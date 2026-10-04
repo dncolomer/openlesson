@@ -301,7 +301,7 @@ describe("TAP Learning Helios I'm done answering chrome (shipped source)", () =>
     expect(chrome).not.toContain("End turn");
     expect(read("components/session-view/ile-work-dock-bar.tsx")).not.toContain("data-ile-submit-turn");
     expect(read("components/session-view/ile-work-dock-bar.tsx")).not.toContain("data-ile-end-turn");
-    expect(read("components/session-view/ile-voice-bar.tsx")).toContain("data-ile-bar-data");
+    expect(read("components/session-view/ile-voice-bar.tsx")).not.toContain("data-ile-bar-data");
     const voice = read("components/session-view/ile-voice-bar.tsx");
     expect(voice).toContain("data-ile-transcription-box");
     expect(voice).toContain("<SlidingTranscript");
@@ -346,7 +346,7 @@ describe("TAP Learning Helios I'm done answering chrome (shipped source)", () =>
     writeScratch(
       "ile-im-done-answering-chrome.txt",
       [
-        "TAP Learning: no End turn control; transcript bar has Data, Logs, and Save; chapter widget has no I'm done answering",
+        "TAP Learning: no End turn control; transcript bar has Exit; chapter widget has no I'm done answering",
         "no SVG bump",
         "no Submit last Thought on TAP Learning or TAP spoken chrome",
         "TAP: I'm done answering between transcript container and Thought Memory",

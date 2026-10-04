@@ -71,8 +71,10 @@ import type { HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
 import { translateWithLocale, useI18n } from "@/lib/i18n";
 import { coerceSpokenLocale, toSpeechBcp47, type SpokenLocale } from "@/lib/tutoring-languages";
 import {
-  capIleSessionChapters,
   clampIleSessionChapterCount,
+  ileBlockSessionChapter,
+  ileBlockSessionFrame,
+  ileBlockSessionOpenWorkIds,
   ILE_SESSION_CHAPTER_COUNT_DEFAULT,
   readIleCanvasSessionConfig,
   writeIleCanvasSessionConfig,
@@ -92,7 +94,6 @@ import {
   isIleMapOverlayTool,
   isIleSessionModalTool,
 } from "@/lib/ile-map-chrome";
-import { IleWorkDockBar } from "@/components/session-view/ile-work-dock-bar";
 import { useIleGatherResources } from "@/components/session-view/use-ile-gather-resources";
 import {
   blockHasUnseenGatherNotification,
@@ -302,7 +303,6 @@ export function SessionView({
     activeChapterIndex,
     setActiveChapterIndex,
     activeChapterIndexRef,
-    planInitializedRef,
     chapterLoading,
     setChapterLoading,
     chapterLoadingIndex,
@@ -312,7 +312,7 @@ export function SessionView({
     setChapterWorkspaces,
     chapterWorkspacesLoaded,
     activeStep,
-    activeChapterKey,
+    activeChapterKey: framedChapterId,
     activeWorkspace,
     chatMessages,
     pendingChatMessage,
@@ -332,6 +332,7 @@ export function SessionView({
     sessionContext,
     coldContextRef,
   } = useSessionChapterWorkspaces(sessionId, sessionPlan);
+  const activeChapterKey = framedChapterId ?? "";
 
   const whiteboardSceneDataRef = useRef(whiteboardSceneData);
   useEffect(() => {
@@ -538,7 +539,9 @@ export function SessionView({
     return false;
   }, [chatMessages]);
 
-  const chapterDialoguePrompt = activeStep?.description?.trim() || t("session.chapterPromptFallback");
+  const blockFrame = useMemo(() => ileBlockSessionFrame(sessionPlan), [sessionPlan]);
+  const chapterDialoguePrompt =
+    blockFrame?.prompt || activeStep?.description?.trim() || t("session.chapterPromptFallback");
 
   /** Durable Learning vs Project mode — prop wins, then session metadata, else learning. */
   const resolvedSessionMode: IleSessionMode = useMemo(() => {
@@ -610,10 +613,6 @@ export function SessionView({
     setIsWebcamEnabled,
     webcamError,
     latestFacialData,
-    logs,
-    setLogs,
-    logsRef,
-    transferHealth,
     isScreenCapturing,
     setIsScreenCapturing,
     screenshotCount,
@@ -626,7 +625,6 @@ export function SessionView({
     handleFaceError,
     handleConnectMuse,
     handleDisconnectMuse,
-    addSessionLog,
     recordTransferEvent,
     getWorkspaceId,
     logTool,
@@ -1062,44 +1060,40 @@ export function SessionView({
     setWorkAestheticById((current) =>
       Object.keys(restored).length === 0 ? current : { ...current, ...restored },
     );
+    const opened = ileBlockSessionFrame(sessionPlanRef.current);
     setOpenWorkIds(
-      capIleSessionChapters(
-        sessionPlanRef.current?.steps ?? [],
-        chapterCount,
-      ).map((step) => step.id),
+      opened
+        ? ileBlockSessionOpenWorkIds(sessionPlanRef.current?.steps, opened.index)
+        : [],
     );
     // Restore docked Work once per session load, not on later metadata writes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.id]);
   useEffect(() => {
-    const ids = capIleSessionChapters(sessionPlan?.steps ?? [], chapterCount).map(
-      (step) => step.id,
-    );
-    if (!ids.length) return;
+    if (!blockFrame) return;
+    const ids = ileBlockSessionOpenWorkIds(sessionPlan?.steps, blockFrame.index);
     setOpenWorkIds((current) => {
       if (current.length === ids.length && current.every((id, index) => id === ids[index])) {
         return current;
       }
       return ids;
     });
-  }, [chapterCount, sessionPlan?.steps]);
+  }, [blockFrame, sessionPlan?.steps]);
   const clampedActiveChapterRef = useRef<string | null>(null);
   useEffect(() => {
     const steps = sessionPlan?.steps ?? [];
-    const available = capIleSessionChapters(steps, chapterCount);
-    const first = available[0];
-    if (!first) return;
-    const activeId = steps[activeChapterIndex]?.id;
-    if (activeId && available.some((step) => step.id === activeId)) {
+    if (steps[activeChapterIndex]?.id) {
       clampedActiveChapterRef.current = null;
       return;
     }
+    const first = ileBlockSessionChapter(steps, activeChapterIndex);
+    if (!first) return;
     if (clampedActiveChapterRef.current === first.id) return;
     clampedActiveChapterRef.current = first.id;
     const nextIndex = steps.findIndex((step) => step.id === first.id);
-    if (nextIndex < 0) return;
+    if (nextIndex < 0 || nextIndex === activeChapterIndex) return;
     void handleLoadChapter(nextIndex);
-  }, [activeChapterIndex, chapterCount, handleLoadChapter, sessionPlan?.steps]);
+  }, [activeChapterIndex, handleLoadChapter, sessionPlan?.steps]);
   useEffect(() => {
     if (!session?.id) return;
     const saved = readIleCanvasSessionConfig(session.id);
@@ -1278,11 +1272,11 @@ export function SessionView({
   );
 
   useEffect(() => {
-    if (!heliosWidgetOpen || !activeChapterKey) return;
-    const text = isProjectMode ? displayProjectChapterExercise : chapterDialoguePrompt;
-    seedChapterWorkCanvas(activeChapterKey, text);
+    if (!heliosWidgetOpen || !blockFrame) return;
+    const text = isProjectMode ? displayProjectChapterExercise : blockFrame.prompt || chapterDialoguePrompt;
+    seedChapterWorkCanvas(blockFrame.id, text);
   }, [
-    activeChapterKey,
+    blockFrame,
     chapterDialoguePrompt,
     displayProjectChapterExercise,
     heliosWidgetOpen,
@@ -1305,22 +1299,6 @@ export function SessionView({
       setHeliosWidgetOpen(true);
     },
     [openWorkIds, seedChapterWorkCanvas, sessionPlan?.steps, tryStartWork],
-  );
-
-  const handleFocusOpenWork = useCallback(
-    (stepId: string) => {
-      const steps = sessionPlanRef.current?.steps ?? sessionPlan?.steps;
-      const idx = steps?.findIndex((s) => s.id === stepId) ?? -1;
-      setDockAttentionIds((current) => current.filter((id) => id !== stepId));
-      if (idx >= 0 && idx !== activeChapterIndexRef.current) {
-        void handleLoadChapter(idx);
-      }
-      const step = idx >= 0 ? steps?.[idx] : undefined;
-      seedChapterWorkCanvas(stepId, step?.description);
-      setActiveTool("chapters");
-      setHeliosWidgetOpen(true);
-    },
-    [seedChapterWorkCanvas, sessionPlan?.steps],
   );
 
   const handleIleSessionToolChange = useCallback(
@@ -1440,7 +1418,7 @@ export function SessionView({
     const formingText =
       sessionThoughtInterface.getFormingText?.() ||
       sessionThoughtInterface.crystallizableText;
-    const awaitingIds = [...openWorkIds];
+    const awaitingIds = openWorkIds.slice(0, 1);
     const works = partitionIleThoughtsByOpenWork({
       thoughts: sessionThoughtInterface.stashedThoughts,
       openWorkIds,
@@ -1878,12 +1856,6 @@ export function SessionView({
         onStartScreenCapture={handleStartScreenCapture}
         onStopScreenCapture={handleStopScreenCapture}
         screenshotCount={screenshotCount}
-        logs={logs}
-        transferHealth={transferHealth}
-        onClearLogs={() => {
-          logsRef.current = [];
-          setLogs([]);
-        }}
       />
     );
   };
@@ -2101,7 +2073,11 @@ export function SessionView({
         isScreenCapturing={isScreenCapturing}
         screenShareStream={isScreenCapturing ? screenCaptureRef.current?.getStream() ?? null : null}
         onStopScreenCapture={handleStopScreenCapture}
+        onStartScreenCapture={handleStartScreenCapture}
         onTurnOffWebcam={() => setIsWebcamEnabled(false)}
+        onEnableWebcam={() => setIsWebcamEnabled(true)}
+        onConnectMuse={handleConnectMuse}
+        onDisconnectMuse={handleDisconnectMuse}
         audioStream={stream}
         audioMuted={isMuted}
         onToggleAudioMute={() => {
@@ -2133,8 +2109,8 @@ export function SessionView({
         })}
         openWorkCount={openWorkIds.length}
         aestheticImages={selectedAesthetic?.images}
+        aestheticPackageId={selectedAesthetic?.id}
         openWorkLabels={openWorkDockLabels}
-        onFocusOpenWork={handleFocusOpenWork}
         resources={
           workspaceId ? (
             <WorkspaceResourcesPanel
@@ -2213,15 +2189,10 @@ export function SessionView({
         voiceBar={<IleVoiceBar thought={sessionThoughtInterface} />}
         actions={
           <IleVoiceBarActions
-            activeTool={activeTool}
-            onToolChange={handleIleSessionToolChange}
             onBackToDashboard={() => {
               setSaveExitName(ileSessionNameFromMetadata(session.metadata) ?? "");
               setShowSaveExitNameDialog(true);
             }}
-            errorNotification={Boolean(error)}
-            showData={sessionSidebarHasSection("ile", "data")}
-            showLogs={sessionSidebarHasSection("ile", "logs")}
             showSave={sessionSidebarHasSection("ile", "save")}
           />
         }

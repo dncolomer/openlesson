@@ -72,7 +72,7 @@ describe("docked chapter loading / attention chrome (shipped source)", () => {
     const view = read("components/SessionView.tsx");
     expect(view).toContain("setDockLoadingIds");
     expect(view).toContain("setDockAttentionIds");
-    expect(view).toContain("const awaitingIds = [...openWorkIds]");
+    expect(view).toContain("const awaitingIds = openWorkIds.slice(0, 1)");
     expect(view).toContain("ILE_SUBMIT_WORK_CONTINUE_TEXT");
     expect(view).toContain("chapterHasPendingHeliosReply");
     expect(view).toContain("dockPendingSeenRef");

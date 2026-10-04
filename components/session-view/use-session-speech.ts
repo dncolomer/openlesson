@@ -31,7 +31,7 @@ import { useTapIdleProofOfWork } from "@/lib/useTapIdleProofOfWork";
 import type { ProofOfWorkApiInterruption } from "@/lib/pow-api/predictive-interruption";
 import type { IlePowInterruptionHandler } from "@/components/session-view/use-session-idle";
 import type { HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
-import type { TransferHealth } from "@/components/LogsTool";
+import type { TransferHealth } from "@/components/session/sessionViewHelpers";
 import type { IlePowCounterArtifact } from "@/lib/ile-pow-counters";
 
 export type SessionSpeechInput = {

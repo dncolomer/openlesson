@@ -4,13 +4,8 @@ import { useEffect, type ReactNode } from "react";
 import { SessionSidebar } from "@/components/session-view/session-sidebar";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { DialogFrame } from "@/components/ui/DialogFrame";
-import {
-  AudioMiniPreview,
-  EegMiniPreview,
-  ScreenShareMiniPreview,
-  WebcamMiniPreview,
-  type Tool,
-} from "@/components/ToolsPanel";
+import type { Tool } from "@/components/ToolsPanel";
+import { SessionDataCard } from "@/components/session-view/session-data-card";
 import type { DeviceStatus } from "@/lib/muse-athena";
 import type { SessionViewTranslate } from "@/components/session-view/types";
 import {
@@ -19,7 +14,11 @@ import {
   isIleMapOverlayTool,
   isIleSessionModalTool,
 } from "@/lib/ile-map-chrome";
-import { IleWorkDockBar } from "@/components/session-view/ile-work-dock-bar";
+import {
+  SessionTopicCard,
+  sessionSidebarTopic,
+} from "@/components/session-view/ile-work-dock-bar";
+import { ORG_CUSTOM_AESTHETIC_PACKAGE_ID } from "@/lib/aesthetics";
 import {
   emptyIlePowDisplayCounts,
   type IlePowDisplayCounts,
@@ -34,10 +33,14 @@ export type SessionChromeProps = {
   isScreenCapturing: boolean;
   screenShareStream: MediaStream | null;
   onStopScreenCapture: () => void;
+  onStartScreenCapture?: () => void | Promise<unknown>;
   onTurnOffWebcam: () => void;
+  onEnableWebcam?: () => void;
   audioStream: MediaStream | null;
   audioMuted: boolean;
   onToggleAudioMute: () => void;
+  onConnectMuse?: () => void | Promise<unknown>;
+  onDisconnectMuse?: () => void;
   museStatus: "disconnected" | "connecting" | "connected" | "streaming";
   museDeviceStatus: DeviceStatus | null;
   museChannelData: Map<string, number[]>;
@@ -73,7 +76,7 @@ export type SessionChromeProps = {
     image?: string;
   }>;
   aestheticImages?: string[];
-  onFocusOpenWork?: (id: string) => void;
+  aestheticPackageId?: string | null;
   resources?: ReactNode;
   resourcesOpen?: boolean;
   onResourcesOpenChange?: (open: boolean) => void;
@@ -111,10 +114,14 @@ export function SessionChrome({
   isScreenCapturing,
   screenShareStream,
   onStopScreenCapture,
+  onStartScreenCapture,
   onTurnOffWebcam,
+  onEnableWebcam,
   audioStream,
   audioMuted,
   onToggleAudioMute,
+  onConnectMuse,
+  onDisconnectMuse,
   museStatus,
   museDeviceStatus,
   museChannelData,
@@ -126,7 +133,7 @@ export function SessionChrome({
   toolOverlay,
   workCanvas,
   heliosWidget: _heliosWidget,
-  heliosOpen,
+  heliosOpen: _heliosOpen,
   onCloseHelios,
   onMinimizeHelios,
   insightCraftOpen = false,
@@ -143,7 +150,7 @@ export function SessionChrome({
   openWorkCount = 0,
   openWorkLabels = [],
   aestheticImages = [],
-  onFocusOpenWork,
+  aestheticPackageId = null,
   resources = null,
   resourcesOpen,
   onResourcesOpenChange,
@@ -192,9 +199,7 @@ export function SessionChrome({
     ? t("session.beforeYouStart")
     : modalTool === "data-input"
       ? "Data"
-      : modalTool === "logs"
-        ? "Logs"
-        : "";
+      : "";
   const overlayTitle =
     activeTool === ILE_REVIEW_WORK_TOOL
       ? t("session.reviewWork") || ILE_REVIEW_WORK_LABEL
@@ -244,39 +249,57 @@ export function SessionChrome({
           }
           chapters={
             <div data-ile-work-dock id="chapters" className="w-full min-w-0">
-              <IleWorkDockBar
-                t={t}
-                heliosOpen={heliosOpen}
-                openWorkLabels={openWorkLabels}
-                onFocusOpenWork={onFocusOpenWork}
-                aestheticImages={aestheticImages}
+              <SessionTopicCard
+                {...sessionSidebarTopic(openWorkLabels)}
+                customUrls={
+                  aestheticPackageId === ORG_CUSTOM_AESTHETIC_PACKAGE_ID
+                    ? aestheticImages
+                    : undefined
+                }
+                systemImages={
+                  aestheticPackageId === ORG_CUSTOM_AESTHETIC_PACKAGE_ID
+                    ? undefined
+                    : aestheticImages
+                }
               />
             </div>
           }
           signals={
-            <div data-ile-tools-widget id="sensors" className="w-full min-w-0">
-              <div
-                data-ile-sensor-pair
-                className="grid w-full max-w-[20rem] grid-cols-2 gap-1.5"
-              >
-                <AudioMiniPreview
-                  stream={audioStream}
-                  muted={audioMuted}
-                  onToggleMute={onToggleAudioMute}
-                />
-                {museStatus === "streaming" ? (
-                  <EegMiniPreview
-                    museChannelData={museChannelData}
-                    museStatus={museStatus}
-                    museDeviceStatus={museDeviceStatus}
-                    bandPowers={bandPowers}
-                  />
-                ) : null}
-                {isScreenCapturing ? (
-                  <ScreenShareMiniPreview stream={screenShareStream} onTurnOff={onStopScreenCapture} />
-                ) : null}
-                {isWebcamEnabled ? <WebcamMiniPreview onTurnOff={onTurnOffWebcam} /> : null}
-              </div>
+            <div data-ile-tools-widget id="sensors" className="h-full w-full min-w-0">
+              <SessionDataCard
+                audioEnabled={Boolean(audioStream) && !audioMuted}
+                onEnableAudio={() => {
+                  if (audioMuted) onToggleAudioMute();
+                }}
+                onDisableAudio={() => {
+                  if (!audioMuted) onToggleAudioMute();
+                }}
+                audioStream={audioStream}
+                audioDisableLabel="Mute"
+                museEnabled={
+                  museStatus === "connecting" ||
+                  museStatus === "connected" ||
+                  museStatus === "streaming"
+                }
+                onEnableMuse={() => {
+                  void onConnectMuse?.();
+                }}
+                onDisableMuse={() => onDisconnectMuse?.()}
+                museStatus={museStatus}
+                museDeviceStatus={museDeviceStatus}
+                museChannelData={museChannelData}
+                bandPowers={bandPowers}
+                videoEnabled={isWebcamEnabled}
+                onEnableVideo={() => onEnableWebcam?.()}
+                onDisableVideo={onTurnOffWebcam}
+                captureVideo
+                screenEnabled={isScreenCapturing}
+                onEnableScreen={() => {
+                  void onStartScreenCapture?.();
+                }}
+                onDisableScreen={onStopScreenCapture}
+                screenStream={screenShareStream}
+              />
             </div>
           }
           transcript={voiceBar}
@@ -299,9 +322,7 @@ export function SessionChrome({
           >
             <div
               data-ile-session-modal={modalTool}
-              className={`flex max-h-[min(88vh,44rem)] w-full flex-col overflow-hidden ${
-                modalTool === "logs" ? "h-[min(88vh,44rem)]" : ""
-              }`}
+              className="flex max-h-[min(88vh,44rem)] w-full flex-col overflow-hidden"
             >
               <div className="flex shrink-0 items-center justify-between border-b border-neutral-800 px-3 py-1.5">
                 <span className="font-mono text-[10px] uppercase tracking-wider text-neutral-400">
@@ -319,15 +340,7 @@ export function SessionChrome({
                   </button>
                 )}
               </div>
-              <div className="min-h-0 flex-1 overflow-hidden">
-                {modalTool === "logs" ? (
-                  <div className="flex h-full min-h-0 flex-col overflow-hidden">
-                    {toolOverlay}
-                  </div>
-                ) : (
-                  toolOverlay
-                )}
-              </div>
+              <div className="min-h-0 flex-1 overflow-hidden">{toolOverlay}</div>
             </div>
           </DialogFrame>
         ) : null}

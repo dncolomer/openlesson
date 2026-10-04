@@ -45,7 +45,8 @@ describe("TAP Learning dead frontend is gone from the live session", () => {
     expect(tools).not.toContain("data-ile-tools-grid");
     expect(tools).not.toContain("const mainTools");
     expect(chrome).toContain("data-ile-tools-widget");
-    expect(chrome).toContain("data-ile-sensor-pair");
+    expect(chrome).toContain("<SessionDataCard");
+    expect(chrome).not.toContain("data-ile-sensor-pair");
 
     const dock = read("components/session-view/ile-work-dock-bar.tsx");
     expect(dock).not.toContain("data-ile-global-resources");
@@ -78,8 +79,8 @@ describe("TAP Learning dead frontend is gone from the live session", () => {
       "ile-quality-dead-frontend.txt",
       [
         "TAP Learning panes: no NotebookSubmitButton, no ThoughtMemoryPanel, IleReviewWorkPanel",
-        "no ToolsPanel empty grid; sensors remain on data-ile-tools-widget",
-        "session resources is a collapsed sidebar section, not the chapter dock",
+        "no ToolsPanel empty grid; Data card stays on data-ile-tools-widget",
+        "session resources is a tab in the focus block, not the chapter dock",
         "TAP: ImDoneAnsweringControl + ThoughtMemoryPanel kept",
       ].join("\n"),
     );

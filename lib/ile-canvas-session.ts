@@ -39,6 +39,81 @@ export function capIleSessionChapters<T>(
   return (chapters ?? []).slice(0, limit);
 }
 
+export type IleBlockSessionChapter = {
+  id: string;
+  prompt: string;
+};
+
+/**
+ * The one live chapter: the plan's current step, so the card, the open work
+ * id, and the seeded prompt stay on the scene that step already has.
+ * A blank id is skipped. With no index, the first saved step is that chapter.
+ */
+export function ileBlockSessionChapter<
+  T extends { id?: string | null; description?: string | null },
+>(
+  steps: readonly T[] | null | undefined,
+  currentStepIndex?: number | null,
+): IleBlockSessionChapter | null {
+  const list = steps ?? [];
+  if (list.length === 0) return null;
+  const raw = Number(currentStepIndex);
+  const start = Number.isFinite(raw)
+    ? Math.min(Math.max(0, Math.floor(raw)), list.length - 1)
+    : 0;
+  for (let index = start; index < list.length; index += 1) {
+    const id = String(list[index]?.id ?? "").trim();
+    if (!id) continue;
+    return { id, prompt: String(list[index]?.description ?? "").trim() };
+  }
+  for (let index = 0; index < start; index += 1) {
+    const id = String(list[index]?.id ?? "").trim();
+    if (!id) continue;
+    return { id, prompt: String(list[index]?.description ?? "").trim() };
+  }
+  return null;
+}
+
+/** One open-work id: the current step from `ileBlockSessionChapter`. */
+export function ileBlockSessionOpenWorkIds<
+  T extends { id?: string | null; description?: string | null },
+>(
+  steps: readonly T[] | null | undefined,
+  currentStepIndex?: number | null,
+): string[] {
+  const chapter = ileBlockSessionChapter(steps, currentStepIndex);
+  return chapter ? [chapter.id] : [];
+}
+
+export type IleBlockSessionFrame = {
+  index: number;
+  id: string;
+  prompt: string;
+};
+
+/**
+ * The one live chapter for this render. Comes from the plan's current step,
+ * so the first paint already has that id. A missing plan, empty steps, or a
+ * pre-plan `step-N` id returns null. Callers must not seed until this exists.
+ */
+export function ileBlockSessionFrame(
+  plan:
+    | {
+        steps?: readonly { id?: string | null; description?: string | null }[] | null;
+        currentStepIndex?: number | null;
+      }
+    | null
+    | undefined,
+): IleBlockSessionFrame | null {
+  const steps = plan?.steps;
+  if (!plan || !steps || steps.length === 0) return null;
+  const chapter = ileBlockSessionChapter(steps, plan.currentStepIndex);
+  if (!chapter || /^step-\d+$/.test(chapter.id)) return null;
+  const index = steps.findIndex((step) => String(step?.id ?? "").trim() === chapter.id);
+  if (index < 0) return null;
+  return { index, id: chapter.id, prompt: chapter.prompt };
+}
+
 /**
  * The insight goal is a target. It does not block crafting or continued work,
  * and it does not mark chapters done.

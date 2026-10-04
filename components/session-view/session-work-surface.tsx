@@ -23,7 +23,7 @@ export function SessionWorkSurface({
   mode: SessionSidebarMode;
   stage: ReactNode;
   clock?: ReactNode;
-  /** Major fixed-height block. Stashed text or generated questions. */
+  /** Block between the topic card and Data. Stashed text or generated questions. */
   focus?: ReactNode;
   focusLabel?: string | null;
   chapters?: ReactNode;

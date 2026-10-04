@@ -2,8 +2,6 @@
 
 import { DataInputTool } from "@/components/DataInputTool";
 import { FacialDataPoint } from "@/components/FaceTracker";
-import { LogsTool, type LogEntry } from "@/components/LogsTool";
-import type { TransferHealth } from "@/components/LogsTool";
 import { IleReviewWorkPanel } from "@/components/session-view/ile-review-work-panel";
 import type { Tool } from "@/components/ToolsPanel";
 import type { IleSessionMode } from "@/lib/ile-mode";
@@ -42,9 +40,6 @@ export type SessionToolPanesProps = {
   onStartScreenCapture: () => Promise<boolean>;
   onStopScreenCapture: () => void;
   screenshotCount: number;
-  logs: LogEntry[];
-  transferHealth: TransferHealth;
-  onClearLogs: () => void;
 };
 
 export function SessionToolPanes(props: SessionToolPanesProps) {
@@ -74,14 +69,11 @@ export function SessionToolPanes(props: SessionToolPanesProps) {
     onStartScreenCapture,
     onStopScreenCapture,
     screenshotCount,
-    logs,
-    transferHealth,
-    onClearLogs,
   } = props;
 
   return (
     <div className="relative flex h-full min-w-0 flex-col overflow-hidden p-3">
-      {shouldBlockTools && !["data-input", "help", "logs", "chapters"].includes(activeTool) && (
+      {shouldBlockTools && !["data-input", "help", "chapters"].includes(activeTool) && (
         <div className="absolute inset-0 z-10 bg-black/30 cursor-not-allowed" />
       )}
       <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -122,18 +114,6 @@ export function SessionToolPanes(props: SessionToolPanesProps) {
             screenshotCount={screenshotCount}
           />
         </div>
-        {activeTool === "logs" && (
-          <div
-            className="flex h-0 min-h-0 flex-1 flex-col overflow-hidden"
-            data-ile-logs-pane
-          >
-            <LogsTool
-              logs={logs}
-              transferHealth={transferHealth}
-              onClear={onClearLogs}
-            />
-          </div>
-        )}
       </div>
     </div>
   );

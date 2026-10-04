@@ -6,7 +6,7 @@ import { MINIMAP_FRAME_HEIGHT, MINIMAP_FRAME_WIDTH } from "@/lib/map-minimap-fra
 /** top-2 (8px) + minimap height + 8px gap — leftover for overlays that still sit under the minimap. */
 export const ILE_HELIOS_WIDGET_TOP_PX = 8 + MINIMAP_FRAME_HEIGHT + 8;
 
-/** One-line transcript row. Data, Logs, and Save sit on the row below. */
+/** One-line transcript row. Exit sits on the row below. */
 export const ILE_VOICE_BAR_HEIGHT_CLASS = "h-10";
 
 /** Bar height + a small gutter. Overlay widgets sit above the transcript. */
@@ -129,8 +129,8 @@ export function isIleChapterWidgetTool(tool: string | null | undefined): boolean
   return (ILE_CHAPTER_WIDGET_TOOLS as readonly string[]).includes(tool);
 }
 
-/** Help / Data / Logs open as a centered session modal. */
-export const ILE_SESSION_MODAL_TOOLS = ["help", "data-input", "logs"] as const;
+/** Help and Data open as a centered session modal. */
+export const ILE_SESSION_MODAL_TOOLS = ["help", "data-input"] as const;
 
 export type IleSessionModalTool = (typeof ILE_SESSION_MODAL_TOOLS)[number];
 

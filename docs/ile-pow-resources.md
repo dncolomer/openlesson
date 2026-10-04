@@ -33,7 +33,7 @@ Spent units are not refunded when you finish a chapter. Gather refunds only if t
 
 ## Visualization
 
-After settings, the stage is the focused chapter’s work canvas. There is no full-width resource bar and no turn-close button. Every chapter the session makes available is docked at once; focusing a chip opens that chapter’s canvas. Insights, the chapter dock, and the signal widgets collapse and expand on the canvas. The only bottom chrome is a short transcript bar with Data, Logs, and Save. Data and Logs open their existing tools. Save runs the existing save path.
+After settings, the stage is the focused chapter’s work canvas. There is no full-width resource bar and no turn-close button. Every chapter the session makes available is docked at once; focusing a chip opens that chapter’s canvas. Insights, the chapter dock, and the signal widgets collapse and expand on the canvas. The only bottom chrome is a short transcript bar with Exit. Exit runs the existing save path.
 
 Welcome settings is a dedicated full-screen route (`/session/settings`, `/ile/session/{token}/settings`, `/learn/{token}/session/settings`). Confirming settings continues onto that canvas.
 

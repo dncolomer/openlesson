@@ -235,6 +235,37 @@ export function resolveIleWorkAestheticImage(input: {
   return aestheticImageForId(input.id, pool);
 }
 
+/**
+ * Still for the one sidebar topic card.
+ * A non-empty custom org set replaces system stills. The pools are not mixed.
+ * An empty custom set keeps the system or session stills. Folder fallback is
+ * used only when the caller allows it and the system pool itself is empty.
+ */
+export function sessionTopicCardStill(input: {
+  id: string;
+  assigned?: string | null;
+  customUrls?: readonly string[] | null;
+  systemImages?: readonly string[] | null;
+  allowSystemFallback?: boolean;
+}): string {
+  const pool = decideActiveAestheticPool({
+    customUrls: input.customUrls,
+    systemImages: input.systemImages,
+  });
+  const images =
+    pool.images.length > 0
+      ? pool.images
+      : pool.source === "system" && input.allowSystemFallback !== false
+        ? [...FALLBACK_AESTHETIC_IMAGES]
+        : [];
+  if (images.length === 0) return String(input.assigned || "").trim();
+  return resolveIleWorkAestheticImage({
+    id: input.id || "topic",
+    assigned: input.assigned,
+    images,
+  });
+}
+
 export function formatAestheticName(id: string) {
   return id
     .split(/[-_]+/)

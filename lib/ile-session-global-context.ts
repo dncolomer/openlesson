@@ -1,11 +1,11 @@
 /**
- * TAP Learning per-chapter practice context: canvas, notebook, thoughts/chat.
- * Focusing a different chapter swaps that chapter's workspace — notes from
- * chapter 1 do not appear on chapter 3.
+ * TAP Learning session context: one topic, one canvas, one notebook.
+ * A second chapter id reads and writes that same scene. It does not open,
+ * swap, or restore another board. Stored rows for other chapters are not
+ * merged into the live scene.
  *
- * Live client state is bounded: unfocused chapters drop heavy payloads
- * (PNG/scene), and chat/notebook lists are capped so a long session cannot
- * unbounded-grow.
+ * Live client state is bounded: chat and notebook lists are capped so a long
+ * session cannot unbounded-grow.
  */
 import {
   createChapterWorkspace,
@@ -48,17 +48,66 @@ export function resolveIleChapterContextKey(
   return id || ILE_SESSION_GLOBAL_CONTEXT_KEY;
 }
 
+/** Fallback id used before a plan step exists, for example `step-0`. */
+export function isIlePrePlanChapterId(chapterId: string | null | undefined): boolean {
+  return /^step-\d+$/.test(String(chapterId ?? "").trim());
+}
+
 /**
- * React remount key for the chapter canvas. Excalidraw snapshots
- * `initialSceneData` on mount — a session-only key would keep CH1 drawings
- * on screen after focusing CH3.
+ * React remount key for the one session canvas. The chapter id is ignored so
+ * focusing another chapter does not mount a second board.
  */
 export function ileChapterCanvasRemountKey(
   sessionId: string | null | undefined,
-  chapterId: string | null | undefined,
+  _chapterId?: string | null,
 ): string {
   const session = typeof sessionId === "string" ? sessionId.trim() : "";
-  return `${session || ILE_SESSION_GLOBAL_CONTEXT_KEY}:${resolveIleChapterContextKey(chapterId)}`;
+  return `${session || ILE_SESSION_GLOBAL_CONTEXT_KEY}:${ILE_SESSION_GLOBAL_CONTEXT_KEY}`;
+}
+
+/**
+ * Copy one stored chapter onto the session canvas. Does not merge other
+ * chapters' drawings. Returns null when the current chapter is not in a
+ * multi-chapter snapshot yet, so a placeholder id cannot blank the map.
+ */
+export function adoptIleSingleLiveCanvas(
+  live: IleSessionContextMap,
+  cold: IleSessionContextMap | null | undefined,
+  chapterId: string | null | undefined,
+): IleSessionContextMap | null {
+  const sessionKey = ILE_SESSION_GLOBAL_CONTEXT_KEY;
+  if (live[sessionKey] || cold?.[sessionKey]) {
+    return {
+      [sessionKey]: restoreIleChapterHeavyPayload(live[sessionKey], cold?.[sessionKey]),
+    };
+  }
+  const legacyKey = resolveIleChapterContextKey(chapterId);
+  const placeholder = isIlePrePlanChapterId(legacyKey);
+  const keys = [
+    ...new Set([...Object.keys(live), ...Object.keys(cold ?? {})]),
+  ].filter((key) => key !== sessionKey);
+  const realKeys = keys.filter((key) => !isIlePrePlanChapterId(key));
+  if (!placeholder && legacyKey !== sessionKey && (live[legacyKey] || cold?.[legacyKey])) {
+    return {
+      [sessionKey]: restoreIleChapterHeavyPayload(live[legacyKey], cold?.[legacyKey]),
+    };
+  }
+  // step-N must not publish an empty row over several stored chapters.
+  if (placeholder && realKeys.length > 1) return null;
+  if (realKeys.length === 1) {
+    const only = realKeys[0]!;
+    return {
+      [sessionKey]: restoreIleChapterHeavyPayload(live[only], cold?.[only]),
+    };
+  }
+  if (realKeys.length > 1) return null;
+  if (keys.length === 1) {
+    const only = keys[0]!;
+    return {
+      [sessionKey]: restoreIleChapterHeavyPayload(live[only], cold?.[only]),
+    };
+  }
+  return null;
 }
 
 export function ileChapterCanvasInitialScene(
@@ -119,9 +168,46 @@ export function hydrateIleFocusedChapterLiveState(
   cold: IleSessionContextMap | null | undefined,
   focusedChapterId: string | null | undefined,
 ): IleSessionContextMap {
+  const sessionKey = ILE_SESSION_GLOBAL_CONTEXT_KEY;
+  if (live[sessionKey] || cold?.[sessionKey]) {
+    return {
+      [sessionKey]: restoreIleChapterHeavyPayload(live[sessionKey], cold?.[sessionKey]),
+    };
+  }
   const key = resolveIleChapterContextKey(focusedChapterId);
+  if (!live[key] && !cold?.[key]) return live;
   const focused = restoreIleChapterHeavyPayload(live[key], cold?.[key]);
   return boundIleSessionLiveState({ ...live, [key]: focused }, key);
+}
+
+/**
+ * Every chapter id reads this one workspace. A second id is the same object,
+ * so a lookup cannot come back as a missing row.
+ */
+export function ileSingleCanvasChapterWorkspaces<T extends object>(
+  workspace: T,
+): Record<string, T> {
+  return new Proxy({} as Record<string, T>, {
+    get(_target, prop) {
+      if (typeof prop !== "string") return undefined;
+      return workspace;
+    },
+    has(_target, prop) {
+      return typeof prop === "string";
+    },
+    ownKeys() {
+      return [ILE_SESSION_GLOBAL_CONTEXT_KEY];
+    },
+    getOwnPropertyDescriptor(_target, prop) {
+      if (prop !== ILE_SESSION_GLOBAL_CONTEXT_KEY) return undefined;
+      return {
+        configurable: true,
+        enumerable: true,
+        writable: false,
+        value: workspace,
+      };
+    },
+  });
 }
 
 /** Focused chapter workspace with cold canvas restored on this render. */
@@ -167,6 +253,10 @@ export function boundIleSessionLiveState(
   map: IleSessionContextMap,
   focusedChapterId: string | null | undefined,
 ): IleSessionContextMap {
+  const sessionKey = ILE_SESSION_GLOBAL_CONTEXT_KEY;
+  if (map[sessionKey]) {
+    return { [sessionKey]: capIleLiveWorkspace(map[sessionKey]) };
+  }
   const focused = resolveIleChapterContextKey(focusedChapterId);
   const next: IleSessionContextMap = {};
   let hotKept = 0;
@@ -196,23 +286,52 @@ function normalizeWorkspace(row: Partial<IleSessionContext> | undefined): IleSes
   });
 }
 
+function legacyChapterIds(current: IleSessionContextMap): string[] {
+  const key = ILE_SESSION_GLOBAL_CONTEXT_KEY;
+  return Object.keys(current).filter((id) => id !== key && current[id]);
+}
+
+function writeIleSessionRow(
+  existing: IleSessionContext,
+  update: IleSessionContextPatch,
+): IleSessionContextMap {
+  const key = ILE_SESSION_GLOBAL_CONTEXT_KEY;
+  const patch = typeof update === "function" ? update(existing) : update;
+  const written = capIleLiveWorkspace({ ...existing, ...patch });
+  return boundIleSessionLiveState({ [key]: written }, key);
+}
+
 export function applyIleSessionContextWrite(
   current: IleSessionContextMap,
   focusedChapterId: string | null | undefined,
   update: IleSessionContextPatch,
 ): IleSessionContextMap {
-  const key = resolveIleChapterContextKey(focusedChapterId);
-  const existing = current[key] ?? createIleSessionContext();
-  const patch = typeof update === "function" ? update(existing) : update;
-  const written = capIleLiveWorkspace({ ...existing, ...patch });
-  return boundIleSessionLiveState({ ...current, [key]: written }, key);
+  const key = ILE_SESSION_GLOBAL_CONTEXT_KEY;
+  if (current[key]) return writeIleSessionRow(current[key], update);
+  const legacyKey = resolveIleChapterContextKey(focusedChapterId);
+  const placeholder = isIlePrePlanChapterId(legacyKey);
+  const stored = legacyChapterIds(current);
+  const realIds = stored.filter((id) => !isIlePrePlanChapterId(id));
+  // A pre-plan id such as step-0 must not publish an empty session over a
+  // multi-chapter snapshot, even when that placeholder row is already present.
+  if (placeholder && realIds.length > 1) return current;
+  if (!placeholder && legacyKey !== key && current[legacyKey]) {
+    return writeIleSessionRow(current[legacyKey], update);
+  }
+  if (realIds.length > 1) return current;
+  if (realIds.length === 1) return writeIleSessionRow(current[realIds[0]!]!, update);
+  if (stored.length === 1) return writeIleSessionRow(current[stored[0]!]!, update);
+  if (stored.length > 1) return current;
+  return writeIleSessionRow(createIleSessionContext(), update);
 }
 
-/** Artifacts for the focused chapter only. */
+/** The one live workspace. A second chapter id does not select another row. */
 export function readIleSessionContext(
   context: IleSessionContextMap,
   focusedChapterId?: string | null,
 ): IleSessionContext {
+  const sessionKey = ILE_SESSION_GLOBAL_CONTEXT_KEY;
+  if (context[sessionKey]) return context[sessionKey];
   const key = resolveIleChapterContextKey(focusedChapterId);
   return context[key] ?? createIleSessionContext();
 }
@@ -281,28 +400,51 @@ export function createIleSessionContextStore(initial?: IleSessionContextMap) {
   let live: IleSessionContextMap = initial ?? {};
   let cold: IleSessionContextMap = initial ? { ...initial } : {};
   let focusedChapterId: string | null = null;
+
+  function pin(chapterId: string | null | undefined) {
+    if (live[ILE_SESSION_GLOBAL_CONTEXT_KEY] || cold[ILE_SESSION_GLOBAL_CONTEXT_KEY]) {
+      const adopted = adoptIleSingleLiveCanvas(live, cold, chapterId);
+      if (adopted) {
+        live = adopted;
+        cold = { ...adopted };
+      }
+      return;
+    }
+    const adopted = adoptIleSingleLiveCanvas(live, cold, chapterId);
+    if (!adopted) return;
+    live = adopted;
+    cold = { ...adopted };
+  }
+
   return {
     focus(chapterId: string | null) {
       focusedChapterId = chapterId;
-      live = boundIleSessionLiveState(live, chapterId);
+      pin(chapterId);
+      live = boundIleSessionLiveState(live, ILE_SESSION_GLOBAL_CONTEXT_KEY);
       return live;
     },
     write(chapterId: string | null | undefined, update: IleSessionContextPatch) {
       focusedChapterId = chapterId ?? focusedChapterId;
-      live = applyIleSessionContextWrite(live, chapterId, update);
-      const key = resolveIleChapterContextKey(chapterId ?? focusedChapterId);
-      cold = persistIleChapterColdWorkspace(cold, key, live[key]);
+      pin(chapterId);
+      const next = applyIleSessionContextWrite(live, chapterId, update);
+      const key = ILE_SESSION_GLOBAL_CONTEXT_KEY;
+      if (!next[key]) {
+        live = next;
+        return live;
+      }
+      live = next;
+      cold = persistIleChapterColdWorkspace({ [key]: cold[key] }, key, live[key]);
       return live;
     },
     read(chapterId?: string | null) {
-      return readIleFocusedChapterWorkspace(
-        live,
-        cold,
-        chapterId ?? focusedChapterId,
-      );
+      const id = chapterId ?? focusedChapterId;
+      pin(id);
+      return readIleFocusedChapterWorkspace(live, cold, ILE_SESSION_GLOBAL_CONTEXT_KEY);
     },
     readLive(chapterId?: string | null) {
-      return readIleSessionContext(live, chapterId ?? focusedChapterId);
+      const id = chapterId ?? focusedChapterId;
+      pin(id);
+      return readIleSessionContext(live, ILE_SESSION_GLOBAL_CONTEXT_KEY);
     },
     get focusedChapterId() {
       return focusedChapterId;

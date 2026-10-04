@@ -12,26 +12,35 @@ export function TapLiveClock({
   remainingSeconds,
   waiting,
   listening,
+  placement = "row",
 }: {
   label: string;
   remainingSeconds: number;
   waiting: boolean;
   listening: boolean;
+  /** `card` sits on the topic still, so the label stays light. */
+  placement?: "row" | "card";
 }) {
   const showListening = listening && !waiting;
+  const onCard = placement === "card";
   return (
     <div
       className="flex shrink-0 items-center gap-2"
       data-tap-live-clock
+      data-tap-clock-placement={onCard ? "card" : "row"}
       data-tap-clock-waiting={waiting ? "true" : "false"}
       data-tap-clock-listening={showListening ? "true" : "false"}
     >
-      <div className="font-mono text-[10px] uppercase leading-none tracking-[2px] text-neutral-600">
+      <div
+        className={`font-mono text-[10px] uppercase leading-none tracking-[2px] ${
+          onCard ? "text-white/80" : "text-neutral-600"
+        }`}
+      >
         {label}
       </div>
       <div
         className={`flex items-center gap-1.5 font-mono text-lg leading-none tabular-nums tracking-tight ${
-          remainingSeconds <= 60 ? "text-neutral-300" : "text-white"
+          remainingSeconds <= 60 ? (onCard ? "text-amber-200" : "text-neutral-300") : "text-white"
         }`}
       >
         {waiting ? (

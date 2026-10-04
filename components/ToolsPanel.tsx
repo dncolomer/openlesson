@@ -92,25 +92,22 @@ export function ToolIcon({ id }: { id: Tool }) {
   }
 }
 
-const utilityTools: Tool[] = ["data-input", "logs"];
+const utilityTools: Tool[] = ["data-input"];
 
 export function VoiceBarUtilityRow({
   activeTool,
   onToolChange,
   onBackToDashboard,
-  errorNotification = false,
 }: {
   activeTool: Tool | null;
   onToolChange: (tool: Tool) => void;
   onBackToDashboard?: () => void;
-  errorNotification?: boolean;
 }) {
   const { t } = useI18n();
   const getToolLabel = (id: Tool): string => {
     switch (id) {
       case "help": return t("tools.help");
       case "data-input": return t("tools.dataInput");
-      case "logs": return t("tools.logs");
       default: return id;
     }
   };
@@ -135,9 +132,6 @@ export function VoiceBarUtilityRow({
           }`}
         >
           <span className="truncate">{getToolLabel(toolId)}</span>
-          {toolId === "logs" && errorNotification ? (
-            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-500 animate-pulse" />
-          ) : null}
         </button>
       ))}
       {onBackToDashboard ? (
@@ -197,6 +191,7 @@ export function AudioMiniPreview({
 
     try {
       audioContext = new AudioContext();
+      void audioContext.resume();
       analyser = audioContext.createAnalyser();
       analyser.fftSize = 256;
       audioContext.createMediaStreamSource(stream).connect(analyser);

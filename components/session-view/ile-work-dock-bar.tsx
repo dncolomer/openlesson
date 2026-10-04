@@ -1,13 +1,159 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { AlertTriangle } from "lucide-react";
 import type { IleDockChipStatus } from "@/lib/ile-work-dock-status";
 import {
   FALLBACK_AESTHETIC_IMAGES,
   resolveIleWorkAestheticImage,
+  sessionTopicCardStill,
 } from "@/lib/aesthetics";
+import { SESSION_TOPIC_CARD_REM } from "@/lib/session-sidebar";
+import { SessionConsoleMarks, SessionConsoleScan } from "@/components/session-view/session-console-marks";
 import { useSurfaceAestheticImages } from "@/lib/use-surface-aesthetic-images";
 import type { SessionViewTranslate } from "@/components/session-view/types";
+
+export type SessionTopicCardInput = {
+  id?: string;
+  label?: string;
+  keyword?: string;
+  focused?: boolean;
+  image?: string;
+};
+
+/** One chapter for the sidebar. Extra labels are not shown. */
+export function sessionSidebarTopic(
+  labels: readonly SessionTopicCardInput[] | null | undefined,
+): { id: string; title: string; image?: string } {
+  const row = (labels ?? []).find((item) => item.focused) ?? (labels ?? [])[0];
+  if (!row) return { id: "topic", title: "Topic" };
+  const title = String(row.keyword || "").trim() || String(row.label || "").trim() || "Topic";
+  const id = String(row.id || "").trim() || "topic";
+  const image = String(row.image || "").trim();
+  return image ? { id, title, image } : { id, title };
+}
+
+/** Silent radar loop for the topic card. The still stays the default. */
+export const SESSION_TOPIC_CARD_LOOP = "/aesthetics/session-topic-loop.mp4";
+
+/**
+ * Cover for the session's one chapter. It does not switch chapters.
+ * Loop swaps the still for the radar video and back.
+ */
+export function SessionTopicCard({
+  id,
+  title,
+  image,
+  customUrls,
+  systemImages,
+}: {
+  id: string;
+  title: string;
+  image?: string | null;
+  customUrls?: readonly string[] | null;
+  systemImages?: readonly string[] | null;
+}) {
+  const explicitCustom = customUrls && customUrls.length > 0 ? customUrls : null;
+  const explicitSystem = systemImages && systemImages.length > 0 ? systemImages : null;
+  const surface = useSurfaceAestheticImages(explicitCustom ?? explicitSystem ?? undefined);
+  const fetchedCustom =
+    !explicitCustom &&
+    !explicitSystem &&
+    surface.source === "packages" &&
+    surface.images.length > 0 &&
+    surface.images.every((url) => !url.startsWith("/aesthetics/"))
+      ? surface.images
+      : [];
+  const resolvedCustom = explicitCustom ?? fetchedCustom;
+  const poolsPending = !explicitCustom && !explicitSystem && surface.source === "pending";
+  const resolvedSystem =
+    resolvedCustom.length > 0
+      ? []
+      : explicitSystem
+        ? explicitSystem
+        : poolsPending
+          ? []
+          : surface.source === "fallback" || surface.source === "packages"
+            ? surface.images
+            : [];
+  const still = sessionTopicCardStill({
+    id,
+    assigned: image,
+    customUrls: resolvedCustom,
+    systemImages: resolvedSystem,
+    allowSystemFallback: !poolsPending,
+  });
+  const heading = title.trim() || "Topic";
+  const height = `${SESSION_TOPIC_CARD_REM}rem`;
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [mode, setMode] = useState<"image" | "video">("image");
+  useEffect(() => {
+    const node = videoRef.current;
+    if (!node) return;
+    if (mode === "video") void node.play().catch(() => undefined);
+    else node.pause();
+  }, [mode]);
+  return (
+    <div
+      data-session-topic-card={id}
+      data-session-topic-card-static="true"
+      className="relative w-full min-w-0 max-w-full shrink-0 overflow-hidden border-b border-white/50 bg-black"
+      style={{ height, minHeight: height }}
+    >
+      <span
+        data-session-topic-card-image
+        data-ile-chapter-chip-image
+        aria-hidden
+        className={`absolute inset-0 bg-cover bg-center ${mode === "video" ? "hidden" : ""}`}
+        style={still ? { backgroundImage: `url(${still})` } : undefined}
+      />
+      <video
+        ref={videoRef}
+        data-session-topic-card-video=""
+        src={SESSION_TOPIC_CARD_LOOP}
+        muted
+        loop
+        playsInline
+        preload="metadata"
+        className={`absolute inset-0 h-full w-full object-cover grayscale ${mode === "video" ? "" : "hidden"}`}
+      />
+      <button
+        type="button"
+        data-session-topic-card-media={mode}
+        aria-pressed={mode === "video"}
+        onClick={() => setMode((current) => (current === "image" ? "video" : "image"))}
+        className="pointer-events-auto absolute right-2 top-4 z-30 rounded-none border border-white/70 bg-black/85 px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-[0.22em] text-white hover:bg-white hover:text-black"
+      >
+        {mode === "image" ? "Loop" : "Still"}
+      </button>
+      <span
+        aria-hidden
+        className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/25"
+      />
+      <SessionConsoleScan />
+      <SessionConsoleMarks />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-x-8 top-0 z-10 h-1.5"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(90deg, rgba(255,255,255,0.75) 0 1px, transparent 1px 7px)",
+        }}
+      />
+      <span className="pointer-events-none absolute left-5 top-2 z-10 font-mono text-[9px] uppercase tracking-[0.34em] text-white">
+        01
+      </span>
+      <span className="relative z-10 flex h-full w-full items-end px-2 pb-2">
+        <span
+          data-session-topic-card-title
+          className="line-clamp-3 border border-white/55 bg-black/80 px-2 py-1 font-mono text-base font-semibold uppercase leading-tight tracking-[0.14em] text-white"
+        >
+          {heading}
+        </span>
+      </span>
+    </div>
+  );
+}
 
 export type IleWorkDockLabel = {
   id: string;
@@ -135,72 +281,54 @@ export function IleWorkDockChip({
   );
 }
 
-/** One chosen topic, drawn with the same chapter chip as a real chapter. */
+/** One chosen topic, drawn as the static sidebar card. */
 export function SessionTopicChapter({
   id,
   keyword,
+  image,
+  customUrls,
+  systemImages,
 }: {
   id: string;
   keyword: string;
+  image?: string | null;
+  customUrls?: readonly string[] | null;
+  systemImages?: readonly string[] | null;
 }) {
   const title = keyword.trim() || "Topic";
   return (
     <div data-session-topic-chapter={id} className="w-full min-w-0">
-      <IleWorkDockBar
-        heliosOpen={false}
-        openWorkLabels={[
-          {
-            id,
-            label: "Topic",
-            keyword: title,
-            focused: true,
-          },
-        ]}
+      <SessionTopicCard
+        id={id}
+        title={title}
+        image={image}
+        customUrls={customUrls}
+        systemImages={systemImages}
       />
     </div>
   );
 }
 
+/** One static topic. Extra labels are not drawn, and the card is not a control. */
 export function IleWorkDockBar({
-  heliosOpen,
   openWorkLabels,
-  onFocusOpenWork,
-  aestheticImages = [],
-  compact = false,
 }: {
   t?: SessionViewTranslate;
-  heliosOpen: boolean;
+  heliosOpen?: boolean;
   openWorkLabels: IleWorkDockLabel[];
   onFocusOpenWork?: (id: string) => void;
   aestheticImages?: string[];
   compact?: boolean;
 }) {
-  const surface = useSurfaceAestheticImages(aestheticImages);
-  const dockImages =
-    surface.source === "fallback" ? FALLBACK_AESTHETIC_IMAGES : surface.images;
-
+  const topic = sessionSidebarTopic(openWorkLabels);
   return (
     <div
       data-ile-work-dock-bar
-      className="pointer-events-auto w-full min-w-0 max-w-full border border-white/20 bg-neutral-950/95 p-2"
+      data-ile-chapter-dock-chapters
+      data-ile-open-work-tabs={openWorkLabels.length > 0 ? "" : undefined}
+      className="pointer-events-auto w-full min-w-0 max-w-full gap-1.5 border border-white/20 bg-neutral-950/95 p-2"
     >
-      <div
-        data-ile-chapter-dock-chapters
-        data-ile-open-work-tabs={openWorkLabels.length > 0 ? "" : undefined}
-        className="grid w-full min-w-0 grid-cols-2 gap-1.5"
-      >
-          {openWorkLabels.map((work) => (
-            <IleWorkDockChip
-              key={work.id}
-              work={work}
-              expanded={Boolean(work.focused && heliosOpen)}
-              compact={compact}
-              fill
-              aestheticImages={dockImages}
-              onClick={() => onFocusOpenWork?.(work.id)}
-            />
-          ))}
-      </div>
+      <SessionTopicCard id={topic.id} title={topic.title} image={topic.image} />
     </div>
   );
 }

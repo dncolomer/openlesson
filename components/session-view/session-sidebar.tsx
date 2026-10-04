@@ -2,62 +2,31 @@
 
 import { useState, type ReactNode } from "react";
 import {
-  SESSION_SIDEBAR_FOCUS_REM,
+  SESSION_DATA_CARD_REM,
   sessionSidebarHasSection,
   sessionSidebarRailStyle,
   type SessionSidebarMode,
 } from "@/lib/session-sidebar";
+import { SessionConsoleMarks, SessionConsoleScan } from "@/components/session-view/session-console-marks";
 
 const SECTION_LABEL = {
-  chapters: "Chapters",
-  signals: "Signals",
+  signals: "Data",
 } as const;
 
-function SessionResourcesSection({
-  children,
-  open,
-  onOpenChange,
-}: {
-  children: ReactNode;
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
-}) {
-  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
-  const expanded = open ?? uncontrolledOpen;
-  return (
-    <section data-session-sidebar-section="resources" className="min-w-0 border border-neutral-800 bg-black/40">
-      <button
-        type="button"
-        data-ile-global-resources
-        aria-expanded={expanded}
-        onClick={() => {
-          const next = !expanded;
-          if (open === undefined) setUncontrolledOpen(next);
-          onOpenChange?.(next);
-        }}
-        className="flex w-full items-center justify-between gap-2 px-2 py-1 text-left font-mono text-[11px] font-semibold leading-none text-neutral-200 hover:text-white"
-      >
-        <span>session resources</span>
-        <span aria-hidden="true" className="font-mono text-[10px] text-neutral-500">
-          {expanded ? "−" : "+"}
-        </span>
-      </button>
-      {expanded ? (
-        <div
-          data-session-sidebar-resources
-          className="max-h-36 overflow-y-auto border-t border-neutral-800"
-        >
-          {children}
-        </div>
-      ) : null}
-    </section>
-  );
-}
+const FOCUS_TAB_CLASS =
+  "min-w-0 flex-1 rounded-none px-2 py-1 text-left font-mono font-semibold uppercase tracking-[0.18em]";
+
+const RAIL_GRID = {
+  backgroundImage:
+    "linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)",
+  backgroundSize: "16px 16px",
+} as const;
 
 /**
- * Shared right rail. The major block is a fixed-height focus slot
- * (insights, stashed text, or generated questions). Chapters and signals
- * sit under it on every mode. The column does not collapse.
+ * Shared right rail. The first block is one static topic card.
+ * The focus slot fills whatever height is left under that card and above Data.
+ * Session resources, when present, is the second tab of that slot.
+ * Sections stack flush. The rail itself does not scroll. It does not collapse.
  */
 export function SessionSidebar({
   mode,
@@ -74,7 +43,7 @@ export function SessionSidebar({
 }: {
   mode: SessionSidebarMode;
   clock?: ReactNode;
-  /** Major fixed-height block. Insights, stashed text, or generated questions. */
+  /** Block between the topic card and Data. Insights, stashed text, or generated questions. */
   focus?: ReactNode;
   focusLabel?: string | null;
   chapters?: ReactNode;
@@ -82,81 +51,168 @@ export function SessionSidebar({
   transcript?: ReactNode;
   /** Bottom row. Learn uses it for Exit. Other flows use it for End session. */
   actions?: ReactNode;
-  /** Workspace files for this session. Hidden until the section is opened. */
+  /** Workspace files for this session. The second tab of the focus block. */
   resources?: ReactNode;
   resourcesOpen?: boolean;
   onResourcesOpenChange?: (open: boolean) => void;
 }) {
+  const [uncontrolledResources, setUncontrolledResources] = useState(false);
+  const resourcesOpenNow = resourcesOpen ?? uncontrolledResources;
+  const selectResources = (next: boolean) => {
+    if (resourcesOpen === undefined) setUncontrolledResources(next);
+    onResourcesOpenChange?.(next);
+  };
   const showClock = sessionSidebarHasSection(mode, "clock") && clock != null;
   const showFocus = sessionSidebarHasSection(mode, "focus") && focus != null;
-  const showChapters = sessionSidebarHasSection(mode, "chapters") && chapters != null;
+  const showTopic = sessionSidebarHasSection(mode, "chapters") && chapters != null;
   const showSignals = sessionSidebarHasSection(mode, "signals") && signals != null;
-  const focusHeight = `${SESSION_SIDEBAR_FOCUS_REM}rem`;
+  const showTranscript = sessionSidebarHasSection(mode, "transcript") && transcript != null;
+  const resourcesInFocus = showFocus && resources != null;
+  const dataCardHeight = `${SESSION_DATA_CARD_REM}rem`;
 
   return (
     <aside
       data-session-sidebar
       data-session-sidebar-mode={mode}
-      style={sessionSidebarRailStyle(false)}
-      className="box-border flex h-full min-h-0 flex-col overflow-hidden border-l border-neutral-800 bg-neutral-950"
+      style={{ ...sessionSidebarRailStyle(false), ...RAIL_GRID }}
+      className="relative box-border flex h-full min-h-0 flex-col overflow-hidden border-l border-white/40 bg-black"
     >
-      {resources != null || showClock ? (
-        <div className="flex shrink-0 flex-col gap-1 border-b border-neutral-800 px-1.5 py-1.5">
-          {resources != null ? (
-            <SessionResourcesSection open={resourcesOpen} onOpenChange={onResourcesOpenChange}>
-              {resources}
-            </SessionResourcesSection>
-          ) : null}
+      {showTopic ? (
+        <div
+          data-session-sidebar-section="topic"
+          className="relative shrink-0 has-[[data-session-topic-card-timer]]:[&_[data-session-topic-card-title]]:ml-auto has-[[data-session-topic-card-timer]]:[&_[data-session-topic-card-title]]:max-w-[58%] has-[[data-session-topic-card-timer]]:[&_[data-session-topic-card-title]]:min-w-0 has-[[data-session-topic-card-timer]]:[&_[data-session-topic-card-title]]:text-right"
+        >
+          {chapters}
           {showClock ? (
-            <div data-session-sidebar-clock className="min-w-0 w-full overflow-hidden">
+            <div
+              data-session-sidebar-clock
+              data-session-topic-card-timer
+              className="pointer-events-none absolute bottom-3 left-3 z-20 w-max max-w-[46%] [&_.w-full]:w-auto"
+            >
               {clock}
             </div>
           ) : null}
         </div>
       ) : null}
-      <div className="flex min-h-0 flex-1 flex-col">
-        <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-x-hidden overflow-y-auto px-1.5 py-1.5">
-          {showFocus ? (
-            <section
-              data-session-sidebar-section="focus"
-              data-session-sidebar-focus
-              style={{ height: focusHeight, minHeight: focusHeight, maxHeight: focusHeight }}
-              className="flex shrink-0 flex-col overflow-hidden border border-white/20 bg-black/40"
-            >
-              {focusLabel ? (
-                <p
-                  data-session-sidebar-focus-label
-                  className="shrink-0 border-b border-neutral-800 px-2 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-neutral-400"
-                >
-                  {focusLabel}
-                </p>
-              ) : null}
-              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{focus}</div>
-            </section>
-          ) : null}
-          {showChapters ? (
-            <div data-session-sidebar-section="chapters" className="min-w-0 max-w-full">
-              <p className="mb-1 px-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
-                {SECTION_LABEL.chapters}
-              </p>
-              {chapters}
-            </div>
-          ) : null}
-          {showSignals ? (
-            <div data-session-sidebar-section="signals" className="min-w-0 max-w-full">
-              <p className="mb-1 px-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
-                {SECTION_LABEL.signals}
-              </p>
-              <div
-                data-session-sidebar-signals-frame
-                className="pointer-events-auto w-full min-w-0 max-w-full border border-white/20 bg-neutral-950/95 p-2"
-              >
-                {signals}
-              </div>
+      {resources != null && !resourcesInFocus ? (
+        <div className="shrink-0 border-b border-white/30 bg-black">
+          <button
+            type="button"
+            data-ile-global-resources
+            data-session-sidebar-section="resources"
+            aria-expanded={resourcesOpenNow}
+            onClick={() => selectResources(!resourcesOpenNow)}
+            className="flex w-full items-center justify-between gap-2 rounded-none px-2 py-1 text-left font-mono text-[11px] font-semibold uppercase leading-none tracking-[0.18em] text-white/80 hover:bg-white hover:text-black"
+          >
+            <span>session resources</span>
+          </button>
+          {resourcesOpenNow ? (
+            <div data-session-sidebar-resources className="overflow-y-auto border-t border-white/25">
+              {resources}
             </div>
           ) : null}
         </div>
-        {sessionSidebarHasSection(mode, "transcript") && transcript != null ? (
+      ) : null}
+      {showFocus ? (
+            <section
+              data-session-sidebar-section="focus"
+              data-session-sidebar-focus
+              className="relative flex min-h-0 flex-1 flex-col overflow-hidden border-b border-white/40 bg-black"
+            >
+              <SessionConsoleScan />
+              <SessionConsoleMarks />
+              {resourcesInFocus ? (
+                <div role="tablist" className="relative z-[2] flex shrink-0 border-b border-white/30 bg-black">
+                  <span aria-hidden className="flex items-center pl-3 pr-1 font-mono text-[9px] tracking-[0.28em] text-white/45">
+                    02
+                  </span>
+                  <button
+                    type="button"
+                    role="tab"
+                    data-session-sidebar-focus-label
+                    data-session-sidebar-focus-tab="main"
+                    aria-selected={!resourcesOpenNow}
+                    onClick={() => selectResources(false)}
+                    className={`${FOCUS_TAB_CLASS} text-[10px] ${
+                      resourcesOpenNow ? "text-white/40 hover:text-white" : "bg-white text-black"
+                    }`}
+                  >
+                    {focusLabel}
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    data-ile-global-resources
+                    data-session-sidebar-section="resources"
+                    data-session-sidebar-focus-tab="resources"
+                    aria-expanded={resourcesOpenNow}
+                    aria-selected={resourcesOpenNow}
+                    onClick={() => selectResources(!resourcesOpenNow)}
+                    className={`${FOCUS_TAB_CLASS} text-[11px] ${
+                      resourcesOpenNow ? "bg-white text-black" : "text-white/40 hover:text-white"
+                    }`}
+                  >
+                    session resources
+                  </button>
+                </div>
+              ) : focusLabel ? (
+                <div className="relative z-[2] flex shrink-0 items-center gap-2 border-b border-white/30 bg-black px-2 py-1 pl-3">
+                  <span aria-hidden className="font-mono text-[9px] tracking-[0.28em] text-white/45">
+                    02
+                  </span>
+                  <p
+                    data-session-sidebar-focus-label
+                    className="min-w-0 font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-white"
+                  >
+                    {focusLabel}
+                  </p>
+                  <span aria-hidden className="ml-auto font-mono text-[8px] tracking-[0.35em] text-white/35">
+                    ////
+                  </span>
+                </div>
+              ) : null}
+              {resourcesInFocus && resourcesOpenNow ? (
+                <div data-session-sidebar-resources className="relative z-[2] min-h-0 flex-1 overflow-y-auto">
+                  {resources}
+                </div>
+              ) : (
+                <div className="relative z-[2] flex min-h-0 flex-1 flex-col overflow-hidden">{focus}</div>
+              )}
+            </section>
+      ) : null}
+        {showSignals ? (
+          <div data-session-sidebar-section="signals" className="shrink-0 bg-black">
+            <div className="flex items-center gap-2 border-b border-white/30 px-2 py-1 pl-3">
+              <span aria-hidden className="font-mono text-[9px] tracking-[0.28em] text-white/45">
+                03
+              </span>
+              <p
+                data-session-sidebar-signals-label
+                className="font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-white"
+              >
+                {SECTION_LABEL.signals}
+              </p>
+              <span aria-hidden className="ml-auto font-mono text-[8px] tracking-[0.35em] text-white/35">
+                ////
+              </span>
+            </div>
+            <div
+              data-session-sidebar-signals-frame
+              style={{ height: dataCardHeight, minHeight: dataCardHeight }}
+              className="relative w-full min-w-0 overflow-hidden border border-white/25 bg-black"
+            >
+              {signals}
+              {showTranscript ? (
+                <div
+                  data-session-sidebar-section="transcript"
+                  className="pointer-events-auto absolute inset-x-0 bottom-0 z-20"
+                >
+                  {transcript}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        ) : showTranscript ? (
           <div data-session-sidebar-section="transcript" className="shrink-0">
             {transcript}
           </div>
@@ -164,12 +220,11 @@ export function SessionSidebar({
         {actions != null ? (
           <div
             data-session-sidebar-actions
-            className="shrink-0 border-t border-neutral-800 bg-black px-1.5 py-1.5"
+            className="shrink-0 bg-black px-1.5 py-1.5"
           >
             <div className="flex w-full min-w-0 items-center gap-1">{actions}</div>
           </div>
         ) : null}
-      </div>
     </aside>
   );
 }

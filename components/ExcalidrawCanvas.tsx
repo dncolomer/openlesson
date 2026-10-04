@@ -86,7 +86,7 @@ const Excalidraw = dynamic(
 type ExcalidrawAPIRef = any;
 
 const ILE_CANVAS_COMMAND_BUTTON_CLASS =
-  "pointer-events-auto shrink-0 whitespace-nowrap rounded-none border border-neutral-600 bg-neutral-900 px-2 py-1 font-mono text-[11px] text-white hover:border-white hover:bg-neutral-800";
+  "pointer-events-auto flex h-full min-w-0 items-center justify-center whitespace-normal rounded-none border border-neutral-600 bg-neutral-900 px-1.5 py-1 text-center font-mono text-[11px] leading-tight text-white hover:border-white hover:bg-neutral-800";
 
 const ILE_EXCALIDRAW_UI_OPTIONS = {
   canvasActions: {
@@ -1407,7 +1407,7 @@ export function ExcalidrawCanvas({
                   <div
                     data-ile-learn-more
                     data-ile-learn-more-actions
-                    className="flex flex-wrap gap-1"
+                    className="grid w-full grid-cols-4 gap-1"
                   >
                     {ILE_WORK_CANVAS_COMMANDS.map((command) => (
                       <button

@@ -2,6 +2,8 @@
  * Org custom aesthetics: the uploaded set replaces the public/aesthetics pool,
  * and only an org admin can change that set.
  */
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -13,8 +15,10 @@ import {
   pickWorkspaceCoverFromPool,
   resolveIleWorkAestheticImage,
   selectSurfaceAestheticImages,
+  sessionTopicCardStill,
   ORG_CUSTOM_AESTHETIC_PACKAGE_ID,
 } from "@/lib/aesthetics";
+import { SessionTopicCard } from "@/components/session-view/ile-work-dock-bar";
 import {
   addCustomAestheticUrls,
   authorizeCustomAestheticEdit,
@@ -196,6 +200,58 @@ describe("decideActiveAestheticPool", () => {
     expect(system.source).toBe("fallback");
     expect(system.images).toEqual([...FALLBACK_AESTHETIC_IMAGES]);
     expect(system.images.every((url) => url.startsWith("/aesthetics/"))).toBe(true);
+  });
+
+  it("paints the topic card from the custom set only, or from system stills when that set is empty", () => {
+    const customUrls = ["https://cdn.example/org/a.png", "https://cdn.example/org/b.webp"];
+    const systemImages = ["/aesthetics/lunar/HE2xzURWUAAd6N2.jpeg"];
+    const storedSystem = "/aesthetics/architecture/HHfAOzYWYAAhCDa.jpeg";
+    const customStill = sessionTopicCardStill({
+      id: "chapter-1",
+      assigned: storedSystem,
+      customUrls,
+      systemImages,
+    });
+    expect(customUrls).toContain(customStill);
+    expect(customStill.startsWith("/aesthetics/")).toBe(false);
+    expect(systemImages).not.toContain(customStill);
+
+    const customHtml = renderToStaticMarkup(
+      createElement(SessionTopicCard, {
+        id: "chapter-1",
+        title: "Just war",
+        image: storedSystem,
+        customUrls,
+        systemImages,
+      }),
+    );
+    expect(customHtml).toContain(customStill);
+    expect(customHtml).toContain("Just war");
+    expect(customHtml).not.toContain(storedSystem);
+    expect(customHtml).not.toContain(systemImages[0]);
+    expect(customHtml.match(/data-session-topic-card-image/g)).toHaveLength(1);
+
+    const systemStill = sessionTopicCardStill({
+      id: "chapter-1",
+      assigned: storedSystem,
+      customUrls: [],
+      systemImages,
+    });
+    expect(systemStill).toBe(systemImages[0]);
+    expect(customUrls).not.toContain(systemStill);
+
+    const systemHtml = renderToStaticMarkup(
+      createElement(SessionTopicCard, {
+        id: "chapter-1",
+        title: "Just war",
+        image: storedSystem,
+        customUrls: [],
+        systemImages,
+      }),
+    );
+    expect(systemHtml).toContain(systemStill);
+    expect(systemHtml).not.toContain(customUrls[0]);
+    expect(systemHtml).not.toContain("https://cdn.example/org/");
   });
 });
 

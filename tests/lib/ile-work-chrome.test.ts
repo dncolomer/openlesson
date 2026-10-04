@@ -11,7 +11,16 @@ import {
   ILE_MAP_INSIGHT_PLACEHOLDER_COUNT,
   IleMapInsightsWidget,
 } from "@/components/session-view/ile-insight-trophies";
-import { IleWorkDockBar } from "@/components/session-view/ile-work-dock-bar";
+import { IleWorkDockBar, sessionSidebarTopic } from "@/components/session-view/ile-work-dock-bar";
+import {
+  IleTurnInsightCraft,
+  ileTurnInsightTopic,
+} from "@/components/session-view/ile-turn-insight-craft";
+import {
+  ileBlockSessionFrame,
+  ileBlockSessionOpenWorkIds,
+} from "@/lib/ile-canvas-session";
+import { resolveBlockMapGlyph } from "@/lib/block-map-glyph";
 import type { InsightSummary } from "@/lib/insights";
 import { readSessionViewSurface } from "@/tests/helpers/surface-source";
 import { ILE_END_TURN_LABEL, ILE_SUBMIT_TURN_LABEL } from "@/lib/ile-session-turn-close";
@@ -239,7 +248,10 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     expect(chrome).not.toContain("data-ile-pow-dual-pill");
     expect(chrome).toContain('data-ile-canvas-stage="true"');
     expect(chrome).toContain("data-ile-work-dock");
-    expect(chrome).toContain("IleWorkDockBar");
+    expect(chrome).toContain("SessionTopicCard");
+    expect(chrome).toContain("sessionSidebarTopic");
+    expect(chrome).not.toContain("IleWorkDockBar");
+    expect(chrome).not.toContain("onFocusOpenWork");
     expect(chrome).not.toContain("IleSubmitWorkButton");
     expect(chrome).not.toContain("IleChapterToolTabs");
     expect(chrome).toContain("{workCanvas}");
@@ -265,7 +277,9 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     expect(view).not.toContain("onShowMap={() => setHeliosWidgetOpen(false)}");
     expect(view).not.toContain("onSubmitTurn={() => void handleSubmitTurn()}");
     expect(dockBarRender).toContain("data-ile-chapter-dock-chapters");
-    expect(dockBarRender).toContain("grid-cols-2");
+    expect(dockBarRender).toContain("SessionTopicCard");
+    expect(dockBarRender).not.toContain("grid-cols-2");
+    expect(dockBarRender).not.toContain("onClick");
     expect(dockBarRender).not.toContain("overflow-x-auto");
     expect(dockBarRender).not.toContain("justify-end");
     expect(dockBar).not.toContain("data-ile-end-turn-stem");
@@ -326,11 +340,10 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     expect(voiceBar).not.toContain("IleVoiceActionPad");
     expect(voiceBar).not.toContain("actionPad");
     expect(voiceBar).toContain("data-ile-transcription-region");
-    expect(voiceBar).toContain("data-ile-bar-data");
-    expect(voiceBar).toContain("data-ile-bar-logs");
+    expect(voiceBar).not.toContain("data-ile-bar-data");
+    expect(voiceBar).not.toContain("data-ile-bar-logs");
+    expect(voiceBar).not.toContain(">Logs<");
     expect(voiceBar).toContain("data-ile-bar-save");
-    expect(voiceBar).toMatch(/data-ile-bar-data[\s\S]{0,400}\n\s*Data/);
-    expect(voiceBar).toMatch(/data-ile-bar-logs[\s\S]{0,400}\n\s*Logs/);
     expect(voiceBar).toMatch(/data-ile-bar-save[\s\S]{0,400}\n\s*Exit/);
     expect(voiceBar.indexOf("data-ile-transcription-box")).toBeLessThan(
       voiceBar.indexOf("data-ile-voice-bar-actions"),
@@ -398,8 +411,10 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     expect(craft).toContain("data-ile-end-turn-blocked-reason");
     expect(craft).toContain("data-ile-turn-insight-chapters");
     expect(craft).toContain("data-ile-turn-insight-chapter-list");
-    expect(craft).toContain("dockedChapters.map");
+    expect(craft).toContain("ileTurnInsightTopic");
+    expect(craft).not.toContain("dockedChapters.map");
     expect(craft).toContain("IleWorkDockChip");
+    expect(read("components/SessionView.tsx")).toContain("ileBlockSessionOpenWorkIds");
     expect(craft).toContain("compact");
     expect(craft).not.toContain("bg-amber-300/10");
     expect(craft).not.toContain("text-amber-100");
@@ -527,7 +542,9 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     expect(docs).not.toMatch(/End turn/);
     expect(docs).toMatch(/Gather appetite/);
     expect(docs).toMatch(/work canvas/i);
-    expect(docs).toMatch(/Data, Logs, and Save/);
+    expect(docs).toMatch(/transcript bar with Exit/);
+    expect(docs).not.toMatch(/Data and Exit/);
+    expect(docs).not.toMatch(/Data, Logs, and Save/);
 
     const sessionList = read("components/SessionList.tsx");
     expect(sessionList).toContain(
@@ -593,7 +610,7 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
         "stage is the work canvas",
         "no top resource bar",
         "no End turn control",
-        "right sidebar stacks transcript, Data, Logs, Save, and the clock",
+        "right sidebar stacks transcript, the Data panel, and Exit",
         "insights, chapters, and sensors collapse inside the sidebar",
         "settings set chapter count and the session insight goal",
       ].join("\n"),
@@ -601,8 +618,92 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
   });
 });
 
+describe("one current chapter", () => {
+  it("uses the plan frame for the card and the seeded prompt", () => {
+    const steps = [
+      { id: "ch-1", description: "Prompt one", map_keyword: "One" },
+      { id: "ch-2", description: "Prompt two", map_keyword: "Two" },
+      { id: "ch-3", description: "Prompt three", map_keyword: "Three" },
+    ];
+    const frame = ileBlockSessionFrame({ steps, currentStepIndex: 2 });
+    expect(frame).toEqual({ index: 2, id: "ch-3", prompt: "Prompt three" });
+    expect(ileBlockSessionFrame(null)).toBeNull();
+    const openIds = frame ? [frame.id] : [];
+    expect(openIds).toEqual(["ch-3"]);
+    const step = steps[frame?.index ?? 0]!;
+    const card = sessionSidebarTopic([
+      {
+        id: openIds[0],
+        label: `Ch ${(frame?.index ?? 0) + 1}`,
+        keyword: resolveBlockMapGlyph({
+          map_keyword: step.map_keyword,
+          title: step.description,
+        }).keyword,
+        focused: openIds[0] === step.id,
+      },
+    ]);
+    expect(card.id).toBe("ch-3");
+    expect(card.title).toBe("Three");
+    expect(frame?.prompt).toBe(step.description);
+    expect(card.id).not.toBe(steps[0]?.id);
+    const view = readFileSync(join(ROOT, "components/SessionView.tsx"), "utf8");
+    const hook = readFileSync(join(ROOT, "lib/useSessionChapterWorkspaces.ts"), "utf8");
+    expect(view).toContain("ileBlockSessionFrame(sessionPlan)");
+    expect(view).toContain("if (!heliosWidgetOpen || !blockFrame) return");
+    expect(view).toContain("seedChapterWorkCanvas(blockFrame.id, text)");
+    expect(view).not.toContain("ileBlockSessionChapter(sessionPlan?.steps, activeChapterIndex)");
+    expect(hook).toContain("const frame = ileBlockSessionFrame(sessionPlan)");
+    expect(hook).toContain("const activeChapterKey = frame?.id ?? null");
+    expect(hook).not.toContain("setActiveChapterIndex(");
+    expect(hook).not.toContain("`step-${activeChapterIndex}`");
+    expect(hook).not.toContain("planInitializedRef");
+  });
+});
+
+describe("end turn topic chip", () => {
+  it("draws one dock chip for the session chapter when several labels are passed", () => {
+    const steps = [
+      { id: "initial-prompt" },
+      { id: "chapter-2" },
+      { id: "chapter-3" },
+      { id: "chapter-4" },
+      { id: "chapter-5" },
+    ];
+    expect(ileBlockSessionOpenWorkIds(steps)).toEqual(["initial-prompt"]);
+    const labels = steps.map((step, index) => ({
+      id: step.id,
+      label: `Ch ${index + 1}`,
+      keyword: index === 0 ? "Initial prompt" : `Later ${index}`,
+      focused: index === 2,
+    }));
+    expect(ileTurnInsightTopic(labels)?.id).toBe("chapter-3");
+    const html = renderToStaticMarkup(
+      createElement(IleTurnInsightCraft, {
+        open: true,
+        dockedChapters: labels,
+        gate: {
+          canComplete: false,
+          reason: "Each chapter needs an insight.",
+          minPerChapter: 1,
+          unmetChapterIds: labels.map((row) => row.id),
+          chaptersToComplete: [],
+        },
+        onContinue: () => {},
+        onSaveAndExit: () => {},
+        onBack: () => {},
+      }),
+    );
+    expect(html.match(/data-ile-open-work-chip=/g)).toHaveLength(1);
+    expect(html).toContain('data-ile-open-work-chip="chapter-3"');
+    expect(html).not.toContain('data-ile-open-work-chip="initial-prompt"');
+    expect(html).not.toContain('data-ile-open-work-chip="chapter-2"');
+    expect(html).not.toContain('data-ile-open-work-chip="chapter-5"');
+    expect(html.match(/data-ile-turn-insight-chapter=/g)).toHaveLength(1);
+  });
+});
+
 describe("IleWorkDockBar chapter grid", () => {
-  it("places chapter chips in a two-column grid", () => {
+  it("draws one static topic when several chapter labels are passed", () => {
     const html = renderToStaticMarkup(
       createElement(IleWorkDockBar, {
         heliosOpen: true,
@@ -615,14 +716,16 @@ describe("IleWorkDockBar chapter grid", () => {
         ],
       }),
     );
-    const gridAt = html.indexOf("data-ile-chapter-dock-chapters");
-    expect(gridAt).toBeGreaterThan(-1);
-    const grid = html.slice(gridAt, gridAt + 220);
-    expect(grid).toContain("grid");
-    expect(grid).toContain("grid-cols-2");
+    expect(html).toContain("data-ile-chapter-dock-chapters");
+    expect(html).not.toContain("grid-cols-2");
+    expect(html.match(/<button/g)).toHaveLength(1);
+    expect(html).toContain('data-session-topic-card-media="image"');
     expect(html).not.toContain("overflow-x-auto");
     expect(html).not.toContain("w-[7rem]");
-    expect(html.match(/data-ile-open-work-chip=/g)).toHaveLength(3);
+    expect(html.match(/data-session-topic-card=/g)).toHaveLength(1);
+    expect(html).toContain('data-session-topic-card="ch-a"');
+    expect(html).toContain("alpha");
+    expect(html).not.toContain('data-session-topic-card="ch-b"');
     expect(html).toContain("w-full min-w-0");
   });
 });

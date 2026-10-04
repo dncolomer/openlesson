@@ -110,7 +110,7 @@ describe("TAP Learning map-first session chrome (shipped surface)", () => {
     expect(view).toContain("onCloseSessionModal");
     expect(view).toContain("isIleSessionModalTool");
     expect(chrome).toContain("max-h-[min(88vh,44rem)]");
-    expect(chrome).toContain('modalTool === "logs" ? "h-[min(88vh,44rem)]"');
+    expect(chrome).not.toContain('modalTool === "logs"');
     expect(view).toContain("<SessionOnboardingGuide");
     expect(helios).not.toContain("SessionOnboardingGuide");
     expect(helios).not.toContain("data-ile-intro-widget");
@@ -119,7 +119,8 @@ describe("TAP Learning map-first session chrome (shipped surface)", () => {
     expect(helpChrome).toContain("setShowWelcomePanel(true)");
     expect(view).not.toContain("onChapterClick");
     expect(view).not.toContain("onWorkChapter");
-    expect(view).toContain("onFocusOpenWork={handleFocusOpenWork}");
+    expect(view).not.toContain("onFocusOpenWork={handleFocusOpenWork}");
+    expect(view).toContain("aestheticPackageId={selectedAesthetic?.id}");
     expect(view).not.toContain("onChapterDoubleClick");
     expect(view).toContain("<IleVoiceBar");
     expect(chrome).toContain("data-ile-work-dock");
@@ -129,7 +130,9 @@ describe("TAP Learning map-first session chrome (shipped surface)", () => {
     expect(chrome).not.toContain("ileChapterOverlayWidthClass");
     expect(ILE_CHAPTER_DOCK_PANEL_HEIGHT_CLASS).toContain("flex-1");
     expect(ILE_CHAPTER_DOCK_PANEL_HEIGHT_CLASS).not.toContain("52vh");
-    expect(chrome).toContain("<IleWorkDockBar");
+    expect(chrome).toContain("<SessionTopicCard");
+    expect(chrome).not.toContain("<IleWorkDockBar");
+    expect(chrome).not.toContain("onFocusOpenWork");
     expect(chrome).not.toContain("onSubmitTurn=");
     expect(chrome).not.toContain("onShowMap=");
     expect(ileMapWorkFrameClass()).toContain("z-40");
@@ -283,25 +286,32 @@ describe("TAP Learning map-first session chrome (shipped surface)", () => {
     expect(tools).toContain("WebcamMiniPreview");
     expect(tools).toContain("data-ile-webcam-preview");
     expect(tools).toContain("grayscale");
-    expect(chrome).toContain("WebcamMiniPreview");
-    expect(chrome).toContain("onTurnOff={onTurnOffWebcam}");
-    expect(chrome).toContain("onTurnOff={onStopScreenCapture}");
+    expect(chrome).toContain("<SessionDataCard");
+    expect(chrome).toContain("onDisableVideo={onTurnOffWebcam}");
+    expect(chrome).toContain("onDisableScreen={onStopScreenCapture}");
+    expect(chrome).toContain("onEnableVideo={() => onEnableWebcam?.()}");
+    expect(chrome).toContain("onEnableScreen={() => {");
+    expect(chrome).toContain("onEnableMuse={() => {");
+    expect(chrome).not.toContain("WebcamMiniPreview");
+    expect(chrome).not.toContain("<AudioMiniPreview");
+    expect(chrome).not.toContain("<ScreenShareMiniPreview");
+    expect(chrome).not.toContain("<EegMiniPreview");
     expect(tools).toContain('data-ile-sensor-off={testId}');
     expect(tools).toContain("Turn off");
     expect(tools).toContain("aspect-video w-full object-cover");
     expect(tools).not.toContain("h-14 w-full object-cover");
-    expect(chrome).toContain("data-ile-sensor-pair");
-    expect(chrome).toContain("grid-cols-2");
+    expect(chrome).toContain("captureVideo");
+    expect(chrome).not.toContain("data-ile-sensor-pair");
+    expect(chrome).not.toContain("grid-cols-2");
     expect(tools).toContain("AudioMiniPreview");
     expect(tools).toContain("data-ile-audio-preview");
     expect(tools).toContain("data-ile-audio-mute");
-    expect(chrome).toContain("<AudioMiniPreview");
     expect(chrome).not.toContain("onTurnOff={onToggleAudioMute}");
     expect(tools).toContain("EegMiniPreview");
     expect(tools).toContain("data-ile-eeg-preview");
     expect(tools).toContain("ScreenShareMiniPreview");
     expect(tools).toContain("data-ile-screenshare-preview");
-    expect(chrome).toContain("museStatus === \"streaming\" ? (");
+    expect(chrome).toContain('museStatus === "streaming"');
     expect(chrome).toContain("museChannelData={museChannelData}");
     expect(chrome).toContain("bandPowers={bandPowers}");
     expect(tools).toContain("data-ile-eeg-quality");
@@ -312,30 +322,30 @@ describe("TAP Learning map-first session chrome (shipped surface)", () => {
     );
     expect(eegPreview).not.toContain("<canvas");
     expect(eegPreview).toContain("data-ile-eeg-band");
-    expect(chrome).toContain("isScreenCapturing ? (");
-    expect(chrome).toContain("<ScreenShareMiniPreview stream={screenShareStream}");
+    expect(chrome).toContain("screenEnabled={isScreenCapturing}");
+    expect(chrome).toContain("screenStream={screenShareStream}");
     expect(tools).toContain("aspect-video");
     expect(tools).toContain("overflow-hidden");
     expect(tools).not.toContain("overflow-y-auto");
     expect(tools).not.toContain("w-[168px]");
     expect(tools).not.toContain("data-ile-tools-grid");
     expect(voice).not.toContain("VoiceBarUtilityRow");
-    expect(voice).toContain("data-ile-bar-data");
-    expect(voice).toContain("data-ile-bar-logs");
+    expect(voice).not.toContain("data-ile-bar-data");
+    expect(voice).not.toContain("data-ile-bar-logs");
+    expect(voice).not.toContain(">Logs<");
     expect(voice).toContain("data-ile-bar-save");
-    expect(voice).toMatch(/data-ile-bar-data[\s\S]{0,400}\n\s*Data/);
-    expect(voice).toMatch(/data-ile-bar-logs[\s\S]{0,400}\n\s*Logs/);
     expect(voice).toMatch(/data-ile-bar-save[\s\S]{0,400}\n\s*Exit/);
     expect(voice.indexOf("data-ile-transcription-box")).toBeLessThan(
       voice.indexOf("data-ile-voice-bar-actions"),
     );
     expect(voice.indexOf("data-ile-voice-bar-actions")).toBeLessThan(
-      voice.indexOf("data-ile-bar-data"),
+      voice.indexOf("data-ile-bar-save"),
     );
     expect(voice).not.toContain("IleVoiceActionPad");
     expect(voice).not.toContain("data-ile-voice-chapter-brief");
     expect(tools).toContain("data-ile-voice-utility");
-    expect(tools).toContain('const utilityTools: Tool[] = ["data-input", "logs"]');
+    expect(tools).toContain('const utilityTools: Tool[] = ["data-input"]');
+    expect(tools).not.toContain('["data-input", "logs"]');
     expect(tools).not.toContain('["help", "data-input", "logs"]');
     expect(tools).toContain("flex-col");
     expect(tools).not.toContain("grid-cols-4");

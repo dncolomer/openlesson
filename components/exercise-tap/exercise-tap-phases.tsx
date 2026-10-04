@@ -336,6 +336,7 @@ export function ExerciseTapPhases(props: {
                   remainingSeconds={remainingSeconds}
                   waiting={isSending}
                   listening={isListening}
+                  placement="card"
                 />
                 {isPracticeMode ? (
                   <div className="flex shrink-0 items-center gap-2">

@@ -10,6 +10,14 @@ import {
 } from "@/components/session-view/ile-work-dock-bar";
 import { IleInsightTrophyIcon } from "@/components/session-view/ile-insight-trophies";
 
+/** The session's one chapter. Extra dock labels are not drawn. */
+export function ileTurnInsightTopic(
+  chapters: readonly IleWorkDockLabel[] | null | undefined,
+): IleWorkDockLabel | null {
+  const rows = chapters ?? [];
+  return rows.find((work) => work.focused) ?? rows[0] ?? null;
+}
+
 /**
  * End-turn screen inside the chapter board. Quota check only. Insights are
  * crafted on the Work canvas — this screen never hosts a craft form.
@@ -33,6 +41,8 @@ export function IleTurnInsightCraft({
 
   const blocked = !gate.canComplete;
   const unmet = new Set(gate.unmetChapterIds);
+  const topic = ileTurnInsightTopic(dockedChapters);
+  const missing = topic ? unmet.has(topic.id) : false;
 
   return (
     <div
@@ -82,30 +92,24 @@ export function IleTurnInsightCraft({
             <p className="mb-2 font-mono text-[10px] uppercase tracking-wider text-white/55">
               Active chapters
             </p>
-            {dockedChapters.length > 0 ? (
+            {topic ? (
               <ul
                 data-ile-turn-insight-chapter-list
                 className="flex flex-wrap gap-2"
               >
-                {dockedChapters.map((work) => {
-                  const missing = unmet.has(work.id);
-                  return (
-                    <li
-                      key={work.id}
-                      data-ile-turn-insight-chapter={work.id}
-                      data-ile-end-turn-chapter-unmet={missing ? "true" : undefined}
-                    >
-                      <IleWorkDockChip
-                        work={{
-                          ...work,
-                          status: missing ? "attention" : work.status ?? "idle",
-                        }}
-                        compact
-                        caption={missing ? "Needs insight" : "Quota met"}
-                      />
-                    </li>
-                  );
-                })}
+                <li
+                  data-ile-turn-insight-chapter={topic.id}
+                  data-ile-end-turn-chapter-unmet={missing ? "true" : undefined}
+                >
+                  <IleWorkDockChip
+                    work={{
+                      ...topic,
+                      status: missing ? "attention" : topic.status ?? "idle",
+                    }}
+                    compact
+                    caption={missing ? "Needs insight" : "Quota met"}
+                  />
+                </li>
               </ul>
             ) : (
               <p

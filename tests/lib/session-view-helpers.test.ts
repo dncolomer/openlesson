@@ -48,22 +48,17 @@ describe("sessionViewHelpers", () => {
     expect(overflow).toHaveLength(150);
   });
 
-  it("logs pane scrolls and every append path uses the 100-entry cap", () => {
+  it("keeps the in-memory log cap and does not mount a logs pane", () => {
     const panes = read("components/session-view/session-tool-panes.tsx");
     const runtime = read("components/session-view/use-session-runtime.ts");
-    const tool = read("components/LogsTool.tsx");
     const chrome = read("components/session-view/session-chrome.tsx");
+    const voice = read("components/session-view/ile-voice-bar.tsx");
 
-    expect(panes).toContain("data-ile-logs-pane");
-    expect(panes).toContain("flex h-0 min-h-0 flex-1 flex-col overflow-hidden");
+    expect(panes).not.toContain("data-ile-logs-pane");
+    expect(panes).not.toContain("LogsTool");
     expect(runtime).toContain("capSessionLogs");
     expect(runtime).not.toContain("slice(-400)");
-    expect(tool).toContain("data-ile-logs-scroll");
-    expect(tool).toContain("h-0 min-h-0 flex-1 overflow-y-auto");
-    expect(tool).toContain("SESSION_LOG_MAX_ENTRIES");
-    expect(tool).toContain("capSessionLogs");
-    expect(tool).not.toContain("slice(-200)");
-    expect(chrome).toContain('modalTool === "logs" ? "h-[min(88vh,44rem)]"');
-    expect(chrome).toContain("flex h-full min-h-0 flex-col overflow-hidden");
+    expect(chrome).not.toContain('modalTool === "logs"');
+    expect(voice).not.toContain("data-ile-bar-logs");
   });
 });

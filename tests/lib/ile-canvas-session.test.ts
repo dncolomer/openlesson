@@ -16,6 +16,9 @@ import {
   capIleSessionChapters,
   clampIleSessionChapterCount,
   clampIleSessionInsightGoal,
+  ileBlockSessionChapter,
+  ileBlockSessionFrame,
+  ileBlockSessionOpenWorkIds,
   ileChaptersMarkedDoneForInsightGoal,
   ileInsightGoalBlocksWork,
 } from "@/lib/ile-canvas-session";
@@ -56,6 +59,37 @@ describe("TAP Learning canvas session chapter count and insight goal", () => {
     expect(capped).toEqual(["chapter-1", "chapter-2", "chapter-3"]);
     expect(capIleSessionChapters(longer, 22)).toHaveLength(5);
     expect(capIleSessionChapters(longer, 6)).toHaveLength(5);
+    expect(
+      ileBlockSessionOpenWorkIds([
+        { id: "initial-prompt" },
+        { id: "chapter-2" },
+        { id: "chapter-3" },
+        { id: "chapter-4" },
+        { id: "chapter-5" },
+      ]),
+    ).toEqual(["initial-prompt"]);
+    expect(ileBlockSessionOpenWorkIds([{ id: "  " }, { id: "kept" }])).toEqual(["kept"]);
+    expect(ileBlockSessionOpenWorkIds([])).toEqual([]);
+    const resumed = [
+      { id: "ch-1", description: "Prompt one" },
+      { id: "ch-2", description: "Prompt two" },
+      { id: "ch-3", description: "Prompt three" },
+    ];
+    expect(ileBlockSessionFrame(null)).toBeNull();
+    expect(ileBlockSessionFrame({ steps: [], currentStepIndex: 2 })).toBeNull();
+    expect(
+      ileBlockSessionFrame({
+        steps: [{ id: "step-0", description: "placeholder" }],
+        currentStepIndex: 0,
+      }),
+    ).toBeNull();
+    expect(ileBlockSessionFrame({ steps: resumed, currentStepIndex: 2 })).toEqual({
+      index: 2,
+      id: "ch-3",
+      prompt: "Prompt three",
+    });
+    expect(ileBlockSessionChapter(resumed, 2)?.id).toBe("ch-3");
+    expect(ileBlockSessionOpenWorkIds(resumed, 2)).toEqual(["ch-3"]);
 
     const goals = ILE_PREGAME_DIFFICULTY_PRESETS.map((preset) => {
       const difficulty = applyIlePregameDifficultyPreset(preset.id);

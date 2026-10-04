@@ -10,10 +10,17 @@ import {
 } from "@/components/session-view/ile-insight-trophies";
 import type { InsightSummary } from "@/lib/insights";
 import { SessionSidebar } from "@/components/session-view/session-sidebar";
+import { SessionDataCard } from "@/components/session-view/session-data-card";
 import {
+  SessionTopicCard,
+  sessionSidebarTopic,
+} from "@/components/session-view/ile-work-dock-bar";
+import {
+  SESSION_DATA_CARD_REM,
   SESSION_SIDEBAR_COLLAPSED_REM,
   SESSION_SIDEBAR_EXPANDED_REM,
-  SESSION_SIDEBAR_FOCUS_REM,
+  SESSION_TOPIC_CARD_REM,
+  SESSION_TOPIC_DOCK_CHIP_REM,
   ileSidebarSignalCount,
   sessionSidebarHasSection,
   sessionSidebarRailStyle,
@@ -40,8 +47,6 @@ const ILE_SECTIONS: SessionSidebarSection[] = [
   "chapters",
   "signals",
   "transcript",
-  "data",
-  "logs",
   "save",
 ];
 
@@ -51,7 +56,6 @@ const TAP_SECTIONS: SessionSidebarSection[] = [
   "signals",
   "transcript",
   "clock",
-  "logs",
   "save",
 ];
 
@@ -61,11 +65,7 @@ function voiceBar() {
 
 function voiceActions(mode: SessionSidebarMode) {
   return createElement(IleVoiceBarActions, {
-    activeTool: "chapters",
-    onToolChange: () => {},
     onBackToDashboard: () => {},
-    showData: sessionSidebarHasSection(mode, "data"),
-    showLogs: sessionSidebarHasSection(mode, "logs"),
     showSave: sessionSidebarHasSection(mode, "save"),
   });
 }
@@ -76,6 +76,18 @@ const insightRow: InsightSummary = {
   summary: "Fits the column",
   created_at: "2026-01-01T00:00:00.000Z",
 };
+
+const TOPIC_TITLE = "Just war";
+const TOPIC_STILL = "/aesthetics/lunar/HE2xzURWUAAd6N2.jpeg";
+
+function topicCard() {
+  return createElement(SessionTopicCard, {
+    id: "chapter-1",
+    title: TOPIC_TITLE,
+    systemImages: [TOPIC_STILL],
+    customUrls: [],
+  });
+}
 
 function renderSidebar(mode: SessionSidebarMode, remainingSeconds: number) {
   return renderToStaticMarkup(
@@ -91,7 +103,7 @@ function renderSidebar(mode: SessionSidebarMode, remainingSeconds: number) {
               slotCount: 1,
             })
           : createElement("div", { "data-slot": "stash" }, "Stash body"),
-      chapters: createElement("div", { "data-slot": "chapters" }, "Chapters body"),
+      chapters: topicCard(),
       signals: createElement("div", { "data-slot": "signals" }, "Signals body"),
       transcript: voiceBar(),
       actions: voiceActions(mode),
@@ -110,19 +122,18 @@ describe("session sidebar mode configuration", () => {
       expect(sections).toContain("focus");
       expect(sections).toContain("chapters");
       expect(sections).toContain("signals");
-      expect(sections).not.toContain("data");
+      expect(sections.join(",")).not.toContain("data");
       expect(sections).toContain("transcript");
       expect(sections).toContain("clock");
-      expect(sessionSidebarHasSection(mode, "data")).toBe(false);
       expect(sessionSidebarHasSection(mode, "signals")).toBe(true);
-      expect(sessionSidebarHasSection(mode, "logs")).toBe(true);
+      expect(sections).not.toContain("logs");
       expect(sessionSidebarHasSection(mode, "save")).toBe(true);
     }
 
     expect(sessionSidebarHasSection("ile", "focus")).toBe(true);
     expect(sessionSidebarHasSection("ile", "chapters")).toBe(true);
     expect(sessionSidebarHasSection("ile", "signals")).toBe(true);
-    expect(sessionSidebarHasSection("ile", "data")).toBe(true);
+    expect(sessionSidebarSections("ile").join(",")).not.toContain("data");
     expect(sessionSidebarHasSection("ile", "clock")).toBe(false);
   });
 
@@ -150,20 +161,63 @@ describe("session sidebar mode configuration", () => {
     const html = renderSidebar("ile", 65);
     expect(html).toContain('data-session-sidebar-mode="ile"');
     expect(html).toContain(`width:${SESSION_SIDEBAR_EXPANDED_REM}rem`);
-    expect(html).toContain(`height:${SESSION_SIDEBAR_FOCUS_REM}rem`);
+    expect(html).toContain("min-h-0 flex-1 flex-col overflow-hidden");
     expect(html).not.toContain("data-session-sidebar-toggle");
     expect(html).not.toContain("Collapse sidebar");
     expect(html).toContain('data-session-sidebar-section="focus"');
     expect(html).toContain('data-session-sidebar-focus-label');
     expect(html).toContain(">Insights<");
-    expect(html).toContain('data-session-sidebar-section="chapters"');
+    expect(html).toContain('data-session-sidebar-section="topic"');
+    expect(html).not.toContain('data-session-sidebar-section="chapters"');
+    expect(html).not.toContain(">Chapters<");
     expect(html).toContain('data-session-sidebar-section="signals"');
     expect(html).toContain('data-session-sidebar-section="transcript"');
+    const topicAt = html.indexOf('data-session-sidebar-section="topic"');
     const focusAt = html.indexOf('data-session-sidebar-section="focus"');
-    const chaptersAt = html.indexOf('data-session-sidebar-section="chapters"');
     const signalsAt = html.indexOf('data-session-sidebar-section="signals"');
-    expect(focusAt).toBeLessThan(chaptersAt);
-    expect(chaptersAt).toBeLessThan(signalsAt);
+    expect(topicAt).toBe(html.indexOf("data-session-sidebar-section"));
+    expect(topicAt).toBeLessThan(focusAt);
+    expect(focusAt).toBeLessThan(signalsAt);
+    const card = html.slice(topicAt, focusAt);
+    expect(card).toContain('data-session-topic-card="chapter-1"');
+    expect(card).toContain("data-session-topic-card-image");
+    expect(card).toContain(TOPIC_STILL);
+    expect(card).toContain(TOPIC_TITLE);
+    expect(card.match(/data-session-topic-card=/g)).toHaveLength(1);
+    expect(card.match(/data-session-topic-card-image/g)).toHaveLength(1);
+    expect(card).toContain('data-session-topic-card-media="image"');
+    expect(card).toContain('data-session-topic-card-video=""');
+    expect(card).toContain("/aesthetics/session-topic-loop.mp4");
+    expect(card).toContain(">Loop<");
+    expect(card.match(/<button/g)).toHaveLength(1);
+    expect(card).not.toContain("onClick");
+    expect(card).not.toContain("tabindex");
+    expect(card).not.toContain("href=");
+    expect(card).not.toContain("grid-cols-2");
+    expect(card).not.toContain("data-ile-chapter-dock-chapters");
+    expect(card).not.toContain("data-ile-open-work-chip");
+    expect(card).not.toContain("onFocusOpenWork");
+    expect(SESSION_TOPIC_CARD_REM).toBeGreaterThan(SESSION_TOPIC_DOCK_CHIP_REM);
+    expect(card).toContain(`height:${SESSION_TOPIC_CARD_REM}rem`);
+    expect(card).toContain(">01<");
+    const stillTag = card.slice(
+      card.indexOf("data-session-topic-card-image"),
+      card.indexOf("data-session-topic-card-video"),
+    );
+    expect(stillTag).not.toContain("grayscale");
+    expect(html.slice(focusAt, signalsAt)).toContain(">02<");
+    expect(html.slice(signalsAt, html.indexOf("data-session-sidebar-signals-frame"))).toContain(">03<");
+    const sidebarSource = readFileSync(join(ROOT, "components/session-view/session-sidebar.tsx"), "utf8");
+    expect(sidebarSource).toContain(
+      'className="relative box-border flex h-full min-h-0 flex-col overflow-hidden border-l border-white/40 bg-black"',
+    );
+    expect(sidebarSource).not.toContain("overflow-y-auto border-l");
+    expect(sidebarSource).not.toContain("SESSION_SIDEBAR_FOCUS_REM");
+    const asideClass = html.slice(html.indexOf('class="'), html.indexOf(">", html.indexOf('class="')));
+    expect(asideClass).toContain("overflow-hidden");
+    expect(asideClass).not.toContain("overflow-y-auto");
+    expect(sidebarSource).not.toMatch(/text-(red|green|amber|emerald|yellow|blue|orange|rose|lime)-/);
+    expect(sidebarSource).not.toMatch(/bg-(red|green|amber|emerald|yellow|blue|orange)-/);
     const widgetAt = html.indexOf("data-ile-map-insights-widget");
     expect(widgetAt).toBeGreaterThan(focusAt);
     expect(html.slice(widgetAt, html.indexOf("data-ile-map-insights-slots"))).toContain(
@@ -172,12 +226,21 @@ describe("session sidebar mode configuration", () => {
     expect(html).not.toContain("w-[min(20rem,calc(100vw-2rem))]");
     expect(html).toContain("data-ile-map-insights-count");
     expect(html).toContain("Rail insight");
-    expect(html).toContain("Chapters body");
+    expect(html).toContain(TOPIC_TITLE);
     expect(html).toContain("data-session-sidebar-signals-frame");
-    expect(html).toContain("border border-white/20 bg-neutral-950/95 p-2");
+    expect(html).toContain("data-session-sidebar-signals-label");
+    expect(html).toContain(">Data<");
+    expect(html).not.toContain(">Signals<");
     const signalsFrameAt = html.indexOf("data-session-sidebar-signals-frame");
     expect(signalsFrameAt).toBeGreaterThan(signalsAt);
+    const signalsFrame = html.slice(signalsFrameAt, html.indexOf("data-session-sidebar-actions"));
+    expect(SESSION_TOPIC_CARD_REM).toBeGreaterThan(SESSION_DATA_CARD_REM);
+    expect(signalsFrame).toContain(`height:${SESSION_DATA_CARD_REM}rem`);
+    expect(signalsFrame).not.toContain(`height:${SESSION_TOPIC_CARD_REM}rem`);
+    expect(signalsFrame).toContain("border border-white/25 bg-black");
+    expect(signalsFrame).not.toContain("p-2");
     expect(html.indexOf("Signals body")).toBeGreaterThan(signalsFrameAt);
+    expect(html.indexOf('data-session-sidebar-section="transcript"')).toBeGreaterThan(signalsFrameAt);
     expect(html).toContain("live speech line");
     const transcriptAt = html.indexOf("data-ile-transcription-box");
     const actionsRowAt = html.indexOf("data-session-sidebar-actions");
@@ -185,13 +248,13 @@ describe("session sidebar mode configuration", () => {
     expect(transcriptAt).toBeGreaterThan(-1);
     expect(actionsRowAt).toBeGreaterThan(transcriptAt);
     expect(actionsAt).toBeGreaterThan(actionsRowAt);
-    expect(html.indexOf("data-ile-bar-data")).toBeGreaterThan(actionsAt);
-    expect(html.slice(transcriptAt, actionsAt)).not.toContain("data-ile-bar-data");
-    expect(html).toContain("data-ile-bar-data");
-    expect(html).toContain("data-ile-bar-logs");
+    expect(html.indexOf("data-ile-bar-save")).toBeGreaterThan(actionsAt);
+    expect(html.slice(transcriptAt, actionsAt)).not.toContain("data-ile-bar-save");
+    expect(html).not.toContain("data-ile-bar-data");
+    expect(html).not.toContain("data-ile-bar-logs");
     expect(html).toContain("data-ile-bar-save");
     expect(html).toContain(">Data<");
-    expect(html).toContain(">Logs<");
+    expect(html).not.toContain(">Logs<");
     expect(html).toContain(">Exit<");
     expect(html).not.toContain("data-ile-work-canvas-timer");
     expect(html).not.toContain("data-session-sidebar-clock");
@@ -216,20 +279,26 @@ describe("session sidebar mode configuration", () => {
     expect(html).toContain("data-session-sidebar-actions");
     expect(html).toContain("data-ile-bar-save");
     expect(html).toContain(">Exit<");
-    expect(html).toContain(">Chapters<");
-    expect(html).toContain(">Signals<");
+    expect(html).toContain(TOPIC_TITLE);
+    expect(html).not.toContain(">Chapters<");
+    expect(html).toContain('data-session-sidebar-signals-label');
+    expect(html).toContain(">Data<");
+    expect(html).not.toContain(">Signals<");
     expect(html).not.toContain("display:none");
     expect(html).not.toContain("translate");
     expect(html).not.toContain("data-ile-global-resources");
   });
 
-  it("shows session resources as a small section, collapsed until opened", () => {
+  it("shows session resources as the second tab of the focus block", () => {
     const resources = createElement("div", null, "Resource body");
+    const focus = createElement("div", null, "Insight body");
     const collapsed = renderToStaticMarkup(
       createElement(SessionSidebar, {
         mode: "ile",
         resources,
-        chapters: createElement("div", null, "Chapters body"),
+        focus,
+        focusLabel: "Insights",
+        chapters: topicCard(),
         transcript: voiceBar(),
         actions: voiceActions("ile"),
       }),
@@ -244,38 +313,47 @@ describe("session sidebar mode configuration", () => {
     expect(sidebarSource).not.toContain("py-2.5");
     expect(collapsed).toContain("data-ile-global-resources");
     expect(collapsed).toContain('data-session-sidebar-section="resources"');
+    expect(collapsed).toContain('data-session-sidebar-focus-tab="resources"');
+    expect(collapsed).toContain('data-session-sidebar-focus-tab="main"');
     expect(collapsed).toContain(">session resources<");
+    expect(collapsed).toContain(">Insights<");
+    expect(collapsed).toContain("Insight body");
     expect(collapsed).toContain('aria-expanded="false"');
     expect(collapsed).toContain("text-[11px]");
     expect(collapsed).not.toContain("Resource body");
-    const resourcesButton = collapsed.slice(
-      collapsed.indexOf("data-ile-global-resources"),
-      collapsed.indexOf("</button>"),
-    );
+    const resourcesAt = collapsed.indexOf("data-ile-global-resources");
+    const resourcesButton = collapsed.slice(resourcesAt, collapsed.indexOf("</button>", resourcesAt));
     expect(resourcesButton).toContain('aria-expanded="false"');
     expect(resourcesButton).not.toContain("aria-pressed");
     expect(resourcesButton).not.toContain("text-sm");
     expect(resourcesButton).not.toContain("py-2.5");
     expect(collapsed).not.toContain("data-ile-tool-overlay");
     expect(collapsed).not.toContain("data-session-sidebar-toggle");
-    expect(collapsed).toContain("data-ile-bar-data");
+    expect(collapsed).not.toContain("data-ile-bar-data");
     expect(collapsed).not.toContain("data-session-sidebar-count");
-    expect(collapsed.indexOf('data-session-sidebar-section="resources"')).toBeLessThan(
-      collapsed.indexOf('data-session-sidebar-section="chapters"'),
+    expect(collapsed.indexOf('data-session-sidebar-section="topic"')).toBeLessThan(
+      collapsed.indexOf('data-session-sidebar-section="resources"'),
+    );
+    expect(collapsed.indexOf('data-session-sidebar-section="focus"')).toBeLessThan(
+      collapsed.indexOf("data-ile-global-resources"),
     );
 
     const opened = renderToStaticMarkup(
       createElement(SessionSidebar, {
         mode: "ile",
         resources,
+        focus,
+        focusLabel: "Insights",
         resourcesOpen: true,
-        chapters: createElement("div", null, "Chapters body"),
+        chapters: topicCard(),
       }),
     );
     expect(opened).toContain('aria-expanded="true"');
     expect(opened).toContain("data-session-sidebar-resources");
-    expect(opened).toContain("max-h-36");
+    expect(opened).not.toContain("max-h-36");
+    expect(opened).toContain("overflow-y-auto");
     expect(opened).toContain("Resource body");
+    expect(opened).not.toContain("Insight body");
 
     expect(renderSidebar("ile", 65)).not.toContain("data-ile-global-resources");
     expect(renderToStaticMarkup(voiceBar())).not.toContain("data-ile-global-resources");
@@ -288,30 +366,106 @@ describe("session sidebar mode configuration", () => {
       expect(html).toContain('data-session-sidebar-section="focus"');
       expect(html).toContain(">Stash<");
       expect(html).toContain("Stash body");
-      expect(html).toContain("Chapters body");
+      expect(html).toContain(TOPIC_TITLE);
+      expect(html).toContain(TOPIC_STILL);
       expect(html).toContain("Signals body");
-      expect(html).toContain(">Chapters<");
-      expect(html).toContain(">Signals<");
-      expect(html).toContain(`height:${SESSION_SIDEBAR_FOCUS_REM}rem`);
+      expect(html).not.toContain(">Chapters<");
+      expect(html).not.toContain("data-ile-chapter-dock-chapters");
+      expect(html).toContain('data-session-sidebar-signals-label');
+      expect(html).toContain(">Data<");
+      expect(html).not.toContain(">Signals<");
+      expect(html).toContain("min-h-0 flex-1 flex-col overflow-hidden");
+      expect(html).not.toContain("overflow-y-auto");
       expect(html).toContain("live speech line");
-      expect(html.indexOf('data-session-sidebar-section="focus"')).toBeLessThan(
-        html.indexOf('data-session-sidebar-section="chapters"'),
+      const modeTopic = html.indexOf('data-session-sidebar-section="topic"');
+      const modeCard = html.slice(modeTopic, html.indexOf('data-session-sidebar-section="focus"'));
+      expect(modeTopic).toBeLessThan(html.indexOf('data-session-sidebar-section="focus"'));
+      expect(modeCard.match(/<button/g)).toHaveLength(1);
+      expect(modeCard).toContain('data-session-topic-card-media="image"');
+      expect(modeCard).toContain("data-session-sidebar-clock");
+      expect(modeCard).toContain('data-session-topic-card-timer="true"');
+      expect(modeCard).toContain("bottom-3");
+      expect(modeCard).toContain("left-3");
+      expect(modeCard.indexOf('data-session-topic-card-timer="true"')).toBeGreaterThan(
+        modeCard.indexOf('data-session-topic-card="chapter-1"'),
       );
+      expect(modeCard).toContain(">0:16<");
+      expect(modeCard.match(/data-session-topic-card=/g)).toHaveLength(1);
       expect(html.indexOf("data-session-sidebar-actions")).toBeGreaterThan(
         html.indexOf("data-ile-transcription-box"),
       );
       expect(html.indexOf("data-ile-voice-bar-actions")).toBeGreaterThan(
         html.indexOf("data-session-sidebar-actions"),
       );
-      expect(html).toContain("data-ile-bar-logs");
+      expect(html).not.toContain("data-ile-bar-logs");
+      expect(html).not.toContain(">Logs<");
       expect(html).toContain("data-ile-bar-save");
       expect(html).toContain(">0:16<");
       expect(html).not.toContain('data-ile-work-canvas-timer-urgent="true"');
       expect(html).not.toContain("data-ile-map-insights-widget");
       expect(html).not.toContain("data-session-sidebar-toggle");
       expect(html).not.toContain("data-ile-bar-data");
-      expect(html).not.toContain(">Data<");
     }
+  });
+
+  it("renders the Data card as four monochrome stream tabs", () => {
+    const cardSource = readFileSync(
+      join(ROOT, "components/session-view/session-data-card.tsx"),
+      "utf8",
+    );
+    expect(cardSource).toContain('audio: { index: "01", label: "Audio" }');
+    expect(cardSource).toContain('muse: { index: "02", label: "Muse" }');
+    expect(cardSource).toContain('video: { index: "03", label: "Video" }');
+    expect(cardSource).toContain('screen: { index: "04", label: "Screen" }');
+    expect(cardSource).toContain("data-session-data-enable");
+    expect(cardSource).toContain("data-session-data-audio");
+    expect(cardSource).not.toMatch(/text-(red|green|amber|emerald|yellow|blue|orange|rose|lime)-/);
+    expect(cardSource).not.toMatch(/bg-(red|green|amber|emerald|yellow|blue|orange)-/);
+
+    const standby = renderToStaticMarkup(
+      createElement(SessionDataCard, {
+        audioEnabled: false,
+        museEnabled: false,
+        videoEnabled: false,
+        screenEnabled: false,
+      }),
+    );
+    expect(standby).toContain('data-session-data-card');
+    expect(standby).toContain('data-session-data-active="audio"');
+    expect(standby).toContain('data-session-data-tab="audio"');
+    expect(standby).toContain('data-session-data-tab="muse"');
+    expect(standby).toContain('data-session-data-tab="video"');
+    expect(standby).toContain('data-session-data-tab="screen"');
+    expect(standby).toContain('data-session-data-enable="audio"');
+    expect(standby).toContain(">Enable<");
+    expect(standby).not.toContain("data-session-data-audio");
+
+    const live = renderToStaticMarkup(
+      createElement(SessionDataCard, {
+        audioEnabled: true,
+        museEnabled: false,
+        videoEnabled: false,
+        screenEnabled: false,
+        audioStream: null,
+      }),
+    );
+    expect(live).toContain("data-session-data-audio");
+    expect(live).toContain(">MIC-01<");
+    expect(live).not.toContain('data-session-data-enable="audio"');
+
+    const muse = renderToStaticMarkup(
+      createElement(SessionDataCard, {
+        defaultTab: "muse",
+        audioEnabled: false,
+        museEnabled: false,
+        videoEnabled: false,
+        screenEnabled: false,
+        museNote: "No headset on this mode.",
+      }),
+    );
+    expect(muse).toContain('data-session-data-active="muse"');
+    expect(muse).toContain('data-session-data-enable="muse"');
+    expect(muse).toContain("No headset on this mode.");
   });
 
   it("counts live signal tiles with audio always included", () => {
@@ -384,6 +538,20 @@ describe("session sidebar mode configuration", () => {
     expect(tap).toContain('focusLabel="Stash"');
     expect(tap).toContain("<SessionTopicChapter");
     expect(tap).toContain("<TapSessionSignals");
+    const signals = readFileSync(join(ROOT, "components/session-view/session-signals.tsx"), "utf8");
+    expect(signals).toContain("SessionDataCard");
+    expect(signals).toContain("getUserMedia");
+    expect(signals).toContain("getDisplayMedia");
+    expect(signals).toContain("echoCancellation: true");
+    expect(signals).toContain('setMuseNote("No headset on this mode.")');
+    expect(signals).not.toContain("<AudioMiniPreview");
+    expect(signals).not.toContain("stream={null}");
+    const mountEffect = signals.slice(
+      signals.indexOf("useEffect(() =>"),
+      signals.indexOf("const replace"),
+    );
+    expect(mountEffect).not.toContain("getUserMedia");
+    expect(mountEffect).not.toContain("getDisplayMedia");
     expect(readFileSync(join(ROOT, "components/thought-ui/ThoughtMemoryPanel.tsx"), "utf8")).not.toContain(
       "Search traces",
     );
@@ -394,5 +562,22 @@ describe("session sidebar mode configuration", () => {
     expect(chrome).toContain('mode="ile"');
     expect(chrome).not.toContain('mode="tap"');
     expect(chrome).not.toContain('mode="verification-tap"');
+    expect(chrome).toContain("<SessionTopicCard");
+    expect(chrome).toContain("sessionSidebarTopic");
+    expect(chrome).not.toContain("<IleWorkDockBar");
+    expect(chrome).not.toContain("onFocusOpenWork");
+    expect(prepare.match(/<SessionTopicChapter/g)).toHaveLength(1);
+    expect(drill.match(/<SessionTopicChapter/g)).toHaveLength(1);
+    expect(tap.match(/<SessionTopicChapter/g)).toHaveLength(1);
+    for (const src of [prepare, drill, tap, chrome]) {
+      expect(src).not.toContain("data-ile-chapter-dock-chapters");
+      expect(src).not.toContain(">Chapters<");
+    }
+    const one = sessionSidebarTopic([
+      { id: "a", label: "Ch 1", keyword: "Alpha" },
+      { id: "b", label: "Ch 2", keyword: "Beta", focused: true },
+      { id: "c", label: "Ch 3", keyword: "Gamma" },
+    ]);
+    expect(one).toEqual({ id: "b", title: "Beta" });
   });
 });

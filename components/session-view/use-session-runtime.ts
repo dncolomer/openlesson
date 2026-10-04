@@ -2,8 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FacialDataPoint } from "@/components/FaceTracker";
-import type { TransferHealth } from "@/components/LogsTool";
-import type { LogEntry } from "@/components/LogsTool";
 import {
   EEG_DISPLAY_MAX_SAMPLES,
   EEG_PERSIST_MAX_SAMPLES,
@@ -11,6 +9,8 @@ import {
   capSessionLogs,
   computeBandPowers,
   createEmptyTransferHealth,
+  type LogEntry,
+  type TransferHealth,
 } from "@/components/session/sessionViewHelpers";
 import {
   eegChannelsFromMap,

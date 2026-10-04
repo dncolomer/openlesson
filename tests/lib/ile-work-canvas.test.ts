@@ -12,7 +12,6 @@ import {
   convertToExcalidrawElements,
   createIleWorkCanvasChapterStore,
   ileWorkCanvasFiniteOrigin,
-  ileWorkCanvasScenesFromWorkspaces,
   ileWorkCanvasThinkingOverlayStyle,
   ileWorkCanvasTurnContextMessage,
   ileWorkCanvasXaiShapeType,
@@ -267,8 +266,8 @@ describe("TAP Learning Work canvas grid default (shipped)", () => {
   });
 });
 
-describe("TAP Learning Work canvas chapter isolation (shipped)", () => {
-  it("keeps two chapter keys on distinct scenes; completed chapter restores non-empty board", () => {
+describe("TAP Learning Work canvas single scene (shipped)", () => {
+  it("keeps one scene when a second chapter id is written, and does not restore another board", () => {
     const store = createIleWorkCanvasChapterStore();
     const sceneA = sceneWith("draw-chA", "chapter A notes");
     const sceneB = sceneWith("draw-chB", "chapter B notes");
@@ -279,18 +278,17 @@ describe("TAP Learning Work canvas chapter isolation (shipped)", () => {
 
     writeIleChapterWorkCanvas(store, "chapter-b", sceneB);
     const readB = readIleChapterWorkCanvas(store, "chapter-b");
-    expect(readB.elements.some((el) => el.text === "chapter B notes")).toBe(true);
-    expect(readB.elements.some((el) => el.text === "chapter A notes")).toBe(false);
-
     const readA = readIleChapterWorkCanvas(store, "chapter-a");
-    expect(readA.elements.some((el) => el.text === "chapter A notes")).toBe(true);
-    expect(readA.elements.some((el) => el.text === "chapter B notes")).toBe(false);
+    expect(readA.elements).toEqual(readB.elements);
+    expect(readB.elements.some((el) => el.text === "chapter B notes")).toBe(true);
+    expect(Object.keys(store.map)).toEqual(["session"]);
+    expect(Object.keys(store.cold)).toEqual(["session"]);
 
-    store.focus("chapter-b");
-    const restoredDone = restoreIleChapterWorkCanvas(store.map, store.cold, "chapter-a");
-    expect(restoredDone.elements.length).toBeGreaterThan(0);
-    expect(restoredDone.elements.some((el) => el.text === "chapter A notes")).toBe(true);
-    expect(serializeIleWorkCanvasScene(restoredDone).appState).not.toHaveProperty("collaborators");
+    store.focus("chapter-a");
+    const restored = restoreIleChapterWorkCanvas(store.map, store.cold, "chapter-a");
+    expect(restored.elements).toEqual(readB.elements);
+    expect(restored.elements.some((el) => el.text === "chapter A notes")).toBe(false);
+    expect(serializeIleWorkCanvasScene(restored).appState).not.toHaveProperty("collaborators");
   });
 });
 
@@ -327,9 +325,11 @@ describe("TAP Learning Work canvas chapter seed (shipped)", () => {
       chapterId: "chapter-b",
     });
     writeIleChapterWorkCanvas(store, "chapter-b", other.scene);
-    expect(readIleChapterWorkCanvas(store, "chapter-a").elements.some((el) => el.originalText === "Walk a case through just-war criteria")).toBe(true);
-    expect(readIleChapterWorkCanvas(store, "chapter-b").elements.some((el) => el.originalText === "Define the rotation invariant")).toBe(true);
-    expect(readIleChapterWorkCanvas(store, "chapter-a").elements.some((el) => el.originalText === "Define the rotation invariant")).toBe(false);
+    const afterA = readIleChapterWorkCanvas(store, "chapter-a");
+    const afterB = readIleChapterWorkCanvas(store, "chapter-b");
+    expect(afterA.elements).toEqual(afterB.elements);
+    expect(afterB.elements.some((el) => el.originalText === "Define the rotation invariant")).toBe(true);
+    expect(Object.keys(store.map)).toEqual(["session"]);
 
     expect(seedIleChapterWorkCanvas(null, { text: "   ", chapterId: "c" }).seeded).toBe(false);
 
@@ -471,6 +471,8 @@ describe("TAP Learning Work canvas ask-XAI on selection (shipped)", () => {
     expect(canvas).toContain("data-ile-learn-more");
     expect(canvas).toContain('data-ile-canvas-prompt-mode={canvasSelectionActive ? "commands" : "ask"}');
     expect(canvas).toContain("data-ile-learn-more-actions");
+    expect(canvas).toContain('className="grid w-full grid-cols-4 gap-1"');
+    expect(canvas).toContain("min-w-0 items-center justify-center");
     expect(canvas).not.toContain("data-ile-learn-more-handle");
     expect(canvas).not.toContain("data-ile-learn-more-dragging");
     expect(canvas).not.toContain("data-ile-learn-more-collapsed");
@@ -873,58 +875,56 @@ describe("TAP Learning session-chat board context (shipped builder)", () => {
     expect(view).toContain("picked.applyLive");
   });
 
-  it("sends chapter B's stored scene and does not apply live onto focused chapter A", () => {
+  it("sends the one live scene when a second chapter id is supplied", () => {
     const store = createIleWorkCanvasChapterStore();
     const sceneA = sceneWith("el-a", "board A");
     const sceneB = sceneWith("el-b", "board B");
     writeIleChapterWorkCanvas(store, "chapter-a", sceneA);
     writeIleChapterWorkCanvas(store, "chapter-b", sceneB);
     store.focus("chapter-a");
-
-    const liveScenes = ileWorkCanvasScenesFromWorkspaces(store.map);
-    const coldScenes = ileWorkCanvasScenesFromWorkspaces(store.cold);
-    expect(liveScenes["chapter-b"]).toBeNull();
-    expect(coldScenes["chapter-b"]?.elements.some((el) => el.text === "board B")).toBe(true);
+    expect(Object.keys(store.map)).toEqual(["session"]);
+    expect(readIleChapterWorkCanvas(store, "chapter-a").elements).toEqual(
+      readIleChapterWorkCanvas(store, "chapter-b").elements,
+    );
 
     const focusedRef = { current: sceneA };
     const pickB = pickIleWorkCanvasTurnScene({
       targetChapterId: "chapter-b",
       focusedChapterId: "chapter-a",
-      liveSceneByChapter: liveScenes,
-      coldSceneByChapter: coldScenes,
+      liveSceneByChapter: { "chapter-a": sceneA, "chapter-b": sceneB },
+      coldSceneByChapter: { "chapter-b": sceneB },
       focusedSceneRef: focusedRef,
     });
-    expect(pickB.applyLive).toBe(false);
-    expect(pickB.sceneToSend.elements.some((el) => el.text === "board B")).toBe(true);
-    expect(pickB.sceneToSend.elements.some((el) => el.text === "board A")).toBe(false);
+    expect(pickB.applyLive).toBe(true);
+    expect(pickB.sceneToSend.elements.some((el) => el.text === "board A")).toBe(true);
+    expect(pickB.sceneToSend.elements.some((el) => el.text === "board B")).toBe(false);
 
     const bodyB = buildIleSessionChatBody({
-      problem: "two open works",
-      messages: [{ role: "user", content: "end turn B" }],
-      sessionId: "s-parallel",
+      problem: "one topic",
+      messages: [{ role: "user", content: "end turn" }],
+      sessionId: "s-one",
       activeStepId: "chapter-b",
       workCanvasScene: pickB.sceneToSend,
     });
     const sentB = bodyB.workCanvasScene as IleWorkCanvasScene;
-    expect(sentB.elements.some((el) => el.text === "board B")).toBe(true);
-    expect(sentB.elements.some((el) => el.text === "board A")).toBe(false);
+    expect(sentB.elements.some((el) => el.text === "board A")).toBe(true);
+    expect(sentB.elements.some((el) => el.text === "board B")).toBe(false);
 
     const pickA = pickIleWorkCanvasTurnScene({
       targetChapterId: "chapter-a",
       focusedChapterId: "chapter-a",
-      liveSceneByChapter: liveScenes,
-      coldSceneByChapter: coldScenes,
+      liveSceneByChapter: { "chapter-a": sceneA, "chapter-b": sceneB },
+      coldSceneByChapter: { "chapter-b": sceneB },
       focusedSceneRef: focusedRef,
     });
     expect(pickA.applyLive).toBe(true);
-    expect(pickA.sceneToSend.elements.some((el) => el.text === "board A")).toBe(true);
-    expect(pickA.sceneToSend.elements.some((el) => el.text === "board B")).toBe(false);
+    expect(pickA.sceneToSend.elements).toEqual(pickB.sceneToSend.elements);
 
-    const appliedOnA = applyIleXaiTurnToWorkCanvas(pickB.sceneToSend, {
-      text: "reply meant for B",
+    const applied = applyIleXaiTurnToWorkCanvas(pickB.sceneToSend, {
+      text: "reply on the one board",
     });
-    expect(appliedOnA.elements.some((el) => el.text === "reply meant for B")).toBe(true);
-    expect(pickA.applyLive && pickB.applyLive).toBe(false);
+    expect(applied.elements.some((el) => el.text === "reply on the one board")).toBe(true);
+    expect(applied.elements.some((el) => el.text === "board B")).toBe(false);
   });
 });
 

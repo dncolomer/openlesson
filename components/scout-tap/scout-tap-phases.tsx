@@ -319,6 +319,7 @@ export function ScoutTapPhases(props: {
                     remainingSeconds={remainingSeconds}
                     waiting={clockPaused || questionsLoading}
                     listening={false}
+                    placement="card"
                   />
                 </div>
               }

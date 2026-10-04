@@ -1,5 +1,28 @@
-import type { TransferHealth } from "@/components/LogsTool";
 import type { ChatMessage, PendingChatMessage } from "@/components/HeliosChat";
+
+export type LogLevel = "error" | "warning" | "info";
+
+export interface LogEntry {
+  id: string;
+  timestamp: number;
+  level: LogLevel;
+  message: string;
+  source?: string;
+}
+
+export interface TransferHealthData {
+  sent: number;
+  saved: number;
+  failed: number;
+}
+
+export interface TransferHealth {
+  audio: TransferHealthData;
+  eeg: TransferHealthData;
+  facial: TransferHealthData;
+  screenshots: TransferHealthData;
+  tools: TransferHealthData;
+}
 
 export type ChapterWorkspace = {
   chatMessages: ChatMessage[];

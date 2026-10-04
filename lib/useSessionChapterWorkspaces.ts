@@ -5,8 +5,11 @@ import type { ChatMessage, PendingChatMessage } from "@/components/HeliosChat";
 import type { SessionPlan } from "@/lib/domain/types";
 import type { ChapterWorkspace } from "@/components/session/sessionViewHelpers";
 import {
+  adoptIleSingleLiveCanvas,
   applyIleSessionContextWrite,
   boundIleSessionLiveState,
+  ileSingleCanvasChapterWorkspaces,
+  ILE_SESSION_GLOBAL_CONTEXT_KEY,
   ileChapterCanvasInitialScene,
   ileLegacyChapterWorkspacesStorageKey,
   ileSessionContextStorageKey,
@@ -14,18 +17,23 @@ import {
   persistIleChapterColdWorkspace,
   hydrateIleFocusedChapterLiveState,
   readIleFocusedChapterWorkspace,
-  resolveIleChapterContextKey,
   type IleSessionContext,
   type IleSessionContextMap,
 } from "@/lib/ile-session-global-context";
+import { ileBlockSessionFrame } from "@/lib/ile-canvas-session";
 
 export function useSessionChapterWorkspaces(
   sessionId: string,
   sessionPlan: SessionPlan | null
 ) {
-  const [activeChapterIndex, setActiveChapterIndex] = useState(0);
-  const activeChapterIndexRef = useRef(0);
-  const planInitializedRef = useRef(false);
+  const frame = ileBlockSessionFrame(sessionPlan);
+  const activeChapterIndex = frame?.index ?? 0;
+  const activeChapterKey = frame?.id ?? null;
+  const activeChapterIndexRef = useRef(activeChapterIndex);
+  activeChapterIndexRef.current = activeChapterIndex;
+  const setActiveChapterIndex = useCallback((_index: number) => {
+    // The live chapter is `frame`. This does not retarget the canvas.
+  }, []);
   const [chapterLoading, setChapterLoading] = useState(false);
   const [chapterLoadingIndex, setChapterLoadingIndex] = useState<number | null>(null);
   const chapterFocusSinceRef = useRef<Record<number, number>>({ 0: Date.now() });
@@ -34,9 +42,6 @@ export function useSessionChapterWorkspaces(
   const [chapterWorkspacesLoaded, setChapterWorkspacesLoaded] = useState(false);
 
   useEffect(() => {
-    setActiveChapterIndex(0);
-    activeChapterIndexRef.current = 0;
-    planInitializedRef.current = false;
     chapterFocusSinceRef.current = { 0: Date.now() };
     setSessionContext({});
     coldContextRef.current = {};
@@ -74,42 +79,31 @@ export function useSessionChapterWorkspaces(
     }
   }, [sessionContext, chapterWorkspacesLoaded, sessionId]);
 
-  useEffect(() => {
-    if (!sessionPlan?.steps?.length || planInitializedRef.current) return;
-    const idx = Math.min(
-      Math.max(0, sessionPlan.currentStepIndex ?? 0),
-      sessionPlan.steps.length - 1
-    );
-    setActiveChapterIndex(idx);
-    activeChapterIndexRef.current = idx;
-    planInitializedRef.current = true;
-  }, [sessionPlan]);
+  const activeStep = frame ? sessionPlan?.steps?.[frame.index] : undefined;
 
-  useEffect(() => {
-    if (!sessionPlan?.steps?.length) return;
-    if (activeChapterIndex > sessionPlan.steps.length - 1) {
-      setActiveChapterIndex(sessionPlan.steps.length - 1);
-    }
-  }, [activeChapterIndex, sessionPlan?.steps?.length]);
-
-  const activeStep = sessionPlan?.steps?.[activeChapterIndex];
-  const activeChapterKey = activeStep?.id ?? `step-${activeChapterIndex}`;
-
-  // Same render as ileChapterCanvasRemountKey: restore cold canvas before Excalidraw mounts.
+  // One canvas. Restore the current chapter once; a later chapter id does not swap it.
   const activeWorkspace = readIleFocusedChapterWorkspace(
     sessionContext,
     coldContextRef.current,
-    activeChapterKey,
+    sessionContext[ILE_SESSION_GLOBAL_CONTEXT_KEY]
+      ? ILE_SESSION_GLOBAL_CONTEXT_KEY
+      : activeChapterKey,
   );
 
   useEffect(() => {
-    const key = resolveIleChapterContextKey(activeChapterKey);
+    if (!chapterWorkspacesLoaded || !activeChapterKey) return;
     setSessionContext((prev) => {
-      const cold = coldContextRef.current;
-      const focused = readIleFocusedChapterWorkspace(prev, cold, key);
-      return boundIleSessionLiveState({ ...prev, [key]: focused }, key);
+      if (prev[ILE_SESSION_GLOBAL_CONTEXT_KEY]) return prev;
+      const adopted = adoptIleSingleLiveCanvas(
+        prev,
+        coldContextRef.current,
+        activeChapterKey,
+      );
+      if (!adopted) return prev;
+      coldContextRef.current = adopted;
+      return adopted;
     });
-  }, [activeChapterKey]);
+  }, [activeChapterKey, chapterWorkspacesLoaded]);
 
   const updateChapterWorkspace = useCallback(
     (
@@ -119,17 +113,17 @@ export function useSessionChapterWorkspaces(
         | ((workspace: ChapterWorkspace) => Partial<ChapterWorkspace>)
     ) => {
       setSessionContext((prev) => {
-        const key = resolveIleChapterContextKey(chapterKey);
+        const key = ILE_SESSION_GLOBAL_CONTEXT_KEY;
         const hydratedPrev = hydrateIleFocusedChapterLiveState(
           prev,
           coldContextRef.current,
-          key,
+          prev[key] ? key : chapterKey,
         );
         const next = applyIleSessionContextWrite(hydratedPrev, chapterKey, update);
         const written = next[key];
         if (written) {
           coldContextRef.current = persistIleChapterColdWorkspace(
-            coldContextRef.current,
+            { [key]: coldContextRef.current[key] },
             key,
             written,
           );
@@ -146,6 +140,7 @@ export function useSessionChapterWorkspaces(
         | Partial<ChapterWorkspace>
         | ((workspace: ChapterWorkspace) => Partial<ChapterWorkspace>)
     ) => {
+      if (!activeChapterKey) return;
       updateChapterWorkspace(activeChapterKey, update);
     },
     [activeChapterKey, updateChapterWorkspace]
@@ -195,11 +190,10 @@ export function useSessionChapterWorkspaces(
     [updateActiveChapterWorkspace]
   );
 
-  const chapterWorkspaces = useMemo((): Record<string, ChapterWorkspace> => {
-    const out: Record<string, ChapterWorkspace> = { ...sessionContext };
-    out[activeChapterKey] = activeWorkspace;
-    return out;
-  }, [activeChapterKey, activeWorkspace, sessionContext]);
+  const chapterWorkspaces = useMemo(
+    () => ileSingleCanvasChapterWorkspaces(activeWorkspace),
+    [activeWorkspace],
+  );
 
   const setChapterWorkspaces = useCallback(
     (
@@ -209,8 +203,16 @@ export function useSessionChapterWorkspaces(
     ) => {
       setSessionContext((prev) => {
         const next = typeof value === "function" ? value(prev) : value;
-        coldContextRef.current = { ...coldContextRef.current, ...next };
-        return boundIleSessionLiveState(next, activeChapterKey);
+        const key = ILE_SESSION_GLOBAL_CONTEXT_KEY;
+        const adopted =
+          next[key] || prev[key]
+            ? { [key]: next[key] ?? prev[key]! }
+            : activeChapterKey
+              ? adoptIleSingleLiveCanvas(next, coldContextRef.current, activeChapterKey)
+              : null;
+        const live = adopted ?? next;
+        coldContextRef.current = live[key] ? { [key]: live[key] } : live;
+        return boundIleSessionLiveState(live, key);
       });
     },
     [activeChapterKey],
@@ -220,7 +222,6 @@ export function useSessionChapterWorkspaces(
     activeChapterIndex,
     setActiveChapterIndex,
     activeChapterIndexRef,
-    planInitializedRef,
     chapterLoading,
     setChapterLoading,
     chapterLoadingIndex,

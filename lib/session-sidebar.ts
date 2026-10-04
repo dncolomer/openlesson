@@ -14,8 +14,6 @@ export const SESSION_SIDEBAR_SECTIONS = [
   "signals",
   "transcript",
   "clock",
-  "data",
-  "logs",
   "save",
 ] as const;
 
@@ -33,25 +31,37 @@ export const SESSION_SIDEBAR_EXPANDED_REM = 20;
 export const SESSION_SIDEBAR_COLLAPSED_REM = 6.5;
 
 /**
- * Fixed height of the major block (insights, stashed text, or generated questions).
- * Content scrolls inside. The block does not grow with the list.
+ * Full-width topic card at the top of the sidebar.
+ * Taller than the retired 6rem dock chip (`h-24`) and taller than the Data console.
  */
-export const SESSION_SIDEBAR_FOCUS_REM = 22;
+export const SESSION_TOPIC_CARD_REM = 16;
 
-/** Learn has no work-canvas countdown. The Data action stays on Learn. */
+/**
+ * Data console under the focus block. The extra room keeps the readout
+ * labels off the traces and the stop control.
+ */
+export const SESSION_DATA_CARD_REM = 13;
+
+/** Retired dock chip height, in rem. The topic card stays taller than this. */
+export const SESSION_TOPIC_DOCK_CHIP_REM = 6;
+
+/**
+ * `chapters` is the single static topic card, not a list.
+ * Learn has no work-canvas countdown. The bottom row is Exit.
+ * Prepare, Drill, conversational TAP, and Verify draw their countdown on the
+ * bottom left of the topic card.
+ */
 const ILE_SESSION_SIDEBAR_SECTIONS = [
   "focus",
   "chapters",
   "signals",
   "transcript",
-  "data",
-  "logs",
   "save",
 ] as const satisfies readonly SessionSidebarSection[];
 
 /**
  * Prepare, Drill, conversational TAP, and Verify share the same sections.
- * The focus block is what changes. Data stays off. The clock stays on.
+ * The focus block is what changes. The clock stays on.
  */
 const TAP_SESSION_SIDEBAR_SECTIONS = [
   "focus",
@@ -59,7 +69,6 @@ const TAP_SESSION_SIDEBAR_SECTIONS = [
   "signals",
   "transcript",
   "clock",
-  "logs",
   "save",
 ] as const satisfies readonly SessionSidebarSection[];
 
@@ -90,8 +99,8 @@ export function sessionSidebarHasSection(
 }
 
 /**
- * Signal tiles mounted in the TAP Learning sidebar. Audio is always present; EEG,
- * screen share, and webcam are added only while those captures are live.
+ * How many Data streams are live. Audio counts as one. EEG, screen, and webcam
+ * add one each while that capture is on. The sidebar shows them as tabs, not tiles.
  */
 export function ileSidebarSignalCount(input: {
   eegStreaming: boolean;
@@ -111,7 +120,7 @@ export function ileSidebarSignalCount(input: {
  * Learn uses it for Save. TAP flows use it for End session.
  */
 export const SESSION_SIDEBAR_PRIMARY_BUTTON_CLASS =
-  "pointer-events-auto h-7 min-w-0 rounded-none border border-white bg-white px-2 text-center font-mono text-[10px] font-semibold uppercase tracking-wider text-neutral-950 hover:bg-neutral-200";
+  "pointer-events-auto h-7 min-w-0 rounded-none border border-white bg-white px-2 text-center font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-black hover:bg-neutral-200";
 
 export function sessionSidebarWidthRem(collapsed: boolean): number {
   return collapsed ? SESSION_SIDEBAR_COLLAPSED_REM : SESSION_SIDEBAR_EXPANDED_REM;

@@ -11,13 +11,7 @@ import { SessionTopicChapter } from "@/components/session-view/ile-work-dock-bar
 import { TapSessionSignals } from "@/components/session-view/session-signals";
 import { SessionWorkSurface } from "@/components/session-view/session-work-surface";
 import { ThoughtMemoryPanel } from "@/components/thought-ui/ThoughtMemoryPanel";
-import {
-  TAP_IM_DONE_CONFIRM_BODY,
-  TAP_IM_DONE_CONFIRM_CANCEL,
-  TAP_IM_DONE_CONFIRM_CONFIRM,
-  TAP_IM_DONE_CONFIRM_TITLE,
-  isTapExerciseThoughtMemoryLocked,
-} from "@/lib/tap-thought-memory";
+import { isTapExerciseThoughtMemoryLocked } from "@/lib/tap-thought-memory";
 
 /**
  * Exercise TAP live surface. The problem map is the stage. Stash sits in the
@@ -138,12 +132,6 @@ export function ExerciseTapShell({
                 logEndOfChainOfThought={logEndOfChainOfThought ?? (() => {})}
                 onClearForming={onClearForming}
                 disabled={isSending}
-                confirmClose={{
-                  title: TAP_IM_DONE_CONFIRM_TITLE,
-                  body: TAP_IM_DONE_CONFIRM_BODY,
-                  confirmLabel: TAP_IM_DONE_CONFIRM_CONFIRM,
-                  cancelLabel: TAP_IM_DONE_CONFIRM_CANCEL,
-                }}
               />
             </div>
             <div

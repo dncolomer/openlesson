@@ -1,5 +1,6 @@
 /**
- * TAP thought memory: local per-thought edit/delete + I'm done answering confirm.
+ * TAP thought memory: local per-thought edit/delete.
+ * Conversational TAP confirms I'm done answering. Drill closes the turn immediately.
  * Drives shipped helpers; TAP convo + exercise surfaces must not multi-select submit.
  */
 import { describe, expect, it } from "vitest";
@@ -107,7 +108,7 @@ describe("TAP local thought edit/delete helpers", () => {
 });
 
 describe("TAP convo + exercise chrome for local thought memory", () => {
-  it("always shows Thought Memory with local edit/delete and I'm done confirm", () => {
+  it("always shows Thought Memory with local edit/delete; convo confirms I'm done, drill does not", () => {
     const convo = readTapScoreSurface();
     const exercise = readExerciseTapSurface();
     const memory = read("components/thought-ui/ThoughtMemoryPanel.tsx");
@@ -116,14 +117,17 @@ describe("TAP convo + exercise chrome for local thought memory", () => {
     for (const surface of [convo, exercise]) {
       expect(surface).not.toContain("TAP_SEE_EDIT_PREVIOUS_THOUGHTS_LABEL");
       expect(surface).toContain("data-tap-thought-memory-always");
-      expect(surface).toContain("confirmClose");
-      expect(surface).toContain("TAP_IM_DONE_CONFIRM_TITLE");
       expect(surface).toContain("onEditThought");
       expect(surface).toContain("onDeleteThought");
       expect(surface).toContain("composeTapThoughtEditPow");
       expect(surface).toContain("composeTapThoughtDeletePow");
       expect(surface).not.toContain("onSendThought={sendThought}");
     }
+
+    expect(convo).toContain("confirmClose");
+    expect(convo).toContain("TAP_IM_DONE_CONFIRM_TITLE");
+    expect(exercise).not.toContain("confirmClose");
+    expect(exercise).not.toContain("TAP_IM_DONE_CONFIRM_TITLE");
 
     expect(memory).toContain("data-tap-edit-thought");
     expect(memory).toContain("data-tap-delete-thought");
@@ -161,7 +165,8 @@ describe("TAP convo + exercise chrome for local thought memory", () => {
         `label unused in TAP chrome=${TAP_SEE_EDIT_PREVIOUS_THOUGHTS_LABEL}`,
         `confirmTitle=${TAP_IM_DONE_CONFIRM_TITLE}`,
         "TAP convo+exercise: always-on Thought Memory, local edit/delete System 2 PoW",
-        "TAP I'm done answering: UI confirm before close",
+        "TAP convo I'm done answering: UI confirm before close",
+        "TAP Drill I'm done answering: closes without Submit this answer?",
         "TAP Learning Helios: no TAP confirmClose / See-Edit label",
       ].join("\n"),
     );

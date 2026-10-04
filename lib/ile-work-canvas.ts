@@ -7,6 +7,7 @@
  */
 import {
   createIleSessionContextStore,
+  ILE_SESSION_GLOBAL_CONTEXT_KEY,
   ileChapterCanvasInitialScene,
   readIleFocusedChapterWorkspace,
   resolveIleChapterContextKey,
@@ -2543,27 +2544,24 @@ function sceneAt(
 }
 
 /**
- * Pick the board for one session-chat turn. Never substitutes another
- * chapter's scene (including the focused ref) when the target is unfocused.
- * `applyLive` is true only when the target is the focused chapter.
+ * Pick the one live board. A second chapter id does not select another scene.
+ * The reply always applies to that board.
  */
 export function pickIleWorkCanvasTurnScene(
   input: IleWorkCanvasTurnScenePickInput,
 ): IleWorkCanvasTurnScenePick {
-  const chapterId = resolveIleChapterContextKey(input.targetChapterId);
   const focusedId = resolveIleChapterContextKey(input.focusedChapterId);
-  const applyLive = chapterId === focusedId;
-  const live = sceneAt(input.liveSceneByChapter, chapterId);
-  const cold = sceneAt(input.coldSceneByChapter, chapterId);
-  let raw: IleWorkCanvasScene | null | undefined;
-  if (applyLive) {
-    raw = input.focusedSceneRef?.current ?? live ?? cold;
-  } else {
-    raw = live ?? cold;
-  }
+  const sessionScene =
+    sceneAt(input.liveSceneByChapter, ILE_SESSION_GLOBAL_CONTEXT_KEY) ??
+    sceneAt(input.coldSceneByChapter, ILE_SESSION_GLOBAL_CONTEXT_KEY);
+  const raw =
+    input.focusedSceneRef?.current ??
+    sceneAt(input.liveSceneByChapter, focusedId) ??
+    sceneAt(input.coldSceneByChapter, focusedId) ??
+    sessionScene;
   return {
-    chapterId,
-    applyLive,
+    chapterId: focusedId,
+    applyLive: true,
     sceneToSend: serializeIleWorkCanvasScene(raw),
   };
 }

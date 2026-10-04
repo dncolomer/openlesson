@@ -507,6 +507,10 @@ describe("shipped voice-challenge UI wiring", () => {
     expect(spoken).not.toContain("data-practice-voice-fill");
     expect(spoken).not.toContain("data-ile-sample-insight-card");
     expect(spoken).toContain("data-practice-voice-retry");
+    expect(spoken).toContain("data-practice-voice-audio");
+    expect(spoken).toContain("data-session-audio-monitor");
+    expect(spoken).toContain("data-session-data-audio");
+    expect(spoken).toContain("MIC-01");
     expect(spoken).toContain("Try again");
     expect(spoken).not.toContain("data-practice-voice-local-skip");
     expect(ileSpoken).not.toContain("data-practice-voice-local-skip");
@@ -638,6 +642,8 @@ describe("shipped voice-challenge UI wiring", () => {
     expect(read("components/session-view/ile-silence-lock-screen.tsx")).toContain("lang={speechLang}");
     expect(read("components/SessionView.tsx")).toContain("speechLang={toSpeechBcp47(tutoringLanguage)}");
     expect(read("components/PracticeVoiceChallenge.tsx")).toContain("startListening");
+    expect(read("components/PracticeVoiceChallenge.tsx")).toContain("getUserMedia");
+    expect(read("components/PracticeVoiceChallenge.tsx")).toContain("SessionAudioMonitor");
     expect(view).toContain("pauseLiveSpeech()");
     expect(view).toContain("resumeLiveSpeech()");
     expect(view).toContain("silenceRest");

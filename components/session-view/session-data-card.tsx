@@ -148,9 +148,12 @@ function StopControl({
 function AudioScope({
   stream,
   active,
+  reserveBottom = AUDIO_OVERLAY_PX,
 }: {
   stream: MediaStream | null;
   active: boolean;
+  /** Pixels kept clear at the bottom. The Data card leaves room for its transcript strip. */
+  reserveBottom?: number;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef(stream);
@@ -188,7 +191,7 @@ function AudioScope({
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       const width = rect.width;
       const height = rect.height;
-      const plot = Math.max(24, height - AUDIO_OVERLAY_PX);
+      const plot = Math.max(24, height - reserveBottom);
       ctx.fillStyle = "#000000";
       ctx.fillRect(0, 0, width, height);
       ctx.strokeStyle = "rgba(255,255,255,0.08)";
@@ -239,7 +242,7 @@ function AudioScope({
       cancelAnimationFrame(animation);
       void audioContext?.close();
     };
-  }, [active, stream]);
+  }, [active, reserveBottom, stream]);
 
   return (
     <canvas
@@ -247,6 +250,23 @@ function AudioScope({
       data-session-data-audio
       className="absolute inset-0 h-full w-full"
     />
+  );
+}
+
+/** The Data-card audio scope, without the four-tab frame. Bars follow `stream`. */
+export function SessionAudioMonitor({ stream }: { stream: MediaStream | null }) {
+  return (
+    <div
+      data-session-audio-monitor
+      className="relative h-40 w-full overflow-hidden border border-white/35 bg-black"
+    >
+      <AudioScope stream={stream} active reserveBottom={12} />
+      <p className="pointer-events-none absolute left-3 top-1.5 z-[5] font-mono text-[8px] uppercase tracking-[0.28em] text-white/70">
+        MIC-01
+      </p>
+      <Scanlines />
+      <CornerBrackets />
+    </div>
   );
 }
 

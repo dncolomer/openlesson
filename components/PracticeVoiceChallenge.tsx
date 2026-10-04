@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { IleInsightTrophyIcon } from "@/components/session-view/ile-insight-trophies";
+import { SessionAudioMonitor } from "@/components/session-view/session-data-card";
 import {
   ILE_SAMPLE_INSIGHT_LABEL,
   PRACTICE_VOICE_CHALLENGE_ACCEPTED,
@@ -112,6 +113,7 @@ export function PracticeVoiceChallenge({
   const onPassRef = useRef(onPass);
   onPassRef.current = onPass;
   const [transcript, setTranscript] = useState("");
+  const [micStream, setMicStream] = useState<MediaStream | null>(null);
   const [listenAttempt, setListenAttempt] = useState(0);
   const [starting, setStarting] = useState(false);
   const [light, setLight] = useState<"idle" | "green" | "red">("idle");
@@ -199,6 +201,35 @@ export function PracticeVoiceChallenge({
     };
   }, [lang, listenAttempt, variant]);
 
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) return;
+    let cancelled = false;
+    let owned: MediaStream | null = null;
+    void navigator.mediaDevices
+      .getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 48000,
+        },
+        video: false,
+      })
+      .then((next) => {
+        if (cancelled) {
+          next.getTracks().forEach((track) => track.stop());
+          return;
+        }
+        owned = next;
+        setMicStream(next);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+      owned?.getTracks().forEach((track) => track.stop());
+      setMicStream(null);
+    };
+  }, [listenAttempt]);
+
   function retry() {
     const decision = retryVoiceChallenge({ alreadyPassed: passedRef.current });
     if (!decision.reset || decision.shouldStart) return;
@@ -282,6 +313,9 @@ export function PracticeVoiceChallenge({
         </p>
       </div>
       <div className="px-5 py-5 sm:px-6">
+        <div data-practice-voice-audio="" className="mb-5">
+          <SessionAudioMonitor stream={micStream} />
+        </div>
         <div data-practice-voice-script="" className="flex flex-col gap-4">
           {sentences.map((sentence, sentenceIndex) => (
             <p

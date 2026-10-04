@@ -492,8 +492,62 @@ export function seedScoutWorkCanvas(seedText: string): {
 }
 
 /**
- * Add a picked follow-up as its own framed box, spread beside the current node.
- * Boxes are not joined with arrows.
+ * Arrow from the parent frame's bottom center to the child frame's top center.
+ * Each pick extends the rabbit hole by one link. The arrow is drawn after the
+ * child is placed, so it is not part of the overlap settle.
+ */
+function scoutRabbitHoleArrow(
+  parent: IleWorkCanvasElement,
+  child: IleWorkCanvasElement,
+  nodeId: string,
+  parentNodeId: string,
+): IleWorkCanvasElement | null {
+  const startX = parent.x + parent.width / 2;
+  const startY = parent.y + parent.height;
+  const endX = child.x + child.width / 2;
+  const endY = child.y;
+  const dx = endX - startX;
+  const dy = endY - startY;
+  if (dx === 0 && dy === 0) return null;
+  const [arrow] = convertToExcalidrawElements([
+    {
+      type: "arrow",
+      x: startX,
+      y: startY,
+      width: dx || 1,
+      height: dy || 1,
+      points: [
+        [0, 0],
+        [dx, dy],
+      ],
+      strokeColor: "#e5e5e5",
+      strokeWidth: 2,
+      customData: {
+        [SCOUT_NODE_CUSTOM_DATA_KEY]: nodeId,
+        [SCOUT_ROLE_CUSTOM_DATA_KEY]: "link",
+        scoutParentId: parentNodeId,
+      },
+    },
+  ]);
+  if (!arrow) return null;
+  arrow.x = startX;
+  arrow.y = startY;
+  arrow.width = dx;
+  arrow.height = dy;
+  arrow.points = [
+    [0, 0],
+    [dx, dy],
+  ];
+  arrow.endArrowhead = "arrow";
+  arrow.startArrowhead = null;
+  arrow.startBinding = { elementId: parent.id, focus: 0, gap: 4 };
+  arrow.endBinding = { elementId: child.id, focus: 0, gap: 4 };
+  return arrow;
+}
+
+/**
+ * Add a picked follow-up as its own framed box, then an arrow back to its parent.
+ * The sequence is a rabbit hole: each pick links only to the node it came from.
  */
 export function connectScoutQuestionToCanvas(
   scene: IleWorkCanvasScene | null | undefined,
@@ -538,6 +592,24 @@ export function connectScoutQuestionToCanvas(
     nodeEls,
     current.elements.filter((el) => !el.isDeleted),
   );
+  const child = added.find(
+    (el) =>
+      el.type === "rectangle" &&
+      el.customData?.[SCOUT_NODE_CUSTOM_DATA_KEY] === nodeId,
+  );
+  const arrow =
+    parent && child
+      ? scoutRabbitHoleArrow(parent, child, nodeId, input.parentNodeId)
+      : null;
+  if (arrow && child) {
+    const childLinks = Array.isArray(child.boundElements) ? child.boundElements : [];
+    child.boundElements = [...childLinks, { id: arrow.id, type: "arrow" }];
+    if (parent) {
+      const parentLinks = Array.isArray(parent.boundElements) ? parent.boundElements : [];
+      parent.boundElements = [...parentLinks, { id: arrow.id, type: "arrow" }];
+    }
+    added.push(arrow);
+  }
   return {
     scene: serializeIleWorkCanvasScene({
       elements: [...current.elements, ...added],

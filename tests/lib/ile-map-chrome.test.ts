@@ -64,7 +64,8 @@ describe("TAP Learning map-first session chrome (shipped surface)", () => {
     expect(chrome).not.toContain("data-ile-map-stage");
     expect(chrome).not.toContain("data-ile-pow-resource-bar");
     expect(chrome).not.toContain("data-ile-global-resources");
-    expect(chrome).toContain("onOpenGlobalResources={onOpenGlobalResources}");
+    expect(chrome).not.toContain("onOpenGlobalResources");
+    expect(chrome).toContain("resources={resources}");
     expect(read("components/session-view/session-sidebar.tsx")).toContain(
       "data-ile-global-resources",
     );
@@ -237,10 +238,10 @@ describe("TAP Learning map-first session chrome (shipped surface)", () => {
     expect(chrome).not.toContain("ILE_MAP_VOICE_BAR_CLEARANCE_CLASS");
     expect(chrome).not.toContain("left-1/2 top-2");
     expect(chrome).not.toContain("-translate-x-1/2");
-    expect(chrome).toContain("ileSidebarSignalCount");
-    expect(chrome).toContain("insightCount");
-    expect(chrome).toContain("chapters: openWorkLabels.length");
-    expect(read("components/SessionView.tsx")).toContain("insightCount={sessionInsights.length}");
+    expect(chrome).not.toContain("ileSidebarSignalCount");
+    expect(chrome).not.toContain("insightCount");
+    expect(chrome).toContain('focusLabel="Insights"');
+    expect(read("components/SessionView.tsx")).not.toContain("insightCount={sessionInsights.length}");
     expect(chrome).toContain('mode="ile"');
     expect(chrome).not.toContain("clock=");
     expect(chrome).not.toContain("IleWorkCanvasTimer");
@@ -253,8 +254,9 @@ describe("TAP Learning map-first session chrome (shipped surface)", () => {
     expect(SESSION_SIDEBAR_COLLAPSED_REM).toBeLessThan(SESSION_SIDEBAR_EXPANDED_REM);
     const sidebar = read("components/session-view/session-sidebar.tsx");
     expect(sidebar).toContain("sessionSidebarRailStyle");
-    expect(sidebar).toContain("sessionSidebarSections");
-    expect(sidebar).toContain("data-session-sidebar-toggle");
+    expect(sidebar).toContain("sessionSidebarHasSection");
+    expect(sidebar).not.toContain("data-session-sidebar-toggle");
+    expect(sidebar).toContain("data-session-sidebar-focus");
     expect(sidebar).toContain("data-session-sidebar-clock");
     expect(sidebar).not.toMatch(/(?:^|[\s"'`])w-0(?:[\s"'`]|$)/);
     expect(sidebar).not.toContain("translate-x-full");
@@ -417,10 +419,13 @@ describe("TAP Learning map-first session chrome (shipped surface)", () => {
     expect(chrome).not.toContain("ILE_POW_COUNTER_ICONS[type]");
     expect(chrome).not.toContain("onReviewWork");
     expect(chrome).not.toContain("data-ile-global-resources");
+    expect(chrome).not.toContain("onOpenGlobalResources");
+    expect(chrome).not.toContain("globalResourcesOpen");
+    expect(chrome).toContain("resources={resources}");
+    expect(chrome).toContain("resourcesOpen={resourcesOpen}");
     expect(read("components/session-view/session-sidebar.tsx")).toContain(
       "data-ile-global-resources",
     );
-    expect(chrome).toContain('globalResourcesOpen={activeTool === "plan-resources"}');
     expect(chrome).not.toContain("data-ile-end-turn");
     expect(chrome).not.toContain(">Traces<");
     const powIcons = read("components/session-view/ile-pow-icons.tsx");
@@ -434,10 +439,10 @@ describe("TAP Learning map-first session chrome (shipped surface)", () => {
     expect(counters).toContain("isIleSpokenThoughtArtifact");
 
     expect(isIleMapOverlayTool("canvas")).toBe(false);
-    expect(isIleMapOverlayTool("plan-resources")).toBe(true);
+    expect(isIleMapOverlayTool("plan-resources")).toBe(false);
     expect(isIleMapOverlayTool("thought-history")).toBe(true);
     expect(isIleMapOverlayTool("chapters")).toBe(false);
-    expect(ILE_MAP_OVERLAY_TOOLS).toContain("plan-resources");
+    expect(ILE_MAP_OVERLAY_TOOLS).not.toContain("plan-resources");
     expect(ILE_MAP_OVERLAY_TOOLS).toContain("thought-history");
     expect(ILE_MAP_OVERLAY_TOOLS).not.toContain("notebook");
     expect(ILE_HELIOS_WIDGET_TOP_PX).toBe(8 + MINIMAP_FRAME_HEIGHT + 8);

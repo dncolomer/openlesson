@@ -293,7 +293,8 @@ describe("TAP Learning Helios I'm done answering chrome (shipped source)", () =>
     expect(chrome).not.toContain("IleSubmitWorkButton");
     expect(chrome).not.toContain("data-ile-session-insights-count");
     expect(chrome).not.toContain("data-ile-global-resources");
-    expect(chrome).toContain("onOpenGlobalResources={onOpenGlobalResources}");
+    expect(chrome).not.toContain("onOpenGlobalResources");
+    expect(chrome).toContain("resources={resources}");
     expect(read("components/session-view/session-sidebar.tsx")).toContain(
       "data-ile-global-resources",
     );

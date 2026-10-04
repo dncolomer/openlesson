@@ -120,14 +120,11 @@ describe("shared live work surface", () => {
 
   it("puts leave and end controls in the sidebar actions row, not the clock", () => {
     expect(host).toContain("actions={actions}");
-    expect(read("components/session-view/session-sidebar.tsx")).toContain(
-      "data-session-sidebar-actions",
-    );
-    const collapsedBranch = read("components/session-view/session-sidebar.tsx");
-    const collapsedAt = collapsedBranch.indexOf("data-session-sidebar-counts");
-    const actionsAt = collapsedBranch.indexOf("data-session-sidebar-actions");
-    expect(collapsedAt).toBeGreaterThan(-1);
-    expect(actionsAt).toBeGreaterThan(collapsedAt);
+    const sidebar = read("components/session-view/session-sidebar.tsx");
+    expect(sidebar).toContain("data-session-sidebar-actions");
+    expect(sidebar).toContain("data-session-sidebar-focus");
+    expect(sidebar).not.toContain("data-session-sidebar-counts");
+    expect(sidebar).not.toContain("data-session-sidebar-toggle");
 
     const prepareClock = prepare.slice(prepare.indexOf("clock={"), prepare.indexOf("actions={"));
     expect(prepareClock).toContain("data-scout-live-control-strip");

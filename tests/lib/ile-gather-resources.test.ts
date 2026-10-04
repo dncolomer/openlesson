@@ -459,9 +459,13 @@ describe("TAP Learning gather resources", () => {
     expect(api).toContain("workspace_external_resources");
     expect(api).toContain("ileGatherResourceMeta");
 
-    expect(panes).toContain("WorkspaceResourcesPanel");
-    expect(panes).toContain("blockId");
-    expect(panes).toContain("chapterId");
+    expect(panes).not.toContain("WorkspaceResourcesPanel");
+    expect(panes).not.toContain('activeTool === "plan-resources"');
+    expect(read("components/SessionView.tsx")).toContain("WorkspaceResourcesPanel");
+    expect(read("components/SessionView.tsx")).toContain("blockId={sessionBlockId}");
+    expect(read("components/SessionView.tsx")).toContain(
+      "chapterId={resourceScopeChapterId || activeStep?.id}",
+    );
     expect(panel).toContain("filterPlannedResourcesByScope");
     expect(panel).toContain("mergeIleGatherPlannedResources");
     expect(panel).toContain("data-ile-gather-planned");
@@ -469,7 +473,8 @@ describe("TAP Learning gather resources", () => {
     expect(surface).toContain("availableIlePowCounts");
     expect(surface).toContain("applyIleGatherSpend");
     expect(surface).toContain("buildIleGatherPowArtifact");
-    expect(surface).toContain('setActiveTool("plan-resources")');
+    expect(surface).toContain("setSessionResourcesOpen(true)");
+    expect(surface).not.toContain('setActiveTool("plan-resources")');
     expect(surface).toContain("onOpenResources");
 
     writeScratch(

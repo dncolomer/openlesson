@@ -83,6 +83,7 @@ import { SessionWelcomeModal } from "@/components/session-view/session-welcome-m
 import { SessionToolPanes } from "@/components/session-view/session-tool-panes";
 import { SessionThoughtPane } from "@/components/session-view/session-thought-pane";
 import { SessionChrome } from "@/components/session-view/session-chrome";
+import { WorkspaceResourcesPanel } from "@/components/WorkspaceResourcesPanel";
 import { WorkCanvas } from "@/components/ExcalidrawCanvas";
 import { IleVoiceBar, IleVoiceBarActions } from "@/components/session-view/ile-voice-bar";
 import { sessionSidebarHasSection } from "@/lib/session-sidebar";
@@ -660,6 +661,7 @@ export function SessionView({
   const sessionBlockId =
     typeof session?.metadata?.block_id === "string" ? session.metadata.block_id : undefined;
   const [resourceScopeChapterId, setResourceScopeChapterId] = useState<string | null>(null);
+  const [sessionResourcesOpen, setSessionResourcesOpen] = useState(false);
   const completeTargetStepIdRef = useRef<string | null>(null);
   const [gatherSeenIds, setGatherSeenIds] = useState<string[]>(() => parseGatherSeenBlockIds([]));
   const {
@@ -685,7 +687,7 @@ export function SessionView({
     chapterDescription: activeStep?.description || "",
     artifacts: sessionPowArtifacts,
     recordSessionPowArtifact,
-    onOpenResources: () => setActiveTool("plan-resources"),
+    onOpenResources: () => setSessionResourcesOpen(true),
     ileToken,
     ayclToken,
     expense: powExpense,
@@ -1848,11 +1850,6 @@ export function SessionView({
         activeTool={activeTool}
         shouldBlockTools={Boolean(shouldBlockTools)}
         session={session}
-        ayclToken={ayclToken}
-        ileToken={ileToken}
-        gatherBlockId={sessionBlockId}
-        gatherChapterId={resourceScopeChapterId || activeStep?.id}
-        gatheredResources={gatheredResources}
         isRecording={isRecording}
         activeStep={activeStep}
         activeChapterLabel={activeChapterLabel}
@@ -1887,7 +1884,6 @@ export function SessionView({
           logsRef.current = [];
           setLogs([]);
         }}
-        isMobile={isMobile}
       />
     );
   };
@@ -2139,7 +2135,20 @@ export function SessionView({
         aestheticImages={selectedAesthetic?.images}
         openWorkLabels={openWorkDockLabels}
         onFocusOpenWork={handleFocusOpenWork}
-        onOpenGlobalResources={() => handleIleSessionToolChange("plan-resources")}
+        resources={
+          workspaceId ? (
+            <WorkspaceResourcesPanel
+              workspaceId={workspaceId}
+              blockId={sessionBlockId}
+              chapterId={resourceScopeChapterId || activeStep?.id}
+              gatheredResources={gatheredResources}
+              ayclToken={ayclToken}
+              ileToken={ileToken}
+            />
+          ) : null
+        }
+        resourcesOpen={sessionResourcesOpen}
+        onResourcesOpenChange={setSessionResourcesOpen}
         onCloseToolOverlay={() => setActiveTool("chapters")}
         heliosOpen={heliosWidgetOpen}
         onCloseHelios={() => setHeliosWidgetOpen(false)}
@@ -2147,7 +2156,6 @@ export function SessionView({
         insightCraftOpen={craftingInsightsOpen}
         onMinimizeInsightCraft={() => setCraftingInsightsOpen(false)}
         workCanvasHeaderLeading={workCanvasInsightSlots}
-        insightCount={sessionInsights.length}
         mapInsightsWidget={
           <IleMapInsightsWidget
             insights={sessionInsights}

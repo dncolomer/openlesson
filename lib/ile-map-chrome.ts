@@ -106,8 +106,8 @@ export const ILE_CHAPTER_PANEL_TOP_CLASS = ILE_MAP_WIDGET_TOP_CLASS;
 /** @deprecated Use ILE_MAP_WIDGET_WIDTH_CLASS. */
 export const ILE_CHAPTER_WIDGET_WIDTH_CLASS = ILE_MAP_WIDGET_WIDTH_CLASS;
 
-/** Session-level overlays on the left (Global resources, Review work). */
-export const ILE_MAP_OVERLAY_TOOLS = ["plan-resources", "thought-history"] as const;
+/** Session-level overlay (Review work). Session resources live in the sidebar. */
+export const ILE_MAP_OVERLAY_TOOLS = ["thought-history"] as const;
 
 export type IleMapOverlayTool = (typeof ILE_MAP_OVERLAY_TOOLS)[number];
 

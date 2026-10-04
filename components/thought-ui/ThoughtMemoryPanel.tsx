@@ -92,7 +92,6 @@ export function ThoughtMemoryPanel<T extends ThoughtMemoryEntry = ThoughtMemoryE
   const listEnabled = surfaceCaps.allowInsightList || generationEnabled;
 
   const [mode, setMode] = useState<"memory" | "insights">("memory");
-  const [searchQuery, setSearchQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [creatingInsight, setCreatingInsight] = useState(false);
   const [suggestingInsights, setSuggestingInsights] = useState(false);
@@ -138,12 +137,6 @@ export function ThoughtMemoryPanel<T extends ThoughtMemoryEntry = ThoughtMemoryE
     });
     return () => subscription.unsubscribe();
   }, []);
-
-  const normalizedSearch = searchQuery.trim().toLowerCase();
-  const filteredThoughts = useMemo(() => {
-    if (!normalizedSearch) return thoughts;
-    return thoughts.filter((thought) => thought.text.toLowerCase().includes(normalizedSearch));
-  }, [normalizedSearch, thoughts]);
 
   const selectedThoughts = useMemo(
     () => thoughts.filter((thought) => selectedIds.has(thought.id)),
@@ -307,8 +300,8 @@ export function ThoughtMemoryPanel<T extends ThoughtMemoryEntry = ThoughtMemoryE
             ? canManageThoughts
               ? "Edit or delete individual thoughts. Keep speaking — new thoughts still come in."
               : generationEnabled
-              ? "Search traces, click cards to select, then bookmark or autosuggest insights."
-              : "Search and review thought traces from this session."
+              ? "Click cards to select, then bookmark or autosuggest insights."
+              : "Review thought traces from this session."
             : workspaceId
               ? "Insights bookmarked from this workspace."
               : "Insights synthesize selected thoughts into shareable bookmarks."}
@@ -380,33 +373,21 @@ export function ThoughtMemoryPanel<T extends ThoughtMemoryEntry = ThoughtMemoryE
         </div>
       ) : (
         <div className="flex h-0 min-h-0 flex-1 flex-col overflow-hidden">
-          <div className="mb-3 shrink-0 space-y-2">
-            <label className="block">
-              <span className="sr-only">Search thought traces</span>
-              <input
-                type="search"
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Search traces…"
-                className="w-full rounded-none border border-neutral-800 bg-black/40 px-2.5 py-1.5 text-xs text-neutral-100 outline-none transition placeholder:text-neutral-600 focus:border-neutral-600"
-              />
-            </label>
-            {generationEnabled ? (
-              <>
-                <button
-                  type="button"
-                  disabled={!insightsAvailable || thoughts.length < 2 || suggestingInsights}
-                  onClick={() => void suggestInsights()}
-                  className="w-full rounded-none border border-neutral-800 bg-neutral-950 px-2.5 py-1.5 text-[11px] font-medium text-neutral-300 transition hover:border-neutral-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  {suggestingInsights ? "Suggesting insights…" : "Suggest insights from traces"}
-                </button>
-                {!insightsAvailable && isAuthenticated !== null ? (
-                  <p className="text-[11px] leading-relaxed text-neutral-500">{INSIGHTS_AUTH_MESSAGE}</p>
-                ) : null}
-              </>
-            ) : null}
-          </div>
+          {generationEnabled ? (
+            <div className="mb-3 shrink-0 space-y-2">
+              <button
+                type="button"
+                disabled={!insightsAvailable || thoughts.length < 2 || suggestingInsights}
+                onClick={() => void suggestInsights()}
+                className="w-full rounded-none border border-neutral-800 bg-neutral-950 px-2.5 py-1.5 text-[11px] font-medium text-neutral-300 transition hover:border-neutral-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {suggestingInsights ? "Suggesting insights…" : "Suggest insights from traces"}
+              </button>
+              {!insightsAvailable && isAuthenticated !== null ? (
+                <p className="text-[11px] leading-relaxed text-neutral-500">{INSIGHTS_AUTH_MESSAGE}</p>
+              ) : null}
+            </div>
+          ) : null}
 
           {generationEnabled && insightSuggestions.length > 0 ? (
             <div className="mb-3 shrink-0 space-y-2 rounded-none border border-neutral-600/20 bg-neutral-800/5 p-2.5">
@@ -485,10 +466,8 @@ export function ThoughtMemoryPanel<T extends ThoughtMemoryEntry = ThoughtMemoryE
           <div className={scrollListClassName}>
             {thoughts.length === 0 ? (
               <p className="py-8 text-center text-sm text-neutral-500">{emptyMessage}</p>
-            ) : filteredThoughts.length === 0 ? (
-              <p className="py-8 text-center text-sm text-neutral-500">No traces match your search.</p>
             ) : (
-              filteredThoughts.map((thought) => {
+              thoughts.map((thought) => {
                 const isSelected = canSelectThoughts && selectedIds.has(thought.id);
                 if (canManageThoughts) {
                   return (

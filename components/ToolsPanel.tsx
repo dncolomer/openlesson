@@ -165,7 +165,8 @@ export function AudioMiniPreview({
 }: {
   stream: MediaStream | null;
   muted: boolean;
-  onToggleMute: () => void;
+  /** Omitted when this tile has no microphone to mute. */
+  onToggleMute?: () => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -238,16 +239,18 @@ export function AudioMiniPreview({
     <div
       data-ile-audio-preview
       className={`${sensorHalfWidgetShell} aspect-video`}
-      title={muted ? "Microphone muted" : "Live audio"}
+      title={stream ? (muted ? "Microphone muted" : "Live audio") : "Audio"}
     >
-      <button
-        type="button"
-        data-ile-audio-mute
-        onClick={onToggleMute}
-        className="absolute right-1 top-1 z-10 rounded-none border border-neutral-600 bg-neutral-950/90 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-neutral-200 hover:border-neutral-400 hover:text-white"
-      >
-        {muted ? "Unmute" : "Mute"}
-      </button>
+      {onToggleMute ? (
+        <button
+          type="button"
+          data-ile-audio-mute
+          onClick={onToggleMute}
+          className="absolute right-1 top-1 z-10 rounded-none border border-neutral-600 bg-neutral-950/90 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-neutral-200 hover:border-neutral-400 hover:text-white"
+        >
+          {muted ? "Unmute" : "Mute"}
+        </button>
+      ) : null}
       <canvas ref={canvasRef} className="absolute inset-0 h-full w-full grayscale" />
     </div>
   );

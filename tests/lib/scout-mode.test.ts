@@ -37,6 +37,7 @@ import {
   SCOUT_FRAME_WIDTH,
   SCOUT_SPREAD_GAP_X,
   SCOUT_NODE_CUSTOM_DATA_KEY,
+  SCOUT_ROLE_CUSTOM_DATA_KEY,
   SCOUT_QUESTION_MAX_WORDS,
   SCOUT_SEED_NODE_ID,
   scoutFrameMetrics,
@@ -265,7 +266,7 @@ describe("Scout pick → connected canvas node + 5 questions + go-back", () => {
           el.customData?.[SCOUT_NODE_CUSTOM_DATA_KEY] === afterPick.nodes[1]!.id,
       ),
     ).toBe(true);
-    expect(connected.scene.elements.some((el) => el.type === "arrow")).toBe(false);
+    expect(connected.scene.elements.some((el) => el.type === "arrow")).toBe(true);
     expect(extractScoutCanvasText(connected.scene)).toMatch(/decrease-key/);
     const seedIds = new Set(seed.scene.elements.map((el) => el.id));
     expect(connected.added.length).toBeGreaterThan(0);
@@ -277,7 +278,7 @@ describe("Scout pick → connected canvas node + 5 questions + go-back", () => {
           el.customData?.[SCOUT_NODE_CUSTOM_DATA_KEY] === afterPick.nodes[1]!.id,
       ),
     ).toBe(true);
-    expect(connected.added.some((el) => el.type === "arrow")).toBe(false);
+    expect(connected.added.some((el) => el.type === "arrow")).toBe(true);
 
     const parentRect = seed.scene.elements.find((el) => el.type === "rectangle")!;
     const childRect = connected.scene.elements.find(
@@ -296,6 +297,25 @@ describe("Scout pick → connected canvas node + 5 questions + go-back", () => {
     expect(childText.width).toBeLessThanOrEqual(childRect.width);
     expect(childText.height).toBeLessThanOrEqual(childRect.height);
     expect(String(childText.text)).toContain("\n");
+
+    const arrow = connected.added.find((el) => el.type === "arrow");
+    expect(arrow?.endArrowhead).toBe("arrow");
+    expect(arrow?.customData?.[SCOUT_ROLE_CUSTOM_DATA_KEY]).toBe("link");
+    expect(arrow?.customData?.scoutParentId).toBe(SCOUT_SEED_NODE_ID);
+    expect(arrow?.x).toBeCloseTo(parentRect.x + parentRect.width / 2);
+    expect(arrow?.y).toBeCloseTo(parentRect.y + parentRect.height);
+    const tip = arrow?.points?.[1];
+    expect((arrow?.x ?? 0) + Number(tip?.[0])).toBeCloseTo(childRect.x + childRect.width / 2);
+    expect((arrow?.y ?? 0) + Number(tip?.[1])).toBeCloseTo(childRect.y);
+
+    const deeper = connectScoutQuestionToCanvas(connected.scene, {
+      question: "How does sift-down choose the child to swap?",
+      parentNodeId: afterPick.nodes[1]!.id,
+    });
+    const deeperArrow = deeper.added.find((el) => el.type === "arrow");
+    expect(deeper.scene.elements.filter((el) => el.type === "arrow" && !el.isDeleted)).toHaveLength(2);
+    expect(deeperArrow?.customData?.scoutParentId).toBe(afterPick.nodes[1]!.id);
+    expect(deeperArrow?.y).toBeCloseTo(childRect.y + childRect.height);
 
     const round2 = [
       "What happens if the parent is already smaller?",
@@ -630,7 +650,12 @@ describe("Prepare canvas drops miss live marks and the question prompt lists the
     expect(keptBlocker.y).toBe(blocker.y);
     expect(keptBlocker.width).toBe(blocker.width);
     expect(keptBlocker.height).toBe(blocker.height);
-    expect(newMarksOverlapExisting(connected.added, [parent, blocker])).toBe(false);
+    expect(
+      newMarksOverlapExisting(
+        connected.added.filter((el) => el.type !== "arrow"),
+        [parent, blocker],
+      ),
+    ).toBe(false);
 
     const deleted = {
       ...blocker,

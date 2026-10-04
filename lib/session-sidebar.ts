@@ -9,7 +9,7 @@ export const SESSION_SIDEBAR_MODES = ["ile", "tap", "verification-tap"] as const
 export type SessionSidebarMode = (typeof SESSION_SIDEBAR_MODES)[number];
 
 export const SESSION_SIDEBAR_SECTIONS = [
-  "insights",
+  "focus",
   "chapters",
   "signals",
   "transcript",
@@ -22,18 +22,25 @@ export const SESSION_SIDEBAR_SECTIONS = [
 export type SessionSidebarSection = (typeof SESSION_SIDEBAR_SECTIONS)[number];
 
 /**
- * Expanded column. 20rem is under the 24rem cap and wider than the rail.
+ * Expanded column. 20rem is under the 24rem cap. The rail does not collapse.
  */
 export const SESSION_SIDEBAR_EXPANDED_REM = 20;
 
 /**
- * Collapsed rail. Stays in the layout: inside 5.5rem–7.5rem, never 0.
+ * Retired collapsed width. Kept so older width checks still have a number.
+ * The live sidebar never uses it.
  */
 export const SESSION_SIDEBAR_COLLAPSED_REM = 6.5;
 
-/** This TAP Learning version has no work-canvas countdown. TAP can still show a clock. */
+/**
+ * Fixed height of the major block (insights, stashed text, or generated questions).
+ * Content scrolls inside. The block does not grow with the list.
+ */
+export const SESSION_SIDEBAR_FOCUS_REM = 22;
+
+/** Learn has no work-canvas countdown. The Data action stays on Learn. */
 const ILE_SESSION_SIDEBAR_SECTIONS = [
-  "insights",
+  "focus",
   "chapters",
   "signals",
   "transcript",
@@ -43,25 +50,20 @@ const ILE_SESSION_SIDEBAR_SECTIONS = [
 ] as const satisfies readonly SessionSidebarSection[];
 
 /**
- * TAP and verification TAP drop insights and the extra data-input channels
- * (signal previews and the Data action). Transcript, clock, chapters, Logs,
- * and Save stay so the same host can be configured later.
+ * Prepare, Drill, conversational TAP, and Verify share the same sections.
+ * The focus block is what changes. Data stays off. The clock stays on.
  */
 const TAP_SESSION_SIDEBAR_SECTIONS = [
+  "focus",
   "chapters",
+  "signals",
   "transcript",
   "clock",
   "logs",
   "save",
 ] as const satisfies readonly SessionSidebarSection[];
 
-const VERIFICATION_TAP_SESSION_SIDEBAR_SECTIONS = [
-  "chapters",
-  "transcript",
-  "clock",
-  "logs",
-  "save",
-] as const satisfies readonly SessionSidebarSection[];
+const VERIFICATION_TAP_SESSION_SIDEBAR_SECTIONS = TAP_SESSION_SIDEBAR_SECTIONS;
 
 export function sessionSidebarSections(
   mode: SessionSidebarMode,

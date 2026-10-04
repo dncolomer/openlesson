@@ -6,8 +6,6 @@ import { LogsTool, type LogEntry } from "@/components/LogsTool";
 import type { TransferHealth } from "@/components/LogsTool";
 import { IleReviewWorkPanel } from "@/components/session-view/ile-review-work-panel";
 import type { Tool } from "@/components/ToolsPanel";
-import { WorkspaceResourcesPanel } from "@/components/WorkspaceResourcesPanel";
-import type { WorkspaceExternalResource } from "@/lib/workspace-external-resources";
 import type { IleSessionMode } from "@/lib/ile-mode";
 import type { DeviceStatus } from "@/lib/muse-athena";
 import type { Session, SessionPlanStep } from "@/lib/storage";
@@ -19,8 +17,6 @@ export type SessionToolPanesProps = {
   activeTool: Tool;
   shouldBlockTools: boolean;
   session: Session;
-  ayclToken?: string;
-  ileToken?: string;
   isRecording: boolean;
   activeStep: SessionPlanStep | undefined;
   activeChapterLabel: string;
@@ -49,10 +45,6 @@ export type SessionToolPanesProps = {
   logs: LogEntry[];
   transferHealth: TransferHealth;
   onClearLogs: () => void;
-  isMobile: boolean;
-  gatherBlockId?: string | null;
-  gatherChapterId?: string | null;
-  gatheredResources?: WorkspaceExternalResource[];
 };
 
 export function SessionToolPanes(props: SessionToolPanesProps) {
@@ -60,8 +52,6 @@ export function SessionToolPanes(props: SessionToolPanesProps) {
     activeTool,
     shouldBlockTools,
     session,
-    ayclToken,
-    ileToken,
     isRecording,
     resolvedSessionMode,
     unsubmittedThoughts,
@@ -87,10 +77,6 @@ export function SessionToolPanes(props: SessionToolPanesProps) {
     logs,
     transferHealth,
     onClearLogs,
-    isMobile,
-    gatherBlockId = null,
-    gatherChapterId = null,
-    gatheredResources = [],
   } = props;
 
   return (
@@ -145,18 +131,6 @@ export function SessionToolPanes(props: SessionToolPanesProps) {
               logs={logs}
               transferHealth={transferHealth}
               onClear={onClearLogs}
-            />
-          </div>
-        )}
-        {activeTool === "plan-resources" && session?.metadata?.workspace_id && !isMobile && (
-          <div className="h-full overflow-hidden">
-            <WorkspaceResourcesPanel
-              workspaceId={session.metadata.workspace_id as string}
-              blockId={gatherBlockId}
-              chapterId={gatherChapterId}
-              gatheredResources={gatheredResources}
-              ayclToken={ayclToken}
-              ileToken={ileToken}
             />
           </div>
         )}

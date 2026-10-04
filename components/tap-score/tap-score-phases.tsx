@@ -30,6 +30,8 @@ import { PerformanceReportCard } from "@/components/PerformanceReportCard";
 import { TapLiveClock } from "@/components/tap-score/tap-live-clock";
 import { TapThoughtButton } from "@/components/tap-score/tap-thought-button";
 import { TapAestheticSection } from "@/components/tap-score/tap-aesthetic-section";
+import { SessionTopicChapter } from "@/components/session-view/ile-work-dock-bar";
+import { TapSessionSignals } from "@/components/session-view/session-signals";
 import { SessionWorkSurface } from "@/components/session-view/session-work-surface";
 import type { SessionSidebarMode } from "@/lib/session-sidebar";
 import { formatSpeechTranscriptDisplay } from "@/lib/useSessionThoughtInterface";
@@ -517,8 +519,6 @@ export function TapScorePhases(props: {
           <section className="flex min-h-0 flex-1 flex-col overflow-hidden" data-tap-convo-live>
             <SessionWorkSurface
               mode={sidebarMode}
-              counts={{ chapters: thoughtHistory.length }}
-              sectionLabels={{ chapters: "Thoughts" }}
               stage={
                 <div
                   data-tap-convo-work-canvas-pane
@@ -612,7 +612,19 @@ export function TapScorePhases(props: {
                 </div>
               }
               chapters={
-                <>
+                <SessionTopicChapter
+                  id={startingTopicId || "topic"}
+                  keyword={
+                    startingTopics.find((topic) => topic.id === startingTopicId)?.title ||
+                    workspaceTitle ||
+                    "Topic"
+                  }
+                />
+              }
+              signals={<TapSessionSignals />}
+              focusLabel="Stash"
+              focus={
+                <div className="flex h-full min-h-0 flex-col overflow-hidden">
                   <div
                     data-tap-im-done-slot
                     className="shrink-0 border-b border-neutral-800/60 bg-black/35 px-3 py-2"
@@ -647,7 +659,7 @@ export function TapScorePhases(props: {
                     />
                   </div>
                   <div
-                    className="min-h-0 overflow-hidden bg-black/35 px-2 py-2"
+                    className="min-h-0 flex-1 overflow-hidden bg-black/35 px-2 py-2"
                     data-tap-older-thoughts
                     data-tap-thought-memory-always
                   >
@@ -665,7 +677,7 @@ export function TapScorePhases(props: {
                       emptyMessage="Speak, press Del to stash thoughts, then edit or delete individual thoughts. I'm done answering closes your turn."
                     />
                   </div>
-                </>
+                </div>
               }
             />
           </section>

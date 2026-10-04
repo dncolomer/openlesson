@@ -52,7 +52,7 @@ describe("Review work chrome (shipped source)", () => {
     expect(ILE_REVIEW_WORK_LABEL).toBe("Review work");
     expect(ILE_REVIEW_WORK_TOOL).toBe("thought-history");
     expect(ILE_MAP_OVERLAY_TOOLS).toContain("thought-history");
-    expect(ILE_MAP_OVERLAY_TOOLS).toContain("plan-resources");
+    expect(ILE_MAP_OVERLAY_TOOLS).not.toContain("plan-resources");
     expect(ILE_CHAPTER_WIDGET_TOOLS).not.toContain("thought-history");
 
     const chrome = read("components/session-view/session-chrome.tsx");
@@ -64,7 +64,8 @@ describe("Review work chrome (shipped source)", () => {
     expect(chrome).not.toContain("data-ile-review-work");
     expect(chrome).not.toContain("data-ile-session-insights-count");
     expect(chrome).not.toContain("data-ile-global-resources");
-    expect(chrome).toContain("onOpenGlobalResources={onOpenGlobalResources}");
+    expect(chrome).not.toContain("onOpenGlobalResources");
+    expect(chrome).toContain("resources={resources}");
     expect(read("components/session-view/session-sidebar.tsx")).toContain(
       "data-ile-global-resources",
     );

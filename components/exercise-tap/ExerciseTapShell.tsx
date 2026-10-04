@@ -7,6 +7,8 @@ import type { ExerciseThought } from "@/lib/exercise-tap";
 import type { TapSoloProblem } from "@/lib/tap-session-map";
 import { TapSessionMap } from "@/components/tap-score/tap-session-map";
 import { TapTurnOverlay } from "@/components/tap-score/tap-turn-overlay";
+import { SessionTopicChapter } from "@/components/session-view/ile-work-dock-bar";
+import { TapSessionSignals } from "@/components/session-view/session-signals";
 import { SessionWorkSurface } from "@/components/session-view/session-work-surface";
 import { ThoughtMemoryPanel } from "@/components/thought-ui/ThoughtMemoryPanel";
 import {
@@ -18,8 +20,8 @@ import {
 } from "@/lib/tap-thought-memory";
 
 /**
- * Exercise TAP live surface. The problem map is the stage. Stash, I'm done
- * answering, and thought memory sit in the shared right sidebar.
+ * Exercise TAP live surface. The problem map is the stage. Stash sits in the
+ * sidebar focus block. The chosen topic uses the chapter chip.
  */
 export function ExerciseTapShell({
   exerciseText,
@@ -78,8 +80,6 @@ export function ExerciseTapShell({
     >
       <SessionWorkSurface
         mode="tap"
-        counts={{ chapters: thoughtHistory.length }}
-        sectionLabels={{ chapters: "Thoughts" }}
         stage={
           <div
             data-exercise-tap-map-pane
@@ -112,7 +112,15 @@ export function ExerciseTapShell({
           </div>
         }
         chapters={
-          <>
+          <SessionTopicChapter
+            id={active?.id || "topic"}
+            keyword={active?.title || "Exercise"}
+          />
+        }
+        signals={<TapSessionSignals />}
+        focusLabel="Stash"
+        focus={
+          <div className="flex h-full min-h-0 flex-col overflow-hidden">
             {identityBadge ? (
               <div className="flex shrink-0 items-center justify-end gap-2 border-b border-neutral-800/60 bg-black/35 px-3 py-1.5">
                 {identityBadge}
@@ -139,7 +147,7 @@ export function ExerciseTapShell({
               />
             </div>
             <div
-              className="min-h-0 overflow-hidden bg-black/35 px-2 py-2"
+              className="min-h-0 flex-1 overflow-hidden bg-black/35 px-2 py-2"
               data-tap-older-thoughts
               data-exercise-older-thoughts
               data-tap-thought-memory-always
@@ -163,7 +171,7 @@ export function ExerciseTapShell({
                 }
               />
             </div>
-          </>
+          </div>
         }
       />
     </section>

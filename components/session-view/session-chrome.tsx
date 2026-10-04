@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
-import { IleCollapsibleOverlay } from "@/components/session-view/ile-collapsible-overlay";
 import { SessionSidebar } from "@/components/session-view/session-sidebar";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { DialogFrame } from "@/components/ui/DialogFrame";
@@ -20,7 +19,6 @@ import {
   isIleMapOverlayTool,
   isIleSessionModalTool,
 } from "@/lib/ile-map-chrome";
-import { ileSidebarSignalCount } from "@/lib/session-sidebar";
 import { IleWorkDockBar } from "@/components/session-view/ile-work-dock-bar";
 import {
   emptyIlePowDisplayCounts,
@@ -58,12 +56,11 @@ export type SessionChromeProps = {
   onMinimizeInsightCraft?: () => void;
   workCanvasHeaderLeading?: ReactNode;
   mapInsightsWidget?: ReactNode;
-  insightCount?: number;
   introOpen: boolean;
   introWidget: ReactNode;
   onCloseSessionModal?: () => void;
   voiceBar: ReactNode;
-  /** Data, Logs, and Save. The sidebar renders this only while expanded. */
+  /** Data, Logs, and Save. */}
   actions?: ReactNode;
   powCounts: IlePowDisplayCounts;
   unsubmittedPowCounts?: IlePowDisplayCounts;
@@ -77,7 +74,9 @@ export type SessionChromeProps = {
   }>;
   aestheticImages?: string[];
   onFocusOpenWork?: (id: string) => void;
-  onOpenGlobalResources?: () => void;
+  resources?: ReactNode;
+  resourcesOpen?: boolean;
+  onResourcesOpenChange?: (open: boolean) => void;
   onSubmitTurn?: () => void;
   submitTurnLabel?: string;
   submitTurnBusy?: boolean;
@@ -134,7 +133,6 @@ export function SessionChrome({
   onMinimizeInsightCraft,
   workCanvasHeaderLeading = null,
   mapInsightsWidget = null,
-  insightCount = 0,
   introOpen,
   introWidget,
   onCloseSessionModal,
@@ -146,7 +144,9 @@ export function SessionChrome({
   openWorkLabels = [],
   aestheticImages = [],
   onFocusOpenWork,
-  onOpenGlobalResources,
+  resources = null,
+  resourcesOpen,
+  onResourcesOpenChange,
   onSubmitTurn: _onSubmitTurn,
   submitTurnLabel: _submitTurnLabel,
   submitTurnBusy: _submitTurnBusy = false,
@@ -198,9 +198,7 @@ export function SessionChrome({
   const overlayTitle =
     activeTool === ILE_REVIEW_WORK_TOOL
       ? t("session.reviewWork") || ILE_REVIEW_WORK_LABEL
-      : activeTool === "plan-resources"
-        ? "session resources"
-        : activeTool;
+      : activeTool;
 
   return (
     <>
@@ -233,67 +231,52 @@ export function SessionChrome({
         </div>
         <SessionSidebar
           mode="ile"
-          counts={{
-            insights: insightCount,
-            chapters: openWorkLabels.length,
-            signals: ileSidebarSignalCount({
-              eegStreaming: museStatus === "streaming",
-              screenCapturing: isScreenCapturing,
-              webcamEnabled: isWebcamEnabled,
-            }),
-          }}
-          onOpenGlobalResources={onOpenGlobalResources}
-          globalResourcesOpen={activeTool === "plan-resources"}
-          insights={
+          resources={resources}
+          resourcesOpen={resourcesOpen}
+          onResourcesOpenChange={onResourcesOpenChange}
+          focusLabel="Insights"
+          focus={
             mapInsightsWidget ? (
-              <IleCollapsibleOverlay
-                id="insights"
-                title="Insights"
-                className="pointer-events-none w-full"
-              >
+              <div id="insights" className="h-full min-h-0 overflow-y-auto">
                 {mapInsightsWidget}
-              </IleCollapsibleOverlay>
+              </div>
             ) : null
           }
           chapters={
-            <div data-ile-work-dock className="w-full min-w-0">
-              <IleCollapsibleOverlay id="chapters" title="Chapters" className="w-full">
-                <IleWorkDockBar
-                  t={t}
-                  heliosOpen={heliosOpen}
-                  openWorkLabels={openWorkLabels}
-                  onFocusOpenWork={onFocusOpenWork}
-                  aestheticImages={aestheticImages}
-                />
-              </IleCollapsibleOverlay>
+            <div data-ile-work-dock id="chapters" className="w-full min-w-0">
+              <IleWorkDockBar
+                t={t}
+                heliosOpen={heliosOpen}
+                openWorkLabels={openWorkLabels}
+                onFocusOpenWork={onFocusOpenWork}
+                aestheticImages={aestheticImages}
+              />
             </div>
           }
           signals={
-            <div data-ile-tools-widget className="w-full min-w-0">
-              <IleCollapsibleOverlay id="sensors" title="Signals">
-                <div
-                  data-ile-sensor-pair
-                  className="grid w-full max-w-[20rem] grid-cols-2 gap-1.5"
-                >
-                  <AudioMiniPreview
-                    stream={audioStream}
-                    muted={audioMuted}
-                    onToggleMute={onToggleAudioMute}
+            <div data-ile-tools-widget id="sensors" className="w-full min-w-0">
+              <div
+                data-ile-sensor-pair
+                className="grid w-full max-w-[20rem] grid-cols-2 gap-1.5"
+              >
+                <AudioMiniPreview
+                  stream={audioStream}
+                  muted={audioMuted}
+                  onToggleMute={onToggleAudioMute}
+                />
+                {museStatus === "streaming" ? (
+                  <EegMiniPreview
+                    museChannelData={museChannelData}
+                    museStatus={museStatus}
+                    museDeviceStatus={museDeviceStatus}
+                    bandPowers={bandPowers}
                   />
-                  {museStatus === "streaming" ? (
-                    <EegMiniPreview
-                      museChannelData={museChannelData}
-                      museStatus={museStatus}
-                      museDeviceStatus={museDeviceStatus}
-                      bandPowers={bandPowers}
-                    />
-                  ) : null}
-                  {isScreenCapturing ? (
-                    <ScreenShareMiniPreview stream={screenShareStream} onTurnOff={onStopScreenCapture} />
-                  ) : null}
-                  {isWebcamEnabled ? <WebcamMiniPreview onTurnOff={onTurnOffWebcam} /> : null}
-                </div>
-              </IleCollapsibleOverlay>
+                ) : null}
+                {isScreenCapturing ? (
+                  <ScreenShareMiniPreview stream={screenShareStream} onTurnOff={onStopScreenCapture} />
+                ) : null}
+                {isWebcamEnabled ? <WebcamMiniPreview onTurnOff={onTurnOffWebcam} /> : null}
+              </div>
             </div>
           }
           transcript={voiceBar}

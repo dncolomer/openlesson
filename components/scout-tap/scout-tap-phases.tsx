@@ -11,6 +11,8 @@ import {
 import { TapBriefingConfig } from "@/components/TapBriefingConfig";
 import { SessionFinishedScreen } from "@/components/session-view/session-finished-screen";
 import { SessionPageLoading } from "@/components/session-view/session-page-loading";
+import { SessionTopicChapter } from "@/components/session-view/ile-work-dock-bar";
+import { TapSessionSignals } from "@/components/session-view/session-signals";
 import { SessionWorkSurface } from "@/components/session-view/session-work-surface";
 import { TapAestheticSection } from "@/components/tap-score/tap-aesthetic-section";
 import { TapLiveClock } from "@/components/tap-score/tap-live-clock";
@@ -307,8 +309,6 @@ export function ScoutTapPhases(props: {
             <SessionWorkSurface
               mode="tap"
               stage={canvasPane}
-              counts={{ chapters: scoutState.questions.length }}
-              sectionLabels={{ chapters: "Questions" }}
               clock={
                 <div
                   className="flex w-full min-w-0 flex-col gap-2 px-1 py-1"
@@ -336,13 +336,12 @@ export function ScoutTapPhases(props: {
                 ) : null
               }
               chapters={
-                <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden" data-scout-questions-pane>
-                  <div className="border-b border-neutral-800/60 bg-black/35 px-3 py-2" data-scout-seed-topic>
-                    <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-neutral-500">
-                      {t("scout.live.questionsHeading")}
-                    </p>
-                    <p className="mt-1 text-sm font-medium text-white">{current.text}</p>
-                  </div>
+                <SessionTopicChapter id={current.id} keyword={current.text} />
+              }
+              signals={<TapSessionSignals />}
+              focusLabel={t("scout.live.questionsHeading")}
+              focus={
+                <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden" data-scout-questions-pane>
                   {questionButtons}
                 </div>
               }

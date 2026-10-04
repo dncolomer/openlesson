@@ -135,6 +135,32 @@ export function IleWorkDockChip({
   );
 }
 
+/** One chosen topic, drawn with the same chapter chip as a real chapter. */
+export function SessionTopicChapter({
+  id,
+  keyword,
+}: {
+  id: string;
+  keyword: string;
+}) {
+  const title = keyword.trim() || "Topic";
+  return (
+    <div data-session-topic-chapter={id} className="w-full min-w-0">
+      <IleWorkDockBar
+        heliosOpen={false}
+        openWorkLabels={[
+          {
+            id,
+            label: "Topic",
+            keyword: title,
+            focused: true,
+          },
+        ]}
+      />
+    </div>
+  );
+}
+
 export function IleWorkDockBar({
   heliosOpen,
   openWorkLabels,

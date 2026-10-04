@@ -370,8 +370,10 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     expect(dockSlice).not.toContain("onReviewWork");
     expect(chrome).not.toContain("data-ile-pow-resource-bar");
     expect(chrome).not.toContain("data-ile-global-resources");
-    expect(chrome).toContain("onOpenGlobalResources={onOpenGlobalResources}");
-    expect(chrome).toContain('globalResourcesOpen={activeTool === "plan-resources"}');
+    expect(chrome).not.toContain("onOpenGlobalResources");
+    expect(chrome).not.toContain("globalResourcesOpen");
+    expect(chrome).toContain("resources={resources}");
+    expect(chrome).toContain("resourcesOpen={resourcesOpen}");
     expect(chrome).not.toContain("data-ile-pow-resource-actions");
     expect(chrome).not.toContain("IleSubmitWorkButton");
     expect(chrome).not.toContain("data-ile-review-work");
@@ -450,8 +452,11 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     expect(chrome).toContain('id="sensors"');
     expect(chrome).toContain("transcript={voiceBar}");
     expect(read("components/session-view/ile-voice-bar.tsx")).not.toContain("inset-x-0 bottom-0");
-    expect(read("components/session-view/session-sidebar.tsx")).toContain(
+    expect(read("components/session-view/session-sidebar.tsx")).not.toContain(
       "data-session-sidebar-toggle",
+    );
+    expect(read("components/session-view/session-sidebar.tsx")).toContain(
+      "data-session-sidebar-focus",
     );
     expect(chrome).toContain("mapInsightsWidget");
     const trophies = read("components/session-view/ile-insight-trophies.tsx");

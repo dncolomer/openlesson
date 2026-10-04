@@ -13,6 +13,7 @@ import { SessionSidebar } from "@/components/session-view/session-sidebar";
 import {
   SESSION_SIDEBAR_COLLAPSED_REM,
   SESSION_SIDEBAR_EXPANDED_REM,
+  SESSION_SIDEBAR_FOCUS_REM,
   ileSidebarSignalCount,
   sessionSidebarHasSection,
   sessionSidebarRailStyle,
@@ -35,7 +36,7 @@ const thought = {
 } as unknown as SessionThoughtInterface;
 
 const ILE_SECTIONS: SessionSidebarSection[] = [
-  "insights",
+  "focus",
   "chapters",
   "signals",
   "transcript",
@@ -45,7 +46,9 @@ const ILE_SECTIONS: SessionSidebarSection[] = [
 ];
 
 const TAP_SECTIONS: SessionSidebarSection[] = [
+  "focus",
   "chapters",
+  "signals",
   "transcript",
   "clock",
   "logs",
@@ -74,22 +77,24 @@ const insightRow: InsightSummary = {
   created_at: "2026-01-01T00:00:00.000Z",
 };
 
-function renderSidebar(mode: SessionSidebarMode, collapsed: boolean, remainingSeconds: number) {
+function renderSidebar(mode: SessionSidebarMode, remainingSeconds: number) {
   return renderToStaticMarkup(
     createElement(SessionSidebar, {
       mode,
-      defaultCollapsed: collapsed,
+      focusLabel: mode === "ile" ? "Insights" : "Stash",
       clock: createElement(IleWorkCanvasTimer, { remainingSeconds }),
-      insights: createElement(IleMapInsightsWidget, {
-        insights: [insightRow],
-        visible: true,
-        slotCount: 1,
-      }),
+      focus:
+        mode === "ile"
+          ? createElement(IleMapInsightsWidget, {
+              insights: [insightRow],
+              visible: true,
+              slotCount: 1,
+            })
+          : createElement("div", { "data-slot": "stash" }, "Stash body"),
       chapters: createElement("div", { "data-slot": "chapters" }, "Chapters body"),
       signals: createElement("div", { "data-slot": "signals" }, "Signals body"),
       transcript: voiceBar(),
       actions: voiceActions(mode),
-      counts: { insights: 4, chapters: 2, signals: 3 },
     }),
   );
 }
@@ -102,17 +107,20 @@ describe("session sidebar mode configuration", () => {
 
     for (const mode of ["tap", "verification-tap"] as const) {
       const sections = sessionSidebarSections(mode);
-      expect(sections).not.toContain("insights");
-      expect(sections).not.toContain("signals");
+      expect(sections).toContain("focus");
+      expect(sections).toContain("chapters");
+      expect(sections).toContain("signals");
       expect(sections).not.toContain("data");
       expect(sections).toContain("transcript");
       expect(sections).toContain("clock");
       expect(sessionSidebarHasSection(mode, "data")).toBe(false);
+      expect(sessionSidebarHasSection(mode, "signals")).toBe(true);
       expect(sessionSidebarHasSection(mode, "logs")).toBe(true);
       expect(sessionSidebarHasSection(mode, "save")).toBe(true);
     }
 
-    expect(sessionSidebarHasSection("ile", "insights")).toBe(true);
+    expect(sessionSidebarHasSection("ile", "focus")).toBe(true);
+    expect(sessionSidebarHasSection("ile", "chapters")).toBe(true);
     expect(sessionSidebarHasSection("ile", "signals")).toBe(true);
     expect(sessionSidebarHasSection("ile", "data")).toBe(true);
     expect(sessionSidebarHasSection("ile", "clock")).toBe(false);
@@ -139,19 +147,25 @@ describe("session sidebar mode configuration", () => {
   });
 
   it("renders the TAP Learning sidebar beside a clock, widgets, and the live transcript", () => {
-    const html = renderSidebar("ile", false, 65);
+    const html = renderSidebar("ile", 65);
     expect(html).toContain('data-session-sidebar-mode="ile"');
-    expect(html).toContain('data-session-sidebar-collapsed="false"');
     expect(html).toContain(`width:${SESSION_SIDEBAR_EXPANDED_REM}rem`);
-    expect(html).toContain("data-session-sidebar-toggle");
-    expect(html).toContain("Collapse sidebar");
-    expect(html).toContain('data-session-sidebar-section="insights"');
+    expect(html).toContain(`height:${SESSION_SIDEBAR_FOCUS_REM}rem`);
+    expect(html).not.toContain("data-session-sidebar-toggle");
+    expect(html).not.toContain("Collapse sidebar");
+    expect(html).toContain('data-session-sidebar-section="focus"');
+    expect(html).toContain('data-session-sidebar-focus-label');
+    expect(html).toContain(">Insights<");
     expect(html).toContain('data-session-sidebar-section="chapters"');
     expect(html).toContain('data-session-sidebar-section="signals"');
     expect(html).toContain('data-session-sidebar-section="transcript"');
-    const insightsAt = html.indexOf('data-session-sidebar-section="insights"');
+    const focusAt = html.indexOf('data-session-sidebar-section="focus"');
+    const chaptersAt = html.indexOf('data-session-sidebar-section="chapters"');
+    const signalsAt = html.indexOf('data-session-sidebar-section="signals"');
+    expect(focusAt).toBeLessThan(chaptersAt);
+    expect(chaptersAt).toBeLessThan(signalsAt);
     const widgetAt = html.indexOf("data-ile-map-insights-widget");
-    expect(widgetAt).toBeGreaterThan(insightsAt);
+    expect(widgetAt).toBeGreaterThan(focusAt);
     expect(html.slice(widgetAt, html.indexOf("data-ile-map-insights-slots"))).toContain(
       "w-full min-w-0 max-w-full",
     );
@@ -182,88 +196,103 @@ describe("session sidebar mode configuration", () => {
     expect(html).not.toContain("translate");
   });
 
-  it("collapses to a rail that keeps the expand control and hides the countdown", () => {
-    const html = renderSidebar("ile", true, 15);
-    expect(html).toContain('data-session-sidebar-collapsed="true"');
-    expect(html).toContain(`width:${SESSION_SIDEBAR_COLLAPSED_REM}rem`);
-    expect(html).toContain(`min-width:${SESSION_SIDEBAR_COLLAPSED_REM}rem`);
-    expect(html).toContain(`max-width:${SESSION_SIDEBAR_COLLAPSED_REM}rem`);
-    expect(html).not.toContain(`width:${SESSION_SIDEBAR_EXPANDED_REM}rem`);
-    expect(html).toContain("data-session-sidebar-toggle");
-    expect(html).toContain("Expand sidebar");
-    expect(html).toContain('aria-expanded="false"');
+  it("stays expanded and does not offer a collapse control", () => {
+    const html = renderSidebar("ile", 15);
+    expect(html).toContain(`width:${SESSION_SIDEBAR_EXPANDED_REM}rem`);
+    expect(html).toContain(`min-width:${SESSION_SIDEBAR_EXPANDED_REM}rem`);
+    expect(html).not.toContain(`width:${SESSION_SIDEBAR_COLLAPSED_REM}rem`);
+    expect(html).not.toContain("data-session-sidebar-toggle");
+    expect(html).not.toContain("Expand sidebar");
+    expect(html).not.toContain("Collapse sidebar");
+    expect(html).not.toContain("data-session-sidebar-count");
     expect(html).not.toContain("data-ile-work-canvas-timer");
     expect(html).not.toContain("data-session-sidebar-clock");
-    expect(html).not.toContain(">0:15<");
-    expect(html).toContain('data-session-sidebar-count="insights"');
-    expect(html).toContain('data-session-sidebar-count-value="4"');
-    expect(html).toContain('data-session-sidebar-count="chapters"');
-    expect(html).toContain('data-session-sidebar-count-value="2"');
-    expect(html).toContain('data-session-sidebar-count="signals"');
-    expect(html).toContain('data-session-sidebar-count-value="3"');
-    expect(html).toContain(">Insights<");
+    expect(html).toContain("data-ile-map-insights-widget");
+    expect(html).toContain("live speech line");
+    expect(html).toContain("data-session-sidebar-actions");
+    expect(html).toContain("data-ile-bar-save");
+    expect(html).toContain(">Save<");
     expect(html).toContain(">Chapters<");
     expect(html).toContain(">Signals<");
-    expect(html).not.toContain("data-ile-map-insights-widget");
-    expect(html).not.toContain("live speech line");
-    expect(html).not.toContain("data-session-sidebar-actions");
-    expect(html).not.toContain("data-ile-bar-save");
-    expect(html).not.toContain(">Save<");
     expect(html).not.toContain("display:none");
     expect(html).not.toContain("translate");
     expect(html).not.toContain("data-ile-global-resources");
   });
 
-  it("shows session resources on the header bar when a handler is passed", () => {
-    const open = () => {};
-    const expanded = renderToStaticMarkup(
+  it("shows session resources as a small section, collapsed until opened", () => {
+    const resources = createElement("div", null, "Resource body");
+    const collapsed = renderToStaticMarkup(
       createElement(SessionSidebar, {
         mode: "ile",
-        defaultCollapsed: false,
-        onOpenGlobalResources: open,
-        globalResourcesOpen: true,
+        resources,
         chapters: createElement("div", null, "Chapters body"),
         transcript: voiceBar(),
         actions: voiceActions("ile"),
       }),
     );
-    expect(expanded).toContain("data-ile-global-resources");
-    expect(expanded).toContain(">session resources<");
-    expect(expanded).toContain("text-sm");
-    expect(expanded).toContain("py-2.5");
-    expect(expanded).not.toContain("text-[9px]");
-    expect(expanded).toContain('aria-pressed="true"');
-    expect(expanded.indexOf("data-ile-global-resources")).toBeGreaterThan(
-      expanded.indexOf("data-session-sidebar-toggle"),
+    const sidebarSource = readFileSync(
+      join(ROOT, "components/session-view/session-sidebar.tsx"),
+      "utf8",
     );
-    expect(expanded).toContain("data-ile-bar-data");
-    expect(expanded).not.toContain("data-session-sidebar-count");
+    expect(sidebarSource).toContain("useState(false)");
+    expect(sidebarSource).not.toContain("onOpenGlobalResources");
+    expect(sidebarSource).not.toContain("aria-pressed");
+    expect(sidebarSource).not.toContain("py-2.5");
+    expect(collapsed).toContain("data-ile-global-resources");
+    expect(collapsed).toContain('data-session-sidebar-section="resources"');
+    expect(collapsed).toContain(">session resources<");
+    expect(collapsed).toContain('aria-expanded="false"');
+    expect(collapsed).toContain("text-[11px]");
+    expect(collapsed).not.toContain("Resource body");
+    const resourcesButton = collapsed.slice(
+      collapsed.indexOf("data-ile-global-resources"),
+      collapsed.indexOf("</button>"),
+    );
+    expect(resourcesButton).toContain('aria-expanded="false"');
+    expect(resourcesButton).not.toContain("aria-pressed");
+    expect(resourcesButton).not.toContain("text-sm");
+    expect(resourcesButton).not.toContain("py-2.5");
+    expect(collapsed).not.toContain("data-ile-tool-overlay");
+    expect(collapsed).not.toContain("data-session-sidebar-toggle");
+    expect(collapsed).toContain("data-ile-bar-data");
+    expect(collapsed).not.toContain("data-session-sidebar-count");
+    expect(collapsed.indexOf('data-session-sidebar-section="resources"')).toBeLessThan(
+      collapsed.indexOf('data-session-sidebar-section="chapters"'),
+    );
 
-    const collapsed = renderToStaticMarkup(
+    const opened = renderToStaticMarkup(
       createElement(SessionSidebar, {
         mode: "ile",
-        defaultCollapsed: true,
-        onOpenGlobalResources: open,
-        globalResourcesOpen: false,
-        counts: { insights: 4, chapters: 2, signals: 3 },
+        resources,
+        resourcesOpen: true,
+        chapters: createElement("div", null, "Chapters body"),
       }),
     );
-    expect(collapsed).toContain("data-ile-global-resources");
-    expect(collapsed).toContain(">session resources<");
-    expect(collapsed).toContain('aria-pressed="false"');
-    expect(collapsed).toContain("Expand sidebar");
-    expect(collapsed).toContain('data-session-sidebar-count="insights"');
+    expect(opened).toContain('aria-expanded="true"');
+    expect(opened).toContain("data-session-sidebar-resources");
+    expect(opened).toContain("max-h-36");
+    expect(opened).toContain("Resource body");
 
-    expect(renderSidebar("ile", false, 65)).not.toContain("data-ile-global-resources");
+    expect(renderSidebar("ile", 65)).not.toContain("data-ile-global-resources");
     expect(renderToStaticMarkup(voiceBar())).not.toContain("data-ile-global-resources");
   });
 
-  it("drops insights and data-input channels for TAP and verification TAP", () => {
+  it("keeps chapters, signals, and the focus block for TAP and verification TAP", () => {
     for (const mode of ["tap", "verification-tap"] as const) {
-      const html = renderSidebar(mode, false, 16);
+      const html = renderSidebar(mode, 16);
       expect(html).toContain(`data-session-sidebar-mode="${mode}"`);
+      expect(html).toContain('data-session-sidebar-section="focus"');
+      expect(html).toContain(">Stash<");
+      expect(html).toContain("Stash body");
       expect(html).toContain("Chapters body");
+      expect(html).toContain("Signals body");
+      expect(html).toContain(">Chapters<");
+      expect(html).toContain(">Signals<");
+      expect(html).toContain(`height:${SESSION_SIDEBAR_FOCUS_REM}rem`);
       expect(html).toContain("live speech line");
+      expect(html.indexOf('data-session-sidebar-section="focus"')).toBeLessThan(
+        html.indexOf('data-session-sidebar-section="chapters"'),
+      );
       expect(html.indexOf("data-session-sidebar-actions")).toBeGreaterThan(
         html.indexOf("data-ile-transcription-box"),
       );
@@ -275,17 +304,10 @@ describe("session sidebar mode configuration", () => {
       expect(html).toContain(">0:16<");
       expect(html).not.toContain('data-ile-work-canvas-timer-urgent="true"');
       expect(html).not.toContain("data-ile-map-insights-widget");
-      expect(html).not.toContain("Signals body");
+      expect(html).not.toContain("data-session-sidebar-toggle");
       expect(html).not.toContain("data-ile-bar-data");
       expect(html).not.toContain(">Data<");
     }
-    const collapsedTap = renderSidebar("tap", true, 16);
-    expect(collapsedTap).toContain('data-session-sidebar-count="chapters"');
-    expect(collapsedTap).toContain('data-session-sidebar-count-value="2"');
-    expect(collapsedTap).not.toContain('data-session-sidebar-count="insights"');
-    expect(collapsedTap).not.toContain('data-session-sidebar-count="signals"');
-    expect(collapsedTap).not.toContain("data-session-sidebar-actions");
-    expect(collapsedTap).not.toContain("data-ile-bar-save");
   });
 
   it("counts live signal tiles with audio always included", () => {
@@ -348,6 +370,19 @@ describe("session sidebar mode configuration", () => {
     expect(host).toContain("data-ile-canvas-stage");
     expect(client).toContain("sidebarMode={sidebarMode}");
     expect(verify).toContain('sidebarMode="verification-tap"');
+    expect(prepare).toContain("focusLabel=");
+    expect(prepare).toContain("<SessionTopicChapter");
+    expect(prepare).toContain("<TapSessionSignals");
+    expect(prepare).toContain("data-scout-questions-pane");
+    expect(drill).toContain('focusLabel="Stash"');
+    expect(drill).toContain("<SessionTopicChapter");
+    expect(drill).toContain("<TapSessionSignals");
+    expect(tap).toContain('focusLabel="Stash"');
+    expect(tap).toContain("<SessionTopicChapter");
+    expect(tap).toContain("<TapSessionSignals");
+    expect(readFileSync(join(ROOT, "components/thought-ui/ThoughtMemoryPanel.tsx"), "utf8")).not.toContain(
+      "Search traces",
+    );
     const chrome = readFileSync(
       join(ROOT, "components/session-view/session-chrome.tsx"),
       "utf8",

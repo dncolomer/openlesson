@@ -34,6 +34,11 @@ export function TapBriefingConfig({
    * When set, replaces the default "Think Aloud Protocol" heading.
    */
   title,
+  /**
+   * Learn settings sit in a wide column. Spread the language buttons across it.
+   * Other modes keep the compact three-column cluster.
+   */
+  wideLanguage = false,
 }: {
   workspaceTitle: string;
   minutes: number;
@@ -45,6 +50,7 @@ export function TapBriefingConfig({
   kicker?: string;
   intro?: string;
   title?: string;
+  wideLanguage?: boolean;
 }) {
   const { t } = useI18n();
 
@@ -96,7 +102,14 @@ export function TapBriefingConfig({
         <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-600">
           {t("tap.briefing.conversationLanguage")}
         </p>
-        <div className="mt-2 grid max-w-xs grid-cols-3 gap-2">
+        <div
+          data-tap-conversation-language
+          className={
+            wideLanguage
+              ? "mt-2 grid w-full grid-cols-2 gap-2 sm:grid-cols-4"
+              : "mt-2 grid max-w-xs grid-cols-3 gap-2"
+          }
+        >
           {spokenLocales.map((locale) => (
             <ThoughtButton
               key={locale}

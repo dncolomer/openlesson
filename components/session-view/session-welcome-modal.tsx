@@ -168,6 +168,7 @@ export function SessionWelcomeModal({
                     onTutoringLanguageChange(coerceSpokenLocale(locale))
                   }
                   showDurationPicker={false}
+                  wideLanguage
                   disabled={isButtonDisabled}
                 />
                 <div

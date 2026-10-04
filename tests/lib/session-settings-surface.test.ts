@@ -33,6 +33,10 @@ describe("shared TAP settings surface", () => {
     expect(learn).toContain("<TapAestheticSection");
     expect(learn).toContain('kind="shortcuts"');
     expect(learn).toContain("conversationLanguage={tutoringLanguage}");
+    expect(learn).toContain("wideLanguage");
+    expect(briefing).toContain('data-tap-conversation-language');
+    expect(briefing).toContain("w-full grid-cols-2 gap-2 sm:grid-cols-4");
+    expect(briefing).toContain("max-w-xs grid-cols-3 gap-2");
     expect(learn).not.toContain("data-ile-pregame-tabs");
     expect(learn).not.toContain("data-ile-pregame-tab=");
     expect(learn).not.toContain("ile-pregame-panel-economy");
@@ -73,6 +77,7 @@ describe("shared TAP settings surface", () => {
       expect(src).toContain('kind="shortcuts"');
       expect(src).toContain("showDurationPicker=");
       expect(src).toContain("onConversationLanguageChange");
+      expect(src).not.toContain("wideLanguage");
       expect(src).not.toContain("data-ile-pregame-tabs");
     }
   });

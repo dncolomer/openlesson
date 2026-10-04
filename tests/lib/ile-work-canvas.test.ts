@@ -90,6 +90,7 @@ import {
   clampIleLearnMorePosition,
   ileCanvasPromptBarTop,
   ileCanvasPromptBarWidth,
+  ileCanvasPromptMode,
   ileLearnMoreFollowOffset,
   ileLearnMoreFollowPosition,
   ileLearnMorePromptPlacement,
@@ -470,13 +471,13 @@ describe("TAP Learning Work canvas ask-XAI on selection (shipped)", () => {
     const canvas = read("components/ExcalidrawCanvas.tsx");
     expect(canvas).toContain("data-ile-excalidraw-ask");
     expect(canvas).toContain("data-ile-learn-more");
-    expect(canvas).toContain("ILE_LEARN_MORE_LABEL");
-    expect(canvas).toContain("ileLearnMorePromptPlacement");
-    expect(canvas).toContain("clampIleLearnMorePosition");
-    expect(canvas).toContain("setPointerCapture");
-    expect(canvas).toContain("data-ile-learn-more-handle");
-    expect(canvas).toContain("data-ile-learn-more-dragging");
-    expect(canvas).toContain("ileWorkCanvasPointerBusy");
+    expect(canvas).toContain('data-ile-canvas-prompt-mode={canvasSelectionActive ? "commands" : "ask"}');
+    expect(canvas).toContain("data-ile-learn-more-actions");
+    expect(canvas).not.toContain("data-ile-learn-more-handle");
+    expect(canvas).not.toContain("data-ile-learn-more-dragging");
+    expect(canvas).not.toContain("data-ile-learn-more-collapsed");
+    expect(canvas).not.toContain("left: learnMoreUi.left");
+    expect(canvas).toContain("ileCanvasPromptMode");
     expect(canvas).toContain("pointer-events-none");
     expect(canvas).toContain("IleExcalidrawMount");
     expect(canvas).toContain("Prompt a question about this selection");
@@ -492,7 +493,8 @@ describe("TAP Learning Work canvas ask-XAI on selection (shipped)", () => {
     expect(canvas).toContain("ileCanvasPromptBarTop");
     expect(canvas).toContain("syncPromptBarPlacement");
     expect(canvas).toContain("top: promptBarTop");
-    expect(canvas).toContain("width: promptBarWidth");
+    expect(canvas).toContain("Math.max(promptBarWidth, ILE_CANVAS_PROMPT_BAR_FALLBACK_WIDTH)");
+    expect(canvas).toContain(": promptBarWidth");
     expect(canvas).toContain("ILE_CANVAS_PROMPT_BAR_TOOLBAR_SELECTOR");
     expect(canvas).not.toContain("inset-x-0 bottom-3 z-[58]");
     expect(canvas).not.toContain("max-w-4xl");
@@ -622,13 +624,11 @@ describe("TAP Learning Work canvas ask-XAI on selection (shipped)", () => {
     });
     expect(ileLearnMoreFollowOffset(null, selection)).toBeNull();
     expect(ileLearnMoreFollowPosition(null, { dx: 1, dy: 1 })).toBeNull();
-    expect(canvas).toContain("ileLearnMoreFollowOffset");
-    expect(canvas).toContain("ileLearnMoreFollowPosition");
-    expect(canvas).toContain("paintLearnMoreUi");
-    expect(canvas).toContain("learnMoreHostRef");
     expect(canvas).toContain('payload.button === "down" && api');
-    expect(canvas).toContain("syncLearnMorePlacement(api.getSceneElements?.() ?? [], api.getAppState?.() ?? {})");
-    expect(canvas).toContain("learnMorePinnedRef.current?.key !== selectionKey");
+    expect(canvas).toContain("syncCanvasSelection(api.getAppState?.() ?? {})");
+    expect(canvas).not.toContain("learnMoreHostRef");
+    expect(canvas).not.toContain("paintLearnMoreUi");
+    expect(canvas).not.toContain("learnMorePinnedRef");
   });
 
   it("parks the thinking chip in empty space beside the closest object", () => {
@@ -1329,8 +1329,12 @@ describe("TAP Learning Work canvas Expand More unselect (shipped)", () => {
         placed,
       }),
     ).toEqual(placed);
+    expect(ileCanvasPromptMode({})).toBe("ask");
+    expect(ileCanvasPromptMode({ a: false })).toBe("ask");
+    expect(ileCanvasPromptMode({ b: true, a: true })).toBe("commands");
     const canvas = read("components/ExcalidrawCanvas.tsx");
-    expect(canvas).toContain("ileLearnMoreVisiblePlacement");
+    expect(canvas).toContain("ileCanvasPromptMode(appState?.selectedElementIds ?? {})");
+    expect(canvas).not.toContain("ileLearnMoreVisiblePlacement");
   });
 });
 
@@ -1465,9 +1469,10 @@ describe("TAP Learning Work canvas split + Expand More quick actions (shipped)",
     expect(ileWorkCanvasQuickActionPrompt("elaborate more pls")).toMatch(/elaborate more pls/i);
 
     const canvas = read("components/ExcalidrawCanvas.tsx");
-    expect(canvas).toContain('data-ile-learn-more-quick="rephrase"');
-    expect(canvas).toContain('data-ile-learn-more-quick="split"');
-    expect(canvas).toContain('data-ile-learn-more-quick="elaborate"');
+    expect(canvas).toContain("ILE_WORK_CANVAS_COMMANDS.map");
+    expect(canvas).toContain("data-ile-learn-more-quick={command.id}");
+    expect(canvas).toContain("handleQuickAction(command.id)");
+    expect(canvas).toContain("{command.label}");
     expect(canvas).toContain("IleCraftInsightButton");
     expect(canvas).toContain("ileCanvasCraftInsightUsable");
     expect(canvas).not.toContain("data-ile-compress-work");
@@ -1476,12 +1481,7 @@ describe("TAP Learning Work canvas split + Expand More quick actions (shipped)",
     expect(craftBtn).toContain("ILE_CRAFT_INSIGHT_LABEL");
     expect(canvas).toContain("ileWorkCanvasQuickActionPrompt");
     expect(canvas).toContain("splitIleWorkCanvasSelectedText");
-    expect(canvas).toContain('handleQuickAction("rephrase")');
-    expect(canvas).toContain('handleQuickAction("split")');
-    expect(canvas).toContain('handleQuickAction("elaborate")');
-    expect(canvas).toMatch(/>\s*Rephrase\s*</);
-    expect(canvas).toMatch(/>\s*Split\s*</);
-    expect(canvas).toMatch(/>\s*Elaborate\s*</);
+    expect(canvas).toContain("handleQuickAction(command.id)");
     const domainAsk = buildIleWorkCanvasAskUserMessage({
       prompt: "What is missing?",
       workspace: {
@@ -1542,8 +1542,8 @@ describe("TAP Learning Work canvas user delete stays empty (shipped)", () => {
     expect(canvas).toContain("ileWorkCanvasShouldRestoreEmptyBoard");
     expect(canvas).toContain("userClearedRef");
     expect(canvas).toContain("getSceneElementsIncludingDeleted");
-    expect(canvas).toContain('data-ile-learn-more-quick="rephrase"');
-    expect(canvas).toMatch(/>\s*Rephrase\s*</);
+    expect(canvas).toContain("data-ile-learn-more-quick={command.id}");
+    expect(canvas).toContain("{command.label}");
   });
 });
 
@@ -2496,17 +2496,19 @@ describe("TAP Learning Work canvas selection commands (shipped)", () => {
     const view = read("components/SessionView.tsx");
     const phases = read("components/tap-score/tap-score-phases.tsx");
     expect(ILE_LEARN_MORE_LABEL).toBe("Commands");
-    expect(canvas).toContain("{ILE_LEARN_MORE_LABEL}");
-    expect(canvas).toContain("const [commandsOpen, setCommandsOpen] = useState(false);");
-    expect(canvas).toContain("data-ile-learn-more-collapsed");
+    expect(canvas).toContain("canvasSelectionActive");
+    expect(canvas).toContain('data-ile-canvas-prompt-mode={canvasSelectionActive ? "commands" : "ask"}');
+    expect(canvas).not.toContain("commandsOpen");
+    expect(canvas).not.toContain("data-ile-learn-more-collapsed");
+    expect(canvas).not.toContain("data-ile-learn-more-handle");
     expect(canvas).not.toContain("data-ile-compress-work");
     expect(canvas).toContain("IleCraftInsightButton");
     expect(canvas).toContain("Any questions?");
     expect(canvas).toContain("Prompt a question about this selection");
+    expect(canvas).toContain("data-ile-learn-more-quick={command.id}");
+    expect(canvas).toContain("title={command.tooltip}");
+    expect(canvas).toContain("{command.label}");
     for (const command of ILE_WORK_CANVAS_COMMANDS) {
-      expect(canvas).toContain(`data-ile-learn-more-quick="${command.id}"`);
-      expect(canvas).toMatch(new RegExp(`>\\s*${command.label}\\s*<`));
-      expect(canvas).toContain(`title="${command.tooltip}"`);
       expect(command.tooltip.toLowerCase()).not.toBe(command.label.toLowerCase());
       expect(command.tooltip.length).toBeGreaterThan(command.label.length + 8);
     }

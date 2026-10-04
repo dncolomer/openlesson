@@ -1927,6 +1927,13 @@ export function ileLearnMoreSelectionKey(
     .join(",");
 }
 
+/** Prompt bar shows commands while a selection exists, otherwise the question row. */
+export function ileCanvasPromptMode(
+  selectedElementIds?: Record<string, unknown> | null,
+): "commands" | "ask" {
+  return ileLearnMoreSelectionKey(selectedElementIds) ? "commands" : "ask";
+}
+
 /**
  * Commands is visible only while a selection exists. Empty ids hide it
  * even when the pointer is down (click-away must not leave it pinned).

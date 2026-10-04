@@ -265,7 +265,8 @@ describe("TAP Work canvas live surface (shipped)", () => {
     expect(canvas).toContain("scrollToContent");
     expect(canvas).toContain("data-ile-canvas-prompt-bar");
     expect(canvas).toContain("top: promptBarTop");
-    expect(canvas).toContain("width: promptBarWidth");
+    expect(canvas).toContain("Math.max(promptBarWidth, ILE_CANVAS_PROMPT_BAR_FALLBACK_WIDTH)");
+    expect(canvas).toContain(": promptBarWidth");
     expect(canvas).not.toContain("inset-x-0 bottom-3 z-[58]");
     expect(canvas).toContain("handleBoardAsk");
     expect(canvas).not.toContain("data-ile-compress-work");

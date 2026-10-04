@@ -8,7 +8,6 @@ import {
   useCallback,
   useState,
   useEffect,
-  type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
 import { useI18n } from "@/lib/i18n";
@@ -21,22 +20,15 @@ import {
   applyIleWorkCanvasPositionEdits,
   applyIleWorkCanvasRefactor,
   applyIleWorkCanvasSuggestInsight,
-  clampIleLearnMorePosition,
   compressIleWorkCanvasSelection,
   ILE_CANVAS_PROMPT_BAR_FALLBACK_TOP,
   ILE_CANVAS_PROMPT_BAR_FALLBACK_WIDTH,
   ILE_CANVAS_PROMPT_BAR_TOOLBAR_SELECTOR,
   ILE_CANVAS_TIMER_RESET_LOADING_MS,
-  ILE_LEARN_MORE_BOX_WIDTH,
-  ILE_LEARN_MORE_LABEL,
   ILE_SELECTIVE_COMPRESSION_LABEL,
   ileCanvasPromptBarTop,
   ileCanvasPromptBarWidth,
-  ileLearnMoreFollowOffset,
-  ileLearnMoreFollowPosition,
-  ileLearnMorePromptPlacement,
-  ileLearnMoreSelectionKey,
-  ileLearnMoreVisiblePlacement,
+  ileCanvasPromptMode,
   ileWorkCanvasQuickActionPrompt,
   ileWorkCanvasSelectionHostRect,
   ileWorkCanvasThinkingOccupancy,
@@ -47,7 +39,6 @@ import {
   ileWorkCanvasLayoutReply,
   ileWorkCanvasNoteNewMarks,
   ileWorkCanvasShouldRestoreEmptyBoard,
-  ileWorkCanvasPointerBusy,
   ileWorkCanvasSceneToViewport,
   ileWorkCanvasThinkingOverlayStyle,
   ileWorkCanvasViewportToHost,
@@ -61,6 +52,7 @@ import {
   runIleWorkCanvasClearOverlaps,
   splitIleWorkCanvasSelectedText,
   withIleWorkCanvasGridAppState,
+  ILE_WORK_CANVAS_COMMANDS,
   type IleWorkCanvasAskKind,
   type IleWorkCanvasCommandId,
   type IleWorkCanvasNewMarkHighlight,
@@ -97,7 +89,7 @@ const Excalidraw = dynamic(
 type ExcalidrawAPIRef = any;
 
 const ILE_CANVAS_COMMAND_BUTTON_CLASS =
-  "pointer-events-auto w-full whitespace-nowrap rounded-none border border-neutral-600 bg-neutral-900 px-2 py-1 text-left font-mono text-[11px] text-white hover:border-white hover:bg-neutral-800";
+  "pointer-events-auto shrink-0 whitespace-nowrap rounded-none border border-neutral-600 bg-neutral-900 px-2 py-1 font-mono text-[11px] text-white hover:border-white hover:bg-neutral-800";
 
 const ILE_EXCALIDRAW_UI_OPTIONS = {
   canvasActions: {
@@ -280,14 +272,7 @@ export function ExcalidrawCanvas({
     Array<{ id: string; left: number; top: number; width: number; height: number }>
   >([]);
   const lastReplaceNonceRef = useRef<string | number | null>(null);
-  const [learnMoreUi, setLearnMoreUi] = useState<{
-    count: number;
-    left: number;
-    top: number;
-  } | null>(null);
-  const [learnMoreDragging, setLearnMoreDragging] = useState(false);
-  const [commandsOpen, setCommandsOpen] = useState(false);
-  const commandsSelectionRef = useRef("");
+  const [canvasSelectionActive, setCanvasSelectionActive] = useState(false);
   const [promptBarTop, setPromptBarTop] = useState(ILE_CANVAS_PROMPT_BAR_FALLBACK_TOP);
   const [promptBarWidth, setPromptBarWidth] = useState(ILE_CANVAS_PROMPT_BAR_FALLBACK_WIDTH);
   const [thinkingTick, setThinkingTick] = useState(0);
@@ -300,23 +285,6 @@ export function ExcalidrawCanvas({
   const applyChainRef = useRef(Promise.resolve());
   const thinkingChipsRef = useRef(thinkingChips);
   const thinkingHostByIdRef = useRef(new Map<string, HTMLDivElement>());
-  const learnMoreUiRef = useRef(learnMoreUi);
-  const learnMoreKeyRef = useRef("");
-  const learnMoreHostRef = useRef<HTMLFormElement>(null);
-  const learnMorePinnedRef = useRef<{
-    key: string;
-    left: number;
-    top: number;
-    dx?: number;
-    dy?: number;
-  } | null>(null);
-  const learnMoreDragRef = useRef<{
-    pointerId: number;
-    startX: number;
-    startY: number;
-    origLeft: number;
-    origTop: number;
-  } | null>(null);
   const newMarkHighlightRef = useRef<IleWorkCanvasNewMarkHighlight | null>(null);
   const newMarkHighlightTimerRef = useRef<number | null>(null);
   
@@ -593,10 +561,6 @@ export function ExcalidrawCanvas({
   }, [thinkingChips]);
 
   useEffect(() => {
-    learnMoreUiRef.current = learnMoreUi;
-  }, [learnMoreUi]);
-
-  useEffect(() => {
     return () => {
       if (newMarkHighlightTimerRef.current != null) {
         window.clearTimeout(newMarkHighlightTimerRef.current);
@@ -708,112 +672,13 @@ export function ExcalidrawCanvas({
     }
   }, [canvasHostOrigin]);
 
-  const learnMoreViewport = useCallback((appState: any) => {
-    const host = canvasHostOrigin();
-    return {
-      left: 0,
-      top: 0,
-      width: Number(appState?.width) || host.width || 0,
-      height: Number(appState?.height) || host.height || 0,
-    };
-  }, [canvasHostOrigin]);
-
-  const paintLearnMoreUi = useCallback((next: { count: number; left: number; top: number } | null) => {
-    const key = next ? `${next.count}:${next.left}:${next.top}` : "";
-    if (key === learnMoreKeyRef.current) return;
-    learnMoreKeyRef.current = key;
-    learnMoreUiRef.current = next;
-    const node = learnMoreHostRef.current;
-    if (node && next) {
-      node.style.left = `${next.left}px`;
-      node.style.top = `${next.top}px`;
-    }
-    setLearnMoreUi(next);
+  const syncCanvasSelection = useCallback((appState: any) => {
+    const active =
+      Boolean(onAskSelectedRef.current) &&
+      ileCanvasPromptMode(appState?.selectedElementIds ?? {}) === "commands";
+    setCanvasSelectionActive((prev) => (prev === active ? prev : active));
+    if (active) setCraftInsightOpen(false);
   }, []);
-
-  const syncLearnMorePlacement = useCallback((elements: readonly any[], appState: any) => {
-    if (!onAskSelectedRef.current) {
-      learnMorePinnedRef.current = null;
-      if (learnMoreKeyRef.current !== "") {
-        learnMoreKeyRef.current = "";
-        setLearnMoreUi(null);
-      }
-      return;
-    }
-    const selectedIds = appState?.selectedElementIds ?? {};
-    const selectionKey = ileLearnMoreSelectionKey(selectedIds);
-    if (commandsSelectionRef.current !== selectionKey) {
-      commandsSelectionRef.current = selectionKey;
-      setCommandsOpen(false);
-    }
-    if (!selectionKey) {
-      learnMorePinnedRef.current = null;
-      paintLearnMoreUi(
-        ileLearnMoreVisiblePlacement({
-          selectedElementIds: selectedIds,
-          pointerBusy: ileWorkCanvasPointerBusy(appState),
-          placed: learnMoreUiRef.current,
-        }),
-      );
-      return;
-    }
-    const busy = ileWorkCanvasPointerBusy(appState) && !learnMoreDragRef.current;
-    if (busy && learnMorePinnedRef.current?.key !== selectionKey) return;
-    const viewport = learnMoreViewport(appState);
-    const host = canvasHostOrigin();
-    const selected = ((elements ?? []) as IleWorkCanvasElement[]).filter(
-      (el) => el?.id && selectedIds[el.id] && !el.isDeleted,
-    );
-    const selectionRect = ileWorkCanvasSelectionHostRect(selected, appState, host);
-    const pinned = learnMorePinnedRef.current;
-    if (pinned && pinned.key !== selectionKey) learnMorePinnedRef.current = null;
-    let next: { count: number; left: number; top: number } | null = null;
-    const follow = learnMorePinnedRef.current;
-    if (follow && follow.key === selectionKey) {
-      const offset =
-        follow.dx != null && follow.dy != null
-          ? { dx: follow.dx, dy: follow.dy }
-          : ileLearnMoreFollowOffset(follow, selectionRect);
-      const raw = ileLearnMoreFollowPosition(selectionRect, offset) ?? {
-        left: follow.left,
-        top: follow.top,
-      };
-      const held = clampIleLearnMorePosition({ ...raw, viewport });
-      learnMorePinnedRef.current = {
-        key: selectionKey,
-        ...held,
-        dx: offset?.dx,
-        dy: offset?.dy,
-      };
-      next = {
-        count: selectionKey ? selectionKey.split(",").length : learnMoreUiRef.current?.count ?? 1,
-        ...held,
-      };
-    } else {
-      const placed = ileLearnMorePromptPlacement({
-        elements: (elements ?? []) as IleWorkCanvasElement[],
-        selectedElementIds: selectedIds,
-        appState,
-        viewport,
-        host,
-      });
-      next =
-        placed ??
-        (askInFlightRef.current > 0 && learnMoreUiRef.current ? learnMoreUiRef.current : null);
-      const offset = ileLearnMoreFollowOffset(next, selectionRect);
-      learnMorePinnedRef.current =
-        next && selectionKey
-          ? { key: selectionKey, ...next, dx: offset?.dx, dy: offset?.dy }
-          : null;
-    }
-    paintLearnMoreUi(
-      ileLearnMoreVisiblePlacement({
-        selectedElementIds: selectedIds,
-        pointerBusy: busy,
-        placed: next,
-      }),
-    );
-  }, [canvasHostOrigin, learnMoreViewport, paintLearnMoreUi]);
 
   const enqueueCanvasAskApply = useCallback((task: () => void) => {
     const run = applyChainRef.current.then(task, task);
@@ -1146,93 +1011,6 @@ export function ExcalidrawCanvas({
     void runCanvasAsk({ prompt, selectedElements: [] });
   }, [boardPrompt, runCanvasAsk]);
 
-  const handleLearnMorePointerDown = useCallback((event: ReactPointerEvent<HTMLElement>) => {
-    event.stopPropagation();
-    if (!learnMoreUiRef.current) return;
-    event.preventDefault();
-    event.currentTarget.setPointerCapture(event.pointerId);
-    const origLeft = learnMoreUiRef.current.left;
-    const origTop = learnMoreUiRef.current.top;
-    learnMoreDragRef.current = {
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
-      origLeft,
-      origTop,
-    };
-    const api = excalidrawAPIRef.current;
-    const appState = api?.getAppState?.() ?? {};
-    const selectedIds = appState?.selectedElementIds ?? {};
-    const selected = (api?.getSceneElements?.() ?? []).filter(
-      (el: { id?: string; isDeleted?: boolean }) =>
-        el?.id && selectedIds[el.id] && !el.isDeleted,
-    ) as IleWorkCanvasElement[];
-    const selectionRect = ileWorkCanvasSelectionHostRect(
-      selected,
-      appState,
-      canvasHostOrigin(),
-    );
-    const offset = ileLearnMoreFollowOffset({ left: origLeft, top: origTop }, selectionRect);
-    learnMorePinnedRef.current = {
-      key: ileLearnMoreSelectionKey(selectedIds) || "*",
-      left: origLeft,
-      top: origTop,
-      dx: offset?.dx,
-      dy: offset?.dy,
-    };
-    setLearnMoreDragging(true);
-  }, [canvasHostOrigin]);
-
-  const handleLearnMorePointerMove = useCallback((event: ReactPointerEvent<HTMLElement>) => {
-    event.stopPropagation();
-    const drag = learnMoreDragRef.current;
-    if (!drag || drag.pointerId !== event.pointerId) return;
-    const api = excalidrawAPIRef.current;
-    const appState = api?.getAppState?.() ?? {};
-    const next = clampIleLearnMorePosition({
-      left: drag.origLeft + (event.clientX - drag.startX),
-      top: drag.origTop + (event.clientY - drag.startY),
-      viewport: learnMoreViewport(appState),
-    });
-    const selectedIds = appState?.selectedElementIds ?? {};
-    const selected = (api?.getSceneElements?.() ?? []).filter(
-      (el: { id?: string; isDeleted?: boolean }) =>
-        el?.id && selectedIds[el.id] && !el.isDeleted,
-    ) as IleWorkCanvasElement[];
-    const selectionRect = ileWorkCanvasSelectionHostRect(
-      selected,
-      appState,
-      canvasHostOrigin(),
-    );
-    const offset = ileLearnMoreFollowOffset(next, selectionRect);
-    const selectionKey = ileLearnMoreSelectionKey(selectedIds);
-    learnMorePinnedRef.current = {
-      key: selectionKey || learnMorePinnedRef.current?.key || "*",
-      ...next,
-      dx: offset?.dx,
-      dy: offset?.dy,
-    };
-    paintLearnMoreUi({
-      count: learnMoreUiRef.current?.count ?? 1,
-      ...next,
-    });
-  }, [canvasHostOrigin, learnMoreViewport, paintLearnMoreUi]);
-
-  const handleLearnMorePointerUp = useCallback((event: ReactPointerEvent<HTMLElement>) => {
-    event.stopPropagation();
-    const drag = learnMoreDragRef.current;
-    if (drag?.pointerId !== event.pointerId) return;
-    const moved = Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY);
-    learnMoreDragRef.current = null;
-    setLearnMoreDragging(false);
-    if (moved < 5) setCommandsOpen((open) => !open);
-    try {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    } catch {
-      /* already released */
-    }
-  }, []);
-
   useEffect(() => {
     if (applyElementsNonce == null || applyElementsNonce === lastApplyNonceRef.current) return;
     pendingApplyRef.current = {
@@ -1418,11 +1196,11 @@ export function ExcalidrawCanvas({
       
       // Trigger debounced PNG export
       debouncedExportPNG();
-      syncLearnMorePlacement(elements, appState);
+      syncCanvasSelection(appState);
       syncThinkingOverlay(appState);
       projectNewMarkHighlight(elements, appState);
     },
-    [debouncedExportPNG, projectNewMarkHighlight, syncLearnMorePlacement, syncThinkingOverlay]
+    [debouncedExportPNG, projectNewMarkHighlight, syncCanvasSelection, syncThinkingOverlay]
   );
 
   const handlePointerUpdate = useCallback(
@@ -1432,7 +1210,7 @@ export function ExcalidrawCanvas({
     }) => {
       const api = excalidrawAPIRef.current;
       if (payload.button === "down" && api) {
-        syncLearnMorePlacement(api.getSceneElements?.() ?? [], api.getAppState?.() ?? {});
+        syncCanvasSelection(api.getAppState?.() ?? {});
         canvasPowCollectorRef.current.markGestureBusy(true);
       } else if (payload.button === "up") {
         const scene = sanitizeSceneData({
@@ -1446,7 +1224,7 @@ export function ExcalidrawCanvas({
         if (powEvents.length) onCanvasPowActionsRef.current?.(powEvents);
       }
     },
-    [syncLearnMorePlacement],
+    [syncCanvasSelection],
   );
 
   /**
@@ -1528,7 +1306,7 @@ export function ExcalidrawCanvas({
       syncPromptBarPlacement();
       if (api) {
         const appState = api.getAppState?.() ?? {};
-        syncLearnMorePlacement(api.getSceneElements?.() ?? [], appState);
+        syncCanvasSelection(appState);
         syncThinkingOverlay(appState);
       }
     };
@@ -1564,7 +1342,7 @@ export function ExcalidrawCanvas({
       unbind();
       unbindZoom();
     };
-  }, [isLoaded, scheduleCenterOnOpen, syncLearnMorePlacement, syncPromptBarPlacement, syncThinkingOverlay]);
+  }, [isLoaded, scheduleCenterOnOpen, syncCanvasSelection, syncPromptBarPlacement, syncThinkingOverlay]);
 
   if (
     !excalidrawAPIRef.current &&
@@ -1696,159 +1474,70 @@ export function ExcalidrawCanvas({
             style={{ left: box.left, top: box.top, width: box.width, height: box.height }}
           />
         ))}
-        {onAskSelected && learnMoreUi ? (
-          <form
-            ref={learnMoreHostRef}
-            data-ile-excalidraw-ask
-            data-ile-learn-more
-            data-ile-learn-more-collapsed={commandsOpen ? "false" : "true"}
-            data-ile-learn-more-dragging={learnMoreDragging ? "true" : undefined}
-            data-ile-excalidraw-ask-busy={askInFlight > 0 ? "true" : undefined}
-            className="pointer-events-none absolute flex flex-col gap-1.5 rounded-none border border-white bg-neutral-950/95 p-2 shadow-[0_12px_40px_rgba(0,0,0,0.55)]"
-            style={{
-              left: learnMoreUi.left,
-              top: learnMoreUi.top,
-              width: ILE_LEARN_MORE_BOX_WIDTH,
-              zIndex: 60,
-            }}
-            onSubmit={(event) => {
-              event.preventDefault();
-              void handleAskSelected();
-            }}
-          >
-            <span
-              data-ile-learn-more-handle
-              className={`pointer-events-auto select-none font-mono text-[10px] uppercase tracking-wider text-white ${
-                learnMoreDragging ? "cursor-grabbing" : "cursor-grab"
-              }`}
-              onPointerDown={handleLearnMorePointerDown}
-              onPointerMove={handleLearnMorePointerMove}
-              onPointerUp={handleLearnMorePointerUp}
-              onPointerCancel={handleLearnMorePointerUp}
-            >
-              {ILE_LEARN_MORE_LABEL}
-            </span>
-            {commandsOpen ? (
-            <div
-              data-ile-learn-more-actions
-              className="pointer-events-auto flex flex-col gap-1"
-            >
-              <button
-                type="button"
-                data-ile-learn-more-quick="rephrase"
-                aria-label="Rephrase"
-                title="Ask XAI to rewrite the selected marks in different words while keeping the same meaning."
-                onClick={() => handleQuickAction("rephrase")}
-                className={ILE_CANVAS_COMMAND_BUTTON_CLASS}
-              >
-                Rephrase
-              </button>
-              <button
-                type="button"
-                data-ile-learn-more-quick="split"
-                aria-label="Split"
-                title="Break the selected text into two or three separate blocks on the canvas."
-                onClick={() => handleQuickAction("split")}
-                className={ILE_CANVAS_COMMAND_BUTTON_CLASS}
-              >
-                Split
-              </button>
-              <button
-                type="button"
-                data-ile-learn-more-quick="join"
-                aria-label="Join"
-                title="Join the selected elements into one text block, or one group when they have no text."
-                onClick={() => handleQuickAction("join")}
-                className={ILE_CANVAS_COMMAND_BUTTON_CLASS}
-              >
-                Join
-              </button>
-              <button
-                type="button"
-                data-ile-learn-more-quick="elaborate"
-                aria-label="Elaborate"
-                title="Ask XAI to expand the selected marks with more concrete detail on this topic."
-                onClick={() => handleQuickAction("elaborate")}
-                className={ILE_CANVAS_COMMAND_BUTTON_CLASS}
-              >
-                Elaborate
-              </button>
-              <button
-                type="button"
-                data-ile-learn-more-quick="selective-compression"
-                aria-label="Compress"
-                title="Ask XAI for one dense summary of the selected marks and replace only those marks with it."
-                onClick={() => handleQuickAction("selective-compression")}
-                className={ILE_CANVAS_COMMAND_BUTTON_CLASS}
-              >
-                Compress
-              </button>
-              <button
-                type="button"
-                data-ile-learn-more-quick="refactor"
-                aria-label="Refactor"
-                title="Ask XAI to rephrase the selected marks and rearrange those marks into a clearer layout."
-                onClick={() => handleQuickAction("refactor")}
-                className={ILE_CANVAS_COMMAND_BUTTON_CLASS}
-              >
-                Refactor
-              </button>
-              <button
-                type="button"
-                data-ile-learn-more-quick="suggest-insight"
-                aria-label="Suggest Insight"
-                title="Ask XAI to add one new mark suggesting an insight from the selection, without saving it."
-                onClick={() => handleQuickAction("suggest-insight")}
-                className={ILE_CANVAS_COMMAND_BUTTON_CLASS}
-              >
-                Suggest Insight
-              </button>
-              <button
-                type="button"
-                data-ile-learn-more-quick="clear-overlaps"
-                aria-label="Clear overlaps"
-                title="Move the selected marks so their boxes no longer touch. Layout only."
-                onClick={() => handleQuickAction("clear-overlaps")}
-                className={ILE_CANVAS_COMMAND_BUTTON_CLASS}
-              >
-                Clear overlaps
-              </button>
-            </div>
-            ) : null}
-            {commandsOpen ? (
-            <div className="pointer-events-auto flex items-stretch gap-1">
-              <input
-                data-ile-excalidraw-ask-input
-                type="text"
-                value={askPrompt}
-                onChange={(event) => setAskPrompt(event.target.value)}
-                placeholder="Prompt a question about this selection"
-                className="min-w-0 flex-1 rounded-none border border-neutral-600 bg-neutral-900 px-2 py-1.5 text-sm text-white placeholder-neutral-500 focus:border-white focus:outline-none"
-              />
-              <button
-                type="submit"
-                data-ile-excalidraw-ask-send
-                disabled={!askPrompt.trim()}
-                className="rounded-none border border-white bg-white px-2.5 text-xs font-semibold uppercase tracking-wider text-neutral-950 hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Send
-              </button>
-            </div>
-            ) : null}
-          </form>
-        ) : null}
         {onAskSelected ? (
           <form
             data-ile-canvas-prompt-bar
+            data-ile-canvas-prompt-mode={canvasSelectionActive ? "commands" : "ask"}
+            data-ile-excalidraw-ask={canvasSelectionActive ? "true" : undefined}
+            data-ile-excalidraw-ask-busy={askInFlight > 0 ? "true" : undefined}
             data-ile-canvas-prompt-bar-busy={askInFlight > 0 ? "true" : undefined}
             className="pointer-events-none absolute left-1/2 z-[58] flex -translate-x-1/2 justify-center"
-            style={{ top: promptBarTop, width: promptBarWidth }}
+            style={{
+              top: promptBarTop,
+              width: canvasSelectionActive
+                ? Math.max(promptBarWidth, ILE_CANVAS_PROMPT_BAR_FALLBACK_WIDTH)
+                : promptBarWidth,
+            }}
             onSubmit={(event) => {
               event.preventDefault();
-              void handleBoardAsk();
+              if (canvasSelectionActive) void handleAskSelected();
+              else void handleBoardAsk();
             }}
           >
             <div className="pointer-events-auto flex w-full flex-col gap-1.5">
+              {canvasSelectionActive ? (
+                <div className="flex w-full flex-col gap-1.5 rounded-none border border-white bg-neutral-950/95 p-2 shadow-[0_12px_40px_rgba(0,0,0,0.55)]">
+                  <div
+                    data-ile-learn-more
+                    data-ile-learn-more-actions
+                    className="flex flex-wrap gap-1"
+                  >
+                    {ILE_WORK_CANVAS_COMMANDS.map((command) => (
+                      <button
+                        key={command.id}
+                        type="button"
+                        data-ile-learn-more-quick={command.id}
+                        aria-label={command.label}
+                        title={command.tooltip}
+                        onClick={() => handleQuickAction(command.id)}
+                        className={ILE_CANVAS_COMMAND_BUTTON_CLASS}
+                      >
+                        {command.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex items-stretch gap-1">
+                    <input
+                      data-ile-excalidraw-ask-input
+                      type="text"
+                      value={askPrompt}
+                      onChange={(event) => setAskPrompt(event.target.value)}
+                      placeholder="Prompt a question about this selection"
+                      aria-label="Prompt a question about this selection"
+                      className="min-w-0 flex-1 rounded-none border border-neutral-600 bg-neutral-900 px-2 py-1.5 text-sm text-white placeholder-neutral-500 focus:border-white focus:outline-none"
+                    />
+                    <button
+                      type="submit"
+                      data-ile-excalidraw-ask-send
+                      disabled={!askPrompt.trim()}
+                      className="rounded-none border border-white bg-white px-2.5 text-xs font-semibold uppercase tracking-wider text-neutral-950 hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Send
+                    </button>
+                  </div>
+                </div>
+              ) : (
+              <>
               <div className="flex items-stretch gap-1.5">
                 <div className="flex min-w-0 flex-1 items-stretch gap-1 rounded-none border border-white bg-neutral-950/95 p-2 shadow-[0_12px_40px_rgba(0,0,0,0.55)]">
                   <input
@@ -1893,6 +1582,8 @@ export function ExcalidrawCanvas({
                   onClose={() => setCraftInsightOpen(false)}
                 />
               ) : null}
+              </>
+              )}
             </div>
           </form>
         ) : null}

@@ -405,7 +405,14 @@ describe("TAP Learning pre-game settings surface", () => {
     const startLoad = read("components/session-view/ile-start-loading.tsx");
     expect(startLoad).toContain("data-ile-start-loading");
     expect(startLoad).toContain("data-ile-start-tips");
+    expect(startLoad).toContain("data-ile-start-tip-index");
+    expect(startLoad).toContain("data-ile-start-tip-mark");
+    expect(startLoad).toContain("SessionConsoleMarks");
     expect(startLoad).toContain("LoadingStatusMessage");
+    const pageLoad = read("components/session-view/session-page-loading.tsx");
+    expect(pageLoad).toContain("data-console-frame");
+    expect(pageLoad).toContain("SessionConsoleScan");
+    expect(pageLoad).toContain("SessionConsoleMarks");
     expect(startLoad).toContain("shuffleIleStartTipIds");
     expect(startLoad).toContain("nextIleStartTipIndex");
     expect(startLoad).toContain("ILE_START_TIP_INTERVAL_MS");

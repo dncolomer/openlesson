@@ -70,7 +70,7 @@ export const AUGMENTATION_PITCH_DECK: SolutionSlideDeck = {
       highlightLabels: [...THESIS_HIGHLIGHT_LABELS],
       bullets: [
         "Onboarding, courses, and prep get the same workspace world model",
-        "TAP and TAP Learning replace lightweight recall widgets where depth matters",
+        "TAP — one interface for Preparing, Learning, Drilling, and Validating — replaces lightweight recall widgets where depth matters",
         "Probes arrive in context",
         "Coaching tuned to the gap the workspace already detected",
       ],
@@ -83,7 +83,7 @@ export const AUGMENTATION_PITCH_DECK: SolutionSlideDeck = {
       left: {
         label: "In the flow",
         items: [
-          "Drop TAP or TAP Learning blocks into lesson sequences",
+          "Drop TAP blocks into lesson sequences",
           "Shareable probes aligned to real exam or product domains",
           "Interruptions timed by TIM, not fixed quiz slots",
           "Learners stay inside course context while reasoning is scored",
@@ -131,7 +131,7 @@ export const AUGMENTATION_PITCH_DECK: SolutionSlideDeck = {
         ],
       ]),
       bullets: [
-        "Drop TAP or TAP Learning into lesson flows on learning apps",
+        "Drop TAP into lesson flows on learning apps",
         "Hesitations, causal reasoning, and revision patterns MC items miss",
         "Keep lightweight recall where it belongs; add depth where it counts",
         "Publisher & content licensing: verification layers travel with catalogs",
@@ -171,9 +171,9 @@ export const AUGMENTATION_PITCH_DECK: SolutionSlideDeck = {
       bullets: [
         "Integrate learning augmentation into your edTech stack or prep program",
         "Pilot onboarding, course depth, or certification probes on one cohort",
-        "Create a Workspace and drop the first TAP or TAP Learning block into a live lesson",
+        "Create a Workspace and drop the first TAP block into a live lesson",
       ],
-      footnote: "uncertain.systems · Learning Augmentation · TAP · TAP Learning · Trace Interruption Model",
+      footnote: "uncertain.systems · Learning Augmentation · TAP · Trace Interruption Model",
     },
   ],
 };

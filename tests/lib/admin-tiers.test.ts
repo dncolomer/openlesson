@@ -62,15 +62,15 @@ describe("admin tiers", () => {
     expect(warning).toContain("10");
   });
 
-  it("uses product-facing timed/open-ended wording (not TAP/TAP Learning)", () => {
+  it("uses product-facing timed/Learning wording (not TAP/TAP Learning)", () => {
     const apiOption = ADMIN_TIER_OPTIONS.find((t) => t.id === "api_metered");
     expect(apiOption?.description).toMatch(/timed session/i);
-    expect(apiOption?.description).toMatch(/open-ended session/i);
+    expect(apiOption?.description).toMatch(/Learning session/i);
     expect(apiOption?.description).not.toMatch(/\bTAP\b|\bILE\b/);
 
     const limits = describePlanLimits("api_metered");
     expect(limits).toMatch(/timed session/i);
-    expect(limits).toMatch(/open-ended session/i);
+    expect(limits).toMatch(/Learning session/i);
     expect(limits).not.toMatch(/\bTAP\b|\bILE\b/);
   });
 });

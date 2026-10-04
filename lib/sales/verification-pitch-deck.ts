@@ -25,8 +25,8 @@ export const VERIFICATION_PITCH_DECK: SolutionSlideDeck = {
           body: "At screening or final interview, send a shareable Think Aloud Protocol link scoped to a role skill block. Candidates talk through real work on a clock. Scores and gap reports land back in the applicant record.",
         },
         {
-          label: "2 · TAP Learning for senior depth",
-          body: "For staff and technical tracks, run the TAP Learning use case instead of one-shot take-homes. Same interface as Preparing, Drilling, and Validating; deeper multi-step judgment, debugging, or design tradeoffs.",
+          label: "2 · Learning for senior depth",
+          body: "For staff and technical tracks, run the Learning use case instead of one-shot take-homes. Same interface for Preparing, Learning, Drilling, and Validating; deeper multi-step judgment, debugging, or design tradeoffs.",
         },
         {
           label: "3 · PoW API in their stack",
@@ -88,7 +88,7 @@ export const VERIFICATION_PITCH_DECK: SolutionSlideDeck = {
           body: "Hosted process. Live, time-framed verification links. Ideal for high-volume screening and interview stages without building your own UX.",
         },
         {
-          label: "02 · TAP Learning",
+          label: "02 · Learning",
           body: "The Learning use case of TAP. Open-ended assignment and project-style depth for complex judgment, debugging, and design tradeoffs under coach.",
         },
         {
@@ -145,7 +145,7 @@ export const VERIFICATION_PITCH_DECK: SolutionSlideDeck = {
       bullets: [
         "Proof of work under probe, not a quiz pass rate",
         "Cannot be faked with polished deliverables or AI assist",
-        "Same workspace markers for TAP speed and TAP Learning depth",
+        "Same workspace markers for Validating speed and Learning depth",
         "Auditable gap reports for hiring, promotion, and certification",
       ],
     },
@@ -171,7 +171,7 @@ export const VERIFICATION_PITCH_DECK: SolutionSlideDeck = {
         "Pilot one gate: screening, TAP-cha, or promotion",
         "Create a Workspace and score the first real scenario this week",
       ],
-      footnote: "uncertain.systems · Learning Verification · TAP · TAP Learning · Proof-of-Work API",
+      footnote: "uncertain.systems · Learning Verification · TAP · Proof-of-Work API",
     },
   ],
 };

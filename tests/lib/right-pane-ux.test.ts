@@ -42,8 +42,7 @@ function writeEvidence(name: string, body: string) {
 }
 
 describe("Explore|Drill × Dialog/Solo → four launch targets", () => {
-  it("maps all four combinations via resolveLaunchFromStyleAndModality (solo flag)", () => {
-    // soloEnabled false → dialog; true → solo
+  it("keeps UI launch on dialog while resolveProductIntent still distinguishes solo", () => {
     expect(resolveLaunchFromStyleAndModality("explore", false)).toEqual(
       resolveProductIntent("explore", "dialog"),
     );
@@ -51,11 +50,17 @@ describe("Explore|Drill × Dialog/Solo → four launch targets", () => {
       resolveProductIntent("drill", "dialog"),
     );
     expect(resolveLaunchFromStyleAndModality("explore", true)).toEqual(
-      resolveProductIntent("explore", "solo"),
+      resolveProductIntent("explore", "dialog"),
     );
     expect(resolveLaunchFromStyleAndModality("drill", true)).toEqual(
-      resolveProductIntent("drill", "solo"),
+      resolveProductIntent("drill", "dialog"),
     );
+    expect(resolveProductIntent("explore", "solo")).toEqual({
+      id: "explore_solo",
+      product: "ile",
+      session_mode: "project",
+    });
+    expect(resolveProductIntent("drill", "solo").id).toBe("drill_solo");
     expect(resolveLaunchFromStyleAndModality("explore", false).id).toBe(
       "explore_dialog",
     );

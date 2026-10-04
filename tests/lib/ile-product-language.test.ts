@@ -74,6 +74,13 @@ function read(rel: string) {
   return readFileSync(join(ROOT, rel), "utf8");
 }
 
+/** Drop // and block comments so a lineup ban does not police engineering notes. */
+function stripComments(source: string) {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/(^|[^:])\/\/.*$/gm, "$1");
+}
+
 describe("retired product language is gone from shipped prose", () => {
   it("comments, markdown, locale strings, and quoted strings do not name the retired product", () => {
     const files: string[] = [];
@@ -110,7 +117,8 @@ describe("retired product language is gone from shipped prose", () => {
     expect(read("lib/ile-tim-chapter-complete.ts")).toContain("upload_ile_chapter_done");
     expect(read("app/ile/session/[token]/page.tsx")).toContain("/ile/session/");
     expect(read("app/api/stripe/webhook/route.ts")).toContain("ileSessions");
-    expect(read("app/api/stripe/webhook/route.ts")).toContain("TAP Learning session");
+    expect(read("app/api/stripe/webhook/route.ts")).toContain("Learning session");
+    expect(read("app/api/stripe/webhook/route.ts")).not.toContain("TAP Learning session");
   });
 
   it("translated locales drop the retired environment names", () => {
@@ -137,6 +145,60 @@ describe("retired product language is gone from shipped prose", () => {
       for (const name of retiredEnvironmentNames) {
         expect(text, `${code} still names ${name}`).not.toContain(name);
       }
+    }
+  });
+
+  it("lineup copy is one TAP for Preparing, Learning, Drilling, and Validating", () => {
+    const lineup = "Preparing, Learning, Drilling, and Validating";
+    const siblingSessionProduct = "TAP Learning";
+    const lineupFiles = [
+      "app/layout.tsx",
+      "app/knowledge-verification/page.tsx",
+      "app/skill-verification/SkillVerificationLanding.tsx",
+      "app/docs/proof-of-work-api/page.tsx",
+      "lib/marketing/verification-product.ts",
+      "lib/seo/platform-page.ts",
+      "lib/seo/product-page.ts",
+      "lib/seo/products.ts",
+      "lib/seo/use-case-page.ts",
+      "lib/sales/platform-pitch-deck.ts",
+      "lib/sales/verification-pitch-deck.ts",
+      "lib/sales/augmentation-pitch-deck.ts",
+      "lib/sales/optimization-pitch-deck.ts",
+      "lib/sales/pitch-index.ts",
+      "components/ProductTable.tsx",
+      "components/SeoSolutionPage.tsx",
+      "docs/pitch/build-product-pitch.mjs",
+      "lib/prompt-kernel/ontology.ts",
+      "lib/prompt-kernel/surfaces/ile.ts",
+      "lib/prompts.ts",
+      "lib/prompt-workspace-context.ts",
+      "app/api/stripe/webhook/route.ts",
+    ];
+    for (const rel of lineupFiles) {
+      const text = stripComments(read(rel));
+      expect(text, rel).toContain(lineup);
+      expect(text, rel).not.toContain(siblingSessionProduct);
+    }
+    expect(read("lib/ile-tim-chapter-complete.ts")).toContain("upload_ile_chapter_done");
+    expect(read("app/ile/session/[token]/page.tsx")).toContain("/ile/session/");
+    expect(read("app/api/stripe/webhook/route.ts")).toContain("ileSessions");
+  });
+
+  it("locale product rows name one TAP for the four use cases", () => {
+    const lineup = "Preparing, Learning, Drilling, and Validating";
+    for (const code of ["en", "de", "es", "pl", "vi", "zh"]) {
+      const data = JSON.parse(read(`messages/${code}.json`)) as {
+        planView: Record<string, string>;
+        welcome: { panelIntro: string };
+      };
+      const plan = data.planView;
+      expect(plan.productIle, code).toBe("TAP");
+      expect(plan.productIleHint, code).toBe(lineup);
+      expect(plan.guestLinksFilterKindTap, code).toBe("Preparing and Drilling");
+      expect(plan.guestLinksFilterKindIle, code).toBe("Learning");
+      expect(plan.productIle, code).not.toContain("TAP Learning");
+      expect(data.welcome.panelIntro.startsWith("Welcome to TAP Learning.")).toBe(true);
     }
   });
 

@@ -138,7 +138,7 @@ const MODE_CARD_COPY: Record<
   knowledge_region: {
     title: "Verification Workspace",
     description:
-      "Goals, Verification Flows, Context, Knowledge, and Settings. Flows collect proof of work from a question pool. This workspace does not mint TAP, TAP Learning, or TAPBench knowledge links.",
+      "Goals, Verification Flows, Context, Knowledge, and Settings. Flows collect proof of work from a question pool. This workspace does not mint TAP or TAPBench knowledge links.",
     badge: "Verification flows",
     details: [
       "Tabs: Goals, Verification Flows, Context, Knowledge, Settings",

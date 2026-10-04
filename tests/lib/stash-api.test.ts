@@ -429,20 +429,19 @@ describe("Stash API product surfaces", () => {
     expect(page).toContain("alaTAP");
   });
 
-  it("platform pitch products slide has four cards including Stash API; interface slide removed", () => {
+  it("platform pitch products slide has TAP, Stash API, and PoW API; interface slide removed", () => {
     const productsSlide = PLATFORM_PITCH_DECK.slides.find(
       (s) => s.kicker?.toLowerCase() === "our products" && (s.cards?.length ?? 0) >= 3,
     );
     expect(productsSlide).toBeTruthy();
     expect(productsSlide?.cardLayout).toBe("product-stack");
-    // Top→bottom: TAP|TAP Learning shared layer → Stash → PoW foundation
+    // Top→bottom: TAP → Stash → PoW foundation
     expect(productsSlide?.cards?.map((c) => c.label.toLowerCase())).toEqual([
       "tap",
-      "tap learning",
       "stash api",
       "pow api",
     ]);
-    expect(productsSlide?.cards).toHaveLength(4);
+    expect(productsSlide?.cards).toHaveLength(3);
     const stashCard = productsSlide?.cards?.find((c) => /stash api/i.test(c.label));
     expect(stashCard?.body?.toLowerCase()).toMatch(
       /buffer agent proof of work.*stash \(system 1\).*submit \(system 2\)/,

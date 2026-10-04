@@ -40,7 +40,7 @@ export const VERIFICATION_SCALE_COPY = {
   eyebrow: "VERIFICATION AT SCALE",
   title: "Verify and rank knowledge against your own knowledge regions at scale.",
   p1: "The same measurement stack runs knowledge verification at scale — many people against the same knowledge regions — without sharing proprietary skills and specs into a public repository or database.",
-  p2: "Our hosted Think Aloud Protocol (TAP) is one interface for Preparing, Learning, Drilling, and Validating. TAP Validating runs live, time-framed verification in parallel, without building your own UX. TAP Learning adds open-ended assignment depth that stays practical as volume grows. We help you surface data that no traditional tech can beat.",
+  p2: "Our hosted Think Aloud Protocol (TAP) is one interface for Preparing, Learning, Drilling, and Validating. TAP Validating runs live, time-framed verification in parallel, without building your own UX. The Learning use case adds open-ended assignment depth that stays practical as volume grows. We help you surface data that no traditional tech can beat.",
   tapbench:
     "TAPBench is the public benchmark of this stack: agents think aloud and build knowledge regions.",
   tapbenchHref: TAPBENCH_PATH,

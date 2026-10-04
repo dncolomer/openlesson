@@ -26,7 +26,7 @@ export const OPTIMIZATION_PITCH_DECK: SolutionSlideDeck = {
         },
         {
           label: "2 · Dynamic onboarding in product",
-          body: "Only the failed skill blocks trigger TAP Learning practice or in-app coaching. High scorers skip ahead. Learning-to-conversion replaces fixed module checklists for every cohort.",
+          body: "Only the failed skill blocks trigger the Learning use case or in-app coaching. High scorers skip ahead. Learning-to-conversion replaces fixed module checklists for every cohort.",
         },
         {
           label: "3 · Agent skill loops",
@@ -64,7 +64,7 @@ export const OPTIMIZATION_PITCH_DECK: SolutionSlideDeck = {
       kicker: "Our thesis",
       title: "Verification findings drive what gets practiced next.",
       subtitle:
-        "Optimization is the second vertical: route humans into TAP Learning, the Learning use case, and agents through Proof-of-Work scoring until scores move and outcomes improve.",
+        "Optimization is the second vertical: route humans into the Learning use case of TAP, one interface for Preparing, Learning, Drilling, and Validating, and agents through Proof-of-Work scoring until scores move and outcomes improve.",
       backgroundImage: PITCH_ASSETS.aesthetics.verticals,
       highlights: thesisScienceHighlights("optimization"),
       highlightLabels: [...THESIS_HIGHLIGHT_LABELS],
@@ -81,7 +81,7 @@ export const OPTIMIZATION_PITCH_DECK: SolutionSlideDeck = {
       title: "From gap report to closed loop",
       backgroundImage: PITCH_ASSETS.aesthetics.products,
       left: {
-        label: "Humans · TAP Learning",
+        label: "Humans · Learning",
         items: [
           "Severity-ranked gaps from TAP or Proof-of-Work API",
           "Coached scenarios only where the model says it is needed",
@@ -118,7 +118,7 @@ export const OPTIMIZATION_PITCH_DECK: SolutionSlideDeck = {
       ]),
       bullets: [
         "Workspace evidence from real product work, not survey self-report",
-        "Trigger TAP Learning or in-product guidance only when scores demand it",
+        "Trigger the Learning use case or in-product guidance only when scores demand it",
         "Measure learning-to-conversion, not module completion rates",
         "Customer success intervenes before churn or support load spikes",
       ],
@@ -173,7 +173,7 @@ export const OPTIMIZATION_PITCH_DECK: SolutionSlideDeck = {
         "Pilot one adoption, coaching, or agent eval motion",
         "Create a Workspace and measure score movement on a live cohort",
       ],
-      footnote: "uncertain.systems · Learning Optimization · TAP Learning · Proof of work · Trace Interruption Model",
+      footnote: "uncertain.systems · Learning Optimization · TAP · Proof of work · Trace Interruption Model",
     },
   ],
 };

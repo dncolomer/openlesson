@@ -18,7 +18,7 @@ export const PITCH_INDEX: PitchIndexEntry[] = [
     path: "/pitch",
     title: "Verification Pitch",
     description:
-      "Founder story first, then problem, thesis, and method: measurement beyond quiz scores, Think Aloud Protocol, and use cases across PoW · TAP · TAP Learning · Stash API.",
+      "Founder story first, then problem, thesis, and method: measurement beyond quiz scores, Think Aloud Protocol — one interface for Preparing, Learning, Drilling, and Validating — and use cases across PoW · TAP · Stash API.",
     vertical: "verification",
     deck: PLATFORM_PITCH_DECK,
   },

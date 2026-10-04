@@ -73,8 +73,10 @@ describe("prompt inventory", () => {
     }
   });
 
-  it("session_plan_update includes TAP Learning tool guidance", () => {
-    expect(DEFAULT_PROMPTS.session_plan_update).toContain("TAP Learning");
+  it("session_plan_update includes Learning use case canvas guidance", () => {
+    expect(DEFAULT_PROMPTS.session_plan_update).toContain("Learning use case");
+    expect(DEFAULT_PROMPTS.session_plan_update).toMatch(/CHAPTER CANVAS/i);
+    expect(DEFAULT_PROMPTS.session_plan_update).not.toContain("TAP Learning");
     expect(ILE_CONTEXT.length).toBeGreaterThan(100);
   });
 

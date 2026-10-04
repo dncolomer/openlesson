@@ -1336,7 +1336,7 @@ export default function DashboardPage() {
                             </div>
                             <p className="mt-2 text-sm text-neutral-500">
                               {usageData.plan === "api_metered"
-                                ? "Usage (external API PoW, timed sessions, open-ended sessions) is tallied through this date and added to your monthly invoice."
+                                ? "Usage (external API PoW, timed sessions, and Learning sessions) is tallied through this date and added to your monthly invoice."
                                 : usageData.plan === "trial"
                                   ? "Trial access ends on this date."
                                   : t("dashboard.regularResetDesc")}
@@ -1515,7 +1515,7 @@ export default function DashboardPage() {
                                 <p className="mt-1 text-xs text-neutral-500">0.05¢ each</p>
                               </div>
                               <div>
-                                <p className="text-xs text-neutral-500">Drill sessions</p>
+                                <p className="text-xs text-neutral-500">Timed sessions</p>
                                 <p className="mt-1 text-2xl font-medium text-white">
                                   {usageData.tapSessionsUsed ??
                                     usageData.apiMeteredInvoice.tapSessionCount ??
@@ -1524,7 +1524,7 @@ export default function DashboardPage() {
                                 <p className="mt-1 text-xs text-neutral-500">$1 each</p>
                               </div>
                               <div>
-                                <p className="text-xs text-neutral-500">Explore sessions</p>
+                                <p className="text-xs text-neutral-500">Learning sessions</p>
                                 <p className="mt-1 text-2xl font-medium text-white">
                                   {usageData.ileSessionsUsed ??
                                     usageData.apiMeteredInvoice.ileSessionCount ??

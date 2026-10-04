@@ -196,8 +196,9 @@ describe("prompt architecture: TAP Learning call path (shipped builders + regist
   it("Helios chat composes compact ontology + ILE_SURFACE with chapter optimize/augment", () => {
     const chat = buildIleHeliosChatSystemPrompt();
     expect(chat.indexOf(WORKSPACE_ONTOLOGY_COMPACT.slice(0, 30))).toBeLessThan(
-      chat.indexOf("PRODUCT SURFACE: TAP Learning"),
+      chat.indexOf("PRODUCT SURFACE: TAP"),
     );
+    expect(chat).not.toContain("PRODUCT SURFACE: TAP Learning");
     expect(chat).toContain(ILE_SURFACE.slice(0, 40));
     expect(chat).toMatch(/Optimize|Augment|current chapter|Mark as Done/i);
     expect(chat).toMatch(/NOT a TAP dual-stream|not running a TAP dual-stream/i);
@@ -206,7 +207,8 @@ describe("prompt architecture: TAP Learning call path (shipped builders + regist
 
   it("welcome uses ILE_SURFACE without full ontology", () => {
     const welcome = buildIleWelcomeSystemPrompt();
-    expect(welcome).toContain("PRODUCT SURFACE: TAP Learning");
+    expect(welcome).toContain("PRODUCT SURFACE: TAP");
+    expect(welcome).not.toContain("PRODUCT SURFACE: TAP Learning");
     expect(welcome).not.toContain("TEMPORAL PROOF OF WORK");
   });
 

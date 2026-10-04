@@ -56,7 +56,7 @@ export const LEARNING_VERIFICATION_PAGE: SeoUseCasePageConfig = {
     "Verify what candidates, employees, and agents can actually do — before you hire, promote, certify, or deploy. Built for HR tech, recruitment platforms, and talent marketplaces that need signal beyond polished deliverables and benchmark pass rates.",
   metaTitle: "Learning Verification | HR, Hiring & Agent Skill Validation",
   metaDescription:
-    "Human hard skill and agentic skill validation for HR and recruitment platforms. Choose TAP for live probes, TAP Learning for project-style depth, or full Proof-of-Work API integration.",
+    "Human hard skill and agentic skill validation for HR and recruitment platforms. TAP is one interface for Preparing, Learning, Drilling, and Validating, or use full Proof-of-Work API integration.",
   keywords: [
     "learning verification",
     "skills validation",
@@ -116,10 +116,10 @@ export const LEARNING_VERIFICATION_PAGE: SeoUseCasePageConfig = {
     {
       level: "02",
       title: "Open-ended — assignment & project style",
-      product: "TAP Learning",
+      product: "Learning",
       productHref: "/products/integrated-learning-environment",
       description:
-        "Run the TAP Learning use case when the role demands complex cognition: multi-step judgment, debugging, design tradeoffs, or extended practice. It is the same TAP interface as Preparing, Drilling, and Validating, and it replaces one-shot take-homes with coached scenarios and proof-of-work artifacts you can score and compare.",
+        "Run the Learning use case when the role demands complex cognition: multi-step judgment, debugging, design tradeoffs, or extended practice. It is the same TAP interface for Preparing, Learning, Drilling, and Validating, and it replaces one-shot take-homes with coached scenarios and proof-of-work artifacts you can score and compare.",
     },
     {
       level: "03",
@@ -139,7 +139,7 @@ export const LEARNING_VERIFICATION_PAGE: SeoUseCasePageConfig = {
     {
       question: "Which tier should an HR platform start with?",
       answer:
-        "Most teams start with Think Aloud Protocol links for live screening, then add TAP Learning for senior or technical roles. Full Proof-of-Work API integration makes sense when validation must run inside your own applicant or employee experience.",
+        "Most teams start with Think Aloud Protocol links for live screening, then use the Learning use case for senior or technical roles. Full Proof-of-Work API integration makes sense when validation must run inside your own applicant or employee experience.",
     },
     {
       question: "Can we validate agents the same way we validate humans?",
@@ -149,7 +149,7 @@ export const LEARNING_VERIFICATION_PAGE: SeoUseCasePageConfig = {
   ],
   closingTitle: "Verify skills before they cost you downstream.",
   closingBody:
-    "Book a demo to map TAP, TAP Learning, and Proof-of-Work API tiers to your HR or recruitment product.",
+    "Book a demo to map TAP — Preparing, Learning, Drilling, and Validating — and Proof-of-Work API tiers to your HR or recruitment product.",
 };
 
 export const LEARNING_OPTIMIZATION_PAGE: SeoUseCasePageConfig = {
@@ -176,7 +176,7 @@ export const LEARNING_OPTIMIZATION_PAGE: SeoUseCasePageConfig = {
     {
       title: "Dynamic onboarding flows",
       description:
-        "Adapt the next coaching step to verified gaps — not a static checklist. Trigger TAP Learning practice or in-product guidance only when proof-of-work scores say it is needed.",
+        "Adapt the next coaching step to verified gaps — not a static checklist. Trigger the Learning use case or in-product guidance only when proof-of-work scores say it is needed.",
     },
     {
       title: "Product activation & feature adoption",
@@ -206,7 +206,7 @@ export const LEARNING_OPTIMIZATION_PAGE: SeoUseCasePageConfig = {
   ],
   highlights: [
     "Verification findings drive what gets practiced next",
-    "TAP Learning for humans, Proof-of-Work scoring for agents — same workspace context",
+    "Learning on TAP for humans, Proof-of-Work scoring for agents — same workspace context",
     "Tie every intervention to adoption, deploy, and conversion metrics",
   ],
   faqs: [
@@ -250,7 +250,7 @@ export const LEARNING_AUGMENTATION_PAGE: SeoUseCasePageConfig = {
     {
       title: "EdTech platforms & learning apps",
       description:
-        "Drop TAP or TAP Learning blocks into lesson flows. Surface hesitations, causal reasoning, and revision patterns that multiple-choice items miss.",
+        "Drop TAP blocks into lesson flows. TAP is one interface for Preparing, Learning, Drilling, and Validating. Surface hesitations, causal reasoning, and revision patterns that multiple-choice items miss.",
     },
     {
       title: "Certification prep agencies",
@@ -287,7 +287,7 @@ export const LEARNING_AUGMENTATION_PAGE: SeoUseCasePageConfig = {
     {
       question: "Can this replace our existing quiz engine?",
       answer:
-        "For depth checks, yes — TAP and TAP Learning measure cognition quizzes cannot. Many teams keep lightweight recall checks and add Uncertain Systems where understanding must be proven.",
+        "For depth checks, yes — TAP measures cognition quizzes cannot. Many teams keep lightweight recall checks and add Uncertain Systems where understanding must be proven.",
     },
     {
       question: "How do learners experience interruptions?",

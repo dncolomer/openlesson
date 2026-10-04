@@ -262,7 +262,7 @@ export async function POST(request: NextRequest) {
             await getStripe().invoiceItems.create({
               customer: customerId,
               invoice: invoice.id,
-              description: `${ileSessions.toLocaleString()} TAP Learning session${ileSessions === 1 ? "" : "s"} @ ${formatIleSessionPrice()}`,
+              description: `${ileSessions.toLocaleString()} Learning session${ileSessions === 1 ? "" : "s"} on TAP (Preparing, Learning, Drilling, and Validating) @ ${formatIleSessionPrice()}`,
               amount: ileRounded,
               currency: "usd",
             });

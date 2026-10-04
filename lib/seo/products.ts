@@ -81,21 +81,8 @@ export const PRODUCTS: ProductDefinition[] = [
       summary:
         "One interface for Preparing, Learning, Drilling, and Validating. Capture reasoning while people work — not rehearsed answers or AI-polished output.",
       bullets: [
-        "Preparing, Drilling, and Validating on the same session surface",
+        "Preparing, Learning, Drilling, and Validating on the same session surface",
         "Shareable links per workspace or practice block",
-      ],
-    },
-  },
-  {
-    id: "ile",
-    eyebrow: "Practice",
-    title: "TAP Learning",
-    forHuman: {
-      summary:
-        "The Learning use case of TAP. A drop-in replacement for tests and take-homes when you need complex cognitive analysis — guided practice wired to verified gaps.",
-      bullets: [
-        "Depth over checkbox completion",
-        "Progress tracked in the same workspace",
       ],
     },
   },

@@ -784,13 +784,12 @@ export function WorkspaceGuestLinksPanel({
             <div>
               <h3 className="text-sm font-medium text-white">Create knowledge link</h3>
               <p className="mt-1 max-w-2xl text-xs leading-relaxed text-neutral-500">
-                Pick a product, scope, and participant — one create action mints a TAP or TAP Learning
-                share link.
+                Pick a use case, scope, and participant — one create action mints a TAP share link.
               </p>
             </div>
 
             <fieldset data-guest-links-product-select data-product-intent="create-product">
-              <legend className="text-xs text-neutral-400">Product</legend>
+              <legend className="text-xs text-neutral-400">Use case</legend>
               <div className="mt-2 grid gap-2 sm:grid-cols-3">
                 {productOptions.map((opt) => {
                   const selected = createProduct === opt.id;

@@ -207,20 +207,16 @@ const PLATFORM_CLOSE: SalesSlide[] = [
   {
     layout: "statement",
     kicker: "Our products",
-    title: "Four products. One measurement stack.",
+    title: "One TAP. One measurement stack.",
     subtitle:
-      "TAP is one interface for Preparing, Learning, Drilling, and Validating. PoW API, Think Aloud Protocol, TAP Learning, and Stash API sit on the same knowledge configuration model — measure proximity to “knowing X,” not quiz pass rates.",
+      "TAP is one interface for Preparing, Learning, Drilling, and Validating. Proof-of-Work API and Stash API sit on the same knowledge configuration model — measure proximity to “knowing X,” not quiz pass rates.",
     backgroundImage: PITCH_ASSETS.aesthetics.useCase,
-    // Visual stack top→bottom: TAP|TAP Learning shared layer → Stash → PoW foundation.
+    // Visual stack top→bottom: TAP → Stash → PoW foundation.
     cardLayout: "product-stack",
     cards: [
       {
         label: "TAP",
-        body: "Think Aloud Protocol — one interface for Preparing, Drilling, and Validating, plus the Learning use case beside it.",
-      },
-      {
-        label: "TAP Learning",
-        body: "The Learning use case of TAP — coached practice that closes gaps verification found.",
+        body: "Think Aloud Protocol — one interface for Preparing, Learning, Drilling, and Validating.",
       },
       {
         label: "Stash API",

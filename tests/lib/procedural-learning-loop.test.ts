@@ -60,12 +60,12 @@ function writeLog(name: string, body: string) {
 }
 
 describe("product-intent surfaces (Explore/Drill always With AI)", () => {
-  it("style×modality combos collapse onto With AI launches", () => {
+  it("style×modality combos keep Explore on the learning product and Solo on project", () => {
     const cases: Array<[string, string, "ile" | "tap", string]> = [
       ["explore", "dialog", "ile", "learning"],
-      ["explore", "solo", "ile", "learning"],
+      ["explore", "solo", "ile", "project"],
       ["drill", "dialog", "tap", "conversational"],
-      ["drill", "solo", "tap", "conversational"],
+      ["drill", "solo", "tap", "exercise"],
     ];
     const lines: string[] = [];
     for (const [style, modality, product, mode] of cases) {
@@ -104,7 +104,7 @@ describe("product-intent surfaces (Explore/Drill always With AI)", () => {
   it("create fields + legacy id canonicalization", () => {
     expect(
       productIntentToCreateFields(resolveProductIntent("drill", "solo")),
-    ).toMatchObject({ linkKind: "tap", exercise: false });
+    ).toMatchObject({ linkKind: "tap", exercise: true, interaction_kind: "exercise" });
     expect(
       productIntentToCreateFields(resolveProductIntent("explore", "dialog")),
     ).toMatchObject({ linkKind: "ile", session_mode: "learning" });
@@ -182,10 +182,10 @@ describe("product-intent surfaces (Explore/Drill always With AI)", () => {
     // i18n product-axis keys for guest links / portal
     const en = read("messages/en.json");
     expect(en).toContain('"tapLinksExerciseMode": "Drill · Solo Exercise"');
-    expect(en).toContain('"ileLinksProjectMode": "Explore · Solo Exercise"');
-    expect(en).toContain('"ileLinksTitle": "Explore practice links"');
-    expect(en).toContain('"guestLinksFilterKindTap": "Drill only"');
-    expect(en).toContain('"guestLinksFilterKindIle": "Explore only"');
+    expect(en).toContain('"ileLinksProjectMode": "Learning · Solo"');
+    expect(en).toContain('"ileLinksTitle": "Learning links"');
+    expect(en).toContain('"guestLinksFilterKindTap": "Preparing and Drilling"');
+    expect(en).toContain('"guestLinksFilterKindIle": "Learning"');
     expect(en).not.toContain('"tapLinksExerciseMode": "Timed Drill');
     expect(en).not.toContain('"ileLinksProjectMode": "Open-ended Drill"');
     expect(en).not.toContain('"ileLinksTitle": "Open-ended practice links"');

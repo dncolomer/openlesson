@@ -8,5 +8,5 @@ export const runtime = "nodejs";
  * Use TAP / TAP Learning guest links or own a workspace to start sessions.
  */
 export async function POST() {
-  return jsonError(410, "Group workspace sessions are no longer available. Start a TAP or TAP Learning session via a guest link, or use your own workspace.", "group_mode_removed",);
+  return jsonError(410, "Group workspace sessions are no longer available. Start a TAP session via a guest link, or use your own workspace.", "group_mode_removed",);
 }

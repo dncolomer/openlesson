@@ -52,7 +52,6 @@ export const PLATFORM_PAGE: SeoPlatformPageConfig = {
     "augmented learning",
     "Proof-of-Work API",
     "think aloud protocol",
-    "TAP Learning",
     "proof of work",
     "cognitive analysis",
     "skills gap analysis",
@@ -80,23 +79,23 @@ export const PLATFORM_PAGE: SeoPlatformPageConfig = {
       ],
     },
     {
-      title: "Augment: TAP Learning",
+      title: "Augment: Learning",
       paragraphs: [
-        "TAP Learning is the Learning use case of TAP, the same interface used for Preparing, Learning, Drilling, and Validating. Humans improve here after verification surfaces gaps: guided practice, think-aloud sessions, Socratic follow-ups, and targeted blocks until scores move — all inside the same workspace context.",
+        "Learning is a use case of TAP, the same interface used for Preparing, Learning, Drilling, and Validating. Humans improve here after verification surfaces gaps: guided practice, think-aloud sessions, Socratic follow-ups, and targeted blocks until scores move — all inside the same workspace context.",
         "Augmentation is not a separate LMS. It is the improvement layer wired to verification findings, so practice targets what actually broke, with proof of work of progress along the way.",
       ],
     },
     {
       title: "The verify-and-augment loop",
       paragraphs: [
-        "Pipe artifacts into Proof-of-Work API for continuous scoring. Issue Think Aloud Protocol links when you need live human cognition under probe. Route gaps into TAP Learning in the same workspace.",
+        "Pipe artifacts into Proof-of-Work API for continuous scoring. Issue Think Aloud Protocol links when you need live human cognition under probe. Route gaps into the Learning use case in the same workspace.",
         "All tools share one knowledge graph, one scoring model, and one gap analysis. Verify learning, augment where it falls short, and prove improvement with auditable proof of work at every step.",
       ],
     },
     {
       title: "Proof-of-Work API: programmatic workspace access",
       paragraphs: [
-        "The Proof-of-Work API is how builders wire the Workspace into their stack. Upload proof of work on UI-created workspaces, request unified performance reports, issue Think Aloud Protocol links, poll TAP completion, and open TAP Learning practice blocks.",
+        "The Proof-of-Work API is how builders wire the Workspace into their stack. Upload proof of work on UI-created workspaces, request unified performance reports, issue Think Aloud Protocol links, poll TAP completion, and open practice for the Learning use case.",
         "Embed verification and augmentation into CI pipelines, internal portals, agent orchestration, or any system where humans and agents perform knowledge work.",
       ],
     },
@@ -120,7 +119,7 @@ export const PLATFORM_PAGE: SeoPlatformPageConfig = {
     {
       question: "How does augmentation connect to verification?",
       answer:
-        "Gap findings from Proof-of-Work API or Think Aloud Protocol route directly into TAP Learning, the Learning use case. Augmentation targets specific failures verification surfaced — not generic content libraries.",
+        "Gap findings from Proof-of-Work API or Think Aloud Protocol route directly into the Learning use case. Augmentation targets specific failures verification surfaced — not generic content libraries.",
     },
     {
       question: "What proof of work can a workspace accumulate?",

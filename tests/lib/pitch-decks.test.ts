@@ -187,7 +187,6 @@ describe("pitch deck content (platform only)", () => {
     expect(PLATFORM_PITCH_DECK.slides[closeStart + 4]?.cardLayout).toBe("product-stack");
     expect(PLATFORM_PITCH_DECK.slides[closeStart + 4]?.cards?.map((c) => c.label.toLowerCase())).toEqual([
       "tap",
-      "tap learning",
       "stash api",
       "pow api",
     ]);
@@ -212,7 +211,7 @@ describe("pitch deck content (platform only)", () => {
     expect(corpus).not.toMatch(/silence ratio/);
     expect(corpus).toMatch(/\bpow\b/);
     expect(corpus).toMatch(/\btap\b/);
-    expect(corpus).toMatch(/tap learning/);
+    expect(corpus).toMatch(/preparing, learning, drilling, and validating/);
     const integrationHits = [
       /hire|hiring|résumé|resume/,
       /certif/,
@@ -309,19 +308,18 @@ describe("pitch deck content (platform only)", () => {
 
     const productsTitleIdx = dataTitleIdx + 3;
     expect(PLATFORM_PITCH_DECK.slides[productsTitleIdx]?.title).toBe("Our products");
-    // Four-product layer stack: TAP|TAP Learning top → Stash → PoW bottom (no integration examples)
+    // Layer stack: TAP → Stash → PoW (no separate learning session product)
     const productsSlide = PLATFORM_PITCH_DECK.slides[productsTitleIdx + 1];
     expect(productsSlide?.layout).toBe("statement");
     expect(productsSlide?.kicker?.toLowerCase()).toMatch(/our products/);
-    expect(productsSlide?.title.toLowerCase()).toMatch(/four products/);
+    expect(productsSlide?.title.toLowerCase()).toMatch(/one tap/);
     expect(productsSlide?.cardLayout).toBe("product-stack");
     expect(productsSlide?.cards?.map((c) => c.label.toLowerCase())).toEqual([
       "tap",
-      "tap learning",
       "stash api",
       "pow api",
     ]);
-    expect(productsSlide?.cards).toHaveLength(4);
+    expect(productsSlide?.cards).toHaveLength(3);
     for (const card of productsSlide?.cards ?? []) {
       expect(card.body?.trim().length).toBeGreaterThan(20);
       expect(card.ideas ?? []).toHaveLength(0);
@@ -336,7 +334,8 @@ describe("pitch deck content (platform only)", () => {
       .toLowerCase();
     expect(productsCorpus).toMatch(/pow api/);
     expect(productsCorpus).toMatch(/think aloud protocol/);
-    expect(productsCorpus).toMatch(/tap learning/);
+    expect(productsCorpus).toMatch(/preparing, learning, drilling, and validating/);
+    expect(productsCorpus).not.toMatch(/tap learning/);
     expect(productsCorpus).toMatch(/stash api/);
     expect(productsCorpus).toMatch(/buffer agent proof of work|stash \(system 1\)|submit \(system 2\)/);
     expect(productsCorpus).toMatch(/knowledge config|measurement/);
@@ -587,7 +586,7 @@ describe("pitch deck content (platform only)", () => {
       "proximity",
       "stash",
       "submit",
-      "tap learning",
+      "preparing, learning, drilling, and validating",
       "stash api",
       "pow api",
     ]) {

@@ -2,13 +2,15 @@
  * Product intent framing for learner/owner surfaces.
  * Technical products remain TAP Learning/TAP in code; UI speaks Work / Drill / Scout.
  *
- * New launches are always the With AI path:
- * - Explore always → TAP Learning learning
- * - Drill always → TAP conversational
+ * resolveProductIntent keeps the Dialog / Solo matrix:
+ * - Explore + Dialog → learning
+ * - Explore + Solo → project
+ * - Drill + Dialog → conversational
+ * - Drill + Solo → exercise
  *
- * Solo / exercise / project second-axis tokens are accepted on read so stored
- * guest tokens still classify, but they no longer produce a distinct new-launch
- * target. Legacy open_ended_* / timed_* ids are accepted on read for stored rows.
+ * UI helpers (resolveLaunchFromStyleAndModality) ignore the solo flag, so new
+ * workspace launches stay With AI. Legacy open_ended_* / timed_* ids still
+ * classify stored rows.
  */
 
 /** What the learner wants to do. */
@@ -204,17 +206,17 @@ export function storedDrillExerciseLaunchTarget(): ProductLaunchTarget {
 }
 
 /**
- * Canonical resolve for NEW launches: Explore|Drill → technical launch.
+ * Explore|Drill × Dialog|Solo → technical launch.
  *
- * Drill always TAP conversational; Explore always TAP Learning learning.
- * Second-arg tokens (solo|exercise|project|timed|dialog|…) are accepted so
- * callers keep compiling, but they no longer produce a distinct target.
+ * Second-arg tokens go through normalizePracticeModality:
+ * solo|exercise|project|timed → solo; dialog|open_ended|missing → dialog.
+ * Drill never returns a learning product; Explore never returns TAP.
  *
  * Defaults missing/invalid style → explore.
  */
 export function resolveProductIntent(
   style: unknown,
-  _modalityOrHorizon?: unknown,
+  modalityOrHorizon?: unknown,
 ): ProductLaunchTarget {
   if (style === "scout" || style === "scouting") {
     return scoutDialogLaunchTarget();
@@ -223,8 +225,15 @@ export function resolveProductIntent(
     style === "drill" || style === "practice" || style === "project"
       ? "drill"
       : "explore";
-  if (s === "explore") return exploreLearningLaunchTarget();
-  return drillConversationalLaunchTarget();
+  const modality = normalizePracticeModality(modalityOrHorizon);
+  if (s === "explore") {
+    return modality === "solo"
+      ? storedExploreProjectLaunchTarget()
+      : exploreLearningLaunchTarget();
+  }
+  return modality === "solo"
+    ? storedDrillExerciseLaunchTarget()
+    : drillConversationalLaunchTarget();
 }
 
 /** Resolve from a full intent object (supports modality or legacy horizon). */
@@ -329,9 +338,14 @@ export function productIntentFromGuestLink(input: {
   return drillConversationalLaunchTarget();
 }
 
-/** New-launch targets in UI order (Work, Drill). Portal mint stays Work+Drill. */
+/** Dialog and Solo targets for Explore and Drill. Portal new mints stay With AI. */
 export function allProductLaunchTargets(): ProductLaunchTarget[] {
-  return [exploreLearningLaunchTarget(), drillConversationalLaunchTarget()];
+  return [
+    exploreLearningLaunchTarget(),
+    storedExploreProjectLaunchTarget(),
+    drillConversationalLaunchTarget(),
+    storedDrillExerciseLaunchTarget(),
+  ];
 }
 
 /** Block play/work surface: Work, Drill, Scout. */

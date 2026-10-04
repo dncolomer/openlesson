@@ -404,7 +404,7 @@ describe("TAP / TAP Learning / TAPBench consume the shared assembler", () => {
 });
 
 describe("prompt impact layers for UI", () => {
-  it("exposes creator/consumer readable layers with TAP/TAP Learning/TAPBench feeds", () => {
+  it("exposes creator/consumer readable layers with TAP and TAPBench feeds", () => {
     const ctx = assemblePromptWorkspaceContext(richFixture);
     expect(ctx.promptImpactLayers.length).toBeGreaterThanOrEqual(6);
     const ids = ctx.promptImpactLayers.map((l) => l.id);
@@ -415,7 +415,12 @@ describe("prompt impact layers for UI", () => {
     expect(ids).toContain("surfaces");
     const local = ctx.promptImpactLayers.find((l) => l.id === "local_context");
     expect(local?.present).toBe(true);
-    expect(local?.feeds).toEqual(expect.arrayContaining(["TAP", "TAP Learning", "TAPBench"]));
+    for (const layer of ctx.promptImpactLayers) {
+      expect(layer.feeds, layer.id).toEqual(["TAP", "TAPBench"]);
+      expect(layer.summary, layer.id).not.toContain("TAP Learning");
+    }
+    const surfaces = ctx.promptImpactLayers.find((l) => l.id === "surfaces");
+    expect(surfaces?.summary).toContain("Preparing, Learning, Drilling, and Validating");
   });
 });
 

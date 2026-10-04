@@ -130,7 +130,7 @@ export function SeoSolutionPage({ page, breadcrumbs }: SeoSolutionPageProps) {
               </p>
               <p className="mt-3 text-sm leading-relaxed text-neutral-500">
                 <span className="text-neutral-300">TAP</span> is one interface for Preparing, Learning,
-                Drilling, and Validating. TAP Learning routes humans into targeted practice.
+                Drilling, and Validating. The Learning use case routes humans into targeted practice.
                 Verification findings drive what gets practiced next.
               </p>
             </div>

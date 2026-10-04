@@ -433,8 +433,8 @@ function CardGrid({
   /** Force a 2×2 layout (products stack) instead of a 1×4 row. */
   twoByTwo = false,
   /**
-   * Layer stack: top TAP|TAP Learning 50/50, then Stash full-width, PoW foundation at bottom.
-   * Expects cards ordered [TAP, TAP Learning, Stash API, PoW API].
+   * Layer stack: one full-width row per card, top to bottom.
+   * Expects cards ordered [TAP, Stash API, PoW API].
    */
   productStack = false,
   deckSlides = [],
@@ -461,8 +461,9 @@ function CardGrid({
     />
   );
 
-  if (productStack && cards.length === 4) {
-    const [topLeft, topRight, middle, bottom] = cards;
+  if (productStack && cards.length >= 3) {
+    const rowName = (index: number) =>
+      index === 0 ? "top" : index === cards.length - 1 ? "bottom" : "middle";
     return (
       <div
         data-pitch-card-grid
@@ -472,25 +473,15 @@ function CardGrid({
           fill ? "min-h-0 flex-1" : ""
         }`}
       >
-        <div
-          data-pitch-card-stack-row="top"
-          className={`grid grid-cols-2 gap-2.5 sm:gap-3 ${fill ? "min-h-0 flex-1" : ""}`}
-        >
-          {renderCard(topLeft)}
-          {renderCard(topRight)}
-        </div>
-        <div
-          data-pitch-card-stack-row="middle"
-          className={fill ? "min-h-0 flex-1" : undefined}
-        >
-          {renderCard(middle)}
-        </div>
-        <div
-          data-pitch-card-stack-row="bottom"
-          className={fill ? "min-h-0 flex-1" : undefined}
-        >
-          {renderCard(bottom)}
-        </div>
+        {cards.map((card, index) => (
+          <div
+            key={card.label}
+            data-pitch-card-stack-row={rowName(index)}
+            className={fill ? "min-h-0 flex-1" : undefined}
+          >
+            {renderCard(card)}
+          </div>
+        ))}
       </div>
     );
   }
@@ -810,7 +801,7 @@ function SlideContent({
     // Single-product idea slides (one card with nested ideas) must fit without scroll.
     const isSingleProductIdeas =
       slide.cards?.length === 1 && (slide.cards[0]?.ideas?.length ?? 0) > 0;
-    // Layer stack (TAP|TAP Learning → Stash → PoW) or legacy 2×2 idea cards — fill the stage.
+    // Layer stack (TAP → Stash → PoW) or legacy 2×2 idea cards — fill the stage.
     const isProductLayerStack = slide.cardLayout === "product-stack";
     const isProductsStack =
       isProductLayerStack ||

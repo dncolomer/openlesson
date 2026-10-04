@@ -11,16 +11,12 @@ export function MobileBlockScreen({
 }: {
   /** Which product is blocked — copy stays desktop-first. */
   product?: MobileBlockProduct;
-  /** Hide dashboard CTA on guest TAP/TAP Learning links. */
+  /** Hide dashboard CTA on guest TAP links. */
   showDashboardLink?: boolean;
 }) {
   const { t } = useI18n();
   const productLabel =
-    product === "tap"
-      ? "Think Aloud Protocol"
-      : product === "ile"
-        ? "TAP Learning"
-        : "this experience";
+    product === "tap" || product === "ile" ? "Think Aloud Protocol" : "this experience";
 
   return (
     <div

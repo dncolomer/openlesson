@@ -82,7 +82,7 @@ export const PLANS: Record<PlanId, PlanDef> = {
     features: [
       "Unlimited product usage (no monthly cap)",
       "0.05¢ per external/API-direct PoW submission",
-      "$1 per timed session · $10 per open-ended session",
+      "$1 per timed session · $10 per Learning session",
       "$99/mo platform access",
       "Unlimited Workspaces",
       "Proof-of-Work API keys + MCP",
@@ -106,7 +106,7 @@ export const POW_API_CALL_PRICE_CENTS = 0.05;
 /** Per TAP session on API Metered (cents) — $1. */
 export const TAP_SESSION_PRICE_CENTS = 100;
 
-/** Per TAP Learning session on API Metered (cents) — $10. */
+/** Per Learning session on API Metered (cents) — $10. */
 export const ILE_SESSION_PRICE_CENTS = 1000;
 
 /**
@@ -141,7 +141,7 @@ export function migratePlanIdToCurrent(plan: string | null | undefined): PlanId 
 
 export function formatPlanMonthlyPrice(plan: PlanId | string, _volume?: number): string {
   if (plan === "api_metered") {
-    return `$${API_METERED_PLATFORM_FEE_CENTS / 100}/month + usage (0.05¢/API PoW · $1/timed · $10/open-ended)`;
+    return `$${API_METERED_PLATFORM_FEE_CENTS / 100}/month + usage (0.05¢/API PoW · $1/timed · $10/Learning)`;
   }
   if (plan === "trial") return `$${TRIAL_PRICE_CENTS / 100} one-time`;
   if (plan === "inactive") return "$0";

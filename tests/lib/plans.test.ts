@@ -31,7 +31,7 @@ describe("plans pricing model", () => {
     expect(PLANS[invalid]).toBeUndefined();
   });
 
-  it("sets Metered rates: 0.05 cents/PoW, $1 timed, $10 open-ended, $99 platform", () => {
+  it("sets Metered rates: 0.05 cents/PoW, $1 timed, $10 Learning, $99 platform", () => {
     expect(POW_API_CALL_PRICE_CENTS).toBe(0.05);
     expect(TAP_SESSION_PRICE_CENTS).toBe(100);
     expect(ILE_SESSION_PRICE_CENTS).toBe(1000);
@@ -43,11 +43,11 @@ describe("plans pricing model", () => {
     expect(label).toContain("$99/month");
     expect(label).toMatch(/0\.05/);
     expect(label).toContain("$1/timed");
-    expect(label).toContain("$10/open-ended");
+    expect(label).toContain("$10/Learning");
     expect(label).not.toMatch(/\$1\/TAP|\$10\/TAP Learning|\bTAP\b|\bILE\b/);
     const features = PLANS.api_metered.features.join(" ");
     expect(features).toContain("$1 per timed session");
-    expect(features).toContain("$10 per open-ended session");
+    expect(features).toContain("$10 per Learning session");
     expect(features).toContain("practice-session PoW");
     expect(features).not.toMatch(/\bTAP\b|\bILE\b/);
   });

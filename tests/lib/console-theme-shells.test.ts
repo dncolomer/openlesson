@@ -172,6 +172,51 @@ describe("console theme shells", () => {
     expect(events).not.toContain("rounded-xl");
   });
 
+  it("keeps the sticky navbar outside an overflow clip and frames the remaining public shells", () => {
+    const html = renderToStaticMarkup(
+      createElement(ConsolePage, { label: "Note" }, createElement("h1", null, "Terms")),
+    );
+    const rootClass = html.slice(html.indexOf('class="'), html.indexOf('"', html.indexOf('class="') + 7));
+    expect(rootClass).not.toContain("overflow-hidden");
+    expect(html).toContain("absolute inset-0 overflow-hidden");
+    expect(html).toContain("Terms");
+
+    const frame = read("components/ui/console-frame.tsx");
+    const pageFn = frame.slice(frame.indexOf("export function ConsolePage"));
+    const rootLiteral = pageFn.match(/"relative flex min-h-screen flex-col[^"]*"/)?.[0] ?? "";
+    expect(rootLiteral).not.toContain("overflow-hidden");
+    expect(pageFn).toContain("absolute inset-0 overflow-hidden");
+
+    const dash = read("app/dashboard/page.tsx");
+    const shell = dash.slice(dash.lastIndexOf("data-workspace-shell"));
+    const shellClass = shell.match(/className="([^"]+)"/)?.[1] ?? "";
+    expect(shell).toContain("<Navbar />");
+    expect(shellClass).not.toContain("overflow-hidden");
+    expect(shellClass).toContain("border-white/40");
+
+    for (const rel of [
+      "app/pricing/page.tsx",
+      "app/legal/page.tsx",
+      "app/community/page.tsx",
+      "app/results/page.tsx",
+      "app/pricing/success/page.tsx",
+      "components/ScienceWhitepaperPage.tsx",
+      "app/invite/[token]/page.tsx",
+    ]) {
+      const src = read(rel);
+      expect(src, rel).toMatch(/PublicConsoleWash|<ConsolePage|data-console-frame/);
+      if (!src.includes("<ConsolePage")) {
+        expect(src, rel).toContain("border-white/40");
+      }
+      expect(src, rel).not.toMatch(/rounded-(sm|md|lg|xl)\b/);
+      expect(src, rel).not.toMatch(/\b(bg|text|border)-(emerald|green|cyan|violet)-/);
+    }
+    expect(read("app/pricing/page.tsx")).toContain("Learning Harness pricing");
+    expect(read("app/pricing/success/page.tsx")).toContain("pricing.allSet");
+    expect(read("components/ScienceWhitepaperPage.tsx")).toContain("data-science-whitepaper");
+    expect(read("components/marketing/MarketingChrome.tsx")).not.toContain("overflow-hidden");
+  });
+
   it("leaves insight flags, the listening dot, and stored canvas ink alone", () => {
     expect(read("components/session-view/ile-insight-trophies.tsx")).toContain("bg-amber-300");
     expect(read("components/tap-score/tap-live-clock.tsx")).toContain("bg-red-500");

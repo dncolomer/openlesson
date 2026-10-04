@@ -4,12 +4,13 @@ import Link from "next/link";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
 import { useI18n } from "@/lib/i18n";
+import { ConsolePage } from "@/components/ui/console-frame";
 
 export default function LegalPage() {
   const { t } = useI18n();
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0a0a0a]">
+    <ConsolePage label="Note">
       <Navbar 
         breadcrumbs={[{ label: t('legal.title') }]}
         showNav={false}
@@ -22,7 +23,7 @@ export default function LegalPage() {
         <div className="space-y-8 text-sm text-neutral-400 leading-relaxed">
           <section>
             <h2 className="text-lg font-semibold text-neutral-200 mb-3">{t('legal.companyInfoHeading')}</h2>
-            <div className="p-4 rounded-lg bg-neutral-900/50 border border-neutral-800 space-y-1">
+            <div className="p-4 rounded-none bg-neutral-900/50 border border-neutral-800 space-y-1">
               <p><strong className="text-neutral-300">{t('legal.companyNameLabel')}:</strong> Uncertain Systems</p>
               <p><strong className="text-neutral-300">{t('legal.ownerLabel')}:</strong> Daniel Colomer</p>
               <p><strong className="text-neutral-300">{t('legal.locationLabel')}:</strong> Hamburg, Germany</p>
@@ -115,7 +116,7 @@ export default function LegalPage() {
           <section>
             <h2 className="text-lg font-semibold text-neutral-200 mb-3">{t('legal.contactHeading')}</h2>
             <p className="mb-3">{t('legal.contactIntro')}</p>
-            <div className="p-4 rounded-lg bg-neutral-900/50 border border-neutral-800 space-y-1">
+            <div className="p-4 rounded-none bg-neutral-900/50 border border-neutral-800 space-y-1">
               <p><strong className="text-neutral-300">{t('legal.emailLabel')}:</strong> daniel@uncertain.systems</p>
               <p><strong className="text-neutral-300">{t('legal.locationLabel')}:</strong> Hamburg, Germany</p>
             </div>
@@ -124,6 +125,6 @@ export default function LegalPage() {
       </div>
 
       <Footer />
-    </div>
+    </ConsolePage>
   );
 }

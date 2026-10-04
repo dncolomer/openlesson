@@ -4,12 +4,13 @@ import { CommunityPlans } from "@/components/CommunityWorkspaces";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
 import { useI18n } from "@/lib/i18n";
+import { ConsolePage } from "@/components/ui/console-frame";
 
 export default function CommunityPage() {
   const { t } = useI18n();
 
   return (
-    <main className="min-h-screen flex flex-col bg-[#0a0a0a]">
+    <ConsolePage label="List">
       <Navbar />
 
       <div className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-8 sm:py-12">
@@ -26,6 +27,6 @@ export default function CommunityPage() {
       </div>
 
       <Footer />
-    </main>
+    </ConsolePage>
   );
 }

@@ -80,14 +80,14 @@ export function ConsolePage({
       data-console-frame=""
       {...rest}
       className={cn(
-        "relative flex min-h-screen flex-col overflow-hidden border border-white/40 bg-black text-zinc-200",
+        "relative flex min-h-screen flex-col border border-white/40 bg-black text-zinc-200",
         className,
       )}
     >
       <div
         data-console-field=""
         aria-hidden
-        className="pointer-events-none absolute inset-0"
+        className="pointer-events-none absolute inset-0 overflow-hidden"
         style={CONSOLE_GRID_STYLE}
       >
         <SessionConsoleScan />

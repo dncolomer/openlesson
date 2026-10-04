@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { BrandLogo } from "@/components/BrandLogo";
+import { PublicConsoleWash } from "@/components/ui/console-frame";
 
 const INVITE_BACKGROUND = "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg";
 
@@ -16,12 +17,12 @@ const shellStyle = {
 } as const;
 
 const cardClass =
-  "w-full max-w-md rounded-md border border-neutral-800 bg-neutral-950/75 p-6 sm:p-8 backdrop-blur-sm";
+  "w-full max-w-md border border-white/30 bg-black/80 p-6 backdrop-blur-sm sm:p-8";
 const labelClass = "font-mono text-[10px] uppercase tracking-[2px] text-neutral-500";
 const primaryBtnClass =
-  "inline-flex w-full items-center justify-center rounded-sm bg-white px-4 py-3 text-sm font-medium text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50";
+  "inline-flex w-full items-center justify-center bg-white px-4 py-3 text-sm font-medium text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50";
 const secondaryBtnClass =
-  "inline-flex w-full items-center justify-center rounded-sm border border-neutral-700 bg-neutral-900/80 px-4 py-3 text-sm font-medium text-neutral-200 transition hover:border-neutral-600 hover:bg-neutral-800 hover:text-white";
+  "inline-flex w-full items-center justify-center border border-white/30 bg-black px-4 py-3 text-sm font-medium text-neutral-200 transition hover:border-white/60 hover:text-white";
 
 interface InviteDetails {
   id: string;
@@ -38,10 +39,12 @@ interface InviteDetails {
 function InviteShell({ children }: { children: ReactNode }) {
   return (
     <div
-      className="min-h-screen bg-[#0a0a0a] bg-cover bg-fixed bg-center text-white"
+      data-console-frame=""
+      className="relative min-h-screen border border-white/40 bg-black bg-cover bg-fixed bg-center text-white"
       style={shellStyle}
     >
-      <div className="flex min-h-screen flex-col">
+      <PublicConsoleWash />
+      <div className="relative z-10 flex min-h-screen flex-col">
         <header className="border-b border-neutral-800/60 px-5 py-4">
           <Link href="/" className="inline-flex opacity-90 transition hover:opacity-100">
             <BrandLogo size={28} nameClassName="text-sm font-semibold tracking-tight text-white" />
@@ -69,7 +72,7 @@ function OrgMark({
         alt={`${name} logo`}
         width={size}
         height={size}
-        className="rounded-md border border-neutral-700 object-cover"
+        className="border border-white/30 object-cover"
         style={{ width: size, height: size }}
         unoptimized
       />
@@ -78,7 +81,7 @@ function OrgMark({
 
   return (
     <div
-      className="flex items-center justify-center rounded-md border border-neutral-700 bg-neutral-900/80 font-medium text-neutral-300"
+      className="flex items-center justify-center border border-white/30 bg-black font-medium text-neutral-300"
       style={{ width: size, height: size, fontSize: size * 0.35 }}
     >
       {name.charAt(0).toUpperCase() || "?"}
@@ -88,9 +91,9 @@ function OrgMark({
 
 function StatusIcon({ tone }: { tone: "success" | "error" | "warning" }) {
   const tones = {
-    success: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
-    error: "border-red-500/30 bg-red-500/10 text-red-400",
-    warning: "border-neutral-600/30 bg-neutral-800/10 text-neutral-300",
+    success: "border-white/40 bg-black text-white",
+    error: "border-white/30 bg-black text-white/80",
+    warning: "border-white/30 bg-black text-white/70",
   };
   const paths = {
     success: "M5 13l4 4L19 7",
@@ -100,7 +103,7 @@ function StatusIcon({ tone }: { tone: "success" | "error" | "warning" }) {
   };
   return (
     <div
-      className={`mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-full border ${tones[tone]}`}
+      className={`mx-auto mb-6 flex h-14 w-14 items-center justify-center border ${tones[tone]}`}
     >
       <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={paths[tone]} />
@@ -217,7 +220,7 @@ export default function InvitePage() {
               logoUrl={invite.organization.logo_url}
               size={72}
             />
-            <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border border-emerald-500/40 bg-emerald-500/20 text-emerald-400">
+            <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center border border-white/40 bg-black text-white">
               <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
               </svg>
@@ -344,7 +347,7 @@ export default function InvitePage() {
         </div>
 
         {invite.organization && (
-          <div className="mt-8 rounded-md border border-neutral-800 bg-black/40 p-4">
+          <div className="mt-8 rounded-none border border-neutral-800 bg-black/40 p-4">
             <div className={labelClass}>{t("invite.organizationLabel")}</div>
             <div className="mt-2 text-lg font-medium text-white">{invite.organization.name}</div>
             <code className="mt-1 block font-mono text-xs text-neutral-500">
@@ -355,7 +358,7 @@ export default function InvitePage() {
 
         {user ? (
           <div className="mt-6 space-y-4">
-            <div className="rounded-md border border-neutral-800 bg-black/40 p-4">
+            <div className="rounded-none border border-neutral-800 bg-black/40 p-4">
               <div className={labelClass}>{t("invite.joiningAs")}</div>
               <div className="mt-2 text-sm text-neutral-200">{user.email}</div>
             </div>

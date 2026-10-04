@@ -12,7 +12,7 @@ export function MarketingPageShell({
   backgroundImage?: string;
 }) {
   return (
-    <main className="relative min-h-screen overflow-hidden border border-white/40 bg-black text-zinc-200 selection:bg-zinc-700">
+    <main className="relative min-h-screen border border-white/40 bg-black text-zinc-200 selection:bg-zinc-700">
       <div className="fixed inset-0 z-0 bg-[#0a0a0a]" />
       <div
         className="fixed inset-0 z-0 bg-cover bg-fixed bg-center"

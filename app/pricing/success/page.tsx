@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { LandingNav } from "@/components/LandingNav";
 import { useI18n } from "@/lib/i18n";
+import { ConsolePage } from "@/components/ui/console-frame";
 
 export default function PricingSuccessPage() {
   const router = useRouter();
@@ -18,11 +19,11 @@ export default function PricingSuccessPage() {
   }, [router]);
 
   return (
-    <main className="min-h-screen flex flex-col bg-[#0a0a0a]">
+    <ConsolePage label="End">
       <LandingNav />
 
-      <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-500/10 border border-green-500/20 text-green-400 mb-6">
+      <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
+        <div className="mb-6 inline-flex h-16 w-16 items-center justify-center border border-white/40 bg-black text-white">
           <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
@@ -35,11 +36,11 @@ export default function PricingSuccessPage() {
         </p>
         <Link
           href="/dashboard"
-          className="px-4 py-2 text-sm text-white bg-white/10 hover:bg-white/15 rounded-lg transition-colors"
+          className="border border-white/40 bg-black px-4 py-2 text-sm text-white transition-colors hover:bg-white hover:text-black"
         >
           {t('pricing.goToDashboard')}
         </Link>
       </div>
-    </main>
+    </ConsolePage>
   );
 }

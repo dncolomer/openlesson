@@ -9,6 +9,7 @@ import { Footer } from "@/components/Footer";
 import { createClient } from "@/lib/supabase/client";
 import { hasProductAccess, type PlanId } from "@/lib/plans";
 import { HARNESS_PRICING_COPY } from "@/lib/pricing/harness-copy";
+import { PublicConsoleWash } from "@/components/ui/console-frame";
 
 interface UserState {
   authenticated: boolean;
@@ -122,14 +123,16 @@ function PricingPageContent() {
 
   return (
     <main
-      className="min-h-screen bg-[#0a0a0a] bg-cover bg-fixed bg-center text-neutral-200"
+      data-console-frame=""
+      className="relative min-h-screen border border-white/40 bg-black bg-cover bg-fixed bg-center text-neutral-200"
       style={{ backgroundImage: `url(${BACKGROUND})` }}
     >
-      <div className="fixed inset-0 bg-black/78" />
+      <div className="fixed inset-0 z-0 bg-black/78" />
+      <PublicConsoleWash />
       <div className="relative z-10 flex min-h-screen flex-col">
         <LandingNav />
         <section className="mx-auto w-full max-w-7xl flex-1 px-6 py-16 sm:py-20">
-          <div className="mb-8 inline-block rounded-sm border border-neutral-800 bg-neutral-950/80 px-3 py-1 font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
+          <div className="mb-8 inline-block rounded-none border border-neutral-800 bg-neutral-950/80 px-3 py-1 font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
             {HARNESS_PRICING_COPY.eyebrow}
           </div>
           <h1 className="max-w-3xl text-4xl font-medium leading-[1.05] tracking-[-2px] text-white sm:text-5xl">
@@ -141,14 +144,14 @@ function PricingPageContent() {
           <Link
             href={HARNESS_PRICING_COPY.ayclHref}
             data-testid="pricing-aycl-link"
-            className="mt-7 inline-flex min-h-12 items-center justify-center rounded-sm bg-white px-5 py-3 text-sm font-medium text-black transition hover:bg-neutral-200"
+            className="mt-7 inline-flex min-h-12 items-center justify-center rounded-none bg-white px-5 py-3 text-sm font-medium text-black transition hover:bg-neutral-200"
           >
             {HARNESS_PRICING_COPY.ayclCta}
             <span className="ml-2 font-normal text-neutral-700">{HARNESS_PRICING_COPY.ayclLabel}</span>
             <ArrowRight className="ml-2" size={16} />
           </Link>
           {needsPlan && (
-            <div className="mt-6 rounded-sm border border-neutral-600/30 bg-neutral-800/10 px-4 py-3 text-sm text-neutral-200">
+            <div className="mt-6 rounded-none border border-neutral-600/30 bg-neutral-800/10 px-4 py-3 text-sm text-neutral-200">
               Choose a plan to continue. Start the Learning Harness or try unlimited for 3 days for $14.99.
             </div>
           )}
@@ -194,7 +197,7 @@ function PricingPageContent() {
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-stretch">
                 {isOnMetered ? (
-                  <div className="flex-1 rounded-sm border border-neutral-800 px-4 py-3 text-center text-sm text-neutral-500">
+                  <div className="flex-1 rounded-none border border-neutral-800 px-4 py-3 text-center text-sm text-neutral-500">
                     Current plan
                   </div>
                 ) : (
@@ -203,13 +206,13 @@ function PricingPageContent() {
                     data-testid="checkout-start-harness"
                     onClick={() => handleCheckout("api_metered")}
                     disabled={loadingPlan === "api_metered"}
-                    className="flex-1 rounded-sm bg-white px-4 py-3 text-sm font-medium text-black transition hover:bg-neutral-200 disabled:opacity-50"
+                    className="flex-1 rounded-none bg-white px-4 py-3 text-sm font-medium text-black transition hover:bg-neutral-200 disabled:opacity-50"
                   >
                     {loadingPlan === "api_metered" ? "Loading..." : "Start"}
                   </button>
                 )}
                 {isOnTrial ? (
-                  <div className="flex-1 rounded-sm border border-neutral-800 px-4 py-3 text-center text-sm text-neutral-500">
+                  <div className="flex-1 rounded-none border border-neutral-800 px-4 py-3 text-center text-sm text-neutral-500">
                     On trial
                   </div>
                 ) : (
@@ -218,7 +221,7 @@ function PricingPageContent() {
                     data-testid="checkout-trial-3day"
                     onClick={() => handleCheckout("trial_3day")}
                     disabled={loadingPlan === "trial_3day" || isOnMetered}
-                    className="flex-1 rounded-sm border border-neutral-600 bg-transparent px-4 py-3 text-sm font-medium text-neutral-200 transition hover:border-neutral-400 hover:bg-neutral-900 disabled:opacity-50"
+                    className="flex-1 rounded-none border border-neutral-600 bg-transparent px-4 py-3 text-sm font-medium text-neutral-200 transition hover:border-neutral-400 hover:bg-neutral-900 disabled:opacity-50"
                   >
                     {loadingPlan === "trial_3day"
                       ? "Loading..."

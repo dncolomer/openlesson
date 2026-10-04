@@ -16,6 +16,7 @@ import { FileDropZone, type AttachedFile } from "@/components/FileDropZone";
 import { SessionPerformanceChat } from "@/components/SessionPerformanceChat";
 import { TutorBackground } from "@/components/TutorBackground";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
+import { ConsolePage } from "@/components/ui/console-frame";
 
 interface FollowUpSuggestion {
   title: string;
@@ -259,31 +260,35 @@ function ResultsContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
-        <LoadingStatusMessage message={t("common.loading")} />
-      </div>
+      <ConsolePage label="End">
+        <div className="flex flex-1 items-center justify-center">
+          <LoadingStatusMessage message={t("common.loading")} />
+        </div>
+      </ConsolePage>
     );
   }
 
   if (!session) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-6 bg-[#0a0a0a]">
-        <h1 className="text-2xl font-bold text-white mb-4">{t('results.notFound')}</h1>
-        <p className="text-neutral-500 mb-8 text-sm">
-          {t('results.notFoundDesc')}
-        </p>
-        <Link
-          href="/"
-          className="px-5 py-2.5 bg-white/10 hover:bg-white/15 text-white text-sm rounded-xl transition-colors"
-        >
-          {t('results.goToDashboard')}
-        </Link>
-      </div>
+      <ConsolePage label="End">
+        <div className="flex flex-1 flex-col items-center justify-center px-6">
+          <h1 className="text-2xl font-bold text-white mb-4">{t('results.notFound')}</h1>
+          <p className="text-neutral-500 mb-8 text-sm">
+            {t('results.notFoundDesc')}
+          </p>
+          <Link
+            href="/"
+            className="border border-white/40 bg-black px-5 py-2.5 text-sm text-white transition-colors hover:bg-white hover:text-black"
+          >
+            {t('results.goToDashboard')}
+          </Link>
+        </div>
+      </ConsolePage>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0a0a0a]">
+    <ConsolePage label="End">
       <Navbar 
         breadcrumbs={[
           { label: t('results.breadcrumb') }
@@ -324,7 +329,7 @@ function ResultsContent() {
                 sessionTopic={session.problem}
               />
             ) : (
-              <div className="flex-1 flex flex-col items-center justify-center h-full rounded-xl">
+              <div className="flex-1 flex flex-col items-center justify-center h-full rounded-none">
                 <div className="w-16 h-16 mb-4 rounded-full bg-gradient-to-br from-neutral-800/15 via-neutral-800 to-neutral-900 border border-neutral-800 flex items-center justify-center">
                   <span className="text-xl font-serif text-neutral-400">H</span>
                 </div>
@@ -341,13 +346,13 @@ function ResultsContent() {
         <div className="lg:w-1/2 flex flex-col overflow-y-auto">
           <div className="flex-1 p-4 space-y-4">
             {/* Follow-up Session Suggestions */}
-            <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-4">
+            <div className="rounded-none border border-neutral-800 bg-neutral-900/50 p-4">
               <h3 className="text-sm font-medium text-neutral-300 mb-1">{t('results.continueLearningSuggestions')}</h3>
               <p className="text-[11px] text-neutral-500 mb-3">{t('results.continueLearningSuggestionsDesc')}</p>
               
               {followUpsLoading ? (
                 <div className="flex items-center gap-3 py-3 justify-center">
-                  <div className="animate-spin w-3.5 h-3.5 border-2 border-emerald-500 border-t-transparent rounded-full" />
+                  <div className="animate-spin w-3.5 h-3.5 border-2 border-white/40 border-t-transparent rounded-full" />
                   <LoadingStatusMessage size="sm" tone="subtle" message={t("results.generatingFollowUps")} />
                 </div>
               ) : followUps.length > 0 ? (
@@ -357,11 +362,11 @@ function ResultsContent() {
                       key={idx}
                       onClick={() => handleStartFollowUp(suggestion)}
                       disabled={startingSession !== null}
-                      className="w-full text-left p-3 rounded-lg border border-neutral-700 bg-neutral-800/50 hover:bg-neutral-800 hover:border-emerald-600/50 transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full text-left p-3 rounded-none border border-neutral-700 bg-neutral-800/50 hover:bg-neutral-800 hover:border-white/60 transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-xs font-medium text-white group-hover:text-emerald-400 transition-colors">
+                          <h4 className="text-xs font-medium text-white group-hover:text-white transition-colors">
                             {suggestion.title}
                           </h4>
                           <p className="text-[10px] text-neutral-500 mt-0.5 line-clamp-2">
@@ -370,9 +375,9 @@ function ResultsContent() {
                         </div>
                         <div className="flex-shrink-0">
                           {startingSession === suggestion.title ? (
-                            <div className="animate-spin w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full" />
+                            <div className="animate-spin w-4 h-4 border-2 border-white/40 border-t-transparent rounded-full" />
                           ) : (
-                            <svg className="w-4 h-4 text-neutral-600 group-hover:text-emerald-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg className="w-4 h-4 text-neutral-600 group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
@@ -388,7 +393,7 @@ function ResultsContent() {
             </div>
 
             {/* Generate Learning Plan Section */}
-            <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-4">
+            <div className="rounded-none border border-neutral-800 bg-neutral-900/50 p-4">
               <h3 className="text-sm font-medium text-neutral-300 mb-1">{t('results.createWorkspace')}</h3>
               <p className="text-[11px] text-neutral-500 mb-3">{t('results.createWorkspaceDesc')}</p>
               
@@ -404,7 +409,7 @@ function ResultsContent() {
                     <button
                       onClick={handleUseSuggestedTopic}
                       disabled={generatingPlan}
-                      className="w-full text-left p-2.5 rounded-lg border border-neutral-600/30 bg-neutral-800/10 hover:bg-neutral-800/20 transition-colors group"
+                      className="w-full text-left p-2.5 rounded-none border border-neutral-600/30 bg-neutral-800/10 hover:bg-neutral-800/20 transition-colors group"
                     >
                       <div className="flex items-start gap-2">
                         <svg className="w-3.5 h-3.5 text-neutral-300 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -431,7 +436,7 @@ function ResultsContent() {
                   placeholder={t('results.planTopicPlaceholder')}
                   rows={2}
                   disabled={generatingPlan}
-                  className="w-full px-3 py-2.5 border rounded-xl text-white text-sm focus:outline-none resize-none transition-colors bg-neutral-800/50 border-neutral-700 focus:border-neutral-600 placeholder-neutral-600"
+                  className="w-full px-3 py-2.5 border rounded-none text-white text-sm focus:outline-none resize-none transition-colors bg-neutral-800/50 border-neutral-700 focus:border-neutral-600 placeholder-neutral-600"
                 />
                 
                 {/* Tool row: Attachments + Duration + Generate */}
@@ -441,7 +446,7 @@ function ResultsContent() {
                     type="button"
                     onClick={() => setShowFileZone((v) => !v)}
                     disabled={generatingPlan}
-                    className={`flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] border rounded-lg transition-colors ${
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] border rounded-none transition-colors ${
                       attachedFiles.length > 0
                         ? "text-neutral-300 border-neutral-600/40 bg-neutral-800/10"
                         : "text-neutral-400 hover:text-white bg-neutral-800/50 hover:bg-neutral-800 border-neutral-700 hover:border-neutral-600"
@@ -463,7 +468,7 @@ function ResultsContent() {
                       value={planWeeks}
                       onChange={(e) => setPlanWeeks(Number(e.target.value))}
                       disabled={generatingPlan}
-                      className="appearance-none bg-neutral-800/50 border border-neutral-700 hover:border-neutral-600 focus:border-neutral-500 focus:outline-none rounded-lg pl-2 pr-5 py-1 text-[11px] text-neutral-200 cursor-pointer transition-colors"
+                      className="appearance-none bg-neutral-800/50 border border-neutral-700 hover:border-neutral-600 focus:border-neutral-500 focus:outline-none rounded-none pl-2 pr-5 py-1 text-[11px] text-neutral-200 cursor-pointer transition-colors"
                     >
                       <option value={1}>{t('planMode.week1')}</option>
                       <option value={2}>{t('planMode.week2')}</option>
@@ -477,7 +482,7 @@ function ResultsContent() {
                   <button
                     onClick={handleGeneratePlan}
                     disabled={!planTopic.trim() || generatingPlan}
-                    className="ml-auto py-1.5 px-3 text-xs font-medium rounded-lg bg-slate-200 text-slate-900 hover:bg-white disabled:bg-neutral-800 disabled:text-neutral-600 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
+                    className="ml-auto py-1.5 px-3 text-xs font-medium rounded-none bg-slate-200 text-slate-900 hover:bg-white disabled:bg-neutral-800 disabled:text-neutral-600 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
                   >
                     {generatingPlan ? (
                       <>
@@ -511,7 +516,7 @@ function ResultsContent() {
                 )}
                 
                 {planError && (
-                  <p className="text-xs text-red-400">{planError}</p>
+                  <p className="text-xs text-white/80">{planError}</p>
                 )}
               </div>
             </div>
@@ -519,7 +524,7 @@ function ResultsContent() {
           </div>
         </div>
       </div>
-    </div>
+    </ConsolePage>
   );
 }
 
@@ -527,9 +532,11 @@ export default function ResultsPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
-          <LoadingStatusMessage message="Loading" />
-        </div>
+        <ConsolePage label="End">
+          <div className="flex flex-1 items-center justify-center">
+            <LoadingStatusMessage message="Loading" />
+          </div>
+        </ConsolePage>
       }
     >
       <ResultsContent />

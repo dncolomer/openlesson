@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Footer } from "@/components/Footer";
 import { LandingNav } from "@/components/LandingNav";
+import { PublicConsoleWash } from "@/components/ui/console-frame";
 import type { ScienceWhitepaper } from "@/lib/science/whitepaper-types";
 
 type ScienceWhitepaperPageProps = {
@@ -15,10 +16,13 @@ export function ScienceWhitepaperPage({ paper }: ScienceWhitepaperPageProps) {
 
   return (
     <main
-      className="relative min-h-screen bg-[#0c0c0c] text-zinc-200 selection:bg-zinc-700 selection:text-white"
+      className="relative min-h-screen border border-white/40 bg-black text-zinc-200 selection:bg-zinc-700 selection:text-white"
+      data-console-frame=""
       data-science-whitepaper
       data-whitepaper-path={paper.path}
     >
+      <PublicConsoleWash />
+      <div className="relative z-10">
       <LandingNav />
 
       <div className="mx-auto w-full max-w-7xl px-4 pt-8 pb-20 sm:px-6 sm:pt-10 lg:px-8 lg:pt-12">
@@ -51,7 +55,7 @@ export function ScienceWhitepaperPage({ paper }: ScienceWhitepaperPageProps) {
             {paper.keywords.map((kw) => (
               <li
                 key={kw}
-                className="rounded-full bg-zinc-900 px-3 py-1 font-mono text-[10px] uppercase tracking-[1.2px] text-zinc-400 ring-1 ring-zinc-800"
+                className="border border-white/30 bg-black px-3 py-1 font-mono text-[10px] uppercase tracking-[1.2px] text-zinc-400"
               >
                 {kw}
               </li>
@@ -66,7 +70,7 @@ export function ScienceWhitepaperPage({ paper }: ScienceWhitepaperPageProps) {
             className="lg:sticky lg:top-24 lg:self-start"
             aria-label="Paper outline"
           >
-            <div className="rounded-xl bg-zinc-900/80 p-4 ring-1 ring-zinc-800 sm:p-5">
+            <div className="rounded-none bg-zinc-900/80 p-4 ring-1 ring-zinc-800 sm:p-5">
               <p className="font-mono text-[10px] uppercase tracking-[1.6px] text-zinc-500">
                 Contents
               </p>
@@ -106,7 +110,7 @@ export function ScienceWhitepaperPage({ paper }: ScienceWhitepaperPageProps) {
             <section
               id="abstract"
               data-whitepaper-section="abstract"
-              className="rounded-xl bg-zinc-900 p-5 ring-1 ring-zinc-800 sm:p-7"
+              className="rounded-none bg-zinc-900 p-5 ring-1 ring-zinc-800 sm:p-7"
               aria-labelledby="abstract-heading"
             >
               <h2
@@ -166,7 +170,7 @@ export function ScienceWhitepaperPage({ paper }: ScienceWhitepaperPageProps) {
                         <div
                           key={step.id}
                           data-experiment-step={step.id}
-                          className="rounded-xl bg-zinc-900 p-4 ring-1 ring-zinc-800 sm:p-5"
+                          className="rounded-none bg-zinc-900 p-4 ring-1 ring-zinc-800 sm:p-5"
                         >
                           <p className="font-mono text-[10px] uppercase tracking-[1.6px] text-neutral-300/70">
                             Step {index + 1}
@@ -230,7 +234,7 @@ export function ScienceWhitepaperPage({ paper }: ScienceWhitepaperPageProps) {
               </ol>
             </section>
 
-            <div className="mt-12 flex flex-col gap-4 rounded-xl bg-zinc-900 p-5 ring-1 ring-zinc-800 sm:mt-14 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+            <div className="mt-12 flex flex-col gap-4 rounded-none bg-zinc-900 p-5 ring-1 ring-zinc-800 sm:mt-14 sm:flex-row sm:items-center sm:justify-between sm:p-6">
               <p className="text-sm text-zinc-400">
                 Related: science thesis, Map of Knowledge exploration surface.
               </p>
@@ -256,6 +260,7 @@ export function ScienceWhitepaperPage({ paper }: ScienceWhitepaperPageProps) {
       </div>
 
       <Footer />
+      </div>
     </main>
   );
 }

@@ -782,7 +782,7 @@ export default function DashboardPage() {
     <div
       data-console-frame=""
       data-workspace-shell=""
-      className="relative min-h-screen overflow-hidden border border-white/40 bg-black bg-cover bg-fixed bg-center text-white"
+      className="relative min-h-screen border border-white/40 bg-black bg-cover bg-fixed bg-center text-white"
       style={{ backgroundImage: `linear-gradient(rgba(10,10,10,0.82), rgba(10,10,10,0.82)), url(${DASHBOARD_BACKGROUND})` }}
     >
       <SessionConsoleScan />

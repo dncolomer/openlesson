@@ -617,30 +617,27 @@ describe("anonymous guest self-placement", () => {
 });
 
 describe("map-of-knowledge product surfaces", () => {
-  it("ships Map of Knowledge page, nav link, and APIs", () => {
+  it("keeps map APIs and drops the public Map of Knowledge page", () => {
     const page = join(root, "app/map-of-knowledge/page.tsx");
     const client = join(root, "components/MapOfKnowledgeClient.tsx");
     const api = join(root, "app/api/map-of-knowledge/route.ts");
     const guestApi = join(root, "app/api/map-of-knowledge/guest-link/route.ts");
     const nav = join(root, "components/LandingNav.tsx");
     const navLinks = join(root, "lib/marketing/nav.ts");
-    expect(existsSync(page)).toBe(true);
+    expect(existsSync(page)).toBe(false);
     expect(existsSync(client)).toBe(true);
     expect(existsSync(api)).toBe(true);
     expect(existsSync(guestApi)).toBe(true);
-    const pageSrc = readFileSync(page, "utf8");
     const navSrc = readFileSync(nav, "utf8");
     const navLinkSrc = readFileSync(navLinks, "utf8");
     const clientSrc = readFileSync(client, "utf8");
-    expect(pageSrc).toContain("The Map of Knowledge");
-    expect(pageSrc).toContain("LandingNav");
     expect(navSrc).toContain("COMMUNITY_NAV_LABEL");
     expect(navSrc).toContain("COMMUNITY_LINKS");
     expect(navSrc).toContain("TOP_LINKS");
-    expect(navLinkSrc).toContain('href: "/map-of-knowledge"');
+    expect(navLinkSrc).not.toContain('href: "/map-of-knowledge"');
     expect(navLinkSrc).toContain('href: "/vision"');
     expect(navLinkSrc).toContain('href: "/science"');
-    expect(navLinkSrc).toContain('label: "The Map of Knowledge"');
+    expect(navLinkSrc).not.toContain('label: "The Map of Knowledge"');
     expect(navLinkSrc).toContain('COMMUNITY_NAV_LABEL = "Projects"');
     // Map stays under Projects; Vision/Science are top-level nav links
     expect(navSrc).toContain("aria-label={COMMUNITY_NAV_LABEL}");
@@ -683,8 +680,6 @@ describe("map-of-knowledge product surfaces", () => {
     );
     expect(timedExploreCard).not.toMatch(/Dialog/);
     expect(timedExploreCard).not.toMatch(/Solo Exercises/);
-    expect(pageSrc).toMatch(/think aloud|put yourself on the map/i);
-    expect(pageSrc).not.toMatch(/TAP or TAP Learning/);
     // Map canvas appears before placement section
     expect(clientSrc.indexOf('id="map-canvas"')).toBeLessThan(
       clientSrc.indexOf('id="map-place-yourself"'),

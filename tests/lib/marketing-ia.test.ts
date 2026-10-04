@@ -439,12 +439,11 @@ describe("nav and footer hrefs resolve to shipped pages", () => {
   it("Community nav labels and Navbar match the current IA", () => {
     expect(COMMUNITY_LINKS.map((l) => l.label)).toEqual([
       "Community Events",
-      "The Map of Knowledge",
       "TAPBench",
     ]);
     const navbar = read("components/Navbar.tsx");
     expect(navbar).toContain('label: "Community Events"');
-    expect(navbar).toContain('label: "The Map of Knowledge"');
+    expect(navbar).not.toContain('label: "The Map of Knowledge"');
     expect(navbar).not.toMatch(
       /communityLinks[\s\S]*href: "\/all-you-can-learn"/,
     );

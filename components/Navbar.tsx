@@ -68,7 +68,6 @@ export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
 
   const communityLinks = [
     { href: "/community-events", label: "Community Events" },
-    { href: "/map-of-knowledge", label: "The Map of Knowledge" },
     { href: "/tapbench", label: "TAPBench" },
   ];
 

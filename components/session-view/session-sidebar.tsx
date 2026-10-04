@@ -8,6 +8,7 @@ import {
   type SessionSidebarMode,
 } from "@/lib/session-sidebar";
 import { SessionConsoleMarks, SessionConsoleScan } from "@/components/session-view/session-console-marks";
+import { SessionTopicCardTimerProvider } from "@/components/session-view/ile-work-dock-bar";
 
 const SECTION_LABEL = {
   signals: "Data",
@@ -78,21 +79,23 @@ export function SessionSidebar({
       className="relative box-border flex h-full min-h-0 flex-col overflow-hidden border-l border-white/40 bg-black"
     >
       {showTopic ? (
-        <div
-          data-session-sidebar-section="topic"
-          className="relative shrink-0 has-[[data-session-topic-card-timer]]:[&_[data-session-topic-card-title]]:ml-auto has-[[data-session-topic-card-timer]]:[&_[data-session-topic-card-title]]:max-w-[58%] has-[[data-session-topic-card-timer]]:[&_[data-session-topic-card-title]]:min-w-0 has-[[data-session-topic-card-timer]]:[&_[data-session-topic-card-title]]:text-right"
+        <SessionTopicCardTimerProvider
+          timer={
+            showClock ? (
+              <div
+                data-session-sidebar-clock
+                data-session-topic-card-timer
+                className="pointer-events-none max-w-full [&>div]:px-0 [&>div]:py-0"
+              >
+                {clock}
+              </div>
+            ) : null
+          }
         >
-          {chapters}
-          {showClock ? (
-            <div
-              data-session-sidebar-clock
-              data-session-topic-card-timer
-              className="pointer-events-none absolute bottom-3 left-3 z-20 w-max max-w-[46%] [&_.w-full]:w-auto"
-            >
-              {clock}
-            </div>
-          ) : null}
-        </div>
+          <div data-session-sidebar-section="topic" className="relative shrink-0">
+            {chapters}
+          </div>
+        </SessionTopicCardTimerProvider>
       ) : null}
       {resources != null && !resourcesInFocus ? (
         <div className="shrink-0 border-b border-white/30 bg-black">

@@ -4,6 +4,7 @@
  */
 
 import { notFound } from "next/navigation";
+import { PublicConsoleWash } from "@/components/ui/console-frame";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveTapbenchSessionToken } from "@/lib/pow-api/tapbench-store";
 import { TAPBENCH_PRODUCT, buildTapbenchShareUrl } from "@/lib/pow-api/tapbench";
@@ -37,11 +38,13 @@ export default async function TapbenchResolvePage({ params }: PageProps) {
     if (resolved.code === "not_found") notFound();
     return (
       <main
-        className="min-h-screen bg-[#0a0a0a] px-6 py-16 text-zinc-200"
+        data-console-frame=""
+        className="relative min-h-screen border border-white/40 bg-black px-6 py-16 text-zinc-200"
         data-tapbench-resolve
         data-tapbench-status={resolved.code}
       >
-        <div className="mx-auto max-w-xl rounded-lg border border-red-900/50 bg-red-950/20 p-6">
+        <PublicConsoleWash />
+        <div className="console-copy relative z-10 mx-auto max-w-xl p-6">
           <p className="font-mono text-[10px] tracking-[2px] text-zinc-500">
             {TAPBENCH_PRODUCT.name}
           </p>
@@ -83,11 +86,13 @@ export default async function TapbenchResolvePage({ params }: PageProps) {
 
   return (
     <main
-      className="min-h-screen bg-[#0a0a0a] px-6 py-16 text-zinc-200"
+      data-console-frame=""
+      className="relative min-h-screen border border-white/40 bg-black px-6 py-16 text-zinc-200"
       data-tapbench-resolve
       data-tapbench-status="active"
     >
-      <div className="mx-auto max-w-2xl space-y-6">
+      <PublicConsoleWash />
+      <div className="relative z-10 mx-auto max-w-2xl space-y-6">
         <div>
           <p className="font-mono text-[10px] tracking-[2px] text-zinc-500">
             {TAPBENCH_PRODUCT.name}
@@ -109,7 +114,7 @@ export default async function TapbenchResolvePage({ params }: PageProps) {
         </div>
 
         <section
-          className="rounded-lg border border-neutral-800/40 bg-neutral-950/15 p-5"
+          className="console-copy p-5"
           data-tapbench-skills-md
           data-tapbench-skills-filename={TAPBENCH_SKILLS_MD_FILENAME}
         >
@@ -128,7 +133,7 @@ export default async function TapbenchResolvePage({ params }: PageProps) {
             <a
               href={skillsPath}
               download={TAPBENCH_SKILLS_MD_FILENAME}
-              className="inline-flex items-center rounded-md border border-neutral-700/50 bg-neutral-950/40 px-3 py-1.5 text-xs font-medium text-neutral-300 hover:bg-neutral-950/40"
+              className="console-button inline-flex items-center px-3 py-1.5 text-xs font-medium text-neutral-300 hover:border-white/80 hover:text-white"
               data-download-tapbench-skills
               data-tapbench-skills-download
             >
@@ -148,7 +153,7 @@ export default async function TapbenchResolvePage({ params }: PageProps) {
         </section>
 
         <section
-          className="rounded-lg border border-zinc-800 bg-zinc-950/80 p-5"
+          className="console-copy p-5"
           data-tapbench-exercise
         >
           <h2 className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
@@ -159,7 +164,7 @@ export default async function TapbenchResolvePage({ params }: PageProps) {
 
         <section className="grid gap-3 sm:grid-cols-2">
           <div
-            className="rounded-lg border border-zinc-800 bg-zinc-950/80 p-4"
+            className="console-copy p-4"
             data-tapbench-remaining
           >
             <div className="text-[11px] uppercase tracking-wide text-zinc-500">
@@ -173,7 +178,7 @@ export default async function TapbenchResolvePage({ params }: PageProps) {
             </div>
           </div>
           <div
-            className="rounded-lg border border-zinc-800 bg-zinc-950/80 p-4"
+            className="console-copy p-4"
             data-tapbench-session-token
           >
             <div className="text-[11px] uppercase tracking-wide text-zinc-500">
@@ -186,7 +191,7 @@ export default async function TapbenchResolvePage({ params }: PageProps) {
         </section>
 
         <section
-          className="rounded-lg border border-zinc-800 bg-zinc-950/80 p-5"
+          className="console-copy p-5"
           data-tapbench-stash-instructions
         >
           <h2 className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
@@ -225,7 +230,7 @@ export default async function TapbenchResolvePage({ params }: PageProps) {
 
         {/* Full skills.md body for agents that scrape HTML / read the page source */}
         <section
-          className="rounded-lg border border-zinc-800 bg-zinc-950/80 p-5"
+          className="console-copy p-5"
           data-tapbench-skills-md-body
           data-tapbench-skills-filename={TAPBENCH_SKILLS_MD_FILENAME}
         >

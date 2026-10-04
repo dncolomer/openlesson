@@ -60,7 +60,7 @@ export default function VisionPage() {
           </TrackedCtaLink>
           <Link
             href="/science"
-            className="inline-flex min-h-12 items-center justify-center rounded-none border border-zinc-800 bg-zinc-950/60 px-5 py-3 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-white"
+            className="console-button inline-flex min-h-12 items-center justify-center rounded-none px-5 py-3 text-sm font-medium text-zinc-300 transition hover:border-white/80 hover:text-white"
           >
             Read the thesis
           </Link>
@@ -105,7 +105,7 @@ export default function VisionPage() {
           {VISION_TOMOGRAPHY_INDUCTION_COPY.lead}
         </p>
         <article
-          className="mt-8 border border-zinc-800 bg-zinc-950/70 p-5 sm:p-6"
+          className="console-copy mt-8 p-5 sm:p-6"
           data-vision-epistemic-foraging
         >
           <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
@@ -140,7 +140,7 @@ export default function VisionPage() {
           <Link
             href={VISION_TOMOGRAPHY_INDUCTION_PATHS.science}
             data-vision-science-link
-            className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-none border border-zinc-800 bg-zinc-950/60 px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-white"
+            className="console-button inline-flex min-h-11 items-center justify-center gap-1.5 rounded-none px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:border-white/80 hover:text-white"
           >
             {VISION_TOMOGRAPHY_INDUCTION_COPY.links.scienceLabel}
             <ArrowRight size={14} />
@@ -148,7 +148,7 @@ export default function VisionPage() {
           <Link
             href={VISION_TOMOGRAPHY_INDUCTION_PATHS.epistemicForaging}
             data-vision-epistemic-foraging-link
-            className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-none border border-zinc-800 bg-zinc-950/60 px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-white"
+            className="console-button inline-flex min-h-11 items-center justify-center gap-1.5 rounded-none px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:border-white/80 hover:text-white"
           >
             {VISION_TOMOGRAPHY_INDUCTION_COPY.links.foragingLabel}
             <ArrowRight size={14} />
@@ -156,7 +156,7 @@ export default function VisionPage() {
           <Link
             href={VISION_TOMOGRAPHY_INDUCTION_PATHS.knowledgeTomographyPaper}
             data-vision-knowledge-tomography-paper-link
-            className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-none border border-zinc-800 bg-zinc-950/60 px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-white"
+            className="console-button inline-flex min-h-11 items-center justify-center gap-1.5 rounded-none px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:border-white/80 hover:text-white"
           >
             {VISION_TOMOGRAPHY_INDUCTION_COPY.links.paperLabel}
             <ArrowRight size={14} />
@@ -195,7 +195,7 @@ function SectionHeading({
 
 function VisionCard({ eyebrow, title, body }: { eyebrow: string; title: string; body: string }) {
   return (
-    <div className="border border-zinc-800 bg-zinc-950/70 p-5 sm:p-6">
+    <div className="console-copy p-5 sm:p-6">
       <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">{eyebrow}</p>
       <h3 className="mt-3 text-xl font-medium tracking-[-0.6px] text-white">{title}</h3>
       <p className="mt-3 text-sm leading-relaxed text-zinc-400">{body}</p>

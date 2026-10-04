@@ -132,7 +132,7 @@ function PricingPageContent() {
       <div className="relative z-10 flex min-h-screen flex-col">
         <LandingNav />
         <section className="mx-auto w-full max-w-7xl flex-1 px-6 py-16 sm:py-20">
-          <div className="mb-8 inline-block rounded-none border border-neutral-800 bg-neutral-950/80 px-3 py-1 font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
+          <div className="console-chip mb-8 inline-block rounded-none px-3 py-1 font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
             {HARNESS_PRICING_COPY.eyebrow}
           </div>
           <h1 className="max-w-3xl text-4xl font-medium leading-[1.05] tracking-[-2px] text-white sm:text-5xl">
@@ -162,7 +162,7 @@ function PricingPageContent() {
           >
             <div
               data-testid="pricing-plans"
-              className="w-full border border-neutral-500 bg-neutral-950/80 p-5 backdrop-blur-sm sm:p-8"
+              className="console-copy w-full p-5 sm:p-8"
             >
               <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-500">
                 {HARNESS_PRICING_COPY.monthlyLabel}

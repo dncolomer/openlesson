@@ -111,7 +111,7 @@ export function ExerciseTapShell({
             keyword={active?.title || "Exercise"}
           />
         }
-        signals={<TapSessionSignals />}
+        signals={<TapSessionSignals captureAudio />}
         focusLabel="Stash"
         focus={
           <div className="flex h-full min-h-0 flex-col overflow-hidden">

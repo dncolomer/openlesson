@@ -35,10 +35,10 @@ function PortalErrorBody({
 }) {
   return (
     <div
-      className="rounded-sm border border-zinc-800 bg-zinc-950/80 p-6 text-center backdrop-blur-sm sm:p-8"
+      className="console-copy p-6 text-center sm:p-8"
       data-practice-portal-error-panel
     >
-      <div className="mb-3 inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
+      <div className="console-chip mb-3 inline-block px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
         Knowledge Portal
       </div>
       <h1 className="text-xl font-medium tracking-[-0.5px] text-white sm:text-2xl">

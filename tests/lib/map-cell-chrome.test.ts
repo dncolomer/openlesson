@@ -76,7 +76,8 @@ describe("mapCellChromeClasses", () => {
       selected: false,
       showProgress: true,
     });
-    expect(cls).toContain("border-neutral");
+    expect(cls).toContain("border-white/35");
+    expect(cls).toContain("bg-black");
     expect(mapCellChromeIsNeutral(cls)).toBe(true);
     expect(cls).not.toMatch(/emerald|amber|cyan|yellow|green-/i);
   });

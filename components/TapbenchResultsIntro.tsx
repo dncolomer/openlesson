@@ -27,7 +27,7 @@ export function TapbenchResultsIntro() {
       </div>
 
       <aside
-        className="w-full border border-zinc-700 border-l-2 border-l-zinc-300 bg-zinc-900/75 px-4 py-4 sm:px-5 sm:py-5"
+        className="console-copy w-full px-4 py-4 sm:px-5 sm:py-5"
         data-tapbench-utility
       >
         <p className="font-mono text-[10px] tracking-[2px] text-zinc-500">THE BENCHMARK</p>
@@ -40,7 +40,7 @@ export function TapbenchResultsIntro() {
       <img
         src="/knowledgeg2.png"
         alt="Knowledge embeddings: people and knowledge regions in a shared geometry"
-        className="w-full rounded-sm border border-zinc-700 object-cover object-top"
+        className="console-copy w-full object-cover object-top"
         data-tapbench-kv-image
       />
 

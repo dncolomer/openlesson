@@ -90,12 +90,6 @@ export function WorkspaceMobilePlanAside({
               >
                 {copied ? t("planView.copied") : t("planView.share")}
               </button>
-              <Link
-                href="/map-of-knowledge"
-                className="block w-full rounded-none border border-neutral-600/20 bg-neutral-950/20 px-3 py-2 text-center text-xs text-neutral-300/90 transition-all hover:bg-neutral-950/40"
-              >
-                Map of Knowledge
-              </Link>
             </div>
           )}
 

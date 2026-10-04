@@ -577,7 +577,7 @@ export default function DashboardPage() {
     }
   };
 
-  const usageCardClass = "rounded-none border border-neutral-800 bg-neutral-950/75 p-5 sm:p-6";
+  const usageCardClass = "console-copy rounded-none p-5 sm:p-6";
   const usageLabelClass = "font-mono text-[10px] uppercase tracking-[2px] text-neutral-500";
 
   const loadXaiUsage = async (period: XaiPeriodPreset) => {
@@ -787,11 +787,11 @@ export default function DashboardPage() {
     >
       <SessionConsoleScan />
       <SessionConsoleMarks />
-      <p data-console-frame-label="" className={`absolute left-3 top-2 z-[4] ${CONSOLE_LABEL_CLASS}`}>
-        Home
-      </p>
       <div className="relative z-[2]">
       <Navbar />
+      <p data-console-frame-label="" className={`pointer-events-none px-4 pt-2 sm:px-6 ${CONSOLE_LABEL_CLASS}`}>
+        Home
+      </p>
 
       {/* Tabs */}
       <div className="border-b border-neutral-800/60">
@@ -996,7 +996,7 @@ export default function DashboardPage() {
             {dashboardHasNoWorkspaces(workspaces) ? (
               <section
                 data-dashboard-empty-workspaces
-                className="border border-neutral-800 bg-neutral-950/80 px-6 py-14 sm:px-10 sm:py-16 backdrop-blur-sm"
+                className="console-copy px-6 py-14 sm:px-10 sm:py-16"
               >
                 <div className="mx-auto flex max-w-xl flex-col items-center text-center">
                   <p className="mb-4 font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
@@ -1022,7 +1022,7 @@ export default function DashboardPage() {
               </section>
             ) : (
             <>
-            <div className="border border-neutral-800 bg-neutral-950/75 px-6 py-7 sm:px-8 sm:py-8 backdrop-blur-sm">
+            <div className="console-copy px-6 py-7 sm:px-8 sm:py-8">
               <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
                 <div>
                   <p className="mb-3 font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
@@ -1046,55 +1046,55 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h3 className="text-lg font-semibold">{t('dashboard.allWorkspaces')}</h3>
-              <div className="flex flex-wrap items-center gap-3">
-                <label
-                  className="flex items-center gap-2 text-xs text-neutral-400"
-                  data-workspace-visibility-filter
-                >
-                  <span className="text-neutral-500">Visibility</span>
-                  <select
-                    value={workspaceVisibilityFilter}
-                    onChange={(e) => {
-                      const next = e.target.value;
-                      if (isDashboardWorkspaceListFilter(next)) {
-                        setWorkspaceVisibilityFilter(next);
-                        setPlanPage(1);
-                      }
-                    }}
-                    className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-300 focus:border-neutral-500 focus:outline-none"
-                    aria-label="Filter workspaces by public, private, or AYCL"
+            <div className="console-copy p-4 sm:p-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h3 className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">{t('dashboard.allWorkspaces')}</h3>
+                <div className="flex flex-wrap items-center gap-3">
+                  <label
+                    className="flex items-center gap-2 text-xs text-neutral-400"
+                    data-workspace-visibility-filter
                   >
-                    <option value="all">All</option>
-                    <option value="public">{t("dashboard.public")}</option>
-                    <option value="private">{t("dashboard.private")}</option>
-                    <option value="aycl">AYCL</option>
-                  </select>
-                </label>
-                <label className="flex items-center gap-2 text-xs text-neutral-400">
-                  <input
-                    type="checkbox"
-                    checked={showArchivedWorkspaces}
-                    onChange={(e) => setShowArchivedPlans(e.target.checked)}
-                    className="rounded border-neutral-700 bg-neutral-900"
-                  />
-                  Show archived
-                </label>
+                    <span className="text-neutral-500">Visibility</span>
+                    <select
+                      value={workspaceVisibilityFilter}
+                      onChange={(e) => {
+                        const next = e.target.value;
+                        if (isDashboardWorkspaceListFilter(next)) {
+                          setWorkspaceVisibilityFilter(next);
+                          setPlanPage(1);
+                        }
+                      }}
+                      className="rounded-none border border-white/40 bg-black px-2 py-1 text-xs text-neutral-300 focus:border-white/70 focus:outline-none"
+                      aria-label="Filter workspaces by public, private, or AYCL"
+                    >
+                      <option value="all">All</option>
+                      <option value="public">{t("dashboard.public")}</option>
+                      <option value="private">{t("dashboard.private")}</option>
+                      <option value="aycl">AYCL</option>
+                    </select>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs text-neutral-400">
+                    <input
+                      type="checkbox"
+                      checked={showArchivedWorkspaces}
+                      onChange={(e) => setShowArchivedPlans(e.target.checked)}
+                      className="rounded-none border border-white/40 bg-black"
+                    />
+                    Show archived
+                  </label>
+                </div>
               </div>
-            </div>
-            <div className="flex-1">
               <input
                 type="text"
                 placeholder={t('dashboard.searchWorkspaces')}
                 value={workspaceSearch}
                 onChange={(e) => setPlanSearch(e.target.value)}
-                className="w-full bg-neutral-900 border border-neutral-800 rounded-none px-3 py-2 text-sm text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-neutral-600"
+                className="mt-3 w-full rounded-none border border-white/40 bg-black px-3 py-2 text-sm text-neutral-200 placeholder:text-neutral-600 focus:border-white/70 focus:outline-none"
               />
             </div>
 
             {filteredWorkspaces.length === 0 ? (
-              <div className="text-center py-8 text-neutral-500 border border-neutral-800 rounded-none">
+              <div className="console-copy py-8 text-center text-neutral-500">
                 <p className="text-sm">{t('dashboard.noMatchingWorkspaces')}</p>
                 <Link href="/workspace/new" className="text-neutral-300 hover:underline mt-2 inline-block text-sm">
                   {t('dashboard.createNewPlan')}
@@ -1149,14 +1149,14 @@ export default function DashboardPage() {
                   <button
                     onClick={() => setPlanPage((p) => Math.max(1, p - 1))}
                     disabled={workspacePage === 1}
-                    className="px-3 py-1 text-xs text-neutral-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed border border-neutral-700 rounded transition-colors"
+                    className="console-button px-3 py-1 text-xs text-neutral-400 transition hover:border-white/80 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {t('dashboard.previous')}
                   </button>
                   <button
                     onClick={() => setPlanPage((p) => Math.min(totalPlanPages, p + 1))}
                     disabled={workspacePage === totalPlanPages}
-                    className="px-3 py-1 text-xs text-neutral-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed border border-neutral-700 rounded transition-colors"
+                    className="console-button px-3 py-1 text-xs text-neutral-400 transition hover:border-white/80 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {t('dashboard.next')}
                   </button>
@@ -1244,7 +1244,7 @@ export default function DashboardPage() {
           return (
           <div className="space-y-10">
             {/* Page header */}
-            <div className="flex flex-wrap items-center justify-between gap-3 border border-neutral-800 bg-neutral-950/75 px-6 py-5">
+            <div className="console-copy flex flex-wrap items-center justify-between gap-3 px-6 py-5">
               <div>
                 <p className={usageLabelClass}>Account</p>
                 <h2 className="mt-2 text-2xl font-medium tracking-[-0.5px] text-white">
@@ -1622,7 +1622,7 @@ export default function DashboardPage() {
                                     className={`rounded-none border px-2.5 py-1 text-[11px] transition ${
                                       xaiPeriod === opt.id
                                         ? "border-white/20 bg-white/10 text-white"
-                                        : "border-neutral-800 bg-black/30 text-neutral-400 hover:border-neutral-600 hover:text-neutral-200"
+                                        : "console-button text-neutral-400 hover:border-white/80 hover:text-neutral-200"
                                     } disabled:opacity-50`}
                                   >
                                     {opt.label}
@@ -1687,7 +1687,7 @@ export default function DashboardPage() {
         {/* Integrations Tab */}
         {activeTab === "integrations" && (
           <div className="space-y-8">
-            <div className="flex flex-wrap items-center justify-between gap-3 border border-neutral-800 bg-neutral-950/75 px-6 py-5">
+            <div className="console-copy flex flex-wrap items-center justify-between gap-3 px-6 py-5">
               <div>
                 <p className={usageLabelClass}>Integrations</p>
                 <h2 className="mt-2 text-2xl font-medium tracking-[-0.5px] text-white">{t("dashboard.integrationsTab")}</h2>
@@ -1739,7 +1739,7 @@ export default function DashboardPage() {
                   : t("dashboard.apiExperimentalDesc")}
               </p>
               {!usesAgenticV2Keys && (
-                <div className="rounded-none border border-neutral-800 bg-black/40 p-4 text-sm text-neutral-400">
+                <div className="console-copy rounded-none p-4 text-sm text-neutral-400">
                   {`${t("dashboard.apiKeysAvailableOnPro")} `}
                   <Link href="/pricing" className="text-neutral-200 underline decoration-neutral-600 underline-offset-4 hover:text-white">
                     {t("dashboard.upgradeToPro")}
@@ -1811,7 +1811,7 @@ export default function DashboardPage() {
                   {apiKeys.map((key) => (
                     <div
                       key={key.id}
-                      className="flex items-center justify-between rounded-none border border-neutral-800 bg-black/40 p-4"
+                      className="console-copy flex items-center justify-between rounded-none p-4"
                     >
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-neutral-200">

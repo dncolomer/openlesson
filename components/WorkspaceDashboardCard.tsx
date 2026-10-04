@@ -6,7 +6,7 @@ import { WorkspaceCardHero } from "@/components/WorkspaceCardHero";
 
 function heroBadge(label: string) {
   return (
-    <span className="border border-white/10 bg-black/50 px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300 backdrop-blur-sm">
+    <span className="console-chip px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300">
       {label}
     </span>
   );
@@ -49,7 +49,7 @@ export function WorkspaceDashboardCard({
 
   return (
     <article
-      className="group overflow-hidden rounded-none border border-neutral-800/90 bg-neutral-950/80 transition hover:border-neutral-600 hover:bg-neutral-900/70"
+      className="console-copy group overflow-hidden transition hover:border-white/80"
       data-workspace-dashboard-card
       data-workspace-pinned={isPinned ? "true" : "false"}
       data-workspace-aycl={plan.is_all_you_can_learn ? "true" : "false"}
@@ -89,10 +89,10 @@ export function WorkspaceDashboardCard({
               aria-pressed={isPinned}
               aria-label={isPinned ? "Unpin workspace" : "Pin workspace"}
               title={isPinned ? "Unpin from top of list" : "Pin to top of list"}
-              className={`shrink-0 rounded-none border px-2.5 py-1 text-xs transition ${
+              className={`console-button shrink-0 px-2.5 py-1 text-xs transition ${
                 isPinned
-                  ? "border-neutral-600/70 bg-neutral-950/40 text-neutral-300 hover:border-white/60 hover:bg-neutral-950/60"
-                  : "border-neutral-700 bg-neutral-900/60 text-neutral-400 hover:border-neutral-500 hover:text-neutral-200"
+                  ? "border-white/80 text-white"
+                  : "text-neutral-400 hover:border-white/80 hover:text-neutral-200"
               }`}
             >
               {isPinned ? "Unpin" : "Pin"}
@@ -106,7 +106,7 @@ export function WorkspaceDashboardCard({
           <span
             className={
               plan.status === "archived"
-                ? "rounded-none border border-neutral-600/30 px-1.5 py-0.5 text-neutral-300"
+                ? "console-chip px-1.5 py-0.5 text-[11px] normal-case tracking-normal text-neutral-300"
                 : "capitalize"
             }
           >
@@ -133,7 +133,7 @@ export function WorkspaceDashboardCard({
                 type="button"
                 onClick={() => onRestore(plan.id)}
                 disabled={archivingWorkspaceId === plan.id}
-                className="rounded-none border border-neutral-700 px-2.5 py-1 text-xs text-neutral-300 transition hover:border-neutral-500 hover:text-white disabled:opacity-50"
+                className="console-button px-2.5 py-1 text-xs text-neutral-300 transition hover:border-white/80 hover:text-white disabled:opacity-50"
               >
                 {archivingWorkspaceId === plan.id ? "Restoring…" : "Restore"}
               </button>
@@ -142,7 +142,7 @@ export function WorkspaceDashboardCard({
                 type="button"
                 onClick={() => onArchive(plan.id)}
                 disabled={archivingWorkspaceId === plan.id}
-                className="rounded-none border border-neutral-700 px-2.5 py-1 text-xs text-neutral-400 transition hover:border-neutral-600/40 hover:text-neutral-300 disabled:opacity-50"
+                className="console-button px-2.5 py-1 text-xs text-neutral-400 transition hover:border-white/80 hover:text-neutral-200 disabled:opacity-50"
               >
                 {archivingWorkspaceId === plan.id ? "Archiving…" : "Archive"}
               </button>
@@ -150,10 +150,10 @@ export function WorkspaceDashboardCard({
             <button
               type="button"
               onClick={() => onToggleVisibility(plan)}
-              className={`rounded-none border px-2.5 py-1 text-xs transition-colors ${
+              className={`console-button px-2.5 py-1 text-xs transition ${
                 isPublic
-                  ? "border-green-800/80 bg-green-900/30 text-green-400 hover:bg-green-900/50"
-                  : "border-neutral-700 bg-neutral-900/60 text-neutral-500 hover:text-neutral-300"
+                  ? "border-white/80 text-white"
+                  : "text-neutral-500 hover:border-white/80 hover:text-neutral-300"
               }`}
             >
               {isPublic ? publicLabel : privateLabel}

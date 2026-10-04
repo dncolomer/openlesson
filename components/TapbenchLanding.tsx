@@ -155,7 +155,7 @@ export function TapbenchLanding(props: {
     <TapbenchShell landing>
       <header data-tapbench-landing-hero>
         <div
-          className="mb-4 inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500"
+          className="console-chip mb-4 inline-block px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500"
           data-tapbench-landing-kicker
         >
           TAPBENCH
@@ -168,7 +168,7 @@ export function TapbenchLanding(props: {
       </header>
 
       <div
-        className="mt-8 flex w-full gap-1 border-b border-zinc-800"
+        className="mt-8 flex w-full gap-1 border-b border-white/30"
         data-tapbench-tabs
         role="tablist"
         aria-label="TAPBench"
@@ -179,7 +179,7 @@ export function TapbenchLanding(props: {
             type="button"
             role="tab"
             aria-selected={tab === item.id}
-            className={`px-3 py-2 text-xs uppercase tracking-wide ${
+            className={`px-3 py-2 font-mono text-[10px] uppercase tracking-[0.18em] ${
               tab === item.id
                 ? "border-b border-white text-white"
                 : "text-zinc-500 hover:text-zinc-300"

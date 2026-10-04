@@ -33,7 +33,7 @@ export default function B2BLandingPage() {
   }, []);
 
   return (
-    <main className="relative min-h-screen overflow-hidden border border-white/40 bg-black text-zinc-200 selection:bg-zinc-700">
+    <main className="relative min-h-screen border border-white/40 bg-black text-zinc-200 selection:bg-zinc-700">
       <div className="fixed inset-0 z-0 bg-[#0a0a0a]" />
       {bgImage && <div className="fixed inset-0 z-0 bg-cover bg-fixed bg-center" style={{ backgroundImage: `url(${bgImage})` }} />}
       <div className="fixed inset-0 z-0 bg-[#0a0a0a]/78" />
@@ -44,7 +44,7 @@ export default function B2BLandingPage() {
 
       <section className="relative z-10 mx-auto w-full max-w-7xl px-6 pt-14 pb-10 sm:pt-16 sm:pb-12" data-home-hero>
         <div className="w-full">
-          <div className="mb-6 inline-block rounded-none border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
+          <div className="console-chip mb-6 inline-block rounded-none px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
             {PLATFORM_HERO.pill}
           </div>
           <h1 className="max-w-5xl text-4xl font-medium leading-[1.08] tracking-[-2px] text-white sm:text-5xl lg:text-[56px]">
@@ -67,7 +67,7 @@ export default function B2BLandingPage() {
             </TrackedCtaLink>
             <a
               href={PLATFORM_CTA.href}
-              className="inline-flex min-h-12 items-center justify-center rounded-none border border-zinc-800 bg-zinc-950/60 px-5 py-3 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-white"
+              className="console-button inline-flex min-h-12 items-center justify-center rounded-none px-5 py-3 text-sm font-medium text-zinc-300 transition hover:border-white/80 hover:text-white"
             >
               {PLATFORM_CTA.email}
             </a>
@@ -79,7 +79,7 @@ export default function B2BLandingPage() {
         <SectionHeading eyebrow={PLATFORM_SPINE.eyebrow} title={PLATFORM_SPINE.title} />
         <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {PLATFORM_SPINE.items.map((item) => (
-            <li key={item.name} className="border border-zinc-800 bg-zinc-950/70 p-5 sm:p-6">
+            <li key={item.name} className="console-copy p-5 sm:p-6">
               <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">{item.eyebrow}</p>
               <h3 className="mt-3 text-xl font-medium tracking-[-0.6px] text-white">{item.name}</h3>
               <p className="mt-3 text-sm leading-relaxed text-zinc-400">{item.body}</p>
@@ -95,7 +95,7 @@ export default function B2BLandingPage() {
         </p>
         <ul className="mt-8 grid gap-4 md:grid-cols-2">
           {PLATFORM_DELIVERY.items.map((item) => (
-            <li key={item.name} className="border border-zinc-800 bg-zinc-950/70 p-5 sm:p-6">
+            <li key={item.name} className="console-copy p-5 sm:p-6">
               <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">{item.eyebrow}</p>
               <h3 className="mt-3 text-xl font-medium tracking-[-0.6px] text-white">{item.name}</h3>
               <p className="mt-3 text-sm leading-relaxed text-zinc-400">{item.body}</p>
@@ -119,7 +119,7 @@ export default function B2BLandingPage() {
           {PLATFORM_PROOF.items.map((item) => (
             <li
               key={item.name}
-              className="flex min-h-0 min-w-0 flex-col overflow-hidden border border-zinc-800 bg-zinc-950/70"
+              className="console-copy flex min-h-0 min-w-0 flex-col overflow-hidden"
             >
               <div className="relative aspect-[16/10] w-full">
                 <Image
@@ -150,7 +150,7 @@ export default function B2BLandingPage() {
           ))}
         </ul>
         <div
-          className="mt-12 w-full border border-zinc-800 bg-zinc-950/80 px-6 py-10 text-center sm:px-10 sm:py-12"
+          className="console-copy mt-12 w-full px-6 py-10 text-center sm:px-10 sm:py-12"
           data-home-cta
         >
           <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
@@ -185,13 +185,13 @@ function LayerCard({
   product: (typeof PLATFORM_LAYER_LIST)[number];
 }) {
   return (
-    <article className="flex min-h-0 min-w-0 flex-col overflow-hidden border border-zinc-800 bg-zinc-950/70">
+    <article className="console-copy flex min-h-0 min-w-0 flex-col overflow-hidden">
       <div className="relative aspect-[16/10] w-full">
         <Image
           src={product.image}
           alt={product.imageAlt}
           fill
-          className="object-cover grayscale"
+          className="object-cover"
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 384px"
         />
       </div>

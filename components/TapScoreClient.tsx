@@ -919,8 +919,9 @@ export function TapScoreClient({
       }
       return;
     }
-    // Always (re)arm recognition when entering/staying live so a dead mic
-    // after pause-like transitions does not leave TAP stuck idle.
+    // The thought hook owns the single SpeechRecognition while live.
+    // These local bindings stay stopped so they cannot steal it or
+    // force the sidebar listening flag off.
     if (isTapLiveThoughtSpeechEnabled(phase)) {
       stopLiveSpeechRecognition(speechBindings);
       return;
@@ -1099,9 +1100,9 @@ export function TapScoreClient({
       crystallizableText={crystallizableText}
       showEndSession={showEndSession}
       endSession={endSession}
-      speechError={speechError}
+      speechError={tapThoughtSpeech.speechError ?? speechError}
       speechSupported={speechSupported}
-      isListening={isListening}
+      isListening={tapThoughtSpeech.isListening || isListening}
       transcriptSilenceMs={transcriptSilenceMs}
       retryMicrophone={retryMicrophone}
       sendCurrentTranscription={sendCurrentTranscription}

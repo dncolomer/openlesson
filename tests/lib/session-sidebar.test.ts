@@ -384,10 +384,16 @@ describe("session sidebar mode configuration", () => {
       expect(modeCard).toContain('data-session-topic-card-media="image"');
       expect(modeCard).toContain("data-session-sidebar-clock");
       expect(modeCard).toContain('data-session-topic-card-timer="true"');
-      expect(modeCard).toContain("bottom-3");
-      expect(modeCard).toContain("left-3");
+      expect(modeCard).toContain("items-start");
+      expect(modeCard).toContain("justify-end");
+      expect(modeCard).toContain("text-left");
+      expect(modeCard).not.toContain("text-right");
+      expect(modeCard).not.toContain("max-w-[58%]");
       expect(modeCard.indexOf('data-session-topic-card-timer="true"')).toBeGreaterThan(
         modeCard.indexOf('data-session-topic-card="chapter-1"'),
+      );
+      expect(modeCard.indexOf('data-session-topic-card-timer="true"')).toBeLessThan(
+        modeCard.indexOf("data-session-topic-card-title"),
       );
       expect(modeCard).toContain(">0:16<");
       expect(modeCard.match(/data-session-topic-card=/g)).toHaveLength(1);
@@ -531,13 +537,14 @@ describe("session sidebar mode configuration", () => {
     expect(prepare).toContain("focusLabel=");
     expect(prepare).toContain("<SessionTopicChapter");
     expect(prepare).toContain("<TapSessionSignals");
+    expect(prepare).not.toContain("captureAudio");
     expect(prepare).toContain("data-scout-questions-pane");
     expect(drill).toContain('focusLabel="Stash"');
     expect(drill).toContain("<SessionTopicChapter");
-    expect(drill).toContain("<TapSessionSignals");
+    expect(drill).toContain("<TapSessionSignals captureAudio");
     expect(tap).toContain('focusLabel="Stash"');
     expect(tap).toContain("<SessionTopicChapter");
-    expect(tap).toContain("<TapSessionSignals");
+    expect(tap).toContain("<TapSessionSignals captureAudio");
     const signals = readFileSync(join(ROOT, "components/session-view/session-signals.tsx"), "utf8");
     expect(signals).toContain("SessionDataCard");
     expect(signals).toContain("getUserMedia");
@@ -552,6 +559,9 @@ describe("session sidebar mode configuration", () => {
     );
     expect(mountEffect).not.toContain("getUserMedia");
     expect(mountEffect).not.toContain("getDisplayMedia");
+    expect(signals).toContain("captureAudio");
+    expect(signals).toContain("if (!captureAudio) return;");
+    expect(signals).toContain("void openMic()");
     expect(readFileSync(join(ROOT, "components/thought-ui/ThoughtMemoryPanel.tsx"), "utf8")).not.toContain(
       "Search traces",
     );

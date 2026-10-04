@@ -168,7 +168,7 @@ export default function ProbabilisticComputingHackathonPage() {
         </nav>
 
         <div className="mb-5 flex flex-wrap items-center gap-2">
-          <span className="rounded-none border border-zinc-700 bg-zinc-950/80 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-400">
+          <span className="console-chip px-2.5 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-400">
             Past event
           </span>
           <span className="rounded-none border border-neutral-600/30 bg-neutral-800/10 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300/90">
@@ -215,7 +215,7 @@ export default function ProbabilisticComputingHackathonPage() {
           </a>
           <Link
             href="/community-events"
-            className="inline-flex min-h-11 items-center justify-center rounded-none border border-zinc-800 bg-zinc-950/60 px-5 text-sm text-zinc-400 transition hover:border-zinc-700 hover:text-white"
+            className="console-button inline-flex min-h-11 items-center justify-center rounded-none px-5 text-sm text-zinc-400 transition hover:border-white/80 hover:text-white"
           >
             All community events
           </Link>
@@ -234,7 +234,7 @@ export default function ProbabilisticComputingHackathonPage() {
         </p>
 
         <div className="mt-8 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-xl border border-zinc-800/90 bg-zinc-950/75 p-5 backdrop-blur-sm sm:p-6">
+          <div className="console-copy p-5 sm:p-6">
             <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">Core topics</p>
             <ul className="mt-4 space-y-2 text-sm text-zinc-300">
               <li className="flex gap-2">
@@ -251,7 +251,7 @@ export default function ProbabilisticComputingHackathonPage() {
               </li>
             </ul>
           </div>
-          <div className="rounded-xl border border-zinc-800/90 bg-zinc-950/75 p-5 backdrop-blur-sm sm:p-6">
+          <div className="console-copy p-5 sm:p-6">
             <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">Audience</p>
             <ul className="mt-4 space-y-2 text-sm text-zinc-300">
               <li className="flex gap-2">
@@ -310,7 +310,7 @@ export default function ProbabilisticComputingHackathonPage() {
           {WINNING_PROJECTS.map((project) => (
             <article
               key={project.place}
-              className="flex flex-col overflow-hidden rounded-xl border border-zinc-800/90 bg-zinc-950/75 backdrop-blur-sm"
+              className="console-copy flex flex-col overflow-hidden"
             >
               <div className="border-b border-zinc-800/80 bg-zinc-900/40 px-5 py-4">
                 <div className="flex items-center justify-between gap-2">
@@ -351,7 +351,7 @@ export default function ProbabilisticComputingHackathonPage() {
           {LIFETIME_PACKAGES.map((pkg) => (
             <article
               key={pkg.id}
-              className="flex flex-col rounded-xl border border-dashed border-zinc-700/80 bg-zinc-950/50 p-5 backdrop-blur-sm"
+              className="rounded-none border border-dashed border-white/40 bg-black flex flex-col p-5"
             >
               <span className="w-fit border border-neutral-600/30 bg-neutral-800/10 px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300/90">
                 {pkg.badge}
@@ -385,7 +385,7 @@ export default function ProbabilisticComputingHackathonPage() {
 
       {/* Prep material */}
       <section className="relative z-10 mx-auto w-full max-w-7xl px-4 py-8 sm:px-6">
-        <div className="overflow-hidden rounded-xl border border-zinc-800/90 bg-zinc-950/75 backdrop-blur-sm">
+        <div className="console-copy overflow-hidden">
           <div className="grid md:grid-cols-2">
             <div
               className="min-h-[180px] bg-cover bg-center md:min-h-full"
@@ -420,7 +420,7 @@ export default function ProbabilisticComputingHackathonPage() {
       {/* Technology + education context */}
       <section className="relative z-10 mx-auto w-full max-w-7xl px-4 py-8 sm:px-6">
         <div className="grid gap-4 md:grid-cols-2">
-          <div className="rounded-xl border border-zinc-800/90 bg-zinc-950/75 p-6 backdrop-blur-sm">
+          <div className="console-copy p-6">
             <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
               Technology context
             </p>
@@ -456,7 +456,7 @@ export default function ProbabilisticComputingHackathonPage() {
             </a>
           </div>
 
-          <div className="rounded-xl border border-zinc-800/90 bg-zinc-950/75 p-6 backdrop-blur-sm">
+          <div className="console-copy p-6">
             <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
               Education context
             </p>
@@ -503,7 +503,7 @@ export default function ProbabilisticComputingHackathonPage() {
               href={sponsor.href}
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-xl border border-zinc-800/90 bg-zinc-950/75 p-5 backdrop-blur-sm transition hover:border-zinc-600"
+              className="console-copy p-5 transition hover:border-white/80"
             >
               <p className="font-medium text-white">{sponsor.name}</p>
               <p className="mt-2 text-sm leading-relaxed text-zinc-500">{sponsor.role}</p>
@@ -514,7 +514,7 @@ export default function ProbabilisticComputingHackathonPage() {
 
       {/* Closed registration */}
       <section className="relative z-10 mx-auto w-full max-w-7xl px-4 py-8 pb-16 sm:px-6">
-        <div className="rounded-xl border border-zinc-800 bg-zinc-950/80 p-6 backdrop-blur-sm sm:p-8">
+        <div className="console-copy p-6 sm:p-8">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
@@ -560,7 +560,7 @@ function SectionLabel({ children }: { children: ReactNode }) {
 
 function MetaCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-zinc-800/90 bg-zinc-950/75 px-4 py-3 backdrop-blur-sm">
+    <div className="console-copy px-4 py-3">
       <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">{label}</p>
       <p className="mt-1.5 text-sm font-medium leading-snug text-zinc-200">{value}</p>
     </div>

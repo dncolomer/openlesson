@@ -412,12 +412,12 @@ export function filterPlannedResourcesByScope(
  * 72 puts a 40px button just outside a 92px block (inner edge at 52, block edge at 46).
  */
 export const BLOCK_CIRCULAR_MENU_RING_RADIUS_PX = 72;
-/** Drawn stroke thickness of the menu circle. */
-export const BLOCK_CIRCULAR_MENU_RING_THICKNESS_PX = 4;
+/** Drawn stroke thickness of the menu circle. Hairline, with ticks inside. */
+export const BLOCK_CIRCULAR_MENU_RING_THICKNESS_PX = 2;
 /** Idle icon-button diameter. */
 export const BLOCK_CIRCULAR_MENU_ACTION_SIZE_PX = 40;
 /** Stroke thickness of each action circle. */
-export const BLOCK_CIRCULAR_MENU_ACTION_BORDER_PX = 3;
+export const BLOCK_CIRCULAR_MENU_ACTION_BORDER_PX = 2;
 
 export function circularMenuActionPosition(
   index: number,

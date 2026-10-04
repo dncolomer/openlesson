@@ -28,7 +28,7 @@ function Section({
 }) {
   return (
     <section
-      className={`border border-zinc-800 bg-zinc-950/70 p-5 backdrop-blur-sm sm:p-6 lg:p-7 ${className}`}
+      className={`console-copy p-5 sm:p-6 lg:p-7${className}`}
     >
       {eyebrow ? (
         <p className="font-mono text-[10px] uppercase tracking-[1.6px] text-zinc-500">{eyebrow}</p>
@@ -73,7 +73,7 @@ function ComparisonTable({
     <div className="overflow-x-auto border border-zinc-800/90">
       <table className="w-full min-w-[32rem] text-left text-sm">
         <thead>
-          <tr className="border-b border-zinc-800 bg-zinc-950/80">
+          <tr className="console-copy border-b">
             <th className="px-3 py-2.5 font-medium text-zinc-400 sm:px-4">{withoutLabel}</th>
             <th className="px-3 py-2.5 font-medium text-zinc-300 sm:px-4">{withLabel}</th>
           </tr>
@@ -140,7 +140,7 @@ export function SalesProductCardPage({ card }: SalesProductCardPageProps) {
 
         <div className="mt-8 grid items-start gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:gap-10">
           <div className="min-w-0">
-            <div className="mb-4 inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
+            <div className="console-chip mb-4 inline-block px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
               {card.eyebrow.toUpperCase()}
             </div>
             <h1 className="text-4xl font-medium leading-[1.05] tracking-[-1.8px] text-white sm:text-5xl lg:text-[52px]">
@@ -167,7 +167,7 @@ export function SalesProductCardPage({ card }: SalesProductCardPageProps) {
 
           {card.image ? (
             <figure
-              className="overflow-hidden rounded-sm border border-zinc-800 bg-zinc-950/80 shadow-[0_20px_60px_-28px_rgba(0,0,0,0.9)] lg:sticky lg:top-8"
+              className="console-copy overflow-hidden lg:sticky lg:top-8"
               data-sales-product-visual
               data-sales-product-image={card.image}
             >
@@ -224,7 +224,7 @@ export function SalesProductCardPage({ card }: SalesProductCardPageProps) {
                 {card.valueModes.map((mode) => (
                   <div
                     key={mode.title}
-                    className="border border-zinc-800/80 bg-zinc-950/50 p-4 sm:p-5"
+                    className="console-copy p-4 sm:p-5"
                   >
                     <h3 className="text-base font-medium text-zinc-200">{mode.title}</h3>
                     <p className="mt-2">{mode.body}</p>
@@ -255,7 +255,7 @@ export function SalesProductCardPage({ card }: SalesProductCardPageProps) {
           </Section>
 
           <Section title={headings.funnel} className="lg:col-span-2">
-            <pre className="overflow-x-auto whitespace-pre-wrap rounded-sm border border-zinc-800 bg-zinc-950/90 p-4 font-mono text-xs leading-relaxed text-zinc-400 sm:text-sm">
+            <pre className="console-copy overflow-x-auto whitespace-pre-wrap p-4 font-mono text-xs leading-relaxed text-zinc-400 sm:text-sm">
               {card.funnel}
             </pre>
             {card.funnelNote ? <p>{card.funnelNote}</p> : null}

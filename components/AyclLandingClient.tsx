@@ -244,7 +244,7 @@ export function AyclLandingClient({
         </div>
 
         <div
-          className="space-y-3 rounded-none border border-zinc-800 bg-zinc-950/80 p-5 backdrop-blur-sm"
+          className="console-copy space-y-3 rounded-none p-5"
           data-aycl-landing-cta
           data-aycl-complimentary-landing={complimentaryTier || undefined}
         >
@@ -370,7 +370,7 @@ export function AyclLandingClient({
           className={
             mapIsFullscreen
               ? "fixed inset-0 z-50 h-screen w-screen overflow-hidden rounded-none border-0 bg-zinc-950"
-              : "relative h-[min(28rem,55vh)] overflow-hidden rounded-none border border-zinc-800 bg-zinc-950/90"
+              : "console-copy relative h-[min(28rem,55vh)] overflow-hidden rounded-none"
           }
           data-aycl-map-snapshot
           data-map-view-only="true"
@@ -386,7 +386,7 @@ export function AyclLandingClient({
             onClick={() =>
               setMapFullscreen((open) => toggleAyclMapPreviewFullscreen(open))
             }
-            className="absolute left-2 top-2 z-30 rounded-none border border-zinc-700/90 bg-zinc-950/90 px-2 py-1 text-[11px] font-medium text-zinc-200 shadow-[0_4px_14px_rgba(0,0,0,0.35)] backdrop-blur-sm hover:text-white"
+            className="console-copy absolute left-2 top-2 z-30 rounded-none px-2 py-1 text-[11px] font-medium text-zinc-200 hover:text-white"
           >
             {mapIsFullscreen ? "Exit" : "Full screen"}
           </button>
@@ -447,7 +447,7 @@ export function AyclLandingClient({
                 {samples.questions.map((q, i) => (
                   <li
                     key={`q-${i}`}
-                    className="rounded-none border border-zinc-800 bg-zinc-950/70 px-4 py-3 text-sm leading-relaxed text-zinc-300"
+                    className="console-copy rounded-none px-4 py-3 text-sm leading-relaxed text-zinc-300"
                     data-aycl-landing-question
                   >
                     {q}
@@ -463,7 +463,7 @@ export function AyclLandingClient({
                 {samples.exercises.map((ex, i) => (
                   <li
                     key={`ex-${i}`}
-                    className="rounded-none border border-zinc-800 bg-zinc-950/70 px-4 py-3 text-sm leading-relaxed text-zinc-300"
+                    className="console-copy rounded-none px-4 py-3 text-sm leading-relaxed text-zinc-300"
                     data-aycl-landing-exercise
                   >
                     {ex}

@@ -38,7 +38,7 @@ export default function SalesIndexPage() {
       <div className="fixed inset-0 z-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:72px_72px] opacity-40" />
 
       <div className="relative z-10 mx-auto w-full max-w-7xl px-6 pt-14 pb-16 sm:pt-16">
-        <div className="mb-6 inline-block rounded-none border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
+        <div className="console-chip mb-6 inline-block rounded-none px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
           SALES
         </div>
         <h1 className="max-w-4xl text-5xl font-medium leading-[1.03] tracking-[-2.4px] text-white sm:text-6xl lg:text-[64px]">
@@ -75,7 +75,7 @@ export default function SalesIndexPage() {
                 return (
                   <li key={entry.path}>
                     <div
-                      className="flex flex-col gap-3 border border-zinc-900/80 bg-zinc-950/40 p-5 opacity-45 sm:flex-row sm:items-center sm:justify-between sm:p-6"
+                      className="console-copy flex flex-col gap-3 p-5 opacity-45 sm:flex-row sm:items-center sm:justify-between sm:p-6"
                       data-pitch-coming-soon
                       aria-disabled="true"
                     >
@@ -91,7 +91,7 @@ export default function SalesIndexPage() {
                         </p>
                         <p className="mt-3 font-mono text-xs text-zinc-700">{entry.path}</p>
                       </div>
-                      <span className="inline-flex shrink-0 items-center rounded-none border border-zinc-800 bg-zinc-950/60 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[1.4px] text-zinc-600">
+                      <span className="console-chip inline-flex shrink-0 items-center rounded-none px-2.5 py-1 font-mono text-[10px] uppercase tracking-[1.4px] text-zinc-600">
                         Coming soon
                       </span>
                     </div>
@@ -103,7 +103,7 @@ export default function SalesIndexPage() {
                 <li key={entry.path}>
                   <Link
                     href={entry.path}
-                    className="group flex flex-col gap-3 border border-zinc-800 bg-zinc-950/70 p-5 transition hover:border-zinc-600 sm:flex-row sm:items-center sm:justify-between sm:p-6"
+                    className="console-copy group flex flex-col gap-3 p-5 transition hover:border-white/80 sm:flex-row sm:items-center sm:justify-between sm:p-6"
                   >
                     <div className="min-w-0">
                       <p className="font-mono text-[10px] uppercase tracking-[1.6px] text-zinc-500">
@@ -140,7 +140,7 @@ function SalesIndexProductLink({ card }: { card: SalesProductCard }) {
   return (
     <Link
       href={card.path}
-      className="group flex flex-col gap-4 border border-zinc-800 bg-zinc-950/70 p-5 transition hover:border-zinc-600 sm:flex-row sm:items-stretch sm:gap-5 sm:p-6"
+      className="console-copy group flex flex-col gap-4 p-5 transition hover:border-white/80 sm:flex-row sm:items-stretch sm:gap-5 sm:p-6"
       data-sales-index-product={card.slug}
       data-sales-product-line={card.productLine}
     >

@@ -983,9 +983,9 @@ export function ExerciseTapClient({
       crystallizableText={crystallizableText}
       showEndSession={showEndSession}
       endSession={endSession}
-      speechError={speechError}
+      speechError={tapThoughtSpeech.speechError ?? speechError}
       speechSupported={speechSupported}
-      isListening={isListening}
+      isListening={tapThoughtSpeech.isListening || isListening}
       transcriptSilenceMs={transcriptSilenceMs}
       retryMicrophone={retryMicrophone}
       stashCurrentTranscription={stashCurrentTranscription}

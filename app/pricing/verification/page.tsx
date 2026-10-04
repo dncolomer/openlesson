@@ -23,7 +23,7 @@ export default function VerificationPricingPage() {
   return (
     <MarketingPageShell>
       <section className="relative z-10 mx-auto w-full max-w-7xl px-6 pt-14 pb-16 sm:pt-16 sm:pb-20">
-        <div className="mb-8 inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
+        <div className="console-chip mb-8 inline-block px-3 py-1 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
           {VERIFICATION_PRICING_COPY.eyebrow}
         </div>
         <h1 className="max-w-3xl text-4xl font-medium leading-[1.05] tracking-[-2px] text-white sm:text-5xl">
@@ -36,7 +36,7 @@ export default function VerificationPricingPage() {
         <div className="mt-10 grid gap-6 lg:grid-cols-2">
           <article
             data-testid="verification-deep-project"
-            className="flex min-h-0 flex-col overflow-hidden border border-zinc-800 bg-zinc-950/80"
+            className="console-copy flex min-h-0 flex-col overflow-hidden"
           >
             <div className="relative aspect-[16/10] w-full">
               <Image
@@ -59,7 +59,7 @@ export default function VerificationPricingPage() {
 
           <article
             data-testid="verification-light-weight"
-            className="flex min-h-0 flex-col overflow-hidden border border-zinc-800 bg-zinc-950/80"
+            className="console-copy flex min-h-0 flex-col overflow-hidden"
           >
             <div className="relative aspect-[16/10] w-full">
               <Image
@@ -83,7 +83,7 @@ export default function VerificationPricingPage() {
 
         <div
           data-testid="verification-contact"
-          className="mt-10 border border-zinc-700 bg-zinc-950/80 p-5 sm:p-6"
+          className="console-copy mt-10 p-5 sm:p-6"
         >
           <h2 className="text-xl font-medium text-white">Get set-up</h2>
           <p className="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-400 sm:text-base">

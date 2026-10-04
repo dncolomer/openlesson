@@ -477,7 +477,7 @@ export function MapOfKnowledgeGlobal3D({
       )}
 
       <div
-        className="pointer-events-auto absolute bottom-3 left-3 z-10 max-w-[16rem] border border-zinc-800/90 bg-black/80 backdrop-blur-sm"
+        className="console-copy pointer-events-auto absolute bottom-3 left-3 z-10 max-w-[16rem]"
         data-map-global-legend
         data-legend-open={legendOpen ? "true" : "false"}
       >
@@ -522,7 +522,7 @@ export function MapOfKnowledgeGlobal3D({
 
       {selectedSummary && (
         <div
-          className="absolute right-3 top-3 z-20 w-[min(100%-1.5rem,18rem)] border border-zinc-600 bg-zinc-950/95 p-3 shadow-xl backdrop-blur-sm"
+          className="console-copy absolute right-3 top-3 z-20 w-[min(100%-1.5rem,18rem)] p-3"
           data-map-global-region-summary
           data-region-id={selectedSummary.region_id}
           onClick={(e) => e.stopPropagation()}
@@ -571,7 +571,7 @@ export function MapOfKnowledgeGlobal3D({
           {onOpenLocalMap && (
             <button
               type="button"
-              className="mt-3 w-full rounded-sm border border-neutral-700/60 bg-neutral-950/40 px-3 py-2 text-left text-[11px] font-medium text-neutral-200 transition hover:border-white/60 hover:bg-neutral-950/40"
+              className="console-copy mt-3 w-full px-3 py-2 text-left text-[11px] font-medium text-neutral-200 transition hover:border-white/60 hover:bg-neutral-950/40"
               onClick={() => onOpenLocalMap(selectedSummary.region_id)}
               data-map-global-open-local
             >

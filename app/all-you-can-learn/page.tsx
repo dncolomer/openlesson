@@ -112,7 +112,7 @@ export default function AllYouCanLearnPage() {
 
       <section className="relative z-10 mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
         <header
-          className="relative mb-6 overflow-hidden rounded-none border border-zinc-700/60 bg-zinc-950/70 shadow-[0_20px_50px_rgba(0,0,0,0.45)] backdrop-blur-md"
+          className="console-copy relative mb-6 overflow-hidden rounded-none"
           data-aycl-catalog-hero
         >
           <div
@@ -129,7 +129,7 @@ export default function AllYouCanLearnPage() {
           />
 
           <div className="relative px-5 py-7 text-center sm:px-8 sm:py-8">
-            <p className="mb-3 inline-flex items-center gap-2 rounded-none border border-zinc-700/80 bg-black/40 px-3 py-1 font-mono text-[10px] uppercase tracking-[2px] text-zinc-400">
+            <p className="console-chip mb-3 inline-flex items-center gap-2 rounded-none px-3 py-1 font-mono text-[10px] uppercase tracking-[2px] text-zinc-400">
               <span
                 className="h-1.5 w-1.5 rounded-full bg-neutral-900/90 shadow-[0_0_8px_rgba(252,211,77,0.7)]"
                 aria-hidden
@@ -181,7 +181,7 @@ export default function AllYouCanLearnPage() {
         {/* Marketplace search + category filters */}
         {!loading && workspaces.length > 0 ? (
           <div
-            className="mb-6 space-y-3 rounded-none border border-zinc-800/80 bg-zinc-950/60 p-4 backdrop-blur-sm"
+            className="console-copy mb-6 space-y-3 rounded-none p-4"
             data-aycl-marketplace-filters
           >
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -193,7 +193,7 @@ export default function AllYouCanLearnPage() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search title, author, category…"
                   data-aycl-marketplace-search
-                  className="w-full rounded-none border border-zinc-700/80 bg-black/40 px-3.5 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:border-zinc-500 focus:outline-none"
+                  className="console-copy w-full rounded-none px-3.5 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:border-zinc-500 focus:outline-none"
                 />
               </label>
               <p
@@ -256,12 +256,12 @@ export default function AllYouCanLearnPage() {
             <LoadingStatusMessage message="Loading" />
           </div>
         ) : workspaces.length === 0 ? (
-          <div className="rounded-none border border-zinc-800 bg-zinc-950/70 px-6 py-12 text-center backdrop-blur-sm">
+          <div className="console-copy rounded-none px-6 py-12 text-center">
             <p className="text-zinc-400">No learning environments are available yet.</p>
           </div>
         ) : filtered.length === 0 ? (
           <div
-            className="rounded-none border border-zinc-800 bg-zinc-950/70 px-6 py-12 text-center backdrop-blur-sm"
+            className="console-copy rounded-none px-6 py-12 text-center"
             data-aycl-marketplace-empty-filter
           >
             <p className="text-zinc-400">No courses match this filter.</p>
@@ -292,7 +292,7 @@ export default function AllYouCanLearnPage() {
               return (
                 <article
                   key={workspace.id}
-                  className="group flex flex-col overflow-hidden rounded-none border border-zinc-800/90 bg-zinc-950/75 backdrop-blur-sm transition hover:border-zinc-600"
+                  className="console-copy group flex flex-col overflow-hidden rounded-none transition hover:border-white/80"
                   data-aycl-catalog-card
                   data-aycl-card-category={workspace.category || ""}
                 >
@@ -306,13 +306,13 @@ export default function AllYouCanLearnPage() {
                         <div className="flex flex-wrap gap-1.5">
                           {workspace.category ? (
                             <span
-                              className="border border-neutral-600/30 bg-black/55 px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300/90 backdrop-blur-sm"
+                              className="console-copy px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300/90"
                               data-aycl-card-category-badge
                             >
                               {workspace.category}
                             </span>
                           ) : null}
-                          <span className="border border-neutral-600/30 bg-black/55 px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300/90 backdrop-blur-sm">
+                          <span className="console-copy px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300/90">
                             Lifetime
                           </span>
                         </div>

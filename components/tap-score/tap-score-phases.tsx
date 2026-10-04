@@ -596,9 +596,9 @@ export function TapScorePhases(props: {
                         className={`w-full ${speechError ? "text-neutral-300/90" : "text-neutral-300"}`}
                       />
                     </div>
-                    {speechError && speechSupported !== false && !isListening ? (
+                    {speechSupported !== false && !isListening ? (
                       <TapThoughtButton size="sm" variant="primary" onClick={() => void retryMicrophone()}>
-                        Retry
+                        {speechError ? "Retry" : "Start"}
                       </TapThoughtButton>
                     ) : null}
                     <div className="flex shrink-0 items-center gap-0.5">
@@ -622,7 +622,7 @@ export function TapScorePhases(props: {
                   }
                 />
               }
-              signals={<TapSessionSignals />}
+              signals={<TapSessionSignals captureAudio />}
               focusLabel="Stash"
               focus={
                 <div className="flex h-full min-h-0 flex-col overflow-hidden">

@@ -577,7 +577,7 @@ export function MapOfKnowledgeClient() {
   }, [findYourselfLink, notifyEmail]);
 
   const selectClass =
-    "h-8 rounded-sm border border-zinc-700 bg-black/50 px-2 font-mono text-[11px] tracking-wide text-zinc-200 outline-none transition hover:border-zinc-500 focus:border-neutral-600/40";
+    "console-copy h-8 px-2 font-mono text-[11px] tracking-wide text-zinc-200 outline-none transition hover:border-white/80 focus:border-neutral-600/40";
   const toolBtnClass = (active: boolean) =>
     `inline-flex h-8 items-center rounded-sm border px-2.5 font-mono text-[11px] tracking-wide transition ${
       active
@@ -588,7 +588,7 @@ export function MapOfKnowledgeClient() {
   /** Compact controls bar — sits directly on the map chrome. */
   const mapToolbar = (
     <div
-      className="flex flex-wrap items-center gap-1.5 border-b border-zinc-800 bg-zinc-950/95 px-2 py-1.5"
+      className="console-copy flex flex-wrap items-center gap-1.5 border-b px-2 py-1.5"
       data-map-toolbar
       role="toolbar"
       aria-label="Map view controls"
@@ -738,7 +738,7 @@ export function MapOfKnowledgeClient() {
       id="map-find-yourself"
       data-map-find-yourself
       data-expanded={findYourselfOpen ? "true" : "false"}
-      className="mt-3 border border-zinc-800 bg-zinc-950/70 backdrop-blur-sm"
+      className="console-copy mt-3"
     >
       <button
         type="button"
@@ -789,7 +789,7 @@ export function MapOfKnowledgeClient() {
                 setNotifyError(null);
               }}
               placeholder="https://…/tap/session/…"
-              className="mt-1.5 w-full rounded-sm border border-zinc-800 bg-black/40 px-3 py-2.5 font-mono text-xs text-white placeholder:text-zinc-600"
+              className="console-copy mt-1.5 w-full px-3 py-2.5 font-mono text-xs text-white placeholder:text-zinc-600"
               data-map-find-yourself-link-input
               aria-label="Placement session link"
             />
@@ -806,7 +806,7 @@ export function MapOfKnowledgeClient() {
           {findYourselfError ? (
             <div
               role="alert"
-              className="mt-2 rounded-sm border border-neutral-600/25 bg-neutral-950/20 px-3 py-2.5"
+              className="console-copy mt-2 px-3 py-2.5"
               data-map-find-yourself-error
               data-map-not-on-map={findYourselfAwaitingSnapshot ? "true" : undefined}
             >
@@ -826,7 +826,7 @@ export function MapOfKnowledgeClient() {
                         setNotifyMessage(null);
                       }}
                       placeholder="you@example.com"
-                      className="mt-1.5 w-full rounded-sm border border-zinc-700 bg-black/40 px-3 py-2 text-sm text-white placeholder:text-zinc-600"
+                      className="console-copy mt-1.5 w-full px-3 py-2 text-sm text-white placeholder:text-zinc-600"
                       data-map-ready-notify-email
                       data-map-newsletter-email
                       aria-label="Email for Uncertain Systems newsletter"
@@ -1068,7 +1068,7 @@ export function MapOfKnowledgeClient() {
                             onClick={() => toggleRegion(region.id)}
                             className={`flex w-full items-start gap-2 rounded-sm border px-2.5 py-2 text-left text-xs transition ${
                               on
-                                ? "border-neutral-600/25 bg-neutral-950/20 text-zinc-200"
+                                ? "console-copy text-zinc-200"
                                 : "border-zinc-800 bg-transparent text-zinc-500 hover:border-zinc-700"
                             }`}
                             data-map-region-toggle
@@ -1116,7 +1116,7 @@ export function MapOfKnowledgeClient() {
             <div className="mb-2 min-w-0">
               <h2
                 id="map-canvas-heading"
-                className="mb-1 inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-2.5 py-0.5 font-mono text-[10px] tracking-[2px] text-zinc-500"
+                className="console-chip mb-1 inline-block px-2.5 py-0.5 font-mono text-[10px] tracking-[2px] text-zinc-500"
               >
                 EMBEDDING SPACE (2D/3D projections)
               </h2>
@@ -1139,7 +1139,7 @@ export function MapOfKnowledgeClient() {
       </section>
 
       <section id="map-place-yourself" aria-labelledby="map-place-heading">
-        <div className="mb-3 inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
+        <div className="console-chip mb-3 inline-block px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
           ANONYMOUS PLACEMENT
         </div>
         <h2 id="map-place-heading" className="text-xl font-medium tracking-tight text-white sm:text-2xl">
@@ -1153,7 +1153,7 @@ export function MapOfKnowledgeClient() {
 
         <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_1.05fr]">
           {/* Identity + scope */}
-          <div className="space-y-4 border border-zinc-800 bg-zinc-950/70 p-5 backdrop-blur-sm sm:p-6">
+          <div className="console-copy space-y-4 p-5 sm:p-6">
             <div>
               <label className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
                 Guest identity
@@ -1179,7 +1179,7 @@ export function MapOfKnowledgeClient() {
                   )}
                 </span>
                 <span
-                  className="min-w-0 flex-1 truncate rounded-sm border border-zinc-800 bg-black/40 px-3 py-2.5 text-sm text-zinc-200"
+                  className="console-copy min-w-0 flex-1 truncate px-3 py-2.5 text-sm text-zinc-200"
                   data-guest-display-name
                   aria-label="Guest display name"
                   title={guestIdentityReady ? guestName : undefined}
@@ -1204,7 +1204,7 @@ export function MapOfKnowledgeClient() {
               <select
                 value={selectedWorkspaceId}
                 onChange={(e) => setSelectedWorkspaceId(e.target.value)}
-                className="mt-1.5 w-full rounded-sm border border-zinc-800 bg-black/40 px-3 py-2.5 text-sm text-white"
+                className="console-copy mt-1.5 w-full px-3 py-2.5 text-sm text-white"
                 data-map-placement-workspace-select
               >
                 {placementWorkspaces.length === 0 && (
@@ -1224,7 +1224,7 @@ export function MapOfKnowledgeClient() {
               <select
                 value={selectedBlockId}
                 onChange={(e) => setSelectedBlockId(e.target.value)}
-                className="mt-1.5 w-full rounded-sm border border-zinc-800 bg-black/40 px-3 py-2.5 text-sm text-white"
+                className="console-copy mt-1.5 w-full px-3 py-2.5 text-sm text-white"
               >
                 {blocksForWorkspace.length === 0 && <option value="">No blocks</option>}
                 {blocksForWorkspace.map((b) => (
@@ -1245,7 +1245,7 @@ export function MapOfKnowledgeClient() {
             <div className="grid gap-3 sm:grid-cols-1">
               {/* Timed Exploration card: duration options live inside the box so they aren't missed */}
               <div
-                className="flex flex-col rounded-sm border border-zinc-700 bg-zinc-950/80 p-4 transition hover:border-zinc-500"
+                className="console-copy flex flex-col p-4 transition hover:border-white/80"
                 data-mint-timed-explore-card
                 data-timed-explore-minutes={timedExploreMinutes}
               >
@@ -1273,7 +1273,7 @@ export function MapOfKnowledgeClient() {
                     Session length
                   </p>
                   <div
-                    className="inline-flex w-full rounded-sm border border-zinc-700 bg-black/40 p-0.5"
+                    className="console-copy inline-flex w-full p-0.5"
                     role="group"
                     aria-labelledby="timed-explore-duration-label"
                     data-timed-explore-duration-options
@@ -1390,7 +1390,7 @@ export function MapOfKnowledgeClient() {
                   </div>
                 </div>
 
-                <div className="mt-4 rounded-sm border border-zinc-800/90 bg-black/50 px-3 py-2.5">
+                <div className="console-copy mt-4 px-3 py-2.5">
                   <p className="font-mono text-[9px] uppercase tracking-[1.5px] text-zinc-600">
                     Private session URL
                   </p>
@@ -1409,7 +1409,7 @@ export function MapOfKnowledgeClient() {
                 </div>
 
                 <div
-                  className="mt-3 rounded-sm border border-neutral-600/30 bg-neutral-950/25 px-3 py-2.5"
+                  className="console-copy mt-3 px-3 py-2.5"
                   data-minted-save-link-reminder
                   role="note"
                 >
@@ -1441,7 +1441,7 @@ export function MapOfKnowledgeClient() {
                   <button
                     type="button"
                     onClick={() => void copyMintedLink()}
-                    className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-sm border border-zinc-700 bg-black/40 px-4 py-2.5 text-sm text-zinc-200 transition hover:border-zinc-500 hover:text-white sm:flex-none"
+                    className="console-copy inline-flex flex-1 items-center justify-center gap-1.5 px-4 py-2.5 text-sm text-zinc-200 transition hover:border-white/80 hover:text-white sm:flex-none"
                   >
                     {linkCopied ? (
                       <>
@@ -1460,7 +1460,7 @@ export function MapOfKnowledgeClient() {
             )}
 
             {!mintResult && !mintError && (
-              <div className="flex items-center gap-3 rounded-sm border border-dashed border-zinc-800 bg-zinc-950/40 px-4 py-3 text-xs text-zinc-600">
+              <div className="rounded-none border border-dashed border-white/40 bg-black flex items-center gap-3 px-4 py-3 text-xs text-zinc-600">
                 <span className="inline-flex gap-1.5">
                   <span className="h-2 w-2 rounded-full bg-slate-500" />
                   <span className="h-2 w-2 rounded-full bg-neutral-800/80" />

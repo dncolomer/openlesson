@@ -64,7 +64,7 @@ const ACCENT_CLASSES: Record<
   { card: string; button: string; pill: string; dot: string; eyebrow: string }
 > = {
   slate: {
-    card: "border-zinc-700 bg-zinc-950/80 backdrop-blur-sm hover:border-zinc-500",
+    card: "console-copy hover:border-white/80",
     button:
       "border-zinc-600 bg-zinc-900/80 text-zinc-100 hover:border-zinc-400 hover:bg-zinc-800 hover:text-white",
     pill: "border-zinc-600 bg-zinc-800/80 text-zinc-300",
@@ -72,9 +72,9 @@ const ACCENT_CLASSES: Record<
     eyebrow: "text-zinc-500",
   },
   amber: {
-    card: "border-neutral-600/30 bg-neutral-950/20 backdrop-blur-sm hover:border-neutral-500/50",
+    card: "console-copy hover:border-white/80",
     button:
-      "border-neutral-600/40 bg-neutral-950/40 text-neutral-50 hover:border-neutral-500/60 hover:bg-neutral-950/40",
+      "console-copy text-neutral-50 hover:border-white/80 hover:bg-neutral-950/40",
     pill: "border-neutral-500/35 bg-neutral-800/10 text-neutral-300",
     dot: "bg-neutral-200 shadow-[0_0_10px_rgba(251,191,36,0.65)]",
     eyebrow: "text-neutral-300/70",
@@ -207,7 +207,7 @@ export function PracticePortalLandingClient({
     >
       <header className="flex flex-col items-center text-center">
         <div
-          className="mb-3 inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500"
+          className="console-chip mb-3 inline-block px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500"
           data-practice-portal-eyebrow-chip
         >
           Knowledge Portal
@@ -221,12 +221,12 @@ export function PracticePortalLandingClient({
       </header>
 
       <div
-        className="rounded-sm border border-zinc-800 bg-zinc-950/70 p-4 backdrop-blur-sm sm:p-5"
+        className="console-copy p-4 sm:p-5"
         data-practice-portal-desk
       >
         {forceWorkspaceScope ? (
           <div
-            className="mb-5 rounded-sm border border-zinc-800/80 bg-black/30 px-3 py-2.5"
+            className="console-copy mb-5 px-3 py-2.5"
             data-practice-portal-workspace-scope
             data-practice-portal-no-block-choice
           >
@@ -240,7 +240,7 @@ export function PracticePortalLandingClient({
           </div>
         ) : blockIsFixed && selectedBlockId ? (
           <div
-            className="mb-5 rounded-sm border border-zinc-800/80 bg-black/30 px-3 py-2.5"
+            className="console-copy mb-5 px-3 py-2.5"
             data-practice-portal-block-fixed
             data-practice-portal-fixed-block={selectedBlockId}
           >
@@ -261,7 +261,7 @@ export function PracticePortalLandingClient({
               <select
                 value={selectedBlockId}
                 onChange={(e) => setSelectedBlockId(e.target.value)}
-                className="mt-1.5 w-full rounded-sm border border-zinc-800 bg-black/40 px-3 py-2.5 text-sm text-white"
+                className="console-copy mt-1.5 w-full px-3 py-2.5 text-sm text-white"
                 data-practice-portal-block-select
               >
                 {blocks.map((b) => (
@@ -346,8 +346,8 @@ export function PracticePortalLandingClient({
                       <div
                         className={`inline-flex w-full rounded-sm border p-0.5 ${
                           accent === "amber"
-                            ? "border-neutral-600/25 bg-black/30"
-                            : "border-zinc-700 bg-black/40"
+                            ? "console-copy"
+                            : "console-copy"
                         }`}
                         role="group"
                         data-duration-options={product.id}

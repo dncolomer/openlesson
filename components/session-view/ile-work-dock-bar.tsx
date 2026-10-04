@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { AlertTriangle } from "lucide-react";
 import type { IleDockChipStatus } from "@/lib/ile-work-dock-status";
 import {
@@ -35,6 +35,23 @@ export function sessionSidebarTopic(
 
 /** Silent radar loop for the topic card. The still stays the default. */
 export const SESSION_TOPIC_CARD_LOOP = "/aesthetics/session-topic-loop.mp4";
+
+const SessionTopicCardTimerContext = createContext<ReactNode>(null);
+
+/** Sidebar clock rendered inside the topic card, above the chapter name. */
+export function SessionTopicCardTimerProvider({
+  timer,
+  children,
+}: {
+  timer: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <SessionTopicCardTimerContext.Provider value={timer}>
+      {children}
+    </SessionTopicCardTimerContext.Provider>
+  );
+}
 
 /**
  * Cover for the session's one chapter. It does not switch chapters.
@@ -84,6 +101,7 @@ export function SessionTopicCard({
     allowSystemFallback: !poolsPending,
   });
   const heading = title.trim() || "Topic";
+  const timer = useContext(SessionTopicCardTimerContext);
   const height = `${SESSION_TOPIC_CARD_REM}rem`;
   const videoRef = useRef<HTMLVideoElement>(null);
   const [mode, setMode] = useState<"image" | "video">("image");
@@ -143,10 +161,11 @@ export function SessionTopicCard({
       <span className="pointer-events-none absolute left-5 top-2 z-10 font-mono text-[9px] uppercase tracking-[0.34em] text-white">
         01
       </span>
-      <span className="relative z-10 flex h-full w-full items-end px-2 pb-2">
+      <span className="relative z-10 flex h-full w-full flex-col items-start justify-end gap-1 px-2 pb-2">
+        {timer}
         <span
           data-session-topic-card-title
-          className="line-clamp-3 border border-white/55 bg-black/80 px-2 py-1 font-mono text-base font-semibold uppercase leading-tight tracking-[0.14em] text-white"
+          className="line-clamp-3 max-w-full min-w-0 self-start text-left border border-white/55 bg-black/80 px-2 py-1 font-mono text-base font-semibold uppercase leading-tight tracking-[0.14em] text-white"
         >
           {heading}
         </span>

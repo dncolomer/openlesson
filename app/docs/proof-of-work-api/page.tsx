@@ -5,7 +5,7 @@ import { PublicConsoleWash } from "@/components/ui/console-frame";
 
 const DOCS_BACKGROUND = "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg";
 
-const sectionClass = "border border-white/30 bg-black/75 p-5 sm:p-6";
+const sectionClass = "console-copy p-5 sm:p-6";
 const labelClass = "font-mono text-[10px] uppercase tracking-[2px] text-neutral-500";
 const codeBlockClass = "mt-3 overflow-x-auto border border-white/20 bg-black p-4 font-mono text-xs text-neutral-300 sm:text-sm";
 
@@ -448,10 +448,10 @@ function EndpointDoc({ spec }: { spec: EndpointSpec }) {
           {spec.method}
         </span>
         <code className="break-all text-sm text-neutral-200">{spec.path}</code>
-        <span className="rounded-none border border-neutral-800 bg-black/40 px-2 py-1 font-mono text-[10px] text-neutral-500">
+        <span className="console-chip px-2 py-1 font-mono text-[10px] text-neutral-500">
           {spec.scope}
         </span>
-        <span className="rounded-none border border-neutral-500/20 bg-neutral-950/20 px-2 py-1 font-mono text-[10px] text-neutral-300/90">
+        <span className="console-chip px-2 py-1 font-mono text-[10px] text-neutral-300/90">
           {spec.status}
         </span>
       </div>

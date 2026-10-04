@@ -533,7 +533,7 @@ export function MapOfKnowledge2D({
 
       {/* 2D control legend */}
       <div
-        className="pointer-events-none absolute bottom-3 left-3 z-10 max-w-[15rem] border border-zinc-800/90 bg-black/70 px-3 py-2.5 backdrop-blur-sm"
+        className="console-copy pointer-events-none absolute bottom-3 left-3 z-10 max-w-[15rem] px-3 py-2.5"
         data-map-2d-legend
       >
         <p className="font-mono text-[9px] uppercase tracking-[1.5px] text-zinc-500">Controls</p>
@@ -565,7 +565,7 @@ export function MapOfKnowledge2D({
         <button
           type="button"
           onClick={() => zoomBy(1.15)}
-          className="rounded-sm border border-zinc-700 bg-black/60 px-2 py-1 font-mono text-[11px] text-zinc-300 backdrop-blur-sm transition hover:border-zinc-500 hover:text-white"
+          className="console-button px-2 py-1 font-mono text-[11px] text-zinc-300 transition hover:border-white/80 hover:text-white"
           aria-label="Zoom in"
         >
           +
@@ -573,7 +573,7 @@ export function MapOfKnowledge2D({
         <button
           type="button"
           onClick={() => zoomBy(0.87)}
-          className="rounded-sm border border-zinc-700 bg-black/60 px-2 py-1 font-mono text-[11px] text-zinc-300 backdrop-blur-sm transition hover:border-zinc-500 hover:text-white"
+          className="console-button px-2 py-1 font-mono text-[11px] text-zinc-300 transition hover:border-white/80 hover:text-white"
           aria-label="Zoom out"
         >
           −
@@ -581,7 +581,7 @@ export function MapOfKnowledge2D({
         <button
           type="button"
           onClick={resetView}
-          className="rounded-sm border border-zinc-700 bg-black/60 px-2.5 py-1 font-mono text-[10px] tracking-wide text-zinc-300 backdrop-blur-sm transition hover:border-zinc-500 hover:text-white"
+          className="console-button px-2.5 py-1 font-mono text-[10px] tracking-wide text-zinc-300 transition hover:border-white/80 hover:text-white"
         >
           Reset
         </button>

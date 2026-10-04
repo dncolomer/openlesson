@@ -34,7 +34,7 @@ export function TapbenchWorkspaceDetail(props: {
       <div data-tapbench-workspace-page>
         <Link
           href="/tapbench"
-          className="inline-flex rounded-sm border border-zinc-600 px-3 py-1.5 text-xs text-zinc-200 hover:border-zinc-400 hover:text-white"
+          className="console-button inline-flex px-3 py-1.5 text-xs text-zinc-200 hover:border-white/80 hover:text-white"
           data-tapbench-back
         >
           Back
@@ -53,7 +53,7 @@ export function TapbenchWorkspaceDetail(props: {
         <img
           src={TAPBENCH_WORKSPACE_IMAGE}
           alt=""
-          className="mt-8 aspect-[16/9] w-full object-cover"
+          className="console-copy mt-8 aspect-[16/9] w-full object-cover"
           data-tapbench-workspace-image
         />
         <section className="mt-10" data-tapbench-workspace-results>
@@ -62,18 +62,18 @@ export function TapbenchWorkspaceDetail(props: {
           </h2>
           {top.length === 0 ? (
             <div
-              className="mt-4 rounded-sm border border-zinc-800 bg-zinc-950/60 px-4 py-8 text-sm text-zinc-500"
+              className="console-copy mt-4 px-4 py-8 text-sm text-zinc-500"
               data-tapbench-workspace-results-empty
             >
               None
             </div>
           ) : (
             <div
-              className="mt-4 overflow-x-auto rounded-sm border border-zinc-800 bg-zinc-950/70"
+              className="console-copy mt-4 overflow-x-auto"
               data-tapbench-workspace-results-table
             >
               <table className="w-full min-w-[720px] text-left text-xs">
-                <thead className="border-b border-zinc-800 text-[10px] uppercase tracking-wide text-zinc-500">
+                <thead className="border-b border-white/25 text-[10px] uppercase tracking-wide text-zinc-500">
                   <tr>
                     <th className="px-3 py-2">Rank</th>
                     <th className="px-3 py-2">Region</th>
@@ -88,7 +88,7 @@ export function TapbenchWorkspaceDetail(props: {
                   {top.map((region, index) => (
                     <tr
                       key={region.id}
-                      className="border-b border-zinc-800/80 last:border-0"
+                      className="border-b border-white/15 last:border-0"
                       data-tapbench-workspace-result-row
                     >
                       <td className="px-3 py-2 font-mono text-zinc-500">{index + 1}</td>
@@ -110,7 +110,7 @@ export function TapbenchWorkspaceDetail(props: {
                   ))}
                 </tbody>
               </table>
-              <p className="border-t border-zinc-800 px-3 py-2 text-[11px] text-zinc-500">
+              <p className="border-t border-white/25 px-3 py-2 text-[11px] text-zinc-500">
                 Ranked by 64D L2 from the tapbench@uncertain.systems human pin.
               </p>
             </div>

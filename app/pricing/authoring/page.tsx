@@ -22,7 +22,7 @@ export default function AuthoringPricingPage() {
   return (
     <MarketingPageShell>
       <section className="relative z-10 mx-auto w-full max-w-7xl px-6 pt-14 pb-16 sm:pt-16 sm:pb-20">
-        <div className="mb-8 inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
+        <div className="console-chip mb-8 inline-block px-3 py-1 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
           {AUTHORING_PRICING_COPY.eyebrow}
         </div>
         <h1 className="max-w-3xl text-4xl font-medium leading-[1.05] tracking-[-2px] text-white sm:text-5xl">
@@ -34,7 +34,7 @@ export default function AuthoringPricingPage() {
 
         <article
           data-testid="authoring-40h-package"
-          className="mt-10 w-full border border-zinc-800 bg-zinc-950/80 p-5 sm:p-8"
+          className="console-copy mt-10 w-full p-5 sm:p-8"
         >
           <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
             {coursePackage.eyebrow}
@@ -46,7 +46,7 @@ export default function AuthoringPricingPage() {
 
         <div
           data-testid="authoring-contact"
-          className="mt-10 w-full border border-zinc-700 bg-zinc-950/80 p-5 sm:p-8"
+          className="console-copy mt-10 w-full p-5 sm:p-8"
         >
           <h2 className="text-xl font-medium text-white">{AUTHORING_PRICING_COPY.contactTitle}</h2>
           <p className="mt-3 max-w-3xl text-sm leading-relaxed text-zinc-400 sm:text-base">

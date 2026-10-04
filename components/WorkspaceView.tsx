@@ -18,7 +18,6 @@ import {
   WorkspaceViewChrome,
 } from "@/components/workspace-view/workspace-chrome";
 import { SessionConsoleMarks, SessionConsoleScan } from "@/components/session-view/session-console-marks";
-import { CONSOLE_LABEL_CLASS } from "@/components/ui/console-frame";
 import {
   aestheticImageForId,
   fetchAestheticPackages,
@@ -820,9 +819,6 @@ export function WorkspaceView({
     >
       <SessionConsoleScan />
       <SessionConsoleMarks />
-      <p data-console-frame-label="" className={`absolute left-3 top-2 z-[4] ${CONSOLE_LABEL_CLASS}`}>
-        Map
-      </p>
       <div className="relative z-[2] flex min-h-0 flex-1 flex-col overflow-hidden">
       <WorkspaceViewChrome
         isAycl={isAycl}

@@ -86,12 +86,13 @@ describe("science principles layout", () => {
     const itemTag = afterMap.slice(itemStart, itemEnd + 1);
     const itemClass = classTokens(itemTag);
     const heavyCard =
-      itemClass.includes("border") &&
-      itemClass.includes("bg-zinc-950/70") &&
+      itemClass.includes("console-copy") &&
       itemClass.includes("p-6") &&
       itemClass.includes("sm:p-8");
     expect(heavyCard).toBe(false);
-    expect(itemClass).toContain("bg-zinc-950/70");
+    expect(itemClass).toContain("console-copy");
+    expect(itemClass).not.toContain("bg-zinc-950/70");
+    expect(itemClass).not.toContain("backdrop-blur-sm");
     expect(itemClass).not.toContain("p-6");
     expect(itemClass).not.toContain("sm:p-8");
 

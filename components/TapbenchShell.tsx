@@ -13,7 +13,8 @@ export function TapbenchShell(props: {
 }) {
   return (
     <main
-      className="relative min-h-screen overflow-hidden bg-[#0a0a0a] text-zinc-200 selection:bg-zinc-700"
+      data-console-frame=""
+      className="relative min-h-screen border border-white/40 bg-black text-zinc-200 selection:bg-zinc-700"
       data-tapbench-project-landing={props.landing ? true : undefined}
     >
       <div className="fixed inset-0 z-0 bg-[#0a0a0a]" />
@@ -24,9 +25,9 @@ export function TapbenchShell(props: {
       />
       <div className="fixed inset-0 z-0 bg-[#0a0a0a]/78" />
       <PublicConsoleWash />
-      <LandingNav />
-      <div className="relative z-10 mx-auto w-full max-w-7xl px-6 pt-10 pb-16">{props.children}</div>
       <div className="relative z-10">
+        <LandingNav />
+        <div className="mx-auto w-full max-w-7xl px-6 pt-10 pb-16">{props.children}</div>
         <Footer />
       </div>
     </main>

@@ -84,7 +84,7 @@ export default function SciencePage() {
       <LandingNav />
 
       <section className="relative z-10 mx-auto w-full max-w-7xl px-6 pt-14 pb-10 sm:pt-16 sm:pb-12">
-        <div className="mb-6 inline-block rounded-none border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
+        <div className="console-chip mb-6 inline-block rounded-none px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
           SCIENCE
         </div>
         <h1 className="max-w-4xl text-5xl font-medium leading-[1.03] tracking-[-2.8px] text-white sm:text-6xl lg:text-[68px]">
@@ -105,7 +105,7 @@ export default function SciencePage() {
           aria-labelledby="science-thesis-heading"
           className="relative z-10 mx-auto max-w-7xl px-6 pb-10 sm:pb-12"
         >
-          <article className="border border-zinc-800 bg-zinc-950/75 p-6 backdrop-blur-sm sm:p-8">
+          <article className="console-copy p-6 sm:p-8">
             {thesisSlide.kicker ? (
               <p className="mb-3 font-mono text-[10px] uppercase tracking-[2px] text-neutral-300/80">
                 {thesisSlide.kicker}
@@ -132,7 +132,7 @@ export default function SciencePage() {
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
                     {image ? (
                       <figure className="w-full shrink-0 sm:w-48">
-                        <div className="overflow-hidden rounded-none border border-zinc-800 bg-black/40">
+                        <div className="console-copy overflow-hidden rounded-none">
                           <Image
                             src={image}
                             alt={imageAlt || label || "Thesis illustration"}
@@ -171,10 +171,10 @@ export default function SciencePage() {
                 {(thesisSlide.cards ?? []).map((card) => (
                   <div
                     key={card.label}
-                    className="flex flex-col overflow-hidden border border-zinc-800 bg-black/30"
+                    className="console-copy flex flex-col overflow-hidden"
                   >
                     {card.image ? (
-                      <div className="relative aspect-[16/10] w-full border-b border-zinc-800 bg-black/50">
+                      <div className="relative aspect-[16/10] w-full border-b border-white/30 bg-black">
                         <Image
                           src={card.image}
                           alt={card.imageAlt || card.label}
@@ -204,7 +204,7 @@ export default function SciencePage() {
         className="relative z-10 mx-auto max-w-7xl px-6 pb-10 sm:pb-12"
         aria-labelledby="science-fep-heading"
       >
-        <article className="border border-zinc-800 bg-zinc-950/70 p-6 backdrop-blur-sm sm:p-8">
+        <article className="console-copy p-6 sm:p-8">
           <p className="mb-3 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
             {SCIENCE_FEP_COPY.eyebrow}
           </p>
@@ -232,7 +232,7 @@ export default function SciencePage() {
         className="relative z-10 mx-auto max-w-7xl px-6 pb-10 sm:pb-12"
         aria-labelledby="science-epistemic-foraging-heading"
       >
-        <article className="border border-zinc-800 bg-zinc-950/70 p-6 backdrop-blur-sm sm:p-8">
+        <article className="console-copy p-6 sm:p-8">
           <p className="mb-3 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
             {SCIENCE_EPISTEMIC_FORAGING_COPY.eyebrow}
           </p>
@@ -286,7 +286,7 @@ export default function SciencePage() {
       <section className="relative z-10 mx-auto max-w-7xl px-6 py-10 sm:py-12" aria-label="Principles">
         <div className="grid grid-cols-1 gap-x-12 gap-y-8 sm:grid-cols-2">
           {PRINCIPLES.map((principle) => (
-            <div key={principle.number} className="border border-zinc-800 bg-zinc-950/70 p-5 backdrop-blur-sm">
+            <div key={principle.number} className="console-copy p-5">
               <p className="font-mono text-[10px] tracking-[2px] text-zinc-500">{principle.number}</p>
               <h2 className="mt-3 text-xl font-medium tracking-[-0.5px] text-white">{principle.title}</h2>
               <p className="mt-2 text-sm font-medium leading-relaxed text-zinc-300">{principle.subtitle}</p>
@@ -318,7 +318,7 @@ export default function SciencePage() {
             href={KNOWLEDGE_TOMOGRAPHY_WHITEPAPER_PATH}
             data-science-research-link
             data-science-research-link-knowledge-tomography
-            className="group block border border-zinc-800 bg-zinc-950/70 p-5 transition hover:border-zinc-600 sm:p-6"
+            className="console-copy group block p-5 transition hover:border-white/80 sm:p-6"
           >
             <p className="font-mono text-[10px] uppercase tracking-[1.6px] text-zinc-500">
               Working paper · {KNOWLEDGE_TOMOGRAPHY_WHITEPAPER.meta.date}
@@ -338,7 +338,7 @@ export default function SciencePage() {
             href={TAP_WHITEPAPER_PATH}
             data-science-research-link
             data-science-research-link-tap
-            className="group block border border-zinc-800 bg-zinc-950/70 p-5 transition hover:border-zinc-600 sm:p-6"
+            className="console-copy group block p-5 transition hover:border-white/80 sm:p-6"
           >
             <p className="font-mono text-[10px] uppercase tracking-[1.6px] text-zinc-500">
               Working paper · {TAP_STASH_SUBMIT_WHITEPAPER.meta.date}
@@ -358,7 +358,7 @@ export default function SciencePage() {
       </section>
 
       <section className="relative z-10 mx-auto max-w-7xl px-6 pb-16">
-        <div className="border border-zinc-800 bg-zinc-950/70 p-6 sm:p-8">
+        <div className="console-copy p-6 sm:p-8">
           <p className="text-base leading-relaxed text-zinc-400">
             This model drives everything we build — from learning verification and think-aloud protocol today,
             to predictive interruption models and non-invasive hardware tomorrow.

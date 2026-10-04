@@ -88,6 +88,16 @@ export function WorkspaceViewChrome({
   return (
     <>
       {!hideNavbar ? <Navbar /> : null}
+      <p
+        data-console-frame-label=""
+        className={
+          hideNavbar
+            ? `pointer-events-none absolute left-3 top-3 z-[4] ${CONSOLE_LABEL_CLASS}`
+            : `pointer-events-none shrink-0 px-4 pt-2 sm:px-6 ${CONSOLE_LABEL_CLASS}`
+        }
+      >
+        Map
+      </p>
       {accessBanner ? (
         <div className="shrink-0 border-b border-neutral-800/60" data-workspace-access-banner>
           {accessBanner}

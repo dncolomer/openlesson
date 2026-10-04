@@ -27,19 +27,20 @@ function apiErrorMessage(body: unknown, fallback: string): string {
   return fallback;
 }
 
-const cardClass =
-  "rounded-md border border-neutral-800 bg-neutral-950/75 backdrop-blur-sm";
+const cardClass = "console-copy";
 const cardPaddedClass = `${cardClass} p-5 sm:p-6`;
 const labelClass =
   "font-mono text-[10px] uppercase tracking-[2px] text-neutral-500";
 const primaryBtnClass =
-  "inline-flex h-10 items-center justify-center rounded-sm bg-white px-4 text-sm font-medium text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50";
+  "inline-flex h-10 items-center justify-center rounded-none bg-white px-4 text-sm font-medium text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50";
 const secondaryBtnClass =
-  "inline-flex h-10 items-center justify-center rounded-sm border border-neutral-700 bg-neutral-950/60 px-4 text-sm text-neutral-200 transition hover:border-neutral-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-50";
+  "console-button inline-flex h-10 items-center justify-center px-4 text-sm text-neutral-200 transition hover:border-white/80 hover:text-white disabled:cursor-not-allowed disabled:opacity-50";
 const dangerBtnClass =
-  "inline-flex h-8 items-center justify-center rounded-sm border border-neutral-700 bg-neutral-950/60 px-3 text-xs text-neutral-300 transition hover:bg-neutral-900 disabled:opacity-50";
+  "console-button inline-flex h-8 items-center justify-center px-3 text-xs text-neutral-300 transition hover:border-white/80 hover:text-white disabled:opacity-50";
 const inputClass =
-  "w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-4 py-2 text-sm text-white placeholder-neutral-500 focus:border-neutral-600 focus:outline-none";
+  "w-full rounded-none border border-white/40 bg-black px-4 py-2 text-sm text-white placeholder-neutral-500 focus:border-white/70 focus:outline-none";
+const chipClass =
+  "console-chip px-2 py-0.5 font-mono text-[10px] uppercase tracking-[1.4px] text-neutral-300";
 
 interface Organization {
   id: string;
@@ -362,7 +363,7 @@ export function OrganizationDashboardTab() {
       {/* Header card */}
       <section className={cardPaddedClass}>
         <div className="flex min-w-0 items-start gap-4">
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md border border-neutral-700 bg-neutral-900/80">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-none border border-white/40 bg-black">
             {organization.logo_url ? (
               <Image
                 src={organization.logo_url}
@@ -384,22 +385,22 @@ export function OrganizationDashboardTab() {
               {organization.name}
             </h2>
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              <code className="rounded border border-neutral-800 bg-black/40 px-2 py-0.5 font-mono text-xs text-neutral-400">
+              <code className="console-chip px-2 py-0.5 font-mono text-xs text-neutral-400">
                 {organization.slug}
               </code>
               {isOrgAdmin ? (
-                <span className="rounded-full border border-white/15 bg-white/[0.06] px-2.5 py-0.5 text-[10px] uppercase tracking-[1.4px] text-white">
+                <span className={`${chipClass} text-white`}>
                   {t("organization.orgAdmin")}
                 </span>
               ) : (
-                <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-0.5 text-[10px] uppercase tracking-[1.4px] text-neutral-400">
+                <span className={chipClass}>
                   {t("organization.member")}
                 </span>
               )}
             </div>
             {isOrgAdmin && (
               <div className="mt-4">
-                <label className="inline-flex cursor-pointer items-center gap-2 rounded-sm border border-neutral-700 bg-neutral-950/60 px-3 py-1.5 text-xs text-neutral-300 transition hover:border-neutral-500 hover:text-white">
+                <label className="console-button inline-flex cursor-pointer items-center gap-2 px-3 py-1.5 text-xs text-neutral-300 transition hover:border-white/80 hover:text-white">
                   <input
                     type="file"
                     accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
@@ -434,7 +435,7 @@ export function OrganizationDashboardTab() {
           <p className="mt-2 max-w-xl text-xs text-neutral-500">
             {t("organization.customAestheticsHelper")}
           </p>
-          <label className="mt-4 inline-flex cursor-pointer items-center gap-2 rounded-sm border border-neutral-700 bg-neutral-950/60 px-3 py-1.5 text-xs text-neutral-300 transition hover:border-neutral-500 hover:text-white">
+          <label className="console-button mt-4 inline-flex cursor-pointer items-center gap-2 px-3 py-1.5 text-xs text-neutral-300 transition hover:border-white/80 hover:text-white">
             <input
               data-org-aesthetic-upload
               type="file"
@@ -460,7 +461,7 @@ export function OrganizationDashboardTab() {
               {aestheticUrls.map((url) => (
                 <li
                   key={url}
-                  className="overflow-hidden rounded-md border border-neutral-800 bg-black/40"
+                  className="console-copy overflow-hidden"
                 >
                   <img
                     src={url}
@@ -558,7 +559,7 @@ export function OrganizationDashboardTab() {
                     </td>
                     <td className="px-4 py-3.5">
                       {member.is_org_admin ? (
-                        <span className="rounded-full border border-white/15 bg-white/[0.06] px-2 py-0.5 text-[10px] uppercase tracking-[1.2px] text-white">
+                        <span className={`${chipClass} text-white`}>
                           {t("organization.admin")}
                         </span>
                       ) : (
@@ -620,7 +621,7 @@ export function OrganizationDashboardTab() {
                   className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6"
                 >
                   <div className="min-w-0">
-                    <code className="break-all rounded border border-white/15 bg-white/[0.06] px-2 py-1 font-mono text-xs text-white">
+                    <code className="console-chip break-all px-2 py-1 font-mono text-xs text-white">
                       {invite.token}
                     </code>
                     <p className="mt-1.5 text-xs text-neutral-500">
@@ -654,7 +655,7 @@ export function OrganizationDashboardTab() {
                   className="flex flex-col gap-2 px-5 py-4 opacity-55 sm:flex-row sm:items-center sm:justify-between sm:px-6"
                 >
                   <div className="min-w-0">
-                    <code className="break-all rounded border border-neutral-800 bg-black/40 px-2 py-1 font-mono text-xs text-neutral-500 line-through">
+                    <code className="console-chip break-all px-2 py-1 font-mono text-xs text-neutral-500 line-through">
                       {invite.token}
                     </code>
                     <p className="mt-1.5 text-xs text-neutral-600">
@@ -663,7 +664,7 @@ export function OrganizationDashboardTab() {
                       })}
                     </p>
                   </div>
-                  <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-neutral-500">
+                  <span className={`${chipClass} text-neutral-500`}>
                     {t("organization.used")}
                   </span>
                 </div>

@@ -323,5 +323,24 @@ describe("TAP Learning + TAP speech wiring (structural)", () => {
     expect(tapSrc).toContain('phase === "live"');
     expect(tapSrc).toContain("isTapLiveThoughtSpeechEnabled(phase)");
     expect(tapSrc).toContain("retryMicrophone");
+    expect(tapSrc).toContain("tapThoughtSpeech.isListening");
+    expect(tapSrc).toContain("tapThoughtSpeech.speechError");
+    const exerciseSrc = readFileSync(
+      path.join(process.cwd(), "components/ExerciseTapClient.tsx"),
+      "utf8",
+    );
+    expect(exerciseSrc).toContain("tapThoughtSpeech.isListening");
+    expect(exerciseSrc).toContain("tapThoughtSpeech.speechError");
+    const tapPhases = readFileSync(
+      path.join(process.cwd(), "components/tap-score/tap-score-phases.tsx"),
+      "utf8",
+    );
+    const exercisePhases = readFileSync(
+      path.join(process.cwd(), "components/exercise-tap/exercise-tap-phases.tsx"),
+      "utf8",
+    );
+    for (const src of [tapPhases, exercisePhases]) {
+      expect(src).toContain('speechError ? "Retry" : "Start"');
+    }
   });
 });

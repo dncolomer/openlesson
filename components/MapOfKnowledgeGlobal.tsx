@@ -708,7 +708,7 @@ function MapOfKnowledgeGlobal2D({
       >
         <button
           type="button"
-          className="rounded-sm border border-zinc-700 bg-black/80 px-2 py-1 font-mono text-xs text-zinc-200 hover:border-zinc-500 hover:text-white"
+          className="console-button px-2 py-1 font-mono text-xs text-zinc-200 hover:border-white/80 hover:text-white"
           onClick={() => zoomBy(1.2)}
           aria-label="Zoom in"
           data-map-global-zoom-in
@@ -717,7 +717,7 @@ function MapOfKnowledgeGlobal2D({
         </button>
         <button
           type="button"
-          className="rounded-sm border border-zinc-700 bg-black/80 px-2 py-1 font-mono text-xs text-zinc-200 hover:border-zinc-500 hover:text-white"
+          className="console-button px-2 py-1 font-mono text-xs text-zinc-200 hover:border-white/80 hover:text-white"
           onClick={() => zoomBy(0.8)}
           aria-label="Zoom out"
           data-map-global-zoom-out
@@ -726,7 +726,7 @@ function MapOfKnowledgeGlobal2D({
         </button>
         <button
           type="button"
-          className="rounded-sm border border-zinc-700 bg-black/80 px-2 py-1 font-mono text-[10px] text-zinc-400 hover:border-zinc-500 hover:text-white"
+          className="console-button px-2 py-1 font-mono text-[10px] text-zinc-400 hover:border-white/80 hover:text-white"
           onClick={resetView}
           aria-label="Reset pan and zoom"
           data-map-global-zoom-reset
@@ -736,7 +736,7 @@ function MapOfKnowledgeGlobal2D({
       </div>
 
       <div
-        className="pointer-events-auto absolute bottom-3 left-3 z-10 max-w-[16rem] border border-zinc-800/90 bg-black/80 backdrop-blur-sm"
+        className="console-copy pointer-events-auto absolute bottom-3 left-3 z-10 max-w-[16rem]"
         data-map-global-legend
         data-legend-open={legendOpen ? "true" : "false"}
       >
@@ -784,7 +784,7 @@ function MapOfKnowledgeGlobal2D({
 
       {selectedSummary && (
         <div
-          className="absolute right-3 top-3 z-20 w-[min(100%-1.5rem,18rem)] border border-zinc-600 bg-zinc-950/95 p-3 shadow-xl backdrop-blur-sm"
+          className="console-copy absolute right-3 top-3 z-20 w-[min(100%-1.5rem,18rem)] p-3"
           data-map-global-region-summary
           data-region-id={selectedSummary.region_id}
           onClick={(e) => e.stopPropagation()}

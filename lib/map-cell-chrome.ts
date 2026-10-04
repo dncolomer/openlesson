@@ -33,9 +33,9 @@ export const MAP_CELL_PREREQ_CLASS =
 /** Target block under prereq-edit (full select language). */
 export const MAP_CELL_TARGET_CLASS = MAP_CELL_SELECTED_CLASS;
 
-/** Neutral unselected occupied tile. */
+/** Neutral unselected occupied tile. Solid black, white hairline. */
 export const MAP_CELL_NEUTRAL_CLASS =
-  "border-neutral-700/80 bg-neutral-950/75 text-neutral-100";
+  "border-white/35 bg-black text-neutral-100";
 
 /** Workspace tile with saved previous sessions — slightly lighter than neutral. */
 export const MAP_CELL_PREVIOUS_SESSIONS_CLASS =

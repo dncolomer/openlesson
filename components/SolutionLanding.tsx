@@ -44,7 +44,7 @@ export function SolutionLanding({
       <div className="relative z-10 flex min-h-screen flex-col">
         <div className="absolute right-6 top-5 z-20">
           {user ? (
-            <Link href="/dashboard" className="flex items-center gap-2 rounded-md border border-white/10 bg-zinc-950/70 py-1.5 pl-1.5 pr-4 text-sm text-zinc-300 backdrop-blur-md transition hover:border-white/20 hover:bg-zinc-900/80 hover:text-white">
+            <Link href="/dashboard" className="console-copy flex items-center gap-2 py-1.5 pl-1.5 pr-4 text-sm text-zinc-300 transition hover:border-white/20 hover:text-white">
               <div className="flex size-9 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-zinc-800 text-xs font-medium text-white">
                 {user.user_metadata?.avatar_url ? <img src={user.user_metadata.avatar_url} alt="User avatar" className="h-full w-full object-cover grayscale" /> : (user.email?.[0] ?? "U").toUpperCase()}
               </div>
@@ -57,7 +57,7 @@ export function SolutionLanding({
 
         <section className="mx-auto flex w-full max-w-7xl flex-1 flex-col justify-center px-6 py-24">
           <div className="max-w-4xl">
-            <div className="mb-6 inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
+            <div className="console-chip mb-6 inline-block px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
               {eyebrow}
             </div>
             <h1 className="max-w-3xl text-5xl font-medium leading-[1.05] tracking-[-2.5px] text-white sm:text-6xl">
@@ -69,7 +69,7 @@ export function SolutionLanding({
           </div>
 
           <div className="mt-16 grid gap-6 md:grid-cols-2">
-            <section className="border border-zinc-800/70 bg-zinc-950/75 p-6 backdrop-blur-sm">
+            <section className="console-copy p-6">
               <h2 className="mb-5 font-mono text-xs uppercase tracking-[2px] text-zinc-500">
                 Revisited Challenges
               </h2>
@@ -82,7 +82,7 @@ export function SolutionLanding({
               </ul>
             </section>
 
-            <section className="border border-zinc-800/70 bg-zinc-950/75 p-6 backdrop-blur-sm">
+            <section className="console-copy p-6">
               <h2 className="mb-5 font-mono text-xs uppercase tracking-[2px] text-zinc-500">
                 How Uncertain Systems Solves It
               </h2>

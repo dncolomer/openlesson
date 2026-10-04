@@ -154,7 +154,7 @@ export function ProductLandingPage({ page }: ProductLandingPageProps) {
             {page.useCases.map((useCase) => (
               <article
                 key={useCase.title}
-                className="border border-zinc-800 bg-zinc-950/70 p-5 transition hover:border-zinc-700"
+                className="console-copy p-5 transition hover:border-white/80"
               >
                 <h3 className="text-base font-medium text-white">{useCase.title}</h3>
                 <p className="mt-3 text-sm leading-relaxed text-zinc-400">{useCase.description}</p>
@@ -163,7 +163,7 @@ export function ProductLandingPage({ page }: ProductLandingPageProps) {
           </div>
         </section>
 
-        <section className="mb-14 rounded-md border border-zinc-800 bg-zinc-950/70 p-6 sm:p-8">
+        <section className="console-copy mb-14 p-6 sm:p-8">
           <h2 className="text-xl font-medium text-white sm:text-2xl">Why teams choose it</h2>
           <ul className="mt-6 space-y-3">
             {page.highlights.map((highlight) => (
@@ -175,7 +175,7 @@ export function ProductLandingPage({ page }: ProductLandingPageProps) {
           </ul>
         </section>
 
-        <section id="faq" className="mb-14 rounded-md border border-zinc-800 bg-zinc-950/70 p-6 sm:p-8">
+        <section id="faq" className="console-copy mb-14 p-6 sm:p-8">
           <h2 className="text-xl font-medium text-white sm:text-2xl">Frequently asked questions</h2>
           <dl className="mt-6 space-y-6">
             {page.faqs.map((faq) => (
@@ -187,7 +187,7 @@ export function ProductLandingPage({ page }: ProductLandingPageProps) {
           </dl>
         </section>
 
-        <section className="rounded-md border border-zinc-800 bg-zinc-950/80 p-8 text-center sm:p-10">
+        <section className="console-copy p-8 text-center sm:p-10">
           <h2 className="text-xl font-medium text-white sm:text-2xl">{page.closingTitle}</h2>
           <p className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-zinc-500">{page.closingBody}</p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">

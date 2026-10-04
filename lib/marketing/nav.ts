@@ -21,7 +21,6 @@ export const PRICING_NAV_LINKS = [
 /** Community dropdown — AYCL lives under the Learning Harness product, not here. */
 export const COMMUNITY_LINKS = [
   { href: "/community-events", label: "Community Events" },
-  { href: "/map-of-knowledge", label: "The Map of Knowledge" },
   { href: TAPBENCH_PATH, label: "TAPBench" },
 ] as const;
 

@@ -115,7 +115,7 @@ export const PLATFORM_PRODUCTS = {
     cta: "Explore",
     pricingHref: HARNESS_PRICING_PATH,
     image: "/lp-boxes/harness-books.jpg",
-    imageAlt: "A small cluster of antique books and a compass on an empty abstract background",
+    imageAlt: "An open black notebook with a square grid, a compass, and a stack of black volumes on a dark field",
   },
   verification: {
     eyebrow: "FOR ENTERPRISE",
@@ -126,7 +126,7 @@ export const PLATFORM_PRODUCTS = {
     cta: "Explore",
     pricingHref: VERIFICATION_PRICING_PATH,
     image: "/lp-boxes/verification-bottles.jpg",
-    imageAlt: "A small cluster of experimental bottles and test tubes on an empty abstract background",
+    imageAlt: "Dark glass laboratory bottles with blank plates and red seals on a black field",
   },
   tapbench: {
     eyebrow: "FOR SCIENCE",
@@ -136,7 +136,7 @@ export const PLATFORM_PRODUCTS = {
     href: TAPBENCH_PATH,
     cta: "Explore",
     image: "/lp-boxes/tapbench-maps.jpg",
-    imageAlt: "A small cluster of maps, a compass, and a magnifying glass on an empty abstract background",
+    imageAlt: "Topographic map sheets with an amber route, a magnifying glass, and a compass on a black field",
   },
 } as const;
 

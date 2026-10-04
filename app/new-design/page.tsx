@@ -81,7 +81,7 @@ export default function NewDesignLanding() {
         {user ? (
           <Link
             href="/dashboard"
-            className="flex items-center gap-2 rounded-none border border-white/10 bg-zinc-950/70 py-1.5 pl-1.5 pr-4 text-sm text-zinc-300 backdrop-blur-md transition hover:border-white/20 hover:bg-zinc-900/80 hover:text-white"
+            className="console-button flex items-center gap-2 py-1.5 pl-1.5 pr-4 text-sm text-zinc-300 transition hover:border-white/80 hover:text-white"
           >
             <div className="flex size-9 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-zinc-800 text-xs font-medium text-white">
               {user.user_metadata?.avatar_url ? (
@@ -124,7 +124,7 @@ export default function NewDesignLanding() {
 
         {/* Primary Plan Generation Input */}
         <form onSubmit={handleGenerate} className="w-full max-w-[1360px] mb-20 relative z-10">
-        <div className="group mx-auto flex w-full max-w-[940px] flex-col gap-2 rounded-none border border-zinc-800 bg-zinc-950/90 p-2 shadow-inner transition-all hover:border-zinc-700 focus-within:border-zinc-500 sm:flex-row">
+        <div className="console-copy group mx-auto flex w-full max-w-[940px] flex-col gap-2 rounded-none p-2 shadow-inner transition-all hover:border-white/80 focus-within:border-zinc-500 sm:flex-row">
           <input
             type="text"
             value={topic}

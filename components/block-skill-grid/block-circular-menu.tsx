@@ -60,14 +60,29 @@ export function BlockCircularMenuRing({
     >
       <div
         data-block-circular-menu-ring
-        className="pointer-events-none absolute left-1/2 top-1/2 rounded-full border-white/75 shadow-[0_0_0_1px_rgba(0,0,0,0.55)]"
+        className="pointer-events-none absolute left-1/2 top-1/2 rounded-full border-white/80"
         style={{
           width: diameter,
           height: diameter,
           borderWidth: BLOCK_CIRCULAR_MENU_RING_THICKNESS_PX,
           transform: "translate(-50%, -50%)",
         }}
-      />
+      >
+        <span
+          aria-hidden
+          className="absolute inset-[9px] rounded-full border border-white/35"
+        />
+        <span
+          aria-hidden
+          className="absolute inset-[2px] rounded-full"
+          style={{
+            background:
+              "repeating-conic-gradient(from 0deg, rgba(255,255,255,0.9) 0deg 1.1deg, transparent 1.1deg 30deg)",
+            mask: "radial-gradient(farthest-side, transparent 72%, #000 74% 100%)",
+            WebkitMask: "radial-gradient(farthest-side, transparent 72%, #000 74% 100%)",
+          }}
+        />
+      </div>
       {actions.map((action, index) => {
         const pos = circularMenuActionPosition(index, actions.length);
         const disabled = disabledIds?.has(action.id);
@@ -85,7 +100,7 @@ export function BlockCircularMenuRing({
             aria-label={action.label}
             disabled={disabled}
             className={cn(
-              "group pointer-events-auto absolute left-1/2 top-1/2 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-white/55 bg-neutral-950 text-neutral-100 shadow-[0_6px_16px_rgba(0,0,0,0.55)] hover:z-10 hover:w-auto hover:min-w-10 hover:border-white/90 hover:bg-neutral-900 hover:px-2.5 disabled:cursor-not-allowed disabled:opacity-40",
+              "group pointer-events-auto absolute left-1/2 top-1/2 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-white/80 bg-black font-mono text-white shadow-[0_0_0_1px_rgba(0,0,0,0.95),inset_0_0_0_1px_rgba(255,255,255,0.4)] hover:z-10 hover:w-auto hover:min-w-10 hover:border-white hover:bg-black hover:px-2.5 disabled:cursor-not-allowed disabled:opacity-40",
               prominent &&
                 "z-[1] outline outline-2 outline-offset-[3px] outline-white/80",
             )}
@@ -110,7 +125,7 @@ export function BlockCircularMenuRing({
             </span>
             <span
               data-block-circular-menu-label
-              className="hidden max-w-[7.5rem] whitespace-nowrap px-1.5 text-center text-[9px] font-medium leading-tight group-hover:inline group-focus-visible:inline"
+              className="hidden max-w-[9.5rem] whitespace-nowrap px-1.5 text-center text-[9px] font-medium uppercase leading-tight tracking-[0.12em] group-hover:inline group-focus-visible:inline"
             >
               {action.label}
             </span>

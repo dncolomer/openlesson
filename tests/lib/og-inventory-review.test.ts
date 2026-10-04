@@ -233,10 +233,6 @@ describe("OG share inventory (one unsys standard)", () => {
     const workspacePage = read("app/workspace/[id]/page.tsx");
     expect(workspacePage).toContain("standardShareSocialMetadata");
 
-    const mok = read("app/map-of-knowledge/page.tsx");
-    expect(mok).toContain("standardShareSocialMetadata");
-    expect(mok).not.toContain("The Map of Knowledge | Uncertain Systems");
-
     const tapbench = read("app/tapbench/page.tsx");
     expect(tapbench).toContain("standardShareSocialMetadata");
 

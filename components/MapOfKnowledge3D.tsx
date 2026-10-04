@@ -550,7 +550,7 @@ export function MapOfKnowledge3D({
 
       {/* Control legend */}
       <div
-        className="pointer-events-none absolute bottom-3 left-3 z-10 max-w-[16rem] border border-zinc-800/90 bg-black/70 px-3 py-2.5 backdrop-blur-sm"
+        className="console-copy pointer-events-none absolute bottom-3 left-3 z-10 max-w-[16rem] px-3 py-2.5"
         data-map-3d-legend
       >
         <p className="font-mono text-[9px] uppercase tracking-[1.5px] text-zinc-500">Controls</p>
@@ -588,14 +588,14 @@ export function MapOfKnowledge3D({
       <button
         type="button"
         onClick={resetView}
-        className="absolute right-3 top-3 z-10 rounded-sm border border-zinc-700 bg-black/60 px-2.5 py-1.5 font-mono text-[10px] tracking-wide text-zinc-300 backdrop-blur-sm transition hover:border-zinc-500 hover:text-white"
+        className="console-button absolute right-3 top-3 z-10 px-2.5 py-1.5 font-mono text-[10px] tracking-wide text-zinc-300 transition hover:border-white/80 hover:text-white"
       >
         Reset view
       </button>
 
       {hover && (
         <div
-          className="pointer-events-none absolute z-20 max-w-[14rem] border border-zinc-700 bg-black/90 px-2.5 py-1.5 text-xs shadow-lg"
+          className="console-copy pointer-events-none absolute z-20 max-w-[14rem] px-2.5 py-1.5 text-xs"
           style={{
             left: Math.min(hover.x + 12, (mountRef.current?.clientWidth || 300) - 160),
             top: Math.max(8, hover.y - 40),

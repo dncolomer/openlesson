@@ -43,7 +43,7 @@ export default function ClickMomentsPage() {
 
         <section className="flex flex-1 flex-col justify-center py-16">
           <div className="max-w-4xl">
-            <p className="inline-block rounded-none border border-zinc-800 bg-black/70 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.32em] text-zinc-500">
+            <p className="console-chip inline-block rounded-none px-3 py-1 font-mono text-[10px] uppercase tracking-[0.32em] text-zinc-500">
               Click moments
             </p>
             <h1 className="mt-6 text-5xl font-medium leading-[0.96] tracking-[-0.08em] text-white sm:text-7xl">
@@ -59,7 +59,7 @@ export default function ClickMomentsPage() {
               <Link
                 key={moment.href}
                 href={moment.href}
-                className="group overflow-hidden rounded-none border border-zinc-800 bg-zinc-950/80 shadow-xl shadow-black/35 transition hover:border-zinc-600 hover:bg-zinc-950"
+                className="console-copy group overflow-hidden rounded-none transition hover:border-white/80"
               >
                 <div
                   className="relative aspect-[16/9] bg-cover bg-center grayscale"

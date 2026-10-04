@@ -193,6 +193,21 @@ describe("console theme shells", () => {
     expect(shell).toContain("<Navbar />");
     expect(shellClass).not.toContain("overflow-hidden");
     expect(shellClass).toContain("border-white/40");
+    const homeLabelAt = shell.indexOf("data-console-frame-label");
+    const homeLabel = shell.slice(homeLabelAt, shell.indexOf("</p>", homeLabelAt));
+    expect(shell.indexOf("<Navbar />")).toBeLessThan(homeLabelAt);
+    expect(homeLabel).toContain("px-4 pt-2 sm:px-6");
+    expect(homeLabel).not.toContain("absolute");
+    expect(homeLabel).toContain("Home");
+
+    const view = read("components/WorkspaceView.tsx");
+    expect(view).not.toContain("left-3 top-2");
+    const chrome = read("components/workspace-view/workspace-chrome.tsx");
+    const mapLabelAt = chrome.lastIndexOf("data-console-frame-label");
+    const mapLabel = chrome.slice(mapLabelAt, chrome.indexOf("</p>", mapLabelAt));
+    expect(mapLabel).toContain("px-4 pt-2 sm:px-6");
+    expect(mapLabel).toContain("Map");
+    expect(chrome.indexOf("<Navbar />")).toBeLessThan(mapLabelAt);
 
     for (const rel of [
       "app/pricing/page.tsx",
@@ -202,6 +217,8 @@ describe("console theme shells", () => {
       "app/pricing/success/page.tsx",
       "components/ScienceWhitepaperPage.tsx",
       "app/invite/[token]/page.tsx",
+      "components/TapbenchShell.tsx",
+      "app/tapbench/[token]/page.tsx",
     ]) {
       const src = read(rel);
       expect(src, rel).toMatch(/PublicConsoleWash|<ConsolePage|data-console-frame/);
@@ -215,6 +232,19 @@ describe("console theme shells", () => {
     expect(read("app/pricing/success/page.tsx")).toContain("pricing.allSet");
     expect(read("components/ScienceWhitepaperPage.tsx")).toContain("data-science-whitepaper");
     expect(read("components/marketing/MarketingChrome.tsx")).not.toContain("overflow-hidden");
+    expect(read("components/TapbenchShell.tsx")).not.toContain("overflow-hidden");
+    for (const rel of [
+      "components/TapbenchResultsTable.tsx",
+      "components/TapbenchResultsIntro.tsx",
+      "components/TapbenchExperimentTutorial.tsx",
+      "components/TapbenchWorkspaceDetail.tsx",
+      "components/TapbenchLanding.tsx",
+    ]) {
+      const src = read(rel);
+      expect(src, rel).toContain("console-");
+      expect(src, rel).not.toMatch(/rounded-(sm|md|lg|xl)\b/);
+      expect(src, rel).not.toMatch(/bg-zinc-950\//);
+    }
   });
 
   it("leaves insight flags, the listening dot, and stored canvas ink alone", () => {

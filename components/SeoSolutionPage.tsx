@@ -135,7 +135,7 @@ export function SeoSolutionPage({ page, breadcrumbs }: SeoSolutionPageProps) {
               </p>
             </div>
           </div>
-          <div className="mt-10 rounded-md border border-neutral-800 bg-neutral-950/70 p-5 sm:p-6">
+          <div className="console-copy mt-10 p-5 sm:p-6">
             <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
               One TAP. One knowledge workspace.
             </p>
@@ -193,7 +193,7 @@ export function SeoSolutionPage({ page, breadcrumbs }: SeoSolutionPageProps) {
             </section>
           ))}
 
-          <section id="faq" className="rounded-md border border-neutral-800 bg-neutral-950/70 p-6 sm:p-8">
+          <section id="faq" className="console-copy p-6 sm:p-8">
             <h2 className="text-xl font-medium text-white sm:text-2xl">Frequently asked questions</h2>
             <dl className="mt-6 space-y-6">
               {page.faqs.map((faq) => (
@@ -205,7 +205,7 @@ export function SeoSolutionPage({ page, breadcrumbs }: SeoSolutionPageProps) {
             </dl>
           </section>
 
-          <section className="rounded-md border border-neutral-800 bg-neutral-950/80 p-6 text-center sm:p-8">
+          <section className="console-copy p-6 text-center sm:p-8">
             <h2 className="text-xl font-medium text-white">{page.closingTitle}</h2>
             <p className="mx-auto mt-3 max-w-lg text-sm text-neutral-500">{page.closingBody}</p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">

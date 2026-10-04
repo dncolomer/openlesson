@@ -1073,6 +1073,14 @@ export function MapWorldLayer({
                 labelPlate={suggestMode === "chapter" && Boolean(tileAesthetic)}
               />
             );
+            // Workspace names fill the tile. The badge span is shrink-wrapped, so an
+            // absolute plate inside it collapses to nothing and overflow clips the word.
+            const blockNameFrame =
+              suggestMode === "chapter" ? null : (
+                <span className="pointer-events-none absolute inset-0 z-10 flex min-h-0 min-w-0 flex-col">
+                  {statusGlyph}
+                </span>
+              );
             // Freeform polyomino: seamless tiles (fill grid gaps) + outer edges only + one title.
             if (freeform) {
               const shapeKeys = freeformShapeKeySet(occupiedCells);
@@ -1276,8 +1284,9 @@ export function MapWorldLayer({
                           ) : null}
                           {isLabel ? (
                             <>
+                              {blockNameFrame}
                               <span className="relative z-10 flex max-w-full flex-col items-center">
-                              {statusGlyph}
+                              {suggestMode === "chapter" ? statusGlyph : null}
                               <BlockGatherNotificationDot visible={Boolean(unseenGatherById?.[node.id])} />
                               {learnerLockedLabel}
                               {practiceBadge}
@@ -1468,8 +1477,9 @@ export function MapWorldLayer({
                       count={insightCountByChapterId?.[node.id] ?? 0}
                     />
                   ) : null}
+                  {blockNameFrame}
                   <span className="relative z-10 flex max-w-full flex-col items-center">
-                  {statusGlyph}
+                  {suggestMode === "chapter" ? statusGlyph : null}
                   <BlockGatherNotificationDot visible={Boolean(unseenGatherById?.[node.id])} />
                   {learnerLockedLabel}
                   {practiceBadge}

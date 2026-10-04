@@ -236,7 +236,7 @@ export function ScienceWhitepaperPage({ paper }: ScienceWhitepaperPageProps) {
 
             <div className="mt-12 flex flex-col gap-4 rounded-none bg-zinc-900 p-5 ring-1 ring-zinc-800 sm:mt-14 sm:flex-row sm:items-center sm:justify-between sm:p-6">
               <p className="text-sm text-zinc-400">
-                Related: science thesis, Map of Knowledge exploration surface.
+                Related: science thesis.
               </p>
               <div className="flex flex-wrap gap-4">
                 <Link
@@ -244,13 +244,6 @@ export function ScienceWhitepaperPage({ paper }: ScienceWhitepaperPageProps) {
                   className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-200 transition hover:text-white"
                 >
                   Science
-                  <ArrowRight size={14} />
-                </Link>
-                <Link
-                  href="/map-of-knowledge"
-                  className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-200 transition hover:text-white"
-                >
-                  Map of Knowledge
                   <ArrowRight size={14} />
                 </Link>
               </div>

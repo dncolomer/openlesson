@@ -71,7 +71,7 @@ export default function HackathonsPage() {
             <Link
               key={hackathon.id}
               href={hackathon.href}
-              className="group overflow-hidden border border-white/30 bg-black/75 backdrop-blur-sm transition hover:border-white/60"
+              className="console-copy group overflow-hidden transition hover:border-white/60"
               data-hackathon-card={hackathon.id}
             >
               <div
@@ -79,13 +79,13 @@ export default function HackathonsPage() {
                 style={{ backgroundImage: `url(${hackathon.image})` }}
               >
                 <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/80 via-transparent to-transparent" />
-                <span className="absolute left-4 top-4 border border-zinc-600/80 bg-black/60 px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-300 backdrop-blur-sm">
+                <span className="console-copy absolute left-4 top-4 px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-300">
                   {hackathon.status}
                 </span>
               </div>
               <div className="space-y-4 p-5">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="border border-neutral-600/30 bg-black/55 px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300/90">
+                  <span className="console-copy px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300/90">
                     {hackathon.kind}
                   </span>
                   {hackathon.host ? (

@@ -330,7 +330,7 @@ export default function RabbitHolePage() {
           <aside className="hidden space-y-4 lg:block">
             <div className="flex items-center gap-3">
               <button onClick={() => router.push("/")} className="flex h-8 w-8 items-center justify-center rounded-sm bg-black text-white/80 ring-1 ring-white/10 transition hover:bg-zinc-900 hover:text-white active:scale-95" aria-label="Go to landing page"><Home size={15} strokeWidth={1.8} /></button>
-              <div className="inline-block rounded-sm border border-zinc-800 bg-zinc-950/85 px-3 py-1 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">Rabbit Hole</div>
+              <div className="console-chip inline-block px-3 py-1 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">Rabbit Hole</div>
             </div>
             <h1 className="max-w-xl text-5xl font-medium leading-[1.02] tracking-[-2.7px] text-white sm:text-6xl">Discover what makes you tick.</h1>
             <p className="max-w-lg text-lg leading-relaxed text-zinc-400">One question a day. Follow only the threads that feel alive.</p>
@@ -339,7 +339,7 @@ export default function RabbitHolePage() {
           </aside>
 
           <div
-            className={`min-h-0 overflow-hidden rounded-xl border border-white/10 bg-zinc-950/60 shadow-2xl backdrop-blur-md lg:min-h-[min(680px,calc(100svh-12rem))] lg:rounded-md lg:p-6 ${stage === "feed" ? "h-[calc(83svh-44px)] flex-none self-center lg:h-auto lg:flex-1" : "flex-1"}`}
+            className={`console-copy min-h-0 overflow-hidden lg:min-h-[min(680px,calc(100svh-12rem))] lg:p-6 ${stage === "feed" ? "h-[calc(83svh-44px)] flex-none self-center lg:h-auto lg:flex-1" : "flex-1"}`}
             onTouchStart={(event) => {
               if (finalizing) return;
               setTouchStart({ x: event.touches[0].clientX, y: event.touches[0].clientY });
@@ -391,7 +391,7 @@ export default function RabbitHolePage() {
                 <div className={`absolute inset-y-0 left-0 w-full will-change-transform ${diveAnimating ? "transition-transform duration-200 ease-out" : ""}`} style={{ transform: `translate3d(calc(100% + ${dragX}px), 0, 0)` }}>
                   <DiveBranchPreview label="Right" text={node.children[1]?.question ?? node.children[0]?.question ?? ""} />
                 </div>
-                {node.children.length > 0 && <div className="absolute inset-x-0 bottom-0 hidden gap-3 lg:grid lg:grid-cols-3">{node.children.slice(0, 3).map((child, childIndex) => <button key={child.id} onClick={() => choose(child)} className="rounded-sm border border-zinc-800 bg-black/20 p-4 text-left text-sm leading-relaxed text-zinc-300 transition hover:border-zinc-600 hover:text-white"><span className="mb-3 block font-mono text-[10px] uppercase tracking-[2px] text-zinc-600">Branch {childIndex + 1}</span>{child.question}</button>)}</div>}
+                {node.children.length > 0 && <div className="absolute inset-x-0 bottom-0 hidden gap-3 lg:grid lg:grid-cols-3">{node.children.slice(0, 3).map((child, childIndex) => <button key={child.id} onClick={() => choose(child)} className="console-copy p-4 text-left text-sm leading-relaxed text-zinc-300 transition hover:border-white/80 hover:text-white"><span className="mb-3 block font-mono text-[10px] uppercase tracking-[2px] text-zinc-600">Branch {childIndex + 1}</span>{child.question}</button>)}</div>}
               </div>
             )}
 
@@ -399,7 +399,7 @@ export default function RabbitHolePage() {
               <div className="flex h-full min-h-0 flex-col justify-center px-5 py-6 lg:min-h-[min(628px,calc(100svh-15rem))] lg:px-0 lg:py-0">
                 <p className="font-mono text-[10px] uppercase tracking-[3px] text-zinc-500">One final question</p>
                 <h2 className="mt-5 text-[clamp(2.15rem,9vw,4.1rem)] font-medium leading-[1.01] tracking-[-0.07em] text-white lg:text-5xl">{interview.question}</h2>
-                <div className="mt-7 grid gap-2.5 lg:gap-3">{interview.choices.map((choice, choiceIndex) => <button key={choice} onClick={() => answer(choiceIndex)} disabled={loading} className="rounded-md border border-white/10 bg-black/18 p-4 text-left text-base leading-snug text-zinc-300 transition hover:border-zinc-600 hover:text-white disabled:opacity-50 lg:rounded-sm lg:border-zinc-800 lg:text-base">{choice}</button>)}</div>
+                <div className="mt-7 grid gap-2.5 lg:gap-3">{interview.choices.map((choice, choiceIndex) => <button key={choice} onClick={() => answer(choiceIndex)} disabled={loading} className="console-copy p-4 text-left text-base leading-snug text-zinc-300 transition hover:border-white/80 hover:text-white disabled:opacity-50">{choice}</button>)}</div>
               </div>
             )}
 
@@ -435,7 +435,7 @@ function FeedScreen({ question, questionIndex, total, primary = false }: { quest
   return (
     <div className={`flex h-full min-h-0 flex-col justify-between px-6 pb-12 pt-5 lg:px-0 lg:pb-20 lg:pt-0 ${primary ? "opacity-100" : "opacity-75"}`}>
       <div className="h-4" />
-      <div className="flex flex-1 items-center justify-center lg:my-8 lg:rounded-md lg:border lg:border-zinc-800 lg:bg-black/30 lg:p-8">
+      <div className="flex flex-1 items-center justify-center lg:my-8 lg:border lg:border-white/40 lg:bg-black lg:p-8">
         <span className="text-[clamp(2.65rem,11.5vw,5rem)] font-medium leading-[0.98] tracking-[-0.06em] text-white lg:text-6xl lg:tracking-[-2.2px]">{question.question}</span>
       </div>
       {primary && (

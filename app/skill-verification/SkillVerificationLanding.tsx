@@ -111,7 +111,7 @@ export function SkillVerificationLanding() {
 
       {/* Hero */}
       <section className="relative z-10 mx-auto w-full max-w-7xl px-6 pt-14 pb-10 sm:pt-16 sm:pb-12">
-        <div className="mb-6 inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
+        <div className="console-chip mb-6 inline-block px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
           HARD SKILL VERIFICATION · HIRING AT SCALE
         </div>
         <h1 className="max-w-5xl text-5xl font-medium leading-[1.03] tracking-[-2.8px] text-white sm:text-6xl lg:text-[72px]">
@@ -150,7 +150,7 @@ export function SkillVerificationLanding() {
             label={CTA_WORKSPACE}
             location="skill_verification_hero_workspace"
             page={PAGE_PATH}
-            className="inline-flex min-h-12 items-center justify-center rounded-sm border border-zinc-800 bg-zinc-950/60 px-5 py-3 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-white"
+            className="console-button inline-flex min-h-12 items-center justify-center px-5 py-3 text-sm font-medium text-zinc-300 transition hover:border-white/80 hover:text-white"
           >
             {CTA_WORKSPACE}
             <ArrowRight className="ml-2" size={16} />
@@ -173,7 +173,7 @@ export function SkillVerificationLanding() {
           {AUDIENCES.map((audience) => (
             <div
               key={audience.eyebrow}
-              className="flex min-h-0 min-w-0 flex-col border border-zinc-800 bg-zinc-950/70 p-6 sm:p-7"
+              className="console-copy flex min-h-0 min-w-0 flex-col p-6 sm:p-7"
             >
               <div className="mb-3 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
                 {audience.eyebrow}
@@ -230,7 +230,7 @@ export function SkillVerificationLanding() {
                 </li>
               ))}
             </ul>
-            <div className="mt-6 border border-zinc-800 bg-zinc-950/70 p-5 sm:p-6">
+            <div className="console-copy mt-6 p-5 sm:p-6">
               <p className="font-mono text-[10px] uppercase tracking-[1.6px] text-zinc-500">When to use</p>
               <ul className="mt-3 space-y-2 text-sm leading-relaxed text-zinc-400">
                 {SKILL_CHECK.when.map((item) => (
@@ -240,7 +240,7 @@ export function SkillVerificationLanding() {
             </div>
           </div>
           <div className="min-w-0 w-full">
-            <figure className="overflow-hidden rounded-sm border border-zinc-800 bg-zinc-950/80 shadow-[0_20px_60px_-24px_rgba(0,0,0,0.85)]">
+            <figure className="console-copy overflow-hidden">
               <Image
                 src="/ranking_app.png"
                 alt="Role ranking UI, candidates ordered by skill proximity with strengths and gaps"
@@ -282,7 +282,7 @@ export function SkillVerificationLanding() {
                 </li>
               ))}
             </ul>
-            <div className="mt-6 border border-zinc-800 bg-zinc-950/70 p-5 sm:p-6">
+            <div className="console-copy mt-6 p-5 sm:p-6">
               <p className="font-mono text-[10px] uppercase tracking-[1.6px] text-zinc-500">When to use</p>
               <ul className="mt-3 space-y-2 text-sm leading-relaxed text-zinc-400">
                 {TAKE_HOME.when.map((item) => (
@@ -292,7 +292,7 @@ export function SkillVerificationLanding() {
             </div>
           </div>
           <div className="min-w-0 w-full md:order-1">
-            <figure className="overflow-hidden rounded-sm border border-zinc-800 bg-zinc-950/80 shadow-[0_20px_60px_-24px_rgba(0,0,0,0.85)]">
+            <figure className="console-copy overflow-hidden">
               <Image
                 src="/knowledgeg2.png"
                 alt="Knowledge embeddings with role regions, multi-block take-home signal projected into knowledge space"
@@ -320,7 +320,7 @@ export function SkillVerificationLanding() {
           eyebrow="HIRING FUNNEL"
           title="Where each product sits in the process."
         />
-        <div className="mt-6 border border-zinc-800 bg-zinc-950/70 p-6 backdrop-blur-sm sm:p-8">
+        <div className="console-copy mt-6 p-6 sm:p-8">
           <pre className="overflow-x-auto font-mono text-[12px] leading-relaxed text-zinc-400 sm:text-[13px]">
 {`Apply
   → resume / early screen (optional)
@@ -339,7 +339,7 @@ export function SkillVerificationLanding() {
 
       {/* Scale visual band */}
       <section id="scale" className="relative z-10 mx-auto max-w-7xl px-6 pb-8 sm:pb-10">
-        <div className="border border-zinc-800 bg-zinc-950/70 p-6 text-lg leading-relaxed text-zinc-400 backdrop-blur-sm sm:p-8">
+        <div className="console-copy p-6 text-lg leading-relaxed text-zinc-400 sm:p-8">
           <div className="mb-3 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
             VERIFICATION AT SCALE
           </div>
@@ -358,7 +358,7 @@ export function SkillVerificationLanding() {
 
       {/* CTA */}
       <section id="cta" className="relative z-10 mx-auto max-w-7xl px-6 pb-12 sm:pb-16">
-        <div className="border border-zinc-800 bg-zinc-950/80 p-8 sm:p-10">
+        <div className="console-copy p-8 sm:p-10">
           <div className="mb-3 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
             NEXT STEP
           </div>
@@ -385,7 +385,7 @@ export function SkillVerificationLanding() {
               label={CTA_WORKSPACE}
               location="skill_verification_footer_workspace"
               page={PAGE_PATH}
-              className="inline-flex min-h-12 items-center justify-center rounded-sm border border-zinc-800 bg-zinc-950/60 px-5 py-3 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-white"
+              className="console-button inline-flex min-h-12 items-center justify-center px-5 py-3 text-sm font-medium text-zinc-300 transition hover:border-white/80 hover:text-white"
             >
               {CTA_WORKSPACE}
               <ArrowRight className="ml-2" size={16} />
@@ -422,7 +422,7 @@ function ProductSummaryCard({
   body: string;
 }) {
   return (
-    <div className="flex min-h-0 min-w-0 flex-col border border-zinc-800 bg-zinc-950/70 p-6 sm:p-7 lg:p-8">
+    <div className="console-copy flex min-h-0 min-w-0 flex-col p-6 sm:p-7 lg:p-8">
       <div className="w-full text-[1.5rem] font-medium leading-[1.08] tracking-[-0.8px] text-white sm:text-[1.7rem]">
         <span className="block w-full border-l-[3px] border-white/30 bg-white/[0.06] px-3.5 py-2 text-white sm:px-4 sm:py-2.5">
           {title}
@@ -444,8 +444,8 @@ function ComparisonPanel({
   rows: readonly { without: string; with: string }[];
 }) {
   return (
-    <div className="mt-4 overflow-hidden border border-zinc-800/90 bg-zinc-950/70">
-      <div className="grid grid-cols-2 border-b border-zinc-800 bg-zinc-950/80">
+    <div className="console-copy mt-4 overflow-hidden">
+      <div className="console-copy grid grid-cols-2 border-b">
         <div className="px-3 py-2.5 text-xs font-medium text-zinc-500 sm:px-4 sm:text-sm">{withoutLabel}</div>
         <div className="px-3 py-2.5 text-xs font-medium text-zinc-300 sm:px-4 sm:text-sm">{withLabel}</div>
       </div>

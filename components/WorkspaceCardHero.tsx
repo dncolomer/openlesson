@@ -35,7 +35,10 @@ export function WorkspaceCardHero({
         : null;
 
   return (
-    <div className={cn("relative overflow-hidden bg-neutral-950", heightClassName, className)}>
+    <div
+      data-console-media=""
+      className={cn("relative overflow-hidden bg-neutral-950", heightClassName, className)}
+    >
       {imageSrc ? (
         <div
           className={cn(

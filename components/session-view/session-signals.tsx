@@ -46,9 +46,10 @@ async function openScreen(): Promise<MediaStream | null> {
 
 /**
  * Data card for Prepare, Drill, conversational TAP, and Verify.
- * Audio, video, and screen stay off until Enable. This surface has no Muse headset.
+ * Drill, conversational TAP, and Verify open the microphone for the level meter.
+ * Prepare leaves audio off. Camera and screen stay off until Enable. No Muse headset.
  */
-export function TapSessionSignals() {
+export function TapSessionSignals({ captureAudio = false }: { captureAudio?: boolean }) {
   const [audioStream, setAudioStream] = useState<MediaStream | null>(null);
   const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
   const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
@@ -77,6 +78,23 @@ export function TapSessionSignals() {
     ref.current = next;
     setStream(next);
   };
+
+  useEffect(() => {
+    if (!captureAudio) return;
+    let cancelled = false;
+    void openMic().then((next) => {
+      if (cancelled || !next || audioRef.current) {
+        stopStream(next);
+        return;
+      }
+      setAudioNote(null);
+      audioRef.current = next;
+      setAudioStream(next);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [captureAudio]);
 
   return (
     <div data-ile-tools-widget data-session-sidebar-signals className="h-full w-full min-w-0">

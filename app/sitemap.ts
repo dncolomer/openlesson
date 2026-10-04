@@ -83,12 +83,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.85,
     },
     {
-      url: `${baseUrl}/map-of-knowledge`,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 0.85,
-    },
-    {
       url: `${baseUrl}/tapbench`,
       lastModified: new Date(),
       changeFrequency: "monthly",

@@ -33,7 +33,7 @@ export function TapbenchResultsTable(props: {
   if (rows.length === 0) {
     return (
       <div
-        className="mt-4 rounded-sm border border-zinc-800 bg-zinc-950/60 px-4 py-8 text-sm text-zinc-500"
+        className="console-copy mt-4 px-4 py-8 text-sm text-zinc-500"
         data-tapbench-results-empty
       >
         {props.empty}
@@ -51,12 +51,12 @@ export function TapbenchResultsTable(props: {
 
   return (
     <div
-      className="mt-4 overflow-x-auto rounded-sm border border-zinc-800 bg-zinc-950/70"
+      className="console-copy mt-4 overflow-x-auto"
       data-tapbench-results-table
       data-tapbench-key-obtain
     >
       <table className="w-full min-w-[860px] text-left text-xs">
-        <thead className="border-b border-zinc-800 text-[10px] uppercase tracking-wide text-zinc-500">
+        <thead className="border-b border-white/25 text-[10px] uppercase tracking-wide text-zinc-500">
           <tr>
             <th className="px-3 py-2">Task</th>
             <th className="px-3 py-2">Best region</th>
@@ -74,7 +74,7 @@ export function TapbenchResultsTable(props: {
             return (
               <tr
                 key={task.id}
-                className="cursor-pointer border-b border-zinc-800/80 last:border-0 hover:bg-zinc-900/50"
+                className="cursor-pointer border-b border-white/15 last:border-0 hover:bg-white/[0.04]"
                 onClick={() => openWorkspace(task.id)}
                 data-tapbench-task-row
               >
@@ -93,7 +93,7 @@ export function TapbenchResultsTable(props: {
                 <td className="px-3 py-2" onClick={stopRowNav}>
                   <button
                     type="button"
-                    className="rounded-sm bg-white px-2 py-1 text-[11px] font-medium text-black hover:bg-zinc-200 disabled:opacity-40"
+                    className="rounded-none bg-white px-2 py-1 text-[11px] font-medium text-black hover:bg-neutral-200 disabled:opacity-40"
                     onClick={() => props.onIssueKey(task.id)}
                     disabled={busy}
                     data-tapbench-issue-key
@@ -104,7 +104,7 @@ export function TapbenchResultsTable(props: {
                 <td className="px-3 py-2" onClick={stopRowNav}>
                   <button
                     type="button"
-                    className="rounded-sm border border-zinc-500 px-2 py-1 text-[11px] text-zinc-100 hover:border-zinc-300 disabled:opacity-40"
+                    className="console-button px-2 py-1 text-[11px] text-zinc-100 hover:border-white/80 disabled:opacity-40"
                     onClick={() => props.onDownloadSkill(task.id)}
                     disabled={busy}
                     data-tapbench-download-skill
@@ -118,7 +118,7 @@ export function TapbenchResultsTable(props: {
         </tbody>
       </table>
       <p
-        className="border-t border-zinc-800 px-3 py-2 text-[11px] text-zinc-500"
+        className="border-t border-white/25 px-3 py-2 text-[11px] text-zinc-500"
         data-tapbench-owner-distance-note
       >
         Best result is the agent region closest to the tapbench@uncertain.systems human pin.

@@ -1286,7 +1286,6 @@ export function MapWorldLayer({
                             <>
                               {blockNameFrame}
                               <span className="relative z-10 flex max-w-full flex-col items-center">
-                              {suggestMode === "chapter" ? statusGlyph : null}
                               <BlockGatherNotificationDot visible={Boolean(unseenGatherById?.[node.id])} />
                               {learnerLockedLabel}
                               {practiceBadge}

@@ -35,7 +35,6 @@ import {
   SCOUT_FOLLOWUP_QUESTION_COUNT,
   SCOUT_FRAME_PADDING_X,
   SCOUT_FRAME_WIDTH,
-  SCOUT_SPREAD_GAP_X,
   SCOUT_NODE_CUSTOM_DATA_KEY,
   SCOUT_ROLE_CUSTOM_DATA_KEY,
   SCOUT_QUESTION_MAX_WORDS,
@@ -286,8 +285,8 @@ describe("Scout pick → connected canvas node + 5 questions + go-back", () => {
         el.type === "rectangle" &&
         el.customData?.[SCOUT_NODE_CUSTOM_DATA_KEY] === afterPick.nodes[1]!.id,
     )!;
-    expect(childRect.y).toBeGreaterThanOrEqual(parentRect.y + parentRect.height);
-    expect(childRect.x).toBe(parentRect.x - (SCOUT_FRAME_WIDTH + SCOUT_SPREAD_GAP_X));
+    expect(childRect.x).toBe(parentRect.x);
+    expect(childRect.y).toBe(parentRect.y + parentRect.height + SCOUT_CHILD_GAP_Y);
 
     const childText = connected.scene.elements.find(
       (el) =>
@@ -313,6 +312,13 @@ describe("Scout pick → connected canvas node + 5 questions + go-back", () => {
       parentNodeId: afterPick.nodes[1]!.id,
     });
     const deeperArrow = deeper.added.find((el) => el.type === "arrow");
+    const deeperRect = deeper.scene.elements.find(
+      (el) =>
+        el.type === "rectangle" &&
+        el.customData?.[SCOUT_NODE_CUSTOM_DATA_KEY] === deeper.nodeId,
+    )!;
+    expect(deeperRect.x).toBe(childRect.x);
+    expect(deeperRect.y).toBe(childRect.y + childRect.height + SCOUT_CHILD_GAP_Y);
     expect(deeper.scene.elements.filter((el) => el.type === "arrow" && !el.isDeleted)).toHaveLength(2);
     expect(deeperArrow?.customData?.scoutParentId).toBe(afterPick.nodes[1]!.id);
     expect(deeperArrow?.y).toBeCloseTo(childRect.y + childRect.height);

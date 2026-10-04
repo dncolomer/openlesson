@@ -80,7 +80,7 @@ export function SessionSidebar({
   chapters?: ReactNode;
   signals?: ReactNode;
   transcript?: ReactNode;
-  /** Bottom row. Learn uses it for Save. Other flows use it for End session. */
+  /** Bottom row. Learn uses it for Exit. Other flows use it for End session. */
   actions?: ReactNode;
   /** Workspace files for this session. Hidden until the section is opened. */
   resources?: ReactNode;
@@ -147,7 +147,12 @@ export function SessionSidebar({
               <p className="mb-1 px-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
                 {SECTION_LABEL.signals}
               </p>
-              {signals}
+              <div
+                data-session-sidebar-signals-frame
+                className="pointer-events-auto w-full min-w-0 max-w-full border border-white/20 bg-neutral-950/95 p-2"
+              >
+                {signals}
+              </div>
             </div>
           ) : null}
         </div>

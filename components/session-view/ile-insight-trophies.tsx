@@ -234,22 +234,13 @@ export function IleMapInsightsWidget({
     <div
       data-ile-map-insights-widget
       data-ile-map-insights-goal={goal}
-      className="box-border flex w-full min-w-0 max-w-full flex-col gap-1.5 rounded-none border border-white/70 bg-neutral-950 px-2 py-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.45)]"
+      data-ile-map-insights-count={insights.length}
+      className="flex h-full min-h-0 w-full min-w-0 max-w-full flex-col"
     >
-      <p className="flex items-center gap-1.5 font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-white">
-        <IleInsightTrophyIcon className="size-3.5 text-white" />
-        Insights
-        <span
-          data-ile-map-insights-count
-          className="ml-auto bg-white px-1 py-0 font-mono text-[10px] text-neutral-950"
-        >
-          {insights.length}
-        </span>
-      </p>
       <ul
         data-ile-map-insights-slots=""
         data-ile-map-insights-slot-count={shown}
-        className="flex max-h-[min(22rem,50vh)] w-full flex-col gap-1.5 overflow-y-auto"
+        className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto px-1.5 py-1.5"
       >
         {insights.map((insight) => (
           <li key={insight.id} className="w-full">

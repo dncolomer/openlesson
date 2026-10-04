@@ -60,12 +60,10 @@ import {
   compressIleWorkCanvasSelection,
   ILE_SELECTIVE_COMPRESSION_LABEL,
   ILE_WORK_CANVAS_COMMANDS,
-  ILE_WORK_CANVAS_NEW_MARK_HIGHLIGHT_MS,
   ileSessionChatCanvasReply,
+  ileWorkCanvasAddedElementIds,
   ileWorkCanvasAskFromSessionChat,
-  ileWorkCanvasHighlightActive,
   ileWorkCanvasLayoutReply,
-  ileWorkCanvasNoteNewMarks,
   runIleWorkCanvasClearOverlaps,
   ILE_COMPRESS_WORK_CUSTOM_DATA_KEY,
   ILE_COMPRESS_WORK_LABEL,
@@ -596,7 +594,7 @@ describe("TAP Learning Work canvas ask-XAI on selection (shipped)", () => {
 
     const canvas = read("components/ExcalidrawCanvas.tsx");
     expect(canvas).toContain("ileWorkCanvasViewportToHost");
-    expect(canvas).toContain("ileWorkCanvasSelectionHostRect");
+    expect(canvas).not.toContain("ileWorkCanvasSelectionHostRect");
     expect(canvas).toContain("canvasHostOrigin()");
 
     expect(ileLearnMoreSelectionKey({ a: true, c: true, b: false })).toBe("a,c");
@@ -2204,7 +2202,7 @@ function boxSeparation(
 }
 
 describe("TAP Learning Work canvas selection commands (shipped)", () => {
-  it("compresses only the selection, refactors it, suggests an insight, clears overlaps, and highlights new marks", () => {
+  it("compresses only the selection, refactors it, suggests an insight, and clears overlaps", () => {
     const selected = convertToExcalidrawElements([
       { type: "text", text: "alpha claim about last resort", x: 0, y: 0, width: 200, height: 48 },
       { type: "text", text: "beta claim about proportionality", x: 40, y: 16, width: 200, height: 48 },
@@ -2478,19 +2476,10 @@ describe("TAP Learning Work canvas selection commands (shipped)", () => {
     ])[0]!;
     const movedOnly = { ...alpha, x: alpha.x + 25 };
     const after = { elements: [movedOnly, beta, kept, added] };
-    const noted = ileWorkCanvasNoteNewMarks({ elements: [alpha, beta, kept] }, after, 5_000);
-    expect(noted.scene).toBe(after);
-    expect(noted.highlight.ids).toEqual([added.id]);
+    expect(ileWorkCanvasAddedElementIds({ elements: [alpha, beta, kept] }, after)).toEqual([added.id]);
     expect(after.elements[0]?.x).toBe(movedOnly.x);
     expect(elementWords(after.elements[0])).toBe(elementWords(movedOnly));
-    expect(elementWords(added)).toBe(elementWords(noted.scene.elements.find((el) => el.id === added.id)));
-    expect(ileWorkCanvasHighlightActive(noted.highlight, 5_000)).toEqual([added.id]);
-    expect(
-      ileWorkCanvasHighlightActive(noted.highlight, 5_000 + ILE_WORK_CANVAS_NEW_MARK_HIGHLIGHT_MS - 1),
-    ).toEqual([added.id]);
-    expect(
-      ileWorkCanvasHighlightActive(noted.highlight, 5_000 + ILE_WORK_CANVAS_NEW_MARK_HIGHLIGHT_MS),
-    ).toEqual([]);
+    expect(elementWords(added)).toBe("fresh reply");
 
     const canvas = read("components/ExcalidrawCanvas.tsx");
     const view = read("components/SessionView.tsx");
@@ -2522,28 +2511,26 @@ describe("TAP Learning Work canvas selection commands (shipped)", () => {
     expect(canvas).toContain("applyIleWorkCanvasSuggestInsight");
     expect(canvas).not.toContain("buildIleCanvasCraftInsightEvaluateRequest");
     expect(canvas).not.toContain("ILE_TURN_INSIGHT_CREATE_PATH");
-    expect(canvas).toContain("data-ile-canvas-new-mark");
-    expect(canvas).toContain("ileWorkCanvasNoteNewMarks");
+    expect(canvas).not.toContain("data-ile-canvas-new-mark");
+    expect(canvas).not.toContain("ileWorkCanvasNoteNewMarks");
+    expect(canvas).not.toContain("rememberNewCanvasMarks");
     const paste = canvas.slice(
       canvas.indexOf("const flushPendingApply"),
       canvas.indexOf("const syncPromptBarPlacement"),
     );
-    expect(paste).toContain("rememberNewCanvasMarks");
     expect(paste).toContain("scrollToContent");
-    const rememberBody = canvas.slice(
-      canvas.indexOf("const rememberNewCanvasMarks"),
-      canvas.indexOf("const syncThinkingOverlay"),
-    );
-    expect(rememberBody).toContain("ileWorkCanvasNoteNewMarks");
+    expect(paste).not.toContain("data-ile-canvas-new-mark");
     const applyBody = canvas.slice(
       canvas.indexOf("const applyReply"),
       canvas.indexOf("const reply = await ask"),
     );
-    expect(applyBody).toContain("ileWorkCanvasNoteNewMarks");
+    expect(applyBody).toContain("ileWorkCanvasAddedElementIds");
     expect(applyBody).toContain("scrollToContent");
+    expect(applyBody).not.toContain("ileWorkCanvasNoteNewMarks");
     const changeStart = canvas.indexOf("const handleChange = useCallback");
     const changeBody = canvas.slice(changeStart, canvas.indexOf("debouncedExportPNG();", changeStart));
     expect(changeBody).not.toContain("ileWorkCanvasNoteNewMarks");
+    expect(changeBody).not.toContain("data-ile-canvas-new-mark");
     expect(view).toContain("buildIleWorkCanvasCommandUserMessage");
     expect(view).not.toContain("buildIleWorkCanvasCompressUserMessage");
     expect(view).toContain("ileWorkCanvasAskFromSessionChat");
@@ -2575,7 +2562,6 @@ describe("TAP Learning Work canvas selection commands (shipped)", () => {
         `clearAskCalls=${ask.calls.length}`,
         `gappedAskCalls=${gappedAsk.calls.length}`,
         `modelAsk=${modelAsk.calls.length}`,
-        `highlightUntil=${noted.highlight.untilMs}`,
         "commands=Rephrase Split Elaborate Compress Refactor Suggest Insight Clear overlaps",
       ].join("\n") + "\n",
     );

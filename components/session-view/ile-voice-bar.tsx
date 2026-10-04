@@ -52,7 +52,7 @@ export function IleVoiceBar({ thought }: { thought: SessionThoughtInterface }) {
   );
 }
 
-/** Data, Logs, and Save. Mounted in the sidebar actions row, under the transcript. */
+/** Data, Logs, and Exit. Mounted in the sidebar actions row, under the transcript. */
 export function IleVoiceBarActions({
   activeTool,
   onToolChange,
@@ -109,7 +109,7 @@ export function IleVoiceBarActions({
           onClick={onBackToDashboard}
           className={`${SESSION_SIDEBAR_PRIMARY_BUTTON_CLASS} flex-1`}
         >
-          Save
+          Exit
         </button>
       ) : null}
     </div>

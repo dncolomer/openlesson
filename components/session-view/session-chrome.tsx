@@ -60,7 +60,7 @@ export type SessionChromeProps = {
   introWidget: ReactNode;
   onCloseSessionModal?: () => void;
   voiceBar: ReactNode;
-  /** Data, Logs, and Save. */}
+  /** Data, Logs, and Exit. */
   actions?: ReactNode;
   powCounts: IlePowDisplayCounts;
   unsubmittedPowCounts?: IlePowDisplayCounts;
@@ -237,7 +237,7 @@ export function SessionChrome({
           focusLabel="Insights"
           focus={
             mapInsightsWidget ? (
-              <div id="insights" className="h-full min-h-0 overflow-y-auto">
+              <div id="insights" className="flex h-full min-h-0 flex-col">
                 {mapInsightsWidget}
               </div>
             ) : null

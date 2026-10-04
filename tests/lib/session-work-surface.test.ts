@@ -164,7 +164,7 @@ describe("shared live work surface", () => {
     const voice = read("components/session-view/ile-voice-bar.tsx");
     expect(voice).toContain("data-ile-bar-save");
     expect(voice).toContain("data-save-and-exit");
-    expect(voice).toMatch(/data-ile-bar-save[\s\S]{0,400}\n\s*Save/);
+    expect(voice).toMatch(/data-ile-bar-save[\s\S]{0,400}\n\s*Exit/);
     expect(learn).toContain("actions={actions}");
     expect(learn).toContain("transcript={voiceBar}");
     expect(read("components/SessionView.tsx")).toContain("<IleVoiceBarActions");

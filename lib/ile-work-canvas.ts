@@ -2880,7 +2880,6 @@ export function joinIleWorkCanvasSelection(
 
 export const ILE_SELECTIVE_COMPRESSION_LABEL = "Compress";
 export const ILE_WORK_CANVAS_OVERLAP_GAP = 16;
-export const ILE_WORK_CANVAS_NEW_MARK_HIGHLIGHT_MS = 1800;
 
 export const ILE_WORK_CANVAS_COMMANDS = [
   {
@@ -2937,11 +2936,6 @@ export type IleWorkCanvasAskKind =
   | "refactor"
   | "suggest-insight"
   | "clear-overlaps";
-
-export type IleWorkCanvasNewMarkHighlight = {
-  ids: string[];
-  untilMs: number;
-};
 
 export type IleWorkCanvasClearOverlapsResult = {
   scene: IleWorkCanvasScene;
@@ -3421,47 +3415,4 @@ export function ileWorkCanvasAddedElementIds(
     ids.push(id);
   }
   return ids;
-}
-
-export function ileWorkCanvasNewMarkHighlight(
-  ids: readonly string[] | null | undefined,
-  nowMs: number,
-  durationMs = ILE_WORK_CANVAS_NEW_MARK_HIGHLIGHT_MS,
-): IleWorkCanvasNewMarkHighlight {
-  const unique: string[] = [];
-  const seen = new Set<string>();
-  for (const raw of ids ?? []) {
-    const id = String(raw || "").trim();
-    if (!id || seen.has(id)) continue;
-    seen.add(id);
-    unique.push(id);
-  }
-  const now = Number.isFinite(Number(nowMs)) ? Number(nowMs) : 0;
-  const duration = Number(durationMs);
-  const span = Number.isFinite(duration) && duration > 0 ? duration : ILE_WORK_CANVAS_NEW_MARK_HIGHLIGHT_MS;
-  return { ids: unique, untilMs: now + span };
-}
-
-export function ileWorkCanvasHighlightActive(
-  highlight: IleWorkCanvasNewMarkHighlight | null | undefined,
-  nowMs: number,
-): string[] {
-  if (!highlight?.ids.length) return [];
-  const now = Number(nowMs);
-  if (!Number.isFinite(now) || now >= highlight.untilMs) return [];
-  return highlight.ids.slice();
-}
-
-/** Record ids the canvas itself inserted. Does not change the scene. */
-export function ileWorkCanvasNoteNewMarks<T extends {
-  elements?: readonly { id?: string | null; isDeleted?: boolean }[] | null;
-}>(
-  before: { elements?: readonly { id?: string | null; isDeleted?: boolean }[] | null } | null | undefined,
-  after: T,
-  nowMs: number,
-): { scene: T; highlight: IleWorkCanvasNewMarkHighlight } {
-  return {
-    scene: after,
-    highlight: ileWorkCanvasNewMarkHighlight(ileWorkCanvasAddedElementIds(before, after), nowMs),
-  };
 }

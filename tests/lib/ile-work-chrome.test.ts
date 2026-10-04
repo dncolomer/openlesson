@@ -331,7 +331,7 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     expect(voiceBar).toContain("data-ile-bar-save");
     expect(voiceBar).toMatch(/data-ile-bar-data[\s\S]{0,400}\n\s*Data/);
     expect(voiceBar).toMatch(/data-ile-bar-logs[\s\S]{0,400}\n\s*Logs/);
-    expect(voiceBar).toMatch(/data-ile-bar-save[\s\S]{0,400}\n\s*Save/);
+    expect(voiceBar).toMatch(/data-ile-bar-save[\s\S]{0,400}\n\s*Exit/);
     expect(voiceBar.indexOf("data-ile-transcription-box")).toBeLessThan(
       voiceBar.indexOf("data-ile-voice-bar-actions"),
     );

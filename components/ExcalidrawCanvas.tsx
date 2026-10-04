@@ -30,14 +30,12 @@ import {
   ileCanvasPromptBarWidth,
   ileCanvasPromptMode,
   ileWorkCanvasQuickActionPrompt,
-  ileWorkCanvasSelectionHostRect,
   ileWorkCanvasThinkingOccupancy,
   ileWorkCanvasEmptyNearbyOriginWithReserved,
   ileWorkCanvasFiniteOrigin,
+  ileWorkCanvasAddedElementIds,
   ileWorkCanvasHasLiveElements,
-  ileWorkCanvasHighlightActive,
   ileWorkCanvasLayoutReply,
-  ileWorkCanvasNoteNewMarks,
   ileWorkCanvasShouldRestoreEmptyBoard,
   ileWorkCanvasSceneToViewport,
   ileWorkCanvasThinkingOverlayStyle,
@@ -55,7 +53,6 @@ import {
   ILE_WORK_CANVAS_COMMANDS,
   type IleWorkCanvasAskKind,
   type IleWorkCanvasCommandId,
-  type IleWorkCanvasNewMarkHighlight,
   ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS,
   ILE_XAI_LOADING_BOX_HEIGHT,
   ILE_XAI_LOADING_BOX_WIDTH,
@@ -268,9 +265,6 @@ export function ExcalidrawCanvas({
   const [boardPrompt, setBoardPrompt] = useState("");
   const [askInFlight, setAskInFlight] = useState(0);
   const [craftInsightOpen, setCraftInsightOpen] = useState(false);
-  const [highlightBoxes, setHighlightBoxes] = useState<
-    Array<{ id: string; left: number; top: number; width: number; height: number }>
-  >([]);
   const lastReplaceNonceRef = useRef<string | number | null>(null);
   const [canvasSelectionActive, setCanvasSelectionActive] = useState(false);
   const [promptBarTop, setPromptBarTop] = useState(ILE_CANVAS_PROMPT_BAR_FALLBACK_TOP);
@@ -285,8 +279,6 @@ export function ExcalidrawCanvas({
   const applyChainRef = useRef(Promise.resolve());
   const thinkingChipsRef = useRef(thinkingChips);
   const thinkingHostByIdRef = useRef(new Map<string, HTMLDivElement>());
-  const newMarkHighlightRef = useRef<IleWorkCanvasNewMarkHighlight | null>(null);
-  const newMarkHighlightTimerRef = useRef<number | null>(null);
   
   // Store the latest scene data for PNG export
    
@@ -362,69 +354,6 @@ export function ExcalidrawCanvas({
     };
   }, []);
 
-  const projectNewMarkHighlight = useCallback((elements: readonly any[], appState: any) => {
-    const active = ileWorkCanvasHighlightActive(newMarkHighlightRef.current, Date.now());
-    if (!active.length) {
-      setHighlightBoxes((prev) => (prev.length ? [] : prev));
-      return;
-    }
-    const host = canvasHostOrigin();
-    const wanted = new Set(active);
-    const boxes: Array<{ id: string; left: number; top: number; width: number; height: number }> = [];
-    for (const el of elements) {
-      if (!el?.id || el.isDeleted || !wanted.has(el.id)) continue;
-      const rect = ileWorkCanvasSelectionHostRect([el], appState, host);
-      if (!rect) continue;
-      const width = Math.round(rect.right - rect.left);
-      const height = Math.round(rect.bottom - rect.top);
-      if (width <= 0 || height <= 0) continue;
-      boxes.push({
-        id: el.id,
-        left: Math.round(rect.left),
-        top: Math.round(rect.top),
-        width,
-        height,
-      });
-    }
-    setHighlightBoxes((prev) => {
-      if (
-        prev.length === boxes.length &&
-        prev.every(
-          (box, index) =>
-            box.id === boxes[index]?.id &&
-            box.left === boxes[index]?.left &&
-            box.top === boxes[index]?.top &&
-            box.width === boxes[index]?.width &&
-            box.height === boxes[index]?.height,
-        )
-      ) {
-        return prev;
-      }
-      return boxes;
-    });
-  }, [canvasHostOrigin]);
-
-  const rememberNewCanvasMarks = useCallback((
-    before: { elements?: readonly { id?: string; isDeleted?: boolean }[] | null } | null,
-    after: { elements?: readonly { id?: string; isDeleted?: boolean }[] | null },
-    elements: readonly any[],
-    appState: any,
-  ) => {
-    const noted = ileWorkCanvasNoteNewMarks(before, after, Date.now());
-    if (!noted.highlight.ids.length) return;
-    newMarkHighlightRef.current = noted.highlight;
-    if (newMarkHighlightTimerRef.current != null) {
-      window.clearTimeout(newMarkHighlightTimerRef.current);
-    }
-    const delay = Math.max(0, noted.highlight.untilMs - Date.now());
-    newMarkHighlightTimerRef.current = window.setTimeout(() => {
-      if (newMarkHighlightRef.current?.untilMs !== noted.highlight.untilMs) return;
-      newMarkHighlightRef.current = null;
-      setHighlightBoxes([]);
-    }, delay);
-    projectNewMarkHighlight(elements, appState);
-  }, [projectNewMarkHighlight]);
-
   const flushPendingApply = useCallback(() => {
     const api = excalidrawAPIRef.current;
     const pending = pendingApplyRef.current;
@@ -485,18 +414,12 @@ export function ExcalidrawCanvas({
     } finally {
       applyingRemoteRef.current = false;
     }
-    rememberNewCanvasMarks(
-      { elements: existing as IleWorkCanvasElement[] },
-      { elements: merged },
-      merged,
-      api.getAppState?.() ?? {},
-    );
     if (added.length && typeof api.scrollToContent === "function") {
       api.scrollToContent(added, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS);
     } else {
       scheduleCenterOnOpen();
     }
-  }, [rememberNewCanvasMarks, scheduleCenterOnOpen]);
+  }, [scheduleCenterOnOpen]);
 
   const syncPromptBarPlacement = useCallback(() => {
     const host = canvasHostRef.current;
@@ -562,9 +485,6 @@ export function ExcalidrawCanvas({
 
   useEffect(() => {
     return () => {
-      if (newMarkHighlightTimerRef.current != null) {
-        window.clearTimeout(newMarkHighlightTimerRef.current);
-      }
       onLearnerWaitChangeRef.current?.({
         canvasLoading: true,
         waitingForXaiReply: false,
@@ -745,8 +665,8 @@ export function ExcalidrawCanvas({
                       reserved: reservedThinkingOrigins(turnId),
                     },
                   );
-        const noted = ileWorkCanvasNoteNewMarks(live, next, Date.now());
-        const added = next.elements.filter((el) => noted.highlight.ids.includes(el.id) && !el.isDeleted);
+        const addedIds = new Set(ileWorkCanvasAddedElementIds(live, next));
+        const added = next.elements.filter((el) => addedIds.has(el.id) && !el.isDeleted);
         applyingRemoteRef.current = true;
         try {
           api.updateScene({
@@ -758,7 +678,6 @@ export function ExcalidrawCanvas({
         } finally {
           applyingRemoteRef.current = false;
         }
-        rememberNewCanvasMarks(live, next, next.elements, api.getAppState?.() ?? {});
         if (added.length && typeof api.scrollToContent === "function") {
           api.scrollToContent(added, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS);
         }
@@ -806,7 +725,6 @@ export function ExcalidrawCanvas({
     [
       enqueueCanvasAskApply,
       projectThinkingChip,
-      rememberNewCanvasMarks,
       removeThinkingChip,
       reservedThinkingOrigins,
       upsertThinkingChip,
@@ -867,7 +785,6 @@ export function ExcalidrawCanvas({
         } finally {
           applyingRemoteRef.current = false;
         }
-        rememberNewCanvasMarks(live, scene, scene.elements, api.getAppState?.() ?? {});
         if (parts.length && typeof api.scrollToContent === "function") {
           api.scrollToContent(parts, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS);
         }
@@ -946,7 +863,7 @@ export function ExcalidrawCanvas({
         kind: "suggest-insight",
       });
     },
-    [rememberNewCanvasMarks, runCanvasAsk, selectedCanvasElements],
+    [runCanvasAsk, selectedCanvasElements],
   );
 
   const writeDictatedText = useCallback(
@@ -980,7 +897,6 @@ export function ExcalidrawCanvas({
         }
         const created = Boolean(result.elementId && result.elementId !== previousId);
         if (created) {
-          rememberNewCanvasMarks(live, result.scene, result.scene.elements, api.getAppState?.() ?? {});
           const mark = result.scene.elements.find((el) => el.id === result.elementId);
           if (mark && typeof api.scrollToContent === "function") {
             api.scrollToContent([mark], ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS);
@@ -999,7 +915,7 @@ export function ExcalidrawCanvas({
       });
       if (powEvents.length) onCanvasPowActionsRef.current?.(powEvents);
     },
-    [rememberNewCanvasMarks],
+    [],
   );
 
   const handleBoardAsk = useCallback(() => {
@@ -1198,9 +1114,8 @@ export function ExcalidrawCanvas({
       debouncedExportPNG();
       syncCanvasSelection(appState);
       syncThinkingOverlay(appState);
-      projectNewMarkHighlight(elements, appState);
     },
-    [debouncedExportPNG, projectNewMarkHighlight, syncCanvasSelection, syncThinkingOverlay]
+    [debouncedExportPNG, syncCanvasSelection, syncThinkingOverlay]
   );
 
   const handlePointerUpdate = useCallback(
@@ -1465,14 +1380,6 @@ export function ExcalidrawCanvas({
               </span>
             </div>
           </div>
-        ))}
-        {highlightBoxes.map((box) => (
-          <div
-            key={box.id}
-            data-ile-canvas-new-mark={box.id}
-            className="pointer-events-none absolute z-[54] animate-pulse rounded-none border-2 border-white shadow-[0_0_0_4px_rgba(255,255,255,0.28)]"
-            style={{ left: box.left, top: box.top, width: box.width, height: box.height }}
-          />
         ))}
         {onAskSelected ? (
           <form

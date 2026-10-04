@@ -173,7 +173,11 @@ describe("session sidebar mode configuration", () => {
     expect(html).toContain("data-ile-map-insights-count");
     expect(html).toContain("Rail insight");
     expect(html).toContain("Chapters body");
-    expect(html).toContain("Signals body");
+    expect(html).toContain("data-session-sidebar-signals-frame");
+    expect(html).toContain("border border-white/20 bg-neutral-950/95 p-2");
+    const signalsFrameAt = html.indexOf("data-session-sidebar-signals-frame");
+    expect(signalsFrameAt).toBeGreaterThan(signalsAt);
+    expect(html.indexOf("Signals body")).toBeGreaterThan(signalsFrameAt);
     expect(html).toContain("live speech line");
     const transcriptAt = html.indexOf("data-ile-transcription-box");
     const actionsRowAt = html.indexOf("data-session-sidebar-actions");
@@ -188,7 +192,7 @@ describe("session sidebar mode configuration", () => {
     expect(html).toContain("data-ile-bar-save");
     expect(html).toContain(">Data<");
     expect(html).toContain(">Logs<");
-    expect(html).toContain(">Save<");
+    expect(html).toContain(">Exit<");
     expect(html).not.toContain("data-ile-work-canvas-timer");
     expect(html).not.toContain("data-session-sidebar-clock");
     expect(html).not.toContain("data-session-sidebar-count");
@@ -211,7 +215,7 @@ describe("session sidebar mode configuration", () => {
     expect(html).toContain("live speech line");
     expect(html).toContain("data-session-sidebar-actions");
     expect(html).toContain("data-ile-bar-save");
-    expect(html).toContain(">Save<");
+    expect(html).toContain(">Exit<");
     expect(html).toContain(">Chapters<");
     expect(html).toContain(">Signals<");
     expect(html).not.toContain("display:none");

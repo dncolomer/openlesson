@@ -30,8 +30,9 @@ export const SCOUT_FRAME_PADDING_X = 14;
 export const SCOUT_FRAME_PADDING_Y = 12;
 export const SCOUT_FONT_SIZE = 16;
 export const SCOUT_CHILD_GAP_Y = 48;
-/** Horizontal step so picked questions sit in a spread, not one column. */
+/** @deprecated The rabbit hole is one column. Kept so older imports compile. */
 export const SCOUT_SPREAD_GAP_X = 80;
+/** @deprecated The rabbit hole is one column. Kept so older imports compile. */
 export const SCOUT_SPREAD_GAP_Y = 72;
 export const SCOUT_SEED_X = 72;
 export const SCOUT_SEED_Y = 40;
@@ -444,23 +445,21 @@ function scoutChildRectangles(
   );
 }
 
+/**
+ * One column under the parent. A later sibling keeps that column, under the
+ * previous frame. settle slides it only when that spot already hits something.
+ */
 function nextScoutChildOrigin(
   scene: IleWorkCanvasScene,
   parent: Pick<IleWorkCanvasElement, "x" | "y" | "width" | "height">,
   parentNodeId: string,
 ): { x: number; y: number } {
   const siblings = scoutChildRectangles(scene, parentNodeId);
-  const index = siblings.length;
-  const columns = 3;
-  const col = index % columns;
-  const row = Math.floor(index / columns);
-  const x = parent.x + (col - 1) * (SCOUT_FRAME_WIDTH + SCOUT_SPREAD_GAP_X);
-  const y =
-    parent.y +
-    parent.height +
-    SCOUT_SPREAD_GAP_Y +
-    row * (SCOUT_FRAME_MIN_HEIGHT + SCOUT_SPREAD_GAP_Y);
-  return { x, y };
+  const floor = siblings.reduce(
+    (bottom, el) => Math.max(bottom, el.y + el.height),
+    parent.y + parent.height,
+  );
+  return { x: parent.x, y: floor + SCOUT_CHILD_GAP_Y };
 }
 
 /** Seed the shared Work canvas with the topic as framed text. */

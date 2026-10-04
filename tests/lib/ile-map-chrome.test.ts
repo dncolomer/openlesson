@@ -325,7 +325,7 @@ describe("TAP Learning map-first session chrome (shipped surface)", () => {
     expect(voice).toContain("data-ile-bar-save");
     expect(voice).toMatch(/data-ile-bar-data[\s\S]{0,400}\n\s*Data/);
     expect(voice).toMatch(/data-ile-bar-logs[\s\S]{0,400}\n\s*Logs/);
-    expect(voice).toMatch(/data-ile-bar-save[\s\S]{0,400}\n\s*Save/);
+    expect(voice).toMatch(/data-ile-bar-save[\s\S]{0,400}\n\s*Exit/);
     expect(voice.indexOf("data-ile-transcription-box")).toBeLessThan(
       voice.indexOf("data-ile-voice-bar-actions"),
     );

@@ -28,7 +28,7 @@ export default function KnowledgeVerificationPage() {
   return (
     <MarketingPageShell>
       <section className="relative z-10 mx-auto w-full max-w-7xl px-6 pt-14 pb-10 sm:pt-16 sm:pb-12">
-        <div className="mb-6 inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
+        <div className="mb-6 inline-block rounded-none border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
           {VERIFICATION_PRODUCT_COPY.eyebrow}
         </div>
         <h1 className="max-w-5xl text-5xl font-medium leading-[1.03] tracking-[-2.8px] text-white sm:text-6xl lg:text-[68px]">
@@ -40,7 +40,7 @@ export default function KnowledgeVerificationPage() {
         <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
           <Link
             href={VERIFICATION_PRODUCT_COPY.pricingHref}
-            className="inline-flex min-h-12 items-center justify-center rounded-sm bg-white px-5 py-3 text-sm font-medium text-black transition hover:bg-zinc-200"
+            className="inline-flex min-h-12 items-center justify-center rounded-none bg-white px-5 py-3 text-sm font-medium text-black transition hover:bg-zinc-200"
           >
             {VERIFICATION_PRODUCT_COPY.pricingCta}
             <ArrowRight className="ml-2" size={16} />
@@ -48,7 +48,7 @@ export default function KnowledgeVerificationPage() {
           <Link
             href={VERIFICATION_PRODUCT_COPY.tapbenchHref}
             data-landing-tapbench
-            className="inline-flex min-h-12 items-center justify-center rounded-sm border border-zinc-800 bg-zinc-950/60 px-5 py-3 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-white"
+            className="inline-flex min-h-12 items-center justify-center rounded-none border border-zinc-800 bg-zinc-950/60 px-5 py-3 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-white"
           >
             {VERIFICATION_PRODUCT_COPY.tapbenchCta}
           </Link>
@@ -73,7 +73,7 @@ export default function KnowledgeVerificationPage() {
           Regions stay private to the workspace.
         </p>
         <div
-          className="mt-6 overflow-hidden rounded-sm border border-zinc-800 bg-zinc-950/80 shadow-[0_0_0_1px_rgba(255,255,255,0.03)]"
+          className="mt-6 overflow-hidden rounded-none border border-zinc-800 bg-zinc-950/80 shadow-[0_0_0_1px_rgba(255,255,255,0.03)]"
           data-landing-knowledge-visual
         >
           <div className="relative aspect-[16/9] w-full sm:aspect-[2918/1656]">
@@ -170,7 +170,7 @@ export default function KnowledgeVerificationPage() {
           </div>
           <div className="min-w-0 w-full md:justify-self-end">
             <figure
-              className="overflow-hidden rounded-sm border border-zinc-800 bg-zinc-950/80 shadow-[0_20px_60px_-24px_rgba(0,0,0,0.85)] md:max-w-lg lg:max-w-xl md:ml-auto"
+              className="overflow-hidden rounded-none border border-zinc-800 bg-zinc-950/80 shadow-[0_20px_60px_-24px_rgba(0,0,0,0.85)] md:max-w-lg lg:max-w-xl md:ml-auto"
               data-landing-ranking-visual
             >
               <Image

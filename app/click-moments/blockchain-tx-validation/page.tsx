@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { PublicConsoleWash } from "@/components/ui/console-frame";
 
 export const metadata: Metadata = {
   title: "Blockchain TX Validation Click Moment",
@@ -48,8 +49,8 @@ const stages = [
 
 function HeliosMark() {
   return (
-    <div className="relative flex size-20 items-center justify-center rounded-full border border-rose-400/60 bg-neutral-950/50 shadow-[0_0_0_5px_rgba(244,63,94,0.08),0_0_42px_rgba(244,63,94,0.16)]">
-      <div className="absolute inset-1.5 rounded-full border border-rose-400/35" />
+    <div className="relative flex size-20 items-center justify-center border border-white/40 bg-black">
+      <div className="absolute inset-1.5 border border-white/25" />
       <span className="font-serif text-3xl text-white">H</span>
     </div>
   );
@@ -57,7 +58,7 @@ function HeliosMark() {
 
 function SourceVideo() {
   return (
-    <div className="overflow-hidden rounded-sm border border-zinc-800 bg-zinc-950/85">
+    <div className="overflow-hidden rounded-none border border-zinc-800 bg-zinc-950/85">
       <iframe
         className="aspect-video w-full"
         src="https://www.youtube.com/embed/OSYthPTp9Es"
@@ -77,16 +78,16 @@ export default function BlockchainTxValidationPage() {
       style={{ backgroundImage: `url(${backgroundImage})`, backgroundPosition: "center", backgroundSize: "cover" }}
     >
       <div className="absolute inset-0 bg-[#0a0a0a]/78" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,rgba(244,63,94,0.12),transparent_30%),linear-gradient(to_bottom,rgba(0,0,0,0.2),rgba(0,0,0,0.7))]" />
+      <PublicConsoleWash className="absolute inset-0" />
 
-      <article className="relative z-10 w-full max-w-[1080px] rounded-md border border-zinc-800 bg-zinc-950/88 shadow-2xl shadow-black/70 backdrop-blur-sm">
+      <article className="relative z-10 w-full max-w-[1080px] rounded-none border border-zinc-800 bg-zinc-950/88 shadow-2xl shadow-black/70 backdrop-blur-sm">
         <div className="absolute inset-0 opacity-[0.045] [background-image:linear-gradient(rgba(255,255,255,0.7)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.7)_1px,transparent_1px)] [background-size:48px_48px]" />
         <div className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-white/[0.035] to-transparent" />
 
         <div className="relative flex flex-col p-[5.6%]">
           <header className="flex items-start justify-between gap-8">
             <div>
-              <p className="inline-block rounded-sm border border-zinc-800 bg-black/70 px-3 py-1 font-mono text-[clamp(9px,1vw,12px)] uppercase tracking-[0.32em] text-zinc-500">
+              <p className="inline-block rounded-none border border-zinc-800 bg-black/70 px-3 py-1 font-mono text-[clamp(9px,1vw,12px)] uppercase tracking-[0.32em] text-zinc-500">
                 Uncertain Systems Click Moment 001
               </p>
               <h1 className="mt-6 max-w-[760px] text-[clamp(46px,7.2vw,86px)] font-medium leading-[0.92] tracking-[-0.08em] text-white">
@@ -96,14 +97,14 @@ export default function BlockchainTxValidationPage() {
             <div className="hidden shrink-0 text-center sm:block">
               <HeliosMark />
               <p className="mt-3 text-sm text-zinc-300">Helios</p>
-              <div className="mx-auto mt-2 h-1 w-8 rounded-full bg-rose-400" />
+              <div className="mx-auto mt-2 h-1 w-8 bg-white" />
             </div>
           </header>
 
           <div className="mt-[5%] grid flex-1 gap-[4%] lg:grid-cols-[0.92fr_1.08fr]">
-            <section className="flex min-h-0 flex-col justify-between rounded-sm border border-zinc-800 bg-black/35 p-6">
+            <section className="flex min-h-0 flex-col justify-between rounded-none border border-zinc-800 bg-black/35 p-6">
               <div>
-                <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-emerald-400/70">Real learner quote</p>
+                <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-white/55">Real learner quote</p>
                 <blockquote className="mt-5 text-[clamp(24px,3.2vw,42px)] font-medium leading-[1.03] tracking-[-0.07em] text-white">
                   &quot;I see, I see, I see. The beauty here is... this is pretty nuts, actually.&quot;
                 </blockquote>
@@ -125,7 +126,7 @@ export default function BlockchainTxValidationPage() {
             <section className="flex min-h-0 flex-col gap-3">
               <div className="grid flex-1 grid-rows-4 gap-3">
                 {stages.map((stage) => (
-                  <div key={stage.label} className="grid grid-cols-[56px_minmax(0,1fr)] gap-4 rounded-sm border border-zinc-800 bg-black/35 p-5">
+                  <div key={stage.label} className="grid grid-cols-[56px_minmax(0,1fr)] gap-4 rounded-none border border-zinc-800 bg-black/35 p-5">
                     <div>
                       <p className="flex size-10 items-center justify-center rounded-full border border-zinc-700 bg-zinc-950/80 font-mono text-[11px] text-zinc-400">{stage.label}</p>
                     </div>
@@ -134,7 +135,7 @@ export default function BlockchainTxValidationPage() {
                       <ul className="mt-4 space-y-2 text-[clamp(13px,1.2vw,16px)] leading-snug text-zinc-400">
                         {stage.points.map((point) => (
                           <li key={point} className="flex gap-2">
-                            <span className="mt-0.5 text-rose-400">-</span>
+                            <span className="mt-0.5 text-white/70">-</span>
                             <span>{point}</span>
                           </li>
                         ))}
@@ -147,11 +148,11 @@ export default function BlockchainTxValidationPage() {
           </div>
 
           <footer className="mt-8 flex flex-col items-stretch justify-between gap-4 border-t border-zinc-800 pt-5 sm:mt-[4%] sm:flex-row sm:items-end sm:gap-6">
-            <div className="rounded-sm border border-zinc-800 bg-black/25 p-4 text-center sm:border-0 sm:bg-transparent sm:p-0 sm:text-left">
+            <div className="rounded-none border border-zinc-800 bg-black/25 p-4 text-center sm:border-0 sm:bg-transparent sm:p-0 sm:text-left">
               <p className="text-xl font-semibold tracking-[-0.04em] text-white">Uncertain Systems</p>
               <div className="mt-3 flex flex-wrap justify-center gap-2 sm:hidden">
                 {['Think aloud', 'Get probed', 'Feel the click'].map((item) => (
-                  <span key={item} className="rounded-sm border border-zinc-800 bg-zinc-950/70 px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.16em] text-zinc-500">
+                  <span key={item} className="rounded-none border border-zinc-800 bg-zinc-950/70 px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.16em] text-zinc-500">
                     {item}
                   </span>
                 ))}

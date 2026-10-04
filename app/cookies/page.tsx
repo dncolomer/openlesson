@@ -4,12 +4,13 @@ import Link from "next/link";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
 import { useI18n } from "@/lib/i18n";
+import { ConsolePage } from "@/components/ui/console-frame";
 
 export default function CookiesPage() {
   const { t } = useI18n();
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0a0a0a]">
+    <ConsolePage label="Note">
       <Navbar 
         breadcrumbs={[{ label: t('cookies.title') }]}
         showNav={false}
@@ -48,7 +49,7 @@ export default function CookiesPage() {
 
             <h3 className="text-sm font-medium text-neutral-300 mb-2">{t('cookies.essentialCookiesLabel')}</h3>
             <div className="overflow-x-auto mb-4">
-              <table className="w-full text-xs border border-neutral-800 rounded-lg overflow-hidden">
+              <table className="w-full text-xs border border-neutral-800 rounded-none overflow-hidden">
                 <thead>
                   <tr className="bg-neutral-800/50">
                     <th className="text-left px-3 py-2 text-neutral-300 font-medium">{t('cookies.tableHeaderCookie')}</th>
@@ -100,7 +101,7 @@ export default function CookiesPage() {
               <li><a href="https://support.apple.com/guide/safari/manage-cookies-sfri11471/mac" target="_blank" rel="noopener noreferrer" className="text-neutral-300 hover:text-neutral-300">{t('cookies.browserSafari')}</a></li>
               <li><a href="https://support.microsoft.com/en-us/microsoft-edge/delete-cookies-in-microsoft-edge-63947406-40ac-c3b8-57b9-2a946a29ae09" target="_blank" rel="noopener noreferrer" className="text-neutral-300 hover:text-neutral-300">{t('cookies.browserEdge')}</a></li>
             </ul>
-            <p className="mt-3 p-3 rounded-lg bg-neutral-800/5 border border-neutral-600/20 text-neutral-300/80 text-xs">
+            <p className="mt-3 p-3 rounded-none bg-neutral-800/5 border border-neutral-600/20 text-neutral-300/80 text-xs">
               <strong>{t('cookies.noteLabel')}:</strong> {t('cookies.disablingNote')}
             </p>
           </section>
@@ -115,7 +116,7 @@ export default function CookiesPage() {
           <section>
             <h2 className="text-lg font-semibold text-neutral-200 mb-3">{t('cookies.contactHeading')}</h2>
             <p className="mb-3">{t('cookies.contactIntro')}</p>
-            <div className="p-4 rounded-lg bg-neutral-900/50 border border-neutral-800 space-y-1">
+            <div className="p-4 rounded-none bg-neutral-900/50 border border-neutral-800 space-y-1">
               <p><strong className="text-neutral-300">{t('cookies.emailLabel')}:</strong> daniel@uncertain.systems</p>
             </div>
           </section>
@@ -123,6 +124,6 @@ export default function CookiesPage() {
       </div>
 
       <Footer />
-    </div>
+    </ConsolePage>
   );
 }

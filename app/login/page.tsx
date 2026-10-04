@@ -7,6 +7,7 @@ import { Navbar } from "@/components/Navbar";
 import { createClient } from "@/lib/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
+import { ConsolePage } from "@/components/ui/console-frame";
 
 function LoginForm() {
   const [email, setEmail] = useState("");
@@ -124,7 +125,7 @@ function LoginForm() {
 
       <form onSubmit={handleLogin} className="space-y-3.5">
         <div>
-          <label htmlFor="email" className="block text-[11px] text-neutral-500 uppercase tracking-wider mb-1.5">
+          <label htmlFor="email" className="block text-[11px] text-neutral-500 font-mono uppercase tracking-[0.18em] mb-1.5">
             {t('auth.email')}
           </label>
           <input
@@ -132,13 +133,13 @@ function LoginForm() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-3.5 py-2.5 bg-neutral-900/80 border border-neutral-800 rounded-xl text-white text-sm focus:outline-none focus:border-neutral-600 transition-colors"
+            className="w-full px-3.5 py-2.5 bg-neutral-900/80 border border-neutral-800 rounded-none text-white text-sm focus:outline-none focus:border-neutral-600 transition-colors"
             required
           />
         </div>
 
         <div>
-          <label htmlFor="password" className="block text-[11px] text-neutral-500 uppercase tracking-wider mb-1.5">
+          <label htmlFor="password" className="block text-[11px] text-neutral-500 font-mono uppercase tracking-[0.18em] mb-1.5">
             {t('auth.password')}
           </label>
           <input
@@ -146,19 +147,19 @@ function LoginForm() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-3.5 py-2.5 bg-neutral-900/80 border border-neutral-800 rounded-xl text-white text-sm focus:outline-none focus:border-neutral-600 transition-colors"
+            className="w-full px-3.5 py-2.5 bg-neutral-900/80 border border-neutral-800 rounded-none text-white text-sm focus:outline-none focus:border-neutral-600 transition-colors"
             required
           />
         </div>
 
         {error && (
-          <div className="p-3 bg-red-500/5 border border-red-500/20 rounded-xl text-red-400 text-xs">
+          <div className="rounded-none border border-white/30 bg-black p-3 text-xs text-white/80">
             {error}
           </div>
         )}
 
         {message && (
-          <div className="p-3 bg-emerald-500/5 border border-emerald-500/20 rounded-xl text-emerald-400 text-xs">
+          <div className="rounded-none border border-white/40 bg-black p-3 text-xs text-white">
             {message}
           </div>
         )}
@@ -166,7 +167,7 @@ function LoginForm() {
         <button
           type="submit"
           disabled={loading || recoveryLoading || magicLinkLoading}
-          className="w-full py-2.5 bg-white hover:bg-neutral-200 disabled:bg-neutral-800 disabled:text-neutral-600 text-black text-sm font-medium rounded-xl transition-colors mt-2"
+          className="w-full py-2.5 bg-white hover:bg-neutral-200 disabled:bg-neutral-800 disabled:text-neutral-600 text-black text-sm font-medium rounded-none transition-colors mt-2"
         >
           {loading ? t('auth.signingIn') : t('auth.signIn')}
         </button>
@@ -175,7 +176,7 @@ function LoginForm() {
           type="button"
           onClick={handleMagicLink}
           disabled={loading || recoveryLoading || magicLinkLoading}
-          className="w-full py-2.5 border border-neutral-800 hover:border-neutral-700 disabled:border-neutral-900 disabled:text-neutral-700 text-neutral-200 text-sm font-medium rounded-xl transition-colors"
+          className="w-full py-2.5 border border-neutral-800 hover:border-neutral-700 disabled:border-neutral-900 disabled:text-neutral-700 text-neutral-200 text-sm font-medium rounded-none transition-colors"
         >
           {magicLinkLoading ? t('auth.sendingMagicLink') : t('auth.emailMagicLink')}
         </button>
@@ -220,10 +221,10 @@ export default function LoginPage() {
   const { t } = useI18n();
   
   return (
-    <main className="min-h-screen flex flex-col bg-[#0a0a0a]">
+    <ConsolePage label="Auth">
       <Navbar showNav={false} />
 
-      <div className="flex-1 flex items-center justify-center px-6">
+      <div className="flex flex-1 items-center justify-center px-6">
         <Suspense fallback={
           <div className="w-full max-w-sm flex justify-center">
             <LoadingStatusMessage tone="muted" message={t('common.loading')} />
@@ -232,6 +233,6 @@ export default function LoginPage() {
           <LoginForm />
         </Suspense>
       </div>
-    </main>
+    </ConsolePage>
   );
 }

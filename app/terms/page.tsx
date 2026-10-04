@@ -4,12 +4,13 @@ import Link from "next/link";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
 import { useI18n } from "@/lib/i18n";
+import { ConsolePage } from "@/components/ui/console-frame";
 
 export default function TermsPage() {
   const { t } = useI18n();
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0a0a0a]">
+    <ConsolePage label="Note">
       <Navbar 
         breadcrumbs={[{ label: t('terms.title') }]}
         showNav={false}
@@ -136,7 +137,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-lg font-semibold text-neutral-200 mb-3">{t('terms.contactHeading')}</h2>
             <p className="mb-3">{t('terms.contactIntro')}</p>
-            <div className="p-4 rounded-lg bg-neutral-900/50 border border-neutral-800 space-y-1">
+            <div className="space-y-1 rounded-none border border-white/30 bg-black p-4">
               <p><strong className="text-neutral-300">{t('terms.emailLabel')}:</strong> daniel@uncertain.systems</p>
               <p><strong className="text-neutral-300">{t('terms.companyLabel')}:</strong> Uncertain Systems (Daniel Colomer)</p>
               <p><strong className="text-neutral-300">{t('terms.locationLabel')}:</strong> Hamburg, Germany</p>
@@ -146,6 +147,6 @@ export default function TermsPage() {
       </div>
 
       <Footer />
-    </div>
+    </ConsolePage>
   );
 }

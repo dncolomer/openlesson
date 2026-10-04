@@ -6,6 +6,7 @@ import { Footer } from "@/components/Footer";
 import { LandingNav } from "@/components/LandingNav";
 
 import { standardShareSocialMetadata } from "@/lib/og/standard";
+import { PublicConsoleWash } from "@/components/ui/console-frame";
 
 const standardSocial = standardShareSocialMetadata({
   url: "https://uncertain.systems/community-events/probabilistic-computing",
@@ -139,7 +140,7 @@ export default function ProbabilisticComputingHackathonPage() {
         aria-hidden
       />
       <div className="fixed inset-0 z-0 bg-[#0a0a0a]/78" />
-      <div className="fixed inset-0 z-0 bg-[radial-gradient(circle_at_72%_8%,rgba(14,116,144,0.22),transparent_31%),radial-gradient(circle_at_12%_18%,rgba(39,39,42,0.62),transparent_32%)]" />
+      <PublicConsoleWash />
       <div className="fixed inset-0 z-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:72px_72px] opacity-40" />
 
       <LandingNav />
@@ -167,10 +168,10 @@ export default function ProbabilisticComputingHackathonPage() {
         </nav>
 
         <div className="mb-5 flex flex-wrap items-center gap-2">
-          <span className="rounded-sm border border-zinc-700 bg-zinc-950/80 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-400">
+          <span className="rounded-none border border-zinc-700 bg-zinc-950/80 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-400">
             Past event
           </span>
-          <span className="rounded-sm border border-neutral-600/30 bg-neutral-800/10 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300/90">
+          <span className="rounded-none border border-neutral-600/30 bg-neutral-800/10 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300/90">
             Registration closed
           </span>
           <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
@@ -200,21 +201,21 @@ export default function ProbabilisticComputingHackathonPage() {
         <div className="mt-8 flex flex-wrap gap-3">
           <a
             href="#winners"
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-sm bg-white px-5 text-sm font-medium text-black transition hover:bg-zinc-200"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-none bg-white px-5 text-sm font-medium text-black transition hover:bg-zinc-200"
           >
             <Trophy size={16} />
             View winners
           </a>
           <a
             href="#lifetime"
-            className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-sm border border-zinc-700 px-5 text-sm text-zinc-200 transition hover:border-zinc-500 hover:text-white"
+            className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-none border border-zinc-700 px-5 text-sm text-zinc-200 transition hover:border-zinc-500 hover:text-white"
           >
             Lifetime access packages
             <ArrowRight size={14} />
           </a>
           <Link
             href="/community-events"
-            className="inline-flex min-h-11 items-center justify-center rounded-sm border border-zinc-800 bg-zinc-950/60 px-5 text-sm text-zinc-400 transition hover:border-zinc-700 hover:text-white"
+            className="inline-flex min-h-11 items-center justify-center rounded-none border border-zinc-800 bg-zinc-950/60 px-5 text-sm text-zinc-400 transition hover:border-zinc-700 hover:text-white"
           >
             All community events
           </Link>
@@ -362,7 +363,7 @@ export default function ProbabilisticComputingHackathonPage() {
                   <p className="text-sm font-medium text-zinc-400">Price TBD</p>
                   <p className="text-xs text-zinc-600">One-time · Fork yours for life</p>
                 </div>
-                <span className="rounded-sm border border-zinc-800 px-3 py-2 text-xs text-zinc-600">
+                <span className="rounded-none border border-zinc-800 px-3 py-2 text-xs text-zinc-600">
                   Not yet available
                 </span>
               </div>
@@ -532,7 +533,7 @@ export default function ProbabilisticComputingHackathonPage() {
             <div className="shrink-0 space-y-3">
               <a
                 href="mailto:uncertainsystems@gmail.com"
-                className="inline-flex min-h-11 w-full items-center justify-center rounded-sm bg-white px-5 text-sm font-medium text-black transition hover:bg-zinc-200 sm:w-auto"
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-none bg-white px-5 text-sm font-medium text-black transition hover:bg-zinc-200 sm:w-auto"
               >
                 Host a hackathon with us
               </a>

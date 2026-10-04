@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
+import { PublicConsoleWash } from "@/components/ui/console-frame";
 
 const DOCS_BACKGROUND = "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg";
 
-const sectionClass = "rounded-md border border-neutral-800 bg-neutral-950/75 p-5 sm:p-6";
+const sectionClass = "border border-white/30 bg-black/75 p-5 sm:p-6";
 const labelClass = "font-mono text-[10px] uppercase tracking-[2px] text-neutral-500";
-const codeBlockClass = "mt-3 overflow-x-auto rounded-md border border-neutral-800 bg-black/60 p-4 font-mono text-xs text-neutral-300 sm:text-sm";
+const codeBlockClass = "mt-3 overflow-x-auto border border-white/20 bg-black p-4 font-mono text-xs text-neutral-300 sm:text-sm";
 
 type FieldSpec = {
   name: string;
@@ -443,14 +444,14 @@ function EndpointDoc({ spec }: { spec: EndpointSpec }) {
   return (
     <section id={spec.id} className={`${sectionClass} scroll-mt-24`}>
       <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-        <span className="rounded-sm border border-white/10 bg-white/[0.04] px-2 py-1 font-mono text-[10px] uppercase tracking-[1.4px] text-neutral-300">
+        <span className="rounded-none border border-white/10 bg-white/[0.04] px-2 py-1 font-mono text-[10px] uppercase tracking-[1.4px] text-neutral-300">
           {spec.method}
         </span>
         <code className="break-all text-sm text-neutral-200">{spec.path}</code>
-        <span className="rounded-sm border border-neutral-800 bg-black/40 px-2 py-1 font-mono text-[10px] text-neutral-500">
+        <span className="rounded-none border border-neutral-800 bg-black/40 px-2 py-1 font-mono text-[10px] text-neutral-500">
           {spec.scope}
         </span>
-        <span className="rounded-sm border border-neutral-500/20 bg-neutral-950/20 px-2 py-1 font-mono text-[10px] text-neutral-300/90">
+        <span className="rounded-none border border-neutral-500/20 bg-neutral-950/20 px-2 py-1 font-mono text-[10px] text-neutral-300/90">
           {spec.status}
         </span>
       </div>
@@ -494,11 +495,13 @@ function EndpointDoc({ spec }: { spec: EndpointSpec }) {
 export default function AgenticV2DocsPage() {
   return (
     <div
-      className="min-h-screen bg-[#0a0a0a] bg-cover bg-fixed bg-center text-white"
+      className="relative min-h-screen overflow-hidden border border-white/40 bg-black bg-cover bg-fixed bg-center text-white"
       style={{
         backgroundImage: `linear-gradient(rgba(10,10,10,0.88), rgba(10,10,10,0.92)), url(${DOCS_BACKGROUND})`,
       }}
     >
+      <PublicConsoleWash />
+      <div className="relative z-10">
       <Navbar />
       <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
         <header className={`${sectionClass} mb-8`}>
@@ -516,13 +519,13 @@ export default function AgenticV2DocsPage() {
           <div className="mt-6 flex flex-wrap gap-3">
             <Link
               href="/skill.md"
-              className="inline-flex h-10 items-center justify-center rounded-sm bg-white px-4 text-sm font-medium text-black transition hover:bg-neutral-200"
+              className="inline-flex h-10 items-center justify-center rounded-none bg-white px-4 text-sm font-medium text-black transition hover:bg-neutral-200"
             >
               Agent skill file →
             </Link>
             <Link
               href="/dashboard?tab=usage"
-              className="inline-flex h-10 items-center justify-center rounded-sm border border-neutral-700 px-4 text-sm text-neutral-200 transition hover:border-neutral-500 hover:text-white"
+              className="inline-flex h-10 items-center justify-center rounded-none border border-neutral-700 px-4 text-sm text-neutral-200 transition hover:border-neutral-500 hover:text-white"
             >
               Get API key
             </Link>
@@ -694,6 +697,7 @@ Content-Type: application/json`}</code>
         </section>
       </main>
       <Footer />
+      </div>
     </div>
   );
 }

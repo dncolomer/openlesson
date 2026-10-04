@@ -46,10 +46,10 @@ export default function LabsPage() {
           <Link
             key={tool.id}
             href={tool.href}
-            className={`block p-6 rounded-xl border transition-all duration-200 ${
+            className={`block border p-6 transition-colors ${
               tool.badgeType === "coming-soon"
-                ? "border-slate-800 bg-slate-900/30 opacity-60 hover:opacity-80"
-                : "border-slate-700 bg-slate-800/30 hover:border-neutral-600/50 hover:bg-slate-800/50"
+                ? "border-white/20 bg-black text-white/60"
+                : "border-white/30 bg-black hover:border-white/60"
             }`}
             onMouseEnter={() => setHoveredTool(tool.id)}
             onMouseLeave={() => setHoveredTool(null)}
@@ -62,10 +62,10 @@ export default function LabsPage() {
                     <h3 className="text-lg font-semibold text-white">{tool.name}</h3>
                     {tool.badge && (
                       <span
-                        className={`px-2 py-0.5 text-xs rounded-full ${
+                        className={`border border-white/30 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.18em] ${
                           tool.badgeType === "new"
-                            ? "bg-neutral-800/20 text-neutral-300"
-                            : "bg-slate-700 text-slate-400"
+                            ? "bg-black text-white"
+                            : "bg-black text-neutral-400"
                         }`}
                       >
                         {tool.badge}
@@ -97,7 +97,7 @@ export default function LabsPage() {
         ))}
       </div>
 
-      <div className="mt-8 p-4 bg-slate-900/50 border border-slate-800 rounded-lg">
+      <div className="mt-8 border border-white/30 bg-black p-4">
         <p className="text-xs text-slate-500">
           {t('labs.disclaimer')}
         </p>

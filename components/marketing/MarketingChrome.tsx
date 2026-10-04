@@ -1,5 +1,6 @@
 import { Footer } from "@/components/Footer";
 import { LandingNav } from "@/components/LandingNav";
+import { PublicConsoleWash } from "@/components/ui/console-frame";
 
 const DEFAULT_BACKGROUND = "/aesthetics/Greco-futurism/HHnTrjJbQAAOz7K.jpeg";
 
@@ -11,7 +12,7 @@ export function MarketingPageShell({
   backgroundImage?: string;
 }) {
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#0a0a0a] text-zinc-200 selection:bg-zinc-700">
+    <main className="relative min-h-screen overflow-hidden border border-white/40 bg-black text-zinc-200 selection:bg-zinc-700">
       <div className="fixed inset-0 z-0 bg-[#0a0a0a]" />
       <div
         className="fixed inset-0 z-0 bg-cover bg-fixed bg-center"
@@ -19,7 +20,7 @@ export function MarketingPageShell({
         aria-hidden
       />
       <div className="fixed inset-0 z-0 bg-[#0a0a0a]/78" />
-      <div className="fixed inset-0 z-0 bg-[radial-gradient(circle_at_72%_8%,rgba(14,116,144,0.22),transparent_31%),radial-gradient(circle_at_12%_18%,rgba(39,39,42,0.62),transparent_32%)]" />
+      <PublicConsoleWash />
       <LandingNav />
       {children}
       <div className="relative z-10">

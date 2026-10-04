@@ -6,6 +6,7 @@ import { LandingNav } from "@/components/LandingNav";
 import { AYCL_HACKATHONS } from "@/lib/aycl-landing";
 import { aestheticImageForId } from "@/lib/aesthetics";
 import { standardShareSocialMetadata } from "@/lib/og/standard";
+import { PublicConsoleWash } from "@/components/ui/console-frame";
 
 const standardSocial = standardShareSocialMetadata({
   url: "https://uncertain.systems/community-events",
@@ -30,7 +31,7 @@ const BACKGROUND_IMAGE = aestheticImageForId("hackathons", [
 export default function HackathonsPage() {
   return (
     <main
-      className="relative min-h-screen overflow-hidden bg-[#0a0a0a] text-zinc-200 selection:bg-zinc-700"
+      className="relative min-h-screen overflow-hidden border border-white/40 bg-black text-zinc-200 selection:bg-zinc-700"
       data-hackathons-page
     >
       <div className="fixed inset-0 z-0 bg-[#0a0a0a]" />
@@ -40,7 +41,7 @@ export default function HackathonsPage() {
         aria-hidden
       />
       <div className="fixed inset-0 z-0 bg-[#0a0a0a]/80" />
-      <div className="fixed inset-0 z-0 bg-[radial-gradient(circle_at_20%_10%,rgba(6,182,212,0.12),transparent_35%)]" />
+      <PublicConsoleWash />
 
       <LandingNav />
 
@@ -70,7 +71,7 @@ export default function HackathonsPage() {
             <Link
               key={hackathon.id}
               href={hackathon.href}
-              className="group overflow-hidden rounded-xl border border-zinc-800/90 bg-zinc-950/75 backdrop-blur-sm transition hover:border-zinc-600"
+              className="group overflow-hidden border border-white/30 bg-black/75 backdrop-blur-sm transition hover:border-white/60"
               data-hackathon-card={hackathon.id}
             >
               <div

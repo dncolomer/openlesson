@@ -7,6 +7,7 @@ import { Footer } from "@/components/Footer";
 import { LandingNav } from "@/components/LandingNav";
 import { SectionHeading } from "@/components/marketing/MarketingChrome";
 import { TrackedCtaLink } from "@/components/TrackedCtaLink";
+import { PublicConsoleWash } from "@/components/ui/console-frame";
 import {
   PLATFORM_CTA,
   PLATFORM_DELIVERY,
@@ -32,18 +33,18 @@ export default function B2BLandingPage() {
   }, []);
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#0a0a0a] text-zinc-200 selection:bg-zinc-700">
+    <main className="relative min-h-screen overflow-hidden border border-white/40 bg-black text-zinc-200 selection:bg-zinc-700">
       <div className="fixed inset-0 z-0 bg-[#0a0a0a]" />
       {bgImage && <div className="fixed inset-0 z-0 bg-cover bg-fixed bg-center" style={{ backgroundImage: `url(${bgImage})` }} />}
       <div className="fixed inset-0 z-0 bg-[#0a0a0a]/78" />
-      <div className="fixed inset-0 z-0 bg-[radial-gradient(circle_at_72%_8%,rgba(14,116,144,0.22),transparent_31%),radial-gradient(circle_at_12%_18%,rgba(39,39,42,0.62),transparent_32%)]" />
+      <PublicConsoleWash />
       <div className="fixed inset-0 z-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:72px_72px] opacity-40" />
 
       <LandingNav />
 
       <section className="relative z-10 mx-auto w-full max-w-7xl px-6 pt-14 pb-10 sm:pt-16 sm:pb-12" data-home-hero>
         <div className="w-full">
-          <div className="mb-6 inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
+          <div className="mb-6 inline-block rounded-none border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
             {PLATFORM_HERO.pill}
           </div>
           <h1 className="max-w-5xl text-4xl font-medium leading-[1.08] tracking-[-2px] text-white sm:text-5xl lg:text-[56px]">
@@ -59,14 +60,14 @@ export default function B2BLandingPage() {
               label={PLATFORM_CTA.label}
               location="landing_hero"
               page="/"
-              className="inline-flex min-h-12 items-center justify-center rounded-sm bg-white px-5 py-3 text-sm font-medium text-black transition hover:bg-zinc-200"
+              className="inline-flex min-h-12 items-center justify-center rounded-none bg-white px-5 py-3 text-sm font-medium text-black transition hover:bg-zinc-200"
             >
               {PLATFORM_CTA.label}
               <ArrowRight className="ml-2" size={16} />
             </TrackedCtaLink>
             <a
               href={PLATFORM_CTA.href}
-              className="inline-flex min-h-12 items-center justify-center rounded-sm border border-zinc-800 bg-zinc-950/60 px-5 py-3 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-white"
+              className="inline-flex min-h-12 items-center justify-center rounded-none border border-zinc-800 bg-zinc-950/60 px-5 py-3 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-white"
             >
               {PLATFORM_CTA.email}
             </a>
@@ -163,7 +164,7 @@ export default function B2BLandingPage() {
             label={PLATFORM_CTA.email}
             location="landing_proof"
             page="/"
-            className="mt-8 inline-flex min-h-12 items-center justify-center rounded-sm bg-white px-5 py-3 text-sm font-medium text-black transition hover:bg-zinc-200"
+            className="mt-8 inline-flex min-h-12 items-center justify-center rounded-none bg-white px-5 py-3 text-sm font-medium text-black transition hover:bg-zinc-200"
           >
             {PLATFORM_CTA.email}
             <ArrowRight className="ml-2" size={16} />
@@ -206,7 +207,7 @@ function LayerCard({
             label={product.cta}
             location="landing_layers"
             page="/"
-            className="inline-flex min-h-12 items-center justify-center rounded-sm bg-white px-5 py-3 text-sm font-medium text-black transition hover:bg-zinc-200"
+            className="inline-flex min-h-12 items-center justify-center rounded-none bg-white px-5 py-3 text-sm font-medium text-black transition hover:bg-zinc-200"
           >
             {product.cta}
             <ArrowRight className="ml-2" size={16} />

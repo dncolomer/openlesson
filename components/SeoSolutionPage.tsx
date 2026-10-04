@@ -112,9 +112,9 @@ export function SeoSolutionPage({ page, breadcrumbs }: SeoSolutionPageProps) {
           </h1>
           <p className="mt-6 text-lg leading-relaxed text-neutral-400">{page.intro}</p>
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
-            <div className="border border-cyan-400/20 bg-cyan-950/20 p-5">
+            <div className="border border-white/30 bg-black p-5">
               <p className="text-base leading-relaxed text-neutral-300">
-                <span className="font-medium text-cyan-200">Verify</span> learning with software
+                <span className="font-medium text-white">Verify</span> learning with software
                 tools.
               </p>
               <p className="mt-3 text-sm leading-relaxed text-neutral-500">
@@ -123,9 +123,9 @@ export function SeoSolutionPage({ page, breadcrumbs }: SeoSolutionPageProps) {
                 human cognition under probe. Both run inside the knowledge workspace.
               </p>
             </div>
-            <div className="border border-violet-400/20 bg-violet-950/20 p-5">
+            <div className="border border-white/30 bg-black p-5">
               <p className="text-base leading-relaxed text-neutral-300">
-                <span className="font-medium text-violet-200">Augment</span> learning where gaps
+                <span className="font-medium text-white">Augment</span> learning where gaps
                 appear.
               </p>
               <p className="mt-3 text-sm leading-relaxed text-neutral-500">

@@ -5,6 +5,7 @@ import { Footer } from "@/components/Footer";
 import { LandingNav } from "@/components/LandingNav";
 import { TrackedCtaLink } from "@/components/TrackedCtaLink";
 import { standardShareSocialMetadata } from "@/lib/og/standard";
+import { PublicConsoleWash } from "@/components/ui/console-frame";
 import {
   VISION_TOMOGRAPHY_INDUCTION_COPY,
   VISION_TOMOGRAPHY_INDUCTION_PATHS,
@@ -35,8 +36,7 @@ export default function VisionPage() {
         aria-hidden
       />
       <div className="fixed inset-0 z-0 bg-[#0a0a0a]/78" />
-      <div className="fixed inset-0 z-0 bg-[radial-gradient(circle_at_72%_8%,rgba(14,116,144,0.22),transparent_31%),radial-gradient(circle_at_12%_18%,rgba(39,39,42,0.62),transparent_32%)]" />
-
+      <PublicConsoleWash />
       <LandingNav />
 
       <section className="relative z-10 mx-auto w-full max-w-7xl px-6 pt-14 pb-10 sm:pt-16 sm:pb-12">
@@ -53,14 +53,14 @@ export default function VisionPage() {
             label="Create your Workspace"
             location="vision_hero"
             page="/vision"
-            className="inline-flex min-h-12 items-center justify-center rounded-sm bg-white px-5 py-3 text-sm font-medium text-black transition hover:bg-zinc-200"
+            className="inline-flex min-h-12 items-center justify-center rounded-none bg-white px-5 py-3 text-sm font-medium text-black transition hover:bg-zinc-200"
           >
             Create your Workspace
             <ArrowRight className="ml-2" size={16} />
           </TrackedCtaLink>
           <Link
             href="/science"
-            className="inline-flex min-h-12 items-center justify-center rounded-sm border border-zinc-800 bg-zinc-950/60 px-5 py-3 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-white"
+            className="inline-flex min-h-12 items-center justify-center rounded-none border border-zinc-800 bg-zinc-950/60 px-5 py-3 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-white"
           >
             Read the thesis
           </Link>
@@ -140,7 +140,7 @@ export default function VisionPage() {
           <Link
             href={VISION_TOMOGRAPHY_INDUCTION_PATHS.science}
             data-vision-science-link
-            className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-sm border border-zinc-800 bg-zinc-950/60 px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-white"
+            className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-none border border-zinc-800 bg-zinc-950/60 px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-white"
           >
             {VISION_TOMOGRAPHY_INDUCTION_COPY.links.scienceLabel}
             <ArrowRight size={14} />
@@ -148,7 +148,7 @@ export default function VisionPage() {
           <Link
             href={VISION_TOMOGRAPHY_INDUCTION_PATHS.epistemicForaging}
             data-vision-epistemic-foraging-link
-            className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-sm border border-zinc-800 bg-zinc-950/60 px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-white"
+            className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-none border border-zinc-800 bg-zinc-950/60 px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-white"
           >
             {VISION_TOMOGRAPHY_INDUCTION_COPY.links.foragingLabel}
             <ArrowRight size={14} />
@@ -156,7 +156,7 @@ export default function VisionPage() {
           <Link
             href={VISION_TOMOGRAPHY_INDUCTION_PATHS.knowledgeTomographyPaper}
             data-vision-knowledge-tomography-paper-link
-            className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-sm border border-zinc-800 bg-zinc-950/60 px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-white"
+            className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-none border border-zinc-800 bg-zinc-950/60 px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-white"
           >
             {VISION_TOMOGRAPHY_INDUCTION_COPY.links.paperLabel}
             <ArrowRight size={14} />

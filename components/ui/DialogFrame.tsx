@@ -2,6 +2,8 @@
 
 import { type ReactNode, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { SessionConsoleMarks, SessionConsoleScan } from "@/components/session-view/session-console-marks";
+import { CONSOLE_LABEL_CLASS } from "@/components/ui/console-frame";
 
 /**
  * Shared modal shell: portaled, screen-centered overlay + panel.
@@ -77,20 +79,28 @@ export function DialogFrame({
         onClick={closeOnOverlay ? onClose : undefined}
       />
       <div
-        className={`relative z-10 w-full ${DIALOG_SIZE[size]} bg-neutral-900 border border-neutral-800 rounded-none shadow-2xl overflow-hidden ${panelClassName ?? ""}`}
+        data-console-frame=""
+        className={`relative z-10 w-full ${DIALOG_SIZE[size]} overflow-hidden rounded-none border border-white/40 bg-black shadow-2xl ${panelClassName ?? ""}`}
       >
-        {headerClose ? (
-          <button
-            type="button"
-            data-dialog-header-close=""
-            aria-label="Close"
-            onClick={onClose}
-            className="absolute right-3 top-3 z-20 rounded-none px-1.5 py-0.5 text-xs text-neutral-500 hover:bg-neutral-800 hover:text-neutral-200"
-          >
-            ✕
-          </button>
-        ) : null}
-        {children}
+        <SessionConsoleScan />
+        <SessionConsoleMarks />
+        <p data-console-frame-label="" className={`relative z-[2] px-3 pt-2 ${CONSOLE_LABEL_CLASS}`}>
+          Note
+        </p>
+        <div className="relative z-[2]">
+          {headerClose ? (
+            <button
+              type="button"
+              data-dialog-header-close=""
+              aria-label="Close"
+              onClick={onClose}
+              className="absolute right-3 top-3 z-20 rounded-none px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.18em] text-white/50 hover:bg-white hover:text-black"
+            >
+              Close
+            </button>
+          ) : null}
+          {children}
+        </div>
       </div>
     </div>
   );

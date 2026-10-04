@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import { Footer } from "@/components/Footer";
+import { PublicConsoleWash } from "@/components/ui/console-frame";
 
 const BACKGROUND_IMAGES = [
   "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg",
@@ -61,7 +62,7 @@ export default function NewDesignLanding() {
 
   return (
     <main 
-      className="min-h-screen bg-[#0a0a0a] text-zinc-200 flex flex-col items-center justify-center font-sans selection:bg-zinc-700 relative overflow-hidden"
+      className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden border border-white/40 bg-black font-sans text-zinc-200 selection:bg-zinc-700"
       style={bgImage ? {
         backgroundImage: `url(${bgImage})`,
         backgroundSize: 'cover',
@@ -70,6 +71,7 @@ export default function NewDesignLanding() {
     >
       {/* Elegant dark overlay for readability */}
       <div className="fixed inset-0 bg-[#0a0a0a]/70 z-0" />
+      <PublicConsoleWash />
       {/* Subtle top bar */}
       <div className="absolute top-0 w-full flex justify-center pt-6 z-10">
         <div className="text-[10px] tracking-[3px] text-zinc-600 font-mono">UNCERTAIN SYSTEMS</div>
@@ -79,7 +81,7 @@ export default function NewDesignLanding() {
         {user ? (
           <Link
             href="/dashboard"
-            className="flex items-center gap-2 rounded-md border border-white/10 bg-zinc-950/70 py-1.5 pl-1.5 pr-4 text-sm text-zinc-300 backdrop-blur-md transition hover:border-white/20 hover:bg-zinc-900/80 hover:text-white"
+            className="flex items-center gap-2 rounded-none border border-white/10 bg-zinc-950/70 py-1.5 pl-1.5 pr-4 text-sm text-zinc-300 backdrop-blur-md transition hover:border-white/20 hover:bg-zinc-900/80 hover:text-white"
           >
             <div className="flex size-9 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-zinc-800 text-xs font-medium text-white">
               {user.user_metadata?.avatar_url ? (
@@ -97,7 +99,7 @@ export default function NewDesignLanding() {
         ) : user === null ? (
           <Link
             href="/pricing"
-            className="rounded-md border border-white/10 bg-white px-5 py-2.5 text-sm font-medium text-black transition hover:bg-zinc-200"
+            className="rounded-none border border-white/10 bg-white px-5 py-2.5 text-sm font-medium text-black transition hover:bg-zinc-200"
           >
             Sign up
           </Link>
@@ -122,7 +124,7 @@ export default function NewDesignLanding() {
 
         {/* Primary Plan Generation Input */}
         <form onSubmit={handleGenerate} className="w-full max-w-[1360px] mb-20 relative z-10">
-        <div className="group mx-auto flex w-full max-w-[940px] flex-col gap-2 rounded-md border border-zinc-800 bg-zinc-950/90 p-2 shadow-inner transition-all hover:border-zinc-700 focus-within:border-zinc-500 sm:flex-row">
+        <div className="group mx-auto flex w-full max-w-[940px] flex-col gap-2 rounded-none border border-zinc-800 bg-zinc-950/90 p-2 shadow-inner transition-all hover:border-zinc-700 focus-within:border-zinc-500 sm:flex-row">
           <input
             type="text"
             value={topic}
@@ -147,7 +149,7 @@ export default function NewDesignLanding() {
           <button
             type="button"
             onClick={() => setTopic("Deeply understand the first principles of nanoGPT's codebase: https://github.com/karpathy/nanogpt")}
-            className="group flex flex-col bg-zinc-950 border border-zinc-800 hover:border-zinc-700 rounded-md overflow-hidden active:scale-[0.985] transition text-left shadow"
+            className="group flex flex-col bg-zinc-950 border border-zinc-800 hover:border-zinc-700 rounded-none overflow-hidden active:scale-[0.985] transition text-left shadow"
           >
             <div className="h-48 bg-zinc-900/60 flex items-center justify-center overflow-hidden">
               <img src="https://i.ytimg.com/vi/kCc8FmEb1nY/maxresdefault.jpg" alt="nanoGPT" className="object-cover h-full w-full group-hover:scale-105 transition" />
@@ -155,7 +157,7 @@ export default function NewDesignLanding() {
             <div className="p-5">
               <div className="font-medium text-[21px] leading-tight tracking-tight">Learn a Codebase</div>
               <div className="mt-1.5 text-[14px] text-zinc-400">Deeply understand the first principles of nanoGPT&apos;s codebase.</div>
-              <div className="mt-4 text-[10px] tracking-[1.5px] text-emerald-400/70 font-mono">GITHUB • KARPATHY</div>
+              <div className="mt-4 text-[10px] tracking-[1.5px] text-white/55 font-mono">GITHUB • KARPATHY</div>
             </div>
           </button>
 
@@ -163,7 +165,7 @@ export default function NewDesignLanding() {
           <button
             type="button"
             onClick={() => setTopic("Turn this Veritasium video into a Socratic workspace: https://www.youtube.com/watch?v=AF8d72mA41M")}
-            className="group flex flex-col bg-zinc-950 border border-zinc-800 hover:border-zinc-700 rounded-md overflow-hidden active:scale-[0.985] transition text-left shadow"
+            className="group flex flex-col bg-zinc-950 border border-zinc-800 hover:border-zinc-700 rounded-none overflow-hidden active:scale-[0.985] transition text-left shadow"
           >
             <div className="h-48 bg-zinc-900/60 flex items-center justify-center overflow-hidden">
               <img src="https://i.ytimg.com/vi/AF8d72mA41M/maxresdefault.jpg" alt="Veritasium Entropy" className="object-cover h-full w-full group-hover:scale-105 transition" />
@@ -171,7 +173,7 @@ export default function NewDesignLanding() {
             <div className="p-5">
               <div className="font-medium text-[21px] leading-tight tracking-tight">Break Down a Scientific Video</div>
               <div className="mt-1.5 text-[14px] text-zinc-400">Don&apos;t just watch educational videos but actually extract their most important insights.</div>
-              <div className="mt-4 text-[10px] tracking-widest text-emerald-400/70 font-mono">VERITASIUM • 2024</div>
+              <div className="mt-4 text-[10px] tracking-widest text-white/55 font-mono">VERITASIUM • 2024</div>
             </div>
           </button>
 
@@ -179,7 +181,7 @@ export default function NewDesignLanding() {
           <button
             type="button"
             onClick={() => setTopic(DEEP_TOPIC_SUGGESTIONS[Math.floor(Math.random() * DEEP_TOPIC_SUGGESTIONS.length)])}
-            className="group flex flex-col bg-zinc-950 border border-zinc-800 hover:border-zinc-700 rounded-md overflow-hidden active:scale-[0.985] transition text-left shadow"
+            className="group flex flex-col bg-zinc-950 border border-zinc-800 hover:border-zinc-700 rounded-none overflow-hidden active:scale-[0.985] transition text-left shadow"
           >
             <div className="h-48 bg-zinc-900/60 flex items-center justify-center overflow-hidden">
               <img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Mus%C3%A9e_Rodin_1.jpg" alt="Der Denker statue" className="object-cover h-full w-full grayscale group-hover:scale-105 transition" />
@@ -187,7 +189,7 @@ export default function NewDesignLanding() {
             <div className="p-5">
               <div className="font-medium text-[21px] leading-tight tracking-tight">Go Deep Anywhere</div>
               <div className="mt-1 text-sm text-zinc-400">Hard math, philosophy, physics.<br />No gatekeeping prerequisite maze.</div>
-              <div className="mt-4 text-[10px] tracking-widest text-emerald-400/70 font-mono">AHA • EUREKA</div>
+              <div className="mt-4 text-[10px] tracking-widest text-white/55 font-mono">AHA • EUREKA</div>
             </div>
           </button>
         </div>

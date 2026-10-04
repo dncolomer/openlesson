@@ -19,6 +19,7 @@ import {
   ayclPlayTooltip,
   type AyclAccessTier,
 } from "@/lib/aycl-shared";
+import { PublicConsoleWash } from "@/components/ui/console-frame";
 import {
   collectAyclCatalogCategories,
   filterAyclCatalogCards,
@@ -104,7 +105,7 @@ export default function AllYouCanLearnPage() {
         aria-hidden
       />
       <div className="fixed inset-0 z-0 bg-[#0a0a0a]/78" />
-      <div className="fixed inset-0 z-0 bg-[radial-gradient(circle_at_72%_8%,rgba(14,116,144,0.22),transparent_31%),radial-gradient(circle_at_12%_18%,rgba(39,39,42,0.62),transparent_32%)]" />
+      <PublicConsoleWash />
       <div className="fixed inset-0 z-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:72px_72px] opacity-40" />
 
       <LandingNav />
@@ -414,7 +415,7 @@ export default function AllYouCanLearnPage() {
                         data-aycl-checkout-learner
                         onClick={() => startCheckout(workspace.id, "learner")}
                         disabled={anyBusy}
-                        className="w-full rounded-sm border border-zinc-600 bg-transparent px-3 py-2 text-sm font-medium text-zinc-100 transition hover:bg-zinc-800 disabled:opacity-50"
+                        className="w-full rounded-none border border-zinc-600 bg-transparent px-3 py-2 text-sm font-medium text-zinc-100 transition hover:bg-zinc-800 disabled:opacity-50"
                         title={ayclOfferTooltip("learner")}
                       >
                         {learnerBusy
@@ -426,7 +427,7 @@ export default function AllYouCanLearnPage() {
                         data-aycl-checkout-full
                         onClick={() => startCheckout(workspace.id, "full")}
                         disabled={anyBusy}
-                        className="w-full rounded-sm bg-white px-3 py-2 text-sm font-medium text-black transition hover:bg-zinc-200 disabled:opacity-50"
+                        className="w-full rounded-none bg-white px-3 py-2 text-sm font-medium text-black transition hover:bg-zinc-200 disabled:opacity-50"
                         title={ayclOfferTooltip("full")}
                       >
                         {fullBusy

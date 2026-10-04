@@ -33,7 +33,9 @@ describe("TAP Learning modals share DialogFrame / ConfirmDialog", () => {
 
     expect(frame).toContain("fixed inset-0 z-[200] flex items-center justify-center");
     expect(frame).toContain("bg-black/70 backdrop-blur-md");
-    expect(frame).toContain("bg-neutral-900 border border-neutral-800 rounded-none");
+    expect(frame).toContain("overflow-hidden rounded-none border border-white/40 bg-black");
+    expect(frame).toContain("data-console-frame");
+    expect(frame).toContain("SessionConsoleMarks");
     expect(frame).toContain("createPortal");
     expect(frame).toContain("portal = true");
     expect(frame).toContain("if (!portal || typeof document === \"undefined\") return dialog");

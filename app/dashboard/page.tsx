@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
+import { SessionConsoleMarks, SessionConsoleScan } from "@/components/session-view/session-console-marks";
+import { CONSOLE_LABEL_CLASS } from "@/components/ui/console-frame";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { getSessions, deleteSession, restartSession, getWorkspaces, getIlePostSessionPath, type Session, type Workspace } from "@/lib/storage";
@@ -575,7 +577,7 @@ export default function DashboardPage() {
     }
   };
 
-  const usageCardClass = "rounded-md border border-neutral-800 bg-neutral-950/75 p-5 sm:p-6";
+  const usageCardClass = "rounded-none border border-neutral-800 bg-neutral-950/75 p-5 sm:p-6";
   const usageLabelClass = "font-mono text-[10px] uppercase tracking-[2px] text-neutral-500";
 
   const loadXaiUsage = async (period: XaiPeriodPreset) => {
@@ -759,19 +761,36 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div
-        className="min-h-screen bg-[#0a0a0a] bg-cover bg-center flex items-center justify-center"
+        data-console-frame=""
+        data-workspace-shell=""
+        className="relative flex min-h-screen items-center justify-center overflow-hidden border border-white/40 bg-black bg-cover bg-center"
         style={{ backgroundImage: `linear-gradient(rgba(10,10,10,0.82), rgba(10,10,10,0.82)), url(${DASHBOARD_BACKGROUND})` }}
       >
-        <LoadingStatusMessage message={t('common.loading')} />
+        <SessionConsoleScan />
+        <SessionConsoleMarks />
+        <p data-console-frame-label="" className={`absolute left-3 top-3 z-[4] ${CONSOLE_LABEL_CLASS}`}>
+          Home
+        </p>
+        <div className="relative z-[2]">
+          <LoadingStatusMessage message={t('common.loading')} />
+        </div>
       </div>
     );
   }
 
   return (
     <div
-      className="min-h-screen bg-[#0a0a0a] bg-cover bg-fixed bg-center text-white"
+      data-console-frame=""
+      data-workspace-shell=""
+      className="relative min-h-screen overflow-hidden border border-white/40 bg-black bg-cover bg-fixed bg-center text-white"
       style={{ backgroundImage: `linear-gradient(rgba(10,10,10,0.82), rgba(10,10,10,0.82)), url(${DASHBOARD_BACKGROUND})` }}
     >
+      <SessionConsoleScan />
+      <SessionConsoleMarks />
+      <p data-console-frame-label="" className={`absolute left-3 top-2 z-[4] ${CONSOLE_LABEL_CLASS}`}>
+        Home
+      </p>
+      <div className="relative z-[2]">
       <Navbar />
 
       {/* Tabs */}
@@ -821,10 +840,10 @@ export default function DashboardPage() {
                   placeholder={t('dashboard.searchSessions')}
                   value={sessionSearch}
                   onChange={(e) => setSessionSearch(e.target.value)}
-                  className="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 text-sm text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-neutral-600"
+                  className="w-full bg-neutral-900 border border-neutral-800 rounded-none px-3 py-2 text-sm text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-neutral-600"
                 />
               </div>
-              <div className="flex items-center gap-3 bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2">
+              <div className="flex items-center gap-3 bg-neutral-900 border border-neutral-800 rounded-none px-3 py-2">
                 {[
                   { value: "active", label: t('dashboard.active') },
                   { value: "paused", label: t('dashboard.paused') },
@@ -856,7 +875,7 @@ export default function DashboardPage() {
             </div>
 
             {filteredSessions.length === 0 ? (
-              <div className="text-center py-8 text-neutral-500 border border-neutral-800 rounded-lg">
+              <div className="text-center py-8 text-neutral-500 border border-neutral-800 rounded-none">
                 <p className="text-sm">{t('dashboard.noMatchingSessions')}</p>
                 <Link href="/" className="text-neutral-300 hover:underline mt-2 inline-block text-sm">
                   {t('dashboard.startYourFirstSession')}
@@ -870,7 +889,7 @@ export default function DashboardPage() {
                   <Link
                     key={session.id}
                     href={isCompleted ? getIlePostSessionPath(session) : `/session?id=${session.id}`}
-                    className="block rounded-lg border border-neutral-800 bg-neutral-900/50 overflow-hidden hover:bg-neutral-800/30 transition-colors"
+                    className="block rounded-none border border-neutral-800 bg-neutral-900/50 overflow-hidden hover:bg-neutral-800/30 transition-colors"
                   >
                     <div className="flex items-center justify-between p-4">
                       <div className="flex-1 min-w-0">
@@ -992,7 +1011,7 @@ export default function DashboardPage() {
                   <Link
                     href="/workspace/new"
                     data-dashboard-empty-create
-                    className="mt-8 inline-flex h-12 min-w-[220px] items-center justify-center rounded-sm bg-white px-8 text-sm font-medium text-black transition hover:bg-neutral-200"
+                    className="mt-8 inline-flex h-12 min-w-[220px] items-center justify-center rounded-none bg-white px-8 text-sm font-medium text-black transition hover:bg-neutral-200"
                   >
                     {t("dashboard.emptyWorkspacesCta")}
                   </Link>
@@ -1020,7 +1039,7 @@ export default function DashboardPage() {
                 </div>
                 <Link
                   href="/workspace/new"
-                  className="inline-flex h-12 items-center justify-center rounded-sm bg-white px-6 text-sm font-medium text-black transition hover:bg-neutral-200"
+                  className="inline-flex h-12 items-center justify-center rounded-none bg-white px-6 text-sm font-medium text-black transition hover:bg-neutral-200"
                 >
                   Create a New Workspace →
                 </Link>
@@ -1070,12 +1089,12 @@ export default function DashboardPage() {
                 placeholder={t('dashboard.searchWorkspaces')}
                 value={workspaceSearch}
                 onChange={(e) => setPlanSearch(e.target.value)}
-                className="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 text-sm text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-neutral-600"
+                className="w-full bg-neutral-900 border border-neutral-800 rounded-none px-3 py-2 text-sm text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-neutral-600"
               />
             </div>
 
             {filteredWorkspaces.length === 0 ? (
-              <div className="text-center py-8 text-neutral-500 border border-neutral-800 rounded-lg">
+              <div className="text-center py-8 text-neutral-500 border border-neutral-800 rounded-none">
                 <p className="text-sm">{t('dashboard.noMatchingWorkspaces')}</p>
                 <Link href="/workspace/new" className="text-neutral-300 hover:underline mt-2 inline-block text-sm">
                   {t('dashboard.createNewPlan')}
@@ -1242,7 +1261,7 @@ export default function DashboardPage() {
                   <button
                     type="button"
                     onClick={() => setDashboardTab("organization")}
-                    className="inline-flex h-10 items-center justify-center rounded-sm border border-neutral-700 px-4 text-sm text-neutral-200 transition hover:border-neutral-500 hover:text-white"
+                    className="inline-flex h-10 items-center justify-center rounded-none border border-neutral-700 px-4 text-sm text-neutral-200 transition hover:border-neutral-500 hover:text-white"
                   >
                     {usageData.organization.isOrgAdmin
                       ? "Manage organization →"
@@ -1252,7 +1271,7 @@ export default function DashboardPage() {
                 {!isBillingBypass && (
                   <Link
                     href="/pricing"
-                    className="inline-flex h-10 items-center justify-center rounded-sm border border-neutral-700 px-4 text-sm text-neutral-200 transition hover:border-neutral-500 hover:text-white"
+                    className="inline-flex h-10 items-center justify-center rounded-none border border-neutral-700 px-4 text-sm text-neutral-200 transition hover:border-neutral-500 hover:text-white"
                   >
                     View pricing →
                   </Link>
@@ -1600,7 +1619,7 @@ export default function DashboardPage() {
                                     type="button"
                                     disabled={xaiUsageLoading}
                                     onClick={() => handleXaiPeriodChange(opt.id)}
-                                    className={`rounded-sm border px-2.5 py-1 text-[11px] transition ${
+                                    className={`rounded-none border px-2.5 py-1 text-[11px] transition ${
                                       xaiPeriod === opt.id
                                         ? "border-white/20 bg-white/10 text-white"
                                         : "border-neutral-800 bg-black/30 text-neutral-400 hover:border-neutral-600 hover:text-neutral-200"
@@ -1677,7 +1696,7 @@ export default function DashboardPage() {
               {usesAgenticV2Keys && (
                 <Link
                   href="/docs/proof-of-work-api"
-                  className="inline-flex h-10 items-center justify-center rounded-sm border border-neutral-700 px-4 text-sm text-neutral-200 transition hover:border-neutral-500 hover:text-white"
+                  className="inline-flex h-10 items-center justify-center rounded-none border border-neutral-700 px-4 text-sm text-neutral-200 transition hover:border-neutral-500 hover:text-white"
                 >
                   {t("dashboard.mcpDocsLink")} →
                 </Link>
@@ -1720,7 +1739,7 @@ export default function DashboardPage() {
                   : t("dashboard.apiExperimentalDesc")}
               </p>
               {!usesAgenticV2Keys && (
-                <div className="rounded-md border border-neutral-800 bg-black/40 p-4 text-sm text-neutral-400">
+                <div className="rounded-none border border-neutral-800 bg-black/40 p-4 text-sm text-neutral-400">
                   {`${t("dashboard.apiKeysAvailableOnPro")} `}
                   <Link href="/pricing" className="text-neutral-200 underline decoration-neutral-600 underline-offset-4 hover:text-white">
                     {t("dashboard.upgradeToPro")}
@@ -1734,19 +1753,19 @@ export default function DashboardPage() {
                   value={newKeyName}
                   onChange={(e) => setNewKeyName(e.target.value)}
                   placeholder={t("dashboard.enterKeyName")}
-                  className="flex-1 rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-200 outline-none focus:border-neutral-600"
+                  className="flex-1 rounded-none border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-200 outline-none focus:border-neutral-600"
                 />
                 <button
                   onClick={handleCreateApiKey}
                   disabled={creatingKey}
-                  className="inline-flex h-10 items-center justify-center rounded-sm bg-white px-4 text-sm font-medium text-black transition hover:bg-neutral-200 disabled:opacity-50"
+                  className="inline-flex h-10 items-center justify-center rounded-none bg-white px-4 text-sm font-medium text-black transition hover:bg-neutral-200 disabled:opacity-50"
                 >
                   {creatingKey ? t("dashboard.creating") : t("dashboard.createNewKey")}
                 </button>
               </div>
 
               {newKeyValue && (
-                <div className="rounded-md border border-white/15 bg-white/[0.03] p-4">
+                <div className="rounded-none border border-white/15 bg-white/[0.03] p-4">
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-sm text-neutral-300">{t("dashboard.yourNewApiKey")}</p>
                     <button
@@ -1755,24 +1774,24 @@ export default function DashboardPage() {
                         setKeyCopied(true);
                         setTimeout(() => setKeyCopied(false), 2000);
                       }}
-                      className="rounded-sm border border-neutral-700 px-3 py-1 text-xs text-neutral-300 transition hover:border-neutral-500 hover:text-white"
+                      className="rounded-none border border-neutral-700 px-3 py-1 text-xs text-neutral-300 transition hover:border-neutral-500 hover:text-white"
                     >
                       {keyCopied ? t("common.copied") : t("common.copy")}
                     </button>
                   </div>
-                  <code className="mt-3 block break-all rounded-md border border-neutral-800 bg-black p-3 font-mono text-xs text-neutral-300">
+                  <code className="mt-3 block break-all rounded-none border border-neutral-800 bg-black p-3 font-mono text-xs text-neutral-300">
                     {newKeyValue}
                   </code>
                   {usesAgenticV2Keys ? (
                     <div className="mt-4 border-t border-neutral-800 pt-4">
                       <p className="text-xs text-neutral-400">{t("dashboard.mcpNewKeyConfig")}</p>
-                      <pre className="mt-2 overflow-x-auto rounded-md border border-neutral-800 bg-black p-3 font-mono text-[11px] text-neutral-300">
+                      <pre className="mt-2 overflow-x-auto rounded-none border border-neutral-800 bg-black p-3 font-mono text-[11px] text-neutral-300">
                         {mcpClientConfig}
                       </pre>
                       <button
                         type="button"
                         onClick={() => void copyMcpText(mcpClientConfig, "mcp-new-key")}
-                        className="mt-2 rounded-sm border border-neutral-700 px-3 py-1 text-xs text-neutral-300 transition hover:border-neutral-500 hover:text-white"
+                        className="mt-2 rounded-none border border-neutral-700 px-3 py-1 text-xs text-neutral-300 transition hover:border-neutral-500 hover:text-white"
                       >
                         {mcpCopiedField === "mcp-new-key"
                           ? t("common.copied")
@@ -1784,7 +1803,7 @@ export default function DashboardPage() {
               )}
 
               {apiKeys.length === 0 ? (
-                <div className="rounded-md border border-dashed border-neutral-800 py-8 text-center text-sm text-neutral-500">
+                <div className="rounded-none border border-dashed border-neutral-800 py-8 text-center text-sm text-neutral-500">
                   {t("dashboard.noApiKeysYet")}
                 </div>
               ) : (
@@ -1792,7 +1811,7 @@ export default function DashboardPage() {
                   {apiKeys.map((key) => (
                     <div
                       key={key.id}
-                      className="flex items-center justify-between rounded-md border border-neutral-800 bg-black/40 p-4"
+                      className="flex items-center justify-between rounded-none border border-neutral-800 bg-black/40 p-4"
                     >
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-neutral-200">
@@ -1836,7 +1855,7 @@ export default function DashboardPage() {
         {activeTab === "config" && (
           <div className="space-y-8">
             {/* AI Provider Status */}
-            <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-5">
+            <div className="rounded-none border border-neutral-800 bg-neutral-900/50 p-5">
               <h2 className="text-lg font-semibold mb-3">{t('dashboard.aiProvider')}</h2>
               {providerInfo ? (
                 <div className="space-y-3">
@@ -1878,12 +1897,12 @@ export default function DashboardPage() {
                   { label: t('dashboard.plannerModel'), desc: t('dashboard.plannerModelDesc') },
                   { label: t('dashboard.coderModel'), desc: t('dashboard.coderModelDesc') },
                 ].map((slot) => (
-                  <div key={slot.label} className="p-4 rounded-lg border border-neutral-800 bg-neutral-900/50">
+                  <div key={slot.label} className="p-4 rounded-none border border-neutral-800 bg-neutral-900/50">
                     <label className="block text-sm font-medium text-neutral-300 mb-1">
                       {slot.label}
                     </label>
                     <p className="text-xs text-neutral-500 mb-3">{slot.desc}</p>
-                    <div className="w-full bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-neutral-300">
+                    <div className="w-full bg-neutral-950 border border-neutral-700 rounded-none px-3 py-2 text-sm text-neutral-300">
                       Grok 4.5 <span className="text-neutral-500">({DEFAULT_MODEL})</span>
                     </div>
                   </div>
@@ -1909,7 +1928,7 @@ export default function DashboardPage() {
                   return (
                     <div
                       key={key}
-                      className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-4 opacity-60"
+                      className="rounded-none border border-neutral-800 bg-neutral-900/50 p-4 opacity-60"
                     >
                       <div className="flex items-start justify-between mb-2.5">
                         <div>
@@ -1924,7 +1943,7 @@ export default function DashboardPage() {
                         readOnly={true}
                         rows={6}
                         spellCheck={false}
-                        className="w-full bg-[#0a0a0a] border border-neutral-800 rounded-lg p-3 text-xs text-neutral-500 font-mono leading-relaxed resize-none cursor-not-allowed"
+                        className="w-full bg-[#0a0a0a] border border-neutral-800 rounded-none p-3 text-xs text-neutral-500 font-mono leading-relaxed resize-none cursor-not-allowed"
                       />
                     </div>
                   );
@@ -1935,6 +1954,7 @@ export default function DashboardPage() {
         )}
 
       </main>
+      </div>
     </div>
   );
 }

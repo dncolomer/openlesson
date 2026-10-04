@@ -4,6 +4,7 @@ import { Footer } from "@/components/Footer";
 import { LandingNav } from "@/components/LandingNav";
 import { TrackedCtaLink } from "@/components/TrackedCtaLink";
 import { aestheticImageForId } from "@/lib/aesthetics";
+import { PublicConsoleWash } from "@/components/ui/console-frame";
 import {
   DEMO_BOOKING_URL,
   type SeoUseCasePageConfig,
@@ -69,7 +70,7 @@ export function UseCaseLandingPage({ page }: UseCaseLandingPageProps) {
         aria-hidden
       />
       <div className="fixed inset-0 z-0 bg-[#0a0a0a]/78" />
-      <div className="fixed inset-0 z-0 bg-[radial-gradient(circle_at_72%_8%,rgba(14,116,144,0.22),transparent_31%),radial-gradient(circle_at_12%_18%,rgba(39,39,42,0.62),transparent_32%)]" />
+      <PublicConsoleWash />
       <div className="fixed inset-0 z-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:72px_72px] opacity-40" />
 
       <LandingNav />

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type HTMLAttributes } from "react";
 import type { SalesSlide, SolutionSlideDeck } from "@/lib/sales/solution-slide-decks";
+import { PublicConsoleWash } from "@/components/ui/console-frame";
 
 type SalesSlideDeckProps = {
   deck: SolutionSlideDeck;
@@ -60,7 +61,7 @@ function PitchMediaVideo({
  * overflow-y-auto only as safety so dense slides never clip narrative.
  */
 const CONTENT_PANEL_CLASS =
-  "flex h-full min-h-0 w-full max-w-none flex-col items-stretch justify-start overflow-y-auto overflow-x-hidden rounded-md border border-white/10 bg-black/50 p-5 text-left shadow-[0_20px_60px_rgba(0,0,0,0.4)] backdrop-blur-md sm:p-6 md:p-7 lg:p-8";
+  "flex h-full min-h-0 w-full max-w-none flex-col items-stretch justify-start overflow-y-auto overflow-x-hidden rounded-none border border-white/10 bg-black/50 p-5 text-left shadow-[0_20px_60px_rgba(0,0,0,0.4)] backdrop-blur-md sm:p-6 md:p-7 lg:p-8";
 
 /**
  * Larger responsive type scale (raised vs prior ~0.85–3rem compact clamps).
@@ -103,7 +104,7 @@ function ContentPanel({
 
 function Eyebrow({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mb-3 inline-block self-start rounded-sm border border-zinc-600/80 bg-black/50 px-2.5 py-0.5 text-left font-mono text-[10px] uppercase tracking-[2px] text-zinc-300 sm:mb-3.5 sm:text-[11px]">
+    <p className="mb-3 inline-block self-start rounded-none border border-zinc-600/80 bg-black/50 px-2.5 py-0.5 text-left font-mono text-[10px] uppercase tracking-[2px] text-zinc-300 sm:mb-3.5 sm:text-[11px]">
       {children}
     </p>
   );
@@ -149,7 +150,7 @@ function BulletList({
                 data-pitch-toc-link
                 data-pitch-toc-target={target}
                 onClick={() => onGoToSlide(target)}
-                className="flex w-full gap-3 rounded-md border border-transparent px-1 py-1 text-left transition hover:border-white/20 hover:bg-white/[0.06] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300/70"
+                className="flex w-full gap-3 rounded-none border border-transparent px-1 py-1 text-left transition hover:border-white/20 hover:bg-white/[0.06] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70"
               >
                 {marker}
                 <span className="min-w-0 underline decoration-white/25 underline-offset-4">
@@ -237,7 +238,7 @@ function HighlightCallouts({
           <div
             key={`${index}-${item.slice(0, 48)}`}
             data-pitch-highlight
-            className="rounded-md border border-white/25 bg-white/[0.08] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] sm:px-5 sm:py-3.5"
+            className="rounded-none border border-white/25 bg-white/[0.08] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] sm:px-5 sm:py-3.5"
           >
             <div className={image ? "flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4" : undefined}>
               {image ? (
@@ -265,7 +266,7 @@ function HighlightCallouts({
               ) : null}
               <div className="min-w-0 flex-1">
                 {labels?.[index] && (
-                  <p className="mb-1.5 font-mono text-[10px] font-semibold uppercase tracking-[1.8px] text-cyan-200/90 sm:text-[11px]">
+                  <p className="mb-1.5 font-mono text-[10px] font-semibold uppercase tracking-[1.8px] text-white/70 sm:text-[11px]">
                     {labels[index]}
                   </p>
                 )}
@@ -285,7 +286,7 @@ function IdeaIcon() {
   return (
     <span
       data-pitch-idea-icon
-      className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-cyan-300/35 bg-cyan-400/10 text-cyan-200"
+      className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center border border-white/40 bg-black text-white"
       aria-hidden
     >
       <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -340,11 +341,11 @@ function PitchCardArticle({
   return (
     <article
       data-pitch-card
-      className={`flex min-h-0 flex-col overflow-hidden rounded-md border border-white/25 bg-black/55 p-3 shadow-[0_16px_40px_rgba(0,0,0,0.35)] backdrop-blur-sm sm:p-4 md:p-5 ${
+      className={`flex min-h-0 flex-col overflow-hidden rounded-none border border-white/25 bg-black/55 p-3 shadow-[0_16px_40px_rgba(0,0,0,0.35)] backdrop-blur-sm sm:p-4 md:p-5 ${
         fill ? "h-full min-h-0" : "h-full"
       }`}
     >
-      <p className="shrink-0 font-mono text-[10px] font-semibold uppercase tracking-[1.8px] text-cyan-200/90 sm:text-[11px]">
+      <p className="shrink-0 font-mono text-[10px] font-semibold uppercase tracking-[1.8px] text-white/70 sm:text-[11px]">
         {card.label}
       </p>
       {card.body && (
@@ -369,7 +370,7 @@ function PitchCardArticle({
             data-pitch-card-image-target={imageGoToSlide}
             onClick={() => onGoToSlide(imageGoToSlide)}
             aria-label={`Open larger view: ${card.imageAlt ?? card.label}`}
-            className="mt-2.5 shrink-0 cursor-pointer overflow-hidden rounded border border-white/15 bg-black/40 text-left transition hover:border-cyan-300/50 hover:ring-1 hover:ring-cyan-300/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300/70 sm:mt-3"
+            className="mt-2.5 shrink-0 cursor-pointer overflow-hidden rounded border border-white/15 bg-black/40 text-left transition hover:border-white/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70 sm:mt-3"
           >
             {imageEl}
           </button>
@@ -391,7 +392,7 @@ function PitchCardArticle({
             <div
               key={`${card.label}-${idea.title}`}
               data-pitch-idea
-              className={`min-h-0 overflow-hidden rounded-md border border-white/15 bg-white/[0.05] px-2.5 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:px-3 sm:py-2.5 ${
+              className={`min-h-0 overflow-hidden rounded-none border border-white/15 bg-white/[0.05] px-2.5 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:px-3 sm:py-2.5 ${
                 fill ? "flex flex-1 flex-col" : ""
               }`}
             >
@@ -535,7 +536,7 @@ function StackedSections({
             <section
               key={column.label}
               data-pitch-content-panel
-              className="w-full rounded-md border border-white/10 bg-black/40 p-4 text-left sm:p-5"
+              className="w-full rounded-none border border-white/10 bg-black/40 p-4 text-left sm:p-5"
             >
               <p className={SECTION_LABEL}>{column.label}</p>
               <ul className="flex flex-col gap-3 text-left">
@@ -569,14 +570,14 @@ function SlideContent({
         <div
           data-pitch-content-panel
           data-pitch-title-centered
-          className="flex h-full min-h-0 w-full flex-1 flex-col items-center justify-center overflow-hidden rounded-md border border-white/10 bg-black/50 p-5 text-center shadow-[0_20px_60px_rgba(0,0,0,0.4)] backdrop-blur-md sm:p-6 md:p-7 lg:p-8"
+          className="flex h-full min-h-0 w-full flex-1 flex-col items-center justify-center overflow-hidden rounded-none border border-white/10 bg-black/50 p-5 text-center shadow-[0_20px_60px_rgba(0,0,0,0.4)] backdrop-blur-md sm:p-6 md:p-7 lg:p-8"
         >
           <div
             data-pitch-title-inner
             className="mx-auto flex w-full max-w-4xl flex-col items-center justify-center gap-0 text-center"
           >
             {slide.kicker && (
-              <p className="mb-4 inline-block rounded-sm border border-zinc-600/80 bg-black/50 px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-[2px] text-zinc-300 sm:mb-5 sm:text-[11px]">
+              <p className="mb-4 inline-block rounded-none border border-zinc-600/80 bg-black/50 px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-[2px] text-zinc-300 sm:mb-5 sm:text-[11px]">
                 {slide.kicker}
               </p>
             )}
@@ -586,7 +587,7 @@ function SlideContent({
                 <img
                   src={slide.image}
                   alt={slide.imageAlt ?? "Uncertain Systems"}
-                  className="mx-auto h-auto w-[min(100%,5.5rem)] rounded-md border border-white/15 object-contain shadow-lg shadow-black/40 sm:w-[min(100%,6.5rem)]"
+                  className="mx-auto h-auto w-[min(100%,5.5rem)] rounded-none border border-white/15 object-contain shadow-lg shadow-black/40 sm:w-[min(100%,6.5rem)]"
                 />
               </div>
             )}
@@ -629,7 +630,7 @@ function SlideContent({
                 <img
                   src={slide.image}
                   alt={slide.imageAlt ?? slide.title}
-                  className="aspect-square h-auto w-[min(100%,180px)] rounded-sm border border-white/15 object-cover shadow-xl shadow-black/40 sm:w-[min(100%,200px)]"
+                  className="aspect-square h-auto w-[min(100%,180px)] rounded-none border border-white/15 object-cover shadow-xl shadow-black/40 sm:w-[min(100%,200px)]"
                 />
               </div>
             )}
@@ -656,7 +657,7 @@ function SlideContent({
       <SlideFrame>
         <figure
           data-pitch-full-image
-          className="relative flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden rounded-md border border-white/10 bg-black/55 shadow-[0_20px_60px_rgba(0,0,0,0.4)] backdrop-blur-md"
+          className="relative flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden rounded-none border border-white/10 bg-black/55 shadow-[0_20px_60px_rgba(0,0,0,0.4)] backdrop-blur-md"
         >
           {canGoBack ? (
             <button
@@ -664,7 +665,7 @@ function SlideContent({
               data-pitch-full-image-back
               data-pitch-full-image-back-target={backTarget}
               onClick={() => onGoToSlide(backTarget)}
-              className="absolute left-3 top-3 z-10 rounded-sm border border-white/20 bg-black/70 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[1.4px] text-zinc-100 shadow-lg backdrop-blur-sm transition hover:border-cyan-300/50 hover:bg-black/85 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300/70 sm:left-4 sm:top-4 sm:text-[11px]"
+              className="absolute left-3 top-3 z-10 rounded-none border border-white/20 bg-black/70 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[1.4px] text-zinc-100 shadow-lg backdrop-blur-sm transition hover:border-white/50 hover:bg-black/85 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70 sm:left-4 sm:top-4 sm:text-[11px]"
             >
               ← Back
             </button>
@@ -753,8 +754,8 @@ function SlideContent({
               data-pitch-image-placeholder={isPlaceholder ? "true" : undefined}
               className={
                 isVideo
-                  ? "order-1 min-w-0 w-full shrink-0 overflow-hidden rounded-sm border-0 bg-black shadow-[0_16px_48px_rgba(0,0,0,0.35)] md:order-2 md:sticky md:top-0"
-                  : "order-1 min-w-0 w-full overflow-hidden rounded-sm border border-white/15 bg-black/40 shadow-[0_16px_48px_rgba(0,0,0,0.35)] md:order-2 md:sticky md:top-0"
+                  ? "order-1 min-w-0 w-full shrink-0 overflow-hidden rounded-none border-0 bg-black shadow-[0_16px_48px_rgba(0,0,0,0.35)] md:order-2 md:sticky md:top-0"
+                  : "order-1 min-w-0 w-full overflow-hidden rounded-none border border-white/15 bg-black/40 shadow-[0_16px_48px_rgba(0,0,0,0.35)] md:order-2 md:sticky md:top-0"
               }
             >
               {slide.video ? (
@@ -986,16 +987,16 @@ export function SalesSlideDeck({ deck }: SalesSlideDeckProps) {
         />
       )}
       <div className="pointer-events-none absolute inset-0 bg-[#0a0a0a]/30" />
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_72%_8%,rgba(14,116,144,0.1),transparent_31%),radial-gradient(circle_at_12%_18%,rgba(0,0,0,0.18),transparent_40%)]" />
+      <PublicConsoleWash className="absolute inset-0" />
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:72px_72px] opacity-25" />
 
       <header className="relative z-10 flex shrink-0 items-center justify-between px-4 py-2.5 md:px-6 md:py-3">
-        <div className="rounded-sm border border-white/10 bg-black/45 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[1.6px] text-zinc-300 backdrop-blur-sm md:text-[11px]">
+        <div className="rounded-none border border-white/10 bg-black/45 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[1.6px] text-zinc-300 backdrop-blur-sm md:text-[11px]">
           uncertain<span className="text-zinc-100">.systems</span>
           <span className="mx-2 text-zinc-500">·</span>
           <span className="text-zinc-200">{deck.label}</span>
         </div>
-        <div className="rounded-sm border border-white/10 bg-black/45 px-2.5 py-1 font-mono text-xs tabular-nums text-zinc-300 backdrop-blur-sm md:text-sm">
+        <div className="rounded-none border border-white/10 bg-black/45 px-2.5 py-1 font-mono text-xs tabular-nums text-zinc-300 backdrop-blur-sm md:text-sm">
           {index + 1} / {total}
         </div>
       </header>
@@ -1020,7 +1021,7 @@ export function SalesSlideDeck({ deck }: SalesSlideDeckProps) {
           />
         </div>
         <div className="flex items-center justify-between gap-3">
-          <p className="hidden rounded-sm bg-black/45 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[1.4px] text-zinc-400 backdrop-blur-sm sm:block">
+          <p className="hidden rounded-none bg-black/45 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[1.4px] text-zinc-400 backdrop-blur-sm sm:block">
             For live presentation
           </p>
           <p className="font-mono text-[10px] tracking-[1px] text-zinc-400 sm:hidden">
@@ -1031,7 +1032,7 @@ export function SalesSlideDeck({ deck }: SalesSlideDeckProps) {
               type="button"
               onClick={() => go(-1)}
               disabled={index === 0}
-              className="rounded-sm border border-white/15 bg-black/50 px-3 py-1 text-xs text-zinc-200 transition hover:border-white/30 hover:text-white disabled:opacity-30"
+              className="rounded-none border border-white/15 bg-black/50 px-3 py-1 text-xs text-zinc-200 transition hover:border-white/30 hover:text-white disabled:opacity-30"
             >
               Previous
             </button>
@@ -1039,7 +1040,7 @@ export function SalesSlideDeck({ deck }: SalesSlideDeckProps) {
               type="button"
               onClick={() => go(1)}
               disabled={index === total - 1}
-              className="rounded-sm border border-white/20 bg-black/55 px-3 py-1 text-xs text-zinc-50 transition hover:border-white/40 hover:text-white disabled:opacity-30"
+              className="rounded-none border border-white/20 bg-black/55 px-3 py-1 text-xs text-zinc-50 transition hover:border-white/40 hover:text-white disabled:opacity-30"
             >
               Next
             </button>

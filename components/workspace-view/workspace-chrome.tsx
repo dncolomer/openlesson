@@ -2,6 +2,8 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { SessionConsoleMarks, SessionConsoleScan } from "@/components/session-view/session-console-marks";
+import { CONSOLE_LABEL_CLASS, ConsolePage } from "@/components/ui/console-frame";
 import { Navbar } from "@/components/Navbar";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { WorkspaceSectionNav } from "@/components/WorkspaceSectionNav";
@@ -18,8 +20,19 @@ import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
 
 export function WorkspaceLoading({ message }: { message: string }) {
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-      <LoadingStatusMessage message={message} />
+    <div
+      data-console-frame=""
+      data-workspace-shell=""
+      className="relative flex min-h-screen items-center justify-center overflow-hidden border border-white/40 bg-black"
+    >
+      <SessionConsoleScan />
+      <SessionConsoleMarks />
+      <p data-console-frame-label="" className={`absolute left-3 top-3 z-[4] ${CONSOLE_LABEL_CLASS}`}>
+        Map
+      </p>
+      <div className="relative z-[2]">
+        <LoadingStatusMessage message={message} />
+      </div>
     </div>
   );
 }
@@ -34,12 +47,14 @@ export function WorkspaceLoadError({
   homeLabel: string;
 }) {
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center gap-4">
-      <div className="text-red-400">{error || fallback}</div>
-      <Link href="/" className="text-neutral-300 hover:text-white hover:underline">
-        {homeLabel}
-      </Link>
-    </div>
+    <ConsolePage label="Map">
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
+        <div className="max-w-md border border-white/30 bg-black px-4 py-3 text-sm text-white/80">{error || fallback}</div>
+        <Link href="/" className="text-neutral-300 hover:text-white hover:underline">
+          {homeLabel}
+        </Link>
+      </div>
+    </ConsolePage>
   );
 }
 

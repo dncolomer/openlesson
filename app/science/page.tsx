@@ -23,6 +23,7 @@ import {
 } from "@/lib/science/epistemic-foraging-copy";
 
 import { standardShareSocialMetadata } from "@/lib/og/standard";
+import { PublicConsoleWash } from "@/components/ui/console-frame";
 
 const standardSocial = standardShareSocialMetadata({
   url: "https://uncertain.systems/science",
@@ -79,12 +80,11 @@ export default function SciencePage() {
         aria-hidden
       />
       <div className="fixed inset-0 z-0 bg-[#0a0a0a]/78" />
-      <div className="fixed inset-0 z-0 bg-[radial-gradient(circle_at_72%_8%,rgba(14,116,144,0.22),transparent_31%),radial-gradient(circle_at_12%_18%,rgba(39,39,42,0.62),transparent_32%)]" />
-
+      <PublicConsoleWash />
       <LandingNav />
 
       <section className="relative z-10 mx-auto w-full max-w-7xl px-6 pt-14 pb-10 sm:pt-16 sm:pb-12">
-        <div className="mb-6 inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
+        <div className="mb-6 inline-block rounded-none border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
           SCIENCE
         </div>
         <h1 className="max-w-4xl text-5xl font-medium leading-[1.03] tracking-[-2.8px] text-white sm:text-6xl lg:text-[68px]">
@@ -127,12 +127,12 @@ export default function SciencePage() {
                 <div
                   key={`hl-${index}`}
                   data-science-pitch-highlight
-                  className="mt-6 rounded-sm border border-white/20 bg-white/[0.05] p-4 sm:p-5"
+                  className="mt-6 rounded-none border border-white/20 bg-white/[0.05] p-4 sm:p-5"
                 >
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
                     {image ? (
                       <figure className="w-full shrink-0 sm:w-48">
-                        <div className="overflow-hidden rounded-sm border border-zinc-800 bg-black/40">
+                        <div className="overflow-hidden rounded-none border border-zinc-800 bg-black/40">
                           <Image
                             src={image}
                             alt={imageAlt || label || "Thesis illustration"}

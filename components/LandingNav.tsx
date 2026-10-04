@@ -55,7 +55,7 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
       className={`z-40 px-5 py-4 backdrop-blur-md ${
         overlay
           ? "absolute inset-x-0 top-0 border-b-0 bg-[#0a0a0a]/40"
-          : "sticky top-0 border-b border-zinc-900 bg-[#0a0a0a]/86"
+          : "sticky top-0 border-b border-white/30 bg-black/85"
       }`}
     >
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">

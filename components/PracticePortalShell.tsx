@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
+import { PublicConsoleWash } from "@/components/ui/console-frame";
 
 /**
  * Map-of-Knowledge visual shell for the public Practice Portal:
- * fixed aesthetics background, dark dimmer, cyan/zinc radials, centered content.
+ * fixed aesthetics background, dark dimmer, console grid, centered content.
  */
 export function PracticePortalShell({
   backgroundImage,
@@ -30,12 +31,7 @@ export function PracticePortalShell({
         aria-hidden
       />
       <div className="fixed inset-0 z-0 bg-[#0a0a0a]/78" aria-hidden />
-      <div
-        className="fixed inset-0 z-0 bg-[radial-gradient(circle_at_72%_8%,rgba(14,116,144,0.22),transparent_31%),radial-gradient(circle_at_12%_18%,rgba(39,39,42,0.62),transparent_32%)]"
-        data-practice-portal-aesthetics-overlay
-        aria-hidden
-      />
-
+      <PublicConsoleWash data-practice-portal-aesthetics-overlay />
       <div
         className="relative z-10 mx-auto flex min-h-screen w-full max-w-3xl flex-col justify-center px-4 py-12 sm:px-6 sm:py-16"
         data-practice-portal-centered

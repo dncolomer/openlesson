@@ -26,6 +26,7 @@ import {
   AYCL_LEARNER_PRICE_LABEL,
 } from "@/lib/aycl-shared";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
+import { PublicConsoleWash } from "@/components/ui/console-frame";
 
 const BACKGROUND_IMAGES = [
   "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg",
@@ -544,7 +545,7 @@ export default function NewWorkspacePage() {
       }
     >
       <div className="fixed inset-0 z-0 bg-[#0a0a0a]/76" />
-      <div className="fixed inset-0 z-0 bg-[radial-gradient(circle_at_72%_8%,rgba(14,116,144,0.16),transparent_32%)]" />
+      <PublicConsoleWash />
       <div
         className={`fixed inset-0 z-30 flex items-center justify-center transition-opacity duration-700 ${busy ? "opacity-100" : "pointer-events-none opacity-0"}`}
         aria-live="polite"

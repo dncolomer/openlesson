@@ -85,11 +85,11 @@ interface ConfirmDialogProps {
 // ── Variant visuals ─────────────────────────────────────────────────────
 
 const ICON_PILL: Record<ConfirmVariant, string> = {
-  destructive: "bg-red-500/15 border border-red-500/30 text-red-400",
-  warning: "bg-neutral-800/20 border border-neutral-600/30 text-neutral-300",
-  info: "bg-neutral-800/20 border border-neutral-600/30 text-neutral-300",
-  success: "bg-emerald-500/15 border border-emerald-500/30 text-emerald-400",
-  neutral: "bg-neutral-800 border border-neutral-700 text-neutral-200",
+  destructive: "border border-white/40 bg-black text-white",
+  warning: "border border-white/40 bg-black text-white",
+  info: "border border-white/40 bg-black text-white",
+  success: "border border-white/40 bg-black text-white",
+  neutral: "border border-white/40 bg-black text-white",
 };
 
 function DefaultIcon({ variant }: { variant: ConfirmVariant }) {
@@ -128,9 +128,8 @@ function Spinner() {
   );
 }
 
-// Confirm button tone. Destructive uses the `bg-red-500/10 border-red-500/30`
-// translucent pattern from SessionView, NOT the old `bg-red-600` solid —
-// solid red is reserved for marketing / destructive-final states elsewhere.
+// Confirm button tone. Destructive stays an outline button, not a red fill,
+// so the dialog matches the black-and-white console without hiding the action.
 const TERTIARY_TONE: Record<NonNullable<ConfirmDialogProps["tertiaryTone"]>, string> = {
   primary:
     "w-full py-2.5 px-4 text-sm font-medium rounded-none bg-neutral-100 text-neutral-900 hover:bg-white active:bg-white transition-colors flex items-center justify-center gap-2",
@@ -140,7 +139,7 @@ const TERTIARY_TONE: Record<NonNullable<ConfirmDialogProps["tertiaryTone"]>, str
 
 const CONFIRM_TONE: Record<NonNullable<ConfirmDialogProps["confirmTone"]>, string> = {
   destructive:
-    "text-red-300 bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 hover:text-red-200 active:bg-red-500/20 active:text-red-200",
+    "text-white bg-black border border-white/70 hover:bg-white hover:text-black active:bg-white active:text-black",
   primary:
     "text-neutral-900 bg-neutral-100 hover:bg-white active:bg-white border border-transparent",
   warning:
@@ -235,7 +234,7 @@ export function ConfirmDialog({
         <div className="flex items-center gap-3">
           {!hideIcon ? (
             <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${ICON_PILL[variant]}`}
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-none ${ICON_PILL[variant]}`}
               aria-hidden="true"
             >
               {icon ?? <DefaultIcon variant={variant} />}

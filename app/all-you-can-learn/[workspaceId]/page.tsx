@@ -14,6 +14,7 @@ import {
 import { normalizeAyclAccessTier, type AyclAccessTier } from "@/lib/aycl-shared";
 import { aestheticImageForId } from "@/lib/aesthetics";
 import { standardShareSocialMetadata } from "@/lib/og/standard";
+import { PublicConsoleWash } from "@/components/ui/console-frame";
 
 const BACKGROUND_IMAGE = aestheticImageForId("all-you-can-learn-landing", [
   "/aesthetics/Greco-futurism/HHnTrjJbQAAOz7K.jpeg",
@@ -116,8 +117,7 @@ export default async function AyclWorkspaceLandingPage({
         aria-hidden
       />
       <div className="fixed inset-0 z-0 bg-[#0a0a0a]/82" />
-      <div className="fixed inset-0 z-0 bg-[radial-gradient(circle_at_72%_8%,rgba(14,116,144,0.18),transparent_31%)]" />
-
+      <PublicConsoleWash />
       <LandingNav />
 
       <section className="relative z-10 mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 sm:py-14">

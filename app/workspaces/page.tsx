@@ -7,6 +7,7 @@ import { Navbar } from "@/components/Navbar";
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
+import { ConsolePage } from "@/components/ui/console-frame";
 
 interface Workspace {
   id: string;
@@ -66,14 +67,16 @@ export default function WorkspacesPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <LoadingStatusMessage message={t('common.loading')} />
-      </div>
+      <ConsolePage label="List">
+        <div className="flex flex-1 items-center justify-center">
+          <LoadingStatusMessage message={t('common.loading')} />
+        </div>
+      </ConsolePage>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <ConsolePage label="List">
       <Navbar
         breadcrumbs={[
           { label: t('plans.title') }
@@ -94,7 +97,7 @@ export default function WorkspacesPage() {
             {workspaces.map((workspace) => (
               <div
                 key={workspace.id}
-                className="p-4 bg-neutral-900/50 border border-neutral-800 rounded-xl hover:border-neutral-700 transition-colors"
+                className="border border-white/30 bg-black p-4 transition-colors hover:border-white/60"
               >
                 <div className="flex items-center justify-between">
                   <Link href={`/workspace/${workspace.id}`} className="flex-1">
@@ -104,19 +107,19 @@ export default function WorkspacesPage() {
                     </p>
                   </Link>
                   <div className="flex items-center gap-2">
-                    <span className={`text-xs px-2 py-1 rounded-full ${
+                    <span className={`border border-white/30 px-2 py-1 text-xs ${
                       workspace.status === 'active'
-                        ? 'bg-neutral-950/50 text-neutral-300'
+                        ? 'bg-black text-white'
                         : workspace.status === 'completed'
-                        ? 'bg-green-900/50 text-green-400'
-                        : 'bg-neutral-800 text-neutral-400'
+                        ? 'bg-black text-white/80'
+                        : 'bg-black text-neutral-400'
                     }`}>
                       {workspace.status}
                     </span>
                     <button
                       type="button"
                       onClick={() => handleArchive(workspace.id)}
-                      className="rounded border border-neutral-700 px-2 py-1 text-[10px] uppercase tracking-wide text-neutral-400 transition hover:border-neutral-600/40 hover:text-neutral-300"
+                      className="rounded-none border border-white/30 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.18em] text-neutral-400 transition hover:border-white/60 hover:text-white"
                     >
                       Archive
                     </button>
@@ -127,6 +130,6 @@ export default function WorkspacesPage() {
           </div>
         )}
       </main>
-    </div>
+    </ConsolePage>
   );
 }

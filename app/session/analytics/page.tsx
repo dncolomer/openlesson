@@ -23,6 +23,7 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { useI18n } from "@/lib/i18n";
+import { ConsolePage } from "@/components/ui/console-frame";
 
 // ---- Types ----
 
@@ -461,21 +462,25 @@ function AnalyticsContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
-        <LoadingStatusMessage message={t("analytics.loading")} />
-      </div>
+      <ConsolePage label="Data">
+        <div className="flex flex-1 items-center justify-center">
+          <LoadingStatusMessage message={t("analytics.loading")} />
+        </div>
+      </ConsolePage>
     );
   }
 
   if (!session) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-6 bg-[#0a0a0a]">
-        <h1 className="text-2xl font-bold text-white mb-4">{t("analytics.notFound")}</h1>
-        <p className="text-neutral-500 mb-8 text-sm">{t("analytics.notFoundDesc")}</p>
-        <Link href="/dashboard" className="px-5 py-2.5 bg-white/10 hover:bg-white/15 text-white text-sm rounded-xl transition-colors">
-          {t("analytics.backToDashboard")}
-        </Link>
-      </div>
+      <ConsolePage label="Data">
+        <div className="flex flex-1 flex-col items-center justify-center px-6">
+          <h1 className="text-2xl font-bold text-white mb-4">{t("analytics.notFound")}</h1>
+          <p className="text-neutral-500 mb-8 text-sm">{t("analytics.notFoundDesc")}</p>
+          <Link href="/dashboard" className="border border-white/40 bg-black px-5 py-2.5 text-sm text-white transition-colors hover:bg-white hover:text-black">
+            {t("analytics.backToDashboard")}
+          </Link>
+        </div>
+      </ConsolePage>
     );
   }
 
@@ -483,7 +488,7 @@ function AnalyticsContent() {
   const durationSec = Math.floor((session.durationMs % 60000) / 1000);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0a0a0a]">
+    <ConsolePage label="Data">
       <Navbar breadcrumbs={[{ label: t("analytics.breadcrumb") }]} />
 
       {/* Lightbox */}
@@ -828,7 +833,7 @@ function AnalyticsContent() {
         </div>
       </div>
       <Footer />
-    </div>
+    </ConsolePage>
   );
 }
 
@@ -885,9 +890,11 @@ export default function SessionAnalyticsPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
-          <LoadingStatusMessage message="Loading" />
-        </div>
+        <ConsolePage label="Data">
+          <div className="flex flex-1 items-center justify-center">
+            <LoadingStatusMessage message="Loading" />
+          </div>
+        </ConsolePage>
       }
     >
       <AnalyticsContent />

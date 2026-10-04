@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { LandingNav } from "@/components/LandingNav";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { AYCL_TOKEN_STORAGE_KEY, buildAyclAccessUrl } from "@/lib/aycl-shared";
+import { ConsolePage } from "@/components/ui/console-frame";
 
 function SuccessContent() {
   const searchParams = useSearchParams();
@@ -89,7 +90,7 @@ function SuccessContent() {
         </>
       ) : (
         <>
-          <div className="mb-6 inline-flex h-16 w-16 items-center justify-center rounded-full border border-green-500/20 bg-green-500/10 text-green-400">
+          <div className="mb-6 inline-flex h-16 w-16 items-center justify-center border border-white/40 bg-black text-white">
             <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
@@ -103,7 +104,7 @@ function SuccessContent() {
               : "Save this link — it's your private lifetime access to your forked workspace. No account needed. Think Aloud Protocol included."}
           </p>
           {accessUrl ? (
-            <div className="mb-6 w-full max-w-xl rounded-lg border border-neutral-800 bg-neutral-950 px-4 py-3 text-left">
+            <div className="mb-6 w-full max-w-xl rounded-none border border-neutral-800 bg-neutral-950 px-4 py-3 text-left">
               <p className="break-all text-sm text-neutral-300">{accessUrl}</p>
             </div>
           ) : null}
@@ -113,13 +114,13 @@ function SuccessContent() {
                 <button
                   type="button"
                   onClick={handleCopy}
-                  className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
+                  className="rounded-none border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
                 >
                   {copied ? "Copied!" : "Copy link"}
                 </button>
                 <Link
                   href={accessUrl}
-                  className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black hover:bg-neutral-200"
+                  className="rounded-none bg-white px-4 py-2 text-sm font-medium text-black hover:bg-neutral-200"
                 >
                   Open my workspace
                 </Link>
@@ -134,7 +135,7 @@ function SuccessContent() {
 
 export default function AllYouCanLearnSuccessPage() {
   return (
-    <main className="flex min-h-screen flex-col bg-[#0a0a0a] text-zinc-200">
+    <ConsolePage label="End">
       <LandingNav />
       <Suspense
         fallback={
@@ -145,6 +146,6 @@ export default function AllYouCanLearnSuccessPage() {
       >
         <SuccessContent />
       </Suspense>
-    </main>
+    </ConsolePage>
   );
 }

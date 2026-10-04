@@ -1,6 +1,8 @@
 "use client";
 
 import { AestheticPicker } from "@/components/AestheticPicker";
+import { SessionConsoleMarks, SessionConsoleScan } from "@/components/session-view/session-console-marks";
+import { CONSOLE_LABEL_CLASS } from "@/components/ui/console-frame";
 import { TapBriefingConfig } from "@/components/TapBriefingConfig";
 import { IleStartLoading } from "@/components/session-view/ile-start-loading";
 import { SessionPageLoading } from "@/components/session-view/session-page-loading";
@@ -133,9 +135,15 @@ export function SessionWelcomeModal({
     <div
       data-ile-session-settings
       data-session-welcome-modal=""
-      className="flex h-screen min-h-0 w-full flex-col bg-[#0a0a0a]"
+      data-console-frame=""
+      className="relative flex h-screen min-h-0 w-full flex-col overflow-hidden border border-white/40 bg-black"
     >
-      <div className="shrink-0 border-b border-neutral-800/70 px-5 py-3 sm:px-6">
+      <SessionConsoleScan />
+      <SessionConsoleMarks />
+      <p data-console-frame-label="" className={`absolute left-3 top-2 z-[4] ${CONSOLE_LABEL_CLASS}`}>
+        Set
+      </p>
+      <div className="relative z-[2] shrink-0 border-b border-white/30 px-5 py-3 sm:px-6">
         <h2 className="text-lg font-semibold leading-tight tracking-tight text-white sm:text-xl">
           {t("session.welcomeTitle")}
         </h2>
@@ -144,7 +152,7 @@ export function SessionWelcomeModal({
         </p>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col">
+      <div className="relative z-[2] flex min-h-0 flex-1 flex-col">
         {!languageConfirmed ? (
           <div className="grid h-full min-h-0 w-full flex-1 overflow-hidden lg:grid-cols-2">
             <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden border-neutral-800 lg:border-r">

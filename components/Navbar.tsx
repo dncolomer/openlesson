@@ -85,7 +85,7 @@ export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
   ];
 
   return (
-    <header className="border-b border-neutral-800/60 px-4 sm:px-6 py-4 backdrop-blur-sm bg-[#0a0a0a]/85 sticky top-0 z-20">
+    <header className="sticky top-0 z-20 border-b border-white/30 bg-black/85 px-4 py-4 backdrop-blur-sm sm:px-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Link href="/" className="transition hover:opacity-90">

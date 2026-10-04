@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { Zap } from "lucide-react";
+import { CONSOLE_GRID_STYLE } from "@/components/ui/console-frame";
 import { cn } from "@/lib/utils";
 import {
   ILE_DIALOGUE_AVATAR_SIZE_CLASS,
@@ -496,13 +497,6 @@ export function ThoughtBackgroundLayers({
       : dimStrength === "medium"
         ? "bg-[#0a0a0a]/72"
         : "bg-[#0a0a0a]/86";
-  const gradientClass =
-    dimStrength === "light"
-      ? "bg-[radial-gradient(circle_at_72%_8%,rgba(14,116,144,0.12),transparent_36%),radial-gradient(circle_at_12%_18%,rgba(39,39,42,0.28),transparent_34%)]"
-      : dimStrength === "medium"
-        ? "bg-[radial-gradient(circle_at_72%_8%,rgba(14,116,144,0.16),transparent_33%),radial-gradient(circle_at_12%_18%,rgba(39,39,42,0.45),transparent_32%)]"
-        : "bg-[radial-gradient(circle_at_72%_8%,rgba(14,116,144,0.18),transparent_31%),radial-gradient(circle_at_12%_18%,rgba(39,39,42,0.55),transparent_32%)]";
-
   const dimOverlay = fadeToRight
     ? "linear-gradient(to right, rgba(10,10,10,0.18) 0%, rgba(10,10,10,0.42) 42%, rgba(10,10,10,0.82) 78%, rgba(10,10,10,0.94) 100%)"
     : dimStrength === "light"
@@ -510,13 +504,6 @@ export function ThoughtBackgroundLayers({
       : dimStrength === "medium"
         ? "rgba(10,10,10,0.72)"
         : "rgba(10,10,10,0.86)";
-  const gradientOverlay =
-    dimStrength === "light"
-      ? "radial-gradient(circle at 72% 8%, rgba(14,116,144,0.12), transparent 36%), radial-gradient(circle at 12% 18%, rgba(39,39,42,0.28), transparent 34%)"
-      : dimStrength === "medium"
-        ? "radial-gradient(circle at 72% 8%, rgba(14,116,144,0.16), transparent 33%), radial-gradient(circle at 12% 18%, rgba(39,39,42,0.45), transparent 32%)"
-        : "radial-gradient(circle at 72% 8%, rgba(14,116,144,0.18), transparent 31%), radial-gradient(circle at 12% 18%, rgba(39,39,42,0.55), transparent 32%)";
-
   return (
     <>
       <div
@@ -541,8 +528,10 @@ export function ThoughtBackgroundLayers({
         style={{ position: "absolute", inset: 0, background: dimOverlay }}
       />
       <div
-        className={`absolute inset-0 ${gradientClass}`}
-        style={{ position: "absolute", inset: 0, backgroundImage: gradientOverlay }}
+        data-console-field=""
+        aria-hidden
+        className="absolute inset-0"
+        style={{ position: "absolute", inset: 0, ...CONSOLE_GRID_STYLE }}
       />
     </>
   );

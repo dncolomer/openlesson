@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { createClient } from "@/lib/supabase/client";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
+import { ConsolePage } from "@/components/ui/console-frame";
 
 export default function LabsLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -23,18 +24,20 @@ export default function LabsLayout({ children }: { children: React.ReactNode }) 
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <LoadingStatusMessage message="Loading" />
-      </div>
+      <ConsolePage label="Labs">
+        <div className="flex flex-1 items-center justify-center">
+          <LoadingStatusMessage message="Loading" />
+        </div>
+      </ConsolePage>
     );
   }
 
   return (
-    <>
+    <ConsolePage label="Labs">
       <Navbar breadcrumbs={[{ label: "Labs" }]} />
-      <main className="min-h-screen bg-[#0a0a0a]">
+      <main className="min-h-0 flex-1 bg-black">
         {children}
       </main>
-    </>
+    </ConsolePage>
   );
 }

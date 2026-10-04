@@ -4,6 +4,7 @@ import { Footer } from "@/components/Footer";
 import { LandingNav } from "@/components/LandingNav";
 import { AYCL_HACKATHONS } from "@/lib/aycl-landing";
 import { standardShareSocialMetadata } from "@/lib/og/standard";
+import { PublicConsoleWash } from "@/components/ui/console-frame";
 
 const EVENT = AYCL_HACKATHONS.find((event) => event.id === "ground-state");
 
@@ -24,7 +25,7 @@ export const metadata: Metadata = {
 export default function GroundStateEventPage() {
   return (
     <main
-      className="relative min-h-screen overflow-hidden bg-[#0a0a0a] text-zinc-200 selection:bg-zinc-700"
+      className="relative min-h-screen overflow-hidden border border-white/40 bg-black text-zinc-200 selection:bg-zinc-700"
       data-ground-state-page
     >
       <div className="fixed inset-0 z-0 bg-[#0a0a0a]" />
@@ -36,6 +37,7 @@ export default function GroundStateEventPage() {
         aria-hidden
       />
       <div className="fixed inset-0 z-0 bg-[#0a0a0a]/82" />
+      <PublicConsoleWash />
 
       <LandingNav />
 

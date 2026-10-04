@@ -8,6 +8,7 @@ import { Navbar } from "@/components/Navbar";
 import { trackSignupCompleted } from "@/lib/analytics";
 import { useI18n } from "@/lib/i18n";
 import { tierLabel } from "@/lib/admin/tiers";
+import { ConsolePage } from "@/components/ui/console-frame";
 
 interface VerifiedCheckout {
   email: string;
@@ -228,16 +229,16 @@ function RegisterForm() {
     if (inviteLoading) {
       return (
         <div className="animate-pulse space-y-3.5">
-          <div className="h-10 bg-neutral-800 rounded-xl" />
-          <div className="h-10 bg-neutral-800 rounded-xl" />
-          <div className="h-10 bg-neutral-800 rounded-xl" />
+          <div className="h-10 bg-neutral-800 rounded-none" />
+          <div className="h-10 bg-neutral-800 rounded-none" />
+          <div className="h-10 bg-neutral-800 rounded-none" />
         </div>
       );
     }
 
     return (
       <>
-        <div className="mb-4 rounded-lg border border-white/10 bg-white/[0.03] p-3">
+        <div className="mb-4 rounded-none border border-white/10 bg-white/[0.03] p-3">
           <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-500">
             Organization invite
           </p>
@@ -252,7 +253,7 @@ function RegisterForm() {
           <div>
             <label
               htmlFor="email"
-              className="mb-1.5 block text-[11px] uppercase tracking-wider text-neutral-500"
+              className="mb-1.5 block text-[11px] font-mono uppercase tracking-[0.18em] text-neutral-500"
             >
               {t("auth.email")}
             </label>
@@ -262,7 +263,7 @@ function RegisterForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="email"
-              className="w-full rounded-xl border border-neutral-800 bg-neutral-900/80 px-3.5 py-2.5 text-sm text-white transition-colors focus:border-neutral-600 focus:outline-none"
+              className="w-full rounded-none border border-neutral-800 bg-neutral-900/80 px-3.5 py-2.5 text-sm text-white transition-colors focus:border-neutral-600 focus:outline-none"
               required
             />
           </div>
@@ -270,7 +271,7 @@ function RegisterForm() {
           <div>
             <label
               htmlFor="password"
-              className="mb-1.5 block text-[11px] uppercase tracking-wider text-neutral-500"
+              className="mb-1.5 block text-[11px] font-mono uppercase tracking-[0.18em] text-neutral-500"
             >
               {t("auth.password")}
             </label>
@@ -280,7 +281,7 @@ function RegisterForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="new-password"
-              className="w-full rounded-xl border border-neutral-800 bg-neutral-900/80 px-3.5 py-2.5 text-sm text-white transition-colors focus:border-neutral-600 focus:outline-none"
+              className="w-full rounded-none border border-neutral-800 bg-neutral-900/80 px-3.5 py-2.5 text-sm text-white transition-colors focus:border-neutral-600 focus:outline-none"
               minLength={6}
               required
             />
@@ -288,7 +289,7 @@ function RegisterForm() {
           </div>
 
           {error && (
-            <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3 text-xs text-red-400">
+            <div className="rounded-none border border-white/30 bg-black p-3 text-xs text-white/80">
               {error}
               {(error.includes("already exists") || error.includes("already been used")) && (
                 <span>
@@ -307,7 +308,7 @@ function RegisterForm() {
           <button
             type="submit"
             disabled={loading || !!error?.toLowerCase().includes("invalid invite")}
-            className="mt-2 w-full rounded-xl bg-white py-2.5 text-sm font-medium text-black transition-colors hover:bg-neutral-200 disabled:bg-neutral-800 disabled:text-neutral-600"
+            className="mt-2 w-full rounded-none bg-white py-2.5 text-sm font-medium text-black transition-colors hover:bg-neutral-200 disabled:bg-neutral-800 disabled:text-neutral-600"
           >
             {loading ? t("auth.creatingAccount") : "Create account & join →"}
           </button>
@@ -320,9 +321,9 @@ function RegisterForm() {
   if (verifying) {
     return (
       <div className="animate-pulse space-y-3.5">
-        <div className="h-10 bg-neutral-800 rounded-xl" />
-        <div className="h-10 bg-neutral-800 rounded-xl" />
-        <div className="h-10 bg-neutral-800 rounded-xl" />
+        <div className="h-10 bg-neutral-800 rounded-none" />
+        <div className="h-10 bg-neutral-800 rounded-none" />
+        <div className="h-10 bg-neutral-800 rounded-none" />
       </div>
     );
   }
@@ -330,12 +331,12 @@ function RegisterForm() {
   if (!checkout) {
     return (
       <div className="space-y-4">
-        <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3 text-xs text-red-400">
+        <div className="rounded-none border border-white/30 bg-black p-3 text-xs text-white/80">
           {error || "Payment required before creating an account."}
         </div>
         <Link
           href="/pricing"
-          className="block w-full rounded-xl bg-white py-2.5 text-center text-sm font-medium text-black transition-colors hover:bg-neutral-200"
+          className="block w-full rounded-none bg-white py-2.5 text-center text-sm font-medium text-black transition-colors hover:bg-neutral-200"
         >
           View plans
         </Link>
@@ -345,8 +346,8 @@ function RegisterForm() {
 
   return (
     <>
-      <div className="mb-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3">
-        <p className="text-sm text-emerald-400">
+      <div className="mb-4 rounded-none border border-white/40 bg-black p-3">
+        <p className="text-sm text-white">
           Payment confirmed — {tierLabel(checkout.plan)}. Create your password to finish setup.
         </p>
       </div>
@@ -355,7 +356,7 @@ function RegisterForm() {
         <div>
           <label
             htmlFor="email"
-            className="mb-1.5 block text-[11px] uppercase tracking-wider text-neutral-500"
+            className="mb-1.5 block text-[11px] font-mono uppercase tracking-[0.18em] text-neutral-500"
           >
             {t("auth.email")}
           </label>
@@ -364,14 +365,14 @@ function RegisterForm() {
             type="email"
             value={checkout.email}
             readOnly
-            className="w-full cursor-not-allowed rounded-xl border border-neutral-800 bg-neutral-900/50 px-3.5 py-2.5 text-sm text-neutral-400"
+            className="w-full cursor-not-allowed rounded-none border border-neutral-800 bg-neutral-900/50 px-3.5 py-2.5 text-sm text-neutral-400"
           />
         </div>
 
         <div>
           <label
             htmlFor="password"
-            className="mb-1.5 block text-[11px] uppercase tracking-wider text-neutral-500"
+            className="mb-1.5 block text-[11px] font-mono uppercase tracking-[0.18em] text-neutral-500"
           >
             {t("auth.password")}
           </label>
@@ -380,7 +381,7 @@ function RegisterForm() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-xl border border-neutral-800 bg-neutral-900/80 px-3.5 py-2.5 text-sm text-white transition-colors focus:border-neutral-600 focus:outline-none"
+            className="w-full rounded-none border border-neutral-800 bg-neutral-900/80 px-3.5 py-2.5 text-sm text-white transition-colors focus:border-neutral-600 focus:outline-none"
             minLength={6}
             required
             disabled={!checkout.claimable}
@@ -388,7 +389,7 @@ function RegisterForm() {
         </div>
 
         {error && (
-          <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3 text-xs text-red-400">
+          <div className="rounded-none border border-white/30 bg-black p-3 text-xs text-white/80">
             {error}
             {error.includes("already exists") && (
               <span>
@@ -404,7 +405,7 @@ function RegisterForm() {
         <button
           type="submit"
           disabled={loading || !checkout.claimable}
-          className="mt-2 w-full rounded-xl bg-white py-2.5 text-sm font-medium text-black transition-colors hover:bg-neutral-200 disabled:bg-neutral-800 disabled:text-neutral-600"
+          className="mt-2 w-full rounded-none bg-white py-2.5 text-sm font-medium text-black transition-colors hover:bg-neutral-200 disabled:bg-neutral-800 disabled:text-neutral-600"
         >
           {loading ? t("auth.creatingAccount") : "Create account →"}
         </button>
@@ -420,7 +421,7 @@ function RegisterShell() {
   const invitePath = inviteToken ? `/invite/${inviteToken}` : null;
 
   return (
-    <main className="flex min-h-screen flex-col bg-[#0a0a0a]">
+    <ConsolePage label="Auth">
       <Navbar showNav={false} />
 
       <div className="flex flex-1 items-center justify-center px-6">
@@ -448,7 +449,7 @@ function RegisterShell() {
           </p>
         </div>
       </div>
-    </main>
+    </ConsolePage>
   );
 }
 
@@ -458,19 +459,19 @@ export default function RegisterPage() {
   return (
     <Suspense
       fallback={
-        <main className="flex min-h-screen flex-col bg-[#0a0a0a]">
+        <ConsolePage label="Auth">
           <Navbar showNav={false} />
           <div className="flex flex-1 items-center justify-center px-6">
             <div className="w-full max-w-sm">
               <h2 className="mb-1 text-xl font-semibold text-white">{t("auth.createAccount")}</h2>
               <p className="mb-8 text-sm text-neutral-500">Loading…</p>
               <div className="animate-pulse space-y-3.5">
-                <div className="h-10 rounded-xl bg-neutral-800" />
-                <div className="h-10 rounded-xl bg-neutral-800" />
+                <div className="h-10 rounded-none bg-neutral-800" />
+                <div className="h-10 rounded-none bg-neutral-800" />
               </div>
             </div>
           </div>
-        </main>
+        </ConsolePage>
       }
     >
       <RegisterShell />

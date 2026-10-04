@@ -1,6 +1,8 @@
 "use client";
 
 import type { HTMLAttributes, ReactNode } from "react";
+import { SessionConsoleMarks, SessionConsoleScan } from "@/components/session-view/session-console-marks";
+import { CONSOLE_LABEL_CLASS } from "@/components/ui/console-frame";
 import { cn } from "@/lib/utils";
 
 /**
@@ -38,21 +40,28 @@ export function SessionFinishedScreen({
       data-session-finished-fill={fillStage ? "true" : "false"}
       {...rest}
       className={cn(
+        "relative border border-white/40 bg-black",
         overlay
-          ? "fixed inset-0 z-[180] flex flex-col items-center overflow-y-auto bg-neutral-950 px-6 py-10 text-center text-white"
-          : "flex min-h-0 flex-1 flex-col items-center overflow-y-auto bg-[#0b0b0b] px-6 py-10 text-center text-white",
+          ? "fixed inset-0 z-[180] flex flex-col items-center overflow-y-auto px-6 py-10 text-center text-white"
+          : "flex min-h-0 flex-1 flex-col items-center overflow-y-auto px-6 py-10 text-center text-white",
         fillStage && "overflow-hidden px-0 py-0",
         className,
       )}
+      data-console-frame=""
     >
+      <SessionConsoleScan />
+      <SessionConsoleMarks />
       <div
         className={cn(
-          "flex w-full flex-col items-center",
+          "relative z-[2] flex w-full flex-col items-center",
           fillStage
             ? "h-full min-h-0 max-w-4xl flex-1 overflow-hidden px-6 py-10"
             : "my-auto max-w-xl",
         )}
       >
+        <p data-console-frame-label="" className={`mb-3 ${CONSOLE_LABEL_CLASS}`}>
+          End
+        </p>
         {kicker ? (
           <p className="shrink-0 font-mono text-[10px] uppercase tracking-[0.16em] text-neutral-300/80">
             {kicker}

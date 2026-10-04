@@ -8,6 +8,7 @@ import {
   type SalesProductCard,
 } from "@/lib/sales/product-cards";
 import { PITCH_ASSETS } from "@/lib/sales/solution-slide-decks";
+import { PublicConsoleWash } from "@/components/ui/console-frame";
 
 export const metadata: Metadata = {
   title: "Sales",
@@ -33,11 +34,11 @@ export default function SalesIndexPage() {
         aria-hidden
       />
       <div className="fixed inset-0 z-0 bg-[#0a0a0a]/78" />
-      <div className="fixed inset-0 z-0 bg-[radial-gradient(circle_at_72%_8%,rgba(14,116,144,0.22),transparent_31%),radial-gradient(circle_at_12%_18%,rgba(39,39,42,0.62),transparent_32%)]" />
+      <PublicConsoleWash />
       <div className="fixed inset-0 z-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:72px_72px] opacity-40" />
 
       <div className="relative z-10 mx-auto w-full max-w-7xl px-6 pt-14 pb-16 sm:pt-16">
-        <div className="mb-6 inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
+        <div className="mb-6 inline-block rounded-none border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
           SALES
         </div>
         <h1 className="max-w-4xl text-5xl font-medium leading-[1.03] tracking-[-2.4px] text-white sm:text-6xl lg:text-[64px]">
@@ -90,7 +91,7 @@ export default function SalesIndexPage() {
                         </p>
                         <p className="mt-3 font-mono text-xs text-zinc-700">{entry.path}</p>
                       </div>
-                      <span className="inline-flex shrink-0 items-center rounded-sm border border-zinc-800 bg-zinc-950/60 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[1.4px] text-zinc-600">
+                      <span className="inline-flex shrink-0 items-center rounded-none border border-zinc-800 bg-zinc-950/60 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[1.4px] text-zinc-600">
                         Coming soon
                       </span>
                     </div>
@@ -145,7 +146,7 @@ function SalesIndexProductLink({ card }: { card: SalesProductCard }) {
     >
       {card.image ? (
         <div
-          className="relative aspect-[16/11] w-full shrink-0 overflow-hidden rounded-sm border border-zinc-800/90 bg-zinc-950 sm:aspect-auto sm:h-auto sm:w-44 md:w-52"
+          className="relative aspect-[16/11] w-full shrink-0 overflow-hidden rounded-none border border-zinc-800/90 bg-zinc-950 sm:aspect-auto sm:h-auto sm:w-44 md:w-52"
           data-sales-index-thumb={card.image}
         >
           <Image

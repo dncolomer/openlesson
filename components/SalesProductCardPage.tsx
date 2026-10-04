@@ -7,6 +7,7 @@ import {
   type SalesProductCard,
 } from "@/lib/sales/product-cards";
 import { PITCH_ASSETS } from "@/lib/sales/solution-slide-decks";
+import { PublicConsoleWash } from "@/components/ui/console-frame";
 
 const BACKGROUND_IMAGE = PITCH_ASSETS.aesthetics.useCase;
 
@@ -125,7 +126,7 @@ export function SalesProductCardPage({ card }: SalesProductCardPageProps) {
         aria-hidden
       />
       <div className="fixed inset-0 z-0 bg-[#0a0a0a]/78" />
-      <div className="fixed inset-0 z-0 bg-[radial-gradient(circle_at_72%_8%,rgba(14,116,144,0.22),transparent_31%),radial-gradient(circle_at_12%_18%,rgba(39,39,42,0.62),transparent_32%)]" />
+      <PublicConsoleWash />
       <div className="fixed inset-0 z-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:72px_72px] opacity-40" />
 
       <div className="relative z-10 mx-auto w-full max-w-7xl px-6 pt-10 pb-16 sm:pt-12">

@@ -152,12 +152,20 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(workspaceLimitErrorResponse(workspaceCheck), { status: 403 });
       }
 
+      const blankTitle = (typeof body.title === "string" ? body.title : topic).trim();
+      if (!blankTitle) {
+        return jsonError(400, "Name is required");
+      }
+      if (blankTitle.length > 120) {
+        return jsonError(400, "Name is too long");
+      }
+
       const { data: plan, error: planError } = await supabase
         .from("workspaces")
         .insert({
           user_id: user.id,
-          title: "Blank workspace",
-          root_topic: "Blank workspace",
+          title: blankTitle,
+          root_topic: blankTitle,
           status: "active",
           source_type: "topic",
           notes: "",
@@ -198,12 +206,20 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(workspaceLimitErrorResponse(workspaceCheck), { status: 403 });
       }
 
+      const verificationTitle = (typeof body.title === "string" ? body.title : topic).trim();
+      if (!verificationTitle) {
+        return jsonError(400, "Name is required");
+      }
+      if (verificationTitle.length > 120) {
+        return jsonError(400, "Name is too long");
+      }
+
       const { data: plan, error: planError } = await supabase
         .from("workspaces")
         .insert({
           user_id: user.id,
-          title: "Verification Workspace",
-          root_topic: "Verification Workspace",
+          title: verificationTitle,
+          root_topic: verificationTitle,
           status: "active",
           source_type: "topic",
           notes: "",

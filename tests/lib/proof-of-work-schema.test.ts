@@ -210,7 +210,12 @@ describe("buildIntegrationSkillInstructions", () => {
         base_url: "https://uncertain.systems",
         eval_definition: "Verify tool adoption",
       },
-      { id: "ws-1", title: "Onboarding", root_topic: "SaaS onboarding" },
+      {
+        id: "ws-1",
+        title: "Onboarding",
+        root_topic: "SaaS onboarding",
+        workspace_kind: "knowledge_region",
+      },
       [{ id: "block-1", title: "Setup", description: "First project" }],
       null,
       null

@@ -5,14 +5,15 @@ import Link from "next/link";
 import { useI18n } from "@/lib/i18n";
 import {
   knowledgeRegionIntegrationCopy,
+  learningWorkspaceIntegrationCopy,
   slugifyIntegrationName,
 } from "@/lib/pow-api/integration-skill";
 import { IntegrationQuickAccess } from "@/components/IntegrationQuickAccess";
 import { WorkspaceAccessSettings } from "@/components/WorkspaceAccessSettings";
 import { WorkspaceAyclMarketplaceSettings } from "@/components/WorkspaceAyclMarketplaceSettings";
+import { WorkspaceCopyToVerification } from "@/components/WorkspaceCopyToVerification";
 import { WorkspaceIdentitySettings } from "@/components/WorkspaceIdentitySettings";
 import { CustomVerificationModelsPanel } from "@/components/CustomVerificationModelsPanel";
-import { WorkspaceKnowledgePortalPanel } from "@/components/WorkspaceKnowledgePortalPanel";
 import { WorkspaceDataStudioPanel } from "@/components/WorkspaceDataStudioPanel";
 import { WorkspaceSectionSubTabs } from "@/components/WorkspaceSectionSubTabs";
 import { readJsonResponse } from "@/lib/read-json-response";
@@ -21,8 +22,8 @@ import type { Workspace } from "@/components/WorkspaceView";
 import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
 import {
   resolveSettingsSubview,
+  settingsShowsMakePublic,
   settingsSubTabsForKind,
-  settingsShowsKnowledgeLinks,
   type SettingsSubview,
 } from "@/lib/workspace-settings-tabs";
 
@@ -81,7 +82,7 @@ export function WorkspaceIntegrationPanel({
     [t, workspaceKind],
   );
 
-  const showKnowledgeLinks = settingsShowsKnowledgeLinks(workspaceKind);
+  const showMakePublic = settingsShowsMakePublic(workspaceKind);
   const isKnowledgeRegion = isKnowledgeRegionWorkspace(workspaceKind);
 
   const handleDownloadSkill = async () => {
@@ -167,7 +168,7 @@ export function WorkspaceIntegrationPanel({
               </div>
             ) : null}
 
-            {plan && onPlanUpdate ? (
+            {plan && onPlanUpdate && showMakePublic ? (
               <div data-settings-section="access">
                 <WorkspaceAccessSettings
                   plan={plan}
@@ -176,6 +177,14 @@ export function WorkspaceIntegrationPanel({
                   onPlanUpdate={onPlanUpdate}
                 />
               </div>
+            ) : null}
+
+            {plan && onPlanUpdate && !isKnowledgeRegion ? (
+              <WorkspaceCopyToVerification
+                workspaceId={workspaceId}
+                workspaceTitle={plan.title || plan.root_topic || ""}
+                isOwner={isOwner}
+              />
             ) : null}
 
             {!plan || !onPlanUpdate ? (
@@ -210,11 +219,9 @@ export function WorkspaceIntegrationPanel({
             data-settings-tab-panel="regions"
           >
             <div className="min-w-0 shrink-0">
-              <h2 className="text-sm font-medium text-white">Custom Knowledge Regions</h2>
+              <h2 className="text-sm font-medium text-white">Knowledge Regions</h2>
               <p className="mt-1 max-w-2xl text-xs leading-relaxed text-neutral-500">
-                {isKnowledgeRegion
-                  ? "High-validation regions in knowledgecfg-v1-d64. Build regions from workspace PoW (generated elsewhere) and overlay them from the Embeddings tab projection."
-                  : "High-validation regions in knowledgecfg-v1-d64. Build regions from human PoW or tapbench PoW. Overlay them from the Embeddings tab projection."}
+                Regions in knowledgecfg-v1-d64. Build them from verification flows, synthetic agents, or proof-of-work sources, then overlay them on Embeddings.
               </p>
             </div>
             <CustomVerificationModelsPanel
@@ -226,34 +233,13 @@ export function WorkspaceIntegrationPanel({
           </section>
         ) : null}
 
-        {showKnowledgeLinks && activeSubview === "knowledge-portal" ? (
-          <section
-            className="space-y-3"
-            data-settings-section="knowledge-portal"
-            data-settings-tab-panel="knowledge-portal"
-          >
-            <div className="min-w-0 shrink-0">
-              <h2 className="text-sm font-medium text-white">
-                {t("planView.knowledgePortalSettingsTab")}
-              </h2>
-              <p className="mt-1 max-w-2xl text-xs leading-relaxed text-neutral-500">
-                {t("planView.practicePortalHint")}
-              </p>
-            </div>
-            <WorkspaceKnowledgePortalPanel
-              workspaceId={workspaceId}
-              isOwner={isOwner}
-              currentUserId={currentUserId}
-            />
-          </section>
-        ) : null}
-
         {activeSubview === "data-studio" ? (
           <section
             className="space-y-3"
             data-settings-section="data-studio"
             data-settings-tab-panel="data-studio"
           >
+            <h2 className="text-sm font-medium text-white">Data Studio</h2>
             <WorkspaceDataStudioPanel workspaceId={workspaceId} isOwner={isOwner} />
           </section>
         ) : null}
@@ -272,15 +258,17 @@ export function WorkspaceIntegrationPanel({
                   >
                     {isKnowledgeRegion
                       ? knowledgeRegionIntegrationCopy().skillDescription
-                      : t("workspaceIntegration.skillSectionDescription")}
+                      : learningWorkspaceIntegrationCopy().skillDescription}
                   </p>
                 </div>
-                <Link
-                  href="/docs/proof-of-work-api"
-                  className="shrink-0 text-xs text-neutral-400 underline decoration-neutral-700 underline-offset-2 hover:text-neutral-200"
-                >
-                  {t("workspaceIntegration.docsLink")}
-                </Link>
+                {isKnowledgeRegion ? (
+                  <Link
+                    href="/docs/proof-of-work-api"
+                    className="shrink-0 text-xs text-neutral-400 underline decoration-neutral-700 underline-offset-2 hover:text-neutral-200"
+                  >
+                    {t("workspaceIntegration.docsLink")}
+                  </Link>
+                ) : null}
               </div>
 
               <div className="space-y-2">
@@ -307,14 +295,15 @@ export function WorkspaceIntegrationPanel({
             </section>
 
             <section className="space-y-3" data-settings-section="mcp">
-              {isKnowledgeRegion ? (
-                <p
-                  className="text-xs leading-relaxed text-neutral-500"
-                  data-kr-integration-mcp-note
-                >
-                  {knowledgeRegionIntegrationCopy().mcpNote}
-                </p>
-              ) : null}
+              <p
+                className="text-xs leading-relaxed text-neutral-500"
+                data-kr-integration-mcp-note={isKnowledgeRegion ? "true" : undefined}
+                data-learning-integration-mcp-note={isKnowledgeRegion ? undefined : "true"}
+              >
+                {isKnowledgeRegion
+                  ? knowledgeRegionIntegrationCopy().mcpNote
+                  : learningWorkspaceIntegrationCopy().mcpNote}
+              </p>
               <IntegrationQuickAccess
                 origin={origin}
                 workspaceId={workspaceId}

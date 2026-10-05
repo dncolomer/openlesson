@@ -3,9 +3,12 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   DASHBOARD_WORKSPACE_LIST_FILTERS,
+  DASHBOARD_WORKSPACE_TYPE_FILTERS,
   dashboardHasNoWorkspaces,
   isDashboardWorkspaceListFilter,
+  isDashboardWorkspaceTypeFilter,
   workspaceMatchesDashboardListFilter,
+  workspaceMatchesDashboardTypeFilter,
 } from "@/lib/dashboard-workspace-filters";
 
 const root = join(__dirname, "../..");
@@ -55,12 +58,52 @@ describe("isDashboardWorkspaceListFilter", () => {
   });
 });
 
+describe("workspaceMatchesDashboardTypeFilter", () => {
+  const learning = { workspace_kind: "standard" };
+  const verification = { workspace_kind: "knowledge_region" };
+  const unset = {};
+
+  it("all keeps learning and verification workspaces", () => {
+    expect(workspaceMatchesDashboardTypeFilter(learning, "all")).toBe(true);
+    expect(workspaceMatchesDashboardTypeFilter(verification, "all")).toBe(true);
+    expect(workspaceMatchesDashboardTypeFilter(unset, "all")).toBe(true);
+  });
+
+  it("learning keeps standard workspaces and a missing kind", () => {
+    expect(workspaceMatchesDashboardTypeFilter(learning, "learning")).toBe(true);
+    expect(workspaceMatchesDashboardTypeFilter(unset, "learning")).toBe(true);
+    expect(workspaceMatchesDashboardTypeFilter(verification, "learning")).toBe(false);
+  });
+
+  it("verification keeps knowledge-region workspaces", () => {
+    expect(workspaceMatchesDashboardTypeFilter(verification, "verification")).toBe(true);
+    expect(workspaceMatchesDashboardTypeFilter(learning, "verification")).toBe(false);
+    expect(workspaceMatchesDashboardTypeFilter(unset, "verification")).toBe(false);
+  });
+});
+
+describe("isDashboardWorkspaceTypeFilter", () => {
+  it("accepts the dashboard type filter values", () => {
+    expect(DASHBOARD_WORKSPACE_TYPE_FILTERS).toEqual([
+      "all",
+      "learning",
+      "verification",
+    ]);
+    expect(isDashboardWorkspaceTypeFilter("verification")).toBe(true);
+    expect(isDashboardWorkspaceTypeFilter("standard")).toBe(false);
+  });
+});
+
 describe("dashboard AYCL filter surface", () => {
   it("wires the AYCL option into the workspace list filter", () => {
     const dashSrc = readFileSync(join(root, "app/dashboard/page.tsx"), "utf8");
     expect(dashSrc).toContain('value="aycl"');
     expect(dashSrc).toContain("workspaceMatchesDashboardListFilter");
     expect(dashSrc).toContain("isDashboardWorkspaceListFilter");
+    expect(dashSrc).toContain("data-workspace-type-filter");
+    expect(dashSrc).toContain('value="learning"');
+    expect(dashSrc).toContain('value="verification"');
+    expect(dashSrc).toContain("workspaceMatchesDashboardTypeFilter");
   });
 });
 

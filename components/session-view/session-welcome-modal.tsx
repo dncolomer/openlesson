@@ -11,8 +11,6 @@ import type { SessionWelcomeModalProps } from "@/components/session-view/types";
 import { TapAestheticSection } from "@/components/tap-score/tap-aesthetic-section";
 import {
   ILE_SESSION_CHAPTER_COUNT_DEFAULT,
-  ILE_SESSION_CHAPTER_COUNT_MAX,
-  ILE_SESSION_CHAPTER_COUNT_MIN,
   capIleSessionChapters,
 } from "@/lib/ile-canvas-session";
 import { ileWelcomeShowsContinuePreview } from "@/lib/ile-welcome-chapters";
@@ -21,12 +19,7 @@ import {
   applyIleLearnPreset,
   ileLearnMatchingPresetId,
 } from "@/lib/ile-pregame-settings";
-import {
-  ILE_POW_EXPENSE_DEFAULT,
-  ILE_POW_EXPENSE_MAX,
-  ILE_POW_EXPENSE_MIN,
-  clampIlePowExpense,
-} from "@/lib/ile-pow-spend";
+import { ILE_POW_EXPENSE_DEFAULT } from "@/lib/ile-pow-spend";
 import {
   ILE_MIN_INSIGHTS_PER_CHAPTER_CEILING,
   ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT,
@@ -215,34 +208,6 @@ export function SessionWelcomeModal({
                       })}
                     </div>
                   </div>
-                  <div data-ile-session-chapter-count>
-                    <div className="mb-1.5 flex items-baseline justify-between gap-3">
-                      <label className="text-sm font-medium text-neutral-100">
-                        {t("session.chapterCount")}
-                      </label>
-                      <span className="font-mono text-[11px] text-neutral-300">{chapterCount}</span>
-                    </div>
-                    <p className="mb-2 text-[12px] leading-snug text-neutral-400">
-                      {t("session.chapterCountDesc")}
-                    </p>
-                    <input
-                      type="range"
-                      min={ILE_SESSION_CHAPTER_COUNT_MIN}
-                      max={ILE_SESSION_CHAPTER_COUNT_MAX}
-                      step={1}
-                      value={chapterCount}
-                      disabled={isButtonDisabled}
-                      onChange={(e) => onChapterCountChange?.(Number(e.target.value))}
-                      className="w-full accent-white"
-                      aria-valuemin={ILE_SESSION_CHAPTER_COUNT_MIN}
-                      aria-valuemax={ILE_SESSION_CHAPTER_COUNT_MAX}
-                      aria-valuenow={chapterCount}
-                    />
-                    <div className="mt-1 flex justify-between font-mono text-[10px] uppercase tracking-wider text-neutral-500">
-                      <span>{t("session.chapterCountFew")}</span>
-                      <span>{t("session.chapterCountMany")}</span>
-                    </div>
-                  </div>
                   <div data-ile-min-insights-slider data-ile-session-insight-goal>
                     <div className="mb-1.5 flex items-baseline justify-between gap-3">
                       <label className="text-sm font-medium text-neutral-100">
@@ -290,36 +255,6 @@ export function SessionWelcomeModal({
                       }
                       className="w-full accent-white"
                     />
-                  </div>
-                  <div data-ile-pow-expense-slider>
-                    <div className="mb-1.5 flex items-baseline justify-between gap-3">
-                      <label className="text-sm font-medium text-neutral-100">
-                        {t("session.powExpense")}
-                      </label>
-                      <span className="font-mono text-[11px] text-neutral-300">{powExpense}</span>
-                    </div>
-                    <p className="mb-2 text-[12px] leading-snug text-neutral-400">
-                      {t("session.powExpenseDesc")}
-                    </p>
-                    <input
-                      type="range"
-                      min={ILE_POW_EXPENSE_MIN}
-                      max={ILE_POW_EXPENSE_MAX}
-                      step={1}
-                      value={powExpense}
-                      disabled={isButtonDisabled}
-                      onChange={(e) =>
-                        onPowExpenseChange?.(clampIlePowExpense(Number(e.target.value)))
-                      }
-                      className="w-full accent-white"
-                      aria-valuemin={ILE_POW_EXPENSE_MIN}
-                      aria-valuemax={ILE_POW_EXPENSE_MAX}
-                      aria-valuenow={powExpense}
-                    />
-                    <div className="mt-1 flex justify-between gap-2 text-[10px] leading-snug text-neutral-500">
-                      <span>{t("session.powExpenseCheap")}</span>
-                      <span>{t("session.powExpenseExpensive")}</span>
-                    </div>
                   </div>
                   {showContinuePreview ? (
                     <div

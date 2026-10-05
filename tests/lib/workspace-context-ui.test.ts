@@ -54,16 +54,11 @@ describe("Context section layout resolver", () => {
       "workspace",
       "dags",
       "map_types",
-      "goals",
       "context",
-      "knowledge",
       "settings",
     ]);
-    expect(availableWorkspaceSections({ isOwner: false })).toEqual([
-      "workspace",
-      "context",
-    ]);
-    expect(resolveActiveSection("context", { isOwner: false })).toBe("context");
+    expect(availableWorkspaceSections({ isOwner: false })).toEqual(["workspace"]);
+    expect(resolveActiveSection("context", { isOwner: false })).toBe("workspace");
     expect(resolveActiveSection("knowledge", { isOwner: false })).toBe("workspace");
     // DAGs is owner-only (Creator authoring)
     expect(availableWorkspaceSections({ isOwner: false })).not.toContain("dags");

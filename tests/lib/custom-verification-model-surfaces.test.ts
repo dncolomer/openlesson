@@ -91,7 +91,8 @@ describe("custom verification model surfaces", () => {
     const settings = read("components/WorkspaceIntegrationPanel.tsx");
     const settingsTabs = read("lib/workspace-settings-tabs.ts");
     expect(settings).toContain("<CustomVerificationModelsPanel");
-    expect(settings).toContain("Custom Knowledge Regions");
+    expect(settings).toContain("Knowledge Regions");
+    expect(settings).not.toContain("Custom Knowledge Regions");
     expect(settings).toContain('data-settings-section="custom-knowledge-regions"');
     expect(settings).toContain("settingsSubTabsForKind");
     expect(settingsTabs).toContain('"regions"');

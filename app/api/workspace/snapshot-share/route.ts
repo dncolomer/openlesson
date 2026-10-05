@@ -8,6 +8,7 @@ import {
   lookupSnapshotShare,
 } from "@/lib/pow-api/snapshot-share";
 import { requireProductWorkspaceEvalAuth } from "@/lib/product-workspace-auth";
+import { denyWorkspaceFeatureById } from "@/lib/workspace-feature-gate";
 
 export const runtime = "nodejs";
 
@@ -36,6 +37,8 @@ async function authorizeSnapshotShare(
 
   const auth = await requireProductWorkspaceEvalAuth(workspaceId, ayclToken);
   if (!auth.ok) return auth;
+  const denied = await denyWorkspaceFeatureById(workspaceId, "snapshots");
+  if (denied) return { ok: false as const, response: denied };
 
   const row = await getEvalRunHistoryById(auth.supabase, evalRunHistoryId);
   if (!row || row.workspace_id !== workspaceId) {

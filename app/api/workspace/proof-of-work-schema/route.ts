@@ -1,3 +1,4 @@
+import { denyWorkspaceFeatureById } from "@/lib/workspace-feature-gate";
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { parseProofOfWorkSchemaRequest } from "@/lib/pow-api/proof-of-work-schema";
@@ -20,6 +21,10 @@ export async function POST(req: NextRequest) {
   }
 
   const workspaceId = typeof body.workspaceId === "string" ? body.workspaceId : "";
+  {
+    const denied = await denyWorkspaceFeatureById(workspaceId, "proof_of_work");
+    if (denied) return denied;
+  }
   if (!workspaceId) {
     return jsonError(400, "workspaceId is required");
   }

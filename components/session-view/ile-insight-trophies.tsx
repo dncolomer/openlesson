@@ -138,7 +138,7 @@ export function IleInsightEmptySlots({
   emptyLabel?: string;
 }) {
   const quota = clampIleMinInsightsPerChapter(count);
-  const n = Math.max(ILE_MAP_INSIGHT_PLACEHOLDER_COUNT, quota);
+  const n = quota;
   return (
     <ul
       data-ile-welcome-insight-slots=""
@@ -223,13 +223,13 @@ export function IleMapInsightsWidget({
 }: {
   insights: readonly InsightSummary[];
   visible: boolean;
-  /** Chapter insight goal. Empty rows stop at three; the plus is not another slot. */
+  /** Target insights for this session. Empty rows match that number. */
   slotCount?: number;
 }) {
   if (!visible) return null;
   const goal = clampIleMinInsightsPerChapter(slotCount);
-  const shown = Math.max(ILE_MAP_INSIGHT_PLACEHOLDER_COUNT, insights.length);
-  const emptyCount = shown - insights.length;
+  const shown = Math.max(goal, insights.length);
+  const emptyCount = Math.max(0, goal - insights.length);
   return (
     <div
       data-ile-map-insights-widget
@@ -253,7 +253,7 @@ export function IleMapInsightsWidget({
           </li>
         ))}
       </ul>
-      <IleMapInsightsMoreMark />
+      {insights.length >= goal ? <IleMapInsightsMoreMark /> : null}
     </div>
   );
 }

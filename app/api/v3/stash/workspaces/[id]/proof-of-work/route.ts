@@ -1,3 +1,4 @@
+import { denyWorkspaceFeatureById } from "@/lib/workspace-feature-gate";
 /**
  * Stash API ingest — same PoW payload types as Proof-of-Work API.
  * Units are stored in temporary memory until POST .../stash or .../submit.
@@ -27,6 +28,10 @@ interface RouteProps {
 
 export async function POST(req: NextRequest, { params }: RouteProps) {
   const { id: workspaceId } = await params;
+  {
+    const denied = await denyWorkspaceFeatureById(workspaceId, "proof_of_work");
+    if (denied) return denied;
+  }
 
   let body: Record<string, unknown>;
   try {

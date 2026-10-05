@@ -1,3 +1,4 @@
+import { denyWorkspaceFeatureById } from "@/lib/workspace-feature-gate";
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest, errorResponse } from "@/lib/pow-api/auth";
 import { canAccessAgentWorkspace } from "@/lib/pow-api/workspace-access";
@@ -21,6 +22,10 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
   if (result instanceof NextResponse) return result;
   const { auth, supabase } = result;
   const { id: workspaceId } = await params;
+  {
+    const denied = await denyWorkspaceFeatureById(workspaceId, "proof_of_work");
+    if (denied) return denied;
+  }
 
   if (auth.auth_method === "tapbench_key") {
     const { TAPBENCH_STASH_ONLY_MESSAGE } = await import("@/lib/tapbench/constants");

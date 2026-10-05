@@ -130,10 +130,12 @@ export function WorkspaceMapAuthoringPane({
           ? "Click a block or empty cells to open the drawers. Scroll to zoom. Use the search control on the map to explore."
           : "Double-click a block to open detail. Use the search control on the map to explore."}
       </p>
-      <p className="text-[11px] text-neutral-600">
-        External sources, notes, and files are managed in{" "}
-        <span className="text-neutral-400">Context</span>.
-      </p>
+      {interactionMode === "creator" ? (
+        <p className="text-[11px] text-neutral-600">
+          External sources, notes, and files are managed in{" "}
+          <span className="text-neutral-400">Context</span>.
+        </p>
+      ) : null}
     </div>
   );
 }

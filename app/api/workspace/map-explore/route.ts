@@ -126,6 +126,7 @@ export async function POST(req: NextRequest) {
     }
 
     const auth = await guardWorkspaceRoute(workspaceId, {
+      feature: "map",
       ayclToken: ayclTokenFromBody(body as Record<string, unknown>),
       // Available in Build + Play (including AYCL learner tier).
       requireAyclAuthoring: false,

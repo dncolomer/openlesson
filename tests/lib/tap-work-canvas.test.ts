@@ -266,7 +266,6 @@ describe("TAP Work canvas live surface (shipped)", () => {
     expect(canvas).toContain("data-ile-canvas-prompt-bar");
     expect(canvas).toContain("top: promptBarTop");
     expect(canvas).toContain("Math.max(promptBarWidth, ILE_CANVAS_PROMPT_BAR_FALLBACK_WIDTH)");
-    expect(canvas).toContain(": promptBarWidth");
     expect(canvas).not.toContain("inset-x-0 bottom-3 z-[58]");
     expect(canvas).toContain("handleBoardAsk");
     expect(canvas).not.toContain("data-ile-compress-work");
@@ -396,10 +395,11 @@ describe("TAP Work canvas XAI origin + board ask (shipped)", () => {
     expect(phases).toContain("onAskSelected={handleAskSelected}");
 
     const box = ileWorkCanvasThinkingOverlayStyle();
-    expect(box.width).toBe(ILE_XAI_LOADING_BOX_WIDTH);
-    expect(box.height).toBe(ILE_XAI_LOADING_BOX_HEIGHT);
-    expect(box.width).toBe(box.height);
+    expect(box.width).toBeGreaterThan(ILE_XAI_LOADING_BOX_WIDTH);
+    expect(box.minWidth).toBe(box.width);
+    expect(box.maxWidth).toBe(box.width);
     expect(box.height).toBeGreaterThan(52);
+    expect(box.minHeight).toBe(box.height);
 
     writeScratch(
       "tap-xai-canvas-origin.log",

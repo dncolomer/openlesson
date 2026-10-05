@@ -1,42 +1,45 @@
 /**
- * Settings subtabs by workspace kind.
- * Knowledge Region: General (name/description), Knowledge Regions, Data Studio, Integration.
- * No AYCL / Knowledge Portal on KR. Knowledge Links is not a Settings section.
+ * Settings subtabs by workspace product.
+ * Learning workspace: General, AYCL, Integrations.
+ * Verification workspace: General (includes Make Public), Knowledge Regions,
+ * Data Studio, Integration.
+ * Knowledge Portal is not a settings section.
  */
 
-import {
-  isKnowledgeRegionWorkspace,
-  workspaceAllowsKnowledgeLinkMint,
-} from "@/lib/workspace-kind";
+import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
+import { workspaceSupportsFeature } from "@/lib/workspace-capabilities";
 
 export type SettingsSubview =
   | "general"
   | "aycl"
   | "regions"
-  | "knowledge-portal"
   | "data-studio"
   | "integrations";
 
-export const ALL_SETTINGS_SUBVIEWS: readonly SettingsSubview[] = [
+export const LEARNING_SETTINGS_SUBVIEWS: readonly SettingsSubview[] = [
   "general",
   "aycl",
+  "integrations",
+];
+
+export const VERIFICATION_SETTINGS_SUBVIEWS: readonly SettingsSubview[] = [
+  "general",
   "regions",
-  "knowledge-portal",
   "data-studio",
   "integrations",
 ];
 
-export const KNOWLEDGE_REGION_SETTINGS_SUBVIEWS: readonly SettingsSubview[] = [
-  "general",
-  "regions",
-  "data-studio",
-  "integrations",
-];
+/** @deprecated Use LEARNING_SETTINGS_SUBVIEWS. Portal and verification tabs are gone. */
+export const ALL_SETTINGS_SUBVIEWS: readonly SettingsSubview[] = LEARNING_SETTINGS_SUBVIEWS;
+
+/** @deprecated Use VERIFICATION_SETTINGS_SUBVIEWS. */
+export const KNOWLEDGE_REGION_SETTINGS_SUBVIEWS: readonly SettingsSubview[] =
+  VERIFICATION_SETTINGS_SUBVIEWS;
 
 export function availableSettingsSubviews(kind: unknown): readonly SettingsSubview[] {
   return isKnowledgeRegionWorkspace(kind)
-    ? KNOWLEDGE_REGION_SETTINGS_SUBVIEWS
-    : ALL_SETTINGS_SUBVIEWS;
+    ? VERIFICATION_SETTINGS_SUBVIEWS
+    : LEARNING_SETTINGS_SUBVIEWS;
 }
 
 export function defaultSettingsSubview(_kind?: unknown): SettingsSubview {
@@ -57,7 +60,7 @@ export function resolveSettingsSubview(
 export function settingsSubviewLabel(
   id: SettingsSubview,
   kind: unknown,
-  t?: (key: string) => string,
+  _t?: (key: string) => string,
 ): string {
   switch (id) {
     case "general":
@@ -66,8 +69,6 @@ export function settingsSubviewLabel(
       return "AYCL";
     case "regions":
       return "Knowledge Regions";
-    case "knowledge-portal":
-      return t?.("planView.knowledgePortalSettingsTab") ?? "Knowledge Portal";
     case "data-studio":
       return "Data Studio";
     case "integrations":
@@ -85,7 +86,11 @@ export function settingsSubTabsForKind(
   }));
 }
 
-/** Knowledge Portal is omitted on Knowledge Region. */
-export function settingsShowsKnowledgeLinks(kind: unknown): boolean {
-  return workspaceAllowsKnowledgeLinkMint(kind);
+/** Knowledge Portal is removed from both products. */
+export function settingsShowsKnowledgeLinks(_kind?: unknown): boolean {
+  return false;
+}
+
+export function settingsShowsMakePublic(kind: unknown): boolean {
+  return workspaceSupportsFeature(kind, "make_public");
 }

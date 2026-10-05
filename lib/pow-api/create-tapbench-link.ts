@@ -157,7 +157,11 @@ export async function createWorkspaceTapbenchLink(
   }
 
   if (!workspaceAllowsKnowledgeLinkMint(workspace.workspace_kind)) {
-    throw new CreateTapbenchLinkError(knowledgeLinkMintDeniedMessage(), 403, "forbidden");
+    throw new CreateTapbenchLinkError(
+      knowledgeLinkMintDeniedMessage(workspace.workspace_kind),
+      403,
+      "forbidden",
+    );
   }
 
   if (blockId) {

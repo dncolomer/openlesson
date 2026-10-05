@@ -221,6 +221,36 @@ export async function resolvePublicInsightWorkspaceTitle(input: {
   return loadWorkspaceTitleForPublicInsight(input.admin, input.workspaceId);
 }
 
+/**
+ * Tool proof-of-work rows in (previous insight, this insight].
+ * No earlier insight means every row up to this one.
+ */
+export function insightPowWindow(input: {
+  insightId?: string | null;
+  createdAt?: string | null;
+  siblings?: readonly { id?: string | null; created_at?: string | null }[] | null;
+  workCreatedAt?: readonly (string | null | undefined)[] | null;
+}): number {
+  const created = Date.parse(String(input.createdAt || ""));
+  if (!Number.isFinite(created)) return 0;
+  const insightId = String(input.insightId || "").trim();
+  let previous = Number.NEGATIVE_INFINITY;
+  for (const row of input.siblings ?? []) {
+    if (insightId && String(row?.id || "").trim() === insightId) continue;
+    const at = Date.parse(String(row?.created_at || ""));
+    if (!Number.isFinite(at) || at >= created || at <= previous) continue;
+    previous = at;
+  }
+  let count = 0;
+  for (const stamp of input.workCreatedAt ?? []) {
+    const at = Date.parse(String(stamp || ""));
+    if (!Number.isFinite(at) || at > created) continue;
+    if (previous !== Number.NEGATIVE_INFINITY && at <= previous) continue;
+    count += 1;
+  }
+  return count;
+}
+
 export function deriveInsightPageStats(input: {
   thought_ids?: unknown;
   source_thoughts?: unknown;
@@ -228,8 +258,15 @@ export function deriveInsightPageStats(input: {
   workspace_id?: string | null;
   workspace_title?: string | null;
   workspace_name?: string | null;
+  /** Session tool rows since the previous insight, when the page could load them. */
+  pow_count?: unknown;
 }): InsightPageStats {
-  const powCount = countInsightLinkedThoughts(input);
+  const linked = countInsightLinkedThoughts(input);
+  const fromSession = Number(input.pow_count);
+  const powCount =
+    Number.isFinite(fromSession) && fromSession >= 0
+      ? Math.max(linked, Math.round(fromSession))
+      : linked;
   const workspaceId = cleanText(input.workspace_id);
   return {
     powCount,

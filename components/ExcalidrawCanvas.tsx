@@ -28,7 +28,11 @@ import {
   ILE_SELECTIVE_COMPRESSION_LABEL,
   ileCanvasPromptBarTop,
   ileCanvasPromptBarWidth,
+  filterIleWorkCanvasCommands,
+  ileCanvasCommandDraft,
   ileCanvasPromptMode,
+  ileWorkCanvasCommandNeedsSelection,
+  ileWorkCanvasMarksNeedScroll,
   ileWorkCanvasQuickActionPrompt,
   ileWorkCanvasThinkingOccupancy,
   ileWorkCanvasEmptyNearbyOriginWithReserved,
@@ -50,17 +54,21 @@ import {
   runIleWorkCanvasClearOverlaps,
   splitIleWorkCanvasSelectedText,
   withIleWorkCanvasGridAppState,
-  ILE_WORK_CANVAS_COMMANDS,
   type IleWorkCanvasAskKind,
   type IleWorkCanvasCommandId,
   ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS,
-  ILE_XAI_LOADING_BOX_HEIGHT,
-  ILE_XAI_LOADING_BOX_WIDTH,
   type IleWorkCanvasElement,
   type IleWorkCanvasScene,
   type IleWorkCanvasSkeleton,
 } from "@/lib/ile-work-canvas";
-import { syncIleDictatedTextOnWorkCanvas } from "@/lib/ile-canvas-dictate";
+import {
+  advanceIleDictateCapture,
+  ileDictateCaptureText,
+  noteIleDictateTranscript,
+  startIleDictateCapture,
+  syncIleDictatedTextOnWorkCanvas,
+  type IleDictateCapture,
+} from "@/lib/ile-canvas-dictate";
 import { ileCanvasCraftInsightUsable } from "@/lib/ile-turn-insights";
 import { IleCanvasDictateButton } from "@/components/session-view/ile-canvas-dictate-button";
 import {
@@ -261,8 +269,9 @@ export function ExcalidrawCanvas({
   const [isSubmittingToHelios, setIsSubmittingToHelios] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [canvasApiReady, setCanvasApiReady] = useState(false);
-  const [askPrompt, setAskPrompt] = useState("");
-  const [boardPrompt, setBoardPrompt] = useState("");
+  const [commandText, setCommandText] = useState("");
+  const [askListening, setAskListening] = useState(false);
+  const askCaptureRef = useRef<IleDictateCapture | null>(null);
   const [askInFlight, setAskInFlight] = useState(0);
   const [craftInsightOpen, setCraftInsightOpen] = useState(false);
   const lastReplaceNonceRef = useRef<string | number | null>(null);
@@ -573,7 +582,7 @@ export function ExcalidrawCanvas({
     const origin = ileWorkCanvasEmptyNearbyOriginWithReserved({
       elements,
       reserved: reservedThinkingOrigins("helios"),
-      box: { width: ILE_XAI_LOADING_BOX_WIDTH, height: ILE_XAI_LOADING_BOX_HEIGHT },
+      box: ileWorkCanvasThinkingOverlayStyle(),
     });
     const appState = api?.getAppState?.() ?? sceneDataRef.current?.appState ?? {};
     upsertThinkingChip(projectThinkingChip("helios", origin, appState));
@@ -622,7 +631,7 @@ export function ExcalidrawCanvas({
         elements: liveElements,
         reserved: reservedThinkingOrigins(),
         near: input.selectedElements.length ? input.selectedElements : liveElements,
-        box: { width: ILE_XAI_LOADING_BOX_WIDTH, height: ILE_XAI_LOADING_BOX_HEIGHT },
+        box: ileWorkCanvasThinkingOverlayStyle(),
       });
       const liveAppState = api.getAppState?.() ?? {};
       removeThinkingChip("helios");
@@ -678,7 +687,11 @@ export function ExcalidrawCanvas({
         } finally {
           applyingRemoteRef.current = false;
         }
-        if (added.length && typeof api.scrollToContent === "function") {
+        if (
+          added.length &&
+          typeof api.scrollToContent === "function" &&
+          ileWorkCanvasMarksNeedScroll(added, api.getAppState?.() ?? {})
+        ) {
           api.scrollToContent(added, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS);
         }
         canvasPowCollectorRef.current.syncWithoutEmit({
@@ -739,19 +752,6 @@ export function ExcalidrawCanvas({
       (el) => el?.id && selectedIds[el.id] && !el.isDeleted,
     );
   }, []);
-
-  const handleAskSelected = useCallback(() => {
-    const prompt = askPrompt.trim();
-    const selected = selectedCanvasElements();
-    if (!prompt || !selected.length) return;
-    setAskPrompt("");
-    const powEvents = canvasPowCollectorRef.current.expandMore({
-      prompt,
-      selectedElements: selected,
-    });
-    if (powEvents.length) onCanvasPowActionsRef.current?.(powEvents);
-    void runCanvasAsk({ prompt, selectedElements: selected });
-  }, [askPrompt, runCanvasAsk, selectedCanvasElements]);
 
   const handleQuickAction = useCallback(
     (action: IleWorkCanvasCommandId) => {
@@ -839,6 +839,17 @@ export function ExcalidrawCanvas({
         });
         return;
       }
+      if (action === "answer" || action === "simplify") {
+        const prompt = action === "answer" ? "Answer" : "Simplify";
+        emitCommand(action, prompt);
+        void runCanvasAsk({
+          prompt,
+          selectedElements: selected,
+          kind: action,
+        });
+        return;
+      }
+      if (action === "ask") return;
       if (action === "rephrase" || action === "elaborate") {
         const prompt = ileWorkCanvasQuickActionPrompt(
           action === "rephrase" ? "rephrase" : "elaborate more pls",
@@ -918,14 +929,81 @@ export function ExcalidrawCanvas({
     [],
   );
 
-  const handleBoardAsk = useCallback(() => {
-    const prompt = boardPrompt.trim();
-    if (!prompt) return;
-    setBoardPrompt("");
-    const powEvents = canvasPowCollectorRef.current.boardPrompt({ prompt });
+  const handleBoardAsk = useCallback((prompt: string) => {
+    const text = String(prompt || "").trim();
+    if (!text) return;
+    const powEvents = canvasPowCollectorRef.current.command("ask", { prompt: text });
     if (powEvents.length) onCanvasPowActionsRef.current?.(powEvents);
-    void runCanvasAsk({ prompt, selectedElements: [] });
-  }, [boardPrompt, runCanvasAsk]);
+    void runCanvasAsk({ prompt: text, selectedElements: [], kind: "ask" });
+  }, [runCanvasAsk]);
+
+  useEffect(() => {
+    if (!askListening || !askCaptureRef.current) return;
+    const advanced = advanceIleDictateCapture(askCaptureRef.current, dictateTranscript ?? "");
+    askCaptureRef.current = advanced.capture;
+    const spoken = advanced.text.trim();
+    setCommandText(spoken ? `/ask ${spoken}` : "/ask ");
+  }, [askListening, dictateTranscript]);
+
+  const beginAskVoice = useCallback(() => {
+    if (dictateTranscript === undefined) {
+      setCommandText((current) => (current.trim().startsWith("/ask") ? current : "/ask "));
+      return;
+    }
+    askCaptureRef.current = startIleDictateCapture(dictateTranscript);
+    setAskListening(true);
+    setCommandText("/ask ");
+  }, [dictateTranscript]);
+
+  const finishAskVoice = useCallback(
+    (send: boolean) => {
+      const capture = askCaptureRef.current;
+      askCaptureRef.current = null;
+      setAskListening(false);
+      const spoken = capture
+        ? ileDictateCaptureText(
+            noteIleDictateTranscript(capture, dictateTranscript ?? ""),
+          ).trim()
+        : "";
+      const draft = ileCanvasCommandDraft(commandText);
+      const typed = draft.exactId === "ask" ? draft.rest.trim() : "";
+      const text = typed || spoken;
+      setCommandText("");
+      if (send && text) handleBoardAsk(text);
+    },
+    [commandText, dictateTranscript, handleBoardAsk],
+  );
+
+  const submitCommand = useCallback(() => {
+    if (askListening) {
+      finishAskVoice(true);
+      return;
+    }
+    const draft = ileCanvasCommandDraft(commandText);
+    if (!draft.slash || !draft.exactId) return;
+    if (draft.exactId === "ask") {
+      if (draft.rest.trim()) {
+        setCommandText("");
+        handleBoardAsk(draft.rest);
+        return;
+      }
+      beginAskVoice();
+      return;
+    }
+    if (ileWorkCanvasCommandNeedsSelection(draft.exactId) && selectedCanvasElements().length === 0) {
+      return;
+    }
+    setCommandText("");
+    handleQuickAction(draft.exactId);
+  }, [
+    askListening,
+    beginAskVoice,
+    commandText,
+    finishAskVoice,
+    handleBoardAsk,
+    handleQuickAction,
+    selectedCanvasElements,
+  ]);
 
   useEffect(() => {
     if (applyElementsNonce == null || applyElementsNonce === lastApplyNonceRef.current) return;
@@ -949,7 +1027,7 @@ export function ExcalidrawCanvas({
     const origin = ileWorkCanvasEmptyNearbyOriginWithReserved({
       elements: liveElements,
       reserved: reservedThinkingOrigins(),
-      box: { width: ILE_XAI_LOADING_BOX_WIDTH, height: ILE_XAI_LOADING_BOX_HEIGHT },
+      box: ileWorkCanvasThinkingOverlayStyle(),
     });
     const liveAppState = api.getAppState?.() ?? {};
     upsertThinkingChip(projectThinkingChip(turnId, origin, liveAppState));
@@ -1384,88 +1462,91 @@ export function ExcalidrawCanvas({
         {onAskSelected ? (
           <form
             data-ile-canvas-prompt-bar
-            data-ile-canvas-prompt-mode={canvasSelectionActive ? "commands" : "ask"}
-            data-ile-excalidraw-ask={canvasSelectionActive ? "true" : undefined}
+            data-ile-canvas-prompt-mode="commands"
+            data-ile-excalidraw-ask="true"
             data-ile-excalidraw-ask-busy={askInFlight > 0 ? "true" : undefined}
             data-ile-canvas-prompt-bar-busy={askInFlight > 0 ? "true" : undefined}
             className="pointer-events-none absolute left-1/2 z-[58] flex -translate-x-1/2 justify-center"
             style={{
               top: promptBarTop,
-              width: canvasSelectionActive
-                ? Math.max(promptBarWidth, ILE_CANVAS_PROMPT_BAR_FALLBACK_WIDTH)
-                : promptBarWidth,
+              width: Math.max(promptBarWidth, ILE_CANVAS_PROMPT_BAR_FALLBACK_WIDTH),
             }}
             onSubmit={(event) => {
               event.preventDefault();
-              if (canvasSelectionActive) void handleAskSelected();
-              else void handleBoardAsk();
+              submitCommand();
             }}
           >
             <div className="pointer-events-auto flex w-full flex-col gap-1.5">
-              {canvasSelectionActive ? (
-                <div className="flex w-full flex-col gap-1.5 rounded-none border border-white bg-neutral-950/95 p-2 shadow-[0_12px_40px_rgba(0,0,0,0.55)]">
+              <div className="flex w-full flex-col gap-1.5 rounded-none border border-white bg-neutral-950/95 p-2 shadow-[0_12px_40px_rgba(0,0,0,0.55)]">
+                {ileCanvasCommandDraft(commandText).slash ? (
                   <div
                     data-ile-learn-more
                     data-ile-learn-more-actions
                     className="grid w-full grid-cols-4 gap-1"
                   >
-                    {ILE_WORK_CANVAS_COMMANDS.map((command) => (
-                      <button
-                        key={command.id}
-                        type="button"
-                        data-ile-learn-more-quick={command.id}
-                        aria-label={command.label}
-                        title={command.tooltip}
-                        onClick={() => handleQuickAction(command.id)}
-                        className={ILE_CANVAS_COMMAND_BUTTON_CLASS}
-                      >
-                        {command.label}
-                      </button>
-                    ))}
+                    {filterIleWorkCanvasCommands(ileCanvasCommandDraft(commandText).query).map((command) => {
+                      const needsSelection = ileWorkCanvasCommandNeedsSelection(command.id);
+                      const blocked = needsSelection && !canvasSelectionActive;
+                      return (
+                        <button
+                          key={command.id}
+                          type="button"
+                          data-ile-learn-more-quick={command.id}
+                          aria-label={command.label}
+                          title={command.tooltip}
+                          disabled={blocked}
+                          onClick={() => {
+                            if (command.id === "ask") {
+                              setCommandText("/ask ");
+                              beginAskVoice();
+                              return;
+                            }
+                            if (blocked) return;
+                            setCommandText("");
+                            handleQuickAction(command.id);
+                          }}
+                          className={ILE_CANVAS_COMMAND_BUTTON_CLASS}
+                        >
+                          {command.label}
+                        </button>
+                      );
+                    })}
                   </div>
-                  <div className="flex items-stretch gap-1">
-                    <input
-                      data-ile-excalidraw-ask-input
-                      type="text"
-                      value={askPrompt}
-                      onChange={(event) => setAskPrompt(event.target.value)}
-                      placeholder="Prompt a question about this selection"
-                      aria-label="Prompt a question about this selection"
-                      className="min-w-0 flex-1 rounded-none border border-neutral-600 bg-neutral-900 px-2 py-1.5 text-sm text-white placeholder-neutral-500 focus:border-white focus:outline-none"
-                    />
-                    <button
-                      type="submit"
-                      data-ile-excalidraw-ask-send
-                      disabled={!askPrompt.trim()}
-                      className="rounded-none border border-white bg-white px-2.5 text-xs font-semibold uppercase tracking-wider text-neutral-950 hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      Send
-                    </button>
-                  </div>
-                </div>
-              ) : (
-              <>
-              <div className="flex items-stretch gap-1.5">
-                <div className="flex min-w-0 flex-1 items-stretch gap-1 rounded-none border border-white bg-neutral-950/95 p-2 shadow-[0_12px_40px_rgba(0,0,0,0.55)]">
+                ) : null}
+                <div className="flex items-stretch gap-1">
                   <input
                     data-ile-canvas-prompt-bar-input
+                    data-ile-canvas-command-input
                     type="text"
-                    value={boardPrompt}
-                    onChange={(event) => setBoardPrompt(event.target.value)}
-                    placeholder="Any questions?"
-                    aria-label="Any questions?"
+                    value={commandText}
+                    onChange={(event) => {
+                      if (askListening) setAskListening(false);
+                      askCaptureRef.current = null;
+                      setCommandText(event.target.value);
+                    }}
+                    placeholder="Type / for a command"
+                    aria-label="Type / for a command"
                     className="min-w-0 flex-1 rounded-none border border-neutral-600 bg-neutral-900 px-2 py-1.5 text-sm text-white placeholder-neutral-500 focus:border-white focus:outline-none"
                   />
                   <button
+                    type="button"
+                    data-ile-canvas-ask
+                    aria-pressed={askListening}
+                    onClick={() => (askListening ? finishAskVoice(true) : beginAskVoice())}
+                    className="rounded-none border border-white bg-neutral-950 px-2.5 text-xs font-semibold uppercase tracking-wider text-white hover:bg-neutral-800 aria-pressed:bg-white aria-pressed:text-neutral-950"
+                  >
+                    {askListening ? "Stop" : "Ask"}
+                  </button>
+                  <button
                     type="submit"
                     data-ile-canvas-prompt-bar-send
-                    disabled={!boardPrompt.trim()}
-                    aria-label="Ask"
-                    className="rounded-none border border-white bg-white px-2.5 text-xs font-semibold uppercase tracking-wider text-neutral-950 hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-none border border-white bg-white px-2.5 text-xs font-semibold uppercase tracking-wider text-neutral-950 hover:bg-neutral-200"
                   >
-                    Ask
+                    Run
                   </button>
                 </div>
+              </div>
+              <div className="flex items-stretch gap-1.5">
                 {craftInsight ? (
                   <IleCraftInsightButton
                     usable={ileCanvasCraftInsightUsable()}
@@ -1489,8 +1570,6 @@ export function ExcalidrawCanvas({
                   onClose={() => setCraftInsightOpen(false)}
                 />
               ) : null}
-              </>
-              )}
             </div>
           </form>
         ) : null}

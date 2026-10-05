@@ -319,11 +319,13 @@ describe("Explore mode wiring", () => {
     const pane = read("components/WorkspaceEmptyMapPane.tsx");
     const api = read("app/api/workspace/map-explore/route.ts");
     const stack = read("components/block-skill-grid/map-right-stack.tsx");
+    const nav = read("components/WorkspaceSectionNav.tsx");
 
-    expect(stack).toContain("WORKSPACE_MAP_TOGGLE_IDS");
-    expect(stack).toContain("data-workspace-mode-toggle-states");
-    expect(stack).toContain("WORKSPACE_MAP_TOGGLE_IDS");
-    expect(stack).toContain('workspaceModeDisplayLabel');
+    expect(nav).toContain("WORKSPACE_MAP_TOGGLE_IDS");
+    expect(nav).toContain("data-workspace-mode-toggle-states");
+    expect(nav).toContain("data-workspace-mode-by-title");
+    expect(nav).toContain("workspaceModeDisplayLabel");
+    expect(stack).not.toContain("data-workspace-mode-under-minimap");
     expect(stack).not.toContain("Explore / Expand Map");
     expect(stack).not.toContain("data-map-explore-toggle");
     expect(grid).not.toContain("data-map-explore-toggle");
@@ -347,7 +349,7 @@ describe("Explore mode wiring", () => {
     writeScratch(
       "explore-mode-wiring.log",
       [
-        "toggle_states=" + stack.includes("build,play,explore"),
+        "toggle_by_title=" + nav.includes("data-workspace-mode-by-title"),
         "no_standalone_explore=" + !stack.includes("data-map-explore-toggle"),
         "search_marker=" + grid.includes("data-empty-cell-search"),
         "plus_still_in_build=" + grid.includes("data-empty-cell-plus"),

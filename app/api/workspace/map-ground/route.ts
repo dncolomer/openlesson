@@ -63,6 +63,7 @@ export async function POST(req: NextRequest) {
       "set_local_context",
     ]);
     const auth = await guardWorkspaceRoute(workspaceId, {
+      feature: "map",
       ayclToken: ayclTokenFromBody(body),
       requireAyclAuthoring: authoringOps.has(String(op || "")),
     });

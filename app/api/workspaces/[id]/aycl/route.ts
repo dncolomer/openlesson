@@ -3,6 +3,7 @@ import { jsonError } from "@/lib/api-error-envelope";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { parseAyclListingUpdateBody } from "@/lib/aycl-marketplace";
+import { denyWorkspaceFeatureById } from "@/lib/workspace-feature-gate";
 
 const LISTING_SELECT =
   "id, is_all_you_can_learn, aycl_category, aycl_summary, aycl_author_name, aycl_author_avatar_url, aycl_learner_price_cents, aycl_full_price_cents";
@@ -13,6 +14,8 @@ export async function PUT(
 ) {
   try {
     const { id: workspaceId } = await params;
+    const denied = await denyWorkspaceFeatureById(workspaceId, "aycl");
+    if (denied) return denied;
     const supabase = await createClient();
     const {
       data: { user },

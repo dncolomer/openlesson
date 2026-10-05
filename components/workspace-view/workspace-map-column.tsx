@@ -18,6 +18,7 @@ export function WorkspaceMapColumn({
   mobileColumn,
   nodes,
   isOwner,
+  canAuthor,
   isLearnerMode,
   currentUserId,
   ayclToken,
@@ -65,6 +66,8 @@ export function WorkspaceMapColumn({
   mobileColumn: MobileColumn;
   nodes: Block[];
   isOwner: boolean;
+  /** Owner or org admin. AYCL capabilities still override this. */
+  canAuthor?: boolean;
   isLearnerMode: boolean;
   currentUserId: string | null;
   ayclToken?: string;
@@ -168,8 +171,10 @@ export function WorkspaceMapColumn({
         mapToggleIds={visibleWorkspaceMapToggleIds({
           allowCreator: ayclCapabilities
             ? ayclCapabilities.allowCreatorModeToggle
-            : true,
-          allowExplore: ayclCapabilities ? ayclCapabilities.allowExplore : true,
+            : Boolean(canAuthor),
+          allowExplore: ayclCapabilities
+            ? ayclCapabilities.allowExplore
+            : Boolean(canAuthor),
         })}
         interactionMode={interactionMode}
         onInteractionModeChange={

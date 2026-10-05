@@ -90,14 +90,14 @@ describe("privileged Knowledge + Settings gating", () => {
     expect(canAccessPrivilegedWorkspaceSections({})).toBe(false);
   });
 
-  it("keeps knowledge and settings for owners", () => {
+  it("keeps settings for learning owners and drops knowledge", () => {
     expect(resolveActiveSection("settings", { isOwner: true })).toBe("settings");
-    expect(resolveActiveSection("knowledge", { isOwner: true })).toBe("knowledge");
+    expect(resolveActiveSection("knowledge", { isOwner: true })).toBe("workspace");
   });
 
-  it("keeps knowledge and settings for org admins who are not owners", () => {
+  it("keeps settings for org admins who are not owners", () => {
     expect(resolveActiveSection("settings", { isOwner: false, isOrgAdmin: true })).toBe("settings");
-    expect(resolveActiveSection("knowledge", { isOwner: false, isOrgAdmin: true })).toBe("knowledge");
+    expect(resolveActiveSection("knowledge", { isOwner: false, isOrgAdmin: true })).toBe("workspace");
   });
 
   it("falls back non-privileged callers from knowledge and settings to workspace", () => {
@@ -112,7 +112,8 @@ describe("privileged Knowledge + Settings gating", () => {
     expect(resolveActiveSection("workspace", { isOwner: true })).toBe("workspace");
     expect(resolveActiveSection("workspace", { isOrgAdmin: true })).toBe("workspace");
     expect(resolveActiveSection("simulation", { isOwner: false })).toBe("workspace");
-    expect(resolveActiveSection("context", { isOwner: false })).toBe("context");
+    expect(resolveActiveSection("context", { isOwner: false })).toBe("workspace");
+    expect(resolveActiveSection("context", { isOwner: true })).toBe("context");
   });
 });
 
@@ -122,28 +123,18 @@ describe("availableWorkspaceSections", () => {
       "workspace",
       "dags",
       "map_types",
-      "goals",
       "context",
-      "knowledge",
       "settings",
     ]);
-    // Org admin (not owner): privileged Knowledge/Settings/Goals, but not DAGs
     expect(availableWorkspaceSections({ isOrgAdmin: true })).toEqual([
       "workspace",
-      "goals",
       "context",
-      "knowledge",
       "settings",
     ]);
     expect(availableWorkspaceSections({ isOwner: false, isOrgAdmin: false })).toEqual([
       "workspace",
-      "context",
     ]);
-    expect(availableWorkspaceSections({})).toEqual([
-      "workspace",
-      "context",
-    ]);
-    // DAGs is second (right after Workspace) for owners. Insight simulation is block-level.
+    expect(availableWorkspaceSections({})).toEqual(["workspace"]);
     const owner = availableWorkspaceSections({ isOwner: true });
     expect(owner.indexOf("dags")).toBe(owner.indexOf("workspace") + 1);
     expect(owner).not.toContain("simulation");

@@ -547,7 +547,7 @@ export function validatePracticePortalMintRequest(
     return {
       ok: false,
       error:
-        "Explore products are not available on workspace-level Knowledge Portals (they require a practice block). Enable a Drill product or switch the portal off workspace scope.",
+        "Explore products are not available when the portal is scoped to the whole workspace. Enable a Drill product or choose a block.",
       code: "product_not_allowed",
     };
   }

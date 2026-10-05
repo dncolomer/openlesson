@@ -14,6 +14,8 @@ import {
   persistableOwnerUserId,
   type WorkspacePrincipal,
 } from "@/lib/workspace-access-policy";
+import { denyWorkspaceFeatureById } from "@/lib/workspace-feature-gate";
+import type { WorkspaceFeature } from "@/lib/workspace-capabilities";
 
 export type AuthenticatedRequest =
   | {
@@ -130,6 +132,8 @@ export async function guardWorkspaceRoute(
     requireProductAccess?: boolean;
     /** When true, AYCL practice-only tier is rejected (creation / grow). */
     requireAyclAuthoring?: boolean;
+    /** Reject the call when this workspace product does not include the feature. */
+    feature?: WorkspaceFeature;
   }
 ): Promise<AuthenticatedRequest> {
   const normalizedWorkspaceId = workspaceId.trim();
@@ -138,6 +142,15 @@ export async function guardWorkspaceRoute(
       ok: false,
       response: jsonError(400, "workspaceId is required"),
     };
+  }
+
+  async function withFeature(
+    result: AuthenticatedRequest,
+  ): Promise<AuthenticatedRequest> {
+    if (!result.ok || !options?.feature) return result;
+    const denied = await denyWorkspaceFeatureById(normalizedWorkspaceId, options.feature);
+    if (denied) return { ok: false, response: denied };
+    return result;
   }
 
   const ayclToken = options?.ayclToken?.trim() || "";
@@ -174,14 +187,14 @@ export async function guardWorkspaceRoute(
     if ("error" in ids) {
       return { ok: false, response: jsonError(500, "Workspace owner is missing") };
     }
-    return {
+    return withFeature({
       ok: true,
       principal,
       subjectId: ids.subjectId,
       persistUserId: ids.persistUserId,
       supabase: aycl.supabase,
       ayclCapabilities: aycl.capabilities,
-    };
+    });
   }
 
   const ileToken = options?.ileToken?.trim() || "";
@@ -214,14 +227,14 @@ export async function guardWorkspaceRoute(
     if ("error" in ids) {
       return { ok: false, response: jsonError(500, "Workspace owner is missing") };
     }
-    return {
+    return withFeature({
       ok: true,
       principal,
       subjectId: ids.subjectId,
       persistUserId: ids.persistUserId,
       supabase: ile.supabase,
       guestUserId: principal.guestUserId ?? null,
-    };
+    });
   }
 
   const auth = await requireAuthenticatedUser();
@@ -249,10 +262,10 @@ export async function guardWorkspaceRoute(
 
   const stripped = stripCookieAuth(auth);
   if (options?.requireProductAccess !== false) {
-    return enforceProductAccessUnlessAycl(stripped, auth.user);
+    return withFeature(await enforceProductAccessUnlessAycl(stripped, auth.user));
   }
 
-  return stripped;
+  return withFeature(stripped);
 }
 
 export type GuardSessionOptions = {

@@ -219,6 +219,7 @@ function sceneWith(id: string, text = id): IleWorkCanvasScene {
 describe("TAP Learning Work canvas grid default (shipped)", () => {
   it("starts with the grid off and zen mode on, and keeps an explicit choice", () => {
     const empty = emptyIleWorkCanvasScene();
+    expect(empty.appState.activeTool).toEqual({ type: "text" });
     expect(empty.appState.gridModeEnabled).toBe(false);
     expect(empty.appState.zenModeEnabled).toBe(true);
     expect(empty.appState.gridSize).toBe(ILE_WORK_CANVAS_DEFAULT_GRID_SIZE);
@@ -469,7 +470,7 @@ describe("TAP Learning Work canvas ask-XAI on selection (shipped)", () => {
     const canvas = read("components/ExcalidrawCanvas.tsx");
     expect(canvas).toContain("data-ile-excalidraw-ask");
     expect(canvas).toContain("data-ile-learn-more");
-    expect(canvas).toContain('data-ile-canvas-prompt-mode={canvasSelectionActive ? "commands" : "ask"}');
+    expect(canvas).toContain('data-ile-canvas-prompt-mode="commands"');
     expect(canvas).toContain("data-ile-learn-more-actions");
     expect(canvas).toContain('className="grid w-full grid-cols-4 gap-1"');
     expect(canvas).toContain("min-w-0 items-center justify-center");
@@ -480,7 +481,8 @@ describe("TAP Learning Work canvas ask-XAI on selection (shipped)", () => {
     expect(canvas).toContain("ileCanvasPromptMode");
     expect(canvas).toContain("pointer-events-none");
     expect(canvas).toContain("IleExcalidrawMount");
-    expect(canvas).toContain("Prompt a question about this selection");
+    expect(canvas).toContain("Type / for a command");
+    expect(canvas).not.toContain("Prompt a question about this selection");
     expect(canvas).not.toContain("Ask XAI about");
     expect(canvas).not.toContain("renderTopRightUI");
     expect(canvas).toContain("ileWorkCanvasEmptyNearbyOrigin");
@@ -494,7 +496,6 @@ describe("TAP Learning Work canvas ask-XAI on selection (shipped)", () => {
     expect(canvas).toContain("syncPromptBarPlacement");
     expect(canvas).toContain("top: promptBarTop");
     expect(canvas).toContain("Math.max(promptBarWidth, ILE_CANVAS_PROMPT_BAR_FALLBACK_WIDTH)");
-    expect(canvas).toContain(": promptBarWidth");
     expect(canvas).toContain("ILE_CANVAS_PROMPT_BAR_TOOLBAR_SELECTOR");
     expect(canvas).not.toContain("inset-x-0 bottom-3 z-[58]");
     expect(canvas).not.toContain("max-w-4xl");
@@ -693,7 +694,8 @@ describe("TAP Learning Work canvas text wrap (shipped)", () => {
     const wrapped = wrapIleWorkCanvasText(long);
     expect(wrapped.lineCount).toBeGreaterThan(1);
     expect(wrapped.width).toBe(ILE_WORK_CANVAS_TEXT_BOX_WIDTH);
-    expect(wrapped.text.split("\n").every((line) => line.length <= 40)).toBe(true);
+    const maxChars = Math.floor(ILE_WORK_CANVAS_TEXT_BOX_WIDTH / (20 * 0.55));
+    expect(wrapped.text.split("\n").every((line) => line.length <= maxChars)).toBe(true);
     expect(wrapped.originalText).toBe(long);
     expect(wrapped.text).not.toBe(long);
 
@@ -1119,18 +1121,17 @@ describe("TAP Learning Work canvas XAI suggested origin (shipped parse+apply)", 
 });
 
 describe("TAP Learning Work canvas thinking overlay box (shipped occupancy+style)", () => {
-  it("uses a fixed square that rotating copy cannot resize", () => {
+  it("uses a fixed text-column plate that rotating copy cannot resize", () => {
     expect(ILE_XAI_LOADING_BOX_WIDTH).toBe(ILE_XAI_LOADING_BOX_HEIGHT);
     expect(ILE_XAI_LOADING_BOX_WIDTH).toBeGreaterThan(52);
-    expect(ILE_XAI_LOADING_BOX_HEIGHT).toBeGreaterThan(52);
     const style = ileWorkCanvasThinkingOverlayStyle();
-    expect(style.width).toBe(style.height);
-    expect(style.width).toBe(ILE_XAI_LOADING_BOX_WIDTH);
-    expect(style.height).toBe(ILE_XAI_LOADING_BOX_HEIGHT);
-    expect(style.minWidth).toBe(ILE_XAI_LOADING_BOX_WIDTH);
-    expect(style.minHeight).toBe(ILE_XAI_LOADING_BOX_HEIGHT);
-    expect(style.maxWidth).toBe(ILE_XAI_LOADING_BOX_WIDTH);
-    expect(style.maxHeight).toBe(ILE_XAI_LOADING_BOX_HEIGHT);
+    expect(style.width).toBe(ILE_WORK_CANVAS_TEXT_BOX_WIDTH);
+    expect(style.width).toBeGreaterThan(ILE_XAI_LOADING_BOX_WIDTH);
+    expect(style.height).toBeGreaterThan(52);
+    expect(style.minWidth).toBe(style.width);
+    expect(style.maxWidth).toBe(style.width);
+    expect(style.minHeight).toBe(style.height);
+    expect(style.maxHeight).toBe(style.height);
     expect(ileWorkCanvasThinkingOverlayStyle()).toEqual(style);
     expect(ileHeliosThinkingLine(0)).not.toBe(ileHeliosThinkingLine(1));
     expect(ileHeliosThinkingLine(0).length).not.toBe(ileHeliosThinkingLine(1).length);
@@ -1197,12 +1198,12 @@ describe("TAP Learning Work canvas parallel asks (shipped live merge)", () => {
     const live = mergeIleXaiTurnOntoLiveWorkCanvas(first, {
       text: "second reply",
       turnId: "ask-b",
-      origin: { x: 420, y: 200 },
+      origin: { x: 640, y: 200 },
     });
     expect(live.elements.some((el) => (el.originalText || el.text) === "first reply")).toBe(true);
     expect(live.elements.some((el) => (el.originalText || el.text) === "second reply")).toBe(true);
     expect(live.elements.find((el) => (el.originalText || el.text) === "first reply")?.x).toBe(20);
-    expect(live.elements.find((el) => (el.originalText || el.text) === "second reply")?.x).toBe(420);
+    expect(live.elements.find((el) => (el.originalText || el.text) === "second reply")?.x).toBe(640);
 
     const block = { id: "block", x: 0, y: 0, width: 100, height: 40, isDeleted: false };
     const slotA = ileWorkCanvasEmptyNearbyOriginWithReserved({ elements: [block] });
@@ -1217,8 +1218,8 @@ describe("TAP Learning Work canvas parallel asks (shipped live merge)", () => {
     expect(canvas).toContain("enqueueCanvasAskApply");
     expect(canvas).toContain("ileWorkCanvasEmptyNearbyOriginWithReserved");
     expect(canvas).toContain("data-ile-canvas-thinking-id");
-    expect(canvas).toContain("disabled={!askPrompt.trim()}");
-    expect(canvas).toContain("disabled={!boardPrompt.trim()}");
+    expect(canvas).toContain("data-ile-canvas-command-input");
+    expect(canvas).toContain("Type / for a command");
     expect(canvas).not.toContain("disabled={askBusy");
     expect(canvas).not.toContain("if (!ask || !api || !prompt || askBusy)");
   });
@@ -1467,7 +1468,7 @@ describe("TAP Learning Work canvas split + Expand More quick actions (shipped)",
     expect(ileWorkCanvasQuickActionPrompt("elaborate more pls")).toMatch(/elaborate more pls/i);
 
     const canvas = read("components/ExcalidrawCanvas.tsx");
-    expect(canvas).toContain("ILE_WORK_CANVAS_COMMANDS.map");
+    expect(canvas).toContain("filterIleWorkCanvasCommands");
     expect(canvas).toContain("data-ile-learn-more-quick={command.id}");
     expect(canvas).toContain("handleQuickAction(command.id)");
     expect(canvas).toContain("{command.label}");
@@ -2486,14 +2487,16 @@ describe("TAP Learning Work canvas selection commands (shipped)", () => {
     const phases = read("components/tap-score/tap-score-phases.tsx");
     expect(ILE_LEARN_MORE_LABEL).toBe("Commands");
     expect(canvas).toContain("canvasSelectionActive");
-    expect(canvas).toContain('data-ile-canvas-prompt-mode={canvasSelectionActive ? "commands" : "ask"}');
+    expect(canvas).toContain('data-ile-canvas-prompt-mode="commands"');
     expect(canvas).not.toContain("commandsOpen");
     expect(canvas).not.toContain("data-ile-learn-more-collapsed");
     expect(canvas).not.toContain("data-ile-learn-more-handle");
     expect(canvas).not.toContain("data-ile-compress-work");
     expect(canvas).toContain("IleCraftInsightButton");
-    expect(canvas).toContain("Any questions?");
-    expect(canvas).toContain("Prompt a question about this selection");
+    expect(canvas).toContain("Type / for a command");
+    expect(canvas).not.toContain("Any questions?");
+    expect(canvas).not.toContain("Prompt a question about this selection");
+    expect(canvas).toContain("Type / for a command");
     expect(canvas).toContain("data-ile-learn-more-quick={command.id}");
     expect(canvas).toContain("title={command.tooltip}");
     expect(canvas).toContain("{command.label}");

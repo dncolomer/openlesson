@@ -528,148 +528,35 @@ describe("practicePortalMintToCreateFields (create → mint shape)", () => {
   });
 });
 
-describe("Practice Portal structural wiring", () => {
-  it("exposes owner create UI, public landing, mint API, middleware allowlist, migration", () => {
-    const portalPanel = read("components/WorkspaceKnowledgePortalPanel.tsx");
-    expect(portalPanel).toMatch(/practice.?portal|Knowledge Portal|practicePortal/i);
-    expect(portalPanel).toMatch(/data-practice-portal/);
-    expect(portalPanel).toMatch(/data-knowledge-portal-panel/);
-    expect(portalPanel).toMatch(/data-knowledge-portal-inner-tab="create"/);
-    expect(portalPanel).toMatch(/data-knowledge-portal-inner-tab="browse"/);
-    expect(portalPanel).toMatch(/data-practice-portal-scope/);
-    expect(portalPanel).toMatch(/data-practice-portal-scope-workspace/);
-    expect(portalPanel).toMatch(/scope_mode/);
-    expect(portalPanel).toMatch(/portalBlockId|block_id/);
-    expect(portalPanel).not.toMatch(/practicePortalUrlOnce/);
-
-    // Guest links no longer embed Knowledge Portal create chrome
-    const guestPanel = read("components/WorkspaceGuestLinksPanel.tsx");
-    expect(guestPanel).not.toMatch(/data-practice-portal-create/);
-    expect(guestPanel).not.toMatch(/data-practice-portal-create-submit/);
-    expect(guestPanel).not.toMatch(/data-product-intent="practice-portal-create"/);
-
+describe("Knowledge Portal removal", () => {
+  it("drops the portal from the product and keeps the database migration", () => {
+    const gone = [
+      "components/WorkspaceKnowledgePortalPanel.tsx",
+      "components/PracticePortalLandingClient.tsx",
+      "components/PracticePortalShell.tsx",
+      "app/portal/[token]/page.tsx",
+      "app/practice-portal/[token]/page.tsx",
+      "app/api/workspace/practice-portals/route.ts",
+      "app/api/practice-portal/[token]/route.ts",
+      "app/api/practice-portal/[token]/mint/route.ts",
+    ];
+    for (const rel of gone) {
+      expect(existsSync(join(process.cwd(), rel)), rel).toBe(false);
+    }
     const settings = read("components/WorkspaceIntegrationPanel.tsx");
-    expect(settings).toMatch(/knowledge-portal/);
-    expect(settings).toMatch(/WorkspaceKnowledgePortalPanel/);
-    expect(settings).toMatch(/data-settings-tab-panel="knowledge-portal"/);
-
-    const pure = read("lib/practice-portal.ts");
-    expect(pure).toContain("normalizePracticePortalConfig");
-    expect(pure).toContain("validatePracticePortalMintRequest");
-    expect(pure).toContain("buildPracticePortalUrl");
-    expect(pure).toContain("PRACTICE_PORTAL_PUBLIC_PATH");
-    expect(pure).toContain("classifyPracticePortalLookup");
-
-    const ownerApi = read("app/api/workspace/practice-portals/route.ts");
-    expect(ownerApi).toMatch(/workspace_practice_portals/);
-    expect(ownerApi).toMatch(/normalizePracticePortalConfig/);
-    expect(ownerApi).toMatch(/public_token/);
-    expect(ownerApi).toMatch(/buildPracticePortalUrl/);
-
-    const publicGet = read("app/api/practice-portal/[token]/route.ts");
-    expect(publicGet).toMatch(/buildPracticePortalLandingView|normalizePracticePortalConfig/);
-
-    const mintApi = read("app/api/practice-portal/[token]/mint/route.ts");
-    expect(mintApi).toMatch(/validatePracticePortalMintRequest/);
-    expect(mintApi).toMatch(/createWorkspaceTapLink|createWorkspaceIleLink/);
-
-    const landing = read("app/portal/[token]/page.tsx");
-    expect(landing).toMatch(/PracticePortalLanding|PracticePortalShell/);
-    expect(landing).toMatch(/classifyPracticePortalLookup/);
-    expect(landing).toMatch(/storage_error|data-practice-portal-error|errorCode/);
-    expect(landing).toMatch(/aestheticImageForId|\/aesthetics\//);
-    expect(landing).toMatch(/PracticePortalShell/);
-
-    const shell = read("components/PracticePortalShell.tsx");
-    expect(shell).toMatch(/data-practice-portal-aesthetics-bg|data-aesthetics-bg/);
-    expect(shell).toMatch(/\/aesthetics\/|backgroundImage/);
-    expect(shell).toMatch(/bg-cover|bg-fixed|bg-center/);
-    expect(shell).toMatch(/data-practice-portal-centered/);
-    expect(shell).toMatch(/max-w-3xl|mx-auto/);
-    expect(shell).toMatch(/radial-gradient|#0a0a0a/);
-    expect(shell).toMatch(/z-10|fixed inset-0/);
-
-    const legacy = read("app/practice-portal/[token]/page.tsx");
-    expect(legacy).toMatch(/redirect\(`?\/portal\//);
-
-    const landingClient = read("components/PracticePortalLandingClient.tsx");
-    expect(landingClient).toMatch(/data-practice-portal-mint|data-mint-/);
-    expect(landingClient).toMatch(/duration|minutes/i);
-    expect(landingClient).toMatch(/product/i);
-    expect(landingClient).toMatch(/font-mono|tracking-\[/);
-    expect(landingClient).toMatch(/zinc-|amber-/);
-    expect(landingClient).toMatch(/items-center text-center|text-center/);
-    // Workspace-level force: hide block picker / no block_id on mint
-    expect(landingClient).toMatch(/forceWorkspaceScope/);
-    expect(landingClient).toMatch(/data-practice-portal-force-workspace/);
-    expect(landingClient).toMatch(
-      /data-practice-portal-workspace-scope|data-practice-portal-no-block-choice/,
-    );
-    expect(landingClient).toMatch(/!forceWorkspaceScope/);
-
-    expect(pure).toContain("scope_mode");
-    expect(pure).toContain('"workspace"');
-    expect(pure).toContain("isPracticePortalWorkspaceScope");
-    expect(pure).toContain("force_workspace_scope");
-    expect(pure).toContain("resolvePracticePortalMintBlockId");
-
-    expect(mintApi).toContain("validatePracticePortalMintRequest");
-    expect(mintApi).toContain("normalizePracticePortalConfig");
-
-    expect(landing).toMatch(/forceWorkspaceScope|force_workspace_scope/);
-
+    expect(settings).not.toMatch(/knowledge-portal|WorkspaceKnowledgePortalPanel|Knowledge Portal/);
     const en = read("messages/en.json");
-    expect(en).toContain("practicePortalScopeWorkspace");
+    expect(en).not.toMatch(/Knowledge Portal/);
+    expect(en).not.toMatch(/practicePortalTitle/);
+    const middleware = read("middleware.ts");
+    expect(middleware).not.toMatch(/\/portal/);
+    const migration = read(
+      "supabase/migrations/20260730120000_workspace_practice_portals.sql",
+    );
+    expect(migration).toMatch(/workspace_practice_portals/);
+  });
 
-    writeLog(
-      "portal-workspace-scope-ui.log",
-      [
-        "owner_scope_control=" + portalPanel.includes("data-practice-portal-scope"),
-        "owner_workspace_option=" +
-          portalPanel.includes("data-practice-portal-scope-workspace"),
-        "owner_scope_mode_payload=" + portalPanel.includes("scope_mode"),
-        "landing_force_prop=" + landingClient.includes("forceWorkspaceScope"),
-        "landing_no_block_hook=" +
-          String(
-            /data-practice-portal-workspace-scope|data-practice-portal-no-block-choice/.test(
-              landingClient,
-            ),
-          ),
-        "landing_hides_picker_when_workspace=" +
-          landingClient.includes("forceWorkspaceScope"),
-        "page_passes_force=" +
-          String(/forceWorkspaceScope|force_workspace_scope/.test(landing)),
-        "i18n_workspace=" + en.includes("practicePortalScopeWorkspace"),
-        "pure_scope_mode=" + pure.includes("scope_mode"),
-      ].join("\n") + "\n",
-    );
-
-    writeLog(
-      "portal-workspace-scope-mint.log",
-      [
-        "mint_uses_validate=" +
-          mintApi.includes("validatePracticePortalMintRequest"),
-        "mint_uses_normalize=" + mintApi.includes("normalizePracticePortalConfig"),
-        "pure_workspace_branch=" +
-          pure.includes('scope_mode === "workspace"'),
-        "pure_has_workspace_helper=" +
-          pure.includes("isPracticePortalWorkspaceScope"),
-        "create_fields_blockId=" + pure.includes("blockId: validated.block_id"),
-      ].join("\n") + "\n",
-    );
-    expect(landingClient).toMatch(/Knowledge Portal/);
-    expect(landingClient).toMatch(
-      /Choose the session type that best fits your style\./,
-    );
-    // No workspace-name suffix on that subtitle
-    expect(landingClient).not.toMatch(
-      /Choose the session type that best fits your style[\s\S]{0,40}for\s*</,
-    );
-    expect(landingClient).not.toMatch(/save it before you start/i);
-    expect(landingClient).not.toMatch(/PRACTICE PORTAL/);
-    expect(landingClient).toMatch(/fixedBlockId|data-practice-portal-block-fixed/);
-
-    // TAP/TAP Learning learner chrome: live onboardingGuide + briefing (not dead session.* helpers)
+  it("keeps learner onboarding copy that used to sit beside the portal test", () => {
     const enCopy = JSON.parse(read("messages/en.json")) as {
       tap?: { briefing?: { intro?: string }; welcome?: { panelIntro?: string } };
       onboardingGuide?: {
@@ -725,11 +612,6 @@ describe("Practice Portal structural wiring", () => {
     const tapClient = readTapScoreSurface();
     expect(tapClient).toContain("SessionOnboardingGuide");
 
-    const middleware = read("middleware.ts");
-    expect(middleware).toMatch(/\/portal/);
-    // subscription exempt + public route for canonical slug
-    expect(middleware).toMatch(/"\/portal\/?"|"\/portal"/);
-
     const migration = read(
       "supabase/migrations/20260730120000_workspace_practice_portals.sql",
     );
@@ -738,14 +620,4 @@ describe("Practice Portal structural wiring", () => {
     expect(migration).toMatch(/config jsonb/);
   });
 
-  it("en.json has Knowledge Portal i18n keys including fixed block", () => {
-    const en = JSON.parse(read("messages/en.json")) as {
-      planView?: Record<string, string>;
-    };
-    expect(en.planView?.practicePortalTitle).toMatch(/Knowledge Portal/i);
-    expect(en.planView?.practicePortalCreate).toBeTruthy();
-    expect(en.planView?.practicePortalHint).toBeTruthy();
-    expect(en.planView?.practicePortalBlock).toBeTruthy();
-    expect(en.planView?.practicePortalBlockOptional).toBeTruthy();
-  });
 });

@@ -125,7 +125,7 @@ export async function GET(req: NextRequest) {
     if (!workspaceId) {
       return jsonError(400, "workspaceId is required");
     }
-    const auth = await guardWorkspaceRoute(workspaceId);
+    const auth = await guardWorkspaceRoute(workspaceId, { feature: "data_studio" });
     if (!auth.ok) return auth.response;
 
     const page = parsePositiveInt(req.nextUrl.searchParams.get("page"), 1, 10_000);
@@ -341,7 +341,7 @@ export async function PATCH(req: NextRequest) {
     if (!workspaceId || !id) {
       return jsonError(400, "workspaceId and id are required");
     }
-    const auth = await guardWorkspaceRoute(workspaceId);
+    const auth = await guardWorkspaceRoute(workspaceId, { feature: "data_studio" });
     if (!auth.ok) return auth.response;
 
     // Writes use service role: RLS only has owner SELECT+INSERT on workspace_proof_of_work.
@@ -417,7 +417,7 @@ export async function POST(req: NextRequest) {
     if (ids.length > 100) {
       return jsonError(400, "At most 100 ids per bulk request");
     }
-    const auth = await guardWorkspaceRoute(workspaceId);
+    const auth = await guardWorkspaceRoute(workspaceId, { feature: "data_studio" });
     if (!auth.ok) return auth.response;
 
     // Writes use service role: RLS only has owner SELECT+INSERT on workspace_proof_of_work.

@@ -212,7 +212,7 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
 
     expect(welcome).toContain("TapBriefingConfig");
     expect(welcome).toContain("showDurationPicker={false}");
-    expect(welcome).toContain("data-ile-pow-expense-slider");
+    expect(welcome).not.toContain("data-ile-pow-expense-slider");
     expect(welcome).not.toContain("data-ile-insight-slot-slider");
     expect(welcome).not.toContain("data-ile-gather-max-slider");
     expect(welcome).not.toContain("data-ile-canvas-timer-slider");
@@ -224,11 +224,11 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     expect(welcome).toContain("AestheticPicker");
     expect(welcome).not.toContain("InitialChaptersPicker");
     expect(welcome).not.toContain("IleContinueMapPreview");
-    expect(welcome).toContain("data-ile-session-chapter-count");
+    expect(welcome).not.toContain("data-ile-session-chapter-count");
     expect(welcome).toContain("data-ile-session-insight-goal");
     expect(welcome).toContain("capIleSessionChapters");
     expect(welcome).not.toMatch(/\bmap type\b|\bboard\b/i);
-    expect(welcome).toContain("session.powExpense");
+    expect(welcome).not.toContain("session.powExpense");
     expect(welcome).toContain("session.confirmSettings");
     expect(welcome).toContain("min-w-[14rem]");
     expect(view).toContain("powExpense={powExpense}");
@@ -481,9 +481,7 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     expect(trophies).toContain("ILE_MAP_INSIGHT_PLACEHOLDER_COUNT = 3");
     expect(trophies).toContain("data-ile-map-insights-more");
     expect(trophies).toContain("ILE_MAP_INSIGHTS_MORE_LABEL");
-    expect(trophies).toContain(
-      "Math.max(ILE_MAP_INSIGHT_PLACEHOLDER_COUNT, insights.length)",
-    );
+    expect(trophies).toContain("Math.max(goal, insights.length)");
     expect(trophies).toContain('data-ile-insight-slot-card="empty"');
     expect(trophies).toContain("ILE_INSIGHT_EMPTY_SLOT_LABEL");
     expect(trophies).not.toContain("Craft insights on the Work canvas.");
@@ -740,7 +738,7 @@ function insightFixture(id: string): InsightSummary {
 }
 
 describe("IleMapInsightsWidget slots", () => {
-  it("draws three slots and a continuation mark when the chapter goal is lower", () => {
+  it("draws one empty slot when the insight goal is one", () => {
     const html = renderToStaticMarkup(
       createElement(IleMapInsightsWidget, {
         insights: [],
@@ -750,14 +748,13 @@ describe("IleMapInsightsWidget slots", () => {
     );
     const empties = html.match(/data-ile-insight-slot-card="empty"/g) ?? [];
     expect(ILE_MAP_INSIGHT_PLACEHOLDER_COUNT).toBe(3);
-    expect(empties).toHaveLength(3);
-    expect(html).toContain('data-ile-map-insights-slot-count="3"');
-    expect(html).toContain("data-ile-map-insights-more");
-    expect(html).toContain("More will come");
+    expect(empties).toHaveLength(1);
+    expect(html).toContain('data-ile-map-insights-slot-count="1"');
+    expect(html).not.toContain("data-ile-map-insights-more");
     expect(html).not.toContain("<button");
   });
 
-  it("keeps a higher chapter goal from adding empty slots", () => {
+  it("draws as many empty slots as the insight goal", () => {
     const html = renderToStaticMarkup(
       createElement(IleMapInsightsWidget, {
         insights: [],
@@ -766,11 +763,12 @@ describe("IleMapInsightsWidget slots", () => {
       }),
     );
     const empties = html.match(/data-ile-insight-slot-card="empty"/g) ?? [];
-    expect(empties).toHaveLength(3);
+    expect(empties).toHaveLength(5);
     expect(html).toContain('data-ile-map-insights-goal="5"');
+    expect(html).toContain('data-ile-map-insights-slot-count="5"');
   });
 
-  it("keeps every accepted insight and fills only the remaining rows", () => {
+  it("keeps every accepted insight past the goal and does not add empty rows", () => {
     const html = renderToStaticMarkup(
       createElement(IleMapInsightsWidget, {
         insights: [insightFixture("a"), insightFixture("b")],
@@ -781,7 +779,7 @@ describe("IleMapInsightsWidget slots", () => {
     const filled = html.match(/data-ile-insight-slot-card="filled"/g) ?? [];
     const empties = html.match(/data-ile-insight-slot-card="empty"/g) ?? [];
     expect(filled).toHaveLength(2);
-    expect(empties).toHaveLength(1);
+    expect(empties).toHaveLength(0);
     expect(html).toContain("data-ile-map-insights-more");
   });
 });

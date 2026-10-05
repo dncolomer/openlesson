@@ -3,6 +3,8 @@
  * Each call appends to a pool; earlier candidates stay selectable.
  */
 
+import { TUTOR_CANVAS_VOICE } from "@/lib/prompt-kernel/tutor-voice";
+
 export type ContextGoalCandidate = {
   id: string;
   text: string;
@@ -134,7 +136,9 @@ export function buildContextGenerationRequest(input: {
     instructions: [
       "Generate a verification-flow topic and starting questions from the Context materials.",
       "Return JSON { \"flows\": [ { \"topic\": string, \"questions\": string[] } ] } with one flow.",
-      "The topic is one subject. Include 3 to 5 starting questions a person can answer aloud.",
+      "The topic is one subject, named the way a teacher would introduce it, not as a syllabus label.",
+      "Include 3 to 5 starting questions. Each question is what a person reads before they answer: two or three unhurried sentences, easy to warm up to, specific to the Context, and free of headings or stacked demands.",
+      TUTOR_CANVAS_VOICE,
       "Do not repeat topics listed under Already generated.",
       "Use only the Context materials.",
       ...shared,

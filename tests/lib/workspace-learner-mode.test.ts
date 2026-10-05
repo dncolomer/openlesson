@@ -41,28 +41,27 @@ function read(rel: string) {
 }
 
 describe("workspace mode pure resolvers", () => {
-  it("Learner sections: workspace + knowledge + insights when logged in", () => {
+  it("Play mode is the map only; Build is the designer shell", () => {
     expect(
       availableSectionsForMode({ mode: "learner", isLoggedIn: true }),
-    ).toEqual(["workspace", "knowledge", "insights", "kpis"]);
+    ).toEqual(["workspace"]);
     expect(
       availableSectionsForMode({ mode: "learner", isLoggedIn: false }),
     ).toEqual(["workspace"]);
     expect(
       availableSectionsForMode({ mode: "creator", isOwner: true, isLoggedIn: true }),
-    ).not.toContain("insights");
+    ).toEqual(["workspace", "dags", "map_types", "context", "settings"]);
   });
 
-  it("Creator keeps full owner sections", () => {
+  it("Creator keeps the learning designer sections", () => {
     const owner = availableSectionsForMode({
       mode: "creator",
       isOwner: true,
     });
-    expect(owner).toContain("workspace");
-    expect(owner).toContain("context");
+    expect(owner).toEqual(["workspace", "dags", "map_types", "context", "settings"]);
     expect(owner).not.toContain("simulation");
-    expect(owner).toContain("knowledge");
-    expect(owner).toContain("settings");
+    expect(owner).not.toContain("knowledge");
+    expect(owner).not.toContain("goals");
   });
 
   it("Learner map chrome: no +, no strip, no multi, minimap on", () => {
@@ -97,12 +96,10 @@ describe("workspace mode pure resolvers", () => {
         requested: "knowledge",
         isLoggedIn: true,
       }),
-    ).toBe("knowledge");
+    ).toBe("workspace");
   });
 
-  it("AYCL practice-only (not owner) still activates Knowledge in learner mode", () => {
-    // Bug: selectSection used resolveActiveSection(isOwner=false) → always "workspace".
-    // Mode-aware resolver must keep knowledge for logged-in / token learner access.
+  it("Play mode does not open Knowledge", () => {
     expect(
       resolveActiveSectionForMode({
         mode: "learner",
@@ -111,14 +108,14 @@ describe("workspace mode pure resolvers", () => {
         isOrgAdmin: false,
         isLoggedIn: true,
       }),
-    ).toBe("knowledge");
+    ).toBe("workspace");
     expect(
       availableSectionsForMode({
         mode: "learner",
         isOwner: false,
         isLoggedIn: true,
       }),
-    ).toContain("knowledge");
+    ).toEqual(["workspace"]);
 
     const view = readWorkspaceViewSurface();
     // Nav change must use mode-aware resolver (not owner-only gate alone).
@@ -331,12 +328,17 @@ describe("Build / Play mode display labels", () => {
 
     const grid = readMapGridSurface();
     const view = readWorkspaceViewSurface();
-    // Build/Play toggle lives under minimap (not top nav)
-    expect(grid).toContain("data-workspace-mode-toggle");
-    expect(grid).toContain("data-workspace-mode-under-minimap");
-    expect(grid).toContain("workspaceModeDisplayLabel");
-    expect(grid).toContain("WORKSPACE_MAP_TOGGLE_IDS");
-    expect(view).toContain("showModeToggle={false}");
+    const nav = read("components/WorkspaceSectionNav.tsx");
+    // Play / Build / Explore sits beside the workspace name.
+    expect(nav).toContain("data-workspace-mode-toggle");
+    expect(nav).toContain("data-workspace-mode-by-title");
+    expect(nav).toContain("workspaceModeDisplayLabel");
+    expect(nav).toContain("WORKSPACE_MAP_TOGGLE_IDS");
+    expect(nav.indexOf("data-workspace-mode-by-title")).toBeLessThan(
+      nav.indexOf("data-workspace-section-title"),
+    );
+    expect(grid).not.toContain("data-workspace-mode-under-minimap");
+    expect(view).toContain("onMapToggle={");
     expect(view).toContain("onInteractionModeChange");
     expect(view).toContain("defaultInteractionModeForWorkspace");
     expect(defaultInteractionModeForWorkspace("standard")).toBe("learner");
@@ -365,8 +367,7 @@ describe("Build / Play mode display labels", () => {
         "learner_practice_drawer=" + mountsLearnerPracticeDrawer("learner"),
         "creator_strip=" + creatorShell.map.showAuthoringToolStrip,
         "learner_strip=" + learnerShell.map.showAuthoringToolStrip,
-        "under_minimap_toggle=" +
-          grid.includes("data-workspace-mode-under-minimap"),
+        "toggle_by_title=" + nav.includes("data-workspace-mode-by-title"),
         "nav_showModeToggle_false=" + view.includes("showModeToggle={false}"),
       ].join("\n"),
       "utf8",
@@ -374,13 +375,12 @@ describe("Build / Play mode display labels", () => {
     writeFileSync(
       join(SCRATCH, "build-play-labels-structural.log"),
       [
-        "toggle_under_minimap=" +
-          grid.includes("data-workspace-mode-under-minimap"),
-        "toggle_present=" + grid.includes("data-workspace-mode-toggle"),
+        "toggle_by_title=" + nav.includes("data-workspace-mode-by-title"),
+        "toggle_present=" + nav.includes("data-workspace-mode-toggle"),
         "uses_workspaceModeDisplayLabel=" +
-          grid.includes("workspaceModeDisplayLabel"),
+          nav.includes("workspaceModeDisplayLabel"),
         "uses_WORKSPACE_MAP_TOGGLE_IDS=" +
-          grid.includes("WORKSPACE_MAP_TOGGLE_IDS"),
+          nav.includes("WORKSPACE_MAP_TOGGLE_IDS"),
         "no_hardcoded_Creator_label=" + !/label:\s*"Creator"/.test(grid),
         "no_hardcoded_Learner_label=" + !/label:\s*"Learner"/.test(grid),
         "no_Creator_button_text=" + !/>\s*Creator\s*</.test(grid),
@@ -406,12 +406,13 @@ describe("learner mode UI structural", () => {
     const perf = read("components/WorkspacePerformancePanel.tsx");
     const mapGround = read("app/api/workspace/map-ground/route.ts");
 
-    // Mode toggle is under minimap stack (not active on nav)
-    expect(grid).toContain("data-workspace-mode-toggle");
-    expect(grid).toContain("data-workspace-mode-under-minimap");
-    expect(grid).toContain('data-workspace-mode={id}');
-    expect(grid).toContain("workspaceModeDisplayLabel");
-    expect(view).toContain("showModeToggle={false}");
+    // Mode toggle sits beside the workspace name.
+    expect(nav).toContain("data-workspace-mode-toggle");
+    expect(nav).toContain("data-workspace-mode-by-title");
+    expect(nav).toContain('data-workspace-mode={id}');
+    expect(nav).toContain("workspaceModeDisplayLabel");
+    expect(view).toContain("onMapToggle={");
+    expect(grid).not.toContain("data-workspace-mode-under-minimap");
     expect(view).toMatch(
       /onInteractionModeChange=\{[\s\S]*?selectInteractionMode/,
     );
@@ -481,7 +482,9 @@ describe("learner mode UI structural", () => {
     expect(grid).toContain("data-learner-mode");
     expect(grid).toContain("data-empty-cell-plus");
     expect(grid).toContain("data-map-minimap");
-    expect(grid).toContain("data-workspace-mode-toggle");
+    expect(read("components/WorkspaceSectionNav.tsx")).toContain(
+      "data-workspace-mode-toggle",
+    );
     // Empty Play maps keep the same grid shell as Build/Explore (minimap + mode toggle).
     expect(grid).not.toContain("nodes.length === 0 && !canEdit");
     expect(grid).not.toMatch(
@@ -569,8 +572,10 @@ describe("learner mode UI structural", () => {
       join(SCRATCH, "workspace-learner-mode-ui.log"),
       [
         "workspace-learner-mode-ui",
-        "toggle_under_minimap=" +
-          grid.includes("data-workspace-mode-under-minimap"),
+        "toggle_by_title=" +
+          read("components/WorkspaceSectionNav.tsx").includes(
+            "data-workspace-mode-by-title",
+          ),
         "nav_mode_toggle_off=" + view.includes("showModeToggle={false}"),
         "learner_pane=" + view.includes("WorkspaceLearnerBlockPane"),
         "learner_launch_card=" + learner.includes("data-learner-launch-card"),

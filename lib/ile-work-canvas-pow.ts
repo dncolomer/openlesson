@@ -38,6 +38,9 @@ export const ILE_WORK_CANVAS_USE_AND_PROMPT_ACTIONS = [
 
 /** Canvas command buttons. Each id is its own `tool_action`, not `expand_more`. */
 export const ILE_WORK_CANVAS_COMMAND_POW_IDS = [
+  "answer",
+  "simplify",
+  "ask",
   "rephrase",
   "split",
   "join",

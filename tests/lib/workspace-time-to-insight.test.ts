@@ -174,16 +174,16 @@ describe("workspace KPIs tab", () => {
     return { sections, labels: items.map((item) => item.label), items };
   }
 
-  it("shows KPIs to logged-in creator and learner viewers and hides it when logged out", () => {
-    const creator = labelsFor({ mode: "creator", isOwner: false, isLoggedIn: true });
+  it("does not show a KPIs tab on either workspace product", () => {
+    const creator = labelsFor({ mode: "creator", isOwner: true, isLoggedIn: true });
     const learner = labelsFor({ mode: "learner", isOwner: false, isLoggedIn: true });
     const loggedOut = labelsFor({ mode: "creator", isOwner: false, isLoggedIn: false });
     const guestLearner = labelsFor({ mode: "learner", isOwner: false, isLoggedIn: false });
 
-    expect(creator.sections).toContain("kpis");
-    expect(learner.sections).toContain("kpis");
-    expect(creator.labels).toContain("KPIs");
-    expect(learner.labels).toContain("KPIs");
+    expect(creator.sections).not.toContain("kpis");
+    expect(learner.sections).not.toContain("kpis");
+    expect(creator.labels).not.toContain("KPIs");
+    expect(learner.labels).not.toContain("KPIs");
     expect(loggedOut.sections).not.toContain("kpis");
     expect(loggedOut.labels).not.toContain("KPIs");
     expect(guestLearner.sections).not.toContain("kpis");
@@ -211,7 +211,7 @@ describe("workspace KPIs tab", () => {
         isOwner: false,
         isLoggedIn: true,
       }),
-    ).toBe("kpis");
+    ).toBe("workspace");
     expect(
       resolveActiveSectionForMode({
         mode: "learner",
@@ -219,7 +219,7 @@ describe("workspace KPIs tab", () => {
         isOwner: false,
         isLoggedIn: true,
       }),
-    ).toBe("kpis");
+    ).toBe("workspace");
     expect(
       resolveActiveSectionForMode({
         mode: "creator",

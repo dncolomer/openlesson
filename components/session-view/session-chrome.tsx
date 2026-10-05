@@ -72,9 +72,12 @@ export type SessionChromeProps = {
     id: string;
     label: string;
     keyword?: string;
+    description?: string;
     focused?: boolean;
     image?: string;
   }>;
+  /** When this Learn session started. The topic card shows time worked. */
+  sessionStartedAt?: string | null;
   aestheticImages?: string[];
   aestheticPackageId?: string | null;
   resources?: ReactNode;
@@ -149,6 +152,7 @@ export function SessionChrome({
   unsubmittedPowCounts = emptyIlePowDisplayCounts(),
   openWorkCount = 0,
   openWorkLabels = [],
+  sessionStartedAt = null,
   aestheticImages = [],
   aestheticPackageId = null,
   resources = null,
@@ -236,6 +240,7 @@ export function SessionChrome({
         </div>
         <SessionSidebar
           mode="ile"
+          elapsedStartedAt={sessionStartedAt}
           resources={resources}
           resourcesOpen={resourcesOpen}
           onResourcesOpenChange={onResourcesOpenChange}

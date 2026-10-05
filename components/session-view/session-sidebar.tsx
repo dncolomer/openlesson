@@ -8,7 +8,7 @@ import {
   type SessionSidebarMode,
 } from "@/lib/session-sidebar";
 import { SessionConsoleMarks, SessionConsoleScan } from "@/components/session-view/session-console-marks";
-import { SessionTopicCardTimerProvider } from "@/components/session-view/ile-work-dock-bar";
+import { LearnElapsedTimer, SessionTopicCardTimerProvider } from "@/components/session-view/ile-work-dock-bar";
 
 const SECTION_LABEL = {
   signals: "Data",
@@ -41,9 +41,12 @@ export function SessionSidebar({
   resources = null,
   resourcesOpen,
   onResourcesOpenChange,
+  elapsedStartedAt = null,
 }: {
   mode: SessionSidebarMode;
   clock?: ReactNode;
+  /** Learn elapsed clock. Other modes keep the countdown in `clock`. */
+  elapsedStartedAt?: string | null;
   /** Block between the topic card and Data. Insights, stashed text, or generated questions. */
   focus?: ReactNode;
   focusLabel?: string | null;
@@ -81,7 +84,9 @@ export function SessionSidebar({
       {showTopic ? (
         <SessionTopicCardTimerProvider
           timer={
-            showClock ? (
+            mode === "ile" ? (
+              <LearnElapsedTimer startedAt={elapsedStartedAt} />
+            ) : showClock ? (
               <div
                 data-session-sidebar-clock
                 data-session-topic-card-timer

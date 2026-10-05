@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     if (!workspaceId) {
       return jsonError(400, "workspaceId is required");
     }
-    const auth = await guardWorkspaceRoute(workspaceId);
+    const auth = await guardWorkspaceRoute(workspaceId, { feature: "knowledge_regions" });
     if (!auth.ok) return auth.response;
 
     const baseUrl =
@@ -73,7 +73,8 @@ export async function POST(req: NextRequest) {
     if (!workspaceId) {
       return jsonError(400, "workspaceId is required");
     }
-    const auth = await guardWorkspaceRoute(workspaceId, { ayclToken: ayclTokenFromBody(body) });
+    const auth = await guardWorkspaceRoute(workspaceId, {
+      feature: "knowledge_regions", ayclToken: ayclTokenFromBody(body) });
     if (!auth.ok) return auth.response;
 
     const action = typeof body.action === "string" ? body.action : "create";

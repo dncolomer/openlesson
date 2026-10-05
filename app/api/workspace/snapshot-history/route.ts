@@ -10,6 +10,7 @@ import { getAllEvalPowGateStatuses } from "@/lib/pow-api/eval-pow-gate";
 import { resolveEvaluationSubject } from "@/lib/pow-api/evaluation-subject";
 import { SCORE_VERTICALS, type ScoreVertical } from "@/lib/pow-api/performance-report";
 import { requireProductWorkspaceEvalAuth } from "@/lib/product-workspace-auth";
+import { denyWorkspaceFeatureById } from "@/lib/workspace-feature-gate";
 import type { AuthContext } from "@/lib/pow-api/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -187,6 +188,8 @@ export async function GET(req: NextRequest) {
       url.searchParams.get("ayclToken"),
     );
     if (!auth.ok) return auth.response;
+    const denied = await denyWorkspaceFeatureById(workspaceId, "snapshots");
+    if (denied) return denied;
     const result = await handle(
       workspaceId,
       auth.subjectId,
@@ -230,6 +233,8 @@ export async function POST(req: NextRequest) {
       ayclTokenFromBody(body),
     );
     if (!auth.ok) return auth.response;
+    const denied = await denyWorkspaceFeatureById(workspaceId, "snapshots");
+    if (denied) return denied;
     const result = await handle(
       workspaceId,
       auth.subjectId,

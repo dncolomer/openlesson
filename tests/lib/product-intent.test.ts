@@ -200,7 +200,7 @@ describe("structural: workspace + settings have no With AI vs Solo choice", () =
     expect(integration).not.toContain("Create shareable TAP and TAP Learning guest links");
     expect(integration).not.toMatch(/shareable practice links/i);
     expect(integration).not.toContain("WorkspaceGuestLinksPanel");
-    expect(integration).toContain("WorkspaceKnowledgePortalPanel");
+    expect(integration).not.toContain("WorkspaceKnowledgePortalPanel");
     const guest = read("components/WorkspaceGuestLinksPanel.tsx");
     expect(guest).toContain('t("planView.guestLinksBrowseEmpty")');
 

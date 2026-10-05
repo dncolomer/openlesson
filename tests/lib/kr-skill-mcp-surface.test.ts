@@ -85,8 +85,15 @@ describe("KR vs standard skill/MCP surface (shipped builders)", () => {
 
     for (const name of KNOWLEDGE_LINK_MINT_TOOL_NAMES) {
       expect(krNames).not.toContain(name);
-      expect(standardNames).toContain(name);
+      expect(standardNames).not.toContain(name);
     }
+    expect(standardNames).toEqual([
+      "list_workspaces",
+      "get_workspace",
+      "list_blocks",
+      "generate_integration_skill",
+    ]);
+    expect(krNames).not.toContain("list_blocks");
     expect(krNames).toContain("upload_proof_of_work");
     expect(krNames).toContain("lwm_snapshot");
     expect(krNames).toContain("get_world_model");
@@ -98,7 +105,8 @@ describe("KR vs standard skill/MCP surface (shipped builders)", () => {
     const krCatalog = mcpProofOfWorkCatalogForWorkspace("knowledge_region").map((t) => t.name);
     const stdCatalog = mcpProofOfWorkCatalogForWorkspace("standard").map((t) => t.name);
     expect(krCatalog).toEqual(krNames);
-    expect(stdCatalog).toContain("create_tap_link");
+    expect(stdCatalog).not.toContain("create_tap_link");
+    expect(stdCatalog).toContain("list_blocks");
     expect(krCatalog).not.toContain("create_tapbench_link");
   });
 
@@ -126,19 +134,19 @@ describe("KR vs standard skill/MCP surface (shipped builders)", () => {
     expect(kr).toContain("/proof-of-work");
     expect(kr).not.toContain("/skill.md");
 
-    expect(textExposesKnowledgeLinkMint(standard)).toBe(true);
-    expect(standard).toContain("create_tap_link");
-    expect(standard).toContain("list_tap_links");
-    expect(standard).not.toContain("create_tapbench_link");
-    expect(standard).not.toContain("list_tapbench_links");
-    expect(standard).toContain("/skill.md");
+    expect(textExposesKnowledgeLinkMint(standard)).toBe(false);
+    expect(standard).not.toContain("create_tap_link");
+    expect(standard).not.toContain("upload_proof_of_work");
+    expect(standard).toContain("list_blocks");
+    expect(standard).toContain("Learning workspace");
 
     const krDoc = skillDocumentedToolsForWorkspace("knowledge_region").map((t) => t.name);
     const stdDoc = skillDocumentedToolsForWorkspace("standard").map((t) => t.name);
     expect(krDoc.some((n) => (KNOWLEDGE_LINK_MINT_TOOL_NAMES as readonly string[]).includes(n))).toBe(
       false,
     );
-    expect(stdDoc).toContain("create_tap_link");
+    expect(stdDoc).toContain("list_blocks");
+    expect(stdDoc).not.toContain("create_tap_link");
   });
 
   it("recommendIntegrationActions recommends Stash TAPBench on KR and TAP mint on standard", () => {
@@ -167,9 +175,10 @@ describe("KR vs standard skill/MCP surface (shipped builders)", () => {
     expect(kr.some((a) => a.rest_equivalent.includes(STASH_API_BASE))).toBe(true);
     expect(kr.some((a) => a.mcp_tool === "create_tap_link")).toBe(false);
 
-    expect(standard.some((a) => a.mcp_tool === "create_tap_link")).toBe(true);
-    expect(stdBlob).toContain("tap-links");
-    expect(omittedKind.some((a) => a.mcp_tool === "create_tap_link")).toBe(true);
+    expect(standard.some((a) => a.mcp_tool === "list_blocks")).toBe(true);
+    expect(standard.some((a) => a.mcp_tool === "create_tap_link")).toBe(false);
+    expect(stdBlob).not.toContain("tap-links");
+    expect(omittedKind.some((a) => a.mcp_tool === "list_blocks")).toBe(true);
   });
 
   it("KR Integration copy and generate-skill paths use workspace kind; mint deny still holds", () => {
@@ -187,8 +196,8 @@ describe("KR vs standard skill/MCP surface (shipped builders)", () => {
     expect(panel).toContain("knowledgeRegionIntegrationCopy");
     expect(panel).toContain("data-kr-integration-mcp-note");
     expect(panel).toContain("workspaceKind={workspaceKind}");
-    expect(panel).toContain("settingsShowsKnowledgeLinks");
-    expect(panel).toContain('showKnowledgeLinks && activeSubview === "knowledge-portal"');
+    expect(panel).not.toContain("WorkspaceKnowledgePortalPanel");
+    expect(panel).not.toContain('activeSubview === "knowledge-portal"');
     expect(panel).not.toContain('activeSubview === "guest-links"');
 
     const quick = read("components/IntegrationQuickAccess.tsx");

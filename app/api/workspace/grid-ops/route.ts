@@ -17,6 +17,7 @@ export async function POST(req: NextRequest) {
     }
 
     const auth = await guardWorkspaceRoute(workspaceId, {
+      feature: "map",
       ayclToken: ayclTokenFromBody(body),
       requireAyclAuthoring: true,
     });

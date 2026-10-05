@@ -26,6 +26,7 @@ export async function POST(req: NextRequest) {
       return jsonError(400, "workspaceId is required");
     }
     const auth = await guardWorkspaceRoute(workspaceId, {
+      feature: "map",
       ayclToken: ayclTokenFromBody(body),
     });
     if (!auth.ok) return auth.response;

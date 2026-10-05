@@ -32,16 +32,16 @@ describe("integration-discovery", () => {
     const cold = recommendIntegrationActions({
       proof_of_work_artifacts: 0,
       blocks: 2,
-
       has_workspace_goal: true,
+      workspace_kind: "knowledge_region",
     });
     expect(cold.some((a) => a.mcp_tool === "generate_proof_of_work_schema")).toBe(true);
 
     const warm = recommendIntegrationActions({
       proof_of_work_artifacts: 6,
       blocks: 2,
-
       has_workspace_goal: true,
+      workspace_kind: "knowledge_region",
     });
     expect(warm.some((a) => a.mcp_tool === "lwm_snapshot")).toBe(true);
     expect(warm.some((a) => a.rest_equivalent.includes("lwm-snapshot"))).toBe(true);

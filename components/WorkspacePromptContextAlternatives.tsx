@@ -26,7 +26,7 @@ const EMPTY_SOURCE_ERROR: Record<SuggestKind, string> = {
     "No author prompt from Knowledge. Add map or snapshot context and try again.",
   simulation:
     "No simulation prompt yet. Curate the Simulation collection first.",
-  context: "No context prompt yet. Add notes, files, or links in Context.",
+  context: "No context prompt yet. Add notes, files, or links under Context in Build.",
 };
 
 /**

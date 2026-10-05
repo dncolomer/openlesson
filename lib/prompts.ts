@@ -17,6 +17,7 @@ import {
   ILE_SURFACE,
   ILE_TOOLS_BLOCK,
 } from "@/lib/prompt-kernel/surfaces/ile";
+import { TUTOR_CANVAS_VOICE } from "@/lib/prompt-kernel/tutor-voice";
 
 // ============================================
 // Learning use case CONTEXT
@@ -70,17 +71,17 @@ The student is working towards solving: {problem}
 Your task: generate ONE opening move that starts useful practice on THIS problem (question, micro-task, or tool prompt). Follow these principles:
 
 GOAL OF THE OPENING:
-- Point at the highest-leverage next practice act for the current chapter/problem (a key distinction, decision, sketch, implementation, or example they must produce).
-- Prefer something that yields deeper work to submit: a chapter-canvas sketch or text block, a worked attempt, or a tool-backed artifact — not stage directions about speaking.
-- If a single sharp question is best, make it concrete and problem-specific — not open-ended validation.
+- Invite the learner into the next useful practice act for this chapter. Make it easy to warm up to: a concrete situation, then one thing to try.
+- Prefer something that yields deeper work: a short written attempt, a worked example, or a sketch only when a picture helps — not stage directions about speaking.
+- If a question is best, make it concrete and problem-specific, in two or three unhurried sentences — not a compressed exam stem and not open-ended validation.
 - Ground every opening in the subject matter and workspace/chapter goal even when background is thin (guest) — never invent meta-learning icebreakers.
 
 GOOD patterns (inspiration, don't copy literally):
-- "Sketch [structure] on the chapter canvas and label the critical path for this problem."
-- "Write one sentence on the chapter canvas: what must be true for [approach] to work here?"
-- "If [concept A] holds for this problem, how do you reconcile [contradicting observation B]?"
-- "Give one concrete example of [mechanism] applied to THIS problem."
-- "Let's stay in this chapter: apply [concept] to a second example before we mark anything done."
+- "Let's look at this problem as if you had to explain the critical path to a classmate. What would you mark first, and why does that step have to come before the others?"
+- "Before we go further, write what must be true for this approach to work here. One honest sentence is enough to start."
+- "Suppose this idea holds, and yet you are also seeing the opposite. How would you hold both of those at once?"
+- "Take one ordinary example of this mechanism and walk me through what it does in this problem."
+- "Let's stay with this chapter a little longer. Try the same idea on a second example before we decide it is finished."
 
 BAD openings (never do these):
 - Generic icebreakers: "What do you already know about X?"
@@ -115,10 +116,14 @@ Previous probes already asked (don't repeat these):
 ENVIRONMENT CONTEXT:
 The learner has one chapter Work canvas (Excalidraw drawing tools: text, freedraw, rectangle, diamond, ellipse, arrow, line, image, frame) plus screen sharing. Prefer canvas-augmented tasks when they clear the gap faster than another pure question. This is not TAP System 1/System 2 elicitation. Do not name Notebook, Grok/Grokipedia, or Dantes.
 
-Generate ONE next move: a focused question, practice task, or tool suggestion that unblocks progress toward SOLVING this problem / completing the current chapter. Rules:
+Generate ONE next move: a focused question, practice task, or tool suggestion that unblocks progress toward SOLVING this problem / completing the current chapter.
+
+${TUTOR_CANVAS_VOICE}
+
+Rules:
 - Optimize for chapter/problem progress and observable practice artifacts — not endless validation.
 - Target the specific gap (assumption, contradiction, skipped step, etc.).
-- Keep it short (1 sentence, max 25 words).
+- Two or three unhurried sentences. Easy to warm up to. Not a 25-word slogan.
 - Concrete about concepts, examples, or steps — never abstract meta ("What's your strategy?").
 - NEVER suggest taking a break or stepping away.
 - NEVER use "out loud" / think-aloud stage directions; never mention Uncertain Systems, PoW, TAP product names, or scoring jargon in the learner-visible text.

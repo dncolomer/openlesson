@@ -1,9 +1,10 @@
 /**
  * Top-level workspace shell sections.
- * Context hosts notes + files; Workspace is map-first with authoring tools.
- * Simulation is an author-facing learner-journey overview (not the map).
- * Verification Workspaces (stored as knowledge_region) expose Goals,
+ * Learning workspaces (stored kind `standard`): Build shows Workspace, DAGs,
+ * Map Types, Context, and Settings. Play shows the map only.
+ * Verification workspaces (stored kind `knowledge_region`): Goals,
  * Verification Flows, Context, Knowledge, and Settings.
+ * The two products do not share sections.
  */
 
 import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
@@ -283,9 +284,9 @@ export function resolveWorkspaceSectionLayout(
 }
 
 /**
- * Knowledge + Settings are privileged: workspace owners and org admins only.
- * Context + Simulation + Workspace are available to everyone who can open the
- * workspace (builders and buyers/consumers).
+ * Designers (owner or org admin) see Build on a Learning workspace and the
+ * full Verification workspace shell. Everyone else who can open a Learning
+ * workspace plays the map.
  */
 export function canAccessPrivilegedWorkspaceSections(options: {
   isOwner?: boolean;
@@ -302,29 +303,14 @@ export type WorkspaceSectionAuth = {
   isLoggedIn?: boolean;
 };
 
-/** KPIs is a signed-in standard-workspace tab. Knowledge Region lists stay as-is. */
-function withLoggedInKpis(
-  sections: WorkspaceSectionKey[],
-  isLoggedIn?: boolean,
-): WorkspaceSectionKey[] {
-  if (!isLoggedIn || sections.includes("kpis")) return sections;
-  const next = sections.slice();
-  const settingsAt = next.indexOf("settings");
-  if (settingsAt >= 0) next.splice(settingsAt, 0, "kpis");
-  else next.push("kpis");
-  return next;
-}
-
 /** Default open tab when none is requested (or a hidden section is requested). */
 export function defaultWorkspaceSection(kind?: unknown): WorkspaceSectionKey {
   return isKnowledgeRegionWorkspace(kind) ? "goals" : "workspace";
 }
 
 /**
- * Privileged sections (Knowledge, Settings, Goals): non-privileged callers fall
- * back to the kind default (Workspace, or Goals on a Knowledge Region).
- * Context and Simulation are open to all standard-workspace viewers.
- * DAGs and Map Types are owner-only.
+ * Hidden sections fall back to the kind default (Workspace, or Goals on a
+ * Verification workspace).
  */
 export function resolveActiveSection(
   requested: WorkspaceSectionKey,
@@ -335,24 +321,25 @@ export function resolveActiveSection(
   return defaultWorkspaceSection(options.workspaceKind);
 }
 
-/** Top-level sections visible in nav for the current user. */
+/**
+ * Build-mode sections for a designer, or the Verification workspace shell.
+ * Play mode on a Learning workspace is applied in `availableSectionsForMode`
+ * and hides this list.
+ */
 export function availableWorkspaceSections(options: WorkspaceSectionAuth): WorkspaceSectionKey[] {
   if (isKnowledgeRegionWorkspace(options.workspaceKind)) {
     if (canAccessPrivilegedWorkspaceSections(options)) {
       return ["goals", "verification_flows", "context", "knowledge", "settings"];
     }
-    // KR is owner-facing; consumers have no remaining public tabs.
     return [];
   }
   if (canAccessPrivilegedWorkspaceSections(options)) {
-    // Nav order: Workspace, DAGs (owner), Map Types (owner), Goals, Context, Knowledge, KPIs, Settings.
     const sections: WorkspaceSectionKey[] = ["workspace"];
     if (options.isOwner) sections.push("dags", "map_types");
-    sections.push("goals", "context", "knowledge", "settings");
-    return withLoggedInKpis(sections, options.isLoggedIn);
+    sections.push("context", "settings");
+    return sections;
   }
-  // Buyers / consumers: Context + Workspace. Insight simulation stays on blocks.
-  return withLoggedInKpis(["workspace", "context"], options.isLoggedIn);
+  return ["workspace"];
 }
 
 /** Whether a local tab key is valid (always false — local tabs removed). */

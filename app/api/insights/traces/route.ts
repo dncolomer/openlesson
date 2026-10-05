@@ -1,3 +1,4 @@
+import { denyWorkspaceFeatureById } from "@/lib/workspace-feature-gate";
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
@@ -17,6 +18,8 @@ export async function GET(req: NextRequest) {
     if (!workspaceId) {
       return jsonError(400, "workspaceId is required");
     }
+    const denied = await denyWorkspaceFeatureById(workspaceId, "insights");
+    if (denied) return denied;
 
     // Workspace visibility is gated by RLS; missing row ⇒ not found / no access.
     const { data: workspace, error: workspaceError } = await supabase

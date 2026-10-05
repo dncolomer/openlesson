@@ -153,6 +153,7 @@ export async function POST(req: NextRequest) {
     const workspaceId = String(body.workspaceId || "").trim();
     if (!workspaceId) return jsonError(400, "workspaceId is required");
     const auth = await guardWorkspaceRoute(workspaceId, {
+      feature: "map",
       ayclToken: ayclTokenFromBody(body),
     });
     if (!auth.ok) return auth.response;
@@ -229,6 +230,7 @@ export async function GET(req: NextRequest) {
     if (!workspaceId) return jsonError(400, "workspaceId is required");
     if (!jobId) return jsonError(400, "jobId is required");
     const auth = await guardWorkspaceRoute(workspaceId, {
+      feature: "map",
       ayclToken: req.nextUrl.searchParams.get("ayclToken"),
     });
     if (!auth.ok) return auth.response;

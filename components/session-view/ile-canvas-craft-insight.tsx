@@ -6,6 +6,7 @@ import {
   buildIleCanvasCraftInsightEvaluateRequest,
   buildIleTurnInsightPersistPayload,
   ileInsightCraftPowFromAcceptedPersist,
+  ileInsightWorkThoughtsSinceMark,
   ILE_CRAFT_INSIGHT_LABEL,
   ILE_INSIGHT_CRAFT_POW_FILE,
   ILE_INSIGHT_CRAFT_TOOL_ACTION,
@@ -37,6 +38,15 @@ export type IleCanvasCraftInsightConfig = {
   sessionId: string;
   workspaceId?: string | null;
   ileToken?: string;
+  /** Uploaded tool rows. Thoughts since `workSinceIndex` are this insight's Proof of Work. */
+  workArtifacts?: readonly {
+    type?: string | null;
+    proof_of_work_type?: string | null;
+    kind?: string | null;
+    tool_action?: string | null;
+    tool_name?: string | null;
+  }[] | null;
+  workSinceIndex?: number;
   onCrafted: (insight: InsightSummary) => void;
   recordSessionPowArtifact?: (artifact: IlePowCounterArtifact) => void;
 };
@@ -67,7 +77,11 @@ export function IleCanvasCraftInsightForm({
         sessionId: config.sessionId,
         workspaceId: config.workspaceId,
         chapterId: config.chapterId,
-        thoughts: [{ id: `canvas-${Date.now()}`, text: input.draftText }],
+        thoughts: ileInsightWorkThoughtsSinceMark({
+          artifacts: config.workArtifacts,
+          sinceIndex: config.workSinceIndex,
+          draft: { id: `canvas-${Date.now()}`, text: input.draftText },
+        }),
       });
       if (!payload.title || !payload.summary || !payload.chapterId) {
         setError("Insight must be linked to this chapter.");

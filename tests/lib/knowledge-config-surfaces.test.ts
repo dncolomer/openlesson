@@ -310,12 +310,12 @@ describe("knowledge config / LWM feature surfaces", () => {
     expect(settings).toContain('data-settings-section="custom-knowledge-regions"');
     expect(settings).not.toContain("WorkspaceGuestLinksPanel");
     expect(settings).not.toContain('data-settings-section="guest-tap-ile"');
-    expect(settings).toContain("WorkspaceKnowledgePortalPanel");
-    expect(settings).toContain('data-settings-tab-panel="knowledge-portal"');
+    expect(settings).not.toContain("WorkspaceKnowledgePortalPanel");
+    expect(settings).not.toContain('data-settings-tab-panel="knowledge-portal"');
     expect(settings).toContain('data-settings-layout="tabs"');
     expect(settings).toContain("settingsSubTabsForKind");
     expect(settingsTabs).toContain('"regions"');
-    expect(settingsTabs).toContain('"knowledge-portal"');
+    expect(settingsTabs).not.toContain('"knowledge-portal"');
     expect(settingsTabs).not.toContain('"guest-links"');
     // Full width (no max-w-3xl constraint).
     expect(models).not.toContain("max-w-3xl");

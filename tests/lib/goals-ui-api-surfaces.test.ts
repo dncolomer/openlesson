@@ -18,9 +18,14 @@ const ROOT = join(__dirname, "../..");
 describe("Goals workspace section registry", () => {
   it("includes goals in section keys and owner nav", () => {
     expect(WORKSPACE_SECTION_KEYS).toContain("goals");
-    const owner = availableWorkspaceSections({ isOwner: true });
-    expect(owner).toContain("goals");
-    expect(owner.indexOf("goals")).toBeLessThan(owner.indexOf("knowledge"));
+    const learning = availableWorkspaceSections({ isOwner: true });
+    expect(learning).not.toContain("goals");
+    const verification = availableWorkspaceSections({
+      isOwner: true,
+      workspaceKind: "knowledge_region",
+    });
+    expect(verification).toContain("goals");
+    expect(verification.indexOf("goals")).toBeLessThan(verification.indexOf("knowledge"));
   });
 
   it("maps goals layout to mountsGoalsPanel", () => {

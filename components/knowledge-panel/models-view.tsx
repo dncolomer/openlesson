@@ -622,7 +622,7 @@ export function KnowledgeModelsView({
                     <div className="px-1 text-xs text-zinc-400" data-region-overlay-empty>
                       <p className="font-medium text-zinc-300">No knowledge regions yet</p>
                       <p className="mt-1 text-zinc-500">
-                        Create under Settings → Custom Knowledge Regions, then multi-select here.
+                        Create under Settings → Knowledge Regions, then multi-select here.
                       </p>
                     </div>
                   ) : (

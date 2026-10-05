@@ -43,12 +43,6 @@ const nextConfig: NextConfig = {
       { source: "/solutions/:path*", destination: "/", permanent: true },
       { source: "/plan/:id", destination: "/workspace/:id", permanent: true },
       { source: "/plans", destination: "/workspaces", permanent: true },
-      // Practice Portal public slug is /portal/{token}; keep old path working.
-      {
-        source: "/practice-portal/:token",
-        destination: "/portal/:token",
-        permanent: true,
-      },
       // Results live on /tapbench; do not let /tapbench/results hit [token].
       {
         source: "/tapbench/results",

@@ -116,9 +116,10 @@ describe("pow-model-v1 agent contract on skill and MCP", () => {
     );
     const copy = knowledgeRegionIntegrationCopy();
 
-    expect(standard).toContain(CANVAS_TAP_SIMULATION_HEADING);
+    expect(standard).not.toContain(CANVAS_TAP_SIMULATION_HEADING);
+    expect(standard).toContain("Learning workspace");
     expect(knowledgeRegion).toContain(CANVAS_TAP_SIMULATION_HEADING);
-    expect(standard).toContain(POW_MODEL_VERSION);
+    expect(standard).not.toContain(POW_MODEL_VERSION);
     expect(knowledgeRegion).toContain(POW_MODEL_VERSION);
     expect(copy.skillDescription).not.toContain(contract);
     expect(copy.skillDescription).not.toContain("draw_text");
@@ -127,7 +128,8 @@ describe("pow-model-v1 agent contract on skill and MCP", () => {
     expect(textExposesKnowledgeLinkMint(copy.skillDescription)).toBe(false);
     expect(knowledgeRegion).toContain("buffer_proof_of_work");
     expect(knowledgeRegion).not.toContain("create_tap_link");
-    expect(standard).toContain("create_tap_link");
+    expect(standard).not.toContain("create_tap_link");
+    expect(standard).toContain("list_blocks");
   });
 
   it("appends the canvas and TAP tool catalog to the skill an agent downloads", () => {

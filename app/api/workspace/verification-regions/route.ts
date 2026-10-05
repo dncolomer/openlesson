@@ -16,12 +16,15 @@ import {
   type SyntheticPowRequest,
 } from "@/lib/verification-flow";
 import { listVerificationResults } from "@/lib/verification-flow-repository";
+import { denyWorkspaceFeatureById } from "@/lib/workspace-feature-gate";
 
 export const runtime = "nodejs";
 
 async function authorize(workspaceId: string, ayclToken: string | null) {
   const auth = await requireProductWorkspaceEvalAuth(workspaceId, ayclToken);
   if (!auth.ok) return auth;
+  const denied = await denyWorkspaceFeatureById(workspaceId, "knowledge_regions");
+  if (denied) return { ok: false as const, response: denied };
   const policy = assertWorkspacePolicy({
     principal: auth.principal,
     workspaceOwnerId: auth.workspaceOwnerId,

@@ -8,7 +8,7 @@ import {
   resolveIleWorkAestheticImage,
   sessionTopicCardStill,
 } from "@/lib/aesthetics";
-import { SESSION_TOPIC_CARD_REM } from "@/lib/session-sidebar";
+import { SESSION_TOPIC_CARD_REM, formatLearnElapsedClock } from "@/lib/session-sidebar";
 import { SessionConsoleMarks, SessionConsoleScan } from "@/components/session-view/session-console-marks";
 import { useSurfaceAestheticImages } from "@/lib/use-surface-aesthetic-images";
 import type { SessionViewTranslate } from "@/components/session-view/types";
@@ -17,6 +17,7 @@ export type SessionTopicCardInput = {
   id?: string;
   label?: string;
   keyword?: string;
+  description?: string;
   focused?: boolean;
   image?: string;
 };
@@ -30,7 +31,33 @@ export function sessionSidebarTopic(
   const title = String(row.keyword || "").trim() || String(row.label || "").trim() || "Topic";
   const id = String(row.id || "").trim() || "topic";
   const image = String(row.image || "").trim();
-  return image ? { id, title, image } : { id, title };
+  const description = String(row.description || "").trim();
+  return {
+    id,
+    title,
+    ...(image ? { image } : {}),
+    ...(description ? { description } : {}),
+  };
+}
+
+/** Elapsed Learn clock. It does not clear the board. */
+export function LearnElapsedTimer({ startedAt }: { startedAt?: string | null }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, []);
+  const start = startedAt ? new Date(startedAt).getTime() : now;
+  const elapsed = Number.isFinite(start) ? now - start : 0;
+  return (
+    <span
+      data-learn-elapsed-timer
+      className="font-mono text-lg font-semibold uppercase tracking-wider text-white tabular-nums"
+      title="Time worked"
+    >
+      {formatLearnElapsedClock(elapsed)}
+    </span>
+  );
 }
 
 /** Silent radar loop for the topic card. The still stays the default. */
@@ -61,12 +88,14 @@ export function SessionTopicCard({
   id,
   title,
   image,
+  description,
   customUrls,
   systemImages,
 }: {
   id: string;
   title: string;
   image?: string | null;
+  description?: string | null;
   customUrls?: readonly string[] | null;
   systemImages?: readonly string[] | null;
 }) {
@@ -105,6 +134,8 @@ export function SessionTopicCard({
   const height = `${SESSION_TOPIC_CARD_REM}rem`;
   const videoRef = useRef<HTMLVideoElement>(null);
   const [mode, setMode] = useState<"image" | "video">("image");
+  const [descriptionOpen, setDescriptionOpen] = useState(false);
+  const fullDescription = String(description || "").trim();
   useEffect(() => {
     const node = videoRef.current;
     if (!node) return;
@@ -163,6 +194,17 @@ export function SessionTopicCard({
       </span>
       <span className="relative z-10 flex h-full w-full flex-col items-start justify-end gap-1 px-2 pb-2">
         {timer}
+        {fullDescription ? (
+          <button
+            type="button"
+            data-session-topic-card-description
+            aria-expanded={descriptionOpen}
+            onClick={() => setDescriptionOpen((open) => !open)}
+            className="pointer-events-auto rounded-none border border-white/70 bg-black/85 px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-[0.22em] text-white hover:bg-white hover:text-black"
+          >
+            {descriptionOpen ? "Close" : "Description"}
+          </button>
+        ) : null}
         <span
           data-session-topic-card-title
           className="line-clamp-3 max-w-full min-w-0 self-start text-left border border-white/55 bg-black/80 px-2 py-1 font-mono text-base font-semibold uppercase leading-tight tracking-[0.14em] text-white"
@@ -170,6 +212,24 @@ export function SessionTopicCard({
           {heading}
         </span>
       </span>
+      {descriptionOpen && fullDescription ? (
+        <div
+          data-session-topic-description
+          className="absolute inset-0 z-20 overflow-y-auto bg-black/95 px-3 pb-3 pt-8 text-left"
+        >
+          <button
+            type="button"
+            data-session-topic-description-close
+            onClick={() => setDescriptionOpen(false)}
+            className="absolute right-2 top-2 rounded-none border border-white/70 bg-black px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-[0.22em] text-white hover:bg-white hover:text-black"
+          >
+            Close
+          </button>
+          <p className="font-sans text-sm font-normal normal-case leading-relaxed tracking-normal text-white">
+            {fullDescription}
+          </p>
+        </div>
+      ) : null}
     </div>
   );
 }

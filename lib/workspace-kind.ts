@@ -1,6 +1,8 @@
 /**
- * Durable workspace kind: standard (Blank / Template / Files+Goal) vs
- * Knowledge Region (Goals / Knowledge / Settings shell; PoW is external).
+ * Durable workspace kind.
+ * `standard` is a Learning workspace (map designer).
+ * `knowledge_region` is a Verification workspace.
+ * Neither product mints knowledge links. AYCL complimentary URLs are separate.
  */
 
 export const WORKSPACE_KIND_STANDARD = "standard";
@@ -22,13 +24,19 @@ export function isKnowledgeRegionWorkspace(value: unknown): boolean {
   return parseWorkspaceKind(value) === WORKSPACE_KIND_KNOWLEDGE_REGION;
 }
 
-/** TAP / TAP Learning / TAPBench mint is only for standard (map) workspaces. */
-export function workspaceAllowsKnowledgeLinkMint(value: unknown): boolean {
+/**
+ * Knowledge-link mint stays available on Learning workspaces for existing
+ * session links and TAPBench. Verification workspaces use flows instead.
+ * The learning workspace UI does not offer link settings.
+ */
+export function workspaceAllowsKnowledgeLinkMint(value?: unknown): boolean {
   return !isKnowledgeRegionWorkspace(value);
 }
 
-export function knowledgeLinkMintDeniedMessage(): string {
-  return "Knowledge Region workspaces do not support knowledge links";
+export function knowledgeLinkMintDeniedMessage(kind?: unknown): string {
+  return isKnowledgeRegionWorkspace(kind)
+    ? "Verification workspaces do not support knowledge links."
+    : "Learning workspaces do not support knowledge links.";
 }
 
 export function assertWorkspaceAllowsKnowledgeLinkMint(
@@ -37,7 +45,7 @@ export function assertWorkspaceAllowsKnowledgeLinkMint(
   if (workspaceAllowsKnowledgeLinkMint(kind)) return { ok: true };
   return {
     ok: false,
-    error: knowledgeLinkMintDeniedMessage(),
+    error: knowledgeLinkMintDeniedMessage(kind),
     code: "forbidden",
   };
 }

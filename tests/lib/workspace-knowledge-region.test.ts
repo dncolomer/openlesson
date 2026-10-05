@@ -146,7 +146,7 @@ describe("Knowledge Region shell", () => {
         isOwner: true,
         visibleSections: learnerKr,
       }).map((item) => item.key),
-    ).not.toContain("settings");
+    ).toEqual(["goals", "verification_flows", "context", "knowledge", "settings"]);
     const viewSource = readFileSync(
       join(ROOT, "components/WorkspaceView.tsx"),
       "utf8",
@@ -198,7 +198,7 @@ describe("Knowledge Region shell", () => {
         isLoggedIn: true,
         workspaceKind: "knowledge_region",
       }),
-    ).toEqual(["knowledge", "insights"]);
+    ).toEqual(["goals", "verification_flows", "context", "knowledge", "settings"]);
     expect(
       availableSectionsForMode({
         mode: "learner",
@@ -224,9 +224,7 @@ describe("Knowledge Region shell", () => {
       "workspace",
       "dags",
       "map_types",
-      "goals",
       "context",
-      "knowledge",
       "settings",
     ]);
     expect(defaultWorkspaceSection("standard")).toBe("workspace");
@@ -260,9 +258,10 @@ describe("Knowledge Region shell", () => {
     expect(fullTabs).toContain("general");
     expect(fullTabs).toContain("aycl");
     expect([...fullTabs]).not.toContain("guest-links");
-    expect(fullTabs).toContain("knowledge-portal");
+    expect([...fullTabs]).not.toContain("knowledge-portal");
+    expect([...fullTabs]).not.toContain("regions");
     expect(resolveSettingsSubview("guest-links", "standard")).toBe("general");
-    expect(resolveSettingsSubview("knowledge-portal", "standard")).toBe("knowledge-portal");
+    expect(resolveSettingsSubview("knowledge-portal", "standard")).toBe("general");
     expect(defaultSettingsSubview("standard")).toBe("general");
 
     writeScratch(
@@ -278,7 +277,7 @@ describe("Knowledge Region shell", () => {
         `kr_integration_label=${settingsSubviewLabel("integrations", "knowledge_region")}`,
         `normal_owner_sections=${JSON.stringify(normal)}`,
         `normal_settings_has_guest_links=${([...fullTabs] as string[]).includes("guest-links")}`,
-        `normal_settings_has_portal=${fullTabs.includes("knowledge-portal")}`,
+        `normal_settings_has_portal=${([...fullTabs] as string[]).includes("knowledge-portal")}`,
         `guest_links_resolves=${resolveSettingsSubview("guest-links", "standard")}`,
       ].join("\n") + "\n",
     );
@@ -292,7 +291,7 @@ describe("Knowledge Region knowledge-link deny", () => {
     expect(workspaceAllowsKnowledgeLinkMint(undefined)).toBe(true);
     expect(assertWorkspaceAllowsKnowledgeLinkMint("knowledge_region")).toEqual({
       ok: false,
-      error: expect.stringMatching(/Knowledge Region/i) as unknown as string,
+      error: expect.stringMatching(/Verification workspaces do not support knowledge links/i) as unknown as string,
       code: "forbidden",
     });
     expect(assertWorkspaceAllowsKnowledgeLinkMint("standard")).toEqual({ ok: true });
@@ -511,7 +510,7 @@ describe("Knowledge Region embeddings import overlay", () => {
 describe("Knowledge Region wiring", () => {
   it("create page, generate path, shell, settings, mint, embeddings import are wired", () => {
     const page = read("app/workspace/new/page.tsx");
-    expect(page).toContain("Verification Workspace");
+    expect(page).toContain("Verification workspace");
     expect(page).toContain("data-create-mode={card.mode}");
     expect(page).toContain('data-create-mode="knowledge_region"');
     expect(page).toContain('data-create-layout="two-groups"');
@@ -540,8 +539,8 @@ describe("Knowledge Region wiring", () => {
 
     const settings = read("components/WorkspaceIntegrationPanel.tsx");
     expect(settings).toContain("settingsSubTabsForKind");
-    expect(settings).toContain("settingsShowsKnowledgeLinks");
-    expect(settings).toContain('showKnowledgeLinks && activeSubview === "knowledge-portal"');
+    expect(settings).not.toContain("WorkspaceKnowledgePortalPanel");
+    expect(settings).not.toContain('activeSubview === "knowledge-portal"');
     expect(settings).not.toContain('activeSubview === "guest-links"');
     expect(settings).not.toContain("Knowledge Links");
 
@@ -570,7 +569,7 @@ describe("Knowledge Region wiring", () => {
         `generate_persists_kind=${gen.includes("workspace_kind: krOutcome.workspaceKind")}`,
         `shell_uses_kind=${view.includes("parseWorkspaceKind")}`,
         `settings_hides_guest_links=${!settings.includes('activeSubview === "guest-links"')}`,
-        `settings_keeps_portal=${settings.includes('showKnowledgeLinks && activeSubview === "knowledge-portal"')}`,
+        `settings_keeps_portal=${settings.includes("WorkspaceKnowledgePortalPanel")}`,
         `embeddings_import=${models.includes("data-region-import-toggle")}`,
         `hook_assemble=${embeddings.includes("assembleSelectedRegionOverlayInputs")}`,
         `api_importable=${regionsApi.includes("importable_models")}`,

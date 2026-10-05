@@ -514,21 +514,20 @@ describe("empty-map-pane structural + wiring", () => {
     expect(view).toContain(
       "onSuggestSelectEmptyCells={handleEmptyMapSuggestCells}",
     );
-    // Grid: Build/Play/Explore is the under-minimap control (no standalone Explore button)
+    // Play / Build / Explore sits beside the workspace name.
+    const nav = read("components/WorkspaceSectionNav.tsx");
     expect(grid).not.toContain("data-map-explore-toggle");
-    expect(grid).toContain("data-workspace-mode-toggle");
-    expect(grid).toContain("data-workspace-mode-under-minimap");
-    expect(grid).toContain("data-workspace-mode-toggle-states");
+    expect(grid).not.toContain("data-workspace-mode-under-minimap");
+    expect(nav).toContain("data-workspace-mode-toggle");
+    expect(nav).toContain("data-workspace-mode-by-title");
+    expect(nav).toContain("data-workspace-mode-toggle-states");
+    expect(nav.indexOf("data-workspace-mode-by-title")).toBeLessThan(
+      nav.indexOf("data-workspace-section-title"),
+    );
     expect(grid).toContain("data-map-minimap-stack");
     expect(grid).toContain("onMapToggle");
     expect(grid).toContain("mapExploreOpen");
     expect(grid).toContain("data-map-note-add");
-    const stackIdx = grid.indexOf("data-map-minimap-stack");
-    const modeIdx = grid.indexOf("data-workspace-mode-toggle");
-    const addNoteIdx = grid.indexOf("data-map-note-add");
-    expect(stackIdx).toBeGreaterThan(-1);
-    expect(modeIdx).toBeGreaterThan(stackIdx);
-    expect(addNoteIdx).toBeGreaterThan(modeIdx);
     // No floating bottom-right round FAB
     expect(view).not.toMatch(/data-map-explore-fab/);
     expect(view).not.toMatch(
@@ -669,20 +668,16 @@ describe("empty-map-pane structural + wiring", () => {
     writeEvidence(
       "map-explore-under-minimap-structural.log",
       [
-        "toggle_under_minimap=" +
-          grid.includes("data-workspace-mode-under-minimap"),
-        "toggle_attr=" + grid.includes("data-workspace-mode-toggle"),
-        "in_minimap_stack=" +
-          String(
-            grid.indexOf("data-workspace-mode-toggle") >
-              grid.indexOf("data-map-minimap-stack"),
+        "toggle_by_title=" +
+          read("components/WorkspaceSectionNav.tsx").includes(
+            "data-workspace-mode-by-title",
           ),
-        "above_add_note=" +
-          String(
-            grid.indexOf("data-workspace-mode-toggle") <
-              grid.indexOf("data-map-note-add") &&
-              grid.indexOf("data-map-note-add") > -1,
+        "toggle_attr=" +
+          read("components/WorkspaceSectionNav.tsx").includes(
+            "data-workspace-mode-toggle",
           ),
+        "not_under_minimap=" +
+          String(!grid.includes("data-workspace-mode-under-minimap")),
         "no_bottom_right_fab=" + String(!view.includes("data-map-explore-fab")),
         "no_fab_absolute_round=" +
           String(

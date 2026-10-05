@@ -470,7 +470,7 @@ describe("prompt builder asks for 3 short questions with canvas/path", () => {
     expect(system).toMatch(/question/i);
     expect(system).toMatch(/never an answer/i);
     expect(system).toMatch(/exactly 3/);
-    expect(system).toMatch(/3–8 words/);
+    expect(system).toMatch(/one or two complete, unhurried sentences/i);
 
     const user = buildScoutQuestionsUserPrompt({
       seedTitle: "Heaps",
@@ -480,7 +480,7 @@ describe("prompt builder asks for 3 short questions with canvas/path", () => {
       currentNode: "What heap invariant fails first on a decrease-key?",
     });
     expect(user).toMatch(/exactly 3/);
-    expect(user).toMatch(/3–8 words/);
+    expect(user).toMatch(/One or two warm sentences/i);
     expect(user).toMatch(/Questions only/);
     expect(user).toMatch(/decrease-key/);
     expect(user).toMatch(/Work canvas/);

@@ -43,12 +43,12 @@ describe("shared TAP settings surface", () => {
     expect(learn).not.toContain("ile-pregame-panel-difficulty");
     expect(learn).not.toContain("ile-pregame-panel-other");
     expect(ILE_LIVE_SETTINGS_KNOBS.map((knob) => knob.id)).toEqual([
-      "chapterCount",
       "insightGoal",
       "silenceLock",
       "spokenLanguage",
-      "powExpense",
     ]);
+    expect(learn).not.toContain("data-ile-session-chapter-count");
+    expect(learn).not.toContain("data-ile-pow-expense-slider");
     for (const knob of ILE_LIVE_SETTINGS_KNOBS) {
       if (knob.id === "spokenLanguage") {
         expect(briefing).toContain(knob.attribute);

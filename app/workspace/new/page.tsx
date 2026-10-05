@@ -115,14 +115,14 @@ const MODE_CARD_COPY: Record<
   blank: {
     title: "Blank",
     description:
-      "An empty skill grid with no generated blocks. Creates immediately so you can place the first tiles yourself.",
+      "An empty skill grid with no generated blocks. Name it, then place the first tiles yourself.",
     badge: "Start empty",
     details: [
       "Empty skill grid — no generated blocks",
-      "Creates immediately, no setup step",
+      "You name the workspace before it is created",
       "Add, drag, and shape the map yourself",
     ],
-    cta: "Create blank workspace",
+    cta: "Name this workspace",
   },
   template: {
     title: "From Template",
@@ -137,16 +137,16 @@ const MODE_CARD_COPY: Record<
     cta: "Choose a template",
   },
   knowledge_region: {
-    title: "Verification Workspace",
+    title: "Verification workspace",
     description:
-      "Goals, Verification Flows, Context, Knowledge, and Settings. Flows collect proof of work from a question pool. This workspace does not mint TAP or TAPBench knowledge links.",
-    badge: "Verification flows",
+      "Goals, verification flows, context, knowledge, and settings. A flow is the link that opens the verification interface.",
+    badge: "Validation",
     details: [
-      "Tabs: Goals, Verification Flows, Context, Knowledge, Settings",
-      "Public flow links and a per-flow agent skill",
-      "No generated map or knowledge links",
+      "Goals, Verification Flows, Context, Knowledge, Settings",
+      "Each flow has its question pool, public link, and skill",
+      "No map designer",
     ],
-    cta: "Create verification workspace",
+    cta: "Name this workspace",
   },
 };
 
@@ -187,6 +187,7 @@ export default function NewWorkspacePage() {
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [createName, setCreateName] = useState("");
   const router = useRouter();
 
   // Template topic library
@@ -382,15 +383,10 @@ export default function NewWorkspacePage() {
   function selectMode(next: WorkspaceCreateMode) {
     setError("");
     if (!isUiWorkspaceCreateMode(next)) return;
-    if (next === "blank") {
-      // Blank starts creation immediately — no second confirmation step
-      setMode("blank");
-      void handleCreateBlank();
-      return;
-    }
-    if (next === "knowledge_region") {
-      setMode("knowledge_region");
-      void handleCreateKnowledgeRegion();
+    if (next === "blank" || next === "knowledge_region") {
+      setMode(next);
+      setCreateName("");
+      setStep(2);
       return;
     }
     setMode(next);
@@ -412,7 +408,7 @@ export default function NewWorkspacePage() {
   }
 
   async function handleCreateBlank() {
-    if (busy) return;
+    if (busy || !createName.trim()) return;
     setBusy(true);
     setError("");
     let succeeded = false;
@@ -421,7 +417,10 @@ export default function NewWorkspacePage() {
       const response = await fetch("/api/workspace/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ createMode: "blank", topic: "Blank workspace" }),
+        body: JSON.stringify({
+          createMode: "blank",
+          title: createName.trim(),
+        }),
       });
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
@@ -441,7 +440,7 @@ export default function NewWorkspacePage() {
   }
 
   async function handleCreateKnowledgeRegion() {
-    if (busy) return;
+    if (busy || !createName.trim()) return;
     setBusy(true);
     setError("");
     let succeeded = false;
@@ -452,7 +451,7 @@ export default function NewWorkspacePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           createMode: "knowledge_region",
-          topic: "Verification Workspace",
+          title: createName.trim(),
         }),
       });
       if (!response.ok) {
@@ -579,8 +578,10 @@ export default function NewWorkspacePage() {
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-zinc-400 sm:text-lg">
               {step === 1
-                ? "Pick how you want to start."
-                : "Browse by category, pick a topic, then choose which resources to use as context."}
+                ? "Pick a Learning workspace or a Verification workspace."
+                : mode === "template"
+                  ? "Browse by category, pick a topic, then choose which resources to use as context."
+                  : "Name the workspace. You can rename it later in Settings."}
             </p>
           </div>
 
@@ -599,7 +600,7 @@ export default function NewWorkspacePage() {
                   id="create-group-learning"
                   className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500"
                 >
-                  Learning & Research
+                  Learning workspace
                 </h2>
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-3 md:gap-4">
                 <a
@@ -669,7 +670,7 @@ export default function NewWorkspacePage() {
                   id="create-group-verification"
                   className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500"
                 >
-                  Verification
+                  Verification workspace
                 </h2>
               <button
                 type="button"
@@ -707,6 +708,54 @@ export default function NewWorkspacePage() {
 
           {step === 1 && error && (
             <p className="mt-4 text-center text-sm text-red-300">{error}</p>
+          )}
+
+          {step === 2 && (mode === "blank" || mode === "knowledge_region") && (
+            <form
+              className="mx-auto max-w-lg rounded-none border border-zinc-800 bg-zinc-950/90 p-6"
+              data-create-name-step={mode}
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (mode === "blank") void handleCreateBlank();
+                else void handleCreateKnowledgeRegion();
+              }}
+            >
+              <div className="mb-4 flex items-center justify-between gap-2">
+                <h2 className="text-lg font-medium text-white">
+                  {mode === "blank" ? "Learning workspace" : "Verification workspace"}
+                </h2>
+                <button
+                  type="button"
+                  onClick={backToModes}
+                  className="text-sm text-zinc-500 hover:text-white"
+                >
+                  ← Back
+                </button>
+              </div>
+              <label className="block text-sm text-zinc-400" htmlFor="create-workspace-name">
+                Name
+              </label>
+              <input
+                id="create-workspace-name"
+                value={createName}
+                onChange={(event) => setCreateName(event.target.value)}
+                maxLength={120}
+                required
+                autoFocus
+                placeholder={mode === "blank" ? "Algebra practice" : "Backend hiring"}
+                className="mt-2 w-full rounded-none border border-zinc-800 bg-black px-3 py-2 text-sm text-white"
+                data-create-workspace-name
+              />
+              {error ? <p className="mt-3 text-sm text-red-300">{error}</p> : null}
+              <button
+                type="submit"
+                disabled={busy || createName.trim().length === 0}
+                className="mt-5 rounded-none bg-white px-4 py-2 text-sm font-medium text-black disabled:opacity-50"
+                data-create-name-submit
+              >
+                {mode === "blank" ? "Create learning workspace" : "Create verification workspace"}
+              </button>
+            </form>
           )}
 
           {step === 2 && mode === "template" && (

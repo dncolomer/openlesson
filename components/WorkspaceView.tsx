@@ -49,6 +49,7 @@ import {
 } from "@/lib/workspace-sections";
 import {
   defaultInteractionModeForWorkspace,
+  visibleWorkspaceMapToggleIds,
   mountsCreatorAuthoringDrawers,
   mountsLearnerPracticeDrawer,
   normalizeWorkspaceInteractionMode,
@@ -797,11 +798,12 @@ export function WorkspaceView({
     }
   };
 
+  const playHidesTabs = workspaceKind !== "knowledge_region" && isLearnerMode;
   const sectionConfig = buildWorkspaceSectionNavItems({
     t,
     isLearnerMode,
     isOwner,
-    visibleSections,
+    visibleSections: playHidesTabs ? [] : visibleSections,
     exploreOpen: showMapExplore,
   });
 
@@ -833,6 +835,22 @@ export function WorkspaceView({
         onSelectSection={selectSection}
         plan={plan}
         interactionMode={interactionMode}
+        exploreOpen={showMapExplore}
+        onMapToggle={
+          workspaceKind === "knowledge_region" ? undefined : applyMapToggle
+        }
+        mapToggleIds={
+          workspaceKind === "knowledge_region"
+            ? []
+            : visibleWorkspaceMapToggleIds({
+                allowCreator: ayclCapabilities
+                  ? ayclCapabilities.allowCreatorModeToggle
+                  : isOwner || isOrgAdmin,
+                allowExplore: ayclCapabilities
+                  ? ayclCapabilities.allowExplore
+                  : isOwner || isOrgAdmin,
+              })
+        }
       />
 
       <WorkspaceSectionHosts
@@ -888,6 +906,7 @@ export function WorkspaceView({
           mobileColumn={mobileColumn}
           nodes={nodes}
           isOwner={isOwner}
+          canAuthor={isOwner || isOrgAdmin}
           isLearnerMode={isLearnerMode}
           currentUserId={currentUserId}
           ayclToken={ayclToken}

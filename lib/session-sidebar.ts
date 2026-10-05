@@ -91,6 +91,18 @@ export function sessionSidebarSections(
   }
 }
 
+/** Elapsed Learn clock. Hours appear only after the first hour. */
+export function formatLearnElapsedClock(elapsedMs: number): string {
+  const total = Math.max(0, Math.floor(Number(elapsedMs) / 1000));
+  const safe = Number.isFinite(total) ? total : 0;
+  const hours = Math.floor(safe / 3600);
+  const minutes = Math.floor((safe % 3600) / 60);
+  const seconds = safe % 60;
+  const ss = String(seconds).padStart(2, "0");
+  if (hours > 0) return `${hours}:${String(minutes).padStart(2, "0")}:${ss}`;
+  return `${minutes}:${ss}`;
+}
+
 export function sessionSidebarHasSection(
   mode: SessionSidebarMode,
   section: SessionSidebarSection,

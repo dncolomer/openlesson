@@ -253,16 +253,18 @@ export function buildScoutQuestionsSystemMessage(
   count: number = SCOUT_FOLLOWUP_QUESTION_COUNT,
 ): string {
   const n = Math.max(1, Math.floor(Number(count) || SCOUT_FOLLOWUP_QUESTION_COUNT));
-  return `You generate rabbit-hole follow-up QUESTIONS for a Prepare (Scout) mind-map session.
+  return `You generate follow-up questions for a Prepare mind-map. Each question is placed on the work canvas and read by the learner.
 Return ONLY JSON: { "questions": [ "...", ... ] } with exactly ${n} distinct questions.
+Voice: you are a wise, warm teacher. Write each question in one or two complete, unhurried sentences. Make it easy to warm up to, specific to the seed and the path, and free of headings, bullets, and compressed slogans.
 Rules:
-- Each item is a short inquisitive question (never an answer, never a lecture, never a definition).
-- Dig into where pull and interest are strongest on the seed topic and the current canvas/path.
-- Keep each option 3–8 words. Easy to scan. End with a question mark.
-- Examples: "Where does this break?", "Who pays the cost?", "What if we invert it?"
+- Each item is a question (never an answer, never a lecture, never a bare definition).
+- Dig into where interest is strongest on the seed topic and the current canvas/path.
+- End with a question mark.
+- Example tone, not text to copy: "If this idea failed in ordinary use, where would you notice it first?"
 - No numbering, no markdown, no product jargon.
 - Do not repeat questions already on the path or canvas.
-- Do not explain or answer — only ask.`;
+- Do not explain or answer — only ask.
+- Never mention Uncertain Systems, Proof of Work, PoW, TAP, or scoring.`;
 }
 
 export function buildScoutQuestionsUserPrompt(input: {
@@ -300,7 +302,7 @@ export function buildScoutQuestionsUserPrompt(input: {
       ? `Text already on the Work canvas (includes manual learner edits):\n${canvasText}`
       : null,
     ileWorkCanvasXaiToolsInstruction(),
-    `Generate exactly ${n} ${path.length <= 1 ? "opening" : "follow-up"} question(s). Short (3–8 words). Questions only — no answers.`,
+    `Generate exactly ${n} ${path.length <= 1 ? "opening" : "follow-up"} question(s). One or two warm sentences each, easy to start from. Questions only — no answers.`,
   ].filter(Boolean);
   return lines.join("\n");
 }

@@ -5,8 +5,11 @@ import { useI18n } from "@/lib/i18n";
 import type { WorkspaceSectionKey } from "@/lib/workspace-sections";
 import {
   WORKSPACE_INTERACTION_MODES,
+  WORKSPACE_MAP_TOGGLE_IDS,
+  resolveWorkspaceMapToggleId,
   workspaceModeDisplayLabel,
   type WorkspaceInteractionMode,
+  type WorkspaceMapToggleId,
 } from "@/lib/workspace-mode";
 
 export type WorkspaceSectionNavItem = {
@@ -27,6 +30,10 @@ interface WorkspaceSectionNavProps {
   onInteractionModeChange?: (mode: WorkspaceInteractionMode) => void;
   /** Show mode toggle (default true when onInteractionModeChange provided). */
   showModeToggle?: boolean;
+  /** Play / Build / Explore, rendered beside the workspace name. */
+  onMapToggle?: (id: WorkspaceMapToggleId) => void;
+  mapToggleIds?: readonly WorkspaceMapToggleId[];
+  exploreOpen?: boolean;
 }
 
 export function WorkspaceSectionNav({
@@ -38,12 +45,57 @@ export function WorkspaceSectionNav({
   interactionMode = "learner",
   onInteractionModeChange,
   showModeToggle,
+  onMapToggle,
+  mapToggleIds,
+  exploreOpen = false,
 }: WorkspaceSectionNavProps) {
   const { t } = useI18n();
   const navLabel = t("planView.topLevelSectionsNav");
   const title = workspaceTitle?.trim() || "";
   const modeToggle =
-    showModeToggle !== false && Boolean(onInteractionModeChange);
+    showModeToggle !== false && Boolean(onInteractionModeChange) && !onMapToggle;
+  const toggleIds =
+    mapToggleIds && mapToggleIds.length > 0 ? mapToggleIds : WORKSPACE_MAP_TOGGLE_IDS;
+  const currentToggle = resolveWorkspaceMapToggleId({
+    interactionMode,
+    exploreOpen,
+  });
+
+  const mapModeControl = onMapToggle ? (
+    <div
+      className="flex shrink-0 items-center gap-0.5 rounded-none border border-neutral-800 bg-neutral-950/80 p-0.5"
+      data-workspace-mode-toggle
+      data-workspace-mode-by-title
+      data-workspace-mode-toggle-states={toggleIds
+        .map((id) => workspaceModeDisplayLabel(id).toLowerCase())
+        .join(",")}
+      role="group"
+      aria-label="Workspace mode"
+    >
+      {toggleIds.map((id) => {
+        const active = currentToggle === id;
+        const label = workspaceModeDisplayLabel(id);
+        return (
+          <button
+            key={id}
+            type="button"
+            data-workspace-mode={id}
+            data-active={active ? "true" : "false"}
+            aria-pressed={active}
+            aria-label={label}
+            onClick={() => onMapToggle(id)}
+            className={`rounded-none px-2 py-1 text-[10px] font-medium uppercase tracking-wide transition ${
+              active
+                ? "bg-white/15 text-white"
+                : "text-neutral-500 hover:text-neutral-300"
+            }`}
+          >
+            {label}
+          </button>
+        );
+      })}
+    </div>
+  ) : null;
 
   const modeControl = modeToggle ? (
     <div
@@ -108,7 +160,7 @@ export function WorkspaceSectionNav({
           })}
         </nav>
         <div className="flex min-w-0 shrink-0 items-center gap-2">
-          {modeControl}
+          {mapModeControl ?? modeControl}
           {title ? (
             <p
               className="max-w-[40%] shrink-0 truncate text-right text-xs font-medium text-neutral-300"
@@ -129,6 +181,7 @@ export function WorkspaceSectionNav({
       data-workspace-section-nav
       data-workspace-interaction-mode={interactionMode}
     >
+      {sections.length > 0 ? (
       <nav
         className="flex min-w-0 flex-1 overflow-x-auto"
         role="tablist"
@@ -166,8 +219,11 @@ export function WorkspaceSectionNav({
           );
         })}
       </nav>
+      ) : (
+        <div className="min-w-0 flex-1" />
+      )}
       <div className="flex min-w-0 shrink-0 items-center gap-2 px-2 sm:px-3">
-        {modeControl}
+        {mapModeControl ?? modeControl}
         {title ? (
           <p
             className="min-w-0 max-w-[12rem] truncate text-right text-sm font-medium text-neutral-200 sm:max-w-sm"

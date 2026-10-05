@@ -661,6 +661,7 @@ export function SessionView({
   const [resourceScopeChapterId, setResourceScopeChapterId] = useState<string | null>(null);
   const [sessionResourcesOpen, setSessionResourcesOpen] = useState(false);
   const completeTargetStepIdRef = useRef<string | null>(null);
+  const insightWorkMarkRef = useRef(0);
   const [gatherSeenIds, setGatherSeenIds] = useState<string[]>(() => parseGatherSeenBlockIds([]));
   const {
     availableCounts,
@@ -1563,6 +1564,7 @@ export function SessionView({
                 title: step.description,
               }).keyword
             : undefined,
+          description: String(step?.description || "").trim() || undefined,
           focused: id === activeStep?.id,
           status: resolveIleDockChipStatus({
             chapterId: id,
@@ -1807,7 +1809,10 @@ export function SessionView({
                 workspaceId,
                 ileToken,
                 recordSessionPowArtifact,
+                workArtifacts: sessionPowArtifactsRef.current,
+                workSinceIndex: insightWorkMarkRef.current,
                 onCrafted: (insight) => {
+                  insightWorkMarkRef.current = sessionPowArtifactsRef.current.length;
                   setSessionInsights((current) => {
                     if (current.some((row) => row.id === insight.id)) return current;
                     return [insight, ...current];
@@ -2111,6 +2116,7 @@ export function SessionView({
         aestheticImages={selectedAesthetic?.images}
         aestheticPackageId={selectedAesthetic?.id}
         openWorkLabels={openWorkDockLabels}
+        sessionStartedAt={session?.startedAt ?? null}
         resources={
           workspaceId ? (
             <WorkspaceResourcesPanel

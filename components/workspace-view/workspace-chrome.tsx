@@ -14,7 +14,7 @@ import {
 } from "@/lib/aycl-shared";
 import type { AyclCapabilities } from "@/lib/aycl-shared";
 import type { WorkspaceSectionKey } from "@/lib/workspace-sections";
-import type { WorkspaceInteractionMode } from "@/lib/workspace-mode";
+import type { WorkspaceInteractionMode, WorkspaceMapToggleId } from "@/lib/workspace-mode";
 import type { Workspace } from "@/components/workspace-view/types";
 import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
 
@@ -71,6 +71,9 @@ export function WorkspaceViewChrome({
   onSelectSection,
   plan,
   interactionMode,
+  onMapToggle,
+  mapToggleIds,
+  exploreOpen,
 }: {
   isAycl: boolean;
   hideNavbar: boolean;
@@ -84,6 +87,9 @@ export function WorkspaceViewChrome({
   onSelectSection: (section: WorkspaceSectionKey) => void;
   plan: Workspace;
   interactionMode: WorkspaceInteractionMode;
+  onMapToggle?: (id: WorkspaceMapToggleId) => void;
+  mapToggleIds?: readonly WorkspaceMapToggleId[];
+  exploreOpen?: boolean;
 }) {
   return (
     <>
@@ -128,14 +134,19 @@ export function WorkspaceViewChrome({
         </div>
       ) : null}
 
-      {isKnowledgeRegionWorkspace(plan.workspace_kind) ? (
-        <p
-          className="shrink-0 border-b border-neutral-800 bg-neutral-950 px-4 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-neutral-400"
-          data-verification-workspace-shell
-        >
-          Verification Workspace
-        </p>
-      ) : null}
+      <p
+        className="shrink-0 border-b border-neutral-800 bg-neutral-950 px-4 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-neutral-400"
+        data-workspace-product-shell={
+          isKnowledgeRegionWorkspace(plan.workspace_kind) ? "verification" : "learning"
+        }
+        {...(isKnowledgeRegionWorkspace(plan.workspace_kind)
+          ? { "data-verification-workspace-shell": true }
+          : { "data-learning-workspace-shell": true })}
+      >
+        {isKnowledgeRegionWorkspace(plan.workspace_kind)
+          ? "Verification workspace"
+          : "Learning workspace"}
+      </p>
 
       <WorkspaceSectionNav
         sections={sections}
@@ -145,6 +156,9 @@ export function WorkspaceViewChrome({
         workspaceTitle={plan.title || plan.root_topic}
         interactionMode={interactionMode}
         showModeToggle={false}
+        onMapToggle={onMapToggle}
+        mapToggleIds={mapToggleIds}
+        exploreOpen={exploreOpen}
       />
     </>
   );

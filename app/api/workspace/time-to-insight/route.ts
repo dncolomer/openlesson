@@ -1,3 +1,4 @@
+import { denyWorkspaceFeatureById } from "@/lib/workspace-feature-gate";
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
@@ -17,6 +18,10 @@ export async function GET(req: NextRequest) {
   if (!auth.ok) return auth.response;
 
   const workspaceId = req.nextUrl.searchParams.get("workspaceId")?.trim() || "";
+  {
+    const denied = await denyWorkspaceFeatureById(workspaceId, "kpis");
+    if (denied) return denied;
+  }
   if (!workspaceId) return jsonError(400, "workspaceId is required");
 
   const { data: sessions, error } = await auth.supabase

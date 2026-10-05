@@ -1,3 +1,4 @@
+import { denyWorkspaceFeatureById } from "@/lib/workspace-feature-gate";
 /**
  * Stash API — Stash decision (System 1).
  * Flushes all buffered PoW units through the regular PoW API, then resets memory.
@@ -23,6 +24,10 @@ interface RouteProps {
 
 export async function POST(req: NextRequest, { params }: RouteProps) {
   const { id: workspaceId } = await params;
+  {
+    const denied = await denyWorkspaceFeatureById(workspaceId, "proof_of_work");
+    if (denied) return denied;
+  }
 
   let body: Record<string, unknown> = {};
   try {

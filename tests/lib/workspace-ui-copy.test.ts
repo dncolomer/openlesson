@@ -35,7 +35,7 @@ describe("Workspace UI copy rename", () => {
     });
 
     expect(offenders).toEqual([]);
-    expect(readRepoFile("app/workspace/new/page.tsx")).toContain("Verification Workspace");
+    expect(readRepoFile("app/workspace/new/page.tsx")).toContain("Verification workspace");
   });
 
   it("keeps Verification Workspace phrasing in API and agent integration surfaces", () => {

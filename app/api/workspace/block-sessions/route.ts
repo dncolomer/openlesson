@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
     }
 
     const auth = await guardWorkspaceRoute(workspaceId, {
+      feature: "map",
       ayclToken: ayclTokenFromBody(body),
       ileToken: ileTokenFromBody(body),
     });

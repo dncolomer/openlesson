@@ -36,17 +36,12 @@ describe("AYCL section layout mapping (shared helper)", () => {
       "workspace",
       "dags",
       "map_types",
-      "goals",
       "context",
-      "knowledge",
       "settings",
     ]);
     expect(resolveActiveSection("settings", { isOwner: true })).toBe("settings");
-    expect(resolveActiveSection("knowledge", { isOwner: true })).toBe("knowledge");
-    expect(availableWorkspaceSections({ isOwner: false })).toEqual([
-      "workspace",
-      "context",
-    ]);
+    expect(resolveActiveSection("knowledge", { isOwner: true })).toBe("workspace");
+    expect(availableWorkspaceSections({ isOwner: false })).toEqual(["workspace"]);
   });
 
   it("AYCL local tabs are empty", () => {

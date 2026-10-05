@@ -311,7 +311,11 @@ export async function createWorkspaceTapLink(options: CreateTapLinkOptions): Pro
   }
 
   if (!workspaceAllowsKnowledgeLinkMint(workspace.workspace_kind)) {
-    throw new CreateTapLinkError(knowledgeLinkMintDeniedMessage(), 403, "forbidden");
+    throw new CreateTapLinkError(
+      knowledgeLinkMintDeniedMessage(workspace.workspace_kind),
+      403,
+      "forbidden",
+    );
   }
 
   const ownerUserId = auth.user_id || workspace.user_id;

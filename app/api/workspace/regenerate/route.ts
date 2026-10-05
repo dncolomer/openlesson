@@ -5,6 +5,7 @@ import { callXaiJSON, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
 import { persistSkillGridPositions, toSkillGridNodes } from "@/lib/skill-grid-positions";
 import { blockMapGlyphDbFields, composeBlockMapGlyphJsonInstruction } from "@/lib/block-map-glyph";
 import { composeBlockGenerationContext } from "@/lib/workspace-create-modes";
+import { denyWorkspaceFeatureById } from "@/lib/workspace-feature-gate";
 
 interface NodeData {
   id: string;
@@ -29,6 +30,8 @@ export async function POST(req: NextRequest) {
     if (!blockId || !workspaceId) {
       return jsonError(400, "Node ID and Plan ID are required");
     }
+    const denied = await denyWorkspaceFeatureById(workspaceId, "map");
+    if (denied) return denied;
 
     const { data: plan, error: planError } = await supabase
       .from("workspaces")

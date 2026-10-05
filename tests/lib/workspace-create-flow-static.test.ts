@@ -16,7 +16,7 @@ describe("workspace create + builder static wiring", () => {
     expect(page).toContain("isUiWorkspaceCreateMode");
     expect(page).toContain("Blank");
     expect(page).toContain("From Template");
-    expect(page).toContain("Verification Workspace");
+    expect(page).toContain("Verification workspace");
     expect(page).not.toContain("From Files + Goal");
     expect(page).not.toContain("files_goal");
     expect(page).not.toContain("handleCreateFilesGoal");
@@ -26,9 +26,9 @@ describe("workspace create + builder static wiring", () => {
     expect(page).toContain("md:grid-cols-3");
     expect(page).toContain('data-create-layout="two-groups"');
     expect(page).toContain('data-create-group="learning"');
-    expect(page).toContain("Learning & Research");
+    expect(page).toContain("Learning workspace");
     expect(page).toContain('data-create-group="verification"');
-    expect(page).toMatch(/id="create-group-verification"[\s\S]{0,240}\n\s*Verification\n/);
+    expect(page).toMatch(/id="create-group-verification"[\s\S]{0,240}\n\s*Verification workspace\n/);
     expect(page).toContain('data-create-mode-span="knowledge_region"');
     expect(page).toContain('data-create-mode="aycl"');
     expect(page).toContain("data-create-mode={card.mode}");

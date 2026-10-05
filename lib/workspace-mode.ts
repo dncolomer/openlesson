@@ -1,6 +1,7 @@
 /**
  * Creator vs Learner workspace mode — pure shell/map/pane rules.
- * Creator = current authoring. Learner = practice map + Knowledge (LWM/embeddings).
+ * Learning workspace: Play is the map. Build is Workspace, DAGs, Map Types,
+ * Context, and Settings. Verification workspaces have no map mode.
  */
 
 import type { WorkspaceSectionKey } from "@/lib/workspace-sections";
@@ -181,9 +182,9 @@ export type WorkspaceModeShell = {
 
 /**
  * Visible top-level sections for the active interaction mode.
- * Learner: Workspace + Knowledge only (logged-in Knowledge scope).
- * Creator: existing owner/consumer section lists.
- * Knowledge Region creator includes Context. Learner stays Knowledge + Insights.
+ * Learning Play: the map surface only (the nav hides that single tab).
+ * Learning Build: designer sections.
+ * Verification: one shell, independent of Play/Build.
  */
 export function availableSectionsForMode(input: {
   mode: WorkspaceInteractionMode;
@@ -194,26 +195,15 @@ export function availableSectionsForMode(input: {
 }): WorkspaceSectionKey[] {
   const mode = normalizeWorkspaceInteractionMode(input.mode);
   if (isKnowledgeRegionWorkspace(input.workspaceKind)) {
-    const kr = availableWorkspaceSections({
+    return availableWorkspaceSections({
       isOwner: input.isOwner,
       isOrgAdmin: input.isOrgAdmin,
       workspaceKind: input.workspaceKind,
     });
-    if (mode === "learner") {
-      // Learner KR: Knowledge + Insights when logged in; no map tab.
-      if (!input.isLoggedIn) return [];
-      return ["knowledge", "insights"];
-    }
-    return kr;
   }
   if (mode === "learner") {
-    // Knowledge only when logged in (user-scoped LWM); guests get map only.
-    // DAGs / Map Types tabs are Creator-only — never in Learner.
-    // KPIs is the signed-in viewer's time-to-insight average.
-    if (input.isLoggedIn) return ["workspace", "knowledge", "insights", "kpis"];
     return ["workspace"];
   }
-  // Creator: full owner/consumer lists (includes dags for owners).
   return availableWorkspaceSections({
     isOwner: input.isOwner,
     isOrgAdmin: input.isOrgAdmin,
@@ -223,9 +213,8 @@ export function availableSectionsForMode(input: {
 }
 
 /**
- * Resolve active section under mode constraints (drop privileged authoring
- * tabs when switching to Learner). Hidden sections on a Knowledge Region
- * fall back to Goals, never Workspace.
+ * Resolve active section under mode constraints. Hidden sections on a
+ * Verification workspace fall back to Goals, never the map.
  */
 export function resolveActiveSectionForMode(input: {
   mode: WorkspaceInteractionMode;

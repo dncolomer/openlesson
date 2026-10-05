@@ -306,8 +306,8 @@ export function buildGroundedDialogueQuestion(
   if (prose && computational) {
     if (i === 0) {
       return goal
-        ? `On “${subject}” (${prose}), produce one concrete intermediate result that advances “${clip(goal, 70)}”. What is that result?`
-        : `On “${subject}” (${prose}), pick concrete numbers or a named instance and give the first checkable intermediate result.`;
+        ? `Let's start with “${subject}”. You have this in front of you: ${prose}. What one result would move you toward “${clip(goal, 70)}”?`
+        : `Let's start with “${subject}”. Take this situation — ${prose} — pick a named instance, and tell me the first result you would compute.`;
     }
     if (i === 1) {
       return `Someone applies “${subject}” to this situation: ${prose}. Name one concrete mistake that yields a wrong answer, and the first signal that would catch it.`;
@@ -324,12 +324,12 @@ export function buildGroundedDialogueQuestion(
     if (i === 0) {
       if (aim) {
         return prose
-          ? `In “${subject}”, ${clip(prose, 100)} — what single checkable intermediate result proves progress toward “${aim}”? Name the result (definition applied, artifact criterion, or decision), not a study plan.`
-          : `In “${subject}”${sourceHint ? ` (drawing on ${sourceHint})` : ""}, what single checkable intermediate result proves progress toward “${aim}”? Name a definition applied, artifact criterion, or decision — not a study plan.`;
+          ? `Let's begin with “${subject}”. Here is the situation: ${clip(prose, 100)}. What result would show you are making progress toward “${aim}”? Name that result, not a study plan.`
+          : `Let's begin with “${subject}”${sourceHint ? `, drawing on ${sourceHint}` : ""}. What result would show progress toward “${aim}”? Name a decision or a definition you applied, not a study plan.`;
       }
       return prose
-        ? `In “${subject}” (${clip(prose, 100)}), give one concrete situational example and the first checkable intermediate result a practitioner must produce.`
-        : `In “${subject}”${sourceHint ? ` (drawing on ${sourceHint})` : ""}, give one concrete situational example and the first checkable intermediate result a practitioner must produce.`;
+        ? `Let's begin with “${subject}”. From this — ${clip(prose, 100)} — give one concrete example and the first result a practitioner would produce.`
+        : `Let's begin with “${subject}”${sourceHint ? `, drawing on ${sourceHint}` : ""}. Give one concrete example and the first result a practitioner would produce.`;
     }
     if (i === 1) {
       return aim
@@ -344,12 +344,12 @@ export function buildGroundedDialogueQuestion(
   // Thin / guest-like context: still a checkable domain act, never meta fluff.
   if (i === 0) {
     if (goal) {
-      return `Give one concrete numerical or situational example of “${subject}” that matters for “${clip(goal, 80)}”, and state the key intermediate result.`;
+      return `Let's start simply. Give one concrete example of “${subject}” that matters for “${clip(goal, 80)}”, and say what result you would look for first.`;
     }
     if (notes) {
-      return `From the workspace notes (“${clip(notes, 80)}”), give one concrete instance of “${subject}” and the first checkable intermediate result.`;
+      return `From these notes — “${clip(notes, 80)}” — take one concrete instance of “${subject}” and tell me the first result you would check.`;
     }
-    return `Give one concrete example of “${subject}” with specific numbers or a named situation — what is the key intermediate result?`;
+    return `Let's start with one concrete example of “${subject}”, with numbers or a named situation. What result would you look for first?`;
   }
   if (i === 1) {
     return planning

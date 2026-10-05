@@ -9,6 +9,7 @@ import { runVerticalScore } from "@/lib/pow-api/run-vertical-score";
 import { resolveScoreParticipantIds } from "@/lib/pow-api/evaluation-subject";
 import type { AuthContext } from "@/lib/pow-api/types";
 import { requireProductWorkspaceEvalAuth } from "@/lib/product-workspace-auth";
+import { denyWorkspaceFeatureById } from "@/lib/workspace-feature-gate";
 import { NO_NEW_POW_CODE } from "@/lib/pow-api/eval-pow-gate";
 import { toErrorCode } from "@/lib/pow-api/types";
 
@@ -32,6 +33,8 @@ export async function POST(req: NextRequest) {
       ayclTokenFromBody(body),
     );
     if (!auth.ok) return auth.response;
+    const denied = await denyWorkspaceFeatureById(workspaceId, "snapshots");
+    if (denied) return denied;
 
     const { supabase, isOwner: accessIsOwner, subjectId } = auth;
 

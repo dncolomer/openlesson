@@ -28,8 +28,11 @@ import {
 import {
   dashboardHasNoWorkspaces,
   isDashboardWorkspaceListFilter,
+  isDashboardWorkspaceTypeFilter,
   workspaceMatchesDashboardListFilter,
+  workspaceMatchesDashboardTypeFilter,
   type DashboardWorkspaceListFilter,
+  type DashboardWorkspaceTypeFilter,
 } from "@/lib/dashboard-workspace-filters";
 
 const DASHBOARD_BACKGROUND = "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg";
@@ -171,6 +174,8 @@ export default function DashboardPage() {
   /** Filter workspace cards by visibility or AYCL listing: all | public | private | aycl */
   const [workspaceVisibilityFilter, setWorkspaceVisibilityFilter] =
     useState<DashboardWorkspaceListFilter>("all");
+  const [workspaceTypeFilter, setWorkspaceTypeFilter] =
+    useState<DashboardWorkspaceTypeFilter>("all");
   const [archivingWorkspaceId, setArchivingPlanId] = useState<string | null>(null);
   const [workspacePage, setPlanPage] = useState(1);
   const workspacePageSize = 10;
@@ -734,10 +739,17 @@ export default function DashboardPage() {
         p.root_topic.toLowerCase().includes(workspaceSearch.toLowerCase()) ||
         (p.title || "").toLowerCase().includes(workspaceSearch.toLowerCase());
       if (!matchesSearch) return false;
-      return workspaceMatchesDashboardListFilter(p, workspaceVisibilityFilter);
+      if (!workspaceMatchesDashboardListFilter(p, workspaceVisibilityFilter)) return false;
+      return workspaceMatchesDashboardTypeFilter(p, workspaceTypeFilter);
     });
     return sortWorkspacesPinnedFirst(filtered, pinnedWorkspaceIds);
-  }, [workspaces, workspaceSearch, workspaceVisibilityFilter, pinnedWorkspaceIds]);
+  }, [
+    workspaces,
+    workspaceSearch,
+    workspaceVisibilityFilter,
+    workspaceTypeFilter,
+    pinnedWorkspaceIds,
+  ]);
 
   const totalPlanPages = Math.ceil(filteredWorkspaces.length / workspacePageSize);
   const paginatedPlans = filteredWorkspaces.slice(
@@ -1071,6 +1083,28 @@ export default function DashboardPage() {
                       <option value="public">{t("dashboard.public")}</option>
                       <option value="private">{t("dashboard.private")}</option>
                       <option value="aycl">AYCL</option>
+                    </select>
+                  </label>
+                  <label
+                    className="flex items-center gap-2 text-xs text-neutral-400"
+                    data-workspace-type-filter
+                  >
+                    <span className="text-neutral-500">Type</span>
+                    <select
+                      value={workspaceTypeFilter}
+                      onChange={(e) => {
+                        const next = e.target.value;
+                        if (isDashboardWorkspaceTypeFilter(next)) {
+                          setWorkspaceTypeFilter(next);
+                          setPlanPage(1);
+                        }
+                      }}
+                      className="rounded-none border border-white/40 bg-black px-2 py-1 text-xs text-neutral-300 focus:border-white/70 focus:outline-none"
+                      aria-label="Filter workspaces by type"
+                    >
+                      <option value="all">All</option>
+                      <option value="learning">Learning</option>
+                      <option value="verification">Verification</option>
                     </select>
                   </label>
                   <label className="flex items-center gap-2 text-xs text-neutral-400">

@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
     if (!workspaceId) {
       return jsonError(400, "workspaceId is required");
     }
-    const auth = await guardWorkspaceRoute(workspaceId);
+    const auth = await guardWorkspaceRoute(workspaceId, { feature: "data_studio" });
     if (!auth.ok) return auth.response;
     const blockId = url.searchParams.get("blockId");
     const stats = await handle(workspaceId, auth.supabase, {
@@ -72,7 +72,8 @@ export async function POST(req: NextRequest) {
     if (!workspaceId) {
       return jsonError(400, "workspaceId is required");
     }
-    const auth = await guardWorkspaceRoute(workspaceId, { ayclToken: ayclTokenFromBody(body) });
+    const auth = await guardWorkspaceRoute(workspaceId, {
+      feature: "data_studio", ayclToken: ayclTokenFromBody(body) });
     if (!auth.ok) return auth.response;
     const blockId =
       typeof body.blockId === "string" && body.blockId.trim()

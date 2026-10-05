@@ -4,6 +4,7 @@ import { ayclTokenFromBody, guardWorkspaceRoute, requireAuthenticatedUser } from
 import { callXaiJSON, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
 import { persistSkillGridPositions, toSkillGridNodes } from "@/lib/skill-grid-positions";
 import { blockMapGlyphDbFields, composeBlockMapGlyphJsonInstruction } from "@/lib/block-map-glyph";
+import { denyWorkspaceFeatureById } from "@/lib/workspace-feature-gate";
 
 interface NodeData {
   id: string;
@@ -37,6 +38,8 @@ export async function POST(req: NextRequest) {
     if (nodeError || !node) {
       return jsonError(404, "Node not found");
     }
+    const denied = await denyWorkspaceFeatureById(String(node.workspace_id || ""), "map");
+    if (denied) return denied;
 
     const { data: plan } = await supabase
       .from("workspaces")

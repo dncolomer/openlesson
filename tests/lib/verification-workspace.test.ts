@@ -710,10 +710,10 @@ describe("verification workspace shell gates", () => {
 
   it("names the create card and shell Verification Workspace and mounts flow controls only for this kind", () => {
     const page = read("app/workspace/new/page.tsx");
-    expect(page).toContain('title: "Verification Workspace"');
+    expect(page).toContain('title: "Verification workspace"');
     expect(page).toContain('data-create-mode="knowledge_region"');
     const shell = read("components/workspace-view/workspace-chrome.tsx");
-    expect(shell).toContain("Verification Workspace");
+    expect(shell).toContain("Verification workspace");
     expect(shell).toContain("data-verification-workspace-shell");
     expect(shell).toContain("isKnowledgeRegionWorkspace");
 

@@ -74,6 +74,7 @@ export async function POST(req: NextRequest) {
     const ayclToken = ayclTokenFromBody(body as Record<string, unknown>);
     // Learners may generate effect content; not full authoring tools.
     const auth = await guardWorkspaceRoute(workspaceId, {
+      feature: "map",
       ayclToken,
       requireAyclAuthoring: false,
     });

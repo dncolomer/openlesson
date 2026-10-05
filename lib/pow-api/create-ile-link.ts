@@ -270,7 +270,11 @@ export async function createWorkspaceIleLink(options: CreateIleLinkOptions): Pro
   }
 
   if (!workspaceAllowsKnowledgeLinkMint(workspace.workspace_kind)) {
-    throw new CreateIleLinkError(knowledgeLinkMintDeniedMessage(), 403, "forbidden");
+    throw new CreateIleLinkError(
+      knowledgeLinkMintDeniedMessage(workspace.workspace_kind),
+      403,
+      "forbidden",
+    );
   }
 
   const ownerUserId = auth.user_id || workspace.user_id;

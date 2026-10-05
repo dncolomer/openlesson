@@ -36,16 +36,13 @@ export type IlePregamePresetId = (typeof ILE_PREGAME_PRESET_IDS)[number];
 
 /**
  * Knobs that still change a live Learn session and stay on the TAP settings card.
- * Learn has no session-length clock, so the TAP duration grid is hidden.
- * The work-canvas timer, gather appetite, and the parallel-work, gather, and
- * browser-inference toggles are not learner settings.
+ * Chapter count and work expense stay on the presets. They are not sliders.
+ * Learn has no session-length countdown. The elapsed clock does not clear the board.
  */
 export const ILE_LIVE_SETTINGS_KNOBS = [
-  { id: "chapterCount", attribute: "data-ile-session-chapter-count" },
   { id: "insightGoal", attribute: "data-ile-session-insight-goal" },
   { id: "silenceLock", attribute: "data-ile-silence-lock-minutes" },
   { id: "spokenLanguage", attribute: "data-tap-briefing-config" },
-  { id: "powExpense", attribute: "data-ile-pow-expense-slider" },
 ] as const;
 
 /**

@@ -53,7 +53,8 @@ export async function GET(req: NextRequest) {
 
     const ayclToken = req.nextUrl.searchParams.get("ayclToken");
     if (ayclToken) {
-      const auth = await guardWorkspaceRoute(workspaceId, { ayclToken });
+      const auth = await guardWorkspaceRoute(workspaceId, {
+      feature: "map", ayclToken });
       if (!auth.ok) return auth.response;
       const { scene } = await loadScene(auth.supabase, workspaceId);
       return NextResponse.json({ scene });
@@ -94,6 +95,7 @@ export async function PUT(req: NextRequest) {
     }
 
     const auth = await guardWorkspaceRoute(workspaceId, {
+      feature: "map",
       ayclToken: ayclTokenFromBody(body),
     });
     if (!auth.ok) return auth.response;

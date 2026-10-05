@@ -185,43 +185,36 @@ describe("shipped Knowledge / Setting aesthetic wiring", () => {
     expect(integration).toContain("settingsSubTabsForKind");
     expect(settingsTabs).toContain('"general"');
     expect(settingsTabs).toContain('"regions"');
-    expect(settingsTabs).toContain('"knowledge-portal"');
+    expect(settingsTabs).not.toContain('"knowledge-portal"');
     expect(settingsTabs).not.toContain('"guest-links"');
     expect(settingsTabs).toContain('"data-studio"');
     expect(settingsTabs).toContain('"integrations"');
-    expect(settingsTabs).toContain('t?.("planView.knowledgePortalSettingsTab")');
+    expect(settingsTabs).not.toContain("knowledgePortalSettingsTab");
     expect(settingsTabs).not.toContain("performanceSubTabTap");
-    const en = JSON.parse(
-      fs.readFileSync(path.join(REPO_ROOT, "messages/en.json"), "utf8"),
-    ) as { planView?: Record<string, string> };
-    expect(en.planView?.knowledgePortalSettingsTab).toBe("Knowledge Portal");
-    // Knowledge Portal tab follows Knowledge Regions.
     const regionsIdx = settingsTabs.indexOf('"regions"');
-    const portalIdx = settingsTabs.indexOf('"knowledge-portal"');
     const dataStudioIdx = settingsTabs.indexOf('"data-studio"');
     expect(regionsIdx).toBeGreaterThan(-1);
-    expect(portalIdx).toBeGreaterThan(regionsIdx);
-    expect(dataStudioIdx).toBeGreaterThan(portalIdx);
+    expect(dataStudioIdx).toBeGreaterThan(regionsIdx);
     expect(integration).toContain('data-settings-tab-panel="general"');
     expect(integration).toContain('data-settings-tab-panel="aycl"');
     expect(integration).toContain('data-settings-tab-panel="regions"');
-    expect(integration).toContain('data-settings-tab-panel="knowledge-portal"');
+    expect(integration).not.toContain('data-settings-tab-panel="knowledge-portal"');
     expect(integration).not.toContain('data-settings-tab-panel="guest-links"');
     expect(integration).toContain('data-settings-tab-panel="data-studio"');
     expect(integration).toContain('data-settings-tab-panel="integrations"');
     // Active-tab conditionals (only one body shown at a time).
     expect(integration).toContain('activeSubview === "general"');
     expect(integration).toContain('activeSubview === "regions"');
-    expect(integration).toContain('activeSubview === "knowledge-portal"');
+    expect(integration).not.toContain('activeSubview === "knowledge-portal"');
     expect(integration).not.toContain('activeSubview === "guest-links"');
     expect(integration).toContain('activeSubview === "data-studio"');
     expect(integration).toContain('activeSubview === "integrations"');
     // Major capabilities still wired under tabs.
     expect(integration).toContain('data-settings-section="custom-knowledge-regions"');
-    expect(integration).toContain('data-settings-section="knowledge-portal"');
+    expect(integration).not.toContain('data-settings-section="knowledge-portal"');
     expect(integration).not.toContain('data-settings-section="guest-tap-ile"');
     expect(integration).not.toContain("Knowledge Links");
-    expect(integration).toContain("knowledgePortalSettingsTab");
+    expect(integration).not.toContain("knowledgePortalSettingsTab");
     expect(integration).toContain('data-settings-section="data-studio"');
     expect(integration).toContain('data-settings-section="skill"');
     expect(integration).toContain('data-settings-section="mcp"');
@@ -229,7 +222,7 @@ describe("shipped Knowledge / Setting aesthetic wiring", () => {
     expect(integration).toContain("WorkspaceAccessSettings");
     expect(integration).toContain("CustomVerificationModelsPanel");
     expect(integration).not.toContain("WorkspaceGuestLinksPanel");
-    expect(integration).toContain("WorkspaceKnowledgePortalPanel");
+    expect(integration).not.toContain("WorkspaceKnowledgePortalPanel");
     expect(integration).toContain("WorkspaceDataStudioPanel");
     expect(integration).not.toContain('data-settings-layout="linear"');
     expect(integration).not.toContain('data-settings-section="generate"');
@@ -248,24 +241,24 @@ describe("shipped Knowledge / Setting aesthetic wiring", () => {
     expect(integration).not.toContain("/api/workspace/proof-of-work-schema");
   });
 
-  it("drops Knowledge Links from settings subviews and keeps Knowledge Portal", () => {
+  it("splits settings by product and omits Knowledge Portal", () => {
     const normal = availableSettingsSubviews("standard");
-    expect([...normal]).not.toContain("guest-links");
-    expect([...normal]).toContain("knowledge-portal");
-    expect(resolveSettingsSubview("guest-links", "standard")).toBe("general");
-    expect(resolveSettingsSubview("knowledge-portal", "standard")).toBe("knowledge-portal");
+    expect([...normal]).toEqual(["general", "aycl", "integrations"]);
+    expect(resolveSettingsSubview("knowledge-portal", "standard")).toBe("general");
+    expect(resolveSettingsSubview("regions", "standard")).toBe("general");
+    expect(resolveSettingsSubview("data-studio", "standard")).toBe("general");
 
     const region = availableSettingsSubviews("knowledge_region");
-    expect([...region]).not.toContain("guest-links");
-    expect([...region]).not.toContain("knowledge-portal");
-    expect(resolveSettingsSubview("guest-links", "knowledge_region")).toBe("general");
+    expect([...region]).toEqual(["general", "regions", "data-studio", "integrations"]);
+    expect([...region]).not.toContain("aycl");
+    expect(resolveSettingsSubview("aycl", "knowledge_region")).toBe("general");
     expect(resolveSettingsSubview("knowledge-portal", "knowledge_region")).toBe("general");
 
     const tabs = settingsSubTabsForKind("standard", (key) =>
       key === "planView.knowledgePortalSettingsTab" ? "Knowledge Portal" : key,
     );
-    expect(tabs.map((tab) => tab.id)).not.toContain("guest-links");
-    expect(tabs.map((tab) => tab.label)).toContain("Knowledge Portal");
+    expect(tabs.map((tab) => tab.id)).toEqual(["general", "aycl", "integrations"]);
+    expect(tabs.map((tab) => tab.label)).not.toContain("Knowledge Portal");
     expect(tabs.map((tab) => tab.label)).not.toContain("Knowledge Links");
     const regionTabs = settingsSubTabsForKind("knowledge_region", () => "Knowledge Links");
     expect(regionTabs.map((tab) => tab.id)).not.toContain("knowledge-portal");

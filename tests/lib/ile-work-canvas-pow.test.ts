@@ -400,6 +400,9 @@ describe("Work-canvas scene-diff PoW (shipped classifier)", () => {
       refactor: "Refactor",
       "suggest-insight": "Suggest Insight",
       "clear-overlaps": "Clear overlaps",
+      answer: "Answer",
+      simplify: "Simplify",
+      ask: "Ask",
     };
 
     const catalogRows: string[] = [
@@ -590,8 +593,7 @@ describe("Work-canvas PoW host wiring (shipped)", () => {
     const canvas = read("components/ExcalidrawCanvas.tsx");
     expect(canvas).toContain("onCanvasPowActions");
     expect(canvas).toContain("IleWorkCanvasPowCollector");
-    expect(canvas).toContain("expandMore");
-    expect(canvas).toContain("boardPrompt");
+    expect(canvas).toContain('.command("ask"');
     expect(canvas).toContain(".command(");
     expect(canvas).not.toContain("compressWork");
     expect(canvas).not.toContain("emitExpand");
@@ -606,13 +608,14 @@ describe("Work-canvas PoW host wiring (shipped)", () => {
     expect(quick).not.toContain("expandMore");
     for (const commandId of ILE_WORK_CANVAS_COMMAND_POW_IDS) {
       expect(quick).toContain(`"${commandId}"`);
-      expect(canvas).toContain(`handleQuickAction("${commandId}")`);
     }
+    expect(canvas).toContain("handleQuickAction(command.id)");
+    expect(canvas).toContain("handleQuickAction(draft.exactId)");
     const boardAsk = canvas.slice(
       canvas.indexOf("const handleBoardAsk"),
-      canvas.indexOf("const handleLearnMorePointerDown"),
+      canvas.indexOf("const beginAskVoice"),
     );
-    expect(boardAsk).toContain("boardPrompt");
+    expect(boardAsk).toContain('.command("ask"');
     expect(boardAsk).not.toContain(".slice(");
 
     const ile = read("components/SessionView.tsx");

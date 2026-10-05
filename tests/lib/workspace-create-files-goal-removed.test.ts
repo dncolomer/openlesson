@@ -61,7 +61,7 @@ describe("workspace create UI modes", () => {
     expect(page).toContain("handleCreateBlank");
     expect(page).toContain("handleCreateTemplate");
     expect(page).toContain("handleCreateKnowledgeRegion");
-    expect(page).toContain("Verification Workspace");
+    expect(page).toContain("Verification workspace");
     expect(page).not.toMatch(/From Files \+ Goal/);
     expect(page).not.toContain("files_goal");
     expect(page).not.toContain("handleCreateFilesGoal");

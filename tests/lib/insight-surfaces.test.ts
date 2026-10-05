@@ -26,6 +26,7 @@ import {
   INSIGHT_WORKSPACE_TITLE_TABLE,
   buildInsightOgShareInput,
   deriveInsightPageStats,
+  insightPowWindow,
   insightOgTitle,
   insightShareSocialMetadata,
   loadWorkspaceTitleForPublicInsight,
@@ -106,9 +107,6 @@ describe("Play-only Insights tab + Generate Insights", () => {
   it("lists Insights next to Knowledge in Play and omits it in Build", () => {
     expect(availableSectionsForMode({ mode: "learner", isLoggedIn: true })).toEqual([
       "workspace",
-      "knowledge",
-      "insights",
-      "kpis",
     ]);
     expect(
       availableSectionsForMode({ mode: "creator", isOwner: true, isLoggedIn: true }),
@@ -324,6 +322,28 @@ describe("public insight OG title + page stats", () => {
     expect(stats.powCount).toBe(3);
     expect(stats.powLabel).toMatch(/3/);
     expect(stats.powLabel).toMatch(/PoW/i);
+    expect(
+      deriveInsightPageStats({
+        thought_ids: ["only-craft"],
+        pow_count: 7,
+      }).powLabel,
+    ).toBe("7 PoW");
+    expect(
+      insightPowWindow({
+        insightId: "later",
+        createdAt: "2026-02-02T00:00:00.000Z",
+        siblings: [
+          { id: "earlier", created_at: "2026-02-01T00:00:00.000Z" },
+          { id: "later", created_at: "2026-02-02T00:00:00.000Z" },
+        ],
+        workCreatedAt: [
+          "2026-01-31T00:00:00.000Z",
+          "2026-02-01T12:00:00.000Z",
+          "2026-02-02T00:00:00.000Z",
+          "2026-02-03T00:00:00.000Z",
+        ],
+      }),
+    ).toBe(2);
     expect(stats.timeLabel).toBe(formatInsightDate(createdAt));
     expect(stats.workspaceName).toBe("Algebra studio");
     expect(stats.workspaceName).not.toBe(INSIGHT_FALLBACK_WORKSPACE_NAME);
@@ -444,7 +464,8 @@ describe("public insight OG title + page stats", () => {
     expect(api).toContain("createAdminClient()");
     expect(api).toContain("resolvePublicInsightWorkspaceTitle");
     expect(api).toContain("userScoped: supabase");
-    expect(api).toContain("admin: createAdminClient()");
+    expect(api).toContain("const admin = createAdminClient()");
+    expect(api).toContain("insightPowWindow");
     const gated = api.indexOf("if (!insight.is_public && !isOwner)");
     const adminLoad = api.indexOf("resolvePublicInsightWorkspaceTitle({");
     expect(gated).toBeGreaterThan(-1);

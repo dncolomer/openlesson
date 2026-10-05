@@ -17,6 +17,7 @@ import {
   listBlockGoals,
   updateBlockGoal,
 } from "@/lib/pow-api/goals-store";
+import { denyWorkspaceFeatureById } from "@/lib/workspace-feature-gate";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
@@ -29,6 +30,8 @@ async function resolveGoalsAccess(
   | { ok: true; supabase: SupabaseClient }
   | { ok: false; response: NextResponse }
 > {
+  const denied = await denyWorkspaceFeatureById(workspaceId, "map");
+  if (denied) return { ok: false, response: denied };
   if (ayclToken) {
     const aycl = await resolveAyclAccess(ayclToken);
     if ("error" in aycl) {

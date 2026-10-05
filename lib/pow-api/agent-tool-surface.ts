@@ -9,7 +9,10 @@ import {
   SNAPSHOT_API_BASE,
   STASH_API_BASE,
 } from "@/lib/api/agent-api-paths";
-import { workspaceAllowsKnowledgeLinkMint } from "@/lib/workspace-kind";
+import {
+  agentToolFeature,
+  workspaceSupportsFeature,
+} from "@/lib/workspace-capabilities";
 import { powModelAgentSimulationContract } from "./pow-model-agent-contract";
 import type { ApiKeyScope } from "./types";
 
@@ -26,7 +29,7 @@ export const AGENT_TOOL_SURFACE = [
   {
     name: "list_workspaces",
     scope: "workspaces:read",
-    summary: "List accessible Verification Workspaces.",
+    summary: "List accessible workspaces.",
     rest: { method: "GET", path: `${POW_API_BASE}/workspaces` },
   },
   {
@@ -221,47 +224,35 @@ export const KNOWLEDGE_LINK_MINT_PATH_FRAGMENTS = [
 ] as const;
 
 /**
- * Documented MCP tool names in generated skill.md for standard (map) workspaces.
+ * Documented MCP tool names in generated skill.md for a Learning workspace.
  * Order is part of the skill prompt; keep this list stable.
  */
 export const STANDARD_SKILL_DOCUMENTED_TOOL_NAMES = [
   "list_workspaces",
   "get_workspace",
   "list_blocks",
-  "generate_proof_of_work_schema",
-  "upload_proof_of_work",
-  "lwm_snapshot",
   "generate_integration_skill",
-  "create_tap_link",
-  "list_tap_links",
 ] as const satisfies readonly AgentToolName[];
 
 export function isKnowledgeLinkMintToolName(name: string): boolean {
   return (KNOWLEDGE_LINK_MINT_TOOL_NAMES as readonly string[]).includes(name);
 }
 
-/** Full agent catalog filtered by workspace kind. Standard keeps mint tools; KR omits them. */
+/** Full agent catalog filtered by workspace product. Calls for the other product are omitted. */
 export function agentToolSurfaceForWorkspace(kind: unknown): AgentToolSurfaceEntry[] {
-  if (workspaceAllowsKnowledgeLinkMint(kind)) {
-    return [...AGENT_TOOL_SURFACE];
-  }
-  return AGENT_TOOL_SURFACE.filter((t) => !isKnowledgeLinkMintToolName(t.name));
+  return AGENT_TOOL_SURFACE.filter((tool) => {
+    const feature = agentToolFeature(tool.name);
+    if (!feature) return true;
+    return workspaceSupportsFeature(kind, feature);
+  });
 }
 
 /**
- * Tools listed in workspace-generated skill.md / recommended MCP copy.
- * KR: PoW + Snapshot + Stash TAPBench (no guest-link mint).
- * Standard: the historical documented subset, including TAP mint.
+ * Tools listed in workspace-generated skill.md.
+ * Learning: map read + skill regeneration.
+ * Verification: proof of work, snapshots, regions, and stash.
  */
 export function skillDocumentedToolsForWorkspace(kind: unknown): AgentToolSurfaceEntry[] {
-  if (workspaceAllowsKnowledgeLinkMint(kind)) {
-    const allow = new Set<string>(STANDARD_SKILL_DOCUMENTED_TOOL_NAMES);
-    return AGENT_TOOL_SURFACE.filter((t) => allow.has(t.name)).sort(
-      (a, b) =>
-        STANDARD_SKILL_DOCUMENTED_TOOL_NAMES.indexOf(a.name as (typeof STANDARD_SKILL_DOCUMENTED_TOOL_NAMES)[number]) -
-        STANDARD_SKILL_DOCUMENTED_TOOL_NAMES.indexOf(b.name as (typeof STANDARD_SKILL_DOCUMENTED_TOOL_NAMES)[number]),
-    );
-  }
   return agentToolSurfaceForWorkspace(kind);
 }
 

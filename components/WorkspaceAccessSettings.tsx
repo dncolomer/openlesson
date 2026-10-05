@@ -13,9 +13,8 @@ interface WorkspaceAccessSettingsProps {
 }
 
 /**
- * Owner access controls: public/private.
- * AYCL marketplace listing lives under Settings → AYCL (own sub-tab).
- * Public workspaces contribute embeddings, regions, and PoW to the Map of Knowledge.
+ * Owner access controls for a Verification workspace: public/private.
+ * Public workspaces publish proof of work, embeddings, and regions.
  */
 export function WorkspaceAccessSettings({
   plan,
@@ -55,8 +54,7 @@ export function WorkspaceAccessSettings({
       <div className="min-w-0">
         <h2 className="text-sm font-medium text-white">{t("planView.sectionAccess")}</h2>
         <p className="mt-1 max-w-2xl text-sm text-neutral-400">
-          Public workspaces publish PoW, embeddings, blocks, and regions to the Map of Knowledge.
-          Paid catalog listing is under the AYCL settings tab.
+          Public workspaces publish proof of work, embeddings, and regions.
         </p>
       </div>
 

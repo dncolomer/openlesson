@@ -29,6 +29,7 @@ import {
 } from "@/lib/knowledge-config";
 import { listWorkspaceAvailableSubjectsForUi } from "@/lib/pow-api/workspace-snapshot-subjects";
 import { requireProductWorkspaceEvalAuth } from "@/lib/product-workspace-auth";
+import { denyWorkspaceFeatureById } from "@/lib/workspace-feature-gate";
 import type { LearningWorldModelV0 } from "@/lib/prompt-kernel/world-model";
 
 export const runtime = "nodejs";
@@ -201,6 +202,8 @@ export async function GET(req: NextRequest) {
       url.searchParams.get("ayclToken"),
     );
     if (!auth.ok) return auth.response;
+    const denied = await denyWorkspaceFeatureById(workspaceId, "knowledge");
+    if (denied) return denied;
     const payload = await handle(
       workspaceId,
       auth.subjectId,
@@ -227,6 +230,8 @@ export async function POST(req: NextRequest) {
       ayclTokenFromBody(body),
     );
     if (!auth.ok) return auth.response;
+    const denied = await denyWorkspaceFeatureById(workspaceId, "knowledge");
+    if (denied) return denied;
     const payload = await handle(
       workspaceId,
       auth.subjectId,

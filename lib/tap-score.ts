@@ -131,7 +131,7 @@ export function buildTapScoreSessionUrl(baseUrl: string, privateToken: string) {
 }
 
 export function listenerStyle(_mode: TapScoreMode) {
-  return "a neutral knowledge-verification facilitator who elicits both spontaneous (System 1 / stashed-or-unsent) and deliberate (System 2 / send-edit-skip-resend) knowledge traces through natural domain questions so later analysis can see what the learner can explain, connect, apply, and repair — without stage directions or platform talk in learner-visible turns";
+  return "a warm, wise teacher conducting knowledge verification, who elicits both spontaneous (System 1 / stashed-or-unsent) and deliberate (System 2 / send-edit-skip-resend) knowledge traces through natural domain questions so later analysis can see what the learner can explain, connect, apply, and repair — without stage directions or platform talk in learner-visible turns";
 }
 
 export async function getTapScoreBrief(workspaceId: string, focusNodeIds: string[] = [], focusSessionId?: string | null) {
@@ -385,7 +385,7 @@ Learner-visible prompts must stay on this domain context. Never invent unrelated
  */
 export function buildTapOpeningQuestionFallback(_brief: TapScoreBrief) {
   void _brief;
-  return "What concrete claim will you demonstrate, and what single intermediate result proves it?";
+  return "Let's start with one concrete claim you can actually show. What would you try first, and what small result would tell you it was working?";
 }
 
 function slugifyTopicId(value: string, index: number) {

@@ -68,7 +68,8 @@ export async function POST(req: NextRequest) {
     const auth =
       mode === "chapter"
         ? await guardSessionRoute(sessionId, { ayclToken, ileToken })
-        : await guardWorkspaceRoute(workspaceId, { ayclToken, ileToken });
+        : await guardWorkspaceRoute(workspaceId, {
+      feature: "map", ayclToken, ileToken });
     if (!auth.ok) return auth.response;
 
     const { supabase, persistUserId } = auth;

@@ -12,8 +12,9 @@ export function buildWorkspaceSectionNavItems(input: {
   exploreOpen?: boolean;
 }): WorkspaceSectionNavItem[] {
   const { t, isLearnerMode, isOwner, visibleSections, exploreOpen } = input;
-  // Nav order: Workspace → DAGs → Map Types → Goals → Context → Simulation → Knowledge → Settings
-  // Knowledge Region shells omit Workspace (no map tab).
+  // Learning Build: Workspace, DAGs, Map Types, Context, Settings.
+  // Verification: Goals, Verification Flows, Context, Knowledge, Settings.
+  // Play on a Learning workspace passes an empty list so only the map shows.
   return [
     ...(visibleSections.includes("workspace")
       ? [
@@ -60,7 +61,7 @@ export function buildWorkspaceSectionNavItems(input: {
           },
         ]
       : []),
-    ...(!isLearnerMode && visibleSections.includes("goals")
+    ...(visibleSections.includes("goals")
       ? [
           {
             key: "goals" as const,
@@ -73,7 +74,7 @@ export function buildWorkspaceSectionNavItems(input: {
           },
         ]
       : []),
-    ...(!isLearnerMode && visibleSections.includes("verification_flows")
+    ...(visibleSections.includes("verification_flows")
       ? [
           {
             key: "verification_flows" as const,

@@ -70,6 +70,11 @@ import {
   handleListSnapshotHistory,
 } from "./snapshot-handlers";
 import {
+  agentToolFeature,
+  workspaceFeatureDeniedMessage,
+  workspaceSupportsFeature,
+} from "@/lib/workspace-capabilities";
+import {
   MCP_EVIDENCE_TOOLS,
   MCP_PROOF_OF_WORK_PROTOCOL_VERSION,
   MCP_PROOF_OF_WORK_SERVER_INSTRUCTIONS,
@@ -93,6 +98,16 @@ export async function callMcpProofOfWorkTool(
   ctx: McpProofOfWorkToolContext
 ) {
   const { auth, supabase, origin } = ctx;
+  const feature = agentToolFeature(name);
+  if (feature) {
+    const workspaceId = stringArg(args, "workspace_id");
+    if (workspaceId) {
+      const gated = await loadWorkspace(supabase, auth, workspaceId);
+      if (!workspaceSupportsFeature(gated.workspace_kind, feature)) {
+        throw new Error(workspaceFeatureDeniedMessage(gated.workspace_kind, feature));
+      }
+    }
+  }
   if (name === "list_workspaces") {
     requireScope(auth.scopes, "workspaces:read");
     const payload = await listAgentWorkspaces(supabase, auth, {

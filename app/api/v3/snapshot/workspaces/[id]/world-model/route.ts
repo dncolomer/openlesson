@@ -1,3 +1,4 @@
+import { denyWorkspaceFeatureById } from "@/lib/workspace-feature-gate";
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest, errorResponse } from "@/lib/pow-api/auth";
 import { canAccessAgentWorkspace } from "@/lib/pow-api/workspace-access";
@@ -19,6 +20,10 @@ export async function GET(req: NextRequest, { params }: RouteProps) {
   if (result instanceof NextResponse) return result;
   const { auth, supabase } = result;
   const { id: workspaceId } = await params;
+  {
+    const denied = await denyWorkspaceFeatureById(workspaceId, "snapshots");
+    if (denied) return denied;
+  }
 
   const { data: workspace } = await supabase
     .from("workspaces")

@@ -20,6 +20,7 @@ export {
 } from "./world-model";
 // Knowledge config geometry lives in @/lib/knowledge-config (knowledgecfg-v1-d64).
 export { composePrompt, type ComposePromptOptions, type OntologyDensity } from "./compose";
+export { TUTOR_CANVAS_VOICE } from "./tutor-voice";
 export {
   TAP_SURFACE,
   TAP_SELECTIVE_THOUGHT_OVERLAY,

@@ -131,21 +131,6 @@ describe("product-intent surfaces (Explore/Drill always With AI)", () => {
     expect(guest).not.toContain("Open-ended Exploration");
     expect(guest).not.toContain("Timed Exploration");
 
-    const portal = read("components/WorkspaceKnowledgePortalPanel.tsx");
-    expect(portal).toContain("explore_dialog");
-    expect(portal).toContain("drill_dialog");
-    expect(portal).toContain("scout_dialog");
-    expect(portal).toContain("PRODUCT_INTENT_LABELS.scoutDialog");
-    expect(portal).toContain("PRODUCT_INTENT_LABELS.exploreDialog");
-    expect(portal).toContain("PRODUCT_INTENT_LABELS.drillDialog");
-    expect(portal).not.toMatch(/With AI or\s*Solo/);
-    expect(portal).not.toMatch(/open-ended or timed/i);
-
-    const landing = read("components/PracticePortalLandingClient.tsx");
-    expect(landing).toMatch(/Learn sessions require a block/);
-    expect(landing).toContain('return "Prepare"');
-    expect(landing).not.toMatch(/Open-ended sessions require a block/);
-
     const edit = read("components/WorkspaceBlockEditPanel.tsx");
     expect(edit).not.toContain("With AI");
     expect(edit).not.toContain(">Solo<");
@@ -851,8 +836,10 @@ describe("suggest from knowledge + simulation", () => {
 describe("Expand Map rename + suggest UI", () => {
   it("button and drawer use Explore / Expand Map naming", () => {
     const grid = readMapGridSurface();
-    expect(grid).toContain("WORKSPACE_MAP_TOGGLE_IDS");
-    expect(grid).toContain("data-workspace-mode-toggle-states");
+    const nav = read("components/WorkspaceSectionNav.tsx");
+    expect(nav).toContain("WORKSPACE_MAP_TOGGLE_IDS");
+    expect(nav).toContain("data-workspace-mode-toggle-states");
+    expect(nav).toContain("data-workspace-mode-by-title");
     expect(grid).not.toContain("data-map-explore-expand-toggle");
 
     const pane = read("components/WorkspaceEmptyMapPane.tsx");

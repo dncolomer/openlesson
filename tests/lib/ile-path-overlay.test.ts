@@ -161,7 +161,7 @@ describe("ile path overlay", () => {
     expect(stack).toContain("data-ile-path-overlay-toggle");
     const pathButton = stack.slice(
       stack.indexOf("data-ile-path-overlay-toggle"),
-      stack.indexOf("data-workspace-mode-toggle"),
+      stack.indexOf("data-map-notes-visibility-row"),
     );
     expect(pathButton).toContain("Path");
     expect(pathButton).toContain('data-ile-path-eye="open"');
@@ -180,8 +180,9 @@ describe("ile path overlay", () => {
     expect(preview).not.toContain('suggestMode="chapter"');
     const stackBody = stack.slice(stack.indexOf("data-map-minimap-stack"));
     expect(stackBody.indexOf("data-ile-path-overlay-toggle")).toBeGreaterThan(0);
+    expect(stack).not.toContain("data-workspace-mode-toggle");
     expect(stackBody.indexOf("data-ile-path-overlay-toggle")).toBeLessThan(
-      stackBody.indexOf("data-workspace-mode-toggle"),
+      stackBody.indexOf("data-map-notes-visibility-row"),
     );
     expect(world).toContain("ILE_PATH_YELLOW");
     expect(ILE_CHAPTER_BLOCK_ALPHA).toBe(0.94);

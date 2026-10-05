@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { ayclTokenFromBody, guardWorkspaceRoute, requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { normalizeWorkspaceGoal } from "@/lib/pow-api/conversion-goal";
+import { denyWorkspaceFeatureResponse } from "@/lib/workspace-feature-gate";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function PUT(
   req: NextRequest,
@@ -15,6 +17,21 @@ export async function PUT(
 
     const body = await req.json();
     const { is_public, title, description, workspace_goal } = body;
+
+    const admin = createAdminClient();
+    const { data: kindRow } = await admin
+      .from("workspaces")
+      .select("workspace_kind")
+      .eq("id", workspaceId)
+      .maybeSingle();
+    if (typeof is_public === "boolean") {
+      const denied = denyWorkspaceFeatureResponse(kindRow?.workspace_kind, "make_public");
+      if (denied) return denied;
+    }
+    if ("workspace_goal" in body) {
+      const denied = denyWorkspaceFeatureResponse(kindRow?.workspace_kind, "goals");
+      if (denied) return denied;
+    }
 
     const updates: Record<string, unknown> = {};
 

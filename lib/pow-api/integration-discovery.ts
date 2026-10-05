@@ -7,7 +7,7 @@ import {
   buildPerformanceApiPath,
 } from "./proof-of-work-integration";
 import { POW_API_BASE, STASH_API_BASE } from "@/lib/api/agent-api-paths";
-import { workspaceAllowsKnowledgeLinkMint } from "@/lib/workspace-kind";
+import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
 
 export const UNCERTAIN_SYSTEMS_SCOPE = {
   product: "Uncertain Systems",
@@ -192,7 +192,23 @@ export function recommendIntegrationActions(options: {
 }): RecommendedIntegrationAction[] {
   const actions: RecommendedIntegrationAction[] = [];
   const { proof_of_work_artifacts, blocks, has_workspace_goal, workspace_kind } = options;
-  const allowsLinkMint = workspaceAllowsKnowledgeLinkMint(workspace_kind);
+  if (!isKnowledgeRegionWorkspace(workspace_kind)) {
+    actions.push({
+      priority: 1,
+      mcp_tool: "get_workspace",
+      rest_equivalent: "GET .../workspaces/{id}",
+      reason: "Read this Learning workspace before using the map.",
+    });
+    if (blocks >= 0) {
+      actions.push({
+        priority: 2,
+        mcp_tool: "list_blocks",
+        rest_equivalent: "GET .../blocks",
+        reason: "Read the map blocks. This workspace does not accept proof of work or snapshots.",
+      });
+    }
+    return actions;
+  }
 
   if (!has_workspace_goal) {
     actions.push({
@@ -245,24 +261,13 @@ export function recommendIntegrationActions(options: {
     });
   }
 
-  if (allowsLinkMint && proof_of_work_artifacts >= 5 && blocks > 0) {
-    actions.push({
-      priority: 7,
-      mcp_tool: "create_tap_link",
-      rest_equivalent: "POST .../blocks/{blockId}/tap-links",
-      reason: "Optional Think Aloud Protocol session adds verbal reasoning signal to progress scoring.",
-    });
-  }
-
-  if (!allowsLinkMint) {
-    actions.push({
-      priority: 7,
-      mcp_tool: "buffer_proof_of_work",
-      rest_equivalent: `POST ${STASH_API_BASE}/workspaces/{id}/proof-of-work`,
-      reason:
-        "TAPBench Stash API — buffer then stash_proof_of_work / submit_stashed_proof_of_work. Knowledge Region agent path is PoW capture plus Stash TAPBench.",
-    });
-  }
+  actions.push({
+    priority: 7,
+    mcp_tool: "buffer_proof_of_work",
+    rest_equivalent: `POST ${STASH_API_BASE}/workspaces/{id}/proof-of-work`,
+    reason:
+      "Buffer proof of work, then stash_proof_of_work or submit_stashed_proof_of_work. Verification workspaces do not mint knowledge links.",
+  });
 
   actions.push({
     priority: 8,

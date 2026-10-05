@@ -22,6 +22,7 @@ export async function GET(req: NextRequest) {
       return jsonError(400, "workspaceId is required");
     }
     const auth = await guardWorkspaceRoute(workspaceId, {
+      feature: "map",
       ayclToken,
       requireAyclAuthoring: false,
     });
@@ -60,6 +61,7 @@ export async function PUT(req: NextRequest) {
       return jsonError(400, "workspaceId is required");
     }
     const auth = await guardWorkspaceRoute(workspaceId, {
+      feature: "map",
       ayclToken: ayclTokenFromBody(body),
       requireAyclAuthoring: true,
     });

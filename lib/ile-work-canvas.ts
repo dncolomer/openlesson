@@ -98,7 +98,7 @@ export function ileWorkCanvasXaiToolsInstruction(): string {
     `For an ordinary explanation, definition, question, or worked step, omit "elements" or send an empty array. Do not draw a flowchart, box diagram, or extra shape by default.`,
     "Skip eraser and selection — those are learner tools only. Skip image unless you already have a fileId.",
     `Reply as JSON: {"text":"<coaching reply, also placed as a text block>","textWidth":number,"origin":{"x":number,"y":number},"elements":[]}.`,
-    `"text" is plain sentences only. Do not put JSON, code fences, or element arrays inside "text".`,
+    `"text" is what the learner reads on the board. Write it as a wise, warm teacher: complete unhurried sentences, eloquent and plain, easy to start from, with no headings, bullets, or compressed exam stems. Do not put JSON, code fences, or element arrays inside "text".`,
     `"textWidth" is the coaching text box width in pixels. Choose it for this reply so the box fits the cluster. Do not reuse one width every time. A text element may set its own "width" the same way.`,
     `Include "elements" only for that necessary diagram (${shapes}). Arrows/lines/freedraw may include "points":[[x,y],...]. Labeled shapes use "label":{"text":"..."}. Place marks near related existing elements. Always include "text". Never mention this JSON format to the learner.`,
   ].join(" ");
@@ -216,8 +216,8 @@ const DEFAULT_DIMENSION = 100;
 const TEXT_GAP_Y = 48;
 const TEXT_ORIGIN_X = 80;
 const TEXT_ORIGIN_Y = 80;
-/** Narrow column so chapter seed / XAI replies stay on-screen. */
-export const ILE_WORK_CANVAS_TEXT_BOX_WIDTH = 320;
+/** Wide column so chapter seed and replies stay readable on the board. */
+export const ILE_WORK_CANVAS_TEXT_BOX_WIDTH = 520;
 
 let skeletonSeq = 0;
 
@@ -259,7 +259,19 @@ export function withIleWorkCanvasGridAppState(
     next.currentItemStrokeColor = ILE_WORK_CANVAS_STROKE_COLOR;
   }
   next.currentItemFontFamily = ILE_WORK_CANVAS_FONT_FAMILY;
+  if (!ileWorkCanvasStoredToolType(next.activeTool)) {
+    next.activeTool = { type: "text" };
+  }
   return next;
+}
+
+function ileWorkCanvasStoredToolType(activeTool: unknown): string {
+  if (typeof activeTool === "string") return activeTool.trim();
+  if (activeTool && typeof activeTool === "object" && !Array.isArray(activeTool)) {
+    const type = (activeTool as { type?: unknown }).type;
+    if (typeof type === "string") return type.trim();
+  }
+  return "";
 }
 
 export function emptyIleWorkCanvasScene(): IleWorkCanvasScene {
@@ -462,7 +474,14 @@ export function serializeIleWorkCanvasScene(
 
 function measureText(text: string, fontSize: number, lineHeight: number): { width: number; height: number } {
   const wrapped = wrapIleWorkCanvasText(text, ILE_WORK_CANVAS_TEXT_BOX_WIDTH, fontSize);
-  return { width: wrapped.width, height: wrapped.height };
+  const charW = Math.max(6, fontSize * 0.55);
+  const longest = wrapped.text.split("\n").reduce((max, line) => Math.max(max, line.length), 0);
+  const contentWidth = Math.max(96, Math.ceil(longest * charW));
+  void lineHeight;
+  return {
+    width: Math.min(wrapped.width, contentWidth),
+    height: wrapped.height,
+  };
 }
 
 /** Word-wrap into a narrow text box so long replies are visible without a single long line. */
@@ -951,7 +970,12 @@ export function isIleXaiLoadingElement(el: IleWorkCanvasElement | null | undefin
   return Boolean(el?.customData?.[ILE_XAI_LOADING_CUSTOM_DATA_KEY]);
 }
 
-/** Fixed thinking overlay / empty-nearby occupancy — square, not a shrink-to-copy chip. */
+/**
+ * Fixed thinking plate. It matches the text column so the reply can replace
+ * it in place. Rotating copy cannot resize it.
+ */
+export const ILE_XAI_REPLY_RESERVE_HEIGHT = 160;
+/** Legacy square used by placement fixtures. Live replies reserve the text column. */
 export const ILE_XAI_LOADING_BOX_SIZE = 128;
 export const ILE_XAI_LOADING_BOX_WIDTH = ILE_XAI_LOADING_BOX_SIZE;
 export const ILE_XAI_LOADING_BOX_HEIGHT = ILE_XAI_LOADING_BOX_SIZE;
@@ -968,12 +992,12 @@ export function ileWorkCanvasThinkingOverlayStyle(): {
   maxHeight: number;
 } {
   return {
-    width: ILE_XAI_LOADING_BOX_WIDTH,
-    height: ILE_XAI_LOADING_BOX_HEIGHT,
-    minWidth: ILE_XAI_LOADING_BOX_WIDTH,
-    minHeight: ILE_XAI_LOADING_BOX_HEIGHT,
-    maxWidth: ILE_XAI_LOADING_BOX_WIDTH,
-    maxHeight: ILE_XAI_LOADING_BOX_HEIGHT,
+    width: ILE_WORK_CANVAS_TEXT_BOX_WIDTH,
+    height: ILE_XAI_REPLY_RESERVE_HEIGHT,
+    minWidth: ILE_WORK_CANVAS_TEXT_BOX_WIDTH,
+    minHeight: ILE_XAI_REPLY_RESERVE_HEIGHT,
+    maxWidth: ILE_WORK_CANVAS_TEXT_BOX_WIDTH,
+    maxHeight: ILE_XAI_REPLY_RESERVE_HEIGHT,
   };
 }
 
@@ -1807,6 +1831,31 @@ export function ileWorkCanvasSceneToViewport(
   };
 }
 
+/**
+ * True when a new mark sits outside the current view. Replies that land
+ * inside the thinking plate should not pan the board.
+ */
+export function ileWorkCanvasMarksNeedScroll(
+  elements: readonly Pick<IleWorkCanvasElement, "x" | "y" | "width" | "height" | "isDeleted">[],
+  appState: IleWorkCanvasViewportAppState | null | undefined,
+  pad = 16,
+): boolean {
+  const rect = ileWorkCanvasSelectionViewportRect(
+    elements.filter((el) => !el.isDeleted),
+    appState,
+  );
+  if (!rect) return false;
+  const width = Number(appState?.width) || 0;
+  const height = Number(appState?.height) || 0;
+  if (width <= 0 || height <= 0) return false;
+  return (
+    rect.left < pad ||
+    rect.top < pad ||
+    rect.right > width - pad ||
+    rect.bottom > height - pad
+  );
+}
+
 export function ileWorkCanvasSelectionViewportRect(
   elements: readonly Pick<IleWorkCanvasElement, "x" | "y" | "width" | "height" | "isDeleted">[],
   appState: IleWorkCanvasViewportAppState | null | undefined,
@@ -2627,6 +2676,9 @@ const CANVAS_POW_ACTIONS = new Set([
   "clear-overlaps",
   "join",
   "dictate",
+  "answer",
+  "simplify",
+  "ask",
 ]);
 
 /**
@@ -2881,6 +2933,21 @@ export const ILE_WORK_CANVAS_OVERLAP_GAP = 16;
 
 export const ILE_WORK_CANVAS_COMMANDS = [
   {
+    id: "answer",
+    label: "Answer",
+    tooltip: "Answer the question texts you selected on the canvas.",
+  },
+  {
+    id: "simplify",
+    label: "Simplify",
+    tooltip: "Rewrite the selected text in shorter, plainer sentences.",
+  },
+  {
+    id: "ask",
+    label: "Ask",
+    tooltip: "Ask by voice. You can type the question instead.",
+  },
+  {
     id: "rephrase",
     label: "Rephrase",
     tooltip:
@@ -2930,10 +2997,62 @@ export type IleWorkCanvasCommandId = (typeof ILE_WORK_CANVAS_COMMANDS)[number]["
 
 export type IleWorkCanvasAskKind =
   | "ask"
+  | "answer"
+  | "simplify"
   | "selective-compress"
   | "refactor"
   | "suggest-insight"
   | "clear-overlaps";
+
+/** Ask can run with no selection. Every other command uses the selected marks. */
+export function ileWorkCanvasCommandNeedsSelection(id: string | null | undefined): boolean {
+  return String(id || "").trim() !== "ask";
+}
+
+export function filterIleWorkCanvasCommands(query: string | null | undefined) {
+  const q = String(query || "").trim().toLowerCase();
+  if (!q) return [...ILE_WORK_CANVAS_COMMANDS];
+  return ILE_WORK_CANVAS_COMMANDS.filter((command) => {
+    const label = command.label.toLowerCase();
+    const compact = label.replace(/\s+/g, "");
+    const dashed = label.replace(/\s+/g, "-");
+    return (
+      command.id.startsWith(q) ||
+      label.startsWith(q) ||
+      compact.startsWith(q) ||
+      dashed.startsWith(q)
+    );
+  });
+}
+
+/** Slash draft. `/ask what is force` is Ask plus the typed question. */
+export function ileCanvasCommandDraft(raw: string | null | undefined): {
+  slash: boolean;
+  query: string;
+  rest: string;
+  exactId: IleWorkCanvasCommandId | null;
+} {
+  const trimmed = String(raw ?? "").trim();
+  if (!trimmed.startsWith("/")) {
+    return { slash: false, query: "", rest: trimmed, exactId: null };
+  }
+  const body = trimmed.slice(1).trim();
+  const space = body.search(/\s/);
+  const head = (space === -1 ? body : body.slice(0, space)).toLowerCase();
+  const rest = space === -1 ? "" : body.slice(space + 1).trim();
+  const matches = filterIleWorkCanvasCommands(head);
+  const exact =
+    ILE_WORK_CANVAS_COMMANDS.find((command) => {
+      const label = command.label.toLowerCase();
+      return (
+        command.id === head ||
+        label === head ||
+        label.replace(/\s+/g, "") === head ||
+        label.replace(/\s+/g, "-") === head
+      );
+    }) ?? (head && matches.length === 1 ? matches[0] : null);
+  return { slash: true, query: head, rest, exactId: exact?.id ?? null };
+}
 
 export type IleWorkCanvasClearOverlapsResult = {
   scene: IleWorkCanvasScene;
@@ -3034,6 +3153,39 @@ export function buildIleWorkCanvasSuggestInsightUserMessage(input: {
   return ileWorkCanvasWithDomainPrefix(body, input.workspace);
 }
 
+export function buildIleWorkCanvasAnswerUserMessage(input: {
+  selectedElements?: readonly IleWorkCanvasElement[] | null;
+  workspace?: PromptWorkspaceContextInput | PromptWorkspaceContext | null;
+}): string {
+  const live = (input.selectedElements ?? []).filter((el) => el && !el.isDeleted);
+  const body = [
+    "Answer the selected question texts.",
+    "The learner wrote these questions on the canvas. Answer them in complete, unhurried sentences.",
+    "Leave the selected questions in place. The answer is the reply text.",
+    "Do not repeat the questions.",
+    "",
+    "Selected elements:",
+    ileWorkCanvasCommandSelectionListing(live),
+  ].join("\n");
+  return ileWorkCanvasWithDomainPrefix(body, input.workspace);
+}
+
+export function buildIleWorkCanvasSimplifyUserMessage(input: {
+  selectedElements?: readonly IleWorkCanvasElement[] | null;
+  workspace?: PromptWorkspaceContextInput | PromptWorkspaceContext | null;
+}): string {
+  const live = (input.selectedElements ?? []).filter((el) => el && !el.isDeleted);
+  const body = [
+    "Simplify the selected text.",
+    "Rewrite it in shorter, plainer sentences a learner can follow on a first read. Keep the same meaning.",
+    "Leave the selected marks in place. The simpler wording is the reply text.",
+    "",
+    "Selected elements:",
+    ileWorkCanvasCommandSelectionListing(live),
+  ].join("\n");
+  return ileWorkCanvasWithDomainPrefix(body, input.workspace);
+}
+
 export function buildIleWorkCanvasClearOverlapsUserMessage(input: {
   selectedElements?: readonly IleWorkCanvasElement[] | null;
   workspace?: PromptWorkspaceContextInput | PromptWorkspaceContext | null;
@@ -3066,6 +3218,8 @@ export function buildIleWorkCanvasCommandUserMessage(input: {
   if (kind === "refactor") return buildIleWorkCanvasRefactorUserMessage(input);
   if (kind === "suggest-insight") return buildIleWorkCanvasSuggestInsightUserMessage(input);
   if (kind === "clear-overlaps") return buildIleWorkCanvasClearOverlapsUserMessage(input);
+  if (kind === "answer") return buildIleWorkCanvasAnswerUserMessage(input);
+  if (kind === "simplify") return buildIleWorkCanvasSimplifyUserMessage(input);
   return buildIleWorkCanvasAskUserMessage({
     prompt: String(input.prompt || ""),
     selectedElements: input.selectedElements,

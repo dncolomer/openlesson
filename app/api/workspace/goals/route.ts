@@ -20,6 +20,7 @@ import {
 } from "@/lib/pow-api/goals-store";
 import { requireProductWorkspaceEvalAuth } from "@/lib/product-workspace-auth";
 import { assertWorkspacePolicy } from "@/lib/workspace-access-policy";
+import { denyWorkspaceFeatureById } from "@/lib/workspace-feature-gate";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
@@ -34,6 +35,8 @@ async function resolveGoalsAccess(
 > {
   const auth = await requireProductWorkspaceEvalAuth(workspaceId, ayclToken);
   if (!auth.ok) return auth;
+  const denied = await denyWorkspaceFeatureById(workspaceId, "goals");
+  if (denied) return { ok: false, response: denied };
 
   if (mode === "write") {
     const policy = assertWorkspacePolicy({

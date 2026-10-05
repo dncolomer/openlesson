@@ -346,7 +346,8 @@ describe("TAP Learning pre-game settings surface", () => {
     expect(welcome).not.toContain("data-ile-pregame-presets-band");
     expect(welcome).not.toContain("data-ile-insight-slot-slider");
     expect(welcome).not.toContain("data-ile-gather-max-slider");
-    expect(welcome).toContain("data-ile-session-chapter-count");
+    expect(welcome).not.toContain("data-ile-session-chapter-count");
+    expect(welcome).not.toContain("data-ile-pow-expense-slider");
     expect(welcome).toContain("data-ile-session-insight-goal");
     expect(welcome).not.toContain("InitialChaptersPicker");
     expect(welcome).not.toContain("IleContinueMapPreview");
@@ -444,7 +445,8 @@ describe("TAP Learning pre-game settings surface", () => {
     expect(backAt).toBeLessThan(confirmAt);
     expect(picker).toContain("data-ile-map-type-use-when");
     expect(welcome).not.toContain("catalogStrip");
-    expect(welcome).toContain("data-ile-session-chapter-count");
+    expect(welcome).not.toContain("data-ile-session-chapter-count");
+    expect(welcome).toContain("data-ile-session-insight-goal");
     expect(welcome).not.toContain("data-ile-pregame-economy-map");
     expect(welcome).toContain("lg:grid-cols-2");
     expect(picker).toContain("line-clamp-3");

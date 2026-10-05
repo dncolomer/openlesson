@@ -70,9 +70,7 @@ describe("course authoring tools report", () => {
       "workspace",
       "dags",
       "map_types",
-      "goals",
       "context",
-      "knowledge",
       "settings",
     ]);
 

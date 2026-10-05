@@ -454,6 +454,43 @@ export function buildIleThoughtsPoolCandidateRequest(input: {
   });
 }
 
+/**
+ * Tool rows uploaded since the previous insight, plus the sentence being crafted.
+ * The public page counts these ids as Proof of Work.
+ */
+export function ileInsightWorkThoughtsSinceMark(input: {
+  artifacts?: readonly {
+    type?: string | null;
+    proof_of_work_type?: string | null;
+    kind?: string | null;
+    tool_action?: string | null;
+    tool_name?: string | null;
+  }[] | null;
+  sinceIndex?: number | null;
+  draft: { id: string; text: string };
+}): { id: string; text: string }[] {
+  const start = Math.max(0, Math.floor(Number(input.sinceIndex) || 0));
+  const slice = (input.artifacts ?? []).slice(start);
+  const rows: { id: string; text: string }[] = [];
+  slice.forEach((item, index) => {
+    const type = String(item?.type || item?.proof_of_work_type || item?.kind || "")
+      .trim()
+      .toLowerCase();
+    if (type && type !== "tool") return;
+    const action = String(item?.tool_action || item?.tool_name || "work").trim() || "work";
+    rows.push({
+      id: `work-${start + index}-${action}`.slice(0, 80),
+      text: action,
+    });
+  });
+  const draftId = String(input.draft.id || "").trim();
+  const draftText = String(input.draft.text || "").trim();
+  if (draftId && draftText && !rows.some((row) => row.id === draftId)) {
+    rows.push({ id: draftId, text: draftText });
+  }
+  return rows;
+}
+
 /** Persist an accepted craft as the existing insight row (session + optional chapter). */
 export function buildIleTurnInsightPersistPayload(input: {
   title: unknown;

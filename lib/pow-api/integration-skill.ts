@@ -195,24 +195,36 @@ ${blockLines || "  none"}`;
 ${blockTable || "  No blocks yet."}`;
 }
 
-/** Integration UI copy for Knowledge Region workspaces — PoW + TAPBench Stash, no guest-link mint. */
+/** Integration UI copy for a Verification workspace. */
 export function knowledgeRegionIntegrationCopy(): {
   skillDescription: string;
   mcpNote: string;
 } {
   return {
     skillDescription:
-      "Download a skill.md for this Knowledge Region workspace. Agents use the Proof-of-Work API (workspace/block/progress read, proof-of-work schema + upload) plus Snapshot (lwm_snapshot, world model, knowledge config/distance/regions) and TAPBench Stash (buffer_proof_of_work / stash_proof_of_work / submit_stashed_proof_of_work under /api/v3/stash).",
+      "Download a skill.md for this Verification workspace. Agents use the Proof-of-Work API (proof-of-work schema + upload) plus Snapshot (lwm_snapshot, world model, knowledge config, distance, regions) and stash (buffer_proof_of_work / stash_proof_of_work / submit_stashed_proof_of_work under /api/v3/stash).",
     mcpNote:
-      "MCP JSON-RPC at POST /api/mcp with Bearer auth. For this workspace, instrument PoW capture/schema/upload, Snapshot, and TAPBench Stash. Guest knowledge-link mint is not part of Knowledge Region workspaces.",
+      "MCP JSON-RPC at POST /api/mcp with Bearer auth. For this workspace, instrument proof-of-work capture, snapshots, and stash. This workspace has no map, DAG, map type, or AYCL tools.",
+  };
+}
+
+export function learningWorkspaceIntegrationCopy(): {
+  skillDescription: string;
+  mcpNote: string;
+} {
+  return {
+    skillDescription:
+      "Download a skill.md for this Learning workspace. Agents can read the workspace and its map blocks, then regenerate this skill. Proof of work, snapshots, and knowledge regions belong to a Verification workspace.",
+    mcpNote:
+      "MCP JSON-RPC at POST /api/mcp with Bearer auth. For this workspace the tools are list_workspaces, get_workspace, list_blocks, and generate_integration_skill.",
   };
 }
 
 export function formatSkillRestEndpointsLine(kind: unknown): string {
   if (isKnowledgeRegionWorkspace(kind)) {
-    return `REST: GET /blocks, POST /proof-of-work-schema, POST /proof-of-work, POST /lwm-snapshot (LWM Snapshot), POST /integration-skill; Snapshot GET world-model, knowledge-config, knowledge-config/trajectory, snapshot-history, custom-knowledge-regions, POST knowledge-distance; TAPBench Stash POST ${STASH_API_BASE}/workspaces/{id}/proof-of-work (buffer_proof_of_work), POST ${STASH_API_BASE}/workspaces/{id}/stash (stash_proof_of_work), POST ${STASH_API_BASE}/workspaces/{id}/submit (submit_stashed_proof_of_work) (workspace create is UI-only; do not document POST /workspaces or MCP create_workspace as supported)`;
+    return `REST: POST /proof-of-work-schema, POST /proof-of-work, POST /lwm-snapshot (LWM Snapshot), POST /integration-skill; Snapshot GET world-model, knowledge-config, knowledge-config/trajectory, snapshot-history, custom-knowledge-regions, POST knowledge-distance; stash POST ${STASH_API_BASE}/workspaces/{id}/proof-of-work (buffer_proof_of_work), POST ${STASH_API_BASE}/workspaces/{id}/stash (stash_proof_of_work), POST ${STASH_API_BASE}/workspaces/{id}/submit (submit_stashed_proof_of_work) (workspace create is UI-only; do not document POST /workspaces or MCP create_workspace as supported)`;
   }
-  return "REST: GET /blocks, POST /proof-of-work-schema, POST /proof-of-work, POST /lwm-snapshot (LWM Snapshot), POST /integration-skill (workspace create is UI-only; do not document POST /workspaces or MCP create_workspace as supported)";
+  return "REST: GET /workspaces, GET /workspaces/{id}, GET /blocks, POST /integration-skill (workspace create is UI-only; do not document proof of work, snapshots, or knowledge links)";
 }
 
 export function buildIntegrationSkillInstructions(
@@ -266,6 +278,43 @@ export function buildIntegrationSkillInstructions(
 
   const workspaceKind = workspace.workspace_kind ?? status?.workspace.workspace_kind;
   const knowledgeRegion = isKnowledgeRegionWorkspace(workspaceKind);
+  if (!knowledgeRegion) {
+    const mcpToolList = formatSkillMcpToolList(workspaceKind);
+    const restEndpointsLine = formatSkillRestEndpointsLine(workspaceKind);
+    return `Generate a custom integration skill.md document for "${request.integration_name}" integrating with a Learning workspace on Uncertain Systems.
+
+${scope}
+
+This workspace is a Learning workspace: a map of blocks that people in the organisation play. It does not expose goals, verification flows, knowledge rankings, snapshots, knowledge regions, Data Studio, or proof-of-work upload.
+
+YAML frontmatter (required):
+---
+name: ${skillName}
+description: ${request.integration_name} integration skill for reading a Learning workspace map.
+---
+
+Workspace:
+- id: ${workspace.id}
+- title: ${workspace.title || workspace.root_topic || "Untitled"}
+- root_topic: ${workspace.root_topic || "n/a"}
+- description: ${workspace.description || status?.workspace.description || "n/a"}
+
+Base URL for examples: ${baseUrl}
+Integration skill regeneration API: POST ${integrationSkillPath}
+
+Required content:
+1. Purpose — read this Learning workspace map. Do not tell the agent to upload proof of work, request a snapshot, mint a link, or sell the workspace.
+2. Authentication table (Bearer sk_ / gsk_, scopes workspaces:read and workspaces:write for skill regeneration).
+3. Endpoints table:
+   - ${restEndpointsLine}
+   - MCP (JSON-RPC at POST /api/mcp with Bearer auth): ${mcpToolList}
+4. Workspace-specific block list from the current status, as read-only context.
+5. Quick checklist: get_workspace → list_blocks → regenerate this skill when the map changes.
+
+${statusSection}
+
+Return ONLY the markdown document. No JSON wrapper. No code fences around the entire document.`;
+  }
   const restEndpointsLine = formatSkillRestEndpointsLine(workspaceKind);
   const mcpToolList = formatSkillMcpToolList(workspaceKind);
   const krStashSection = knowledgeRegion

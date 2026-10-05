@@ -8,14 +8,7 @@ import {
 } from "@/lib/map-annotation-layers";
 import { shouldShowMapNotesPlaneToggle, toggleMapNotesPlaneVisible } from "@/lib/learner-map-notes";
 import { MINIMAP_FRAME_HEIGHT, MINIMAP_FRAME_WIDTH } from "@/lib/map-minimap-clusters";
-import {
-  WORKSPACE_MAP_TOGGLE_IDS,
-  nextWorkspaceMapToggle,
-  resolveWorkspaceMapToggleId,
-  workspaceModeDisplayLabel,
-  type WorkspaceInteractionMode,
-  type WorkspaceMapToggleId,
-} from "@/lib/workspace-mode";
+import type { WorkspaceInteractionMode, WorkspaceMapToggleId } from "@/lib/workspace-mode";
 import type { MapOverlayPersistScope } from "@/lib/map-overlay-persist";
 
 export function MapRightStack({
@@ -23,16 +16,16 @@ export function MapRightStack({
   mountMapNotes,
   overlayPersist,
   workspaceId,
-  onMapExploreToggle,
-  onInteractionModeChange,
-  onMapToggle,
-  mapToggleIds,
+  onMapExploreToggle: _onMapExploreToggle,
+  onInteractionModeChange: _onInteractionModeChange,
+  onMapToggle: _onMapToggle,
+  mapToggleIds: _mapToggleIds,
   mapNotesCount,
   annotationLayers,
   minimapStackRef,
   learnerMode,
-  interactionModeProp,
-  mapExploreOpen,
+  interactionModeProp: _interactionModeProp,
+  mapExploreOpen: _mapExploreOpen,
   mapNotesPlaneVisible,
   setMapNotesPlaneVisible,
   handleMapNoteAddAtCenter,
@@ -81,22 +74,9 @@ export function MapRightStack({
   /** TAP Learning chapter map: show or hide the route overlay. Default is on. */
   pathOverlay?: { visible: boolean; onToggle: () => void } | null;
 }) {
-  const toggleIds =
-    mapToggleIds && mapToggleIds.length > 0
-      ? mapToggleIds
-      : WORKSPACE_MAP_TOGGLE_IDS;
-  const toggleStates = toggleIds
-    .map((id) => workspaceModeDisplayLabel(id).toLowerCase())
-    .join(",");
   const show =
     pathOverlay != null ||
-    (!viewOnly &&
-      (mountMapNotes ||
-        overlayPersist ||
-        workspaceId ||
-        onMapToggle ||
-        onMapExploreToggle ||
-        onInteractionModeChange)) ||
+    (!viewOnly && (mountMapNotes || overlayPersist || Boolean(workspaceId))) ||
     (viewOnly &&
       (shouldShowMapNotesPlaneToggle(mapNotesCount) ||
         shouldShowAnnotationLayerToggles(annotationLayers.length)));
@@ -176,67 +156,6 @@ export function MapRightStack({
             </svg>
           )}
         </button>
-      ) : null}
-      {!viewOnly &&
-      (typeof onMapToggle === "function" ||
-        typeof onInteractionModeChange === "function") ? (
-        <div
-          className="flex w-full shrink-0 items-center gap-0.5 rounded-none border border-neutral-700/90 bg-neutral-950/90 p-0.5 shadow-[0_4px_14px_rgba(0,0,0,0.35)] backdrop-blur-sm"
-          data-workspace-mode-toggle
-          data-workspace-mode-under-minimap
-          data-workspace-mode-toggle-states={toggleStates}
-          role="group"
-          aria-label="Workspace mode"
-        >
-          {toggleIds.map((id) => {
-            const interaction: WorkspaceInteractionMode =
-              interactionModeProp === "learner" || interactionModeProp === "creator"
-                ? interactionModeProp
-                : learnerMode
-                  ? "learner"
-                  : "creator";
-            const current = resolveWorkspaceMapToggleId({
-              interactionMode: interaction,
-              exploreOpen: mapExploreOpen,
-            });
-            const active = current === id;
-            const label = workspaceModeDisplayLabel(id);
-            return (
-              <button
-                key={id}
-                type="button"
-                data-workspace-mode={id}
-                data-active={active ? "true" : "false"}
-                aria-pressed={active}
-                aria-label={label}
-                onClick={() => {
-                  if (typeof onMapToggle === "function") {
-                    onMapToggle(id);
-                    return;
-                  }
-                  const next = nextWorkspaceMapToggle({
-                    clicked: id,
-                    interactionMode: interaction,
-                    exploreOpen: mapExploreOpen,
-                  });
-                  if (next.exploreOpen !== mapExploreOpen) {
-                    onMapExploreToggle?.();
-                  }
-                  if (next.interactionMode !== interaction) {
-                    onInteractionModeChange?.(next.interactionMode);
-                  }
-                }}
-                className={`min-w-0 flex-1 rounded-none px-1 py-1.5 text-center text-[10px] font-medium uppercase tracking-normal transition ${
-                  active
-                    ? "bg-white/15 text-white"
-                    : "text-neutral-500 hover:text-neutral-300"
-                }`}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
       ) : null}
       {mountMapNotes &&
       (!viewOnly || shouldShowMapNotesPlaneToggle(mapNotesCount)) ? (

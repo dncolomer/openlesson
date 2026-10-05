@@ -84,6 +84,7 @@ export async function POST(req: NextRequest) {
     const scope: SimulationSampleScope = scopeResult;
 
     const auth = await guardWorkspaceRoute(workspaceId, {
+      feature: "map",
       ayclToken: ayclTokenFromBody(body),
     });
     if (!auth.ok) return auth.response;

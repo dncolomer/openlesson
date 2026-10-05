@@ -16,6 +16,9 @@ export const INSIGHT_HOME_LABEL = UNSYS_STANDARD_SHARE_SITE_NAME;
 export const INSIGHT_FALLBACK_TITLE = "Insight";
 export const INSIGHT_FALLBACK_WORKSPACE_NAME = "Workspace";
 
+/** Blueprint plate on every public insight page, in place of a session aesthetic. */
+export const INSIGHT_PAGE_BLUEPRINT = "/lp-boxes/insight-blueprint.jpg";
+
 /** White note on the public insight hero. */
 export const INSIGHT_HERO_NOTE_TITLE = "Proof of a unique and genuine insight";
 export const INSIGHT_HERO_NOTE_BODY =

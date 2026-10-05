@@ -15,6 +15,7 @@ import {
 import {
   INSIGHT_HERO_NOTE_BODY,
   INSIGHT_HERO_NOTE_TITLE,
+  INSIGHT_PAGE_BLUEPRINT,
   deriveInsightPageStats,
 } from "@/lib/insight-share";
 
@@ -95,14 +96,10 @@ export function InsightDetailClient({ insightId }: { insightId: string }) {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#0a0a0a] text-white">
-      {insight.aesthetic_image ? (
-        <div
-          className="absolute inset-0 bg-cover bg-center opacity-40"
-          style={{ backgroundImage: `url(${insight.aesthetic_image})` }}
-        />
-      ) : (
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(120,120,120,0.18),transparent_42%),linear-gradient(180deg,#111,#050505)]" />
-      )}
+      <div
+        className="absolute inset-0 bg-cover bg-center opacity-40"
+        style={{ backgroundImage: `url(${INSIGHT_PAGE_BLUEPRINT})` }}
+      />
       <div className="absolute inset-0 bg-gradient-to-b from-black/85 via-black/60 to-black/95" />
 
       <div className="relative z-10 mx-auto flex min-h-screen max-w-3xl flex-col px-6 py-10">
@@ -150,15 +147,11 @@ export function InsightDetailClient({ insightId }: { insightId: string }) {
           data-insight-hero
           className="relative mb-8 overflow-hidden rounded-none border border-white/10 shadow-2xl shadow-black/50"
         >
-          {insight.aesthetic_image ? (
-            <img
-              src={insight.aesthetic_image}
-              alt=""
-              className="h-56 w-full object-cover md:h-72"
-            />
-          ) : (
-            <div className="h-56 w-full bg-neutral-900 md:h-72" />
-          )}
+          <img
+            src={INSIGHT_PAGE_BLUEPRINT}
+            alt=""
+            className="h-56 w-full object-cover md:h-72"
+          />
           <div
             data-insight-hero-note
             className="absolute inset-x-0 top-0 border-b border-neutral-200 bg-white px-4 py-3 text-neutral-950 sm:px-5 sm:py-3.5"

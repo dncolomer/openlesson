@@ -374,6 +374,8 @@ describe("public insight OG title + page stats", () => {
       insightDetail.indexOf("data-insight-hero"),
       insightDetail.indexOf("data-insight-hero-note"),
     );
+    expect(hero).toContain("INSIGHT_PAGE_BLUEPRINT");
+    expect(hero).not.toContain("aesthetic_image");
     expect(hero).toContain("rounded-none");
     expect(hero).not.toContain("rounded-2xl");
     expect(insightDetail).toContain("INSIGHT_HERO_NOTE_TITLE");

@@ -213,7 +213,7 @@ describe("TAPBench project landing", () => {
     expect(landing).toContain('label: "How to run"');
     expect(PLATFORM_PRODUCTS.tapbench.name).toBe("TAPBench");
     expect(PLATFORM_PRODUCTS.tapbench.href).toBe("/tapbench");
-    expect(PLATFORM_PRODUCTS.tapbench.image).toBe("/lp-boxes/tapbench-maps.jpg");
+    expect(PLATFORM_PRODUCTS.tapbench.image).toBe("/lp-boxes/tapbench-maps-blueprint.jpg");
     expect(PLATFORM_LAYER_LIST[2].name).toBe("Custom Knowledge Mapping");
     expect(PLATFORM_LAYER_LIST[2].body).toMatch(/target audience/);
     expect(PLATFORM_LAYER_LIST[2].body).not.toMatch(/physical place/);

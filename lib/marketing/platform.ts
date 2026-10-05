@@ -114,8 +114,8 @@ export const PLATFORM_PRODUCTS = {
     href: LEARNING_HARNESS_PATH,
     cta: "Explore",
     pricingHref: HARNESS_PRICING_PATH,
-    image: "/lp-boxes/harness-books.jpg",
-    imageAlt: "An open black notebook with a square grid, a compass, and a stack of black volumes on a dark field",
+    image: "/lp-boxes/harness-books-blueprint.jpg",
+    imageAlt: "Blueprint sketch of an open gridded notebook, a compass, and a stack of volumes",
   },
   verification: {
     eyebrow: "FOR ENTERPRISE",
@@ -125,8 +125,8 @@ export const PLATFORM_PRODUCTS = {
     href: KNOWLEDGE_VERIFICATION_PATH,
     cta: "Explore",
     pricingHref: VERIFICATION_PRICING_PATH,
-    image: "/lp-boxes/verification-bottles.jpg",
-    imageAlt: "Dark glass laboratory bottles with blank plates and red seals on a black field",
+    image: "/lp-boxes/verification-bottles-blueprint.jpg",
+    imageAlt: "Blueprint sketch of laboratory bottles with blank plates and red seals",
   },
   tapbench: {
     eyebrow: "FOR SCIENCE",
@@ -135,8 +135,8 @@ export const PLATFORM_PRODUCTS = {
     body: "Agents explore knowledge the way a person explores a physical place. We run the benchmark to pick the setup that is best at that job.",
     href: TAPBENCH_PATH,
     cta: "Explore",
-    image: "/lp-boxes/tapbench-maps.jpg",
-    imageAlt: "Topographic map sheets with an amber route, a magnifying glass, and a compass on a black field",
+    image: "/lp-boxes/tapbench-maps-blueprint.jpg",
+    imageAlt: "Blueprint sketch of topographic sheets, an amber route, a magnifier, and a compass",
   },
 } as const;
 

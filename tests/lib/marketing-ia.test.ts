@@ -104,16 +104,16 @@ describe("landing: hard-domain learning experiences with product layers", () => 
     expect(PLATFORM_PRODUCTS.harness.name).toBe("Learning Harness");
     expect(PLATFORM_PRODUCTS.harness.body).toBe(HARNESS_PRODUCT_COPY.lead);
     expect(PLATFORM_PRODUCTS.verification.name).toBe("Knowledge Verification");
-    expect(PLATFORM_PRODUCTS.harness.image).toBe("/lp-boxes/harness-books.jpg");
-    expect(PLATFORM_PRODUCTS.verification.image).toBe("/lp-boxes/verification-bottles.jpg");
-    expect(PLATFORM_PRODUCTS.tapbench.image).toBe("/lp-boxes/tapbench-maps.jpg");
+    expect(PLATFORM_PRODUCTS.harness.image).toBe("/lp-boxes/harness-books-blueprint.jpg");
+    expect(PLATFORM_PRODUCTS.verification.image).toBe("/lp-boxes/verification-bottles-blueprint.jpg");
+    expect(PLATFORM_PRODUCTS.tapbench.image).toBe("/lp-boxes/tapbench-maps-blueprint.jpg");
     expect(PLATFORM_PRODUCTS.tapbench.href).toBe("/tapbench");
     expect(PLATFORM_PRODUCTS.tapbench.name).toBe("TAPBench");
     expectExplorationFrame(PLATFORM_PRODUCTS.tapbench.body);
     expectNoDroppedLeadOrCostume(PLATFORM_PRODUCTS.tapbench.body);
-    expect(existsSync(join(ROOT, "public/lp-boxes/harness-books.jpg"))).toBe(true);
-    expect(existsSync(join(ROOT, "public/lp-boxes/verification-bottles.jpg"))).toBe(true);
-    expect(existsSync(join(ROOT, "public/lp-boxes/tapbench-maps.jpg"))).toBe(true);
+    expect(existsSync(join(ROOT, "public/lp-boxes/harness-books-blueprint.jpg"))).toBe(true);
+    expect(existsSync(join(ROOT, "public/lp-boxes/verification-bottles-blueprint.jpg"))).toBe(true);
+    expect(existsSync(join(ROOT, "public/lp-boxes/tapbench-maps-blueprint.jpg"))).toBe(true);
     expect(landing).toContain("grayscale");
   });
 
@@ -144,7 +144,7 @@ describe("landing: hard-domain learning experiences with product layers", () => 
     expect(experiment).toContain("Build a region");
     expect(PLATFORM_PRODUCTS.tapbench.name).toBe("TAPBench");
     expect(PLATFORM_PRODUCTS.tapbench.href).toBe("/tapbench");
-    expect(PLATFORM_PRODUCTS.tapbench.image).toBe("/lp-boxes/tapbench-maps.jpg");
+    expect(PLATFORM_PRODUCTS.tapbench.image).toBe("/lp-boxes/tapbench-maps-blueprint.jpg");
     expect(PLATFORM_LAYER_LIST[2].name).toBe("Custom Knowledge Mapping");
     expect(PLATFORM_LAYER_LIST[2].body).toBe(
       "We use this tech to see where a target audience actually is. Knowledge, mapped.",

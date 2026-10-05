@@ -16,7 +16,6 @@ import {
 import {
   INSIGHT_HERO_NOTE_BODY,
   INSIGHT_HERO_NOTE_TITLE,
-  INSIGHT_PAGE_BLUEPRINT,
   INSIGHT_PAGE_LIGHT_CONE,
   deriveInsightPageStats,
   insightPageFieldImage,
@@ -150,11 +149,6 @@ export function InsightDetailClient({ insightId }: { insightId: string }) {
             src={INSIGHT_PAGE_LIGHT_CONE}
             alt=""
             className="block w-full"
-          />
-          <img
-            src={INSIGHT_PAGE_BLUEPRINT}
-            alt=""
-            className="block w-full border-t border-white/40"
           />
           <div
             data-insight-hero-note

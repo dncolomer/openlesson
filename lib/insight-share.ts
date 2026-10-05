@@ -16,10 +16,7 @@ export const INSIGHT_HOME_LABEL = UNSYS_STANDARD_SHARE_SITE_NAME;
 export const INSIGHT_FALLBACK_TITLE = "Insight";
 export const INSIGHT_FALLBACK_WORKSPACE_NAME = "Workspace";
 
-/** Blueprint plate on every public insight page, in place of a session aesthetic. */
-export const INSIGHT_PAGE_BLUEPRINT = "/lp-boxes/insight-blueprint.jpg";
-
-/** Light cone: past below the present, future above it. */
+/** Light cone on every public insight page: past below the present, future above it. */
 export const INSIGHT_PAGE_LIGHT_CONE = "/lp-boxes/insight-light-cone.jpg";
 
 /** Same Greco-futurism field the homepage and dashboard use. */

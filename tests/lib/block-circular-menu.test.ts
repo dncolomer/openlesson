@@ -390,7 +390,8 @@ describe("circular menu source wiring", () => {
     expect(helios).not.toContain("ImDoneAnsweringControl");
     expect(helios).toContain("IleChapterHeliosActions");
 
-    expect(sessionList).toContain('circularMenuSurface={learnerMode ? "workspace-learner" : "none"}');
+    expect(sessionList).toContain("resolveBlockCircularMenuSurface");
+    expect(sessionList).toContain("practiceMenu");
     expect(wsView).toContain("nextLearnerDrawerRequest");
     expect(learner).toContain("requestedDrawerId");
     expect(drawers).toContain("requestedDrawerId");

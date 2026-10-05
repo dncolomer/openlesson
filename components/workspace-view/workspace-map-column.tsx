@@ -58,6 +58,7 @@ export function WorkspaceMapColumn({
   mapExploreOpen,
   onMapExploreToggle,
   onMapToggle,
+  practiceMenu = false,
   interactionMode,
   ayclCapabilities,
   selectInteractionMode,
@@ -112,6 +113,8 @@ export function WorkspaceMapColumn({
   mapExploreOpen: boolean;
   onMapExploreToggle: () => void;
   onMapToggle?: (id: "creator" | "learner" | "explore") => void;
+  /** Keep Calibrate / Learn / Drill on the map without a Play mode. */
+  practiceMenu?: boolean;
   interactionMode: WorkspaceInteractionMode;
   ayclCapabilities: AyclCapabilities | null;
   selectInteractionMode: (mode: WorkspaceInteractionMode) => void;
@@ -129,6 +132,7 @@ export function WorkspaceMapColumn({
         onFork={() => {}}
         isOwner={isOwner}
         learnerMode={isLearnerMode}
+        practiceMenu={practiceMenu}
         onCircularMenuAction={onCircularMenuAction}
         learnerScopeId={currentUserId || ayclToken || "local"}
         cloneArmed={cloneArmed}

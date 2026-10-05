@@ -333,7 +333,8 @@ describe("Build / Play mode display labels", () => {
     expect(nav).toContain("data-workspace-mode-toggle");
     expect(nav).toContain("data-workspace-mode-by-title");
     expect(nav).toContain("workspaceModeDisplayLabel");
-    expect(nav).toContain("WORKSPACE_MAP_TOGGLE_IDS");
+    expect(nav).toContain("workspaceModeControlMounted");
+    expect(nav).not.toContain("WORKSPACE_MAP_TOGGLE_IDS");
     expect(nav.indexOf("data-workspace-mode-by-title")).toBeLessThan(
       nav.indexOf("data-workspace-section-title"),
     );

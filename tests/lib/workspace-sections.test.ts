@@ -227,7 +227,7 @@ describe("WorkspaceView section shell wiring", () => {
     expect(viewSource).toContain('from "@/lib/workspace-sections"');
     expect(viewSource).toContain("resolveWorkspaceSectionLayout");
     expect(viewSource).toContain("resolveActiveSection");
-    expect(viewSource).toContain("availableWorkspaceSections");
+    expect(viewSource).toContain("workspaceSurfaceShowsAuthoring");
     expect(viewSource).toContain("canAccessPrivilegedWorkspaceSections");
     expect(viewSource).toContain("isOrgAdmin");
     expect(viewSource).toContain("WorkspaceSectionNav");

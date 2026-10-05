@@ -41,7 +41,6 @@ import {
 import { resolveProductIntent } from "@/lib/product-intent";
 import { WorkspaceRightDrawers } from "@/components/workspace-view/workspace-right-drawers";
 import {
-  availableWorkspaceSections,
   canAccessPrivilegedWorkspaceSections,
   defaultWorkspaceSection,
   resolveWorkspaceSectionLayout,
@@ -55,6 +54,9 @@ import {
   normalizeWorkspaceInteractionMode,
   resolveActiveSectionForMode,
   resolveWorkspaceModeShell,
+  workspaceIdlePaneShowsExplore,
+  workspaceSurfaceShowsAuthoring,
+  workspaceSurfaceShowsPracticeMenu,
   type WorkspaceInteractionMode,
 } from "@/lib/workspace-mode";
 import { parseWorkspaceKind } from "@/lib/workspace-kind";
@@ -646,8 +648,11 @@ export function WorkspaceView({
       isOrgAdmin,
       isLoggedIn: Boolean(currentUserId) || Boolean(ayclToken),
       workspaceKind,
+      allowAuthoring: ayclCapabilities
+        ? ayclCapabilities.allowCreatorModeToggle
+        : undefined,
     }),
-    [ayclToken, currentUserId, isOrgAdmin, isOwner, workspaceKind],
+    [ayclCapabilities, ayclToken, currentUserId, isOrgAdmin, isOwner, workspaceKind],
   );
 
   useEffect(() => {
@@ -741,6 +746,9 @@ export function WorkspaceView({
     // AYCL token holders are "signed in" for Learner Knowledge without a cookie session.
     isLoggedIn: Boolean(currentUserId) || Boolean(ayclToken),
     workspaceKind,
+    allowAuthoring: ayclCapabilities
+      ? ayclCapabilities.allowCreatorModeToggle
+      : undefined,
   });
   const resolvedSection = resolveActiveSectionForMode({
     mode: interactionMode,
@@ -748,20 +756,31 @@ export function WorkspaceView({
     ...sectionAuth(),
   });
   const sectionLayout = resolveWorkspaceSectionLayout(resolvedSection);
-  // Mode-aware section list (Learner: workspace+knowledge; Creator: shipped registry).
-  // Knowledge Region creator includes Context and omits the map, DAGs, and Simulation.
-  const visibleSections =
-    interactionMode === "learner"
-      ? modeShell.sections
-      : availableWorkspaceSections({
-          isOwner,
-          isOrgAdmin,
-          workspaceKind,
-          isLoggedIn: Boolean(currentUserId) || Boolean(ayclToken),
-        });
-  const isLearnerMode = interactionMode === "learner";
-  const showCreatorDrawers = mountsCreatorAuthoringDrawers(interactionMode);
-  const showLearnerDrawer = mountsLearnerPracticeDrawer(interactionMode);
+  // One surface: the map plus authoring sections for people who can design.
+  // Verification keeps its own list. Play-only stays on the map.
+  const visibleSections = modeShell.sections;
+  const authoringOnMap = workspaceSurfaceShowsAuthoring({
+    isOwner,
+    isOrgAdmin,
+    allowAuthoring: ayclCapabilities
+      ? ayclCapabilities.allowCreatorModeToggle
+      : undefined,
+    workspaceKind,
+  });
+  const practiceMenu = workspaceSurfaceShowsPracticeMenu({ workspaceKind });
+  const idleExplore = workspaceIdlePaneShowsExplore({
+    allowExplore:
+      workspaceKind === "knowledge_region"
+        ? false
+        : ayclCapabilities
+          ? ayclCapabilities.allowExplore
+          : isOwner || isOrgAdmin,
+  });
+  const isLearnerMode = interactionMode === "learner" && !authoringOnMap;
+  const showCreatorDrawers =
+    authoringOnMap || mountsCreatorAuthoringDrawers(interactionMode);
+  const showLearnerDrawer =
+    !authoringOnMap && mountsLearnerPracticeDrawer(interactionMode);
 
   const selectInteractionMode = (mode: WorkspaceInteractionMode) => {
     // Practice-only AYCL cannot switch into Creator tools.
@@ -986,6 +1005,7 @@ export function WorkspaceView({
           mapExploreOpen={showMapExplore}
           onMapExploreToggle={handleToggleMapExplore}
           onMapToggle={applyMapToggle}
+          practiceMenu={practiceMenu}
           interactionMode={interactionMode}
           ayclCapabilities={ayclCapabilities}
           selectInteractionMode={selectInteractionMode}
@@ -1010,6 +1030,7 @@ export function WorkspaceView({
           mobileColumn={mobileColumn}
           workspaceImage={workspaceImage}
           showMapExplore={showMapExplore}
+          idleExplore={idleExplore}
           rightPane={rightPane}
           isOwner={isOwner}
           showCreatorDrawers={showCreatorDrawers}

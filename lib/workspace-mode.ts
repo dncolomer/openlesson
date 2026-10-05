@@ -1,7 +1,8 @@
 /**
- * Creator vs Learner workspace mode — pure shell/map/pane rules.
- * Learning workspace: Play is the map. Build is Workspace, DAGs, Map Types,
- * Context, and Settings. Verification workspaces have no map mode.
+ * Workspace shell rules.
+ * Learning workspaces use one surface: the map, authoring sections for people
+ * who can design, and explore content on the idle pane. There is no Play /
+ * Build / Explore choice. Verification workspaces keep their own shell.
  */
 
 import type { WorkspaceSectionKey } from "@/lib/workspace-sections";
@@ -46,21 +47,63 @@ export const WORKSPACE_MAP_TOGGLE_IDS: readonly WorkspaceMapToggleId[] = [
   "explore",
 ] as const;
 
+/** The workspace does not ask the user to choose Play, Build, or Explore. */
+export function workspacePresentsModeChoice(): boolean {
+  return false;
+}
+
 /**
- * Under-minimap segments to render.
- * Play is always first. Explore follows Build (AYCL clones keep Explore even
- * when Build is hidden). Build is omitted when allowCreator is false (play-only).
+ * No Play / Build / Explore segments are rendered.
+ * `allowCreator` / `allowExplore` stay on the signature for older callers.
  */
-export function visibleWorkspaceMapToggleIds(input?: {
+export function visibleWorkspaceMapToggleIds(_input?: {
   allowCreator?: boolean;
   allowExplore?: boolean;
 }): WorkspaceMapToggleId[] {
-  const allowCreator = input?.allowCreator !== false;
-  const allowExplore = input?.allowExplore !== false;
-  const ids: WorkspaceMapToggleId[] = ["learner"];
-  if (allowCreator) ids.push("creator");
-  if (allowExplore) ids.push("explore");
-  return ids;
+  return [];
+}
+
+/** True only when a mode choice is still offered and it has segments. */
+export function workspaceModeControlMounted(input?: {
+  presentsChoice?: boolean;
+  toggleIds?: readonly unknown[];
+}): boolean {
+  const presents = input?.presentsChoice ?? workspacePresentsModeChoice();
+  const ids = input?.toggleIds ?? visibleWorkspaceMapToggleIds();
+  return Boolean(presents && ids.length > 0);
+}
+
+/** Learning maps keep Calibrate, Learn, and Drill. Verification has no map. */
+export function workspaceSurfaceShowsPracticeMenu(input?: {
+  workspaceKind?: unknown;
+}): boolean {
+  return !isKnowledgeRegionWorkspace(input?.workspaceKind);
+}
+
+/**
+ * Authoring tools for people who can design the map.
+ * Play-only access (`allowAuthoring: false`) stays on the map.
+ * Verification workspaces do not use this map-authoring shell.
+ */
+export function workspaceSurfaceShowsAuthoring(input: {
+  isOwner?: boolean;
+  isOrgAdmin?: boolean;
+  allowAuthoring?: boolean;
+  workspaceKind?: unknown;
+}): boolean {
+  if (isKnowledgeRegionWorkspace(input.workspaceKind)) return false;
+  if (input.allowAuthoring === false) return false;
+  return canAccessPrivilegedWorkspaceSections(input);
+}
+
+/**
+ * Explore search, suggest, and overview sit on the idle map pane.
+ * A selected block still opens its own pane.
+ */
+export function workspaceIdlePaneShowsExplore(input?: {
+  allowExplore?: boolean;
+}): boolean {
+  return input?.allowExplore !== false;
 }
 
 /**
@@ -181,10 +224,10 @@ export type WorkspaceModeShell = {
 };
 
 /**
- * Visible top-level sections for the active interaction mode.
- * Learning Play: the map surface only (the nav hides that single tab).
- * Learning Build: designer sections.
- * Verification: one shell, independent of Play/Build.
+ * Visible top-level sections on the one workspace surface.
+ * Privileged learning users get the map and the authoring sections.
+ * Play-only (`allowAuthoring: false`) stays on the map.
+ * Verification: one shell, independent of the old Play/Build split.
  */
 export function availableSectionsForMode(input: {
   mode: WorkspaceInteractionMode;
@@ -192,8 +235,8 @@ export function availableSectionsForMode(input: {
   isOrgAdmin?: boolean;
   isLoggedIn?: boolean;
   workspaceKind?: unknown;
+  allowAuthoring?: boolean;
 }): WorkspaceSectionKey[] {
-  const mode = normalizeWorkspaceInteractionMode(input.mode);
   if (isKnowledgeRegionWorkspace(input.workspaceKind)) {
     return availableWorkspaceSections({
       isOwner: input.isOwner,
@@ -201,7 +244,7 @@ export function availableSectionsForMode(input: {
       workspaceKind: input.workspaceKind,
     });
   }
-  if (mode === "learner") {
+  if (input.allowAuthoring === false) {
     return ["workspace"];
   }
   return availableWorkspaceSections({
@@ -223,6 +266,7 @@ export function resolveActiveSectionForMode(input: {
   isOrgAdmin?: boolean;
   isLoggedIn?: boolean;
   workspaceKind?: unknown;
+  allowAuthoring?: boolean;
 }): WorkspaceSectionKey {
   const mode = normalizeWorkspaceInteractionMode(input.mode);
   const allowed = availableSectionsForMode(input);
@@ -247,10 +291,12 @@ export function resolveWorkspaceModeShell(input: {
   isOrgAdmin?: boolean;
   isLoggedIn?: boolean;
   workspaceKind?: unknown;
+  allowAuthoring?: boolean;
 }): WorkspaceModeShell {
   const mode = normalizeWorkspaceInteractionMode(input.mode);
   const sections = availableSectionsForMode(input);
-  if (mode === "learner") {
+  const authoring = workspaceSurfaceShowsAuthoring(input);
+  if (mode === "learner" && !authoring) {
     return {
       mode: "learner",
       sections,

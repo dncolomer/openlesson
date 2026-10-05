@@ -156,7 +156,7 @@ describe("session intro visuals", () => {
     expect(ileLearningText).toMatch(/raw thinking signal/i);
     expect(ileLearningText).toMatch(/baseline attention/i);
     expect(ileLearningText).toMatch(/In this session I will work to craft insights/i);
-    expect(ileLearningHtml).toContain("data-ile-sample-insight-card");
+    expect(ileLearningHtml).not.toContain("data-ile-sample-insight-card");
     expect(ileLearningHtml).toContain('data-practice-voice-sentence="2"');
     expect(ileLearningHtml).not.toContain("data-onboarding-start");
     expect(ileLearningHtml).not.toContain("data-onboarding-highlight");
@@ -187,15 +187,15 @@ describe("session intro visuals", () => {
     expect(ileLearningHtml).not.toContain("data-ile-welcome-insight-skeleton");
     expect(ileLearningText).not.toMatch(/After you work a chapter/);
     expect(ileLearningText).not.toContain("Empty");
-    expect(ileThreeHtml).toContain("data-ile-sample-insight-card");
+    expect(ileThreeHtml).not.toContain("data-ile-sample-insight-card");
     expect(ileThreeHtml).not.toContain("data-ile-welcome-insight-slots");
-    expect(ileFiveHtml).toContain("data-ile-sample-insight-card");
+    expect(ileFiveHtml).not.toContain("data-ile-sample-insight-card");
     expect(ileFiveHtml).not.toContain("data-ile-welcome-insight-slots");
     expect(tapHtml).not.toContain("data-ile-welcome-insight-slots");
     expect(tapHtml).not.toContain("data-ile-sample-insight-card");
 
     expect(ileProjectHtml).toContain("data-practice-voice-challenge");
-    expect(ileProjectHtml).toContain("data-ile-sample-insight-card");
+    expect(ileProjectHtml).not.toContain("data-ile-sample-insight-card");
     expect(ileProjectHtml).not.toContain("data-onboarding-start");
     expect(ileProjectHtml).not.toContain("data-onboarding-highlight");
     expect(ileProjectText).toMatch(/craft insights on the canvas/i);

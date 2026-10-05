@@ -517,9 +517,9 @@ describe("shipped voice-challenge UI wiring", () => {
     expect(ileSpoken).toContain('data-practice-voice-variant="ile"');
     expect(ileSpoken.replace(/<[^>]+>/g, "")).toContain("In this session I will work to craft insights");
     expect(ileSpoken).toContain('data-practice-voice-sentence="2"');
-    expect(ileSpoken).toContain("data-ile-sample-insight-card");
-    expect(ileSpoken).toContain("data-ile-sample-insight-bar");
-    expect(ileSpoken).toContain("Sample insight");
+    expect(ileSpoken).not.toContain("data-ile-sample-insight-card");
+    expect(ileSpoken).not.toContain("data-ile-sample-insight-bar");
+    expect(ileSpoken).not.toContain("Sample insight");
     expect(ileSpoken).not.toContain("A finished idea from one area of the map.");
     const challenge = read("components/PracticeVoiceChallenge.tsx");
     expect(challenge).toContain("data-practice-voice-loading");

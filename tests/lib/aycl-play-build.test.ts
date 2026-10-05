@@ -16,6 +16,7 @@ import {
 } from "@/lib/aycl-shared";
 import { parseAyclClonePracticeOptions } from "@/lib/block-practice-options";
 import {
+  availableSectionsForMode,
   visibleWorkspaceMapToggleIds,
   workspaceModeDisplayLabel,
 } from "@/lib/workspace-mode";
@@ -220,18 +221,24 @@ describe("Explore on purchased clones", () => {
       allowCreator: full.allowCreatorModeToggle,
       allowExplore: full.allowExplore,
     });
-    expect(playOnlyIds).toEqual(["learner", "explore"]);
-    expect(playOnlyIds).not.toContain("creator");
-    expect(playBuildIds).toEqual(["learner", "creator", "explore"]);
-    expect(playOnlyIds.map(workspaceModeDisplayLabel)).toEqual([
-      "Play",
-      "Explore",
-    ]);
-    expect(playBuildIds.map(workspaceModeDisplayLabel)).toEqual([
-      "Play",
-      "Build",
-      "Explore",
-    ]);
+    expect(playOnlyIds).toEqual([]);
+    expect(playBuildIds).toEqual([]);
+    expect(playOnlyIds.map(workspaceModeDisplayLabel)).toEqual([]);
+    expect(playBuildIds.map(workspaceModeDisplayLabel)).toEqual([]);
+    expect(
+      availableSectionsForMode({
+        mode: "learner",
+        isOwner: true,
+        allowAuthoring: learner.allowCreatorModeToggle,
+      }),
+    ).toEqual(["workspace"]);
+    expect(
+      availableSectionsForMode({
+        mode: "learner",
+        isOwner: true,
+        allowAuthoring: full.allowCreatorModeToggle,
+      }),
+    ).toEqual(["workspace", "dags", "map_types", "context", "settings"]);
 
     expect(
       parseAyclClonePracticeOptions({ allow_explore: false }).allowExplore,

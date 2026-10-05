@@ -144,7 +144,7 @@ describe("workspace map types helpers", () => {
         isOwner: true,
         isLoggedIn: true,
       }),
-    ).not.toContain("map_types");
+    ).toContain("map_types");
 
     expect(
       availableWorkspaceSections({
@@ -178,7 +178,7 @@ describe("workspace map types helpers", () => {
       isOwner: true,
       visibleSections: creator,
     });
-    expect(playNav.map((item) => item.key)).not.toContain("map_types");
+    expect(playNav.map((item) => item.key)).toContain("map_types");
 
     const exploreNav = buildWorkspaceSectionNavItems({
       t,
@@ -187,7 +187,7 @@ describe("workspace map types helpers", () => {
       visibleSections: creator,
       exploreOpen: true,
     });
-    expect(exploreNav.map((item) => item.key)).not.toContain("map_types");
+    expect(exploreNav.map((item) => item.key)).toContain("map_types");
 
     const layout = resolveWorkspaceSectionLayout("map_types");
     expect(layout.mountsMapTypesPanel).toBe(true);
@@ -530,17 +530,17 @@ describe("Map Types tab UI / API structural", () => {
               isOwner: true,
             }).includes("map_types"),
           ),
-        "play_excludes=" +
+        "owner_includes=" +
           String(
-            !availableSectionsForMode({
+            availableSectionsForMode({
               mode: "learner",
               isOwner: true,
               isLoggedIn: true,
             }).includes("map_types"),
           ),
-        "explore_nav_excludes=" +
+        "explore_nav_includes=" +
           String(
-            !buildWorkspaceSectionNavItems({
+            buildWorkspaceSectionNavItems({
               t: (k) => k,
               isLearnerMode: false,
               isOwner: true,

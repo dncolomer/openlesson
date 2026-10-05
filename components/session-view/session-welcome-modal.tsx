@@ -149,7 +149,7 @@ export function SessionWelcomeModal({
         {!languageConfirmed ? (
           <div className="grid h-full min-h-0 w-full flex-1 overflow-hidden lg:grid-cols-2">
             <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden border-neutral-800 lg:border-r">
-              <div className="min-h-0 flex-1 overflow-y-auto">
+              <div className="min-h-0 flex-1">
                 <TapBriefingConfig
                   workspaceTitle="Learn"
                   kicker="Learn"
@@ -166,7 +166,7 @@ export function SessionWelcomeModal({
                 />
                 <div
                   data-ile-session-chapters
-                  className="flex h-full min-h-0 min-w-0 flex-col gap-4 px-5 pb-6 sm:px-8 lg:px-10"
+                  className="flex min-h-0 min-w-0 flex-col gap-4 px-5 pb-6 sm:px-8 lg:px-10"
                 >
                   <div data-ile-learn-presets>
                     <p className="mb-2 text-sm font-medium text-neutral-100">

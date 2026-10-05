@@ -1,5 +1,5 @@
 import { createElement } from "react";
-import { readFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
@@ -25,6 +25,11 @@ import {
   buildIleWorkCanvasActionUploadItem,
   buildIleWorkCanvasDictatePowEvent,
 } from "@/lib/ile-work-canvas-pow";
+import {
+  ileCanvasCraftInsightOpenAfterSelection,
+  ileCanvasSlashBarOpen,
+  ileCanvasSlashKeyOpensBar,
+} from "@/lib/ile-work-canvas";
 import {
   convertToExcalidrawElements,
   ileWorkCanvasElementRect,
@@ -166,7 +171,8 @@ describe("canvas dictate button", () => {
     expect(idle).not.toContain(">stop<");
 
     const canvas = read("components/ExcalidrawCanvas.tsx");
-    const gate = canvas.indexOf("{canvasSelectionActive ? (");
+    const promptAt = canvas.indexOf("data-ile-canvas-prompt-bar");
+    const gate = canvas.indexOf("ileCanvasSlashBarOpen({", promptAt);
     const input = canvas.indexOf("data-ile-canvas-prompt-bar-input");
     const gateClose = canvas.indexOf(") : null}", input);
     const rowStart = canvas.indexOf("<IleCraftInsightButton");
@@ -214,5 +220,79 @@ describe("canvas dictate button", () => {
     expect(html).not.toContain("data-ile-canvas-ask");
     expect(html).not.toContain("data-ile-canvas-prompt-bar-send");
     expect(html).not.toContain(">Run<");
+    expect(ileCanvasSlashBarOpen({ selectionActive: false, slashIntent: true })).toBe(false);
+    expect(ileCanvasSlashKeyOpensBar({ key: "/", selectionActive: false })).toBe(false);
+    expect(html).toContain("px-4 py-2.5 text-sm");
+    const craftBtn = read("components/session-view/ile-canvas-craft-insight.tsx");
+    const dictateBtn = read("components/session-view/ile-canvas-dictate-button.tsx");
+    expect(craftBtn).toContain("px-4 py-2.5 text-sm");
+    expect(dictateBtn).toContain("px-4 py-2.5 text-sm");
+    expect(craftBtn).not.toContain("px-2.5 py-2 text-xs");
+    expect(dictateBtn).not.toContain("px-2.5 py-2 text-xs");
+    expect(read("components/session-view/ile-work-dock-bar.tsx")).not.toContain(
+      "data-session-topic-card-description",
+    );
+    expect(read("components/PracticeVoiceChallenge.tsx")).not.toContain(
+      "data-ile-sample-insight-card",
+    );
+  });
+
+  it("keeps the craft form open on selection and refuses slash without a selection", () => {
+    const stayed = ileCanvasCraftInsightOpenAfterSelection({
+      open: true,
+      selectionActive: true,
+    });
+    expect(stayed).toBe(true);
+    expect(
+      ileCanvasCraftInsightOpenAfterSelection({
+        open: true,
+        selectionActive: false,
+      }),
+    ).toBe(true);
+    expect(ileCanvasSlashBarOpen({ selectionActive: false, slashIntent: false })).toBe(false);
+    expect(ileCanvasSlashBarOpen({ selectionActive: false, slashIntent: true })).toBe(false);
+    expect(ileCanvasSlashKeyOpensBar({ key: "/", selectionActive: false })).toBe(false);
+    expect(ileCanvasSlashKeyOpensBar({ key: "/", selectionActive: true })).toBe(true);
+    expect(
+      ileCanvasSlashKeyOpensBar({
+        key: "/",
+        selectionActive: true,
+        typingInField: true,
+      }),
+    ).toBe(false);
+    expect(ileCanvasSlashBarOpen({ selectionActive: true, slashIntent: true })).toBe(true);
+    expect(ileCanvasSlashBarOpen({ selectionActive: true, slashIntent: false })).toBe(false);
+
+    const canvas = read("components/ExcalidrawCanvas.tsx");
+    expect(canvas).toContain("ileCanvasCraftInsightOpenAfterSelection");
+    expect(canvas).toContain("ileCanvasSlashKeyOpensBar");
+    expect(canvas).not.toContain("if (active) setCraftInsightOpen(false)");
+
+    const html = renderToStaticMarkup(
+      createElement(ExcalidrawCanvas, {
+        onAskSelected: async () => ({ text: "" }),
+        dictateTranscript: "",
+        craftInsight: { chapterId: "chapter-1", sessionId: "session-1" },
+      }),
+    );
+    expect(html).not.toContain("data-ile-canvas-prompt-bar-input");
+    expect(html).toContain("data-ile-craft-insight");
+
+    const scratch =
+      process.env.GROK_GOAL_SCRATCH ||
+      "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-94f79d5a71b0/implementer";
+    mkdirSync(scratch, { recursive: true });
+    writeFileSync(
+      join(scratch, "craft-and-slash.log"),
+      [
+        `craft_stays_open=${stayed}`,
+        `slash_without_selection=${ileCanvasSlashKeyOpensBar({ key: "/", selectionActive: false })}`,
+        `bar_without_selection=${ileCanvasSlashBarOpen({ selectionActive: false, slashIntent: true })}`,
+        `slash_with_selection=${ileCanvasSlashKeyOpensBar({ key: "/", selectionActive: true })}`,
+        `bar_with_slash=${ileCanvasSlashBarOpen({ selectionActive: true, slashIntent: true })}`,
+        `rendered_input=${html.includes("data-ile-canvas-prompt-bar-input")}`,
+        `rendered_craft=${html.includes("data-ile-craft-insight")}`,
+      ].join("\n") + "\n",
+    );
   });
 });

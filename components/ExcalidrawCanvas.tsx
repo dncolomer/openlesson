@@ -30,7 +30,10 @@ import {
   ileCanvasPromptBarWidth,
   filterIleWorkCanvasCommands,
   ileCanvasCommandDraft,
+  ileCanvasCraftInsightOpenAfterSelection,
   ileCanvasPromptMode,
+  ileCanvasSlashBarOpen,
+  ileCanvasSlashKeyOpensBar,
   ileWorkCanvasCommandNeedsSelection,
   ileWorkCanvasMarksNeedScroll,
   ileWorkCanvasQuickActionPrompt,
@@ -284,6 +287,8 @@ export function ExcalidrawCanvas({
   const [isLoaded, setIsLoaded] = useState(false);
   const [canvasApiReady, setCanvasApiReady] = useState(false);
   const [commandText, setCommandText] = useState("");
+  const [slashBarOpen, setSlashBarOpen] = useState(false);
+  const commandInputRef = useRef<HTMLInputElement>(null);
   const [askListening, setAskListening] = useState(false);
   const askCaptureRef = useRef<IleDictateCapture | null>(null);
   const selectionWasActiveRef = useRef(false);
@@ -677,11 +682,51 @@ export function ExcalidrawCanvas({
       askCaptureRef.current = null;
       setAskListening(false);
       setCommandText("");
+      setSlashBarOpen(false);
     }
     selectionWasActiveRef.current = active;
     setCanvasSelectionActive((prev) => (prev === active ? prev : active));
-    if (active) setCraftInsightOpen(false);
+    setCraftInsightOpen((open) =>
+      ileCanvasCraftInsightOpenAfterSelection({
+        open,
+        selectionActive: active,
+      }),
+    );
   }, []);
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const typingInField =
+        target?.tagName === "INPUT" ||
+        target?.tagName === "TEXTAREA" ||
+        Boolean(target?.isContentEditable);
+      if (
+        !ileCanvasSlashKeyOpensBar({
+          key: event.key,
+          selectionActive: canvasSelectionActive,
+          typingInField,
+        })
+      ) {
+        return;
+      }
+      event.preventDefault();
+      setSlashBarOpen(true);
+      setCommandText((current) => (current.startsWith("/") ? current : "/"));
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [canvasSelectionActive]);
+
+  useEffect(() => {
+    if (!ileCanvasSlashBarOpen({
+      selectionActive: canvasSelectionActive,
+      slashIntent: slashBarOpen,
+    })) {
+      return;
+    }
+    commandInputRef.current?.focus();
+  }, [canvasSelectionActive, slashBarOpen]);
 
   const enqueueCanvasAskApply = useCallback((task: () => void) => {
     const run = applyChainRef.current.then(task, task);
@@ -1556,7 +1601,10 @@ export function ExcalidrawCanvas({
             <div
               className={`pointer-events-auto flex flex-col gap-1.5 ${canvasSelectionActive ? "w-full" : "w-max"}`}
             >
-              {canvasSelectionActive ? (
+              {ileCanvasSlashBarOpen({
+                selectionActive: canvasSelectionActive,
+                slashIntent: slashBarOpen,
+              }) ? (
               <div className="flex w-full flex-col gap-1.5 rounded-none border border-white bg-neutral-950/95 p-2 shadow-[0_12px_40px_rgba(0,0,0,0.55)]">
                 {ileCanvasCommandDraft(commandText).slash ? (
                   <div
@@ -1595,6 +1643,7 @@ export function ExcalidrawCanvas({
                 ) : null}
                 <div className="flex items-stretch gap-1">
                   <input
+                    ref={commandInputRef}
                     data-ile-canvas-prompt-bar-input
                     data-ile-canvas-command-input
                     type="text"

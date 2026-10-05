@@ -309,9 +309,22 @@ describe("Learn research presets", () => {
     expect(en.session.learnPresetSurvey).toBe("Survey");
     expect(en.session.learnPresetStudy).toBe("Study");
     expect(en.session.learnPresetThesis).toBe("Thesis");
-    expect(
-      `${en.session.learnPresetSurveyDesc} ${en.session.learnPresetStudyDesc} ${en.session.learnPresetThesisDesc}`,
-    ).not.toMatch(/\bmap\b|\bboard\b/i);
+    const presetCopy = `${en.session.learnPresetSurveyDesc} ${en.session.learnPresetStudyDesc} ${en.session.learnPresetThesisDesc}`;
+    expect(presetCopy).not.toMatch(/\bmap\b|\bboard\b|\btimer\b|time to read|one canvas/i);
+    expect(en.session.learnPresetSurveyDesc).toContain("1 chapter");
+    expect(en.session.learnPresetSurveyDesc).toContain("1 insight");
+    expect(en.session.learnPresetSurveyDesc).toContain("4 minutes");
+    expect(en.session.learnPresetSurveyDesc).toContain("work expense 1");
+    expect(en.session.learnPresetStudyDesc).toContain("3 chapters");
+    expect(en.session.learnPresetStudyDesc).toContain("3 insights");
+    expect(en.session.learnPresetStudyDesc).toContain("2 minutes");
+    expect(en.session.learnPresetStudyDesc).toContain("work expense 3");
+    expect(en.session.learnPresetThesisDesc).toContain("5 chapters");
+    expect(en.session.learnPresetThesisDesc).toContain("5 insights");
+    expect(en.session.learnPresetThesisDesc).toContain("1 minute");
+    expect(en.session.learnPresetThesisDesc).toContain("work expense 5");
+    expect(welcome).toContain("overflow-hidden");
+    expect(welcome).not.toContain("overflow-y-auto");
   });
 });
 

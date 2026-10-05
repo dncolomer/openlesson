@@ -10,12 +10,19 @@ import {
   WORKSPACE_INTERACTION_MODES,
   WORKSPACE_MAP_TOGGLE_IDS,
   WORKSPACE_MODE_DISPLAY_LABELS,
+  availableSectionsForMode,
   nextWorkspaceMapToggle,
   resolveWorkspaceMapToggleId,
   visibleWorkspaceMapToggleIds,
+  workspaceIdlePaneShowsExplore,
+  workspaceModeControlMounted,
   workspaceModeDisplayLabel,
   workspaceModeFlipClearsMapSelection,
+  workspacePresentsModeChoice,
+  workspaceSurfaceShowsAuthoring,
+  workspaceSurfaceShowsPracticeMenu,
 } from "@/lib/workspace-mode";
+import { resolveBlockCircularMenuSurface } from "@/lib/block-circular-menu";
 import {
   resolveEmptyCellMarker,
   resolveMapOccupiedTileBadges,
@@ -70,8 +77,31 @@ const nearbyBlocks = [
   },
 ];
 
-describe("Build / Play / Explore toggle helpers", () => {
-  it("display labels and third state for the under-minimap control", () => {
+describe("one workspace surface", () => {
+  it("does not present Play, Build, or Explore and still reaches map, authoring, and explore", () => {
+    expect(workspacePresentsModeChoice()).toBe(false);
+    expect(workspaceModeControlMounted()).toBe(false);
+    expect(workspaceModeControlMounted({
+      presentsChoice: workspacePresentsModeChoice(),
+      toggleIds: visibleWorkspaceMapToggleIds({
+        allowCreator: true,
+        allowExplore: true,
+      }),
+    })).toBe(false);
+    expect(visibleWorkspaceMapToggleIds()).toEqual([]);
+    expect(
+      visibleWorkspaceMapToggleIds({
+        allowCreator: false,
+        allowExplore: true,
+      }),
+    ).toEqual([]);
+    expect(
+      visibleWorkspaceMapToggleIds({
+        allowCreator: true,
+        allowExplore: true,
+      }),
+    ).toEqual([]);
+    expect(visibleWorkspaceMapToggleIds().map(workspaceModeDisplayLabel)).toEqual([]);
     expect(workspaceModeDisplayLabel("creator")).toBe("Build");
     expect(workspaceModeDisplayLabel("learner")).toBe("Play");
     expect(workspaceModeDisplayLabel("explore")).toBe("Explore");
@@ -81,29 +111,43 @@ describe("Build / Play / Explore toggle helpers", () => {
       "creator",
       "explore",
     ]);
-    expect(visibleWorkspaceMapToggleIds()).toEqual([
-      "learner",
-      "creator",
-      "explore",
-    ]);
-    expect(
-      visibleWorkspaceMapToggleIds({
-        allowCreator: false,
-        allowExplore: true,
-      }),
-    ).toEqual(["learner", "explore"]);
-    expect(
-      visibleWorkspaceMapToggleIds({
-        allowCreator: true,
-        allowExplore: true,
-      }),
-    ).toEqual(["learner", "creator", "explore"]);
     expect([...WORKSPACE_INTERACTION_MODES]).toEqual(["learner", "creator"]);
-    expect(visibleWorkspaceMapToggleIds().map(workspaceModeDisplayLabel)).toEqual([
-      "Play",
-      "Build",
-      "Explore",
+
+    const owner = availableSectionsForMode({
+      mode: "learner",
+      isOwner: true,
+      isLoggedIn: true,
+    });
+    expect(owner).toEqual([
+      "workspace",
+      "dags",
+      "map_types",
+      "context",
+      "settings",
     ]);
+    expect(workspaceSurfaceShowsAuthoring({ isOwner: true })).toBe(true);
+    expect(workspaceSurfaceShowsPracticeMenu()).toBe(true);
+    expect(workspaceIdlePaneShowsExplore({ allowExplore: true })).toBe(true);
+    expect(
+      availableSectionsForMode({
+        mode: "learner",
+        isOwner: true,
+        allowAuthoring: false,
+      }),
+    ).toEqual(["workspace"]);
+    expect(
+      workspaceSurfaceShowsAuthoring({ isOwner: true, allowAuthoring: false }),
+    ).toBe(false);
+    expect(workspaceIdlePaneShowsExplore({ allowExplore: false })).toBe(false);
+    expect(
+      resolveBlockCircularMenuSurface({
+        learnerMode: false,
+        practiceMenu: true,
+      }),
+    ).toBe("workspace-learner");
+    expect(
+      resolveBlockCircularMenuSurface({ learnerMode: false }),
+    ).toBe("none");
 
     expect(
       resolveWorkspaceMapToggleId({
@@ -205,7 +249,14 @@ describe("Build / Play / Explore toggle helpers", () => {
       [
         "labels=" +
           WORKSPACE_MAP_TOGGLE_IDS.map(workspaceModeDisplayLabel).join("/"),
-        "toggle_ids=" + WORKSPACE_MAP_TOGGLE_IDS.join(","),
+        "mode_choice=" + workspacePresentsModeChoice(),
+        "control_mounted=" + workspaceModeControlMounted(),
+        "toggle_ids=" + visibleWorkspaceMapToggleIds().join(","),
+        "owner_sections=" +
+          availableSectionsForMode({
+            mode: "learner",
+            isOwner: true,
+          }).join(","),
         "wire_modes=" + WORKSPACE_INTERACTION_MODES.join(","),
         "explore_active_id=" +
           resolveWorkspaceMapToggleId({
@@ -321,10 +372,16 @@ describe("Explore mode wiring", () => {
     const stack = read("components/block-skill-grid/map-right-stack.tsx");
     const nav = read("components/WorkspaceSectionNav.tsx");
 
-    expect(nav).toContain("WORKSPACE_MAP_TOGGLE_IDS");
-    expect(nav).toContain("data-workspace-mode-toggle-states");
-    expect(nav).toContain("data-workspace-mode-by-title");
-    expect(nav).toContain("workspaceModeDisplayLabel");
+    expect(nav).toContain("workspaceModeControlMounted");
+    expect(nav).toContain("workspacePresentsModeChoice");
+    expect(nav).not.toContain("WORKSPACE_MAP_TOGGLE_IDS");
+    expect(workspaceModeControlMounted()).toBe(false);
+    expect(view).toContain("workspaceSurfaceShowsAuthoring");
+    expect(view).toContain("workspaceIdlePaneShowsExplore");
+    expect(view).toContain("idleExplore={idleExplore}");
+    expect(read("components/SessionList.tsx")).toContain(
+      "resolveBlockCircularMenuSurface",
+    );
     expect(stack).not.toContain("data-workspace-mode-under-minimap");
     expect(stack).not.toContain("Explore / Expand Map");
     expect(stack).not.toContain("data-map-explore-toggle");

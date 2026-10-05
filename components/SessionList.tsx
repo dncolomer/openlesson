@@ -14,6 +14,7 @@ import {
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import type { Block } from "@/lib/domain/types";
 import { postWorkspaceGridOp } from "@/lib/workspace-grid-ops-client";
+import { resolveBlockCircularMenuSurface } from "@/lib/block-circular-menu";
 
 const MODEL_STORAGE_KEY = "planner-model";
 const DEFAULT_PLANNER_MODEL = DEFAULT_MODEL;
@@ -28,6 +29,8 @@ interface SessionListProps {
   isOwner?: boolean;
   /** Learner map: no authoring strip / empty +; content color cues. */
   learnerMode?: boolean;
+  /** Calibrate / Learn / Drill on the map even when authoring tools are on. */
+  practiceMenu?: boolean;
   isGroupPlan?: boolean;
   /** Hide completion/progress styling for public workspaces before fork */
   maskProgress?: boolean;
@@ -171,6 +174,7 @@ export function SessionList({
   highlightOpacity = 1,
   isOwner = true,
   learnerMode = false,
+  practiceMenu = false,
   isGroupPlan = false,
   maskProgress = false,
   onRequestFork,
@@ -473,7 +477,10 @@ export function SessionList({
             onMapSelectionChange={onMapSelectionChange}
             canEdit={isOwner && !learnerMode}
             learnerMode={learnerMode}
-            circularMenuSurface={learnerMode ? "workspace-learner" : "none"}
+            circularMenuSurface={resolveBlockCircularMenuSurface({
+              learnerMode,
+              practiceMenu,
+            })}
             onCircularMenuAction={onCircularMenuAction}
             learnerScopeId={learnerScopeId || ayclToken || null}
             cloneArmed={cloneArmed}

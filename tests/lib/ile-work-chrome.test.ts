@@ -545,9 +545,8 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     expect(docs).not.toMatch(/Data, Logs, and Save/);
 
     const sessionList = read("components/SessionList.tsx");
-    expect(sessionList).toContain(
-      'circularMenuSurface={learnerMode ? "workspace-learner" : "none"}',
-    );
+    expect(sessionList).toContain("resolveBlockCircularMenuSurface");
+    expect(sessionList).toContain("practiceMenu");
     expect(read("components/SessionView.tsx")).not.toContain('circularMenuSurface="ile"');
     expect(read("components/SessionView.tsx")).not.toContain("<ChapterMapPanel");
 

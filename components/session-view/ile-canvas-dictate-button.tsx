@@ -58,7 +58,7 @@ export function IleCanvasDictateButton({
         if (text) onCommit(text);
         else onLiveText(text);
       }}
-      className="pointer-events-auto shrink-0 rounded-none border border-white bg-neutral-950 px-2.5 py-2 text-xs font-semibold uppercase tracking-wider text-white shadow-[0_12px_40px_rgba(0,0,0,0.55)] hover:bg-neutral-800 aria-pressed:bg-white aria-pressed:text-neutral-950"
+      className="pointer-events-auto shrink-0 rounded-none border border-white bg-neutral-950 px-4 py-2.5 text-sm font-semibold uppercase tracking-wider text-white shadow-[0_12px_40px_rgba(0,0,0,0.55)] hover:bg-neutral-800 aria-pressed:bg-white aria-pressed:text-neutral-950"
     >
       {dictating ? ILE_CANVAS_DICTATE_STOP_LABEL : ILE_CANVAS_DICTATE_LABEL}
     </button>

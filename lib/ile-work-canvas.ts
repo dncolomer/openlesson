@@ -1977,11 +1977,41 @@ export function ileLearnMoreSelectionKey(
     .join(",");
 }
 
-/** Ask, Run, and the command field show while a selection exists. No selection leaves the idle row. */
+/** "commands" means a canvas element is selected. The slash bar still waits for "/". */
 export function ileCanvasPromptMode(
   selectedElementIds?: Record<string, unknown> | null,
 ): "commands" | "ask" {
   return ileLearnMoreSelectionKey(selectedElementIds) ? "commands" : "ask";
+}
+
+/** Input, Ask, Run, and command chips show only after "/" while a selection exists. */
+export function ileCanvasSlashBarOpen(input: {
+  selectionActive: boolean;
+  slashIntent: boolean;
+}): boolean {
+  return Boolean(input.selectionActive && input.slashIntent);
+}
+
+/** "/" opens the slash bar only when a canvas element is selected. */
+export function ileCanvasSlashKeyOpensBar(input: {
+  key: string;
+  selectionActive: boolean;
+  typingInField?: boolean;
+}): boolean {
+  if (input.typingInField) return false;
+  return input.key === "/" && Boolean(input.selectionActive);
+}
+
+/**
+ * A selected element must not dismiss the craft insight form.
+ * The learner closes it, or the save finishes.
+ */
+export function ileCanvasCraftInsightOpenAfterSelection(input: {
+  open: boolean;
+  selectionActive: boolean;
+}): boolean {
+  void input.selectionActive;
+  return input.open;
 }
 
 /**

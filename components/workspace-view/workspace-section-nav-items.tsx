@@ -11,10 +11,9 @@ export function buildWorkspaceSectionNavItems(input: {
   /** Explore overlay hides authoring Map Types (Play already omits them). */
   exploreOpen?: boolean;
 }): WorkspaceSectionNavItem[] {
-  const { t, isLearnerMode, isOwner, visibleSections, exploreOpen } = input;
-  // Learning Build: Workspace, DAGs, Map Types, Context, Settings.
-  // Verification: Goals, Verification Flows, Context, Knowledge, Settings.
-  // Play on a Learning workspace passes an empty list so only the map shows.
+  const { t, isLearnerMode, isOwner, visibleSections } = input;
+  // One learning surface: Workspace, DAGs, Map Types, Context, Settings
+  // when those sections are in the list. Verification keeps its own list.
   return [
     ...(visibleSections.includes("workspace")
       ? [
@@ -30,7 +29,7 @@ export function buildWorkspaceSectionNavItems(input: {
         ]
       : []),
     // Creator owner-only — second tab after Workspace
-    ...(!isLearnerMode && isOwner && visibleSections.includes("dags")
+    ...(isOwner && visibleSections.includes("dags")
       ? [
           {
             key: "dags" as const,
@@ -44,9 +43,7 @@ export function buildWorkspaceSectionNavItems(input: {
           },
         ]
       : []),
-    ...(!isLearnerMode &&
-    !exploreOpen &&
-    isOwner &&
+    ...(isOwner &&
     visibleSections.includes("map_types")
       ? [
           {

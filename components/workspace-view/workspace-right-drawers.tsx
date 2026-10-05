@@ -33,6 +33,7 @@ export function WorkspaceRightDrawers({
   mobileColumn,
   workspaceImage,
   showMapExplore,
+  idleExplore = false,
   rightPane,
   isOwner,
   showCreatorDrawers,
@@ -107,6 +108,8 @@ export function WorkspaceRightDrawers({
   mobileColumn: MobileColumn;
   workspaceImage: string;
   showMapExplore: boolean;
+  /** Explore search / suggest / overview on the idle pane, not a mode. */
+  idleExplore?: boolean;
   rightPane: string;
   isOwner: boolean;
   showCreatorDrawers: boolean;
@@ -451,7 +454,21 @@ export function WorkspaceRightDrawers({
             blocks={nodes}
             unusableCells={unusableCells}
             workspaceId={workspaceId}
-            exploreOpen={false}
+            exploreOpen={idleExplore}
+            selectivePolygon={idleExplore ? selectiveExplanationPolygon : null}
+            selectiveDrawing={idleExplore ? selectiveExplanationActive : false}
+            onSearchSelectBlocks={idleExplore ? onSearchSelectBlocks : undefined}
+            onSuggestSelectEmptyCells={
+              idleExplore ? onSuggestSelectEmptyCells : undefined
+            }
+            onStartSelectiveDraw={idleExplore ? onStartSelectiveDraw : undefined}
+            onClearSelectiveOverlay={
+              idleExplore ? onClearSelectiveOverlay : undefined
+            }
+            onCreateNoteFromSummary={
+              idleExplore ? onCreateNoteFromSummary : undefined
+            }
+            exploreTargetCell={idleExplore ? exploreTargetCell : null}
           />
         )}
       </main>

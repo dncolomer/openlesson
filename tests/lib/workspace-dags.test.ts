@@ -181,7 +181,7 @@ describe("Creator-only DAGs section visibility", () => {
         isOwner: true,
         isLoggedIn: true,
       }),
-    ).not.toContain("dags");
+    ).toContain("dags");
 
     expect(
       availableSectionsForMode({
@@ -275,9 +275,9 @@ describe("DAGs tab UI / API structural", () => {
         "dags-tab",
         "section_key=dags",
         "label=DAGs",
-        "learner_excludes=" +
+        "learner_includes=" +
           String(
-            !availableSectionsForMode({
+            availableSectionsForMode({
               mode: "learner",
               isOwner: true,
               isLoggedIn: true,

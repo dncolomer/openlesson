@@ -2,10 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
-import { IleInsightTrophyIcon } from "@/components/session-view/ile-insight-trophies";
 import { SessionAudioMonitor } from "@/components/session-view/session-data-card";
 import {
-  ILE_SAMPLE_INSIGHT_LABEL,
   PRACTICE_VOICE_CHALLENGE_ACCEPTED,
   PRACTICE_VOICE_CHALLENGE_CHECK,
   PRACTICE_VOICE_CHALLENGE_CHECK_REST,
@@ -338,24 +336,6 @@ export function PracticeVoiceChallenge({
               )}
             </p>
           ))}
-          {variant === "ile" ? (
-            <article
-              data-ile-sample-insight-card=""
-              className="flex items-start gap-3 border border-white/80 bg-amber-300 px-3 py-3 text-neutral-950"
-            >
-              <IleInsightTrophyIcon className="mt-0.5 size-4 shrink-0" />
-              <div className="min-w-0 w-full flex-1">
-                <p className="font-mono text-[10px] font-semibold uppercase tracking-wider">
-                  {ILE_SAMPLE_INSIGHT_LABEL}
-                </p>
-                <span
-                  data-ile-sample-insight-bar=""
-                  aria-hidden
-                  className="mt-2 block h-2.5 w-full bg-amber-700"
-                />
-              </div>
-            </article>
-          ) : null}
         </div>
         <p
           data-practice-voice-captured=""

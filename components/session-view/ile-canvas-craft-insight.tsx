@@ -264,7 +264,7 @@ export function IleCraftInsightButton({
       data-ile-craft-insight
       disabled={!usable}
       onClick={onClick}
-      className="pointer-events-auto shrink-0 rounded-none border border-white bg-white px-2.5 py-2 text-xs font-semibold uppercase tracking-wider text-neutral-950 shadow-[0_12px_40px_rgba(0,0,0,0.55)] hover:bg-neutral-200 disabled:cursor-not-allowed disabled:border-white/30 disabled:bg-neutral-800 disabled:text-white/40"
+      className="pointer-events-auto shrink-0 rounded-none border border-white bg-white px-4 py-2.5 text-sm font-semibold uppercase tracking-wider text-neutral-950 shadow-[0_12px_40px_rgba(0,0,0,0.55)] hover:bg-neutral-200 disabled:cursor-not-allowed disabled:border-white/30 disabled:bg-neutral-800 disabled:text-white/40"
     >
       {ILE_CRAFT_INSIGHT_LABEL}
     </button>

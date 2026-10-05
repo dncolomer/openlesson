@@ -5,9 +5,10 @@ import { useI18n } from "@/lib/i18n";
 import type { WorkspaceSectionKey } from "@/lib/workspace-sections";
 import {
   WORKSPACE_INTERACTION_MODES,
-  WORKSPACE_MAP_TOGGLE_IDS,
   resolveWorkspaceMapToggleId,
+  workspaceModeControlMounted,
   workspaceModeDisplayLabel,
+  workspacePresentsModeChoice,
   type WorkspaceInteractionMode,
   type WorkspaceMapToggleId,
 } from "@/lib/workspace-mode";
@@ -54,14 +55,17 @@ export function WorkspaceSectionNav({
   const title = workspaceTitle?.trim() || "";
   const modeToggle =
     showModeToggle !== false && Boolean(onInteractionModeChange) && !onMapToggle;
-  const toggleIds =
-    mapToggleIds && mapToggleIds.length > 0 ? mapToggleIds : WORKSPACE_MAP_TOGGLE_IDS;
+  const toggleIds = mapToggleIds ?? [];
+  const mountModeControl = workspaceModeControlMounted({
+    presentsChoice: workspacePresentsModeChoice(),
+    toggleIds,
+  });
   const currentToggle = resolveWorkspaceMapToggleId({
     interactionMode,
     exploreOpen,
   });
 
-  const mapModeControl = onMapToggle ? (
+  const mapModeControl = mountModeControl && onMapToggle ? (
     <div
       className="flex shrink-0 items-center gap-0.5 rounded-none border border-neutral-800 bg-neutral-950/80 p-0.5"
       data-workspace-mode-toggle
@@ -97,7 +101,7 @@ export function WorkspaceSectionNav({
     </div>
   ) : null;
 
-  const modeControl = modeToggle ? (
+  const modeControl = mountModeControl && modeToggle ? (
     <div
       className="flex shrink-0 items-center gap-0.5 rounded-none border border-neutral-800 bg-neutral-950/80 p-0.5"
       data-workspace-mode-toggle

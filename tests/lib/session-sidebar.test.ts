@@ -198,7 +198,7 @@ describe("session sidebar mode configuration", () => {
     expect(card).not.toContain("data-ile-open-work-chip");
     expect(card).not.toContain("onFocusOpenWork");
     expect(SESSION_TOPIC_CARD_REM).toBeGreaterThan(SESSION_TOPIC_DOCK_CHIP_REM);
-    expect(card).toContain(`height:${SESSION_TOPIC_CARD_REM}rem`);
+    expect(card).toContain(`var(--session-topic-card-height, ${SESSION_TOPIC_CARD_REM}rem)`);
     expect(card).toContain(">01<");
     const stillTag = card.slice(
       card.indexOf("data-session-topic-card-image"),

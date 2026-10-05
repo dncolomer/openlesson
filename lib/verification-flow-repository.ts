@@ -9,6 +9,7 @@
  */
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { flowCountdownMinutes } from "@/lib/flow-countdown";
 import {
   applyVerificationCommand,
   emptyVerificationState,
@@ -85,6 +86,7 @@ function mapFlow(row: Record<string, unknown>): VerificationFlow {
     workspaceId: String(row.workspace_id),
     topic: String(row.topic || ""),
     questions: normalizeQuestionPool(row.questions),
+    durationMinutes: flowCountdownMinutes(row.duration_minutes),
     publicToken: String(row.public_token || ""),
     createdAt: String(row.created_at || ""),
     updatedAt: String(row.updated_at || ""),
@@ -144,11 +146,12 @@ async function persistCommand(
 ): Promise<void> {
   const supabase = createAdminClient();
   if (command.type === "create" && value.flow) {
-    const { error } = await supabase.from("workspace_verification_flows").insert({
+    const { error } = await writeVerificationFlow(supabase, "insert", value.flow.id, {
       id: value.flow.id,
       workspace_id: value.flow.workspaceId,
       topic: value.flow.topic,
       questions: value.flow.questions,
+      duration_minutes: value.flow.durationMinutes,
       public_token: value.flow.publicToken,
       created_at: value.flow.createdAt,
       updated_at: value.flow.updatedAt,
@@ -157,14 +160,12 @@ async function persistCommand(
     return;
   }
   if (command.type === "update" && value.flow) {
-    const { error } = await supabase
-      .from("workspace_verification_flows")
-      .update({
-        topic: value.flow.topic,
-        questions: value.flow.questions,
-        updated_at: value.flow.updatedAt,
-      })
-      .eq("id", value.flow.id);
+    const { error } = await writeVerificationFlow(supabase, "update", value.flow.id, {
+      topic: value.flow.topic,
+      questions: value.flow.questions,
+      duration_minutes: value.flow.durationMinutes,
+      updated_at: value.flow.updatedAt,
+    });
     if (error) throw new Error(error.message);
     return;
   }
@@ -220,12 +221,34 @@ export async function runVerificationCommand(
   return next;
 }
 
+function presentFlow(flow: VerificationFlow): VerificationFlow {
+  return { ...flow, durationMinutes: flowCountdownMinutes(flow.durationMinutes) };
+}
+
+async function writeVerificationFlow(
+  supabase: ReturnType<typeof createAdminClient>,
+  mode: "insert" | "update",
+  id: string,
+  row: Record<string, unknown>,
+): Promise<{ error: { message: string } | null }> {
+  const run = (body: Record<string, unknown>) =>
+    mode === "insert"
+      ? supabase.from("workspace_verification_flows").insert(body)
+      : supabase.from("workspace_verification_flows").update(body).eq("id", id);
+  const first = await run(row);
+  if (!first.error || !String(first.error.message).includes("duration_minutes")) return first;
+  const { duration_minutes: _duration, ...withoutDuration } = row;
+  return run(withoutDuration);
+}
+
 export async function listVerificationFlows(workspaceId: string): Promise<VerificationFlow[]> {
   if ((await resolveBackend()) === "memory") {
-    return verificationRepositoryGlobal().memory.flows.filter((flow) => flow.workspaceId === workspaceId);
+    return verificationRepositoryGlobal().memory.flows
+      .filter((flow) => flow.workspaceId === workspaceId)
+      .map(presentFlow);
   }
   const state = await loadSupabaseState({ workspaceId });
-  return state.flows;
+  return state.flows.map(presentFlow);
 }
 
 export async function listVerificationResults(workspaceId: string): Promise<VerificationFlowResult[]> {
@@ -239,11 +262,11 @@ export async function listVerificationResults(workspaceId: string): Promise<Veri
 }
 
 export async function getVerificationFlowByToken(token: string): Promise<VerificationFlow | null> {
-  if ((await resolveBackend()) === "memory") {
-    return flowByPublicToken(verificationRepositoryGlobal().memory, token);
-  }
-  const state = await loadSupabaseState({ publicToken: token });
-  return flowByPublicToken(state, token);
+  const flow =
+    (await resolveBackend()) === "memory"
+      ? flowByPublicToken(verificationRepositoryGlobal().memory, token)
+      : flowByPublicToken(await loadSupabaseState({ publicToken: token }), token);
+  return flow ? presentFlow(flow) : null;
 }
 
 export async function claimPublicIdentity(token: string, identity: string) {

@@ -241,7 +241,15 @@ function calibrateDictateTarget(elements: readonly IleWorkCanvasElement[]): {
   for (const el of alive) {
     if (el.type !== "text") continue;
     const role = elementData(el)[CALIBRATE_ROLE];
-    if (role === "question-label" || role === "region-label" || role === "question" || role === "region") {
+    if (
+      role === "question-label" ||
+      role === "region-label" ||
+      role === "question" ||
+      role === "region" ||
+      role === "instruction" ||
+      role === "cue" ||
+      role === "cue-label"
+    ) {
       continue;
     }
     const text = String(el.originalText || el.text || "").replace(/\s+/g, " ").trim();
@@ -268,9 +276,162 @@ function calibrateDictateTarget(elements: readonly IleWorkCanvasElement[]): {
   return {
     questionId: cardId(target),
     x: target.x + 12,
-    y: target.y + Math.min(36, Math.max(8, target.height - 48)),
+    y: target.y + target.height + 12,
     width,
   };
+}
+
+function boardBoxesOverlap(
+  a: { x: number; y: number; width: number; height: number },
+  b: { x: number; y: number; width: number; height: number },
+  pad = 4,
+): boolean {
+  return (
+    a.x - pad < b.x + b.width &&
+    a.x + a.width + pad > b.x &&
+    a.y - pad < b.y + b.height &&
+    a.y + a.height + pad > b.y
+  );
+}
+
+function boardBox(el: IleWorkCanvasElement): { x: number; y: number; width: number; height: number } {
+  return {
+    x: el.x,
+    y: el.y,
+    width: Math.max(1, el.width || 0),
+    height: Math.max(1, el.height || 0),
+  };
+}
+
+/**
+ * Responses sit under their cards. A long answer pushes the next card, and
+ * the region frame grows so the words stay inside it and off the next title.
+ */
+export function clearCalibrateResponseOverlap(
+  elements: readonly IleWorkCanvasElement[],
+): IleWorkCanvasElement[] {
+  const next = elements.map((el) => ({ ...el }));
+  const roleOf = (el: IleWorkCanvasElement) => String(el.customData?.[CALIBRATE_ROLE] || "");
+  const questionOf = (el: IleWorkCanvasElement) => String(el.customData?.[CALIBRATE_QUESTION] || "");
+  const shiftQuestion = (id: string, dy: number) => {
+    if (!id || dy <= 0) return;
+    for (const el of next) {
+      if (questionOf(el) === id) el.y += dy;
+    }
+  };
+  const shiftRegionDown = (regionName: string, dy: number) => {
+    if (!regionName || dy <= 0) return;
+    const region = next.find(
+      (el) => roleOf(el) === "region" && String(el.customData?.[CALIBRATE_REGION] || "") === regionName,
+    );
+    if (!region) return;
+    const cutoff = region.y - 80;
+    for (const el of next) {
+      if (el.y + (el.height || 0) < cutoff && el.id !== region.id) continue;
+      const cx = el.x + (el.width || 0) / 2;
+      const inColumn = cx >= region.x - 8 && cx <= region.x + (region.width || 0) + 8;
+      const named = String(el.customData?.[CALIBRATE_REGION] || "") === regionName;
+      if ((named || inColumn) && (el.y >= cutoff - 4 || el.id === region.id)) el.y += dy;
+    }
+  };
+
+  for (let pass = 0; pass < 8; pass += 1) {
+    let moved = false;
+    const responses = next.filter((el) => !el.isDeleted && el.type === "text" && roleOf(el) === "response");
+    for (const response of responses) {
+      const box = boardBox(response);
+      const pushed = new Set<string>();
+      for (const other of next) {
+        if (other.id === response.id || other.isDeleted) continue;
+        const otherRole = roleOf(other);
+        if (otherRole === "region" || otherRole === "instruction") continue;
+        if (questionOf(other) && questionOf(other) === questionOf(response)) continue;
+        if (!boardBoxesOverlap(box, boardBox(other))) continue;
+        const id = questionOf(other);
+        if (id && other.y >= response.y - 1) {
+          if (pushed.has(id)) continue;
+          const dy = response.y + box.height + 12 - other.y;
+          if (dy > 0) {
+            shiftQuestion(id, dy);
+            pushed.add(id);
+            moved = true;
+          }
+          continue;
+        }
+        if (otherRole === "region-label" && other.y >= response.y - 1) {
+          const dy = response.y + box.height + 16 - other.y;
+          const regionName = String(other.customData?.[CALIBRATE_REGION] || "");
+          if (dy > 0 && regionName && !pushed.has(`region:${regionName}`)) {
+            shiftRegionDown(regionName, dy);
+            pushed.add(`region:${regionName}`);
+            moved = true;
+          }
+        }
+      }
+    }
+
+    const questionCards = next
+      .filter((el) => !el.isDeleted && el.type === "rectangle" && roleOf(el) === "question")
+      .sort((a, b) => a.y - b.y || a.x - b.x);
+    for (let i = 0; i < questionCards.length; i += 1) {
+      const upper = questionCards[i]!;
+      const upperBox = boardBox(upper);
+      const response = next.find(
+        (el) => roleOf(el) === "response" && questionOf(el) === questionOf(upper) && !el.isDeleted,
+      );
+      const floor = Math.max(
+        upper.y + upperBox.height + 28,
+        response ? response.y + (response.height || 0) + 12 : 0,
+      );
+      for (let j = i + 1; j < questionCards.length; j += 1) {
+        const lower = questionCards[j]!;
+        const lowerBox = boardBox(lower);
+        const xOverlap =
+          upperBox.x < lowerBox.x + lowerBox.width && upperBox.x + upperBox.width > lowerBox.x;
+        if (!xOverlap || lower.y >= floor) continue;
+        shiftQuestion(questionOf(lower), floor - lower.y);
+        moved = true;
+      }
+    }
+
+    const regions = next
+      .filter((el) => !el.isDeleted && el.type === "rectangle" && roleOf(el) === "region")
+      .sort((a, b) => a.y - b.y);
+    for (const region of regions) {
+      let bottom = region.y + 24;
+      for (const el of next) {
+        if (el.isDeleted || el.id === region.id) continue;
+        const elRole = roleOf(el);
+        if (elRole === "region" || elRole === "region-label" || elRole === "instruction") continue;
+        const cx = el.x + (el.width || 0) / 2;
+        const cy = el.y + (el.height || 0) / 2;
+        if (cx < region.x || cx > region.x + (region.width || 0)) continue;
+        if (cy < region.y) continue;
+        bottom = Math.max(bottom, el.y + (el.height || 0) + 20);
+      }
+      const height = bottom - region.y;
+      if (height > (region.height || 0) + 0.5) {
+        region.height = height;
+        moved = true;
+      }
+    }
+    for (let index = 0; index < regions.length - 1; index += 1) {
+      const upper = regions[index]!;
+      const lower = regions[index + 1]!;
+      const lowerName = String(lower.customData?.[CALIBRATE_REGION] || "");
+      const label = next.find(
+        (el) => roleOf(el) === "region-label" && String(el.customData?.[CALIBRATE_REGION] || "") === lowerName,
+      );
+      const top = label ? Math.min(label.y, lower.y) : lower.y;
+      const dy = upper.y + (upper.height || 0) + 24 - top;
+      if (dy > 0) {
+        shiftRegionDown(lowerName, dy);
+        moved = true;
+      }
+    }
+    if (!moved) break;
+  }
+  return next;
 }
 
 /** Place dictated speech as a learner text box beside existing marks. */
@@ -310,7 +471,7 @@ export function appendIleDictatedTextToWorkCanvas(
   if (!appended.length) return { scene: current, appended: [] };
   return {
     scene: {
-      elements: [...current.elements, ...appended],
+      elements: clearCalibrateResponseOverlap([...current.elements, ...appended]),
       appState: current.appState,
       files: current.files,
     },

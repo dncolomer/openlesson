@@ -13,6 +13,7 @@ import {
   type CalibrateQuestion,
   type CalibrateState,
 } from "@/lib/calibrate-session";
+import { flowCountdownMinutes } from "@/lib/flow-countdown";
 import { acceptParticipantIdentity } from "@/lib/verification-flow";
 
 export type CalibrationFlow = {
@@ -20,6 +21,8 @@ export type CalibrationFlow = {
   workspaceId: string;
   goal: string;
   questions: CalibrateQuestion[];
+  /** Countdown chosen when the flow is created, in minutes. */
+  durationMinutes: number;
   publicToken: string;
   createdAt: string;
   updatedAt: string;
@@ -100,6 +103,7 @@ export type CalibrationCommand =
       workspaceId: string;
       goal: string;
       questions: unknown;
+      durationMinutes?: number;
       id?: string;
       publicToken?: string;
     }
@@ -109,6 +113,7 @@ export type CalibrationCommand =
       flowId: string;
       goal?: string;
       questions?: unknown;
+      durationMinutes?: number;
     }
   | { type: "remove"; workspaceId: string; flowId: string }
   | { type: "claim"; flowId: string; identity: string }
@@ -180,6 +185,7 @@ export function applyCalibrationCommand(
       workspaceId: command.workspaceId,
       goal: draft.goal,
       questions: draft.questions,
+      durationMinutes: flowCountdownMinutes(command.durationMinutes),
       publicToken: token,
       createdAt: stamp,
       updatedAt: stamp,
@@ -198,7 +204,16 @@ export function applyCalibrationCommand(
     const questions =
       command.questions === undefined ? current.questions : normalizeCalibrateQuestions(command.questions);
     if (questions.length === 0) return { ok: false, reason: "questions_required", state };
-    const flow: CalibrationFlow = { ...current, goal, questions, updatedAt: nowIso() };
+    const flow: CalibrationFlow = {
+      ...current,
+      goal,
+      questions,
+      durationMinutes:
+        command.durationMinutes === undefined
+          ? flowCountdownMinutes(current.durationMinutes)
+          : flowCountdownMinutes(command.durationMinutes),
+      updatedAt: nowIso(),
+    };
     return {
       ok: true,
       flow,

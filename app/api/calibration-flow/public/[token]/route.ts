@@ -23,6 +23,7 @@ export async function GET(
     flowId: flow.id,
     goal: flow.goal,
     questionCount: flow.questions.length,
+    durationMinutes: flow.durationMinutes,
     verificationRun: false,
   });
 }
@@ -47,6 +48,7 @@ export async function POST(
       requiresClassification: started.requiresClassification,
       flowId: claimed.flow.id,
       goal: claimed.flow.goal,
+      durationMinutes: claimed.flow.durationMinutes,
       questions: claimed.flow.questions,
     });
   } catch (error) {

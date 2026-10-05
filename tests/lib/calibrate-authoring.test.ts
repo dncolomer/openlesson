@@ -56,6 +56,19 @@ describe("calibration authoring", () => {
     if (!created.ok || !created.flow) return;
     expect(created.flow.goal).toBe("Continuity");
     expect(created.flow.questions).toHaveLength(5);
+    expect(created.flow.durationMinutes).toBe(15);
+    const timed = applyCalibrationCommand(emptyCalibrationState(), {
+      type: "create",
+      workspaceId: "ws-cal",
+      goal: typed.goal,
+      questions: typed.questions,
+      durationMinutes: 25,
+      id: "flow-timed",
+      publicToken: "token-timed",
+    });
+    expect(timed.ok).toBe(true);
+    if (!timed.ok || !timed.flow) return;
+    expect(timed.flow.durationMinutes).toBe(25);
 
     const started = beginCalibrationSession(created.flow);
     expect(started.kind).toBe("calibration");
@@ -202,6 +215,13 @@ describe("calibration authoring", () => {
     expect(runner).toContain("Identify yourself");
     expect(runner).toContain("That identity is already used for this calibration flow.");
     expect(runner).toContain("identity: claimedIdentity");
+    expect(runner).toContain("data-calibration-live-clock");
+    expect(panel).toContain("data-calibration-flow-minutes");
+    expect(read("components/VerificationFlowsPanel.tsx")).toContain("data-verification-flow-minutes");
+    expect(read("components/calibrate/calibrate-live-surface.tsx")).toContain("data-calibrate-opening");
+    expect(read("components/calibrate/calibrate-live-surface.tsx")).toContain("data-calibrate-opening-cue");
+    expect(read("components/calibrate/calibrate-live-surface.tsx")).toContain("CALIBRATE_MOVE_RIGHT_LABEL");
+    expect(read("lib/calibrate-session.ts")).toContain('CALIBRATE_MOVE_RIGHT_LABEL = "move right"');
   });
 
   it("still starts a verification flow with one pooled question", () => {
@@ -210,6 +230,7 @@ describe("calibration authoring", () => {
       workspaceId: "ws-cal",
       topic: "Limits",
       questions: MANUAL_QUESTIONS.map((text, index) => ({ id: `v-${index + 1}`, text })),
+      durationMinutes: 15,
       publicToken: "token-verify",
       createdAt: "2026-10-05T00:00:00.000Z",
       updatedAt: "2026-10-05T00:00:00.000Z",

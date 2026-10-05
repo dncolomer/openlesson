@@ -42,6 +42,7 @@ export function SessionSidebar({
   resourcesOpen,
   onResourcesOpenChange,
   elapsedStartedAt = null,
+  fillWidth = false,
 }: {
   mode: SessionSidebarMode;
   clock?: ReactNode;
@@ -59,6 +60,8 @@ export function SessionSidebar({
   resources?: ReactNode;
   resourcesOpen?: boolean;
   onResourcesOpenChange?: (open: boolean) => void;
+  /** Narrow Calibrate: the rail uses the width under the canvas instead of 20rem. */
+  fillWidth?: boolean;
 }) {
   const [uncontrolledResources, setUncontrolledResources] = useState(false);
   const resourcesOpenNow = resourcesOpen ?? uncontrolledResources;
@@ -72,13 +75,25 @@ export function SessionSidebar({
   const showSignals = sessionSidebarHasSection(mode, "signals") && signals != null;
   const showTranscript = sessionSidebarHasSection(mode, "transcript") && transcript != null;
   const resourcesInFocus = showFocus && resources != null;
-  const dataCardHeight = `${SESSION_DATA_CARD_REM}rem`;
+  const dataCardHeight = fillWidth ? "4.5rem" : `${SESSION_DATA_CARD_REM}rem`;
 
   return (
     <aside
       data-session-sidebar
       data-session-sidebar-mode={mode}
-      style={{ ...sessionSidebarRailStyle(false), ...RAIL_GRID }}
+      style={
+        fillWidth
+          ? {
+              width: "100%",
+              minWidth: 0,
+              maxWidth: "100%",
+              height: "42%",
+              flexShrink: 0,
+              ["--session-topic-card-height" as string]: "7rem",
+              ...RAIL_GRID,
+            }
+          : { ...sessionSidebarRailStyle(false), ...RAIL_GRID }
+      }
       className="relative box-border flex h-full min-h-0 flex-col overflow-hidden border-l border-white/40 bg-black"
     >
       {showTopic ? (

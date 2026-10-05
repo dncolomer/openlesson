@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { ContextGenerationPool } from "@/components/ContextGenerationPool";
+import { FLOW_COUNTDOWN_MINUTES, flowCountdownMinutes } from "@/lib/flow-countdown";
 import {
   buildVerificationFlowSkillMarkdown,
   verificationFlowSkillFilename,
@@ -12,6 +13,7 @@ type FlowRecord = {
   id: string;
   topic: string;
   questions: VerificationQuestion[];
+  durationMinutes?: number;
   publicToken: string;
   publicUrl: string;
   skillMd: string;
@@ -36,6 +38,7 @@ export function VerificationFlowsPanel({
 }) {
   const [flows, setFlows] = useState<FlowRecord[]>([]);
   const [topic, setTopic] = useState("");
+  const [minutes, setMinutes] = useState(15);
   const [draftQuestions, setDraftQuestions] = useState<string[]>([""]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -78,6 +81,7 @@ export function VerificationFlowsPanel({
           flowId: editingId,
           topic,
           questions: questionsFromDraft(),
+          durationMinutes: minutes,
         }),
       });
       const payload = await response.json();
@@ -87,6 +91,7 @@ export function VerificationFlowsPanel({
       }
       setTopic("");
       setDraftQuestions([""]);
+      setMinutes(15);
       setEditingId(null);
       await load();
     } finally {
@@ -149,6 +154,21 @@ export function VerificationFlowsPanel({
           data-verification-flow-topic
           className="w-full border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
         />
+        <label className="flex items-center gap-3 text-xs text-neutral-300">
+          Countdown
+          <select
+            value={minutes}
+            data-verification-flow-minutes
+            onChange={(event) => setMinutes(flowCountdownMinutes(event.target.value))}
+            className="border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-xs text-white"
+          >
+            {FLOW_COUNTDOWN_MINUTES.map((value) => (
+              <option key={value} value={value}>
+                {value} min
+              </option>
+            ))}
+          </select>
+        </label>
         <div className="space-y-2" data-verification-flow-pool>
           {draftQuestions.map((value, index) => (
             <div key={index} className="flex gap-2">
@@ -200,6 +220,8 @@ export function VerificationFlowsPanel({
                 <p className="text-sm text-white">{flow.topic}</p>
                 <p className="text-[11px] text-neutral-500">
                   {flow.questions.length} starting question{flow.questions.length === 1 ? "" : "s"}
+                  {" · "}
+                  {flowCountdownMinutes(flow.durationMinutes)} min
                 </p>
               </div>
               <div className="flex gap-2">
@@ -209,6 +231,7 @@ export function VerificationFlowsPanel({
                   onClick={() => {
                     setEditingId(flow.id);
                     setTopic(flow.topic);
+                    setMinutes(flowCountdownMinutes(flow.durationMinutes));
                     setDraftQuestions(
                       flow.questions.length ? flow.questions.map((question) => question.text) : [""],
                     );

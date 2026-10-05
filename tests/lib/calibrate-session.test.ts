@@ -22,6 +22,8 @@ import {
   moveCalibrateQuestionOnCanvas,
   readCalibratePlacements,
   readCalibrateResponseTexts,
+  calibrateBoardHasOverlap,
+  calibrateTextCollides,
   seedCalibrateWorkCanvas,
   syncCalibratePlacements,
   type CalibrateResponseSource,
@@ -161,6 +163,45 @@ describe("calibration answer and uncertainty", () => {
 });
 
 describe("calibration canvas regions", () => {
+  it("keeps question text, labels, and regions from occupying the same pixels", () => {
+    const seeded = seedCalibrateWorkCanvas([
+      "A long question that wraps across several lines so the card grows taller than a single row of type and still has to clear the region titles.",
+      "Second question with enough words to wrap inside the card without touching the first.",
+      "Third question stays in the column to the right of the opening instructions.",
+      "Fourth question remains clear of both regions and their titles.",
+      "Fifth question ends the pool without crossing another mark.",
+    ]);
+    expect(calibrateBoardHasOverlap(seeded.scene.elements)).toBe(false);
+    const opening = seeded.scene.elements.find((el) => el.customData?.calibrateRole === "instruction");
+    const card = seeded.scene.elements.find((el) => el.customData?.calibrateRole === "question");
+    expect(opening).toBeTruthy();
+    expect(card).toBeTruthy();
+    expect(card!.x).toBeGreaterThan(opening!.x + opening!.width);
+    expect(card!.x - (opening!.x + opening!.width)).toBeGreaterThanOrEqual(240);
+    expect(calibrateTextCollides(seeded.scene.elements)).toBe(false);
+  });
+
+  it("keeps a long answer off the next card and inside its region", () => {
+    const seeded = seedCalibrateWorkCanvas(POOL);
+    let scene = seeded.scene;
+    scene = moveCalibrateQuestionOnCanvas(scene, "q-1", "comfortable");
+    scene = moveCalibrateQuestionOnCanvas(scene, "q-2", "comfortable");
+    scene = moveCalibrateQuestionOnCanvas(scene, "q-3", "comfortable");
+    const long =
+      "I would name the slope, then the smaller and smaller runs, then the value those slopes approach, and I would say which picture still fails when the graph breaks.";
+    scene = addCalibrateResponseText(scene, { questionId: "q-1", text: long, source: "typed" });
+    expect(calibrateTextCollides(scene.elements)).toBe(false);
+    const placed = readCalibratePlacements(scene);
+    expect(placed["q-1"]).toBe("comfortable");
+    expect(placed["q-2"]).toBe("comfortable");
+    expect(placed["q-3"]).toBe("comfortable");
+    const dictated = appendIleDictatedTextToWorkCanvas(
+      scene,
+      "The uncertain part is which comparison would show the area and the integral disagree, and how many smaller steps still refuse to settle on one picture.",
+    );
+    expect(calibrateTextCollides(dictated.scene.elements)).toBe(false);
+  });
+
   it("reads region moves and response text from the work canvas", () => {
     const seeded = seedCalibrateWorkCanvas(POOL);
     expect(seeded.questions).toHaveLength(5);

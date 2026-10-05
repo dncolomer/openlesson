@@ -38,6 +38,8 @@ import {
   ileWorkCanvasEmptyNearbyOriginWithReserved,
   ileWorkCanvasFiniteOrigin,
   ileWorkCanvasAddedElementIds,
+  ileWorkCanvasCenterScroll,
+  ileWorkCanvasContentBounds,
   ileWorkCanvasHasLiveElements,
   ileWorkCanvasLayoutReply,
   ileWorkCanvasShouldRestoreEmptyBoard,
@@ -179,6 +181,10 @@ export interface ExcalidrawCanvasProps {
   applyElementsNonce?: string | number | null;
   /** Ids to drop before merging applyElements (loading-placeholder replace). */
   applyRemoveElementIds?: readonly string[] | null;
+  /** On open, center these marks (`customData.calibrateRole`) instead of the whole board. */
+  openFocusRole?: string | null;
+  /** When false, merging elements does not pan the camera. */
+  scrollAppliedElements?: boolean;
   /** Classified Work-canvas PoW (draw/move/rotate/delete/Commands/board prompt). */
   onCanvasPowActions?: (events: IleWorkCanvasPowEvent[]) => void;
   onAskSelected?: (input: {
@@ -256,6 +262,8 @@ export function ExcalidrawCanvas({
   applyElements = null,
   applyElementsNonce = null,
   applyRemoveElementIds = null,
+  openFocusRole = null,
+  scrollAppliedElements = true,
   onCanvasPowActions,
   onAskSelected,
   boardId = null,
@@ -300,7 +308,9 @@ export function ExcalidrawCanvas({
    
   const sceneDataRef = useRef<{ elements: any[]; appState: any; files: any } | null>(null);
   const initialSceneDataRef = useRef(
-    ileWorkCanvasWithScrollToContent(sanitizeSceneData(initialSceneData)),
+    openFocusRole
+      ? sanitizeSceneData(initialSceneData)
+      : ileWorkCanvasWithScrollToContent(sanitizeSceneData(initialSceneData)),
   );
   const onSceneChangeRef = useRef(onSceneChange);
   const onCanvasPowActionsRef = useRef(onCanvasPowActions);
@@ -319,11 +329,17 @@ export function ExcalidrawCanvas({
   const applyingRemoteRef = useRef(false);
   const userClearedRef = useRef(false);
   const centeredOnOpenRef = useRef(false);
+  const openFocusRoleRef = useRef(openFocusRole);
+  openFocusRoleRef.current = openFocusRole;
+  const scrollAppliedElementsRef = useRef(scrollAppliedElements);
+  scrollAppliedElementsRef.current = scrollAppliedElements;
   const centerRafRef = useRef(0);
   const centerTriesRef = useRef(0);
+  const focusHoldUntilRef = useRef(0);
 
   const scheduleCenterOnOpen = useCallback(() => {
     if (centeredOnOpenRef.current) return;
+    centerTriesRef.current = 0;
     if (centerRafRef.current) cancelAnimationFrame(centerRafRef.current);
     const run = () => {
       centerRafRef.current = 0;
@@ -332,7 +348,22 @@ export function ExcalidrawCanvas({
       const elements = (api.getSceneElements?.() ?? []).filter(
         (el: { isDeleted?: boolean }) => !el.isDeleted,
       );
-      if (!elements.length) return;
+      const appState = api.getAppState?.() ?? {};
+      const width = Number(appState.width);
+      const height = Number(appState.height);
+      const viewportReady =
+        elements.length > 0 &&
+        Number.isFinite(width) &&
+        width > 0 &&
+        Number.isFinite(height) &&
+        height > 0;
+      if (!viewportReady) {
+        if (centerTriesRef.current < 24) {
+          centerTriesRef.current += 1;
+          centerRafRef.current = requestAnimationFrame(run);
+        }
+        return;
+      }
       if (typeof api.refresh === "function") {
         try {
           api.refresh();
@@ -340,18 +371,48 @@ export function ExcalidrawCanvas({
           /* layout may not be ready */
         }
       }
-      const appState = api.getAppState?.() ?? {};
-      const width = Number(appState.width);
-      const height = Number(appState.height);
-      if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) {
-        if (centerTriesRef.current < 24) {
+      const role = openFocusRoleRef.current;
+      const focused = role
+        ? elements.filter(
+            (el: { customData?: { calibrateRole?: string } }) => el.customData?.calibrateRole === role,
+          )
+        : [];
+      if (role && !focused.length) {
+        if (centerTriesRef.current < 40) {
           centerTriesRef.current += 1;
           centerRafRef.current = requestAnimationFrame(run);
         }
         return;
       }
+      if (focused.length && typeof api.updateScene === "function") {
+        const bounds = ileWorkCanvasContentBounds(focused);
+        const scroll = ileWorkCanvasCenterScroll(bounds, { width, height, zoom: { value: 1 } });
+        if (scroll) {
+          const offsetLeft = Number(appState.offsetLeft) || 0;
+          const offsetTop = Number(appState.offsetTop) || 0;
+          try {
+            api.updateScene({
+              appState: {
+                zoom: { value: 1 },
+                scrollX: scroll.scrollX - offsetLeft,
+                scrollY: scroll.scrollY - offsetTop,
+              },
+            });
+          } catch {
+            api.scrollToContent(focused, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS);
+          }
+        } else {
+          api.scrollToContent(focused, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS);
+        }
+        if (!focusHoldUntilRef.current) focusHoldUntilRef.current = performance.now() + 900;
+        if (performance.now() < focusHoldUntilRef.current) {
+          centerRafRef.current = requestAnimationFrame(run);
+          return;
+        }
+      } else {
+        api.scrollToContent(elements, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS);
+      }
       centeredOnOpenRef.current = true;
-      api.scrollToContent(elements, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS);
     };
     centerRafRef.current = requestAnimationFrame(() => {
       centerRafRef.current = requestAnimationFrame(run);
@@ -430,7 +491,7 @@ export function ExcalidrawCanvas({
     } finally {
       applyingRemoteRef.current = false;
     }
-    if (added.length && typeof api.scrollToContent === "function") {
+    if (added.length && scrollAppliedElementsRef.current && typeof api.scrollToContent === "function") {
       api.scrollToContent(added, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS);
     } else {
       scheduleCenterOnOpen();
@@ -1354,9 +1415,10 @@ export function ExcalidrawCanvas({
     !excalidrawAPIRef.current &&
     ileWorkCanvasHasLiveElements(initialSceneData as IleWorkCanvasScene)
   ) {
-    initialSceneDataRef.current = ileWorkCanvasWithScrollToContent(
-      sanitizeSceneData(initialSceneData),
-    );
+    const clean = sanitizeSceneData(initialSceneData);
+    initialSceneDataRef.current = openFocusRole
+      ? clean
+      : ileWorkCanvasWithScrollToContent(clean);
   }
 
   return (

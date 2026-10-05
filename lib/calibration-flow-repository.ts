@@ -18,6 +18,7 @@ import {
   type CalibrationState,
 } from "@/lib/calibration-flow";
 import { normalizeCalibrateQuestions } from "@/lib/calibrate-session";
+import { flowCountdownMinutes } from "@/lib/flow-countdown";
 
 const CALIBRATION_FLOW_GLOBAL = "__openlessonCalibrationFlowRepository";
 
@@ -86,6 +87,7 @@ function mapFlow(row: Record<string, unknown>): CalibrationFlow {
     workspaceId: String(row.workspace_id),
     goal: String(row.goal || ""),
     questions: normalizeCalibrateQuestions(row.questions),
+    durationMinutes: flowCountdownMinutes(row.duration_minutes),
     publicToken: String(row.public_token || ""),
     createdAt: String(row.created_at || ""),
     updatedAt: String(row.updated_at || ""),
@@ -139,11 +141,12 @@ async function persistCommand(
 ): Promise<void> {
   const supabase = createAdminClient();
   if (command.type === "create" && value.flow) {
-    const { error } = await supabase.from("workspace_calibration_flows").insert({
+    const { error } = await insertFlowRow(supabase, "workspace_calibration_flows", {
       id: value.flow.id,
       workspace_id: value.flow.workspaceId,
       goal: value.flow.goal,
       questions: value.flow.questions,
+      duration_minutes: value.flow.durationMinutes,
       public_token: value.flow.publicToken,
       created_at: value.flow.createdAt,
       updated_at: value.flow.updatedAt,
@@ -152,14 +155,12 @@ async function persistCommand(
     return;
   }
   if (command.type === "update" && value.flow) {
-    const { error } = await supabase
-      .from("workspace_calibration_flows")
-      .update({
-        goal: value.flow.goal,
-        questions: value.flow.questions,
-        updated_at: value.flow.updatedAt,
-      })
-      .eq("id", value.flow.id);
+    const { error } = await updateFlowRow(supabase, "workspace_calibration_flows", value.flow.id, {
+      goal: value.flow.goal,
+      questions: value.flow.questions,
+      duration_minutes: value.flow.durationMinutes,
+      updated_at: value.flow.updatedAt,
+    });
     if (error) throw new Error(error.message);
     return;
   }
@@ -210,20 +211,47 @@ export async function runCalibrationCommand(
   return next;
 }
 
+function presentFlow(flow: CalibrationFlow): CalibrationFlow {
+  return { ...flow, durationMinutes: flowCountdownMinutes(flow.durationMinutes) };
+}
+
+async function updateFlowRow(
+  supabase: ReturnType<typeof createAdminClient>,
+  table: "workspace_calibration_flows",
+  id: string,
+  row: Record<string, unknown>,
+): Promise<{ error: { message: string } | null }> {
+  const first = await supabase.from(table).update(row).eq("id", id);
+  if (!first.error || !String(first.error.message).includes("duration_minutes")) return first;
+  const { duration_minutes: _duration, ...withoutDuration } = row;
+  return supabase.from(table).update(withoutDuration).eq("id", id);
+}
+
+async function insertFlowRow(
+  supabase: ReturnType<typeof createAdminClient>,
+  table: "workspace_calibration_flows",
+  row: Record<string, unknown>,
+): Promise<{ error: { message: string } | null }> {
+  const first = await supabase.from(table).insert(row);
+  if (!first.error || !String(first.error.message).includes("duration_minutes")) return first;
+  const { duration_minutes: _duration, ...withoutDuration } = row;
+  return supabase.from(table).insert(withoutDuration);
+}
+
 export async function listCalibrationFlows(workspaceId: string): Promise<CalibrationFlow[]> {
   if ((await resolveBackend()) === "memory") {
-    return memoryState().flows.filter((flow) => flow.workspaceId === workspaceId);
+    return memoryState().flows.filter((flow) => flow.workspaceId === workspaceId).map(presentFlow);
   }
   const state = await loadSupabaseState({ workspaceId });
-  return state.flows;
+  return state.flows.map(presentFlow);
 }
 
 export async function getCalibrationFlowByToken(token: string): Promise<CalibrationFlow | null> {
-  if ((await resolveBackend()) === "memory") {
-    return flowByPublicToken(memoryState(), token);
-  }
-  const state = await loadSupabaseState({ publicToken: token });
-  return flowByPublicToken(state, token);
+  const flow =
+    (await resolveBackend()) === "memory"
+      ? flowByPublicToken(memoryState(), token)
+      : flowByPublicToken(await loadSupabaseState({ publicToken: token }), token);
+  return flow ? presentFlow(flow) : null;
 }
 
 export async function claimCalibrationIdentity(token: string, identity: string) {

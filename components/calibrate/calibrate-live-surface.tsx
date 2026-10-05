@@ -12,6 +12,8 @@ import {
   CALIBRATE_DONE_ANSWERING_LABEL,
   CALIBRATE_DONE_CLASSIFYING_LABEL,
   CALIBRATE_DONE_EXPLAINING_LABEL,
+  CALIBRATE_MOVE_RIGHT_LABEL,
+  CALIBRATE_OPENING_INSTRUCTION,
   CALIBRATE_UNCONFIDENT_REQUIRED,
   calibrateStepInstruction,
   type CalibratePhase,
@@ -103,10 +105,36 @@ export function CalibrateLiveSurface(props: {
   const { transcript, onDictateActive } = useOptionalDictateTranscript();
   const label = advanceLabel(props.phase);
   const waiting = props.poolLoading && props.phase === "classifying";
+  const [showOpening, setShowOpening] = useState(props.phase === "classifying");
+  const [showMoveRight, setShowMoveRight] = useState(false);
+
+  useEffect(() => {
+    if (props.phase !== "classifying") {
+      setShowOpening(false);
+      return;
+    }
+    setShowOpening(true);
+    setShowMoveRight(false);
+    const cue = window.setTimeout(() => setShowMoveRight(true), 1100);
+    return () => window.clearTimeout(cue);
+  }, [props.boardId, props.phase]);
+
+  useEffect(() => {
+    if (!showOpening || !showMoveRight) return;
+    const dismiss = () => setShowOpening(false);
+    const host = document.querySelector("[data-calibrate-work-canvas]");
+    const timer = window.setTimeout(dismiss, 6000);
+    host?.addEventListener("pointerdown", dismiss);
+    return () => {
+      window.clearTimeout(timer);
+      host?.removeEventListener("pointerdown", dismiss);
+    };
+  }, [showOpening, showMoveRight]);
 
   return (
     <SessionWorkSurface
       mode="tap"
+      stackBelow
       stage={
         <div
           data-scout-work-canvas-pane
@@ -131,7 +159,37 @@ export function CalibrateLiveSurface(props: {
             }}
             onCanvasPowActions={props.onCanvasPowActions}
             onAskSelected={async () => ({ text: "" })}
+            openFocusRole="instruction"
+            scrollAppliedElements={false}
           />
+          {showOpening ? (
+            <div
+              className="@container/calibrate-open pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-4"
+              data-calibrate-opening
+            >
+              <div className="relative w-full min-w-0 max-w-md @[40rem]/calibrate-open:max-w-[min(28rem,calc(100cqw-26rem))]">
+                <div className="bg-[#0b0b0b]/90 px-6 py-5">
+                  <p className="text-center text-base leading-relaxed text-white" data-calibrate-opening-text>
+                    {CALIBRATE_OPENING_INSTRUCTION}
+                  </p>
+                </div>
+                {showMoveRight ? (
+                  <div
+                    className="absolute right-0 top-full mt-3 flex w-max items-center gap-2 text-white @[40rem]/calibrate-open:left-full @[40rem]/calibrate-open:right-auto @[40rem]/calibrate-open:top-1/2 @[40rem]/calibrate-open:mt-0 @[40rem]/calibrate-open:ml-4 @[40rem]/calibrate-open:-translate-y-1/2"
+                    data-calibrate-opening-cue
+                  >
+                    <svg viewBox="0 0 72 16" className="h-4 w-16 shrink-0" aria-hidden>
+                      <path d="M0 8h60" stroke="currentColor" strokeWidth="2" fill="none" />
+                      <path d="M52 2l12 6-12 6" fill="currentColor" />
+                    </svg>
+                    <span className="whitespace-nowrap font-mono text-xs uppercase tracking-[0.16em]">
+                      {CALIBRATE_MOVE_RIGHT_LABEL}
+                    </span>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
           {props.error ? (
             <p className="pointer-events-none absolute inset-x-0 bottom-2 z-10 px-3 text-center text-xs text-red-300">
               {props.error}

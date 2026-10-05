@@ -24,6 +24,7 @@ export async function GET(
   return NextResponse.json({
     topic: flow.topic,
     questionCount: flow.questions.length,
+    durationMinutes: flow.durationMinutes,
     flowId: flow.id,
   });
 }
@@ -42,6 +43,7 @@ export async function POST(
   const question = claimed.choices.question;
   return NextResponse.json({
     identity: claimed.identity,
+    durationMinutes: claimed.flow.durationMinutes,
     emptyPool: claimed.choices.emptyPool,
     practice: claimed.choices.practice,
     question: question

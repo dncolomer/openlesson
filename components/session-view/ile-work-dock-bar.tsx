@@ -131,7 +131,7 @@ export function SessionTopicCard({
   });
   const heading = title.trim() || "Topic";
   const timer = useContext(SessionTopicCardTimerContext);
-  const height = `${SESSION_TOPIC_CARD_REM}rem`;
+  const height = `var(--session-topic-card-height, ${SESSION_TOPIC_CARD_REM}rem)`;
   const videoRef = useRef<HTMLVideoElement>(null);
   const [mode, setMode] = useState<"image" | "video">("image");
   const [descriptionOpen, setDescriptionOpen] = useState(false);

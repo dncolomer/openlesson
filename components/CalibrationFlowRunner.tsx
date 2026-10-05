@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { TapLiveClock } from "@/components/tap-score/tap-live-clock";
+import { flowCountdownMinutes } from "@/lib/flow-countdown";
 import { CalibrateLiveSurface } from "@/components/calibrate/calibrate-live-surface";
 import { SessionFinishedScreen } from "@/components/session-view/session-finished-screen";
 import { TapThoughtButton } from "@/components/tap-score/tap-thought-button";
@@ -50,6 +52,10 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
   const [error, setError] = useState("");
   const [claiming, setClaiming] = useState(false);
   const [stored, setStored] = useState(false);
+  const [durationMinutes, setDurationMinutes] = useState(15);
+  const [startedAt, setStartedAt] = useState<number | null>(null);
+  const [remainingSeconds, setRemainingSeconds] = useState(0);
+  const [timeUp, setTimeUp] = useState(false);
   const storedRef = useRef(false);
 
   useEffect(() => {
@@ -76,6 +82,7 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
         questions?: { id?: string; text: string }[];
         identity?: string;
         goal?: string;
+        durationMinutes?: number;
       } = {};
       if (raw.trim()) {
         try {
@@ -109,6 +116,11 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
       }
       const seeded = seedCalibrateWorkCanvas(started.session.pool);
       const claimed = String(payload.identity || identity.trim());
+      const minutes = flowCountdownMinutes(payload.durationMinutes);
+      setDurationMinutes(minutes);
+      setRemainingSeconds(minutes * 60);
+      setStartedAt(Date.now());
+      setTimeUp(false);
       setClaimedIdentity(claimed);
       setGoal(String(payload.goal || ""));
       setCalibrate(started.session);
@@ -123,6 +135,20 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
       setClaiming(false);
     }
   }
+
+  useEffect(() => {
+    if (!startedAt || stored || timeUp) return;
+    const total = durationMinutes * 60;
+    const tick = () => {
+      const elapsed = Math.floor((Date.now() - startedAt) / 1000);
+      const remaining = Math.max(0, total - elapsed);
+      setRemainingSeconds(remaining);
+      if (remaining <= 0) setTimeUp(true);
+    };
+    tick();
+    const id = window.setInterval(tick, 250);
+    return () => window.clearInterval(id);
+  }, [durationMinutes, startedAt, stored, timeUp]);
 
   const storeProof = useCallback(async (state: CalibrateState) => {
     if (storedRef.current) return;
@@ -218,6 +244,22 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
       </CalibrationViewport>
     );
   }
+  if (timeUp && !stored) {
+    return (
+      <CalibrationViewport>
+        <SessionFinishedScreen
+          data-calibration-time-up=""
+          title="Time is up"
+          body="The countdown for this calibration flow has ended."
+          actions={
+            <TapThoughtButton size="md" variant="primary" onClick={() => { window.location.href = "/"; }}>
+              Explore Uncertain Systems
+            </TapThoughtButton>
+          }
+        />
+      </CalibrationViewport>
+    );
+  }
   if (stored) {
     return (
       <CalibrationViewport>
@@ -253,7 +295,7 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
         comfortableCount={counts.comfortable}
         unconfidentCount={counts.unconfident}
         canAdvance={canAdvance}
-        readOnly={false}
+        readOnly={timeUp}
         scene={scene}
         sceneRef={sceneRef}
         applyElements={applyElements}
@@ -262,7 +304,17 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
         onCanvasPowActions={() => {}}
         onAdvance={onAdvance}
         error={error}
-        clock={null}
+        clock={
+          <div className="flex w-full min-w-0 flex-col gap-2 px-1 py-1" data-calibration-live-clock>
+            <TapLiveClock
+              label="Time left"
+              remainingSeconds={remainingSeconds}
+              waiting={false}
+              listening={false}
+              placement="card"
+            />
+          </div>
+        }
         actions={null}
         topicId="calibration-goal"
         topicText={goal || "Calibration"}

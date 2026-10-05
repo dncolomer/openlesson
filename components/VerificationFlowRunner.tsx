@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { TapScoreClient } from "@/components/TapScoreClient";
 import type { TapStartingTopic } from "@/lib/tap-score";
+import { flowCountdownMinutes } from "@/lib/flow-countdown";
 import {
   VERIFICATION_PRACTICE_OPENING,
   verificationQuestionStartingPrompt,
@@ -15,6 +16,7 @@ export function VerificationFlowRunner({ token }: { token: string }) {
   const [identity, setIdentity] = useState("");
   const [claimedIdentity, setClaimedIdentity] = useState("");
   const [topic, setTopic] = useState("");
+  const [minutes, setMinutes] = useState(15);
   const [question, setQuestion] = useState<TapStartingTopic | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -55,6 +57,7 @@ export function VerificationFlowRunner({ token }: { token: string }) {
         openingQuestion: opening,
       });
       setTopic(String(payload.topic || ""));
+      setMinutes(flowCountdownMinutes(payload.durationMinutes));
       setPhase("pick");
     } finally {
       setBusy(false);
@@ -92,7 +95,7 @@ export function VerificationFlowRunner({ token }: { token: string }) {
           onLocalProof={storeProof}
           initialSession={{ workspaceTitle: topic || "Verification flow", post_session: "show_results" }}
           lockDuration
-          initialMinutes={10}
+          initialMinutes={minutes}
           showEndSession
         />
       </div>

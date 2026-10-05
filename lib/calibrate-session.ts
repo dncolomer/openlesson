@@ -14,7 +14,7 @@ import {
   type IleWorkCanvasElement,
   type IleWorkCanvasScene,
 } from "@/lib/ile-work-canvas";
-import { ILE_CANVAS_DICTATE_AUTHOR } from "@/lib/ile-canvas-dictate";
+import { clearCalibrateResponseOverlap, ILE_CANVAS_DICTATE_AUTHOR } from "@/lib/ile-canvas-dictate";
 
 export const CALIBRATE_COMFORTABLE_REQUIRED = 3;
 export const CALIBRATE_UNCONFIDENT_REQUIRED = 2;
@@ -90,11 +90,44 @@ const CARD_MIN_HEIGHT = 88;
 const CARD_PAD_X = 14;
 const CARD_PAD_Y = 12;
 const CARD_FONT = 16;
-const REGION_WIDTH = 560;
-const REGION_HEIGHT = 720;
-const REGION_Y = 300;
-const COMFORTABLE_X = 40;
-const UNCONFIDENT_X = 680;
+const REGION_WIDTH = 520;
+const CARD_STACK_GAP = 28;
+/** Room under a card for a response so the words do not sit on the question. */
+const RESPONSE_CLEARANCE = 96;
+
+/** Opening plate. The camera centers this box, and the question column starts to its right. */
+const OPENING_X = 80;
+const OPENING_Y = 80;
+const OPENING_W = 560;
+const OPENING_H = 220;
+/** Empty world space between the centered instruction and the question column. */
+const CUE_LANE = 280;
+/** Keeps the region title below the opening cue, which sits under the instruction on a phone. */
+const OPENING_CLEARANCE = 140;
+
+export const CALIBRATE_OPENING_INSTRUCTION =
+  "Move three questions into Comfortable answering and two into Not confident. Then answer one question you could answer, and write what is uncertain about one you could not. Type, paste, or dictate on that card.";
+export const CALIBRATE_MOVE_RIGHT_LABEL = "move right";
+
+type Box = { x: number; y: number; width: number; height: number };
+
+function boxesOverlap(a: Box, b: Box, pad = 4): boolean {
+  return (
+    a.x - pad < b.x + b.width &&
+    a.x + a.width + pad > b.x &&
+    a.y - pad < b.y + b.height &&
+    a.y + a.height + pad > b.y
+  );
+}
+
+function boxOf(el: Pick<IleWorkCanvasElement, "x" | "y" | "width" | "height">): Box {
+  return {
+    x: el.x,
+    y: el.y,
+    width: Math.max(1, el.width || 0),
+    height: Math.max(1, el.height || 0),
+  };
+}
 
 function trimText(value: unknown): string {
   return String(value ?? "").replace(/\s+/g, " ").trim();
@@ -431,8 +464,11 @@ function cardMetrics(text: string): { width: number; height: number; innerWidth:
 function regionFrame(
   region: CalibrateRegion,
   x: number,
+  y: number,
+  height: number,
 ): IleWorkCanvasElement[] {
   const label = region === "comfortable" ? CALIBRATE_COMFORTABLE_LABEL : CALIBRATE_UNCONFIDENT_LABEL;
+  const wrapped = wrapIleWorkCanvasText(label, REGION_WIDTH - 32, 18);
   const custom = {
     [CALIBRATE_ROLE_KEY]: "region",
     [CALIBRATE_REGION_KEY]: region,
@@ -445,9 +481,9 @@ function regionFrame(
     {
       type: "rectangle",
       x,
-      y: REGION_Y,
+      y,
       width: REGION_WIDTH,
-      height: REGION_HEIGHT,
+      height,
       strokeColor: "#e5e5e5",
       backgroundColor: "transparent",
       strokeWidth: 2,
@@ -458,10 +494,29 @@ function regionFrame(
       type: "text",
       text: label,
       x: x + 16,
-      y: REGION_Y + 16,
-      width: REGION_WIDTH - 32,
+      y: y - wrapped.height - 12,
+      width: wrapped.width,
+      height: wrapped.height,
+      autoResize: false,
       locked: true,
       customData: labelCustom,
+    },
+  ]);
+}
+
+function openingAnchor(): IleWorkCanvasElement[] {
+  return convertToExcalidrawElements([
+    {
+      type: "rectangle",
+      x: OPENING_X,
+      y: OPENING_Y,
+      width: OPENING_W,
+      height: OPENING_H,
+      strokeColor: "transparent",
+      backgroundColor: "transparent",
+      strokeWidth: 0,
+      locked: true,
+      customData: { [CALIBRATE_ROLE_KEY]: "instruction" },
     },
   ]);
 }
@@ -513,21 +568,38 @@ function questionCard(
   return converted;
 }
 
+function questionColumnX(): number {
+  return OPENING_X + OPENING_W + CUE_LANE;
+}
+
+function regionHeightFor(questions: readonly CalibrateQuestion[]): number {
+  const tallest = questions.reduce((max, question) => {
+    return Math.max(max, cardMetrics(question.text).height);
+  }, CARD_MIN_HEIGHT);
+  const slots = Math.max(questions.length, CALIBRATE_COMFORTABLE_REQUIRED);
+  return 24 + slots * (tallest + RESPONSE_CLEARANCE);
+}
+
 export function seedCalibrateWorkCanvas(
   raw: unknown,
 ): { scene: IleWorkCanvasScene; questions: CalibrateQuestion[] } {
   const questions = normalizeCalibrateQuestions(raw);
+  const height = regionHeightFor(questions);
+  const labelGap = wrapIleWorkCanvasText(CALIBRATE_COMFORTABLE_LABEL, REGION_WIDTH - 32, 18).height + 28;
+  const comfortableY = OPENING_Y + OPENING_H + OPENING_CLEARANCE + labelGap;
+  const unconfidentY = comfortableY + height + labelGap;
   const elements: IleWorkCanvasElement[] = [
-    ...regionFrame("comfortable", COMFORTABLE_X),
-    ...regionFrame("unconfident", UNCONFIDENT_X),
+    ...openingAnchor(),
+    ...regionFrame("comfortable", OPENING_X, comfortableY, height),
+    ...regionFrame("unconfident", OPENING_X, unconfidentY, height),
   ];
-  questions.forEach((question, index) => {
-    const column = index % 4;
-    const row = Math.floor(index / 4);
-    const x = 40 + column * (CARD_WIDTH + 24);
-    const y = 28 + row * (CARD_MIN_HEIGHT + 20);
-    elements.push(...questionCard(question, x, y));
-  });
+  let cardY = OPENING_Y;
+  const cardX = questionColumnX();
+  for (const question of questions) {
+    const box = cardMetrics(question.text);
+    elements.push(...questionCard(question, cardX, cardY));
+    cardY += box.height + CARD_STACK_GAP;
+  }
   const empty = emptyIleWorkCanvasScene();
   return {
     questions,
@@ -537,6 +609,51 @@ export function seedCalibrateWorkCanvas(
       files: empty.files,
     }),
   };
+}
+
+/** True when readable text shares pixels with other text or with a card it is not inside. */
+export function calibrateTextCollides(elements: readonly IleWorkCanvasElement[]): boolean {
+  const live = elements.filter((el) => !el.isDeleted);
+  const texts = live.filter((el) => el.type === "text");
+  for (let i = 0; i < texts.length; i += 1) {
+    const text = texts[i]!;
+    for (let j = i + 1; j < texts.length; j += 1) {
+      if (boxesOverlap(boxOf(text), boxOf(texts[j]!), 2)) return true;
+    }
+    for (const other of live) {
+      if (other.type !== "rectangle") continue;
+      const role = roleOf(other);
+      if (role === "region" || role === "instruction") continue;
+      if (text.containerId === other.id) {
+        const glyphs = boxOf(text);
+        const card = boxOf(other);
+        const inside =
+          glyphs.x >= card.x - 1 &&
+          glyphs.y >= card.y - 1 &&
+          glyphs.x + glyphs.width <= card.x + card.width + 1 &&
+          glyphs.y + glyphs.height <= card.y + card.height + 1;
+        if (!inside) return true;
+        continue;
+      }
+      if (boxesOverlap(boxOf(text), boxOf(other), 2)) return true;
+    }
+  }
+  return false;
+}
+
+/** True when two board marks occupy the same pixels, other than a label inside its card. */
+export function calibrateBoardHasOverlap(elements: readonly IleWorkCanvasElement[]): boolean {
+  const live = elements.filter((el) => !el.isDeleted);
+  for (let i = 0; i < live.length; i += 1) {
+    for (let j = i + 1; j < live.length; j += 1) {
+      const a = live[i]!;
+      const b = live[j]!;
+      if (a.containerId === b.id || b.containerId === a.id) continue;
+      if (!boxesOverlap(boxOf(a), boxOf(b))) continue;
+      return true;
+    }
+  }
+  return false;
 }
 
 function centerOf(el: Pick<IleWorkCanvasElement, "x" | "y" | "width" | "height">): {
@@ -652,7 +769,16 @@ function nearestQuestion(
   return ranked[0]?.id || "";
 }
 
-const IGNORED_TEXT_ROLES = new Set(["question-label", "region-label", "prompt", "question", "region"]);
+const IGNORED_TEXT_ROLES = new Set([
+  "question-label",
+  "region-label",
+  "prompt",
+  "question",
+  "region",
+  "instruction",
+  "cue",
+  "cue-label",
+]);
 
 export function readCalibrateResponseTexts(
   scene: IleWorkCanvasScene | null | undefined,
@@ -692,25 +818,34 @@ export function moveCalibrateQuestionOnCanvas(
   if (region !== "pool") {
     const frame = regionRectangles(elements).find((el) => regionOf(el) === region);
     if (!frame) return current;
-    const stacked = questionRectangles(elements).filter((el) => {
-      if (questionIdOf(el) === questionId) return false;
-      return containsPoint(frame, centerOf(el));
-    }).length;
-    targetX = frame.x + 28;
-    targetY = frame.y + 64 + stacked * (card.height + 16);
+    const stacked = questionRectangles(elements)
+      .filter((el) => {
+        if (questionIdOf(el) === questionId) return false;
+        return containsPoint(frame, centerOf(el));
+      })
+      .sort((a, b) => a.y - b.y || a.x - b.x);
+    targetX = frame.x + 24;
+    targetY = frame.y + 20;
+    for (const other of stacked) {
+      targetY = Math.max(targetY, other.y + other.height + RESPONSE_CLEARANCE);
+    }
   }
   if (!Number.isFinite(targetX) || !Number.isFinite(targetY)) return current;
   const dx = targetX - card.x;
   const dy = targetY - card.y;
   const moved = elements.map((el) => {
     if (el.id === card.id) return shiftBy(el, dx, dy);
-    if (el.containerId === card.id || (roleOf(el) === "question-label" && questionIdOf(el) === questionId)) {
+    if (
+      el.containerId === card.id ||
+      (questionIdOf(el) === questionId &&
+        (roleOf(el) === "question-label" || roleOf(el) === "response"))
+    ) {
       return shiftBy(el, dx, dy);
     }
     return el;
   });
   return serializeIleWorkCanvasScene({
-    elements: moved,
+    elements: clearCalibrateResponseOverlap(moved),
     appState: current.appState,
     files: current.files,
   });
@@ -725,7 +860,7 @@ export function addCalibrateResponseText(
   if (!text || !calibrateCanvasTextCounts(text, input.source)) return current;
   const card = questionRectangles(current.elements).find((el) => questionIdOf(el) === input.questionId);
   const x = card ? card.x + 12 : 48;
-  const y = card ? card.y + Math.max(28, card.height - 36) : 48;
+  const y = card ? card.y + card.height + 12 : 48;
   const custom: Record<string, unknown> = {
     [CALIBRATE_ROLE_KEY]: "response",
     [CALIBRATE_QUESTION_KEY]: input.questionId,
@@ -743,7 +878,7 @@ export function addCalibrateResponseText(
     },
   ]);
   return serializeIleWorkCanvasScene({
-    elements: [...current.elements, ...added],
+    elements: clearCalibrateResponseOverlap([...current.elements, ...added]),
     appState: current.appState,
     files: current.files,
   });

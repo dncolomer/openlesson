@@ -10,6 +10,7 @@ import {
   createCustomVerificationModelFromVectors,
   type CustomVerificationModelSpec,
 } from "@/lib/knowledge-config/custom-verification-model";
+import { flowCountdownMinutes } from "@/lib/flow-countdown";
 import type { TapStartingTopic } from "@/lib/tap-score";
 
 export const VERIFICATION_WORKSPACE_LABEL = "Verification Workspace";
@@ -27,6 +28,8 @@ export type VerificationFlow = {
   workspaceId: string;
   topic: string;
   questions: VerificationQuestion[];
+  /** Countdown chosen when the flow is created, in minutes. */
+  durationMinutes: number;
   publicToken: string;
   createdAt: string;
   updatedAt: string;
@@ -435,6 +438,7 @@ export type VerificationCommand =
       workspaceId: string;
       topic: string;
       questions: unknown;
+      durationMinutes?: number;
       id?: string;
       publicToken?: string;
     }
@@ -444,6 +448,7 @@ export type VerificationCommand =
       flowId: string;
       topic?: string;
       questions?: unknown;
+      durationMinutes?: number;
     }
   | { type: "remove"; workspaceId: string; flowId: string }
   | { type: "claim"; flowId: string; identity: string }
@@ -487,6 +492,7 @@ export function applyVerificationCommand(
       workspaceId: command.workspaceId,
       topic,
       questions: normalizeQuestionPool(command.questions),
+      durationMinutes: flowCountdownMinutes(command.durationMinutes),
       publicToken: token,
       createdAt: stamp,
       updatedAt: stamp,
@@ -509,6 +515,10 @@ export function applyVerificationCommand(
         command.questions === undefined
           ? current.questions
           : normalizeQuestionPool(command.questions),
+      durationMinutes:
+        command.durationMinutes === undefined
+          ? flowCountdownMinutes(current.durationMinutes)
+          : flowCountdownMinutes(command.durationMinutes),
       updatedAt: nowIso(),
     };
     return {

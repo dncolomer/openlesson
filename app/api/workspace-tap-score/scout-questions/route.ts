@@ -9,6 +9,13 @@ import {
   DEFAULT_MODEL,
 } from "@/lib/xai-client";
 import {
+  CALIBRATE_MIN_POOL,
+  CALIBRATE_POOL_LIMIT,
+  buildCalibratePoolSystemMessage,
+  buildCalibratePoolUserPrompt,
+  normalizeCalibrateQuestions,
+} from "@/lib/calibrate-session";
+import {
   SCOUT_FOLLOWUP_QUESTION_COUNT,
   buildScoutQuestionsSystemMessage,
   buildScoutQuestionsUserPrompt,
@@ -54,6 +61,42 @@ export async function POST(req: NextRequest) {
     }
 
     const countRaw = Number(body.count);
+    const languageNote =
+      locale && locale !== "en"
+        ? `Respond in ${locale}. Question text must be in that language.`
+        : "";
+
+    if (body.purpose === "calibrate") {
+      const count =
+        Number.isFinite(countRaw) && countRaw > 0
+          ? Math.min(CALIBRATE_POOL_LIMIT, Math.max(CALIBRATE_MIN_POOL, Math.floor(countRaw)))
+          : CALIBRATE_MIN_POOL;
+      const ai = await callXaiJSON<ScoutQuestionsResponse>(
+        [
+          systemMessage(
+            buildCalibratePoolSystemMessage(count) +
+              (languageNote ? `\n${languageNote}` : ""),
+          ),
+          userMessage(
+            buildCalibratePoolUserPrompt({
+              seedTitle: body.seedTitle ?? body.seedText ?? "",
+              seedDescription: body.seedDescription ?? "",
+              count,
+            }),
+          ),
+        ],
+        {
+          model: DEFAULT_MODEL,
+          maxTokens: 1200,
+          temperature: 0.85,
+        },
+      );
+      const questions = normalizeCalibrateQuestions(
+        ai.success ? (ai.data?.questions ?? ai.data) : null,
+      );
+      return NextResponse.json({ questions, count: questions.length, purpose: "calibrate" });
+    }
+
     const count =
       Number.isFinite(countRaw) && countRaw > 0
         ? Math.min(8, Math.floor(countRaw))
@@ -62,11 +105,6 @@ export async function POST(req: NextRequest) {
     const path = Array.isArray(body.path)
       ? body.path.map((p: unknown) => String(p ?? "").trim()).filter(Boolean)
       : [];
-
-    const languageNote =
-      locale && locale !== "en"
-        ? `Respond in ${locale}. Question text must be in that language.`
-        : "";
 
     const ai = await callXaiJSON<ScoutQuestionsResponse>(
       [

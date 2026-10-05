@@ -17,6 +17,7 @@ export type WorkspaceFeature =
   | "map_types"
   | "goals"
   | "verification_flows"
+  | "calibration_flows"
   | "context"
   | "knowledge"
   | "insights"
@@ -45,6 +46,7 @@ const LEARNING_FEATURES: readonly WorkspaceFeature[] = [
 const VERIFICATION_FEATURES: readonly WorkspaceFeature[] = [
   "goals",
   "verification_flows",
+  "calibration_flows",
   "context",
   "knowledge",
   "settings",
@@ -87,6 +89,8 @@ function featurePhrase(feature: WorkspaceFeature): string {
       return "goals";
     case "verification_flows":
       return "verification flows";
+    case "calibration_flows":
+      return "calibration flows";
     case "context":
       return "context";
     case "knowledge":

@@ -702,7 +702,7 @@ describe("verification workspace shell gates", () => {
       workspaceKind: "knowledge_region",
     });
     expect(owner).toContain("verification_flows");
-    expect(owner).toEqual(["goals", "verification_flows", "context", "knowledge", "settings"]);
+    expect(owner).toEqual(["goals", "verification_flows", "calibration_flows", "context", "knowledge", "settings"]);
     const standard = availableWorkspaceSections({ isOwner: true });
     expect(standard).not.toContain("verification_flows");
     expect(standard[0]).toBe("workspace");

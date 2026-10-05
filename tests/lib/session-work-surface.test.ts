@@ -45,21 +45,28 @@ describe("shared live work surface", () => {
     expect(host).toContain("absolute inset-0 flex h-full min-h-0 w-full flex-col");
   });
 
-  it("Prepare live play uses the sidebar and keeps questions, go back, and the paused clock", () => {
-    expect(prepare).toContain("<SessionWorkSurface");
-    expect(prepare).toContain('mode="tap"');
-    expect(prepare).toContain("data-scout-work-canvas-pane");
-    const paneAt = prepare.indexOf("data-scout-work-canvas-pane");
-    expect(prepare.slice(paneAt, paneAt + 280)).toContain("h-full");
-    expect(prepare).toContain("data-scout-questions-pane");
-    expect(prepare).toContain("data-scout-go-back");
-    expect(prepare).toMatch(/data-scout-go-back[\s\S]{0,180}disabled=\{readOnly\}/);
+  it("Calibrate live play uses the sidebar, the classifying step, and the paused clock", () => {
+    const surface = read("components/calibrate/calibrate-live-surface.tsx");
+    expect(prepare).toContain("<CalibrateLiveSurface");
+    expect(surface).toContain("<SessionWorkSurface");
+    expect(surface).toContain('mode="tap"');
+    expect(surface).toContain("data-scout-work-canvas-pane");
+    const paneAt = surface.indexOf("data-scout-work-canvas-pane");
+    expect(surface.slice(paneAt, paneAt + 280)).toContain("h-full");
+    expect(surface).toContain("data-calibrate-done-classifying");
+    expect(surface).toContain("CALIBRATE_DONE_CLASSIFYING_LABEL");
+    expect(surface).toContain("dictateTranscript={transcript}");
+    expect(surface).toContain('data-calibrate-data="disabled"');
+    expect(surface).not.toContain("data-scout-go-back");
+    expect(surface).not.toContain("PracticeVoiceChallenge");
     expect(prepare).toContain("data-scout-live-control-strip");
     expect(prepare).toContain("waiting={clockPaused || questionsLoading}");
     expect(prepare).toContain("listening={false}");
     expect(prepare).not.toContain("useSessionThoughtInterface");
+    expect(prepare).not.toContain("PracticeVoiceChallenge");
     for (const marker of OLD_LIVE_SPLITS) {
       expect(prepare, marker).not.toContain(marker);
+      expect(surface, marker).not.toContain(marker);
     }
   });
 

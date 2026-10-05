@@ -70,10 +70,30 @@ export function ContextGenerationPool({
     }
   }
 
-  const label = kind === "goals" ? "Generate goals from context" : "Generate topic + questions from context";
-  const action = kind === "goals" ? "data-generate-goals-from-context" : "data-generate-flow-from-context";
-  const poolAttr = kind === "goals" ? "data-context-goal-pool" : "data-context-flow-pool";
-  const candidateAttr = kind === "goals" ? "data-context-goal-candidate" : "data-context-flow-candidate";
+  const label =
+    kind === "goals"
+      ? "Generate goals from context"
+      : kind === "calibration_flow"
+        ? "Generate calibration questions from context"
+        : "Generate topic + questions from context";
+  const action =
+    kind === "goals"
+      ? "data-generate-goals-from-context"
+      : kind === "calibration_flow"
+        ? "data-generate-calibration-from-context"
+        : "data-generate-flow-from-context";
+  const poolAttr =
+    kind === "goals"
+      ? "data-context-goal-pool"
+      : kind === "calibration_flow"
+        ? "data-context-calibration-pool"
+        : "data-context-flow-pool";
+  const candidateAttr =
+    kind === "goals"
+      ? "data-context-goal-candidate"
+      : kind === "calibration_flow"
+        ? "data-context-calibration-candidate"
+        : "data-context-flow-candidate";
 
   return (
     <section className="space-y-3 border border-neutral-800 bg-neutral-950/60 p-3" data-context-generation={kind}>

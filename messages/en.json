@@ -497,7 +497,7 @@
     "searchWorkspaces": "Search workspaces...",
     "emptyWorkspacesKicker": "Get started",
     "emptyWorkspacesTitle": "Create your first workspace",
-    "emptyWorkspacesBody": "A workspace is the map you practice on. Create one to add topics, then Prepare, Learn, or Drill.",
+    "emptyWorkspacesBody": "A workspace is the map you practice on. Create one to add topics, then Calibrate, Learn, or Drill.",
     "emptyWorkspacesCta": "Create a workspace",
     "emptyWorkspacesHint": "You can start from a blank map or generate one from a topic.",
     "yourSubscription": "Your Subscription",
@@ -2172,6 +2172,7 @@
     "mapTypesPromptHint": "Layout context sent when a new session map is generated from this type.",
     "sectionGoals": "Goals",
     "sectionVerificationFlows": "Verification Flows",
+    "sectionCalibrationFlows": "Calibration Flows",
     "sectionKnowledge": "Knowledge",
     "sectionInsights": "Insights",
     "sectionSetting": "Settings",
@@ -2823,20 +2824,20 @@
     },
     "scout": {
       "kicker": "Session goal",
-      "title": "Scout the topic",
+      "title": "Calibrate",
       "progressLabel": "Briefing steps",
       "goToStep": "Go to step {step}",
       "imagePlaceholder": "Illustration coming soon",
       "back": "Back",
       "next": "Next",
       "step1": {
-        "title": "Build a mind map of pull",
-        "imageAlt": "Scout mind map on the Work canvas",
-        "body": "This session is a scout, not a think-aloud. You map the topic on the Work canvas to see where curiosity and pull are strongest.\n\nThe left side is the same Work canvas used across modes. The topic starts as framed text. Follow-up questions appear on the right — questions only, never answers."
+        "title": "Sort what you could answer",
+        "imageAlt": "Calibration questions on the Work canvas",
+        "body": "This session is calibration. It is quiet unless you choose to dictate.\n\nQuestions sit on the Work canvas. Move three into the area where you could answer, and two into the area where you could not."
       },
       "step3": {
-        "title": "When Prepare helps",
-        "body": "Use Prepare when you are not ready to work the topic yet. You build a mind map of questions only, to see where curiosity and pull are strongest. That map is useful context for the next work session.\n\nPick a follow-up to add it as a connected node. When time is up, the map freezes.",
+        "title": "When Calibrate helps",
+        "body": "Use Calibrate when you want a picture of what already feels answerable. After you sort the pool, answer one comfortable question and write what is uncertain about one you would not.\n\nType, paste, or dictate. The canvas keeps that proof of work.",
         "quoteText": "",
         "quoteAuthor": "",
         "start": "Start",
@@ -2894,18 +2895,18 @@
   },
   "scout": {
     "briefing": {
-      "kicker": "Scout",
-      "title": "Scout",
-      "intro": "Scout the topic and build a mind map of where pull is strongest. No speaking — pick follow-up questions and draw on the canvas. Choose length, then start."
+      "kicker": "Calibrate",
+      "title": "Calibrate",
+      "intro": "Sort questions into ones you could answer and ones you could not. No speaking is required. Choose length, then start."
     },
     "live": {
-      "questionsHeading": "Follow-up questions",
+      "questionsHeading": "Calibrate",
       "goBack": "Go back to previous node",
-      "generating": "Generating follow-up questions…"
+      "generating": "Generating questions…"
     },
     "thankYou": {
       "title": "Thank you",
-      "body": "Your prepare map is saved as context for later Learn sessions. More Prepare runs give a richer picture of where interest pulls.",
+      "body": "Your calibration is saved as proof of work for later Learn sessions.",
       "restart": "Restart",
       "workspace": "Back to workspace",
       "work": "Jump into Learn",

@@ -21,6 +21,7 @@ Nav labels (EN): Workspace · DAGs · Map Types · Goals · Context · Simulatio
 | **`map_types`** | Workspace owner only (Creator / Build mode; hidden in Play and Explore) | Author custom chapter-map types and enable/disable built-ins; types are generator context, not 1:1 templates |
 | **`goals`** | Owner / org admin only | Multi natural-language **workspace goals** CRUD (`mountsGoalsPanel`); block goals live on block-detail drawer |
 | **`verification_flows`** | Verification Workspace owners only (stored kind `knowledge_region`) | Create and manage verification flows (`mountsVerificationFlowsPanel`). Standard map workspaces do not list this section. |
+| **`calibration_flows`** | Verification Workspace owners only (stored kind `knowledge_region`) | Create and manage calibration flows (`mountsCalibrationFlowsPanel`). A calibration flow sorts a question pool on the canvas. It is not a verification run. Standard map workspaces do not list this section. |
 | **`knowledge`** | Owner / org admin only | Performance / knowledge analytics surface (`mountsPerformancePanel`); LWM Snapshot goal selection (default / adhoc / custom) |
 | **`insights`** | Play (learner) mode only — not in Build/creator nav | Workspace-related Insights list (`mountsInsightsPanel`); generated from Work/PoW. Not a Knowledge subview. |
 | **`kpis`** | Signed-in viewers on a standard workspace (Play and Build, including non-owners). Hidden when logged out. Not on Knowledge Region. | That viewer's average time-to-insight for sessions on the workspace (`mountsKpisPanel`). |

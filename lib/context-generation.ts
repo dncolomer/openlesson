@@ -19,7 +19,7 @@ export type ContextFlowCandidate = ContextFlowDraft & {
   id: string;
 };
 
-export type ContextGenerationKind = "goals" | "verification_flow";
+export type ContextGenerationKind = "goals" | "verification_flow" | "calibration_flow";
 
 export type ContextGenerationRequest = {
   kind: ContextGenerationKind;
@@ -122,6 +122,27 @@ export function buildContextGenerationRequest(input: {
         "Return JSON { \"goals\": string[] } with 4 short natural-language goals.",
         "Do not repeat goals listed under Already generated.",
         "Use only the Context materials. Do not invent a map, TAP session, or knowledge link.",
+        ...shared,
+      ].join(" "),
+      user: [`Context:\n${input.contextText}`, `Already generated:\n${avoided}`, steer]
+        .filter(Boolean)
+        .join("\n\n"),
+    };
+  }
+  if (input.kind === "calibration_flow") {
+    return {
+      kind: "calibration_flow",
+      avoid,
+      modifier,
+      instructions: [
+        "Generate a calibration question pool from the Context materials.",
+        "Return JSON { \"flows\": [ { \"topic\": string, \"questions\": string[] } ] } with one pool.",
+        "The topic is the calibration goal, named the way a teacher would introduce it.",
+        "Include at least 5 questions. Each question is what a learner reads before deciding whether they could answer it: two or three unhurried sentences, specific to the Context, and free of headings.",
+        "This pool is for calibration. It is not a verification flow and it is not one pooled verification question.",
+        TUTOR_CANVAS_VOICE,
+        "Do not repeat topics listed under Already generated.",
+        "Use only the Context materials.",
         ...shared,
       ].join(" "),
       user: [`Context:\n${input.contextText}`, `Already generated:\n${avoided}`, steer]

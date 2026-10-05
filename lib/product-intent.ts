@@ -73,7 +73,7 @@ export type ProductLaunchTarget = {
 export const PRODUCT_INTENT_LABELS = {
   styleExplore: "Learn",
   styleDrill: "Drill / Practice",
-  styleScout: "Prepare",
+  styleScout: "Calibrate",
   /** LLM-powered dialog practice (user-facing: "With AI"). */
   modalityDialog: "With AI",
   /** Solo exercise practice (user-facing: "Solo"). */
@@ -86,7 +86,7 @@ export const PRODUCT_INTENT_LABELS = {
   exploreSolo: "Learn",
   drillDialog: "Drill",
   drillSolo: "Drill",
-  scoutDialog: "Prepare",
+  scoutDialog: "Calibrate",
   /** Legacy label keys — map to new names so old i18n/UI still resolve. */
   openEndedExplore: "Explore",
   openEndedDrill: "Explore",
@@ -101,7 +101,7 @@ export const PRODUCT_INTENT_LABELS = {
   drillSoloHint:
     "Timed dialogue demonstration of what you know.",
   scoutDialogHint:
-    "Timed mind-map prepare: follow-up questions, no speaking.",
+    "Timed calibration: sort questions on the canvas, then answer one and name one uncertainty. Speaking is optional.",
   openEndedExploreHint:
     "Guided dialogue practice with an LLM partner — no clock.",
   openEndedDrillHint:
@@ -115,7 +115,7 @@ export const PRODUCT_INTENT_LABELS = {
   chooseHorizon: "How do you want to practice?",
   questionExplore: "Do you want to Learn?",
   questionDrill: "Do you want to Drill / Practice?",
-  questionScout: "Do you want to Prepare?",
+  questionScout: "Do you want to Calibrate?",
   questionDialog: "With AI?",
   questionSolo: "With AI?",
   questionOpen: "With AI?",

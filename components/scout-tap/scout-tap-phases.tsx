@@ -1,42 +1,31 @@
 "use client";
 
-import { WorkCanvas } from "@/components/ExcalidrawCanvas";
-import { PracticeVoiceChallenge } from "@/components/PracticeVoiceChallenge";
 import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
-import {
-  prepareBriefingStep,
-  releaseVoiceChallengeStartLatch,
-  voiceChallengeStartSucceeded,
-} from "@/lib/practice-voice-challenge";
+import { CalibrateLiveSurface } from "@/components/calibrate/calibrate-live-surface";
 import { TapBriefingConfig } from "@/components/TapBriefingConfig";
 import { SessionFinishedScreen } from "@/components/session-view/session-finished-screen";
 import { SessionPageLoading } from "@/components/session-view/session-page-loading";
-import { SessionTopicChapter } from "@/components/session-view/ile-work-dock-bar";
-import { TapSessionSignals } from "@/components/session-view/session-signals";
-import { SessionWorkSurface } from "@/components/session-view/session-work-surface";
 import { TapAestheticSection } from "@/components/tap-score/tap-aesthetic-section";
 import { TapLiveClock } from "@/components/tap-score/tap-live-clock";
 import { TapThoughtButton } from "@/components/tap-score/tap-thought-button";
-import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { SESSION_SIDEBAR_PRIMARY_BUTTON_CLASS } from "@/lib/session-sidebar";
 import type { PowParticipantIdentity } from "@/lib/session-participant-identity";
 import type { SpokenLocale } from "@/lib/tutoring-languages";
 import { coerceSpokenLocale } from "@/lib/tutoring-languages";
 import { type Phase } from "@/lib/tap-score-client-helpers";
-import {
-  tapWorkCanvasBoardId,
-  tapWorkCanvasShouldAcceptSceneUpdate,
-} from "@/lib/tap-work-canvas";
+import { tapWorkCanvasBoardId } from "@/lib/tap-work-canvas";
 import type { IleWorkCanvasElement, IleWorkCanvasScene } from "@/lib/ile-work-canvas";
 import type { IleWorkCanvasPowEvent } from "@/lib/ile-work-canvas-pow";
 import {
-  canGoBackScoutNode,
-  scoutCurrentNode,
-  scoutThinkAloudEnabled,
-  type ScoutLiveState,
-  type ScoutThankYouActions,
-} from "@/lib/scout-session";
-import { useEffect, useRef, useState, type MutableRefObject } from "react";
+  calibrateRegionCounts,
+  canFinishClassifying,
+  canFinishComfortableAnswer,
+  canFinishUncertainty,
+  readCalibrateResponseTexts,
+  type CalibrateState,
+} from "@/lib/calibrate-session";
+import { scoutThinkAloudEnabled, type ScoutThankYouActions } from "@/lib/scout-session";
+import type { MutableRefObject } from "react";
 
 type Translate = (key: string, vars?: Record<string, string | number>) => string;
 
@@ -72,10 +61,10 @@ export function ScoutTapPhases(props: {
   canvasApplyNonce: number;
   handleSceneChange: (scene: IleWorkCanvasScene) => void;
   onCanvasPowActions: (events: IleWorkCanvasPowEvent[]) => void;
-  scoutState: ScoutLiveState;
+  calibrate: CalibrateState;
+  seedText: string;
   questionsLoading: boolean;
-  onPickQuestion: (index: number) => void;
-  onGoBack: () => void;
+  onAdvance: () => void;
   thankYouActions: ScoutThankYouActions;
   onJumpWork: () => void;
   onJumpDrill: () => void;
@@ -111,10 +100,10 @@ export function ScoutTapPhases(props: {
     canvasApplyNonce,
     handleSceneChange,
     onCanvasPowActions,
-    scoutState,
+    calibrate,
+    seedText,
     questionsLoading,
-    onPickQuestion,
-    onGoBack,
+    onAdvance,
     thankYouActions,
     onJumpWork,
     onJumpDrill,
@@ -123,122 +112,16 @@ export function ScoutTapPhases(props: {
 
   void scoutThinkAloudEnabled();
 
-  const [startConfirmed, setStartConfirmed] = useState(false);
-  const passGuard = useRef(false);
-  const [challengeAttempt, setChallengeAttempt] = useState(0);
-  useEffect(() => {
-    if (phase !== "briefing") {
-      setStartConfirmed(false);
-      passGuard.current = false;
-    }
-  }, [phase]);
-
-  function confirmPrepareStart() {
-    const step = prepareBriefingStep({ startConfirmed: true, challengePassed: false });
-    if (step === "challenge") setStartConfirmed(true);
-  }
-
-  function passPrepareChallenge() {
-    if (passGuard.current) return;
-    const step = prepareBriefingStep({ startConfirmed: true, challengePassed: true });
-    if (step !== "live") return;
-    passGuard.current = true;
-    void Promise.resolve(startSession()).then((result) => {
-      const release = releaseVoiceChallengeStartLatch({
-        startSucceeded: voiceChallengeStartSucceeded(result),
-      });
-      if (!release.release) return;
-      passGuard.current = false;
-      setChallengeAttempt((attempt) => attempt + 1);
-    });
-  }
-
-  const prepareStep = prepareBriefingStep({
-    startConfirmed,
-    challengePassed: false,
-  });
-
-  const current = scoutCurrentNode(scoutState);
-  const canGoBack = canGoBackScoutNode(scoutState);
-  const readOnly = phase === "results" || phase === "practice_done";
-
-  const canvasPane = (
-    <div
-      data-scout-work-canvas-pane
-      data-scout-canvas-readonly={readOnly ? "true" : "false"}
-      className="relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
-    >
-      <WorkCanvas
-        key={`scout-work-canvas:${phase}`}
-        boardId={tapWorkCanvasBoardId(tapSessionId || sessionId)}
-        initialSceneData={workCanvasScene}
-        applyElements={canvasApplyElements}
-        applyElementsNonce={canvasApplyNonce}
-        viewModeEnabled={readOnly}
-        heliosBusy={false}
-        onSceneChange={(scene) => {
-          if (readOnly) return;
-          if (!tapWorkCanvasShouldAcceptSceneUpdate(workCanvasSceneRef.current, scene)) {
-            return;
-          }
-          handleSceneChange(scene);
-        }}
-        onCanvasPowActions={onCanvasPowActions}
-        onAskSelected={async () => ({ text: "" })}
-      />
-      {error ? (
-        <p className="pointer-events-none absolute inset-x-0 bottom-2 z-10 px-3 text-center text-xs text-red-300">
-          {error}
-        </p>
-      ) : null}
-    </div>
-  );
-
-  const questionButtons = (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden" data-scout-questions-list>
-      {canGoBack ? (
-        <div className="shrink-0 px-3 pt-3">
-          <button
-            type="button"
-            data-scout-go-back
-            disabled={readOnly}
-            onClick={() => onGoBack()}
-            className="w-full rounded-none border border-dashed border-white/25 bg-transparent px-3 py-2 text-left text-xs font-medium text-neutral-300 transition hover:border-white/45 hover:text-white disabled:opacity-40"
-          >
-            {t("scout.live.goBack")}
-          </button>
-        </div>
-      ) : null}
-      {questionsLoading ? (
-        <div
-          className="flex min-h-0 flex-1 items-center justify-center px-4 py-8"
-          data-scout-questions-loading
-        >
-          <LoadingStatusMessage
-            message={t("scout.live.generating")}
-            size="md"
-            tone="light"
-            className="text-center"
-          />
-        </div>
-      ) : (
-        <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-3">
-          {scoutState.questions.map((q, index) => (
-            <button
-              key={`${index}:${q}`}
-              type="button"
-              data-scout-question={index}
-              disabled={readOnly}
-              onClick={() => onPickQuestion(index)}
-              className="rounded-none border border-white/20 bg-black/40 px-3 py-2.5 text-left text-sm text-white transition hover:border-white/45 hover:bg-white/5 disabled:opacity-40"
-            >
-              {q}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+  const counts = calibrateRegionCounts(calibrate);
+  const texts = readCalibrateResponseTexts(workCanvasScene, calibrate);
+  const canAdvance =
+    calibrate.phase === "classifying"
+      ? canFinishClassifying(calibrate)
+      : calibrate.phase === "answer"
+        ? canFinishComfortableAnswer(calibrate, texts)
+        : calibrate.phase === "explain"
+          ? canFinishUncertainty(calibrate, texts)
+          : false;
 
   return (
     <main
@@ -251,24 +134,8 @@ export function ScoutTapPhases(props: {
           <SessionPageLoading message={t("session.startLoading")} />
         ) : null}
 
-        {phase === "briefing" && !isStartingSession && prepareStep === "challenge" ? (
-          <section
-            className="relative flex min-h-0 flex-1 items-center justify-center bg-[#0b0b0b] px-6"
-            data-scout-briefing
-            data-scout-voice-challenge=""
-            data-prepare-briefing-step="challenge"
-          >
-            <div className="w-full max-w-xl">
-              <PracticeVoiceChallenge key={challengeAttempt} variant="prepare" onPass={passPrepareChallenge} />
-              {error ? (
-                <p className="mt-4 text-center text-sm text-red-300">{error}</p>
-              ) : null}
-            </div>
-          </section>
-        ) : null}
-
-        {phase === "briefing" && !isStartingSession && prepareStep === "confirm" && (
-          <section className="relative flex min-h-0 flex-1" data-scout-briefing data-tap-briefing-layout="sections" data-prepare-briefing-step="confirm">
+        {phase === "briefing" && !isStartingSession && (
+          <section className="relative flex min-h-0 flex-1" data-scout-briefing data-tap-briefing-layout="sections">
             <div className="grid h-full min-h-0 w-full flex-1 lg:grid-cols-2">
               <div className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-[#0b0b0b] lg:border-r lg:border-neutral-800/60">
                 <SessionOnboardingGuide
@@ -276,7 +143,7 @@ export function ScoutTapPhases(props: {
                   hideStep3Quote
                   showStartAction
                   isStarting={isStartingSession}
-                  onStart={confirmPrepareStart}
+                  onStart={() => void startSession()}
                 />
               </div>
               <TapAestheticSection bgImage={bgImage} kind="shortcuts">
@@ -306,9 +173,22 @@ export function ScoutTapPhases(props: {
 
         {phase === "live" && (
           <section className="flex min-h-0 flex-1 flex-col overflow-hidden" data-scout-live>
-            <SessionWorkSurface
-              mode="tap"
-              stage={canvasPane}
+            <CalibrateLiveSurface
+              boardId={tapWorkCanvasBoardId(tapSessionId || sessionId)}
+              phase={calibrate.phase}
+              poolLoading={questionsLoading}
+              comfortableCount={counts.comfortable}
+              unconfidentCount={counts.unconfident}
+              canAdvance={canAdvance}
+              readOnly={false}
+              scene={workCanvasScene}
+              sceneRef={workCanvasSceneRef}
+              applyElements={canvasApplyElements}
+              applyNonce={canvasApplyNonce}
+              onSceneChange={handleSceneChange}
+              onCanvasPowActions={onCanvasPowActions}
+              onAdvance={onAdvance}
+              error={error}
               clock={
                 <div
                   className="flex w-full min-w-0 flex-col gap-2 px-1 py-1"
@@ -336,16 +216,9 @@ export function ScoutTapPhases(props: {
                   </div>
                 ) : null
               }
-              chapters={
-                <SessionTopicChapter id={current.id} keyword={current.text} />
-              }
-              signals={<TapSessionSignals />}
+              topicId="calibrate"
+              topicText={seedText}
               focusLabel={t("scout.live.questionsHeading")}
-              focus={
-                <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden" data-scout-questions-pane>
-                  {questionButtons}
-                </div>
-              }
             />
           </section>
         )}
@@ -394,7 +267,7 @@ export function ScoutTapPhases(props: {
 
         {phase === "error" && (
           <SessionFinishedScreen
-            title="Could not end Scout session"
+            title="Could not end the calibration session"
             body={resultsError || error}
             actions={
               <TapThoughtButton size="md" variant="primary" onClick={() => setPhase("briefing")}>

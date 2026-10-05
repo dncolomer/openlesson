@@ -14,11 +14,12 @@ import {
   generateContextCandidates,
   type ContextGenerationKind,
 } from "@/lib/context-generation";
+import { generateCalibrationPoolFromGoal } from "@/lib/calibration-flow";
 
 export const runtime = "nodejs";
 
 function generationKind(value: unknown): ContextGenerationKind | null {
-  if (value === "goals" || value === "verification_flow") return value;
+  if (value === "goals" || value === "verification_flow" || value === "calibration_flow") return value;
   return null;
 }
 
@@ -26,9 +27,46 @@ export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as Record<string, unknown>;
     const workspaceId = String(body.workspaceId || "");
-    const kind = generationKind(body.kind);
+    const requestedKind = body.kind;
+    if (requestedKind === "calibration_from_goal") {
+      const goal = String(body.goal || "").trim();
+      if (!workspaceId) return jsonError(400, "workspaceId is required");
+      if (!goal) return jsonError(400, "goal is required");
+      const ayclToken = typeof body.ayclToken === "string" ? body.ayclToken : null;
+      const auth = await requireProductWorkspaceEvalAuth(workspaceId, ayclToken);
+      if (!auth.ok) return auth.response;
+      const policy = assertWorkspacePolicy({
+        principal: auth.principal,
+        workspaceOwnerId: auth.workspaceOwnerId,
+        action: "author",
+      });
+      if (!policy.ok) return jsonError(403, "Forbidden");
+      const { data: workspace } = await auth.supabase
+        .from("workspaces")
+        .select("workspace_kind")
+        .eq("id", workspaceId)
+        .maybeSingle();
+      const storedKind = workspace?.workspace_kind;
+      if (storedKind && !isKnowledgeRegionWorkspace(storedKind)) {
+        return jsonError(403, "Context generation belongs to Verification Workspaces");
+      }
+      const questions = await generateCalibrationPoolFromGoal({
+        goal,
+        complete: async (request) => {
+          const response = await callXaiJSON<unknown>(
+            [systemMessage(request.instructions), userMessage(request.user)],
+            { model: DEFAULT_MODEL, temperature: 0.3, maxTokens: 2000, reasoningEffort: "low" },
+          );
+          if (!response.success) throw new Error(response.error || "Calibration questions failed");
+          return response.data;
+        },
+      });
+      if (questions.length === 0) return jsonError(502, "No calibration questions generated");
+      return NextResponse.json({ goal, questions });
+    }
+    const kind = generationKind(requestedKind);
     if (!workspaceId) return jsonError(400, "workspaceId is required");
-    if (!kind) return jsonError(400, "kind must be goals or verification_flow");
+    if (!kind) return jsonError(400, "kind must be goals, verification_flow, or calibration_flow");
     const ayclToken = typeof body.ayclToken === "string" ? body.ayclToken : null;
     const auth = await requireProductWorkspaceEvalAuth(workspaceId, ayclToken);
     if (!auth.ok) return auth.response;
@@ -88,6 +126,9 @@ export async function POST(req: NextRequest) {
     }
     if (kind === "verification_flow" && generated.flows.length === 0) {
       return jsonError(502, "No topic generated");
+    }
+    if (kind === "calibration_flow" && generated.flows.length === 0) {
+      return jsonError(502, "No calibration questions generated");
     }
     return NextResponse.json(generated);
   } catch (error) {

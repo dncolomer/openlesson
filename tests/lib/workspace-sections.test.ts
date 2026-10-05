@@ -148,13 +148,13 @@ describe("availableWorkspaceSections", () => {
         isOwner: true,
         workspaceKind: "knowledge_region",
       }),
-    ).toEqual(["goals", "verification_flows", "context", "knowledge", "settings"]);
+    ).toEqual(["goals", "verification_flows", "calibration_flows", "context", "knowledge", "settings"]);
     expect(
       availableWorkspaceSections({
         isOrgAdmin: true,
         workspaceKind: "knowledge_region",
       }),
-    ).toEqual(["goals", "verification_flows", "context", "knowledge", "settings"]);
+    ).toEqual(["goals", "verification_flows", "calibration_flows", "context", "knowledge", "settings"]);
     expect(
       availableWorkspaceSections({
         isOwner: false,

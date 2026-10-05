@@ -209,6 +209,11 @@ export interface ExcalidrawCanvasProps {
    * onto the canvas as it arrives.
    */
   dictateTranscript?: string;
+  /**
+   * Fires when Dictate is turned on or off. Omitted callers keep the
+   * existing transcript feed and do not start a recognizer from this button.
+   */
+  onDictateActive?: (active: boolean) => void;
   /** When nonce changes, replace the live board (timer expiry reset). */
   replaceScene?: IleWorkCanvasScene | null;
   replaceSceneNonce?: string | number | null;
@@ -258,6 +263,7 @@ export function ExcalidrawCanvas({
   onLearnerWaitChange,
   craftInsight = null,
   dictateTranscript,
+  onDictateActive,
   replaceScene = null,
   replaceSceneNonce = null,
   viewModeEnabled = false,
@@ -272,6 +278,7 @@ export function ExcalidrawCanvas({
   const [commandText, setCommandText] = useState("");
   const [askListening, setAskListening] = useState(false);
   const askCaptureRef = useRef<IleDictateCapture | null>(null);
+  const selectionWasActiveRef = useRef(false);
   const [askInFlight, setAskInFlight] = useState(0);
   const [craftInsightOpen, setCraftInsightOpen] = useState(false);
   const lastReplaceNonceRef = useRef<string | number | null>(null);
@@ -605,6 +612,12 @@ export function ExcalidrawCanvas({
     const active =
       Boolean(onAskSelectedRef.current) &&
       ileCanvasPromptMode(appState?.selectedElementIds ?? {}) === "commands";
+    if (selectionWasActiveRef.current && !active) {
+      askCaptureRef.current = null;
+      setAskListening(false);
+      setCommandText("");
+    }
+    selectionWasActiveRef.current = active;
     setCanvasSelectionActive((prev) => (prev === active ? prev : active));
     if (active) setCraftInsightOpen(false);
   }, []);
@@ -1469,14 +1482,19 @@ export function ExcalidrawCanvas({
             className="pointer-events-none absolute left-1/2 z-[58] flex -translate-x-1/2 justify-center"
             style={{
               top: promptBarTop,
-              width: Math.max(promptBarWidth, ILE_CANVAS_PROMPT_BAR_FALLBACK_WIDTH),
+              width: canvasSelectionActive
+                ? Math.max(promptBarWidth, ILE_CANVAS_PROMPT_BAR_FALLBACK_WIDTH)
+                : undefined,
             }}
             onSubmit={(event) => {
               event.preventDefault();
               submitCommand();
             }}
           >
-            <div className="pointer-events-auto flex w-full flex-col gap-1.5">
+            <div
+              className={`pointer-events-auto flex flex-col gap-1.5 ${canvasSelectionActive ? "w-full" : "w-max"}`}
+            >
+              {canvasSelectionActive ? (
               <div className="flex w-full flex-col gap-1.5 rounded-none border border-white bg-neutral-950/95 p-2 shadow-[0_12px_40px_rgba(0,0,0,0.55)]">
                 {ileCanvasCommandDraft(commandText).slash ? (
                   <div
@@ -1546,6 +1564,7 @@ export function ExcalidrawCanvas({
                   </button>
                 </div>
               </div>
+              ) : null}
               <div className="flex items-stretch gap-1.5">
                 {craftInsight ? (
                   <IleCraftInsightButton
@@ -1558,6 +1577,7 @@ export function ExcalidrawCanvas({
                     transcript={dictateTranscript}
                     onLiveText={(text) => writeDictatedText(text, false)}
                     onCommit={(text) => writeDictatedText(text, true)}
+                    onActiveChange={onDictateActive}
                   />
                 ) : null}
               </div>

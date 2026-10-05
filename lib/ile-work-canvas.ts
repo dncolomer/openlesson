@@ -1977,7 +1977,7 @@ export function ileLearnMoreSelectionKey(
     .join(",");
 }
 
-/** Prompt bar shows commands while a selection exists, otherwise the question row. */
+/** Ask, Run, and the command field show while a selection exists. No selection leaves the idle row. */
 export function ileCanvasPromptMode(
   selectedElementIds?: Record<string, unknown> | null,
 ): "commands" | "ask" {

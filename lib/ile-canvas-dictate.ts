@@ -176,6 +176,103 @@ export function syncIleDictatedTextOnWorkCanvas(
   return { scene: placed.scene, elementId: createdId, changed: true };
 }
 
+/**
+ * Keys shared with the calibrate canvas. Kept as literals so this module
+ * does not import the phase model.
+ */
+const CALIBRATE_ROLE = "calibrateRole";
+const CALIBRATE_REGION = "calibrateRegion";
+const CALIBRATE_QUESTION = "calibrateQuestionId";
+const CALIBRATE_SOURCE = "calibrateResponseSource";
+
+function elementData(el: IleWorkCanvasElement): Record<string, unknown> {
+  return el.customData ?? {};
+}
+
+function elementCenter(el: Pick<IleWorkCanvasElement, "x" | "y" | "width" | "height">) {
+  return { x: el.x + el.width / 2, y: el.y + el.height / 2 };
+}
+
+function elementContains(
+  el: Pick<IleWorkCanvasElement, "x" | "y" | "width" | "height">,
+  point: { x: number; y: number },
+) {
+  return (
+    point.x >= el.x &&
+    point.x <= el.x + el.width &&
+    point.y >= el.y &&
+    point.y <= el.y + el.height
+  );
+}
+
+/**
+ * On a calibrate board, dictate has to land on one question in the active
+ * region. The generic empty-space placement sits outside both regions, so
+ * the answer and uncertainty gates never see it.
+ * Comfortable questions are the answer step. After one of those has a
+ * response, the next dictate is the uncertainty on a not-confident question.
+ */
+function calibrateDictateTarget(elements: readonly IleWorkCanvasElement[]): {
+  questionId: string;
+  x: number;
+  y: number;
+  width: number;
+} | null {
+  const alive = elements.filter((el) => !el.isDeleted);
+  const regions = alive.filter((el) => {
+    if (el.type !== "rectangle" || elementData(el)[CALIBRATE_ROLE] !== "region") return false;
+    const region = elementData(el)[CALIBRATE_REGION];
+    return region === "comfortable" || region === "unconfident";
+  });
+  const cards = alive.filter((el) => {
+    if (el.type !== "rectangle" || elementData(el)[CALIBRATE_ROLE] !== "question") return false;
+    return String(elementData(el)[CALIBRATE_QUESTION] || "").trim().length > 0;
+  });
+  if (!regions.length || !cards.length) return null;
+
+  const regionName = (card: IleWorkCanvasElement): "comfortable" | "unconfident" | null => {
+    const hit = regions.find((region) => elementContains(region, elementCenter(card)));
+    const name = hit ? elementData(hit)[CALIBRATE_REGION] : null;
+    return name === "comfortable" || name === "unconfident" ? name : null;
+  };
+  const cardId = (card: IleWorkCanvasElement) => String(elementData(card)[CALIBRATE_QUESTION]).trim();
+
+  const answered = new Set<string>();
+  for (const el of alive) {
+    if (el.type !== "text") continue;
+    const role = elementData(el)[CALIBRATE_ROLE];
+    if (role === "question-label" || role === "region-label" || role === "question" || role === "region") {
+      continue;
+    }
+    const text = String(el.originalText || el.text || "").replace(/\s+/g, " ").trim();
+    if (!text) continue;
+    const explicit = String(elementData(el)[CALIBRATE_QUESTION] || "").trim();
+    if (explicit) {
+      answered.add(explicit);
+      continue;
+    }
+    const hit = cards.find((card) => elementContains(card, elementCenter(el)));
+    if (hit) answered.add(cardId(hit));
+  }
+
+  const inRegion = (name: "comfortable" | "unconfident") =>
+    cards
+      .filter((card) => regionName(card) === name && !answered.has(cardId(card)))
+      .sort((a, b) => a.y - b.y || a.x - b.x);
+  const comfortableAnswered = cards.some(
+    (card) => regionName(card) === "comfortable" && answered.has(cardId(card)),
+  );
+  const target = (!comfortableAnswered ? inRegion("comfortable") : inRegion("unconfident"))[0];
+  if (!target) return null;
+  const width = Math.max(80, Math.min(240, target.width - 24));
+  return {
+    questionId: cardId(target),
+    x: target.x + 12,
+    y: target.y + Math.min(36, Math.max(8, target.height - 48)),
+    width,
+  };
+}
+
 /** Place dictated speech as a learner text box beside existing marks. */
 export function appendIleDictatedTextToWorkCanvas(
   scene: IleWorkCanvasScene | null | undefined,
@@ -184,12 +281,21 @@ export function appendIleDictatedTextToWorkCanvas(
   const current = serializeIleWorkCanvasScene(scene);
   const clean = normalizeDictateText(text);
   if (!clean) return { scene: current, appended: [] };
-  const wrapped = wrapIleWorkCanvasText(clean);
-  const origin = ileWorkCanvasEmptyNearbyOriginWithReserved({
-    elements: current.elements,
-    near: current.elements.filter((el) => !el.isDeleted),
-    box: { width: wrapped.width, height: wrapped.height },
-  });
+  const target = calibrateDictateTarget(current.elements);
+  const wrapped = wrapIleWorkCanvasText(clean, target?.width);
+  const origin = target
+    ? { x: target.x, y: target.y }
+    : ileWorkCanvasEmptyNearbyOriginWithReserved({
+        elements: current.elements,
+        near: current.elements.filter((el) => !el.isDeleted),
+        box: { width: wrapped.width, height: wrapped.height },
+      });
+  const customData: Record<string, unknown> = { author: ILE_CANVAS_DICTATE_AUTHOR };
+  if (target) {
+    customData[CALIBRATE_ROLE] = "response";
+    customData[CALIBRATE_QUESTION] = target.questionId;
+    customData[CALIBRATE_SOURCE] = "dictated";
+  }
   const appended = convertToExcalidrawElements([
     {
       type: "text",
@@ -198,7 +304,7 @@ export function appendIleDictatedTextToWorkCanvas(
       y: origin.y,
       width: wrapped.width,
       autoResize: false,
-      customData: { author: ILE_CANVAS_DICTATE_AUTHOR },
+      customData,
     },
   ]);
   if (!appended.length) return { scene: current, appended: [] };

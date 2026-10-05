@@ -179,14 +179,14 @@ describe("author Scout enable/disable + at least one of Work/Drill/Scout", () =>
 
 describe("Learn (not Explore/Work) is the TAP Learning block-launch label", () => {
   it("product labels, circular menu, and card use Prepare / Learn / Drill", () => {
-    expect(PRODUCT_INTENT_LABELS.styleScout).toBe("Prepare");
+    expect(PRODUCT_INTENT_LABELS.styleScout).toBe("Calibrate");
     expect(PRODUCT_INTENT_LABELS.styleExplore).toBe("Learn");
     expect(PRODUCT_INTENT_LABELS.exploreDialog).toBe("Learn");
-    expect(PRODUCT_INTENT_LABELS.scoutDialog).toBe("Prepare");
+    expect(PRODUCT_INTENT_LABELS.scoutDialog).toBe("Calibrate");
     expect(productIntentClusterLabel(resolveProductIntent("explore"))).toBe("Learn");
-    expect(productIntentClusterLabel(resolveProductIntent("scout"))).toBe("Prepare");
+    expect(productIntentClusterLabel(resolveProductIntent("scout"))).toBe("Calibrate");
     expect(WORKSPACE_CIRCULAR_MENU_ACTIONS.map((a) => a.label)).toEqual(
-      expect.arrayContaining(["Prepare", "Learn", "Drill"]),
+      expect.arrayContaining(["Calibrate", "Learn", "Drill"]),
     );
     expect(WORKSPACE_CIRCULAR_MENU_ACTIONS[0]?.id).toBe("start_prepare");
 
@@ -507,6 +507,7 @@ describe("structural: Scout TAP shell, no think-aloud, Build toggle", () => {
     expect(resolveProductIntentFromId("scout_dialog").interaction_kind).toBe("scout");
 
     const phases = read("components/scout-tap/scout-tap-phases.tsx");
+    const surface = read("components/calibrate/calibrate-live-surface.tsx");
     const client = read("components/scout-tap/ScoutTapClient.tsx");
     const edit = read("components/WorkspaceBlockEditPanel.tsx");
     const en = read("messages/en.json");
@@ -518,24 +519,26 @@ describe("structural: Scout TAP shell, no think-aloud, Build toggle", () => {
     const mutate = read("components/session-view/use-session-mutate.ts");
     const onboarding = read("components/SessionOnboardingGuide.tsx");
 
-    expect(phases).toContain("<SessionWorkSurface");
-    expect(phases).toContain('mode="tap"');
+    expect(phases).toContain("<CalibrateLiveSurface");
+    expect(surface).toContain("<SessionWorkSurface");
+    expect(surface).toContain('mode="tap"');
     expect(phases).not.toContain("data-scout-live-split");
     expect(phases).not.toContain('data-scout-split="70-30"');
     expect(phases).not.toContain("lg:grid-cols-[7fr_3fr]");
-    expect(phases).toContain("LoadingStatusMessage");
-    expect(phases).toContain("data-scout-questions-loading");
-    expect(phases).toMatch(/data-scout-go-back[\s\S]{0,180}disabled=\{readOnly\}/);
-    expect(phases).not.toContain("disabled={questionsLoading || readOnly}");
+    expect(surface).toContain("LoadingStatusMessage");
+    expect(surface).toContain("data-scout-questions-loading");
+    expect(surface).toContain("data-calibrate-done-classifying");
+    expect(phases).not.toContain("data-scout-go-back");
+    expect(phases).not.toContain("PracticeVoiceChallenge");
     expect(client).toContain("questionsAbortRef");
-    expect(phases).toContain("data-scout-work-canvas-pane");
-    expect(phases).toContain("data-scout-questions-pane");
-    expect(phases).toContain("data-scout-go-back");
+    expect(surface).toContain("data-scout-work-canvas-pane");
+    expect(surface).toContain("data-calibrate-step");
     expect(phases).toContain("data-scout-thank-you");
-    expect(phases).toContain("data-scout-canvas-readonly");
-    expect(phases).toContain("viewModeEnabled={readOnly}");
+    expect(surface).toContain("data-scout-canvas-readonly");
+    expect(surface).toContain("viewModeEnabled={props.readOnly}");
     expect(phases).toContain("applyElements={canvasApplyElements}");
-    expect(phases).toContain("applyElementsNonce={canvasApplyNonce}");
+    expect(phases).toContain("applyNonce={canvasApplyNonce}");
+    expect(surface).toContain("applyElementsNonce={props.applyNonce}");
     expect(phases).toContain('variant="scout"');
     expect(phases).not.toContain("useSessionThoughtInterface");
     expect(phases).not.toContain("tap-session-purity");
@@ -548,24 +551,25 @@ describe("structural: Scout TAP shell, no think-aloud, Build toggle", () => {
     expect(client).not.toContain("useSessionThoughtInterface");
     expect(client).not.toContain("tap-session-purity");
     expect(client).not.toContain("useTapSpeechProofOfWork");
-    expect(client).toContain("buildScoutCanvasPowMetadata");
-    expect(client).toContain("setCanvasApplyElements(connected.added)");
+    expect(client).toContain("buildCalibrateProofMetadata");
+    expect(client).toContain("purpose: \"calibrate\"");
+    expect(client).toContain("setCanvasApplyElements(seeded.scene.elements)");
     expect(client).toContain("setCanvasApplyNonce((n) => n + 1)");
     expect(client).toContain("canvasApplyNonce={canvasApplyNonce}");
+    expect(client).not.toContain("connectScoutQuestionToCanvas");
 
     expect(edit).toContain("data-block-edit-allow-scout");
-    expect(edit).toContain(">Prepare<");
+    expect(edit).toContain(">Calibrate<");
     expect(edit).toContain(">Learn<");
-    const prepareIdx = edit.indexOf(">Prepare<");
+    const prepareIdx = edit.indexOf(">Calibrate<");
     const learnIdx = edit.indexOf(">Learn<");
     const drillIdx = edit.indexOf(">Drill<");
     expect(prepareIdx).toBeGreaterThan(0);
     expect(learnIdx).toBeGreaterThan(prepareIdx);
     expect(drillIdx).toBeGreaterThan(learnIdx);
 
-    expect(en).toMatch(/Scout the topic/);
-    expect(en).toMatch(/mind map/);
-    expect(en).toMatch(/where curiosity and pull are strongest/);
+    expect(en).toMatch(/"title": "Calibrate"/);
+    expect(en).toMatch(/I'm done classifying|Sort questions/);
     expect(en).toMatch(/Jump into Learn/);
 
     expect(tapPage).not.toContain("ScoutTapClient");
@@ -703,8 +707,11 @@ describe("Prepare canvas drops miss live marks and the question prompt lists the
     const client = read("components/scout-tap/ScoutTapClient.tsx");
     expect(questionsApi).toContain("buildScoutQuestionsUserPrompt");
     expect(questionsApi).toContain("workCanvasScene");
-    expect(client).toContain("workCanvasScene: serializeTapWorkCanvasScene(scene)");
-    expect(client).toContain("connectScoutQuestionToCanvas");
+    expect(questionsApi).toContain("buildCalibratePoolUserPrompt");
+    expect(questionsApi).toContain("normalizeCalibrateQuestions");
+    expect(client).toContain('purpose: "calibrate"');
+    expect(client).toContain("seedCalibrateWorkCanvas");
+    expect(client).not.toContain("connectScoutQuestionToCanvas");
     expect(client).toContain("advanceTapLiveClockPause");
 
     writeScratch(

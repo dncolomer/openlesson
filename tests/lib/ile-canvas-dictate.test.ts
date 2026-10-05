@@ -2,7 +2,11 @@ import { createElement } from "react";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { ExcalidrawCanvas } from "@/components/ExcalidrawCanvas";
+
+vi.mock("@excalidraw/excalidraw/index.css", () => ({}));
+vi.mock("@/app/ile-excalidraw-theme.css", () => ({}));
 import { IleCanvasDictateButton } from "@/components/session-view/ile-canvas-dictate-button";
 import {
   ILE_CANVAS_DICTATE_AUTHOR,
@@ -162,9 +166,22 @@ describe("canvas dictate button", () => {
     expect(idle).not.toContain(">stop<");
 
     const canvas = read("components/ExcalidrawCanvas.tsx");
+    const gate = canvas.indexOf("{canvasSelectionActive ? (");
+    const input = canvas.indexOf("data-ile-canvas-prompt-bar-input");
+    const gateClose = canvas.indexOf(") : null}", input);
     const rowStart = canvas.indexOf("<IleCraftInsightButton");
     const rowEnd = canvas.indexOf("<IleCanvasCraftInsightForm");
+    expect(gate).toBeGreaterThan(canvas.indexOf("data-ile-canvas-prompt-bar"));
+    expect(input).toBeGreaterThan(gate);
+    expect(gateClose).toBeGreaterThan(input);
+    expect(gateClose).toBeLessThan(rowStart);
+    const commandRow = canvas.slice(gate, gateClose);
+    expect(commandRow).toContain("data-ile-canvas-ask");
+    expect(commandRow).toContain("data-ile-canvas-prompt-bar-send");
+    expect(commandRow).toContain('"Ask"');
+    expect(commandRow).toMatch(/>\s*Run\s*</);
     const row = canvas.slice(rowStart, rowEnd);
+    expect(row).not.toContain("data-ile-canvas-prompt-bar-input");
     expect(row).toContain("<IleCanvasDictateButton");
     expect(row.indexOf("<IleCanvasDictateButton")).toBeGreaterThan(0);
     expect(canvas).toContain("syncIleDictatedTextOnWorkCanvas");
@@ -179,5 +196,23 @@ describe("canvas dictate button", () => {
     expect(read("components/tap-score/tap-score-phases.tsx")).toContain(
       "dictateTranscript={crystallizableText}",
     );
+  });
+
+  it("hides ask, run, and the command field until something is selected", () => {
+    const html = renderToStaticMarkup(
+      createElement(ExcalidrawCanvas, {
+        onAskSelected: async () => ({ text: "" }),
+        dictateTranscript: "",
+        craftInsight: { chapterId: "chapter-1", sessionId: "session-1" },
+      }),
+    );
+    expect(html).toContain("data-ile-craft-insight");
+    expect(html).toContain("data-ile-canvas-dictate");
+    expect(html).toContain(">craft insight<");
+    expect(html).toContain(">dictate<");
+    expect(html).not.toContain("data-ile-canvas-prompt-bar-input");
+    expect(html).not.toContain("data-ile-canvas-ask");
+    expect(html).not.toContain("data-ile-canvas-prompt-bar-send");
+    expect(html).not.toContain(">Run<");
   });
 });

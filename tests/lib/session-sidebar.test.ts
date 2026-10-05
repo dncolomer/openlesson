@@ -523,7 +523,11 @@ describe("session sidebar mode configuration", () => {
     const client = readFileSync(join(ROOT, "components/TapScoreClient.tsx"), "utf8");
     const verify = readFileSync(join(ROOT, "components/VerificationFlowRunner.tsx"), "utf8");
     const host = readFileSync(join(ROOT, "components/session-view/session-work-surface.tsx"), "utf8");
-    for (const src of [prepare, drill, tap]) {
+    const calibrateSurface = readFileSync(
+      join(ROOT, "components/calibrate/calibrate-live-surface.tsx"),
+      "utf8",
+    );
+    for (const src of [calibrateSurface, drill, tap]) {
       expect(src).toContain("<SessionWorkSurface");
       expect(src).not.toContain("data-scout-live-split");
       expect(src).not.toContain("data-tap-convo-live-split");
@@ -534,11 +538,16 @@ describe("session sidebar mode configuration", () => {
     expect(host).toContain("data-ile-canvas-stage");
     expect(client).toContain("sidebarMode={sidebarMode}");
     expect(verify).toContain('sidebarMode="verification-tap"');
-    expect(prepare).toContain("focusLabel=");
-    expect(prepare).toContain("<SessionTopicChapter");
-    expect(prepare).toContain("<TapSessionSignals");
+    expect(prepare).toContain("<CalibrateLiveSurface");
+    expect(prepare).toContain("focusLabel={t(\"scout.live.questionsHeading\")}");
+    expect(calibrateSurface).toContain("focusLabel={props.focusLabel}");
+    expect(calibrateSurface).toContain("<SessionTopicChapter");
+    expect(calibrateSurface).toContain('data-calibrate-data="disabled"');
+    expect(calibrateSurface).toContain("CALIBRATE_DATA_DISABLED_LABEL");
+    expect(calibrateSurface).not.toContain("<TapSessionSignals");
+    expect(prepare).not.toContain("<TapSessionSignals");
     expect(prepare).not.toContain("captureAudio");
-    expect(prepare).toContain("data-scout-questions-pane");
+    expect(calibrateSurface).toContain("data-calibrate-step");
     expect(drill).toContain('focusLabel="Stash"');
     expect(drill).toContain("<SessionTopicChapter");
     expect(drill).toContain("<TapSessionSignals captureAudio");
@@ -576,7 +585,8 @@ describe("session sidebar mode configuration", () => {
     expect(chrome).toContain("sessionSidebarTopic");
     expect(chrome).not.toContain("<IleWorkDockBar");
     expect(chrome).not.toContain("onFocusOpenWork");
-    expect(prepare.match(/<SessionTopicChapter/g)).toHaveLength(1);
+    expect(calibrateSurface.match(/<SessionTopicChapter/g)).toHaveLength(1);
+    expect(prepare).not.toContain("<SessionTopicChapter");
     expect(drill.match(/<SessionTopicChapter/g)).toHaveLength(1);
     expect(tap.match(/<SessionTopicChapter/g)).toHaveLength(1);
     for (const src of [prepare, drill, tap, chrome]) {

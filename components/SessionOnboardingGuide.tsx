@@ -288,7 +288,9 @@ export function SessionOnboardingGuide({
       className={`flex min-h-0 flex-col ${
         isFloating
           ? `max-h-[min(100%,46rem)] ${variant === "ile" ? "" : "min-h-[34rem] "}w-full max-w-lg overflow-hidden rounded-none border border-white/10 bg-black/55 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-xl`
-          : `h-full w-full flex-1 ${className}`
+          : variant === "scout"
+            ? `w-full ${className}`
+            : `h-full w-full flex-1 ${className}`
       }`}
     >
       <div
@@ -444,6 +446,16 @@ export function SessionOnboardingGuide({
     return (
       <div className={`flex flex-1 items-center justify-center p-4 sm:p-6 ${className}`}>
         {guide}
+      </div>
+    );
+  }
+
+  // Calibrate's briefing is one short slide. Pinning it under the header
+  // leaves it at the top of the column while the settings column is centered.
+  if (variant === "scout") {
+    return (
+      <div className="flex h-full min-h-0 w-full flex-1 flex-col overflow-y-auto">
+        <div className="my-auto w-full">{guide}</div>
       </div>
     );
   }

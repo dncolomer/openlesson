@@ -126,6 +126,7 @@ describe("context generation pool", () => {
     ).toBe("context");
     expect(availableWorkspaceSections({ isOwner: true })).toContain("context");
     expect(availableWorkspaceSections({ isOwner: true })).not.toContain("verification_flows");
+    expect(availableWorkspaceSections({ isOwner: true })).not.toContain("calibration_flows");
 
     const hosts = read("components/workspace-view/workspace-section-hosts.tsx");
     expect(hosts).toContain("WorkspaceContextPanel");

@@ -5,6 +5,7 @@ import { WorkspaceContextPanel } from "@/components/WorkspaceContextPanel";
 import { WorkspaceDagsPanel } from "@/components/WorkspaceDagsPanel";
 import { WorkspaceMapTypesPanel } from "@/components/WorkspaceMapTypesPanel";
 import { WorkspaceGoalsPanel } from "@/components/WorkspaceGoalsPanel";
+import { CalibrationFlowsPanel } from "@/components/CalibrationFlowsPanel";
 import { VerificationFlowsPanel } from "@/components/VerificationFlowsPanel";
 import { WorkspaceIntegrationPanel } from "@/components/WorkspaceIntegrationPanel";
 import { InsightsDashboardTab } from "@/components/InsightsDashboardTab";
@@ -216,6 +217,23 @@ export function WorkspaceSectionHosts({
             className="flex h-full min-h-0 flex-col overflow-hidden p-3 sm:p-4"
           >
             <VerificationFlowsPanel workspaceId={workspaceId} ayclToken={ayclToken} />
+          </div>
+        </WorkspaceSectionSurface>
+      )}
+
+      {!isLearnerMode &&
+        sectionLayout.mountsCalibrationFlowsPanel &&
+        visibleSections.includes("calibration_flows") && (
+        <WorkspaceSectionSurface
+          kind="settings"
+          imageSrc={workspaceImage}
+          identity={identity}
+        >
+          <div
+            data-workspace-calibration-flows-host
+            className="flex h-full min-h-0 flex-col overflow-hidden p-3 sm:p-4"
+          >
+            <CalibrationFlowsPanel workspaceId={workspaceId} ayclToken={ayclToken} />
           </div>
         </WorkspaceSectionSurface>
       )}

@@ -76,7 +76,7 @@ describe("block circular menu catalog", () => {
       ILE_CIRCULAR_MENU_ACTIONS.map((a) => a.id),
     );
     expect(blockCircularMenuActions("workspace-learner").map((a) => a.label)).toEqual([
-      "Prepare",
+      "Calibrate",
       "Learn",
       "Drill",
       "Continue prev Session",

@@ -151,7 +151,7 @@ describe("product-intent surfaces (Explore/Drill always With AI)", () => {
     const badges = read("components/block-skill-grid/map-tile-badges.tsx");
     expect(badges).toContain('"Learn"');
     expect(badges).toContain('"Drill"');
-    expect(badges).toContain('"Prepare"');
+    expect(badges).toContain('"Calibrate"');
     expect(badges).not.toContain('? "With AI"');
     expect(badges).not.toContain(': "Solo"');
     expect(badges).not.toContain('? "Open-ended"');

@@ -3,7 +3,7 @@
  * Learning workspaces (stored kind `standard`): Build shows Workspace, DAGs,
  * Map Types, Context, and Settings. Play shows the map only.
  * Verification workspaces (stored kind `knowledge_region`): Goals,
- * Verification Flows, Context, Knowledge, and Settings.
+ * Verification Flows, Calibration Flows, Context, Knowledge, and Settings.
  * The two products do not share sections.
  */
 
@@ -17,6 +17,7 @@ export type WorkspaceSectionKey =
   | "map_types"
   | "goals"
   | "verification_flows"
+  | "calibration_flows"
   | "knowledge"
   | "insights"
   | "kpis"
@@ -33,6 +34,7 @@ export type WorkspaceMainSurface =
   | "map_types"
   | "goals"
   | "verification_flows"
+  | "calibration_flows"
   | "knowledge"
   | "insights"
   | "kpis"
@@ -44,6 +46,7 @@ export const WORKSPACE_SECTION_KEYS: readonly WorkspaceSectionKey[] = [
   "map_types",
   "goals",
   "verification_flows",
+  "calibration_flows",
   "context",
   "simulation",
   "knowledge",
@@ -73,6 +76,8 @@ export type WorkspaceSectionLayout = {
   mountsGoalsPanel: boolean;
   /** Verification Flows tab — only on a Verification Workspace. */
   mountsVerificationFlowsPanel?: boolean;
+  /** Calibration Flows tab — only on a Verification Workspace. */
+  mountsCalibrationFlowsPanel?: boolean;
   /** Always empty — local tab bar removed from Workspace section. */
   localTabs: readonly WorkspaceLocalTabKey[];
   mountsPerformancePanel: boolean;
@@ -188,6 +193,24 @@ export function resolveWorkspaceSectionLayout(
         mountsMapTypesPanel: false,
         mountsGoalsPanel: false,
         mountsVerificationFlowsPanel: true,
+        localTabs: [],
+        mountsPerformancePanel: false,
+        mountsIntegrationPanel: false,
+        mountsInsightsPanel: false,
+        mountsKpisPanel: false,
+      };
+    case "calibration_flows":
+      return {
+        section: "calibration_flows",
+        mainSurface: "calibration_flows",
+        showBlockMapChrome: false,
+        showSessionsColumn: false,
+        mountsContextPanel: false,
+        mountsSimulationPanel: false,
+        mountsDagsPanel: false,
+        mountsMapTypesPanel: false,
+        mountsGoalsPanel: false,
+        mountsCalibrationFlowsPanel: true,
         localTabs: [],
         mountsPerformancePanel: false,
         mountsIntegrationPanel: false,
@@ -329,7 +352,7 @@ export function resolveActiveSection(
 export function availableWorkspaceSections(options: WorkspaceSectionAuth): WorkspaceSectionKey[] {
   if (isKnowledgeRegionWorkspace(options.workspaceKind)) {
     if (canAccessPrivilegedWorkspaceSections(options)) {
-      return ["goals", "verification_flows", "context", "knowledge", "settings"];
+      return ["goals", "verification_flows", "calibration_flows", "context", "knowledge", "settings"];
     }
     return [];
   }

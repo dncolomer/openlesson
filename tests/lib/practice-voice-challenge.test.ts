@@ -238,9 +238,9 @@ describe("practice voice challenge script and transcript", () => {
     const tap = read("components/tap-score/tap-score-phases.tsx");
     const prepare = read("components/scout-tap/scout-tap-phases.tsx");
     expect(tap).toContain("releaseVoiceChallengeStartLatch");
-    expect(prepare).toContain("releaseVoiceChallengeStartLatch");
+    expect(prepare).not.toContain("releaseVoiceChallengeStartLatch");
+    expect(prepare).not.toContain("PracticeVoiceChallenge");
     expect(tap).not.toContain("passGuard.current = false;\n    });");
-    expect(prepare).not.toContain("finally(() => {\n      passGuard.current = false;");
   });
 });
 
@@ -554,33 +554,22 @@ describe("shipped voice-challenge UI wiring", () => {
     expect(pass).toContain('step !== "live"');
   });
 
-  it("Prepare renders the challenge after start confirmation and does not enter live before a pass", () => {
+  it("Calibrate starts from the briefing and does not mount the Prepare voice challenge", () => {
     const phases = read("components/scout-tap/scout-tap-phases.tsx");
-    expect(phases).toContain("confirmPrepareStart");
-    expect(phases).toContain("passPrepareChallenge");
-    expect(phases).toContain('data-prepare-briefing-step="confirm"');
-    expect(phases).toContain('data-prepare-briefing-step="challenge"');
-    expect(phases).toContain("onStart={confirmPrepareStart}");
-    expect(phases).not.toContain("onStart={() => void startSession()}");
-    const confirm = phases.slice(
-      phases.indexOf("function confirmPrepareStart"),
-      phases.indexOf("function passPrepareChallenge"),
-    );
-    expect(confirm).not.toContain("startSession");
-    expect(confirm).toContain("prepareBriefingStep");
-    const pass = phases.slice(
-      phases.indexOf("function passPrepareChallenge"),
-      phases.indexOf("const prepareStep"),
-    );
-    expect(pass).toContain('step !== "live"');
-    expect(pass).toContain("startSession()");
+    expect(phases).not.toContain("confirmPrepareStart");
+    expect(phases).not.toContain("passPrepareChallenge");
+    expect(phases).not.toContain("PracticeVoiceChallenge");
+    expect(phases).not.toContain('variant="prepare"');
+    expect(phases).not.toContain('data-prepare-briefing-step="challenge"');
+    expect(phases).toContain("onStart={() => void startSession()}");
+    expect(phases).toContain("<CalibrateLiveSurface");
     expect(scoutThinkAloudEnabled()).toBe(false);
     expect(phases).toContain("scoutThinkAloudEnabled()");
     const drill = read("components/exercise-tap/exercise-tap-phases.tsx");
     expect(drill).toContain('variant="drill"');
     expect(drill).toContain("omitIntroSlide");
     expect(drill).not.toMatch(/onPracticeFirst=\{\(\) => void startSession/);
-    expect(read("components/scout-tap/scout-tap-phases.tsx")).toContain('variant="prepare"');
+    expect(read("lib/practice-voice-challenge.ts")).toContain('variant === "prepare"');
   });
 
   it("difficulty settings expose the silence-minutes control with no off switch", () => {

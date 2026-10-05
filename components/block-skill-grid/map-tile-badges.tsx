@@ -276,7 +276,7 @@ export function BlockPracticeOptionsBadge({
   if (keys.length === 0) return null;
   const displayKeys = keys.filter((k) => k === "scout" || k === "explore" || k === "drill");
   const title = displayKeys
-    .map((k) => (k === "scout" ? "Prepare" : k === "explore" ? "Learn" : "Drill"))
+    .map((k) => (k === "scout" ? "Calibrate" : k === "explore" ? "Learn" : "Drill"))
     .join(" · ");
   return (
     <span

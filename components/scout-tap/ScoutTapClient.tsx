@@ -47,24 +47,24 @@ import {
 import type { IleWorkCanvasPowEvent } from "@/lib/ile-work-canvas-pow";
 import type { IleWorkCanvasElement, IleWorkCanvasScene } from "@/lib/ile-work-canvas";
 import {
-  SCOUT_FOLLOWUP_QUESTION_COUNT,
-  buildScoutCanvasPowMetadata,
-  buildScoutCompleteTranscript,
-  canGoBackScoutNode,
-  connectScoutQuestionToCanvas,
-  createScoutLiveState,
-  extractScoutCanvasText,
-  goBackScoutNode,
-  pickScoutQuestion,
-  receiveScoutQuestions,
-  scoutArtifactsFromLive,
-  scoutCurrentNode,
+  CALIBRATE_MIN_POOL,
+  buildCalibrateCompleteTranscript,
+  buildCalibrateProofMetadata,
+  createCalibrateState,
+  finishClassifying,
+  finishComfortableAnswer,
+  finishUncertainty,
+  normalizeCalibrateQuestions,
+  readCalibratePlacements,
+  readCalibrateResponseTexts,
+  seedCalibrateWorkCanvas,
+  syncCalibratePlacements,
+  type CalibrateState,
+} from "@/lib/calibrate-session";
+import {
   scoutLiveSpeechEnabled,
-  scoutPathFromRoot,
   scoutSessionPurityEnabled,
   scoutThankYouActions,
-  seedScoutWorkCanvas,
-  type ScoutLiveState,
 } from "@/lib/scout-session";
 import {
   buildPowParticipantIdentity,
@@ -177,15 +177,14 @@ export function ScoutTapClient({
   const tapSessionIdRef = useRef<string | null>((initialSession?.id as string) ?? null);
   const resolvedWorkspaceId = workspaceId || (initialSession?.workspace_id as string | undefined);
   const [liveMinutes, setLiveMinutes] = useState(resolvedLaunchMinutes);
-  const [seedDescription, setSeedDescription] = useState("");
   const [practiceOptions, setPracticeOptions] = useState<BlockPracticeOptions>(
     parseBlockPracticeOptions(null),
   );
 
-  const [scoutState, setScoutState] = useState<ScoutLiveState>(() =>
-    createScoutLiveState("Topic"),
-  );
-  const scoutStateRef = useRef(scoutState);
+  const [seedText, setSeedText] = useState("Topic");
+  const seedTextRef = useRef(seedText);
+  const [calibrate, setCalibrate] = useState<CalibrateState>(() => createCalibrateState([]));
+  const calibrateRef = useRef(calibrate);
   const [questionsLoading, setQuestionsLoading] = useState(false);
   const questionsAbortRef = useRef<AbortController | null>(null);
   const questionsGenRef = useRef(0);
@@ -205,8 +204,11 @@ export function ScoutTapClient({
     tapSessionIdRef.current = tapSessionId;
   }, [tapSessionId]);
   useEffect(() => {
-    scoutStateRef.current = scoutState;
-  }, [scoutState]);
+    seedTextRef.current = seedText;
+  }, [seedText]);
+  useEffect(() => {
+    calibrateRef.current = calibrate;
+  }, [calibrate]);
   useEffect(() => {
     workCanvasSceneRef.current = workCanvasScene;
   }, [workCanvasScene]);
@@ -250,7 +252,11 @@ export function ScoutTapClient({
       for (const event of events) {
         const item = buildTapWorkCanvasActionUploadItem(sessionKey, {
           ...event,
-          metadata: { ...event.metadata, product: "tap" },
+          metadata: {
+            ...event.metadata,
+            product: "tap",
+            ...buildCalibrateProofMetadata(calibrateRef.current),
+          },
         });
         if (!item) continue;
         void uploadTapWorkCanvasPow({
@@ -267,13 +273,11 @@ export function ScoutTapClient({
     [blockId, privateToken, sessionId, workspaceId],
   );
 
-  const persistScoutCanvas = useCallback(async () => {
+  const persistCalibrateCanvas = useCallback(async () => {
     const scene = workCanvasSceneRef.current;
-    const state = scoutStateRef.current;
     const sessionKey = tapSessionIdRef.current || sessionId;
     if (!scene || !sessionKey) return;
     const serialized = serializeTapWorkCanvasScene(scene);
-    const artifacts = scoutArtifactsFromLive(state, scene);
     const item = buildTapCanvasSnapshotUploadItem(sessionKey, JSON.stringify(serialized));
     await uploadTapWorkCanvasPow({
       workspaceId,
@@ -286,13 +290,13 @@ export function ScoutTapClient({
         ...item,
         metadata: {
           ...(item.metadata || {}),
-          ...buildScoutCanvasPowMetadata(artifacts),
+          ...buildCalibrateProofMetadata(calibrateRef.current),
         },
       },
     });
   }, [blockId, privateToken, sessionId, workspaceId]);
 
-  const loadQuestions = useCallback(async (state: ScoutLiveState, scene: IleWorkCanvasScene) => {
+  const loadPool = useCallback(async (title: string, description: string) => {
     questionsAbortRef.current?.abort();
     const ac = new AbortController();
     questionsAbortRef.current = ac;
@@ -311,28 +315,35 @@ export function ScoutTapClient({
           privateToken,
           tapSessionId: tapSessionIdRef.current,
           entryQueryParams: entryQueryParamsRef.current,
-          seedTitle: state.seedText,
-          seedDescription,
-          path: scoutPathFromRoot(state),
-          canvasText: extractScoutCanvasText(scene),
-          workCanvasScene: serializeTapWorkCanvasScene(scene),
-          currentNode: scoutCurrentNode(state).text,
-          count: SCOUT_FOLLOWUP_QUESTION_COUNT,
+          purpose: "calibrate",
+          seedTitle: title,
+          seedDescription: description,
+          count: CALIBRATE_MIN_POOL,
           conversationLanguage,
         }),
       });
       const payload = await res.json().catch(() => ({}));
       if (gen !== questionsGenRef.current) return;
-      if (!res.ok) throw new Error(errorMessageFromBody(payload, "Could not load Scout questions"));
-      setScoutState((prev) => receiveScoutQuestions(prev, payload.questions));
+      if (!res.ok) throw new Error(errorMessageFromBody(payload, "Could not load calibration questions"));
+      const questions = normalizeCalibrateQuestions(payload.questions);
+      const next = createCalibrateState(questions);
+      const seeded = seedCalibrateWorkCanvas(next.pool);
+      setCalibrate(next);
+      calibrateRef.current = next;
+      setWorkCanvasScene(seeded.scene);
+      workCanvasSceneRef.current = seeded.scene;
+      setCanvasApplyElements(seeded.scene.elements);
+      setCanvasApplyNonce((n) => n + 1);
     } catch (err) {
       if (ac.signal.aborted || gen !== questionsGenRef.current) return;
-      setScoutState((prev) => receiveScoutQuestions(prev, null));
-      setError(err instanceof Error ? err.message : "Could not load Scout questions");
+      const next = createCalibrateState([]);
+      setCalibrate(next);
+      calibrateRef.current = next;
+      setError(err instanceof Error ? err.message : "Could not load calibration questions");
     } finally {
       if (gen === questionsGenRef.current) setQuestionsLoading(false);
     }
-  }, [blockId, conversationLanguage, privateToken, seedDescription, sessionId, workspaceId]);
+  }, [blockId, conversationLanguage, privateToken, sessionId, workspaceId]);
 
   async function startSession() {
     isEndingRef.current = false;
@@ -361,13 +372,15 @@ export function ScoutTapClient({
       const seed =
         String(payload.seedTitle || payload.openingQuestion || "").trim() ||
         "Topic";
-      setSeedDescription(String(payload.seedDescription || "").trim());
-      const nextState = createScoutLiveState(seed);
-      const seeded = seedScoutWorkCanvas(seed);
-      setScoutState(nextState);
-      scoutStateRef.current = nextState;
-      setWorkCanvasScene(seeded.scene);
-      workCanvasSceneRef.current = seeded.scene;
+      const description = String(payload.seedDescription || "").trim();
+      setSeedText(seed);
+      seedTextRef.current = seed;
+      const next = createCalibrateState([]);
+      const empty = emptyTapWorkCanvasScene();
+      setCalibrate(next);
+      calibrateRef.current = next;
+      setWorkCanvasScene(empty);
+      workCanvasSceneRef.current = empty;
       setCanvasApplyElements([]);
       setCanvasApplyNonce(0);
       const startedAtMs = Date.now();
@@ -378,7 +391,7 @@ export function ScoutTapClient({
       setRemainingSeconds(sessionMinutes * 60);
       setPhase("live");
       started = true;
-      void loadQuestions(nextState, seeded.scene);
+      void loadPool(seed, description);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not start Scout");
     } finally {
@@ -392,9 +405,12 @@ export function ScoutTapClient({
     isEndingRef.current = true;
     setPhase("saving");
     try {
-      await persistScoutCanvas();
+      await persistCalibrateCanvas();
       const durationSeconds = startedAt ? Math.floor((Date.now() - startedAt) / 1000) : 0;
-      const transcript = buildScoutCompleteTranscript(scoutStateRef.current);
+      const transcript = buildCalibrateCompleteTranscript({
+        seedText: seedTextRef.current,
+        state: calibrateRef.current,
+      });
       const { ok, payload } = await postTutoringSessionComplete({
         workspaceId,
         blockId,
@@ -458,43 +474,37 @@ export function ScoutTapClient({
     if (!tapWorkCanvasShouldAcceptSceneUpdate(workCanvasSceneRef.current, scene)) return;
     workCanvasSceneRef.current = scene;
     setWorkCanvasScene(scene);
+    const next = syncCalibratePlacements(
+      calibrateRef.current,
+      readCalibratePlacements(scene),
+    );
+    calibrateRef.current = next;
+    setCalibrate(next);
   }, []);
 
-  const onPickQuestion = useCallback(
-    (index: number) => {
-      const prev = scoutStateRef.current;
-      const next = pickScoutQuestion(prev, index);
-      if (next === prev) return;
-      const picked = next.nodes[next.nodes.length - 1];
-      const connected = connectScoutQuestionToCanvas(workCanvasSceneRef.current, {
-        question: picked?.text || "",
-        nodeId: picked?.id,
-        parentNodeId: prev.currentNodeId,
-      });
-      setScoutState(next);
-      scoutStateRef.current = next;
-      workCanvasSceneRef.current = connected.scene;
-      setWorkCanvasScene(connected.scene);
-      if (connected.added.length) {
-        setCanvasApplyElements(connected.added);
-        setCanvasApplyNonce((n) => n + 1);
-      }
-      void persistScoutCanvas();
-      void loadQuestions(next, connected.scene);
-    },
-    [loadQuestions, persistScoutCanvas],
-  );
-
-  const onGoBack = useCallback(() => {
-    const prev = scoutStateRef.current;
-    if (!canGoBackScoutNode(prev)) return;
-    questionsAbortRef.current?.abort();
-    const next = goBackScoutNode(prev);
-    setScoutState(next);
-    scoutStateRef.current = next;
-    const scene = workCanvasSceneRef.current || emptyTapWorkCanvasScene();
-    void loadQuestions(next, scene);
-  }, [loadQuestions]);
+  const onAdvance = useCallback(() => {
+    const current = calibrateRef.current;
+    const live = workCanvasSceneRef.current;
+    if (!live) return;
+    const synced = syncCalibratePlacements(current, readCalibratePlacements(live));
+    const texts = readCalibrateResponseTexts(live, synced);
+    const advanced =
+      synced.phase === "classifying"
+        ? finishClassifying(synced)
+        : synced.phase === "answer"
+          ? finishComfortableAnswer(synced, texts)
+          : synced.phase === "explain"
+            ? finishUncertainty(synced, texts)
+            : { ok: false as const, reason: "wrong_phase", state: synced };
+    if (!advanced.ok) {
+      setError("Finish this step on the canvas before continuing.");
+      return;
+    }
+    setError("");
+    calibrateRef.current = advanced.state;
+    setCalibrate(advanced.state);
+    void persistCalibrateCanvas();
+  }, [persistCalibrateCanvas]);
 
   const restartBriefingFlow = useCallback(() => {
     isEndingRef.current = false;
@@ -506,7 +516,11 @@ export function ScoutTapClient({
     setRemainingSeconds(0);
     setError("");
     setResultsError("");
-    setScoutState(createScoutLiveState("Topic"));
+    setSeedText("Topic");
+    seedTextRef.current = "Topic";
+    const reset = createCalibrateState([]);
+    setCalibrate(reset);
+    calibrateRef.current = reset;
     const empty = emptyTapWorkCanvasScene();
     setWorkCanvasScene(empty);
     workCanvasSceneRef.current = empty;
@@ -601,10 +615,10 @@ export function ScoutTapClient({
       canvasApplyNonce={canvasApplyNonce}
       handleSceneChange={handleSceneChange}
       onCanvasPowActions={handleCanvasPowActions}
-      scoutState={scoutState}
+      calibrate={calibrate}
+      seedText={seedText}
       questionsLoading={questionsLoading}
-      onPickQuestion={onPickQuestion}
-      onGoBack={onGoBack}
+      onAdvance={onAdvance}
       thankYouActions={thankYouActions}
       onJumpWork={onJumpWork}
       onJumpDrill={onJumpDrill}

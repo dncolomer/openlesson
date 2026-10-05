@@ -86,7 +86,7 @@ export function WorkspaceBlockEditPanel({
         >
           Practice:{" "}
           {[
-            savedPractice.allowScout ? "Prepare" : null,
+            savedPractice.allowScout ? "Calibrate" : null,
             savedPractice.allowExplore ? "Learn" : null,
             savedPractice.allowDrill ? "Drill" : null,
             savedPractice.allowDrill && savedPractice.allowedDurationsMinutes.length
@@ -192,7 +192,7 @@ export function WorkspaceBlockEditPanel({
               disabled={disabled}
               onChange={(e) => patchPractice({ allowScout: e.target.checked })}
             />
-            <span className="text-[11px] text-neutral-200">Prepare</span>
+            <span className="text-[11px] text-neutral-200">Calibrate</span>
           </label>
           <label className="flex cursor-pointer items-center gap-1.5 rounded-none border border-neutral-800/80 bg-neutral-900/40 px-2 py-1.5">
             <input

@@ -81,6 +81,36 @@ export function workspaceSurfaceShowsPracticeMenu(input?: {
 }
 
 /**
+ * Empty-cell clicks open add or generate only when this map can be authored.
+ * Play-only access drops them. The stored Play/Build id does not decide this.
+ */
+export function workspaceEmptyCellOpensAuthoring(input: {
+  authoring: boolean;
+}): boolean {
+  return input.authoring === true;
+}
+
+/**
+ * Continue and Mark as Done need the learner pane on an authoring map.
+ * Play-only maps always use that pane. A stored learner id is not enough
+ * when authoring is also on.
+ */
+export function workspaceLearnerPaneMounted(input: {
+  authoring: boolean;
+  practiceDrawer: boolean;
+  learnerActionRequested: boolean;
+}): boolean {
+  if (!input.practiceDrawer) return false;
+  if (!input.authoring) return true;
+  return input.learnerActionRequested;
+}
+
+/** Idle explore header. It does not name Play, Build, or Explore. */
+export function workspaceExpandMapTitle(): string {
+  return "Expand Map";
+}
+
+/**
  * Authoring tools for people who can design the map.
  * Play-only access (`allowAuthoring: false`) stays on the map.
  * Verification workspaces do not use this map-authoring shell.

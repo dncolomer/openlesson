@@ -844,8 +844,10 @@ describe("Expand Map rename + suggest UI", () => {
     expect(grid).not.toContain("data-map-explore-expand-toggle");
 
     const pane = read("components/WorkspaceEmptyMapPane.tsx");
-    expect(pane).toContain("Expand Map");
+    expect(pane).toContain("workspaceExpandMapTitle()");
     expect(pane).toContain("data-expand-map-title");
+    expect(pane).not.toContain("Expand Map ·");
+    expect(pane).not.toContain('? "Play"');
     expect(pane).toContain("data-expand-map-suggest-context");
     expect(pane).toContain("WorkspacePromptContextAlternatives");
 

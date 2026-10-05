@@ -88,7 +88,7 @@ describe("exclusive map-host commit (shipped host→shell emit)", () => {
     expect(grid).not.toMatch(
       /applyEmptyCellSelection\([\s\S]*?onSelectNode\(null\)/,
     );
-    expect(view).toContain("onMapSelectionChange={handleMapSelectionChange}");
+    expect(view).toContain("handleMapSelectionChange(selection)");
     expect(view).toContain("mapSelection={mapSelection}");
     expect(view).not.toContain("applyMapSelection={");
     expect(view).not.toContain("onSelectedBlockIdsChange={handleSelectedBlockIdsChange}");

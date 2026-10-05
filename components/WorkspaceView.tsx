@@ -55,6 +55,7 @@ import {
   resolveActiveSectionForMode,
   resolveWorkspaceModeShell,
   workspaceIdlePaneShowsExplore,
+  workspaceLearnerPaneMounted,
   workspaceSurfaceShowsAuthoring,
   workspaceSurfaceShowsPracticeMenu,
   type WorkspaceInteractionMode,
@@ -166,6 +167,28 @@ export function WorkspaceView({
     id: string;
     nonce: number;
   } | null>(null);
+  /** AYCL purchase tier capabilities (null = non-AYCL). Seeded from prop. */
+  const [ayclCapabilities, setAyclCapabilities] = useState<AyclCapabilities | null>(
+    () =>
+      ayclToken
+        ? resolveAyclCapabilities(ayclAccessTierProp ?? "full")
+        : null,
+  );
+  // AYCL: owner-equivalent only when purchase includes creation (full tier).
+  // Practice-only access is fixed-scope — no authoring / grow tools.
+  const isOwner = isAycl
+    ? Boolean(ayclCapabilities?.canAuthor)
+    : currentUserId
+      ? plan?.user_id === currentUserId
+      : false;
+  const authoringOnMap = workspaceSurfaceShowsAuthoring({
+    isOwner,
+    isOrgAdmin,
+    allowAuthoring: ayclCapabilities
+      ? ayclCapabilities.allowCreatorModeToggle
+      : undefined,
+    workspaceKind: parseWorkspaceKind(plan?.workspace_kind),
+  });
   const {
     generatorTargetPreviewCells,
     setGeneratorTargetPreviewCells,
@@ -224,18 +247,11 @@ export function WorkspaceView({
     clearMapChromeForModeFlip,
   } = useWorkspaceMapSelection({
     interactionMode,
+    authoring: authoringOnMap,
     unusableCells,
     nodes,
     setMobileColumn,
   });
-
-  /** AYCL purchase tier capabilities (null = non-AYCL). Seeded from prop. */
-  const [ayclCapabilities, setAyclCapabilities] = useState<AyclCapabilities | null>(
-    () =>
-      ayclToken
-        ? resolveAyclCapabilities(ayclAccessTierProp ?? "full")
-        : null,
-  );
   const {
     ayclUpgradeBusy,
     ayclUpgradePriceLabel,
@@ -255,13 +271,6 @@ export function WorkspaceView({
     }
   }, [isAycl, ayclCapabilities]);
 
-  // AYCL: owner-equivalent only when purchase includes creation (full tier).
-  // Practice-only access is fixed-scope — no authoring / grow tools.
-  const isOwner = isAycl
-    ? Boolean(ayclCapabilities?.canAuthor)
-    : currentUserId
-      ? plan?.user_id === currentUserId
-      : false;
   const canAccessPrivilegedSections = canAccessPrivilegedWorkspaceSections({
     isOwner,
     isOrgAdmin,
@@ -759,14 +768,6 @@ export function WorkspaceView({
   // One surface: the map plus authoring sections for people who can design.
   // Verification keeps its own list. Play-only stays on the map.
   const visibleSections = modeShell.sections;
-  const authoringOnMap = workspaceSurfaceShowsAuthoring({
-    isOwner,
-    isOrgAdmin,
-    allowAuthoring: ayclCapabilities
-      ? ayclCapabilities.allowCreatorModeToggle
-      : undefined,
-    workspaceKind,
-  });
   const practiceMenu = workspaceSurfaceShowsPracticeMenu({ workspaceKind });
   const idleExplore = workspaceIdlePaneShowsExplore({
     allowExplore:
@@ -779,8 +780,11 @@ export function WorkspaceView({
   const isLearnerMode = interactionMode === "learner" && !authoringOnMap;
   const showCreatorDrawers =
     authoringOnMap || mountsCreatorAuthoringDrawers(interactionMode);
-  const showLearnerDrawer =
-    !authoringOnMap && mountsLearnerPracticeDrawer(interactionMode);
+  const showLearnerDrawer = workspaceLearnerPaneMounted({
+    authoring: authoringOnMap,
+    practiceDrawer: mountsLearnerPracticeDrawer(interactionMode),
+    learnerActionRequested: learnerDrawerRequest != null,
+  });
 
   const selectInteractionMode = (mode: WorkspaceInteractionMode) => {
     // Practice-only AYCL cannot switch into Creator tools.
@@ -947,8 +951,14 @@ export function WorkspaceView({
           onRefresh={isAycl ? () => void refreshAyclWorkspace() : refreshNodes}
           onNodesUpdate={handleNodesUpdate}
           expandedBlockId={expandedBlockId}
-          onExpandedNodeIdChange={handleExpandedBlockChange}
-          onMapSelectionChange={handleMapSelectionChange}
+          onExpandedNodeIdChange={(blockId) => {
+            setLearnerDrawerRequest(null);
+            handleExpandedBlockChange(blockId);
+          }}
+          onMapSelectionChange={(selection) => {
+            setLearnerDrawerRequest(null);
+            handleMapSelectionChange(selection);
+          }}
           mapSelection={mapSelection}
           selectiveExplanationActive={selectiveExplanationActive}
           selectiveExplanationPolygon={selectiveExplanationPolygon}

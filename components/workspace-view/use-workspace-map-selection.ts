@@ -27,6 +27,7 @@ import {
 } from "@/lib/empty-map-pane";
 import {
   nextWorkspaceMapToggle,
+  workspaceEmptyCellOpensAuthoring,
   workspaceModeFlipClearsMapSelection,
   type WorkspaceInteractionMode,
   type WorkspaceMapToggleId,
@@ -48,11 +49,13 @@ import {
 
 export function useWorkspaceMapSelection(input: {
   interactionMode: WorkspaceInteractionMode;
+  /** False on play-only maps. Empty cells then do not open add or generate. */
+  authoring: boolean;
   unusableCells: UnusableCell[];
   nodes: Block[];
   setMobileColumn: Dispatch<SetStateAction<MobileColumn>>;
 }) {
-  const { interactionMode, unusableCells, nodes, setMobileColumn } = input;
+  const { interactionMode, authoring, unusableCells, nodes, setMobileColumn } = input;
 
   /** Creator generator drawer / learner select → empty cells to spark. */
   const [generatorTargetPreviewCells, setGeneratorTargetPreviewCells] =
@@ -157,7 +160,9 @@ export function useWorkspaceMapSelection(input: {
         exploreActive: true,
       });
     }
-    if (interactionMode === "learner") return clearWorkspaceAddTarget();
+    if (!workspaceEmptyCellOpensAuthoring({ authoring })) {
+      return clearWorkspaceAddTarget();
+    }
     // Pass unusable keys so a mixed selection opens Add on the remaining
     // placeable cell. An all-unusable selection stays on that same pane so
     // Unusable ground can clear it (placeable.length === 0 keeps `selected`).
@@ -165,7 +170,7 @@ export function useWorkspaceMapSelection(input: {
       selectedEmptyCells: emptyCells,
       unusableKeys: unusableCells.map((c) => `${c.row}:${c.col}`),
     });
-  }, [interactionMode, mapExploreShell.open, mapSelection, unusableCells]);
+  }, [authoring, mapExploreShell.open, mapSelection, unusableCells]);
 
   const handleExpandedBlockChange = useCallback((blockId: string | null) => {
     const next = nextWorkspaceMapSelection({

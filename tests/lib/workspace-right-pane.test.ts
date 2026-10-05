@@ -220,7 +220,7 @@ describe("resolveEmptySelectionSurface + resolveEmptyAddTarget", () => {
       "utf8",
     );
     const creatorReturn = selectionHook.slice(
-      selectionHook.indexOf('interactionMode === "learner"'),
+      selectionHook.indexOf("workspaceEmptyCellOpensAuthoring"),
     );
     expect(creatorReturn).toContain("selectedEmptyCells: emptyCells");
     expect(creatorReturn).toMatch(

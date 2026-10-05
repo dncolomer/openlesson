@@ -14,7 +14,10 @@ import {
   nextWorkspaceMapToggle,
   resolveWorkspaceMapToggleId,
   visibleWorkspaceMapToggleIds,
+  workspaceEmptyCellOpensAuthoring,
+  workspaceExpandMapTitle,
   workspaceIdlePaneShowsExplore,
+  workspaceLearnerPaneMounted,
   workspaceModeControlMounted,
   workspaceModeDisplayLabel,
   workspaceModeFlipClearsMapSelection,
@@ -138,6 +141,51 @@ describe("one workspace surface", () => {
     expect(
       workspaceSurfaceShowsAuthoring({ isOwner: true, allowAuthoring: false }),
     ).toBe(false);
+    expect(workspaceEmptyCellOpensAuthoring({ authoring: true })).toBe(true);
+    expect(workspaceEmptyCellOpensAuthoring({ authoring: false })).toBe(false);
+    expect(
+      workspaceLearnerPaneMounted({
+        authoring: true,
+        practiceDrawer: true,
+        learnerActionRequested: false,
+      }),
+    ).toBe(false);
+    expect(
+      workspaceLearnerPaneMounted({
+        authoring: true,
+        practiceDrawer: true,
+        learnerActionRequested: true,
+      }),
+    ).toBe(true);
+    expect(
+      workspaceLearnerPaneMounted({
+        authoring: false,
+        practiceDrawer: true,
+        learnerActionRequested: false,
+      }),
+    ).toBe(true);
+    expect(
+      workspaceLearnerPaneMounted({
+        authoring: true,
+        practiceDrawer: false,
+        learnerActionRequested: true,
+      }),
+    ).toBe(false);
+    expect(workspaceExpandMapTitle()).toBe("Expand Map");
+    expect(workspaceExpandMapTitle()).not.toMatch(/Play|Build|Explore/);
+    const selection = read("components/workspace-view/use-workspace-map-selection.ts");
+    expect(selection).toContain("workspaceEmptyCellOpensAuthoring({ authoring })");
+    expect(selection).not.toContain(
+      'if (interactionMode === "learner") return clearWorkspaceAddTarget()',
+    );
+    const shell = read("components/WorkspaceView.tsx");
+    expect(shell).toContain("authoring: authoringOnMap");
+    expect(shell).toContain("workspaceLearnerPaneMounted");
+    expect(shell).toContain("learnerActionRequested: learnerDrawerRequest != null");
+    const explorePane = read("components/WorkspaceEmptyMapPane.tsx");
+    expect(explorePane).toContain("{workspaceExpandMapTitle()}");
+    expect(explorePane).not.toContain("Expand Map ·");
+    expect(explorePane).not.toContain('? "Play"');
     expect(workspaceIdlePaneShowsExplore({ allowExplore: false })).toBe(false);
     expect(
       resolveBlockCircularMenuSurface({

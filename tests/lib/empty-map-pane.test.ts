@@ -535,19 +535,20 @@ describe("empty-map-pane structural + wiring", () => {
     );
     expect(sessionList).toContain("onMapExploreToggle");
     expect(sessionList).toContain("mapExploreOpen");
-    // Selection callbacks wired in both modes (not creator-only)
-    expect(view).toMatch(
-      /onMapSelectionChange=\{handleMapSelectionChange\}/,
-    );
+    // Selection callbacks wired in both modes (not creator-only).
+    // A map click clears a Continue / Mark as Done request, then uses the hook.
+    expect(view).toContain("handleMapSelectionChange(selection)");
+    expect(view).toContain("setLearnerDrawerRequest(null)");
     expect(view).not.toMatch(
       /onEmptySelectionChange=\{handleEmptySelectionChange\}/,
     );
     expect(view).not.toMatch(
       /onSelectedBlockIdsChange=\{handleSelectedBlockIdsChange\}/,
     );
-    // Learner empty selection does not open create panes
-    expect(view).toMatch(
-      /interactionMode === "learner"[\s\S]*?clearWorkspaceAddTarget/,
+    // Play-only empty selection does not open create panes. Authoring does.
+    expect(view).toContain("workspaceEmptyCellOpensAuthoring({ authoring })");
+    expect(view).not.toContain(
+      'if (interactionMode === "learner") return clearWorkspaceAddTarget()',
     );
 
     // Grid: exclusive selection + selective overlay independent of lasso
@@ -859,7 +860,7 @@ describe("empty-map-pane structural + wiring", () => {
         "create_note_from_summary=" +
           String(view.includes("onCreateNoteFromSummary")),
         "learner_empty_visibility_only=" +
-          String(view.includes('interactionMode === "learner"')),
+          String(view.includes("workspaceEmptyCellOpensAuthoring")),
       ].join("\n"),
     );
   });

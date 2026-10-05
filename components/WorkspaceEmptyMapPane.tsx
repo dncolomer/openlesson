@@ -21,6 +21,7 @@ import {
 } from "@/lib/empty-map-pane";
 import type { GridContinuousPoint } from "@/lib/block-map-tools";
 import type { MapNoteSource } from "@/lib/learner-map-notes";
+import { workspaceExpandMapTitle } from "@/lib/workspace-mode";
 import {
   WorkspaceRightPaneDrawer,
   WorkspaceRightPaneDrawerGroup,
@@ -306,7 +307,6 @@ export function WorkspaceEmptyMapPane({
     workspaceId,
   ]);
 
-  const modeLabel = interactionMode === "learner" ? "Play" : "Build";
   const disabled = busy || !workspaceId;
 
   const handleSearch = async () => {
@@ -429,7 +429,7 @@ export function WorkspaceEmptyMapPane({
           data-expand-map-title
           data-map-explore-drawer-title
         >
-          Expand Map · {modeLabel}
+          {workspaceExpandMapTitle()}
         </p>
       </div>
 

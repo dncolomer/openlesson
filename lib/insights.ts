@@ -20,6 +20,8 @@ export type InsightSummary = {
   archived_at?: string | null;
   thought_ids?: unknown;
   workspace_title?: string | null;
+  /** Milliseconds from session start to crafting. Null when the start is unknown. */
+  session_elapsed_ms?: number | null;
 };
 
 function uuidOrNull(value: unknown): string | null {
@@ -55,7 +57,96 @@ export type InsightCreateInsertRow = {
   source_thoughts: unknown;
   aesthetic_image: string;
   is_public: true;
+  /** Present only when session start was known at craft time. */
+  session_elapsed_ms?: number;
 };
+
+const INSIGHT_SESSION_ELAPSED_MS_MAX = 2_147_483_647;
+
+function parseInsightTimestamp(value: unknown): number | null {
+  if (value == null) return null;
+  if (value instanceof Date) {
+    const time = value.getTime();
+    return Number.isFinite(time) ? time : null;
+  }
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const time = Date.parse(trimmed);
+  return Number.isFinite(time) ? time : null;
+}
+
+/** Non-negative integer milliseconds, or null. Caps at a signed 32-bit integer. */
+export function normalizeInsightSessionElapsedMs(value: unknown): number | null {
+  const ms = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(ms) || ms < 0) return null;
+  return Math.min(INSIGHT_SESSION_ELAPSED_MS_MAX, Math.round(ms));
+}
+
+/**
+ * Milliseconds from session start to `atMs`.
+ * Start is `sessionStartedAt` when that parses, otherwise `sessionCreatedAt`.
+ */
+export function insightSessionElapsedMs(input: {
+  sessionStartedAt?: unknown;
+  sessionCreatedAt?: unknown;
+  atMs: unknown;
+}): number | null {
+  const at = parseInsightTimestamp(input.atMs);
+  if (at == null) return null;
+  const start =
+    parseInsightTimestamp(input.sessionStartedAt) ??
+    parseInsightTimestamp(input.sessionCreatedAt);
+  if (start == null) return null;
+  return normalizeInsightSessionElapsedMs(at - start);
+}
+
+type InsightSessionElapsedClient = {
+  from: (table: string) => {
+    select: (columns: string) => {
+      eq: (column: string, id: string) => {
+        maybeSingle: () => Promise<{
+          data?: {
+            user_id?: string | null;
+            created_at?: string | null;
+            session_started_at?: string | null;
+          } | null;
+          error?: { message?: string } | null;
+        }>;
+      };
+    };
+  };
+};
+
+/**
+ * Read the owner's session and return elapsed milliseconds at `atMs`.
+ * A missing session, another user's session, or a query error returns null
+ * so crafting still saves.
+ */
+export async function loadInsightSessionElapsedMs(
+  client: unknown,
+  input: { sessionId: unknown; userId: unknown; atMs: number },
+): Promise<number | null> {
+  const sessionId = uuidOrNull(input.sessionId);
+  const userId = String(input.userId ?? "").trim();
+  if (!sessionId || !userId) return null;
+  try {
+    const { data, error } = await (client as InsightSessionElapsedClient)
+      .from("sessions")
+      .select("user_id, created_at, session_started_at")
+      .eq("id", sessionId)
+      .maybeSingle();
+    if (error || !data || String(data.user_id || "") !== userId) return null;
+    return insightSessionElapsedMs({
+      sessionStartedAt: data.session_started_at,
+      sessionCreatedAt: data.created_at,
+      atMs: input.atMs,
+    });
+  } catch {
+    return null;
+  }
+}
 
 /** Insert row for POST /api/insights/create — UUID-guards uuid columns. */
 export function buildInsightCreateInsert(input: {
@@ -69,11 +160,13 @@ export function buildInsightCreateInsert(input: {
   thoughtIds?: unknown;
   sourceThoughts?: unknown;
   aestheticImage: string;
+  sessionElapsedMs?: unknown;
 }): InsightCreateInsertRow {
   const link = resolveInsightBlockAndChapterIds({
     blockId: input.blockId,
     chapterId: input.chapterId,
   });
+  const sessionElapsedMs = normalizeInsightSessionElapsedMs(input.sessionElapsedMs);
   return {
     user_id: input.userId,
     workspace_id: uuidOrNull(input.workspaceId),
@@ -86,6 +179,7 @@ export function buildInsightCreateInsert(input: {
     source_thoughts: Array.isArray(input.sourceThoughts) ? input.sourceThoughts : [],
     aesthetic_image: input.aestheticImage,
     is_public: true,
+    ...(sessionElapsedMs == null ? {} : { session_elapsed_ms: sessionElapsedMs }),
   };
 }
 

@@ -187,6 +187,11 @@ export function InsightDetailClient({ insightId }: { insightId: string }) {
               Time
             </p>
             <p className="mt-2 text-lg font-medium text-white">{stats.timeLabel}</p>
+            {stats.sessionElapsedLabel ? (
+              <p className="mt-1 text-sm text-neutral-300" data-insight-session-elapsed>
+                {stats.sessionElapsedLabel}
+              </p>
+            ) : null}
           </div>
           <div
             data-insight-stat="workspace"

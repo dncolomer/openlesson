@@ -2,7 +2,8 @@
  * Public insight share: OG title/input and the three page stats (PoW, time, workspace).
  * Pure — tests drive these with representative insight records.
  */
-import { formatInsightDate, insightPublicPath, type InsightSummary } from "@/lib/insights";
+import { formatInsightDate, insightPublicPath, normalizeInsightSessionElapsedMs, type InsightSummary } from "@/lib/insights";
+import { formatTimeToInsightDuration } from "@/lib/workspace-time-to-insight";
 import {
   UNSYS_STANDARD_SHARE_BRAND,
   UNSYS_STANDARD_SHARE_SITE,
@@ -173,11 +174,22 @@ export type InsightPageStats = {
   powCount: number;
   powLabel: string;
   timeLabel: string;
+  /** "12m 4s from session start", or null when the duration was not stored. */
+  sessionElapsedLabel: string | null;
   workspaceName: string;
   workspaceHref: string | null;
   homeHref: string;
   homeLabel: string;
 };
+
+/** Page line for a stored session duration. Null when the value is missing or invalid. */
+export function formatInsightSessionElapsedLabel(value: unknown): string | null {
+  const ms = normalizeInsightSessionElapsedMs(value);
+  if (ms == null) return null;
+  const duration = formatTimeToInsightDuration(ms);
+  if (!duration) return null;
+  return `${duration} from session start`;
+}
 
 export const INSIGHT_WORKSPACE_TITLE_TABLE = "workspaces";
 export const INSIGHT_WORKSPACE_TITLE_COLUMNS = "title, root_topic";
@@ -280,6 +292,8 @@ export function deriveInsightPageStats(input: {
   workspace_id?: string | null;
   workspace_title?: string | null;
   workspace_name?: string | null;
+  /** Milliseconds from session start, stored when the insight was crafted. */
+  session_elapsed_ms?: unknown;
   /** Session tool rows since the previous insight, when the page could load them. */
   pow_count?: unknown;
 }): InsightPageStats {
@@ -294,6 +308,7 @@ export function deriveInsightPageStats(input: {
     powCount,
     powLabel: `${powCount} PoW`,
     timeLabel: input.created_at ? formatInsightDate(input.created_at) : "—",
+    sessionElapsedLabel: formatInsightSessionElapsedLabel(input.session_elapsed_ms),
     workspaceName: resolveInsightWorkspaceName(input),
     workspaceHref: workspaceId ? `/workspace/${workspaceId}` : null,
     homeHref: INSIGHT_HOME_HREF,

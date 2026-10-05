@@ -3,6 +3,7 @@ import { jsonError } from "@/lib/api-error-envelope";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { insightPowWindow, resolvePublicInsightWorkspaceTitle } from "@/lib/insight-share";
+import { loadInsightSessionElapsedMs, normalizeInsightSessionElapsedMs } from "@/lib/insights";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -33,15 +34,37 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     admin,
   });
   const powCount = await loadInsightSessionPowCount(admin, insight);
+  const sessionElapsedMs = await resolveInsightSessionElapsedMs(admin, insight);
 
   return NextResponse.json({
     insight: {
       ...insight,
       workspace_title: workspaceTitle,
+      session_elapsed_ms: sessionElapsedMs,
       ...(powCount == null ? {} : { pow_count: powCount }),
     },
     isOwner,
     isAuthenticated: !!user,
+  });
+}
+
+async function resolveInsightSessionElapsedMs(
+  admin: ReturnType<typeof createAdminClient>,
+  insight: {
+    user_id?: string | null;
+    session_id?: string | null;
+    created_at?: string | null;
+    session_elapsed_ms?: unknown;
+  },
+): Promise<number | null> {
+  const stored = normalizeInsightSessionElapsedMs(insight.session_elapsed_ms);
+  if (stored != null) return stored;
+  const atMs = Date.parse(String(insight.created_at || ""));
+  if (!Number.isFinite(atMs)) return null;
+  return loadInsightSessionElapsedMs(admin, {
+    sessionId: insight.session_id,
+    userId: insight.user_id,
+    atMs,
   });
 }
 

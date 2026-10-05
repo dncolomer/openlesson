@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
-import { buildInsightCreateInsert } from "@/lib/insights";
+import { buildInsightCreateInsert, loadInsightSessionElapsedMs } from "@/lib/insights";
 import { INSIGHT_AESTHETIC_IMAGES } from "@/lib/insights-server";
 import { callXaiJSON, systemMessage, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
 
@@ -76,24 +76,38 @@ export async function POST(req: NextRequest) {
     const aestheticImage =
       INSIGHT_AESTHETIC_IMAGES[Math.floor(Math.random() * INSIGHT_AESTHETIC_IMAGES.length)];
 
-    const { data: insight, error } = await supabase
+    const sessionElapsedMs = await loadInsightSessionElapsedMs(supabase, {
+      sessionId,
+      userId: user.id,
+      atMs: Date.now(),
+    });
+
+    const insertRow = buildInsightCreateInsert({
+      userId: user.id,
+      workspaceId,
+      sessionId,
+      blockId,
+      chapterId,
+      title,
+      summary,
+      thoughtIds,
+      sourceThoughts,
+      aestheticImage,
+      sessionElapsedMs,
+    });
+
+    let { data: insight, error } = await supabase
       .from("insights")
-      .insert(
-        buildInsightCreateInsert({
-          userId: user.id,
-          workspaceId,
-          sessionId,
-          blockId,
-          chapterId,
-          title,
-          summary,
-          thoughtIds,
-          sourceThoughts,
-          aestheticImage,
-        }),
-      )
+      .insert(insertRow)
       .select()
       .single();
+
+    if (error && String(error.message).includes("session_elapsed_ms")) {
+      const { session_elapsed_ms: _elapsed, ...withoutElapsed } = insertRow;
+      const retry = await supabase.from("insights").insert(withoutElapsed).select().single();
+      insight = retry.data;
+      error = retry.error;
+    }
 
     if (error || !insight) {
       return jsonError(500, error?.message || "Failed to save insight");

@@ -6,9 +6,12 @@ import {
   GENERATE_INSIGHTS_ACTION_LABEL,
   LEARNER_WORK_DRAWER_TITLE,
   buildGenerateInsightsSuggestBody,
+  buildInsightCreateInsert,
   formatInsightDate,
   insightApiErrorMessage,
+  insightSessionElapsedMs,
   insightPublicPath,
+  loadInsightSessionElapsedMs,
   insightsListUrl,
   insightsSessionListUrl,
   insightsTracesUrl,
@@ -238,6 +241,14 @@ describe("shipped insight surface wiring", () => {
     expect(create).toContain("buildInsightCreateInsert");
     expect(create).toContain("chapterId");
     expect(create).toContain("evaluated");
+    expect(create).toContain("loadInsightSessionElapsedMs");
+    expect(create).toContain("session_elapsed_ms");
+    const detailApi = fs.readFileSync(
+      path.join(REPO_ROOT, "app/api/insights/[id]/route.ts"),
+      "utf8",
+    );
+    expect(detailApi).toContain("loadInsightSessionElapsedMs");
+    expect(detailApi).toContain("session_elapsed_ms");
     expect(list).toContain('searchParams.get("sessionId")');
     expect(list).toContain('.eq("session_id", sessionId)');
     expect(evaluate).toContain("allowIleTypedInsightCreate");
@@ -312,7 +323,7 @@ describe("public insight OG title + page stats", () => {
     );
   });
 
-  it("derives PoW, time, and workspace stats and the page does not list source thoughts", () => {
+  it("derives PoW, time, and workspace stats and the page does not list source thoughts", async () => {
     const createdAt = "2026-01-15T12:00:00.000Z";
     const stats = deriveInsightPageStats({
       thought_ids: ["t-a", "t-b", "t-c"],
@@ -347,6 +358,107 @@ describe("public insight OG title + page stats", () => {
       }),
     ).toBe(2);
     expect(stats.timeLabel).toBe(formatInsightDate(createdAt));
+    expect(stats.sessionElapsedLabel).toBeNull();
+    const started = Date.parse("2026-01-15T12:00:00.000Z");
+    expect(
+      insightSessionElapsedMs({
+        sessionStartedAt: "2026-01-15T12:10:00.000Z",
+        sessionCreatedAt: "2026-01-15T12:00:00.000Z",
+        atMs: started + 15 * 60 * 1000,
+      }),
+    ).toBe(5 * 60 * 1000);
+    expect(
+      insightSessionElapsedMs({
+        sessionStartedAt: "not-a-timestamp",
+        sessionCreatedAt: "2026-01-15T12:00:00.000Z",
+        atMs: started + 90_000,
+      }),
+    ).toBe(90_000);
+    expect(
+      insightSessionElapsedMs({
+        sessionStartedAt: "2026-01-15T12:20:00.000Z",
+        atMs: started,
+      }),
+    ).toBeNull();
+    const withElapsed = deriveInsightPageStats({
+      created_at: createdAt,
+      session_elapsed_ms: 125_000,
+    });
+    expect(withElapsed.timeLabel).toBe(formatInsightDate(createdAt));
+    expect(withElapsed.sessionElapsedLabel).toBe("2m 5s from session start");
+    expect(deriveInsightPageStats({ session_elapsed_ms: -5 }).sessionElapsedLabel).toBeNull();
+    const sessionId = "33333333-3333-4333-8333-333333333333";
+    const ownerId = "11111111-1111-4111-8111-111111111111";
+    const elapsedRow = buildInsightCreateInsert({
+      userId: ownerId,
+      sessionId,
+      title: "Stored duration",
+      summary: "The craft remembers how long the session had been running.",
+      aestheticImage: "/aesthetics/example.jpeg",
+      sessionElapsedMs: 125_000.4,
+    });
+    expect(elapsedRow.session_elapsed_ms).toBe(125_000);
+    expect(
+      buildInsightCreateInsert({
+        userId: ownerId,
+        title: "No session",
+        summary: "Nothing to time.",
+        aestheticImage: "/aesthetics/example.jpeg",
+      }).session_elapsed_ms,
+    ).toBeUndefined();
+    const elapsedReads: string[] = [];
+    await expect(
+      loadInsightSessionElapsedMs(
+        {
+          from(table: string) {
+            elapsedReads.push(table);
+            return {
+              select() {
+                return {
+                  eq() {
+                    return {
+                      async maybeSingle() {
+                        return {
+                          data: {
+                            user_id: ownerId,
+                            created_at: "2026-01-15T12:00:00.000Z",
+                            session_started_at: "2026-01-15T12:10:00.000Z",
+                          },
+                        };
+                      },
+                    };
+                  },
+                };
+              },
+            };
+          },
+        },
+        { sessionId, userId: ownerId, atMs: started + 15 * 60 * 1000 },
+      ),
+    ).resolves.toBe(5 * 60 * 1000);
+    expect(elapsedReads).toEqual(["sessions"]);
+    await expect(
+      loadInsightSessionElapsedMs(
+        {
+          from() {
+            return {
+              select() {
+                return {
+                  eq() {
+                    return {
+                      async maybeSingle() {
+                        return { data: { user_id: "someone-else", created_at: createdAt } };
+                      },
+                    };
+                  },
+                };
+              },
+            };
+          },
+        },
+        { sessionId, userId: ownerId, atMs: started + 15 * 60 * 1000 },
+      ),
+    ).resolves.toBeNull();
     expect(stats.workspaceName).toBe("Algebra studio");
     expect(stats.workspaceName).not.toBe(INSIGHT_FALLBACK_WORKSPACE_NAME);
     expect(stats.homeHref).toBe(INSIGHT_HOME_HREF);
@@ -368,6 +480,8 @@ describe("public insight OG title + page stats", () => {
     expect(insightDetail).toContain("deriveInsightPageStats");
     expect(insightDetail).toContain('data-insight-stat="pow"');
     expect(insightDetail).toContain('data-insight-stat="time"');
+    expect(insightDetail).toContain("data-insight-session-elapsed");
+    expect(insightDetail).toContain("stats.sessionElapsedLabel");
     expect(insightDetail).toContain('data-insight-stat="workspace"');
     expect(insightDetail).toContain("data-insight-home-link");
     expect(insightDetail).toContain("data-insight-hero");

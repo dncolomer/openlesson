@@ -19,6 +19,25 @@ export const INSIGHT_FALLBACK_WORKSPACE_NAME = "Workspace";
 /** Blueprint plate on every public insight page, in place of a session aesthetic. */
 export const INSIGHT_PAGE_BLUEPRINT = "/lp-boxes/insight-blueprint.jpg";
 
+/** Same Greco-futurism field the homepage and dashboard use. */
+export const INSIGHT_PAGE_FIELD_IMAGES = [
+  "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg",
+  "/aesthetics/Greco-futurism/HHnTrf2acAA1Juo.jpeg",
+  "/aesthetics/Greco-futurism/HHnTrlMaAAAg_4I.jpeg",
+  "/aesthetics/Greco-futurism/HHnTrjJbQAAOz7K.jpeg",
+] as const;
+
+/** Stable field for one insight, so the page does not change picture on refresh. */
+export function insightPageFieldImage(seed: string | null | undefined): string {
+  const images = INSIGHT_PAGE_FIELD_IMAGES;
+  const text = String(seed || "insight");
+  let hash = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    hash = (hash * 33 + text.charCodeAt(i)) >>> 0;
+  }
+  return images[hash % images.length];
+}
+
 /** White note on the public insight hero. */
 export const INSIGHT_HERO_NOTE_TITLE = "Proof of a unique and genuine insight";
 export const INSIGHT_HERO_NOTE_BODY =

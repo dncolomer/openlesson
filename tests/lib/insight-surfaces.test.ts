@@ -26,7 +26,9 @@ import {
   INSIGHT_WORKSPACE_TITLE_TABLE,
   buildInsightOgShareInput,
   deriveInsightPageStats,
+  insightPageFieldImage,
   insightPowWindow,
+  INSIGHT_PAGE_FIELD_IMAGES,
   insightOgTitle,
   insightShareSocialMetadata,
   loadWorkspaceTitleForPublicInsight,
@@ -376,6 +378,12 @@ describe("public insight OG title + page stats", () => {
     );
     expect(hero).toContain("INSIGHT_PAGE_BLUEPRINT");
     expect(hero).not.toContain("aesthetic_image");
+    expect(insightDetail).toContain("data-insight-page-field");
+    expect(insightDetail).toContain("PublicConsoleWash");
+    expect(insightDetail).toContain("insightPageFieldImage");
+    expect(insightPageFieldImage("ins-1")).toBe(insightPageFieldImage("ins-1"));
+    expect(INSIGHT_PAGE_FIELD_IMAGES).toContain(insightPageFieldImage("ins-1"));
+    expect(INSIGHT_PAGE_FIELD_IMAGES[0]).toContain("/aesthetics/Greco-futurism/");
     expect(hero).toContain("rounded-none");
     expect(hero).not.toContain("rounded-2xl");
     expect(insightDetail).toContain("INSIGHT_HERO_NOTE_TITLE");

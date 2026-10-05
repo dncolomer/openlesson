@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
+import { PublicConsoleWash } from "@/components/ui/console-frame";
 import {
   archiveInsight,
   insightApiErrorMessage,
@@ -17,6 +18,7 @@ import {
   INSIGHT_HERO_NOTE_TITLE,
   INSIGHT_PAGE_BLUEPRINT,
   deriveInsightPageStats,
+  insightPageFieldImage,
 } from "@/lib/insight-share";
 
 type InsightRecord = InsightSummary & {
@@ -78,30 +80,26 @@ export function InsightDetailClient({ insightId }: { insightId: string }) {
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a] text-neutral-400">
-        {error}
-      </div>
+      <InsightPageField>
+        <div className="flex min-h-screen items-center justify-center text-neutral-400">{error}</div>
+      </InsightPageField>
     );
   }
 
   if (!insight) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a]">
-        <LoadingStatusMessage message="Loading insight" />
-      </div>
+      <InsightPageField>
+        <div className="flex min-h-screen items-center justify-center">
+          <LoadingStatusMessage message="Loading insight" />
+        </div>
+      </InsightPageField>
     );
   }
 
   const stats = deriveInsightPageStats(insight);
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#0a0a0a] text-white">
-      <div
-        className="absolute inset-0 bg-cover bg-center opacity-40"
-        style={{ backgroundImage: `url(${INSIGHT_PAGE_BLUEPRINT})` }}
-      />
-      <div className="absolute inset-0 bg-gradient-to-b from-black/85 via-black/60 to-black/95" />
-
+    <InsightPageField seed={insight.id}>
       <div className="relative z-10 mx-auto flex min-h-screen max-w-3xl flex-col px-6 py-10">
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -111,7 +109,7 @@ export function InsightDetailClient({ insightId }: { insightId: string }) {
             <button
               type="button"
               onClick={() => void handleCopyLink()}
-              className="rounded-md border border-neutral-700 bg-black/40 px-3 py-1.5 text-xs text-neutral-200 transition hover:border-neutral-500 hover:text-white"
+              className="rounded-none border border-white/40 bg-black/70 px-3 py-1.5 text-xs text-neutral-200 transition hover:border-white hover:text-white"
             >
               {copied ? "Link copied" : "Copy share link"}
             </button>
@@ -120,7 +118,7 @@ export function InsightDetailClient({ insightId }: { insightId: string }) {
                 type="button"
                 onClick={() => void handleArchive()}
                 disabled={archiving}
-                className="rounded-md border border-neutral-800/60 bg-neutral-950/30 px-3 py-1.5 text-xs text-neutral-300 transition hover:border-white/60 disabled:opacity-50"
+                className="rounded-none border border-white/25 bg-black/70 px-3 py-1.5 text-xs text-neutral-300 transition hover:border-white/70 disabled:opacity-50"
               >
                 {archiving ? "Archiving…" : "Archive"}
               </button>
@@ -128,14 +126,14 @@ export function InsightDetailClient({ insightId }: { insightId: string }) {
             {isAuthenticated === false ? (
               <Link
                 href={`/pricing?redirect=${encodeURIComponent(insightPublicPath(insight))}`}
-                className="rounded-md border border-white/15 bg-white px-3 py-1.5 text-xs font-medium text-black transition hover:bg-zinc-200"
+                className="rounded-none border border-white bg-white px-3 py-1.5 text-xs font-medium text-black transition hover:bg-zinc-200"
               >
                 Sign up
               </Link>
             ) : isAuthenticated === true && insight.workspace_id ? (
               <Link
                 href={`/workspace/${insight.workspace_id}`}
-                className="rounded-md border border-neutral-700 bg-black/40 px-3 py-1.5 text-xs text-neutral-300 transition hover:border-neutral-500 hover:text-white"
+                className="rounded-none border border-white/40 bg-black/70 px-3 py-1.5 text-xs text-neutral-300 transition hover:border-white hover:text-white"
               >
                 Workspace
               </Link>
@@ -145,7 +143,7 @@ export function InsightDetailClient({ insightId }: { insightId: string }) {
 
         <div
           data-insight-hero
-          className="relative mb-8 overflow-hidden rounded-none border border-white/10 shadow-2xl shadow-black/50"
+          className="relative mb-8 overflow-hidden rounded-none border border-white/40 shadow-2xl shadow-black/50"
         >
           <img
             src={INSIGHT_PAGE_BLUEPRINT}
@@ -174,7 +172,7 @@ export function InsightDetailClient({ insightId }: { insightId: string }) {
         >
           <div
             data-insight-stat="pow"
-            className="rounded-none border border-neutral-800/80 bg-black/40 px-4 py-4"
+            className="rounded-none border border-white/40 bg-black/75 px-4 py-4"
           >
             <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-neutral-500">
               Proof of Work
@@ -183,7 +181,7 @@ export function InsightDetailClient({ insightId }: { insightId: string }) {
           </div>
           <div
             data-insight-stat="time"
-            className="rounded-none border border-neutral-800/80 bg-black/40 px-4 py-4"
+            className="rounded-none border border-white/40 bg-black/75 px-4 py-4"
           >
             <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-neutral-500">
               Time
@@ -192,7 +190,7 @@ export function InsightDetailClient({ insightId }: { insightId: string }) {
           </div>
           <div
             data-insight-stat="workspace"
-            className="rounded-none border border-neutral-800/80 bg-black/40 px-4 py-4"
+            className="rounded-none border border-white/40 bg-black/75 px-4 py-4"
           >
             <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-neutral-500">
               Workspace
@@ -209,6 +207,32 @@ export function InsightDetailClient({ insightId }: { insightId: string }) {
           {stats.homeLabel}
         </Link>
       </div>
+    </InsightPageField>
+  );
+}
+
+function InsightPageField({
+  seed,
+  children,
+}: {
+  seed?: string | null;
+  children: ReactNode;
+}) {
+  const field = insightPageFieldImage(seed);
+  return (
+    <div
+      data-insight-page
+      className="relative min-h-screen overflow-hidden border border-white/40 bg-black text-white"
+    >
+      <div className="pointer-events-none fixed inset-0 z-0 bg-[#0a0a0a]" />
+      <div
+        data-insight-page-field
+        className="pointer-events-none fixed inset-0 z-0 bg-cover bg-fixed bg-center"
+        style={{ backgroundImage: `url(${field})` }}
+      />
+      <div className="pointer-events-none fixed inset-0 z-0 bg-[#0a0a0a]/78" />
+      <PublicConsoleWash />
+      {children}
     </div>
   );
 }

@@ -144,7 +144,7 @@ export function CalibrateLiveSurface(props: {
         >
           <WorkCanvas
             key={`calibrate-work-canvas:${props.boardId || "board"}`}
-            boardId={props.boardId}
+            boardId={props.boardId || "board"}
             initialSceneData={props.scene}
             applyElements={props.applyElements}
             applyElementsNonce={props.applyNonce}

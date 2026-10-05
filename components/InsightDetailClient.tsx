@@ -17,6 +17,7 @@ import {
   INSIGHT_HERO_NOTE_BODY,
   INSIGHT_HERO_NOTE_TITLE,
   INSIGHT_PAGE_BLUEPRINT,
+  INSIGHT_PAGE_LIGHT_CONE,
   deriveInsightPageStats,
   insightPageFieldImage,
 } from "@/lib/insight-share";
@@ -146,13 +147,18 @@ export function InsightDetailClient({ insightId }: { insightId: string }) {
           className="relative mb-8 overflow-hidden rounded-none border border-white/40 shadow-2xl shadow-black/50"
         >
           <img
+            src={INSIGHT_PAGE_LIGHT_CONE}
+            alt=""
+            className="block w-full"
+          />
+          <img
             src={INSIGHT_PAGE_BLUEPRINT}
             alt=""
-            className="h-56 w-full object-cover md:h-72"
+            className="block w-full border-t border-white/40"
           />
           <div
             data-insight-hero-note
-            className="absolute inset-x-0 top-0 border-b border-neutral-200 bg-white px-4 py-3 text-neutral-950 sm:px-5 sm:py-3.5"
+            className="border-t border-neutral-200 bg-white px-4 py-3 text-neutral-950 sm:px-5 sm:py-3.5"
           >
             <p className="text-sm font-semibold leading-snug text-neutral-950">
               {INSIGHT_HERO_NOTE_TITLE}

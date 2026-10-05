@@ -19,6 +19,9 @@ export const INSIGHT_FALLBACK_WORKSPACE_NAME = "Workspace";
 /** Blueprint plate on every public insight page, in place of a session aesthetic. */
 export const INSIGHT_PAGE_BLUEPRINT = "/lp-boxes/insight-blueprint.jpg";
 
+/** Light cone: past below the present, future above it. */
+export const INSIGHT_PAGE_LIGHT_CONE = "/lp-boxes/insight-light-cone.jpg";
+
 /** Same Greco-futurism field the homepage and dashboard use. */
 export const INSIGHT_PAGE_FIELD_IMAGES = [
   "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg",

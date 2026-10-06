@@ -106,9 +106,7 @@ export function blockCircularMenuDoubleClickIsNoop(
 /** Single-click opens the circular menu on TAP Learning and Workspace learner (not TAP). */
 export function blockCircularMenuOpensOnSelect(
   surface: BlockCircularMenuSurface | null | undefined,
-  opts?: { exploreOpen?: boolean | null },
 ): boolean {
-  if (opts?.exploreOpen) return false;
   return surface === "ile" || surface === "workspace-learner";
 }
 
@@ -156,9 +154,8 @@ export function nextCircularMenuBlockIdOnClick(input: {
   surface?: BlockCircularMenuSurface | null;
   clickedId: string | null | undefined;
   currentMenuId?: string | null;
-  exploreOpen?: boolean | null;
 }): string | null {
-  if (!blockCircularMenuOpensOnSelect(input.surface, { exploreOpen: input.exploreOpen })) {
+  if (!blockCircularMenuOpensOnSelect(input.surface)) {
     return null;
   }
   const clicked = typeof input.clickedId === "string" ? input.clickedId.trim() : "";

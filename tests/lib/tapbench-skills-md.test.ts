@@ -125,18 +125,11 @@ describe("buildTapbenchSkillsMarkdown (shipped builder)", () => {
 });
 
 describe("Knowledge Links does not host TAPBench skills download", () => {
-  it("workspace TAPBench mint panel is gone; TAP/TAP Learning Knowledge Links stay", () => {
+  it("workspace TAPBench mint panel and guest links panel are absent", () => {
     expect(existsSync(join(ROOT, "components/WorkspaceTapbenchLinksPanel.tsx"))).toBe(
       false,
     );
-    const guest = readFileSync(
-      join(ROOT, "components/WorkspaceGuestLinksPanel.tsx"),
-      "utf8",
-    );
-    expect(guest).not.toContain("downloadTapbenchSkillsMarkdown");
-    expect(guest).not.toContain("/api/workspace/tapbench-links");
-    expect(guest).toContain("/api/workspace/tap-links");
-    expect(guest).toContain("/api/workspace/ile-links");
+    expect(existsSync(join(ROOT, "components/WorkspaceGuestLinksPanel.tsx"))).toBe(false);
   });
 
   it("ships builder module without alaTAP", () => {

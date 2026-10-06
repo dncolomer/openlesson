@@ -364,17 +364,9 @@ describe("dummy density occupancy + continue mini read-only", () => {
     expect(welcome).toContain("data-ile-continue-welcome");
     expect(welcome).toContain("capIleSessionChapters");
     expect(welcome).toContain("sessionPlan?.steps");
-    const preview = read("components/session-view/ile-continue-map-preview.tsx");
-    expect(preview).toContain("BlockSkillGrid");
-    expect(preview).toContain("viewOnly");
-    expect(preview).toContain("showMinimap={false}");
-    expect(preview).toContain("learnerMode");
-    expect(preview).toContain("canEdit={false}");
-    expect(preview).toContain("sessionStepsToSkillGridNodes");
-    expect(preview).toContain("loading");
-    expect(preview).toContain("data-ile-continue-map-loading");
-    expect(preview).toContain("animate-spin");
-    expect(preview).toContain("ILE_CONTINUE_MAP_PREVIEW_FRAME_CLASS");
+    expect(
+      existsSync(join(ROOT, "components/session-view/ile-continue-map-preview.tsx")),
+    ).toBe(false);
     expect(ILE_CONTINUE_MAP_PREVIEW_FRAME_CLASS).toContain("h-full");
     expect(ILE_CONTINUE_MAP_PREVIEW_FRAME_CLASS).toContain(
       "max-lg:min-h-[min(14rem,28vh)]",
@@ -389,10 +381,6 @@ describe("dummy density occupancy + continue mini read-only", () => {
     const aycl = read("components/AyclLandingClient.tsx");
     expect(aycl).toContain("h-[min(28rem,55vh)]");
     expect(aycl).toContain("viewOnly");
-    expect(preview).toContain("data-ile-continue-mini-map");
-    expect(preview).not.toContain("sessionId=");
-    expect(preview).not.toContain("suggestMode=");
-    expect(preview).not.toContain("ileContinueMapOverlayInput");
   });
 });
 

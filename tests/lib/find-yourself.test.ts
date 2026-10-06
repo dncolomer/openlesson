@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { existsSync, readFileSync } from "fs";
+import { existsSync } from "fs";
 import { join } from "path";
 import {
   buildFindYourselfMapFocus,
@@ -128,30 +128,10 @@ describe("findMapUserForGuestSubject + buildFindYourselfMapFocus", () => {
 });
 
 describe("Find yourself UI surfaces", () => {
-  it("MoK client ships save-link reminder + Find yourself control; drops Embedding space panel", () => {
+  it("Map of Knowledge client and find-yourself route are absent", () => {
     const client = join(root, "components/MapOfKnowledgeClient.tsx");
     const api = join(root, "app/api/map-of-knowledge/find-yourself/route.ts");
-    expect(existsSync(client)).toBe(true);
-    expect(existsSync(api)).toBe(true);
-    const clientSrc = readFileSync(client, "utf8");
-    const apiSrc = readFileSync(api, "utf8");
-
-    expect(clientSrc).toContain("data-minted-save-link-reminder");
-    expect(clientSrc).toMatch(/Save this link|save this link|find yourself on the map later/i);
-    expect(clientSrc).toContain("data-map-find-yourself");
-    expect(clientSrc).toContain("data-map-find-yourself-toggle");
-    expect(clientSrc).toContain("Find yourself");
-    expect(clientSrc).toContain("data-map-find-yourself-link-input");
-    expect(clientSrc).toContain("data-map-find-yourself-submit");
-    expect(clientSrc).toContain("buildFindYourselfMapFocus");
-    expect(clientSrc).toContain('setMapScope("local")');
-    expect(clientSrc).toContain("focusedUserId");
-    // Embedding space collapsible removed from that chrome role
-    expect(clientSrc).not.toContain("data-map-embedding-info");
-    expect(clientSrc).not.toContain("data-map-embedding-info-toggle");
-
-    expect(apiSrc).toContain("parsePlacementLinkToken");
-    expect(apiSrc).toContain("workspace_tap_sessions");
-    expect(apiSrc).toContain("guest_user_id");
+    expect(existsSync(client)).toBe(false);
+    expect(existsSync(api)).toBe(false);
   });
 });

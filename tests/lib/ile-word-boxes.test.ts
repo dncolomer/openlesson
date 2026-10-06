@@ -266,7 +266,6 @@ describe("TAP Learning word-box surfaces (shipped source)", () => {
     const ui = read("components/thought-ui/ThoughtUi.tsx");
     const boxes = read("components/thought-ui/IleWordBoxText.tsx");
     const markdown = read("components/thought-ui/HeliosMarkdown.tsx");
-    const dantes = read("components/DantesTool.tsx");
     const panes = read("components/session-view/session-tool-panes.tsx");
     const view = readSessionViewSurface();
     const overlay = read("components/tap-score/tap-turn-overlay.tsx");
@@ -343,7 +342,7 @@ describe("TAP Learning word-box surfaces (shipped source)", () => {
     expect(panes).not.toContain("onLeaveIleTab");
     expect(panes).not.toContain("prefillQuery={toolPrefillQuery}");
     expect(existsSync(join(ROOT, "components/GrokGrokipediaTool.tsx"))).toBe(false);
-    expect(dantes).toContain("prefillQuery");
+    expect(existsSync(join(ROOT, "components/DantesTool.tsx"))).toBe(false);
 
     expect(overlay).not.toContain("IleWordBoxText");
     expect(overlay).not.toContain("data-ile-word-box");

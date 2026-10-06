@@ -17,8 +17,7 @@ import {
 import { parseAyclClonePracticeOptions } from "@/lib/block-practice-options";
 import {
   availableSectionsForMode,
-  visibleWorkspaceMapToggleIds,
-  workspaceModeDisplayLabel,
+  resolveFixedWorkspaceInteractionMode,
 } from "@/lib/workspace-mode";
 import {
   ayclMapPreviewFullscreenActive,
@@ -212,19 +211,17 @@ describe("Explore on purchased clones", () => {
     expect(full.allowExplore).toBe(true);
     expect(ayclOfferLabel("learner")).toBe("play mode only");
     expect(ayclOfferLabel("full")).toBe("Play + Build");
-
-    const playOnlyIds = visibleWorkspaceMapToggleIds({
-      allowCreator: learner.allowCreatorModeToggle,
-      allowExplore: learner.allowExplore,
-    });
-    const playBuildIds = visibleWorkspaceMapToggleIds({
-      allowCreator: full.allowCreatorModeToggle,
-      allowExplore: full.allowExplore,
-    });
-    expect(playOnlyIds).toEqual([]);
-    expect(playBuildIds).toEqual([]);
-    expect(playOnlyIds.map(workspaceModeDisplayLabel)).toEqual([]);
-    expect(playBuildIds.map(workspaceModeDisplayLabel)).toEqual([]);
+    expect(
+      resolveFixedWorkspaceInteractionMode({
+        workspaceKind: "knowledge_region",
+        practiceOnly: !learner.allowCreatorModeToggle,
+      }),
+    ).toBe("learner");
+    expect(
+      resolveFixedWorkspaceInteractionMode({
+        practiceOnly: !full.allowCreatorModeToggle,
+      }),
+    ).toBe("learner");
     expect(
       availableSectionsForMode({
         mode: "learner",
@@ -255,8 +252,9 @@ describe("Explore on purchased clones", () => {
     expect(fork).toContain("isAyclFork");
     expect(fork).toContain("parseAyclClonePracticeOptions");
     expect(fork).toContain("practice_options");
-    expect(mapCol).toContain("visibleWorkspaceMapToggleIds");
-    expect(mapCol).toContain("allowExplore");
+    expect(mapCol).not.toContain("visibleWorkspaceMapToggleIds");
+    expect(mapCol).not.toContain("onMapToggle");
+    expect(view).toContain("allowExplore");
     expect(view).toContain("ayclClone: true");
     expect(view).toContain("parseWorkspacePracticeOptions");
     expect(shared).toContain("allowExplore: true");
@@ -267,8 +265,8 @@ describe("Explore on purchased clones", () => {
       [
         `learner_allowExplore=${learner.allowExplore}`,
         `full_allowExplore=${full.allowExplore}`,
-        `play_only_toggles=${playOnlyIds.join(",")}`,
-        `play_build_toggles=${playBuildIds.join(",")}`,
+        `learner_practice_only=${!learner.allowCreatorModeToggle}`,
+        `full_allows_authoring=${full.allowCreatorModeToggle}`,
         `catalog_off_clone_explore=${parseAyclClonePracticeOptions({ allow_explore: false }).allowExplore}`,
         `offer_learner=${ayclOfferLabel("learner")}`,
         `offer_full=${ayclOfferLabel("full")}`,

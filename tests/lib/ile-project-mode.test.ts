@@ -334,12 +334,7 @@ describe("structural Project Mode wiring (static source checks)", () => {
     expect(panes).not.toContain("ProjectThoughtsDualStack");
     expect(panes).toContain('activeTool === "thought-history"');
 
-    const panel = read("components/WorkspaceGuestLinksPanel.tsx");
-    expect(panel).toContain("ileProjectMode");
-    expect(panel).toContain("session_mode");
-    // Product UI uses Explore/Drill labels; Project mode still wired via session_mode.
-    expect(panel).toMatch(/Project Mode|Drill|openEndedStyle|session_mode/);
-    expect(panel).toContain("data-guest-link-ile-project-mode");
+    expect(existsSync(join(ROOT, "components/WorkspaceGuestLinksPanel.tsx"))).toBe(false);
   });
 
   it("reuses Exercise TAP dual-list helpers (not a forked stash/solution model)", () => {

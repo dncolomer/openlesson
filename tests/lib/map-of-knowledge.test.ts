@@ -617,20 +617,27 @@ describe("anonymous guest self-placement", () => {
 });
 
 describe("map-of-knowledge product surfaces", () => {
-  it("keeps map APIs and drops the public Map of Knowledge page", () => {
+  it("drops the public Map of Knowledge page, client, views, and map APIs", () => {
     const page = join(root, "app/map-of-knowledge/page.tsx");
     const client = join(root, "components/MapOfKnowledgeClient.tsx");
+    const twoD = join(root, "components/MapOfKnowledge2D.tsx");
+    const threeD = join(root, "components/MapOfKnowledge3D.tsx");
     const api = join(root, "app/api/map-of-knowledge/route.ts");
     const guestApi = join(root, "app/api/map-of-knowledge/guest-link/route.ts");
+    const findApi = join(root, "app/api/map-of-knowledge/find-yourself/route.ts");
+    const notifyApi = join(root, "app/api/map-of-knowledge/notify-when-ready/route.ts");
     const nav = join(root, "components/LandingNav.tsx");
     const navLinks = join(root, "lib/marketing/nav.ts");
     expect(existsSync(page)).toBe(false);
-    expect(existsSync(client)).toBe(true);
-    expect(existsSync(api)).toBe(true);
-    expect(existsSync(guestApi)).toBe(true);
+    expect(existsSync(client)).toBe(false);
+    expect(existsSync(twoD)).toBe(false);
+    expect(existsSync(threeD)).toBe(false);
+    expect(existsSync(api)).toBe(false);
+    expect(existsSync(guestApi)).toBe(false);
+    expect(existsSync(findApi)).toBe(false);
+    expect(existsSync(notifyApi)).toBe(false);
     const navSrc = readFileSync(nav, "utf8");
     const navLinkSrc = readFileSync(navLinks, "utf8");
-    const clientSrc = readFileSync(client, "utf8");
     expect(navSrc).toContain("COMMUNITY_NAV_LABEL");
     expect(navSrc).toContain("COMMUNITY_LINKS");
     expect(navSrc).toContain("TOP_LINKS");
@@ -642,117 +649,6 @@ describe("map-of-knowledge product surfaces", () => {
     // Map stays under Projects; Vision/Science are top-level nav links
     expect(navSrc).toContain("aria-label={COMMUNITY_NAV_LABEL}");
     expect(navLinkSrc).toMatch(/TOP_LINKS[\s\S]*href: "\/vision"[\s\S]*href: "\/science"/);
-    expect(clientSrc).toContain("map-canvas");
-    expect(clientSrc).toContain("map-place-yourself");
-    // Aggregated PoW stats section removed from Map of Knowledge page
-    expect(clientSrc).not.toContain("map-stats");
-    expect(clientSrc).not.toContain("AGGREGATED PROOF OF WORK");
-    expect(clientSrc).toContain("data-map-surface");
-    expect(clientSrc).toContain("Fullscreen");
-    // Product language on placement cards (not TAP/TAP Learning jargon)
-    expect(clientSrc).toContain("data-mint-timed-explore");
-    expect(clientSrc).not.toContain("data-mint-timed-drill-card");
-    expect(clientSrc).not.toContain("Drill Solo Exercises");
-    expect(clientSrc).not.toContain("Drill with AI");
-    expect(clientSrc).toContain('label: "Drill"');
-    expect(clientSrc).toContain("interaction_kind");
-    expect(clientSrc).toContain("data-timed-explore-duration-picker");
-    expect(clientSrc).toContain("data-mint-timed-explore-card");
-    expect(clientSrc).toContain("TIMED_EXPLORE_DURATION_OPTIONS");
-    expect(clientSrc).toContain("timedExploreMinutes");
-    expect(clientSrc).toContain("minutes");
-    const exploreCardIdx = clientSrc.indexOf("data-mint-timed-explore-card");
-    const exploreDurationIdx = clientSrc.indexOf("data-timed-explore-duration-picker");
-    expect(exploreCardIdx).toBeGreaterThan(-1);
-    expect(exploreDurationIdx).toBeGreaterThan(exploreCardIdx);
-    const guestApiSrc = readFileSync(guestApi, "utf8");
-    expect(guestApiSrc).toContain("MAP_TIMED_EXPLORE_MINUTES");
-    expect(guestApiSrc).toContain("MAP_TIMED_DRILL_MINUTES");
-    expect(guestApiSrc).toContain("parseMapPlacementMinutes");
-    expect(guestApiSrc).toMatch(/minutes:\s*minutes|minutes,/);
-    expect(guestApiSrc).toMatch(/MAP_TIMED_DRILL_MINUTES\s*=\s*\[\s*15\s*,\s*30\s*,\s*45\s*\]/);
-    expect(clientSrc).not.toMatch(/Mint TAP link|Mint TAP Learning link|Think Aloud Protocol|Integrated Learning Env|Socratic/);
-    expect(clientSrc).toMatch(/think aloud/i);
-    expect(clientSrc).toContain('label: "Drill"');
-    const timedExploreCard = clientSrc.slice(
-      clientSrc.indexOf("data-mint-timed-explore-card"),
-      clientSrc.indexOf("data-minted-link-card"),
-    );
-    expect(timedExploreCard).not.toMatch(/Dialog/);
-    expect(timedExploreCard).not.toMatch(/Solo Exercises/);
-    // Map canvas appears before placement section
-    expect(clientSrc.indexOf('id="map-canvas"')).toBeLessThan(
-      clientSrc.indexOf('id="map-place-yourself"'),
-    );
-    // Real Three.js 3D explorer (not a yaw slider)
-    const three3d = join(root, "components/MapOfKnowledge3D.tsx");
-    expect(existsSync(three3d)).toBe(true);
-    const threeSrc = readFileSync(three3d, "utf8");
-    expect(threeSrc).toContain('from "three"');
-    expect(threeSrc).toContain("OrbitControls");
-    expect(threeSrc).toContain("data-map-3d-legend");
-    expect(threeSrc).toMatch(/Drag|orbit/i);
-    expect(clientSrc).toContain("MapOfKnowledge3D");
-    expect(clientSrc).toContain("MapOfKnowledge2D");
-    expect(clientSrc).toContain("MapOfKnowledgeGlobal");
-    expect(clientSrc).toContain("Local Map");
-    expect(clientSrc).toContain("Global Map");
-    expect(clientSrc).toContain("data-map-scope-toggle");
-    expect(clientSrc).toMatch(/useState<MapScope>\(["']global["']\)/);
-    expect(clientSrc).not.toMatch(/type="range"/);
-    const twoD = join(root, "components/MapOfKnowledge2D.tsx");
-    expect(existsSync(twoD)).toBe(true);
-    const twoDSrc = readFileSync(twoD, "utf8");
-    expect(twoDSrc).toContain("data-map-2d-interactive");
-    expect(twoDSrc).toContain("data-map-2d-legend");
-    // Local 2D fills the host edge-to-edge; viewBox tracks host size so circles stay circular
-    expect(twoDSrc).toContain('preserveAspectRatio="none"');
-    expect(twoDSrc).toContain("ResizeObserver");
-    expect(twoDSrc).toContain("aspectRatio");
-    expect(twoDSrc).toContain("absolute inset-0");
-    expect(twoDSrc).toContain("MAP_INFINITE_GRID.background");
-    expect(twoDSrc).toContain("data-map-infinite-grid");
-    expect(twoDSrc).toContain("panViewTransform");
-    expect(twoDSrc).toContain("zoomViewTransform");
-    expect(twoDSrc).toMatch(/ArrowLeft|WASD|keydown/);
-    expect(twoDSrc).toContain("touchstart");
-    expect(twoDSrc).toContain("id_preview");
-    expect(clientSrc).toContain("pickDefaultEnabledRegionsFromOneWorkspace");
-    expect(clientSrc).not.toContain("pickRandomEnabledRegionIds(allRegionIds");
-    expect(clientSrc).toContain("reprojectMapLayout");
-    expect(clientSrc).toContain("data-map-projection-select");
-    expect(clientSrc).toContain("data-map-embedding-model-select");
-    // Embedding-space details panel replaced by Find yourself
-    expect(clientSrc).not.toContain("data-map-embedding-info");
-    expect(clientSrc).toContain("data-map-find-yourself");
-    expect(clientSrc).toContain("data-minted-save-link-reminder");
-    expect(clientSrc).toContain("PROJECTION_ALGORITHM_OPTIONS");
-    expect(clientSrc).toContain("embedding_model_id");
-    expect(threeSrc).toContain("makeIdLabelSprite");
-    expect(threeSrc).toContain("id_preview");
-    // STEM mini avatars: guest identity + map markers (not plain dots only)
-    expect(clientSrc).toContain("data-guest-avatar");
-    expect(clientSrc).toContain("avatar_path");
-    expect(clientSrc).toContain("generateAnonymousGuestIdentity");
-    expect(twoDSrc).toContain("avatar_path");
-    expect(twoDSrc).toContain("data-map-user-avatar");
-    expect(twoDSrc).toMatch(/<image[\s\S]*href/);
-    expect(threeSrc).toContain("STEM_MINI_AVATARS");
-    expect(threeSrc).toContain("makeAvatarSprite");
-    expect(threeSrc).toContain("loadStemAvatarTextures");
-    expect(threeSrc).toContain("avatar_id");
-    // Region toggles grouped by collapsible workspace
-    expect(clientSrc).toContain("groupRegionsByWorkspace");
-    expect(clientSrc).toContain("data-map-region-workspace-groups");
-    expect(clientSrc).toContain("data-map-region-workspace-toggle");
-    expect(clientSrc).toContain("data-map-region-workspace-group");
-    expect(clientSrc).toContain("data-map-region-workspace-select-all");
-    expect(clientSrc).toContain("toggleAllRegionsInWorkspace");
-    expect(clientSrc).toContain("aria-expanded");
-    expect(clientSrc).toContain("expandedRegionWorkspaces");
-    expect(clientSrc).toContain("filterMapPlacementWorkspaces");
-    expect(clientSrc).toContain("placementWorkspaces");
-    expect(clientSrc).toContain("data-map-placement-workspace-select");
   });
 
   it("groups regions by workspace for collapsible map toggles", () => {

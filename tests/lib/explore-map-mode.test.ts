@@ -7,21 +7,12 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { readMapGridSurface, readWorkspaceViewSurface } from "../helpers/surface-source";
 import {
-  WORKSPACE_INTERACTION_MODES,
-  WORKSPACE_MAP_TOGGLE_IDS,
-  WORKSPACE_MODE_DISPLAY_LABELS,
   availableSectionsForMode,
-  nextWorkspaceMapToggle,
-  resolveWorkspaceMapToggleId,
-  visibleWorkspaceMapToggleIds,
+  resolveFixedWorkspaceInteractionMode,
   workspaceEmptyCellOpensAuthoring,
   workspaceExpandMapTitle,
   workspaceIdlePaneShowsExplore,
   workspaceLearnerPaneMounted,
-  workspaceModeControlMounted,
-  workspaceModeDisplayLabel,
-  workspaceModeFlipClearsMapSelection,
-  workspacePresentsModeChoice,
   workspaceSurfaceShowsAuthoring,
   workspaceSurfaceShowsPracticeMenu,
 } from "@/lib/workspace-mode";
@@ -82,39 +73,22 @@ const nearbyBlocks = [
 
 describe("one workspace surface", () => {
   it("does not present Play, Build, or Explore and still reaches map, authoring, and explore", () => {
-    expect(workspacePresentsModeChoice()).toBe(false);
-    expect(workspaceModeControlMounted()).toBe(false);
-    expect(workspaceModeControlMounted({
-      presentsChoice: workspacePresentsModeChoice(),
-      toggleIds: visibleWorkspaceMapToggleIds({
-        allowCreator: true,
-        allowExplore: true,
-      }),
-    })).toBe(false);
-    expect(visibleWorkspaceMapToggleIds()).toEqual([]);
+    const modeLib = read("lib/workspace-mode.ts");
+    expect(modeLib).not.toContain("workspacePresentsModeChoice");
+    expect(modeLib).not.toContain("workspaceModeControlMounted");
+    expect(modeLib).not.toContain("visibleWorkspaceMapToggleIds");
+    expect(modeLib).not.toContain("workspaceModeDisplayLabel");
+    expect(modeLib).not.toContain("WORKSPACE_MAP_TOGGLE_IDS");
+    expect(resolveFixedWorkspaceInteractionMode({})).toBe("learner");
     expect(
-      visibleWorkspaceMapToggleIds({
-        allowCreator: false,
-        allowExplore: true,
-      }),
-    ).toEqual([]);
+      resolveFixedWorkspaceInteractionMode({ workspaceKind: "knowledge_region" }),
+    ).toBe("creator");
     expect(
-      visibleWorkspaceMapToggleIds({
-        allowCreator: true,
-        allowExplore: true,
+      resolveFixedWorkspaceInteractionMode({
+        workspaceKind: "knowledge_region",
+        practiceOnly: true,
       }),
-    ).toEqual([]);
-    expect(visibleWorkspaceMapToggleIds().map(workspaceModeDisplayLabel)).toEqual([]);
-    expect(workspaceModeDisplayLabel("creator")).toBe("Build");
-    expect(workspaceModeDisplayLabel("learner")).toBe("Play");
-    expect(workspaceModeDisplayLabel("explore")).toBe("Explore");
-    expect(WORKSPACE_MODE_DISPLAY_LABELS.explore).toBe("Explore");
-    expect([...WORKSPACE_MAP_TOGGLE_IDS]).toEqual([
-      "learner",
-      "creator",
-      "explore",
-    ]);
-    expect([...WORKSPACE_INTERACTION_MODES]).toEqual(["learner", "creator"]);
+    ).toBe("learner");
 
     const owner = availableSectionsForMode({
       mode: "learner",
@@ -197,46 +171,12 @@ describe("one workspace surface", () => {
       resolveBlockCircularMenuSurface({ learnerMode: false }),
     ).toBe("none");
 
-    expect(
-      resolveWorkspaceMapToggleId({
-        interactionMode: "creator",
-        exploreOpen: false,
-      }),
-    ).toBe("creator");
-    expect(
-      resolveWorkspaceMapToggleId({
-        interactionMode: "learner",
-        exploreOpen: true,
-      }),
-    ).toBe("explore");
-
-    expect(
-      nextWorkspaceMapToggle({
-        clicked: "explore",
-        interactionMode: "creator",
-        exploreOpen: false,
-      }),
-    ).toEqual({ interactionMode: "creator", exploreOpen: true });
-    expect(
-      nextWorkspaceMapToggle({
-        clicked: "learner",
-        interactionMode: "creator",
-        exploreOpen: true,
-      }),
-    ).toEqual({ interactionMode: "learner", exploreOpen: false });
-    expect(
-      nextWorkspaceMapToggle({
-        clicked: "creator",
-        interactionMode: "creator",
-        exploreOpen: true,
-      }),
-    ).toEqual({ interactionMode: "creator", exploreOpen: false });
-    expect(workspaceModeFlipClearsMapSelection()).toBe(false);
-
     const world = read("components/block-skill-grid/map-world-layer.tsx");
     const grid = read("components/BlockSkillGrid.tsx");
-    expect(world).toContain("!mapExploreOpen");
-    expect(grid).toContain("exploreOpen: mapExploreOpen");
+    expect(world).not.toContain("mapExploreOpen");
+    expect(world).not.toContain("data-empty-cell-search");
+    expect(grid).toContain("blockCircularMenuOpensOnSelect(circularMenuSurface)");
+    expect(grid).not.toContain("exploreOpen: mapExploreOpen");
 
     const occupied = resolveMapOccupiedTileBadges({
       hasDagLock: true,
@@ -244,7 +184,6 @@ describe("one workspace surface", () => {
       hasPractice: true,
       hasLocalContext: true,
       hasEffects: true,
-      exploreActive: true,
     });
     expect(occupied).toEqual({
       showLock: false,
@@ -254,38 +193,21 @@ describe("one workspace surface", () => {
       showEffects: false,
       showGeneratorBusy: false,
     });
-    const occupiedBuild = resolveMapOccupiedTileBadges({
-      hasDagLock: true,
-      isStart: true,
-      exploreActive: false,
-    });
-    expect(occupiedBuild.showLock).toBe(false);
-    expect(occupiedBuild.showStarter).toBe(false);
 
     expect(
       resolveEmptyCellMarker({
-        exploreActive: true,
-        canEdit: true,
-        learnerMode: false,
-      }),
-    ).toBe("search");
-    expect(
-      resolveEmptyCellMarker({
-        exploreActive: false,
         canEdit: true,
         learnerMode: false,
       }),
     ).toBe("plus");
     expect(
       resolveEmptyCellMarker({
-        exploreActive: false,
         canEdit: false,
         learnerMode: true,
       }),
     ).toBe("none");
     expect(
       resolveEmptyCellMarker({
-        exploreActive: false,
         canEdit: true,
         learnerMode: false,
         isUnusable: true,
@@ -295,29 +217,19 @@ describe("one workspace surface", () => {
     writeScratch(
       "explore-mode-chrome.log",
       [
-        "labels=" +
-          WORKSPACE_MAP_TOGGLE_IDS.map(workspaceModeDisplayLabel).join("/"),
-        "mode_choice=" + workspacePresentsModeChoice(),
-        "control_mounted=" + workspaceModeControlMounted(),
-        "toggle_ids=" + visibleWorkspaceMapToggleIds().join(","),
+        "fixed_learner=" + resolveFixedWorkspaceInteractionMode({}),
+        "fixed_verification=" +
+          resolveFixedWorkspaceInteractionMode({
+            workspaceKind: "knowledge_region",
+          }),
         "owner_sections=" +
           availableSectionsForMode({
             mode: "learner",
             isOwner: true,
           }).join(","),
-        "wire_modes=" + WORKSPACE_INTERACTION_MODES.join(","),
-        "explore_active_id=" +
-          resolveWorkspaceMapToggleId({
-            interactionMode: "creator",
-            exploreOpen: true,
-          }),
-        "occupied_icons_explore=" +
-          JSON.stringify(occupied),
-        "empty_explore=" +
-          resolveEmptyCellMarker({ exploreActive: true, canEdit: true }),
-        "empty_build=" +
+        "occupied_icons=" + JSON.stringify(occupied),
+        "empty_authoring=" +
           resolveEmptyCellMarker({
-            exploreActive: false,
             canEdit: true,
             learnerMode: false,
           }),
@@ -326,41 +238,29 @@ describe("one workspace surface", () => {
   });
 });
 
-describe("empty-cell click resolves to explore-block in Explore", () => {
-  it("Explore empty → explore_block; Build empty → add_block", () => {
+describe("empty-cell click opens add or generate", () => {
+  it("one empty cell is add_block; two or more are generate_shape", () => {
     const cell = { row: 3, col: 4 };
-    const explore = resolveEmptySelectionSurface({
+    const one = resolveEmptySelectionSurface({
       selectedEmptyCells: [cell],
-      exploreActive: true,
     });
-    expect(explore).toEqual({ kind: "explore_block", cell });
-    expect(resolveWorkspaceRightPane(null, explore)).toBe("explore_block");
+    expect(one).toEqual({ kind: "add_block", cell });
+    expect(resolveWorkspaceRightPane(null, one)).toBe("add_block");
 
-    const build = resolveEmptySelectionSurface({
-      selectedEmptyCells: [cell],
-      exploreActive: false,
-    });
-    expect(build).toEqual({ kind: "add_block", cell });
-    expect(resolveWorkspaceRightPane(null, build)).toBe("add_block");
-
-    const multiExplore = resolveEmptySelectionSurface({
+    const multi = resolveEmptySelectionSurface({
       selectedEmptyCells: [cell, { row: 3, col: 5 }],
-      exploreActive: true,
     });
-    expect(multiExplore?.kind).toBe("explore_block");
-    const multiBuild = resolveEmptySelectionSurface({
-      selectedEmptyCells: [cell, { row: 3, col: 5 }],
-      exploreActive: false,
-    });
-    expect(multiBuild?.kind).toBe("generate_shape");
+    expect(multi?.kind).toBe("generate_shape");
+    expect(resolveWorkspaceRightPane(null, multi)).toBe("generate_shape");
+    const paneLib = read("lib/workspace-right-pane.ts");
+    expect(paneLib).not.toContain("explore_block");
 
     writeScratch(
       "explore-block-drawer.log",
       [
-        "explore_kind=" + explore?.kind,
-        "explore_pane=" + resolveWorkspaceRightPane(null, explore),
-        "build_kind=" + build?.kind,
-        "build_pane=" + resolveWorkspaceRightPane(null, build),
+        "one_kind=" + one?.kind,
+        "one_pane=" + resolveWorkspaceRightPane(null, one),
+        "multi_kind=" + multi?.kind,
         "title=" + MAP_EXPLORE_BLOCK_DRAWER_TITLE,
       ].join("\n"),
     );
@@ -412,7 +312,7 @@ describe("explore-block XAI prompt + parser", () => {
 });
 
 describe("Explore mode wiring", () => {
-  it("3-state toggle, no standalone explore button, search marker, explore-block drawer", () => {
+  it("idle Expand Map pane, no mode toggle, no explore-block drawer", () => {
     const grid = readMapGridSurface();
     const view = readWorkspaceViewSurface();
     const pane = read("components/WorkspaceEmptyMapPane.tsx");
@@ -420,12 +320,13 @@ describe("Explore mode wiring", () => {
     const stack = read("components/block-skill-grid/map-right-stack.tsx");
     const nav = read("components/WorkspaceSectionNav.tsx");
 
-    expect(nav).toContain("workspaceModeControlMounted");
-    expect(nav).toContain("workspacePresentsModeChoice");
+    expect(nav).not.toContain("workspaceModeControlMounted");
+    expect(nav).not.toContain("workspacePresentsModeChoice");
     expect(nav).not.toContain("WORKSPACE_MAP_TOGGLE_IDS");
-    expect(workspaceModeControlMounted()).toBe(false);
+    expect(nav).toContain("data-workspace-interaction-mode");
     expect(view).toContain("workspaceSurfaceShowsAuthoring");
     expect(view).toContain("workspaceIdlePaneShowsExplore");
+    expect(view).toContain("resolveFixedWorkspaceInteractionMode");
     expect(view).toContain("idleExplore={idleExplore}");
     expect(read("components/SessionList.tsx")).toContain(
       "resolveBlockCircularMenuSurface",
@@ -434,33 +335,30 @@ describe("Explore mode wiring", () => {
     expect(stack).not.toContain("Explore / Expand Map");
     expect(stack).not.toContain("data-map-explore-toggle");
     expect(grid).not.toContain("data-map-explore-toggle");
-    expect(grid).toContain("data-empty-cell-search");
+    expect(grid).not.toContain("data-empty-cell-search");
     expect(grid).toContain("data-empty-cell-plus");
     expect(grid).toContain("resolveEmptyCellMarker");
 
-    expect(pane).toContain(MAP_EXPLORE_BLOCK_DRAWER_TITLE);
-    expect(pane).toContain('drawerId="map_explore_block"');
-    expect(pane).toContain("data-explore-block-modifier");
-    expect(pane).toContain("data-explore-block-submit");
-    expect(pane).toContain('callMapExplore("explore_block"');
-    expect(MAP_EXPLORE_DRAWER_IDS).toContain("map_explore_block");
+    expect(pane).not.toContain('drawerId="map_explore_block"');
+    expect(pane).not.toContain("data-explore-block-modifier");
+    expect(pane).not.toContain("data-explore-block-submit");
+    expect(pane).not.toContain('callMapExplore("explore_block"');
+    expect(pane).toContain("workspaceExpandMapTitle()");
+    expect(MAP_EXPLORE_DRAWER_IDS).not.toContain("map_explore_block");
 
     expect(api).toContain('op !== "explore_block"');
     expect(api).toContain("buildExploreBlockUserPrompt");
-    expect(view).toContain("onMapToggle");
-    expect(view).toContain("exploreTargetCell");
-    expect(view).toContain("handleMapToggle");
+    expect(view).not.toContain("onMapToggle");
+    expect(view).not.toContain("exploreTargetCell");
+    expect(view).not.toContain("handleMapToggle");
 
     writeScratch(
       "explore-mode-wiring.log",
       [
-        "toggle_by_title=" + nav.includes("data-workspace-mode-by-title"),
+        "interaction_mode=" + nav.includes("data-workspace-interaction-mode"),
         "no_standalone_explore=" + !stack.includes("data-map-explore-toggle"),
-        "search_marker=" + grid.includes("data-empty-cell-search"),
         "plus_still_in_build=" + grid.includes("data-empty-cell-plus"),
-        "drawer_title=" + pane.includes(MAP_EXPLORE_BLOCK_DRAWER_TITLE),
-        "modifier=" + pane.includes("data-explore-block-modifier"),
-        "explore_btn=" + pane.includes("data-explore-block-submit"),
+        "no_explore_block_drawer=" + !pane.includes('drawerId="map_explore_block"'),
         "api_op=" + api.includes("explore_block"),
         "view_toggle=" + view.includes("onMapToggle"),
       ].join("\n"),

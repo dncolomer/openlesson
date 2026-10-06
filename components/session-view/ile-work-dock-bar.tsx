@@ -11,7 +11,6 @@ import {
 import { SESSION_TOPIC_CARD_REM, formatLearnElapsedClock } from "@/lib/session-sidebar";
 import { SessionConsoleMarks, SessionConsoleScan } from "@/components/session-view/session-console-marks";
 import { useSurfaceAestheticImages } from "@/lib/use-surface-aesthetic-images";
-import type { SessionViewTranslate } from "@/components/session-view/types";
 
 export type SessionTopicCardInput = {
   id?: string;
@@ -352,30 +351,6 @@ export function SessionTopicChapter({
         customUrls={customUrls}
         systemImages={systemImages}
       />
-    </div>
-  );
-}
-
-/** One static topic. Extra labels are not drawn, and the card is not a control. */
-export function IleWorkDockBar({
-  openWorkLabels,
-}: {
-  t?: SessionViewTranslate;
-  heliosOpen?: boolean;
-  openWorkLabels: IleWorkDockLabel[];
-  onFocusOpenWork?: (id: string) => void;
-  aestheticImages?: string[];
-  compact?: boolean;
-}) {
-  const topic = sessionSidebarTopic(openWorkLabels);
-  return (
-    <div
-      data-ile-work-dock-bar
-      data-ile-chapter-dock-chapters
-      data-ile-open-work-tabs={openWorkLabels.length > 0 ? "" : undefined}
-      className="pointer-events-auto w-full min-w-0 max-w-full gap-1.5 border border-white/20 bg-neutral-950/95 p-2"
-    >
-      <SessionTopicCard id={topic.id} title={topic.title} image={topic.image} />
     </div>
   );
 }

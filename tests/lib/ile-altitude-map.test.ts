@@ -3,7 +3,7 @@
  * Adjacent squares at one elevation share one outline. Manual empty-cell add is off.
  */
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { sessionStepsToSkillGridNodes } from "@/lib/chapter-skill-grid";
 import {
@@ -520,8 +520,8 @@ describe("ile altitude groups", () => {
       "add_chapter",
     ]);
     expect(blockCircularMenuActions("ile").map((action) => action.id)).toEqual(["work", "edit"]);
-    const chapter = read("components/ChapterMapPanel.tsx");
-    expect(chapter).toContain('suggestMode="chapter"');
+    expect(existsSync(join(ROOT, "components/ChapterMapPanel.tsx"))).toBe(false);
+    expect(read("components/BlockSkillGrid.tsx")).toContain('suggestMode === "chapter"');
     expect(read("lib/ile-tim-chapter-complete.ts")).toContain("chapter_map_expand");
   });
 });
@@ -610,8 +610,6 @@ describe("TAP Learning board opening camera", () => {
     expect(grid).toContain('fitBoard: suggestMode === "chapter"');
     expect(viewport).toContain("fitWorldRectCamera");
     expect(viewport).toContain("getDefaultSkillGridZoom");
-    expect(read("components/ChapterMapPanel.tsx")).toContain(
-      "SKILL_GRID_ILE_DEFAULT_ZOOM_AT_REFERENCE",
-    );
+    expect(existsSync(join(ROOT, "components/ChapterMapPanel.tsx"))).toBe(false);
   });
 });

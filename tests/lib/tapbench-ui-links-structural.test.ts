@@ -19,7 +19,7 @@ function read(rel: string) {
 }
 
 describe("UI: Knowledge Regions builder; TAP/TAP Learning mint only on Knowledge Links", () => {
-  it("regions keep builder filters; TAPBench mint is not on workspace APIs or Knowledge Links", () => {
+  it("regions keep builder filters; guest links panel is absent", () => {
     const ui = read("components/CustomVerificationModelsPanel.tsx");
     expect(ui).not.toContain("Create from description or files");
     expect(ui).not.toContain("data-region-create-custom");
@@ -34,13 +34,7 @@ describe("UI: Knowledge Regions builder; TAP/TAP Learning mint only on Knowledge
     expect(ui).toContain("data-region-link-filter");
     expect(ui).toContain("source_link_url");
 
-    const links = read("components/WorkspaceGuestLinksPanel.tsx");
-    expect(links).not.toContain("data-tapbench-mint");
-    expect(links).not.toContain("data-create-tapbench-link");
-    expect(links).not.toContain("/api/workspace/tapbench-links");
-    expect(links).toContain("/api/workspace/tap-links");
-    expect(links).toContain("/api/workspace/ile-links");
-    expect(links).not.toContain('data-guest-links-inner-tab="tapbench"');
+    expect(existsSync(join(ROOT, "components/WorkspaceGuestLinksPanel.tsx"))).toBe(false);
   });
 
   it("public /tapbench/[token] page exists and middleware allows it", () => {
@@ -98,10 +92,7 @@ describe("Always-visible guest links (listable share URLs)", () => {
     const ileList = read("app/api/workspace/ile-links/route.ts");
     expect(ileList).toContain("guestLinkUrlFromPublicToken");
 
-    const guestUi = read("components/WorkspaceGuestLinksPanel.tsx");
-    // Uses list URL from API, not only createdLinks client memory
-    expect(guestUi).toMatch(/listUrl|\.url/);
-    expect(guestUi).toContain("privateUrl");
+    expect(existsSync(join(ROOT, "components/WorkspaceGuestLinksPanel.tsx"))).toBe(false);
   });
 
   it("workspace TAPBench mint route is gone; TAP and TAP Learning mint remain", () => {

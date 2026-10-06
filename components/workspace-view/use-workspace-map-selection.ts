@@ -19,19 +19,7 @@ import {
   createDisarmedCloneState,
   type CloneArmState,
 } from "@/lib/clone-block";
-import {
-  closeMapExploreShell,
-  createMapExploreShellState,
-  openMapExploreShell,
-  resolveMapExploreRightColumn,
-} from "@/lib/empty-map-pane";
-import {
-  nextWorkspaceMapToggle,
-  workspaceEmptyCellOpensAuthoring,
-  workspaceModeFlipClearsMapSelection,
-  type WorkspaceInteractionMode,
-  type WorkspaceMapToggleId,
-} from "@/lib/workspace-mode";
+import { workspaceEmptyCellOpensAuthoring } from "@/lib/workspace-mode";
 import type { UnusableCell } from "@/lib/map-ground-rules";
 import {
   emptyWorkspaceMapSelection,
@@ -48,14 +36,13 @@ import {
 } from "@/lib/workspace-right-pane";
 
 export function useWorkspaceMapSelection(input: {
-  interactionMode: WorkspaceInteractionMode;
   /** False on play-only maps. Empty cells then do not open add or generate. */
   authoring: boolean;
   unusableCells: UnusableCell[];
   nodes: Block[];
   setMobileColumn: Dispatch<SetStateAction<MobileColumn>>;
 }) {
-  const { interactionMode, authoring, unusableCells, nodes, setMobileColumn } = input;
+  const { authoring, unusableCells, nodes, setMobileColumn } = input;
 
   /** Creator generator drawer / learner select → empty cells to spark. */
   const [generatorTargetPreviewCells, setGeneratorTargetPreviewCells] =
@@ -112,10 +99,6 @@ export function useWorkspaceMapSelection(input: {
   const [mapSelection, setMapSelection] = useState<WorkspaceMapSelection>(
     emptyWorkspaceMapSelection,
   );
-  /** Map explore FAB toggle (not the default empty-selection pane). */
-  const [mapExploreShell, setMapExploreShell] = useState(() =>
-    createMapExploreShellState(),
-  );
   /** Selective Explanation free-shape overlay (independent of selection). */
   const [selectiveExplanationActive, setSelectiveExplanationActive] =
     useState(false);
@@ -153,13 +136,6 @@ export function useWorkspaceMapSelection(input: {
   const emptySurface = useMemo(() => {
     const emptyCells = mapSelectionEmptyCells(mapSelection);
     if (emptyCells.length === 0) return clearWorkspaceAddTarget();
-    if (mapExploreShell.open) {
-      return resolveEmptySelectionSurface({
-        selectedEmptyCells: emptyCells,
-        unusableKeys: unusableCells.map((c) => `${c.row}:${c.col}`),
-        exploreActive: true,
-      });
-    }
     if (!workspaceEmptyCellOpensAuthoring({ authoring })) {
       return clearWorkspaceAddTarget();
     }
@@ -170,7 +146,7 @@ export function useWorkspaceMapSelection(input: {
       selectedEmptyCells: emptyCells,
       unusableKeys: unusableCells.map((c) => `${c.row}:${c.col}`),
     });
-  }, [authoring, mapExploreShell.open, mapSelection, unusableCells]);
+  }, [authoring, mapSelection, unusableCells]);
 
   const handleExpandedBlockChange = useCallback((blockId: string | null) => {
     const next = nextWorkspaceMapSelection({
@@ -286,51 +262,9 @@ export function useWorkspaceMapSelection(input: {
     emptySurface,
     selectedFilledBlockIds,
   );
-  const mapExploreColumn = resolveMapExploreRightColumn({
-    exploreOpen: mapExploreShell.open,
-    naturalPane: naturalRightPane,
-    previousPane: mapExploreShell.previousPane,
-  });
-  /** When explore FAB is open, force explore surface (hide drawers). */
-  const rightPane = mapExploreColumn.showExplore
-    ? "map_tools"
-    : mapExploreColumn.displayPane === "map_explore"
-      ? "map_tools"
-      : naturalRightPane;
-  const showMapExplore = mapExploreColumn.showExplore;
-
-  const handleToggleMapExplore = useCallback(() => {
-    setMapExploreShell((prev) =>
-      prev.open
-        ? closeMapExploreShell(prev)
-        : openMapExploreShell(prev, naturalRightPane),
-    );
-  }, [naturalRightPane]);
-
-  const handleMapToggle = useCallback(
-    (clicked: WorkspaceMapToggleId) => {
-      const next = nextWorkspaceMapToggle({
-        clicked,
-        interactionMode,
-        exploreOpen: mapExploreShell.open,
-      });
-      setMapExploreShell((prev) => {
-        if (next.exploreOpen && !prev.open) {
-          return openMapExploreShell(prev, naturalRightPane);
-        }
-        if (!next.exploreOpen && prev.open) {
-          return closeMapExploreShell(prev);
-        }
-        return prev;
-      });
-      return next;
-    },
-    [interactionMode, mapExploreShell.open, naturalRightPane],
-  );
+  const rightPane = naturalRightPane;
   const addTargetCell =
     emptySurface?.kind === "add_block" ? emptySurface.cell : null;
-  const exploreTargetCell =
-    emptySurface?.kind === "explore_block" ? emptySurface.cell : null;
   const generateShapeCells =
     emptySurface?.kind === "generate_shape" ? emptySurface.cells : null;
   const combineBlockIds =
@@ -343,19 +277,6 @@ export function useWorkspaceMapSelection(input: {
   const detailIndex = detailBlock
     ? orderedBlocks.findIndex((n) => n.id === detailBlock.id)
     : -1;
-
-  const clearMapChromeForModeFlip = useCallback(() => {
-    if (workspaceModeFlipClearsMapSelection()) {
-      applyMapSelectionResult(nextWorkspaceMapSelection({ type: "clear" }));
-    }
-    setAddExpandPreviewCells(null);
-    setGeneratorTargetPreviewCells(null);
-    setGeneratorPickActiveSafe(false);
-    generatorEmptyToggleRef.current = null;
-    setDynamicPickActiveSafe(false);
-    setDynamicUnlockPreviewIds(null);
-    dynamicBlockToggleRef.current = null;
-  }, [applyMapSelectionResult, setDynamicPickActiveSafe, setGeneratorPickActiveSafe]);
 
   return {
     generatorTargetPreviewCells,
@@ -403,15 +324,10 @@ export function useWorkspaceMapSelection(input: {
     handleCloseEmptyCreate,
     handleCloseCombine,
     rightPane,
-    showMapExplore,
-    handleToggleMapExplore,
-    handleMapToggle,
-    exploreTargetCell,
     addTargetCell,
     generateShapeCells,
     combineBlockIds,
     detailBlock,
     detailIndex,
-    clearMapChromeForModeFlip,
   };
 }

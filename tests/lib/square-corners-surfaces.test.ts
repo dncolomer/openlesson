@@ -28,7 +28,6 @@ const ENTRY_SHELLS = [
   "components/IleGuestSessionClient.tsx",
   "components/AyclWorkspaceView.tsx",
   "components/BlockSkillGrid.tsx",
-  "components/ChapterMapPanel.tsx",
 ];
 
 const SKIP_BASENAMES = new Set([
@@ -170,6 +169,7 @@ function scanLineHits(rel: string, line: string, lineNo: number): string[] {
 
 describe("workspace / TAP Learning / TAP square corners", () => {
   it("mounted product UI has no rounded-sm/md/lg/xl box radii", () => {
+    expect(existsSync(join(ROOT, "components/ChapterMapPanel.tsx"))).toBe(false);
     const files = collectMountedSurfaceFiles();
     const rels = files.map((f) => relative(ROOT, f));
     expect(files.length).toBeGreaterThan(40);

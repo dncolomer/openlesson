@@ -8,8 +8,6 @@ export function buildWorkspaceSectionNavItems(input: {
   isLearnerMode: boolean;
   isOwner: boolean;
   visibleSections: WorkspaceSectionKey[];
-  /** Explore overlay hides authoring Map Types (Play already omits them). */
-  exploreOpen?: boolean;
 }): WorkspaceSectionNavItem[] {
   const { t, isLearnerMode, isOwner, visibleSections } = input;
   // One learning surface: Workspace, DAGs, Map Types, Context, Settings

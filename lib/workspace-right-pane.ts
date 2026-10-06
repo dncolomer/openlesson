@@ -16,8 +16,7 @@ export type WorkspaceRightPaneKind =
   | "block_detail"
   | "combine_blocks"
   | "add_block"
-  | "generate_shape"
-  | "explore_block";
+  | "generate_shape";
 
 /** Grid cell used as the place-new-block target. */
 export type WorkspaceAddTargetCell = { row: number; col: number };
@@ -28,8 +27,7 @@ export type WorkspaceAddTargetCell = { row: number; col: number };
  */
 export type EmptySelectionSurface =
   | { kind: "add_block"; cell: WorkspaceAddTargetCell }
-  | { kind: "generate_shape"; cells: WorkspaceAddTargetCell[] }
-  | { kind: "explore_block"; cell: WorkspaceAddTargetCell };
+  | { kind: "generate_shape"; cells: WorkspaceAddTargetCell[] };
 
 /**
  * Desktop Tailwind width tokens for map (sessions) vs right column.
@@ -201,20 +199,12 @@ function finiteEmptyCells(
 export function resolveEmptySelectionSurface(input: {
   selectedEmptyCells: readonly WorkspaceAddTargetCell[];
   unusableKeys?: ReadonlySet<string> | readonly string[] | null;
-  /** Explore mode: a placeable empty opens explore-block, not Add. */
-  exploreActive?: boolean;
 }): EmptySelectionSurface | null {
   const selected = finiteEmptyCells(input.selectedEmptyCells);
   const placeable = filterPlaceableEmptyCells({
     selectedEmptyCells: selected,
     unusableKeys: input.unusableKeys,
   });
-  if (input.exploreActive) {
-    if (placeable.length >= 1) {
-      return { kind: "explore_block", cell: placeable[0] };
-    }
-    return null;
-  }
   const cells = placeable.length > 0 ? placeable : selected;
   if (cells.length === 1) {
     return { kind: "add_block", cell: cells[0] };
@@ -285,9 +275,6 @@ export function resolveWorkspaceRightPane(
   }
   if (surface?.kind === "add_block" && isFiniteCell(surface.cell)) {
     return "add_block";
-  }
-  if (surface?.kind === "explore_block" && isFiniteCell(surface.cell)) {
-    return "explore_block";
   }
   return "map_tools";
 }

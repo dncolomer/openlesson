@@ -3,7 +3,7 @@
  * The spine is the longest chain. Other links are detours. Order is not a path.
  */
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { sessionStepsToSkillGridNodes } from "@/lib/chapter-skill-grid";
 import type { IleAltitudeChapter } from "@/lib/ile-altitude-map";
@@ -176,8 +176,9 @@ describe("ile path overlay", () => {
     );
     expect(grid).toContain('showPathOverlay: suggestMode === "chapter" && pathOverlayVisible');
     expect(grid).toContain('suggestMode === "chapter"');
-    const preview = read("components/session-view/ile-continue-map-preview.tsx");
-    expect(preview).not.toContain('suggestMode="chapter"');
+    expect(
+      existsSync(join(ROOT, "components/session-view/ile-continue-map-preview.tsx")),
+    ).toBe(false);
     const stackBody = stack.slice(stack.indexOf("data-map-minimap-stack"));
     expect(stackBody.indexOf("data-ile-path-overlay-toggle")).toBeGreaterThan(0);
     expect(stack).not.toContain("data-workspace-mode-toggle");

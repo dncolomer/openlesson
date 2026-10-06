@@ -11,7 +11,7 @@ import {
   ILE_MAP_INSIGHT_PLACEHOLDER_COUNT,
   IleMapInsightsWidget,
 } from "@/components/session-view/ile-insight-trophies";
-import { IleWorkDockBar, sessionSidebarTopic } from "@/components/session-view/ile-work-dock-bar";
+import { SessionTopicCard, sessionSidebarTopic } from "@/components/session-view/ile-work-dock-bar";
 import {
   IleTurnInsightCraft,
   ileTurnInsightTopic,
@@ -263,8 +263,10 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     expect(chrome).toContain('id="chapters"');
     expect(chrome).toContain('id="sensors"');
     const dockBar = read("components/session-view/ile-work-dock-bar.tsx");
-    const dockBarRender = dockBar.slice(dockBar.indexOf("export function IleWorkDockBar"));
-    expect(dockBar).toContain("data-ile-work-dock-bar");
+    expect(dockBar).not.toContain("export function IleWorkDockBar");
+    expect(dockBar).not.toContain("data-ile-work-dock-bar");
+    expect(dockBar).toContain("export function SessionTopicCard");
+    expect(dockBar).toContain("export function sessionSidebarTopic");
     expect(dockBar).not.toContain("data-ile-global-resources");
     expect(dockBar).not.toContain("data-ile-submit-turn");
     expect(dockBar).not.toContain("data-ile-end-turn");
@@ -276,21 +278,17 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     expect(chrome).not.toContain("onSubmitTurn=");
     expect(view).not.toContain("onShowMap={() => setHeliosWidgetOpen(false)}");
     expect(view).not.toContain("onSubmitTurn={() => void handleSubmitTurn()}");
-    expect(dockBarRender).toContain("data-ile-chapter-dock-chapters");
-    expect(dockBarRender).toContain("SessionTopicCard");
-    expect(dockBarRender).not.toContain("grid-cols-2");
-    expect(dockBarRender).not.toContain("onClick");
-    expect(dockBarRender).not.toContain("overflow-x-auto");
-    expect(dockBarRender).not.toContain("justify-end");
+    expect(dockBar).not.toContain("data-ile-chapter-dock-chapters");
+    expect(dockBar).toContain("export function SessionTopicCard");
     expect(dockBar).not.toContain("data-ile-end-turn-stem");
     expect(dockBar).not.toContain("data-ile-review-work");
     expect(dockBar).toContain("const chipSize = compact");
     expect(dockBar).not.toContain("sizeClass={chipSize}");
-    expect(dockBar).toContain("gap-1.5");
     expect(dockBar).toContain("compact");
     expect(dockBar).not.toContain("data-ile-open-work-count");
     expect(dockBar).not.toContain("data-ile-pow-budget-remaining");
-    expect(dockBar).toContain("data-ile-open-work-tabs");
+    expect(dockBar).not.toContain("data-ile-open-work-tabs");
+    expect(dockBar).toContain("data-ile-open-work-chip");
     expect(dockBar).toContain("data-ile-chapter-minimized");
     expect(dockBar).toContain("data-ile-chapter-chip-image");
     expect(dockBar).toContain("data-ile-chapter-chip-keyword");
@@ -436,11 +434,9 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     expect(view).toContain("onMinimizeHelios");
     expect(view).toContain("aestheticImages={selectedAesthetic?.images}");
     expect(read("components/SessionView.tsx")).not.toContain("openWorkIds={openWorkIds}");
-    const chapterMap = read("components/ChapterMapPanel.tsx");
-    expect(chapterMap).toContain("boardInterior={boardInterior}");
-    expect(chapterMap).toContain("openWorkIds={openWorkIds}");
-    expect(chapterMap).toContain("aestheticImages={aestheticImages}");
-    expect(chapterMap).toContain("workAestheticById={workAestheticById}");
+    expect(existsSync(join(ROOT, "components/ChapterMapPanel.tsx"))).toBe(false);
+    const gridHost = read("components/BlockSkillGrid.tsx");
+    expect(gridHost).toContain("boardInterior");
     const world = read("components/block-skill-grid/map-world-layer.tsx");
     expect(world).toContain("data-ile-end-turn-board");
     expect(world).toContain("data-ile-open-work-tile-image");
@@ -524,11 +520,9 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     const phase = read("components/session-view/use-session-phase.ts");
     expect(phase).toContain("applyIleOpenWorkIdsToMetadata");
     expect(phase).toContain("openWorkIdsRef.current");
-    const frame = read("components/session-view/ile-chapter-widget-frame.tsx");
-    expect(frame).toContain("headerLeading");
-    expect(frame).toContain("data-ile-helios-widget-minimize");
-    expect(frame).not.toContain("data-ile-work-canvas-wide-toggle");
-    expect(frame).not.toContain("onToggleWide");
+    expect(existsSync(join(ROOT, "components/session-view/ile-chapter-widget-frame.tsx"))).toBe(
+      false,
+    );
     expect(chrome).not.toContain("ileMapWorkFrameClass()");
     expect(chrome).not.toContain("onToggleWide");
     expect(chrome).not.toContain("workCanvasWide");
@@ -699,21 +693,23 @@ describe("end turn topic chip", () => {
   });
 });
 
-describe("IleWorkDockBar chapter grid", () => {
-  it("draws one static topic when several chapter labels are passed", () => {
+describe("session topic card", () => {
+  it("keeps the focused chapter and draws one static card", () => {
+    const topic = sessionSidebarTopic([
+      { id: "ch-a", label: "Chapter A", keyword: "alpha", focused: true },
+      { id: "ch-b", label: "Chapter B", keyword: "beta" },
+      { id: "ch-c", label: "Chapter C", keyword: "gamma" },
+    ]);
+    expect(topic.id).toBe("ch-a");
+    expect(topic.title).toBe("alpha");
     const html = renderToStaticMarkup(
-      createElement(IleWorkDockBar, {
-        heliosOpen: true,
-        aestheticImages: ["https://example.com/still.jpg"],
-        onFocusOpenWork: () => {},
-        openWorkLabels: [
-          { id: "ch-a", label: "Chapter A", keyword: "alpha", focused: true },
-          { id: "ch-b", label: "Chapter B", keyword: "beta" },
-          { id: "ch-c", label: "Chapter C", keyword: "gamma" },
-        ],
+      createElement(SessionTopicCard, {
+        id: topic.id,
+        title: topic.title,
+        customUrls: ["https://example.com/still.jpg"],
       }),
     );
-    expect(html).toContain("data-ile-chapter-dock-chapters");
+    expect(html).not.toContain("data-ile-chapter-dock-chapters");
     expect(html).not.toContain("grid-cols-2");
     expect(html.match(/<button/g)).toHaveLength(1);
     expect(html).toContain('data-session-topic-card-media="image"');

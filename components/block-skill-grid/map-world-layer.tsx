@@ -220,7 +220,6 @@ export function MapWorldLayer({
   previewEmptyCells,
   generatorSparkEmptyKeys,
   unusableKeys,
-  mapExploreOpen = false,
   busy,
   handleEmptyCellClick,
   handleEmptyCellPointerDown,
@@ -300,7 +299,6 @@ export function MapWorldLayer({
   previewEmptyCells?: Array<{ row: number; col: number }> | null;
   generatorSparkEmptyKeys: Set<string>;
   unusableKeys: Set<string>;
-  mapExploreOpen?: boolean;
   busy: boolean;
   handleEmptyCellClick: (cell: GridCell, e: MouseEvent | PointerEvent) => void;
   handleEmptyCellPointerDown: (cell: GridCell, e: PointerEvent) => void;
@@ -484,7 +482,6 @@ export function MapWorldLayer({
               selectedEmpty || previewEmpty || isGeneratorSparkEmpty;
             const isUnusable = unusableKeys.has(cellKeyStr);
             const emptyMarker = resolveEmptyCellMarker({
-              exploreActive: mapExploreOpen,
               canEdit,
               learnerMode,
               isUnusable,
@@ -581,8 +578,6 @@ export function MapWorldLayer({
                           ? "Unusable ground — drag lasso to multi-select, then Unusable tool to clear"
                           : "Unusable ground — click to select, then Unusable tool to clear"
                         : "Unusable ground — shapes paths"
-                      : mapExploreOpen
-                        ? "Click empty to explore this cell"
                       : canEdit && suggestMode === "chapter"
                         ? "Click to add a chapter"
                       : canEdit && !fog.fullyVisible && !activeLassoShape
@@ -607,26 +602,6 @@ export function MapWorldLayer({
                       data-map-cell-unusable-mark
                     >
                       ∅
-                    </span>
-                  ) : emptyMarker === "search" ? (
-                    <span
-                      className="text-neutral-400"
-                      data-empty-cell-search
-                      aria-hidden
-                    >
-                      <svg
-                        className="h-4 w-4"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={1.8}
-                      >
-                        <circle cx="11" cy="11" r="6" />
-                        <path
-                          strokeLinecap="round"
-                          d="M16.5 16.5L20 20"
-                        />
-                      </svg>
                     </span>
                   ) : !isUnusable && emptyMarker === "plus" ? (
                     <span
@@ -995,7 +970,6 @@ export function MapWorldLayer({
               hasLocalContext,
               hasEffects: creatorEffectIconKeys(nodeEffects).length > 0,
               generatorBusy,
-              exploreActive: mapExploreOpen,
             });
             const lockBadge = tileBadges.showLock ? (
                 <BlockDependencyLockBadge
@@ -1300,7 +1274,6 @@ export function MapWorldLayer({
                         </button>
                         {isLabel &&
                         circularMenuSurface !== "none" &&
-                        !mapExploreOpen &&
                         circularMenuBlockId === node.id ? (
                           <BlockCircularMenuRing
                             surface={circularMenuSurface}
@@ -1490,7 +1463,6 @@ export function MapWorldLayer({
                   <BlockInTileProgress fraction={blockProgressById?.[node.id] ?? 0} />
                 </button>
                 {circularMenuSurface !== "none" &&
-                !mapExploreOpen &&
                 circularMenuBlockId === node.id ? (
                   <BlockCircularMenuRing
                     surface={circularMenuSurface}

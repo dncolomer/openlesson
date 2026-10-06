@@ -239,19 +239,8 @@ describe("TAPBench project landing", () => {
 });
 
 describe("TAPBench operator UI is the public /tapbench page", () => {
-  it("Knowledge Links mints TAP and TAP Learning only — not TAPBench links", () => {
-    const guest = read("components/WorkspaceGuestLinksPanel.tsx");
-    expect(guest).not.toContain('id: "tapbench" as const');
-    expect(guest).not.toContain('data-guest-links-inner-tab="tapbench"');
-    expect(guest).toContain('data-guest-links-inner-tab="create"');
-    expect(guest).toContain('data-guest-links-inner-tab="browse"');
-    expect(guest).not.toContain("data-tapbench-mint");
-    expect(guest).not.toContain("data-create-tapbench-link");
-    expect(guest).not.toContain("data-tapbench-links-list");
-    expect(guest).not.toContain("/api/workspace/tapbench-links");
-    expect(guest).not.toContain("mintTapbenchLink");
-    expect(guest).toContain("/api/workspace/tap-links");
-    expect(guest).toContain("/api/workspace/ile-links");
+  it("guest links panel is absent", () => {
+    expect(existsSync(join(ROOT, "components/WorkspaceGuestLinksPanel.tsx"))).toBe(false);
   });
 
   it("Knowledge Regions no longer hosts TAPBench mint as a primary sub-tab", () => {

@@ -3,14 +3,9 @@
 import { SessionList } from "@/components/SessionList";
 import type { Block, ClusterMapJob, InjectMapNote, MobileColumn, Workspace } from "@/components/workspace-view/types";
 import type { AddExpandJob } from "@/lib/add-block-range-density";
-import type { AyclCapabilities } from "@/lib/aycl-shared";
 import type { GeneratorTargetCell } from "@/lib/block-creator-effects";
 import type { UnusableCell } from "@/lib/map-ground-rules";
 import type { SupabaseBrowserClient } from "@/lib/supabase/client";
-import {
-  visibleWorkspaceMapToggleIds,
-  type WorkspaceInteractionMode,
-} from "@/lib/workspace-mode";
 import type { WorkspaceMapSelection } from "@/lib/workspace-map-selection";
 import { WORKSPACE_MAP_DESKTOP_MAP_WIDTH_CLASS } from "@/lib/workspace-right-pane";
 
@@ -18,7 +13,6 @@ export function WorkspaceMapColumn({
   mobileColumn,
   nodes,
   isOwner,
-  canAuthor,
   isLearnerMode,
   currentUserId,
   ayclToken,
@@ -55,20 +49,12 @@ export function WorkspaceMapColumn({
   expandJobs,
   clusterMapJob,
   onAbortExpandJob,
-  mapExploreOpen,
-  onMapExploreToggle,
-  onMapToggle,
   practiceMenu = false,
-  interactionMode,
-  ayclCapabilities,
-  selectInteractionMode,
   onCircularMenuAction,
 }: {
   mobileColumn: MobileColumn;
   nodes: Block[];
   isOwner: boolean;
-  /** Owner or org admin. AYCL capabilities still override this. */
-  canAuthor?: boolean;
   isLearnerMode: boolean;
   currentUserId: string | null;
   ayclToken?: string;
@@ -110,14 +96,8 @@ export function WorkspaceMapColumn({
   expandJobs: AddExpandJob[];
   clusterMapJob: ClusterMapJob;
   onAbortExpandJob: (jobId: string) => void;
-  mapExploreOpen: boolean;
-  onMapExploreToggle: () => void;
-  onMapToggle?: (id: "creator" | "learner" | "explore") => void;
-  /** Keep Calibrate / Learn / Drill on the map without a Play mode. */
+  /** Keep Calibrate / Learn / Drill on the map. */
   practiceMenu?: boolean;
-  interactionMode: WorkspaceInteractionMode;
-  ayclCapabilities: AyclCapabilities | null;
-  selectInteractionMode: (mode: WorkspaceInteractionMode) => void;
   onCircularMenuAction?: (
     blockId: string,
     action: "start_session" | "continue_session" | "mark_done" | string,
@@ -169,25 +149,6 @@ export function WorkspaceMapColumn({
         expandJobs={expandJobs}
         clusterMapJob={clusterMapJob}
         onAbortExpandJob={onAbortExpandJob}
-        mapExploreOpen={mapExploreOpen}
-        onMapExploreToggle={onMapExploreToggle}
-        onMapToggle={onMapToggle}
-        mapToggleIds={visibleWorkspaceMapToggleIds({
-          allowCreator: ayclCapabilities
-            ? ayclCapabilities.allowCreatorModeToggle
-            : Boolean(canAuthor),
-          allowExplore: ayclCapabilities
-            ? ayclCapabilities.allowExplore
-            : Boolean(canAuthor),
-        })}
-        interactionMode={interactionMode}
-        onInteractionModeChange={
-          isAycl &&
-          ayclCapabilities &&
-          !ayclCapabilities.allowCreatorModeToggle
-            ? undefined
-            : selectInteractionMode
-        }
       />
     </aside>
   );

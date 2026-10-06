@@ -85,12 +85,6 @@ export interface BlockSkillGridProps {
     y: number;
     source?: "creator" | "learner";
   } | null;
-  mapExploreOpen?: boolean;
-  onMapExploreToggle?: () => void;
-  onMapToggle?: (id: "creator" | "learner" | "explore") => void;
-  mapToggleIds?: readonly ("creator" | "learner" | "explore")[];
-  interactionMode?: "creator" | "learner";
-  onInteractionModeChange?: (mode: "creator" | "learner") => void;
   canEdit: boolean;
   learnerMode?: boolean;
   viewOnly?: boolean;

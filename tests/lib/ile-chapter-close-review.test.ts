@@ -124,8 +124,7 @@ describe("TAP Learning chapter-close review", () => {
     expect(chrome).toContain("data-ile-chapter-close-blocked");
     expect(chrome).toContain("ConfirmDialog");
     expect(chrome).toContain('t("chapterMap.closeOverride")');
-    const chapterPanel = readFileSync(join(ROOT, "components/ChapterMapPanel.tsx"), "utf8");
-    expect(chapterPanel).not.toContain("data-ile-chapter-close-blocked");
+    expect(existsSync(join(ROOT, "components/ChapterMapPanel.tsx"))).toBe(false);
 
     writeScratch(
       "ile-chapter-close-review-excerpts.txt",

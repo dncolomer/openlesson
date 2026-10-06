@@ -47,18 +47,15 @@ import {
   type WorkspaceSectionKey,
 } from "@/lib/workspace-sections";
 import {
-  defaultInteractionModeForWorkspace,
-  visibleWorkspaceMapToggleIds,
   mountsCreatorAuthoringDrawers,
   mountsLearnerPracticeDrawer,
-  normalizeWorkspaceInteractionMode,
   resolveActiveSectionForMode,
+  resolveFixedWorkspaceInteractionMode,
   resolveWorkspaceModeShell,
   workspaceIdlePaneShowsExplore,
   workspaceLearnerPaneMounted,
   workspaceSurfaceShowsAuthoring,
   workspaceSurfaceShowsPracticeMenu,
-  type WorkspaceInteractionMode,
 } from "@/lib/workspace-mode";
 import { parseWorkspaceKind } from "@/lib/workspace-kind";
 import {
@@ -134,15 +131,6 @@ export function WorkspaceView({
       sectionFromUrl ??
       defaultWorkspaceSection(parseWorkspaceKind(initialPlan?.workspace_kind)),
   );
-  /** Play (practice) is the default; Build is authoring. */
-  const [interactionMode, setInteractionMode] =
-    useState<WorkspaceInteractionMode>(() => {
-      if (ayclToken) {
-        return resolveAyclCapabilities(ayclAccessTierProp ?? "full")
-          .defaultInteractionMode;
-      }
-      return defaultInteractionModeForWorkspace(initialPlan?.workspace_kind);
-    });
   const [notesContent, setNotesContent] = useState(initialPlan?.notes || "");
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [savingNotes, setSavingNotes] = useState(false);
@@ -235,18 +223,12 @@ export function WorkspaceView({
     handleCloseEmptyCreate,
     handleCloseCombine,
     rightPane,
-    showMapExplore,
-    handleToggleMapExplore,
-    handleMapToggle,
-    exploreTargetCell,
     addTargetCell,
     generateShapeCells,
     combineBlockIds,
     detailBlock,
     detailIndex,
-    clearMapChromeForModeFlip,
   } = useWorkspaceMapSelection({
-    interactionMode,
     authoring: authoringOnMap,
     unusableCells,
     nodes,
@@ -263,13 +245,6 @@ export function WorkspaceView({
   });
 
   const supabase = createClient();
-
-  useEffect(() => {
-    if (!isAycl || !ayclCapabilities) return;
-    if (!ayclCapabilities.allowCreatorModeToggle) {
-      setInteractionMode("learner");
-    }
-  }, [isAycl, ayclCapabilities]);
 
   const canAccessPrivilegedSections = canAccessPrivilegedWorkspaceSections({
     isOwner,
@@ -540,14 +515,6 @@ export function WorkspaceView({
       setIsOrgAdmin(orgAdminForWorkspace);
 
       setPlan(planData);
-      if (
-        defaultInteractionModeForWorkspace(
-          (planData as { workspace_kind?: unknown }).workspace_kind,
-        ) === "creator" &&
-        !(isAycl && ayclCapabilities && !ayclCapabilities.allowCreatorModeToggle)
-      ) {
-        setInteractionMode("creator");
-      }
       setUnusableCells(
         normalizeUnusableCells(
           (planData as { unusable_cells?: unknown }).unusable_cells,
@@ -642,15 +609,13 @@ export function WorkspaceView({
    * never owner-only resolveActiveSection alone (that snaps Knowledge → Workspace).
    */
   const workspaceKind = parseWorkspaceKind(plan?.workspace_kind);
-  // KR has no map, so the Build toggle never mounts. Keep Build so Goals
-  // and Settings stay on the nav. Practice-only AYCL cannot enter Build.
-  useEffect(() => {
-    if (defaultInteractionModeForWorkspace(workspaceKind) !== "creator") return;
-    if (isAycl && ayclCapabilities && !ayclCapabilities.allowCreatorModeToggle) {
-      return;
-    }
-    setInteractionMode("creator");
-  }, [ayclCapabilities, isAycl, workspaceKind]);
+  const practiceOnlyAycl = Boolean(
+    isAycl && ayclCapabilities && !ayclCapabilities.allowCreatorModeToggle,
+  );
+  const interactionMode = resolveFixedWorkspaceInteractionMode({
+    workspaceKind,
+    practiceOnly: practiceOnlyAycl,
+  });
   const sectionAuth = useCallback(
     () => ({
       isOwner,
@@ -786,48 +751,12 @@ export function WorkspaceView({
     learnerActionRequested: learnerDrawerRequest != null,
   });
 
-  const selectInteractionMode = (mode: WorkspaceInteractionMode) => {
-    // Practice-only AYCL cannot switch into Creator tools.
-    if (
-      isAycl &&
-      ayclCapabilities &&
-      !ayclCapabilities.allowCreatorModeToggle &&
-      mode === "creator"
-    ) {
-      return;
-    }
-    const next = normalizeWorkspaceInteractionMode(mode);
-    if (next === interactionMode) return;
-    setInteractionMode(next);
-    clearMapChromeForModeFlip();
-    if (next === "learner") {
-      setActiveSection(
-        resolveActiveSectionForMode({
-          mode: next,
-          requested: activeSection,
-          isOwner,
-          isOrgAdmin,
-          isLoggedIn: Boolean(currentUserId) || Boolean(ayclToken),
-          workspaceKind,
-        }),
-      );
-    }
-  };
-
-  const applyMapToggle = (id: "creator" | "learner" | "explore") => {
-    const next = handleMapToggle(id);
-    if (next.interactionMode !== interactionMode) {
-      selectInteractionMode(next.interactionMode);
-    }
-  };
-
   const playHidesTabs = workspaceKind !== "knowledge_region" && isLearnerMode;
   const sectionConfig = buildWorkspaceSectionNavItems({
     t,
     isLearnerMode,
     isOwner,
     visibleSections: playHidesTabs ? [] : visibleSections,
-    exploreOpen: showMapExplore,
   });
 
   const detailLockTitles =
@@ -858,22 +787,6 @@ export function WorkspaceView({
         onSelectSection={selectSection}
         plan={plan}
         interactionMode={interactionMode}
-        exploreOpen={showMapExplore}
-        onMapToggle={
-          workspaceKind === "knowledge_region" ? undefined : applyMapToggle
-        }
-        mapToggleIds={
-          workspaceKind === "knowledge_region"
-            ? []
-            : visibleWorkspaceMapToggleIds({
-                allowCreator: ayclCapabilities
-                  ? ayclCapabilities.allowCreatorModeToggle
-                  : isOwner || isOrgAdmin,
-                allowExplore: ayclCapabilities
-                  ? ayclCapabilities.allowExplore
-                  : isOwner || isOrgAdmin,
-              })
-        }
       />
 
       <WorkspaceSectionHosts
@@ -929,7 +842,6 @@ export function WorkspaceView({
           mobileColumn={mobileColumn}
           nodes={nodes}
           isOwner={isOwner}
-          canAuthor={isOwner || isOrgAdmin}
           isLearnerMode={isLearnerMode}
           currentUserId={currentUserId}
           ayclToken={ayclToken}
@@ -1012,13 +924,7 @@ export function WorkspaceView({
           expandJobs={isLearnerMode ? [] : expandJobs}
           clusterMapJob={isLearnerMode ? null : clusterMapJob}
           onAbortExpandJob={handleAbortExpandJob}
-          mapExploreOpen={showMapExplore}
-          onMapExploreToggle={handleToggleMapExplore}
-          onMapToggle={applyMapToggle}
           practiceMenu={practiceMenu}
-          interactionMode={interactionMode}
-          ayclCapabilities={ayclCapabilities}
-          selectInteractionMode={selectInteractionMode}
           onCircularMenuAction={(blockId, action) => {
             applyMapSelectionResult(
               nextWorkspaceMapSelection({ type: "open_block", blockId }),
@@ -1039,7 +945,6 @@ export function WorkspaceView({
         <WorkspaceRightDrawers
           mobileColumn={mobileColumn}
           workspaceImage={workspaceImage}
-          showMapExplore={showMapExplore}
           idleExplore={idleExplore}
           rightPane={rightPane}
           isOwner={isOwner}
@@ -1067,7 +972,6 @@ export function WorkspaceView({
             setSelectiveExplanationPolygon(null);
           }}
           onCreateNoteFromSummary={handleCreateNoteFromSummary}
-          exploreTargetCell={exploreTargetCell}
           detailBlock={detailBlock}
           detailIndex={detailIndex}
           currentUserId={currentUserId}

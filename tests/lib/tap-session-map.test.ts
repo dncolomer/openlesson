@@ -282,26 +282,7 @@ describe("TAP live map wiring", () => {
 });
 
 describe("knowledge landing Drill labels", () => {
-  it("visitor-facing Drill product is Drill (no Solo Exercises choice)", () => {
-    const client = read("components/MapOfKnowledgeClient.tsx");
-    expect(client).toContain('label: "Drill"');
-    expect(client).not.toContain("Drill Solo Exercises");
-    expect(client).not.toContain("Drill with AI");
-    expect(client).not.toContain("data-mint-timed-drill-card");
-    const exploreCard = client.slice(
-      client.indexOf("data-mint-timed-explore-card"),
-      client.indexOf("data-minted-link-card"),
-    );
-    expect(exploreCard).not.toMatch(/\bDialog\b/);
-    expect(exploreCard).not.toMatch(/\bSolo\b/);
-
-    writeScratch(
-      "knowledge-drill-labels.txt",
-      [
-        "Drill",
-        `exploreCardHasDialog=${/\bDialog\b/.test(exploreCard)}`,
-        `hasSoloExercises=${client.includes("Drill Solo Exercises")}`,
-      ].join("\n"),
-    );
+  it("Map of Knowledge page client is absent", () => {
+    expect(existsSync(join(ROOT, "components/MapOfKnowledgeClient.tsx"))).toBe(false);
   });
 });

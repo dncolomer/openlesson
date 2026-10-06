@@ -32,7 +32,6 @@ import { useI18n } from "@/lib/i18n";
 export function WorkspaceRightDrawers({
   mobileColumn,
   workspaceImage,
-  showMapExplore,
   idleExplore = false,
   rightPane,
   isOwner,
@@ -54,7 +53,6 @@ export function WorkspaceRightDrawers({
   onStartSelectiveDraw,
   onClearSelectiveOverlay,
   onCreateNoteFromSummary,
-  exploreTargetCell,
   detailBlock,
   detailIndex,
   currentUserId,
@@ -107,8 +105,7 @@ export function WorkspaceRightDrawers({
 }: {
   mobileColumn: MobileColumn;
   workspaceImage: string;
-  showMapExplore: boolean;
-  /** Explore search / suggest / overview on the idle pane, not a mode. */
+  /** Explore search / suggest / overview on the idle pane. */
   idleExplore?: boolean;
   rightPane: string;
   isOwner: boolean;
@@ -135,7 +132,6 @@ export function WorkspaceRightDrawers({
     y: number;
     source: "creator" | "learner";
   }) => void;
-  exploreTargetCell?: { row: number; col: number } | null;
   detailBlock: Block | null;
   detailIndex: number;
   currentUserId: string | null;
@@ -263,31 +259,9 @@ export function WorkspaceRightDrawers({
       <main
         className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden p-0"
         data-workspace-right-column
-        data-workspace-right-pane={
-          showMapExplore ? "map_explore" : rightPane
-        }
-        data-map-explore-open={showMapExplore ? "true" : "false"}
+        data-workspace-right-pane={rightPane}
       >
-        {showMapExplore ? (
-          <WorkspaceMapAuthoringPane
-            canEdit={isOwner && showCreatorDrawers}
-            interactionMode={interactionMode}
-            ayclToken={ayclToken}
-            locale={locale}
-            blocks={nodes}
-            unusableCells={unusableCells}
-            workspaceId={workspaceId}
-            exploreOpen
-            selectivePolygon={selectiveExplanationPolygon}
-            selectiveDrawing={selectiveExplanationActive}
-            onSearchSelectBlocks={onSearchSelectBlocks}
-            onSuggestSelectEmptyCells={onSuggestSelectEmptyCells}
-            onStartSelectiveDraw={onStartSelectiveDraw}
-            onClearSelectiveOverlay={onClearSelectiveOverlay}
-            onCreateNoteFromSummary={onCreateNoteFromSummary}
-            exploreTargetCell={exploreTargetCell}
-          />
-        ) : showLearnerDrawer &&
+        {showLearnerDrawer &&
         detailBlock &&
         detailIndex >= 0 ? (
           <WorkspaceLearnerBlockPane
@@ -468,7 +442,6 @@ export function WorkspaceRightDrawers({
             onCreateNoteFromSummary={
               idleExplore ? onCreateNoteFromSummary : undefined
             }
-            exploreTargetCell={idleExplore ? exploreTargetCell : null}
           />
         )}
       </main>

@@ -57,7 +57,6 @@ describe("TAP Learning modals share DialogFrame / ConfirmDialog", () => {
     const thought = read("components/thought-ui/ThoughtEditPanel.tsx");
     const ring = read("components/block-skill-grid/block-circular-menu.tsx");
     const chrome = read("components/session-view/session-chrome.tsx");
-    const chapter = read("components/ChapterMapPanel.tsx");
     const helios = read("components/SessionHeliosPanel.tsx");
     const view = readSessionViewSurface();
 
@@ -78,12 +77,7 @@ describe("TAP Learning modals share DialogFrame / ConfirmDialog", () => {
     expect(ring).toContain("<ConfirmDialog");
     expect(ring).toContain('testId="block-circular-edit"');
     expect(helios).toContain("ThoughtEditPanel");
-    expect(chapter).toContain("BlockCircularEditForm");
-    expect(chapter).not.toContain("closeReviewBlocked");
-    expect(chapter).not.toContain("data-ile-chapter-close-blocked");
-    expect(chapter).not.toContain("data-ile-close-override");
-    expect(chapter).not.toMatch(CUSTOM_CENTERED_OVERLAY);
-    expect(chapter).not.toContain("absolute inset-0 z-40 flex items-start justify-center");
+    expect(existsSync(join(ROOT, "components/ChapterMapPanel.tsx"))).toBe(false);
 
     expect(chrome).toContain("<ConfirmDialog");
     expect(chrome).toContain("showEndDialog");

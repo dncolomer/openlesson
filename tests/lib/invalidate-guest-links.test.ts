@@ -551,17 +551,8 @@ describe("static wiring: migration, APIs, UI", () => {
     expect(auth).toContain("ILE_LINK_REVOKED_MESSAGE");
   });
 
-  it("WorkspaceGuestLinksPanel exposes invalidate-one and invalidate-all controls", () => {
-    const panel = read("components/WorkspaceGuestLinksPanel.tsx");
-    expect(panel).toContain("invalidate_link_id");
-    expect(panel).toContain("invalidate_all");
-    expect(panel).toContain('data-guest-link-invalidate="tap"');
-    expect(panel).toContain('data-guest-link-invalidate="ile"');
-    expect(panel).toContain('data-guest-link-invalidate-all="tap"');
-    expect(panel).toContain('data-guest-link-invalidate-all="ile"');
-    // Revoked links are not copyable
-    expect(panel).toContain("isRevoked ? undefined : listUrl || createdLinks[link.id]");
-    expect(panel).toContain('link.status !== "revoked"');
+  it("guest links panel is absent", () => {
+    expect(existsSync(join(ROOT, "components/WorkspaceGuestLinksPanel.tsx"))).toBe(false);
   });
 
   it("i18n keys exist for invalidate actions", () => {

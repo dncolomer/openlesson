@@ -1,6 +1,6 @@
 import { readMcpSurface, readSessionViewSurface } from "@/tests/helpers/surface-source";
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import path from "path";
 import {
   DEFAULT_INITIAL_CHAPTERS,
@@ -592,29 +592,16 @@ describe("create surface wiring (structural)", () => {
     expect(genSrc).toContain("unusable_cells");
     expect(genSrc).toContain("blockedCellsFromMapType");
     expect(genSrc).toContain("applyGeneratedMapTypePlacement");
-    const chapter = readFileSync(
-      path.join(process.cwd(), "components/ChapterMapPanel.tsx"),
-      "utf8",
-    );
-    expect(chapter).toContain("unusableCells={plan.unusable_cells ?? []}");
+    expect(existsSync(path.join(process.cwd(), "components/ChapterMapPanel.tsx"))).toBe(false);
     const xaiCreate = readFileSync(path.join(process.cwd(), "lib/xai.ts"), "utf8");
     expect(xaiCreate).toContain("relocateChapterStepsOffBlocked");
     expect(xaiCreate).toContain("blockedCellsFromMapType");
     expect(genSrc).toContain("extractGeneratedPlanNodes");
 
-    const uiSrc = readFileSync(
-      path.join(process.cwd(), "components/WorkspaceModeSelect.tsx"),
-      "utf8",
+    expect(existsSync(path.join(process.cwd(), "components/WorkspaceModeSelect.tsx"))).toBe(
+      false,
     );
-    expect(uiSrc).toContain("initialChapters");
-    expect(uiSrc).toContain("planMode.initialChapters");
-
-    const humanSrc = readFileSync(
-      path.join(process.cwd(), "components/HumanModeSelect.tsx"),
-      "utf8",
-    );
-    expect(humanSrc).toContain("initialChapters");
-    expect(humanSrc).toContain("planMode.initialChapters");
+    expect(existsSync(path.join(process.cwd(), "components/HumanModeSelect.tsx"))).toBe(false);
 
     // Primary create surface at /workspace/new (standalone page, not WorkspaceModeSelect)
     const newWorkspaceSrc = readFileSync(
@@ -625,8 +612,6 @@ describe("create surface wiring (structural)", () => {
     expect(newWorkspaceSrc).toContain("InitialChaptersPicker");
     expect(newWorkspaceSrc).toMatch(/initialChapters,/);
     expect(newWorkspaceSrc).toMatch(/Map type|Starting map|Starting size|Initial chapters/i);
-    expect(uiSrc).toContain("InitialChaptersPicker");
-    expect(humanSrc).toContain("InitialChaptersPicker");
     const pickerSrc = readFileSync(
       path.join(process.cwd(), "components/InitialChaptersPicker.tsx"),
       "utf8",

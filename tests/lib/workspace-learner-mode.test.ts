@@ -9,11 +9,8 @@ import {
   mountsCreatorAuthoringDrawers,
   mountsLearnerPracticeDrawer,
   resolveActiveSectionForMode,
+  resolveFixedWorkspaceInteractionMode,
   resolveWorkspaceModeShell,
-  workspaceModeDisplayLabel,
-  workspaceModeFlipClearsMapSelection,
-  WORKSPACE_MODE_DISPLAY_LABELS,
-  WORKSPACE_INTERACTION_MODES,
   DEFAULT_WORKSPACE_INTERACTION_MODE,
   defaultInteractionModeForWorkspace,
   normalizeWorkspaceInteractionMode,
@@ -296,17 +293,19 @@ describe("learner map chrome + DAG view", () => {
   });
 });
 
-describe("Build / Play mode display labels", () => {
-  it("maps creator→Build and learner→Play; shell behavior unchanged for wire ids", () => {
-    expect(workspaceModeDisplayLabel("creator")).toBe("Build");
-    expect(workspaceModeDisplayLabel("learner")).toBe("Play");
-    expect(workspaceModeDisplayLabel("explore")).toBe("Explore");
-    expect(WORKSPACE_MODE_DISPLAY_LABELS.creator).toBe("Build");
-    expect(WORKSPACE_MODE_DISPLAY_LABELS.learner).toBe("Play");
-    expect([...WORKSPACE_INTERACTION_MODES]).toEqual(["learner", "creator"]);
+describe("fixed interaction mode", () => {
+  it("keeps creator and learner wire ids and does not offer a mode choice", () => {
+    const modeLib = read("lib/workspace-mode.ts");
+    expect(modeLib).not.toContain("workspaceModeDisplayLabel");
+    expect(modeLib).not.toContain("WORKSPACE_MODE_DISPLAY_LABELS");
+    expect(modeLib).not.toContain("workspaceModeControlMounted");
     expect(DEFAULT_WORKSPACE_INTERACTION_MODE).toBe("learner");
     expect(normalizeWorkspaceInteractionMode(undefined)).toBe("learner");
     expect(normalizeWorkspaceInteractionMode("nope")).toBe("learner");
+    expect(resolveFixedWorkspaceInteractionMode({})).toBe("learner");
+    expect(
+      resolveFixedWorkspaceInteractionMode({ workspaceKind: "knowledge_region" }),
+    ).toBe("creator");
 
     // Wire ids still drive authoring vs practice shell (labels only changed)
     expect(mountsCreatorAuthoringDrawers("creator")).toBe(true);
@@ -329,19 +328,16 @@ describe("Build / Play mode display labels", () => {
     const grid = readMapGridSurface();
     const view = readWorkspaceViewSurface();
     const nav = read("components/WorkspaceSectionNav.tsx");
-    // Play / Build / Explore sits beside the workspace name.
-    expect(nav).toContain("data-workspace-mode-toggle");
-    expect(nav).toContain("data-workspace-mode-by-title");
-    expect(nav).toContain("workspaceModeDisplayLabel");
-    expect(nav).toContain("workspaceModeControlMounted");
-    expect(nav).not.toContain("WORKSPACE_MAP_TOGGLE_IDS");
-    expect(nav.indexOf("data-workspace-mode-by-title")).toBeLessThan(
-      nav.indexOf("data-workspace-section-title"),
-    );
+    expect(nav).not.toContain("data-workspace-mode-toggle");
+    expect(nav).not.toContain("data-workspace-mode-by-title");
+    expect(nav).not.toContain("workspaceModeDisplayLabel");
+    expect(nav).not.toContain("workspaceModeControlMounted");
+    expect(nav).toContain("data-workspace-interaction-mode");
+    expect(nav).toContain("data-workspace-section-title");
     expect(grid).not.toContain("data-workspace-mode-under-minimap");
-    expect(view).toContain("onMapToggle={");
-    expect(view).toContain("onInteractionModeChange");
-    expect(view).toContain("defaultInteractionModeForWorkspace");
+    expect(view).not.toContain("onMapToggle={");
+    expect(view).not.toContain("onInteractionModeChange");
+    expect(view).toContain("resolveFixedWorkspaceInteractionMode");
     expect(defaultInteractionModeForWorkspace("standard")).toBe("learner");
     expect(defaultInteractionModeForWorkspace(undefined)).toBe(
       DEFAULT_WORKSPACE_INTERACTION_MODE,
@@ -351,47 +347,22 @@ describe("Build / Play mode display labels", () => {
     expect(grid).not.toMatch(/label:\s*"Learner"/);
     expect(grid).not.toMatch(/>\s*Creator\s*</);
     expect(grid).not.toMatch(/>\s*Learner\s*</);
-    // Builds labels from helper (Build/Play live in workspace-mode)
-    const modeLib = read("lib/workspace-mode.ts");
-    expect(modeLib).toContain('creator: "Build"');
-    expect(modeLib).toContain('learner: "Play"');
+    expect(modeLib).not.toContain('creator: "Build"');
+    expect(modeLib).not.toContain('learner: "Play"');
+    expect(modeLib).toContain('"creator"');
+    expect(modeLib).toContain('"learner"');
 
     mkdirSync(SCRATCH, { recursive: true });
     writeFileSync(
       join(SCRATCH, "build-play-mode-behavior.log"),
       [
-        "creator_label=" + workspaceModeDisplayLabel("creator"),
-        "learner_label=" + workspaceModeDisplayLabel("learner"),
-        "wire_modes=" + WORKSPACE_INTERACTION_MODES.join(","),
+        "fixed_learner=" + resolveFixedWorkspaceInteractionMode({}),
         "creator_authoring_drawers=" +
           mountsCreatorAuthoringDrawers("creator"),
         "learner_practice_drawer=" + mountsLearnerPracticeDrawer("learner"),
         "creator_strip=" + creatorShell.map.showAuthoringToolStrip,
         "learner_strip=" + learnerShell.map.showAuthoringToolStrip,
-        "toggle_by_title=" + nav.includes("data-workspace-mode-by-title"),
-        "nav_showModeToggle_false=" + view.includes("showModeToggle={false}"),
-      ].join("\n"),
-      "utf8",
-    );
-    writeFileSync(
-      join(SCRATCH, "build-play-labels-structural.log"),
-      [
-        "toggle_by_title=" + nav.includes("data-workspace-mode-by-title"),
-        "toggle_present=" + nav.includes("data-workspace-mode-toggle"),
-        "uses_workspaceModeDisplayLabel=" +
-          nav.includes("workspaceModeDisplayLabel"),
-        "uses_WORKSPACE_MAP_TOGGLE_IDS=" +
-          nav.includes("WORKSPACE_MAP_TOGGLE_IDS"),
-        "no_hardcoded_Creator_label=" + !/label:\s*"Creator"/.test(grid),
-        "no_hardcoded_Learner_label=" + !/label:\s*"Learner"/.test(grid),
-        "no_Creator_button_text=" + !/>\s*Creator\s*</.test(grid),
-        "no_Learner_button_text=" + !/>\s*Learner\s*</.test(grid),
-        "helper_Build=" + (workspaceModeDisplayLabel("creator") === "Build"),
-        "helper_Play=" + (workspaceModeDisplayLabel("learner") === "Play"),
-        "mode_lib_Build=" + modeLib.includes('creator: "Build"'),
-        "mode_lib_Play=" + modeLib.includes('learner: "Play"'),
-        "wire_id_creator_still_used=" + modeLib.includes('"creator"'),
-        "wire_id_learner_still_used=" + modeLib.includes('"learner"'),
+        "interaction_mode_attr=" + nav.includes("data-workspace-interaction-mode"),
       ].join("\n"),
       "utf8",
     );
@@ -399,7 +370,7 @@ describe("Build / Play mode display labels", () => {
 });
 
 describe("learner mode UI structural", () => {
-  it("Build/Play toggle under minimap; learner drawer vs creator drawers; map flags", () => {
+  it("learner drawer vs creator drawers; map flags; no mode toggle", () => {
     const nav = read("components/WorkspaceSectionNav.tsx");
     const view = readWorkspaceViewSurface();
     const grid = readMapGridSurface();
@@ -407,37 +378,25 @@ describe("learner mode UI structural", () => {
     const perf = read("components/WorkspacePerformancePanel.tsx");
     const mapGround = read("app/api/workspace/map-ground/route.ts");
 
-    // Mode toggle sits beside the workspace name.
-    expect(nav).toContain("data-workspace-mode-toggle");
-    expect(nav).toContain("data-workspace-mode-by-title");
-    expect(nav).toContain('data-workspace-mode={id}');
-    expect(nav).toContain("workspaceModeDisplayLabel");
-    expect(view).toContain("onMapToggle={");
+    expect(nav).not.toContain("data-workspace-mode-toggle");
+    expect(nav).not.toContain("data-workspace-mode-by-title");
+    expect(nav).toContain("data-workspace-interaction-mode");
+    expect(view).not.toContain("onMapToggle={");
     expect(grid).not.toContain("data-workspace-mode-under-minimap");
-    expect(view).toMatch(
-      /onInteractionModeChange=\{[\s\S]*?selectInteractionMode/,
-    );
-    // Display: Build / Play (not Creator / Learner)
+    expect(view).not.toContain("selectInteractionMode");
     expect(grid).not.toMatch(/label:\s*"Creator"/);
     expect(grid).not.toMatch(/label:\s*"Learner"/);
     expect(view).toContain("WorkspaceLearnerBlockPane");
-    expect(view).toContain("selectInteractionMode");
-    expect(workspaceModeFlipClearsMapSelection()).toBe(false);
-    expect(view).toContain("clearMapChromeForModeFlip");
-    expect(view).not.toMatch(
-      /selectInteractionMode[\s\S]{0,500}nextWorkspaceMapSelection\(\{\s*type: "clear"/,
-    );
+    expect(view).toContain("resolveFixedWorkspaceInteractionMode");
+    expect(view).not.toContain("clearMapChromeForModeFlip");
     const selection = read("components/workspace-view/use-workspace-map-selection.ts");
-    expect(selection).toContain("workspaceModeFlipClearsMapSelection");
-    expect(selection).toMatch(
-      /if \(workspaceModeFlipClearsMapSelection\(\)\) \{[\s\S]*?type: "clear"/,
-    );
-    expect(view).toContain("if (next === interactionMode) return");
+    expect(selection).not.toContain("workspaceModeFlipClearsMapSelection");
+    expect(view).not.toContain("if (next === interactionMode) return");
     expect(view).toContain("showLearnerDrawer");
     expect(view).toContain("showCreatorDrawers");
     expect(grid).toContain("learnerModeRef");
-    expect(grid).toContain("workspaceModeFlipClearsMapSelection");
-    expect(grid).toMatch(
+    expect(grid).not.toContain("workspaceModeFlipClearsMapSelection");
+    expect(grid).not.toMatch(
       /if \(workspaceModeFlipClearsMapSelection\(\)\) \{[\s\S]*?setSelectedBlockIds\(\[\]\)/,
     );
     // Practice Explore/Drill live on learner drawer; authoring on creator drawers.
@@ -483,10 +442,13 @@ describe("learner mode UI structural", () => {
     expect(grid).toContain("data-learner-mode");
     expect(grid).toContain("data-empty-cell-plus");
     expect(grid).toContain("data-map-minimap");
-    expect(read("components/WorkspaceSectionNav.tsx")).toContain(
+    expect(read("components/WorkspaceSectionNav.tsx")).not.toContain(
       "data-workspace-mode-toggle",
     );
-    // Empty Play maps keep the same grid shell as Build/Explore (minimap + mode toggle).
+    expect(read("components/WorkspaceSectionNav.tsx")).toContain(
+      "data-workspace-interaction-mode",
+    );
+    // Empty learner maps keep the same grid shell (minimap, no mode toggle).
     expect(grid).not.toContain("nodes.length === 0 && !canEdit");
     expect(grid).not.toMatch(
       /if \(nodes\.length === 0 && !canEdit\)[\s\S]{0,80}labels\.emptyCell/,

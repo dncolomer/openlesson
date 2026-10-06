@@ -1,9 +1,9 @@
 /**
- * Guest-link Browse surface: pure search/filter helpers + structural UI hooks.
+ * Guest-link Browse surface: pure search/filter helpers.
  * Drives shipped lib/guest-link-browse.ts — no re-implementation of match rules.
  */
 import { describe, expect, it } from "vitest";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import {
   buildGuestLinkBrowseRows,
@@ -16,12 +16,6 @@ import {
 } from "@/lib/guest-link-browse";
 
 const ROOT = join(__dirname, "../..");
-
-function read(rel: string) {
-  const path = join(ROOT, rel);
-  expect(existsSync(path), `missing ${rel}`).toBe(true);
-  return readFileSync(path, "utf8");
-}
 
 const TAP_PENDING: TapLinkBrowseSource = {
   id: "tap-pending-1111-aaaa",
@@ -284,44 +278,9 @@ describe("collectGuestLinkBrowseStatuses", () => {
   });
 });
 
-describe("WorkspaceGuestLinksPanel browse UI structure", () => {
-  it("exposes Create|Browse only, TAP/TAP Learning filters, no TAPBench mint", () => {
-    const panel = read("components/WorkspaceGuestLinksPanel.tsx");
-    expect(panel).toContain("data-guest-links-inner-tabs");
-    expect(panel).toContain('data-guest-links-inner-tab="create"');
-    expect(panel).toContain('data-guest-links-inner-tab="browse"');
-    expect(panel).not.toContain('data-guest-links-inner-tab="tapbench"');
-    expect(panel).toContain("data-guest-links-search");
-    expect(panel).toContain("data-guest-links-filter-kind");
-    expect(panel).toContain("data-guest-links-filter-status");
-    expect(panel).toContain("data-guest-links-browse-list");
-    expect(panel).not.toContain('value="tapbench"');
-    expect(panel).toContain('value="tap"');
-    expect(panel).toContain('value="ile"');
-    expect(panel).toContain("filterGuestLinkBrowseRows");
-    expect(panel).toContain("buildGuestLinkBrowseRows");
-    expect(panel).not.toContain("tapbenchLinks");
-  });
-
-  it("create is one primary TAP/TAP Learning submit; browse keeps invalidate/copy", () => {
-    const panel = read("components/WorkspaceGuestLinksPanel.tsx");
-    expect(panel).toContain("createTapLink");
-    expect(panel).toContain("createIleLink");
-    expect(panel).not.toContain("mintTapbenchLink");
-    expect(panel).toContain("createSelectedLink");
-    expect(panel).toContain("data-guest-links-create-submit");
-    expect(panel).not.toContain("data-create-tapbench-link");
-    expect(panel).toContain("data-guest-links-product-select");
-    expect(panel).not.toMatch(/onClick=\{\(\) => void createTapLink\("anonymous"\)\}/);
-    expect(panel).not.toMatch(/onClick=\{\(\) => void createIleLink\("anonymous"\)\}/);
-    expect(panel).toContain('data-guest-link-invalidate="tap"');
-    expect(panel).toContain('data-guest-link-invalidate="ile"');
-    expect(panel).toContain('data-guest-link-invalidate-all="tap"');
-    expect(panel).toContain('data-guest-link-invalidate-all="ile"');
-    expect(panel).toContain("reissueTapLink");
-    expect(panel).toContain("reissueIleLink");
-    expect(panel).toContain("copyLink");
-    expect(panel).not.toContain("downloadTapbenchSkills");
+describe("WorkspaceGuestLinksPanel", () => {
+  it("is absent", () => {
+    expect(existsSync(join(ROOT, "components/WorkspaceGuestLinksPanel.tsx"))).toBe(false);
   });
 });
 

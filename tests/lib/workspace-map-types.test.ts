@@ -185,7 +185,6 @@ describe("workspace map types helpers", () => {
       isLearnerMode: false,
       isOwner: true,
       visibleSections: creator,
-      exploreOpen: true,
     });
     expect(exploreNav.map((item) => item.key)).toContain("map_types");
 
@@ -441,7 +440,8 @@ describe("Map Types tab UI / API structural", () => {
     expect(view).toContain("sectionMapTypes");
     expect(view).toContain("WorkspaceMapTypesPanel");
     expect(view).toContain("data-workspace-map-types-host");
-    expect(view).toContain("exploreOpen: showMapExplore");
+    expect(view).toContain("exploreOpen={idleExplore}");
+    expect(view).not.toContain("showMapExplore");
     expect(view).toMatch(
       /!isLearnerMode &&\s*isOwner &&\s*sectionLayout\.mountsMapTypesPanel &&\s*visibleSections\.includes\("map_types"\)/,
     );
@@ -548,7 +548,6 @@ describe("Map Types tab UI / API structural", () => {
                 mode: "creator",
                 isOwner: true,
               }),
-              exploreOpen: true,
             })
               .map((i) => i.key)
               .includes("map_types"),

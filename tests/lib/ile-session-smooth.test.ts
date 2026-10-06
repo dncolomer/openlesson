@@ -187,13 +187,13 @@ describe("TAP Learning slowness + wiring (shipped source)", () => {
     expect(grid).toContain("ileChapterCellChrome");
     expect(grid).toContain("data-ile-chapter-done-tick");
 
-    const chapter = read("components/ChapterMapPanel.tsx");
-    expect(chapter).toContain('suggestMode="chapter"');
+    expect(existsSync(join(ROOT, "components/ChapterMapPanel.tsx"))).toBe(false);
+    expect(read("components/BlockSkillGrid.tsx")).toContain('suggestMode === "chapter"');
     writeScratch(
       "ile-chapter-done-excerpts.txt",
       [
         "BlockSkillGrid uses ileChapterCellChrome + data-ile-chapter-done-tick",
-        "ChapterMapPanel suggestMode=chapter",
+        "BlockSkillGrid suggestMode === chapter",
         `CHAPTER_LOAD_DURATION_MS=${CHAPTER_LOAD_DURATION_MS}`,
       ].join("\n"),
     );

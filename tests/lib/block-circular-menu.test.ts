@@ -196,7 +196,7 @@ describe("in-block progress, unseen gather dot, resource scope", () => {
 
 describe("circular menu source wiring", () => {
   it("TAP Learning and Workspace render a circular menu; TAP Learning double-click peeks; widget keeps I'm done answering; workspace drawers open", () => {
-    const chapter = read("components/ChapterMapPanel.tsx");
+    expect(existsSync(join(ROOT, "components/ChapterMapPanel.tsx"))).toBe(false);
     const grid = read("components/BlockSkillGrid.tsx");
     const world = read("components/block-skill-grid/map-world-layer.tsx");
     const ring = read("components/block-skill-grid/block-circular-menu.tsx");
@@ -208,7 +208,7 @@ describe("circular menu source wiring", () => {
     const learner = read("components/WorkspaceLearnerBlockPane.tsx");
     const wsView = read("components/WorkspaceView.tsx");
     const drawers = read("components/workspace-view/workspace-right-drawers.tsx");
-    const preview = read("components/session-view/ile-continue-map-preview.tsx");
+    expect(existsSync(join(ROOT, "components/session-view/ile-continue-map-preview.tsx"))).toBe(false);
     const landing = read("components/AyclLandingClient.tsx");
 
     expect(ring).toContain("data-block-circular-menu");
@@ -219,12 +219,11 @@ describe("circular menu source wiring", () => {
     expect(ring).toContain("accept_chapter: <Check");
     expect(ring).toContain("reject_chapter: <X");
     expect(ring).toContain("timUnopened");
-    expect(chapter).toContain("accept_chapter");
-    expect(chapter).toContain("reject_chapter");
-    expect(chapter).toContain("onAcceptTimChapter");
-    expect(chapter).toContain("onRejectTimChapter");
     expect(view).toContain("handleAcceptTimChapter");
     expect(view).toContain("handleRejectTimChapter");
+    expect(view).toContain("handleRejectTimChapter");
+    expect(ring).toContain("accept_chapter");
+    expect(ring).toContain("reject_chapter");
     expect(ring).not.toContain("work: <MessageSquare");
     expect(ring).not.toContain("gather_resources: <Pickaxe");
     expect(ring).toContain("data-block-circular-menu-action");
@@ -253,10 +252,7 @@ describe("circular menu source wiring", () => {
     expect(world).toMatch(/<\/button>\s*\{circularMenuSurface !== "none"/);
     expect(world).toMatch(/<\/button>\s*\{isLabel &&/);
     expect(world).not.toContain("<BlockCircularMenuRing\n                                surface={circularMenuSurface}");
-    expect(chapter).toContain('circularMenuSurface="ile"');
-    expect(chapter).toContain("peekOnDoubleClick={false}");
-    expect(chapter).toContain("onCircularMenuAction");
-    expect(chapter).not.toContain("onChapterDoubleClick");
+    expect(grid).toContain('suggestMode === "chapter"');
     expect(grid).toContain("blockCircularMenuDoubleClickIsNoop");
     expect(grid).toContain("blockCircularMenuOpensOnSelect");
     expect(grid).toContain("handleBlockDoubleClickGuarded");
@@ -292,19 +288,18 @@ describe("circular menu source wiring", () => {
         current: { row: 2, col: 3 },
       }),
     ).toEqual({ row: 1, col: 1 });
-    expect(grid).toContain("blockCircularMenuOpensOnSelect(circularMenuSurface, { exploreOpen: mapExploreOpen })");
-    expect(blockCircularMenuOpensOnSelect("workspace-learner", { exploreOpen: true })).toBe(false);
-    expect(blockCircularMenuOpensOnSelect("ile", { exploreOpen: true })).toBe(false);
-    expect(blockCircularMenuOpensOnSelect("workspace-learner", { exploreOpen: false })).toBe(true);
+    expect(grid).toContain("blockCircularMenuOpensOnSelect(circularMenuSurface)");
+    expect(grid).not.toContain("mapExploreOpen");
+    expect(blockCircularMenuOpensOnSelect("workspace-learner")).toBe(true);
+    expect(blockCircularMenuOpensOnSelect("ile")).toBe(true);
     expect(
       nextCircularMenuBlockIdOnClick({
         surface: "workspace-learner",
         clickedId: "b-1",
         currentMenuId: null,
-        exploreOpen: true,
       }),
-    ).toBeNull();
-    expect(world).toContain("!mapExploreOpen");
+    ).toBe("b-1");
+    expect(world).not.toContain("mapExploreOpen");
     expect(grid).toContain("nextCircularMenuBlockIdOnClick");
     expect(grid).toContain("clearSelection()");
     expect(nextCircularMenuBlockIdOnClick({
@@ -362,9 +357,6 @@ describe("circular menu source wiring", () => {
 
     expect(world).toContain("ileCircularMenuDisabledActionIds");
     expect(world).toContain("disabledIds");
-    expect(chapter).toContain("ileWorkOnCompletedRequiresConfirm");
-    expect(chapter).toContain("onUndoChapterDone");
-    expect(chapter).toContain('testId="ile-undo-chapter-done"');
     expect(view).toContain("handleMarkChapterUndone");
     expect(ring).toContain("disabled={disabled}");
 
@@ -374,8 +366,6 @@ describe("circular menu source wiring", () => {
     expect(read("components/SessionView.tsx")).not.toContain("<ChapterMapPanel");
     expect(read("components/SessionView.tsx")).not.toContain('circularMenuSurface="ile"');
     expect(view).toContain("setHeliosWidgetOpen(true)");
-    expect(chapter).toContain('action === "work"');
-    expect(chapter).toContain("onWorkChapter");
     expect(view).toContain("void handleLoadChapter(idx)");
     expect(view).toContain("await handleMarkChapterDone(opts)");
 
@@ -439,9 +429,7 @@ describe("circular menu source wiring", () => {
     expect(grid).toContain("viewOnly");
     expect(grid).toContain('circularMenuSurfaceProp ?? "none"');
     expect(grid).toContain("if (viewOnly) {");
-    expect(preview).toContain("viewOnly");
     expect(landing).toContain("viewOnly");
-    expect(preview).not.toContain('circularMenuSurface="');
     expect(landing).not.toContain("circularMenuSurface");
     expect(learner).toContain('drawerId="practice"');
     expect(learner).toContain("drawerId={PREVIOUS_SESSIONS_DRAWER_ID}");

@@ -31,9 +31,7 @@ const GATE_FILES = [
   "components/workspace-view/workspace-chrome.tsx",
   "components/InsightsDashboardTab.tsx",
   "components/InsightDetailClient.tsx",
-  "components/WorkspaceFilesTab.tsx",
   "components/SessionHeliosPanel.tsx",
-  "components/ChapterMapPanel.tsx",
 ] as const;
 
 describe("LoadingStatusMessage (CREATING WORKSPACE treatment)", () => {
@@ -68,6 +66,8 @@ describe("LoadingStatusMessage (CREATING WORKSPACE treatment)", () => {
 
 describe("Loading gate call sites use shared treatment", () => {
   it("each primary gate file imports LoadingStatusMessage", () => {
+    expect(fs.existsSync(path.join(REPO_ROOT, "components/WorkspaceFilesTab.tsx"))).toBe(false);
+    expect(fs.existsSync(path.join(REPO_ROOT, "components/ChapterMapPanel.tsx"))).toBe(false);
     const offenders: string[] = [];
     for (const file of GATE_FILES) {
       const source = readRepoFile(file);

@@ -53,7 +53,8 @@ describe("map double-click peek overlay", () => {
     expect(host).toContain("blockCircularMenuDoubleClickIsNoop");
     expect(host).toContain("blockCircularMenuOpensOnSelect");
     expect(host).toContain("handleBlockDoubleClickGuarded");
-    expect(host).toContain("blockCircularMenuOpensOnSelect(circularMenuSurface, { exploreOpen: mapExploreOpen })");
+    expect(host).toContain("blockCircularMenuOpensOnSelect(circularMenuSurface)");
+    expect(host).not.toContain("mapExploreOpen");
     expect(host).toMatch(/if \(blockCircularMenuDoubleClickIsNoop\(circularMenuSurface\)\) return/);
     expect(blockCircularMenuOpensOnSelect("ile")).toBe(true);
     expect(blockCircularMenuDoubleClickIsNoop("ile")).toBe(false);

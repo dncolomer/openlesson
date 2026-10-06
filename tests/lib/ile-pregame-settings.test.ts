@@ -3,7 +3,7 @@
  * fuller map-type explanation. Drives shipped helpers (no re-implementation).
  */
 import { describe, expect, it } from "vitest";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { readSessionViewSurface } from "@/tests/helpers/surface-source";
 import {
@@ -446,9 +446,9 @@ describe("TAP Learning pre-game settings surface", () => {
     expect(en.session.startTipCraftInsight).not.toMatch(/\bboard\b|\bend turn\b/i);
     expect(en.session.startTipSendEnter).not.toMatch(/unsys/i);
     expect(en.session[ILE_START_TIP_LABEL_KEYS["craft-insight"].replace("session.", "")]).toBeTruthy();
-    const continuePreview = read("components/session-view/ile-continue-map-preview.tsx");
-    expect(continuePreview).toContain("animate-spin");
-    expect(continuePreview).toContain("Checking for existing chapters");
+    expect(
+      existsSync(join(process.cwd(), "components/session-view/ile-continue-map-preview.tsx")),
+    ).toBe(false);
     expect(welcome).toContain('t("session.backToDashboard")');
     expect(en.session.backToDashboard).toBe("Back to Workspace");
     expect(view).toContain("onBackToWorkspace");

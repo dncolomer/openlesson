@@ -246,13 +246,11 @@ describe("structural: BlockSkillGrid title-only map tiles", () => {
     expect(MAP_CELL_PREREQ_CLASS).toMatch(/border-dashed/);
   });
 
-  it("TAP Learning ChapterMapPanel and workspace SessionList use BlockSkillGrid", () => {
-    const chapter = read("components/ChapterMapPanel.tsx");
+  it("chapter board stays on BlockSkillGrid; workspace SessionList uses BlockSkillGrid", () => {
+    expect(existsSync(join(ROOT, "components/ChapterMapPanel.tsx"))).toBe(false);
+    expect(read("components/BlockSkillGrid.tsx")).toContain('suggestMode === "chapter"');
     const list = read("components/SessionList.tsx");
-    expect(chapter).toContain("BlockSkillGrid");
     expect(list).toContain("BlockSkillGrid");
-    expect(chapter).toContain('from "@/components/BlockSkillGrid"');
-    expect(chapter).toContain("SKILL_GRID_ILE_DEFAULT_ZOOM_AT_REFERENCE");
     expect(list).not.toContain("SKILL_GRID_ILE_DEFAULT_ZOOM_AT_REFERENCE");
   });
 });

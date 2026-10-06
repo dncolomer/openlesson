@@ -184,15 +184,8 @@ describe("structural: workspace + settings have no With AI vs Solo choice", () =
     expect(card).not.toContain('data-block-tool="tap-exercise"');
   });
 
-  it("WorkspaceGuestLinksPanel uses intent clusters; create still sets technical fields", () => {
-    const panel = read("components/WorkspaceGuestLinksPanel.tsx");
-    expect(panel).toContain("productIntent");
-    expect(panel).toContain("exploreDialog");
-    expect(panel).toContain("session_mode");
-    expect(panel).toContain("interaction_kind");
-    // Primary badges not TAP/TAP Learning product names
-    expect(panel).not.toMatch(/\{isTap \? "TAP" : "TAP Learning"\}/);
-    expect(panel).not.toContain("Exercise TAP (no dialogue)");
+  it("guest links panel is absent", () => {
+    expect(existsSync(join(ROOT, "components/WorkspaceGuestLinksPanel.tsx"))).toBe(false);
   });
 
   it("Settings / dashboard / workspace chrome avoid TAP/TAP Learning product brands", () => {
@@ -201,8 +194,7 @@ describe("structural: workspace + settings have no With AI vs Solo choice", () =
     expect(integration).not.toMatch(/shareable practice links/i);
     expect(integration).not.toContain("WorkspaceGuestLinksPanel");
     expect(integration).not.toContain("WorkspaceKnowledgePortalPanel");
-    const guest = read("components/WorkspaceGuestLinksPanel.tsx");
-    expect(guest).toContain('t("planView.guestLinksBrowseEmpty")');
+    expect(existsSync(join(ROOT, "components/WorkspaceGuestLinksPanel.tsx"))).toBe(false);
 
     const dashboard = read("app/dashboard/page.tsx");
     expect(dashboard).not.toContain(">TAP sessions<");
@@ -251,9 +243,7 @@ describe("structural: workspace + settings have no With AI vs Solo choice", () =
     expect(edit).not.toContain("data-block-edit-allow-solo");
     expect(edit).not.toContain("data-block-edit-allow-dialog");
 
-    const guest = read("components/WorkspaceGuestLinksPanel.tsx");
-    expect(guest).not.toContain("explore_solo");
-    expect(guest).not.toContain("drill_solo");
+    expect(existsSync(join(ROOT, "components/WorkspaceGuestLinksPanel.tsx"))).toBe(false);
   });
 
   it("workspace TAP route accepts minutes and locks duration in the client", () => {

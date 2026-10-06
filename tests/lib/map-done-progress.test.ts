@@ -238,8 +238,7 @@ describe("workspace Mark as Done + tile glyphs", () => {
     expect(pane).toContain("onMarkDone");
     expect(chapter).toContain("onChapterDone");
     expect(chapter).not.toContain('t("chapterMap.complete")');
-    expect(read("components/ChapterMapPanel.tsx")).toContain("onMarkChapterCompleted");
-    expect(read("components/ChapterMapPanel.tsx")).toContain("learnerScopeId");
+    expect(existsSync(join(ROOT, "components/ChapterMapPanel.tsx"))).toBe(false);
 
     expect(grid).toContain("ileChapterCellChrome");
     expect(grid).toContain("resolveOccupiedMapTileChrome");

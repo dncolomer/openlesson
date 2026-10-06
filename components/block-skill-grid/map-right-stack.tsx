@@ -8,7 +8,6 @@ import {
 } from "@/lib/map-annotation-layers";
 import { shouldShowMapNotesPlaneToggle, toggleMapNotesPlaneVisible } from "@/lib/learner-map-notes";
 import { MINIMAP_FRAME_HEIGHT, MINIMAP_FRAME_WIDTH } from "@/lib/map-minimap-clusters";
-import type { WorkspaceInteractionMode, WorkspaceMapToggleId } from "@/lib/workspace-mode";
 import type { MapOverlayPersistScope } from "@/lib/map-overlay-persist";
 
 export function MapRightStack({
@@ -16,16 +15,10 @@ export function MapRightStack({
   mountMapNotes,
   overlayPersist,
   workspaceId,
-  onMapExploreToggle: _onMapExploreToggle,
-  onInteractionModeChange: _onInteractionModeChange,
-  onMapToggle: _onMapToggle,
-  mapToggleIds: _mapToggleIds,
   mapNotesCount,
   annotationLayers,
   minimapStackRef,
   learnerMode,
-  interactionModeProp: _interactionModeProp,
-  mapExploreOpen: _mapExploreOpen,
   mapNotesPlaneVisible,
   setMapNotesPlaneVisible,
   handleMapNoteAddAtCenter,
@@ -45,18 +38,10 @@ export function MapRightStack({
   mountMapNotes: boolean;
   overlayPersist: MapOverlayPersistScope | null;
   workspaceId?: string;
-  onMapExploreToggle?: () => void;
-  onInteractionModeChange?: (mode: WorkspaceInteractionMode) => void;
-  /** Unified 3-state under-minimap handler (Build / Play / Explore). */
-  onMapToggle?: (id: WorkspaceMapToggleId) => void;
-  /** Which Build / Play / Explore segments to render. Default: all three. */
-  mapToggleIds?: readonly WorkspaceMapToggleId[];
   mapNotesCount: number;
   annotationLayers: AnnotationLayer[];
   minimapStackRef: RefObject<HTMLDivElement | null>;
   learnerMode: boolean;
-  interactionModeProp?: "creator" | "learner";
-  mapExploreOpen: boolean;
   mapNotesPlaneVisible: boolean;
   setMapNotesPlaneVisible: (next: boolean | ((prev: boolean) => boolean)) => void;
   handleMapNoteAddAtCenter: () => void;

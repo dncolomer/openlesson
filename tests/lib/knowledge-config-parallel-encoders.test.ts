@@ -3,7 +3,7 @@
  * Exercises real shipped encode/registry/store helpers (no re-implementations).
  */
 import { describe, expect, it } from "vitest";
-import { writeFileSync, mkdirSync, readFileSync } from "fs";
+import { writeFileSync, mkdirSync, existsSync } from "fs";
 import { join } from "path";
 import {
   ALL_KNOWLEDGE_CONFIG_MODELS,
@@ -494,12 +494,8 @@ describe("product defaults stay on knowledgecfg-v1-d64", () => {
     expect(EMBEDDING_MODEL_CATALOG[0].id).toBe(KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID);
   });
 
-  it("UI MapOfKnowledgeClient initializes embedding model to v1", () => {
-    const src = readFileSync(join(__dirname, "../../components/MapOfKnowledgeClient.tsx"), "utf8");
-    expect(src).toContain("KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID");
-    expect(src).toMatch(
-      /useState<\s*string\s*>\(\s*\n?\s*KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID/,
-    );
+  it("Map of Knowledge page client is absent", () => {
+    expect(existsSync(join(__dirname, "../../components/MapOfKnowledgeClient.tsx"))).toBe(false);
   });
 });
 

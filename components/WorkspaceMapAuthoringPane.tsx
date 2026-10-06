@@ -28,10 +28,9 @@ export type MapAuthoringBlock = {
 };
 
 /**
- * Map right pane when no block / empty create surface is open, OR when Map
- * Explore is toggled open via the floating search control.
+ * Map right pane when no block / empty create surface is open.
  *
- * - exploreOpen=false (default empty selection): short idle tip only.
+ * - exploreOpen=false: short idle tip only.
  * - exploreOpen=true: full map explore UI (search / suggest / overview / area).
  */
 export function WorkspaceMapAuthoringPane({
@@ -50,7 +49,6 @@ export function WorkspaceMapAuthoringPane({
   onStartSelectiveDraw,
   onClearSelectiveOverlay,
   onCreateNoteFromSummary,
-  exploreTargetCell = null,
   busy = false,
 }: {
   canEdit: boolean;
@@ -60,7 +58,7 @@ export function WorkspaceMapAuthoringPane({
   locale?: string;
   blocks?: MapAuthoringBlock[];
   unusableCells?: UnusableCell[] | null;
-  /** When true, show map explore UI (FAB open). Default idle empty pane. */
+  /** When true, show map explore UI on the idle pane. */
   exploreOpen?: boolean;
   workspaceTitle?: string | null;
   rootTopic?: string | null;
@@ -82,7 +80,6 @@ export function WorkspaceMapAuthoringPane({
     y: number;
     source: MapNoteSource;
   }) => void;
-  exploreTargetCell?: { row: number; col: number } | null;
   busy?: boolean;
 }) {
   if (exploreOpen) {
@@ -108,7 +105,6 @@ export function WorkspaceMapAuthoringPane({
           onStartSelectiveDraw={onStartSelectiveDraw}
           onClearSelectiveOverlay={onClearSelectiveOverlay}
           onCreateNoteFromSummary={onCreateNoteFromSummary}
-          exploreTargetCell={exploreTargetCell}
           busy={busy}
         />
       </div>
@@ -127,8 +123,8 @@ export function WorkspaceMapAuthoringPane({
       </p>
       <p className="max-w-xs text-xs leading-relaxed text-neutral-500">
         {canEdit
-          ? "Click a block or empty cells to open the drawers. Scroll to zoom. Use the search control on the map to explore."
-          : "Double-click a block to open detail. Use the search control on the map to explore."}
+          ? "Click a block or empty cells to open the drawers. Scroll to zoom."
+          : "Double-click a block to open detail."}
       </p>
       {interactionMode === "creator" ? (
         <p className="text-[11px] text-neutral-600">

@@ -16,14 +16,8 @@ function read(rel: string) {
 }
 
 describe("TAP session link post-session thank-you", () => {
-  it("guest links UI does not offer after-session action selectors", () => {
-    const panel = read("components/WorkspaceGuestLinksPanel.tsx");
-    expect(panel).not.toContain("tapLinksPostSession");
-    expect(panel).not.toContain("setPostSession");
-    expect(panel).not.toContain("redirect_workspace");
-    expect(panel).not.toContain("redirect_url");
-    // Still creates links with a fixed post_session default for DB compatibility.
-    expect(panel).toContain('post_session: "show_results"');
+  it("guest links panel is absent", () => {
+    expect(existsSync(join(ROOT, "components/WorkspaceGuestLinksPanel.tsx"))).toBe(false);
   });
 
   it("TapScoreClient privateToken path shows thank-you + explore landing CTA", () => {

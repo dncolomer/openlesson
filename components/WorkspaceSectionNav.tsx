@@ -3,15 +3,7 @@
 import type { ReactNode } from "react";
 import { useI18n } from "@/lib/i18n";
 import type { WorkspaceSectionKey } from "@/lib/workspace-sections";
-import {
-  WORKSPACE_INTERACTION_MODES,
-  resolveWorkspaceMapToggleId,
-  workspaceModeControlMounted,
-  workspaceModeDisplayLabel,
-  workspacePresentsModeChoice,
-  type WorkspaceInteractionMode,
-  type WorkspaceMapToggleId,
-} from "@/lib/workspace-mode";
+import type { WorkspaceInteractionMode } from "@/lib/workspace-mode";
 
 export type WorkspaceSectionNavItem = {
   key: WorkspaceSectionKey;
@@ -26,15 +18,8 @@ interface WorkspaceSectionNavProps {
   variant?: "bar" | "pills";
   /** Workspace name shown on the right of the section tabs. */
   workspaceTitle?: string | null;
-  /** Build (authoring) vs Play (practice) mode (toggle next to workspace name). */
+  /** Learner shell vs creator shell. There is no mode toggle. */
   interactionMode?: WorkspaceInteractionMode;
-  onInteractionModeChange?: (mode: WorkspaceInteractionMode) => void;
-  /** Show mode toggle (default true when onInteractionModeChange provided). */
-  showModeToggle?: boolean;
-  /** Play / Build / Explore, rendered beside the workspace name. */
-  onMapToggle?: (id: WorkspaceMapToggleId) => void;
-  mapToggleIds?: readonly WorkspaceMapToggleId[];
-  exploreOpen?: boolean;
 }
 
 export function WorkspaceSectionNav({
@@ -44,94 +29,10 @@ export function WorkspaceSectionNav({
   variant = "bar",
   workspaceTitle,
   interactionMode = "learner",
-  onInteractionModeChange,
-  showModeToggle,
-  onMapToggle,
-  mapToggleIds,
-  exploreOpen = false,
 }: WorkspaceSectionNavProps) {
   const { t } = useI18n();
   const navLabel = t("planView.topLevelSectionsNav");
   const title = workspaceTitle?.trim() || "";
-  const modeToggle =
-    showModeToggle !== false && Boolean(onInteractionModeChange) && !onMapToggle;
-  const toggleIds = mapToggleIds ?? [];
-  const mountModeControl = workspaceModeControlMounted({
-    presentsChoice: workspacePresentsModeChoice(),
-    toggleIds,
-  });
-  const currentToggle = resolveWorkspaceMapToggleId({
-    interactionMode,
-    exploreOpen,
-  });
-
-  const mapModeControl = mountModeControl && onMapToggle ? (
-    <div
-      className="flex shrink-0 items-center gap-0.5 rounded-none border border-neutral-800 bg-neutral-950/80 p-0.5"
-      data-workspace-mode-toggle
-      data-workspace-mode-by-title
-      data-workspace-mode-toggle-states={toggleIds
-        .map((id) => workspaceModeDisplayLabel(id).toLowerCase())
-        .join(",")}
-      role="group"
-      aria-label="Workspace mode"
-    >
-      {toggleIds.map((id) => {
-        const active = currentToggle === id;
-        const label = workspaceModeDisplayLabel(id);
-        return (
-          <button
-            key={id}
-            type="button"
-            data-workspace-mode={id}
-            data-active={active ? "true" : "false"}
-            aria-pressed={active}
-            aria-label={label}
-            onClick={() => onMapToggle(id)}
-            className={`rounded-none px-2 py-1 text-[10px] font-medium uppercase tracking-wide transition ${
-              active
-                ? "bg-white/15 text-white"
-                : "text-neutral-500 hover:text-neutral-300"
-            }`}
-          >
-            {label}
-          </button>
-        );
-      })}
-    </div>
-  ) : null;
-
-  const modeControl = mountModeControl && modeToggle ? (
-    <div
-      className="flex shrink-0 items-center gap-0.5 rounded-none border border-neutral-800 bg-neutral-950/80 p-0.5"
-      data-workspace-mode-toggle
-      role="group"
-      aria-label="Workspace mode"
-    >
-      {WORKSPACE_INTERACTION_MODES.map((id) => {
-        const active = interactionMode === id;
-        const label = workspaceModeDisplayLabel(id);
-        return (
-          <button
-            key={id}
-            type="button"
-            data-workspace-mode={id}
-            data-active={active ? "true" : "false"}
-            aria-pressed={active}
-            aria-label={label}
-            onClick={() => onInteractionModeChange?.(id)}
-            className={`rounded-none px-2 py-1 text-[10px] font-medium uppercase tracking-wide transition ${
-              active
-                ? "bg-white/15 text-white"
-                : "text-neutral-500 hover:text-neutral-300"
-            }`}
-          >
-            {label}
-          </button>
-        );
-      })}
-    </div>
-  ) : null;
 
   if (variant === "pills") {
     return (
@@ -164,7 +65,6 @@ export function WorkspaceSectionNav({
           })}
         </nav>
         <div className="flex min-w-0 shrink-0 items-center gap-2">
-          {mapModeControl ?? modeControl}
           {title ? (
             <p
               className="max-w-[40%] shrink-0 truncate text-right text-xs font-medium text-neutral-300"
@@ -227,7 +127,6 @@ export function WorkspaceSectionNav({
         <div className="min-w-0 flex-1" />
       )}
       <div className="flex min-w-0 shrink-0 items-center gap-2 px-2 sm:px-3">
-        {mapModeControl ?? modeControl}
         {title ? (
           <p
             className="min-w-0 max-w-[12rem] truncate text-right text-sm font-medium text-neutral-200 sm:max-w-sm"

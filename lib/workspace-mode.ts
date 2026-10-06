@@ -16,17 +16,14 @@ import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
 
 export type WorkspaceInteractionMode = "creator" | "learner";
 
-/** Under-minimap 3-state control: Play / Build / Explore. */
-export type WorkspaceMapToggleId = WorkspaceInteractionMode | "explore";
-
-/** Map workspaces open in Play (practice). */
+/** Map workspaces open in the learner shell. Verification opens in the creator shell. */
 export const DEFAULT_WORKSPACE_INTERACTION_MODE: WorkspaceInteractionMode =
   "learner";
 
 /**
- * Knowledge Region has no map, and the Build control lives on that map.
- * Open those shells in Build so Goals / Knowledge / Settings are reachable.
- * Standard workspaces stay on Play.
+ * Verification workspaces have no map. They use the creator shell so Goals
+ * and Settings stay reachable. Learning workspaces use the learner shell;
+ * authoring is a separate capability, not a second mode.
  */
 export function defaultInteractionModeForWorkspace(
   kind: unknown,
@@ -36,41 +33,16 @@ export function defaultInteractionModeForWorkspace(
     : DEFAULT_WORKSPACE_INTERACTION_MODE;
 }
 
-export const WORKSPACE_INTERACTION_MODES: readonly WorkspaceInteractionMode[] = [
-  "learner",
-  "creator",
-] as const;
-
-export const WORKSPACE_MAP_TOGGLE_IDS: readonly WorkspaceMapToggleId[] = [
-  "learner",
-  "creator",
-  "explore",
-] as const;
-
-/** The workspace does not ask the user to choose Play, Build, or Explore. */
-export function workspacePresentsModeChoice(): boolean {
-  return false;
-}
-
 /**
- * No Play / Build / Explore segments are rendered.
- * `allowCreator` / `allowExplore` stay on the signature for older callers.
+ * The shell is fixed. Practice-only All-you-can-learn stays on the learner
+ * shell, including verification workspaces.
  */
-export function visibleWorkspaceMapToggleIds(_input?: {
-  allowCreator?: boolean;
-  allowExplore?: boolean;
-}): WorkspaceMapToggleId[] {
-  return [];
-}
-
-/** True only when a mode choice is still offered and it has segments. */
-export function workspaceModeControlMounted(input?: {
-  presentsChoice?: boolean;
-  toggleIds?: readonly unknown[];
-}): boolean {
-  const presents = input?.presentsChoice ?? workspacePresentsModeChoice();
-  const ids = input?.toggleIds ?? visibleWorkspaceMapToggleIds();
-  return Boolean(presents && ids.length > 0);
+export function resolveFixedWorkspaceInteractionMode(input: {
+  workspaceKind?: unknown;
+  practiceOnly?: boolean;
+}): WorkspaceInteractionMode {
+  if (input.practiceOnly) return "learner";
+  return defaultInteractionModeForWorkspace(input.workspaceKind);
 }
 
 /** Learning maps keep Calibrate, Learn, and Drill. Verification has no map. */
@@ -105,7 +77,7 @@ export function workspaceLearnerPaneMounted(input: {
   return input.learnerActionRequested;
 }
 
-/** Idle explore header. It does not name Play, Build, or Explore. */
+/** Idle explore header. */
 export function workspaceExpandMapTitle(): string {
   return "Expand Map";
 }
@@ -134,72 +106,6 @@ export function workspaceIdlePaneShowsExplore(input?: {
   allowExplore?: boolean;
 }): boolean {
   return input?.allowExplore !== false;
-}
-
-/**
- * User-visible labels for the workspace mode toggle (under minimap).
- * Wire/state ids stay `"creator"` | `"learner"` | `"explore"`; display is
- * Play / Build / Explore.
- */
-export const WORKSPACE_MODE_DISPLAY_LABELS: Readonly<
-  Record<WorkspaceMapToggleId, string>
-> = {
-  creator: "Build",
-  learner: "Play",
-  explore: "Explore",
-} as const;
-
-/** Display label for a toggle id (Play / Build / Explore). */
-export function workspaceModeDisplayLabel(
-  mode: WorkspaceMapToggleId,
-): string {
-  return WORKSPACE_MODE_DISPLAY_LABELS[mode];
-}
-
-export function isWorkspaceMapToggleId(
-  value: unknown,
-): value is WorkspaceMapToggleId {
-  return value === "creator" || value === "learner" || value === "explore";
-}
-
-/** Which under-minimap segment is lit. Explore wins over Build/Play. */
-export function resolveWorkspaceMapToggleId(input: {
-  interactionMode: WorkspaceInteractionMode | null | undefined;
-  exploreOpen?: boolean;
-}): WorkspaceMapToggleId {
-  if (input.exploreOpen) return "explore";
-  return normalizeWorkspaceInteractionMode(input.interactionMode);
-}
-
-/**
- * Next Play / Build / Explore state after a toggle click.
- * Explore keeps the current Build/Play shell underneath; leaving Explore
- * closes the overlay without inventing a mode.
- */
-/**
- * Play / Build / Explore keep the current map selection (sole block, multi,
- * empty cells). Authoring pick chrome may still reset.
- */
-export function workspaceModeFlipClearsMapSelection(): boolean {
-  return false;
-}
-
-export function nextWorkspaceMapToggle(input: {
-  clicked: unknown;
-  interactionMode: WorkspaceInteractionMode | null | undefined;
-  exploreOpen?: boolean;
-}): {
-  interactionMode: WorkspaceInteractionMode;
-  exploreOpen: boolean;
-} {
-  const current = normalizeWorkspaceInteractionMode(input.interactionMode);
-  if (input.clicked === "explore") {
-    return { interactionMode: current, exploreOpen: true };
-  }
-  if (input.clicked === "creator" || input.clicked === "learner") {
-    return { interactionMode: input.clicked, exploreOpen: false };
-  }
-  return { interactionMode: current, exploreOpen: Boolean(input.exploreOpen) };
 }
 
 export function isWorkspaceInteractionMode(

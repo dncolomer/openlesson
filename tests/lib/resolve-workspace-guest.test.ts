@@ -4,7 +4,7 @@ import {
   isUuid,
   ResolveWorkspaceGuestError,
 } from "@/lib/pow-api/resolve-workspace-guest";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 function chainableGuest(row: Record<string, unknown> | null) {
@@ -156,10 +156,9 @@ describe("TAP/TAP Learning link reuse wiring", () => {
     expect(ile).toContain("assertReusableWorkspaceGuest");
   });
 
-  it("TAP/TAP Learning reissue rotates token on the same link card (keeps params)", () => {
+  it("TAP/TAP Learning reissue helpers rotate token; guest links panel is absent", () => {
     const tap = readFileSync(join(root, "lib/pow-api/create-tap-link.ts"), "utf8");
     const ile = readFileSync(join(root, "lib/pow-api/create-ile-link.ts"), "utf8");
-    const panel = readFileSync(join(root, "components/WorkspaceGuestLinksPanel.tsx"), "utf8");
     const tapRoute = readFileSync(join(root, "app/api/workspace/tap-links/route.ts"), "utf8");
     const ileRoute = readFileSync(join(root, "app/api/workspace/ile-links/route.ts"), "utf8");
 
@@ -169,11 +168,6 @@ describe("TAP/TAP Learning link reuse wiring", () => {
     expect(ile).toContain('status: "pending"');
     expect(tapRoute).toContain("reissueWorkspaceTapLink");
     expect(ileRoute).toContain("reissueWorkspaceIleLink");
-    expect(panel).toContain("reissueTapLink");
-    expect(panel).toContain("reissueIleLink");
-    expect(panel).toContain("reissue_link_id");
-    // UI no longer creates a second card via guest_user_id for reuse.
-    expect(panel).not.toMatch(/createTapLink\("anonymous",\s*\{\s*guestUserId/);
-    expect(panel).not.toMatch(/createIleLink\("anonymous",\s*\{[\s\S]*guestUserId/);
+    expect(existsSync(join(root, "components/WorkspaceGuestLinksPanel.tsx"))).toBe(false);
   });
 });

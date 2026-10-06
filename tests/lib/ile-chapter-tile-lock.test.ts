@@ -157,10 +157,11 @@ describe("TAP Learning chapter unlock highlight", () => {
 describe("chapter map path wiring", () => {
   it("chapter grid omits extra badges and applies unlock-highlight on locked select", () => {
     const grid = readMapGridSurface();
-    const chapter = read("components/ChapterMapPanel.tsx");
+    expect(existsSync(join(ROOT, "components/ChapterMapPanel.tsx"))).toBe(false);
+    const board = read("components/BlockSkillGrid.tsx");
     const mapper = read("lib/chapter-skill-grid.ts");
 
-    expect(chapter).toContain('suggestMode="chapter"');
+    expect(board).toContain('suggestMode === "chapter"');
     expect(grid).toContain("resolveMapOccupiedTileBadges");
     expect(grid).toContain("ileChapterUnlockHighlightIds");
     expect(grid).toContain("isChapterMapTileLocked");
@@ -199,7 +200,7 @@ describe("chapter map path wiring", () => {
     writeScratch(
       "ile-chapter-lock-excerpts.txt",
       [
-        "ChapterMapPanel: suggestMode=chapter",
+        "ChapterMapPanel absent; BlockSkillGrid suggestMode === chapter",
         "BlockSkillGrid: resolveMapOccupiedTileBadges + ileChapterUnlockHighlightIds",
         "BlockSkillGrid: data-ile-chapter-unlock-highlight",
         "sessionStepsToSkillGridNodes: no implicit order DAG",

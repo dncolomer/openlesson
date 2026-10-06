@@ -23,21 +23,27 @@ const FORBIDDEN =
   /\b(bg|text|border|border-[trblxyse]|ring|from|to|via|fill|stroke|outline|placeholder|divide)-(cyan|blue|sky|indigo|violet|purple|fuchsia|yellow|amber)-/;
 
 const SHELL_PANELS = [
-  "components/WorkspaceGuestLinksPanel.tsx",
   "components/CustomVerificationModelsPanel.tsx",
   "components/KnowledgeConfigTrajectoryPanel.tsx",
-  "components/WorkspaceModeSelect.tsx",
   "components/ui/ConfirmDialog.tsx",
   "components/ui/DialogFrame.tsx",
   "components/StrengthsGapsPanel.tsx",
   "components/WorkspacePerformancePanel.tsx",
   "components/ModelLoadingModal.tsx",
+];
+
+const REMOVED_SHELL_PANELS = [
+  "components/WorkspaceGuestLinksPanel.tsx",
+  "components/WorkspaceModeSelect.tsx",
   "components/ProbesPanel.tsx",
   "components/MobileProbesTab.tsx",
 ];
 
 describe("UI monochrome chrome (white outline aesthetic)", () => {
   it("shell panels have no forbidden blue/cyan/purple/yellow Tailwind chrome", () => {
+    for (const rel of REMOVED_SHELL_PANELS) {
+      expect(existsSync(join(ROOT, rel)), rel).toBe(false);
+    }
     for (const rel of SHELL_PANELS) {
       const src = read(rel);
       const hit = src.match(FORBIDDEN);
@@ -45,26 +51,18 @@ describe("UI monochrome chrome (white outline aesthetic)", () => {
     }
   });
 
-  it("loading spinners use white/neutral tops, not cyan/purple/amber", () => {
+  it("loading modal uses white/neutral tops; probe panels are absent", () => {
     const modal = read("components/ModelLoadingModal.tsx");
     expect(modal).toMatch(/animate-spin/);
     expect(modal).not.toMatch(/border-t-(cyan|purple|blue|amber|yellow|violet)-/);
     expect(modal).toMatch(/border-t-white|border-t-neutral-/);
 
-    const probes = read("components/ProbesPanel.tsx");
-    expect(probes).not.toMatch(/border-t-(cyan|purple|blue|amber|yellow|violet)-/);
-    expect(probes).toMatch(/border-t-white|border-t-neutral-/);
-
-    const mobile = read("components/MobileProbesTab.tsx");
-    expect(mobile).not.toMatch(/border-t-(cyan|purple|blue|amber|yellow|violet)-/);
-    expect(mobile).toMatch(/border-t-white|border-t-neutral-/);
+    expect(existsSync(join(ROOT, "components/ProbesPanel.tsx"))).toBe(false);
+    expect(existsSync(join(ROOT, "components/MobileProbesTab.tsx"))).toBe(false);
   });
 
-  it("Guest Links + TAPBench primary CTAs are white/black monochrome", () => {
-    const guest = read("components/WorkspaceGuestLinksPanel.tsx");
-    expect(guest).toMatch(/bg-white[\s\S]{0,80}text-black|text-black[\s\S]{0,80}bg-white/);
-    expect(guest).toContain("data-guest-links-create-submit");
-    expect(guest).not.toMatch(/bg-cyan-|bg-blue-/);
+  it("TAPBench landing CTAs are white/black monochrome; guest links panel is absent", () => {
+    expect(existsSync(join(ROOT, "components/WorkspaceGuestLinksPanel.tsx"))).toBe(false);
 
     const landing = read("components/TapbenchLanding.tsx");
     expect(landing).toMatch(/bg-white|text-white/);

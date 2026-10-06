@@ -245,15 +245,11 @@ describe("session intro visuals", () => {
     expect(exercise).toContain("renderStep3Action");
     expect(exercise).toContain("TapStartingTopicCards");
 
-    const ileLearningMount = read("components/ProbesPanel.tsx");
-    const ileMobile = read("components/MobileProbesTab.tsx");
+    expect(existsSync(join(ROOT, "components/ProbesPanel.tsx"))).toBe(false);
+    expect(existsSync(join(ROOT, "components/MobileProbesTab.tsx"))).toBe(false);
     const ileHelios = read("components/SessionHeliosPanel.tsx");
     const ileChrome = read("components/session-view/session-chrome.tsx");
     const ileView = read("components/SessionView.tsx");
-    expect(ileLearningMount).toContain("SessionOnboardingGuide");
-    expect(ileLearningMount).toContain("showStartAction");
-    expect(ileMobile).toContain("SessionOnboardingGuide");
-    expect(ileMobile).toContain("showStartAction");
     expect(ileHelios).not.toContain("SessionOnboardingGuide");
     expect(ileChrome).toContain("data-ile-intro-widget");
     expect(ileView).toContain("SessionOnboardingGuide");

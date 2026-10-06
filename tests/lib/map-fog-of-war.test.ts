@@ -336,7 +336,7 @@ describe("map fog-of-war wiring (workspace + TAP Learning, overlay only)", () =>
     const grid = readMapGridSurface();
     const authoring = read("components/block-skill-grid/use-map-authoring.ts");
     const viewport = read("components/block-skill-grid/use-map-viewport.ts");
-    const chapter = read("components/ChapterMapPanel.tsx");
+    expect(existsSync(join(ROOT, "components/ChapterMapPanel.tsx"))).toBe(false);
     const sessionList = read("components/SessionList.tsx");
     const workspace = readWorkspaceViewSurface();
     const emptyPane = read("lib/empty-map-pane.ts");
@@ -358,26 +358,23 @@ describe("map fog-of-war wiring (workspace + TAP Learning, overlay only)", () =>
     expect(world).toContain('suggestMode === "chapter"');
     expect(world).toContain("{ opacity: 1, fullyVisible: true }");
     expect(authoring).toContain("canBuildOnFogVisibleEmpty");
-    expect(authoring).toContain("mapExploreOpen");
+    expect(authoring).not.toContain("mapExploreOpen");
     expect(grid).toContain("handleEmptyCellPointerDown");
     expect(emptyPane).toContain("createMapFogLookup");
     expect(emptyPane).toContain("suggestEmptySpotsForTopic");
 
     expect(viewport).toContain("getVisibleGridCells(");
     expect(grid).toContain("buildSkillGridLayout");
-    expect(chapter).toContain("BlockSkillGrid");
-    expect(chapter).toContain('suggestMode="chapter"');
+    expect(host).toContain('suggestMode === "chapter"');
     expect(sessionList).toContain("BlockSkillGrid");
     expect(sessionList).toContain("learnerMode={learnerMode}");
-    expect(sessionList).toContain("mapExploreOpen={mapExploreOpen}");
+    expect(sessionList).not.toContain("mapExploreOpen");
     expect(workspace).toContain("<SessionList");
 
-    const exploreIdx = authoring.indexOf("if (mapExploreOpen) {");
     const fogGateIdx = authoring.indexOf(
       "!canBuildOnFogVisibleEmpty(fogLookup(cell.row, cell.col))",
     );
-    expect(exploreIdx).toBeGreaterThan(0);
-    expect(fogGateIdx).toBeGreaterThan(exploreIdx);
+    expect(fogGateIdx).toBeGreaterThan(0);
 
     const cells = getVisibleGridCells(400, 300, 0, 0, 1, 1);
     expect(cells.length).toBeGreaterThan(10);
@@ -390,8 +387,8 @@ describe("map fog-of-war wiring (workspace + TAP Learning, overlay only)", () =>
         "authoring_gate=" + authoring.includes("canBuildOnFogVisibleEmpty"),
         "host_drag=" + host.includes("dragOffset: blockDragOffset"),
         "host_extra=" + host.includes("extraRevealCells"),
-        "chapter_grid=" + chapter.includes("BlockSkillGrid"),
-        "session_explore=" + sessionList.includes("mapExploreOpen={mapExploreOpen}"),
+        "chapter_grid=" + host.includes('suggestMode === "chapter"'),
+        "session_explore=" + sessionList.includes("mapExploreOpen"),
         "session_play=" + sessionList.includes("learnerMode={learnerMode}"),
         "viewport_cells=" + viewport.includes("getVisibleGridCells("),
         "visible_cell_count=" + cells.length,

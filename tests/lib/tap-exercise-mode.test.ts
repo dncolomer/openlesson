@@ -341,13 +341,8 @@ describe("resolveExercisePromptAfterIntro", () => {
 });
 
 describe("structural: Settings, block tools, separate Exercise UI", () => {
-  it("Settings guest-link create wires drill solo style into interaction_kind payload", () => {
-    const panel = read("components/WorkspaceGuestLinksPanel.tsx");
-    expect(panel).toContain("data-guest-link-exercise-tap");
-    expect(panel).toContain("drillModalitySolo");
-    expect(panel).toContain("interaction_kind");
-    expect(panel).toContain("resolveProductIntent");
-    expect(panel).toContain("productIntent");
+  it("guest links panel is absent", () => {
+    expect(existsSync(join(ROOT, "components/WorkspaceGuestLinksPanel.tsx"))).toBe(false);
   });
 
   it("block detail exposes Explore/Drill intent tools (always With AI)", () => {

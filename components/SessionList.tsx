@@ -74,14 +74,6 @@ interface SessionListProps {
     y: number;
     source?: "creator" | "learner";
   } | null;
-  /** Map explore toggle under minimap (above Add Note). */
-  mapExploreOpen?: boolean;
-  onMapExploreToggle?: () => void;
-  onMapToggle?: (id: "creator" | "learner" | "explore") => void;
-  mapToggleIds?: readonly ("creator" | "learner" | "explore")[];
-  /** Build / Play mode toggle under minimap (not in top nav). */
-  interactionMode?: "creator" | "learner";
-  onInteractionModeChange?: (mode: "creator" | "learner") => void;
   /** Unusable map ground cells (path-shaping). */
   unusableCells?: Array<{ row: number; col: number }> | null;
   /** Persist lock-until / unusable ground from left toolbar + selection. */
@@ -202,12 +194,6 @@ export function SessionList({
   selectiveExplanationPolygon = null,
   onSelectiveExplanationComplete,
   injectMapNote = null,
-  mapExploreOpen = false,
-  onMapExploreToggle,
-  onMapToggle,
-  mapToggleIds,
-  interactionMode = "learner",
-  onInteractionModeChange,
   unusableCells = null,
   onMapGround,
   workspaceNotes = null,
@@ -513,12 +499,6 @@ export function SessionList({
             selectiveExplanationPolygon={selectiveExplanationPolygon}
             onSelectiveExplanationComplete={onSelectiveExplanationComplete}
             injectMapNote={injectMapNote}
-            mapExploreOpen={mapExploreOpen}
-            onMapExploreToggle={onMapExploreToggle}
-            onMapToggle={onMapToggle}
-            mapToggleIds={mapToggleIds}
-            interactionMode={interactionMode}
-            onInteractionModeChange={onInteractionModeChange}
             appearingNodeIds={appearingNodeIds}
             onAppearingComplete={() => setAppearingNodeIds([])}
             labels={{

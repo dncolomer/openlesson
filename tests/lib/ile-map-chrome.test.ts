@@ -84,10 +84,9 @@ describe("TAP Learning map-first session chrome (shipped surface)", () => {
     expect(chrome).toContain('id="insights"');
     expect(chrome).toContain('id="chapters"');
     expect(chrome).toContain('id="sensors"');
-    const collapsible = read("components/session-view/ile-collapsible-overlay.tsx");
-    expect(collapsible).toContain("data-ile-overlay-widget");
-    expect(collapsible).toContain("data-ile-widget-collapse");
-    expect(collapsible).toContain("data-ile-overlay-collapsed");
+    expect(
+      existsSync(join(ROOT, "components/session-view/ile-collapsible-overlay.tsx")),
+    ).toBe(false);
     expect(chrome).toContain("heliosOpen");
     expect(view).toContain("heliosOpen={heliosWidgetOpen}");
     expect(view).toContain("introOpen={showWelcomePanel}");
@@ -208,10 +207,9 @@ describe("TAP Learning map-first session chrome (shipped surface)", () => {
     expect(sensors).not.toContain("z-[35]");
     expect(chrome.indexOf("<SessionSidebar")).toBeLessThan(chrome.indexOf("data-ile-tools-widget"));
     expect(chrome.indexOf("data-ile-tools-widget")).toBeLessThan(chrome.indexOf("{voiceBar}"));
-    const frame = read("components/session-view/ile-chapter-widget-frame.tsx");
-    expect(frame).toContain("data-ile-helios-widget");
-    expect(frame).toContain('title = "Work"');
-    expect(frame).toContain("ILE_SESSION_TOP_BAR_PAD_CLASS");
+    expect(
+      existsSync(join(ROOT, "components/session-view/ile-chapter-widget-frame.tsx")),
+    ).toBe(false);
     expect(ILE_POW_RESOURCE_BAR_CLASS).toContain(ILE_POW_RESOURCE_BAR_PAD_CLASS);
     expect(ILE_SESSION_TOP_BAR_PAD_CLASS).toBe("px-3 py-2.5");
     expect(ILE_POW_RESOURCE_BAR_PAD_CLASS).toBe("px-2 py-1.5");
@@ -231,13 +229,6 @@ describe("TAP Learning map-first session chrome (shipped surface)", () => {
     expect(chrome).not.toContain("workCanvasHeaderExtra");
     expect(chrome).toContain("mapInsightsWidget");
     expect(chrome).not.toContain("ILE_MAP_INSIGHTS_WIDGET_CLASS");
-    expect(frame).not.toContain(">Chapter</span>");
-    expect(frame).not.toContain("data-ile-work-canvas-wide-toggle");
-    expect(frame).not.toContain("Exit full screen");
-    expect(frame).not.toContain("Full screen canvas");
-    expect(frame).not.toContain("onToggleWide");
-    expect(frame).toContain("data-ile-helios-widget-minimize");
-    expect(frame).toContain('wide ? "border-0" : "border border-neutral-700"');
     expect(chrome).not.toContain("ILE_MAP_VOICE_BAR_CLEARANCE_CLASS");
     expect(chrome).not.toContain("left-1/2 top-2");
     expect(chrome).not.toContain("-translate-x-1/2");
@@ -373,8 +364,7 @@ describe("TAP Learning map-first session chrome (shipped surface)", () => {
     expect(rail).toContain("overflow-hidden");
     expect(rail).not.toContain("overflow-y-auto");
     const grid = read("components/BlockSkillGrid.tsx");
-    const chapterMap = read("components/ChapterMapPanel.tsx");
-    expect(chapterMap).toContain("SKILL_GRID_ILE_DEFAULT_ZOOM_AT_REFERENCE");
+    expect(existsSync(join(ROOT, "components/ChapterMapPanel.tsx"))).toBe(false);
     expect(grid).toContain("defaultZoomAtReference");
     expect(grid).toContain("overlayAnchorClass");
     expect(grid).toContain('suggestMode === "chapter" ? "top-12" : "top-2"');
@@ -393,9 +383,7 @@ describe("TAP Learning map-first session chrome (shipped surface)", () => {
     expect(helios).not.toContain("<SlidingTranscript");
     expect(helios).not.toContain("data-ile-voice-bar");
 
-    const chapter = read("components/ChapterMapPanel.tsx");
-    expect(chapter).not.toContain("data-ile-chapter-inspector");
-    expect(chapter).not.toContain('t("chapterMap.markDone")');
+    expect(existsSync(join(ROOT, "components/ChapterMapPanel.tsx"))).toBe(false);
     expect(chrome).not.toContain("ILE_MAP_VOICE_BAR_CLEARANCE_CLASS");
     expect(ILE_MAP_VOICE_BAR_CLEARANCE_CLASS).toBe("bottom-12");
     const heliosActions = read("components/session-view/ile-chapter-helios-actions.tsx");

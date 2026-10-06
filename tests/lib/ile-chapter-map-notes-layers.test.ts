@@ -150,7 +150,8 @@ describe("TAP Learning chapter-map notes + layers persist (shipped helpers)", ()
 describe("TAP Learning chapter-map chrome (shipped source + frame constants)", () => {
   it("chapter map mounts notes/layers without a workspace id", () => {
     const grid = readMapGridSurface();
-    const chapter = read("components/ChapterMapPanel.tsx");
+    expect(existsSync(join(ROOT, "components/ChapterMapPanel.tsx"))).toBe(false);
+    const board = read("components/BlockSkillGrid.tsx");
     expect(grid).toContain("resolveMapOverlayPersistScope");
     expect(grid).toContain('mapKind: suggestMode === "chapter" ? "chapter"');
     expect(grid).toContain("overlayPersist");
@@ -158,33 +159,25 @@ describe("TAP Learning chapter-map chrome (shipped source + frame constants)", (
     expect(grid).toContain("data-annotation-layers-stack");
     expect(grid).toContain("data-learner-note-add");
     expect(grid).toContain("minimapHidden");
-    expect(chapter).toContain('suggestMode="chapter"');
-    expect(chapter).toContain("sessionId={sessionId}");
-    expect(chapter).toContain("BlockSkillGrid");
+    expect(board).toContain('suggestMode === "chapter"');
 
     writeScratch(
       "ile-chapter-notes-layers-excerpts.txt",
       [
-        "ChapterMapPanel: BlockSkillGrid suggestMode=chapter sessionId",
-        "BlockSkillGrid: overlayPersist chapter scope + notes/layers chrome",
+        "ChapterMapPanel absent",
+        "BlockSkillGrid: suggestMode === chapter + overlayPersist chapter scope + notes/layers chrome",
       ].join("\n"),
     );
   });
 
-  it("continue welcome preview does not mount notes or drawing layers", () => {
-    const preview = read("components/session-view/ile-continue-map-preview.tsx");
-    expect(preview).toContain("viewOnly");
-    expect(preview).toContain("showMinimap={false}");
-    expect(preview).not.toContain("sessionId=");
-    expect(preview).not.toContain("suggestMode=");
-    expect(preview).not.toContain("ileContinueMapOverlayInput");
-    expect(preview).not.toContain("learnerScopeId");
+  it("continue welcome preview file is absent", () => {
+    expect(
+      existsSync(join(ROOT, "components/session-view/ile-continue-map-preview.tsx")),
+    ).toBe(false);
 
     writeScratch(
       "ile-continue-preview-notes-layers.txt",
-      ["IleContinueMapPreview: chapters only — no notes or drawing layers"].join(
-        "\n",
-      ),
+      ["ile-continue-map-preview.tsx absent"].join("\n"),
     );
   });
 

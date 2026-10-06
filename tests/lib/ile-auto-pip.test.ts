@@ -56,10 +56,12 @@ describe("TAP Learning picture-in-picture is removed", () => {
     const compact = read("lib/ile-compact-window.ts");
     const capture = read("lib/screen-capture.ts");
     const policy = read("lib/ile-blur-screenshare.ts");
-    const frame = read("components/session-view/ile-chapter-widget-frame.tsx");
 
     expect(existsSync(join(ROOT, "lib/ile-auto-pip.ts"))).toBe(false);
     expect(existsSync(join(ROOT, "components/IleCompactStashWindow.tsx"))).toBe(false);
+    expect(
+      existsSync(join(ROOT, "components/session-view/ile-chapter-widget-frame.tsx")),
+    ).toBe(false);
     expect(view).not.toContain('renderWorkCanvas("pip")');
     expect(view).not.toContain("openManualPicInPic");
     expect(view).not.toContain("showOpenPicInPic");
@@ -87,7 +89,6 @@ describe("TAP Learning picture-in-picture is removed", () => {
     expect(capture).not.toContain('source === "pip"');
     expect(capture).not.toContain("adoptScreenCaptureStreamOnOpener");
     expect(capture).toContain("getDisplayMedia");
-    expect(frame).not.toContain("IleChapterPipFrame");
 
     mkdirSync(SCRATCH, { recursive: true });
     writeFileSync(

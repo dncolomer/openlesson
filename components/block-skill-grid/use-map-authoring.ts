@@ -83,7 +83,6 @@ export function useMapAuthoring(input: {
   learnerMode: boolean;
   viewOnly: boolean;
   canEdit: boolean;
-  mapExploreOpen?: boolean;
   prereqEdit: PrereqEditState;
   setPrereqEdit: (next: PrereqEditState | ((prev: PrereqEditState) => PrereqEditState)) => void;
   prereqEditRef: { current: PrereqEditState };
@@ -212,7 +211,6 @@ export function useMapAuthoring(input: {
     learnerMode,
     viewOnly,
     canEdit,
-    mapExploreOpen = false,
     prereqEdit,
     setPrereqEdit,
     prereqEditRef,
@@ -678,11 +676,6 @@ export function useMapAuthoring(input: {
 
       if (busy) return;
       if (isCellOccupied(occupancy, cell.row, cell.col)) return;
-      if (mapExploreOpen) {
-        if (unusableKeys.has(`${cell.row}:${cell.col}`)) return;
-        applyEmptyCellSelection(cell, false);
-        return;
-      }
       if (!canEdit) return;
       // Lasso modes own the gesture — never open add or select empties from click.
       if (isLassoModeTool(activeToolRef.current)) return;
@@ -747,7 +740,6 @@ export function useMapAuthoring(input: {
       applyEmptyCellSelection,
       busy,
       canEdit,
-      mapExploreOpen,
       cloneArmed,
       cloneSourceBlockId,
       generatorPickActive,

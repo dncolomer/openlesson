@@ -94,7 +94,7 @@ describe("registerMapNewsletterLead — real insert path", () => {
 });
 
 describe("map newsletter UI + API surfaces (no send path)", () => {
-  it("ships newsletter subscribe UI and lead API; no Resend/process-ready path", () => {
+  it("newsletter lead store remains; page client, notify route, and send path are absent", () => {
     const client = join(root, "components/MapOfKnowledgeClient.tsx");
     const notifyApi = join(root, "app/api/map-of-knowledge/notify-when-ready/route.ts");
     const processApi = join(
@@ -105,24 +105,10 @@ describe("map newsletter UI + API surfaces (no send path)", () => {
     const store = join(root, "lib/map-of-knowledge/map-ready-notify-store.ts");
     const knowledgeStore = join(root, "lib/pow-api/knowledge-config-store.ts");
 
-    expect(existsSync(client)).toBe(true);
-    expect(existsSync(notifyApi)).toBe(true);
+    expect(existsSync(client)).toBe(false);
+    expect(existsSync(notifyApi)).toBe(false);
     expect(existsSync(processApi)).toBe(false);
     expect(existsSync(sendMod)).toBe(false);
-
-    const clientSrc = readFileSync(client, "utf8");
-    expect(clientSrc).toContain("data-map-newsletter-subscribe");
-    expect(clientSrc).toContain("data-map-newsletter-subscribe-note");
-    expect(clientSrc).toContain("MAP_NEWSLETTER_SUBSCRIBE_NOTE");
-    expect(clientSrc).toContain("Subscribe to newsletter");
-    expect(clientSrc).not.toContain("Notify me when ready");
-    expect(clientSrc).not.toContain("sendMapReadyEmail");
-    expect(clientSrc).not.toContain("processPendingMapReadyNotifications");
-
-    const notifySrc = readFileSync(notifyApi, "utf8");
-    expect(notifySrc).toContain("registerMapNewsletterLead");
-    expect(notifySrc).not.toContain("RESEND");
-    expect(notifySrc).not.toContain("sendMapReadyEmail");
 
     const storeSrc = readFileSync(store, "utf8");
     expect(storeSrc).toContain('.from("leads")');

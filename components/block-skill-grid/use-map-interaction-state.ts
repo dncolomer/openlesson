@@ -12,7 +12,6 @@ import {
 } from "@/lib/block-map-tools";
 import { parseShapeCells, type PlacedBlockRef, type StretchHandle } from "@/lib/skill-grid-ops";
 import type { WorkspaceMapSelection } from "@/lib/workspace-map-selection";
-import { workspaceModeFlipClearsMapSelection } from "@/lib/workspace-mode";
 import type { ShapeContextSourceOption } from "@/lib/shape-context-select";
 import type { LassoOverlay } from "@/components/block-skill-grid/map-gesture-overlays";
 
@@ -174,12 +173,6 @@ export function useMapInteractionState(input: {
   useEffect(() => {
     if (learnerModeRef.current === learnerMode) return;
     learnerModeRef.current = learnerMode;
-    if (workspaceModeFlipClearsMapSelection()) {
-      selectedEmptyCellsRef.current = [];
-      selectedBlockIdsRef.current = [];
-      setSelectedEmptyCells([]);
-      setSelectedBlockIds([]);
-    }
     setShapePromptOpen(false);
     setMergePromptOpen(false);
     setPrompt("");

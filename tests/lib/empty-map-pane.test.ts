@@ -17,9 +17,7 @@ import {
   buildMapSearchUserPrompt,
   buildSuggestSpotSystemMessage,
   buildSuggestSpotUserPrompt,
-  closeMapExploreShell,
   collectPlaceableEmptyNearSeeds,
-  createMapExploreShellState,
   createMapNoteFromAreaSummary,
   isMapExploreDrawerId,
   isSelectivePolygonReady,
@@ -28,16 +26,13 @@ import {
   mapNoteCreateInputFromAreaSummary,
   normalizeEmptySpotTopic,
   normalizeMapSearchQuery,
-  openMapExploreShell,
   parseAreaSummaryAiResponse,
   parseMapSearchAiResponse,
   parseOverviewAiResponse,
   parseSuggestSpotAiResponse,
-  resolveMapExploreRightColumn,
   searchMapBlocksByTopic,
   suggestEmptySpotsForTopic,
   summarizeSelectiveArea,
-  toggleMapExploreShell,
 } from "@/lib/empty-map-pane";
 import { resolveWorkspaceRightPane } from "@/lib/workspace-right-pane";
 import { SKILL_GRID_PITCH } from "@/lib/block-skill-grid";
@@ -347,87 +342,24 @@ describe("empty-map-pane xAI prompts + parsers (shipped)", () => {
   });
 });
 
-describe("map explore FAB toggle + restore (shipped helpers)", () => {
-  it("open shows explore / hide drawers; close restores natural pane", () => {
-    let shell = createMapExploreShellState();
-    expect(shell.open).toBe(false);
-    expect(shell.previousPane).toBeNull();
-
-    shell = openMapExploreShell(shell, "block_detail");
-    expect(shell.open).toBe(true);
-    expect(shell.previousPane).toBe("block_detail");
-    // Idempotent open
-    shell = openMapExploreShell(shell, "combine_blocks");
-    expect(shell.previousPane).toBe("block_detail");
-
-    const openCol = resolveMapExploreRightColumn({
-      exploreOpen: true,
-      naturalPane: "block_detail",
-      previousPane: shell.previousPane,
-    });
-    expect(openCol.showExplore).toBe(true);
-    expect(openCol.displayPane).toBe("map_explore");
-
-    shell = closeMapExploreShell(shell);
-    expect(shell.open).toBe(false);
-    expect(shell.previousPane).toBeNull();
-    const closedCol = resolveMapExploreRightColumn({
-      exploreOpen: false,
-      naturalPane: "block_detail",
-      previousPane: null,
-    });
-    expect(closedCol.showExplore).toBe(false);
-    expect(closedCol.displayPane).toBe("block_detail");
-    expect(closedCol.restoredPane).toBe("block_detail");
-
-    // Empty/omitted prior restores safely to natural empty map_tools
-    const emptyRestore = resolveMapExploreRightColumn({
-      exploreOpen: false,
-      naturalPane: "map_tools",
-      previousPane: undefined,
-    });
-    expect(emptyRestore.displayPane).toBe("map_tools");
-    expect(emptyRestore.showExplore).toBe(false);
-
-    // Toggle open from add_block, then toggle closed
-    shell = toggleMapExploreShell(createMapExploreShellState(), "add_block");
-    expect(shell.open).toBe(true);
-    expect(shell.previousPane).toBe("add_block");
-    shell = toggleMapExploreShell(shell, "add_block");
-    expect(shell.open).toBe(false);
-
-    // Closed natural generate_shape restores drawers path
-    const gen = resolveMapExploreRightColumn({
-      exploreOpen: false,
-      naturalPane: "generate_shape",
-    });
-    expect(gen.displayPane).toBe("generate_shape");
-
-    writeEvidence(
-      "map-explore-toggle-logic.log",
-      [
-        "open_hides_drawers_display=map_explore",
-        "open_from_block_detail_prev=block_detail",
-        "close_restores_block_detail=" +
-          String(closedCol.displayPane === "block_detail"),
-        "empty_prior_to_map_tools=" +
-          String(emptyRestore.displayPane === "map_tools"),
-        "toggle_roundtrip_closed=" + String(!shell.open),
-      ].join("\n"),
-    );
-
-    writeEvidence(
-      "map-explore-drawers-logic.log",
-      [
-        "drawer_ids=" + MAP_EXPLORE_DRAWER_IDS.join(","),
-        "default_open=" + MAP_EXPLORE_DEFAULT_OPEN_DRAWER,
-        "is_map_search=" + isMapExploreDrawerId("map_search"),
-        "is_bogus=" + isMapExploreDrawerId("nope"),
-        "open_showExplore=" + openCol.showExplore,
-        "closed_showExplore=" + closedCol.showExplore,
-        "closed_restores=" + closedCol.displayPane,
-      ].join("\n"),
-    );
+describe("map explore drawers", () => {
+  it("keeps overview, search, suggest, and selective; the explore shell is gone", () => {
+    expect([...MAP_EXPLORE_DRAWER_IDS]).toEqual([
+      "map_overview",
+      "map_search",
+      "map_suggest_spot",
+      "map_selective",
+    ]);
+    expect(MAP_EXPLORE_DEFAULT_OPEN_DRAWER).toBe("map_search");
+    expect(isMapExploreDrawerId("map_search")).toBe(true);
+    expect(isMapExploreDrawerId("map_explore_block")).toBe(false);
+    expect(isMapExploreDrawerId("nope")).toBe(false);
+    const lib = read("lib/empty-map-pane.ts");
+    expect(lib).not.toContain("createMapExploreShellState");
+    expect(lib).not.toContain("openMapExploreShell");
+    expect(lib).not.toContain("toggleMapExploreShell");
+    expect(lib).not.toContain("resolveMapExploreRightColumn");
+    expect(resolveWorkspaceRightPane(null)).toBe("map_tools");
   });
 });
 
@@ -450,7 +382,7 @@ describe("empty-map-pane structural + wiring", () => {
     expect(pane).toContain('drawerId="map_search"');
     expect(pane).toContain('drawerId="map_suggest_spot"');
     expect(pane).toContain('drawerId="map_selective"');
-    expect(pane).toContain('drawerId="map_explore_block"');
+    expect(pane).not.toContain('drawerId="map_explore_block"');
     expect(pane).toContain("MAP_EXPLORE_DEFAULT_OPEN_DRAWER");
     expect(pane).toContain("data-empty-map-xai");
     expect(pane).toContain("data-empty-map-search");
@@ -480,28 +412,28 @@ describe("empty-map-pane structural + wiring", () => {
     expect(pane).toContain('callMapExplore("suggest_spot"');
     expect(pane).toContain('callMapExplore("overview"');
     expect(pane).toContain('callMapExplore("area_summary"');
-    expect(pane).toContain('callMapExplore("explore_block"');
+    expect(pane).not.toContain('callMapExplore("explore_block"');
     expect(pane).toContain("mapNoteCreateInputFromAreaSummary");
 
-    // Authoring: explore only when exploreOpen; idle empty is short tip
+    // Idle explore opens the empty-map drawers. The closed pane is a short tip.
     expect(authoring).toContain("WorkspaceEmptyMapPane");
     expect(authoring).toContain("exploreOpen");
     expect(authoring).toContain('data-map-explore-open="true"');
     expect(authoring).toContain('data-map-explore-open="false"');
-    expect(authoring).toContain("Use the search control on the map to explore");
+    expect(authoring).toContain("Click a block or empty cells to open the drawers.");
+    expect(authoring).not.toContain("Use the search control on the map to explore");
 
-    // Host: under-minimap toggle (not bottom-right FAB); explore not empty default
     expect(view).toContain("WorkspaceMapAuthoringPane");
     expect(view).not.toContain("data-map-explore-fab");
-    expect(view).toContain("onMapExploreToggle={handleToggleMapExplore}");
-    expect(view).toContain("mapExploreOpen={showMapExplore}");
-    expect(view).toContain("handleToggleMapExplore");
-    expect(view).toContain("handleMapToggle");
-    expect(view).toContain("openMapExploreShell");
-    expect(view).toContain("resolveMapExploreRightColumn");
-    expect(view).toContain("showMapExplore");
-    expect(view).toContain("exploreOpen");
-    expect(view).toMatch(/showMapExplore\s*\?\s*\([\s\S]*?WorkspaceMapAuthoringPane[\s\S]*?exploreOpen/);
+    expect(view).not.toContain("onMapExploreToggle");
+    expect(view).not.toContain("mapExploreOpen");
+    expect(view).not.toContain("handleToggleMapExplore");
+    expect(view).not.toContain("handleMapToggle");
+    expect(view).not.toContain("openMapExploreShell");
+    expect(view).not.toContain("resolveMapExploreRightColumn");
+    expect(view).not.toContain("showMapExplore");
+    expect(view).toContain("exploreOpen={idleExplore}");
+    expect(view).toContain("workspaceIdlePaneShowsExplore");
     expect(view).toContain("handleEmptyMapSearchBlocks");
     expect(view).toContain("handleEmptyMapSuggestCells");
     expect(view).toContain("mapSelection={mapSelection}");
@@ -514,27 +446,26 @@ describe("empty-map-pane structural + wiring", () => {
     expect(view).toContain(
       "onSuggestSelectEmptyCells={handleEmptyMapSuggestCells}",
     );
-    // Play / Build / Explore sits beside the workspace name.
     const nav = read("components/WorkspaceSectionNav.tsx");
     expect(grid).not.toContain("data-map-explore-toggle");
     expect(grid).not.toContain("data-workspace-mode-under-minimap");
-    expect(nav).toContain("data-workspace-mode-toggle");
-    expect(nav).toContain("data-workspace-mode-by-title");
-    expect(nav).toContain("data-workspace-mode-toggle-states");
-    expect(nav.indexOf("data-workspace-mode-by-title")).toBeLessThan(
-      nav.indexOf("data-workspace-section-title"),
-    );
+    expect(grid).not.toContain("data-empty-cell-search");
+    expect(nav).not.toContain("data-workspace-mode-toggle");
+    expect(nav).not.toContain("data-workspace-mode-by-title");
+    expect(nav).not.toContain("data-workspace-mode-toggle-states");
+    expect(nav).toContain("data-workspace-interaction-mode");
+    expect(nav).toContain("data-workspace-section-title");
     expect(grid).toContain("data-map-minimap-stack");
-    expect(grid).toContain("onMapToggle");
-    expect(grid).toContain("mapExploreOpen");
+    expect(grid).not.toContain("onMapToggle");
+    expect(grid).not.toContain("mapExploreOpen");
     expect(grid).toContain("data-map-note-add");
     // No floating bottom-right round FAB
     expect(view).not.toMatch(/data-map-explore-fab/);
     expect(view).not.toMatch(
       /absolute bottom-3 right-3[\s\S]{0,80}?rounded-full/,
     );
-    expect(sessionList).toContain("onMapExploreToggle");
-    expect(sessionList).toContain("mapExploreOpen");
+    expect(sessionList).not.toContain("onMapExploreToggle");
+    expect(sessionList).not.toContain("mapExploreOpen");
     // Selection callbacks wired in both modes (not creator-only).
     // A map click clears a Continue / Mark as Done request, then uses the hook.
     expect(view).toContain("handleMapSelectionChange(selection)");
@@ -619,8 +550,8 @@ describe("empty-map-pane structural + wiring", () => {
     expect(lib).toContain("buildMapOverviewSystemMessage");
     expect(lib).toContain("parseAreaSummaryAiResponse");
     expect(lib).toContain("mapNoteCreateInputFromAreaSummary");
-    expect(lib).toContain("toggleMapExploreShell");
-    expect(lib).toContain("resolveMapExploreRightColumn");
+    expect(lib).not.toContain("toggleMapExploreShell");
+    expect(lib).not.toContain("resolveMapExploreRightColumn");
     expect(api).toContain("callXaiJSON");
     expect(api).toContain('op === "search"');
     expect(api).toContain('op === "suggest_spot"');
@@ -726,17 +657,7 @@ describe("empty-map-pane structural + wiring", () => {
       [
         "toggle_helper=" + lib.includes("openMapExploreShell"),
         "resolve_helper=" + lib.includes("resolveMapExploreRightColumn"),
-        "open_showExplore_true=" +
-          resolveMapExploreRightColumn({
-            exploreOpen: true,
-            naturalPane: "block_detail",
-          }).showExplore,
-        "closed_restores_block_detail=" +
-          (resolveMapExploreRightColumn({
-            exploreOpen: false,
-            naturalPane: "block_detail",
-          }).displayPane ===
-            "block_detail"),
+        "idle_explore=" + view.includes("exploreOpen={idleExplore}"),
         "no_fab_required=" + String(!view.includes("data-map-explore-fab")),
       ].join("\n"),
     );

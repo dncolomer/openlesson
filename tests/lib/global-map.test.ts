@@ -446,32 +446,17 @@ describe("Global Map focus helpers", () => {
 describe("Global Map UI structure", () => {
   it("ships Local Map / Global Map controls and interactive Global Map renderer", () => {
     const client = join(root, "components/MapOfKnowledgeClient.tsx");
+    const twoD = join(root, "components/MapOfKnowledge2D.tsx");
+    const threeD = join(root, "components/MapOfKnowledge3D.tsx");
     const global = join(root, "components/MapOfKnowledgeGlobal.tsx");
     const knowledge = join(root, "components/KnowledgeConfigTrajectoryPanel.tsx");
-    expect(existsSync(client)).toBe(true);
+    expect(existsSync(client)).toBe(false);
+    expect(existsSync(twoD)).toBe(false);
+    expect(existsSync(threeD)).toBe(false);
     expect(existsSync(global)).toBe(true);
     expect(existsSync(knowledge)).toBe(true);
-    const clientSrc = readFileSync(client, "utf8");
     const globalSrc = readFileSync(global, "utf8");
     const knowledgeSrc = readKnowledgePanelSurface();
-
-    expect(clientSrc).toContain("Local Map");
-    expect(clientSrc).toContain("Global Map");
-    expect(clientSrc).toContain("data-map-scope-toggle");
-    expect(clientSrc).toContain('data-map-scope="global"');
-    expect(clientSrc).toContain('data-map-scope="local"');
-    expect(clientSrc).toContain("MapOfKnowledgeGlobal");
-    expect(clientSrc).toContain("mapScope");
-    // Default map representation is Global Map on both MoK and workspace Knowledge.
-    expect(clientSrc).toMatch(/useState<MapScope>\(["']global["']\)/);
-    expect(knowledgeSrc).toMatch(
-      /useState<["']local["']\s*\|\s*["']global["']>\(["']global["']\)/,
-    );
-    expect(clientSrc).toContain("openLocalMapFocusedOnRegion");
-    expect(clientSrc).toContain("enabledRegionsForLocalFocus");
-    expect(clientSrc).toContain("fullscreen");
-    expect(clientSrc).toContain("data-map-fullscreen");
-    expect(clientSrc).toMatch(/mapScope === ["']global["']/);
 
     expect(globalSrc).toContain("data-map-global");
     expect(globalSrc).toContain("data-map-global-interactive");
@@ -518,14 +503,9 @@ describe("Global Map UI structure", () => {
     // True multi-algo z path (world wz from layout)
     expect(global3dSrc).toMatch(/n\.wz|wx,\s*n\.wy,\s*n\.wz/);
 
-    // MoK: 2D/3D available for Global Map (not Local-only)
-    expect(clientSrc).toContain("data-map-view-mode-toggle");
-    expect(clientSrc).toContain('data-map-view-mode="3d"');
-    expect(clientSrc).toContain("viewMode={viewMode}");
-    expect(clientSrc).not.toMatch(
-      /mapScope === ["']local["'] && \([\s\S]{0,80}data-map-view-mode-toggle/,
+    expect(knowledgeSrc).toMatch(
+      /useState<["']local["']\s*\|\s*["']global["']>\(["']global["']\)/,
     );
-
     expect(knowledgeSrc).toContain("data-knowledge-map-scope-toggle");
     expect(knowledgeSrc).toContain("MapOfKnowledgeGlobal");
     expect(knowledgeSrc).toContain("openLocalMapFocusedOnRegion");
@@ -536,12 +516,6 @@ describe("Global Map UI structure", () => {
     expect(knowledgeSrc).toContain('data-knowledge-global-view-mode="3d"');
     expect(knowledgeSrc).toContain("knowledgeGlobalViewMode");
     expect(knowledgeSrc).toContain("viewMode={knowledgeGlobalViewMode}");
-    // Project control drives 2D, Local 3D, and Global Map multi-algo 3D layout
-    expect(clientSrc).toContain("data-map-projection-select");
-    expect(clientSrc).toContain("data-map-3d-projection-select");
-    expect(clientSrc).toContain("2D / Local 3D / Global Map multi-algo layout");
-    expect(clientSrc).toContain("projectionAlgorithm={projectionAlgorithm}");
-    expect(clientSrc).toContain("MapOfKnowledge3D");
     expect(knowledgeSrc).toContain("data-projection-algorithm-select");
     expect(knowledgeSrc).toContain("data-map-3d-projection-select");
     expect(knowledgeSrc).toContain("reprojectMapLayout");
@@ -550,11 +524,6 @@ describe("Global Map UI structure", () => {
     expect(globalSrc).toContain("projectGlobalMapLayoutPoint");
     expect(globalSrc).toContain("data-map-global-projection");
     expect(globalSrc).toContain("projectionAlgorithm");
-    const threeD = join(root, "components/MapOfKnowledge3D.tsx");
-    expect(existsSync(threeD)).toBe(true);
-    const threeDSrc = readFileSync(threeD, "utf8");
-    expect(threeDSrc).toContain("data-map-3d-projection");
-    expect(threeDSrc).toContain("projectionAlgorithm");
     // Region picker matches Map of Knowledge (collapsible group + All/None + sync)
     expect(knowledgeSrc).toContain("data-map-region-workspace-group");
     expect(knowledgeSrc).toContain("data-map-region-workspace-select-all");

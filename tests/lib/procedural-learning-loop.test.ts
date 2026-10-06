@@ -123,13 +123,14 @@ describe("product-intent surfaces (Explore/Drill always With AI)", () => {
     expect(card).not.toContain("Open-ended session (no clock)");
     expect(card).not.toContain("Timed session (clock on)");
 
-    const guest = read("components/WorkspaceGuestLinksPanel.tsx");
-    expect(guest).toContain("explore_dialog");
-    expect(guest).toContain("drill_dialog");
-    expect(guest).toContain("scout_dialog");
-    expect(guest).not.toContain("drill_solo");
-    expect(guest).not.toContain("Open-ended Exploration");
-    expect(guest).not.toContain("Timed Exploration");
+    expect(existsSync(join(process.cwd(), "components/WorkspaceGuestLinksPanel.tsx"))).toBe(
+      false,
+    );
+    expect(card).toContain("explore_dialog");
+    expect(card).toContain("drill_dialog");
+    expect(card).toContain("scout_dialog");
+    expect(card).not.toContain("Open-ended Exploration");
+    expect(card).not.toContain("Timed Exploration");
 
     const edit = read("components/WorkspaceBlockEditPanel.tsx");
     expect(edit).not.toContain("With AI");
@@ -837,10 +838,11 @@ describe("Expand Map rename + suggest UI", () => {
   it("button and drawer use Explore / Expand Map naming", () => {
     const grid = readMapGridSurface();
     const nav = read("components/WorkspaceSectionNav.tsx");
-    expect(nav).toContain("workspaceModeControlMounted");
+    expect(nav).not.toContain("workspaceModeControlMounted");
     expect(nav).not.toContain("WORKSPACE_MAP_TOGGLE_IDS");
-    expect(nav).toContain("data-workspace-mode-toggle-states");
-    expect(nav).toContain("data-workspace-mode-by-title");
+    expect(nav).not.toContain("data-workspace-mode-toggle-states");
+    expect(nav).not.toContain("data-workspace-mode-by-title");
+    expect(nav).toContain("data-workspace-interaction-mode");
     expect(grid).not.toContain("data-map-explore-expand-toggle");
 
     const pane = read("components/WorkspaceEmptyMapPane.tsx");

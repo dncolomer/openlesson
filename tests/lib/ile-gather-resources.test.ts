@@ -385,7 +385,7 @@ describe("TAP Learning gather resources", () => {
     const surface = readSessionViewSurface();
     const actions = read("components/session-view/ile-chapter-helios-actions.tsx");
     const helios = read("components/SessionHeliosPanel.tsx");
-    const chapter = read("components/ChapterMapPanel.tsx");
+    expect(existsSync(join(ROOT, "components/ChapterMapPanel.tsx"))).toBe(false);
     const grid = read("components/BlockSkillGrid.tsx");
     const jobs = read("components/block-skill-grid/map-job-indicators.tsx");
     const panes = read("components/session-view/session-tool-panes.tsx");
@@ -405,8 +405,6 @@ describe("TAP Learning gather resources", () => {
     expect(surface).toContain("gatherJobs");
     expect(surface).toContain("onGatherResources");
     expect(surface).toContain("decideIleGatherResources");
-    expect(chapter).toContain('circularMenuSurface="ile"');
-    expect(chapter).toContain("onGatherChapterResources");
     const chrome = read("components/session-view/session-chrome.tsx");
     expect(chrome).toContain("ConfirmDialog");
     expect(chrome).toContain("data-ile-gather-warning");
@@ -431,7 +429,6 @@ describe("TAP Learning gather resources", () => {
     expect(jobs).toContain("data-ile-gather-open-resources");
     expect(jobs).toContain("ileGatherJobShowsFinishLink");
     expect(jobs).toContain("gatherJobs");
-    expect(chapter).toContain("gatherJobs");
     expect(grid).toContain("gatherJobs");
     expect(hook).not.toContain("if (gatherBusy) return");
     expect(hook).toContain("ileGatherRateLimitKey");

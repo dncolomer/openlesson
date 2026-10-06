@@ -125,12 +125,6 @@ export function BlockSkillGrid({
   selectiveExplanationPolygon = null,
   onSelectiveExplanationComplete,
   injectMapNote = null,
-  mapExploreOpen = false,
-  onMapExploreToggle,
-  onMapToggle,
-  mapToggleIds,
-  interactionMode: interactionModeProp,
-  onInteractionModeChange,
   canEdit: canEditProp,
   learnerMode = false,
   viewOnly = false,
@@ -211,10 +205,6 @@ export function BlockSkillGrid({
   useEffect(() => {
     if (circularMenuEmptyCell || circularMenuBlockId) setBlockedCellKey(null);
   }, [circularMenuBlockId, circularMenuEmptyCell]);
-  useEffect(() => {
-    if (!mapExploreOpen) return;
-    setCircularMenuBlockId(null);
-  }, [mapExploreOpen]);
   const circularMenuSurface: "ile" | "workspace-learner" | "none" = viewOnly
     ? "none"
     : circularMenuSurfaceProp ?? "none";
@@ -770,7 +760,6 @@ export function BlockSkillGrid({
     learnerMode,
     viewOnly,
     canEdit,
-    mapExploreOpen,
     prereqEdit,
     setPrereqEdit,
     prereqEditRef,
@@ -838,12 +827,11 @@ export function BlockSkillGrid({
         handleCellSelect(blockId, event);
         return;
       }
-      if (blockCircularMenuOpensOnSelect(circularMenuSurface, { exploreOpen: mapExploreOpen })) {
+      if (blockCircularMenuOpensOnSelect(circularMenuSurface)) {
         const nextMenuId = nextCircularMenuBlockIdOnClick({
           surface: circularMenuSurface,
           clickedId: blockId,
           currentMenuId: circularMenuBlockId,
-          exploreOpen: mapExploreOpen,
         });
         setPeekBlockId(null);
         setCircularMenuEmptyCell(null);
@@ -861,7 +849,6 @@ export function BlockSkillGrid({
       circularMenuSurface,
       clearSelection,
       handleCellSelect,
-      mapExploreOpen,
       viewOnly,
     ],
   );
@@ -1125,7 +1112,6 @@ export function BlockSkillGrid({
         previewEmptyCells,
         generatorSparkEmptyKeys,
         unusableKeys,
-        mapExploreOpen,
         busy,
         handleEmptyCellClick,
         handleEmptyCellPointerDown,
@@ -1232,16 +1218,10 @@ export function BlockSkillGrid({
         overlayPersist,
         minimapHidden: showMinimap === false || suggestMode === "chapter",
         workspaceId,
-        onMapExploreToggle,
-        onMapToggle,
-        mapToggleIds,
-        onInteractionModeChange,
         mapNotesCount: mapNotes.length,
         annotationLayers,
         minimapStackRef,
         learnerMode,
-        interactionModeProp,
-        mapExploreOpen,
         mapNotesPlaneVisible,
         setMapNotesPlaneVisible,
         handleMapNoteAddAtCenter,

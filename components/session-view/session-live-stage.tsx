@@ -1,37 +1,55 @@
 "use client";
 
+import type { Dispatch, JSX, RefObject, SetStateAction } from "react";
 import type { Tool } from "@/components/ToolsPanel";
 import type { InsightSummary } from "@/lib/insights";
-import type { Session } from "@/lib/storage";
+import type { AestheticPackage } from "@/lib/aesthetics";
+import type { DeviceStatus } from "@/lib/muse-athena";
+import type { SessionThoughtInterface } from "@/lib/useSessionThoughtInterface";
+import type { WorkspaceExternalResource } from "@/lib/workspace-external-resources";
+import type { Session, SessionPlanStep } from "@/lib/storage";
 import { IleMapInsightsWidget } from "@/components/session-view/ile-insight-trophies";
 import { IleSessionImpurityScreen, IleSilenceRestScreen, mountIleSilenceScreen } from "@/components/session-view/ile-silence-lock-screen";
 import { IleVoiceBar, IleVoiceBarActions } from "@/components/session-view/ile-voice-bar";
 import { SessionChrome } from "@/components/session-view/session-chrome";
 import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
 import { WorkspaceResourcesPanel } from "@/components/WorkspaceResourcesPanel";
-import { countIleUnsubmittedPowDisplay, toIlePowDisplayCounts } from "@/lib/ile-pow-counters";
-import { ileImpurityExitPlan } from "@/lib/practice-voice-challenge";
+import {
+  countIleUnsubmittedPowDisplay,
+  toIlePowDisplayCounts,
+  type IlePowCounterArtifact,
+  type IlePowTypeCounts,
+} from "@/lib/ile-pow-counters";
+import { ileImpurityExitPlan, type IleSilenceLockOutcome } from "@/lib/practice-voice-challenge";
 import { ileSessionNameFromMetadata } from "@/lib/ile-session-name";
 import { sessionSidebarHasSection } from "@/lib/session-sidebar";
 import { toSpeechBcp47 } from "@/lib/tutoring-languages";
 
+type LiveScreenCaptureHandle = {
+  captureNow: () => Promise<Blob | null>;
+  start: () => Promise<boolean>;
+  stop: () => void;
+  isCapturing: () => boolean;
+  getStream: () => MediaStream | null;
+};
+
 export type SessionLiveStageProps = {
-  activeStep: import("/Users/dncolomer/UncertainSystems/openlesson/lib/storage").SessionPlanStep | undefined;
+  activeStep: SessionPlanStep | undefined;
   activeTool: Tool;
   allowEndSession: boolean;
-  availableCounts: import("/Users/dncolomer/UncertainSystems/openlesson/lib/ile-pow-counters").IlePowTypeCounts;
+  availableCounts: IlePowTypeCounts;
   ayclToken: string | undefined;
   bandPowers: { delta: number; theta: number; alpha: number; beta: number; gamma: number; } | null;
   canvasDirtyForHelios: boolean;
   chapterCloseReview: { canClose: boolean; reason: string; } | null;
-  completeTargetStepIdRef: import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").RefObject<string | null>;
+  completeTargetStepIdRef: RefObject<string | null>;
   craftingInsightsOpen: boolean;
   dismissGatherWarning: () => void;
   eegChannelData: Map<string, number[]>;
   endReason: string;
   error: string | null;
   gatherWarning: string | null;
-  gatheredResources: import("/Users/dncolomer/UncertainSystems/openlesson/lib/workspace-external-resources").WorkspaceExternalResource[];
+  gatheredResources: WorkspaceExternalResource[];
   handleConfirmEnd: () => Promise<void>;
   handleConnectMuse: () => Promise<void>;
   handleDisconnectMuse: () => void;
@@ -48,50 +66,50 @@ export type SessionLiveStageProps = {
   isStartingSession: boolean;
   isWebcamEnabled: boolean;
   minInsightsPerChapter: number;
-  museDeviceStatus: import("/Users/dncolomer/UncertainSystems/openlesson/lib/muse-athena").DeviceStatus | null;
+  museDeviceStatus: DeviceStatus | null;
   museStatus: "disconnected" | "connecting" | "connected" | "streaming";
-  muteTimerRef: import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").RefObject<NodeJS.Timeout | null>;
+  muteTimerRef: RefObject<NodeJS.Timeout | null>;
   openWorkDockLabels: { id: string; label: string; keyword: string | undefined; description: string | undefined; focused: boolean; status: "idle" | "loading" | "attention"; image: string; }[];
   openWorkCount: number;
   pauseAndGoToDashboard: (sessionName?: string | null, options?: { persistSession?: boolean; }) => Promise<void>;
-  renderChapterThoughtPane: (replica: boolean) => import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/jsx-runtime").JSX.Element | null;
-  renderSessionToolPanes: () => import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/jsx-runtime").JSX.Element | null;
-  renderWorkCanvas: () => import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/jsx-runtime").JSX.Element;
+  renderChapterThoughtPane: (replica: boolean) => JSX.Element | null;
+  renderSessionToolPanes: () => JSX.Element | null;
+  renderWorkCanvas: () => JSX.Element;
   resourceScopeChapterId: string | null;
   saveExitName: string;
-  screenCaptureRef: import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").RefObject<{ captureNow: () => Promise<Blob | null>; start: () => Promise<boolean>; stop: () => void; isCapturing: () => boolean; getStream: () => MediaStream | null; } | null>;
-  selectedAesthetic: import("/Users/dncolomer/UncertainSystems/openlesson/lib/aesthetics").AestheticPackage;
+  screenCaptureRef: RefObject<LiveScreenCaptureHandle | null>;
+  selectedAesthetic: AestheticPackage;
   session: Session;
   sessionBlockId: string | undefined;
   sessionInsights: InsightSummary[];
-  sessionPowArtifacts: import("/Users/dncolomer/UncertainSystems/openlesson/lib/ile-pow-counters").IlePowCounterArtifact[];
+  sessionPowArtifacts: IlePowCounterArtifact[];
   sessionResourcesOpen: boolean;
-  sessionThoughtInterface: { thoughts: import("/Users/dncolomer/UncertainSystems/openlesson/lib/useSessionThoughtInterface").SessionThought[]; interimText: string; crystallizableText: string; isListening: boolean; pauseLiveSpeech: () => void; resumeLiveSpeech: () => void; speechEnabled: boolean; speechError: string | null; isSending: boolean; sendError: string; stashedThoughts: import("/Users/dncolomer/UncertainSystems/openlesson/lib/useSessionThoughtInterface").SessionThought[]; latestThoughts: import("/Users/dncolomer/UncertainSystems/openlesson/lib/useSessionThoughtInterface").SessionThought[]; sentThoughtIds: Set<string>; memoryThoughtIds: Set<string>; speechSupported: boolean | null; getFormingText: () => string; ingestStashedThought: (thought: import("/Users/dncolomer/UncertainSystems/openlesson/lib/useSessionThoughtInterface").SessionThought) => void; stashCurrentTranscription: (providedText?: string) => void; clearCurrentTranscription: () => void; sendCurrentTranscription: () => Promise<void>; sendThought: (text: string, thoughtIds?: string[], options?: { skipTrace?: boolean; chapterId?: string | null; }) => Promise<void>; logTrace: (payload: import("/Users/dncolomer/UncertainSystems/openlesson/lib/useSessionThoughtInterface").SessionThoughtTracePayload) => void; beginEditTranscription: () => void; cancelEditTranscription: () => void; updateEditDraft: (draft: string) => void; submitEditedTranscription: () => Promise<void>; retryMicrophone: () => void; editingTranscription: { draft: string; originalText: string; } | null; };
-  setActiveTool: import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").Dispatch<import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").SetStateAction<Tool>>;
-  setChapterCloseReview: import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").Dispatch<import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").SetStateAction<{ canClose: boolean; reason: string; } | null>>;
-  setCraftingInsightsOpen: import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").Dispatch<import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").SetStateAction<boolean>>;
-  setError: import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").Dispatch<import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").SetStateAction<string | null>>;
-  setHeliosWidgetOpen: import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").Dispatch<import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").SetStateAction<boolean>>;
-  setIsMuted: import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").Dispatch<import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").SetStateAction<boolean>>;
-  setIsWebcamEnabled: import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").Dispatch<import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").SetStateAction<boolean>>;
-  setMuteRemaining: import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").Dispatch<import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").SetStateAction<number>>;
-  setSaveExitName: import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").Dispatch<import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").SetStateAction<string>>;
-  setSessionResourcesOpen: import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").Dispatch<import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").SetStateAction<boolean>>;
-  setShowEndDialog: import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").Dispatch<import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").SetStateAction<boolean>>;
-  setShowPlanCompleteModal: import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").Dispatch<import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").SetStateAction<boolean>>;
-  setShowSaveExitNameDialog: import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").Dispatch<import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").SetStateAction<boolean>>;
-  setShowWelcomePanel: import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").Dispatch<import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").SetStateAction<boolean>>;
+  sessionThoughtInterface: SessionThoughtInterface;
+  setActiveTool: Dispatch<SetStateAction<Tool>>;
+  setChapterCloseReview: Dispatch<SetStateAction<{ canClose: boolean; reason: string; } | null>>;
+  setCraftingInsightsOpen: Dispatch<SetStateAction<boolean>>;
+  setError: Dispatch<SetStateAction<string | null>>;
+  setHeliosWidgetOpen: Dispatch<SetStateAction<boolean>>;
+  setIsMuted: Dispatch<SetStateAction<boolean>>;
+  setIsWebcamEnabled: Dispatch<SetStateAction<boolean>>;
+  setMuteRemaining: Dispatch<SetStateAction<number>>;
+  setSaveExitName: Dispatch<SetStateAction<string>>;
+  setSessionResourcesOpen: Dispatch<SetStateAction<boolean>>;
+  setShowEndDialog: Dispatch<SetStateAction<boolean>>;
+  setShowPlanCompleteModal: Dispatch<SetStateAction<boolean>>;
+  setShowSaveExitNameDialog: Dispatch<SetStateAction<boolean>>;
+  setShowWelcomePanel: Dispatch<SetStateAction<boolean>>;
   showEndDialog: boolean;
   showPlanCompleteModal: boolean;
   showSaveExitNameDialog: boolean;
   showWelcomeModal: boolean;
   showWelcomePanel: boolean;
-  silenceLock: { lockCount: number; outcome: import("/Users/dncolomer/UncertainSystems/openlesson/lib/practice-voice-challenge").IleSilenceLockOutcome; unlock: (challengePassed: boolean) => void; minutes: number; };
+  silenceLock: { lockCount: number; outcome: IleSilenceLockOutcome; unlock: (challengePassed: boolean) => void; minutes: number; };
   stream: MediaStream | null;
   t: (key: string, params?: Record<string, string | number>) => string;
   tutoringLanguage: "en" | "vi" | "zh" | "es" | "de" | "pl" | "ca";
   welcomeOpenNonce: number;
-  workCanvasInsightSlots: import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/jsx-runtime").JSX.Element;
+  workCanvasInsightSlots: JSX.Element;
   workspaceId: string | undefined;
 };
 

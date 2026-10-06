@@ -1,5 +1,6 @@
 "use client";
 
+import type { Dispatch, SetStateAction } from "react";
 import { IntegrationQuickAccess } from "@/components/IntegrationQuickAccess";
 import { default as Link } from "next/link";
 
@@ -28,8 +29,8 @@ export type DashboardIntegrationsTabProps = {
   mcpOrigin: string;
   newKeyName: string;
   newKeyValue: string | null;
-  setKeyCopied: import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").Dispatch<import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").SetStateAction<boolean>>;
-  setNewKeyName: import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").Dispatch<import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").SetStateAction<string>>;
+  setKeyCopied: Dispatch<SetStateAction<boolean>>;
+  setNewKeyName: Dispatch<SetStateAction<string>>;
   t: (key: string, params?: Record<string, string | number>) => string;
   usageCardClass: "console-copy rounded-none p-5 sm:p-6";
   usageLabelClass: "font-mono text-[10px] uppercase tracking-[2px] text-neutral-500";

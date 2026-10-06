@@ -1,5 +1,7 @@
 "use client";
 
+import type { Dispatch, SetStateAction } from "react";
+import type { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import { default as Link } from "next/link";
 import { getIlePostSessionPath, type Session } from "@/lib/storage";
 
@@ -10,14 +12,14 @@ export type DashboardSessionsTabProps = {
   handleDeleteSession: (id: string) => Promise<void>;
   handleStartOverSession: (id: string) => Promise<void>;
   paginatedSessions: Session[];
-  router: import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/next/dist/shared/lib/app-router-context.shared-runtime").AppRouterInstance;
+  router: AppRouterInstance;
   sessionPage: number;
   sessionPageSize: 10;
   sessionSearch: string;
   sessionStatusFilter: Set<string>;
-  setSessionPage: import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").Dispatch<import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").SetStateAction<number>>;
-  setSessionSearch: import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").Dispatch<import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").SetStateAction<string>>;
-  setSessionStatusFilter: import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").Dispatch<import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").SetStateAction<Set<string>>>;
+  setSessionPage: Dispatch<SetStateAction<number>>;
+  setSessionSearch: Dispatch<SetStateAction<string>>;
+  setSessionStatusFilter: Dispatch<SetStateAction<Set<string>>>;
   t: (key: string, params?: Record<string, string | number>) => string;
   totalSessionPages: number;
 };

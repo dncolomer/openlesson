@@ -1,5 +1,6 @@
 "use client";
 
+import type { Dispatch, SetStateAction } from "react";
 import { default as Link } from "next/link";
 import { WorkspaceDashboardCard } from "@/components/WorkspaceDashboardCard";
 import {
@@ -20,12 +21,12 @@ export type DashboardPlansTabProps = {
   handleTogglePin: (workspace: Workspace) => void;
   paginatedPlans: Workspace[];
   pinnedWorkspaceIds: Set<string>;
-  setPlanPage: import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").Dispatch<import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").SetStateAction<number>>;
-  setPlanSearch: import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").Dispatch<import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").SetStateAction<string>>;
-  setShowArchivedPlans: import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").Dispatch<import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").SetStateAction<boolean>>;
-  setWorkspaceTypeFilter: import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").Dispatch<import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").SetStateAction<DashboardWorkspaceTypeFilter>>;
-  setWorkspaceVisibilityFilter: import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").Dispatch<import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").SetStateAction<DashboardWorkspaceListFilter>>;
-  setWorkspaces: import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").Dispatch<import("/Users/dncolomer/UncertainSystems/openlesson/node_modules/@types/react/index").SetStateAction<Workspace[]>>;
+  setPlanPage: Dispatch<SetStateAction<number>>;
+  setPlanSearch: Dispatch<SetStateAction<string>>;
+  setShowArchivedPlans: Dispatch<SetStateAction<boolean>>;
+  setWorkspaceTypeFilter: Dispatch<SetStateAction<DashboardWorkspaceTypeFilter>>;
+  setWorkspaceVisibilityFilter: Dispatch<SetStateAction<DashboardWorkspaceListFilter>>;
+  setWorkspaces: Dispatch<SetStateAction<Workspace[]>>;
   showArchivedWorkspaces: boolean;
   t: (key: string, params?: Record<string, string | number>) => string;
   totalPlanPages: number;

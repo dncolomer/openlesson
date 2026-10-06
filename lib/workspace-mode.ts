@@ -53,16 +53,6 @@ export function workspaceSurfaceShowsPracticeMenu(input?: {
 }
 
 /**
- * Empty-cell clicks open add or generate only when this map can be authored.
- * Play-only access drops them. The stored Play/Build id does not decide this.
- */
-export function workspaceEmptyCellOpensAuthoring(input: {
-  authoring: boolean;
-}): boolean {
-  return input.authoring === true;
-}
-
-/**
  * Continue and Mark as Done need the learner pane on an authoring map.
  * Play-only maps always use that pane. A stored learner id is not enough
  * when authoring is also on.
@@ -75,11 +65,6 @@ export function workspaceLearnerPaneMounted(input: {
   if (!input.practiceDrawer) return false;
   if (!input.authoring) return true;
   return input.learnerActionRequested;
-}
-
-/** Idle explore header. */
-export function workspaceExpandMapTitle(): string {
-  return "Expand Map";
 }
 
 /**
@@ -106,6 +91,54 @@ export function workspaceIdlePaneShowsExplore(input?: {
   allowExplore?: boolean;
 }): boolean {
   return input?.allowExplore !== false;
+}
+
+/**
+ * One shell decision from workspace kind, authoring capability, and
+ * practice-only access. Learning authors keep authoring drawers and can
+ * open the practice drawer. Play-only stays on the map. Verification keeps
+ * its own sections. Practice-only access stays on the learner surface,
+ * including a verification workspace.
+ */
+export type WorkspaceShell = {
+  sections: WorkspaceSectionKey[];
+  authoringDrawers: boolean;
+  practiceDrawer: boolean;
+  learnerSurface: boolean;
+  learnerActivity: boolean;
+  knowledgeLwmEmbeddingsOnly: boolean;
+};
+
+export function workspaceShell(input: {
+  kind?: unknown;
+  authoring: boolean;
+  practiceOnly?: boolean;
+  isOwner?: boolean;
+  isOrgAdmin?: boolean;
+  isLoggedIn?: boolean;
+}): WorkspaceShell {
+  const verification = isKnowledgeRegionWorkspace(input.kind);
+  const learnerActivity = Boolean(input.practiceOnly) || !verification;
+  const learnerSurface = learnerActivity && !input.authoring;
+  const auth = {
+    isOwner: input.isOwner,
+    isOrgAdmin: input.isOrgAdmin,
+    isLoggedIn: input.isLoggedIn,
+    workspaceKind: input.kind,
+  };
+  const sections: WorkspaceSectionKey[] = verification
+    ? availableWorkspaceSections(auth)
+    : input.authoring
+      ? availableWorkspaceSections(auth)
+      : ["workspace"];
+  return {
+    sections,
+    authoringDrawers: input.authoring || (verification && !input.practiceOnly),
+    practiceDrawer: learnerActivity,
+    learnerSurface,
+    learnerActivity,
+    knowledgeLwmEmbeddingsOnly: learnerSurface,
+  };
 }
 
 export function isWorkspaceInteractionMode(

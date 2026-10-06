@@ -220,7 +220,7 @@ describe("resolveEmptySelectionSurface + resolveEmptyAddTarget", () => {
       "utf8",
     );
     const creatorReturn = selectionHook.slice(
-      selectionHook.indexOf("workspaceEmptyCellOpensAuthoring"),
+      selectionHook.indexOf("if (!authoring)"),
     );
     expect(creatorReturn).toContain("selectedEmptyCells: emptyCells");
     expect(creatorReturn).toMatch(
@@ -344,7 +344,8 @@ describe("structural: right pane not map modal", () => {
     expect(view).toContain("nextWorkspaceMapSelection");
     expect(view).toContain("onMapSelectionChange");
     expect(view).toContain("data-workspace-right-pane=");
-    expect(view).toContain('showMapExplore ? "map_explore" : rightPane');
+    expect(view).toContain("exploreOpen={idleExplore}");
+    expect(view).not.toContain("showMapExplore");
     expect(view).toContain("onExpandedNodeIdChange");
     expect(view).toContain('rightPane === "add_block"');
     expect(view).toContain('rightPane === "generate_shape"');

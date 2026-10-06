@@ -32,7 +32,6 @@ export function useMapGridMutate(input: {
   ayclToken?: string;
   ileToken?: string;
   locale: string;
-  suggestMode: "block" | "chapter";
   labels: BlockSkillGridProps["labels"];
   shapeFootprint: {
     span_w: number;
@@ -89,7 +88,6 @@ export function useMapGridMutate(input: {
     ayclToken,
     ileToken,
     locale,
-    suggestMode,
     labels,
     shapeFootprint,
     selectedEmptyCells,
@@ -150,7 +148,7 @@ export function useMapGridMutate(input: {
           body: JSON.stringify({
             workspaceId,
             sessionId,
-            mode: suggestMode,
+            mode: "block",
             row: opts.row,
             col: opts.col,
             weightedNeighbors: opts.weightedNeighbors,
@@ -192,7 +190,6 @@ export function useMapGridMutate(input: {
       labels.suggestError,
       locale,
       sessionId,
-      suggestMode,
       workspaceId,
     ],
   );

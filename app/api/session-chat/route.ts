@@ -6,10 +6,10 @@ import { ayclTokenFromBody,
   ileTokenFromBody, guardSessionRoute } from "@/lib/api/require-auth";
 import { buildIleHeliosChatSystemPrompt } from "@/lib/prompt-kernel/surfaces/ile";
 import { ileChapterSuggestionPowFromCoachText } from "@/lib/ile-chapter-depth";
+import { ileWorkCanvasWorkspaceFromChatBody } from "@/lib/ile-work-canvas-prompts";
 import {
   ileSessionChatCanvasReply,
   ileWorkCanvasTurnContextMessage,
-  ileWorkCanvasWorkspaceFromChatBody,
   serializeIleWorkCanvasScene,
 } from "@/lib/ile-work-canvas";
 import { assemblePromptWorkspaceContext } from "@/lib/prompt-workspace-context";

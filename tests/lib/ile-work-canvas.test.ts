@@ -5,6 +5,7 @@
 import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { readExcalidrawSurface, readSessionStageSurface } from "../helpers/surface-source";
 import {
   applyIleXaiReplyToWorkCanvas,
   applyIleXaiTurnAtCommit,
@@ -145,6 +146,8 @@ function writeScratch(name: string, body: string) {
 }
 
 function read(rel: string) {
+  if (rel === "components/ExcalidrawCanvas.tsx") return readExcalidrawSurface();
+  if (rel === "components/SessionView.tsx") return readSessionStageSurface();
   const path = join(ROOT, rel);
   expect(existsSync(path), `missing ${rel}`).toBe(true);
   return readFileSync(path, "utf8");

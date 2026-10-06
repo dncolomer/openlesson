@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { readSessionStageSurface } from "../helpers/surface-source";
 import type { SessionPlan } from "@/lib/domain/types";
 import { ileBlockSessionFrame } from "@/lib/ile-canvas-session";
 import { useSessionChapterWorkspaces } from "@/lib/useSessionChapterWorkspaces";
@@ -219,7 +220,7 @@ describe("TAP Learning single-canvas context store", () => {
     ]);
     expect(persisted["chapter-3"]).toBeUndefined();
 
-    const viewCanvas = readFileSync(join(ROOT, "components/SessionView.tsx"), "utf8");
+    const viewCanvas = readSessionStageSurface();
     expect(viewCanvas).toContain("ileChapterCanvasRemountKey");
     expect(viewCanvas).toContain("ileChapterCanvasRemountKey(session.id, activeChapterKey)");
     expect(viewCanvas).not.toMatch(/<ExcalidrawCanvas[\s\S]{0,80}key=\{session\.id\}/);

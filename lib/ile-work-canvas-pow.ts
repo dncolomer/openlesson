@@ -3,8 +3,8 @@
  * Pure scene-diff classifier + upload-item builder so hosts do not fork
  * `tool_name` / `tool_action` and tests do not mount Excalidraw.
  */
+import { ILE_EXCALIDRAW_POW_TOOLS } from "@/lib/ile-work-canvas-prompts";
 import {
-  ILE_EXCALIDRAW_POW_TOOLS,
   ileWorkCanvasHasLiveElements,
   ileWorkCanvasPointerBusy,
   isRetiredIleWorkToolName,

@@ -68,14 +68,12 @@ export const WORKSPACE_CIRCULAR_MENU_DRAWER_IDS = {
 } as const;
 
 export function resolveBlockCircularMenuSurface(input: {
-  suggestMode?: string | null;
   learnerMode?: boolean | null;
   tap?: boolean | null;
   /** Learning map keeps Calibrate / Learn / Drill without a Play mode. */
   practiceMenu?: boolean | null;
 }): BlockCircularMenuSurface {
   if (input.tap) return "none";
-  if (input.suggestMode === "chapter") return "ile";
   if (input.learnerMode || input.practiceMenu) return "workspace-learner";
   return "none";
 }

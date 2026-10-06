@@ -100,7 +100,6 @@ export function useMapAuthoring(input: {
   ayclToken?: string;
   ileToken?: string;
   locale: string;
-  suggestMode: "block" | "chapter";
   labels: BlockSkillGridProps["labels"];
   onAddBlock: BlockSkillGridProps["onAddBlock"];
   onGridOp?: BlockSkillGridProps["onGridOp"];
@@ -228,7 +227,6 @@ export function useMapAuthoring(input: {
     ayclToken,
     ileToken,
     locale,
-    suggestMode,
     labels,
     onAddBlock,
     onGridOp,
@@ -279,13 +277,6 @@ export function useMapAuthoring(input: {
         unusableKeys,
       });
       if (surface?.kind === "add_block") {
-        // TAP Learning empty cells open an Add-chapter ring first; the ring action
-        // sets localPendingCell. Workspace still opens the add chrome here.
-        if (suggestMode === "chapter") {
-          setLocalPendingCell(null);
-          setShapePromptOpen(false);
-          return;
-        }
         setLocalPendingCell(surface.cell);
         setShapePromptOpen(false);
       } else if (surface?.kind === "generate_shape" && onGridOp) {
@@ -296,7 +287,7 @@ export function useMapAuthoring(input: {
         setShapePromptOpen(false);
       }
     },
-    [onGridOp, suggestMode, unusableKeys],
+    [onGridOp, unusableKeys],
   );
 
   const paintMapSelection = useCallback((selection: WorkspaceMapSelection) => {
@@ -456,10 +447,10 @@ export function useMapAuthoring(input: {
         panX: pan.x,
         panY: pan.y,
         zoom,
-        pitch: skillGridMetrics(suggestMode === "chapter" ? "chapter" : "workspace").pitch,
+        pitch: skillGridMetrics("workspace").pitch,
       });
     },
-    [pan.x, pan.y, suggestMode, zoom],
+    [pan.x, pan.y, zoom],
   );
 
   const handleBlockPointerDown = useCallback(
@@ -685,7 +676,6 @@ export function useMapAuthoring(input: {
       // Fade / black fog empties cannot be used to add, clone, or generator-pick.
       // Pan and explore-click are handled above / in pointer-down, not here.
       if (
-        suggestMode !== "chapter" &&
         !isUnusable &&
         !canBuildOnFogVisibleEmpty(fogLookup(cell.row, cell.col))
       ) {
@@ -745,7 +735,6 @@ export function useMapAuthoring(input: {
       generatorPickActive,
       occupancy,
       fogLookup,
-      suggestMode,
       onClonePaste,
       onGeneratorEmptyToggle,
       selectedNodeId,

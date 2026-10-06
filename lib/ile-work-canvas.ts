@@ -13,10 +13,74 @@ import {
   resolveIleChapterContextKey,
 } from "@/lib/ile-session-global-context";
 import {
-  assemblePromptWorkspaceContext,
   type PromptWorkspaceContext,
   type PromptWorkspaceContextInput,
 } from "@/lib/prompt-workspace-context";
+
+import {
+  ILE_XAI_CANVAS_SHAPE_TYPES,
+  buildIleWorkCanvasClearOverlapsUserMessage,
+  ileWorkCanvasSelectionSummary,
+  ileWorkCanvasWithDomainPrefix,
+  ileWorkCanvasXaiToolsInstruction,
+  type IleXaiCanvasShapeType,
+} from "@/lib/ile-work-canvas-prompts";
+import {
+  ileWorkCanvasNormalizedRect,
+  ileWorkCanvasPositiveAreaOverlap,
+  ileWorkCanvasRectsOverlap,
+} from "@/lib/ile-work-canvas-geometry";
+import { ILE_WORK_CANVAS_OVERLAP_GAP } from "@/lib/ile-work-canvas-commands";
+
+export {
+  ILE_CANVAS_TIMER_RESET_LOADING_MS,
+  ILE_CANVAS_TIMER_SECONDS_CEILING,
+  ILE_CANVAS_TIMER_SECONDS_DEFAULT,
+  ILE_CANVAS_TIMER_SECONDS_MIN,
+  ILE_CANVAS_TIMER_SECONDS_STEP,
+  clampIleCanvasTimerSeconds,
+  formatIleWorkCanvasTimer,
+  ileWorkCanvasTimerExpired,
+  ileWorkCanvasTimerRemainingSeconds,
+} from "@/lib/ile-work-canvas-timer";
+export { ileWorkCanvasElementRect } from "@/lib/ile-work-canvas-geometry";
+export {
+  ileWorkCanvasNormalizedRect,
+  ileWorkCanvasPositiveAreaOverlap,
+  ileWorkCanvasRectsOverlap,
+};
+export {
+  ILE_SELECTIVE_COMPRESSION_LABEL,
+  ILE_WORK_CANVAS_COMMANDS,
+  filterIleWorkCanvasCommands,
+  ileCanvasCommandDraft,
+  ileWorkCanvasCommandNeedsSelection,
+} from "@/lib/ile-work-canvas-commands";
+export { ILE_WORK_CANVAS_OVERLAP_GAP };
+export type { IleWorkCanvasAskKind, IleWorkCanvasCommandId } from "@/lib/ile-work-canvas-commands";
+export {
+  ILE_COMPRESS_WORK_PROMPT,
+  ILE_EXCALIDRAW_POW_TOOLS,
+  ILE_WORK_CANVAS_STAY_ON_DOMAIN,
+  ILE_XAI_CANVAS_SHAPE_TYPES,
+  buildIleWorkCanvasAnswerUserMessage,
+  buildIleWorkCanvasAskUserMessage,
+  buildIleWorkCanvasClearOverlapsUserMessage,
+  buildIleWorkCanvasCommandUserMessage,
+  buildIleWorkCanvasRefactorUserMessage,
+  buildIleWorkCanvasSelectiveCompressUserMessage,
+  buildIleWorkCanvasSimplifyUserMessage,
+  buildIleWorkCanvasSuggestInsightUserMessage,
+  ileWorkCanvasDomainContextBlock,
+  ileWorkCanvasSelectionSummary,
+  ileWorkCanvasWorkspaceFromChatBody,
+  ileWorkCanvasXaiToolsInstruction,
+} from "@/lib/ile-work-canvas-prompts";
+export type {
+  IleExcalidrawPowTool,
+  IleWorkCanvasWorkspaceInput,
+  IleXaiCanvasShapeType,
+} from "@/lib/ile-work-canvas-prompts";
 
 export const ILE_XAI_CANVAS_CUSTOM_DATA_KEY = "ileXaiTurn" as const;
 export const ILE_XAI_LOADING_CUSTOM_DATA_KEY = "ileXaiLoading" as const;
@@ -24,37 +88,6 @@ export const ILE_CHAPTER_SEED_CUSTOM_DATA_KEY = "ileChapterSeed" as const;
 export const ILE_COMPRESS_WORK_CUSTOM_DATA_KEY = "ileCompressWork" as const;
 export const ILE_XAI_LOADING_TEXT = "Thinking ...";
 
-/** Excalidraw drawing tools that map to TAP Learning Work PoW. */
-export const ILE_EXCALIDRAW_POW_TOOLS = [
-  "text",
-  "freedraw",
-  "rectangle",
-  "diamond",
-  "ellipse",
-  "arrow",
-  "line",
-  "image",
-  "eraser",
-  "frame",
-  "selection",
-] as const;
-
-export type IleExcalidrawPowTool = (typeof ILE_EXCALIDRAW_POW_TOOLS)[number];
-
-/** Scene primitives XAI may emit in JSON "elements" (eraser/selection are learner-only). */
-export const ILE_XAI_CANVAS_SHAPE_TYPES = [
-  "text",
-  "freedraw",
-  "rectangle",
-  "diamond",
-  "ellipse",
-  "arrow",
-  "line",
-  "frame",
-  "image",
-] as const;
-
-export type IleXaiCanvasShapeType = (typeof ILE_XAI_CANVAS_SHAPE_TYPES)[number];
 
 const ILE_XAI_CANVAS_SHAPE_SET = new Set<string>(ILE_XAI_CANVAS_SHAPE_TYPES);
 
@@ -88,21 +121,6 @@ export function ileWorkCanvasXaiShapeType(raw: unknown): IleXaiCanvasShapeType |
   return ILE_XAI_CANVAS_SHAPE_SET.has(key) ? (key as IleXaiCanvasShapeType) : null;
 }
 
-/** Turn + system instruction: tools on the board and how to draw them in JSON. */
-export function ileWorkCanvasXaiToolsInstruction(): string {
-  const tools = ILE_EXCALIDRAW_POW_TOOLS.join(", ");
-  const shapes = ILE_XAI_CANVAS_SHAPE_TYPES.filter((type) => type !== "image").join(", ");
-  return [
-    `EXCALIDRAW DRAWING TOOLS on this board (name these when routing work): ${tools}.`,
-    `A schematic is rare. Add JSON "elements" (types: ${shapes}) only when a diagram is truly necessary: the topic is spatial, structural, geometric, or a relationship the learner cannot see from sentences.`,
-    `For an ordinary explanation, definition, question, or worked step, omit "elements" or send an empty array. Do not draw a flowchart, box diagram, or extra shape by default.`,
-    "Skip eraser and selection — those are learner tools only. Skip image unless you already have a fileId.",
-    `Reply as JSON: {"text":"<coaching reply, also placed as a text block>","textWidth":number,"origin":{"x":number,"y":number},"elements":[]}.`,
-    `"text" is what the learner reads on the board. Write it as a wise, warm teacher: complete unhurried sentences, eloquent and plain, easy to start from, with no headings, bullets, or compressed exam stems. Do not put JSON, code fences, or element arrays inside "text".`,
-    `"textWidth" is the coaching text box width in pixels. Choose it for this reply so the box fits the cluster. Do not reuse one width every time. A text element may set its own "width" the same way.`,
-    `Include "elements" only for that necessary diagram (${shapes}). Arrows/lines/freedraw may include "points":[[x,y],...]. Labeled shapes use "label":{"text":"..."}. Place marks near related existing elements. Always include "text". Never mention this JSON format to the learner.`,
-  ].join(" ");
-}
 
 const RETIRED_ILE_WORK_TOOLS = new Set(["notebook", "grokipedia", "dantes"]);
 
@@ -278,50 +296,6 @@ export function emptyIleWorkCanvasScene(): IleWorkCanvasScene {
   return { elements: [], appState: withIleWorkCanvasGridAppState({}), files: {} };
 }
 
-/** Difficulty: Work-canvas countdown before the board resets (insights stay). */
-export const ILE_CANVAS_TIMER_SECONDS_MIN = 10 * 60;
-export const ILE_CANVAS_TIMER_SECONDS_DEFAULT = 15 * 60;
-export const ILE_CANVAS_TIMER_SECONDS_CEILING = 60 * 60;
-export const ILE_CANVAS_TIMER_SECONDS_STEP = 60;
-
-export function clampIleCanvasTimerSeconds(value: unknown): number {
-  const n = Math.round(Number(value));
-  if (!Number.isFinite(n) || n <= 0) return ILE_CANVAS_TIMER_SECONDS_DEFAULT;
-  if (n < ILE_CANVAS_TIMER_SECONDS_MIN) return ILE_CANVAS_TIMER_SECONDS_MIN;
-  if (n > ILE_CANVAS_TIMER_SECONDS_CEILING) return ILE_CANVAS_TIMER_SECONDS_CEILING;
-  return n;
-}
-
-export function ileWorkCanvasTimerRemainingSeconds(input: {
-  durationSeconds: unknown;
-  startedAtMs: unknown;
-  nowMs: unknown;
-}): number {
-  const duration = clampIleCanvasTimerSeconds(input.durationSeconds);
-  const started = Number(input.startedAtMs);
-  const now = Number(input.nowMs);
-  if (!Number.isFinite(started) || !Number.isFinite(now)) return duration;
-  const elapsed = Math.max(0, (now - started) / 1000);
-  return Math.max(0, Math.ceil(duration - elapsed));
-}
-
-export function ileWorkCanvasTimerExpired(input: {
-  durationSeconds: unknown;
-  startedAtMs: unknown;
-  nowMs: unknown;
-}): boolean {
-  return ileWorkCanvasTimerRemainingSeconds(input) <= 0;
-}
-
-export function formatIleWorkCanvasTimer(remainingSeconds: unknown): string {
-  const s = Math.max(0, Math.floor(Number(remainingSeconds) || 0));
-  const m = Math.floor(s / 60);
-  const r = s % 60;
-  return `${m}:${String(r).padStart(2, "0")}`;
-}
-
-/** Overlay duration so timer reset is visible before the seed returns. */
-export const ILE_CANVAS_TIMER_RESET_LOADING_MS = 700;
 
 /**
  * Timer hit zero: clear learner work, then re-seed the original chapter
@@ -1022,57 +996,6 @@ export function ileWorkCanvasThinkingOccupancy(input: {
   return [];
 }
 
-export function ileWorkCanvasElementRect(
-  el: Pick<IleWorkCanvasElement, "x" | "y" | "width" | "height">,
-): { minX: number; minY: number; maxX: number; maxY: number } {
-  return {
-    minX: el.x,
-    minY: el.y,
-    maxX: el.x + (el.width || 0),
-    maxY: el.y + (el.height || 0),
-  };
-}
-
-export function ileWorkCanvasRectsOverlap(
-  a: { minX: number; minY: number; maxX: number; maxY: number },
-  b: { minX: number; minY: number; maxX: number; maxY: number },
-  pad = 0,
-): boolean {
-  return !(
-    a.maxX + pad <= b.minX ||
-    b.maxX + pad <= a.minX ||
-    a.maxY + pad <= b.minY ||
-    b.maxY + pad <= a.minY
-  );
-}
-
-/** Axis-aligned bounds. Zero-area marks (a line with no thickness) are null. */
-export function ileWorkCanvasNormalizedRect(
-  el: Pick<IleWorkCanvasElement, "x" | "y" | "width" | "height"> | null | undefined,
-): { minX: number; minY: number; maxX: number; maxY: number } | null {
-  if (!el) return null;
-  const x = Number(el.x) || 0;
-  const y = Number(el.y) || 0;
-  const w = Number(el.width) || 0;
-  const h = Number(el.height) || 0;
-  const minX = Math.min(x, x + w);
-  const maxX = Math.max(x, x + w);
-  const minY = Math.min(y, y + h);
-  const maxY = Math.max(y, y + h);
-  if (!(maxX > minX) || !(maxY > minY)) return null;
-  return { minX, minY, maxX, maxY };
-}
-
-/** Positive-area intersection. Shared edges do not count. */
-export function ileWorkCanvasPositiveAreaOverlap(
-  a: { minX: number; minY: number; maxX: number; maxY: number },
-  b: { minX: number; minY: number; maxX: number; maxY: number },
-): boolean {
-  return (
-    Math.min(a.maxX, b.maxX) - Math.max(a.minX, b.minX) > 0 &&
-    Math.min(a.maxY, b.maxY) - Math.max(a.minY, b.minY) > 0
-  );
-}
 
 function ileWorkCanvasCollisionMembers(
   incoming: readonly IleWorkCanvasElement[],
@@ -2149,128 +2072,9 @@ export function replaceIleXaiLoadingPlaceholder(
   );
 }
 
-export function ileWorkCanvasSelectionSummary(
-  elements: readonly IleWorkCanvasElement[] | null | undefined,
-): string {
-  const live = (elements ?? []).filter((el) => !el.isDeleted);
-  if (!live.length) return "(none)";
-  return live
-    .map((el) => {
-      if (el.type === "text" && el.text) {
-        const text = String(el.text).replace(/\s+/g, " ").trim().slice(0, 280);
-        return `[text] ${text}`;
-      }
-      return `[${el.type}] at (${Math.round(el.x)}, ${Math.round(el.y)})`;
-    })
-    .join("\n");
-}
-
-export type IleWorkCanvasWorkspaceInput = PromptWorkspaceContextInput;
-
-/** Stay-on-domain line attached to seed/ask/turn prompts so XAI does not drift. */
-export const ILE_WORK_CANVAS_STAY_ON_DOMAIN =
-  "Stay on this workspace and focused-block domain. Do not invent unrelated topics.";
-
-export function ileWorkCanvasWorkspaceFromChatBody(body: {
-  workspaceContext?: unknown;
-  workspaceTitle?: unknown;
-  workspaceGoal?: unknown;
-  workspaceDescription?: unknown;
-  blockTitle?: unknown;
-  blockDescription?: unknown;
-  chapterDescription?: unknown;
-  activeStepDescription?: unknown;
-  problem?: unknown;
-  notes?: unknown;
-  focusedBlockId?: unknown;
-  rootTopic?: unknown;
-} | null | undefined): PromptWorkspaceContextInput {
-  const rec = asRecord(body);
-  const nested = asRecord(rec.workspaceContext);
-  const str = (value: unknown): string | null => {
-    if (typeof value !== "string") return null;
-    const t = value.replace(/\s+/g, " ").trim();
-    return t || null;
-  };
-  const pick = (key: string, fallback?: unknown): string | null =>
-    str(nested[key]) || str(rec[key]) || str(fallback);
-  const files = Array.isArray(nested.files)
-    ? nested.files
-    : Array.isArray(rec.files)
-      ? rec.files
-      : undefined;
-  const blocks = Array.isArray(nested.blocks)
-    ? nested.blocks
-    : Array.isArray(rec.blocks)
-      ? rec.blocks
-      : undefined;
-  const unusableCells = Array.isArray(nested.unusableCells)
-    ? nested.unusableCells
-    : Array.isArray(rec.unusableCells)
-      ? rec.unusableCells
-      : undefined;
-  const blockLocalContext = nested.blockLocalContext ?? rec.blockLocalContext ?? undefined;
-  return {
-    workspaceTitle: pick("workspaceTitle", rec.problem),
-    rootTopic: pick("rootTopic"),
-    workspaceGoal: pick("workspaceGoal"),
-    workspaceDescription: pick("workspaceDescription"),
-    notes: pick("notes"),
-    blockTitle: pick("blockTitle"),
-    blockDescription: pick("blockDescription"),
-    chapterDescription: pick("chapterDescription", rec.activeStepDescription),
-    focusedBlockId: pick("focusedBlockId"),
-    files: files as PromptWorkspaceContextInput["files"],
-    blocks: blocks as PromptWorkspaceContextInput["blocks"],
-    blockLocalContext: blockLocalContext as PromptWorkspaceContextInput["blockLocalContext"],
-    unusableCells: unusableCells as PromptWorkspaceContextInput["unusableCells"],
-    scoutArtifacts:
-      (nested.scoutArtifacts as PromptWorkspaceContextInput["scoutArtifacts"]) ??
-      (rec.scoutArtifacts as PromptWorkspaceContextInput["scoutArtifacts"]) ??
-      null,
-  };
-}
-
-export function ileWorkCanvasDomainContextBlock(
-  workspace?: PromptWorkspaceContextInput | PromptWorkspaceContext | null,
-): string {
-  if (!workspace) return "";
-  const assembled =
-    "contextBlock" in workspace && typeof workspace.contextBlock === "string"
-      ? workspace
-      : assemblePromptWorkspaceContext(workspace);
-  const trimmed = String(assembled.contextBlock || "").trim();
-  if (!trimmed) return "";
-  if (trimmed.includes(ILE_WORK_CANVAS_STAY_ON_DOMAIN)) return trimmed;
-  return `${trimmed}\n${ILE_WORK_CANVAS_STAY_ON_DOMAIN}`;
-}
-
-function ileWorkCanvasWithDomainPrefix(
-  body: string,
-  workspace?: PromptWorkspaceContextInput | PromptWorkspaceContext | null,
-): string {
-  const domain = ileWorkCanvasDomainContextBlock(workspace);
-  if (!domain) return body;
-  return `${domain}\n\n${body}`;
-}
-
-export function buildIleWorkCanvasAskUserMessage(input: {
-  prompt: string;
-  selectedElements?: readonly IleWorkCanvasElement[] | null;
-  workspace?: PromptWorkspaceContextInput | PromptWorkspaceContext | null;
-}): string {
-  const prompt = String(input.prompt || "").trim();
-  const live = (input.selectedElements ?? []).filter((el) => !el.isDeleted);
-  const body = !live.length
-    ? `Ask about the Work canvas.\n\nQuestion:\n${prompt}`
-    : `Ask about the selected Work canvas elements.\n\nQuestion:\n${prompt}\n\nSelected elements:\n${ileWorkCanvasSelectionSummary(live)}`;
-  return ileWorkCanvasWithDomainPrefix(body, input.workspace);
-}
 
 export const ILE_COMPRESS_WORK_LABEL = "Compress work";
 export const ILE_COMPRESS_WORK_LOADING_LABEL = "Compressing work";
-export const ILE_COMPRESS_WORK_PROMPT =
-  "Compress this Work canvas into one concise knowledge summary. Distill every mark, note, and relation into a single dense takeaway. Stay on the workspace/block domain. Do not invent unrelated topics.";
 
 export function ileWorkCanvasLiveElements(
   scene: IleWorkCanvasScene | null | undefined,
@@ -2958,131 +2762,6 @@ export function joinIleWorkCanvasSelection(
   return { scene: { ...current, elements }, joined: true, parts };
 }
 
-export const ILE_SELECTIVE_COMPRESSION_LABEL = "Compress";
-export const ILE_WORK_CANVAS_OVERLAP_GAP = 16;
-
-export const ILE_WORK_CANVAS_COMMANDS = [
-  {
-    id: "answer",
-    label: "Answer",
-    tooltip: "Answer the question texts you selected on the canvas.",
-  },
-  {
-    id: "simplify",
-    label: "Simplify",
-    tooltip: "Rewrite the selected text in shorter, plainer sentences.",
-  },
-  {
-    id: "ask",
-    label: "Ask",
-    tooltip: "Ask by voice. You can type the question instead.",
-  },
-  {
-    id: "rephrase",
-    label: "Rephrase",
-    tooltip:
-      "Ask XAI to rewrite the selected marks in different words while keeping the same meaning.",
-  },
-  {
-    id: "split",
-    label: "Split",
-    tooltip: "Break the selected text into two or three separate blocks on the canvas.",
-  },
-  {
-    id: "join",
-    label: "Join",
-    tooltip: "Join the selected elements into one text block, or one group when they have no text.",
-  },
-  {
-    id: "elaborate",
-    label: "Elaborate",
-    tooltip: "Ask XAI to expand the selected marks with more concrete detail on this topic.",
-  },
-  {
-    id: "selective-compression",
-    label: "Compress",
-    tooltip:
-      "Ask XAI for one dense summary of the selected marks and replace only those marks with it.",
-  },
-  {
-    id: "refactor",
-    label: "Refactor",
-    tooltip:
-      "Ask XAI to rephrase the selected marks and rearrange those marks into a clearer layout.",
-  },
-  {
-    id: "suggest-insight",
-    label: "Suggest Insight",
-    tooltip:
-      "Ask XAI to add one new mark suggesting an insight from the selection, without saving it.",
-  },
-  {
-    id: "clear-overlaps",
-    label: "Clear overlaps",
-    tooltip: "Move the selected marks so their boxes no longer touch. Layout only.",
-  },
-] as const;
-
-export type IleWorkCanvasCommandId = (typeof ILE_WORK_CANVAS_COMMANDS)[number]["id"];
-
-export type IleWorkCanvasAskKind =
-  | "ask"
-  | "answer"
-  | "simplify"
-  | "selective-compress"
-  | "refactor"
-  | "suggest-insight"
-  | "clear-overlaps";
-
-/** Ask can run with no selection. Every other command uses the selected marks. */
-export function ileWorkCanvasCommandNeedsSelection(id: string | null | undefined): boolean {
-  return String(id || "").trim() !== "ask";
-}
-
-export function filterIleWorkCanvasCommands(query: string | null | undefined) {
-  const q = String(query || "").trim().toLowerCase();
-  if (!q) return [...ILE_WORK_CANVAS_COMMANDS];
-  return ILE_WORK_CANVAS_COMMANDS.filter((command) => {
-    const label = command.label.toLowerCase();
-    const compact = label.replace(/\s+/g, "");
-    const dashed = label.replace(/\s+/g, "-");
-    return (
-      command.id.startsWith(q) ||
-      label.startsWith(q) ||
-      compact.startsWith(q) ||
-      dashed.startsWith(q)
-    );
-  });
-}
-
-/** Slash draft. `/ask what is force` is Ask plus the typed question. */
-export function ileCanvasCommandDraft(raw: string | null | undefined): {
-  slash: boolean;
-  query: string;
-  rest: string;
-  exactId: IleWorkCanvasCommandId | null;
-} {
-  const trimmed = String(raw ?? "").trim();
-  if (!trimmed.startsWith("/")) {
-    return { slash: false, query: "", rest: trimmed, exactId: null };
-  }
-  const body = trimmed.slice(1).trim();
-  const space = body.search(/\s/);
-  const head = (space === -1 ? body : body.slice(0, space)).toLowerCase();
-  const rest = space === -1 ? "" : body.slice(space + 1).trim();
-  const matches = filterIleWorkCanvasCommands(head);
-  const exact =
-    ILE_WORK_CANVAS_COMMANDS.find((command) => {
-      const label = command.label.toLowerCase();
-      return (
-        command.id === head ||
-        label === head ||
-        label.replace(/\s+/g, "") === head ||
-        label.replace(/\s+/g, "-") === head
-      );
-    }) ?? (head && matches.length === 1 ? matches[0] : null);
-  return { slash: true, query: head, rest, exactId: exact?.id ?? null };
-}
 
 export type IleWorkCanvasClearOverlapsResult = {
   scene: IleWorkCanvasScene;
@@ -3105,19 +2784,6 @@ function ileWorkCanvasSelectedLive(
   return scene.elements.filter((el) => ids.has(el.id) && !el.isDeleted);
 }
 
-function ileWorkCanvasCommandSelectionListing(
-  elements: readonly IleWorkCanvasElement[] | null | undefined,
-): string {
-  const live = (elements ?? []).filter((el) => el && !el.isDeleted);
-  if (!live.length) return "(none)";
-  return live
-    .map((el) => {
-      const text = String(el.originalText || el.text || "").replace(/\s+/g, " ").trim();
-      const head = `id=${el.id} type=${el.type} x=${Math.round(Number(el.x) || 0)} y=${Math.round(Number(el.y) || 0)}`;
-      return text ? `${head} text=${JSON.stringify(text)}` : head;
-    })
-    .join("\n");
-}
 
 /** Sentence from a command reply. JSON canvas payloads contribute their text field only. */
 export function ileWorkCanvasCommandProse(raw: string | null | undefined): string {
@@ -3130,132 +2796,6 @@ export function ileWorkCanvasCommandProse(raw: string | null | undefined): strin
   return source;
 }
 
-export function buildIleWorkCanvasSelectiveCompressUserMessage(input: {
-  selectedElements?: readonly IleWorkCanvasElement[] | null;
-  workspace?: PromptWorkspaceContextInput | PromptWorkspaceContext | null;
-}): string {
-  const live = (input.selectedElements ?? []).filter((el) => el && !el.isDeleted);
-  const body = [
-    "Compress only the selected Work canvas marks into one dense knowledge summary.",
-    "Distill those marks into a single takeaway that preserves their essential claims and relations.",
-    "The summary replaces only the selected marks. Every unselected mark stays in place.",
-    "Do not add new topics.",
-    "",
-    "Selected elements:",
-    ileWorkCanvasCommandSelectionListing(live),
-  ].join("\n");
-  return ileWorkCanvasWithDomainPrefix(body, input.workspace);
-}
-
-export function buildIleWorkCanvasRefactorUserMessage(input: {
-  selectedElements?: readonly IleWorkCanvasElement[] | null;
-  workspace?: PromptWorkspaceContextInput | PromptWorkspaceContext | null;
-}): string {
-  const live = (input.selectedElements ?? []).filter((el) => el && !el.isDeleted);
-  const body = [
-    "Refactor the selected Work canvas marks.",
-    "Rephrase each selected mark in different words that keep the same meaning, and give each mark a new position so the selection reads as a clearer layout.",
-    "Change both the wording and the positions. Leave every unselected mark unchanged.",
-    "Return JSON only, with no markdown:",
-    '{"elements":[{"id":"<id>","text":"<rephrased words>","x":0,"y":0}]}',
-    "Include every selected id. Do not include unselected ids.",
-    "",
-    "Selected elements:",
-    ileWorkCanvasCommandSelectionListing(live),
-  ].join("\n");
-  return ileWorkCanvasWithDomainPrefix(body, input.workspace);
-}
-
-export function buildIleWorkCanvasSuggestInsightUserMessage(input: {
-  selectedElements?: readonly IleWorkCanvasElement[] | null;
-  workspace?: PromptWorkspaceContextInput | PromptWorkspaceContext | null;
-}): string {
-  const live = (input.selectedElements ?? []).filter((el) => el && !el.isDeleted);
-  const body = [
-    "Suggest one insight from the selected Work canvas marks.",
-    "Write a single sentence the learner could later craft as an insight. It is only a suggestion placed on the canvas.",
-    "Do not evaluate it, do not save it, and do not submit it.",
-    "Leave the selected marks unchanged.",
-    "",
-    "Selected elements:",
-    ileWorkCanvasCommandSelectionListing(live),
-  ].join("\n");
-  return ileWorkCanvasWithDomainPrefix(body, input.workspace);
-}
-
-export function buildIleWorkCanvasAnswerUserMessage(input: {
-  selectedElements?: readonly IleWorkCanvasElement[] | null;
-  workspace?: PromptWorkspaceContextInput | PromptWorkspaceContext | null;
-}): string {
-  const live = (input.selectedElements ?? []).filter((el) => el && !el.isDeleted);
-  const body = [
-    "Answer the selected question texts.",
-    "The learner wrote these questions on the canvas. Answer them in complete, unhurried sentences.",
-    "Leave the selected questions in place. The answer is the reply text.",
-    "Do not repeat the questions.",
-    "",
-    "Selected elements:",
-    ileWorkCanvasCommandSelectionListing(live),
-  ].join("\n");
-  return ileWorkCanvasWithDomainPrefix(body, input.workspace);
-}
-
-export function buildIleWorkCanvasSimplifyUserMessage(input: {
-  selectedElements?: readonly IleWorkCanvasElement[] | null;
-  workspace?: PromptWorkspaceContextInput | PromptWorkspaceContext | null;
-}): string {
-  const live = (input.selectedElements ?? []).filter((el) => el && !el.isDeleted);
-  const body = [
-    "Simplify the selected text.",
-    "Rewrite it in shorter, plainer sentences a learner can follow on a first read. Keep the same meaning.",
-    "Leave the selected marks in place. The simpler wording is the reply text.",
-    "",
-    "Selected elements:",
-    ileWorkCanvasCommandSelectionListing(live),
-  ].join("\n");
-  return ileWorkCanvasWithDomainPrefix(body, input.workspace);
-}
-
-export function buildIleWorkCanvasClearOverlapsUserMessage(input: {
-  selectedElements?: readonly IleWorkCanvasElement[] | null;
-  workspace?: PromptWorkspaceContextInput | PromptWorkspaceContext | null;
-}): string {
-  const live = (input.selectedElements ?? []).filter((el) => el && !el.isDeleted);
-  const body = [
-    "The selected marks overlap and a local layout could not separate them.",
-    "Return new positions only so the boxes no longer touch. Keep each mark's text and type.",
-    "Do not rephrase. Do not add or remove marks.",
-    "Return JSON only:",
-    '{"elements":[{"id":"<id>","x":0,"y":0}]}',
-    "",
-    "Selected elements:",
-    ileWorkCanvasCommandSelectionListing(live),
-  ].join("\n");
-  return ileWorkCanvasWithDomainPrefix(body, input.workspace);
-}
-
-export function buildIleWorkCanvasCommandUserMessage(input: {
-  kind?: IleWorkCanvasAskKind | "compress" | null;
-  prompt?: string | null;
-  selectedElements?: readonly IleWorkCanvasElement[] | null;
-  scene?: IleWorkCanvasScene | null;
-  workspace?: PromptWorkspaceContextInput | PromptWorkspaceContext | null;
-}): string {
-  const kind = input.kind === "compress" ? "selective-compress" : input.kind;
-  if (kind === "selective-compress") {
-    return buildIleWorkCanvasSelectiveCompressUserMessage(input);
-  }
-  if (kind === "refactor") return buildIleWorkCanvasRefactorUserMessage(input);
-  if (kind === "suggest-insight") return buildIleWorkCanvasSuggestInsightUserMessage(input);
-  if (kind === "clear-overlaps") return buildIleWorkCanvasClearOverlapsUserMessage(input);
-  if (kind === "answer") return buildIleWorkCanvasAnswerUserMessage(input);
-  if (kind === "simplify") return buildIleWorkCanvasSimplifyUserMessage(input);
-  return buildIleWorkCanvasAskUserMessage({
-    prompt: String(input.prompt || ""),
-    selectedElements: input.selectedElements,
-    workspace: input.workspace,
-  });
-}
 
 /**
  * Replace the current selection with one summary mark.

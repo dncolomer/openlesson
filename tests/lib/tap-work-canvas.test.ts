@@ -5,6 +5,7 @@
 import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { readExcalidrawSurface } from "../helpers/surface-source";
 import ts from "typescript";
 import {
   applyTapAssistantTurnsToWorkCanvas,
@@ -49,6 +50,7 @@ function writeScratch(name: string, body: string) {
 }
 
 function read(rel: string) {
+  if (rel === "components/ExcalidrawCanvas.tsx") return readExcalidrawSurface();
   const path = join(ROOT, rel);
   expect(existsSync(path), `missing ${rel}`).toBe(true);
   return readFileSync(path, "utf8");

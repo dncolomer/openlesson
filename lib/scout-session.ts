@@ -4,11 +4,11 @@
  * prompt builder, and TAP Learning context merge. Tests inject question arrays.
  */
 
+import { ileWorkCanvasXaiToolsInstruction } from "@/lib/ile-work-canvas-prompts";
 import {
   convertToExcalidrawElements,
   emptyIleWorkCanvasScene,
   ileWorkCanvasLiveGeometryListing,
-  ileWorkCanvasXaiToolsInstruction,
   serializeIleWorkCanvasScene,
   settleIleWorkCanvasIncoming,
   wrapIleWorkCanvasText,

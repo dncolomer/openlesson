@@ -158,7 +158,7 @@ describe("learner self-lock for LWM + Embeddings", () => {
     expect(perf).toContain('panelView="models"');
     expect(perf).toContain('panelView="lwm"');
     // Creator ranking path does not force lock via lwmEmbeddingsOnly
-    expect(view).toContain("lwmEmbeddingsOnly={modeShell.knowledgeLwmEmbeddingsOnly}");
+    expect(view).toContain("lwmEmbeddingsOnly={knowledgeLwmEmbeddingsOnly}");
 
     // UserPicker / multi: disabled self when !canInspectOthers
     expect(panel).toContain("if (!canInspectOthers)");

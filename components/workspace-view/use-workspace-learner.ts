@@ -33,14 +33,12 @@ import {
   WORKSPACE_LEARNER_LAUNCH_PATH,
   WORKSPACE_LEARNER_PROMPT_PATH,
 } from "@/lib/workspace-learner-writes";
-import type { WorkspaceInteractionMode } from "@/lib/workspace-mode";
-
 export function useWorkspaceLearner(input: {
   workspaceId: string;
   ayclToken?: string;
   currentUserId: string | null;
   locale: string;
-  interactionMode: WorkspaceInteractionMode;
+  learnerActivity: boolean;
   nodes: Block[];
   setNodes: Dispatch<SetStateAction<Block[]>>;
   unusableCells: UnusableCell[];
@@ -51,7 +49,7 @@ export function useWorkspaceLearner(input: {
     ayclToken,
     currentUserId,
     locale,
-    interactionMode,
+    learnerActivity,
     nodes,
     setNodes,
     unusableCells,
@@ -136,7 +134,7 @@ export function useWorkspaceLearner(input: {
   // Hydrate dynamic-generated flags from sessionStorage for map "?" labels.
   // Must stay above loading/error early returns (Rules of Hooks).
   useEffect(() => {
-    if (!workspaceId || interactionMode !== "learner") return;
+    if (!workspaceId || !learnerActivity) return;
     const userKey = currentUserId || ayclToken || "local";
     const next = new Set<string>();
     for (const n of nodes) {
@@ -154,7 +152,7 @@ export function useWorkspaceLearner(input: {
       }
     }
     setDynamicGeneratedIds(next);
-  }, [workspaceId, interactionMode, currentUserId, ayclToken, nodes.length]);
+  }, [workspaceId, learnerActivity, currentUserId, ayclToken, nodes.length]);
 
   const handleBlocksUpdated = useCallback(
     (raw: unknown[]) => {

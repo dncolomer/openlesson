@@ -35,7 +35,7 @@ export type MapAuthoringBlock = {
  */
 export function WorkspaceMapAuthoringPane({
   canEdit,
-  interactionMode = "learner",
+  learnerNotes = true,
   workspaceId = null,
   ayclToken,
   locale = "en",
@@ -52,7 +52,8 @@ export function WorkspaceMapAuthoringPane({
   busy = false,
 }: {
   canEdit: boolean;
-  interactionMode?: "creator" | "learner";
+  /** Learner-authored map notes. Verification creators save creator notes. */
+  learnerNotes?: boolean;
   workspaceId?: string | null;
   ayclToken?: string | null;
   locale?: string;
@@ -92,7 +93,7 @@ export function WorkspaceMapAuthoringPane({
       >
         <WorkspaceEmptyMapPane
           canEdit={canEdit}
-          interactionMode={interactionMode}
+          learnerNotes={learnerNotes}
           workspaceId={workspaceId}
           ayclToken={ayclToken}
           locale={locale}
@@ -126,12 +127,12 @@ export function WorkspaceMapAuthoringPane({
           ? "Click a block or empty cells to open the drawers. Scroll to zoom."
           : "Double-click a block to open detail."}
       </p>
-      {interactionMode === "creator" ? (
+      {learnerNotes ? null : (
         <p className="text-[11px] text-neutral-600">
           External sources, notes, and files are managed in{" "}
           <span className="text-neutral-400">Context</span>.
         </p>
-      ) : null}
+      )}
     </div>
   );
 }

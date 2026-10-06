@@ -115,10 +115,10 @@ describe("workspace mode pure resolvers", () => {
     ).toEqual(["workspace"]);
 
     const view = readWorkspaceViewSurface();
-    // Nav change must use mode-aware resolver (not owner-only gate alone).
-    expect(view).toContain("resolveActiveSectionForMode");
+    expect(view).toContain("workspaceShell(");
+    expect(view).not.toContain("resolveActiveSectionForMode");
     expect(view).toMatch(
-      /selectSection[\s\S]{0,400}resolveActiveSectionForMode/,
+      /selectSection[\s\S]{0,500}shell\.sections\.includes\(section\)/,
     );
     // AYCL token counts as signed-in for Learner Knowledge tab visibility
     expect(view).toMatch(
@@ -332,12 +332,13 @@ describe("fixed interaction mode", () => {
     expect(nav).not.toContain("data-workspace-mode-by-title");
     expect(nav).not.toContain("workspaceModeDisplayLabel");
     expect(nav).not.toContain("workspaceModeControlMounted");
-    expect(nav).toContain("data-workspace-interaction-mode");
+    expect(nav).not.toContain("data-workspace-interaction-mode");
     expect(nav).toContain("data-workspace-section-title");
     expect(grid).not.toContain("data-workspace-mode-under-minimap");
     expect(view).not.toContain("onMapToggle={");
     expect(view).not.toContain("onInteractionModeChange");
-    expect(view).toContain("resolveFixedWorkspaceInteractionMode");
+    expect(view).not.toContain("resolveFixedWorkspaceInteractionMode");
+    expect(view).toContain("workspaceShell(");
     expect(defaultInteractionModeForWorkspace("standard")).toBe("learner");
     expect(defaultInteractionModeForWorkspace(undefined)).toBe(
       DEFAULT_WORKSPACE_INTERACTION_MODE,
@@ -380,14 +381,15 @@ describe("learner mode UI structural", () => {
 
     expect(nav).not.toContain("data-workspace-mode-toggle");
     expect(nav).not.toContain("data-workspace-mode-by-title");
-    expect(nav).toContain("data-workspace-interaction-mode");
+    expect(nav).not.toContain("data-workspace-interaction-mode");
     expect(view).not.toContain("onMapToggle={");
     expect(grid).not.toContain("data-workspace-mode-under-minimap");
     expect(view).not.toContain("selectInteractionMode");
     expect(grid).not.toMatch(/label:\s*"Creator"/);
     expect(grid).not.toMatch(/label:\s*"Learner"/);
     expect(view).toContain("WorkspaceLearnerBlockPane");
-    expect(view).toContain("resolveFixedWorkspaceInteractionMode");
+    expect(view).not.toContain("resolveFixedWorkspaceInteractionMode");
+    expect(view).toContain("workspaceShell(");
     expect(view).not.toContain("clearMapChromeForModeFlip");
     const selection = read("components/workspace-view/use-workspace-map-selection.ts");
     expect(selection).not.toContain("workspaceModeFlipClearsMapSelection");
@@ -408,8 +410,8 @@ describe("learner mode UI structural", () => {
     expect(view).toMatch(
       /showCreatorDrawers[\s\S]*WorkspaceBlockDetailPane/,
     );
-    expect(view).toContain("mountsCreatorAuthoringDrawers");
-    expect(view).toContain("mountsLearnerPracticeDrawer");
+    expect(view).not.toContain("mountsCreatorAuthoringDrawers");
+    expect(view).not.toContain("mountsLearnerPracticeDrawer");
     // Real PoW stats path + parser (user-scoped, all quality — not practice-only)
     expect(view).toContain("parseLearnerPowSummaryFromApi");
     expect(view).toContain('subjectKey: "me"');
@@ -437,7 +439,7 @@ describe("learner mode UI structural", () => {
     expect(markDoneStart).toBeGreaterThan(-1);
     expect(applyingIdx).toBeGreaterThan(markDoneStart);
     expect(snapIdx).toBeGreaterThan(applyingIdx);
-    expect(view).toContain("lwmEmbeddingsOnly={modeShell.knowledgeLwmEmbeddingsOnly}");
+    expect(view).toContain("lwmEmbeddingsOnly={knowledgeLwmEmbeddingsOnly}");
     expect(grid).toContain("learnerMode");
     expect(grid).toContain("data-learner-mode");
     expect(grid).toContain("data-empty-cell-plus");
@@ -445,7 +447,7 @@ describe("learner mode UI structural", () => {
     expect(read("components/WorkspaceSectionNav.tsx")).not.toContain(
       "data-workspace-mode-toggle",
     );
-    expect(read("components/WorkspaceSectionNav.tsx")).toContain(
+    expect(read("components/WorkspaceSectionNav.tsx")).not.toContain(
       "data-workspace-interaction-mode",
     );
     // Empty learner maps keep the same grid shell (minimap, no mode toggle).
@@ -478,7 +480,7 @@ describe("learner mode UI structural", () => {
     expect(learner).toContain("MultiBlockDagCanvas");
     expect(learner).toContain("readOnly");
     const badges = read("components/block-skill-grid/map-tile-badges.tsx");
-    expect(grid + badges).toContain("data-learner-locked-label");
+    expect(grid + badges).not.toContain("data-learner-locked-label");
     expect(grid + badges).toContain("data-learner-locked-icon");
     expect(grid + badges).toContain("data-learner-dep-highlight");
     expect(learner).toContain("data-learner-pow-summary-stats");
@@ -551,7 +553,7 @@ describe("learner mode UI structural", () => {
         "subject_me=" + view.includes('subjectKey: "me"'),
         "quality_all=" + view.includes('quality: "all"'),
         "not_practice_only=" + String(!view.includes('quality: "practice"')),
-        "lwm_only=" + view.includes("lwmEmbeddingsOnly={modeShell.knowledgeLwmEmbeddingsOnly}"),
+        "lwm_only=" + view.includes("lwmEmbeddingsOnly={knowledgeLwmEmbeddingsOnly}"),
         "await_status=" + view.includes("set_block_status"),
         "await_snapshot=" + view.includes("snapshot-all"),
         "onPhase=" + view.includes("onPhase"),

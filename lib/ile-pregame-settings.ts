@@ -19,7 +19,7 @@ import {
   ILE_CANVAS_TIMER_SECONDS_CEILING,
   ILE_CANVAS_TIMER_SECONDS_DEFAULT,
   clampIleCanvasTimerSeconds,
-} from "@/lib/ile-work-canvas";
+} from "@/lib/ile-work-canvas-timer";
 import {
   ILE_POW_EXPENSE_DEFAULT,
   clampIlePowExpense,

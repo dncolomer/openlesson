@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { readDashboardSurface } from "../helpers/surface-source";
 import {
   DASHBOARD_WORKSPACE_LIST_FILTERS,
   DASHBOARD_WORKSPACE_TYPE_FILTERS,
@@ -10,8 +9,6 @@ import {
   workspaceMatchesDashboardListFilter,
   workspaceMatchesDashboardTypeFilter,
 } from "@/lib/dashboard-workspace-filters";
-
-const root = join(__dirname, "../..");
 
 describe("workspaceMatchesDashboardListFilter", () => {
   const publicAycl = { is_public: true, is_all_you_can_learn: true };
@@ -96,7 +93,7 @@ describe("isDashboardWorkspaceTypeFilter", () => {
 
 describe("dashboard AYCL filter surface", () => {
   it("wires the AYCL option into the workspace list filter", () => {
-    const dashSrc = readFileSync(join(root, "app/dashboard/page.tsx"), "utf8");
+    const dashSrc = readDashboardSurface();
     expect(dashSrc).toContain('value="aycl"');
     expect(dashSrc).toContain("workspaceMatchesDashboardListFilter");
     expect(dashSrc).toContain("isDashboardWorkspaceListFilter");
@@ -115,7 +112,7 @@ describe("dashboard empty workspace CTA", () => {
   });
 
   it("renders a first-run create CTA instead of search/filter chrome", () => {
-    const dashSrc = readFileSync(join(root, "app/dashboard/page.tsx"), "utf8");
+    const dashSrc = readDashboardSurface();
     expect(dashSrc).toContain("dashboardHasNoWorkspaces");
     expect(dashSrc).toContain("data-dashboard-empty-workspaces");
     expect(dashSrc).toContain("data-dashboard-empty-create");

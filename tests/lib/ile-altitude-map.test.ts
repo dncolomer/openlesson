@@ -421,48 +421,31 @@ describe("ile altitude groups", () => {
     );
 
     const world = read("components/block-skill-grid/map-world-layer.tsx");
-    expect(world).toContain("ileMapBoardBounds");
-    expect(world).toContain("data-ile-map-board");
-    expect(world).toContain("data-ile-map-board-frame");
-    expect(world).toContain("data-ile-map-board-frame-outer");
-    expect(world).toContain("data-ile-map-board-frame-inner");
-    expect(world).toContain("data-ile-map-board-corner");
+    expect(world).not.toContain("ileMapBoardBounds");
+    expect(world).not.toContain("data-ile-map-board");
+    expect(world).not.toContain("onChapterBoard");
+    expect(world).not.toContain("suggestMode");
     expect(ILE_MAP_BOARD_FRAME_INSET_PX).toBeGreaterThan(ILE_MAP_BOARD_FRAME_OUTER_PX);
     expect(ILE_MAP_BOARD_CORNER_PX / 2).toBe(
       ILE_MAP_BOARD_FRAME_INSET_PX + ILE_MAP_BOARD_FRAME_INNER_PX,
     );
     expect(ILE_MAP_BOARD_MARGIN_PX).toBeGreaterThan(ILE_MAP_BOARD_CORNER_PX / 2);
-    expect(world).toContain("onChapterBoard(cell.row, cell.col)");
-    expect(world).toContain("{ opacity: 1, fullyVisible: true }");
     const shell = read("components/block-skill-grid/map-grid-shell.tsx");
-    expect(shell).toContain('world.suggestMode === "chapter"');
-    expect(shell).toContain("bg-black");
-    expect(shell).toContain("data-ile-board-backdrop");
-    expect(shell).toContain("bg-cover bg-center");
-    expect(shell).toContain("grayscale(1)");
-    expect(shell).toContain("data-ile-board-backdrop-veil");
-    expect(shell).toContain("bg-black/65");
+    expect(shell).not.toContain("suggestMode");
+    expect(shell).not.toContain("data-ile-board-backdrop");
     const mini = read("components/block-skill-grid/map-minimap-chrome.tsx");
-    expect(mini).toContain("data-ile-minimap-board");
+    expect(mini).not.toContain("data-ile-minimap-board");
     expect(mini).toContain("data-minimap-fog-base");
     const grid = read("components/BlockSkillGrid.tsx");
-    expect(grid).toContain(
-      'hidden: showMinimap === false || suggestMode === "chapter"',
-    );
-    expect(grid).toContain(
-      'minimapHidden: showMinimap === false || suggestMode === "chapter"',
-    );
-    expect(grid).not.toContain('hidden: suggestMode === "chapter"');
-    expect(grid).toContain("pathOverlay");
+    expect(grid).toContain("hidden: showMinimap === false");
+    expect(grid).toContain("minimapHidden: showMinimap === false");
+    expect(grid).not.toContain("suggestMode");
+    expect(grid).not.toContain("pathOverlay");
     expect(grid).toContain("annotationLayers");
     expect(grid).toContain("handleMapNoteAddAtCenter");
-    expect(grid).toContain(
-      'aestheticImageForId(sessionId || "ile-chapter-board", resolvedAestheticImages)',
-    );
-    expect(grid).toContain("backdropSrc={chapterBoardBackdrop}");
-    expect(grid).toContain('suggestMode === "chapter" &&');
+    expect(grid).toContain('skillGridMetrics("workspace")');
     const stack = read("components/block-skill-grid/map-right-stack.tsx");
-    expect(stack).toContain("data-ile-path-overlay-toggle");
+    expect(stack).not.toContain("data-ile-path-overlay-toggle");
     expect(stack).toContain("data-annotation-layers-stack");
     expect(stack).toContain("data-learner-note-add");
     expect(stack).toContain("minimapHidden ? 8 :");
@@ -476,40 +459,32 @@ describe("ile altitude groups", () => {
     expect(world).not.toContain("ileAltitudeSurface");
     expect(world).not.toContain("ILE_ALTITUDE_TILE_CLASS");
     expect(world).not.toContain("bg-black/50");
-    expect(world).toContain(
-      'labelPlate={suggestMode === "chapter" && Boolean(tileAesthetic)}',
-    );
+    expect(world).toContain("labelPlate={false}");
     const badges = read("components/block-skill-grid/map-tile-badges.tsx");
     expect(badges).toContain("bg-black px-1.5 py-0.5 text-white");
     expect(badges).toContain("data-map-cell-keyword-plate");
-    expect(world).toContain("ILE_MAP_BOARD_FILL");
-    expect(world).toContain("skillGridMetrics");
-    expect(world).toContain('fill="none"');
+    expect(world).not.toContain("ILE_MAP_BOARD_FILL");
+    expect(world).toContain('skillGridMetrics("workspace")');
     expect(world).toContain("border border-dashed");
     expect(world).not.toContain("border border-solid");
     expect(world).not.toContain("!border-transparent bg-transparent");
     expect(world).not.toContain("!border-neutral-500");
-    expect(world).toContain('suggestMode !== "chapter" &&');
+    expect(world).not.toContain("suggestMode");
     expect(world).toContain('glyphVariant="solid"');
-    expect(world).toContain('glyphScale={suggestMode === "chapter" ? "chapter" : "block"}');
-    expect(world).toContain("ILE_CHAPTER_BLOCK_ALPHA");
-    expect(world).toContain("`rgb(0 0 0 / ${ILE_CHAPTER_BLOCK_ALPHA})`");
+    expect(world).toContain('glyphScale="block"');
+    expect(world).not.toContain("ILE_CHAPTER_BLOCK_ALPHA");
+    expect(world).not.toContain("ILE_PATH_YELLOW");
     expect(world).not.toContain('"!bg-black"');
     expect(world).not.toContain("border-white/20");
-    expect(world).toContain('suggestMode === "chapter"');
-    expect(world).toContain('suggestMode === "chapter" && showPathOverlay');
-    expect(world).toContain("ILE_PATH_YELLOW");
     expect(
       resolveEmptyCellMarker({
-        surface: "chapter",
         canEdit: true,
         learnerMode: false,
       }),
     ).toBe("plus");
     expect(world).toContain("data-empty-cell-plus");
-    expect(world).toContain("Click to add a chapter");
-    expect(world).toContain('surface: suggestMode === "chapter" ? "chapter" : "block"');
-    expect(world).toContain('isUnusable && suggestMode !== "chapter"');
+    expect(world).not.toContain("Click to add a chapter");
+    expect(world).toContain('surface: "block"');
     expect(world).toContain("data-map-cell-unusable-mark");
     expect(blockCircularMenuOpensOnEmpty("ile")).toBe(true);
     expect(blockCircularMenuOpensOnEmpty("ile", { unusable: true })).toBe(false);
@@ -521,7 +496,7 @@ describe("ile altitude groups", () => {
     ]);
     expect(blockCircularMenuActions("ile").map((action) => action.id)).toEqual(["work", "edit"]);
     expect(existsSync(join(ROOT, "components/ChapterMapPanel.tsx"))).toBe(false);
-    expect(read("components/BlockSkillGrid.tsx")).toContain('suggestMode === "chapter"');
+    expect(read("components/BlockSkillGrid.tsx")).not.toContain("suggestMode");
     expect(read("lib/ile-tim-chapter-complete.ts")).toContain("chapter_map_expand");
   });
 });
@@ -537,7 +512,7 @@ describe("TAP Learning board opening camera", () => {
 
   it("fits the whole board inside the viewport, as large as the clear area allows", () => {
     expect(ILE_BOARD_FIT_INSETS.bottom).toBe(ILE_MAP_VOICE_BAR_CLEARANCE_PX);
-    expect(ILE_BOARD_FIT_INSETS.bottom).toBe(140);
+    expect(ILE_BOARD_FIT_INSETS.bottom).toBe(48);
     expect(ILE_BOARD_FIT_INSETS.right).toBe(8 + MINIMAP_FRAME_WIDTH + ILE_BOARD_FIT_INSETS.left);
     const board = ileMapBoardBounds([
       { row: 1, col: -2 },
@@ -605,9 +580,10 @@ describe("TAP Learning board opening camera", () => {
     expect(getDefaultSkillGridZoom(width, height)).toBeCloseTo(0.7, 5);
     const grid = read("components/BlockSkillGrid.tsx");
     const viewport = read("components/block-skill-grid/use-map-viewport.ts");
-    expect(grid).toContain("ILE_BOARD_FIT_INSETS");
-    expect(grid).toContain("ileMapBoardBounds");
-    expect(grid).toContain('fitBoard: suggestMode === "chapter"');
+    expect(grid).not.toContain("ILE_BOARD_FIT_INSETS");
+    expect(grid).not.toContain("ileMapBoardBounds");
+    expect(grid).not.toContain("fitBoard");
+    expect(grid).toContain('skillGridMetrics("workspace")');
     expect(viewport).toContain("fitWorldRectCamera");
     expect(viewport).toContain("getDefaultSkillGridZoom");
     expect(existsSync(join(ROOT, "components/ChapterMapPanel.tsx"))).toBe(false);

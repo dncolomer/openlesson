@@ -355,8 +355,8 @@ describe("map fog-of-war wiring (workspace + TAP Learning, overlay only)", () =>
     expect(world).toContain("data-map-fog-veil");
     expect(world).toContain("data-map-fog-opacity");
     expect(world).toContain("opacity: fog.opacity");
-    expect(world).toContain('suggestMode === "chapter"');
-    expect(world).toContain("{ opacity: 1, fullyVisible: true }");
+    expect(world).not.toContain("suggestMode");
+    expect(world).toContain("fogLookup(cell.row, cell.col)");
     expect(authoring).toContain("canBuildOnFogVisibleEmpty");
     expect(authoring).not.toContain("mapExploreOpen");
     expect(grid).toContain("handleEmptyCellPointerDown");
@@ -365,7 +365,7 @@ describe("map fog-of-war wiring (workspace + TAP Learning, overlay only)", () =>
 
     expect(viewport).toContain("getVisibleGridCells(");
     expect(grid).toContain("buildSkillGridLayout");
-    expect(host).toContain('suggestMode === "chapter"');
+    expect(host).not.toContain("suggestMode");
     expect(sessionList).toContain("BlockSkillGrid");
     expect(sessionList).toContain("learnerMode={learnerMode}");
     expect(sessionList).not.toContain("mapExploreOpen");
@@ -387,7 +387,7 @@ describe("map fog-of-war wiring (workspace + TAP Learning, overlay only)", () =>
         "authoring_gate=" + authoring.includes("canBuildOnFogVisibleEmpty"),
         "host_drag=" + host.includes("dragOffset: blockDragOffset"),
         "host_extra=" + host.includes("extraRevealCells"),
-        "chapter_grid=" + host.includes('suggestMode === "chapter"'),
+        "chapter_grid=" + host.includes("suggestMode"),
         "session_explore=" + sessionList.includes("mapExploreOpen"),
         "session_play=" + sessionList.includes("learnerMode={learnerMode}"),
         "viewport_cells=" + viewport.includes("getVisibleGridCells("),

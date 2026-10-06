@@ -18,10 +18,7 @@ import {
   generatorTargetHighlightCells,
   parseBlockCreatorEffects,
 } from "@/lib/block-creator-effects";
-import {
-  ileChapterUnlockHighlightIds,
-  learnerMapDependencyHighlightIds,
-} from "@/lib/learner-local-dag";
+import { learnerMapDependencyHighlightIds } from "@/lib/learner-local-dag";
 import {
   buildOccupancyFromPlaced,
   normalizeSpan,
@@ -44,12 +41,10 @@ export function useMapDerived(input: {
   learnerMode: boolean;
   selectedNodeId: string | null;
   selectedBlockIds: string[];
-  suggestMode: "block" | "chapter";
   generatorTargetPreviewCells?: ReadonlyArray<{ row: number; col: number }> | null;
   dynamicContentGeneratedIds?: ReadonlySet<string> | readonly string[] | null;
   dynamicUnlockPreviewIds?: readonly string[] | null;
   expandJobs?: readonly AddExpandJob[] | null;
-  sessionId?: string;
   workspaceId?: string;
   recenterCell?: GridCell | null;
   isAdding: boolean;
@@ -61,12 +56,10 @@ export function useMapDerived(input: {
     learnerMode,
     selectedNodeId,
     selectedBlockIds,
-    suggestMode,
     generatorTargetPreviewCells,
     dynamicContentGeneratedIds,
     dynamicUnlockPreviewIds,
     expandJobs,
-    sessionId,
     workspaceId,
     recenterCell,
     isAdding,
@@ -117,24 +110,6 @@ export function useMapDerived(input: {
       ),
     );
   }, [learnerMode, selectedNodeId, selectedBlockIds, displayNodes]);
-
-  const chapterUnlockHighlightIds = useMemo(() => {
-    if (suggestMode !== "chapter") return new Set<string>();
-    const focus = selectedNodeId || selectedBlockIds[0] || null;
-    if (!focus) return new Set<string>();
-    return new Set(
-      ileChapterUnlockHighlightIds(
-        focus,
-        displayNodes.map((n) => ({
-          id: n.id,
-          title: n.title,
-          status: n.status,
-          lock_until_block_ids: n.lock_until_block_ids,
-          next_block_ids: n.next_block_ids,
-        })),
-      ),
-    );
-  }, [suggestMode, selectedNodeId, selectedBlockIds, displayNodes]);
 
   const generatorSparkEmptyKeys = useMemo(() => {
     if (generatorTargetPreviewCells && generatorTargetPreviewCells.length > 0) {
@@ -226,8 +201,7 @@ export function useMapDerived(input: {
     return keys;
   }, [expandJobs]);
 
-  const canSuggest =
-    suggestMode === "chapter" ? Boolean(sessionId) : Boolean(workspaceId);
+  const canSuggest = Boolean(workspaceId);
   const viewportCenterCell = recenterCell ?? startCell;
   const busy = isAdding || localBusy;
 
@@ -268,7 +242,6 @@ export function useMapDerived(input: {
     displayNodes,
     nodesById,
     learnerDepHighlightIds,
-    chapterUnlockHighlightIds,
     generatorSparkEmptyKeys,
     dynamicGeneratedSet,
     dynamicUnlockHighlightIds,

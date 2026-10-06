@@ -630,13 +630,13 @@ describe("TAP Learning TIM map interactions catalog + wiring", () => {
     expect(idle).toContain("mapSchedulerRef.current.begin");
     expect(view).toContain("ileTimProgressByTileId");
     expect(view).toContain("timBlockActionProgress");
-    expect(view).toContain("beginMapDelay(stepId)");
-    const markDoneIdx = view.indexOf("onMarkChapterCompleted={(stepId) => {");
-    const flushIdx = view.indexOf("await flushRemainingIlePow()", markDoneIdx);
-    const beginIdx = view.indexOf("beginMapDelay(stepId)", markDoneIdx);
-    expect(markDoneIdx).toBeGreaterThan(-1);
-    expect(beginIdx).toBeGreaterThan(markDoneIdx);
+    expect(view).toContain("beginMapDelay(activeStep.id)");
+    const beginIdx = view.indexOf("beginMapDelay(activeStep.id)");
+    const flushIdx = view.indexOf("await flushRemainingIlePow()", beginIdx);
+    const markDoneIdx = view.indexOf("await handleMarkChapterDone(opts)", beginIdx);
+    expect(beginIdx).toBeGreaterThan(-1);
     expect(flushIdx).toBeGreaterThan(beginIdx);
+    expect(markDoneIdx).toBeGreaterThan(flushIdx);
     expect(mutate).toContain("handleMarkChapterUndone");
     expect(mutate).toContain("applyIleChapterUndoDone");
 

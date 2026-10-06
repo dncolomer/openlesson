@@ -1,6 +1,6 @@
 import { composePrompt } from "../compose";
 import { TUTOR_CANVAS_VOICE } from "../tutor-voice";
-import { ileWorkCanvasXaiToolsInstruction } from "@/lib/ile-work-canvas";
+import { ileWorkCanvasXaiToolsInstruction } from "@/lib/ile-work-canvas-prompts";
 
 /**
  * L1 TAP surface — Think Aloud Protocol.

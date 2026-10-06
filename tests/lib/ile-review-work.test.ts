@@ -98,7 +98,7 @@ describe("Review work chrome (shipped source)", () => {
     const dockBar = read("components/session-view/ile-work-dock-bar.tsx");
     expect(dockBar).not.toContain("data-ile-review-work");
     expect(dockBar).not.toContain("data-ile-end-turn");
-    expect(dockBar).toContain("data-ile-chapter-dock-chapters");
+    expect(dockBar).not.toContain("data-ile-chapter-dock-chapters");
     expect(chrome).not.toContain("onReviewWork");
 
     const icons = read("components/session-view/ile-pow-icons.tsx");

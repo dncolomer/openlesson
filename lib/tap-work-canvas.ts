@@ -2,10 +2,10 @@
  * TAP conversational Work canvas: one session-scoped Excalidraw board.
  * Reuses TAP Learning scene apply / pull / PoW units — TAP does not fork Excalidraw.
  */
+import { buildIleWorkCanvasAskUserMessage } from "@/lib/ile-work-canvas-prompts";
 import {
   applyIleXaiReplyToWorkCanvas,
   applyIleXaiTurnToWorkCanvas,
-  buildIleWorkCanvasAskUserMessage,
   buildIleWorkCanvasCompressUserMessage,
   createIleXaiLoadingPlaceholder,
   emptyIleWorkCanvasScene,

@@ -179,7 +179,7 @@ describe("structural: Edit drawer + launch + map icons", () => {
     expect(card).toContain("data-practice-allow-explore");
 
     expect(grid).toContain("BlockPracticeOptionsBadge");
-    expect(grid).toContain("practiceOptionsIconKeys");
+    expect(grid).not.toContain("practiceOptionsIconKeys");
     const badges = read("components/block-skill-grid/map-tile-badges.tsx");
     expect(badges).toContain("data-block-practice-icons");
     expect(badges).toContain("data-practice-icon");

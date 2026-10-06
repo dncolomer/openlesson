@@ -5,6 +5,7 @@
 import { describe, expect, it } from "vitest";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { readExcalidrawSurface, readSessionStageSurface } from "../helpers/surface-source";
 import {
   appendIlePowCounterArtifact,
   countIlePowByType,
@@ -464,10 +465,7 @@ describe("canvas craft insight (evaluate + persist)", () => {
     expect(persist.evaluated).toBe(true);
     expect(persist.sessionId).toBe("sess-canvas");
 
-    const canvas = readFileSync(
-      join(__dirname, "../../components/ExcalidrawCanvas.tsx"),
-      "utf8",
-    );
+    const canvas = readExcalidrawSurface();
     const form = readFileSync(
       join(__dirname, "../../components/session-view/ile-canvas-craft-insight.tsx"),
       "utf8",
@@ -611,10 +609,7 @@ describe("accepted insight craft emits snapshot-eligible tool PoW", () => {
       join(__dirname, "../../components/session-view/ile-canvas-craft-insight.tsx"),
       "utf8",
     );
-    const viewSrc = readFileSync(
-      join(__dirname, "../../components/SessionView.tsx"),
-      "utf8",
-    );
+    const viewSrc = readSessionStageSurface();
     expect(craftSrc).toContain("ileInsightCraftPowFromAcceptedPersist");
     expect(craftSrc).toContain("persistOk: true");
     expect(craftSrc).toContain("config.recordSessionPowArtifact?.(pow)");

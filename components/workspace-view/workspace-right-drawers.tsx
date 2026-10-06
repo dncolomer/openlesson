@@ -23,7 +23,6 @@ import type { UnusableCell } from "@/lib/map-ground-rules";
 import type { ProductLaunchTarget } from "@/lib/product-intent";
 import type { BlockLocalContextInput, WorkspaceFileContextItem } from "@/lib/prompt-workspace-context";
 import type { WorkspaceExpandBlockSubmitOpts } from "@/components/WorkspaceExpandBlockPane";
-import type { WorkspaceInteractionMode } from "@/lib/workspace-mode";
 import type { LearnerDoneProgressPhase, LearnerPowSummary } from "@/lib/workspace-learner-done";
 import type { WorkspaceAddTargetCell } from "@/lib/workspace-right-pane";
 import { WORKSPACE_MAP_DESKTOP_RIGHT_WIDTH_CLASS } from "@/lib/workspace-right-pane";
@@ -40,7 +39,7 @@ export function WorkspaceRightDrawers({
   requestedDrawerId,
   requestedDrawerNonce,
   isLearnerMode,
-  interactionMode,
+  learnerNotes,
   workspaceId,
   ayclToken,
   locale,
@@ -114,7 +113,7 @@ export function WorkspaceRightDrawers({
   requestedDrawerId?: string | null;
   requestedDrawerNonce?: number | null;
   isLearnerMode: boolean;
-  interactionMode: WorkspaceInteractionMode;
+  learnerNotes: boolean;
   workspaceId: string;
   ayclToken?: string;
   locale: string;
@@ -422,7 +421,7 @@ export function WorkspaceRightDrawers({
         ) : (
           <WorkspaceMapAuthoringPane
             canEdit={isOwner && showCreatorDrawers}
-            interactionMode={interactionMode}
+            learnerNotes={learnerNotes}
             ayclToken={ayclToken}
             locale={locale}
             blocks={nodes}

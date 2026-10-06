@@ -11,8 +11,6 @@ import {
   applyAiTextToAreaSummary,
   buildAreaSummarySystemMessage,
   buildAreaSummaryUserPrompt,
-  buildExploreBlockSystemMessage,
-  buildExploreBlockUserPrompt,
   buildMapOverviewSystemMessage,
   buildMapOverviewUserPrompt,
   buildMapOverviewSummary,
@@ -20,10 +18,8 @@ import {
   buildMapSearchUserPrompt,
   buildSuggestSpotSystemMessage,
   buildSuggestSpotUserPrompt,
-  collectNearbyFilledBlocks,
   emptyMapBlocksToMinimapPlacements,
   parseAreaSummaryAiResponse,
-  parseExploreBlockAiResponse,
   parseMapSearchAiResponse,
   parseOverviewAiResponse,
   parseSuggestSpotAiResponse,
@@ -49,8 +45,6 @@ type Body = {
   blocks?: EmptyMapBlock[];
   unusableCells?: Array<{ row: number; col: number }>;
   polygon?: Array<{ x: number; y: number }>;
-  cell?: { row?: number; col?: number } | null;
-  modifierPrompt?: string | null;
   model?: string;
   locale?: string;
   limit?: number;
@@ -114,7 +108,7 @@ function occupancyFromBlocks(blocks: EmptyMapBlock[]): Set<string> {
 
 /**
  * xAI-powered map exploration for the empty-selection right pane.
- * ops: search | suggest_spot | overview | area_summary | explore_block
+ * ops: search | suggest_spot | overview | area_summary
  */
 export async function POST(req: NextRequest) {
   try {
@@ -138,12 +132,11 @@ export async function POST(req: NextRequest) {
       op !== "search" &&
       op !== "suggest_spot" &&
       op !== "overview" &&
-      op !== "area_summary" &&
-      op !== "explore_block"
+      op !== "area_summary"
     ) {
       return jsonError(
         400,
-        "op must be one of: search, suggest_spot, overview, area_summary, explore_block",
+        "op must be one of: search, suggest_spot, overview, area_summary",
       );
     }
 
@@ -286,49 +279,6 @@ export async function POST(req: NextRequest) {
         blockCount: heuristic.blockCount,
         clusterCount: heuristic.clusterCount,
         source: ai.success && parseOverviewAiResponse(ai.data) ? "xai" : "fallback",
-      });
-    }
-
-    if (op === "explore_block") {
-      const row = Math.trunc(Number(body.cell?.row));
-      const col = Math.trunc(Number(body.cell?.col));
-      if (!Number.isFinite(row) || !Number.isFinite(col)) {
-        return jsonError(400, "cell row and col are required");
-      }
-      const cell = { row, col };
-      const nearby = collectNearbyFilledBlocks({ cell, blocks });
-      const modifier = String(body.modifierPrompt ?? body.userHint ?? "").trim();
-      const ai = await callXaiJSON<{ summary?: unknown }>(
-        [
-          systemMessage(
-            buildExploreBlockSystemMessage() +
-              (languageNote ? `\n${languageNote}` : ""),
-          ),
-          userMessage(
-            buildExploreBlockUserPrompt({
-              cell,
-              blocks,
-              nearbyBlocks: nearby,
-              modifierPrompt: modifier || null,
-            }),
-          ),
-        ],
-        { model, maxTokens: 800, temperature: 0.55 },
-      );
-      const summary = parseExploreBlockAiResponse(ai.success ? ai.data : null);
-      if (!ai.success && !summary) {
-        return jsonError(
-          502,
-          (ai as { error?: string }).error ||
-            "Explore block failed — no result from the model.",
-        );
-      }
-      return NextResponse.json({
-        op,
-        summary,
-        cell,
-        nearbyBlockIds: nearby.map((b) => b.id),
-        source: ai.success && summary ? "xai" : "empty",
       });
     }
 

@@ -217,7 +217,7 @@ describe("TAP Learning map-first session chrome (shipped surface)", () => {
     expect(chrome).not.toContain("ileMapInsightCraftFrameClass()");
     expect(chrome).not.toContain("data-ile-work-dock-covered");
     const world = read("components/block-skill-grid/map-world-layer.tsx");
-    expect(world).toContain("data-ile-end-turn-board");
+    expect(world).not.toContain("data-ile-end-turn-board");
     expect(ileMapInsightCraftFrameClass()).toContain(ILE_MAP_INSIGHT_CRAFT_Z_CLASS);
     expect(ileMapInsightCraftFrameClass()).toContain("inset-0");
     expect(ileMapInsightCraftFrameClass()).not.toContain(ILE_MAP_POW_BAR_CLEARANCE_CLASS);
@@ -366,9 +366,9 @@ describe("TAP Learning map-first session chrome (shipped surface)", () => {
     const grid = read("components/BlockSkillGrid.tsx");
     expect(existsSync(join(ROOT, "components/ChapterMapPanel.tsx"))).toBe(false);
     expect(grid).toContain("defaultZoomAtReference");
-    expect(grid).toContain("overlayAnchorClass");
-    expect(grid).toContain('suggestMode === "chapter" ? "top-12" : "top-2"');
-    expect(grid).not.toContain('hidden: suggestMode === "chapter"');
+    expect(grid).toContain('overlayAnchorClass: "top-2"');
+    expect(grid).not.toContain("suggestMode");
+    expect(grid).toContain("hidden: showMinimap === false");
     expect(rail).toContain("if (!annotationDrawingActive) return null");
     expect(rail).toContain("data-annotation-toolbox");
 

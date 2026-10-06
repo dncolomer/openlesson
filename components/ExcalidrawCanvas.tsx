@@ -1,21 +1,29 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import {
-  Component,
-  memo,
   useRef,
   useCallback,
   useState,
   useEffect,
-  type ReactNode,
 } from "react";
 import { useI18n } from "@/lib/i18n";
 import { bindIleSurfaceEditorEvents, bindIleSurfaceWheelZoom } from "@/lib/ile-compact-window";
+import { ILE_HELIOS_THINKING_ROTATE_MS } from "@/lib/ile-dialogue-turn";
+import { ILE_CANVAS_TIMER_RESET_LOADING_MS } from "@/lib/ile-work-canvas-timer";
 import {
-  ILE_HELIOS_THINKING_ROTATE_MS,
-  ileHeliosThinkingLine,
-} from "@/lib/ile-dialogue-turn";
+  ILE_SELECTIVE_COMPRESSION_LABEL,
+  ileCanvasCommandDraft,
+  ileWorkCanvasCommandNeedsSelection,
+  type IleWorkCanvasCommandId,
+} from "@/lib/ile-work-canvas-commands";
+import { CanvasPromptBar } from "@/components/excalidraw-canvas/canvas-prompt-bar";
+import { CanvasSubmitBar } from "@/components/excalidraw-canvas/canvas-submit-bar";
+import { CanvasThinkingChips } from "@/components/excalidraw-canvas/canvas-thinking-chips";
+import {
+  IleExcalidrawErrorBoundary,
+  IleExcalidrawMount,
+} from "@/components/excalidraw-canvas/ile-excalidraw-mount";
+import { sanitizeSceneData } from "@/components/excalidraw-canvas/sanitize-scene";
 import {
   applyIleWorkCanvasPositionEdits,
   applyIleWorkCanvasRefactor,
@@ -24,17 +32,12 @@ import {
   ILE_CANVAS_PROMPT_BAR_FALLBACK_TOP,
   ILE_CANVAS_PROMPT_BAR_FALLBACK_WIDTH,
   ILE_CANVAS_PROMPT_BAR_TOOLBAR_SELECTOR,
-  ILE_CANVAS_TIMER_RESET_LOADING_MS,
-  ILE_SELECTIVE_COMPRESSION_LABEL,
   ileCanvasPromptBarTop,
   ileCanvasPromptBarWidth,
-  filterIleWorkCanvasCommands,
-  ileCanvasCommandDraft,
   ileCanvasCraftInsightOpenAfterSelection,
   ileCanvasPromptMode,
   ileCanvasSlashBarOpen,
   ileCanvasSlashKeyOpensBar,
-  ileWorkCanvasCommandNeedsSelection,
   ileWorkCanvasMarksNeedScroll,
   ileWorkCanvasQuickActionPrompt,
   ileWorkCanvasThinkingOccupancy,
@@ -58,9 +61,7 @@ import {
   joinIleWorkCanvasSelection,
   runIleWorkCanvasClearOverlaps,
   splitIleWorkCanvasSelectedText,
-  withIleWorkCanvasGridAppState,
   type IleWorkCanvasAskKind,
-  type IleWorkCanvasCommandId,
   ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS,
   type IleWorkCanvasElement,
   type IleWorkCanvasScene,
@@ -74,13 +75,7 @@ import {
   syncIleDictatedTextOnWorkCanvas,
   type IleDictateCapture,
 } from "@/lib/ile-canvas-dictate";
-import { ileCanvasCraftInsightUsable } from "@/lib/ile-turn-insights";
-import { IleCanvasDictateButton } from "@/components/session-view/ile-canvas-dictate-button";
-import {
-  IleCanvasCraftInsightForm,
-  IleCraftInsightButton,
-  type IleCanvasCraftInsightConfig,
-} from "@/components/session-view/ile-canvas-craft-insight";
+import { type IleCanvasCraftInsightConfig } from "@/components/session-view/ile-canvas-craft-insight";
 import {
   IleWorkCanvasPowCollector,
   ileWorkCanvasGestureBusy,
@@ -91,82 +86,7 @@ import "@excalidraw/excalidraw/index.css";
 import "@/app/ile-excalidraw-theme.css";
 
 // Dynamic import for Next.js SSR compatibility
-const Excalidraw = dynamic(
-  async () => (await import("@excalidraw/excalidraw")).Excalidraw,
-  { ssr: false }
-);
-
 type ExcalidrawAPIRef = any;
-
-const ILE_CANVAS_COMMAND_BUTTON_CLASS =
-  "pointer-events-auto flex h-full min-w-0 items-center justify-center whitespace-normal rounded-none border border-neutral-600 bg-neutral-900 px-1.5 py-1 text-center font-mono text-[11px] leading-tight text-white hover:border-white hover:bg-neutral-800";
-
-const ILE_EXCALIDRAW_UI_OPTIONS = {
-  canvasActions: {
-    loadScene: false,
-    export: false as false,
-    saveAsImage: false,
-    saveToActiveFile: false,
-    toggleTheme: false,
-  },
-};
-
-const IleExcalidrawMount = memo(function IleExcalidrawMount({
-  onApi,
-  onChange,
-  onPointerUpdate,
-  initialData,
-  viewModeEnabled = false,
-}: {
-  onApi: (api: ExcalidrawAPIRef) => void;
-  onChange: (
-    elements: readonly any[],
-    appState: any,
-    files: any,
-  ) => void;
-  onPointerUpdate?: (payload: {
-    pointer: { x: number; y: number; tool: "pointer" | "laser" };
-    button: "up" | "down";
-    pointersMap: Map<number, unknown>;
-  }) => void;
-  initialData: { elements: any[]; appState: any; files: any; scrollToContent?: boolean };
-  viewModeEnabled?: boolean;
-}) {
-  return (
-    <Excalidraw
-      excalidrawAPI={onApi}
-      onChange={onChange}
-      onPointerUpdate={onPointerUpdate}
-      initialData={initialData}
-      theme="dark"
-      viewModeEnabled={viewModeEnabled}
-      UIOptions={ILE_EXCALIDRAW_UI_OPTIONS}
-    />
-  );
-});
-
-class IleExcalidrawErrorBoundary extends Component<{ children: ReactNode }, { crashed: boolean }> {
-  state = { crashed: false };
-  static getDerivedStateFromError() {
-    return { crashed: true };
-  }
-  componentDidCatch(error: unknown) {
-    console.error("[ExcalidrawCanvas] crashed:", error);
-  }
-  render() {
-    if (this.state.crashed) {
-      return (
-        <div
-          data-ile-excalidraw-crash
-          className="flex h-full items-center justify-center bg-[#0a0a0a] px-4 text-center font-mono text-[11px] uppercase tracking-wider text-neutral-400"
-        >
-          Canvas failed to load.
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
 
 export interface ExcalidrawCanvasProps {
   initialData?: string;
@@ -230,24 +150,7 @@ export interface ExcalidrawCanvasProps {
   viewModeEnabled?: boolean;
 }
 
-// Excalidraw's appState contains runtime-only fields like collaborators
-// (a Map) that do not survive JSON storage. Persist only restorable state.
- 
-function sanitizeSceneData(scene: { elements: any[]; appState: any; files: any } | null | undefined) {
-  if (!scene) {
-    return {
-      elements: [],
-      appState: withIleWorkCanvasGridAppState({}),
-      files: {},
-    };
-  }
-  const { collaborators: _collaborators, ...appState } = scene.appState ?? {};
-  return {
-    elements: scene.elements ?? [],
-    appState: withIleWorkCanvasGridAppState(appState),
-    files: scene.files ?? {},
-  };
-}
+
 
 /**
  * Shared TAP Learning + TAP Work board. Hosts must not fork this — both surfaces
@@ -1469,56 +1372,13 @@ export function ExcalidrawCanvas({
   return (
     <div className="flex flex-col h-full bg-[#0a0a0a] rounded-none overflow-hidden">
       {onSubmitToHelios ? (
-      <div className="flex items-center justify-end gap-2 p-2 border-b border-neutral-800 bg-neutral-900/30">
-          <button
-            onClick={handleSubmitToHelios}
-            disabled={isSubmittingToHelios || !canSubmitToHelios}
-            title={
-              canSubmitToHelios
-                ? t("whiteboard.submitHint")
-                : t("whiteboard.alreadySubmitted")
-            }
-            aria-label={submitButtonLabel}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-black bg-white border border-white hover:bg-neutral-200 disabled:opacity-50 disabled:cursor-not-allowed rounded-none transition-colors"
-          >
-            {isSubmittingToHelios ? (
-              <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                />
-              </svg>
-            ) : (
-              <svg
-                className="w-3.5 h-3.5"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M5 12l5 5L20 7"
-                />
-              </svg>
-            )}
-            <span className="whitespace-nowrap">
-              {isSubmittingToHelios
-                ? t("whiteboard.submitting")
-                : submitButtonLabel}
-            </span>
-          </button>
-      </div>
+        <CanvasSubmitBar
+          t={t}
+          handleSubmitToHelios={handleSubmitToHelios}
+          isSubmittingToHelios={isSubmittingToHelios}
+          canSubmitToHelios={canSubmitToHelios}
+          submitButtonLabel={submitButtonLabel}
+        />
       ) : null}
 
       <div ref={canvasHostRef} className="flex-1 min-h-0 relative" data-ile-excalidraw-host>
@@ -1533,176 +1393,38 @@ export function ExcalidrawCanvas({
             />
           </IleExcalidrawErrorBoundary>
         )}
-        {thinkingChips.map((chip) => (
-          <div
-            key={chip.turnId}
-            ref={(node) => {
-              if (node) thinkingHostByIdRef.current.set(chip.turnId, node);
-              else thinkingHostByIdRef.current.delete(chip.turnId);
-            }}
-            data-ile-canvas-thinking
-            data-ile-canvas-thinking-id={chip.turnId}
-            className="pointer-events-none absolute z-[55] origin-top-left"
-            style={{
-              left: chip.left,
-              top: chip.top,
-              transform: `scale(${chip.zoom})`,
-            }}
-          >
-            <div
-              data-ile-canvas-thinking-chip
-              className="animate-ile-canvas-thinking box-border flex flex-col items-center justify-center gap-2 overflow-hidden rounded-none border border-white bg-neutral-950/92 px-3 py-3 shadow-[0_10px_32px_rgba(0,0,0,0.55)]"
-              style={{
-                width: thinkingOverlayBox.width,
-                height: thinkingOverlayBox.height,
-                minWidth: thinkingOverlayBox.minWidth,
-                minHeight: thinkingOverlayBox.minHeight,
-                maxWidth: thinkingOverlayBox.maxWidth,
-                maxHeight: thinkingOverlayBox.maxHeight,
-              }}
-            >
-              <span className="relative flex h-6 w-6 shrink-0 items-center justify-center" aria-hidden>
-                <span className="animate-ile-canvas-thinking-orbit absolute inset-0 rounded-full border border-white/30 border-t-white" />
-                <span className="h-1.5 w-1.5 rounded-full bg-white" />
-              </span>
-              <span
-                data-ile-canvas-thinking-copy
-                className="min-w-0 w-full overflow-hidden text-center font-mono text-[10px] uppercase leading-tight tracking-wider text-white"
-              >
-                {ileHeliosThinkingLine(thinkingTick)}
-              </span>
-              <span className="flex shrink-0 items-center gap-1" aria-hidden>
-                <span className="size-1 animate-bounce rounded-full bg-white" style={{ animationDelay: "0ms" }} />
-                <span className="size-1 animate-bounce rounded-full bg-white" style={{ animationDelay: "150ms" }} />
-                <span className="size-1 animate-bounce rounded-full bg-white" style={{ animationDelay: "300ms" }} />
-              </span>
-            </div>
-          </div>
-        ))}
+        <CanvasThinkingChips
+          thinkingChips={thinkingChips}
+          thinkingHostByIdRef={thinkingHostByIdRef}
+          thinkingOverlayBox={thinkingOverlayBox}
+          thinkingTick={thinkingTick}
+        />
         {onAskSelected ? (
-          <form
-            data-ile-canvas-prompt-bar
-            data-ile-canvas-prompt-mode="commands"
-            data-ile-excalidraw-ask="true"
-            data-ile-excalidraw-ask-busy={askInFlight > 0 ? "true" : undefined}
-            data-ile-canvas-prompt-bar-busy={askInFlight > 0 ? "true" : undefined}
-            className="pointer-events-none absolute left-1/2 z-[58] flex -translate-x-1/2 justify-center"
-            style={{
-              top: promptBarTop,
-              width: canvasSelectionActive
-                ? Math.max(promptBarWidth, ILE_CANVAS_PROMPT_BAR_FALLBACK_WIDTH)
-                : undefined,
-            }}
-            onSubmit={(event) => {
-              event.preventDefault();
-              submitCommand();
-            }}
-          >
-            <div
-              className={`pointer-events-auto flex flex-col gap-1.5 ${canvasSelectionActive ? "w-full" : "w-max"}`}
-            >
-              {ileCanvasSlashBarOpen({
-                selectionActive: canvasSelectionActive,
-                slashIntent: slashBarOpen,
-              }) ? (
-              <div className="flex w-full flex-col gap-1.5 rounded-none border border-white bg-neutral-950/95 p-2 shadow-[0_12px_40px_rgba(0,0,0,0.55)]">
-                {ileCanvasCommandDraft(commandText).slash ? (
-                  <div
-                    data-ile-learn-more
-                    data-ile-learn-more-actions
-                    className="grid w-full grid-cols-4 gap-1"
-                  >
-                    {filterIleWorkCanvasCommands(ileCanvasCommandDraft(commandText).query).map((command) => {
-                      const needsSelection = ileWorkCanvasCommandNeedsSelection(command.id);
-                      const blocked = needsSelection && !canvasSelectionActive;
-                      return (
-                        <button
-                          key={command.id}
-                          type="button"
-                          data-ile-learn-more-quick={command.id}
-                          aria-label={command.label}
-                          title={command.tooltip}
-                          disabled={blocked}
-                          onClick={() => {
-                            if (command.id === "ask") {
-                              setCommandText("/ask ");
-                              beginAskVoice();
-                              return;
-                            }
-                            if (blocked) return;
-                            setCommandText("");
-                            handleQuickAction(command.id);
-                          }}
-                          className={ILE_CANVAS_COMMAND_BUTTON_CLASS}
-                        >
-                          {command.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                ) : null}
-                <div className="flex items-stretch gap-1">
-                  <input
-                    ref={commandInputRef}
-                    data-ile-canvas-prompt-bar-input
-                    data-ile-canvas-command-input
-                    type="text"
-                    value={commandText}
-                    onChange={(event) => {
-                      if (askListening) setAskListening(false);
-                      askCaptureRef.current = null;
-                      setCommandText(event.target.value);
-                    }}
-                    placeholder="Type / for a command"
-                    aria-label="Type / for a command"
-                    className="min-w-0 flex-1 rounded-none border border-neutral-600 bg-neutral-900 px-2 py-1.5 text-sm text-white placeholder-neutral-500 focus:border-white focus:outline-none"
-                  />
-                  <button
-                    type="button"
-                    data-ile-canvas-ask
-                    aria-pressed={askListening}
-                    onClick={() => (askListening ? finishAskVoice(true) : beginAskVoice())}
-                    className="rounded-none border border-white bg-neutral-950 px-2.5 text-xs font-semibold uppercase tracking-wider text-white hover:bg-neutral-800 aria-pressed:bg-white aria-pressed:text-neutral-950"
-                  >
-                    {askListening ? "Stop" : "Ask"}
-                  </button>
-                  <button
-                    type="submit"
-                    data-ile-canvas-prompt-bar-send
-                    className="rounded-none border border-white bg-white px-2.5 text-xs font-semibold uppercase tracking-wider text-neutral-950 hover:bg-neutral-200"
-                  >
-                    Run
-                  </button>
-                </div>
-              </div>
-              ) : null}
-              <div className="flex items-stretch gap-1.5">
-                {craftInsight ? (
-                  <IleCraftInsightButton
-                    usable={ileCanvasCraftInsightUsable()}
-                    onClick={() => setCraftInsightOpen(true)}
-                  />
-                ) : null}
-                {dictateTranscript !== undefined && !viewModeEnabled ? (
-                  <IleCanvasDictateButton
-                    transcript={dictateTranscript}
-                    onLiveText={(text) => writeDictatedText(text, false)}
-                    onCommit={(text) => writeDictatedText(text, true)}
-                    onActiveChange={onDictateActive}
-                  />
-                ) : null}
-              </div>
-              {craftInsight ? (
-                <IleCanvasCraftInsightForm
-                  open={craftInsightOpen}
-                  enabled={ileCanvasCraftInsightUsable()}
-                  selectedElements={selectedCanvasElements()}
-                  config={craftInsight}
-                  onClose={() => setCraftInsightOpen(false)}
-                />
-              ) : null}
-            </div>
-          </form>
+          <CanvasPromptBar
+            askInFlight={askInFlight}
+            promptBarTop={promptBarTop}
+            canvasSelectionActive={canvasSelectionActive}
+            promptBarWidth={promptBarWidth}
+            submitCommand={submitCommand}
+            slashBarOpen={slashBarOpen}
+            commandText={commandText}
+            setCommandText={setCommandText}
+            beginAskVoice={beginAskVoice}
+            handleQuickAction={handleQuickAction}
+            commandInputRef={commandInputRef}
+            askListening={askListening}
+            setAskListening={setAskListening}
+            askCaptureRef={askCaptureRef}
+            finishAskVoice={finishAskVoice}
+            craftInsight={craftInsight}
+            setCraftInsightOpen={setCraftInsightOpen}
+            dictateTranscript={dictateTranscript}
+            viewModeEnabled={viewModeEnabled}
+            writeDictatedText={writeDictatedText}
+            onDictateActive={onDictateActive}
+            craftInsightOpen={craftInsightOpen}
+            selectedCanvasElements={selectedCanvasElements}
+          />
         ) : null}
       </div>
     </div>

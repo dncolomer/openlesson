@@ -4,11 +4,13 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
+import { readSessionStageSurface } from "../helpers/surface-source";
 import { ileCompactPaintKey } from "@/lib/ile-blur-screenshare";
 
 const ROOT = join(__dirname, "../..");
 
 function read(rel: string) {
+  if (rel === "components/SessionView.tsx") return readSessionStageSurface();
   const path = join(ROOT, rel);
   expect(existsSync(path), `missing ${rel}`).toBe(true);
   return readFileSync(path, "utf8");

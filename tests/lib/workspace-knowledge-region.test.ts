@@ -152,7 +152,8 @@ describe("Knowledge Region shell", () => {
       join(ROOT, "components/WorkspaceView.tsx"),
       "utf8",
     );
-    expect(viewSource).toContain("resolveFixedWorkspaceInteractionMode");
+    expect(viewSource).toContain("workspaceShell(");
+    expect(viewSource).not.toContain("resolveFixedWorkspaceInteractionMode");
     expect(viewSource).not.toContain("setInteractionMode");
     expect(krNav.map((item) => item.key)).not.toContain("workspace");
     const standardNav = buildWorkspaceSectionNavItems({

@@ -164,7 +164,7 @@ describe("learner Locked + DAG drawer structural", () => {
     expect(chrome).toContain("depHighlight");
 
     const badges = read("components/block-skill-grid/map-tile-badges.tsx");
-    expect(grid + badges).toContain("data-learner-locked-label");
+    expect(grid + badges).not.toContain("data-learner-locked-label");
     expect(grid + badges).toContain("data-learner-locked-icon");
     expect(grid).toContain("learnerDepHighlightIds");
     expect(grid).toContain("data-learner-dep-highlight");

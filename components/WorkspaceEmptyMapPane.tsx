@@ -21,7 +21,7 @@ import {
 } from "@/lib/empty-map-pane";
 import type { GridContinuousPoint } from "@/lib/block-map-tools";
 import type { MapNoteSource } from "@/lib/learner-map-notes";
-import { workspaceExpandMapTitle } from "@/lib/workspace-mode";
+
 import {
   WorkspaceRightPaneDrawer,
   WorkspaceRightPaneDrawerGroup,
@@ -38,7 +38,7 @@ import {
  */
 export function WorkspaceEmptyMapPane({
   canEdit: _canEdit = false,
-  interactionMode = "learner",
+  learnerNotes = true,
   workspaceId,
   ayclToken = null,
   locale = "en",
@@ -54,8 +54,8 @@ export function WorkspaceEmptyMapPane({
   busy = false,
 }: {
   canEdit?: boolean;
-  /** Wire id: creator shell or learner shell. */
-  interactionMode?: "creator" | "learner";
+  /** Learner-authored map notes. Verification creators save creator notes. */
+  learnerNotes?: boolean;
   workspaceId?: string | null;
   ayclToken?: string | null;
   locale?: string;
@@ -340,8 +340,7 @@ export function WorkspaceEmptyMapPane({
 
   const handleSaveNote = () => {
     if (!areaSummary || !areaSummary.text) return;
-    const source: MapNoteSource =
-      interactionMode === "learner" ? "learner" : "creator";
+    const source: MapNoteSource = learnerNotes ? "learner" : "creator";
     const createInput = mapNoteCreateInputFromAreaSummary(areaSummary, {
       source,
     });
@@ -369,7 +368,7 @@ export function WorkspaceEmptyMapPane({
       data-workspace-map-explore-pane
       data-map-explore-drawers
       data-workspace-right-pane="map_explore"
-      data-empty-map-mode={interactionMode}
+      data-empty-map-learner-notes={learnerNotes ? "true" : "false"}
       data-empty-map-xai="true"
       data-empty-map-overview-busy={overviewBusy ? "true" : "false"}
       className="flex h-full w-full min-h-0 flex-col overflow-hidden bg-neutral-950/95"
@@ -383,7 +382,7 @@ export function WorkspaceEmptyMapPane({
           data-expand-map-title
           data-map-explore-drawer-title
         >
-          {workspaceExpandMapTitle()}
+          Expand Map
         </p>
       </div>
 

@@ -19,7 +19,7 @@ import {
   createDisarmedCloneState,
   type CloneArmState,
 } from "@/lib/clone-block";
-import { workspaceEmptyCellOpensAuthoring } from "@/lib/workspace-mode";
+
 import type { UnusableCell } from "@/lib/map-ground-rules";
 import {
   emptyWorkspaceMapSelection,
@@ -136,7 +136,7 @@ export function useWorkspaceMapSelection(input: {
   const emptySurface = useMemo(() => {
     const emptyCells = mapSelectionEmptyCells(mapSelection);
     if (emptyCells.length === 0) return clearWorkspaceAddTarget();
-    if (!workspaceEmptyCellOpensAuthoring({ authoring })) {
+    if (!authoring) {
       return clearWorkspaceAddTarget();
     }
     // Pass unusable keys so a mixed selection opens Add on the remaining

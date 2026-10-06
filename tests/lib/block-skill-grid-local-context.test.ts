@@ -43,7 +43,7 @@ describe("blockHasAttachedLocalContext", () => {
     expect(grid).toContain("data-block-local-context-badge");
     expect(grid).toContain("data-block-local-context-icon");
     expect(grid).toContain('data-block-has-local-context={hasLocalContext ? "true" : "false"}');
-    // Both freeform label tile and rect tile render the badge.
-    expect(grid).toMatch(/localContextBadge[\s\S]*lockBadge/);
+    expect(grid).not.toContain("localContextBadge");
+    expect(grid).not.toContain("resolveMapOccupiedTileBadges");
   });
 });

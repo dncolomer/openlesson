@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
+import { readDashboardSurface } from "../helpers/surface-source";
 import {
   collectWorkspaceSnapshotSubjects,
   dedupeSnapshotSubjects,
@@ -53,7 +54,7 @@ describe("workspace dashboard card layout", () => {
     expect(existsSync(route)).toBe(true);
 
     const cardSrc = readFileSync(card, "utf8");
-    const dashSrc = readFileSync(dash, "utf8");
+    const dashSrc = readDashboardSurface();
     const routeSrc = readFileSync(route, "utf8");
 
     // Snapshot is LWM-only; dashboard cards keep pin / archive / visibility only
@@ -80,7 +81,7 @@ describe("workspace dashboard card layout", () => {
   });
 
   it("filters workspaces by public / private / AYCL next to archived", () => {
-    const dashSrc = readFileSync(join(root, "app/dashboard/page.tsx"), "utf8");
+    const dashSrc = readDashboardSurface();
     const storageSrc = readFileSync(join(root, "lib/storage/workspaces.ts"), "utf8");
     const cardSrc = readFileSync(join(root, "components/WorkspaceDashboardCard.tsx"), "utf8");
     expect(dashSrc).toContain("data-workspace-visibility-filter");

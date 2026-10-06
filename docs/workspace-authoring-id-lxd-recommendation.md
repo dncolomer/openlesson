@@ -73,7 +73,6 @@ Resolver: `resolveWorkspaceRightPane` in `lib/workspace-right-pane.ts`. Priority
 | `combine_blocks` | ≥2 filled blocks selected. | Multi-select drawers (table after next). |
 | `add_block` | Single placeable empty (Build, not Explore). | Prompt, attach context, range/density expand, starter flag. |
 | `generate_shape` | ≥2 placeable empties (Build). | Lecture-shaped multi-create from the selection + context source picker. |
-| `explore_block` | Explore overlay + placeable empty. | Explore-block drawer (`map_explore_block`) — not Add. |
 
 ### Sole-block drawers (`workspaceBlockDetailDrawerIds`)
 
@@ -112,7 +111,7 @@ No `detail` drawer exists in this registry (the older inventory still lists one)
 
 ### Explore overlay (not in the five registries — named so it is not mistaken for a gap)
 
-While the under-minimap toggle is **Explore**, the right column is the map-explore accordion (`MAP_EXPLORE_DRAWER_IDS`): `map_overview`, `map_search`, `map_suggest_spot`, `map_selective`, plus `map_explore_block` when an empty is selected (`explore_block` kind). These are LXD search / suggest / area-summary tools, not Build create.
+When the idle Expand Map pane is open, the right column is the map-explore accordion (`MAP_EXPLORE_DRAWER_IDS`): `map_overview`, `map_search`, `map_suggest_spot`, `map_selective`. These are LXD search / suggest / area-summary tools, not Build create.
 
 ### Settings subviews (section `settings` only)
 
@@ -150,7 +149,7 @@ Verdicts are **keep / promote / demote / relocate / hide**, tied to where the fa
 | `map_types` | Owner, Build, hidden in Play/Explore | **keep** | Advanced generator context; hiding it outside Build is correct. Do not promote to a template gallery unless the product wants that metaphor. |
 | `knowledge` | Privileged analytics | **keep** (not authoring) | Evaluation of *learners* against goals, not of the instruction. Do not hide from owners; do not pretend it is an ID design surface. |
 | `settings` | Privileged | **keep** | Access and identity. Correct that goals left this surface. |
-| `explore_block` + Explore overlay | Under-minimap Explore | **keep** | Learner-perspective search/suggest without mixing into Add. |
+| Idle Expand Map pane | Right column when nothing is selected | **keep** | Search, suggest-spot, overview, and area summary. |
 | Build / Play / Explore toggle | Under minimap | **keep** Play hide; **promote** a Build-side preview | Play correctly strips authoring chrome, but that is a mode switch, not an iterate-in-place preview. Authors need a learner-perspective pass **without** losing drawers. |
 | Knowledge Region (`goals` / `knowledge` / `settings` only) | Kind gate | **keep** | Not a course map; omitting `workspace` / `dags` / `map_types` / `context` / `simulation` is correct. |
 
@@ -217,7 +216,7 @@ Advice only. This goal does not implement them.
 |---|---|---|
 | Sole-block drawers | `detail`, `simulation`, `split`, `edit`, `local` | `simulation`, `split`, `expand_block`, `edit`, `danger`, `goals`, `effect_dynamic`, `effect_generator`, `local` — **no `detail`** |
 | Multi-select drawers | Combine + Bridge only | `combine`, `bridge`, `cluster`, `dag`, `simulation`, `danger` |
-| Right-pane kinds | five kinds | six: adds `explore_block` |
+| Right-pane kinds | five kinds | five: map tools, block detail, combine, add, generate shape |
 | Simulation **section** | Journey overview, sample paths, validation, score | Generate + collection only; overview/validation **unmounted** |
 | Settings subviews | `general`, `regions`, `knowledge-portal`, `guest-links`, `data-studio`, `integrations` | Adds `aycl`; guest-links labeled Knowledge Links |
 | Goals | Workspace goals tab mentioned | Also block-detail `goals`; Settings no longer edits a single goal |

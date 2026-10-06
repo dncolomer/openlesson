@@ -9,30 +9,18 @@ import { readMapGridSurface, readWorkspaceViewSurface } from "../helpers/surface
 import {
   availableSectionsForMode,
   resolveFixedWorkspaceInteractionMode,
-  workspaceEmptyCellOpensAuthoring,
-  workspaceExpandMapTitle,
   workspaceIdlePaneShowsExplore,
   workspaceLearnerPaneMounted,
   workspaceSurfaceShowsAuthoring,
   workspaceSurfaceShowsPracticeMenu,
 } from "@/lib/workspace-mode";
 import { resolveBlockCircularMenuSurface } from "@/lib/block-circular-menu";
-import {
-  resolveEmptyCellMarker,
-  resolveMapOccupiedTileBadges,
-} from "@/lib/map-tile-badges";
+import { resolveEmptyCellMarker } from "@/lib/map-tile-badges";
 import {
   resolveEmptySelectionSurface,
   resolveWorkspaceRightPane,
 } from "@/lib/workspace-right-pane";
-import {
-  MAP_EXPLORE_BLOCK_DRAWER_TITLE,
-  MAP_EXPLORE_DRAWER_IDS,
-  buildExploreBlockSystemMessage,
-  buildExploreBlockUserPrompt,
-  collectNearbyFilledBlocks,
-  parseExploreBlockAiResponse,
-} from "@/lib/empty-map-pane";
+import { MAP_EXPLORE_DRAWER_IDS } from "@/lib/empty-map-pane";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
@@ -49,27 +37,6 @@ function writeScratch(name: string, body: string) {
   mkdirSync(SCRATCH, { recursive: true });
   writeFileSync(join(SCRATCH, name), body);
 }
-
-const nearbyBlocks = [
-  {
-    id: "alpha",
-    title: "Linear algebra",
-    description: "Vectors and bases",
-    position_x: 2,
-    position_y: 2,
-    span_w: 1,
-    span_h: 1,
-  },
-  {
-    id: "beta",
-    title: "Probability",
-    description: "Random variables",
-    position_x: 8,
-    position_y: 8,
-    span_w: 1,
-    span_h: 1,
-  },
-];
 
 describe("one workspace surface", () => {
   it("does not present Play, Build, or Explore and still reaches map, authoring, and explore", () => {
@@ -115,8 +82,6 @@ describe("one workspace surface", () => {
     expect(
       workspaceSurfaceShowsAuthoring({ isOwner: true, allowAuthoring: false }),
     ).toBe(false);
-    expect(workspaceEmptyCellOpensAuthoring({ authoring: true })).toBe(true);
-    expect(workspaceEmptyCellOpensAuthoring({ authoring: false })).toBe(false);
     expect(
       workspaceLearnerPaneMounted({
         authoring: true,
@@ -145,10 +110,9 @@ describe("one workspace surface", () => {
         learnerActionRequested: true,
       }),
     ).toBe(false);
-    expect(workspaceExpandMapTitle()).toBe("Expand Map");
-    expect(workspaceExpandMapTitle()).not.toMatch(/Play|Build|Explore/);
     const selection = read("components/workspace-view/use-workspace-map-selection.ts");
-    expect(selection).toContain("workspaceEmptyCellOpensAuthoring({ authoring })");
+    expect(selection).toContain("if (!authoring)");
+    expect(selection).not.toContain("workspaceEmptyCellOpensAuthoring");
     expect(selection).not.toContain(
       'if (interactionMode === "learner") return clearWorkspaceAddTarget()',
     );
@@ -157,7 +121,9 @@ describe("one workspace surface", () => {
     expect(shell).toContain("workspaceLearnerPaneMounted");
     expect(shell).toContain("learnerActionRequested: learnerDrawerRequest != null");
     const explorePane = read("components/WorkspaceEmptyMapPane.tsx");
-    expect(explorePane).toContain("{workspaceExpandMapTitle()}");
+    expect(explorePane).toContain("Expand Map");
+    expect(explorePane).toContain("data-expand-map-title");
+    expect(explorePane).not.toContain("workspaceExpandMapTitle");
     expect(explorePane).not.toContain("Expand Map ·");
     expect(explorePane).not.toContain('? "Play"');
     expect(workspaceIdlePaneShowsExplore({ allowExplore: false })).toBe(false);
@@ -178,21 +144,12 @@ describe("one workspace surface", () => {
     expect(grid).toContain("blockCircularMenuOpensOnSelect(circularMenuSurface)");
     expect(grid).not.toContain("exploreOpen: mapExploreOpen");
 
-    const occupied = resolveMapOccupiedTileBadges({
-      hasDagLock: true,
-      isStart: true,
-      hasPractice: true,
-      hasLocalContext: true,
-      hasEffects: true,
-    });
-    expect(occupied).toEqual({
-      showLock: false,
-      showStarter: false,
-      showPractice: false,
-      showLocalContext: false,
-      showEffects: false,
-      showGeneratorBusy: false,
-    });
+    expect(read("lib/map-tile-badges.ts")).not.toContain(
+      "resolveMapOccupiedTileBadges",
+    );
+    expect(world).not.toContain("resolveMapOccupiedTileBadges");
+    expect(world).not.toContain("practiceOptionsIconKeys");
+    expect(world).not.toContain("creatorEffectIconKeys");
 
     expect(
       resolveEmptyCellMarker({
@@ -227,7 +184,6 @@ describe("one workspace surface", () => {
             mode: "learner",
             isOwner: true,
           }).join(","),
-        "occupied_icons=" + JSON.stringify(occupied),
         "empty_authoring=" +
           resolveEmptyCellMarker({
             canEdit: true,
@@ -261,53 +217,22 @@ describe("empty-cell click opens add or generate", () => {
         "one_kind=" + one?.kind,
         "one_pane=" + resolveWorkspaceRightPane(null, one),
         "multi_kind=" + multi?.kind,
-        "title=" + MAP_EXPLORE_BLOCK_DRAWER_TITLE,
       ].join("\n"),
     );
   });
 });
 
-describe("explore-block XAI prompt + parser", () => {
-  it("prompt includes cell, filled titles, nearby geometry, and modifier", () => {
-    const nearby = collectNearbyFilledBlocks({
-      cell: { row: 2, col: 3 },
-      blocks: nearbyBlocks,
-      radius: 3,
-    });
-    expect(nearby.map((b) => b.id)).toContain("alpha");
-    expect(nearby.map((b) => b.id)).not.toContain("beta");
-
-    const prompt = buildExploreBlockUserPrompt({
-      cell: { row: 2, col: 3 },
-      blocks: nearbyBlocks,
-      nearbyBlocks: nearby,
-      modifierPrompt: "Focus on visual proofs",
-    });
-    expect(prompt).toContain("row=2, col=3");
-    expect(prompt).toContain("Linear algebra");
-    expect(prompt).toContain("Probability");
-    expect(prompt).toContain("Focus on visual proofs");
-    expect(buildExploreBlockSystemMessage()).toMatch(/empty cell/i);
-
-    const parsed = parseExploreBlockAiResponse({
-      summary:
-        "This empty cell sits next to Linear algebra and can host a visual proof of bases.",
-    });
-    expect(parsed).toMatch(/Linear algebra/);
-    expect(parseExploreBlockAiResponse("plain text result")).toBe(
-      "plain text result",
-    );
-
-    writeScratch(
-      "explore-block-xai.log",
-      [
-        "nearby=" + nearby.map((b) => b.id).join(","),
-        "prompt_has_cell=" + prompt.includes("row=2, col=3"),
-        "prompt_has_filled=" + prompt.includes("Linear algebra"),
-        "prompt_has_modifier=" + prompt.includes("Focus on visual proofs"),
-        "parsed=" + parsed,
-      ].join("\n"),
-    );
+describe("explore-block prompts are gone", () => {
+  it("the pane library and the route no longer build an explore-block prompt", () => {
+    const paneLib = read("lib/empty-map-pane.ts");
+    const api = read("app/api/workspace/map-explore/route.ts");
+    expect(paneLib).not.toContain("buildExploreBlockUserPrompt");
+    expect(paneLib).not.toContain("buildExploreBlockSystemMessage");
+    expect(paneLib).not.toContain("parseExploreBlockAiResponse");
+    expect(paneLib).not.toContain("collectNearbyFilledBlocks");
+    expect(paneLib).not.toContain('"explore_block"');
+    expect(api).not.toContain("buildExploreBlockUserPrompt");
+    expect(api).not.toContain("explore_block");
   });
 });
 
@@ -323,10 +248,11 @@ describe("Explore mode wiring", () => {
     expect(nav).not.toContain("workspaceModeControlMounted");
     expect(nav).not.toContain("workspacePresentsModeChoice");
     expect(nav).not.toContain("WORKSPACE_MAP_TOGGLE_IDS");
-    expect(nav).toContain("data-workspace-interaction-mode");
+    expect(nav).not.toContain("data-workspace-interaction-mode");
     expect(view).toContain("workspaceSurfaceShowsAuthoring");
     expect(view).toContain("workspaceIdlePaneShowsExplore");
-    expect(view).toContain("resolveFixedWorkspaceInteractionMode");
+    expect(view).toContain("workspaceShell(");
+    expect(view).not.toContain("resolveFixedWorkspaceInteractionMode");
     expect(view).toContain("idleExplore={idleExplore}");
     expect(read("components/SessionList.tsx")).toContain(
       "resolveBlockCircularMenuSurface",
@@ -343,11 +269,17 @@ describe("Explore mode wiring", () => {
     expect(pane).not.toContain("data-explore-block-modifier");
     expect(pane).not.toContain("data-explore-block-submit");
     expect(pane).not.toContain('callMapExplore("explore_block"');
-    expect(pane).toContain("workspaceExpandMapTitle()");
+    expect(pane).toContain("Expand Map");
+    expect(pane).toContain("data-expand-map-title");
+    expect(pane).not.toContain("workspaceExpandMapTitle");
     expect(MAP_EXPLORE_DRAWER_IDS).not.toContain("map_explore_block");
 
-    expect(api).toContain('op !== "explore_block"');
-    expect(api).toContain("buildExploreBlockUserPrompt");
+    expect(api).not.toContain("explore_block");
+    expect(api).not.toContain("buildExploreBlockUserPrompt");
+    expect(api).toContain('op !== "search"');
+    expect(api).toContain('op !== "suggest_spot"');
+    expect(api).toContain('op !== "overview"');
+    expect(api).toContain('op !== "area_summary"');
     expect(view).not.toContain("onMapToggle");
     expect(view).not.toContain("exploreTargetCell");
     expect(view).not.toContain("handleMapToggle");

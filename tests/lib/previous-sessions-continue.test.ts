@@ -446,15 +446,13 @@ describe("Practice drawer labels and previous-sessions UI", () => {
     ).toEqual(["b-saved"]);
     expect(
       workspaceTileShowsPreviousSessionsPickaxe({
-        suggestMode: "block",
         blockId: "b-saved",
         previousSessionBlockIds: new Set(["b-saved"]),
       }),
     ).toBe(true);
     expect(
       workspaceTileShowsPreviousSessionsPickaxe({
-        suggestMode: "chapter",
-        blockId: "b-saved",
+        blockId: "b-other",
         previousSessionBlockIds: new Set(["b-saved"]),
       }),
     ).toBe(false);

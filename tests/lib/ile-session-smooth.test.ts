@@ -184,16 +184,16 @@ describe("TAP Learning slowness + wiring (shipped source)", () => {
     expect(helios).toContain("ingestStashedThought");
 
     const grid = readMapGridSurface() + read("components/block-skill-grid/map-tile-badges.tsx");
-    expect(grid).toContain("ileChapterCellChrome");
+    expect(grid).not.toContain("ileChapterCellChrome");
     expect(grid).toContain("data-ile-chapter-done-tick");
 
     expect(existsSync(join(ROOT, "components/ChapterMapPanel.tsx"))).toBe(false);
-    expect(read("components/BlockSkillGrid.tsx")).toContain('suggestMode === "chapter"');
+    expect(read("components/BlockSkillGrid.tsx")).not.toContain("suggestMode");
     writeScratch(
       "ile-chapter-done-excerpts.txt",
       [
-        "BlockSkillGrid uses ileChapterCellChrome + data-ile-chapter-done-tick",
-        "BlockSkillGrid suggestMode === chapter",
+        "BlockSkillGrid has no chapter cell chrome; badges keep data-ile-chapter-done-tick",
+        "BlockSkillGrid has no chapter suggest mode",
         `CHAPTER_LOAD_DURATION_MS=${CHAPTER_LOAD_DURATION_MS}`,
       ].join("\n"),
     );

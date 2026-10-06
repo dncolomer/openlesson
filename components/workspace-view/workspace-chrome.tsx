@@ -14,7 +14,6 @@ import {
 } from "@/lib/aycl-shared";
 import type { AyclCapabilities } from "@/lib/aycl-shared";
 import type { WorkspaceSectionKey } from "@/lib/workspace-sections";
-import type { WorkspaceInteractionMode } from "@/lib/workspace-mode";
 import type { Workspace } from "@/components/workspace-view/types";
 import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
 
@@ -70,7 +69,6 @@ export function WorkspaceViewChrome({
   activeSection,
   onSelectSection,
   plan,
-  interactionMode,
 }: {
   isAycl: boolean;
   hideNavbar: boolean;
@@ -83,7 +81,6 @@ export function WorkspaceViewChrome({
   activeSection: WorkspaceSectionKey;
   onSelectSection: (section: WorkspaceSectionKey) => void;
   plan: Workspace;
-  interactionMode: WorkspaceInteractionMode;
 }) {
   return (
     <>
@@ -148,7 +145,6 @@ export function WorkspaceViewChrome({
         onChange={onSelectSection}
         variant="bar"
         workspaceTitle={plan.title || plan.root_topic}
-        interactionMode={interactionMode}
       />
     </>
   );

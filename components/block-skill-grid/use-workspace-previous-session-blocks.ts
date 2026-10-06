@@ -6,16 +6,15 @@ import { fetchWorkspaceBlocksWithPreviousSessions } from "@/lib/block-previous-s
 /** Workspace map only: block ids with at least one saved previous session. */
 export function useWorkspacePreviousSessionBlockIds(input: {
   workspaceId?: string;
-  suggestMode?: "block" | "chapter";
   ayclToken?: string;
   ileToken?: string;
 }): Set<string> {
-  const { workspaceId, suggestMode = "block", ayclToken, ileToken } = input;
+  const { workspaceId, ayclToken, ileToken } = input;
   const [ids, setIds] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
     const id = String(workspaceId || "").trim();
-    if (suggestMode === "chapter" || !id) {
+    if (!id) {
       setIds(new Set());
       return;
     }
@@ -33,7 +32,7 @@ export function useWorkspacePreviousSessionBlockIds(input: {
     return () => {
       cancelled = true;
     };
-  }, [workspaceId, suggestMode, ayclToken, ileToken]);
+  }, [workspaceId, ayclToken, ileToken]);
 
   return ids;
 }

@@ -60,8 +60,8 @@ import {
 } from "@/lib/tap-work-canvas";
 import type { IleWorkCanvasPowEvent } from "@/lib/ile-work-canvas-pow";
 import { ILE_POW_DEBOUNCE_MS } from "@/lib/ile-realtime-pow";
+import { buildIleWorkCanvasCommandUserMessage } from "@/lib/ile-work-canvas-prompts";
 import {
-  buildIleWorkCanvasCommandUserMessage,
   type IleWorkCanvasAskKind,
   type IleWorkCanvasElement,
   type IleWorkCanvasScene,

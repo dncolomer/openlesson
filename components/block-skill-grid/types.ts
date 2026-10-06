@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import type { AddExpandJob } from "@/lib/add-block-range-density";
 import type { IleGatherJob } from "@/lib/ile-gather-resources";
 import type { GridCell, SkillGridNode } from "@/lib/block-skill-grid";
@@ -34,16 +33,8 @@ export interface BlockSkillGridProps {
   onAbortExpandJob?: (jobId: string) => void;
   gatherJobs?: readonly IleGatherJob[] | null;
   onOpenGatherResources?: (opts?: { jobId?: string | null; tileId?: string | null }) => void;
-  /** Chapter ids currently in open Work (docked). TAP Learning map tiles use matching aesthetic stills. */
-  openWorkIds?: readonly string[] | null;
-  /** Session aesthetic stills — same pool as the Work dock chips. */
+  /** Session aesthetic stills used on tiles that have a previous session. */
   aestheticImages?: readonly string[] | null;
-  /** Session-lived still per open Work id (stable until reload). */
-  workAestheticById?: Readonly<Record<string, string>> | null;
-  /** Accepted insights already tracked per chapter id. */
-  insightCountByChapterId?: Readonly<Record<string, number>> | null;
-  /** Replaces the chapter-board field. The double frame stays visible around it. */
-  boardInterior?: ReactNode;
   circularMenuSurface?: "ile" | "workspace-learner" | "none";
   onEmptyCellSelect?: (selected: boolean) => void;
   onBlockedCellSelect?: (selected: boolean) => void;
@@ -102,7 +93,6 @@ export interface BlockSkillGridProps {
   sessionId?: string;
   ayclToken?: string;
   ileToken?: string;
-  suggestMode?: "block" | "chapter";
   locale?: string;
   recenterCell?: GridCell | null;
   followCell?: GridCell | null;

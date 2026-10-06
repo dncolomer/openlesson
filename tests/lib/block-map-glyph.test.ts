@@ -18,7 +18,6 @@ import {
   pickRandomBlockMapIcon,
   resolveBlockMapGlyph,
 } from "@/lib/block-map-glyph";
-import { resolveMapOccupiedTileBadges } from "@/lib/map-tile-badges";
 import { composeGenerateShapeBlockSystemMessage } from "@/lib/block-footprint-prompt";
 import { composeAddBlockAtSlotSystemMessage } from "@/lib/workspace-authoring-prompt-context";
 import { composeEffectGenerationSystemMessage } from "@/lib/block-effect-generation";
@@ -142,25 +141,9 @@ describe("block map glyph (keyword + random 3×3 squares)", () => {
   });
 
   it("workspace tiles show glyph and hide occupancy modifiers", () => {
-    const badges = resolveMapOccupiedTileBadges({
-      surface: "block",
-      hasDagLock: true,
-      isStart: true,
-      hasPractice: true,
-      hasLocalContext: true,
-      hasEffects: true,
-      generatorBusy: true,
-    });
-    expect(badges).toEqual({
-      showLock: false,
-      showStarter: false,
-      showPractice: false,
-      showLocalContext: false,
-      showEffects: false,
-      showGeneratorBusy: false,
-    });
-
     const grid = readMapGridSurface();
+    expect(read("lib/map-tile-badges.ts")).not.toContain("resolveMapOccupiedTileBadges");
+    expect(grid).not.toContain("resolveMapOccupiedTileBadges");
     expect(grid).toContain('labelMode="glyph"');
     expect(grid).toContain('glyphVariant="solid"');
     expect(grid).not.toContain('glyphVariant={isChapterSurface ? "outline" : "solid"}');

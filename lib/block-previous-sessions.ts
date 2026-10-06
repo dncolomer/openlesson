@@ -307,11 +307,9 @@ export async function fetchWorkspaceBlocksWithPreviousSessions(
 }
 
 export function workspaceTileShowsPreviousSessionsPickaxe(input: {
-  suggestMode?: string | null;
   blockId?: string | null;
   previousSessionBlockIds?: ReadonlySet<string> | readonly string[] | null;
 }): boolean {
-  if (input.suggestMode === "chapter") return false;
   const blockId = String(input.blockId || "").trim();
   if (!blockId || !input.previousSessionBlockIds) return false;
   if (input.previousSessionBlockIds instanceof Set) {

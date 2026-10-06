@@ -18,7 +18,6 @@ import {
 } from "@/lib/skill-grid-ops";
 import type { AnnotationLayer } from "@/lib/map-annotation-layers";
 import { MapAnnotationStrokes } from "@/components/block-skill-grid/map-annotation-strokes";
-import { IleChapterInsightCountBadge } from "@/components/session-view/ile-insight-trophies";
 import {
   canDeleteMapNote,
   canEditMapNoteContent,
@@ -28,40 +27,15 @@ import {
 } from "@/lib/learner-map-notes";
 import { LearnerMapNotePostIt } from "@/components/LearnerMapNotePostIt";
 import {
-  parseBlockPracticeOptions,
-  practiceOptionsIconKeys,
-} from "@/lib/block-practice-options";
-import {
-  creatorEffectIconKeys,
   isGeneratorEffectBusy,
   learnerDynamicMapLabel,
   parseBlockCreatorEffects,
 } from "@/lib/block-creator-effects";
 import {
-  ILE_MAP_BOARD_CORNER_PX,
-  ILE_MAP_BOARD_FILL,
-  ILE_MAP_BOARD_FRAME,
-  ILE_MAP_BOARD_FRAME_INNER_PX,
-  ILE_MAP_BOARD_FRAME_INSET_PX,
-  ILE_MAP_BOARD_FRAME_OUTER_PX,
-  ileMapBoardBounds,
-} from "@/lib/ile-altitude-map";
-import {
-  ILE_CHAPTER_BLOCK_ALPHA,
-  ILE_PATH_DETOUR_WIDTH,
-  ILE_PATH_SPINE_CASING_WIDTH,
-  ILE_PATH_SPINE_WIDTH,
-  ILE_PATH_YELLOW,
-  ilePathMapFrame,
-  ilePathOverlay,
-  ilePathRouteD,
-} from "@/lib/ile-path-overlay";
-import {
   MAP_CELL_EMPTY_SELECTED_CLASS,
   MAP_CELL_GENERATION_PENDING_CLASS,
   MAP_CELL_TIM_UNOPENED_CLASS,
   MAP_CELL_UNUSABLE_CLASS,
-  ileChapterCellChrome,
   isMapCellDoneStatus,
   mapCellFreeformColors,
   mapCellFreeformDoneColors,
@@ -75,16 +49,11 @@ import {
   resolveOccupiedMapTileChrome,
 } from "@/lib/workspace-learner-chrome";
 import {
-  chapterHasDagLockChrome,
   incompleteInboundNextPrerequisites,
-  isChapterMapTileLocked,
   isLearnerMapBlockLocked,
   learnerBlockHasDependencyChrome,
 } from "@/lib/learner-local-dag";
-import {
-  resolveEmptyCellMarker,
-  resolveMapOccupiedTileBadges,
-} from "@/lib/map-tile-badges";
+import { resolveEmptyCellMarker } from "@/lib/map-tile-badges";
 import {
   resolveMapBlockHighlightRole,
   type LassoShapeKind,
@@ -97,11 +66,7 @@ import {
 import type { PlacedBlockRef } from "@/lib/skill-grid-ops";
 import type { MapFogLookup } from "@/lib/map-fog-of-war";
 import {
-  BlockCreatorEffectsBadge,
-  BlockDependencyLockBadge,
   BlockGeneratorTargetSparkBadge,
-  BlockLocalContextDocBadge,
-  BlockPracticeOptionsBadge,
   MapCellStatusGlyph,
 } from "@/components/block-skill-grid/map-tile-badges";
 import { workspaceTileShowsPreviousSessionsPickaxe } from "@/lib/block-previous-sessions";
@@ -112,10 +77,7 @@ import {
   resolveBlockMapGlyph,
 } from "@/lib/block-map-glyph";
 import type { BlockSkillGridProps } from "@/components/block-skill-grid/types";
-import {
-  aestheticImageForId,
-  resolveIleWorkAestheticImage,
-} from "@/lib/aesthetics";
+import { aestheticImageForId } from "@/lib/aesthetics";
 import { useSurfaceAestheticImages } from "@/lib/use-surface-aesthetic-images";
 import {
   BlockCircularMenuRing,
@@ -127,72 +89,6 @@ import {
   type BlockCircularMenuActionId,
   type BlockCircularMenuSurface,
 } from "@/lib/block-circular-menu";
-
-const ILE_BOARD_CORNERS = [
-  { id: "nw", top: true, left: true },
-  { id: "ne", top: true, left: false },
-  { id: "sw", top: false, left: true },
-  { id: "se", top: false, left: false },
-] as const;
-
-/** Clears the inner rule and the inward half of each corner square. */
-const ILE_END_TURN_BOARD_INSET_PX =
-  ILE_MAP_BOARD_FRAME_INSET_PX + ILE_MAP_BOARD_FRAME_INNER_PX + 4;
-
-function IleChapterBoardFrame({
-  left,
-  top,
-  width,
-  height,
-}: {
-  left: number;
-  top: number;
-  width: number;
-  height: number;
-}) {
-  const corner = ILE_MAP_BOARD_CORNER_PX;
-  return (
-    <div
-      data-ile-map-board-frame=""
-      aria-hidden
-      className="pointer-events-none absolute"
-      style={{ left, top, width, height, zIndex: 1 }}
-    >
-      <div
-        data-ile-map-board-frame-outer=""
-        className="absolute inset-0"
-        style={{
-          border: `${ILE_MAP_BOARD_FRAME_OUTER_PX}px solid ${ILE_MAP_BOARD_FRAME}`,
-        }}
-      />
-      <div
-        data-ile-map-board-frame-inner=""
-        className="absolute"
-        style={{
-          inset: ILE_MAP_BOARD_FRAME_INSET_PX,
-          border: `${ILE_MAP_BOARD_FRAME_INNER_PX}px solid ${ILE_MAP_BOARD_FRAME}`,
-        }}
-      />
-      {ILE_BOARD_CORNERS.map((cornerId) => (
-        <div
-          key={cornerId.id}
-          data-ile-map-board-corner={cornerId.id}
-          className="absolute"
-          style={{
-            width: corner,
-            height: corner,
-            backgroundColor: ILE_MAP_BOARD_FRAME,
-            boxShadow: "inset 0 0 0 2px #1a1404",
-            top: cornerId.top ? -corner / 2 : undefined,
-            bottom: cornerId.top ? undefined : -corner / 2,
-            left: cornerId.left ? -corner / 2 : undefined,
-            right: cornerId.left ? undefined : -corner / 2,
-          }}
-        />
-      ))}
-    </div>
-  );
-}
 
 function OpenWorkTileAesthetic({
   src,
@@ -254,19 +150,12 @@ export function MapWorldLayer({
   selectedNodeId,
   focusedNodeId,
   displayNodes,
-  suggestMode,
-  showPathOverlay = false,
   previewTargetId,
   previewPrereqIds,
   prereqEdit,
-  chapterUnlockHighlightIds,
   learnerDepHighlightIds,
   workedOnIds,
-  openWorkIds = null,
   aestheticImages = null,
-  workAestheticById = null,
-  insightCountByChapterId = null,
-  boardInterior = null,
   previousSessionBlockIds = new Set<string>(),
   generationLockedBlockIds,
   dynamicUnlockHighlightIds,
@@ -333,21 +222,12 @@ export function MapWorldLayer({
   selectedNodeId: string | null;
   focusedNodeId?: string | null;
   displayNodes: SkillGridNode[];
-  suggestMode: "block" | "chapter";
-  /** TAP Learning chapter map only. Draws the DAG spine and its detours. */
-  showPathOverlay?: boolean;
   previewTargetId: string | null;
   previewPrereqIds: string[];
   prereqEdit: PrereqEditState;
-  chapterUnlockHighlightIds: Set<string>;
   learnerDepHighlightIds: Set<string>;
   workedOnIds: Set<string>;
-  openWorkIds?: readonly string[] | null;
   aestheticImages?: readonly string[] | null;
-  workAestheticById?: Readonly<Record<string, string>> | null;
-  insightCountByChapterId?: Readonly<Record<string, number>> | null;
-  /** Replaces the chapter-board field. The frame around it stays visible. */
-  boardInterior?: ReactNode;
   previousSessionBlockIds?: Set<string>;
   generationLockedBlockIds: Set<string>;
   dynamicUnlockHighlightIds: Set<string>;
@@ -373,98 +253,15 @@ export function MapWorldLayer({
   renderStretchHandles: (blockId: string) => ReactNode;
   annotationLayers: AnnotationLayer[];
 }) {
-  const openWorkIdSet = new Set(openWorkIds ?? []);
   const surface = useSurfaceAestheticImages(aestheticImages);
   const aestheticPool = surface.source === "pending" ? undefined : surface.images;
-  const grid = skillGridMetrics(suggestMode === "chapter" ? "chapter" : "workspace");
-  const pathOverlay =
-    suggestMode === "chapter" && showPathOverlay
-      ? ilePathOverlay(
-          displayNodes.map((node) => ({
-            id: node.id,
-            row: node.position_y,
-            col: node.position_x,
-            lockUntilIds: node.lock_until_block_ids,
-            nextIds: node.next_block_ids,
-          })),
-        )
-      : null;
-  const pathFrame = pathOverlay ? ilePathMapFrame(pathOverlay) : null;
-  const chapterBoardCells =
-    suggestMode === "chapter"
-      ? [...occupancy.keys(), ...unusableKeys].flatMap((key) => {
-          const split = key.split(":");
-          const row = Number(split[0]);
-          const col = Number(split[1]);
-          if (!Number.isFinite(row) || !Number.isFinite(col)) return [];
-          return [{ row, col }];
-        })
-      : [];
-  const chapterBoard = ileMapBoardBounds(chapterBoardCells);
-  const onChapterBoard = (row: number, col: number) =>
-    chapterBoard != null &&
-    row >= chapterBoard.minRow &&
-    row <= chapterBoard.maxRow &&
-    col >= chapterBoard.minCol &&
-    col <= chapterBoard.maxCol;
+  const grid = skillGridMetrics("workspace");
   return (
     <>
-      {chapterBoard ? (
-        <>
-          <div
-            data-ile-map-board=""
-            aria-hidden
-            className="pointer-events-none absolute"
-            style={{
-              left: chapterBoard.minX,
-              top: chapterBoard.minY,
-              width: chapterBoard.width,
-              height: chapterBoard.height,
-              zIndex: 0,
-              backgroundColor: ILE_MAP_BOARD_FILL,
-            }}
-          />
-          <IleChapterBoardFrame
-            left={chapterBoard.minX}
-            top={chapterBoard.minY}
-            width={chapterBoard.width}
-            height={chapterBoard.height}
-          />
-          {boardInterior ? (
-            <div
-              data-ile-end-turn-board=""
-              className="absolute overflow-hidden bg-black"
-              style={{
-                left: chapterBoard.minX + ILE_END_TURN_BOARD_INSET_PX,
-                top: chapterBoard.minY + ILE_END_TURN_BOARD_INSET_PX,
-                width: Math.max(0, chapterBoard.width - ILE_END_TURN_BOARD_INSET_PX * 2),
-                height: Math.max(0, chapterBoard.height - ILE_END_TURN_BOARD_INSET_PX * 2),
-                zIndex: 50,
-                pointerEvents: "auto",
-              }}
-            >
-              <div
-                className="origin-top-left"
-                style={{
-                  width: `${Math.max(zoom, 0.05) * 100}%`,
-                  height: `${Math.max(zoom, 0.05) * 100}%`,
-                  transform: `scale(${1 / Math.max(zoom, 0.05)})`,
-                  transformOrigin: "top left",
-                }}
-              >
-                {boardInterior}
-              </div>
-            </div>
-          ) : null}
-        </>
-      ) : null}
           {/* Empty cells + selection highlights + unusable ground */}
           {visibleCells.map((cell) => {
             const blockId = occupancy.get(`${cell.row}:${cell.col}`);
             if (blockId) return null;
-            if (suggestMode === "chapter" && !onChapterBoard(cell.row, cell.col)) {
-              return null;
-            }
             const selectedEmpty = selectedEmptyCells.some(
               (c) => c.row === cell.row && c.col === cell.col,
             );
@@ -486,12 +283,9 @@ export function MapWorldLayer({
               learnerMode,
               isUnusable,
               isGeneratorSpark: isGeneratorSparkEmpty,
-              surface: suggestMode === "chapter" ? "chapter" : "block",
+              surface: "block",
             });
-            const fog =
-              suggestMode === "chapter"
-                ? { opacity: 1, fullyVisible: true }
-                : fogLookup(cell.row, cell.col);
+            const fog = fogLookup(cell.row, cell.col);
             return (
               <div
                 key={`empty-${cell.row}:${cell.col}`}
@@ -578,8 +372,6 @@ export function MapWorldLayer({
                           ? "Unusable ground — drag lasso to multi-select, then Unusable tool to clear"
                           : "Unusable ground — click to select, then Unusable tool to clear"
                         : "Unusable ground — shapes paths"
-                      : canEdit && suggestMode === "chapter"
-                        ? "Click to add a chapter"
                       : canEdit && !fog.fullyVisible && !activeLassoShape
                         ? "Hidden by fog — add only on fully visible empty cells · drag a block or use Best spot to reveal"
                       : canEdit
@@ -596,7 +388,7 @@ export function MapWorldLayer({
                   }
                 >
                   {isGeneratorSparkEmpty ? <BlockGeneratorTargetSparkBadge /> : null}
-                  {isUnusable && suggestMode !== "chapter" ? (
+                  {isUnusable ? (
                     <span
                       className="text-[9px] uppercase tracking-wide text-neutral-600"
                       data-map-cell-unusable-mark
@@ -651,76 +443,6 @@ export function MapWorldLayer({
               })
             : null}
 
-          {pathOverlay && pathFrame ? (
-            <svg
-              data-ile-path-overlay=""
-              aria-hidden
-              className="pointer-events-none absolute overflow-visible"
-              viewBox={`${pathFrame.minX} ${pathFrame.minY} ${pathFrame.width} ${pathFrame.height}`}
-              style={{
-                left: pathFrame.minX,
-                top: pathFrame.minY,
-                zIndex: 0,
-                width: pathFrame.width,
-                height: pathFrame.height,
-              }}
-            >
-              {pathOverlay.detours.map((route) => (
-                <g key={route.id} data-ile-path-detour={route.chapterIds.join(",")}>
-                  <path
-                    d={ilePathRouteD(route.points)}
-                    fill="none"
-                    stroke={ILE_PATH_YELLOW}
-                    strokeWidth={ILE_PATH_DETOUR_WIDTH}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeDasharray="10 8"
-                    opacity={0.85}
-                  />
-                </g>
-              ))}
-              {pathOverlay.spine ? (
-                <g data-ile-path-spine={pathOverlay.spine.chapterIds.join(",")}>
-                  <path
-                    d={ilePathRouteD(pathOverlay.spine.points)}
-                    fill="none"
-                    stroke="rgba(0,0,0,0.8)"
-                    strokeWidth={ILE_PATH_SPINE_CASING_WIDTH}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d={ilePathRouteD(pathOverlay.spine.points)}
-                    fill="none"
-                    stroke={ILE_PATH_YELLOW}
-                    strokeWidth={ILE_PATH_SPINE_WIDTH}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  {pathOverlay.spine.points.map((point, index) => {
-                    const last = index === pathOverlay.spine!.points.length - 1;
-                    if (index !== 0 && !last) return null;
-                    const size = 16;
-                    return (
-                      <rect
-                        key={point.chapterId}
-                        data-ile-path-stop={point.chapterId}
-                        data-ile-path-role={index === 0 ? "start" : "end"}
-                        x={point.x - size / 2}
-                        y={point.y - size / 2}
-                        width={size}
-                        height={size}
-                        fill={ILE_PATH_YELLOW}
-                        stroke="#1a1404"
-                        strokeWidth={2}
-                      />
-                    );
-                  })}
-                </g>
-              ) : null}
-            </svg>
-          ) : null}
-
           {/* Occupied blocks: solid rect or freeform multi-tile lecture */}
           {[...renderedBlockIds].map((blockId) => {
             const node = nodesById.get(blockId);
@@ -751,9 +473,7 @@ export function MapWorldLayer({
                   })),
                 ).flat()
               : skillNodeOccupiedCells(node);
-            // Chapter squares stay individual tiles. Workspace polyominoes still share one outline.
             const freeform =
-              suggestMode !== "chapter" &&
               !liveStretch &&
               Array.isArray(node.shape_cells) &&
               node.shape_cells.length > 0 &&
@@ -807,12 +527,9 @@ export function MapWorldLayer({
             }));
             // Both modes: lock_until + inbound next (DAG leads-to) + Dynamic unlock-after.
             // Locked state: learner uses status-aware gate; creator uses lock_until complete.
-            const lockedByPrereq =
-              suggestMode === "chapter"
-                ? isChapterMapTileLocked(learnerNodeRef, learnerBlocksRef)
-                : learnerMode
-                  ? isLearnerMapBlockLocked(learnerNodeRef, learnerBlocksRef)
-                  : isBlockLockedUntilCompleted(node, nodesById);
+            const lockedByPrereq = learnerMode
+              ? isLearnerMapBlockLocked(learnerNodeRef, learnerBlocksRef)
+              : isBlockLockedUntilCompleted(node, nodesById);
             const inboundNextIncomplete = incompleteInboundNextPrerequisites(
               learnerNodeRef,
               learnerBlocksRef,
@@ -821,14 +538,10 @@ export function MapWorldLayer({
               ...lockUntilIds,
               ...inboundNextIncomplete.map((b) => b.id),
             ].filter((id, i, arr) => arr.indexOf(id) === i);
-            // Chapter tiles keep the DAG for unlock highlighting. The lock icon is not drawn.
-            const hasDependencies =
-              suggestMode === "chapter"
-                ? chapterHasDagLockChrome(learnerNodeRef, learnerBlocksRef)
-                : learnerBlockHasDependencyChrome(
-                    learnerNodeRef,
-                    learnerBlocksRef,
-                  );
+            const hasDependencies = learnerBlockHasDependencyChrome(
+              learnerNodeRef,
+              learnerBlocksRef,
+            );
             const displayStatus = lockedByPrereq ? "locked" : node.status;
             // Prereq dashed preview only for sole map selection that is also the
             // detail focus — not while multi-selecting (avoids "extra selected").
@@ -848,42 +561,20 @@ export function MapWorldLayer({
             });
             const isPrereqHighlight = highlightRole === "prereq";
             const isLearnerDepHighlight =
-              suggestMode === "chapter"
-                ? !isBlockHighlighted &&
-                  chapterUnlockHighlightIds.has(node.id)
-                : learnerMode &&
-                  !isBlockHighlighted &&
-                  learnerDepHighlightIds.has(node.id);
+              learnerMode &&
+              !isBlockHighlighted &&
+              learnerDepHighlightIds.has(node.id);
             const hasPreviousSessions = workspaceTileShowsPreviousSessionsPickaxe({
-              suggestMode,
               blockId: node.id,
               previousSessionBlockIds,
             });
             const itemWorkedOn =
               workedOnIds.has(node.id) && !hasPreviousSessions;
             const itemDone = isMapCellDoneStatus(displayStatus);
-            const tileAesthetic =
-              suggestMode === "chapter" && openWorkIdSet.has(node.id)
-                ? resolveIleWorkAestheticImage({
-                    id: node.id,
-                    assigned: workAestheticById?.[node.id],
-                    images: aestheticPool,
-                  })
-                : hasPreviousSessions
-                  ? aestheticImageForId(node.id, aestheticPool)
-                  : null;
-            const chapterChrome =
-              suggestMode === "chapter"
-                ? ileChapterCellChrome({
-                    status: displayStatus,
-                    selected: isBlockHighlighted,
-                    focused: isBlockHighlighted,
-                    workedOn: itemWorkedOn,
-                  })
-                : null;
-            const occupiedChrome =
-              chapterChrome ??
-              resolveOccupiedMapTileChrome({
+            const tileAesthetic = hasPreviousSessions
+              ? aestheticImageForId(node.id, aestheticPool)
+              : null;
+            const occupiedChrome = resolveOccupiedMapTileChrome({
                 learnerMode,
                 status: displayStatus,
                 selected: isBlockHighlighted,
@@ -895,10 +586,9 @@ export function MapWorldLayer({
                 workedOn: itemWorkedOn,
                 hasPreviousSessions,
               });
-            const baseChrome =
-              suggestMode !== "chapter" && isLearnerDepHighlight
-                ? LEARNER_MAP_CELL_DEP_HIGHLIGHT_CLASS
-                : occupiedChrome.className;
+            const baseChrome = isLearnerDepHighlight
+              ? LEARNER_MAP_CELL_DEP_HIGHLIGHT_CLASS
+              : occupiedChrome.className;
             const chapterStatusIcon = occupiedChrome.statusIcon;
             // Must be declared before tileClass (TDZ) — used by rect + freeform chrome.
             const generationLocked = generationLockedBlockIds.has(node.id);
@@ -936,16 +626,6 @@ export function MapWorldLayer({
                   : "opacity-0 scale-95"
                 : ""
             } ${timUnopened ? MAP_CELL_TIM_UNOPENED_CLASS : ""}`;
-            const chapterBlockSurface =
-              suggestMode !== "chapter"
-                ? undefined
-                : tileAesthetic
-                  ? "transparent"
-                  : itemDone
-                    ? `rgb(255 255 255 / ${ILE_CHAPTER_BLOCK_ALPHA})`
-                    : itemWorkedOn
-                      ? undefined
-                      : `rgb(0 0 0 / ${ILE_CHAPTER_BLOCK_ALPHA})`;
             const hasOptimisticGeometry = Boolean(optimisticPlacements[node.id]);
             const tileTransition = {
               // No ease when live-dragging or holding optimistic settle — feels instant.
@@ -957,62 +637,6 @@ export function MapWorldLayer({
             } as const;
             const hasLocalContext = blockHasAttachedLocalContext(node);
             const isStarter = Boolean(node.is_start);
-            const tileBadges = resolveMapOccupiedTileBadges({
-              surface: suggestMode === "chapter" ? "chapter" : "block",
-              hasDagLock: hasDependencies || lockedByPrereq,
-              isStart: isStarter,
-              hasPractice:
-                practiceOptionsIconKeys(
-                  parseBlockPracticeOptions(
-                    (node as { practice_options?: unknown }).practice_options,
-                  ),
-                ).length > 0,
-              hasLocalContext,
-              hasEffects: creatorEffectIconKeys(nodeEffects).length > 0,
-              generatorBusy,
-            });
-            const lockBadge = tileBadges.showLock ? (
-                <BlockDependencyLockBadge
-                  dependencyCount={Math.max(
-                    dependencyIds.length,
-                    lockedByPrereq ? 1 : 0,
-                  )}
-                  currentlyLocked={lockedByPrereq}
-                  // Red lock when currently locked (learner workspace or TAP Learning chapter).
-                  learnerSpottable={learnerMode || suggestMode === "chapter"}
-                />
-              ) : null;
-            const learnerLockedLabel =
-              tileBadges.showLock && learnerMode && lockedByPrereq ? (
-                <span
-                  className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-rose-300/95"
-                  data-learner-locked-label
-                >
-                  Locked
-                </span>
-              ) : null;
-            const localContextBadge = tileBadges.showLocalContext ? (
-              <BlockLocalContextDocBadge />
-            ) : null;
-            const practiceKeys = practiceOptionsIconKeys(
-              parseBlockPracticeOptions(
-                (node as { practice_options?: unknown }).practice_options,
-              ),
-            );
-            const practiceBadge =
-              tileBadges.showPractice && practiceKeys.length > 0 ? (
-                <BlockPracticeOptionsBadge keys={practiceKeys} />
-              ) : null;
-            const effectKeys = creatorEffectIconKeys(nodeEffects);
-            const effectBadge =
-              tileBadges.showEffects && effectKeys.length > 0 ? (
-                <BlockCreatorEffectsBadge
-                  keys={effectKeys}
-                  learnerMode={learnerMode}
-                />
-              ) : null;
-            // Generator targets are empty cells (not filled blocks).
-            const generatorSparkBadge = null;
             // Dynamic “?” once configured (creator + learner) until generated.
             const mapTitle = learnerDynamicMapLabel({
               effects: nodeEffects,
@@ -1042,19 +666,18 @@ export function MapWorldLayer({
                 icon={glyphIcon}
                 labelMode="glyph"
                 glyphVariant="solid"
-                glyphScale={suggestMode === "chapter" ? "chapter" : "block"}
+                glyphScale="block"
                 hideIcon={Boolean(tileAesthetic)}
-                labelPlate={suggestMode === "chapter" && Boolean(tileAesthetic)}
+                labelPlate={false}
               />
             );
-            // Workspace names fill the tile. The badge span is shrink-wrapped, so an
+            // Names fill the tile. The badge span is shrink-wrapped, so an
             // absolute plate inside it collapses to nothing and overflow clips the word.
-            const blockNameFrame =
-              suggestMode === "chapter" ? null : (
-                <span className="pointer-events-none absolute inset-0 z-10 flex min-h-0 min-w-0 flex-col">
-                  {statusGlyph}
-                </span>
-              );
+            const blockNameFrame = (
+              <span className="pointer-events-none absolute inset-0 z-10 flex min-h-0 min-w-0 flex-col">
+                {statusGlyph}
+              </span>
+            );
             // Freeform polyomino: seamless tiles (fill grid gaps) + outer edges only + one title.
             if (freeform) {
               const shapeKeys = freeformShapeKeySet(occupiedCells);
@@ -1261,12 +884,6 @@ export function MapWorldLayer({
                               {blockNameFrame}
                               <span className="relative z-10 flex max-w-full flex-col items-center">
                               <BlockGatherNotificationDot visible={Boolean(unseenGatherById?.[node.id])} />
-                              {learnerLockedLabel}
-                              {practiceBadge}
-                              {effectBadge}
-                              {generatorSparkBadge}
-                              {localContextBadge}
-                              {lockBadge}
                               </span>
                               <BlockInTileProgress fraction={blockProgressById?.[node.id] ?? 0} />
                             </>
@@ -1338,9 +955,7 @@ export function MapWorldLayer({
                         ? 5
                         : liveStretch
                           ? 5
-                          : suggestMode === "chapter"
-                            ? 2
-                            : undefined,
+                          : undefined,
                 }}
               >
                 <button
@@ -1351,11 +966,6 @@ export function MapWorldLayer({
                   data-map-cell-done={itemDone ? "true" : undefined}
                   data-map-cell-self-progress={
                     itemWorkedOn && !itemDone ? "true" : undefined
-                  }
-                  data-ile-chapter-unlock-highlight={
-                    suggestMode === "chapter" && isLearnerDepHighlight
-                      ? "true"
-                      : undefined
                   }
                   data-block-selected={isBlockHighlighted ? "true" : "false"}
                   data-block-locked={lockedByPrereq ? "true" : "false"}
@@ -1405,14 +1015,7 @@ export function MapWorldLayer({
                       : undefined
                   }
                   className={`${tileClass} ${tileAesthetic ? "text-white" : ""}`}
-                  style={
-                    chapterBlockSurface
-                      ? { ...tileTransition, backgroundColor: chapterBlockSurface }
-                      : tileTransition
-                  }
-                  data-ile-open-work-tile={
-                    suggestMode === "chapter" && tileAesthetic ? "true" : undefined
-                  }
+                  style={tileTransition}
                   data-block-session-aesthetic={
                     hasPreviousSessions && tileAesthetic ? "true" : undefined
                   }
@@ -1437,28 +1040,11 @@ export function MapWorldLayer({
                   }
                 >
                   {tileAesthetic ? (
-                    <OpenWorkTileAesthetic
-                      src={tileAesthetic}
-                      opacity={
-                        suggestMode === "chapter" ? ILE_CHAPTER_BLOCK_ALPHA : undefined
-                      }
-                    />
-                  ) : null}
-                  {suggestMode === "chapter" ? (
-                    <IleChapterInsightCountBadge
-                      count={insightCountByChapterId?.[node.id] ?? 0}
-                    />
+                    <OpenWorkTileAesthetic src={tileAesthetic} />
                   ) : null}
                   {blockNameFrame}
                   <span className="relative z-10 flex max-w-full flex-col items-center">
-                  {suggestMode === "chapter" ? statusGlyph : null}
                   <BlockGatherNotificationDot visible={Boolean(unseenGatherById?.[node.id])} />
-                  {learnerLockedLabel}
-                  {practiceBadge}
-                  {effectBadge}
-                  {generatorSparkBadge}
-                  {localContextBadge}
-                  {lockBadge}
                   </span>
                   <BlockInTileProgress fraction={blockProgressById?.[node.id] ?? 0} />
                 </button>

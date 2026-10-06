@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useI18n } from "@/lib/i18n";
@@ -47,13 +47,9 @@ import {
   type WorkspaceSectionKey,
 } from "@/lib/workspace-sections";
 import {
-  mountsCreatorAuthoringDrawers,
-  mountsLearnerPracticeDrawer,
-  resolveActiveSectionForMode,
-  resolveFixedWorkspaceInteractionMode,
-  resolveWorkspaceModeShell,
   workspaceIdlePaneShowsExplore,
   workspaceLearnerPaneMounted,
+  workspaceShell,
   workspaceSurfaceShowsAuthoring,
   workspaceSurfaceShowsPracticeMenu,
 } from "@/lib/workspace-mode";
@@ -612,47 +608,43 @@ export function WorkspaceView({
   const practiceOnlyAycl = Boolean(
     isAycl && ayclCapabilities && !ayclCapabilities.allowCreatorModeToggle,
   );
-  const interactionMode = resolveFixedWorkspaceInteractionMode({
-    workspaceKind,
-    practiceOnly: practiceOnlyAycl,
-  });
-  const sectionAuth = useCallback(
-    () => ({
-      isOwner,
+  const shell = useMemo(
+    () =>
+      workspaceShell({
+        kind: workspaceKind,
+        authoring: authoringOnMap,
+        practiceOnly: practiceOnlyAycl,
+        isOwner,
+        isOrgAdmin,
+        isLoggedIn: Boolean(currentUserId) || Boolean(ayclToken),
+      }),
+    [
+      authoringOnMap,
+      ayclToken,
+      currentUserId,
       isOrgAdmin,
-      isLoggedIn: Boolean(currentUserId) || Boolean(ayclToken),
+      isOwner,
+      practiceOnlyAycl,
       workspaceKind,
-      allowAuthoring: ayclCapabilities
-        ? ayclCapabilities.allowCreatorModeToggle
-        : undefined,
-    }),
-    [ayclCapabilities, ayclToken, currentUserId, isOrgAdmin, isOwner, workspaceKind],
+    ],
   );
 
   useEffect(() => {
     setActiveSection((current) =>
-      resolveActiveSectionForMode({
-        mode: interactionMode,
-        requested: current,
-        ...sectionAuth(),
-      }),
+      shell.sections.includes(current) ? current : defaultWorkspaceSection(workspaceKind),
     );
-  }, [interactionMode, sectionAuth]);
+  }, [shell.sections, workspaceKind]);
 
   const selectSection = useCallback(
     (section: WorkspaceSectionKey) => {
       setActiveSection(
-        resolveActiveSectionForMode({
-          mode: interactionMode,
-          requested: section,
-          ...sectionAuth(),
-        }),
+        shell.sections.includes(section) ? section : defaultWorkspaceSection(workspaceKind),
       );
       if (section === "workspace") {
         setMobileColumn("workspace");
       }
     },
-    [interactionMode, sectionAuth],
+    [shell.sections, workspaceKind],
   );
 
   const saveNotes = async () => {
@@ -692,7 +684,7 @@ export function WorkspaceView({
     ayclToken,
     currentUserId,
     locale,
-    interactionMode,
+    learnerActivity: shell.learnerActivity,
     nodes,
     setNodes,
     unusableCells,
@@ -713,26 +705,13 @@ export function WorkspaceView({
     );
   }
 
-  const modeShell = resolveWorkspaceModeShell({
-    mode: interactionMode,
-    isOwner,
-    isOrgAdmin,
-    // AYCL token holders are "signed in" for Learner Knowledge without a cookie session.
-    isLoggedIn: Boolean(currentUserId) || Boolean(ayclToken),
-    workspaceKind,
-    allowAuthoring: ayclCapabilities
-      ? ayclCapabilities.allowCreatorModeToggle
-      : undefined,
-  });
-  const resolvedSection = resolveActiveSectionForMode({
-    mode: interactionMode,
-    requested: activeSection,
-    ...sectionAuth(),
-  });
+  const resolvedSection = shell.sections.includes(activeSection)
+    ? activeSection
+    : defaultWorkspaceSection(workspaceKind);
   const sectionLayout = resolveWorkspaceSectionLayout(resolvedSection);
   // One surface: the map plus authoring sections for people who can design.
   // Verification keeps its own list. Play-only stays on the map.
-  const visibleSections = modeShell.sections;
+  const visibleSections = shell.sections;
   const practiceMenu = workspaceSurfaceShowsPracticeMenu({ workspaceKind });
   const idleExplore = workspaceIdlePaneShowsExplore({
     allowExplore:
@@ -742,12 +721,11 @@ export function WorkspaceView({
           ? ayclCapabilities.allowExplore
           : isOwner || isOrgAdmin,
   });
-  const isLearnerMode = interactionMode === "learner" && !authoringOnMap;
-  const showCreatorDrawers =
-    authoringOnMap || mountsCreatorAuthoringDrawers(interactionMode);
+  const isLearnerMode = shell.learnerSurface;
+  const showCreatorDrawers = shell.authoringDrawers;
   const showLearnerDrawer = workspaceLearnerPaneMounted({
     authoring: authoringOnMap,
-    practiceDrawer: mountsLearnerPracticeDrawer(interactionMode),
+    practiceDrawer: shell.practiceDrawer,
     learnerActionRequested: learnerDrawerRequest != null,
   });
 
@@ -786,7 +764,6 @@ export function WorkspaceView({
         activeSection={resolvedSection}
         onSelectSection={selectSection}
         plan={plan}
-        interactionMode={interactionMode}
       />
 
       <WorkspaceSectionHosts
@@ -817,7 +794,7 @@ export function WorkspaceView({
         onSaveDagEdit={handleApplyDag}
         onDeleteDag={handleDeleteDag}
         currentUserId={currentUserId}
-        modeShell={modeShell}
+        knowledgeLwmEmbeddingsOnly={shell.knowledgeLwmEmbeddingsOnly}
         knowledgeSubviewFromUrl={knowledgeSubviewFromUrl}
         onPlanUpdate={setPlan}
         t={t}
@@ -953,7 +930,7 @@ export function WorkspaceView({
           requestedDrawerId={learnerDrawerRequest?.id ?? null}
           requestedDrawerNonce={learnerDrawerRequest?.nonce ?? null}
           isLearnerMode={isLearnerMode}
-          interactionMode={interactionMode}
+          learnerNotes={shell.learnerActivity}
           workspaceId={workspaceId}
           ayclToken={ayclToken}
           locale={locale}

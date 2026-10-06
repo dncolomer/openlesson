@@ -4,7 +4,7 @@
  * With AI. Drives shipped resolve helpers — no re-implementation of the matrix.
  */
 import { describe, expect, it } from "vitest";
-import { readExerciseTapSurface, readMapGridSurface, readTapScoreSurface } from "../helpers/surface-source";
+import { readDashboardSurface, readExerciseTapSurface, readMapGridSurface, readTapScoreSurface } from "../helpers/surface-source";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -196,7 +196,7 @@ describe("structural: workspace + settings have no With AI vs Solo choice", () =
     expect(integration).not.toContain("WorkspaceKnowledgePortalPanel");
     expect(existsSync(join(ROOT, "components/WorkspaceGuestLinksPanel.tsx"))).toBe(false);
 
-    const dashboard = read("app/dashboard/page.tsx");
+    const dashboard = readDashboardSurface();
     expect(dashboard).not.toContain(">TAP sessions<");
     expect(dashboard).not.toContain(">TAP Learning sessions<");
     const retiredProductWord = ["I", "L", "E"].join("");

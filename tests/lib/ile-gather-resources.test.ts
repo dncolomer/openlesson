@@ -5,7 +5,7 @@
 import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { readSessionViewSurface } from "@/tests/helpers/surface-source";
+import { readSessionStageSurface, readSessionViewSurface } from "@/tests/helpers/surface-source";
 import {
   applyIleGatherSpend,
   availableIlePowCounts,
@@ -64,6 +64,7 @@ const SCRATCH =
   "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-c4bc4e763ac7/implementer";
 
 function read(rel: string) {
+  if (rel === "components/SessionView.tsx") return readSessionStageSurface();
   const path = join(ROOT, rel);
   expect(existsSync(path), `missing ${rel}`).toBe(true);
   return readFileSync(path, "utf8");

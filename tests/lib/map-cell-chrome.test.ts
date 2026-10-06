@@ -164,13 +164,13 @@ describe("structural: BlockSkillGrid title-only map tiles", () => {
   it("BlockSkillGrid uses title path plus tick/gear from the chrome mapper", () => {
     const grid = readMapGridSurface();
     expect(grid).toContain("resolveOccupiedMapTileChrome");
-    expect(grid).toContain("ileChapterCellChrome");
+    expect(grid).not.toContain("ileChapterCellChrome");
     expect(grid).toContain("MapCellStatusGlyph");
     const badges = read("components/block-skill-grid/map-tile-badges.tsx");
     expect(badges).toContain("resolveMapCellStatusIcon");
     expect(badges).toContain('data-map-cell-status="title"');
     expect(badges).toContain("data-ile-chapter-done-tick");
-    expect(grid).toContain('suggestMode === "chapter"');
+    expect(grid).not.toContain('suggestMode === "chapter"');
     expect(read("lib/map-cell-chrome.ts")).toContain("MAP_CELL_PREREQ_CLASS");
     expect(grid).toContain("MAP_CELL_EMPTY_SELECTED_CLASS");
     expect(grid).toContain("MAP_CELL_GENERATION_PENDING_CLASS");
@@ -246,11 +246,12 @@ describe("structural: BlockSkillGrid title-only map tiles", () => {
     expect(MAP_CELL_PREREQ_CLASS).toMatch(/border-dashed/);
   });
 
-  it("chapter board stays on BlockSkillGrid; workspace SessionList uses BlockSkillGrid", () => {
+  it("workspace SessionList and the All-you-can-learn preview mount BlockSkillGrid without a chapter suggest mode", () => {
     expect(existsSync(join(ROOT, "components/ChapterMapPanel.tsx"))).toBe(false);
-    expect(read("components/BlockSkillGrid.tsx")).toContain('suggestMode === "chapter"');
+    expect(read("components/BlockSkillGrid.tsx")).not.toContain("suggestMode");
     const list = read("components/SessionList.tsx");
-    expect(list).toContain("BlockSkillGrid");
+    expect(list).toContain("<BlockSkillGrid");
     expect(list).not.toContain("SKILL_GRID_ILE_DEFAULT_ZOOM_AT_REFERENCE");
+    expect(read("components/AyclLandingClient.tsx")).toContain("<BlockSkillGrid");
   });
 });

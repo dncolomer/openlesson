@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { SessionFinishedScreen } from "@/components/session-view/session-finished-screen";
+import { readSessionStageSurface } from "../helpers/surface-source";
 
 const ROOT = join(__dirname, "../..");
 
@@ -37,11 +38,11 @@ describe("shared live work surface", () => {
     expect(host).toContain("data-session-work-surface");
     expect(host).toContain("data-ile-canvas-sidebar-split");
     expect(host).toContain("data-ile-canvas-stage");
-    const stageAt = host.indexOf("data-ile-canvas-stage className");
-    const sidebarAt = host.indexOf("<SessionSidebar\n");
+    const stageAt = host.indexOf("data-ile-canvas-stage");
+    const sidebarAt = host.indexOf("<SessionSidebar");
     expect(stageAt).toBeGreaterThan(-1);
     expect(sidebarAt).toBeGreaterThan(stageAt);
-    expect(host).toContain('className="relative z-0 min-h-0 min-w-0 flex-1 overflow-hidden"');
+    expect(host).toContain("relative z-0 min-h-0 min-w-0 overflow-hidden");
     expect(host).toContain("absolute inset-0 flex h-full min-h-0 w-full flex-col");
   });
 
@@ -174,7 +175,7 @@ describe("shared live work surface", () => {
     expect(voice).toMatch(/data-ile-bar-save[\s\S]{0,400}\n\s*Exit/);
     expect(learn).toContain("actions={actions}");
     expect(learn).toContain("transcript={voiceBar}");
-    expect(read("components/SessionView.tsx")).toContain("<IleVoiceBarActions");
+    expect(readSessionStageSurface()).toContain("<IleVoiceBarActions");
     expect(read("components/SessionView.tsx")).not.toContain("IleWorkCanvasTimer");
   });
 

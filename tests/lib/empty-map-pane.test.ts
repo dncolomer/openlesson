@@ -440,7 +440,8 @@ describe("empty-map-pane structural + wiring", () => {
     expect(view).toContain("selectiveExplanationActive");
     expect(view).toContain("selectiveExplanationPolygon");
     expect(view).toContain("injectMapNote");
-    expect(view).toContain("interactionMode={interactionMode}");
+    expect(view).toContain("learnerNotes={shell.learnerActivity}");
+    expect(view).not.toContain("interactionMode={interactionMode}");
     expect(view).toContain("workspaceId={workspaceId}");
     expect(view).toContain("onSearchSelectBlocks={handleEmptyMapSearchBlocks}");
     expect(view).toContain(
@@ -453,7 +454,7 @@ describe("empty-map-pane structural + wiring", () => {
     expect(nav).not.toContain("data-workspace-mode-toggle");
     expect(nav).not.toContain("data-workspace-mode-by-title");
     expect(nav).not.toContain("data-workspace-mode-toggle-states");
-    expect(nav).toContain("data-workspace-interaction-mode");
+    expect(nav).not.toContain("data-workspace-interaction-mode");
     expect(nav).toContain("data-workspace-section-title");
     expect(grid).toContain("data-map-minimap-stack");
     expect(grid).not.toContain("onMapToggle");
@@ -477,7 +478,8 @@ describe("empty-map-pane structural + wiring", () => {
       /onSelectedBlockIdsChange=\{handleSelectedBlockIdsChange\}/,
     );
     // Play-only empty selection does not open create panes. Authoring does.
-    expect(view).toContain("workspaceEmptyCellOpensAuthoring({ authoring })");
+    expect(view).toContain("if (!authoring)");
+    expect(view).not.toContain("workspaceEmptyCellOpensAuthoring");
     expect(view).not.toContain(
       'if (interactionMode === "learner") return clearWorkspaceAddTarget()',
     );
@@ -781,7 +783,10 @@ describe("empty-map-pane structural + wiring", () => {
         "create_note_from_summary=" +
           String(view.includes("onCreateNoteFromSummary")),
         "learner_empty_visibility_only=" +
-          String(view.includes("workspaceEmptyCellOpensAuthoring")),
+          String(
+            view.includes("if (!authoring)") &&
+              !view.includes("workspaceEmptyCellOpensAuthoring"),
+          ),
       ].join("\n"),
     );
   });

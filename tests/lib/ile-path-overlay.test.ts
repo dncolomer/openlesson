@@ -122,85 +122,47 @@ describe("ile path overlay", () => {
     expect(new Set(cycled.spine?.chapterIds)).toEqual(new Set(["a", "b"]));
   });
 
-  it('the spine is a yellow path, wider than the dashed detours, and intermediate spine stops are not marked data-ile-path-role="spine"', () => {
+  it("path widths stay on the library, and the shared grid does not draw the chapter path", () => {
     const world = read("components/block-skill-grid/map-world-layer.tsx");
-    const detourAt = world.indexOf("data-ile-path-detour");
-    const spineAt = world.indexOf("data-ile-path-spine");
-    const detourBlock = world.slice(detourAt, spineAt);
-    const spineBlock = world.slice(spineAt, world.indexOf("</svg>", spineAt));
-    expect(detourAt).toBeGreaterThan(0);
-    expect(spineAt).toBeGreaterThan(detourAt);
+    expect(world).not.toContain("data-ile-path-detour");
+    expect(world).not.toContain("data-ile-path-spine");
+    expect(world).not.toContain("data-ile-path-overlay");
     expect(ILE_PATH_SPINE_WIDTH).toBe(6);
     expect(ILE_PATH_SPINE_CASING_WIDTH).toBe(10);
     expect(ILE_PATH_DETOUR_WIDTH).toBe(3);
     expect(ILE_PATH_SPINE_CASING_WIDTH).toBeGreaterThan(ILE_PATH_SPINE_WIDTH);
     expect(ILE_PATH_DETOUR_WIDTH).toBeLessThan(ILE_PATH_SPINE_WIDTH);
     expect(ILE_PATH_YELLOW.startsWith("#")).toBe(true);
-    expect(world).not.toMatch(/data-ile-path-role=(?:"spine"|\{[^}]*"spine"[^}]*\})/);
-    expect(spineBlock).toContain("index !== 0 && !last");
-    expect(spineBlock).toContain("return null");
-    expect(spineBlock).toContain("ILE_PATH_YELLOW");
-    expect(spineBlock).toContain("ILE_PATH_SPINE_WIDTH");
-    expect(spineBlock).toContain("ILE_PATH_SPINE_CASING_WIDTH");
-    expect(detourBlock).toContain("strokeDasharray=");
-    expect(detourBlock).toContain("ILE_PATH_YELLOW");
-    expect(detourBlock).toContain("ILE_PATH_DETOUR_WIDTH");
-    expect(detourBlock).toContain('strokeLinecap="round"');
-    expect(spineBlock).toContain('strokeLinecap="round"');
   });
 
-  it('the Path control (data-ile-path-overlay-toggle, label Path) is the first control under the minimap and the overlay starts hidden, the path overlay renders only for the chapter map so the workspace map does not receive it, the chapter tile class stays transparent with no rounded-sm rounded-md rounded-lg or rounded-xl, and TAP Learning empty cells show the add plus', () => {
+  it("the shared grid does not mount a chapter path overlay or a chapter suggest mode, and an editable empty cell still shows a plus", () => {
     const world = read("components/block-skill-grid/map-world-layer.tsx");
     const stack = read("components/block-skill-grid/map-right-stack.tsx");
     const grid = read("components/BlockSkillGrid.tsx");
-    expect(world).toContain("data-ile-path-overlay");
-    expect(world).toContain("data-ile-path-spine");
-    expect(world).toContain("data-ile-path-detour");
-    expect(world).toContain('suggestMode === "chapter" && showPathOverlay');
+    expect(world).not.toContain("data-ile-path-overlay");
+    expect(world).not.toContain("data-ile-path-spine");
+    expect(world).not.toContain("suggestMode");
+    expect(world).not.toContain("showPathOverlay");
     expect(world).not.toMatch(/rounded-(sm|md|lg|xl)\b/);
-    expect(stack).toContain("data-ile-path-overlay-toggle");
-    const pathButton = stack.slice(
-      stack.indexOf("data-ile-path-overlay-toggle"),
-      stack.indexOf("data-map-notes-visibility-row"),
-    );
-    expect(pathButton).toContain("Path");
-    expect(pathButton).toContain('data-ile-path-eye="open"');
-    expect(pathButton).toContain('data-ile-path-eye="closed"');
-    expect(pathButton.indexOf("data-ile-path-overlay-toggle")).toBeLessThan(
-      pathButton.indexOf("Path"),
-    );
+    expect(stack).not.toContain("data-ile-path-overlay-toggle");
     expect(stack).toContain("rounded-none");
     expect(stack).not.toMatch(/rounded-(sm|md|lg|xl)\b/);
-    expect(grid).toContain(
-      "const [pathOverlayVisible, setPathOverlayVisible] = useState(false)",
-    );
-    expect(grid).toContain('showPathOverlay: suggestMode === "chapter" && pathOverlayVisible');
-    expect(grid).toContain('suggestMode === "chapter"');
+    expect(grid).not.toContain("pathOverlayVisible");
+    expect(grid).not.toContain("suggestMode");
+    expect(grid).toContain('mapKind: "workspace"');
     expect(
       existsSync(join(ROOT, "components/session-view/ile-continue-map-preview.tsx")),
     ).toBe(false);
-    const stackBody = stack.slice(stack.indexOf("data-map-minimap-stack"));
-    expect(stackBody.indexOf("data-ile-path-overlay-toggle")).toBeGreaterThan(0);
     expect(stack).not.toContain("data-workspace-mode-toggle");
-    expect(stackBody.indexOf("data-ile-path-overlay-toggle")).toBeLessThan(
-      stackBody.indexOf("data-map-notes-visibility-row"),
-    );
-    expect(world).toContain("ILE_PATH_YELLOW");
+    expect(stack).toContain("data-map-notes-visibility-row");
     expect(ILE_CHAPTER_BLOCK_ALPHA).toBe(0.94);
-    const pathAt = world.indexOf('data-ile-path-overlay=""');
-    const blocksAt = world.indexOf("Occupied blocks: solid rect");
-    expect(pathAt).toBeGreaterThan(0);
-    expect(blocksAt).toBeGreaterThan(pathAt);
-    const pathTag = world.slice(pathAt, pathAt + 420);
-    expect(pathTag).toContain("zIndex: 0");
-    expect(world).toMatch(/suggestMode === "chapter"\s*\?\s*2/);
-    expect(world).toContain("ILE_CHAPTER_BLOCK_ALPHA");
+    expect(world).toContain("data-empty-cell-plus");
+    expect(world).not.toContain("ILE_CHAPTER_BLOCK_ALPHA");
     expect(world).not.toContain("zIndex: 3");
     expect(world).not.toContain("data-ile-altitude-map");
     expect(world).not.toContain("ILE_ALTITUDE_TILE_CLASS");
     expect(
       resolveEmptyCellMarker({
-        surface: "chapter",
         canEdit: true,
         learnerMode: false,
       }),

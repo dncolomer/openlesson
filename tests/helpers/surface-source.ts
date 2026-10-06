@@ -27,6 +27,44 @@ export function readMapGridSurface(): string {
   return parts.join("\n");
 }
 
+export function readExcalidrawSurface(): string {
+  const dir = join(ROOT, "components/excalidraw-canvas");
+  const parts = [readRepo("components/ExcalidrawCanvas.tsx")];
+  try {
+    for (const name of readdirSync(dir).sort()) {
+      if (name.endsWith(".ts") || name.endsWith(".tsx")) {
+        parts.push(readFileSync(join(dir, name), "utf8"));
+      }
+    }
+  } catch {
+    // Directory is created as Excalidraw extracts land.
+  }
+  return parts.join("\n");
+}
+
+export function readDashboardSurface(): string {
+  const dir = join(ROOT, "components/dashboard");
+  const parts = [readRepo("app/dashboard/page.tsx")];
+  try {
+    for (const name of readdirSync(dir).sort()) {
+      if (name.endsWith(".ts") || name.endsWith(".tsx")) {
+        parts.push(readFileSync(join(dir, name), "utf8"));
+      }
+    }
+  } catch {
+    // Directory is created as dashboard extracts land.
+  }
+  return parts.join("\n");
+}
+
+export function readSessionStageSurface(): string {
+  return [
+    readRepo("components/SessionView.tsx"),
+    readRepo("components/session-view/session-live-stage.tsx"),
+    readRepo("components/session-view/session-chapter-canvas.tsx"),
+  ].join("\n");
+}
+
 export function readSessionViewSurface(): string {
   const dir = join(ROOT, "components/session-view");
   const parts = [readRepo("components/SessionView.tsx")];

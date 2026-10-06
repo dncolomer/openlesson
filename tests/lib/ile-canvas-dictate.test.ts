@@ -1,6 +1,7 @@
 import { createElement } from "react";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { readExcalidrawSurface, readSessionStageSurface } from "../helpers/surface-source";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { ExcalidrawCanvas } from "@/components/ExcalidrawCanvas";
@@ -39,6 +40,8 @@ import {
 const ROOT = join(__dirname, "../..");
 
 function read(rel: string) {
+  if (rel === "components/ExcalidrawCanvas.tsx") return readExcalidrawSurface();
+  if (rel === "components/SessionView.tsx") return readSessionStageSurface();
   return readFileSync(join(ROOT, rel), "utf8");
 }
 

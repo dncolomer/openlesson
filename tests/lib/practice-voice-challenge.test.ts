@@ -7,6 +7,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { readSessionStageSurface } from "../helpers/surface-source";
 import { PracticeVoiceChallenge } from "@/components/PracticeVoiceChallenge";
 import { IleInsightEmptySlots } from "@/components/session-view/ile-insight-trophies";
 import {
@@ -58,6 +59,7 @@ import { scoutThinkAloudEnabled } from "@/lib/scout-session";
 const ROOT = join(__dirname, "../..");
 
 function read(rel: string) {
+  if (rel === "components/SessionView.tsx") return readSessionStageSurface();
   return readFileSync(join(ROOT, rel), "utf8");
 }
 

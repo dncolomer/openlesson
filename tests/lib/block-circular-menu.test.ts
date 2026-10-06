@@ -114,12 +114,10 @@ describe("block circular menu catalog", () => {
     expect(blockCircularMenuActions("workspace-learner", { timUnopened: true })).toEqual([]);
     expect(blockCircularMenuActions("workspace-learner", { empty: true })).toEqual([]);
     expect(blockCircularMenuActions("none")).toEqual([]);
-    expect(resolveBlockCircularMenuSurface({ tap: true, learnerMode: true, suggestMode: "chapter" })).toBe(
-      "none",
-    );
-    expect(resolveBlockCircularMenuSurface({ suggestMode: "chapter" })).toBe("ile");
+    expect(resolveBlockCircularMenuSurface({ tap: true, learnerMode: true })).toBe("none");
+    expect(resolveBlockCircularMenuSurface({})).toBe("none");
     expect(resolveBlockCircularMenuSurface({ learnerMode: true })).toBe("workspace-learner");
-    expect(resolveBlockCircularMenuSurface({ suggestMode: "block" })).toBe("none");
+    expect(resolveBlockCircularMenuSurface({ practiceMenu: true })).toBe("workspace-learner");
     expect(ILE_CIRCULAR_MENU_ACTIONS.some((a) => a.id.includes("tap"))).toBe(false);
     expect(WORKSPACE_CIRCULAR_MENU_ACTIONS.some((a) => a.id.includes("tap"))).toBe(false);
 
@@ -252,7 +250,7 @@ describe("circular menu source wiring", () => {
     expect(world).toMatch(/<\/button>\s*\{circularMenuSurface !== "none"/);
     expect(world).toMatch(/<\/button>\s*\{isLabel &&/);
     expect(world).not.toContain("<BlockCircularMenuRing\n                                surface={circularMenuSurface}");
-    expect(grid).toContain('suggestMode === "chapter"');
+    expect(grid).not.toContain("suggestMode");
     expect(grid).toContain("blockCircularMenuDoubleClickIsNoop");
     expect(grid).toContain("blockCircularMenuOpensOnSelect");
     expect(grid).toContain("handleBlockDoubleClickGuarded");
@@ -263,7 +261,7 @@ describe("circular menu source wiring", () => {
     expect(world).toContain("onEmptyCircularMenuAction");
     expect(world).toContain("empty");
     expect(ring).toContain("data-block-circular-menu-empty");
-    expect(authoring).toContain('suggestMode === "chapter"');
+    expect(authoring).not.toContain("suggestMode");
     expect(blockCircularMenuOpensOnEmpty("ile")).toBe(true);
     expect(blockCircularMenuOpensOnEmpty("ile", { unusable: true })).toBe(false);
     expect(blockCircularMenuOpensOnEmpty("workspace-learner")).toBe(false);

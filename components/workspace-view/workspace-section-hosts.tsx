@@ -15,7 +15,6 @@ import { WorkspaceSectionSurface } from "@/components/WorkspaceSectionSurface";
 import type { Block, Workspace } from "@/components/workspace-view/types";
 import type { WorkspaceDagRecord } from "@/lib/workspace-dags";
 import type { WorkspaceMapTypesState } from "@/lib/workspace-map-types";
-import type { WorkspaceModeShell } from "@/lib/workspace-mode";
 import type { WorkspaceSectionLayout } from "@/lib/workspace-sections";
 import type { WorkspaceSectionKey } from "@/lib/workspace-sections";
 import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
@@ -45,7 +44,7 @@ export function WorkspaceSectionHosts({
   onSaveDagEdit,
   onDeleteDag,
   currentUserId,
-  modeShell,
+  knowledgeLwmEmbeddingsOnly,
   knowledgeSubviewFromUrl,
   onPlanUpdate,
   t,
@@ -81,7 +80,7 @@ export function WorkspaceSectionHosts({
   }) => Promise<void>;
   onDeleteDag: (input: { dagId: string }) => Promise<void>;
   currentUserId: string | null;
-  modeShell: WorkspaceModeShell;
+  knowledgeLwmEmbeddingsOnly: boolean;
   knowledgeSubviewFromUrl: string | null;
   onPlanUpdate: Dispatch<SetStateAction<Workspace | null>>;
   t: (key: string) => string;
@@ -253,7 +252,7 @@ export function WorkspaceSectionHosts({
               currentUserId={currentUserId}
               workspaceKind={plan.workspace_kind}
               ayclToken={ayclToken}
-              lwmEmbeddingsOnly={modeShell.knowledgeLwmEmbeddingsOnly}
+              lwmEmbeddingsOnly={knowledgeLwmEmbeddingsOnly}
               initialSubview={
                 knowledgeSubviewFromUrl === "insights" ||
                 knowledgeSubviewFromUrl === "score" ||

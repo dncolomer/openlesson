@@ -240,9 +240,9 @@ describe("workspace Mark as Done + tile glyphs", () => {
     expect(chapter).not.toContain('t("chapterMap.complete")');
     expect(existsSync(join(ROOT, "components/ChapterMapPanel.tsx"))).toBe(false);
 
-    expect(grid).toContain("ileChapterCellChrome");
+    expect(grid).not.toContain("ileChapterCellChrome");
     expect(grid).toContain("resolveOccupiedMapTileChrome");
-    expect(grid).toContain("recordMapItemWorkedOn");
+    expect(grid).not.toContain("recordMapItemWorkedOn");
     expect(grid).toContain("MapCellStatusGlyph");
     const badges = read("components/block-skill-grid/map-tile-badges.tsx");
     expect(badges).toContain("data-ile-chapter-done-tick");
@@ -263,7 +263,7 @@ describe("workspace Mark as Done + tile glyphs", () => {
       [
         "WorkspaceLearnerBlockPane: data-learner-mark-done + Mark as Done",
         "IleChapterHeliosActions: onChapterDone + chapterMap.complete",
-        "BlockSkillGrid: ileChapterCellChrome + resolveOccupiedMapTileChrome + tick/gear glyphs",
+        "BlockSkillGrid: resolveOccupiedMapTileChrome + tick/gear glyphs, no chapter cell chrome",
         "WorkspaceView: recordMapItemWorkedOn on launch + onMarkDone",
       ].join("\n"),
     );

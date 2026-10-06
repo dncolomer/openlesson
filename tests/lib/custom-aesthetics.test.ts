@@ -5,6 +5,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { readDashboardSurface } from "../helpers/surface-source";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -478,7 +479,7 @@ describe("custom aesthetic surfaces", () => {
     expect(covers).toContain("decideActiveAestheticPool");
     expect(covers).toContain("pickWorkspaceCoverFromPool");
 
-    const dashboard = read("app/dashboard/page.tsx");
+    const dashboard = readDashboardSurface();
     const card = read("components/WorkspaceDashboardCard.tsx");
     expect(dashboard).toContain("fetchAestheticPackages");
     expect(dashboard).toContain("imagePool={workspaceCoverPool}");

@@ -69,7 +69,7 @@ import { useThinkAloudTranscript, type SpeechTranscriptEntry } from "@/lib/useTh
 import { useHeliosVoicePlaybackActive } from "@/lib/useHeliosVoicePlayback";
 import type { HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
 import { translateWithLocale, useI18n } from "@/lib/i18n";
-import { coerceSpokenLocale, toSpeechBcp47, type SpokenLocale } from "@/lib/tutoring-languages";
+import { coerceSpokenLocale, type SpokenLocale } from "@/lib/tutoring-languages";
 import {
   clampIleSessionChapterCount,
   ileBlockSessionChapter,
@@ -84,12 +84,8 @@ import type { MapTypePickerItem } from "@/lib/workspace-map-types";
 import { SessionWelcomeModal } from "@/components/session-view/session-welcome-modal";
 import { SessionToolPanes } from "@/components/session-view/session-tool-panes";
 import { SessionThoughtPane } from "@/components/session-view/session-thought-pane";
-import { SessionChrome } from "@/components/session-view/session-chrome";
-import { WorkspaceResourcesPanel } from "@/components/WorkspaceResourcesPanel";
-import { WorkCanvas } from "@/components/ExcalidrawCanvas";
-import { IleVoiceBar, IleVoiceBarActions } from "@/components/session-view/ile-voice-bar";
-import { sessionSidebarHasSection } from "@/lib/session-sidebar";
-import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
+import { SessionChapterWorkCanvas } from "@/components/session-view/session-chapter-canvas";
+import { SessionLiveStage } from "@/components/session-view/session-live-stage";
 import {
   isIleMapOverlayTool,
   isIleSessionModalTool,
@@ -103,10 +99,6 @@ import {
   type BlockCircularMenuActionId,
   type IleVoicePadSpec,
 } from "@/lib/block-circular-menu";
-import {
-  countIleUnsubmittedPowDisplay,
-  toIlePowDisplayCounts,
-} from "@/lib/ile-pow-counters";
 import {
   assignIleWorkAestheticImages,
   ileChapterAestheticIds,
@@ -132,10 +124,9 @@ import {
 } from "@/lib/ile-mode";
 import { shouldShowHeliosReplyForChapter } from "@/lib/chapter-load-control";
 import { useSessionChapterWorkspaces } from "@/lib/useSessionChapterWorkspaces";
-import { ileChapterCanvasRemountKey } from "@/lib/ile-session-global-context";
+import { buildIleWorkCanvasCommandUserMessage } from "@/lib/ile-work-canvas-prompts";
 import {
   applyIleXaiTurnAtCommit,
-  buildIleWorkCanvasCommandUserMessage,
   ileWorkCanvasAskFromSessionChat,
   ileWorkCanvasScenesFromWorkspaces,
   parseIleXaiCanvasTurn,
@@ -150,19 +141,10 @@ import {
 } from "@/lib/ile-work-canvas";
 import {
   ILE_SILENCE_LOCK_MINUTES_DEFAULT,
-  ileImpurityExitPlan,
   ileMicCountsAsSilence,
 } from "@/lib/practice-voice-challenge";
-import {
-  IleSessionImpurityScreen,
-  IleSilenceRestScreen,
-  mountIleSilenceScreen,
-} from "@/components/session-view/ile-silence-lock-screen";
 import { useIleSilenceLock } from "@/components/session-view/use-ile-silence-lock";
-import {
-  IleInsightTrophyStrip,
-  IleMapInsightsWidget,
-} from "@/components/session-view/ile-insight-trophies";
+import { IleInsightTrophyStrip } from "@/components/session-view/ile-insight-trophies";
 import {
   shouldLogIleSidebarToolSwitch,
   type IleWorkCanvasPowEvent,
@@ -1770,60 +1752,33 @@ export function SessionView({
     />
   );
 
-  const renderWorkCanvas = () => {
-    if (!session) return null;
-    const boardId = ileChapterCanvasRemountKey(session.id, activeChapterKey);
-    return (
-      <WorkCanvas
-        key={`${boardId}:work`}
-        boardId={boardId}
-        initialData={whiteboardData || undefined}
-        initialSceneData={whiteboardSceneData}
-        heliosBusy={isHeliosAssistantPending}
-        onCanvasChange={(data) => {
-          setWhiteboardData(data);
-          setCanvasDirtyForHelios(true);
-          if (sessionRef.current) {
-            sessionRef.current = {
-              ...sessionRef.current,
-              metadata: { ...sessionRef.current.metadata, whiteboardData: data },
-            };
-          }
-        }}
-        onSceneChange={(data) => {
-          const scene = serializeIleWorkCanvasScene(data);
-          whiteboardSceneDataRef.current = scene;
-          updateActiveChapterWorkspace({ whiteboardSceneData: scene });
-        }}
-        applyElements={canvasApplyElements}
-        applyElementsNonce={canvasApplyNonce}
-        onCanvasPowActions={handleCanvasPowActions}
-        onAskSelected={handleAskCanvasSelection}
-        dictateTranscript={sessionThoughtInterface.crystallizableText}
-        craftInsight={
-          activeStep?.id
-            ? {
-                chapterId: activeStep.id,
-                chapterLabel: activeChapterLabel,
-                sessionId: session.id,
-                workspaceId,
-                ileToken,
-                recordSessionPowArtifact,
-                workArtifacts: sessionPowArtifactsRef.current,
-                workSinceIndex: insightWorkMarkRef.current,
-                onCrafted: (insight) => {
-                  insightWorkMarkRef.current = sessionPowArtifactsRef.current.length;
-                  setSessionInsights((current) => {
-                    if (current.some((row) => row.id === insight.id)) return current;
-                    return [insight, ...current];
-                  });
-                },
-              }
-            : null
-        }
-      />
-    );
-  };
+  const renderWorkCanvas = () => (
+    <SessionChapterWorkCanvas
+      session={session}
+      activeChapterKey={activeChapterKey}
+      whiteboardData={whiteboardData}
+      whiteboardSceneData={whiteboardSceneData}
+      isHeliosAssistantPending={isHeliosAssistantPending}
+      setWhiteboardData={setWhiteboardData}
+      setCanvasDirtyForHelios={setCanvasDirtyForHelios}
+      sessionRef={sessionRef}
+      whiteboardSceneDataRef={whiteboardSceneDataRef}
+      updateActiveChapterWorkspace={updateActiveChapterWorkspace}
+      canvasApplyElements={canvasApplyElements}
+      canvasApplyNonce={canvasApplyNonce}
+      handleCanvasPowActions={handleCanvasPowActions}
+      handleAskCanvasSelection={handleAskCanvasSelection}
+      sessionThoughtInterface={sessionThoughtInterface}
+      activeStep={activeStep}
+      activeChapterLabel={activeChapterLabel}
+      workspaceId={workspaceId}
+      ileToken={ileToken}
+      recordSessionPowArtifact={recordSessionPowArtifact}
+      sessionPowArtifactsRef={sessionPowArtifactsRef}
+      insightWorkMarkRef={insightWorkMarkRef}
+      setSessionInsights={setSessionInsights}
+    />
+  );
 
   const renderSessionToolPanes = () => {
     if (!session) return null;
@@ -2026,183 +1981,84 @@ export function SessionView({
   }
 
   return (
-    <div className="h-screen flex bg-[#0a0a0a] overflow-hidden">
-      {silenceLock.outcome === "rest"
-        ? mountIleSilenceScreen(
-            <IleSilenceRestScreen
-              lockCount={silenceLock.lockCount}
-              speechLang={toSpeechBcp47(tutoringLanguage)}
-              onUnlock={() => silenceLock.unlock(true)}
-              onSaveAndLeave={() => {
-                const plan = ileImpurityExitPlan("save");
-                if (!plan.persistSession) return;
-                setShowSaveExitNameDialog(true);
-              }}
-            />,
-          )
-        : null}
-      {silenceLock.outcome === "impurity"
-        ? mountIleSilenceScreen(
-            <IleSessionImpurityScreen
-              lockCount={silenceLock.lockCount}
-              onSave={() => {
-                const plan = ileImpurityExitPlan("save");
-                if (!plan.persistSession) return;
-                setShowSaveExitNameDialog(true);
-              }}
-              onLogOff={() => {
-                const plan = ileImpurityExitPlan("logoff");
-                if (!plan.leave) return;
-                void pauseAndGoToDashboard(null, { persistSession: plan.persistSession });
-              }}
-            />,
-          )
-        : null}
-      <SessionChrome
-        t={t}
-        activeTool={activeTool}
-        onToolChange={handleIleSessionToolChange}
-        showSaveExitNameDialog={showSaveExitNameDialog}
-        saveExitName={saveExitName}
-        onSaveExitNameChange={setSaveExitName}
-        onCancelSaveExitName={() => setShowSaveExitNameDialog(false)}
-        onConfirmSaveExitName={() => {
-          setShowSaveExitNameDialog(false);
-          void pauseAndGoToDashboard(saveExitName);
-        }}
-        onDiscardSaveExitName={() => {
-          setShowSaveExitNameDialog(false);
-          void pauseAndGoToDashboard(null, { persistSession: false });
-        }}
-        isWebcamEnabled={isWebcamEnabled}
-        isScreenCapturing={isScreenCapturing}
-        screenShareStream={isScreenCapturing ? screenCaptureRef.current?.getStream() ?? null : null}
-        onStopScreenCapture={handleStopScreenCapture}
-        onStartScreenCapture={handleStartScreenCapture}
-        onTurnOffWebcam={() => setIsWebcamEnabled(false)}
-        onEnableWebcam={() => setIsWebcamEnabled(true)}
-        onConnectMuse={handleConnectMuse}
-        onDisconnectMuse={handleDisconnectMuse}
-        audioStream={stream}
-        audioMuted={isMuted}
-        onToggleAudioMute={() => {
-          if (muteTimerRef.current) {
-            clearTimeout(muteTimerRef.current);
-            muteTimerRef.current = null;
-          }
-          setMuteRemaining(0);
-          setIsMuted((muted) => !muted);
-        }}
-        museStatus={museStatus}
-        museDeviceStatus={museDeviceStatus}
-        museChannelData={eegChannelData}
-        bandPowers={bandPowers}
-        error={error}
-        onDismissError={() => setError(null)}
-        showWelcomeModal={showWelcomeModal}
-        powCounts={toIlePowDisplayCounts(availableCounts, sessionPowArtifacts)}
-        unsubmittedPowCounts={countIleUnsubmittedPowDisplay({
-          unflaggedThoughtCount: sessionThoughtInterface.stashedThoughts.length,
-          formingThought: Boolean(
-            (
-              sessionThoughtInterface.getFormingText?.() ||
-              sessionThoughtInterface.crystallizableText ||
-              ""
-            ).trim(),
-          ),
-          canvasDirty: canvasDirtyForHelios,
-        })}
-        openWorkCount={openWorkIds.length}
-        aestheticImages={selectedAesthetic?.images}
-        aestheticPackageId={selectedAesthetic?.id}
-        openWorkLabels={openWorkDockLabels}
-        sessionStartedAt={session?.startedAt ?? null}
-        resources={
-          workspaceId ? (
-            <WorkspaceResourcesPanel
-              workspaceId={workspaceId}
-              blockId={sessionBlockId}
-              chapterId={resourceScopeChapterId || activeStep?.id}
-              gatheredResources={gatheredResources}
-              ayclToken={ayclToken}
-              ileToken={ileToken}
-            />
-          ) : null
-        }
-        resourcesOpen={sessionResourcesOpen}
-        onResourcesOpenChange={setSessionResourcesOpen}
-        onCloseToolOverlay={() => setActiveTool("chapters")}
-        heliosOpen={heliosWidgetOpen}
-        onCloseHelios={() => setHeliosWidgetOpen(false)}
-        onMinimizeHelios={() => setHeliosWidgetOpen(false)}
-        insightCraftOpen={craftingInsightsOpen}
-        onMinimizeInsightCraft={() => setCraftingInsightsOpen(false)}
-        workCanvasHeaderLeading={workCanvasInsightSlots}
-        mapInsightsWidget={
-          <IleMapInsightsWidget
-            insights={sessionInsights}
-            slotCount={minInsightsPerChapter}
-            visible
-          />
-        }
-        introOpen={showWelcomePanel}
-        onCloseSessionModal={() => {
-          setShowWelcomePanel(false);
-          setActiveTool("chapters");
-        }}
-        introWidget={
-          <SessionOnboardingGuide
-            key={welcomeOpenNonce}
-            variant="ile"
-            presentation="sidebar"
-            className="min-h-0"
-            language={tutoringLanguage}
-            showStartAction
-            projectMode={isProjectMode}
-            insightGoalCount={minInsightsPerChapter}
-            onStart={() => { void handleWelcomePlay(); }}
-            isStarting={isStartingSession}
-          />
-        }
-        allowEndSession={allowEndSession}
-        showEndDialog={showEndDialog}
-        onCancelEnd={() => setShowEndDialog(false)}
-        onConfirmEnd={handleConfirmEnd}
-        endReason={endReason}
-        showPlanCompleteModal={showPlanCompleteModal}
-        onCancelPlanComplete={() => setShowPlanCompleteModal(false)}
-        onConfirmPlanComplete={() => {
-          setShowPlanCompleteModal(false);
-          if (allowEndSession) {
-            handleConfirmEnd();
-          }
-        }}
-        gatherWarning={gatherWarning}
-        onDismissGatherWarning={dismissGatherWarning}
-        closeReviewBlocked={Boolean(chapterCloseReview && !chapterCloseReview.canClose)}
-        closeReviewReason={chapterCloseReview?.reason ?? null}
-        onChapterDoneOverride={() => {
-          void handleMarkChapterDone({
-            closeOverride: true,
-            stepId: completeTargetStepIdRef.current || activeStep?.id,
-          });
-        }}
-        onDismissCloseReview={() => setChapterCloseReview(null)}
-        map={null}
-        toolOverlay={renderSessionToolPanes()}
-        workCanvas={renderWorkCanvas()}
-        heliosWidget={renderChapterThoughtPane(false)}
-        voiceBar={<IleVoiceBar thought={sessionThoughtInterface} />}
-        actions={
-          <IleVoiceBarActions
-            onBackToDashboard={() => {
-              setSaveExitName(ileSessionNameFromMetadata(session.metadata) ?? "");
-              setShowSaveExitNameDialog(true);
-            }}
-            showSave={sessionSidebarHasSection("ile", "save")}
-          />
-        }
-      />
-    </div>
+    <SessionLiveStage
+      activeStep={activeStep}
+      activeTool={activeTool}
+      allowEndSession={allowEndSession}
+      availableCounts={availableCounts}
+      ayclToken={ayclToken}
+      bandPowers={bandPowers}
+      canvasDirtyForHelios={canvasDirtyForHelios}
+      chapterCloseReview={chapterCloseReview}
+      completeTargetStepIdRef={completeTargetStepIdRef}
+      craftingInsightsOpen={craftingInsightsOpen}
+      dismissGatherWarning={dismissGatherWarning}
+      eegChannelData={eegChannelData}
+      endReason={endReason}
+      error={error}
+      gatherWarning={gatherWarning}
+      gatheredResources={gatheredResources}
+      handleConfirmEnd={handleConfirmEnd}
+      handleConnectMuse={handleConnectMuse}
+      handleDisconnectMuse={handleDisconnectMuse}
+      handleIleSessionToolChange={handleIleSessionToolChange}
+      handleMarkChapterDone={handleMarkChapterDone}
+      handleStartScreenCapture={handleStartScreenCapture}
+      handleStopScreenCapture={handleStopScreenCapture}
+      handleWelcomePlay={handleWelcomePlay}
+      heliosWidgetOpen={heliosWidgetOpen}
+      ileToken={ileToken}
+      isMuted={isMuted}
+      isProjectMode={isProjectMode}
+      isScreenCapturing={isScreenCapturing}
+      isStartingSession={isStartingSession}
+      isWebcamEnabled={isWebcamEnabled}
+      minInsightsPerChapter={minInsightsPerChapter}
+      museDeviceStatus={museDeviceStatus}
+      museStatus={museStatus}
+      muteTimerRef={muteTimerRef}
+      openWorkDockLabels={openWorkDockLabels}
+      openWorkCount={openWorkIds.length}
+      pauseAndGoToDashboard={pauseAndGoToDashboard}
+      renderChapterThoughtPane={renderChapterThoughtPane}
+      renderSessionToolPanes={renderSessionToolPanes}
+      renderWorkCanvas={renderWorkCanvas}
+      resourceScopeChapterId={resourceScopeChapterId}
+      saveExitName={saveExitName}
+      screenCaptureRef={screenCaptureRef}
+      selectedAesthetic={selectedAesthetic}
+      session={session}
+      sessionBlockId={sessionBlockId}
+      sessionInsights={sessionInsights}
+      sessionPowArtifacts={sessionPowArtifacts}
+      sessionResourcesOpen={sessionResourcesOpen}
+      sessionThoughtInterface={sessionThoughtInterface}
+      setActiveTool={setActiveTool}
+      setChapterCloseReview={setChapterCloseReview}
+      setCraftingInsightsOpen={setCraftingInsightsOpen}
+      setError={setError}
+      setHeliosWidgetOpen={setHeliosWidgetOpen}
+      setIsMuted={setIsMuted}
+      setIsWebcamEnabled={setIsWebcamEnabled}
+      setMuteRemaining={setMuteRemaining}
+      setSaveExitName={setSaveExitName}
+      setSessionResourcesOpen={setSessionResourcesOpen}
+      setShowEndDialog={setShowEndDialog}
+      setShowPlanCompleteModal={setShowPlanCompleteModal}
+      setShowSaveExitNameDialog={setShowSaveExitNameDialog}
+      setShowWelcomePanel={setShowWelcomePanel}
+      showEndDialog={showEndDialog}
+      showPlanCompleteModal={showPlanCompleteModal}
+      showSaveExitNameDialog={showSaveExitNameDialog}
+      showWelcomeModal={showWelcomeModal}
+      showWelcomePanel={showWelcomePanel}
+      silenceLock={silenceLock}
+      stream={stream}
+      t={t}
+      tutoringLanguage={tutoringLanguage}
+      welcomeOpenNonce={welcomeOpenNonce}
+      workCanvasInsightSlots={workCanvasInsightSlots}
+      workspaceId={workspaceId}
+    />
   );
 }

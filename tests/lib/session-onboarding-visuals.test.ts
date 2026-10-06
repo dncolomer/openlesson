@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
-import { readExerciseTapSurface, readTapScoreSurface } from "@/tests/helpers/surface-source";
+import { readExerciseTapSurface, readSessionStageSurface, readTapScoreSurface } from "@/tests/helpers/surface-source";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
@@ -249,7 +249,7 @@ describe("session intro visuals", () => {
     expect(existsSync(join(ROOT, "components/MobileProbesTab.tsx"))).toBe(false);
     const ileHelios = read("components/SessionHeliosPanel.tsx");
     const ileChrome = read("components/session-view/session-chrome.tsx");
-    const ileView = read("components/SessionView.tsx");
+    const ileView = readSessionStageSurface();
     expect(ileHelios).not.toContain("SessionOnboardingGuide");
     expect(ileChrome).toContain("data-ile-intro-widget");
     expect(ileView).toContain("SessionOnboardingGuide");

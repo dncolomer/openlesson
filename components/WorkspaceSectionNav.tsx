@@ -3,7 +3,6 @@
 import type { ReactNode } from "react";
 import { useI18n } from "@/lib/i18n";
 import type { WorkspaceSectionKey } from "@/lib/workspace-sections";
-import type { WorkspaceInteractionMode } from "@/lib/workspace-mode";
 
 export type WorkspaceSectionNavItem = {
   key: WorkspaceSectionKey;
@@ -18,8 +17,6 @@ interface WorkspaceSectionNavProps {
   variant?: "bar" | "pills";
   /** Workspace name shown on the right of the section tabs. */
   workspaceTitle?: string | null;
-  /** Learner shell vs creator shell. There is no mode toggle. */
-  interactionMode?: WorkspaceInteractionMode;
 }
 
 export function WorkspaceSectionNav({
@@ -28,7 +25,6 @@ export function WorkspaceSectionNav({
   onChange,
   variant = "bar",
   workspaceTitle,
-  interactionMode = "learner",
 }: WorkspaceSectionNavProps) {
   const { t } = useI18n();
   const navLabel = t("planView.topLevelSectionsNav");
@@ -83,7 +79,6 @@ export function WorkspaceSectionNav({
     <div
       className="flex shrink-0 items-center border-b border-neutral-800/60 bg-[#0b0b0b]"
       data-workspace-section-nav
-      data-workspace-interaction-mode={interactionMode}
     >
       {sections.length > 0 ? (
       <nav

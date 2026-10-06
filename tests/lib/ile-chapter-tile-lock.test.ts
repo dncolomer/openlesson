@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import { readMapGridSurface } from "../helpers/surface-source";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { resolveMapOccupiedTileBadges } from "@/lib/map-tile-badges";
+import { resolveEmptyCellMarker } from "@/lib/map-tile-badges";
 import {
   chapterHasDagLockChrome,
   ileChapterUnlockHighlightIds,
@@ -57,54 +57,14 @@ const chapters: LearnerLocalDagBlock[] = [
 ];
 
 describe("TAP Learning chapter tile badges", () => {
-  it("chapter tiles drop workspace badges and the lock icon", () => {
-    const loaded = resolveMapOccupiedTileBadges({
-      surface: "chapter",
-      hasDagLock: false,
-      isStart: true,
-      hasPractice: true,
-      hasLocalContext: true,
-      hasEffects: true,
-      generatorBusy: true,
-    });
-    expect(loaded.showLock).toBe(false);
-    expect(loaded.showStarter).toBe(false);
-    expect(loaded.showPractice).toBe(false);
-    expect(loaded.showLocalContext).toBe(false);
-    expect(loaded.showEffects).toBe(false);
-    expect(loaded.showGeneratorBusy).toBe(false);
-
-    const locked = resolveMapOccupiedTileBadges({
-      surface: "chapter",
-      hasDagLock: true,
-      isStart: true,
-      hasPractice: true,
-      hasLocalContext: true,
-      hasEffects: true,
-      generatorBusy: true,
-    });
-    expect(locked.showLock).toBe(false);
-    expect(locked.showStarter).toBe(false);
-    expect(locked.showPractice).toBe(false);
-    expect(locked.showLocalContext).toBe(false);
-    expect(locked.showEffects).toBe(false);
-    expect(locked.showGeneratorBusy).toBe(false);
-
-    const workspace = resolveMapOccupiedTileBadges({
-      surface: "block",
-      hasDagLock: true,
-      isStart: true,
-      hasPractice: true,
-      hasLocalContext: true,
-      hasEffects: true,
-      generatorBusy: true,
-    });
-    expect(workspace.showLock).toBe(false);
-    expect(workspace.showStarter).toBe(false);
-    expect(workspace.showPractice).toBe(false);
-    expect(workspace.showLocalContext).toBe(false);
-    expect(workspace.showEffects).toBe(false);
-    expect(workspace.showGeneratorBusy).toBe(false);
+  it("does not resolve an identity occupied-tile badge set", () => {
+    const badges = read("lib/map-tile-badges.ts");
+    expect(badges).not.toContain("resolveMapOccupiedTileBadges");
+    expect(resolveEmptyCellMarker({ canEdit: true, learnerMode: false })).toBe("plus");
+    expect(
+      resolveEmptyCellMarker({ canEdit: true, learnerMode: false, isUnusable: true }),
+    ).toBe("none");
+    expect(resolveEmptyCellMarker({ canEdit: false, learnerMode: true })).toBe("none");
 
     expect(chapterHasDagLockChrome(chapters[0]!, chapters)).toBe(false);
     expect(chapterHasDagLockChrome(chapters[1]!, chapters)).toBe(true);
@@ -114,9 +74,7 @@ describe("TAP Learning chapter tile badges", () => {
     writeScratch(
       "ile-chapter-tile-badges.txt",
       [
-        `chapter_flags=${JSON.stringify(loaded)}`,
-        `chapter_locked=${JSON.stringify(locked)}`,
-        `workspace_keeps_suite=${JSON.stringify(workspace)}`,
+        "occupied_badge_helper=absent",
         `first_has_lock_chrome=${chapterHasDagLockChrome(chapters[0]!, chapters)}`,
         `second_has_lock_chrome=${chapterHasDagLockChrome(chapters[1]!, chapters)}`,
       ].join("\n"),
@@ -161,13 +119,13 @@ describe("chapter map path wiring", () => {
     const board = read("components/BlockSkillGrid.tsx");
     const mapper = read("lib/chapter-skill-grid.ts");
 
-    expect(board).toContain('suggestMode === "chapter"');
-    expect(grid).toContain("resolveMapOccupiedTileBadges");
-    expect(grid).toContain("ileChapterUnlockHighlightIds");
-    expect(grid).toContain("isChapterMapTileLocked");
-    expect(grid).toContain("chapterHasDagLockChrome");
-    expect(grid).toContain("data-ile-chapter-unlock-highlight");
-    expect(grid).toContain('surface: suggestMode === "chapter" ? "chapter" : "block"');
+    expect(board).not.toContain("suggestMode");
+    expect(grid).not.toContain("resolveMapOccupiedTileBadges");
+    expect(grid).not.toContain("ileChapterUnlockHighlightIds");
+    expect(grid).not.toContain("isChapterMapTileLocked");
+    expect(grid).not.toContain("chapterHasDagLockChrome");
+    expect(grid).not.toContain("data-ile-chapter-unlock-highlight");
+    expect(grid).toContain('surface: "block"');
     expect(mapper).toContain("lock_until_block_ids");
 
     const steps: SessionPlanStep[] = [
@@ -200,9 +158,9 @@ describe("chapter map path wiring", () => {
     writeScratch(
       "ile-chapter-lock-excerpts.txt",
       [
-        "ChapterMapPanel absent; BlockSkillGrid suggestMode === chapter",
-        "BlockSkillGrid: resolveMapOccupiedTileBadges + ileChapterUnlockHighlightIds",
-        "BlockSkillGrid: data-ile-chapter-unlock-highlight",
+        "ChapterMapPanel absent; BlockSkillGrid has no chapter suggest mode",
+        "BlockSkillGrid: no identity occupied-tile badge helper",
+        "BlockSkillGrid: no chapter unlock highlight",
         "sessionStepsToSkillGridNodes: no implicit order DAG",
       ].join("\n"),
     );

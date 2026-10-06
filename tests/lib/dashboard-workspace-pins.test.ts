@@ -8,6 +8,7 @@ import {
   sortWorkspacesPinnedFirst,
   togglePinnedWorkspaceId,
 } from "@/lib/dashboard-workspace-pins";
+import { readDashboardSurface } from "../helpers/surface-source";
 
 const ROOT = process.cwd();
 
@@ -84,7 +85,7 @@ describe("Dashboard pin UI surface", () => {
     expect(card).toContain("onTogglePin");
     expect(card).toMatch(/Pin|Unpin|pinned/i);
 
-    const page = fs.readFileSync(path.join(ROOT, "app/dashboard/page.tsx"), "utf8");
+    const page = readDashboardSurface();
     expect(page).toContain("sortWorkspacesPinnedFirst");
     expect(page).toContain("loadPinnedWorkspaceIds");
     expect(page).toContain("savePinnedWorkspaceIds");

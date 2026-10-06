@@ -8,7 +8,7 @@ import {
   normalizeIleSessionMode,
   type IleSessionMode,
 } from "@/lib/ile-mode";
-import { ileWorkCanvasXaiToolsInstruction } from "@/lib/ile-work-canvas";
+import { ileWorkCanvasXaiToolsInstruction } from "@/lib/ile-work-canvas-prompts";
 
 /**
  * L1 Learning surface — the Learning use case of TAP.

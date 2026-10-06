@@ -153,19 +153,20 @@ describe("TAP Learning chapter-map chrome (shipped source + frame constants)", (
     expect(existsSync(join(ROOT, "components/ChapterMapPanel.tsx"))).toBe(false);
     const board = read("components/BlockSkillGrid.tsx");
     expect(grid).toContain("resolveMapOverlayPersistScope");
-    expect(grid).toContain('mapKind: suggestMode === "chapter" ? "chapter"');
+    expect(grid).toContain('mapKind: "workspace"');
+    expect(grid).not.toContain("suggestMode");
     expect(grid).toContain("overlayPersist");
     expect(grid).toContain("data-learner-map-notes-toolbar");
     expect(grid).toContain("data-annotation-layers-stack");
     expect(grid).toContain("data-learner-note-add");
     expect(grid).toContain("minimapHidden");
-    expect(board).toContain('suggestMode === "chapter"');
+    expect(board).not.toContain("suggestMode");
 
     writeScratch(
       "ile-chapter-notes-layers-excerpts.txt",
       [
         "ChapterMapPanel absent",
-        "BlockSkillGrid: suggestMode === chapter + overlayPersist chapter scope + notes/layers chrome",
+        "BlockSkillGrid: workspace overlay scope, no chapter suggest mode, notes/layers chrome",
       ].join("\n"),
     );
   });

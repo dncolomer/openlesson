@@ -4,6 +4,7 @@
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { readExcalidrawSurface } from "../helpers/surface-source";
 import { describe, expect, it } from "vitest";
 import { WORKSPACE_CIRCULAR_MENU_ACTIONS } from "@/lib/block-circular-menu";
 import {
@@ -16,6 +17,7 @@ import { PRODUCT_INTENT_LABELS, productIntentClusterLabel, resolveProductIntent 
 const ROOT = join(__dirname, "../..");
 
 function read(rel: string): string {
+  if (rel === "components/ExcalidrawCanvas.tsx") return readExcalidrawSurface();
   return readFileSync(join(ROOT, rel), "utf8");
 }
 

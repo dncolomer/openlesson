@@ -6,11 +6,9 @@ import { PracticeVoiceChallenge } from "@/components/PracticeVoiceChallenge";
 import { SessionFinishedScreen } from "@/components/session-view/session-finished-screen";
 import {
   ILE_SESSION_IMPURITY_BODY,
-  ILE_SESSION_IMPURITY_KICKER,
   ILE_SESSION_IMPURITY_LOG_OFF,
   ILE_SESSION_IMPURITY_SAVE,
   ILE_SESSION_IMPURITY_TITLE,
-  ILE_SILENCE_REST_BODY,
   ILE_SILENCE_REST_SAVE_AND_LEAVE,
   ILE_SILENCE_REST_TITLE,
   ileImpurityExitPlan,
@@ -39,9 +37,8 @@ export function IleSilenceRestScreen({
       overlay
       data-ile-silence-rest=""
       data-ile-silence-lock-count={lockCount}
-      kicker={ILE_SILENCE_REST_TITLE}
+      frameLabel={null}
       title={ILE_SILENCE_REST_TITLE}
-      body={ILE_SILENCE_REST_BODY}
       actions={
         <button
           type="button"
@@ -84,7 +81,7 @@ export function IleSessionImpurityScreen({
       overlay
       data-ile-session-impurity=""
       data-ile-silence-lock-count={lockCount}
-      kicker={ILE_SESSION_IMPURITY_KICKER}
+      frameLabel={null}
       title={ILE_SESSION_IMPURITY_TITLE}
       body={ILE_SESSION_IMPURITY_BODY}
       actions={

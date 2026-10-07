@@ -483,13 +483,8 @@ export function launchPracticeHref(
       ? `/workspace/${workspaceId}/scout?${scoutQ}`
       : `/workspace/${workspaceId}/scout`;
   }
-  const params = new URLSearchParams();
-  if (input.blockId) params.set("block", String(input.blockId));
-  if (target.interaction_kind) params.set("interaction_kind", target.interaction_kind);
-  const q = params.toString();
-  return q
-    ? `/workspace/${workspaceId}/tap?${q}`
-    : `/workspace/${workspaceId}/tap`;
+  // Conversational and exercise targets are not sessions.
+  return `/workspace/${workspaceId}`;
 }
 
 /** Style extracted from a launch target. */

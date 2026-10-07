@@ -2,9 +2,14 @@
  * TAP Learning pre-game settings: named presets, extra sliders, Start Session copy,
  * fuller map-type explanation. Drives shipped helpers (no re-implementation).
  */
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { IleStartLoading } from "@/components/session-view/ile-start-loading";
+import { SessionPageLoading } from "@/components/session-view/session-page-loading";
+import { translateWithLocale } from "@/lib/i18n";
 import { readSessionViewSurface } from "@/tests/helpers/surface-source";
 import {
   ILE_LEARN_PRESETS,
@@ -298,13 +303,11 @@ describe("Learn research presets", () => {
 
     const welcome = read("components/session-view/session-welcome-modal.tsx");
     const en = JSON.parse(read("messages/en.json")) as { session: Record<string, string> };
-    expect(welcome).toContain("data-ile-learn-presets");
-    expect(welcome).toContain("data-ile-learn-preset={preset.id}");
-    expect(welcome).toContain("applyIleLearnPreset");
-    expect(welcome).toContain("onChapterCountChange?.(knobs.chapterCount)");
-    expect(welcome).toContain("onMinInsightsPerChapterChange?.(knobs.minInsightsPerChapter)");
-    expect(welcome).toContain("onSilenceLockMinutesChange?.(knobs.silenceLockMinutes)");
-    expect(welcome).toContain("onPowExpenseChange?.(knobs.powExpense)");
+    expect(welcome).not.toContain("data-ile-learn-presets");
+    expect(welcome).not.toContain("applyIleLearnPreset");
+    expect(welcome).not.toContain("data-ile-session-insight-goal");
+    expect(welcome).toContain("data-ile-silence-lock-minutes");
+    expect(welcome).toContain("onSilenceLockMinutesChange");
     expect(welcome).not.toContain("data-ile-pregame-preset");
     expect(en.session.learnPresetSurvey).toBe("Survey");
     expect(en.session.learnPresetStudy).toBe("Study");
@@ -361,7 +364,8 @@ describe("TAP Learning pre-game settings surface", () => {
     expect(welcome).not.toContain("data-ile-gather-max-slider");
     expect(welcome).not.toContain("data-ile-session-chapter-count");
     expect(welcome).not.toContain("data-ile-pow-expense-slider");
-    expect(welcome).toContain("data-ile-session-insight-goal");
+    expect(welcome).not.toContain("data-ile-session-insight-goal");
+    expect(welcome).toContain("data-ile-silence-lock-minutes");
     expect(welcome).not.toContain("InitialChaptersPicker");
     expect(welcome).not.toContain("IleContinueMapPreview");
     expect(welcome).not.toContain("data-ile-pregame-map");
@@ -376,7 +380,7 @@ describe("TAP Learning pre-game settings surface", () => {
     expect(welcome).not.toContain("ile-pregame-panel-other");
     expect(welcome).not.toContain("data-ile-pregame-difficulty-toggle");
     expect(welcome).not.toContain("data-ile-browser-inference");
-    expect(welcome).toContain("data-ile-min-insights-slider");
+    expect(welcome).not.toContain("data-ile-min-insights-slider");
     expect(welcome).not.toContain("data-ile-canvas-timer-slider");
     expect(en.session.minInsightsPerChapter).toBeTruthy();
     expect(en.session.canvasTimer).toBeTruthy();
@@ -428,24 +432,39 @@ describe("TAP Learning pre-game settings surface", () => {
     expect(pageLoad).toContain("SessionConsoleScan");
     expect(pageLoad).toContain("SessionConsoleMarks");
     expect(startLoad).toContain("shuffleIleStartTipIds");
+    expect(startLoad).not.toMatch(/useMemo\(\(\) => shuffleIleStartTipIds/);
+    expect(startLoad).toContain("useState<readonly IleStartTipId[]>(ILE_START_TIP_IDS)");
     expect(startLoad).toContain("nextIleStartTipIndex");
     expect(startLoad).toContain("ILE_START_TIP_INTERVAL_MS");
     expect(en.session.startLoading).toBe("Starting session");
     expect(en.session.startTipsTitle).toBe("Tips & Tricks");
-    expect(ILE_START_TIP_IDS).toHaveLength(5);
-    expect(ILE_START_TIP_IDS).not.toContain("end-turn");
-    expect(ILE_START_TIP_IDS).not.toContain("map-pan");
-    expect(shuffleIleStartTipIds(["send-enter", "craft-insight"], () => 0)).toEqual([
-      "craft-insight",
-      "send-enter",
-    ]);
+    expect(ILE_START_TIP_IDS).toEqual(["actions", "selection", "commands", "dictate", "leave"]);
+    expect(shuffleIleStartTipIds(["actions", "dictate"], () => 0)).toEqual(["dictate", "actions"]);
     expect(nextIleStartTipIndex(4, 5)).toBe(0);
     expect(nextIleStartTipIndex(0, 5)).toBe(1);
     expect(ILE_START_TIP_INTERVAL_MS).toBe(12000);
-    expect(en.session.startTipCraftInsight).toMatch(/canvas/i);
-    expect(en.session.startTipCraftInsight).not.toMatch(/\bboard\b|\bend turn\b/i);
-    expect(en.session.startTipSendEnter).not.toMatch(/unsys/i);
-    expect(en.session[ILE_START_TIP_LABEL_KEYS["craft-insight"].replace("session.", "")]).toBeTruthy();
+    expect(en.session.startTipActions).toMatch(/Close, Keep, Discard, and Insight/);
+    expect(en.session.startTipActions).toMatch(/canvas/i);
+    const tipCopy = ILE_START_TIP_IDS.map(
+      (id) => en.session[ILE_START_TIP_LABEL_KEYS[id].replace("session.", "")],
+    );
+    for (const copy of tipCopy) {
+      expect(copy).toBeTruthy();
+      expect(copy).not.toMatch(/\bboard\b|\bmap\b|\bstash\b|thought memory|\bend turn\b|\bunsys\b/i);
+    }
+    const plate = renderToStaticMarkup(
+      createElement(IleStartLoading, {
+        t: (key: string) => translateWithLocale("en", key),
+      }),
+    );
+    expect(plate).toContain("data-ile-start-tips");
+    expect(plate).toContain("01 / 05");
+    expect(tipCopy.some((copy) => plate.includes(copy))).toBe(true);
+    const saving = renderToStaticMarkup(
+      createElement(SessionPageLoading, { message: "Saving proof of work…" }),
+    );
+    expect(saving).toContain("data-ile-start-tips");
+    expect(saving).toContain("Saving proof of work");
     expect(
       existsSync(join(process.cwd(), "components/session-view/ile-continue-map-preview.tsx")),
     ).toBe(false);
@@ -459,7 +478,8 @@ describe("TAP Learning pre-game settings surface", () => {
     expect(picker).toContain("data-ile-map-type-use-when");
     expect(welcome).not.toContain("catalogStrip");
     expect(welcome).not.toContain("data-ile-session-chapter-count");
-    expect(welcome).toContain("data-ile-session-insight-goal");
+    expect(welcome).not.toContain("data-ile-session-insight-goal");
+    expect(welcome).toContain("data-ile-silence-lock-minutes");
     expect(welcome).not.toContain("data-ile-pregame-economy-map");
     expect(welcome).toContain("lg:grid-cols-2");
     expect(picker).toContain("line-clamp-3");

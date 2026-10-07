@@ -36,18 +36,18 @@ export type IlePregamePresetId = (typeof ILE_PREGAME_PRESET_IDS)[number];
 
 /**
  * Knobs that still change a live Learn session and stay on the TAP settings card.
- * Chapter count and work expense stay on the presets. They are not sliders.
- * Learn has no session-length countdown. The elapsed clock does not clear the board.
+ * Presets and the insight goal are not on the card. Chapter count, the insight
+ * goal, and work expense stay at their defaults. Learn has no session-length
+ * countdown. The elapsed clock does not clear the board.
  */
 export const ILE_LIVE_SETTINGS_KNOBS = [
-  { id: "insightGoal", attribute: "data-ile-session-insight-goal" },
   { id: "silenceLock", attribute: "data-ile-silence-lock-minutes" },
   { id: "spokenLanguage", attribute: "data-tap-briefing-config" },
 ] as const;
 
 /**
- * Research presets for the Learn settings card. They set only the knobs
- * that still change the session. Spoken language and look stay as chosen.
+ * Research presets. They are not on the Learn settings card. Spoken language,
+ * silence, and look are chosen there. These knobs stay available for tests.
  */
 export const ILE_LEARN_PRESET_IDS = ["survey", "study", "thesis"] as const;
 export type IleLearnPresetId = (typeof ILE_LEARN_PRESET_IDS)[number];
@@ -388,21 +388,21 @@ export function ileMapTypeSessionExplanation(input: {
 }
 
 export const ILE_START_TIP_IDS = [
-  "send-enter",
-  "stash-del",
-  "craft-insight",
-  "chapters",
-  "thought-memory",
+  "actions",
+  "selection",
+  "commands",
+  "dictate",
+  "leave",
 ] as const;
 
 export type IleStartTipId = (typeof ILE_START_TIP_IDS)[number];
 
 export const ILE_START_TIP_LABEL_KEYS: Record<IleStartTipId, string> = {
-  "send-enter": "session.startTipSendEnter",
-  "stash-del": "session.startTipStashDel",
-  "craft-insight": "session.startTipCraftInsight",
-  chapters: "session.startTipChapters",
-  "thought-memory": "session.startTipThoughtMemory",
+  actions: "session.startTipActions",
+  selection: "session.startTipSelection",
+  commands: "session.startTipCommands",
+  dictate: "session.startTipDictate",
+  leave: "session.startTipLeave",
 };
 
 export const ILE_START_TIP_INTERVAL_MS = 12000;

@@ -38,6 +38,11 @@ import {
 import { ileWelcomeShowsRegenerate } from "@/lib/ile-welcome-chapters";
 import { applyIleSessionNameToMetadata } from "@/lib/ile-session-name";
 import { applyIleOpenWorkIdsToMetadata } from "@/lib/ile-pow-spend";
+import { textToBase64, uploadIleProofOfWork } from "@/lib/ile-proof-of-work-client";
+import { embedPolicyScore } from "@/lib/session-policy-score";
+import type { SessionPolicySnapshot } from "@/components/session-view/session-policy-context";
+import { loadSessionBranchField, sessionClockMayStart } from "@/lib/session-branch-field-load";
+import { learnSessionFieldInput } from "@/lib/session-branch-prepare";
 import { discardUnsavedIleSession } from "@/lib/ile-unsaved-exit";
 import type { GuestAccessKind, ChapterPlanStatus, PrepStage, HelpPreviousLayout } from "@/components/session-view/types";
 import type { InitialChaptersLevel } from "@/lib/initial-chapters";
@@ -129,6 +134,7 @@ export type SessionPhaseInput = {
   pausedWebcamStreamRef: { current: MediaStream | null };
   handlePauseRef: { current: () => Promise<void> };
   openWorkIdsRef: { current: string[] };
+  policyRef?: { current: SessionPolicySnapshot };
 };
 
 export function useSessionPhase(input: SessionPhaseInput) {
@@ -772,6 +778,30 @@ const handleToggleFocus = async (probeId: string, focused: boolean) => {
 const handleConfirmEnd = async () => {
   setShowEndDialog(false);
   if (session) {
+    const snapshot = input.policyRef?.current;
+    if (snapshot?.model) {
+      const workspaceId =
+        typeof session.metadata?.workspace_id === "string" ? session.metadata.workspace_id : "";
+      const scored = embedPolicyScore({
+        model: snapshot.model,
+        sequence: snapshot.sequence,
+        workspaceId: workspaceId || session.id,
+      });
+      if (workspaceId) {
+        void uploadIleProofOfWork({
+          workspaceId,
+          sessionId: session.id,
+          ileToken,
+          type: "tool",
+          mime_type: "application/json",
+          data: textToBase64(scored.text),
+          file_name: "session-policy-score.json",
+          tool_name: scored.toolName,
+          tool_action: scored.toolAction,
+          metadata: scored.metadata,
+        });
+      }
+    }
     const finalSession = endSession(session, elapsedSeconds * 1000, "completed");
     setSession(finalSession);
     sessionRef.current = finalSession;
@@ -955,7 +985,6 @@ setActiveProbe(null);
 setViewingProbeIndex(-1);
 // Plan prep done
 setPlanLoading(false);
-setLanguageConfirmed(true);
 // Stage 2: Load local model if enabled
 if (localInferenceEnabled) {
   setPrepStage("model");
@@ -971,9 +1000,25 @@ if (localInferenceEnabled) {
     return; // Keep modal open to show error
   }
 }
+const fieldInput = learnSessionFieldInput({
+  sessionId: session.id,
+  problem: session.problem,
+  plan: newPlan,
+  ileToken,
+  ayclToken,
+  fallbackTitle: t("session.chapterPromptFallback"),
+});
+const field = fieldInput
+  ? await loadSessionBranchField(fieldInput)
+  : { ok: false as const, error: "The field could not be prepared.", key: null };
+if (!sessionClockMayStart({ mode: "learn", fieldReady: field.ok })) {
+  setPlanError(field.ok ? "The field could not be prepared." : field.error);
+  return;
+}
 // All done - leave settings route and enter the map session
 setPrepStage("done");
 setIsPaused(false); // Reset paused state from previous session load
+setLanguageConfirmed(true);
 markIleSessionSettingsConfirmed(session.id);
 setShowWelcomeModal(false);
 const enterMap = decideIleSettingsEnterMap({
@@ -1005,6 +1050,7 @@ setIsPreparing(false);
   chapterCount,
   resolvedSessionMode,
   localInferenceEnabled,
+  t,
 ]);
 
 const handleContinueWithoutInference = useCallback(() => {
@@ -1016,19 +1062,40 @@ const handleContinueWithoutInference = useCallback(() => {
 }, []);
 
 const handleWelcomeReadyStart = useCallback(async () => {
-  setIsPaused(false);
-  const needsWelcome =
-    !!session &&
-    !isSessionWelcomeSeen(session.id) &&
-    session.probes.filter((p) => !p.archived).length === 0;
-  if (needsWelcome) {
-    setShowWelcomePanel(true);
-  } else {
-    await startRecording();
+  if (!session || isPreparing) return;
+  setIsPreparing(true);
+  setPlanError(null);
+  try {
+    const fieldInput = learnSessionFieldInput({
+      sessionId: session.id,
+      problem: session.problem,
+      plan: sessionPlanRef.current,
+      ileToken,
+      ayclToken,
+      fallbackTitle: t("session.chapterPromptFallback"),
+    });
+    const field = fieldInput
+      ? await loadSessionBranchField(fieldInput)
+      : { ok: false as const, error: "The field could not be prepared.", key: null };
+    if (!sessionClockMayStart({ mode: "learn", fieldReady: field.ok })) {
+      setPlanError(field.ok ? "The field could not be prepared." : field.error);
+      return;
+    }
+    setIsPaused(false);
+    const needsWelcome =
+      !isSessionWelcomeSeen(session.id) &&
+      session.probes.filter((p) => !p.archived).length === 0;
+    if (needsWelcome) {
+      setShowWelcomePanel(true);
+    } else {
+      await startRecording();
+    }
+    markIleSessionSettingsConfirmed(session.id);
+    setShowWelcomeModal(false);
+  } finally {
+    setIsPreparing(false);
   }
-  if (session?.id) markIleSessionSettingsConfirmed(session.id);
-  setShowWelcomeModal(false);
-}, [session]);
+}, [session, isPreparing, ileToken, ayclToken, t, sessionPlanRef]);
 
   return {
     checkMicrophone,

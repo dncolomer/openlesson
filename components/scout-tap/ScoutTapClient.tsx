@@ -19,6 +19,10 @@ import {
 import { resolveTapShowEndSession } from "@/components/TapScoreClient";
 import { fetchAestheticPackages } from "@/lib/aesthetics";
 import { ScoutTapPhases } from "@/components/scout-tap/scout-tap-phases";
+import { emptySessionPolicySnapshot } from "@/components/session-view/session-policy-context";
+import { embedPolicyScore, policyScoreUploadItem } from "@/lib/session-policy-score";
+import { loadSessionBranchField, sessionClockMayStart } from "@/lib/session-branch-field-load";
+import { calibrateFieldPrepareInput } from "@/lib/session-branch-prepare";
 import {
   advanceTapLiveClockPause,
   pickTapBackgroundImage,
@@ -185,6 +189,7 @@ export function ScoutTapClient({
   const seedTextRef = useRef(seedText);
   const [calibrate, setCalibrate] = useState<CalibrateState>(() => createCalibrateState([]));
   const calibrateRef = useRef(calibrate);
+  const policyRef = useRef(emptySessionPolicySnapshot());
   const [questionsLoading, setQuestionsLoading] = useState(false);
   const questionsAbortRef = useRef<AbortController | null>(null);
   const questionsGenRef = useRef(0);
@@ -274,9 +279,35 @@ export function ScoutTapClient({
   );
 
   const persistCalibrateCanvas = useCallback(async () => {
-    const scene = workCanvasSceneRef.current;
     const sessionKey = tapSessionIdRef.current || sessionId;
-    if (!scene || !sessionKey) return;
+    if (!sessionKey) return;
+    const snapshot = policyRef.current;
+    const scored = snapshot.model
+      ? embedPolicyScore({
+          model: snapshot.model,
+          sequence: snapshot.sequence,
+          workspaceId,
+          note: buildCalibrateCompleteTranscript({
+            seedText: seedTextRef.current,
+            state: calibrateRef.current,
+          })
+            .map((row) => row.text)
+            .join("\n"),
+        })
+      : null;
+    if (scored) {
+      await uploadTapWorkCanvasPow({
+        workspaceId,
+        blockId,
+        sessionId,
+        privateToken,
+        tapSessionId: tapSessionIdRef.current,
+        entryQueryParams: entryQueryParamsRef.current,
+        item: policyScoreUploadItem(scored),
+      });
+    }
+    const scene = workCanvasSceneRef.current;
+    if (!scene) return;
     const serialized = serializeTapWorkCanvasScene(scene);
     const item = buildTapCanvasSnapshotUploadItem(sessionKey, JSON.stringify(serialized));
     await uploadTapWorkCanvasPow({
@@ -291,6 +322,7 @@ export function ScoutTapClient({
         metadata: {
           ...(item.metadata || {}),
           ...buildCalibrateProofMetadata(calibrateRef.current),
+          ...(scored ? scored.metadata : {}),
         },
       },
     });
@@ -383,6 +415,23 @@ export function ScoutTapClient({
       workCanvasSceneRef.current = empty;
       setCanvasApplyElements([]);
       setCanvasApplyNonce(0);
+      await loadPool(seed, description);
+      const field = await loadSessionBranchField(
+        calibrateFieldPrepareInput({
+          topicText: seed,
+          topicId: "calibrate",
+          questions: calibrateRef.current.pool.slice(0, 3),
+          sessionId,
+          tapSessionId: tapSessionIdRef.current,
+          workspaceId,
+          blockId,
+          privateToken,
+          entryQueryParams: entryQueryParamsRef.current,
+        }),
+      );
+      if (!sessionClockMayStart({ mode: "calibrate", fieldReady: field.ok })) {
+        throw new Error(field.ok ? "The field could not be prepared." : field.error);
+      }
       const startedAtMs = Date.now();
       pauseStartedAtRef.current = null;
       pausedMsRef.current = 0;
@@ -391,7 +440,6 @@ export function ScoutTapClient({
       setRemainingSeconds(sessionMinutes * 60);
       setPhase("live");
       started = true;
-      void loadPool(seed, description);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not start Scout");
     } finally {
@@ -570,14 +618,6 @@ export function ScoutTapClient({
     })();
   }, [blockId, onBackWorkspace, resolvedWorkspaceId, router]);
 
-  const onJumpDrill = useCallback(() => {
-    if (!resolvedWorkspaceId) return;
-    const params = new URLSearchParams();
-    if (blockId) params.set("blockId", blockId);
-    params.set("interactionKind", "conversational");
-    router.push(`/workspace/${resolvedWorkspaceId}/tap?${params.toString()}`);
-  }, [blockId, resolvedWorkspaceId, router]);
-
   if (isMobile) {
     return <MobileBlockScreen product="tap" />;
   }
@@ -602,10 +642,12 @@ export function ScoutTapClient({
       clockPaused={clockPaused}
       showEndSession={showEndSession}
       endSession={() => void endSession()}
+      policyRef={policyRef}
       workspaceId={workspaceId}
       blockId={blockId}
       sessionId={sessionId}
       tapSessionId={tapSessionId}
+      entryQueryParams={entryQueryParams}
       resultsError={resultsError}
       restartBriefingFlow={restartBriefingFlow}
       setPhase={setPhase}
@@ -621,7 +663,6 @@ export function ScoutTapClient({
       onAdvance={onAdvance}
       thankYouActions={thankYouActions}
       onJumpWork={onJumpWork}
-      onJumpDrill={onJumpDrill}
       onBackWorkspace={onBackWorkspace}
     />
   );

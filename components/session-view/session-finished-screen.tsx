@@ -23,6 +23,7 @@ export function SessionFinishedScreen({
   children,
   wide = false,
   overlay = false,
+  frameLabel = "End",
   className,
   ...rest
 }: HTMLAttributes<HTMLElement> & {
@@ -32,6 +33,8 @@ export function SessionFinishedScreen({
   actions?: ReactNode;
   wide?: boolean;
   overlay?: boolean;
+  /** Pass null to omit the console label. */
+  frameLabel?: ReactNode | null;
 }) {
   const fillStage = wide && children != null && children !== false;
   return (
@@ -59,9 +62,11 @@ export function SessionFinishedScreen({
             : "my-auto max-w-xl",
         )}
       >
-        <p data-console-frame-label="" className={`mb-3 ${CONSOLE_LABEL_CLASS}`}>
-          End
-        </p>
+        {frameLabel ? (
+          <p data-console-frame-label="" className={`mb-3 ${CONSOLE_LABEL_CLASS}`}>
+            {frameLabel}
+          </p>
+        ) : null}
         {kicker ? (
           <p className="shrink-0 font-mono text-[10px] uppercase tracking-[0.16em] text-neutral-300/80">
             {kicker}

@@ -185,9 +185,9 @@ describe("canvas dictate button", () => {
     expect(gateClose).toBeGreaterThan(input);
     expect(gateClose).toBeLessThan(rowStart);
     const commandRow = canvas.slice(gate, gateClose);
-    expect(commandRow).toContain("data-ile-canvas-ask");
+    expect(commandRow).not.toContain("data-ile-canvas-ask");
     expect(commandRow).toContain("data-ile-canvas-prompt-bar-send");
-    expect(commandRow).toContain('"Ask"');
+    expect(commandRow).not.toContain('"Ask"');
     expect(commandRow).toMatch(/>\s*Run\s*</);
     const row = canvas.slice(rowStart, rowEnd);
     expect(row).not.toContain("data-ile-canvas-prompt-bar-input");
@@ -212,11 +212,20 @@ describe("canvas dictate button", () => {
       createElement(ExcalidrawCanvas, {
         onAskSelected: async () => ({ text: "" }),
         dictateTranscript: "",
-        craftInsight: { chapterId: "chapter-1", sessionId: "session-1" },
+        craftInsight: { chapterId: "chapter-1", sessionId: "session-1", onCrafted: () => {} },
       }),
     );
     expect(html).toContain("data-ile-craft-insight");
     expect(html).toContain("data-ile-canvas-dictate");
+    expect(html).toContain("data-ile-learn-more-actions");
+    for (const label of ["Simplify", "Rephrase", "Split", "Join", "Elaborate", "Compress", "Refactor", "Clear overlaps"]) {
+      expect(html).toContain(`>${label}<`);
+    }
+    expect(html).not.toContain(">Answer<");
+    expect(html).not.toContain(">Suggest Insight<");
+    expect(html).not.toContain('data-ile-learn-more-quick="answer"');
+    expect(html).not.toContain('data-ile-learn-more-quick="ask"');
+    expect(html).not.toContain('data-ile-learn-more-quick="suggest-insight"');
     expect(html).toContain(">craft insight<");
     expect(html).toContain(">dictate<");
     expect(html).not.toContain("data-ile-canvas-prompt-bar-input");
@@ -275,7 +284,7 @@ describe("canvas dictate button", () => {
       createElement(ExcalidrawCanvas, {
         onAskSelected: async () => ({ text: "" }),
         dictateTranscript: "",
-        craftInsight: { chapterId: "chapter-1", sessionId: "session-1" },
+        craftInsight: { chapterId: "chapter-1", sessionId: "session-1", onCrafted: () => {} },
       }),
     );
     expect(html).not.toContain("data-ile-canvas-prompt-bar-input");

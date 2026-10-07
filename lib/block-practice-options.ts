@@ -69,7 +69,7 @@ export type BlockPracticeOptionsInput = Partial<{
 export function defaultBlockPracticeOptions(): BlockPracticeOptions {
   return {
     allowExplore: true,
-    allowDrill: true,
+    allowDrill: false,
     allowScout: true,
     allowDialog: true,
     allowSolo: true,
@@ -117,7 +117,7 @@ export function normalizeBlockPracticeOptions(
     raw.allowExplore ?? raw.allow_explore,
     def.allowExplore,
   );
-  let allowDrill = asBool(raw.allowDrill ?? raw.allow_drill, def.allowDrill);
+  const allowDrill = false;
   let allowScout = asBool(raw.allowScout ?? raw.allow_scout, def.allowScout);
 
   // Prefer explicit dialog/solo; fall back to open_ended/timed legacy keys.
@@ -235,7 +235,7 @@ export function blockAllowsPracticeStyle(
   style: LearningStyle,
 ): boolean {
   const n = normalizeBlockPracticeOptions(opts ?? null);
-  if (style === "drill") return n.allowDrill;
+  if (style === "drill") return false;
   if (style === "scout") return n.allowScout;
   return n.allowExplore;
 }
@@ -295,11 +295,9 @@ export function resolveDefaultPracticeLaunchUi(
   const n = normalizeBlockPracticeOptions(opts ?? null);
   const style: LearningStyle = n.allowExplore
     ? "explore"
-    : n.allowDrill
-      ? "drill"
-      : n.allowScout
-        ? "scout"
-        : "explore";
+    : n.allowScout
+      ? "scout"
+      : "explore";
   const durations = blockAllowedDurations(n);
   const durationMinutes =
     durations.includes(15) ? 15 : durations[0] ?? 15;
@@ -332,7 +330,7 @@ export function enabledPracticeLaunchCombos(
 ): ProductLaunchTarget["id"][] {
   const n = normalizeBlockPracticeOptions(opts ?? null);
   const out: ProductLaunchTarget["id"][] = [];
-  for (const style of ["scout", "explore", "drill"] as const) {
+  for (const style of ["scout", "explore"] as const) {
     if (!blockAllowsPracticeStyle(n, style)) continue;
     out.push(resolveLaunchFromStyleAndModality(style, false).id);
   }
@@ -350,7 +348,6 @@ export function practiceOptionsIconKeys(
   const keys: Array<"explore" | "drill" | "scout" | "dialog" | "solo" | "open" | "timed"> = [];
   if (n.allowScout) keys.push("scout");
   if (n.allowExplore) keys.push("explore");
-  if (n.allowDrill) keys.push("drill");
   return keys;
 }
 

@@ -4,7 +4,6 @@ import { join } from "node:path";
 import {
   ILE_CIRCULAR_MENU_ACTIONS,
   ILE_EMPTY_CIRCULAR_MENU_ACTIONS,
-  ILE_TIM_CIRCULAR_MENU_ACTIONS,
   WORKSPACE_CIRCULAR_MENU_ACTIONS,
   WORKSPACE_CIRCULAR_MENU_DRAWER_IDS,
   blockCircularMenuActions,
@@ -78,7 +77,7 @@ describe("block circular menu catalog", () => {
     expect(blockCircularMenuActions("workspace-learner").map((a) => a.label)).toEqual([
       "Calibrate",
       "Learn",
-      "Drill",
+      "Verify",
       "Continue prev Session",
       "Mark as Done",
     ]);
@@ -105,11 +104,11 @@ describe("block circular menu catalog", () => {
       ileVoicePadSpec({ selection: "chapter", completed: true }).disabledIds.has("edit"),
     ).toBe(true);
     expect(blockCircularMenuActions("ile", { timUnopened: true }).map((a) => a.id)).toEqual(
-      ILE_TIM_CIRCULAR_MENU_ACTIONS.map((a) => a.id),
+      ILE_CIRCULAR_MENU_ACTIONS.map((a) => a.id),
     );
     expect(blockCircularMenuActions("ile", { timUnopened: true }).map((a) => a.label)).toEqual([
-      "Accept",
-      "Reject",
+      "Work",
+      "Edit",
     ]);
     expect(blockCircularMenuActions("workspace-learner", { timUnopened: true })).toEqual([]);
     expect(blockCircularMenuActions("workspace-learner", { empty: true })).toEqual([]);
@@ -386,7 +385,7 @@ describe("circular menu source wiring", () => {
     expect(workspaceCircularMenuDrawerId("start_session")).toBeNull();
     expect(workspaceCircularMenuStartsFreshExplore("start_prepare")).toBe(true);
     expect(workspaceCircularMenuStartsFreshExplore("start_session")).toBe(true);
-    expect(workspaceCircularMenuStartsFreshExplore("start_drill")).toBe(true);
+    expect(workspaceCircularMenuStartsFreshExplore("start_drill")).toBe(false);
     expect(workspaceCircularMenuStartsFreshExplore("continue_session")).toBe(false);
     expect(nextLearnerDrawerRequest("start_session", 1)).toBeNull();
     expect(wsView).toContain("workspaceCircularMenuStartsFreshExplore");

@@ -225,12 +225,15 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     expect(welcome).not.toContain("InitialChaptersPicker");
     expect(welcome).not.toContain("IleContinueMapPreview");
     expect(welcome).not.toContain("data-ile-session-chapter-count");
-    expect(welcome).toContain("data-ile-session-insight-goal");
+    expect(welcome).not.toContain("data-ile-session-insight-goal");
+    expect(welcome).not.toContain("data-ile-learn-presets");
+    expect(welcome).toContain("data-ile-silence-lock-minutes");
     expect(welcome).toContain("capIleSessionChapters");
     expect(welcome).not.toMatch(/\bmap type\b|\bboard\b/i);
     expect(welcome).not.toContain("session.powExpense");
     expect(welcome).toContain("session.confirmSettings");
-    expect(welcome).toContain("min-w-[14rem]");
+    expect(welcome).toContain("data-ile-confirm-settings");
+    expect(welcome).not.toContain("session.getStarted");
     expect(view).toContain("powExpense={powExpense}");
     expect(view).toContain("insightSlotMax={insightSlotMax}");
     expect(view).toContain("maxPerSession: gatherMaxPerSession");
@@ -259,7 +262,9 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     expect(chrome).not.toContain("data-ile-chapter-dock-panel");
     expect(chrome).toContain("ILE_MAP_WIDGET_FRAME_CLASS");
     expect(chrome).not.toContain("IleChapterWidgetFrame");
-    expect(chrome).toContain('id="insights"');
+    expect(chrome).toContain('id="actions"');
+    expect(chrome).toContain("SessionActionsPanel");
+    expect(chrome).not.toContain('id="insights"');
     expect(chrome).toContain('id="chapters"');
     expect(chrome).toContain('id="sensors"');
     const dockBar = read("components/session-view/ile-work-dock-bar.tsx");
@@ -459,7 +464,9 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     expect(chrome).not.toContain("IleWorkCanvasTimer");
     expect(chrome).not.toContain("left-1/2 top-2");
     expect(chrome).not.toContain("-translate-x-1/2");
-    expect(chrome).toContain('id="insights"');
+    expect(chrome).toContain('id="actions"');
+    expect(chrome).toContain("SessionActionsPanel");
+    expect(chrome).not.toContain('id="insights"');
     expect(chrome).toContain('id="chapters"');
     expect(chrome).toContain('id="sensors"');
     expect(chrome).toContain("transcript={voiceBar}");
@@ -559,8 +566,11 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
       "pregamePresetBlitzDesc",
       "pregameTabEconomy",
       "canvasTimerDesc",
-      "startTipCraftInsight",
-      "startTipChapters",
+      "startTipActions",
+      "startTipSelection",
+      "startTipCommands",
+      "startTipDictate",
+      "startTipLeave",
     ] as const;
     const localeNotes: string[] = [];
     for (const locale of locales) {

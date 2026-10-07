@@ -1,7 +1,15 @@
 "use client";
 
-import type { Dispatch, SetStateAction } from "react";
+import { type Dispatch, type MutableRefObject, type SetStateAction } from "react";
 import { WorkCanvas } from "@/components/ExcalidrawCanvas";
+import { useSessionBranchField } from "@/components/session-view/session-branch-prepare";
+import { SessionFieldLoader } from "@/components/session-view/session-field-gate";
+import {
+  SessionPolicyBridge,
+  useSessionBranchSlot,
+  type SessionPolicySnapshot,
+} from "@/components/session-view/session-policy-context";
+import { sessionCanvasMayOpen } from "@/lib/session-field-gate";
 import type { IleCanvasCraftInsightConfig } from "@/components/session-view/ile-canvas-craft-insight";
 import type { InsightSummary } from "@/lib/insights";
 import type { IlePowCounterArtifact } from "@/lib/ile-pow-counters";
@@ -32,12 +40,17 @@ export function SessionChapterWorkCanvas({
   sessionThoughtInterface,
   activeStep,
   activeChapterLabel,
+  chapterTitle,
+  chapterBrief,
+  fieldScope,
   workspaceId,
   ileToken,
+  ayclToken,
   recordSessionPowArtifact,
   sessionPowArtifactsRef,
   insightWorkMarkRef,
   setSessionInsights,
+  policyRef,
 }: {
   session: Session | null;
   activeChapterKey: string;
@@ -56,16 +69,52 @@ export function SessionChapterWorkCanvas({
   sessionThoughtInterface: { crystallizableText?: string };
   activeStep: { id?: string | null } | null | undefined;
   activeChapterLabel: string;
+  /** Chapter material for the field. This is not the "Chapter N" label. */
+  chapterTitle: string;
+  chapterBrief: string;
+  /** Same slice key the tips screen used. A later chapter passes its own id. */
+  fieldScope?: string | null;
   workspaceId?: string | null;
   ileToken?: string;
+  ayclToken?: string;
   recordSessionPowArtifact: IleCanvasCraftInsightConfig["recordSessionPowArtifact"];
   sessionPowArtifactsRef: { current: IlePowCounterArtifact[] };
   insightWorkMarkRef: { current: number };
   setSessionInsights: Dispatch<SetStateAction<InsightSummary[]>>;
+  policyRef?: MutableRefObject<SessionPolicySnapshot>;
 }) {
-  if (!session) return null;
+  const chapterId = activeStep?.id || activeChapterKey || "chapter";
+  useSessionBranchField({
+    enabled: Boolean(session?.id),
+    sessionId: session?.id,
+    chapterTitle,
+    chapterBrief,
+    ileToken,
+    ayclToken,
+    scope: fieldScope || chapterId,
+  });
+  const fieldSlot = useSessionBranchSlot();
+
+  const bridge = policyRef ? <SessionPolicyBridge target={policyRef} /> : null;
+  if (!session) return bridge;
+  if (!sessionCanvasMayOpen(fieldSlot)) {
+    return (
+      <>
+        {bridge}
+        <SessionFieldLoader status={fieldSlot?.status} error={fieldSlot?.error} />
+      </>
+    );
+  }
+  const sessionMarkQuestions = [
+    {
+      id: chapterId,
+      text: chapterTitle.trim() || activeChapterLabel || "This chapter",
+    },
+  ];
   const boardId = ileChapterCanvasRemountKey(session.id, activeChapterKey);
   return (
+    <>
+    {bridge}
     <WorkCanvas
       key={`${boardId}:work`}
       boardId={boardId}
@@ -92,6 +141,9 @@ export function SessionChapterWorkCanvas({
       onCanvasPowActions={handleCanvasPowActions}
       onAskSelected={handleAskCanvasSelection}
       dictateTranscript={sessionThoughtInterface.crystallizableText}
+      sessionMarkMode="learn"
+      sessionMarkListKey={`${session.id}:${chapterId}`}
+      sessionMarkQuestions={sessionMarkQuestions}
       craftInsight={
         activeStep?.id
           ? {
@@ -114,5 +166,6 @@ export function SessionChapterWorkCanvas({
           : null
       }
     />
+    </>
   );
 }

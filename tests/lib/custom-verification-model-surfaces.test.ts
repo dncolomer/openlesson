@@ -85,7 +85,8 @@ describe("custom verification model surfaces", () => {
     expect(brain).toContain("data-knowledge-distance");
     expect(brain).toContain("data-region-overlay-distances");
     expect(brain).toContain("showModels");
-    expect(brain).toContain("showLwm");
+    expect(brain).not.toContain("showLwm");
+    expect(brain).toContain('data-knowledge-judge-report="removed"');
     expect(brain).toContain('data-section="embeddings-projections"');
 
     const settings = read("components/WorkspaceIntegrationPanel.tsx");

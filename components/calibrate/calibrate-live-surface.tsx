@@ -2,20 +2,16 @@
 
 import { useCallback, useEffect, useRef, useState, type MutableRefObject, type ReactNode } from "react";
 import { WorkCanvas } from "@/components/ExcalidrawCanvas";
-import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { SessionTopicChapter } from "@/components/session-view/ile-work-dock-bar";
+import { SessionBranchFieldBoundary } from "@/components/session-view/session-branch-prepare";
+import { calibrateFieldPrepareInput } from "@/lib/session-branch-prepare";
+import { SessionPolicyBridge, type SessionPolicySnapshot } from "@/components/session-view/session-policy-context";
+import { SessionActionsPanel } from "@/components/session-view/session-mark-controls";
 import { SessionWorkSurface } from "@/components/session-view/session-work-surface";
-import { SESSION_SIDEBAR_PRIMARY_BUTTON_CLASS } from "@/lib/session-sidebar";
 import {
-  CALIBRATE_COMFORTABLE_REQUIRED,
   CALIBRATE_DATA_DISABLED_LABEL,
-  CALIBRATE_DONE_ANSWERING_LABEL,
-  CALIBRATE_DONE_CLASSIFYING_LABEL,
-  CALIBRATE_DONE_EXPLAINING_LABEL,
   CALIBRATE_MOVE_RIGHT_LABEL,
   CALIBRATE_OPENING_INSTRUCTION,
-  CALIBRATE_UNCONFIDENT_REQUIRED,
-  calibrateStepInstruction,
   type CalibratePhase,
 } from "@/lib/calibrate-session";
 import { tapWorkCanvasShouldAcceptSceneUpdate } from "@/lib/tap-work-canvas";
@@ -73,13 +69,6 @@ function CalibrateDataDisabled() {
   );
 }
 
-function advanceLabel(phase: CalibratePhase): string {
-  if (phase === "answer") return CALIBRATE_DONE_ANSWERING_LABEL;
-  if (phase === "explain") return CALIBRATE_DONE_EXPLAINING_LABEL;
-  if (phase === "complete") return "Stored";
-  return CALIBRATE_DONE_CLASSIFYING_LABEL;
-}
-
 export function CalibrateLiveSurface(props: {
   boardId?: string | null;
   phase: CalibratePhase;
@@ -101,10 +90,17 @@ export function CalibrateLiveSurface(props: {
   topicId: string;
   topicText: string;
   focusLabel: string;
+  markQuestions?: readonly { id?: string | null; text?: string | null }[];
+  sessionId?: string | null;
+  tapSessionId?: string | null;
+  workspaceId?: string | null;
+  blockId?: string | null;
+  privateToken?: string | null;
+  calibrationToken?: string | null;
+  entryQueryParams?: Record<string, string | string[]> | null;
+  policyRef?: MutableRefObject<SessionPolicySnapshot>;
 }) {
   const { transcript, onDictateActive } = useOptionalDictateTranscript();
-  const label = advanceLabel(props.phase);
-  const waiting = props.poolLoading && props.phase === "classifying";
   const [showOpening, setShowOpening] = useState(props.phase === "classifying");
   const [showMoveRight, setShowMoveRight] = useState(false);
 
@@ -131,9 +127,35 @@ export function CalibrateLiveSurface(props: {
     };
   }, [showOpening, showMoveRight]);
 
+  const fieldInput = calibrateFieldPrepareInput({
+    topicText: props.topicText,
+    topicId: props.topicId,
+    questions: props.markQuestions,
+    sessionId: props.sessionId,
+    tapSessionId: props.tapSessionId,
+    workspaceId: props.workspaceId,
+    blockId: props.blockId,
+    privateToken: props.privateToken,
+    calibrationToken: props.calibrationToken,
+    entryQueryParams: props.entryQueryParams,
+  });
+  const fieldSessionKey = (
+    props.tapSessionId ||
+    props.sessionId ||
+    props.calibrationToken ||
+    props.boardId ||
+    "session"
+  ).trim();
+
   return (
+    <SessionBranchFieldBoundary
+      enabled
+      input={fieldInput}
+    >
+    {props.policyRef ? <SessionPolicyBridge target={props.policyRef} /> : null}
     <SessionWorkSurface
       mode="tap"
+      policyTab
       stackBelow
       stage={
         <div
@@ -152,6 +174,13 @@ export function CalibrateLiveSurface(props: {
             heliosBusy={false}
             dictateTranscript={transcript}
             onDictateActive={onDictateActive}
+            sessionMarkMode="calibrate"
+            sessionMarkListKey={`calibrate:${fieldSessionKey}:${props.topicId || "topic"}`}
+            sessionMarkQuestions={
+              props.markQuestions && props.markQuestions.length > 0
+                ? props.markQuestions
+                : [{ id: props.topicId || "topic", text: props.topicText || "This topic" }]
+            }
             onSceneChange={(scene) => {
               if (props.readOnly) return;
               if (!tapWorkCanvasShouldAcceptSceneUpdate(props.sceneRef.current, scene)) return;
@@ -201,43 +230,13 @@ export function CalibrateLiveSurface(props: {
       actions={props.actions}
       chapters={<SessionTopicChapter id={props.topicId} keyword={props.topicText} />}
       signals={<CalibrateDataDisabled />}
-      focusLabel={props.focusLabel}
+      focusLabel="actions"
       focus={
         <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden" data-calibrate-step>
-          {waiting ? (
-            <div
-              className="flex min-h-0 flex-1 items-center justify-center px-4 py-8"
-              data-calibrate-pool-loading
-              data-scout-questions-loading
-            >
-              <LoadingStatusMessage message="Generating questions…" size="md" tone="light" className="text-center" />
-            </div>
-          ) : (
-            <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3">
-              <p className="text-sm leading-relaxed text-neutral-200" data-calibrate-instruction>
-                {calibrateStepInstruction(props.phase)}
-              </p>
-              {props.phase === "classifying" ? (
-                <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-neutral-500" data-calibrate-counts>
-                  Comfortable {props.comfortableCount}/{CALIBRATE_COMFORTABLE_REQUIRED}
-                  {" · "}
-                  Not confident {props.unconfidentCount}/{CALIBRATE_UNCONFIDENT_REQUIRED}
-                </p>
-              ) : null}
-              <button
-                type="button"
-                data-calibrate-advance
-                data-calibrate-done-classifying={props.phase === "classifying" ? "true" : "false"}
-                disabled={props.readOnly || props.phase === "complete" || !props.canAdvance}
-                onClick={() => props.onAdvance()}
-                className={`${SESSION_SIDEBAR_PRIMARY_BUTTON_CLASS} w-full disabled:opacity-40`}
-              >
-                {label}
-              </button>
-            </div>
-          )}
+          <SessionActionsPanel />
         </div>
       }
     />
+    </SessionBranchFieldBoundary>
   );
 }

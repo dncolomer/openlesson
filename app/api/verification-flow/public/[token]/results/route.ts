@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { verificationProofEmbedding } from "@/lib/verification-flow";
+import { policyScoreFromUnknown } from "@/lib/session-policy-score";
 import { addPublicFlowResult } from "@/lib/verification-flow-repository";
 
 export const runtime = "nodejs";
@@ -27,6 +28,7 @@ export async function POST(
       prompt,
       source,
       workspaceId: token,
+      policy: policyScoreFromUnknown(body.policy),
     }),
   });
   if (!saved.ok) {

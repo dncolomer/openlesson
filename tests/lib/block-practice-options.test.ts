@@ -52,7 +52,7 @@ describe("normalize + allow rules", () => {
   it("defaults full surface; restricts styles/horizons/durations", () => {
     const def = defaultBlockPracticeOptions();
     expect(def.allowExplore).toBe(true);
-    expect(def.allowDrill).toBe(true);
+    expect(def.allowDrill).toBe(false);
     expect(def.allowScout).toBe(true);
     expect(def.allowOpenEnded).toBe(true);
     expect(def.allowTimed).toBe(true);
@@ -67,17 +67,17 @@ describe("normalize + allow rules", () => {
       allowed_durations_minutes: [10, 20, 99, 10],
     });
     expect(limited.allowExplore).toBe(false);
-    expect(limited.allowDrill).toBe(true);
+    expect(limited.allowDrill).toBe(false);
     expect(limited.allowOpenEnded).toBe(false);
     expect(limited.allowTimed).toBe(true);
-    expect(limited.allowedDurationsMinutes).toEqual([10, 20]);
+    expect(limited.allowedDurationsMinutes).toEqual([]);
 
-    expect(blockAllowsPracticeStyle(limited, "drill")).toBe(true);
+    expect(blockAllowsPracticeStyle(limited, "drill")).toBe(false);
     expect(blockAllowsPracticeStyle(limited, "explore")).toBe(false);
-    expect(blockAllowsLaunchTarget(limited, "drill", true)).toBe(true);
-    expect(blockAllowsLaunchTarget(limited, "drill", false)).toBe(true);
-    expect(blockAllowedDurations(limited)).toEqual([10, 20]);
-    expect(clampPracticeDuration(limited, 15)).toBe(10);
+    expect(blockAllowsLaunchTarget(limited, "drill", true)).toBe(false);
+    expect(blockAllowsLaunchTarget(limited, "drill", false)).toBe(false);
+    expect(blockAllowedDurations(limited)).toEqual([]);
+    expect(clampPracticeDuration(limited, 15)).toBe(15);
     expect(clampPracticeDuration(limited, 20)).toBe(20);
 
     // Explore+Drill off with Scout default on → keep Scout, do not reopen others
@@ -100,23 +100,21 @@ describe("normalize + allow rules", () => {
 
     const combos = enabledPracticeLaunchCombos(limited);
     // drill-only author limits still launch Drill With AI; Scout defaults on
-    expect(combos).toEqual(["scout_dialog", "drill_dialog"]);
-    expect(practiceOptionsIconKeys(limited)).toEqual(["scout", "drill"]);
+    expect(combos).toEqual(["scout_dialog"]);
+    expect(practiceOptionsIconKeys(limited)).toEqual(["scout"]);
     expect(practiceOptionsIsRestricted(limited)).toBe(true);
     expect(practiceOptionsIsRestricted(def)).toBe(false);
 
     const ui = resolveDefaultPracticeLaunchUi(limited);
-    expect(ui.style).toBe("drill");
+    expect(ui.style).toBe("scout");
     expect(ui.solo).toBe(false);
     expect(ui.timebox).toBe(false);
-    expect(ui.durationMinutes).toBe(10);
+    expect(ui.durationMinutes).toBe(15);
 
     const wire = serializeBlockPracticeOptions(limited);
-    expect(wire.allow_drill).toBe(true);
+    expect(wire.allow_drill).toBe(false);
     expect(wire.allow_explore).toBe(false);
-    expect(parseBlockPracticeOptions(wire).allowedDurationsMinutes).toEqual([
-      10, 20,
-    ]);
+    expect(parseBlockPracticeOptions(wire).allowedDurationsMinutes).toEqual([]);
 
     const catalogOff = normalizeBlockPracticeOptions({
       allow_explore: false,
@@ -124,7 +122,7 @@ describe("normalize + allow rules", () => {
     });
     expect(catalogOff.allowExplore).toBe(false);
     expect(withExplorePracticeEnabled(catalogOff).allowExplore).toBe(true);
-    expect(withExplorePracticeEnabled(catalogOff).allowDrill).toBe(true);
+    expect(withExplorePracticeEnabled(catalogOff).allowDrill).toBe(false);
     expect(parseAyclClonePracticeOptions({ allow_explore: false }).allowExplore).toBe(
       true,
     );
@@ -165,12 +163,12 @@ describe("structural: Edit drawer + launch + map icons", () => {
 
     expect(edit).toContain("data-block-edit-practice-options");
     expect(edit).toContain("data-block-edit-allow-explore");
-    expect(edit).toContain("data-block-edit-allow-drill");
+    expect(edit).not.toContain("data-block-edit-allow-drill");
     expect(edit).toContain("data-block-edit-allow-scout");
     expect(edit).not.toContain("data-block-edit-allow-open-ended");
     expect(edit).not.toContain("data-block-edit-allow-timed");
     expect(edit).not.toContain("data-block-edit-allow-solo");
-    expect(edit).toContain("data-block-edit-practice-durations");
+    expect(edit).not.toContain("data-block-edit-practice-durations");
     expect(edit).toContain("practiceOptions");
 
     expect(card).toContain("practiceOptions");
@@ -187,7 +185,7 @@ describe("structural: Edit drawer + launch + map icons", () => {
     const practiceBadge = badges.slice(
       badges.indexOf("export function BlockPracticeOptionsBadge"),
     );
-    for (const key of ["explore", "drill", "scout"] as const) {
+    for (const key of ["explore", "scout"] as const) {
       expect(practiceBadge).toMatch(
         new RegExp(
           `className="[^"]*text-white[^"]*"[\\s\\S]{0,60}data-practice-icon="${key}"`,

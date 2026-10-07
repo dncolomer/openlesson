@@ -14,17 +14,8 @@ import {
   capIleSessionChapters,
 } from "@/lib/ile-canvas-session";
 import { ileWelcomeShowsContinuePreview } from "@/lib/ile-welcome-chapters";
-import {
-  ILE_LEARN_PRESETS,
-  applyIleLearnPreset,
-  ileLearnMatchingPresetId,
-} from "@/lib/ile-pregame-settings";
 import { ILE_POW_EXPENSE_DEFAULT } from "@/lib/ile-pow-spend";
-import {
-  ILE_MIN_INSIGHTS_PER_CHAPTER_CEILING,
-  ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT,
-  ILE_MIN_INSIGHTS_PER_CHAPTER_MIN,
-} from "@/lib/ile-turn-insights";
+import { ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT } from "@/lib/ile-turn-insights";
 import {
   ILE_SILENCE_LOCK_MINUTES_DEFAULT,
   ILE_SILENCE_LOCK_MINUTES_DESC,
@@ -38,7 +29,7 @@ import { coerceSpokenLocale } from "@/lib/tutoring-languages";
 
 export function SessionWelcomeModal({
   t,
-  languageConfirmed,
+  languageConfirmed: _languageConfirmed,
   planLoading: _planLoading,
   isPreparing,
   tutoringLanguage,
@@ -54,10 +45,10 @@ export function SessionWelcomeModal({
   initialChapters: _initialChapters,
   onInitialChaptersChange: _onInitialChaptersChange,
   chapterCount = ILE_SESSION_CHAPTER_COUNT_DEFAULT,
-  onChapterCountChange,
+  onChapterCountChange: _onChapterCountChange,
   mapTypeCatalog: _mapTypeCatalog,
-  powExpense = ILE_POW_EXPENSE_DEFAULT,
-  onPowExpenseChange,
+  powExpense: _powExpense = ILE_POW_EXPENSE_DEFAULT,
+  onPowExpenseChange: _onPowExpenseChange,
   insightSlotMax: _insightSlotMax,
   onInsightSlotMaxChange: _onInsightSlotMaxChange,
   gatherMaxPerSession: _gatherMaxPerSession,
@@ -68,8 +59,8 @@ export function SessionWelcomeModal({
   onAllowParallelWorkChange: _onAllowParallelWorkChange,
   allowGatherResources: _allowGatherResources,
   onAllowGatherResourcesChange: _onAllowGatherResourcesChange,
-  minInsightsPerChapter = ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT,
-  onMinInsightsPerChapterChange,
+  minInsightsPerChapter: _minInsightsPerChapter = ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT,
+  onMinInsightsPerChapterChange: _onMinInsightsPerChapterChange,
   canvasTimerSeconds: _canvasTimerSeconds,
   onCanvasTimerSecondsChange: _onCanvasTimerSecondsChange,
   silenceLockMinutes = ILE_SILENCE_LOCK_MINUTES_DEFAULT,
@@ -86,7 +77,7 @@ export function SessionWelcomeModal({
   onConfirmSettings,
   onBackToWorkspace,
   onContinueWithoutInference,
-  onReadyStart,
+  onReadyStart: _onReadyStart,
   hasSessionPlan: _hasSessionPlan,
   sessionId,
   sessionStartedAt,
@@ -101,7 +92,7 @@ export function SessionWelcomeModal({
         data-ile-start-loading-page
         className="h-screen"
       >
-        <IleStartLoading t={t} />
+        <IleStartLoading t={t} fieldStatus="preparing" />
       </SessionPageLoading>
     );
   }
@@ -117,12 +108,6 @@ export function SessionWelcomeModal({
   const statusFailed = chapterPlanStatus === "failed";
   const completedCount = (sessionPlan?.steps || []).filter((step) => step.status === "completed").length;
   const visibleChapters = capIleSessionChapters(sessionPlan?.steps ?? [], chapterCount);
-  const selectedLearnPreset = ileLearnMatchingPresetId({
-    chapterCount,
-    minInsightsPerChapter,
-    silenceLockMinutes,
-    powExpense,
-  });
 
   return (
     <div
@@ -146,7 +131,6 @@ export function SessionWelcomeModal({
       </div>
 
       <div className="relative z-[2] flex min-h-0 flex-1 flex-col">
-        {!languageConfirmed ? (
           <div className="grid h-full min-h-0 w-full flex-1 overflow-hidden lg:grid-cols-2">
             <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden border-neutral-800 lg:border-r">
               <div className="min-h-0 flex-1">
@@ -168,69 +152,6 @@ export function SessionWelcomeModal({
                   data-ile-session-chapters
                   className="flex min-h-0 min-w-0 flex-col gap-4 px-5 pb-6 sm:px-8 lg:px-10"
                 >
-                  <div data-ile-learn-presets>
-                    <p className="mb-2 text-sm font-medium text-neutral-100">
-                      {t("session.learnPresets")}
-                    </p>
-                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                      {ILE_LEARN_PRESETS.map((preset) => {
-                        const selected = selectedLearnPreset === preset.id;
-                        return (
-                          <button
-                            key={preset.id}
-                            type="button"
-                            data-ile-learn-preset={preset.id}
-                            aria-pressed={selected}
-                            disabled={isButtonDisabled}
-                            onClick={() => {
-                              const knobs = applyIleLearnPreset(preset.id);
-                              onChapterCountChange?.(knobs.chapterCount);
-                              onMinInsightsPerChapterChange?.(knobs.minInsightsPerChapter);
-                              onSilenceLockMinutesChange?.(knobs.silenceLockMinutes);
-                              onPowExpenseChange?.(knobs.powExpense);
-                            }}
-                            className={`rounded-none border px-3 py-3 text-left transition disabled:cursor-not-allowed disabled:opacity-50 ${
-                              selected
-                                ? "border-white bg-white text-neutral-950"
-                                : "border-neutral-800 bg-neutral-950 text-neutral-100 hover:border-neutral-600"
-                            }`}
-                          >
-                            <span className="block text-sm font-medium">{t(preset.labelKey)}</span>
-                            <span
-                              className={`mt-1 block text-[12px] leading-snug ${
-                                selected ? "text-neutral-700" : "text-neutral-400"
-                              }`}
-                            >
-                              {t(preset.descKey)}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  <div data-ile-min-insights-slider data-ile-session-insight-goal>
-                    <div className="mb-1.5 flex items-baseline justify-between gap-3">
-                      <label className="text-sm font-medium text-neutral-100">
-                        {t("session.minInsightsPerChapter")}
-                      </label>
-                      <span className="font-mono text-[11px] text-neutral-300">
-                        {minInsightsPerChapter}
-                      </span>
-                    </div>
-                    <p className="mb-2 text-[12px] leading-snug text-neutral-400">
-                      {t("session.minInsightsPerChapterDesc")}
-                    </p>
-                    <input
-                      type="range"
-                      min={ILE_MIN_INSIGHTS_PER_CHAPTER_MIN}
-                      max={ILE_MIN_INSIGHTS_PER_CHAPTER_CEILING}
-                      step={1}
-                      value={minInsightsPerChapter}
-                      disabled={isButtonDisabled}
-                      onChange={(e) => onMinInsightsPerChapterChange?.(Number(e.target.value))}
-                      className="w-full accent-white"
-                    />
-                  </div>
                   <div data-ile-silence-lock-minutes>
                     <div className="mb-1.5 flex items-baseline justify-between gap-3">
                       <label className="text-sm font-medium text-neutral-100">
@@ -373,19 +294,6 @@ export function SessionWelcomeModal({
               />
             </TapAestheticSection>
           </div>
-        ) : (
-          <div className="flex min-h-[12rem] flex-col items-center justify-center gap-4 px-6 py-6 text-center sm:min-h-[14rem] sm:px-8">
-            <p className="max-w-lg text-sm leading-relaxed text-neutral-400">
-              {t("session.welcomeMessage")}
-            </p>
-            <button
-              onClick={() => void onReadyStart()}
-              className="min-w-[14rem] rounded-none bg-neutral-100 px-8 py-3.5 text-sm font-semibold text-neutral-900 transition-colors hover:bg-white"
-            >
-              {t("session.getStarted")}
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );

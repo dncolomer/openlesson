@@ -26,7 +26,12 @@ import type { PerformanceReport } from "@/lib/pow-api/performance-report";
 import type { HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
 import { stopLiveSpeechRecognition, type LiveSpeechRecognitionBindings } from "@/lib/useSessionThoughtInterface";
 import type { ProofOfWorkApiInterruption } from "@/lib/pow-api/predictive-interruption";
-import { parseTapXaiCanvasTurn, serializeTapWorkCanvasScene } from "@/lib/tap-work-canvas";
+import { parseTapXaiCanvasTurn, serializeTapWorkCanvasScene, uploadTapWorkCanvasPow } from "@/lib/tap-work-canvas";
+import { embedPolicyScore, policyScoreUploadItem } from "@/lib/session-policy-score";
+import type { SessionPolicySnapshot } from "@/components/session-view/session-policy-context";
+import { loadSessionBranchField, sessionClockMayStart } from "@/lib/session-branch-field-load";
+import { verificationFieldPrepareInput } from "@/lib/session-branch-prepare";
+import type { SessionSidebarMode } from "@/lib/session-sidebar";
 import { localVerificationOpening } from "@/lib/verification-flow";
 import type {
   IleWorkCanvasElement,
@@ -72,7 +77,17 @@ export type TapScoreSession = {
     prompt: string;
     practice: boolean;
     questionId: string | null;
+    policy?: {
+      model: NonNullable<SessionPolicySnapshot["model"]>;
+      sequence: SessionPolicySnapshot["sequence"];
+    } | null;
   }) => Promise<void> | void;
+  policyRef?: MutableRefObject<SessionPolicySnapshot>;
+  /** Verification waits for the field. Conversational TAP does not. */
+  sidebarMode?: Extract<SessionSidebarMode, "tap" | "verification-tap">;
+  workspaceTitle?: string;
+  verificationToken?: string | null;
+  startingTopics?: readonly TapStartingTopic[];
   logTapTrace: (input: {
     traceType: TapTraceType;
     action: TapSystem1Action | TapSystem2Action;
@@ -311,6 +326,25 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
           s.localQuestionIdRef.current = practice ? null : topic?.id ?? null;
         }
         s.apply({ tapSessionId: localId });
+        if (s.sidebarMode === "verification-tap") {
+          const field = await loadSessionBranchField(
+            verificationFieldPrepareInput({
+              workspaceTitle: s.workspaceTitle,
+              topics: s.startingTopics,
+              topicId: practice ? "practice" : topic?.id ?? null,
+              sessionId: s.sessionId,
+              tapSessionId: s.tapSessionIdRef.current,
+              workspaceId: s.workspaceId,
+              blockId: s.blockId,
+              privateToken: s.privateToken,
+              verificationToken: s.verificationToken,
+              entryQueryParams: s.entryQueryParamsRef.current,
+            }),
+          );
+          if (!sessionClockMayStart({ mode: "verification", fieldReady: field.ok })) {
+            throw new Error(field.ok ? "The field could not be prepared." : field.error);
+          }
+        }
         const startedAtMs = Date.now();
         s.apply({ startedAt: startedAtMs });
         s.apply({ remainingSeconds: sessionMinutes * 60 });
@@ -352,6 +386,25 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
       const openingQuestion = String(payload.openingQuestion || "").trim();
       if (!openingQuestion) throw new Error("Could not generate opening question");
 
+      if (s.sidebarMode === "verification-tap") {
+        const field = await loadSessionBranchField(
+          verificationFieldPrepareInput({
+            workspaceTitle: s.workspaceTitle,
+            topics: s.startingTopics,
+            topicId: practice ? "practice" : topic?.id ?? null,
+            sessionId: s.sessionId,
+            tapSessionId: s.tapSessionIdRef.current,
+            workspaceId: s.workspaceId,
+            blockId: s.blockId,
+            privateToken: s.privateToken,
+            verificationToken: s.verificationToken,
+            entryQueryParams: s.entryQueryParamsRef.current,
+          }),
+        );
+        if (!sessionClockMayStart({ mode: "verification", fieldReady: field.ok })) {
+          throw new Error(field.ok ? "The field could not be prepared." : field.error);
+        }
+      }
       const startedAtMs = Date.now();
       s.apply({ startedAt: startedAtMs });
       s.apply({ remainingSeconds: sessionMinutes * 60 });
@@ -377,7 +430,6 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
       s.apply({ error: err instanceof Error ? err.message : "Could not start TAP session" });
     } finally {
       s.apply({ isStartingSession: false });
-      s.apply({ startingTopicId: null });
     }
     return { ok: started };
   }
@@ -409,6 +461,7 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
     s.resetIdleTracking();
     s.resetSpeechTracking();
     clearDialogueMessages(s.dialogueStorageKey);
+    s.apply({ startingTopicId: null });
     s.apply({ phase: "briefing" });
   }
 
@@ -431,6 +484,33 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
     }
     s.apply({ phase: "saving" });
     stopLiveSpeechRecognition(s.speechBindings);
+    const snapshot = s.policyRef?.current;
+    const policy = snapshot?.model ? { model: snapshot.model, sequence: snapshot.sequence } : null;
+    if (policy) {
+      const note = s.messages
+        .map((message) => String(message.content || "").trim())
+        .filter(Boolean)
+        .join("\n\n");
+      const scored = embedPolicyScore({
+        model: policy.model,
+        sequence: policy.sequence,
+        workspaceId: s.workspaceId || s.sessionId || "verification",
+        note,
+      });
+      const sessionKey = String(s.tapSessionIdRef.current || s.sessionId || "").trim();
+      if (sessionKey) {
+        await uploadTapWorkCanvasPow({
+          workspaceId: s.workspaceId,
+          blockId: s.blockId,
+          sessionId: s.sessionId,
+          privateToken: s.privateToken,
+          tapSessionId: s.tapSessionIdRef.current,
+          entryQueryParams: s.entryQueryParamsRef.current,
+          practice,
+          item: policyScoreUploadItem(scored),
+        });
+      }
+    }
     if (s.localOpening) {
       try {
         const prompt = s.messages
@@ -441,6 +521,7 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
           prompt,
           practice,
           questionId: s.localQuestionIdRef?.current ?? null,
+          policy,
         });
         s.apply({ performanceReport: null });
         s.apply({ phase: practice ? "practice_done" : "results" });

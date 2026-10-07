@@ -6,6 +6,9 @@
  */
 
 import { encodeKnowledgeConfig } from "@/lib/knowledge-config/encoder";
+import { embedSessionPress, type SessionMarkButtonId } from "@/lib/session-marks";
+import { embedPolicyScore } from "@/lib/session-policy-score";
+import type { SessionBranchModel } from "@/lib/session-branch-model";
 import {
   createCustomVerificationModelFromVectors,
   type CustomVerificationModelSpec,
@@ -268,14 +271,56 @@ export function parseSyntheticPowModelOutput(raw: unknown): SyntheticPowItem[] {
 }
 
 /**
- * knowledgecfg vector for one proof text.
- * `evaluatedGoalsText` is what moves the vector. Model-supplied coordinates are ignored.
+ * knowledgecfg vector for one proof.
+ * A button press embeds the button line and the drawing-and-speech slice.
+ * A prompt-only caller still embeds that prompt, not a judge paragraph.
  */
 export function verificationProofEmbedding(input: {
   prompt: string;
   source?: "runner" | "skill" | "synthetic";
   workspaceId?: string;
+  /** When the proof is a button press, embed that line and its slice. */
+  press?: {
+    button: "try" | "hold" | "drop" | "insight";
+    slice: string;
+    aimedMistakeText?: string | null;
+    at?: number;
+  };
+  /** Prepared tree and the actions taken. The embedding then includes the policy distance. */
+  policy?: { model: SessionBranchModel; sequence: readonly SessionMarkButtonId[] } | null;
 }): number[] {
+  if (input.policy?.model) {
+    const source = input.source ?? "runner";
+    return embedPolicyScore({
+      model: input.policy.model,
+      sequence: input.policy.sequence,
+      workspaceId: input.workspaceId || "verification-flow",
+      note: input.prompt,
+      proofRows: [
+        {
+          proof_of_work_type: source === "runner" ? "speech" : "tool",
+          timestamp_ms: 1,
+          tool_name: source,
+        },
+      ],
+    }).embedding;
+  }
+  if (input.press) {
+    return embedSessionPress({
+      workspaceId: input.workspaceId || "verification-flow",
+      mistakeText: input.press.aimedMistakeText,
+      press: {
+        id: "press-1",
+        button: input.press.button,
+        aimedMistakeId: null,
+        slice: input.press.slice,
+        closedMistakeId: null,
+        earlyInsight: false,
+        insightCounted: input.press.button === "insight",
+        at: input.press.at ?? 1,
+      },
+    }).vector;
+  }
   const source = input.source ?? "runner";
   return encodeKnowledgeConfig({
     workspaceId: input.workspaceId || "verification-flow",

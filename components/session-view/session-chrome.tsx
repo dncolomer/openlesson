@@ -2,6 +2,8 @@
 
 import { useEffect, type ReactNode } from "react";
 import { SessionSidebar } from "@/components/session-view/session-sidebar";
+import { SessionActionsPanel } from "@/components/session-view/session-mark-controls";
+import { SessionPolicyProvider } from "@/components/session-view/session-policy-context";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { DialogFrame } from "@/components/ui/DialogFrame";
 import type { Tool } from "@/components/ToolsPanel";
@@ -142,7 +144,7 @@ export function SessionChrome({
   insightCraftOpen = false,
   onMinimizeInsightCraft,
   workCanvasHeaderLeading = null,
-  mapInsightsWidget = null,
+  mapInsightsWidget: _mapInsightsWidget = null,
   introOpen,
   introWidget,
   onCloseSessionModal,
@@ -210,6 +212,7 @@ export function SessionChrome({
       : activeTool;
 
   return (
+    <SessionPolicyProvider>
     <>
       <div
         data-ile-session-stage
@@ -244,13 +247,11 @@ export function SessionChrome({
           resources={resources}
           resourcesOpen={resourcesOpen}
           onResourcesOpenChange={onResourcesOpenChange}
-          focusLabel="Insights"
+          focusLabel="actions"
           focus={
-            mapInsightsWidget ? (
-              <div id="insights" className="flex h-full min-h-0 flex-col">
-                {mapInsightsWidget}
-              </div>
-            ) : null
+            <div id="actions" className="flex h-full min-h-0 flex-col">
+              <SessionActionsPanel />
+            </div>
           }
           chapters={
             <div data-ile-work-dock id="chapters" className="w-full min-w-0">
@@ -468,5 +469,6 @@ export function SessionChrome({
         />
       </div>
     </>
+    </SessionPolicyProvider>
   );
 }

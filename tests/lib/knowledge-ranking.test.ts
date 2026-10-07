@@ -132,12 +132,11 @@ describe("Knowledge Ranking surface wiring", () => {
     const trajSrc = readKnowledgePanelSurface();
     const en = readFileSync(join(ROOT, "messages/en.json"), "utf8");
 
-    expect(panelSrc).toContain('"ranking"');
-    expect(panelSrc).toContain('panelView="ranking"');
-    expect(panelSrc).toContain("performanceSubTabRanking");
+    expect(panelSrc).not.toContain('panelView="ranking"');
+    expect(panelSrc).not.toContain("performanceSubTabRanking");
     expect(en).toContain("performanceSubTabRanking");
 
-    expect(trajSrc).toContain('panelView === "ranking"');
+    expect(trajSrc).not.toContain('panelView === "ranking"');
     expect(trajSrc).toContain('data-section="ranking"');
     expect(trajSrc).toContain('data-ranking-layout="list-detail"');
     expect(trajSrc).toContain("data-ranking-list");

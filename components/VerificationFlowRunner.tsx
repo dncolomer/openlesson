@@ -64,7 +64,12 @@ export function VerificationFlowRunner({ token }: { token: string }) {
     }
   }
 
-  async function storeProof(input: { prompt: string; practice: boolean; questionId: string | null }) {
+  async function storeProof(input: {
+    prompt: string;
+    practice: boolean;
+    questionId: string | null;
+    policy?: { model: unknown; sequence: unknown } | null;
+  }) {
     const response = await fetch(
       `/api/verification-flow/public/${encodeURIComponent(token)}/results`,
       {
@@ -75,6 +80,7 @@ export function VerificationFlowRunner({ token }: { token: string }) {
           source: "runner",
           prompt: input.prompt,
           questionId: input.practice ? null : input.questionId || question?.id || null,
+          policy: input.policy ?? null,
         }),
       },
     );
@@ -91,6 +97,7 @@ export function VerificationFlowRunner({ token }: { token: string }) {
           presetStartingTopics={presetTopics}
           localOpening
           sidebarMode="verification-tap"
+          verificationToken={token}
           localPracticePrompt={VERIFICATION_PRACTICE_OPENING}
           onLocalProof={storeProof}
           initialSession={{ workspaceTitle: topic || "Verification flow", post_session: "show_results" }}

@@ -53,18 +53,18 @@ export function workspaceSurfaceShowsPracticeMenu(input?: {
 }
 
 /**
- * Continue and Mark as Done need the learner pane on an authoring map.
- * Play-only maps always use that pane. A stored learner id is not enough
- * when authoring is also on.
+ * Learning workspaces keep the practice drawers on a selected block.
+ * Authoring drawers stay beside them. Verification workspaces have no
+ * practice drawer.
  */
 export function workspaceLearnerPaneMounted(input: {
   authoring: boolean;
   practiceDrawer: boolean;
   learnerActionRequested: boolean;
 }): boolean {
-  if (!input.practiceDrawer) return false;
-  if (!input.authoring) return true;
-  return input.learnerActionRequested;
+  void input.authoring;
+  void input.learnerActionRequested;
+  return input.practiceDrawer;
 }
 
 /**

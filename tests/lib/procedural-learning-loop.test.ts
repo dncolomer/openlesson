@@ -143,15 +143,15 @@ describe("product-intent surfaces (Explore/Drill always With AI)", () => {
 
     // SessionItem learner launch: Drill, not Timed
     const sessionItem = read("components/SessionItem.tsx");
-    expect(sessionItem).toContain("Start Drill");
-    expect(sessionItem).toContain("data-session-item-drill-dialog");
+    expect(sessionItem).not.toContain("Start Drill");
+    expect(sessionItem).not.toContain("data-session-item-drill-dialog");
     expect(sessionItem).not.toContain("Start Timed Exploration");
     expect(sessionItem).not.toMatch(/>\s*Timed\s*</);
 
     // Map practice badges: Explore / Drill only
     const badges = read("components/block-skill-grid/map-tile-badges.tsx");
     expect(badges).toContain('"Learn"');
-    expect(badges).toContain('"Drill"');
+    expect(badges).not.toContain('"Drill"');
     expect(badges).toContain('"Calibrate"');
     expect(badges).not.toContain('? "With AI"');
     expect(badges).not.toContain(': "Solo"');

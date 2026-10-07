@@ -13,6 +13,7 @@ import { useSessionSpeech } from "@/components/session-view/use-session-speech";
 import { useSessionIdle, type IlePowInterruptionHandler } from "@/components/session-view/use-session-idle";
 import { useSessionPhase } from "@/components/session-view/use-session-phase";
 import { useSessionHeliosPrep } from "@/components/session-view/use-session-helios-prep";
+import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { SessionPageLoading } from "@/components/session-view/session-page-loading";
 import {
   buildPowParticipantIdentity,
@@ -85,6 +86,8 @@ import { SessionWelcomeModal } from "@/components/session-view/session-welcome-m
 import { SessionToolPanes } from "@/components/session-view/session-tool-panes";
 import { SessionThoughtPane } from "@/components/session-view/session-thought-pane";
 import { SessionChapterWorkCanvas } from "@/components/session-view/session-chapter-canvas";
+import { emptySessionPolicySnapshot } from "@/components/session-view/session-policy-context";
+import { learnSessionFieldInput } from "@/lib/session-branch-prepare";
 import { SessionLiveStage } from "@/components/session-view/session-live-stage";
 import {
   isIleMapOverlayTool,
@@ -1103,6 +1106,7 @@ export function SessionView({
     });
   }, [stream, isMuted]);
 
+  const policyRef = useRef(emptySessionPolicySnapshot());
   const {
     checkMicrophone,
     startRecording,
@@ -1122,6 +1126,7 @@ export function SessionView({
     handleWelcomeReadyStart: handleWelcomeReadyStartPhase,
   } = useSessionPhase({
     session,
+    policyRef,
     setSession,
     sessionRef,
     sessionId,
@@ -1752,6 +1757,15 @@ export function SessionView({
     />
   );
 
+  const learnField = learnSessionFieldInput({
+    sessionId: session?.id,
+    problem: session?.problem,
+    plan: sessionPlan,
+    ileToken,
+    ayclToken,
+    fallbackTitle: t("session.chapterPromptFallback"),
+  });
+
   const renderWorkCanvas = () => (
     <SessionChapterWorkCanvas
       session={session}
@@ -1771,12 +1785,17 @@ export function SessionView({
       sessionThoughtInterface={sessionThoughtInterface}
       activeStep={activeStep}
       activeChapterLabel={activeChapterLabel}
+      chapterTitle={learnField?.chapterTitle || ""}
+      chapterBrief={learnField?.chapterBrief || ""}
+      fieldScope={learnField?.scope}
       workspaceId={workspaceId}
       ileToken={ileToken}
+      ayclToken={ayclToken}
       recordSessionPowArtifact={recordSessionPowArtifact}
       sessionPowArtifactsRef={sessionPowArtifactsRef}
       insightWorkMarkRef={insightWorkMarkRef}
       setSessionInsights={setSessionInsights}
+      policyRef={policyRef}
     />
   );
 
@@ -1898,12 +1917,17 @@ export function SessionView({
     );
   }
 
-  if (!session || isSaving) {
+  if (!session) {
     return (
-      <SessionPageLoading
-        className="min-h-screen"
-        message={isSaving ? t("session.savingSession") : t("common.loading")}
-      />
+      <div className="flex min-h-screen items-center justify-center bg-black">
+        <LoadingStatusMessage message={t("common.loading")} />
+      </div>
+    );
+  }
+
+  if (isSaving) {
+    return (
+      <SessionPageLoading className="min-h-screen" message={t("session.savingSession")} />
     );
   }
 

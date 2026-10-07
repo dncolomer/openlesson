@@ -18,15 +18,13 @@ SCORES (single snapshot strategy — one primary score per call):
 GOALS:
 - workspace_goal is stored on the workspace when known, otherwise inferred from title, notes, blocks, and accumulating PoW; inference may evolve as evidence grows.
 
-LEARNING WORLD MODEL vs KNOWLEDGE CONFIG vs TIM:
-- Learning world model: evolving symbolic representation of how the learner explores blocks, strengths/friction, temporal patterns, evidence appetite (what PoW types still help), and latest scores snapshot (LWM Snapshot primary + GHC). Workspace- and subject-scoped; exportable/transferable when serialized. Durable via Snapshot API.
-- Knowledge config: fixed-dimensional embedding (knowledgecfg-v1-d64, D=64) of learner state in a globally comparable configuration space. Same axes across workspaces/users; distance = proximity. Trajectories support time analysis; expert regions (future) are densities in this space.
-- TIM (Trace Interruption Model): interruption world model. On (nearly) every PoW API success response, TIM may recommend a timed intervention (interruption: null | { delay_ms, intervention, … }). Consumers schedule, supersede on later responses, and never stack timers. TIM may read LWM + scores when provided.
-- Evaluation surface (LWM Snapshot, LWM, knowledge config) is conceptually separate from PoW capture; both share workspace auth.
-- Today TIM is platform-hosted and co-deployed with the PoW API. Architecturally it is a swappable provider — later it may be an independent external world model service while the consumer interruption contract stays stable.
+LEARNING WORLD MODEL vs KNOWLEDGE CONFIG:
+- Learning world model: running record of which mistakes a person closes, which they commit past, and the press embeddings beside them. It does not keep a judge essay.
+- Knowledge config: press embeddings. Each press embeds the button line and the drawing-and-speech slice. A session bundle is those vectors. Judged snapshots are not the geometry.
+- Proof-of-work responses do not include an interruption.
 
 TEMPORAL PROOF OF WORK:
-- Every PoW event has timestamps. Inter-event gaps, idle bursts, dwell, and speech/tool timing are informative for LWM Snapshot, GHC, and TIM.
+- Every PoW event has timestamps. Inter-event gaps, idle bursts, dwell, and speech/tool timing stay on the press they belong to.
 
 SELECTIVE THOUGHT (TAP):
 - System 1: crystallized spontaneous speech including stashed/unsent thoughts.

@@ -98,6 +98,15 @@ function isRetryableError(status: number): boolean {
   return status === 429 || (status >= 500 && status < 600);
 }
 
+/** AbortSignal.timeout rejects with this. A second attempt spends another full window. */
+export function xaiAttemptShouldRetry(error: unknown, attempt: number, maxAttempts: number): boolean {
+  if (attempt >= maxAttempts - 1) return false;
+  const name = error && typeof error === "object" && "name" in error ? String(error.name) : "";
+  const message = error instanceof Error ? error.message : "";
+  if (name === "TimeoutError" || /aborted due to timeout/i.test(message)) return false;
+  return true;
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -405,7 +414,7 @@ export async function callXai<T = string>(
     } catch (error) {
       console.error(`[xai] chat request failed (attempt ${attempt + 1}):`, error);
       lastError = error instanceof Error ? error.message : "Unknown error";
-      if (attempt < maxRetries - 1) {
+      if (xaiAttemptShouldRetry(error, attempt, maxRetries)) {
         await sleep(baseDelay * Math.pow(2, attempt));
         continue;
       }
@@ -783,7 +792,7 @@ export async function callXaiResponses<T = unknown>(
     } catch (error) {
       console.error(`[xai] responses request failed (attempt ${attempt + 1}):`, error);
       lastError = error instanceof Error ? error.message : "Unknown error";
-      if (attempt < maxRetries - 1) {
+      if (xaiAttemptShouldRetry(error, attempt, maxRetries)) {
         await sleep(baseDelay * Math.pow(2, attempt));
       }
     }

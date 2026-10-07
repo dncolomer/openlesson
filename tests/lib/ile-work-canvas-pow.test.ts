@@ -24,6 +24,7 @@ import {
   ileWorkCanvasElementContentFingerprint,
   ILE_WORK_CANVAS_COMMAND_POW_IDS,
   ILE_WORK_CANVAS_POW_ACTIONS,
+  ILE_WORK_CANVAS_RETIRED_COMMAND_POW_IDS,
   ILE_WORK_CANVAS_POW_TOOL_NAME,
   mapExcalidrawToolToCanvasPow,
   shouldLogIleSidebarToolSwitch,
@@ -213,6 +214,7 @@ describe("Work-canvas scene-diff PoW (shipped classifier)", () => {
       "board_prompt",
       "dictate",
       ...ILE_WORK_CANVAS_COMMAND_POW_IDS,
+      ...ILE_WORK_CANVAS_RETIRED_COMMAND_POW_IDS,
     ]);
     expect(distinct.size).toBe(ILE_WORK_CANVAS_POW_ACTIONS.length);
     expect([...ILE_WORK_CANVAS_COMMAND_POW_IDS]).toEqual(
@@ -401,11 +403,8 @@ describe("Work-canvas scene-diff PoW (shipped classifier)", () => {
       elaborate: ileWorkCanvasQuickActionPrompt("elaborate more pls"),
       "selective-compression": ILE_SELECTIVE_COMPRESSION_LABEL,
       refactor: "Refactor",
-      "suggest-insight": "Suggest Insight",
       "clear-overlaps": "Clear overlaps",
-      answer: "Answer",
       simplify: "Simplify",
-      ask: "Ask",
     };
 
     const catalogRows: string[] = [
@@ -560,6 +559,13 @@ describe("Work-canvas scene-diff PoW (shipped classifier)", () => {
     expect(compress?.metadata.command_id).toBe("selective-compression");
     expect(freeAsk?.metadata.command_id).toBeUndefined();
     expect(buildIleWorkCanvasCommandPowEvent("not-a-command", { prompt: "x" })).toBeNull();
+    expect(buildIleWorkCanvasCommandPowEvent("ask", { prompt: "x" })).toBeNull();
+    const retired = buildIleWorkCanvasActionUploadItem(
+      "session-1",
+      { toolName: "canvas", toolAction: "ask", metadata: { command_id: "ask", prompt: "old question" } },
+      32,
+    );
+    expect(retired?.toolAction).toBe("ask");
 
     const voiceAndSpeech = [
       ILE_TRACE_TOOL_NAME,
@@ -596,7 +602,6 @@ describe("Work-canvas PoW host wiring (shipped)", () => {
     const canvas = read("components/ExcalidrawCanvas.tsx");
     expect(canvas).toContain("onCanvasPowActions");
     expect(canvas).toContain("IleWorkCanvasPowCollector");
-    expect(canvas).toContain('.command("ask"');
     expect(canvas).toContain(".command(");
     expect(canvas).not.toContain("compressWork");
     expect(canvas).not.toContain("emitExpand");
@@ -605,21 +610,18 @@ describe("Work-canvas PoW host wiring (shipped)", () => {
 
     const quick = canvas.slice(
       canvas.indexOf("const handleQuickAction"),
-      canvas.indexOf("const handleBoardAsk"),
+      canvas.indexOf("const writeDictatedText"),
     );
     expect(quick).toContain(".command(");
     expect(quick).not.toContain("expandMore");
+    expect(quick).not.toContain('"ask"');
+    expect(quick).not.toContain('"answer"');
+    expect(quick).not.toContain('"suggest-insight"');
     for (const commandId of ILE_WORK_CANVAS_COMMAND_POW_IDS) {
       expect(quick).toContain(`"${commandId}"`);
     }
     expect(canvas).toContain("handleQuickAction(command.id)");
     expect(canvas).toContain("handleQuickAction(draft.exactId)");
-    const boardAsk = canvas.slice(
-      canvas.indexOf("const handleBoardAsk"),
-      canvas.indexOf("const beginAskVoice"),
-    );
-    expect(boardAsk).toContain('.command("ask"');
-    expect(boardAsk).not.toContain(".slice(");
 
     const ile = read("components/SessionView.tsx");
     expect(ile).toContain("handleCanvasPowActions");

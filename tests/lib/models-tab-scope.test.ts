@@ -156,7 +156,7 @@ describe("learner self-lock for LWM + Embeddings", () => {
     // Performance panel threads lock for LWM + Embeddings (not ranking)
     expect(perf).toContain("lockSubjectToSelf={lwmEmbeddingsOnly}");
     expect(perf).toContain('panelView="models"');
-    expect(perf).toContain('panelView="lwm"');
+    expect(perf).not.toContain('panelView="lwm"');
     // Creator ranking path does not force lock via lwmEmbeddingsOnly
     expect(view).toContain("lwmEmbeddingsOnly={knowledgeLwmEmbeddingsOnly}");
 

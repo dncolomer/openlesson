@@ -4,6 +4,7 @@ import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
 import { CalibrateLiveSurface } from "@/components/calibrate/calibrate-live-surface";
 import { TapBriefingConfig } from "@/components/TapBriefingConfig";
 import { SessionFinishedScreen } from "@/components/session-view/session-finished-screen";
+import { IleStartLoading } from "@/components/session-view/ile-start-loading";
 import { SessionPageLoading } from "@/components/session-view/session-page-loading";
 import { TapAestheticSection } from "@/components/tap-score/tap-aesthetic-section";
 import { TapLiveClock } from "@/components/tap-score/tap-live-clock";
@@ -26,6 +27,7 @@ import {
 } from "@/lib/calibrate-session";
 import { scoutThinkAloudEnabled, type ScoutThankYouActions } from "@/lib/scout-session";
 import type { MutableRefObject } from "react";
+import type { SessionPolicySnapshot } from "@/components/session-view/session-policy-context";
 
 type Translate = (key: string, vars?: Record<string, string | number>) => string;
 
@@ -48,10 +50,12 @@ export function ScoutTapPhases(props: {
   clockPaused?: boolean;
   showEndSession: boolean;
   endSession: () => void;
+  policyRef?: MutableRefObject<SessionPolicySnapshot>;
   workspaceId?: string;
   blockId?: string;
   sessionId?: string;
   tapSessionId?: string | null;
+  entryQueryParams?: Record<string, string | string[]>;
   resultsError: string;
   restartBriefingFlow: () => void;
   setPhase: (phase: Phase) => void;
@@ -67,7 +71,6 @@ export function ScoutTapPhases(props: {
   onAdvance: () => void;
   thankYouActions: ScoutThankYouActions;
   onJumpWork: () => void;
-  onJumpDrill: () => void;
   onBackWorkspace: () => void;
 }) {
   const {
@@ -89,8 +92,12 @@ export function ScoutTapPhases(props: {
     clockPaused = false,
     showEndSession,
     endSession,
+    policyRef,
+    workspaceId,
+    blockId,
     tapSessionId,
     sessionId,
+    entryQueryParams,
     resultsError,
     restartBriefingFlow,
     setPhase,
@@ -106,7 +113,6 @@ export function ScoutTapPhases(props: {
     onAdvance,
     thankYouActions,
     onJumpWork,
-    onJumpDrill,
     onBackWorkspace,
   } = props;
 
@@ -131,7 +137,9 @@ export function ScoutTapPhases(props: {
     >
       <div className="relative z-10 flex min-h-0 w-full flex-1 flex-col overflow-hidden">
         {phase === "briefing" && isStartingSession ? (
-          <SessionPageLoading message={t("session.startLoading")} />
+          <SessionPageLoading>
+            <IleStartLoading t={t} fieldStatus="preparing" />
+          </SessionPageLoading>
         ) : null}
 
         {phase === "briefing" && !isStartingSession && (
@@ -187,6 +195,13 @@ export function ScoutTapPhases(props: {
               applyNonce={canvasApplyNonce}
               onSceneChange={handleSceneChange}
               onCanvasPowActions={onCanvasPowActions}
+              markQuestions={calibrate.pool.slice(0, 3)}
+              sessionId={sessionId}
+              tapSessionId={tapSessionId}
+              workspaceId={workspaceId}
+              blockId={blockId}
+              privateToken={privateToken}
+              entryQueryParams={entryQueryParams}
               onAdvance={onAdvance}
               error={error}
               clock={
@@ -219,6 +234,7 @@ export function ScoutTapPhases(props: {
               topicId="calibrate"
               topicText={seedText}
               focusLabel={t("scout.live.questionsHeading")}
+              policyRef={policyRef}
             />
           </section>
         )}
@@ -253,11 +269,6 @@ export function ScoutTapPhases(props: {
                 {thankYouActions.work ? (
                   <TapThoughtButton size="md" data-scout-jump-work onClick={onJumpWork}>
                     {t("scout.thankYou.work")}
-                  </TapThoughtButton>
-                ) : null}
-                {thankYouActions.drill ? (
-                  <TapThoughtButton size="md" data-scout-jump-drill onClick={onJumpDrill}>
-                    {t("scout.thankYou.drill")}
                   </TapThoughtButton>
                 ) : null}
               </>

@@ -165,27 +165,16 @@ export function SessionItem({
     }
   };
 
-  const handleStartTimed = (
-    interactionKind: "conversational" | "exercise" | "scout",
-    event?: React.MouseEvent,
-    minutes?: number,
-  ) => {
+  const handleStartCalibrate = (event?: React.MouseEvent, minutes?: number) => {
     event?.stopPropagation();
     if (!workspaceId) return;
     const params = new URLSearchParams({ blockId: node.id });
-    if (interactionKind === "exercise") {
-      params.set("interactionKind", "exercise");
-    }
     if (typeof minutes === "number" && Number.isFinite(minutes) && minutes > 0) {
       params.set("minutes", String(Math.trunc(minutes)));
     }
     const contextualSessionId = activeSession?.id || node.session_id;
     if (contextualSessionId) params.set("sessionId", contextualSessionId);
-    const path =
-      interactionKind === "scout"
-        ? `/workspace/${workspaceId}/scout`
-        : `/workspace/${workspaceId}/tap`;
-    router.push(`${path}?${params.toString()}`);
+    router.push(`/workspace/${workspaceId}/scout?${params.toString()}`);
   };
 
   const handleLaunchIntent = (
@@ -201,15 +190,9 @@ export function SessionItem({
       void handleStart("learning");
       return;
     }
-    handleStartTimed(
-      target.interaction_kind === "scout"
-        ? "scout"
-        : target.interaction_kind === "exercise"
-          ? "exercise"
-          : "conversational",
-      undefined,
-      options?.minutes,
-    );
+    if (target.interaction_kind === "scout") {
+      handleStartCalibrate(undefined, options?.minutes);
+    }
   };
 
   const savePlanningPrompt = useCallback(async () => {
@@ -288,7 +271,7 @@ export function SessionItem({
       )}
       {!hideTap ? (
         <button
-          onClick={(e) => handleStartTimed("scout", e)}
+          onClick={(e) => handleStartCalibrate(e)}
           className={
             isDetail
               ? `${detailButtonClass} border border-neutral-600 bg-neutral-900/80 text-white hover:border-neutral-400 hover:bg-neutral-800`
@@ -300,20 +283,7 @@ export function SessionItem({
           Calibrate
         </button>
       ) : null}
-      {!hideTap ? (
-        <button
-          onClick={(e) => handleStartTimed("conversational", e)}
-          className={
-            isDetail
-              ? `${detailButtonClass} border border-neutral-600 bg-neutral-900/80 text-white hover:border-neutral-400 hover:bg-neutral-800`
-              : "shrink-0 rounded-none border border-neutral-700/80 bg-neutral-900/50 px-2.5 py-1.5 text-xs font-medium text-neutral-300 transition-colors hover:border-neutral-600 hover:text-white"
-          }
-          title="Start Drill"
-          data-session-item-drill-dialog
-        >
-          Drill
-        </button>
-      ) : null}
+
     </div>
   );
 
@@ -428,16 +398,6 @@ export function SessionItem({
           }
           onStartIleProject={
             showLaunchActions ? () => void handleStart("project") : undefined
-          }
-          onStartEval={
-            showLaunchActions && !hideTap
-              ? (e, minutes) => handleStartTimed("conversational", e, minutes)
-              : undefined
-          }
-          onStartExercise={
-            showLaunchActions && !hideTap
-              ? (e, minutes) => handleStartTimed("exercise", e, minutes)
-              : undefined
           }
           promptSection={detailLayout === "drawer" ? undefined : detailPromptSection}
           highlighted={highlighted}

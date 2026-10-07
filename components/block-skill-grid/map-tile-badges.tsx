@@ -274,9 +274,9 @@ export function BlockPracticeOptionsBadge({
   keys: Array<"explore" | "drill" | "scout" | "dialog" | "solo" | "open" | "timed">;
 }) {
   if (keys.length === 0) return null;
-  const displayKeys = keys.filter((k) => k === "scout" || k === "explore" || k === "drill");
+  const displayKeys = keys.filter((k) => k === "scout" || k === "explore");
   const title = displayKeys
-    .map((k) => (k === "scout" ? "Calibrate" : k === "explore" ? "Learn" : "Drill"))
+    .map((k) => (k === "scout" ? "Calibrate" : "Learn"))
     .join(" · ");
   return (
     <span
@@ -314,22 +314,6 @@ export function BlockPracticeOptionsBadge({
           <path strokeLinecap="round" d="M14 10l-2 5-5 2 2-5 5-2z" />
         </svg>
       ) : null}
-      {keys.includes("drill") ? (
-        <svg
-          className="h-2.5 w-2.5 text-white"
-          data-practice-icon="drill"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-          aria-hidden
-        >
-          <circle cx="12" cy="12" r="7" />
-          <circle cx="12" cy="12" r="3.5" />
-          <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" />
-        </svg>
-      ) : null}
-
     </span>
   );
 }

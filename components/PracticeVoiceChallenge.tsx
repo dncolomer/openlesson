@@ -299,6 +299,7 @@ export function PracticeVoiceChallenge({
       data-practice-voice-framing={framing}
       className="overflow-hidden border border-white/15 bg-neutral-950"
     >
+      {framing === "rest" ? null : (
       <div className="border-b border-white/10 px-5 py-4 sm:px-6">
         <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-neutral-500">
           {cue}
@@ -310,6 +311,7 @@ export function PracticeVoiceChallenge({
           {PRACTICE_VOICE_CHALLENGE_READ_NOTE}
         </p>
       </div>
+      )}
       <div className="px-5 py-5 sm:px-6">
         <div data-practice-voice-audio="" className="mb-5">
           <SessionAudioMonitor stream={micStream} />
@@ -337,12 +339,15 @@ export function PracticeVoiceChallenge({
             </p>
           ))}
         </div>
+        {framing === "rest" && !transcript ? null : (
         <p
           data-practice-voice-captured=""
           className="mt-6 min-h-6 text-sm leading-relaxed text-neutral-400"
         >
           {transcript || "Nothing captured yet."}
         </p>
+        )}
+        {framing === "rest" && light === "idle" ? null : (
         <div className="mt-4 flex items-center gap-3" data-practice-voice-result="">
           <span
             data-practice-voice-light={light}
@@ -378,6 +383,7 @@ export function PracticeVoiceChallenge({
                 : PRACTICE_VOICE_CHALLENGE_UNCHECKED}
           </span>
         </div>
+        )}
         <div className="mt-5 flex flex-wrap items-center gap-2">
           <button
             type="button"

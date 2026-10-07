@@ -284,7 +284,8 @@ describe("welcome branch continue vs new", () => {
     expect(welcome).not.toContain("IleContinueMapPreview");
     expect(welcome).not.toContain("InitialChaptersPicker");
     expect(welcome).not.toContain("data-ile-session-chapter-count");
-    expect(welcome).toContain("data-ile-session-insight-goal");
+    expect(welcome).not.toContain("data-ile-session-insight-goal");
+    expect(welcome).toContain("data-ile-silence-lock-minutes");
     expect(welcome).toContain("capIleSessionChapters");
     const picker = read("components/InitialChaptersPicker.tsx");
     expect(picker).toContain("data-density-level");
@@ -297,9 +298,9 @@ describe("welcome branch continue vs new", () => {
     expect(welcome).not.toContain("catalogStrip");
     expect(welcome).not.toContain('data-ile-map-type-align="aesthetics"');
     const continueAt = welcome.indexOf("data-ile-continue-welcome");
-    const countAt = welcome.indexOf("data-ile-session-insight-goal");
+    const silenceAt = welcome.indexOf("data-ile-silence-lock-minutes");
     expect(continueAt).toBeGreaterThan(-1);
-    expect(countAt).toBeGreaterThan(-1);
+    expect(silenceAt).toBeGreaterThan(-1);
   });
 });
 
@@ -376,7 +377,8 @@ describe("dummy density occupancy + continue mini read-only", () => {
     expect(welcome).not.toContain('data-ile-continue-map-align="aesthetics"');
     expect(welcome).toContain("data-ile-session-chapters");
     expect(welcome).not.toContain("data-ile-session-chapter-count");
-    expect(welcome).toContain("data-ile-session-insight-goal");
+    expect(welcome).not.toContain("data-ile-session-insight-goal");
+    expect(welcome).toContain("data-ile-silence-lock-minutes");
     expect(welcome).toContain("flex-1");
     const aycl = read("components/AyclLandingClient.tsx");
     expect(aycl).toContain("h-[min(28rem,55vh)]");
@@ -536,7 +538,8 @@ describe("Practice drawer labels and previous-sessions UI", () => {
       "ileWelcomeShowsRegenerate",
     );
     expect(view).not.toContain("data-ile-session-chapter-count");
-    expect(view).toContain("data-ile-session-insight-goal");
+    expect(view).not.toContain("data-ile-session-insight-goal");
+    expect(view).toContain("data-ile-silence-lock-minutes");
     const chrome = read("components/session-view/session-chrome.tsx");
     const phase = read("components/session-view/use-session-phase.ts");
     expect(chrome).toContain('testId="ile-save-exit-name"');

@@ -88,7 +88,7 @@ describe("one workspace surface", () => {
         practiceDrawer: true,
         learnerActionRequested: false,
       }),
-    ).toBe(false);
+    ).toBe(true);
     expect(
       workspaceLearnerPaneMounted({
         authoring: true,

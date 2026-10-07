@@ -48,8 +48,7 @@ export const ILE_SILENCE_LOCK_MINUTES_MAX = 30;
 export const ILE_SILENCE_LOCK_MINUTES_DEFAULT = 2;
 
 export const ILE_SILENCE_REST_TITLE = "Taking a rest";
-export const ILE_SILENCE_REST_BODY =
-  "The session is locked while you rest. Read the lines aloud to continue, or save and leave.";
+export const ILE_SILENCE_REST_BODY = "";
 export const ILE_SILENCE_REST_SAVE_AND_LEAVE = "Save and leave";
 
 export const ILE_SESSION_IMPURITY_KICKER = "Session impurity";

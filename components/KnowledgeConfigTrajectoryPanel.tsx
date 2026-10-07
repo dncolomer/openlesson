@@ -2,10 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { resolveModelsTabCanInspectOthers } from "@/lib/pow-api/models-tab-scope";
-import { KnowledgeLwmView } from "@/components/knowledge-panel/lwm-view";
 import { KnowledgeModelsView } from "@/components/knowledge-panel/models-view";
-import { KnowledgeRankingView } from "@/components/knowledge-panel/ranking-view";
-import { KnowledgeStrengthsGapsView } from "@/components/knowledge-panel/strengths-gaps-view";
 import type { VerificationFlowFilterState } from "@/components/VerificationFlowSubtabFilter";
 import type { VerificationKnowledgeRow } from "@/lib/verification-flow";
 
@@ -82,10 +79,7 @@ export function KnowledgeConfigTrajectoryPanel({
     rows,
     onFlowId: setFlowId,
   };
-  const showModels = panelView === "models";
-  const showLwm = panelView === "lwm";
-  const showRanking = panelView === "ranking";
-  const showStrengthsGaps = panelView === "strengths_gaps";
+  const showModels = panelView === "models" || panelView == null;
   const canInspectOthers = resolveModelsTabCanInspectOthers({
     isOwner,
     lockSubjectToSelf,
@@ -94,14 +88,10 @@ export function KnowledgeConfigTrajectoryPanel({
   return (
     <div
       className={
-        showModels || showRanking || showStrengthsGaps
-          ? "flex w-full min-h-0 flex-1 flex-col overflow-hidden"
-          : "flex w-full min-h-0 flex-1 flex-col gap-5 overflow-y-auto"
+        "flex w-full min-h-0 flex-1 flex-col overflow-hidden"
       }
       data-models-tab={showModels ? "true" : undefined}
-      data-lwm-tab={showLwm ? "true" : undefined}
-      data-ranking-tab={showRanking ? "true" : undefined}
-      data-strengths-gaps-tab={showStrengthsGaps ? "true" : undefined}
+      data-knowledge-judge-report="removed"
       data-knowledge-panel-view={panelView}
       data-knowledge-lock-subject-to-self={lockSubjectToSelf ? "true" : "false"}
       data-knowledge-can-inspect-others={canInspectOthers ? "true" : "false"}
@@ -113,38 +103,6 @@ export function KnowledgeConfigTrajectoryPanel({
           ayclToken={ayclToken}
           canInspectOthers={canInspectOthers}
           lockSubjectToSelf={lockSubjectToSelf}
-          flowFilter={flowFilter}
-        />
-      ) : null}
-
-      {showLwm ? (
-        <KnowledgeLwmView
-          workspaceId={workspaceId}
-          currentUserId={currentUserId}
-          isOwner={isOwner}
-          ayclToken={ayclToken}
-          canInspectOthers={canInspectOthers}
-          lockSubjectToSelf={lockSubjectToSelf}
-          flowFilter={flowFilter}
-        />
-      ) : null}
-
-      {showRanking ? (
-        <KnowledgeRankingView
-          workspaceId={workspaceId}
-          currentUserId={currentUserId}
-          ayclToken={ayclToken}
-          canInspectOthers={canInspectOthers}
-          flowFilter={flowFilter}
-        />
-      ) : null}
-
-      {showStrengthsGaps ? (
-        <KnowledgeStrengthsGapsView
-          workspaceId={workspaceId}
-          currentUserId={currentUserId}
-          ayclToken={ayclToken}
-          canInspectOthers={canInspectOthers}
           flowFilter={flowFilter}
         />
       ) : null}

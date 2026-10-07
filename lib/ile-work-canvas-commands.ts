@@ -6,19 +6,9 @@ export const ILE_WORK_CANVAS_OVERLAP_GAP = 16;
 
 export const ILE_WORK_CANVAS_COMMANDS = [
   {
-    id: "answer",
-    label: "Answer",
-    tooltip: "Answer the question texts you selected on the canvas.",
-  },
-  {
     id: "simplify",
     label: "Simplify",
     tooltip: "Rewrite the selected text in shorter, plainer sentences.",
-  },
-  {
-    id: "ask",
-    label: "Ask",
-    tooltip: "Ask by voice. You can type the question instead.",
   },
   {
     id: "rephrase",
@@ -54,12 +44,6 @@ export const ILE_WORK_CANVAS_COMMANDS = [
       "Ask XAI to rephrase the selected marks and rearrange those marks into a clearer layout.",
   },
   {
-    id: "suggest-insight",
-    label: "Suggest Insight",
-    tooltip:
-      "Ask XAI to add one new mark suggesting an insight from the selection, without saving it.",
-  },
-  {
     id: "clear-overlaps",
     label: "Clear overlaps",
     tooltip: "Move the selected marks so their boxes no longer touch. Layout only.",
@@ -77,9 +61,9 @@ export type IleWorkCanvasAskKind =
   | "suggest-insight"
   | "clear-overlaps";
 
-/** Ask can run with no selection. Every other command uses the selected marks. */
+/** Every canvas command uses the selected marks. */
 export function ileWorkCanvasCommandNeedsSelection(id: string | null | undefined): boolean {
-  return String(id || "").trim() !== "ask";
+  return Boolean(String(id || "").trim());
 }
 
 export function filterIleWorkCanvasCommands(query: string | null | undefined) {

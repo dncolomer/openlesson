@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  BLOCK_PRACTICE_DURATION_OPTIONS,
   normalizeBlockPracticeOptions,
   serializeBlockPracticeOptions,
   type BlockPracticeOptions,
@@ -88,10 +87,6 @@ export function WorkspaceBlockEditPanel({
           {[
             savedPractice.allowScout ? "Calibrate" : null,
             savedPractice.allowExplore ? "Learn" : null,
-            savedPractice.allowDrill ? "Drill" : null,
-            savedPractice.allowDrill && savedPractice.allowedDurationsMinutes.length
-              ? `Durations (${savedPractice.allowedDurationsMinutes.join("/")}m)`
-              : null,
           ]
             .filter(Boolean)
             .join(" · ") || "—"}
@@ -109,20 +104,6 @@ export function WorkspaceBlockEditPanel({
     setEditPractice((prev) =>
       normalizeBlockPracticeOptions({ ...prev, ...patch }),
     );
-  };
-
-  const toggleDuration = (mins: number) => {
-    setEditPractice((prev) => {
-      if (!prev.allowDrill) return prev;
-      const has = prev.allowedDurationsMinutes.includes(mins);
-      const next = has
-        ? prev.allowedDurationsMinutes.filter((m) => m !== mins)
-        : [...prev.allowedDurationsMinutes, mins].sort((a, b) => a - b);
-      return normalizeBlockPracticeOptions({
-        ...prev,
-        allowedDurationsMinutes: next,
-      });
-    });
   };
 
   const save = async () => {
@@ -183,7 +164,7 @@ export function WorkspaceBlockEditPanel({
           <p className="text-[11px] font-medium text-neutral-200">Practice options</p>
         </div>
 
-        <div className="grid grid-cols-3 gap-1.5" data-block-edit-practice-styles>
+        <div className="grid grid-cols-2 gap-1.5" data-block-edit-practice-styles>
           <label className="flex cursor-pointer items-center gap-1.5 rounded-none border border-neutral-800/80 bg-neutral-900/40 px-2 py-1.5">
             <input
               type="checkbox"
@@ -204,47 +185,7 @@ export function WorkspaceBlockEditPanel({
             />
             <span className="text-[11px] text-neutral-200">Learn</span>
           </label>
-          <label className="flex cursor-pointer items-center gap-1.5 rounded-none border border-neutral-800/80 bg-neutral-900/40 px-2 py-1.5">
-            <input
-              type="checkbox"
-              data-block-edit-allow-drill
-              checked={editPractice.allowDrill}
-              disabled={disabled}
-              onChange={(e) => patchPractice({ allowDrill: e.target.checked })}
-            />
-            <span className="text-[11px] text-neutral-200">Drill</span>
-          </label>
         </div>
-
-        {editPractice.allowDrill ? (
-          <div data-block-edit-practice-durations>
-            <p className="mb-1 text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
-              Allowed timed lengths
-            </p>
-            <div className="grid grid-cols-4 gap-1">
-              {BLOCK_PRACTICE_DURATION_OPTIONS.map((mins) => {
-                const on = editPractice.allowedDurationsMinutes.includes(mins);
-                return (
-                  <button
-                    key={mins}
-                    type="button"
-                    data-block-edit-duration={mins}
-                    data-selected={on ? "true" : "false"}
-                    disabled={disabled}
-                    onClick={() => toggleDuration(mins)}
-                    className={`h-7 rounded-none border text-[10px] font-semibold transition disabled:opacity-40 ${
-                      on
-                        ? "border-white/40 bg-white/10 text-white"
-                        : "border-neutral-700 bg-transparent text-neutral-500 hover:border-neutral-500"
-                    }`}
-                  >
-                    {mins}m
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        ) : null}
 
         {/* Hidden serialized snapshot for structural/tests */}
         <span className="sr-only" data-block-edit-practice-serialized>

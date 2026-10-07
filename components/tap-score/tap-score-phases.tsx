@@ -4,6 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ThoughtCompactAction, type HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
 import { ImDoneAnsweringControl } from "@/components/thought-ui/ImDoneAnsweringButton";
 import { WorkCanvas } from "@/components/ExcalidrawCanvas";
+import { SessionBranchFieldBoundary } from "@/components/session-view/session-branch-prepare";
+import { SessionActionsPanel } from "@/components/session-view/session-mark-controls";
+import { SessionPolicyBridge, type SessionPolicySnapshot } from "@/components/session-view/session-policy-context";
 import { ThoughtMemoryPanel } from "@/components/thought-ui/ThoughtMemoryPanel";
 import { ThoughtEditPanel } from "@/components/thought-ui/ThoughtEditPanel";
 import {
@@ -23,7 +26,9 @@ import {
 import { TapStartingTopicCards } from "@/components/TapStartingTopicCards";
 import { TapBriefingConfig } from "@/components/TapBriefingConfig";
 import { SessionFinishedScreen } from "@/components/session-view/session-finished-screen";
+import { IleStartLoading } from "@/components/session-view/ile-start-loading";
 import { SessionPageLoading } from "@/components/session-view/session-page-loading";
+import { verificationFieldPrepareInput } from "@/lib/session-branch-prepare";
 import { SESSION_SIDEBAR_PRIMARY_BUTTON_CLASS } from "@/lib/session-sidebar";
 import { TapPracticePill } from "@/components/tap-score/tap-practice-pill";
 import { PerformanceReportCard } from "@/components/PerformanceReportCard";
@@ -85,6 +90,9 @@ export function TapScorePhases(props: {
   localOpening?: boolean;
   /** Verification uses the verification-tap sidebar. Scored TAP uses tap. */
   sidebarMode?: Extract<SessionSidebarMode, "tap" | "verification-tap">;
+  /** Public verification flow. Workspace verification uses the session instead. */
+  verificationToken?: string | null;
+  policyRef?: MutableRefObject<SessionPolicySnapshot>;
   durationLocked: boolean;
   isStartingSession: boolean;
   startingTopics: TapStartingTopic[];
@@ -176,6 +184,7 @@ export function TapScorePhases(props: {
     privateToken,
     localOpening = false,
     sidebarMode = "tap",
+    verificationToken = null,
     durationLocked,
     isStartingSession,
     startingTopics,
@@ -436,15 +445,37 @@ export function TapScorePhases(props: {
     [sendCanvasAsk, workspaceTitle],
   );
 
+  const verificationField = verificationFieldPrepareInput({
+    workspaceTitle,
+    topics: startingTopics,
+    topicId: startingTopicId,
+    sessionId,
+    tapSessionId,
+    workspaceId,
+    blockId,
+    privateToken,
+    verificationToken,
+    entryQueryParams,
+  });
+  const verificationTitle = verificationField.chapterTitle || "This topic";
+  const verificationBrief = verificationField.chapterBrief || "";
+  const verificationFieldKey = (tapSessionId || sessionId || verificationToken || "session").trim();
+
   return (
     <main className="relative flex h-screen min-h-0 flex-col overflow-hidden bg-[#0b0b0b] text-white selection:bg-zinc-700">
       <div className="relative z-10 flex min-h-0 w-full flex-1 flex-col overflow-hidden">
         {phase === "briefing" && isStartingSession ? (
-          <SessionPageLoading
-            message={
-              isPracticeMode ? t("tap.practice.starting") : t("session.startLoading")
-            }
-          />
+          sidebarMode === "verification-tap" ? (
+            <SessionPageLoading>
+              <IleStartLoading t={t} fieldStatus="preparing" />
+            </SessionPageLoading>
+          ) : (
+            <SessionPageLoading
+              message={
+                isPracticeMode ? t("tap.practice.starting") : t("session.startLoading")
+              }
+            />
+          )
         ) : null}
 
         {phase === "briefing" && !isStartingSession && briefingStep === "challenge" && pendingStart ? (
@@ -517,8 +548,17 @@ export function TapScorePhases(props: {
 
         {phase === "live" && (
           <section className="flex min-h-0 flex-1 flex-col overflow-hidden" data-tap-convo-live>
+            <SessionBranchFieldBoundary
+              enabled={sidebarMode === "verification-tap"}
+              input={{
+                ...verificationField,
+                enabled: sidebarMode === "verification-tap",
+              }}
+            >
+            {props.policyRef ? <SessionPolicyBridge target={props.policyRef} /> : null}
             <SessionWorkSurface
               mode={sidebarMode}
+              policyTab={sidebarMode === "verification-tap"}
               stage={
                 <div
                   data-tap-convo-work-canvas-pane
@@ -536,6 +576,25 @@ export function TapScorePhases(props: {
                     onCanvasPowActions={handleCanvasPowActions}
                     onAskSelected={handleAskSelected}
                     dictateTranscript={crystallizableText}
+                    sessionMarkMode={sidebarMode === "verification-tap" ? "verification" : undefined}
+                    sessionMarkListKey={
+                      sidebarMode === "verification-tap"
+                        ? `verification:${verificationFieldKey}:${startingTopicId || "topic"}`
+                        : undefined
+                    }
+                    sessionMarkQuestions={
+                      sidebarMode === "verification-tap"
+                        ? [
+                            {
+                              id: startingTopicId || "topic",
+                              text:
+                                startingTopics.find((topic) => topic.id === startingTopicId)?.title ||
+                                workspaceTitle ||
+                                "This topic",
+                            },
+                          ]
+                        : undefined
+                    }
                   />
                   {error ? (
                     <p className="pointer-events-none absolute inset-x-0 bottom-2 z-10 px-3 text-center text-xs text-red-300">
@@ -623,8 +682,11 @@ export function TapScorePhases(props: {
                 />
               }
               signals={<TapSessionSignals captureAudio />}
-              focusLabel="Stash"
+              focusLabel={sidebarMode === "verification-tap" ? "actions" : "Stash"}
               focus={
+                sidebarMode === "verification-tap" ? (
+                  <SessionActionsPanel />
+                ) : (
                 <div className="flex h-full min-h-0 flex-col overflow-hidden">
                   <div
                     data-tap-im-done-slot
@@ -679,8 +741,10 @@ export function TapScorePhases(props: {
                     />
                   </div>
                 </div>
+                )
               }
             />
+            </SessionBranchFieldBoundary>
           </section>
         )}
 

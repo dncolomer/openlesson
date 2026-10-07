@@ -1,6 +1,6 @@
 "use client";
 
-import type { RefObject } from "react";
+import { useEffect, type RefObject } from "react";
 import { ILE_CANVAS_PROMPT_BAR_FALLBACK_WIDTH, ileCanvasSlashBarOpen } from "@/lib/ile-work-canvas";
 import {
   filterIleWorkCanvasCommands,
@@ -9,7 +9,6 @@ import {
   type IleWorkCanvasCommandId,
 } from "@/lib/ile-work-canvas-commands";
 import type { IleWorkCanvasElement } from "@/lib/ile-work-canvas";
-import type { IleDictateCapture } from "@/lib/ile-canvas-dictate";
 import { ileCanvasCraftInsightUsable } from "@/lib/ile-turn-insights";
 import { IleCanvasDictateButton } from "@/components/session-view/ile-canvas-dictate-button";
 import {
@@ -17,9 +16,11 @@ import {
   IleCraftInsightButton,
   type IleCanvasCraftInsightConfig,
 } from "@/components/session-view/ile-canvas-craft-insight";
+import { usePublishSessionMarkDraft } from "@/components/session-view/session-policy-context";
+import type { SessionMarkMode } from "@/lib/session-marks";
 
 const ILE_CANVAS_COMMAND_BUTTON_CLASS =
-  "pointer-events-auto flex h-full min-w-0 items-center justify-center whitespace-normal rounded-none border border-neutral-600 bg-neutral-900 px-1.5 py-1 text-center font-mono text-[11px] leading-tight text-white hover:border-white hover:bg-neutral-800";
+  "pointer-events-auto flex h-full min-w-0 items-center justify-center whitespace-normal rounded-none border border-neutral-600 bg-neutral-900 px-1.5 py-1 text-center font-mono text-[11px] leading-tight text-white hover:border-white hover:bg-neutral-800 disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-950 disabled:text-neutral-600 disabled:opacity-100 disabled:hover:border-neutral-800 disabled:hover:bg-neutral-950 disabled:hover:text-neutral-600";
 
 export function CanvasPromptBar({
   askInFlight,
@@ -30,13 +31,8 @@ export function CanvasPromptBar({
   slashBarOpen,
   commandText,
   setCommandText,
-  beginAskVoice,
   handleQuickAction,
   commandInputRef,
-  askListening,
-  setAskListening,
-  askCaptureRef,
-  finishAskVoice,
   craftInsight,
   setCraftInsightOpen,
   dictateTranscript,
@@ -45,6 +41,11 @@ export function CanvasPromptBar({
   onDictateActive,
   craftInsightOpen,
   selectedCanvasElements,
+  sessionMarkMode,
+  sessionMarkQuestions,
+  sessionMarkListKey,
+  selectedMarkTexts,
+  markSpeech,
 }: {
   askInFlight: number;
   promptBarTop: number;
@@ -54,13 +55,8 @@ export function CanvasPromptBar({
   slashBarOpen: boolean;
   commandText: string;
   setCommandText: (value: string) => void;
-  beginAskVoice: () => void;
   handleQuickAction: (id: IleWorkCanvasCommandId) => void;
   commandInputRef: RefObject<HTMLInputElement | null>;
-  askListening: boolean;
-  setAskListening: (value: boolean) => void;
-  askCaptureRef: { current: IleDictateCapture | null };
-  finishAskVoice: (commit: boolean) => void;
   craftInsight?: IleCanvasCraftInsightConfig | null;
   setCraftInsightOpen: (open: boolean) => void;
   dictateTranscript?: string;
@@ -69,7 +65,41 @@ export function CanvasPromptBar({
   onDictateActive?: (active: boolean) => void;
   craftInsightOpen: boolean;
   selectedCanvasElements: () => IleWorkCanvasElement[];
+  sessionMarkMode?: SessionMarkMode | null;
+  sessionMarkQuestions?: readonly { id?: string | null; text?: string | null }[];
+  sessionMarkListKey?: string | null;
+  selectedMarkTexts: string[];
+  markSpeech: string;
 }) {
+  const publishDraft = usePublishSessionMarkDraft();
+  const questionKey = (sessionMarkQuestions ?? [])
+    .map((question) => `${question.id || ""}:${question.text || ""}`)
+    .join("|");
+  const selectionKey = selectedMarkTexts.join("\n");
+  useEffect(() => {
+    if (!sessionMarkMode) {
+      publishDraft(null);
+      return;
+    }
+    publishDraft({
+      mode: sessionMarkMode,
+      questions: sessionMarkQuestions ?? [],
+      listKey: sessionMarkListKey ?? null,
+      selectionActive: canvasSelectionActive,
+      selectedTexts: selectedMarkTexts,
+      speech: markSpeech,
+    });
+  }, [
+    canvasSelectionActive,
+    markSpeech,
+    publishDraft,
+    questionKey,
+    selectionKey,
+    sessionMarkListKey,
+    sessionMarkMode,
+  ]);
+  const commandDraft = ileCanvasCommandDraft(commandText);
+  const commands = filterIleWorkCanvasCommands(commandDraft.slash ? commandDraft.query : "");
   return (
           <form
             data-ile-canvas-prompt-bar
@@ -80,58 +110,47 @@ export function CanvasPromptBar({
             className="pointer-events-none absolute left-1/2 z-[58] flex -translate-x-1/2 justify-center"
             style={{
               top: promptBarTop,
-              width: canvasSelectionActive
-                ? Math.max(promptBarWidth, ILE_CANVAS_PROMPT_BAR_FALLBACK_WIDTH)
-                : undefined,
+              width: Math.max(promptBarWidth, ILE_CANVAS_PROMPT_BAR_FALLBACK_WIDTH),
             }}
             onSubmit={(event) => {
               event.preventDefault();
               submitCommand();
             }}
           >
-            <div
-              className={`pointer-events-auto flex flex-col gap-1.5 ${canvasSelectionActive ? "w-full" : "w-max"}`}
-            >
-              {ileCanvasSlashBarOpen({
-                selectionActive: canvasSelectionActive,
-                slashIntent: slashBarOpen,
-              }) ? (
+            <div className="pointer-events-auto flex w-full flex-col gap-1.5">
               <div className="flex w-full flex-col gap-1.5 rounded-none border border-white bg-neutral-950/95 p-2 shadow-[0_12px_40px_rgba(0,0,0,0.55)]">
-                {ileCanvasCommandDraft(commandText).slash ? (
-                  <div
-                    data-ile-learn-more
-                    data-ile-learn-more-actions
-                    className="grid w-full grid-cols-4 gap-1"
-                  >
-                    {filterIleWorkCanvasCommands(ileCanvasCommandDraft(commandText).query).map((command) => {
-                      const needsSelection = ileWorkCanvasCommandNeedsSelection(command.id);
-                      const blocked = needsSelection && !canvasSelectionActive;
-                      return (
-                        <button
-                          key={command.id}
-                          type="button"
-                          data-ile-learn-more-quick={command.id}
-                          aria-label={command.label}
-                          title={command.tooltip}
-                          disabled={blocked}
-                          onClick={() => {
-                            if (command.id === "ask") {
-                              setCommandText("/ask ");
-                              beginAskVoice();
-                              return;
-                            }
-                            if (blocked) return;
-                            setCommandText("");
-                            handleQuickAction(command.id);
-                          }}
-                          className={ILE_CANVAS_COMMAND_BUTTON_CLASS}
-                        >
-                          {command.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                ) : null}
+                <div
+                  data-ile-learn-more
+                  data-ile-learn-more-actions
+                  className="grid w-full grid-cols-4 gap-1"
+                >
+                  {commands.map((command) => {
+                    const needsSelection = ileWorkCanvasCommandNeedsSelection(command.id);
+                    const blocked = needsSelection && !canvasSelectionActive;
+                    return (
+                      <button
+                        key={command.id}
+                        type="button"
+                        data-ile-learn-more-quick={command.id}
+                        aria-label={command.label}
+                        title={command.tooltip}
+                        disabled={blocked}
+                        onClick={() => {
+                          if (blocked) return;
+                          setCommandText("");
+                          handleQuickAction(command.id);
+                        }}
+                        className={ILE_CANVAS_COMMAND_BUTTON_CLASS}
+                      >
+                        {command.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {ileCanvasSlashBarOpen({
+                  selectionActive: canvasSelectionActive,
+                  slashIntent: slashBarOpen,
+                }) ? (
                 <div className="flex items-stretch gap-1">
                   <input
                     ref={commandInputRef}
@@ -139,24 +158,11 @@ export function CanvasPromptBar({
                     data-ile-canvas-command-input
                     type="text"
                     value={commandText}
-                    onChange={(event) => {
-                      if (askListening) setAskListening(false);
-                      askCaptureRef.current = null;
-                      setCommandText(event.target.value);
-                    }}
+                    onChange={(event) => setCommandText(event.target.value)}
                     placeholder="Type / for a command"
                     aria-label="Type / for a command"
                     className="min-w-0 flex-1 rounded-none border border-neutral-600 bg-neutral-900 px-2 py-1.5 text-sm text-white placeholder-neutral-500 focus:border-white focus:outline-none"
                   />
-                  <button
-                    type="button"
-                    data-ile-canvas-ask
-                    aria-pressed={askListening}
-                    onClick={() => (askListening ? finishAskVoice(true) : beginAskVoice())}
-                    className="rounded-none border border-white bg-neutral-950 px-2.5 text-xs font-semibold uppercase tracking-wider text-white hover:bg-neutral-800 aria-pressed:bg-white aria-pressed:text-neutral-950"
-                  >
-                    {askListening ? "Stop" : "Ask"}
-                  </button>
                   <button
                     type="submit"
                     data-ile-canvas-prompt-bar-send
@@ -165,10 +171,10 @@ export function CanvasPromptBar({
                     Run
                   </button>
                 </div>
+                ) : null}
               </div>
-              ) : null}
               <div className="flex items-stretch gap-1.5">
-                {craftInsight ? (
+                {craftInsight && !sessionMarkMode ? (
                   <IleCraftInsightButton
                     usable={ileCanvasCraftInsightUsable()}
                     onClick={() => setCraftInsightOpen(true)}
@@ -183,7 +189,7 @@ export function CanvasPromptBar({
                   />
                 ) : null}
               </div>
-              {craftInsight ? (
+              {craftInsight && !sessionMarkMode ? (
                 <IleCanvasCraftInsightForm
                   open={craftInsightOpen}
                   enabled={ileCanvasCraftInsightUsable()}

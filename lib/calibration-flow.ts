@@ -159,7 +159,11 @@ function proofEvents(raw: unknown): CalibrateProofEvent[] {
     const text = String(record.text || "").trim();
     const source = record.source === "pasted" || record.source === "dictated" ? record.source : "typed";
     if (!text) continue;
-    if (record.type === "comfortable_answer" || record.type === "uncertainty_explanation") {
+    if (
+      record.type === "comfortable_answer" ||
+      record.type === "uncertainty_explanation" ||
+      record.type === "policy_score"
+    ) {
       events.push({ type: record.type, questionId, text, source });
     }
   }

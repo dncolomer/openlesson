@@ -38,17 +38,21 @@ export const ILE_WORK_CANVAS_USE_AND_PROMPT_ACTIONS = [
 
 /** Canvas command buttons. Each id is its own `tool_action`, not `expand_more`. */
 export const ILE_WORK_CANVAS_COMMAND_POW_IDS = [
-  "answer",
   "simplify",
-  "ask",
   "rephrase",
   "split",
   "join",
   "elaborate",
   "selective-compression",
   "refactor",
-  "suggest-insight",
   "clear-overlaps",
+] as const;
+
+/** Retired canvas commands. Stored rows may still use these ids. They are not on the canvas. */
+export const ILE_WORK_CANVAS_RETIRED_COMMAND_POW_IDS = [
+  "answer",
+  "ask",
+  "suggest-insight",
 ] as const;
 
 export type IleWorkCanvasCommandPowId = (typeof ILE_WORK_CANVAS_COMMAND_POW_IDS)[number];
@@ -59,6 +63,7 @@ export const ILE_WORK_CANVAS_DICTATE_ACTION = "dictate" as const;
 export const ILE_WORK_CANVAS_POW_ACTIONS = [
   ...ILE_WORK_CANVAS_USE_AND_PROMPT_ACTIONS,
   ...ILE_WORK_CANVAS_COMMAND_POW_IDS,
+  ...ILE_WORK_CANVAS_RETIRED_COMMAND_POW_IDS,
   ILE_WORK_CANVAS_DICTATE_ACTION,
 ] as const;
 

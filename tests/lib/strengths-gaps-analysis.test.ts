@@ -309,13 +309,12 @@ describe("buildStrengthsGapsBrowseModel + analysis", () => {
 });
 
 describe("Knowledge Strengths & Gaps tab wiring", () => {
-  it("places Strengths & Gaps immediately after Ranking in subtab order", () => {
+  it("does not show Ranking or Strengths & Gaps on the Knowledge screen", () => {
     const panel = readFileSync(
       join(ROOT, "components/WorkspacePerformancePanel.tsx"),
       "utf8",
     );
 
-    // PERFORMANCE_SUBVIEWS array order (visible nav ids)
     const subviewsMatch = panel.match(
       /const PERFORMANCE_SUBVIEWS[^=]*=\s*\[([\s\S]*?)\];/,
     );
@@ -323,22 +322,11 @@ describe("Knowledge Strengths & Gaps tab wiring", () => {
     const subviewOrder = [...(subviewsMatch?.[1].matchAll(/"([^"]+)"/g) ?? [])].map(
       (m) => m[1],
     );
-    const rSv = subviewOrder.indexOf("ranking");
-    const sSv = subviewOrder.indexOf("strengths_gaps");
-    expect(rSv).toBeGreaterThanOrEqual(0);
-    expect(sSv).toBe(rSv + 1);
-
-    // Subtab list order in useMemo
-    const tabsBlock = panel.slice(
-      panel.indexOf("const subTabs"),
-      panel.indexOf("return (", panel.indexOf("const subTabs")),
-    );
-    const order = [...tabsBlock.matchAll(/id:\s*"([^"]+)"/g)].map((m) => m[1]);
-    const r = order.indexOf("ranking");
-    const s = order.indexOf("strengths_gaps");
-    expect(r).toBeGreaterThanOrEqual(0);
-    expect(s).toBe(r + 1);
-    expect(tabsBlock).toContain("performanceSubTabStrengthsGaps");
+    expect(subviewOrder).toEqual(["knowledge"]);
+    expect(subviewOrder).not.toContain("ranking");
+    expect(subviewOrder).not.toContain("strengths_gaps");
+    expect(panel).not.toContain('panelView="strengths_gaps"');
+    expect(panel).not.toContain('panelView="ranking"');
   });
 
   it("Knowledge panel mounts strengths_gaps view with structural markers", () => {
@@ -346,8 +334,8 @@ describe("Knowledge Strengths & Gaps tab wiring", () => {
     const sgp = readFileSync(join(ROOT, "components/StrengthsGapsPanel.tsx"), "utf8");
 
     expect(kctp).toMatch(/KnowledgePanelView[\s\S]*strengths_gaps/);
-    expect(kctp).toMatch(/panelView === "strengths_gaps"|showStrengthsGaps/);
-    expect(kctp).toContain("StrengthsGapsPanel");
+    expect(kctp).not.toMatch(/panelView === "strengths_gaps"|showStrengthsGaps/);
+    expect(kctp).not.toContain("<KnowledgeStrengthsGapsView");
     expect(sgp).toContain('data-section="strengths-gaps"');
     expect(sgp).toContain("data-strengths-gaps-analysis");
     expect(sgp).toContain("data-strengths-gaps-list");

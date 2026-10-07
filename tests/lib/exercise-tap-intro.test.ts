@@ -64,11 +64,14 @@ describe("entry still resolves exercise client; briefing is intro path", () => {
     expect(resolveTapShellFromSession({})).toBe("conversational");
 
     const guest = read("app/tap/session/[token]/page.tsx");
-    expect(guest).toContain("ExerciseTapClient");
     expect(guest).toContain("resolveTapShellFromSession");
+    expect(guest).toContain('shell === "scout"');
+    expect(guest).not.toContain("ExerciseTapClient");
+    expect(guest).not.toContain("TapScoreClient");
 
     const owner = read("app/workspace/[id]/tap/page.tsx");
-    expect(owner).toContain("ExerciseTapClient");
+    expect(owner).toContain('sidebarMode="verification-tap"');
+    expect(owner).not.toContain("ExerciseTapClient");
   });
 
   it("resolveExercisePromptAfterIntro drives real start seeding", () => {

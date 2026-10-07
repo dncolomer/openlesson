@@ -139,10 +139,7 @@ describe("chapter-complete PoW is a TIM event (shipped)", () => {
         stepDescription: "Dijkstra shortest path",
       },
     });
-    expect(ctx).not.toBeNull();
-    expect(ctx?.endpoint).toBe("upload_ile_chapter_done");
-    expect(ctx?.tap_action).toBe("chapter_done");
-    expect(ctx?.artifact_metadata?.stepId).toBe("ch-done");
+    expect(ctx).toBeNull();
 
     const payload = buildIleChapterDonePowToolData({
       stepIndex: 0,

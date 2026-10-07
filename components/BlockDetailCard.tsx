@@ -25,6 +25,8 @@ type ProgressRing = "neutral" | "completed" | "in_progress";
 export type ProductLaunchOptions = {
   /** Drill (TAP) sessions only — minutes for the TAP clock. */
   minutes?: number;
+  /** Learning-workspace Verify launch. Same canvas, verification marks. */
+  verification?: boolean;
 };
 
 type BlockDetailCardProps = {
@@ -257,8 +259,8 @@ export function BlockDetailCard({
   );
 
   const canLaunchStyle = (s: LearningStyle) => {
+    if (s === "drill") return false;
     if (!blockAllowsPracticeStyle(practiceLimits, s)) return false;
-    if (s === "drill" && !drillFamilyAllowed) return false;
     if (s === "scout" && !practiceLimits.allowScout) return false;
     if (!blockAllowsLaunchTarget(practiceLimits, s, false)) {
       return false;
@@ -278,6 +280,9 @@ export function BlockDetailCard({
       target.product === "tap"
         ? clampPracticeDuration(practiceLimits, durationMinutes)
         : undefined;
+    if (target.id === "drill_dialog" || target.interaction_kind === "conversational" || target.interaction_kind === "exercise") {
+      return;
+    }
     if (onLaunchIntent) {
       onLaunchIntent(target, minutes != null ? { minutes } : undefined);
       return;
@@ -286,7 +291,7 @@ export function BlockDetailCard({
       onStartIle?.();
       return;
     }
-    if (target.id === "drill_dialog" || target.id === "scout_dialog") {
+    if (target.id === "scout_dialog") {
       onStartEval?.(event as React.MouseEvent, minutes);
     }
   };
@@ -321,7 +326,8 @@ export function BlockDetailCard({
       {/* Select-only style tools — Explore = TAP Learning, Drill = TAP; launch via Start */}
       <div
         className={`grid gap-2 ${
-          practiceLimits.allowScout && practiceLimits.allowExplore && drillFamilyAllowed
+          onLaunchIntent ||
+          (practiceLimits.allowScout && practiceLimits.allowExplore && drillFamilyAllowed)
             ? "grid-cols-3"
             : "grid-cols-2"
         }`}
@@ -351,7 +357,8 @@ export function BlockDetailCard({
           ] as const
         )
           .filter(({ id }) => {
-            if (id === "drill" && !drillFamilyAllowed) return false;
+            // Drill opened the talk-aloud session. Calibrate and Learn stay.
+            if (id === "drill") return false;
             return blockAllowsPracticeStyle(practiceLimits, id);
           })
           .map(({ id, label, Icon }) => {
@@ -380,6 +387,20 @@ export function BlockDetailCard({
             </button>
           );
         })}
+        {onLaunchIntent ? (
+          <button
+            type="button"
+            data-style-option="verify"
+            data-session-launch="verification"
+            disabled={isStarting || isLocked}
+            onClick={() => {
+              onLaunchIntent(resolvedTarget, { verification: true });
+            }}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-none border-2 border-white/25 bg-transparent px-3 text-left text-white transition hover:border-white/45 hover:bg-white/5 disabled:opacity-40"
+          >
+            <span className="text-xs font-semibold tracking-tight">Verify</span>
+          </button>
+        ) : null}
       </div>
 
       {/* Duration only for Drill (TAP) launches */}

@@ -26,7 +26,7 @@ export default function AyclSessionSettingsPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a]">
+        <div className="flex min-h-screen items-center justify-center bg-black">
           <LoadingStatusMessage message="Loading" />
         </div>
       }

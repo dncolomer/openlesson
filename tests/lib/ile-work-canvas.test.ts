@@ -507,10 +507,10 @@ describe("TAP Learning Work canvas ask-XAI on selection (shipped)", () => {
     expect(ileCanvasPromptBarWidth({ width: 512 })).toBe(512);
     expect(ileCanvasPromptBarWidth(null)).toBe(ILE_CANVAS_PROMPT_BAR_FALLBACK_WIDTH);
     expect(ILE_CANVAS_PROMPT_BAR_TOOLBAR_SELECTOR).toContain(".App-toolbar");
-    expect(canvas).toContain("handleBoardAsk");
+    expect(canvas).toContain("handleQuickAction");
     expect(canvas).not.toContain("data-ile-compress-work");
     expect(canvas).toContain("IleCraftInsightButton");
-    expect(canvas).toContain("selectedElements: []");
+    expect(canvas).not.toContain("selectedElements: []");
     expect(canvas).toContain("ileWorkCanvasThinkingOverlayStyle");
     const view = read("components/SessionView.tsx");
     expect(view).toContain("onAskSelected={handleAskCanvasSelection}");
@@ -2510,7 +2510,7 @@ describe("TAP Learning Work canvas selection commands (shipped)", () => {
     expect(ILE_SELECTIVE_COMPRESSION_LABEL).toBe("Compress");
     expect(canvas).toContain('kind: "selective-compress"');
     expect(canvas).toContain('kind: "refactor"');
-    expect(canvas).toContain('kind: "suggest-insight"');
+    expect(canvas).not.toContain('kind: "suggest-insight"');
     expect(canvas).toContain('kind: "clear-overlaps"');
     expect(canvas).toContain("runIleWorkCanvasClearOverlaps");
     expect(canvas).toContain("if (!cleared.needsModel && cleared.moved)");
@@ -2568,7 +2568,7 @@ describe("TAP Learning Work canvas selection commands (shipped)", () => {
         `clearAskCalls=${ask.calls.length}`,
         `gappedAskCalls=${gappedAsk.calls.length}`,
         `modelAsk=${modelAsk.calls.length}`,
-        "commands=Rephrase Split Elaborate Compress Refactor Suggest Insight Clear overlaps",
+        "commands=Simplify Rephrase Split Join Elaborate Compress Refactor Clear overlaps",
       ].join("\n") + "\n",
     );
   });

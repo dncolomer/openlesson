@@ -1,6 +1,5 @@
+import { redirect } from "next/navigation";
 import { TapScoreClient } from "@/components/TapScoreClient";
-import { ExerciseTapClient } from "@/components/ExerciseTapClient";
-import { resolveTapShellFromSession } from "@/lib/exercise-tap";
 import { resolveInitialMinutes } from "@/lib/tap-score-client-helpers";
 
 interface PageProps {
@@ -12,6 +11,8 @@ interface PageProps {
     interaction_kind?: string;
     /** Pre-selected session length from workspace launch (minutes). */
     minutes?: string;
+    /** Learning-workspace Verify launch. */
+    session?: string;
   }>;
 }
 
@@ -25,23 +26,12 @@ function parseLaunchMinutes(raw: string | undefined): number | undefined {
 
 export default async function GhlScorePage({ params, searchParams }: PageProps) {
   const { id } = await params;
-  const { sessionId, blockId, interactionKind, interaction_kind, minutes } =
-    await searchParams;
-  const shell = resolveTapShellFromSession({
-    interactionKind: interactionKind ?? interaction_kind,
-  });
+  const { sessionId, blockId, minutes, session } = await searchParams;
   const initialMinutes = parseLaunchMinutes(minutes);
 
-  if (shell === "exercise") {
-    return (
-      <ExerciseTapClient
-        workspaceId={id}
-        sessionId={sessionId}
-        blockId={blockId}
-        initialMinutes={initialMinutes}
-        lockDuration={initialMinutes != null}
-      />
-    );
+  // Learn, Calibrate, and Verify are the only sessions. This route is Verify.
+  if (session !== "verification") {
+    redirect(`/workspace/${id}`);
   }
 
   return (
@@ -51,6 +41,7 @@ export default async function GhlScorePage({ params, searchParams }: PageProps) 
       blockId={blockId}
       initialMinutes={initialMinutes}
       lockDuration={initialMinutes != null}
+      sidebarMode="verification-tap"
     />
   );
 }

@@ -81,7 +81,9 @@ describe("TAP Learning map-first session chrome (shipped surface)", () => {
     expect(chrome).not.toContain("data-ile-pow-count");
     expect(chrome).toContain("data-ile-tool-overlay");
     expect(chrome).not.toContain("IleChapterWidgetFrame");
-    expect(chrome).toContain('id="insights"');
+    expect(chrome).toContain('id="actions"');
+    expect(chrome).toContain("SessionActionsPanel");
+    expect(chrome).not.toContain('id="insights"');
     expect(chrome).toContain('id="chapters"');
     expect(chrome).toContain('id="sensors"');
     expect(
@@ -234,7 +236,7 @@ describe("TAP Learning map-first session chrome (shipped surface)", () => {
     expect(chrome).not.toContain("-translate-x-1/2");
     expect(chrome).not.toContain("ileSidebarSignalCount");
     expect(chrome).not.toContain("insightCount");
-    expect(chrome).toContain('focusLabel="Insights"');
+    expect(chrome).toContain('focusLabel="actions"');
     expect(read("components/SessionView.tsx")).not.toContain("insightCount={sessionInsights.length}");
     expect(chrome).toContain('mode="ile"');
     expect(chrome).not.toContain("clock=");

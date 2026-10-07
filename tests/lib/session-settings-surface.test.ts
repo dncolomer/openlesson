@@ -43,7 +43,6 @@ describe("shared TAP settings surface", () => {
     expect(learn).not.toContain("ile-pregame-panel-difficulty");
     expect(learn).not.toContain("ile-pregame-panel-other");
     expect(ILE_LIVE_SETTINGS_KNOBS.map((knob) => knob.id)).toEqual([
-      "insightGoal",
       "silenceLock",
       "spokenLanguage",
     ]);
@@ -63,9 +62,12 @@ describe("shared TAP settings surface", () => {
     expect(learn).not.toContain("data-ile-gather-max-slider");
     expect(learn).not.toContain("data-ile-pregame-difficulty-toggle");
     expect(learn).not.toContain("data-ile-browser-inference");
-    expect(learn).toContain("data-ile-learn-presets");
-    expect(learn).toContain("applyIleLearnPreset");
-    expect(learn).toContain("ILE_LEARN_PRESETS.map");
+    expect(learn).not.toContain("data-ile-learn-presets");
+    expect(learn).not.toContain("applyIleLearnPreset");
+    expect(learn).not.toContain("ILE_LEARN_PRESETS");
+    expect(learn).not.toContain("data-ile-session-insight-goal");
+    expect(learn).not.toContain("data-ile-min-insights-slider");
+    expect(learn).toContain("data-ile-silence-lock-minutes");
     expect(learn).not.toContain("data-ile-pregame-preset");
     expect(read("components/SessionView.tsx")).not.toContain("resetIleWorkCanvasSceneOnTimerExpiry");
   });

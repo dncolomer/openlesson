@@ -79,8 +79,10 @@ describe("learning Calibrate entry", () => {
 
     expect(surface).toContain("<SessionWorkSurface");
     expect(surface).toContain('mode="tap"');
-    expect(surface).toContain("CALIBRATE_DONE_CLASSIFYING_LABEL");
-    expect(surface).toContain("data-calibrate-done-classifying");
+    expect(surface).toContain("<SessionActionsPanel />");
+    expect(surface).toContain('focusLabel="actions"');
+    expect(surface).not.toContain("CALIBRATE_DONE_CLASSIFYING_LABEL");
+    expect(surface).not.toContain("data-calibrate-done-classifying");
     expect(surface).toContain("dictateTranscript={transcript}");
     expect(surface).toContain("onDictateActive={onDictateActive}");
     expect(surface).toContain('data-calibrate-data="disabled"');

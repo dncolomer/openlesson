@@ -210,6 +210,15 @@ export function useWorkspaceLearner(input: {
       if (progressScope) {
         recordMapItemWorkedOn(progressScope, block.id);
       }
+      if (options?.verification) {
+        const params = new URLSearchParams({
+          blockId: block.id,
+          session: "verification",
+        });
+        if (block.session_id) params.set("sessionId", block.session_id);
+        router.push(`/workspace/${workspaceId}/tap?${params.toString()}`);
+        return;
+      }
       // Same product intent map as SessionItem / BlockDetailCard.
       if (target.product === "ile") {
         const ileMode = "learning";
@@ -232,12 +241,10 @@ export function useWorkspaceLearner(input: {
         router.push(`/session?id=${launchData.sessionId}`);
         return;
       }
+      if (target.interaction_kind !== "scout") return;
       const params = new URLSearchParams({
         blockId: block.id,
       });
-      if (target.interaction_kind === "exercise") {
-        params.set("interactionKind", "exercise");
-      }
       if (
         typeof options?.minutes === "number" &&
         Number.isFinite(options.minutes) &&
@@ -248,11 +255,7 @@ export function useWorkspaceLearner(input: {
       if (block.session_id) {
         params.set("sessionId", block.session_id);
       }
-      if (target.interaction_kind === "scout") {
-        router.push(`/workspace/${workspaceId}/scout?${params.toString()}`);
-        return;
-      }
-      router.push(`/workspace/${workspaceId}/tap?${params.toString()}`);
+      router.push(`/workspace/${workspaceId}/scout?${params.toString()}`);
     },
     [ayclToken, currentUserId, router, workspaceId],
   );

@@ -53,7 +53,7 @@ export interface BlockSkillGridProps {
       | "reject_chapter"
       | "start_prepare"
       | "start_session"
-      | "start_drill"
+      | "start_verify"
       | "continue_session"
       | "mark_done",
   ) => void;

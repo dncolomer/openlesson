@@ -201,7 +201,7 @@ describe("wiring: snapshots exclude + UI surfaces", () => {
     expect(perf).not.toContain("InsightsDashboardTab");
     // Visible Knowledge subtabs (Insights remains hidden / not in PERFORMANCE_SUBVIEWS).
     expect(perf).toMatch(
-      /const PERFORMANCE_SUBVIEWS: readonly PerformanceSubview\[] = \[\s*"ranking",\s*"strengths_gaps",\s*"lwm",\s*"knowledge",\s*\]/,
+      /const PERFORMANCE_SUBVIEWS: readonly PerformanceSubview\[] = \["knowledge"\]/,
     );
     expect(perf).not.toContain('id: "pow"');
     expect(perf).not.toContain('id: "insights"');

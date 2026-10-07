@@ -76,6 +76,51 @@ describe("console theme shells", () => {
     expect(html).toContain("session.welcomeTitle");
     expect(html).toContain("data-ile-confirm-settings");
     expect(html).toContain("session.confirmSettings");
+    expect(html).toContain("data-ile-silence-lock-minutes");
+    expect(html).not.toContain("data-ile-learn-presets");
+    expect(html).not.toContain("data-ile-session-insight-goal");
+    expect(html).toContain("data-ile-aesthetic-picker");
+    expect(html).not.toContain("session.getStarted");
+
+    const confirmed = renderToStaticMarkup(
+      createElement(SessionWelcomeModal, {
+        t: (key: string) => key,
+        languageConfirmed: true,
+        planLoading: false,
+        isPreparing: false,
+        tutoringLanguage: "en",
+        onTutoringLanguageChange: () => {},
+        aestheticPackages: [],
+        selectedAesthetic: undefined,
+        selectedAestheticId: null,
+        onSelectAesthetic: () => {},
+        aestheticsLoading: false,
+        chapterPlanStatus: "exists",
+        regenerateChapters: false,
+        onRegenerateChaptersChange: () => {},
+        initialChapters: "standard",
+        onInitialChaptersChange: () => {},
+        autoAdvance: false,
+        onToggleAutoAdvance: () => {},
+        localInferenceEnabled: false,
+        onToggleLocalInference: () => {},
+        webGPUAvailable: false,
+        planError: null,
+        modelLoadError: null,
+        modelLoadProgress: null,
+        prepStage: "done",
+        onConfirmSettings: () => {},
+        onContinueWithoutInference: () => {},
+        onReadyStart: () => {},
+        hasSessionPlan: true,
+      }),
+    );
+    expect(confirmed).toContain("data-ile-silence-lock-minutes");
+    expect(confirmed).not.toContain("data-ile-learn-presets");
+    expect(confirmed).not.toContain("data-ile-session-insight-goal");
+    expect(confirmed).toContain("data-ile-aesthetic-picker");
+    expect(confirmed).toContain("data-ile-confirm-settings");
+    expect(confirmed).not.toContain("session.getStarted");
   });
 
   it("renders a confirm pop-up with the console frame and its title and action", () => {

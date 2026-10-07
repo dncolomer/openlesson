@@ -10,6 +10,14 @@ import {
   beginCalibrationSession,
   calibrationProofMetadata,
 } from "@/lib/calibration-flow";
+import { emptySessionPolicySnapshot } from "@/components/session-view/session-policy-context";
+import { IleStartLoading } from "@/components/session-view/ile-start-loading";
+import { SessionPageLoading } from "@/components/session-view/session-page-loading";
+import { embedPolicyScore, policyScoreProofEvent } from "@/lib/session-policy-score";
+import { loadSessionBranchField, sessionClockMayStart } from "@/lib/session-branch-field-load";
+import { calibrateFieldPrepareInput } from "@/lib/session-branch-prepare";
+import { useI18n } from "@/lib/i18n";
+import { SESSION_SIDEBAR_PRIMARY_BUTTON_CLASS } from "@/lib/session-sidebar";
 import {
   calibrateRegionCounts,
   canFinishClassifying,
@@ -40,6 +48,7 @@ function CalibrationViewport({ children }: { children: ReactNode }) {
 }
 
 export function CalibrationFlowRunner({ token }: { token: string }) {
+  const { t } = useI18n();
   const [goal, setGoal] = useState("");
   const [identity, setIdentity] = useState("");
   const [claimedIdentity, setClaimedIdentity] = useState("");
@@ -51,6 +60,15 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
   const [applyNonce, setApplyNonce] = useState(0);
   const [error, setError] = useState("");
   const [claiming, setClaiming] = useState(false);
+  const [fieldHold, setFieldHold] = useState<null | "preparing" | "failed">(null);
+  const [fieldError, setFieldError] = useState("");
+  const pendingRef = useRef<{
+    goal: string;
+    identity: string;
+    minutes: number;
+    session: CalibrateState;
+    scene: IleWorkCanvasScene;
+  } | null>(null);
   const [stored, setStored] = useState(false);
   const [durationMinutes, setDurationMinutes] = useState(15);
   const [startedAt, setStartedAt] = useState<number | null>(null);
@@ -64,6 +82,39 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
   useEffect(() => {
     sceneRef.current = scene;
   }, [scene]);
+
+  async function finishCalibrationStart() {
+    const pending = pendingRef.current;
+    if (!pending) return;
+    setFieldHold("preparing");
+    setFieldError("");
+    const field = await loadSessionBranchField(
+      calibrateFieldPrepareInput({
+        topicText: pending.goal || "Calibration",
+        topicId: "calibration-goal",
+        questions: pending.session.pool.slice(0, 3),
+        calibrationToken: token,
+      }),
+    );
+    if (!sessionClockMayStart({ mode: "calibrate", fieldReady: field.ok })) {
+      setFieldError(field.ok ? "The field could not be prepared." : field.error);
+      setFieldHold("failed");
+      return;
+    }
+    setDurationMinutes(pending.minutes);
+    setRemainingSeconds(pending.minutes * 60);
+    setStartedAt(Date.now());
+    setTimeUp(false);
+    setClaimedIdentity(pending.identity);
+    setGoal(pending.goal);
+    setCalibrate(pending.session);
+    calibrateRef.current = pending.session;
+    setScene(pending.scene);
+    sceneRef.current = pending.scene;
+    setApplyElements(pending.scene.elements);
+    setApplyNonce(1);
+    setFieldHold(null);
+  }
 
   async function claim(event: React.FormEvent) {
     event.preventDefault();
@@ -117,18 +168,15 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
       const seeded = seedCalibrateWorkCanvas(started.session.pool);
       const claimed = String(payload.identity || identity.trim());
       const minutes = flowCountdownMinutes(payload.durationMinutes);
-      setDurationMinutes(minutes);
-      setRemainingSeconds(minutes * 60);
-      setStartedAt(Date.now());
-      setTimeUp(false);
-      setClaimedIdentity(claimed);
-      setGoal(String(payload.goal || ""));
-      setCalibrate(started.session);
-      calibrateRef.current = started.session;
-      setScene(seeded.scene);
-      sceneRef.current = seeded.scene;
-      setApplyElements(seeded.scene.elements);
-      setApplyNonce(1);
+      const goalText = String(payload.goal || "");
+      pendingRef.current = {
+        goal: goalText,
+        identity: claimed,
+        minutes,
+        session: started.session,
+        scene: seeded.scene,
+      };
+      await finishCalibrationStart();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not start");
     } finally {
@@ -150,15 +198,26 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
     return () => window.clearInterval(id);
   }, [durationMinutes, startedAt, stored, timeUp]);
 
+  const policyRef = useRef(emptySessionPolicySnapshot());
+
   const storeProof = useCallback(async (state: CalibrateState) => {
     if (storedRef.current) return;
     storedRef.current = true;
+    const snapshot = policyRef.current;
+    const scored = snapshot.model
+      ? embedPolicyScore({
+          model: snapshot.model,
+          sequence: snapshot.sequence,
+          workspaceId: token,
+        })
+      : null;
+    const events = scored ? [...state.events, policyScoreProofEvent(scored)] : state.events;
     const response = await fetch(`/api/calibration-flow/public/${encodeURIComponent(token)}/proof`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         identity: claimedIdentity,
-        events: state.events,
+        events,
         metadata: calibrationProofMetadata(state),
       }),
     });
@@ -208,6 +267,30 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
       });
     }
   }, [storeProof]);
+
+  if (fieldHold && !calibrate) {
+    return (
+      <CalibrationViewport>
+        <SessionPageLoading data-calibration-field-loading="">
+          <IleStartLoading
+            t={t}
+            fieldStatus={fieldHold === "failed" ? "failed" : "preparing"}
+            fieldError={fieldError}
+          />
+          {fieldHold === "failed" ? (
+            <button
+              type="button"
+              data-calibration-field-retry
+              onClick={() => void finishCalibrationStart()}
+              className="mt-6 border border-white/40 px-4 py-2 font-mono text-xs uppercase tracking-[0.14em] text-white"
+            >
+              Try again
+            </button>
+          ) : null}
+        </SessionPageLoading>
+      </CalibrationViewport>
+    );
+  }
 
   if (!calibrate) {
     return (
@@ -302,6 +385,8 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
         applyNonce={applyNonce}
         onSceneChange={onSceneChange}
         onCanvasPowActions={() => {}}
+        markQuestions={calibrate.pool.slice(0, 3)}
+        calibrationToken={token}
         onAdvance={onAdvance}
         error={error}
         clock={
@@ -315,7 +400,23 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
             />
           </div>
         }
-        actions={null}
+        actions={
+          <button
+            type="button"
+            data-calibration-end-session
+            onClick={() => {
+              const current = calibrateRef.current;
+              if (!current) return;
+              void storeProof(current).catch((err) => {
+                setError(err instanceof Error ? err.message : "Could not store calibration proof");
+              });
+            }}
+            className={`${SESSION_SIDEBAR_PRIMARY_BUTTON_CLASS} w-full`}
+          >
+            End session
+          </button>
+        }
+        policyRef={policyRef}
         topicId="calibration-goal"
         topicText={goal || "Calibration"}
         focusLabel="Calibrate"

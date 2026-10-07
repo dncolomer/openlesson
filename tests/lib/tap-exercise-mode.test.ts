@@ -358,7 +358,8 @@ describe("structural: Settings, block tools, separate Exercise UI", () => {
     expect(card).toContain("onClick={() => setStyle(id)}");
 
     const item = read("components/SessionItem.tsx");
-    expect(item).toContain("handleStartTimed");
+    expect(item).toContain("handleStartCalibrate");
+    expect(item).not.toContain("handleStartTimed");
     expect(item).toContain("onLaunchIntent");
     expect(item).toContain('handleStart("learning")');
     expect(item).toContain("session_mode: ileMode");
@@ -407,14 +408,14 @@ describe("structural: Settings, block tools, separate Exercise UI", () => {
   it("guest + owner entry routes by interaction kind to ExerciseTapClient", () => {
     const guest = read("app/tap/session/[token]/page.tsx");
     expect(guest).toContain("resolveTapShellFromSession");
-    expect(guest).toContain("ExerciseTapClient");
     expect(guest).toContain("interaction_kind");
-    expect(guest).toContain('shell === "exercise"');
+    expect(guest).toContain('shell === "scout"');
+    expect(guest).not.toContain("ExerciseTapClient");
 
     const owner = read("app/workspace/[id]/tap/page.tsx");
-    expect(owner).toContain("resolveTapShellFromSession");
-    expect(owner).toContain("ExerciseTapClient");
-    expect(owner).toContain("interactionKind");
+    expect(owner).toContain('session !== "verification"');
+    expect(owner).toContain('sidebarMode="verification-tap"');
+    expect(owner).not.toContain("ExerciseTapClient");
   });
 
   it("trace API accepts system2 remove action for submission undo", () => {

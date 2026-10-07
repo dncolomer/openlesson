@@ -911,7 +911,11 @@ export function WorkspaceView({
               const block = nodes.find((n) => n.id === blockId);
               if (!block || !currentUserId) return;
               if (isLearnerMapBlockLocked(block, nodes)) return;
-              void handleLaunchIntent(block, resolveProductIntent(launchStyle));
+              void handleLaunchIntent(
+                block,
+                resolveProductIntent(launchStyle === "verify" ? "explore" : launchStyle),
+                launchStyle === "verify" ? { verification: true } : undefined,
+              );
               return;
             }
             const request = nextLearnerDrawerRequest(action);

@@ -256,13 +256,15 @@ export function WorkspaceRightDrawers({
       <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/20 to-black/70" />
 
       <main
-        className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden p-0"
+        className="relative z-10 flex min-h-0 flex-1 flex-col overflow-y-auto p-0"
         data-workspace-right-column
         data-workspace-right-pane={rightPane}
       >
         {showLearnerDrawer &&
         detailBlock &&
-        detailIndex >= 0 ? (
+        detailIndex >= 0 &&
+        rightPane === "block_detail" ? (
+          <div className="h-full min-h-0 shrink-0">
           <WorkspaceLearnerBlockPane
             key={`learner-${detailBlock.id}`}
             block={detailBlock}
@@ -281,7 +283,9 @@ export function WorkspaceRightDrawers({
             onFetchPowSummary={onFetchPowSummary}
             onMarkDone={onMarkDone}
           />
-        ) : showCreatorDrawers &&
+          </div>
+        ) : null}
+        {showCreatorDrawers &&
           rightPane === "combine_blocks" &&
           combineBlockIds.length >= 2 ? (
           <WorkspaceCombineBlocksPane
@@ -309,6 +313,7 @@ export function WorkspaceRightDrawers({
           rightPane === "block_detail" &&
           detailBlock &&
           detailIndex >= 0 ? (
+          <div className="h-full min-h-0 shrink-0">
           <WorkspaceBlockDetailPane
             key={detailBlock.id}
             blockId={detailBlock.id}
@@ -374,6 +379,7 @@ export function WorkspaceRightDrawers({
               />
             }
           />
+          </div>
         ) : showCreatorDrawers && rightPane === "add_block" && addTargetCell ? (
           <WorkspaceAddBlockPane
             key={`add-${addTargetCell.row}-${addTargetCell.col}`}
@@ -418,7 +424,10 @@ export function WorkspaceRightDrawers({
               addCancel: t("sessionList.gridAddCancel"),
             }}
           />
-        ) : (
+        ) : showLearnerDrawer &&
+          detailBlock &&
+          detailIndex >= 0 &&
+          rightPane === "block_detail" ? null : (
           <WorkspaceMapAuthoringPane
             canEdit={isOwner && showCreatorDrawers}
             learnerNotes={learnerNotes}

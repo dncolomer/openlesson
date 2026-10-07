@@ -10,6 +10,8 @@ import {
 } from "@/components/session-view/ile-insight-trophies";
 import type { InsightSummary } from "@/lib/insights";
 import { SessionSidebar } from "@/components/session-view/session-sidebar";
+import { SessionPolicyPanel } from "@/components/session-view/session-policy-panel";
+import { applySessionPress, emptySessionMarkState, freezeMistakeList } from "@/lib/session-marks";
 import { SessionDataCard } from "@/components/session-view/session-data-card";
 import {
   SessionTopicCard,
@@ -289,7 +291,7 @@ describe("session sidebar mode configuration", () => {
     expect(html).not.toContain("data-ile-global-resources");
   });
 
-  it("shows session resources as the second tab of the focus block", () => {
+  it("shows the current policy as the second tab of the Learn focus block", () => {
     const resources = createElement("div", null, "Resource body");
     const focus = createElement("div", null, "Insight body");
     const collapsed = renderToStaticMarkup(
@@ -307,35 +309,48 @@ describe("session sidebar mode configuration", () => {
       join(ROOT, "components/session-view/session-sidebar.tsx"),
       "utf8",
     );
+    const chromeSource = readFileSync(
+      join(ROOT, "components/session-view/session-chrome.tsx"),
+      "utf8",
+    );
+    const marksSource = readFileSync(
+      join(ROOT, "components/session-view/session-mark-controls.tsx"),
+      "utf8",
+    );
     expect(sidebarSource).toContain("useState(false)");
+    expect(sidebarSource).toContain('mode === "ile"');
     expect(sidebarSource).not.toContain("onOpenGlobalResources");
     expect(sidebarSource).not.toContain("aria-pressed");
     expect(sidebarSource).not.toContain("py-2.5");
-    expect(collapsed).toContain("data-ile-global-resources");
-    expect(collapsed).toContain('data-session-sidebar-section="resources"');
-    expect(collapsed).toContain('data-session-sidebar-focus-tab="resources"');
+    expect(chromeSource).toContain("SessionPolicyProvider");
+    expect(marksSource).toContain("publishPolicy");
+    expect(collapsed).toContain("data-session-policy-tab");
+    expect(collapsed).toContain('data-session-sidebar-section="policy"');
+    expect(collapsed).toContain('data-session-sidebar-focus-tab="policy"');
     expect(collapsed).toContain('data-session-sidebar-focus-tab="main"');
-    expect(collapsed).toContain(">session resources<");
+    expect(collapsed).toContain(">policy<");
     expect(collapsed).toContain(">Insights<");
     expect(collapsed).toContain("Insight body");
+    expect(collapsed).not.toContain("session resources");
+    expect(collapsed).not.toContain("data-ile-global-resources");
+    expect(collapsed).not.toContain("Resource body");
     expect(collapsed).toContain('aria-expanded="false"');
     expect(collapsed).toContain("text-[11px]");
-    expect(collapsed).not.toContain("Resource body");
-    const resourcesAt = collapsed.indexOf("data-ile-global-resources");
-    const resourcesButton = collapsed.slice(resourcesAt, collapsed.indexOf("</button>", resourcesAt));
-    expect(resourcesButton).toContain('aria-expanded="false"');
-    expect(resourcesButton).not.toContain("aria-pressed");
-    expect(resourcesButton).not.toContain("text-sm");
-    expect(resourcesButton).not.toContain("py-2.5");
+    const policyAt = collapsed.indexOf("data-session-policy-tab");
+    const policyButton = collapsed.slice(policyAt, collapsed.indexOf("</button>", policyAt));
+    expect(policyButton).toContain('aria-expanded="false"');
+    expect(policyButton).not.toContain("aria-pressed");
+    expect(policyButton).not.toContain("text-sm");
+    expect(policyButton).not.toContain("py-2.5");
     expect(collapsed).not.toContain("data-ile-tool-overlay");
     expect(collapsed).not.toContain("data-session-sidebar-toggle");
     expect(collapsed).not.toContain("data-ile-bar-data");
     expect(collapsed).not.toContain("data-session-sidebar-count");
     expect(collapsed.indexOf('data-session-sidebar-section="topic"')).toBeLessThan(
-      collapsed.indexOf('data-session-sidebar-section="resources"'),
+      collapsed.indexOf('data-session-sidebar-section="policy"'),
     );
     expect(collapsed.indexOf('data-session-sidebar-section="focus"')).toBeLessThan(
-      collapsed.indexOf("data-ile-global-resources"),
+      collapsed.indexOf("data-session-policy-tab"),
     );
 
     const opened = renderToStaticMarkup(
@@ -344,19 +359,68 @@ describe("session sidebar mode configuration", () => {
         resources,
         focus,
         focusLabel: "Insights",
-        resourcesOpen: true,
+        policyOpen: true,
         chapters: topicCard(),
       }),
     );
     expect(opened).toContain('aria-expanded="true"');
-    expect(opened).toContain("data-session-sidebar-resources");
+    expect(opened).toContain("data-session-sidebar-policy");
+    expect(opened).toContain("data-session-policy-empty");
     expect(opened).not.toContain("max-h-36");
     expect(opened).toContain("overflow-y-auto");
-    expect(opened).toContain("Resource body");
+    expect(opened).not.toContain("Resource body");
     expect(opened).not.toContain("Insight body");
+    expect(opened).not.toContain("session resources");
+
+    const pressed = applySessionPress(
+      emptySessionMarkState(freezeMistakeList([{ id: "q1", text: "What holds?" }])),
+      { button: "try", aimedMistakeId: "q1", slice: "a sketch", at: 1 },
+    );
+    expect(pressed.ok).toBe(true);
+    if (!pressed.ok) return;
+    const policy = renderToStaticMarkup(
+      createElement(SessionPolicyPanel, { state: pressed.state }),
+    );
+    expect(policy).toContain("data-session-policy");
+    expect(policy).toContain("data-session-policy-mistake-status=\"closed\"");
+    expect(policy).toContain("What holds?");
+    expect(policy).toContain("Closed");
+    expect(policy).toContain("Close.");
+    expect(policy).toContain("a sketch");
+    expect(policy).toContain("Closed: 1.");
+    expect(policy).not.toContain("Still open at the insight");
 
     expect(renderSidebar("ile", 65)).not.toContain("data-ile-global-resources");
+    expect(renderSidebar("ile", 65)).toContain('data-session-sidebar-focus-tab="policy"');
     expect(renderToStaticMarkup(voiceBar())).not.toContain("data-ile-global-resources");
+  });
+
+  it("keeps session resources as the second tab outside Learn", () => {
+    const resources = createElement("div", null, "Resource body");
+    const collapsed = renderToStaticMarkup(
+      createElement(SessionSidebar, {
+        mode: "tap",
+        resources,
+        focus: createElement("div", null, "Stash body"),
+        focusLabel: "Stash",
+      }),
+    );
+    expect(collapsed).toContain("data-ile-global-resources");
+    expect(collapsed).toContain(">session resources<");
+    expect(collapsed).not.toContain("Resource body");
+    expect(collapsed).toContain("Stash body");
+    const opened = renderToStaticMarkup(
+      createElement(SessionSidebar, {
+        mode: "tap",
+        resources,
+        focus: createElement("div", null, "Stash body"),
+        focusLabel: "Stash",
+        resourcesOpen: true,
+      }),
+    );
+    expect(opened).toContain("data-session-sidebar-resources");
+    expect(opened).toContain("Resource body");
+    expect(opened).not.toContain("Stash body");
   });
 
   it("keeps chapters, signals, and the focus block for TAP and verification TAP", () => {
@@ -540,7 +604,9 @@ describe("session sidebar mode configuration", () => {
     expect(verify).toContain('sidebarMode="verification-tap"');
     expect(prepare).toContain("<CalibrateLiveSurface");
     expect(prepare).toContain("focusLabel={t(\"scout.live.questionsHeading\")}");
-    expect(calibrateSurface).toContain("focusLabel={props.focusLabel}");
+    expect(calibrateSurface).toContain('focusLabel="actions"');
+    expect(calibrateSurface).toContain("<SessionActionsPanel />");
+    expect(calibrateSurface).not.toContain("data-calibrate-done-classifying");
     expect(calibrateSurface).toContain("<SessionTopicChapter");
     expect(calibrateSurface).toContain('data-calibrate-data="disabled"');
     expect(calibrateSurface).toContain("CALIBRATE_DATA_DISABLED_LABEL");
@@ -551,7 +617,8 @@ describe("session sidebar mode configuration", () => {
     expect(drill).toContain('focusLabel="Stash"');
     expect(drill).toContain("<SessionTopicChapter");
     expect(drill).toContain("<TapSessionSignals captureAudio");
-    expect(tap).toContain('focusLabel="Stash"');
+    expect(tap).toContain('? "actions" : "Stash"');
+    expect(tap).toContain("<SessionActionsPanel />");
     expect(tap).toContain("<SessionTopicChapter");
     expect(tap).toContain("<TapSessionSignals captureAudio");
     const signals = readFileSync(join(ROOT, "components/session-view/session-signals.tsx"), "utf8");

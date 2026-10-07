@@ -25,7 +25,9 @@ import {
   ILE_SILENCE_LOCK_MINUTES_MIN,
   ILE_SILENCE_REST_TITLE,
   PRACTICE_VOICE_CHALLENGE_LOCAL_SKIP,
+  PRACTICE_VOICE_CHALLENGE_READ_NOTE,
   PRACTICE_VOICE_CHALLENGE_SCRIPT,
+  PRACTICE_VOICE_CHALLENGE_UNCHECKED,
   TAP_VOICE_CHALLENGE_SENTENCE_TWO,
   TAP_VOICE_CHALLENGE_SCRIPT,
   advanceIleSilenceClock,
@@ -611,7 +613,8 @@ describe("shipped voice-challenge UI wiring", () => {
         onLogOff: () => {},
       }),
     );
-    expect(impurity).toContain(ILE_SESSION_IMPURITY_KICKER);
+    expect(impurity).not.toContain(ILE_SESSION_IMPURITY_KICKER);
+    expect(impurity).not.toContain("data-console-frame-label");
     expect(impurity).toContain(ILE_SESSION_IMPURITY_TITLE);
     expect(impurity).toContain(ILE_SESSION_IMPURITY_BODY);
     expect(impurity).toContain(ILE_SESSION_IMPURITY_SAVE);
@@ -629,6 +632,15 @@ describe("shipped voice-challenge UI wiring", () => {
     expect(rest).toContain(ILE_SILENCE_REST_TITLE);
     expect(rest).toContain("data-practice-voice-challenge");
     expect(rest).toContain('data-practice-voice-framing="rest"');
+    expect(rest).toContain('data-practice-voice-sentence="1"');
+    expect(rest).toContain('data-practice-voice-sentence="2"');
+    expect(rest).toContain(">Continue<");
+    expect(rest).toContain(">Try again<");
+    expect(rest).not.toContain("data-console-frame-label");
+    expect(rest).not.toContain("Say these lines out loud");
+    expect(rest).not.toContain(PRACTICE_VOICE_CHALLENGE_READ_NOTE);
+    expect(rest).not.toContain("Nothing captured yet.");
+    expect(rest).not.toContain(PRACTICE_VOICE_CHALLENGE_UNCHECKED);
     expect(rest).not.toContain("data-practice-voice-local-skip");
     expect(read("components/session-view/ile-silence-lock-screen.tsx")).toContain("lang={speechLang}");
     expect(read("components/SessionView.tsx")).toContain("speechLang={toSpeechBcp47(tutoringLanguage)}");

@@ -1,6 +1,4 @@
 import { notFound, redirect } from "next/navigation";
-import { TapScoreClient } from "@/components/TapScoreClient";
-import { ExerciseTapClient } from "@/components/ExerciseTapClient";
 import { ScoutTapClient } from "@/components/scout-tap/ScoutTapClient";
 import { hashPrivateToken } from "@/lib/tap-score";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -142,13 +140,10 @@ export default async function PrivateTapSessionPage({ params, searchParams }: Pa
     participantIdentity,
   };
 
-  if (shell === "exercise") {
-    return <ExerciseTapClient {...clientProps} />;
-  }
-
   if (shell === "scout") {
     return <ScoutTapClient {...clientProps} />;
   }
 
-  return <TapScoreClient {...clientProps} />;
+  // The talk-aloud session and the exercise session are not flows.
+  redirect(`/workspace/${String(session.workspace_id)}`);
 }

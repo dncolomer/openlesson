@@ -17,6 +17,21 @@ import {
   type IleWorkCanvasCommandId,
 } from "@/lib/ile-work-canvas-commands";
 import { CanvasPromptBar } from "@/components/excalidraw-canvas/canvas-prompt-bar";
+import {
+  usePublishSessionBranchSlot,
+  useSessionBranchSlot,
+  useSessionMarkCanvasEffects,
+} from "@/components/session-view/session-policy-context";
+import {
+  appendSessionBranchNotes,
+  graftSessionBranchModel,
+  openSessionBranchQuestions,
+  type SessionBranchModel,
+} from "@/lib/session-branch-model";
+import {
+  commitSessionAction,
+  type SessionMarkCanvasEffect,
+} from "@/lib/session-mark-canvas";
 import { CanvasSubmitBar } from "@/components/excalidraw-canvas/canvas-submit-bar";
 import { CanvasThinkingChips } from "@/components/excalidraw-canvas/canvas-thinking-chips";
 import {
@@ -67,14 +82,7 @@ import {
   type IleWorkCanvasScene,
   type IleWorkCanvasSkeleton,
 } from "@/lib/ile-work-canvas";
-import {
-  advanceIleDictateCapture,
-  ileDictateCaptureText,
-  noteIleDictateTranscript,
-  startIleDictateCapture,
-  syncIleDictatedTextOnWorkCanvas,
-  type IleDictateCapture,
-} from "@/lib/ile-canvas-dictate";
+import { syncIleDictatedTextOnWorkCanvas } from "@/lib/ile-canvas-dictate";
 import { type IleCanvasCraftInsightConfig } from "@/components/session-view/ile-canvas-craft-insight";
 import {
   IleWorkCanvasPowCollector,
@@ -148,6 +156,14 @@ export interface ExcalidrawCanvasProps {
   replaceSceneNonce?: string | number | null;
   /** Read-only board (Scout thank-you / frozen canvas). */
   viewModeEnabled?: boolean;
+  /**
+   * Calibrate, Learning, or Verification. The four buttons are the work.
+   * Omit on boards that are not one of those sessions.
+   */
+  sessionMarkMode?: "calibrate" | "learn" | "verification" | null;
+  sessionMarkQuestions?: readonly { id?: string | null; text?: string | null }[];
+  /** Session and chapter. Growing questions inside one key keeps the presses. */
+  sessionMarkListKey?: string | null;
 }
 
 
@@ -181,6 +197,9 @@ export function ExcalidrawCanvas({
   replaceScene = null,
   replaceSceneNonce = null,
   viewModeEnabled = false,
+  sessionMarkMode = null,
+  sessionMarkQuestions,
+  sessionMarkListKey = null,
 }: ExcalidrawCanvasProps) {
   const { t } = useI18n();
   const submitButtonLabel = submitLabel || t("whiteboard.submitToHelios");
@@ -192,13 +211,22 @@ export function ExcalidrawCanvas({
   const [commandText, setCommandText] = useState("");
   const [slashBarOpen, setSlashBarOpen] = useState(false);
   const commandInputRef = useRef<HTMLInputElement>(null);
-  const [askListening, setAskListening] = useState(false);
-  const askCaptureRef = useRef<IleDictateCapture | null>(null);
+
   const selectionWasActiveRef = useRef(false);
   const [askInFlight, setAskInFlight] = useState(0);
   const [craftInsightOpen, setCraftInsightOpen] = useState(false);
   const lastReplaceNonceRef = useRef<string | number | null>(null);
   const [canvasSelectionActive, setCanvasSelectionActive] = useState(false);
+  const sessionMarkCanvasEffects = useSessionMarkCanvasEffects();
+  const sessionBranchSlot = useSessionBranchSlot();
+  const publishSessionBranch = usePublishSessionBranchSlot();
+  const sessionBranchRef = useRef<SessionBranchModel | null>(null);
+  sessionBranchRef.current = sessionBranchSlot?.status === "ready" ? sessionBranchSlot.model : null;
+  const openBranchQuestions = openSessionBranchQuestions(sessionBranchRef.current);
+  const sessionMarkQuestionsForBar =
+    openBranchQuestions.length > 0 ? openBranchQuestions : sessionMarkQuestions;
+  const publishSessionBranchRef = useRef(publishSessionBranch);
+  publishSessionBranchRef.current = publishSessionBranch;
   const [promptBarTop, setPromptBarTop] = useState(ILE_CANVAS_PROMPT_BAR_FALLBACK_TOP);
   const [promptBarWidth, setPromptBarWidth] = useState(ILE_CANVAS_PROMPT_BAR_FALLBACK_WIDTH);
   const [thinkingTick, setThinkingTick] = useState(0);
@@ -582,8 +610,6 @@ export function ExcalidrawCanvas({
       Boolean(onAskSelectedRef.current) &&
       ileCanvasPromptMode(appState?.selectedElementIds ?? {}) === "commands";
     if (selectionWasActiveRef.current && !active) {
-      askCaptureRef.current = null;
-      setAskListening(false);
       setCommandText("");
       setSlashBarOpen(false);
     }
@@ -775,6 +801,108 @@ export function ExcalidrawCanvas({
     );
   }, []);
 
+  const applySessionMarkCanvasEffect = useCallback((effect: SessionMarkCanvasEffect) => {
+    const api = excalidrawAPIRef.current;
+    if (!api) return;
+    const selected = selectedCanvasElements();
+    const raw = (
+      typeof api.getSceneElementsIncludingDeleted === "function"
+        ? api.getSceneElementsIncludingDeleted()
+        : (api.getSceneElements?.() ?? [])
+    ) as IleWorkCanvasElement[];
+    const live = serializeIleWorkCanvasScene({
+      elements: raw,
+      appState: api.getAppState?.() ?? {},
+      files: api.getFiles?.() ?? {},
+    });
+    const committed = commitSessionAction({
+      elements: live.elements,
+      selectedIds: selected.map((element) => element.id),
+      model: sessionBranchRef.current,
+      action: effect.kind,
+      branchId: effect.branchId,
+    });
+    if (!committed.changed) return;
+    if (committed.added.length > 0 || committed.selectedElementIds) {
+      applyingRemoteRef.current = true;
+      try {
+        api.updateScene(
+          committed.selectedElementIds
+            ? { elements: committed.elements, appState: { selectedElementIds: committed.selectedElementIds } }
+            : { elements: committed.elements },
+        );
+      } finally {
+        applyingRemoteRef.current = false;
+      }
+      canvasPowCollectorRef.current.syncWithoutEmit({
+        elements: committed.elements,
+        appState: {
+          ...(api.getAppState?.() ?? {}),
+          ...(committed.selectedElementIds ? { selectedElementIds: committed.selectedElementIds } : {}),
+        },
+        files: api.getFiles?.() ?? {},
+      });
+      const scrollTarget = committed.anchor ? [committed.anchor] : committed.added;
+      if (scrollTarget.length > 0 && typeof api.scrollToContent === "function") {
+        api.scrollToContent(scrollTarget, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS);
+      }
+    }
+    if (committed.model && committed.model !== sessionBranchRef.current) {
+      const advanced = committed.model;
+      publishSessionBranchRef.current((current) => ({
+        status: "ready",
+        model: current.birth ? graftSessionBranchModel(advanced, current.birth) : advanced,
+        birth: current.birth ?? null,
+        error: null,
+      }));
+    }
+  }, [selectedCanvasElements]);
+
+  const applySessionMarkCanvasEffectRef = useRef(applySessionMarkCanvasEffect);
+  applySessionMarkCanvasEffectRef.current = applySessionMarkCanvasEffect;
+  useEffect(() => {
+    if (!sessionMarkCanvasEffects) return;
+    if (!canvasApiReady || !excalidrawAPIRef.current) {
+      sessionMarkCanvasEffects.register(null);
+      return;
+    }
+    const apply = (effect: SessionMarkCanvasEffect) => applySessionMarkCanvasEffectRef.current(effect);
+    sessionMarkCanvasEffects.register(apply);
+    return () => sessionMarkCanvasEffects.register(null);
+  }, [canvasApiReady, sessionMarkCanvasEffects]);
+
+  useEffect(() => {
+    const model = sessionBranchRef.current;
+    const api = excalidrawAPIRef.current;
+    if (!canvasApiReady || !model || !api) return;
+    const raw = (
+      typeof api.getSceneElementsIncludingDeleted === "function"
+        ? api.getSceneElementsIncludingDeleted()
+        : (api.getSceneElements?.() ?? [])
+    ) as IleWorkCanvasElement[];
+    const live = serializeIleWorkCanvasScene({
+      elements: raw,
+      appState: api.getAppState?.() ?? {},
+      files: api.getFiles?.() ?? {},
+    });
+    const placed = appendSessionBranchNotes(live.elements, model.boardNotes);
+    if (!placed.added.length) return;
+    applyingRemoteRef.current = true;
+    try {
+      api.updateScene({ elements: placed.elements });
+    } finally {
+      applyingRemoteRef.current = false;
+    }
+    canvasPowCollectorRef.current.syncWithoutEmit({
+      elements: placed.elements,
+      appState: api.getAppState?.() ?? {},
+      files: api.getFiles?.() ?? {},
+    });
+    if (typeof api.scrollToContent === "function") {
+      api.scrollToContent(placed.added, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS);
+    }
+  }, [canvasApiReady, sessionBranchSlot?.model]);
+
   const handleQuickAction = useCallback(
     (action: IleWorkCanvasCommandId) => {
       const api = excalidrawAPIRef.current;
@@ -861,17 +989,15 @@ export function ExcalidrawCanvas({
         });
         return;
       }
-      if (action === "answer" || action === "simplify") {
-        const prompt = action === "answer" ? "Answer" : "Simplify";
-        emitCommand(action, prompt);
+      if (action === "simplify") {
+        emitCommand("simplify", "Simplify");
         void runCanvasAsk({
-          prompt,
+          prompt: "Simplify",
           selectedElements: selected,
-          kind: action,
+          kind: "simplify",
         });
         return;
       }
-      if (action === "ask") return;
       if (action === "rephrase" || action === "elaborate") {
         const prompt = ileWorkCanvasQuickActionPrompt(
           action === "rephrase" ? "rephrase" : "elaborate more pls",
@@ -887,14 +1013,7 @@ export function ExcalidrawCanvas({
           selectedElements: selected,
           kind: "refactor",
         });
-        return;
       }
-      emitCommand("suggest-insight", "Suggest Insight");
-      void runCanvasAsk({
-        prompt: "Suggest Insight",
-        selectedElements: selected,
-        kind: "suggest-insight",
-      });
     },
     [runCanvasAsk, selectedCanvasElements],
   );
@@ -951,81 +1070,15 @@ export function ExcalidrawCanvas({
     [],
   );
 
-  const handleBoardAsk = useCallback((prompt: string) => {
-    const text = String(prompt || "").trim();
-    if (!text) return;
-    const powEvents = canvasPowCollectorRef.current.command("ask", { prompt: text });
-    if (powEvents.length) onCanvasPowActionsRef.current?.(powEvents);
-    void runCanvasAsk({ prompt: text, selectedElements: [], kind: "ask" });
-  }, [runCanvasAsk]);
-
-  useEffect(() => {
-    if (!askListening || !askCaptureRef.current) return;
-    const advanced = advanceIleDictateCapture(askCaptureRef.current, dictateTranscript ?? "");
-    askCaptureRef.current = advanced.capture;
-    const spoken = advanced.text.trim();
-    setCommandText(spoken ? `/ask ${spoken}` : "/ask ");
-  }, [askListening, dictateTranscript]);
-
-  const beginAskVoice = useCallback(() => {
-    if (dictateTranscript === undefined) {
-      setCommandText((current) => (current.trim().startsWith("/ask") ? current : "/ask "));
-      return;
-    }
-    askCaptureRef.current = startIleDictateCapture(dictateTranscript);
-    setAskListening(true);
-    setCommandText("/ask ");
-  }, [dictateTranscript]);
-
-  const finishAskVoice = useCallback(
-    (send: boolean) => {
-      const capture = askCaptureRef.current;
-      askCaptureRef.current = null;
-      setAskListening(false);
-      const spoken = capture
-        ? ileDictateCaptureText(
-            noteIleDictateTranscript(capture, dictateTranscript ?? ""),
-          ).trim()
-        : "";
-      const draft = ileCanvasCommandDraft(commandText);
-      const typed = draft.exactId === "ask" ? draft.rest.trim() : "";
-      const text = typed || spoken;
-      setCommandText("");
-      if (send && text) handleBoardAsk(text);
-    },
-    [commandText, dictateTranscript, handleBoardAsk],
-  );
-
   const submitCommand = useCallback(() => {
-    if (askListening) {
-      finishAskVoice(true);
-      return;
-    }
     const draft = ileCanvasCommandDraft(commandText);
     if (!draft.slash || !draft.exactId) return;
-    if (draft.exactId === "ask") {
-      if (draft.rest.trim()) {
-        setCommandText("");
-        handleBoardAsk(draft.rest);
-        return;
-      }
-      beginAskVoice();
-      return;
-    }
     if (ileWorkCanvasCommandNeedsSelection(draft.exactId) && selectedCanvasElements().length === 0) {
       return;
     }
     setCommandText("");
     handleQuickAction(draft.exactId);
-  }, [
-    askListening,
-    beginAskVoice,
-    commandText,
-    finishAskVoice,
-    handleBoardAsk,
-    handleQuickAction,
-    selectedCanvasElements,
-  ]);
+  }, [commandText, handleQuickAction, selectedCanvasElements]);
 
   useEffect(() => {
     if (applyElementsNonce == null || applyElementsNonce === lastApplyNonceRef.current) return;
@@ -1409,13 +1462,8 @@ export function ExcalidrawCanvas({
             slashBarOpen={slashBarOpen}
             commandText={commandText}
             setCommandText={setCommandText}
-            beginAskVoice={beginAskVoice}
             handleQuickAction={handleQuickAction}
             commandInputRef={commandInputRef}
-            askListening={askListening}
-            setAskListening={setAskListening}
-            askCaptureRef={askCaptureRef}
-            finishAskVoice={finishAskVoice}
             craftInsight={craftInsight}
             setCraftInsightOpen={setCraftInsightOpen}
             dictateTranscript={dictateTranscript}
@@ -1424,6 +1472,14 @@ export function ExcalidrawCanvas({
             onDictateActive={onDictateActive}
             craftInsightOpen={craftInsightOpen}
             selectedCanvasElements={selectedCanvasElements}
+            sessionMarkMode={sessionMarkMode}
+            sessionMarkQuestions={sessionMarkQuestionsForBar}
+            sessionMarkListKey={sessionMarkListKey}
+            selectedMarkTexts={selectedCanvasElements()
+              .map((element) => element.text || "")
+              .filter((text) => text.trim())}
+            markSpeech={dictateTranscript || ""}
+
           />
         ) : null}
       </div>

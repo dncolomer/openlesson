@@ -54,8 +54,10 @@ describe("shared live work surface", () => {
     expect(surface).toContain("data-scout-work-canvas-pane");
     const paneAt = surface.indexOf("data-scout-work-canvas-pane");
     expect(surface.slice(paneAt, paneAt + 280)).toContain("h-full");
-    expect(surface).toContain("data-calibrate-done-classifying");
-    expect(surface).toContain("CALIBRATE_DONE_CLASSIFYING_LABEL");
+    expect(surface).toContain("<SessionActionsPanel />");
+    expect(surface).toContain('focusLabel="actions"');
+    expect(surface).not.toContain("data-calibrate-done-classifying");
+    expect(surface).not.toContain("CALIBRATE_DONE_CLASSIFYING_LABEL");
     expect(surface).toContain("dictateTranscript={transcript}");
     expect(surface).toContain('data-calibrate-data="disabled"');
     expect(surface).not.toContain("data-scout-go-back");
@@ -247,7 +249,7 @@ describe("shared live work surface", () => {
     expect(prepare).toContain("data-scout-restart");
     expect(prepare).toContain("data-scout-workspace");
     expect(prepare).toContain("data-scout-jump-work");
-    expect(prepare).toContain("data-scout-jump-drill");
+    expect(prepare).not.toContain("data-scout-jump-drill");
     expect(tap).toContain("data-tap-session-thank-you");
     expect(tap).toContain("data-tap-session-impure");
     expect(tap).toContain("data-tap-practice-done");

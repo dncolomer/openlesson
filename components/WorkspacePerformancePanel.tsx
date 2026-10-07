@@ -28,30 +28,21 @@ interface WorkspacePerformancePanelProps {
   /** Optional initial Knowledge subview (e.g. insights deep-link). */
   initialSubview?: PerformanceSubview | "score" | "pow";
   /**
-   * Learner mode: only LWM + Embeddings (models) subtabs — no Ranking / Strengths & Gaps.
-   * Driven by resolveWorkspaceModeShell().knowledgeLwmEmbeddingsOnly.
+   * Learner maps lock the embeddings subject to the signed-in person.
+   * Driven by workspaceShell().knowledgeLwmEmbeddingsOnly.
    */
   lwmEmbeddingsOnly?: boolean;
 }
 
-/** Insights temporarily hidden from nav (may return later). PoW tab removed from Knowledge. */
-const PERFORMANCE_SUBVIEWS: readonly PerformanceSubview[] = [
-  "ranking",
-  "strengths_gaps",
-  "lwm",
-  "knowledge",
-];
+/** Knowledge shows embeddings. Ranking, strengths, gaps, and the model report are removed. */
+const PERFORMANCE_SUBVIEWS: readonly PerformanceSubview[] = ["knowledge"];
 
-/** Learner Knowledge = LWM + Embeddings only. */
-const LEARNER_KNOWLEDGE_SUBVIEWS: readonly PerformanceSubview[] = [
-  "lwm",
-  "knowledge",
-];
+/** Learner Knowledge is the same embeddings surface, locked to self. */
+const LEARNER_KNOWLEDGE_SUBVIEWS: readonly PerformanceSubview[] = ["knowledge"];
 
 /**
- * Knowledge surface: Ranking, Strengths & Gaps, LWM (next to Embeddings), Embeddings.
- * Insights tab hidden for now. PoW tab removed. Eval removed — snapshot generation lives in LWM.
- * Learner (`lwmEmbeddingsOnly`): LWM + Embeddings only.
+ * Knowledge surface: embeddings.
+ * Ranking, the spider, strengths and gaps paragraphs, and the model report are not shown.
  */
 export function WorkspacePerformancePanel({
   workspaceId,
@@ -72,23 +63,17 @@ export function WorkspacePerformancePanel({
     ? LEARNER_KNOWLEDGE_SUBVIEWS
     : PERFORMANCE_SUBVIEWS;
   const [activeSubview, setActiveSubview] = useState<PerformanceSubview>(() => {
-    if (initialSubview === "score") return "lwm";
-    // Deep-links to insights / legacy pow fall back to LWM while those tabs are hidden.
-    if (initialSubview === "insights" || initialSubview === "pow") return "lwm";
     if (
       initialSubview &&
       (allowedSubviews as readonly string[]).includes(initialSubview)
     ) {
       return initialSubview as PerformanceSubview;
     }
-    return "lwm";
+    return "knowledge";
   });
 
   const subTabs: Array<{ id: PerformanceSubview; label: string }> = useMemo(() => {
     const all: Array<{ id: PerformanceSubview; label: string }> = [
-      { id: "ranking", label: t("planView.performanceSubTabRanking") },
-      { id: "strengths_gaps", label: t("planView.performanceSubTabStrengthsGaps") },
-      { id: "lwm", label: t("planView.performanceSubTabLwm") },
       { id: "knowledge", label: t("planView.performanceSubTabModels") },
     ];
     return all.filter((tab) =>
@@ -119,40 +104,6 @@ export function WorkspacePerformancePanel({
             ayclToken={ayclToken}
             lockSubjectToSelf={lwmEmbeddingsOnly}
             panelView="models"
-            verificationWorkspace={verificationWorkspace}
-          />
-        )}
-
-        {activeSubview === "lwm" && (
-          <KnowledgeConfigTrajectoryPanel
-            workspaceId={workspaceId}
-            currentUserId={currentUserId}
-            isOwner={isOwner}
-            ayclToken={ayclToken}
-            lockSubjectToSelf={lwmEmbeddingsOnly}
-            panelView="lwm"
-            verificationWorkspace={verificationWorkspace}
-          />
-        )}
-
-        {activeSubview === "ranking" && (
-          <KnowledgeConfigTrajectoryPanel
-            workspaceId={workspaceId}
-            currentUserId={currentUserId}
-            isOwner={isOwner}
-            ayclToken={ayclToken}
-            panelView="ranking"
-            verificationWorkspace={verificationWorkspace}
-          />
-        )}
-
-        {activeSubview === "strengths_gaps" && (
-          <KnowledgeConfigTrajectoryPanel
-            workspaceId={workspaceId}
-            currentUserId={currentUserId}
-            isOwner={isOwner}
-            ayclToken={ayclToken}
-            panelView="strengths_gaps"
             verificationWorkspace={verificationWorkspace}
           />
         )}

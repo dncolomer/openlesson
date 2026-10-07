@@ -424,7 +424,8 @@ describe("learner mode UI structural", () => {
     expect(view).toContain("WORKSPACE_LEARNER_LAUNCH_PATH");
     expect(view).toContain("/session?id=");
     expect(view).toContain("/workspace/${workspaceId}/tap?");
-    expect(view).toContain('params.set("interactionKind", "exercise")');
+    expect(view).toContain('session: "verification"');
+    expect(view).not.toContain('params.set("interactionKind", "exercise")');
     expect(view).toContain("onSavePlanningPrompt");
     // Done: set_block_status, then Generator/Dynamic effects, then soft snapshot
     expect(view).toContain("set_block_status");

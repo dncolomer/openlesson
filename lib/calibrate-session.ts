@@ -64,6 +64,12 @@ export type CalibrateProofEvent =
       questionId: string;
       text: string;
       source: CalibrateResponseSource;
+    }
+  | {
+      type: "policy_score";
+      questionId: string;
+      text: string;
+      source: CalibrateResponseSource;
     };
 
 export type CalibrateCanvasText = {

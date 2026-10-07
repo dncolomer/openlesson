@@ -3,7 +3,7 @@
  * truncated objects) so callXaiJSON does not fail the Simulation tab.
  */
 import { describe, expect, it } from "vitest";
-import { parseJsonLoose } from "@/lib/xai-client";
+import { parseJsonLoose, xaiAttemptShouldRetry } from "@/lib/xai-client";
 
 describe("parseJsonLoose", () => {
   it("parses clean JSON objects", () => {
@@ -48,5 +48,14 @@ describe("parseJsonLoose", () => {
   it("returns ok:false for non-JSON garbage", () => {
     const r = parseJsonLoose("not json at all, just prose about algebra");
     expect(r.ok).toBe(false);
+  });
+});
+
+describe("xaiAttemptShouldRetry", () => {
+  it("does not spend another attempt on a timeout abort", () => {
+    const timeout = new DOMException("The operation was aborted due to timeout", "TimeoutError");
+    expect(xaiAttemptShouldRetry(timeout, 0, 2)).toBe(false);
+    expect(xaiAttemptShouldRetry(new Error("Failed to parse JSON from response"), 0, 2)).toBe(true);
+    expect(xaiAttemptShouldRetry(new Error("Failed to parse JSON from response"), 1, 2)).toBe(false);
   });
 });

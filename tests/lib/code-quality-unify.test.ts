@@ -409,8 +409,8 @@ describe("exclusive map selection + product intent", () => {
     expect(launchPracticeHref(explore, { workspaceId: "ws", sessionId: "s1" })).toContain(
       "/session",
     );
-    expect(launchPracticeHref(drill, { workspaceId: "ws", blockId: "b1" })).toContain(
-      "/workspace/ws/tap",
+    expect(launchPracticeHref(drill, { workspaceId: "ws", blockId: "b1" })).toBe(
+      "/workspace/ws",
     );
 
     const mapShell = read("components/block-skill-grid/map-grid-shell.tsx");

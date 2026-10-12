@@ -254,9 +254,12 @@ export function IleCanvasCraftInsightForm({
 export function IleCraftInsightButton({
   usable,
   onClick,
+  square = false,
 }: {
   usable: boolean;
   onClick: () => void;
+  /** Left and right docks: a short row with the name beside a mark. */
+  square?: boolean;
 }) {
   return (
     <button
@@ -264,8 +267,15 @@ export function IleCraftInsightButton({
       data-ile-craft-insight
       disabled={!usable}
       onClick={onClick}
-      className="pointer-events-auto shrink-0 rounded-none border border-white bg-white px-4 py-2.5 text-sm font-semibold uppercase tracking-wider text-neutral-950 shadow-[0_12px_40px_rgba(0,0,0,0.55)] hover:bg-neutral-200 disabled:cursor-not-allowed disabled:border-white/30 disabled:bg-neutral-800 disabled:text-white/40"
+      aria-label={ILE_CRAFT_INSIGHT_LABEL}
+      title={ILE_CRAFT_INSIGHT_LABEL}
+      className={
+        square
+          ? "pointer-events-auto flex min-h-9 w-full min-w-0 items-center justify-start gap-1.5 whitespace-nowrap rounded-none border border-white bg-white px-1.5 py-2 text-left font-mono text-[11px] font-semibold text-neutral-950 hover:bg-neutral-200 disabled:cursor-not-allowed disabled:border-white/30 disabled:bg-neutral-800 disabled:text-white/40"
+          : "pointer-events-auto min-w-0 flex-1 rounded-none border border-white bg-white px-4 py-2.5 text-sm text-center font-semibold uppercase tracking-wider text-neutral-950 shadow-[0_12px_40px_rgba(0,0,0,0.55)] hover:bg-neutral-200 disabled:cursor-not-allowed disabled:border-white/30 disabled:bg-neutral-800 disabled:text-white/40"
+      }
     >
+      {square ? <span aria-hidden className="block h-3 w-3 shrink-0 border-2 border-current" /> : null}
       {ILE_CRAFT_INSIGHT_LABEL}
     </button>
   );

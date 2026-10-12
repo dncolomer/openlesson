@@ -27,6 +27,7 @@ import {
   formatIleEndTurnBlockedMissingInsights,
   ileActiveChapterInsightQuota,
   ileCanvasCraftInsightUsable,
+  ileCanvasShowsCraftInsight,
   ileChapterInsightCounts,
   ileEndTurnChaptersToMarkDone,
   ileInsightCraftPowFromAcceptedPersist,
@@ -297,7 +298,7 @@ describe("thoughts-pool candidates + persist (session + optional chapter)", () =
     expect(craftSrc).not.toContain("blockId: linkedChapterId");
     expect(craftSrc).toContain("buildIleTurnInsightPersistPayload");
     expect(craftSrc).toContain("ILE_TURN_INSIGHT_EVALUATE_PATH");
-    expect(ILE_CRAFT_INSIGHT_LABEL).toBe("craft insight");
+    expect(ILE_CRAFT_INSIGHT_LABEL).toBe("commit (insight)");
 
     writeScratch(
       "ile-turn-insights-helpers.txt",
@@ -420,7 +421,7 @@ describe("canvas craft insight (evaluate + persist)", () => {
     expect(ileCanvasCraftInsightUsable(0)).toBe(true);
     expect(ileCanvasCraftInsightUsable(1)).toBe(true);
     expect(ileCanvasCraftInsightUsable()).toBe(true);
-    expect(ILE_CRAFT_INSIGHT_LABEL).toBe("craft insight");
+    expect(ILE_CRAFT_INSIGHT_LABEL).toBe("commit (insight)");
 
     const evaluateBody = buildIleCanvasCraftInsightEvaluateRequest({
       text: "  gravity is curvature  ",
@@ -470,8 +471,23 @@ describe("canvas craft insight (evaluate + persist)", () => {
       join(__dirname, "../../components/session-view/ile-canvas-craft-insight.tsx"),
       "utf8",
     );
+    expect(ileCanvasShowsCraftInsight("learn")).toBe(true);
+    expect(ileCanvasShowsCraftInsight(null)).toBe(true);
+    expect(ileCanvasShowsCraftInsight("calibrate")).toBe(false);
+    expect(ileCanvasShowsCraftInsight("verification")).toBe(false);
+    expect(canvas).toContain("ileCanvasShowsCraftInsight");
     expect(canvas).toContain("IleCraftInsightButton");
     expect(canvas).toContain("ileCanvasCraftInsightUsable");
+    const stage = readFileSync(
+      join(__dirname, "../../components/session-view/session-live-stage.tsx"),
+      "utf8",
+    );
+    const kept = stage.slice(stage.indexOf("<IleInsightKeptScreen"));
+    expect(kept).toContain("handleConfirmEnd");
+    expect(readFileSync(
+      join(__dirname, "../../components/session-view/session-chapter-canvas.tsx"),
+      "utf8",
+    )).toContain("onInsightKept?.(insight)");
     expect(canvas).not.toContain("data-ile-compress-work");
     expect(canvas).toContain("<IleCraftInsightButton");
     expect(form).toContain("ILE_CRAFT_INSIGHT_LABEL");

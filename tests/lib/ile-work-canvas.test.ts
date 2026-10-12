@@ -42,6 +42,8 @@ import {
   ILE_CANVAS_TIMER_SECONDS_MIN,
   ILE_CANVAS_TIMER_RESET_LOADING_MS,
   ileWorkCanvasInitialSeedText,
+  BOARD_INSTRUCTION_NOTE_KEY,
+  BOARD_INSTRUCTION_NOTE_LABEL,
   ILE_CHAPTER_SEED_CUSTOM_DATA_KEY,
   ILE_WORK_CANVAS_DEFAULT_GRID_SIZE,
   ILE_WORK_CANVAS_FONT_FAMILY,
@@ -95,6 +97,7 @@ import {
   ileLearnMoreSelectionKey,
   ileLearnMoreVisiblePlacement,
   ileWorkCanvasCenterScroll,
+  ileWorkCanvasFitScroll,
   ileWorkCanvasZoomAtPoint,
   ileWorkCanvasContentBounds,
   ileWorkCanvasClusteredOrigin,
@@ -297,7 +300,7 @@ describe("TAP Learning Work canvas single scene (shipped)", () => {
 });
 
 describe("TAP Learning Work canvas chapter seed (shipped)", () => {
-  it("places chapter text as a type:text element on an empty board and does not overwrite existing work", () => {
+  it("places the chapter prompt as a note on an empty board and does not overwrite existing work", () => {
     const empty = serializeIleWorkCanvasScene(null);
     const seeded = seedIleChapterWorkCanvas(empty, {
       text: "Walk a case through just-war criteria",
@@ -311,9 +314,15 @@ describe("TAP Learning Work canvas chapter seed (shipped)", () => {
     expect(textEl?.width).toBe(ILE_WORK_CANVAS_TEXT_BOX_WIDTH);
     expect(textEl?.customData).toMatchObject({
       [ILE_CHAPTER_SEED_CUSTOM_DATA_KEY]: true,
+      [BOARD_INSTRUCTION_NOTE_KEY]: "text",
       author: "chapter",
       chapterId: "chapter-a",
     });
+    const note = seeded.scene.elements.find((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "body");
+    const noteLabel = seeded.scene.elements.find((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "label");
+    expect(note?.type).toBe("rectangle");
+    expect(note?.backgroundColor).not.toBe("transparent");
+    expect(noteLabel?.originalText).toBe(BOARD_INSTRUCTION_NOTE_LABEL);
 
     const again = seedIleChapterWorkCanvas(seeded.scene, {
       text: "Walk a case through just-war criteria",
@@ -353,17 +362,25 @@ describe("TAP Learning Work canvas center on open (shipped)", () => {
       chapterId: "chapter-center",
     });
     const textEl = seeded.scene.elements.find((el) => el.type === "text");
+    const note = seeded.scene.elements.find((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "body");
     expect(textEl).toBeTruthy();
+    expect(note).toBeTruthy();
     const bounds = ileWorkCanvasContentBounds(seeded.scene.elements);
     expect(bounds).toBeTruthy();
-    expect(bounds!.minX).toBe(textEl!.x);
-    expect(bounds!.minY).toBe(textEl!.y);
+    expect(bounds!.minX).toBe(note!.x);
+    expect(bounds!.minY).toBe(note!.y);
 
     expect(ileWorkCanvasCenterScroll(bounds, null)).toBeNull();
     expect(ileWorkCanvasCenterScroll(bounds, { width: 0, height: 600 })).toBeNull();
     expect(ileWorkCanvasCenterScroll(null, { width: 800, height: 600 })).toBeNull();
 
     const viewport = { width: 800, height: 600, zoom: { value: 1 } };
+    const fitted = ileWorkCanvasFitScroll(
+      { minX: 0, minY: 0, maxX: 1600, maxY: 1200 },
+      { width: 800, height: 600 },
+    );
+    expect(fitted?.zoom).toBeLessThan(1);
+    expect(fitted?.zoom).toBeCloseTo(Math.min(744 / 1600, 544 / 1200));
     const scroll = ileWorkCanvasCenterScroll(bounds, viewport);
     expect(scroll).toEqual({
       scrollX: viewport.width / 2 - (bounds!.minX + bounds!.maxX) / 2,
@@ -475,7 +492,9 @@ describe("TAP Learning Work canvas ask-XAI on selection (shipped)", () => {
     expect(canvas).toContain("data-ile-learn-more");
     expect(canvas).toContain('data-ile-canvas-prompt-mode="commands"');
     expect(canvas).toContain("data-ile-learn-more-actions");
-    expect(canvas).toContain('className="grid w-full grid-cols-4 gap-1"');
+    expect(canvas).toContain("grid w-full grid-cols-4 gap-1");
+    expect(canvas).toContain("grid w-full grid-cols-1 gap-1");
+    expect(canvas).toContain("aspect-square");
     expect(canvas).toContain("min-w-0 items-center justify-center");
     expect(canvas).not.toContain("data-ile-learn-more-handle");
     expect(canvas).not.toContain("data-ile-learn-more-dragging");
@@ -495,9 +514,8 @@ describe("TAP Learning Work canvas ask-XAI on selection (shipped)", () => {
     expect(canvas).toContain("enqueueCanvasAskApply");
     expect(canvas).not.toContain("createIleXaiLoadingPlaceholder");
     expect(canvas).toContain("data-ile-canvas-prompt-bar");
-    expect(canvas).toContain("ileCanvasPromptBarTop");
+    expect(canvas).toContain("data-ile-command-dock");
     expect(canvas).toContain("syncPromptBarPlacement");
-    expect(canvas).toContain("top: promptBarTop");
     expect(canvas).toContain("Math.max(promptBarWidth, ILE_CANVAS_PROMPT_BAR_FALLBACK_WIDTH)");
     expect(canvas).toContain("ILE_CANVAS_PROMPT_BAR_TOOLBAR_SELECTOR");
     expect(canvas).not.toContain("inset-x-0 bottom-3 z-[58]");
@@ -1467,8 +1485,8 @@ describe("TAP Learning Work canvas split + Expand More quick actions (shipped)",
       false,
     );
 
-    expect(ileWorkCanvasQuickActionPrompt("rephrase")).toMatch(/rephrase/i);
-    expect(ileWorkCanvasQuickActionPrompt("elaborate more pls")).toMatch(/elaborate more pls/i);
+    expect(ileWorkCanvasQuickActionPrompt("check")).toMatch(/check/i);
+    expect(ileWorkCanvasQuickActionPrompt("check")).toMatch(/what holds and what to fix/i);
 
     const canvas = read("components/ExcalidrawCanvas.tsx");
     expect(canvas).toContain("filterIleWorkCanvasCommands");
@@ -1501,7 +1519,7 @@ describe("TAP Learning Work canvas split + Expand More quick actions (shipped)",
         `askHasWorkspace=${domainAsk.includes("Just War Ethics") && domainAsk.includes("Last resort")}`,
         `splitCount=${liveText.length}`,
         `splitPreserves=${joined === source.replace(/\s+/g, " ")}`,
-        "quickActions=named Rephrase/Split/Elaborate",
+        "quickActions=named Check",
         "packaging=WorkCanvas injected ask, no host imports",
       ].join("\n") + "\n",
     );
@@ -1644,9 +1662,11 @@ describe("TAP Learning Work canvas timer expiry (shipped)", () => {
       seedText,
     });
     const live = reset.scene.elements.filter((el) => !el.isDeleted);
-    expect(live).toHaveLength(1);
-    expect(live[0]?.customData?.[ILE_CHAPTER_SEED_CUSTOM_DATA_KEY]).toBe(true);
-    expect(String(live[0]?.originalText || live[0]?.text || "").replace(/\s+/g, " ")).toContain(
+    const seed = live.find((el) => el.customData?.[ILE_CHAPTER_SEED_CUSTOM_DATA_KEY] === true);
+    expect(live.length).toBeGreaterThan(1);
+    expect(seed?.type).toBe("text");
+    expect(seed?.customData?.[BOARD_INSTRUCTION_NOTE_KEY]).toBe("text");
+    expect(String(seed?.originalText || seed?.text || "").replace(/\s+/g, " ")).toContain(
       "Walk a case through just-war criteria",
     );
     expect(live.some((el) => el.id === "el-1")).toBe(false);
@@ -1664,12 +1684,10 @@ describe("TAP Learning Work canvas timer expiry (shipped)", () => {
       chapterId: "ch-a",
       seedText,
     });
-    expect(fromFallback.scene.elements.filter((el) => !el.isDeleted)).toHaveLength(1);
-    expect(
-      String(
-        fromFallback.scene.elements[0]?.originalText || fromFallback.scene.elements[0]?.text || "",
-      ),
-    ).toContain("Walk a case");
+    const fallbackLive = fromFallback.scene.elements.filter((el) => !el.isDeleted);
+    const fallbackSeed = fallbackLive.find((el) => el.customData?.[ILE_CHAPTER_SEED_CUSTOM_DATA_KEY] === true);
+    expect(fallbackLive.length).toBeGreaterThan(1);
+    expect(String(fallbackSeed?.originalText || fallbackSeed?.text || "")).toContain("Walk a case");
 
     const canvas = read("components/ExcalidrawCanvas.tsx");
     expect(canvas).toContain("replaceSceneNonce");
@@ -1691,10 +1709,10 @@ describe("TAP Learning Work canvas timer expiry (shipped)", () => {
         `remaining60sInto30m=${ileWorkCanvasTimerRemainingSeconds({ durationSeconds: 30 * 60, startedAtMs: started, nowMs: started + 60_000 })}`,
         `expiredAt15m=${ileWorkCanvasTimerExpired({ durationSeconds: 15 * 60, startedAtMs: started, nowMs: started + 15 * 60 * 1000 })}`,
         `resetLive=${live.length}`,
-        `seedKept=${live[0]?.customData?.[ILE_CHAPTER_SEED_CUSTOM_DATA_KEY] === true}`,
+        `seedKept=${seed?.customData?.[ILE_CHAPTER_SEED_CUSTOM_DATA_KEY] === true}`,
         `insightsKept=${reset.insights.map((row) => row.id).join(",")}`,
         `loadingMs=${ILE_CANVAS_TIMER_RESET_LOADING_MS}`,
-        `fallbackSeed=${fromFallback.scene.elements.filter((el) => !el.isDeleted).length}`,
+        `fallbackSeed=${fallbackLive.length}`,
       ].join("\n") + "\n",
     );
   });
@@ -1742,8 +1760,10 @@ describe("TAP Learning Work canvas compress work (shipped)", () => {
 
     const canvas = read("components/ExcalidrawCanvas.tsx");
     expect(canvas).not.toContain("data-ile-compress-work");
-    expect(canvas).toContain('emitCommand("selective-compression"');
-    expect(canvas).toContain('kind: "selective-compress"');
+    expect(canvas).not.toContain('emitCommand("selective-compression"');
+    expect(canvas).toContain('emitCommand("declutter"');
+    expect(canvas).toContain('emitCommand("check"');
+    expect(canvas).toContain('input.kind === "selective-compress"');
     expect(canvas).toContain("compressIleWorkCanvasSelection");
     expect(canvas).toContain("<IleCraftInsightButton");
     const view = read("components/SessionView.tsx");
@@ -2508,10 +2528,12 @@ describe("TAP Learning Work canvas selection commands (shipped)", () => {
       expect(command.tooltip.length).toBeGreaterThan(command.label.length + 8);
     }
     expect(ILE_SELECTIVE_COMPRESSION_LABEL).toBe("Compress");
-    expect(canvas).toContain('kind: "selective-compress"');
+    expect(canvas).toContain('input.kind === "selective-compress"');
+    expect(canvas).toContain('kind: "check"');
     expect(canvas).toContain('kind: "refactor"');
     expect(canvas).not.toContain('kind: "suggest-insight"');
-    expect(canvas).toContain('kind: "clear-overlaps"');
+    expect(canvas).toContain('kind: "declutter"');
+    expect(canvas).toContain('input.kind === "clear-overlaps"');
     expect(canvas).toContain("runIleWorkCanvasClearOverlaps");
     expect(canvas).toContain("if (!cleared.needsModel && cleared.moved)");
     expect(canvas).toContain("applyIleWorkCanvasSuggestInsight");
@@ -2568,7 +2590,7 @@ describe("TAP Learning Work canvas selection commands (shipped)", () => {
         `clearAskCalls=${ask.calls.length}`,
         `gappedAskCalls=${gappedAsk.calls.length}`,
         `modelAsk=${modelAsk.calls.length}`,
-        "commands=Simplify Rephrase Split Join Elaborate Compress Refactor Clear overlaps",
+        "commands=Simplify Split Check Refactor Declutter",
       ].join("\n") + "\n",
     );
   });

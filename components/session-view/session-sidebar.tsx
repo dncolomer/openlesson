@@ -9,8 +9,6 @@ import {
 } from "@/lib/session-sidebar";
 import { SessionConsoleMarks, SessionConsoleScan } from "@/components/session-view/session-console-marks";
 import { LearnElapsedTimer, SessionTopicCardTimerProvider } from "@/components/session-view/ile-work-dock-bar";
-import { useSessionPolicyState } from "@/components/session-view/session-policy-context";
-import { SessionPolicyPanel } from "@/components/session-view/session-policy-panel";
 
 const SECTION_LABEL = {
   signals: "Data",
@@ -28,8 +26,9 @@ const RAIL_GRID = {
 /**
  * Shared right rail. The first block is one static topic card.
  * The focus slot fills whatever height is left under that card and above Data.
- * Learn's second tab is the current policy. Other modes keep session resources
- * there when a resources panel is passed.
+ * Learn, Calibrate, and Verification pass their own commands and instructions
+ * in that slot. Other modes keep session resources there when a resources
+ * panel is passed.
  * Sections stack flush. The rail itself does not scroll. It does not collapse.
  */
 export function SessionSidebar({
@@ -44,11 +43,8 @@ export function SessionSidebar({
   resources = null,
   resourcesOpen,
   onResourcesOpenChange,
-  policyOpen,
-  onPolicyOpenChange,
   elapsedStartedAt = null,
   fillWidth = false,
-  policyTab = false,
 }: {
   mode: SessionSidebarMode;
   clock?: ReactNode;
@@ -66,13 +62,8 @@ export function SessionSidebar({
   resources?: ReactNode;
   resourcesOpen?: boolean;
   onResourcesOpenChange?: (open: boolean) => void;
-  /** Learn: the policy tab starts closed so the actions stay in view. */
-  policyOpen?: boolean;
-  onPolicyOpenChange?: (open: boolean) => void;
   /** Narrow Calibrate: the rail uses the width under the canvas instead of 20rem. */
   fillWidth?: boolean;
-  /** Calibrate and Verification share Learn's policy tab. Conversational TAP does not. */
-  policyTab?: boolean;
 }) {
   const [uncontrolledResources, setUncontrolledResources] = useState(false);
   const resourcesOpenNow = resourcesOpen ?? uncontrolledResources;
@@ -80,19 +71,11 @@ export function SessionSidebar({
     if (resourcesOpen === undefined) setUncontrolledResources(next);
     onResourcesOpenChange?.(next);
   };
-  const [uncontrolledPolicy, setUncontrolledPolicy] = useState(false);
-  const policyOpenNow = policyOpen ?? uncontrolledPolicy;
-  const selectPolicy = (next: boolean) => {
-    if (policyOpen === undefined) setUncontrolledPolicy(next);
-    onPolicyOpenChange?.(next);
-  };
-  const policyState = useSessionPolicyState();
   const showClock = sessionSidebarHasSection(mode, "clock") && clock != null;
   const showFocus = sessionSidebarHasSection(mode, "focus") && focus != null;
   const showTopic = sessionSidebarHasSection(mode, "chapters") && chapters != null;
   const showSignals = sessionSidebarHasSection(mode, "signals") && signals != null;
   const showTranscript = sessionSidebarHasSection(mode, "transcript") && transcript != null;
-  const policyInFocus = showFocus && (mode === "ile" || policyTab);
   const resourcesInFocus = showFocus && resources != null && mode !== "ile";
   const dataCardHeight = fillWidth ? "4.5rem" : `${SESSION_DATA_CARD_REM}rem`;
 
@@ -163,41 +146,7 @@ export function SessionSidebar({
             >
               <SessionConsoleScan />
               <SessionConsoleMarks />
-              {policyInFocus ? (
-                <div role="tablist" className="relative z-[2] flex shrink-0 border-b border-white/30 bg-black">
-                  <span aria-hidden className="flex items-center pl-3 pr-1 font-mono text-[9px] tracking-[0.28em] text-white/45">
-                    02
-                  </span>
-                  <button
-                    type="button"
-                    role="tab"
-                    data-session-sidebar-focus-label
-                    data-session-sidebar-focus-tab="main"
-                    aria-selected={!policyOpenNow}
-                    onClick={() => selectPolicy(false)}
-                    className={`${FOCUS_TAB_CLASS} text-[10px] ${
-                      policyOpenNow ? "text-white/40 hover:text-white" : "bg-white text-black"
-                    }`}
-                  >
-                    {focusLabel}
-                  </button>
-                  <button
-                    type="button"
-                    role="tab"
-                    data-session-policy-tab
-                    data-session-sidebar-section="policy"
-                    data-session-sidebar-focus-tab="policy"
-                    aria-expanded={policyOpenNow}
-                    aria-selected={policyOpenNow}
-                    onClick={() => selectPolicy(!policyOpenNow)}
-                    className={`${FOCUS_TAB_CLASS} text-[11px] ${
-                      policyOpenNow ? "bg-white text-black" : "text-white/40 hover:text-white"
-                    }`}
-                  >
-                    policy
-                  </button>
-                </div>
-              ) : resourcesInFocus ? (
+              {resourcesInFocus ? (
                 <div role="tablist" className="relative z-[2] flex shrink-0 border-b border-white/30 bg-black">
                   <span aria-hidden className="flex items-center pl-3 pr-1 font-mono text-[9px] tracking-[0.28em] text-white/45">
                     02
@@ -247,11 +196,7 @@ export function SessionSidebar({
                   </span>
                 </div>
               ) : null}
-              {policyInFocus && policyOpenNow ? (
-                <div data-session-sidebar-policy className="relative z-[2] min-h-0 flex-1 overflow-y-auto">
-                  <SessionPolicyPanel state={policyState} showPrices={mode === "ile"} />
-                </div>
-              ) : resourcesInFocus && resourcesOpenNow ? (
+              {resourcesInFocus && resourcesOpenNow ? (
                 <div data-session-sidebar-resources className="relative z-[2] min-h-0 flex-1 overflow-y-auto">
                   {resources}
                 </div>

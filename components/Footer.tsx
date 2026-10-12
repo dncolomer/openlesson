@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { BrandLogo } from "@/components/BrandLogo";
+import { ACCELERANDO_SOURCE } from "@/lib/accelerando";
 import { useI18n } from "@/lib/i18n";
 
 const productLinks = [
@@ -139,6 +140,16 @@ export function Footer() {
           </p>
           <p className="text-[11px] text-neutral-700 tracking-widest uppercase">
             {t('footer.tagline')}
+          </p>
+          <p className="mt-2 text-[10px] tracking-[0.14em] text-neutral-700">
+            <a
+              href={ACCELERANDO_SOURCE}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="transition-colors hover:text-neutral-500"
+            >
+              Accelerando-8192
+            </a>
           </p>
         </div>
       </div>

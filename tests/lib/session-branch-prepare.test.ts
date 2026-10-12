@@ -154,10 +154,12 @@ describe("session branch prepare", () => {
     const route = read("app/api/ile/session-branch-model/route.ts");
     const prompt = read("components/excalidraw-canvas/canvas-prompt-bar.tsx");
     expect(calibrate).toContain("SessionBranchFieldBoundary");
-    expect(calibrate).toContain("policyTab");
+    expect(calibrate).toContain('<SessionGuidePanel guide="calibrate" />');
+    expect(calibrate).not.toContain("policyTab");
     expect(calibrate).toContain("calibrationToken");
     expect(verification).toContain('enabled={sidebarMode === "verification-tap"}');
-    expect(verification).toContain('policyTab={sidebarMode === "verification-tap"}');
+    expect(verification).toContain('<SessionGuidePanel guide="verification" />');
+    expect(verification).not.toContain("policyTab");
     expect(verification).toContain("verificationToken");
     expect(learn).toContain("useSessionBranchField");
     expect(route).toContain("getCalibrationFlowByToken");
@@ -165,23 +167,32 @@ describe("session branch prepare", () => {
     expect(route).toContain("resolveTapSessionAccess");
     expect(route).toContain("guardSessionRoute");
     expect(prompt).toContain("listKey: sessionMarkListKey ?? null");
+    expect(prompt).toContain("usePublishSessionCanvasCommands");
+    expect(prompt).toContain("publishCommands(null)");
     expect(prompt).not.toContain("<SessionMarkControls");
     expect(read("components/ExcalidrawCanvas.tsx")).toContain("openSessionBranchQuestions");
   });
 
-  it("gives Calibrate and Verification the policy tab", () => {
+  it("keeps the prepared field off the sidebar tabs", () => {
+    const sidebar = read("components/session-view/session-sidebar.tsx");
+    expect(sidebar).not.toContain("data-session-policy-tab");
+    expect(sidebar).not.toContain("data-session-assert-tab");
+    expect(sidebar).not.toContain("SessionAssertGraph");
+    expect(sidebar).not.toContain("SessionPolicyPanel");
     const focus = createElement("div", null, "Step body");
     const withField = renderToStaticMarkup(
       createElement(SessionSidebar, {
         mode: "verification-tap",
-        policyTab: true,
         focus,
         focusLabel: "Stash",
       }),
     );
-    expect(withField).toContain("data-session-policy-tab");
-    expect(withField).toContain(">policy<");
     expect(withField).toContain("Step body");
+    expect(withField).toContain(">Stash<");
+    expect(withField).not.toContain("data-session-policy-tab");
+    expect(withField).not.toContain("data-session-assert-tab");
+    expect(withField).not.toContain(">policy<");
+    expect(withField).not.toContain(">assert<");
     const conversational = renderToStaticMarkup(
       createElement(SessionSidebar, {
         mode: "tap",
@@ -189,6 +200,8 @@ describe("session branch prepare", () => {
         focusLabel: "Stash",
       }),
     );
+    expect(conversational).toContain("Step body");
     expect(conversational).not.toContain("data-session-policy-tab");
+    expect(conversational).not.toContain("data-session-assert-tab");
   });
 });

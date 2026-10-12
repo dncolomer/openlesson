@@ -773,7 +773,7 @@
     "backToDashboard": "Zurück zum Dashboard",
     "saveAndExit": "Speichern und beenden",
     "nameSessionTitle": "Sitzung benennen?",
-    "nameSessionBody": "Give it a name so you can find it in Previous Sessions later. Leave blank to keep the default id.\n\nGenerated Proof of Work has been stored regardless. If you don't save, the current canvas state will be lost.",
+    "nameSessionBody": "The session is saved as you work, including where the policy left off. Give it a name so you can find it in Previous Sessions. Leave the name blank to keep the default id.\n\nGenerated Proof of Work is stored either way. Exit without saving hides the session, and the current canvas state will be lost.",
     "nameSessionPlaceholder": "Sitzungsname",
     "nameSessionConfirm": "Speichern und beenden",
     "nameSessionStay": "Bleiben",
@@ -921,11 +921,11 @@
     "difficultyHint": "Turning a toggle off, raising the insight goal, or shortening the canvas timer makes the session harder.",
     "difficultyThoughtsPoolDesc": "When on, the session can suggest insights from the thoughts pool. Off means you type every insight yourself.",
     "startTipsTitle": "Tips & Tricks",
-    "startTipActions": "Close, Keep, Discard, and Insight each place the next observation on the canvas.",
-    "startTipSelection": "You can choose an action with nothing selected. Keep frames the selected marks. Discard removes them.",
+    "startTipActions": "Work on the canvas. The session reads that work and records the policy beside it.",
+    "startTipSelection": "You can draw with nothing selected. Commands wait until something is selected.",
     "startTipCommands": "Commands sit under the canvas tools. Select marks first. Every command waits until something is selected.",
     "startTipDictate": "Dictate writes what you are saying onto the canvas. Press it again when that sentence is done.",
-    "startTipLeave": "When you leave, the session keeps your speech, your commands, and the actions you took."
+    "startTipLeave": "When you leave, the session keeps your speech, your commands, and the work you did."
   },
   "sessionEnd": {
     "endSession": "Block beenden",
@@ -2547,9 +2547,9 @@
       "step2": {
         "title": "Think aloud, then send",
         "imageAlt": "Selective thought interface",
-        "body": "Press craft insight on the work canvas. Write what you learned and submit it. A valid insight stays with that chapter.",
+        "body": "Press commit (insight) on the work canvas. Write what you learned and submit it. A valid insight stays with that chapter.",
         "titleProject": "Think aloud — stash & solution",
-        "bodyProject": "Press craft insight on the work canvas. Write what you learned and submit it. A valid insight stays with that chapter."
+        "bodyProject": "Press commit (insight) on the work canvas. Write what you learned and submit it. A valid insight stays with that chapter."
       },
       "step3": {
         "title": "Then move on",

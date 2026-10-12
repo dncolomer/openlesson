@@ -443,8 +443,9 @@ describe("TAP Learning pre-game settings surface", () => {
     expect(nextIleStartTipIndex(4, 5)).toBe(0);
     expect(nextIleStartTipIndex(0, 5)).toBe(1);
     expect(ILE_START_TIP_INTERVAL_MS).toBe(12000);
-    expect(en.session.startTipActions).toMatch(/Close, Keep, Discard, and Insight/);
     expect(en.session.startTipActions).toMatch(/canvas/i);
+    expect(en.session.startTipActions).not.toMatch(/\bClose\b|\bKeep\b|\bDiscard\b|\bInsight\b/);
+    expect(en.session.startTipSelection).not.toMatch(/\bKeep\b|\bDiscard\b/);
     const tipCopy = ILE_START_TIP_IDS.map(
       (id) => en.session[ILE_START_TIP_LABEL_KEYS[id].replace("session.", "")],
     );

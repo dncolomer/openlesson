@@ -3,7 +3,10 @@
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { PracticeVoiceChallenge } from "@/components/PracticeVoiceChallenge";
+import { IleStartLoading } from "@/components/session-view/ile-start-loading";
 import { SessionFinishedScreen } from "@/components/session-view/session-finished-screen";
+import { SessionPageLoading } from "@/components/session-view/session-page-loading";
+import { useI18n } from "@/lib/i18n";
 import {
   ILE_SESSION_IMPURITY_BODY,
   ILE_SESSION_IMPURITY_LOG_OFF,
@@ -32,14 +35,23 @@ export function IleSilenceRestScreen({
   onSaveAndLeave: () => void;
   speechLang?: string | null;
 }) {
+  const { t } = useI18n();
   return (
-    <SessionFinishedScreen
-      overlay
+    <SessionPageLoading
       data-ile-silence-rest=""
       data-ile-silence-lock-count={lockCount}
-      frameLabel={null}
-      title={ILE_SILENCE_REST_TITLE}
-      actions={
+      className="fixed inset-0 z-[180] h-screen"
+    >
+      <IleStartLoading t={t} statusLabel={ILE_SILENCE_REST_TITLE}>
+        <PracticeVoiceChallenge
+          variant="ile"
+          framing="rest"
+          lang={speechLang}
+          onPass={() => {
+            if (ileRestUnlock({ challengePassed: true, lockCount }).locked) return;
+            onUnlock();
+          }}
+        />
         <button
           type="button"
           data-ile-silence-save-and-leave=""
@@ -48,22 +60,12 @@ export function IleSilenceRestScreen({
             if (!plan.persistSession || !plan.leave) return;
             onSaveAndLeave();
           }}
-          className="inline-flex w-full items-center justify-center border border-white/20 px-4 py-3 text-sm font-semibold text-white"
+          className="mt-5 inline-flex border border-white/30 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.14em] text-white transition hover:border-white hover:bg-white hover:text-neutral-950"
         >
           {ILE_SILENCE_REST_SAVE_AND_LEAVE}
         </button>
-      }
-    >
-      <PracticeVoiceChallenge
-        variant="ile"
-        framing="rest"
-        lang={speechLang}
-        onPass={() => {
-          if (ileRestUnlock({ challengePassed: true, lockCount }).locked) return;
-          onUnlock();
-        }}
-      />
-    </SessionFinishedScreen>
+      </IleStartLoading>
+    </SessionPageLoading>
   );
 }
 

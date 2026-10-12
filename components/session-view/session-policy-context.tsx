@@ -2,7 +2,9 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -17,8 +19,26 @@ import {
   emptyCanvasEffectGate,
 } from "@/lib/session-canvas-effect-gate";
 import type { SessionMarkCanvasEffect } from "@/lib/session-mark-canvas";
-import type { SessionBranchModel } from "@/lib/session-branch-model";
+import {
+  graftSessionBranchModel,
+  recommendSessionBranchAction,
+  sessionBranchById,
+  type SessionBranchModel,
+} from "@/lib/session-branch-model";
+import { requestSessionPolicyReply } from "@/lib/session-policy-infer-client";
+import {
+  parsePolicySuggestionReply,
+  recordPolicyInference,
+  SESSION_POLICY_INFER_EVENT_THRESHOLD,
+  SESSION_POLICY_INFER_INTERVAL_MS,
+  sessionPolicyInferDue,
+  sessionPolicyProofFromCanvas,
+  type SessionPolicyInference,
+  type SessionPolicyProofEvent,
+} from "@/lib/session-policy-infer";
 import { sessionPolicySnapshot } from "@/lib/session-policy-score";
+import type { SessionPolicyRecord } from "@/lib/session-policy-store";
+import { SessionCommandBridgeProvider } from "@/components/session-view/session-command-bridge";
 import type { SessionMarkButtonId, SessionMarkMode, SessionMarkState } from "@/lib/session-marks";
 
 const PublishContext = createContext<((state: SessionMarkState) => void) | null>(null);
@@ -43,6 +63,10 @@ export type SessionBranchSlot = {
 };
 
 const IDLE_BRANCH_SLOT: SessionBranchSlot = { status: "idle", model: null, error: null };
+const LIVE_THRESHOLDS = {
+  eventCount: SESSION_POLICY_INFER_EVENT_THRESHOLD,
+  elapsedMs: SESSION_POLICY_INFER_INTERVAL_MS,
+};
 
 const DraftPublishContext = createContext<((draft: SessionMarkDraft | null) => void) | null>(null);
 const DraftContext = createContext<SessionMarkDraft | null>(null);
@@ -56,20 +80,44 @@ const CanvasEffectContext = createContext<SessionMarkCanvasBridge | null>(null);
 const CanvasReadyContext = createContext(false);
 const BranchSlotContext = createContext<SessionBranchSlot | null>(null);
 const BranchPublishContext = createContext<Dispatch<SetStateAction<SessionBranchSlot>> | null>(null);
+const ProofPublishContext = createContext<
+  ((events: readonly { toolAction?: unknown; metadata?: unknown }[]) => void) | null
+>(null);
+const PreparePublishContext = createContext<((body: Record<string, unknown> | null) => void) | null>(null);
+const InferenceContext = createContext<readonly SessionPolicyInference[]>([]);
+const SuggestionContext = createContext<string | null>(null);
+const RestoreContext = createContext<((record: SessionPolicyRecord) => void) | null>(null);
 
 function publishNowhere(_state: SessionMarkState) {}
 function publishDraftNowhere(_draft: SessionMarkDraft | null) {}
 function publishBranchNowhere(_slot: SetStateAction<SessionBranchSlot>) {}
+function publishProofNowhere(_events: readonly { toolAction?: unknown; metadata?: unknown }[]) {}
+function publishPrepareNowhere(_body: Record<string, unknown> | null) {}
+function restoreNowhere(_record: SessionPolicyRecord) {}
 
-/** Learn chrome shares the canvas button state with the sidebar policy tab. */
+function canvasNoteOf(events: readonly SessionPolicyProofEvent[]): string {
+  return events
+    .slice(-12)
+    .map((event) => (event.prompt ? `${event.action}: ${event.prompt}` : event.action))
+    .join("\n");
+}
+
+/** Shares the canvas mark draft and the prepared field with the live session. */
 export function SessionPolicyProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<SessionMarkState | null>(null);
   const [draft, setDraft] = useState<SessionMarkDraft | null>(null);
   const [branchSlot, setBranchSlot] = useState<SessionBranchSlot>(IDLE_BRANCH_SLOT);
   const [canvasReady, setCanvasReady] = useState(false);
+  const [inferences, setInferences] = useState<readonly SessionPolicyInference[]>([]);
+  const [suggestion, setSuggestion] = useState<string | null>(null);
+  const [proofVersion, setProofVersion] = useState(0);
   const canvasEffectRef = useRef<((effect: SessionMarkCanvasEffect) => void) | null>(null);
   const gateRef = useRef(emptyCanvasEffectGate());
-  const canvasEffects = useMemo<SessionMarkCanvasBridge>(
+  const slotRef = useRef<SessionBranchSlot>(IDLE_BRANCH_SLOT);
+  const proofRef = useRef<SessionPolicyProofEvent[]>([]);
+  const prepareRef = useRef<Record<string, unknown> | null>(null);
+  const inferencesRef = useRef<readonly SessionPolicyInference[]>([]);
+  const canvasBridge = useMemo<SessionMarkCanvasBridge>(
     () => ({
       apply(effect) {
         const decision = canvasEffectGateApply(gateRef.current, effect);
@@ -88,15 +136,72 @@ export function SessionPolicyProvider({ children }: { children: ReactNode }) {
     }),
     [],
   );
+  const publishSlot = useCallback((action: SetStateAction<SessionBranchSlot>) => {
+    const prev = slotRef.current;
+    const next = typeof action === "function" ? action(prev) : action;
+    slotRef.current = next;
+    setBranchSlot(next);
+    const chapterChanged = next.model?.chapterTitle !== prev.model?.chapterTitle;
+    const rewound = Boolean(prev.model && prev.model.step > 0 && next.model && next.model.step === 0);
+    if (!chapterChanged && !rewound) return;
+    if (inferencesRef.current.length) {
+      inferencesRef.current = [];
+      setInferences([]);
+    }
+    setSuggestion(null);
+  }, []);
+  const publishProof = useCallback((events: readonly { toolAction?: unknown; metadata?: unknown }[]) => {
+    const mapped = sessionPolicyProofFromCanvas(events);
+    if (!mapped.length) return;
+    const pending = proofRef.current.concat(mapped);
+    proofRef.current = pending.length > 200 ? pending.slice(-200) : pending;
+    setProofVersion((version) => version + 1);
+  }, []);
+  const publishPrepare = useCallback((body: Record<string, unknown> | null) => {
+    prepareRef.current = body;
+  }, []);
+  const restorePolicy = useCallback((record: SessionPolicyRecord) => {
+    const next: SessionBranchSlot = {
+      status: "ready",
+      model: record.model,
+      birth: record.birth,
+      error: null,
+    };
+    slotRef.current = next;
+    setBranchSlot(next);
+    inferencesRef.current = record.inferences;
+    setInferences(record.inferences);
+    setSuggestion(record.suggestion);
+  }, []);
   return (
     <PublishContext.Provider value={setState}>
       <StateContext.Provider value={state}>
         <DraftPublishContext.Provider value={setDraft}>
           <DraftContext.Provider value={draft}>
-            <CanvasEffectContext.Provider value={canvasEffects}>
+            <CanvasEffectContext.Provider value={canvasBridge}>
               <CanvasReadyContext.Provider value={canvasReady}>
-                <BranchPublishContext.Provider value={setBranchSlot}>
-                  <BranchSlotContext.Provider value={branchSlot}>{children}</BranchSlotContext.Provider>
+                <BranchPublishContext.Provider value={publishSlot}>
+                  <BranchSlotContext.Provider value={branchSlot}>
+                    <ProofPublishContext.Provider value={publishProof}>
+                      <PreparePublishContext.Provider value={publishPrepare}>
+                        <RestoreContext.Provider value={restorePolicy}>
+                          <InferenceContext.Provider value={inferences}>
+                            <SuggestionContext.Provider value={suggestion}>
+                              <SessionPolicyInferLoop
+                                proofRef={proofRef}
+                                proofVersion={proofVersion}
+                                prepareRef={prepareRef}
+                                inferencesRef={inferencesRef}
+                                setInferences={setInferences}
+                                setSuggestion={setSuggestion}
+                              />
+                              <SessionCommandBridgeProvider>{children}</SessionCommandBridgeProvider>
+                            </SuggestionContext.Provider>
+                          </InferenceContext.Provider>
+                        </RestoreContext.Provider>
+                      </PreparePublishContext.Provider>
+                    </ProofPublishContext.Provider>
+                  </BranchSlotContext.Provider>
                 </BranchPublishContext.Provider>
               </CanvasReadyContext.Provider>
             </CanvasEffectContext.Provider>
@@ -105,6 +210,148 @@ export function SessionPolicyProvider({ children }: { children: ReactNode }) {
       </StateContext.Provider>
     </PublishContext.Provider>
   );
+}
+
+function SessionPolicyInferLoop({
+  proofRef,
+  proofVersion,
+  prepareRef,
+  inferencesRef,
+  setInferences,
+  setSuggestion,
+}: {
+  proofRef: MutableRefObject<SessionPolicyProofEvent[]>;
+  proofVersion: number;
+  prepareRef: MutableRefObject<Record<string, unknown> | null>;
+  inferencesRef: MutableRefObject<readonly SessionPolicyInference[]>;
+  setInferences: Dispatch<SetStateAction<readonly SessionPolicyInference[]>>;
+  setSuggestion: Dispatch<SetStateAction<string | null>>;
+}) {
+  const slot = useSessionBranchSlot();
+  const draft = useSessionMarkDraft();
+  const publishSlot = usePublishSessionBranchSlot();
+  const [clock, setClock] = useState(0);
+  const inflight = useRef(false);
+  const suggestInflight = useRef(false);
+  const lastInferAt = useRef(Date.now());
+  const lastSuggestAt = useRef(0);
+  const suggestKey = useRef("");
+  const suggestAction = useRef("");
+  const latestWanted = useRef("");
+  const chapterStamp = useRef<string | null>(null);
+  const inferToken = useRef(0);
+  const mounted = useRef(true);
+
+  useEffect(() => {
+    mounted.current = true;
+    const id = window.setInterval(() => setClock((value) => value + 1), 1000);
+    return () => {
+      mounted.current = false;
+      window.clearInterval(id);
+    };
+  }, []);
+
+  useEffect(() => {
+    const model = slot?.status === "ready" ? slot.model : null;
+    if (model && chapterStamp.current !== model.chapterTitle) {
+      const switched = chapterStamp.current != null;
+      chapterStamp.current = model.chapterTitle;
+      lastInferAt.current = Date.now();
+      if (switched) {
+        inferToken.current += 1;
+        inflight.current = false;
+        proofRef.current = [];
+        suggestKey.current = "";
+        latestWanted.current = "";
+      }
+    }
+    if (inflight.current) return;
+    if (!model) return;
+    const pending = proofRef.current.length;
+    if (
+      !sessionPolicyInferDue({
+        pendingEvents: pending,
+        elapsedMs: Date.now() - lastInferAt.current,
+        thresholds: LIVE_THRESHOLDS,
+      })
+    ) {
+      return;
+    }
+    const prepare = prepareRef.current;
+    if (!prepare) return;
+    const batch = proofRef.current.slice();
+    const token = inferToken.current;
+    inflight.current = true;
+    void requestSessionPolicyReply({ ...prepare, phase: "infer", events: batch }).then((reply) => {
+      if (inferToken.current !== token) return;
+      proofRef.current = proofRef.current.slice(batch.length);
+      lastInferAt.current = Date.now();
+      if (!reply) return;
+      let recorded: readonly SessionPolicyInference[] | null = null;
+      publishSlot((current) => {
+        if (current.status !== "ready" || !current.model) return current;
+        const next = recordPolicyInference(current.model, inferencesRef.current, reply);
+        if (next.log === inferencesRef.current) return current;
+        recorded = next.log;
+        return {
+          status: "ready",
+          model: current.birth ? graftSessionBranchModel(next.model, current.birth) : next.model,
+          birth: current.birth ?? current.model,
+          error: null,
+        };
+      });
+      if (recorded) {
+        inferencesRef.current = recorded;
+        setInferences(recorded);
+      }
+    }).finally(() => {
+      if (inferToken.current === token) inflight.current = false;
+      if (mounted.current) setClock((value) => value + 1);
+    });
+  }, [clock, inferencesRef, prepareRef, proofRef, proofVersion, publishSlot, setInferences, slot]);
+
+  useEffect(() => {
+    if (draft?.mode !== "learn") return;
+    if (slot?.status !== "ready" || !slot.model) return;
+    const model = slot.model;
+    const recommended = recommendSessionBranchAction(model, model.focusId);
+    if (!recommended) return;
+    const focus = sessionBranchById(model, model.focusId);
+    const canvasNote = canvasNoteOf(proofRef.current);
+    const key = `${model.focusId}:${model.step}:${recommended.id}:${canvasNote}`;
+    if (suggestAction.current !== recommended.id) {
+      if (suggestAction.current) setSuggestion(null);
+      suggestAction.current = recommended.id;
+    }
+    latestWanted.current = key;
+    if (suggestInflight.current) return;
+    if (suggestKey.current === key) return;
+    const sameStep = suggestKey.current.startsWith(`${model.focusId}:${model.step}:${recommended.id}:`);
+    if (sameStep && Date.now() - lastSuggestAt.current < SESSION_POLICY_INFER_INTERVAL_MS) return;
+    const prepare = prepareRef.current;
+    if (!prepare) return;
+    suggestInflight.current = true;
+    suggestKey.current = key;
+    lastSuggestAt.current = Date.now();
+    void requestSessionPolicyReply({
+      ...prepare,
+      phase: "suggest",
+      action: recommended.id,
+      nodeTitle: focus?.title ?? "",
+      observation: focus?.observation ?? "",
+      intent: recommended.observation.trim() || recommended.leads.trim(),
+      canvasNote,
+    }).then((reply) => {
+      if (latestWanted.current !== key) return;
+      const text = reply ? parsePolicySuggestionReply(reply) : null;
+      if (text) setSuggestion(text);
+    }).finally(() => {
+      suggestInflight.current = false;
+      if (mounted.current) setClock((value) => value + 1);
+    });
+  }, [clock, draft?.mode, prepareRef, proofRef, proofVersion, setSuggestion, slot]);
+
+  return null;
 }
 
 export function usePublishSessionPolicy(): (state: SessionMarkState) => void {
@@ -142,6 +389,30 @@ export function usePublishSessionBranchSlot(): Dispatch<SetStateAction<SessionBr
   return useContext(BranchPublishContext) ?? publishBranchNowhere;
 }
 
+/** No-op outside the provider. Drawing and commands on every field flow land here. */
+export function usePublishSessionProof(): (
+  events: readonly { toolAction?: unknown; metadata?: unknown }[],
+) => void {
+  return useContext(ProofPublishContext) ?? publishProofNowhere;
+}
+
+export function usePublishSessionPrepareRequest(): (body: Record<string, unknown> | null) => void {
+  return useContext(PreparePublishContext) ?? publishPrepareNowhere;
+}
+
+export function useSessionPolicyInferences(): readonly SessionPolicyInference[] {
+  return useContext(InferenceContext);
+}
+
+export function useSessionPolicySuggestion(): string | null {
+  return useContext(SuggestionContext);
+}
+
+/** Puts a stored snapshot on the field without treating it as a new chapter. */
+export function useRestoreSessionPolicy(): (record: SessionPolicyRecord) => void {
+  return useContext(RestoreContext) ?? restoreNowhere;
+}
+
 export type SessionPolicySnapshot = {
   model: SessionBranchModel | null;
   sequence: SessionMarkButtonId[];
@@ -151,12 +422,16 @@ export function emptySessionPolicySnapshot(): SessionPolicySnapshot {
   return { model: null, sequence: [] };
 }
 
-/** Copies the prepared tree and the button path into a ref the end path can read. */
+/** Copies the prepared tree and the inferred path into a ref the end path can read. */
 export function SessionPolicyBridge({ target }: { target: MutableRefObject<SessionPolicySnapshot> }) {
   const slot = useSessionBranchSlot();
-  const state = useSessionPolicyState();
+  const inferences = useSessionPolicyInferences();
   const preparedRef = useRef<SessionBranchModel | null>(null);
-  const next = sessionPolicySnapshot(preparedRef.current, slot, state?.presses);
+  const next = sessionPolicySnapshot(
+    preparedRef.current,
+    slot,
+    inferences.map((entry) => ({ button: entry.action })),
+  );
   preparedRef.current = next.prepared;
   target.current = next.snapshot;
   return null;

@@ -5,7 +5,7 @@ import { ThoughtCompactAction, type HeliosTurnMode } from "@/components/thought-
 import { ImDoneAnsweringControl } from "@/components/thought-ui/ImDoneAnsweringButton";
 import { WorkCanvas } from "@/components/ExcalidrawCanvas";
 import { SessionBranchFieldBoundary } from "@/components/session-view/session-branch-prepare";
-import { SessionActionsPanel } from "@/components/session-view/session-mark-controls";
+import { SessionGuidePanel } from "@/components/session-view/session-guide-panel";
 import { SessionPolicyBridge, type SessionPolicySnapshot } from "@/components/session-view/session-policy-context";
 import { ThoughtMemoryPanel } from "@/components/thought-ui/ThoughtMemoryPanel";
 import { ThoughtEditPanel } from "@/components/thought-ui/ThoughtEditPanel";
@@ -26,9 +26,11 @@ import {
 import { TapStartingTopicCards } from "@/components/TapStartingTopicCards";
 import { TapBriefingConfig } from "@/components/TapBriefingConfig";
 import { SessionFinishedScreen } from "@/components/session-view/session-finished-screen";
+import { SessionPolicyScoreResult } from "@/components/session-view/session-policy-score-result";
 import { IleStartLoading } from "@/components/session-view/ile-start-loading";
 import { SessionPageLoading } from "@/components/session-view/session-page-loading";
 import { verificationFieldPrepareInput } from "@/lib/session-branch-prepare";
+import { policyScoreFromSnapshot } from "@/lib/session-policy-score";
 import { SESSION_SIDEBAR_PRIMARY_BUTTON_CLASS } from "@/lib/session-sidebar";
 import { TapPracticePill } from "@/components/tap-score/tap-practice-pill";
 import { PerformanceReportCard } from "@/components/PerformanceReportCard";
@@ -460,6 +462,7 @@ export function TapScorePhases(props: {
   const verificationTitle = verificationField.chapterTitle || "This topic";
   const verificationBrief = verificationField.chapterBrief || "";
   const verificationFieldKey = (tapSessionId || sessionId || verificationToken || "session").trim();
+  const policyScore = policyScoreFromSnapshot(props.policyRef?.current);
 
   return (
     <main className="relative flex h-screen min-h-0 flex-col overflow-hidden bg-[#0b0b0b] text-white selection:bg-zinc-700">
@@ -558,7 +561,6 @@ export function TapScorePhases(props: {
             {props.policyRef ? <SessionPolicyBridge target={props.policyRef} /> : null}
             <SessionWorkSurface
               mode={sidebarMode}
-              policyTab={sidebarMode === "verification-tap"}
               stage={
                 <div
                   data-tap-convo-work-canvas-pane
@@ -682,10 +684,10 @@ export function TapScorePhases(props: {
                 />
               }
               signals={<TapSessionSignals captureAudio />}
-              focusLabel={sidebarMode === "verification-tap" ? "actions" : "Stash"}
+              focusLabel={sidebarMode === "verification-tap" ? null : "Stash"}
               focus={
                 sidebarMode === "verification-tap" ? (
-                  <SessionActionsPanel />
+                  <SessionGuidePanel guide="verification" />
                 ) : (
                 <div className="flex h-full min-h-0 flex-col overflow-hidden">
                   <div
@@ -810,22 +812,29 @@ export function TapScorePhases(props: {
                   {t("tap.postSession.exploreUncertainSystems")}
                 </a>
               }
-            />
+            >
+              <SessionPolicyScoreResult score={policyScore} />
+            </SessionFinishedScreen>
           ) : (
             <SessionFinishedScreen
               wide
               title={t("tap.postSession.resultsTitle")}
               body={t("tap.postSession.resultsHint")}
             >
-              {performanceReport ? (
-                <div className="mt-6 flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-none border border-neutral-800 bg-neutral-950/50 p-4 md:p-5">
-                  <PerformanceReportCard
-                    report={performanceReport}
-                    layout="spacious"
-                    fillHeight
-                    label={t("tap.postSession.verificationResultsTitle")}
-                  />
-                </div>
+              {policyScore || performanceReport ? (
+                <>
+                  <SessionPolicyScoreResult score={policyScore} />
+                  {performanceReport ? (
+                    <div className="mt-6 flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-none border border-neutral-800 bg-neutral-950/50 p-4 md:p-5">
+                      <PerformanceReportCard
+                        report={performanceReport}
+                        layout="spacious"
+                        fillHeight
+                        label={t("tap.postSession.verificationResultsTitle")}
+                      />
+                    </div>
+                  ) : null}
+                </>
               ) : null}
             </SessionFinishedScreen>
           )

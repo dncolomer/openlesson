@@ -244,9 +244,12 @@ function calibrateDictateTarget(elements: readonly IleWorkCanvasElement[]): {
     if (
       role === "question-label" ||
       role === "region-label" ||
+      role === "well-label" ||
       role === "question" ||
       role === "region" ||
+      role === "well" ||
       role === "instruction" ||
+      role === "instruction-label" ||
       role === "cue" ||
       role === "cue-label"
     ) {
@@ -272,6 +275,29 @@ function calibrateDictateTarget(elements: readonly IleWorkCanvasElement[]): {
   );
   const target = (!comfortableAnswered ? inRegion("comfortable") : inRegion("unconfident"))[0];
   if (!target) return null;
+  const name = regionName(target);
+  const well = alive.find((el) => {
+    if (el.type !== "rectangle" || elementData(el)[CALIBRATE_ROLE] !== "well") return false;
+    return elementData(el)[CALIBRATE_REGION] === name;
+  });
+  const label = alive.find((el) => {
+    if (el.type !== "text" || elementData(el)[CALIBRATE_ROLE] !== "well-label") return false;
+    return elementData(el)[CALIBRATE_REGION] === name;
+  });
+  if (well) {
+    const prior = alive.filter((el) => {
+      if (el.type !== "text" || elementData(el)[CALIBRATE_ROLE] !== "response") return false;
+      return elementContains(well, elementCenter(el));
+    });
+    let y = label ? label.y + label.height + 6 : well.y + 28;
+    for (const earlier of prior) y = Math.max(y, earlier.y + (earlier.height || 0) + 6);
+    return {
+      questionId: cardId(target),
+      x: well.x + 8,
+      y,
+      width: Math.max(80, well.width - 16),
+    };
+  }
   const width = Math.max(80, Math.min(240, target.width - 24));
   return {
     questionId: cardId(target),
@@ -344,7 +370,17 @@ export function clearCalibrateResponseOverlap(
       for (const other of next) {
         if (other.id === response.id || other.isDeleted) continue;
         const otherRole = roleOf(other);
-        if (otherRole === "region" || otherRole === "instruction") continue;
+        if (
+          other.locked ||
+          otherRole === "region" ||
+          otherRole === "instruction" ||
+          otherRole === "instruction-label" ||
+          otherRole === "region-label" ||
+          otherRole === "well" ||
+          otherRole === "well-label"
+        ) {
+          continue;
+        }
         if (questionOf(other) && questionOf(other) === questionOf(response)) continue;
         if (!boardBoxesOverlap(box, boardBox(other))) continue;
         const id = questionOf(other);
@@ -389,6 +425,28 @@ export function clearCalibrateResponseOverlap(
         const xOverlap =
           upperBox.x < lowerBox.x + lowerBox.width && upperBox.x + upperBox.width > lowerBox.x;
         if (!xOverlap || lower.y >= floor) continue;
+        const upperCenter = {
+          x: upper.x + upperBox.width / 2,
+          y: upper.y + upperBox.height / 2,
+        };
+        const lowerCenter = {
+          x: lower.x + lowerBox.width / 2,
+          y: lower.y + lowerBox.height / 2,
+        };
+        const sharedLockedRegion = next.some((el) => {
+          if (el.isDeleted || !el.locked || roleOf(el) !== "region") return false;
+          return (
+            upperCenter.x >= el.x &&
+            upperCenter.x <= el.x + (el.width || 0) &&
+            upperCenter.y >= el.y &&
+            upperCenter.y <= el.y + (el.height || 0) &&
+            lowerCenter.x >= el.x &&
+            lowerCenter.x <= el.x + (el.width || 0) &&
+            lowerCenter.y >= el.y &&
+            lowerCenter.y <= el.y + (el.height || 0)
+          );
+        });
+        if (sharedLockedRegion) continue;
         shiftQuestion(questionOf(lower), floor - lower.y);
         moved = true;
       }
@@ -402,13 +460,24 @@ export function clearCalibrateResponseOverlap(
       for (const el of next) {
         if (el.isDeleted || el.id === region.id) continue;
         const elRole = roleOf(el);
-        if (elRole === "region" || elRole === "region-label" || elRole === "instruction") continue;
+        if (
+          el.locked ||
+          elRole === "region" ||
+          elRole === "region-label" ||
+          elRole === "instruction" ||
+          elRole === "instruction-label" ||
+          elRole === "well" ||
+          elRole === "well-label"
+        ) {
+          continue;
+        }
         const cx = el.x + (el.width || 0) / 2;
         const cy = el.y + (el.height || 0) / 2;
         if (cx < region.x || cx > region.x + (region.width || 0)) continue;
         if (cy < region.y) continue;
         bottom = Math.max(bottom, el.y + (el.height || 0) + 20);
       }
+      if (region.locked) continue;
       const height = bottom - region.y;
       if (height > (region.height || 0) + 0.5) {
         region.height = height;
@@ -418,6 +487,9 @@ export function clearCalibrateResponseOverlap(
     for (let index = 0; index < regions.length - 1; index += 1) {
       const upper = regions[index]!;
       const lower = regions[index + 1]!;
+      const sharesColumn =
+        upper.x < lower.x + (lower.width || 0) && upper.x + (upper.width || 0) > lower.x;
+      if (!sharesColumn || upper.locked || lower.locked) continue;
       const lowerName = String(lower.customData?.[CALIBRATE_REGION] || "");
       const label = next.find(
         (el) => roleOf(el) === "region-label" && String(el.customData?.[CALIBRATE_REGION] || "") === lowerName,
@@ -443,7 +515,8 @@ export function appendIleDictatedTextToWorkCanvas(
   const clean = normalizeDictateText(text);
   if (!clean) return { scene: current, appended: [] };
   const target = calibrateDictateTarget(current.elements);
-  const wrapped = wrapIleWorkCanvasText(clean, target?.width);
+  const fontSize = target ? 15 : undefined;
+  const wrapped = wrapIleWorkCanvasText(clean, target?.width, fontSize);
   const origin = target
     ? { x: target.x, y: target.y }
     : ileWorkCanvasEmptyNearbyOriginWithReserved({
@@ -464,6 +537,7 @@ export function appendIleDictatedTextToWorkCanvas(
       x: origin.x,
       y: origin.y,
       width: wrapped.width,
+      fontSize,
       autoResize: false,
       customData,
     },

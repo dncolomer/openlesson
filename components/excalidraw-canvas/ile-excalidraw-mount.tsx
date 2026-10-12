@@ -1,8 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { Component, memo, type ReactNode } from "react";
+import { Component, memo, useLayoutEffect, type ReactNode } from "react";
 import "@excalidraw/excalidraw/index.css";
+import { commitOpenExcalidrawTextEditor } from "@/lib/excalidraw-text-editor";
 
 const Excalidraw = dynamic(
   async () => (await import("@excalidraw/excalidraw")).Excalidraw,
@@ -41,6 +42,11 @@ const IleExcalidrawMount = memo(function IleExcalidrawMount({
   initialData: { elements: any[]; appState: any; files: any; scrollToContent?: boolean };
   viewModeEnabled?: boolean;
 }) {
+  useLayoutEffect(() => {
+    return () => {
+      commitOpenExcalidrawTextEditor();
+    };
+  }, []);
   return (
     <Excalidraw
       excalidrawAPI={onApi}

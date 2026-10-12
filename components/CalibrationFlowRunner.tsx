@@ -5,6 +5,7 @@ import { TapLiveClock } from "@/components/tap-score/tap-live-clock";
 import { flowCountdownMinutes } from "@/lib/flow-countdown";
 import { CalibrateLiveSurface } from "@/components/calibrate/calibrate-live-surface";
 import { SessionFinishedScreen } from "@/components/session-view/session-finished-screen";
+import { SessionPolicyScoreResult } from "@/components/session-view/session-policy-score-result";
 import { TapThoughtButton } from "@/components/tap-score/tap-thought-button";
 import {
   beginCalibrationSession,
@@ -13,7 +14,7 @@ import {
 import { emptySessionPolicySnapshot } from "@/components/session-view/session-policy-context";
 import { IleStartLoading } from "@/components/session-view/ile-start-loading";
 import { SessionPageLoading } from "@/components/session-view/session-page-loading";
-import { embedPolicyScore, policyScoreProofEvent } from "@/lib/session-policy-score";
+import { embedPolicyScore, policyScoreFromSnapshot, policyScoreProofEvent } from "@/lib/session-policy-score";
 import { loadSessionBranchField, sessionClockMayStart } from "@/lib/session-branch-field-load";
 import { calibrateFieldPrepareInput } from "@/lib/session-branch-prepare";
 import { useI18n } from "@/lib/i18n";
@@ -327,6 +328,7 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
       </CalibrationViewport>
     );
   }
+  const policyScore = policyScoreFromSnapshot(policyRef.current);
   if (timeUp && !stored) {
     return (
       <CalibrationViewport>
@@ -339,7 +341,9 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
               Explore Uncertain Systems
             </TapThoughtButton>
           }
-        />
+        >
+          <SessionPolicyScoreResult score={policyScore} />
+        </SessionFinishedScreen>
       </CalibrationViewport>
     );
   }
@@ -355,7 +359,9 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
               Explore Uncertain Systems
             </TapThoughtButton>
           }
-        />
+        >
+          <SessionPolicyScoreResult score={policyScore} />
+        </SessionFinishedScreen>
       </CalibrationViewport>
     );
   }

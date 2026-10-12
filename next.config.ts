@@ -1,8 +1,14 @@
 import type { NextConfig } from "next";
+import path from "node:path";
 
 const nextConfig: NextConfig = {
   // Isolated dist dir for parallel `next dev` (e.g. pilot servers) without fighting .next/dev/lock
   ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
+  // A package-lock.json in the parent UncertainSystems folder otherwise becomes
+  // the Turbopack workspace root, and CSS cannot resolve tailwindcss.
+  turbopack: {
+    root: path.resolve(process.cwd()),
+  },
   // Prevent @huggingface/transformers from being bundled server-side
   serverExternalPackages: [
     "@huggingface/transformers",

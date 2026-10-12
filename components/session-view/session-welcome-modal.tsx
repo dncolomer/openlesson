@@ -136,7 +136,6 @@ export function SessionWelcomeModal({
               <div className="min-h-0 flex-1">
                 <TapBriefingConfig
                   workspaceTitle="Learn"
-                  kicker="Learn"
                   title={t("session.welcomeTitle")}
                   minutes={DEFAULT_DURATION_MINUTES}
                   onMinutesChange={() => {}}

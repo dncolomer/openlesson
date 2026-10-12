@@ -263,7 +263,7 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     expect(chrome).toContain("ILE_MAP_WIDGET_FRAME_CLASS");
     expect(chrome).not.toContain("IleChapterWidgetFrame");
     expect(chrome).toContain('id="actions"');
-    expect(chrome).toContain("SessionActionsPanel");
+    expect(chrome).toContain("SessionGuidePanel");
     expect(chrome).not.toContain('id="insights"');
     expect(chrome).toContain('id="chapters"');
     expect(chrome).toContain('id="sensors"');
@@ -465,7 +465,7 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     expect(chrome).not.toContain("left-1/2 top-2");
     expect(chrome).not.toContain("-translate-x-1/2");
     expect(chrome).toContain('id="actions"');
-    expect(chrome).toContain("SessionActionsPanel");
+    expect(chrome).toContain("SessionGuidePanel");
     expect(chrome).not.toContain('id="insights"');
     expect(chrome).toContain('id="chapters"');
     expect(chrome).toContain('id="sensors"');

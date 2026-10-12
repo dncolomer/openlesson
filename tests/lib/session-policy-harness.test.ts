@@ -4,6 +4,10 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { SessionFieldLoader } from "@/components/session-view/session-field-gate";
+import {
+  formatPolicyScoreFigure,
+  SessionPolicyScoreResult,
+} from "@/components/session-view/session-policy-score-result";
 import { SessionMarkControls } from "@/components/session-view/session-mark-controls";
 import {
   SessionPolicyProvider,
@@ -39,6 +43,7 @@ import {
 } from "@/lib/session-field-gate";
 import {
   embedPolicyScore,
+  policyScoreFromSnapshot,
   policyScoreFromUnknown,
   policyScoreProofEvent,
   scorePolicySequence,
@@ -105,7 +110,7 @@ describe("session field gate", () => {
     expect(loader).toContain(start.label);
   });
 
-  it("waits on the ready tree and puts the four actions in the sidebar on every mode", () => {
+  it("waits on the ready tree and puts commands and instructions in the live sidebar", () => {
     const learn = read("components/session-view/session-chapter-canvas.tsx");
     const prepare = read("components/session-view/session-branch-prepare.tsx");
     const calibrate = read("components/calibrate/calibrate-live-surface.tsx");
@@ -122,26 +127,29 @@ describe("session field gate", () => {
     expect(learn).toContain("<SessionFieldLoader");
     expect(prepare).toContain("<SessionFieldGate>{children}</SessionFieldGate>");
     expect(calibrate).toContain("<SessionBranchFieldBoundary");
-    expect(calibrate).toContain("<SessionActionsPanel />");
-    expect(calibrate).toContain('focusLabel="actions"');
+    expect(calibrate).toContain('<SessionGuidePanel guide="calibrate" />');
+    expect(calibrate).not.toContain('focusLabel="actions"');
+    expect(calibrate).not.toContain("SessionActionsPanel");
     expect(calibrate).not.toContain("data-calibrate-done-classifying");
     expect(calibrate).not.toContain("I'm done classifying");
     expect(workspaceCalibrate).toContain("<CalibrateLiveSurface");
     expect(publicCalibrate).toContain("<CalibrateLiveSurface");
     expect(verification).toContain('enabled={sidebarMode === "verification-tap"}');
-    expect(verification).toContain('sidebarMode === "verification-tap" ? (\n                  <SessionActionsPanel />');
+    expect(verification).toContain('sidebarMode === "verification-tap" ? (\n                  <SessionGuidePanel guide="verification" />');
     expect(verification).toContain("data-tap-older-thoughts");
     const verificationFocus = verification.slice(
       verification.indexOf('sidebarMode === "verification-tap" ? ('),
       verification.indexOf("data-tap-older-thoughts"),
     );
-    expect(verificationFocus).toContain("<SessionActionsPanel />");
+    expect(verificationFocus).toContain('<SessionGuidePanel guide="verification" />');
     expect(verificationFocus).not.toContain("ThoughtMemoryPanel");
     expect(verificationFocus).not.toContain("I'm done");
     expect(publicVerification).toContain('sidebarMode="verification-tap"');
     expect(workspaceVerification).toContain("verification");
-    expect(learnChrome).toContain("<SessionActionsPanel />");
-    expect(learnChrome).toContain('focusLabel="actions"');
+    expect(learnChrome).toContain('<SessionGuidePanel guide="learn" />');
+    expect(learnChrome).toContain('id="actions"');
+    expect(learnChrome).not.toContain("SessionActionsPanel");
+    expect(learnChrome).not.toContain('focusLabel="actions"');
     expect(prompt).not.toContain("<SessionMarkControls");
     expect(prompt).toContain("mode: sessionMarkMode");
   });
@@ -223,6 +231,62 @@ describe("policy score against the prepared tree", () => {
     expect(far.steps).toBe(near.steps);
     expect(near.distance).toBeLessThan(far.distance);
     expect(near.sequence).not.toEqual(far.sequence);
+  });
+
+  it("shows distance, steps, and excess on the time-ended results pages", () => {
+    expect(policyScoreFromSnapshot(null)).toBeNull();
+    expect(policyScoreFromSnapshot({ model: null, sequence: ["try"] })).toBeNull();
+    const scored = scorePolicySequence(model, higher);
+    expect(policyScoreFromSnapshot({ model, sequence: higher })).toEqual(scored);
+
+    const html = renderToStaticMarkup(
+      createElement(SessionPolicyScoreResult, {
+        score: { steps: 3, excess: 12.5, distance: 4.17, sequence: ["try", "hold"] },
+      }),
+    );
+    expect(html).toContain('data-session-policy-score=""');
+    expect(html).toContain('data-session-policy-distance="4.17"');
+    expect(html).toContain('data-session-policy-steps="3"');
+    expect(html).toContain('data-session-policy-excess="12.5"');
+    expect(html).toContain(`>${formatPolicyScoreFigure(4.17)}<`);
+    expect(html).toContain(">Policy score<");
+    expect(html).toContain(">Distance<");
+    expect(html).toContain(">Steps<");
+    expect(html).toContain(">Excess<");
+    expect(html).not.toMatch(/\b(try|hold|drop|insight)\b/);
+    expect(renderToStaticMarkup(createElement(SessionPolicyScoreResult, { score: null }))).toBe("");
+
+    const tap = read("components/tap-score/tap-score-phases.tsx");
+    const impure = sliceBetween(tap, "data-tap-session-impure", "data-tap-session-thank-you");
+    expect(impure).not.toContain("SessionPolicyScoreResult");
+    const thankYou = tap.slice(tap.indexOf("data-tap-session-thank-you"));
+    expect(thankYou).toContain("<SessionPolicyScoreResult");
+    expect(thankYou).toContain("thankYouTitle");
+    expect(thankYou).toContain("thankYouBody");
+    expect(thankYou).toContain("data-tap-explore-uncertain-systems");
+    const results = tap.slice(tap.indexOf("tap.postSession.resultsTitle"));
+    expect(results).toContain("<SessionPolicyScoreResult");
+    expect(results).toContain("policyScore || performanceReport");
+
+    const scout = read("components/scout-tap/scout-tap-phases.tsx");
+    const scoutThanks = scout.slice(scout.indexOf("data-scout-thank-you"));
+    expect(scoutThanks).toContain("data-tap-session-thank-you");
+    expect(scoutThanks).toContain("<SessionPolicyScoreResult");
+
+    const calibrate = read("components/CalibrationFlowRunner.tsx");
+    const timeUp = sliceBetween(calibrate, "data-calibration-time-up", "data-calibration-thank-you");
+    expect(timeUp).toContain("Time is up");
+    expect(timeUp).toContain("<SessionPolicyScoreResult");
+    const storedThanks = calibrate.slice(calibrate.indexOf("data-calibration-thank-you"));
+    expect(storedThanks).toContain("Your calibration proof of work has been stored.");
+    expect(storedThanks).toContain("<SessionPolicyScoreResult");
+
+    expect(read("components/session-view/ile-insight-kept-screen.tsx")).not.toContain(
+      "SessionPolicyScoreResult",
+    );
+    expect(read("components/exercise-tap/exercise-tap-phases.tsx")).not.toContain(
+      "SessionPolicyScoreResult",
+    );
   });
 
   it("changes the embedding when the sequence or the captured proof changes", () => {

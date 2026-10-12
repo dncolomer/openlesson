@@ -16,6 +16,7 @@ export function IleCanvasDictateButton({
   onLiveText,
   onCommit,
   onActiveChange,
+  square = false,
 }: {
   transcript: string;
   /** Writes the transcript onto the canvas as recognition updates. */
@@ -24,6 +25,8 @@ export function IleCanvasDictateButton({
   onCommit: (text: string) => void;
   /** Optional. Calibration starts speech only while this button is active. */
   onActiveChange?: (active: boolean) => void;
+  /** Left and right docks: a short row with the name beside a mark. */
+  square?: boolean;
 }) {
   const [dictating, setDictating] = useState(false);
   const captureRef = useRef<IleDictateCapture | null>(null);
@@ -42,6 +45,7 @@ export function IleCanvasDictateButton({
       type="button"
       data-ile-canvas-dictate
       aria-pressed={dictating}
+      aria-label={dictating ? ILE_CANVAS_DICTATE_STOP_LABEL : ILE_CANVAS_DICTATE_LABEL}
       onClick={() => {
         if (!captureRef.current) {
           captureRef.current = startIleDictateCapture(transcript);
@@ -58,8 +62,13 @@ export function IleCanvasDictateButton({
         if (text) onCommit(text);
         else onLiveText(text);
       }}
-      className="pointer-events-auto shrink-0 rounded-none border border-white bg-neutral-950 px-4 py-2.5 text-sm font-semibold uppercase tracking-wider text-white shadow-[0_12px_40px_rgba(0,0,0,0.55)] hover:bg-neutral-800 aria-pressed:bg-white aria-pressed:text-neutral-950"
+      className={
+        square
+          ? "pointer-events-auto flex min-h-9 w-full min-w-0 items-center justify-start gap-1.5 whitespace-nowrap rounded-none border border-white bg-neutral-950 px-1.5 py-2 text-left font-mono text-[11px] font-semibold text-white hover:bg-neutral-800 aria-pressed:bg-white aria-pressed:text-neutral-950"
+          : "pointer-events-auto min-w-0 flex-1 rounded-none border border-white bg-neutral-950 px-4 py-2.5 text-sm text-center font-semibold uppercase tracking-wider text-white shadow-[0_12px_40px_rgba(0,0,0,0.55)] hover:bg-neutral-800 aria-pressed:bg-white aria-pressed:text-neutral-950"
+      }
     >
+      {square ? <span aria-hidden className="block h-3 w-3 shrink-0 border border-current" /> : null}
       {dictating ? ILE_CANVAS_DICTATE_STOP_LABEL : ILE_CANVAS_DICTATE_LABEL}
     </button>
   );

@@ -210,6 +210,8 @@ describe("calibration authoring", () => {
     expect(proofRoute).toContain("verificationRun: false");
     expect(proofRoute).not.toContain("pickVerificationFlowQuestion");
     const runner = read("components/CalibrationFlowRunner.tsx");
+    expect(runner).not.toContain("data-calibrate-voice-challenge");
+    expect(runner).not.toContain("PracticeVoiceChallenge");
     expect(runner).toContain("data-calibration-identity");
     expect(runner).toContain("data-calibration-identity-input");
     expect(runner).toContain("Identify yourself");
@@ -218,10 +220,12 @@ describe("calibration authoring", () => {
     expect(runner).toContain("data-calibration-live-clock");
     expect(panel).toContain("data-calibration-flow-minutes");
     expect(read("components/VerificationFlowsPanel.tsx")).toContain("data-verification-flow-minutes");
-    expect(read("components/calibrate/calibrate-live-surface.tsx")).toContain("data-calibrate-opening");
-    expect(read("components/calibrate/calibrate-live-surface.tsx")).toContain("data-calibrate-opening-cue");
-    expect(read("components/calibrate/calibrate-live-surface.tsx")).toContain("CALIBRATE_MOVE_RIGHT_LABEL");
-    expect(read("lib/calibrate-session.ts")).toContain('CALIBRATE_MOVE_RIGHT_LABEL = "move right"');
+    expect(read("components/calibrate/calibrate-live-surface.tsx")).toContain("fitOpenBoard");
+    expect(read("components/ExcalidrawCanvas.tsx")).toContain("restoreCalibrateChrome");
+    expect(read("components/calibrate/calibrate-live-surface.tsx")).not.toContain("data-calibrate-opening");
+    expect(read("lib/calibrate-session.ts")).toContain("CALIBRATE_ANSWER_WELL_LABEL");
+    expect(read("lib/calibrate-session.ts")).toContain("CALIBRATE_EXPLAIN_WELL_LABEL");
+    expect(read("lib/calibrate-session.ts")).toContain("CALIBRATE_OPENING_INSTRUCTION");
   });
 
   it("still starts a verification flow with one pooled question", () => {

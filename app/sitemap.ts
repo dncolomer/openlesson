@@ -95,6 +95,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.85,
     },
     {
+      url: `${baseUrl}/kardashev`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.4,
+    },
+    {
       url: `${baseUrl}/community-events/probabilistic-computing`,
       lastModified: new Date(),
       changeFrequency: "monthly",

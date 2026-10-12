@@ -10,6 +10,7 @@ import {
   VERIFICATION_PRODUCT_COPY,
   VERIFICATION_SCALE_COPY,
 } from "@/lib/marketing/verification-product";
+import { AccelerandoRun } from "@/components/AccelerandoGlyphs";
 import { standardShareSocialMetadata } from "@/lib/og/standard";
 
 const standardSocial = standardShareSocialMetadata({
@@ -28,8 +29,11 @@ export default function KnowledgeVerificationPage() {
   return (
     <MarketingPageShell>
       <section className="relative z-10 mx-auto w-full max-w-7xl px-6 pt-14 pb-10 sm:pt-16 sm:pb-12">
-        <div className="console-chip mb-6 inline-block rounded-none px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
-          {VERIFICATION_PRODUCT_COPY.eyebrow}
+        <div className="mb-6 flex flex-wrap items-center gap-3">
+          <div className="console-chip inline-block rounded-none px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
+            {VERIFICATION_PRODUCT_COPY.eyebrow}
+          </div>
+          <AccelerandoRun text={VERIFICATION_PRODUCT_COPY.eyebrow} className="text-[11px]" />
         </div>
         <h1 className="max-w-5xl text-5xl font-medium leading-[1.03] tracking-[-2.8px] text-white sm:text-6xl lg:text-[68px]">
           Verify Human Knowledge.

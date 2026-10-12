@@ -1,32 +1,155 @@
 "use client";
 
-import { useEffect, type RefObject } from "react";
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type RefObject } from "react";
 import { ILE_CANVAS_PROMPT_BAR_FALLBACK_WIDTH, ileCanvasSlashBarOpen } from "@/lib/ile-work-canvas";
 import {
+  ILE_COMMAND_DOCK_STORAGE_KEY,
+  clampIleCommandDockPoint,
+  ileCommandDockAfterDrag,
+  ileCommandDockFloatWidth,
+  ileCanvasCommandDockVisible,
+  ileCommandDockFrame,
+  parseIleCommandDock,
+  serializeIleCommandDock,
+  type IleCommandDockMode,
+  type IleCommandDockState,
+} from "@/lib/ile-command-dock";
+import {
   filterIleWorkCanvasCommands,
+  ILE_WORK_CANVAS_COMMANDS,
   ileCanvasCommandDraft,
   ileWorkCanvasCommandNeedsSelection,
   type IleWorkCanvasCommandId,
 } from "@/lib/ile-work-canvas-commands";
 import type { IleWorkCanvasElement } from "@/lib/ile-work-canvas";
-import { ileCanvasCraftInsightUsable } from "@/lib/ile-turn-insights";
+import { ileCanvasCraftInsightUsable, ileCanvasShowsCraftInsight } from "@/lib/ile-turn-insights";
 import { IleCanvasDictateButton } from "@/components/session-view/ile-canvas-dictate-button";
 import {
   IleCanvasCraftInsightForm,
   IleCraftInsightButton,
   type IleCanvasCraftInsightConfig,
 } from "@/components/session-view/ile-canvas-craft-insight";
-import { usePublishSessionMarkDraft } from "@/components/session-view/session-policy-context";
+import { usePublishSessionCanvasCommands } from "@/components/session-view/session-command-bridge";
+import { LearnSuggestionToast } from "@/components/session-view/learn-suggestion-toast";
+import { learnSuggestionToastText } from "@/lib/ile-learn-suggestion";
+import {
+  usePublishSessionMarkDraft,
+  useSessionPolicySuggestion,
+} from "@/components/session-view/session-policy-context";
 import type { SessionMarkMode } from "@/lib/session-marks";
 
 const ILE_CANVAS_COMMAND_BUTTON_CLASS =
-  "pointer-events-auto flex h-full min-w-0 items-center justify-center whitespace-normal rounded-none border border-neutral-600 bg-neutral-900 px-1.5 py-1 text-center font-mono text-[11px] leading-tight text-white hover:border-white hover:bg-neutral-800 disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-950 disabled:text-neutral-600 disabled:opacity-100 disabled:hover:border-neutral-800 disabled:hover:bg-neutral-950 disabled:hover:text-neutral-600";
+  "pointer-events-auto relative flex h-full flex-col min-w-0 items-center justify-center gap-1 whitespace-normal rounded-none border border-white/45 bg-black px-1.5 pb-1.5 pt-3 text-center font-mono text-[11px] leading-tight text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] hover:border-white hover:bg-neutral-950 disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-950 disabled:text-neutral-600 disabled:opacity-100 disabled:shadow-none disabled:hover:border-neutral-800 disabled:hover:bg-neutral-950 disabled:hover:text-neutral-600";
+
+const ILE_CANVAS_COMMAND_RAIL_CLASS =
+  "pointer-events-auto relative flex min-h-9 w-full min-w-0 flex-row items-center justify-start gap-1.5 whitespace-nowrap rounded-none border border-white/45 bg-black px-1.5 py-2 text-left font-mono text-[11px] leading-tight text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] hover:border-white hover:bg-neutral-950 disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-950 disabled:text-neutral-600 disabled:opacity-100 disabled:shadow-none disabled:hover:border-neutral-800 disabled:hover:bg-neutral-950 disabled:hover:text-neutral-600";
+
+const MARK_CLASS = "h-3.5 w-3.5";
+
+function commandIndex(id: IleWorkCanvasCommandId): string {
+  const at = ILE_WORK_CANVAS_COMMANDS.findIndex((command) => command.id === id);
+  return String(at + 1).padStart(2, "0");
+}
+
+/** Corner ticks, a stencil number, and a lamp. They follow the button color, including the dim disabled state. */
+function CommandPlate({ index }: { index: string }) {
+  const tick = "pointer-events-none absolute h-1.5 w-1.5 border-current opacity-70";
+  return (
+    <>
+      <span aria-hidden className={`${tick} left-0.5 top-0.5 border-l border-t`} />
+      <span aria-hidden className={`${tick} right-0.5 top-0.5 border-r border-t`} />
+      <span aria-hidden className={`${tick} bottom-0.5 left-0.5 border-b border-l`} />
+      <span aria-hidden className={`${tick} bottom-0.5 right-0.5 border-b border-r`} />
+      <span
+        aria-hidden
+        data-ile-command-index={index}
+        className="absolute left-1.5 top-0.5 font-mono text-[7px] leading-none tracking-[0.14em] opacity-60"
+      >
+        {index}
+      </span>
+      <span aria-hidden className="absolute right-1.5 top-1 h-1 w-1 bg-current" />
+    </>
+  );
+}
+
+function CommandMark({ id }: { id: IleWorkCanvasCommandId }) {
+  const common = {
+    viewBox: "0 0 16 16",
+    className: MARK_CLASS,
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.4,
+    strokeLinecap: "square" as const,
+    strokeLinejoin: "miter" as const,
+    "aria-hidden": true,
+    "data-ile-command-mark": id,
+  };
+  switch (id) {
+    case "simplify":
+      return (
+        <svg {...common}>
+          <path d="M1.5 4h13M3.5 8h9M5.5 12h5" />
+        </svg>
+      );
+    case "split":
+      return (
+        <svg {...common}>
+          <path d="M8 2v4M8 6 3.5 13M8 6l4.5 7" />
+        </svg>
+      );
+    case "check":
+      return (
+        <svg {...common}>
+          <path d="M3 3h10v10H3zM4.5 8.2 7 10.6 11.5 5.4" />
+        </svg>
+      );
+    case "refactor":
+      return (
+        <svg {...common}>
+          <path d="M3 12V4.5h7M8.2 2.5 11.5 4.5 8.2 6.5" />
+        </svg>
+      );
+    case "declutter":
+      return (
+        <svg {...common}>
+          <path d="M2 2h5v5H2zM9 9h5v5H9z" />
+        </svg>
+      );
+    default:
+      return null;
+  }
+}
+
+const DOCK_ANCHORS: readonly { mode: IleCommandDockMode; title: string }[] = [
+  { mode: "bottom-left", title: "Anchor at the bottom left" },
+  { mode: "left", title: "Anchor as a full-height bar on the left" },
+  { mode: "right", title: "Anchor beside the sidebar" },
+];
+
+function DockAnchorIcon({ mode }: { mode: IleCommandDockMode }) {
+  const bar =
+    mode === "bottom-left" ? "M3 10h6v3H3z" : mode === "left" ? "M3 3h3v10H3z" : "M10 3h3v10h-3z";
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      className="h-3.5 w-3.5"
+      fill="currentColor"
+      stroke="currentColor"
+      strokeWidth={1.2}
+      aria-hidden
+    >
+      <path fill="none" d="M3 3h10v10H3z" />
+      <path d={bar} />
+    </svg>
+  );
+}
 
 export function CanvasPromptBar({
   askInFlight,
-  promptBarTop,
   canvasSelectionActive,
   promptBarWidth,
+  hostWidth = 0,
+  hostHeight = 0,
   submitCommand,
   slashBarOpen,
   commandText,
@@ -38,6 +161,7 @@ export function CanvasPromptBar({
   dictateTranscript,
   viewModeEnabled,
   writeDictatedText,
+  placeSuggestionText,
   onDictateActive,
   craftInsightOpen,
   selectedCanvasElements,
@@ -48,9 +172,10 @@ export function CanvasPromptBar({
   markSpeech,
 }: {
   askInFlight: number;
-  promptBarTop: number;
   canvasSelectionActive: boolean;
   promptBarWidth: number;
+  hostWidth?: number;
+  hostHeight?: number;
   submitCommand: () => void;
   slashBarOpen: boolean;
   commandText: string;
@@ -62,6 +187,7 @@ export function CanvasPromptBar({
   dictateTranscript?: string;
   viewModeEnabled?: boolean;
   writeDictatedText: (text: string, commit: boolean) => void;
+  placeSuggestionText?: (text: string) => void;
   onDictateActive?: (active: boolean) => void;
   craftInsightOpen: boolean;
   selectedCanvasElements: () => IleWorkCanvasElement[];
@@ -71,7 +197,26 @@ export function CanvasPromptBar({
   selectedMarkTexts: string[];
   markSpeech: string;
 }) {
+  const [dockState, setDockState] = useState<IleCommandDockState>({ mode: "bottom-left", left: 0, top: 0 });
+  const formRef = useRef<HTMLFormElement>(null);
+  const suppressClickRef = useRef(false);
+  const stopDragRef = useRef<(() => void) | null>(null);
   const publishDraft = usePublishSessionMarkDraft();
+  const publishCommands = usePublishSessionCanvasCommands();
+  const suggestion = useSessionPolicySuggestion();
+  const [dismissedSuggestion, setDismissedSuggestion] = useState<string | null>(null);
+  const runCommandRef = useRef(handleQuickAction);
+  const clearCommandRef = useRef(setCommandText);
+  const writeDictatedRef = useRef(writeDictatedText);
+  const placeSuggestionRef = useRef(placeSuggestionText);
+  const dictateActiveRef = useRef(onDictateActive);
+  const openCraftRef = useRef(setCraftInsightOpen);
+  runCommandRef.current = handleQuickAction;
+  clearCommandRef.current = setCommandText;
+  writeDictatedRef.current = writeDictatedText;
+  placeSuggestionRef.current = placeSuggestionText;
+  dictateActiveRef.current = onDictateActive;
+  openCraftRef.current = setCraftInsightOpen;
   const questionKey = (sessionMarkQuestions ?? [])
     .map((question) => `${question.id || ""}:${question.text || ""}`)
     .join("|");
@@ -98,31 +243,187 @@ export function CanvasPromptBar({
     sessionMarkListKey,
     sessionMarkMode,
   ]);
+  useEffect(() => {
+    try {
+      setDockState(parseIleCommandDock(sessionStorage.getItem(ILE_COMMAND_DOCK_STORAGE_KEY)));
+    } catch {
+      // Storage can be blocked. The box stays at the bottom left.
+    }
+    return () => stopDragRef.current?.();
+  }, []);
   const commandDraft = ileCanvasCommandDraft(commandText);
   const commands = filterIleWorkCanvasCommands(commandDraft.slash ? commandDraft.query : "");
-  return (
+  const showCraftInsight = Boolean(craftInsight) && ileCanvasShowsCraftInsight(sessionMarkMode);
+  const dictateOn = dictateTranscript !== undefined && !viewModeEnabled;
+  useEffect(() => {
+    publishCommands({
+      selectionActive: canvasSelectionActive,
+      run(id) {
+        clearCommandRef.current("");
+        runCommandRef.current(id);
+      },
+      dictate: dictateOn
+        ? {
+            transcript: dictateTranscript ?? "",
+            write: (text, commit) => writeDictatedRef.current(text, commit),
+            onActive: (active) => dictateActiveRef.current?.(active),
+          }
+        : null,
+      craft: showCraftInsight ? { open: () => openCraftRef.current(true) } : null,
+    });
+  }, [canvasSelectionActive, dictateOn, dictateTranscript, publishCommands, showCraftInsight]);
+  useEffect(() => () => publishCommands(null), [publishCommands]);
+  const floatWidth = ileCommandDockFloatWidth(
+    Math.max(promptBarWidth, ILE_CANVAS_PROMPT_BAR_FALLBACK_WIDTH),
+    hostWidth,
+  );
+  const frame = ileCommandDockFrame({
+    state: dockState,
+    hostWidth,
+    hostHeight,
+    floatWidth,
+  });
+  const rail = frame.mode === "left" || frame.mode === "right";
+  const learnSuggestion = learnSuggestionToastText({
+    mode: sessionMarkMode,
+    suggestion,
+    dismissed: dismissedSuggestion,
+  });
+  const commandDockVisible = ileCanvasCommandDockVisible(sessionMarkMode);
+  const rememberDock = (next: IleCommandDockState) => {
+    setDockState(next);
+    try {
+      sessionStorage.setItem(ILE_COMMAND_DOCK_STORAGE_KEY, serializeIleCommandDock(next));
+    } catch {
+      // The dock still moves for this view.
+    }
+  };
+  const beginDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return;
+    const target = event.target;
+    if (target instanceof Element && target.closest("input, textarea, [data-ile-learn-suggestion]")) return;
+    const form = formRef.current;
+    const host = form?.offsetParent instanceof HTMLElement ? form.offsetParent : null;
+    if (!form || !host) return;
+    const formRect = form.getBoundingClientRect();
+    const hostRect = host.getBoundingClientRect();
+    const originLeft = formRect.left - hostRect.left;
+    const originTop = formRect.top - hostRect.top;
+    const startX = event.clientX;
+    const startY = event.clientY;
+    let moved = false;
+    const box = {
+      hostWidth: hostRect.width,
+      hostHeight: hostRect.height,
+      boxWidth: formRect.width,
+      boxHeight: formRect.height,
+    };
+    const stop = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      if (stopDragRef.current === stop) stopDragRef.current = null;
+    };
+    const finish = (clientX: number, clientY: number) => {
+      stop();
+      if (!moved) return;
+      suppressClickRef.current = true;
+      rememberDock(
+        ileCommandDockAfterDrag({
+          left: originLeft + (clientX - startX),
+          top: originTop + (clientY - startY),
+          ...box,
+        }),
+      );
+    };
+    const onMove = (move: PointerEvent) => {
+      const dx = move.clientX - startX;
+      const dy = move.clientY - startY;
+      if (!moved && Math.hypot(dx, dy) < 6) return;
+      moved = true;
+      const clamped = clampIleCommandDockPoint({
+        left: originLeft + dx,
+        top: originTop + dy,
+        ...box,
+      });
+      setDockState({ mode: "free", left: clamped.left, top: clamped.top });
+    };
+    const onUp = (up: PointerEvent) => finish(up.clientX, up.clientY);
+    stopDragRef.current?.();
+    stopDragRef.current = stop;
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  };
+  const suggestionNote = learnSuggestion ? (
+    <LearnSuggestionToast
+      key={learnSuggestion}
+      text={learnSuggestion}
+      placement="under"
+      onDone={(text) => setDismissedSuggestion(text)}
+      onAdd={(text) => placeSuggestionRef.current?.(text)}
+    />
+  ) : null;
+  return commandDockVisible ? (
           <form
+            ref={formRef}
             data-ile-canvas-prompt-bar
             data-ile-canvas-prompt-mode="commands"
+            data-ile-command-dock={frame.mode}
             data-ile-excalidraw-ask="true"
             data-ile-excalidraw-ask-busy={askInFlight > 0 ? "true" : undefined}
             data-ile-canvas-prompt-bar-busy={askInFlight > 0 ? "true" : undefined}
-            className="pointer-events-none absolute left-1/2 z-[58] flex -translate-x-1/2 justify-center"
+            className="pointer-events-none absolute z-[58] flex flex-col"
             style={{
-              top: promptBarTop,
-              width: Math.max(promptBarWidth, ILE_CANVAS_PROMPT_BAR_FALLBACK_WIDTH),
+              left: frame.left ?? undefined,
+              right: frame.right ?? undefined,
+              top: frame.top ?? undefined,
+              bottom: frame.bottom ?? undefined,
+              width: frame.width,
             }}
             onSubmit={(event) => {
               event.preventDefault();
               submitCommand();
             }}
           >
-            <div className="pointer-events-auto flex w-full flex-col gap-1.5">
-              <div className="flex w-full flex-col gap-1.5 rounded-none border border-white bg-neutral-950/95 p-2 shadow-[0_12px_40px_rgba(0,0,0,0.55)]">
+            <div
+              className={`pointer-events-auto relative flex w-full flex-col gap-1.5 ${rail ? "h-full" : ""}`}
+              onPointerDown={beginDrag}
+              onClickCapture={(event) => {
+                if (!suppressClickRef.current) return;
+                suppressClickRef.current = false;
+                event.preventDefault();
+                event.stopPropagation();
+              }}
+            >
+              <div className={`relative flex w-full flex-col gap-1 rounded-none border border-white bg-neutral-950/95 shadow-[0_12px_40px_rgba(0,0,0,0.55)] ${rail ? "min-h-0 flex-1 overflow-y-auto p-1" : "gap-1.5 p-2"}`}>
+              <div
+                data-ile-command-dock-grip
+                className="sticky top-0 z-10 flex cursor-grab items-center gap-1 border border-white/40 bg-black px-1 py-1 active:cursor-grabbing"
+              >
+                <span className="font-mono text-[9px] uppercase tracking-[0.22em] text-white/55">drag</span>
+                <span className="ml-auto flex items-center gap-1">
+                  {DOCK_ANCHORS.map((anchor) => {
+                    const selected = frame.mode === anchor.mode;
+                    return (
+                      <button
+                        key={anchor.mode}
+                        type="button"
+                        data-ile-command-dock-anchor={anchor.mode}
+                        aria-pressed={selected}
+                        aria-label={anchor.title}
+                        title={anchor.title}
+                        onClick={() => rememberDock({ mode: anchor.mode, left: dockState.left, top: dockState.top })}
+                        className={`flex aspect-square h-6 w-6 items-center justify-center rounded-none border p-0 ${selected ? "border-white bg-white text-neutral-950" : "border-white/40 text-white/55 hover:border-white hover:text-white"}`}
+                      >
+                        <DockAnchorIcon mode={anchor.mode} />
+                      </button>
+                    );
+                  })}
+                </span>
+              </div>
                 <div
                   data-ile-learn-more
                   data-ile-learn-more-actions
-                  className="grid w-full grid-cols-4 gap-1"
+                  className={rail ? "grid w-full grid-cols-1 gap-1" : "grid w-full grid-cols-4 gap-1"}
                 >
                   {commands.map((command) => {
                     const needsSelection = ileWorkCanvasCommandNeedsSelection(command.id);
@@ -140,9 +441,11 @@ export function CanvasPromptBar({
                           setCommandText("");
                           handleQuickAction(command.id);
                         }}
-                        className={ILE_CANVAS_COMMAND_BUTTON_CLASS}
+                        className={rail ? ILE_CANVAS_COMMAND_RAIL_CLASS : ILE_CANVAS_COMMAND_BUTTON_CLASS}
                       >
-                        {command.label}
+                        <CommandPlate index={commandIndex(command.id)} />
+                        <CommandMark id={command.id} />
+                        <span>{command.label}</span>
                       </button>
                     );
                   })}
@@ -151,7 +454,7 @@ export function CanvasPromptBar({
                   selectionActive: canvasSelectionActive,
                   slashIntent: slashBarOpen,
                 }) ? (
-                <div className="flex items-stretch gap-1">
+                <div className={rail ? "absolute top-8 z-20 flex w-56 flex-col gap-1 border border-white bg-neutral-950 p-1 " + (frame.mode === "right" ? "right-full mr-1" : "left-full ml-1") : "flex items-stretch gap-1"}>
                   <input
                     ref={commandInputRef}
                     data-ile-canvas-prompt-bar-input
@@ -172,33 +475,55 @@ export function CanvasPromptBar({
                   </button>
                 </div>
                 ) : null}
-              </div>
-              <div className="flex items-stretch gap-1.5">
-                {craftInsight && !sessionMarkMode ? (
-                  <IleCraftInsightButton
-                    usable={ileCanvasCraftInsightUsable()}
-                    onClick={() => setCraftInsightOpen(true)}
-                  />
+                {showCraftInsight || (dictateTranscript !== undefined && !viewModeEnabled) ? (
+                <div className={rail ? "grid w-full grid-cols-1 gap-1" : "flex w-full items-stretch gap-1"}>
+                  {showCraftInsight ? (
+                    <IleCraftInsightButton
+                      square={rail}
+                      usable={ileCanvasCraftInsightUsable()}
+                      onClick={() => setCraftInsightOpen(true)}
+                    />
+                  ) : null}
+                  {dictateTranscript !== undefined && !viewModeEnabled ? (
+                    <IleCanvasDictateButton
+                      square={rail}
+                      transcript={dictateTranscript}
+                      onLiveText={(text) => writeDictatedText(text, false)}
+                      onCommit={(text) => writeDictatedText(text, true)}
+                      onActiveChange={onDictateActive}
+                    />
+                  ) : null}
+                </div>
                 ) : null}
-                {dictateTranscript !== undefined && !viewModeEnabled ? (
-                  <IleCanvasDictateButton
-                    transcript={dictateTranscript}
-                    onLiveText={(text) => writeDictatedText(text, false)}
-                    onCommit={(text) => writeDictatedText(text, true)}
-                    onActiveChange={onDictateActive}
-                  />
-                ) : null}
               </div>
-              {craftInsight && !sessionMarkMode ? (
-                <IleCanvasCraftInsightForm
-                  open={craftInsightOpen}
-                  enabled={ileCanvasCraftInsightUsable()}
-                  selectedElements={selectedCanvasElements()}
-                  config={craftInsight}
-                  onClose={() => setCraftInsightOpen(false)}
-                />
+              {showCraftInsight && craftInsight ? (
+                <div className={rail ? `absolute top-0 z-20 w-72 ${frame.mode === "right" ? "right-full mr-1" : "left-full ml-1"}` : undefined}>
+                  <IleCanvasCraftInsightForm
+                    open={craftInsightOpen}
+                    enabled={ileCanvasCraftInsightUsable()}
+                    selectedElements={selectedCanvasElements()}
+                    config={craftInsight}
+                    onClose={() => setCraftInsightOpen(false)}
+                  />
+                </div>
               ) : null}
             </div>
           </form>
-  );
+  ) : suggestionNote || (showCraftInsight && craftInsight && craftInsightOpen) ? (
+    <div
+      data-ile-canvas-side-note
+      className="pointer-events-none absolute bottom-2 left-2 z-[58] flex w-[min(28rem,calc(100%-1rem))] flex-col gap-1"
+    >
+      {showCraftInsight && craftInsight ? (
+        <IleCanvasCraftInsightForm
+          open={craftInsightOpen}
+          enabled={ileCanvasCraftInsightUsable()}
+          selectedElements={selectedCanvasElements()}
+          config={craftInsight}
+          onClose={() => setCraftInsightOpen(false)}
+        />
+      ) : null}
+      {suggestionNote}
+    </div>
+  ) : null;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { SessionConsoleMarks } from "@/components/session-view/session-console-marks";
 import type { SessionViewTranslate } from "@/components/session-view/types";
@@ -19,12 +19,15 @@ export function IleStartLoading({
   statusLabel = null,
   fieldStatus = null,
   fieldError = null,
+  children = null,
 }: {
   t: SessionViewTranslate;
   /** Replaces "Starting session" when this same plate is a save or a route wait. */
   statusLabel?: string | null;
   fieldStatus?: "preparing" | "failed" | null;
   fieldError?: string | null;
+  /** Extra readout under the current tip. The plate stays the tips screen. */
+  children?: ReactNode;
 }) {
   // The first paint stays on ILE_START_TIP_IDS. Shuffling during render
   // uses Math.random and the server order will not match the client.
@@ -122,6 +125,7 @@ export function IleStartLoading({
                 </div>
               </div>
             ) : null}
+            {children ? <div className="mt-5 border-t border-white/25 pt-5">{children}</div> : null}
           </section>
         </div>
       </div>

@@ -11,7 +11,6 @@ import {
   pauseSession,
   resetSessionProbes,
   resumeSession,
-  saveSession,
   toggleProbeFocused,
   updateSessionStatus,
   type Session,
@@ -43,6 +42,8 @@ import { embedPolicyScore } from "@/lib/session-policy-score";
 import type { SessionPolicySnapshot } from "@/components/session-view/session-policy-context";
 import { loadSessionBranchField, sessionClockMayStart } from "@/lib/session-branch-field-load";
 import { learnSessionFieldInput } from "@/lib/session-branch-prepare";
+import { persistIleSessionRow } from "@/lib/ile-session-persist";
+import { learnFieldFromStoredPolicy } from "@/lib/session-policy-store";
 import { discardUnsavedIleSession } from "@/lib/ile-unsaved-exit";
 import type { GuestAccessKind, ChapterPlanStatus, PrepStage, HelpPreviousLayout } from "@/components/session-view/types";
 import type { InitialChaptersLevel } from "@/lib/initial-chapters";
@@ -424,7 +425,7 @@ const stopRecording = async () => {
   setIsSaving(true);
   if (!session) return;
 
-  const finalSession = endSession(session, elapsedSeconds * 1000);
+  const finalSession = endSession(sessionRef.current ?? session, elapsedSeconds * 1000);
   finalSession.hasAudio = false;
   finalSession.metadata = applyIleOpenWorkIdsToMetadata(
     {
@@ -434,16 +435,9 @@ const stopRecording = async () => {
     } as Record<string, unknown>,
     openWorkIdsRef.current,
   ) as Session["metadata"];
+  sessionRef.current = finalSession;
 
-  if (guestAccessKind === "aycl" && ayclToken) {
-    const { saveAyclSession } = await import("@/lib/aycl-storage");
-    await saveAyclSession(ayclToken, finalSession);
-  } else if (guestAccessKind === "ile" && ileToken) {
-    const { saveIleLinkSession } = await import("@/lib/ile-link-storage");
-    await saveIleLinkSession(ileToken, finalSession);
-  } else {
-    await saveSession(finalSession);
-  }
+  await persistIleSessionRow(() => sessionRef.current, { ayclToken, ileToken });
 
   // LWM Snapshot is manual (Knowledge UI) or Snapshot API POST .../lwm-snapshot —
   // not auto-run on TAP Learning end. PoW is already flushed above.
@@ -610,26 +604,19 @@ const pauseAndGoToDashboard = useCallback(async (
   const current = sessionRef.current ?? session;
   if (current) {
     if (persistSession) {
+      const latest = sessionRef.current ?? current;
       const metadata = applyIleOpenWorkIdsToMetadata(
         applyIleSessionNameToMetadata(
-          current.metadata as Record<string, unknown>,
+          latest.metadata as Record<string, unknown>,
           sessionName,
         ),
         openWorkIdsRef.current,
       ) as Session["metadata"];
-      const named = { ...current, metadata };
+      const named = { ...latest, metadata };
       setSession(named);
       sessionRef.current = named;
       try {
-        if (guestAccessKind === "aycl" && ayclToken) {
-          const { saveAyclSession } = await import("@/lib/aycl-storage");
-          await saveAyclSession(ayclToken, named);
-        } else if (guestAccessKind === "ile" && ileToken) {
-          const { saveIleLinkSession } = await import("@/lib/ile-link-storage");
-          await saveIleLinkSession(ileToken, named);
-        } else {
-          await saveSession(named);
-        }
+        await persistIleSessionRow(() => sessionRef.current, { ayclToken, ileToken });
       } catch {
         /* Still pause and leave — name is best-effort. */
       }
@@ -1008,9 +995,12 @@ const fieldInput = learnSessionFieldInput({
   ayclToken,
   fallbackTitle: t("session.chapterPromptFallback"),
 });
-const field = fieldInput
-  ? await loadSessionBranchField(fieldInput)
-  : { ok: false as const, error: "The field could not be prepared.", key: null };
+const storedField = learnFieldFromStoredPolicy(session.metadata, fieldInput);
+const field = storedField
+  ? storedField
+  : fieldInput
+    ? await loadSessionBranchField(fieldInput)
+    : { ok: false as const, error: "The field could not be prepared.", key: null };
 if (!sessionClockMayStart({ mode: "learn", fieldReady: field.ok })) {
   setPlanError(field.ok ? "The field could not be prepared." : field.error);
   return;
@@ -1074,9 +1064,12 @@ const handleWelcomeReadyStart = useCallback(async () => {
       ayclToken,
       fallbackTitle: t("session.chapterPromptFallback"),
     });
-    const field = fieldInput
-      ? await loadSessionBranchField(fieldInput)
-      : { ok: false as const, error: "The field could not be prepared.", key: null };
+    const storedField = learnFieldFromStoredPolicy(session.metadata, fieldInput);
+    const field = storedField
+      ? storedField
+      : fieldInput
+        ? await loadSessionBranchField(fieldInput)
+        : { ok: false as const, error: "The field could not be prepared.", key: null };
     if (!sessionClockMayStart({ mode: "learn", fieldReady: field.ok })) {
       setPlanError(field.ok ? "The field could not be prepared." : field.error);
       return;

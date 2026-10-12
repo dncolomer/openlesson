@@ -8,6 +8,7 @@ import type { DeviceStatus } from "@/lib/muse-athena";
 import type { SessionThoughtInterface } from "@/lib/useSessionThoughtInterface";
 import type { WorkspaceExternalResource } from "@/lib/workspace-external-resources";
 import type { Session, SessionPlanStep } from "@/lib/storage";
+import { IleInsightKeptScreen } from "@/components/session-view/ile-insight-kept-screen";
 import { IleMapInsightsWidget } from "@/components/session-view/ile-insight-trophies";
 import { IleSessionImpurityScreen, IleSilenceRestScreen, mountIleSilenceScreen } from "@/components/session-view/ile-silence-lock-screen";
 import { IleVoiceBar, IleVoiceBarActions } from "@/components/session-view/ile-voice-bar";
@@ -82,6 +83,7 @@ export type SessionLiveStageProps = {
   session: Session;
   sessionBlockId: string | undefined;
   sessionInsights: InsightSummary[];
+  keptInsight: InsightSummary | null;
   sessionPowArtifacts: IlePowCounterArtifact[];
   sessionResourcesOpen: boolean;
   sessionThoughtInterface: SessionThoughtInterface;
@@ -162,6 +164,7 @@ export function SessionLiveStage({
     session,
     sessionBlockId,
     sessionInsights,
+    keptInsight,
     sessionPowArtifacts,
     sessionResourcesOpen,
     sessionThoughtInterface,
@@ -370,6 +373,14 @@ export function SessionLiveStage({
           />
         }
       />
+      {keptInsight ? (
+        <IleInsightKeptScreen
+          insight={keptInsight}
+          onBackToWorkspace={() => {
+            void handleConfirmEnd();
+          }}
+        />
+      ) : null}
     </div>
   );
 }

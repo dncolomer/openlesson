@@ -5,8 +5,7 @@
  */
 
 import {
-  convertIleWorkCanvasSkeletons,
-  ILE_WORK_CANVAS_STROKE_COLOR,
+  boardInstructionNoteElements,
   ileWorkCanvasContentBounds,
   type IleWorkCanvasElement,
 } from "@/lib/ile-work-canvas";
@@ -608,22 +607,17 @@ export function branchObservationElements(
   return pending.flatMap((note, index) => {
     const column = index % 2;
     const row = Math.floor(index / 2);
-    const made = convertIleWorkCanvasSkeletons(
-      [
-        {
-          type: "text",
-          id: `branch-note-${note.key}`,
-          text: note.text,
-          x: originX + column * 340,
-          y: originY + row * 280,
-          width: 300,
-          strokeColor: ILE_WORK_CANVAS_STROKE_COLOR,
-          customData: { sessionBranchNote: note.key },
-        },
-      ],
-      { regenerateIds: false },
-    );
-    return made;
+    const marked = { sessionBranchNote: note.key };
+    return boardInstructionNoteElements({
+      text: note.text,
+      x: originX + column * 340,
+      y: originY + row * 280,
+      textWidth: 300,
+      textId: `branch-note-${note.key}`,
+      textCustomData: marked,
+      bodyCustomData: marked,
+      headerCustomData: marked,
+    }).elements;
   });
 }
 
@@ -634,6 +628,13 @@ function branchNoteKey(element: IleWorkCanvasElement): string | null {
     return element.id.slice("branch-note-".length);
   }
   return null;
+}
+
+/** Field observations stay on the model. They are not opening canvas text. */
+export function withoutSessionBranchNotes<T extends { id?: unknown; customData?: IleWorkCanvasElement["customData"] }>(
+  elements: readonly T[],
+): T[] {
+  return elements.filter((element) => branchNoteKey(element as unknown as IleWorkCanvasElement) == null);
 }
 
 /** Notes that are not already on the board, including ones the learner deleted. */

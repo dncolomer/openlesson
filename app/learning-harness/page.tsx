@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, ExternalLink } from "lucide-react";
+import { AccelerandoRun } from "@/components/AccelerandoGlyphs";
 import { MarketingPageShell, SectionHeading } from "@/components/marketing/MarketingChrome";
 import { HarnessScreenshotCarousel } from "@/components/marketing/HarnessScreenshotCarousel";
 import { TrackedCtaLink } from "@/components/TrackedCtaLink";
@@ -25,8 +26,11 @@ export default function LearningHarnessPage() {
   return (
     <MarketingPageShell>
       <section className="relative z-10 mx-auto w-full max-w-7xl px-6 pt-14 pb-10 sm:pt-16 sm:pb-12">
-        <div className="mb-6 inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
-          {HARNESS_PRODUCT_COPY.eyebrow}
+        <div className="mb-6 flex flex-wrap items-center gap-3">
+          <div className="inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
+            {HARNESS_PRODUCT_COPY.eyebrow}
+          </div>
+          <AccelerandoRun text={HARNESS_PRODUCT_COPY.eyebrow} className="text-[11px]" />
         </div>
         <h1 className="max-w-4xl text-5xl font-medium leading-[1.03] tracking-[-2.8px] text-white sm:text-6xl lg:text-[68px]">
           {HARNESS_PRODUCT_COPY.title}

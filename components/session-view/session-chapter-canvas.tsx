@@ -2,6 +2,7 @@
 
 import { type Dispatch, type MutableRefObject, type SetStateAction } from "react";
 import { WorkCanvas } from "@/components/ExcalidrawCanvas";
+import { SessionPolicyAutosave } from "@/components/session-view/session-policy-autosave";
 import { useSessionBranchField } from "@/components/session-view/session-branch-prepare";
 import { SessionFieldLoader } from "@/components/session-view/session-field-gate";
 import {
@@ -50,6 +51,7 @@ export function SessionChapterWorkCanvas({
   sessionPowArtifactsRef,
   insightWorkMarkRef,
   setSessionInsights,
+  onInsightKept,
   policyRef,
 }: {
   session: Session | null;
@@ -81,26 +83,35 @@ export function SessionChapterWorkCanvas({
   sessionPowArtifactsRef: { current: IlePowCounterArtifact[] };
   insightWorkMarkRef: { current: number };
   setSessionInsights: Dispatch<SetStateAction<InsightSummary[]>>;
+  /** Fires after the insight is accepted, cleaned up, and saved. */
+  onInsightKept?: (insight: InsightSummary) => void;
   policyRef?: MutableRefObject<SessionPolicySnapshot>;
 }) {
   const chapterId = activeStep?.id || activeChapterKey || "chapter";
-  useSessionBranchField({
-    enabled: Boolean(session?.id),
-    sessionId: session?.id,
-    chapterTitle,
-    chapterBrief,
-    ileToken,
-    ayclToken,
-    scope: fieldScope || chapterId,
-  });
+  useSessionBranchField(
+    {
+      enabled: Boolean(session?.id),
+      sessionId: session?.id,
+      chapterTitle,
+      chapterBrief,
+      ileToken,
+      ayclToken,
+      scope: fieldScope || chapterId,
+    },
+    session?.metadata,
+  );
   const fieldSlot = useSessionBranchSlot();
 
   const bridge = policyRef ? <SessionPolicyBridge target={policyRef} /> : null;
+  const autosave = session ? (
+    <SessionPolicyAutosave sessionRef={sessionRef} ayclToken={ayclToken} ileToken={ileToken} />
+  ) : null;
   if (!session) return bridge;
   if (!sessionCanvasMayOpen(fieldSlot)) {
     return (
       <>
         {bridge}
+        {autosave}
         <SessionFieldLoader status={fieldSlot?.status} error={fieldSlot?.error} />
       </>
     );
@@ -115,6 +126,7 @@ export function SessionChapterWorkCanvas({
   return (
     <>
     {bridge}
+    {autosave}
     <WorkCanvas
       key={`${boardId}:work`}
       boardId={boardId}
@@ -161,6 +173,7 @@ export function SessionChapterWorkCanvas({
                   if (current.some((row) => row.id === insight.id)) return current;
                   return [insight, ...current];
                 });
+                onInsightKept?.(insight);
               },
             }
           : null

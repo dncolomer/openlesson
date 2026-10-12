@@ -83,6 +83,70 @@ video.console-copy {
   background-color: #000;
 }
 
+/* Accelerando-8192 overlay: phosphor glyphs, never the readable copy. */
+.accelerando-run {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.22em;
+  pointer-events: none;
+  line-height: 1;
+  color: rgba(176, 214, 190, 0.5);
+}
+
+.accelerando-run .accelerando-glyph {
+  width: 0.82em;
+  height: 0.82em;
+  overflow: visible;
+}
+
+.accelerando-field {
+  position: absolute;
+  top: 6%;
+  right: -3%;
+  z-index: 0;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 2.6rem 1.6rem;
+  width: min(44vw, 620px);
+  padding: 1.5rem;
+  pointer-events: none;
+  transform: rotate(-11deg);
+  opacity: 0.16;
+  color: #9ecfb4;
+  mask-image: radial-gradient(ellipse at 55% 40%, #000 10%, transparent 78%);
+}
+
+.accelerando-field .accelerando-glyph {
+  width: 100%;
+  max-width: 2.7rem;
+  height: auto;
+  justify-self: center;
+  overflow: visible;
+}
+
+.accelerando-field .accelerando-glyph:nth-child(5n) {
+  color: #c4f5c3;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .accelerando-field .accelerando-glyph {
+    animation: accelerando-breathe 9s ease-in-out infinite;
+    animation-delay: calc(var(--accelerando-i, 0) * -0.35s);
+  }
+}
+
+@keyframes accelerando-breathe {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (max-width: 720px) {
+  .accelerando-field {
+    display: none;
+  }
+}
+
 /* Hide scrollbar but keep scroll functionality */
 .scrollbar-hide {
   -ms-overflow-style: none;

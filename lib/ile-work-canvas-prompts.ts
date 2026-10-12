@@ -268,6 +268,22 @@ export function buildIleWorkCanvasAnswerUserMessage(input: {
   return ileWorkCanvasWithDomainPrefix(body, input.workspace);
 }
 
+export function buildIleWorkCanvasCheckUserMessage(input: {
+  selectedElements?: readonly IleWorkCanvasElement[] | null;
+  workspace?: PromptWorkspaceContextInput | PromptWorkspaceContext | null;
+}): string {
+  const live = (input.selectedElements ?? []).filter((el) => el && !el.isDeleted);
+  const body = [
+    "Check the selected work.",
+    "Say what holds and what to fix, in a few unhurried sentences. Stay on this topic.",
+    "Leave the selected marks in place. The check is the reply text.",
+    "",
+    "Selected elements:",
+    ileWorkCanvasCommandSelectionListing(live),
+  ].join("\n");
+  return ileWorkCanvasWithDomainPrefix(body, input.workspace);
+}
+
 export function buildIleWorkCanvasSimplifyUserMessage(input: {
   selectedElements?: readonly IleWorkCanvasElement[] | null;
   workspace?: PromptWorkspaceContextInput | PromptWorkspaceContext | null;
@@ -315,9 +331,10 @@ export function buildIleWorkCanvasCommandUserMessage(input: {
   }
   if (kind === "refactor") return buildIleWorkCanvasRefactorUserMessage(input);
   if (kind === "suggest-insight") return buildIleWorkCanvasSuggestInsightUserMessage(input);
-  if (kind === "clear-overlaps") return buildIleWorkCanvasClearOverlapsUserMessage(input);
+  if (kind === "declutter" || kind === "clear-overlaps") return buildIleWorkCanvasClearOverlapsUserMessage(input);
   if (kind === "answer") return buildIleWorkCanvasAnswerUserMessage(input);
   if (kind === "simplify") return buildIleWorkCanvasSimplifyUserMessage(input);
+  if (kind === "check") return buildIleWorkCanvasCheckUserMessage(input);
   return buildIleWorkCanvasAskUserMessage({
     prompt: String(input.prompt || ""),
     selectedElements: input.selectedElements,

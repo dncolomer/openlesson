@@ -80,7 +80,7 @@ describe("TAP Learning dead frontend is gone from the live session", () => {
       [
         "TAP Learning panes: no NotebookSubmitButton, no ThoughtMemoryPanel, IleReviewWorkPanel",
         "no ToolsPanel empty grid; Data card stays on data-ile-tools-widget",
-        "Learn focus second tab is the current policy; session resources stays off that tab",
+        "Learn focus is the inferred policy plus a separate next section; session resources stays off that block",
         "TAP: ImDoneAnsweringControl + ThoughtMemoryPanel kept",
       ].join("\n"),
     );

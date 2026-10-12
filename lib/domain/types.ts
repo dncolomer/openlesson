@@ -37,6 +37,8 @@ export type ToolAction =
   | "suggest-insight"
   | "clear-overlaps"
   | "join"
+  | "check"
+  | "declutter"
   | "answer"
   | "simplify"
   | "ask"
@@ -212,6 +214,11 @@ export interface Session {
     session_name?: string;
     /** Chapter ids in open Work (clicked Work, not closed yet). */
     ile_open_work_ids?: string[];
+    /**
+     * Autosaved policy snapshot (birth tree, live tree, inferred history).
+     * Resume opens this instead of preparing a new field. The session name is separate.
+     */
+    session_policy?: unknown;
   };
 }
 

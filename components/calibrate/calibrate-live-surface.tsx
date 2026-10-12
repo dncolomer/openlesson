@@ -6,12 +6,10 @@ import { SessionTopicChapter } from "@/components/session-view/ile-work-dock-bar
 import { SessionBranchFieldBoundary } from "@/components/session-view/session-branch-prepare";
 import { calibrateFieldPrepareInput } from "@/lib/session-branch-prepare";
 import { SessionPolicyBridge, type SessionPolicySnapshot } from "@/components/session-view/session-policy-context";
-import { SessionActionsPanel } from "@/components/session-view/session-mark-controls";
+import { SessionGuidePanel } from "@/components/session-view/session-guide-panel";
 import { SessionWorkSurface } from "@/components/session-view/session-work-surface";
 import {
   CALIBRATE_DATA_DISABLED_LABEL,
-  CALIBRATE_MOVE_RIGHT_LABEL,
-  CALIBRATE_OPENING_INSTRUCTION,
   type CalibratePhase,
 } from "@/lib/calibrate-session";
 import { tapWorkCanvasShouldAcceptSceneUpdate } from "@/lib/tap-work-canvas";
@@ -101,31 +99,6 @@ export function CalibrateLiveSurface(props: {
   policyRef?: MutableRefObject<SessionPolicySnapshot>;
 }) {
   const { transcript, onDictateActive } = useOptionalDictateTranscript();
-  const [showOpening, setShowOpening] = useState(props.phase === "classifying");
-  const [showMoveRight, setShowMoveRight] = useState(false);
-
-  useEffect(() => {
-    if (props.phase !== "classifying") {
-      setShowOpening(false);
-      return;
-    }
-    setShowOpening(true);
-    setShowMoveRight(false);
-    const cue = window.setTimeout(() => setShowMoveRight(true), 1100);
-    return () => window.clearTimeout(cue);
-  }, [props.boardId, props.phase]);
-
-  useEffect(() => {
-    if (!showOpening || !showMoveRight) return;
-    const dismiss = () => setShowOpening(false);
-    const host = document.querySelector("[data-calibrate-work-canvas]");
-    const timer = window.setTimeout(dismiss, 6000);
-    host?.addEventListener("pointerdown", dismiss);
-    return () => {
-      window.clearTimeout(timer);
-      host?.removeEventListener("pointerdown", dismiss);
-    };
-  }, [showOpening, showMoveRight]);
 
   const fieldInput = calibrateFieldPrepareInput({
     topicText: props.topicText,
@@ -155,7 +128,6 @@ export function CalibrateLiveSurface(props: {
     {props.policyRef ? <SessionPolicyBridge target={props.policyRef} /> : null}
     <SessionWorkSurface
       mode="tap"
-      policyTab
       stackBelow
       stage={
         <div
@@ -188,37 +160,9 @@ export function CalibrateLiveSurface(props: {
             }}
             onCanvasPowActions={props.onCanvasPowActions}
             onAskSelected={async () => ({ text: "" })}
-            openFocusRole="instruction"
+            fitOpenBoard
             scrollAppliedElements={false}
           />
-          {showOpening ? (
-            <div
-              className="@container/calibrate-open pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-4"
-              data-calibrate-opening
-            >
-              <div className="relative w-full min-w-0 max-w-md @[40rem]/calibrate-open:max-w-[min(28rem,calc(100cqw-26rem))]">
-                <div className="bg-[#0b0b0b]/90 px-6 py-5">
-                  <p className="text-center text-base leading-relaxed text-white" data-calibrate-opening-text>
-                    {CALIBRATE_OPENING_INSTRUCTION}
-                  </p>
-                </div>
-                {showMoveRight ? (
-                  <div
-                    className="absolute right-0 top-full mt-3 flex w-max items-center gap-2 text-white @[40rem]/calibrate-open:left-full @[40rem]/calibrate-open:right-auto @[40rem]/calibrate-open:top-1/2 @[40rem]/calibrate-open:mt-0 @[40rem]/calibrate-open:ml-4 @[40rem]/calibrate-open:-translate-y-1/2"
-                    data-calibrate-opening-cue
-                  >
-                    <svg viewBox="0 0 72 16" className="h-4 w-16 shrink-0" aria-hidden>
-                      <path d="M0 8h60" stroke="currentColor" strokeWidth="2" fill="none" />
-                      <path d="M52 2l12 6-12 6" fill="currentColor" />
-                    </svg>
-                    <span className="whitespace-nowrap font-mono text-xs uppercase tracking-[0.16em]">
-                      {CALIBRATE_MOVE_RIGHT_LABEL}
-                    </span>
-                  </div>
-                ) : null}
-              </div>
-            </div>
-          ) : null}
           {props.error ? (
             <p className="pointer-events-none absolute inset-x-0 bottom-2 z-10 px-3 text-center text-xs text-red-300">
               {props.error}
@@ -230,10 +174,9 @@ export function CalibrateLiveSurface(props: {
       actions={props.actions}
       chapters={<SessionTopicChapter id={props.topicId} keyword={props.topicText} />}
       signals={<CalibrateDataDisabled />}
-      focusLabel="actions"
       focus={
         <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden" data-calibrate-step>
-          <SessionActionsPanel />
+          <SessionGuidePanel guide="calibrate" />
         </div>
       }
     />

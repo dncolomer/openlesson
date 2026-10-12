@@ -54,8 +54,10 @@ describe("shared live work surface", () => {
     expect(surface).toContain("data-scout-work-canvas-pane");
     const paneAt = surface.indexOf("data-scout-work-canvas-pane");
     expect(surface.slice(paneAt, paneAt + 280)).toContain("h-full");
-    expect(surface).toContain("<SessionActionsPanel />");
-    expect(surface).toContain('focusLabel="actions"');
+    expect(surface).toContain('<SessionGuidePanel guide="calibrate" />');
+    expect(surface).not.toContain('focusLabel="actions"');
+    expect(surface).not.toContain("SessionActionsPanel");
+    expect(surface).not.toContain("policyTab");
     expect(surface).not.toContain("data-calibrate-done-classifying");
     expect(surface).not.toContain("CALIBRATE_DONE_CLASSIFYING_LABEL");
     expect(surface).toContain("dictateTranscript={transcript}");

@@ -901,7 +901,7 @@
     "backToDashboard": "Back to Workspace",
     "saveAndExit": "Save and Exit",
     "nameSessionTitle": "Name this session?",
-    "nameSessionBody": "Give it a name so you can find it in Previous Sessions later. Leave blank to keep the default id.\n\nGenerated Proof of Work has been stored regardless. If you don't save, the current canvas state will be lost.",
+    "nameSessionBody": "The session is saved as you work, including where the policy left off. Give it a name so you can find it in Previous Sessions. Leave the name blank to keep the default id.\n\nGenerated Proof of Work is stored either way. Exit without saving hides the session, and the current canvas state will be lost.",
     "nameSessionPlaceholder": "Session name",
     "nameSessionConfirm": "Save and Exit",
     "nameSessionStay": "Stay",
@@ -1024,11 +1024,11 @@
     "beforeYouStart": "Before you start",
     "startLoading": "Starting session",
     "startTipsTitle": "Tips & Tricks",
-    "startTipActions": "Close, Keep, Discard, and Insight each place the next observation on the canvas.",
-    "startTipSelection": "You can choose an action with nothing selected. Keep frames the selected marks. Discard removes them.",
+    "startTipActions": "Work on the canvas. The session reads that work and records the policy beside it.",
+    "startTipSelection": "You can draw with nothing selected. Commands wait until something is selected.",
     "startTipCommands": "Commands sit under the canvas tools. Select marks first. Every command waits until something is selected.",
     "startTipDictate": "Dictate writes what you are saying onto the canvas. Press it again when that sentence is done.",
-    "startTipLeave": "When you leave, the session keeps your speech, your commands, and the actions you took.",
+    "startTipLeave": "When you leave, the session keeps your speech, your commands, and the work you did.",
     "preparingPlan": "Preparing block plan...",
     "planReady": "Block plan ready",
     "localModelLoaded": "Local model loaded",
@@ -2773,8 +2773,8 @@
         "title": "Craft insights on the canvas",
         "titleProject": "Craft insights on the canvas",
         "imageAlt": "Craft insights from a canvas selection",
-        "body": "Press craft insight on the work canvas. Write what you learned and submit it. A valid insight stays with that chapter.",
-        "bodyProject": "Press craft insight on the work canvas. Write what you learned and submit it. A valid insight stays with that chapter."
+        "body": "Press commit (insight) on the work canvas. Write what you learned and submit it. A valid insight stays with that chapter.",
+        "bodyProject": "Press commit (insight) on the work canvas. Write what you learned and submit it. A valid insight stays with that chapter."
       },
       "step3": {
         "title": "Then move on",
@@ -2827,13 +2827,13 @@
       "back": "Back",
       "next": "Next",
       "step1": {
-        "title": "Sort what you could answer",
+        "title": "Sort, then write",
         "imageAlt": "Calibration questions on the Work canvas",
-        "body": "This session is calibration. It is quiet unless you choose to dictate.\n\nQuestions sit on the Work canvas. Move three into the area where you could answer, and two into the area where you could not."
+        "body": "Move three questions into Comfortable answering and two into Not confident. Write one answer, and one reason you could not answer, in the filled spaces."
       },
       "step3": {
-        "title": "When Calibrate helps",
-        "body": "Use Calibrate when you want a picture of what already feels answerable. After you sort the pool, answer one comfortable question and write what is uncertain about one you would not.\n\nType, paste, or dictate. The canvas keeps that proof of work.",
+        "title": "Sort three, then write two things",
+        "body": "Your goal is a baseline for this topic: which questions you can answer, and which you cannot.\n\nMove three questions into Comfortable answering and two into Not confident. Each area has a filled space. Write the answer to one question you know in Comfortable answering. Write why you could not answer one question in Not confident.\n\nNo speaking is required. When time ends, the score is your distance from the cheapest path on a map of this topic prepared before you started. Distance 0 means every step matched that path.",
         "quoteText": "",
         "quoteAuthor": "",
         "start": "Start",
@@ -2893,7 +2893,7 @@
     "briefing": {
       "kicker": "Calibrate",
       "title": "Calibrate",
-      "intro": "Sort questions into ones you could answer and ones you could not. No speaking is required. Choose length, then start."
+      "intro": "Move three questions you could answer into one area and two you could not into the other. Write one answer and one explanation in the filled spaces. No speaking is required. The score is your distance from the cheapest path on a map prepared before you start. Choose length, then start."
     },
     "live": {
       "questionsHeading": "Calibrate",

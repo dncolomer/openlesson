@@ -1,4 +1,5 @@
 import type { HTMLAttributes, ReactNode } from "react";
+import { AccelerandoField, AccelerandoRun } from "@/components/AccelerandoGlyphs";
 import { SessionConsoleMarks, SessionConsoleScan } from "@/components/session-view/session-console-marks";
 import { cn } from "@/lib/utils";
 
@@ -29,14 +30,19 @@ export function PublicConsoleWash({
       data-console-field=""
       aria-hidden
       {...rest}
-      className={cn("pointer-events-none fixed inset-0 z-[1]", className)}
+      className={cn("pointer-events-none fixed inset-0 z-[1] overflow-hidden", className)}
       style={{ ...CONSOLE_GRID_STYLE, ...style }}
     >
+      <AccelerandoField />
       <SessionConsoleScan />
       <SessionConsoleMarks />
       <p data-console-frame-label="" className={`absolute bottom-3 left-3 z-[3] ${CONSOLE_LABEL_CLASS}`}>
         01
       </p>
+      <AccelerandoRun
+        text="Uncertain Systems"
+        className="absolute bottom-3 right-3 z-[3] text-[11px] sm:text-xs"
+      />
     </div>
   );
 }

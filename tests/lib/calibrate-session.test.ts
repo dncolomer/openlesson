@@ -7,6 +7,20 @@ import {
   syncIleDictatedTextOnWorkCanvas,
 } from "@/lib/ile-canvas-dictate";
 import {
+  BOARD_INSTRUCTION_NOTE_BODY_FILL,
+  BOARD_INSTRUCTION_NOTE_LABEL,
+  ileWorkCanvasContentBounds,
+  ileWorkCanvasFitScroll,
+  ILE_WORK_CANVAS_STROKE_COLOR,
+} from "@/lib/ile-work-canvas";
+import {
+  CALIBRATE_ANSWER_WELL_LABEL,
+  CALIBRATE_EXPLAIN_WELL_LABEL,
+  CALIBRATE_OPENING_INSTRUCTION,
+  CALIBRATE_QUESTION_FILL,
+  CALIBRATE_WELL_FILL,
+  CALIBRATE_REGION_HEIGHT,
+  CALIBRATE_REGION_WIDTH,
   CALIBRATE_DONE_CLASSIFYING_LABEL,
   addCalibrateResponseText,
   buildCalibrateProofMetadata,
@@ -22,6 +36,7 @@ import {
   moveCalibrateQuestionOnCanvas,
   readCalibratePlacements,
   readCalibrateResponseTexts,
+  restoreCalibrateChrome,
   calibrateBoardHasOverlap,
   calibrateTextCollides,
   seedCalibrateWorkCanvas,
@@ -163,7 +178,7 @@ describe("calibration answer and uncertainty", () => {
 });
 
 describe("calibration canvas regions", () => {
-  it("keeps question text, labels, and regions from occupying the same pixels", () => {
+  it("keeps the instruction, locks the plates, and fits both areas beside the questions", () => {
     const seeded = seedCalibrateWorkCanvas([
       "A long question that wraps across several lines so the card grows taller than a single row of type and still has to clear the region titles.",
       "Second question with enough words to wrap inside the card without touching the first.",
@@ -171,14 +186,98 @@ describe("calibration canvas regions", () => {
       "Fourth question remains clear of both regions and their titles.",
       "Fifth question ends the pool without crossing another mark.",
     ]);
+    const wider = seedCalibrateWorkCanvas([
+      ...POOL,
+      "Sixth question must not stretch the areas.",
+      "Seventh question stacks in the column.",
+      "Eighth question still leaves the areas the same size.",
+    ]);
     expect(calibrateBoardHasOverlap(seeded.scene.elements)).toBe(false);
-    const opening = seeded.scene.elements.find((el) => el.customData?.calibrateRole === "instruction");
-    const card = seeded.scene.elements.find((el) => el.customData?.calibrateRole === "question");
-    expect(opening).toBeTruthy();
-    expect(card).toBeTruthy();
-    expect(card!.x).toBeGreaterThan(opening!.x + opening!.width);
-    expect(card!.x - (opening!.x + opening!.width)).toBeGreaterThanOrEqual(240);
     expect(calibrateTextCollides(seeded.scene.elements)).toBe(false);
+    const instruction = seeded.scene.elements.find(
+      (el) => el.type === "text" && el.customData?.calibrateRole === "instruction",
+    );
+    expect(instruction?.originalText).toBe(CALIBRATE_OPENING_INSTRUCTION);
+    expect(instruction?.locked).toBe(true);
+    const note = seeded.scene.elements.find(
+      (el) => el.type === "rectangle" && el.customData?.calibrateRole === "instruction",
+    );
+    const noteLabel = seeded.scene.elements.find(
+      (el) => el.customData?.boardInstructionNote === "label",
+    );
+    expect(note?.locked).toBe(true);
+    expect(note?.backgroundColor).toBe(BOARD_INSTRUCTION_NOTE_BODY_FILL);
+    expect(noteLabel?.originalText).toBe(BOARD_INSTRUCTION_NOTE_LABEL);
+    expect(noteLabel?.locked).toBe(true);
+    const regions = seeded.scene.elements.filter(
+      (el) => el.type === "rectangle" && el.customData?.calibrateRole === "region",
+    );
+    expect(regions).toHaveLength(2);
+    for (const region of regions) {
+      expect(region.locked).toBe(true);
+      expect(region.width).toBe(CALIBRATE_REGION_WIDTH);
+      expect(region.height).toBe(CALIBRATE_REGION_HEIGHT);
+      expect(region.strokeColor).toBe(ILE_WORK_CANVAS_STROKE_COLOR);
+    }
+    expect(CALIBRATE_REGION_WIDTH).toBeLessThanOrEqual(320);
+    expect(CALIBRATE_REGION_HEIGHT).toBeLessThanOrEqual(260);
+    expect(instruction?.strokeColor).toBe(ILE_WORK_CANVAS_STROKE_COLOR);
+    const fitted = ileWorkCanvasFitScroll(ileWorkCanvasContentBounds(seeded.scene.elements), {
+      width: 960,
+      height: 640,
+    });
+    expect(fitted?.zoom).toBe(1);
+    const widerRegions = wider.scene.elements.filter(
+      (el) => el.type === "rectangle" && el.customData?.calibrateRole === "region",
+    );
+    expect(widerRegions.map((el) => el.height)).toEqual(regions.map((el) => el.height));
+    const wells = seeded.scene.elements.filter((el) => el.customData?.calibrateRole === "well-label");
+    expect(wells.map((el) => el.originalText).sort()).toEqual(
+      [CALIBRATE_ANSWER_WELL_LABEL, CALIBRATE_EXPLAIN_WELL_LABEL].sort(),
+    );
+    expect(wells.every((el) => el.locked)).toBe(true);
+    const cards = seeded.scene.elements.filter((el) => el.customData?.calibrateRole === "question");
+    expect(cards.every((el) => !el.locked)).toBe(true);
+    expect(cards.every((card) => card.backgroundColor === CALIBRATE_QUESTION_FILL)).toBe(true);
+    expect(cards.every((card) => card.fillStyle === "solid")).toBe(true);
+    expect(cards.every((card) => card.y >= (instruction?.y || 0) + (instruction?.height || 0))).toBe(true);
+    const wellsStay = seeded.scene.elements.filter((el) => el.customData?.calibrateRole === "well");
+    expect(wellsStay).toHaveLength(2);
+    expect(wellsStay.every((el) => el.locked && el.strokeStyle === "dashed")).toBe(true);
+    expect(wellsStay.every((el) => el.backgroundColor === CALIBRATE_WELL_FILL && el.fillStyle === "solid")).toBe(true);
+    expect(wellsStay.every((el) => el.width > CALIBRATE_REGION_WIDTH / 2)).toBe(true);
+    for (const well of wellsStay) {
+      const region = regions.find((frame) => frame.customData?.calibrateRegion === well.customData?.calibrateRegion);
+      expect(region).toBeTruthy();
+      expect(well.y).toBeGreaterThan((region?.y || 0) + 24);
+      expect(well.y + well.height).toBeLessThanOrEqual((region?.y || 0) + (region?.height || 0));
+    }
+  });
+
+  it("puts the instruction and the areas back when they are moved or rewritten", () => {
+    const seeded = seedCalibrateWorkCanvas(POOL);
+    const region = seeded.scene.elements.find((el) => el.customData?.calibrateRole === "region");
+    const instruction = seeded.scene.elements.find(
+      (el) => el.type === "text" && el.customData?.calibrateRole === "instruction",
+    );
+    const card = seeded.scene.elements.find((el) => el.customData?.calibrateRole === "question");
+    expect(region && instruction && card).toBeTruthy();
+    const disturbed = seeded.scene.elements.map((el) => {
+      if (el.id === region?.id) return { ...el, x: el.x + 120, y: el.y + 80, locked: false };
+      if (el.id === instruction?.id) return { ...el, text: "gone", originalText: "gone", locked: false, isDeleted: true };
+      if (el.id === card?.id) return { ...el, x: el.x + 30 };
+      return el;
+    });
+    const restored = restoreCalibrateChrome(disturbed);
+    const regionAgain = restored.find((el) => el.id === region?.id);
+    const instructionAgain = restored.find((el) => el.id === instruction?.id);
+    const cardAgain = restored.find((el) => el.id === card?.id);
+    expect(regionAgain).toMatchObject({ x: region?.x, y: region?.y, locked: true });
+    expect(instructionAgain?.originalText).toBe(CALIBRATE_OPENING_INSTRUCTION);
+    expect(instructionAgain?.locked).toBe(true);
+    expect(instructionAgain?.isDeleted).toBe(false);
+    expect(cardAgain?.x).toBe((card?.x || 0) + 30);
+    expect(restoreCalibrateChrome(restored)).toBe(restored);
   });
 
   it("keeps a long answer off the next card and inside its region", () => {

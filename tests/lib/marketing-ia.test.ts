@@ -440,6 +440,7 @@ describe("nav and footer hrefs resolve to shipped pages", () => {
     expect(COMMUNITY_LINKS.map((l) => l.label)).toEqual([
       "Community Events",
       "TAPBench",
+      "Kardashev Research",
     ]);
     const navbar = read("components/Navbar.tsx");
     expect(navbar).toContain('label: "Community Events"');
@@ -454,5 +455,9 @@ describe("nav and footer hrefs resolve to shipped pages", () => {
     expect(verification).not.toContain("Verify Human Knowledge without tests.");
     const vision = read("app/vision/page.tsx");
     expect(vision).not.toContain("$UNSYS");
+    const kardashev = read("app/kardashev/page.tsx");
+    expect(kardashev).toContain("Coming soon");
+    expect(kardashev).toContain("data-kardashev-coming-soon");
+    expect(kardashev).not.toContain("KardashevBoard");
   });
 });

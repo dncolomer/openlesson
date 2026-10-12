@@ -527,10 +527,12 @@ describe("shipped voice-challenge UI wiring", () => {
     expect(ileSpoken).not.toContain("A finished idea from one area of the map.");
     const challenge = read("components/PracticeVoiceChallenge.tsx");
     expect(challenge).toContain("data-practice-voice-loading");
-    expect(challenge).toContain("LoadingStatusMessage");
+    expect(challenge).toContain("<IleStartLoading");
+    expect(read("components/session-view/ile-start-loading.tsx")).toContain("data-ile-start-tips");
     expect(challenge).toContain("Starting the session");
     expect(challenge).toContain('framing === "rest" ? "Continuing"');
     expect(challenge).not.toContain("animate-spin");
+    expect(challenge).not.toContain("min-h-52");
     expect(read("components/session-view/ile-silence-lock-screen.tsx")).toContain(
       'framing="rest"',
     );
@@ -560,6 +562,7 @@ describe("shipped voice-challenge UI wiring", () => {
 
   it("Calibrate starts from the briefing and does not mount the Prepare voice challenge", () => {
     const phases = read("components/scout-tap/scout-tap-phases.tsx");
+    const runner = read("components/CalibrationFlowRunner.tsx");
     expect(phases).not.toContain("confirmPrepareStart");
     expect(phases).not.toContain("passPrepareChallenge");
     expect(phases).not.toContain("PracticeVoiceChallenge");
@@ -567,6 +570,8 @@ describe("shipped voice-challenge UI wiring", () => {
     expect(phases).not.toContain('data-prepare-briefing-step="challenge"');
     expect(phases).toContain("onStart={() => void startSession()}");
     expect(phases).toContain("<CalibrateLiveSurface");
+    expect(runner).not.toContain("PracticeVoiceChallenge");
+    expect(runner).not.toContain("data-calibrate-voice-challenge");
     expect(scoutThinkAloudEnabled()).toBe(false);
     expect(phases).toContain("scoutThinkAloudEnabled()");
     const drill = read("components/exercise-tap/exercise-tap-phases.tsx");

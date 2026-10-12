@@ -5,6 +5,9 @@ import { readExcalidrawSurface, readSessionStageSurface } from "../helpers/surfa
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { ExcalidrawCanvas } from "@/components/ExcalidrawCanvas";
+import { CanvasPromptBar } from "@/components/excalidraw-canvas/canvas-prompt-bar";
+import { IleInsightKeptScreen } from "@/components/session-view/ile-insight-kept-screen";
+import type { SessionMarkMode } from "@/lib/session-marks";
 
 vi.mock("@excalidraw/excalidraw/index.css", () => ({}));
 vi.mock("@/app/ile-excalidraw-theme.css", () => ({}));
@@ -38,6 +41,31 @@ import {
 } from "@/lib/ile-work-canvas";
 
 const ROOT = join(__dirname, "../..");
+
+function promptBar(mode: SessionMarkMode) {
+  return renderToStaticMarkup(
+    createElement(CanvasPromptBar, {
+      askInFlight: 0,
+      canvasSelectionActive: false,
+      promptBarWidth: 480,
+      submitCommand: () => {},
+      slashBarOpen: false,
+      commandText: "",
+      setCommandText: () => {},
+      handleQuickAction: () => {},
+      commandInputRef: { current: null },
+      setCraftInsightOpen: () => {},
+      writeDictatedText: () => {},
+      craftInsightOpen: false,
+      selectedCanvasElements: () => [],
+      selectedMarkTexts: [],
+      markSpeech: "",
+      sessionMarkMode: mode,
+      dictateTranscript: "",
+      craftInsight: { chapterId: "chapter-1", sessionId: "session-1", onCrafted: () => {} },
+    }),
+  );
+}
 
 function read(rel: string) {
   if (rel === "components/ExcalidrawCanvas.tsx") return readExcalidrawSurface();
@@ -218,16 +246,67 @@ describe("canvas dictate button", () => {
     expect(html).toContain("data-ile-craft-insight");
     expect(html).toContain("data-ile-canvas-dictate");
     expect(html).toContain("data-ile-learn-more-actions");
-    for (const label of ["Simplify", "Rephrase", "Split", "Join", "Elaborate", "Compress", "Refactor", "Clear overlaps"]) {
+    for (const label of ["Simplify", "Split", "Check", "Refactor", "Declutter"]) {
       expect(html).toContain(`>${label}<`);
     }
+    for (const label of ["Rephrase", "Join", "Elaborate", "Compress", "Clear overlaps"]) {
+      expect(html).not.toContain(`>${label}<`);
+    }
+    expect(html).toContain('data-ile-command-mark="simplify"');
+    expect(html).toContain('data-ile-command-mark="check"');
+    expect(html).toContain('data-ile-command-mark="declutter"');
+    expect(html).toContain('data-ile-command-index="01"');
+    expect(html).toContain('data-ile-command-index="05"');
+    expect(html).not.toContain('data-ile-command-index="08"');
+    expect(read("components/excalidraw-canvas/canvas-prompt-bar.tsx")).toContain("min-h-9");
+    for (const file of [
+      "components/session-view/session-chapter-canvas.tsx",
+      "components/calibrate/calibrate-live-surface.tsx",
+      "components/tap-score/tap-score-phases.tsx",
+    ]) {
+      const source = read(file);
+      expect(source).toContain("<WorkCanvas");
+      expect(source).not.toContain("ILE_WORK_CANVAS_COMMANDS");
+    }
+    expect(html).toContain("min-w-0 items-center justify-center");
+    expect(html).toContain("flex-col");
+    expect(html).toContain("border-l border-t");
     expect(html).not.toContain(">Answer<");
     expect(html).not.toContain(">Suggest Insight<");
     expect(html).not.toContain('data-ile-learn-more-quick="answer"');
     expect(html).not.toContain('data-ile-learn-more-quick="ask"');
     expect(html).not.toContain('data-ile-learn-more-quick="suggest-insight"');
-    expect(html).toContain(">craft insight<");
+    expect(html).toContain(">commit (insight)<");
     expect(html).toContain(">dictate<");
+    expect(promptBar("learn")).not.toContain("data-ile-command-dock");
+    expect(promptBar("learn")).not.toContain("data-ile-learn-more-actions");
+    expect(promptBar("learn")).not.toContain("data-ile-craft-insight");
+    expect(promptBar("learn")).not.toContain(">commit (insight)<");
+    expect(promptBar("learn")).not.toContain("data-ile-canvas-dictate");
+    expect(promptBar("learn")).not.toContain(">hide commands<");
+    expect(promptBar("calibrate")).not.toContain("data-ile-command-dock");
+    expect(promptBar("calibrate")).not.toContain("data-ile-craft-insight");
+    expect(promptBar("calibrate")).not.toContain("data-ile-canvas-commands-toggle");
+    expect(promptBar("verification")).not.toContain("data-ile-command-dock");
+    expect(promptBar("verification")).not.toContain("data-ile-craft-insight");
+    expect(promptBar("verification")).not.toContain("data-ile-canvas-commands-toggle");
+    const kept = renderToStaticMarkup(
+      createElement(IleInsightKeptScreen, {
+        insight: {
+          id: "ins-1",
+          title: "Last resort is a real test",
+          summary: "Force waits until the peaceful options are actually used up.",
+          created_at: "2026-01-01T00:00:00.000Z",
+        },
+        onBackToWorkspace: () => {},
+      }),
+    );
+    expect(kept).toContain('data-ile-insight-kept=""');
+    expect(kept).toContain("Last resort is a real test");
+    expect(kept).toContain("Force waits until the peaceful options are actually used up.");
+    expect(kept).toContain(">Back to workspace<");
+    expect(kept).toContain("data-ile-insight-flag-icon");
+    expect(kept).toContain("bg-amber-300");
     expect(html).not.toContain("data-ile-canvas-prompt-bar-input");
     expect(html).not.toContain("data-ile-canvas-ask");
     expect(html).not.toContain("data-ile-canvas-prompt-bar-send");
@@ -239,6 +318,37 @@ describe("canvas dictate button", () => {
     const dictateBtn = read("components/session-view/ile-canvas-dictate-button.tsx");
     expect(craftBtn).toContain("px-4 py-2.5 text-sm");
     expect(dictateBtn).toContain("px-4 py-2.5 text-sm");
+    expect(craftBtn).toContain("min-w-0 flex-1");
+    expect(dictateBtn).toContain("min-w-0 flex-1");
+    const prompt = read("components/ExcalidrawCanvas.tsx");
+    const actionRow = prompt.slice(
+      prompt.indexOf("data-ile-learn-more-actions"),
+      prompt.indexOf("<IleCanvasCraftInsightForm"),
+    );
+    expect(actionRow).toContain("flex w-full items-stretch gap-1");
+    expect(actionRow).toContain("grid w-full grid-cols-1 gap-1");
+    expect(prompt).toContain("aspect-square");
+    expect(actionRow).not.toContain("data-ile-canvas-commands-toggle");
+    expect(actionRow).not.toContain("hide commands");
+    expect(actionRow).not.toContain("commandsOpen");
+    expect(prompt).not.toContain("commandCatalogShown");
+    const sharedRow = prompt.slice(
+      prompt.indexOf("flex w-full items-stretch gap-1"),
+      prompt.indexOf("<IleCanvasCraftInsightForm"),
+    );
+    expect(sharedRow).toContain("<IleCraftInsightButton");
+    expect(sharedRow.indexOf("<IleCanvasDictateButton")).toBeGreaterThan(
+      sharedRow.indexOf("<IleCraftInsightButton"),
+    );
+    expect(html).not.toContain("data-ile-canvas-commands-toggle");
+    expect(html).not.toContain(">hide commands<");
+    expect(html).not.toContain(">show commands<");
+    expect(html).toContain('data-ile-command-dock="bottom-left"');
+    expect(html).toContain('data-ile-command-dock-anchor="bottom-left"');
+    expect(html).toContain('data-ile-command-dock-anchor="left"');
+    expect(html).toContain('data-ile-command-dock-anchor="right"');
+    expect(html).toContain("data-ile-command-dock-grip");
+    expect(html).not.toContain("left-1/2");
     expect(craftBtn).not.toContain("px-2.5 py-2 text-xs");
     expect(dictateBtn).not.toContain("px-2.5 py-2 text-xs");
     expect(read("components/session-view/ile-work-dock-bar.tsx")).not.toContain(

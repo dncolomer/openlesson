@@ -22,6 +22,7 @@ export const PRICING_NAV_LINKS = [
 export const COMMUNITY_LINKS = [
   { href: "/community-events", label: "Community Events" },
   { href: TAPBENCH_PATH, label: "TAPBench" },
+  { href: "/kardashev", label: "Kardashev Research" },
 ] as const;
 
 export const COMMUNITY_NAV_LABEL = "Projects" as const;

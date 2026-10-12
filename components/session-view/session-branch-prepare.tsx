@@ -2,7 +2,16 @@
 
 import { useLayoutEffect, useRef, type ReactNode } from "react";
 import { SessionFieldGate } from "@/components/session-view/session-field-gate";
-import { SessionPolicyProvider, usePublishSessionBranchSlot } from "@/components/session-view/session-policy-context";
+import {
+  SessionPolicyProvider,
+  usePublishSessionBranchSlot,
+  usePublishSessionPrepareRequest,
+  useRestoreSessionPolicy,
+} from "@/components/session-view/session-policy-context";
+import {
+  learnFieldFromStoredPolicy,
+  readSessionPolicyRecord,
+} from "@/lib/session-policy-store";
 import { adoptSessionBranchGrowth } from "@/lib/session-branch-model";
 import {
   loadSessionBranchField,
@@ -10,16 +19,38 @@ import {
   sessionBranchFieldRequestKey,
   subscribeSessionBranchField,
 } from "@/lib/session-branch-field-load";
-import type { SessionBranchPrepareInput } from "@/lib/session-branch-prepare";
+import {
+  planSessionBranchPrepare,
+  sessionBranchPrepareRequest,
+  type SessionBranchPrepareInput,
+} from "@/lib/session-branch-prepare";
 
-/** Prepare the field once per session slice. A tree built on the tips screen is reused. */
-export function useSessionBranchField(input: SessionBranchPrepareInput): void {
+/** Prepare the field once per session slice. A stored policy for this chapter is restored instead. */
+export function useSessionBranchField(
+  input: SessionBranchPrepareInput,
+  storedMetadata?: unknown,
+): void {
   const publish = usePublishSessionBranchSlot();
+  const publishPrepare = usePublishSessionPrepareRequest();
+  const restore = useRestoreSessionPolicy();
   const inputRef = useRef(input);
   inputRef.current = input;
+  const storedRef = useRef(storedMetadata);
+  storedRef.current = storedMetadata;
   const requestKey = sessionBranchFieldRequestKey(input) ?? "null";
   useLayoutEffect(() => {
+    publishPrepare(
+      requestKey === "null"
+        ? null
+        : sessionBranchPrepareRequest(planSessionBranchPrepare(inputRef.current)),
+    );
     if (requestKey === "null") return;
+    const storedField = learnFieldFromStoredPolicy(storedRef.current, inputRef.current);
+    const record = storedField ? readSessionPolicyRecord(storedRef.current) : null;
+    if (record) {
+      restore(record);
+      return;
+    }
     const applyReady = (model: NonNullable<ReturnType<typeof readSessionBranchFieldCache>>["model"], birth: NonNullable<ReturnType<typeof readSessionBranchFieldCache>>["birth"]) => {
       if (!model) return;
       publish((current) => adoptSessionBranchGrowth(current, model, birth ?? model));
@@ -55,7 +86,7 @@ export function useSessionBranchField(input: SessionBranchPrepareInput): void {
       controller.abort();
       unsubscribe();
     };
-  }, [publish, requestKey]);
+  }, [publish, publishPrepare, restore, requestKey]);
 }
 
 export function SessionBranchFieldPrepare({

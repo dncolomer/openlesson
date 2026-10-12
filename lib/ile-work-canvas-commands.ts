@@ -11,31 +11,14 @@ export const ILE_WORK_CANVAS_COMMANDS = [
     tooltip: "Rewrite the selected text in shorter, plainer sentences.",
   },
   {
-    id: "rephrase",
-    label: "Rephrase",
-    tooltip:
-      "Ask XAI to rewrite the selected marks in different words while keeping the same meaning.",
-  },
-  {
     id: "split",
     label: "Split",
     tooltip: "Break the selected text into two or three separate blocks on the canvas.",
   },
   {
-    id: "join",
-    label: "Join",
-    tooltip: "Join the selected elements into one text block, or one group when they have no text.",
-  },
-  {
-    id: "elaborate",
-    label: "Elaborate",
-    tooltip: "Ask XAI to expand the selected marks with more concrete detail on this topic.",
-  },
-  {
-    id: "selective-compression",
-    label: "Compress",
-    tooltip:
-      "Ask XAI for one dense summary of the selected marks and replace only those marks with it.",
+    id: "check",
+    label: "Check",
+    tooltip: "Ask for a check of the selected work: what holds, and what to fix.",
   },
   {
     id: "refactor",
@@ -44,8 +27,8 @@ export const ILE_WORK_CANVAS_COMMANDS = [
       "Ask XAI to rephrase the selected marks and rearrange those marks into a clearer layout.",
   },
   {
-    id: "clear-overlaps",
-    label: "Clear overlaps",
+    id: "declutter",
+    label: "Declutter",
     tooltip: "Move the selected marks so their boxes no longer touch. Layout only.",
   },
 ] as const;
@@ -56,10 +39,12 @@ export type IleWorkCanvasAskKind =
   | "ask"
   | "answer"
   | "simplify"
+  | "check"
   | "selective-compress"
   | "refactor"
   | "suggest-insight"
-  | "clear-overlaps";
+  | "clear-overlaps"
+  | "declutter";
 
 /** Every canvas command uses the selected marks. */
 export function ileWorkCanvasCommandNeedsSelection(id: string | null | undefined): boolean {

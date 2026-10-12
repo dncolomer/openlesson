@@ -21,13 +21,17 @@ import {
   sessionBranchById,
   type SessionBranchModel,
 } from "@/lib/session-branch-model";
+import { SessionPolicyFocusView } from "@/components/session-view/session-policy-focus";
 import {
   usePublishSessionPolicy,
   useSessionBranchSlot,
   useSessionCanvasEffectReady,
   useSessionMarkCanvasEffects,
   useSessionMarkDraft,
+  useSessionPolicyInferences,
+  useSessionPolicySuggestion,
 } from "@/components/session-view/session-policy-context";
+import type { SessionPolicyInference } from "@/lib/session-policy-infer";
 import { sessionActionsMayCommit } from "@/lib/session-canvas-effect-gate";
 import type { SessionMarkCanvasEffect } from "@/lib/session-mark-canvas";
 import { sessionActionPricesVisible } from "@/lib/session-field-gate";
@@ -257,32 +261,35 @@ export function SessionMarkControls({
   );
 }
 
-/** Learn sidebar tab. The four presses live here. The canvas keeps commands and dictate. */
-export function SessionActionsPanel() {
+/**
+ * Sidebar focus for Learn, Calibrate, and Verification.
+ * The discrete actions stay internal. This list is what the session inferred.
+ */
+export function SessionActionsPanel({
+  mode,
+  entries,
+  suggestion,
+}: {
+  mode?: SessionMarkMode | null;
+  entries?: readonly SessionPolicyInference[];
+  suggestion?: string | null;
+}) {
   const draft = useSessionMarkDraft();
   const slot = useSessionBranchSlot();
-  const model = slot?.status === "ready" ? slot.model : null;
+  const inferred = useSessionPolicyInferences();
+  const liveSuggestion = useSessionPolicySuggestion();
+  const resolvedMode = mode !== undefined ? mode : (draft?.mode ?? null);
+  const resolvedEntries = entries !== undefined ? entries : inferred;
+  const resolvedSuggestion = suggestion !== undefined ? suggestion : liveSuggestion;
   return (
-    <div data-session-actions className="flex h-full min-h-0 flex-col overflow-y-auto px-2 py-2">
-      {slot?.status === "preparing" ? (
-        <p data-session-branch-preparing className="px-1 py-2 font-mono text-[11px] leading-snug text-neutral-300">
-          Preparing the field for this session.
-        </p>
-      ) : null}
-      {slot?.status === "failed" ? (
-        <p data-session-branch-failed className="px-1 py-2 font-mono text-[11px] leading-snug text-neutral-300">
-          {slot.error || "The field could not be prepared."}
-        </p>
-      ) : null}
-      <SessionMarkControls
-        mode={draft?.mode ?? "learn"}
-        questions={draft?.questions ?? []}
-        listKey={draft?.listKey}
-        branchModel={model}
-        selectionActive={draft?.selectionActive ?? false}
-        selectedTexts={draft?.selectedTexts ?? []}
-        speech={draft?.speech ?? ""}
-      />
-    </div>
+    <SessionPolicyFocusView
+      mode={resolvedMode}
+      entries={resolvedEntries}
+      suggestion={resolvedSuggestion}
+      preparing={slot?.status === "preparing"}
+      failedMessage={
+        slot?.status === "failed" ? slot.error || "The field could not be prepared." : null
+      }
+    />
   );
 }

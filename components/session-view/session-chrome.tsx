@@ -2,7 +2,7 @@
 
 import { useEffect, type ReactNode } from "react";
 import { SessionSidebar } from "@/components/session-view/session-sidebar";
-import { SessionActionsPanel } from "@/components/session-view/session-mark-controls";
+import { SessionGuidePanel } from "@/components/session-view/session-guide-panel";
 import { SessionPolicyProvider } from "@/components/session-view/session-policy-context";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { DialogFrame } from "@/components/ui/DialogFrame";
@@ -247,10 +247,9 @@ export function SessionChrome({
           resources={resources}
           resourcesOpen={resourcesOpen}
           onResourcesOpenChange={onResourcesOpenChange}
-          focusLabel="actions"
           focus={
             <div id="actions" className="flex h-full min-h-0 flex-col">
-              <SessionActionsPanel />
+              <SessionGuidePanel guide="learn" />
             </div>
           }
           chapters={

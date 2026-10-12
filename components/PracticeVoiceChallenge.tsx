@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { SessionAudioMonitor } from "@/components/session-view/session-data-card";
+import { IleStartLoading } from "@/components/session-view/ile-start-loading";
+import { SessionPageLoading } from "@/components/session-view/session-page-loading";
+import { useI18n } from "@/lib/i18n";
 import {
   PRACTICE_VOICE_CHALLENGE_ACCEPTED,
   PRACTICE_VOICE_CHALLENGE_CHECK,
@@ -108,6 +110,7 @@ export function PracticeVoiceChallenge({
   /** BCP-47 tag. The rest screen must match the session recognizer it just released. */
   lang?: string | null;
 }) {
+  const { t } = useI18n();
   const onPassRef = useRef(onPass);
   onPassRef.current = onPass;
   const [transcript, setTranscript] = useState("");
@@ -279,16 +282,17 @@ export function PracticeVoiceChallenge({
 
   if (starting) {
     return (
-      <section
+      <SessionPageLoading
         data-practice-voice-challenge=""
         data-practice-voice-loading=""
         data-practice-voice-variant={variant}
-        className="flex min-h-52 flex-col items-center justify-center gap-4 border border-white/15 bg-neutral-950 px-6 py-10"
+        className="fixed inset-0 z-[220] h-screen"
       >
-        <LoadingStatusMessage
-          message={framing === "rest" ? "Continuing" : "Starting the session"}
+        <IleStartLoading
+          t={t}
+          statusLabel={framing === "rest" ? "Continuing" : "Starting the session"}
         />
-      </section>
+      </SessionPageLoading>
     );
   }
 
@@ -297,7 +301,11 @@ export function PracticeVoiceChallenge({
       data-practice-voice-challenge=""
       data-practice-voice-variant={variant}
       data-practice-voice-framing={framing}
-      className="overflow-hidden border border-white/15 bg-neutral-950"
+      className={
+        framing === "rest"
+          ? "text-left"
+          : "overflow-hidden border border-white/15 bg-neutral-950"
+      }
     >
       {framing === "rest" ? null : (
       <div className="border-b border-white/10 px-5 py-4 sm:px-6">
@@ -312,7 +320,7 @@ export function PracticeVoiceChallenge({
         </p>
       </div>
       )}
-      <div className="px-5 py-5 sm:px-6">
+      <div className={framing === "rest" ? "" : "px-5 py-5 sm:px-6"}>
         <div data-practice-voice-audio="" className="mb-5">
           <SessionAudioMonitor stream={micStream} />
         </div>
@@ -321,7 +329,11 @@ export function PracticeVoiceChallenge({
             <p
               key={sentenceIndex}
               data-practice-voice-sentence={sentenceIndex + 1}
-              className="text-lg leading-relaxed tracking-tight sm:text-xl"
+              className={
+                framing === "rest"
+                  ? "border border-white/30 px-4 py-4 text-left font-mono text-sm leading-relaxed tracking-wide text-white sm:text-base"
+                  : "text-lg leading-relaxed tracking-tight sm:text-xl"
+              }
             >
               {sentence.map((mark, index) =>
                 mark.kind === "space" ? (

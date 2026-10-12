@@ -65,6 +65,7 @@ export {
   ILE_XAI_CANVAS_SHAPE_TYPES,
   buildIleWorkCanvasAnswerUserMessage,
   buildIleWorkCanvasAskUserMessage,
+  buildIleWorkCanvasCheckUserMessage,
   buildIleWorkCanvasClearOverlapsUserMessage,
   buildIleWorkCanvasCommandUserMessage,
   buildIleWorkCanvasRefactorUserMessage,
@@ -691,6 +692,35 @@ export const ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS = { animate: false } as cons
  * Excalidraw `centerScrollOn` without sidebar offsets). Null when the viewport
  * size is unknown — do not write fake scroll into a seed scene.
  */
+/**
+ * Largest zoom at or below 1 that keeps `bounds` inside the viewport, then
+ * the scroll that centers that box. Padding stays on every edge.
+ */
+export function ileWorkCanvasFitScroll(
+  bounds: { minX: number; minY: number; maxX: number; maxY: number } | null | undefined,
+  viewport: { width?: number; height?: number } | null | undefined,
+  pad = 28,
+): { scrollX: number; scrollY: number; zoom: number } | null {
+  if (!bounds) return null;
+  const width = Number(viewport?.width);
+  const height = Number(viewport?.height);
+  if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) return null;
+  const boardW = Math.max(1, bounds.maxX - bounds.minX);
+  const boardH = Math.max(1, bounds.maxY - bounds.minY);
+  const inset = Math.max(0, pad);
+  const availW = Math.max(1, width - inset * 2);
+  const availH = Math.max(1, height - inset * 2);
+  const zoom = Math.min(1, availW / boardW, availH / boardH);
+  if (!Number.isFinite(zoom) || zoom <= 0) return null;
+  const centerX = (bounds.minX + bounds.maxX) / 2;
+  const centerY = (bounds.minY + bounds.maxY) / 2;
+  return {
+    zoom,
+    scrollX: width / 2 / zoom - centerX,
+    scrollY: height / 2 / zoom - centerY,
+  };
+}
+
 export function ileWorkCanvasCenterScroll(
   bounds: { minX: number; minY: number; maxX: number; maxY: number } | null | undefined,
   viewport: Pick<IleWorkCanvasViewportAppState, "width" | "height" | "zoom"> | null | undefined,
@@ -769,9 +799,130 @@ export function ileWorkCanvasWithScrollToContent<T extends { elements?: unknown[
   return { ...scene, scrollToContent: true };
 }
 
+/** Marker on an instruction note placed on the work canvas. */
+export const BOARD_INSTRUCTION_NOTE_KEY = "boardInstructionNote" as const;
+export const BOARD_INSTRUCTION_NOTE_LABEL = "Note";
 /**
- * First open of a chapter board: place the chapter's initial text as a
- * manipulable Excalidraw text element. No-op when the board already has work.
+ * Stored light so the dark-canvas invert paints a dark card.
+ * Ink stays the shared near-black stroke, which inverts to a light edge and type.
+ */
+export const BOARD_INSTRUCTION_NOTE_BODY_FILL = "#f4f4f5";
+export const BOARD_INSTRUCTION_NOTE_HEADER_FILL = "#ffffff";
+const BOARD_NOTE_HEADER_HEIGHT = 28;
+const BOARD_NOTE_PAD_X = 14;
+const BOARD_NOTE_PAD_Y = 12;
+const BOARD_NOTE_HEADER_FONT = 14;
+
+/**
+ * Instruction on the board is a note: a filled card, a Note header, and the words.
+ * Not a transparent rectangle with text bound inside it.
+ */
+export function boardInstructionNoteElements(input: {
+  text: string;
+  x: number;
+  y: number;
+  textWidth: number;
+  fontSize?: number;
+  textCustomData?: Record<string, unknown> | null;
+  bodyCustomData?: Record<string, unknown> | null;
+  headerCustomData?: Record<string, unknown> | null;
+  locked?: boolean;
+  textId?: string;
+}): { elements: IleWorkCanvasElement[]; width: number; height: number } {
+  const text = String(input.text || "").trim();
+  if (!text) return { elements: [], width: 0, height: 0 };
+  const fontSize = Number(input.fontSize) || DEFAULT_FONT_SIZE;
+  const textWidth = Math.max(96, Number(input.textWidth) || ILE_WORK_CANVAS_TEXT_BOX_WIDTH);
+  const wrapped = wrapIleWorkCanvasText(text, textWidth, fontSize);
+  const width = wrapped.width + BOARD_NOTE_PAD_X * 2;
+  const height = BOARD_NOTE_HEADER_HEIGHT + BOARD_NOTE_PAD_Y + wrapped.height + BOARD_NOTE_PAD_Y;
+  const locked = input.locked === true;
+  const x = input.x;
+  const y = input.y;
+  const kind = (
+    data: Record<string, unknown> | null | undefined,
+    part: "body" | "header" | "text" | "label",
+  ) => ({
+    ...(data ?? {}),
+    [BOARD_INSTRUCTION_NOTE_KEY]: part,
+  });
+  const headerSource = input.headerCustomData ?? input.bodyCustomData;
+  const converted = convertToExcalidrawElements(
+    [
+      {
+        type: "rectangle",
+        x,
+        y,
+        width,
+        height,
+        strokeColor: ILE_WORK_CANVAS_STROKE_COLOR,
+        backgroundColor: BOARD_INSTRUCTION_NOTE_BODY_FILL,
+        fillStyle: "solid",
+        strokeWidth: 2,
+        roughness: 0,
+        locked,
+        customData: kind(input.bodyCustomData, "body"),
+      },
+      {
+        type: "rectangle",
+        x,
+        y,
+        width,
+        height: BOARD_NOTE_HEADER_HEIGHT,
+        strokeColor: ILE_WORK_CANVAS_STROKE_COLOR,
+        backgroundColor: BOARD_INSTRUCTION_NOTE_HEADER_FILL,
+        fillStyle: "solid",
+        strokeWidth: 1,
+        roughness: 0,
+        locked,
+        customData: kind(headerSource, "header"),
+      },
+      {
+        type: "text",
+        id: input.textId,
+        text,
+        x: x + BOARD_NOTE_PAD_X,
+        y: y + BOARD_NOTE_HEADER_HEIGHT + BOARD_NOTE_PAD_Y,
+        width: wrapped.width,
+        fontSize,
+        strokeColor: ILE_WORK_CANVAS_STROKE_COLOR,
+        autoResize: false,
+        locked,
+        customData: kind(input.textCustomData ?? input.bodyCustomData, "text"),
+      },
+      {
+        type: "text",
+        text: BOARD_INSTRUCTION_NOTE_LABEL,
+        x: x + BOARD_NOTE_PAD_X,
+        y: y + 6,
+        width: wrapped.width,
+        fontSize: BOARD_NOTE_HEADER_FONT,
+        strokeColor: ILE_WORK_CANVAS_STROKE_COLOR,
+        autoResize: false,
+        locked,
+        customData: kind(headerSource, "label"),
+      },
+    ],
+    { regenerateIds: !input.textId },
+  );
+  const body = converted.find((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "body");
+  const header = converted.find((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "header");
+  const bodyText = converted.find((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "text");
+  const label = converted.find((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "label");
+  if (body && bodyText) {
+    bodyText.containerId = body.id;
+    body.boundElements = [{ type: "text", id: bodyText.id }];
+  }
+  if (header && label) {
+    label.containerId = header.id;
+    header.boundElements = [{ type: "text", id: label.id }];
+  }
+  return { elements: converted, width, height };
+}
+
+/**
+ * First open of a chapter board: place the chapter prompt as a note.
+ * No-op when the board already has work.
  */
 export function seedIleChapterWorkCanvas(
   scene: IleWorkCanvasScene | null | undefined,
@@ -796,25 +947,26 @@ export function seedIleChapterWorkCanvas(
     return { scene: current, seeded: false };
   }
   const origin = nextXaiTextOrigin(current.elements);
-  const converted = convertToExcalidrawElements([
-    {
-      type: "text",
-      text,
-      x: origin.x,
-      y: origin.y,
-      width: ILE_WORK_CANVAS_TEXT_BOX_WIDTH,
-      autoResize: false,
-      customData: {
-        [ILE_CHAPTER_SEED_CUSTOM_DATA_KEY]: true,
-        chapterId: resolveIleChapterContextKey(input.chapterId),
-        author: "chapter",
-      },
+  const chapterId = resolveIleChapterContextKey(input.chapterId);
+  const note = boardInstructionNoteElements({
+    text,
+    x: origin.x,
+    y: origin.y,
+    textWidth: ILE_WORK_CANVAS_TEXT_BOX_WIDTH,
+    textCustomData: {
+      [ILE_CHAPTER_SEED_CUSTOM_DATA_KEY]: true,
+      chapterId,
+      author: "chapter",
     },
-  ]);
-  if (!converted.length) return { scene: current, seeded: false };
+    bodyCustomData: {
+      chapterId,
+      author: "chapter",
+    },
+  });
+  if (!note.elements.length) return { scene: current, seeded: false };
   return {
     scene: {
-      elements: [...current.elements, ...converted],
+      elements: [...current.elements, ...note.elements],
       appState: current.appState,
       files: current.files,
     },
@@ -2509,6 +2661,8 @@ const CANVAS_POW_ACTIONS = new Set([
   "suggest-insight",
   "clear-overlaps",
   "join",
+  "check",
+  "declutter",
   "dictate",
   "answer",
   "simplify",
@@ -2598,23 +2752,15 @@ export function ileWorkCanvasTurnContextMessage(
   return ileWorkCanvasWithDomainPrefix(body, input?.workspace);
 }
 
-export const ILE_WORK_CANVAS_QUICK_ACTION_REPHRASE = "rephrase" as const;
-export const ILE_WORK_CANVAS_QUICK_ACTION_SPLIT = "split" as const;
-export const ILE_WORK_CANVAS_QUICK_ACTION_ELABORATE = "elaborate more pls" as const;
+export const ILE_WORK_CANVAS_QUICK_ACTION_CHECK = "check" as const;
 
-export type IleWorkCanvasQuickActionId =
-  | typeof ILE_WORK_CANVAS_QUICK_ACTION_REPHRASE
-  | typeof ILE_WORK_CANVAS_QUICK_ACTION_SPLIT
-  | typeof ILE_WORK_CANVAS_QUICK_ACTION_ELABORATE;
+export type IleWorkCanvasQuickActionId = typeof ILE_WORK_CANVAS_QUICK_ACTION_CHECK;
 
-/** Canned Commands intents. Rephrase / elaborate go through the ask path. */
+/** Canned Check intent. It goes through the ask path. */
 export function ileWorkCanvasQuickActionPrompt(
-  action: typeof ILE_WORK_CANVAS_QUICK_ACTION_REPHRASE | typeof ILE_WORK_CANVAS_QUICK_ACTION_ELABORATE,
+  _action: typeof ILE_WORK_CANVAS_QUICK_ACTION_CHECK,
 ): string {
-  if (action === ILE_WORK_CANVAS_QUICK_ACTION_REPHRASE) {
-    return "Rephrase this selection. Keep the same meaning, stay on the workspace/block domain, and do not invent unrelated topics.";
-  }
-  return "Elaborate more pls. Expand this selection with more concrete detail, stay on the workspace/block domain, and do not invent unrelated topics.";
+  return "Check this selection. Say what holds and what to fix, stay on the workspace/block domain, and do not invent unrelated topics.";
 }
 
 function groupIleWorkCanvasSplitParts(parts: string[], joiner: string): string[] {

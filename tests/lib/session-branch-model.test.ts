@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
@@ -15,6 +17,7 @@ import {
   appendSessionBranchNotes,
   graftSessionBranchModel,
   normalizeSessionBranchModel,
+  withoutSessionBranchNotes,
   recommendSessionBranchAction,
   SESSION_BRANCH_ACCEPT_COUNT,
   SESSION_BRANCH_TARGET_COUNT,
@@ -287,11 +290,11 @@ describe("session branch model", () => {
     ]);
     const already = appendSessionBranchNotes([], opening.boardNotes);
     const placed = appendSessionBranchNotes(already.elements, adopted.model.boardNotes);
-    expect(placed.added.map((element) => element.customData?.sessionBranchNote)).toEqual([
-      "r1-a1",
-      "r1-a1-q1",
-      "r2",
-    ]);
+    expect(
+      placed.added
+        .filter((element) => element.customData?.boardInstructionNote === "body")
+        .map((element) => element.customData?.sessionBranchNote),
+    ).toEqual(["r1-a1", "r1-a1-q1", "r2"]);
 
     const moved = advanceSessionBranchModel(opening, { action: "hold" });
     const grafted = graftSessionBranchModel(moved, later);
@@ -302,22 +305,38 @@ describe("session branch model", () => {
     expect(grafted.boardNotes.some((note) => note.text === "Region two arrived after the opening.")).toBe(true);
   });
 
-  it("places each observation once, in two columns", () => {
+  it("places each observation once, as a note, in two columns", () => {
     const first = appendSessionBranchNotes([], [
       { key: "root", text: "The premise is on the board." },
       { key: "r1", text: "The first region is on the board." },
       { key: "r2", text: "The second region is on the board." },
     ]);
-    expect(first.added).toHaveLength(3);
-    expect(first.added[0]?.x).toBe(80);
-    expect(first.added[1]?.x).toBe(420);
-    expect(first.added[2]?.y).toBe(80 + 280);
-    expect(first.added[0]?.customData?.sessionBranchNote).toBe("root");
+    const notes = first.added.filter((element) => element.customData?.boardInstructionNote === "body");
+    expect(notes).toHaveLength(3);
+    expect(notes[0]?.x).toBe(80);
+    expect(notes[1]?.x).toBe(420);
+    expect(notes[2]?.y).toBe(80 + 280);
+    expect(notes[0]?.customData?.sessionBranchNote).toBe("root");
+    expect(notes[0]?.backgroundColor).not.toBe("transparent");
+    expect(first.added.some((element) => element.originalText === "Note")).toBe(true);
     const again = appendSessionBranchNotes(first.elements, [
       { key: "root", text: "The premise is on the board." },
       { key: "r3", text: "A new region opens." },
     ]);
-    expect(again.added.map((element) => element.customData?.sessionBranchNote)).toEqual(["r3"]);
+    expect(
+      again.added
+        .filter((element) => element.customData?.boardInstructionNote === "body")
+        .map((element) => element.customData?.sessionBranchNote),
+    ).toEqual(["r3"]);
+    expect(withoutSessionBranchNotes(again.elements).some((element) => element.customData?.sessionBranchNote)).toBe(
+      false,
+    );
+  });
+
+  it("does not paint prepared-field observations when a session opens", () => {
+    const canvas = readFileSync(join(process.cwd(), "components/ExcalidrawCanvas.tsx"), "utf8");
+    expect(canvas).not.toContain("appendSessionBranchNotes");
+    expect(canvas).toContain("withoutSessionBranchNotes");
   });
 
   it("asks for a wide field rather than a short maze", () => {

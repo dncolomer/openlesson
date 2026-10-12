@@ -13,8 +13,8 @@ const SECTION_LABEL =
   "font-mono text-[9px] uppercase tracking-[0.22em] text-white/45";
 
 /**
- * Live policy for this Learn session: the frozen mistake list, the button
- * path, and the running close counts. Presses stay in memory for the session.
+ * The prepared field on the Calibrate and Verification policy tab.
+ * Learn shows the inferred history in the focus slot instead.
  */
 export function SessionPolicyPanel({
   state,
@@ -73,12 +73,10 @@ export function SessionPolicyPanel({
         )}
       </section>
       )}
+      {state.presses.length === 0 ? null : (
       <section data-session-policy-path className="flex flex-col gap-1">
-        <p className={SECTION_LABEL}>Button path</p>
-        {state.presses.length === 0 ? (
-          <p data-session-policy-path-empty>No presses yet.</p>
-        ) : (
-          state.presses.map((press) => {
+        <p className={SECTION_LABEL}>Path</p>
+        {state.presses.map((press) => {
             const aimed =
               textById.get(press.aimedMistakeId || "") ||
               textById.get(press.closedMistakeId || "") ||
@@ -97,9 +95,9 @@ export function SessionPolicyPanel({
                 ) : null}
               </p>
             );
-          })
-        )}
+          })}
       </section>
+      )}
       <section data-session-policy-running className="flex flex-col gap-1">
         <p className={SECTION_LABEL}>So far</p>
         {shownRows.length === 0 ? (

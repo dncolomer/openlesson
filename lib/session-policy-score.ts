@@ -85,6 +85,20 @@ export function sessionPolicySnapshot(
   };
 }
 
+/** The end screen reads the same snapshot the upload scored. No model means there is no score yet. */
+export function policyScoreFromSnapshot(
+  snapshot:
+    | {
+        model?: SessionBranchModel | null;
+        sequence?: readonly SessionMarkButtonId[] | null;
+      }
+    | null
+    | undefined,
+): PolicyScore | null {
+  if (!snapshot?.model) return null;
+  return scorePolicySequence(snapshot.model, snapshot.sequence ?? []);
+}
+
 /** Replay the prepared tree. Excess is how much dearer each choice was than the lowest price. */
 export function scorePolicySequence(
   model: SessionBranchModel,

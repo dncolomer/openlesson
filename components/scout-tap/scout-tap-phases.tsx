@@ -4,6 +4,7 @@ import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
 import { CalibrateLiveSurface } from "@/components/calibrate/calibrate-live-surface";
 import { TapBriefingConfig } from "@/components/TapBriefingConfig";
 import { SessionFinishedScreen } from "@/components/session-view/session-finished-screen";
+import { SessionPolicyScoreResult } from "@/components/session-view/session-policy-score-result";
 import { IleStartLoading } from "@/components/session-view/ile-start-loading";
 import { SessionPageLoading } from "@/components/session-view/session-page-loading";
 import { TapAestheticSection } from "@/components/tap-score/tap-aesthetic-section";
@@ -28,6 +29,7 @@ import {
 import { scoutThinkAloudEnabled, type ScoutThankYouActions } from "@/lib/scout-session";
 import type { MutableRefObject } from "react";
 import type { SessionPolicySnapshot } from "@/components/session-view/session-policy-context";
+import { policyScoreFromSnapshot } from "@/lib/session-policy-score";
 
 type Translate = (key: string, vars?: Record<string, string | number>) => string;
 
@@ -117,6 +119,7 @@ export function ScoutTapPhases(props: {
   } = props;
 
   void scoutThinkAloudEnabled();
+  const policyScore = policyScoreFromSnapshot(policyRef?.current);
 
   const counts = calibrateRegionCounts(calibrate);
   const texts = readCalibrateResponseTexts(workCanvasScene, calibrate);
@@ -273,7 +276,9 @@ export function ScoutTapPhases(props: {
                 ) : null}
               </>
             }
-          />
+          >
+            <SessionPolicyScoreResult score={policyScore} />
+          </SessionFinishedScreen>
         ) : null}
 
         {phase === "error" && (

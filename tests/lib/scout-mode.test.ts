@@ -525,8 +525,9 @@ describe("structural: Scout TAP shell, no think-aloud, Build toggle", () => {
     expect(phases).not.toContain("data-scout-live-split");
     expect(phases).not.toContain('data-scout-split="70-30"');
     expect(phases).not.toContain("lg:grid-cols-[7fr_3fr]");
-    expect(surface).toContain("<SessionActionsPanel />");
-    expect(surface).toContain('focusLabel="actions"');
+    expect(surface).toContain('<SessionGuidePanel guide="calibrate" />');
+    expect(surface).not.toContain('focusLabel="actions"');
+    expect(surface).not.toContain("SessionActionsPanel");
     expect(surface).not.toContain("data-scout-questions-loading");
     expect(surface).not.toContain("data-calibrate-done-classifying");
     expect(phases).not.toContain("data-scout-go-back");

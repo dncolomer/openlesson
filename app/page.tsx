@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { ArrowRight } from "lucide-react";
+import { AccelerandoRun } from "@/components/AccelerandoGlyphs";
 import { Footer } from "@/components/Footer";
 import { LandingNav } from "@/components/LandingNav";
 import { SectionHeading } from "@/components/marketing/MarketingChrome";
@@ -44,8 +45,11 @@ export default function B2BLandingPage() {
 
       <section className="relative z-10 mx-auto w-full max-w-7xl px-6 pt-14 pb-10 sm:pt-16 sm:pb-12" data-home-hero>
         <div className="w-full">
-          <div className="console-chip mb-6 inline-block rounded-none px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
-            {PLATFORM_HERO.pill}
+          <div className="mb-6 flex flex-wrap items-center gap-3">
+            <div className="console-chip inline-block rounded-none px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
+              {PLATFORM_HERO.pill}
+            </div>
+            <AccelerandoRun text={PLATFORM_HERO.pill} className="text-[11px]" />
           </div>
           <h1 className="max-w-5xl text-4xl font-medium leading-[1.08] tracking-[-2px] text-white sm:text-5xl lg:text-[56px]">
             {PLATFORM_HERO.h1}

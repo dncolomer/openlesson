@@ -61,6 +61,10 @@ describe("learning Calibrate entry", () => {
     expect(en.scout.briefing.title).toBe(CALIBRATE_MODE_LABEL);
     expect(en.scout.briefing.kicker).toBe(CALIBRATE_MODE_LABEL);
     expect(en.scout.briefing.intro.toLowerCase()).toContain("no speaking");
+    expect(en.scout.briefing.intro.toLowerCase()).toContain("cheapest path");
+    expect(en.onboardingGuide.scout.step3.body.toLowerCase()).toContain("comfortable answering");
+    expect(en.onboardingGuide.scout.step3.body.toLowerCase()).toContain("not confident");
+    expect(en.onboardingGuide.scout.step3.body.toLowerCase()).toContain("distance 0");
 
     expect(phases).toContain("<CalibrateLiveSurface");
     expect(phases).toContain("onStart={() => void startSession()}");
@@ -79,8 +83,9 @@ describe("learning Calibrate entry", () => {
 
     expect(surface).toContain("<SessionWorkSurface");
     expect(surface).toContain('mode="tap"');
-    expect(surface).toContain("<SessionActionsPanel />");
-    expect(surface).toContain('focusLabel="actions"');
+    expect(surface).toContain('<SessionGuidePanel guide="calibrate" />');
+    expect(surface).not.toContain('focusLabel="actions"');
+    expect(surface).not.toContain("SessionActionsPanel");
     expect(surface).not.toContain("CALIBRATE_DONE_CLASSIFYING_LABEL");
     expect(surface).not.toContain("data-calibrate-done-classifying");
     expect(surface).toContain("dictateTranscript={transcript}");

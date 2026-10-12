@@ -33,7 +33,6 @@ export function SessionWorkSurface({
   transcript = null,
   actions = null,
   stackBelow = false,
-  policyTab = false,
 }: {
   mode: SessionSidebarMode;
   stage: ReactNode;
@@ -48,8 +47,6 @@ export function SessionWorkSurface({
   actions?: ReactNode;
   /** Phone width: canvas on top, sidebar under it. Desktop stays a row. */
   stackBelow?: boolean;
-  /** Second focus tab for the prepared field. Learn already has this from its mode. */
-  policyTab?: boolean;
 }) {
   const stacked = useNarrowViewport(stackBelow);
   return (
@@ -75,7 +72,6 @@ export function SessionWorkSurface({
         transcript={transcript}
         actions={actions}
         fillWidth={stacked}
-        policyTab={policyTab}
       />
     </div>
   );

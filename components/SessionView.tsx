@@ -387,6 +387,7 @@ export function SessionView({
     evaluateIleEndTurnInsightGate({ activeChapterIds: [], insights: [] }),
   );
   const [sessionInsights, setSessionInsights] = useState<InsightSummary[]>([]);
+  const [keptInsight, setKeptInsight] = useState<InsightSummary | null>(null);
   const [dockLoadingIds, setDockLoadingIds] = useState<string[]>([]);
   const [dockAttentionIds, setDockAttentionIds] = useState<string[]>([]);
   const dockSeenAssistantIdRef = useRef<Record<string, string | null>>({});
@@ -1795,6 +1796,7 @@ export function SessionView({
       sessionPowArtifactsRef={sessionPowArtifactsRef}
       insightWorkMarkRef={insightWorkMarkRef}
       setSessionInsights={setSessionInsights}
+      onInsightKept={setKeptInsight}
       policyRef={policyRef}
     />
   );
@@ -2054,6 +2056,7 @@ export function SessionView({
       session={session}
       sessionBlockId={sessionBlockId}
       sessionInsights={sessionInsights}
+      keptInsight={keptInsight}
       sessionPowArtifacts={sessionPowArtifacts}
       sessionResourcesOpen={sessionResourcesOpen}
       sessionThoughtInterface={sessionThoughtInterface}

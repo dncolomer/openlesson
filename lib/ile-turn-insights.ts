@@ -30,7 +30,7 @@ export const ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT = 1;
 export const ILE_MIN_INSIGHTS_PER_CHAPTER_MIN = 1;
 export const ILE_MIN_INSIGHTS_PER_CHAPTER_CEILING = 5;
 
-export const ILE_CRAFT_INSIGHT_LABEL = "craft insight";
+export const ILE_CRAFT_INSIGHT_LABEL = "commit (insight)";
 
 export const ILE_END_TURN_BLOCKED_NO_ACTIVE =
   "Open a chapter and craft insights on its Work canvas before you can End turn.";
@@ -335,6 +335,11 @@ export function ileCanvasCraftInsightSelectionCount(
 /** Craft insight is always usable from the Work prompt bar — no selection required. */
 export function ileCanvasCraftInsightUsable(_selectedCount?: unknown): boolean {
   return true;
+}
+
+/** Learn keeps the craft button. Calibrate and Verification do not. */
+export function ileCanvasShowsCraftInsight(mode: string | null | undefined): boolean {
+  return mode !== "calibrate" && mode !== "verification";
 }
 
 export function buildIleCanvasCraftInsightEvaluateRequest(input: {

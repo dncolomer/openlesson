@@ -23,6 +23,7 @@ import {
 } from "@/lib/science/epistemic-foraging-copy";
 
 import { standardShareSocialMetadata } from "@/lib/og/standard";
+import { AccelerandoRun } from "@/components/AccelerandoGlyphs";
 import { PublicConsoleWash } from "@/components/ui/console-frame";
 
 const standardSocial = standardShareSocialMetadata({
@@ -84,8 +85,11 @@ export default function SciencePage() {
       <LandingNav />
 
       <section className="relative z-10 mx-auto w-full max-w-7xl px-6 pt-14 pb-10 sm:pt-16 sm:pb-12">
-        <div className="console-chip mb-6 inline-block rounded-none px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
-          SCIENCE
+        <div className="mb-6 flex flex-wrap items-center gap-3">
+          <div className="console-chip inline-block rounded-none px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
+            SCIENCE
+          </div>
+          <AccelerandoRun text="SCIENCE" className="text-[11px]" />
         </div>
         <h1 className="max-w-4xl text-5xl font-medium leading-[1.03] tracking-[-2.8px] text-white sm:text-6xl lg:text-[68px]">
           A holistic model of knowledge.

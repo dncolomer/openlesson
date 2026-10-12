@@ -11,7 +11,6 @@ import { bindIleSurfaceEditorEvents, bindIleSurfaceWheelZoom } from "@/lib/ile-c
 import { ILE_HELIOS_THINKING_ROTATE_MS } from "@/lib/ile-dialogue-turn";
 import { ILE_CANVAS_TIMER_RESET_LOADING_MS } from "@/lib/ile-work-canvas-timer";
 import {
-  ILE_SELECTIVE_COMPRESSION_LABEL,
   ileCanvasCommandDraft,
   ileWorkCanvasCommandNeedsSelection,
   type IleWorkCanvasCommandId,
@@ -19,13 +18,14 @@ import {
 import { CanvasPromptBar } from "@/components/excalidraw-canvas/canvas-prompt-bar";
 import {
   usePublishSessionBranchSlot,
+  usePublishSessionProof,
   useSessionBranchSlot,
   useSessionMarkCanvasEffects,
 } from "@/components/session-view/session-policy-context";
 import {
-  appendSessionBranchNotes,
   graftSessionBranchModel,
   openSessionBranchQuestions,
+  withoutSessionBranchNotes,
   type SessionBranchModel,
 } from "@/lib/session-branch-model";
 import {
@@ -44,10 +44,8 @@ import {
   applyIleWorkCanvasRefactor,
   applyIleWorkCanvasSuggestInsight,
   compressIleWorkCanvasSelection,
-  ILE_CANVAS_PROMPT_BAR_FALLBACK_TOP,
   ILE_CANVAS_PROMPT_BAR_FALLBACK_WIDTH,
   ILE_CANVAS_PROMPT_BAR_TOOLBAR_SELECTOR,
-  ileCanvasPromptBarTop,
   ileCanvasPromptBarWidth,
   ileCanvasCraftInsightOpenAfterSelection,
   ileCanvasPromptMode,
@@ -60,6 +58,7 @@ import {
   ileWorkCanvasFiniteOrigin,
   ileWorkCanvasAddedElementIds,
   ileWorkCanvasCenterScroll,
+  ileWorkCanvasFitScroll,
   ileWorkCanvasContentBounds,
   ileWorkCanvasHasLiveElements,
   ileWorkCanvasLayoutReply,
@@ -73,7 +72,6 @@ import {
   mergeIleXaiTurnOntoLiveWorkCanvas,
   pasteIleWorkCanvasElements,
   serializeIleWorkCanvasScene,
-  joinIleWorkCanvasSelection,
   runIleWorkCanvasClearOverlaps,
   splitIleWorkCanvasSelectedText,
   type IleWorkCanvasAskKind,
@@ -83,6 +81,8 @@ import {
   type IleWorkCanvasSkeleton,
 } from "@/lib/ile-work-canvas";
 import { syncIleDictatedTextOnWorkCanvas } from "@/lib/ile-canvas-dictate";
+import { appendLearnSuggestionText } from "@/lib/ile-learn-suggestion";
+import { restoreCalibrateChrome } from "@/lib/calibrate-session";
 import { type IleCanvasCraftInsightConfig } from "@/components/session-view/ile-canvas-craft-insight";
 import {
   IleWorkCanvasPowCollector,
@@ -114,6 +114,8 @@ export interface ExcalidrawCanvasProps {
   applyRemoveElementIds?: readonly string[] | null;
   /** On open, center these marks (`customData.calibrateRole`) instead of the whole board. */
   openFocusRole?: string | null;
+  /** On open, zoom out so the whole board fits the viewport. */
+  fitOpenBoard?: boolean;
   /** When false, merging elements does not pan the camera. */
   scrollAppliedElements?: boolean;
   /** Classified Work-canvas PoW (draw/move/rotate/delete/Commands/board prompt). */
@@ -168,6 +170,18 @@ export interface ExcalidrawCanvasProps {
 
 
 
+function openCanvasScene(
+  scene: { elements: any[]; appState: any; files: any } | null | undefined,
+  scrollToContent: boolean,
+) {
+  const clean = sanitizeSceneData(scene);
+  const next = {
+    ...clean,
+    elements: withoutSessionBranchNotes(clean.elements ?? []),
+  };
+  return scrollToContent ? ileWorkCanvasWithScrollToContent(next) : next;
+}
+
 /**
  * Shared TAP Learning + TAP Work board. Hosts must not fork this — both surfaces
  * mount `WorkCanvas` so Commands, the board prompt, thinking overlay,
@@ -185,6 +199,7 @@ export function ExcalidrawCanvas({
   applyElementsNonce = null,
   applyRemoveElementIds = null,
   openFocusRole = null,
+  fitOpenBoard = false,
   scrollAppliedElements = true,
   onCanvasPowActions,
   onAskSelected,
@@ -227,8 +242,8 @@ export function ExcalidrawCanvas({
     openBranchQuestions.length > 0 ? openBranchQuestions : sessionMarkQuestions;
   const publishSessionBranchRef = useRef(publishSessionBranch);
   publishSessionBranchRef.current = publishSessionBranch;
-  const [promptBarTop, setPromptBarTop] = useState(ILE_CANVAS_PROMPT_BAR_FALLBACK_TOP);
   const [promptBarWidth, setPromptBarWidth] = useState(ILE_CANVAS_PROMPT_BAR_FALLBACK_WIDTH);
+  const [promptHost, setPromptHost] = useState({ width: 0, height: 0 });
   const [thinkingTick, setThinkingTick] = useState(0);
   const [thinkingChips, setThinkingChips] = useState<
     Array<{ turnId: string; x: number; y: number; left: number; top: number; zoom: number }>
@@ -243,13 +258,18 @@ export function ExcalidrawCanvas({
   // Store the latest scene data for PNG export
    
   const sceneDataRef = useRef<{ elements: any[]; appState: any; files: any } | null>(null);
-  const initialSceneDataRef = useRef(
-    openFocusRole
-      ? sanitizeSceneData(initialSceneData)
-      : ileWorkCanvasWithScrollToContent(sanitizeSceneData(initialSceneData)),
-  );
+  const initialSceneDataRef = useRef(openCanvasScene(initialSceneData, !openFocusRole && !fitOpenBoard));
   const onSceneChangeRef = useRef(onSceneChange);
   const onCanvasPowActionsRef = useRef(onCanvasPowActions);
+  const publishSessionProof = usePublishSessionProof();
+  const publishSessionProofRef = useRef(publishSessionProof);
+  publishSessionProofRef.current = publishSessionProof;
+  const emitCanvasPowRef = useRef<(powEvents: IleWorkCanvasPowEvent[]) => void>(() => {});
+  emitCanvasPowRef.current = (powEvents) => {
+    if (!powEvents.length) return;
+    onCanvasPowActionsRef.current?.(powEvents);
+    publishSessionProofRef.current(powEvents);
+  };
   const canvasPowCollectorRef = useRef(new IleWorkCanvasPowCollector());
   const dictateElementIdRef = useRef<string | null>(null);
   const lastApplyNonceRef = useRef<string | number | null>(null);
@@ -267,6 +287,10 @@ export function ExcalidrawCanvas({
   const centeredOnOpenRef = useRef(false);
   const openFocusRoleRef = useRef(openFocusRole);
   openFocusRoleRef.current = openFocusRole;
+  const fitOpenBoardRef = useRef(fitOpenBoard);
+  fitOpenBoardRef.current = fitOpenBoard;
+  const sessionMarkModeRef = useRef(sessionMarkMode);
+  sessionMarkModeRef.current = sessionMarkMode;
   const scrollAppliedElementsRef = useRef(scrollAppliedElements);
   scrollAppliedElementsRef.current = scrollAppliedElements;
   const centerRafRef = useRef(0);
@@ -306,6 +330,27 @@ export function ExcalidrawCanvas({
         } catch {
           /* layout may not be ready */
         }
+      }
+      if (fitOpenBoardRef.current && typeof api.updateScene === "function") {
+        const bounds = ileWorkCanvasContentBounds(elements);
+        const fitted = ileWorkCanvasFitScroll(bounds, { width, height });
+        if (fitted) {
+          const offsetLeft = Number(appState.offsetLeft) || 0;
+          const offsetTop = Number(appState.offsetTop) || 0;
+          try {
+            api.updateScene({
+              appState: {
+                zoom: { value: fitted.zoom },
+                scrollX: fitted.scrollX - offsetLeft,
+                scrollY: fitted.scrollY - offsetTop,
+              },
+            });
+          } catch {
+            api.scrollToContent(elements, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS);
+          }
+        }
+        centeredOnOpenRef.current = true;
+        return;
       }
       const role = openFocusRoleRef.current;
       const focused = role
@@ -440,15 +485,15 @@ export function ExcalidrawCanvas({
     const toolbar = host.querySelector(ILE_CANVAS_PROMPT_BAR_TOOLBAR_SELECTOR);
     const hostRect = host.getBoundingClientRect();
     const toolbarRect = toolbar?.getBoundingClientRect();
-    const top = ileCanvasPromptBarTop(
-      toolbarRect ? { bottom: toolbarRect.bottom } : null,
-      { top: hostRect.top },
-    );
     const width = ileCanvasPromptBarWidth(
       toolbarRect ? { width: toolbarRect.width } : null,
     );
-    setPromptBarTop((prev) => (prev === top ? prev : top));
+    const hostWidth = Math.round(hostRect.width);
+    const hostHeight = Math.round(hostRect.height);
     setPromptBarWidth((prev) => (prev === width ? prev : width));
+    setPromptHost((prev) =>
+      prev.width === hostWidth && prev.height === hostHeight ? prev : { width: hostWidth, height: hostHeight },
+    );
   }, []);
 
   const setExcalidrawAPI = useCallback((api: ExcalidrawAPIRef) => {
@@ -469,7 +514,7 @@ export function ExcalidrawCanvas({
   }, [onCanvasPowActions]);
 
   useEffect(() => {
-    canvasPowCollectorRef.current.reset(sanitizeSceneData(initialSceneData));
+    canvasPowCollectorRef.current.reset(openCanvasScene(initialSceneData, false));
   }, [boardId]);
 
   useEffect(() => {
@@ -707,7 +752,7 @@ export function ExcalidrawCanvas({
             ? applyIleWorkCanvasRefactor(live, input.selectedElements, layoutReply)
             : input.kind === "suggest-insight"
               ? applyIleWorkCanvasSuggestInsight(live, input.selectedElements, source)
-              : input.kind === "clear-overlaps"
+              : input.kind === "declutter" || input.kind === "clear-overlaps"
                 ? applyIleWorkCanvasPositionEdits(live, input.selectedElements, layoutReply)
                 : mergeIleXaiTurnOntoLiveWorkCanvas(
                     live,
@@ -871,38 +916,6 @@ export function ExcalidrawCanvas({
     return () => sessionMarkCanvasEffects.register(null);
   }, [canvasApiReady, sessionMarkCanvasEffects]);
 
-  useEffect(() => {
-    const model = sessionBranchRef.current;
-    const api = excalidrawAPIRef.current;
-    if (!canvasApiReady || !model || !api) return;
-    const raw = (
-      typeof api.getSceneElementsIncludingDeleted === "function"
-        ? api.getSceneElementsIncludingDeleted()
-        : (api.getSceneElements?.() ?? [])
-    ) as IleWorkCanvasElement[];
-    const live = serializeIleWorkCanvasScene({
-      elements: raw,
-      appState: api.getAppState?.() ?? {},
-      files: api.getFiles?.() ?? {},
-    });
-    const placed = appendSessionBranchNotes(live.elements, model.boardNotes);
-    if (!placed.added.length) return;
-    applyingRemoteRef.current = true;
-    try {
-      api.updateScene({ elements: placed.elements });
-    } finally {
-      applyingRemoteRef.current = false;
-    }
-    canvasPowCollectorRef.current.syncWithoutEmit({
-      elements: placed.elements,
-      appState: api.getAppState?.() ?? {},
-      files: api.getFiles?.() ?? {},
-    });
-    if (typeof api.scrollToContent === "function") {
-      api.scrollToContent(placed.added, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS);
-    }
-  }, [canvasApiReady, sessionBranchSlot?.model]);
-
   const handleQuickAction = useCallback(
     (action: IleWorkCanvasCommandId) => {
       const api = excalidrawAPIRef.current;
@@ -918,7 +931,7 @@ export function ExcalidrawCanvas({
           prompt,
           selectedElements: selected,
         });
-        if (powEvents.length) onCanvasPowActionsRef.current?.(powEvents);
+        emitCanvasPowRef.current(powEvents);
       };
       const applyLocalCanvasEdit = (
         scene: IleWorkCanvasScene,
@@ -940,20 +953,14 @@ export function ExcalidrawCanvas({
         }
         emitCommand(commandId, prompt);
       };
-      if (action === "join") {
-        const result = joinIleWorkCanvasSelection(live, selected);
-        if (!result.joined) return;
-        applyLocalCanvasEdit(result.scene, result.parts, "join", "Join");
-        return;
-      }
       if (action === "split") {
         const result = splitIleWorkCanvasSelectedText(live, selected);
         if (!result.split) return;
         applyLocalCanvasEdit(result.scene, result.parts, "split", "split");
         return;
       }
-      if (action === "clear-overlaps") {
-        emitCommand("clear-overlaps", "Clear overlaps");
+      if (action === "declutter") {
+        emitCommand("declutter", "Declutter");
         const cleared = runIleWorkCanvasClearOverlaps({
           scene: live,
           selectedElements: selected,
@@ -961,7 +968,7 @@ export function ExcalidrawCanvas({
             void runCanvasAsk({
               prompt: message,
               selectedElements: selected,
-              kind: "clear-overlaps",
+              kind: "declutter",
             });
           },
         });
@@ -980,15 +987,6 @@ export function ExcalidrawCanvas({
         }
         return;
       }
-      if (action === "selective-compression") {
-        emitCommand("selective-compression", ILE_SELECTIVE_COMPRESSION_LABEL);
-        void runCanvasAsk({
-          prompt: ILE_SELECTIVE_COMPRESSION_LABEL,
-          selectedElements: selected,
-          kind: "selective-compress",
-        });
-        return;
-      }
       if (action === "simplify") {
         emitCommand("simplify", "Simplify");
         void runCanvasAsk({
@@ -998,12 +996,14 @@ export function ExcalidrawCanvas({
         });
         return;
       }
-      if (action === "rephrase" || action === "elaborate") {
-        const prompt = ileWorkCanvasQuickActionPrompt(
-          action === "rephrase" ? "rephrase" : "elaborate more pls",
-        );
-        emitCommand(action, prompt);
-        void runCanvasAsk({ prompt, selectedElements: selected });
+      if (action === "check") {
+        const prompt = ileWorkCanvasQuickActionPrompt("check");
+        emitCommand("check", prompt);
+        void runCanvasAsk({
+          prompt,
+          selectedElements: selected,
+          kind: "check",
+        });
         return;
       }
       if (action === "refactor") {
@@ -1065,10 +1065,47 @@ export function ExcalidrawCanvas({
         text: clean,
         elementId: result.elementId,
       });
-      if (powEvents.length) onCanvasPowActionsRef.current?.(powEvents);
+      emitCanvasPowRef.current(powEvents);
     },
     [],
   );
+
+  const placeSuggestionText = useCallback((text: string) => {
+    const api = excalidrawAPIRef.current;
+    if (!api) return;
+    const clean = text.trim();
+    if (!clean) return;
+    const rawElements = (
+      typeof api.getSceneElementsIncludingDeleted === "function"
+        ? api.getSceneElementsIncludingDeleted()
+        : (api.getSceneElements?.() ?? [])
+    ) as IleWorkCanvasElement[];
+    const live = serializeIleWorkCanvasScene({
+      elements: rawElements,
+      appState: api.getAppState?.() ?? {},
+      files: api.getFiles?.() ?? {},
+    });
+    const result = appendLearnSuggestionText(live, clean);
+    if (!result.appended.length) return;
+    applyingRemoteRef.current = true;
+    try {
+      api.updateScene({
+        elements: result.scene.elements,
+        appState: { selectedElementIds: {} },
+      });
+    } finally {
+      applyingRemoteRef.current = false;
+    }
+    const mark = result.appended[0];
+    if (mark && typeof api.scrollToContent === "function") {
+      api.scrollToContent([mark], ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS);
+    }
+    canvasPowCollectorRef.current.syncWithoutEmit({
+      elements: result.scene.elements,
+      appState: api.getAppState?.() ?? {},
+      files: api.getFiles?.() ?? {},
+    });
+  }, []);
 
   const submitCommand = useCallback(() => {
     const draft = ileCanvasCommandDraft(commandText);
@@ -1136,7 +1173,7 @@ export function ExcalidrawCanvas({
   ]);
 
   useEffect(() => {
-    const next = ileWorkCanvasWithScrollToContent(sanitizeSceneData(initialSceneData));
+    const next = openCanvasScene(initialSceneData, true);
     initialSceneDataRef.current = next;
     if (ileWorkCanvasHasLiveElements(initialSceneData as IleWorkCanvasScene)) {
       userClearedRef.current = false;
@@ -1234,6 +1271,24 @@ export function ExcalidrawCanvas({
       // Store scene data for potential immediate export
       const previous = sceneDataRef.current;
       const sceneData = sanitizeSceneData({ elements: [...elements], appState, files });
+      if (sessionMarkModeRef.current === "calibrate") {
+        const restored = restoreCalibrateChrome(sceneData.elements as IleWorkCanvasElement[]);
+        if (restored !== sceneData.elements) {
+          sceneData.elements = restored;
+          const api = excalidrawAPIRef.current;
+          queueMicrotask(() => {
+            if (!api || typeof api.updateScene !== "function") return;
+            applyingRemoteRef.current = true;
+            try {
+              api.updateScene({ elements: restored });
+            } catch {
+              /* the saved scene already has the plates back */
+            } finally {
+              applyingRemoteRef.current = false;
+            }
+          });
+        }
+      }
       const prevLive = ileWorkCanvasHasLiveElements(previous as IleWorkCanvasScene);
       const nextLive = ileWorkCanvasHasLiveElements(sceneData);
       const deletedSnapshot = (sceneData.elements ?? []).some(
@@ -1252,7 +1307,7 @@ export function ExcalidrawCanvas({
         const powEvents = canvasPowCollectorRef.current.observeScene(sceneData, {
           gestureBusy: ileWorkCanvasGestureBusy(appState),
         });
-        if (powEvents.length) onCanvasPowActionsRef.current?.(powEvents);
+        emitCanvasPowRef.current(powEvents);
       }
       if (scenePersistTimeoutRef.current) clearTimeout(scenePersistTimeoutRef.current);
       scenePersistTimeoutRef.current = setTimeout(() => {
@@ -1289,7 +1344,7 @@ export function ExcalidrawCanvas({
         const powEvents = canvasPowCollectorRef.current.observeScene(scene, {
           gestureBusy: false,
         });
-        if (powEvents.length) onCanvasPowActionsRef.current?.(powEvents);
+        emitCanvasPowRef.current(powEvents);
       }
     },
     [syncCanvasSelection],
@@ -1416,10 +1471,7 @@ export function ExcalidrawCanvas({
     !excalidrawAPIRef.current &&
     ileWorkCanvasHasLiveElements(initialSceneData as IleWorkCanvasScene)
   ) {
-    const clean = sanitizeSceneData(initialSceneData);
-    initialSceneDataRef.current = openFocusRole
-      ? clean
-      : ileWorkCanvasWithScrollToContent(clean);
+    initialSceneDataRef.current = openCanvasScene(initialSceneData, !openFocusRole && !fitOpenBoard);
   }
 
   return (
@@ -1455,9 +1507,10 @@ export function ExcalidrawCanvas({
         {onAskSelected ? (
           <CanvasPromptBar
             askInFlight={askInFlight}
-            promptBarTop={promptBarTop}
             canvasSelectionActive={canvasSelectionActive}
             promptBarWidth={promptBarWidth}
+            hostWidth={promptHost.width}
+            hostHeight={promptHost.height}
             submitCommand={submitCommand}
             slashBarOpen={slashBarOpen}
             commandText={commandText}
@@ -1469,6 +1522,7 @@ export function ExcalidrawCanvas({
             dictateTranscript={dictateTranscript}
             viewModeEnabled={viewModeEnabled}
             writeDictatedText={writeDictatedText}
+            placeSuggestionText={placeSuggestionText}
             onDictateActive={onDictateActive}
             craftInsightOpen={craftInsightOpen}
             selectedCanvasElements={selectedCanvasElements}

@@ -9,7 +9,6 @@ import { readExcalidrawSurface, readSessionStageSurface } from "../helpers/surfa
 import {
   convertToExcalidrawElements,
   emptyIleWorkCanvasScene,
-  ILE_SELECTIVE_COMPRESSION_LABEL,
   ILE_WORK_CANVAS_COMMANDS,
   ileWorkCanvasQuickActionPrompt,
   type IleWorkCanvasElement,
@@ -397,14 +396,11 @@ describe("Work-canvas scene-diff PoW (shipped classifier)", () => {
     expect(JSON.parse(ileSelection.payload).metadata.prompt).toBe(longPrompt);
 
     const commandPrompts: Record<(typeof ILE_WORK_CANVAS_COMMAND_POW_IDS)[number], string> = {
-      rephrase: ileWorkCanvasQuickActionPrompt("rephrase"),
-      split: "split",
-      join: "Join",
-      elaborate: ileWorkCanvasQuickActionPrompt("elaborate more pls"),
-      "selective-compression": ILE_SELECTIVE_COMPRESSION_LABEL,
-      refactor: "Refactor",
-      "clear-overlaps": "Clear overlaps",
       simplify: "Simplify",
+      split: "split",
+      check: ileWorkCanvasQuickActionPrompt("check"),
+      refactor: "Refactor",
+      declutter: "Declutter",
     };
 
     const catalogRows: string[] = [
@@ -535,7 +531,7 @@ describe("Work-canvas scene-diff PoW (shipped classifier)", () => {
       );
     }
 
-    const longCommand = buildIleWorkCanvasCommandPowEvent("selective-compression", {
+    const longCommand = buildIleWorkCanvasCommandPowEvent("check", {
       prompt: longPrompt,
       selectedIds: ["sel-1", "sel-2"],
     });
@@ -546,20 +542,35 @@ describe("Work-canvas scene-diff PoW (shipped classifier)", () => {
     expect(JSON.parse(longCommandUpload!.payload).metadata.prompt).toBe(longPrompt);
 
     const freeAsk = buildIleWorkCanvasAskPowEvent("expand_more", {
-      prompt: ILE_SELECTIVE_COMPRESSION_LABEL,
+      prompt: "Check",
       selectedIds: ["sel-1"],
     });
-    const compress = buildIleWorkCanvasCommandPowEvent("selective-compression", {
-      prompt: ILE_SELECTIVE_COMPRESSION_LABEL,
+    const check = buildIleWorkCanvasCommandPowEvent("check", {
+      prompt: "Check",
       selectedIds: ["sel-1"],
     });
     expect(freeAsk?.toolAction).toBe("expand_more");
-    expect(compress?.toolAction).toBe("selective-compression");
-    expect(compress?.toolAction).not.toBe(freeAsk?.toolAction);
-    expect(compress?.metadata.command_id).toBe("selective-compression");
+    expect(check?.toolAction).toBe("check");
+    expect(check?.toolAction).not.toBe(freeAsk?.toolAction);
+    expect(check?.metadata.command_id).toBe("check");
     expect(freeAsk?.metadata.command_id).toBeUndefined();
     expect(buildIleWorkCanvasCommandPowEvent("not-a-command", { prompt: "x" })).toBeNull();
     expect(buildIleWorkCanvasCommandPowEvent("ask", { prompt: "x" })).toBeNull();
+    expect(buildIleWorkCanvasCommandPowEvent("rephrase", { prompt: "x" })).toBeNull();
+    expect(buildIleWorkCanvasCommandPowEvent("join", { prompt: "x" })).toBeNull();
+    expect(buildIleWorkCanvasCommandPowEvent("elaborate", { prompt: "x" })).toBeNull();
+    expect(buildIleWorkCanvasCommandPowEvent("selective-compression", { prompt: "x" })).toBeNull();
+    expect(buildIleWorkCanvasCommandPowEvent("clear-overlaps", { prompt: "x" })).toBeNull();
+    const retiredCompress = buildIleWorkCanvasActionUploadItem(
+      "session-1",
+      {
+        toolName: "canvas",
+        toolAction: "selective-compression",
+        metadata: { command_id: "selective-compression", prompt: "old summary" },
+      },
+      33,
+    );
+    expect(retiredCompress?.toolAction).toBe("selective-compression");
     const retired = buildIleWorkCanvasActionUploadItem(
       "session-1",
       { toolName: "canvas", toolAction: "ask", metadata: { command_id: "ask", prompt: "old question" } },

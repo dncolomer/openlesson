@@ -39,13 +39,10 @@ export const ILE_WORK_CANVAS_USE_AND_PROMPT_ACTIONS = [
 /** Canvas command buttons. Each id is its own `tool_action`, not `expand_more`. */
 export const ILE_WORK_CANVAS_COMMAND_POW_IDS = [
   "simplify",
-  "rephrase",
   "split",
-  "join",
-  "elaborate",
-  "selective-compression",
+  "check",
   "refactor",
-  "clear-overlaps",
+  "declutter",
 ] as const;
 
 /** Retired canvas commands. Stored rows may still use these ids. They are not on the canvas. */
@@ -53,6 +50,11 @@ export const ILE_WORK_CANVAS_RETIRED_COMMAND_POW_IDS = [
   "answer",
   "ask",
   "suggest-insight",
+  "rephrase",
+  "join",
+  "elaborate",
+  "selective-compression",
+  "clear-overlaps",
 ] as const;
 
 export type IleWorkCanvasCommandPowId = (typeof ILE_WORK_CANVAS_COMMAND_POW_IDS)[number];
@@ -456,7 +458,7 @@ export function buildIleWorkCanvasAskPowEvent(
 
 /**
  * One canvas command click. `tool_action` and `metadata.command_id` are the
- * command id (`selective-compression`, not a free-text `expand_more`).
+ * command id (`check`, not a free-text `expand_more`).
  */
 /** One finished dictate. `metadata.prompt` is the transcript on the board. */
 export function buildIleWorkCanvasDictatePowEvent(input: {

@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * Scout TAP shell — briefing → timed canvas/questions split → frozen thank-you.
- * No think-aloud, mic, or session purity.
+ * Scout TAP shell — briefing → voice check → sounding → frozen thank-you.
+ * No think-aloud after the opening, mic, or session purity.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -19,9 +19,11 @@ import {
 import { resolveTapShowEndSession } from "@/components/TapScoreClient";
 import { fetchAestheticPackages } from "@/lib/aesthetics";
 import { ScoutTapPhases } from "@/components/scout-tap/scout-tap-phases";
-import { emptySessionPolicySnapshot } from "@/components/session-view/session-policy-context";
-import { embedPolicyScore, policyScoreUploadItem } from "@/lib/session-policy-score";
-import { loadSessionBranchField, sessionClockMayStart } from "@/lib/session-branch-field-load";
+import {
+  loadSessionBranchField,
+  sessionClockMayStart,
+  subscribeSessionBranchField,
+} from "@/lib/session-branch-field-load";
 import { calibrateFieldPrepareInput } from "@/lib/session-branch-prepare";
 import {
   advanceTapLiveClockPause,
@@ -40,31 +42,27 @@ import {
   buildLearnerLaunchBody,
   WORKSPACE_LEARNER_LAUNCH_PATH,
 } from "@/lib/workspace-learner-writes";
+import { uploadTapWorkCanvasPow } from "@/lib/tap-work-canvas";
 import {
-  buildTapCanvasSnapshotUploadItem,
-  buildTapWorkCanvasActionUploadItem,
-  emptyTapWorkCanvasScene,
-  serializeTapWorkCanvasScene,
-  tapWorkCanvasShouldAcceptSceneUpdate,
-  uploadTapWorkCanvasPow,
-} from "@/lib/tap-work-canvas";
-import type { IleWorkCanvasPowEvent } from "@/lib/ile-work-canvas-pow";
-import type { IleWorkCanvasElement, IleWorkCanvasScene } from "@/lib/ile-work-canvas";
-import {
-  CALIBRATE_MIN_POOL,
-  buildCalibrateCompleteTranscript,
-  buildCalibrateProofMetadata,
   createCalibrateState,
-  finishClassifying,
-  finishComfortableAnswer,
-  finishUncertainty,
   normalizeCalibrateQuestions,
-  readCalibratePlacements,
-  readCalibrateResponseTexts,
-  seedCalibrateWorkCanvas,
-  syncCalibratePlacements,
   type CalibrateState,
 } from "@/lib/calibrate-session";
+import {
+  SOUNDING_POOL_COUNT,
+  absorbSoundingStills,
+  commitSoundingTaps,
+  createSoundingState,
+  createSoundingTree,
+  finishSounding,
+  soundingCompleteTranscript,
+  soundingProofUploadItem,
+  soundingStillsFromBranchModel,
+  soundingTreeIsTravelable,
+  submitSoundingProof,
+  type SoundingState,
+} from "@/lib/calibrate-sounding";
+import { inferSoundingVoiceStep } from "@/lib/calibrate-sounding-voice-client";
 import {
   scoutLiveSpeechEnabled,
   scoutSessionPurityEnabled,
@@ -166,6 +164,7 @@ export function ScoutTapClient({
     (initialSession?.workspaceTitle as string) || "Workspace",
   );
   const [error, setError] = useState("");
+  const [proofBusy, setProofBusy] = useState(false);
   const [resultsError, setResultsError] = useState("");
   const [isStartingSession, setIsStartingSession] = useState(false);
   const [startedAt, setStartedAt] = useState<number | null>(null);
@@ -189,18 +188,14 @@ export function ScoutTapClient({
   const seedTextRef = useRef(seedText);
   const [calibrate, setCalibrate] = useState<CalibrateState>(() => createCalibrateState([]));
   const calibrateRef = useRef(calibrate);
-  const policyRef = useRef(emptySessionPolicySnapshot());
+  const [sounding, setSounding] = useState<SoundingState | null>(null);
+  const [fieldKey, setFieldKey] = useState<string | null>(null);
+  const soundingRef = useRef<SoundingState | null>(null);
+  const [startConfirmed, setStartConfirmed] = useState(false);
+  const [challengePassed, setChallengePassed] = useState(false);
   const [questionsLoading, setQuestionsLoading] = useState(false);
   const questionsAbortRef = useRef<AbortController | null>(null);
   const questionsGenRef = useRef(0);
-  const [workCanvasScene, setWorkCanvasScene] = useState<IleWorkCanvasScene>(() =>
-    emptyTapWorkCanvasScene(),
-  );
-  const workCanvasSceneRef = useRef<IleWorkCanvasScene | null>(workCanvasScene);
-  const [canvasApplyElements, setCanvasApplyElements] = useState<IleWorkCanvasElement[]>(
-    [],
-  );
-  const [canvasApplyNonce, setCanvasApplyNonce] = useState(0);
 
   const isEndingRef = useRef(false);
   const endAndScoreRef = useRef<() => void>(() => {});
@@ -215,8 +210,25 @@ export function ScoutTapClient({
     calibrateRef.current = calibrate;
   }, [calibrate]);
   useEffect(() => {
-    workCanvasSceneRef.current = workCanvasScene;
-  }, [workCanvasScene]);
+    soundingRef.current = sounding;
+  }, [sounding]);
+
+  useEffect(() => {
+    if (!fieldKey) return;
+    return subscribeSessionBranchField(fieldKey, (entry) => {
+      if (!entry.model) return;
+      const live = soundingRef.current;
+      if (!live) return;
+      const next = absorbSoundingStills(
+        live,
+        soundingStillsFromBranchModel(entry.model),
+        entry.model,
+      );
+      if (next === live) return;
+      soundingRef.current = next;
+      setSounding(next);
+    });
+  }, [fieldKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -250,66 +262,9 @@ export function ScoutTapClient({
     };
   }, [blockId]);
 
-  const handleCanvasPowActions = useCallback(
-    (events: IleWorkCanvasPowEvent[]) => {
-      const sessionKey = String(tapSessionIdRef.current || sessionId || "").trim();
-      if (!sessionKey) return;
-      for (const event of events) {
-        const item = buildTapWorkCanvasActionUploadItem(sessionKey, {
-          ...event,
-          metadata: {
-            ...event.metadata,
-            product: "tap",
-            ...buildCalibrateProofMetadata(calibrateRef.current),
-          },
-        });
-        if (!item) continue;
-        void uploadTapWorkCanvasPow({
-          workspaceId,
-          blockId,
-          sessionId,
-          privateToken,
-          tapSessionId: tapSessionIdRef.current,
-          entryQueryParams: entryQueryParamsRef.current,
-          item,
-        });
-      }
-    },
-    [blockId, privateToken, sessionId, workspaceId],
-  );
-
-  const persistCalibrateCanvas = useCallback(async () => {
-    const sessionKey = tapSessionIdRef.current || sessionId;
-    if (!sessionKey) return;
-    const snapshot = policyRef.current;
-    const scored = snapshot.model
-      ? embedPolicyScore({
-          model: snapshot.model,
-          sequence: snapshot.sequence,
-          workspaceId,
-          note: buildCalibrateCompleteTranscript({
-            seedText: seedTextRef.current,
-            state: calibrateRef.current,
-          })
-            .map((row) => row.text)
-            .join("\n"),
-        })
-      : null;
-    if (scored) {
-      await uploadTapWorkCanvasPow({
-        workspaceId,
-        blockId,
-        sessionId,
-        privateToken,
-        tapSessionId: tapSessionIdRef.current,
-        entryQueryParams: entryQueryParamsRef.current,
-        item: policyScoreUploadItem(scored),
-      });
-    }
-    const scene = workCanvasSceneRef.current;
-    if (!scene) return;
-    const serialized = serializeTapWorkCanvasScene(scene);
-    const item = buildTapCanvasSnapshotUploadItem(sessionKey, JSON.stringify(serialized));
+  const persistSounding = useCallback(async () => {
+    const live = soundingRef.current;
+    if (!live) return;
     await uploadTapWorkCanvasPow({
       workspaceId,
       blockId,
@@ -317,14 +272,7 @@ export function ScoutTapClient({
       privateToken,
       tapSessionId: tapSessionIdRef.current,
       entryQueryParams: entryQueryParamsRef.current,
-      item: {
-        ...item,
-        metadata: {
-          ...(item.metadata || {}),
-          ...buildCalibrateProofMetadata(calibrateRef.current),
-          ...(scored ? scored.metadata : {}),
-        },
-      },
+      item: soundingProofUploadItem(live),
     });
   }, [blockId, privateToken, sessionId, workspaceId]);
 
@@ -350,7 +298,7 @@ export function ScoutTapClient({
           purpose: "calibrate",
           seedTitle: title,
           seedDescription: description,
-          count: CALIBRATE_MIN_POOL,
+          count: SOUNDING_POOL_COUNT,
           conversationLanguage,
         }),
       });
@@ -359,13 +307,8 @@ export function ScoutTapClient({
       if (!res.ok) throw new Error(errorMessageFromBody(payload, "Could not load calibration questions"));
       const questions = normalizeCalibrateQuestions(payload.questions);
       const next = createCalibrateState(questions);
-      const seeded = seedCalibrateWorkCanvas(next.pool);
       setCalibrate(next);
       calibrateRef.current = next;
-      setWorkCanvasScene(seeded.scene);
-      workCanvasSceneRef.current = seeded.scene;
-      setCanvasApplyElements(seeded.scene.elements);
-      setCanvasApplyNonce((n) => n + 1);
     } catch (err) {
       if (ac.signal.aborted || gen !== questionsGenRef.current) return;
       const next = createCalibrateState([]);
@@ -408,30 +351,42 @@ export function ScoutTapClient({
       setSeedText(seed);
       seedTextRef.current = seed;
       const next = createCalibrateState([]);
-      const empty = emptyTapWorkCanvasScene();
       setCalibrate(next);
       calibrateRef.current = next;
-      setWorkCanvasScene(empty);
-      workCanvasSceneRef.current = empty;
-      setCanvasApplyElements([]);
-      setCanvasApplyNonce(0);
-      await loadPool(seed, description);
-      const field = await loadSessionBranchField(
-        calibrateFieldPrepareInput({
-          topicText: seed,
-          topicId: "calibrate",
-          questions: calibrateRef.current.pool.slice(0, 3),
-          sessionId,
-          tapSessionId: tapSessionIdRef.current,
-          workspaceId,
-          blockId,
-          privateToken,
-          entryQueryParams: entryQueryParamsRef.current,
-        }),
-      );
+      const fieldInput = calibrateFieldPrepareInput({
+        topicText: seed,
+        topicId: "calibrate",
+        questions: [],
+        sessionId,
+        tapSessionId: tapSessionIdRef.current,
+        workspaceId,
+        blockId,
+        privateToken,
+        entryQueryParams: entryQueryParamsRef.current,
+      });
+      const field = await loadSessionBranchField(fieldInput);
       if (!sessionClockMayStart({ mode: "calibrate", fieldReady: field.ok })) {
         throw new Error(field.ok ? "The field could not be prepared." : field.error);
       }
+      const fromModel = soundingStillsFromBranchModel(field.ok ? field.model : null);
+      if (!soundingTreeIsTravelable(fromModel)) {
+        await loadPool(seed, description);
+      }
+      const tree = createSoundingTree({
+        model: field.ok ? field.model : null,
+        questions: calibrateRef.current.pool,
+      });
+      const opened = createSoundingState(
+        tree,
+        tapSessionIdRef.current || sessionId || "calibrate",
+        field.ok ? field.model : null,
+      );
+      if (!opened.current) {
+        throw new Error("The sounding could not be prepared.");
+      }
+      setFieldKey(field.key);
+      setSounding(opened);
+      soundingRef.current = opened;
       const startedAtMs = Date.now();
       pauseStartedAtRef.current = null;
       pausedMsRef.current = 0;
@@ -442,22 +397,44 @@ export function ScoutTapClient({
       started = true;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not start Scout");
+      setChallengePassed(false);
     } finally {
       setIsStartingSession(false);
     }
     return { ok: started };
   }
 
+  function confirmStart() {
+    setStartConfirmed(true);
+  }
+
+  function passChallenge() {
+    setChallengePassed(true);
+    void startSession();
+  }
+
   async function endSession() {
+    const live = soundingRef.current;
+    if (live && live.phase === "sounding") {
+      const closed = finishSounding(live, true);
+      soundingRef.current = closed;
+      setSounding(closed);
+      if (closed.phase === "expert-proof") return;
+    }
     if (isEndingRef.current) return;
     isEndingRef.current = true;
     setPhase("saving");
     try {
-      await persistCalibrateCanvas();
+      if (soundingRef.current?.phase === "expert-proof") {
+        const closed = finishSounding(soundingRef.current, false);
+        soundingRef.current = closed;
+        setSounding(closed);
+      }
+      await persistSounding();
       const durationSeconds = startedAt ? Math.floor((Date.now() - startedAt) / 1000) : 0;
-      const transcript = buildCalibrateCompleteTranscript({
+      const transcript = soundingCompleteTranscript({
         seedText: seedTextRef.current,
-        state: calibrateRef.current,
+        state: soundingRef.current ?? createSoundingState([], "calibrate"),
       });
       const { ok, payload } = await postTutoringSessionComplete({
         workspaceId,
@@ -484,6 +461,12 @@ export function ScoutTapClient({
   endAndScoreRef.current = endSession;
 
   useEffect(() => {
+    if (phase !== "live") return;
+    if (sounding?.phase !== "complete") return;
+    void endAndScoreRef.current();
+  }, [phase, sounding?.phase]);
+
+  useEffect(() => {
     questionsLoadingRef.current = questionsLoading;
   }, [questionsLoading]);
 
@@ -491,7 +474,7 @@ export function ScoutTapClient({
     if (phase !== "live" || !startedAt) return;
     const tick = () => {
       const now = Date.now();
-      const waiting = questionsLoadingRef.current;
+      const waiting = false;
       const next = advanceTapLiveClockPause({
         waiting,
         nowMs: now,
@@ -510,6 +493,12 @@ export function ScoutTapClient({
       setClockPaused(waiting);
       setRemainingSeconds(remaining);
       if (remaining <= 0 && !waiting) {
+        const live = soundingRef.current;
+        if (live && live.phase !== "complete") {
+          const closed = finishSounding(live, false);
+          soundingRef.current = closed;
+          setSounding(closed);
+        }
         void endAndScoreRef.current();
       }
     };
@@ -518,41 +507,51 @@ export function ScoutTapClient({
     return () => window.clearInterval(id);
   }, [phase, startedAt, liveMinutes, questionsLoading]);
 
-  const handleSceneChange = useCallback((scene: IleWorkCanvasScene) => {
-    if (!tapWorkCanvasShouldAcceptSceneUpdate(workCanvasSceneRef.current, scene)) return;
-    workCanvasSceneRef.current = scene;
-    setWorkCanvasScene(scene);
-    const next = syncCalibratePlacements(
-      calibrateRef.current,
-      readCalibratePlacements(scene),
-    );
-    calibrateRef.current = next;
-    setCalibrate(next);
+  const onCommitTaps = useCallback((tappedIds: readonly string[]) => {
+    const live = soundingRef.current;
+    if (!live) return;
+    const next = commitSoundingTaps(live, tappedIds);
+    soundingRef.current = next;
+    setSounding(next);
   }, []);
 
-  const onAdvance = useCallback(() => {
-    const current = calibrateRef.current;
-    const live = workCanvasSceneRef.current;
-    if (!live) return;
-    const synced = syncCalibratePlacements(current, readCalibratePlacements(live));
-    const texts = readCalibrateResponseTexts(live, synced);
-    const advanced =
-      synced.phase === "classifying"
-        ? finishClassifying(synced)
-        : synced.phase === "answer"
-          ? finishComfortableAnswer(synced, texts)
-          : synced.phase === "explain"
-            ? finishUncertainty(synced, texts)
-            : { ok: false as const, reason: "wrong_phase", state: synced };
-    if (!advanced.ok) {
-      setError("Finish this step on the canvas before continuing.");
-      return;
-    }
+  const onSubmitProof = useCallback((transcript: string) => {
+    const live = soundingRef.current;
+    if (!live || live.phase !== "expert-proof" || !live.proof || proofBusy) return;
+    setProofBusy(true);
     setError("");
-    calibrateRef.current = advanced.state;
-    setCalibrate(advanced.state);
-    void persistCalibrateCanvas();
-  }, [persistCalibrateCanvas]);
+    void inferSoundingVoiceStep({
+      prepare: calibrateFieldPrepareInput({
+        topicText: seedTextRef.current,
+        topicId: "calibrate",
+        questions: [],
+        sessionId,
+        tapSessionId: tapSessionIdRef.current,
+        workspaceId,
+        blockId,
+        privateToken,
+        entryQueryParams: entryQueryParamsRef.current,
+      }),
+      stillText: live.proof.stillText,
+      transcript,
+      candidates: live.proof.candidates,
+    }).then((result) => {
+      if (!result.ok) {
+        setError(result.error);
+        setProofBusy(false);
+        return;
+      }
+      const current = soundingRef.current;
+      if (!current || current.phase !== "expert-proof") {
+        setProofBusy(false);
+        return;
+      }
+      const next = submitSoundingProof(current, result.submission);
+      soundingRef.current = next;
+      setSounding(next);
+      setProofBusy(false);
+    });
+  }, [blockId, privateToken, proofBusy, sessionId, workspaceId]);
 
   const restartBriefingFlow = useCallback(() => {
     isEndingRef.current = false;
@@ -563,17 +562,18 @@ export function ScoutTapClient({
     setClockPaused(false);
     setRemainingSeconds(0);
     setError("");
+    setProofBusy(false);
     setResultsError("");
     setSeedText("Topic");
     seedTextRef.current = "Topic";
     const reset = createCalibrateState([]);
     setCalibrate(reset);
     calibrateRef.current = reset;
-    const empty = emptyTapWorkCanvasScene();
-    setWorkCanvasScene(empty);
-    workCanvasSceneRef.current = empty;
-    setCanvasApplyElements([]);
-    setCanvasApplyNonce(0);
+    setSounding(null);
+    soundingRef.current = null;
+    setFieldKey(null);
+    setStartConfirmed(false);
+    setChallengePassed(false);
   }, []);
 
   const thankYouActions = useMemo(
@@ -636,31 +636,22 @@ export function ScoutTapClient({
       durationLocked={durationLocked}
       isStartingSession={isStartingSession}
       error={error}
-      startSession={startSession}
-      participantIdentity={participantIdentity}
+      confirmStart={confirmStart}
+      passChallenge={passChallenge}
+      startConfirmed={startConfirmed}
+      challengePassed={challengePassed}
       remainingSeconds={remainingSeconds}
       clockPaused={clockPaused}
       showEndSession={showEndSession}
       endSession={() => void endSession()}
-      policyRef={policyRef}
-      workspaceId={workspaceId}
-      blockId={blockId}
-      sessionId={sessionId}
-      tapSessionId={tapSessionId}
-      entryQueryParams={entryQueryParams}
       resultsError={resultsError}
       restartBriefingFlow={restartBriefingFlow}
       setPhase={setPhase}
-      workCanvasSceneRef={workCanvasSceneRef}
-      workCanvasScene={workCanvasScene}
-      canvasApplyElements={canvasApplyElements}
-      canvasApplyNonce={canvasApplyNonce}
-      handleSceneChange={handleSceneChange}
-      onCanvasPowActions={handleCanvasPowActions}
-      calibrate={calibrate}
-      seedText={seedText}
-      questionsLoading={questionsLoading}
-      onAdvance={onAdvance}
+      sounding={sounding}
+      onCommitTaps={onCommitTaps}
+      onSubmitProof={onSubmitProof}
+      proofBusy={proofBusy}
+      classification={sounding?.classification ?? null}
       thankYouActions={thankYouActions}
       onJumpWork={onJumpWork}
       onBackWorkspace={onBackWorkspace}

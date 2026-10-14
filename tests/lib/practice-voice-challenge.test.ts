@@ -242,8 +242,7 @@ describe("practice voice challenge script and transcript", () => {
     const tap = read("components/tap-score/tap-score-phases.tsx");
     const prepare = read("components/scout-tap/scout-tap-phases.tsx");
     expect(tap).toContain("releaseVoiceChallengeStartLatch");
-    expect(prepare).not.toContain("releaseVoiceChallengeStartLatch");
-    expect(prepare).not.toContain("PracticeVoiceChallenge");
+    expect(prepare).toContain("PracticeVoiceChallenge");
     expect(tap).not.toContain("passGuard.current = false;\n    });");
   });
 });
@@ -560,18 +559,18 @@ describe("shipped voice-challenge UI wiring", () => {
     expect(pass).toContain('step !== "live"');
   });
 
-  it("Calibrate starts from the briefing and does not mount the Prepare voice challenge", () => {
+  it("Calibrate confirms start, then mounts the Prepare voice challenge, then sounding", () => {
     const phases = read("components/scout-tap/scout-tap-phases.tsx");
     const runner = read("components/CalibrationFlowRunner.tsx");
-    expect(phases).not.toContain("confirmPrepareStart");
-    expect(phases).not.toContain("passPrepareChallenge");
-    expect(phases).not.toContain("PracticeVoiceChallenge");
-    expect(phases).not.toContain('variant="prepare"');
-    expect(phases).not.toContain('data-prepare-briefing-step="challenge"');
-    expect(phases).toContain("onStart={() => void startSession()}");
-    expect(phases).toContain("<CalibrateLiveSurface");
-    expect(runner).not.toContain("PracticeVoiceChallenge");
-    expect(runner).not.toContain("data-calibrate-voice-challenge");
+    expect(phases).toContain("confirmStart");
+    expect(phases).toContain("passChallenge");
+    expect(phases).toContain("PracticeVoiceChallenge");
+    expect(phases).toContain('variant="prepare"');
+    expect(phases).toContain('data-prepare-briefing-step="challenge"');
+    expect(phases).toContain("onStart={confirmStart}");
+    expect(phases).toContain("<CalibrateSoundingSurface");
+    expect(runner).toContain("PracticeVoiceChallenge");
+    expect(runner).toContain("data-calibrate-voice-challenge");
     expect(scoutThinkAloudEnabled()).toBe(false);
     expect(phases).toContain("scoutThinkAloudEnabled()");
     const drill = read("components/exercise-tap/exercise-tap-phases.tsx");

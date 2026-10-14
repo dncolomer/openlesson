@@ -21,6 +21,7 @@ import {
   SCIENCE_EPISTEMIC_FORAGING_COPY,
   SCIENCE_EPISTEMIC_FORAGING_READINGS,
 } from "@/lib/science/epistemic-foraging-copy";
+import { SCIENCE_LEARNING_MODEL_COPY, SCIENCE_LEARNING_MODEL_PATH } from "@/lib/science/learning-model-copy";
 
 import { standardShareSocialMetadata } from "@/lib/og/standard";
 import { AccelerandoRun } from "@/components/AccelerandoGlyphs";
@@ -255,6 +256,14 @@ export default function SciencePage() {
           <p className="mt-4 text-sm leading-relaxed text-zinc-500 sm:text-base">
             {SCIENCE_EPISTEMIC_FORAGING_COPY.caveat}
           </p>
+          <Link
+            href={SCIENCE_LEARNING_MODEL_PATH}
+            data-science-learning-model-link
+            className="mt-6 inline-flex items-center gap-1.5 text-sm font-medium text-zinc-300 transition hover:text-white"
+          >
+            {SCIENCE_LEARNING_MODEL_COPY.title}
+            <ArrowRight size={14} />
+          </Link>
 
           <div className="mt-8 border-t border-zinc-800 pt-6" data-science-epistemic-foraging-readings>
             <p className="mb-4 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">

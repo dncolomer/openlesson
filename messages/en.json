@@ -2827,13 +2827,13 @@
       "back": "Back",
       "next": "Next",
       "step1": {
-        "title": "Sort, then write",
-        "imageAlt": "Calibration questions on the Work canvas",
-        "body": "Move three questions into Comfortable answering and two into Not confident. Write one answer, and one reason you could not answer, in the filled spaces."
+        "title": "Tap what you would not trust",
+        "imageAlt": "Calibration questions",
+        "body": "Tap every hidden state you would not trust yourself to occupy. The screens get finer or stop on their own."
       },
       "step3": {
-        "title": "Sort three, then write two things",
-        "body": "Your goal is a baseline for this topic: which questions you can answer, and which you cannot.\n\nMove three questions into Comfortable answering and two into Not confident. Each area has a filled space. Write the answer to one question you know in Comfortable answering. Write why you could not answer one question in Not confident.\n\nNo speaking is required. When time ends, the score is your distance from the cheapest path on a map of this topic prepared before you started. Distance 0 means every step matched that path.",
+        "title": "Tap what you would not trust",
+        "body": "Read the opening lines out loud to start. Then tap every hidden state you would not trust yourself to occupy. The screens get finer or stop on their own. No speaking is required after the opening.\n\nThis is a prior of where your uncertainty sits, for later Learn sessions.",
         "quoteText": "",
         "quoteAuthor": "",
         "start": "Start",
@@ -2893,7 +2893,7 @@
     "briefing": {
       "kicker": "Calibrate",
       "title": "Calibrate",
-      "intro": "Move three questions you could answer into one area and two you could not into the other. Write one answer and one explanation in the filled spaces. No speaking is required. The score is your distance from the cheapest path on a map prepared before you start. Choose length, then start."
+      "intro": "Read the opening lines out loud to start. Then tap every hidden state you would not trust yourself to occupy. No speaking is required after that. Choose length, then start."
     },
     "live": {
       "questionsHeading": "Calibrate",

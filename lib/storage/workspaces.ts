@@ -38,6 +38,8 @@ export async function getWorkspaces(options?: { includeArchived?: boolean }): Pr
     cover_image_url: p.cover_image_url,
     workspace_kind: p.workspace_kind === "knowledge_region" ? "knowledge_region" : "standard",
     is_group: p.is_group || false,
+    learning_model_size:
+      p.learning_model_size === 8 || p.learning_model_size === 16 ? p.learning_model_size : 4,
     is_all_you_can_learn: Boolean(p.is_all_you_can_learn),
   }));
 }
@@ -104,7 +106,7 @@ export async function getWorkspaceById(workspaceId: string): Promise<Workspace |
   const { data } = await supabase
     .from("workspaces")
     .select(
-      "id, root_topic, status, created_at, is_public, author_id, user_id, remix_count, original_workspace_id, source_type, source_url, source_summary, notes, workspace_kind"
+      "id, root_topic, status, created_at, is_public, author_id, user_id, remix_count, original_workspace_id, source_type, source_url, source_summary, notes, workspace_kind, learning_model_size"
     )
     .eq("id", workspaceId)
     .single();
@@ -127,6 +129,10 @@ export async function getWorkspaceById(workspaceId: string): Promise<Workspace |
     notes: data.notes || undefined,
     workspace_kind:
       data.workspace_kind === "knowledge_region" ? "knowledge_region" : "standard",
+    learning_model_size:
+      data.learning_model_size === 8 || data.learning_model_size === 16
+        ? data.learning_model_size
+        : 4,
   };
 }
 

@@ -34,7 +34,7 @@ describe("session guide panel", () => {
       onboardingGuide: { scout: { step3: { body: string } } };
     };
     expect(SESSION_INSTRUCTIONS.calibrate).toBe(en.onboardingGuide.scout.step3.body);
-    expect(SESSION_INSTRUCTIONS.learn).toContain("commit (insight)");
+    expect(SESSION_INSTRUCTIONS.learn).toContain("Infer");
     expect(SESSION_INSTRUCTIONS.verification).toContain("identity you claimed");
     for (const text of Object.values(SESSION_INSTRUCTIONS)) {
       expect(text).not.toMatch(/\b(Close|Keep|Discard|Insight)\b/);

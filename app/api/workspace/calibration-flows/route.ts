@@ -68,6 +68,7 @@ export async function POST(req: NextRequest) {
         goal: typeof body.goal === "string" ? body.goal : undefined,
         questions: body.questions,
         durationMinutes: body.durationMinutes as number | undefined,
+        actionCatalog: body.actionCatalog as number | undefined,
       });
       if (!updated.ok) return jsonError(400, updated.reason);
       return NextResponse.json({ flow: updated.flow });
@@ -88,6 +89,7 @@ export async function POST(req: NextRequest) {
       goal: String(body.goal || ""),
       questions: body.questions,
       durationMinutes: body.durationMinutes as number | undefined,
+      actionCatalog: body.actionCatalog as number | undefined,
     });
     if (!created.ok || !created.flow) {
       return jsonError(400, created.ok ? "create_failed" : created.reason);

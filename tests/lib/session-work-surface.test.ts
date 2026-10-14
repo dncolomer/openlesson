@@ -46,29 +46,19 @@ describe("shared live work surface", () => {
     expect(host).toContain("absolute inset-0 flex h-full min-h-0 w-full flex-col");
   });
 
-  it("Calibrate live play uses the sidebar, the classifying step, and the paused clock", () => {
-    const surface = read("components/calibrate/calibrate-live-surface.tsx");
-    expect(prepare).toContain("<CalibrateLiveSurface");
-    expect(surface).toContain("<SessionWorkSurface");
-    expect(surface).toContain('mode="tap"');
-    expect(surface).toContain("data-scout-work-canvas-pane");
-    const paneAt = surface.indexOf("data-scout-work-canvas-pane");
-    expect(surface.slice(paneAt, paneAt + 280)).toContain("h-full");
-    expect(surface).toContain('<SessionGuidePanel guide="calibrate" />');
-    expect(surface).not.toContain('focusLabel="actions"');
-    expect(surface).not.toContain("SessionActionsPanel");
-    expect(surface).not.toContain("policyTab");
+  it("Calibrate live play uses sounding cards, a clock, and a start voice check", () => {
+    const surface = read("components/calibrate/calibrate-sounding-surface.tsx");
+    expect(prepare).toContain("<CalibrateSoundingSurface");
+    expect(surface).toContain("data-calibrate-sounding");
+    expect(surface).toContain("data-sounding-still");
+    expect(surface).not.toContain("SessionWorkSurface");
     expect(surface).not.toContain("data-calibrate-done-classifying");
     expect(surface).not.toContain("CALIBRATE_DONE_CLASSIFYING_LABEL");
-    expect(surface).toContain("dictateTranscript={transcript}");
-    expect(surface).toContain('data-calibrate-data="disabled"');
-    expect(surface).not.toContain("data-scout-go-back");
-    expect(surface).not.toContain("PracticeVoiceChallenge");
+    expect(surface).not.toContain("WorkCanvas");
+    expect(prepare).toContain("PracticeVoiceChallenge");
     expect(prepare).toContain("data-scout-live-control-strip");
-    expect(prepare).toContain("waiting={clockPaused || questionsLoading}");
     expect(prepare).toContain("listening={false}");
     expect(prepare).not.toContain("useSessionThoughtInterface");
-    expect(prepare).not.toContain("PracticeVoiceChallenge");
     for (const marker of OLD_LIVE_SPLITS) {
       expect(prepare, marker).not.toContain(marker);
       expect(surface, marker).not.toContain(marker);

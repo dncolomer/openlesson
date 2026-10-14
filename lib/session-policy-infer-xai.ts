@@ -37,6 +37,20 @@ const CONFIDENCE_SCHEMA: JsonSchema = {
   },
 };
 
+const GAP_SCHEMA: JsonSchema = {
+  name: "sounding_gap_project",
+  strict: true,
+  schema: {
+    type: "object",
+    additionalProperties: false,
+    required: ["candidateId", "confidence"],
+    properties: {
+      candidateId: { type: "string" },
+      confidence: { type: "number" },
+    },
+  },
+};
+
 const SUGGESTION_SCHEMA: JsonSchema = {
   name: "session_policy_suggestion",
   strict: true,
@@ -60,16 +74,25 @@ const INFER_SYSTEM = [
   "Also write closeLine, keepLine, discardLine, and insightLine.",
   "Each line is one sentence a learner would recognize in this chapter, about the work just given.",
   "Address the learner as you. Do not use I, me, or my.",
-  "Do not use the words Close, Keep, Discard, or Insight.",
+  "Do not use the words Close, Keep, Discard, Insight, Forage, Exploit, Avoid, or Infer.",
   "Do not mention a price, a score, or a policy.",
   "Use only the chapter and the work given.",
+].join("\n");
+
+const GAP_SYSTEM = [
+  "You match a learner's spoken plan to one nearby node on a frozen map.",
+  "The learner marked a gap and said what is uncertain and how they would look next.",
+  "Pick the candidate whose title or observation best matches that plan.",
+  "If none match, candidateId is none.",
+  "Return confidence from 0 to 1.",
+  "Use only the gap, the candidates, and the speech.",
 ].join("\n");
 
 const SUGGEST_SYSTEM = [
   "Write one short sentence that tells the learner what to do next on the canvas.",
   "Address the learner as you. Do not use I, me, or my.",
   "Follow the intent. Use the canvas notes when they make the sentence more specific.",
-  "Do not use the words Close, Keep, Discard, or Insight.",
+  "Do not use the words Close, Keep, Discard, Insight, Forage, Exploit, Avoid, or Infer.",
   "Do not mention a price, a score, or a policy.",
 ].join("\n");
 
@@ -114,6 +137,48 @@ export async function inferSessionPolicyReply(input: {
       temperature: 0.2,
       responseFormat: "json_schema",
       jsonSchema: CONFIDENCE_SCHEMA,
+      reasoningEffort: "low",
+      fetchTimeout: 30_000,
+      retries: 2,
+    },
+  );
+  const data = response.success ? response.data : null;
+  if (!data || typeof data !== "object") {
+    return { ok: false, error: "The policy could not be read." };
+  }
+  return { ok: true, reply: JSON.stringify(data) };
+}
+
+export async function inferSessionGapReply(input: {
+  events: readonly SessionPolicyProofEvent[];
+  chapterTitle?: string | null;
+  nodeTitle?: string | null;
+  candidates: readonly { id: string; title: string; observation: string }[];
+}): Promise<{ ok: true; reply: string } | { ok: false; error: string }> {
+  const events = input.events;
+  if (!events.length || !input.candidates.length) {
+    return { ok: false, error: "The policy could not be read." };
+  }
+  const title = textOf(input.chapterTitle);
+  const node = textOf(input.nodeTitle);
+  const lines = input.candidates.map(
+    (row) => `${row.id}: ${textOf(row.title)} — ${textOf(row.observation)}`,
+  );
+  const prompt = [
+    title ? `Chapter: ${title}.` : "",
+    node ? `Gap: ${node}.` : "",
+    `Candidates:\n${lines.join("\n")}`,
+    `Speech:\n${workLines(events)}`,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+  const response = await callXai<Record<string, unknown>>(
+    [systemMessage(GAP_SYSTEM), userMessage(prompt)],
+    {
+      maxTokens: 200,
+      temperature: 0.2,
+      responseFormat: "json_schema",
+      jsonSchema: GAP_SCHEMA,
       reasoningEffort: "low",
       fetchTimeout: 30_000,
       retries: 2,

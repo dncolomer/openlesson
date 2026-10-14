@@ -32,14 +32,19 @@ export type SessionPolicyInference = {
 const ALIASES: Record<string, SessionMarkButtonId> = {
   close: "try",
   try: "try",
+  exploit: "try",
   keep: "hold",
   hold: "hold",
+  forage: "hold",
+  sample: "hold",
   discard: "drop",
   drop: "drop",
+  avoid: "drop",
   insight: "insight",
+  infer: "insight",
 };
 
-const RAW_LABEL = /^(close|keep|discard|insight)[.!?]*$/i;
+const RAW_LABEL = /^(close|keep|discard|insight|forage|exploit|avoid|infer|sample|predict)[.!?]*$/i;
 
 const ACTION_LINE_KEY: Record<SessionMarkButtonId, string> = {
   try: "closeLine",

@@ -10,6 +10,7 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { flowCountdownMinutes } from "@/lib/flow-countdown";
+import { parseLearningModelSize } from "@/lib/learning-model";
 import {
   applyVerificationCommand,
   emptyVerificationState,
@@ -87,6 +88,7 @@ function mapFlow(row: Record<string, unknown>): VerificationFlow {
     topic: String(row.topic || ""),
     questions: normalizeQuestionPool(row.questions),
     durationMinutes: flowCountdownMinutes(row.duration_minutes),
+    actionCatalog: parseLearningModelSize(row.action_catalog),
     publicToken: String(row.public_token || ""),
     createdAt: String(row.created_at || ""),
     updatedAt: String(row.updated_at || ""),
@@ -152,6 +154,7 @@ async function persistCommand(
       topic: value.flow.topic,
       questions: value.flow.questions,
       duration_minutes: value.flow.durationMinutes,
+      action_catalog: value.flow.actionCatalog,
       public_token: value.flow.publicToken,
       created_at: value.flow.createdAt,
       updated_at: value.flow.updatedAt,
@@ -164,6 +167,7 @@ async function persistCommand(
       topic: value.flow.topic,
       questions: value.flow.questions,
       duration_minutes: value.flow.durationMinutes,
+      action_catalog: value.flow.actionCatalog,
       updated_at: value.flow.updatedAt,
     });
     if (error) throw new Error(error.message);
@@ -222,7 +226,11 @@ export async function runVerificationCommand(
 }
 
 function presentFlow(flow: VerificationFlow): VerificationFlow {
-  return { ...flow, durationMinutes: flowCountdownMinutes(flow.durationMinutes) };
+  return {
+    ...flow,
+    durationMinutes: flowCountdownMinutes(flow.durationMinutes),
+    actionCatalog: parseLearningModelSize(flow.actionCatalog),
+  };
 }
 
 async function writeVerificationFlow(
@@ -235,10 +243,16 @@ async function writeVerificationFlow(
     mode === "insert"
       ? supabase.from("workspace_verification_flows").insert(body)
       : supabase.from("workspace_verification_flows").update(body).eq("id", id);
-  const first = await run(row);
-  if (!first.error || !String(first.error.message).includes("duration_minutes")) return first;
-  const { duration_minutes: _duration, ...withoutDuration } = row;
-  return run(withoutDuration);
+  let current = row;
+  for (const optional of ["action_catalog", "duration_minutes"] as const) {
+    const result = await run(current);
+    if (!result.error) return result;
+    if (!String(result.error.message).includes(optional) || !(optional in current)) return result;
+    const next = { ...current };
+    delete next[optional];
+    current = next;
+  }
+  return run(current);
 }
 
 export async function listVerificationFlows(workspaceId: string): Promise<VerificationFlow[]> {

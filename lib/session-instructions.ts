@@ -8,9 +8,9 @@ export type SessionGuideId = (typeof SESSION_GUIDES)[number];
  */
 export const SESSION_INSTRUCTIONS: Record<SessionGuideId, string> = {
   learn:
-    "Speak, write, and draw on the work canvas. That is your work.\n\nPress commit (insight), write what you learned, and submit it. A valid insight stays with this chapter.",
+    "Speak, write, and draw on the work canvas. That is your work.\n\nPress Infer, write the hidden cause you found, and submit it. A valid posterior stays with this chapter.",
   calibrate:
-    "Your goal is a baseline for this topic: which questions you can answer, and which you cannot.\n\nMove three questions into Comfortable answering and two into Not confident. Each area has a filled space. Write the answer to one question you know in Comfortable answering. Write why you could not answer one question in Not confident.\n\nNo speaking is required. When time ends, the score is your distance from the cheapest path on a map of this topic prepared before you started. Distance 0 means every step matched that path.",
+    "Read the opening lines out loud to start. Then tap every hidden state you would not trust yourself to occupy. The screens get finer or stop on their own. No speaking is required after the opening.\n\nThis is a prior of where your uncertainty sits, for later Learn sessions.",
   verification:
-    "Work the question on the canvas before the clock ends.\n\nWhen time ends, the score is your distance from the cheapest path on a map of this topic prepared before you started. Distance 0 means every step matched that path. The score is stored with the identity you claimed.",
+    "Work the question on the canvas before the clock ends.\n\nWhen time ends, the score is your distance from the cheapest policy on the generative model prepared before you started. Distance 0 means every step matched that policy. The score is stored with the identity you claimed.",
 };

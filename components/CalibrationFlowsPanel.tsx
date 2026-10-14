@@ -3,13 +3,16 @@
 import { useCallback, useEffect, useState } from "react";
 import { ContextGenerationPool } from "@/components/ContextGenerationPool";
 import type { CalibrateQuestion } from "@/lib/calibrate-session";
+import { LearningModelSizePicker } from "@/components/learning-model/LearningModelSizePicker";
 import { FLOW_COUNTDOWN_MINUTES, flowCountdownMinutes } from "@/lib/flow-countdown";
+import { parseLearningModelSize, type LearningModelSize } from "@/lib/learning-model";
 
 type FlowRecord = {
   id: string;
   goal: string;
   questions: CalibrateQuestion[];
   durationMinutes?: number;
+  actionCatalog?: LearningModelSize;
   publicToken: string;
   publicUrl: string;
 };
@@ -24,6 +27,7 @@ export function CalibrationFlowsPanel({
   const [flows, setFlows] = useState<FlowRecord[]>([]);
   const [goal, setGoal] = useState("");
   const [minutes, setMinutes] = useState(15);
+  const [catalog, setCatalog] = useState<LearningModelSize>(4);
   const [draftQuestions, setDraftQuestions] = useState<string[]>([""]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -67,6 +71,7 @@ export function CalibrationFlowsPanel({
           goal,
           questions: questionsFromDraft(),
           durationMinutes: minutes,
+          actionCatalog: catalog,
         }),
       });
       const payload = await response.json();
@@ -77,6 +82,7 @@ export function CalibrationFlowsPanel({
       setGoal("");
       setDraftQuestions([""]);
       setMinutes(15);
+      setCatalog(4);
       setEditingId(null);
       await load();
     } finally {
@@ -199,6 +205,12 @@ export function CalibrationFlowsPanel({
             ))}
           </select>
         </label>
+        <LearningModelSizePicker
+          name="calibration-flow-learning-model"
+          value={catalog}
+          onChange={setCatalog}
+          disabled={busy}
+        />
         <div className="space-y-2" data-calibration-flow-pool>
           {draftQuestions.map((value, index) => (
             <div key={index} className="flex gap-2">
@@ -253,6 +265,8 @@ export function CalibrationFlowsPanel({
                   {flow.questions.length} question{flow.questions.length === 1 ? "" : "s"}
                   {" · "}
                   {flowCountdownMinutes(flow.durationMinutes)} min
+                  {" · "}
+                  {parseLearningModelSize(flow.actionCatalog)} actions
                 </p>
               </div>
               <div className="flex gap-2">
@@ -263,6 +277,7 @@ export function CalibrationFlowsPanel({
                     setEditingId(flow.id);
                     setGoal(flow.goal);
                     setMinutes(flowCountdownMinutes(flow.durationMinutes));
+                    setCatalog(parseLearningModelSize(flow.actionCatalog));
                     setDraftQuestions(
                       flow.questions.length ? flow.questions.map((question) => question.text) : [""],
                     );

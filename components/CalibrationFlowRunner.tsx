@@ -1,42 +1,47 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { PracticeVoiceChallenge } from "@/components/PracticeVoiceChallenge";
 import { TapLiveClock } from "@/components/tap-score/tap-live-clock";
 import { flowCountdownMinutes } from "@/lib/flow-countdown";
-import { CalibrateLiveSurface } from "@/components/calibrate/calibrate-live-surface";
+import { CalibrateSoundingSurface } from "@/components/calibrate/calibrate-sounding-surface";
 import { SessionFinishedScreen } from "@/components/session-view/session-finished-screen";
-import { SessionPolicyScoreResult } from "@/components/session-view/session-policy-score-result";
-import { TapThoughtButton } from "@/components/tap-score/tap-thought-button";
 import {
-  beginCalibrationSession,
-  calibrationProofMetadata,
-} from "@/lib/calibration-flow";
-import { emptySessionPolicySnapshot } from "@/components/session-view/session-policy-context";
+  SessionSoundingResult,
+  SoundingFinishedStage,
+} from "@/components/session-view/session-sounding-result";
+import { TapThoughtButton } from "@/components/tap-score/tap-thought-button";
+import { TapAestheticSection } from "@/components/tap-score/tap-aesthetic-section";
+import { beginCalibrationSession } from "@/lib/calibration-flow";
+import { fetchAestheticPackages } from "@/lib/aesthetics";
+import { pickTapBackgroundImage } from "@/lib/tap-score-client-helpers";
 import { IleStartLoading } from "@/components/session-view/ile-start-loading";
 import { SessionPageLoading } from "@/components/session-view/session-page-loading";
-import { embedPolicyScore, policyScoreFromSnapshot, policyScoreProofEvent } from "@/lib/session-policy-score";
-import { loadSessionBranchField, sessionClockMayStart } from "@/lib/session-branch-field-load";
+import {
+  loadSessionBranchField,
+  sessionClockMayStart,
+  subscribeSessionBranchField,
+} from "@/lib/session-branch-field-load";
 import { calibrateFieldPrepareInput } from "@/lib/session-branch-prepare";
 import { useI18n } from "@/lib/i18n";
 import { SESSION_SIDEBAR_PRIMARY_BUTTON_CLASS } from "@/lib/session-sidebar";
+import type { CalibrateState } from "@/lib/calibrate-session";
 import {
-  calibrateRegionCounts,
-  canFinishClassifying,
-  canFinishComfortableAnswer,
-  canFinishUncertainty,
-  finishClassifying,
-  finishComfortableAnswer,
-  finishUncertainty,
-  readCalibratePlacements,
-  readCalibrateResponseTexts,
-  seedCalibrateWorkCanvas,
-  syncCalibratePlacements,
-  type CalibrateState,
-} from "@/lib/calibrate-session";
-import { emptyTapWorkCanvasScene } from "@/lib/tap-work-canvas";
-import type { IleWorkCanvasElement, IleWorkCanvasScene } from "@/lib/ile-work-canvas";
+  absorbSoundingStills,
+  commitSoundingTaps,
+  createSoundingState,
+  createSoundingTree,
+  finishSounding,
+  soundingProofEvent,
+  soundingProofMetadata,
+  soundingResultPresentation,
+  soundingStillsFromBranchModel,
+  submitSoundingProof,
+  type SoundingClassification,
+  type SoundingState,
+} from "@/lib/calibrate-sounding";
+import { inferSoundingVoiceStep } from "@/lib/calibrate-sounding-voice-client";
 
-/** Full-viewport column so loading and the thank-you center like the other modes. */
 function CalibrationViewport({ children }: { children: ReactNode }) {
   return (
     <main
@@ -50,17 +55,15 @@ function CalibrationViewport({ children }: { children: ReactNode }) {
 
 export function CalibrationFlowRunner({ token }: { token: string }) {
   const { t } = useI18n();
-  const [goal, setGoal] = useState("");
   const [identity, setIdentity] = useState("");
   const [claimedIdentity, setClaimedIdentity] = useState("");
-  const [calibrate, setCalibrate] = useState<CalibrateState | null>(null);
-  const calibrateRef = useRef<CalibrateState | null>(null);
-  const [scene, setScene] = useState<IleWorkCanvasScene>(() => emptyTapWorkCanvasScene());
-  const sceneRef = useRef<IleWorkCanvasScene | null>(scene);
-  const [applyElements, setApplyElements] = useState<IleWorkCanvasElement[]>([]);
-  const [applyNonce, setApplyNonce] = useState(0);
+  const [sounding, setSounding] = useState<SoundingState | null>(null);
+  const soundingRef = useRef<SoundingState | null>(null);
+  const [fieldKey, setFieldKey] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [proofBusy, setProofBusy] = useState(false);
   const [claiming, setClaiming] = useState(false);
+  const [voiceReady, setVoiceReady] = useState(false);
   const [fieldHold, setFieldHold] = useState<null | "preparing" | "failed">(null);
   const [fieldError, setFieldError] = useState("");
   const pendingRef = useRef<{
@@ -68,7 +71,6 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
     identity: string;
     minutes: number;
     session: CalibrateState;
-    scene: IleWorkCanvasScene;
   } | null>(null);
   const [stored, setStored] = useState(false);
   const [durationMinutes, setDurationMinutes] = useState(15);
@@ -76,13 +78,42 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const [timeUp, setTimeUp] = useState(false);
   const storedRef = useRef(false);
+  const [bgImage, setBgImage] = useState("");
 
   useEffect(() => {
-    calibrateRef.current = calibrate;
-  }, [calibrate]);
+    soundingRef.current = sounding;
+  }, [sounding]);
+
   useEffect(() => {
-    sceneRef.current = scene;
-  }, [scene]);
+    let cancelled = false;
+    fetchAestheticPackages()
+      .then((packages) => {
+        if (!cancelled) setBgImage(pickTapBackgroundImage(packages));
+      })
+      .catch(() => {
+        if (!cancelled) setBgImage(pickTapBackgroundImage([]));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!fieldKey) return;
+    return subscribeSessionBranchField(fieldKey, (entry) => {
+      if (!entry.model) return;
+      const live = soundingRef.current;
+      if (!live) return;
+      const next = absorbSoundingStills(
+        live,
+        soundingStillsFromBranchModel(entry.model),
+        entry.model,
+      );
+      if (next === live) return;
+      soundingRef.current = next;
+      setSounding(next);
+    });
+  }, [fieldKey]);
 
   async function finishCalibrationStart() {
     const pending = pendingRef.current;
@@ -93,7 +124,7 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
       calibrateFieldPrepareInput({
         topicText: pending.goal || "Calibration",
         topicId: "calibration-goal",
-        questions: pending.session.pool.slice(0, 3),
+        questions: [],
         calibrationToken: token,
       }),
     );
@@ -102,18 +133,24 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
       setFieldHold("failed");
       return;
     }
+    const tree = createSoundingTree({
+      model: field.ok ? field.model : null,
+      questions: pending.session.pool,
+    });
+    const opened = createSoundingState(tree, token, field.ok ? field.model : null);
+    if (!opened.current) {
+      setFieldError("The sounding could not be prepared.");
+      setFieldHold("failed");
+      return;
+    }
+    setFieldKey(field.key);
     setDurationMinutes(pending.minutes);
     setRemainingSeconds(pending.minutes * 60);
     setStartedAt(Date.now());
     setTimeUp(false);
     setClaimedIdentity(pending.identity);
-    setGoal(pending.goal);
-    setCalibrate(pending.session);
-    calibrateRef.current = pending.session;
-    setScene(pending.scene);
-    sceneRef.current = pending.scene;
-    setApplyElements(pending.scene.elements);
-    setApplyNonce(1);
+    setSounding(opened);
+    soundingRef.current = opened;
     setFieldHold(null);
   }
 
@@ -166,7 +203,6 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
         setError("This calibration flow has no questions.");
         return;
       }
-      const seeded = seedCalibrateWorkCanvas(started.session.pool);
       const claimed = String(payload.identity || identity.trim());
       const minutes = flowCountdownMinutes(payload.durationMinutes);
       const goalText = String(payload.goal || "");
@@ -175,9 +211,9 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
         identity: claimed,
         minutes,
         session: started.session,
-        scene: seeded.scene,
       };
-      await finishCalibrationStart();
+      setClaimedIdentity(claimed);
+      setVoiceReady(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not start");
     } finally {
@@ -199,27 +235,17 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
     return () => window.clearInterval(id);
   }, [durationMinutes, startedAt, stored, timeUp]);
 
-  const policyRef = useRef(emptySessionPolicySnapshot());
-
-  const storeProof = useCallback(async (state: CalibrateState) => {
+  const storeProof = useCallback(async (state: SoundingState) => {
     if (storedRef.current) return;
     storedRef.current = true;
-    const snapshot = policyRef.current;
-    const scored = snapshot.model
-      ? embedPolicyScore({
-          model: snapshot.model,
-          sequence: snapshot.sequence,
-          workspaceId: token,
-        })
-      : null;
-    const events = scored ? [...state.events, policyScoreProofEvent(scored)] : state.events;
+    const closed = state.phase === "complete" ? state : finishSounding(state, false);
     const response = await fetch(`/api/calibration-flow/public/${encodeURIComponent(token)}/proof`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         identity: claimedIdentity,
-        events,
-        metadata: calibrationProofMetadata(state),
+        events: [soundingProofEvent(closed)],
+        metadata: soundingProofMetadata(closed),
       }),
     });
     if (!response.ok) {
@@ -227,49 +253,28 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
       const payload = await response.json().catch(() => ({}));
       throw new Error(payload?.error?.message || "Could not store calibration proof");
     }
+    setSounding(closed);
+    soundingRef.current = closed;
     setStored(true);
   }, [claimedIdentity, token]);
 
-  const onSceneChange = useCallback((nextScene: IleWorkCanvasScene) => {
-    sceneRef.current = nextScene;
-    setScene(nextScene);
-    setCalibrate((prev) => {
-      if (!prev) return prev;
-      const next = syncCalibratePlacements(prev, readCalibratePlacements(nextScene));
-      calibrateRef.current = next;
-      return next;
+  useEffect(() => {
+    if (!timeUp || stored) return;
+    const live = soundingRef.current;
+    if (!live) return;
+    void storeProof(finishSounding(live, false)).catch((err) => {
+      setError(err instanceof Error ? err.message : "Could not store calibration proof");
     });
-  }, []);
+  }, [storeProof, stored, timeUp]);
 
-  const onAdvance = useCallback(() => {
-    const current = calibrateRef.current;
-    const live = sceneRef.current;
-    if (!current || !live) return;
-    const synced = syncCalibratePlacements(current, readCalibratePlacements(live));
-    const texts = readCalibrateResponseTexts(live, synced);
-    const advanced =
-      synced.phase === "classifying"
-        ? finishClassifying(synced)
-        : synced.phase === "answer"
-          ? finishComfortableAnswer(synced, texts)
-          : synced.phase === "explain"
-            ? finishUncertainty(synced, texts)
-            : { ok: false as const, reason: "wrong_phase", state: synced };
-    if (!advanced.ok) {
-      setError("Finish this step on the canvas before continuing.");
-      return;
-    }
-    setError("");
-    calibrateRef.current = advanced.state;
-    setCalibrate(advanced.state);
-    if (advanced.state.phase === "complete") {
-      void storeProof(advanced.state).catch((err) => {
-        setError(err instanceof Error ? err.message : "Could not store calibration proof");
-      });
-    }
-  }, [storeProof]);
+  useEffect(() => {
+    if (stored || !sounding || sounding.phase !== "complete") return;
+    void storeProof(sounding).catch((err) => {
+      setError(err instanceof Error ? err.message : "Could not store calibration proof");
+    });
+  }, [sounding, storeProof, stored]);
 
-  if (fieldHold && !calibrate) {
+  if (fieldHold && !sounding) {
     return (
       <CalibrationViewport>
         <SessionPageLoading data-calibration-field-loading="">
@@ -293,7 +298,7 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
     );
   }
 
-  if (!calibrate) {
+  if (!voiceReady) {
     return (
       <CalibrationViewport>
         <form
@@ -328,73 +333,102 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
       </CalibrationViewport>
     );
   }
-  const policyScore = policyScoreFromSnapshot(policyRef.current);
+
+  if (!sounding) {
+    return (
+      <CalibrationViewport>
+        <section
+          className="relative flex min-h-0 flex-1 items-center justify-center bg-[#0b0b0b] px-6"
+          data-calibrate-voice-challenge=""
+          data-prepare-briefing-step="challenge"
+        >
+          <div className="w-full max-w-xl">
+            <PracticeVoiceChallenge
+              variant="prepare"
+              onPass={() => {
+                void finishCalibrationStart();
+              }}
+            />
+            {error ? <p className="mt-4 text-center text-sm text-red-300">{error}</p> : null}
+          </div>
+        </section>
+      </CalibrationViewport>
+    );
+  }
+
   if (timeUp && !stored) {
     return (
       <CalibrationViewport>
-        <SessionFinishedScreen
-          data-calibration-time-up=""
-          title="Time is up"
-          body="The countdown for this calibration flow has ended."
-          actions={
-            <TapThoughtButton size="md" variant="primary" onClick={() => { window.location.href = "/"; }}>
-              Explore Uncertain Systems
-            </TapThoughtButton>
-          }
-        >
-          <SessionPolicyScoreResult score={policyScore} />
-        </SessionFinishedScreen>
+        <CalibrationSoundingFinished
+          marker="data-calibration-time-up"
+          classification={sounding.classification}
+          fallbackTitle="Time is up"
+          fallbackBody="The countdown for this calibration flow has ended."
+          bgImage={bgImage}
+        />
       </CalibrationViewport>
     );
   }
   if (stored) {
     return (
       <CalibrationViewport>
-        <SessionFinishedScreen
-          data-calibration-thank-you=""
-          title="Thank you"
-          body="Your calibration proof of work has been stored."
-          actions={
-            <TapThoughtButton size="md" variant="primary" onClick={() => { window.location.href = "/"; }}>
-              Explore Uncertain Systems
-            </TapThoughtButton>
-          }
-        >
-          <SessionPolicyScoreResult score={policyScore} />
-        </SessionFinishedScreen>
+        <CalibrationSoundingFinished
+          marker="data-calibration-thank-you"
+          classification={sounding.classification}
+          fallbackTitle="Thank you"
+          fallbackBody="Your calibration proof of work has been stored."
+          bgImage={bgImage}
+        />
       </CalibrationViewport>
     );
   }
 
-  const counts = calibrateRegionCounts(calibrate);
-  const texts = readCalibrateResponseTexts(scene, calibrate);
-  const canAdvance =
-    calibrate.phase === "classifying"
-      ? canFinishClassifying(calibrate)
-      : calibrate.phase === "answer"
-        ? canFinishComfortableAnswer(calibrate, texts)
-        : canFinishUncertainty(calibrate, texts);
-
   return (
     <CalibrationViewport>
-      <CalibrateLiveSurface
-        boardId={token}
-        phase={calibrate.phase}
-        poolLoading={false}
-        comfortableCount={counts.comfortable}
-        unconfidentCount={counts.unconfident}
-        canAdvance={canAdvance}
-        readOnly={timeUp}
-        scene={scene}
-        sceneRef={sceneRef}
-        applyElements={applyElements}
-        applyNonce={applyNonce}
-        onSceneChange={onSceneChange}
-        onCanvasPowActions={() => {}}
-        markQuestions={calibrate.pool.slice(0, 3)}
-        calibrationToken={token}
-        onAdvance={onAdvance}
+      <CalibrateSoundingSurface
+        sounding={sounding}
         error={error}
+        bgImage={bgImage}
+        onCommitTaps={(tappedIds) => {
+          const live = soundingRef.current;
+          if (!live) return;
+          const next = commitSoundingTaps(live, tappedIds);
+          soundingRef.current = next;
+          setSounding(next);
+        }}
+        proofBusy={proofBusy}
+        onSubmitProof={(transcript) => {
+          const live = soundingRef.current;
+          if (!live || live.phase !== "expert-proof" || !live.proof || proofBusy) return;
+          setProofBusy(true);
+          setError("");
+          void inferSoundingVoiceStep({
+            prepare: calibrateFieldPrepareInput({
+              topicText: pendingRef.current?.goal || "Calibration",
+              topicId: "calibration-goal",
+              questions: [],
+              calibrationToken: token,
+            }),
+            stillText: live.proof.stillText,
+            transcript,
+            candidates: live.proof.candidates,
+          }).then((result) => {
+            if (!result.ok) {
+              setError(result.error);
+              setProofBusy(false);
+              return;
+            }
+            const current = soundingRef.current;
+            if (!current || current.phase !== "expert-proof") {
+              setProofBusy(false);
+              return;
+            }
+            const next = submitSoundingProof(current, result.submission);
+            soundingRef.current = next;
+            setSounding(next);
+            setProofBusy(false);
+          });
+        }}
         clock={
           <div className="flex w-full min-w-0 flex-col gap-2 px-1 py-1" data-calibration-live-clock>
             <TapLiveClock
@@ -411,9 +445,22 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
             type="button"
             data-calibration-end-session
             onClick={() => {
-              const current = calibrateRef.current;
+              const current = soundingRef.current;
               if (!current) return;
-              void storeProof(current).catch((err) => {
+              if (current.phase === "expert-proof") {
+                const closed = finishSounding(current, false);
+                soundingRef.current = closed;
+                setSounding(closed);
+                void storeProof(closed).catch((err) => {
+                  setError(err instanceof Error ? err.message : "Could not store calibration proof");
+                });
+                return;
+              }
+              const closed = finishSounding(current, true);
+              soundingRef.current = closed;
+              setSounding(closed);
+              if (closed.phase === "expert-proof") return;
+              void storeProof(closed).catch((err) => {
                 setError(err instanceof Error ? err.message : "Could not store calibration proof");
               });
             }}
@@ -422,11 +469,47 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
             End session
           </button>
         }
-        policyRef={policyRef}
-        topicId="calibration-goal"
-        topicText={goal || "Calibration"}
-        focusLabel="Calibrate"
       />
     </CalibrationViewport>
+  );
+}
+
+function CalibrationSoundingFinished({
+  marker,
+  classification,
+  fallbackTitle,
+  fallbackBody,
+  bgImage,
+}: {
+  marker: "data-calibration-time-up" | "data-calibration-thank-you";
+  classification: SoundingClassification | null;
+  fallbackTitle: string;
+  fallbackBody: string;
+  bgImage: string;
+}) {
+  const presentation = soundingResultPresentation(classification);
+  return (
+    <section
+      className="grid min-h-0 flex-1 grid-rows-[minmax(7rem,28vh)_minmax(0,1fr)] lg:grid-rows-1 lg:grid-cols-2"
+      {...{ [marker]: "" }}
+    >
+      <TapAestheticSection kind="sounding" bgImage={bgImage} className="min-h-[7rem] lg:order-2" />
+      <SoundingFinishedStage>
+        <SessionFinishedScreen
+          className="flex-none"
+          kicker={presentation?.kicker}
+          title={presentation?.title ?? fallbackTitle}
+          body={presentation?.body ?? fallbackBody}
+          frameLabel={null}
+          actions={
+            <TapThoughtButton size="md" variant="primary" onClick={() => { window.location.href = "/"; }}>
+              Explore Uncertain Systems
+            </TapThoughtButton>
+          }
+        >
+          <SessionSoundingResult classification={classification} />
+        </SessionFinishedScreen>
+      </SoundingFinishedStage>
+    </section>
   );
 }

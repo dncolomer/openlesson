@@ -22,7 +22,7 @@ export const BLOCK_PRACTICE_DURATION_OPTIONS: readonly number[] = DURATIONS;
 export type BlockPracticeOptions = {
   allowExplore: boolean;
   allowDrill: boolean;
-  /** Scout (TAP-shaped rabbit-hole mind map, no speaking). */
+  /** Scout / Calibrate: opening voice check, then silent tapping. */
   allowScout: boolean;
   /** Dialog modality (LLM-powered conversation). */
   allowDialog: boolean;

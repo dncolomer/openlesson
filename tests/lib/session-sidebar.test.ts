@@ -599,16 +599,11 @@ describe("session sidebar mode configuration", () => {
     expect(host).toContain("data-ile-canvas-stage");
     expect(client).toContain("sidebarMode={sidebarMode}");
     expect(verify).toContain('sidebarMode="verification-tap"');
-    expect(prepare).toContain("<CalibrateLiveSurface");
-    expect(prepare).toContain("focusLabel={t(\"scout.live.questionsHeading\")}");
-    expect(calibrateSurface).toContain('<SessionGuidePanel guide="calibrate" />');
+    expect(prepare).toContain("<CalibrateSoundingSurface");
     expect(calibrateSurface).not.toContain('focusLabel="actions"');
     expect(calibrateSurface).not.toContain("SessionActionsPanel");
     expect(calibrateSurface).not.toContain("policyTab");
     expect(calibrateSurface).not.toContain("data-calibrate-done-classifying");
-    expect(calibrateSurface).toContain("<SessionTopicChapter");
-    expect(calibrateSurface).toContain('data-calibrate-data="disabled"');
-    expect(calibrateSurface).toContain("CALIBRATE_DATA_DISABLED_LABEL");
     expect(calibrateSurface).not.toContain("<TapSessionSignals");
     expect(prepare).not.toContain("<TapSessionSignals");
     expect(prepare).not.toContain("captureAudio");

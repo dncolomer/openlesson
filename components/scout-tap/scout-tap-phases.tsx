@@ -1,35 +1,31 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
-import { CalibrateLiveSurface } from "@/components/calibrate/calibrate-live-surface";
+import { PracticeVoiceChallenge } from "@/components/PracticeVoiceChallenge";
+import { CalibrateSoundingSurface } from "@/components/calibrate/calibrate-sounding-surface";
 import { TapBriefingConfig } from "@/components/TapBriefingConfig";
 import { SessionFinishedScreen } from "@/components/session-view/session-finished-screen";
-import { SessionPolicyScoreResult } from "@/components/session-view/session-policy-score-result";
+import {
+  SessionSoundingResult,
+  SoundingFinishedStage,
+} from "@/components/session-view/session-sounding-result";
 import { IleStartLoading } from "@/components/session-view/ile-start-loading";
 import { SessionPageLoading } from "@/components/session-view/session-page-loading";
 import { TapAestheticSection } from "@/components/tap-score/tap-aesthetic-section";
 import { TapLiveClock } from "@/components/tap-score/tap-live-clock";
 import { TapThoughtButton } from "@/components/tap-score/tap-thought-button";
 import { SESSION_SIDEBAR_PRIMARY_BUTTON_CLASS } from "@/lib/session-sidebar";
-import type { PowParticipantIdentity } from "@/lib/session-participant-identity";
 import type { SpokenLocale } from "@/lib/tutoring-languages";
 import { coerceSpokenLocale } from "@/lib/tutoring-languages";
 import { type Phase } from "@/lib/tap-score-client-helpers";
-import { tapWorkCanvasBoardId } from "@/lib/tap-work-canvas";
-import type { IleWorkCanvasElement, IleWorkCanvasScene } from "@/lib/ile-work-canvas";
-import type { IleWorkCanvasPowEvent } from "@/lib/ile-work-canvas-pow";
-import {
-  calibrateRegionCounts,
-  canFinishClassifying,
-  canFinishComfortableAnswer,
-  canFinishUncertainty,
-  readCalibrateResponseTexts,
-  type CalibrateState,
-} from "@/lib/calibrate-session";
+import { prepareBriefingStep } from "@/lib/practice-voice-challenge";
 import { scoutThinkAloudEnabled, type ScoutThankYouActions } from "@/lib/scout-session";
-import type { MutableRefObject } from "react";
-import type { SessionPolicySnapshot } from "@/components/session-view/session-policy-context";
-import { policyScoreFromSnapshot } from "@/lib/session-policy-score";
+import {
+  soundingResultPresentation,
+  type SoundingClassification,
+  type SoundingState,
+} from "@/lib/calibrate-sounding";
 
 type Translate = (key: string, vars?: Record<string, string | number>) => string;
 
@@ -46,31 +42,22 @@ export function ScoutTapPhases(props: {
   durationLocked: boolean;
   isStartingSession: boolean;
   error: string;
-  startSession: () => void;
-  participantIdentity: PowParticipantIdentity | null;
+  confirmStart: () => void;
+  passChallenge: () => void;
+  startConfirmed: boolean;
+  challengePassed: boolean;
   remainingSeconds: number;
   clockPaused?: boolean;
   showEndSession: boolean;
   endSession: () => void;
-  policyRef?: MutableRefObject<SessionPolicySnapshot>;
-  workspaceId?: string;
-  blockId?: string;
-  sessionId?: string;
-  tapSessionId?: string | null;
-  entryQueryParams?: Record<string, string | string[]>;
   resultsError: string;
   restartBriefingFlow: () => void;
   setPhase: (phase: Phase) => void;
-  workCanvasSceneRef: MutableRefObject<IleWorkCanvasScene | null>;
-  workCanvasScene: IleWorkCanvasScene;
-  canvasApplyElements: IleWorkCanvasElement[];
-  canvasApplyNonce: number;
-  handleSceneChange: (scene: IleWorkCanvasScene) => void;
-  onCanvasPowActions: (events: IleWorkCanvasPowEvent[]) => void;
-  calibrate: CalibrateState;
-  seedText: string;
-  questionsLoading: boolean;
-  onAdvance: () => void;
+  sounding: SoundingState | null;
+  onCommitTaps: (tappedIds: readonly string[]) => void;
+  onSubmitProof: (transcript: string) => void;
+  proofBusy?: boolean;
+  classification: SoundingClassification | null;
   thankYouActions: ScoutThankYouActions;
   onJumpWork: () => void;
   onBackWorkspace: () => void;
@@ -88,49 +75,29 @@ export function ScoutTapPhases(props: {
     durationLocked,
     isStartingSession,
     error,
-    startSession,
-    participantIdentity: _participantIdentity,
+    confirmStart,
+    passChallenge,
+    startConfirmed,
+    challengePassed,
     remainingSeconds,
     clockPaused = false,
     showEndSession,
     endSession,
-    policyRef,
-    workspaceId,
-    blockId,
-    tapSessionId,
-    sessionId,
-    entryQueryParams,
     resultsError,
     restartBriefingFlow,
     setPhase,
-    workCanvasSceneRef,
-    workCanvasScene,
-    canvasApplyElements,
-    canvasApplyNonce,
-    handleSceneChange,
-    onCanvasPowActions,
-    calibrate,
-    seedText,
-    questionsLoading,
-    onAdvance,
+    sounding,
+    onCommitTaps,
+    onSubmitProof,
+    proofBusy = false,
+    classification,
     thankYouActions,
     onJumpWork,
     onBackWorkspace,
   } = props;
 
   void scoutThinkAloudEnabled();
-  const policyScore = policyScoreFromSnapshot(policyRef?.current);
-
-  const counts = calibrateRegionCounts(calibrate);
-  const texts = readCalibrateResponseTexts(workCanvasScene, calibrate);
-  const canAdvance =
-    calibrate.phase === "classifying"
-      ? canFinishClassifying(calibrate)
-      : calibrate.phase === "answer"
-        ? canFinishComfortableAnswer(calibrate, texts)
-        : calibrate.phase === "explain"
-          ? canFinishUncertainty(calibrate, texts)
-          : false;
+  const briefingStep = prepareBriefingStep({ startConfirmed, challengePassed });
 
   return (
     <main
@@ -145,7 +112,20 @@ export function ScoutTapPhases(props: {
           </SessionPageLoading>
         ) : null}
 
-        {phase === "briefing" && !isStartingSession && (
+        {phase === "briefing" && !isStartingSession && briefingStep === "challenge" ? (
+          <section
+            className="relative flex min-h-0 flex-1 items-center justify-center bg-[#0b0b0b] px-6"
+            data-calibrate-voice-challenge=""
+            data-prepare-briefing-step="challenge"
+          >
+            <div className="w-full max-w-xl">
+              <PracticeVoiceChallenge variant="prepare" onPass={passChallenge} />
+              {error ? <p className="mt-4 text-center text-sm text-red-300">{error}</p> : null}
+            </div>
+          </section>
+        ) : null}
+
+        {phase === "briefing" && !isStartingSession && briefingStep === "confirm" && (
           <section className="relative flex min-h-0 flex-1" data-scout-briefing data-tap-briefing-layout="sections">
             <div className="grid h-full min-h-0 w-full flex-1 lg:grid-cols-2">
               <div className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-[#0b0b0b] lg:border-r lg:border-neutral-800/60">
@@ -154,7 +134,7 @@ export function ScoutTapPhases(props: {
                   hideStep3Quote
                   showStartAction
                   isStarting={isStartingSession}
-                  onStart={() => void startSession()}
+                  onStart={confirmStart}
                 />
               </div>
               <TapAestheticSection bgImage={bgImage} kind="shortcuts">
@@ -182,31 +162,15 @@ export function ScoutTapPhases(props: {
           </section>
         )}
 
-        {phase === "live" && (
+        {phase === "live" && sounding ? (
           <section className="flex min-h-0 flex-1 flex-col overflow-hidden" data-scout-live>
-            <CalibrateLiveSurface
-              boardId={tapWorkCanvasBoardId(tapSessionId || sessionId)}
-              phase={calibrate.phase}
-              poolLoading={questionsLoading}
-              comfortableCount={counts.comfortable}
-              unconfidentCount={counts.unconfident}
-              canAdvance={canAdvance}
-              readOnly={false}
-              scene={workCanvasScene}
-              sceneRef={workCanvasSceneRef}
-              applyElements={canvasApplyElements}
-              applyNonce={canvasApplyNonce}
-              onSceneChange={handleSceneChange}
-              onCanvasPowActions={onCanvasPowActions}
-              markQuestions={calibrate.pool.slice(0, 3)}
-              sessionId={sessionId}
-              tapSessionId={tapSessionId}
-              workspaceId={workspaceId}
-              blockId={blockId}
-              privateToken={privateToken}
-              entryQueryParams={entryQueryParams}
-              onAdvance={onAdvance}
+            <CalibrateSoundingSurface
+              sounding={sounding}
               error={error}
+              bgImage={bgImage}
+              proofBusy={proofBusy}
+              onCommitTaps={onCommitTaps}
+              onSubmitProof={onSubmitProof}
               clock={
                 <div
                   className="flex w-full min-w-0 flex-col gap-2 px-1 py-1"
@@ -215,7 +179,7 @@ export function ScoutTapPhases(props: {
                   <TapLiveClock
                     label="Time left"
                     remainingSeconds={remainingSeconds}
-                    waiting={clockPaused || questionsLoading}
+                    waiting={clockPaused}
                     listening={false}
                     placement="card"
                   />
@@ -234,51 +198,57 @@ export function ScoutTapPhases(props: {
                   </div>
                 ) : null
               }
-              topicId="calibrate"
-              topicText={seedText}
-              focusLabel={t("scout.live.questionsHeading")}
-              policyRef={policyRef}
             />
           </section>
-        )}
+        ) : null}
 
         {phase === "saving" ? (
           <SessionPageLoading message={t("tap.postSession.savingAndReturning")} />
         ) : null}
 
         {phase === "results" ? (
-          <SessionFinishedScreen
+          <section
+            className="grid min-h-0 flex-1 grid-rows-[minmax(7rem,28vh)_minmax(0,1fr)] lg:grid-rows-1 lg:grid-cols-2"
             data-scout-thank-you=""
             data-tap-session-thank-you=""
-            title={t("scout.thankYou.title")}
-            body={t("scout.thankYou.body")}
-            actions={
-              <>
-                <TapThoughtButton
-                  size="md"
-                  variant="primary"
-                  data-scout-restart
-                  onClick={restartBriefingFlow}
-                >
-                  {t("scout.thankYou.restart")}
-                </TapThoughtButton>
-                <TapThoughtButton
-                  size="md"
-                  data-scout-workspace
-                  onClick={onBackWorkspace}
-                >
-                  {t("scout.thankYou.workspace")}
-                </TapThoughtButton>
-                {thankYouActions.work ? (
-                  <TapThoughtButton size="md" data-scout-jump-work onClick={onJumpWork}>
-                    {t("scout.thankYou.work")}
-                  </TapThoughtButton>
-                ) : null}
-              </>
-            }
           >
-            <SessionPolicyScoreResult score={policyScore} />
-          </SessionFinishedScreen>
+            <TapAestheticSection
+              kind="sounding"
+              bgImage={bgImage}
+              className="min-h-[7rem] lg:order-2"
+            />
+            <SoundingFinishedStage>
+              <ScoutSoundingFinished
+                classification={classification}
+                fallbackTitle={t("scout.thankYou.title")}
+                fallbackBody={t("scout.thankYou.body")}
+                actions={
+                  <>
+                    <TapThoughtButton
+                      size="md"
+                      variant="primary"
+                      data-scout-restart
+                      onClick={restartBriefingFlow}
+                    >
+                      {t("scout.thankYou.restart")}
+                    </TapThoughtButton>
+                    <TapThoughtButton
+                      size="md"
+                      data-scout-workspace
+                      onClick={onBackWorkspace}
+                    >
+                      {t("scout.thankYou.workspace")}
+                    </TapThoughtButton>
+                    {thankYouActions.work ? (
+                      <TapThoughtButton size="md" data-scout-jump-work onClick={onJumpWork}>
+                        {t("scout.thankYou.work")}
+                      </TapThoughtButton>
+                    ) : null}
+                  </>
+                }
+              />
+            </SoundingFinishedStage>
+          </section>
         ) : null}
 
         {phase === "error" && (
@@ -294,5 +264,31 @@ export function ScoutTapPhases(props: {
         )}
       </div>
     </main>
+  );
+}
+
+function ScoutSoundingFinished({
+  classification,
+  fallbackTitle,
+  fallbackBody,
+  actions,
+}: {
+  classification: SoundingClassification | null;
+  fallbackTitle: string;
+  fallbackBody: string;
+  actions: ReactNode;
+}) {
+  const presentation = soundingResultPresentation(classification);
+  return (
+    <SessionFinishedScreen
+      className="flex-none"
+      kicker={presentation?.kicker}
+      title={presentation?.title ?? fallbackTitle}
+      body={presentation?.body ?? fallbackBody}
+      frameLabel={null}
+      actions={actions}
+    >
+      <SessionSoundingResult classification={classification} />
+    </SessionFinishedScreen>
   );
 }

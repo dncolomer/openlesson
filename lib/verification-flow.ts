@@ -14,6 +14,7 @@ import {
   type CustomVerificationModelSpec,
 } from "@/lib/knowledge-config/custom-verification-model";
 import { flowCountdownMinutes } from "@/lib/flow-countdown";
+import { parseLearningModelSize, type LearningModelSize } from "@/lib/learning-model";
 import type { TapStartingTopic } from "@/lib/tap-score";
 
 export const VERIFICATION_WORKSPACE_LABEL = "Verification Workspace";
@@ -33,6 +34,8 @@ export type VerificationFlow = {
   questions: VerificationQuestion[];
   /** Countdown chosen when the flow is created, in minutes. */
   durationMinutes: number;
+  /** 4, 8, or 16 actions on the learning model. */
+  actionCatalog: LearningModelSize;
   publicToken: string;
   createdAt: string;
   updatedAt: string;
@@ -484,6 +487,7 @@ export type VerificationCommand =
       topic: string;
       questions: unknown;
       durationMinutes?: number;
+      actionCatalog?: number;
       id?: string;
       publicToken?: string;
     }
@@ -494,6 +498,7 @@ export type VerificationCommand =
       topic?: string;
       questions?: unknown;
       durationMinutes?: number;
+      actionCatalog?: number;
     }
   | { type: "remove"; workspaceId: string; flowId: string }
   | { type: "claim"; flowId: string; identity: string }
@@ -538,6 +543,7 @@ export function applyVerificationCommand(
       topic,
       questions: normalizeQuestionPool(command.questions),
       durationMinutes: flowCountdownMinutes(command.durationMinutes),
+      actionCatalog: parseLearningModelSize(command.actionCatalog),
       publicToken: token,
       createdAt: stamp,
       updatedAt: stamp,
@@ -564,6 +570,10 @@ export function applyVerificationCommand(
         command.durationMinutes === undefined
           ? flowCountdownMinutes(current.durationMinutes)
           : flowCountdownMinutes(command.durationMinutes),
+      actionCatalog:
+        command.actionCatalog === undefined
+          ? parseLearningModelSize(current.actionCatalog)
+          : parseLearningModelSize(command.actionCatalog),
       updatedAt: nowIso(),
     };
     return {

@@ -19,6 +19,7 @@ import {
 } from "@/lib/calibration-flow";
 import { normalizeCalibrateQuestions } from "@/lib/calibrate-session";
 import { flowCountdownMinutes } from "@/lib/flow-countdown";
+import { parseLearningModelSize } from "@/lib/learning-model";
 
 const CALIBRATION_FLOW_GLOBAL = "__openlessonCalibrationFlowRepository";
 
@@ -88,6 +89,7 @@ function mapFlow(row: Record<string, unknown>): CalibrationFlow {
     goal: String(row.goal || ""),
     questions: normalizeCalibrateQuestions(row.questions),
     durationMinutes: flowCountdownMinutes(row.duration_minutes),
+    actionCatalog: parseLearningModelSize(row.action_catalog),
     publicToken: String(row.public_token || ""),
     createdAt: String(row.created_at || ""),
     updatedAt: String(row.updated_at || ""),
@@ -147,6 +149,7 @@ async function persistCommand(
       goal: value.flow.goal,
       questions: value.flow.questions,
       duration_minutes: value.flow.durationMinutes,
+      action_catalog: value.flow.actionCatalog,
       public_token: value.flow.publicToken,
       created_at: value.flow.createdAt,
       updated_at: value.flow.updatedAt,
@@ -159,6 +162,7 @@ async function persistCommand(
       goal: value.flow.goal,
       questions: value.flow.questions,
       duration_minutes: value.flow.durationMinutes,
+      action_catalog: value.flow.actionCatalog,
       updated_at: value.flow.updatedAt,
     });
     if (error) throw new Error(error.message);
@@ -212,7 +216,11 @@ export async function runCalibrationCommand(
 }
 
 function presentFlow(flow: CalibrationFlow): CalibrationFlow {
-  return { ...flow, durationMinutes: flowCountdownMinutes(flow.durationMinutes) };
+  return {
+    ...flow,
+    durationMinutes: flowCountdownMinutes(flow.durationMinutes),
+    actionCatalog: parseLearningModelSize(flow.actionCatalog),
+  };
 }
 
 async function updateFlowRow(
@@ -221,10 +229,7 @@ async function updateFlowRow(
   id: string,
   row: Record<string, unknown>,
 ): Promise<{ error: { message: string } | null }> {
-  const first = await supabase.from(table).update(row).eq("id", id);
-  if (!first.error || !String(first.error.message).includes("duration_minutes")) return first;
-  const { duration_minutes: _duration, ...withoutDuration } = row;
-  return supabase.from(table).update(withoutDuration).eq("id", id);
+  return writeFlowRowWithOptionalColumns((body) => supabase.from(table).update(body).eq("id", id), row);
 }
 
 async function insertFlowRow(
@@ -232,10 +237,23 @@ async function insertFlowRow(
   table: "workspace_calibration_flows",
   row: Record<string, unknown>,
 ): Promise<{ error: { message: string } | null }> {
-  const first = await supabase.from(table).insert(row);
-  if (!first.error || !String(first.error.message).includes("duration_minutes")) return first;
-  const { duration_minutes: _duration, ...withoutDuration } = row;
-  return supabase.from(table).insert(withoutDuration);
+  return writeFlowRowWithOptionalColumns((body) => supabase.from(table).insert(body), row);
+}
+
+async function writeFlowRowWithOptionalColumns(
+  run: (body: Record<string, unknown>) => PromiseLike<{ error: { message: string } | null }>,
+  row: Record<string, unknown>,
+): Promise<{ error: { message: string } | null }> {
+  let current = row;
+  for (const optional of ["action_catalog", "duration_minutes"] as const) {
+    const result = await run(current);
+    if (!result.error) return result;
+    if (!String(result.error.message).includes(optional) || !(optional in current)) return result;
+    const next = { ...current };
+    delete next[optional];
+    current = next;
+  }
+  return run(current);
 }
 
 export async function listCalibrationFlows(workspaceId: string): Promise<CalibrationFlow[]> {

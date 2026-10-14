@@ -20,10 +20,12 @@ export const ILE_VOICE_CHALLENGE_SENTENCE_TWO =
 export const ILE_VOICE_CHALLENGE_SCRIPT = `${ILE_VOICE_CHALLENGE_SENTENCE_ONE} ${ILE_VOICE_CHALLENGE_SENTENCE_TWO}`;
 export const ILE_SAMPLE_INSIGHT_LABEL = "Sample insight";
 
+export const PREPARE_VOICE_CHALLENGE_SENTENCE_ONE =
+  "I will now read these opening lines out loud to start.";
 export const PREPARE_VOICE_CHALLENGE_SENTENCE_TWO =
-  "In this session I will map questions only, to see where my curiosity pulls before I work.";
+  "In this session I will tap every question I would not trust myself to answer.";
 export const DRILL_VOICE_CHALLENGE_SENTENCE_TWO = TAP_VOICE_CHALLENGE_SENTENCE_TWO;
-export const PREPARE_VOICE_CHALLENGE_SCRIPT = `${ILE_VOICE_CHALLENGE_SENTENCE_ONE} ${PREPARE_VOICE_CHALLENGE_SENTENCE_TWO}`;
+export const PREPARE_VOICE_CHALLENGE_SCRIPT = `${PREPARE_VOICE_CHALLENGE_SENTENCE_ONE} ${PREPARE_VOICE_CHALLENGE_SENTENCE_TWO}`;
 /** Drill reads the same two clear sentences as the speak-aloud gate on TAP. */
 export const DRILL_VOICE_CHALLENGE_SCRIPT = TAP_VOICE_CHALLENGE_SCRIPT;
 
@@ -424,7 +426,7 @@ export function scoredTapBriefingStep(input: {
   return "live";
 }
 
-/** Prepare confirms start, then the same voice challenge, then live. */
+/** Prepare confirms start, then the Calibrate voice check, then sounding. */
 export function prepareBriefingStep(input: {
   startConfirmed: boolean;
   challengePassed: boolean;

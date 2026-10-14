@@ -8,6 +8,7 @@ import { guardSessionRoute } from "@/lib/api/require-auth";
 import { entryQueryParamsFromBody } from "@/lib/guest-link-access";
 import { getCalibrationFlowByToken } from "@/lib/calibration-flow-repository";
 import {
+  inferSessionGapReply,
   inferSessionPolicyReply,
   suggestSessionPolicyReply,
 } from "@/lib/session-policy-infer-xai";
@@ -86,6 +87,38 @@ export async function POST(request: NextRequest) {
         events,
         chapterTitle: plan.chapterTitle,
         chapterBrief: plan.chapterBrief,
+      });
+      if (!prepared.ok) return jsonError(502, "The policy could not be read.");
+      return NextResponse.json({ reply: prepared.reply });
+    }
+
+    if (body.phase === "project") {
+      const events = proofEvents(body.events);
+      if (!events) return jsonError(400, "The policy could not be read.");
+      const rawCandidates = body.candidates;
+      if (!Array.isArray(rawCandidates) || rawCandidates.length === 0) {
+        return jsonError(400, "The policy could not be read.");
+      }
+      const candidates: { id: string; title: string; observation: string }[] = [];
+      for (const row of rawCandidates) {
+        if (!row || typeof row !== "object" || Array.isArray(row)) {
+          return jsonError(400, "The policy could not be read.");
+        }
+        const id = typeof (row as { id?: unknown }).id === "string" ? (row as { id: string }).id.trim() : "";
+        const title =
+          typeof (row as { title?: unknown }).title === "string" ? (row as { title: string }).title.trim() : "";
+        const observation =
+          typeof (row as { observation?: unknown }).observation === "string"
+            ? (row as { observation: string }).observation.trim()
+            : "";
+        if (!id || !title) return jsonError(400, "The policy could not be read.");
+        candidates.push({ id, title, observation: observation || title });
+      }
+      const prepared = await inferSessionGapReply({
+        events,
+        chapterTitle: plan.chapterTitle,
+        nodeTitle: typeof body.nodeTitle === "string" ? body.nodeTitle : "",
+        candidates,
       });
       if (!prepared.ok) return jsonError(502, "The policy could not be read.");
       return NextResponse.json({ reply: prepared.reply });

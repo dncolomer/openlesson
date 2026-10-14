@@ -1,7 +1,7 @@
 /**
  * Calibration flows on a Verification Workspace.
  * A flow stores a goal and a question pool. Starting it runs the calibrate
- * canvas procedure. It does not pick one verification question.
+ * sounding. It does not pick one verification question.
  */
 
 import { TUTOR_CANVAS_VOICE } from "@/lib/prompt-kernel/tutor-voice";
@@ -14,6 +14,7 @@ import {
   type CalibrateState,
 } from "@/lib/calibrate-session";
 import { flowCountdownMinutes } from "@/lib/flow-countdown";
+import { parseLearningModelSize, type LearningModelSize } from "@/lib/learning-model";
 import { acceptParticipantIdentity } from "@/lib/verification-flow";
 
 export type CalibrationFlow = {
@@ -23,6 +24,8 @@ export type CalibrationFlow = {
   questions: CalibrateQuestion[];
   /** Countdown chosen when the flow is created, in minutes. */
   durationMinutes: number;
+  /** 4, 8, or 16 actions on the learning model. */
+  actionCatalog: LearningModelSize;
   publicToken: string;
   createdAt: string;
   updatedAt: string;
@@ -104,6 +107,7 @@ export type CalibrationCommand =
       goal: string;
       questions: unknown;
       durationMinutes?: number;
+      actionCatalog?: number;
       id?: string;
       publicToken?: string;
     }
@@ -114,6 +118,7 @@ export type CalibrationCommand =
       goal?: string;
       questions?: unknown;
       durationMinutes?: number;
+      actionCatalog?: number;
     }
   | { type: "remove"; workspaceId: string; flowId: string }
   | { type: "claim"; flowId: string; identity: string }
@@ -162,7 +167,8 @@ function proofEvents(raw: unknown): CalibrateProofEvent[] {
     if (
       record.type === "comfortable_answer" ||
       record.type === "uncertainty_explanation" ||
-      record.type === "policy_score"
+      record.type === "policy_score" ||
+      record.type === "sounding"
     ) {
       events.push({ type: record.type, questionId, text, source });
     }
@@ -190,6 +196,7 @@ export function applyCalibrationCommand(
       goal: draft.goal,
       questions: draft.questions,
       durationMinutes: flowCountdownMinutes(command.durationMinutes),
+      actionCatalog: parseLearningModelSize(command.actionCatalog),
       publicToken: token,
       createdAt: stamp,
       updatedAt: stamp,
@@ -216,6 +223,10 @@ export function applyCalibrationCommand(
         command.durationMinutes === undefined
           ? flowCountdownMinutes(current.durationMinutes)
           : flowCountdownMinutes(command.durationMinutes),
+      actionCatalog:
+        command.actionCatalog === undefined
+          ? parseLearningModelSize(current.actionCatalog)
+          : parseLearningModelSize(command.actionCatalog),
       updatedAt: nowIso(),
     };
     return {
@@ -293,7 +304,7 @@ export function flowByPublicToken(state: CalibrationState, token: string): Calib
 }
 
 /**
- * Start the saved pool on the calibrate canvas.
+ * Start the saved pool as a calibrate sounding.
  * This is not a verification run and does not pick a single question.
  */
 export function beginCalibrationSession(flow: {

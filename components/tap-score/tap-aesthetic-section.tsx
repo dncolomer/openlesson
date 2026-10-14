@@ -15,8 +15,8 @@ export function TapAestheticSection({
 }: {
   bgImage?: string | null;
   className?: string;
-  children: ReactNode;
-  kind: "shortcuts" | "thought-memory" | "solo-stacks" | "convo-stash";
+  children?: ReactNode;
+  kind: "shortcuts" | "thought-memory" | "solo-stacks" | "convo-stash" | "sounding";
 }) {
   return (
     <div
@@ -35,11 +35,17 @@ export function TapAestheticSection({
           />
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-0 bg-[#0b0b0b]/78"
+            className={
+              children
+                ? "pointer-events-none absolute inset-0 bg-[#0b0b0b]/78"
+                : "pointer-events-none absolute inset-0 bg-[#0b0b0b]/35"
+            }
           />
         </>
       ) : null}
-      <div className="relative z-10 flex min-h-0 flex-1 flex-col">{children}</div>
+      {children ? (
+        <div className="relative z-10 flex min-h-0 flex-1 flex-col">{children}</div>
+      ) : null}
     </div>
   );
 }

@@ -5,14 +5,15 @@
  */
 
 import { encodeKnowledgeConfig } from "@/lib/knowledge-config/encoder";
+import { LEARNING_MODEL_CATALOG_4 } from "@/lib/learning-model/action-catalog";
 
 export const SESSION_PRESS_EMBEDDING_MODEL_ID = "knowledgecfg-press-v1" as const;
 
 export const SESSION_MARK_BUTTONS = [
-  { id: "try", label: "Close" },
-  { id: "hold", label: "Keep" },
-  { id: "drop", label: "Discard" },
-  { id: "insight", label: "Insight" },
+  { id: "try" as const, label: LEARNING_MODEL_CATALOG_4.find((row) => row.storedId === "try")!.label },
+  { id: "hold" as const, label: LEARNING_MODEL_CATALOG_4.find((row) => row.storedId === "hold")!.label },
+  { id: "drop" as const, label: LEARNING_MODEL_CATALOG_4.find((row) => row.storedId === "drop")!.label },
+  { id: "insight" as const, label: LEARNING_MODEL_CATALOG_4.find((row) => row.storedId === "insight")!.label },
 ] as const;
 
 export type SessionMarkButtonId = (typeof SESSION_MARK_BUTTONS)[number]["id"];

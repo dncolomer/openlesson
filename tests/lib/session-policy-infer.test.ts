@@ -200,6 +200,7 @@ describe("session policy inference", () => {
     expect(parsePolicySuggestionReply('{"text":"Insight"}')).toBeNull();
     expect(parsePolicySuggestionReply("")).toBeNull();
     expect(policySuggestionIsRawLabel("Close")).toBe(true);
+    expect(policySuggestionIsRawLabel("Forage")).toBe(true);
     expect(policySuggestionIsRawLabel(sentence)).toBe(false);
 
     const infer = read("lib/session-policy-infer.ts");
@@ -224,9 +225,11 @@ describe("session policy inference", () => {
     const xai = read("lib/session-policy-infer-xai.ts");
     expect(xai).toContain("callXai");
     expect(xai).toContain("closeLine");
-    expect(xai).toContain("Do not use the words Close, Keep, Discard, or Insight.");
+    expect(xai).toContain("inferSessionGapReply");
+    expect(xai).toContain("Do not use the words Close, Keep, Discard, Insight, Forage, Exploit, Avoid, or Infer.");
     expect(xai.match(/Address the learner as you\. Do not use I, me, or my\./g)).toHaveLength(2);
     expect(read("app/api/ile/session-policy-infer/route.ts")).toContain("planSessionBranchPrepare");
+    expect(read("app/api/ile/session-policy-infer/route.ts")).toContain('body.phase === "project"');
     expect(read("components/ExcalidrawCanvas.tsx")).toContain("usePublishSessionProof");
   });
 });

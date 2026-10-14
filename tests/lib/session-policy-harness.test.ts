@@ -113,7 +113,7 @@ describe("session field gate", () => {
   it("waits on the ready tree and puts commands and instructions in the live sidebar", () => {
     const learn = read("components/session-view/session-chapter-canvas.tsx");
     const prepare = read("components/session-view/session-branch-prepare.tsx");
-    const calibrate = read("components/calibrate/calibrate-live-surface.tsx");
+    const calibrate = read("components/calibrate/calibrate-sounding-surface.tsx");
     const verification = read("components/tap-score/tap-score-phases.tsx");
     const publicCalibrate = read("components/CalibrationFlowRunner.tsx");
     const publicVerification = read("components/VerificationFlowRunner.tsx");
@@ -126,14 +126,12 @@ describe("session field gate", () => {
     expect(learn.indexOf("useSessionBranchField")).toBeLessThan(learn.indexOf("sessionCanvasMayOpen"));
     expect(learn).toContain("<SessionFieldLoader");
     expect(prepare).toContain("<SessionFieldGate>{children}</SessionFieldGate>");
-    expect(calibrate).toContain("<SessionBranchFieldBoundary");
-    expect(calibrate).toContain('<SessionGuidePanel guide="calibrate" />');
-    expect(calibrate).not.toContain('focusLabel="actions"');
+    expect(calibrate).toContain("data-calibrate-sounding");
     expect(calibrate).not.toContain("SessionActionsPanel");
     expect(calibrate).not.toContain("data-calibrate-done-classifying");
     expect(calibrate).not.toContain("I'm done classifying");
-    expect(workspaceCalibrate).toContain("<CalibrateLiveSurface");
-    expect(publicCalibrate).toContain("<CalibrateLiveSurface");
+    expect(workspaceCalibrate).toContain("<CalibrateSoundingSurface");
+    expect(publicCalibrate).toContain("<CalibrateSoundingSurface");
     expect(verification).toContain('enabled={sidebarMode === "verification-tap"}');
     expect(verification).toContain('sidebarMode === "verification-tap" ? (\n                  <SessionGuidePanel guide="verification" />');
     expect(verification).toContain("data-tap-older-thoughts");
@@ -271,15 +269,17 @@ describe("policy score against the prepared tree", () => {
     const scout = read("components/scout-tap/scout-tap-phases.tsx");
     const scoutThanks = scout.slice(scout.indexOf("data-scout-thank-you"));
     expect(scoutThanks).toContain("data-tap-session-thank-you");
-    expect(scoutThanks).toContain("<SessionPolicyScoreResult");
+    expect(scoutThanks).toContain("<SessionSoundingResult");
+    expect(scoutThanks).toContain("SoundingFinishedStage");
 
     const calibrate = read("components/CalibrationFlowRunner.tsx");
-    const timeUp = sliceBetween(calibrate, "data-calibration-time-up", "data-calibration-thank-you");
-    expect(timeUp).toContain("Time is up");
-    expect(timeUp).toContain("<SessionPolicyScoreResult");
-    const storedThanks = calibrate.slice(calibrate.indexOf("data-calibration-thank-you"));
-    expect(storedThanks).toContain("Your calibration proof of work has been stored.");
-    expect(storedThanks).toContain("<SessionPolicyScoreResult");
+    expect(calibrate).toContain("data-calibration-time-up");
+    expect(calibrate).toContain("Time is up");
+    expect(calibrate).toContain("data-calibration-thank-you");
+    expect(calibrate).toContain("Your calibration proof of work has been stored.");
+    expect(calibrate).toContain("<SessionSoundingResult");
+    expect(calibrate).toContain("SoundingFinishedStage");
+    expect(calibrate).toContain("soundingResultPresentation");
 
     expect(read("components/session-view/ile-insight-kept-screen.tsx")).not.toContain(
       "SessionPolicyScoreResult",
@@ -447,15 +447,14 @@ describe("policy score against the prepared tree", () => {
     expect(verificationFinish).toContain("uploadTapWorkCanvasPow");
     expect(verificationCanvas).toContain("handleCanvasPowActions");
     expect(verificationCanvas).toContain("uploadTapWorkCanvasPow");
-    expect(calibrateEnd).toContain("embedPolicyScore");
-    expect(calibrateEnd).toContain("policyScoreUploadItem");
+    expect(calibrateEnd).toContain("soundingProofUploadItem");
     expect(calibrateEnd).toContain("uploadTapWorkCanvasPow");
     expect(calibrateEnd).toContain("postTutoringSessionComplete");
     const calibrateFinish = calibrateEnd.slice(calibrateEnd.indexOf("async function endSession"));
-    expect(calibrateFinish.indexOf("persistCalibrateCanvas")).toBeLessThan(
+    expect(calibrateFinish.indexOf("persistSounding")).toBeLessThan(
       calibrateFinish.indexOf("postTutoringSessionComplete"),
     );
-    expect(publicCalibrate).toContain("policyScoreProofEvent");
+    expect(publicCalibrate).toContain("soundingProofEvent");
     expect(publicCalibrate).toContain("data-calibration-end-session");
     expect(publicCalibrate).not.toContain("I'm done classifying");
     expect(publicVerification).toContain("policy: input.policy ?? null");
@@ -743,7 +742,8 @@ describe("sidebar actions wait until the canvas can place an observation", () =>
     );
     expect(scout.indexOf("loadSessionBranchField")).toBeLessThan(scout.indexOf("setStartedAt"));
     expect(scout.indexOf("sessionClockMayStart")).toBeLessThan(scout.indexOf('setPhase("live")'));
-    expect(scout.indexOf("await loadPool")).toBeLessThan(scout.indexOf("loadSessionBranchField"));
+    expect(scout.indexOf("loadSessionBranchField")).toBeLessThan(scout.indexOf("soundingTreeIsTravelable"));
+    expect(scout.indexOf("soundingTreeIsTravelable")).toBeLessThan(scout.indexOf("await loadPool"));
 
     const tap = sliceBetween(
       read("components/tap-score/use-tap-score-flow.ts"),

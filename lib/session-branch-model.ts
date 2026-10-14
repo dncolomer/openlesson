@@ -1,7 +1,8 @@
 /**
- * The field prepared at the start of a Learn session.
- * XAI writes the territories, the observations, and the price of each action.
- * Close, Keep, and Discard reveal the next ring. Insight is the last step.
+ * The generative model prepared at the start of a session.
+ * Hidden states (branches) sit on state factors (territory). Each has a
+ * likelihood (observation) and four actions with expected-free-energy prices.
+ * Forage, Exploit, and Avoid reveal the next ring. Infer is the last step.
  */
 
 import {
@@ -48,7 +49,9 @@ export type SessionBranch = {
   id: string;
   parentId: string | null;
   title: string;
+  /** State factor. Stored key stays `territory`. */
   territory: string;
+  /** Likelihood p(o|s). Predicted observation for this hidden state. */
   observation: string;
   depth: number;
   status: SessionBranchStatus;

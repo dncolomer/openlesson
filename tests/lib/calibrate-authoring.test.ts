@@ -210,8 +210,8 @@ describe("calibration authoring", () => {
     expect(proofRoute).toContain("verificationRun: false");
     expect(proofRoute).not.toContain("pickVerificationFlowQuestion");
     const runner = read("components/CalibrationFlowRunner.tsx");
-    expect(runner).not.toContain("data-calibrate-voice-challenge");
-    expect(runner).not.toContain("PracticeVoiceChallenge");
+    expect(runner).toContain("data-calibrate-voice-challenge");
+    expect(runner).toContain("PracticeVoiceChallenge");
     expect(runner).toContain("data-calibration-identity");
     expect(runner).toContain("data-calibration-identity-input");
     expect(runner).toContain("Identify yourself");
@@ -235,6 +235,7 @@ describe("calibration authoring", () => {
       topic: "Limits",
       questions: MANUAL_QUESTIONS.map((text, index) => ({ id: `v-${index + 1}`, text })),
       durationMinutes: 15,
+      actionCatalog: 4,
       publicToken: "token-verify",
       createdAt: "2026-10-05T00:00:00.000Z",
       updatedAt: "2026-10-05T00:00:00.000Z",

@@ -16,7 +16,7 @@ export async function PUT(
     const { user, supabase } = auth;
 
     const body = await req.json();
-    const { is_public, title, description, workspace_goal } = body;
+    const { is_public, title, description, workspace_goal, learning_model_size } = body;
 
     const admin = createAdminClient();
     const { data: kindRow } = await admin
@@ -53,6 +53,11 @@ export async function PUT(
         workspace_goal === null ? null : normalizeWorkspaceGoal(workspace_goal);
     }
 
+    if ("learning_model_size" in body) {
+      const size = Math.round(Number(learning_model_size));
+      updates.learning_model_size = size === 8 || size === 16 ? size : 4;
+    }
+
     if (Object.keys(updates).length === 0) {
       return jsonError(400, "No valid fields to update");
     }
@@ -73,11 +78,23 @@ export async function PUT(
     console.log("Current user:", user.id);
 
     // Now update
-    const { error: updateError } = await supabase
-      .from("workspaces")
-      .update({ ...updates, author_id: user.id })
-      .eq("id", workspaceId)
-      .eq("user_id", user.id);
+    let updateError = (
+      await supabase
+        .from("workspaces")
+        .update({ ...updates, author_id: user.id })
+        .eq("id", workspaceId)
+        .eq("user_id", user.id)
+    ).error;
+    if (updateError && String(updateError.message).includes("learning_model_size")) {
+      const { learning_model_size: _size, ...withoutSize } = updates;
+      updateError = (
+        await supabase
+          .from("workspaces")
+          .update({ ...withoutSize, author_id: user.id })
+          .eq("id", workspaceId)
+          .eq("user_id", user.id)
+      ).error;
+    }
 
     if (updateError) {
       console.error("Update error:", updateError);
@@ -117,6 +134,11 @@ export async function PUT(
 
     if ("workspace_goal" in body) {
       response.workspace_goal = verifyPlan?.workspace_goal;
+    }
+
+    if ("learning_model_size" in body) {
+      const size = Number(updates.learning_model_size);
+      response.learning_model_size = size === 8 || size === 16 ? size : 4;
     }
 
     return NextResponse.json(response);

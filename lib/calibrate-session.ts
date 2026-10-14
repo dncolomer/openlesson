@@ -22,7 +22,7 @@ export const CALIBRATE_COMFORTABLE_REQUIRED = 3;
 export const CALIBRATE_UNCONFIDENT_REQUIRED = 2;
 export const CALIBRATE_MIN_POOL =
   CALIBRATE_COMFORTABLE_REQUIRED + CALIBRATE_UNCONFIDENT_REQUIRED;
-export const CALIBRATE_POOL_LIMIT = 8;
+export const CALIBRATE_POOL_LIMIT = 12;
 
 export const CALIBRATE_MODE_LABEL = "Calibrate";
 export const CALIBRATE_DONE_CLASSIFYING_LABEL = "I'm done classifying";
@@ -69,6 +69,12 @@ export type CalibrateProofEvent =
     }
   | {
       type: "policy_score";
+      questionId: string;
+      text: string;
+      source: CalibrateResponseSource;
+    }
+  | {
+      type: "sounding";
       questionId: string;
       text: string;
       source: CalibrateResponseSource;

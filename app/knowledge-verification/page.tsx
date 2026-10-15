@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { MarketingPageShell, SectionHeading } from "@/components/marketing/MarketingChrome";
+import { ThesisDirectory } from "@/components/science/ThesisDirectory";
 import { KNOWLEDGE_VERIFICATION_PATH } from "@/lib/marketing/paths";
 import {
   VERIFICATION_APPROACH_COPY,
@@ -41,6 +42,9 @@ export default function KnowledgeVerificationPage() {
         <p className="mt-7 max-w-3xl text-lg leading-relaxed text-zinc-400">
           A Knowledge Verification product for enterprise use cases: confirm that knowledge is actually held, without traditional tests and exams, with the guarantee that results cannot be cheated or faked.
         </p>
+        <div className="mt-8 max-w-4xl">
+          <ThesisDirectory links={VERIFICATION_APPROACH_COPY.thesisLinks} marker="verification" />
+        </div>
         <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
           <Link
             href={VERIFICATION_PRODUCT_COPY.pricingHref}

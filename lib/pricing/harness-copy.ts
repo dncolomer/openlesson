@@ -6,6 +6,7 @@ import {
   formatHarnessTrialPrice,
 } from "@/lib/plans";
 import { AYCL_PATH } from "@/lib/marketing/paths";
+import { HARNESS_PRICING_THESIS_LINKS } from "@/lib/science/hub";
 
 export const PRICING_AYCL_HREF = AYCL_PATH;
 export const PRICING_AYCL_LABEL = "All-You-Can-Learn";
@@ -36,4 +37,6 @@ export const HARNESS_PRICING_COPY = {
   ayclHref: PRICING_AYCL_HREF,
   ayclCta: PRICING_AYCL_CTA,
   ayclLabel: PRICING_AYCL_LABEL,
+  thesisLead: "You are paying for unlimited time in the foraging loop — not a content library.",
+  thesisLinks: HARNESS_PRICING_THESIS_LINKS,
 } as const;

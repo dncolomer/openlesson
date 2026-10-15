@@ -55,6 +55,7 @@ const nextConfig: NextConfig = {
         destination: "/tapbench",
         permanent: true,
       },
+      { source: "/vision", destination: "/science", permanent: true },
     ];
   },
   images: {

@@ -5,7 +5,9 @@ import {
   LEARNING_MODEL_CATALOG_16,
   LEARNING_MODEL_CATALOG_4,
   LEARNING_MODEL_CATALOG_8,
+  LEARNING_MODEL_NAME,
   LEARNING_MODEL_OBJECTS,
+  LEARNING_MODEL_PUBLIC_LABEL,
   LEARNING_MODEL_SIZES,
   parseLearningModelSize,
 } from "@/lib/learning-model";
@@ -18,18 +20,30 @@ function read(rel: string): string {
 }
 
 describe("learning model vocabulary and catalogs", () => {
+  it("names the product the unsys model", () => {
+    expect(LEARNING_MODEL_NAME).toBe("unsys model");
+    expect(LEARNING_MODEL_PUBLIC_LABEL).toBe("Unsys model");
+    expect(read("components/learning-model/LearningModelSizePicker.tsx")).toContain(
+      "LEARNING_MODEL_PUBLIC_LABEL",
+    );
+    expect(read("lib/science/learning-model-copy.ts")).toContain("The unsys model");
+    expect(read("lib/science/learning-model-copy.ts")).toContain("UNSYS MODEL");
+    expect(read("lib/science/hub.ts")).toContain("LEARNING_MODEL_PUBLIC_LABEL");
+    expect(read("app/science/learning-model/page.tsx")).toContain("LEARNING_MODEL_PUBLIC_LABEL");
+  });
+
   it("names the generative model objects in FEP terms", () => {
     const names = LEARNING_MODEL_OBJECTS.map((row) => row.name);
     expect(names).toEqual([
       "Generative model",
       "Hidden state",
       "State factor",
-      "Likelihood",
+      "Observation",
       "Action",
       "Policy",
     ]);
     expect(LEARNING_MODEL_OBJECTS.find((row) => row.id === "state-factor")?.stored).toBe("territory");
-    expect(LEARNING_MODEL_OBJECTS.find((row) => row.id === "likelihood")?.stored).toBe("observation");
+    expect(LEARNING_MODEL_OBJECTS.find((row) => row.id === "observation")?.stored).toBe("observation");
   });
 
   it("ships nested 4, 8, and 16 action catalogs", () => {

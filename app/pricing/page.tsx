@@ -9,6 +9,7 @@ import { Footer } from "@/components/Footer";
 import { createClient } from "@/lib/supabase/client";
 import { hasProductAccess, type PlanId } from "@/lib/plans";
 import { HARNESS_PRICING_COPY } from "@/lib/pricing/harness-copy";
+import { ThesisDirectory } from "@/components/science/ThesisDirectory";
 import { PublicConsoleWash } from "@/components/ui/console-frame";
 
 interface UserState {
@@ -141,6 +142,12 @@ function PricingPageContent() {
           <p className="mt-5 max-w-2xl text-base leading-relaxed text-neutral-400 sm:text-lg">
             {HARNESS_PRICING_COPY.lead}
           </p>
+          <p className="mt-4 max-w-2xl text-sm leading-relaxed text-neutral-500">
+            {HARNESS_PRICING_COPY.thesisLead}
+          </p>
+          <div className="mt-6 max-w-3xl">
+            <ThesisDirectory links={HARNESS_PRICING_COPY.thesisLinks} marker="harness-pricing" />
+          </div>
           <Link
             href={HARNESS_PRICING_COPY.ayclHref}
             data-testid="pricing-aycl-link"

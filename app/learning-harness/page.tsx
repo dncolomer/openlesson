@@ -5,6 +5,7 @@ import { ArrowRight, ExternalLink } from "lucide-react";
 import { AccelerandoRun } from "@/components/AccelerandoGlyphs";
 import { MarketingPageShell, SectionHeading } from "@/components/marketing/MarketingChrome";
 import { HarnessScreenshotCarousel } from "@/components/marketing/HarnessScreenshotCarousel";
+import { ThesisDirectory } from "@/components/science/ThesisDirectory";
 import { TrackedCtaLink } from "@/components/TrackedCtaLink";
 import { HARNESS_PRODUCT_COPY } from "@/lib/marketing/harness-product";
 import { LEARNING_HARNESS_PATH } from "@/lib/marketing/paths";
@@ -48,6 +49,9 @@ export default function LearningHarnessPage() {
             </Link>
             : learning as reducing uncertainty, rather than optimizing for tests and practice repetition.
           </p>
+        </div>
+        <div className="mt-8 max-w-4xl">
+          <ThesisDirectory links={HARNESS_PRODUCT_COPY.thesisLinks} marker="harness" />
         </div>
         <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
           <TrackedCtaLink
@@ -99,15 +103,25 @@ export default function LearningHarnessPage() {
                 <h3 className="mt-2 text-lg font-medium tracking-[-0.4px] text-white">{point.title}</h3>
                 <p className="mt-3 flex-1 text-sm leading-relaxed text-zinc-400">{point.body}</p>
                 {point.href && point.linkLabel ? (
-                  <a
-                    href={point.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-zinc-200 underline decoration-zinc-700 underline-offset-4 transition hover:text-white hover:decoration-zinc-500"
-                  >
-                    {point.linkLabel}
-                    <ExternalLink size={13} />
-                  </a>
+                  point.href.startsWith("/") ? (
+                    <Link
+                      href={point.href}
+                      className="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-zinc-200 underline decoration-zinc-700 underline-offset-4 transition hover:text-white hover:decoration-zinc-500"
+                    >
+                      {point.linkLabel}
+                      <ArrowRight size={13} />
+                    </Link>
+                  ) : (
+                    <a
+                      href={point.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-zinc-200 underline decoration-zinc-700 underline-offset-4 transition hover:text-white hover:decoration-zinc-500"
+                    >
+                      {point.linkLabel}
+                      <ExternalLink size={13} />
+                    </a>
+                  )
                 ) : null}
               </div>
             </li>

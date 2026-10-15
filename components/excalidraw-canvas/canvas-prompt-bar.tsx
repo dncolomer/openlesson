@@ -37,14 +37,13 @@ import {
   useSessionPolicySuggestion,
 } from "@/components/session-view/session-policy-context";
 import type { SessionMarkMode } from "@/lib/session-marks";
+import { AccelerandoMark } from "@/components/AccelerandoGlyphs";
 
 const ILE_CANVAS_COMMAND_BUTTON_CLASS =
   "pointer-events-auto relative flex h-full flex-col min-w-0 items-center justify-center gap-1 whitespace-normal rounded-none border border-white/45 bg-black px-1.5 pb-1.5 pt-3 text-center font-mono text-[11px] leading-tight text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] hover:border-white hover:bg-neutral-950 disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-950 disabled:text-neutral-600 disabled:opacity-100 disabled:shadow-none disabled:hover:border-neutral-800 disabled:hover:bg-neutral-950 disabled:hover:text-neutral-600";
 
 const ILE_CANVAS_COMMAND_RAIL_CLASS =
   "pointer-events-auto relative flex min-h-9 w-full min-w-0 flex-row items-center justify-start gap-1.5 whitespace-nowrap rounded-none border border-white/45 bg-black px-1.5 py-2 text-left font-mono text-[11px] leading-tight text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] hover:border-white hover:bg-neutral-950 disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-950 disabled:text-neutral-600 disabled:opacity-100 disabled:shadow-none disabled:hover:border-neutral-800 disabled:hover:bg-neutral-950 disabled:hover:text-neutral-600";
-
-const MARK_CLASS = "h-3.5 w-3.5";
 
 function commandIndex(id: IleWorkCanvasCommandId): string {
   const at = ILE_WORK_CANVAS_COMMANDS.findIndex((command) => command.id === id);
@@ -72,52 +71,8 @@ function CommandPlate({ index }: { index: string }) {
   );
 }
 
-function CommandMark({ id }: { id: IleWorkCanvasCommandId }) {
-  const common = {
-    viewBox: "0 0 16 16",
-    className: MARK_CLASS,
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: 1.4,
-    strokeLinecap: "square" as const,
-    strokeLinejoin: "miter" as const,
-    "aria-hidden": true,
-    "data-ile-command-mark": id,
-  };
-  switch (id) {
-    case "simplify":
-      return (
-        <svg {...common}>
-          <path d="M1.5 4h13M3.5 8h9M5.5 12h5" />
-        </svg>
-      );
-    case "split":
-      return (
-        <svg {...common}>
-          <path d="M8 2v4M8 6 3.5 13M8 6l4.5 7" />
-        </svg>
-      );
-    case "check":
-      return (
-        <svg {...common}>
-          <path d="M3 3h10v10H3zM4.5 8.2 7 10.6 11.5 5.4" />
-        </svg>
-      );
-    case "refactor":
-      return (
-        <svg {...common}>
-          <path d="M3 12V4.5h7M8.2 2.5 11.5 4.5 8.2 6.5" />
-        </svg>
-      );
-    case "declutter":
-      return (
-        <svg {...common}>
-          <path d="M2 2h5v5H2zM9 9h5v5H9z" />
-        </svg>
-      );
-    default:
-      return null;
-  }
+function CommandMark({ id, label }: { id: IleWorkCanvasCommandId; label: string }) {
+  return <AccelerandoMark text={label} mark={id} className="h-3.5 w-3.5" />;
 }
 
 const DOCK_ANCHORS: readonly { mode: IleCommandDockMode; title: string }[] = [
@@ -444,7 +399,7 @@ export function CanvasPromptBar({
                         className={rail ? ILE_CANVAS_COMMAND_RAIL_CLASS : ILE_CANVAS_COMMAND_BUTTON_CLASS}
                       >
                         <CommandPlate index={commandIndex(command.id)} />
-                        <CommandMark id={command.id} />
+                        <CommandMark id={command.id} label={command.label} />
                         <span>{command.label}</span>
                       </button>
                     );

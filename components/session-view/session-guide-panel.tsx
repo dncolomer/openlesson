@@ -7,6 +7,7 @@ import { useSessionCanvasCommands } from "@/components/session-view/session-comm
 import { ILE_WORK_CANVAS_COMMANDS } from "@/lib/ile-work-canvas-commands";
 import { ileCanvasCraftInsightUsable } from "@/lib/ile-turn-insights";
 import { SESSION_INSTRUCTIONS, type SessionGuideId } from "@/lib/session-instructions";
+import { AccelerandoMark } from "@/components/AccelerandoGlyphs";
 
 const TAB_CLASS =
   "min-w-0 flex-1 rounded-none px-2 py-1 text-left font-mono text-[10px] font-semibold uppercase tracking-[0.18em]";
@@ -69,7 +70,10 @@ export function SessionGuidePanel({ guide }: { guide: SessionGuideId }) {
                   }}
                   className={COMMAND_CLASS}
                 >
-                  <span>{command.label}</span>
+                  <span className="flex min-w-0 items-center gap-2">
+                    <AccelerandoMark text={command.label} mark={command.id} className="h-3.5 w-3.5" />
+                    <span>{command.label}</span>
+                  </span>
                 </button>
               );
             })}

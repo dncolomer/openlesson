@@ -9,6 +9,7 @@ import {
   TAP_SESSION_PRICE_CENTS,
 } from "@/lib/plans";
 import { ENTERPRISE_SETUP_EMAIL, ENTERPRISE_SETUP_MAILTO } from "@/lib/marketing/paths";
+import { VERIFICATION_PRICING_THESIS_LINKS } from "@/lib/science/hub";
 
 export const VERIFICATION_DEEP_PROJECT_CENTS = ILE_SESSION_PRICE_CENTS;
 export const VERIFICATION_LIGHT_WEIGHT_CENTS = TAP_SESSION_PRICE_CENTS;
@@ -46,4 +47,7 @@ export const VERIFICATION_PRICING_COPY = {
     difference:
       "Live, time-framed verification. A short Think Aloud Protocol run: the person works a scoped scenario on a clock while talking through their thinking. Built for volume — screening, interview stages, quick hard-skill probes. Billed at $1 per run.",
   },
+  thesisLead:
+    "Price follows how we measure held knowledge: a short live probe, or a deep project. Not an exam.",
+  thesisLinks: VERIFICATION_PRICING_THESIS_LINKS,
 } as const;

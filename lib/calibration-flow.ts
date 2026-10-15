@@ -24,7 +24,7 @@ export type CalibrationFlow = {
   questions: CalibrateQuestion[];
   /** Countdown chosen when the flow is created, in minutes. */
   durationMinutes: number;
-  /** 4, 8, or 16 actions on the learning model. */
+  /** 4, 8, or 16 actions on the unsys model. */
   actionCatalog: LearningModelSize;
   publicToken: string;
   createdAt: string;

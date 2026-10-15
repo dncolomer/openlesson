@@ -7,7 +7,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { AccelerandoField, AccelerandoRun } from "@/components/AccelerandoGlyphs";
+import { AccelerandoField, AccelerandoMark, AccelerandoRun } from "@/components/AccelerandoGlyphs";
 import { SectionHeading } from "@/components/marketing/MarketingChrome";
 import { PublicConsoleWash } from "@/components/ui/console-frame";
 import {
@@ -60,6 +60,25 @@ describe("Accelerando-8192 overlay", () => {
 
     const missing = renderToStaticMarkup(createElement(AccelerandoRun, { text: "unmapped" }));
     expect(missing).toBe("");
+
+    expect(accelerandoIds("Simplify")).toEqual([50, 321, 528, 1985]);
+    expect(accelerandoIds("Forage")).toEqual([2653, 477]);
+    expect(accelerandoIds("Generative model")?.length).toBeGreaterThan(0);
+    const mark = renderToStaticMarkup(createElement(AccelerandoMark, { text: "Check", mark: "check" }));
+    expect(mark).toContain('data-accelerando-mark="Check"');
+    expect(mark).toContain('data-ile-command-mark="check"');
+    expect(mark).toContain("accelerando-mark");
+    expect(mark).toContain('overflow="hidden"');
+    expect(mark).toContain('width="100%"');
+    expect(mark.split("<svg").length - 1).toBe(1);
+    expect(mark).not.toContain(">Check<");
+    const four = renderToStaticMarkup(createElement(AccelerandoMark, { text: "Simplify" }));
+    expect(four.split("<svg").length - 1).toBe(1);
+    expect(four.split("<path").length - 1).toBe(4);
+    const css = read("app/globals.css");
+    expect(css).toContain(".accelerando-mark {");
+    expect(css).toContain("overflow: clip");
+    expect(css).toContain("clip-path: inset(0)");
 
     const field = renderToStaticMarkup(createElement(AccelerandoField));
     expect(field).toContain("data-accelerando-field");

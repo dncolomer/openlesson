@@ -1,5 +1,5 @@
 /**
- * Action catalogs for the learning model.
+ * Action catalogs for the unsys model.
  * Size 4 is live. Sizes 8 and 16 are the finer policy sets a workspace or
  * flow can select. Stored four-action ids stay try / hold / drop / insight.
  */
@@ -56,7 +56,7 @@ export const LEARNING_MODEL_CATALOG_4: readonly LearningModelAction[] = [
     efe: "negative preference",
     storedId: "drop",
     meaning:
-      "Withdraw. This hidden state is not the cause. Drop the line.",
+      "Withdraw. This is not the hidden state in focus. Drop the line.",
   },
   {
     id: "infer",
@@ -65,7 +65,7 @@ export const LEARNING_MODEL_CATALOG_4: readonly LearningModelAction[] = [
     efe: "posterior report",
     storedId: "insight",
     meaning:
-      "Report the posterior. State the inferred hidden cause.",
+      "Craft the insight. Report the hidden state the work found.",
   },
 ] as const;
 
@@ -75,21 +75,21 @@ export const LEARNING_MODEL_CATALOG_8: readonly LearningModelAction[] = [
     label: "Descend",
     kind: "travel",
     efe: "epistemic value",
-    meaning: "Occupy a finer hidden state (a child of the current cause).",
+    meaning: "Focus on a finer hidden state (a child of the current hidden state).",
   },
   {
     id: "ascend",
     label: "Ascend",
     kind: "travel",
     efe: "complexity",
-    meaning: "Occupy the coarser hidden state (the parent cause).",
+    meaning: "Focus on the coarser hidden state (the parent).",
   },
   {
     id: "switch",
     label: "Switch",
     kind: "travel",
     efe: "expected information gain",
-    meaning: "Occupy a rival hidden state on the same state factor.",
+    meaning: "Focus on a rival hidden state on the same state factor.",
   },
   {
     id: "exploit",
@@ -106,7 +106,7 @@ export const LEARNING_MODEL_CATALOG_8: readonly LearningModelAction[] = [
     kind: "aversive",
     efe: "negative preference",
     storedId: "drop",
-    meaning: "Withdraw. This hidden state is not the cause.",
+    meaning: "Withdraw. This is not the hidden state in focus.",
   },
   {
     id: "sample",
@@ -123,7 +123,7 @@ export const LEARNING_MODEL_CATALOG_8: readonly LearningModelAction[] = [
     kind: "epistemic",
     efe: "prediction error",
     meaning:
-      "Generate the predicted observation from the likelihood p(o|s) and compare it to what shows up.",
+      "Generate the observation we would expect while focusing on this hidden state, and compare it to what shows up.",
   },
   {
     id: "infer",
@@ -131,7 +131,7 @@ export const LEARNING_MODEL_CATALOG_8: readonly LearningModelAction[] = [
     kind: "report",
     efe: "posterior report",
     storedId: "insight",
-    meaning: "Report the posterior. State the inferred hidden cause.",
+    meaning: "Craft the insight. Report the hidden state the work found.",
   },
 ] as const;
 
@@ -141,28 +141,28 @@ export const LEARNING_MODEL_CATALOG_16: readonly LearningModelAction[] = [
     label: "Descend",
     kind: "travel",
     efe: "epistemic value",
-    meaning: "Occupy a finer hidden state (a child of the current cause).",
+    meaning: "Focus on a finer hidden state (a child of the current hidden state).",
   },
   {
     id: "ascend",
     label: "Ascend",
     kind: "travel",
     efe: "complexity",
-    meaning: "Occupy the coarser hidden state (the parent cause).",
+    meaning: "Focus on the coarser hidden state (the parent).",
   },
   {
     id: "switch",
     label: "Switch",
     kind: "travel",
     efe: "expected information gain",
-    meaning: "Occupy a rival hidden state on the same state factor.",
+    meaning: "Focus on a rival hidden state on the same state factor.",
   },
   {
     id: "divert",
     label: "Divert",
     kind: "travel",
     efe: "expected information gain",
-    meaning: "Occupy a hidden state on a different state factor.",
+    meaning: "Focus on a hidden state on a different state factor.",
   },
   {
     id: "exploit",
@@ -178,7 +178,7 @@ export const LEARNING_MODEL_CATALOG_16: readonly LearningModelAction[] = [
     kind: "aversive",
     efe: "negative preference",
     storedId: "drop",
-    meaning: "Withdraw. This hidden state is not the cause.",
+    meaning: "Withdraw. This is not the hidden state in focus.",
   },
   {
     id: "dwell",
@@ -207,14 +207,14 @@ export const LEARNING_MODEL_CATALOG_16: readonly LearningModelAction[] = [
     label: "Predict",
     kind: "epistemic",
     efe: "prediction error",
-    meaning: "Generate the predicted observation from the likelihood p(o|s).",
+    meaning: "Generate the observation we would expect while focusing on this hidden state.",
   },
   {
     id: "compare",
     label: "Compare",
     kind: "epistemic",
     efe: "prediction error",
-    meaning: "Read the prediction error between the predicted observation and the likelihood.",
+    meaning: "Read the prediction error between the observation we would expect while focusing on this hidden state and what showed up.",
   },
   {
     id: "novelty",
@@ -250,7 +250,7 @@ export const LEARNING_MODEL_CATALOG_16: readonly LearningModelAction[] = [
     kind: "report",
     efe: "posterior report",
     storedId: "insight",
-    meaning: "Report the posterior. State the inferred hidden cause.",
+    meaning: "Craft the insight. Report the hidden state the work found.",
   },
 ] as const;
 

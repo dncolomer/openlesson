@@ -4,6 +4,9 @@ import Link from "next/link";
 import { ArrowRight, ExternalLink } from "lucide-react";
 import { Footer } from "@/components/Footer";
 import { LandingNav } from "@/components/LandingNav";
+import { TrackedCtaLink } from "@/components/TrackedCtaLink";
+import { ScrollToHash } from "@/components/science/ScrollToHash";
+import { ThesisDirectory } from "@/components/science/ThesisDirectory";
 import {
   getPlatformPitchSlide,
   PLATFORM_THESIS_SLIDE_INDEX,
@@ -22,19 +25,29 @@ import {
   SCIENCE_EPISTEMIC_FORAGING_READINGS,
 } from "@/lib/science/epistemic-foraging-copy";
 import { SCIENCE_LEARNING_MODEL_COPY, SCIENCE_LEARNING_MODEL_PATH } from "@/lib/science/learning-model-copy";
+import {
+  SCIENCE_HUB_COPY,
+  SCIENCE_HUB_DIRECTORY,
+  SCIENCE_HUB_PATH,
+  SCIENCE_HUB_WHY,
+} from "@/lib/science/hub";
+import {
+  VISION_TOMOGRAPHY_INDUCTION_COPY,
+  VISION_TOMOGRAPHY_INDUCTION_PATHS,
+} from "@/lib/vision/knowledge-tomography-induction-copy";
 
 import { standardShareSocialMetadata } from "@/lib/og/standard";
 import { AccelerandoRun } from "@/components/AccelerandoGlyphs";
 import { PublicConsoleWash } from "@/components/ui/console-frame";
 
 const standardSocial = standardShareSocialMetadata({
-  url: "https://uncertain.systems/science",
+  url: `https://uncertain.systems${SCIENCE_HUB_PATH}`,
 });
 
 export const metadata: Metadata = {
-  title: "Science",
+  title: "Vision",
   description:
-    "A holistic model of knowledge: epistemic foraging, knowledge configuration, proximity, transformation, and a non-invasive path to self-driving learning.",
+    "Self-driving technology for learning, grounded in a physical model of knowledge: epistemic foraging, configuration, proximity, and transformation with less wasted effort.",
   alternates: { canonical: "https://uncertain.systems/science" },
   openGraph: standardSocial.openGraph,
   twitter: standardSocial.twitter,
@@ -74,7 +87,11 @@ const thesisSlide = getPlatformPitchSlide(PLATFORM_THESIS_SLIDE_INDEX);
 
 export default function SciencePage() {
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#0a0a0a] text-zinc-200 selection:bg-zinc-700">
+    <main
+      className="relative min-h-screen overflow-hidden bg-[#0a0a0a] text-zinc-200 selection:bg-zinc-700 [&_section[id]]:scroll-mt-24"
+      data-science-hub
+    >
+      <ScrollToHash />
       <div className="fixed inset-0 z-0 bg-[#0a0a0a]" />
       <div
         className="fixed inset-0 z-0 bg-cover bg-fixed bg-center"
@@ -88,20 +105,81 @@ export default function SciencePage() {
       <section className="relative z-10 mx-auto w-full max-w-7xl px-6 pt-14 pb-10 sm:pt-16 sm:pb-12">
         <div className="mb-6 flex flex-wrap items-center gap-3">
           <div className="console-chip inline-block rounded-none px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
-            SCIENCE
+            {SCIENCE_HUB_COPY.eyebrowVision}
+          </div>
+          <div className="console-chip inline-block rounded-none px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
+            {SCIENCE_HUB_COPY.eyebrowScience}
           </div>
           <AccelerandoRun text="SCIENCE" className="text-[11px]" />
         </div>
         <h1 className="max-w-4xl text-5xl font-medium leading-[1.03] tracking-[-2.8px] text-white sm:text-6xl lg:text-[68px]">
-          A holistic model of knowledge.
+          {SCIENCE_HUB_COPY.title}
         </h1>
         <p className="mt-7 max-w-3xl text-lg leading-relaxed text-zinc-400">
-          Uncertain Systems is grounded in a physical view of learning: knowledge configuration space, proximity
-          as the measure of knowing, and education technology as a path toward transformation with less wasted effort.
+          {SCIENCE_HUB_COPY.lead}
         </p>
+        <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <TrackedCtaLink
+            href={SCIENCE_HUB_COPY.workspaceHref}
+            label={SCIENCE_HUB_COPY.workspaceCta}
+            location="science_hub_hero"
+            page={SCIENCE_HUB_PATH}
+            className="inline-flex min-h-12 items-center justify-center rounded-none bg-white px-5 py-3 text-sm font-medium text-black transition hover:bg-zinc-200"
+          >
+            {SCIENCE_HUB_COPY.workspaceCta}
+            <ArrowRight className="ml-2" size={16} />
+          </TrackedCtaLink>
+        </div>
       </section>
 
-      {/* Platform pitch slide 10 — Our thesis — at top of science content */}
+      <section
+        className="relative z-10 mx-auto max-w-7xl px-6 pb-10 sm:pb-12"
+        aria-labelledby="science-directory-heading"
+      >
+        <p className="mb-3 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
+          {SCIENCE_HUB_COPY.directoryEyebrow}
+        </p>
+        <h2
+          id="science-directory-heading"
+          className="max-w-3xl text-3xl font-medium leading-[1.08] tracking-[-1.4px] text-white sm:text-4xl"
+        >
+          {SCIENCE_HUB_COPY.directoryTitle}
+        </h2>
+        <p className="mt-4 max-w-2xl text-base leading-relaxed text-zinc-400">
+          {SCIENCE_HUB_COPY.directoryLead}
+        </p>
+        <div className="mt-6">
+          <ThesisDirectory links={SCIENCE_HUB_DIRECTORY} marker="science-hub" />
+        </div>
+      </section>
+
+      <section
+        id="why"
+        data-science-why
+        className="relative z-10 mx-auto max-w-7xl px-6 pb-10 sm:pb-12"
+        aria-labelledby="science-why-heading"
+      >
+        <p className="mb-3 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
+          {SCIENCE_HUB_COPY.whyEyebrow}
+        </p>
+        <h2
+          id="science-why-heading"
+          className="max-w-3xl text-3xl font-medium leading-[1.08] tracking-[-1.4px] text-white sm:text-4xl"
+        >
+          {SCIENCE_HUB_COPY.whyTitle}
+        </h2>
+        <div className="mt-6 grid gap-6 md:grid-cols-3">
+          {SCIENCE_HUB_WHY.map((card) => (
+            <article key={card.title} className="console-copy p-5 sm:p-6">
+              <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">{card.eyebrow}</p>
+              <h3 className="mt-3 text-xl font-medium tracking-[-0.6px] text-white">{card.title}</h3>
+              <p className="mt-3 text-sm leading-relaxed text-zinc-400">{card.body}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      {/* Platform pitch slide 10 — Our thesis */}
       {thesisSlide ? (
         <section
           id="science-thesis-slide"
@@ -296,6 +374,99 @@ export default function SciencePage() {
         </article>
       </section>
 
+      <section
+        id="knowledge-tomography-induction"
+        data-vision-tomography-induction
+        className="relative z-10 mx-auto max-w-7xl px-6 pb-10 sm:pb-12"
+        aria-labelledby="vision-tomography-induction-heading"
+      >
+        <p className="mb-3 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
+          {VISION_TOMOGRAPHY_INDUCTION_COPY.eyebrow}
+        </p>
+        <h2
+          id="vision-tomography-induction-heading"
+          className="max-w-3xl text-3xl font-medium leading-[1.08] tracking-[-1.4px] text-white sm:text-4xl"
+        >
+          {VISION_TOMOGRAPHY_INDUCTION_COPY.title}
+        </h2>
+        <p
+          className="mt-6 max-w-3xl text-base leading-relaxed text-zinc-400 sm:text-lg"
+          data-vision-tomography-induction-lead
+        >
+          {VISION_TOMOGRAPHY_INDUCTION_COPY.lead}
+        </p>
+        <article
+          className="console-copy mt-8 p-5 sm:p-6"
+          data-vision-epistemic-foraging
+        >
+          <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
+            {VISION_TOMOGRAPHY_INDUCTION_COPY.policy.eyebrow}
+          </p>
+          <h3 className="mt-2 text-lg font-medium text-white">
+            {VISION_TOMOGRAPHY_INDUCTION_COPY.policy.title}
+          </h3>
+          <p className="mt-2 text-sm leading-relaxed text-zinc-400 sm:text-base">
+            {VISION_TOMOGRAPHY_INDUCTION_COPY.policy.body}
+          </p>
+        </article>
+        <div className="mt-8 grid gap-4 md:grid-cols-2">
+          <article className="console-copy p-5 sm:p-6">
+            <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
+              {VISION_TOMOGRAPHY_INDUCTION_COPY.tomography.eyebrow}
+            </p>
+            <h3 className="mt-3 text-xl font-medium tracking-[-0.6px] text-white">
+              {VISION_TOMOGRAPHY_INDUCTION_COPY.tomography.title}
+            </h3>
+            <p className="mt-3 text-sm leading-relaxed text-zinc-400">
+              {VISION_TOMOGRAPHY_INDUCTION_COPY.tomography.body}
+            </p>
+          </article>
+          <article className="console-copy p-5 sm:p-6">
+            <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
+              {VISION_TOMOGRAPHY_INDUCTION_COPY.induction.eyebrow}
+            </p>
+            <h3 className="mt-3 text-xl font-medium tracking-[-0.6px] text-white">
+              {VISION_TOMOGRAPHY_INDUCTION_COPY.induction.title}
+            </h3>
+            <p className="mt-3 text-sm leading-relaxed text-zinc-400">
+              {VISION_TOMOGRAPHY_INDUCTION_COPY.induction.body}
+            </p>
+          </article>
+        </div>
+        <p
+          className="mt-6 max-w-3xl text-sm leading-relaxed text-zinc-500 sm:text-base"
+          data-vision-tomography-induction-distinction
+        >
+          {VISION_TOMOGRAPHY_INDUCTION_COPY.distinction}
+        </p>
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+          <Link
+            href={VISION_TOMOGRAPHY_INDUCTION_PATHS.epistemicForaging}
+            data-vision-epistemic-foraging-link
+            className="console-button inline-flex min-h-11 items-center justify-center gap-1.5 rounded-none px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:border-white/80 hover:text-white"
+          >
+            {VISION_TOMOGRAPHY_INDUCTION_COPY.links.foragingLabel}
+            <ArrowRight size={14} />
+          </Link>
+          <Link
+            href={SCIENCE_LEARNING_MODEL_PATH}
+            data-vision-learning-model-link
+            className="console-button inline-flex min-h-11 items-center justify-center gap-1.5 rounded-none px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:border-white/80 hover:text-white"
+          >
+            {SCIENCE_LEARNING_MODEL_COPY.title}
+            <ArrowRight size={14} />
+          </Link>
+          <Link
+            href={VISION_TOMOGRAPHY_INDUCTION_PATHS.knowledgeTomographyPaper}
+            data-vision-knowledge-tomography-paper-link
+            className="console-button inline-flex min-h-11 items-center justify-center gap-1.5 rounded-none px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:border-white/80 hover:text-white"
+          >
+            {VISION_TOMOGRAPHY_INDUCTION_COPY.links.paperLabel}
+            <ArrowRight size={14} />
+          </Link>
+        </div>
+      </section>
+
       <section className="relative z-10 mx-auto max-w-7xl px-6 py-10 sm:py-12" aria-label="Principles">
         <div className="grid grid-cols-1 gap-x-12 gap-y-8 sm:grid-cols-2">
           {PRINCIPLES.map((principle) => (
@@ -312,7 +483,7 @@ export default function SciencePage() {
       <section
         id="research"
         data-science-research
-        className="relative z-10 mx-auto max-w-7xl px-6 pb-10 sm:pb-12"
+        className="relative z-10 mx-auto max-w-7xl px-6 pb-16 sm:pb-20"
         aria-labelledby="science-research-heading"
       >
         <div className="mb-3 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">Research</div>
@@ -366,22 +537,6 @@ export default function SciencePage() {
               Read the white paper
               <ArrowRight size={14} />
             </span>
-          </Link>
-        </div>
-      </section>
-
-      <section className="relative z-10 mx-auto max-w-7xl px-6 pb-16">
-        <div className="console-copy p-6 sm:p-8">
-          <p className="text-base leading-relaxed text-zinc-400">
-            This model drives everything we build — from learning verification and think-aloud protocol today,
-            to predictive interruption models and non-invasive hardware tomorrow.
-          </p>
-          <Link
-            href="/vision"
-            className="mt-6 inline-flex items-center gap-1.5 text-sm font-medium text-zinc-300 transition hover:text-white"
-          >
-            See our vision
-            <ArrowRight size={14} />
           </Link>
         </div>
       </section>

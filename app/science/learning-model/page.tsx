@@ -3,20 +3,17 @@ import Link from "next/link";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Footer } from "@/components/Footer";
 import { LandingNav } from "@/components/LandingNav";
-import { LearningModelExplorer } from "@/components/science/LearningModelExplorer";
+import { LearningModelCatalogs } from "@/components/science/LearningModelCatalogs";
+import { LearningModelFactorCopy } from "@/components/science/LearningModelFactorCopy";
+import { LearningModelObjectGlyph } from "@/components/science/LearningModelMarks";
 import { LearningModelPipelines } from "@/components/science/LearningModelPipelines";
-import { LearningModelSchematic } from "@/components/science/LearningModelSchematic";
+import { LearningModelScene } from "@/components/science/LearningModelScene";
 import { PublicConsoleWash } from "@/components/ui/console-frame";
-import {
-  LEARNING_MODEL_CATALOG_16,
-  LEARNING_MODEL_CATALOG_4,
-  LEARNING_MODEL_CATALOG_8,
-  LEARNING_MODEL_OBJECTS,
-  LEARNING_MODEL_SIZE_COPY,
-} from "@/lib/learning-model";
+import { LEARNING_MODEL_OBJECTS, LEARNING_MODEL_PUBLIC_LABEL } from "@/lib/learning-model";
 import { standardShareSocialMetadata } from "@/lib/og/standard";
 import {
   SCIENCE_LEARNING_MODEL_COPY,
+  SCIENCE_LEARNING_MODEL_CONCEPT_BLURBS,
   SCIENCE_LEARNING_MODEL_PATH,
 } from "@/lib/science/learning-model-copy";
 
@@ -25,18 +22,12 @@ const standardSocial = standardShareSocialMetadata({
 });
 
 export const metadata: Metadata = {
-  title: "Learning model",
+  title: LEARNING_MODEL_PUBLIC_LABEL,
   description: SCIENCE_LEARNING_MODEL_COPY.lead,
   alternates: { canonical: `https://uncertain.systems${SCIENCE_LEARNING_MODEL_PATH}` },
   openGraph: standardSocial.openGraph,
   twitter: standardSocial.twitter,
 };
-
-const CATALOGS = [
-  { size: 4 as const, actions: LEARNING_MODEL_CATALOG_4 },
-  { size: 8 as const, actions: LEARNING_MODEL_CATALOG_8 },
-  { size: 16 as const, actions: LEARNING_MODEL_CATALOG_16 },
-];
 
 export default function ScienceLearningModelPage() {
   const copy = SCIENCE_LEARNING_MODEL_COPY;
@@ -54,52 +45,86 @@ export default function ScienceLearningModelPage() {
             className="inline-flex items-center gap-1.5 text-sm text-zinc-500 transition hover:text-zinc-300"
           >
             <ArrowLeft size={14} />
-            Science
+            Vision
           </Link>
 
           <header className="mt-8 border-b border-zinc-800 pb-10 sm:mt-10 sm:pb-12">
             <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
               {copy.eyebrow}
             </p>
-            <h1 className="mt-4 max-w-4xl text-3xl font-medium leading-[1.12] tracking-[-1.2px] text-white sm:text-4xl lg:text-[2.75rem]">
+            <h1 className="mt-4 text-3xl font-medium leading-[1.12] tracking-[-1.2px] text-white sm:text-4xl lg:text-[2.75rem]">
               {copy.title}
             </h1>
-            <p className="mt-6 max-w-3xl text-base leading-relaxed text-zinc-400 sm:text-lg">
+            <p className="mt-6 text-base leading-relaxed text-zinc-400 sm:text-lg">
               {copy.lead}
             </p>
           </header>
 
-          <section className="mt-12" aria-labelledby="learning-model-schematic">
+          <section className="mt-12" aria-labelledby="learning-model-foundation">
             <h2
-              id="learning-model-schematic"
+              id="learning-model-foundation"
               className="text-2xl font-medium tracking-[-0.6px] text-white"
             >
-              {copy.schematicTitle}
+              {copy.foundationTitle}
             </h2>
-            <div className="mt-6">
-              <LearningModelSchematic />
+            <p className="mt-4 text-base leading-relaxed text-zinc-400">
+              {copy.foundation}
+            </p>
+          </section>
+
+          <section className="mt-12" aria-labelledby="learning-model-how">
+            <h2
+              id="learning-model-how"
+              className="text-2xl font-medium tracking-[-0.6px] text-white"
+            >
+              {copy.howTitle}
+            </h2>
+            <p className="mt-4 text-base leading-relaxed text-zinc-400">{copy.how}</p>
+          </section>
+
+          <section className="mt-12" aria-labelledby="learning-model-explorer-heading">
+            <h2
+              id="learning-model-explorer-heading"
+              className="text-2xl font-medium tracking-[-0.6px] text-white"
+            >
+              {copy.explorerTitle}
+            </h2>
+            <p className="mt-4 text-base leading-relaxed text-zinc-400">
+              <LearningModelFactorCopy text={copy.explorerLead} />
+            </p>
+            <div className="console-copy mt-6 overflow-hidden p-0 sm:p-0">
+              <div className="p-4 sm:p-5">
+                <LearningModelScene />
+              </div>
             </div>
           </section>
 
-          <section className="mt-12" aria-labelledby="learning-model-objects">
+          <section className="mt-16" aria-labelledby="learning-model-concepts">
             <h2
-              id="learning-model-objects"
+              id="learning-model-concepts"
               className="text-2xl font-medium tracking-[-0.6px] text-white"
             >
-              {copy.objectsTitle}
+              {copy.conceptsTitle}
             </h2>
             <div className="mt-6 grid gap-4 md:grid-cols-2">
-              {LEARNING_MODEL_OBJECTS.map((object) => (
+              {LEARNING_MODEL_OBJECTS.map((concept) => (
                 <article
-                  key={object.id}
-                  data-learning-model-object={object.id}
-                  className="console-copy p-5"
+                  key={concept.id}
+                  data-learning-model-concept={concept.id}
+                  className="console-copy flex gap-4 p-5 sm:p-6"
                 >
-                  <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">
-                    {object.symbol} · stored {object.stored}
-                  </p>
-                  <h3 className="mt-2 text-lg text-white">{object.name}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-zinc-400">{object.meaning}</p>
+                  <span className="relative h-10 w-10 shrink-0 overflow-clip border border-white/25 text-zinc-200 [clip-path:inset(0)]">
+                    <LearningModelObjectGlyph id={concept.id} />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">
+                      {concept.symbol}
+                    </p>
+                    <h3 className="mt-1 text-lg text-white">{concept.name}</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-zinc-400 sm:text-[15px]">
+                      {SCIENCE_LEARNING_MODEL_CONCEPT_BLURBS[concept.id] ?? concept.meaning}
+                    </p>
+                  </div>
                 </article>
               ))}
             </div>
@@ -112,49 +137,11 @@ export default function ScienceLearningModelPage() {
             >
               {copy.catalogsTitle}
             </h2>
-            <p className="mt-4 max-w-3xl text-base leading-relaxed text-zinc-400">
+            <p className="mt-4 text-base leading-relaxed text-zinc-400">
               {copy.catalogsLead}
             </p>
-            <div className="mt-8 space-y-6">
-              {CATALOGS.map((catalog) => (
-                <article
-                  key={catalog.size}
-                  data-learning-model-catalog={catalog.size}
-                  className="console-copy p-5 sm:p-6"
-                >
-                  <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">
-                    {LEARNING_MODEL_SIZE_COPY[catalog.size].title}
-                  </p>
-                  <p className="mt-2 text-sm leading-relaxed text-zinc-400">
-                    {LEARNING_MODEL_SIZE_COPY[catalog.size].body}
-                  </p>
-                  <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-                    {catalog.actions.map((action) => (
-                      <li key={`${catalog.size}-${action.id}`} className="border border-white/15 px-3 py-3">
-                        <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-500">
-                          {action.label} · {action.kind}
-                        </p>
-                        <p className="mt-1 text-xs leading-relaxed text-zinc-400">{action.meaning}</p>
-                      </li>
-                    ))}
-                  </ul>
-                </article>
-              ))}
-            </div>
-          </section>
-
-          <section className="mt-16" aria-labelledby="learning-model-explorer-heading">
-            <h2
-              id="learning-model-explorer-heading"
-              className="text-2xl font-medium tracking-[-0.6px] text-white"
-            >
-              {copy.explorerTitle}
-            </h2>
-            <p className="mt-4 max-w-3xl text-base leading-relaxed text-zinc-400">
-              {copy.explorerLead}
-            </p>
-            <div className="console-copy mt-6 p-5 sm:p-6">
-              <LearningModelExplorer />
+            <div className="mt-6">
+              <LearningModelCatalogs />
             </div>
           </section>
 
@@ -165,7 +152,7 @@ export default function ScienceLearningModelPage() {
             >
               {copy.pipelinesTitle}
             </h2>
-            <p className="mt-4 max-w-3xl text-base leading-relaxed text-zinc-400">
+            <p className="mt-4 text-base leading-relaxed text-zinc-400">
               {copy.pipelinesLead}
             </p>
             <div className="mt-6">
@@ -182,12 +169,12 @@ export default function ScienceLearningModelPage() {
                 id="learning-model-projection"
                 className="mt-3 text-2xl font-medium tracking-[-0.6px] text-white"
               >
-                Work lands on the generative model
+                {copy.projectionHeading}
               </h2>
-              <p className="mt-4 max-w-3xl text-base leading-relaxed text-zinc-400">
+              <p className="mt-4 text-base leading-relaxed text-zinc-400">
                 {copy.projection}
               </p>
-              <p className="mt-4 max-w-3xl text-sm leading-relaxed text-zinc-500">{copy.caveat}</p>
+              <p className="mt-4 text-sm leading-relaxed text-zinc-500">{copy.caveat}</p>
             </article>
           </section>
 

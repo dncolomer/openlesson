@@ -246,7 +246,8 @@ describe("product pages: verification owns platform/approach/scale; harness owns
       "Easy to fool yourself",
       "Open source by design",
     ]);
-    expect(HARNESS_PRODUCT_COPY.points[0].href).toBeNull();
+    expect(HARNESS_PRODUCT_COPY.points[0].href).toBe("/science#science-epistemic-foraging");
+    expect(page).toContain('marker="harness"');
     expect(page).not.toContain("grokipedia.com");
     expect(HARNESS_PRODUCT_COPY.points[2].href).toBe("https://github.com/dncolomer/openlesson");
     expect(page).toContain("target=\"_blank\"");

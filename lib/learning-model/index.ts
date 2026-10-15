@@ -1,6 +1,11 @@
 export {
+  FEP_CONCEPT_NAMES,
+  FEP_PUBLIC_BANNED,
+  FEP_PUBLIC_SURFACE_FILES,
   LEARNING_MODEL_NAME,
+  LEARNING_MODEL_PUBLIC_LABEL,
   LEARNING_MODEL_OBJECTS,
+  fepPublicCopyViolations,
   learningModelObject,
   type LearningModelObjectId,
 } from "@/lib/learning-model/vocabulary";

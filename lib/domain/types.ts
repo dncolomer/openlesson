@@ -433,7 +433,7 @@ export interface Workspace {
   notes?: string;
   workspace_goal?: string | null;
   cover_image_url?: string;
-  /** 4, 8, or 16 actions on the learning model. Learning workspaces only. */
+  /** 4, 8, or 16 actions on the unsys model. Learning workspaces only. */
   learning_model_size?: 4 | 8 | 16;
   is_all_you_can_learn?: boolean;
   aycl_category?: string | null;

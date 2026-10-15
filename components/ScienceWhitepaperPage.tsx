@@ -31,7 +31,7 @@ export function ScienceWhitepaperPage({ paper }: ScienceWhitepaperPageProps) {
           className="inline-flex items-center gap-1.5 text-sm text-zinc-500 transition hover:text-zinc-300"
         >
           <ArrowLeft size={14} />
-          Science
+          Vision
         </Link>
 
         {/* Hero / title block — full width */}
@@ -236,14 +236,14 @@ export function ScienceWhitepaperPage({ paper }: ScienceWhitepaperPageProps) {
 
             <div className="mt-12 flex flex-col gap-4 rounded-none bg-zinc-900 p-5 ring-1 ring-zinc-800 sm:mt-14 sm:flex-row sm:items-center sm:justify-between sm:p-6">
               <p className="text-sm text-zinc-400">
-                Related: science thesis.
+                Related: the combined vision and science thesis.
               </p>
               <div className="flex flex-wrap gap-4">
                 <Link
                   href="/science"
                   className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-200 transition hover:text-white"
                 >
-                  Science
+                  Vision
                   <ArrowRight size={14} />
                 </Link>
               </div>

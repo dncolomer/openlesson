@@ -1,4 +1,5 @@
 import { SCIENCE_EPISTEMIC_FORAGING_PATH } from "@/lib/science/epistemic-foraging-copy";
+import { VERIFICATION_THESIS_LINKS } from "@/lib/science/hub";
 import { TAPBENCH_PATH, VERIFICATION_PRICING_PATH } from "@/lib/marketing/paths";
 
 export const VERIFICATION_PRODUCT_COPY = {
@@ -34,6 +35,7 @@ export const VERIFICATION_APPROACH_COPY = {
     "The harness searches for information that reduces uncertainty about what is held. That policy is epistemic foraging.",
   foragingHref: SCIENCE_EPISTEMIC_FORAGING_PATH,
   foragingLabel: "epistemic foraging",
+  thesisLinks: VERIFICATION_THESIS_LINKS,
 } as const;
 
 export const VERIFICATION_SCALE_COPY = {

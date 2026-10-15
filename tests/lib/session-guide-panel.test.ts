@@ -26,6 +26,7 @@ describe("session guide panel", () => {
     for (const command of ILE_WORK_CANVAS_COMMANDS) {
       expect(html).toContain(`data-session-command="${command.id}"`);
       expect(html).toContain(`>${command.label}<`);
+      expect(html).toContain(`data-accelerando-mark="${command.label}"`);
       expect(html).toContain("disabled");
     }
     expect(html).not.toMatch(/\b(Close|Keep|Discard|Insight)\b/);
@@ -35,6 +36,8 @@ describe("session guide panel", () => {
     };
     expect(SESSION_INSTRUCTIONS.calibrate).toBe(en.onboardingGuide.scout.step3.body);
     expect(SESSION_INSTRUCTIONS.learn).toContain("Infer");
+    expect(SESSION_INSTRUCTIONS.learn).toContain("hidden state you found");
+    expect(SESSION_INSTRUCTIONS.learn).not.toMatch(/hidden cause/);
     expect(SESSION_INSTRUCTIONS.verification).toContain("identity you claimed");
     for (const text of Object.values(SESSION_INSTRUCTIONS)) {
       expect(text).not.toMatch(/\b(Close|Keep|Discard|Insight)\b/);

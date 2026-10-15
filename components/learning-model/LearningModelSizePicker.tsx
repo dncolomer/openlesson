@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  LEARNING_MODEL_PUBLIC_LABEL,
   LEARNING_MODEL_SIZE_COPY,
   LEARNING_MODEL_SIZES,
   parseLearningModelSize,
@@ -26,7 +27,7 @@ export function LearningModelSizePicker({
       disabled={disabled}
     >
       <legend className="text-xs font-medium uppercase tracking-[0.12em] text-neutral-500">
-        Learning model
+        {LEARNING_MODEL_PUBLIC_LABEL}
       </legend>
       <p className="mt-1 text-sm text-neutral-400">
         How many actions the policy may take from a hidden state. 4 is Forage,

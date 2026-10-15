@@ -35,6 +35,7 @@ import type { SessionPolicyInference } from "@/lib/session-policy-infer";
 import { sessionActionsMayCommit } from "@/lib/session-canvas-effect-gate";
 import type { SessionMarkCanvasEffect } from "@/lib/session-mark-canvas";
 import { sessionActionPricesVisible } from "@/lib/session-field-gate";
+import { AccelerandoMark } from "@/components/AccelerandoGlyphs";
 
 const MARK_BUTTON_CLASS =
   "pointer-events-auto min-w-0 rounded-none border border-neutral-600 bg-neutral-900 px-2 py-1.5 text-center font-mono text-[11px] leading-tight text-white hover:border-white hover:bg-neutral-800 disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-950 disabled:text-neutral-600 disabled:opacity-100 disabled:hover:border-neutral-800 disabled:hover:bg-neutral-950 disabled:hover:text-neutral-600";
@@ -238,6 +239,7 @@ export function SessionMarkControls({
               className={`${ACTION_BUTTON_CLASS} ${recommended ? "border-white" : ""}`}
               onClick={() => commit(button.id)}
             >
+              <AccelerandoMark text={button.label} className="mr-2 h-4 w-4" />
               {button.label}
               {price != null ? (
                 <span data-session-branch-price={price}>{` · ${price}`}</span>

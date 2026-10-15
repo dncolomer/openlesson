@@ -8,7 +8,7 @@ export type SessionGuideId = (typeof SESSION_GUIDES)[number];
  */
 export const SESSION_INSTRUCTIONS: Record<SessionGuideId, string> = {
   learn:
-    "Speak, write, and draw on the work canvas. That is your work.\n\nPress Infer, write the hidden cause you found, and submit it. A valid posterior stays with this chapter.",
+    "Speak, write, and draw on the work canvas. That is your work.\n\nPress Infer, write the hidden state you found, and submit it. A valid posterior stays with this chapter.",
   calibrate:
     "Read the opening lines out loud to start. Then tap every hidden state you would not trust yourself to occupy. The screens get finer or stop on their own. No speaking is required after the opening.\n\nThis is a prior of where your uncertainty sits, for later Learn sessions.",
   verification:

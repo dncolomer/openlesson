@@ -1,5 +1,6 @@
 import { AYCL_PATH, HARNESS_PRICING_PATH } from "@/lib/marketing/paths";
 import { SCIENCE_EPISTEMIC_FORAGING_PATH } from "@/lib/science/epistemic-foraging-copy";
+import { HARNESS_THESIS_LINKS } from "@/lib/science/hub";
 
 export const HARNESS_PRODUCT_COPY = {
   eyebrow: "LEARNING HARNESS",
@@ -10,13 +11,14 @@ export const HARNESS_PRODUCT_COPY = {
     "That policy is epistemic foraging: learning as reducing uncertainty, rather than optimizing for tests and practice repetition.",
   foragingHref: SCIENCE_EPISTEMIC_FORAGING_PATH,
   foragingLabel: "epistemic foraging",
+  thesisLinks: HARNESS_THESIS_LINKS,
   points: [
     {
       eyebrow: "POLICY",
       title: "Epistemic Foraging Policy",
       body: "Learning as reducing uncertainty: an active search for information that shrinks what you don't know, instead of optimizing for tests and practice repetition.",
-      href: null,
-      linkLabel: null,
+      href: SCIENCE_EPISTEMIC_FORAGING_PATH,
+      linkLabel: "Read the policy",
       image: "/harness-blocks/policy-cliff-villa.jpg",
       imageAlt: "Greco-futurist cliffside villa over water at dusk",
     },

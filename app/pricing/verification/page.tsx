@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { MarketingPageShell } from "@/components/marketing/MarketingChrome";
+import { ThesisDirectory } from "@/components/science/ThesisDirectory";
 import { ENTERPRISE_SETUP_EMAIL, VERIFICATION_PRICING_PATH } from "@/lib/marketing/paths";
 import { VERIFICATION_PRICING_COPY } from "@/lib/pricing/verification-copy";
 import { standardShareSocialMetadata } from "@/lib/og/standard";
@@ -32,6 +33,15 @@ export default function VerificationPricingPage() {
         <p className="mt-5 max-w-2xl text-base leading-relaxed text-zinc-400 sm:text-lg">
           {VERIFICATION_PRICING_COPY.lead}
         </p>
+        <p className="mt-4 max-w-2xl text-sm leading-relaxed text-zinc-500">
+          {VERIFICATION_PRICING_COPY.thesisLead}
+        </p>
+        <div className="mt-6 max-w-4xl">
+          <ThesisDirectory
+            links={VERIFICATION_PRICING_COPY.thesisLinks}
+            marker="verification-pricing"
+          />
+        </div>
 
         <div className="mt-10 grid gap-6 lg:grid-cols-2">
           <article

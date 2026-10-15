@@ -128,11 +128,17 @@ describe("science page renders epistemic foraging copy", () => {
 
     expect(src.toLowerCase()).toMatch(/epistemic foraging/);
     expect(SCIENCE_EPISTEMIC_FORAGING_PATH).toBe("/science#science-epistemic-foraging");
+    expect(src).toContain("data-science-hub");
+    expect(src).toContain("ThesisDirectory");
+    expect(src).toContain("SCIENCE_HUB_DIRECTORY");
+    expect(src).toContain("data-science-why");
+    expect(src).toContain("data-vision-tomography-induction");
   });
 
   it("science metadata names epistemic foraging", () => {
     const src = read("app/science/page.tsx");
-    expect(src).toMatch(/description:\s*"A holistic model of knowledge: epistemic foraging/);
+    expect(src).toMatch(/epistemic foraging/);
+    expect(src).toContain('title: "Vision"');
   });
 });
 
@@ -143,6 +149,7 @@ describe("landing approach names foraging without rewriting the hero", () => {
     expect(page).toContain("data-landing-epistemic-foraging");
     expect(page).toMatch(/epistemic foraging/i);
     expect(page).toContain("foragingHref");
+    expect(page).toContain('marker="verification"');
     expect(page).not.toContain("Epistemic Foraging Platform");
     const landing = read("app/page.tsx");
     expect(landing).toContain("{PLATFORM_HERO.h1}");

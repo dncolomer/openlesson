@@ -71,7 +71,7 @@ describe("session guide panel", () => {
 
     const source = readFileSync(join(ROOT, "components/session-view/session-guide-panel.tsx"), "utf8");
     expect(source).toContain("IleCanvasDictateButton");
-    expect(source).toContain('onAsk={() => bridge.run("check")}');
+    expect(source).not.toContain("onAsk=");
     expect(source).toContain("IleCraftInsightButton");
     expect(source).toContain("SessionHarnessPanel");
     expect(source).toContain("data-session-instructions");

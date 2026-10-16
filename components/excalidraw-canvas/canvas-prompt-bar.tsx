@@ -424,7 +424,6 @@ export function CanvasPromptBar({
                       transcript={dictateTranscript}
                       onLiveText={(text) => writeDictatedText(text, false)}
                       onCommit={(text) => writeDictatedText(text, true)}
-                      onAsk={() => handleQuickAction("check")}
                       onActiveChange={onDictateActive}
                     />
                   ) : null}

@@ -318,7 +318,7 @@ describe("session branch model", () => {
     expect(notes[2]?.y).toBe(80 + 280);
     expect(notes[0]?.customData?.sessionBranchNote).toBe("root");
     expect(notes[0]?.backgroundColor).not.toBe("transparent");
-    expect(first.added.some((element) => element.originalText === "Note")).toBe(true);
+    expect(first.added.some((element) => element.originalText === "Work")).toBe(true);
     const again = appendSessionBranchNotes(first.elements, [
       { key: "root", text: "The premise is on the board." },
       { key: "r3", text: "A new region opens." },

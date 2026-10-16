@@ -15,7 +15,6 @@ import { IleCanvasDictateButton } from "@/components/session-view/ile-canvas-dic
 import {
   ILE_CANVAS_DICTATE_AUTHOR,
   ILE_CANVAS_DICTATE_LABEL,
-  ILE_CANVAS_DICTATE_STOP_ASK_LABEL,
   ILE_CANVAS_DICTATE_STOP_LABEL,
   advanceIleDictateCapture,
   appendIleDictatedTextToWorkCanvas,
@@ -190,7 +189,6 @@ describe("canvas dictate button", () => {
   it("sits next to craft insight and reads the live transcript", () => {
     expect(ILE_CANVAS_DICTATE_LABEL).toBe("dictate");
     expect(ILE_CANVAS_DICTATE_STOP_LABEL).toBe("stop");
-    expect(ILE_CANVAS_DICTATE_STOP_ASK_LABEL).toBe("stop & ask");
     const idle = renderToStaticMarkup(
       createElement(IleCanvasDictateButton, {
         transcript: "",
@@ -206,15 +204,14 @@ describe("canvas dictate button", () => {
     expect(idle).not.toContain("data-ile-canvas-dictate-stop-ask");
     const dictate = read("components/session-view/ile-canvas-dictate-button.tsx");
     expect(dictate).toContain("data-ile-canvas-dictate-stop");
-    expect(dictate).toContain("data-ile-canvas-dictate-stop-ask");
-    expect(dictate).toContain("ILE_CANVAS_DICTATE_STOP_ASK_LABEL");
-    expect(dictate).toContain("onAsk");
-    expect(dictate).toContain('text="Check/ask"');
-    expect(read("components/excalidraw-canvas/canvas-prompt-bar.tsx")).toContain(
-      'onAsk={() => handleQuickAction("check")}',
+    expect(dictate).not.toContain("data-ile-canvas-dictate-stop-ask");
+    expect(dictate).not.toContain("ILE_CANVAS_DICTATE_STOP_ASK_LABEL");
+    expect(dictate).not.toContain("onAsk");
+    expect(read("components/excalidraw-canvas/canvas-prompt-bar.tsx")).not.toContain(
+      "onAsk=",
     );
-    expect(read("components/session-view/session-guide-panel.tsx")).toContain(
-      'onAsk={() => bridge.run("check")}',
+    expect(read("components/session-view/session-guide-panel.tsx")).not.toContain(
+      "onAsk=",
     );
 
     const canvas = read("components/ExcalidrawCanvas.tsx");

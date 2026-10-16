@@ -126,7 +126,6 @@ export function SessionGuidePanel({
                 transcript={bridge.dictate.transcript}
                 onLiveText={(text) => bridge.dictate?.write(text, false)}
                 onCommit={(text) => bridge.dictate?.write(text, true)}
-                onAsk={() => bridge.run("check")}
                 onActiveChange={bridge.dictate.onActive}
               />
             ) : null}

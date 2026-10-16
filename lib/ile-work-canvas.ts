@@ -805,7 +805,7 @@ export function ileWorkCanvasWithScrollToContent<T extends { elements?: unknown[
 
 /** Marker on an instruction note placed on the work canvas. */
 export const BOARD_INSTRUCTION_NOTE_KEY = "boardInstructionNote" as const;
-export const BOARD_INSTRUCTION_NOTE_LABEL = "Note";
+export const BOARD_INSTRUCTION_NOTE_LABEL = "Work";
 /**
  * Stored light so the dark-canvas invert paints a dark card.
  * Ink stays the shared near-black stroke, which inverts to a light edge and type.
@@ -818,7 +818,7 @@ const BOARD_NOTE_PAD_Y = 12;
 const BOARD_NOTE_HEADER_FONT = 14;
 
 /**
- * Instruction on the board is a note: a filled card, a Note header, and the words.
+ * Instruction on the board is a work card: a filled card, a Work header, and the words.
  * Not a transparent rectangle with text bound inside it.
  */
 export function boardInstructionNoteElements(input: {

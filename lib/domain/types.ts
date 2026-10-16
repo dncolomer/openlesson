@@ -219,6 +219,8 @@ export interface Session {
      * Resume opens this instead of preparing a new field. The session name is separate.
      */
     session_policy?: unknown;
+    /** Workspace catalog size (4, 8, or 16) copied onto the session for field prep. */
+    learning_model_size?: 4 | 8 | 16;
   };
 }
 

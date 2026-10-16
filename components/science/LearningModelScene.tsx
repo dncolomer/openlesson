@@ -364,7 +364,7 @@ export function LearningModelScene() {
   const nodes = useMemo(() => scienceLearningModelNodes(), []);
   const opening = SCIENCE_LEARNING_MODEL_ROOT;
   const [focusId, setFocusId] = useState(opening.id);
-  const [log, setLog] = useState(SCIENCE_LEARNING_MODEL_COPY.explorerOpening);
+  const [log, setLog] = useState<string>(SCIENCE_LEARNING_MODEL_COPY.explorerOpening);
   const [lastAction, setLastAction] = useState<string | null>(null);
   const [explorerMode, setExplorerMode] = useState<ExplorerMode>("learn");
   const [excess, setExcess] = useState(0);

@@ -159,6 +159,8 @@ describe("session policy inference", () => {
       const best = recommendSessionBranchAction(model, model.focusId);
       expect(best).toBeTruthy();
       if (!best) return;
+      expect(["try", "hold", "drop", "insight"]).toContain(best.id);
+      if (best.id !== "try" && best.id !== "hold" && best.id !== "drop" && best.id !== "insight") return;
       const recorded = recordPolicyInference(model, log, confidenceReply(best.id, 0.91));
       expect(recorded.log).toHaveLength(step + 1);
       expect(recorded.log[step]?.action).toBe(best.id);

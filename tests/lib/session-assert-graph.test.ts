@@ -42,6 +42,7 @@ function model(branches: SessionBranch[], focusId = "root"): SessionBranchModel 
     rootId: "root",
     focusId,
     step: 0,
+    catalogSize: 4,
     boardNotes: [],
     branches,
   };

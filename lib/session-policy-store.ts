@@ -4,6 +4,7 @@
  * Resume opens this snapshot instead of asking for a new field.
  */
 
+import { parseLearningModelSize } from "@/lib/learning-model";
 import {
   SESSION_BRANCH_ACTION_ORDER,
   type SessionBranch,
@@ -154,7 +155,15 @@ function parseModel(value: unknown, birth: boolean): SessionBranchModel | null {
     noteIds.add(key);
     if (text) boardNotes.push({ key, text });
   }
-  return { chapterTitle, rootId, focusId, step: raw.step, branches, boardNotes };
+  return {
+    chapterTitle,
+    rootId,
+    focusId,
+    step: raw.step,
+    catalogSize: parseLearningModelSize(raw.catalogSize),
+    branches,
+    boardNotes,
+  };
 }
 
 function parseInferences(value: unknown): SessionPolicyInference[] | null {

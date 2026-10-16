@@ -12,7 +12,7 @@ import {
   type SessionAssertGraphNode,
 } from "@/lib/session-assert-graph";
 import { sessionBranchFieldCounts, type SessionBranchModel } from "@/lib/session-branch-model";
-import { SESSION_MARK_BUTTONS, type SessionMarkButtonId } from "@/lib/session-marks";
+import { SESSION_MARK_BUTTONS } from "@/lib/session-marks";
 
 const PACE_MS = 140;
 
@@ -38,7 +38,7 @@ const REVEAL_STYLE = `
 }
 `;
 
-function actionLabel(id: SessionMarkButtonId): string {
+function actionLabel(id: string): string {
   return SESSION_MARK_BUTTONS.find((button) => button.id === id)?.label ?? id;
 }
 

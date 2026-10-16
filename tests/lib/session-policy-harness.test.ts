@@ -194,9 +194,9 @@ function fixtureTree(): SessionBranchModel {
 function walkSequence(
   model: SessionBranchModel,
   pick: (
-    bestId: SessionMarkButtonId,
-    actions: { id: SessionMarkButtonId; price: number }[],
-  ) => SessionMarkButtonId,
+    bestId: string,
+    actions: { id: string; price: number }[],
+  ) => string,
 ): SessionMarkButtonId[] {
   const sequence: SessionMarkButtonId[] = [];
   let cursor = model;
@@ -205,6 +205,7 @@ function walkSequence(
     const best = recommendSessionBranchAction(cursor, cursor.focusId);
     if (!focus || !best) break;
     const action = pick(best.id, focus.actions);
+    if (action !== "try" && action !== "hold" && action !== "drop" && action !== "insight") break;
     sequence.push(action);
     const next = advanceSessionBranchModel(cursor, { action, branchId: cursor.focusId });
     if (next === cursor) break;

@@ -482,6 +482,7 @@ describe("one TAP Learning coaching constitution", () => {
 describe("closed error envelope", () => {
   it("jsonError writes nested envelope; unknown codes fall back; no string writers in app/api", async () => {
     expect(KNOWN_ERROR_CODES).toContain("forbidden");
+    expect(KNOWN_ERROR_CODES).toContain("flow_embedding_not_found");
     expect(toErrorCode("not_a_real_code")).toBe("internal_error");
     expect(toErrorCode("guest_missing")).toBe("guest_missing");
 

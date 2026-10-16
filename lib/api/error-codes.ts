@@ -41,6 +41,7 @@ export const KNOWN_ERROR_CODES = [
   "key_revoked",
   "key_expired",
   "guest_not_found",
+  "flow_embedding_not_found",
   "performance_report_generation_failed",
   "usage_limit_reached",
 ] as const;

@@ -4,7 +4,6 @@ import {
   type SessionBranchModel,
   type SessionBranchStatus,
 } from "@/lib/session-branch-model";
-import type { SessionMarkButtonId } from "@/lib/session-marks";
 
 export const SESSION_ASSERT_GRAPH_WIDTH = 280;
 const CENTER = SESSION_ASSERT_GRAPH_WIDTH / 2;
@@ -101,7 +100,7 @@ export function sessionAssertRevealOrder(model: SessionBranchModel): string[] {
     .map((node) => node.id);
 }
 
-export function cheapestAssertAction(branch: SessionBranch | null | undefined): SessionMarkButtonId | null {
+export function cheapestAssertAction(branch: SessionBranch | null | undefined): string | null {
   if (!branch) return null;
   const ranked = branch.actions
     .filter((action) => action.id !== "insight")

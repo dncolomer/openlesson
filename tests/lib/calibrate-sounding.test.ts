@@ -80,6 +80,7 @@ function fixtureModel(stills: SoundingStill[] = fixtureTree()): SessionBranchMod
     rootId: "root",
     focusId: stills[0]?.id ?? "root",
     step: 0,
+    catalogSize: 4,
     boardNotes: [],
     branches: [
       {
@@ -353,6 +354,7 @@ describe("sounding tree freeze", () => {
         rootId: "root",
         focusId: "root",
         step: 0,
+        catalogSize: 4,
         boardNotes: [],
         branches: [
           {
@@ -416,6 +418,7 @@ describe("sounding tree freeze", () => {
         rootId: "root",
         focusId: "root",
         step: 0,
+        catalogSize: 4,
         boardNotes: [],
         branches: [
           {

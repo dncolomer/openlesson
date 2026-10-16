@@ -81,6 +81,8 @@ const NO_INTERRUPTION_ENDPOINTS = new Set<ProofOfWorkApiEndpoint>([
   "knowledge_distance",
   "list_snapshot_history",
   "list_custom_knowledge_regions",
+  "list_flow_embeddings",
+  "get_flow_embedding",
 ]);
 
 const DEFAULT_EXAMPLE: PredictiveInterruption = {

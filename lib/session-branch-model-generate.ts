@@ -790,7 +790,7 @@ export async function continueSessionBranchModel(input: {
   const material = { chapterTitle: chapterTitle || chapterBrief, chapterBrief };
   let continuation = asContinuation({
     ...input.continuation,
-    catalogSize: input.catalogSize ?? input.continuation.catalogSize,
+    catalogSize: parseLearningModelSize(input.catalogSize ?? input.continuation.catalogSize),
   });
   const slices = nextSessionBranchSlices(continuation);
   if (!slices.length) {

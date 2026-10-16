@@ -73,6 +73,8 @@ export type ProofOfWorkApiEndpoint =
   | "upload_ile_speech"
   | "upload_ile_chapter_done"
   | "lwm_snapshot"
+  | "list_flow_embeddings"
+  | "get_flow_embedding"
   | "list_tap_links"
   | "create_tap_link"
   | "get_workspace_detail"

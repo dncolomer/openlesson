@@ -13,5 +13,5 @@ export const SESSION_INSTRUCTIONS: Record<SessionGuideId, string> = {
   calibrate:
     "Read the opening lines out loud to start. Then tap every question you would not trust yourself to answer. The screens get finer or stop on their own. No speaking is required after the opening.\n\nThis records which questions felt uncertain, for later Learn sessions.",
   verification:
-    "Work the question on the canvas before the clock ends.\n\nWhen time ends, you see a Distance score. Distance 0 means every step matched. The score is stored with the name you claimed.",
+    "Work the question on the canvas before the clock ends.\n\nEnd session, or wait for the clock, to see a Distance score. Distance 0 means every step matched. The score is stored.",
 };

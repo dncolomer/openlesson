@@ -31,7 +31,7 @@ export function SessionSoundingResult({
     <div
       data-session-sounding-result=""
       data-sounding-band={classification?.band}
-      className="mt-6 w-full max-w-lg text-left"
+      className="mt-6 w-full max-w-lg text-center"
     >
       {presentation.depthLabel ? (
         <p

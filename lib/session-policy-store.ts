@@ -120,6 +120,7 @@ function parseBranch(value: unknown): SessionBranch | null {
     id,
     parentId,
     title,
+    question: textOf(raw.question) ?? "",
     territory,
     observation,
     depth: raw.depth,

@@ -57,5 +57,7 @@ describe("TAP session link post-session thank-you", () => {
     expect(post.thankYouBody?.toLowerCase()).toMatch(/distance/);
     expect(post.thankYouBody?.toLowerCase()).toMatch(/stored/);
     expect(post.exploreUncertainSystems).toMatch(/Uncertain Systems/i);
+    expect(post.backToWorkspace).toMatch(/workspace/i);
+    expect(post.scoring).toMatch(/scor/i);
   });
 });

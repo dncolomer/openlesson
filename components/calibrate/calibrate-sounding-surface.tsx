@@ -58,6 +58,7 @@ export function CalibrateSoundingSurface({
         {sounding.phase === "expert-proof" && sounding.proof ? (
           <SoundingVoiceStep
             stillText={sounding.proof.stillText}
+            kind={sounding.proof.kind}
             progress={progress}
             error={error}
             busy={proofBusy}
@@ -142,12 +143,14 @@ function speechRecognitionConstructor(): (new () => SpeechRecognitionLike) | nul
 
 function SoundingVoiceStep({
   stillText,
+  kind,
   progress,
   error,
   busy,
   onSubmit,
 }: {
   stillText: string;
+  kind: "gap" | "trusted";
   progress: ReturnType<typeof soundingProgress>;
   error?: string;
   busy: boolean;
@@ -230,7 +233,9 @@ function SoundingVoiceStep({
       data-sounding-voice=""
     >
       <SoundingProgressHeader progress={progress} />
-      <p className="text-xs uppercase tracking-[0.16em] text-neutral-500">A gap you marked</p>
+      <p className="text-xs uppercase tracking-[0.16em] text-neutral-500">
+        {kind === "trusted" ? "A question you left unmarked" : "A gap you marked"}
+      </p>
       <p className="text-sm text-neutral-300" data-sounding-proof-still="">
         {stillText}
       </p>
@@ -247,7 +252,11 @@ function SoundingVoiceStep({
         value={typed}
         onChange={(event) => setTyped(event.target.value)}
         rows={4}
-        placeholder="Or type what is uncertain, and how you would look next to fill it."
+        placeholder={
+          kind === "trusted"
+            ? "Or type how you would work this question."
+            : "Or type what is uncertain, and how you would look next to fill it."
+        }
         className="w-full resize-none border border-white/30 bg-black px-4 py-3 text-sm leading-relaxed text-white placeholder:text-neutral-500"
       />
       {error ? <p className="text-sm text-red-300">{error}</p> : null}

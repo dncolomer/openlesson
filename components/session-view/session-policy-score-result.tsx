@@ -8,7 +8,7 @@ export function formatPolicyScoreFigure(value: number): string {
 }
 
 /**
- * Time-ended Verification results.
+ * Verify results after End session or the clock.
  * Distance is the score the learner sees. Steps and excess sit under it.
  * The action ids stay off this screen.
  */
@@ -17,7 +17,7 @@ export function SessionPolicyScoreResult({ score }: { score: PolicyScore | null 
   return (
     <div
       data-session-policy-score=""
-      className="mt-8 w-full max-w-sm border border-white/45 bg-black text-left"
+      className="mx-auto mt-8 w-full max-w-sm border border-white/45 bg-black text-left"
     >
       <div className="flex items-center gap-2 border-b border-white/30 px-3 py-1">
         <span aria-hidden className="font-mono text-[9px] tracking-[0.28em] text-white/45">

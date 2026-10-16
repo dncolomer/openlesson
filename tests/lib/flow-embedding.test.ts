@@ -168,6 +168,10 @@ describe("completion paths persist flow embeddings instead of snapshots", () => 
     expect(finish).toContain('flowKind: "verify"');
     expect(finish).not.toContain("embedPolicyScore");
     expect(finish).not.toContain("lwm_snapshot");
+    expect(finish).toContain('if (s.sidebarMode === "verification-tap") {');
+    expect(finish.indexOf('if (s.sidebarMode === "verification-tap") {')).toBeLessThan(
+      finish.indexOf("getIlePostSessionPath"),
+    );
 
     const results = read("app/api/verification-flow/public/[token]/results/route.ts");
     expect(results).toContain("completeFlowEmbedding");

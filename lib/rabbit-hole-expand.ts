@@ -370,15 +370,5 @@ export function normalizeRabbitHoleQuestions(
     out.push(q);
     if (out.length >= need) break;
   }
-  // Pad with distinct fallbacks if AI returned fewer than needed (keeps process unblocked).
-  let pad = 1;
-  while (out.length < need) {
-    const fallback = `What deeper aspect of this topic should we explore next (${pad})?`;
-    if (!seen.has(fallback.toLowerCase())) {
-      out.push(fallback);
-      seen.add(fallback.toLowerCase());
-    }
-    pad += 1;
-  }
   return out.slice(0, need);
 }

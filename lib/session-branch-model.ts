@@ -58,6 +58,8 @@ export type SessionBranch = {
   id: string;
   parentId: string | null;
   title: string;
+  /** Learner-facing question xAI wrote for this node. Never a title wrap. */
+  question: string;
   /** State factor. Stored key stays `territory`. */
   territory: string;
   /** Likelihood p(o|s). Predicted observation for this hidden state. */
@@ -101,6 +103,7 @@ type RawActionPrices = {
 
 type RawInquiry = RawActionPrices & {
   title?: unknown;
+  question?: unknown;
   territory?: unknown;
   observation?: unknown;
 };
@@ -159,7 +162,7 @@ function extraActionsFrom(
   return extraCatalogActionIds(catalogSize).map((id, index) => ({
     id,
     price: priceOf(raw[extraCatalogPriceKey(id)], 22 + index * 6),
-    leads: "The next observation on this hidden state opens.",
+    leads: "",
     observation,
   }));
 }
@@ -207,6 +210,7 @@ export function normalizeSessionBranchModel(
     id: "root",
     parentId: null,
     title,
+    question: textOf(draft?.question),
     territory: premise,
     observation: premise,
     depth: 0,
@@ -223,6 +227,7 @@ export function normalizeSessionBranchModel(
       id: regionId,
       parentId: root.id,
       title: regionTitle,
+      question: textOf(region?.question),
       territory: textOf(region?.territory, regionObservation),
       observation: regionObservation,
       depth: 1,
@@ -238,6 +243,7 @@ export function normalizeSessionBranchModel(
         id: avenueId,
         parentId: regionId,
         title: avenueTitle,
+        question: textOf(avenue?.question),
         territory: textOf(avenue?.territory, avenueObservation),
         observation: avenueObservation,
         depth: 2,
@@ -252,6 +258,7 @@ export function normalizeSessionBranchModel(
           id: `${avenueId}-q${inquiryIndex + 1}`,
           parentId: avenueId,
           title: inquiryTitle,
+          question: textOf(inquiry?.question),
           territory: textOf(inquiry?.territory, inquiryObservation),
           observation: inquiryObservation,
           depth: 3,
@@ -290,7 +297,10 @@ export function openSessionBranchQuestions(
   if (!model) return [];
   return model.branches
     .filter((branch) => branch.status !== "latent")
-    .map((branch) => ({ id: branch.id, text: branch.title }));
+    .map((branch) => ({
+      id: branch.id,
+      text: (branch.question || "").trim() || branch.title,
+    }));
 }
 
 export function recommendSessionBranchAction(
@@ -359,11 +369,10 @@ export function advanceSessionBranchModel(
     if (sibling) branches = openLatent(branches, [sibling.id]);
   }
 
-  const prepared =
-    action?.observation?.trim() ||
-    action?.leads?.trim() ||
-    `The next observation on ${focus.title} is ready.`;
-  const actionNote = noteFor(`${focus.id}:${input.action}:${step}`, prepared, seen);
+  const prepared = action?.observation?.trim() || action?.leads?.trim() || "";
+  const actionNote = prepared
+    ? noteFor(`${focus.id}:${input.action}:${step}`, prepared, seen)
+    : null;
   if (actionNote) notes.push(actionNote);
   for (const branch of branches) {
     if (branch.status !== "open") continue;
@@ -512,6 +521,7 @@ export const SESSION_BRANCH_MODEL_SCHEMA = {
           additionalProperties: false,
           required: [
             "title",
+            "question",
             "territory",
             "observation",
             "closePrice",
@@ -530,6 +540,7 @@ export const SESSION_BRANCH_MODEL_SCHEMA = {
           ],
           properties: {
             title: { type: "string" },
+            question: { type: "string" },
             territory: { type: "string" },
             observation: { type: "string" },
             closePrice: { type: "number" },
@@ -653,7 +664,8 @@ export function sessionBranchModelPrompt(input: {
     `Under every region write ${SESSION_BRANCH_AVENUE_COUNT} avenues.`,
     `Under every avenue write ${SESSION_BRANCH_INQUIRY_COUNT} inquiries.`,
     `The generative model uses a ${size}-action catalog.`,
-    "Every node needs its own territory, a board observation of one or two sentences, and four live actions: close, keep, discard, and insight.",
+    "Every node needs its own territory, a genuine question, a board observation of one or two sentences, and four live actions: close, keep, discard, and insight.",
+    "The question is one original interrogative sentence a learner would be asked. Write it from scratch. Never wrap the title or territory into a stock sentence.",
     extraLine,
     "Price each action from 0 to 100. A lower price is the better next policy for that node.",
     "Close should be cheap when the observation would settle that node, and expensive when the node is still only a hunch.",

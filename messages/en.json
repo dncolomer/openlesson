@@ -2869,6 +2869,7 @@
     },
     "postSession": {
       "savingAndReturning": "Saving proof of work…",
+      "scoring": "Scoring this session…",
       "generatingResults": "Saving proof of work…",
       "resultsTitle": "Session complete",
       "resultsHint": "Your score is saved. LWM Snapshot is not generated automatically — the workspace owner runs Generate new snapshot in Knowledge, or calls the Snapshot API POST .../lwm-snapshot.",
@@ -2876,6 +2877,7 @@
       "thankYouTitle": "Thank you",
       "thankYouBody": "The Distance on this screen has been stored.",
       "exploreUncertainSystems": "Explore Uncertain Systems",
+      "backToWorkspace": "Back to workspace",
       "impureTitle": "Session Invalidated",
       "impureBody": "This session was invalidated because you remained silent for too long.\n\nYou can start again. Remember to think out loud the whole time — including while reading the question(s).\n\nIf you want, you can do a practice run before starting a new run. There is no limit on attempts. You can try as many times as you need.",
       "impureTryAgain": "Try again"

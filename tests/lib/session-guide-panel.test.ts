@@ -63,7 +63,8 @@ describe("session guide panel", () => {
     expect(SESSION_INSTRUCTIONS.learn).not.toMatch(/hidden state|posterior/i);
     expect(SESSION_INSTRUCTIONS.learn).not.toMatch(/hidden cause/);
     expect(SESSION_INSTRUCTIONS.verification).toContain("Distance");
-    expect(SESSION_INSTRUCTIONS.verification).toContain("name you claimed");
+    expect(SESSION_INSTRUCTIONS.verification).toContain("End session");
+    expect(SESSION_INSTRUCTIONS.verification).toMatch(/stored/i);
     expect(SESSION_INSTRUCTIONS.verification).not.toMatch(/generative model|cheapest policy/i);
     for (const text of Object.values(SESSION_INSTRUCTIONS)) {
       expect(text).not.toMatch(/\b(Close|Keep|Discard|Insight)\b/);

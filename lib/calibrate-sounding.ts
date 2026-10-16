@@ -1,9 +1,9 @@
 /**
  * Calibrate sounding: a rabbit-hole of stills. Tap every question you would
  * not trust yourself to answer. The tree zooms, stays, or stops from the
- * tap count. Classification is coverage depth plus persistence. A marked
- * gap then gets one spoken forage step, projected onto nearby frozen
- * branches. Field titles stay short phrases; cards wrap them as questions.
+ * tap count. Classification is coverage depth plus persistence. Coverage
+ * or a marked gap then gets one spoken forage step, projected onto nearby
+ * frozen branches. Cards show the generated question on each still.
  */
 
 import type { CalibrateQuestion } from "@/lib/calibrate-session";
@@ -33,6 +33,8 @@ export const SOUNDING_PASS_HINT =
   "Continue brings another set, drawn from the cards you just marked.";
 export const SOUNDING_PROOF_PROMPT =
   "This is a gap you marked. Say what is uncertain, and how you would look next to fill it.";
+export const SOUNDING_TRUSTED_PROOF_PROMPT =
+  "You did not mark this question as uncertain. Say how you would work it.";
 export const SOUNDING_CANT_TELL_LABEL = "I can't tell";
 export const SOUNDING_CONTINUE_LABEL = "Continue";
 
@@ -69,11 +71,14 @@ export type SoundingProofCandidate = {
   observation: string;
 };
 
+export type SoundingProofKind = "gap" | "trusted";
+
 export type SoundingProof = {
   stillId: string;
   prompt: string;
   stillText: string;
   candidates: SoundingProofCandidate[];
+  kind: SoundingProofKind;
 };
 
 export type SoundingProofChoice = "hit" | "miss" | "cant-tell";
@@ -150,32 +155,23 @@ function trimText(value: unknown): string {
   return String(value ?? "").replace(/\s+/g, " ").trim();
 }
 
-function wordCount(text: string): number {
-  return text.split(/\s+/).filter(Boolean).length;
-}
-
 /**
- * Field titles are short phrases. Sounding cards need a real question
- * without putting the hidden observation on the card.
+ * Cards show the xAI-written question. Never wrap a title or territory
+ * into a stock sentence.
  */
 export function soundingStillCardText(input: {
+  question?: string | null;
   title: string;
+  observation?: string | null;
   territory?: string | null;
 }): string {
+  const question = trimText(input.question);
+  if (question) return question;
   const title = trimText(input.title);
-  if (!title) return "";
-  const territory = trimText(input.territory);
-  const sameTerritory = !territory || territory.toLowerCase() === title.toLowerCase();
-  if (title.includes("?")) {
-    if (wordCount(title) >= SOUNDING_CARD_MIN_WORDS) return title;
-    if (!sameTerritory) {
-      const rest = `${title.charAt(0).toLowerCase()}${title.slice(1)}`;
-      return `In ${territory}, ${rest}`;
-    }
-    return title;
-  }
-  if (!sameTerritory) return `What would you need to settle about ${title} in ${territory}?`;
-  return `What would you need to settle about ${title}?`;
+  if (title.includes("?")) return title;
+  const observation = trimText(input.observation);
+  if (observation.includes("?")) return observation;
+  return title;
 }
 
 function byId(stills: readonly SoundingStill[]): Map<string, SoundingStill> {
@@ -265,7 +261,11 @@ export function soundingStillsFromBranchModel(
     const territory = trimText(branch.territory) || title;
     stills.push({
       id: String(branch.id),
-      text: soundingStillCardText({ title, territory }),
+      text: soundingStillCardText({
+        question: branch.question,
+        title,
+        observation: branch.observation,
+      }),
       observation: trimText(branch.observation) || title,
       parentId: branch.parentId,
       depth: Number.isFinite(branch.depth) ? Math.max(1, Math.floor(branch.depth)) : 1,
@@ -608,7 +608,8 @@ export function soundingLocalCandidates(
   const out: SoundingProofCandidate[] = [];
   const push = (branch: SessionBranch | null | undefined) => {
     if (!branch || seen.has(branch.id) || branch.parentId == null) return;
-    const title = trimText(branch.title) || trimText(branch.observation);
+    const title =
+      trimText(branch.question) || trimText(branch.title) || trimText(branch.observation);
     if (!title) return;
     seen.add(branch.id);
     out.push({
@@ -694,31 +695,48 @@ export function soundingVoiceSubmissionFromReply(input: {
   };
 }
 
+function proofFromStill(
+  model: SessionBranchModel,
+  still: SoundingStill,
+  kind: SoundingProofKind,
+): SoundingProof | null {
+  const candidates = soundingLocalCandidates(model, still.id);
+  if (candidates.length < 2) return null;
+  return {
+    stillId: still.id,
+    prompt: still.text,
+    stillText: still.text,
+    candidates,
+    kind,
+  };
+}
+
 export function buildSoundingProof(state: SoundingState): SoundingProof | null {
   const model = state.model;
   if (!model) return null;
+  const lookup = byId(state.stills);
   const counts = new Map<string, number>();
   for (const tap of state.taps) {
     for (const id of tap.tappedIds) counts.set(id, (counts.get(id) ?? 0) + 1);
   }
-  if (counts.size === 0) return null;
-  const lookup = byId(state.stills);
-  const ranked = [...counts.entries()]
+  const rankedGaps = [...counts.entries()]
     .map(([id, count]) => ({ still: lookup.get(id), count }))
     .filter((row): row is { still: SoundingStill; count: number } => Boolean(row.still))
     .sort(
       (a, b) =>
         b.count - a.count || b.still.depth - a.still.depth || a.still.id.localeCompare(b.still.id),
     );
-  for (const { still } of ranked) {
-    const candidates = soundingLocalCandidates(model, still.id);
-    if (candidates.length < 2) continue;
-    return {
-      stillId: still.id,
-      prompt: still.text,
-      stillText: still.text,
-      candidates,
-    };
+  for (const { still } of rankedGaps) {
+    const proof = proofFromStill(model, still, "gap");
+    if (proof) return proof;
+  }
+  const trusted = state.shownIds
+    .map((id) => lookup.get(id))
+    .filter((still): still is SoundingStill => Boolean(still))
+    .sort((a, b) => b.depth - a.depth || a.id.localeCompare(b.id));
+  for (const still of trusted) {
+    const proof = proofFromStill(model, still, "trusted");
+    if (proof) return proof;
   }
   return null;
 }
@@ -886,8 +904,8 @@ export function soundingBandCopy(band: SoundingBand): { title: string; body: str
     };
   }
   return {
-    title: "The questions did not settle",
-    body: "This pass was too short or too mixed to show which questions felt uncertain. Later Learn sessions can still use it. You can run Calibrate again for a clearer reading.",
+    title: "The uncertain questions were spread out",
+    body: "You marked questions from more than one part of the topic, so no single set stood out. Those taps are saved for later Learn sessions.",
   };
 }
 
@@ -904,7 +922,10 @@ export function soundingProgress(state: SoundingState): {
       passes: SOUNDING_ROUND_COUNT,
       set: 0,
       label: "One more check",
-      hint: SOUNDING_PROOF_PROMPT,
+      hint:
+        state.proof?.kind === "trusted"
+          ? SOUNDING_TRUSTED_PROOF_PROMPT
+          : SOUNDING_PROOF_PROMPT,
     };
   }
   const pass = Math.max(1, state.round);

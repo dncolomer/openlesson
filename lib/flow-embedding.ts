@@ -42,6 +42,7 @@ export type FlowGenModelRaw = {
     id: string;
     parentId: string | null;
     title: string;
+    question: string;
     territory: string;
     observation: string;
     depth: number;
@@ -134,6 +135,7 @@ function compactGenModel(model: SessionBranchModel | null | undefined, catalogSi
       id: textOf(branch.id),
       parentId: branch.parentId == null ? null : textOf(branch.parentId) || null,
       title: textOf(branch.title),
+      question: textOf(branch.question),
       territory: textOf(branch.territory),
       observation: textOf(branch.observation),
       depth: Math.max(0, Math.round(numberOf(branch.depth))),
@@ -246,6 +248,7 @@ export function recoverFlowEmbeddingRaw(value: unknown): FlowEmbeddingRaw | null
           id: textOf(branch.id),
           parentId: branch.parentId == null ? null : textOf(branch.parentId) || null,
           title: textOf(branch.title),
+          question: textOf(branch.question),
           territory: textOf(branch.territory),
           observation: textOf(branch.observation),
           depth: Math.max(0, Math.round(numberOf(branch.depth))),
@@ -319,7 +322,12 @@ export function embedFlowOutput(rawInput: FlowEmbeddingRaw): FlowEmbeddingRecord
     raw.flowKind,
     String(raw.genModel.catalogSize),
     raw.genModel.chapterTitle,
-    ...raw.genModel.branches.flatMap((branch) => [branch.title, branch.territory, branch.observation]),
+    ...raw.genModel.branches.flatMap((branch) => [
+      branch.title,
+      branch.question,
+      branch.territory,
+      branch.observation,
+    ]),
     ...(raw.projectedPolicy?.sequence ?? []),
     ...raw.pow.flatMap((row) => [row.tool_name, row.tool_action, row.payload, row.type]),
   ].filter((value): value is string => typeof value === "string" && value.trim().length > 0);

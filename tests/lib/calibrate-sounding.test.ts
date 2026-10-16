@@ -10,11 +10,11 @@ import {
   SoundingFinishedStage,
 } from "@/components/session-view/session-sounding-result";
 import {
-  SOUNDING_CARD_MIN_WORDS,
   SOUNDING_INSTRUCTION,
   SOUNDING_PASS_HINT,
   SOUNDING_POLICY_MIN_CONFIDENCE,
   SOUNDING_PROOF_PROMPT,
+  SOUNDING_TRUSTED_PROOF_PROMPT,
   SOUNDING_SCREEN_SIZE,
   absorbSoundingStills,
   buildSoundingProof,
@@ -87,6 +87,7 @@ function fixtureModel(stills: SoundingStill[] = fixtureTree()): SessionBranchMod
         id: "root",
         parentId: null,
         title: "SQL",
+        question: "What would you not trust yourself to answer about SQL?",
         territory: "SQL",
         observation: "The topic is open.",
         depth: 0,
@@ -97,6 +98,7 @@ function fixtureModel(stills: SoundingStill[] = fixtureTree()): SessionBranchMod
         id: row.id,
         parentId: row.parentId,
         title: row.text,
+        question: `Would you trust yourself to answer ${row.id}?`,
         territory: row.territory,
         observation: row.observation,
         depth: row.depth,
@@ -223,26 +225,48 @@ describe("sounding spectrum", () => {
   });
 
   it("phrases short field titles as questions without putting the observation on the card", () => {
-    const short = soundingStillCardText({ title: "Left join", territory: "SQL joins" });
-    expect(short).toBe("What would you need to settle about Left join in SQL joins?");
-    expect(short.split(/\s+/).length).toBeGreaterThanOrEqual(SOUNDING_CARD_MIN_WORDS);
+    const generated = soundingStillCardText({
+      question: "When does a left join duplicate rows?",
+      title: "Left join",
+      territory: "This region covers how joins multiply rows.",
+    });
+    expect(generated).toBe("When does a left join duplicate rows?");
+    expect(generated).not.toMatch(/What would you need to settle about/i);
+    expect(generated).not.toMatch(/in This region/i);
+    expect(
+      soundingStillCardText({
+        title: "Left join",
+        territory: "This region covers how joins multiply rows.",
+      }),
+    ).toBe("Left join");
+    expect(
+      soundingStillCardText({
+        title: "Left join?",
+        territory: "This region covers how joins multiply rows.",
+      }),
+    ).toBe("Left join?");
     expect(soundingStillCardText({ title: "What happens to unmatched right rows in a left join?", territory: "SQL" })).toBe(
       "What happens to unmatched right rows in a left join?",
     );
     const fromField = soundingStillsFromBranchModel(fixtureModel());
     expect(fromField.length).toBeGreaterThan(0);
     expect(fromField.every((row) => row.text.includes("?"))).toBe(true);
+    expect(fromField.every((row) => !/What would you need to settle about/i.test(row.text))).toBe(true);
     expect(fromField.every((row) => !row.text.includes(row.observation) || row.observation.includes("?"))).toBe(
       true,
     );
   });
 
-  it("treats a zero trunk as coverage and skips the spoken step when no gap was marked", () => {
+  it("treats a zero trunk as coverage and still asks a trusted question", () => {
     let state = createSoundingState(fixtureTree(), "expert", fixtureModel());
     while (state.phase === "sounding") state = tapNone(state);
-    expect(state.phase).toBe("complete");
+    expect(state.phase).toBe("expert-proof");
     expect(state.classification?.band).toBe("coverage");
-    expect(state.proof).toBeNull();
+    expect(state.proof?.kind).toBe("trusted");
+    expect(state.proof?.stillText).toBeTruthy();
+    expect(state.taps.every((tap) => tap.tappedIds.length === 0)).toBe(true);
+    expect(state.taps.some((tap) => tap.tappedIds.includes(state.proof!.stillId))).toBe(false);
+    expect(soundingProgress(state).hint).toBe(SOUNDING_TRUSTED_PROOF_PROMPT);
   });
 
   it("asks a marked gap how they would forage, then projects onto local branches", () => {
@@ -250,6 +274,7 @@ describe("sounding spectrum", () => {
     expect(state.phase).toBe("expert-proof");
     expect(state.classification?.band).toBe("localized");
     expect(state.proof).not.toBeNull();
+    expect(state.proof!.kind).toBe("gap");
     expect(state.proof!.candidates.length).toBeGreaterThanOrEqual(2);
     expect(state.taps.some((tap) => tap.tappedIds.includes(state.proof!.stillId))).toBe(true);
     const local = soundingLocalCandidates(fixtureModel(), state.proof!.stillId);
@@ -361,6 +386,7 @@ describe("sounding tree freeze", () => {
             id: "root",
             parentId: null,
             title: "Limits",
+            question: "What still has to be true of a limit for the value to exist?",
             territory: "Limits",
             observation: "Limits",
             depth: 0,
@@ -371,6 +397,7 @@ describe("sounding tree freeze", () => {
             id: "r1",
             parentId: "root",
             title: "Algebraic 0/0",
+            question: "After factoring, which factor is still allowed to be zero?",
             territory: "r1",
             observation: "Factor before naming the form.",
             depth: 1,
@@ -381,6 +408,7 @@ describe("sounding tree freeze", () => {
             id: "r2",
             parentId: "root",
             title: "sin x / x",
+            question: "Why does sin x / x approach 1 as x approaches 0?",
             territory: "r2",
             observation: "The standard trig limit is 1.",
             depth: 1,
@@ -391,6 +419,7 @@ describe("sounding tree freeze", () => {
             id: "r3",
             parentId: "root",
             title: "Continuity vs derivative",
+            question: "Can a function be continuous at a point and still fail to have a derivative there?",
             territory: "r3",
             observation: "Matching values do not give a derivative.",
             depth: 1,
@@ -401,6 +430,11 @@ describe("sounding tree freeze", () => {
       },
     });
     expect(tree.map((row) => row.id)).toEqual(["r1", "r2", "r3"]);
+    expect(tree.map((row) => row.text)).toEqual([
+      "After factoring, which factor is still allowed to be zero?",
+      "Why does sin x / x approach 1 as x approaches 0?",
+      "Can a function be continuous at a point and still fail to have a derivative there?",
+    ]);
     expect(tree.every((row) => row.observation !== row.text)).toBe(true);
   });
 
@@ -425,6 +459,7 @@ describe("sounding tree freeze", () => {
             id: "root",
             parentId: null,
             title: "SQL",
+            question: "What would you not trust yourself to answer about SQL yet?",
             territory: "SQL",
             observation: "SQL",
             depth: 0,
@@ -435,6 +470,7 @@ describe("sounding tree freeze", () => {
             id: "r1",
             parentId: "root",
             title: "Joins",
+            question: "When do joins multiply rows instead of matching them one-to-one?",
             territory: "r1",
             observation: "Joins multiply rows when keys repeat.",
             depth: 1,
@@ -466,7 +502,7 @@ describe("sounding tree freeze", () => {
 });
 
 describe("sounding copy", () => {
-  it("names an unranked path as unsettled and hides depth zero", () => {
+  it("names an unranked path as spread-out uncertainty and hides depth zero", () => {
     const opened = createSoundingState(fixtureTree(), "copy");
     const progress = soundingProgress(opened);
     expect(progress.label).toBe("Pass 1 of 2");
@@ -478,10 +514,11 @@ describe("sounding copy", () => {
       persistentTerritories: [],
       falseCoverage: false,
     });
-    expect(unranked?.title).toBe("The questions did not settle");
+    expect(unranked?.title).toBe("The uncertain questions were spread out");
     expect(unranked?.depthLabel).toBeNull();
-    expect(unranked?.body).toMatch(/too short or too mixed/i);
-    expect(unranked?.body).toMatch(/questions felt uncertain/i);
+    expect(unranked?.body).toMatch(/more than one part of the topic/i);
+    expect(unranked?.body).toMatch(/no single set stood out/i);
+    expect(unranked?.body).not.toMatch(/too short or too mixed/i);
     expect(unranked?.body).not.toMatch(/prior/i);
     const deep = soundingResultPresentation({
       band: "coverage",
@@ -508,6 +545,20 @@ describe("sounding copy", () => {
     expect(result).not.toContain("01");
     expect(result).not.toContain("Depth 0");
     expect(result).not.toContain("Insufficient signal");
+    const coverage = renderToStaticMarkup(
+      createElement(SessionSoundingResult, {
+        classification: {
+          band: "coverage",
+          coverageDepth: 3,
+          reliability: "high",
+          persistentTerritories: [],
+          falseCoverage: false,
+        },
+      }),
+    );
+    expect(coverage).toContain("Reached finer questions · 3");
+    expect(coverage).toContain("text-center");
+    expect(coverage).not.toContain("text-left");
   });
 
   it("centers the result plate with side inset", () => {
@@ -615,6 +666,19 @@ describe("sounding wiring contract", () => {
     expect(proof).toContain("A gap you marked");
     expect(proof).toContain(SOUNDING_PROOF_PROMPT);
     expect(proof).not.toContain("data-sounding-proof-line");
+    let trustedState = createSoundingState(fixtureTree(), "trusted-ui", fixtureModel());
+    while (trustedState.phase === "sounding") trustedState = tapNone(trustedState);
+    const trusted = renderToStaticMarkup(
+      createElement(CalibrateSoundingSurface, {
+        sounding: trustedState,
+        onCommitTaps: () => {},
+        onSubmitProof: () => {},
+      }),
+    );
+    expect(trustedState.proof?.kind).toBe("trusted");
+    expect(trusted).toContain("A question you left unmarked");
+    expect(trusted).toContain(SOUNDING_TRUSTED_PROOF_PROMPT);
+    expect(trusted).not.toContain("A gap you marked");
     for (const candidate of expert.proof?.candidates ?? []) {
       expect(proof).not.toContain(candidate.observation);
     }

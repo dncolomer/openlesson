@@ -245,7 +245,7 @@ describe("rabbit-hole expansion process", () => {
         3,
       ),
     ).toEqual(["One?", "Two?", "Three?"]);
-    expect(normalizeRabbitHoleQuestions(["A?", "B?"], 3)).toHaveLength(3);
+    expect(normalizeRabbitHoleQuestions(["A?", "B?"], 3)).toEqual(["A?", "B?"]);
     expect(buildRabbitHoleQuestionsSystemMessage(2)).toContain("exactly 2");
     const user = buildRabbitHoleQuestionsUserPrompt({
       seedTitle: "Calculus",

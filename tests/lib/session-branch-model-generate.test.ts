@@ -26,6 +26,7 @@ function promptOf(messages: ChatMessage[]): string {
 function node(title: string, extra: Record<string, unknown> = {}) {
   return {
     title,
+    question: `What still has to be true about ${title}?`,
     territory: `${title} stays distinct.`,
     observation: `${title} is open on the board.`,
     closePrice: 20,
@@ -137,6 +138,14 @@ describe("generateSessionBranchModel", () => {
     expect(inquiries.every((call) => call.maxTokens === tokensForNodes(6))).toBe(true);
     expect(inquiries.every((call) => (call.prompt.match(/^\d+\.\d+ /gm) ?? []).length === 2)).toBe(true);
     expect(calls.some((call) => call.prompt.includes("for every region"))).toBe(false);
+    expect(
+      result.model.branches
+        .filter((branch) => branch.parentId)
+        .every((branch) => branch.question.includes("?")),
+    ).toBe(true);
+    const firstConfig = JSON.stringify(callXai.mock.calls[0]?.[1] ?? {});
+    expect(firstConfig).toContain('"question"');
+    expect(promptOf(callXai.mock.calls[0]?.[0] as ChatMessage[])).toMatch(/original interrogative sentence/i);
   });
 
   it("returns a slice timeout and does not ask for inquiries", async () => {

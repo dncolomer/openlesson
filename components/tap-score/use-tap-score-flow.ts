@@ -582,6 +582,12 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
         s.apply({ phase: "results" });
         return;
       }
+      // Verify End session and time-up score in place. TAP may still leave the page.
+      if (s.sidebarMode === "verification-tap") {
+        s.apply({ performanceReport: null });
+        s.apply({ phase: "results" });
+        return;
+      }
       // Private session links: thank-you only (no redirect / results scorecard).
       // LWM Snapshot remains manual (Knowledge UI / Snapshot API) — not auto-run on TAP end.
       if (s.privateToken) {

@@ -779,9 +779,10 @@ describe("verification workspace shell gates", () => {
     expect(tapStart).toContain("TapStartingTopicCards");
     expect(tapStart).not.toContain("data-verification-flow-filter");
     expect(tapStart).not.toContain("VerificationFlowSubtabFilter");
-    expect(tapStart).toContain("privateToken || localOpening");
+    expect(tapStart).toContain("privateToken || localOpening || sidebarMode === \"verification-tap\"");
     expect(tapStart).toContain("data-tap-session-thank-you");
     expect(tapStart).toContain("data-tap-explore-uncertain-systems");
+    expect(tapStart).toContain("data-tap-back-workspace");
     expect(tapStart).toContain("thankYouTitle");
     expect(tapStart).toContain("thankYouBody");
     const tapClient = read("components/TapScoreClient.tsx");

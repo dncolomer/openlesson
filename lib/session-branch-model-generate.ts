@@ -27,6 +27,7 @@ export type SessionBranchGenerateResult =
 
 const STORED_NODE_KEYS = [
   "title",
+  "question",
   "territory",
   "observation",
   "closePrice",
@@ -57,7 +58,9 @@ function systemForCatalog(size: LearningModelSize): string {
     : "";
   return [
     "You write one slice of a session field as JSON.",
-    "Every title is a short phrase. Every territory, observation, leads line, and action observation is one or two complete sentences about this chapter.",
+    "Every title is a short phrase.",
+    "Every question is one original interrogative sentence a learner would be asked. Write it from scratch. Never wrap the title or territory into a stock sentence.",
+    "Every territory, observation, leads line, and action observation is one or two complete sentences about this chapter.",
     "Prices are numbers from 0 to 100. A lower price is the better next policy on that node.",
     "Close is cheap when the observation would settle the node. Keep is cheap when a further observation is still needed. Discard is cheap on a dead end. Insight is expensive until the territory is settled.",
     extraLine,
@@ -223,7 +226,9 @@ function numberOf(value: unknown): number | null {
 }
 
 function filled(nodes: readonly FieldNode[]): number {
-  return nodes.filter((node) => textOf(node.title) && textOf(node.observation)).length;
+  return nodes.filter(
+    (node) => textOf(node.title) && textOf(node.question) && textOf(node.observation),
+  ).length;
 }
 
 function materialBlock(input: { chapterTitle: string; chapterBrief?: string | null }): string {
@@ -233,7 +238,7 @@ function materialBlock(input: { chapterTitle: string; chapterBrief?: string | nu
     `Chapter: ${title}.`,
     brief ? `Material:\n${brief}` : "",
     "This slice belongs to a wide field of inquiry, not a short quiz and not a three-step maze.",
-    "Write in complete sentences. No headings, no bullets, no product names.",
+    "Write in complete sentences. Each question is an original interrogative sentence, not a wrap of the title. No headings, no bullets, no product names.",
   ]
     .filter(Boolean)
     .join("\n\n");
@@ -708,7 +713,9 @@ async function writeContinuationSlice(
       2000,
     );
     const region = reply.ok ? asRecord(reply.data.region) : null;
-    if (!region || !textOf(region.title) || !textOf(region.observation)) return { regionFailed: true };
+    if (!region || !textOf(region.title) || !textOf(region.question) || !textOf(region.observation)) {
+      return { regionFailed: true };
+    }
     return { region };
   }
   if (slice.kind === "avenues") {

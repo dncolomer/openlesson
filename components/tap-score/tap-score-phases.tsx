@@ -722,7 +722,9 @@ export function TapScorePhases(props: {
             message={
               isPracticeMode
                 ? t("tap.practice.saving")
-                : t("tap.postSession.savingAndReturning")
+                : sidebarMode === "verification-tap"
+                  ? t("tap.postSession.scoring")
+                  : t("tap.postSession.savingAndReturning")
             }
           />
         )}
@@ -765,20 +767,30 @@ export function TapScorePhases(props: {
             }
           />
         ) : phase === "results" ? (
-          privateToken || localOpening ? (
+          privateToken || localOpening || sidebarMode === "verification-tap" ? (
             <SessionFinishedScreen
               data-tap-session-thank-you=""
               kicker={sidebarMode === "verification-tap" ? FLOW_END_KICKERS.verify : undefined}
               title={t("tap.postSession.thankYouTitle")}
               body={t("tap.postSession.thankYouBody")}
               actions={
-                <a
-                  href="/"
-                  data-tap-explore-uncertain-systems
-                  className="inline-flex items-center justify-center rounded-none bg-white px-5 py-2.5 text-sm font-medium text-black transition hover:bg-neutral-200"
-                >
-                  {t("tap.postSession.exploreUncertainSystems")}
-                </a>
+                sidebarMode === "verification-tap" && workspaceId && !privateToken && !localOpening ? (
+                  <a
+                    href={`/workspace/${workspaceId}`}
+                    data-tap-back-workspace
+                    className="inline-flex items-center justify-center rounded-none bg-white px-5 py-2.5 text-sm font-medium text-black transition hover:bg-neutral-200"
+                  >
+                    {t("tap.postSession.backToWorkspace")}
+                  </a>
+                ) : (
+                  <a
+                    href="/"
+                    data-tap-explore-uncertain-systems
+                    className="inline-flex items-center justify-center rounded-none bg-white px-5 py-2.5 text-sm font-medium text-black transition hover:bg-neutral-200"
+                  >
+                    {t("tap.postSession.exploreUncertainSystems")}
+                  </a>
+                )
               }
             >
               <SessionPolicyScoreResult score={policyScore} />

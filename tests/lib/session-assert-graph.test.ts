@@ -23,6 +23,7 @@ function branch(
   partial: Pick<SessionBranch, "id" | "parentId" | "title" | "depth"> & Partial<SessionBranch>,
 ): SessionBranch {
   return {
+    question: `What still has to hold about ${partial.title}?`,
     territory: `${partial.title} territory`,
     observation: `${partial.title} is on the board.`,
     status: "open",

@@ -191,15 +191,6 @@ export function normalizeScoutQuestions(
     if (out.length >= need) break;
   }
 
-  let pad = 1;
-  while (out.length < need) {
-    const fallback = `What pulls next (${pad})?`;
-    if (!seen.has(fallback.toLowerCase())) {
-      out.push(fallback);
-      seen.add(fallback.toLowerCase());
-    }
-    pad += 1;
-  }
   return out.slice(0, need);
 }
 

@@ -29,6 +29,7 @@ import {
 function fieldDraft(): SessionBranchDraft {
   const regions = Array.from({ length: 6 }, (_, regionIndex) => ({
     title: `Region ${regionIndex + 1} of the argument`,
+    question: `What must still hold in region ${regionIndex + 1} of the argument?`,
     territory: `Territory ${regionIndex + 1} stays distinct from the others.`,
     observation: `Region ${regionIndex + 1} is open on the board.`,
     closePrice: 30 + regionIndex,
@@ -45,6 +46,7 @@ function fieldDraft(): SessionBranchDraft {
     insightObservation: `The insight is not in region ${regionIndex + 1} yet.`,
     avenues: Array.from({ length: 4 }, (_, avenueIndex) => ({
       title: `Avenue ${regionIndex + 1}.${avenueIndex + 1}`,
+      question: `What would go wrong on avenue ${regionIndex + 1}.${avenueIndex + 1}?`,
       territory: `Avenue ${regionIndex + 1}.${avenueIndex + 1} diverges.`,
       observation: `Avenue ${regionIndex + 1}.${avenueIndex + 1} is still ahead.`,
       closePrice: 22,
@@ -61,6 +63,7 @@ function fieldDraft(): SessionBranchDraft {
       insightObservation: `Insight does not belong on avenue ${regionIndex + 1}.${avenueIndex + 1}.`,
       inquiries: Array.from({ length: 3 }, (_, inquiryIndex) => ({
         title: `Inquiry ${regionIndex + 1}.${avenueIndex + 1}.${inquiryIndex + 1}`,
+        question: `What would you check at inquiry ${regionIndex + 1}.${avenueIndex + 1}.${inquiryIndex + 1}?`,
         territory: `Inquiry ${regionIndex + 1}.${avenueIndex + 1}.${inquiryIndex + 1} goes further.`,
         observation: `Inquiry ${regionIndex + 1}.${avenueIndex + 1}.${inquiryIndex + 1} is still ahead.`,
         closePrice: 11,
@@ -349,15 +352,17 @@ describe("session branch model", () => {
     expect(prompt).toContain("3 inquiries");
     expect(prompt).toContain("not a short quiz");
     expect(prompt).toContain("three-step maze");
+    expect(prompt).toContain("genuine question");
+    expect(prompt).toContain("Never wrap the title");
     expect(SESSION_BRANCH_ACCEPT_COUNT).toBeGreaterThan(31);
   });
 
   it("assembles a staged reply into one field", () => {
     const draft = assembleSessionBranchDraft({
       root: { premise: "A war can be wrong even when the cause is serious." },
-      regions: [{ title: "Just cause", territory: "The injury has to be named.", observation: "The cause is the first region." }],
-      avenues: [{ region: 1, title: "Civilian harm", territory: "Harm is one avenue.", observation: "Harm is still ahead." }],
-      inquiries: [{ region: 1, avenue: 1, title: "Who counts", territory: "The count goes further.", observation: "The count is still ahead." }],
+      regions: [{ title: "Just cause", question: "What injury has to be named?", territory: "The injury has to be named.", observation: "The cause is the first region." }],
+      avenues: [{ region: 1, title: "Civilian harm", question: "Who is harmed, and how?", territory: "Harm is one avenue.", observation: "Harm is still ahead." }],
+      inquiries: [{ region: 1, avenue: 1, title: "Who counts", question: "Who counts as a civilian here?", territory: "The count goes further.", observation: "The count is still ahead." }],
     });
     const model = normalizeSessionBranchModel(draft, "Just war");
     expect(model?.branches.map((branch) => branch.id)).toEqual(["root", "r1", "r1-a1", "r1-a1-q1"]);

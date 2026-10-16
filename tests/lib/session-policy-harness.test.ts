@@ -236,7 +236,7 @@ describe("policy score against the prepared tree", () => {
     expect(near.sequence).not.toEqual(far.sequence);
   });
 
-  it("shows distance, steps, and excess on the time-ended results pages", () => {
+  it("shows distance, steps, and excess on the Verify results pages", () => {
     expect(policyScoreFromSnapshot(null)).toBeNull();
     expect(policyScoreFromSnapshot({ model: null, sequence: ["try"] })).toBeNull();
     const scored = scorePolicySequence(model, higher);
@@ -248,6 +248,7 @@ describe("policy score against the prepared tree", () => {
       }),
     );
     expect(html).toContain('data-session-policy-score=""');
+    expect(html).toContain("mx-auto");
     expect(html).toContain('data-session-policy-distance="4.17"');
     expect(html).toContain('data-session-policy-steps="3"');
     expect(html).toContain('data-session-policy-excess="12.5"');
@@ -267,6 +268,8 @@ describe("policy score against the prepared tree", () => {
     expect(thankYou).toContain("thankYouTitle");
     expect(thankYou).toContain("thankYouBody");
     expect(thankYou).toContain("data-tap-explore-uncertain-systems");
+    expect(thankYou).toContain("data-tap-back-workspace");
+    expect(thankYou).toContain("sidebarMode === \"verification-tap\"");
     const results = tap.slice(tap.indexOf("tap.postSession.resultsTitle"));
     expect(results).toContain("<SessionPolicyScoreResult");
     expect(results).toContain("policyScore || performanceReport");
@@ -451,6 +454,10 @@ describe("policy score against the prepared tree", () => {
       verificationFinish.indexOf("postTutoringSessionComplete"),
     );
     expect(verificationFinish).toContain('flowKind: "verify"');
+    expect(verificationFinish).toContain('if (s.sidebarMode === "verification-tap") {');
+    expect(verificationFinish.indexOf('if (s.sidebarMode === "verification-tap") {')).toBeLessThan(
+      verificationFinish.indexOf("getIlePostSessionPath"),
+    );
     expect(verificationCanvas).toContain("handleCanvasPowActions");
     expect(verificationCanvas).toContain("uploadTapWorkCanvasPow");
     expect(calibrateEnd).toContain("soundingProofUploadItem");

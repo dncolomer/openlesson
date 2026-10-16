@@ -7,6 +7,8 @@
  */
 
 import {
+  extraCatalogActionIds,
+  extraCatalogPriceKey,
   normalizeSessionBranchModel,
   SESSION_BRANCH_ACCEPT_COUNT,
   SESSION_BRANCH_AVENUE_COUNT,
@@ -16,13 +18,14 @@ import {
   type SessionBranchDraft,
   type SessionBranchModel,
 } from "@/lib/session-branch-model";
+import { parseLearningModelSize, type LearningModelSize } from "@/lib/learning-model";
 import { callXai, systemMessage, userMessage, type JsonSchema } from "@/lib/xai-client";
 
 export type SessionBranchGenerateResult =
   | { ok: true; model: SessionBranchModel }
   | { ok: false; error: string };
 
-const NODE_KEYS = [
+const STORED_NODE_KEYS = [
   "title",
   "territory",
   "observation",
@@ -40,24 +43,43 @@ const NODE_KEYS = [
   "insightObservation",
 ] as const;
 
-const SYSTEM = [
-  "You write one slice of a session field as JSON.",
-  "Every title is a short phrase. Every territory, observation, leads line, and action observation is one or two complete sentences about this chapter.",
-  "Prices are numbers from 0 to 100. A lower price is the better next policy on that node.",
-  "Close is cheap when the observation would settle the node. Keep is cheap when a further observation is still needed. Discard is cheap on a dead end. Insight is expensive until the territory is settled.",
-  "No headings, no bullets, no product names.",
-].join(" ");
+function nodeKeysForCatalog(size: LearningModelSize): string[] {
+  return [
+    ...STORED_NODE_KEYS,
+    ...extraCatalogActionIds(size).map((id) => extraCatalogPriceKey(id)),
+  ];
+}
 
-function nodeProperties(extra: Record<string, unknown> = {}): Record<string, unknown> {
+function systemForCatalog(size: LearningModelSize): string {
+  const extra = extraCatalogActionIds(size);
+  const extraLine = extra.length
+    ? `Also set ${extra.map((id) => extraCatalogPriceKey(id)).join(", ")} from 0 to 100. Those are the extra catalog actions on this ${size}-action generative model.`
+    : "";
+  return [
+    "You write one slice of a session field as JSON.",
+    "Every title is a short phrase. Every territory, observation, leads line, and action observation is one or two complete sentences about this chapter.",
+    "Prices are numbers from 0 to 100. A lower price is the better next policy on that node.",
+    "Close is cheap when the observation would settle the node. Keep is cheap when a further observation is still needed. Discard is cheap on a dead end. Insight is expensive until the territory is settled.",
+    extraLine,
+    "No headings, no bullets, no product names.",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function nodeProperties(
+  size: LearningModelSize,
+  extra: Record<string, unknown> = {},
+): Record<string, unknown> {
   const properties: Record<string, unknown> = { ...extra };
-  for (const key of NODE_KEYS) {
+  for (const key of nodeKeysForCatalog(size)) {
     properties[key] = key.endsWith("Price") ? { type: "number" } : { type: "string" };
   }
   return properties;
 }
 
-function nodeRequired(extra: string[] = []): string[] {
-  return [...extra, ...NODE_KEYS];
+function nodeRequired(size: LearningModelSize, extra: string[] = []): string[] {
+  return [...extra, ...nodeKeysForCatalog(size)];
 }
 
 function objectSchema(
@@ -77,10 +99,8 @@ function objectSchema(
   };
 }
 
-const REGION_SCHEMA = objectSchema(
-  "session_branch_regions",
-  ["premise", "closePrice", "keepPrice", "discardPrice", "insightPrice", "closeLeads", "keepLeads", "discardLeads", "insightLeads", "closeObservation", "keepObservation", "discardObservation", "insightObservation", "regions"],
-  {
+function storedRootProperties(size: LearningModelSize): Record<string, unknown> {
+  const properties: Record<string, unknown> = {
     premise: { type: "string" },
     closePrice: { type: "number" },
     keepPrice: { type: "number" },
@@ -94,53 +114,92 @@ const REGION_SCHEMA = objectSchema(
     keepObservation: { type: "string" },
     discardObservation: { type: "string" },
     insightObservation: { type: "string" },
-    regions: {
+  };
+  for (const id of extraCatalogActionIds(size)) {
+    properties[extraCatalogPriceKey(id)] = { type: "number" };
+  }
+  return properties;
+}
+
+function storedRootRequired(size: LearningModelSize): string[] {
+  return [
+    "premise",
+    "closePrice",
+    "keepPrice",
+    "discardPrice",
+    "insightPrice",
+    "closeLeads",
+    "keepLeads",
+    "discardLeads",
+    "insightLeads",
+    "closeObservation",
+    "keepObservation",
+    "discardObservation",
+    "insightObservation",
+    ...extraCatalogActionIds(size).map((id) => extraCatalogPriceKey(id)),
+  ];
+}
+
+function regionSchema(size: LearningModelSize): JsonSchema {
+  return objectSchema(
+    "session_branch_regions",
+    [...storedRootRequired(size), "regions"],
+    {
+      ...storedRootProperties(size),
+      regions: {
+        type: "array",
+        items: {
+          type: "object",
+          additionalProperties: false,
+          required: nodeRequired(size),
+          properties: nodeProperties(size),
+        },
+      },
+    },
+  );
+}
+
+function avenueSchema(size: LearningModelSize): JsonSchema {
+  return objectSchema("session_branch_avenues", ["avenues"], {
+    avenues: {
       type: "array",
       items: {
         type: "object",
         additionalProperties: false,
-        required: nodeRequired(),
-        properties: nodeProperties(),
+        required: nodeRequired(size, ["region"]),
+        properties: nodeProperties(size, { region: { type: "number" } }),
       },
     },
-  },
-);
+  });
+}
 
-const AVENUE_SCHEMA = objectSchema("session_branch_avenues", ["avenues"], {
-  avenues: {
-    type: "array",
-    items: {
+function singleRegionSchema(size: LearningModelSize): JsonSchema {
+  return objectSchema("session_branch_region", ["region"], {
+    region: {
       type: "object",
       additionalProperties: false,
-      required: nodeRequired(["region"]),
-      properties: nodeProperties({ region: { type: "number" } }),
+      required: nodeRequired(size),
+      properties: nodeProperties(size),
     },
-  },
-});
+  });
+}
 
-const SINGLE_REGION_SCHEMA = objectSchema("session_branch_region", ["region"], {
-  region: {
-    type: "object",
-    additionalProperties: false,
-    required: nodeRequired(),
-    properties: nodeProperties(),
-  },
-});
-
-const INQUIRY_SCHEMA = objectSchema("session_branch_inquiries", ["inquiries"], {
-  inquiries: {
-    type: "array",
-    items: {
-      type: "object",
-      additionalProperties: false,
-      required: nodeRequired(["region", "avenue"]),
-      properties: nodeProperties({
-        region: { type: "number" },
-        avenue: { type: "number" },
-      }),
+function inquirySchema(size: LearningModelSize): JsonSchema {
+  return objectSchema("session_branch_inquiries", ["inquiries"], {
+    inquiries: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: nodeRequired(size, ["region", "avenue"]),
+        properties: nodeProperties(size, {
+          region: { type: "number" },
+          avenue: { type: "number" },
+        }),
+      },
     },
-  },
-});
+  });
+}
 
 type FieldNode = Record<string, unknown>;
 
@@ -181,12 +240,13 @@ function materialBlock(input: { chapterTitle: string; chapterBrief?: string | nu
 }
 
 async function ask(
+  size: LearningModelSize,
   schema: JsonSchema,
   prompt: string,
   maxTokens: number,
 ): Promise<{ ok: true; data: FieldNode } | { ok: false; error: string }> {
   const response = await callXai<FieldNode>(
-    [systemMessage(SYSTEM), userMessage(prompt)],
+    [systemMessage(systemForCatalog(size)), userMessage(prompt)],
     {
       maxTokens,
       temperature: 0.3,
@@ -208,15 +268,17 @@ function listedCount(data: FieldNode): number {
 }
 
 async function askUntil(
+  size: LearningModelSize,
   schema: JsonSchema,
   prompt: string,
   maxTokens: number,
   accept: (data: FieldNode) => boolean,
 ): Promise<{ ok: true; data: FieldNode } | { ok: false; error: string }> {
-  const first = await ask(schema, prompt, maxTokens);
+  const first = await ask(size, schema, prompt, maxTokens);
   if (!first.ok) return first;
   if (accept(first.data)) return first;
   const second = await ask(
+    size,
     schema,
     `${prompt}\n\nThe last reply was too small. Write every item this request asks for. Do not stop early.`,
     maxTokens,
@@ -323,16 +385,19 @@ export function assembleSessionBranchDraft(input: {
 export async function generateSessionBranchModel(input: {
   chapterTitle: string;
   chapterBrief?: string | null;
+  catalogSize?: unknown;
 }): Promise<SessionBranchGenerateResult> {
   const chapterTitle = textOf(input.chapterTitle);
   const chapterBrief = textOf(input.chapterBrief);
+  const catalogSize = parseLearningModelSize(input.catalogSize);
   if (!chapterTitle && !chapterBrief) {
     return { ok: false, error: "A chapter is required." };
   }
   const material = { chapterTitle: chapterTitle || chapterBrief, chapterBrief };
 
   const regionsReply = await askUntil(
-    REGION_SCHEMA,
+    catalogSize,
+    regionSchema(catalogSize),
     [
       materialBlock(material),
       `Write the premise and exactly ${SESSION_BRANCH_REGION_COUNT} regions.`,
@@ -356,7 +421,8 @@ export async function generateSessionBranchModel(input: {
     const region = regions[call.regionOffset];
     const regionNumber = call.regionOffset + 1;
     const reply = await askUntil(
-      AVENUE_SCHEMA,
+      catalogSize,
+      avenueSchema(catalogSize),
       [
         materialBlock(material),
         "Region already chosen:",
@@ -404,7 +470,8 @@ export async function generateSessionBranchModel(input: {
       },
     );
     const reply = await askUntil(
-      INQUIRY_SCHEMA,
+      catalogSize,
+      inquirySchema(catalogSize),
       [
         materialBlock(material),
         "Avenues to go further into:",
@@ -443,7 +510,7 @@ export async function generateSessionBranchModel(input: {
     avenues,
     inquiries,
   });
-  const model = normalizeSessionBranchModel(draft, material.chapterTitle);
+  const model = normalizeSessionBranchModel(draft, material.chapterTitle, catalogSize);
   if (!model || model.branches.length < SESSION_BRANCH_ACCEPT_COUNT) {
     return {
       ok: false,
@@ -468,6 +535,7 @@ export type SessionBranchContinuation = {
   failed: string[];
   /** Slices that returned something. A short reply is kept and not asked again. */
   settled: string[];
+  catalogSize: LearningModelSize;
 };
 
 type ContinuationSlice =
@@ -475,8 +543,20 @@ type ContinuationSlice =
   | { kind: "avenues"; regionNumber: number }
   | { kind: "inquiries"; regionNumber: number; avenueOffset: number; avenueCount: number };
 
-export function emptySessionBranchContinuation(root: Record<string, unknown>): SessionBranchContinuation {
-  return { root, regions: [], avenues: [], inquiries: [], regionFailures: 0, failed: [], settled: [] };
+export function emptySessionBranchContinuation(
+  root: Record<string, unknown>,
+  catalogSize: unknown = 4,
+): SessionBranchContinuation {
+  return {
+    root,
+    regions: [],
+    avenues: [],
+    inquiries: [],
+    regionFailures: 0,
+    failed: [],
+    settled: [],
+    catalogSize: parseLearningModelSize(catalogSize),
+  };
 }
 
 function asContinuation(value: SessionBranchContinuation | null | undefined): SessionBranchContinuation {
@@ -488,6 +568,7 @@ function asContinuation(value: SessionBranchContinuation | null | undefined): Se
     regionFailures: Math.max(0, Number(value?.regionFailures) || 0),
     failed: Array.isArray(value?.failed) ? value.failed.filter((item) => typeof item === "string") : [],
     settled: Array.isArray(value?.settled) ? value.settled.filter((item) => typeof item === "string") : [],
+    catalogSize: parseLearningModelSize(value?.catalogSize),
   };
 }
 
@@ -548,24 +629,28 @@ function modelFromContinuation(
       inquiries: continuation.inquiries,
     }),
     chapterTitle,
+    continuation.catalogSize,
   );
 }
 
 export async function generateSessionBranchOpening(input: {
   chapterTitle: string;
   chapterBrief?: string | null;
+  catalogSize?: unknown;
 }): Promise<
   | { ok: true; model: SessionBranchModel; continuation: SessionBranchContinuation }
   | { ok: false; error: string }
 > {
   const chapterTitle = textOf(input.chapterTitle);
   const chapterBrief = textOf(input.chapterBrief);
+  const catalogSize = parseLearningModelSize(input.catalogSize);
   if (!chapterTitle && !chapterBrief) {
     return { ok: false, error: "A chapter is required." };
   }
   const material = { chapterTitle: chapterTitle || chapterBrief, chapterBrief };
   const reply = await ask(
-    REGION_SCHEMA,
+    catalogSize,
+    regionSchema(catalogSize),
     [
       materialBlock(material),
       "Write the premise and exactly 1 region.",
@@ -580,7 +665,7 @@ export async function generateSessionBranchOpening(input: {
     return { ok: false, error: "The field came back too small to work in." };
   }
   const continuation = asContinuation({
-    ...emptySessionBranchContinuation(reply.data),
+    ...emptySessionBranchContinuation(reply.data, catalogSize),
     regions,
   });
   const model = modelFromContinuation(continuation, material.chapterTitle);
@@ -603,12 +688,14 @@ async function writeContinuationSlice(
   material: { chapterTitle: string; chapterBrief?: string | null },
 ): Promise<SliceDelta> {
   const next = asContinuation(continuation);
+  const catalogSize = next.catalogSize;
   if (slice.kind === "region") {
     const chosen = next.regions
       .map((region, index) => `${index + 1}. ${textOf(region.title)} — ${textOf(region.territory)}`)
       .join("\n");
     const reply = await ask(
-      SINGLE_REGION_SCHEMA,
+      catalogSize,
+      singleRegionSchema(catalogSize),
       [
         materialBlock(material),
         chosen ? `Regions already chosen:\n${chosen}` : "",
@@ -627,7 +714,8 @@ async function writeContinuationSlice(
   if (slice.kind === "avenues") {
     const region = next.regions[slice.regionNumber - 1];
     const reply = await ask(
-      AVENUE_SCHEMA,
+      catalogSize,
+      avenueSchema(catalogSize),
       [
         materialBlock(material),
         "Region already chosen:",
@@ -662,7 +750,8 @@ async function writeContinuationSlice(
     };
   });
   const reply = await ask(
-    INQUIRY_SCHEMA,
+    catalogSize,
+    inquirySchema(catalogSize),
     [
       materialBlock(material),
       "Avenues to go further into:",
@@ -689,6 +778,7 @@ async function writeContinuationSlice(
 export async function continueSessionBranchModel(input: {
   chapterTitle: string;
   chapterBrief?: string | null;
+  catalogSize?: unknown;
   continuation: SessionBranchContinuation;
 }): Promise<
   | { ok: true; model: SessionBranchModel; continuation: SessionBranchContinuation; done: boolean }
@@ -698,7 +788,10 @@ export async function continueSessionBranchModel(input: {
   const chapterBrief = textOf(input.chapterBrief);
   if (!chapterTitle && !chapterBrief) return { ok: false, error: "A chapter is required." };
   const material = { chapterTitle: chapterTitle || chapterBrief, chapterBrief };
-  let continuation = asContinuation(input.continuation);
+  let continuation = asContinuation({
+    ...input.continuation,
+    catalogSize: input.catalogSize ?? input.continuation.catalogSize,
+  });
   const slices = nextSessionBranchSlices(continuation);
   if (!slices.length) {
     const model = modelFromContinuation(continuation, material.chapterTitle);

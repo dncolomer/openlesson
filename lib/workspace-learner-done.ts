@@ -194,13 +194,13 @@ export function recommendLearnerDone(
     return {
       recommendation: "not_ok",
       rationale:
-        "No proof-of-work found for this block yet. You can still use Mark Done anyway — Generator and unlocks still run.",
+        "No proof-of-work found for this block yet. You can still Mark as Done — Generator and unlocks still run.",
     };
   }
   if (score != null && score < 40) {
     return {
       recommendation: "not_ok",
-      rationale: `Latest practice signal is low (${Math.round(score)}). More Explore/Drill may help — or mark Done anyway.`,
+      rationale: `Latest practice signal is low (${Math.round(score)}). More Explore/Drill may help — or Mark as Done.`,
     };
   }
   if (count >= 1 && (score == null || score >= 40)) {

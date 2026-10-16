@@ -33,8 +33,8 @@ const MUSE_BANDS = [
   { key: "gamma", label: "γ" },
 ] as const;
 
-/** Room left above the transcript strip that sits on the audio tab. */
-const AUDIO_OVERLAY_PX = 56;
+/** Room left under the peak readout. The transcript overlay is retired. */
+const AUDIO_OVERLAY_PX = 12;
 
 function museConsoleWord(status: string, device: DeviceStatus | null): string {
   if (status === "connecting") return "SYNC";
@@ -98,9 +98,7 @@ function Standby({
   return (
     <div
       data-session-data-standby={tab}
-      className={`absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 bg-black ${
-        tab === "audio" ? "pb-14" : ""
-      }`}
+      className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 bg-black"
     >
       <ConsoleGrid />
       <p className="relative font-mono text-[9px] uppercase tracking-[0.32em] text-neutral-500">
@@ -152,7 +150,7 @@ function AudioScope({
 }: {
   stream: MediaStream | null;
   active: boolean;
-  /** Pixels kept clear at the bottom. The Data card leaves room for its transcript strip. */
+  /** Pixels kept clear at the bottom for the peak readout. */
   reserveBottom?: number;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);

@@ -18,7 +18,7 @@ function useNarrowViewport(enabled: boolean): boolean {
 }
 
 /**
- * Canvas-first live surface for Prepare, Drill, conversational TAP, and
+ * Canvas-first live surface for Calibrate, Drill, conversational TAP, and
  * verification TAP. The stage is the main column. Session chrome sits in the
  * same right sidebar Learn already mounts.
  */

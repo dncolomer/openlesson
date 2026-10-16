@@ -4,6 +4,7 @@ import { useState } from "react";
 import { IleInsightTrophyIcon } from "@/components/session-view/ile-insight-trophies";
 import { SessionFinishedScreen } from "@/components/session-view/session-finished-screen";
 import type { InsightSummary } from "@/lib/insights";
+import { FLOW_END_KICKERS } from "@/lib/session-stage-progress";
 
 /** Accepted Learn insight. Leaving this screen ends the session at the workspace. */
 export function IleInsightKeptScreen({
@@ -18,7 +19,7 @@ export function IleInsightKeptScreen({
     <SessionFinishedScreen
       overlay
       data-ile-insight-kept=""
-      kicker="Insight kept"
+      kicker={FLOW_END_KICKERS.learn}
       title={insight.title}
       body={insight.summary}
       actions={

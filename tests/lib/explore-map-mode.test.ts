@@ -132,7 +132,7 @@ describe("one workspace surface", () => {
         learnerMode: false,
         practiceMenu: true,
       }),
-    ).toBe("workspace-learner");
+    ).toBe("none");
     expect(
       resolveBlockCircularMenuSurface({ learnerMode: false }),
     ).toBe("none");
@@ -254,7 +254,7 @@ describe("Explore mode wiring", () => {
     expect(view).toContain("workspaceShell(");
     expect(view).not.toContain("resolveFixedWorkspaceInteractionMode");
     expect(view).toContain("idleExplore={idleExplore}");
-    expect(read("components/SessionList.tsx")).toContain(
+    expect(read("components/SessionList.tsx")).not.toContain(
       "resolveBlockCircularMenuSurface",
     );
     expect(stack).not.toContain("data-workspace-mode-under-minimap");

@@ -76,10 +76,30 @@ export const AGENT_TOOL_SURFACE = [
     },
   },
   {
+    name: "list_flow_embeddings",
+    scope: "workspaces:read",
+    summary:
+      "List Calibrate, Learn, and Verify embeddings for a workspace (flowcfg-v1-d96). Each record includes the vector plus the recoverable raw gen model, projected policy when the flow produced one, and proof of work. These runs are not embedded via lwm_snapshot.",
+    rest: {
+      method: "GET",
+      path: `${POW_API_BASE}/workspaces/{workspace_id}/flow-embeddings`,
+    },
+  },
+  {
+    name: "get_flow_embedding",
+    scope: "workspaces:read",
+    summary:
+      "Recover one Calibrate, Learn, or Verify embedding by id, including the raw payload used to embed. Re-embed the raw to map gen model, projected policy, and PoW. REST: GET .../flow-embeddings?id=",
+    rest: {
+      method: "GET",
+      path: `${POW_API_BASE}/workspaces/{workspace_id}/flow-embeddings`,
+    },
+  },
+  {
     name: "lwm_snapshot",
     scope: "workspaces:read",
     summary:
-      "LWM Snapshot (Learning World Model Snapshot) score (0–100) + GHC + spider markers, analysis, next actions. REST: POST .../lwm-snapshot. Sole product snapshot strategy; run via Knowledge UI or this Snapshot API/MCP tool (not auto on TAP/TAP Learning end).",
+      "LWM Snapshot (Learning World Model Snapshot) score (0–100) + GHC + spider markers, analysis, next actions. REST: POST .../lwm-snapshot. Knowledge UI / TAPBench snapshot strategy (not auto on TAP/TAP Learning end). Calibrate, Learn, and Verify persist flow embeddings via list_flow_embeddings / get_flow_embedding instead of this snapshot.",
     rest: {
       method: "POST",
       path: `${SNAPSHOT_API_BASE}/workspaces/{workspace_id}/lwm-snapshot`,

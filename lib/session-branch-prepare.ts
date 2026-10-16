@@ -5,6 +5,7 @@
  */
 
 import { ileBlockSessionFrame } from "@/lib/ile-canvas-session";
+import { parseLearningModelSize, type LearningModelSize } from "@/lib/learning-model";
 
 export type SessionBranchPrepareInput = {
   enabled?: boolean;
@@ -22,6 +23,8 @@ export type SessionBranchPrepareInput = {
   entryQueryParams?: Record<string, string | string[]> | null;
   /** Client-only. A new chapter refetches even when the title text matches. */
   scope?: string | null;
+  /** 4, 8, or 16 — the catalog this run prepares. */
+  catalogSize?: LearningModelSize | number | null;
 };
 
 export type SessionBranchPreparePlan =
@@ -32,12 +35,14 @@ export type SessionBranchPreparePlan =
       token: string;
       chapterTitle: string;
       chapterBrief: string;
+      catalogSize: LearningModelSize;
     }
   | {
       kind: "verification";
       token: string;
       chapterTitle: string;
       chapterBrief: string;
+      catalogSize: LearningModelSize;
     }
   | {
       kind: "learn";
@@ -46,6 +51,7 @@ export type SessionBranchPreparePlan =
       ayclToken: string;
       chapterTitle: string;
       chapterBrief: string;
+      catalogSize: LearningModelSize;
     }
   | {
       kind: "workspace";
@@ -57,6 +63,7 @@ export type SessionBranchPreparePlan =
       entryQueryParams: Record<string, string | string[]>;
       chapterTitle: string;
       chapterBrief: string;
+      catalogSize: LearningModelSize;
     };
 
 function text(value: unknown): string {
@@ -93,7 +100,8 @@ export function planSessionBranchPrepare(
   const privateToken = text(input.privateToken);
   const calibrationToken = text(input.calibrationToken);
   const verificationToken = text(input.verificationToken);
-  const material = { chapterTitle, chapterBrief };
+  const catalogSize = parseLearningModelSize(input.catalogSize);
+  const material = { chapterTitle, chapterBrief, catalogSize };
 
   // A real workspace or guest link wins over a flow token.
   // A public flow has no workspace. Its local canvas id is not a TAP session row.
@@ -147,6 +155,7 @@ export function sessionBranchPrepareRequest(
   const body: Record<string, unknown> = {
     chapterTitle: plan.chapterTitle,
     chapterBrief: plan.chapterBrief,
+    catalogSize: plan.catalogSize,
   };
   if (plan.kind === "calibration") body.calibrationToken = plan.token;
   else if (plan.kind === "verification") body.verificationToken = plan.token;
@@ -188,6 +197,7 @@ export function learnSessionFieldInput(input: {
   ileToken?: string | null;
   ayclToken?: string | null;
   fallbackTitle?: string | null;
+  catalogSize?: unknown;
 }): SessionBranchPrepareInput | null {
   const sessionId = text(input.sessionId);
   const frame = ileBlockSessionFrame(input.plan);
@@ -205,6 +215,7 @@ export function learnSessionFieldInput(input: {
     chapterBrief: uniqueLines([problem, description, prompt]).join("\n\n"),
     ileToken: text(input.ileToken),
     ayclToken: text(input.ayclToken),
+    catalogSize: parseLearningModelSize(input.catalogSize),
     scope: text(step?.id) || frame.id,
   };
 }
@@ -221,6 +232,7 @@ export function calibrateFieldPrepareInput(input: {
   privateToken?: string | null;
   calibrationToken?: string | null;
   entryQueryParams?: Record<string, string | string[]> | null;
+  catalogSize?: unknown;
 }): SessionBranchPrepareInput {
   const chapterTitle = text(input.topicText) || "This topic";
   return {
@@ -237,6 +249,7 @@ export function calibrateFieldPrepareInput(input: {
     privateToken: input.privateToken,
     calibrationToken: input.calibrationToken,
     entryQueryParams: input.entryQueryParams,
+    catalogSize: parseLearningModelSize(input.catalogSize),
     scope: text(input.topicId) || "topic",
   };
 }
@@ -253,6 +266,7 @@ export function verificationFieldPrepareInput(input: {
   privateToken?: string | null;
   verificationToken?: string | null;
   entryQueryParams?: Record<string, string | string[]> | null;
+  catalogSize?: unknown;
 }): SessionBranchPrepareInput {
   const topicId = text(input.topicId);
   const topic = (input.topics ?? []).find((row) => text(row?.id) === topicId);
@@ -268,6 +282,7 @@ export function verificationFieldPrepareInput(input: {
     privateToken: input.privateToken,
     verificationToken: input.verificationToken,
     entryQueryParams: input.entryQueryParams,
+    catalogSize: parseLearningModelSize(input.catalogSize),
     scope: topicId || "topic",
   };
 }

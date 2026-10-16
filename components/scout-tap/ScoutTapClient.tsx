@@ -43,6 +43,8 @@ import {
   WORKSPACE_LEARNER_LAUNCH_PATH,
 } from "@/lib/workspace-learner-writes";
 import { uploadTapWorkCanvasPow } from "@/lib/tap-work-canvas";
+import { postWorkspaceFlowEmbedding } from "@/lib/flow-embedding-client";
+import { parseLearningModelSize } from "@/lib/learning-model";
 import {
   createCalibrateState,
   normalizeCalibrateQuestions,
@@ -56,6 +58,7 @@ import {
   createSoundingTree,
   finishSounding,
   soundingCompleteTranscript,
+  soundingProofMetadata,
   soundingProofUploadItem,
   soundingStillsFromBranchModel,
   soundingTreeIsTravelable,
@@ -183,6 +186,7 @@ export function ScoutTapClient({
   const [practiceOptions, setPracticeOptions] = useState<BlockPracticeOptions>(
     parseBlockPracticeOptions(null),
   );
+  const [catalogSize, setCatalogSize] = useState<4 | 8 | 16>(4);
 
   const [seedText, setSeedText] = useState("Topic");
   const seedTextRef = useRef(seedText);
@@ -262,6 +266,23 @@ export function ScoutTapClient({
     };
   }, [blockId]);
 
+  useEffect(() => {
+    const id = (workspaceId || "").trim();
+    if (!id) return;
+    let cancelled = false;
+    void createClient()
+      .from("workspaces")
+      .select("learning_model_size")
+      .eq("id", id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled && data) setCatalogSize(parseLearningModelSize(data.learning_model_size));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceId]);
+
   const persistSounding = useCallback(async () => {
     const live = soundingRef.current;
     if (!live) return;
@@ -274,7 +295,33 @@ export function ScoutTapClient({
       entryQueryParams: entryQueryParamsRef.current,
       item: soundingProofUploadItem(live),
     });
-  }, [blockId, privateToken, sessionId, workspaceId]);
+    if (workspaceId) {
+      const metadata = soundingProofMetadata(live);
+      await postWorkspaceFlowEmbedding({
+        workspaceId,
+        flowKind: "calibrate",
+        runId: tapSessionIdRef.current || sessionId || null,
+        source: "sounding",
+        model: live.model,
+        catalogSize: live.model?.catalogSize ?? catalogSize,
+        sequence: null,
+        pow: [
+          {
+            type: "tool",
+            tool_name: "probe",
+            tool_action: "sounding",
+            timestamp_ms: 1,
+            payload: JSON.stringify(metadata),
+            metadata,
+          },
+        ],
+        sessionId,
+        privateToken,
+        tapSessionId: tapSessionIdRef.current,
+        entryQueryParams: entryQueryParamsRef.current,
+      });
+    }
+  }, [blockId, catalogSize, privateToken, sessionId, workspaceId]);
 
   const loadPool = useCallback(async (title: string, description: string) => {
     questionsAbortRef.current?.abort();
@@ -363,6 +410,7 @@ export function ScoutTapClient({
         blockId,
         privateToken,
         entryQueryParams: entryQueryParamsRef.current,
+        catalogSize,
       });
       const field = await loadSessionBranchField(fieldInput);
       if (!sessionClockMayStart({ mode: "calibrate", fieldReady: field.ok })) {
@@ -531,6 +579,7 @@ export function ScoutTapClient({
         blockId,
         privateToken,
         entryQueryParams: entryQueryParamsRef.current,
+        catalogSize,
       }),
       stillText: live.proof.stillText,
       transcript,

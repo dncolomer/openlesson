@@ -527,14 +527,22 @@ describe("sounding wiring contract", () => {
     expect(engine).toContain("expert-proof");
     expect(surface).toContain("data-sounding-proof");
     expect(surface).toContain("data-sounding-progress");
-    expect(surface).toContain('kind="sounding"');
+    expect(surface).not.toContain("SessionBranchFieldMap");
+    expect(surface).not.toContain("SessionStageProgress");
+    expect(surface).toContain("usePublishSessionFieldReveal");
+    expect(readFileSync(join(ROOT, "components/session-view/session-harness-panel.tsx"), "utf8")).toContain(
+      "SessionBranchFieldMap",
+    );
+    expect(surface).not.toContain('kind="sounding"');
     expect(surface).not.toContain("WorkCanvas");
     expect(surface).not.toContain("zoom-finer");
     expect(phases).toContain("bgImage={bgImage}");
     expect(phases).toContain('variant="prepare"');
     expect(phases).toContain("data-calibrate-voice-challenge");
-    expect(phases).toContain("SoundingFinishedStage");
-    expect(runner).toContain("SoundingFinishedStage");
+    expect(phases).toContain("<SessionWorkSurface");
+    expect(phases).not.toContain("SoundingFinishedStage");
+    expect(runner).toContain("<SessionWorkSurface");
+    expect(runner).not.toContain("SoundingFinishedStage");
     expect(client).toContain("SOUNDING_POOL_COUNT");
     expect(client).toContain("absorbSoundingStills");
     expect(client).toContain("soundingTreeIsTravelable");

@@ -2,7 +2,7 @@
  * Calibration authoring stays beside verification flows.
  * Context and goal generation are injected. Verification start still returns one question.
  */
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -220,9 +220,10 @@ describe("calibration authoring", () => {
     expect(runner).toContain("data-calibration-live-clock");
     expect(panel).toContain("data-calibration-flow-minutes");
     expect(read("components/VerificationFlowsPanel.tsx")).toContain("data-verification-flow-minutes");
-    expect(read("components/calibrate/calibrate-live-surface.tsx")).toContain("fitOpenBoard");
-    expect(read("components/ExcalidrawCanvas.tsx")).toContain("restoreCalibrateChrome");
-    expect(read("components/calibrate/calibrate-live-surface.tsx")).not.toContain("data-calibrate-opening");
+    expect(existsSync(join(ROOT, "components/calibrate/calibrate-live-surface.tsx"))).toBe(false);
+    expect(read("components/calibrate/calibrate-sounding-surface.tsx")).toContain("data-calibrate-sounding");
+    expect(read("components/ExcalidrawCanvas.tsx")).not.toContain("restoreCalibrateChrome");
+    expect(read("components/ExcalidrawCanvas.tsx")).not.toContain("fitOpenBoard");
     expect(read("lib/calibrate-session.ts")).toContain("CALIBRATE_ANSWER_WELL_LABEL");
     expect(read("lib/calibrate-session.ts")).toContain("CALIBRATE_EXPLAIN_WELL_LABEL");
     expect(read("lib/calibrate-session.ts")).toContain("CALIBRATE_OPENING_INSTRUCTION");

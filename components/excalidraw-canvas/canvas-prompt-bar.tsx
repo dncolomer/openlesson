@@ -37,43 +37,13 @@ import {
   useSessionPolicySuggestion,
 } from "@/components/session-view/session-policy-context";
 import type { SessionMarkMode } from "@/lib/session-marks";
-import { AccelerandoMark } from "@/components/AccelerandoGlyphs";
-
-const ILE_CANVAS_COMMAND_BUTTON_CLASS =
-  "pointer-events-auto relative flex h-full flex-col min-w-0 items-center justify-center gap-1 whitespace-normal rounded-none border border-white/45 bg-black px-1.5 pb-1.5 pt-3 text-center font-mono text-[11px] leading-tight text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] hover:border-white hover:bg-neutral-950 disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-950 disabled:text-neutral-600 disabled:opacity-100 disabled:shadow-none disabled:hover:border-neutral-800 disabled:hover:bg-neutral-950 disabled:hover:text-neutral-600";
-
-const ILE_CANVAS_COMMAND_RAIL_CLASS =
-  "pointer-events-auto relative flex min-h-9 w-full min-w-0 flex-row items-center justify-start gap-1.5 whitespace-nowrap rounded-none border border-white/45 bg-black px-1.5 py-2 text-left font-mono text-[11px] leading-tight text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] hover:border-white hover:bg-neutral-950 disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-950 disabled:text-neutral-600 disabled:opacity-100 disabled:shadow-none disabled:hover:border-neutral-800 disabled:hover:bg-neutral-950 disabled:hover:text-neutral-600";
-
-function commandIndex(id: IleWorkCanvasCommandId): string {
-  const at = ILE_WORK_CANVAS_COMMANDS.findIndex((command) => command.id === id);
-  return String(at + 1).padStart(2, "0");
-}
-
-/** Corner ticks, a stencil number, and a lamp. They follow the button color, including the dim disabled state. */
-function CommandPlate({ index }: { index: string }) {
-  const tick = "pointer-events-none absolute h-1.5 w-1.5 border-current opacity-70";
-  return (
-    <>
-      <span aria-hidden className={`${tick} left-0.5 top-0.5 border-l border-t`} />
-      <span aria-hidden className={`${tick} right-0.5 top-0.5 border-r border-t`} />
-      <span aria-hidden className={`${tick} bottom-0.5 left-0.5 border-b border-l`} />
-      <span aria-hidden className={`${tick} bottom-0.5 right-0.5 border-b border-r`} />
-      <span
-        aria-hidden
-        data-ile-command-index={index}
-        className="absolute left-1.5 top-0.5 font-mono text-[7px] leading-none tracking-[0.14em] opacity-60"
-      >
-        {index}
-      </span>
-      <span aria-hidden className="absolute right-1.5 top-1 h-1 w-1 bg-current" />
-    </>
-  );
-}
-
-function CommandMark({ id, label }: { id: IleWorkCanvasCommandId; label: string }) {
-  return <AccelerandoMark text={label} mark={id} className="h-3.5 w-3.5" />;
-}
+import {
+  CommandMark,
+  CommandPlate,
+  ILE_CANVAS_COMMAND_BUTTON_CLASS,
+  ILE_CANVAS_COMMAND_RAIL_CLASS,
+  ileWorkCanvasCommandIndex,
+} from "@/components/excalidraw-canvas/command-plate";
 
 const DOCK_ANCHORS: readonly { mode: IleCommandDockMode; title: string }[] = [
   { mode: "bottom-left", title: "Anchor at the bottom left" },
@@ -398,7 +368,7 @@ export function CanvasPromptBar({
                         }}
                         className={rail ? ILE_CANVAS_COMMAND_RAIL_CLASS : ILE_CANVAS_COMMAND_BUTTON_CLASS}
                       >
-                        <CommandPlate index={commandIndex(command.id)} />
+                        <CommandPlate index={ileWorkCanvasCommandIndex(command.id)} />
                         <CommandMark id={command.id} label={command.label} />
                         <span>{command.label}</span>
                       </button>
@@ -431,7 +401,16 @@ export function CanvasPromptBar({
                 </div>
                 ) : null}
                 {showCraftInsight || (dictateTranscript !== undefined && !viewModeEnabled) ? (
-                <div className={rail ? "grid w-full grid-cols-1 gap-1" : "flex w-full items-stretch gap-1"}>
+                <div
+                  data-ile-board-tools
+                  className={
+                    rail
+                      ? "mt-1 grid w-full grid-cols-1 gap-1 border-t border-white/30 pt-1.5"
+                      : "mt-1 flex w-full flex-col gap-1.5 border-t border-white/30 pt-1.5"
+                  }
+                >
+                  <p className="px-0.5 font-mono text-[9px] uppercase tracking-[0.22em] text-white/45">board</p>
+                  <div className={rail ? "grid w-full grid-cols-1 gap-1" : "flex w-full items-stretch gap-1"}>
                   {showCraftInsight ? (
                     <IleCraftInsightButton
                       square={rail}
@@ -445,9 +424,11 @@ export function CanvasPromptBar({
                       transcript={dictateTranscript}
                       onLiveText={(text) => writeDictatedText(text, false)}
                       onCommit={(text) => writeDictatedText(text, true)}
+                      onAsk={() => handleQuickAction("check")}
                       onActiveChange={onDictateActive}
                     />
                   ) : null}
+                  </div>
                 </div>
                 ) : null}
               </div>

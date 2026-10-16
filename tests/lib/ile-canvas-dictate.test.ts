@@ -15,6 +15,7 @@ import { IleCanvasDictateButton } from "@/components/session-view/ile-canvas-dic
 import {
   ILE_CANVAS_DICTATE_AUTHOR,
   ILE_CANVAS_DICTATE_LABEL,
+  ILE_CANVAS_DICTATE_STOP_ASK_LABEL,
   ILE_CANVAS_DICTATE_STOP_LABEL,
   advanceIleDictateCapture,
   appendIleDictatedTextToWorkCanvas,
@@ -189,6 +190,7 @@ describe("canvas dictate button", () => {
   it("sits next to craft insight and reads the live transcript", () => {
     expect(ILE_CANVAS_DICTATE_LABEL).toBe("dictate");
     expect(ILE_CANVAS_DICTATE_STOP_LABEL).toBe("stop");
+    expect(ILE_CANVAS_DICTATE_STOP_ASK_LABEL).toBe("stop & ask");
     const idle = renderToStaticMarkup(
       createElement(IleCanvasDictateButton, {
         transcript: "",
@@ -200,6 +202,20 @@ describe("canvas dictate button", () => {
     expect(idle).toContain('aria-pressed="false"');
     expect(idle).toContain(">dictate<");
     expect(idle).not.toContain(">stop<");
+    expect(idle).not.toContain("stop & ask");
+    expect(idle).not.toContain("data-ile-canvas-dictate-stop-ask");
+    const dictate = read("components/session-view/ile-canvas-dictate-button.tsx");
+    expect(dictate).toContain("data-ile-canvas-dictate-stop");
+    expect(dictate).toContain("data-ile-canvas-dictate-stop-ask");
+    expect(dictate).toContain("ILE_CANVAS_DICTATE_STOP_ASK_LABEL");
+    expect(dictate).toContain("onAsk");
+    expect(dictate).toContain('text="Check/ask"');
+    expect(read("components/excalidraw-canvas/canvas-prompt-bar.tsx")).toContain(
+      'onAsk={() => handleQuickAction("check")}',
+    );
+    expect(read("components/session-view/session-guide-panel.tsx")).toContain(
+      'onAsk={() => bridge.run("check")}',
+    );
 
     const canvas = read("components/ExcalidrawCanvas.tsx");
     const promptAt = canvas.indexOf("data-ile-canvas-prompt-bar");
@@ -246,7 +262,7 @@ describe("canvas dictate button", () => {
     expect(html).toContain("data-ile-craft-insight");
     expect(html).toContain("data-ile-canvas-dictate");
     expect(html).toContain("data-ile-learn-more-actions");
-    for (const label of ["Simplify", "Split", "Check", "Refactor", "Declutter"]) {
+    for (const label of ["Simplify", "Split", "Check/ask", "Refactor", "Declutter"]) {
       expect(html).toContain(`>${label}<`);
     }
     for (const label of ["Rephrase", "Join", "Elaborate", "Compress", "Clear overlaps"]) {
@@ -258,10 +274,9 @@ describe("canvas dictate button", () => {
     expect(html).toContain('data-ile-command-index="01"');
     expect(html).toContain('data-ile-command-index="05"');
     expect(html).not.toContain('data-ile-command-index="08"');
-    expect(read("components/excalidraw-canvas/canvas-prompt-bar.tsx")).toContain("min-h-9");
+    expect(read("components/excalidraw-canvas/command-plate.tsx")).toContain("min-h-9");
     for (const file of [
       "components/session-view/session-chapter-canvas.tsx",
-      "components/calibrate/calibrate-live-surface.tsx",
       "components/tap-score/tap-score-phases.tsx",
     ]) {
       const source = read(file);

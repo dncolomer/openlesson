@@ -6,7 +6,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { KNOWLEDGE_CONFIG_DIM } from "@/lib/knowledge-config";
+import { FLOW_EMBEDDING_DIM, FLOW_EMBEDDING_MODEL_ID } from "@/lib/flow-embedding";
 import { resolveTapStartingTopicsFromLlm } from "@/lib/tap-score";
 import { availableWorkspaceSections } from "@/lib/workspace-sections";
 import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
@@ -51,7 +51,7 @@ function read(rel: string) {
 }
 
 function axis(index: number): number[] {
-  const vector = new Array(KNOWLEDGE_CONFIG_DIM).fill(0);
+  const vector = new Array(FLOW_EMBEDDING_DIM).fill(0);
   vector[index] = 1;
   return vector;
 }
@@ -257,7 +257,7 @@ describe("region embeddings from a verification flow and synthetic agents", () =
     expect(spec.subject_count).toBe(2);
     expect(spec.centroid[0]).toBeGreaterThan(0.99);
     expect(Math.abs(spec.centroid[1] || 0)).toBeLessThan(1e-6);
-    expect(spec.embedding_model_id).toBe("knowledgecfg-v1-d64");
+    expect(spec.embedding_model_id).toBe(FLOW_EMBEDDING_MODEL_ID);
   });
 
   it("asks xAI for proof of work with the optional modifier and builds from the returned items", async () => {
@@ -278,7 +278,7 @@ describe("region embeddings from a verification flow and synthetic agents", () =
       },
     });
     expect(generated.embeddings).toHaveLength(2);
-    expect(generated.embeddings[0]).toHaveLength(KNOWLEDGE_CONFIG_DIM);
+    expect(generated.embeddings[0]).toHaveLength(FLOW_EMBEDDING_DIM);
     expect(generated.embeddings[0]).not.toEqual(generated.embeddings[1]);
     expect(generated.embeddings[0]).not.toEqual(axis(2));
     const spec = buildRegionFromSyntheticItems({
@@ -286,8 +286,8 @@ describe("region embeddings from a verification flow and synthetic agents", () =
       items: generated.items,
     });
     expect(spec.subject_count).toBe(generated.items.length);
-    expect(spec.dim).toBe(KNOWLEDGE_CONFIG_DIM);
-    expect(spec.centroid).toHaveLength(KNOWLEDGE_CONFIG_DIM);
+    expect(spec.dim).toBe(FLOW_EMBEDDING_DIM);
+    expect(spec.centroid).toHaveLength(FLOW_EMBEDDING_DIM);
     const bogus = await generateSyntheticPowItems({
       topic: "Limits",
       promptModifier: "prefer epsilon proofs",
@@ -296,13 +296,13 @@ describe("region embeddings from a verification flow and synthetic agents", () =
       }),
     });
     expect(bogus.items[0]?.embedding).toEqual([]);
-    expect(bogus.embeddings[0]).toHaveLength(KNOWLEDGE_CONFIG_DIM);
+    expect(bogus.embeddings[0]).toHaveLength(FLOW_EMBEDDING_DIM);
     expect(bogus.embeddings[0]?.slice(0, 3)).not.toEqual([0.1, 0.2, 0.3]);
     const fromText = buildRegionFromSyntheticItems({
       name: "Epsilon",
       items: bogus.items,
     });
-    expect(fromText.dim).toBe(KNOWLEDGE_CONFIG_DIM);
+    expect(fromText.dim).toBe(FLOW_EMBEDDING_DIM);
     expect(fromText.centroid).toEqual(
       buildRegionFromSyntheticItems({
         name: "Epsilon",
@@ -314,7 +314,7 @@ describe("region embeddings from a verification flow and synthetic agents", () =
     expect(bare.asksForProofOfWork).toBe(true);
   });
 
-  it("encodes runner and skill proof text into distinct knowledgecfg vectors", () => {
+  it("encodes runner and skill proof text into distinct flowcfg vectors", () => {
     const runnerA = verificationProofEmbedding({
       prompt: "epsilon delta limit proof",
       source: "runner",
@@ -330,7 +330,7 @@ describe("region embeddings from a verification flow and synthetic agents", () =
       source: "skill",
       workspaceId: "flow-token",
     });
-    expect(runnerA).toHaveLength(KNOWLEDGE_CONFIG_DIM);
+    expect(runnerA).toHaveLength(FLOW_EMBEDDING_DIM);
     expect(runnerA).not.toEqual(runnerB);
     expect(runnerA).not.toEqual(skill);
     expect(
@@ -341,8 +341,9 @@ describe("region embeddings from a verification flow and synthetic agents", () =
       }),
     ).toEqual(runnerA);
     const route = read("app/api/verification-flow/public/[token]/results/route.ts");
-    expect(route).toContain("verificationProofEmbedding");
-    expect(route).toContain("prompt,");
+    expect(route).toContain("completeFlowEmbedding");
+    expect(route).toContain("persistCompletedFlowEmbedding");
+    expect(route).toContain("prompt");
   });
 });
 

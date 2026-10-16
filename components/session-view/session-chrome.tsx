@@ -148,7 +148,7 @@ export function SessionChrome({
   introOpen,
   introWidget,
   onCloseSessionModal,
-  voiceBar,
+  voiceBar: _voiceBar,
   actions = null,
   powCounts,
   unsubmittedPowCounts = emptyIlePowDisplayCounts(),
@@ -307,7 +307,6 @@ export function SessionChrome({
               />
             </div>
           }
-          transcript={voiceBar}
           actions={actions}
         />
 

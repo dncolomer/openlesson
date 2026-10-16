@@ -14,6 +14,7 @@ import {
 
 export const ILE_CANVAS_DICTATE_LABEL = "dictate";
 export const ILE_CANVAS_DICTATE_STOP_LABEL = "stop";
+export const ILE_CANVAS_DICTATE_STOP_ASK_LABEL = "stop & ask";
 export const ILE_CANVAS_DICTATE_AUTHOR = "dictate";
 
 export type IleDictateCapture = {

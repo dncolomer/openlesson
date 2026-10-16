@@ -953,9 +953,7 @@ export function WorkspaceLearnerBlockPane({
               ? "Working…"
               : isCompleted
                 ? "Already done"
-                : reco === "not_ok" || locked
-                  ? "Mark Done anyway"
-                  : "Mark as Done"}
+                : "Mark as Done"}
           </button>
 
           <p className="sr-only" data-workspace-id={workspaceId}>

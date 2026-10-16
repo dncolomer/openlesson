@@ -67,14 +67,12 @@ export const WORKSPACE_CIRCULAR_MENU_DRAWER_IDS = {
   mark_done: "progress",
 } as const;
 
-export function resolveBlockCircularMenuSurface(input: {
+export function resolveBlockCircularMenuSurface(_input: {
   learnerMode?: boolean | null;
   tap?: boolean | null;
-  /** Learning map keeps Calibrate / Learn / Drill without a Play mode. */
+  /** Unused: workspace maps no longer mount the occupied-block ring. */
   practiceMenu?: boolean | null;
 }): BlockCircularMenuSurface {
-  if (input.tap) return "none";
-  if (input.learnerMode || input.practiceMenu) return "workspace-learner";
   return "none";
 }
 
@@ -101,11 +99,11 @@ export function blockCircularMenuDoubleClickIsNoop(
   return surface === "workspace-learner";
 }
 
-/** Single-click opens the circular menu on TAP Learning and Workspace learner (not TAP). */
+/** Single-click opens the circular menu on TAP Learning chapter maps only. */
 export function blockCircularMenuOpensOnSelect(
   surface: BlockCircularMenuSurface | null | undefined,
 ): boolean {
-  return surface === "ile" || surface === "workspace-learner";
+  return surface === "ile";
 }
 
 /** Empty TAP Learning cells open a one-action Add chapter ring. Blocked ground does not. */
@@ -145,8 +143,8 @@ export function nextCircularMenuEmptyCellOnClick(input: {
 }
 
 /**
- * Click a selected TAP Learning/workspace-learner block again to close the menu
- * (unselect). Clicking a different block moves the menu there.
+ * Click a selected TAP Learning chapter again to close the menu (unselect).
+ * Clicking a different chapter moves the menu there. Workspace maps have no ring.
  */
 export function nextCircularMenuBlockIdOnClick(input: {
   surface?: BlockCircularMenuSurface | null;
@@ -409,8 +407,8 @@ export function filterPlannedResourcesByScope(
  * 72 puts a 40px button just outside a 92px block (inner edge at 52, block edge at 46).
  */
 export const BLOCK_CIRCULAR_MENU_RING_RADIUS_PX = 72;
-/** Drawn stroke thickness of the menu circle. Hairline, with ticks inside. */
-export const BLOCK_CIRCULAR_MENU_RING_THICKNESS_PX = 2;
+/** Drawn stroke thickness of the menu circle. Single hairline, no ticks. */
+export const BLOCK_CIRCULAR_MENU_RING_THICKNESS_PX = 1;
 /** Idle icon-button diameter. */
 export const BLOCK_CIRCULAR_MENU_ACTION_SIZE_PX = 40;
 /** Stroke thickness of each action circle. */

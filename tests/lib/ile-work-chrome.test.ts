@@ -469,7 +469,7 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     expect(chrome).not.toContain('id="insights"');
     expect(chrome).toContain('id="chapters"');
     expect(chrome).toContain('id="sensors"');
-    expect(chrome).toContain("transcript={voiceBar}");
+    expect(chrome).not.toContain("transcript={voiceBar}");
     expect(read("components/session-view/ile-voice-bar.tsx")).not.toContain("inset-x-0 bottom-0");
     expect(read("components/session-view/session-sidebar.tsx")).not.toContain(
       "data-session-sidebar-toggle",
@@ -547,8 +547,8 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     expect(docs).not.toMatch(/Data, Logs, and Save/);
 
     const sessionList = read("components/SessionList.tsx");
-    expect(sessionList).toContain("resolveBlockCircularMenuSurface");
-    expect(sessionList).toContain("practiceMenu");
+    expect(sessionList).not.toContain("resolveBlockCircularMenuSurface");
+    expect(sessionList).not.toContain("practiceMenu");
     expect(read("components/SessionView.tsx")).not.toContain('circularMenuSurface="ile"');
     expect(read("components/SessionView.tsx")).not.toContain("<ChapterMapPanel");
 

@@ -336,11 +336,10 @@ describe("TAP Learning Helios I'm done answering chrome (shipped source)", () =>
     expect(tapShell).toContain("data-tap-im-done-slot");
     expect(tapPhases).toContain("I'm done answering");
     expect(tapShell).toContain("ImDoneAnsweringControl");
-    const tapTranscriptIdx = tapPhases.indexOf("data-tap-transcript-container");
     const tapDoneIdx = tapPhases.indexOf("data-tap-im-done-slot");
     const tapMemoryIdx = tapPhases.indexOf("<ThoughtMemoryPanel");
-    expect(tapTranscriptIdx).toBeGreaterThan(-1);
-    expect(tapDoneIdx).toBeGreaterThan(tapTranscriptIdx);
+    expect(tapPhases).not.toContain("data-tap-transcript-container");
+    expect(tapDoneIdx).toBeGreaterThan(-1);
     expect(tapMemoryIdx).toBeGreaterThan(tapDoneIdx);
 
     writeScratch(

@@ -59,6 +59,7 @@ export const ACCELERANDO_ENCODINGS: Record<string, readonly number[]> = {
   "Simplify": [50, 321, 528, 1985],
   "Split": [50, 4059],
   "Check": [4383],
+  "Check/ask": [4383],
   "Refactor": [4634, 588, 267],
   "Declutter": [1923, 565, 339, 399],
   "dictate": [67, 1360, 379],

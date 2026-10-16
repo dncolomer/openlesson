@@ -6,15 +6,17 @@ import { PracticeVoiceChallenge } from "@/components/PracticeVoiceChallenge";
 import { CalibrateSoundingSurface } from "@/components/calibrate/calibrate-sounding-surface";
 import { TapBriefingConfig } from "@/components/TapBriefingConfig";
 import { SessionFinishedScreen } from "@/components/session-view/session-finished-screen";
-import {
-  SessionSoundingResult,
-  SoundingFinishedStage,
-} from "@/components/session-view/session-sounding-result";
+import { SessionGuidePanel } from "@/components/session-view/session-guide-panel";
+import { SessionSoundingResult } from "@/components/session-view/session-sounding-result";
+import { SessionWorkSurface } from "@/components/session-view/session-work-surface";
+import { SessionTopicChapter } from "@/components/session-view/ile-work-dock-bar";
+import { TapSessionSignals } from "@/components/session-view/session-signals";
 import { IleStartLoading } from "@/components/session-view/ile-start-loading";
 import { SessionPageLoading } from "@/components/session-view/session-page-loading";
 import { TapAestheticSection } from "@/components/tap-score/tap-aesthetic-section";
 import { TapLiveClock } from "@/components/tap-score/tap-live-clock";
 import { TapThoughtButton } from "@/components/tap-score/tap-thought-button";
+import { FLOW_END_KICKERS } from "@/lib/session-stage-progress";
 import { SESSION_SIDEBAR_PRIMARY_BUTTON_CLASS } from "@/lib/session-sidebar";
 import type { SpokenLocale } from "@/lib/tutoring-languages";
 import { coerceSpokenLocale } from "@/lib/tutoring-languages";
@@ -164,13 +166,17 @@ export function ScoutTapPhases(props: {
 
         {phase === "live" && sounding ? (
           <section className="flex min-h-0 flex-1 flex-col overflow-hidden" data-scout-live>
-            <CalibrateSoundingSurface
-              sounding={sounding}
-              error={error}
-              bgImage={bgImage}
-              proofBusy={proofBusy}
-              onCommitTaps={onCommitTaps}
-              onSubmitProof={onSubmitProof}
+            <SessionWorkSurface
+              mode="calibrate"
+              stage={
+                <CalibrateSoundingSurface
+                  sounding={sounding}
+                  error={error}
+                  proofBusy={proofBusy}
+                  onCommitTaps={onCommitTaps}
+                  onSubmitProof={onSubmitProof}
+                />
+              }
               clock={
                 <div
                   className="flex w-full min-w-0 flex-col gap-2 px-1 py-1"
@@ -198,6 +204,11 @@ export function ScoutTapPhases(props: {
                   </div>
                 ) : null
               }
+              chapters={
+                <SessionTopicChapter id="calibrate" keyword={workspaceTitle} image={bgImage} />
+              }
+              signals={<TapSessionSignals />}
+              focus={<SessionGuidePanel guide="calibrate" />}
             />
           </section>
         ) : null}
@@ -208,46 +219,39 @@ export function ScoutTapPhases(props: {
 
         {phase === "results" ? (
           <section
-            className="grid min-h-0 flex-1 grid-rows-[minmax(7rem,28vh)_minmax(0,1fr)] lg:grid-rows-1 lg:grid-cols-2"
+            className="flex min-h-0 flex-1 flex-col overflow-hidden"
             data-scout-thank-you=""
             data-tap-session-thank-you=""
           >
-            <TapAestheticSection
-              kind="sounding"
-              bgImage={bgImage}
-              className="min-h-[7rem] lg:order-2"
+            <ScoutSoundingFinished
+              classification={classification}
+              fallbackTitle={t("scout.thankYou.title")}
+              fallbackBody={t("scout.thankYou.body")}
+              actions={
+                <>
+                  <TapThoughtButton
+                    size="md"
+                    variant="primary"
+                    data-scout-restart
+                    onClick={restartBriefingFlow}
+                  >
+                    {t("scout.thankYou.restart")}
+                  </TapThoughtButton>
+                  <TapThoughtButton
+                    size="md"
+                    data-scout-workspace
+                    onClick={onBackWorkspace}
+                  >
+                    {t("scout.thankYou.workspace")}
+                  </TapThoughtButton>
+                  {thankYouActions.work ? (
+                    <TapThoughtButton size="md" data-scout-jump-work onClick={onJumpWork}>
+                      {t("scout.thankYou.work")}
+                    </TapThoughtButton>
+                  ) : null}
+                </>
+              }
             />
-            <SoundingFinishedStage>
-              <ScoutSoundingFinished
-                classification={classification}
-                fallbackTitle={t("scout.thankYou.title")}
-                fallbackBody={t("scout.thankYou.body")}
-                actions={
-                  <>
-                    <TapThoughtButton
-                      size="md"
-                      variant="primary"
-                      data-scout-restart
-                      onClick={restartBriefingFlow}
-                    >
-                      {t("scout.thankYou.restart")}
-                    </TapThoughtButton>
-                    <TapThoughtButton
-                      size="md"
-                      data-scout-workspace
-                      onClick={onBackWorkspace}
-                    >
-                      {t("scout.thankYou.workspace")}
-                    </TapThoughtButton>
-                    {thankYouActions.work ? (
-                      <TapThoughtButton size="md" data-scout-jump-work onClick={onJumpWork}>
-                        {t("scout.thankYou.work")}
-                      </TapThoughtButton>
-                    ) : null}
-                  </>
-                }
-              />
-            </SoundingFinishedStage>
           </section>
         ) : null}
 
@@ -281,8 +285,7 @@ function ScoutSoundingFinished({
   const presentation = soundingResultPresentation(classification);
   return (
     <SessionFinishedScreen
-      className="flex-none"
-      kicker={presentation?.kicker}
+      kicker={presentation?.kicker ?? FLOW_END_KICKERS.calibrate}
       title={presentation?.title ?? fallbackTitle}
       body={presentation?.body ?? fallbackBody}
       frameLabel={null}

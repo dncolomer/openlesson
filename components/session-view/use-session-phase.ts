@@ -38,7 +38,8 @@ import { ileWelcomeShowsRegenerate } from "@/lib/ile-welcome-chapters";
 import { applyIleSessionNameToMetadata } from "@/lib/ile-session-name";
 import { applyIleOpenWorkIdsToMetadata } from "@/lib/ile-pow-spend";
 import { textToBase64, uploadIleProofOfWork } from "@/lib/ile-proof-of-work-client";
-import { embedPolicyScore } from "@/lib/session-policy-score";
+import { postWorkspaceFlowEmbedding } from "@/lib/flow-embedding-client";
+import { FLOW_EMBEDDING_MODEL_ID } from "@/lib/flow-embedding";
 import type { SessionPolicySnapshot } from "@/components/session-view/session-policy-context";
 import { loadSessionBranchField, sessionClockMayStart } from "@/lib/session-branch-field-load";
 import { learnSessionFieldInput } from "@/lib/session-branch-prepare";
@@ -769,23 +770,46 @@ const handleConfirmEnd = async () => {
     if (snapshot?.model) {
       const workspaceId =
         typeof session.metadata?.workspace_id === "string" ? session.metadata.workspace_id : "";
-      const scored = embedPolicyScore({
-        model: snapshot.model,
-        sequence: snapshot.sequence,
-        workspaceId: workspaceId || session.id,
-      });
+      const sequence = snapshot.sequence ?? [];
       if (workspaceId) {
+        void postWorkspaceFlowEmbedding({
+          workspaceId,
+          flowKind: "learn",
+          runId: session.id,
+          source: "learn",
+          model: snapshot.model,
+          catalogSize: snapshot.model.catalogSize,
+          sequence,
+          pow: sequence.map((action, index) => ({
+            type: "tool",
+            tool_name: "session_policy",
+            tool_action: action,
+            timestamp_ms: index + 1,
+          })),
+          sessionId: session.id,
+          ileToken,
+        });
         void uploadIleProofOfWork({
           workspaceId,
           sessionId: session.id,
           ileToken,
           type: "tool",
           mime_type: "application/json",
-          data: textToBase64(scored.text),
-          file_name: "session-policy-score.json",
-          tool_name: scored.toolName,
-          tool_action: scored.toolAction,
-          metadata: scored.metadata,
+          data: textToBase64(
+            JSON.stringify({
+              flowKind: "learn",
+              catalogSize: snapshot.model.catalogSize,
+              sequence,
+            }),
+          ),
+          file_name: "session-policy.json",
+          tool_name: "session_policy",
+          tool_action: "policy_score",
+          metadata: {
+            flowKind: "learn",
+            embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
+            policy_sequence: sequence,
+          },
         });
       }
     }
@@ -994,6 +1018,7 @@ const fieldInput = learnSessionFieldInput({
   ileToken,
   ayclToken,
   fallbackTitle: t("session.chapterPromptFallback"),
+  catalogSize: session.metadata?.learning_model_size,
 });
 const storedField = learnFieldFromStoredPolicy(session.metadata, fieldInput);
 const field = storedField
@@ -1063,6 +1088,7 @@ const handleWelcomeReadyStart = useCallback(async () => {
       ileToken,
       ayclToken,
       fallbackTitle: t("session.chapterPromptFallback"),
+      catalogSize: session.metadata?.learning_model_size,
     });
     const storedField = learnFieldFromStoredPolicy(session.metadata, fieldInput);
     const field = storedField

@@ -26,7 +26,7 @@ const RAIL_GRID = {
 /**
  * Shared right rail. The first block is one static topic card.
  * The focus slot fills whatever height is left under that card and above Data.
- * Learn, Calibrate, and Verification pass their own commands and instructions
+ * Learn, Calibrate, and Verification pass their own commands, help, and harness
  * in that slot. Other modes keep session resources there when a resources
  * panel is passed.
  * Sections stack flush. The rail itself does not scroll. It does not collapse.
@@ -38,7 +38,7 @@ export function SessionSidebar({
   focusLabel = null,
   chapters = null,
   signals = null,
-  transcript = null,
+  transcript: _transcript = null,
   actions = null,
   resources = null,
   resourcesOpen,
@@ -75,7 +75,6 @@ export function SessionSidebar({
   const showFocus = sessionSidebarHasSection(mode, "focus") && focus != null;
   const showTopic = sessionSidebarHasSection(mode, "chapters") && chapters != null;
   const showSignals = sessionSidebarHasSection(mode, "signals") && signals != null;
-  const showTranscript = sessionSidebarHasSection(mode, "transcript") && transcript != null;
   const resourcesInFocus = showFocus && resources != null && mode !== "ile";
   const dataCardHeight = fillWidth ? "4.5rem" : `${SESSION_DATA_CARD_REM}rem`;
 
@@ -227,19 +226,7 @@ export function SessionSidebar({
               className="relative w-full min-w-0 overflow-hidden border border-white/25 bg-black"
             >
               {signals}
-              {showTranscript ? (
-                <div
-                  data-session-sidebar-section="transcript"
-                  className="pointer-events-auto absolute inset-x-0 bottom-0 z-20"
-                >
-                  {transcript}
-                </div>
-              ) : null}
             </div>
-          </div>
-        ) : showTranscript ? (
-          <div data-session-sidebar-section="transcript" className="shrink-0">
-            {transcript}
           </div>
         ) : null}
         {actions != null ? (

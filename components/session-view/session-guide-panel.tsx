@@ -1,59 +1,90 @@
 "use client";
 
 import { useState } from "react";
+import {
+  CommandMark,
+  CommandPlate,
+  ILE_CANVAS_COMMAND_SIDEBAR_CLASS,
+  ileWorkCanvasCommandIndex,
+} from "@/components/excalidraw-canvas/command-plate";
 import { IleCraftInsightButton } from "@/components/session-view/ile-canvas-craft-insight";
 import { IleCanvasDictateButton } from "@/components/session-view/ile-canvas-dictate-button";
+import { SessionHarnessPanel } from "@/components/session-view/session-harness-panel";
 import { useSessionCanvasCommands } from "@/components/session-view/session-command-bridge";
 import { ILE_WORK_CANVAS_COMMANDS } from "@/lib/ile-work-canvas-commands";
 import { ileCanvasCraftInsightUsable } from "@/lib/ile-turn-insights";
 import { SESSION_INSTRUCTIONS, type SessionGuideId } from "@/lib/session-instructions";
-import { AccelerandoMark } from "@/components/AccelerandoGlyphs";
 
 const TAB_CLASS =
-  "min-w-0 flex-1 rounded-none px-2 py-1 text-left font-mono text-[10px] font-semibold uppercase tracking-[0.18em]";
+  "flex min-w-0 items-center justify-center rounded-none px-1 py-1.5 text-center font-mono text-[10px] font-semibold uppercase tracking-[0.12em]";
 
-const COMMAND_CLASS =
-  "flex w-full items-center justify-between gap-2 rounded-none border border-white/40 bg-black px-2 py-1.5 text-left font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-white hover:border-white hover:bg-white hover:text-black disabled:cursor-not-allowed disabled:border-white/20 disabled:bg-black disabled:text-white/35";
+type GuideTab = "commands" | "help" | "harness";
 
 /**
  * Sidebar focus for Learn, Calibrate, and Verification.
- * Commands run on the canvas selection. Instructions stay fixed for the mode.
+ * Learn and Verification run canvas commands from this rail.
+ * Calibrate has no canvas, so this panel is Help and Harness.
  */
-export function SessionGuidePanel({ guide }: { guide: SessionGuideId }) {
-  const [tab, setTab] = useState<"commands" | "instructions">("commands");
+export function SessionGuidePanel({
+  guide,
+  remainingSeconds = 0,
+}: {
+  guide: SessionGuideId;
+  remainingSeconds?: number;
+}) {
+  const canvasCommands = guide !== "calibrate";
+  const [tab, setTab] = useState<GuideTab>(canvasCommands ? "commands" : "help");
   const bridge = useSessionCanvasCommands();
-  const commandsOpen = tab === "commands";
+  const commandsOpen = canvasCommands && tab === "commands";
+  const harnessOpen = tab === "harness";
   const text = SESSION_INSTRUCTIONS[guide];
   return (
     <div data-session-guide={guide} className="flex h-full min-h-0 flex-col overflow-hidden bg-black text-white">
-      <div role="tablist" className="flex shrink-0 border-b border-white/30 bg-black">
-        <span aria-hidden className="flex items-center pl-3 pr-1 font-mono text-[9px] tracking-[0.28em] text-white/45">
+      <div className="flex shrink-0 border-b border-white/30 bg-black">
+        <span aria-hidden className="flex shrink-0 items-center pl-2 pr-1 font-mono text-[9px] tracking-[0.28em] text-white/45">
           02
         </span>
-        <button
-          type="button"
-          role="tab"
-          data-session-guide-tab="commands"
-          aria-selected={commandsOpen}
-          onClick={() => setTab("commands")}
-          className={`${TAB_CLASS} ${commandsOpen ? "bg-white text-black" : "text-white/40 hover:text-white"}`}
+        <div
+          role="tablist"
+          className={`grid min-w-0 flex-1 ${canvasCommands ? "grid-cols-3" : "grid-cols-2"}`}
         >
-          commands
-        </button>
-        <button
-          type="button"
-          role="tab"
-          data-session-guide-tab="instructions"
-          aria-selected={!commandsOpen}
-          onClick={() => setTab("instructions")}
-          className={`${TAB_CLASS} ${commandsOpen ? "text-white/40 hover:text-white" : "bg-white text-black"}`}
-        >
-          instructions
-        </button>
+          {canvasCommands ? (
+            <button
+              type="button"
+              role="tab"
+              data-session-guide-tab="commands"
+              aria-selected={commandsOpen}
+              onClick={() => setTab("commands")}
+              className={`${TAB_CLASS} ${commandsOpen ? "bg-white text-black" : "text-white/40 hover:text-white"}`}
+            >
+              commands
+            </button>
+          ) : null}
+          <button
+            type="button"
+            role="tab"
+            data-session-guide-tab="help"
+            aria-selected={tab === "help"}
+            onClick={() => setTab("help")}
+            className={`${TAB_CLASS} ${tab === "help" ? "bg-white text-black" : "text-white/40 hover:text-white"}`}
+          >
+            help
+          </button>
+          <button
+            type="button"
+            role="tab"
+            data-session-guide-tab="harness"
+            aria-selected={harnessOpen}
+            onClick={() => setTab("harness")}
+            className={`${TAB_CLASS} ${harnessOpen ? "bg-white text-black" : "text-white/40 hover:text-white"}`}
+          >
+            harness
+          </button>
+        </div>
       </div>
       {commandsOpen ? (
-        <div data-session-commands className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-2 py-1.5">
-          <div className="grid grid-cols-2 gap-1">
+        <div data-session-commands className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+          <div className="grid grid-cols-2 gap-1 px-2 pt-1.5">
             {ILE_WORK_CANVAS_COMMANDS.map((command) => {
               const ready = Boolean(bridge?.selectionActive);
               return (
@@ -68,33 +99,39 @@ export function SessionGuidePanel({ guide }: { guide: SessionGuideId }) {
                     if (!ready || !bridge) return;
                     bridge.run(command.id);
                   }}
-                  className={COMMAND_CLASS}
+                  className={ILE_CANVAS_COMMAND_SIDEBAR_CLASS}
                 >
-                  <span className="flex min-w-0 items-center gap-2">
-                    <AccelerandoMark text={command.label} mark={command.id} className="h-3.5 w-3.5" />
-                    <span>{command.label}</span>
-                  </span>
+                  <CommandPlate index={ileWorkCanvasCommandIndex(command.id)} />
+                  <CommandMark id={command.id} label={command.label} className="h-5 w-5" />
+                  <span>{command.label}</span>
                 </button>
               );
             })}
           </div>
-          {bridge?.craft ? (
-            <IleCraftInsightButton
-              square
-              usable={ileCanvasCraftInsightUsable()}
-              onClick={() => bridge.craft?.open()}
-            />
-          ) : null}
-          {bridge?.dictate ? (
-            <IleCanvasDictateButton
-              square
-              transcript={bridge.dictate.transcript}
-              onLiveText={(text) => bridge.dictate?.write(text, false)}
-              onCommit={(text) => bridge.dictate?.write(text, true)}
-              onActiveChange={bridge.dictate.onActive}
-            />
-          ) : null}
-          <p className="px-1 pt-1 font-mono text-[10px] leading-snug text-white/45">
+          <div
+            data-session-board-tools
+            className="mt-2 flex flex-col gap-1.5 border-t border-white/30 px-2 py-2"
+          >
+            <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-white/45">board</p>
+            {bridge?.craft ? (
+              <IleCraftInsightButton
+                wide
+                usable={ileCanvasCraftInsightUsable()}
+                onClick={() => bridge.craft?.open()}
+              />
+            ) : null}
+            {bridge?.dictate ? (
+              <IleCanvasDictateButton
+                wide
+                transcript={bridge.dictate.transcript}
+                onLiveText={(text) => bridge.dictate?.write(text, false)}
+                onCommit={(text) => bridge.dictate?.write(text, true)}
+                onAsk={() => bridge.run("check")}
+                onActiveChange={bridge.dictate.onActive}
+              />
+            ) : null}
+          </div>
+          <p className="px-2 pb-2 pt-1 font-mono text-[10px] leading-snug text-white/45">
             {bridge
               ? bridge.selectionActive
                 ? "Commands use the marks selected on the canvas."
@@ -102,6 +139,8 @@ export function SessionGuidePanel({ guide }: { guide: SessionGuideId }) {
               : "The board is still opening."}
           </p>
         </div>
+      ) : harnessOpen ? (
+        <SessionHarnessPanel guide={guide} remainingSeconds={remainingSeconds} />
       ) : (
         <div data-session-instructions className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
           {text.split("\n\n").map((paragraph) => (

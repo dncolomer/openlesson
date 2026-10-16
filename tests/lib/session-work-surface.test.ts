@@ -49,12 +49,15 @@ describe("shared live work surface", () => {
   it("Calibrate live play uses sounding cards, a clock, and a start voice check", () => {
     const surface = read("components/calibrate/calibrate-sounding-surface.tsx");
     expect(prepare).toContain("<CalibrateSoundingSurface");
+    expect(prepare).toContain("<SessionWorkSurface");
+    expect(prepare).toContain('mode="calibrate"');
     expect(surface).toContain("data-calibrate-sounding");
     expect(surface).toContain("data-sounding-still");
     expect(surface).not.toContain("SessionWorkSurface");
     expect(surface).not.toContain("data-calibrate-done-classifying");
     expect(surface).not.toContain("CALIBRATE_DONE_CLASSIFYING_LABEL");
     expect(surface).not.toContain("WorkCanvas");
+    expect(surface).not.toContain("TapAestheticSection");
     expect(prepare).toContain("PracticeVoiceChallenge");
     expect(prepare).toContain("data-scout-live-control-strip");
     expect(prepare).toContain("listening={false}");
@@ -83,14 +86,12 @@ describe("shared live work surface", () => {
     expect(drill).toContain("data-exercise-tap-map-pane");
     expect(drill).toContain("TapSessionMap");
     expect(drill).toContain("data-exercise-tap-stash-submit");
-    expect(drill).toContain("data-tap-transcript-container");
+    expect(drill).not.toContain("data-tap-transcript-container");
     expect(drill).toContain("data-tap-im-done-slot");
     expect(drill).toContain("<ThoughtMemoryPanel");
     expect(drill).toContain("ImDoneAnsweringControl");
-    const transcriptAt = drill.indexOf("data-tap-transcript-container");
     const doneAt = drill.indexOf("data-tap-im-done-slot");
     const memoryAt = drill.indexOf("<ThoughtMemoryPanel");
-    expect(doneAt).toBeGreaterThan(transcriptAt);
     expect(memoryAt).toBeGreaterThan(doneAt);
     for (const marker of OLD_LIVE_SPLITS) {
       expect(drill, marker).not.toContain(marker);
@@ -102,14 +103,12 @@ describe("shared live work surface", () => {
     expect(tap).toContain("mode={sidebarMode}");
     expect(tap).toContain("data-tap-convo-work-canvas-pane");
     expect(tap).toContain("<WorkCanvas");
-    expect(tap).toContain("data-tap-transcript-container");
+    expect(tap).not.toContain("data-tap-transcript-container");
     expect(tap).toContain("data-tap-im-done-slot");
     expect(tap).toContain("<ThoughtMemoryPanel");
     expect(tap).toContain("I'm done answering");
-    const transcriptAt = tap.indexOf("data-tap-transcript-container");
     const doneAt = tap.indexOf("data-tap-im-done-slot");
     const memoryAt = tap.indexOf("<ThoughtMemoryPanel");
-    expect(doneAt).toBeGreaterThan(transcriptAt);
     expect(memoryAt).toBeGreaterThan(doneAt);
     expect(verify).toContain("<TapScoreClient");
     expect(verify).toContain('sidebarMode="verification-tap"');
@@ -141,7 +140,7 @@ describe("shared live work surface", () => {
     const tapClock = tap.slice(tap.indexOf("clock={"), tap.indexOf("actions={"));
     expect(tapClock).toContain("data-tap-live-control-strip");
     expect(tapClock).not.toContain("data-tap-end-session");
-    const tapActions = tap.slice(tap.indexOf("actions={"), tap.indexOf("transcript={"));
+    const tapActions = tap.slice(tap.indexOf("actions={"), tap.indexOf("chapters={"));
     expect(tapActions).toContain("showEndSession");
     expect(tapActions).toContain("data-tap-end-session");
     expect(tapActions).toContain("End session");
@@ -168,7 +167,7 @@ describe("shared live work surface", () => {
     expect(voice).toContain("data-save-and-exit");
     expect(voice).toMatch(/data-ile-bar-save[\s\S]{0,400}\n\s*Exit/);
     expect(learn).toContain("actions={actions}");
-    expect(learn).toContain("transcript={voiceBar}");
+    expect(learn).not.toContain("transcript={voiceBar}");
     expect(readSessionStageSurface()).toContain("<IleVoiceBarActions");
     expect(read("components/SessionView.tsx")).not.toContain("IleWorkCanvasTimer");
   });

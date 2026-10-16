@@ -13,7 +13,6 @@ import {
   type BlockCircularMenuActionId,
   type BlockCircularMenuSurface,
 } from "@/lib/block-circular-menu";
-import { cn } from "@/lib/utils";
 
 export const BLOCK_CIRCULAR_MENU_ACTION_ICONS: Record<
   BlockCircularMenuActionId,
@@ -60,50 +59,25 @@ export function BlockCircularMenuRing({
     >
       <div
         data-block-circular-menu-ring
-        className="pointer-events-none absolute left-1/2 top-1/2 rounded-full border-white/80"
+        className="pointer-events-none absolute left-1/2 top-1/2 rounded-full border-white/40"
         style={{
           width: diameter,
           height: diameter,
           borderWidth: BLOCK_CIRCULAR_MENU_RING_THICKNESS_PX,
           transform: "translate(-50%, -50%)",
         }}
-      >
-        <span
-          aria-hidden
-          className="absolute inset-[9px] rounded-full border border-white/35"
-        />
-        <span
-          aria-hidden
-          className="absolute inset-[2px] rounded-full"
-          style={{
-            background:
-              "repeating-conic-gradient(from 0deg, rgba(255,255,255,0.9) 0deg 1.1deg, transparent 1.1deg 30deg)",
-            mask: "radial-gradient(farthest-side, transparent 72%, #000 74% 100%)",
-            WebkitMask: "radial-gradient(farthest-side, transparent 72%, #000 74% 100%)",
-          }}
-        />
-      </div>
+      />
       {actions.map((action, index) => {
         const pos = circularMenuActionPosition(index, actions.length);
         const disabled = disabledIds?.has(action.id);
-        const prominent =
-          action.id === "work" ||
-          action.id === "start_prepare" ||
-          action.id === "start_session" ||
-          action.id === "start_verify";
         return (
           <button
             key={action.id}
             type="button"
             data-block-circular-menu-action={action.id}
-            data-block-circular-menu-prominent={prominent ? "true" : undefined}
             aria-label={action.label}
             disabled={disabled}
-            className={cn(
-              "group pointer-events-auto absolute left-1/2 top-1/2 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-white/80 bg-black font-mono text-white shadow-[0_0_0_1px_rgba(0,0,0,0.95),inset_0_0_0_1px_rgba(255,255,255,0.4)] hover:z-10 hover:w-auto hover:min-w-10 hover:border-white hover:bg-black hover:px-2.5 disabled:cursor-not-allowed disabled:opacity-40",
-              prominent &&
-                "z-[1] outline outline-2 outline-offset-[3px] outline-white/80",
-            )}
+            className="group pointer-events-auto absolute left-1/2 top-1/2 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-white/80 bg-black font-mono text-white hover:z-10 hover:w-auto hover:min-w-10 hover:border-white hover:bg-black hover:px-2.5 disabled:cursor-not-allowed disabled:opacity-40"
             style={{
               height: BLOCK_CIRCULAR_MENU_ACTION_SIZE_PX,
               minHeight: BLOCK_CIRCULAR_MENU_ACTION_SIZE_PX,

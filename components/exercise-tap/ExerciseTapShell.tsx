@@ -25,7 +25,7 @@ export function ExerciseTapShell({
   onEditThought,
   onDeleteThought,
   isSending = false,
-  speechBar,
+  speechBar: _speechBar,
   formingText = "",
   logEndOfChainOfThought,
   onClearForming,
@@ -96,15 +96,6 @@ export function ExerciseTapShell({
         }
         clock={clock}
         actions={actions}
-        transcript={
-          <div
-            data-exercise-speech-panel
-            data-tap-transcript-container
-            className="shrink-0 border-t border-neutral-800/60 bg-black/35 p-2.5"
-          >
-            {speechBar}
-          </div>
-        }
         chapters={
           <SessionTopicChapter
             id={active?.id || "topic"}

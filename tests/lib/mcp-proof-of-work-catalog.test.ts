@@ -5,6 +5,8 @@ describe("MCP_PROOF_OF_WORK_TOOL_CATALOG", () => {
   it("includes the single LWM Snapshot score tool (lwm_snapshot)", () => {
     const names = MCP_PROOF_OF_WORK_TOOL_CATALOG.map((tool) => tool.name);
     expect(names).toContain("lwm_snapshot");
+    expect(names).toContain("list_flow_embeddings");
+    expect(names).toContain("get_flow_embedding");
     expect(names).not.toContain("verification_score");
     expect(names).not.toContain("augmentation_score");
     expect(names).not.toContain("optimization_score");
@@ -15,6 +17,14 @@ describe("MCP_PROOF_OF_WORK_TOOL_CATALOG", () => {
     expect(snapshot?.summary).toContain("lwm-snapshot");
     expect(snapshot?.summary).toMatch(/LWM Snapshot/i);
     expect(snapshot?.summary.toLowerCase()).toMatch(/tap|ile/);
+    expect(snapshot?.summary).toContain("list_flow_embeddings");
+    const list = MCP_PROOF_OF_WORK_TOOL_CATALOG.find((t) => t.name === "list_flow_embeddings");
+    const get = MCP_PROOF_OF_WORK_TOOL_CATALOG.find((t) => t.name === "get_flow_embedding");
+    expect(list?.rest.path).toContain("/flow-embeddings");
+    expect(get?.rest.path).toContain("/flow-embeddings");
+    expect(list?.summary).toMatch(/gen model/i);
+    expect(get?.summary).toMatch(/raw/i);
+    expect(list?.summary.toLowerCase()).toContain("lwm_snapshot");
   });
 
   it("does not expose analyze_performance chat tooling", () => {

@@ -423,7 +423,7 @@ describe("session branch model", () => {
     expect(field).toContain("103 branches");
     expect(field).toContain('data-session-branch-state="latent"');
     expect(field).toContain("Ahead");
-    expect(field).toContain("Close 28");
+    expect(field).toContain("Exploit 28");
     expect(renderToStaticMarkup(createElement(SessionBranchFieldView, { slot: { status: "idle", model: null, error: null } }))).toBe("");
     expect(renderToStaticMarkup(createElement(SessionBranchFieldView, { slot: null }))).toBe("");
   });
@@ -465,7 +465,7 @@ describe("session branch model", () => {
         }),
       );
       expect(field).toContain("103 branches");
-      expect(field).not.toContain("Close 28");
+      expect(field).not.toContain("Exploit 28");
       expect(field).not.toContain("data-session-branch-prices");
     }
   });

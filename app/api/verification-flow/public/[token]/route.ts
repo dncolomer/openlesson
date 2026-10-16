@@ -25,6 +25,7 @@ export async function GET(
     topic: flow.topic,
     questionCount: flow.questions.length,
     durationMinutes: flow.durationMinutes,
+    actionCatalog: flow.actionCatalog,
     flowId: flow.id,
   });
 }
@@ -44,6 +45,7 @@ export async function POST(
   return NextResponse.json({
     identity: claimed.identity,
     durationMinutes: claimed.flow.durationMinutes,
+    actionCatalog: claimed.flow.actionCatalog,
     emptyPool: claimed.choices.emptyPool,
     practice: claimed.choices.practice,
     question: question

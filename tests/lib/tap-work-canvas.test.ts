@@ -249,7 +249,7 @@ describe("TAP Work canvas live surface (shipped)", () => {
     expect(live).toContain("<SessionWorkSurface");
     expect(live).not.toContain("data-tap-convo-live-split");
     expect(live).not.toContain('data-tap-split="70-30"');
-    expect(live).toContain("data-tap-transcript-container");
+    expect(live).not.toContain("data-tap-transcript-container");
     expect(live).toContain("logTapTrace");
 
     expect(phases).toContain("<WorkCanvas");
@@ -271,7 +271,7 @@ describe("TAP Work canvas live surface (shipped)", () => {
     expect(canvas).not.toContain("inset-x-0 bottom-3 z-[58]");
     expect(canvas).toContain("handleQuickAction");
     expect(canvas).not.toContain("data-ile-compress-work");
-    expect(canvas).toContain('input.kind === "selective-compress"');
+    expect(canvas).toContain("applyIleWorkCanvasAskReply");
     expect(canvas).toContain("ileWorkCanvasThinkingOverlayStyle");
 
     const propsType = phases.slice(
@@ -335,11 +335,10 @@ describe("TAP Work canvas PoW (shipped TAP Learning builders)", () => {
     expect(live).toContain("onCanvasPowActions");
     const preparePhases = read("components/scout-tap/scout-tap-phases.tsx");
     const prepareClient = read("components/scout-tap/ScoutTapClient.tsx");
-    expect(preparePhases).not.toContain("onCanvasPowActions={() => {}}");
-    expect(preparePhases).toContain("onCanvasPowActions={onCanvasPowActions}");
-    expect(prepareClient).toContain("buildTapWorkCanvasActionUploadItem");
+    expect(preparePhases).not.toContain("onCanvasPowActions");
+    expect(preparePhases).not.toContain("<WorkCanvas");
     expect(prepareClient).toContain("uploadTapWorkCanvasPow");
-    expect(prepareClient).toContain("onCanvasPowActions={handleCanvasPowActions}");
+    expect(prepareClient).toContain("soundingProofUploadItem");
     const runtime = read("lib/tap-session-runtime.ts");
     expect(runtime).toContain('canvas: "/api/workspace-tap-score/canvas"');
     expect(existsSync(join(ROOT, "app/api/workspace-tap-score/canvas/route.ts"))).toBe(true);

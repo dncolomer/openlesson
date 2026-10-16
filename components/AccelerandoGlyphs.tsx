@@ -23,17 +23,6 @@ function AccelerandoGlyph({
   );
 }
 
-function markCellTransform(count: number, index: number): { ox: number; oy: number; scale: number } {
-  if (count <= 1) return { ox: 0, oy: 0, scale: 1 };
-  const col = index % 2;
-  const row = Math.floor(index / 2);
-  const scale = 0.42;
-  const stride = 1.04;
-  const ox = 0.06 + col * stride;
-  const oy = count === 2 ? 0.5 + 0.06 : 0.06 + row * stride;
-  return { ox, oy, scale };
-}
-
 /** Real Accelerando encoding of a known label. Hidden from AT; English stays the copy. */
 export function AccelerandoRun({
   text,
@@ -53,9 +42,7 @@ export function AccelerandoRun({
   );
 }
 
-const MARK_LIMIT = 4;
-
-/** Compact token-language mark for a command or Concept. English stays the readable label. */
+/** Compact token-language mark for a command or Concept: first glyph only. */
 export function AccelerandoMark({
   text,
   className,
@@ -65,8 +52,10 @@ export function AccelerandoMark({
   className?: string;
   mark?: string;
 }) {
-  const ids = accelerandoIds(text)?.slice(0, MARK_LIMIT);
-  if (!ids?.length) return null;
+  const id = accelerandoIds(text)?.[0];
+  if (id == null) return null;
+  const d = accelerandoPath(id);
+  if (!d) return null;
   return (
     <span
       data-accelerando-mark={text}
@@ -83,22 +72,13 @@ export function AccelerandoMark({
         focusable="false"
         className="accelerando-mark-svg"
       >
-        {ids.map((id, index) => {
-          const d = accelerandoPath(id);
-          if (!d) return null;
-          const { ox, oy, scale } = markCellTransform(ids.length, index);
-          return (
-            <g key={`${id}-${index}`} transform={`translate(${ox} ${oy}) scale(${scale})`}>
-              <path
-                d={d}
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={scale === 1 ? 0.12 : 0.18}
-                strokeLinecap="square"
-              />
-            </g>
-          );
-        })}
+        <path
+          d={d}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={0.12}
+          strokeLinecap="square"
+        />
       </svg>
     </span>
   );

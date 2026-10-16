@@ -14,7 +14,6 @@ import {
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import type { Block } from "@/lib/domain/types";
 import { postWorkspaceGridOp } from "@/lib/workspace-grid-ops-client";
-import { resolveBlockCircularMenuSurface } from "@/lib/block-circular-menu";
 
 const MODEL_STORAGE_KEY = "planner-model";
 const DEFAULT_PLANNER_MODEL = DEFAULT_MODEL;
@@ -29,8 +28,6 @@ interface SessionListProps {
   isOwner?: boolean;
   /** Learner map: no authoring strip / empty +; content color cues. */
   learnerMode?: boolean;
-  /** Calibrate / Learn / Drill on the map even when authoring tools are on. */
-  practiceMenu?: boolean;
   isGroupPlan?: boolean;
   /** Hide completion/progress styling for public workspaces before fork */
   maskProgress?: boolean;
@@ -116,10 +113,6 @@ interface SessionListProps {
     progress: number;
     label: string;
   } | null;
-  onCircularMenuAction?: (
-    blockId: string,
-    action: "start_session" | "continue_session" | "mark_done" | string,
-  ) => void;
 }
 
 /** Ordered block list (start → next links, then orphans). Shared with right-pane detail. */
@@ -166,7 +159,6 @@ export function SessionList({
   highlightOpacity = 1,
   isOwner = true,
   learnerMode = false,
-  practiceMenu = false,
   isGroupPlan = false,
   maskProgress = false,
   onRequestFork,
@@ -208,7 +200,6 @@ export function SessionList({
   expandJobs = null,
   onAbortExpandJob,
   clusterMapJob = null,
-  onCircularMenuAction,
 }: SessionListProps) {
   const [internalExpandedNodeId, setInternalExpandedNodeId] = useState<string | null>(null);
   const isExpandedControlled =
@@ -463,11 +454,6 @@ export function SessionList({
             onMapSelectionChange={onMapSelectionChange}
             canEdit={isOwner && !learnerMode}
             learnerMode={learnerMode}
-            circularMenuSurface={resolveBlockCircularMenuSurface({
-              learnerMode,
-              practiceMenu,
-            })}
-            onCircularMenuAction={onCircularMenuAction}
             learnerScopeId={learnerScopeId || ayclToken || null}
             cloneArmed={cloneArmed}
             cloneSourceBlockId={cloneSourceBlockId}

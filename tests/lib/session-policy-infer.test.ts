@@ -224,10 +224,17 @@ describe("session policy inference", () => {
     expect(bridge).not.toContain("slot.model");
     const xai = read("lib/session-policy-infer-xai.ts");
     expect(xai).toContain("callXai");
+    expect(xai).toContain("callPolicyXai");
     expect(xai).toContain("closeLine");
     expect(xai).toContain("inferSessionGapReply");
     expect(xai).toContain("Do not use the words Close, Keep, Discard, Insight, Forage, Exploit, Avoid, or Infer.");
     expect(xai.match(/Address the learner as you\. Do not use I, me, or my\./g)).toHaveLength(2);
+    expect(xai).toContain("POLICY_XAI_TIMEOUT_MS = 12_000");
+    expect(xai).toContain('responseFormat: "json_schema"');
+    expect(xai).toContain('responseFormat: "json"');
+    expect(xai).toContain("retries: 1");
+    expect(xai).not.toContain("fetchTimeout: 30_000");
+    expect(context).not.toContain('draft?.mode !== "learn"');
     expect(read("app/api/ile/session-policy-infer/route.ts")).toContain("planSessionBranchPrepare");
     expect(read("app/api/ile/session-policy-infer/route.ts")).toContain('body.phase === "project"');
     expect(read("components/ExcalidrawCanvas.tsx")).toContain("usePublishSessionProof");

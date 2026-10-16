@@ -101,8 +101,6 @@ export function BlockSkillGrid({
   onEmptyCellSelect,
   onBlockedCellSelect,
   emptyAddNonce = 0,
-  allowGatherResources = true,
-  onCircularMenuAction,
   blockProgressById,
   unseenGatherById,
   clusterMapJob = null,
@@ -850,13 +848,6 @@ export function BlockSkillGrid({
     ],
   );
 
-  const handleCircularMenuAction = useCallback(
-    (blockId: string, action: BlockCircularMenuActionId) => {
-      onCircularMenuAction?.(blockId, action);
-    },
-    [onCircularMenuAction],
-  );
-
   const handleEmptyCircularMenuAction = useCallback(
     (action: BlockCircularMenuActionId) => {
       if (action !== "add_chapter" || !circularMenuEmptyCell) return;
@@ -1109,12 +1100,6 @@ export function BlockSkillGrid({
         showProgress,
         handleCellSelect: handleCellSelectWithMenu,
         handleBlockDoubleClick: handleBlockDoubleClickGuarded,
-        circularMenuSurface,
-        allowGatherResources,
-        circularMenuBlockId,
-        circularMenuEmptyCell,
-        onCircularMenuAction: handleCircularMenuAction,
-        onEmptyCircularMenuAction: handleEmptyCircularMenuAction,
         blockProgressById,
         unseenGatherById,
         handleBlockPointerDown,

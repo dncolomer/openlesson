@@ -80,15 +80,9 @@ import type { BlockSkillGridProps } from "@/components/block-skill-grid/types";
 import { aestheticImageForId } from "@/lib/aesthetics";
 import { useSurfaceAestheticImages } from "@/lib/use-surface-aesthetic-images";
 import {
-  BlockCircularMenuRing,
   BlockGatherNotificationDot,
   BlockInTileProgress,
 } from "@/components/block-skill-grid/block-circular-menu";
-import {
-  ileCircularMenuDisabledActionIds,
-  type BlockCircularMenuActionId,
-  type BlockCircularMenuSurface,
-} from "@/lib/block-circular-menu";
 
 function OpenWorkTileAesthetic({
   src,
@@ -172,12 +166,6 @@ export function MapWorldLayer({
   soleStretchBlockId,
   renderStretchHandles,
   annotationLayers,
-  circularMenuSurface = "none",
-  allowGatherResources = true,
-  circularMenuBlockId = null,
-  circularMenuEmptyCell = null,
-  onCircularMenuAction,
-  onEmptyCircularMenuAction,
   blockProgressById,
   unseenGatherById,
 }: {
@@ -238,12 +226,6 @@ export function MapWorldLayer({
   showProgress: boolean;
   handleCellSelect: (id: string, e: MouseEvent) => void;
   handleBlockDoubleClick: (id: string) => void;
-  circularMenuSurface?: BlockCircularMenuSurface;
-  allowGatherResources?: boolean;
-  circularMenuBlockId?: string | null;
-  circularMenuEmptyCell?: { row: number; col: number } | null;
-  onCircularMenuAction?: (blockId: string, action: BlockCircularMenuActionId) => void;
-  onEmptyCircularMenuAction?: (action: BlockCircularMenuActionId) => void;
   blockProgressById?: Readonly<Record<string, number>>;
   unseenGatherById?: Readonly<Record<string, boolean>>;
   handleBlockPointerDown: (id: string, cell: GridCell, e: PointerEvent) => void;
@@ -404,16 +386,6 @@ export function MapWorldLayer({
                     </span>
                   ) : null}
                 </button>
-                {circularMenuSurface === "ile" &&
-                !isUnusable &&
-                circularMenuEmptyCell?.row === cell.row &&
-                circularMenuEmptyCell?.col === cell.col ? (
-                  <BlockCircularMenuRing
-                    surface={circularMenuSurface}
-                    empty
-                    onAction={(action) => onEmptyCircularMenuAction?.(action)}
-                  />
-                ) : null}
               </div>
             );
           })}
@@ -749,7 +721,7 @@ export function MapWorldLayer({
                           width,
                           height,
                           zIndex:
-                            circularMenuBlockId === node.id
+                            selectedBlockIds.includes(node.id)
                               ? 40
                               : isDragParticipant && blockDragOffset
                                 ? 5
@@ -889,23 +861,6 @@ export function MapWorldLayer({
                             </>
                           ) : null}
                         </button>
-                        {isLabel &&
-                        circularMenuSurface !== "none" &&
-                        circularMenuBlockId === node.id ? (
-                          <BlockCircularMenuRing
-                            surface={circularMenuSurface}
-                            timUnopened={timUnopened}
-                            onAction={(action) => onCircularMenuAction?.(node.id, action)}
-                            disabledIds={
-                              circularMenuSurface === "ile"
-                                ? ileCircularMenuDisabledActionIds({
-                                  completed: itemDone,
-                                  allowGatherResources,
-                                })
-                                : undefined
-                            }
-                          />
-                        ) : null}
                       </div>
                     );
                   })}
@@ -949,7 +904,7 @@ export function MapWorldLayer({
                   width,
                   height,
                   zIndex:
-                    circularMenuBlockId === node.id
+                    selectedBlockIds.includes(node.id)
                       ? 40
                       : isDragParticipant && blockDragOffset
                         ? 5
@@ -1048,22 +1003,6 @@ export function MapWorldLayer({
                   </span>
                   <BlockInTileProgress fraction={blockProgressById?.[node.id] ?? 0} />
                 </button>
-                {circularMenuSurface !== "none" &&
-                circularMenuBlockId === node.id ? (
-                  <BlockCircularMenuRing
-                    surface={circularMenuSurface}
-                    timUnopened={timUnopened}
-                    onAction={(action) => onCircularMenuAction?.(node.id, action)}
-                    disabledIds={
-                      circularMenuSurface === "ile"
-                        ? ileCircularMenuDisabledActionIds({
-                                  completed: itemDone,
-                                  allowGatherResources,
-                                })
-                        : undefined
-                    }
-                  />
-                ) : null}
                 {renderStretchHandles(node.id)}
               </div>
             );

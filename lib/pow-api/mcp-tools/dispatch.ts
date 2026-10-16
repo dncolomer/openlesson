@@ -69,6 +69,7 @@ import {
   handleListCustomKnowledgeRegions,
   handleListSnapshotHistory,
 } from "./snapshot-handlers";
+import { getFlowEmbedding, listFlowEmbeddings, presentFlowEmbedding } from "@/lib/flow-embedding-store";
 import {
   agentToolFeature,
   workspaceFeatureDeniedMessage,
@@ -434,7 +435,38 @@ export async function callMcpProofOfWorkTool(
     );
   }
 
-  // Sole public score tool: LWM Snapshot.
+  if (name === "list_flow_embeddings") {
+    requireScope(auth.scopes, "workspaces:read");
+    const workspaceId = stringArg(args, "workspace_id");
+    if (!workspaceId) throw new Error("workspace_id is required.");
+    await loadWorkspace(supabase, auth, workspaceId);
+    const rows = await listFlowEmbeddings({
+      workspaceId,
+      flowKind: stringArg(args, "flow_kind"),
+      flowId: stringArg(args, "flow_id"),
+    });
+    return await evidenceToolResult(
+      { flow_embeddings: rows.map(presentFlowEmbedding) },
+      { endpoint: "list_flow_embeddings", workspace_id: workspaceId },
+    );
+  }
+
+  if (name === "get_flow_embedding") {
+    requireScope(auth.scopes, "workspaces:read");
+    const workspaceId = stringArg(args, "workspace_id");
+    const embeddingId = stringArg(args, "embedding_id") || stringArg(args, "id");
+    if (!workspaceId) throw new Error("workspace_id is required.");
+    if (!embeddingId) throw new Error("embedding_id is required.");
+    await loadWorkspace(supabase, auth, workspaceId);
+    const row = await getFlowEmbedding({ workspaceId, embeddingId });
+    if (!row) throw new Error("Flow embedding not found.");
+    return await evidenceToolResult(
+      { flow_embedding: presentFlowEmbedding(row) },
+      { endpoint: "get_flow_embedding", workspace_id: workspaceId },
+    );
+  }
+
+  // Knowledge / TAPBench score tool: LWM Snapshot. Not the embed path for Calibrate/Learn/Verify.
   if (name === "lwm_snapshot") {
     requireScope(auth.scopes, "workspaces:read");
     const workspaceId = stringArg(args, "workspace_id");

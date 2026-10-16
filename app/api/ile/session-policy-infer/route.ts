@@ -88,7 +88,10 @@ export async function POST(request: NextRequest) {
         chapterTitle: plan.chapterTitle,
         chapterBrief: plan.chapterBrief,
       });
-      if (!prepared.ok) return jsonError(502, "The policy could not be read.");
+      if (!prepared.ok) {
+        console.error("[session-policy-infer] infer", prepared.error);
+        return jsonError(502, "The policy could not be read.");
+      }
       return NextResponse.json({ reply: prepared.reply });
     }
 
@@ -120,7 +123,10 @@ export async function POST(request: NextRequest) {
         nodeTitle: typeof body.nodeTitle === "string" ? body.nodeTitle : "",
         candidates,
       });
-      if (!prepared.ok) return jsonError(502, "The policy could not be read.");
+      if (!prepared.ok) {
+        console.error("[session-policy-infer] project", prepared.error);
+        return jsonError(502, "The policy could not be read.");
+      }
       return NextResponse.json({ reply: prepared.reply });
     }
 
@@ -136,7 +142,10 @@ export async function POST(request: NextRequest) {
         intent: typeof body.intent === "string" ? body.intent : "",
         canvasNote: typeof body.canvasNote === "string" ? body.canvasNote : "",
       });
-      if (!prepared.ok) return jsonError(502, "The policy could not be read.");
+      if (!prepared.ok) {
+        console.error("[session-policy-infer] suggest", prepared.error);
+        return jsonError(502, "The policy could not be read.");
+      }
       return NextResponse.json({ reply: prepared.reply });
     }
 

@@ -1,7 +1,8 @@
 /**
  * The generative model prepared at the start of a session.
  * Hidden states (branches) sit on state factors (territory). Each has a
- * likelihood (observation) and four actions with expected-free-energy prices.
+ * likelihood (observation) and catalog-sized actions with expected-free-energy
+ * prices. Live chrome still presses the four stored ids (try/hold/drop/insight).
  * Forage, Exploit, and Avoid reveal the next ring. Infer is the last step.
  */
 
@@ -10,6 +11,11 @@ import {
   ileWorkCanvasContentBounds,
   type IleWorkCanvasElement,
 } from "@/lib/ile-work-canvas";
+import {
+  learningModelCatalog,
+  parseLearningModelSize,
+  type LearningModelSize,
+} from "@/lib/learning-model";
 import type { SessionMarkButtonId } from "@/lib/session-marks";
 
 export const SESSION_BRANCH_REGION_COUNT = 6;
@@ -34,8 +40,11 @@ export const SESSION_BRANCH_ACCEPT_COUNT = 80;
 
 export const SESSION_BRANCH_ACTION_ORDER = ["try", "hold", "drop", "insight"] as const;
 
+const LIVE_ACTION_IDS = new Set<string>(SESSION_BRANCH_ACTION_ORDER);
+
 export type SessionBranchAction = {
-  id: SessionMarkButtonId;
+  /** Catalog action id, or a stored four-action id (try/hold/drop/insight). */
+  id: string;
   price: number;
   /** Where this action takes the learner. */
   leads: string;
@@ -68,6 +77,8 @@ export type SessionBranchModel = {
   rootId: string;
   focusId: string;
   step: number;
+  /** 4, 8, or 16 — the catalog this tree was prepared with. */
+  catalogSize: LearningModelSize;
   branches: SessionBranch[];
   boardNotes: SessionBranchNote[];
 };
@@ -85,6 +96,7 @@ type RawActionPrices = {
   keepObservation?: unknown;
   discardObservation?: unknown;
   insightObservation?: unknown;
+  [key: string]: unknown;
 };
 
 type RawInquiry = RawActionPrices & {
@@ -128,13 +140,49 @@ function priceOf(value: unknown, fallback: number): number {
   return Math.max(0, Math.min(100, Math.round(price)));
 }
 
-function actionsFrom(raw: RawActionPrices, observation: string): SessionBranchAction[] {
-  return ACTION_FIELDS.map((field, index) => ({
+/** Catalog actions that are not the four stored live buttons. */
+export function extraCatalogActionIds(size: unknown): string[] {
+  return learningModelCatalog(size)
+    .filter((action) => !action.storedId)
+    .map((action) => action.id);
+}
+
+export function extraCatalogPriceKey(actionId: string): string {
+  return `${actionId}Price`;
+}
+
+function extraActionsFrom(
+  raw: RawActionPrices,
+  observation: string,
+  catalogSize: LearningModelSize,
+): SessionBranchAction[] {
+  return extraCatalogActionIds(catalogSize).map((id, index) => ({
+    id,
+    price: priceOf(raw[extraCatalogPriceKey(id)], 22 + index * 6),
+    leads: "The next observation on this hidden state opens.",
+    observation,
+  }));
+}
+
+function actionsFrom(
+  raw: RawActionPrices,
+  observation: string,
+  catalogSize: LearningModelSize,
+): SessionBranchAction[] {
+  const stored = ACTION_FIELDS.map((field, index) => ({
     id: field.id,
     price: priceOf(raw[field.price], 20 + index * 15),
     leads: textOf(raw[field.leads], "The next ring of this territory opens on the board."),
     observation: textOf(raw[field.observation], observation),
   }));
+  return [...stored, ...extraActionsFrom(raw, observation, catalogSize)];
+}
+
+export function liveSessionBranchActions(
+  branch: SessionBranch | null | undefined,
+): SessionBranchAction[] {
+  if (!branch) return [];
+  return branch.actions.filter((action) => LIVE_ACTION_IDS.has(action.id));
 }
 
 function pushBranch(
@@ -147,9 +195,11 @@ function pushBranch(
 export function normalizeSessionBranchModel(
   draft: SessionBranchDraft | null | undefined,
   chapterTitle: string,
+  catalogSize: unknown = 4,
 ): SessionBranchModel | null {
   const regions = Array.isArray(draft?.regions) ? (draft.regions as RawRegion[]) : [];
   if (!regions.length) return null;
+  const size = parseLearningModelSize(catalogSize);
   const title = textOf(chapterTitle, "This chapter");
   const premise = textOf(draft?.premise, title);
   const branches: SessionBranch[] = [];
@@ -161,7 +211,7 @@ export function normalizeSessionBranchModel(
     observation: premise,
     depth: 0,
     status: "open",
-    actions: actionsFrom(draft ?? {}, premise),
+    actions: actionsFrom(draft ?? {}, premise, size),
   };
   pushBranch(branches, root);
 
@@ -177,7 +227,7 @@ export function normalizeSessionBranchModel(
       observation: regionObservation,
       depth: 1,
       status: "open",
-      actions: actionsFrom(region ?? {}, regionObservation),
+      actions: actionsFrom(region ?? {}, regionObservation, size),
     });
     const avenues = Array.isArray(region?.avenues) ? (region.avenues as RawAvenue[]) : [];
     avenues.forEach((avenue, avenueIndex) => {
@@ -192,7 +242,7 @@ export function normalizeSessionBranchModel(
         observation: avenueObservation,
         depth: 2,
         status: "latent",
-        actions: actionsFrom(avenue ?? {}, avenueObservation),
+        actions: actionsFrom(avenue ?? {}, avenueObservation, size),
       });
       const inquiries = Array.isArray(avenue?.inquiries) ? (avenue.inquiries as RawInquiry[]) : [];
       inquiries.forEach((inquiry, inquiryIndex) => {
@@ -206,7 +256,7 @@ export function normalizeSessionBranchModel(
           observation: inquiryObservation,
           depth: 3,
           status: "latent",
-          actions: actionsFrom(inquiry ?? {}, inquiryObservation),
+          actions: actionsFrom(inquiry ?? {}, inquiryObservation, size),
         });
       });
     });
@@ -217,6 +267,7 @@ export function normalizeSessionBranchModel(
     rootId: root.id,
     focusId: root.id,
     step: 0,
+    catalogSize: size,
     branches,
     boardNotes: branches
       .filter((branch) => branch.observation.trim())
@@ -248,9 +299,10 @@ export function recommendSessionBranchAction(
 ): SessionBranchAction | null {
   const focus = sessionBranchById(model, branchId || model.focusId);
   if (!focus) return null;
+  const live = liveSessionBranchActions(focus);
   const openLeft = model.branches.some((branch) => branch.status === "open");
-  if (!openLeft) return focus.actions.find((action) => action.id === "insight") ?? null;
-  const ranked = focus.actions
+  if (!openLeft) return live.find((action) => action.id === "insight") ?? null;
+  const ranked = live
     .filter((action) => action.id !== "insight")
     .slice()
     .sort((a, b) => a.price - b.price || a.id.localeCompare(b.id));
@@ -407,6 +459,14 @@ export function sessionBranchFieldCounts(model: SessionBranchModel): {
     latent: model.branches.filter((branch) => branch.status === "latent").length,
     closed: model.branches.filter((branch) => branch.status === "closed").length,
   };
+}
+
+/** Accept a prepared tree from a completion payload. Empty trees are refused. */
+export function sessionBranchModelFromUnknown(raw: unknown): SessionBranchModel | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const branches = (raw as SessionBranchModel).branches;
+  if (!Array.isArray(branches) || branches.length === 0) return null;
+  return raw as SessionBranchModel;
 }
 
 export const SESSION_BRANCH_MODEL_SCHEMA = {
@@ -574,8 +634,17 @@ export const SESSION_BRANCH_MODEL_SCHEMA = {
   },
 };
 
-export function sessionBranchModelPrompt(input: { chapterTitle: string; chapterBrief?: string | null }): string {
+export function sessionBranchModelPrompt(input: {
+  chapterTitle: string;
+  chapterBrief?: string | null;
+  catalogSize?: unknown;
+}): string {
   const brief = textOf(input.chapterBrief);
+  const size = parseLearningModelSize(input.catalogSize);
+  const extra = extraCatalogActionIds(size);
+  const extraLine = extra.length
+    ? `Also price these extra catalog actions from 0 to 100 on every node: ${extra.join(", ")}.`
+    : "";
   return [
     `Prepare the working field for a session on "${textOf(input.chapterTitle, "this chapter")}".`,
     brief ? `Chapter material:\n${brief}` : "",
@@ -583,7 +652,9 @@ export function sessionBranchModelPrompt(input: { chapterTitle: string; chapterB
     `Write ${SESSION_BRANCH_REGION_COUNT} regions.`,
     `Under every region write ${SESSION_BRANCH_AVENUE_COUNT} avenues.`,
     `Under every avenue write ${SESSION_BRANCH_INQUIRY_COUNT} inquiries.`,
-    "Every node needs its own territory, a board observation of one or two sentences, and four actions: close, keep, discard, and insight.",
+    `The generative model uses a ${size}-action catalog.`,
+    "Every node needs its own territory, a board observation of one or two sentences, and four live actions: close, keep, discard, and insight.",
+    extraLine,
     "Price each action from 0 to 100. A lower price is the better next policy for that node.",
     "Close should be cheap when the observation would settle that node, and expensive when the node is still only a hunch.",
     "Keep should be cheap when the node needs a further observation before it can be settled.",

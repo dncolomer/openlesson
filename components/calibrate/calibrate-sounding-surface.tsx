@@ -1,30 +1,25 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { SessionAudioMonitor } from "@/components/session-view/session-data-card";
-import { TapAestheticSection } from "@/components/tap-score/tap-aesthetic-section";
+import { usePublishSessionFieldReveal } from "@/components/session-view/session-policy-context";
 import {
   SOUNDING_CANT_TELL_LABEL,
   SOUNDING_CONTINUE_LABEL,
   soundingProgress,
   type SoundingState,
 } from "@/lib/calibrate-sounding";
+import { soundingRevealedIds } from "@/lib/session-branch-field-layout";
 
 export function CalibrateSoundingSurface({
   sounding,
   error,
-  clock,
-  actions,
-  bgImage,
   proofBusy = false,
   onCommitTaps,
   onSubmitProof,
 }: {
   sounding: SoundingState;
   error?: string;
-  clock?: ReactNode;
-  actions?: ReactNode;
-  bgImage?: string | null;
   proofBusy?: boolean;
   onCommitTaps: (tappedIds: readonly string[]) => void;
   onSubmitProof: (transcript: string) => void;
@@ -32,80 +27,84 @@ export function CalibrateSoundingSurface({
   const [tapped, setTapped] = useState<string[]>([]);
   const screenKey = sounding.current?.stills.map((still) => still.id).join("|") ?? sounding.phase;
   const progress = soundingProgress(sounding);
+  const currentIds = sounding.current?.stills.map((still) => still.id) ?? [];
+  const revealedIds = useMemo(() => {
+    if (!sounding.model) return null;
+    return soundingRevealedIds(sounding.model, currentIds);
+  }, [sounding.model, screenKey]);
+  const publishReveal = usePublishSessionFieldReveal();
 
   useEffect(() => {
     setTapped([]);
   }, [screenKey]);
 
+  useEffect(() => {
+    publishReveal({
+      revealedIds,
+      currentIds,
+      pass: progress.pass,
+      passes: progress.passes,
+    });
+    return () => publishReveal(null);
+  }, [screenKey, progress.pass, progress.passes, publishReveal, revealedIds]);
+
   return (
     <div
-      className="flex h-full min-h-0 w-full flex-1 flex-col bg-[#0b0b0b] text-white"
+      className="relative flex h-full min-h-0 w-full flex-1 flex-col bg-[#0b0b0b] text-white"
       data-calibrate-sounding=""
       data-sounding-phase={sounding.phase}
     >
-      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/15 px-4 py-3">
-        <div className="min-w-0 flex-1">{clock}</div>
-        {actions ? <div className="shrink-0">{actions}</div> : null}
-      </div>
-
-      <div className="grid min-h-0 flex-1 grid-rows-[minmax(7rem,28vh)_minmax(0,1fr)] lg:grid-rows-1 lg:grid-cols-2">
-        <TapAestheticSection
-          kind="sounding"
-          bgImage={bgImage}
-          className="min-h-[7rem] lg:order-2"
-        />
-        <div className="min-h-0 overflow-y-auto lg:order-1">
-          {sounding.phase === "expert-proof" && sounding.proof ? (
-            <SoundingVoiceStep
-              stillText={sounding.proof.stillText}
-              progress={progress}
-              error={error}
-              busy={proofBusy}
-              onSubmit={onSubmitProof}
-            />
-          ) : (
-            <div className="mx-auto flex min-h-full w-full max-w-xl flex-col justify-center gap-6 px-6 py-10">
-              <SoundingProgressHeader progress={progress} />
-              <ul className="flex flex-col gap-3" data-sounding-stills="">
-                {(sounding.current?.stills ?? []).map((still) => {
-                  const selected = tapped.includes(still.id);
-                  return (
-                    <li key={still.id}>
-                      <button
-                        type="button"
-                        data-sounding-still={still.id}
-                        aria-pressed={selected}
-                        onClick={() => {
-                          setTapped((current) =>
-                            current.includes(still.id)
-                              ? current.filter((id) => id !== still.id)
-                              : [...current, still.id],
-                          );
-                        }}
-                        className={`w-full border px-4 py-4 text-left text-base leading-relaxed ${
-                          selected
-                            ? "border-white bg-white text-neutral-950"
-                            : "border-white/30 bg-black text-white hover:border-white/70"
-                        }`}
-                      >
-                        {still.text}
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-              {error ? <p className="text-sm text-red-300">{error}</p> : null}
-              <button
-                type="button"
-                data-sounding-continue=""
-                onClick={() => onCommitTaps(tapped)}
-                className="bg-white px-4 py-2.5 text-sm font-semibold uppercase tracking-wider text-neutral-950"
-              >
-                {SOUNDING_CONTINUE_LABEL}
-              </button>
-            </div>
-          )}
-        </div>
+      <div className="relative z-[1] min-h-0 flex-1 overflow-y-auto">
+        {sounding.phase === "expert-proof" && sounding.proof ? (
+          <SoundingVoiceStep
+            stillText={sounding.proof.stillText}
+            progress={progress}
+            error={error}
+            busy={proofBusy}
+            onSubmit={onSubmitProof}
+          />
+        ) : (
+          <div className="mx-auto flex min-h-full w-full max-w-xl flex-col justify-center gap-6 px-6 py-10">
+            <SoundingProgressHeader progress={progress} />
+            <ul className="flex flex-col gap-3" data-sounding-stills="">
+              {(sounding.current?.stills ?? []).map((still) => {
+                const selected = tapped.includes(still.id);
+                return (
+                  <li key={still.id}>
+                    <button
+                      type="button"
+                      data-sounding-still={still.id}
+                      aria-pressed={selected}
+                      onClick={() => {
+                        setTapped((current) =>
+                          current.includes(still.id)
+                            ? current.filter((id) => id !== still.id)
+                            : [...current, still.id],
+                        );
+                      }}
+                      className={`w-full border px-4 py-4 text-left text-base leading-relaxed ${
+                        selected
+                          ? "border-white bg-white text-neutral-950"
+                          : "border-white/30 bg-black text-white hover:border-white/70"
+                      }`}
+                    >
+                      {still.text}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+            {error ? <p className="text-sm text-red-300">{error}</p> : null}
+            <button
+              type="button"
+              data-sounding-continue=""
+              onClick={() => onCommitTaps(tapped)}
+              className="bg-white px-4 py-2.5 text-sm font-semibold uppercase tracking-wider text-neutral-950"
+            >
+              {SOUNDING_CONTINUE_LABEL}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -287,29 +286,27 @@ function SoundingProgressHeader({
 }) {
   return (
     <div data-sounding-progress="" className="flex flex-col gap-3">
-      <div className="flex items-center gap-3">
-        <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-neutral-500">
-          {progress.label}
-        </p>
-        <div className="flex gap-1" aria-hidden>
-          {Array.from({ length: progress.passes }, (_, index) => {
-            const filled = index < progress.pass;
-            const current = index + 1 === progress.pass;
-            return (
-              <span
-                key={index}
-                data-sounding-pass={index + 1}
-                className={`h-1.5 w-6 ${
-                  filled
-                    ? "bg-white"
-                    : current
-                      ? "bg-white/50"
-                      : "border border-white/30 bg-transparent"
-                }`}
-              />
-            );
-          })}
-        </div>
+      <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/80">
+        Pass {progress.pass} of {progress.passes}
+      </p>
+      <div className="flex gap-1" aria-hidden>
+        {Array.from({ length: progress.passes }, (_, index) => {
+          const filled = index < progress.pass;
+          const current = index + 1 === progress.pass;
+          return (
+            <span
+              key={index}
+              data-sounding-pass={index + 1}
+              className={`h-1.5 w-6 ${
+                filled
+                  ? "bg-white"
+                  : current
+                    ? "bg-white/50"
+                    : "border border-white/30 bg-transparent"
+              }`}
+            />
+          );
+        })}
       </div>
       <p className="text-sm leading-relaxed text-neutral-300">{progress.hint}</p>
     </div>

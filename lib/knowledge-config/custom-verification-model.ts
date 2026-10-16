@@ -6,7 +6,6 @@
 import {
   KNOWLEDGE_CONFIG_DIM,
   KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
-  isKnowledgeConfigVector,
 } from "./types";
 import { cosineSimilarity, l2Distance, l2Normalize } from "./math";
 
@@ -73,15 +72,14 @@ export class CustomVerificationModelError extends Error {
   }
 }
 
+function isFiniteVector(vector: unknown, dim: number): vector is number[] {
+  return Array.isArray(vector) && vector.length === dim && vector.every((n) => Number.isFinite(n));
+}
+
 function assertCompatibleVector(vector: number[], embeddingModelId: string, dim: number) {
-  if (embeddingModelId !== KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID) {
+  if (!isFiniteVector(vector, dim)) {
     throw new CustomVerificationModelError(
-      `embedding_model_id mismatch: expected ${KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID}, got ${embeddingModelId}`,
-    );
-  }
-  if (!isKnowledgeConfigVector(vector, dim) || dim !== KNOWLEDGE_CONFIG_DIM) {
-    throw new CustomVerificationModelError(
-      `vector must be finite length ${KNOWLEDGE_CONFIG_DIM} for ${KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID}`,
+      `vector must be finite length ${dim} for ${embeddingModelId}`,
     );
   }
 }
@@ -105,16 +103,22 @@ export function createCustomVerificationModelFromVectors(options: {
   if (!vectors.length) {
     throw new CustomVerificationModelError("at least one subject embedding is required");
   }
+  const dim = vectors[0]?.length ?? 0;
+  if (embedding_model_id === KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID && dim !== KNOWLEDGE_CONFIG_DIM) {
+    throw new CustomVerificationModelError(
+      `vector must be finite length ${KNOWLEDGE_CONFIG_DIM} for ${KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID}`,
+    );
+  }
   for (const v of vectors) {
-    assertCompatibleVector(v, embedding_model_id, KNOWLEDGE_CONFIG_DIM);
+    assertCompatibleVector(v, embedding_model_id, dim);
   }
 
   // Mean then re-normalize → geometric centroid on the sphere
-  const acc = new Array(KNOWLEDGE_CONFIG_DIM).fill(0);
+  const acc = new Array(dim).fill(0);
   for (const v of vectors) {
-    for (let i = 0; i < KNOWLEDGE_CONFIG_DIM; i++) acc[i] += v[i];
+    for (let i = 0; i < dim; i++) acc[i] += v[i];
   }
-  for (let i = 0; i < KNOWLEDGE_CONFIG_DIM; i++) acc[i] /= vectors.length;
+  for (let i = 0; i < dim; i++) acc[i] /= vectors.length;
   const centroid = l2Normalize(acc);
 
   let cohesionSum = 0;
@@ -143,7 +147,7 @@ export function createCustomVerificationModelFromVectors(options: {
   return {
     name,
     embedding_model_id,
-    dim: KNOWLEDGE_CONFIG_DIM,
+    dim,
     centroid,
     cohort_cohesion,
     mean_radius,
@@ -165,7 +169,7 @@ export function computeKnowledgeDistance(
   >,
 ): KnowledgeDistance {
   assertCompatibleVector(userVector, region.embedding_model_id, region.dim);
-  if (!isKnowledgeConfigVector(region.centroid, region.dim)) {
+  if (!isFiniteVector(region.centroid, region.dim)) {
     throw new CustomVerificationModelError("region centroid is invalid");
   }
 

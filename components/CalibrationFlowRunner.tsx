@@ -6,13 +6,15 @@ import { TapLiveClock } from "@/components/tap-score/tap-live-clock";
 import { flowCountdownMinutes } from "@/lib/flow-countdown";
 import { CalibrateSoundingSurface } from "@/components/calibrate/calibrate-sounding-surface";
 import { SessionFinishedScreen } from "@/components/session-view/session-finished-screen";
-import {
-  SessionSoundingResult,
-  SoundingFinishedStage,
-} from "@/components/session-view/session-sounding-result";
+import { SessionGuidePanel } from "@/components/session-view/session-guide-panel";
+import { SessionSoundingResult } from "@/components/session-view/session-sounding-result";
+import { SessionWorkSurface } from "@/components/session-view/session-work-surface";
+import { SessionTopicChapter } from "@/components/session-view/ile-work-dock-bar";
+import { TapSessionSignals } from "@/components/session-view/session-signals";
 import { TapThoughtButton } from "@/components/tap-score/tap-thought-button";
-import { TapAestheticSection } from "@/components/tap-score/tap-aesthetic-section";
+import { FLOW_END_KICKERS } from "@/lib/session-stage-progress";
 import { beginCalibrationSession } from "@/lib/calibration-flow";
+import { parseLearningModelSize } from "@/lib/learning-model";
 import { fetchAestheticPackages } from "@/lib/aesthetics";
 import { pickTapBackgroundImage } from "@/lib/tap-score-client-helpers";
 import { IleStartLoading } from "@/components/session-view/ile-start-loading";
@@ -70,6 +72,7 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
     goal: string;
     identity: string;
     minutes: number;
+    catalogSize: 4 | 8 | 16;
     session: CalibrateState;
   } | null>(null);
   const [stored, setStored] = useState(false);
@@ -126,6 +129,7 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
         topicId: "calibration-goal",
         questions: [],
         calibrationToken: token,
+        catalogSize: pending.catalogSize,
       }),
     );
     if (!sessionClockMayStart({ mode: "calibrate", fieldReady: field.ok })) {
@@ -172,6 +176,7 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
         identity?: string;
         goal?: string;
         durationMinutes?: number;
+        actionCatalog?: number;
       } = {};
       if (raw.trim()) {
         try {
@@ -210,6 +215,7 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
         goal: goalText,
         identity: claimed,
         minutes,
+        catalogSize: parseLearningModelSize(payload.actionCatalog),
         session: started.session,
       };
       setClaimedIdentity(claimed);
@@ -246,6 +252,8 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
         identity: claimedIdentity,
         events: [soundingProofEvent(closed)],
         metadata: soundingProofMetadata(closed),
+        model: closed.model,
+        catalogSize: closed.model?.catalogSize ?? pendingRef.current?.catalogSize,
       }),
     });
     if (!response.ok) {
@@ -364,7 +372,6 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
           classification={sounding.classification}
           fallbackTitle="Time is up"
           fallbackBody="The countdown for this calibration flow has ended."
-          bgImage={bgImage}
         />
       </CalibrationViewport>
     );
@@ -377,7 +384,6 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
           classification={sounding.classification}
           fallbackTitle="Thank you"
           fallbackBody="Your calibration proof of work has been stored."
-          bgImage={bgImage}
         />
       </CalibrationViewport>
     );
@@ -385,50 +391,55 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
 
   return (
     <CalibrationViewport>
-      <CalibrateSoundingSurface
-        sounding={sounding}
-        error={error}
-        bgImage={bgImage}
-        onCommitTaps={(tappedIds) => {
-          const live = soundingRef.current;
-          if (!live) return;
-          const next = commitSoundingTaps(live, tappedIds);
-          soundingRef.current = next;
-          setSounding(next);
-        }}
-        proofBusy={proofBusy}
-        onSubmitProof={(transcript) => {
-          const live = soundingRef.current;
-          if (!live || live.phase !== "expert-proof" || !live.proof || proofBusy) return;
-          setProofBusy(true);
-          setError("");
-          void inferSoundingVoiceStep({
-            prepare: calibrateFieldPrepareInput({
-              topicText: pendingRef.current?.goal || "Calibration",
-              topicId: "calibration-goal",
-              questions: [],
-              calibrationToken: token,
-            }),
-            stillText: live.proof.stillText,
-            transcript,
-            candidates: live.proof.candidates,
-          }).then((result) => {
-            if (!result.ok) {
-              setError(result.error);
-              setProofBusy(false);
-              return;
-            }
-            const current = soundingRef.current;
-            if (!current || current.phase !== "expert-proof") {
-              setProofBusy(false);
-              return;
-            }
-            const next = submitSoundingProof(current, result.submission);
-            soundingRef.current = next;
-            setSounding(next);
-            setProofBusy(false);
-          });
-        }}
+      <SessionWorkSurface
+        mode="calibrate"
+        stage={
+          <CalibrateSoundingSurface
+            sounding={sounding}
+            error={error}
+            onCommitTaps={(tappedIds) => {
+              const live = soundingRef.current;
+              if (!live) return;
+              const next = commitSoundingTaps(live, tappedIds);
+              soundingRef.current = next;
+              setSounding(next);
+            }}
+            proofBusy={proofBusy}
+            onSubmitProof={(transcript) => {
+              const live = soundingRef.current;
+              if (!live || live.phase !== "expert-proof" || !live.proof || proofBusy) return;
+              setProofBusy(true);
+              setError("");
+              void inferSoundingVoiceStep({
+                prepare: calibrateFieldPrepareInput({
+                  topicText: pendingRef.current?.goal || "Calibration",
+                  topicId: "calibration-goal",
+                  questions: [],
+                  calibrationToken: token,
+                  catalogSize: pendingRef.current?.catalogSize,
+                }),
+                stillText: live.proof.stillText,
+                transcript,
+                candidates: live.proof.candidates,
+              }).then((result) => {
+                if (!result.ok) {
+                  setError(result.error);
+                  setProofBusy(false);
+                  return;
+                }
+                const current = soundingRef.current;
+                if (!current || current.phase !== "expert-proof") {
+                  setProofBusy(false);
+                  return;
+                }
+                const next = submitSoundingProof(current, result.submission);
+                soundingRef.current = next;
+                setSounding(next);
+                setProofBusy(false);
+              });
+            }}
+          />
+        }
         clock={
           <div className="flex w-full min-w-0 flex-col gap-2 px-1 py-1" data-calibration-live-clock>
             <TapLiveClock
@@ -469,6 +480,15 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
             End session
           </button>
         }
+        chapters={
+          <SessionTopicChapter
+            id="calibration-goal"
+            keyword={pendingRef.current?.goal || "Calibration"}
+            image={bgImage}
+          />
+        }
+        signals={<TapSessionSignals />}
+        focus={<SessionGuidePanel guide="calibrate" />}
       />
     </CalibrationViewport>
   );
@@ -479,37 +499,28 @@ function CalibrationSoundingFinished({
   classification,
   fallbackTitle,
   fallbackBody,
-  bgImage,
 }: {
   marker: "data-calibration-time-up" | "data-calibration-thank-you";
   classification: SoundingClassification | null;
   fallbackTitle: string;
   fallbackBody: string;
-  bgImage: string;
 }) {
   const presentation = soundingResultPresentation(classification);
   return (
-    <section
-      className="grid min-h-0 flex-1 grid-rows-[minmax(7rem,28vh)_minmax(0,1fr)] lg:grid-rows-1 lg:grid-cols-2"
-      {...{ [marker]: "" }}
-    >
-      <TapAestheticSection kind="sounding" bgImage={bgImage} className="min-h-[7rem] lg:order-2" />
-      <SoundingFinishedStage>
-        <SessionFinishedScreen
-          className="flex-none"
-          kicker={presentation?.kicker}
-          title={presentation?.title ?? fallbackTitle}
-          body={presentation?.body ?? fallbackBody}
-          frameLabel={null}
-          actions={
-            <TapThoughtButton size="md" variant="primary" onClick={() => { window.location.href = "/"; }}>
-              Explore Uncertain Systems
-            </TapThoughtButton>
-          }
-        >
-          <SessionSoundingResult classification={classification} />
-        </SessionFinishedScreen>
-      </SoundingFinishedStage>
+    <section className="flex min-h-0 flex-1 flex-col overflow-hidden" {...{ [marker]: "" }}>
+      <SessionFinishedScreen
+        kicker={presentation?.kicker ?? FLOW_END_KICKERS.calibrate}
+        title={presentation?.title ?? fallbackTitle}
+        body={presentation?.body ?? fallbackBody}
+        frameLabel={null}
+        actions={
+          <TapThoughtButton size="md" variant="primary" onClick={() => { window.location.href = "/"; }}>
+            Explore Uncertain Systems
+          </TapThoughtButton>
+        }
+      >
+        <SessionSoundingResult classification={classification} />
+      </SessionFinishedScreen>
     </section>
   );
 }

@@ -33,12 +33,6 @@ import { buildWorkspaceSectionNavItems } from "@/components/workspace-view/works
 import { WorkspaceMobilePlanAside } from "@/components/workspace-view/workspace-mobile-plan-aside";
 import { WorkspaceMobileTabBar } from "@/components/workspace-view/workspace-mobile-tab-bar";
 import { WorkspaceMapColumn } from "@/components/workspace-view/workspace-map-column";
-import {
-  nextLearnerDrawerRequest,
-  workspaceCircularMenuLaunchStyle,
-  workspaceCircularMenuStartsFreshExplore,
-} from "@/lib/block-circular-menu";
-import { resolveProductIntent } from "@/lib/product-intent";
 import { WorkspaceRightDrawers } from "@/components/workspace-view/workspace-right-drawers";
 import {
   canAccessPrivilegedWorkspaceSections,
@@ -51,7 +45,6 @@ import {
   workspaceLearnerPaneMounted,
   workspaceShell,
   workspaceSurfaceShowsAuthoring,
-  workspaceSurfaceShowsPracticeMenu,
 } from "@/lib/workspace-mode";
 import { parseWorkspaceKind } from "@/lib/workspace-kind";
 import {
@@ -83,7 +76,6 @@ import {
   type AyclCapabilities,
 } from "@/lib/aycl-shared";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
-import { nextWorkspaceMapSelection } from "@/lib/workspace-map-selection";
 
 export type { Block, Workspace, WorkspaceViewProps };
 
@@ -712,7 +704,6 @@ export function WorkspaceView({
   // One surface: the map plus authoring sections for people who can design.
   // Verification keeps its own list. Play-only stays on the map.
   const visibleSections = shell.sections;
-  const practiceMenu = workspaceSurfaceShowsPracticeMenu({ workspaceKind });
   const idleExplore = workspaceIdlePaneShowsExplore({
     allowExplore:
       workspaceKind === "knowledge_region"
@@ -901,26 +892,6 @@ export function WorkspaceView({
           expandJobs={isLearnerMode ? [] : expandJobs}
           clusterMapJob={isLearnerMode ? null : clusterMapJob}
           onAbortExpandJob={handleAbortExpandJob}
-          practiceMenu={practiceMenu}
-          onCircularMenuAction={(blockId, action) => {
-            applyMapSelectionResult(
-              nextWorkspaceMapSelection({ type: "open_block", blockId }),
-            );
-            const launchStyle = workspaceCircularMenuLaunchStyle(action);
-            if (workspaceCircularMenuStartsFreshExplore(action) && launchStyle) {
-              const block = nodes.find((n) => n.id === blockId);
-              if (!block || !currentUserId) return;
-              if (isLearnerMapBlockLocked(block, nodes)) return;
-              void handleLaunchIntent(
-                block,
-                resolveProductIntent(launchStyle === "verify" ? "explore" : launchStyle),
-                launchStyle === "verify" ? { verification: true } : undefined,
-              );
-              return;
-            }
-            const request = nextLearnerDrawerRequest(action);
-            if (request) setLearnerDrawerRequest(request);
-          }}
         />
 
         <WorkspaceRightDrawers

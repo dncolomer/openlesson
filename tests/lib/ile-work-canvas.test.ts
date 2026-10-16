@@ -1454,6 +1454,27 @@ describe("TAP Learning Work canvas split + Expand More quick actions (shipped)",
     expect(noSplit.split).toBe(false);
     expect(noSplit.scene.elements.map((el) => el.id)).toEqual(scene.elements.map((el) => el.id));
 
+    const box = convertToExcalidrawElements([
+      { type: "rectangle", x: 20, y: 20, width: 160, height: 80, label: { text: source } },
+    ]);
+    const container = box.find((el) => el.type === "rectangle")!;
+    const caption = box.find((el) => el.type === "text")!;
+    expect(caption.containerId).toBe(container.id);
+    const boundSplit = splitIleWorkCanvasSelectedText(
+      { elements: box, appState: {}, files: {} },
+      [container],
+    );
+    expect(boundSplit.split).toBe(true);
+    expect(boundSplit.parts.length).toBeGreaterThanOrEqual(2);
+    expect(boundSplit.parts.every((el) => !el.containerId)).toBe(true);
+    expect(boundSplit.parts[0]?.fontFamily).toBe(ILE_WORK_CANVAS_FONT_FAMILY);
+    const boundSelectedIds = (boundSplit.scene.appState.selectedElementIds ?? {}) as Record<
+      string,
+      boolean
+    >;
+    expect(boundSelectedIds[boundSplit.parts[0]!.id]).toBe(true);
+    expect(boundSplit.scene.elements.some((el) => el.id === caption.id)).toBe(false);
+
     const upper = convertToExcalidrawElements([{ type: "text", text: "Alpha", x: 10, y: 10 }])[0]!;
     const lower = convertToExcalidrawElements([{ type: "text", text: "Beta", x: 30, y: 80 }])[0]!;
     const merged = joinIleWorkCanvasSelection(
@@ -1499,9 +1520,12 @@ describe("TAP Learning Work canvas split + Expand More quick actions (shipped)",
     const craftBtn = read("components/session-view/ile-canvas-craft-insight.tsx");
     expect(craftBtn).toContain("data-ile-craft-insight");
     expect(craftBtn).toContain("ILE_CRAFT_INSIGHT_LABEL");
-    expect(canvas).toContain("ileWorkCanvasQuickActionPrompt");
-    expect(canvas).toContain("splitIleWorkCanvasSelectedText");
+    expect(canvas).toContain("runIleWorkCanvasCommand");
     expect(canvas).toContain("handleQuickAction(command.id)");
+    expect(canvas).toContain("selectedElementIds");
+    expect(canvas).toContain("syncWithoutEmit");
+    expect(canvas).toContain("ileWorkCanvasAskFallback");
+    expect(canvas).toContain("outcome.notice");
     const domainAsk = buildIleWorkCanvasAskUserMessage({
       prompt: "What is missing?",
       workspace: {
@@ -1761,10 +1785,9 @@ describe("TAP Learning Work canvas compress work (shipped)", () => {
     const canvas = read("components/ExcalidrawCanvas.tsx");
     expect(canvas).not.toContain("data-ile-compress-work");
     expect(canvas).not.toContain('emitCommand("selective-compression"');
-    expect(canvas).toContain('emitCommand("declutter"');
-    expect(canvas).toContain('emitCommand("check"');
-    expect(canvas).toContain('input.kind === "selective-compress"');
-    expect(canvas).toContain("compressIleWorkCanvasSelection");
+    expect(canvas).toContain("emitCommand");
+    expect(canvas).toContain("runIleWorkCanvasCommand");
+    expect(canvas).toContain("applyIleWorkCanvasAskReply");
     expect(canvas).toContain("<IleCraftInsightButton");
     const view = read("components/SessionView.tsx");
     expect(view).toContain("buildIleWorkCanvasCommandUserMessage");
@@ -2528,15 +2551,14 @@ describe("TAP Learning Work canvas selection commands (shipped)", () => {
       expect(command.tooltip.length).toBeGreaterThan(command.label.length + 8);
     }
     expect(ILE_SELECTIVE_COMPRESSION_LABEL).toBe("Compress");
-    expect(canvas).toContain('input.kind === "selective-compress"');
-    expect(canvas).toContain('kind: "check"');
-    expect(canvas).toContain('kind: "refactor"');
+    expect(canvas).toContain("applyIleWorkCanvasAskReply");
+    expect(canvas).toContain("runIleWorkCanvasCommand");
     expect(canvas).not.toContain('kind: "suggest-insight"');
-    expect(canvas).toContain('kind: "declutter"');
-    expect(canvas).toContain('input.kind === "clear-overlaps"');
-    expect(canvas).toContain("runIleWorkCanvasClearOverlaps");
-    expect(canvas).toContain("if (!cleared.needsModel && cleared.moved)");
-    expect(canvas).toContain("applyIleWorkCanvasSuggestInsight");
+    expect(read("lib/ile-work-canvas.ts")).toContain('kind === "selective-compress"');
+    expect(read("lib/ile-work-canvas.ts")).toContain('kind === "declutter" || kind === "clear-overlaps"');
+    expect(read("lib/ile-work-canvas.ts")).toContain("runIleWorkCanvasClearOverlaps");
+    expect(read("lib/ile-work-canvas.ts")).toContain("if (!cleared.needsModel && cleared.moved)");
+    expect(read("lib/ile-work-canvas.ts")).toContain("applyIleWorkCanvasSuggestInsight");
     expect(canvas).not.toContain("buildIleCanvasCraftInsightEvaluateRequest");
     expect(canvas).not.toContain("ILE_TURN_INSIGHT_CREATE_PATH");
     expect(canvas).not.toContain("data-ile-canvas-new-mark");
@@ -2567,7 +2589,7 @@ describe("TAP Learning Work canvas selection commands (shipped)", () => {
     const route = read("app/api/session-chat/route.ts");
     expect(route).toContain("ileSessionChatCanvasReply");
     expect(route).toContain("raw: canvasReply.raw");
-    expect(canvas).toContain("ileWorkCanvasLayoutReply(payload.raw, payload.elements)");
+    expect(read("lib/ile-work-canvas.ts")).toContain("ileWorkCanvasLayoutReply(input.payload.raw, input.payload.elements)");
     expect(phases).toContain("buildIleWorkCanvasCommandUserMessage");
     expect(phases).not.toContain("buildIleWorkCanvasCompressUserMessage");
     expect(phases).not.toContain('kind === "compress"');
@@ -2590,7 +2612,7 @@ describe("TAP Learning Work canvas selection commands (shipped)", () => {
         `clearAskCalls=${ask.calls.length}`,
         `gappedAskCalls=${gappedAsk.calls.length}`,
         `modelAsk=${modelAsk.calls.length}`,
-        "commands=Simplify Split Check Refactor Declutter",
+        "commands=Simplify Split Check/ask Refactor Declutter",
       ].join("\n") + "\n",
     );
   });

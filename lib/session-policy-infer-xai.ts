@@ -6,7 +6,43 @@
 
 import type { SessionMarkButtonId } from "@/lib/session-marks";
 import type { SessionPolicyProofEvent } from "@/lib/session-policy-infer";
-import { callXai, systemMessage, userMessage, type JsonSchema } from "@/lib/xai-client";
+import { callXai, systemMessage, userMessage, type JsonSchema, type Message } from "@/lib/xai-client";
+
+/** Stay under the route maxDuration. json_schema plus one json fallback, each 12s. */
+const POLICY_XAI_TIMEOUT_MS = 12_000;
+
+async function callPolicyXai<T extends Record<string, unknown>>(
+  messages: Message[],
+  schema: JsonSchema,
+  opts: { maxTokens: number; temperature: number },
+): Promise<{ ok: true; data: T } | { ok: false; error: string }> {
+  const schemaReply = await callXai<T>(messages, {
+    maxTokens: opts.maxTokens,
+    temperature: opts.temperature,
+    responseFormat: "json_schema",
+    jsonSchema: schema,
+    reasoningEffort: "low",
+    fetchTimeout: POLICY_XAI_TIMEOUT_MS,
+    retries: 1,
+  });
+  if (schemaReply.success && schemaReply.data && typeof schemaReply.data === "object") {
+    return { ok: true, data: schemaReply.data };
+  }
+  console.error("[session-policy-infer-xai] json_schema failed", schemaReply.error);
+  const looseReply = await callXai<T>(messages, {
+    maxTokens: opts.maxTokens,
+    temperature: opts.temperature,
+    responseFormat: "json",
+    reasoningEffort: "low",
+    fetchTimeout: POLICY_XAI_TIMEOUT_MS,
+    retries: 1,
+  });
+  if (looseReply.success && looseReply.data && typeof looseReply.data === "object") {
+    return { ok: true, data: looseReply.data };
+  }
+  console.error("[session-policy-infer-xai] json fallback failed", looseReply.error);
+  return { ok: false, error: "The policy could not be read." };
+}
 
 const CONFIDENCE_SCHEMA: JsonSchema = {
   name: "session_policy_confidence",
@@ -130,23 +166,13 @@ export async function inferSessionPolicyReply(input: {
   ]
     .filter(Boolean)
     .join("\n\n");
-  const response = await callXai<Record<string, unknown>>(
+  const response = await callPolicyXai<Record<string, unknown>>(
     [systemMessage(INFER_SYSTEM), userMessage(prompt)],
-    {
-      maxTokens: 500,
-      temperature: 0.2,
-      responseFormat: "json_schema",
-      jsonSchema: CONFIDENCE_SCHEMA,
-      reasoningEffort: "low",
-      fetchTimeout: 30_000,
-      retries: 2,
-    },
+    CONFIDENCE_SCHEMA,
+    { maxTokens: 500, temperature: 0.2 },
   );
-  const data = response.success ? response.data : null;
-  if (!data || typeof data !== "object") {
-    return { ok: false, error: "The policy could not be read." };
-  }
-  return { ok: true, reply: JSON.stringify(data) };
+  if (!response.ok) return { ok: false, error: response.error };
+  return { ok: true, reply: JSON.stringify(response.data) };
 }
 
 export async function inferSessionGapReply(input: {
@@ -172,23 +198,13 @@ export async function inferSessionGapReply(input: {
   ]
     .filter(Boolean)
     .join("\n\n");
-  const response = await callXai<Record<string, unknown>>(
+  const response = await callPolicyXai<Record<string, unknown>>(
     [systemMessage(GAP_SYSTEM), userMessage(prompt)],
-    {
-      maxTokens: 200,
-      temperature: 0.2,
-      responseFormat: "json_schema",
-      jsonSchema: GAP_SCHEMA,
-      reasoningEffort: "low",
-      fetchTimeout: 30_000,
-      retries: 2,
-    },
+    GAP_SCHEMA,
+    { maxTokens: 200, temperature: 0.2 },
   );
-  const data = response.success ? response.data : null;
-  if (!data || typeof data !== "object") {
-    return { ok: false, error: "The policy could not be read." };
-  }
-  return { ok: true, reply: JSON.stringify(data) };
+  if (!response.ok) return { ok: false, error: response.error };
+  return { ok: true, reply: JSON.stringify(response.data) };
 }
 
 export async function suggestSessionPolicyReply(input: {
@@ -208,19 +224,13 @@ export async function suggestSessionPolicyReply(input: {
   ]
     .filter(Boolean)
     .join("\n\n");
-  const response = await callXai<{ text?: unknown }>(
+  const response = await callPolicyXai<{ text?: unknown }>(
     [systemMessage(SUGGEST_SYSTEM), userMessage(prompt)],
-    {
-      maxTokens: 180,
-      temperature: 0.4,
-      responseFormat: "json_schema",
-      jsonSchema: SUGGESTION_SCHEMA,
-      reasoningEffort: "low",
-      fetchTimeout: 30_000,
-      retries: 2,
-    },
+    SUGGESTION_SCHEMA,
+    { maxTokens: 180, temperature: 0.4 },
   );
-  const text = textOf(response.success ? response.data?.text : "");
+  if (!response.ok) return { ok: false, error: response.error };
+  const text = textOf(response.data.text);
   if (!text) return { ok: false, error: "The policy could not be read." };
   return { ok: true, reply: text };
 }

@@ -106,6 +106,10 @@ describe("API ↔ MCP surface contract (shipped code)", () => {
         routeRel: "app/api/v3/pow/workspaces/[id]/proof-of-work/route.ts",
       },
       {
+        built: powWorkspaceResource(workspaceId, "flow-embeddings"),
+        routeRel: "app/api/v3/pow/workspaces/[id]/flow-embeddings/route.ts",
+      },
+      {
         built: powWorkspaceResource(workspaceId, "blocks"),
         routeRel: "app/api/v3/pow/workspaces/[id]/blocks/route.ts",
       },
@@ -196,6 +200,8 @@ describe("API ↔ MCP surface contract (shipped code)", () => {
       "buffer_proof_of_work",
       "stash_proof_of_work",
       "submit_stashed_proof_of_work",
+      "list_flow_embeddings",
+      "get_flow_embedding",
     ] as const) {
       expect(mcpNames.has(name)).toBe(true);
     }

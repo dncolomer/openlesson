@@ -26,8 +26,8 @@ import type { PerformanceReport } from "@/lib/pow-api/performance-report";
 import type { HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
 import { stopLiveSpeechRecognition, type LiveSpeechRecognitionBindings } from "@/lib/useSessionThoughtInterface";
 import type { ProofOfWorkApiInterruption } from "@/lib/pow-api/predictive-interruption";
-import { parseTapXaiCanvasTurn, serializeTapWorkCanvasScene, uploadTapWorkCanvasPow } from "@/lib/tap-work-canvas";
-import { embedPolicyScore, policyScoreUploadItem } from "@/lib/session-policy-score";
+import { parseTapXaiCanvasTurn, serializeTapWorkCanvasScene } from "@/lib/tap-work-canvas";
+import { postWorkspaceFlowEmbedding } from "@/lib/flow-embedding-client";
 import type { SessionPolicySnapshot } from "@/components/session-view/session-policy-context";
 import { loadSessionBranchField, sessionClockMayStart } from "@/lib/session-branch-field-load";
 import { verificationFieldPrepareInput } from "@/lib/session-branch-prepare";
@@ -87,6 +87,8 @@ export type TapScoreSession = {
   sidebarMode?: Extract<SessionSidebarMode, "tap" | "verification-tap">;
   workspaceTitle?: string;
   verificationToken?: string | null;
+  /** 4, 8, or 16 — the catalog this verification run prepares. */
+  actionCatalog?: 4 | 8 | 16;
   startingTopics?: readonly TapStartingTopic[];
   logTapTrace: (input: {
     traceType: TapTraceType;
@@ -339,6 +341,7 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
               privateToken: s.privateToken,
               verificationToken: s.verificationToken,
               entryQueryParams: s.entryQueryParamsRef.current,
+              catalogSize: s.actionCatalog,
             }),
           );
           if (!sessionClockMayStart({ mode: "verification", fieldReady: field.ok })) {
@@ -399,6 +402,7 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
             privateToken: s.privateToken,
             verificationToken: s.verificationToken,
             entryQueryParams: s.entryQueryParamsRef.current,
+            catalogSize: s.actionCatalog,
           }),
         );
         if (!sessionClockMayStart({ mode: "verification", fieldReady: field.ok })) {
@@ -486,30 +490,33 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
     stopLiveSpeechRecognition(s.speechBindings);
     const snapshot = s.policyRef?.current;
     const policy = snapshot?.model ? { model: snapshot.model, sequence: snapshot.sequence } : null;
-    if (policy) {
-      const note = s.messages
+    if (s.sidebarMode === "verification-tap" && policy && s.workspaceId && !s.localOpening) {
+      const prompt = s.messages
         .map((message) => String(message.content || "").trim())
         .filter(Boolean)
         .join("\n\n");
-      const scored = embedPolicyScore({
+      await postWorkspaceFlowEmbedding({
+        workspaceId: s.workspaceId,
+        flowKind: "verify",
+        runId: s.tapSessionIdRef.current || s.sessionId || null,
+        source: "runner",
         model: policy.model,
+        catalogSize: policy.model.catalogSize ?? s.actionCatalog,
         sequence: policy.sequence,
-        workspaceId: s.workspaceId || s.sessionId || "verification",
-        note,
+        pow: [
+          { type: "speech", tool_name: "runner", timestamp_ms: 1, payload: prompt },
+          ...policy.sequence.map((action, index) => ({
+            type: "tool" as const,
+            tool_name: "session_policy",
+            tool_action: action,
+            timestamp_ms: index + 2,
+          })),
+        ],
+        sessionId: s.sessionId,
+        privateToken: s.privateToken,
+        tapSessionId: s.tapSessionIdRef.current,
+        entryQueryParams: s.entryQueryParamsRef.current,
       });
-      const sessionKey = String(s.tapSessionIdRef.current || s.sessionId || "").trim();
-      if (sessionKey) {
-        await uploadTapWorkCanvasPow({
-          workspaceId: s.workspaceId,
-          blockId: s.blockId,
-          sessionId: s.sessionId,
-          privateToken: s.privateToken,
-          tapSessionId: s.tapSessionIdRef.current,
-          entryQueryParams: s.entryQueryParamsRef.current,
-          practice,
-          item: policyScoreUploadItem(scored),
-        });
-      }
     }
     if (s.localOpening) {
       try {

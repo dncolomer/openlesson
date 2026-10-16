@@ -624,12 +624,14 @@ describe("Work-canvas PoW host wiring (shipped)", () => {
       canvas.indexOf("const writeDictatedText"),
     );
     expect(quick).toContain(".command(");
+    expect(quick).toContain("runIleWorkCanvasCommand");
     expect(quick).not.toContain("expandMore");
     expect(quick).not.toContain('"ask"');
     expect(quick).not.toContain('"answer"');
     expect(quick).not.toContain('"suggest-insight"');
+    const commandLib = read("lib/ile-work-canvas.ts");
     for (const commandId of ILE_WORK_CANVAS_COMMAND_POW_IDS) {
-      expect(quick).toContain(`"${commandId}"`);
+      expect(commandLib).toContain(`"${commandId}"`);
     }
     expect(canvas).toContain("handleQuickAction(command.id)");
     expect(canvas).toContain("handleQuickAction(draft.exactId)");
@@ -653,11 +655,10 @@ describe("Work-canvas PoW host wiring (shipped)", () => {
 
     const preparePhases = read("components/scout-tap/scout-tap-phases.tsx");
     const prepareClient = read("components/scout-tap/ScoutTapClient.tsx");
-    expect(preparePhases).not.toContain("onCanvasPowActions={() => {}}");
-    expect(preparePhases).toContain("onCanvasPowActions={onCanvasPowActions}");
-    expect(prepareClient).toContain("buildTapWorkCanvasActionUploadItem");
+    expect(preparePhases).not.toContain("onCanvasPowActions");
+    expect(preparePhases).not.toContain("<WorkCanvas");
     expect(prepareClient).toContain("uploadTapWorkCanvasPow");
-    expect(prepareClient).toContain("onCanvasPowActions={handleCanvasPowActions}");
+    expect(prepareClient).toContain("soundingProofUploadItem");
 
     const tapUploader = read("lib/tap-work-canvas.ts");
     const tapRuntime = read("lib/tap-session-runtime.ts");

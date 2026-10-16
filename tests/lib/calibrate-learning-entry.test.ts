@@ -66,12 +66,13 @@ describe("learning Calibrate entry", () => {
     expect(en.onboardingGuide.scout.step3.body.toLowerCase()).toContain("opening lines out loud");
 
     expect(phases).toContain("<CalibrateSoundingSurface");
+    expect(phases).toContain("<SessionWorkSurface");
     expect(phases).toContain("onStart={confirmStart}");
     expect(phases).toContain("<TapBriefingConfig");
     expect(phases).toContain("PracticeVoiceChallenge");
     expect(phases).toContain('variant="prepare"');
     expect(phases).toContain('data-prepare-briefing-step="challenge"');
-    expect(phases).not.toContain("<TapSessionSignals");
+    expect(phases).toContain("<TapSessionSignals");
     expect(client).toContain('interaction_kind: "scout"');
     expect(client).toContain('purpose: "calibrate"');
     expect(client).toContain("createSoundingState");

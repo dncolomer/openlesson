@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ThoughtCompactAction, type HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
+import { type HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
 import { ImDoneAnsweringControl } from "@/components/thought-ui/ImDoneAnsweringButton";
 import { WorkCanvas } from "@/components/ExcalidrawCanvas";
 import { SessionBranchFieldBoundary } from "@/components/session-view/session-branch-prepare";
@@ -15,7 +15,6 @@ import {
   TAP_IM_DONE_CONFIRM_CONFIRM,
   TAP_IM_DONE_CONFIRM_TITLE,
 } from "@/lib/tap-thought-memory";
-import { SlidingTranscript } from "@/components/thought-ui/SlidingTranscript";
 import { PracticeVoiceChallenge } from "@/components/PracticeVoiceChallenge";
 import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
 import {
@@ -40,8 +39,8 @@ import { TapAestheticSection } from "@/components/tap-score/tap-aesthetic-sectio
 import { SessionTopicChapter } from "@/components/session-view/ile-work-dock-bar";
 import { TapSessionSignals } from "@/components/session-view/session-signals";
 import { SessionWorkSurface } from "@/components/session-view/session-work-surface";
+import { FLOW_END_KICKERS } from "@/lib/session-stage-progress";
 import type { SessionSidebarMode } from "@/lib/session-sidebar";
-import { formatSpeechTranscriptDisplay } from "@/lib/useSessionThoughtInterface";
 import { coerceSpokenLocale, type SpokenLocale } from "@/lib/tutoring-languages";
 import type { TapStartingTopic } from "@/lib/tap-score";
 import type { PerformanceReport } from "@/lib/pow-api/performance-report";
@@ -94,6 +93,7 @@ export function TapScorePhases(props: {
   sidebarMode?: Extract<SessionSidebarMode, "tap" | "verification-tap">;
   /** Public verification flow. Workspace verification uses the session instead. */
   verificationToken?: string | null;
+  actionCatalog?: 4 | 8 | 16;
   policyRef?: MutableRefObject<SessionPolicySnapshot>;
   durationLocked: boolean;
   isStartingSession: boolean;
@@ -187,6 +187,7 @@ export function TapScorePhases(props: {
     localOpening = false,
     sidebarMode = "tap",
     verificationToken = null,
+    actionCatalog,
     durationLocked,
     isStartingSession,
     startingTopics,
@@ -204,11 +205,11 @@ export function TapScorePhases(props: {
     crystallizableText,
     showEndSession,
     endSession,
-    speechError,
-    speechSupported,
+    speechError: _speechError,
+    speechSupported: _speechSupported,
     isListening,
-    retryMicrophone,
-    stashCurrentTranscription,
+    retryMicrophone: _retryMicrophone,
+    stashCurrentTranscription: _stashCurrentTranscription,
     stashedThoughts,
     sendThought,
     onEditThought,
@@ -458,6 +459,7 @@ export function TapScorePhases(props: {
     privateToken,
     verificationToken,
     entryQueryParams,
+    catalogSize: actionCatalog,
   });
   const verificationTitle = verificationField.chapterTitle || "This topic";
   const verificationBrief = verificationField.chapterBrief || "";
@@ -598,6 +600,7 @@ export function TapScorePhases(props: {
                         : undefined
                     }
                   />
+
                   {error ? (
                     <p className="pointer-events-none absolute inset-x-0 bottom-2 z-10 px-3 text-center text-xs text-red-300">
                       {error}
@@ -637,42 +640,6 @@ export function TapScorePhases(props: {
                   </div>
                 ) : null
               }
-              transcript={
-                <div
-                  data-tap-transcript-container
-                  className="shrink-0 border-t border-neutral-800/60 bg-black/35 p-2.5"
-                >
-                  <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
-                    <div
-                      className="flex h-8 min-w-0 flex-1 items-center rounded-none border border-neutral-900 bg-black/70 px-2.5 text-xs text-neutral-300"
-                    >
-                      <SlidingTranscript
-                        text={formatSpeechTranscriptDisplay({
-                          text: crystallizableText,
-                          speechError,
-                          speechSupported,
-                          isListening,
-                          enabled: phase === "live",
-                        })}
-                        className={`w-full ${speechError ? "text-neutral-300/90" : "text-neutral-300"}`}
-                      />
-                    </div>
-                    {speechSupported !== false && !isListening ? (
-                      <TapThoughtButton size="sm" variant="primary" onClick={() => void retryMicrophone()}>
-                        {speechError ? "Retry" : "Start"}
-                      </TapThoughtButton>
-                    ) : null}
-                    <div className="flex shrink-0 items-center gap-0.5">
-                      <ThoughtCompactAction
-                        shortcut="Del"
-                        label="Stash"
-                        disabled={!crystallizableText}
-                        onClick={() => stashCurrentTranscription()}
-                      />
-                    </div>
-                  </div>
-                </div>
-              }
               chapters={
                 <SessionTopicChapter
                   id={startingTopicId || "topic"}
@@ -687,7 +654,7 @@ export function TapScorePhases(props: {
               focusLabel={sidebarMode === "verification-tap" ? null : "Stash"}
               focus={
                 sidebarMode === "verification-tap" ? (
-                  <SessionGuidePanel guide="verification" />
+                  <SessionGuidePanel guide="verification" remainingSeconds={remainingSeconds} />
                 ) : (
                 <div className="flex h-full min-h-0 flex-col overflow-hidden">
                   <div
@@ -801,6 +768,7 @@ export function TapScorePhases(props: {
           privateToken || localOpening ? (
             <SessionFinishedScreen
               data-tap-session-thank-you=""
+              kicker={sidebarMode === "verification-tap" ? FLOW_END_KICKERS.verify : undefined}
               title={t("tap.postSession.thankYouTitle")}
               body={t("tap.postSession.thankYouBody")}
               actions={
@@ -818,6 +786,7 @@ export function TapScorePhases(props: {
           ) : (
             <SessionFinishedScreen
               wide
+              kicker={sidebarMode === "verification-tap" ? FLOW_END_KICKERS.verify : undefined}
               title={t("tap.postSession.resultsTitle")}
               body={t("tap.postSession.resultsHint")}
             >

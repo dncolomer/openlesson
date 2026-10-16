@@ -191,7 +191,7 @@ describe("learner Done + unlock", () => {
     const empty = recommendLearnerDone({ powCount: 0 });
     expect(empty.recommendation).toBe("not_ok");
     // Advisory only — copy must not imply Done is blocked
-    expect(empty.rationale).toMatch(/Mark Done anyway|still/i);
+    expect(empty.rationale).toMatch(/Mark as Done|still/i);
     expect(recommendLearnerDone({ powCount: 2, latestScore: 70 }).recommendation).toBe(
       "ok",
     );
@@ -486,7 +486,8 @@ describe("learner mode UI structural", () => {
     expect(grid + badges).toContain("data-learner-dep-highlight");
     expect(learner).toContain("data-learner-pow-summary-stats");
     expect(learner).toContain("data-learner-mark-done");
-    expect(learner).toContain("Mark Done anyway");
+    expect(learner).toContain("Mark as Done");
+    expect(learner).not.toContain("Mark Done anyway");
     // Force mark done is not gated on map lock or PoW Not OK
     expect(learner).toContain("disabled={busy || !onMarkDone || isCompleted}");
     expect(learner).not.toContain("disabled={busy || locked || !onMarkDone || isCompleted}");

@@ -48,7 +48,6 @@ const ILE_SECTIONS: SessionSidebarSection[] = [
   "focus",
   "chapters",
   "signals",
-  "transcript",
   "save",
 ];
 
@@ -56,7 +55,6 @@ const TAP_SECTIONS: SessionSidebarSection[] = [
   "focus",
   "chapters",
   "signals",
-  "transcript",
   "clock",
   "save",
 ];
@@ -118,6 +116,15 @@ describe("session sidebar mode configuration", () => {
     expect(sessionSidebarSections("ile")).toEqual(ILE_SECTIONS);
     expect(sessionSidebarSections("tap")).toEqual(TAP_SECTIONS);
     expect(sessionSidebarSections("verification-tap")).toEqual(TAP_SECTIONS);
+    expect(sessionSidebarSections("calibrate")).toEqual([
+      "focus",
+      "chapters",
+      "signals",
+      "clock",
+      "save",
+    ]);
+    expect(sessionSidebarHasSection("calibrate", "clock")).toBe(true);
+    expect(sessionSidebarHasSection("calibrate", "transcript")).toBe(false);
 
     for (const mode of ["tap", "verification-tap"] as const) {
       const sections = sessionSidebarSections(mode);
@@ -125,7 +132,7 @@ describe("session sidebar mode configuration", () => {
       expect(sections).toContain("chapters");
       expect(sections).toContain("signals");
       expect(sections.join(",")).not.toContain("data");
-      expect(sections).toContain("transcript");
+      expect(sections).not.toContain("transcript");
       expect(sections).toContain("clock");
       expect(sessionSidebarHasSection(mode, "signals")).toBe(true);
       expect(sections).not.toContain("logs");
@@ -159,7 +166,7 @@ describe("session sidebar mode configuration", () => {
     expect(Number.parseFloat(collapsed.width)).toBeGreaterThan(0);
   });
 
-  it("renders the TAP Learning sidebar beside a clock, widgets, and the live transcript", () => {
+  it("renders the TAP Learning sidebar beside a clock, widgets, and Data", () => {
     const html = renderSidebar("ile", 65);
     expect(html).toContain('data-session-sidebar-mode="ile"');
     expect(html).toContain(`width:${SESSION_SIDEBAR_EXPANDED_REM}rem`);
@@ -173,7 +180,7 @@ describe("session sidebar mode configuration", () => {
     expect(html).not.toContain('data-session-sidebar-section="chapters"');
     expect(html).not.toContain(">Chapters<");
     expect(html).toContain('data-session-sidebar-section="signals"');
-    expect(html).toContain('data-session-sidebar-section="transcript"');
+    expect(html).not.toContain('data-session-sidebar-section="transcript"');
     const topicAt = html.indexOf('data-session-sidebar-section="topic"');
     const focusAt = html.indexOf('data-session-sidebar-section="focus"');
     const signalsAt = html.indexOf('data-session-sidebar-section="signals"');
@@ -242,16 +249,14 @@ describe("session sidebar mode configuration", () => {
     expect(signalsFrame).toContain("border border-white/25 bg-black");
     expect(signalsFrame).not.toContain("p-2");
     expect(html.indexOf("Signals body")).toBeGreaterThan(signalsFrameAt);
-    expect(html.indexOf('data-session-sidebar-section="transcript"')).toBeGreaterThan(signalsFrameAt);
-    expect(html).toContain("live speech line");
-    const transcriptAt = html.indexOf("data-ile-transcription-box");
+    expect(html).not.toContain("data-ile-transcription-box");
+    expect(html).not.toContain("live speech line");
     const actionsRowAt = html.indexOf("data-session-sidebar-actions");
     const actionsAt = html.indexOf("data-ile-voice-bar-actions");
-    expect(transcriptAt).toBeGreaterThan(-1);
-    expect(actionsRowAt).toBeGreaterThan(transcriptAt);
+    expect(actionsRowAt).toBeGreaterThan(signalsFrameAt);
     expect(actionsAt).toBeGreaterThan(actionsRowAt);
     expect(html.indexOf("data-ile-bar-save")).toBeGreaterThan(actionsAt);
-    expect(html.slice(transcriptAt, actionsAt)).not.toContain("data-ile-bar-save");
+    expect(html.slice(signalsFrameAt, actionsAt)).not.toContain("data-ile-bar-save");
     expect(html).not.toContain("data-ile-bar-data");
     expect(html).not.toContain("data-ile-bar-logs");
     expect(html).toContain("data-ile-bar-save");
@@ -277,7 +282,7 @@ describe("session sidebar mode configuration", () => {
     expect(html).not.toContain("data-ile-work-canvas-timer");
     expect(html).not.toContain("data-session-sidebar-clock");
     expect(html).toContain("data-ile-map-insights-widget");
-    expect(html).toContain("live speech line");
+    expect(html).not.toContain("live speech line");
     expect(html).toContain("data-session-sidebar-actions");
     expect(html).toContain("data-ile-bar-save");
     expect(html).toContain(">Exit<");
@@ -382,7 +387,7 @@ describe("session sidebar mode configuration", () => {
     expect(policy).toContain("data-session-policy-mistake-status=\"closed\"");
     expect(policy).toContain("What holds?");
     expect(policy).toContain("Closed");
-    expect(policy).toContain("Close.");
+    expect(policy).toContain("Exploit.");
     expect(policy).toContain("a sketch");
     expect(policy).toContain("Closed: 1.");
     expect(policy).not.toContain("Still open at the insight");
@@ -437,7 +442,7 @@ describe("session sidebar mode configuration", () => {
       expect(html).not.toContain(">Signals<");
       expect(html).toContain("min-h-0 flex-1 flex-col overflow-hidden");
       expect(html).not.toContain("overflow-y-auto");
-      expect(html).toContain("live speech line");
+      expect(html).not.toContain("live speech line");
       const modeTopic = html.indexOf('data-session-sidebar-section="topic"');
       const modeCard = html.slice(modeTopic, html.indexOf('data-session-sidebar-section="focus"'));
       expect(modeTopic).toBeLessThan(html.indexOf('data-session-sidebar-section="focus"'));
@@ -458,8 +463,9 @@ describe("session sidebar mode configuration", () => {
       );
       expect(modeCard).toContain(">0:16<");
       expect(modeCard.match(/data-session-topic-card=/g)).toHaveLength(1);
+      expect(html).not.toContain("data-ile-transcription-box");
       expect(html.indexOf("data-session-sidebar-actions")).toBeGreaterThan(
-        html.indexOf("data-ile-transcription-box"),
+        html.indexOf("data-session-sidebar-signals-frame"),
       );
       expect(html.indexOf("data-ile-voice-bar-actions")).toBeGreaterThan(
         html.indexOf("data-session-sidebar-actions"),
@@ -584,11 +590,7 @@ describe("session sidebar mode configuration", () => {
     const client = readFileSync(join(ROOT, "components/TapScoreClient.tsx"), "utf8");
     const verify = readFileSync(join(ROOT, "components/VerificationFlowRunner.tsx"), "utf8");
     const host = readFileSync(join(ROOT, "components/session-view/session-work-surface.tsx"), "utf8");
-    const calibrateSurface = readFileSync(
-      join(ROOT, "components/calibrate/calibrate-live-surface.tsx"),
-      "utf8",
-    );
-    for (const src of [calibrateSurface, drill, tap]) {
+    for (const src of [drill, tap]) {
       expect(src).toContain("<SessionWorkSurface");
       expect(src).not.toContain("data-scout-live-split");
       expect(src).not.toContain("data-tap-convo-live-split");
@@ -600,19 +602,25 @@ describe("session sidebar mode configuration", () => {
     expect(client).toContain("sidebarMode={sidebarMode}");
     expect(verify).toContain('sidebarMode="verification-tap"');
     expect(prepare).toContain("<CalibrateSoundingSurface");
-    expect(calibrateSurface).not.toContain('focusLabel="actions"');
-    expect(calibrateSurface).not.toContain("SessionActionsPanel");
+    expect(prepare).toContain("<SessionWorkSurface");
+    expect(prepare).toContain('mode="calibrate"');
+    expect(prepare).not.toContain('focusLabel="actions"');
+    expect(prepare).not.toContain("SessionActionsPanel");
+    const calibrateSurface = readFileSync(
+      join(ROOT, "components/calibrate/calibrate-sounding-surface.tsx"),
+      "utf8",
+    );
     expect(calibrateSurface).not.toContain("policyTab");
     expect(calibrateSurface).not.toContain("data-calibrate-done-classifying");
     expect(calibrateSurface).not.toContain("<TapSessionSignals");
-    expect(prepare).not.toContain("<TapSessionSignals");
+    expect(prepare).toContain("<TapSessionSignals");
     expect(prepare).not.toContain("captureAudio");
-    expect(calibrateSurface).toContain("data-calibrate-step");
+    expect(calibrateSurface).toContain("data-calibrate-sounding");
     expect(drill).toContain('focusLabel="Stash"');
     expect(drill).toContain("<SessionTopicChapter");
     expect(drill).toContain("<TapSessionSignals captureAudio");
     expect(tap).toContain('? null : "Stash"');
-    expect(tap).toContain('<SessionGuidePanel guide="verification" />');
+    expect(tap).toContain('<SessionGuidePanel guide="verification" remainingSeconds={remainingSeconds} />');
     expect(tap).not.toContain("SessionActionsPanel");
     expect(tap).not.toContain("policyTab");
     expect(tap).toContain("<SessionTopicChapter");
@@ -648,8 +656,8 @@ describe("session sidebar mode configuration", () => {
     expect(chrome).toContain("sessionSidebarTopic");
     expect(chrome).not.toContain("<IleWorkDockBar");
     expect(chrome).not.toContain("onFocusOpenWork");
-    expect(calibrateSurface.match(/<SessionTopicChapter/g)).toHaveLength(1);
-    expect(prepare).not.toContain("<SessionTopicChapter");
+    expect(calibrateSurface).not.toContain("<SessionTopicChapter");
+    expect(prepare).toContain("<SessionTopicChapter");
     expect(drill.match(/<SessionTopicChapter/g)).toHaveLength(1);
     expect(tap.match(/<SessionTopicChapter/g)).toHaveLength(1);
     for (const src of [prepare, drill, tap, chrome]) {

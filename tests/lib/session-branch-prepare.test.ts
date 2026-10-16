@@ -33,6 +33,7 @@ describe("session branch prepare", () => {
       chapterBrief: "A cause can fail.",
       sessionId: "session-1",
       ileToken: "ile",
+      catalogSize: 4,
     });
   });
 
@@ -61,6 +62,7 @@ describe("session branch prepare", () => {
       chapterTitle: "Verification",
       chapterBrief: "",
       verificationToken: "ver-token",
+      catalogSize: 4,
     });
     expect(request).not.toHaveProperty("sessionId");
   });
@@ -147,18 +149,66 @@ describe("session branch prepare", () => {
     expect(planSessionBranchPrepare(verification).kind).toBe("verification");
   });
 
+  it("puts catalog size on every prepare request so 4/8/16 reach field prep", () => {
+    expect(
+      sessionBranchPrepareRequest(
+        planSessionBranchPrepare({
+          chapterTitle: "Learn",
+          sessionId: "session-1",
+          catalogSize: 8,
+        }),
+      ),
+    ).toMatchObject({ catalogSize: 8, sessionId: "session-1" });
+    expect(
+      sessionBranchPrepareRequest(
+        planSessionBranchPrepare({
+          chapterTitle: "Calibration",
+          calibrationToken: "cal-token",
+          catalogSize: 16,
+        }),
+      ),
+    ).toMatchObject({ catalogSize: 16, calibrationToken: "cal-token" });
+    expect(
+      sessionBranchPrepareRequest(
+        planSessionBranchPrepare({
+          chapterTitle: "Verification",
+          verificationToken: "ver-token",
+          catalogSize: 8,
+        }),
+      ),
+    ).toMatchObject({ catalogSize: 8, verificationToken: "ver-token" });
+    expect(calibrateFieldPrepareInput({ topicText: "Seed", catalogSize: 16 }).catalogSize).toBe(16);
+    expect(verificationFieldPrepareInput({ workspaceTitle: "W", catalogSize: 8 }).catalogSize).toBe(8);
+    expect(
+      learnSessionFieldInput({
+        sessionId: "s",
+        problem: "P",
+        plan: { steps: [{ id: "chapter-1", description: "C" }], currentStepIndex: 0 },
+        catalogSize: 8,
+      })?.catalogSize,
+    ).toBe(8);
+    const route = read("app/api/ile/session-branch-model/route.ts");
+    expect(route).toContain("resolveCatalogSize");
+    expect(route).toContain("generateSessionBranchOpening");
+    expect(read("lib/session-branch-model-generate.ts")).toContain("catalogSize");
+    expect(read("components/CalibrationFlowRunner.tsx")).toContain("catalogSize:");
+    expect(read("components/scout-tap/ScoutTapClient.tsx")).toContain("catalogSize");
+    expect(read("components/VerificationFlowRunner.tsx")).toContain("actionCatalog");
+  });
+
   it("prepares the field for Calibrate and Verification, and leaves conversational TAP alone", () => {
-    const calibrate = read("components/calibrate/calibrate-live-surface.tsx");
+    const calibrate = read("components/scout-tap/ScoutTapClient.tsx");
+    const publicCalibrate = read("components/CalibrationFlowRunner.tsx");
     const verification = read("components/tap-score/tap-score-phases.tsx");
     const learn = read("components/session-view/session-chapter-canvas.tsx");
     const route = read("app/api/ile/session-branch-model/route.ts");
     const prompt = read("components/excalidraw-canvas/canvas-prompt-bar.tsx");
-    expect(calibrate).toContain("SessionBranchFieldBoundary");
-    expect(calibrate).toContain('<SessionGuidePanel guide="calibrate" />');
-    expect(calibrate).not.toContain("policyTab");
-    expect(calibrate).toContain("calibrationToken");
+    expect(calibrate).toContain("calibrateFieldPrepareInput");
+    expect(calibrate).toContain("loadSessionBranchField");
+    expect(publicCalibrate).toContain("calibrateFieldPrepareInput");
+    expect(publicCalibrate).toContain("calibrationToken");
     expect(verification).toContain('enabled={sidebarMode === "verification-tap"}');
-    expect(verification).toContain('<SessionGuidePanel guide="verification" />');
+    expect(verification).toContain('<SessionGuidePanel guide="verification" remainingSeconds={remainingSeconds} />');
     expect(verification).not.toContain("policyTab");
     expect(verification).toContain("verificationToken");
     expect(learn).toContain("useSessionBranchField");

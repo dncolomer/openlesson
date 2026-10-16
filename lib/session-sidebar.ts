@@ -1,10 +1,10 @@
 /**
- * Right-rail session chrome shared by TAP Learning, TAP, and verification TAP.
- * Learn mounts it from session chrome. Prepare, Drill, conversational TAP,
- * and verification TAP mount it from SessionWorkSurface.
+ * Right-rail session chrome shared by TAP Learning, TAP, Calibrate, and
+ * verification TAP. Learn mounts it from session chrome. Calibrate, Drill,
+ * conversational TAP, and verification TAP mount it from SessionWorkSurface.
  */
 
-export const SESSION_SIDEBAR_MODES = ["ile", "tap", "verification-tap"] as const;
+export const SESSION_SIDEBAR_MODES = ["ile", "tap", "verification-tap", "calibrate"] as const;
 
 export type SessionSidebarMode = (typeof SESSION_SIDEBAR_MODES)[number];
 
@@ -48,31 +48,41 @@ export const SESSION_TOPIC_DOCK_CHIP_REM = 6;
 /**
  * `chapters` is the single static topic card, not a list.
  * Learn has no work-canvas countdown. The bottom row is Exit.
- * Prepare, Drill, conversational TAP, and Verify draw their countdown on the
+ * Calibrate, Drill, conversational TAP, and Verify draw their countdown on the
  * bottom left of the topic card.
  */
 const ILE_SESSION_SIDEBAR_SECTIONS = [
   "focus",
   "chapters",
   "signals",
-  "transcript",
   "save",
 ] as const satisfies readonly SessionSidebarSection[];
 
 /**
- * Prepare, Drill, conversational TAP, and Verify share the same sections.
+ * Drill, conversational TAP, and Verify share the same sections.
  * The focus block is what changes. The clock stays on.
  */
 const TAP_SESSION_SIDEBAR_SECTIONS = [
   "focus",
   "chapters",
   "signals",
-  "transcript",
   "clock",
   "save",
 ] as const satisfies readonly SessionSidebarSection[];
 
 const VERIFICATION_TAP_SESSION_SIDEBAR_SECTIONS = TAP_SESSION_SIDEBAR_SECTIONS;
+
+/**
+ * Calibrate keeps the topic still, clock, Data, and End. No think-aloud
+ * transcript. Data streams stay off until Enable.
+ */
+const CALIBRATE_SESSION_SIDEBAR_SECTIONS = [
+  "focus",
+  "chapters",
+  "signals",
+  "clock",
+  "save",
+] as const satisfies readonly SessionSidebarSection[];
 
 export function sessionSidebarSections(
   mode: SessionSidebarMode,
@@ -84,6 +94,8 @@ export function sessionSidebarSections(
       return TAP_SESSION_SIDEBAR_SECTIONS;
     case "verification-tap":
       return VERIFICATION_TAP_SESSION_SIDEBAR_SECTIONS;
+    case "calibrate":
+      return CALIBRATE_SESSION_SIDEBAR_SECTIONS;
     default: {
       const unknown: never = mode;
       return unknown;
@@ -113,6 +125,7 @@ export function sessionSidebarHasSection(
 /**
  * How many Data streams are live. Audio counts as one. EEG, screen, and webcam
  * add one each while that capture is on. The sidebar shows them as tabs, not tiles.
+ * The live transcript overlay is retired; speech still lands through Dictate.
  */
 export function ileSidebarSignalCount(input: {
   eegStreaming: boolean;

@@ -88,6 +88,20 @@ const InferenceContext = createContext<readonly SessionPolicyInference[]>([]);
 const SuggestionContext = createContext<string | null>(null);
 const RestoreContext = createContext<((record: SessionPolicyRecord) => void) | null>(null);
 
+export type SessionFieldReveal = {
+  revealedIds: ReadonlySet<string> | null;
+  currentIds: readonly string[];
+  pass?: number;
+  passes?: number;
+};
+
+const EMPTY_FIELD_REVEAL: SessionFieldReveal = { revealedIds: null, currentIds: [] };
+const FieldRevealContext = createContext<SessionFieldReveal>(EMPTY_FIELD_REVEAL);
+const FieldRevealPublishContext = createContext<((next: SessionFieldReveal | null) => void) | null>(
+  null,
+);
+function publishRevealNowhere(_next: SessionFieldReveal | null) {}
+
 function publishNowhere(_state: SessionMarkState) {}
 function publishDraftNowhere(_draft: SessionMarkDraft | null) {}
 function publishBranchNowhere(_slot: SetStateAction<SessionBranchSlot>) {}
@@ -110,7 +124,11 @@ export function SessionPolicyProvider({ children }: { children: ReactNode }) {
   const [canvasReady, setCanvasReady] = useState(false);
   const [inferences, setInferences] = useState<readonly SessionPolicyInference[]>([]);
   const [suggestion, setSuggestion] = useState<string | null>(null);
+  const [fieldReveal, setFieldReveal] = useState<SessionFieldReveal>(EMPTY_FIELD_REVEAL);
   const [proofVersion, setProofVersion] = useState(0);
+  const publishReveal = useCallback((next: SessionFieldReveal | null) => {
+    setFieldReveal(next ?? EMPTY_FIELD_REVEAL);
+  }, []);
   const canvasEffectRef = useRef<((effect: SessionMarkCanvasEffect) => void) | null>(null);
   const gateRef = useRef(emptyCanvasEffectGate());
   const slotRef = useRef<SessionBranchSlot>(IDLE_BRANCH_SLOT);
@@ -187,6 +205,8 @@ export function SessionPolicyProvider({ children }: { children: ReactNode }) {
                         <RestoreContext.Provider value={restorePolicy}>
                           <InferenceContext.Provider value={inferences}>
                             <SuggestionContext.Provider value={suggestion}>
+                              <FieldRevealPublishContext.Provider value={publishReveal}>
+                                <FieldRevealContext.Provider value={fieldReveal}>
                               <SessionPolicyInferLoop
                                 proofRef={proofRef}
                                 proofVersion={proofVersion}
@@ -196,6 +216,8 @@ export function SessionPolicyProvider({ children }: { children: ReactNode }) {
                                 setSuggestion={setSuggestion}
                               />
                               <SessionCommandBridgeProvider>{children}</SessionCommandBridgeProvider>
+                                </FieldRevealContext.Provider>
+                              </FieldRevealPublishContext.Provider>
                             </SuggestionContext.Provider>
                           </InferenceContext.Provider>
                         </RestoreContext.Provider>
@@ -284,9 +306,9 @@ function SessionPolicyInferLoop({
     inflight.current = true;
     void requestSessionPolicyReply({ ...prepare, phase: "infer", events: batch }).then((reply) => {
       if (inferToken.current !== token) return;
-      proofRef.current = proofRef.current.slice(batch.length);
       lastInferAt.current = Date.now();
       if (!reply) return;
+      proofRef.current = proofRef.current.slice(batch.length);
       let recorded: readonly SessionPolicyInference[] | null = null;
       publishSlot((current) => {
         if (current.status !== "ready" || !current.model) return current;
@@ -311,13 +333,19 @@ function SessionPolicyInferLoop({
   }, [clock, inferencesRef, prepareRef, proofRef, proofVersion, publishSlot, setInferences, slot]);
 
   useEffect(() => {
-    if (draft?.mode !== "learn") return;
     if (slot?.status !== "ready" || !slot.model) return;
     const model = slot.model;
     const recommended = recommendSessionBranchAction(model, model.focusId);
     if (!recommended) return;
     const focus = sessionBranchById(model, model.focusId);
-    const canvasNote = canvasNoteOf(proofRef.current);
+    const canvasNote = [
+      canvasNoteOf(proofRef.current),
+      (draft?.selectedTexts ?? []).join("\n"),
+      draft?.speech ?? "",
+    ]
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .join("\n");
     const key = `${model.focusId}:${model.step}:${recommended.id}:${canvasNote}`;
     if (suggestAction.current !== recommended.id) {
       if (suggestAction.current) setSuggestion(null);
@@ -349,7 +377,7 @@ function SessionPolicyInferLoop({
       suggestInflight.current = false;
       if (mounted.current) setClock((value) => value + 1);
     });
-  }, [clock, draft?.mode, prepareRef, proofRef, proofVersion, setSuggestion, slot]);
+  }, [clock, draft, prepareRef, proofRef, proofVersion, setSuggestion, slot]);
 
   return null;
 }
@@ -406,6 +434,14 @@ export function useSessionPolicyInferences(): readonly SessionPolicyInference[] 
 
 export function useSessionPolicySuggestion(): string | null {
   return useContext(SuggestionContext);
+}
+
+export function useSessionFieldReveal(): SessionFieldReveal {
+  return useContext(FieldRevealContext);
+}
+
+export function usePublishSessionFieldReveal(): (next: SessionFieldReveal | null) => void {
+  return useContext(FieldRevealPublishContext) ?? publishRevealNowhere;
 }
 
 /** Puts a stored snapshot on the field without treating it as a new chapter. */

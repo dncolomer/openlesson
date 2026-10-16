@@ -277,7 +277,7 @@ describe("science learning model page", () => {
     );
     expect(read("components/science/LearningModelMarks.tsx")).toContain("LearningModelActionGlyph");
     expect(read("components/science/LearningModelMarks.tsx")).toContain("AccelerandoMark");
-    expect(read("components/excalidraw-canvas/canvas-prompt-bar.tsx")).toContain("AccelerandoMark");
+    expect(read("components/excalidraw-canvas/command-plate.tsx")).toContain("AccelerandoMark");
     expect(read("app/science/learning-model/page.tsx")).toContain("overflow-clip");
     expect(read("components/science/LearningModelCatalogs.tsx")).toContain("overflow-clip");
     expect(read("components/science/LearningModelPipelines.tsx")).toContain("overflow-clip");

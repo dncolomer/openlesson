@@ -17,7 +17,7 @@ export const ILE_WORK_CANVAS_COMMANDS = [
   },
   {
     id: "check",
-    label: "Check",
+    label: "Check/ask",
     tooltip: "Ask for a check of the selected work: what holds, and what to fix.",
   },
   {
@@ -56,8 +56,8 @@ export function filterIleWorkCanvasCommands(query: string | null | undefined) {
   if (!q) return [...ILE_WORK_CANVAS_COMMANDS];
   return ILE_WORK_CANVAS_COMMANDS.filter((command) => {
     const label = command.label.toLowerCase();
-    const compact = label.replace(/\s+/g, "");
-    const dashed = label.replace(/\s+/g, "-");
+    const compact = label.replace(/[\s/]+/g, "");
+    const dashed = label.replace(/[\s/]+/g, "-");
     return (
       command.id.startsWith(q) ||
       label.startsWith(q) ||
@@ -89,8 +89,8 @@ export function ileCanvasCommandDraft(raw: string | null | undefined): {
       return (
         command.id === head ||
         label === head ||
-        label.replace(/\s+/g, "") === head ||
-        label.replace(/\s+/g, "-") === head
+        label.replace(/[\s/]+/g, "") === head ||
+        label.replace(/[\s/]+/g, "-") === head
       );
     }) ?? (head && matches.length === 1 ? matches[0] : null);
   return { slash: true, query: head, rest, exactId: exact?.id ?? null };

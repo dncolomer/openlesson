@@ -21,6 +21,7 @@ import { isSmartphoneClient } from "@/lib/is-smartphone";
 import { useI18n } from "@/lib/i18n";
 import type { TapStartingTopic } from "@/lib/tap-score";
 import { VERIFICATION_PRACTICE_OPENING } from "@/lib/verification-flow";
+import { parseLearningModelSize } from "@/lib/learning-model";
 import type { SessionSidebarMode } from "@/lib/session-sidebar";
 import type { TapPostSessionMode } from "@/lib/pow-api/tap-link-config";
 import { TAP_LINK_MAX_MINUTES, TAP_LINK_MIN_MINUTES } from "@/lib/pow-api/tap-link-config";
@@ -129,6 +130,8 @@ interface TapScoreClientProps {
   sidebarMode?: Extract<SessionSidebarMode, "tap" | "verification-tap">;
   /** Public verification flow. Workspace verification uses the session instead. */
   verificationToken?: string | null;
+  /** 4, 8, or 16 — the catalog this verification run prepares. */
+  actionCatalog?: 4 | 8 | 16;
 }
 
 /** Resolve whether End Session UI should show (default yes). */
@@ -158,6 +161,7 @@ export function TapScoreClient({
   onLocalProof,
   sidebarMode = "tap",
   verificationToken = null,
+  actionCatalog: actionCatalogProp,
 }: TapScoreClientProps) {
   const showEndSession = resolveTapShowEndSession({
     showEndSession: showEndSessionProp,
@@ -165,9 +169,31 @@ export function TapScoreClient({
   });
   const entryQueryParamsRef = useRef(entryQueryParams);
   const policyRef = useRef(emptySessionPolicySnapshot());
+  const [actionCatalog, setActionCatalog] = useState<4 | 8 | 16>(() =>
+    parseLearningModelSize(actionCatalogProp),
+  );
   useEffect(() => {
     entryQueryParamsRef.current = entryQueryParams;
   }, [entryQueryParams]);
+  useEffect(() => {
+    if (actionCatalogProp) {
+      setActionCatalog(parseLearningModelSize(actionCatalogProp));
+      return;
+    }
+    if (!workspaceId) return;
+    let cancelled = false;
+    void createClient()
+      .from("workspaces")
+      .select("learning_model_size")
+      .eq("id", workspaceId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled && data) setActionCatalog(parseLearningModelSize(data.learning_model_size));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [actionCatalogProp, workspaceId]);
   const router = useRouter();
   const { t } = useI18n();
   // Smartphone → desktop-only gate (same product rule as TAP Learning SessionView)
@@ -975,6 +1001,7 @@ export function TapScoreClient({
     sidebarMode,
     workspaceTitle,
     verificationToken,
+    actionCatalog,
     startingTopics,
     localOpening,
     localPracticePrompt,
@@ -1091,6 +1118,7 @@ export function TapScoreClient({
       localOpening={localOpening}
       sidebarMode={sidebarMode}
       verificationToken={verificationToken}
+      actionCatalog={actionCatalog}
       policyRef={policyRef}
       durationLocked={durationLocked}
       isStartingSession={isStartingSession}

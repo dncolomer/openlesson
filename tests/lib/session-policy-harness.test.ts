@@ -133,13 +133,17 @@ describe("session field gate", () => {
     expect(workspaceCalibrate).toContain("<CalibrateSoundingSurface");
     expect(publicCalibrate).toContain("<CalibrateSoundingSurface");
     expect(verification).toContain('enabled={sidebarMode === "verification-tap"}');
-    expect(verification).toContain('sidebarMode === "verification-tap" ? (\n                  <SessionGuidePanel guide="verification" />');
+    expect(verification).toContain(
+      'sidebarMode === "verification-tap" ? (\n                  <SessionGuidePanel guide="verification" remainingSeconds={remainingSeconds} />',
+    );
     expect(verification).toContain("data-tap-older-thoughts");
     const verificationFocus = verification.slice(
       verification.indexOf('sidebarMode === "verification-tap" ? ('),
       verification.indexOf("data-tap-older-thoughts"),
     );
-    expect(verificationFocus).toContain('<SessionGuidePanel guide="verification" />');
+    expect(verificationFocus).toContain(
+      '<SessionGuidePanel guide="verification" remainingSeconds={remainingSeconds} />',
+    );
     expect(verificationFocus).not.toContain("ThoughtMemoryPanel");
     expect(verificationFocus).not.toContain("I'm done");
     expect(publicVerification).toContain('sidebarMode="verification-tap"');
@@ -270,7 +274,7 @@ describe("policy score against the prepared tree", () => {
     const scoutThanks = scout.slice(scout.indexOf("data-scout-thank-you"));
     expect(scoutThanks).toContain("data-tap-session-thank-you");
     expect(scoutThanks).toContain("<SessionSoundingResult");
-    expect(scoutThanks).toContain("SoundingFinishedStage");
+    expect(scoutThanks).not.toContain("SoundingFinishedStage");
 
     const calibrate = read("components/CalibrationFlowRunner.tsx");
     expect(calibrate).toContain("data-calibration-time-up");
@@ -278,7 +282,7 @@ describe("policy score against the prepared tree", () => {
     expect(calibrate).toContain("data-calibration-thank-you");
     expect(calibrate).toContain("Your calibration proof of work has been stored.");
     expect(calibrate).toContain("<SessionSoundingResult");
-    expect(calibrate).toContain("SoundingFinishedStage");
+    expect(calibrate).not.toContain("SoundingFinishedStage");
     expect(calibrate).toContain("soundingResultPresentation");
 
     expect(read("components/session-view/ile-insight-kept-screen.tsx")).not.toContain(
@@ -344,7 +348,8 @@ describe("policy score against the prepared tree", () => {
       source: "runner",
       workspaceId: "flow-policy",
     });
-    expect(low).toEqual(
+    expect(low).toHaveLength(96);
+    expect(low).not.toEqual(
       embedPolicyScore({
         model,
         sequence: lowest,
@@ -375,7 +380,7 @@ describe("policy score against the prepared tree", () => {
       ],
     });
     expect(region.subject_count).toBe(2);
-    expect(region.embedding_model_id).toBe("knowledgecfg-v1-d64");
+    expect(region.embedding_model_id).toBe("flowcfg-v1-d96");
     expect(region.centroid).not.toEqual(promptRegion.centroid);
   });
 
@@ -434,21 +439,22 @@ describe("policy score against the prepared tree", () => {
     const results = read("app/api/verification-flow/public/[token]/results/route.ts");
 
     const confirmEnd = learnEnd.slice(learnEnd.indexOf("const handleConfirmEnd"));
-    expect(confirmEnd.indexOf("embedPolicyScore")).toBeGreaterThan(-1);
-    expect(confirmEnd.indexOf("embedPolicyScore")).toBeLessThan(confirmEnd.indexOf("endSession("));
+    expect(confirmEnd.indexOf("postWorkspaceFlowEmbedding")).toBeGreaterThan(-1);
+    expect(confirmEnd.indexOf("postWorkspaceFlowEmbedding")).toBeLessThan(confirmEnd.indexOf("endSession("));
     expect(confirmEnd.indexOf("endSession(")).toBeLessThan(confirmEnd.indexOf("stopRecording"));
     expect(confirmEnd).toContain("uploadIleProofOfWork");
+    expect(confirmEnd).not.toContain("lwm_snapshot");
     expect(learnCanvas).toContain('logTool("canvas"');
     const verificationFinish = verificationEnd.slice(verificationEnd.indexOf("async function endSession"));
-    expect(verificationFinish.indexOf("embedPolicyScore")).toBeLessThan(
+    expect(verificationFinish.indexOf("postWorkspaceFlowEmbedding")).toBeLessThan(
       verificationFinish.indexOf("postTutoringSessionComplete"),
     );
-    expect(verificationFinish).toContain("policyScoreUploadItem");
-    expect(verificationFinish).toContain("uploadTapWorkCanvasPow");
+    expect(verificationFinish).toContain('flowKind: "verify"');
     expect(verificationCanvas).toContain("handleCanvasPowActions");
     expect(verificationCanvas).toContain("uploadTapWorkCanvasPow");
     expect(calibrateEnd).toContain("soundingProofUploadItem");
     expect(calibrateEnd).toContain("uploadTapWorkCanvasPow");
+    expect(calibrateEnd).toContain("postWorkspaceFlowEmbedding");
     expect(calibrateEnd).toContain("postTutoringSessionComplete");
     const calibrateFinish = calibrateEnd.slice(calibrateEnd.indexOf("async function endSession"));
     expect(calibrateFinish.indexOf("persistSounding")).toBeLessThan(
@@ -458,9 +464,10 @@ describe("policy score against the prepared tree", () => {
     expect(publicCalibrate).toContain("data-calibration-end-session");
     expect(publicCalibrate).not.toContain("I'm done classifying");
     expect(publicVerification).toContain("policy: input.policy ?? null");
-    expect(results).toContain("verificationProofEmbedding");
+    expect(results).toContain("completeFlowEmbedding");
+    expect(results).toContain("persistCompletedFlowEmbedding");
     expect(results).toContain("policyScoreFromUnknown");
-    expect(results).toContain("prompt,");
+    expect(results).toContain("prompt");
   });
 });
 

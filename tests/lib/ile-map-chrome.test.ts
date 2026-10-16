@@ -200,7 +200,7 @@ describe("TAP Learning map-first session chrome (shipped surface)", () => {
     expect(globals).toContain('[data-ile-work-covers-map="true"] [data-block-map-tool-strip]');
     const sensors = chrome.slice(
       chrome.indexOf("data-ile-tools-widget"),
-      chrome.indexOf("{voiceBar}"),
+      chrome.indexOf("actions={actions}"),
     );
     expect(sensors).toContain('id="sensors"');
     expect(chrome).not.toContain("defaultCollapsed");
@@ -208,7 +208,7 @@ describe("TAP Learning map-first session chrome (shipped surface)", () => {
     expect(sensors).not.toContain("absolute");
     expect(sensors).not.toContain("z-[35]");
     expect(chrome.indexOf("<SessionSidebar")).toBeLessThan(chrome.indexOf("data-ile-tools-widget"));
-    expect(chrome.indexOf("data-ile-tools-widget")).toBeLessThan(chrome.indexOf("{voiceBar}"));
+    expect(chrome.indexOf("data-ile-tools-widget")).toBeLessThan(chrome.indexOf("actions={actions}"));
     expect(
       existsSync(join(ROOT, "components/session-view/ile-chapter-widget-frame.tsx")),
     ).toBe(false);

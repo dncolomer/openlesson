@@ -5,9 +5,8 @@
  * Callers (UI, routes) must use these functions — do not re-implement them.
  */
 
-import { encodeKnowledgeConfig } from "@/lib/knowledge-config/encoder";
-import { embedSessionPress, type SessionMarkButtonId } from "@/lib/session-marks";
-import { embedPolicyScore } from "@/lib/session-policy-score";
+import { completeFlowEmbedding, FLOW_EMBEDDING_MODEL_ID } from "@/lib/flow-embedding";
+import type { SessionMarkButtonId } from "@/lib/session-marks";
 import type { SessionBranchModel } from "@/lib/session-branch-model";
 import {
   createCustomVerificationModelFromVectors,
@@ -222,6 +221,7 @@ export function buildRegionFromFlowEmbeddings(input: {
     name: input.name,
     vectors,
     subjects: vectors.map(() => ({ label: input.flowId })),
+    embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
   });
 }
 
@@ -274,66 +274,36 @@ export function parseSyntheticPowModelOutput(raw: unknown): SyntheticPowItem[] {
 }
 
 /**
- * knowledgecfg vector for one proof.
- * A button press embeds the button line and the drawing-and-speech slice.
- * A prompt-only caller still embeds that prompt, not a judge paragraph.
+ * flowcfg-v1-d96 vector for one verification proof.
+ * Encodes the gen model, projected policy when the run produced one, and the PoW.
  */
 export function verificationProofEmbedding(input: {
   prompt: string;
   source?: "runner" | "skill" | "synthetic";
   workspaceId?: string;
-  /** When the proof is a button press, embed that line and its slice. */
-  press?: {
-    button: "try" | "hold" | "drop" | "insight";
-    slice: string;
-    aimedMistakeText?: string | null;
-    at?: number;
-  };
+  catalogSize?: unknown;
   /** Prepared tree and the actions taken. The embedding then includes the policy distance. */
   policy?: { model: SessionBranchModel; sequence: readonly SessionMarkButtonId[] } | null;
 }): number[] {
-  if (input.policy?.model) {
-    const source = input.source ?? "runner";
-    return embedPolicyScore({
-      model: input.policy.model,
-      sequence: input.policy.sequence,
-      workspaceId: input.workspaceId || "verification-flow",
-      note: input.prompt,
-      proofRows: [
-        {
-          proof_of_work_type: source === "runner" ? "speech" : "tool",
-          timestamp_ms: 1,
-          tool_name: source,
-        },
-      ],
-    }).embedding;
-  }
-  if (input.press) {
-    return embedSessionPress({
-      workspaceId: input.workspaceId || "verification-flow",
-      mistakeText: input.press.aimedMistakeText,
-      press: {
-        id: "press-1",
-        button: input.press.button,
-        aimedMistakeId: null,
-        slice: input.press.slice,
-        closedMistakeId: null,
-        earlyInsight: false,
-        insightCounted: input.press.button === "insight",
-        at: input.press.at ?? 1,
-      },
-    }).vector;
-  }
   const source = input.source ?? "runner";
-  return encodeKnowledgeConfig({
-    workspaceId: input.workspaceId || "verification-flow",
-    totalBlocks: 0,
-    evaluatedGoalsText: input.prompt,
-    powRows: [
+  return completeFlowEmbedding({
+    flowKind: "verify",
+    model: input.policy?.model ?? null,
+    catalogSize: input.catalogSize ?? input.policy?.model?.catalogSize,
+    sequence: input.policy?.sequence ?? null,
+    pow: [
       {
-        proof_of_work_type: source === "runner" ? "speech" : "tool",
+        type: source === "runner" ? "speech" : "tool",
+        tool_name: source,
         timestamp_ms: 1,
+        payload: input.prompt,
       },
+      ...(input.policy?.sequence ?? []).map((action, index) => ({
+        type: "tool" as const,
+        tool_name: "session_policy",
+        tool_action: action,
+        timestamp_ms: index + 2,
+      })),
     ],
   }).vector;
 }
@@ -393,6 +363,7 @@ export function buildRegionFromSyntheticItems(input: {
     name: input.name,
     vectors: regionEmbeddingsFromSyntheticItems(input.items),
     subjects: input.items.map((item) => ({ label: item.text.slice(0, 80) })),
+    embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
   });
 }
 

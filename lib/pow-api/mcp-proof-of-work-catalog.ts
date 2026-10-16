@@ -3,7 +3,8 @@
  * Tool names/summaries come from AGENT_TOOL_SURFACE (single source of truth).
  *
  * Score tools (REST path ↔ MCP name): lwm-snapshot ↔ lwm_snapshot
- * (LWM Snapshot — sole product snapshot strategy; GHC secondary on the same report).
+ * (LWM Snapshot — Knowledge UI / TAPBench snapshot strategy; GHC secondary on the same report).
+ * Calibrate, Learn, and Verify embeddings: GET .../flow-embeddings ↔ list_flow_embeddings / get_flow_embedding.
  * No legacy verification/augmentation/optimization score routes or tools.
  * workspace_goal is the outcome field used across score + progress tools.
  */
@@ -14,10 +15,12 @@ export const MCP_PROOF_OF_WORK_TOOL_CATALOG = AGENT_TOOL_SURFACE.map((tool) => (
   name: tool.name,
   scope: tool.scope,
   summary: tool.summary,
+  rest: tool.rest,
 })) as ReadonlyArray<{
   name: (typeof AGENT_TOOL_SURFACE)[number]["name"];
   scope: (typeof AGENT_TOOL_SURFACE)[number]["scope"];
   summary: string;
+  rest: (typeof AGENT_TOOL_SURFACE)[number]["rest"];
 }>;
 
 /** Workspace-kind catalog for Integration skill/MCP copy. Global tools/list stays unfiltered. */
@@ -26,6 +29,7 @@ export function mcpProofOfWorkCatalogForWorkspace(kind: unknown) {
     name: tool.name,
     scope: tool.scope,
     summary: tool.summary,
+    rest: tool.rest,
   }));
 }
 

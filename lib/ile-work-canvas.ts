@@ -30,7 +30,11 @@ import {
   ileWorkCanvasPositiveAreaOverlap,
   ileWorkCanvasRectsOverlap,
 } from "@/lib/ile-work-canvas-geometry";
-import { ILE_WORK_CANVAS_OVERLAP_GAP } from "@/lib/ile-work-canvas-commands";
+import {
+  ILE_WORK_CANVAS_OVERLAP_GAP,
+  type IleWorkCanvasAskKind,
+  type IleWorkCanvasCommandId,
+} from "@/lib/ile-work-canvas-commands";
 
 export {
   ILE_CANVAS_TIMER_RESET_LOADING_MS,
@@ -2782,6 +2786,8 @@ export function ileWorkCanvasSplitTextChunks(text: string | null | undefined): s
   if (lines.length >= 2) return groupIleWorkCanvasSplitParts(lines, "\n");
   const sentences = original.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
   if (sentences.length >= 2) return groupIleWorkCanvasSplitParts(sentences, " ");
+  const clauses = original.split(/\s*[,;:|/—–]\s+/).map((part) => part.trim()).filter(Boolean);
+  if (clauses.length >= 2) return groupIleWorkCanvasSplitParts(clauses, " ");
   const words = original.split(/\s+/).filter(Boolean);
   if (words.length < 2) return [];
   const n = words.length >= 9 ? 3 : 2;
@@ -2792,13 +2798,114 @@ export function ileWorkCanvasSplitTextChunks(text: string | null | undefined): s
   return groups.map((group) => group.join(" ")).filter(Boolean);
 }
 
+function ileWorkCanvasBoundTextId(
+  element: IleWorkCanvasElement,
+  scene?: IleWorkCanvasScene | null,
+): string | null {
+  const bound = Array.isArray(element.boundElements) ? element.boundElements : [];
+  for (const entry of bound) {
+    if (!entry || typeof entry !== "object") continue;
+    const rec = entry as { type?: unknown; id?: unknown };
+    if (typeof rec.id !== "string" || !rec.id.trim()) continue;
+    if (rec.type === "text" || rec.type == null) return rec.id;
+  }
+  const containerId = element.id;
+  const nested = (scene?.elements ?? []).find(
+    (el) =>
+      ileWorkCanvasHasSplitText(el) &&
+      typeof el.containerId === "string" &&
+      el.containerId === containerId,
+  );
+  return nested?.id ?? null;
+}
+
+function ileWorkCanvasHasSplitText(element: IleWorkCanvasElement | null | undefined): boolean {
+  return Boolean(
+    element &&
+      !element.isDeleted &&
+      element.type === "text" &&
+      String(element.originalText || element.text || "").trim(),
+  );
+}
+
+/** Selected free text, or bound caption on a selected container. */
+export function ileWorkCanvasSplitTextTarget(
+  scene: IleWorkCanvasScene | null | undefined,
+  selectedElements: readonly IleWorkCanvasElement[] | null | undefined,
+): IleWorkCanvasElement | null {
+  const current = serializeIleWorkCanvasScene(scene);
+  const live = ileWorkCanvasSelectedLive(current, selectedElements);
+  const direct = live.find((el) => ileWorkCanvasHasSplitText(el));
+  if (direct) return current.elements.find((el) => el.id === direct.id) ?? direct;
+  for (const el of live) {
+    const boundId = ileWorkCanvasBoundTextId(el, current);
+    if (!boundId) continue;
+    const bound = current.elements.find((item) => item.id === boundId);
+    if (ileWorkCanvasHasSplitText(bound)) return bound ?? null;
+  }
+  return null;
+}
+
+/** Include bound captions so a labeled rectangle is a real command target. */
+export function expandIleWorkCanvasCommandSelection(
+  scene: IleWorkCanvasScene | null | undefined,
+  selectedElements: readonly IleWorkCanvasElement[] | null | undefined,
+): IleWorkCanvasElement[] {
+  const current = serializeIleWorkCanvasScene(scene);
+  const live = ileWorkCanvasSelectedLive(current, selectedElements);
+  const byId = new Map(live.map((el) => [el.id, el]));
+  for (const el of live) {
+    const boundId = ileWorkCanvasBoundTextId(el, current);
+    if (!boundId || byId.has(boundId)) continue;
+    const bound = current.elements.find((item) => item.id === boundId && !item.isDeleted);
+    if (bound) byId.set(bound.id, bound);
+  }
+  return [...byId.values()];
+}
+
+function ileWorkCanvasWithoutBoundText(
+  elements: IleWorkCanvasElement[],
+  textId: string,
+): IleWorkCanvasElement[] {
+  return elements
+    .filter((el) => el.id !== textId)
+    .map((el) => {
+      const bound = Array.isArray(el.boundElements) ? el.boundElements : null;
+      if (!bound?.length) return el;
+      const nextBound = bound.filter((entry) => {
+        if (!entry || typeof entry !== "object") return true;
+        return (entry as { id?: unknown }).id !== textId;
+      });
+      if (nextBound.length === bound.length) return el;
+      return { ...el, boundElements: nextBound.length ? nextBound : null };
+    });
+}
+
 /**
  * Replace one text element with 2 or 3 live text blocks. Non-text is a no-op.
  * Concatenated chunks preserve the source modulo whitespace.
+ * Bound captions unbind from their container so the new blocks stay editable.
  */
 export function splitIleWorkCanvasTextElement(
   scene: IleWorkCanvasScene | null | undefined,
-  element: Pick<IleWorkCanvasElement, "id" | "type" | "text" | "originalText" | "x" | "y" | "width" | "height" | "isDeleted"> | null | undefined,
+  element: Pick<
+    IleWorkCanvasElement,
+    | "id"
+    | "type"
+    | "text"
+    | "originalText"
+    | "x"
+    | "y"
+    | "width"
+    | "height"
+    | "isDeleted"
+    | "fontSize"
+    | "fontFamily"
+    | "strokeColor"
+    | "textAlign"
+    | "opacity"
+    | "containerId"
+  > | null | undefined,
 ): { scene: IleWorkCanvasScene; split: boolean; parts: IleWorkCanvasElement[] } {
   const current = serializeIleWorkCanvasScene(scene);
   if (!element || element.isDeleted || element.type !== "text") {
@@ -2808,11 +2915,12 @@ export function splitIleWorkCanvasTextElement(
   const chunks = ileWorkCanvasSplitTextChunks(source);
   if (chunks.length < 2) return { scene: current, split: false, parts: [] };
   const boxWidth = Number(element.width) > 0 ? Number(element.width) : ILE_WORK_CANVAS_TEXT_BOX_WIDTH;
+  const fontSize = Number(element.fontSize) || DEFAULT_FONT_SIZE;
   const skeletons: IleWorkCanvasSkeleton[] = [];
   let y = Number(element.y) || 0;
   const x = Number(element.x) || 0;
   for (const chunk of chunks) {
-    const wrapped = wrapIleWorkCanvasText(chunk, boxWidth);
+    const wrapped = wrapIleWorkCanvasText(chunk, boxWidth, fontSize);
     skeletons.push({
       type: "text",
       text: chunk,
@@ -2820,15 +2928,27 @@ export function splitIleWorkCanvasTextElement(
       y,
       width: wrapped.width,
       autoResize: false,
+      fontSize,
+      fontFamily: Number(element.fontFamily) || ILE_WORK_CANVAS_FONT_FAMILY,
+      strokeColor:
+        typeof element.strokeColor === "string" ? element.strokeColor : ILE_WORK_CANVAS_STROKE_COLOR,
+      textAlign: typeof element.textAlign === "string" ? element.textAlign : "left",
+      opacity: element.opacity == null ? 100 : Number(element.opacity) || 0,
     });
     y += wrapped.height + 16;
   }
   const parts = convertToExcalidrawElements(skeletons);
   if (parts.length < 2) return { scene: current, split: false, parts: [] };
+  const remaining = ileWorkCanvasWithoutBoundText(current.elements, element.id);
+  const selectedElementIds = Object.fromEntries(parts.map((part) => [part.id, true]));
   return {
     scene: {
       ...current,
-      elements: [...current.elements.filter((el) => el.id !== element.id), ...parts],
+      elements: [...remaining, ...parts],
+      appState: {
+        ...current.appState,
+        selectedElementIds,
+      },
     },
     split: true,
     parts,
@@ -2840,12 +2960,116 @@ export function splitIleWorkCanvasSelectedText(
   selectedElements: readonly IleWorkCanvasElement[] | null | undefined,
 ): { scene: IleWorkCanvasScene; split: boolean; parts: IleWorkCanvasElement[] } {
   const current = serializeIleWorkCanvasScene(scene);
-  const target = (selectedElements ?? []).find(
-    (el) => el && !el.isDeleted && el.type === "text" && String(el.originalText || el.text || "").trim(),
-  );
+  const expanded = expandIleWorkCanvasCommandSelection(current, selectedElements);
+  const target = ileWorkCanvasSplitTextTarget(current, expanded);
   if (!target) return { scene: current, split: false, parts: [] };
   const live = current.elements.find((el) => el.id === target.id) ?? target;
   return splitIleWorkCanvasTextElement(current, live);
+}
+
+export type IleWorkCanvasCommandAsk = {
+  kind: IleWorkCanvasAskKind;
+  prompt: string;
+};
+
+export type IleWorkCanvasCommandRun = {
+  scene: IleWorkCanvasScene;
+  changed: boolean;
+  parts: IleWorkCanvasElement[];
+  selected: IleWorkCanvasElement[];
+  prompt: string;
+  ask: IleWorkCanvasCommandAsk | null;
+  notice: string | null;
+};
+
+function ileWorkCanvasCommandPrompt(action: IleWorkCanvasCommandId): string {
+  if (action === "check") return ileWorkCanvasQuickActionPrompt("check");
+  if (action === "simplify") return "Simplify";
+  if (action === "refactor") return "Refactor";
+  if (action === "declutter") return "Declutter";
+  return action;
+}
+
+/**
+ * Local result of a sidebar/dock command click.
+ * Split and Declutter mutate now. Simplify, Check, and Refactor ask XAI.
+ * A click that cannot run returns a short board notice instead of going silent.
+ */
+export function runIleWorkCanvasCommand(input: {
+  action: IleWorkCanvasCommandId;
+  scene: IleWorkCanvasScene | null | undefined;
+  selectedElements: readonly IleWorkCanvasElement[] | null | undefined;
+}): IleWorkCanvasCommandRun {
+  const current = serializeIleWorkCanvasScene(input.scene);
+  const selected = expandIleWorkCanvasCommandSelection(current, input.selectedElements);
+  const prompt = ileWorkCanvasCommandPrompt(input.action);
+  const idle = (notice: string | null, ask: IleWorkCanvasCommandAsk | null = null): IleWorkCanvasCommandRun => ({
+    scene: current,
+    changed: false,
+    parts: [],
+    selected,
+    prompt,
+    ask,
+    notice,
+  });
+  if (!selected.length) {
+    return idle("Select marks on the canvas first.");
+  }
+  if (input.action === "split") {
+    const result = splitIleWorkCanvasSelectedText(current, selected);
+    if (result.split) {
+      return {
+        scene: result.scene,
+        changed: true,
+        parts: result.parts,
+        selected,
+        prompt,
+        ask: null,
+        notice: null,
+      };
+    }
+    const target = ileWorkCanvasSplitTextTarget(current, selected);
+    return idle(
+      target
+        ? "Need at least two words to split."
+        : "Select text, or a labeled shape, to split.",
+    );
+  }
+  if (input.action === "declutter") {
+    const cleared = runIleWorkCanvasClearOverlaps({
+      scene: current,
+      selectedElements: selected,
+    });
+    if (!cleared.needsModel && cleared.moved) {
+      return {
+        scene: cleared.scene,
+        changed: true,
+        parts: selected,
+        selected,
+        prompt,
+        ask: null,
+        notice: null,
+      };
+    }
+    if (cleared.needsModel) {
+      return idle(null, { kind: "declutter", prompt });
+    }
+    return idle(
+      selected.length < 2
+        ? "Select two or more overlapping marks to declutter."
+        : null,
+    );
+  }
+  if (input.action === "simplify") {
+    return idle(null, { kind: "simplify", prompt });
+  }
+  if (input.action === "check") {
+    return idle(null, { kind: "check", prompt });
+  }
+  if (input.action === "refactor") {
+    return idle(null, { kind: "refactor", prompt });
+  }
+  return idle(null);
 }
 
 /**
@@ -3134,6 +3358,91 @@ export function applyIleWorkCanvasSuggestInsight(
     ...current,
     elements: [...current.elements, ...settled],
   };
+}
+
+export function ileWorkCanvasSceneVisiblyChanged(
+  before: IleWorkCanvasScene | null | undefined,
+  after: IleWorkCanvasScene | null | undefined,
+): boolean {
+  const previous = serializeIleWorkCanvasScene(before).elements.filter((el) => !el.isDeleted);
+  const next = serializeIleWorkCanvasScene(after).elements.filter((el) => !el.isDeleted);
+  if (previous.length !== next.length) return true;
+  const byId = new Map(previous.map((el) => [el.id, el]));
+  for (const el of next) {
+    const prior = byId.get(el.id);
+    if (!prior) return true;
+    if (
+      prior.x !== el.x ||
+      prior.y !== el.y ||
+      prior.width !== el.width ||
+      prior.height !== el.height ||
+      String(prior.text || "") !== String(el.text || "") ||
+      String(prior.originalText || "") !== String(el.originalText || "")
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+export function ileWorkCanvasAskFallback(kind?: IleWorkCanvasAskKind | null): string {
+  if (!kind || kind === "ask") return "Learn more failed. Try again.";
+  return `${kind} failed. Try again.`;
+}
+
+/**
+ * Apply an XAI command reply. Layout commands that cannot edit still place the
+ * coaching/fallback sentence so the click is never a silent no-op.
+ */
+export function applyIleWorkCanvasAskReply(input: {
+  kind?: IleWorkCanvasAskKind | null;
+  live: IleWorkCanvasScene | null | undefined;
+  selectedElements: readonly IleWorkCanvasElement[] | null | undefined;
+  payload: {
+    text?: string | null;
+    raw?: string | null;
+    elements?: IleWorkCanvasSkeleton[] | null;
+    origin?: { x?: number; y?: number } | null;
+    turnId?: string | null;
+  };
+  fallbackOrigin?: { x?: number; y?: number } | null;
+  reserved?: readonly { x: number; y: number }[] | null;
+}): IleWorkCanvasScene {
+  const live = serializeIleWorkCanvasScene(input.live);
+  const selected = expandIleWorkCanvasCommandSelection(live, input.selectedElements);
+  const kind = input.kind ?? null;
+  const source =
+    kind && kind !== "ask" ? String(input.payload.raw || "") : String(input.payload.text || "");
+  const layoutReply = ileWorkCanvasLayoutReply(input.payload.raw, input.payload.elements);
+  const merge = (text: string, extra?: IleWorkCanvasSkeleton[] | null) =>
+    mergeIleXaiTurnOntoLiveWorkCanvas(
+      live,
+      {
+        text,
+        elements: extra ?? input.payload.elements,
+        turnId: input.payload.turnId,
+        origin: input.payload.origin,
+      },
+      {
+        fallbackOrigin: input.fallbackOrigin,
+        reserved: input.reserved,
+      },
+    );
+  let next = live;
+  if (kind === "selective-compress") {
+    next = compressIleWorkCanvasSelection(live, selected, source);
+  } else if (kind === "refactor") {
+    next = applyIleWorkCanvasRefactor(live, selected, layoutReply);
+  } else if (kind === "suggest-insight") {
+    next = applyIleWorkCanvasSuggestInsight(live, selected, source);
+  } else if (kind === "declutter" || kind === "clear-overlaps") {
+    next = applyIleWorkCanvasPositionEdits(live, selected, layoutReply);
+  } else {
+    next = merge(String(input.payload.text || "").trim());
+  }
+  if (ileWorkCanvasSceneVisiblyChanged(live, next)) return next;
+  const fallback = String(input.payload.text || "").trim() || ileWorkCanvasAskFallback(kind);
+  return merge(fallback);
 }
 
 /** Move selected marks to new positions. Text and type stay. */

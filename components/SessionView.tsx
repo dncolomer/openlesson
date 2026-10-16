@@ -1765,6 +1765,7 @@ export function SessionView({
     ileToken,
     ayclToken,
     fallbackTitle: t("session.chapterPromptFallback"),
+    catalogSize: session?.metadata?.learning_model_size,
   });
 
   const renderWorkCanvas = () => (

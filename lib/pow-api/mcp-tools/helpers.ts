@@ -122,9 +122,10 @@ Workspaces are created **only in the product UI** (\`/workspace/new\`). Programm
 1. list_workspaces or get_workspace(workspace_id) — orient on an existing UI-created workspace
 2. generate_proof_of_work_schema — returns continuous_evaluation (REST) AND continuous_evaluation_mcp (tools)
 3. upload_proof_of_work (or buffer_proof_of_work → stash_proof_of_work / submit_stashed_proof_of_work)
-4. lwm_snapshot (LWM Snapshot — sole strategy); optional get_world_model / get_knowledge_config / list_snapshot_history
-5. Re-fetch schema + regenerate skill as proof of work grows
-Note: LWM Snapshot (lwm_snapshot) is manual via Knowledge UI or this API/MCP — not auto-run on TAP/TAP Learning end. Workspace creation is UI-only.
+4. list_flow_embeddings / get_flow_embedding — recover Calibrate, Learn, and Verify embeddings (gen model + projected policy + PoW raw). Do not call lwm_snapshot to embed those three flows.
+5. lwm_snapshot (LWM Snapshot) for Knowledge / TAPBench scorecards; optional get_world_model / get_knowledge_config / list_snapshot_history
+6. Re-fetch schema + regenerate skill as proof of work grows
+Note: LWM Snapshot (lwm_snapshot) is manual via Knowledge UI or this API/MCP — not auto-run on TAP/TAP Learning end, and not the embedding path for Calibrate/Learn/Verify. Workspace creation is UI-only.
 
 REST mirror: /api/v3/pow (capture), /api/v3/snapshot (scores + LWM/knowledge), /api/v3/stash (TAP buffer + TAPBench sessions).
 
@@ -257,9 +258,45 @@ export const MCP_EVIDENCE_TOOLS = [
     },
   },
   {
+    name: "list_flow_embeddings",
+    description:
+      "List Calibrate, Learn, and Verify embeddings (flowcfg-v1-d96) for a workspace. Each item includes the vector and the recoverable raw gen model, projected policy when produced, and proof of work. These three flows are not embedded via lwm_snapshot. REST: GET .../flow-embeddings.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        workspace_id: { type: "string" },
+        flow_kind: {
+          type: "string",
+          enum: ["calibrate", "learn", "verify"],
+          description: "Optional filter.",
+        },
+        flow_id: { type: "string", description: "Optional flow id filter." },
+      },
+      required: ["workspace_id"],
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true },
+  },
+  {
+    name: "get_flow_embedding",
+    description:
+      "Recover one Calibrate, Learn, or Verify embedding by id, including the raw payload used to embed. Re-embed that raw to map gen model, projected policy, and PoW. REST: GET .../flow-embeddings?id=",
+    inputSchema: {
+      type: "object",
+      properties: {
+        workspace_id: { type: "string" },
+        embedding_id: { type: "string" },
+        id: { type: "string", description: "Alias for embedding_id." },
+      },
+      required: ["workspace_id"],
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true },
+  },
+  {
     name: "lwm_snapshot",
     description:
-      "LWM Snapshot (Learning World Model Snapshot) score (0–100) plus GHC, spider marker_scores, analysis (summary/gaps), and next actions. Sole product snapshot strategy. Evaluated against a goal set: default = all workspace goals + PoW-related block goals; or adhoc_goal; or selected goal_ids. Returns evaluated_goals on the response. Run via Knowledge UI Generate new snapshot or this tool/REST — not auto on TAP/TAP Learning end. Opaque workspaces also return evaluation_mode, privacy, and protocol_report. REST: POST .../lwm-snapshot.",
+      "LWM Snapshot (Learning World Model Snapshot) score (0–100) plus GHC, spider marker_scores, analysis (summary/gaps), and next actions. Knowledge UI / TAPBench snapshot strategy. Calibrate, Learn, and Verify persist flow embeddings (list_flow_embeddings / get_flow_embedding) instead of this snapshot. Evaluated against a goal set: default = all workspace goals + PoW-related block goals; or adhoc_goal; or selected goal_ids. Returns evaluated_goals on the response. Run via Knowledge UI Generate new snapshot or this tool/REST — not auto on TAP/TAP Learning end. Opaque workspaces also return evaluation_mode, privacy, and protocol_report. REST: POST .../lwm-snapshot.",
     inputSchema: {
       type: "object",
       properties: {

@@ -260,31 +260,6 @@ export function WorkspaceRightDrawers({
         data-workspace-right-column
         data-workspace-right-pane={rightPane}
       >
-        {showLearnerDrawer &&
-        detailBlock &&
-        detailIndex >= 0 &&
-        rightPane === "block_detail" ? (
-          <div className="h-full min-h-0 shrink-0">
-          <WorkspaceLearnerBlockPane
-            key={`learner-${detailBlock.id}`}
-            block={detailBlock}
-            blocks={nodes}
-            workspaceId={workspaceId}
-            ayclToken={ayclToken}
-            locale={locale}
-            learnerUserKey={currentUserId || ayclToken || "local"}
-            requestedDrawerId={requestedDrawerId}
-            requestedDrawerNonce={requestedDrawerNonce}
-            locked={locked}
-            onBlocksUpdated={onBlocksUpdated}
-            onDynamicGenerated={onDynamicGenerated}
-            onSavePlanningPrompt={onSavePlanningPrompt}
-            onLaunchIntent={onLaunchIntent}
-            onFetchPowSummary={onFetchPowSummary}
-            onMarkDone={onMarkDone}
-          />
-          </div>
-        ) : null}
         {showCreatorDrawers &&
           rightPane === "combine_blocks" &&
           combineBlockIds.length >= 2 ? (
@@ -309,77 +284,6 @@ export function WorkspaceRightDrawers({
               cancel: t("sessionList.gridAddCancel") || "Cancel",
             }}
           />
-        ) : showCreatorDrawers &&
-          rightPane === "block_detail" &&
-          detailBlock &&
-          detailIndex >= 0 ? (
-          <div className="h-full min-h-0 shrink-0">
-          <WorkspaceBlockDetailPane
-            key={detailBlock.id}
-            blockId={detailBlock.id}
-            blockTitle={detailBlock.title}
-            blockDescription={detailBlock.description}
-            planningPrompt={detailBlock.planning_prompt}
-            localContext={detailBlock.local_context}
-            blockStatus={detailBlock.status}
-            isStart={detailBlock.is_start}
-            practiceOptions={parseWorkspacePracticeOptions(
-              detailBlock.practice_options,
-              { ayclClone: Boolean(ayclToken) },
-            )}
-            creatorEffects={parseBlockCreatorEffects(
-              detailBlock.creator_effects,
-              { selfBlockId: detailBlock.id },
-            )}
-            lockUntilTitles={detailLockTitles}
-            spanW={detailBlock.span_w}
-            spanH={detailBlock.span_h}
-            shapeCells={detailBlock.shape_cells}
-            positionX={detailBlock.position_x}
-            positionY={detailBlock.position_y}
-            workspaceId={workspaceId}
-            ayclToken={ayclToken}
-            locale={locale}
-            canEdit={isOwner}
-            editBusy={isAddingBlock}
-            workspaceGoal={plan.workspace_goal}
-            workspaceTitle={plan.title || plan.root_topic}
-            rootTopic={plan.root_topic}
-            workspaceNotes={notesContent || plan.notes}
-            onUpdateBlock={onUpdateBlock}
-            onDeleteBlock={onDeleteBlock}
-            onSaveCreatorEffects={onSaveCreatorEffects}
-            onSplitBlock={onSplitBlock}
-            cloneArmed={cloneArmed}
-            onCloneArm={onCloneArm}
-            onCloneCancel={onCloneCancel}
-            expandNodes={nodes}
-            unusableCells={unusableCells}
-            onExpandBlock={onExpandBlock}
-            onExpandPreviewChange={onExpandPreviewChange}
-            onGeneratorTargetPreviewChange={onGeneratorTargetPreviewChange}
-            onGeneratorPickModeChange={onGeneratorPickModeChange}
-            onRegisterGeneratorEmptyToggle={onRegisterGeneratorEmptyToggle}
-            onDynamicUnlockPreviewChange={onDynamicUnlockPreviewChange}
-            onDynamicPickModeChange={onDynamicPickModeChange}
-            onRegisterDynamicBlockToggle={onRegisterDynamicBlockToggle}
-            localContextPanel={
-              <WorkspaceBlockLocalContextPanel
-                key={detailBlock.id}
-                canEdit={isOwner}
-                blockId={detailBlock.id}
-                blockTitle={detailBlock.title}
-                blockDescription={detailBlock.description}
-                blockStatus={detailBlock.status}
-                lockUntilTitles={detailLockTitles}
-                localContext={detailBlock.local_context}
-                workspaceFiles={workspaceFileItems}
-                onSaveLocalContext={onSaveLocalContext}
-                busy={mapGroundBusy}
-              />
-            }
-          />
-          </div>
         ) : showCreatorDrawers && rightPane === "add_block" && addTargetCell ? (
           <WorkspaceAddBlockPane
             key={`add-${addTargetCell.row}-${addTargetCell.col}`}
@@ -424,10 +328,107 @@ export function WorkspaceRightDrawers({
               addCancel: t("sessionList.gridAddCancel"),
             }}
           />
-        ) : showLearnerDrawer &&
+        ) : rightPane === "block_detail" &&
           detailBlock &&
           detailIndex >= 0 &&
-          rightPane === "block_detail" ? null : (
+          (showCreatorDrawers || showLearnerDrawer) ? (
+          <div
+            className="flex h-full min-h-0 flex-col overflow-y-auto"
+            data-workspace-block-drawers=""
+          >
+            {showCreatorDrawers ? (
+              <div className="min-h-0 shrink-0">
+                <WorkspaceBlockDetailPane
+                  key={detailBlock.id}
+                  blockId={detailBlock.id}
+                  blockTitle={detailBlock.title}
+                  blockDescription={detailBlock.description}
+                  planningPrompt={detailBlock.planning_prompt}
+                  localContext={detailBlock.local_context}
+                  blockStatus={detailBlock.status}
+                  isStart={detailBlock.is_start}
+                  practiceOptions={parseWorkspacePracticeOptions(
+                    detailBlock.practice_options,
+                    { ayclClone: Boolean(ayclToken) },
+                  )}
+                  creatorEffects={parseBlockCreatorEffects(
+                    detailBlock.creator_effects,
+                    { selfBlockId: detailBlock.id },
+                  )}
+                  lockUntilTitles={detailLockTitles}
+                  spanW={detailBlock.span_w}
+                  spanH={detailBlock.span_h}
+                  shapeCells={detailBlock.shape_cells}
+                  positionX={detailBlock.position_x}
+                  positionY={detailBlock.position_y}
+                  workspaceId={workspaceId}
+                  ayclToken={ayclToken}
+                  locale={locale}
+                  canEdit={isOwner}
+                  editBusy={isAddingBlock}
+                  workspaceGoal={plan.workspace_goal}
+                  workspaceTitle={plan.title || plan.root_topic}
+                  rootTopic={plan.root_topic}
+                  workspaceNotes={notesContent || plan.notes}
+                  onUpdateBlock={onUpdateBlock}
+                  onDeleteBlock={onDeleteBlock}
+                  onSaveCreatorEffects={onSaveCreatorEffects}
+                  onSplitBlock={onSplitBlock}
+                  cloneArmed={cloneArmed}
+                  onCloneArm={onCloneArm}
+                  onCloneCancel={onCloneCancel}
+                  expandNodes={nodes}
+                  unusableCells={unusableCells}
+                  onExpandBlock={onExpandBlock}
+                  onExpandPreviewChange={onExpandPreviewChange}
+                  onGeneratorTargetPreviewChange={onGeneratorTargetPreviewChange}
+                  onGeneratorPickModeChange={onGeneratorPickModeChange}
+                  onRegisterGeneratorEmptyToggle={onRegisterGeneratorEmptyToggle}
+                  onDynamicUnlockPreviewChange={onDynamicUnlockPreviewChange}
+                  onDynamicPickModeChange={onDynamicPickModeChange}
+                  onRegisterDynamicBlockToggle={onRegisterDynamicBlockToggle}
+                  localContextPanel={
+                    <WorkspaceBlockLocalContextPanel
+                      key={detailBlock.id}
+                      canEdit={isOwner}
+                      blockId={detailBlock.id}
+                      blockTitle={detailBlock.title}
+                      blockDescription={detailBlock.description}
+                      blockStatus={detailBlock.status}
+                      lockUntilTitles={detailLockTitles}
+                      localContext={detailBlock.local_context}
+                      workspaceFiles={workspaceFileItems}
+                      onSaveLocalContext={onSaveLocalContext}
+                      busy={mapGroundBusy}
+                    />
+                  }
+                />
+              </div>
+            ) : null}
+            {showLearnerDrawer ? (
+              <div className="min-h-0 shrink-0">
+                <WorkspaceLearnerBlockPane
+                  key={`learner-${detailBlock.id}`}
+                  block={detailBlock}
+                  blocks={nodes}
+                  workspaceId={workspaceId}
+                  ayclToken={ayclToken}
+                  locale={locale}
+                  learnerUserKey={currentUserId || ayclToken || "local"}
+                  requestedDrawerId={requestedDrawerId}
+                  requestedDrawerNonce={requestedDrawerNonce}
+                  locked={locked}
+                  onBlocksUpdated={onBlocksUpdated}
+                  onDynamicGenerated={onDynamicGenerated}
+                  onSavePlanningPrompt={onSavePlanningPrompt}
+                  onLaunchIntent={onLaunchIntent}
+                  onFetchPowSummary={onFetchPowSummary}
+                  onMarkDone={onMarkDone}
+                />
+              </div>
+            ) : null}
+          </div>
+        ) : (
           <WorkspaceMapAuthoringPane
             canEdit={isOwner && showCreatorDrawers}
             learnerNotes={learnerNotes}

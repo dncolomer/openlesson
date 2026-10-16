@@ -1,10 +1,10 @@
 /**
  * Top-level workspace shell sections.
- * Learning workspaces (stored kind `standard`): Build shows Workspace, DAGs,
- * Map Types, Context, and Settings. Play shows the map only.
- * Verification workspaces (stored kind `knowledge_region`): Goals,
- * Verification Flows, Calibration Flows, Context, Knowledge, and Settings.
- * The two products do not share sections.
+ * Learning workspaces (stored kind `standard`): Workspace, DAGs, Map Types,
+ * Context, Insights, and Settings for designers; Workspace and Insights for
+ * signed-in play-only viewers. Verification workspaces (stored kind
+ * `knowledge_region`): Goals, Verification Flows, Calibration Flows, Context,
+ * Knowledge, and Settings. The two products do not share sections.
  */
 
 import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
@@ -318,6 +318,29 @@ export function canAccessPrivilegedWorkspaceSections(options: {
   return Boolean(options.isOwner || options.isOrgAdmin);
 }
 
+/**
+ * Signed-in viewers of a learning workspace get Insights so they can open
+ * insights they crafted. Verification keeps Knowledge instead.
+ */
+export function withLearningInsightsSection(
+  sections: readonly WorkspaceSectionKey[],
+  options: WorkspaceSectionAuth = {},
+): WorkspaceSectionKey[] {
+  if (isKnowledgeRegionWorkspace(options.workspaceKind)) {
+    return [...sections];
+  }
+  if (!options.isLoggedIn) return [...sections];
+  if (sections.includes("insights")) return [...sections];
+  const list = [...sections];
+  const settingsAt = list.indexOf("settings");
+  if (settingsAt >= 0) {
+    list.splice(settingsAt, 0, "insights");
+    return list;
+  }
+  list.push("insights");
+  return list;
+}
+
 export type WorkspaceSectionAuth = {
   isOwner?: boolean;
   isOrgAdmin?: boolean;
@@ -360,9 +383,9 @@ export function availableWorkspaceSections(options: WorkspaceSectionAuth): Works
     const sections: WorkspaceSectionKey[] = ["workspace"];
     if (options.isOwner) sections.push("dags", "map_types");
     sections.push("context", "settings");
-    return sections;
+    return withLearningInsightsSection(sections, options);
   }
-  return ["workspace"];
+  return withLearningInsightsSection(["workspace"], options);
 }
 
 /** Whether a local tab key is valid (always false — local tabs removed). */

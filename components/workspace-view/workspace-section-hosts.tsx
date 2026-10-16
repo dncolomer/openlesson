@@ -282,8 +282,7 @@ export function WorkspaceSectionHosts({
         </WorkspaceSectionSurface>
       )}
 
-      {isLearnerMode &&
-        sectionLayout.mountsInsightsPanel &&
+      {sectionLayout.mountsInsightsPanel &&
         visibleSections.includes("insights") && (
         <WorkspaceSectionSurface
           kind="insights"

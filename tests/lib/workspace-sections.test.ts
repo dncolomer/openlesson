@@ -9,6 +9,7 @@ import {
   isWorkspaceLocalTab,
   resolveActiveSection,
   resolveWorkspaceSectionLayout,
+  withLearningInsightsSection,
 } from "@/lib/workspace-sections";
 
 const REPO_ROOT = path.resolve(__dirname, "../..");
@@ -140,6 +141,30 @@ describe("availableWorkspaceSections", () => {
     expect(owner).not.toContain("simulation");
     expect(owner).toContain("dags");
     expect(availableWorkspaceSections({ isOrgAdmin: true })).not.toContain("dags");
+    expect(
+      availableWorkspaceSections({ isOwner: true, isLoggedIn: true }),
+    ).toEqual([
+      "workspace",
+      "dags",
+      "map_types",
+      "context",
+      "insights",
+      "settings",
+    ]);
+    expect(
+      availableWorkspaceSections({ isOwner: false, isLoggedIn: true }),
+    ).toEqual(["workspace", "insights"]);
+    expect(resolveActiveSection("insights", { isLoggedIn: true })).toBe("insights");
+    expect(resolveActiveSection("insights", { isOwner: true })).toBe("workspace");
+    expect(
+      withLearningInsightsSection(["workspace", "settings"], { isLoggedIn: true }),
+    ).toEqual(["workspace", "insights", "settings"]);
+    expect(
+      withLearningInsightsSection(["workspace"], {
+        isLoggedIn: true,
+        workspaceKind: "knowledge_region",
+      }),
+    ).toEqual(["workspace"]);
   });
 
   it("Knowledge Region owner sections are Goals / Knowledge / Settings; hidden requests fall back to Goals", () => {

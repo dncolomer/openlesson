@@ -135,7 +135,7 @@ export function buildWorkspaceSectionNavItems(input: {
           },
         ]
       : []),
-    ...(isLearnerMode && visibleSections.includes("insights")
+    ...(visibleSections.includes("insights")
       ? [
           {
             key: "insights" as const,

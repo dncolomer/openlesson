@@ -720,12 +720,11 @@ export function WorkspaceView({
     learnerActionRequested: learnerDrawerRequest != null,
   });
 
-  const playHidesTabs = workspaceKind !== "knowledge_region" && isLearnerMode;
   const sectionConfig = buildWorkspaceSectionNavItems({
     t,
     isLearnerMode,
     isOwner,
-    visibleSections: playHidesTabs ? [] : visibleSections,
+    visibleSections,
   });
 
   const detailLockTitles =

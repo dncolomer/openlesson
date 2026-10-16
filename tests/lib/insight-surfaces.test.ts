@@ -109,13 +109,14 @@ describe("workspaceKnowledgeInsightsPath", () => {
 });
 
 describe("Play-only Insights tab + Generate Insights", () => {
-  it("lists Insights next to Knowledge in Play and omits it in Build", () => {
+  it("lists Insights on a learning workspace for signed-in viewers", () => {
     expect(availableSectionsForMode({ mode: "learner", isLoggedIn: true })).toEqual([
       "workspace",
+      "insights",
     ]);
     expect(
       availableSectionsForMode({ mode: "creator", isOwner: true, isLoggedIn: true }),
-    ).not.toContain("insights");
+    ).toContain("insights");
     expect(workspacePlayInsightsPath("abc")).toBe("/workspace/abc?section=insights");
     expect(insightsTracesUrl("ws-1", "block-9")).toContain("blockId=block-9");
     expect(LEARNER_WORK_DRAWER_TITLE).toBe("Work");
@@ -140,7 +141,7 @@ describe("Play-only Insights tab + Generate Insights", () => {
       "utf8",
     );
     expect(nav).toContain('key: "insights"');
-    expect(nav).toContain("isLearnerMode && visibleSections.includes(\"insights\")");
+    expect(nav).toContain('visibleSections.includes("insights")');
     expect(hosts).toContain("InsightsDashboardTab");
     expect(hosts).toContain("data-play-insights-tab");
     expect(hosts).toContain("mountsInsightsPanel");

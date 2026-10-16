@@ -11,6 +11,7 @@ import {
   canAccessPrivilegedWorkspaceSections,
   defaultWorkspaceSection,
   resolveActiveSection,
+  withLearningInsightsSection,
 } from "@/lib/workspace-sections";
 import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
 
@@ -128,9 +129,10 @@ export function workspaceShell(input: {
   };
   const sections: WorkspaceSectionKey[] = verification
     ? availableWorkspaceSections(auth)
-    : input.authoring
-      ? availableWorkspaceSections(auth)
-      : ["workspace"];
+    : withLearningInsightsSection(
+        input.authoring ? availableWorkspaceSections(auth) : ["workspace"],
+        auth,
+      );
   return {
     sections,
     authoringDrawers: input.authoring || (verification && !input.practiceOnly),
@@ -214,7 +216,7 @@ export function availableSectionsForMode(input: {
     });
   }
   if (input.allowAuthoring === false) {
-    return ["workspace"];
+    return withLearningInsightsSection(["workspace"], input);
   }
   return availableWorkspaceSections({
     isOwner: input.isOwner,

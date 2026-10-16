@@ -475,9 +475,11 @@ describe("sounding copy", () => {
       persistentTerritories: [],
       falseCoverage: false,
     });
-    expect(unranked?.title).toBe("The path did not settle");
+    expect(unranked?.title).toBe("The questions did not settle");
     expect(unranked?.depthLabel).toBeNull();
     expect(unranked?.body).toMatch(/too short or too mixed/i);
+    expect(unranked?.body).toMatch(/questions felt uncertain/i);
+    expect(unranked?.body).not.toMatch(/prior/i);
     const deep = soundingResultPresentation({
       band: "coverage",
       coverageDepth: 2,
@@ -485,7 +487,10 @@ describe("sounding copy", () => {
       persistentTerritories: [],
       falseCoverage: false,
     });
-    expect(deep?.depthLabel).toBe("Reached layer 2");
+    expect(deep?.title).toBe("The questions stayed precise");
+    expect(deep?.body).toMatch(/finer questions/i);
+    expect(deep?.body).not.toMatch(/prior/i);
+    expect(deep?.depthLabel).toBe("Reached finer questions · 2");
     const result = renderToStaticMarkup(
       createElement(SessionSoundingResult, {
         classification: {

@@ -319,6 +319,7 @@ describe("canvas dictate button", () => {
     expect(kept).toContain('data-ile-insight-kept=""');
     expect(kept).toContain("Last resort is a real test");
     expect(kept).toContain("Force waits until the peaceful options are actually used up.");
+    expect(kept).toContain("This takeaway stays with the chapter.");
     expect(kept).toContain(">Back to workspace<");
     expect(kept).toContain("data-ile-insight-flag-icon");
     expect(kept).toContain("bg-amber-300");

@@ -54,7 +54,7 @@ describe("TAP session link post-session thank-you", () => {
     };
     const post = en.tap?.postSession ?? {};
     expect(post.thankYouTitle?.toLowerCase()).toMatch(/thank you/);
-    expect(post.thankYouBody?.toLowerCase()).toMatch(/proof of work/);
+    expect(post.thankYouBody?.toLowerCase()).toMatch(/distance/);
     expect(post.thankYouBody?.toLowerCase()).toMatch(/stored/);
     expect(post.exploreUncertainSystems).toMatch(/Uncertain Systems/i);
   });

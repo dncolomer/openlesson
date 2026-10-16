@@ -869,25 +869,25 @@ export function finishSounding(state: SoundingState, allowProof = true): Soundin
 export function soundingBandCopy(band: SoundingBand): { title: string; body: string } {
   if (band === "coverage") {
     return {
-      title: "Precision held",
-      body: "Your path stayed precise into finer questions. That prior is saved for later Learn sessions.",
+      title: "The questions stayed precise",
+      body: "You kept tapping into finer questions. Those taps are saved for later Learn sessions.",
     };
   }
   if (band === "localized") {
     return {
-      title: "A hole stayed put",
-      body: "Uncertainty came back on one part of the topic. That prior is saved for later Learn sessions.",
+      title: "One set of questions stayed uncertain",
+      body: "The same part of the topic kept coming back. Those taps are saved for later Learn sessions.",
     };
   }
   if (band === "lost") {
     return {
-      title: "The opening did not split",
-      body: "The first cards did not separate into a place you trusted and a place you did not. That prior is saved for later Learn sessions.",
+      title: "The opening questions did not split",
+      body: "The first questions did not separate into ones you trusted and ones you did not. Those taps are saved for later Learn sessions.",
     };
   }
   return {
-    title: "The path did not settle",
-    body: "This pass was too short or too mixed to place where your uncertainty sits. Later Learn sessions can still use it as a weak prior. You can run Calibrate again for a clearer reading.",
+    title: "The questions did not settle",
+    body: "This pass was too short or too mixed to show which questions felt uncertain. Later Learn sessions can still use it. You can run Calibrate again for a clearer reading.",
   };
 }
 
@@ -935,9 +935,11 @@ export function soundingResultPresentation(
     title: copy.title,
     body: copy.body,
     depthLabel:
-      classification.coverageDepth > 0 ? `Reached layer ${classification.coverageDepth}` : null,
+      classification.coverageDepth > 0
+        ? `Reached finer questions · ${classification.coverageDepth}`
+        : null,
     note: classification.falseCoverage
-      ? "The forage check did not match a nearby branch on the map."
+      ? "A later check did not match a nearby question."
       : null,
   };
 }

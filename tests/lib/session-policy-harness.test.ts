@@ -251,7 +251,7 @@ describe("policy score against the prepared tree", () => {
     expect(html).toContain('data-session-policy-steps="3"');
     expect(html).toContain('data-session-policy-excess="12.5"');
     expect(html).toContain(`>${formatPolicyScoreFigure(4.17)}<`);
-    expect(html).toContain(">Policy score<");
+    expect(html).toContain(">Score<");
     expect(html).toContain(">Distance<");
     expect(html).toContain(">Steps<");
     expect(html).toContain(">Excess<");
@@ -280,7 +280,7 @@ describe("policy score against the prepared tree", () => {
     expect(calibrate).toContain("data-calibration-time-up");
     expect(calibrate).toContain("Time is up");
     expect(calibrate).toContain("data-calibration-thank-you");
-    expect(calibrate).toContain("Your calibration proof of work has been stored.");
+    expect(calibrate).toContain("Your taps have been stored for later Learn sessions.");
     expect(calibrate).toContain("<SessionSoundingResult");
     expect(calibrate).not.toContain("SoundingFinishedStage");
     expect(calibrate).toContain("soundingResultPresentation");

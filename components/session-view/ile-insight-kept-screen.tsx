@@ -21,7 +21,7 @@ export function IleInsightKeptScreen({
       data-ile-insight-kept=""
       kicker={FLOW_END_KICKERS.learn}
       title={insight.title}
-      body={insight.summary}
+      body={insight.summary ? `${insight.summary}\n\nThis takeaway stays with the chapter.` : "This takeaway stays with the chapter."}
       actions={
         <button
           type="button"

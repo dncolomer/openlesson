@@ -383,7 +383,7 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
           marker="data-calibration-thank-you"
           classification={sounding.classification}
           fallbackTitle="Thank you"
-          fallbackBody="Your calibration proof of work has been stored."
+          fallbackBody="Your taps have been stored for later Learn sessions."
         />
       </CalibrationViewport>
     );

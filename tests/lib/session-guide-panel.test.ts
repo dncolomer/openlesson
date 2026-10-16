@@ -55,11 +55,16 @@ describe("session guide panel", () => {
     const en = JSON.parse(readFileSync(join(ROOT, "messages/en.json"), "utf8")) as {
       onboardingGuide: { scout: { step3: { body: string } } };
     };
-    expect(SESSION_INSTRUCTIONS.calibrate).toBe(en.onboardingGuide.scout.step3.body);
-    expect(SESSION_INSTRUCTIONS.learn).toContain("Infer");
-    expect(SESSION_INSTRUCTIONS.learn).toContain("hidden state you found");
+    expect(SESSION_INSTRUCTIONS.calibrate).not.toBe(en.onboardingGuide.scout.step3.body);
+    expect(SESSION_INSTRUCTIONS.calibrate).toMatch(/tap every question/i);
+    expect(SESSION_INSTRUCTIONS.calibrate).not.toMatch(/hidden state/i);
+    expect(SESSION_INSTRUCTIONS.learn).toContain("commit (insight)");
+    expect(SESSION_INSTRUCTIONS.learn).toContain("takeaway");
+    expect(SESSION_INSTRUCTIONS.learn).not.toMatch(/hidden state|posterior/i);
     expect(SESSION_INSTRUCTIONS.learn).not.toMatch(/hidden cause/);
-    expect(SESSION_INSTRUCTIONS.verification).toContain("identity you claimed");
+    expect(SESSION_INSTRUCTIONS.verification).toContain("Distance");
+    expect(SESSION_INSTRUCTIONS.verification).toContain("name you claimed");
+    expect(SESSION_INSTRUCTIONS.verification).not.toMatch(/generative model|cheapest policy/i);
     for (const text of Object.values(SESSION_INSTRUCTIONS)) {
       expect(text).not.toMatch(/\b(Close|Keep|Discard|Insight)\b/);
     }

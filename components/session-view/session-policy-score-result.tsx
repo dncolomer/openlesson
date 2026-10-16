@@ -8,8 +8,9 @@ export function formatPolicyScoreFigure(value: number): string {
 }
 
 /**
- * Time-ended Calibrate and Verification results.
- * Distance is the score. Steps and excess sit under it. The action ids stay off this screen.
+ * Time-ended Verification results.
+ * Distance is the score the learner sees. Steps and excess sit under it.
+ * The action ids stay off this screen.
  */
 export function SessionPolicyScoreResult({ score }: { score: PolicyScore | null }) {
   if (!score) return null;
@@ -23,7 +24,7 @@ export function SessionPolicyScoreResult({ score }: { score: PolicyScore | null 
           01
         </span>
         <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-white">
-          Policy score
+          Score
         </p>
       </div>
       <p

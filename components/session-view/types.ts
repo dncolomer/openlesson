@@ -1,5 +1,4 @@
 import type { AestheticPackage } from "@/lib/aesthetics";
-import type { InitProgress } from "@/lib/local-inference";
 import type { IleSessionMode } from "@/lib/ile-mode";
 import type { InitialChaptersLevel } from "@/lib/initial-chapters";
 import type { MapTypePickerItem } from "@/lib/workspace-map-types";
@@ -20,8 +19,6 @@ export type SessionViewTranslate = (
 export type GuestAccessKind = "aycl" | "ile" | null;
 
 export type ChapterPlanStatus = "unknown" | "empty" | "exists" | "failed";
-
-export type PrepStage = "plan" | "model" | "done";
 
 export type HelpPaneLayoutSnapshot = {
   leftWidth?: number;
@@ -103,16 +100,9 @@ export type SessionWelcomeModalProps = {
   onSilenceLockMinutesChange?: (value: number) => void;
   autoAdvance: boolean;
   onToggleAutoAdvance: () => void;
-  localInferenceEnabled: boolean;
-  onToggleLocalInference: () => void;
-  webGPUAvailable: boolean;
   planError: string | null;
-  modelLoadError: string | null;
-  modelLoadProgress: InitProgress | null;
-  prepStage: PrepStage;
   onConfirmSettings: () => Promise<void> | void;
   onBackToWorkspace?: () => void;
-  onContinueWithoutInference: () => void;
   onReadyStart: () => Promise<void> | void;
   hasSessionPlan: boolean;
   sessionId?: string | null;

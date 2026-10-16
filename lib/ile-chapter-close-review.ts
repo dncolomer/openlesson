@@ -47,8 +47,9 @@ function reviewFromArtifacts(
   artifacts: readonly IlePowCounterArtifact[],
   chapter: { id: string; description?: string | null },
   batchCount: number,
+  counts?: IlePowTypeCounts,
 ): IleChapterCloseReview {
-  const counters = countIlePowByType(artifacts);
+  const counters = counts ?? countIlePowByType(artifacts);
   const total = ilePowCounterTotal(counters);
   const canClose = total > 0;
   return {
@@ -65,8 +66,9 @@ function reviewFromArtifacts(
 export function reviewIleChapterClose(input: {
   artifacts: readonly IlePowCounterArtifact[];
   chapter: { id: string; description?: string | null };
+  counts?: IlePowTypeCounts;
 }): IleChapterCloseReview {
-  return reviewFromArtifacts(input.artifacts, input.chapter, 1);
+  return reviewFromArtifacts(input.artifacts, input.chapter, 1, input.counts);
 }
 
 export function splitIlePowBatches<T>(
@@ -108,10 +110,15 @@ export function planIleChapterClose(input: {
   chapter: { id: string; description?: string | null };
   closeOverride?: boolean;
   batches?: readonly (readonly IlePowCounterArtifact[])[];
+  counts?: IlePowTypeCounts;
 }): IleChapterCloseDecision {
   const review = input.batches
     ? reviewIleChapterCloseInBatches({ batches: input.batches, chapter: input.chapter })
-    : reviewIleChapterClose({ artifacts: input.artifacts, chapter: input.chapter });
+    : reviewIleChapterClose({
+        artifacts: input.artifacts,
+        chapter: input.chapter,
+        counts: input.counts,
+      });
   const decided = decideIleChapterClose({
     review,
     closeOverride: Boolean(input.closeOverride),

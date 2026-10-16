@@ -14,6 +14,7 @@ import { sessionCanvasMayOpen } from "@/lib/session-field-gate";
 import type { IleCanvasCraftInsightConfig } from "@/components/session-view/ile-canvas-craft-insight";
 import type { InsightSummary } from "@/lib/insights";
 import type { IlePowCounterArtifact } from "@/lib/ile-pow-counters";
+import { ilePowNextIndex } from "@/lib/ile-pow-counters";
 import { ileChapterCanvasRemountKey } from "@/lib/ile-session-global-context";
 import {
   serializeIleWorkCanvasScene,
@@ -168,7 +169,9 @@ export function SessionChapterWorkCanvas({
               workArtifacts: sessionPowArtifactsRef.current,
               workSinceIndex: insightWorkMarkRef.current,
               onCrafted: (insight) => {
-                insightWorkMarkRef.current = sessionPowArtifactsRef.current.length;
+                insightWorkMarkRef.current = ilePowNextIndex(
+                  sessionPowArtifactsRef.current,
+                );
                 setSessionInsights((current) => {
                   if (current.some((row) => row.id === insight.id)) return current;
                   return [insight, ...current];

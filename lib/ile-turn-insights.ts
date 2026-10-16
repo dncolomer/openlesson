@@ -465,6 +465,7 @@ export function buildIleThoughtsPoolCandidateRequest(input: {
  */
 export function ileInsightWorkThoughtsSinceMark(input: {
   artifacts?: readonly {
+    n?: number;
     type?: string | null;
     proof_of_work_type?: string | null;
     kind?: string | null;
@@ -475,7 +476,11 @@ export function ileInsightWorkThoughtsSinceMark(input: {
   draft: { id: string; text: string };
 }): { id: string; text: string }[] {
   const start = Math.max(0, Math.floor(Number(input.sinceIndex) || 0));
-  const slice = (input.artifacts ?? []).slice(start);
+  const artifacts = input.artifacts ?? [];
+  const hasN = artifacts.some((item) => typeof item.n === "number");
+  const slice = hasN
+    ? artifacts.filter((item) => (item.n ?? 0) >= start)
+    : artifacts.slice(start);
   const rows: { id: string; text: string }[] = [];
   slice.forEach((item, index) => {
     const type = String(item?.type || item?.proof_of_work_type || item?.kind || "")
@@ -483,8 +488,9 @@ export function ileInsightWorkThoughtsSinceMark(input: {
       .toLowerCase();
     if (type && type !== "tool") return;
     const action = String(item?.tool_action || item?.tool_name || "work").trim() || "work";
+    const ordinal = typeof item.n === "number" ? item.n : start + index;
     rows.push({
-      id: `work-${start + index}-${action}`.slice(0, 80),
+      id: `work-${ordinal}-${action}`.slice(0, 80),
       text: action,
     });
   });

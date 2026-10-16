@@ -735,7 +735,7 @@ describe("sidebar actions wait until the canvas can place an observation", () =>
     expect(retried.ok).toBe(true);
 
     const phase = read("components/session-view/use-session-phase.ts");
-    const confirm = sliceBetween(phase, "const handleConfirmSettings", "const handleContinueWithoutInference");
+    const confirm = sliceBetween(phase, "const handleConfirmSettings", "const handleWelcomeReadyStart");
     const readyStart = sliceBetween(phase, "const handleWelcomeReadyStart", "return {");
     expect(confirm.indexOf("loadSessionBranchField")).toBeGreaterThan(-1);
     expect(confirm.indexOf("loadSessionBranchField")).toBeLessThan(confirm.indexOf("startRecording()"));

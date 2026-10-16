@@ -67,16 +67,9 @@ export function SessionWelcomeModal({
   onSilenceLockMinutesChange,
   autoAdvance,
   onToggleAutoAdvance,
-  localInferenceEnabled: _localInferenceEnabled,
-  onToggleLocalInference: _onToggleLocalInference,
-  webGPUAvailable: _webGPUAvailable,
   planError,
-  modelLoadError,
-  modelLoadProgress: _modelLoadProgress,
-  prepStage: _prepStage,
   onConfirmSettings,
   onBackToWorkspace,
-  onContinueWithoutInference,
   onReadyStart: _onReadyStart,
   hasSessionPlan: _hasSessionPlan,
   sessionId,
@@ -232,21 +225,12 @@ export function SessionWelcomeModal({
                 data-ile-confirm-settings-footer
                 className="mt-auto shrink-0 border-t border-neutral-800 p-3"
               >
-                {(planError || modelLoadError) && (
+                {planError && (
                   <div className="mb-2 border border-red-500/20 bg-red-500/5 px-2 py-2">
                     <p className="text-[11px] leading-relaxed text-red-400">
-                      {planError || modelLoadError}
+                      {planError}
                     </p>
                   </div>
-                )}
-                {modelLoadError && (
-                  <button
-                    type="button"
-                    onClick={onContinueWithoutInference}
-                    className="mb-2 w-full py-1.5 text-left text-[11px] text-neutral-400 transition-colors hover:text-neutral-200"
-                  >
-                    {t("session.continueWithoutBrowserInference")}
-                  </button>
                 )}
                 {onBackToWorkspace ? (
                   <button

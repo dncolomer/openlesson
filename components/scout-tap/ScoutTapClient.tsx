@@ -24,6 +24,7 @@ import {
   sessionClockMayStart,
   subscribeSessionBranchField,
 } from "@/lib/session-branch-field-load";
+import { releaseSessionLocalMemory } from "@/lib/session-local-memory";
 import { calibrateFieldPrepareInput } from "@/lib/session-branch-prepare";
 import {
   advanceTapLiveClockPause,
@@ -121,8 +122,11 @@ export function ScoutTapClient({
     const check = () => setIsMobile(isSmartphoneClient());
     check();
     window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
+    return () => {
+      window.removeEventListener("resize", check);
+      releaseSessionLocalMemory(sessionId);
+    };
+  }, [sessionId]);
 
   const [participantIdentity, setParticipantIdentity] = useState<PowParticipantIdentity | null>(
     () => {
@@ -497,6 +501,7 @@ export function ScoutTapClient({
         sessionQuality: "pure",
       });
       if (!ok) throw new Error(errorMessageFromBody(payload, "Could not save Scout"));
+      releaseSessionLocalMemory(sessionId);
       setPhase("results");
     } catch (err) {
       setResultsError(err instanceof Error ? err.message : "Could not save Scout");

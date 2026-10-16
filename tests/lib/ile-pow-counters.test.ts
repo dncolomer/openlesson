@@ -3,15 +3,22 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   appendIlePowCounterArtifact,
+  appendIlePowSessionLedger,
   countIlePowByType,
   countIlePowDisplayByType,
   countIleUnsubmittedPowDisplay,
   emptyIlePowDisplayCounts,
+  emptyIlePowSessionLedger,
   emptyIlePowTypeCounts,
+  ILE_POW_ARTIFACT_WINDOW,
   ilePowCounterTotal,
+  ilePowNextIndex,
   isIleSpokenThoughtArtifact,
+  slimIlePowCounterArtifact,
+  toIlePowDisplayCounts,
   type IlePowCounterArtifact,
 } from "@/lib/ile-pow-counters";
+import { ileInsightWorkThoughtsSinceMark } from "@/lib/ile-turn-insights";
 
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
@@ -99,5 +106,54 @@ describe("countIlePowByType (session-global)", () => {
       "ile-pow-counters-excerpts.txt",
       JSON.stringify({ zeros: emptyIlePowTypeCounts(), mixed: counts, total: ilePowCounterTotal(counts) }),
     );
+  });
+
+  it("windows the in-memory list, keeps running totals, and slims payloads", () => {
+    let ledger = emptyIlePowSessionLedger();
+    for (let i = 0; i < 40; i += 1) {
+      ledger = appendIlePowSessionLedger(ledger, {
+        type: "tool",
+        metadata: { prompt: "x".repeat(4000), type: "canvas" },
+      });
+    }
+    expect(ledger.artifacts.length).toBe(ILE_POW_ARTIFACT_WINDOW);
+    expect(ledger.typed.tool).toBe(40);
+    expect(ledger.artifacts[0]?.n).toBe(9);
+    expect(ledger.artifacts.at(-1)?.n).toBe(40);
+    expect(ilePowNextIndex(ledger.artifacts)).toBe(41);
+    expect(JSON.stringify(ledger.artifacts[0]?.metadata)).not.toContain("xxxx");
+    expect(countIlePowByType(ledger.artifacts).tool).toBe(ILE_POW_ARTIFACT_WINDOW);
+    expect(
+      toIlePowDisplayCounts(ledger.typed, ledger.artifacts, ledger.thoughts).tool,
+    ).toBe(40);
+
+    ledger = appendIlePowSessionLedger(ledger, {
+      type: "tool",
+      tool_name: "ile-thought-trace",
+    });
+    expect(ledger.thoughts).toBe(1);
+    expect(ledger.typed.tool).toBe(40);
+    expect(
+      toIlePowDisplayCounts(ledger.typed, ledger.artifacts, ledger.thoughts).thoughts,
+    ).toBe(1);
+
+    const slim = slimIlePowCounterArtifact(
+      {
+        type: "eeg",
+        metadata: { impure: true, payload: "big", calibration_passed: false },
+      },
+      1,
+    );
+    expect(slim.n).toBe(1);
+    expect(slim.metadata).toEqual({ impure: true, calibration_passed: false });
+
+    const since = ileInsightWorkThoughtsSinceMark({
+      artifacts: ledger.artifacts,
+      sinceIndex: 40,
+      draft: { id: "draft-1", text: "keep" },
+    });
+    expect(since.some((row) => row.id.includes("work-40-"))).toBe(true);
+    expect(since.some((row) => row.id.includes("work-41-"))).toBe(true);
+    expect(since.some((row) => row.id === "draft-1")).toBe(true);
   });
 });

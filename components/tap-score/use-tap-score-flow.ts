@@ -1,4 +1,5 @@
-import { useMemo, useRef, type MutableRefObject } from "react";
+import { useEffect, useMemo, useRef, type MutableRefObject } from "react";
+import { releaseSessionLocalMemory } from "@/lib/session-local-memory";
 import type { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import { getIlePostSessionPath } from "@/lib/storage";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
@@ -146,6 +147,11 @@ export type TapScoreSessionPatch = {
 export function useTapScoreSession(session: TapScoreSession) {
   const sessionRef = useRef(session);
   sessionRef.current = session;
+  useEffect(() => {
+    return () => {
+      releaseSessionLocalMemory(sessionRef.current.sessionId);
+    };
+  }, []);
   return useMemo(() => createTapScoreSessionActions(() => sessionRef.current), []);
 }
 
@@ -530,6 +536,7 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
           questionId: s.localQuestionIdRef?.current ?? null,
           policy,
         });
+        releaseSessionLocalMemory(s.sessionId);
         s.apply({ performanceReport: null });
         s.apply({ phase: practice ? "practice_done" : "results" });
       } catch (err) {
@@ -563,6 +570,7 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
         practice,
       });
       if (!ok) throw new Error(errorMessageFromBody(payload, "Could not save TAP session"));
+      releaseSessionLocalMemory(s.sessionId);
 
       if (practice) {
         s.apply({ performanceReport: null });

@@ -29,7 +29,6 @@ const SHELL_PANELS = [
   "components/ui/DialogFrame.tsx",
   "components/StrengthsGapsPanel.tsx",
   "components/WorkspacePerformancePanel.tsx",
-  "components/ModelLoadingModal.tsx",
 ];
 
 const REMOVED_SHELL_PANELS = [
@@ -37,6 +36,7 @@ const REMOVED_SHELL_PANELS = [
   "components/WorkspaceModeSelect.tsx",
   "components/ProbesPanel.tsx",
   "components/MobileProbesTab.tsx",
+  "components/ModelLoadingModal.tsx",
 ];
 
 describe("UI monochrome chrome (white outline aesthetic)", () => {
@@ -52,11 +52,7 @@ describe("UI monochrome chrome (white outline aesthetic)", () => {
   });
 
   it("loading modal uses white/neutral tops; probe panels are absent", () => {
-    const modal = read("components/ModelLoadingModal.tsx");
-    expect(modal).toMatch(/animate-spin/);
-    expect(modal).not.toMatch(/border-t-(cyan|purple|blue|amber|yellow|violet)-/);
-    expect(modal).toMatch(/border-t-white|border-t-neutral-/);
-
+    expect(existsSync(join(ROOT, "components/ModelLoadingModal.tsx"))).toBe(false);
     expect(existsSync(join(ROOT, "components/ProbesPanel.tsx"))).toBe(false);
     expect(existsSync(join(ROOT, "components/MobileProbesTab.tsx"))).toBe(false);
   });

@@ -9,10 +9,7 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.resolve(process.cwd()),
   },
-  // Prevent @huggingface/transformers from being bundled server-side
   serverExternalPackages: [
-    "@huggingface/transformers",
-    "onnxruntime-web",
     "@coral-xyz/anchor",
   ],
   async redirects() {

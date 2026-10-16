@@ -43,6 +43,7 @@ export function useIleGatherResources(input: {
   chapterId?: string | null;
   chapterDescription?: string;
   artifacts: readonly IlePowCounterArtifact[];
+  counts?: IlePowTypeCounts;
   recordSessionPowArtifact: (artifact: IlePowCounterArtifact) => void;
   onOpenResources: () => void;
   ileToken?: string;
@@ -63,7 +64,7 @@ export function useIleGatherResources(input: {
     [],
   );
 
-  const total = countIlePowByType(input.artifacts);
+  const total = input.counts ?? countIlePowByType(input.artifacts);
   const availableCounts = availableIlePowCounts(total, spent);
 
   const dismissGatherWarning = useCallback(() => setGatherWarning(null), []);

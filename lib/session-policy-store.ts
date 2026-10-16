@@ -48,6 +48,12 @@ export function clearRememberedSessionPolicies(): void {
   remembered.clear();
 }
 
+export function forgetSessionPolicy(sessionId: string): void {
+  const id = sessionId.trim();
+  if (!id) return;
+  remembered.delete(id);
+}
+
 export function rememberSessionPolicy(sessionId: string, record: SessionPolicyRecord): void {
   const id = sessionId.trim();
   if (!id) return;

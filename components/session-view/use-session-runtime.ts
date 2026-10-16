@@ -17,7 +17,10 @@ import {
   scoreEegContactWindow,
 } from "@/lib/muse-eeg-quality";
 import type { IlePowCounterArtifact } from "@/lib/ile-pow-counters";
-import { appendIlePowCounterArtifact } from "@/lib/ile-pow-counters";
+import {
+  appendIlePowSessionLedger,
+  emptyIlePowSessionLedger,
+} from "@/lib/ile-pow-counters";
 import type { IleProofOfWorkUploadItem } from "@/lib/ile-evidence-buffer";
 import {
   uploadIleEvidenceItem,
@@ -35,7 +38,6 @@ import {
   meetsFacialUploadThreshold,
   totalIleEegSamples,
 } from "@/lib/ile-realtime-pow";
-import type { LocalContextBuffer } from "@/lib/local-context";
 import type { DeviceStatus } from "@/lib/muse-athena";
 import { createScreenCapture } from "@/lib/screen-capture";
 import type { IlePowInterruptionHandler } from "@/components/session-view/use-session-idle";
@@ -49,8 +51,6 @@ export type SessionRuntimeInput = {
   sessionBlockId: string | undefined;
   ileToken?: string;
   entryQueryParams?: Record<string, string | string[]>;
-  localInferenceEnabledRef: { current: boolean };
-  localContextRef: { current: LocalContextBuffer | null };
   whiteboardData: string | null;
   notebookContent: string;
   activeChapterKey: string;
@@ -69,8 +69,6 @@ export function useSessionRuntime(input: SessionRuntimeInput) {
     sessionBlockId,
     ileToken,
     entryQueryParams,
-    localInferenceEnabledRef,
-    localContextRef,
     whiteboardData,
     notebookContent,
     activeChapterKey,
@@ -115,14 +113,21 @@ const canvasPowDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 const bandPowersRef = useRef(bandPowers);
 const [transferHealth, setTransferHealth] = useState<TransferHealth>(createEmptyTransferHealth);
 const transferHealthRef = useRef<TransferHealth>(createEmptyTransferHealth());
+const sessionPowLedgerRef = useRef(emptyIlePowSessionLedger());
 const [sessionPowArtifacts, setSessionPowArtifacts] = useState<IlePowCounterArtifact[]>([]);
 const sessionPowArtifactsRef = useRef<IlePowCounterArtifact[]>([]);
+const sessionPowTypedRef = useRef(emptyIlePowSessionLedger().typed);
+const [sessionPowThoughts, setSessionPowThoughts] = useState(0);
 const recordSessionPowArtifact = useCallback((artifact: IlePowCounterArtifact) => {
-  sessionPowArtifactsRef.current = appendIlePowCounterArtifact(
-    sessionPowArtifactsRef.current,
+  sessionPowLedgerRef.current = appendIlePowSessionLedger(
+    sessionPowLedgerRef.current,
     artifact,
   );
-  setSessionPowArtifacts(sessionPowArtifactsRef.current);
+  const ledger = sessionPowLedgerRef.current;
+  sessionPowArtifactsRef.current = ledger.artifacts;
+  sessionPowTypedRef.current = ledger.typed;
+  setSessionPowArtifacts(ledger.artifacts);
+  setSessionPowThoughts(ledger.thoughts);
 }, []);
 const whiteboardDataRef = useRef(whiteboardData);
 const notebookContentRef = useRef(notebookContent);
@@ -151,15 +156,6 @@ const handleFacialData = useCallback((data: FacialDataPoint) => {
   }
   if (meetsFacialUploadThreshold(facialBufferRef.current.length)) {
     tryUploadFacialBatchRef.current();
-  }
-  // Feed into local context buffer if local inference is active
-  if (localInferenceEnabledRef.current && localContextRef.current) {
-    localContextRef.current.addFacialData({
-      confusionScore: data.confusionScore ?? 0,
-      frustrationScore: data.frustrationScore ?? 0,
-      emotion: data.emotion === "confused" ? 0.8 : data.emotion === "frustrated" ? 0.7 : 0.2,
-      attention: data.attentionLevel === "high" ? 0.9 : data.attentionLevel === "medium" ? 0.5 : 0.2,
-    });
   }
 }, []);
 
@@ -256,9 +252,6 @@ const handleConnectMuse = async () => {
       if (!af7 || af7.length < 256 || !af8 || af8.length < 256) return;
       const powers = computeBandPowers(af7.slice(-256), af8.slice(-256));
       setBandPowers(powers);
-      if (localInferenceEnabledRef.current && localContextRef.current) {
-        localContextRef.current.addEEGData(powers);
-      }
     }, 1000);
   } catch (err: unknown) {
     setMuseStatus("disconnected");
@@ -644,6 +637,8 @@ const handleStopScreenCapture = useCallback(() => {
     handleStopScreenCapture,
     sessionPowArtifacts,
     sessionPowArtifactsRef,
+    sessionPowTypedRef,
+    sessionPowThoughts,
     recordSessionPowArtifact,
   };
 }

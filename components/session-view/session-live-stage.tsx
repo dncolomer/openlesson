@@ -85,6 +85,7 @@ export type SessionLiveStageProps = {
   sessionInsights: InsightSummary[];
   keptInsight: InsightSummary | null;
   sessionPowArtifacts: IlePowCounterArtifact[];
+  sessionPowThoughts: number;
   sessionResourcesOpen: boolean;
   sessionThoughtInterface: SessionThoughtInterface;
   setActiveTool: Dispatch<SetStateAction<Tool>>;
@@ -166,6 +167,7 @@ export function SessionLiveStage({
     sessionInsights,
     keptInsight,
     sessionPowArtifacts,
+    sessionPowThoughts,
     sessionResourcesOpen,
     sessionThoughtInterface,
     setActiveTool,
@@ -270,7 +272,11 @@ export function SessionLiveStage({
         error={error}
         onDismissError={() => setError(null)}
         showWelcomeModal={showWelcomeModal}
-        powCounts={toIlePowDisplayCounts(availableCounts, sessionPowArtifacts)}
+        powCounts={toIlePowDisplayCounts(
+          availableCounts,
+          sessionPowArtifacts,
+          sessionPowThoughts,
+        )}
         unsubmittedPowCounts={countIleUnsubmittedPowDisplay({
           unflaggedThoughtCount: sessionThoughtInterface.stashedThoughts.length,
           formingThought: Boolean(

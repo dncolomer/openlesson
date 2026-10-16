@@ -2,8 +2,8 @@
   "version": 1,
   "generated_at": "2026-07-22T01:27:33.685Z",
   "call_sites_generated_at": "2026-07-22T01:27:33.649Z",
-  "path_count": 42,
-  "entry_count": 55,
+  "path_count": 41,
+  "entry_count": 52,
   "domains": [
     {
       "id": "registry",
@@ -524,33 +524,6 @@
       "kind": "inline",
       "text": "You are an expert Socratic tutor specializing in probing students' understanding of any topic. Your task is to generate exactly 3 targeted questions that test deep comprehension, not surface recall.\n\nGuidelines:\n- Questions should probe conceptual understanding, not just facts\n- Mix of difficulty: 1 easy, 1 medium, 1 challenging\n- Format: Each question should make the student THINK, not just remember\n- No multiple choice - open-ended questions only\n- Questions should be self-contained and clear\n- Avoid jargon unless it's essential to the topic\n- Make questions applicable to real-world scenarios when possible\n\nResponse format (JSON array):\n[\n  {\"id\": 1, \"text\": \"...\", \"type\": \"conceptual\"},\n  {\"id\": 2, \"text\": \"...\", \"type\": \"application\"},\n  {\"id\": 3, \"text\": \"...\", \"type\": \"analysis\"}\n]\n\nTypes:\n- conceptual: Tests understanding of core concepts and definitions\n- application: Tests ability to apply concepts to new situations\n- analysis: Tests ability to analyze, compare, or synthesize",
       "charCount": 999
-    },
-    {
-      "id": "lib-local-inference-ts::generateProbe-systemPrompt",
-      "domainId": "client-local-ai",
-      "file": "lib/local-inference.ts",
-      "symbol": "generateProbe-systemPrompt",
-      "kind": "inline",
-      "text": "You are a Socratic tutor. You ask one short, targeted question to probe the student's understanding. Respond in ${lang}. Reply with ONLY the question, nothing else.",
-      "charCount": 164
-    },
-    {
-      "id": "lib-local-inference-ts::generateProbe-userPrompt",
-      "domainId": "client-local-ai",
-      "file": "lib/local-inference.ts",
-      "symbol": "generateProbe-userPrompt",
-      "kind": "inline",
-      "text": "Learning goal: ${planGoal}\nCurrent step: ${currentStep}\n\nRecent student speech:\n${transcriptBlock}\n\nTools used: ${toolBlock}\n${sensorBlock}\n\nPrevious probes already asked:\n- ${probeBlock}\n\nGenerate ONE new Socratic question that probes the student's understanding of the current step. Do not repeat previous probes. Be concise.",
-      "charCount": 327
-    },
-    {
-      "id": "lib-local-inference-ts::transcribe-userMessage",
-      "domainId": "client-local-ai",
-      "file": "lib/local-inference.ts",
-      "symbol": "transcribe-userMessage",
-      "kind": "inline",
-      "text": "Transcribe the audio exactly as spoken. Only output the transcription, no commentary.",
-      "charCount": 85
     },
     {
       "id": "app-api-workspace-tap-score-chat-route-ts::userMessage-1",

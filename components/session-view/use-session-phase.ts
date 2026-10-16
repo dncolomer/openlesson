@@ -24,9 +24,8 @@ import {
   markIleSessionSettingsConfirmed,
   markSessionWelcomeSeen,
 } from "@/lib/welcomeState";
-import { LocalInferenceManager, type InitProgress } from "@/lib/local-inference";
-import { LocalContextBuffer } from "@/lib/local-context";
 import { coerceSpokenLocale, type SpokenLocale } from "@/lib/tutoring-languages";
+import { releaseSessionLocalMemory } from "@/lib/session-local-memory";
 import { readErrorResponse } from "@/components/session/sessionViewHelpers";
 import {
   chapterStatusAfterHydrate,
@@ -46,7 +45,7 @@ import { learnSessionFieldInput } from "@/lib/session-branch-prepare";
 import { persistIleSessionRow } from "@/lib/ile-session-persist";
 import { learnFieldFromStoredPolicy } from "@/lib/session-policy-store";
 import { discardUnsavedIleSession } from "@/lib/ile-unsaved-exit";
-import type { GuestAccessKind, ChapterPlanStatus, PrepStage, HelpPreviousLayout } from "@/components/session-view/types";
+import type { GuestAccessKind, ChapterPlanStatus, HelpPreviousLayout } from "@/components/session-view/types";
 import type { InitialChaptersLevel } from "@/lib/initial-chapters";
 import type { IleSessionMode } from "@/lib/ile-mode";
 
@@ -91,13 +90,6 @@ export type SessionPhaseInput = {
   setArchivingProbeId: (id: string | null) => void;
   isPreparing: boolean;
   setIsPreparing: (v: boolean) => void;
-  setPrepStage: (s: PrepStage) => void;
-  setModelLoadError: (e: string | null) => void;
-  setModelLoadProgress: (p: InitProgress | null) => void;
-  localInferenceEnabled: boolean;
-  setLocalInferenceEnabled: (v: boolean) => void;
-  localInferenceEnabledRef: { current: boolean };
-  localContextRef: { current: LocalContextBuffer | null };
   initialChapters: InitialChaptersLevel | string;
   chapterCount?: number;
   resolvedSessionMode: IleSessionMode;
@@ -147,9 +139,8 @@ export function useSessionPhase(input: SessionPhaseInput) {
     setError, tutoringLanguage, setTutoringLanguage, setLanguageConfirmed, setSessionPlan,
     sessionPlanRef, setPlanLoading, setPlanError, setChapterPlanStatus, setRegenerateChapters,
     regenerateChapters, objectives, setObjectives, setObjectiveStatuses, setActiveProbe,
-    setViewingProbeIndex, setArchivingProbeId, isPreparing, setIsPreparing, setPrepStage,
-    setModelLoadError, setModelLoadProgress, localInferenceEnabled, setLocalInferenceEnabled,
-    localInferenceEnabledRef, localContextRef, initialChapters, chapterCount, resolvedSessionMode,
+    setViewingProbeIndex, setArchivingProbeId, isPreparing, setIsPreparing,
+    initialChapters, chapterCount, resolvedSessionMode,
     setShowWelcomeModal, setShowWelcomePanel, setIsStartingSession, applyIleChapterGridStartup,
     helpPreviousLayoutRef, setPaneVisibility, timerRef, muteTimerRef,
     micStreamRef, setMicStatus, setIsMuted, setMuteRemaining, setIsSaving, setShowEndDialog,
@@ -413,18 +404,15 @@ const startRecording = async () => {
 const stopRecording = async () => {
   if (timerRef.current) clearInterval(timerRef.current);
 
-  // Clean up local inference if active
-  if (localInferenceEnabledRef.current) {
-    LocalInferenceManager.getInstance().dispose();
-    localContextRef.current?.clear();
-  }
-
   await flushRemainingIlePow({ force: true });
 
   if (stream) { stream.getTracks().forEach((t) => t.stop()); setStream(null); }
   setIsRecording(false);
   setIsSaving(true);
-  if (!session) return;
+  if (!session) {
+    releaseSessionLocalMemory();
+    return;
+  }
 
   const finalSession = endSession(sessionRef.current ?? session, elapsedSeconds * 1000);
   finalSession.hasAudio = false;
@@ -444,6 +432,7 @@ const stopRecording = async () => {
   // not auto-run on TAP Learning end. PoW is already flushed above.
 
   handleDisconnectMuse();
+  releaseSessionLocalMemory(finalSession.id);
 
   router.push(
     guestAccessKind === "aycl" && ayclToken
@@ -639,6 +628,7 @@ const pauseAndGoToDashboard = useCallback(async (
     await pauseSession(session.id, elapsedSeconds * 1000);
   }
   const next = sessionRef.current ?? session;
+  releaseSessionLocalMemory(next?.id ?? current?.id);
   router.push(next ? getIlePostSessionPath(next) : "/dashboard");
 }, [
   session,
@@ -846,6 +836,7 @@ useEffect(() => {
       micStreamRef.current = null;
     }
     handleDisconnectMuse();
+    releaseSessionLocalMemory(sessionRef.current?.id);
   };
 // eslint-disable-next-line react-hooks/exhaustive-deps
 }, []);
@@ -853,12 +844,9 @@ useEffect(() => {
 const handleConfirmSettings = useCallback(async () => {
 if (!session || isPreparing) return;
 
-setPrepStage("plan");
 setIsPreparing(true);
 setPlanLoading(true);
 setPlanError(null);
-setModelLoadError(null);
-setModelLoadProgress(null);
 
 try {
 if (guestAccessKind === "aycl" && ayclToken) {
@@ -996,21 +984,6 @@ setActiveProbe(null);
 setViewingProbeIndex(-1);
 // Plan prep done
 setPlanLoading(false);
-// Stage 2: Load local model if enabled
-if (localInferenceEnabled) {
-  setPrepStage("model");
-  try {
-    const manager = LocalInferenceManager.getInstance();
-    await manager.init((progress) => {
-      setModelLoadProgress(progress);
-    });
-    localContextRef.current = new LocalContextBuffer();
-  } catch (modelErr) {
-    setModelLoadError(modelErr instanceof Error ? modelErr.message : String(modelErr));
-    setIsPreparing(false);
-    return; // Keep modal open to show error
-  }
-}
 const fieldInput = learnSessionFieldInput({
   sessionId: session.id,
   problem: session.problem,
@@ -1031,7 +1004,6 @@ if (!sessionClockMayStart({ mode: "learn", fieldReady: field.ok })) {
   return;
 }
 // All done - leave settings route and enter the map session
-setPrepStage("done");
 setIsPaused(false); // Reset paused state from previous session load
 setLanguageConfirmed(true);
 markIleSessionSettingsConfirmed(session.id);
@@ -1064,17 +1036,8 @@ setIsPreparing(false);
   initialChapters,
   chapterCount,
   resolvedSessionMode,
-  localInferenceEnabled,
   t,
 ]);
-
-const handleContinueWithoutInference = useCallback(() => {
-  LocalInferenceManager.getInstance().dispose();
-  setModelLoadError(null);
-  setLocalInferenceEnabled(false);
-  setIsPreparing(false);
-  setPrepStage("done");
-}, []);
 
 const handleWelcomeReadyStart = useCallback(async () => {
   if (!session || isPreparing) return;
@@ -1131,7 +1094,6 @@ const handleWelcomeReadyStart = useCallback(async () => {
     handleToggleFocus,
     handleConfirmEnd,
     handleConfirmSettings,
-    handleContinueWithoutInference,
     handleWelcomeReadyStart,
   };
 }

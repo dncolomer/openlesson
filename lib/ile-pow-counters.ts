@@ -27,6 +27,8 @@ export type IlePowDisplayCounts = Record<IlePowDisplayCounterType, number>;
 
 /** Artifact shape accepted from live uploads, buffers, or fixture lists. */
 export type IlePowCounterArtifact = {
+  /** Monotonic session index. Survives the in-memory window slide. */
+  n?: number;
   type?: string | null;
   proof_of_work_type?: string | null;
   kind?: string | null;
@@ -36,6 +38,31 @@ export type IlePowCounterArtifact = {
   tool_name?: string | null;
   tool_action?: string | null;
   metadata?: Record<string, unknown> | null;
+};
+
+/** Recent rows kept in RAM after upload. HUD totals live on the session ledger. */
+export const ILE_POW_ARTIFACT_WINDOW = 32;
+
+const SLIM_META_KEYS = [
+  "type",
+  "impure",
+  "quality",
+  "session_quality",
+  "practice",
+  "practice_pow",
+  "pow_kind",
+  "pow_label",
+  "invalidated",
+  "invalidated_pow",
+  "pow_invalidated",
+  "calibration_passed",
+] as const;
+
+export type IlePowSessionLedger = {
+  artifacts: IlePowCounterArtifact[];
+  typed: IlePowTypeCounts;
+  thoughts: number;
+  nextN: number;
 };
 
 export const ILE_POW_COUNTER_LABELS: Record<IlePowDisplayCounterType, string> = {
@@ -160,13 +187,17 @@ export function countIlePowByType(
 export function toIlePowDisplayCounts(
   typed: IlePowTypeCounts,
   artifacts?: readonly IlePowCounterArtifact[] | null,
+  thoughts?: number,
 ): IlePowDisplayCounts {
   return {
     tool: typed.tool,
     screen: typed.screen,
     video: typed.video,
     eeg: typed.eeg,
-    thoughts: countIleSpokenThoughts(artifacts),
+    thoughts:
+      typeof thoughts === "number" && Number.isFinite(thoughts)
+        ? Math.max(0, Math.floor(thoughts))
+        : countIleSpokenThoughts(artifacts),
   };
 }
 
@@ -180,9 +211,100 @@ export function ilePowCounterTotal(counts: IlePowTypeCounts): number {
   return counts.tool + counts.screen + counts.video + counts.eeg;
 }
 
+export function emptyIlePowSessionLedger(): IlePowSessionLedger {
+  return {
+    artifacts: [],
+    typed: emptyIlePowTypeCounts(),
+    thoughts: 0,
+    nextN: 1,
+  };
+}
+
+function slimMetadata(
+  metadata: Record<string, unknown> | null | undefined,
+): Record<string, unknown> | null {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return null;
+  const slim: Record<string, unknown> = {};
+  for (const key of SLIM_META_KEYS) {
+    if (key in metadata) slim[key] = metadata[key];
+  }
+  return Object.keys(slim).length ? slim : null;
+}
+
+export function slimIlePowCounterArtifact(
+  item: IlePowCounterArtifact,
+  n: number,
+): IlePowCounterArtifact {
+  return {
+    n,
+    type: item.type ?? null,
+    proof_of_work_type: item.proof_of_work_type ?? null,
+    kind: item.kind ?? null,
+    chapter_id: item.chapter_id ?? null,
+    step_id: item.step_id ?? null,
+    block_id: item.block_id ?? null,
+    tool_name: item.tool_name ?? null,
+    tool_action: item.tool_action ?? null,
+    metadata: slimMetadata(item.metadata),
+  };
+}
+
+function addTypedCount(
+  typed: IlePowTypeCounts,
+  item: IlePowCounterArtifact,
+): IlePowTypeCounts {
+  if (isIleSpokenThoughtArtifact(item)) return typed;
+  const type = artifactType(item);
+  if (!type) return typed;
+  if (type === "eeg" && isExcludedFromSnapshotPoW(item.metadata)) return typed;
+  return { ...typed, [type]: typed[type] + 1 };
+}
+
+export function ilePowNextIndex(
+  artifacts: readonly IlePowCounterArtifact[] | null | undefined,
+): number {
+  if (!artifacts?.length) return 0;
+  let max = 0;
+  let hasN = false;
+  for (const item of artifacts) {
+    if (typeof item.n === "number" && Number.isFinite(item.n)) {
+      hasN = true;
+      if (item.n > max) max = item.n;
+    }
+  }
+  return hasN ? max + 1 : artifacts.length;
+}
+
+export function appendIlePowSessionLedger(
+  ledger: IlePowSessionLedger,
+  next: IlePowCounterArtifact,
+): IlePowSessionLedger {
+  const n = ledger.nextN;
+  const slimmed = slimIlePowCounterArtifact(next, n);
+  const artifacts = [...ledger.artifacts, slimmed];
+  return {
+    artifacts:
+      artifacts.length > ILE_POW_ARTIFACT_WINDOW
+        ? artifacts.slice(-ILE_POW_ARTIFACT_WINDOW)
+        : artifacts,
+    typed: addTypedCount(ledger.typed, slimmed),
+    thoughts: ledger.thoughts + (isIleSpokenThoughtArtifact(slimmed) ? 1 : 0),
+    nextN: n + 1,
+  };
+}
+
 export function appendIlePowCounterArtifact(
   artifacts: readonly IlePowCounterArtifact[],
   next: IlePowCounterArtifact,
 ): IlePowCounterArtifact[] {
-  return [...artifacts, next];
+  const lastN = ilePowNextIndex(artifacts);
+  return appendIlePowSessionLedger(
+    {
+      artifacts: [...artifacts],
+      typed: emptyIlePowTypeCounts(),
+      thoughts: 0,
+      nextN: artifacts.length ? Math.max(1, lastN) : 1,
+    },
+    next,
+  ).artifacts;
 }

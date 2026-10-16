@@ -32,7 +32,6 @@
   ],
   "supplemental": [
     "lib/labs-ai.ts",
-    "lib/local-inference.ts",
     "lib/pow-api/create-verification-workspace.ts",
     "lib/pow-api/integration-skill.ts",
     "lib/pow-api/performance-context.ts",
@@ -73,7 +72,6 @@
     "app/api/workspace/suggest-chapter-edit/route.ts",
     "app/api/workspaces/[id]/remix/route.ts",
     "lib/labs-ai.ts",
-    "lib/local-inference.ts",
     "lib/pow-api/create-agent-workspace.ts",
     "lib/pow-api/create-verification-workspace.ts",
     "lib/pow-api/custom-verification-model-store.ts",

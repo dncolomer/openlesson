@@ -24,6 +24,7 @@ import {
   sessionClockMayStart,
   subscribeSessionBranchField,
 } from "@/lib/session-branch-field-load";
+import { releaseSessionLocalMemory } from "@/lib/session-local-memory";
 import { calibrateFieldPrepareInput } from "@/lib/session-branch-prepare";
 import { useI18n } from "@/lib/i18n";
 import { SESSION_SIDEBAR_PRIMARY_BUTTON_CLASS } from "@/lib/session-sidebar";
@@ -98,6 +99,7 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
       });
     return () => {
       cancelled = true;
+      releaseSessionLocalMemory();
     };
   }, []);
 
@@ -264,6 +266,7 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
     setSounding(closed);
     soundingRef.current = closed;
     setStored(true);
+    releaseSessionLocalMemory();
   }, [claimedIdentity, token]);
 
   useEffect(() => {

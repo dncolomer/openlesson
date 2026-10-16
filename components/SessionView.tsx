@@ -64,8 +64,6 @@ import {
 } from "@/lib/welcomeState";
 import { insightsSessionListUrl, type InsightSummary } from "@/lib/insights";
 import { IleTurnInsightCraft } from "@/components/session-view/ile-turn-insight-craft";
-import { LocalInferenceManager, type InitProgress } from "@/lib/local-inference";
-import { LocalContextBuffer } from "@/lib/local-context";
 import { useThinkAloudTranscript, type SpeechTranscriptEntry } from "@/lib/useThinkAloudTranscript";
 import { useHeliosVoicePlaybackActive } from "@/lib/useHeliosVoicePlayback";
 import type { HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
@@ -337,19 +335,6 @@ export function SessionView({
   // Plan complete modal (shown when all steps are done)
   const [showPlanCompleteModal, setShowPlanCompleteModal] = useState(false);
 
-  // Local inference
-  const [localInferenceEnabled, setLocalInferenceEnabled] = useState(false);
-  const localInferenceEnabledRef = useRef(false);
-  const localContextRef = useRef<LocalContextBuffer | null>(null);
-  const [modelLoadProgress, setModelLoadProgress] = useState<InitProgress | null>(null);
-  const [modelLoadError, setModelLoadError] = useState<string | null>(null);
-  const [webGPUAvailable, setWebGPUAvailable] = useState(false);
-  const [prepStage, setPrepStage] = useState<"plan" | "model" | "done">("plan");
-
-  useEffect(() => {
-    setWebGPUAvailable(LocalInferenceManager.isWebGPUAvailable());
-  }, []);
-
   const [showWelcomeModal, setShowWelcomeModal] = useState(
     () => !isIleSessionSettingsConfirmed(sessionId),
   );
@@ -563,11 +548,7 @@ export function SessionView({
     if (shouldLogIleSidebarToolSwitch(activeTool)) {
       logTool(activeTool as ToolName, "open", { via: "tool_switch" });
     }
-    // Feed tool events into local context buffer
-    if (localInferenceEnabledRef.current && localContextRef.current) {
-      localContextRef.current.addToolEvent(`opened ${activeTool}`);
-    }
-    
+
     prevToolRef.current = activeTool;
   }, [activeTool, session?.id, session?.startedAt]);
 
@@ -623,6 +604,8 @@ export function SessionView({
     handleStopScreenCapture,
     sessionPowArtifacts,
     sessionPowArtifactsRef,
+    sessionPowTypedRef,
+    sessionPowThoughts,
     recordSessionPowArtifact,
   } = useSessionRuntime({
     sessionRef,
@@ -631,8 +614,6 @@ export function SessionView({
       typeof session?.metadata?.block_id === "string" ? session.metadata.block_id : undefined,
     ileToken,
     entryQueryParams,
-    localInferenceEnabledRef,
-    localContextRef,
     whiteboardData,
     notebookContent,
     activeChapterKey,
@@ -671,6 +652,7 @@ export function SessionView({
     chapterId: activeStep?.id,
     chapterDescription: activeStep?.description || "",
     artifacts: sessionPowArtifacts,
+    counts: sessionPowTypedRef.current,
     recordSessionPowArtifact,
     onOpenResources: () => setSessionResourcesOpen(true),
     ileToken,
@@ -765,6 +747,7 @@ export function SessionView({
     setShowPlanCompleteModal,
     chapterDialoguePrompt,
     sessionPowArtifactsRef,
+    sessionPowTypedRef,
     setChapterCloseReview,
   });
   const activeChapterFollowUps = chapterFollowUpsById[activeProjectChapterId] ?? [];
@@ -989,7 +972,6 @@ export function SessionView({
   useEffect(() => { objectivesRef.current = objectives; }, [objectives]);
   useEffect(() => { isRecordingRef.current = isRecording; }, [isRecording]);
   useEffect(() => { autoAdvanceRef.current = autoAdvance; }, [autoAdvance]);
-  useEffect(() => { localInferenceEnabledRef.current = localInferenceEnabled; }, [localInferenceEnabled]);
   useEffect(() => { sessionPlanRef.current = sessionPlan; }, [sessionPlan]);
   useEffect(() => { openWorkIdsRef.current = openWorkIds; }, [openWorkIds]);
   useEffect(() => {
@@ -1123,7 +1105,6 @@ export function SessionView({
     handleToggleFocus,
     handleConfirmEnd,
     handleConfirmSettings: handleConfirmSettingsPhase,
-    handleContinueWithoutInference,
     handleWelcomeReadyStart: handleWelcomeReadyStartPhase,
   } = useSessionPhase({
     session,
@@ -1166,13 +1147,6 @@ export function SessionView({
     setArchivingProbeId,
     isPreparing,
     setIsPreparing,
-    setPrepStage,
-    setModelLoadError,
-    setModelLoadProgress,
-    localInferenceEnabled,
-    setLocalInferenceEnabled,
-    localInferenceEnabledRef,
-    localContextRef,
     initialChapters,
     chapterCount,
     resolvedSessionMode,
@@ -1985,18 +1959,11 @@ export function SessionView({
         onSilenceLockMinutesChange={setSilenceLockMinutes}
         autoAdvance={autoAdvance}
         onToggleAutoAdvance={() => setAutoAdvance(!autoAdvance)}
-        localInferenceEnabled={localInferenceEnabled}
-        onToggleLocalInference={() => setLocalInferenceEnabled(!localInferenceEnabled)}
-        webGPUAvailable={webGPUAvailable}
         planError={planError}
-        modelLoadError={modelLoadError}
-        modelLoadProgress={modelLoadProgress}
-        prepStage={prepStage}
         onConfirmSettings={handleConfirmSettings}
         onBackToWorkspace={() => {
           void pauseAndGoToDashboard();
         }}
-        onContinueWithoutInference={handleContinueWithoutInference}
         onReadyStart={handleWelcomeReadyStart}
         hasSessionPlan={Boolean(sessionPlan)}
         sessionId={session.id}
@@ -2059,6 +2026,7 @@ export function SessionView({
       sessionInsights={sessionInsights}
       keptInsight={keptInsight}
       sessionPowArtifacts={sessionPowArtifacts}
+      sessionPowThoughts={sessionPowThoughts}
       sessionResourcesOpen={sessionResourcesOpen}
       sessionThoughtInterface={sessionThoughtInterface}
       setActiveTool={setActiveTool}

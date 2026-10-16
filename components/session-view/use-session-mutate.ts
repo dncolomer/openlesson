@@ -28,7 +28,7 @@ import {
   planIleChapterClose,
   resolveIleChapterDoneIndex,
 } from "@/lib/ile-chapter-close-review";
-import type { IlePowCounterArtifact } from "@/lib/ile-pow-counters";
+import type { IlePowCounterArtifact, IlePowTypeCounts } from "@/lib/ile-pow-counters";
 import { buildIleChapterAddPowToolData, buildIleChapterLoadPowToolData } from "@/lib/ile-chapter-depth";
 import {
   buildFollowUpChapterDescription,
@@ -101,6 +101,7 @@ export type SessionMutateInput = {
   setShowPlanCompleteModal: (v: boolean) => void;
   chapterDialoguePrompt: string;
   sessionPowArtifactsRef: { current: IlePowCounterArtifact[] };
+  sessionPowTypedRef: { current: IlePowTypeCounts };
   setChapterCloseReview: (review: {
     canClose: boolean;
     reason: string;
@@ -138,6 +139,7 @@ export function useSessionMutate(input: SessionMutateInput) {
     setShowPlanCompleteModal,
     chapterDialoguePrompt,
     sessionPowArtifactsRef,
+    sessionPowTypedRef,
     setChapterCloseReview,
   } = input;
 
@@ -970,6 +972,7 @@ const handleMarkChapterDone = useCallback(async (opts?: { closeOverride?: boolea
   const artifacts = sessionPowArtifactsRef.current;
   const planned = planIleChapterClose({
     artifacts,
+    counts: sessionPowTypedRef.current,
     chapter: { id: step.id, description: step.description },
     closeOverride: Boolean(opts?.closeOverride),
   });
@@ -1030,6 +1033,7 @@ const handleMarkChapterDone = useCallback(async (opts?: { closeOverride?: boolea
   resolvedSessionMode,
   fetchChapterFollowUps,
   sessionPowArtifactsRef,
+  sessionPowTypedRef,
   setChapterCloseReview,
 ]);
 

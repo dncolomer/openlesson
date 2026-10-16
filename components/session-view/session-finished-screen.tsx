@@ -72,9 +72,9 @@ export function SessionFinishedScreen({
             {kicker}
           </p>
         ) : null}
-        <h1 className="mt-2 shrink-0 text-2xl font-medium text-neutral-100 sm:text-3xl">{title}</h1>
+        <h1 className="mt-2 shrink-0 text-2xl font-medium text-balance text-neutral-100 sm:text-3xl">{title}</h1>
         {body ? (
-          <div className="mt-4 max-w-lg shrink-0 whitespace-pre-line text-sm leading-relaxed text-neutral-300 sm:text-base">
+          <div className="mt-4 max-w-lg shrink-0 whitespace-pre-line text-sm leading-relaxed text-pretty text-neutral-300 sm:text-base">
             {body}
           </div>
         ) : null}

@@ -567,7 +567,8 @@ describe("shipped voice-challenge UI wiring", () => {
     expect(phases).toContain("PracticeVoiceChallenge");
     expect(phases).toContain('variant="prepare"');
     expect(phases).toContain('data-prepare-briefing-step="challenge"');
-    expect(phases).toContain("onStart={confirmStart}");
+    expect(phases).toContain("onClick={confirmStart}");
+    expect(phases).toContain("data-calibrate-start");
     expect(phases).toContain("<CalibrateSoundingSurface");
     expect(runner).toContain("PracticeVoiceChallenge");
     expect(runner).toContain("data-calibrate-voice-challenge");

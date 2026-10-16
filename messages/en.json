@@ -801,7 +801,7 @@
     "mobileDetected": "Mobile Device Detected",
     "mobileDetectedDesc": "This block is optimized for desktop. Use the mobile view for a better experience on this device.",
     "savingSession": "Saving block...",
-    "welcomeTitle": "Welcome to your learning session",
+    "welcomeTitle": "Learn",
     "welcomeMessage": "Set how long silence can run, and the look. Then work on the canvas.",
     "chapterCount": "Chapters",
     "chapterCountDesc": "How many chapters this session makes available. Presets set this too. The session never opens more than five.",
@@ -2829,11 +2829,11 @@
       "step1": {
         "title": "Tap what you would not trust",
         "imageAlt": "Calibration questions",
-        "body": "Tap every hidden state you would not trust yourself to occupy. The screens get finer or stop on their own."
+        "body": "Tap every question you would not trust yourself to answer. The screens get finer or stop on their own."
       },
       "step3": {
         "title": "Tap what you would not trust",
-        "body": "Read the opening lines out loud to start. Then tap every hidden state you would not trust yourself to occupy. The screens get finer or stop on their own. No speaking is required after the opening.\n\nThis is a prior of where your uncertainty sits, for later Learn sessions.",
+        "body": "Read the opening lines out loud to start. Then tap every question you would not trust yourself to answer. The screens get finer or stop on their own. No speaking is required after the opening.\n\nThose taps are saved for later Learn sessions.",
         "quoteText": "",
         "quoteAuthor": "",
         "start": "Start",
@@ -2895,7 +2895,7 @@
     "briefing": {
       "kicker": "Calibrate",
       "title": "Calibrate",
-      "intro": "Read the opening lines out loud to start. Then tap every hidden state you would not trust yourself to occupy. No speaking is required after that. Choose length, then start."
+      "intro": "Read the opening lines out loud to start. Then tap every question you would not trust yourself to answer. No speaking is required after the opening."
     },
     "live": {
       "questionsHeading": "Calibrate",

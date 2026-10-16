@@ -533,7 +533,8 @@ describe("structural: Scout TAP shell, no think-aloud, Build toggle", () => {
     expect(surface).toContain("data-sounding-still");
     expect(phases).toContain("data-scout-thank-you");
     expect(phases).toContain("<SessionSoundingResult");
-    expect(phases).toContain('variant="scout"');
+    expect(phases).toContain("data-calibrate-start");
+    expect(phases).not.toContain('variant="scout"');
     expect(phases).not.toContain("useSessionThoughtInterface");
     expect(phases).not.toContain("tap-session-purity");
     expect(phases).not.toContain("retryMicrophone");
@@ -559,7 +560,8 @@ describe("structural: Scout TAP shell, no think-aloud, Build toggle", () => {
     expect(learnIdx).toBeGreaterThan(prepareIdx);
 
     expect(en).toMatch(/"title": "Calibrate"/);
-    expect(en).toMatch(/tap every hidden state/i);
+    expect(en).toMatch(/tap every question/i);
+    expect(en).not.toMatch(/tap every hidden state/i);
     expect(en).toMatch(/Jump into Learn/);
 
     expect(tapPage).not.toContain("ScoutTapClient");

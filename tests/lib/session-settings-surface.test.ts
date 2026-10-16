@@ -36,7 +36,8 @@ describe("shared TAP settings surface", () => {
     expect(learn).toContain("wideLanguage");
     expect(briefing).toContain('data-tap-conversation-language');
     expect(briefing).toContain("w-full grid-cols-2 gap-2 sm:grid-cols-4");
-    expect(briefing).toContain("max-w-xs grid-cols-3 gap-2");
+    expect(briefing).toContain("mx-auto flex w-full max-w-xl flex-col gap-8");
+    expect(briefing).toContain("grid grid-cols-3 gap-2");
     expect(learn).not.toContain("data-ile-pregame-tabs");
     expect(learn).not.toContain("data-ile-pregame-tab=");
     expect(learn).not.toContain("ile-pregame-panel-economy");
@@ -79,8 +80,16 @@ describe("shared TAP settings surface", () => {
       expect(src).toContain('kind="shortcuts"');
       expect(src).toContain("showDurationPicker=");
       expect(src).toContain("onConversationLanguageChange");
-      expect(src).not.toContain("wideLanguage");
       expect(src).not.toContain("data-ile-pregame-tabs");
     }
+    expect(prepare).toContain("wideLanguage");
+    expect(prepare).toContain("data-calibrate-start");
+    expect(prepare).toContain("<TapAestheticSection bgImage={bgImage} kind=\"shortcuts\" />");
+    expect(prepare).toContain("SessionStartShell");
+    expect(learn).toContain("SessionStartShell");
+    expect(verify).toContain("SessionStartShell");
+    expect(verify).toContain("wideLanguage");
+    expect(verify).toContain('layout="stack"');
+    expect(drill).not.toContain("wideLanguage");
   });
 });

@@ -332,7 +332,7 @@ describe("Learn research presets", () => {
 });
 
 describe("TAP Learning pre-game settings surface", () => {
-  it("uses Welcome to your learning session, Start Session, presets, extra sliders, and full map copy", () => {
+  it("uses Learn, Start Session, presets, extra sliders, and full map copy", () => {
     const welcome = read("components/session-view/session-welcome-modal.tsx");
     const picker = read("components/InitialChaptersPicker.tsx");
     const view = readSessionViewSurface();
@@ -340,7 +340,7 @@ describe("TAP Learning pre-game settings surface", () => {
       session: Record<string, string>;
     };
 
-    expect(en.session.welcomeTitle).toBe("Welcome to your learning session");
+    expect(en.session.welcomeTitle).toBe("Learn");
     expect(en.session.confirmSettings).toBe("Start Session");
     expect(en.session.welcomeTitle).not.toBe("Welcome to your block");
     expect(en.session.confirmSettings).not.toBe("Confirm Settings");
@@ -352,7 +352,8 @@ describe("TAP Learning pre-game settings surface", () => {
     expect(en.session.mapTypeUseWhen).toBe("Use when");
     expect(en.session.mapTypePlayRule).toBe("Play rule");
 
-    expect(welcome).toContain("session.welcomeTitle");
+    expect(welcome).toContain("session.welcomeMessage");
+    expect(welcome).toContain("FLOW_END_KICKERS.learn");
     expect(welcome).toContain("session.confirmSettings");
     expect(welcome).toContain("TapBriefingConfig");
     expect(welcome).toContain("showDurationPicker={false}");

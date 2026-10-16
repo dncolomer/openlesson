@@ -83,7 +83,7 @@ export function CalibrateSoundingSurface({
                             : [...current, still.id],
                         );
                       }}
-                      className={`w-full border px-4 py-4 text-left text-base leading-relaxed ${
+                      className={`w-full border px-4 py-4 text-left text-base leading-relaxed text-pretty ${
                         selected
                           ? "border-white bg-white text-neutral-950"
                           : "border-white/30 bg-black text-white hover:border-white/70"
@@ -236,7 +236,7 @@ function SoundingVoiceStep({
       <p className="text-xs uppercase tracking-[0.16em] text-neutral-500">
         {kind === "trusted" ? "A question you left unmarked" : "A gap you marked"}
       </p>
-      <p className="text-sm text-neutral-300" data-sounding-proof-still="">
+      <p className="text-sm leading-relaxed text-pretty text-neutral-300" data-sounding-proof-still="">
         {stillText}
       </p>
       <div data-sounding-voice-audio="">
@@ -317,7 +317,7 @@ function SoundingProgressHeader({
           );
         })}
       </div>
-      <p className="text-sm leading-relaxed text-neutral-300">{progress.hint}</p>
+      <p className="text-sm leading-relaxed text-pretty text-neutral-300">{progress.hint}</p>
     </div>
   );
 }

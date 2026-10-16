@@ -61,14 +61,19 @@ describe("learning Calibrate entry", () => {
     expect(en.scout.briefing.title).toBe(CALIBRATE_MODE_LABEL);
     expect(en.scout.briefing.kicker).toBe(CALIBRATE_MODE_LABEL);
     expect(en.scout.briefing.intro.toLowerCase()).toContain("no speaking");
-    expect(en.scout.briefing.intro.toLowerCase()).toContain("tap every hidden state");
-    expect(en.onboardingGuide.scout.step3.body.toLowerCase()).toContain("tap every hidden state");
+    expect(en.scout.briefing.intro.toLowerCase()).toContain("tap every question");
+    expect(en.scout.briefing.intro.toLowerCase()).not.toContain("hidden state");
+    expect(en.onboardingGuide.scout.step3.body.toLowerCase()).toContain("tap every question");
     expect(en.onboardingGuide.scout.step3.body.toLowerCase()).toContain("opening lines out loud");
+    expect(en.onboardingGuide.scout.step3.body.toLowerCase()).not.toContain("hidden state");
 
     expect(phases).toContain("<CalibrateSoundingSurface");
     expect(phases).toContain("<SessionWorkSurface");
-    expect(phases).toContain("onStart={confirmStart}");
+    expect(phases).toContain("onClick={confirmStart}");
+    expect(phases).toContain("data-calibrate-start");
     expect(phases).toContain("<TapBriefingConfig");
+    expect(phases).toContain("SessionStartShell");
+    expect(phases).not.toContain("kicker={t(\"scout.briefing.kicker\")}");
     expect(phases).toContain("PracticeVoiceChallenge");
     expect(phases).toContain('variant="prepare"');
     expect(phases).toContain('data-prepare-briefing-step="challenge"');

@@ -1,7 +1,6 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
 import { PracticeVoiceChallenge } from "@/components/PracticeVoiceChallenge";
 import { CalibrateSoundingSurface } from "@/components/calibrate/calibrate-sounding-surface";
 import { TapBriefingConfig } from "@/components/TapBriefingConfig";
@@ -13,6 +12,7 @@ import { SessionTopicChapter } from "@/components/session-view/ile-work-dock-bar
 import { TapSessionSignals } from "@/components/session-view/session-signals";
 import { IleStartLoading } from "@/components/session-view/ile-start-loading";
 import { SessionPageLoading } from "@/components/session-view/session-page-loading";
+import { SessionStartShell } from "@/components/session-view/session-start-shell";
 import { TapAestheticSection } from "@/components/tap-score/tap-aesthetic-section";
 import { TapLiveClock } from "@/components/tap-score/tap-live-clock";
 import { TapThoughtButton } from "@/components/tap-score/tap-thought-button";
@@ -128,18 +128,9 @@ export function ScoutTapPhases(props: {
         ) : null}
 
         {phase === "briefing" && !isStartingSession && briefingStep === "confirm" && (
-          <section className="relative flex min-h-0 flex-1" data-scout-briefing data-tap-briefing-layout="sections">
+          <SessionStartShell data-scout-briefing="" data-tap-briefing-layout="sections">
             <div className="grid h-full min-h-0 w-full flex-1 lg:grid-cols-2">
               <div className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-[#0b0b0b] lg:border-r lg:border-neutral-800/60">
-                <SessionOnboardingGuide
-                  variant="scout"
-                  hideStep3Quote
-                  showStartAction
-                  isStarting={isStartingSession}
-                  onStart={confirmStart}
-                />
-              </div>
-              <TapAestheticSection bgImage={bgImage} kind="shortcuts">
                 <TapBriefingConfig
                   workspaceTitle={workspaceTitle}
                   minutes={minutes}
@@ -150,18 +141,31 @@ export function ScoutTapPhases(props: {
                   }
                   showDurationPicker={!privateToken && !durationLocked}
                   disabled={isStartingSession}
-                  kicker={t("scout.briefing.kicker")}
                   title={t("scout.briefing.title")}
                   intro={t("scout.briefing.intro")}
+                  wideLanguage
                 />
-              </TapAestheticSection>
+                <div className="mt-auto shrink-0 border-t border-neutral-800 p-3">
+                  <button
+                    type="button"
+                    data-onboarding-start
+                    data-calibrate-start
+                    onClick={confirmStart}
+                    disabled={isStartingSession}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-none bg-neutral-100 px-3 py-3 text-[11px] font-semibold uppercase tracking-wider text-neutral-900 transition-colors hover:bg-white disabled:cursor-wait disabled:bg-neutral-800 disabled:text-neutral-500"
+                  >
+                    {isStartingSession ? t("onboardingGuide.scout.step3.starting") : t("onboardingGuide.scout.step3.start")}
+                  </button>
+                </div>
+              </div>
+              <TapAestheticSection bgImage={bgImage} kind="shortcuts" />
               {error ? (
                 <p className="absolute inset-x-0 bottom-0 z-20 px-6 pb-5 text-center text-sm text-red-300 lg:col-span-2">
                   {error}
                 </p>
               ) : null}
             </div>
-          </section>
+          </SessionStartShell>
         )}
 
         {phase === "live" && sounding ? (

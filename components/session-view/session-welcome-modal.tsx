@@ -1,14 +1,14 @@
 "use client";
 
 import { AestheticPicker } from "@/components/AestheticPicker";
-import { SessionConsoleMarks, SessionConsoleScan } from "@/components/session-view/session-console-marks";
-import { CONSOLE_LABEL_CLASS } from "@/components/ui/console-frame";
 import { TapBriefingConfig } from "@/components/TapBriefingConfig";
 import { IleStartLoading } from "@/components/session-view/ile-start-loading";
 import { SessionPageLoading } from "@/components/session-view/session-page-loading";
 import { isIleConfirmSettingsBlocked } from "@/components/session-view/ile-confirm-settings";
+import { SessionStartShell } from "@/components/session-view/session-start-shell";
 import type { SessionWelcomeModalProps } from "@/components/session-view/types";
 import { TapAestheticSection } from "@/components/tap-score/tap-aesthetic-section";
+import { FLOW_END_KICKERS } from "@/lib/session-stage-progress";
 import {
   ILE_SESSION_CHAPTER_COUNT_DEFAULT,
   capIleSessionChapters,
@@ -103,47 +103,27 @@ export function SessionWelcomeModal({
   const visibleChapters = capIleSessionChapters(sessionPlan?.steps ?? [], chapterCount);
 
   return (
-    <div
+    <SessionStartShell
       data-ile-session-settings
       data-session-welcome-modal=""
-      data-console-frame=""
-      className="relative flex h-screen min-h-0 w-full flex-col overflow-hidden border border-white/40 bg-black"
+      className="h-screen w-full"
     >
-      <SessionConsoleScan />
-      <SessionConsoleMarks />
-      <p data-console-frame-label="" className={`absolute left-3 top-2 z-[4] ${CONSOLE_LABEL_CLASS}`}>
-        Set
-      </p>
-      <div className="relative z-[2] shrink-0 border-b border-white/30 px-5 py-3 sm:px-6">
-        <h2 className="text-lg font-semibold leading-tight tracking-tight text-white sm:text-xl">
-          {t("session.welcomeTitle")}
-        </h2>
-        <p className="mt-1 max-w-3xl text-[12px] leading-snug text-neutral-400">
-          {t("session.welcomeMessage")}
-        </p>
-      </div>
-
-      <div className="relative z-[2] flex min-h-0 flex-1 flex-col">
-          <div className="grid h-full min-h-0 w-full flex-1 overflow-hidden lg:grid-cols-2">
+      <div className="grid h-full min-h-0 w-full flex-1 overflow-hidden lg:grid-cols-2">
             <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden border-neutral-800 lg:border-r">
-              <div className="min-h-0 flex-1">
-                <TapBriefingConfig
-                  workspaceTitle="Learn"
-                  title={t("session.welcomeTitle")}
-                  minutes={DEFAULT_DURATION_MINUTES}
-                  onMinutesChange={() => {}}
-                  conversationLanguage={tutoringLanguage}
-                  onConversationLanguageChange={(locale) =>
-                    onTutoringLanguageChange(coerceSpokenLocale(locale))
-                  }
-                  showDurationPicker={false}
-                  wideLanguage
-                  disabled={isButtonDisabled}
-                />
-                <div
-                  data-ile-session-chapters
-                  className="flex min-h-0 min-w-0 flex-col gap-4 px-5 pb-6 sm:px-8 lg:px-10"
-                >
+              <TapBriefingConfig
+                title={FLOW_END_KICKERS.learn}
+                intro={t("session.welcomeMessage")}
+                minutes={DEFAULT_DURATION_MINUTES}
+                onMinutesChange={() => {}}
+                conversationLanguage={tutoringLanguage}
+                onConversationLanguageChange={(locale) =>
+                  onTutoringLanguageChange(coerceSpokenLocale(locale))
+                }
+                showDurationPicker={false}
+                wideLanguage
+                disabled={isButtonDisabled}
+              >
+                <div data-ile-session-chapters className="flex min-h-0 min-w-0 flex-col gap-4">
                   <div data-ile-silence-lock-minutes>
                     <div className="mb-1.5 flex items-baseline justify-between gap-3">
                       <label className="text-sm font-medium text-neutral-100">
@@ -153,7 +133,7 @@ export function SessionWelcomeModal({
                         {silenceLockMinutes}m
                       </span>
                     </div>
-                    <p className="mb-2 text-[12px] leading-snug text-neutral-400">
+                    <p className="mb-2 text-[12px] leading-snug text-pretty text-neutral-400">
                       {ILE_SILENCE_LOCK_MINUTES_DESC}
                     </p>
                     <input
@@ -220,7 +200,7 @@ export function SessionWelcomeModal({
                     {autoAdvance ? t("session.autoAdvanceOn") : t("session.manualMode")}
                   </button>
                 </div>
-              </div>
+              </TapBriefingConfig>
               <div
                 data-ile-confirm-settings-footer
                 className="mt-auto shrink-0 border-t border-neutral-800 p-3"
@@ -277,7 +257,6 @@ export function SessionWelcomeModal({
               />
             </TapAestheticSection>
           </div>
-      </div>
-    </div>
+    </SessionStartShell>
   );
 }

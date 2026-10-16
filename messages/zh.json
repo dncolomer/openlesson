@@ -741,7 +741,7 @@
     "mobileDetected": "检测到移动设备",
     "mobileDetectedDesc": "此区块针对桌面进行了优化。使用移动视图在此设备上获得更好的体验。",
     "savingSession": "保存区块中...",
-    "welcomeTitle": "欢迎来到您的区块",
+    "welcomeTitle": "Learn",
     "welcomeMessage": "Set how long silence can run, and the look. Then work on the canvas.",
     "chapterPromptFallback": "通过向 unsys 发送想法来完成本章。",
     "emptyUserTurn": "发送一个想法以在此处显示您最新的提交。",

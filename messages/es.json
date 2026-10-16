@@ -793,7 +793,7 @@
     "mobileDetected": "Dispositivo Móvil Detectado",
     "mobileDetectedDesc": "Este bloque está optimizada para escritorio. Usa la vista móvil para mejor experiencia en este dispositivo.",
     "savingSession": "Guardando bloque...",
-    "welcomeTitle": "Bienvenido a tu bloque",
+    "welcomeTitle": "Learn",
     "welcomeMessage": "Set how long silence can run, and the look. Then work on the canvas.",
     "chapterPromptFallback": "Trabaja este capítulo enviando pensamientos a unsys.",
     "emptyUserTurn": "Envía un pensamiento para mostrar tu último envío aquí.",

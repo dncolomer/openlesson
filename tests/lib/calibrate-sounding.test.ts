@@ -507,6 +507,9 @@ describe("sounding copy", () => {
     const progress = soundingProgress(opened);
     expect(progress.label).toBe("Pass 1 of 2");
     expect(progress.hint).toBe(SOUNDING_INSTRUCTION);
+    expect(SOUNDING_INSTRUCTION).toMatch(/tap every question/i);
+    expect(SOUNDING_INSTRUCTION).not.toMatch(/hidden state/i);
+    expect(SOUNDING_INSTRUCTION).not.toMatch(/What would you need to settle about/i);
     const unranked = soundingResultPresentation({
       band: "unranked",
       coverageDepth: 0,

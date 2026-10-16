@@ -66,7 +66,8 @@ describe("console theme shells", () => {
     );
     expectConsoleChrome(html);
     expect(html).toContain("data-ile-session-settings");
-    expect(html).toContain("session.welcomeTitle");
+    expect(html).toContain("Learn");
+    expect(html).toContain("session.welcomeMessage");
     expect(html).toContain("data-ile-confirm-settings");
     expect(html).toContain("session.confirmSettings");
     expect(html).toContain("data-ile-silence-lock-minutes");

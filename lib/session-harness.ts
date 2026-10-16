@@ -8,7 +8,7 @@ import type { SessionGuideId } from "@/lib/session-instructions";
 export const SESSION_HARNESS_FALLBACK: Record<SessionGuideId, string> = {
   learn:
     "Stay with the work on the board. The next step will show here once there is enough of your work to read.",
-  calibrate: "Tap every hidden state you would not trust yourself to occupy.",
+  calibrate: "Tap every question you would not trust yourself to answer.",
   verification:
     "Work the question on the board. The next step will show here once there is enough of your work to read.",
 };

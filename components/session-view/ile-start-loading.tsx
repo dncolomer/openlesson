@@ -104,7 +104,7 @@ export function IleStartLoading({
             <p
               key={tipId}
               data-ile-start-tip={tipId}
-              className="mt-5 border border-white/30 px-4 py-4 text-left font-mono text-sm leading-relaxed tracking-wide text-white sm:text-base"
+              className="mt-5 border border-white/30 px-4 py-4 text-left font-mono text-sm leading-relaxed tracking-wide text-pretty text-white sm:text-base"
             >
               {tip}
             </p>

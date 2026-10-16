@@ -28,7 +28,7 @@ export const SOUNDING_CARD_MIN_WORDS = 8;
 export const SOUNDING_GAP_NONE = "none";
 
 export const SOUNDING_INSTRUCTION =
-  "Tap every hidden state you would not trust yourself to occupy right now.";
+  "Tap every question you would not trust yourself to answer.";
 export const SOUNDING_PASS_HINT =
   "Continue brings another set, drawn from the cards you just marked.";
 export const SOUNDING_PROOF_PROMPT =

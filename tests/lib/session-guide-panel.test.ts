@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { SessionGuidePanel } from "@/components/session-view/session-guide-panel";
 import { ILE_WORK_CANVAS_COMMANDS } from "@/lib/ile-work-canvas-commands";
-import { SESSION_INSTRUCTIONS } from "@/lib/session-instructions";
+import { SESSION_BRIEFING_INTRO, SESSION_INSTRUCTIONS } from "@/lib/session-instructions";
 import { ileCanvasCommandDraft } from "@/lib/ile-work-canvas-commands";
 import { sessionHarnessNextLine, SESSION_HARNESS_FALLBACK } from "@/lib/session-harness";
 
@@ -69,6 +69,13 @@ describe("session guide panel", () => {
     for (const text of Object.values(SESSION_INSTRUCTIONS)) {
       expect(text).not.toMatch(/\b(Close|Keep|Discard|Insight)\b/);
     }
+    expect(SESSION_BRIEFING_INTRO.calibrate).toMatch(/tap every question/i);
+    expect(SESSION_BRIEFING_INTRO.calibrate).not.toMatch(/hidden state|What would you need to settle about/i);
+    expect(SESSION_BRIEFING_INTRO.verification).toMatch(/Distance/);
+    expect(SESSION_BRIEFING_INTRO.verification).not.toMatch(/hidden state|What would you need to settle about/i);
+    for (const text of Object.values(SESSION_BRIEFING_INTRO)) {
+      expect(text).not.toMatch(/\$\{|What would you need to settle about|in This region/i);
+    }
 
     const source = readFileSync(join(ROOT, "components/session-view/session-guide-panel.tsx"), "utf8");
     expect(source).toContain("IleCanvasDictateButton");
@@ -121,5 +128,7 @@ describe("session guide panel", () => {
     for (const text of Object.values(SESSION_HARNESS_FALLBACK)) {
       expect(text).not.toMatch(/\b(Close|Keep|Discard|Insight|Forage|Exploit|Avoid|Infer)\b/);
     }
+    expect(SESSION_HARNESS_FALLBACK.calibrate).toMatch(/tap every question/i);
+    expect(SESSION_HARNESS_FALLBACK.calibrate).not.toMatch(/hidden state/i);
   });
 });

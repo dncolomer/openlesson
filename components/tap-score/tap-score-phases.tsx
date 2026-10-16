@@ -39,6 +39,8 @@ import { TapAestheticSection } from "@/components/tap-score/tap-aesthetic-sectio
 import { SessionTopicChapter } from "@/components/session-view/ile-work-dock-bar";
 import { TapSessionSignals } from "@/components/session-view/session-signals";
 import { SessionWorkSurface } from "@/components/session-view/session-work-surface";
+import { SESSION_BRIEFING_INTRO } from "@/lib/session-instructions";
+import { SessionStartShell } from "@/components/session-view/session-start-shell";
 import { FLOW_END_KICKERS } from "@/lib/session-stage-progress";
 import type { SessionSidebarMode } from "@/lib/session-sidebar";
 import { coerceSpokenLocale, type SpokenLocale } from "@/lib/tutoring-languages";
@@ -499,15 +501,27 @@ export function TapScorePhases(props: {
         ) : null}
 
         {phase === "briefing" && !isStartingSession && briefingStep === "pick" && (
-          <section className="relative flex min-h-0 flex-1" data-tap-briefing-layout="sections" data-tap-briefing-step="pick">
+          sidebarMode === "verification-tap" ? (
+          <SessionStartShell data-tap-briefing-layout="sections" data-tap-briefing-step="pick">
             <div className="grid h-full min-h-0 w-full flex-1 lg:grid-cols-2">
-              <div className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-[#0b0b0b] lg:border-r lg:border-neutral-800/60">
-                <SessionOnboardingGuide
-                  variant="tap"
-                  omitIntroSlide
-                  hideStep3Quote
-                  renderStep3Action={() => (
-                    <>
+                  <div className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-[#0b0b0b] lg:border-r lg:border-neutral-800/60">
+                    <TapBriefingConfig
+                      workspaceTitle={workspaceTitle}
+                      minutes={minutes}
+                      onMinutesChange={setMinutes}
+                      conversationLanguage={conversationLanguage}
+                      onConversationLanguageChange={(locale) =>
+                        setConversationLanguage(coerceSpokenLocale(locale))
+                      }
+                      showDurationPicker={!privateToken && !durationLocked}
+                      disabled={isStartingSession}
+                      title={FLOW_END_KICKERS.verify}
+                      intro={SESSION_BRIEFING_INTRO.verification}
+                      wideLanguage
+                      layout="stack"
+                    />
+                    <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-8 sm:px-8 lg:px-10">
+                      <div className="mx-auto w-full max-w-xl">
                       <TapStartingTopicCards
                         topics={startingTopics}
                         isStarting={isStartingSession}
@@ -525,23 +539,61 @@ export function TapScorePhases(props: {
                       {topicsError ? (
                         <p className="mt-2 text-center text-xs text-neutral-300/90">{topicsError}</p>
                       ) : null}
-                    </>
-                  )}
-                />
-              </div>
-              <TapAestheticSection bgImage={bgImage} kind="shortcuts">
-                <TapBriefingConfig
-                  workspaceTitle={workspaceTitle}
-                  minutes={minutes}
-                  onMinutesChange={setMinutes}
-                  conversationLanguage={conversationLanguage}
-                  onConversationLanguageChange={(locale) =>
-                    setConversationLanguage(coerceSpokenLocale(locale))
-                  }
-                  showDurationPicker={!privateToken && !durationLocked}
-                  disabled={isStartingSession}
-                />
-              </TapAestheticSection>
+                      </div>
+                    </div>
+                  </div>
+                  <TapAestheticSection bgImage={bgImage} kind="shortcuts" />
+              {error ? (
+                <p className="absolute inset-x-0 bottom-0 z-20 px-6 pb-5 text-center text-sm text-red-300 lg:col-span-2">
+                  {error}
+                </p>
+              ) : null}
+            </div>
+          </SessionStartShell>
+          ) : (
+          <section className="relative flex min-h-0 flex-1" data-tap-briefing-layout="sections" data-tap-briefing-step="pick">
+            <div className="grid h-full min-h-0 w-full flex-1 lg:grid-cols-2">
+                  <div className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-[#0b0b0b] lg:border-r lg:border-neutral-800/60">
+                    <SessionOnboardingGuide
+                      variant="tap"
+                      omitIntroSlide
+                      hideStep3Quote
+                      renderStep3Action={() => (
+                        <>
+                          <TapStartingTopicCards
+                            topics={startingTopics}
+                            isStarting={isStartingSession}
+                            startingTopicId={startingTopicId}
+                            onStartTopic={chooseTopic}
+                            onPracticeFirst={choosePractice}
+                            practiceTitle={t("tap.practice.practiceFirst")}
+                            practiceSubtitle={t("tap.practice.practiceFirstHint")}
+                            practiceStartLabel={t("tap.practice.cardStart")}
+                            practiceStartingLabel={t("tap.practice.starting")}
+                            loadingLabel={t("tap.briefing.topicsLoading")}
+                            startLabel={t("onboardingGuide.tap.step3.start")}
+                            startingLabel={t("onboardingGuide.tap.step3.starting")}
+                          />
+                          {topicsError ? (
+                            <p className="mt-2 text-center text-xs text-neutral-300/90">{topicsError}</p>
+                          ) : null}
+                        </>
+                      )}
+                    />
+                  </div>
+                  <TapAestheticSection bgImage={bgImage} kind="shortcuts">
+                    <TapBriefingConfig
+                      workspaceTitle={workspaceTitle}
+                      minutes={minutes}
+                      onMinutesChange={setMinutes}
+                      conversationLanguage={conversationLanguage}
+                      onConversationLanguageChange={(locale) =>
+                        setConversationLanguage(coerceSpokenLocale(locale))
+                      }
+                      showDurationPicker={!privateToken && !durationLocked}
+                      disabled={isStartingSession}
+                    />
+                  </TapAestheticSection>
               {error ? (
                 <p className="absolute inset-x-0 bottom-0 z-20 px-6 pb-5 text-center text-sm text-red-300 lg:col-span-2">
                   {error}
@@ -549,6 +601,7 @@ export function TapScorePhases(props: {
               ) : null}
             </div>
           </section>
+          )
         )}
 
         {phase === "live" && (
@@ -798,7 +851,6 @@ export function TapScorePhases(props: {
           ) : (
             <SessionFinishedScreen
               wide
-              kicker={sidebarMode === "verification-tap" ? FLOW_END_KICKERS.verify : undefined}
               title={t("tap.postSession.resultsTitle")}
               body={t("tap.postSession.resultsHint")}
             >

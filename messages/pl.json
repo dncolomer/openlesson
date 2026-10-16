@@ -741,7 +741,7 @@
     "mobileDetected": "Wykryto urządzenie mobilne",
     "mobileDetectedDesc": "Ta blok jest zoptymalizowana pod kątem komputera. Użyj widoku mobilnego na tym urządzeniu.",
     "savingSession": "Zapisywanie bloków...",
-    "welcomeTitle": "Witaj w swoim bloku",
+    "welcomeTitle": "Learn",
     "welcomeMessage": "Set how long silence can run, and the look. Then work on the canvas.",
     "chapterPromptFallback": "Pracuj nad tym rozdziałem, wysyłając myśli do unsys.",
     "emptyUserTurn": "Wyślij myśl, aby pokazać tutaj swoje ostatnie zgłoszenie.",

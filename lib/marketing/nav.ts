@@ -1,4 +1,5 @@
 import {
+  ACADEMY_K_HREF,
   AUTHORING_PRICING_PATH,
   HARNESS_PRICING_PATH,
   KNOWLEDGE_MAPPING_PATH,
@@ -21,6 +22,7 @@ export const PRICING_NAV_LINKS = [
 export const COMMUNITY_LINKS = [
   { href: "/community-events", label: "Community Events" },
   { href: "/kardashev", label: "Kardashev Research" },
+  { href: ACADEMY_K_HREF, label: "Academy-k" },
 ] as const;
 
 export const COMMUNITY_NAV_LABEL = "Projects" as const;

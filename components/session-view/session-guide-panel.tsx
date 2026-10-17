@@ -38,11 +38,7 @@ export function SessionGuidePanel({
   const commandsOpen = canvasCommands && tab === "commands";
   const harnessOpen = tab === "harness";
   const text = SESSION_INSTRUCTIONS[guide];
-  const commandsHint = !bridge
-    ? "The board is still opening."
-    : bridge.selectionActive
-      ? null
-      : "Select marks on the canvas first.";
+  const commandsHint = !bridge ? "The board is still opening." : null;
   return (
     <div data-session-guide={guide} className="flex h-full min-h-0 flex-col overflow-hidden bg-black text-white">
       <div className="flex shrink-0 border-b border-white/30 bg-black">

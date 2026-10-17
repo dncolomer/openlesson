@@ -109,6 +109,16 @@ describe("work-canvas command buttons actually mutate the board", () => {
     ]);
   });
 
+  it("stays quiet when nothing is selected", () => {
+    const empty = runIleWorkCanvasCommand({
+      action: "simplify",
+      scene: sceneOf([]),
+      selectedElements: [],
+    });
+    expect(empty.changed).toBe(false);
+    expect(empty.notice).toBeNull();
+  });
+
   it("posts a board notice when Split cannot run, instead of going silent", () => {
     const word = convertToExcalidrawElements([{ type: "text", text: "Force", x: 0, y: 0 }]);
     const short = runIleWorkCanvasCommand({

@@ -92,6 +92,8 @@ describe("session guide panel", () => {
     expect(source).toContain("grid-cols-2");
     expect(source).toContain("text-center");
     expect(source).not.toContain("Commands use the marks selected on the canvas.");
+    expect(source).not.toContain("Select marks on the canvas first.");
+    expect(learn).not.toContain("Select marks on the canvas first.");
     expect(source).toContain("CommandPlate");
     expect(source).toContain("auto-rows-fr");
     expect(source).toContain("grid-rows-3");

@@ -3014,7 +3014,7 @@ export function runIleWorkCanvasCommand(input: {
     notice,
   });
   if (!selected.length) {
-    return idle("Select marks on the canvas first.");
+    return idle(null);
   }
   if (input.action === "split") {
     const result = splitIleWorkCanvasSelectedText(current, selected);

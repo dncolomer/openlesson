@@ -101,6 +101,15 @@ function PricingPageContent() {
               {UNIFIED_PRICING_COPY.authoringCta}
               <ArrowRight className="ml-1.5" size={14} />
             </Link>
+            <a
+              href={UNIFIED_PRICING_COPY.academyHref}
+              data-testid="pricing-academy-k-link"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center text-neutral-200 underline decoration-neutral-700 underline-offset-4 hover:text-white"
+            >
+              {UNIFIED_PRICING_COPY.academyCta}
+            </a>
           </div>
           {needsPlan && (
             <p className="mt-6 text-sm text-neutral-300">{UNIFIED_PRICING_COPY.needsPlan}</p>

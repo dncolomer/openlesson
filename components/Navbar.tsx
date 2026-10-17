@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { BrandLogo } from "@/components/BrandLogo";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useI18n } from "@/lib/i18n";
+import { COMMUNITY_LINKS } from "@/lib/marketing/nav";
 
 interface BreadcrumbItem {
   label: string;
@@ -72,10 +73,7 @@ export function Navbar({
 
   const topLinks = [{ href: "/science", label: "Vision" }];
 
-  const communityLinks = [
-    { href: "/community-events", label: "Community Events" },
-    { href: "/kardashev", label: "Kardashev Research" },
-  ];
+  const communityLinks = COMMUNITY_LINKS;
 
   const showCommunity = isLoggedIn !== true && productLinks;
   const showProductLinks = showNav && productLinks;
@@ -182,6 +180,9 @@ export function Navbar({
                         role="menuitem"
                         className="block px-3 py-2 text-xs text-neutral-400 transition-colors hover:bg-white/5 hover:text-white sm:text-sm"
                         onClick={() => setCommunityOpen(false)}
+                        {...(link.href.startsWith("http")
+                          ? { target: "_blank", rel: "noopener noreferrer" }
+                          : {})}
                       >
                         {link.label}
                       </Link>
@@ -318,6 +319,9 @@ export function Navbar({
                         href={link.href}
                         onClick={() => setMobileMenuOpen(false)}
                         className="text-sm text-neutral-500 transition-colors hover:text-white"
+                        {...(link.href.startsWith("http")
+                          ? { target: "_blank", rel: "noopener noreferrer" }
+                          : {})}
                       >
                         {link.label}
                       </Link>

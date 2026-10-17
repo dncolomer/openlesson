@@ -1,7 +1,13 @@
 /**
  * Public pricing copy — sparse module list. Course authoring is its own page.
  */
-import { AYCL_PATH, AUTHORING_PRICING_PATH, ENTERPRISE_SETUP_EMAIL, ENTERPRISE_SETUP_MAILTO } from "@/lib/marketing/paths";
+import {
+  ACADEMY_K_HREF,
+  AYCL_PATH,
+  AUTHORING_PRICING_PATH,
+  ENTERPRISE_SETUP_EMAIL,
+  ENTERPRISE_SETUP_MAILTO,
+} from "@/lib/marketing/paths";
 import { formatUsdFromCents, TRY_EVERYTHING_PRICE_CENTS } from "@/lib/pricing/modules";
 
 export const UNIFIED_PRICING_COPY = {
@@ -14,6 +20,8 @@ export const UNIFIED_PRICING_COPY = {
   ayclLabel: "All-You-Can-Learn",
   authoringHref: AUTHORING_PRICING_PATH,
   authoringCta: "Course authoring",
+  academyHref: ACADEMY_K_HREF,
+  academyCta: "Academy-k",
   custom: {
     id: "custom",
     eyebrow: "CUSTOM",

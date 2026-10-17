@@ -6,6 +6,7 @@ import { MarketingPageShell } from "@/components/marketing/MarketingChrome";
 import { usePricingCheckout } from "@/components/pricing/use-pricing-checkout";
 import { HARNESS_PRICING_PATH } from "@/lib/marketing/paths";
 import { AUTHORING_PRICING_COPY } from "@/lib/pricing/authoring-copy";
+import { UNIFIED_PRICING_COPY } from "@/lib/pricing/unified-copy";
 import { AUTHORING_SKU_CARD, skuAlreadyCovered } from "@/lib/pricing/modules";
 
 function AuthoringPricingContent() {
@@ -27,12 +28,23 @@ function AuthoringPricingContent() {
         <p className="mt-5 text-base leading-relaxed text-zinc-400 sm:text-lg">
           {AUTHORING_PRICING_COPY.lead}
         </p>
-        <Link
-          href={HARNESS_PRICING_PATH}
-          className="mt-4 inline-block text-sm text-zinc-400 underline decoration-zinc-700 underline-offset-4 hover:text-white"
-        >
-          All modules
-        </Link>
+        <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+          <Link
+            href={HARNESS_PRICING_PATH}
+            className="inline-block text-zinc-400 underline decoration-zinc-700 underline-offset-4 hover:text-white"
+          >
+            All modules
+          </Link>
+          <a
+            href={UNIFIED_PRICING_COPY.academyHref}
+            data-testid="pricing-academy-k-link"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block text-zinc-400 underline decoration-zinc-700 underline-offset-4 hover:text-white"
+          >
+            {UNIFIED_PRICING_COPY.academyCta}
+          </a>
+        </div>
 
         <div
           id="authoring"

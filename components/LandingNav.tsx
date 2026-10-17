@@ -16,6 +16,13 @@ type LandingNavProps = {
   overlay?: boolean;
 };
 
+function communityAnchorProps(href: string) {
+  if (href.startsWith("http")) {
+    return { target: "_blank" as const, rel: "noopener noreferrer" };
+  }
+  return {};
+}
+
 export function LandingNav({ overlay = false }: LandingNavProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [communityOpen, setCommunityOpen] = useState(false);
@@ -150,6 +157,7 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
                     role="menuitem"
                     className="block px-3 py-2 text-sm text-zinc-400 transition hover:bg-white/5 hover:text-white"
                     onClick={() => setCommunityOpen(false)}
+                    {...communityAnchorProps(link.href)}
                   >
                     {link.label}
                   </Link>
@@ -252,6 +260,7 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
                         href={link.href}
                         className="block rounded-sm px-2 py-2 text-zinc-400"
                         onClick={() => setMobileOpen(false)}
+                        {...communityAnchorProps(link.href)}
                       >
                         {link.label}
                       </Link>

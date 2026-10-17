@@ -372,9 +372,8 @@ describe("aycl landing + hackathons structural", () => {
     expect(nav).not.toMatch(/href:\s*["']\/hackathons["']/);
     expect(nav).toContain('label: "Community Events"');
     expect(nav).not.toContain('label: "Hackathons"');
-    expect(navbar).toMatch(/href:\s*["']\/community-events["']/);
+    expect(navbar).toContain("COMMUNITY_LINKS");
     expect(navbar).not.toMatch(/href:\s*["']\/hackathons["']/);
-    expect(navbar).toContain('label: "Community Events"');
     expect(navbar).not.toContain('label: "Hackathons"');
     expect(listing).toContain("Community Events");
     expect(middleware).toContain('"/community-events"');

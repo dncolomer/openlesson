@@ -95,6 +95,17 @@ describe("unified pricing page source", () => {
     expect(PRICING_AYCL_LABEL).toMatch(/All-You-Can-Learn/);
     expect(PRICING_AYCL_CTA.toLowerCase()).toMatch(/browse ready-made workspaces/);
   });
+
+  it("links Academy-k on modules and authoring pricing", () => {
+    expect(UNIFIED_PRICING_COPY.academyHref).toBe("https://academy-k.com/");
+    expect(UNIFIED_PRICING_COPY.academyCta).toBe("Academy-k");
+    const modules = read("app/pricing/page.tsx");
+    const authoring = read("app/pricing/authoring/page.tsx");
+    expect(modules).toContain('data-testid="pricing-academy-k-link"');
+    expect(modules).toContain("UNIFIED_PRICING_COPY.academyHref");
+    expect(authoring).toContain('data-testid="pricing-academy-k-link"');
+    expect(authoring).toContain("UNIFIED_PRICING_COPY.academyHref");
+  });
 });
 
 describe("course authoring stays on its own page", () => {

@@ -412,34 +412,23 @@ describe("learner mode UI structural", () => {
     );
     expect(view).not.toContain("mountsCreatorAuthoringDrawers");
     expect(view).not.toContain("mountsLearnerPracticeDrawer");
-    // Real PoW stats path + parser (user-scoped, all quality — not practice-only)
-    expect(view).toContain("parseLearnerPowSummaryFromApi");
-    expect(view).toContain('subjectKey: "me"');
-    expect(view).toContain('quality: "all"');
-    expect(view).toContain("proof-of-work-stats");
-    expect(view).toContain("blockId");
-    expect(view).not.toContain('quality: "practice"');
+    expect(view).not.toContain("parseLearnerPowSummaryFromApi");
+    expect(view).not.toContain("proof-of-work-stats");
+    expect(view).not.toContain("onFetchPowSummary");
+    expect(view).not.toContain("onMarkDone");
     // Real Explore / Drill entry points via product intent
     expect(view).toContain("onLaunchIntent");
     expect(view).toContain("WORKSPACE_LEARNER_LAUNCH_PATH");
     expect(view).toContain("/session?id=");
     expect(view).toContain("/workspace/${workspaceId}/tap?");
     expect(view).toContain('session: "verification"');
+    expect(view).toContain('params.set("minutes"');
+    expect(read("components/BlockDetailCard.tsx")).toContain("verification: true");
+    expect(read("components/BlockDetailCard.tsx")).toContain(
+      "minutes: clampPracticeDuration(practiceLimits, durationMinutes)",
+    );
     expect(view).not.toContain('params.set("interactionKind", "exercise")');
     expect(view).toContain("onSavePlanningPrompt");
-    // Done: set_block_status, then Generator/Dynamic effects, then soft snapshot
-    expect(view).toContain("set_block_status");
-    expect(view).toContain("generatorTargetCellsAfterDone");
-    expect(view).toContain("runBlockEffectGenerate");
-    expect(view).toContain("snapshot-all");
-    expect(view).toContain("onPhase");
-    // Effects must not wait on snapshot-all (order: applying_unlocks before snapshot)
-    const markDoneStart = view.indexOf("onMarkDone={async");
-    const applyingIdx = view.indexOf('report("applying_unlocks")', markDoneStart);
-    const snapIdx = view.indexOf('report("snapshot_lwm")', markDoneStart);
-    expect(markDoneStart).toBeGreaterThan(-1);
-    expect(applyingIdx).toBeGreaterThan(markDoneStart);
-    expect(snapIdx).toBeGreaterThan(applyingIdx);
     expect(view).toContain("lwmEmbeddingsOnly={knowledgeLwmEmbeddingsOnly}");
     expect(grid).toContain("learnerMode");
     expect(grid).toContain("data-learner-mode");
@@ -460,10 +449,10 @@ describe("learner mode UI structural", () => {
     expect(learner).toContain("BlockDetailCard");
     expect(learner).toContain('drawerId="practice"');
     expect(learner).toContain("LEARNER_WORK_DRAWER_TITLE");
-    expect(learner).toContain("GENERATE_INSIGHTS_ACTION_LABEL");
-    expect(learner).toContain("data-generate-insights-drawer");
-    expect(learner).toContain("data-generate-insights-prompt");
-    expect(learner).toContain("data-generate-insights-action");
+    expect(learner).not.toContain("GENERATE_INSIGHTS_ACTION_LABEL");
+    expect(learner).not.toContain("data-generate-insights-drawer");
+    expect(learner).not.toContain("data-generate-insights-prompt");
+    expect(learner).not.toContain("data-generate-insights-action");
     expect(learner).not.toContain('title="Practice"');
     expect(learner).toContain("data-learner-explore-drill");
     expect(learner).toContain("data-learner-launch-card");
@@ -471,10 +460,9 @@ describe("learner mode UI structural", () => {
     expect(learner).toContain("data-customize-session");
     expect(learner).toContain("allowTimed");
     expect(learner).toContain("onLaunchIntent");
-    // Progress drawer: PoW summary + Mark as Done
-    expect(learner).toContain('drawerId="progress"');
-    expect(learner).toContain('title="Progress"');
-    expect(learner).toContain("data-learner-progress-pane");
+    expect(learner).not.toContain('drawerId="progress"');
+    expect(learner).not.toContain('title="Progress"');
+    expect(learner).not.toContain("data-learner-progress-pane");
     // Dependencies drawer + mini canvas (local DAG)
     expect(learner).toContain('drawerId="dependencies"');
     expect(learner).toContain("data-learner-dag-drawer");
@@ -484,16 +472,10 @@ describe("learner mode UI structural", () => {
     expect(grid + badges).not.toContain("data-learner-locked-label");
     expect(grid + badges).toContain("data-learner-locked-icon");
     expect(grid + badges).toContain("data-learner-dep-highlight");
-    expect(learner).toContain("data-learner-pow-summary-stats");
-    expect(learner).toContain("data-learner-mark-done");
-    expect(learner).toContain("Mark as Done");
-    expect(learner).not.toContain("Mark Done anyway");
-    // Force mark done is not gated on map lock or PoW Not OK
-    expect(learner).toContain("disabled={busy || !onMarkDone || isCompleted}");
-    expect(learner).not.toContain("disabled={busy || locked || !onMarkDone || isCompleted}");
-    expect(learner).toContain("data-learner-done-panel");
+    expect(learner).not.toContain("data-learner-pow-summary-stats");
+    expect(learner).not.toContain("data-learner-mark-done");
+    expect(learner).not.toContain("Mark as Done");
     expect(learner).toContain("data-learner-dag");
-    expect(learner).toContain("onPhase");
     // Creator drawer not in learner pane
     expect(learner).not.toContain("WorkspaceBlockDetailPane");
     // Knowledge LWM+embeddings only; subject locked to self (no multi-user inspect)

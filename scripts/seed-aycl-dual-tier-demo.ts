@@ -1,7 +1,7 @@
 /**
- * Seed two staging AYCL access setups for mode + upgrade testing:
- *  - completed purchase access_tier=learner (practice-only, upgrade-eligible)
- *  - completed purchase access_tier=full (creator tools, not upgrade-eligible)
+ * Seed two staging AYCL access setups for stored-tier + upgrade-row testing:
+ *  - completed purchase access_tier=learner (upgrade-eligible row)
+ *  - completed purchase access_tier=full (not upgrade-eligible)
  *
  * SAFETY: default target is staging. Production only with --target=prod.
  *
@@ -583,12 +583,12 @@ async function main() {
     }
 
     console.log("\n════════ AYCL dual-tier demo ready ════════");
-    console.log("LEARNER (practice-only, upgrade-eligible):");
+    console.log("LEARNER (stored tier, upgrade-eligible row):");
     console.log(`  token:     ${fixtures.learner.accessToken}`);
     console.log(`  URL:       ${ayclDemoLearnUrl(baseUrl, fixtures.learner.accessToken)}`);
     console.log(`  fork id:   ${results.find((r) => r.kind === "learner")!.forkId}`);
     console.log(`  purchase:  ${results.find((r) => r.kind === "learner")!.purchaseId}`);
-    console.log("FULL / CREATOR (no upgrade CTA):");
+    console.log("FULL (stored tier, no upgrade row):");
     console.log(`  token:     ${fixtures.full.accessToken}`);
     console.log(`  URL:       ${ayclDemoLearnUrl(baseUrl, fixtures.full.accessToken)}`);
     console.log(`  fork id:   ${results.find((r) => r.kind === "full")!.forkId}`);

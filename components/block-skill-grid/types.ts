@@ -54,7 +54,6 @@ export interface BlockSkillGridProps {
       | "start_prepare"
       | "start_session"
       | "start_verify"
-      | "continue_session"
       | "mark_done",
   ) => void;
   blockProgressById?: Readonly<Record<string, number>>;

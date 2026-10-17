@@ -32,3 +32,25 @@ export function sessionHarnessNextLine(input: {
   if (label && !policySuggestionIsRawLabel(label)) return label;
   return cleanLine(input.fallback) || SESSION_HARNESS_FALLBACK.learn;
 }
+
+/**
+ * Verify scores Distance at the end. The Harness tab must not coach a next
+ * step or show the Learn focus hint.
+ */
+export function sessionHarnessFocusLine(input: {
+  guide: SessionGuideId;
+  suggestion?: string | null;
+  inferenceLabel?: string | null;
+}): string | null {
+  if (input.guide === "verification") return null;
+  if (input.guide === "calibrate") {
+    return sessionHarnessNextLine({
+      fallback: SESSION_HARNESS_FALLBACK.calibrate,
+    });
+  }
+  return sessionHarnessNextLine({
+    suggestion: input.suggestion,
+    inferenceLabel: input.inferenceLabel,
+    fallback: SESSION_HARNESS_FALLBACK.learn,
+  });
+}

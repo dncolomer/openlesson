@@ -36,13 +36,13 @@ export type EmptySelectionSurface =
 export const WORKSPACE_MAP_DESKTOP_MAP_WIDTH_CLASS = "md:w-3/4";
 export const WORKSPACE_MAP_DESKTOP_RIGHT_WIDTH_CLASS = "md:w-1/4";
 
-/** Shared Danger zone drawer — peer of Edit / Combine, never nested in them. */
+/** Shared Danger zone drawer — last in the combined authoring + practice column. */
 export const WORKSPACE_EDITOR_DANGER_DRAWER_ID = "danger";
 export const WORKSPACE_EDITOR_DANGER_DRAWER_TITLE = "Danger zone";
 
 /**
  * Drawer ids on the 1-block editor surface (creator block detail).
- * Danger zone is a peer of Edit, not a section inside it.
+ * Danger zone is a peer of Edit, hosted last after practice drawers.
  */
 export function workspaceBlockDetailDrawerIds(input: {
   canEdit?: boolean;
@@ -68,7 +68,7 @@ export function workspaceBlockDetailDrawerIds(input: {
 
 /**
  * Drawer ids on the 2+-block editor surface (combine pane).
- * Danger zone is its own drawer, not mixed into Combine/Bridge/Edit.
+ * Danger zone is last, not mixed into Combine/Bridge/Edit.
  */
 export function workspaceMultiSelectDrawerIds(): string[] {
   return [

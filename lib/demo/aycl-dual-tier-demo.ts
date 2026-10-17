@@ -70,7 +70,7 @@ export function buildAyclDualTierDemoFixtures(): {
       accessTokenHash: ayclDemoAccessTokenHash(AYCL_DEMO_LEARNER_ACCESS_TOKEN),
       catalogTitle: "[Demo] AYCL Learner tier — PPV clinic",
       catalogDescription:
-        "Staging demo catalog for practice-only (learner) access. Compute PPV from sensitivity, specificity, and prevalence.",
+        "Staging demo catalog for stored learner-tier access. Compute PPV from sensitivity, specificity, and prevalence.",
       catalogGoal: "Update clinical beliefs from test evidence correctly",
       purchaserEmail: "aycl-demo-learner@uncertain.systems.invalid",
       stripeCheckoutSessionId: "cs_test_aycl_demo_learner_v1",
@@ -85,7 +85,7 @@ export function buildAyclDualTierDemoFixtures(): {
       accessTokenHash: ayclDemoAccessTokenHash(AYCL_DEMO_FULL_ACCESS_TOKEN),
       catalogTitle: "[Demo] AYCL Full tier — PPV clinic creator",
       catalogDescription:
-        "Staging demo catalog for full (creator) access with growth tools. Same domain as learner demo for side-by-side mode testing.",
+        "Staging demo catalog for stored full-tier access. Same domain as the learner demo row.",
       catalogGoal: "Update clinical beliefs from test evidence correctly",
       purchaserEmail: "aycl-demo-full@uncertain.systems.invalid",
       stripeCheckoutSessionId: "cs_test_aycl_demo_full_v1",
@@ -215,11 +215,17 @@ export function assertAyclDualTierDemoExpectations(input: {
   if (fullElig.eligibleForUpgrade) {
     errors.push("full must NOT be upgrade-eligible");
   }
-  if (learnerElig.capabilities.canAuthor) {
-    errors.push("learner must not canAuthor");
+  if (!learnerElig.capabilities.canAuthor) {
+    errors.push("learner must canAuthor");
   }
   if (!fullElig.capabilities.canAuthor) {
     errors.push("full must canAuthor");
+  }
+  if (learnerElig.capabilities.canUpgrade) {
+    errors.push("learner must not canUpgrade");
+  }
+  if (fullElig.capabilities.canUpgrade) {
+    errors.push("full must not canUpgrade");
   }
   if (errors.length) return { ok: false, errors };
   return { ok: true };

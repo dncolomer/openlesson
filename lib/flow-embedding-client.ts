@@ -1,4 +1,5 @@
 import type { FlowKind, FlowPowRow } from "@/lib/flow-embedding";
+import type { FlowEmbeddingViewRow } from "@/lib/flow-embedding-view";
 import type { SessionBranchModel } from "@/lib/session-branch-model";
 
 export async function postWorkspaceFlowEmbedding(input: {
@@ -48,4 +49,29 @@ export async function postWorkspaceFlowEmbedding(input: {
   } catch {
     return { ok: false };
   }
+}
+
+export async function listWorkspaceFlowEmbeddings(input: {
+  workspaceId: string;
+  ayclToken?: string;
+  flowId?: string | null;
+  flowKind?: FlowKind | string | null;
+}): Promise<FlowEmbeddingViewRow[]> {
+  const workspaceId = input.workspaceId.trim();
+  if (!workspaceId) return [];
+  const params = new URLSearchParams({ workspaceId });
+  if (input.ayclToken) params.set("ayclToken", input.ayclToken);
+  const flowId = String(input.flowId || "").trim();
+  if (flowId) params.set("flowId", flowId);
+  const flowKind = String(input.flowKind || "").trim();
+  if (flowKind) params.set("flowKind", flowKind);
+  const response = await fetch(`/api/workspace/flow-embeddings?${params.toString()}`);
+  const payload = (await response.json().catch(() => ({}))) as {
+    error?: string;
+    flow_embeddings?: FlowEmbeddingViewRow[];
+  };
+  if (!response.ok) {
+    throw new Error(payload.error || "Failed to load embeddings");
+  }
+  return Array.isArray(payload.flow_embeddings) ? payload.flow_embeddings : [];
 }

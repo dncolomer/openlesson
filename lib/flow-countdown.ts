@@ -1,6 +1,6 @@
 import { DEFAULT_DURATION_MINUTES, DURATIONS } from "@/lib/tap-score-client-helpers";
 
-/** Countdown choices shared by calibration and verification flows. */
+/** Countdown choices. Calibration flow settings still use these; Verify picks length at run start. */
 export const FLOW_COUNTDOWN_MINUTES: readonly number[] = DURATIONS;
 
 export function flowCountdownMinutes(value: unknown): number {

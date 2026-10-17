@@ -233,9 +233,9 @@ describe("workspace Mark as Done + tile glyphs", () => {
     const grid = readMapGridSurface();
     const view = readWorkspaceViewSurface();
 
-    expect(pane).toContain("data-learner-mark-done");
-    expect(pane).toContain("Mark as Done");
-    expect(pane).toContain("onMarkDone");
+    expect(pane).not.toContain("data-learner-mark-done");
+    expect(pane).not.toContain("Mark as Done");
+    expect(pane).not.toContain("onMarkDone");
     expect(chapter).toContain("onChapterDone");
     expect(chapter).not.toContain('t("chapterMap.complete")');
     expect(existsSync(join(ROOT, "components/ChapterMapPanel.tsx"))).toBe(false);
@@ -255,16 +255,16 @@ describe("workspace Mark as Done + tile glyphs", () => {
     expect(grid).toContain("BlockMapGlyphIcon");
 
     expect(view).toContain("recordMapItemWorkedOn");
-    expect(view).toContain("onMarkDone");
+    expect(view).not.toContain("onMarkDone");
     expect(view).toContain("WorkspaceLearnerBlockPane");
 
     writeScratch(
       "map-done-progress-excerpts.txt",
       [
-        "WorkspaceLearnerBlockPane: data-learner-mark-done + Mark as Done",
+        "WorkspaceLearnerBlockPane: Progress drawer removed",
         "IleChapterHeliosActions: onChapterDone + chapterMap.complete",
         "BlockSkillGrid: resolveOccupiedMapTileChrome + tick/gear glyphs, no chapter cell chrome",
-        "WorkspaceView: recordMapItemWorkedOn on launch + onMarkDone",
+        "WorkspaceView: recordMapItemWorkedOn on launch",
       ].join("\n"),
     );
   });

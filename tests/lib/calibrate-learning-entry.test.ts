@@ -55,8 +55,9 @@ describe("learning Calibrate entry", () => {
     expect(badges).toContain('"Calibrate"');
     expect(sessionItem).toContain('title="Start Calibrate"');
     expect(sessionItem).toContain("Calibrate");
-    expect(edit).toContain(">Calibrate<");
     expect(edit).not.toContain(">Prepare<");
+    expect(edit).not.toContain("data-block-edit-allow-scout");
+    expect(read("components/BlockDetailCard.tsx")).toContain("PRODUCT_INTENT_LABELS.styleScout");
     expect(en.onboardingGuide.scout.title).toBe(CALIBRATE_MODE_LABEL);
     expect(en.scout.briefing.title).toBe(CALIBRATE_MODE_LABEL);
     expect(en.scout.briefing.kicker).toBe(CALIBRATE_MODE_LABEL);
@@ -71,6 +72,8 @@ describe("learning Calibrate entry", () => {
     expect(phases).toContain("<SessionWorkSurface");
     expect(phases).toContain("onClick={confirmStart}");
     expect(phases).toContain("data-calibrate-start");
+    expect(phases).toContain("SessionStartBackButton");
+    expect(phases).toContain("onSettingsBackToWorkspace");
     expect(phases).toContain("<TapBriefingConfig");
     expect(phases).toContain("SessionStartShell");
     expect(phases).not.toContain("kicker={t(\"scout.briefing.kicker\")}");

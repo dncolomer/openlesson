@@ -277,7 +277,7 @@ export function IleCraftInsightButton({
         square
           ? "pointer-events-auto flex min-h-9 w-full min-w-0 items-center justify-start gap-1.5 whitespace-nowrap rounded-none border border-white bg-white px-1.5 py-2 text-left font-mono text-[11px] font-semibold text-neutral-950 hover:bg-neutral-200 disabled:cursor-not-allowed disabled:border-white/30 disabled:bg-neutral-800 disabled:text-white/40"
           : wide
-            ? "pointer-events-auto flex w-full items-center justify-center gap-1.5 rounded-none border border-white bg-white px-4 py-2.5 text-sm text-center font-semibold uppercase tracking-wider text-neutral-950 hover:bg-neutral-200 disabled:cursor-not-allowed disabled:border-white/30 disabled:bg-neutral-800 disabled:text-white/40"
+            ? "pointer-events-auto flex min-h-0 w-full items-center justify-center gap-1 rounded-none border border-white bg-white px-2 py-1.5 text-[11px] text-center font-semibold uppercase tracking-wider text-neutral-950 hover:bg-neutral-200 disabled:cursor-not-allowed disabled:border-white/30 disabled:bg-neutral-800 disabled:text-white/40"
           : "pointer-events-auto inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-none border border-white bg-white px-4 py-2.5 text-sm text-center font-semibold uppercase tracking-wider text-neutral-950 shadow-[0_12px_40px_rgba(0,0,0,0.55)] hover:bg-neutral-200 disabled:cursor-not-allowed disabled:border-white/30 disabled:bg-neutral-800 disabled:text-white/40"
       }
     >

@@ -276,12 +276,12 @@ describe("AYCL marketplace structure (settings + catalog + checkout)", () => {
     expect(settings).toContain("data-aycl-listing-summary");
     expect(settings).toContain("data-aycl-listing-author-name");
     expect(settings).toContain("data-aycl-listing-author-avatar");
-    expect(settings).toContain("data-aycl-listing-learner-price");
+    expect(settings).not.toContain("data-aycl-listing-learner-price");
     expect(settings).toContain("data-aycl-listing-full-price");
     expect(settings).toContain("Enable Paid (AYCL)");
     expect(settings).toContain("/api/workspaces/");
     expect(settings).toContain("/aycl");
-    expect(settings).toContain("data-aycl-complimentary-create-play");
+    expect(settings).not.toContain("data-aycl-complimentary-create-play");
     expect(settings).toContain("data-aycl-complimentary-create-full");
   });
 

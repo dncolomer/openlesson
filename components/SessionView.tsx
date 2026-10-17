@@ -166,7 +166,7 @@ export function SessionView({
   sessionMode: sessionModeProp,
 }: {
   sessionId: string;
-  /** Opened from Previous Sessions — continue stored chapters, no density picker. */
+  /** Resume query — continue stored chapters, no density picker. */
   resumeSession?: boolean;
   ayclToken?: string;
   /** Private token for guest TAP Learning practice links (`/ile/session/{token}`). */

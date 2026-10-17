@@ -146,6 +146,9 @@ describe("flow embedding store", () => {
     expect(stored.raw.projectedPolicy).toBeNull();
     const listed = await listFlowEmbeddings({ workspaceId: "ws-flow", flowKind: "calibrate" });
     expect(listed).toHaveLength(1);
+    const byFlow = await listFlowEmbeddings({ workspaceId: "ws-flow", flowId: "flow-1" });
+    expect(byFlow).toHaveLength(1);
+    expect(byFlow[0]?.identity).toBe("ada");
     const got = await getFlowEmbedding({ workspaceId: "ws-flow", embeddingId: stored.id });
     expect(got?.raw).toEqual(stored.raw);
     expect(vectorsMatch(reembedFlowRaw(got!.raw), stored.vector)).toBe(true);
@@ -194,6 +197,19 @@ describe("completion paths persist flow embeddings instead of snapshots", () => 
     const publicCalibrate = read("components/CalibrationFlowRunner.tsx");
     expect(publicCalibrate).toContain("model: closed.model");
     expect(publicCalibrate).toContain("soundingProofEvent");
+
+    const listRoute = read("app/api/workspace/flow-embeddings/route.ts");
+    expect(listRoute).toContain("export async function GET");
+    expect(listRoute).toContain("listFlowEmbeddings");
+    expect(listRoute).toContain('embedding_model_id: "flowcfg-v1-d96"');
+    expect(listRoute).toContain("flow_embeddings: rows");
+    const client = read("lib/flow-embedding-client.ts");
+    expect(client).toContain("listWorkspaceFlowEmbeddings");
+    expect(client).toContain("/api/workspace/flow-embeddings?");
+    const models = read("components/knowledge-panel/models-view.tsx");
+    expect(models).toContain('embeddingSource: flowFilter?.enabled ? "flowcfg" : "knowledgecfg"');
+    expect(models).toContain("Embeddings in");
+    expect(models).toContain("Overlay regions on the right.");
   });
 
   it("live Calibrate is sounding and leftover canvas classify UI is gone", () => {

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   AYCL_FULL_PRICE_CENTS,
-  AYCL_LEARNER_PRICE_CENTS,
+  ayclOfferLabel,
   formatAyclPriceCentsLabel,
 } from "@/lib/aycl-shared";
 import {
@@ -33,7 +33,7 @@ interface WorkspaceAyclMarketplaceSettingsProps {
 
 /**
  * Admin AYCL / marketplace listing settings: enable catalog listing +
- * category, summary, author, and dual prices.
+ * category, summary, author, and one workspace price.
  */
 export function WorkspaceAyclMarketplaceSettings({
   plan,
@@ -53,9 +53,6 @@ export function WorkspaceAyclMarketplaceSettings({
   const [authorAvatarUrl, setAuthorAvatarUrl] = useState(
     plan.aycl_author_avatar_url || "",
   );
-  const [learnerDollars, setLearnerDollars] = useState(
-    centsToDollarsInput(plan.aycl_learner_price_cents),
-  );
   const [fullDollars, setFullDollars] = useState(
     centsToDollarsInput(plan.aycl_full_price_cents),
   );
@@ -63,11 +60,9 @@ export function WorkspaceAyclMarketplaceSettings({
   const [compLinks, setCompLinks] = useState<ComplimentaryLinkRow[]>([]);
   const [compLoading, setCompLoading] = useState(false);
   const [compError, setCompError] = useState("");
-  const [playMaxUses, setPlayMaxUses] = useState("");
-  const [playExpiresAt, setPlayExpiresAt] = useState("");
   const [fullMaxUses, setFullMaxUses] = useState("");
   const [fullExpiresAt, setFullExpiresAt] = useState("");
-  const [creatingTier, setCreatingTier] = useState<"learner" | "full" | null>(null);
+  const [creating, setCreating] = useState(false);
   const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
   const [revokingId, setRevokingId] = useState<string | null>(null);
 
@@ -85,7 +80,6 @@ export function WorkspaceAyclMarketplaceSettings({
     setSummary(plan.aycl_summary || "");
     setAuthorName(plan.aycl_author_name || "");
     setAuthorAvatarUrl(plan.aycl_author_avatar_url || "");
-    setLearnerDollars(centsToDollarsInput(plan.aycl_learner_price_cents));
     setFullDollars(centsToDollarsInput(plan.aycl_full_price_cents));
   }, [
     plan.is_all_you_can_learn,
@@ -93,7 +87,6 @@ export function WorkspaceAyclMarketplaceSettings({
     plan.aycl_summary,
     plan.aycl_author_name,
     plan.aycl_author_avatar_url,
-    plan.aycl_learner_price_cents,
     plan.aycl_full_price_cents,
   ]);
 
@@ -121,16 +114,14 @@ export function WorkspaceAyclMarketplaceSettings({
 
   if (!isOwner) return null;
 
-  const createComplimentary = async (tier: "learner" | "full") => {
-    setCreatingTier(tier);
+  const createComplimentary = async () => {
+    setCreating(true);
     setCompError("");
     try {
-      const maxUsesRaw = tier === "learner" ? playMaxUses : fullMaxUses;
-      const expiresRaw = tier === "learner" ? playExpiresAt : fullExpiresAt;
-      const body: Record<string, unknown> = { access_tier: tier };
-      if (maxUsesRaw.trim()) body.max_uses = Number(maxUsesRaw.trim());
-      if (expiresRaw.trim()) {
-        const ms = Date.parse(expiresRaw);
+      const body: Record<string, unknown> = { access_tier: "full" };
+      if (fullMaxUses.trim()) body.max_uses = Number(fullMaxUses.trim());
+      if (fullExpiresAt.trim()) {
+        const ms = Date.parse(fullExpiresAt);
         if (!Number.isFinite(ms)) {
           throw new Error("Expiration must be a valid date and time");
         }
@@ -146,17 +137,12 @@ export function WorkspaceAyclMarketplaceSettings({
         throw new Error(data.error || "Failed to create complimentary URL");
       }
       setCompLinks((prev) => [data.link as ComplimentaryLinkRow, ...prev]);
-      if (tier === "learner") {
-        setPlayMaxUses("");
-        setPlayExpiresAt("");
-      } else {
-        setFullMaxUses("");
-        setFullExpiresAt("");
-      }
+      setFullMaxUses("");
+      setFullExpiresAt("");
     } catch (err) {
       setCompError(err instanceof Error ? err.message : "Failed to create complimentary URL");
     } finally {
-      setCreatingTier(null);
+      setCreating(false);
     }
   };
 
@@ -201,63 +187,17 @@ export function WorkspaceAyclMarketplaceSettings({
     >
       <h2 className="text-sm font-medium text-white">Complimentary AYCL URLs</h2>
       <p className="mt-1 max-w-2xl text-sm text-neutral-400">
-        Create a free special URL for play mode (practice only) or full mode (Play + Build).
-        Optionally cap how many times it can be redeemed and/or when it expires. Recipients get
-        the course without paying.
+        Create a free special URL for this workspace. Optionally cap how many times it can be
+        redeemed and/or when it expires. Recipients get the workspace without paying.
       </p>
 
-      <div className="mt-5 grid gap-4 sm:grid-cols-2">
-        <div
-          className="space-y-3 rounded-none border border-white/10 bg-white/5 p-3"
-          data-aycl-complimentary-create-play
-        >
-          <p className="text-xs font-medium uppercase tracking-[0.12em] text-neutral-400">
-            Play mode
-          </p>
-          <label className="block">
-            <span className="mb-1 block text-[11px] text-neutral-500">
-              Usage cap (empty = unlimited)
-            </span>
-            <input
-              type="number"
-              min={1}
-              step={1}
-              value={playMaxUses}
-              onChange={(e) => setPlayMaxUses(e.target.value)}
-              placeholder="Unlimited"
-              data-aycl-complimentary-play-max-uses
-              className="w-full rounded-none border border-neutral-800 bg-neutral-900/80 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-600 focus:outline-none"
-            />
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-[11px] text-neutral-500">
-              Time expiration (empty = none)
-            </span>
-            <input
-              type="datetime-local"
-              value={playExpiresAt}
-              onChange={(e) => setPlayExpiresAt(e.target.value)}
-              data-aycl-complimentary-play-expires-at
-              className="w-full rounded-none border border-neutral-800 bg-neutral-900/80 px-3 py-2 text-sm text-white focus:border-neutral-600 focus:outline-none"
-            />
-          </label>
-          <button
-            type="button"
-            onClick={() => void createComplimentary("learner")}
-            disabled={creatingTier !== null}
-            data-aycl-complimentary-create-play-submit
-            className="rounded-none bg-white px-3 py-2 text-sm font-medium text-black transition hover:bg-neutral-200 disabled:opacity-50"
-          >
-            {creatingTier === "learner" ? "Creating…" : "Create play URL"}
-          </button>
-        </div>
-
+      <div className="mt-5">
         <div
           className="space-y-3 rounded-none border border-white/10 bg-white/5 p-3"
           data-aycl-complimentary-create-full
         >
           <p className="text-xs font-medium uppercase tracking-[0.12em] text-neutral-400">
-            Full mode
+            {ayclOfferLabel()}
           </p>
           <label className="block">
             <span className="mb-1 block text-[11px] text-neutral-500">
@@ -288,12 +228,12 @@ export function WorkspaceAyclMarketplaceSettings({
           </label>
           <button
             type="button"
-            onClick={() => void createComplimentary("full")}
-            disabled={creatingTier !== null}
+            onClick={() => void createComplimentary()}
+            disabled={creating}
             data-aycl-complimentary-create-full-submit
             className="rounded-none bg-white px-3 py-2 text-sm font-medium text-black transition hover:bg-neutral-200 disabled:opacity-50"
           >
-            {creatingTier === "full" ? "Creating…" : "Create full URL"}
+            {creating ? "Creating…" : "Create complimentary URL"}
           </button>
         </div>
       </div>
@@ -324,7 +264,7 @@ export function WorkspaceAyclMarketplaceSettings({
           >
             <div className="min-w-0">
               <p className="text-sm text-neutral-200">
-                {link.access_tier === "full" ? "Full (Play + Build)" : "Play mode"}
+                {ayclOfferLabel()}
                 {link.status !== "active" ? (
                   <span className="ml-2 text-xs uppercase text-neutral-500">{link.status}</span>
                 ) : null}
@@ -384,7 +324,6 @@ export function WorkspaceAyclMarketplaceSettings({
     );
   }
 
-  const defaultLearnerLabel = formatAyclPriceCentsLabel(AYCL_LEARNER_PRICE_CENTS);
   const defaultFullLabel = formatAyclPriceCentsLabel(AYCL_FULL_PRICE_CENTS);
 
   const save = async () => {
@@ -392,18 +331,11 @@ export function WorkspaceAyclMarketplaceSettings({
     setError("");
     setSavedFlash(false);
     try {
-      let learnerCents: number | null = null;
       let fullCents: number | null = null;
-      if (learnerDollars.trim()) {
-        learnerCents = dollarsInputToCents(learnerDollars);
-        if (learnerCents === null) {
-          throw new Error("Practice price must be a valid dollar amount (or empty for default).");
-        }
-      }
       if (fullDollars.trim()) {
         fullCents = dollarsInputToCents(fullDollars);
         if (fullCents === null) {
-          throw new Error("Full price must be a valid dollar amount (or empty for default).");
+          throw new Error("Price must be a valid dollar amount (or empty for default).");
         }
       }
 
@@ -416,7 +348,7 @@ export function WorkspaceAyclMarketplaceSettings({
           aycl_summary: summary.trim() || null,
           aycl_author_name: authorName.trim() || null,
           aycl_author_avatar_url: authorAvatarUrl.trim() || null,
-          aycl_learner_price_cents: learnerCents,
+          aycl_learner_price_cents: plan.aycl_learner_price_cents ?? null,
           aycl_full_price_cents: fullCents,
         }),
       });
@@ -438,7 +370,9 @@ export function WorkspaceAyclMarketplaceSettings({
           data.listing?.aycl_author_avatar_url ??
           (authorAvatarUrl.trim() || null),
         aycl_learner_price_cents:
-          data.listing?.aycl_learner_price_cents ?? learnerCents,
+          data.listing?.aycl_learner_price_cents ??
+          plan.aycl_learner_price_cents ??
+          null,
         aycl_full_price_cents:
           data.listing?.aycl_full_price_cents ?? fullCents,
       });
@@ -461,7 +395,7 @@ export function WorkspaceAyclMarketplaceSettings({
         <h2 className="text-sm font-medium text-white">AYCL marketplace</h2>
         <p className="mt-1 max-w-2xl text-sm text-neutral-400">
           List this workspace on All-You-Can-Learn and set marketplace fields:
-          category, summary, author, and prices.
+          category, summary, author, and price.
         </p>
       </div>
 
@@ -543,53 +477,28 @@ export function WorkspaceAyclMarketplaceSettings({
           />
         </label>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block">
-            <span className="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.12em] text-neutral-500">
-              Practice price (USD)
+        <label className="block max-w-sm">
+          <span className="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.12em] text-neutral-500">
+            Price (USD)
+          </span>
+          <div className="relative">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-neutral-500">
+              $
             </span>
-            <div className="relative">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-neutral-500">
-                $
-              </span>
-              <input
-                type="text"
-                inputMode="decimal"
-                value={learnerDollars}
-                onChange={(e) => setLearnerDollars(e.target.value)}
-                placeholder={defaultLearnerLabel.replace("$", "")}
-                data-aycl-listing-learner-price
-                className="w-full rounded-none border border-neutral-800 bg-neutral-900/80 py-2 pl-7 pr-3 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-600 focus:outline-none"
-              />
-            </div>
-            <p className="mt-1 text-[11px] text-neutral-600">
-              Empty → default {defaultLearnerLabel}
-            </p>
-          </label>
-
-          <label className="block">
-            <span className="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.12em] text-neutral-500">
-              Full price (USD)
-            </span>
-            <div className="relative">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-neutral-500">
-                $
-              </span>
-              <input
-                type="text"
-                inputMode="decimal"
-                value={fullDollars}
-                onChange={(e) => setFullDollars(e.target.value)}
-                placeholder={defaultFullLabel.replace("$", "")}
-                data-aycl-listing-full-price
-                className="w-full rounded-none border border-neutral-800 bg-neutral-900/80 py-2 pl-7 pr-3 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-600 focus:outline-none"
-              />
-            </div>
-            <p className="mt-1 text-[11px] text-neutral-600">
-              Empty → default {defaultFullLabel}
-            </p>
-          </label>
-        </div>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={fullDollars}
+              onChange={(e) => setFullDollars(e.target.value)}
+              placeholder={defaultFullLabel.replace("$", "")}
+              data-aycl-listing-full-price
+              className="w-full rounded-none border border-neutral-800 bg-neutral-900/80 py-2 pl-7 pr-3 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-600 focus:outline-none"
+            />
+          </div>
+          <p className="mt-1 text-[11px] text-neutral-600">
+            Empty → default {defaultFullLabel}
+          </p>
+        </label>
 
         {error ? (
           <p className="text-sm text-red-400" data-aycl-listing-error>

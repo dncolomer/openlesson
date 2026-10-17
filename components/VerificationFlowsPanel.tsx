@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { ContextGenerationPool } from "@/components/ContextGenerationPool";
 import { LearningModelSizePicker } from "@/components/learning-model/LearningModelSizePicker";
-import { FLOW_COUNTDOWN_MINUTES, flowCountdownMinutes } from "@/lib/flow-countdown";
 import { parseLearningModelSize, type LearningModelSize } from "@/lib/learning-model";
 import {
   buildVerificationFlowSkillMarkdown,
@@ -15,7 +14,6 @@ type FlowRecord = {
   id: string;
   topic: string;
   questions: VerificationQuestion[];
-  durationMinutes?: number;
   actionCatalog?: LearningModelSize;
   publicToken: string;
   publicUrl: string;
@@ -41,7 +39,6 @@ export function VerificationFlowsPanel({
 }) {
   const [flows, setFlows] = useState<FlowRecord[]>([]);
   const [topic, setTopic] = useState("");
-  const [minutes, setMinutes] = useState(15);
   const [catalog, setCatalog] = useState<LearningModelSize>(4);
   const [draftQuestions, setDraftQuestions] = useState<string[]>([""]);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -85,7 +82,6 @@ export function VerificationFlowsPanel({
           flowId: editingId,
           topic,
           questions: questionsFromDraft(),
-          durationMinutes: minutes,
           actionCatalog: catalog,
         }),
       });
@@ -96,7 +92,6 @@ export function VerificationFlowsPanel({
       }
       setTopic("");
       setDraftQuestions([""]);
-      setMinutes(15);
       setCatalog(4);
       setEditingId(null);
       await load();
@@ -131,7 +126,8 @@ export function VerificationFlowsPanel({
         <h2 className="text-sm font-medium text-white">Verification Flows</h2>
         <p className="mt-1 max-w-2xl text-xs leading-relaxed text-neutral-500">
           A verification flow is one topic. Its question pool, public link, agent skill, and
-          proof-of-work results stay on the flow.
+          proof-of-work results stay on the flow. Session length is chosen when the run
+          starts.
         </p>
       </div>
 
@@ -160,21 +156,6 @@ export function VerificationFlowsPanel({
           data-verification-flow-topic
           className="w-full border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
         />
-        <label className="flex items-center gap-3 text-xs text-neutral-300">
-          Countdown
-          <select
-            value={minutes}
-            data-verification-flow-minutes
-            onChange={(event) => setMinutes(flowCountdownMinutes(event.target.value))}
-            className="border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-xs text-white"
-          >
-            {FLOW_COUNTDOWN_MINUTES.map((value) => (
-              <option key={value} value={value}>
-                {value} min
-              </option>
-            ))}
-          </select>
-        </label>
         <LearningModelSizePicker
           name="verification-flow-learning-model"
           value={catalog}
@@ -233,8 +214,6 @@ export function VerificationFlowsPanel({
                 <p className="text-[11px] text-neutral-500">
                   {flow.questions.length} starting question{flow.questions.length === 1 ? "" : "s"}
                   {" · "}
-                  {flowCountdownMinutes(flow.durationMinutes)} min
-                  {" · "}
                   {parseLearningModelSize(flow.actionCatalog)} actions
                 </p>
               </div>
@@ -245,7 +224,6 @@ export function VerificationFlowsPanel({
                   onClick={() => {
                     setEditingId(flow.id);
                     setTopic(flow.topic);
-                    setMinutes(flowCountdownMinutes(flow.durationMinutes));
                     setCatalog(parseLearningModelSize(flow.actionCatalog));
                     setDraftQuestions(
                       flow.questions.length ? flow.questions.map((question) => question.text) : [""],

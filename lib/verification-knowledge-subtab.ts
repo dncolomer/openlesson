@@ -59,7 +59,7 @@ function proofSubjectRow(row: VerificationKnowledgeRow): VerificationSubjectRow 
   return {
     user_id: null,
     guest_user_id: row.id,
-    embedding_model_id: "knowledgecfg-v1-d64",
+    embedding_model_id: "flowcfg-v1-d96",
     as_of_ms: 0,
     confidence: 0,
     label: row.label,

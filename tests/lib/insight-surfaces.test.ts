@@ -145,9 +145,9 @@ describe("Play-only Insights tab + Generate Insights", () => {
     expect(hosts).toContain("InsightsDashboardTab");
     expect(hosts).toContain("data-play-insights-tab");
     expect(hosts).toContain("mountsInsightsPanel");
-    expect(learner).toContain("data-generate-insights-drawer");
-    expect(learner).toContain("data-generate-insights-prompt");
-    expect(learner).toContain(GENERATE_INSIGHTS_ACTION_LABEL);
+    expect(learner).not.toContain("data-generate-insights-drawer");
+    expect(learner).not.toContain("data-generate-insights-prompt");
+    expect(learner).not.toContain(GENERATE_INSIGHTS_ACTION_LABEL);
   });
 });
 

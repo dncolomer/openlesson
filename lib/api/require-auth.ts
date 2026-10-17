@@ -130,7 +130,7 @@ export async function guardWorkspaceRoute(
     ayclToken?: string | null;
     ileToken?: string | null;
     requireProductAccess?: boolean;
-    /** When true, AYCL practice-only tier is rejected (creation / grow). */
+    /** When true, AYCL access without authoring is rejected (creation / grow). */
     requireAyclAuthoring?: boolean;
     /** Reject the call when this workspace product does not include the feature. */
     feature?: WorkspaceFeature;

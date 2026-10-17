@@ -135,8 +135,8 @@ describe("product-intent surfaces (Explore/Drill always With AI)", () => {
     const edit = read("components/WorkspaceBlockEditPanel.tsx");
     expect(edit).not.toContain("With AI");
     expect(edit).not.toContain(">Solo<");
-    expect(edit).toContain("allowExplore");
-    expect(edit).toContain("allowDrill");
+    expect(edit).not.toContain("allowExplore");
+    expect(edit).not.toContain("allowDrill");
     // Must not restate Explore-always-dialog / Drill-always-timed contradiction
     expect(edit).not.toContain("Explore is always dialogue");
     expect(edit).not.toContain("Drill is always timed practice");
@@ -725,22 +725,18 @@ describe("suggest from knowledge + simulation", () => {
     }
 
     const alt = read("components/WorkspacePromptContextAlternatives.tsx");
-    expect(alt).toContain("grid-cols-3");
-    expect(alt).toContain("w-full min-w-0");
-    expect(alt).toContain("sample from Knowledge");
-    expect(alt).toContain("sample from Simulation");
-    expect(alt).toContain("sample from Context");
-    expect(alt).toContain("data-suggest-from-knowledge");
-    expect(alt).toContain("data-suggest-from-simulation");
-    expect(alt).toContain("data-suggest-from-context");
-    expect(alt).toContain("/api/workspace/suggest-from-knowledge");
-    expect(alt).toContain("/api/workspace/suggest-from-simulation");
-    expect(alt).toContain("/api/workspace/suggest-from-context");
-    expect(alt).toContain("pickNextDistinctAuthorPrompt");
-    expect(alt).toContain("onAccept(prompt)");
-    expect(alt).toContain("onAdhocChange(prompt)");
+    expect(alt).not.toContain("grid-cols-3");
+    expect(alt).not.toContain("sample from Knowledge");
+    expect(alt).not.toContain("sample from Simulation");
+    expect(alt).not.toContain("sample from Context");
+    expect(alt).not.toContain("data-suggest-from-knowledge");
+    expect(alt).not.toContain("data-suggest-from-simulation");
+    expect(alt).not.toContain("data-suggest-from-context");
+    expect(alt).not.toContain("/api/workspace/suggest-from-knowledge");
+    expect(alt).not.toContain("/api/workspace/suggest-from-simulation");
+    expect(alt).not.toContain("/api/workspace/suggest-from-context");
+    expect(alt).not.toContain("pickNextDistinctAuthorPrompt");
     expect(alt).toContain("data-prompt-context-adhoc-input");
-    expect(alt).not.toContain('mode === "adhoc"');
     expect(alt).not.toContain("data-prompt-context-suggestions");
     expect(alt).not.toContain("suggestions.map");
 
@@ -772,14 +768,7 @@ describe("suggest from knowledge + simulation", () => {
     writeLog(
       "suggest-context-ui.log",
       [
-        "equal_grid=grid-cols-3",
-        "button_share=w-full min-w-0",
-        "labels=sample from Knowledge | sample from Simulation | sample from Context",
-        "knowledge_endpoint=/api/workspace/suggest-from-knowledge",
-        "simulation_endpoint=/api/workspace/suggest-from-simulation",
-        "context_endpoint=/api/workspace/suggest-from-context",
-        "picker=pickNextDistinctAuthorPrompt",
-        "apply=onAccept(prompt)+onAdhocChange(prompt)",
+        "sample_buttons=absent",
         "field=data-prompt-context-adhoc-input",
         `field_hooks=${fieldHooks.join(",")}`,
         "suggestion_choice_list=absent",
@@ -856,10 +845,10 @@ describe("Expand Map rename + suggest UI", () => {
     expect(pane).toContain("WorkspacePromptContextAlternatives");
 
     const alt = read("components/WorkspacePromptContextAlternatives.tsx");
-    expect(alt).toContain("sample from Knowledge");
-    expect(alt).toContain("sample from Simulation");
-    expect(alt).toContain("sample from Context");
-    expect(alt).toContain("grid-cols-3");
+    expect(alt).not.toContain("sample from Knowledge");
+    expect(alt).not.toContain("sample from Simulation");
+    expect(alt).not.toContain("sample from Context");
+    expect(alt).not.toContain("grid-cols-3");
 
     writeLog(
       "expand-map-ui.log",

@@ -1,34 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import {
-  normalizeBlockPracticeOptions,
-  serializeBlockPracticeOptions,
-  type BlockPracticeOptions,
-} from "@/lib/block-practice-options";
-
-function practiceOptionsEqual(a: BlockPracticeOptions, b: BlockPracticeOptions): boolean {
-  if (a.allowExplore !== b.allowExplore) return false;
-  if (a.allowDrill !== b.allowDrill) return false;
-  if (a.allowScout !== b.allowScout) return false;
-  if (a.allowOpenEnded !== b.allowOpenEnded) return false;
-  if (a.allowTimed !== b.allowTimed) return false;
-  if (a.allowedDurationsMinutes.length !== b.allowedDurationsMinutes.length) {
-    return false;
-  }
-  return a.allowedDurationsMinutes.every((m, i) => m === b.allowedDurationsMinutes[i]);
-}
+import { useEffect, useState } from "react";
 
 /**
  * Owner-facing block update form for the block-detail Edit drawer.
  * Destructive delete is a sibling drawer, not part of this form.
+ * Calibrate, Learn, and Verify are always available; they are not edited here.
  */
 export function WorkspaceBlockEditPanel({
   blockId,
   title,
   description,
   isStart = false,
-  practiceOptions: practiceOptionsProp = null,
   canEdit,
   busy = false,
   onUpdate,
@@ -38,8 +21,6 @@ export function WorkspaceBlockEditPanel({
   description?: string | null;
   /** Current starter / potential start flag on the block. */
   isStart?: boolean | null;
-  /** Author practice launch limits (Explore/Drill × open/timed + durations). */
-  practiceOptions?: BlockPracticeOptions | null;
   canEdit: boolean;
   busy?: boolean;
   onUpdate?: (input: {
@@ -47,27 +28,19 @@ export function WorkspaceBlockEditPanel({
     title: string;
     description: string;
     isStart?: boolean;
-    practiceOptions: BlockPracticeOptions;
   }) => Promise<void> | void;
 }) {
-  const savedPractice = useMemo(
-    () => normalizeBlockPracticeOptions(practiceOptionsProp ?? null),
-    [practiceOptionsProp],
-  );
   void isStart;
   const [editTitle, setEditTitle] = useState(title);
   const [editDescription, setEditDescription] = useState(description || "");
-  const [editPractice, setEditPractice] = useState<BlockPracticeOptions>(savedPractice);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Reset draft when switching blocks or when saved values change externally.
   useEffect(() => {
     setEditTitle(title);
     setEditDescription(description || "");
-    setEditPractice(normalizeBlockPracticeOptions(practiceOptionsProp ?? null));
     setError(null);
-  }, [blockId, title, description, practiceOptionsProp]);
+  }, [blockId, title, description]);
 
   if (!canEdit) {
     return (
@@ -79,32 +52,13 @@ export function WorkspaceBlockEditPanel({
         {description ? (
           <p className="text-[11px] leading-relaxed text-neutral-400">{description}</p>
         ) : null}
-        <p
-          className="text-[10px] text-neutral-500"
-          data-block-edit-practice-readonly
-        >
-          Practice:{" "}
-          {[
-            savedPractice.allowScout ? "Calibrate" : null,
-            savedPractice.allowExplore ? "Learn" : null,
-          ]
-            .filter(Boolean)
-            .join(" · ") || "—"}
-        </p>
       </div>
     );
   }
 
   const dirty =
     editTitle.trim() !== (title || "").trim() ||
-    (editDescription || "").trim() !== (description || "").trim() ||
-    !practiceOptionsEqual(editPractice, savedPractice);
-
-  const patchPractice = (patch: Partial<BlockPracticeOptions>) => {
-    setEditPractice((prev) =>
-      normalizeBlockPracticeOptions({ ...prev, ...patch }),
-    );
-  };
+    (editDescription || "").trim() !== (description || "").trim();
 
   const save = async () => {
     if (!onUpdate || !editTitle.trim()) return;
@@ -115,7 +69,6 @@ export function WorkspaceBlockEditPanel({
         blockId,
         title: editTitle.trim(),
         description: editDescription.trim(),
-        practiceOptions: normalizeBlockPracticeOptions(editPractice),
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save block");
@@ -154,44 +107,6 @@ export function WorkspaceBlockEditPanel({
           placeholder="What this block covers…"
         />
       </label>
-
-      {/* Practice launch limits — Explore / Drill + Drill durations */}
-      <div
-        className="space-y-2.5 rounded-none border border-neutral-800 bg-neutral-950/50 p-2.5"
-        data-block-edit-practice-options
-      >
-        <div>
-          <p className="text-[11px] font-medium text-neutral-200">Practice options</p>
-        </div>
-
-        <div className="grid grid-cols-2 gap-1.5" data-block-edit-practice-styles>
-          <label className="flex cursor-pointer items-center gap-1.5 rounded-none border border-neutral-800/80 bg-neutral-900/40 px-2 py-1.5">
-            <input
-              type="checkbox"
-              data-block-edit-allow-scout
-              checked={editPractice.allowScout}
-              disabled={disabled}
-              onChange={(e) => patchPractice({ allowScout: e.target.checked })}
-            />
-            <span className="text-[11px] text-neutral-200">Calibrate</span>
-          </label>
-          <label className="flex cursor-pointer items-center gap-1.5 rounded-none border border-neutral-800/80 bg-neutral-900/40 px-2 py-1.5">
-            <input
-              type="checkbox"
-              data-block-edit-allow-explore
-              checked={editPractice.allowExplore}
-              disabled={disabled}
-              onChange={(e) => patchPractice({ allowExplore: e.target.checked })}
-            />
-            <span className="text-[11px] text-neutral-200">Learn</span>
-          </label>
-        </div>
-
-        {/* Hidden serialized snapshot for structural/tests */}
-        <span className="sr-only" data-block-edit-practice-serialized>
-          {JSON.stringify(serializeBlockPracticeOptions(editPractice))}
-        </span>
-      </div>
 
       {error ? (
         <p className="text-[11px] text-red-400/90" data-block-edit-error>

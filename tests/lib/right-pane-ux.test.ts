@@ -97,13 +97,14 @@ describe("desktop layout + block detail chrome", () => {
     expect(card).toContain("resolveLaunchFromStyleAndModality");
     expect(card).toContain("data-style-option={id}");
     expect(card).toContain('id: "explore"');
-    expect(card).toContain('id: "drill"');
+    expect(card).toContain('id: "scout"');
+    expect(card).toContain('data-style-option="verify"');
     expect(card).not.toContain("data-modality-control");
     expect(card).not.toContain("data-modality-toggle");
     expect(card).not.toContain("data-modality-option");
     expect(card).not.toContain("data-product-intent-modality-grid");
     expect(card).toContain('data-style-icon="explore"');
-    expect(card).toContain('data-style-icon="drill"');
+    expect(card).toContain('data-style-icon="scout"');
     // Style is select-only; Start + duration live on the card
     expect(card).toContain("data-style-select");
     expect(card).toContain("data-launch-start");
@@ -144,9 +145,9 @@ describe("desktop layout + block detail chrome", () => {
     expect(detail).toContain('drawerId="edit"');
     expect(detail).toContain("WorkspaceBlockEditPanel");
     expect(detail).toContain("onUpdateBlock");
-    expect(detail).toContain("WorkspaceBlockDangerPanel");
-    expect(detail).toContain("onDeleteBlock");
-    expect(detail).toContain("WORKSPACE_EDITOR_DANGER_DRAWER_ID");
+    const drawers = read("components/workspace-view/workspace-right-drawers.tsx");
+    expect(drawers).toContain("WorkspaceBlockDangerDrawer");
+    expect(drawers).toContain("onDelete={onDeleteBlock}");
     const editPanel = read("components/WorkspaceBlockEditPanel.tsx");
     expect(editPanel).toContain("data-block-edit-panel");
     expect(editPanel).toContain("data-block-edit-save");

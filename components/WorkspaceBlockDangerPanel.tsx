@@ -1,6 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { WorkspaceRightPaneDrawer } from "@/components/WorkspaceRightPaneDrawer";
+import {
+  WORKSPACE_EDITOR_DANGER_DRAWER_ID,
+  WORKSPACE_EDITOR_DANGER_DRAWER_TITLE,
+} from "@/lib/workspace-right-pane";
 
 /**
  * Single-block Danger zone body — delete for the current selection.
@@ -96,5 +101,46 @@ export function WorkspaceBlockDangerPanel({
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Peer Danger zone drawer for one selected block.
+ * Hosted at the bottom of the combined authoring + practice column.
+ */
+export function WorkspaceBlockDangerDrawer({
+  blockId,
+  title,
+  canEdit,
+  busy = false,
+  onDelete,
+}: {
+  blockId: string;
+  title: string;
+  canEdit: boolean;
+  busy?: boolean;
+  onDelete?: (blockId: string) => Promise<void> | void;
+}) {
+  if (!canEdit) return null;
+  return (
+    <WorkspaceRightPaneDrawer
+      variant="section"
+      drawerId={WORKSPACE_EDITOR_DANGER_DRAWER_ID}
+      title={WORKSPACE_EDITOR_DANGER_DRAWER_TITLE}
+      defaultExpanded={false}
+      bodyClassName="space-y-2"
+      surfaceDataAttr="data-block-danger-drawer"
+      tone="danger"
+    >
+      <div data-block-detail-tab-content="danger" data-block-danger-drawer>
+        <WorkspaceBlockDangerPanel
+          blockId={blockId}
+          title={title}
+          canEdit={canEdit}
+          busy={busy}
+          onDelete={onDelete}
+        />
+      </div>
+    </WorkspaceRightPaneDrawer>
   );
 }

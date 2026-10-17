@@ -139,7 +139,7 @@ describe("aycl landing model", () => {
     );
   });
 
-  it("complimentary play token: original learner price + current Free; full stays paid", () => {
+  it("complimentary play token: the one workspace offer is Free", () => {
     const landing = assembleAyclLandingSummary({
       workspace: fixtureWorkspace,
       blocks: fixtureBlocks,
@@ -147,20 +147,17 @@ describe("aycl landing model", () => {
     const playTier = complimentaryAyclAccessTierFromInput("play");
     const offers = ayclLandingOffersForComplimentary(landing.offers, playTier);
     expect(playTier).toBe("learner");
-    expect(offers.learner.isComplimentary).toBe(true);
-    expect(offers.learner.originalPriceCents).toBe(landing.offers.learner.priceCents);
-    expect(offers.learner.originalPriceLabel).toBe(landing.offers.learner.priceLabel);
-    expect(offers.learner.originalPriceLabel).toMatch(/\$/);
-    expect(offers.learner.currentPriceLabel).toBe(AYCL_COMPLIMENTARY_CURRENT_PRICE_LABEL);
-    expect(offers.learner.currentPriceLabel.toLowerCase()).toBe("free");
-    expect(offers.full.isComplimentary).toBe(false);
-    expect(offers.full.currentPriceLabel).toBe(landing.offers.full.priceLabel);
-    expect(offers.full.currentPriceLabel.toLowerCase()).not.toBe("free");
+    expect(offers.full.isComplimentary).toBe(true);
+    expect(offers.full.originalPriceCents).toBe(landing.offers.full.priceCents);
+    expect(offers.full.originalPriceLabel).toBe(landing.offers.full.priceLabel);
+    expect(offers.full.originalPriceLabel).toMatch(/\$/);
+    expect(offers.full.currentPriceLabel).toBe(AYCL_COMPLIMENTARY_CURRENT_PRICE_LABEL);
+    expect(offers.full.currentPriceLabel.toLowerCase()).toBe("free");
+    expect(ayclLandingCtaKind(playTier, "full")).toBe("complimentary");
     expect(ayclLandingCtaKind(playTier, "learner")).toBe("complimentary");
-    expect(ayclLandingCtaKind(playTier, "full")).toBe("paid");
   });
 
-  it("complimentary full token: original full price + current Free; play stays paid", () => {
+  it("complimentary full token: the one workspace offer is Free", () => {
     const landing = assembleAyclLandingSummary({
       workspace: fixtureWorkspace,
       blocks: fixtureBlocks,
@@ -173,11 +170,8 @@ describe("aycl landing model", () => {
     expect(offers.full.originalPriceLabel).toBe(landing.offers.full.priceLabel);
     expect(offers.full.originalPriceLabel).toMatch(/\$/);
     expect(offers.full.currentPriceLabel).toBe(AYCL_COMPLIMENTARY_CURRENT_PRICE_LABEL);
-    expect(offers.learner.isComplimentary).toBe(false);
-    expect(offers.learner.currentPriceLabel).toBe(landing.offers.learner.priceLabel);
-    expect(offers.learner.currentPriceLabel.toLowerCase()).not.toBe("free");
     expect(ayclLandingCtaKind(fullTier, "full")).toBe("complimentary");
-    expect(ayclLandingCtaKind(fullTier, "learner")).toBe("paid");
+    expect(ayclLandingCtaKind(fullTier, "learner")).toBe("complimentary");
   });
 
   it("no complimentary token: both offers stay original paid prices with no Free", () => {

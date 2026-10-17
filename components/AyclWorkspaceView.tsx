@@ -2,8 +2,8 @@
 
 /**
  * All-You-Can-Learn access: workspace UI clone via WorkspaceView.
- * Full tier = owner-equivalent creation tools; learner tier = practice-only
- * fixed scope (upgrade in-shell). AYCL is only a cloning + access mechanism.
+ * One workspace mode: practice and authoring together. AYCL is a cloning
+ * + access mechanism.
  */
 
 import Link from "next/link";
@@ -68,14 +68,10 @@ export function AyclWorkspaceView({
             Private copy
           </span>
           <span
-            className={
-              accessTier === "full"
-                ? "rounded border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-emerald-300"
-                : "rounded border border-neutral-500/30 bg-neutral-500/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-neutral-300"
-            }
+            className="rounded border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-emerald-300"
             data-aycl-tier-badge
           >
-            {ayclOfferLabel(accessTier)}
+            {ayclOfferLabel()}
           </span>
         </div>
       </div>

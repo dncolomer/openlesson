@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Binoculars, BookOpen, Check, Compass, History, Map, Pencil, Pickaxe, Plus, ShieldCheck, X } from "lucide-react";
+import { Binoculars, BookOpen, Check, Compass, Map, Pencil, Pickaxe, Plus, ShieldCheck, X } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import {
   BLOCK_CIRCULAR_MENU_ACTION_BORDER_PX,
@@ -29,7 +29,6 @@ export const BLOCK_CIRCULAR_MENU_ACTION_ICONS: Record<
   start_prepare: <Map className="size-4" strokeWidth={2.4} aria-hidden />,
   start_session: <Compass className="size-4" strokeWidth={2.4} aria-hidden />,
   start_verify: <ShieldCheck className="size-4" strokeWidth={2.4} aria-hidden />,
-  continue_session: <History className="size-4" strokeWidth={2.4} aria-hidden />,
   mark_done: <Check className="size-4" strokeWidth={2.4} aria-hidden />,
 };
 

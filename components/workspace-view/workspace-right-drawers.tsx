@@ -4,6 +4,7 @@ import {
   WorkspaceAddBlockPane,
   type WorkspaceAddBlockSubmitOpts,
 } from "@/components/WorkspaceAddBlockPane";
+import { WorkspaceBlockDangerDrawer } from "@/components/WorkspaceBlockDangerPanel";
 import { WorkspaceBlockDetailPane } from "@/components/WorkspaceBlockDetailPane";
 import { WorkspaceBlockLocalContextPanel } from "@/components/WorkspaceBlockLocalContextPanel";
 import { WorkspaceCombineBlocksPane } from "@/components/WorkspaceCombineBlocksPane";
@@ -14,16 +15,12 @@ import type { Block, MobileColumn, Workspace } from "@/components/workspace-view
 import type { ProductLaunchOptions } from "@/components/BlockDetailCard";
 import type { BlockCreatorEffects, GeneratorTargetCell } from "@/lib/block-creator-effects";
 import { parseBlockCreatorEffects } from "@/lib/block-creator-effects";
-import {
-  parseWorkspacePracticeOptions,
-  type BlockPracticeOptions,
-} from "@/lib/block-practice-options";
+import type { BlockPracticeOptions } from "@/lib/block-practice-options";
 import type { ExpandSourceIdentity } from "@/lib/expand-block-from-source";
 import type { UnusableCell } from "@/lib/map-ground-rules";
 import type { ProductLaunchTarget } from "@/lib/product-intent";
 import type { BlockLocalContextInput, WorkspaceFileContextItem } from "@/lib/prompt-workspace-context";
 import type { WorkspaceExpandBlockSubmitOpts } from "@/components/WorkspaceExpandBlockPane";
-import type { LearnerDoneProgressPhase, LearnerPowSummary } from "@/lib/workspace-learner-done";
 import type { WorkspaceAddTargetCell } from "@/lib/workspace-right-pane";
 import { WORKSPACE_MAP_DESKTOP_RIGHT_WIDTH_CLASS } from "@/lib/workspace-right-pane";
 import { useI18n } from "@/lib/i18n";
@@ -60,8 +57,6 @@ export function WorkspaceRightDrawers({
   onDynamicGenerated,
   onSavePlanningPrompt,
   onLaunchIntent,
-  onFetchPowSummary,
-  onMarkDone,
   combineBlockIds,
   isAddingBlock,
   onCombine,
@@ -142,16 +137,6 @@ export function WorkspaceRightDrawers({
     target: ProductLaunchTarget,
     options?: ProductLaunchOptions,
   ) => Promise<void>;
-  onFetchPowSummary: (blockId: string) => Promise<LearnerPowSummary>;
-  onMarkDone: (input: {
-    blockId: string;
-    status: string;
-    onPhase?: (phase: LearnerDoneProgressPhase) => void;
-  }) => Promise<{
-    unlockedIds?: string[];
-    generatedCells?: number;
-    dynamicGenerated?: number;
-  } | void>;
   combineBlockIds: string[];
   isAddingBlock: boolean;
   onCombine: (input: { blockIds: string[]; prompt?: string }) => Promise<void>;
@@ -347,10 +332,6 @@ export function WorkspaceRightDrawers({
                   localContext={detailBlock.local_context}
                   blockStatus={detailBlock.status}
                   isStart={detailBlock.is_start}
-                  practiceOptions={parseWorkspacePracticeOptions(
-                    detailBlock.practice_options,
-                    { ayclClone: Boolean(ayclToken) },
-                  )}
                   creatorEffects={parseBlockCreatorEffects(
                     detailBlock.creator_effects,
                     { selfBlockId: detailBlock.id },
@@ -371,7 +352,6 @@ export function WorkspaceRightDrawers({
                   rootTopic={plan.root_topic}
                   workspaceNotes={notesContent || plan.notes}
                   onUpdateBlock={onUpdateBlock}
-                  onDeleteBlock={onDeleteBlock}
                   onSaveCreatorEffects={onSaveCreatorEffects}
                   onSplitBlock={onSplitBlock}
                   cloneArmed={cloneArmed}
@@ -422,8 +402,20 @@ export function WorkspaceRightDrawers({
                   onDynamicGenerated={onDynamicGenerated}
                   onSavePlanningPrompt={onSavePlanningPrompt}
                   onLaunchIntent={onLaunchIntent}
-                  onFetchPowSummary={onFetchPowSummary}
-                  onMarkDone={onMarkDone}
+                />
+              </div>
+            ) : null}
+            {showCreatorDrawers && isOwner ? (
+              <div
+                className="mt-auto min-h-0 shrink-0"
+                data-workspace-block-danger-host
+              >
+                <WorkspaceBlockDangerDrawer
+                  blockId={detailBlock.id}
+                  title={detailBlock.title}
+                  canEdit={isOwner}
+                  busy={isAddingBlock}
+                  onDelete={onDeleteBlock}
                 />
               </div>
             ) : null}

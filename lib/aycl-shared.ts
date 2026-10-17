@@ -6,11 +6,11 @@ export const AYCL_PRICE_CENTS = 1999;
 /** @deprecated Prefer AYCL_FULL_PRICE_LABEL. */
 export const AYCL_PRICE_LABEL = "$19.99";
 
-/** Practice-only access (fixed forked scope, no creation tools). */
+/** Retired shopper SKU. Kept so listing rows and old checkouts still resolve. */
 export const AYCL_LEARNER_PRICE_CENTS = 999;
 export const AYCL_LEARNER_PRICE_LABEL = "$9.99";
 
-/** Full pack: practice + create / grow the forked workspace. */
+/** One AYCL workspace offer: private copy with practice and authoring together. */
 export const AYCL_FULL_PRICE_CENTS = 1999;
 export const AYCL_FULL_PRICE_LABEL = "$19.99";
 
@@ -26,19 +26,15 @@ export type AyclAccessTier = "learner" | "full";
 
 export type AyclCapabilities = {
   tier: AyclAccessTier;
-  /** Creator/authoring tools (map tools, DAGs tab, expand, etc.). */
+  /** Authoring tools on the forked workspace. Always on — one AYCL mode. */
   canAuthor: boolean;
-  /** Grow map via multi-create / bridge / generate (same as canAuthor for v1). */
+  /** Grow map via multi-create / bridge / generate. Always on. */
   canGrow: boolean;
-  /** May open paid upgrade checkout to full pack. */
+  /** Retired dual-SKU upgrade. Always false. */
   canUpgrade: boolean;
-  /** Interaction mode: learner-tier forces practice; full may toggle. */
   defaultInteractionMode: "learner" | "creator";
   allowCreatorModeToggle: boolean;
-  /**
-   * Map Explore mode (empty-cell search / explore-block).
-   * Always on for purchased clones — both play-only and Play+Build.
-   */
+  /** Map explore (empty-cell search). Always on for purchased clones. */
   allowExplore: boolean;
 };
 
@@ -75,45 +71,41 @@ export function formatAyclPriceCentsLabel(cents: number): string {
     : `$${dollars.toFixed(2)}`;
 }
 
-/** Short offer labels — never "rent" / "buy" movie metaphors. */
-export function ayclOfferLabel(tier: AyclAccessTier): string {
-  return tier === "learner" ? "play mode only" : "Play + Build";
+/** One shopper name — never Play vs Build, never rent/buy movie metaphors. */
+export function ayclOfferLabel(_tier?: AyclAccessTier): string {
+  return "All You Can Learn";
 }
 
-/** What Play means on AYCL offers (tooltip). */
+/** @deprecated Same as ayclOfferTooltip. Play is not a separate mode. */
 export function ayclPlayTooltip(): string {
-  return "Play is practice: explore the map and train on existing content at your pace.";
+  return ayclOfferTooltip();
 }
 
-/** What Build means on AYCL offers (tooltip). */
+/** @deprecated Same as ayclOfferTooltip. Build is not a separate mode. */
 export function ayclBuildTooltip(): string {
-  return "Build is authoring: add blocks, reshape the map, and grow your private copy.";
+  return ayclOfferTooltip();
 }
 
-/** Tooltip attached to an offer title / checkout CTA. */
-export function ayclOfferTooltip(tier: AyclAccessTier): string {
-  return tier === "learner"
-    ? ayclPlayTooltip()
-    : `${ayclPlayTooltip()} ${ayclBuildTooltip()}`;
+/** Tooltip attached to the offer title / checkout CTA. */
+export function ayclOfferTooltip(_tier?: AyclAccessTier): string {
+  return "Your private copy of this workspace. Practice on the map and grow it from here.";
 }
 
-/** Checkout button label — follows the same offer names. */
-export function ayclOfferCheckoutCta(tier: AyclAccessTier): string {
-  return tier === "learner" ? "Get play mode only" : "Get Play + Build";
+/** Checkout button label. */
+export function ayclOfferCheckoutCta(_tier?: AyclAccessTier): string {
+  return "Get this workspace";
 }
 
-export function ayclOfferDescription(tier: AyclAccessTier): string {
-  return tier === "learner"
-    ? "Your private copy for Play. Fixed content — explore and train at your pace."
-    : "Play plus Build tools so you can grow and reshape your private copy.";
+export function ayclOfferDescription(_tier?: AyclAccessTier): string {
+  return "Your private copy of this workspace. Practice on the map and grow it from here.";
 }
 
 export function ayclUpgradeOfferLabel(): string {
-  return "Unlock creation tools";
+  return "All You Can Learn";
 }
 
 export function ayclUpgradeOfferDescription(): string {
-  return "Add creation tools on this same private copy so you can expand the map.";
+  return "Your private copy of this workspace. Practice on the map and grow it from here.";
 }
 
 /**
@@ -143,32 +135,21 @@ export function ayclCatalogKeyPoints(): readonly string[] {
   return [
     "Learn for curiosity — not a credential, cohort, or deadline",
     "Dive deep anytime; come back months later",
-    "Living workspaces with map, practice, and depth built in",
+    "One workspace: map, practice, and the tools to grow it",
     "One-time pay · private fork · lifetime system updates & platform improvements",
   ] as const;
 }
 
 /**
- * Capability bag for shell + API. Learner = fixed practice scope.
- * Full = author/grow. Legacy purchases without tier resolve as full.
+ * One AYCL workspace mode. Stored tier is kept for old rows; authoring,
+ * grow, and explore are always on. Dual-SKU upgrade is retired.
  */
 export function resolveAyclCapabilities(
   tierInput: unknown,
 ): AyclCapabilities {
   const tier = normalizeAyclAccessTier(tierInput);
-  if (tier === "learner") {
-    return {
-      tier: "learner",
-      canAuthor: false,
-      canGrow: false,
-      canUpgrade: true,
-      defaultInteractionMode: "learner",
-      allowCreatorModeToggle: false,
-      allowExplore: true,
-    };
-  }
   return {
-    tier: "full",
+    tier,
     canAuthor: true,
     canGrow: true,
     canUpgrade: false,
@@ -178,8 +159,8 @@ export function resolveAyclCapabilities(
   };
 }
 
-export function ayclCanUpgradeFromTier(tierInput: unknown): boolean {
-  return normalizeAyclAccessTier(tierInput) === "learner";
+export function ayclCanUpgradeFromTier(_tierInput?: unknown): boolean {
+  return false;
 }
 
 /** After successful upgrade payment, target tier is always full. */

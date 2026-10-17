@@ -38,6 +38,11 @@ export function SessionGuidePanel({
   const commandsOpen = canvasCommands && tab === "commands";
   const harnessOpen = tab === "harness";
   const text = SESSION_INSTRUCTIONS[guide];
+  const commandsHint = !bridge
+    ? "The board is still opening."
+    : bridge.selectionActive
+      ? null
+      : "Select marks on the canvas first.";
   return (
     <div data-session-guide={guide} className="flex h-full min-h-0 flex-col overflow-hidden bg-black text-white">
       <div className="flex shrink-0 border-b border-white/30 bg-black">
@@ -83,8 +88,8 @@ export function SessionGuidePanel({
         </div>
       </div>
       {commandsOpen ? (
-        <div data-session-commands className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-          <div className="grid grid-cols-2 gap-1 px-2 pt-1.5">
+        <div data-session-commands className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="grid min-h-0 flex-1 auto-rows-fr grid-cols-2 grid-rows-3 gap-1 px-2 pt-1">
             {ILE_WORK_CANVAS_COMMANDS.map((command) => {
               const ready = Boolean(bridge?.selectionActive);
               return (
@@ -102,41 +107,49 @@ export function SessionGuidePanel({
                   className={ILE_CANVAS_COMMAND_SIDEBAR_CLASS}
                 >
                   <CommandPlate index={ileWorkCanvasCommandIndex(command.id)} />
-                  <CommandMark id={command.id} label={command.label} className="h-5 w-5" />
-                  <span>{command.label}</span>
+                  <CommandMark
+                    id={command.id}
+                    label={command.label}
+                    className="h-[clamp(0.75rem,28cqh,1.25rem)] w-[clamp(0.75rem,28cqh,1.25rem)] shrink-0"
+                  />
+                  <span className="min-w-0 truncate">{command.label}</span>
                 </button>
               );
             })}
           </div>
           <div
             data-session-board-tools
-            className="mt-2 flex flex-col gap-1.5 border-t border-white/30 px-2 py-2"
+            className="mt-1 flex shrink-0 flex-col gap-1 border-t border-white/30 px-2 py-1.5"
           >
             <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-white/45">board</p>
-            {bridge?.craft ? (
-              <IleCraftInsightButton
-                wide
-                usable={ileCanvasCraftInsightUsable()}
-                onClick={() => bridge.craft?.open()}
-              />
-            ) : null}
-            {bridge?.dictate ? (
-              <IleCanvasDictateButton
-                wide
-                transcript={bridge.dictate.transcript}
-                onLiveText={(text) => bridge.dictate?.write(text, false)}
-                onCommit={(text) => bridge.dictate?.write(text, true)}
-                onActiveChange={bridge.dictate.onActive}
-              />
-            ) : null}
+            <div
+              className={
+                bridge?.craft && bridge?.dictate ? "grid grid-cols-2 gap-1" : "flex flex-col gap-1"
+              }
+            >
+              {bridge?.craft ? (
+                <IleCraftInsightButton
+                  wide
+                  usable={ileCanvasCraftInsightUsable()}
+                  onClick={() => bridge.craft?.open()}
+                />
+              ) : null}
+              {bridge?.dictate ? (
+                <IleCanvasDictateButton
+                  wide
+                  transcript={bridge.dictate.transcript}
+                  onLiveText={(text) => bridge.dictate?.write(text, false)}
+                  onCommit={(text) => bridge.dictate?.write(text, true)}
+                  onActiveChange={bridge.dictate.onActive}
+                />
+              ) : null}
+            </div>
           </div>
-          <p className="px-2 pb-2 pt-1 font-mono text-[10px] leading-snug text-white/45">
-            {bridge
-              ? bridge.selectionActive
-                ? "Commands use the marks selected on the canvas."
-                : "Select marks on the canvas first."
-              : "The board is still opening."}
-          </p>
+          {commandsHint ? (
+            <p className="shrink-0 px-2 pb-1.5 pt-0.5 font-mono text-[9px] leading-snug text-white/45">
+              {commandsHint}
+            </p>
+          ) : null}
         </div>
       ) : harnessOpen ? (
         <SessionHarnessPanel guide={guide} remainingSeconds={remainingSeconds} />

@@ -10,14 +10,11 @@ import { aestheticImageForId } from "@/lib/aesthetics";
 import { ayclLandingPath } from "@/lib/aycl-landing";
 import {
   AYCL_TOKEN_STORAGE_KEY,
-  ayclBuildTooltip,
   ayclCatalogKeyPoints,
   ayclLifetimeSystemUpdatesFootnote,
   ayclOfferCheckoutCta,
   ayclOfferLabel,
   ayclOfferTooltip,
-  ayclPlayTooltip,
-  type AyclAccessTier,
 } from "@/lib/aycl-shared";
 import { PublicConsoleWash } from "@/components/ui/console-frame";
 import {
@@ -65,11 +62,8 @@ export default function AllYouCanLearnPage() {
     [workspaces, categoryFilter, searchQuery],
   );
 
-  const startCheckout = async (
-    workspaceId: string,
-    tier: AyclAccessTier = "full",
-  ) => {
-    const key = `${workspaceId}:${tier}`;
+  const startCheckout = async (workspaceId: string) => {
+    const key = `${workspaceId}:full`;
     setCheckoutKey(key);
     setError("");
     try {
@@ -79,7 +73,7 @@ export default function AllYouCanLearnPage() {
         body: JSON.stringify({
           priceType: "all_you_can_learn",
           workspaceId,
-          ayclAccessTier: tier,
+          ayclAccessTier: "full",
         }),
       });
       const data = await res.json();
@@ -165,7 +159,7 @@ export default function AllYouCanLearnPage() {
                 ))}
               </div>
               <p className="mt-4 text-[11px] text-zinc-500">
-                Practice-only or full access · upgrade anytime ·{" "}
+                One workspace · practice and authoring together ·{" "}
                 <Link
                   href="/community-events"
                   className="text-zinc-300 underline decoration-zinc-600 underline-offset-2 transition hover:text-white"
@@ -282,11 +276,9 @@ export default function AllYouCanLearnPage() {
             data-aycl-marketplace-grid
           >
             {filtered.map((workspace) => {
-              const learnerOffer = workspace.offers.learner;
               const fullOffer = workspace.offers.full;
-              const learnerBusy = checkoutKey === `${workspace.id}:learner`;
               const fullBusy = checkoutKey === `${workspace.id}:full`;
-              const anyBusy = learnerBusy || fullBusy;
+              const anyBusy = fullBusy;
               const landingHref = ayclLandingPath(workspace.id);
               const blurb = workspace.summary || workspace.description;
               return (
@@ -374,30 +366,12 @@ export default function AllYouCanLearnPage() {
                         data-aycl-card-price-chips
                       >
                         <span
-                          className="rounded-none border border-zinc-700 bg-zinc-900/80 px-2 py-0.5 text-[11px] text-zinc-300"
-                          data-aycl-card-price-learner
-                          title={ayclOfferTooltip("learner")}
-                          data-aycl-offer-tooltip="learner"
-                        >
-                          <span title={ayclPlayTooltip()} data-aycl-play-tooltip>
-                            {ayclOfferLabel("learner")}
-                          </span>{" "}
-                          {learnerOffer.priceLabel}
-                        </span>
-                        <span
                           className="rounded-none border border-zinc-600 bg-zinc-800/80 px-2 py-0.5 text-[11px] font-medium text-white"
                           data-aycl-card-price-full
-                          title={ayclOfferTooltip("full")}
+                          title={ayclOfferTooltip()}
                           data-aycl-offer-tooltip="full"
                         >
-                          <span title={ayclPlayTooltip()} data-aycl-play-tooltip>
-                            Play
-                          </span>
-                          {" + "}
-                          <span title={ayclBuildTooltip()} data-aycl-build-tooltip>
-                            Build
-                          </span>{" "}
-                          {fullOffer.priceLabel}
+                          {ayclOfferLabel()} {fullOffer.priceLabel}
                         </span>
                       </div>
 
@@ -409,30 +383,18 @@ export default function AllYouCanLearnPage() {
                       </Link>
                     </div>
 
-                    <div className="grid gap-2" data-aycl-dual-offers>
-                      <button
-                        type="button"
-                        data-aycl-checkout-learner
-                        onClick={() => startCheckout(workspace.id, "learner")}
-                        disabled={anyBusy}
-                        className="w-full rounded-none border border-zinc-600 bg-transparent px-3 py-2 text-sm font-medium text-zinc-100 transition hover:bg-zinc-800 disabled:opacity-50"
-                        title={ayclOfferTooltip("learner")}
-                      >
-                        {learnerBusy
-                          ? "Redirecting…"
-                          : `${ayclOfferCheckoutCta("learner")} · ${learnerOffer.priceLabel}`}
-                      </button>
+                    <div className="grid gap-2" data-aycl-offer>
                       <button
                         type="button"
                         data-aycl-checkout-full
-                        onClick={() => startCheckout(workspace.id, "full")}
+                        onClick={() => startCheckout(workspace.id)}
                         disabled={anyBusy}
                         className="w-full rounded-none bg-white px-3 py-2 text-sm font-medium text-black transition hover:bg-zinc-200 disabled:opacity-50"
-                        title={ayclOfferTooltip("full")}
+                        title={ayclOfferTooltip()}
                       >
                         {fullBusy
                           ? "Redirecting…"
-                          : `${ayclOfferCheckoutCta("full")} · ${fullOffer.priceLabel}`}
+                          : `${ayclOfferCheckoutCta()} · ${fullOffer.priceLabel}`}
                       </button>
                     </div>
 

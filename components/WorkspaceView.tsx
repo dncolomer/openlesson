@@ -150,8 +150,7 @@ export function WorkspaceView({
         ? resolveAyclCapabilities(ayclAccessTierProp ?? "full")
         : null,
   );
-  // AYCL: owner-equivalent only when purchase includes creation (full tier).
-  // Practice-only access is fixed-scope — no authoring / grow tools.
+  // AYCL: one workspace mode — authoring follows canAuthor (always on).
   const isOwner = isAycl
     ? Boolean(ayclCapabilities?.canAuthor)
     : currentUserId
@@ -592,7 +591,7 @@ export function WorkspaceView({
   }, [plan?.notes]);
 
   /**
-   * AYCL practice-only is not isOwner, but Learner mode still needs Knowledge
+   * AYCL clones are not isOwner, but Learner mode still needs Knowledge
    * (LWM/embeddings). Always resolve sections through the mode-aware helper —
    * never owner-only resolveActiveSection alone (that snaps Knowledge → Workspace).
    */
@@ -669,8 +668,6 @@ export function WorkspaceView({
     handleDynamicGenerated,
     handleSavePlanningPrompt,
     handleLaunchIntent,
-    handleFetchPowSummary,
-    handleMarkDone,
   } = useWorkspaceLearner({
     workspaceId,
     ayclToken,
@@ -679,7 +676,6 @@ export function WorkspaceView({
     learnerActivity: shell.learnerActivity,
     nodes,
     setNodes,
-    unusableCells,
     router,
   });
 
@@ -949,8 +945,6 @@ export function WorkspaceView({
                 }
               : undefined
           }
-          onFetchPowSummary={handleFetchPowSummary}
-          onMarkDone={async (input) => handleMarkDone(input)}
           combineBlockIds={combineBlockIds}
           isAddingBlock={isAddingBlock}
           onCombine={handleCombineBlocks}

@@ -38,7 +38,7 @@ export interface WorkspaceViewProps {
   initialNodes?: Block[];
   /**
    * AYCL / purchased lifetime access: token is sent on authoring APIs.
-   * Full tier → owner-equivalent tools; learner tier → practice only.
+   * One workspace mode: practice and authoring together.
    */
   ayclToken?: string;
   /** Owner user id for AYCL (Knowledge/PoW subject scoping). */

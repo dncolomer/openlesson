@@ -18,10 +18,7 @@ import {
 import type { PlacedBlockRef } from "@/lib/skill-grid-ops";
 import { RabbitHoleExpandModal } from "@/components/RabbitHoleExpandModal";
 import { mapCandidatesToFrozenSlots } from "@/lib/rabbit-hole-expand";
-import {
-  WorkspacePromptContextAlternatives,
-  type PromptContextMode,
-} from "@/components/WorkspacePromptContextAlternatives";
+import { WorkspacePromptContextAlternatives } from "@/components/WorkspacePromptContextAlternatives";
 
 export type WorkspaceExpandBlockSubmitOpts = {
   frozenSlots: Array<{ row: number; col: number }>;
@@ -76,7 +73,7 @@ export function WorkspaceExpandBlockPane({
   const [density, setDensity] = useState(ADD_DENSITY_MAX);
   const [sampleSeed, setSampleSeed] = useState(1);
   const [userGuidance, setUserGuidance] = useState("");
-  const [contextMode, setContextMode] = useState<PromptContextMode>("adhoc");
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rabbitHoleOpen, setRabbitHoleOpen] = useState(false);
@@ -257,14 +254,8 @@ export function WorkspaceExpandBlockPane({
 
         <div data-expand-block-modifier data-generative-context-alternatives>
           <WorkspacePromptContextAlternatives
-            workspaceId={workspaceId}
-            draftPrompt={userGuidance}
-            surface="expand block"
-            mode={contextMode}
-            onModeChange={setContextMode}
             adhocValue={userGuidance}
             onAdhocChange={setUserGuidance}
-            onAccept={setUserGuidance}
             disabled={busy || submitting}
             adhocPlaceholder="Optional guidance for the expansion (e.g. emphasize applications, keep beginner-friendly, or focus on proofs)…"
             adhocLabel="Modifier prompt"

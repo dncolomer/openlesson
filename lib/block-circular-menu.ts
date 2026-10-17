@@ -2,7 +2,6 @@
  * Occupied-block circular menu (TAP Learning + Workspace learner). TAP is excluded.
  * Pure — tests drive catalog, progress, unseen-dot, and resource scoping.
  */
-import { PREVIOUS_SESSIONS_DRAWER_ID } from "@/lib/block-previous-sessions";
 import {
   ileGatherResourceBlockId,
   isIleGatherResource,
@@ -26,7 +25,6 @@ export type WorkspaceCircularMenuActionId =
   | "start_prepare"
   | "start_session"
   | "start_verify"
-  | "continue_session"
   | "mark_done";
 
 export type BlockCircularMenuActionId =
@@ -58,14 +56,9 @@ export const WORKSPACE_CIRCULAR_MENU_ACTIONS: readonly BlockCircularMenuAction[]
   { id: "start_prepare", label: "Calibrate" },
   { id: "start_session", label: "Learn" },
   { id: "start_verify", label: "Verify" },
-  { id: "continue_session", label: "Continue prev Session" },
-  { id: "mark_done", label: "Mark as Done" },
 ] as const;
 
-export const WORKSPACE_CIRCULAR_MENU_DRAWER_IDS = {
-  continue_session: PREVIOUS_SESSIONS_DRAWER_ID,
-  mark_done: "progress",
-} as const;
+export const WORKSPACE_CIRCULAR_MENU_DRAWER_IDS = {} as const;
 
 export function resolveBlockCircularMenuSurface(_input: {
   learnerMode?: boolean | null;
@@ -216,10 +209,8 @@ export function ileWorkOnCompletedRequiresConfirm(completed?: boolean | null): b
 }
 
 export function workspaceCircularMenuDrawerId(
-  action: WorkspaceCircularMenuActionId | string,
+  _action: WorkspaceCircularMenuActionId | string,
 ): string | null {
-  if (action === "continue_session") return WORKSPACE_CIRCULAR_MENU_DRAWER_IDS.continue_session;
-  if (action === "mark_done") return WORKSPACE_CIRCULAR_MENU_DRAWER_IDS.mark_done;
   return null;
 }
 

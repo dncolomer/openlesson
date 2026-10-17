@@ -19,10 +19,7 @@ import {
   WorkspaceRightPaneDrawerGroup,
 } from "@/components/WorkspaceRightPaneDrawer";
 import { WorkspaceSuggestExternalContext } from "@/components/WorkspaceSuggestExternalContext";
-import {
-  WorkspacePromptContextAlternatives,
-  type PromptContextMode,
-} from "@/components/WorkspacePromptContextAlternatives";
+import { WorkspacePromptContextAlternatives } from "@/components/WorkspacePromptContextAlternatives";
 import {
   buildShapeContextSourceOptions,
   toggleShapeContextSelection,
@@ -115,7 +112,6 @@ export function WorkspaceAddBlockPane({
   };
 }) {
   const [prompt, setPrompt] = useState("");
-  const [contextMode, setContextMode] = useState<PromptContextMode>("adhoc");
   const [addError, setAddError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [range, setRange] = useState(0);
@@ -327,15 +323,8 @@ export function WorkspaceAddBlockPane({
 
         <div data-add-block-context-alternatives data-generative-context-alternatives>
           <WorkspacePromptContextAlternatives
-            workspaceId={workspaceId}
-            ayclToken={ayclToken}
-            draftPrompt={prompt}
-            surface="add block"
-            mode={contextMode}
-            onModeChange={setContextMode}
             adhocValue={prompt}
             onAdhocChange={setPrompt}
-            onAccept={setPrompt}
             disabled={busy || submitting}
             adhocPlaceholder={labels.addPlaceholder}
             adhocLabel="Block prompt"

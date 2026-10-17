@@ -1,5 +1,5 @@
 /**
- * AYCL shopper names (play mode only / Play + Build), Play/Build tooltips,
+ * AYCL shopper names (one workspace offer), offer tooltip,
  * preview notes+layer toggles, and map-preview fullscreen.
  */
 import { describe, expect, it } from "vitest";
@@ -15,10 +15,7 @@ import {
   resolveAyclCapabilities,
 } from "@/lib/aycl-shared";
 import { parseAyclClonePracticeOptions } from "@/lib/block-practice-options";
-import {
-  availableSectionsForMode,
-  resolveFixedWorkspaceInteractionMode,
-} from "@/lib/workspace-mode";
+import { availableSectionsForMode } from "@/lib/workspace-mode";
 import {
   ayclMapPreviewFullscreenActive,
   resolveAyclPreviewOverlayChrome,
@@ -59,13 +56,13 @@ function writeScratch(name: string, body: string) {
 }
 
 describe("AYCL offer labels", () => {
-  it("learner is play mode only; full is Play + Build", () => {
-    expect(ayclOfferLabel("learner")).toBe("play mode only");
-    expect(ayclOfferLabel("full")).toBe("Play + Build");
-    expect(ayclOfferCheckoutCta("learner")).toBe("Get play mode only");
-    expect(ayclOfferCheckoutCta("full")).toBe("Get Play + Build");
-    expect(ayclOfferLabel("learner")).not.toMatch(/Practice access/i);
-    expect(ayclOfferLabel("full")).not.toMatch(/Full access/i);
+  it("one shopper name for every stored tier", () => {
+    expect(ayclOfferLabel("learner")).toBe("All You Can Learn");
+    expect(ayclOfferLabel("full")).toBe("All You Can Learn");
+    expect(ayclOfferCheckoutCta("learner")).toBe("Get this workspace");
+    expect(ayclOfferCheckoutCta("full")).toBe("Get this workspace");
+    expect(ayclOfferLabel("learner")).not.toMatch(/play mode/i);
+    expect(ayclOfferLabel("full")).not.toMatch(/Play \+ Build/i);
     expect(ayclOfferCheckoutCta("learner")).not.toMatch(/practice access/i);
     expect(ayclOfferCheckoutCta("full")).not.toMatch(/full access/i);
 
@@ -81,28 +78,31 @@ describe("AYCL offer labels", () => {
   });
 });
 
-describe("Play / Build tooltips", () => {
-  it("both modes have brief explanations attached on landing and catalog", () => {
+describe("AYCL offer tooltip", () => {
+  it("one explanation attached on landing and catalog", () => {
     const play = ayclPlayTooltip();
     const build = ayclBuildTooltip();
-    expect(play.length).toBeGreaterThan(12);
-    expect(build.length).toBeGreaterThan(12);
-    expect(play.toLowerCase()).toMatch(/play|practice|explore/);
-    expect(build.toLowerCase()).toMatch(/build|author|grow/);
-    expect(ayclOfferTooltip("learner")).toBe(play);
-    expect(ayclOfferTooltip("full")).toContain(play);
-    expect(ayclOfferTooltip("full")).toContain(build);
+    const offer = ayclOfferTooltip();
+    expect(play).toBe(offer);
+    expect(build).toBe(offer);
+    expect(offer.length).toBeGreaterThan(12);
+    expect(offer.toLowerCase()).toMatch(/practice/);
+    expect(offer.toLowerCase()).toMatch(/grow/);
+    expect(ayclOfferTooltip("learner")).toBe(offer);
+    expect(ayclOfferTooltip("full")).toBe(offer);
 
     const landing = read("components/AyclLandingClient.tsx");
     const catalog = read("app/all-you-can-learn/page.tsx");
     for (const src of [landing, catalog]) {
-      expect(src).toContain("ayclPlayTooltip");
-      expect(src).toContain("ayclBuildTooltip");
       expect(src).toContain("ayclOfferTooltip");
-      expect(src).toContain('data-aycl-play-tooltip');
-      expect(src).toContain('data-aycl-build-tooltip');
-      expect(src).toContain('data-aycl-offer-tooltip="learner"');
       expect(src).toContain('data-aycl-offer-tooltip="full"');
+      expect(src).not.toContain("ayclPlayTooltip");
+      expect(src).not.toContain("ayclBuildTooltip");
+      expect(src).not.toContain("data-aycl-play-tooltip");
+      expect(src).not.toContain("data-aycl-build-tooltip");
+      expect(src).not.toContain('data-aycl-offer-tooltip="learner"');
+      expect(src).not.toContain("data-aycl-checkout-learner");
+      expect(src).not.toMatch(/Play \+ Build/);
     }
 
     writeScratch(
@@ -112,7 +112,7 @@ describe("Play / Build tooltips", () => {
         `build=${build}`,
         `offer_learner=${ayclOfferTooltip("learner")}`,
         `offer_full=${ayclOfferTooltip("full")}`,
-        "landing+catalog attach data-aycl-play-tooltip / data-aycl-build-tooltip",
+        "landing+catalog attach one data-aycl-offer-tooltip=full",
       ].join("\n"),
     );
   });
@@ -204,31 +204,24 @@ describe("preview notes + handwriting visibility", () => {
 });
 
 describe("Explore on purchased clones", () => {
-  it("both play-only and Play+Build keep Explore; play-only hides Build", () => {
+  it("every purchased clone keeps Explore and authoring", () => {
     const learner = resolveAyclCapabilities("learner");
     const full = resolveAyclCapabilities("full");
     expect(learner.allowExplore).toBe(true);
     expect(full.allowExplore).toBe(true);
-    expect(ayclOfferLabel("learner")).toBe("play mode only");
-    expect(ayclOfferLabel("full")).toBe("Play + Build");
-    expect(
-      resolveFixedWorkspaceInteractionMode({
-        workspaceKind: "knowledge_region",
-        practiceOnly: !learner.allowCreatorModeToggle,
-      }),
-    ).toBe("learner");
-    expect(
-      resolveFixedWorkspaceInteractionMode({
-        practiceOnly: !full.allowCreatorModeToggle,
-      }),
-    ).toBe("learner");
+    expect(learner.allowCreatorModeToggle).toBe(true);
+    expect(full.allowCreatorModeToggle).toBe(true);
+    expect(ayclOfferLabel("learner")).toBe("All You Can Learn");
+    expect(ayclOfferLabel("full")).toBe("All You Can Learn");
+    expect(learner.defaultInteractionMode).toBe("learner");
+    expect(full.defaultInteractionMode).toBe("learner");
     expect(
       availableSectionsForMode({
         mode: "learner",
         isOwner: true,
         allowAuthoring: learner.allowCreatorModeToggle,
       }),
-    ).toEqual(["workspace"]);
+    ).toEqual(["workspace", "dags", "map_types", "context", "settings"]);
     expect(
       availableSectionsForMode({
         mode: "learner",
@@ -265,7 +258,7 @@ describe("Explore on purchased clones", () => {
       [
         `learner_allowExplore=${learner.allowExplore}`,
         `full_allowExplore=${full.allowExplore}`,
-        `learner_practice_only=${!learner.allowCreatorModeToggle}`,
+        `learner_allows_authoring=${learner.allowCreatorModeToggle}`,
         `full_allows_authoring=${full.allowCreatorModeToggle}`,
         `catalog_off_clone_explore=${parseAyclClonePracticeOptions({ allow_explore: false }).allowExplore}`,
         `offer_learner=${ayclOfferLabel("learner")}`,

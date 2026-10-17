@@ -2,6 +2,7 @@
 
 import { MapOfKnowledgeGlobal } from "@/components/MapOfKnowledgeGlobal";
 import { PROJECTION_ALGORITHM_OPTIONS } from "@/lib/knowledge-config";
+import { FLOW_EMBEDDING_MODEL_ID } from "@/lib/flow-embedding";
 import {
   EmbeddingsUserMultiPicker,
   ProjectionSpaceWidget,
@@ -77,14 +78,21 @@ export function KnowledgeModelsView({
     ayclToken,
     canInspectOthers,
     lockSubjectToSelf,
+    embeddingSource: flowFilter?.enabled ? "flowcfg" : "knowledgecfg",
+    flowId: flowFilter?.enabled ? flowFilter.flowId : null,
   });
   const flowId = flowFilter?.enabled ? flowFilter.flowId : null;
-  const subjects = knowledgeSubjectsForVerificationFlow(
-    availableSubjects,
-    flowFilter?.rows ?? [],
-    flowId,
-  );
-  const visibleCoords = knowledgeCoordsForVerificationFlow(coords, subjects, flowId);
+  const useFlowEmbeddings = Boolean(flowFilter?.enabled);
+  const subjects = useFlowEmbeddings
+    ? availableSubjects
+    : knowledgeSubjectsForVerificationFlow(
+        availableSubjects,
+        flowFilter?.rows ?? [],
+        flowId,
+      );
+  const visibleCoords = useFlowEmbeddings
+    ? coords
+    : knowledgeCoordsForVerificationFlow(coords, subjects, flowId);
 
   return (
         <div
@@ -92,6 +100,9 @@ export function KnowledgeModelsView({
           data-section="embeddings-projections"
           data-models-section="embeddings-projections"
           data-embeddings-layout="left-canvas-right-regions"
+          data-embeddings-model={
+            useFlowEmbeddings ? FLOW_EMBEDDING_MODEL_ID : "knowledgecfg-v1-d64"
+          }
           data-embeddings-fullscreen={embeddingsFullscreen ? "true" : "false"}
           className={
             embeddingsFullscreen
@@ -113,10 +124,23 @@ export function KnowledgeModelsView({
               }`}
             >
               <div className="shrink-0 space-y-3">
-                <p className="text-[11px] leading-relaxed text-neutral-500">
-                  Trajectory in{" "}
-                  <span className="font-mono text-neutral-400">knowledgecfg-v1-d64</span>. Overlay
-                  regions on the right.
+                <p
+                  className="text-[11px] leading-relaxed text-neutral-500"
+                  data-embeddings-model-copy
+                >
+                  {useFlowEmbeddings ? (
+                    <>
+                      Embeddings in{" "}
+                      <span className="font-mono text-neutral-400">{FLOW_EMBEDDING_MODEL_ID}</span>.
+                      Overlay regions on the right.
+                    </>
+                  ) : (
+                    <>
+                      Trajectory in{" "}
+                      <span className="font-mono text-neutral-400">knowledgecfg-v1-d64</span>. Overlay
+                      regions on the right.
+                    </>
+                  )}
                 </p>
 
                 <div className="w-full" data-projection-algorithm-picker data-map-projection-picker>
@@ -276,7 +300,9 @@ export function KnowledgeModelsView({
                     ) : embScope.label ? (
                       <span className="text-neutral-400">{embScope.label}</span>
                     ) : (
-                      <span>Knowledge config trajectory</span>
+                      <span>
+                        {useFlowEmbeddings ? "Flow embeddings" : "Knowledge config trajectory"}
+                      </span>
                     )}
                     {summary && knowledgeMapScope === "local" ? (
                       <span className="text-neutral-600">
@@ -471,8 +497,12 @@ export function KnowledgeModelsView({
                       ? "Latest position per selected user · view fits positions + regions"
                       : "Latest position only · view fits position + selected regions"
                     : embScope.kind === "multi"
-                      ? "Multi-user trajectories · ℝ⁶⁴ → 2D"
-                      : "Full trajectory · ℝ⁶⁴ → 2D"}
+                      ? useFlowEmbeddings
+                        ? "Multi-user embeddings · ℝ⁹⁶ → 2D"
+                        : "Multi-user trajectories · ℝ⁶⁴ → 2D"
+                      : useFlowEmbeddings
+                        ? "Flow embeddings · ℝ⁹⁶ → 2D"
+                        : "Full trajectory · ℝ⁶⁴ → 2D"}
                 </span>
                 <span className="text-neutral-400" data-projection-algorithm-hint>
                   ·{" "}

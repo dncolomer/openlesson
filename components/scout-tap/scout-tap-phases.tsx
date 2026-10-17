@@ -12,6 +12,7 @@ import { SessionTopicChapter } from "@/components/session-view/ile-work-dock-bar
 import { TapSessionSignals } from "@/components/session-view/session-signals";
 import { IleStartLoading } from "@/components/session-view/ile-start-loading";
 import { SessionPageLoading } from "@/components/session-view/session-page-loading";
+import { SessionStartBackButton } from "@/components/session-view/session-start-back-button";
 import { SessionStartShell } from "@/components/session-view/session-start-shell";
 import { TapAestheticSection } from "@/components/tap-score/tap-aesthetic-section";
 import { TapLiveClock } from "@/components/tap-score/tap-live-clock";
@@ -63,6 +64,7 @@ export function ScoutTapPhases(props: {
   thankYouActions: ScoutThankYouActions;
   onJumpWork: () => void;
   onBackWorkspace: () => void;
+  onSettingsBackToWorkspace?: () => void;
 }) {
   const {
     phase,
@@ -96,6 +98,7 @@ export function ScoutTapPhases(props: {
     thankYouActions,
     onJumpWork,
     onBackWorkspace,
+    onSettingsBackToWorkspace,
   } = props;
 
   void scoutThinkAloudEnabled();
@@ -146,6 +149,11 @@ export function ScoutTapPhases(props: {
                   wideLanguage
                 />
                 <div className="mt-auto shrink-0 border-t border-neutral-800 p-3">
+                  {onSettingsBackToWorkspace ? (
+                    <SessionStartBackButton onClick={onSettingsBackToWorkspace}>
+                      {t("session.backToDashboard")}
+                    </SessionStartBackButton>
+                  ) : null}
                   <button
                     type="button"
                     data-onboarding-start

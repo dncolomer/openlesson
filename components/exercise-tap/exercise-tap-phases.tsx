@@ -13,6 +13,7 @@ import { TapBriefingConfig } from "@/components/TapBriefingConfig";
 import { ExerciseTapShell } from "@/components/exercise-tap/ExerciseTapShell";
 import { TapLiveClock } from "@/components/tap-score/tap-live-clock";
 import { TapThoughtButton } from "@/components/tap-score/tap-thought-button";
+import { SessionStartBackButton } from "@/components/session-view/session-start-back-button";
 import { TapAestheticSection } from "@/components/tap-score/tap-aesthetic-section";
 import { formatSpeechTranscriptDisplay } from "@/lib/useSessionThoughtInterface";
 import { coerceSpokenLocale, type SpokenLocale } from "@/lib/tutoring-languages";
@@ -97,6 +98,7 @@ export function ExerciseTapPhases(props: {
   restartPractice: () => void;
   backToBriefing: () => void;
   onDone: () => void;
+  onBackToWorkspace?: () => void;
   soloProblems: TapSoloProblem[];
   activeSoloProblemId: string | null;
   onSelectSoloProblem: (id: string) => void;
@@ -149,6 +151,7 @@ export function ExerciseTapPhases(props: {
     restartPractice,
     backToBriefing,
     onDone,
+    onBackToWorkspace,
     soloProblems,
     activeSoloProblemId,
     onSelectSoloProblem,
@@ -272,6 +275,13 @@ export function ExerciseTapPhases(props: {
                     </>
                   )}
                 />
+                {onBackToWorkspace ? (
+                  <div className="mt-auto shrink-0 border-t border-neutral-800 p-3">
+                    <SessionStartBackButton onClick={onBackToWorkspace} className="mb-0">
+                      {t("session.backToDashboard")}
+                    </SessionStartBackButton>
+                  </div>
+                ) : null}
               </div>
               <TapAestheticSection bgImage={bgImage} kind="shortcuts">
                 <TapBriefingConfig

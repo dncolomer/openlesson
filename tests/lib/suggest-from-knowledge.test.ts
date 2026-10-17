@@ -321,10 +321,9 @@ describe("structural: xAI route + UI control", () => {
     expect(route).not.toMatch(/report\?\.themes\?\.gaps/);
 
     const alt = read("components/WorkspacePromptContextAlternatives.tsx");
-    expect(alt).toContain("data-suggest-from-knowledge");
-    expect(alt).toContain("/api/workspace/suggest-from-knowledge");
-    expect(alt).toContain("onAccept(prompt)");
-    expect(alt).toContain("onAdhocChange(prompt)");
+    expect(alt).not.toContain("data-suggest-from-knowledge");
+    expect(alt).not.toContain("/api/workspace/suggest-from-knowledge");
+    expect(alt).toContain("data-prompt-context-adhoc-input");
     expect(alt).not.toContain("data-prompt-context-suggestions");
     expect(typeof suggestFromKnowledgePost).toBe("function");
 

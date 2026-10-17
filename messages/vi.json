@@ -773,7 +773,7 @@
     "backToDashboard": "Về Bảng điều khiển",
     "saveAndExit": "Lưu và thoát",
     "nameSessionTitle": "Đặt tên phiên này?",
-    "nameSessionBody": "The session is saved as you work, including where the policy left off. Give it a name so you can find it in Previous Sessions. Leave the name blank to keep the default id.\n\nGenerated Proof of Work is stored either way. Exit without saving hides the session, and the current canvas state will be lost.",
+    "nameSessionBody": "The session is saved as you work, including where the policy left off. Leave the name blank to keep the default id.\n\nGenerated Proof of Work is stored either way. Exit without saving hides the session, and the current canvas state will be lost.",
     "nameSessionPlaceholder": "Tên phiên",
     "nameSessionConfirm": "Lưu và thoát",
     "nameSessionStay": "Ở lại",

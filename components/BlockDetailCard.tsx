@@ -11,7 +11,6 @@ import {
 import { DEFAULT_DURATION_MINUTES, DURATIONS } from "@/lib/tap-score-client-helpers";
 import {
   blockAllowedDurations,
-  blockAllowsLaunchTarget,
   blockAllowsPracticeStyle,
   clampPracticeDuration,
   normalizeBlockPracticeOptions,
@@ -21,9 +20,9 @@ import {
 
 type ProgressRing = "neutral" | "completed" | "in_progress";
 
-/** Optional launch options (duration chosen on the card before TAP/Drill). */
+/** Optional launch options (duration chosen on the card before TAP/Calibrate/Verify). */
 export type ProductLaunchOptions = {
-  /** Drill (TAP) sessions only — minutes for the TAP clock. */
+  /** Session length in minutes for Calibrate, Verify, and Drill. */
   minutes?: number;
   /** Learning-workspace Verify launch. Same canvas, verification marks. */
   verification?: boolean;
@@ -75,8 +74,6 @@ type BlockDetailCardProps = {
   highlightOpacity?: number;
   /** TAP Learning (non-TAP) Start label. TAP copy stays `Start · N min`. */
   ileStartLabel?: string;
-  onSeePreviousSessions?: () => void;
-  seePreviousSessionsLabel?: string;
 };
 
 const HERO_RING_CLASS: Record<ProgressRing, string> = {
@@ -117,25 +114,6 @@ function ScoutIcon({ className = "h-5 w-5" }: { className?: string }) {
       <circle cx="10" cy="10" r="6" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M14.5 14.5L20 20" />
       <circle cx="10" cy="10" r="2.2" />
-    </svg>
-  );
-}
-
-function DrillIcon({ className = "h-5 w-5" }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      data-style-icon="drill"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-      strokeWidth={1.6}
-      aria-hidden
-    >
-      {/* Target / focused practice */}
-      <circle cx="12" cy="12" r="8" />
-      <circle cx="12" cy="12" r="4" />
-      <circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none" />
     </svg>
   );
 }
@@ -220,8 +198,6 @@ export function BlockDetailCard({
   highlighted,
   highlightOpacity = 1,
   ileStartLabel,
-  onSeePreviousSessions,
-  seePreviousSessionsLabel,
 }: BlockDetailCardProps) {
   const { t } = useI18n();
   const practiceLimits = useMemo(
@@ -261,10 +237,6 @@ export function BlockDetailCard({
   const canLaunchStyle = (s: LearningStyle) => {
     if (s === "drill") return false;
     if (!blockAllowsPracticeStyle(practiceLimits, s)) return false;
-    if (s === "scout" && !practiceLimits.allowScout) return false;
-    if (!blockAllowsLaunchTarget(practiceLimits, s, false)) {
-      return false;
-    }
     const target = resolveLaunchFromStyleAndModality(s, false);
     if (onLaunchIntent) return true;
     if (target.id === "explore_dialog") return Boolean(onStartIle);
@@ -325,17 +297,12 @@ export function BlockDetailCard({
 
       {/* Select-only style tools — Explore = TAP Learning, Drill = TAP; launch via Start */}
       <div
-        className={`grid gap-2 ${
-          onLaunchIntent ||
-          (practiceLimits.allowScout && practiceLimits.allowExplore && drillFamilyAllowed)
-            ? "grid-cols-3"
-            : "grid-cols-2"
-        }`}
+        className={`grid gap-2 ${onLaunchIntent ? "grid-cols-3" : "grid-cols-2"}`}
         data-block-mode-tools
         data-product-intent-style-grid
-        data-practice-allow-explore={practiceLimits.allowExplore ? "true" : "false"}
-        data-practice-allow-drill={drillFamilyAllowed ? "true" : "false"}
-        data-practice-allow-scout={practiceLimits.allowScout ? "true" : "false"}
+        data-practice-allow-explore="true"
+        data-practice-allow-drill="false"
+        data-practice-allow-scout="true"
       >
         {(
           [
@@ -349,18 +316,9 @@ export function BlockDetailCard({
               label: PRODUCT_INTENT_LABELS.styleExplore,
               Icon: ExploreIcon,
             },
-            {
-              id: "drill" as const,
-              label: "Drill",
-              Icon: DrillIcon,
-            },
           ] as const
         )
-          .filter(({ id }) => {
-            // Drill opened the talk-aloud session. Calibrate and Learn stay.
-            if (id === "drill") return false;
-            return blockAllowsPracticeStyle(practiceLimits, id);
-          })
+          .filter(({ id }) => blockAllowsPracticeStyle(practiceLimits, id))
           .map(({ id, label, Icon }) => {
           const selected = style === id;
           const target = resolveLaunchFromStyleAndModality(id, false);
@@ -394,7 +352,10 @@ export function BlockDetailCard({
             data-session-launch="verification"
             disabled={isStarting || isLocked}
             onClick={() => {
-              onLaunchIntent(resolvedTarget, { verification: true });
+              onLaunchIntent(resolvedTarget, {
+                verification: true,
+                minutes: clampPracticeDuration(practiceLimits, durationMinutes),
+              });
             }}
             className="inline-flex h-11 items-center justify-center gap-2 rounded-none border-2 border-white/25 bg-transparent px-3 text-left text-white transition hover:border-white/45 hover:bg-white/5 disabled:opacity-40"
           >
@@ -403,8 +364,10 @@ export function BlockDetailCard({
         ) : null}
       </div>
 
-      {/* Duration only for Drill (TAP) launches */}
-      {(style === "drill" && drillFamilyAllowed) || style === "scout" ? (
+      {/* Duration for Calibrate, Verify, and Drill. Learn has no clock. */}
+      {(style === "drill" && drillFamilyAllowed) ||
+      style === "scout" ||
+      Boolean(onLaunchIntent) ? (
         <div className="mt-3" data-launch-duration-picker>
           <p className="mb-1.5 text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
             Session length
@@ -437,18 +400,6 @@ export function BlockDetailCard({
             })}
           </div>
         </div>
-      ) : null}
-
-      {onSeePreviousSessions ? (
-        <button
-          type="button"
-          data-see-previous-sessions
-          disabled={isStarting || isLocked}
-          onClick={() => onSeePreviousSessions()}
-          className="mt-3 w-full rounded-none border border-white/25 bg-transparent px-3 py-2.5 text-xs font-semibold tracking-tight text-white transition hover:border-white/45 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          {seePreviousSessionsLabel || "See Previous Sessions"}
-        </button>
       ) : null}
 
       <button

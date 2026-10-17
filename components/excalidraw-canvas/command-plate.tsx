@@ -12,9 +12,9 @@ export const ILE_CANVAS_COMMAND_BUTTON_CLASS =
 export const ILE_CANVAS_COMMAND_RAIL_CLASS =
   "pointer-events-auto relative flex min-h-9 w-full min-w-0 flex-row items-center justify-start gap-1.5 whitespace-nowrap rounded-none border border-white/45 bg-black px-1.5 py-2 text-left font-mono text-[11px] leading-tight text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] hover:border-white hover:bg-neutral-950 disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-950 disabled:text-neutral-600 disabled:opacity-100 disabled:shadow-none disabled:hover:border-neutral-800 disabled:hover:bg-neutral-950 disabled:hover:text-neutral-600";
 
-/** Sidebar Commands tab: the same plate as the dock, with a fixed tile height. */
+/** Sidebar Commands tab: fill the row, then shrink type and marks with the tile. */
 export const ILE_CANVAS_COMMAND_SIDEBAR_CLASS =
-  "pointer-events-auto relative flex min-h-[4.75rem] w-full flex-col min-w-0 items-center justify-center gap-1 whitespace-normal rounded-none border border-white/45 bg-black px-1.5 pb-1.5 pt-3 text-center font-mono text-[11px] leading-tight text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] hover:border-white hover:bg-neutral-950 disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-950 disabled:text-neutral-600 disabled:opacity-100 disabled:shadow-none disabled:hover:border-neutral-800 disabled:hover:bg-neutral-950 disabled:hover:text-neutral-600";
+  "pointer-events-auto relative flex h-full min-h-0 w-full flex-col min-w-0 items-center justify-center gap-0.5 overflow-hidden whitespace-normal rounded-none border border-white/45 bg-black px-1 py-1 pt-2.5 text-center font-mono text-[clamp(8px,12cqh,11px)] leading-tight text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] hover:border-white hover:bg-neutral-950 disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-950 disabled:text-neutral-600 disabled:opacity-100 disabled:shadow-none disabled:hover:border-neutral-800 disabled:hover:bg-neutral-950 disabled:hover:text-neutral-600 [container-type:size]";
 
 export function ileWorkCanvasCommandIndex(id: IleWorkCanvasCommandId): string {
   const at = ILE_WORK_CANVAS_COMMANDS.findIndex((command) => command.id === id);

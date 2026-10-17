@@ -549,14 +549,19 @@ describe("structural: right pane not map modal", () => {
     expect(pane).toContain('drawerId="local"');
     expect(pane).toContain('drawerId="simulation"');
     expect(pane).toContain('drawerId="edit"');
-    expect(pane).toContain("WORKSPACE_EDITOR_DANGER_DRAWER_ID");
-    expect(pane).toContain("WorkspaceBlockDangerPanel");
+    expect(pane).not.toContain("WORKSPACE_EDITOR_DANGER_DRAWER_ID");
+    expect(pane).not.toContain("WorkspaceBlockDangerPanel");
     expect(pane).toContain('title="Local context"');
     expect(pane).toContain('title="Simulate Insights"');
     expect(pane).toContain("WorkspaceBlockSimulationPanel");
-    // Order: simulation → edit → … → local → Danger zone last
+    // Order: simulation → edit → … → local; Danger zone last in the combined column
     expect(pane).toMatch(
-      /drawerId="simulation"[\s\S]*?drawerId="edit"[\s\S]*?drawerId="local"[\s\S]*?WORKSPACE_EDITOR_DANGER_DRAWER_ID/,
+      /drawerId="simulation"[\s\S]*?drawerId="edit"[\s\S]*?drawerId="local"/,
+    );
+    const drawers = read("components/workspace-view/workspace-right-drawers.tsx");
+    expect(drawers).toContain("WorkspaceBlockDangerDrawer");
+    expect(drawers.lastIndexOf("WorkspaceLearnerBlockPane")).toBeLessThan(
+      drawers.lastIndexOf("WorkspaceBlockDangerDrawer"),
     );
     // Simulation collapsed; local opens when materials exist
     expect(pane).toMatch(
@@ -581,7 +586,8 @@ describe("structural: right pane not map modal", () => {
       [
         "detailDrawer=" + pane.includes('drawerId="detail"'),
         "editDrawer=" + pane.includes('drawerId="edit"'),
-        "dangerDrawer=" + pane.includes("WORKSPACE_EDITOR_DANGER_DRAWER_ID"),
+        "dangerDrawer=" +
+          drawers.includes("WorkspaceBlockDangerDrawer"),
         "localDrawer=" + pane.includes('drawerId="local"'),
         "simulationDrawer=" + pane.includes('drawerId="simulation"'),
         "simulationCollapsedDefault=" +

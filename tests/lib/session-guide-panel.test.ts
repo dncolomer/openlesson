@@ -7,7 +7,11 @@ import { SessionGuidePanel } from "@/components/session-view/session-guide-panel
 import { ILE_WORK_CANVAS_COMMANDS } from "@/lib/ile-work-canvas-commands";
 import { SESSION_BRIEFING_INTRO, SESSION_INSTRUCTIONS } from "@/lib/session-instructions";
 import { ileCanvasCommandDraft } from "@/lib/ile-work-canvas-commands";
-import { sessionHarnessNextLine, SESSION_HARNESS_FALLBACK } from "@/lib/session-harness";
+import {
+  sessionHarnessFocusLine,
+  sessionHarnessNextLine,
+  SESSION_HARNESS_FALLBACK,
+} from "@/lib/session-harness";
 
 const ROOT = join(__dirname, "../..");
 
@@ -87,8 +91,19 @@ describe("session guide panel", () => {
     expect(source).toContain("grid-cols-3");
     expect(source).toContain("grid-cols-2");
     expect(source).toContain("text-center");
+    expect(source).not.toContain("Commands use the marks selected on the canvas.");
     expect(source).toContain("CommandPlate");
+    expect(source).toContain("auto-rows-fr");
+    expect(source).toContain("grid-rows-3");
+    expect(source).toContain('data-session-commands className="flex min-h-0 flex-1 flex-col overflow-hidden"');
+    expect(source).not.toMatch(/data-session-commands[^>]*overflow-y-auto/);
     expect(source).not.toMatch(/text-(red|green|amber|emerald|yellow|blue|orange|rose|lime)-/);
+
+    const plates = readFileSync(join(ROOT, "components/excalidraw-canvas/command-plate.tsx"), "utf8");
+    expect(plates).toContain("ILE_CANVAS_COMMAND_SIDEBAR_CLASS");
+    expect(plates).toContain("h-full min-h-0");
+    expect(plates).toContain("[container-type:size]");
+    expect(plates).not.toContain("min-h-[4.75rem]");
 
     const provider = readFileSync(join(ROOT, "components/session-view/session-policy-context.tsx"), "utf8");
     expect(provider).toContain("<SessionCommandBridgeProvider>{children}</SessionCommandBridgeProvider>");
@@ -130,5 +145,31 @@ describe("session guide panel", () => {
     }
     expect(SESSION_HARNESS_FALLBACK.calibrate).toMatch(/tap every question/i);
     expect(SESSION_HARNESS_FALLBACK.calibrate).not.toMatch(/hidden state/i);
+
+    const hint = "Stay with the ray and mark the end that is still open.";
+    expect(
+      sessionHarnessFocusLine({
+        guide: "learn",
+        suggestion: hint,
+        inferenceLabel: "Forage",
+      }),
+    ).toBe(hint);
+    expect(
+      sessionHarnessFocusLine({
+        guide: "calibrate",
+        suggestion: hint,
+        inferenceLabel: hint,
+      }),
+    ).toBe(SESSION_HARNESS_FALLBACK.calibrate);
+    expect(
+      sessionHarnessFocusLine({
+        guide: "verification",
+        suggestion: hint,
+        inferenceLabel: hint,
+      }),
+    ).toBeNull();
+    const harness = readFileSync(join(ROOT, "components/session-view/session-harness-panel.tsx"), "utf8");
+    expect(harness).toContain("sessionHarnessFocusLine");
+    expect(harness).not.toContain("SESSION_HARNESS_FALLBACK[guide]");
   });
 });

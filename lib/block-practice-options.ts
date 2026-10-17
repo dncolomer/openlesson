@@ -195,7 +195,7 @@ export function withExplorePracticeEnabled(
 
 /**
  * Practice options on purchased AYCL clones: catalog may have turned Explore
- * off, but both play-only and Play+Build clones always offer it.
+ * off, but purchased clones always offer it.
  */
 export function parseAyclClonePracticeOptions(raw: unknown): BlockPracticeOptions {
   return withExplorePracticeEnabled(parseBlockPracticeOptions(raw));
@@ -229,15 +229,13 @@ export function serializeBlockPracticeOptions(
   };
 }
 
-/** Whether a learning style is offered. */
+/** Whether a learning style is offered. Calibrate and Learn are always on. */
 export function blockAllowsPracticeStyle(
-  opts: BlockPracticeOptions | null | undefined,
+  _opts: BlockPracticeOptions | null | undefined,
   style: LearningStyle,
 ): boolean {
-  const n = normalizeBlockPracticeOptions(opts ?? null);
   if (style === "drill") return false;
-  if (style === "scout") return n.allowScout;
-  return n.allowExplore;
+  return style === "scout" || style === "explore";
 }
 
 /** Whether Dialog or Solo modality is offered. */
@@ -293,11 +291,7 @@ export function resolveDefaultPracticeLaunchUi(
   opts: BlockPracticeOptions | null | undefined,
 ): { style: LearningStyle; solo: boolean; timebox: boolean; durationMinutes: number } {
   const n = normalizeBlockPracticeOptions(opts ?? null);
-  const style: LearningStyle = n.allowExplore
-    ? "explore"
-    : n.allowScout
-      ? "scout"
-      : "explore";
+  const style: LearningStyle = "explore";
   const durations = blockAllowedDurations(n);
   const durationMinutes =
     durations.includes(15) ? 15 : durations[0] ?? 15;
@@ -326,12 +320,10 @@ export function clampPracticeDuration(
  * Enabled new-launch combos (Prepare / Learn / Drill — always With AI).
  */
 export function enabledPracticeLaunchCombos(
-  opts: BlockPracticeOptions | null | undefined,
+  _opts?: BlockPracticeOptions | null,
 ): ProductLaunchTarget["id"][] {
-  const n = normalizeBlockPracticeOptions(opts ?? null);
   const out: ProductLaunchTarget["id"][] = [];
   for (const style of ["scout", "explore"] as const) {
-    if (!blockAllowsPracticeStyle(n, style)) continue;
     out.push(resolveLaunchFromStyleAndModality(style, false).id);
   }
   return out;
@@ -342,33 +334,14 @@ export function enabledPracticeLaunchCombos(
  * New launches badge Prepare / Learn / Drill — no With AI vs Solo icons.
  */
 export function practiceOptionsIconKeys(
-  opts: BlockPracticeOptions | null | undefined,
+  _opts?: BlockPracticeOptions | null,
 ): Array<"explore" | "drill" | "scout" | "dialog" | "solo" | "open" | "timed"> {
-  const n = normalizeBlockPracticeOptions(opts ?? null);
-  const keys: Array<"explore" | "drill" | "scout" | "dialog" | "solo" | "open" | "timed"> = [];
-  if (n.allowScout) keys.push("scout");
-  if (n.allowExplore) keys.push("explore");
-  return keys;
+  return ["scout", "explore"];
 }
 
 /** True when options differ from full default surface (for map badge density). */
 export function practiceOptionsIsRestricted(
-  opts: BlockPracticeOptions | null | undefined,
+  _opts?: BlockPracticeOptions | null,
 ): boolean {
-  const n = normalizeBlockPracticeOptions(opts ?? null);
-  const d = defaultBlockPracticeOptions();
-  if (n.allowExplore !== d.allowExplore) return true;
-  if (n.allowDrill !== d.allowDrill) return true;
-  if (n.allowScout !== d.allowScout) return true;
-  if (n.allowDrill) {
-    if (n.allowedDurationsMinutes.length !== d.allowedDurationsMinutes.length) {
-      return true;
-    }
-    for (let i = 0; i < n.allowedDurationsMinutes.length; i++) {
-      if (n.allowedDurationsMinutes[i] !== d.allowedDurationsMinutes[i]) {
-        return true;
-      }
-    }
-  }
   return false;
 }

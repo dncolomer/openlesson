@@ -18,10 +18,7 @@ import {
 import { UnusableGroundDrawer } from "@/components/UnusableGroundDrawer";
 import { canPlaceOnMapGround } from "@/lib/map-ground-rules";
 import { WorkspaceSuggestExternalContext } from "@/components/WorkspaceSuggestExternalContext";
-import {
-  WorkspacePromptContextAlternatives,
-  type PromptContextMode,
-} from "@/components/WorkspacePromptContextAlternatives";
+import { WorkspacePromptContextAlternatives } from "@/components/WorkspacePromptContextAlternatives";
 /**
  * Right-column multi-empty create form (generate-in-shape).
  * Opens automatically when 2+ placeable empties are multi-selected — no toolbar button.
@@ -61,7 +58,7 @@ export function WorkspaceGenerateShapePane({
   };
 }) {
   const [prompt, setPrompt] = useState("");
-  const [contextMode, setContextMode] = useState<PromptContextMode>("adhoc");
+
   const [addError, setAddError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [contextOptions, setContextOptions] = useState<ShapeContextSourceOption[]>([]);
@@ -188,15 +185,8 @@ export function WorkspaceGenerateShapePane({
 
         <div data-generate-shape-context-alternatives data-generative-context-alternatives>
           <WorkspacePromptContextAlternatives
-            workspaceId={workspaceId}
-            ayclToken={ayclToken}
-            draftPrompt={prompt}
-            surface="generate shape"
-            mode={contextMode}
-            onModeChange={setContextMode}
             adhocValue={prompt}
             onAdhocChange={setPrompt}
-            onAccept={setPrompt}
             disabled={busy || submitting}
             adhocPlaceholder={labels.addPlaceholder}
             adhocLabel="Shape prompt"

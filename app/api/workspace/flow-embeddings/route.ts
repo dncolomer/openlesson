@@ -4,7 +4,9 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
-import { persistCompletedFlowEmbedding } from "@/lib/flow-embedding-store";
+import { persistCompletedFlowEmbedding, listFlowEmbeddings } from "@/lib/flow-embedding-store";
+import { requireProductWorkspaceEvalAuth } from "@/lib/product-workspace-auth";
+import { denyWorkspaceFeatureById } from "@/lib/workspace-feature-gate";
 import { entryQueryParamsFromBody } from "@/lib/guest-link-access";
 import { parseLearningModelSize } from "@/lib/learning-model";
 import { ileTokenFromPowBody, requireSessionWorkspaceProofOfWorkAccess } from "@/lib/pow-api/workspace-session-access";
@@ -13,6 +15,35 @@ import { resolveTapSessionAccess } from "@/lib/tap-score-session-auth";
 import type { FlowKind, FlowPowRow } from "@/lib/flow-embedding";
 
 export const runtime = "nodejs";
+
+export async function GET(req: NextRequest) {
+  try {
+    const url = new URL(req.url);
+    const workspaceId = (url.searchParams.get("workspaceId") || "").trim();
+    if (!workspaceId) return jsonError(400, "workspaceId is required");
+    const auth = await requireProductWorkspaceEvalAuth(
+      workspaceId,
+      url.searchParams.get("ayclToken") || url.searchParams.get("aycl_token"),
+    );
+    if (!auth.ok) return auth.response;
+    const denied = await denyWorkspaceFeatureById(workspaceId, "knowledge");
+    if (denied) return denied;
+    const rows = await listFlowEmbeddings({
+      workspaceId,
+      flowKind: url.searchParams.get("flowKind") || url.searchParams.get("flow_kind"),
+      flowId: url.searchParams.get("flowId") || url.searchParams.get("flow_id"),
+    });
+    return NextResponse.json({
+      embedding_model_id: "flowcfg-v1-d96",
+      flow_embeddings: rows,
+    });
+  } catch (error) {
+    return jsonError(
+      500,
+      error instanceof Error ? error.message : "Could not list flow embeddings",
+    );
+  }
+}
 
 const FLOW_KINDS = new Set<FlowKind>(["calibrate", "learn", "verify"]);
 

@@ -41,15 +41,15 @@ function writeEvidence(name: string, body: string) {
 }
 
 describe("aycl dual-tier pure eligibility", () => {
-  it("learner canUpgrade + no author; full canAuthor + no upgrade", () => {
+  it("both stored demo tiers get the one workspace mode", () => {
     const learnerCaps = expectedAyclDemoCapabilities("learner");
     const fullCaps = expectedAyclDemoCapabilities("full");
 
     expect(learnerCaps.tier).toBe("learner");
-    expect(learnerCaps.canAuthor).toBe(false);
-    expect(learnerCaps.canGrow).toBe(false);
-    expect(learnerCaps.canUpgrade).toBe(true);
-    expect(learnerCaps.allowCreatorModeToggle).toBe(false);
+    expect(learnerCaps.canAuthor).toBe(true);
+    expect(learnerCaps.canGrow).toBe(true);
+    expect(learnerCaps.canUpgrade).toBe(false);
+    expect(learnerCaps.allowCreatorModeToggle).toBe(true);
     expect(learnerCaps.allowExplore).toBe(true);
 
     expect(fullCaps.tier).toBe("full");
@@ -59,7 +59,7 @@ describe("aycl dual-tier pure eligibility", () => {
     expect(fullCaps.allowExplore).toBe(true);
 
     // Drive shipped entry points directly
-    expect(resolveAyclCapabilities("learner").canUpgrade).toBe(true);
+    expect(resolveAyclCapabilities("learner").canUpgrade).toBe(false);
     expect(resolveAyclCapabilities("full").canAuthor).toBe(true);
 
     expect(

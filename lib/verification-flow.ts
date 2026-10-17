@@ -31,7 +31,7 @@ export type VerificationFlow = {
   workspaceId: string;
   topic: string;
   questions: VerificationQuestion[];
-  /** Countdown chosen when the flow is created, in minutes. */
+  /** Stored default; the run clock is chosen on the session start screen. */
   durationMinutes: number;
   /** 4, 8, or 16 actions on the unsys model. */
   actionCatalog: LearningModelSize;

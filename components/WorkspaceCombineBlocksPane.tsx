@@ -38,10 +38,7 @@ import {
   setMultiBlockDagEdge,
   type MultiBlockDagDraft,
 } from "@/lib/multi-block-dag";
-import {
-  WorkspacePromptContextAlternatives,
-  type PromptContextMode,
-} from "@/components/WorkspacePromptContextAlternatives";
+import { WorkspacePromptContextAlternatives } from "@/components/WorkspacePromptContextAlternatives";
 import { WorkspaceMultiBlockSimulationPanel } from "@/components/WorkspaceMultiBlockSimulationPanel";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import { normalizeSuggestDagResponse } from "@/lib/suggest-dag";
@@ -164,8 +161,6 @@ export function WorkspaceCombineBlocksPane({
   const [bridgeWidth, setBridgeWidth] = useState(BRIDGE_WIDTH_MIN);
   const [bridgeDensity, setBridgeDensity] = useState(BRIDGE_DENSITY_MAX);
   const [bridgePrompt, setBridgePrompt] = useState("");
-  const [bridgeContextMode, setBridgeContextMode] =
-    useState<PromptContextMode>("adhoc");
   const [bridgeSubmitting, setBridgeSubmitting] = useState(false);
   const [bridgeError, setBridgeError] = useState<string | null>(null);
   const [dagDraft, setDagDraft] = useState<MultiBlockDagDraft>(() =>
@@ -776,15 +771,8 @@ export function WorkspaceCombineBlocksPane({
 
           <div data-bridge-context-alternatives data-generative-context-alternatives>
             <WorkspacePromptContextAlternatives
-              workspaceId={workspaceId}
-              ayclToken={ayclToken}
-              draftPrompt={bridgePrompt}
-              surface="bridge blocks"
-              mode={bridgeContextMode}
-              onModeChange={setBridgeContextMode}
               adhocValue={bridgePrompt}
               onAdhocChange={setBridgePrompt}
-              onAccept={setBridgePrompt}
               disabled={busy || bridgeSubmitting}
               adhocPlaceholder="Optional guidance for the bridge (e.g. emphasize causality, shared vocabulary, or a transition exercise)…"
               adhocLabel="Bridging prompt"

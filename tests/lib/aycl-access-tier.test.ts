@@ -43,16 +43,16 @@ describe("AYCL dual access tiers (pure)", () => {
     expect(AYCL_FULL_PRICE_LABEL).toBe("$19.99");
   });
 
-  it("learner capabilities: no author/grow; can upgrade; force practice mode", () => {
+  it("learner capabilities match the one workspace mode", () => {
     const caps = resolveAyclCapabilities("learner");
     expect(caps.tier).toBe("learner");
-    expect(caps.canAuthor).toBe(false);
-    expect(caps.canGrow).toBe(false);
-    expect(caps.canUpgrade).toBe(true);
-    expect(caps.allowCreatorModeToggle).toBe(false);
+    expect(caps.canAuthor).toBe(true);
+    expect(caps.canGrow).toBe(true);
+    expect(caps.canUpgrade).toBe(false);
+    expect(caps.allowCreatorModeToggle).toBe(true);
     expect(caps.allowExplore).toBe(true);
     expect(caps.defaultInteractionMode).toBe("learner");
-    expect(ayclCanUpgradeFromTier("learner")).toBe(true);
+    expect(ayclCanUpgradeFromTier("learner")).toBe(false);
   });
 
   it("full capabilities: author/grow; no upgrade CTA", () => {
@@ -68,8 +68,8 @@ describe("AYCL dual access tiers (pure)", () => {
   });
 
   it("customer-facing labels avoid rent/buy metaphors", () => {
-    expect(ayclOfferLabel("learner")).toBe("play mode only");
-    expect(ayclOfferLabel("full")).toBe("Play + Build");
+    expect(ayclOfferLabel("learner")).toBe("All You Can Learn");
+    expect(ayclOfferLabel("full")).toBe("All You Can Learn");
     const joined = [
       ayclOfferLabel("learner"),
       ayclOfferLabel("full"),
@@ -147,17 +147,19 @@ describe("AYCL dual-tier wiring (structural)", () => {
     expect(marketplace).toContain('"full"');
   });
 
-  it("catalog page has dual CTAs without rent/buy wording", () => {
+  it("catalog page has one checkout CTA without rent/buy wording", () => {
     const src = fs.readFileSync(
       path.join(REPO_ROOT, "app/all-you-can-learn/page.tsx"),
       "utf8",
     );
     expect(src).toContain("ayclAccessTier");
-    expect(src).toContain('data-aycl-dual-offers');
-    expect(src).toContain('data-aycl-checkout-learner');
+    expect(src).toContain('data-aycl-offer');
+    expect(src).not.toContain('data-aycl-dual-offers');
+    expect(src).not.toContain('data-aycl-checkout-learner');
     expect(src).toContain('data-aycl-checkout-full');
-    expect(src).toMatch(/play mode only|ayclOfferLabel|ayclOfferCheckoutCta/);
-    expect(src).toMatch(/Play \+ Build|ayclOfferCheckoutCta|ayclOfferLabel/);
+    expect(src).toMatch(/ayclOfferLabel|ayclOfferCheckoutCta/);
+    expect(src).not.toMatch(/Play \+ Build/);
+    expect(src).not.toMatch(/play mode only/);
     expect(src.toLowerCase()).not.toMatch(/\brent\b/);
     expect(src.toLowerCase()).not.toMatch(/\bbuy a movie\b/);
   });

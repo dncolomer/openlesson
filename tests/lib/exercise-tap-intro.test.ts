@@ -26,6 +26,8 @@ describe("Exercise TAP briefing uses shared intro", () => {
     expect(client).toContain("TapBriefingConfig");
     expect(client).toContain("data-exercise-tap-intro");
     expect(client).toContain("data-exercise-briefing");
+    expect(client).toContain("SessionStartBackButton");
+    expect(client).toContain("onBackToWorkspace");
     expect(client).toContain("/api/workspace-tap-score/topics");
     // Not the old single-panel "Start exercise" blurb as the only intro.
     expect(client).not.toContain("Start exercise");

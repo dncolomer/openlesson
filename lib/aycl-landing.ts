@@ -1,6 +1,6 @@
 /**
  * Pure helpers for public All-You-Can-Learn per-workspace landing pages:
- * catalog summary, view-only map nodes, buy CTA inputs, Explore/Learn samples.
+ * catalog summary, view-only map nodes, checkout CTA inputs, Explore/Learn samples.
  */
 
 import {
@@ -79,7 +79,7 @@ export type AyclLandingSummary = {
   authorAvatarUrl: string | null;
   blockCount: number;
   offers: { learner: AyclLandingOffer; full: AyclLandingOffer };
-  /** View-only map props for BlockSkillGrid (Play-mode fog, no authoring). */
+  /** View-only map props for BlockSkillGrid (preview fog, no authoring). */
   map: {
     viewOnly: true;
     canEdit: false;
@@ -245,16 +245,15 @@ export type AyclLandingOfferDisplay = {
 };
 
 /**
- * Original paid price vs current price for landing CTAs.
- * Only the complimentary link's access type (play/learner vs full) is Free;
- * the unmatched offer stays at its paid listing price.
+ * Original paid price vs current price for the shopper CTA.
+ * A complimentary token makes the one workspace offer Free.
  */
 export function ayclLandingOffersForComplimentary(
   offers: AyclLandingSummary["offers"],
   complimentaryTier: AyclAccessTier | null | undefined,
 ): { learner: AyclLandingOfferDisplay; full: AyclLandingOfferDisplay } {
+  const isComplimentary = Boolean(complimentaryTier);
   const match = (offer: AyclLandingOffer): AyclLandingOfferDisplay => {
-    const isComplimentary = complimentaryTier === offer.tier;
     return {
       tier: offer.tier,
       label: offer.label,
@@ -275,9 +274,9 @@ export function ayclLandingOffersForComplimentary(
 
 export function ayclLandingCtaKind(
   complimentaryTier: AyclAccessTier | null | undefined,
-  ctaTier: AyclAccessTier,
+  _ctaTier?: AyclAccessTier,
 ): "complimentary" | "paid" {
-  return complimentaryTier === ctaTier ? "complimentary" : "paid";
+  return complimentaryTier ? "complimentary" : "paid";
 }
 
 /** Stripe checkout body for AYCL purchase from the landing CTA. */

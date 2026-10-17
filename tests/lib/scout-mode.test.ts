@@ -145,7 +145,7 @@ describe("author Scout enable/disable + at least one of Work/Drill/Scout", () =>
   it("normalizes Scout independently and refuses an empty mode set", () => {
     const def = normalizeBlockPracticeOptions(null);
     expect(def.allowExplore).toBe(true);
-    expect(def.allowDrill).toBe(true);
+    expect(def.allowDrill).toBe(false);
     expect(def.allowScout).toBe(true);
 
     const scoutOnly = normalizeBlockPracticeOptions({
@@ -157,10 +157,10 @@ describe("author Scout enable/disable + at least one of Work/Drill/Scout", () =>
     expect(scoutOnly.allowDrill).toBe(false);
     expect(scoutOnly.allowScout).toBe(true);
     expect(blockAllowsPracticeStyle(scoutOnly, "scout")).toBe(true);
-    expect(blockAllowsPracticeStyle(scoutOnly, "explore")).toBe(false);
-    expect(enabledPracticeLaunchCombos(scoutOnly)).toEqual(["scout_dialog"]);
-    expect(practiceOptionsIconKeys(scoutOnly)).toEqual(["scout"]);
-    expect(resolveDefaultPracticeLaunchUi(scoutOnly).style).toBe("scout");
+    expect(blockAllowsPracticeStyle(scoutOnly, "explore")).toBe(true);
+    expect(enabledPracticeLaunchCombos(scoutOnly)).toEqual(["scout_dialog", "explore_dialog"]);
+    expect(practiceOptionsIconKeys(scoutOnly)).toEqual(["scout", "explore"]);
+    expect(resolveDefaultPracticeLaunchUi(scoutOnly).style).toBe("explore");
 
     const allOff = normalizeBlockPracticeOptions({
       allow_explore: false,
@@ -186,7 +186,7 @@ describe("Learn (not Explore/Work) is the TAP Learning block-launch label", () =
     expect(productIntentClusterLabel(resolveProductIntent("explore"))).toBe("Learn");
     expect(productIntentClusterLabel(resolveProductIntent("scout"))).toBe("Calibrate");
     expect(WORKSPACE_CIRCULAR_MENU_ACTIONS.map((a) => a.label)).toEqual(
-      expect.arrayContaining(["Calibrate", "Learn", "Drill"]),
+      expect.arrayContaining(["Calibrate", "Learn", "Verify"]),
     );
     expect(WORKSPACE_CIRCULAR_MENU_ACTIONS[0]?.id).toBe("start_prepare");
 
@@ -197,10 +197,10 @@ describe("Learn (not Explore/Work) is the TAP Learning block-launch label", () =
     expect(card).toContain("data-practice-allow-scout");
     const scoutIdx = card.indexOf('id: "scout" as const');
     const learnIdx = card.indexOf('id: "explore" as const');
-    const drillIdx = card.indexOf('id: "drill" as const');
+    const verifyIdx = card.indexOf('data-style-option="verify"');
     expect(scoutIdx).toBeGreaterThan(0);
     expect(learnIdx).toBeGreaterThan(scoutIdx);
-    expect(drillIdx).toBeGreaterThan(learnIdx);
+    expect(verifyIdx).toBeGreaterThan(learnIdx);
 
     const menu = read("lib/block-circular-menu.ts");
     expect(menu).toContain('id: "start_session", label: "Learn"');
@@ -412,7 +412,7 @@ describe("thank-you CTA gating by allowed modes", () => {
         allowScout: true,
       }),
     });
-    expect(both).toEqual({ restart: true, workspace: true, work: true, drill: true });
+    expect(both).toEqual({ restart: true, workspace: true, work: true, drill: false });
 
     const scoutOnly = scoutThankYouActions({
       practiceOptions: normalizeBlockPracticeOptions({
@@ -551,13 +551,12 @@ describe("structural: Scout TAP shell, no think-aloud, Build toggle", () => {
     expect(client).toContain("soundingProofUploadItem");
     expect(client).not.toContain("connectScoutQuestionToCanvas");
 
-    expect(edit).toContain("data-block-edit-allow-scout");
-    expect(edit).toContain(">Calibrate<");
-    expect(edit).toContain(">Learn<");
-    const prepareIdx = edit.indexOf(">Calibrate<");
-    const learnIdx = edit.indexOf(">Learn<");
-    expect(prepareIdx).toBeGreaterThan(0);
-    expect(learnIdx).toBeGreaterThan(prepareIdx);
+    expect(edit).not.toContain("data-block-edit-allow-scout");
+    expect(edit).not.toContain("data-block-edit-practice-options");
+    const card = read("components/BlockDetailCard.tsx");
+    expect(card).toContain("PRODUCT_INTENT_LABELS.styleScout");
+    expect(card).toContain("PRODUCT_INTENT_LABELS.styleExplore");
+    expect(card).toContain('data-style-option="verify"');
 
     expect(en).toMatch(/"title": "Calibrate"/);
     expect(en).toMatch(/tap every question/i);

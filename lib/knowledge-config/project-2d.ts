@@ -10,9 +10,10 @@
  * Distance-based methods operate on L2 distances in the high-D input space.
  */
 
+import { FLOW_EMBEDDING_DIM, FLOW_EMBEDDING_MODEL_ID } from "@/lib/flow-embedding";
 import { projectKnowledgeConfigTo2D } from "./encoder";
-import { hashUnit, l2Distance } from "./math";
-import { KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID } from "./types";
+import { hashUnit, l2Distance, projectWithMatrix, seededRandomProjection } from "./math";
+import { KNOWLEDGE_CONFIG_DIM, KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID } from "./types";
 
 export type ProjectionAlgorithmId = "random" | "pca" | "classical_mds" | "smacof";
 
@@ -203,15 +204,39 @@ export function jacobiEigendecomposition(
 // Algorithms
 // ---------------------------------------------------------------------------
 
-function projectRandom(vectors: number[][]): Point2D[] {
-  return vectors.map((v) => {
-    if (!v.length || !v.every((x) => Number.isFinite(x))) return { x: 0, y: 0 };
+const RANDOM_UI2D_BY_DIM = new Map<number, number[][]>();
+
+function randomUi2dMatrix(dim: number): number[][] {
+  const cached = RANDOM_UI2D_BY_DIM.get(dim);
+  if (cached) return cached;
+  const seed =
+    dim === FLOW_EMBEDDING_DIM
+      ? `${FLOW_EMBEDDING_MODEL_ID}:ui2d`
+      : `openlesson:ui2d:d${dim}`;
+  const matrix = seededRandomProjection(2, dim, seed);
+  RANDOM_UI2D_BY_DIM.set(dim, matrix);
+  return matrix;
+}
+
+function projectRandomTo2D(vector: number[]): Point2D {
+  if (!vector.length || !vector.every((x) => Number.isFinite(x))) return { x: 0, y: 0 };
+  if (vector.length === KNOWLEDGE_CONFIG_DIM) {
     try {
-      return projectKnowledgeConfigTo2D(v);
+      return projectKnowledgeConfigTo2D(vector);
     } catch {
       return { x: 0, y: 0 };
     }
-  });
+  }
+  try {
+    const projected = projectWithMatrix(vector, randomUi2dMatrix(vector.length));
+    return { x: projected[0] ?? 0, y: projected[1] ?? 0 };
+  } catch {
+    return { x: 0, y: 0 };
+  }
+}
+
+function projectRandom(vectors: number[][]): Point2D[] {
+  return vectors.map(projectRandomTo2D);
 }
 
 /**
@@ -484,11 +509,15 @@ export function projectRandom3D(vectors: number[][]): Point3D[] {
   return vectors.map((v) => {
     if (!v.length || !v.every((x) => Number.isFinite(x))) return finitePoint3D(0, 0, 0);
     try {
-      const xy = projectKnowledgeConfigTo2D(v);
+      const xy = projectRandomTo2D(v);
       // Third axis: independent fixed Rademacher combo (not residual of x/y).
+      const zSeed =
+        v.length === FLOW_EMBEDDING_DIM
+          ? FLOW_EMBEDDING_MODEL_ID
+          : KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID;
       let z = 0;
       for (let i = 0; i < v.length; i++) {
-        const u = hashUnit(`${KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID}:ui3d:z:${i}`);
+        const u = hashUnit(`${zSeed}:ui3d:z:${i}`);
         z += v[i] * ((u < 0.5 ? -1 : 1) / Math.SQRT2);
       }
       return finitePoint3D(xy.x, xy.y, z);

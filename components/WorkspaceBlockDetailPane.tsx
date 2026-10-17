@@ -7,7 +7,6 @@ import {
   resolveDetailDrawerDefaultOpenId,
 } from "@/components/WorkspaceRightPaneDrawer";
 import { WorkspaceBlockEditPanel } from "@/components/WorkspaceBlockEditPanel";
-import { WorkspaceBlockDangerPanel } from "@/components/WorkspaceBlockDangerPanel";
 import { WorkspaceBlockSimulationPanel } from "@/components/WorkspaceBlockSimulationPanel";
 import { WorkspaceSplitBlockPane } from "@/components/WorkspaceSplitBlockPane";
 import { WorkspaceCloneBlockPane } from "@/components/WorkspaceCloneBlockPane";
@@ -22,8 +21,6 @@ import {
 } from "@/components/WorkspaceBlockEffectsPanels";
 import { BlockGoalsPanel } from "@/components/BlockGoalsPanel";
 import {
-  WORKSPACE_EDITOR_DANGER_DRAWER_ID,
-  WORKSPACE_EDITOR_DANGER_DRAWER_TITLE,
   blockOffersSplitDrawer,
   type SplitCandidateBlock,
 } from "@/lib/workspace-right-pane";
@@ -34,14 +31,14 @@ import {
 import type { ExpandSourceIdentity } from "@/lib/expand-block-from-source";
 import type { SkillGridNode } from "@/lib/block-skill-grid";
 import type { PlacedBlockRef } from "@/lib/skill-grid-ops";
-import type { BlockPracticeOptions } from "@/lib/block-practice-options";
 import type { BlockCreatorEffects } from "@/lib/block-creator-effects";
 
 /**
  * Block-detail right column (creator mode): peer top-level drawers —
- * Simulation, Split (multi-cell), Expand, Edit, Danger zone, Goals (post-creation),
+ * Simulation, Split (multi-cell), Expand, Edit, Goals (post-creation),
  * Dynamic / Generator effects, Local context.
- * Title/description live in Edit; delete lives in the Danger zone drawer.
+ * Title/description live in Edit; delete lives in the Danger zone drawer
+ * at the bottom of the combined authoring + practice column.
  * Clone is a drawer on this stack (arm, then click an empty cell).
  * Accordion: opening any drawer collapses the others.
  * No X close on drawers; dismiss via map selection clear.
@@ -55,7 +52,6 @@ export function WorkspaceBlockDetailPane({
   localContext,
   blockStatus,
   isStart,
-  practiceOptions = null,
   creatorEffects = null,
   lockUntilTitles,
   spanW,
@@ -69,7 +65,6 @@ export function WorkspaceBlockDetailPane({
   canEdit = false,
   editBusy = false,
   onUpdateBlock,
-  onDeleteBlock,
   onSaveCreatorEffects,
   onSplitBlock,
   cloneArmed = false,
@@ -98,7 +93,6 @@ export function WorkspaceBlockDetailPane({
   localContext?: BlockLocalContextInput | null;
   blockStatus?: string | null;
   isStart?: boolean | null;
-  practiceOptions?: BlockPracticeOptions | null;
   /** Combinable Dynamic / Generator effects. */
   creatorEffects?: BlockCreatorEffects | null;
   lockUntilTitles?: string[];
@@ -123,9 +117,7 @@ export function WorkspaceBlockDetailPane({
     title: string;
     description: string;
     isStart?: boolean;
-    practiceOptions: BlockPracticeOptions;
   }) => Promise<void> | void;
-  onDeleteBlock?: (blockId: string) => Promise<void> | void;
   onSaveCreatorEffects?: (
     input: WorkspaceBlockEffectsSaveInput,
   ) => Promise<void> | void;
@@ -333,7 +325,6 @@ export function WorkspaceBlockDetailPane({
               title={blockTitle}
               description={blockDescription}
               isStart={isStart}
-              practiceOptions={practiceOptions}
               canEdit={canEdit}
               busy={editBusy}
               onUpdate={onUpdateBlock}
@@ -421,31 +412,6 @@ export function WorkspaceBlockDetailPane({
       >
         <div data-block-detail-tab-content="local">{localContextPanel}</div>
       </WorkspaceRightPaneDrawer>
-
-      {canEdit ? (
-        <WorkspaceRightPaneDrawer
-          variant="section"
-          drawerId={WORKSPACE_EDITOR_DANGER_DRAWER_ID}
-          title={WORKSPACE_EDITOR_DANGER_DRAWER_TITLE}
-          defaultExpanded={false}
-          bodyClassName="space-y-2"
-          surfaceDataAttr="data-block-danger-drawer"
-          tone="danger"
-        >
-          <div
-            data-block-detail-tab-content="danger"
-            data-block-danger-drawer
-          >
-            <WorkspaceBlockDangerPanel
-              blockId={blockId}
-              title={blockTitle}
-              canEdit={canEdit}
-              busy={editBusy}
-              onDelete={onDeleteBlock}
-            />
-          </div>
-        </WorkspaceRightPaneDrawer>
-      ) : null}
     </WorkspaceRightPaneDrawerGroup>
   );
 }

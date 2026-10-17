@@ -80,24 +80,32 @@ describe("shipped editor drawer-id helpers", () => {
 describe("single and multi editor panes", () => {
   it("Edit no longer hosts Danger zone; both panes mount a peer Danger zone drawer with delete", () => {
     const detail = read("components/WorkspaceBlockDetailPane.tsx");
+    const host = read("components/workspace-view/workspace-right-drawers.tsx");
     const edit = read("components/WorkspaceBlockEditPanel.tsx");
     const danger = read("components/WorkspaceBlockDangerPanel.tsx");
     const combine = read("components/WorkspaceCombineBlocksPane.tsx");
 
-    expect(detail).toContain("WORKSPACE_EDITOR_DANGER_DRAWER_ID");
-    expect(detail).toContain("WORKSPACE_EDITOR_DANGER_DRAWER_TITLE");
-    expect(detail).toContain("WorkspaceBlockDangerPanel");
-    expect(detail).toContain("data-block-danger-drawer");
-    expect(detail).toContain('tone="danger"');
+    expect(detail).not.toContain("WORKSPACE_EDITOR_DANGER_DRAWER_ID");
+    expect(detail).not.toContain("WorkspaceBlockDangerPanel");
+    expect(detail).not.toContain("WorkspaceBlockDangerDrawer");
+    expect(detail).toContain('drawerId="edit"');
+    expect(detail).toContain("WorkspaceBlockEditPanel");
+    expect(host).toContain("WorkspaceBlockDangerDrawer");
+    expect(host).toContain("data-workspace-block-danger-host");
+    expect(host).toContain("onDelete={onDeleteBlock}");
+    expect(host.lastIndexOf("WorkspaceLearnerBlockPane")).toBeLessThan(
+      host.lastIndexOf("WorkspaceBlockDangerDrawer"),
+    );
+    expect(host.lastIndexOf("WorkspaceBlockDetailPane")).toBeLessThan(
+      host.lastIndexOf("WorkspaceBlockDangerDrawer"),
+    );
+    expect(danger).toContain("WORKSPACE_EDITOR_DANGER_DRAWER_ID");
+    expect(danger).toContain("WORKSPACE_EDITOR_DANGER_DRAWER_TITLE");
+    expect(danger).toContain("data-block-danger-drawer");
+    expect(danger).toContain('tone="danger"');
     const drawer = read("components/WorkspaceRightPaneDrawer.tsx");
     expect(drawer).toContain("text-red-300");
     expect(drawer).toContain("border-red-800/70");
-    const dangerAt = detail.lastIndexOf("WORKSPACE_EDITOR_DANGER_DRAWER_ID");
-    expect(dangerAt).toBeGreaterThan(detail.lastIndexOf('drawerId="local"'));
-    expect(dangerAt).toBeGreaterThan(detail.lastIndexOf('drawerId="edit"'));
-    expect(detail).toContain("onDelete={onDeleteBlock}");
-    expect(detail).toContain('drawerId="edit"');
-    expect(detail).toContain("WorkspaceBlockEditPanel");
 
     expect(edit).not.toContain("Danger zone");
     expect(edit).not.toContain("data-block-edit-delete");
@@ -122,7 +130,8 @@ describe("single and multi editor panes", () => {
     writeScratch(
       "workspace-danger-drawer-excerpts.txt",
       [
-        "WorkspaceBlockDetailPane: peer Danger zone drawer + WorkspaceBlockDangerPanel",
+        "WorkspaceBlockDetailPane: no Danger zone (hosted last in right drawers)",
+        "WorkspaceBlockDangerDrawer: last after learner pane",
         "WorkspaceBlockEditPanel: no Danger zone / no delete",
         "WorkspaceBlockDangerPanel: delete for one block",
         "WorkspaceCombineBlocksPane: Danger zone drawer + batch delete",

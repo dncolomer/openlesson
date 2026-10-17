@@ -1,6 +1,7 @@
 /**
- * Complimentary (free) AYCL special URLs: play vs full, usage and/or time expiration.
- * Pure helpers — no Stripe. Server redeem lives in lib/aycl.ts.
+ * Complimentary (free) AYCL special URLs: one workspace mode, usage and/or time expiration.
+ * Stored access_tier is kept for old rows. Pure helpers — no Stripe.
+ * Server redeem lives in lib/aycl.ts.
  */
 
 import {
@@ -34,7 +35,7 @@ export type ComplimentaryAyclLinkCreateFields = {
   expires_at: string | null;
 };
 
-/** Play special URL → learner capabilities; full → full capabilities. */
+/** Map create/redeem aliases onto stored access_tier. Capabilities are one mode. */
 export function complimentaryAyclAccessTierFromInput(
   value: unknown,
 ): AyclAccessTier | null {

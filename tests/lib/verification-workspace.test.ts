@@ -753,6 +753,24 @@ describe("verification workspace shell gates", () => {
       expect(source).toContain("VerificationFlowSubtabFilter");
       expect(source).toContain(`subtab="${subtab}"`);
     }
+    const modelsView = read("components/knowledge-panel/models-view.tsx");
+    expect(modelsView).toContain('embeddingSource: flowFilter?.enabled ? "flowcfg" : "knowledgecfg"');
+    expect(modelsView).toContain("Embeddings in");
+    expect(modelsView).toContain("FLOW_EMBEDDING_MODEL_ID");
+    expect(modelsView).toContain("data-embeddings-model");
+    expect(modelsView).toContain("data-embeddings-model-copy");
+    expect(modelsView).toContain("data-embeddings-regions-rail");
+    expect(modelsView).toContain("Trajectory in");
+    expect(modelsView).toContain("knowledgecfg-v1-d64");
+    const embeddingsHook = read("components/knowledge-panel/use-knowledge-embeddings.ts");
+    expect(embeddingsHook).toContain("listWorkspaceFlowEmbeddings");
+    expect(embeddingsHook).toContain("knowledgeConfigFromFlowEmbeddings");
+    expect(embeddingsHook).toContain("regionMatchesFlowEmbeddingSpace");
+    expect(embeddingsHook).toContain('embeddingSource?: "knowledgecfg" | "flowcfg"');
+    expect(settings).toContain("Regions in flowcfg-v1-d96.");
+    expect(read("lib/verification-knowledge-subtab.ts")).toContain(
+      'embedding_model_id: "flowcfg-v1-d96"',
+    );
     const filter = read("components/VerificationFlowSubtabFilter.tsx");
     expect(filter).toContain("data-verification-flow-filter");
     expect(filter).toContain("filterKnowledgeRowsByVerificationFlow");
@@ -776,6 +794,8 @@ describe("verification workspace shell gates", () => {
     expect(lwmHook).toContain("holdEmptySubject && !lwmUserId && !lwmGuestUserId");
 
     const tapStart = read("components/tap-score/tap-score-phases.tsx");
+    expect(tapStart).toContain("SessionStartBackButton");
+    expect(tapStart).toContain("onBackToWorkspace");
     expect(tapStart).toContain("TapStartingTopicCards");
     expect(tapStart).not.toContain("data-verification-flow-filter");
     expect(tapStart).not.toContain("VerificationFlowSubtabFilter");
@@ -788,6 +808,10 @@ describe("verification workspace shell gates", () => {
     const tapClient = read("components/TapScoreClient.tsx");
     expect(tapClient).toContain("localOpening={localOpening}");
     const runner = read("components/VerificationFlowRunner.tsx");
+    expect(read("components/VerificationFlowsPanel.tsx")).not.toContain("data-verification-flow-minutes");
+    expect(read("components/VerificationFlowsPanel.tsx")).not.toContain("Countdown");
+    expect(runner).not.toContain("lockDuration");
+    expect(runner).not.toContain("initialMinutes");
     expect(runner).toContain("data-verification-identity");
     expect(runner).toContain("data-verification-empty-pool");
     expect(runner).toContain("TapScoreClient");

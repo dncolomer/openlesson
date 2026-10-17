@@ -9,9 +9,7 @@ import {
   type WorkspaceBlockApiNode,
 } from "@/components/workspace-view/types";
 import {
-  dynamicBlocksUnlockedAfterDone,
   dynamicGeneratedStorageKey,
-  generatorTargetCellsAfterDone,
 } from "@/lib/block-creator-effects";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import type { ProductLaunchTarget } from "@/lib/product-intent";
@@ -19,14 +17,6 @@ import {
   recordMapItemWorkedOn,
   resolveMapSelfProgressScope,
 } from "@/lib/map-self-progress";
-import type { UnusableCell } from "@/lib/map-ground-rules";
-import type { MapGroundBlockRef } from "@/lib/map-ground-rules";
-import {
-  blocksUnlockedAfterDone,
-  parseLearnerPowSummaryFromApi,
-  type LearnerDoneProgressPhase,
-  type LearnerPowSummary,
-} from "@/lib/workspace-learner-done";
 import {
   buildLearnerLaunchBody,
   buildLearnerPromptSaveBody,
@@ -41,7 +31,6 @@ export function useWorkspaceLearner(input: {
   learnerActivity: boolean;
   nodes: Block[];
   setNodes: Dispatch<SetStateAction<Block[]>>;
-  unusableCells: UnusableCell[];
   router: AppRouterInstance;
 }) {
   const {
@@ -52,7 +41,6 @@ export function useWorkspaceLearner(input: {
     learnerActivity,
     nodes,
     setNodes,
-    unusableCells,
     router,
   } = input;
 
@@ -69,7 +57,6 @@ export function useWorkspaceLearner(input: {
 
   /**
    * Run effect generation (dynamic unlock / generator empty-cell spawn).
-   * Returns ok + error so Mark Done can await Generator and surface failures.
    */
   const runBlockEffectGenerate = useCallback(
     async (payload: {
@@ -215,6 +202,13 @@ export function useWorkspaceLearner(input: {
           blockId: block.id,
           session: "verification",
         });
+        if (
+          typeof options?.minutes === "number" &&
+          Number.isFinite(options.minutes) &&
+          options.minutes > 0
+        ) {
+          params.set("minutes", String(Math.trunc(options.minutes)));
+        }
         if (block.session_id) params.set("sessionId", block.session_id);
         router.push(`/workspace/${workspaceId}/tap?${params.toString()}`);
         return;
@@ -260,182 +254,6 @@ export function useWorkspaceLearner(input: {
     [ayclToken, currentUserId, router, workspaceId],
   );
 
-  const handleFetchPowSummary = useCallback(
-    async (blockId: string): Promise<LearnerPowSummary> => {
-      try {
-        // PoW for this block + logged-in user (Progress drawer).
-        const qs = new URLSearchParams({
-          workspaceId,
-          subjectKey: "me",
-          quality: "all",
-          blockId,
-        });
-        const res = await fetch(
-          `/api/workspace/proof-of-work-stats?${qs.toString()}`,
-        );
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          return {
-            powCount: 0,
-            notes: errorMessageFromBody(data, "Failed to load PoW stats"),
-          } satisfies LearnerPowSummary;
-        }
-        return parseLearnerPowSummaryFromApi(data);
-      } catch {
-        return { powCount: 0, notes: "PoW stats request failed" };
-      }
-    },
-    [workspaceId],
-  );
-
-  const handleMarkDone = useCallback(
-    async ({
-      blockId,
-      status,
-      onPhase,
-    }: {
-      blockId: string;
-      status: string;
-      onPhase?: (phase: LearnerDoneProgressPhase) => void;
-    }) => {
-      const report = (phase: LearnerDoneProgressPhase) => {
-        onPhase?.(phase);
-      };
-
-      // 1) Persist status via map-ground (await success) — always allowed
-      // regardless of PoW recommendation (force Mark Done).
-      report("marking_done");
-      const groundRes = await fetch("/api/workspace/map-ground", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          workspaceId,
-          ...(ayclToken ? { ayclToken } : {}),
-          op: "set_block_status",
-          blockId,
-          status,
-        }),
-      });
-      const groundData = await groundRes.json().catch(() => ({}));
-      if (!groundRes.ok) {
-        throw new Error(
-          errorMessageFromBody(groundData, "Failed to mark block done"),
-        );
-      }
-
-      const before = nodes.map((n) => ({
-        id: n.id,
-        title: n.title,
-        status: n.status,
-        lock_until_block_ids: n.lock_until_block_ids,
-        creator_effects: n.creator_effects,
-        position_x: n.position_x,
-        position_y: n.position_y,
-      }));
-      const { unlockedIds } = blocksUnlockedAfterDone({
-        completedBlockId: blockId,
-        blocks: before as MapGroundBlockRef[],
-      });
-
-      // Prefer server nodes (with status) but keep client-parsed effects.
-      if (Array.isArray(groundData.updatedNodes)) {
-        setNodes(mapNodesWithEffects(groundData.updatedNodes as WorkspaceBlockApiNode[]));
-      } else {
-        setNodes((prev) =>
-          prev.map((n) =>
-            n.id === blockId ? { ...n, status: "completed" } : n,
-          ),
-        );
-      }
-
-      // Blocks for effect resolution: mark completed in the snapshot
-      // we use (do not wait for React state).
-      const blocksForEffects = before.map((n) =>
-        n.id === blockId ? { ...n, status: "completed" } : n,
-      );
-
-      // 2) Generator / Dynamic effects immediately after status save.
-      // Do NOT wait on LWM snapshot first — that can hang for minutes
-      // and previously blocked generator spawn entirely.
-      report("applying_unlocks");
-      const effectErrors: string[] = [];
-
-      const genCells = generatorTargetCellsAfterDone({
-        completedBlockId: blockId,
-        blocks: blocksForEffects,
-        unusableKeys: unusableCells.map((c) => `${c.row}:${c.col}`),
-      });
-      for (const cell of genCells) {
-        const result = await runBlockEffectGenerate({
-          mode: "generator_cell",
-          generatorBlockId: blockId,
-          row: cell.row,
-          col: cell.col,
-        });
-        if (!result.ok) {
-          effectErrors.push(
-            result.error || `Generator failed at (${cell.row},${cell.col})`,
-          );
-        }
-      }
-
-      const dynamicIds = dynamicBlocksUnlockedAfterDone({
-        completedBlockId: blockId,
-        blocks: blocksForEffects,
-      });
-      for (const dynId of dynamicIds) {
-        const result = await runBlockEffectGenerate({
-          mode: "dynamic",
-          blockId: dynId,
-        });
-        if (!result.ok) {
-          effectErrors.push(
-            result.error || `Dynamic generate failed for ${dynId}`,
-          );
-        }
-      }
-
-      // 3) Soft LWM snapshot (non-blocking after soft timeout)
-      report("snapshot_lwm");
-      try {
-        const snapAbort = new AbortController();
-        const snapTimer = window.setTimeout(() => snapAbort.abort(), 12_000);
-        const snapRes = await fetch(`/api/workspaces/${workspaceId}/snapshot-all`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ workspaceId }),
-          signal: snapAbort.signal,
-        }).catch(() => null);
-        window.clearTimeout(snapTimer);
-        if (snapRes && !snapRes.ok && snapRes.status >= 500) {
-          console.warn("[learner-done] snapshot-all failed", snapRes.status);
-        }
-      } catch {
-        /* snapshot is best-effort after Done */
-      }
-
-      if (effectErrors.length) {
-        throw new Error(
-          `Marked done, but generation failed: ${effectErrors[0]}`,
-        );
-      }
-      return {
-        unlockedIds,
-        generatedCells: genCells.length,
-        dynamicGenerated: dynamicIds.length,
-      };
-    },
-    [
-      ayclToken,
-      mapNodesWithEffects,
-      nodes,
-      runBlockEffectGenerate,
-      setNodes,
-      unusableCells,
-      workspaceId,
-    ],
-  );
-
   return {
     dynamicGeneratedIds,
     setDynamicGeneratedIds,
@@ -445,7 +263,5 @@ export function useWorkspaceLearner(input: {
     handleDynamicGenerated,
     handleSavePlanningPrompt,
     handleLaunchIntent,
-    handleFetchPowSummary,
-    handleMarkDone,
   };
 }

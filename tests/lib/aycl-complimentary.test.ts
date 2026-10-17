@@ -146,21 +146,21 @@ describe("complimentaryAyclLinkEligible (shipped)", () => {
 });
 
 describe("play vs full capability mapping (shipped)", () => {
-  it("play / learner matches paid learner (practice-only)", () => {
+  it("play / learner aliases store learner; capabilities are the one workspace mode", () => {
     for (const input of ["play", "learner", "practice"] as const) {
       expect(complimentaryAyclAccessTierFromInput(input)).toBe("learner");
       const caps = resolveComplimentaryAyclCapabilities(input);
       expect(caps.tier).toBe("learner");
-      expect(caps.canAuthor).toBe(false);
-      expect(caps.canGrow).toBe(false);
-      expect(caps.allowCreatorModeToggle).toBe(false);
+      expect(caps.canAuthor).toBe(true);
+      expect(caps.canGrow).toBe(true);
+      expect(caps.allowCreatorModeToggle).toBe(true);
       expect(caps.defaultInteractionMode).toBe("learner");
       expect(caps.allowExplore).toBe(true);
-      expect(caps.canUpgrade).toBe(true);
+      expect(caps.canUpgrade).toBe(false);
     }
   });
 
-  it("full matches paid full (Play + Build)", () => {
+  it("full aliases store full; capabilities are the one workspace mode", () => {
     for (const input of ["full", "build", "creator"] as const) {
       expect(complimentaryAyclAccessTierFromInput(input)).toBe("full");
       const caps = resolveComplimentaryAyclCapabilities(input);
@@ -279,20 +279,22 @@ describe("complimentary AYCL surfaces (structural)", () => {
     expect(sql).toContain("complimentary_link_id");
   });
 
-  it("Settings > AYCL exposes play and full create controls plus usage and expiration", () => {
+  it("Settings > AYCL exposes one complimentary create control plus usage and expiration", () => {
     const settings = readFileSync(
       join(root, "components/WorkspaceAyclMarketplaceSettings.tsx"),
       "utf8",
     );
     expect(settings).toContain("data-aycl-complimentary-links");
-    expect(settings).toContain("data-aycl-complimentary-create-play");
+    expect(settings).not.toContain("data-aycl-complimentary-create-play");
     expect(settings).toContain("data-aycl-complimentary-create-full");
-    expect(settings).toContain("data-aycl-complimentary-play-max-uses");
-    expect(settings).toContain("data-aycl-complimentary-play-expires-at");
+    expect(settings).not.toContain("data-aycl-complimentary-play-max-uses");
+    expect(settings).not.toContain("data-aycl-complimentary-play-expires-at");
     expect(settings).toContain("data-aycl-complimentary-full-max-uses");
     expect(settings).toContain("data-aycl-complimentary-full-expires-at");
     expect(settings).toContain("/api/workspaces/");
     expect(settings).toContain("/aycl/complimentary");
+    expect(settings).not.toMatch(/Play \+ Build/);
+    expect(settings).not.toMatch(/play mode/i);
   });
 
   it("share URL and /learn coupon hop target the workspace landing, not in-course shell", () => {

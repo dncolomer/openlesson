@@ -1,7 +1,7 @@
 /**
  * Workspace map types: GET list + PUT persist.
  * Read: workspace owner / AYCL authoring access.
- * Write: same, requireAyclAuthoring so practice-only AYCL cannot edit.
+ * Write: same, requireAyclAuthoring so AYCL without authoring cannot edit.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";

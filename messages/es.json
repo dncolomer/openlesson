@@ -825,7 +825,7 @@
     "backToDashboard": "Volver al panel",
     "saveAndExit": "Guardar y salir",
     "nameSessionTitle": "¿Nombrar esta sesión?",
-    "nameSessionBody": "The session is saved as you work, including where the policy left off. Give it a name so you can find it in Previous Sessions. Leave the name blank to keep the default id.\n\nGenerated Proof of Work is stored either way. Exit without saving hides the session, and the current canvas state will be lost.",
+    "nameSessionBody": "The session is saved as you work, including where the policy left off. Leave the name blank to keep the default id.\n\nGenerated Proof of Work is stored either way. Exit without saving hides the session, and the current canvas state will be lost.",
     "nameSessionPlaceholder": "Nombre de la sesión",
     "nameSessionConfirm": "Guardar y salir",
     "nameSessionStay": "Quedarse",

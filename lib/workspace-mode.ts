@@ -35,8 +35,8 @@ export function defaultInteractionModeForWorkspace(
 }
 
 /**
- * The shell is fixed. Practice-only All-you-can-learn stays on the learner
- * shell, including verification workspaces.
+ * The shell is fixed. Practice-only access stays on the learner shell,
+ * including verification workspaces.
  */
 export function resolveFixedWorkspaceInteractionMode(input: {
   workspaceKind?: unknown;

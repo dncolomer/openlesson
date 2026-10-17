@@ -221,7 +221,9 @@ export function WorkspaceIntegrationPanel({
             <div className="min-w-0 shrink-0">
               <h2 className="text-sm font-medium text-white">Knowledge Regions</h2>
               <p className="mt-1 max-w-2xl text-xs leading-relaxed text-neutral-500">
-                Regions in knowledgecfg-v1-d64. Build them from verification flows, synthetic agents, or proof-of-work sources, then overlay them on Embeddings.
+                {isKnowledgeRegion
+                  ? "Regions in flowcfg-v1-d96. Build them from verification flows or synthetic agents, then overlay them on Knowledge embeddings."
+                  : "Regions in knowledgecfg-v1-d64. Build them from verification flows, synthetic agents, or proof-of-work sources, then overlay them on Embeddings."}
               </p>
             </div>
             <CustomVerificationModelsPanel

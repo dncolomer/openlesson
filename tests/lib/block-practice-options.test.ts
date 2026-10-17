@@ -73,7 +73,8 @@ describe("normalize + allow rules", () => {
     expect(limited.allowedDurationsMinutes).toEqual([]);
 
     expect(blockAllowsPracticeStyle(limited, "drill")).toBe(false);
-    expect(blockAllowsPracticeStyle(limited, "explore")).toBe(false);
+    expect(blockAllowsPracticeStyle(limited, "explore")).toBe(true);
+    expect(blockAllowsPracticeStyle(limited, "scout")).toBe(true);
     expect(blockAllowsLaunchTarget(limited, "drill", true)).toBe(false);
     expect(blockAllowsLaunchTarget(limited, "drill", false)).toBe(false);
     expect(blockAllowedDurations(limited)).toEqual([]);
@@ -99,14 +100,13 @@ describe("normalize + allow rules", () => {
     expect(allOff.allowScout).toBe(false);
 
     const combos = enabledPracticeLaunchCombos(limited);
-    // drill-only author limits still launch Drill With AI; Scout defaults on
-    expect(combos).toEqual(["scout_dialog"]);
-    expect(practiceOptionsIconKeys(limited)).toEqual(["scout"]);
-    expect(practiceOptionsIsRestricted(limited)).toBe(true);
+    expect(combos).toEqual(["scout_dialog", "explore_dialog"]);
+    expect(practiceOptionsIconKeys(limited)).toEqual(["scout", "explore"]);
+    expect(practiceOptionsIsRestricted(limited)).toBe(false);
     expect(practiceOptionsIsRestricted(def)).toBe(false);
 
     const ui = resolveDefaultPracticeLaunchUi(limited);
-    expect(ui.style).toBe("scout");
+    expect(ui.style).toBe("explore");
     expect(ui.solo).toBe(false);
     expect(ui.timebox).toBe(false);
     expect(ui.durationMinutes).toBe(15);
@@ -161,15 +161,15 @@ describe("structural: Edit drawer + launch + map icons", () => {
       "supabase/migrations/20260804120000_blocks_practice_options.sql",
     );
 
-    expect(edit).toContain("data-block-edit-practice-options");
-    expect(edit).toContain("data-block-edit-allow-explore");
+    expect(edit).not.toContain("data-block-edit-practice-options");
+    expect(edit).not.toContain("data-block-edit-allow-explore");
     expect(edit).not.toContain("data-block-edit-allow-drill");
-    expect(edit).toContain("data-block-edit-allow-scout");
+    expect(edit).not.toContain("data-block-edit-allow-scout");
     expect(edit).not.toContain("data-block-edit-allow-open-ended");
     expect(edit).not.toContain("data-block-edit-allow-timed");
     expect(edit).not.toContain("data-block-edit-allow-solo");
     expect(edit).not.toContain("data-block-edit-practice-durations");
-    expect(edit).toContain("practiceOptions");
+    expect(edit).not.toContain("practiceOptions");
 
     expect(card).toContain("practiceOptions");
     expect(card).toContain("blockAllowsPracticeStyle");

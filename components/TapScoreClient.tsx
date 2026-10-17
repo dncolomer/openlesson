@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { getIlePostSessionPath } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/client";
 import { type HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
 import { fetchAestheticPackages } from "@/lib/aesthetics";
@@ -1095,6 +1096,14 @@ export function TapScoreClient({
     holdSilenceForWait(busy);
   }, [holdSilenceForWait]);
 
+  const onBackToWorkspace = useCallback(() => {
+    if (resolvedWorkspaceId) {
+      router.push(getIlePostSessionPath({ metadata: { workspace_id: resolvedWorkspaceId } }));
+      return;
+    }
+    router.push("/dashboard");
+  }, [resolvedWorkspaceId, router]);
+
   if (isMobile) {
     return (
       <MobileBlockScreen
@@ -1155,6 +1164,9 @@ export function TapScoreClient({
       onDeleteThought={deleteStashedThought}
       thoughtHistory={thoughtHistory}
       workspaceId={workspaceId}
+      onBackToWorkspace={
+        resolvedWorkspaceId && !privateToken && !localOpening ? onBackToWorkspace : undefined
+      }
       blockId={blockId}
       sessionId={sessionId}
       resultsError={resultsError}

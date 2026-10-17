@@ -5,7 +5,6 @@ import {
   ILE_CIRCULAR_MENU_ACTIONS,
   ILE_EMPTY_CIRCULAR_MENU_ACTIONS,
   WORKSPACE_CIRCULAR_MENU_ACTIONS,
-  WORKSPACE_CIRCULAR_MENU_DRAWER_IDS,
   blockCircularMenuActions,
   blockCircularMenuDoubleClickIsNoop,
   blockCircularMenuOpensOnEmpty,
@@ -32,7 +31,6 @@ import {
   BLOCK_CIRCULAR_MENU_RING_THICKNESS_PX,
   circularMenuActionPosition,
 } from "@/lib/block-circular-menu";
-import { PREVIOUS_SESSIONS_DRAWER_ID } from "@/lib/block-previous-sessions";
 import { applyIleChapterUndoDone } from "@/lib/ile-chapter-close-review";
 import type { WorkspaceExternalResource } from "@/lib/workspace-external-resources";
 
@@ -61,7 +59,7 @@ function resource(partial: Partial<WorkspaceExternalResource> & { id: string }):
 }
 
 describe("block circular menu catalog", () => {
-  it("TAP Learning set is exactly Work / Edit; Workspace is Learn/Continue/Mark as Done; TAP is empty", () => {
+  it("TAP Learning set is exactly Work / Edit; Workspace is Calibrate/Learn/Verify; TAP is empty", () => {
     expect(blockCircularMenuActions("ile").map((a) => a.label)).toEqual([
       "Work",
       "Edit",
@@ -78,8 +76,6 @@ describe("block circular menu catalog", () => {
       "Calibrate",
       "Learn",
       "Verify",
-      "Continue prev Session",
-      "Mark as Done",
     ]);
     expect(blockCircularMenuActions("workspace-learner").map((a) => a.id)).toEqual(
       WORKSPACE_CIRCULAR_MENU_ACTIONS.map((a) => a.id),
@@ -386,19 +382,14 @@ describe("circular menu source wiring", () => {
     expect(workspaceCircularMenuStartsFreshExplore("start_session")).toBe(true);
     expect(workspaceCircularMenuStartsFreshExplore("start_drill")).toBe(false);
     expect(workspaceCircularMenuStartsFreshExplore("continue_session")).toBe(false);
+    expect(workspaceCircularMenuDrawerId("continue_session")).toBeNull();
     expect(nextLearnerDrawerRequest("start_session", 1)).toBeNull();
     expect(wsView).not.toContain("workspaceCircularMenuStartsFreshExplore");
     expect(wsView).not.toContain("workspaceCircularMenuLaunchStyle");
     expect(wsView).not.toContain("resolveProductIntent");
     expect(wsView).toContain("handleLaunchIntent");
     expect(ring).toContain("start_session: <Compass");
-    expect(workspaceCircularMenuDrawerId("continue_session")).toBe(
-      WORKSPACE_CIRCULAR_MENU_DRAWER_IDS.continue_session,
-    );
-    expect(workspaceCircularMenuDrawerId("mark_done")).toBe(
-      WORKSPACE_CIRCULAR_MENU_DRAWER_IDS.mark_done,
-    );
-    expect(WORKSPACE_CIRCULAR_MENU_DRAWER_IDS.continue_session).toBe(PREVIOUS_SESSIONS_DRAWER_ID);
+    expect(workspaceCircularMenuDrawerId("mark_done")).toBeNull();
     expect(applyLearnerDrawerRequest({ defaultOpenId: "practice" })).toBe("practice");
     expect(
       applyLearnerDrawerRequest({
@@ -407,14 +398,7 @@ describe("circular menu source wiring", () => {
         requestedNonce: 1,
       }),
     ).toBe("progress");
-    expect(
-      applyLearnerDrawerRequest({
-        defaultOpenId: "practice",
-        requestedId: "progress",
-        requestedNonce: 2,
-      }),
-    ).toBe("progress");
-    expect(nextLearnerDrawerRequest("mark_done", 9)).toEqual({ id: "progress", nonce: 9 });
+    expect(nextLearnerDrawerRequest("mark_done", 9)).toBeNull();
     expect(learner).toContain("applyLearnerDrawerRequest");
     expect(learner).toContain("requestedDrawerNonce");
     const drawerStateIdx = wsView.indexOf("const [learnerDrawerRequest, setLearnerDrawerRequest]");
@@ -427,7 +411,7 @@ describe("circular menu source wiring", () => {
     expect(landing).toContain("viewOnly");
     expect(landing).not.toContain("circularMenuSurface");
     expect(learner).toContain('drawerId="practice"');
-    expect(learner).toContain("drawerId={PREVIOUS_SESSIONS_DRAWER_ID}");
-    expect(learner).toContain('drawerId="progress"');
+    expect(learner).not.toContain("PREVIOUS_SESSIONS_DRAWER_ID");
+    expect(learner).not.toContain('drawerId="progress"');
   });
 });

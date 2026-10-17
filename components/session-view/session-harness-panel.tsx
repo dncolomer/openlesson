@@ -8,7 +8,7 @@ import {
   useSessionPolicySuggestion,
 } from "@/components/session-view/session-policy-context";
 import { SessionStageProgress } from "@/components/session-view/session-stage-progress";
-import { SESSION_HARNESS_FALLBACK, sessionHarnessNextLine } from "@/lib/session-harness";
+import { sessionHarnessFocusLine } from "@/lib/session-harness";
 import type { SessionGuideId } from "@/lib/session-instructions";
 import {
   sessionStageProgressLine,
@@ -22,8 +22,8 @@ const GUIDE_KIND: Record<SessionGuideId, SessionStageKind> = {
 };
 
 /**
- * Third sidebar tab: the generative-model field and the next thing to do,
- * written from the learner's work rather than an action name.
+ * Third sidebar tab: the generative-model field. Learn (and Calibrate's
+ * fallback) may add a next-step line. Verify never shows that focus hint.
  */
 export function SessionHarnessPanel({
   guide,
@@ -45,22 +45,24 @@ export function SessionHarnessPanel({
         ? { kind, policyLabel: "Learn" }
         : { kind, remainingSeconds },
   );
-  const nextLine = sessionHarnessNextLine({
+  const nextLine = sessionHarnessFocusLine({
+    guide,
     suggestion,
     inferenceLabel: inferences.at(-1)?.label ?? null,
-    fallback: SESSION_HARNESS_FALLBACK[guide],
   });
   return (
     <div data-session-harness={guide} className="flex h-full min-h-0 flex-col overflow-hidden bg-black text-white">
       <div className="relative shrink-0 px-3 pt-2">
         <SessionStageProgress kind={kind} label={stageLine.label} placement="panel" />
       </div>
-      <p
-        data-session-harness-next=""
-        className="shrink-0 px-3 pb-2 pt-1 font-mono text-[12px] leading-snug text-white/85"
-      >
-        {nextLine}
-      </p>
+      {nextLine ? (
+        <p
+          data-session-harness-next=""
+          className="shrink-0 px-3 pb-2 pt-1 font-mono text-[12px] leading-snug text-white/85"
+        >
+          {nextLine}
+        </p>
+      ) : null}
       <div className="relative min-h-0 flex-1">
         {model ? (
           <SessionBranchFieldMap

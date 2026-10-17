@@ -5,6 +5,7 @@ import { TapBriefingConfig } from "@/components/TapBriefingConfig";
 import { IleStartLoading } from "@/components/session-view/ile-start-loading";
 import { SessionPageLoading } from "@/components/session-view/session-page-loading";
 import { isIleConfirmSettingsBlocked } from "@/components/session-view/ile-confirm-settings";
+import { SessionStartBackButton } from "@/components/session-view/session-start-back-button";
 import { SessionStartShell } from "@/components/session-view/session-start-shell";
 import type { SessionWelcomeModalProps } from "@/components/session-view/types";
 import { TapAestheticSection } from "@/components/tap-score/tap-aesthetic-section";
@@ -213,14 +214,12 @@ export function SessionWelcomeModal({
                   </div>
                 )}
                 {onBackToWorkspace ? (
-                  <button
-                    type="button"
+                  <SessionStartBackButton
                     data-ile-back-to-workspace
                     onClick={() => onBackToWorkspace()}
-                    className="mb-2 inline-flex w-full items-center justify-center gap-2 rounded-none border border-neutral-800 bg-black px-3 py-3 text-[11px] font-semibold uppercase tracking-wider text-neutral-200 transition-colors hover:border-neutral-600 hover:bg-neutral-950 hover:text-white"
                   >
                     {t("session.backToDashboard")}
-                  </button>
+                  </SessionStartBackButton>
                 ) : null}
                 <button
                   type="button"

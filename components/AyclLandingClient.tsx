@@ -15,13 +15,12 @@ import {
 } from "@/lib/aycl-landing";
 import {
   AYCL_TOKEN_STORAGE_KEY,
-  ayclBuildTooltip,
   ayclLifetimeSystemUpdatesClaim,
   ayclLifetimeSystemUpdatesFootnote,
   ayclLifetimeSystemUpdatesHeroLine,
   ayclOfferCheckoutCta,
+  ayclOfferLabel,
   ayclOfferTooltip,
-  ayclPlayTooltip,
   type AyclAccessTier,
 } from "@/lib/aycl-shared";
 import type { SkillGridNode } from "@/lib/block-skill-grid";
@@ -134,9 +133,8 @@ export function AyclLandingClient({
   );
 
   const nodes = landing.map.nodes as SkillGridNode[];
-  const learnerBusy = checkoutKey === `${landing.workspaceId}:learner`;
   const fullBusy = checkoutKey === `${landing.workspaceId}:full`;
-  const anyBusy = learnerBusy || fullBusy;
+  const anyBusy = fullBusy;
   const mapIsFullscreen = ayclMapPreviewFullscreenActive(mapFullscreen);
 
   useEffect(() => {
@@ -249,72 +247,22 @@ export function AyclLandingClient({
           data-aycl-complimentary-landing={complimentaryTier || undefined}
         >
           <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
-            Get this environment
+            Get this workspace
           </p>
           {error ? (
             <p className="text-sm text-red-400" data-aycl-landing-error>
               {error}
             </p>
           ) : null}
-          <div className="rounded-none border border-zinc-800 bg-zinc-900/50 p-3">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <p
-                  className="text-sm font-medium text-white"
-                  title={ayclOfferTooltip("learner")}
-                  data-aycl-offer-tooltip="learner"
-                >
-                  <span title={ayclPlayTooltip()} data-aycl-play-tooltip>
-                    {landing.offers.learner.label}
-                  </span>
-                </p>
-                <p className="mt-1 text-[11px] leading-relaxed text-zinc-500">
-                  {landing.offers.learner.description}
-                </p>
-              </div>
-              <p
-                className="text-right"
-                data-aycl-offer-price="learner"
-                data-aycl-offer-complimentary={
-                  offerDisplay.learner.isComplimentary ? "true" : "false"
-                }
-              >
-                {offerDisplay.learner.isComplimentary ? (
-                  <span className="block text-xs text-zinc-500 line-through" data-aycl-offer-original-price="learner">
-                    {offerDisplay.learner.originalPriceLabel}
-                  </span>
-                ) : null}
-                <span className="text-lg font-semibold text-white" data-aycl-offer-current-price="learner">
-                  {offerDisplay.learner.currentPriceLabel}
-                </span>
-              </p>
-            </div>
-            <button
-              type="button"
-              data-aycl-checkout-learner
-              data-aycl-cta-kind={ayclLandingCtaKind(complimentaryTier, "learner")}
-              disabled={anyBusy}
-              onClick={() => void startCheckout("learner")}
-              className="mt-3 w-full rounded-sm border border-zinc-600 px-4 py-2 text-sm font-medium text-zinc-100 transition hover:bg-zinc-800 disabled:opacity-50"
-            >
-              {learnerBusy ? "Redirecting…" : ayclOfferCheckoutCta("learner")}
-            </button>
-          </div>
           <div className="rounded-none border border-zinc-700 bg-zinc-900/80 p-3">
             <div className="flex items-start justify-between gap-2">
               <div>
                 <p
                   className="text-sm font-medium text-white"
-                  title={ayclOfferTooltip("full")}
+                  title={ayclOfferTooltip()}
                   data-aycl-offer-tooltip="full"
                 >
-                  <span title={ayclPlayTooltip()} data-aycl-play-tooltip>
-                    Play
-                  </span>
-                  {" + "}
-                  <span title={ayclBuildTooltip()} data-aycl-build-tooltip>
-                    Build
-                  </span>
+                  {ayclOfferLabel()}
                 </p>
                 <p className="mt-1 text-[11px] leading-relaxed text-zinc-500">
                   {landing.offers.full.description}
@@ -345,7 +293,7 @@ export function AyclLandingClient({
               onClick={() => void startCheckout("full")}
               className="mt-3 w-full rounded-sm bg-white px-4 py-2 text-sm font-medium text-black transition hover:bg-zinc-200 disabled:opacity-50"
             >
-              {fullBusy ? "Redirecting…" : ayclOfferCheckoutCta("full")}
+              {fullBusy ? "Redirecting…" : ayclOfferCheckoutCta()}
             </button>
           </div>
           <p
@@ -353,8 +301,6 @@ export function AyclLandingClient({
             data-aycl-lifetime-updates-footnote
           >
             {ayclLifetimeSystemUpdatesFootnote()}
-            {" · "}
-            Upgrade anytime
           </p>
         </div>
       </section>

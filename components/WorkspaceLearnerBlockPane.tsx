@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   buildLearnerDagView,
   type LearnerDagView,
@@ -10,15 +9,6 @@ import {
   learnerLocalDagDrawerRelevant,
   seedLearnerLocalDagDraft,
 } from "@/lib/learner-local-dag";
-import {
-  initialLearnerDoneProgress,
-  learnerDoneProgressForPhase,
-  learnerDoneStatusValue,
-  recommendLearnerDone,
-  type LearnerDoneProgress,
-  type LearnerDoneProgressPhase,
-  type LearnerPowSummary,
-} from "@/lib/workspace-learner-done";
 import {
   WorkspaceRightPaneDrawer,
   WorkspaceRightPaneDrawerGroup,
@@ -38,27 +28,9 @@ import {
   parseBlockCreatorEffects,
   type BlockCreatorEffects,
 } from "@/lib/block-creator-effects";
-import {
-  PREVIOUS_SESSIONS_DRAWER_ID,
-  SEE_PREVIOUS_SESSIONS_LABEL,
-  START_NEW_SESSION_LABEL,
-  continueIleSessionHref,
-  fetchBlockPreviousSessions,
-  ileLaunchInsertsNewSession,
-  previousSessionsDrawerShouldLoad,
-  type BlockPreviousSession,
-} from "@/lib/block-previous-sessions";
-import { ileSessionListDisplayName } from "@/lib/ile-session-name";
+import { START_NEW_SESSION_LABEL } from "@/lib/block-previous-sessions";
 import { applyLearnerDrawerRequest } from "@/lib/block-circular-menu";
-import {
-  GENERATE_INSIGHTS_ACTION_LABEL,
-  GENERATE_INSIGHTS_DRAWER_ID,
-  LEARNER_WORK_DRAWER_TITLE,
-  buildGenerateInsightsCreateBody,
-  buildGenerateInsightsSuggestBody,
-  insightApiErrorMessage,
-  insightsTracesUrl,
-} from "@/lib/insights";
+import { LEARNER_WORK_DRAWER_TITLE } from "@/lib/insights";
 
 export type LearnerBlockRef = {
   id: string;
@@ -76,10 +48,8 @@ export type LearnerBlockRef = {
 };
 
 /**
- * Learner-only right pane:
- * 1) Practice — Explore/Drill launch (timebox + customize session)
- * 2) Progress — PoW for this block + logged-in user, recommendation, Mark as Done
- * Not mounted in Creator mode.
+ * Learner-only right pane: practice launch (Calibrate / Learn / Verify)
+ * and optional dependency drawers. Not mounted in Creator mode.
  *
  * Creator effects (combinable):
  * - Dynamic: “?” until generated; unlock-after deps
@@ -95,8 +65,6 @@ export function WorkspaceLearnerBlockPane({
   requestedDrawerNonce = null,
   onLaunchIntent,
   onSavePlanningPrompt,
-  onFetchPowSummary,
-  onMarkDone,
   onDynamicGenerated: _onDynamicGenerated,
 }: {
   block: LearnerBlockRef;
@@ -114,17 +82,6 @@ export function WorkspaceLearnerBlockPane({
     options?: ProductLaunchOptions,
   ) => void | Promise<void>;
   onSavePlanningPrompt?: (prompt: string) => void | Promise<void>;
-  /** Load PoW for this block + current user (host scopes API). */
-  onFetchPowSummary?: (blockId: string) => Promise<LearnerPowSummary | null>;
-  onMarkDone?: (input: {
-    blockId: string;
-    status: string;
-    onPhase?: (phase: LearnerDoneProgressPhase) => void;
-  }) => Promise<{
-    unlockedIds?: string[];
-    generatedCells?: number;
-    dynamicGenerated?: number;
-  } | void>;
   /** Host refresh after effect generation mutates blocks. */
   onBlocksUpdated?: (nodes: unknown[]) => void;
   onDynamicGenerated?: (blockId: string) => void;
@@ -189,60 +146,17 @@ export function WorkspaceLearnerBlockPane({
     [localDagDraft.blockIds, blocks],
   );
 
-  const [progress, setProgress] = useState<LearnerDoneProgress>(
-    initialLearnerDoneProgress,
-  );
-  const [powSummary, setPowSummary] = useState<LearnerPowSummary | null>(null);
-  const router = useRouter();
   const [isStarting, setIsStarting] = useState(false);
   const [openDrawerId, setOpenDrawerId] = useState<string | null>("practice");
-  const [previousSessions, setPreviousSessions] = useState<
-    BlockPreviousSession[]
-  >([]);
-  const [previousSessionsLoading, setPreviousSessionsLoading] = useState(false);
-  const [previousSessionsError, setPreviousSessionsError] = useState<
-    string | null
-  >(null);
   const [planningPrompt, setPlanningPrompt] = useState(
     () => String(block.planning_prompt || ""),
   );
   const [savingPrompt, setSavingPrompt] = useState(false);
   const [promptSaved, setPromptSaved] = useState(false);
-  const [insightsPrompt, setInsightsPrompt] = useState("");
-  const [insightsBusy, setInsightsBusy] = useState(false);
-  const [insightsError, setInsightsError] = useState<string | null>(null);
-  const [insightsStatus, setInsightsStatus] = useState<string | null>(null);
 
   useEffect(() => {
     setPlanningPrompt(String(block.planning_prompt || ""));
   }, [block.id, block.planning_prompt]);
-
-  const runPowCheck = useCallback(async () => {
-    setProgress(learnerDoneProgressForPhase("checking_pow"));
-    try {
-      const summary = onFetchPowSummary
-        ? await onFetchPowSummary(block.id)
-        : { powCount: 0 };
-      setPowSummary(summary);
-      const reco = recommendLearnerDone(summary);
-      setProgress(
-        learnerDoneProgressForPhase("awaiting_user", {
-          recommendation: reco.recommendation,
-          rationale: reco.rationale,
-        }),
-      );
-    } catch (err) {
-      setProgress(
-        learnerDoneProgressForPhase("error", {
-          error: err instanceof Error ? err.message : "PoW check failed",
-        }),
-      );
-    }
-  }, [block.id, onFetchPowSummary]);
-
-  useEffect(() => {
-    void runPowCheck();
-  }, [block.id, runPowCheck]);
 
   const savePrompt = useCallback(async () => {
     if (!onSavePlanningPrompt) return;
@@ -276,74 +190,10 @@ export function WorkspaceLearnerBlockPane({
     }
   };
 
-  const markDone = async () => {
-    // Force Mark Done is always allowed (including when PoW is Not OK or
-    // map lock chrome is set) so Generator/Dynamic effects can still fire.
-    if (!onMarkDone || isCompleted) return;
-    const reco = progress.recommendation;
-    const rationale = progress.rationale;
-    setProgress(
-      learnerDoneProgressForPhase("marking_done", {
-        recommendation: reco,
-        rationale,
-      }),
-    );
-    try {
-      const result = await onMarkDone({
-        blockId: block.id,
-        status: learnerDoneStatusValue(),
-        onPhase: (phase) => {
-          setProgress(
-            learnerDoneProgressForPhase(phase, {
-              recommendation: reco,
-              rationale,
-            }),
-          );
-        },
-      });
-      const unlocked = result?.unlockedIds?.length
-        ? ` Unlocked ${result.unlockedIds.length} block(s).`
-        : "";
-      const generated =
-        typeof result?.generatedCells === "number" && result.generatedCells > 0
-          ? ` Generated ${result.generatedCells} block(s) from Generator.`
-          : "";
-      const dyn =
-        typeof result?.dynamicGenerated === "number" &&
-        result.dynamicGenerated > 0
-          ? ` Updated ${result.dynamicGenerated} Dynamic block(s).`
-          : "";
-      setProgress(
-        learnerDoneProgressForPhase("complete", {
-          message: `Block marked done.${unlocked}${generated}${dyn}`,
-          recommendation: reco,
-          rationale,
-        }),
-      );
-      // Refresh PoW summary after mark-done pipeline
-      void runPowCheck();
-    } catch (err) {
-      setProgress(
-        learnerDoneProgressForPhase("error", {
-          error: err instanceof Error ? err.message : "Mark done failed",
-          recommendation: reco,
-          rationale,
-        }),
-      );
-    }
-  };
-
   // Note: map uses "?" for pending dynamic; pane keeps a readable label.
   const displayTitle = isDynamic
     ? String(block.title || "").trim() || "Dynamic block"
     : String(block.title || "").trim() || "Block";
-  const reco = progress.recommendation;
-  const busy =
-    progress.phase === "checking_pow" ||
-    progress.phase === "marking_done" ||
-    progress.phase === "snapshot_lwm" ||
-    progress.phase === "applying_unlocks";
-
   const isCompleted =
     String(block.status || "").toLowerCase() === "completed" ||
     String(block.status || "").toLowerCase() === "done";
@@ -381,9 +231,6 @@ export function WorkspaceLearnerBlockPane({
     </div>
   );
 
-  const byType = (powSummary?.byType || []).filter((t) => t.count > 0);
-  const recent = powSummary?.recent || [];
-
   const defaultOpenId =
     (locked && showDynamicUnlockDrawer) || (locked && showLocalDagDrawer)
       ? showDynamicUnlockDrawer
@@ -401,128 +248,6 @@ export function WorkspaceLearnerBlockPane({
     );
   }, [defaultOpenId, block.id, requestedDrawerId, requestedDrawerNonce]);
 
-  useEffect(() => {
-    if (!previousSessionsDrawerShouldLoad(openDrawerId) || locked) return;
-    let cancelled = false;
-    setPreviousSessionsLoading(true);
-    setPreviousSessionsError(null);
-    void fetchBlockPreviousSessions(
-      workspaceId,
-      block.id,
-      ayclToken ? { ayclToken } : {},
-    )
-      .then((sessions) => {
-        if (cancelled) return;
-        setPreviousSessions(sessions);
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setPreviousSessionsError(
-          err instanceof Error ? err.message : "Failed to list sessions",
-        );
-        setPreviousSessions([]);
-      })
-      .finally(() => {
-        if (!cancelled) setPreviousSessionsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [ayclToken, block.id, locked, openDrawerId, workspaceId]);
-
-  const continueSession = useCallback(
-    (sessionId: string) => {
-      if (locked || ileLaunchInsertsNewSession("continue")) return;
-      router.push(continueIleSessionHref(sessionId));
-    },
-    [locked, router],
-  );
-
-  const generateInsightsFromWork = useCallback(async () => {
-    if (insightsBusy) return;
-    setInsightsBusy(true);
-    setInsightsError(null);
-    setInsightsStatus(null);
-    try {
-      const tracesRes = await fetch(insightsTracesUrl(workspaceId, block.id));
-      const tracesData = await tracesRes.json();
-      if (!tracesRes.ok) {
-        throw new Error(insightApiErrorMessage(tracesData, "Failed to load Work traces"));
-      }
-      const thoughts = Array.isArray(tracesData.thoughts) ? tracesData.thoughts : [];
-      if (thoughts.length < 1) {
-        throw new Error("No Work (PoW) traces on this block yet.");
-      }
-      const suggestBody = buildGenerateInsightsSuggestBody({
-        thoughts,
-        modifyingPrompt: insightsPrompt,
-      });
-      const suggestRes = await fetch("/api/insights/suggest", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(suggestBody),
-      });
-      const suggestData = await suggestRes.json();
-      if (!suggestRes.ok) {
-        throw new Error(insightApiErrorMessage(suggestData, "Failed to suggest insights"));
-      }
-      const suggestions = Array.isArray(suggestData.suggestions)
-        ? suggestData.suggestions
-        : [];
-      if (suggestions.length === 0) {
-        const createRes = await fetch("/api/insights/create", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(
-            buildGenerateInsightsCreateBody({
-              thoughts,
-              workspaceId,
-              blockId: block.id,
-              modifyingPrompt: insightsPrompt,
-            }),
-          ),
-        });
-        const createData = await createRes.json();
-        if (!createRes.ok) {
-          throw new Error(insightApiErrorMessage(createData, "Failed to generate insights"));
-        }
-        setInsightsStatus("Created 1 insight from this block’s Work.");
-        return;
-      }
-      let created = 0;
-      for (const suggestion of suggestions) {
-        const source = Array.isArray(suggestion.thoughtIds)
-          ? thoughts.filter((thought: { id: string }) =>
-              suggestion.thoughtIds.includes(thought.id),
-            )
-          : thoughts;
-        const createRes = await fetch("/api/insights/create", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(
-            buildGenerateInsightsCreateBody({
-              thoughts: source.length ? source : thoughts,
-              thoughtIds: suggestion.thoughtIds,
-              workspaceId,
-              blockId: block.id,
-              modifyingPrompt: insightsPrompt,
-            }),
-          ),
-        });
-        if (createRes.ok) created += 1;
-      }
-      setInsightsStatus(
-        created > 0
-          ? `Created ${created} insight${created === 1 ? "" : "s"} from this block’s Work.`
-          : "No insights could be saved.",
-      );
-    } catch (err) {
-      setInsightsError(err instanceof Error ? err.message : "Failed to generate insights");
-    } finally {
-      setInsightsBusy(false);
-    }
-  }, [block.id, insightsBusy, insightsPrompt, workspaceId]);
-
   return (
     <WorkspaceRightPaneDrawerGroup
       defaultOpenId={defaultOpenId}
@@ -531,6 +256,7 @@ export function WorkspaceLearnerBlockPane({
       data-workspace-right-pane="learner_practice"
       data-learner-block-pane
       data-learner-block-id={block.id}
+      data-workspace-id={workspaceId}
       data-learner-effect-dynamic={isDynamic ? "true" : "false"}
       className="flex h-full w-full min-h-0 flex-col overflow-hidden bg-neutral-950/95"
     >
@@ -585,113 +311,9 @@ export function WorkspaceLearnerBlockPane({
                 void handleLaunch(target, options);
               }}
               ileStartLabel={START_NEW_SESSION_LABEL}
-              seePreviousSessionsLabel={SEE_PREVIOUS_SESSIONS_LABEL}
-              onSeePreviousSessions={() => {
-                setOpenDrawerId(PREVIOUS_SESSIONS_DRAWER_ID);
-              }}
               promptSection={promptSection}
             />
           </div>
-        </div>
-      </WorkspaceRightPaneDrawer>
-
-      <WorkspaceRightPaneDrawer
-        variant="section"
-        drawerId={GENERATE_INSIGHTS_DRAWER_ID}
-        title={GENERATE_INSIGHTS_ACTION_LABEL}
-        defaultExpanded={false}
-        bodyClassName="space-y-3"
-      >
-        <div data-generate-insights-drawer className="space-y-3">
-          <p className="text-[11px] leading-relaxed text-neutral-400">
-            Generate Insights from this block’s Work (PoW). Optionally add a
-            modifying prompt to steer the synthesis.
-          </p>
-          <label className="block space-y-1">
-            <span className="text-[10px] font-medium uppercase tracking-wide text-neutral-500">
-              Modifying prompt
-            </span>
-            <textarea
-              data-generate-insights-prompt
-              value={insightsPrompt}
-              onChange={(e) => setInsightsPrompt(e.target.value)}
-              placeholder="Optional: focus on misconceptions, a comparison, a next step…"
-              rows={3}
-              className="w-full resize-none rounded-none border border-neutral-700/60 bg-neutral-950/70 px-2.5 py-2 text-xs leading-relaxed text-white placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none"
-            />
-          </label>
-          <button
-            type="button"
-            data-generate-insights-action
-            disabled={insightsBusy}
-            onClick={() => void generateInsightsFromWork()}
-            className="w-full rounded-none bg-white px-2 py-1.5 text-[11px] font-semibold text-black transition hover:bg-neutral-200 disabled:opacity-40"
-          >
-            {insightsBusy ? "Generating…" : GENERATE_INSIGHTS_ACTION_LABEL}
-          </button>
-          {insightsError ? (
-            <p className="text-[11px] text-rose-300" data-generate-insights-error>
-              {insightsError}
-            </p>
-          ) : null}
-          {insightsStatus ? (
-            <p className="text-[11px] text-neutral-300" data-generate-insights-status>
-              {insightsStatus}
-            </p>
-          ) : null}
-        </div>
-      </WorkspaceRightPaneDrawer>
-
-      <WorkspaceRightPaneDrawer
-        variant="section"
-        drawerId={PREVIOUS_SESSIONS_DRAWER_ID}
-        title={SEE_PREVIOUS_SESSIONS_LABEL}
-        defaultExpanded={false}
-        bodyClassName="space-y-3"
-        surfaceDataAttr="data-previous-sessions-drawer"
-      >
-        <div data-previous-sessions-list className="space-y-2">
-          {previousSessionsLoading ? (
-            <p className="text-[11px] text-neutral-500">Loading sessions…</p>
-          ) : null}
-          {previousSessionsError ? (
-            <p className="text-[11px] text-rose-300">{previousSessionsError}</p>
-          ) : null}
-          {!previousSessionsLoading &&
-          !previousSessionsError &&
-          previousSessions.length === 0 ? (
-            <p className="text-[11px] text-neutral-500">
-              No previous sessions for this block.
-            </p>
-          ) : null}
-          {previousSessions.map((entry) => (
-            <div
-              key={entry.sessionId}
-              data-previous-session-row
-              data-session-id={entry.sessionId}
-              data-session-started={entry.startedAt}
-              className="rounded-none border border-neutral-800 bg-neutral-950/70 px-2.5 py-2"
-            >
-              <p
-                className="truncate text-[11px] text-neutral-200"
-                data-previous-session-name
-              >
-                {ileSessionListDisplayName(entry)}
-              </p>
-              <p className="mt-0.5 text-[10px] text-neutral-500">
-                {entry.startedAt}
-              </p>
-              <button
-                type="button"
-                data-continue-session
-                disabled={locked}
-                onClick={() => continueSession(entry.sessionId)}
-                className="mt-2 w-full rounded-none bg-white px-2 py-1.5 text-[11px] font-semibold text-black transition hover:bg-neutral-200 disabled:opacity-40"
-              >
-                Continue
-              </button>
-            </div>
-          ))}
         </div>
       </WorkspaceRightPaneDrawer>
 
@@ -772,195 +394,6 @@ export function WorkspaceLearnerBlockPane({
           </div>
         </WorkspaceRightPaneDrawer>
       ) : null}
-
-      {/* Progress — PoW for this block + you + Mark as Done */}
-      <WorkspaceRightPaneDrawer
-        variant="section"
-        drawerId="progress"
-        title="Progress"
-        defaultExpanded={false}
-        bodyClassName="space-y-3"
-        surfaceDataAttr="data-learner-progress-drawer"
-      >
-        <div
-          data-learner-progress-pane
-          data-learner-done-panel
-          className="space-y-3"
-        >
-          {isCompleted ? (
-            <p className="text-[10px] uppercase tracking-wide text-emerald-400/90">
-              Done
-            </p>
-          ) : null}
-
-          {progress.phase === "checking_pow" ? (
-            <p className="text-[11px] text-neutral-500" data-learner-pow-loading>
-              Loading your PoW for this block…
-            </p>
-          ) : null}
-
-          <div
-            className="grid grid-cols-2 gap-2"
-            data-learner-pow-summary-stats
-          >
-            <div className="rounded-none border border-white/10 bg-black/20 px-2.5 py-2">
-              <p className="text-[9px] font-medium uppercase tracking-[0.12em] text-neutral-500">
-                Your artifacts
-              </p>
-              <p
-                className="mt-0.5 font-mono text-lg text-white"
-                data-learner-pow-count
-              >
-                {powSummary?.powCount ?? "—"}
-              </p>
-            </div>
-            <div className="rounded-none border border-white/10 bg-black/20 px-2.5 py-2">
-              <p className="text-[9px] font-medium uppercase tracking-[0.12em] text-neutral-500">
-                Status
-              </p>
-              <p className="mt-0.5 text-[12px] font-medium text-neutral-200">
-                {isCompleted ? "Done" : locked ? "Locked" : "Open"}
-              </p>
-            </div>
-          </div>
-
-          {byType.length > 0 ? (
-            <div data-learner-pow-by-type>
-              <p className="mb-1 text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
-                By type
-              </p>
-              <ul className="flex flex-wrap gap-1.5">
-                {byType.map((t) => (
-                  <li
-                    key={t.type}
-                    data-learner-pow-type={t.type}
-                    className="rounded-none border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[10px] text-neutral-300"
-                  >
-                    {t.type} · {t.count}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-
-          {recent.length > 0 ? (
-            <div data-learner-pow-recent>
-              <p className="mb-1 text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
-                Recent
-              </p>
-              <ul className="max-h-36 space-y-1 overflow-y-auto">
-                {recent.slice(0, 8).map((r, i) => (
-                  <li
-                    key={`${r.created_at || i}-${r.type}-${i}`}
-                    data-learner-pow-recent-item
-                    className="rounded-none border border-white/10 bg-black/15 px-2 py-1.5 text-[11px] text-neutral-300"
-                  >
-                    <span className="text-neutral-100">{r.type}</span>
-                    {r.tool_name ? (
-                      <span className="text-neutral-500"> · {r.tool_name}</span>
-                    ) : null}
-                    {r.quality ? (
-                      <span className="ml-1 text-[9px] uppercase tracking-wide text-neutral-600">
-                        {r.quality}
-                      </span>
-                    ) : null}
-                    {r.created_at ? (
-                      <span className="mt-0.5 block text-[10px] text-neutral-600">
-                        {new Date(r.created_at).toLocaleString()}
-                      </span>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : powSummary && progress.phase === "awaiting_user" ? (
-            <p
-              className="text-[11px] text-neutral-600"
-              data-learner-pow-empty
-            >
-              No proof of work for this block yet from your account. Explore or
-              Drill first, then return here.
-            </p>
-          ) : null}
-
-          {progress.phase !== "idle" &&
-          progress.phase !== "awaiting_user" &&
-          progress.phase !== "complete" &&
-          progress.phase !== "checking_pow" ? (
-            <div className="space-y-1" data-learner-done-progress>
-              <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
-                <div
-                  className="h-full bg-white/70 transition-all duration-300"
-                  style={{ width: `${progress.percent}%` }}
-                  data-learner-done-progress-bar
-                  data-progress-percent={progress.percent}
-                  data-progress-phase={progress.phase}
-                />
-              </div>
-              <p className="text-[11px] text-neutral-400">{progress.message}</p>
-            </div>
-          ) : null}
-
-          {progress.rationale ? (
-            <p
-              className="text-[11px] leading-snug text-neutral-400"
-              data-learner-done-recommendation
-              data-recommendation={reco || "unknown"}
-            >
-              <span
-                className={
-                  reco === "ok"
-                    ? "text-emerald-300"
-                    : reco === "not_ok"
-                      ? "text-neutral-300"
-                      : "text-neutral-400"
-                }
-              >
-                {reco === "ok"
-                  ? "OK"
-                  : reco === "not_ok"
-                    ? "Not OK"
-                    : "Unknown"}
-              </span>
-              {" — "}
-              {progress.rationale}
-            </p>
-          ) : null}
-
-          {progress.error ? (
-            <p className="text-[11px] text-rose-300" data-learner-done-error>
-              {progress.error}
-            </p>
-          ) : null}
-
-          {progress.phase === "complete" ? (
-            <p
-              className="text-[11px] text-emerald-300/90"
-              data-learner-done-complete
-            >
-              {progress.message}
-            </p>
-          ) : null}
-
-          <button
-            type="button"
-            data-learner-mark-done
-            disabled={busy || !onMarkDone || isCompleted}
-            onClick={() => void markDone()}
-            className="w-full rounded-none bg-white px-3 py-2 text-xs font-semibold text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:bg-neutral-800 disabled:text-neutral-500"
-          >
-            {busy
-              ? "Working…"
-              : isCompleted
-                ? "Already done"
-                : "Mark as Done"}
-          </button>
-
-          <p className="sr-only" data-workspace-id={workspaceId}>
-            {workspaceId}
-          </p>
-        </div>
-      </WorkspaceRightPaneDrawer>
     </WorkspaceRightPaneDrawerGroup>
   );
 }

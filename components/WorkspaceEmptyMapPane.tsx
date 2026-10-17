@@ -26,10 +26,7 @@ import {
   WorkspaceRightPaneDrawer,
   WorkspaceRightPaneDrawerGroup,
 } from "@/components/WorkspaceRightPaneDrawer";
-import {
-  WorkspacePromptContextAlternatives,
-  type PromptContextMode,
-} from "@/components/WorkspacePromptContextAlternatives";
+import { WorkspacePromptContextAlternatives } from "@/components/WorkspacePromptContextAlternatives";
 
 /**
  * Expand Map right-column UI as accordion drawers (overview, search, suggest
@@ -80,8 +77,6 @@ export function WorkspaceEmptyMapPane({
   const [searchQuery, setSearchQuery] = useState("");
   const [spotTopic, setSpotTopic] = useState("");
   const [spotLimit, setSpotLimit] = useState(SUGGEST_SPOT_LIMIT_DEFAULT);
-  const [spotContextMode, setSpotContextMode] =
-    useState<PromptContextMode>("adhoc");
   const [searchStatus, setSearchStatus] = useState<string | null>(null);
   const [spotStatus, setSpotStatus] = useState<string | null>(null);
   const [searchBusy, setSearchBusy] = useState(false);
@@ -470,17 +465,10 @@ export function WorkspaceEmptyMapPane({
         >
           <div data-expand-map-suggest-context data-suggest-best-spot-context>
             <WorkspacePromptContextAlternatives
-              workspaceId={workspaceId || undefined}
-              ayclToken={ayclToken || undefined}
-              draftPrompt={spotTopic}
-              surface="expand map suggest spot"
-              mode={spotContextMode}
-              onModeChange={setSpotContextMode}
               adhocValue={spotTopic}
               onAdhocChange={setSpotTopic}
-              onAccept={(prompt) => setSpotTopic(prompt)}
               disabled={disabled || spotBusy}
-              adhocPlaceholder="Best spot for… (or sample from Knowledge, Simulation, or Context)"
+              adhocPlaceholder="Best spot for…"
               adhocLabel="Topic for empty spot"
               adhocInputDataAttr="data-empty-map-suggest-input"
               onAdhocEnter={() => void handleSuggestSpot()}

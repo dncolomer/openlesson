@@ -219,7 +219,10 @@ describe("calibration authoring", () => {
     expect(runner).toContain("identity: claimedIdentity");
     expect(runner).toContain("data-calibration-live-clock");
     expect(panel).toContain("data-calibration-flow-minutes");
-    expect(read("components/VerificationFlowsPanel.tsx")).toContain("data-verification-flow-minutes");
+    expect(read("components/VerificationFlowsPanel.tsx")).not.toContain("data-verification-flow-minutes");
+    expect(read("components/VerificationFlowsPanel.tsx")).not.toContain("Countdown");
+    expect(read("components/VerificationFlowRunner.tsx")).not.toContain("lockDuration");
+    expect(read("components/VerificationFlowRunner.tsx")).not.toContain("initialMinutes");
     expect(existsSync(join(ROOT, "components/calibrate/calibrate-live-surface.tsx"))).toBe(false);
     expect(read("components/calibrate/calibrate-sounding-surface.tsx")).toContain("data-calibrate-sounding");
     expect(read("components/ExcalidrawCanvas.tsx")).not.toContain("restoreCalibrateChrome");

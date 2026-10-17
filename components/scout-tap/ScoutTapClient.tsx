@@ -709,6 +709,9 @@ export function ScoutTapClient({
       thankYouActions={thankYouActions}
       onJumpWork={onJumpWork}
       onBackWorkspace={onBackWorkspace}
+      onSettingsBackToWorkspace={
+        resolvedWorkspaceId && !privateToken ? onBackWorkspace : undefined
+      }
     />
   );
 }

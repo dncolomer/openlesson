@@ -237,20 +237,11 @@ describe("continue uses chosen session id and does not insert", () => {
     expect(ileLaunchInsertsNewSession("new")).toBe(true);
 
     const pane = read("components/WorkspaceLearnerBlockPane.tsx");
-    expect(pane).toContain("ileSessionListDisplayName");
-    expect(pane).toContain("data-previous-session-name");
-    expect(pane).toContain("continueIleSessionHref");
-    expect(pane).toContain("ileLaunchInsertsNewSession(\"continue\")");
-    expect(pane).toContain("WORKSPACE_LEARNER_LAUNCH_PATH".slice(0, 0) + "onLaunchIntent");
-    expect(pane).not.toMatch(
-      /continueSession[\s\S]{0,400}WORKSPACE_LEARNER_LAUNCH_PATH/,
-    );
-    const continueFn = pane.indexOf("const continueSession");
-    const launchPath = pane.indexOf("WORKSPACE_LEARNER_LAUNCH_PATH");
-    const hrefCall = pane.indexOf("continueIleSessionHref(sessionId)");
-    expect(continueFn).toBeGreaterThan(-1);
-    expect(hrefCall).toBeGreaterThan(continueFn);
-    expect(pane.slice(continueFn, hrefCall + 80)).not.toContain("learner-launch");
+    expect(pane).not.toContain("ileSessionListDisplayName");
+    expect(pane).not.toContain("data-previous-session-name");
+    expect(pane).not.toContain("continueIleSessionHref");
+    expect(pane).not.toContain("const continueSession");
+    expect(pane).toContain("onLaunchIntent");
   });
 });
 
@@ -387,40 +378,27 @@ describe("dummy density occupancy + continue mini read-only", () => {
 });
 
 describe("Practice drawer labels and previous-sessions UI", () => {
-  it("uses verbatim See Previous Sessions and Start a New Session", async () => {
+  it("uses Start a New Session and has no Previous Sessions drawer", async () => {
     const pane = read("components/WorkspaceLearnerBlockPane.tsx");
     expect(SEE_PREVIOUS_SESSIONS_LABEL).toBe("See Previous Sessions");
     expect(START_NEW_SESSION_LABEL).toBe("Start a New Session");
-    expect(pane).toContain("SEE_PREVIOUS_SESSIONS_LABEL");
+    expect(pane).not.toContain("SEE_PREVIOUS_SESSIONS_LABEL");
     expect(pane).toContain("START_NEW_SESSION_LABEL");
-    expect(pane).toContain("drawerId={PREVIOUS_SESSIONS_DRAWER_ID}");
-    expect(pane).toContain("previousSessionsDrawerShouldLoad(openDrawerId)");
-    expect(pane).toContain("fetchBlockPreviousSessions");
+    expect(pane).not.toContain("PREVIOUS_SESSIONS_DRAWER_ID");
+    expect(pane).not.toContain("previousSessionsDrawerShouldLoad");
+    expect(pane).not.toContain("fetchBlockPreviousSessions");
+    expect(pane).not.toContain("data-previous-sessions-drawer");
+    expect(pane).not.toContain("data-previous-session-row");
+    expect(pane).not.toContain("data-continue-session");
     expect(previousSessionsDrawerShouldLoad(PREVIOUS_SESSIONS_DRAWER_ID)).toBe(
       true,
     );
     expect(previousSessionsDrawerShouldLoad("practice")).toBe(false);
     expect(previousSessionsDrawerShouldLoad(null)).toBe(false);
-    const loadEffect = pane.indexOf("previousSessionsDrawerShouldLoad(openDrawerId)");
-    const fetchAt = pane.indexOf("fetchBlockPreviousSessions", loadEffect);
-    const buttonOpen = pane.indexOf(
-      "setOpenDrawerId(PREVIOUS_SESSIONS_DRAWER_ID)",
-    );
-    expect(loadEffect).toBeGreaterThan(-1);
-    expect(fetchAt).toBeGreaterThan(loadEffect);
-    expect(buttonOpen).toBeGreaterThan(-1);
-    expect(pane.slice(buttonOpen, buttonOpen + 120)).not.toContain(
-      "fetchBlockPreviousSessions",
-    );
-    expect(pane).toContain("data-previous-session-row");
-    expect(pane).toContain("data-previous-session-name");
-    expect(pane).toContain("ileSessionListDisplayName");
-    expect(pane).toContain("data-continue-session");
-    expect(pane).toContain("entry.sessionId");
-    expect(pane).toContain("entry.startedAt");
 
     const card = read("components/BlockDetailCard.tsx");
-    expect(card).toContain("data-see-previous-sessions");
+    expect(card).not.toContain("data-see-previous-sessions");
+    expect(card).not.toContain("onSeePreviousSessions");
     expect(card).toContain("ileStartLabel");
     expect(card).toContain("`Start · ${durationMinutes} min`");
 

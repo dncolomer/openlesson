@@ -18,7 +18,7 @@ function dictateButtonClass(kind: "idle" | "stop", square: boolean, wide: boolea
     return `pointer-events-auto flex min-h-9 w-full min-w-0 items-center justify-start gap-1.5 whitespace-nowrap rounded-none border border-white bg-neutral-950 px-1.5 py-2 text-left font-mono text-[11px] font-semibold text-white hover:bg-neutral-800${pressed}`;
   }
   if (wide) {
-    return `pointer-events-auto flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-none border border-white bg-neutral-950 px-4 py-2.5 text-sm text-center font-semibold uppercase tracking-wider text-white hover:bg-neutral-800${pressed}`;
+    return `pointer-events-auto flex min-h-0 min-w-0 w-full items-center justify-center gap-1 rounded-none border border-white bg-neutral-950 px-2 py-1.5 text-[11px] text-center font-semibold uppercase tracking-wider text-white hover:bg-neutral-800${pressed}`;
   }
   return `pointer-events-auto inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-none border border-white bg-neutral-950 px-4 py-2.5 text-sm text-center font-semibold uppercase tracking-wider text-white shadow-[0_12px_40px_rgba(0,0,0,0.55)] hover:bg-neutral-800${pressed}`;
 }

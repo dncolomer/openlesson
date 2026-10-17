@@ -92,4 +92,26 @@ describe("shared TAP settings surface", () => {
     expect(verify).toContain('layout="stack"');
     expect(drill).not.toContain("wideLanguage");
   });
+
+  it("every first settings screen mounts Back to workspace", () => {
+    const back = read("components/session-view/session-start-back-button.tsx");
+    expect(back).toContain("data-session-back-to-workspace");
+    for (const src of [learn, prepare, drill, verify]) {
+      expect(src).toContain("SessionStartBackButton");
+      expect(src).toContain('t("session.backToDashboard")');
+    }
+    expect(learn).toContain("data-ile-back-to-workspace");
+    expect(prepare).toContain("onSettingsBackToWorkspace");
+    expect(verify).toContain("onBackToWorkspace");
+    expect(drill).toContain("onBackToWorkspace");
+    const scoutClient = read("components/scout-tap/ScoutTapClient.tsx");
+    const tapClient = read("components/TapScoreClient.tsx");
+    const exerciseClient = read("components/ExerciseTapClient.tsx");
+    expect(scoutClient).toContain("onSettingsBackToWorkspace=");
+    expect(scoutClient).toContain("resolvedWorkspaceId && !privateToken");
+    expect(tapClient).toContain("onBackToWorkspace=");
+    expect(tapClient).toContain("resolvedWorkspaceId && !privateToken && !localOpening");
+    expect(exerciseClient).toContain("onBackToWorkspace=");
+    expect(exerciseClient).toContain("resolvedWorkspaceId && !privateToken");
+  });
 });

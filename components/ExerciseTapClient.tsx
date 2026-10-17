@@ -1031,6 +1031,13 @@ export function ExerciseTapClient({
         }
         router.push("/dashboard");
       }}
+      onBackToWorkspace={
+        resolvedWorkspaceId && !privateToken
+          ? () => {
+              router.push(getIlePostSessionPath({ metadata: { workspace_id: resolvedWorkspaceId } }));
+            }
+          : undefined
+      }
     />
   );
 }

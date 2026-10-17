@@ -40,6 +40,7 @@ import { SessionTopicChapter } from "@/components/session-view/ile-work-dock-bar
 import { TapSessionSignals } from "@/components/session-view/session-signals";
 import { SessionWorkSurface } from "@/components/session-view/session-work-surface";
 import { SESSION_BRIEFING_INTRO } from "@/lib/session-instructions";
+import { SessionStartBackButton } from "@/components/session-view/session-start-back-button";
 import { SessionStartShell } from "@/components/session-view/session-start-shell";
 import { FLOW_END_KICKERS } from "@/lib/session-stage-progress";
 import type { SessionSidebarMode } from "@/lib/session-sidebar";
@@ -133,6 +134,7 @@ export function TapScorePhases(props: {
   onDeleteThought: (thought: Thought) => void;
   thoughtHistory: Thought[];
   workspaceId?: string;
+  onBackToWorkspace?: () => void;
   blockId?: string;
   sessionId?: string;
   resultsError: string;
@@ -218,6 +220,7 @@ export function TapScorePhases(props: {
     onDeleteThought,
     thoughtHistory,
     workspaceId,
+    onBackToWorkspace,
     blockId,
     sessionId,
     resultsError,
@@ -541,6 +544,13 @@ export function TapScorePhases(props: {
                       ) : null}
                       </div>
                     </div>
+                    {onBackToWorkspace ? (
+                      <div className="mt-auto shrink-0 border-t border-neutral-800 p-3">
+                        <SessionStartBackButton onClick={onBackToWorkspace} className="mb-0">
+                          {t("session.backToDashboard")}
+                        </SessionStartBackButton>
+                      </div>
+                    ) : null}
                   </div>
                   <TapAestheticSection bgImage={bgImage} kind="shortcuts" />
               {error ? (
@@ -580,6 +590,13 @@ export function TapScorePhases(props: {
                         </>
                       )}
                     />
+                    {onBackToWorkspace ? (
+                      <div className="mt-auto shrink-0 border-t border-neutral-800 p-3">
+                        <SessionStartBackButton onClick={onBackToWorkspace} className="mb-0">
+                          {t("session.backToDashboard")}
+                        </SessionStartBackButton>
+                      </div>
+                    ) : null}
                   </div>
                   <TapAestheticSection bgImage={bgImage} kind="shortcuts">
                     <TapBriefingConfig

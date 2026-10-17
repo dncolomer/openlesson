@@ -3,7 +3,7 @@
  * Strip it at display time; also forbid it in generation prompts.
  */
 const SESSION_FORMAT_WRAPPER =
-  /^(in (one|this|a) (multi-turn )?guided (conversation|dialogue)[,:.]?\s+|through (a |one )?(multi-turn )?guided (conversation|dialogue)[,:.]?\s+)/i;
+  /^(in (one|this|a) (multi-turn |topic-horizon )?guided (conversation|dialogue)[,:.]?\s+|through (a |one )?(multi-turn |topic-horizon )?guided (conversation|dialogue)[,:.]?\s+|in (one|this|a) topic-horizon (conversation|dialogue)[,:.]?\s+|this (chapter|session) is a (topic-horizon |guided |multi-turn )?(conversation|dialogue)[,:.]?\s+|as your (practice )?coach[,:.]?\s+)/i;
 
 const COMMAND_META_WRAPPERS = [
   /^your (question|reply|answer|prompt) sits in the right place(?:\s*\([^)]+\))?[.!]?\s*/i,

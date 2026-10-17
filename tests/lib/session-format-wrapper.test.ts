@@ -31,6 +31,14 @@ describe("learner-facing wrappers", () => {
     expect(stripSessionFormatWrapper("plain prose reply with no JSON")).toBe(
       "plain prose reply with no JSON",
     );
+    expect(
+      stripSessionFormatWrapper(
+        "In a topic-horizon conversation, compare two AVL rotations on the same insert.",
+      ),
+    ).toBe("Compare two AVL rotations on the same insert.");
+    expect(
+      stripLearnerFacingWrappers("As your practice coach, name the two bodies in the inverse-square law."),
+    ).toBe("Name the two bodies in the inverse-square law.");
     const parsed = parseIleXaiCanvasTurn("plain prose reply with no JSON");
     expect(parsed.text).toBe("plain prose reply with no JSON");
     const stacked = applyIleXaiTurnToWorkCanvas(emptyIleWorkCanvasScene(), parsed);

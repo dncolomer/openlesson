@@ -136,7 +136,7 @@ export async function runImportThinkAloud(input: {
     events = applySystem2Inference(events, inference);
     system2Inferred = true;
   } else {
-    warnings.push("XAI_API_KEY missing; System 2 inference skipped (System 1 only)");
+    warnings.push("XAI_API_KEY missing; action inference skipped (observations only)");
   }
 
   const stillTimestamps = events

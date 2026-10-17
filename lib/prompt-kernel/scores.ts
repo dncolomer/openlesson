@@ -1,5 +1,5 @@
 /**
- * Shared score vocabulary for LWM Snapshot reports, PoW schema contracts, and TIM features.
+ * Shared score vocabulary for LWM Snapshot reports, PoW schema contracts, and interruption features.
  *
  * Product strategy: a single snapshot path labeled **LWM Snapshot** /
  * Learning World Model Snapshot, with GHC as secondary signal.
@@ -81,7 +81,7 @@ export const SCORE_FIELD_DESCRIPTIONS = {
   workspace_goal:
     "Plain-language inferred (or owner-set) workspace goal defining success for this workspace.",
   ghc_score:
-    "0–100 Genuine Human Cognition score: how genuine/human the PoW source appears. Strongest with TAP/TAP Learning selective thought (System 1 vs System 2) and natural temporal patterns; tool-only dumps yield low ghc_confidence. Secondary signal — not a second primary snapshot strategy.",
+    "0–100 Genuine Human Cognition score: how genuine/human the PoW source appears. Strongest with TAP/TAP Learning selective thought (observations vs actions) and natural temporal patterns; tool-only dumps yield low ghc_confidence. Secondary signal — not a second primary snapshot strategy.",
   ghc_confidence:
     "none | low | medium | high — confidence in ghc_score given available signal quality.",
   temporal_summary:
@@ -93,7 +93,7 @@ export const LWM_SNAPSHOT_INSTRUCTIONS = `
 Required scoring outputs for **LWM Snapshot** (Learning World Model Snapshot) only:
 1. score — integer 0–100 **LWM Snapshot** primary score: how well the learner has explored the workspace and demonstrated knowledge (block/pathway coverage + depth). Synthesize from all proof of work (not a naive average of markers). This is the sole primary score strategy product-wide. Also set lwm_snapshot_score equal to score when the schema allows.
 2. workspace_goal — concise phrase. When an authoritative workspace goal is provided, echo it exactly; otherwise infer and allow evolution as PoW grows.
-3. ghc_score — integer 0–100 **Genuine Human Cognition** (secondary). Weight selective thought System 1 vs System 2, natural temporal pacing. Tool-only dumps → low ghc_score and ghc_confidence "none" or "low".
+3. ghc_score — integer 0–100 **Genuine Human Cognition** (secondary). Weight selective thought observations vs actions, natural temporal pacing. Tool-only dumps → low ghc_score and ghc_confidence "none" or "low".
 4. ghc_confidence — none | low | medium | high.
 5. temporal_summary — optional one sentence when timestamps inform the scores.
 Do NOT invent separate augmentation or optimization primary scores — there is only one snapshot strategy.

@@ -206,10 +206,10 @@ export const EMBEDDING_MODEL_CATALOG: readonly EmbeddingModelInfo[] = [
     dim: KNOWLEDGE_CONFIG_DUAL_D256_DIM,
     struct_dim: KNOWLEDGE_CONFIG_DUAL_D256_STRUCT_DIM,
     description:
-      "Experimental dual-stream System 1 / System 2 text channels with temporal fusion. Dual-written on score; not product UI default.",
+      "Experimental dual-stream observation / action text channels with temporal fusion. Dual-written on score; not product UI default.",
     notes: [
       "Not comparable to other embedding_model_id values.",
-      "Separates stash/explore (System 1) from submit (System 2) free-text channels.",
+      "Separates stash/explore (observations) from submit (actions) free-text channels.",
     ],
   },
 ] as const;

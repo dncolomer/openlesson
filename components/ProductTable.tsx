@@ -42,7 +42,7 @@ export const LANDING_PRODUCT_ROWS: ProductTableRow[] = [
     icon: Bot,
     pitch: "Evaluate Agentic Knowledge by probing their Systems 1 and 2 traces",
     description:
-      "Buffer agent proof of work, then Stash (System 1) or Submit (System 2) into the regular PoW API — pure-API Think Aloud for agents.",
+      "Buffer agent proof of work, then Stash (observation) or Submit (action) into the regular PoW API — pure-API Think Aloud for agents.",
   },
   {
     name: "Calibrate, Learn, Verify",

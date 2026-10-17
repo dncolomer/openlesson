@@ -1122,6 +1122,9 @@ describe("TAP Learning Work canvas XAI suggested origin (shipped parse+apply)", 
     expect(checkMsg).toMatch(/Answer directly/i);
     expect(checkMsg).toMatch(/Do not mention Check\/ask/i);
     expect(ileWorkCanvasXaiToolsInstruction()).toMatch(/sits in the right place/i);
+    expect(ileWorkCanvasXaiToolsInstruction()).toMatch(
+      /Never mention PoW, platform jargon, or Uncertain Systems/,
+    );
 
     const prose = parseIleXaiCanvasTurn("plain prose reply with no JSON");
     expect(ileWorkCanvasFiniteOrigin(prose.origin)).toBeNull();

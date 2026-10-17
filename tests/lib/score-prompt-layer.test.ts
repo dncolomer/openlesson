@@ -23,8 +23,8 @@ describe("score-context layer (isolation)", () => {
       true
     );
     expect(SCORE_POW_CONTEXT_LAYER).toMatch(/exclusively|PROOF-OF-WORK ONLY/i);
-    expect(SCORE_VERIFICATION_SUBMIT_STASH_OVERLAY).toMatch(/System\s*1/i);
-    expect(SCORE_VERIFICATION_SUBMIT_STASH_OVERLAY).toMatch(/System\s*2/i);
+    expect(SCORE_VERIFICATION_SUBMIT_STASH_OVERLAY).toMatch(/observation/i);
+    expect(SCORE_VERIFICATION_SUBMIT_STASH_OVERLAY).toMatch(/action/i);
     expect(SCORE_VERIFICATION_SUBMIT_STASH_OVERLAY).toMatch(/stash|unsent/i);
   });
 
@@ -67,11 +67,11 @@ describe("buildVerticalScoreInstructions (shipped builders)", () => {
     }
   );
 
-  it("verification requires submit/stash System 1–2 analysis", () => {
+  it("verification requires submit/stash observation–action analysis", () => {
     const instructions = buildVerticalScoreInstructions("verification", "block-1", null);
     expect(scoreInstructionsRequireSubmitStashAnalysis(instructions)).toBe(true);
-    expect(instructions).toMatch(/System\s*1/i);
-    expect(instructions).toMatch(/System\s*2/i);
+    expect(instructions).toMatch(/observation/i);
+    expect(instructions).toMatch(/action/i);
     expect(instructions).toMatch(/stash|unsent|submit/i);
     expect(instructions).toContain(SCORE_VERIFICATION_SUBMIT_STASH_OVERLAY.slice(0, 30));
   });

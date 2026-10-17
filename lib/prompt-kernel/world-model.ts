@@ -1,6 +1,6 @@
 /**
  * Learning world model v0 — evolving representation of how a learner
- * explores a workspace. Separate from TIM (interruption world model).
+ * explores a workspace. Separate from the expected-free-energy interruption policy.
  *
  * Optional dual geometry: knowledge_config points into the fixed knowledgecfg-v1-d64 space
  * (see lib/knowledge-config). Subject scoping enables multi-learner workspaces.
@@ -216,7 +216,7 @@ export function parseLearningWorldModel(raw: unknown): LearningWorldModelV0 | nu
   return mergeLearningWorldModelDelta(base, obj as LearningWorldModelDelta);
 }
 
-/** Subset safe to pass into TIM feature envelopes. */
+/** Subset safe to pass into interruption feature envelopes. */
 export function learningWorldModelForTim(
   model: LearningWorldModelV0 | null | undefined,
 ): {
@@ -263,6 +263,6 @@ Optional world_model_delta: when enough proof of work exists, return a partial l
 - inferred_goal evolution if evidence shifts what success means
 - exploration.block_coverage / blind_spots
 - learning_profile strengths, friction_patterns, preferred_modalities, temporal_patterns
-- evidence_appetite.want_more vs saturated (what PoW types TIM and schema generation should bias toward next)
+- evidence_appetite.want_more vs saturated (what PoW types the interruption policy and schema generation should bias toward next)
 - scores_snapshot mirroring the LWM Snapshot primary score and ghc_score and ghc_score from this evaluation — do not invent separate augmentation/optimization primaries
 `.trim();

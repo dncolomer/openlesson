@@ -16,7 +16,7 @@ function asStringArray(value: unknown): string[] {
 
 /**
  * Parse an xAI-shaped inference payload. Unknown / partial JSON becomes empty inference
- * (all thoughts stay System 1) rather than throwing.
+ * (all thoughts stay observations) rather than throwing.
  */
 export function parseSystem2Inference(raw: unknown): System2Inference {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
@@ -58,7 +58,7 @@ function system1Thoughts(events: IleSoloTimelineEvent[]): IleSoloThoughtEvent[] 
 }
 
 /**
- * Apply inferred Solo System 2 on top of an S1 timeline.
+ * Apply inferred Solo committed actions on top of an observation timeline.
  * Promotions become `system2:send` (solution-stack promote). Optional I'm-done
  * becomes `end_of_chain_of_thought`. Original S1 stashes stay. No Helios chat.
  */

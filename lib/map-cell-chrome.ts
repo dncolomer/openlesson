@@ -41,7 +41,7 @@ export const MAP_CELL_NEUTRAL_CLASS =
 export const MAP_CELL_PREVIOUS_SESSIONS_CLASS =
   "border-neutral-600/80 bg-neutral-800/80 text-neutral-100";
 
-/** Unopened TIM-sourced TAP Learning chapter — explore tile, slight pulse so the map feels alive. */
+/** Unopened forage TAP Learning chapter — explore tile, slight pulse so the map feels alive. */
 export const MAP_CELL_TIM_UNOPENED_CLASS =
   "border-white/35 bg-neutral-950/80 shadow-[0_0_10px_rgba(255,255,255,0.08)] animate-pulse";
 

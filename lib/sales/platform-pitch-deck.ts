@@ -164,12 +164,12 @@ const PLATFORM_METHOD: SalesSlide[] = [
     ]),
     cards: [
       {
-        label: "System 1",
-        body: "Fast, intuitive thinking externalized as it fires.",
+        label: "Observations",
+        body: "Spontaneous thought externalized as it fires — forage before a policy is chosen.",
       },
       {
-        label: "System 2",
-        body: "Slow, deliberate reasoning made inspectable.",
+        label: "Actions",
+        body: "Deliberate send, edit, skip, or resend — the policy the learner commits.",
       },
     ],
   },
@@ -190,7 +190,7 @@ const PLATFORM_METHOD: SalesSlide[] = [
       ],
       [
         "Protocol purity",
-        "Submit–Stash keeps intent first-class: System 1 (stashed/unsent) and System 2 (submitted) both become proof of work. Scoring and GHC use that contrast—not polished finals alone—so over-filtering and non-cooperation show up in the evidence, not a vanity transcript.",
+        "Submit–Stash keeps intent first-class: observations (stashed/unsent) and actions (submitted) both become proof of work. Scoring and GHC use that contrast—not polished finals alone—so over-filtering and non-cooperation show up in the evidence, not a vanity transcript.",
       ],
     ]),
   },
@@ -220,7 +220,7 @@ const PLATFORM_CLOSE: SalesSlide[] = [
       },
       {
         label: "Stash API",
-        body: "Buffer agent proof of work, then Stash (System 1) or Submit (System 2) into PoW — Think Aloud for agents.",
+        body: "Buffer agent proof of work, then Stash (observation) or Submit (action) into PoW — Think Aloud for agents.",
       },
       {
         label: "PoW API",

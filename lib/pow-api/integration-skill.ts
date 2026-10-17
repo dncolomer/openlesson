@@ -378,12 +378,12 @@ ${purposeLine}
    - Explicit warning: treating the initial skill.md as permanent will degrade quality over time
    - Recommended loop: start_session → upload_proof_of_work → end_session → regenerate skill → repeat
    - Reference the \`continuous_evaluation\` object returned by the proof of work spec API for machine-readable self-update triggers
-4. **Predictive interruptions (required section)** — Trace Interruption Model (TIM) on every Proof-of-Work API response:
+4. **Predictive interruptions (required section)** — expected-free-energy interruption on every Proof-of-Work API response:
    - Every REST and MCP success response includes top-level \`interruption\` (object or null).
    - When non-null: schedule \`intervention\` after \`delay_ms\` unless a later Proof-of-Work API response supersedes it.
    - When null: no interruption predicted — do not schedule from that response.
    - Document consumer obligations: read interruption every call, supersede pending timers, never stack duplicate timers.
-   - Reference \`interruption_contract\` from the proof of work spec API for machine-readable TIM contract and intervention types.
+   - Reference \`interruption_contract\` from the proof of work spec API for the machine-readable interruption contract and intervention types.
    - Include JSON examples for active interruption and null (empty).
 5. Authentication table (Bearer sk_ / gsk_, Teams tier, scopes).
 6. Endpoints table covering REST and MCP with **dual documentation** (never hide REST behind MCP):

@@ -227,6 +227,11 @@ describe("grounded dialogue + exercise builders (live + thin/guest)", () => {
         "Your question sits in the right place (After Check/Ask). Name the two bodies in the inverse-square law.",
       ),
     ).toBe("Name the two bodies in the inverse-square law.");
+    expect(
+      stripLearnerFacingWrappers(
+        "In a topic-horizon conversation, compare two AVL rotations on the same insert.",
+      ),
+    ).toBe("Compare two AVL rotations on the same insert.");
 
     // Same block fields would have produced the old meta template; new builder is concrete.
     const fixed = buildGroundedDialogueQuestion(
@@ -536,7 +541,7 @@ describe("LWM Snapshot conscious trigger only", () => {
     expect(WORKSPACE_ONTOLOGY).not.toMatch(
       /Closing\/ending TAP or TAP Learning always generates a snapshot/i,
     );
-    expect(WORKSPACE_ONTOLOGY_COMPACT).toMatch(/not auto-run when a TAP session ends/i);
+    expect(WORKSPACE_ONTOLOGY_COMPACT).toMatch(/not auto-run when a session ends/i);
 
     // Session complete must not invoke score builders
     const tapComplete = read("app/api/workspace-tap-score/complete/route.ts");

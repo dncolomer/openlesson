@@ -48,6 +48,15 @@ import {
   buildDomainExerciseAuthorUserPrompt,
 } from "@/lib/pow-api/tapbench-exercise-generate";
 import { isLowQualityTapbenchExercise } from "@/lib/pow-api/tapbench-exercise-quality";
+import { TUTOR_CANVAS_VOICE } from "@/lib/prompt-kernel/tutor-voice";
+import { ileWorkCanvasXaiToolsInstruction } from "@/lib/ile-work-canvas-prompts";
+import { buildCalibratePoolSystemMessage } from "@/lib/calibrate-session";
+import { buildScoutQuestionsSystemMessage } from "@/lib/scout-session";
+import { composeIleChapterGenerateSystemMessage } from "@/lib/ile-chapter-generate";
+import {
+  stripLearnerFacingWrappers,
+  stripSessionFormatWrapper,
+} from "@/lib/session-format-wrapper";
 import { buildTapScoreInstructions, type TapScoreBrief } from "@/lib/tap-score";
 import { buildTraceScoringInstructions } from "@/lib/tap-score-traces";
 
@@ -120,8 +129,8 @@ describe("prompt architecture: TAP call path (shipped builders)", () => {
       facilitator.indexOf("PRODUCT SURFACE: Verify"),
     );
     expect(facilitator).toContain(TAP_SURFACE.slice(0, 50));
-    expect(facilitator).toMatch(/System 1/);
-    expect(facilitator).toMatch(/System 2/);
+    expect(facilitator).toMatch(/observation/i);
+    expect(facilitator).toMatch(/action/i);
     expect(facilitator).toMatch(/proof of work|thought-trace|thought trace/i);
     expect(facilitator).toMatch(
       /NEVER use think-aloud stage directions|Never use "say\/talk\/think/i,
@@ -172,14 +181,14 @@ describe("prompt architecture: TAP call path (shipped builders)", () => {
     expect(opening).toMatch(/not a generic icebreaker|not a meta question/i);
     expect(practice).toMatch(/PRACTICE|warm-up|simple|introductory/i);
     expect(topics).toMatch(/openingQuestion/);
-    expect(topics).toMatch(/System 1 and System 2/);
+    expect(topics).toMatch(/observation and action/);
   });
 
   it("runtime buildTapScoreInstructions grounds in workspace brief", () => {
     const runtime = buildTapScoreInstructions(sampleBrief, "curious", 12);
     expect(runtime).toContain("Linear algebra fundamentals");
     expect(runtime).toContain("Matrix multiplication");
-    expect(runtime).toMatch(/PRODUCT SURFACE: Verify|System 1/);
+    expect(runtime).toMatch(/PRODUCT SURFACE: Verify|observation/i);
   });
 
   it("TAP chat route wires selective thought system prompt", () => {
@@ -242,14 +251,16 @@ describe("prompt architecture: TAP Learning call path (shipped builders + regist
   it("xai consumers resolve registry keys via getPrompt", () => {
     const xai = readFileSync(join(ROOT, "lib/xai.ts"), "utf8");
     for (const key of [
-      "gap_detection",
-      "opening_probe",
-      "probe_generation",
+      "report_generation",
+      "follow_up_sessions",
+      "generate_objectives",
       "session_plan_create",
-      "session_plan_update",
     ]) {
       expect(xai).toContain(`getPrompt("${key}"`);
     }
+    expect(readFileSync(join(ROOT, "lib/session-plan-update.ts"), "utf8")).toContain(
+      "session_plan_update",
+    );
   });
 });
 
@@ -345,7 +356,7 @@ describe("LWM Snapshot scoring stack (shipped composition)", () => {
     expect(SCORE_FIELD_DESCRIPTIONS.lwm_snapshot_score).toMatch(
       /coverage|depth|demonstrated knowledge/i,
     );
-    expect(SCORE_FIELD_DESCRIPTIONS.ghc_score).toMatch(/Genuine Human Cognition|System 1|System 2/i);
+    expect(SCORE_FIELD_DESCRIPTIONS.ghc_score).toMatch(/Genuine Human Cognition|observation|action/i);
     // Underspecification claim: no band tables like "0–20" / "81–100" in current instructions
     const instructions = buildVerticalScoreInstructions("verification", null);
     expect(instructions).not.toMatch(/0–20:|0-20:|81–100:|81-100:/);
@@ -359,8 +370,8 @@ describe("LWM Snapshot scoring stack (shipped composition)", () => {
       manifestText: "[t1] system1/crystallize: foo",
       fileIds: ["file-1"],
     });
-    expect(text).toMatch(/System 1 traces \(3\)/);
-    expect(text).toMatch(/System 2 traces \(2\)/);
+    expect(text).toMatch(/Observation traces \(3\)/);
+    expect(text).toMatch(/Action traces \(2\)/);
     expect(text).toMatch(/ghc_score|GHC/);
   });
 
@@ -375,6 +386,111 @@ describe("LWM Snapshot scoring stack (shipped composition)", () => {
   });
 });
 
+function suggestedOpeningSpeech(text: string): string {
+  const match = text.match(/Suggested opening[\s\S]*?\n"([^"]+)"/i);
+  return match?.[1] ?? "";
+}
+
+describe("learner-visible tutor voice on live Calibrate / Learn / Verify paths", () => {
+  it("TUTOR_CANVAS_VOICE bans jargon, wrappers, and stage directions", () => {
+    expect(TUTOR_CANVAS_VOICE).toMatch(/wise, warm teacher/i);
+    expect(TUTOR_CANVAS_VOICE).toMatch(/In one guided conversation/i);
+    expect(TUTOR_CANVAS_VOICE).toMatch(/sits in the right place/i);
+    expect(TUTOR_CANVAS_VOICE).toMatch(/Check\/ask/i);
+    expect(TUTOR_CANVAS_VOICE).toMatch(/Uncertain Systems/i);
+    expect(TUTOR_CANVAS_VOICE).toMatch(/Never mention/i);
+  });
+
+  it("live system and task strings include tutor voice plus bans", () => {
+    const verify = buildTapFacilitatorInstructions({
+      assessmentTarget: 'the performance block "Matrix multiplication"',
+      listenerStyle: "a warm, wise teacher conducting knowledge verification",
+      markers: "Conceptual Clarity",
+      minutes: 12,
+      workspaceBlock: "Workspace: Linear algebra",
+    });
+    const learn = buildIleHeliosChatSystemPrompt();
+    const calibrate = buildCalibratePoolSystemMessage();
+    const scout = buildScoutQuestionsSystemMessage();
+    const chapter = composeIleChapterGenerateSystemMessage("learning");
+    const canvasText = ileWorkCanvasXaiToolsInstruction();
+
+    for (const [label, text] of [
+      ["TUTOR_CANVAS_VOICE", TUTOR_CANVAS_VOICE],
+      ["TAP_SURFACE", TAP_SURFACE],
+      ["verify facilitator", verify],
+      ["ILE_SURFACE", ILE_SURFACE],
+      ["learn chat", learn],
+      ["calibrate pool", calibrate],
+      ["scout questions", scout],
+      ["chapter generate", chapter],
+      ["opening task", buildTapOpeningQuestionTask()],
+      ["opening_probe", getPrompt("opening_probe")],
+      ["session_plan_create", getPrompt("session_plan_create")],
+      ["session_plan_update", getPrompt("session_plan_update")],
+    ] as const) {
+      expect(text, label).toMatch(/wise, warm teacher|LEARNER-FACING VOICE|Answer the topic directly/i);
+      expect(text, label).toMatch(/In one guided conversation|session-format wrapper/i);
+      expect(text, label).toMatch(/out loud/i);
+      expect(text, label).toMatch(/Uncertain Systems|PoW|Proof of Work/i);
+    }
+
+    expect(canvasText).toMatch(/"text" is what the learner reads/i);
+    expect(canvasText).toMatch(/Never mention Check\/ask/i);
+    expect(canvasText).toMatch(/Never mention PoW, platform jargon, or Uncertain Systems/i);
+    expect(ILE_SURFACE).toMatch(/several turns on (this chapter |one )?topic/);
+    expect(ILE_SURFACE).not.toMatch(/a chapter is a topic-horizon conversation/i);
+    expect(learn).not.toMatch(/a chapter is a topic-horizon conversation/i);
+  });
+
+  it("suggested openings and canvas text do not tell the model to say private jargon", () => {
+    const facilitator = buildTapFacilitatorInstructions({
+      assessmentTarget: "topic X",
+      listenerStyle: "curious facilitator",
+      markers: "Conceptual Clarity",
+      minutes: 10,
+      workspaceBlock: "ctx",
+    });
+    const opening = suggestedOpeningSpeech(facilitator);
+    expect(opening.length).toBeGreaterThan(20);
+    expect(opening).not.toMatch(/PoW|Proof of Work|System 1|TIM|Uncertain Systems|Check\/ask|guided conversation/i);
+    expect(opening).toMatch(/concrete|topic|try/i);
+
+    const canvasText = ileWorkCanvasXaiToolsInstruction();
+    expect(canvasText).toMatch(/"text" is what the learner reads on the board/i);
+    expect(canvasText).toMatch(/Answer the topic directly/i);
+    expect(canvasText).toMatch(/Never mention PoW, platform jargon, or Uncertain Systems/);
+  });
+
+  it("composePrompt still orders ontology → surface → task", () => {
+    const text = composePrompt({
+      ontology: "full",
+      surface: "L1_SURFACE_MARKER",
+      task: "L2_TASK_MARKER",
+    });
+    expect(text.indexOf("WORKSPACE ONTOLOGY")).toBeLessThan(text.indexOf("L1_SURFACE_MARKER"));
+    expect(text.indexOf("L1_SURFACE_MARKER")).toBeLessThan(text.indexOf("L2_TASK_MARKER"));
+  });
+
+  it("strip functions remove known wrappers and leave the topic sentence", () => {
+    expect(
+      stripSessionFormatWrapper(
+        "In one guided conversation, work the last-resort test on a just-war case.",
+      ),
+    ).toBe("Work the last-resort test on a just-war case.");
+    expect(
+      stripLearnerFacingWrappers(
+        "Your question sits in the right place (After Check/Ask). Name the two bodies in the inverse-square law.",
+      ),
+    ).toBe("Name the two bodies in the inverse-square law.");
+    expect(
+      stripLearnerFacingWrappers(
+        "In a topic-horizon conversation, compare two AVL rotations on the same insert.",
+      ),
+    ).toBe("Compare two AVL rotations on the same insert.");
+  });
+});
+
 describe("analysis deliverable present", () => {
   it("ships docs/prompt-architecture-and-quality-review.md with four acceptance sections", () => {
     const doc = readFileSync(
@@ -382,7 +498,7 @@ describe("analysis deliverable present", () => {
       "utf8",
     );
     expect(doc).toMatch(/End-to-end prompt architecture|composePrompt/i);
-    expect(doc).toMatch(/TAP dialog|System 1|System 2/i);
+    expect(doc).toMatch(/TAP dialog|observation|action/i);
     expect(doc).toMatch(/TAP Learning dialog|Mark as Done|session_plan/i);
     expect(doc).toMatch(/LWM Snapshot scoring|PRIMARY SCORE BANDS|score-derivation/i);
     expect(doc).toMatch(/buildVerticalScoreInstructions/);

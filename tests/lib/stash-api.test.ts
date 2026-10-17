@@ -391,10 +391,10 @@ describe("Stash API entry paths (handlers + routes)", () => {
     );
     expect(stashRoute).toContain("stashBufferedProofOfWork");
     expect(stashRoute).toContain('decision: "stash"');
-    expect(stashRoute).toContain("System 1");
+    expect(stashRoute).toContain("observation");
     expect(submitRoute).toContain("submitBufferedProofOfWork");
     expect(submitRoute).toContain('decision: "submit"');
-    expect(submitRoute).toContain("System 2");
+    expect(submitRoute).toContain("action");
     expect(ingestRoute).toContain("ingestStashUnit");
     expect(ingestRoute).toContain("authenticateStashRequest");
   });
@@ -443,7 +443,7 @@ describe("Stash API product surfaces", () => {
     expect(productsSlide?.cards).toHaveLength(3);
     const stashCard = productsSlide?.cards?.find((c) => /stash api/i.test(c.label));
     expect(stashCard?.body?.toLowerCase()).toMatch(
-      /buffer agent proof of work.*stash \(system 1\).*submit \(system 2\)/,
+      /buffer agent proof of work.*stash \(observation\).*submit \(action\)/,
     );
     expect(stashCard?.ideas ?? []).toHaveLength(0);
 

@@ -1,10 +1,10 @@
-# TAP Learning TIM × chapter map interactions
+# TAP Learning expected-free-energy × chapter map interactions
 
-Chapter complete is Proof of Work (`session_plan` / `chapter_done` → TIM endpoint `upload_ile_chapter_done`). TIM reads LWM `evidence_appetite` and schedules `chapter_map_expand` with **1–3** `chapter_suggestions`. TAP Learning applies that on a **map timer** (idle/speech PoW cannot supersede it) and places adjacent TIM-sourced chapters.
+Chapter complete is Proof of Work (`session_plan` / `chapter_done` → interruption endpoint `upload_ile_chapter_done`). The expected-free-energy interruption policy reads LWM `evidence_appetite` and schedules `chapter_map_expand` with **1–3** `chapter_suggestions`. TAP Learning applies that on a **map timer** (idle/speech PoW cannot supersede it) and places adjacent forage chapters.
 
-Unopened TIM chapters use the explore/map icon (`tim-explore`). Accept switches them to the usual 3×3 blocky glyph; reject removes the tile so the cell is empty again.
+Unopened forage chapters use the explore/map icon (`tim-explore`). Accept switches them to the usual 3×3 blocky glyph; reject removes the tile so the cell is empty again.
 
-## TIM interruption catalog (fixed)
+## Interruption catalog (fixed)
 
 Intervention **types** are a closed catalog (`TIM_INTERVENTION_TYPE_CATALOG`):
 
@@ -14,14 +14,14 @@ Intervention **types** are a closed catalog (`TIM_INTERVENTION_TYPE_CATALOG`):
 
 ## Follow-on TAP Learning map actions
 
-| id | status | TIM source | effect | summary |
+| id | status | interruption source | effect | summary |
 | --- | --- | --- | --- | --- |
-| `chapter_complete_expand` | shipped | `upload_ile_chapter_done` | positive | Done → 1–3 adjacent TIM-sourced chapters (explore icon until accepted or rejected). |
+| `chapter_complete_expand` | shipped | `upload_ile_chapter_done` | positive | Done → 1–3 adjacent forage chapters (explore icon until accepted or rejected). |
 | `idle_fog_creep` | planned | `upload_ile_idle` | negative | Long idle grows fog over unvisited empty cells. |
-| `idle_wilt_unopened` | planned | `upload_ile_idle` | negative | Unopened TIM tiles dim if ignored. |
+| `idle_wilt_unopened` | planned | `upload_ile_idle` | negative | Unopened forage tiles dim if ignored. |
 | `idle_current_pulse` | planned | `upload_ile_idle` | positive | Short idle pulses the active chapter. |
 | `speech_keyword_highlight` | planned | `upload_ile_speech` | positive | Highlight chapters whose keywords match speech. |
-| `appetite_settle` | planned | `upload_ile_chapter_done` | neutral | Saturated expansion stops further TIM growth. |
-| `skip_withdraw` | planned | skip | negative | Skipping a chapter withdraws nearby unopened TIM tiles. |
+| `appetite_settle` | planned | `upload_ile_chapter_done` | neutral | Saturated expansion stops further expected-free-energy growth. |
+| `skip_withdraw` | planned | skip | negative | Skipping a chapter withdraws nearby unopened forage tiles. |
 
 Canonical data: `ILE_TIM_MAP_INTERACTIONS` in `lib/ile-tim-chapter-complete.ts`.

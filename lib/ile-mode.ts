@@ -3,7 +3,7 @@
  * (Exercise-TAP-style solo exercises per chapter, dual-stack Thoughts, no bubbles).
  *
  * Dual-list stash ↔ solution mutations reuse Exercise TAP helpers so both products
- * share System 1 / System 2 semantics.
+ * share observation / action semantics.
  */
 import {
   buildExercisePromptText,

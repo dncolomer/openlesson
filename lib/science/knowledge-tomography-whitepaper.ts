@@ -156,7 +156,7 @@ export const KNOWLEDGE_TOMOGRAPHY_WHITEPAPER: ScienceWhitepaper = {
           heading: "5.1 Aims and hypotheses",
           paragraphs: [
             "Primary aim: validate TAP as an initial tomography tool for human knowledge-state reconstruction. Secondary aim: pilot agentic tomography under the same reproduce-your-knowledge battery. Exploratory aim: compare human and agent reconstruction profiles on identical targets as a co-evaluation substrate for later induction research.",
-            "Directional hypothesis: dual-stream TAP traces (System 1 spontaneous/stashed plus System 2 deliberate submit actions) improve reconstruction fidelity—completeness of facets, gap detection, and agreement with independent skill ratings—relative to final-answer-only or transcript-without-stash baselines.",
+            "Directional hypothesis: dual-stream TAP traces (observations: spontaneous/stashed plus actions: deliberate submit) improve reconstruction fidelity—completeness of facets, gap detection, and agreement with independent skill ratings—relative to final-answer-only or transcript-without-stash baselines.",
           ],
           bullets: [
             "H1: TAP dual-stream PoW > final-answer-only on reconstruction fidelity for humans.",
@@ -169,7 +169,7 @@ export const KNOWLEDGE_TOMOGRAPHY_WHITEPAPER: ScienceWhitepaper = {
           heading: "5.2 Design: instrument TAP sessions as tomography probes",
           paragraphs: [
             "Participants complete timed TAP sessions inside workspaces with labeled knowledge targets. A facilitator protocol prompts continuous externalization and multi-facet reproduction (definition, causal/procedural steps, example, edge case, transfer, repair). The Stash/Submit selective interface records spontaneous crystallization and deliberate dialogue participation as dual-stream PoW—the tomographic slices for each session.",
-            "Conditions include at least: (A) full TAP Stash/Submit tomography battery; (B) final-answer-only control; (C) optional free-response without stash instrumentation. Knowledge-area labels and session goals are fixed within blocks. Inclusion requires minimum System 1 and System 2 event counts for the TAP arm so dual-stream analysis is powered.",
+            "Conditions include at least: (A) full TAP Stash/Submit tomography battery; (B) final-answer-only control; (C) optional free-response without stash instrumentation. Knowledge-area labels and session goals are fixed within blocks. Inclusion requires minimum observation and action event counts for the TAP arm so dual-stream analysis is powered.",
           ],
           bullets: [
             "Independent variables: elicitation condition (TAP tomography vs baselines); knowledge-area label.",
@@ -235,14 +235,9 @@ export const KNOWLEDGE_TOMOGRAPHY_WHITEPAPER: ScienceWhitepaper = {
         "Chi, M. T. H. (1997). Quantifying qualitative analyses of verbal data: A practical guide. Journal of the Learning Sciences, 6(3), 271–315.",
     },
     {
-      id: "kahneman",
-      citation:
-        "Kahneman, D. (2011). Thinking, fast and slow. Farrar, Straus and Giroux.",
-    },
-    {
       id: "tap-companion",
       citation:
-        "Uncertain Systems. (2026). Think Aloud Protocol with Selective Stash/Submit: Externalizing System 1 and System 2 as Proof of Work. Working paper. https://uncertain.systems/science/think-aloud-protocol",
+        "Uncertain Systems. (2026). Think Aloud Protocol with Selective Stash/Submit: Externalizing Observations and Actions as Proof of Work. Working paper. https://uncertain.systems/science/think-aloud-protocol",
     },
     {
       id: "knowledge-config",

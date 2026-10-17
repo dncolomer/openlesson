@@ -15,7 +15,7 @@ Options:
   --dry-run              Print timeline / mapped events; do not persist
   --help, -h             Show this help
 
-Never TAP. Never Helios chat. System 2 promotions are inferred via xAI and applied automatically.
+Never TAP. Never Helios chat. Action promotions are inferred via xAI and applied automatically.
 `;
 
 export type ImportThinkAloudArgs = {

@@ -1,6 +1,6 @@
 import type { InterruptionContext } from "@/lib/pow-api/predictive-interruption";
 
-/** TIM is removed. Proof of work does not carry an interruption. */
+/** Expected-free-energy interruption is not attached to proof-of-work responses. */
 export function resolvePowInterruptionContext(_input: {
   workspaceId: string;
   blockId?: string | null;

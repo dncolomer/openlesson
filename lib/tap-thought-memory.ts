@@ -1,6 +1,6 @@
 /**
  * TAP thought-memory: local per-thought edit/delete (no multi-select submit).
- * Edit/delete are System 2 PoW; speech keeps running while a thought is edited.
+ * Edit/delete are action PoW; speech keeps running while a thought is edited.
  */
 import { normalize } from "@/lib/tap-score-client-helpers";
 import type { ExerciseDualLists, ExerciseThought } from "@/lib/exercise-tap";

@@ -47,8 +47,8 @@ npm run import:think-aloud-pow -- --transcript tests/fixtures/think-aloud-transc
 | `--dry-run` | no | Print timeline JSON; do not write PoW. |
 | `--help` | no | Usage. |
 
-**Needs:** `XAI_API_KEY` for STT and System 2 inference. Persist also needs `NEXT_PUBLIC_SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`. Video stills need `ffmpeg` on PATH; without it, traces still persist and frames are skipped.
+**Needs:** `XAI_API_KEY` for STT and action inference. Persist also needs `NEXT_PUBLIC_SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`. Video stills need `ffmpeg` on PATH; without it, traces still persist and frames are skipped.
 
-**What is written:** `ile-speech-segment`, `ile-thought-trace` (System 1 for every utterance; inferred System 2 promote / `end_of_chain_of_thought`), `ile-idle-heartbeat`, event stills as `type: screen`. Optional short `type: video` if the file is ≤10 MB. Never `type: speech`. Never LWM Snapshot.
+**What is written:** `ile-speech-segment`, `ile-thought-trace` (observation for every utterance; inferred action promote / `end_of_chain_of_thought`), `ile-idle-heartbeat`, event stills as `type: screen`. Optional short `type: video` if the file is ≤10 MB. Never `type: speech`. Never LWM Snapshot.
 
 Entry: `utilities/import-think-aloud-pow/main.ts`.

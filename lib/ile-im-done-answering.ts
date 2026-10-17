@@ -1,5 +1,5 @@
 /**
- * TAP Learning spoken “I'm done answering”: collect unflagged PoW, emit a System 2
+ * TAP Learning spoken “I'm done answering”: collect unflagged PoW, emit an action
  * end-of-chain-of-thought, send that chain, and flag included ids so a later
  * close does not re-expand them.
  */

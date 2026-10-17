@@ -256,7 +256,7 @@ export function buildExerciseThoughtRecord(
 }
 
 /**
- * System 1: append spoken text to the stash history (Del / silence auto-stash).
+ * Observation: append spoken text to the stash history (Del / silence auto-stash).
  * Does not touch the submission stack.
  */
 export function stashExerciseSpeech(
@@ -270,7 +270,7 @@ export function stashExerciseSpeech(
 }
 
 /**
- * System 2: promote a stashed thought into the submission stack (leaves stash).
+ * Action: promote a stashed thought into the submission stack (leaves stash).
  */
 export function promoteExerciseStashToSubmission(
   lists: ExerciseDualLists,
@@ -347,7 +347,7 @@ export function applyTapSoloImDoneSend(
 }
 
 /**
- * System 2: submit live speech directly onto the submission stack (Enter with live text).
+ * Action: submit live speech directly onto the submission stack (Enter with live text).
  * Skips the stash surface — equivalent to conversational “send” without a prior Del.
  */
 export function submitExerciseSpeechDirect(
@@ -361,7 +361,7 @@ export function submitExerciseSpeechDirect(
 }
 
 /**
- * System 2 undo: demote a Solution Stack thought back into stash (does not discard).
+ * Action undo: demote a Solution Stack thought back into stash (does not discard).
  * Inverse of promoteExerciseStashToSubmission. Missing id → no-op.
  */
 export function demoteExerciseSubmissionToStash(
@@ -417,7 +417,7 @@ export function removeExerciseThought(
   return { list: dual.lists.submitted, removed: dual.removed };
 }
 
-/** System 1 stash trace (deliberate or auto). */
+/** Observation stash trace (deliberate or auto). */
 export function buildExerciseStashTracePayload(input: {
   tapSessionId: string;
   workspaceId: string;
@@ -440,7 +440,7 @@ export function buildExerciseStashTracePayload(input: {
   });
 }
 
-/** System 2 submit/promote onto the submission stack. */
+/** Action submit/promote onto the submission stack. */
 export function buildExerciseSubmitTracePayload(input: {
   tapSessionId: string;
   workspaceId: string;
@@ -462,7 +462,7 @@ export function buildExerciseSubmitTracePayload(input: {
   });
 }
 
-/** System 2 remove from submission stack (undo dimension). */
+/** Action remove from submission stack (undo dimension). */
 export function buildExerciseRemoveTracePayload(input: {
   tapSessionId: string;
   workspaceId: string;

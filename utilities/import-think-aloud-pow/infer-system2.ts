@@ -32,12 +32,12 @@ export async function inferIleSoloSystem2(
     [
       {
         role: "system",
-        content: `You label System 2 actions for a TAP Learning ${ILE_IMPORT_SESSION_MODE_LABEL} think-aloud.
+        content: `You label committed actions (policy) for a TAP Learning ${ILE_IMPORT_SESSION_MODE_LABEL} think-aloud.
 This is NOT TAP and NOT Helios chat. There are no dialogue sends.
-Every listed item is already a System 1 stash (thought memory).
-System 2 means: promote a stash onto the Solo solution stack (promotions → system2:send), and/or close with I'm-done answering (end_of_chain).
+Every listed item is already an observation stash (thought memory).
+A committed action means: promote a stash onto the Solo solution stack (promotions → system2:send), and/or close with I'm-done answering (end_of_chain).
 Only promote utterances that are committed answers, conclusions, or explicit "I'm done" / final-answer language.
-Do not invent thought ids or rewrite text. Prefer sparse promotions. Remaining stashes stay System 1.
+Do not invent thought ids or rewrite text. Prefer sparse promotions. Remaining stashes stay observations.
 Return JSON: { "promotions": [{ "thought_id": "t0" }], "end_of_chain": { "thought_ids": ["t0"], "text": "..." } | null }`,
       },
       {
@@ -53,7 +53,7 @@ Return JSON: { "promotions": [{ "thought_id": "t0" }], "end_of_chain": { "though
   );
 
   if (!response.success || !response.data) {
-    console.error("[import-think-aloud-pow] System 2 inference failed:", response.error);
+    console.error("[import-think-aloud-pow] action inference failed:", response.error);
     return { promotions: [], end_of_chain: null };
   }
   return parseSystem2Inference(response.data);

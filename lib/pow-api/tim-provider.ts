@@ -5,8 +5,8 @@ import { predictRawFromFeaturesWithLlm } from "./tim-llm-predictor";
 import { predictIleChapterCompleteInterruption } from "@/lib/ile-tim-chapter-complete";
 
 /**
- * Pluggable Trace Interruption Model backend.
- * Default is in-process Grok; a future external TIM implements the same interface.
+ * Pluggable expected-free-energy interruption backend.
+ * Default is in-process Grok; a future external provider implements the same interface.
  */
 export interface TimProvider {
   readonly id: string;
@@ -24,7 +24,7 @@ export function getTimProvider(): TimProvider {
 }
 
 /**
- * Default baked-in TIM: Grok over the feature envelope.
+ * Default baked-in interruption policy: Grok over the feature envelope.
  * Returns null when the model declines interruption (or API unavailable).
  */
 export const defaultGrokTimProvider: TimProvider = {

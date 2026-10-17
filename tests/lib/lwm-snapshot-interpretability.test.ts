@@ -98,7 +98,7 @@ const RICHER_REPORT: VerticalScoreReport = {
     },
   ],
   summary: "Solid demonstration of algorithms fluency with room to tighten crypto-adjacent edges.",
-  strengths: ["Clear reductions", "Good use of System 2 commits"],
+  strengths: ["Clear reductions", "Good use of action commits"],
   growth_areas: ["Randomized algorithms edge cases"],
   gap_analysis: {
     summary: "Strong algorithms base; randomized analysis thinner.",

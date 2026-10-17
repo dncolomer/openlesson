@@ -1832,7 +1832,7 @@
     "ileProjectHelpTitle": "Explore · Solo Exercise",
     "ileProjectHelpSummary": "Longer-horizon exercises per chapter — no dialogue bubbles; dual-stack Thoughts (stash + solution).",
     "ileProjectHelpPoint1": "Each chapter is a solo exercise you work through with tools (canvas, notebook, thoughts).",
-    "ileProjectHelpPoint2": "Thoughts tool splits stash (System 1) and solution (System 2); move thoughts between stacks.",
+    "ileProjectHelpPoint2": "Thoughts tool splits stash (observations) and solution (actions); move thoughts between stacks.",
     "ileProjectHelpPoint3": "Mark as Done is final for that chapter (PoW only) — no on-screen score or evaluation.",
     "ileLearningCtaLabel": "Khám phá · Đối thoại",
     "ileLearningCtaHint": "Guided practice with a dialogue partner — no clock",

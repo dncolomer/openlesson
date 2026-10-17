@@ -59,7 +59,7 @@ export type System2EndOfChain = {
   text?: string;
 };
 
-/** xAI-shaped Solo System 2 inference. Applied automatically (no operator loop). */
+/** xAI-shaped Solo action inference. Applied automatically (no operator loop). */
 export type System2Inference = {
   promotions: System2Promotion[];
   end_of_chain: System2EndOfChain | null;

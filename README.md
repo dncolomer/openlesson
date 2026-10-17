@@ -154,7 +154,7 @@ npm run import:think-aloud-pow -- --media recording.mp4 --workspace <workspace-i
 npm run import:think-aloud-pow -- --media recording.mp4 --workspace <workspace-id> --dry-run
 ```
 
-Requires `XAI_API_KEY` (STT + System 2 inference). Persist also needs Supabase service-role env. Video stills need `ffmpeg`; without it, traces still write. Full flags: `npm run import:think-aloud-pow -- --help`.
+Requires `XAI_API_KEY` (STT + action inference). Persist also needs Supabase service-role env. Video stills need `ffmpeg`; without it, traces still write. Full flags: `npm run import:think-aloud-pow -- --help`.
 
 ## Public agent APIs (v3)
 

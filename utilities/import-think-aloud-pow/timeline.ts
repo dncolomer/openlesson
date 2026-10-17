@@ -153,7 +153,7 @@ export function sortIleSoloTimeline(events: IleSoloTimelineEvent[]): IleSoloTime
 
 /**
  * Build TAP Learning Explore Solo timeline from a timed transcript.
- * Every utterance is System 1 first. Speech gaps use 2600ms; auto-stash 5000ms; idle 60000ms.
+ * Every utterance is an observation first. Speech gaps use 2600ms; auto-stash 5000ms; idle 60000ms.
  * Timestamps are media-relative milliseconds (not write-time).
  */
 export function buildIleSoloTimeline(transcript: ThinkAloudTranscript): IleSoloTimelineEvent[] {

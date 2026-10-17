@@ -14,7 +14,7 @@ export const UNCERTAIN_SYSTEMS_SCOPE = {
   pillars: [
     "Workspace management — create and edit Learning and Verification workspaces, the map, workspace settings, and account settings",
     "Headless proof of work — start_session → upload_proof_of_work → end_session. The server prepares the answers-model tree, infers the path, and enforces the clock",
-    "Predictive interruptions (TIM) — every response includes interruption (object or null) with delay_ms and intervention hints",
+    "Predictive interruptions (expected free energy) — every response includes interruption (object or null) with delay_ms and intervention hints",
   ],
   workspace_model:
     "A workspace has blocks (assessable units), a workspace_goal (what success means), and headless Calibrate / Learn / Verify sessions. Progress is continuous: start_session → upload proof of work → end_session → repeat.",
@@ -289,8 +289,8 @@ export const MCP_RESOURCE_CATALOG = [
   },
   {
     uri: "uncertain-systems://predictive-interruptions",
-    name: "Predictive interruptions (TIM)",
-    description: "Trace Interruption Model contract: interruption field, delay_ms, supersession, consumer obligations.",
+    name: "Predictive interruptions (expected free energy)",
+    description: "Expected-free-energy interruption contract: interruption field, delay_ms, supersession, consumer obligations.",
     mimeType: "text/markdown",
   },
 ] as const;
@@ -343,20 +343,20 @@ Call **get_workspace** with \`workspace_id\` for metadata and workspace_goal. Ca
 
 Every schema/skill response includes \`continuous_evaluation\` (REST) and \`continuous_evaluation_mcp\` (tools) — do not treat either as optional.
 
-Every Proof-of-Work API success response also includes \`interruption\` (TIM) — object or null.
+Every Proof-of-Work API success response also includes \`interruption\` (expected free energy) — object or null.
 
 Snapshot and Stash are not public agent tools.
 `;
   }
 
   if (uri === "uncertain-systems://predictive-interruptions") {
-    return `# Predictive interruptions (Trace Interruption Model)
+    return `# Predictive interruptions (expected free energy)
 
 ${formatInterruptionContractForSkillPrompt()}
 
 ## REST + MCP parity
 - REST success bodies and MCP tool results both include top-level \`interruption\`.
-- \`interruption_contract\` on proof-of-work spec responses documents the full TIM contract.
+- \`interruption_contract\` on proof-of-work spec responses documents the full interruption contract.
 - Supersession: any later Proof-of-Work API response replaces the previous pending interruption timer.
 `;
   }

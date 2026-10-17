@@ -80,8 +80,8 @@ describe("OG text helpers", () => {
     expect(shortTitleFromMeta("Pricing - Proof-of-Work Volume | Uncertain Systems")).toBe(
       "Pricing - Proof-of-Work Volume",
     );
-    expect(shortTitleFromMeta("Trace Interruption Model (TIM) | Core Engine")).toBe(
-      "Trace Interruption Model (TIM)",
+    expect(shortTitleFromMeta("Expected Free Energy Interruption | Core Engine")).toBe(
+      "Expected Free Energy Interruption",
     );
   });
 });

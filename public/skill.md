@@ -70,7 +70,7 @@ Common codes: `unauthorized`, `forbidden`, `api_plan_required`, `validation_erro
 
 ---
 
-## Predictive interruptions (TIM)
+## Predictive interruptions (expected free energy)
 
 Every Proof-of-Work API **success** response includes top-level `interruption` — object or `null`.
 
@@ -131,7 +131,7 @@ Content-Type: application/json
 
 **Partner agents:** `create_workspace` or `get_workspace`, then `start_session` → `upload_proof_of_work` → `end_session`. PumaDoc policy snippets: `/customer-agent-uncertain-systems-policy.md`, `/pumaclaw-mentor-uncertain-systems-policy.md`.
 
-Every MCP tool result includes `interruption` (TIM) with the same semantics as REST.
+Every MCP tool result includes `interruption` (expected free energy) with the same semantics as REST.
 
 REST and MCP both use `Authorization: Bearer <api_key>` with Teams API keys from the dashboard. Treat API keys as secrets.
 
@@ -229,7 +229,7 @@ Given workspace context plus an evaluation definition, returns a JSON Schema for
   "definition": "...",
   "workspace_summary": { "id": "uuid", "title": "...", "root_topic": "..." },
   "context_counts": { "blocks": 5, "workspace_files": 2, "proof_of_work_artifacts": 0 },
-  "interruption_contract": { "description": "TIM contract...", "supersession_rule": "..." },
+  "interruption_contract": { "description": "Expected-free-energy interruption contract...", "supersession_rule": "..." },
   "file_ids": ["file_..."],
   "interruption": {
     "interruption_id": "int_start_session_ws1_x1y2z3",

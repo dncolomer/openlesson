@@ -1,9 +1,9 @@
 /**
- * Stash API — temporary PoW buffer + Stash (System 1) / Submit (System 2) flush.
+ * Stash API — temporary PoW buffer + Stash (observation) / Submit (action) flush.
  *
  * Agents stream the same PoW types as the Proof-of-Work API into a short-lived buffer.
  * A Stash or Submit decision drains the buffer into the regular PoW upload path with
- * workspace + user refs and System 1 / System 2 intent metadata, then resets memory.
+ * workspace + user refs and observation / action intent metadata, then resets memory.
  *
  */
 
@@ -23,10 +23,10 @@ export const STASH_API_PRODUCT = {
   name: "Stash API",
   tagline: "Evaluate agents the same way we evaluate humans",
   description:
-    "Agentic Stash/Submit: buffer proof of work, then Stash (System 1) or Submit (System 2) into the regular PoW stack.",
+    "Agentic Stash/Submit: buffer proof of work, then Stash (observation) or Submit (action) into the regular PoW stack.",
 } as const;
 
-/** Stash = System 1 (fast / parked intent); Submit = System 2 (deliberate commit). */
+/** Stash = observation (forage / parked intent); Submit = action (committed policy). */
 export type StashDecision = "stash" | "submit";
 
 export type StashSystemFlag = 1 | 2;
@@ -216,8 +216,8 @@ export function ingestStashUnit(
 }
 
 /**
- * Metadata attached on flush so scoring / knowledge-config see System 1 vs System 2
- * the same way human stash/submit traces do.
+ * Metadata attached on flush so scoring / knowledge-config see observation vs action
+ * the same way human stash/submit traces do. Stored flags remain system 1|2.
  */
 export function buildStashDecisionMetadata(
   decision: StashDecision,
@@ -313,7 +313,7 @@ const defaultUploader: StashPowFlushUploader = async ({
 };
 
 /**
- * Drain temporary buffer → regular PoW API with System 1 (stash) or System 2 (submit).
+ * Drain temporary buffer → regular PoW API with observation (stash) or action (submit).
  * Empty buffer no-ops cleanly (ok, flushed: 0). Buffer resets only after full success.
  */
 export async function flushStashBuffer(

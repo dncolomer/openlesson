@@ -1,6 +1,6 @@
 import { denyWorkspaceFeatureById } from "@/lib/workspace-feature-gate";
 /**
- * Stash API — Submit decision (System 2).
+ * Stash API — Submit decision (action).
  * Flushes all buffered PoW units through the regular PoW API, then resets memory.
  */
 
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
     {
       decision: "submit",
       system: flush.system,
-      system_label: "System 2",
+      system_label: "action",
       flushed: flush.flushed,
       empty: flush.empty,
       proof_of_work: flush.proof_of_work,
@@ -83,7 +83,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
       guest_user_id: auth.guest_user_id,
       note: flush.empty
         ? "No buffered proof of work — nothing to submit."
-        : "Buffered units flushed to PoW API as System 2 (submit); buffer reset.",
+        : "Buffered units flushed to PoW API as actions (submit); buffer reset.",
     },
     { status: flush.empty ? 200 : 201 },
   );

@@ -21,7 +21,7 @@ describe("prompt kernel", () => {
     expect(WORKSPACE_ONTOLOGY).toContain("do not include an interruption");
     expect(WORKSPACE_ONTOLOGY).not.toContain("Trace Interruption Model");
     expect(WORKSPACE_ONTOLOGY).toContain("ghc_score");
-    expect(TIM_SYSTEM_ROLE).toContain("Trace Interruption Model");
+    expect(TIM_SYSTEM_ROLE).toContain("expected free energy");
     expect(TIM_SYSTEM_ROLE).toContain("independent external service");
   });
 
@@ -84,7 +84,7 @@ describe("prompt kernel", () => {
     expect(perf).toContain("SCORE GENERATION CONTEXT");
     expect(perf).toContain("verification");
     expect(perf).toContain("ghc_score");
-    expect(perf).toMatch(/System\s*1/i);
+    expect(perf).toMatch(/observation|action|stash|submit/i);
 
     const schema = buildProofOfWorkSchemaInstructions(
       { definition: "Evaluate onboarding readiness" },
@@ -100,6 +100,6 @@ describe("prompt kernel", () => {
     expect(schema).toContain("continuous");
     expect(schema).toContain("ghc_score");
     expect(schema).toContain("decision_rationale");
-    expect(schema).toContain("Trace Interruption Model");
+    expect(schema).toContain("expected-free-energy interruption");
   });
 });

@@ -347,16 +347,16 @@ export const STASH_API_PAGE: SeoProductPageConfig = {
   eyebrow: "Stash API · agent Stash",
   h1: "Evaluate agents the same way we evaluate humans with session.",
   intro:
-    "Stash API is the first Agentic Product (agent Stash) — a pure-API Think Aloud Protocol for agents. Stream the same proof-of-work types as Proof-of-Work API into temporary memory, then decide Stash (System 1) or Submit (System 2). Every decision flushes into the regular PoW stack with workspace and user references so scoring can contrast intent the same way session does for humans.",
+    "Stash API is the first Agentic Product (agent Stash) — a pure-API Think Aloud Protocol for agents. Stream the same proof-of-work types as Proof-of-Work API into temporary memory, then decide Stash (observation) or Submit (action). Every decision flushes into the regular PoW stack with workspace and user references so scoring can contrast intent the same way session does for humans.",
   metaTitle: "Stash API | agent Stash — Agent Evaluation like Think Aloud Protocol",
   metaDescription:
-    "Stash API buffers agent proof of work, then Stash (System 1) or Submit (System 2) into Proof-of-Work API. Evaluate agents the same way we evaluate humans with session.",
+    "Stash API buffers agent proof of work, then Stash (observation) or Submit (action) into Proof-of-Work API. Evaluate agents the same way we evaluate humans with session.",
   keywords: [
     "stash API",
     "agent Stash",
     "agent evaluation",
     "agent think aloud",
-    "system 1 system 2 agents",
+    "observation action agents",
     "proof of work stash submit",
     "agentic product",
   ],
@@ -368,9 +368,9 @@ export const STASH_API_PAGE: SeoProductPageConfig = {
         "Orchestrators buffer tool traces, screens, video, and EEG as they work — then call Stash or Submit when the agent parks or commits a reasoning step.",
     },
     {
-      title: "System 1 vs System 2 for agents",
+      title: "Observations vs actions for agents",
       description:
-        "Stash marks fast, provisional work (System 1). Submit marks deliberate commits (System 2). Both become durable PoW with intent metadata for scoring.",
+        "Stash marks forage before a policy is chosen (observation). Submit marks the committed policy (action). Both become durable PoW with intent metadata for scoring.",
     },
     {
       title: "Same meter as human session",
@@ -386,7 +386,7 @@ export const STASH_API_PAGE: SeoProductPageConfig = {
   highlights: [
     "First Agentic Product (agent Stash) — pure-API session for agents",
     "Same PoW types as Proof-of-Work API: tool, screen, video, EEG",
-    "Temporary buffer until Stash (System 1) or Submit (System 2); memory resets after flush",
+    "Temporary buffer until Stash (observation) or Submit (action); memory resets after flush",
     "Flushes through the regular PoW API with workspace, user, and system flags",
   ],
   faqs: [
@@ -398,7 +398,7 @@ export const STASH_API_PAGE: SeoProductPageConfig = {
     {
       question: "What happens on Stash vs Submit?",
       answer:
-        "Both flush every buffered unit through Proof-of-Work API with workspace and user references. Stash attaches System 1 metadata; Submit attaches System 2. The buffer then resets.",
+        "Both flush every buffered unit through Proof-of-Work API with workspace and user references. Stash attaches observation metadata; Submit attaches action metadata. The buffer then resets.",
     },
     {
       question: "Is this a replacement for session?",

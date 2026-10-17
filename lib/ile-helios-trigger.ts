@@ -1,6 +1,6 @@
 /**
  * TAP Learning Helios dialogue: classify a Helios appearance as a learner send vs an
- * auto-fire (idle heartbeat, speech-segment TIM, or other PoW interruption).
+ * auto-fire (idle heartbeat, speech-segment interruption, or other PoW interruption).
  *
  * Auto-fires stay off the TAP Learning dialogue so Helios does not appear without a
  * send. whyHelios is the explanation token if a surface ever shows them.

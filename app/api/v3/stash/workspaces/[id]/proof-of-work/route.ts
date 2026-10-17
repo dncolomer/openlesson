@@ -84,7 +84,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
         stash: `POST /api/v3/stash/workspaces/${workspaceId}/stash`,
         submit: `POST /api/v3/stash/workspaces/${workspaceId}/submit`,
       },
-      note: "Proof of work is held temporarily until Stash (System 1) or Submit (System 2).",
+      note: "Proof of work is held temporarily until Stash (observation) or Submit (action).",
     },
     { status: 202 },
   );

@@ -75,9 +75,9 @@ const sampleBrief: TapScoreBrief = {
 };
 
 describe("TAP prompt surface (shipped builders)", () => {
-  it("frames dual-stream System 1/2 elicitation without Socratic identity", () => {
-    expect(TAP_SURFACE).toMatch(/System 1/);
-    expect(TAP_SURFACE).toMatch(/System 2/);
+  it("frames dual-stream observation/action elicitation without Socratic identity", () => {
+    expect(TAP_SURFACE).toMatch(/Observation/);
+    expect(TAP_SURFACE).toMatch(/Action/);
     expect(TAP_SURFACE).toMatch(/proof of work|PoW/i);
     expectNoSocraticIdentity(TAP_SURFACE, "TAP_SURFACE");
     expectNoSocraticIdentity(TAP_SELECTIVE_THOUGHT_OVERLAY, "TAP overlay");
@@ -89,13 +89,13 @@ describe("TAP prompt surface (shipped builders)", () => {
       minutes: 15,
       workspaceBlock: "Workspace: Onboarding",
     });
-    expect(facilitator).toMatch(/System 1|System 2|thought-trace|thought trace/i);
+    expect(facilitator).toMatch(/observation|action|thought-trace|thought trace/i);
     expect(facilitator).toMatch(/knowledge-verification|knowledge verification|knowledge-check/i);
     expectNoSocraticIdentity(facilitator, "buildTapFacilitatorInstructions");
 
     const selective = buildTapSelectiveThoughtSystemPrompt(facilitator);
     expect(selective).toMatch(/SELECTIVE THOUGHT|selective thought/i);
-    expect(selective).toMatch(/System 1|System 2/);
+    expect(selective).toMatch(/observation|action/i);
     expectNoSocraticIdentity(selective, "selective thought system");
 
     expectNoSocraticIdentity(buildTapOpeningQuestionTask(), "opening task");
@@ -136,7 +136,9 @@ describe("TAP prompt surface (shipped builders)", () => {
     const opening = suggestedOpeningSpeech(facilitator);
     expect(opening.length).toBeGreaterThan(20);
     expect(opening).toMatch(/checkable|intermediate result|concrete/i);
-    expect(opening).not.toMatch(/out loud|Uncertain Systems|Proof of Work|\bPoW\b|TAP|TAP Learning/i);
+    expect(opening).not.toMatch(
+      /out loud|Uncertain Systems|Proof of Work|\bPoW\b|TAP|TAP Learning|System 1|TIM|Check\/ask/i,
+    );
 
     const runtimeOpening = suggestedOpeningSpeech(runtime);
     expect(runtimeOpening).toBe(opening);
@@ -197,19 +199,19 @@ describe("TAP prompt surface (shipped builders)", () => {
 
     // listenerStyle keeps dual-stream goals for the model while forbidding stage directions / platform talk.
     const style = listenerStyle("curious");
-    expect(style).toMatch(/System 1/);
-    expect(style).toMatch(/System 2/);
+    expect(style).toMatch(/observation/);
+    expect(style).toMatch(/action/);
     expect(style).toMatch(/knowledge-verification|knowledge verification/i);
     expect(style).toMatch(/without stage directions|platform talk/i);
   });
 
   it("buildTapScoreInstructions uses the TAP surface (runtime entry)", () => {
     const text = buildTapScoreInstructions(sampleBrief, "curious", 15);
-    expect(text).toMatch(/PRODUCT SURFACE: Verify|knowledge-verification facilitator|System 1/i);
+    expect(text).toMatch(/PRODUCT SURFACE: Verify|knowledge-verification facilitator|observation/i);
     expect(text).toContain("Onboarding mastery");
     expect(text).toContain("ICP");
-    expect(text).toMatch(/System 1/);
-    expect(text).toMatch(/System 2/);
+    expect(text).toMatch(/observation/i);
+    expect(text).toMatch(/action/i);
     expect(text).toMatch(/definitions|causal|examples|comparisons|predictions|repairs/i);
     expectNoSocraticIdentity(text, "buildTapScoreInstructions");
     // Identity is not "facilitator for Uncertain Systems" as a product pitch to the learner.
@@ -224,7 +226,7 @@ describe("TAP Learning prompt surface (shipped builders + registry)", () => {
     expect(ILE_SURFACE).toMatch(/current chapter/i);
     expect(ILE_SURFACE).toMatch(/chapter canvas|Work canvas|drawing tools|tools/i);
     // Dual-stream must not be the primary TAP Learning conversation goal.
-    expect(ILE_SURFACE).toMatch(/NOT a TAP dual-stream|not TAP dual-stream|not optimize for System 1/i);
+    expect(ILE_SURFACE).toMatch(/not a forage-only interview|chapter practice/i);
     expectNoSocraticIdentity(ILE_SURFACE, "ILE_SURFACE");
 
     const chat = buildIleHeliosChatSystemPrompt();
@@ -308,7 +310,7 @@ describe("TAP Learning prompt surface (shipped builders + registry)", () => {
     expect(DEFAULT_PROMPTS.session_plan_update).toMatch(/practice coach|Optimize|good enough|Mark as Done/i);
     expect(DEFAULT_PROMPTS.session_plan_update).toMatch(/next or adjacent chapter|adjacent chapter|next chapter/i);
     expect(DEFAULT_PROMPTS.session_plan_update).toMatch(
-      /not System 1\/System 2 elicitation|not TAP System 1|not TAP dual-stream/i,
+      /not a forage-only interview|chapter practice/i,
     );
     expect(DEFAULT_PROMPTS.session_plan_update).toContain("{chapter_closure_rules}");
     expect(DEFAULT_PROMPTS.session_plan_update).toContain("{chapter_expansion_rules}");
@@ -326,7 +328,7 @@ describe("TAP trace scoring addendum", () => {
       manifestText: "[t] system1/crystallize: hello",
       fileIds: [],
     });
-    expect(text).toMatch(/System 1|System 2|GHC/i);
+    expect(text).toMatch(/observation|action|GHC/i);
     expectNoSocraticIdentity(text, "buildTraceScoringInstructions");
   });
 });

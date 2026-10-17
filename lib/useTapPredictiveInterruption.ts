@@ -47,7 +47,7 @@ export function createTapInterruptionScheduler(
   ) => {
     const origin = options.origin ?? "other";
 
-    // Explicit null supersedes any pending timer (TIM contract).
+    // Explicit null supersedes any pending timer (interruption contract).
     if (!interruption) {
       clearPending();
       return;

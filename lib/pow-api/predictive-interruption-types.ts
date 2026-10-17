@@ -12,7 +12,7 @@ export const TIM_INTERVENTION_TYPE_CATALOG = [
   "chapter_map_expand",
 ] as const;
 
-/** Trace Interruption Model (TIM) — intervention types a consumer may trigger toward the user. */
+/** Expected-free-energy interruption — intervention types a consumer may trigger toward the user. */
 export type InterruptionInterventionType = (typeof TIM_INTERVENTION_TYPE_CATALOG)[number];
 
 export interface InterruptionChapterSuggestion {

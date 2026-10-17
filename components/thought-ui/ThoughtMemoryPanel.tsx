@@ -67,7 +67,7 @@ interface ThoughtMemoryPanelProps<T extends ThoughtMemoryEntry = ThoughtMemoryEn
   isSending?: boolean;
   /** TAP: save an individual thought locally (no Helios submit). Speech keeps running. */
   onEditThought?: (thought: T, nextText: string) => void;
-  /** TAP: delete an individual thought locally and record System 2 PoW. */
+  /** TAP: delete an individual thought locally and record action PoW. */
   onDeleteThought?: (thought: T) => void;
 }
 

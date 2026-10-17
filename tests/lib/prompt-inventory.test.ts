@@ -26,13 +26,15 @@ describe("prompt inventory", () => {
     }
   });
 
-  it("active keys are referenced by getPrompt in lib/xai.ts", () => {
+  it("getPrompt keys used in lib/xai.ts are live DEFAULT_PROMPTS keys", () => {
     const xaiSrc = fs.readFileSync(
       path.join(process.cwd(), "lib/xai.ts"),
       "utf8"
     );
-    for (const key of ACTIVE_KEYS) {
-      expect(xaiSrc).toContain(`getPrompt("${key}"`);
+    const used = [...xaiSrc.matchAll(/getPrompt\("([^"]+)"/g)].map((m) => m[1]);
+    expect(used.length).toBeGreaterThan(0);
+    for (const key of used) {
+      expect(ACTIVE_KEYS).toContain(key);
     }
   });
 
@@ -46,7 +48,7 @@ describe("prompt inventory", () => {
       "curious",
       15
     );
-    expect(create).toContain("Think Aloud Protocol");
+    expect(create).toMatch(/observation|action|PRODUCT SURFACE: Verify/i);
     expect(create).not.toContain("{brief.");
   });
 

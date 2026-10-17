@@ -1,14 +1,14 @@
 /**
- * TAP Learning TIM × chapter map — chapter-complete path.
+ * TAP Learning expected-free-energy × chapter map — chapter-complete path.
  *
  * Completing a chapter is Proof of Work (`session_plan` / `chapter_done`).
- * TIM reads that event plus LWM evidence appetite and schedules a
+ * The interruption policy reads that event plus LWM evidence appetite and schedules a
  * `chapter_map_expand` interruption. TAP Learning applies it on a dedicated map
  * timer (not the Helios dialogue scheduler, so idle/speech PoW cannot
- * supersede it). The new tile uses a TIM-explore icon until the learner
+ * supersede it). The new tile uses a forage-explore icon until the learner
  * accepts it (3×3 blocky glyph) or rejects it (tile cleared).
  *
- * Idle TIM map effects are intentionally not implemented here — see
+ * Idle map effects are intentionally not implemented here — see
  * ILE_TIM_MAP_INTERACTIONS for follow-on ideas.
  */
 import { findClosestEmptyChapterSlot } from "@/lib/ile-chapter-follow-ups";
@@ -43,7 +43,7 @@ export const EXPAND_CHAPTER_MAP_ACTION = "expand_chapter_map" as const;
 
 export const ILE_CHAPTER_COMPLETE_TIM_DELAY_MS = 8_000;
 export const ILE_CHAPTER_COMPLETE_TIM_MIN_DELAY_MS = 2_000;
-/** One chapter-complete TIM may place this many adjacent tiles at once. */
+/** One chapter-complete interruption may place this many adjacent tiles at once. */
 export const ILE_CHAPTER_COMPLETE_MAX_EXPANSIONS = 3;
 /** When appetite is thin, still fan out at least this many adjacent tiles. */
 export const ILE_CHAPTER_COMPLETE_DEFAULT_EXPANSIONS = 2;
@@ -85,7 +85,7 @@ export const ILE_TIM_MAP_INTERACTIONS: readonly IleTimMapInteraction[] = [
     tim_source: "upload_ile_chapter_done",
     effect: "positive",
     summary:
-      "Mark as Done is PoW; TIM + evidence appetite place 1–3 adjacent TIM-sourced chapters (explore icon until accepted or rejected).",
+      "Mark as Done is PoW; expected-free-energy interruption plus evidence appetite place 1–3 adjacent chapters (explore icon until accepted or rejected).",
   },
   {
     id: "idle_fog_creep",
@@ -97,11 +97,11 @@ export const ILE_TIM_MAP_INTERACTIONS: readonly IleTimMapInteraction[] = [
   },
   {
     id: "idle_wilt_unopened",
-    title: "Wilt ignored TIM tiles",
+    title: "Wilt ignored forage tiles",
     status: "planned",
     tim_source: "upload_ile_idle",
     effect: "negative",
-    summary: "Unopened TIM-explore chapters dim if idle TIM fires before the learner opens them.",
+    summary: "Unopened forage chapters dim if idle interruption fires before the learner opens them.",
   },
   {
     id: "idle_current_pulse",
@@ -109,7 +109,7 @@ export const ILE_TIM_MAP_INTERACTIONS: readonly IleTimMapInteraction[] = [
     status: "planned",
     tim_source: "upload_ile_idle",
     effect: "positive",
-    summary: "Short idle TIM pulses the active chapter so the map still feels inhabited.",
+    summary: "Short idle interruption pulses the active chapter so the map still feels inhabited.",
   },
   {
     id: "speech_keyword_highlight",
@@ -117,7 +117,7 @@ export const ILE_TIM_MAP_INTERACTIONS: readonly IleTimMapInteraction[] = [
     status: "planned",
     tim_source: "upload_ile_speech",
     effect: "positive",
-    summary: "Speech TIM highlights chapters whose keywords match the transcript.",
+    summary: "Speech interruption highlights chapters whose keywords match the transcript.",
   },
   {
     id: "appetite_settle",
@@ -125,7 +125,7 @@ export const ILE_TIM_MAP_INTERACTIONS: readonly IleTimMapInteraction[] = [
     status: "planned",
     tim_source: "upload_ile_chapter_done",
     effect: "neutral",
-    summary: "Saturated chapter expansion + empty want_more stops TIM from growing the map.",
+    summary: "Saturated chapter expansion + empty want_more stops expected-free-energy growth of the map.",
   },
   {
     id: "skip_withdraw",
@@ -133,7 +133,7 @@ export const ILE_TIM_MAP_INTERACTIONS: readonly IleTimMapInteraction[] = [
     status: "planned",
     tim_source: "session_plan/skip",
     effect: "negative",
-    summary: "Skipping a chapter withdraws nearby unopened TIM tiles.",
+    summary: "Skipping a chapter withdraws nearby unopened forage tiles.",
   },
 ] as const;
 
@@ -481,7 +481,7 @@ export function predictChapterCompleteMapExpansion(
         message,
         rationale: appetiteHint
           ? `Chapter complete PoW plus evidence appetite want_more (${appetiteHint}) — grow the TAP Learning chapter map with ${suggestions.length} adjacent chapters.`
-          : `Chapter complete is Proof of Work; TIM grows the chapter map with ${suggestions.length} adjacent chapters so the session stays spatially alive.`,
+          : `Chapter complete is Proof of Work; epistemic foraging grows the chapter map with ${suggestions.length} adjacent chapters so the session stays spatially alive.`,
         consumer_action: EXPAND_CHAPTER_MAP_ACTION,
         block_id: features.event.block_id ?? null,
         chapter_suggestion: suggestion,

@@ -88,8 +88,8 @@ describe("composeSessionPlanCreatePrompt is mode-aware (shipped fill path)", () 
     expect(learning).toContain("Binary search trees");
     expect(project).toContain("Binary search trees");
 
-    // Dialog: topic-horizon conversation, not single-interaction micro-chapters
-    expect(learning).toMatch(/topic-horizon conversation/i);
+    // Dialog: several turns on one topic, not single-interaction micro-chapters
+    expect(learning).toMatch(/several turns on one topic/i);
     expect(learning).toMatch(/Summarize what you understand as X/i);
     expect(learning).toMatch(/Draw X on a notebook/i);
     expect(learning).toMatch(/Make a list/i);
@@ -186,7 +186,7 @@ describe("composeSessionPlanUpdatePrompt + Helios (shipped fill path)", () => {
     const dialog = buildIleHeliosChatSystemPrompt("learning");
     const project = buildIleHeliosChatSystemPrompt("project");
     expect(dialog).not.toBe(project);
-    expect(dialog).toMatch(/topic-horizon conversation/i);
+    expect(dialog).toMatch(/several turns/i);
     expect(dialog).toMatch(/Do NOT invite "Mark as Done" after the first/i);
     expect(dialog).toMatch(/chapter map can be expanded/i);
     expect(dialog).toMatch(/ile-chapter-suggest/i);
@@ -333,7 +333,7 @@ describe("shipped TAP Learning planner / Helios text names the user's anti-patte
     expect(create).toMatch(/question" \| "task" \| "suggestion" \| "checkpoint/);
     expect(update).toMatch(/CHAPTER CLOSURE POLICY|chapter_closure_rules/);
     expect(update).toMatch(/NO-ENDLESS-DRILLING/);
-    expect(ILE_SURFACE).toMatch(/topic-horizon conversation/);
+    expect(ILE_SURFACE).toMatch(/several turns on (this chapter |one )?topic/);
     expect(ILE_SURFACE).toMatch(/Mark as Done/);
     expect(ILE_CONTEXT_BODY).toMatch(/Do not invite Mark as Done after the first interaction/);
   });
@@ -350,9 +350,11 @@ describe("shipped TAP Learning planner / Helios text names the user's anti-patte
     expect(chatRoute).toContain("chapterSuggestion");
 
     const xai = read("lib/xai.ts");
-    expect(xai).toContain("composeSessionPlanUpdatePrompt");
-    expect(xai).toContain("shouldOfferIleChapterDone");
+    expect(xai).toContain("composeSessionPlanCreatePrompt");
     expect(xai).toContain("sessionMode");
+    const update = read("lib/session-plan-update.ts");
+    expect(update).toContain("composeSessionPlanUpdatePrompt");
+    expect(read("lib/ile-chapter-depth.ts")).toContain("shouldOfferIleChapterDone");
 
     const view = readSessionViewSurface();
     expect(view).toContain("buildIleChapterAddPowToolData");

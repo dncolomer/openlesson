@@ -92,7 +92,7 @@ export interface ProofOfWorkEvalSchemaResult {
   vertical_score_contracts?: {
     verification: PerformanceReportContract;
   };
-  /** Trace Interruption Model contract — every Proof-of-Work API response also carries top-level interruption. */
+  /** Expected-free-energy interruption contract — every Proof-of-Work API response also carries top-level interruption. */
   interruption_contract?: InterruptionContract;
   /** LLM-predicted interruption for this workspace context (mapped to response interruption). */
   predicted_interruption?: ProofOfWorkApiInterruption;
@@ -406,7 +406,7 @@ Output rules:
    - Continuous evaluation is the intended operating model, not a one-time setup
 9. schema_name must be snake_case prefixed with "eval_input_".
 10. Keep required_fields practical; use optional_fields for enrichments.
-11. "predicted_interruption" — Trace Interruption Model (TIM) prediction for the consumer system (TIM is a swappable interruption world model; consumer envelope stays stable):
+11. "predicted_interruption" — expected-free-energy interruption prediction for the consumer system (the policy is a swappable interruption world model; consumer envelope stays stable):
    - Return null when no intervention is predicted (user is on track, or context is too thin).
    - When non-null, set delay_ms (15000-600000) and intervention { type, message, optional rationale, consumer_action, block_id }.
    - Types: reflection_prompt (articulate reasoning), checkpoint_probe (verify understanding), coaching_nudge (gap-driven nudge), proof_of_work_reminder (upload proof-of-work into the live session), performance_review (end_session), chapter_map_expand (TAP Learning chapter-complete → grow the chapter map).

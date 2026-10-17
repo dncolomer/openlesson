@@ -325,12 +325,12 @@ export function buildTraceScoringInstructions(traceContext: ReturnType<typeof bu
 
   return `
 
-Thought trace proof of work (System 1 and System 2) — primary GHC (Genuine Human Cognition) signal:
-- System 1 traces (${traceContext.system1Count}): spontaneous crystallized speech — everything the learner said aloud, including thoughts they did NOT submit (stashed/unsent) to the TAP dialogue.
-- System 2 traces (${traceContext.system2Count}): deliberate learner decisions — explicit send, edit, skip, select/deselect, or resend actions.
+Thought trace proof of work (observations and actions) — primary GHC (Genuine Human Cognition) signal:
+- Observation traces (${traceContext.system1Count}): spontaneous crystallized speech — everything the learner said aloud, including thoughts they did NOT submit (stashed/unsent) to the TAP dialogue.
+- Action traces (${traceContext.system2Count}): deliberate learner decisions — explicit send, edit, skip, select/deselect, or resend actions.
 
-Use the dialogue transcript as the primary TAP exchange (System 1 and System 2 elicitation), and treat attached trace files and the manifest below as first-class proof of work for LWM Snapshot and especially ghc_score / ghc_confidence.
-Compare System 1 vs System 2: knowledge articulated but not sent may reveal hesitation, incomplete understanding, or metacognitive filtering — cite both sent and unsent traces in gap_analysis proof_of_work and temporal_summary where relevant.
+Use the dialogue transcript as the primary TAP exchange (observation and action elicitation), and treat attached trace files and the manifest below as first-class proof of work for LWM Snapshot and especially ghc_score / ghc_confidence.
+Compare observations vs actions: knowledge articulated but not sent may reveal hesitation, incomplete understanding, or metacognitive filtering — cite both sent and unsent traces in gap_analysis proof_of_work and temporal_summary where relevant.
 Timestamps on traces inform temporal scoring (inter-event gaps, dwell before send, idle before crystallize).
 
 Trace manifest:

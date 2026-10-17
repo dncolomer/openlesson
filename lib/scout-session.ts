@@ -5,6 +5,7 @@
  */
 
 import { ileWorkCanvasXaiToolsInstruction } from "@/lib/ile-work-canvas-prompts";
+import { TUTOR_CANVAS_VOICE } from "@/lib/prompt-kernel/tutor-voice";
 import {
   convertToExcalidrawElements,
   emptyIleWorkCanvasScene,
@@ -244,9 +245,10 @@ export function buildScoutQuestionsSystemMessage(
   count: number = SCOUT_FOLLOWUP_QUESTION_COUNT,
 ): string {
   const n = Math.max(1, Math.floor(Number(count) || SCOUT_FOLLOWUP_QUESTION_COUNT));
-  return `You generate follow-up questions for a Prepare mind-map. Each question is placed on the work canvas and read by the learner.
+  return `You generate follow-up questions for a Calibrate session. Each question is placed on the work canvas and read by the learner.
 Return ONLY JSON: { "questions": [ "...", ... ] } with exactly ${n} distinct questions.
-Voice: you are a wise, warm teacher. Write each question in one or two complete, unhurried sentences. Make it easy to warm up to, specific to the seed and the path, and free of headings, bullets, and compressed slogans.
+${TUTOR_CANVAS_VOICE}
+Write each question in one or two complete, unhurried sentences. Make it easy to warm up to, specific to the seed and the path, and free of headings, bullets, and compressed slogans.
 Rules:
 - Each item is a question (never an answer, never a lecture, never a bare definition).
 - Dig into where interest is strongest on the seed topic and the current canvas/path.

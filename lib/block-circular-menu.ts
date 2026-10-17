@@ -46,7 +46,7 @@ export const ILE_EMPTY_CIRCULAR_MENU_ACTIONS: readonly BlockCircularMenuAction[]
   { id: "add_chapter", label: "Add chapter" },
 ] as const;
 
-/** TIM-proposed chapters: accept keeps the 3×3 logos, reject clears the tile. */
+/** Forage-proposed chapters: accept keeps the 3×3 logos, reject clears the tile. */
 export const ILE_TIM_CIRCULAR_MENU_ACTIONS: readonly BlockCircularMenuAction[] = [
   { id: "accept_chapter", label: "Accept" },
   { id: "reject_chapter", label: "Reject" },

@@ -26,13 +26,13 @@ composePrompt({ ontology, surface, task, contextNotes? })
   → [L0 ontology?] + [L1 surface?] + L2 task + [notes?]
 ```
 
-**L0 ontology** (`lib/prompt-kernel/ontology.ts`) encodes product philosophy: never-ending workspaces, PoW API as primary capture interface, single LWM Snapshot primary score + GHC secondary, System 1/2 selective thought, TIM interruption model, and the remediation rule (never recommend platform mechanics as outputs).
+**L0 ontology** (`lib/prompt-kernel/ontology.ts`) encodes product philosophy: never-ending workspaces, PoW API as primary capture interface, single LWM Snapshot primary score + GHC secondary, observation/action selective thought, expected-free-energy interruption policy, and the remediation rule (never recommend platform mechanics as outputs).
 
 ### 1.2 Surfaces (L1)
 
 | Surface | File | Primary private goal |
 |---|---|---|
-| `TAP_SURFACE` (+ selective / practice overlays) | `lib/prompt-kernel/surfaces/tap.ts` | Maximize genuine System 1/2 thought traces as PoW |
+| `TAP_SURFACE` (+ selective / practice overlays) | `lib/prompt-kernel/surfaces/tap.ts` | Maximize genuine observation/action thought traces as PoW |
 | `ILE_SURFACE` (+ tools block / context body) | `lib/prompt-kernel/surfaces/ile.ts` | Optimize chapter progress + augment with tool-routed practice artifacts |
 | `buildScoreContextSurface(vertical)` | `lib/prompt-kernel/surfaces/score-context.ts` | Score from PoW only; verification adds submit/stash analysis |
 
@@ -146,12 +146,12 @@ TAP complete scoring also appends buildTraceScoringInstructions (System1/2 count
 
 ## 2. TAP dialog / question / exercise generation — quality review
 
-**Product goal:** genuine, well-designed elicitation that yields strong System 1 and System 2 PoW for later LWM Snapshot + GHC scoring.
+**Product goal:** genuine, well-designed elicitation that yields strong observation and action PoW for later LWM Snapshot + GHC scoring.
 
 ### 2.1 Strengths (grounded in shipped text)
 
 1. **Clear dual objective model (private vs visible)**  
-   `TAP_SURFACE` states primary goal as maximizing System 1 (spontaneous/stashed) and System 2 (send/edit/skip/select/resend) traces, while learner-visible speech must sound like natural knowledge-checking — definitions, causal links, examples, comparisons, predictions, repairs. Platform jargon and dual-process explanations are banned from learner-facing turns.
+   `TAP_SURFACE` states primary goal as maximizing observations (spontaneous/stashed) and actions (send/edit/skip/select/resend) traces, while learner-visible speech must sound like natural knowledge-checking — definitions, causal links, examples, comparisons, predictions, repairs. Platform jargon and dual-process explanations are banned from learner-facing turns.
 
 2. **Strong anti-theater rules**  
    Explicit NEVER lists for “say/talk/think … out loud”, Uncertain Systems / PoW / TAP product names, scoring jargon. Tests in `tests/lib/tap-ile-prompt-surfaces.test.ts` lock these bans. This is essential for genuine PoW: stage directions produce performative speech, not cognition.
@@ -160,7 +160,7 @@ TAP complete scoring also appends buildTraceScoringInstructions (System1/2 count
    One concise elicitation; optional brief mirror; prioritize knowledge-thick moves; favor prompts that invite both spontaneous continuation and deliberate send/repair — without naming systems to the learner. Practice overlay correctly lowers difficulty for warm-ups without leaking “practice mode.”
 
 4. **Opening generation prefers concrete problems**  
-   `buildTapOpeningQuestionTask` rejects syllabus restatements, generic icebreakers, meta “approach” questions, and stage directions; if context is only a topic list, invent a small concrete problem. Starting topics require distinct domain angles and openingQuestions that yield System 1/2 traces.
+   `buildTapOpeningQuestionTask` rejects syllabus restatements, generic icebreakers, meta “approach” questions, and stage directions; if context is only a topic list, invent a small concrete problem. Starting topics require distinct domain angles and openingQuestions that yield observation and action traces.
 
 5. **Domain exercise author + quality gate**  
    Shared author for TAPBench / human TAP drill / TAP Learning Project Mode with hard bans on topic-list restatements and weak openers (“Using what you know about…”, “Demonstrate your understanding…”). `isLowQualityTapbenchExercise` + pure fallbacks prevent the worst “paste the syllabus” failures. Exercise TAP framing strips out-loud stage directions.
@@ -179,7 +179,7 @@ TAP complete scoring also appends buildTraceScoringInstructions (System1/2 count
 3. **No explicit “trace thickness” success criteria**  
    Private goal says “maximize genuine traces,” but prompts do not define what counts as *enough* for scoring (e.g. learner produces a definition + mechanism + example + failure mode). Facilitators may stop after one short exchange or over-interrogate without a coverage plan across the six TAP markers.
 
-4. **Weak adaptive strategy for System 1 vs System 2 balance**  
+4. **Weak adaptive strategy for observation vs action balance**  
    Overlay says “favor both,” but does not instruct when to open space for spontaneous stashable speech vs force a deliberate decision (compare, choose, repair, commit). High GHC depends on natural temporal pacing and submit/stash contrast — generation rarely steers for that contrast deliberately.
 
 5. **Repair / contradiction handling is light**  
@@ -198,7 +198,7 @@ TAP complete scoring also appends buildTraceScoringInstructions (System1/2 count
 | P0 | Align suggested opening + fallbacks with opening-task quality bar (concrete problem-in-context, not “core idea”) | `buildTapFacilitatorInstructions` suggested opening; `buildTapOpeningQuestionFallback` / topics fallbacks |
 | P0 | Add 4–6 GOOD / BAD elicitation exemplars (domain-agnostic shells) to `TAP_SURFACE` or selective overlay | Same pattern as TAP Learning `opening_probe` |
 | P1 | Add private “trace thickness checklist” (definition → mechanism → example → edge/transfer → repair) and instruct covering markers over the session | Facilitator task goals |
-| P1 | Explicit System 1 invitation moves vs System 2 commitment moves (without learner-facing jargon) | `TAP_SELECTIVE_THOUGHT_OVERLAY` |
+| P1 | Explicit observation invitation moves vs action commitment moves (without learner-facing jargon) | `TAP_SELECTIVE_THOUGHT_OVERLAY` |
 | P2 | Optional LWM evidence_appetite / blind_spots injection into TAP chat system notes | `workspace-tap-score/chat` contextNotes |
 | P2 | Stronger exercise author grounding when file excerpts exist (require using at least one constraint from materials) | Domain exercise user prompt |
 
@@ -269,9 +269,9 @@ TAP complete scoring also appends buildTraceScoringInstructions (System1/2 count
 
 For product LWM Snapshot (`buildVerticalScoreInstructions("verification", …)`):
 
-1. **L0 full ontology** — workspace never ends; single snapshot strategy; GHC secondary; System 1/2 definition; remediation rule (no platform outputs).
+1. **L0 full ontology** — workspace never ends; single snapshot strategy; GHC secondary; observation/action definition; remediation rule (no platform outputs).
 2. **L1 `SCORE_POW_CONTEXT_LAYER`** — score from attached PoW only; forbidden invented history/marketing; thin-signal honesty; timestamps first-class; remediation domain language.
-3. **L1 `SCORE_VERIFICATION_SUBMIT_STASH_OVERLAY`** (verification only) — mandatory submit/stash System 1 vs 2 analysis when selective-thought PoW exists; else do not invent; low GHC confidence.
+3. **L1 `SCORE_VERIFICATION_SUBMIT_STASH_OVERLAY`** (verification only) — mandatory submit/stash observation vs action analysis when selective-thought PoW exists; else do not invent; low GHC confidence.
 4. **L2 task** — produce structured report for scope (block vs full workspace); authoritative workspace_goal if provided; embeds:
    - `LWM_SNAPSHOT_INSTRUCTIONS` / `VERTICAL_SCORE_INSTRUCTIONS[vertical]`
    - marker_scores 4–8 with PoW-grounded rationales
@@ -291,7 +291,7 @@ For product LWM Snapshot (`buildVerticalScoreInstructions("verification", …)`)
 | **Primary `score` (0–100)** | “How well the learner has explored the workspace and demonstrated knowledge (block/pathway coverage + depth). Synthesize from all proof of work (not a naive average of markers).” Schema: same idea via `lwm_snapshot_score` description. |
 | **`lwm_snapshot_score`** | Set equal to `score` when schema allows (product named field). |
 | **Markers** | 4–8 competency axes; each 0–100 + one-sentence rationale grounded in specific PoW; optional block_id. No fixed global marker set at LWM level (TAP live markers are separate fixed six). |
-| **GHC `ghc_score` / `ghc_confidence`** | 0–100 authenticity of human cognition; weight System 1 vs 2 and natural temporal pacing; tool-only dumps → low score + none/low confidence. Submit/stash overlay requires citing sent vs unsent when selective thought present. |
+| **GHC `ghc_score` / `ghc_confidence`** | 0–100 authenticity of human cognition; weight observations vs actions and natural temporal pacing; tool-only dumps → low score + none/low confidence. Submit/stash overlay requires citing sent vs unsent when selective thought present. |
 | **`temporal_summary`** | Optional one sentence when timestamps inform scores. |
 | **`workspace_goal`** | Echo authoritative if provided; else infer and allow evolution. |
 | **Gaps / next_steps / suggestions** | Concrete deficiencies with PoW proof; next_steps split directions vs granular events; never TAP/TAP Learning/blocks as remediation outputs. |
@@ -356,7 +356,7 @@ MARKER ↔ PRIMARY CONSISTENCY:
 GHC SCORE ANCHORS (secondary authenticity signal):
 - 0–25 + ghc_confidence none|low: tool-only dumps, copy-paste, or no selective-thought / natural timing signal.
 - 26–50 + low|medium: some human traces but highly prompted, templated, or missing submit/stash contrast.
-- 51–75 + medium|high: natural pacing, hesitation/repair, System 1 vs System 2 contrast visible in selective-thought PoW.
+- 51–75 + medium|high: natural pacing, hesitation/repair, observation vs action contrast visible in selective-thought PoW.
 - 76–100 + high: rich dual-stream traces, non-templated language, temporal patterns consistent with genuine cognition; cite concrete stash vs submit pairs.
 
 Never inflate GHC because domain content is correct — correctness belongs in the primary LWM Snapshot score; GHC measures authenticity of the cognition source.
@@ -368,7 +368,7 @@ Never inflate GHC because domain content is correct — correctness belongs in t
 THIN / MISSING POW DEFAULTS:
 - If total PoW is empty or non-diagnostic for the goal: primary score ≤ 15, markers low or empty with rationales citing absence, gaps may be empty only when nothing specific can be named, ghc_confidence "none".
 - If only unstructured tool events without outcomes: primary usually ≤ 40 unless events clearly demonstrate goal progress.
-- If selective thought is absent: do not invent System 1/2 dynamics; cap ghc_confidence at low; still score domain demonstration from remaining PoW.
+- If selective thought is absent: do not invent observation/action dynamics; cap ghc_confidence at low; still score domain demonstration from remaining PoW.
 ```
 
 #### E. Optional calibration micro-examples — place as short appendix in L2 task (token-cost aware)
@@ -406,7 +406,7 @@ When a marker list is provided in context, use those ids/labels for marker_score
 | Claim | Locked by shipped tests |
 |---|---|
 | `composePrompt` order ontology → surface → task | `tests/lib/prompt-kernel.test.ts` |
-| TAP System 1/2 + no Socratic identity + out-loud bans | `tests/lib/tap-ile-prompt-surfaces.test.ts` |
+| TAP observation/action + no Socratic identity + out-loud bans | `tests/lib/tap-ile-prompt-surfaces.test.ts` |
 | TAP Learning chapter-aware optimize/augment + registry path | same |
 | Score PoW-only + verification submit/stash layering | `tests/lib/score-prompt-layer.test.ts`, `tests/lib/performance-report.test.ts` |
 | Domain exercise surfaces + quality helpers | `tests/lib/tapbench-exercise-generate.test.ts` |

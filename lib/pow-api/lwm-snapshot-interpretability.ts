@@ -74,7 +74,7 @@ export function listLwmSnapshotResponseFields(): LwmSnapshotFieldInventoryItem[]
       field: "ghc_score",
       client_label: LWM_CLIENT_LABELS.ghc_score,
       plain_language:
-        "Secondary 0–100 score: how genuine / human the work process looks (System 1 vs System 2 thoughts, natural pacing). " +
+        "Secondary 0–100 score: how genuine / human the work process looks (observations vs actions, natural pacing). " +
         "It is NOT the same as skill. Short agent dumps can still look “structured” and score mid-high authenticity " +
         "while skill stays low — that split is expected. " +
         SCORE_FIELD_DESCRIPTIONS.ghc_score,

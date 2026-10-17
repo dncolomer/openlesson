@@ -102,7 +102,7 @@ describe("predictive-interruption", () => {
     expect(contract.intervention_types).toEqual([...TIM_INTERVENTION_TYPE_CATALOG]);
     expect(contract.consumer_obligations.length).toBeGreaterThan(2);
     expect(contract.supersession_rule).toContain("replaces");
-    expect(contract.description).toMatch(/Trace Interruption Model \(TIM\)/);
+    expect(contract.description).toMatch(/expected-free-energy interruption/i);
     expect(contract.description).toMatch(/independent external service|swappable/i);
   });
 
@@ -121,13 +121,12 @@ describe("predictive-interruption", () => {
     expect(predict).not.toHaveBeenCalled();
   });
 
-  it("predicts evidence reminder after workspace creation", async () => {
+  it("returns null after workspace creation (no interruption on that endpoint)", async () => {
     const interruption = await predictInterruption({
       endpoint: "create_workspace",
       workspace_id: "ws-1",
     });
-    expect(interruption?.intervention.type).toBe("proof_of_work_reminder");
-    expect(interruption?.delay_ms).toBeGreaterThan(0);
+    expect(interruption).toBeNull();
   });
 
   it("predicts upload reminder when evidence schema has no artifacts", async () => {
@@ -140,14 +139,14 @@ describe("predictive-interruption", () => {
     expect(interruption?.intervention.consumer_action).toBe("call_upload_proof_of_work");
   });
 
-  it("predicts performance review on evidence milestone uploads", async () => {
+  it("returns null on proof-of-work upload (no interruption on that endpoint)", async () => {
     const interruption = await predictInterruption({
       endpoint: "upload_proof_of_work",
       workspace_id: "ws-1",
       proof_of_work_artifacts: 5,
       tool_name: "canvas",
     });
-    expect(interruption?.intervention.type).toBe("performance_review");
+    expect(interruption).toBeNull();
   });
 
   it("predicts coaching nudge from performance report context", async () => {
@@ -206,7 +205,7 @@ describe("predictive-interruption", () => {
     setTimProviderForTests(fixed);
 
     const interruption = await predictInterruption({
-      endpoint: "upload_proof_of_work",
+      endpoint: "generate_proof_of_work_schema",
       workspace_id: "ws-1",
       proof_of_work_artifacts: 2,
     });

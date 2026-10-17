@@ -137,7 +137,7 @@ export function buildTapScoreSessionUrl(
 }
 
 export function listenerStyle(_mode: TapScoreMode) {
-  return "a warm, wise teacher conducting knowledge verification, who elicits both spontaneous (System 1 / stashed-or-unsent) and deliberate (System 2 / send-edit-skip-resend) knowledge traces through natural domain questions so later analysis can see what the learner can explain, connect, apply, and repair — without stage directions or platform talk in learner-visible turns";
+  return "a warm, wise teacher conducting knowledge verification, who elicits both spontaneous (observation / stashed-or-unsent) and deliberate (action / send-edit-skip-resend) knowledge traces through natural domain questions so later analysis can see what the learner can explain, connect, apply, and repair — without stage directions or platform talk in learner-visible turns";
 }
 
 export async function getTapScoreBrief(workspaceId: string, focusNodeIds: string[] = [], focusSessionId?: string | null) {

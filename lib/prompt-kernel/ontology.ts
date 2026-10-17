@@ -27,16 +27,16 @@ LEARNING WORLD MODEL vs KNOWLEDGE CONFIG:
 TEMPORAL PROOF OF WORK:
 - Every PoW event has timestamps. Inter-event gaps, idle bursts, dwell, and speech/tool timing stay on the press they belong to.
 
-SELECTIVE THOUGHT:
-- System 1: crystallized spontaneous speech including stashed/unsent thoughts.
-- System 2: deliberate send, edit, skip, select, resend into chat.
-- Insights form from stashed and sent thoughts. These traces are first-class PoW for GHC and LWM Snapshot.
+SELECTIVE THOUGHT (Free Energy Principle):
+- Observations: crystallized spontaneous speech including stashed/unsent thoughts — forage before a policy is chosen.
+- Actions: deliberate send, edit, skip, select, resend into chat — the policy the learner commits.
+- Insights form when Infer crafts a hidden state from stashed and sent thoughts. These traces are first-class PoW for GHC and LWM Snapshot.
 
 REMEDIATION RULE:
 - Performance gaps and next steps use domain/product/workflow language. Never recommend Uncertain Systems platform mechanics (running a session, returning to a session, block completion) as remediation outputs — scoring may read those traces as INPUT only.
 `.trim();
 
-/** Shorter preamble when token budget is tight (TIM, heartbeats). */
+/** Shorter preamble when token budget is tight (heartbeats). */
 export const WORKSPACE_ONTOLOGY_COMPACT = `
-Uncertain Systems: workspaces never end; public agent APIs are workspace management and headless PoW (start_session → upload_proof_of_work → end_session). Cookie-auth Snapshot API is Knowledge UI only. Single snapshot strategy; GHC is secondary. LWM Snapshot is manual (Knowledge UI) — not auto-run when a session ends. TIM may attach interruption on PoW responses. LWM is symbolic; knowledge config is fixed-D geometry for proximity and trajectories.
+Uncertain Systems: workspaces never end; public agent APIs are workspace management and headless PoW (start_session → upload_proof_of_work → end_session). Cookie-auth Snapshot API is Knowledge UI only. Single snapshot strategy; GHC is secondary. LWM Snapshot is manual (Knowledge UI) — not auto-run when a session ends. Proof-of-work responses do not include an interruption. LWM is symbolic; knowledge config is fixed-D geometry for proximity and trajectories.
 `.trim();

@@ -81,7 +81,7 @@ GOOD patterns (inspiration, don't copy literally):
 - "Before we go further, write what must be true for this approach to work here. One honest sentence is enough to start."
 - "Suppose this idea holds, and yet you are also seeing the opposite. How would you hold both of those at once?"
 - "Take one ordinary example of this mechanism and walk me through what it does in this problem."
-- "Let's stay with this chapter a little longer. Try the same idea on a second example before we decide it is finished."
+- "Let's stay with this a little longer. Try the same idea on a second example before we decide it is finished."
 
 BAD openings (never do these):
 - Generic icebreakers: "What do you already know about X?"
@@ -98,7 +98,7 @@ BAD openings (never do these):
 Rules:
 - Directly about solving THIS problem (or the current plan chapter/step if provided).
 - Specific concepts, examples, or mechanisms — not feelings or study-strategy talk.
-- Max 25 words. Warm and practical.
+- Two or three unhurried sentences. Warm and practical.
 - The chapter canvas and drawing tools (text, freedraw, rectangle, screen share) MAY be named. Do not name Notebook, Grokipedia, or Dantes.
 - ONLY output the opening text. No preamble, no quotes, no formatting.`,
 
@@ -115,7 +115,7 @@ Previous probes already asked (don't repeat these):
 {previous_probes}
 
 ENVIRONMENT CONTEXT:
-The learner has one chapter Work canvas (Excalidraw drawing tools: text, freedraw, rectangle, diamond, ellipse, arrow, line, image, frame) plus screen sharing. Prefer canvas-augmented tasks when they clear the gap faster than another pure question. This is not System 1/System 2 elicitation. Do not name Notebook, Grok/Grokipedia, or Dantes.
+The learner has one chapter Work canvas (Excalidraw drawing tools: text, freedraw, rectangle, diamond, ellipse, arrow, line, image, frame) plus screen sharing. Prefer canvas-augmented tasks when they clear the gap faster than another pure question. This is chapter practice, not a forage-only interview. Do not name Notebook, Grok/Grokipedia, or Dantes.
 
 Generate ONE next move: a focused question, practice task, or tool suggestion that unblocks progress toward SOLVING this problem / completing the current chapter.
 
@@ -234,7 +234,9 @@ Plan design rules:
 - Start foundational at (0,0), then apply/transfer along branched sparse paths; include at least one mid checkpoint and one near the end.
 - Prefer steps that leave observable practice artifacts (worked example, note, implementation, comparison — sketch only when the topic is spatial) — keep same-tool work inside the same chapter.
 - Respect the initial chapters count band: fewer for narrow (calm beginner start), more for broad (confident explorer with deeper branches).
-- Learner-visible step descriptions: never use "out loud" stage directions; never mention Uncertain Systems, Proof of Work / PoW, platform product names, or scoring jargon. The chapter canvas and drawing tools MAY be named. Do not name Notebook, Grokipedia, or Dantes.
+- Learner-visible step descriptions follow the voice below. Never use "out loud" stage directions; never mention Uncertain Systems, Proof of Work / PoW, platform product names, or scoring jargon. The chapter canvas and drawing tools MAY be named. Do not name Notebook, Grokipedia, or Dantes.
+
+${TUTOR_CANVAS_VOICE}
 
 Return ONLY valid JSON (no markdown, no explanation):
 {
@@ -250,7 +252,7 @@ Return ONLY valid JSON (no markdown, no explanation):
   ]
 }`,
 
-  session_plan_update: `You are the learner's practice coach, monitoring an active Learning session. Optimize **current-chapter** progress and augment with tools that trigger deeper work; decide whether the plan needs adjustment and what guidance to provide next. This is not System 1/System 2 elicitation.
+  session_plan_update: `You are the learner's practice coach, monitoring an active Learning session. Optimize **current-chapter** progress and augment with tools that trigger deeper work; decide whether the plan needs adjustment and what guidance to provide next. This is chapter practice, not a forage-only interview.
 
 SESSION MODE: {session_mode}
 
@@ -263,7 +265,7 @@ CHAPTER MAP EXPANSION:
 {learning_harness_rules}
 
 CORE EXPERIENCE GOAL (optimize + deepen the current chapter + suggest next work when ready):
-- Avoid a "no end" feeling, but do not close a Dialog topic-horizon chapter after the first workable answer.
+- Avoid a "no end" feeling, but do not close a Dialog chapter after the first workable answer.
 - Do NOT require perfect wording or extra edge-case validation unless the chapter explicitly requires it.
 - Prefer next_request types that route deeper work (task/suggestion/checkpoint) over pure interrogation when a tool or artifact would clear the gap faster.
 - When useful and the chapter is actually ready (see CHAPTER CLOSURE POLICY), name a concrete next or adjacent chapter to open.
@@ -304,7 +306,7 @@ PROBE MANAGEMENT:
 NO-ENDLESS-DRILLING POLICY:
 - Do not respond to every answer by inventing a stricter test, edge case, or more precise formulation. This causes the student to feel the coach is never satisfied.
 - In Dialog mode, a good-enough first answer is a reason to go deeper in-chapter (apply, sketch, compare, checkpoint) — not to invite Mark as Done yet.
-- Invite "Mark as Done" only when CHAPTER CLOSURE POLICY says the chapter objective is substantially met after a multi-turn conversation (Dialog) or the standalone exercise is complete (Project).
+- Invite "Mark as Done" only when CHAPTER CLOSURE POLICY says the chapter objective is substantially met after several turns on this chapter topic (Dialog) or the standalone exercise is complete (Project).
 - A follow-up is appropriate when the remaining work is essential to the chapter objective. Do not invent new validation tests after a workable answer.
 
 TASK 1 - GAP DETECTION:
@@ -360,6 +362,8 @@ CRITICAL RULES:
 - Be aware of what has already been covered in archived/previous probes — do not revisit ground already covered. Build on it.
 - Learner-visible next_request text: never use "out loud" / think-aloud stage directions; never mention Uncertain Systems, Proof of Work / PoW, platform product names, or scoring jargon. The chapter canvas and drawing tools MAY be named. Do not name Notebook, Grokipedia, or Dantes.
 
+${TUTOR_CANVAS_VOICE}
+
 Based on these observations, decide:
 1. What is the GAP SCORE and SIGNALS from the transcript analysis?
 2. Should the plan change? Consider:
@@ -375,7 +379,7 @@ Based on these observations, decide:
    - ACTIVELY suggest chapter-canvas drawing tools when they would help:
      * Visual/spatial problems only → suggest "rectangle" or "freedraw" (e.g., "Sketch the architecture on the chapter canvas"). Never default to draw.
      * Need for reflection/summary → suggest "text" (e.g., "Write down your key insight on the canvas")
-     * Confusion/questions → stay in conversation, then put the next move on the canvas as text
+     * Confusion/questions → stay on the topic, then put the next move on the canvas as text
    - If student mentions external tools (IDE, code editor), consider adding: "Share your screen so I can see your work"
    - Include 1-2 suggested_tools for task/suggestion types where tools would genuinely help
    - The question should push them to the next concrete insight within the current step
@@ -426,7 +430,7 @@ Return ONLY valid JSON:
 If plan_changed is false, updated_steps can be omitted or be the same as current steps.
 If no probes should be archived, probes_to_archive should be an empty array.
 Set can_generate_probe to false if at probe cap (5) and cannot archive any.
-The next_request should be ready to display directly to the student - make it specific, concrete, and directly about the current chapter/step topic. If CHAPTER CLOSURE POLICY says they are ready to move on, next_request must be feedback/checkpoint inviting them to click "Mark as Done" (and optionally open a next/adjacent chapter), not another validation question. In Dialog mode after only the first interaction, next_request must deepen the conversation instead. Never put "out loud" stage directions or Uncertain Systems / PoW / platform product jargon in next_request text.
+The next_request should be ready to display directly to the student - make it specific, concrete, and directly about the current chapter/step topic. Start on the topic; never open with a session-format wrapper. If CHAPTER CLOSURE POLICY says they are ready to move on, next_request must be feedback/checkpoint inviting them to click "Mark as Done" (and optionally open a next/adjacent chapter), not another validation question. In Dialog mode after only the first interaction, next_request must go deeper on the same topic instead. Never put "out loud" stage directions or Uncertain Systems / PoW / platform product jargon in next_request text.
 suggested_tools is optional - only include it for "task" or "suggestion" types where drawing tools would help. Use Excalidraw tool IDs (text, freedraw, rectangle, diamond, ellipse, arrow, line, image, frame).
 can_auto_advance: Set to true only when CHAPTER CLOSURE POLICY is satisfied (Dialog: multi-turn chapter-objective depth; Project: standalone exercise complete). Do not hold a ready chapter open for perfection — and do not set true after the first Dialog turn.
 advance_reasoning: A brief (1-2 sentence) human-readable explanation of why the step can or cannot advance, displayed in the manual mode override dialog. Use domain/practice language — not platform product terms.`,

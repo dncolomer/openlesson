@@ -59,20 +59,21 @@ describe("TAP Stash/Submit white paper content", () => {
     expect(experiment.toLowerCase()).toMatch(/high-dimensional|high-dim/);
   });
 
-  it("operational System 1 / System 2 mapping is explicit (stash vs submit)", () => {
+  it("operational observation / action mapping is explicit (stash vs submit)", () => {
     const protocol = TAP_STASH_SUBMIT_WHITEPAPER.sections.find((s) => s.id === "protocol");
     const background = TAP_STASH_SUBMIT_WHITEPAPER.sections.find((s) => s.id === "background");
     const text = [background, protocol]
       .flatMap((s) => s?.paragraphs ?? [])
       .join(" ")
       .toLowerCase();
-    expect(text).toMatch(/system 1/);
-    expect(text).toMatch(/system 2/);
+    expect(text).toMatch(/observation/);
+    expect(text).toMatch(/action/);
     expect(text).toMatch(/stash/);
     expect(text).toMatch(/submit/);
     expect(text).toMatch(/operational/);
     expect(text).toMatch(/forage log/);
     expect(text).toMatch(/friston/);
+    expect(text).toMatch(/free energy/);
   });
 });
 

@@ -33,7 +33,7 @@ Quote these. They are the product contract.
 9. **Thought traces are a kind of `tool`**, distinguished by `tool_name` / metadata — not a fifth CHECK value.
 10. **Speech is a capture channel**, serialized into `tool` (transcript / thought-trace). It is not a stored type.
 11. **More PoW improves evaluation.** Integrators re-fetch the live spec and regenerate skill.md.
-12. **Downstream products consume metadata and timing, not raw bytes.** LWM, knowledge config, and TIM never require file payloads at encode time.
+12. **Downstream products consume metadata and timing, not raw bytes.** LWM, knowledge config, and interruption policy never require file payloads at encode time.
 13. **One persist path:** `uploadWorkspaceProofOfWork`. No product-path direct table inserts.
 14. **The evidence model is versioned** (`pow_model_id = pow-model-v1`). That is not `spec_version` (`1.3` / `1.5-opaque`) and not `embedding_model_id` (`knowledgecfg-v1-d64`).
 15. **Unknown-to-this-version is explicit.** Never coerce a type to `other`. Reject on write; on read, count it in the existing dim-28 slot (`unknown_to_model`).
@@ -84,7 +84,7 @@ Ontology already states principles 1–7, 11 (`lib/prompt-kernel/ontology.ts`, `
 **Non-goals**
 
 - Implementing `pow-model-v2`.
-- Changing LWM Snapshot / GHC / TIM contracts.
+- Changing LWM Snapshot / GHC / interruption contracts.
 - Making knowledge-config consume raw xAI bytes.
 - Dual-writing two PoW rows per event.
 - Forcing MCP JSON-RPC to HTTP 201.
@@ -240,7 +240,7 @@ flowchart LR
   subgraph consume [Consume metadata + timing]
     LWM[Learning world model]
     KC["knowledgecfg-v1-d64"]
-    TIM[TIM interruption]
+    TIM[interruption policy]
   end
   TAP --> Upload
   TAP Learning --> Upload
@@ -398,7 +398,7 @@ ALTER TABLE public.workspaces
 | Alternative | Why not |
 |---|---|
 | **A. Freeze the type enum as the only identity** | Cannot add types or change thought-trace rules without breaking CHECK + clients. |
-| **B. Dual-write every event into v1 and v2 rows** | Doubles storage and TIM noise. Geometry dual-write is the analog for *embeddings*, not evidence. |
+| **B. Dual-write every event into v1 and v2 rows** | Doubles storage and interruption noise. Geometry dual-write is the analog for *embeddings*, not evidence. |
 | **C. Store thought / speech as fifth/sixth CHECK values** | Conflicts with frozen v1 algebra, existing rows, and TAP/TAP Learning `tool_name`s. |
 | **D. Reuse `spec_version` instead of `pow_model_id`** | `1.3` vs `1.5-opaque` vs MCP server `1.3.0` already collide; spec versions generated JSON, not the stored type algebra. |
 | **E. Leave encoder dim 28 named `other` until first v2 write** | Acceptable deferral of PR 1 encoder churn, but unofficial `speech` fixtures already hit the slot. Renaming the accumulator (same formula, same dim) is cheaper than teaching implementers that `other` is a stored type. |

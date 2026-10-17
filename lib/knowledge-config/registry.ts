@@ -94,7 +94,7 @@ export const EXPERIMENTAL_KNOWLEDGE_CONFIG_MODELS: readonly KnowledgeConfigModel
     dim: KNOWLEDGE_CONFIG_DUAL_D256_DIM,
     label: "Knowledge config dual-stream v2 (D=256)",
     description:
-      "Dual-stream System 1 / System 2 text channels with temporal fusion and structural block.",
+      "Dual-stream observation / action text channels with temporal fusion and structural block.",
     isProductDefault: false,
     dualWriteOnScore: true,
     struct_dim: KNOWLEDGE_CONFIG_DUAL_D256_STRUCT_DIM,

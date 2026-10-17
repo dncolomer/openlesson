@@ -91,7 +91,7 @@ export type ToolAction =
   // Project Mode: notebook/canvas submit lands on the Solution stack (no Helios).
   | "submit_to_solution"
   | "stuck_card"
-  // Selective thought interface (System 1 / System 2 traces)
+  // Selective thought interface (observation / action traces)
   | "crystallize"
   | "pause_finalize"
   | "thought_send"
@@ -132,13 +132,13 @@ export interface SessionPlanStep {
   position_y?: number;
   /** Two-word map-tile label (shown instead of the truncated title). */
   map_keyword?: string | null;
-  /** 3×3 occupancy mark (`g{bits}`) or TIM-explore icon for unopened TIM chapters. */
+  /** 3×3 occupancy mark (`g{bits}`) or forage-explore icon for unopened forage chapters. */
   map_icon?: string | null;
   /** Who placed this chapter on the TAP Learning map. */
   source?: "plan" | "learner" | "tim_chapter_complete" | null;
-  /** Completed chapter that spawned a TIM expansion. */
+  /** Completed chapter that spawned an expected-free-energy expansion. */
   source_step_id?: string | null;
-  /** TIM-sourced chapters start unopened (explore icon) until the learner accepts or rejects them. */
+  /** Forage-sourced chapters start unopened (explore icon) until the learner accepts or rejects them. */
   tim_unopened?: boolean;
   /** Prerequisite chapter ids (DAG lock-until), same idea as workspace lock_until_block_ids. */
   lock_until_step_ids?: string[] | null;

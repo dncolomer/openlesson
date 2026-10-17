@@ -1,7 +1,7 @@
 /**
  * Mode-aware TAP Learning chapter grain, closure, and map-expansion instructions.
  *
- * Dialog (Learning Mode) chapters are topic-horizon conversations.
+ * Dialog (Learning Mode) chapters are several turns on one topic.
  * Project (Solo / exercise) chapters stay standalone longer-horizon tasks.
  *
  * Grain and Done policy live as prompt data filled by compose helpers so
@@ -65,9 +65,9 @@ export function ileChapterGrainRules(mode: IleSessionMode): string {
 - After Mark as Done, the product may suggest adjacent follow-up exercise chapters. Do not pre-split those follow-ups into the initial map unless they are distinct standalone exercises.`;
   }
 
-  return `DIALOG CHAPTER GRAIN (Explore · Dialog / Learning Mode — topic-horizon conversations):
-- Each chapter is a topic-horizon conversation: several turns on one topic, not a single interaction.
-- Sequential micro-acts that belong in one conversation MUST be one chapter, not four. Forbidden Dialog splits (these are turns inside one chapter, never separate chapters):
+  return `DIALOG CHAPTER GRAIN (Explore · Dialog / Learning Mode — several turns on one topic):
+- Each chapter is several turns on one topic, not a single interaction.
+- Sequential micro-acts that belong together MUST be one chapter, not four. Forbidden Dialog splits (these are turns inside one chapter, never separate chapters):
   * "Summarize what you understand as X"
   * "Draw X on a notebook" / sketch X on the Canvas
   * "Make a list" of the note taker / capture a list
@@ -98,17 +98,17 @@ export function ileChapterExpansionRules(mode: IleSessionMode): string {
   if (mode === "project") {
     return `PROJECT CHAPTER MAP EXPANSION:
 - After Mark as Done, suggest adjacent follow-up exercise chapters (existing Project follow-up flow).
-- Completing a chapter is also Proof of Work: TIM may place an adjacent TIM-sourced exercise (explore icon until accepted or rejected), in addition to the follow-up chips.
+- Completing a chapter is also Proof of Work: epistemic foraging may place an adjacent exercise (explore icon until accepted or rejected), in addition to the follow-up chips.
 - Do not prompt mid-exercise to grow the map the way Dialog does.`;
   }
 
   return `DIALOG CHAPTER MAP EXPANSION:
 - The chapter map can be expanded / grow — it is not a fixed list.
-- Completing a chapter is Proof of Work. TIM may grow the map with an adjacent TIM-sourced chapter (explore icon until the learner accepts or rejects it). Do not fight that expansion.
+- Completing a chapter is Proof of Work. Epistemic foraging may grow the map with an adjacent chapter (explore icon until the learner accepts or rejects it). Do not fight that expansion.
 - Prompt the learner to suggest / propose new chapters about the topic they are actually working on (not only after Explore Solo Done).
 - When they (or you) suggest a new chapter, that suggestion is Proof of Work; if they accept and add it, the accepted add is also Proof of Work.
-- Ask something like: "This thread could be its own chapter — want to add one about [concrete topic]?"
-- Do not auto-insert chapters without the learner confirming (TIM chapter-complete expansions are the exception).
+- Ask something like: "We could spend more time just on [concrete topic]. Want to open that next?"
+- Do not auto-insert chapters without the learner confirming (chapter-complete expected-free-energy expansions are the exception).
 - When you propose a new chapter, append a hidden last-line marker the client will strip and record as PoW:
   <!--ile-chapter-suggest:{"topic":"<short topic>","title":"<optional title>","keyword":"<1 or 2 map words>"}-->`;
 }

@@ -112,11 +112,11 @@ const DEFAULT_EXAMPLE: PredictiveInterruption = {
 export function buildInterruptionContract(): InterruptionContract {
   return {
     description:
-      "Every Proof-of-Work API success response includes an interruption field powered by the Trace Interruption Model (TIM). When non-null, schedule the intervention after delay_ms unless a later Proof-of-Work API response supersedes it. TIM is a swappable interruption world model (baked-in default today; may later run as an independent external service) — the consumer interruption envelope stays stable.",
+      "Every Proof-of-Work API success response includes an interruption field from the expected-free-energy interruption policy. When non-null, schedule the intervention after delay_ms unless a later Proof-of-Work API response supersedes it. The policy is a swappable interruption world model (baked-in default today; may later run as an independent external service) — the consumer interruption envelope stays stable.",
     empty_value: null,
     consumer_obligations: [
       "Read interruption on every Proof-of-Work API response (REST and MCP).",
-      "When interruption is null, do not schedule a new TIM intervention from this response.",
+      "When interruption is null, do not schedule a new intervention from this response.",
       "When interruption is non-null, schedule consumer_action after delay_ms.",
       "If another Proof-of-Work API call returns before the timer fires, cancel the pending timer and apply the newest interruption (or clear if null).",
       "Never stack duplicate timers for the same workspace session — always supersede.",
@@ -126,7 +126,7 @@ export function buildInterruptionContract(): InterruptionContract {
       delay_ms: "Non-negative milliseconds before the consumer should trigger the intervention.",
       intervention:
         "type (fixed catalog: reflection_prompt | checkpoint_probe | coaching_nudge | proof_of_work_reminder | performance_review | chapter_map_expand), message, optional rationale, consumer_action (free-form hint), optional block_id, optional chapter_suggestion / chapter_suggestions.",
-      confidence: "low | medium | high — how strongly TIM predicts this intervention.",
+      confidence: "low | medium | high — how strongly the interruption policy predicts this intervention.",
       predicted_at: "ISO-8601 timestamp when the prediction was issued.",
     },
     supersession_rule:
@@ -173,5 +173,5 @@ ${JSON.stringify(contract.example_active, null, 2)}
 
 Empty interruption (no prediction): null
 
-TIM provider note: the platform may host TIM in-process or as an independent world model service; integrators only depend on the interruption field and supersession rules above.`;
+Interruption-policy note: the platform may host the expected-free-energy policy in-process or as an independent world model service; integrators only depend on the interruption field and supersession rules above.`;
 }

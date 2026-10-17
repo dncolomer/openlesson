@@ -66,7 +66,7 @@ export const PRODUCTS: ProductDefinition[] = [
     title: "Stash API",
     forAgent: {
       summary:
-        "Evaluate agents the same way we evaluate humans with session. Buffer proof of work, then Stash (System 1) or Submit (System 2) into the regular PoW stack.",
+        "Evaluate agents the same way we evaluate humans with session. Buffer proof of work, then Stash (observation) or Submit (action) into the regular PoW stack.",
       bullets: [
         "Same PoW types as Proof-of-Work API — tool, screen, video, EEG",
         "Temporary memory until Stash or Submit; intent is first-class evidence",

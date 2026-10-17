@@ -65,9 +65,9 @@ Canonical protocol `agent-trace-v3` phases: `enumerate` → `fingerprint` → `a
 
 Session state (tree, clock, proof, sequence) is persisted so `start_session` then a later `upload_proof_of_work` / `end_session` from another agent instance does not 404.
 
-## Predictive Interruptions (TIM)
+## Predictive Interruptions (expected free energy)
 
-Every Proof-of-Work API success response (REST and MCP) includes a top-level `interruption` field powered by the **Trace Interruption Model (TIM)**.
+Every Proof-of-Work API success response (REST and MCP) includes a top-level `interruption` field from the **expected-free-energy interruption policy**.
 
 - **`interruption: null`** — no intervention predicted for this moment.
 - **`interruption: { ... }`** — consumer systems should schedule `intervention` after `delay_ms` unless a later Proof-of-Work API response supersedes it.

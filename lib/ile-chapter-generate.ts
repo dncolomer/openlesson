@@ -9,6 +9,7 @@ import {
   composeChapterMapGlyphJsonInstruction,
 } from "@/lib/block-map-glyph";
 import { ILE_SESSION_MODE_DEFAULT, normalizeIleSessionMode, type IleSessionMode } from "@/lib/ile-mode";
+import { TUTOR_CANVAS_VOICE } from "@/lib/prompt-kernel/tutor-voice";
 
 export type IleChapterGenerateResult = {
   title: string;
@@ -25,10 +26,11 @@ export function composeIleChapterGenerateSystemMessage(
       ? "Description: a standalone longer-horizon exercise (1–3 sentences, self-contained). Do not script a conversation."
       : "Description: 1–2 sentences naming the concrete skill or situation they will work. Never start with 'In one guided conversation' or name the session format.";
   return [
-    "You create a single TAP Learning chapter for a skill-grid slot.",
+    "You create a single Learn chapter for a skill-grid slot.",
     `Return JSON only: ${BLOCK_MAP_GLYPH_JSON_SHAPE}.`,
     "Title: 4-14 words, specific and actionable.",
     grain,
+    TUTOR_CANVAS_VOICE,
     composeBlockMapGlyphJsonInstruction(),
     composeChapterMapGlyphJsonInstruction(),
   ].join(" ");

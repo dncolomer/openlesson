@@ -12,7 +12,8 @@ import {
 } from "@/lib/pricing/harness-copy";
 import { VERIFICATION_PRICING_COPY } from "@/lib/pricing/verification-copy";
 import { AUTHORING_PRICING_COPY } from "@/lib/pricing/authoring-copy";
-import { AUTHORING_PRICING_PATH } from "@/lib/marketing/paths";
+import { MAPPING_PRICING_COPY } from "@/lib/pricing/mapping-copy";
+import { AUTHORING_PRICING_PATH, MAPPING_PRICING_PATH } from "@/lib/marketing/paths";
 import {
   formatHarnessMonthlyPrice,
   formatHarnessTrialPrice,
@@ -86,6 +87,35 @@ describe("verification pricing page source", () => {
     expect(src).toContain("lightWeight.image");
     expect(existsSync(join(ROOT, "public/deep-verification.png"))).toBe(true);
     expect(existsSync(join(ROOT, "public/shallow_verification.png"))).toBe(true);
+  });
+});
+
+describe("mapping pricing page source", () => {
+  it("is contact-only with a $1 per data point quote", () => {
+    const pagePath = join(ROOT, "app/pricing/mapping/page.tsx");
+    expect(existsSync(pagePath)).toBe(true);
+    const src = read("app/pricing/mapping/page.tsx");
+
+    expect(src).toContain("{MAPPING_PRICING_COPY.title}");
+    expect(src).toContain("{MAPPING_PRICING_COPY.lead}");
+    expect(src).toContain("{quote.price}");
+    expect(src).toContain("{quote.body}");
+    expect(src).toContain("{MAPPING_PRICING_COPY.contactMailto}");
+    expect(src).toContain("{MAPPING_PRICING_COPY.contactCta}");
+    expect(src).not.toContain("create-checkout");
+    expect(src).not.toContain("handleCheckout");
+    expect(src).not.toContain("api_metered");
+    expect(src).not.toContain("trial_3day");
+    expect(src).not.toMatch(/pay|checkout|buy now|purchase/i);
+
+    expect(MAPPING_PRICING_PATH).toBe("/pricing/mapping");
+    expect(MAPPING_PRICING_COPY.title).toBe("Knowledge Mapping");
+    expect(MAPPING_PRICING_COPY.quote.priceAmount).toBe("$1");
+    expect(MAPPING_PRICING_COPY.quote.price).toBe("$1 per data point");
+    expect(MAPPING_PRICING_COPY.lead).toMatch(/\$1 per data point/);
+    expect(MAPPING_PRICING_COPY.quote.body).toMatch(/data points/);
+    expect(MAPPING_PRICING_COPY.contactEmail).toBe("daniel@uncertain.systems");
+    expect(MAPPING_PRICING_COPY.contactMailto).toBe("mailto:daniel@uncertain.systems");
   });
 });
 

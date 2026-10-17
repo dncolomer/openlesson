@@ -47,11 +47,17 @@ export default function KnowledgeMappingPage() {
         </div>
         <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
           <Link
-            href={MAPPING_PRODUCT_COPY.scienceHref}
+            href={MAPPING_PRODUCT_COPY.pricingHref}
             className="inline-flex min-h-12 items-center justify-center rounded-none bg-white px-5 py-3 text-sm font-medium text-black transition hover:bg-zinc-200"
           >
-            {MAPPING_PRODUCT_COPY.scienceCta}
+            {MAPPING_PRODUCT_COPY.pricingCta}
             <ArrowRight className="ml-2" size={16} />
+          </Link>
+          <Link
+            href={MAPPING_PRODUCT_COPY.scienceHref}
+            className="inline-flex min-h-12 items-center justify-center rounded-none border border-zinc-800 bg-zinc-950/60 px-5 py-3 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-white"
+          >
+            {MAPPING_PRODUCT_COPY.scienceCta}
           </Link>
         </div>
       </section>

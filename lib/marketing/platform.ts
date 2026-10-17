@@ -9,6 +9,7 @@ import {
   KNOWLEDGE_MAPPING_PATH,
   KNOWLEDGE_VERIFICATION_PATH,
   LEARNING_HARNESS_PATH,
+  MAPPING_PRICING_PATH,
   VERIFICATION_PRICING_PATH,
 } from "@/lib/marketing/paths";
 import { HARNESS_PRODUCT_COPY } from "@/lib/marketing/harness-product";
@@ -136,6 +137,7 @@ export const PLATFORM_PRODUCTS = {
     body: MAPPING_PRODUCT_COPY.lead,
     href: KNOWLEDGE_MAPPING_PATH,
     cta: "Explore",
+    pricingHref: MAPPING_PRICING_PATH,
     image: "/lp-boxes/tapbench-maps-blueprint.jpg",
     imageAlt: "Blueprint sketch of a folded map, compass, and knowledge-region plates",
   },

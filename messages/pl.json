@@ -97,6 +97,7 @@
     "knowledgeMapping": "Knowledge Mapping",
     "harnessPricing": "Cennik Harness",
     "verificationPricing": "Cennik Verification",
+    "mappingPricing": "Cennik Mapping",
     "authoringPricing": "Cennik Authoring",
     "supportThisProject": "Support this Project"
   },

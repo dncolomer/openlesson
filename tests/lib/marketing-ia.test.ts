@@ -28,6 +28,7 @@ import { SUPPORT_COPY, SUPPORT_PAGE_TITLE } from "@/lib/marketing/support";
 import { HARNESS_PRICING_COPY } from "@/lib/pricing/harness-copy";
 import { VERIFICATION_PRICING_COPY } from "@/lib/pricing/verification-copy";
 import { AUTHORING_PRICING_COPY } from "@/lib/pricing/authoring-copy";
+import { MAPPING_PRICING_COPY } from "@/lib/pricing/mapping-copy";
 import {
   harnessMonthlyCheckoutPriceData,
   harnessTrialCheckoutPriceData,
@@ -224,6 +225,9 @@ describe("product pages: verification owns platform/approach/scale; harness owns
     expect(MAPPING_PLATFORM_COPY.title).toMatch(/map of regions/i);
     expect(MAPPING_PRODUCT_COPY.lead.toLowerCase()).toMatch(/living map/);
     expect(MAPPING_PRODUCT_COPY.lead.toLowerCase()).toMatch(/verification exam/);
+    expect(page).toContain("MAPPING_PRODUCT_COPY.pricingHref");
+    expect(MAPPING_PRODUCT_COPY.pricingHref).toBe("/pricing/mapping");
+    expect(MAPPING_PRODUCT_COPY.pricingCta).toMatch(/pricing/i);
   });
 
   it("harness product path includes All-You-Can-Learn", () => {
@@ -363,6 +367,20 @@ describe("split pricing + public harness checkout", () => {
     expect(page).not.toContain("/aesthetics/");
   });
 
+  it("mapping pricing is contact-only at $1 per data point", () => {
+    const page = read("app/pricing/mapping/page.tsx");
+    expect(existsSync(join(ROOT, "app/pricing/mapping/page.tsx"))).toBe(true);
+    expect(page).toContain("{MAPPING_PRICING_COPY.title}");
+    expect(page).toContain("{quote.price}");
+    expect(page).toContain("MAPPING_PRICING_COPY.contactMailto");
+    expect(page).not.toContain("create-checkout");
+    expect(page).not.toContain("handleCheckout");
+    expect(MAPPING_PRICING_COPY.quote.priceAmount).toBe("$1");
+    expect(MAPPING_PRICING_COPY.quote.price).toBe("$1 per data point");
+    expect(MAPPING_PRICING_COPY.lead).toMatch(/\$1 per data point/);
+    expect(MAPPING_PRICING_COPY.contactEmail).toBe("daniel@uncertain.systems");
+  });
+
   it("authoring pricing is contact-only starting at $15,000 for a 40h package", () => {
     const page = read("app/pricing/authoring/page.tsx");
     expect(existsSync(join(ROOT, "app/pricing/authoring/page.tsx"))).toBe(true);
@@ -403,6 +421,7 @@ describe("sitemap lists new public pages", () => {
     expect(sitemap).toContain("/knowledge-verification");
     expect(sitemap).toContain("/knowledge-mapping");
     expect(sitemap).toContain("/pricing/verification");
+    expect(sitemap).toContain("/pricing/mapping");
     expect(sitemap).toContain("/pricing/authoring");
     expect(sitemap).toContain("/support");
     expect(sitemap).toContain("/all-you-can-learn");

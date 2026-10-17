@@ -1,4 +1,5 @@
 import { MAPPING_THESIS_LINKS, SCIENCE_FEP_PATH } from "@/lib/science/hub";
+import { MAPPING_PRICING_PATH } from "@/lib/marketing/paths";
 
 export const MAPPING_PRODUCT_COPY = {
   eyebrow: "KNOWLEDGE MAPPING",
@@ -6,6 +7,8 @@ export const MAPPING_PRODUCT_COPY = {
   lead: "A Knowledge Mapping product for science use cases: knowledge regions as a living map of a domain — proximity, coverage, and the path through what is held — rather than as a verification exam.",
   scienceCta: "Read the science",
   scienceHref: SCIENCE_FEP_PATH,
+  pricingCta: "See mapping pricing",
+  pricingHref: MAPPING_PRICING_PATH,
   thesisLinks: MAPPING_THESIS_LINKS,
 } as const;
 

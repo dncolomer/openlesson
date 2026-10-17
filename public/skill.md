@@ -1,27 +1,19 @@
-# Uncertain Systems Proof-of-Work API
+# Uncertain Systems agent APIs
 
-Use this skill when an agent needs to work with existing Verification Workspaces (created in the product UI), issue private Think Aloud Protocol (TAP) links, upload proof of work, and run unified performance analysis via the Uncertain Systems Proof-of-Work API.
+Use this skill when ChatGPT, Claude, or another agent should authorize against Uncertain Systems and **manage workspaces** or **run Calibrate, Learn, Verify, and TAPBench flows headless**.
+
+There are **two** public agent APIs:
+
+1. **Workspace management** — `GET/POST /api/v3/workspaces`, `GET/PATCH /api/v3/workspaces/{id}`, map blocks, workspace settings, account settings (`/api/v3/account`). Create and edit **Learning** workspaces and **Verification Workspace** records.
+2. **Headless proof-of-work** — `POST /api/v3/pow/workspaces/{id}/sessions` (`start_session` with `flow_kind` calibrate | learn | verify | tapbench), submit proof of work, `end_session`. The server prepares the answers-model tree, infers the path from proof plus actions (catalogs **4 / 8 / 16**), and enforces the session clock. TAPBench is this API, not a third one.
 
 **Human-readable spec:** `/docs/proof-of-work-api`  
 **Base URL:** `https://uncertain.systems` (or your self-hosted origin)
+**MCP:** `POST /api/mcp` with `Authorization: Bearer <api_key>`
 
----
+Snapshot (`/api/v3/snapshot`), Stash (`/api/v3/stash`), and TAPBench (`/api/v3/tapbench`) are **not** public agent APIs.
 
-## Scope
-
-The Proof-of-Work API supports **only** this workflow:
-
-1. Resolve an existing Verification Workspace created in the product UI (`/workspace/new`) — use `list_workspaces` / `get_workspace` (REST + MCP). **Do not** call `POST /workspaces` or MCP `create_workspace` (rejected: create is UI-only).
-2. List blocks in that workspace.
-3. *(Optional)* Generate an ideal proof-of-work input JSON schema (`POST .../proof-of-work-schema`) or a custom integration `skill.md` (`POST .../integration-skill`) from workspace context.
-4. Upload proof of work (`POST .../proof-of-work`) **or** buffer via Stash API then stash/submit.
-5. Run LWM Snapshot (`lwm-snapshot` / `lwm_snapshot`) and optional eval reads (world-model, knowledge-config, snapshot-history).
-6. Create a private TAP link (minutes **1–120**, default **15**).
-7. List TAP links and completion status; score TAP via `POST .../lwm-snapshot` only.
-
-**Out of scope** — programmatic workspace create, blockchain tracking, proof anchoring, live tutoring session control, heartbeats, or plan adaptation. Key CRUD is browser-session only (`/api/v3/pow/keys`). Legacy `/api/session-files/*` is separate from this API.
-
-**Teams tier required.** Agent routes under `/api/v3/{pow,snapshot,stash}` require Teams (platform admins bypass). Plan-gate failures return **`403` with `error.code = "api_plan_required"`**.
+**Teams tier required.** Plan-gate failures return **`403` with `error.code = "api_plan_required"`**.
 
 ---
 
@@ -29,8 +21,8 @@ The Proof-of-Work API supports **only** this workflow:
 
 | Mode | When to use | Create | Schema | Performance |
 |------|-------------|--------|--------|-------------|
-| `semantic` | Default — full learning verification | **UI only** (`/workspace/new`) | `definition` | LWM Snapshot (`lwm_snapshot` + GHC secondary), semantic gap analysis |
-| `opaque` | Privacy-preserving structural verification | **UI only** (`/workspace/new`) | `definition_ref` + `contract.event_verbs` | `protocol_report`, `privacy`; no semantic inference |
+| `semantic` | Default — full learning verification | `POST /api/v3/workspaces` or `/workspace/new` | `definition` | Headless session (`start_session` → `end_session`) infers the path on the answers-model tree |
+| `opaque` | Privacy-preserving structural verification | `POST /api/v3/workspaces` or `/workspace/new` | `definition_ref` + `contract.event_verbs` | `protocol_report`, `privacy`; no semantic inference |
 
 **Opaque guardrails:**
 - `goal_ref`, `definition_ref`, and `external_refs` are stored but **never interpreted** into domain meaning.
@@ -114,7 +106,7 @@ Every Proof-of-Work API **success** response includes top-level `interruption` �
 
 Intervention types: `reflection_prompt`, `checkpoint_probe`, `coaching_nudge`, `proof_of_work_reminder`, `performance_review`, `chapter_map_expand`.
 
-Proof-of-work spec responses (`POST .../proof-of-work-schema`, MCP `generate_proof_of_work_schema`) also return `interruption_contract` and may include workspace-specific `predicted_interruption` from Grok (spec version **1.3**).
+Headless session responses (`start_session`, `upload_proof_of_work`, `end_session`) also return `interruption_contract` semantics via top-level `interruption`, and may include workspace-specific `predicted_interruption` from Grok.
 
 MCP resource: `resources/read uncertain-systems://predictive-interruptions`
 
@@ -133,13 +125,11 @@ Content-Type: application/json
 { "jsonrpc": "2.0", "id": 1, "method": "tools/list" }
 ```
 
-**Tools (100% parity with public agent REST under `/api/v3/{pow,snapshot,stash}`; create is UI-only; key CRUD is browser-session only):**
+**Tools (100% parity with public agent REST under `/api/v3/workspaces` and `/api/v3/pow`; two families only; key CRUD is browser-session only):**
 
-`list_workspaces`, `get_workspace`, `list_blocks`, `generate_proof_of_work_schema`, `generate_integration_skill`, `upload_proof_of_work`, `lwm_snapshot` (LWM Snapshot), `list_tap_links`, `create_tap_link`, `get_world_model`, `get_knowledge_config`, `get_knowledge_config_trajectory`, `knowledge_distance`, `list_snapshot_history`, `list_custom_knowledge_regions`, `create_custom_knowledge_region`, `eval_custom_knowledge_region`, `buffer_proof_of_work`, `stash_proof_of_work`, `submit_stashed_proof_of_work`
+`list_workspaces`, `get_workspace`, `create_workspace`, `update_workspace`, `list_blocks`, `update_blocks`, `get_workspace_settings`, `update_workspace_settings`, `get_account_settings`, `update_account_settings`, `generate_integration_skill`, `start_session`, `get_session`, `upload_proof_of_work`, `end_session`, `list_flow_embeddings`, `get_flow_embedding`
 
-Workspace creation is **not** available via MCP or REST — create workspaces in the product UI at `/workspace/new`.
-
-**Partner agents:** call `get_workspace` to orient, then `upload_proof_of_work` (or Stash buffer tools) and `lwm_snapshot`. PumaDoc policy snippets: `/customer-agent-uncertain-systems-policy.md`, `/pumaclaw-mentor-uncertain-systems-policy.md`.
+**Partner agents:** `create_workspace` or `get_workspace`, then `start_session` → `upload_proof_of_work` → `end_session`. PumaDoc policy snippets: `/customer-agent-uncertain-systems-policy.md`, `/pumaclaw-mentor-uncertain-systems-policy.md`.
 
 Every MCP tool result includes `interruption` (TIM) with the same semantics as REST.
 
@@ -151,22 +141,9 @@ MCP resources: `uncertain-systems://integration-scope`, `uncertain-systems://pro
 
 ## Endpoints
 
-### `POST /api/v3/pow/workspaces` — not available (UI-only create)
+### `POST /api/v3/workspaces` — `workspaces:write` — create_workspace
 
-Programmatic workspace creation is **disabled**. This endpoint returns `403 forbidden` with a message that create is UI-only. MCP `create_workspace` is not in the tool catalog and hard-fails with the same message if called.
-
-**Create workspaces in the product UI** at `/workspace/new` (blank, template, or files+goal). Then use `list_workspaces` / `get_workspace` with the resulting workspace ID.
-
-**Response `403`:**
-
-```json
-{
-  "error": {
-    "code": "forbidden",
-    "message": "Workspace creation is not available via API or MCP. Create workspaces manually in the product UI at /workspace/new."
-  }
-}
-```
+Create a **Learning** (`kind: "learning"`) or **Verification** (`kind: "verification"`) workspace. Optional `title`, `description`, `workspace_goal`, `learning_model_size` (4 | 8 | 16), `blocks` (map), or `initial_prompt` to generate. MCP: `create_workspace`.
 
 ---
 
@@ -255,7 +232,7 @@ Given workspace context plus an evaluation definition, returns a JSON Schema for
   "interruption_contract": { "description": "TIM contract...", "supersession_rule": "..." },
   "file_ids": ["file_..."],
   "interruption": {
-    "interruption_id": "int_generate_proof_of_work_schema_ws1_x1y2z3",
+    "interruption_id": "int_start_session_ws1_x1y2z3",
     "delay_ms": 30000,
     "intervention": {
       "type": "proof_of_work_reminder",
@@ -308,185 +285,64 @@ Host the returned markdown at your suggested path or inject `skill_md` directly 
 
 ---
 
-### `POST /api/v3/pow/workspaces/{workspace_id}/proof-of-work` — `workspaces:write`
+### `POST /api/v3/pow/workspaces/{workspace_id}/sessions` — `workspaces:write` — `start_session`
 
-Upload open-format performance proof of work to xAI Files and link it to a workspace, optionally scoped to a block or session.
+Start a headless **Calibrate**, **Learn**, **Verify**, or **TAPBench** session. The server prepares the answers-model tree and starts the session clock (1–120 minutes, default 15). TAPBench is this same API (`flow_kind: "tapbench"`).
 
 **Request:**
 
 ```json
 {
-  "type": "tool",
-  "file_name": "canvas-events.json",
-  "mime_type": "application/json",
-  "data": "<base64>",
+  "flow_kind": "calibrate",
+  "catalog_size": 8,
+  "duration_minutes": 15,
   "block_id": "optional-block-uuid",
-  "session_id": "optional-session-uuid",
-  "timestamp_ms": 1710000000000,
-  "chunk_index": 0,
-  "metadata": { "source": "custom-agent" },
-  "tool_name": "canvas",
-  "tool_action": "draw",
-  "band_powers": { "alpha": 0.2, "beta": 0.4 },
-  "device_name": "Muse",
-  "sample_count": 256
+  "chapter_title": "optional",
+  "chapter_brief": "optional"
 }
 ```
 
-**`type` values:** `tool`, `screen` (alias: `screenshot`), `video`, `eeg`
+`flow_kind`: `calibrate` | `learn` | `verify` | `tapbench`. `catalog_size`: `4` | `8` | `16`.
 
-| Type | Typical MIME types |
-|------|-------------------|
-| `tool` | `application/json`, `text/plain`, `text/markdown` |
-| `screen` | `image/png`, `image/jpeg`, `image/webp` |
-| `video` | `video/mp4`, `video/webm`, `video/quicktime` |
-| `eeg` | `application/json`, `text/plain` |
-
-Max **10 MB** per upload. Guest keys attach proof of work to their guest identity; org members attach to the workspace org.
-
-**Opaque workspaces:** `metadata` is filtered to the allowlist above. Tool payloads are plaintext-linted (reject file paths unless `metadata.allow_plaintext=true`). Response may include `evaluation_mode`, `privacy`, and `plaintext_lint`.
-
-**Response `201`:**
-
-```json
-{
-  "proof_of_work": {
-    "id": "uuid",
-    "workspace_id": "uuid",
-    "type": "tool",
-    "xai_file_id": "file_...",
-    "metadata": {},
-    "created_at": "..."
-  },
-  "evaluation_mode": "opaque",
-  "privacy": { "semantic_inference": "disabled", "plaintext_lint": "enforced" },
-  "plaintext_lint": { "passed": true, "violations": [] }
-}
-```
+**Response `201`:** session_id, remaining_ms, answers_model (catalog_size, focus, branch_count), status.
 
 ---
 
-### LWM Snapshot — `workspaces:read`
+### `POST /api/v3/pow/workspaces/{workspace_id}/sessions/{session_id}/proof-of-work` — `workspaces:write` — `upload_proof_of_work`
 
-Sole product score strategy (one primary 0–100 score per call + GHC secondary). Returns spider/radar `marker_scores`, analysis (`summary`, strengths/growth/gaps), and next actions (`gap_analysis.next_steps`). Run via Knowledge UI or Snapshot API/MCP (not auto on TAP/TAP Learning end).
-
-| Method | Path | MCP tool | Primary field |
-| :--- | :--- | :--- | :--- |
-| `POST` | `/api/v3/snapshot/workspaces/{workspace_id}/lwm-snapshot` | `lwm_snapshot` | `lwm_snapshot_score` / `score` |
-
-**Product name:** LWM Snapshot (Learning World Model Snapshot). Do not present `verification_score` or “verification score” as the product score type.
+Submit proof of work into a live headless session. The server infers the path on the prepared tree from those events plus actions. Expired sessions reject further work (`401` `session_expired`).
 
 **Request:**
 
 ```json
 {
-  "block_id": "optional-block-uuid",
-  "style_prompt": "optional voice/tone"
+  "events": [
+    {
+      "type": "tool",
+      "tool_name": "canvas",
+      "tool_action": "board_prompt",
+      "metadata": { "prompt": "I close this observation." },
+      "timestamp_ms": 1710000000000
+    }
+  ]
 }
 ```
 
-**Response `200`:**
+You may also send a single event at the top level (`tool_action` + `metadata`). Stored type is `tool` for simulated TAP.
 
-```json
-{
-  "mode": "score",
-  "strategy": "lwm_snapshot",
-  "label": "LWM Snapshot",
-  "workspace_goal": "Trial-to-paid subscription activation",
-  "workspace_goal_source": "workspace",
-  "report": {
-    "score": 72,
-    "lwm_snapshot_score": 72,
-    "workspace_goal": "Trial-to-paid subscription activation",
-    "marker_scores": [
-      {
-        "id": "workflow_execution",
-        "label": "Workflow Execution",
-        "score": 78,
-        "rationale": "Completed core steps with consistent tool traces."
-      },
-      {
-        "id": "decision_quality",
-        "label": "Decision Quality",
-        "score": 65,
-        "rationale": "Choices were reasonable but lacked quantified tradeoff analysis."
-      }
-    ],
-    "summary": "...",
-    "strengths": ["..."],
-    "growth_areas": ["..."],
-    "gap_analysis": {
-      "summary": "...",
-      "gaps": [
-        {
-          "title": "...",
-          "proof_of_work": "...",
-          "severity": "medium",
-          "suggested_repair": "..."
-        }
-      ],
-      "next_steps": {
-        "directions": ["..."],
-        "events": ["..."]
-      }
-    },
-    "suggestions": ["..."],
-    "confidence": "developing"
-  },
-  "proof_of_work_summary": {
-    "blocks": 5,
-    "proof_of_work_artifacts": 4,
-    "linked_sessions": 1,
-    "workspace_files": 0
-  },
-  "file_ids": ["file_..."]
-}
-```
-
-**Opaque workspaces** also return `evaluation_mode`, `privacy`, `workspace_goal_source: "opaque_ref"`, and `protocol_report`.
+**Response `200`:** remaining_ms, sequence (inferred path), proof_count, focus, answers_model.
 
 ---
 
-### `POST /api/v3/pow/workspaces/{workspace_id}/blocks/{block_id}/tap-links` — `tap:write`
+### `GET /api/v3/pow/workspaces/{workspace_id}/sessions/{session_id}` — `workspaces:read` — `get_session`
 
-Create a private Think Aloud Protocol (TAP) link for a block.
-
-**Request:**
-
-```json
-{
-  "minutes": 15,
-  "guest_user_id": "optional-uuid",
-  "guest_email": "optional@example.com"
-}
-```
-
-- `minutes`: integer **1–120** (default **15**; values outside the range are clamped)
-- Org **admins** may assign a link to a guest via `guest_user_id` or `guest_email`
-- **Guest keys** automatically attach the link to their own guest identity (no extra fields)
-
-**Response `201`:**
-
-```json
-{
-  "tap_link": {
-    "id": "uuid",
-    "workspace_id": "workspace_id",
-    "block_id": "block_id",
-    "status": "pending",
-    "requested_duration_seconds": 900,
-    "private_url": "https://uncertain.systems/tap/session/{token}"
-  }
-}
-```
+Read remaining time, inferred path, current focus, and the answers model.
 
 ---
 
-### `GET /api/v3/pow/workspaces/{workspace_id}/tap-links` — `tap:read`
+### `POST /api/v3/pow/workspaces/{workspace_id}/sessions/{session_id}/end` — `workspaces:write` — `end_session`
 
-List TAP links for a workspace. Guests see only their own links; non-admin members see their own; org admins see org workspace links.
-
-**Response `200`:** `{ "tap_links": [ ... ] }`
+End the session: score the inferred path against the prepared tree and persist the flow embedding (`flowcfg-v1-d96`). Outcome is answers-model + inferred path + proof of work.
 
 ---
 
@@ -557,28 +413,23 @@ Facilitation style: Socratic — one concise question at a time, follow-ups from
 
 | Action | Org-admin / member key (`sk_`) | Guest key (`gsk_`) |
 |--------|-------------------------------|---------------------|
-| Create workspace | ❌ UI only (`/workspace/new`) | ❌ UI only |
-| List blocks | ✅ | ✅ (org workspaces) |
-| Proof-of-work schema / integration skill | ✅ | ✅ |
-| Upload proof of work | ✅ | ✅ (own uploads) |
-| Performance analysis | ✅ | ✅ (own proof of work + links) |
-| Create TAP link | ✅; admin can assign to guest | ✅ (self only) |
-| List TAP link status | ✅ | ✅ (own links) |
+| Create workspace | ✅ `POST /api/v3/workspaces` / `create_workspace` | ✅ (org workspaces) |
+| List / edit map and settings | ✅ | ✅ (org workspaces) |
+| Integration skill | ✅ | ✅ |
+| Start / run / end headless session | ✅ | ✅ |
 | Create guest + issue `gsk_` | ✅ `org:write` + `is_org_admin` | ❌ |
 
-**Integration pattern:** Org admin provisions guests with `gsk_` keys. Workspaces are created in the product UI; guests use their keys for proof-of-work upload, block reads, and TAP links on accessible workspaces. TAP transcripts and thought traces land in proof-of-work — score with `POST .../lwm-snapshot` only.
+**Integration pattern:** Org admin provisions guests with `gsk_` keys. Guests (or ChatGPT / Claude with those keys) create or open a workspace, then `start_session` → `upload_proof_of_work` → `end_session`. TAPBench is `flow_kind=tapbench` on the same loop.
 
 ---
 
 ## Quick integration checklist
 
 1. Teams user creates org (`POST /api/organization`) and API key (`sk_` with default scopes).
-2. Create a Verification Workspace in the product UI at `/workspace/new` (not via API).
-3. `list_workspaces` / `GET .../blocks` → map blocks to your workflow steps.
-4. *(Optional)* `POST .../proof-of-work-schema` — semantic: `definition`; opaque: `definition_ref` + `contract.event_verbs`; or `POST .../integration-skill` for a custom `skill.md`.
-5. `POST .../proof-of-work` as learners produce tool usage, screenshots, video, or EEG (optional `block_id`).
-6. `POST .../lwm-snapshot` (LWM Snapshot) for scorecards.
-7. `POST .../tap-links` → send `private_url` to the learner.
-8. Poll `GET .../tap-links` until the link `status === "completed"`.
-9. `POST .../lwm-snapshot` to score TAP proof of work (verification only) together with other artifacts.
-10. For external learners without accounts: `POST /org/guests` → give them `gsk_` + private TAP URL.
+2. `create_workspace` / `POST /api/v3/workspaces` for a Learning or Verification workspace (or `get_workspace` if it already exists).
+3. `list_blocks` / `GET .../blocks` → map contents to your workflow steps.
+4. *(Optional)* `POST .../integration-skill` for a custom `skill.md`.
+5. `start_session` with `flow_kind` calibrate | learn | verify | tapbench.
+6. `upload_proof_of_work` as the agent produces tool events (repeat until the clock expires).
+7. `end_session` to persist the answers-model tree, inferred path, and flow embedding.
+8. For external learners without accounts: `POST /org/guests` → give them `gsk_` so their agent can run the same loop.

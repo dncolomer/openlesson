@@ -126,10 +126,13 @@ describe("pow-model-v1 agent contract on skill and MCP", () => {
     expect(copy.skillDescription).not.toContain(CANVAS_TAP_SIMULATION_HEADING);
     expect(textExposesKnowledgeLinkMint(knowledgeRegion)).toBe(false);
     expect(textExposesKnowledgeLinkMint(copy.skillDescription)).toBe(false);
-    expect(knowledgeRegion).toContain("buffer_proof_of_work");
+    expect(knowledgeRegion).toContain("upload_proof_of_work");
+    expect(knowledgeRegion).toContain("start_session");
+    expect(knowledgeRegion).not.toContain("buffer_proof_of_work");
     expect(knowledgeRegion).not.toContain("create_tap_link");
     expect(standard).not.toContain("create_tap_link");
     expect(standard).toContain("list_blocks");
+    expect(standard).toContain("upload_proof_of_work");
   });
 
   it("appends the canvas and TAP tool catalog to the skill an agent downloads", () => {
@@ -164,18 +167,17 @@ describe("pow-model-v1 agent contract on skill and MCP", () => {
     }
   });
 
-  it("states the same contract on MCP upload and stash buffer, including the version field", () => {
-    for (const name of ["upload_proof_of_work", "buffer_proof_of_work"] as const) {
-      const tool = mcpTool(name);
-      const version = tool.inputSchema.properties.pow_model_version;
-      expect(tool.description).toContain(contract);
-      expect(tool.inputSchema.required).toContain("pow_model_version");
-      expect(version?.enum).toEqual([POW_MODEL_VERSION]);
-      expect(version?.description).toContain(contract);
-      expect(version?.description).toContain(`Must be ${POW_MODEL_VERSION}`);
-      expect(version?.description?.toLowerCase()).not.toContain("optional");
-      const summary = AGENT_TOOL_SURFACE.find((entry) => entry.name === name)?.summary;
-      expect(summary).toContain(contract);
-    }
+  it("states the same contract on MCP upload_proof_of_work, including the version field", () => {
+    const tool = mcpTool("upload_proof_of_work");
+    const version = tool.inputSchema.properties.pow_model_version;
+    expect(tool.description).toContain(contract);
+    expect(tool.inputSchema.required).toContain("session_id");
+    expect(version?.enum).toEqual([POW_MODEL_VERSION]);
+    expect(version?.description).toContain(contract);
+    expect(version?.description).toContain(`Must be ${POW_MODEL_VERSION}`);
+    expect(version?.description?.toLowerCase()).not.toContain("optional");
+    const summary = AGENT_TOOL_SURFACE.find((entry) => entry.name === "upload_proof_of_work")?.summary;
+    expect(summary).toContain(contract);
+    expect(MCP_EVIDENCE_TOOLS.map((entry) => entry.name)).not.toContain("buffer_proof_of_work");
   });
 });

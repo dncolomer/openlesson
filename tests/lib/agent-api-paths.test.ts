@@ -3,10 +3,13 @@ import { describe, expect, it } from "vitest";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import {
+  ACCOUNT_API_BASE,
   EVAL_API_BASE,
   POW_API_BASE,
+  PUBLIC_AGENT_API_FAMILIES,
   SNAPSHOT_API_BASE,
   STASH_API_BASE,
+  WORKSPACE_API_BASE,
 } from "@/lib/api/agent-api-paths";
 import {
   buildIntegrationSkillApiPath,
@@ -30,46 +33,52 @@ function collectRouteTs(dir: string, acc: string[] = []): string[] {
 }
 
 describe("Proof-of-Work API v3 path contract", () => {
-  it("exports fixed bases", () => {
+  it("exports two public agent families; Snapshot/Stash remain internal bases", () => {
+    expect(WORKSPACE_API_BASE).toBe("/api/v3/workspaces");
+    expect(ACCOUNT_API_BASE).toBe("/api/v3/account");
     expect(POW_API_BASE).toBe("/api/v3/pow");
+    expect([...PUBLIC_AGENT_API_FAMILIES]).toEqual(["workspace", "pow"]);
     expect(SNAPSHOT_API_BASE).toBe("/api/v3/snapshot");
     expect(EVAL_API_BASE).toBe(SNAPSHOT_API_BASE);
     expect(STASH_API_BASE).toBe("/api/v3/stash");
     expect(SNAPSHOT_API_BASE).not.toBe("/api/v3/eval");
   });
 
-  it("e2e and agent surface docs use Snapshot API base (not /api/v3/eval)", () => {
+  it("e2e and agent surface docs advertise the two public APIs (not /api/v3/eval)", () => {
     const e2e = readFileSync(join(ROOT, "scripts/run-pow-api-e2e.mjs"), "utf8");
-    expect(e2e).toContain("/api/v3/snapshot/workspaces/");
-    expect(e2e).toContain("lwm-snapshot");
     expect(e2e).not.toMatch(/\/api\/v3\/eval\//);
 
     const skill = readFileSync(join(ROOT, "public/skill.md"), "utf8");
-    expect(skill).toContain("/api/v3/{pow,snapshot,stash}");
+    expect(skill).toContain("/api/v3/workspaces");
+    expect(skill).toContain("/api/v3/pow");
     expect(skill).not.toContain("/api/v3/{pow,eval,stash}");
+    expect(skill).not.toContain("/api/v3/{pow,snapshot,stash}");
 
     const mcp = readMcpSurface();
-    expect(mcp).toContain("/api/v3/{pow,snapshot,stash}");
+    expect(mcp).toContain("/api/v3/workspaces");
+    expect(mcp).toContain("/api/v3/pow");
     expect(mcp).not.toContain("/api/v3/{pow,eval,stash}");
 
     const en = readFileSync(join(ROOT, "messages/en.json"), "utf8");
-    expect(en).toContain("/api/v3/{pow,snapshot,stash}");
+    expect(en).toContain("/api/v3/workspaces");
+    expect(en).toContain("/api/v3/pow");
     expect(en).not.toContain("/api/v3/{pow,eval,stash}");
 
     const readme = readFileSync(join(ROOT, "README.md"), "utf8");
-    expect(readme).toContain("/api/v3/{pow,snapshot,stash}");
+    expect(readme).toContain("/api/v3/workspaces");
+    expect(readme).toContain("/api/v3/pow");
     expect(readme).not.toContain("/api/v3/{pow,eval,stash}");
   });
 
-  it("shipped path builders use pow for capture and snapshot for scores", () => {
+  it("shipped path builders use pow sessions for capture and end_session for performance", () => {
     const base = "https://example.com";
     expect(buildUpload("ws-1", base)).toBe(
-      "https://example.com/api/v3/pow/workspaces/ws-1/proof-of-work",
+      "https://example.com/api/v3/pow/workspaces/ws-1/sessions/{session_id}/proof-of-work",
     );
     expect(buildProofOfWorkSchemaApiPath("ws-1", base)).toContain("/api/v3/pow/");
     expect(buildIntegrationSkillApiPath("ws-1", base)).toContain("/api/v3/pow/");
     expect(buildPerformanceApiPath("ws-1", base)).toBe(
-      "https://example.com/api/v3/snapshot/workspaces/ws-1/lwm-snapshot",
+      "https://example.com/api/v3/pow/workspaces/ws-1/sessions/{session_id}/end",
     );
 
     for (const vertical of ["verification", "augmentation", "optimization"] as const) {

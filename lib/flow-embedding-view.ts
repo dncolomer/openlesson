@@ -60,6 +60,38 @@ export function filterFlowEmbeddingRows(
   });
 }
 
+export function sameStringList(
+  left: readonly string[],
+  right: readonly string[],
+): boolean {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+
+/** Keep the previous selection identity when the key list is unchanged. */
+export function reconcileSelectedSubjectKeys(
+  prev: readonly string[],
+  available: readonly string[],
+): string[] {
+  const keep = prev.filter((key) => available.includes(key));
+  const next = keep.length > 0 ? keep : available.slice();
+  if (sameStringList(prev, next)) return prev as string[];
+  return next;
+}
+
+export function sameFlowEmbeddingList(
+  left: readonly FlowEmbeddingViewRow[],
+  right: readonly FlowEmbeddingViewRow[],
+): boolean {
+  if (left === right) return true;
+  if (left.length !== right.length) return false;
+  return left.every(
+    (row, index) =>
+      row.id === right[index]?.id &&
+      row.created_at === right[index]?.created_at &&
+      row.embedding_model_id === right[index]?.embedding_model_id,
+  );
+}
+
 export function filterFlowEmbeddingRowsBySubjectKeys(
   rows: readonly FlowEmbeddingViewRow[],
   selectedKeys: readonly string[],

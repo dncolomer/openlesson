@@ -28,9 +28,12 @@ export async function listAgentWorkspaces(
 
   let query = supabase
     .from("workspaces")
-    .select("id, title, root_topic, status, notes, workspace_goal, created_at, updated_at", {
-      count: "exact",
-    })
+    .select(
+      "id, title, root_topic, description, notes, workspace_goal, status, workspace_kind, learning_model_size, is_public, created_at, updated_at",
+      {
+        count: "exact",
+      },
+    )
     .or(
       auth.user_id
         ? `user_id.eq.${auth.user_id},organization_id.eq.${auth.organization_id}`

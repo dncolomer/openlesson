@@ -1,13 +1,14 @@
 /**
  * Single inventory of public agent tools (MCP tools/list + REST twins).
- * Workspace create is intentionally absent — UI-only at /workspace/new.
- * Key CRUD (/api/v3/pow/keys) is browser-session only and excluded.
+ * Two families: workspace management and headless proof-of-work.
+ * Snapshot, Stash, and TAPBench are not public agent APIs.
  */
 
 import {
+  ACCOUNT_API_BASE,
   POW_API_BASE,
-  SNAPSHOT_API_BASE,
-  STASH_API_BASE,
+  WORKSPACE_API_BASE,
+  type PublicAgentApiFamily,
 } from "@/lib/api/agent-api-paths";
 import {
   agentToolFeature,
@@ -18,6 +19,7 @@ import type { ApiKeyScope } from "./types";
 
 export type AgentToolSurfaceEntry = {
   name: string;
+  family: PublicAgentApiFamily;
   scope: ApiKeyScope;
   summary: string;
   /** REST twin — method + path pattern with {workspace_id} placeholder */
@@ -28,58 +30,147 @@ export type AgentToolSurfaceEntry = {
 export const AGENT_TOOL_SURFACE = [
   {
     name: "list_workspaces",
+    family: "workspace",
     scope: "workspaces:read",
-    summary: "List accessible workspaces.",
-    rest: { method: "GET", path: `${POW_API_BASE}/workspaces` },
+    summary: "List Learning and Verification workspaces accessible to this key.",
+    rest: { method: "GET", path: WORKSPACE_API_BASE },
   },
   {
     name: "get_workspace",
+    family: "workspace",
     scope: "workspaces:read",
-    summary: "Read workspace metadata and workspace_goal.",
-    rest: { method: "GET", path: `${POW_API_BASE}/workspaces/{workspace_id}` },
+    summary: "Read workspace metadata, kind, map summary, and workspace settings.",
+    rest: { method: "GET", path: `${WORKSPACE_API_BASE}/{workspace_id}` },
+  },
+  {
+    name: "create_workspace",
+    family: "workspace",
+    scope: "workspaces:write",
+    summary:
+      "Create a Learning or Verification workspace (kind/product), including an optional map and settings.",
+    rest: { method: "POST", path: WORKSPACE_API_BASE },
+  },
+  {
+    name: "update_workspace",
+    family: "workspace",
+    scope: "workspaces:write",
+    summary:
+      "Edit workspace settings, contents, and map blocks for a Learning or Verification workspace.",
+    rest: { method: "PATCH", path: `${WORKSPACE_API_BASE}/{workspace_id}` },
   },
   {
     name: "list_blocks",
+    family: "workspace",
     scope: "workspaces:read",
-    summary: "List assessable blocks.",
+    summary: "List map blocks / contents for a workspace.",
     rest: {
       method: "GET",
-      path: `${POW_API_BASE}/workspaces/{workspace_id}/blocks`,
+      path: `${WORKSPACE_API_BASE}/{workspace_id}/blocks`,
     },
   },
   {
-    name: "generate_proof_of_work_schema",
-    scope: "workspaces:read",
-    summary:
-      "Generate formal proof-of-work spec (tool JSON schemas, interruption_contract, TIM interruption).",
+    name: "update_blocks",
+    family: "workspace",
+    scope: "workspaces:write",
+    summary: "Replace or patch the workspace map (blocks and links).",
     rest: {
-      method: "POST",
-      path: `${POW_API_BASE}/workspaces/{workspace_id}/proof-of-work-schema`,
+      method: "PATCH",
+      path: `${WORKSPACE_API_BASE}/{workspace_id}/blocks`,
     },
+  },
+  {
+    name: "get_workspace_settings",
+    family: "workspace",
+    scope: "workspaces:read",
+    summary: "Read workspace settings (title, goal, catalog size, visibility).",
+    rest: {
+      method: "GET",
+      path: `${WORKSPACE_API_BASE}/{workspace_id}/settings`,
+    },
+  },
+  {
+    name: "update_workspace_settings",
+    family: "workspace",
+    scope: "workspaces:write",
+    summary: "Patch workspace settings.",
+    rest: {
+      method: "PATCH",
+      path: `${WORKSPACE_API_BASE}/{workspace_id}/settings`,
+    },
+  },
+  {
+    name: "get_account_settings",
+    family: "workspace",
+    scope: "workspaces:read",
+    summary: "Read account settings for this API key (identity, org, scopes).",
+    rest: { method: "GET", path: ACCOUNT_API_BASE },
+  },
+  {
+    name: "update_account_settings",
+    family: "workspace",
+    scope: "workspaces:write",
+    summary: "Patch account settings (username / display name).",
+    rest: { method: "PATCH", path: ACCOUNT_API_BASE },
   },
   {
     name: "generate_integration_skill",
+    family: "workspace",
     scope: "workspaces:read",
-    summary: "Generate partner skill.md with dynamic API references.",
+    summary:
+      "Generate partner skill.md so ChatGPT, Claude, or another agent can authorize and run the two APIs.",
     rest: {
       method: "POST",
-      path: `${POW_API_BASE}/workspaces/{workspace_id}/integration-skill`,
+      path: `${WORKSPACE_API_BASE}/{workspace_id}/integration-skill`,
+    },
+  },
+  {
+    name: "start_session",
+    family: "pow",
+    scope: "workspaces:write",
+    summary:
+      "Start a headless Calibrate, Learn, Verify, or TAPBench session: prepare the answers-model tree, start the clock.",
+    rest: {
+      method: "POST",
+      path: `${POW_API_BASE}/workspaces/{workspace_id}/sessions`,
+    },
+  },
+  {
+    name: "get_session",
+    family: "pow",
+    scope: "workspaces:read",
+    summary: "Read a headless session: remaining time, inferred path, current focus, answers model.",
+    rest: {
+      method: "GET",
+      path: `${POW_API_BASE}/workspaces/{workspace_id}/sessions/{session_id}`,
     },
   },
   {
     name: "upload_proof_of_work",
+    family: "pow",
     scope: "workspaces:write",
-    summary: `Upload tool/screen/video/EEG proof of work. ${powModelAgentSimulationContract()}`,
+    summary: `Submit proof of work into a live headless session. Infers the path on the prepared tree. Expired sessions reject further work. ${powModelAgentSimulationContract()}`,
     rest: {
       method: "POST",
-      path: `${POW_API_BASE}/workspaces/{workspace_id}/proof-of-work`,
+      path: `${POW_API_BASE}/workspaces/{workspace_id}/sessions/{session_id}/proof-of-work`,
+    },
+  },
+  {
+    name: "end_session",
+    family: "pow",
+    scope: "workspaces:write",
+    summary:
+      "End a headless session: score the inferred path against the prepared tree and persist the flow embedding.",
+    rest: {
+      method: "POST",
+      path: `${POW_API_BASE}/workspaces/{workspace_id}/sessions/{session_id}/end`,
     },
   },
   {
     name: "list_flow_embeddings",
+    family: "pow",
     scope: "workspaces:read",
     summary:
-      "List Calibrate, Learn, and Verify embeddings for a workspace (flowcfg-v1-d96). Each record includes the vector plus the recoverable raw gen model, projected policy when the flow produced one, and proof of work. These runs are not embedded via lwm_snapshot.",
+      "List Calibrate, Learn, and Verify embeddings (flowcfg-v1-d96): answers model, projected policy, and proof of work.",
     rest: {
       method: "GET",
       path: `${POW_API_BASE}/workspaces/{workspace_id}/flow-embeddings`,
@@ -87,140 +178,12 @@ export const AGENT_TOOL_SURFACE = [
   },
   {
     name: "get_flow_embedding",
+    family: "pow",
     scope: "workspaces:read",
-    summary:
-      "Recover one Calibrate, Learn, or Verify embedding by id, including the raw payload used to embed. Re-embed the raw to map gen model, projected policy, and PoW. REST: GET .../flow-embeddings?id=",
+    summary: "Recover one flow embedding by id, including the raw payload used to embed.",
     rest: {
       method: "GET",
       path: `${POW_API_BASE}/workspaces/{workspace_id}/flow-embeddings`,
-    },
-  },
-  {
-    name: "lwm_snapshot",
-    scope: "workspaces:read",
-    summary:
-      "LWM Snapshot (Learning World Model Snapshot) score (0–100) + GHC + spider markers, analysis, next actions. REST: POST .../lwm-snapshot. Knowledge UI / TAPBench snapshot strategy (not auto on TAP/TAP Learning end). Calibrate, Learn, and Verify persist flow embeddings via list_flow_embeddings / get_flow_embedding instead of this snapshot.",
-    rest: {
-      method: "POST",
-      path: `${SNAPSHOT_API_BASE}/workspaces/{workspace_id}/lwm-snapshot`,
-    },
-  },
-  {
-    name: "list_tap_links",
-    scope: "tap:read",
-    summary: "List TAP session links and status.",
-    rest: {
-      method: "GET",
-      path: `${POW_API_BASE}/workspaces/{workspace_id}/tap-links`,
-    },
-  },
-  {
-    name: "create_tap_link",
-    scope: "tap:write",
-    summary: "Create a private TAP link for a workspace or block.",
-    rest: {
-      method: "POST",
-      path: `${POW_API_BASE}/workspaces/{workspace_id}/tap-links`,
-    },
-  },
-  {
-    name: "get_world_model",
-    scope: "workspaces:read",
-    summary: "Durable learning world model for a workspace × subject.",
-    rest: {
-      method: "GET",
-      path: `${SNAPSHOT_API_BASE}/workspaces/{workspace_id}/world-model`,
-    },
-  },
-  {
-    name: "get_knowledge_config",
-    scope: "workspaces:read",
-    summary: "Latest knowledge configuration embedding (knowledgecfg-v1-d64).",
-    rest: {
-      method: "GET",
-      path: `${SNAPSHOT_API_BASE}/workspaces/{workspace_id}/knowledge-config`,
-    },
-  },
-  {
-    name: "get_knowledge_config_trajectory",
-    scope: "workspaces:read",
-    summary: "Knowledge config trajectory + optional 2D projection.",
-    rest: {
-      method: "GET",
-      path: `${SNAPSHOT_API_BASE}/workspaces/{workspace_id}/knowledge-config/trajectory`,
-    },
-  },
-  {
-    name: "knowledge_distance",
-    scope: "workspaces:read",
-    summary:
-      "Knowledge distance (user ↔ region) in knowledgecfg space — not an LWM Snapshot scorecard.",
-    rest: {
-      method: "POST",
-      path: `${SNAPSHOT_API_BASE}/workspaces/{workspace_id}/knowledge-distance`,
-    },
-  },
-  {
-    name: "list_snapshot_history",
-    scope: "workspaces:read",
-    summary: "Prior LWM Snapshot scorecards for a workspace / subject / cohort.",
-    rest: {
-      method: "GET",
-      path: `${SNAPSHOT_API_BASE}/workspaces/{workspace_id}/snapshot-history`,
-    },
-  },
-  {
-    name: "list_custom_knowledge_regions",
-    scope: "workspaces:read",
-    summary: "List custom knowledge regions and subjects with knowledge config.",
-    rest: {
-      method: "GET",
-      path: `${SNAPSHOT_API_BASE}/workspaces/{workspace_id}/custom-knowledge-regions`,
-    },
-  },
-  {
-    name: "create_custom_knowledge_region",
-    scope: "workspaces:write",
-    summary: "Create a custom knowledge region from subject embeddings.",
-    rest: {
-      method: "POST",
-      path: `${SNAPSHOT_API_BASE}/workspaces/{workspace_id}/custom-knowledge-regions`,
-    },
-  },
-  {
-    name: "eval_custom_knowledge_region",
-    scope: "workspaces:write",
-    summary: "Score a subject against a custom knowledge region.",
-    rest: {
-      method: "POST",
-      path: `${SNAPSHOT_API_BASE}/workspaces/{workspace_id}/custom-knowledge-regions`,
-    },
-  },
-  {
-    name: "buffer_proof_of_work",
-    scope: "workspaces:write",
-    summary: `Buffer a PoW unit in Stash API temporary memory (TAP) until stash or submit. ${powModelAgentSimulationContract()}`,
-    rest: {
-      method: "POST",
-      path: `${STASH_API_BASE}/workspaces/{workspace_id}/proof-of-work`,
-    },
-  },
-  {
-    name: "stash_proof_of_work",
-    scope: "workspaces:write",
-    summary: "Flush buffered PoW as System 1 (stash) into the regular PoW stack.",
-    rest: {
-      method: "POST",
-      path: `${STASH_API_BASE}/workspaces/{workspace_id}/stash`,
-    },
-  },
-  {
-    name: "submit_stashed_proof_of_work",
-    scope: "workspaces:write",
-    summary: "Flush buffered PoW as System 2 (submit) into the regular PoW stack.",
-    rest: {
-      method: "POST",
-      path: `${STASH_API_BASE}/workspaces/{workspace_id}/submit`,
     },
   },
 ] as const satisfies readonly AgentToolSurfaceEntry[];
@@ -231,11 +194,15 @@ export function agentToolNames(): AgentToolName[] {
   return AGENT_TOOL_SURFACE.map((t) => t.name);
 }
 
-/** TAP / TAP Learning / TAPBench guest-link mint — omitted from Knowledge Region skill/MCP copy. */
+export function agentToolsByFamily(family: PublicAgentApiFamily): AgentToolSurfaceEntry[] {
+  return AGENT_TOOL_SURFACE.filter((tool) => tool.family === family);
+}
+
+/** Historical TAP / TAP Learning / TAPBench guest-link mint — not public agent tools. */
 export const KNOWLEDGE_LINK_MINT_TOOL_NAMES = [
   "create_tap_link",
   "list_tap_links",
-] as const satisfies readonly AgentToolName[];
+] as const;
 
 export const KNOWLEDGE_LINK_MINT_PATH_FRAGMENTS = [
   "tap-links",
@@ -243,22 +210,14 @@ export const KNOWLEDGE_LINK_MINT_PATH_FRAGMENTS = [
   "ile-links",
 ] as const;
 
-/**
- * Documented MCP tool names in generated skill.md for a Learning workspace.
- * Order is part of the skill prompt; keep this list stable.
- */
-export const STANDARD_SKILL_DOCUMENTED_TOOL_NAMES = [
-  "list_workspaces",
-  "get_workspace",
-  "list_blocks",
-  "generate_integration_skill",
-] as const satisfies readonly AgentToolName[];
+export const STANDARD_SKILL_DOCUMENTED_TOOL_NAMES = AGENT_TOOL_SURFACE.map(
+  (tool) => tool.name,
+) as readonly AgentToolName[];
 
 export function isKnowledgeLinkMintToolName(name: string): boolean {
   return (KNOWLEDGE_LINK_MINT_TOOL_NAMES as readonly string[]).includes(name);
 }
 
-/** Full agent catalog filtered by workspace product. Calls for the other product are omitted. */
 export function agentToolSurfaceForWorkspace(kind: unknown): AgentToolSurfaceEntry[] {
   return AGENT_TOOL_SURFACE.filter((tool) => {
     const feature = agentToolFeature(tool.name);
@@ -267,18 +226,13 @@ export function agentToolSurfaceForWorkspace(kind: unknown): AgentToolSurfaceEnt
   });
 }
 
-/**
- * Tools listed in workspace-generated skill.md.
- * Learning: map read + skill regeneration.
- * Verification: proof of work, snapshots, regions, and stash.
- */
 export function skillDocumentedToolsForWorkspace(kind: unknown): AgentToolSurfaceEntry[] {
   return agentToolSurfaceForWorkspace(kind);
 }
 
 export function formatSkillMcpToolList(kind: unknown): string {
   return skillDocumentedToolsForWorkspace(kind)
-    .map((t) => (t.name === "lwm_snapshot" ? "lwm_snapshot (LWM Snapshot)" : t.name))
+    .map((t) => t.name)
     .join(", ");
 }
 

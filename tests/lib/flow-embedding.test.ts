@@ -210,6 +210,10 @@ describe("completion paths persist flow embeddings instead of snapshots", () => 
     expect(models).toContain('embeddingSource: flowFilter?.enabled ? "flowcfg" : "knowledgecfg"');
     expect(models).toContain("Embeddings in");
     expect(models).toContain("Overlay regions on the right.");
+    const hook = read("components/knowledge-panel/use-knowledge-embeddings.ts");
+    expect(hook).toContain('if (useFlowEmbeddings) return "flowcfg"');
+    expect(hook).toContain("reconcileSelectedSubjectKeys");
+    expect(hook).toContain("sameFlowEmbeddingList");
   });
 
   it("live Calibrate is sounding and leftover canvas classify UI is gone", () => {

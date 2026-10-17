@@ -5,7 +5,9 @@ import {
   flowEmbeddingDistanceToRegion,
   flowEmbeddingSubjectKey,
   knowledgeConfigFromFlowEmbeddings,
+  reconcileSelectedSubjectKeys,
   regionMatchesFlowEmbeddingSpace,
+  sameFlowEmbeddingList,
   subjectsFromFlowEmbeddings,
   type FlowEmbeddingViewRow,
 } from "@/lib/flow-embedding-view";
@@ -102,6 +104,23 @@ describe("flow embedding knowledge view", () => {
     });
     expect(distance.knowledge_distance).toBe(0);
     expect(distance.in_region).toBe(true);
+  });
+
+  it("keeps subject-key identity so an empty list does not retrigger loads", () => {
+    const empty: string[] = [];
+    expect(reconcileSelectedSubjectKeys(empty, [])).toBe(empty);
+    const prev = ["g:ada"];
+    expect(reconcileSelectedSubjectKeys(prev, ["g:ada"])).toBe(prev);
+    expect(reconcileSelectedSubjectKeys(prev, ["g:bea"])).toEqual(["g:bea"]);
+    expect(sameFlowEmbeddingList([], [])).toBe(true);
+    const ada = row({
+      id: "e1",
+      identity: "ada",
+      createdAt: "2026-10-01T00:00:00.000Z",
+      prompt: "epsilon proof",
+    });
+    expect(sameFlowEmbeddingList([ada], [{ ...ada }])).toBe(true);
+    expect(sameFlowEmbeddingList([ada], [])).toBe(false);
   });
 
   it("projects flowcfg points and overlay regions in ℝ⁹⁶", () => {

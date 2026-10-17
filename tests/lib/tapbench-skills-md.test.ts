@@ -10,7 +10,7 @@ import {
   buildTapbenchSkillsMarkdown,
   tapbenchSkillsMdFilename,
 } from "@/lib/pow-api/tapbench-skills-md";
-import { STASH_API_BASE, stashWorkspaceResource } from "@/lib/api/agent-api-paths";
+import { POW_API_BASE, powWorkspaceResource } from "@/lib/api/agent-api-paths";
 import { TAPBENCH_POW_SOURCE } from "@/lib/pow-api/tapbench";
 
 const ROOT = join(__dirname, "../..");
@@ -49,17 +49,17 @@ describe("buildTapbenchSkillsMarkdown (shipped builder)", () => {
     expect(md).toContain("900s");
   });
 
-  it("documents Stash/Submit paths and session header for this workspace", () => {
+  it("documents headless PoW session paths and session header for this workspace", () => {
     const md = buildTapbenchSkillsMarkdown(fixture);
-    expect(md).toContain(STASH_API_BASE);
+    expect(md).toContain(POW_API_BASE);
     expect(md).toContain(TAPBENCH_SESSION_HEADER);
     expect(md).toContain(`${TAPBENCH_SESSION_HEADER}: ${fixture.session_token}`);
-    expect(md).toContain(stashWorkspaceResource(fixture.workspace_id, "proof-of-work"));
-    expect(md).toContain(stashWorkspaceResource(fixture.workspace_id, "stash"));
-    expect(md).toContain(stashWorkspaceResource(fixture.workspace_id, "submit"));
+    expect(md).toContain(powWorkspaceResource(fixture.workspace_id, "sessions"));
     expect(md).toMatch(/POST.*proof-of-work/i);
-    expect(md).toMatch(/Stash \(System 1\)/i);
-    expect(md).toMatch(/Submit \(System 2\)/i);
+    expect(md).toMatch(/start_session/);
+    expect(md).toMatch(/end_session/);
+    expect(md).not.toContain("/api/v3/stash");
+    expect(md).not.toContain("/api/v3/snapshot");
   });
 
   it("explains remaining-time stop behavior and tapbench pow flag", () => {
@@ -110,16 +110,12 @@ describe("buildTapbenchSkillsMarkdown (shipped builder)", () => {
     expect(md).toMatch(/text.*reasoning.*content|text` \/ `reasoning` \/ `content/i);
   });
 
-  it("instructs stash for intermediate System 1 and submit for deliberate System 2", () => {
+  it("instructs continuous thought uploads through the headless session", () => {
     const md = buildTapbenchSkillsMarkdown(fixture);
-    expect(md).toMatch(/Stash \(System 1\)/i);
-    expect(md).toMatch(/Submit \(System 2\)/i);
-    expect(md).toMatch(/intermediate|spontaneous|park/i);
-    expect(md).toMatch(/deliberate|final answer/i);
-    expect(md).toMatch(/decision: "stash"|system: 1|System 1 flush/i);
-    expect(md).toMatch(/decision: "submit"|system: 2|System 2 flush/i);
-    // Interleave, not only end-of-session batch
-    expect(md).toMatch(/Interleave|buffer thought|recommended/i);
+    expect(md).toMatch(/start_session/);
+    expect(md).toMatch(/upload_proof_of_work|Upload PoW/i);
+    expect(md).toMatch(/end_session/);
+    expect(md).toMatch(/Interleave|buffer thought|continuous/i);
     expect(md).toMatch(/end-of-session batch|one buffer \+ one flush|Anti-patterns/i);
   });
 });
@@ -137,7 +133,7 @@ describe("Knowledge Links does not host TAPBench skills download", () => {
     expect(existsSync(join(ROOT, rel))).toBe(true);
     const src = readFileSync(join(ROOT, rel), "utf8");
     expect(src).not.toMatch(/alatap|alaTAP/i);
-    expect(src).toContain("Stash/Submit");
+    expect(src).toContain("headless proof-of-work");
     expect(src).toContain("TAPBench");
     expect(src).toContain(TAPBENCH_SESSION_HEADER);
   });

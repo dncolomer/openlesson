@@ -139,13 +139,14 @@ describe("API / MCP surface structural contracts for goal selection", () => {
     expect(src).toContain("evaluated_goals");
   });
 
-  it("MCP lwm_snapshot schema documents goal_mode / adhoc_goal / goal_ids", () => {
+  it("public MCP catalog does not expose lwm_snapshot; cookie-auth snapshot still documents goals", () => {
     const src = readMcpSurface();
-    expect(src).toContain("goal_mode");
-    expect(src).toContain("adhoc_goal");
-    expect(src).toContain("goal_ids");
-    expect(src).toContain("evaluated_goals");
-    expect(src).toContain("goalSelectionBody");
+    expect(src).not.toMatch(/name:\s*"lwm_snapshot"/);
+    const snapshot = readFileSync(
+      join(ROOT, "app/api/v3/snapshot/workspaces/[id]/lwm-snapshot/route.ts"),
+      "utf8",
+    );
+    expect(snapshot).toMatch(/goal_mode|evaluated_goals|goalSelectionBody/);
   });
 
   it("runVerticalScore wires goals resolution + gate fingerprint", () => {

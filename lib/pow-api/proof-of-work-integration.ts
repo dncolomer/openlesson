@@ -37,10 +37,7 @@ import {
   type ProofOfWorkApiInterruption,
 } from "./predictive-interruption";
 import { callXaiResponsesWithFiles } from "@/lib/xai-client";
-import {
-  evalWorkspaceResource,
-  powWorkspaceResource,
-} from "@/lib/api/agent-api-paths";
+import { powWorkspaceResource } from "@/lib/api/agent-api-paths";
 
 export const EVIDENCE_SPEC_VERSION = "1.3";
 
@@ -49,16 +46,20 @@ export function buildProofOfWorkSchemaApiPath(workspaceId: string, baseUrl: stri
 }
 
 export function buildProofOfWorkUploadApiPath(workspaceId: string, baseUrl: string): string {
-  return powWorkspaceResource(workspaceId, "proof-of-work", baseUrl);
+  return powWorkspaceResource(workspaceId, "sessions/{session_id}/proof-of-work", baseUrl);
+}
+
+export function buildHeadlessSessionStartApiPath(workspaceId: string, baseUrl: string): string {
+  return powWorkspaceResource(workspaceId, "sessions", baseUrl);
 }
 
 export function buildIntegrationSkillApiPath(workspaceId: string, baseUrl: string): string {
   return powWorkspaceResource(workspaceId, "integration-skill", baseUrl);
 }
 
-/** Primary LWM Snapshot endpoint (Snapshot API). */
+/** Headless session end — public agent performance outcome. */
 export function buildPerformanceApiPath(workspaceId: string, baseUrl: string): string {
-  return evalWorkspaceResource(workspaceId, "lwm-snapshot", baseUrl);
+  return powWorkspaceResource(workspaceId, "sessions/{session_id}/end", baseUrl);
 }
 
 export function buildContinuousEvaluationPolicy(
@@ -71,7 +72,7 @@ export function buildContinuousEvaluationPolicy(
   } | null
 ): ContinuousEvaluationPolicy {
   const proofOfWorkCount = contextCounts?.proof_of_work_artifacts ?? 0;
-  const proofOfWorkSpecPath = buildProofOfWorkSchemaApiPath(workspaceId, baseUrl);
+  const startPath = buildHeadlessSessionStartApiPath(workspaceId, baseUrl);
   const skillPath = buildIntegrationSkillApiPath(workspaceId, baseUrl);
   const performancePath = buildPerformanceApiPath(workspaceId, baseUrl);
   const uploadPath = buildProofOfWorkUploadApiPath(workspaceId, baseUrl);
@@ -97,14 +98,14 @@ export function buildContinuousEvaluationPolicy(
 
   return {
     principle:
-      "Uncertain Systems verification is continuous. The proof-of-work spec and integration skill are living documents derived from workspace context and accumulated proof of work.",
+      "Uncertain Systems verification is continuous. Start a headless session, stream proof of work, end the session, and regenerate the integration skill as the workspace grows.",
     more_evidence_improves:
-      "The more tool usage, artifacts, and session proof of work you submit, the richer workspace context becomes and the better POST .../lwm-snapshot can learn, score, and surface gaps.",
+      "The more tool events you upload into a live session, the better the server can infer the path on the prepared answers-model tree.",
     regeneration_required: true,
     proof_of_work_spec: {
-      api_path: proofOfWorkSpecPath,
+      api_path: startPath,
       method: "POST",
-      purpose: "Re-fetch the formal proof-of-work specification (tool_submissions, upload contract) as proof of work accumulates",
+      purpose: "Start a headless Calibrate, Learn, Verify, or TAPBench session (answers-model tree + clock)",
       when_to_call: evidenceTriggers,
     },
     integration_skill: {
@@ -121,14 +122,13 @@ export function buildContinuousEvaluationPolicy(
     performance: {
       api_path: performancePath,
       method: "POST",
-      purpose: "Request updated gap analysis and readiness scores as new proof of work arrives",
+      purpose: "End the headless session: score the inferred path and persist the flow embedding",
       when_to_call: [
-        "After each meaningful batch of proof-of-work uploads via POST .../proof-of-work",
-        "Before deploy gates, promotion decisions, or learning-to-conversion checkpoints",
-        "Whenever you need refreshed marker scores tied to the latest workspace context",
+        "When the session clock expires or the agent is done",
+        "After streaming proof of work into start_session via POST .../sessions/{session_id}/proof-of-work",
       ],
     },
-    recommended_cadence: `Continuous loop: upload proof of work (${uploadPath}) → re-fetch spec (${proofOfWorkSpecPath}) → regenerate skill (${skillPath}) → request performance (${performancePath}). Repeat as proof of work grows.`,
+    recommended_cadence: `Continuous loop: start_session (${startPath}) → upload proof of work (${uploadPath}) → end_session (${performancePath}) → regenerate skill (${skillPath}). Repeat as proof of work grows.`,
   };
 }
 
@@ -151,11 +151,21 @@ export function enrichProofOfWorkSpecResult(
   const proofOfWorkSpecPath = buildProofOfWorkSchemaApiPath(workspaceId, baseUrl);
   const skillPath = buildIntegrationSkillApiPath(workspaceId, baseUrl);
 
-  const performanceContract: PerformanceReportContract =
-    result.performance_report_contract ?? {
-      ...buildVerticalScoreReportContract("verification", baseUrl),
-      endpoint_pattern: buildPerformanceApiPath(workspaceId, baseUrl),
-    };
+  const sessionRequiredFields = [
+    "session_id",
+    "flow_kind",
+    "remaining_ms",
+    "sequence",
+    "answers_model",
+    "embedding",
+  ] as const;
+  const performanceContract: PerformanceReportContract = {
+    ...(result.performance_report_contract ??
+      buildVerticalScoreReportContract("verification", baseUrl)),
+    endpoint_pattern: `POST ${buildPerformanceApiPath(workspaceId, baseUrl)}`,
+    mcp_tool: "end_session",
+    required_fields: [...sessionRequiredFields],
+  };
 
   const continuousEvaluation = buildContinuousEvaluationPolicy(workspaceId, baseUrl, contextCounts);
   const continuousEvaluationMcp = buildContinuousEvaluationMcpPolicy(workspaceId, baseUrl, contextCounts);
@@ -163,7 +173,7 @@ export function enrichProofOfWorkSpecResult(
   const blockCount = contextCounts?.blocks ?? 0;
   const llmInterruption = normalizePredictedInterruption(
     result.predicted_interruption,
-    "generate_proof_of_work_schema",
+    "start_session",
     workspaceId
   );
 
@@ -178,10 +188,8 @@ export function enrichProofOfWorkSpecResult(
     workspace_id: workspaceId,
     block_id: blockId ?? null,
     performance_report_contract: performanceContract,
-    // Sole product strategy: LWM Snapshot (verification). Do not ship peer aug/opt contracts.
     vertical_score_contracts: {
-      verification:
-        result.vertical_score_contracts?.verification ?? performanceContract,
+      verification: performanceContract,
     },
     continuous_evaluation: continuousEvaluation,
     continuous_evaluation_mcp: continuousEvaluationMcp,
@@ -202,7 +210,7 @@ export function enrichProofOfWorkSpecResult(
       result.collection_guidance,
       result.continuous_evaluation_summary,
       formatDualSurfaceGuidance(continuousEvaluation, continuousEvaluationMcp),
-      `Self-update: re-fetch REST ${proofOfWorkSpecPath} or MCP generate_proof_of_work_schema; regenerate skill at ${skillPath} or MCP generate_integration_skill.`,
+      `Self-update: start_session then upload_proof_of_work then end_session; regenerate skill at ${skillPath} or MCP generate_integration_skill.`,
     ]
       .filter(Boolean)
       .join(" "),
@@ -242,39 +250,35 @@ ${spec.continuous_evaluation?.more_evidence_improves || ""}
 Regenerate proof-of-work spec: ${spec.continuous_evaluation?.proof_of_work_spec.api_path || spec.proof_of_work_spec_api_path}
 Regenerate integration skill: ${spec.continuous_evaluation?.integration_skill.api_path || "(workspace)/integration-skill"}
 Upload proof of work: ${spec.continuous_evaluation?.proof_of_work_spec.api_path ? spec.proof_of_work_upload_api_path : "(workspace)/proof-of-work"}
-Request refreshed performance: ${spec.continuous_evaluation?.performance.api_path || "(workspace)/lwm-snapshot"}
-REST cadence: ${spec.continuous_evaluation?.recommended_cadence || "upload → re-fetch spec → regenerate skill → performance"}
+End session: ${spec.continuous_evaluation_mcp?.performance.rest_equivalent || "(workspace)/sessions/{session_id}/end"}
+REST cadence: ${spec.continuous_evaluation?.recommended_cadence || "start_session → upload_proof_of_work → end_session → regenerate skill"}
 
 Continuous evaluation — MCP (same loop, tool names):
 ${spec.continuous_evaluation_mcp?.principle || spec.continuous_evaluation?.principle || ""}
 MCP endpoint: ${spec.continuous_evaluation_mcp?.mcp_endpoint_pattern || "POST /api/mcp"} (Authorization: Bearer <api_key>)
-generate_proof_of_work_schema ↔ ${spec.continuous_evaluation?.proof_of_work_spec.api_path || "REST proof-of-work-schema"}
+start_session ↔ REST POST .../sessions
 upload_proof_of_work ↔ ${spec.proof_of_work_upload_api_path || "REST proof of work"}
-lwm_snapshot ↔ REST POST .../lwm-snapshot
-get_workspace — workspace_goal and metadata; lwm_snapshot for scores
-MCP cadence: ${spec.continuous_evaluation_mcp?.recommended_cadence || "schema → upload → LWM Snapshot → repeat"}
+end_session ↔ REST POST .../sessions/{session_id}/end
+get_workspace — workspace_goal, kind, map, and settings
+MCP cadence: ${spec.continuous_evaluation_mcp?.recommended_cadence || "create/get workspace → start_session → upload → end_session → repeat"}
 
 Integration surfaces: REST Bearer auth + MCP JSON-RPC (full parity — document both, prefer live API paths over static copies).
 
-LWM Snapshot contract (MUST appear in skill.md — sole product score strategy; one primary score + GHC secondary + spider + analysis + next actions):
-Endpoint: POST .../lwm-snapshot
-MCP tool: lwm_snapshot
-LWM Snapshot: manual Knowledge UI or POST .../lwm-snapshot / MCP lwm_snapshot (not auto on TAP/TAP Learning end)
-Required fields: ${(spec.performance_report_contract?.required_fields || ["score", "lwm_snapshot_score", "workspace_goal", "ghc_score", "marker_scores", "gap_analysis.gaps", "gap_analysis.next_steps"]).join(", ")}
-primary score: ${spec.performance_report_contract?.primary_score?.range || "0-100"} integer (lwm_snapshot_score / LWM Snapshot)
-workspace_goal: ${spec.performance_report_contract?.workspace_goal?.description || "inferred or owner-set workspace goal"}
-marker_scores: ${spec.performance_report_contract?.marker_scores.visualization || "spider_radar"} chart with ${spec.performance_report_contract?.marker_scores.min_markers || 4}-${spec.performance_report_contract?.marker_scores.max_markers || 8} competency axes (id, label, score, rationale)
-gap_analysis.gaps: required list of gaps (title, proof_of_work, severity, suggested_repair) — product/workflow remediation only; never TAP, block completion, or TAP Learning
-gap_analysis.next_steps: directions (domain goals) and events (granular product/tool actions) — same remediation rules
-Example LWM Snapshot score shape:
+Headless session outcomes (MUST appear in skill.md — answers-model tree, inferred path, remaining time, flow embedding):
+Endpoint: POST .../sessions/{session_id}/end
+MCP tool: end_session
+TAPBench is start_session with flow_kind=tapbench. Snapshot and Stash are not public agent APIs.
+Observable after end_session: answers_model (prepared tree), sequence (inferred path), remaining_ms, embedding.raw.pow
+Catalog sizes: 4 / 8 / 16. Clock: 1–120 minutes (default 15).
+Example end_session shape:
 ${JSON.stringify(
-    spec.performance_report_contract?.example_report || {
-      vertical: "verification" as const,
-      score: 0,
-      lwm_snapshot_score: 0,
-      workspace_goal: "Workspace goal",
-      marker_scores: [],
-      gap_analysis: { gaps: [], next_steps: { directions: [], events: [] } },
+    {
+      session_id: "session-id",
+      flow_kind: "verify",
+      remaining_ms: 0,
+      sequence: ["close"],
+      answers_model: { catalog_size: 4, branch_count: 5 },
+      embedding: { flow_kind: "verify" },
     },
     null,
     2
@@ -289,7 +293,7 @@ export function resolveProofOfWorkSchemaInterruption(
 ): ProofOfWorkApiInterruption {
   return normalizePredictedInterruption(
     spec.predicted_interruption,
-    "generate_proof_of_work_schema",
+    "start_session",
     workspaceId,
   );
 }

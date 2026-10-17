@@ -46,16 +46,15 @@ describe("TAPBench dump endpoints closed", () => {
     ).toBe(false);
   });
 
-  it("PoW dump and MCP upload reject TAPBench keys toward Stash", () => {
-    const pow = readFileSync(
-      join(ROOT, "app/api/v3/pow/workspaces/[id]/proof-of-work/route.ts"),
+  it("TAPBench agents use headless sessions, not a separate dump API", () => {
+    const sessionPow = readFileSync(
+      join(ROOT, "app/api/v3/pow/workspaces/[id]/sessions/[sessionId]/proof-of-work/route.ts"),
       "utf8",
     );
-    expect(pow).toContain("tapbench_key");
-    expect(pow).toContain("TAPBENCH_STASH_ONLY_MESSAGE");
-    expect(pow).not.toContain("maybeScoreTapbenchPowUpload");
+    expect(sessionPow).toContain("ingestHeadlessProofForWorkspace");
     const mcp = readFileSync(join(ROOT, "lib/pow-api/mcp-tools/dispatch.ts"), "utf8");
-    expect(mcp).toContain("TAPBENCH_STASH_ONLY_MESSAGE");
+    expect(mcp).toContain("ingestHeadlessProofOfWork");
+    expect(mcp).not.toContain("TAPBENCH_STASH_ONLY_MESSAGE");
     expect(TAPBENCH_STASH_ONLY_MESSAGE.toLowerCase()).toMatch(/stash/);
   });
 });

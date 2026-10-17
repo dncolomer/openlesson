@@ -7,7 +7,7 @@ import {
   buildPerformanceApiPath,
   formatProofOfWorkSpecForSkillPrompt,
 } from "./proof-of-work-integration";
-import { STASH_API_BASE } from "@/lib/api/agent-api-paths";
+import { POW_API_BASE, WORKSPACE_API_BASE } from "@/lib/api/agent-api-paths";
 import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
 import { formatSkillMcpToolList } from "./agent-tool-surface";
 import { CANVAS_TAP_SIMULATION_HEADING } from "./pow-model-agent-contract";
@@ -202,9 +202,9 @@ export function knowledgeRegionIntegrationCopy(): {
 } {
   return {
     skillDescription:
-      "Download a skill.md for this Verification workspace. Agents use the Proof-of-Work API (proof-of-work schema + upload) plus Snapshot (lwm_snapshot, world model, knowledge config, distance, regions) and stash (buffer_proof_of_work / stash_proof_of_work / submit_stashed_proof_of_work under /api/v3/stash).",
+      "Download a skill.md for this Verification workspace. Agents use workspace management (/api/v3/workspaces) and the headless proof-of-work API (/api/v3/pow) to create, edit, and run Calibrate, Learn, Verify, or TAPBench sessions.",
     mcpNote:
-      "MCP JSON-RPC at POST /api/mcp with Bearer auth. For this workspace, instrument proof-of-work capture, snapshots, and stash. This workspace has no map, DAG, map type, or AYCL tools.",
+      "MCP JSON-RPC at POST /api/mcp with Bearer auth. Two APIs: workspace management and headless proof-of-work. ChatGPT or Claude authorizes and runs flows for the user.",
   };
 }
 
@@ -214,17 +214,14 @@ export function learningWorkspaceIntegrationCopy(): {
 } {
   return {
     skillDescription:
-      "Download a skill.md for this Learning workspace. Agents can read the workspace and its map blocks, then regenerate this skill. Proof of work, snapshots, and knowledge regions belong to a Verification workspace.",
+      "Download a skill.md for this Learning workspace. Agents create and edit the map through workspace management, then run Calibrate, Learn, or Verify headless through the proof-of-work API.",
     mcpNote:
-      "MCP JSON-RPC at POST /api/mcp with Bearer auth. For this workspace the tools are list_workspaces, get_workspace, list_blocks, and generate_integration_skill.",
+      "MCP JSON-RPC at POST /api/mcp with Bearer auth. Two APIs: workspace management and headless proof-of-work. ChatGPT or Claude authorizes and runs flows for the user.",
   };
 }
 
-export function formatSkillRestEndpointsLine(kind: unknown): string {
-  if (isKnowledgeRegionWorkspace(kind)) {
-    return `REST: POST /proof-of-work-schema, POST /proof-of-work, POST /lwm-snapshot (LWM Snapshot), POST /integration-skill; Snapshot GET world-model, knowledge-config, knowledge-config/trajectory, snapshot-history, custom-knowledge-regions, POST knowledge-distance; stash POST ${STASH_API_BASE}/workspaces/{id}/proof-of-work (buffer_proof_of_work), POST ${STASH_API_BASE}/workspaces/{id}/stash (stash_proof_of_work), POST ${STASH_API_BASE}/workspaces/{id}/submit (submit_stashed_proof_of_work) (workspace create is UI-only; do not document POST /workspaces or MCP create_workspace as supported)`;
-  }
-  return "REST: GET /workspaces, GET /workspaces/{id}, GET /blocks, POST /integration-skill (workspace create is UI-only; do not document proof of work, snapshots, or knowledge links)";
+export function formatSkillRestEndpointsLine(_kind: unknown): string {
+  return `REST: workspace management GET/POST ${WORKSPACE_API_BASE}, GET/PATCH ${WORKSPACE_API_BASE}/{id}, GET/PATCH .../blocks, GET/PATCH .../settings, GET/PATCH /api/v3/account, POST .../integration-skill; headless proof-of-work POST ${POW_API_BASE}/workspaces/{id}/sessions, GET .../sessions/{session_id}, POST .../proof-of-work, POST .../end, GET .../flow-embeddings. TAPBench is start_session with flow_kind=tapbench. Snapshot and Stash are not public agent APIs.`;
 }
 
 export function buildIntegrationSkillInstructions(
@@ -285,12 +282,12 @@ export function buildIntegrationSkillInstructions(
 
 ${scope}
 
-This workspace is a Learning workspace: a map of blocks that people in the organisation play. It does not expose goals, verification flows, knowledge rankings, snapshots, knowledge regions, Data Studio, or proof-of-work upload.
+This workspace is a Learning workspace: a map of blocks plus Calibrate, Learn, and Verify. Agents manage the workspace and run those flows headless. Snapshot and Stash are not public agent APIs.
 
 YAML frontmatter (required):
 ---
 name: ${skillName}
-description: ${request.integration_name} integration skill for reading a Learning workspace map.
+description: ${request.integration_name} integration skill for managing a Learning workspace and running headless Calibrate, Learn, and Verify.
 ---
 
 Workspace:
@@ -303,13 +300,13 @@ Base URL for examples: ${baseUrl}
 Integration skill regeneration API: POST ${integrationSkillPath}
 
 Required content:
-1. Purpose — read this Learning workspace map. Do not tell the agent to upload proof of work, request a snapshot, mint a link, or sell the workspace.
-2. Authentication table (Bearer sk_ / gsk_, scopes workspaces:read and workspaces:write for skill regeneration).
+1. Purpose — manage this Learning workspace map and run Calibrate, Learn, or Verify through the headless proof-of-work API. ChatGPT or Claude authorizes with a Bearer key and runs the flow for the user.
+2. Authentication table (Bearer sk_ / gsk_, scopes workspaces:read and workspaces:write).
 3. Endpoints table:
    - ${restEndpointsLine}
    - MCP (JSON-RPC at POST /api/mcp with Bearer auth): ${mcpToolList}
-4. Workspace-specific block list from the current status, as read-only context.
-5. Quick checklist: get_workspace → list_blocks → regenerate this skill when the map changes.
+4. Workspace-specific block list from the current status.
+5. Quick checklist: create_workspace or get_workspace → update_workspace / update_blocks → start_session → upload_proof_of_work → end_session.
 
 ${statusSection}
 
@@ -319,22 +316,18 @@ Return ONLY the markdown document. No JSON wrapper. No code fences around the en
   const mcpToolList = formatSkillMcpToolList(workspaceKind);
   const krStashSection = knowledgeRegion
     ? `
-   - **TAPBench Stash (required for Knowledge Region)** — agent proof of work buffers under ${STASH_API_BASE}:
-     - MCP buffer_proof_of_work / REST POST ${STASH_API_BASE}/workspaces/{id}/proof-of-work
-     - MCP stash_proof_of_work / REST POST ${STASH_API_BASE}/workspaces/{id}/stash
-     - MCP submit_stashed_proof_of_work / REST POST ${STASH_API_BASE}/workspaces/{id}/submit
-   - Snapshot extras: get_world_model, get_knowledge_config, get_knowledge_config_trajectory, knowledge_distance, list_custom_knowledge_regions
-   - Do not document guest knowledge-link mint. This workspace's agent path is PoW API + TAPBench Stash.`
+   - Headless proof-of-work: start_session (calibrate | learn | verify | tapbench) → upload_proof_of_work → end_session
+   - Do not document Snapshot, Stash, or a separate TAPBench API. TAPBench is the same headless session.`
     : "";
   const canonicalRefs = knowledgeRegion
     ? `${request.base_url}/docs/proof-of-work-api`
     : `${request.base_url}/skill.md and ${request.base_url}/docs/proof-of-work-api`;
   const checklist = knowledgeRegion
-    ? "fetch proof-of-work spec → honor interruption scheduling → upload proof of work or TAPBench Stash (buffer_proof_of_work → stash_proof_of_work / submit_stashed_proof_of_work) → regenerate skill → request LWM Snapshot → repeat as proof of work grows."
-    : "fetch proof-of-work spec → honor interruption scheduling → upload proof of work per contract → regenerate skill → request LWM Snapshot → repeat as proof of work grows.";
+    ? "create or get workspace → start_session → upload_proof_of_work through the clock → end_session → regenerate skill."
+    : "create or get workspace → edit map/settings → start_session → upload_proof_of_work → end_session → regenerate skill.";
   const purposeLine = knowledgeRegion
-    ? "1. Purpose — what this partner agent verifies **given the current Knowledge Region workspace status** and how proof of work + TAPBench Stash + LWM Snapshot fit the workflow."
-    : "1. Purpose — what this partner agent verifies **given the current workspace status** and how proof of work + LWM Snapshot fit the workflow.";
+    ? "1. Purpose — what this partner agent verifies **given the current Verification workspace status** and how workspace management + headless Calibrate/Learn/Verify/TAPBench fit the workflow."
+    : "1. Purpose — what this partner agent verifies **given the current Learning workspace status** and how workspace management + headless Calibrate/Learn/Verify fit the workflow.";
 
   return `Generate a custom integration skill.md document for "${request.integration_name}" integrating with Uncertain Systems Proof-of-Work API.
 
@@ -367,11 +360,9 @@ ${statusSection}
 
 Base URL for examples: ${request.base_url}
 Suggested share path: ${sharePath}
-Proof-of-work spec API (dynamic — MUST document prominently): POST ${proofOfWorkSchemaPath}
-Proof-of-work upload API: POST ${evidenceUploadPath}
+Workspace management API: ${WORKSPACE_API_BASE}
+Headless proof-of-work API: ${POW_API_BASE} (start_session, upload_proof_of_work, end_session)
 Integration skill regeneration API (self-update — MUST document prominently): POST ${integrationSkillPath}
-LWM Snapshot API (re-run as proof of work grows; sole product strategy):
-- LWM Snapshot: POST ${performancePath} (MCP lwm_snapshot). GHC is secondary on the same report.
 
 Sections to include: ${sections.join(", ")}
 ${proofOfWorkSpecSection}
@@ -384,9 +375,8 @@ ${purposeLine}
    - Principle: evaluation is continuous; the more data and proof of work submitted, the better Uncertain Systems can learn and snapshot
    - This skill.md is a snapshot; partner agents must **regenerate** it via POST ${integrationSkillPath} as proof of work accumulates
    - Re-fetch the proof of work spec via POST ${proofOfWorkSchemaPath} on a recurring basis (e.g. after every 5-10 new uploads, when blocks change, or when scores feel stale)
-   - Re-request LWM Snapshot via POST .../lwm-snapshot after meaningful proof-of-work batches
-   - Explicit warning: treating the initial skill.md or spec as permanent will degrade evaluation quality over time
-   - Recommended loop: upload proof of work → re-fetch spec → regenerate skill → request LWM Snapshot → repeat
+   - Explicit warning: treating the initial skill.md as permanent will degrade quality over time
+   - Recommended loop: start_session → upload_proof_of_work → end_session → regenerate skill → repeat
    - Reference the \`continuous_evaluation\` object returned by the proof of work spec API for machine-readable self-update triggers
 4. **Predictive interruptions (required section)** — Trace Interruption Model (TIM) on every Proof-of-Work API response:
    - Every REST and MCP success response includes top-level \`interruption\` (object or null).
@@ -399,21 +389,16 @@ ${purposeLine}
 6. Endpoints table covering REST and MCP with **dual documentation** (never hide REST behind MCP):
    - ${restEndpointsLine}
    - MCP (JSON-RPC at POST /api/mcp with Bearer auth): ${mcpToolList}
-   - State that MCP tools have parity with REST for capture/score flows; workspace creation is product UI only (/workspace/new); proof-of-work spec responses include both continuous_evaluation (REST paths) and continuous_evaluation_mcp (tool names)
-   - Recommend get_workspace / generate_proof_of_work_schema first; use lwm_snapshot for scores${krStashSection}
+   - State that MCP tools have parity with REST for the two public APIs (workspace management and headless proof-of-work). Agents create and edit workspaces. TAPBench is start_session with flow_kind=tapbench.
+   - Recommend create_workspace or get_workspace, then start_session${krStashSection}
 7. **Proof-of-work specification (required section)** — explain that payloads are defined by the formal proof-of-work spec returned from POST ${proofOfWorkSchemaPath}. Include:
    - When to call the proof of work spec endpoint (before first upload, after proof-of-work milestones, when eval definition or blocks change)
    - Example request body with definition, optional block_id, and integration_hints
-   - That the response includes tool_submissions, proof_of_work_upload_contract, performance_report_contract (LWM Snapshot), interruption_contract, continuous_evaluation, schema_name, example_payload, collection_guidance, and top-level interruption
+   - That the response includes tool_submissions, proof_of_work_upload_contract, interruption_contract, continuous_evaluation, schema_name, example_payload, collection_guidance, and top-level interruption
    - Instruction to validate tool payloads against the fetched schema before upload
    - Do NOT embed a static schema as the source of truth; reference the API path above
 8. Workspace-specific block mapping guidance and example tool JSON payloads that match the proof of work spec (illustrative only).
-9. **LWM Snapshot (required section)** — sole product score strategy (LWM Snapshot strategy). Each call returns ONE primary score plus GHC secondary, spider breakdown, analysis, and next actions:
-   - POST .../lwm-snapshot (MCP lwm_snapshot) — LWM Snapshot; manual / explicit API (not auto on TAP/TAP Learning end)
-   - Every score response MUST include: score + lwm_snapshot_score, vertical, workspace_goal, ghc_score, marker_scores (4-8 spider axes: id, label, score, rationale), gap_analysis with gaps[] and next_steps { directions[], events[] }, summary, strengths, growth_areas, suggestions, confidence
-   - Remediation must be product/workflow-specific; never TAP, block completion, TAP Learning, or Uncertain Systems platform tasks
-   - Reference performance_report_contract from the proof of work spec API for machine-readable contracts
-   - Include a full JSON example for lwm-snapshot with score, lwm_snapshot_score, ghc_score, workspace_goal, marker_scores, and at least one gap + next_steps
+9. **Headless session outcomes (required section)** — after end_session the observable is the answers-model tree, the inferred path, remaining time, and the flow embedding. Do not document Snapshot, Stash flush, or a separate TAPBench API.
 10. Quick integration checklist: ${checklist}
 
 Canonical API reference links: ${canonicalRefs}

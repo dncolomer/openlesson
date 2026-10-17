@@ -142,10 +142,12 @@ describe("Knowledge distance surfaces", () => {
     expect(settings).toContain("Embeddings tab");
   });
 
-  it("docs list knowledge-distance under Snapshot API", () => {
+  it("public agent docs do not catalog knowledge-distance as an agent API", () => {
     const docs = read("docs/PROOF_OF_WORK_API.md");
-    expect(docs).toContain("knowledge-distance");
-    expect(docs).toMatch(/Knowledge distance/i);
-    expect(docs).toMatch(/not a vertical Eval|not.*Eval score/i);
+    expect(docs).not.toContain("knowledge-distance");
+    expect(docs).toContain("start_session");
+    expect(existsSync(join(ROOT, "app/api/v3/snapshot/workspaces/[id]/knowledge-distance/route.ts"))).toBe(
+      true,
+    );
   });
 });

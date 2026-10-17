@@ -21,10 +21,11 @@ describe("integration-discovery", () => {
       proof_of_work_artifacts: 0,
       blocks: 3,
     });
-    expect(policy.proof_of_work_spec.mcp_tool).toBe("generate_proof_of_work_schema");
-    expect(policy.proof_of_work_spec.rest_equivalent).toContain("/proof-of-work-schema");
+    expect(policy.proof_of_work_spec.mcp_tool).toBe("start_session");
+    expect(policy.proof_of_work_spec.rest_equivalent).toContain("/sessions");
+    expect(policy.upload_proof_of_work.rest_equivalent).toContain("/sessions/{session_id}/proof-of-work");
     expect(policy.upload_proof_of_work?.mcp_tool).toBe("upload_proof_of_work");
-    expect(policy.performance.mcp_tool).toBe("lwm_snapshot");
+    expect(policy.performance.mcp_tool).toBe("end_session");
     expect(policy.progress_snapshot.mcp_tool).toBe("get_workspace");
   });
 
@@ -35,7 +36,7 @@ describe("integration-discovery", () => {
       has_workspace_goal: true,
       workspace_kind: "knowledge_region",
     });
-    expect(cold.some((a) => a.mcp_tool === "generate_proof_of_work_schema")).toBe(true);
+    expect(cold.some((a) => a.mcp_tool === "start_session")).toBe(true);
 
     const warm = recommendIntegrationActions({
       proof_of_work_artifacts: 6,
@@ -43,8 +44,8 @@ describe("integration-discovery", () => {
       has_workspace_goal: true,
       workspace_kind: "knowledge_region",
     });
-    expect(warm.some((a) => a.mcp_tool === "lwm_snapshot")).toBe(true);
-    expect(warm.some((a) => a.rest_equivalent.includes("lwm-snapshot"))).toBe(true);
+    expect(warm.some((a) => a.mcp_tool === "end_session")).toBe(true);
+    expect(warm.some((a) => a.mcp_tool === "upload_proof_of_work")).toBe(true);
   });
 
   it("serves MCP resource markdown for scope and proof-of-work loop", () => {
@@ -54,7 +55,11 @@ describe("integration-discovery", () => {
 
     const loop = buildMcpResourceContent("uncertain-systems://proof-of-work-loop", "https://uncertain.systems");
     expect(loop).toContain("get_workspace");
+    expect(loop).toContain("start_session");
+    expect(loop).toContain("upload_proof_of_work");
+    expect(loop).toContain("end_session");
     expect(loop).not.toContain("get_learning_progress");
+    expect(loop).not.toContain("lwm_snapshot");
     expect(loop).toContain("continuous_evaluation_mcp");
   });
 });

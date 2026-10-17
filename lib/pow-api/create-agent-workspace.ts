@@ -221,6 +221,7 @@ async function createSemanticAgentWorkspace(
       source_type: "topic",
       notes: goalFields.notes,
       workspace_goal: workspaceGoal,
+      workspace_kind: "standard",
       is_agent_workspace: true,
       evaluation_mode: "semantic",
       unusable_cells: blockedSlots,

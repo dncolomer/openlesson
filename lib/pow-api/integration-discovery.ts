@@ -1,27 +1,25 @@
 import type { ContinuousEvaluationPolicy } from "./proof-of-work-schema";
 import { formatInterruptionContractForSkillPrompt } from "./predictive-interruption";
 import {
-  buildProofOfWorkSchemaApiPath,
+  buildHeadlessSessionStartApiPath,
   buildProofOfWorkUploadApiPath,
   buildIntegrationSkillApiPath,
-  buildPerformanceApiPath,
 } from "./proof-of-work-integration";
-import { POW_API_BASE, STASH_API_BASE } from "@/lib/api/agent-api-paths";
-import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
+import { POW_API_BASE, WORKSPACE_API_BASE } from "@/lib/api/agent-api-paths";
 
 export const UNCERTAIN_SYSTEMS_SCOPE = {
   product: "Uncertain Systems",
   mission:
     "Verify learning and measure readiness-to-perform using real product proof of work — not quizzes in isolation.",
   pillars: [
-    "LWM Snapshot — lwm_snapshot (Learning World Model Snapshot) + GHC from tool traces, artifacts, and sessions (manual UI or Snapshot API/MCP)",
-    "Proof of work — upload_proof_of_work / POST .../proof-of-work streams observable actions as durable artifacts",
+    "Workspace management — create and edit Learning and Verification workspaces, the map, workspace settings, and account settings",
+    "Headless proof of work — start_session → upload_proof_of_work → end_session. The server prepares the answers-model tree, infers the path, and enforces the clock",
     "Predictive interruptions (TIM) — every response includes interruption (object or null) with delay_ms and intervention hints",
   ],
   workspace_model:
-    "A Verification Workspace has blocks (assessable units), a workspace_goal (what success means), and accumulates proof of work. Progress is continuous: upload → re-fetch spec → LWM Snapshot → repeat.",
+    "A workspace has blocks (assessable units), a workspace_goal (what success means), and headless Calibrate / Learn / Verify / TAPBench sessions. Progress is continuous: start_session → upload proof of work → end_session → repeat.",
   integrator_model:
-    "Partner agents instrument their product, upload proof of work after meaningful actions, and call lwm_snapshot (LWM Snapshot) for gap reports and next actions. Both REST (Bearer API key) and MCP (JSON-RPC with Bearer auth) expose the same capabilities.",
+    "Partner agents authorize with a Bearer key, manage workspaces, and run flows headless. ChatGPT, Claude, or any MCP client uses the same two APIs.",
   docs: {
     api_reference: "/skill.md",
     human_guide: "/docs/proof-of-work-api",
@@ -100,10 +98,9 @@ export function buildContinuousEvaluationMcpPolicy(
   } | null
 ): ContinuousEvaluationMcpPolicy {
   const proofOfWorkCount = contextCounts?.proof_of_work_artifacts ?? 0;
-  const proofOfWorkSpecRest = buildProofOfWorkSchemaApiPath(workspaceId, baseUrl);
+  const startRest = `POST ${buildHeadlessSessionStartApiPath(workspaceId, baseUrl)}`;
   const skillRest = buildIntegrationSkillApiPath(workspaceId, baseUrl);
-  const uploadRest = buildProofOfWorkUploadApiPath(workspaceId, baseUrl);
-  const performanceRest = buildPerformanceApiPath(workspaceId, baseUrl);
+  const uploadRest = `POST ${buildProofOfWorkUploadApiPath(workspaceId, baseUrl)}`;
 
   const evidenceTriggers = [
     "Before the first proof-of-work upload for a new workflow or block",
@@ -114,7 +111,7 @@ export function buildContinuousEvaluationMcpPolicy(
 
   if (proofOfWorkCount === 0) {
     evidenceTriggers.unshift(
-      "Immediately: call generate_proof_of_work_schema (MCP) or POST .../proof-of-work-schema (REST) before first upload"
+      "Immediately: call start_session (MCP) or POST .../sessions (REST) before the first upload"
     );
   } else if (proofOfWorkCount < 10) {
     evidenceTriggers.unshift(
@@ -129,13 +126,13 @@ export function buildContinuousEvaluationMcpPolicy(
   return {
     principle: UNCERTAIN_SYSTEMS_SCOPE.workspace_model,
     more_evidence_improves:
-      "More upload_proof_of_work / POST .../proof-of-work calls improve LWM Snapshot (lwm_snapshot) and GHC accuracy.",
+      "More upload_proof_of_work calls during a live session improve the inferred path on the prepared answers-model tree.",
     regeneration_required: true,
     mcp_endpoint_pattern: buildMcpEndpointPattern(baseUrl),
     proof_of_work_spec: {
-      mcp_tool: "generate_proof_of_work_schema",
-      rest_equivalent: proofOfWorkSpecRest,
-      purpose: "Fetch formal tool_submissions, upload contract, and performance_report_contract",
+      mcp_tool: "start_session",
+      rest_equivalent: startRest,
+      purpose: "Start a headless Calibrate, Learn, Verify, or TAPBench session: prepare the answers-model tree and clock",
       when_to_call: evidenceTriggers,
     },
     integration_skill: {
@@ -159,27 +156,27 @@ export function buildContinuousEvaluationMcpPolicy(
       ],
     },
     performance: {
-      mcp_tool: "lwm_snapshot",
-      rest_equivalent: performanceRest,
+      mcp_tool: "end_session",
+      rest_equivalent: `${baseUrl.replace(/\/$/, "")}${POW_API_BASE}/workspaces/${workspaceId}/sessions/{session_id}/end`,
       purpose:
-        "LWM Snapshot (lwm_snapshot): one primary 0–100 score + GHC + spider + analysis + next actions. Sole product snapshot strategy.",
+        "End a headless session: score the inferred path against the prepared answers-model tree and persist the flow embedding.",
       when_to_call: [
-        "After each meaningful proof-of-work batch (e.g. every 3-10 uploads)",
-        "Call lwm_snapshot for LWM Snapshot (manual; not auto on TAP/TAP Learning end)",
+        "When the session clock expires or the agent is done",
+        "After streaming proof of work into start_session",
       ],
     },
     progress_snapshot: {
       mcp_tool: "get_workspace",
-      rest_equivalent: `GET ${baseUrl.replace(/\/$/, "")}/api/v3/pow/workspaces/${workspaceId}`,
+      rest_equivalent: `GET ${baseUrl.replace(/\/$/, "")}${WORKSPACE_API_BASE}/${workspaceId}`,
       purpose:
-        "Workspace orientation: workspace_goal and metadata. Scores live on Snapshot API (lwm_snapshot).",
+        "Workspace orientation: kind, map, settings, and workspace_goal.",
       when_to_call: [
         "When connecting MCP mid-session and need workspace context",
-        "Before choosing between upload_proof_of_work vs lwm_snapshot (LWM Snapshot)",
+        "Before start_session",
         "After long idle gaps to re-orient the agent",
       ],
     },
-    recommended_cadence: `MCP loop: generate_proof_of_work_schema → upload_proof_of_work (repeat) → lwm_snapshot (LWM Snapshot) → regenerate schema/skill. REST mirror: ${uploadRest} → ${proofOfWorkSpecRest} → ${performanceRest}.`,
+    recommended_cadence: `MCP loop: create_workspace or get_workspace → start_session → upload_proof_of_work (repeat) → end_session → regenerate skill. REST mirror: ${WORKSPACE_API_BASE} → ${startRest} → ${uploadRest}.`,
   };
 }
 
@@ -191,89 +188,56 @@ export function recommendIntegrationActions(options: {
   workspace_kind?: unknown;
 }): RecommendedIntegrationAction[] {
   const actions: RecommendedIntegrationAction[] = [];
-  const { proof_of_work_artifacts, blocks, has_workspace_goal, workspace_kind } = options;
-  if (!isKnowledgeRegionWorkspace(workspace_kind)) {
-    actions.push({
-      priority: 1,
-      mcp_tool: "get_workspace",
-      rest_equivalent: "GET .../workspaces/{id}",
-      reason: "Read this Learning workspace before using the map.",
-    });
-    if (blocks >= 0) {
-      actions.push({
-        priority: 2,
-        mcp_tool: "list_blocks",
-        rest_equivalent: "GET .../blocks",
-        reason: "Read the map blocks. This workspace does not accept proof of work or snapshots.",
-      });
-    }
-    return actions;
-  }
+  const { proof_of_work_artifacts, blocks, has_workspace_goal } = options;
+  void options.workspace_kind;
 
   if (!has_workspace_goal) {
     actions.push({
       priority: 1,
       mcp_tool: "get_workspace",
-      rest_equivalent: "GET .../workspaces/{id}",
-      reason: "Read workspace_goal — defines what learning progress should optimize toward.",
+      rest_equivalent: `GET ${WORKSPACE_API_BASE}/{id}`,
+      reason: "Read workspace_goal, kind, and settings before running a flow.",
     });
   }
 
-  if (blocks > 0 && proof_of_work_artifacts === 0) {
+  if (blocks >= 0) {
     actions.push({
       priority: 2,
-      mcp_tool: "generate_proof_of_work_schema",
-      rest_equivalent: "POST .../proof-of-work-schema",
-      reason: "No proof of work yet — fetch tool_submissions contract before first upload.",
+      mcp_tool: "list_blocks",
+      rest_equivalent: `GET ${WORKSPACE_API_BASE}/{id}/blocks`,
+      reason: "Read the map / contents. Both Learning and Verification workspaces share this API.",
     });
+  }
+
+  if (proof_of_work_artifacts === 0) {
     actions.push({
       priority: 3,
-      mcp_tool: "list_blocks",
-      rest_equivalent: "GET .../blocks",
-      reason: "Map assessable blocks to upcoming upload_proof_of_work block_id fields.",
-    });
-  }
-
-  if (proof_of_work_artifacts > 0 && proof_of_work_artifacts % 5 === 0) {
-    actions.push({
-      priority: 4,
-      mcp_tool: "generate_proof_of_work_schema",
-      rest_equivalent: "POST .../proof-of-work-schema",
-      reason: `${proof_of_work_artifacts} artifacts — re-fetch spec so evaluation stays aligned with observed behavior.`,
-    });
-  }
-
-  if (proof_of_work_artifacts >= 1 && (proof_of_work_artifacts < 3 || proof_of_work_artifacts % 3 === 0)) {
-    actions.push({
-      priority: 5,
-      mcp_tool: "lwm_snapshot",
-      rest_equivalent: "POST .../lwm-snapshot",
-      reason: "Enough signal to score — request scorecard (no prompt) for marker_scores and gap_analysis.",
+      mcp_tool: "start_session",
+      rest_equivalent: `POST ${POW_API_BASE}/workspaces/{id}/sessions`,
+      reason: "Start a headless Calibrate, Learn, Verify, or TAPBench session.",
     });
   }
 
   if (proof_of_work_artifacts > 0) {
     actions.push({
-      priority: 6,
+      priority: 4,
       mcp_tool: "upload_proof_of_work",
-      rest_equivalent: "POST .../proof-of-work",
-      reason: "Continue streaming product actions — more proof of work improves learning verification.",
+      rest_equivalent: `POST ${POW_API_BASE}/workspaces/{id}/sessions/{session_id}/proof-of-work`,
+      reason: "Stream proof of work into the live session so the server can infer the path.",
+    });
+    actions.push({
+      priority: 5,
+      mcp_tool: "end_session",
+      rest_equivalent: `POST ${POW_API_BASE}/workspaces/{id}/sessions/{session_id}/end`,
+      reason: "End the session to persist the answers-model tree, inferred path, and flow embedding.",
     });
   }
 
   actions.push({
-    priority: 7,
-    mcp_tool: "buffer_proof_of_work",
-    rest_equivalent: `POST ${STASH_API_BASE}/workspaces/{id}/proof-of-work`,
-    reason:
-      "Buffer proof of work, then stash_proof_of_work or submit_stashed_proof_of_work. Verification workspaces do not mint knowledge links.",
-  });
-
-  actions.push({
-    priority: 8,
+    priority: 6,
     mcp_tool: "get_workspace",
-    rest_equivalent: `GET ${POW_API_BASE}/workspaces/{id}`,
-    reason: "Re-orient on workspace_goal. Scores live on lwm_snapshot.",
+    rest_equivalent: `GET ${WORKSPACE_API_BASE}/{id}`,
+    reason: "Re-orient on workspace_goal, map, and settings.",
   });
 
   return actions.sort((a, b) => a.priority - b.priority);
@@ -293,7 +257,7 @@ export function buildUncertainSystemsScopeForWorkspace(options: {
       block_count: options.blockCount,
       proof_of_work_artifact_count: options.proofOfWorkCount,
       progress_interpretation:
-        "Learning progress = proof-of-work volume + quality of marker_scores/gaps from LWM Snapshot (lwm_snapshot) + GHC, measured against workspace_goal.",
+        "Learning progress = headless session proof of work projected onto the prepared answers-model tree, measured against workspace_goal.",
     },
   };
 }
@@ -359,29 +323,29 @@ Docs: ${base}${UNCERTAIN_SYSTEMS_SCOPE.docs.api_reference} · ${base}${UNCERTAIN
   if (uri === "uncertain-systems://proof-of-work-loop") {
     return `# Proof-of-work loop and learning progress
 
-Progress is **continuous**, not one-time setup.
+Progress is **continuous**, not one-time setup. ChatGPT, Claude, or any MCP client authorizes with a Bearer key and runs Calibrate, Learn, Verify, or TAPBench headless.
 
 ## Recommended loop
-1. **generate_proof_of_work_schema** / POST .../proof-of-work-schema — get tool_submissions + contracts
-2. **list_blocks** / GET .../blocks — map competencies to block_id
-3. **upload_proof_of_work** / POST .../proof-of-work — after each meaningful product action (repeat)
-4. **lwm_snapshot** — LWM Snapshot (sole strategy; GHC secondary on the same report)
-5. Re-fetch schema + regenerate skill as proof of work grows
+1. **create_workspace** or **get_workspace** — Learning or Verification workspace, map, settings
+2. **start_session** / POST ${POW_API_BASE}/workspaces/{workspace_id}/sessions — \`flow_kind\` calibrate | learn | verify | tapbench. The server prepares the answers-model tree and starts the clock.
+3. **upload_proof_of_work** / POST ${POW_API_BASE}/workspaces/{workspace_id}/sessions/{session_id}/proof-of-work — after each meaningful action (repeat). The server infers the path on the prepared tree (catalogs 4 / 8 / 16). Expired sessions reject further work.
+4. **end_session** / POST ${POW_API_BASE}/workspaces/{workspace_id}/sessions/{session_id}/end — score the inferred path and persist the flow embedding
+5. **generate_integration_skill** as the workspace grows
 
 ## Progress signals
-- \`proof_of_work_summary.proof_of_work_artifacts\` — how much signal exists
-- \`report.score\` / named \`lwm_snapshot_score\` — primary 0-100 LWM Snapshot
-- \`report.ghc_score\` — secondary Genuine Human Cognition signal
-- \`report.workspace_goal\` — inferred or owner-set workspace goal
-- \`report.marker_scores\` — per-competency spider/radar axes
-- \`report.gap_analysis\` — analysis + product-language next actions
+- \`answers_model\` — prepared tree (catalog size, focus, branch count)
+- \`sequence\` — inferred path from proof plus actions
+- \`remaining_ms\` — session clock
+- \`embedding\` — flowcfg-v1-d96 after end_session (answers model + projected policy + proof of work)
 
 ## Quick orientation
-Call **get_workspace** with \`workspace_id\` for metadata and workspace_goal. Call **lwm_snapshot** for scores.
+Call **get_workspace** with \`workspace_id\` for metadata and workspace_goal. Call **get_session** for remaining time and the current focus.
 
-Every **generate_proof_of_work_schema** response includes \`continuous_evaluation\` (REST) and \`continuous_evaluation_mcp\` (tools) — do not treat either as optional.
+Every schema/skill response includes \`continuous_evaluation\` (REST) and \`continuous_evaluation_mcp\` (tools) — do not treat either as optional.
 
 Every Proof-of-Work API success response also includes \`interruption\` (TIM) — object or null.
+
+Snapshot, Stash, and TAPBench-as-a-separate-API are not public agent tools.
 `;
   }
 

@@ -247,20 +247,19 @@ describe("workspace create + builder static wiring", () => {
     expect(stripBody).not.toContain('"lasso_freehand"');
   });
 
-  it("programmatic API/MCP create is disabled; UI generate remains", () => {
-    const route = read("app/api/v3/pow/workspaces/route.ts");
-    expect(route).not.toContain("createAgentWorkspace");
-    expect(route).toContain("WORKSPACE_CREATE_UI_ONLY_MESSAGE");
+  it("programmatic API/MCP create is enabled; UI generate remains", () => {
+    const route = read("app/api/v3/workspaces/route.ts");
+    expect(route).toContain("createManagedWorkspace");
+    expect(route).toContain("export async function POST");
+    expect(route).not.toContain("WORKSPACE_CREATE_UI_ONLY_MESSAGE");
 
     const catalog = read("lib/pow-api/mcp-proof-of-work-catalog.ts");
-    expect(catalog).not.toMatch(/name:\s*"create_workspace"/);
+    expect(catalog).toContain("AGENT_TOOL_SURFACE");
 
     const mcp = read("lib/pow-api/mcp-tools/dispatch.ts");
-    expect(mcp).toContain("rejectProgrammaticWorkspaceCreate");
-    // create_workspace must hard-fail, not call createAgentWorkspace
-    expect(mcp).not.toMatch(/await createAgentWorkspace/);
+    expect(mcp).toContain("createManagedWorkspace");
+    expect(mcp).not.toContain("rejectProgrammaticWorkspaceCreate");
 
-    // Internal helper may still exist for legacy/demo paths, but public surfaces reject
     const create = read("lib/pow-api/create-agent-workspace.ts");
     expect(create).toContain("assertApiCreateMode");
   });

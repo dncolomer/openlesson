@@ -128,21 +128,56 @@ describe("evidence integration helpers", () => {
     );
 
     expect(enriched.proof_of_work_spec_api_path).toContain("/proof-of-work-schema");
-    expect(enriched.proof_of_work_upload_api_path).toContain("/proof-of-work");
+    expect(enriched.proof_of_work_upload_api_path).toContain("/sessions/{session_id}/proof-of-work");
     expect(enriched.spec_version).toBe("1.3");
     expect(enriched.pow_model_version).toBe("pow-model-v1");
     expect(enriched.interruption_contract).toBeTruthy();
-    expect(enriched.performance_report_contract?.marker_scores.visualization).toBe("spider_radar");
-    expect(enriched.performance_report_contract?.gap_analysis.gaps_required).toBe(true);
+    expect(enriched.performance_report_contract?.endpoint_pattern).toContain("/sessions/{session_id}/end");
+    expect(enriched.performance_report_contract?.mcp_tool).toBe("end_session");
     expect(enriched.continuous_evaluation?.regeneration_required).toBe(true);
     expect(enriched.continuous_evaluation?.integration_skill.api_path).toContain("/integration-skill");
-    expect(enriched.continuous_evaluation_mcp?.proof_of_work_spec.mcp_tool).toBe("generate_proof_of_work_schema");
-    expect(enriched.continuous_evaluation_mcp?.performance.rest_equivalent).toContain("/lwm-snapshot");
+    expect(enriched.continuous_evaluation?.performance.api_path).toContain("/sessions/{session_id}/end");
+    expect(enriched.continuous_evaluation_mcp?.proof_of_work_spec.mcp_tool).toBe("start_session");
+    expect(enriched.continuous_evaluation_mcp?.upload_proof_of_work.rest_equivalent).toContain(
+      "/sessions/{session_id}/proof-of-work",
+    );
+    expect(enriched.continuous_evaluation_mcp?.performance.rest_equivalent).toContain("/sessions");
+    expect(enriched.continuous_evaluation_mcp?.performance.mcp_tool).toBe("end_session");
     expect(enriched.integration_surfaces?.length).toBe(2);
     expect(enriched.uncertain_systems_scope).toBeTruthy();
     expect(enriched.recommended_next_actions?.length).toBeGreaterThan(0);
     expect(enriched.collection_guidance).toContain("Self-update");
     expect(enriched.collection_guidance).toContain("MCP");
+  });
+
+  it("stamps end_session over leaked snapshot performance contracts", () => {
+    const enriched = enrichProofOfWorkSpecResult(
+      {
+        schema: { type: "object" },
+        schema_name: "eval_input_demo",
+        rationale: "test",
+        example_payload: { event: "start" },
+        recommended_mime_type: "application/json",
+        recommended_proof_of_work_type: "tool",
+        performance_report_contract: {
+          endpoint_pattern: "POST /api/v3/snapshot/workspaces/{id}/lwm-snapshot",
+          mcp_tool: "lwm_snapshot",
+          required_fields: ["marker_scores", "lwm_snapshot_score"],
+        } as never,
+      },
+      "ws-1",
+      "https://uncertain.systems",
+    );
+
+    expect(enriched.performance_report_contract?.mcp_tool).toBe("end_session");
+    expect(enriched.performance_report_contract?.endpoint_pattern).toContain(
+      "/sessions/{session_id}/end",
+    );
+    expect(enriched.performance_report_contract?.required_fields).toEqual(
+      expect.arrayContaining(["session_id", "answers_model", "sequence", "embedding"]),
+    );
+    expect(enriched.performance_report_contract?.endpoint_pattern).not.toContain("lwm-snapshot");
+    expect(enriched.vertical_score_contracts?.verification?.mcp_tool).toBe("end_session");
   });
 
   it("builds continuous evaluation policy with proof of work-aware triggers", () => {
@@ -151,9 +186,9 @@ describe("evidence integration helpers", () => {
     });
 
     expect(policy.more_evidence_improves).toContain("more");
-    expect(policy.proof_of_work_spec.api_path).toBe(
-      buildProofOfWorkSchemaApiPath("ws-1", "https://uncertain.systems")
-    );
+    expect(policy.proof_of_work_spec.api_path).toContain("/sessions");
+    expect(policy.performance.api_path).toContain("/sessions/{session_id}/end");
+    expect(policy.more_evidence_improves).not.toContain("lwm-snapshot");
     expect(policy.integration_skill.api_path).toBe(
       buildIntegrationSkillApiPath("ws-1", "https://uncertain.systems")
     );
@@ -182,10 +217,10 @@ describe("evidence integration helpers", () => {
 
     expect(text).toContain("proof-of-work-schema");
     expect(text).toContain("demo");
-    expect(text).toMatch(/LWM Snapshot contract/i);
-    expect(text).toContain("lwm_snapshot");
+    expect(text).toMatch(/Headless session outcomes/i);
+    expect(text).toContain("end_session");
+    expect(text).not.toContain("lwm_snapshot");
     expect(text).not.toMatch(/MCP tools: verification_score, augmentation_score, optimization_score/);
-    expect(text).toContain("spider_radar");
   });
 
   it("builds evidence schema request from integration fields", () => {
@@ -228,9 +263,10 @@ describe("buildIntegrationSkillInstructions", () => {
     expect(instructions).toContain("Predictive interruptions");
     expect(instructions).toContain("do not tell them to invent ad-hoc JSON");
     expect(instructions).toContain("regenerate");
-    expect(instructions).toContain("lwm_snapshot");
-    expect(instructions).toContain("marker_scores");
-    expect(instructions).toContain("performance_report_contract");
+    expect(instructions).toContain("start_session");
+    expect(instructions).toContain("end_session");
+    expect(instructions).not.toContain("lwm_snapshot");
+    expect(instructions).toContain("flow embedding");
     expect(instructions).toContain("Predictive interruptions");
     expect(instructions).toContain("interruption_contract");
     expect(instructions).toContain("current status");
@@ -340,10 +376,17 @@ describe("buildProofOfWorkSchemaInstructions", () => {
     expect(instructions).toContain("continuous_evaluation_summary");
     expect(instructions).toContain("performance_report_contract");
     expect(instructions).toContain("predicted_interruption");
-    expect(instructions).toContain("marker_scores");
+    expect(instructions).toContain("answers_model");
+    expect(instructions).toContain("sequence");
+    expect(instructions).toContain("embedding");
     expect(instructions).toContain("Discovery");
     expect(instructions).toContain("product-independent");
     expect(instructions).toContain("never recommend TAP sessions");
+    expect(instructions).toContain("start_session");
+    expect(instructions).toContain("end_session");
+    expect(instructions).not.toContain("generate_proof_of_work_schema");
+    expect(instructions).not.toContain("lwm_snapshot");
+    expect(instructions).not.toContain("/lwm-snapshot");
   });
 });
 

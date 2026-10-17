@@ -22,7 +22,7 @@ import {
   assertWorkspaceAllowsKnowledgeLinkMint,
   workspaceAllowsKnowledgeLinkMint,
 } from "@/lib/workspace-kind";
-import { STASH_API_BASE } from "@/lib/api/agent-api-paths";
+import { POW_API_BASE, WORKSPACE_API_BASE } from "@/lib/api/agent-api-paths";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
@@ -60,10 +60,10 @@ const SKILL_REQUEST = {
   eval_definition: "Verify partner workflow",
 };
 
-const STASH_TOOLS = [
-  "buffer_proof_of_work",
-  "stash_proof_of_work",
-  "submit_stashed_proof_of_work",
+const HEADLESS_TOOLS = [
+  "start_session",
+  "upload_proof_of_work",
+  "end_session",
 ] as const;
 
 function assertNoLinkMint(label: string, text: string) {
@@ -77,7 +77,7 @@ function assertNoLinkMint(label: string, text: string) {
 }
 
 describe("KR vs standard skill/MCP surface (shipped builders)", () => {
-  it("filters the agent catalog: KR omits mint tools, standard keeps them", () => {
+  it("shares the two public APIs for both workspace kinds (no mint, no Snapshot/Stash)", () => {
     const kr = agentToolSurfaceForWorkspace("knowledge_region");
     const standard = agentToolSurfaceForWorkspace("standard");
     const krNames = kr.map((t) => t.name);
@@ -87,20 +87,13 @@ describe("KR vs standard skill/MCP surface (shipped builders)", () => {
       expect(krNames).not.toContain(name);
       expect(standardNames).not.toContain(name);
     }
-    expect(standardNames).toEqual([
-      "list_workspaces",
-      "get_workspace",
-      "list_blocks",
-      "generate_integration_skill",
-    ]);
-    expect(krNames).not.toContain("list_blocks");
-    expect(krNames).toContain("upload_proof_of_work");
-    expect(krNames).toContain("lwm_snapshot");
-    expect(krNames).toContain("get_world_model");
-    expect(krNames).toContain("get_knowledge_config");
-    for (const name of STASH_TOOLS) {
+    for (const name of ["create_workspace", "list_blocks", ...HEADLESS_TOOLS] as const) {
       expect(krNames).toContain(name);
+      expect(standardNames).toContain(name);
     }
+    expect(krNames).not.toContain("lwm_snapshot");
+    expect(standardNames).not.toContain("lwm_snapshot");
+    expect(krNames).not.toContain("buffer_proof_of_work");
 
     const krCatalog = mcpProofOfWorkCatalogForWorkspace("knowledge_region").map((t) => t.name);
     const stdCatalog = mcpProofOfWorkCatalogForWorkspace("standard").map((t) => t.name);
@@ -110,7 +103,7 @@ describe("KR vs standard skill/MCP surface (shipped builders)", () => {
     expect(krCatalog).not.toContain("create_tapbench_link");
   });
 
-  it("buildIntegrationSkillInstructions omits mint for KR and documents PoW + Stash TAPBench", () => {
+  it("buildIntegrationSkillInstructions omits mint and documents the two public APIs", () => {
     const kr = buildIntegrationSkillInstructions(SKILL_REQUEST, KR_WORKSPACE, [], null, null);
     const standard = buildIntegrationSkillInstructions(
       SKILL_REQUEST,
@@ -122,21 +115,16 @@ describe("KR vs standard skill/MCP surface (shipped builders)", () => {
 
     assertNoLinkMint("KR skill instructions", kr);
     expect(kr).toContain("upload_proof_of_work");
-    expect(kr).toContain("lwm_snapshot");
-    expect(kr).toContain("get_world_model");
-    expect(kr).toContain("get_knowledge_config");
-    expect(kr).toContain("knowledge_distance");
-    for (const name of STASH_TOOLS) {
-      expect(kr).toContain(name);
-    }
-    expect(kr).toContain(STASH_API_BASE);
-    expect(kr).toContain("/proof-of-work-schema");
-    expect(kr).toContain("/proof-of-work");
-    expect(kr).not.toContain("/skill.md");
+    expect(kr).toContain("start_session");
+    expect(kr).toContain("end_session");
+    expect(kr).not.toContain("lwm_snapshot");
+    expect(kr).not.toContain("buffer_proof_of_work");
+    expect(kr).toContain(POW_API_BASE);
+    expect(kr).toContain(WORKSPACE_API_BASE);
 
     expect(textExposesKnowledgeLinkMint(standard)).toBe(false);
     expect(standard).not.toContain("create_tap_link");
-    expect(standard).not.toContain("upload_proof_of_work");
+    expect(standard).toContain("upload_proof_of_work");
     expect(standard).toContain("list_blocks");
     expect(standard).toContain("Learning workspace");
 
@@ -149,7 +137,7 @@ describe("KR vs standard skill/MCP surface (shipped builders)", () => {
     expect(stdDoc).not.toContain("create_tap_link");
   });
 
-  it("recommendIntegrationActions recommends Stash TAPBench on KR and TAP mint on standard", () => {
+  it("recommendIntegrationActions recommends headless PoW on both kinds", () => {
     const kr = recommendIntegrationActions({
       proof_of_work_artifacts: 6,
       blocks: 2,
@@ -171,8 +159,12 @@ describe("KR vs standard skill/MCP surface (shipped builders)", () => {
     const krBlob = JSON.stringify(kr);
     const stdBlob = JSON.stringify(standard);
     assertNoLinkMint("KR recommended actions", krBlob);
-    expect(kr.some((a) => a.mcp_tool === "buffer_proof_of_work")).toBe(true);
-    expect(kr.some((a) => a.rest_equivalent.includes(STASH_API_BASE))).toBe(true);
+    expect(kr.some((a) => a.mcp_tool === "start_session" || a.mcp_tool === "upload_proof_of_work")).toBe(
+      true,
+    );
+    expect(kr.some((a) => a.rest_equivalent.includes(POW_API_BASE) || a.rest_equivalent.includes("/sessions"))).toBe(
+      true,
+    );
     expect(kr.some((a) => a.mcp_tool === "create_tap_link")).toBe(false);
 
     expect(standard.some((a) => a.mcp_tool === "list_blocks")).toBe(true);
@@ -185,11 +177,10 @@ describe("KR vs standard skill/MCP surface (shipped builders)", () => {
     const copy = knowledgeRegionIntegrationCopy();
     assertNoLinkMint("KR integration skillDescription", copy.skillDescription);
     assertNoLinkMint("KR integration mcpNote", copy.mcpNote);
-    expect(copy.skillDescription).toContain("buffer_proof_of_work");
-    expect(copy.skillDescription).toContain("stash_proof_of_work");
-    expect(copy.skillDescription).toContain("submit_stashed_proof_of_work");
-    expect(copy.skillDescription).toContain("/api/v3/stash");
-    expect(copy.skillDescription).toContain("lwm_snapshot");
+    expect(copy.skillDescription).toContain("headless proof-of-work");
+    expect(copy.skillDescription).toContain("/api/v3/pow");
+    expect(copy.skillDescription).toContain("/api/v3/workspaces");
+    expect(copy.skillDescription).not.toContain("lwm_snapshot");
     expect(copy.mcpNote).toContain("/api/mcp");
 
     const panel = read("components/WorkspaceIntegrationPanel.tsx");
@@ -248,11 +239,11 @@ describe("KR vs standard skill/MCP surface (shipped builders)", () => {
       [
         `kr_catalog=${agentToolSurfaceForWorkspace("knowledge_region").map((t) => t.name).join(",")}`,
         `std_catalog_has_create_tap_link=${agentToolSurfaceForWorkspace("standard").some((t) => t.name === "create_tap_link")}`,
-        `kr_skill_has_stash=${STASH_TOOLS.every((n) => krSkill.includes(n))}`,
+        `kr_skill_has_headless=${HEADLESS_TOOLS.every((n) => krSkill.includes(n))}`,
         `kr_skill_exposes_mint=${textExposesKnowledgeLinkMint(krSkill)}`,
         `std_skill_exposes_mint=${textExposesKnowledgeLinkMint(stdSkill)}`,
         `kr_actions=${krActions.map((a) => a.mcp_tool).join(",")}`,
-        `kr_copy_stash=${copy.skillDescription.includes("buffer_proof_of_work")}`,
+        `kr_copy_headless=${copy.skillDescription.includes("/api/v3/pow")}`,
         `ui_skill_passes_kind=${uiSkill.includes("workspace_kind: plan.workspace_kind")}`,
         `agent_skill_passes_kind=${agentSkill.includes("workspace_kind: workspace.workspace_kind")}`,
         `mcp_skill_passes_kind=${mcpDispatch.includes("workspace_kind: workspace.workspace_kind")}`,

@@ -397,12 +397,21 @@ export function buildOpaqueVerticalScoreContract(
   example.workspace_goal = "goal_ref:example";
   return {
     ...base,
-    endpoint_pattern: `(workspace)/lwm-snapshot`,
+    endpoint_pattern: `(workspace)/sessions/{session_id}/end`,
+    mcp_tool: "end_session",
+    required_fields: [
+      "session_id",
+      "flow_kind",
+      "remaining_ms",
+      "sequence",
+      "answers_model",
+      "embedding",
+    ],
     primary_score: {
       type: "integer",
       range: "0-100",
       description:
-        "Structural LWM Snapshot score — phase coverage / protocol compliance (opaque mode)",
+        "Headless session outcome — inferred path vs prepared answers-model tree (opaque mode)",
     },
     workspace_goal: {
       type: "string",

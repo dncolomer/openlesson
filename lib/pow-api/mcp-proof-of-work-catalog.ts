@@ -2,11 +2,9 @@
  * Client-safe catalog for workspace integration UI (no server imports).
  * Tool names/summaries come from AGENT_TOOL_SURFACE (single source of truth).
  *
- * Score tools (REST path ↔ MCP name): lwm-snapshot ↔ lwm_snapshot
- * (LWM Snapshot — Knowledge UI / TAPBench snapshot strategy; GHC secondary on the same report).
- * Calibrate, Learn, and Verify embeddings: GET .../flow-embeddings ↔ list_flow_embeddings / get_flow_embedding.
- * No legacy verification/augmentation/optimization score routes or tools.
- * workspace_goal is the outcome field used across score + progress tools.
+ * Two public families: workspace management (/api/v3/workspaces, /api/v3/account)
+ * and headless proof-of-work (/api/v3/pow). Snapshot, Stash, and TAPBench are
+ * not public agent APIs. TAPBench is start_session with flow_kind=tapbench.
  */
 
 import { AGENT_TOOL_SURFACE, agentToolSurfaceForWorkspace } from "./agent-tool-surface";

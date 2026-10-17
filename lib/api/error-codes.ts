@@ -12,6 +12,8 @@ export const KNOWN_ERROR_CODES = [
   "internal_error",
   "validation_error",
   "session_expired",
+  "session_ended",
+  "session_not_found",
   "session_revoked",
   "session_stopped",
   "aycl_authoring_required",

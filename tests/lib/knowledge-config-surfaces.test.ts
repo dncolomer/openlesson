@@ -396,12 +396,12 @@ describe("knowledge config / LWM feature surfaces", () => {
     }
   });
 
-  it("docs describe Snapshot API and model contract", () => {
+  it("public agent docs exclude Snapshot as a third API family", () => {
     const docs = read("docs/PROOF_OF_WORK_API.md");
-    expect(docs).toContain("/api/v3/snapshot");
-    expect(docs).toContain("knowledge-config");
-    expect(docs).toContain("world-model");
-    expect(docs).toContain("knowledgecfg-v1-d64");
+    expect(docs).toContain("/api/v3/workspaces");
+    expect(docs).toContain("/api/v3/pow");
+    expect(docs).toContain("start_session");
+    expect(docs).toMatch(/not public agent APIs/);
   });
 
   it("ontology names knowledge config dual layer", () => {

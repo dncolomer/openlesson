@@ -184,68 +184,40 @@ export const EVIDENCE_EVAL_SCHEMA_OUTPUT = {
       performance_report_contract: {
         type: "object",
         description:
-          "Formal contract for POST .../lwm-snapshot: score (lwm_snapshot_score), workspace_goal, marker_scores (spider/radar), analysis, and gap_analysis next actions",
+          "Formal contract for POST .../sessions/{session_id}/end (MCP end_session): answers_model, inferred sequence, remaining_ms, and flow embedding. Cookie-auth Snapshot is not a public agent API.",
         properties: {
           endpoint_pattern: { type: "string" },
+          mcp_tool: { type: "string" },
           response_mode: { type: "string", enum: ["score", "report"] },
           required_fields: { type: "array", items: { type: "string" } },
-          primary_score: {
+          answers_model: {
             type: "object",
-            properties: {
-              type: { type: "string" },
-              range: { type: "string" },
-              description: { type: "string" },
-            },
-            required: ["type", "range", "description"],
-            additionalProperties: false,
+            description: "Prepared answers-model tree (catalog_size, focus_id, branch_count).",
+            additionalProperties: true,
           },
-          workspace_goal: {
+          sequence: {
             type: "object",
-            properties: {
-              type: { type: "string" },
-              description: { type: "string" },
-            },
-            required: ["type", "description"],
-            additionalProperties: false,
+            description: "Inferred path from proof of work plus actions.",
+            additionalProperties: true,
           },
-          marker_scores: {
+          embedding: {
             type: "object",
-            properties: {
-              description: { type: "string" },
-              min_markers: { type: "number" },
-              max_markers: { type: "number" },
-              visualization: { type: "string", enum: ["spider_radar"] },
-              item_fields: { type: "array", items: { type: "string" } },
-            },
-            required: ["description", "min_markers", "max_markers", "visualization", "item_fields"],
-            additionalProperties: false,
+            description: "flowcfg-v1-d96 after end_session.",
+            additionalProperties: true,
           },
-          gap_analysis: {
+          remaining_ms: {
             type: "object",
-            properties: {
-              required: { type: "boolean" },
-              gaps_required: { type: "boolean" },
-              item_fields: { type: "array", items: { type: "string" } },
-            },
-            required: ["required", "gaps_required", "item_fields"],
-            additionalProperties: false,
+            description: "Session clock remaining at end.",
+            additionalProperties: true,
           },
-          example_report: { type: "object", additionalProperties: true },
         },
-        required: [
-          "endpoint_pattern",
-          "response_mode",
-          "required_fields",
-          "marker_scores",
-          "gap_analysis",
-          "example_report",
-        ],
+        required: ["endpoint_pattern", "response_mode", "required_fields"],
         additionalProperties: true,
       },
       vertical_score_contracts: {
         type: "object",
         description:
-          "LWM Snapshot contract only (lwm-snapshot / lwm_snapshot / lwm_snapshot_score). Sole product strategy; GHC is secondary on the same report.",
+          "Headless session outcome contract only (end_session). Cookie-auth Snapshot is not a public agent API.",
         additionalProperties: true,
       },
       predicted_interruption: {
@@ -388,11 +360,11 @@ export function buildProofOfWorkSchemaInstructions(
 
   const task = `${scope}
 
-You are an Uncertain Systems proof-of-work architect. Produce a **formal proof-of-work specification** that tells integrators exactly how to submit tool usage and related artifacts for learning verification.
+You are an Uncertain Systems proof-of-work architect. Produce a **formal proof-of-work specification** that tells integrators exactly how to submit tool usage into a **headless session**.
 
-Uncertain Systems scope: single LWM Snapshot strategy — lwm_snapshot (Learning World Model Snapshot, 0–100). GHC (ghc_score + ghc_confidence) is a secondary cognition signal on the same report. Collect proof-of-work via proof-of-work uploads. Scoring is **on demand** — Knowledge UI Generate new snapshot or Snapshot API POST .../lwm-snapshot / MCP lwm_snapshot (not auto on TAP/TAP Learning end).
+Uncertain Systems public agent surface is two APIs: workspace management and headless proof-of-work. Integrators **start_session** (calibrate | learn | verify | tapbench), **upload_proof_of_work** into that session, then **end_session**. The server prepares the answers-model tree, infers the path (catalogs 4 / 8 / 16), enforces the clock, and persists a flow embedding. Snapshot, Stash, and TAPBench-as-a-separate-API are not public agent APIs.
 
-Integrators may use **REST** (Bearer API key: POST .../proof-of-work, POST .../lwm-snapshot) or **MCP** (JSON-RPC tools upload_proof_of_work, lwm_snapshot, generate_proof_of_work_schema) with identical semantics. Document REST paths in contracts; the platform also attaches continuous_evaluation_mcp with tool names after generation — your continuous_evaluation_summary must mention both surfaces.
+Integrators may use **REST** (Bearer API key: POST .../sessions, POST .../sessions/{session_id}/proof-of-work, POST .../sessions/{session_id}/end) or **MCP** (JSON-RPC tools start_session, upload_proof_of_work, end_session) with identical semantics. Document REST paths in contracts; the platform also attaches continuous_evaluation_mcp with those tool names after generation — your continuous_evaluation_summary must mention both surfaces.
 
 Use the full workspace context: attached JSON summary, block titles/descriptions, existing proof of work patterns, plan files, and Think Aloud Protocol (TAP) session signals when present. TAP and TAP Learning may inform scoring — but score report remediation (gaps, next_steps, suggestions) must stay product-independent: never recommend TAP sessions, block completion, TAP Learning, or other Uncertain Systems platform mechanics.
 
@@ -410,35 +382,34 @@ Output rules:
 1. "schema" is the primary/default JSON Schema (draft-07) for the main tool proof-of-work payload placed in the proof of work upload "data" field (base64-encoded JSON).
 2. "tool_submissions" must list one or more formal tool submission specs. Include separate entries when the workspace implies multiple tools, workflows, or block-specific payloads. Each entry needs tool_name, purpose, when_to_submit, schema, example_payload, and optional block_ids tying submissions to workspace blocks.
 3. Align every schema with workspace blocks, root topic, notes, and any tool names already present in proof-of-work history.
-4. "proof_of_work_upload_contract" must formally describe POST .../proof-of-work:
-   - endpoint_pattern: "POST /api/v3/pow/workspaces/{workspace_id}/proof-of-work"
+4. "proof_of_work_upload_contract" must formally describe POST .../sessions/{session_id}/proof-of-work:
+   - endpoint_pattern: "POST /api/v3/pow/workspaces/{workspace_id}/sessions/{session_id}/proof-of-work"
    - encoding: "base64"
    - proof_of_work_types: tool (${PROOF_OF_WORK_MIME_BY_TYPE.tool.join(", ")}), screen (${PROOF_OF_WORK_MIME_BY_TYPE.screen.join(", ")}), video (${PROOF_OF_WORK_MIME_BY_TYPE.video.join(", ")}), eeg (${PROOF_OF_WORK_MIME_BY_TYPE.eeg.join(", ")}) with when_to_use guidance. Stored types are ${WORKSPACE_PROOF_OF_WORK_TYPES.join(" | ")}. Model version ${POW_MODEL_VERSION}.
    - common_fields: type, mime_type, data, file_name, block_id, session_id, timestamp_ms, tool_name, tool_action, metadata, pow_model_version
-5. Optimize payloads for the LWM Snapshot endpoint: time-ordered events, learner reflections, goals achieved, artifact summaries, decision rationale, outcomes, block-relevant competencies. Each snapshot call returns one primary score (0-100 lwm_snapshot_score), workspace_goal, ghc_score + ghc_confidence (secondary), marker_scores (spider/radar), summary analysis, and gap_analysis with next_steps.
-6. "performance_report_contract" must formally describe POST .../lwm-snapshot (LWM Snapshot — sole strategy; TAP/TAP Learning end use this):
-   - endpoint_pattern: "POST /api/v3/snapshot/workspaces/{workspace_id}/lwm-snapshot"
+5. Optimize payloads for path inference on the prepared answers-model tree: time-ordered events, tool_action, metadata.prompt, decision rationale. Catalog sizes 4 / 8 / 16. Expired sessions reject further work.
+6. "performance_report_contract" must formally describe POST .../sessions/{session_id}/end (MCP end_session):
+   - endpoint_pattern: "POST /api/v3/pow/workspaces/{workspace_id}/sessions/{session_id}/end"
    - response_mode: "score"
-   - required_fields: score, lwm_snapshot_score, vertical, workspace_goal, marker_scores, gap_analysis, gap_analysis.gaps, gap_analysis.next_steps, summary, strengths, growth_areas, suggestions, confidence
-   - score / lwm_snapshot_score: integer 0-100 LWM Snapshot
-   - workspace_goal: inferred or owner-set success outcome for this workspace
-   - marker_scores: 4-8 competency axes for spider/radar
-   - gap_analysis.next_steps: directions and events (product/workflow language only — never TAP, block completion, or TAP Learning)
-   Do not document other score endpoints — LWM Snapshot is the sole product strategy.
-7. "collection_guidance" explains cadence, checkpoint timing, block-scoped vs workspace-global uploads, and that **more proof of work submitted improves LWM Snapshot and GHC**. Encourage ongoing uploads, not one-time dumps. When learning world model evidence appetite is provided above, bias collection_guidance and tool_submissions toward want_more types and de-emphasize saturated types.
+   - required_fields: session_id, flow_kind, remaining_ms, sequence, answers_model, embedding
+   - answers_model: prepared tree (catalog_size, focus_id, branch_count)
+   - sequence: inferred path from proof plus actions
+   - embedding: flowcfg-v1-d96 after end_session
+   Do not document Snapshot, Stash, or a separate TAPBench API. TAPBench is start_session with flow_kind=tapbench.
+7. "collection_guidance" explains cadence: start_session → upload_proof_of_work (repeat until the clock expires) → end_session. More events during a live session improve the inferred path. When learning world model evidence appetite is provided above, bias collection_guidance and tool_submissions toward want_more types and de-emphasize saturated types.
 8. "continuous_evaluation_summary" must state clearly that:
-   - This proof-of-work spec is a snapshot derived from current workspace context and proof-of-work history
-   - Integrators must **re-fetch** POST .../proof-of-work-schema (REST) or call generate_proof_of_work_schema (MCP) as proof of work accumulates
+   - This proof-of-work spec is derived from current workspace context and proof-of-work history
+   - Integrators run **start_session** (REST POST .../sessions / MCP start_session) then **upload_proof_of_work** then **end_session**
    - Integrators must **regenerate** POST .../integration-skill (REST) or generate_integration_skill (MCP) so skill.md stays aligned
-   - Progress tracking uses lwm_snapshot (LWM Snapshot) MCP tool and REST .../lwm-snapshot
-   - get_workspace (MCP) orients agents mid-session; lwm_snapshot for scores; REST equivalents remain authoritative in API paths
+   - Progress tracking uses get_session / end_session — remaining_ms, sequence, answers_model, embedding
+   - get_workspace (MCP) orients agents before start_session
    - Continuous evaluation is the intended operating model, not a one-time setup
 9. schema_name must be snake_case prefixed with "eval_input_".
 10. Keep required_fields practical; use optional_fields for enrichments.
 11. "predicted_interruption" — Trace Interruption Model (TIM) prediction for the consumer system (TIM is a swappable interruption world model; consumer envelope stays stable):
    - Return null when no intervention is predicted (user is on track, or context is too thin).
    - When non-null, set delay_ms (15000-600000) and intervention { type, message, optional rationale, consumer_action, block_id }.
-   - Types: reflection_prompt (articulate reasoning), checkpoint_probe (verify understanding), coaching_nudge (gap-driven nudge), proof_of_work_reminder (upload proof-of-work), performance_review (request LWM Snapshot), chapter_map_expand (TAP Learning chapter-complete → grow the chapter map).
+   - Types: reflection_prompt (articulate reasoning), checkpoint_probe (verify understanding), coaching_nudge (gap-driven nudge), proof_of_work_reminder (upload proof-of-work into the live session), performance_review (end_session), chapter_map_expand (TAP Learning chapter-complete → grow the chapter map).
    - Ground predictions in workspace blocks, eval definition, proof-of-work history, evidence appetite, and collection_guidance — not generic coaching.
    - The consumer schedules the intervention after delay_ms unless any later Proof-of-Work API response supersedes it.
 

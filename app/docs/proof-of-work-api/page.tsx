@@ -36,190 +36,94 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
   {
     id: "create-workspace",
     method: "POST",
-    path: "/api/v3/pow/workspaces",
+    path: "/api/v3/workspaces",
     scope: "workspaces:write",
     summary:
-      "Not available. Programmatic workspace creation is disabled; create workspaces manually in the product UI at /workspace/new.",
-    status: "403 Forbidden",
-    responseBody: [
-      { name: "error.code", type: "string", description: "forbidden" },
-      {
-        name: "error.message",
-        type: "string",
-        description:
-          "Workspace creation is not available via API or MCP. Create workspaces manually in the product UI at /workspace/new.",
-      },
-    ],
-    responseExample: `{
-  "error": {
-    "code": "forbidden",
-    "message": "Workspace creation is not available via API or MCP. Create workspaces manually in the product UI at /workspace/new."
-  }
-}`,
-    notes: [
-      "Workspace creation is UI-only (blank, template, or files+goal at /workspace/new).",
-      "MCP tool create_workspace is not offered and hard-fails with the same message if called.",
-      "Use list_workspaces / get_workspace against UI-created workspace IDs. Scores: lwm_snapshot.",
-    ],
-  },
-  {
-    id: "lwm-snapshot",
-    method: "POST",
-    path: "/api/v3/snapshot/workspaces/{workspace_id}/lwm-snapshot",
-    scope: "workspaces:read",
-    summary:
-      "LWM Snapshot score (0–100) + GHC + spider markers, analysis, and next actions. Sole product snapshot strategy. Manual Knowledge UI or Snapshot API/MCP (not auto-run when a TAP session ends).",
-    status: "200 OK",
-    pathParams: [
-      { name: "workspace_id", type: "uuid", required: true, description: "Workspace ID." },
-    ],
+      "Create a Learning or Verification workspace, including an optional map and settings. MCP: create_workspace.",
+    status: "201 Created",
     requestBody: [
-      { name: "block_id", type: "uuid", description: "Optional: scope analysis to one block." },
-      { name: "style_prompt", type: "string", description: "Optional voice/tone for narrative fields." },
-      { name: "file_ids", type: "string[]", description: "Optional xAI file IDs from a prior score call. Empty → rebuild context bundle." },
+      { name: "kind", type: "string", description: "learning | verification" },
+      { name: "title", type: "string", description: "Workspace title." },
+      { name: "workspace_goal", type: "string", description: "What success looks like." },
+      { name: "learning_model_size", type: "number", description: "Action catalog 4 | 8 | 16." },
+      { name: "blocks", type: "array", description: "Optional map blocks." },
+      { name: "initial_prompt", type: "string", description: "Optional generation prompt." },
     ],
-    requestExample: `{ "block_id": "e57844a6-1b69-465c-9120-d0812d6339ae" }`,
-    responseBody: [
-      { name: "mode", type: '"score"', description: "Always score for this endpoint." },
-      { name: "strategy", type: "string", description: "lwm_snapshot" },
-      { name: "label", type: "string", description: "LWM Snapshot" },
-      { name: "workspace_goal", type: "string", description: "Inferred or owner-set workspace goal." },
-      { name: "report", type: "object", description: "LWM Snapshot score report payload." },
-      { name: "report.score", type: "integer", description: "0–100 primary LWM Snapshot score." },
-      { name: "report.lwm_snapshot_score", type: "integer", description: "Named primary field (equals score)." },
-      { name: "report.ghc_score", type: "integer", description: "0–100 secondary GHC signal." },
-      { name: "proof_of_work_summary", type: "object | null", description: "Counts used in context." },
-      { name: "file_ids", type: "string[]", description: "xAI file IDs for follow-up calls." },
-    ],
-    responseExample: `{
-  "mode": "score",
-  "strategy": "lwm_snapshot",
-  "label": "LWM Snapshot",
-  "workspace_goal": "Trial-to-paid subscription activation",
-  "report": {
-    "score": 68,
-    "lwm_snapshot_score": 68,
-    "ghc_score": 40,
-    "workspace_goal": "Trial-to-paid subscription activation",
-    "marker_scores": [],
-    "summary": "...",
-    "confidence": "developing"
-  },
-  "proof_of_work_summary": {
-    "blocks": 1,
-    "proof_of_work_artifacts": 2,
-    "linked_sessions": 0,
-    "workspace_files": 0
-  },
-  "file_ids": ["file_814439bd-4894-4e11-852d-314e9f777a7f"]
+    requestExample: `{
+  "kind": "verification",
+  "title": "Discovery mastery",
+  "blocks": [{ "title": "Chapter", "description": "Priced field", "is_start": true }]
 }`,
     notes: [
-      "Sole product score strategy — no verification/augmentation/optimization score routes.",
-      "First call with empty file_ids uploads a workspace performance JSON summary + up to 19 artifact files to xAI.",
-      "If no proof of work exists, returns 200 with an empty-data score template.",
+      "Same core as /workspace/new.",
+      "Then run Calibrate, Learn, Verify, or TAPBench via start_session.",
     ],
   },
   {
-    id: "create-tap-link",
+    id: "start-session",
     method: "POST",
-    path: "/api/v3/pow/workspaces/{workspace_id}/tap-links",
-    scope: "tap:write",
-    summary: "Create a private Think Aloud Protocol (TAP) link for the workspace (or a block via body/path).",
+    path: "/api/v3/pow/workspaces/{workspace_id}/sessions",
+    scope: "workspaces:write",
+    summary:
+      "Start a headless Calibrate, Learn, Verify, or TAPBench session. Prepares the answers-model tree and starts the clock. MCP: start_session.",
     status: "201 Created",
     pathParams: [
       { name: "workspace_id", type: "uuid", required: true, description: "Workspace ID." },
     ],
     requestBody: [
-      { name: "block_id", type: "uuid", description: "Optional. When set, scopes the TAP session to that block. Omit for full-workspace scope." },
-      { name: "minutes", type: "integer", description: "1–120; default 15." },
-      { name: "guest_user_id", type: "uuid", description: "Org admin only: assign link to a guest by ID." },
-      { name: "guest_email", type: "string", description: "Org admin only: assign link to a guest by email." },
-      { name: "participant_type", type: "string", description: "anonymous | guest | user." },
-      { name: "user_id", type: "uuid", description: "Member user id when participant_type=user." },
-      { name: "post_session", type: "string", description: "redirect_workspace | show_results | redirect_url." },
-      { name: "redirect_url", type: "string", description: "Required when post_session=redirect_url." },
+      { name: "flow_kind", type: "string", required: true, description: "calibrate | learn | verify | tapbench" },
+      { name: "catalog_size", type: "number", description: "4 | 8 | 16" },
+      { name: "duration_minutes", type: "integer", description: "1–120; default 15." },
+      { name: "block_id", type: "uuid", description: "Optional map block to focus." },
+      { name: "chapter_title", type: "string", description: "Optional chapter title." },
+      { name: "chapter_brief", type: "string", description: "Optional chapter brief." },
     ],
     requestExample: `{
-  "minutes": 15,
-  "participant_type": "anonymous"
+  "flow_kind": "calibrate",
+  "catalog_size": 8,
+  "duration_minutes": 15
 }`,
     responseBody: [
-      { name: "tap_link.id", type: "uuid", description: "TAP link / session row ID." },
-      { name: "tap_link.workspace_id", type: "uuid", description: "Workspace ID." },
-      { name: "tap_link.block_id", type: "uuid | null", description: "Block ID when scoped; null for full workspace." },
-      { name: "tap_link.status", type: "string", description: "pending | in_progress | completed" },
-      { name: "tap_link.requested_duration_seconds", type: "integer", description: "Requested duration in seconds." },
-      { name: "tap_link.focus_block_ids", type: "uuid[]", description: "Focused block IDs (empty = full workspace)." },
-      { name: "tap_link.created_at", type: "ISO-8601", description: "Link creation time." },
-      { name: "tap_link.private_url", type: "string", description: "Bearer URL: /tap/session/{token}. No login required." },
-      { name: "interruption", type: "object | null", description: "TIM predictive interruption (see Predictive interruptions)." },
+      { name: "session_id", type: "uuid", description: "Headless session id." },
+      { name: "remaining_ms", type: "integer", description: "Time left on the clock." },
+      { name: "answers_model", type: "object", description: "Prepared tree (catalog_size, focus, branch_count)." },
+      { name: "status", type: "string", description: "in_progress | ended | expired" },
     ],
-    responseExample: `{
-  "tap_link": {
-    "id": "ae0cc774-1832-4bb5-bc7d-bf119ddf759f",
-    "workspace_id": "75b3b4ef-4e47-4f39-bb09-f61406603d75",
-    "block_id": null,
-    "status": "pending",
-    "requested_duration_seconds": 900,
-    "focus_block_ids": [],
-    "created_at": "2026-06-23T01:29:03.861663+00:00",
-    "private_url": "https://uncertain.systems/tap/session/E8-ouJ9lErgDEmteyKc4tJ39meJ91vzZFNUiuRauHvw"
-  }
-}`,
-    notes: [
-      "Also available as POST .../blocks/{block_id}/tap-links for block-scoped links (same body fields).",
-      "Guest keys auto-attach the link to their guest identity.",
-      "Org admins may set guest_user_id or guest_email to assign the link (404 guest_not_found if missing).",
-      "Learner completes session at private_url without an API key.",
-    ],
+    notes: ["TAPBench is flow_kind=tapbench on this same API."],
   },
   {
-    id: "list-tap-links",
-    method: "GET",
-    path: "/api/v3/pow/workspaces/{workspace_id}/tap-links",
-    scope: "tap:read",
-    summary: "List TAP links for a workspace (filtered by caller role).",
+    id: "upload-proof-of-work",
+    method: "POST",
+    path: "/api/v3/pow/workspaces/{workspace_id}/sessions/{session_id}/proof-of-work",
+    scope: "workspaces:write",
+    summary:
+      "Submit proof of work into a live headless session. The server infers the path on the prepared tree. Expired sessions reject further work. MCP: upload_proof_of_work.",
     status: "200 OK",
     pathParams: [
       { name: "workspace_id", type: "uuid", required: true, description: "Workspace ID." },
+      { name: "session_id", type: "uuid", required: true, description: "Session ID from start_session." },
     ],
-    responseBody: [
-      { name: "tap_links", type: "array", description: "Sessions ordered by created_at descending." },
-      { name: "tap_links[].id", type: "uuid", description: "Link ID." },
-      { name: "tap_links[].workspace_id", type: "uuid", description: "Workspace ID." },
-      { name: "tap_links[].block_id", type: "uuid | null", description: "Block ID when scoped; null for full workspace." },
-      { name: "tap_links[].status", type: "string", description: "pending | in_progress | completed" },
-      { name: "tap_links[].requested_duration_seconds", type: "integer", description: "Requested duration." },
-      { name: "tap_links[].duration_seconds", type: "integer", description: "Actual duration (0 until completed)." },
-      { name: "tap_links[].focus_block_ids", type: "uuid[]", description: "Focused blocks." },
-      { name: "tap_links[].score", type: "integer | null", description: "Score when completed." },
-      { name: "tap_links[].created_at", type: "ISO-8601", description: "Created at." },
-      { name: "tap_links[].started_at", type: "ISO-8601 | null", description: "Started at." },
-      { name: "tap_links[].completed_at", type: "ISO-8601 | null", description: "Completed at." },
-      { name: "interruption", type: "object | null", description: "TIM predictive interruption." },
+    requestBody: [
+      { name: "events", type: "array", description: "Proof events (tool_action + metadata)." },
     ],
-    responseExample: `{
-  "tap_links": [
-    {
-      "id": "ae0cc774-1832-4bb5-bc7d-bf119ddf759f",
-      "workspace_id": "75b3b4ef-4e47-4f39-bb09-f61406603d75",
-      "block_id": "88a43ad8-62f8-4252-a847-2cbc0b754a57",
-      "status": "completed",
-      "requested_duration_seconds": 900,
-      "duration_seconds": 120,
-      "focus_block_ids": ["88a43ad8-62f8-4252-a847-2cbc0b754a57"],
-      "lwm_snapshot_score": 72,
-      "created_at": "2026-06-23T01:29:03.861663+00:00",
-      "started_at": "2026-06-23T01:30:00+00:00",
-      "completed_at": "2026-06-23T01:32:21.492+00:00"
-    }
+    requestExample: `{
+  "events": [
+    { "tool_action": "board_prompt", "metadata": { "prompt": "I close this observation." } }
   ]
 }`,
-    notes: [
-      "Guests see only their own links.",
-      "Non-admin members see only links they created.",
-      "Org admins see all links on org workspaces.",
-
+    notes: ["401 session_expired when the clock has run out."],
+  },
+  {
+    id: "end-session",
+    method: "POST",
+    path: "/api/v3/pow/workspaces/{workspace_id}/sessions/{session_id}/end",
+    scope: "workspaces:write",
+    summary:
+      "End the session: score the inferred path against the prepared tree and persist the flow embedding. MCP: end_session.",
+    status: "200 OK",
+    pathParams: [
+      { name: "workspace_id", type: "uuid", required: true, description: "Workspace ID." },
+      { name: "session_id", type: "uuid", required: true, description: "Session ID." },
     ],
   },
   {
@@ -510,10 +414,10 @@ export default function AgenticV2DocsPage() {
             Workspace API Reference
           </h1>
           <p className="mt-4 max-w-3xl text-sm leading-relaxed text-neutral-400 sm:text-base">
-            Full request and response specifications for every Proof-of-Work API endpoint: workspaces, proof-of-work schema
-            generation, integration skill generation, proof-of-work upload, performance analysis, TAP links for Preparing, Learning, Drilling, and Validating, guest
-            provisioning, and dashboard key management. Bearer endpoints use base path{" "}
-            <code className="text-neutral-300">/api/v3/pow</code> and require active{" "}
+            Two public agent APIs: workspace management (<code className="text-neutral-300">/api/v3/workspaces</code>) and
+            headless proof-of-work (<code className="text-neutral-300">/api/v3/pow</code>). Create Learning or Verification
+            workspaces, then start, run, and end Calibrate, Learn, Verify, or TAPBench sessions — one TAP for Preparing, Learning, Drilling, and Validating, run headless. Snapshot, Stash, and
+            TAPBench-as-a-separate-API are product-UI routes. Bearer endpoints require active{" "}
             <code className="text-neutral-300">api_metered</code>.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
@@ -602,10 +506,10 @@ Content-Type: application/json`}</code>
           <FieldTable
             title="Scope reference"
             fields={[
-              { name: "workspaces:read", type: "scope", description: "List blocks; generate proof-of-work schemas and integration skills; call lwm-snapshot (LWM Snapshot)." },
-              { name: "workspaces:write", type: "scope", description: "Upload proof of work (workspace create is UI-only)." },
-              { name: "tap:read", type: "scope", description: "List TAP links and poll completion status (score via POST .../lwm-snapshot)." },
-              { name: "tap:write", type: "scope", description: "Create Think Aloud Protocol (TAP) links for blocks." },
+              { name: "workspaces:read", type: "scope", description: "List workspaces, map, settings, sessions, and flow embeddings; generate integration skills." },
+              { name: "workspaces:write", type: "scope", description: "Create and edit workspaces; start, upload, and end headless sessions." },
+              { name: "tap:read", type: "scope", description: "Read TAP-related workspace access (headless sessions use workspaces:read)." },
+              { name: "tap:write", type: "scope", description: "Write TAP-related workspace access (headless TAPBench uses workspaces:write)." },
               { name: "org:read", type: "scope", description: "Reserved for org admin keys (future org read endpoints)." },
               { name: "org:write", type: "scope", description: "Create guest users and issue gsk_ keys." },
               { name: "*", type: "scope", description: "All scopes. Org admins only when assigning to sk_ keys." },

@@ -582,7 +582,7 @@ describe("create surface wiring (structural)", () => {
     expect(src).toContain("session_plans_session_id_key");
   });
 
-  it("workspace generate + UI document initial_chapters (programmatic create is UI-only)", () => {
+  it("workspace generate + UI document initial_chapters (programmatic create stays available)", () => {
     const genSrc = readFileSync(
       path.join(process.cwd(), "app/api/workspace/generate/route.ts"),
       "utf8",
@@ -661,15 +661,16 @@ describe("create surface wiring (structural)", () => {
     expect(copy.session.initialChapters).toBe("Map type");
     expect(copy.planMode.initialChapters).toBe("Map type");
 
-    // Public MCP surface no longer offers create_workspace / initial_chapters on create
     const mcpSrc = readMcpSurface();
-    expect(mcpSrc).toContain("rejectProgrammaticWorkspaceCreate");
-    expect(mcpSrc).not.toMatch(/name:\s*"create_workspace"/);
+    expect(mcpSrc).toContain("createManagedWorkspace");
+    expect(mcpSrc).toContain("create_workspace");
+    expect(mcpSrc).not.toContain("rejectProgrammaticWorkspaceCreate");
 
     const docs = readFileSync(
       path.join(process.cwd(), "docs/PROOF_OF_WORK_API.md"),
       "utf8",
     );
-    expect(docs).toMatch(/UI only|UI-only/i);
+    expect(docs).toContain("create_workspace");
+    expect(docs).toContain("/api/v3/workspaces");
   });
 });

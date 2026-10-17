@@ -33,7 +33,9 @@ import {
   flowEmbeddingDistanceToRegion,
   knowledgeConfigFromFlowEmbeddings,
   latestFlowVectorForSubject,
+  reconcileSelectedSubjectKeys,
   regionMatchesFlowEmbeddingSpace,
+  sameFlowEmbeddingList,
   subjectsFromFlowEmbeddings,
   type FlowEmbeddingViewRow,
 } from "@/lib/flow-embedding-view";
@@ -161,6 +163,21 @@ export function useKnowledgeEmbeddings(input: {
   const embUserId = embScope.subjects[0]?.user_id ?? "";
   const embGuestUserId = embScope.subjects[0]?.guest_user_id ?? "";
 
+  const knowledgeQueryKey = useMemo(() => {
+    if (useFlowEmbeddings) return "flowcfg";
+    const query = embScope.query;
+    return [
+      "knowledgecfg",
+      query.scope,
+      query.user_id ?? "",
+      query.guest_user_id ?? "",
+      query.user_ids ?? "",
+      query.guest_user_ids ?? "",
+    ].join("|");
+  }, [embScope.query, useFlowEmbeddings]);
+  const knowledgeQueryRef = useRef(embScope.query);
+  knowledgeQueryRef.current = embScope.query;
+
   const loadEmbeddings = useCallback(async () => {
     setEmbLoading(true);
     setEmbError(null);
@@ -171,11 +188,15 @@ export function useKnowledgeEmbeddings(input: {
           ayclToken,
           flowId,
         });
-        setFlowRows(rows);
+        setFlowRows((prev) => (sameFlowEmbeddingList(prev, rows) ? prev : rows));
         setAvailableSubjects(subjectsFromFlowEmbeddings(rows));
         return;
       }
-      const payload = await fetchKnowledgeConfig(workspaceId, ayclToken, embScope.query);
+      const payload = await fetchKnowledgeConfig(
+        workspaceId,
+        ayclToken,
+        knowledgeQueryRef.current,
+      );
       setEmbData(payload);
       setAvailableSubjects((prev) => mergeAvailableSubjects(prev, payload));
     } catch (err) {
@@ -183,7 +204,7 @@ export function useKnowledgeEmbeddings(input: {
     } finally {
       setEmbLoading(false);
     }
-  }, [ayclToken, embScope.query, flowId, useFlowEmbeddings, workspaceId]);
+  }, [ayclToken, flowId, knowledgeQueryKey, useFlowEmbeddings, workspaceId]);
 
   const loadRegionsForOverlay = useCallback(async () => {
     setRegionsLoading(true);
@@ -269,10 +290,7 @@ export function useKnowledgeEmbeddings(input: {
     if (!useFlowEmbeddings) return;
     const subjects = subjectsFromFlowEmbeddings(flowRows);
     const keys = subjects.map((subject) => subjectOptionKey(subject));
-    setEmbSelectedKeys((prev) => {
-      const keep = prev.filter((key) => keys.includes(key));
-      return keep.length > 0 ? keep : keys;
-    });
+    setEmbSelectedKeys((prev) => reconcileSelectedSubjectKeys(prev, keys));
   }, [flowRows, useFlowEmbeddings]);
 
   useEffect(() => {

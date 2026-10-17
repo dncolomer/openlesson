@@ -58,18 +58,12 @@ const SCORE_SURFACE_FILES = [
   "messages/en.json",
 ] as const;
 
-/** Surfaces that document the single LWM Snapshot score endpoint/tool. */
-const SCORE_DOCS_FILES = [
+/** Public agent docs — Snapshot score is not a user-facing agent API. */
+const AGENT_DOCS_FILES = [
   "docs/PROOF_OF_WORK_API.md",
-  "public/skill.md",
   "public/docs/proof-of-work-api-guide.md",
-  "public/customer-agent-uncertain-systems-policy.md",
-  "public/pumaclaw-mentor-uncertain-systems-policy.md",
+  "public/skill.md",
   "app/docs/proof-of-work-api/page.tsx",
-  "lib/pow-api/mcp-proof-of-work-catalog.ts",
-  "lib/pow-api/mcp-proof-of-work-server.ts",
-  "lib/pow-api/integration-skill.ts",
-  "lib/pow-api/integration-discovery.ts",
 ] as const;
 
 const BANNED_CONTRACT_PATTERNS: Array<{ re: RegExp; label: string }> = [
@@ -127,15 +121,12 @@ describe("LWM Snapshot entry points (shipped wiring)", () => {
     }
   });
 
-  it("MCP catalog exposes only lwm_snapshot score tool", () => {
-    const tool = MCP_PROOF_OF_WORK_TOOL_CATALOG.find((t) => t.name === "lwm_snapshot");
-    expect(tool, "missing MCP tool lwm_snapshot").toBeTruthy();
-    expect(tool!.summary).toMatch(/LWM Snapshot|lwm-snapshot/i);
-    expect(tool!.summary).toContain("lwm-snapshot");
-    const scoreTools = MCP_PROOF_OF_WORK_TOOL_CATALOG.filter((t) =>
-      /_score$|lwm_snapshot/.test(t.name),
-    );
-    expect(scoreTools.map((t) => t.name)).toEqual(["lwm_snapshot"]);
+  it("MCP catalog does not expose lwm_snapshot as a public agent tool", () => {
+    const names = MCP_PROOF_OF_WORK_TOOL_CATALOG.map((t) => t.name);
+    expect(names).not.toContain("lwm_snapshot");
+    expect(names.filter((name) => /_score$|lwm_snapshot/.test(name))).toEqual([]);
+    expect(names).toContain("end_session");
+    expect(names).toContain("list_flow_embeddings");
   });
 
   it("finalize path returns one primary 0–100 score + spider/analysis/next-actions + GHC", () => {
@@ -297,11 +288,14 @@ describe("LWM Snapshot entry points (shipped wiring)", () => {
     }
   });
 
-  it("inventory-gated: score docs surfaces only LWM Snapshot public entry (no legacy score APIs)", () => {
-    for (const rel of SCORE_DOCS_FILES) {
+  it("inventory-gated: public agent docs use headless sessions, not Snapshot/Stash score APIs", () => {
+    for (const rel of AGENT_DOCS_FILES) {
       const text = readSurface(rel);
-      expect(text, `${rel} missing lwm-snapshot / lwm_snapshot`).toMatch(/lwm[-_]snapshot/);
-      expect(text, `${rel} missing workspace_goal`).toContain("workspace_goal");
+      expect(text, `${rel} missing start_session`).toContain("start_session");
+      expect(text, `${rel} missing end_session`).toContain("end_session");
+      expect(text, `${rel} still documents lwm-snapshot as an agent endpoint`).not.toMatch(
+        /POST[`\s].*lwm-snapshot|`lwm_snapshot`/,
+      );
       expect(text, `${rel} still documents verification-score API`).not.toMatch(
         /verification-score/,
       );

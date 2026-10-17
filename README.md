@@ -2,7 +2,7 @@
 
 **A Human Learning Harness — verify without a test.**
 
-Uncertain Systems is an open-source platform for knowledge acquisition and knowledge verification. Create a **Verification Workspace**, stream **proof of work**, and score readiness with an **LWM Snapshot**. Agents integrate through the Proof-of-Work API, Snapshot API, TAPBench Stash API, and MCP — the same loop the product UI uses.
+Uncertain Systems is an open-source platform for knowledge acquisition and knowledge verification. Create a **Learning** or **Verification** workspace, then run Calibrate, Learn, Verify, or TAPBench headless. Agents integrate through two APIs — workspace management and headless proof-of-work — plus MCP.
 
 Live at [uncertain.systems](https://uncertain.systems)
 
@@ -19,20 +19,18 @@ Workspaces come in two durable kinds:
 
 ## How It Works
 
-1. **Create a workspace** in the product UI (`/workspace/new`) — blank map, template, or Verification Workspace. Workspace create is UI-only; there is no `POST /workspaces` or MCP `create_workspace`.
-2. **Collect proof of work** — upload tool/screen/video/EEG artifacts (`POST .../proof-of-work`), or buffer via TAPBench Stash then stash/submit (`/api/v3/stash`).
-3. **Snapshot** — call `lwm_snapshot` (REST `POST .../lwm-snapshot`) for a 0–100 LWM Snapshot + GHC, spider markers, gaps, and next actions. Optional world model, knowledge config, distance, and custom regions live under `/api/v3/snapshot`.
-4. **Repeat** — more proof of work improves evaluation. Re-fetch the PoW schema and regenerate the workspace `skill.md` as context grows.
+1. **Create a workspace** via workspace management (`POST /api/v3/workspaces` / MCP `create_workspace`) — Learning or Verification — or in the product UI (`/workspace/new`).
+2. **Run a flow headless** — `start_session` (calibrate | learn | verify | tapbench) → `upload_proof_of_work` → `end_session`. The server prepares the answers-model tree, infers the path, and enforces the clock.
+3. **Repeat** — more proof of work improves the inferred path. Regenerate the workspace `skill.md` as context grows.
 
-On **standard** workspaces you can also mint TAP / TAP Learning / TAPBench knowledge links for human or agent sessions. **Verification Workspace** workspaces do not mint those links. Their human path is a verification flow; agents still use PoW capture plus TAPBench Stash, and each flow has its own skill.
+Agents authorize with a Bearer key (ChatGPT, Claude, or any MCP client) and use only these two APIs. Snapshot, Stash, and TAPBench-as-a-separate-API are not public agent surfaces.
 
 ## Key Features
 
 - **Verification workspaces** — assessable blocks, workspace goals, and continuous proof of work
 - **Verification Workspace** — Goals / Verification Flows / Context / Knowledge / Settings; flow-scoped proof of work; custom knowledge regions and Data Studio. Does not mint knowledge links.
-- **LWM Snapshot** — sole product score strategy (`lwm_snapshot` / `POST .../lwm-snapshot`); GHC is secondary on the same report
-- **Proof-of-Work API + MCP** — REST under `/api/v3/{pow,snapshot,stash}` with JSON-RPC at `/api/mcp` (Bearer or OAuth)
-- **TAPBench Stash** — `buffer_proof_of_work` / `stash_proof_of_work` / `submit_stashed_proof_of_work` for agent PoW
+- **Headless proof-of-work** — `start_session` → `upload_proof_of_work` → `end_session` for Calibrate, Learn, Verify, and TAPBench (catalogs 4 / 8 / 16, session clock)
+- **Public agent APIs + MCP** — workspace management (`/api/v3/workspaces`) and headless proof-of-work (`/api/v3/pow`) with JSON-RPC at `/api/mcp` (Bearer or OAuth)
 - **Think Aloud Protocol (TAP) and TAP Learning** — practice sessions on standard workspaces (knowledge-link mint)
 - **Knowledge map** — React Flow block graph, simulation, DAGs, learner mode
 - **Muse EEG and face tracking** — optional biosignals on session proof of work
@@ -159,19 +157,16 @@ npm run import:think-aloud-pow -- --media recording.mp4 --workspace <workspace-i
 
 Requires `XAI_API_KEY` (STT + System 2 inference). Persist also needs Supabase service-role env. Video stills need `ffmpeg`; without it, traces still write. Full flags: `npm run import:think-aloud-pow -- --help`.
 
-## Proof-of-Work, Snapshot, and Stash APIs (v3)
+## Public agent APIs (v3)
 
-Uncertain Systems exposes a scoped REST API and MCP transport for integrators and agents. **Workspaces are created in the product UI** (`/workspace/new`) — not via API or MCP. Generate an API key from the dashboard (`/dashboard`) and use it to:
+Uncertain Systems exposes **two** public agent APIs, with MCP parity at `POST /api/mcp`:
 
-- List and read existing verification workspaces and blocks
-- Upload proof-of-work artifacts (`POST .../proof-of-work`) and fetch the live PoW schema
-- Request LWM Snapshot / world model / knowledge config (`/api/v3/snapshot`)
-- Buffer agent PoW via TAPBench Stash (`buffer_proof_of_work` / `stash_proof_of_work` / `submit_stashed_proof_of_work` under `/api/v3/stash`)
-- Connect via MCP (`POST /api/mcp`, Bearer or OAuth) with parity to public agent REST
+- **Workspace management** (`/api/v3/workspaces`, `/api/v3/account`) — create and edit Learning and Verification workspaces, the map, workspace settings, and account settings.
+- **Headless proof-of-work** (`/api/v3/pow`) — `start_session` (calibrate | learn | verify | tapbench) → `upload_proof_of_work` → `end_session`. TAPBench is this API.
 
-On **standard** workspaces, mint TAP knowledge links via `POST .../tap-links` (MCP `create_tap_link`). Timed TAPBench sessions mint from the workspace UI, not agent REST/MCP. **Knowledge Region** skill.md and Integration MCP copy omit TAP mint — agents there use PoW + Snapshot + TAPBench Stash only. TAP mint still 403 if called against a Knowledge Region workspace.
+Snapshot, Stash, and TAPBench-as-a-separate-API are product-UI routes, not public agent families. Generate an API key from the dashboard (`/dashboard`).
 
-See [`public/skill.md`](public/skill.md) (global catalog, includes mint tools for standard workspaces) and [`docs/PROOF_OF_WORK_API.md`](docs/PROOF_OF_WORK_API.md). Interactive reference: [`/docs/proof-of-work-api`](/docs/proof-of-work-api). Download a **workspace-scoped** skill.md from Settings → Integration.
+See [`public/skill.md`](public/skill.md) and [`docs/PROOF_OF_WORK_API.md`](docs/PROOF_OF_WORK_API.md). Interactive reference: [`/docs/proof-of-work-api`](/docs/proof-of-work-api). Download a **workspace-scoped** skill.md from Settings → Integration.
 
 ## Uncertain Systems
 

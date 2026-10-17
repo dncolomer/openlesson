@@ -1,8 +1,6 @@
 # Uncertain Systems Proof-of-Work API
 
-The Proof-of-Work API exposes the workspace workflow on **UI-created** workspaces: upload proof of work, run an **LWM Snapshot** (`lwm-snapshot` — sole product score strategy; GHC secondary), issue Think Aloud Protocol (TAP) links, and poll TAP completion. Workspace creation is product UI only (`/workspace/new`).
-
-Capture: `/api/v3/pow` · Evaluation: `/api/v3/snapshot`
+The two public agent APIs are **workspace management** (`/api/v3/workspaces`) and **headless proof-of-work** (`/api/v3/pow`). Create Learning or Verification workspaces, then start, run, and end Calibrate, Learn, Verify, or TAPBench sessions. Snapshot, Stash, and TAPBench-as-a-separate-API are product-UI routes.
 
 Authenticate with `Authorization: Bearer <api_key>`.
 
@@ -10,85 +8,58 @@ Authenticate with `Authorization: Bearer <api_key>`.
 
 | Mode | Create | Schema | Scoring |
 | :--- | :--- | :--- | :--- |
-| `semantic` (default) | **UI only** (`/workspace/new`) | `definition` | LWM Snapshot (`lwm_snapshot` + GHC) with semantic gap analysis |
-| `opaque` | **UI only** (`/workspace/new`) | `definition_ref` + `contract.event_verbs` | `protocol_report` + structural scoring |
+| `semantic` (default) | `POST /api/v3/workspaces` or `/workspace/new` | `definition` | Headless session (`start_session` → `end_session`) |
+| `opaque` | `POST /api/v3/workspaces` or `/workspace/new` | `definition_ref` + `contract.event_verbs` | `protocol_report` + structural scoring |
 
 Opaque mode stores partner references (`goal_ref`, `external_refs`) without semantic inference. Upload metadata is allowlisted; tool payloads are plaintext-linted.
 
-## Endpoints
+## Workspace management
 
 | Method | Path | Scope | Purpose |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/workspaces/{workspace_id}/blocks` | `workspaces:read` | List available blocks in a workspace. |
-| `POST` | `/workspaces/{workspace_id}/proof-of-work` | `workspaces:write` | Upload tool usage, screenshots, video, or EEG linked to workspace/block. |
-| `POST` | `/workspaces/{workspace_id}/lwm-snapshot` | `workspaces:read` | LWM Snapshot score (0–100; LWM Snapshot strategy) + spider, analysis, next actions. Manual / Snapshot API (not auto on TAP/TAP Learning end). |
-| `POST` | `/workspaces/{workspace_id}/tap-links` | `tap:write` | Request a private TAP link for the full workspace (optional body `block_id`). Links open `/tap/session/{token}`. |
-| `POST` | `/workspaces/{workspace_id}/blocks/{block_id}/tap-links` | `tap:write` | Request a private TAP link scoped to a single block. |
-| `GET` | `/workspaces/{workspace_id}/tap-links` | `tap:read` | List existing TAP links and completion status. |
-| `POST` | `/org/guests` | `org:write` | Organization admins create guest users by email and issue guest API keys. |
+| `POST` | `/api/v3/workspaces` | `workspaces:write` | Create a Learning or Verification workspace (map, settings optional). |
+| `GET` / `PATCH` | `/api/v3/workspaces/{workspace_id}` | `workspaces:read` / `write` | Read or edit workspace, map, and settings. |
+| `GET` | `/api/v3/workspaces/{workspace_id}/blocks` | `workspaces:read` | List map blocks. |
+| `GET` / `PATCH` | `/api/v3/account` | `workspaces:read` / `write` | Account settings. |
+
+## Headless proof-of-work
+
+| Method | Path | Scope | Purpose |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/v3/pow/workspaces/{workspace_id}/sessions` | `workspaces:write` | Start Calibrate, Learn, Verify, or TAPBench (`flow_kind`). Prepares the answers-model tree and starts the clock. |
+| `POST` | `/api/v3/pow/workspaces/{workspace_id}/sessions/{session_id}/proof-of-work` | `workspaces:write` | Upload proof events; infer the path (catalogs 4 / 8 / 16). Expired sessions reject further work. |
+| `GET` | `/api/v3/pow/workspaces/{workspace_id}/sessions/{session_id}` | `workspaces:read` | Remaining time, inferred path, answers model. |
+| `POST` | `/api/v3/pow/workspaces/{workspace_id}/sessions/{session_id}/end` | `workspaces:write` | Score the inferred path and persist the flow embedding. |
+| `POST` | `/api/v3/pow/org/guests` | `org:write` | Organization admins create guest users by email and issue guest API keys. |
+
+MCP twins: `create_workspace`, `start_session`, `upload_proof_of_work`, `end_session`.
 
 ## Upload Proof of Work
 
-`POST /api/v3/pow/workspaces/{workspace_id}/proof-of-work`
+`POST /api/v3/pow/workspaces/{workspace_id}/sessions/{session_id}/proof-of-work`
 
 ```json
 {
-  "type": "screen",
-  "mime_type": "image/png",
-  "data": "base64-encoded-bytes",
-  "block_id": "optional-block-uuid",
-  "metadata": { "step": "discovery-call" }
+  "events": [
+    {
+      "type": "tool",
+      "tool_action": "board_prompt",
+      "metadata": { "prompt": "I close this observation." }
+    }
+  ]
 }
 ```
 
-Supported `type` values: `tool`, `screen` (alias `screenshot`), `video`, `eeg`. Max 10 MB.
+Supported `type` values: `tool`, `screen` (alias `screenshot`), `video`, `eeg`. Simulated TAP is stored type `tool`.
 
-## Vertical scores
+## Create Workspace
 
-Each score endpoint returns **one** primary 0–100 score for that vertical, plus spider/radar `marker_scores`, analysis, and next actions. Shared request body:
-
-```json
-{ "block_id": "optional-block-uuid", "style_prompt": "optional voice/tone" }
-```
-
-| Path | MCP tool | Primary field |
-| :--- | :--- | :--- |
-| `POST .../lwm-snapshot` | `lwm_snapshot` | `lwm_snapshot_score` |
-
-- **Verification** — learning verification (knowledge coverage). LWM Snapshot (`lwm-snapshot`) is manual or Snapshot API/MCP.
-- **Augmentation** — practice / improvement readiness.
-- **Optimization** — progress toward the inferred `workspace_goal` (score units 0–100; replaces former conversion %).
-
-## Create Workspace (UI only)
-
-Programmatic create is **not available**. `POST /api/v3/pow/workspaces` and MCP `create_workspace` are rejected with `403 forbidden`. Create workspaces in the product UI at `/workspace/new`, then use list/get and Snapshot APIs against that workspace ID.
-
-## TAP Links
-
-**Full workspace** (omit `block_id`):
-
-`POST /api/v3/pow/workspaces/{workspace_id}/tap-links`
-
-```json
-{ "minutes": 15 }
-```
-
-**Single block** (path or body):
-
-`POST /api/v3/pow/workspaces/{workspace_id}/blocks/{block_id}/tap-links`
-
-```json
-{ "minutes": 15 }
-```
-
-Returns a `private_url` for `/tap/session/{token}`. Workspace-scoped links evaluate the whole workspace; block-scoped links focus on that block. Poll `GET .../tap-links` for link `status`, then call `POST .../lwm-snapshot` to score TAP proof of work (verification only).
-
-Identified gaps can be routed into TAP Learning practice blocks for remediation.
+`POST /api/v3/workspaces` and MCP `create_workspace` create a Learning or Verification workspace. Then run Calibrate, Learn, Verify, or TAPBench through the headless proof-of-work API (`start_session` → `upload_proof_of_work` → `end_session`).
 
 ## TAPBench
 
-TAPBench keys and tasks live on `/tapbench`. TAP and TAP Learning mint APIs do not create TAPBench links. Existing timed session tokens still resolve at `GET /api/tapbench/{token}`.
+TAPBench is `start_session` with `flow_kind=tapbench` on this same API. Product-UI mint routes under `/tapbench` are not public agent APIs.
 
 ## Guests
 
-Org admins with `org:write` can call `POST /org/guests` to mint `gsk_` keys. Guests may upload proof of work, run vertical scores on their own artifacts, and use TAP links on accessible (UI-created) workspaces.
+Org admins with `org:write` can call `POST /org/guests` to mint `gsk_` keys. Guests may create and edit workspaces they can access and run headless sessions (`start_session` → `upload_proof_of_work` → `end_session`).

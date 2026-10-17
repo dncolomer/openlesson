@@ -1,14 +1,25 @@
 /**
- * Canonical public API bases (v3): Proof-of-Work + Snapshot + Stash (TAP).
- * Capture lives under POW; LWM Snapshot / world model / knowledge-config under SNAPSHOT;
- * agent stash/submit buffering under STASH.
+ * Public agent REST families (v3):
+ *   - Workspace management  `/api/v3/workspaces` (+ `/api/v3/account`)
+ *   - Headless proof-of-work `/api/v3/pow`
+ *
+ * Snapshot, Stash, and TAPBench route trees may still exist for the product UI.
+ * They are not public agent API families.
  */
 
+export const WORKSPACE_API_BASE = "/api/v3/workspaces" as const;
+export const ACCOUNT_API_BASE = "/api/v3/account" as const;
 export const POW_API_BASE = "/api/v3/pow" as const;
+/** Cookie-auth / internal Knowledge UI. Not a public agent family. */
 export const SNAPSHOT_API_BASE = "/api/v3/snapshot" as const;
+/** Cookie-auth TAP buffer. Not a public agent family. */
 export const STASH_API_BASE = "/api/v3/stash" as const;
-/** TAPBench catalog, goals, keys, skill, and results (live traces go through Stash). */
+/** Cookie-auth TAPBench mint UI. Not a public agent family — agents use POW sessions. */
 export const TAPBENCH_API_BASE = "/api/v3/tapbench" as const;
+
+/** Public agent REST families. Snapshot / Stash / TAPBench are excluded. */
+export const PUBLIC_AGENT_API_FAMILIES = ["workspace", "pow"] as const;
+export type PublicAgentApiFamily = (typeof PUBLIC_AGENT_API_FAMILIES)[number];
 
 /** @deprecated Use SNAPSHOT_API_BASE — former Evaluation API base name. */
 export const EVAL_API_BASE = SNAPSHOT_API_BASE;
@@ -16,7 +27,40 @@ export const EVAL_API_BASE = SNAPSHOT_API_BASE;
 export type PowSnapshotApiSurface = "pow" | "snapshot";
 /** @deprecated Use PowSnapshotApiSurface */
 export type PowEvalApiSurface = PowSnapshotApiSurface | "eval";
-export type AgentApiSurface = PowSnapshotApiSurface | "stash";
+export type AgentApiSurface = PowSnapshotApiSurface | "stash" | "workspace";
+
+export function workspaceCollectionPath(baseUrl?: string | null): string {
+  const base = (baseUrl || "").replace(/\/$/, "");
+  return `${base}${WORKSPACE_API_BASE}`;
+}
+
+export function workspacePath(workspaceId: string, baseUrl?: string | null): string {
+  return `${workspaceCollectionPath(baseUrl)}/${workspaceId}`;
+}
+
+export function workspaceResource(
+  workspaceId: string,
+  resource: string,
+  baseUrl?: string | null,
+): string {
+  return `${workspacePath(workspaceId, baseUrl)}/${resource.replace(/^\//, "")}`;
+}
+
+export function accountApiPath(baseUrl?: string | null): string {
+  const base = (baseUrl || "").replace(/\/$/, "");
+  return `${base}${ACCOUNT_API_BASE}`;
+}
+
+export function powSessionPath(
+  workspaceId: string,
+  sessionId: string,
+  resource?: string,
+  baseUrl?: string | null,
+): string {
+  const root = powWorkspaceResource(workspaceId, `sessions/${sessionId}`, baseUrl);
+  if (!resource) return root;
+  return `${root}/${resource.replace(/^\//, "")}`;
+}
 
 export function agentApiBase(surface: PowSnapshotApiSurface | "eval"): string {
   if (surface === "pow") return POW_API_BASE;

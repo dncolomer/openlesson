@@ -140,13 +140,13 @@ describe("listLwmSnapshotResponseFields (API inventory)", () => {
     );
   });
 
-  it("docs and helper both mention dual scores in plain language", () => {
+  it("public agent docs do not catalog LWM Snapshot as an agent endpoint", () => {
     const docs = join(ROOT, "docs/PROOF_OF_WORK_API.md");
     expect(existsSync(docs)).toBe(true);
     const text = readFileSync(docs, "utf8");
-    expect(text).toMatch(/Skill \/ readiness|plain language/i);
-    expect(text).toMatch(/Authenticity of work|ghc_score/i);
-    expect(text).toMatch(/lwm-snapshot-interpretability/);
+    expect(text).toContain("start_session");
+    expect(text).toContain("end_session");
+    expect(text).not.toMatch(/POST[`\s].*lwm-snapshot|MCP `lwm_snapshot`/);
   });
 });
 

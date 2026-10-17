@@ -146,12 +146,23 @@ export function agentToolFeature(name: string): WorkspaceFeature | null {
   switch (name) {
     case "list_workspaces":
     case "get_workspace":
-    case "generate_integration_skill":
-      return null;
+    case "create_workspace":
+    case "update_workspace":
     case "list_blocks":
-      return "map";
-    case "generate_proof_of_work_schema":
+    case "update_blocks":
+    case "get_workspace_settings":
+    case "update_workspace_settings":
+    case "get_account_settings":
+    case "update_account_settings":
+    case "generate_integration_skill":
+    case "start_session":
+    case "get_session":
     case "upload_proof_of_work":
+    case "end_session":
+    case "list_flow_embeddings":
+    case "get_flow_embedding":
+      return null;
+    case "generate_proof_of_work_schema":
     case "buffer_proof_of_work":
     case "stash_proof_of_work":
     case "submit_stashed_proof_of_work":

@@ -113,6 +113,7 @@ export async function createVerificationWorkspaceFromPrompt(
       notes: initialPrompt,
       description: workspaceDescription,
       workspace_goal: workspaceGoal,
+      workspace_kind: "knowledge_region",
       is_agent_workspace: options?.isAgentSession ?? true,
     })
     .select("id, title, root_topic, status, notes, description, workspace_goal, created_at, updated_at")

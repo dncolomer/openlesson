@@ -81,9 +81,8 @@ describe("API subject unique IDs (no subject=me)", () => {
     }
 
     const docs = read("docs/PROOF_OF_WORK_API.md");
-    expect(docs).toMatch(/unique `user_id`/);
-    expect(docs).toMatch(/no `subject=me`/);
     expect(docs).not.toMatch(/\?subject=me/);
+    expect(docs).toContain("start_session");
 
     // Snapshot subject addressing lives in LWM panel (Eval tab removed).
     const lwm = readKnowledgePanelSurface();

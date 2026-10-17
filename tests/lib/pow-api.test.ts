@@ -70,7 +70,7 @@ describe("scope assignment", () => {
     expect(canAssignApiKeyScopes({ is_org_admin: true })).toBe(true);
   });
 
-  it("issues guest keys with workspaces:write for proof-of-work upload (create is UI-only)", () => {
+  it("issues guest keys with workspaces:write for workspace management and proof-of-work", () => {
     expect(GUEST_API_KEY_SCOPES).toContain("workspaces:write");
     expect(GUEST_API_KEY_SCOPES).not.toContain("org:write");
     expect(hasScope(GUEST_API_KEY_SCOPES, "workspaces:write")).toBe(true);

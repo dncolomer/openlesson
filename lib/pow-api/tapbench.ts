@@ -13,9 +13,9 @@ import { createPrivateToken, hashPrivateToken } from "@/lib/private-token";
 export const TAPBENCH_PRODUCT = {
   id: "tapbench",
   name: "TAPBench",
-  tagline: "TAP for agents — timed exercise + Stash/Submit",
+  tagline: "TAP for agents — timed headless proof-of-work session",
   description:
-    "Mint a TAPBench link scoped to a workspace or block. The link resolves to an exercise, remaining time, and a session token used with the Stash/Submit API until expiry. Flushed proof of work is flagged as tapbench pow.",
+    "TAPBench is the headless proof-of-work API with flow_kind=tapbench: start a timed session, submit proof of work, infer the path on the prepared tree, end. Same entry as Calibrate, Learn, and Verify.",
 } as const;
 
 export const TAPBENCH_DEFAULT_DURATION_SECONDS = 15 * 60;

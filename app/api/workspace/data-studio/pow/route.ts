@@ -42,12 +42,10 @@ async function resolveSessionLinkFromToken(
   const tokenHash = hashPrivateToken(token);
   const tryKinds: StudioSessionLinkKind[] =
     preferredKind === "tap"
-      ? ["tap", "ile", "tapbench"]
+      ? ["tap", "ile"]
       : preferredKind === "ile"
-        ? ["ile", "tap", "tapbench"]
-        : preferredKind === "tapbench"
-          ? ["tapbench", "tap", "ile"]
-          : ["tap", "ile", "tapbench"];
+        ? ["ile", "tap"]
+        : ["tap", "ile"];
 
   for (const kind of tryKinds) {
     if (kind === "tap") {
@@ -78,36 +76,6 @@ async function resolveSessionLinkFromToken(
           linkId: data.id as string,
           sessionId: (data.session_id as string | null) ?? null,
           workspaceId: (data.workspace_id as string | null) ?? workspaceId,
-        };
-      }
-    } else {
-      // TAPBench: public_token is stored plain; also try private hash
-      const { data: byPublic } = await supabase
-        .from("workspace_tapbench_links")
-        .select("id, workspace_id, public_token")
-        .eq("workspace_id", workspaceId)
-        .eq("public_token", token)
-        .maybeSingle();
-      if (byPublic?.id) {
-        return {
-          kind: "tapbench",
-          linkId: byPublic.id as string,
-          sessionId: byPublic.id as string,
-          workspaceId: (byPublic.workspace_id as string | null) ?? workspaceId,
-        };
-      }
-      const { data: byHash } = await supabase
-        .from("workspace_tapbench_links")
-        .select("id, workspace_id, public_token")
-        .eq("workspace_id", workspaceId)
-        .eq("private_token_hash", tokenHash)
-        .maybeSingle();
-      if (byHash?.id) {
-        return {
-          kind: "tapbench",
-          linkId: byHash.id as string,
-          sessionId: byHash.id as string,
-          workspaceId: (byHash.workspace_id as string | null) ?? workspaceId,
         };
       }
     }

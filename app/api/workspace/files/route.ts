@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { ayclTokenFromBody, guardWorkspaceRoute, requireAuthenticatedUser } from "@/lib/api/require-auth";
-import { uploadFileToXAI, deleteFileFromXAI, getFileContentResponse } from "@/lib/xai-files";
+import {
+  deleteOrgScopedXaiFile,
+  getOrgScopedFileContentResponse,
+  organizationIdFromWorkspace,
+  uploadOrgScopedXaiFile,
+} from "@/lib/organization/org-xai-files";
 
 const ALLOWED_MIME_TYPES = new Set([
   "application/pdf",
@@ -63,7 +68,8 @@ export async function GET(req: NextRequest) {
         return jsonError(410, "File has no xAI reference");
       }
 
-      const upstream = await getFileContentResponse(file.xai_file_id);
+      const organizationId = await organizationIdFromWorkspace(supabase, file.workspace_id);
+      const upstream = await getOrgScopedFileContentResponse(file.xai_file_id, organizationId);
       if (!upstream.ok || !upstream.body) {
         const errBody = await upstream.text().catch(() => "");
         console.error(
@@ -132,7 +138,7 @@ export async function POST(req: NextRequest) {
     // Ownership check
     const { data: plan } = await supabase
       .from("workspaces")
-      .select("user_id")
+      .select("user_id, organization_id")
       .eq("id", workspaceId)
       .single();
 
@@ -159,10 +165,15 @@ export async function POST(req: NextRequest) {
       return jsonError(400, "Maximum 5 files per plan");
     }
 
-    // Upload to xAI
     let xaiFile;
     try {
-      xaiFile = await uploadFileToXAI(fileName, mimeType, base64Data);
+      xaiFile = await uploadOrgScopedXaiFile(fileName, mimeType, base64Data, {
+        organizationId: typeof plan.organization_id === "string" ? plan.organization_id : null,
+        collectionFields: {
+          workspace_id: workspaceId,
+          user_id: user.id,
+        },
+      });
     } catch (err) {
       console.error("[plan-files POST] xAI upload failed:", err);
       return jsonError(502, err instanceof Error ? err.message : "Failed to upload to xAI");
@@ -184,7 +195,10 @@ export async function POST(req: NextRequest) {
 
     if (dbError || !fileRecord) {
       // Rollback xAI upload
-      await deleteFileFromXAI(xaiFile.file_id).catch(() => {});
+      await deleteOrgScopedXaiFile(
+        xaiFile.file_id,
+        typeof plan.organization_id === "string" ? plan.organization_id : null,
+      ).catch(() => {});
       return jsonError(500, "Failed to save file record");
     }
 
@@ -207,7 +221,7 @@ export async function DELETE(req: NextRequest) {
 
     const { data: file } = await supabase
       .from("workspace_files")
-      .select("id, user_id, xai_file_id")
+      .select("id, user_id, xai_file_id, workspace_id")
       .eq("id", fileId)
       .single();
 
@@ -216,7 +230,8 @@ export async function DELETE(req: NextRequest) {
 
     // Best-effort delete from xAI (don't block local delete on failure)
     if (file.xai_file_id) {
-      await deleteFileFromXAI(file.xai_file_id).catch(err =>
+      const organizationId = await organizationIdFromWorkspace(supabase, file.workspace_id);
+      await deleteOrgScopedXaiFile(file.xai_file_id, organizationId).catch((err) =>
         console.warn(`[plan-files DELETE] xAI delete failed for ${file.xai_file_id}:`, err)
       );
     }

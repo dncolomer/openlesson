@@ -7,7 +7,7 @@
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { uploadFileToXAI } from "./xai-files";
+import { organizationIdFromSession, uploadOrgScopedXaiFile } from "./organization/org-xai-files";
 
 export interface AnalysisResultSnapshot {
   gapScore?: number;
@@ -62,7 +62,15 @@ export async function storeAnalysisResult(opts: StoreAnalysisOptions): Promise<v
 
   let xaiFileId: string | null = null;
   try {
-    const uploaded = await uploadFileToXAI(fileName, "text/plain", base64);
+    const organizationId = await organizationIdFromSession(opts.supabase, opts.sessionId);
+    const uploaded = await uploadOrgScopedXaiFile(fileName, "text/plain", base64, {
+      organizationId,
+      collectionFields: {
+        session_id: opts.sessionId,
+        user_id: opts.userId,
+        source: opts.source,
+      },
+    });
     xaiFileId = uploaded.file_id;
   } catch (err) {
     console.error("[storeAnalysisResult] xAI upload failed:", err);

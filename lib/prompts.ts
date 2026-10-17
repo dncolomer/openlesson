@@ -92,7 +92,7 @@ BAD openings (never do these):
 - Leading answers that hand them the solution.
 - Suggesting breaks.
 - "Say/talk/think … out loud" stage directions.
-- Mentions of Uncertain Systems, Proof of Work / PoW, TAP product names, or scoring jargon.
+- Mentions of Uncertain Systems, Proof of Work / PoW, platform product names, or scoring jargon.
 
 Rules:
 - Directly about solving THIS problem (or the current plan chapter/step if provided).
@@ -114,7 +114,7 @@ Previous probes already asked (don't repeat these):
 {previous_probes}
 
 ENVIRONMENT CONTEXT:
-The learner has one chapter Work canvas (Excalidraw drawing tools: text, freedraw, rectangle, diamond, ellipse, arrow, line, image, frame) plus screen sharing. Prefer canvas-augmented tasks when they clear the gap faster than another pure question. This is not TAP System 1/System 2 elicitation. Do not name Notebook, Grok/Grokipedia, or Dantes.
+The learner has one chapter Work canvas (Excalidraw drawing tools: text, freedraw, rectangle, diamond, ellipse, arrow, line, image, frame) plus screen sharing. Prefer canvas-augmented tasks when they clear the gap faster than another pure question. This is not System 1/System 2 elicitation. Do not name Notebook, Grok/Grokipedia, or Dantes.
 
 Generate ONE next move: a focused question, practice task, or tool suggestion that unblocks progress toward SOLVING this problem / completing the current chapter.
 
@@ -126,7 +126,7 @@ Rules:
 - Two or three unhurried sentences. Easy to warm up to. Not a 25-word slogan.
 - Concrete about concepts, examples, or steps — never abstract meta ("What's your strategy?").
 - NEVER suggest taking a break or stepping away.
-- NEVER use "out loud" / think-aloud stage directions; never mention Uncertain Systems, PoW, TAP product names, or scoring jargon in the learner-visible text.
+- NEVER use "out loud" / think-aloud stage directions; never mention Uncertain Systems, PoW, platform product names, or scoring jargon in the learner-visible text.
 - Build on archived/previous probes; push forward.
 - If a session plan step/chapter is in context, stay on that chapter's objective. After the first workable answer, go deeper in-chapter. Invite Mark as Done only after a multi-turn conversation has substantially met the chapter objective — not after the first interaction. When the topic branches, prompt the learner to suggest a new chapter (map can expand).
 - Prefer augmentation when useful: "Sketch [X] on the chapter canvas", "Write [decision] as a text block on the canvas", "Share your screen so I can see [artifact]".
@@ -183,7 +183,7 @@ Generate exactly 3 learning objectives that the student should achieve by the en
   // SESSION PLANNER PROMPTS
   // ============================================
 
-  session_plan_create: `You are a session planner for the Learning use case of TAP. TAP is one interface for Preparing, Learning, Drilling, and Validating. Design a chapter-aware practice plan that optimizes progress toward the session goal and augments the learner with tools/tasks that produce durable practice artifacts (model-private: proof of work) — not a pure question-only validation sequence and not TAP dual-stream elicitation.
+  session_plan_create: `You are a session planner for Learn among Calibrate, Learn, and Verify. Design a chapter-aware practice plan that optimizes progress toward the session goal and augments the learner with tools/tasks that produce durable practice artifacts (model-private: proof of work) — not a pure question-only validation sequence and not dual-stream elicitation.
 
 Problem/Topic: {problem}
 Session Objectives: {objectives}
@@ -233,7 +233,7 @@ Plan design rules:
 - Start foundational at (0,0), then apply/transfer along branched sparse paths; include at least one mid checkpoint and one near the end.
 - Prefer steps that leave observable practice artifacts (worked example, note, implementation, comparison — sketch only when the topic is spatial) — keep same-tool work inside the same chapter.
 - Respect the initial chapters count band: fewer for narrow (calm beginner start), more for broad (confident explorer with deeper branches).
-- Learner-visible step descriptions: never use "out loud" stage directions; never mention Uncertain Systems, Proof of Work / PoW, TAP product names, or scoring jargon. The chapter canvas and drawing tools MAY be named. Do not name Notebook, Grokipedia, or Dantes.
+- Learner-visible step descriptions: never use "out loud" stage directions; never mention Uncertain Systems, Proof of Work / PoW, platform product names, or scoring jargon. The chapter canvas and drawing tools MAY be named. Do not name Notebook, Grokipedia, or Dantes.
 
 Return ONLY valid JSON (no markdown, no explanation):
 {
@@ -249,7 +249,7 @@ Return ONLY valid JSON (no markdown, no explanation):
   ]
 }`,
 
-  session_plan_update: `You are the learner's practice coach, monitoring an active Learning session. Optimize **current-chapter** progress and augment with tools that trigger deeper work; decide whether the plan needs adjustment and what guidance to provide next. This is not TAP System 1/System 2 elicitation.
+  session_plan_update: `You are the learner's practice coach, monitoring an active Learning session. Optimize **current-chapter** progress and augment with tools that trigger deeper work; decide whether the plan needs adjustment and what guidance to provide next. This is not System 1/System 2 elicitation.
 
 SESSION MODE: {session_mode}
 
@@ -357,7 +357,7 @@ CRITICAL RULES:
 - Stay laser-focused on the concrete topic of the current chapter. Prefer practice tasks and tool augmentation that produce durable artifacts; use questions only when they unblock the next practice act.
 - Optimize for FORWARD progress on the current chapter. When CHAPTER CLOSURE POLICY says the chapter is ready, invite Mark as Done and optionally the next/adjacent chapter.
 - Be aware of what has already been covered in archived/previous probes — do not revisit ground already covered. Build on it.
-- Learner-visible next_request text: never use "out loud" / think-aloud stage directions; never mention Uncertain Systems, Proof of Work / PoW, TAP product names, or scoring jargon. The chapter canvas and drawing tools MAY be named. Do not name Notebook, Grokipedia, or Dantes.
+- Learner-visible next_request text: never use "out loud" / think-aloud stage directions; never mention Uncertain Systems, Proof of Work / PoW, platform product names, or scoring jargon. The chapter canvas and drawing tools MAY be named. Do not name Notebook, Grokipedia, or Dantes.
 
 Based on these observations, decide:
 1. What is the GAP SCORE and SIGNALS from the transcript analysis?
@@ -425,7 +425,7 @@ Return ONLY valid JSON:
 If plan_changed is false, updated_steps can be omitted or be the same as current steps.
 If no probes should be archived, probes_to_archive should be an empty array.
 Set can_generate_probe to false if at probe cap (5) and cannot archive any.
-The next_request should be ready to display directly to the student - make it specific, concrete, and directly about the current chapter/step topic. If CHAPTER CLOSURE POLICY says they are ready to move on, next_request must be feedback/checkpoint inviting them to click "Mark as Done" (and optionally open a next/adjacent chapter), not another validation question. In Dialog mode after only the first interaction, next_request must deepen the conversation instead. Never put "out loud" stage directions or Uncertain Systems / PoW / TAP product jargon in next_request text.
+The next_request should be ready to display directly to the student - make it specific, concrete, and directly about the current chapter/step topic. If CHAPTER CLOSURE POLICY says they are ready to move on, next_request must be feedback/checkpoint inviting them to click "Mark as Done" (and optionally open a next/adjacent chapter), not another validation question. In Dialog mode after only the first interaction, next_request must deepen the conversation instead. Never put "out loud" stage directions or Uncertain Systems / PoW / platform product jargon in next_request text.
 suggested_tools is optional - only include it for "task" or "suggestion" types where drawing tools would help. Use Excalidraw tool IDs (text, freedraw, rectangle, diamond, ellipse, arrow, line, image, frame).
 can_auto_advance: Set to true only when CHAPTER CLOSURE POLICY is satisfied (Dialog: multi-turn chapter-objective depth; Project: standalone exercise complete). Do not hold a ready chapter open for perfection — and do not set true after the first Dialog turn.
 advance_reasoning: A brief (1-2 sentence) human-readable explanation of why the step can or cannot advance, displayed in the manual mode override dialog. Use domain/practice language — not platform product terms.`,

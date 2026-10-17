@@ -122,7 +122,7 @@ export function matchesStudioPowFilter(
 
 // ---------- Session / guest-link paste lookup (TAP & TAP Learning) ----------
 
-export type StudioSessionLinkKind = "tap" | "ile" | "tapbench";
+export type StudioSessionLinkKind = "tap" | "ile";
 
 export type StudioSessionLinkParse = {
   token: string;
@@ -131,8 +131,9 @@ export type StudioSessionLinkParse = {
 };
 
 /**
- * Parse a TAP/TAP Learning/TAPBench share URL, path, or bare private token for Data Studio PoW lookup.
- * Accepts `/tap/session/{token}`, `/ile/session/{token}`, `/tapbench/{token}`, full URLs, or bare tokens.
+ * Parse a TAP/TAP Learning share URL, path, or bare private token for Data Studio PoW lookup.
+ * Accepts `/calibrate/session/{token}`, `/learn/session/{token}`, `/verify/session/{token}`,
+ * legacy `/tap/session/{token}` / `/ile/session/{token}`, full URLs, or bare tokens.
  */
 export function parseStudioSessionLinkInput(
   input: string | null | undefined,
@@ -151,20 +152,17 @@ export function parseStudioSessionLinkInput(
       : `https://placeholder.local${raw.startsWith("/") ? "" : "/"}${raw}`;
     const url = new URL(withScheme);
     const parts = url.pathname.split("/").filter(Boolean);
-    // …/tapbench/<token>
-    const tbIdx = parts.findIndex((p) => p.toLowerCase() === "tapbench");
-    if (tbIdx >= 0 && parts[tbIdx + 1]) {
-      const token = decodeURIComponent(parts[tbIdx + 1]).trim();
-      if (token) return { token, kind: "tapbench" };
-    }
-    // …/tap/session/<token> or …/ile/session/<token>
+    // …/{calibrate|verify|learn|tap|ile}/session/<token>
     const sessionIdx = parts.findIndex((p) => p === "session");
     if (sessionIdx >= 1 && parts[sessionIdx + 1]) {
       const product = parts[sessionIdx - 1]?.toLowerCase();
       const token = decodeURIComponent(parts[sessionIdx + 1]).trim();
       if (!token) return null;
-      if (product === "tap" || product === "ile") {
-        return { token, kind: product };
+      if (product === "tap" || product === "calibrate" || product === "verify") {
+        return { token, kind: "tap" };
+      }
+      if (product === "ile" || product === "learn") {
+        return { token, kind: "ile" };
       }
       return { token, kind: null };
     }
@@ -189,7 +187,7 @@ export function parseStudioSessionLinkInput(
 /** Resolved guest-link / session identity used to match PoW rows. */
 export type StudioResolvedSessionLink = {
   kind: StudioSessionLinkKind;
-  /** workspace_tap_sessions.id, workspace_ile_links.id, or workspace_tapbench_links.id */
+  /** workspace_tap_sessions.id or workspace_ile_links.id */
   linkId: string;
   /** sessions.id when the link has started a session (TAP Learning often; TAP link id is often also the session). */
   sessionId: string | null;
@@ -239,16 +237,6 @@ export function matchesStudioPowToSessionLink(
   if (resolved.kind === "ile") {
     const ileId = typeof meta.ile_link_id === "string" ? meta.ile_link_id.trim() : "";
     if (ileId && ileId === linkId) return true;
-  }
-  if (resolved.kind === "tapbench") {
-    const tbId =
-      typeof meta.tapbench_link_id === "string"
-        ? meta.tapbench_link_id.trim()
-        : typeof meta.tap_session_id === "string"
-          ? meta.tap_session_id.trim()
-          : "";
-    if (tbId && tbId === linkId) return true;
-    if (sourceKind === "tapbench" && sourceId === linkId) return true;
   }
 
   return false;

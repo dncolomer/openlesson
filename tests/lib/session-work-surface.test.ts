@@ -244,7 +244,7 @@ describe("shared live work surface", () => {
     expect(tap).toContain("data-tap-session-thank-you");
     expect(tap).toContain("data-tap-session-impure");
     expect(tap).toContain("data-tap-practice-done");
-    expect(tap).toContain("Could not end TAP session");
+    expect(tap).toContain("Could not end Verify session");
     expect(tap).toContain("<PerformanceReportCard");
     const drill = read("components/exercise-tap/exercise-tap-phases.tsx");
     expect(drill).toContain("data-tap-practice-done");
@@ -253,7 +253,8 @@ describe("shared live work surface", () => {
     expect(drill).toContain("data-exercise-session-impure");
     expect(drill).toContain("data-tap-session-thank-you");
     expect(drill).toContain("data-exercise-session-thank-you");
-    expect(drill).toContain("Exercise TAP complete");
+    expect(drill).toContain('kicker="Verify"');
+    expect(drill).toContain("Verify complete");
     const silence = read("components/session-view/ile-silence-lock-screen.tsx");
     expect(silence).toContain("data-ile-silence-rest");
     expect(silence).toContain("data-ile-session-impurity");

@@ -233,8 +233,7 @@ describe("OG share inventory (one unsys standard)", () => {
     const workspacePage = read("app/workspace/[id]/page.tsx");
     expect(workspacePage).toContain("standardShareSocialMetadata");
 
-    const tapbench = read("app/tapbench/page.tsx");
-    expect(tapbench).toContain("standardShareSocialMetadata");
+    expect(existsSync(join(ROOT, "app/tapbench/page.tsx"))).toBe(false);
 
     const hack = read("app/community-events/page.tsx");
     expect(hack).toContain("standardShareSocialMetadata");

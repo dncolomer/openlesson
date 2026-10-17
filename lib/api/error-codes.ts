@@ -53,13 +53,12 @@ export type ErrorCode = KnownErrorCode;
 
 const KNOWN_ERROR_CODE_SET = new Set<string>(KNOWN_ERROR_CODES);
 
-export interface TapbenchErrorDetails {
+export interface SessionErrorDetails {
   expires_at?: string;
   remaining_ms?: number;
-  tapbench?: boolean;
 }
 
-export type ApiErrorDetails = TapbenchErrorDetails & Record<string, unknown>;
+export type ApiErrorDetails = SessionErrorDetails & Record<string, unknown>;
 
 export interface ApiError {
   code: ErrorCode;

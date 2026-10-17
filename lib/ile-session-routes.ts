@@ -21,7 +21,7 @@ export function ileSessionMapPath(input: {
 }): string {
   const id = encodeURIComponent(input.sessionId);
   if (input.ileToken) {
-    return withResume(`/ile/session/${encodeURIComponent(input.ileToken)}`, input.resume);
+    return withResume(`/learn/session/${encodeURIComponent(input.ileToken)}`, input.resume);
   }
   if (input.ayclToken) {
     return withResume(
@@ -87,7 +87,7 @@ export function ileSessionSettingsPath(input: {
   const id = encodeURIComponent(input.sessionId);
   if (input.ileToken) {
     return withResume(
-      `/ile/session/${encodeURIComponent(input.ileToken)}/settings`,
+      `/learn/session/${encodeURIComponent(input.ileToken)}/settings`,
       input.resume,
     );
   }

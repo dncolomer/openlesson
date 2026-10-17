@@ -105,7 +105,7 @@ export function buildContinuousEvaluationPolicy(
     proof_of_work_spec: {
       api_path: startPath,
       method: "POST",
-      purpose: "Start a headless Calibrate, Learn, Verify, or TAPBench session (answers-model tree + clock)",
+      purpose: "Start a headless Calibrate, Learn, or Verify session (answers-model tree + clock)",
       when_to_call: evidenceTriggers,
     },
     integration_skill: {
@@ -267,7 +267,7 @@ Integration surfaces: REST Bearer auth + MCP JSON-RPC (full parity — document 
 Headless session outcomes (MUST appear in skill.md — answers-model tree, inferred path, remaining time, flow embedding):
 Endpoint: POST .../sessions/{session_id}/end
 MCP tool: end_session
-TAPBench is start_session with flow_kind=tapbench. Snapshot and Stash are not public agent APIs.
+Snapshot and Stash are not public agent APIs.
 Observable after end_session: answers_model (prepared tree), sequence (inferred path), remaining_ms, embedding.raw.pow
 Catalog sizes: 4 / 8 / 16. Clock: 1–120 minutes (default 15).
 Example end_session shape:

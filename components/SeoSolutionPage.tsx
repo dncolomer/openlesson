@@ -129,19 +129,19 @@ export function SeoSolutionPage({ page, breadcrumbs }: SeoSolutionPageProps) {
                 appear.
               </p>
               <p className="mt-3 text-sm leading-relaxed text-neutral-500">
-                <span className="text-neutral-300">TAP</span> is one interface for Preparing, Learning,
-                Drilling, and Validating. The Learning use case routes humans into targeted practice.
+                <span className="text-neutral-300">Calibrate, Learn, and Verify</span> are the hosted
+                flows. Learn routes humans into targeted practice.
                 Verification findings drive what gets practiced next.
               </p>
             </div>
           </div>
           <div className="console-copy mt-10 p-5 sm:p-6">
             <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
-              One TAP. One knowledge workspace.
+              Three flows. One knowledge workspace.
             </p>
             <p className="mt-3 text-sm leading-relaxed text-neutral-400">
-              Proof-of-Work API verifies learning from artifacts. Think Aloud Protocol (TAP) is the session
-              interface for Preparing, Learning, Drilling, and Validating. They share the same workspace
+              Proof-of-Work API verifies learning from artifacts. Calibrate, Learn, and Verify are the hosted
+              session flows. They share the same workspace
               context, scoring model, and gap analysis.
             </p>
             <div className="mt-5">

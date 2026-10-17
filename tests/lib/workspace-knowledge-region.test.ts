@@ -314,9 +314,7 @@ describe("Knowledge Region knowledge-link deny", () => {
     expect(read("lib/pow-api/create-ile-link.ts")).toContain(
       "workspaceAllowsKnowledgeLinkMint",
     );
-    expect(read("lib/pow-api/create-tapbench-link.ts")).toContain(
-      "workspaceAllowsKnowledgeLinkMint",
-    );
+    expect(existsSync(join(ROOT, "lib/pow-api/create-tapbench-link.ts"))).toBe(false);
 
     writeScratch(
       "knowledge-region-no-links.log",

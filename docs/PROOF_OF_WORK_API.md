@@ -3,9 +3,9 @@
 Two families:
 
 - **Workspace management (`/api/v3/workspaces`, `/api/v3/account`)** — create and edit Learning and Verification workspaces, map/contents, workspace settings, account settings.
-- **Headless proof-of-work (`/api/v3/pow`)** — start, run, and end Calibrate, Learn, Verify, and TAPBench sessions. Submit proof of work; the server prepares the answers-model tree, infers the path (catalogs 4 / 8 / 16), and enforces the session clock.
+- **Headless proof-of-work (`/api/v3/pow`)** — start, run, and end Calibrate, Learn, and Verify sessions. Submit proof of work; the server prepares the answers-model tree, infers the path (catalogs 4 / 8 / 16), and enforces the session clock.
 
-Snapshot (`/api/v3/snapshot`), Stash (`/api/v3/stash`), and TAPBench (`/api/v3/tapbench`) are product-UI routes, not public agent APIs. TAPBench agents use `start_session` with `flow_kind=tapbench`.
+Snapshot (`/api/v3/snapshot`) and Stash (`/api/v3/stash`) are product-UI routes, not public agent APIs.
 
 **MCP (`POST /api/mcp`)** exposes the same two APIs with 100% tool ↔ REST parity. Key CRUD remains browser-session (`/api/v3/pow/keys`).
 
@@ -53,7 +53,7 @@ Canonical protocol `agent-trace-v3` phases: `enumerate` → `fingerprint` → `a
 
 | Method | Path | Scope | MCP tool | Description |
 | :--- | :--- | :--- | :--- | :--- |
-| `POST` | `/workspaces/{workspace_id}/sessions` | `workspaces:write` | `start_session` | Start Calibrate, Learn, Verify, or TAPBench. Prepares the answers-model tree and starts the clock (1–120 minutes, default 15). |
+| `POST` | `/workspaces/{workspace_id}/sessions` | `workspaces:write` | `start_session` | Start Calibrate, Learn, or Verify. Prepares the answers-model tree and starts the clock (1–120 minutes, default 15). |
 | `GET` | `/workspaces/{workspace_id}/sessions/{session_id}` | `workspaces:read` | `get_session` | Remaining time, inferred path, focus, answers model. |
 | `POST` | `/workspaces/{workspace_id}/sessions/{session_id}/proof-of-work` | `workspaces:write` | `upload_proof_of_work` | Ingest proof events; infer the path on the prepared tree. Expired sessions reject further work (`session_expired`). |
 | `POST` | `/workspaces/{workspace_id}/sessions/{session_id}/end` | `workspaces:write` | `end_session` | Score the inferred path and persist the flow embedding. |
@@ -61,7 +61,7 @@ Canonical protocol `agent-trace-v3` phases: `enumerate` → `fingerprint` → `a
 | `POST` | `/org/guests` | `org:write` | — | Org admins create guest users (not an MCP tool). |
 | `GET`/`POST`/`DELETE`/`PATCH` | `/keys…` | browser session | — | API key CRUD is browser-session only (not MCP). |
 
-`flow_kind`: `calibrate` | `learn` | `verify` | `tapbench`. `catalog_size`: `4` | `8` | `16`.
+`flow_kind`: `calibrate` | `learn` | `verify`. `catalog_size`: `4` | `8` | `16`.
 
 Session state (tree, clock, proof, sequence) is persisted so `start_session` then a later `upload_proof_of_work` / `end_session` from another agent instance does not 404.
 
@@ -96,7 +96,7 @@ Response includes `skill_md`, `skill_name`, `suggested_share_path`, and `workspa
 }
 ```
 
-Types: `tool`, `screen` (`screenshot` alias), `video`, `eeg`. Simulated TAP is stored type `tool`.
+Types: `tool`, `screen` (`screenshot` alias), `video`, `eeg`. Simulated canvas work is stored type `tool`.
 
 **Opaque workspaces:** `metadata` is filtered to an allowlist (`trace_token`, `goal_ref`, `anon`, `event_count`, `schema_version`, `protocol_id`, `phase_id`, `allow_plaintext`). Tool uploads are plaintext-linted; responses may include `evaluation_mode`, `privacy`, and `plaintext_lint`.
 
@@ -108,12 +108,8 @@ Types: `tool`, `screen` (`screenshot` alias), `video`, `eeg`. Simulated TAP is s
 
 Users on the Teams tier can create an organization with `POST /api/organization` and become its admin. Organization admins can use `POST /api/v3/pow/org/guests` with an `org:write` API key to create guest users by email. Guest users receive individual API keys scoped to workspace management and headless proof-of-work (`workspaces:read`, `workspaces:write`, `tap:read`, `tap:write`). Workspace **creation** is available via `POST /api/v3/workspaces` and MCP `create_workspace`.
 
-Organization-owned workspaces are visible to all real users and guest users in that organization. When a guest signs up later with the same email, their real user account inherits the guest organization membership, TAP sessions, and guest API keys.
-
-## TAPBench
-
-TAPBench is the same headless proof-of-work API: `start_session` with `flow_kind=tapbench`. Product-UI mint routes under `/tapbench` are not public agent APIs.
+Organization-owned workspaces are visible to all real users and guest users in that organization. When a guest signs up later with the same email, their real user account inherits the guest organization membership, practice sessions, and guest API keys.
 
 ## Removed From Proof-of-Work API
 
-The public agent surface does not expose Snapshot, Stash, TAP link mint, proof tracking, blockchain anchoring, live tutoring sessions, heartbeats, or plan adaptation. Use `start_session` → `upload_proof_of_work` → `end_session` for workspace-linked artifacts.
+The public agent surface does not expose Snapshot, Stash, guest practice-link mint, proof tracking, blockchain anchoring, live tutoring sessions, heartbeats, or plan adaptation. Use `start_session` → `upload_proof_of_work` → `end_session` for workspace-linked artifacts.

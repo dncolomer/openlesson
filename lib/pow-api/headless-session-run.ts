@@ -26,7 +26,7 @@ export async function startHeadlessSessionForWorkspace(input: {
   if (!flowKind) {
     throw new HeadlessSessionError(
       "validation_error",
-      "flow_kind must be calibrate, learn, verify, or tapbench.",
+      "flow_kind must be calibrate, learn, or verify.",
     );
   }
   const blockId =
@@ -75,11 +75,17 @@ export async function requireWorkspaceSession(workspaceId: string, sessionId: st
 }
 
 export async function ingestHeadlessProofForWorkspace(input: {
+  supabase: SupabaseClient;
+  auth: AuthContext;
   workspaceId: string;
   sessionId: string;
   args: Record<string, unknown>;
 }) {
   await requireWorkspaceSession(input.workspaceId, input.sessionId);
+  const workspace = await loadManagedWorkspace(input.supabase, input.auth, input.workspaceId);
+  if (!workspace) {
+    throw new HeadlessSessionError("workspace_not_found", "Workspace not found.");
+  }
   const events: HeadlessProofEventInput[] = [];
   if (Array.isArray(input.args.events)) {
     for (const event of input.args.events) {
@@ -116,7 +122,24 @@ export async function ingestHeadlessProofForWorkspace(input: {
       timestamp_ms: typeof input.args.timestamp_ms === "number" ? input.args.timestamp_ms : null,
     });
   }
-  const session = await ingestHeadlessProofOfWork({ sessionId: input.sessionId, events });
+  const session = await ingestHeadlessProofOfWork({
+    sessionId: input.sessionId,
+    events,
+    persistFiles: {
+      supabase: input.supabase,
+      auth: input.auth,
+      workspace: {
+        id: String(workspace.id),
+        user_id: typeof workspace.user_id === "string" ? workspace.user_id : null,
+        organization_id:
+          typeof workspace.organization_id === "string" ? workspace.organization_id : null,
+        evaluation_mode:
+          typeof (workspace as { evaluation_mode?: unknown }).evaluation_mode === "string"
+            ? String((workspace as { evaluation_mode?: unknown }).evaluation_mode)
+            : null,
+      },
+    },
+  });
   return presentHeadlessSession(session);
 }
 

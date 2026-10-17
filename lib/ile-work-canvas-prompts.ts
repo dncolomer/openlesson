@@ -15,7 +15,7 @@ function asRecord(value: unknown): Record<string, unknown> {
   return { ...(value as Record<string, unknown>) };
 }
 
-/** Excalidraw drawing tools that map to TAP Learning Work PoW. */
+/** Excalidraw drawing tools that map to Learn work-canvas PoW. */
 export const ILE_EXCALIDRAW_POW_TOOLS = [
   "text",
   "freedraw",

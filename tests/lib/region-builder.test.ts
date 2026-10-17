@@ -1,11 +1,10 @@
 /**
- * Region builder: filter human PoW vs tapbench PoW and by link / TAPBench link.
+ * Region builder: live filter is all | human. Historical tapbench provenance is classified.
  */
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  assertTapbenchOnlySelection,
   enrichSubjectWithPowProvenance,
   filterRegionBuilderSubjects,
   normalizeRegionBuilderSourceFilter,
@@ -13,25 +12,10 @@ import {
   selectSubjectsForRegion,
   type RegionBuilderSubject,
 } from "@/lib/pow-api/region-builder";
-import {
-  buildStashDecisionMetadata,
-  type StashTapbenchContext,
-} from "@/lib/pow-api/stash-api";
+import { buildStashDecisionMetadata } from "@/lib/pow-api/stash-api";
 import { classifyPowSource, isTapbenchPowMetadata } from "@/lib/pow-api/tapbench";
 
 const ROOT = join(__dirname, "../..");
-
-const tapbenchCtx: StashTapbenchContext = {
-  linkId: "tb-link-aaa",
-  exercise: "Exercise: Solve graph traversal out loud.",
-  expires_at: new Date(Date.now() + 60_000).toISOString(),
-  remaining_ms: 60_000,
-  duration_seconds: 900,
-  session_token: "tok",
-  block_id: null,
-  workspace_id: "ws-1",
-  guest_user_id: "33333333-3333-4333-8333-333333333333",
-};
 
 function subject(
   partial: Partial<RegionBuilderSubject> & {
@@ -82,13 +66,14 @@ describe("region builder filters (shipped helpers)", () => {
     expect(out.every((s) => s.pow_source === "human")).toBe(true);
   });
 
-  it("filters to tapbench PoW only", () => {
-    const out = filterRegionBuilderSubjects(subjects, { source: "tapbench" });
-    expect(out).toHaveLength(2);
-    expect(out.every((s) => s.pow_source === "tapbench")).toBe(true);
+  it("does not treat tapbench as a live source filter", () => {
+    expect(normalizeRegionBuilderSourceFilter("tapbench")).toBe("all");
+    const out = filterRegionBuilderSubjects(subjects, { source: "all" });
+    expect(out.some((s) => s.pow_source === "tapbench")).toBe(true);
+    expect(out.some((s) => s.pow_source === "human")).toBe(true);
   });
 
-  it("filters by link / TAPBench link id", () => {
+  it("filters by TAP / TAP Learning link id", () => {
     const byId = filterRegionBuilderSubjects(subjects, {
       source: "all",
       linkQuery: "tb-link-aaa",
@@ -97,52 +82,51 @@ describe("region builder filters (shipped helpers)", () => {
     expect(byId[0].source_link_id).toBe("tb-link-aaa");
   });
 
-  it("filters by TAPBench share URL substring", () => {
+  it("filters by historical share URL substring without a live tapbench source option", () => {
     const byUrl = filterRegionBuilderSubjects(subjects, {
-      source: "tapbench",
-      linkQuery: "tapbench/tb_tok",
+      source: "all",
+      linkQuery: "tb_tok",
     });
     expect(byUrl).toHaveLength(1);
     expect(byUrl[0].guest_user_id).toBe("guest-tb");
   });
 
   it("filters by full listable share URL operators copy (source_link_url populated)", () => {
-    const fullUrl = "https://app/tapbench/tb_tok";
+    const fullUrl = "https://app/tap/session/tok1";
     const byFull = filterRegionBuilderSubjects(subjects, {
       source: "all",
       linkQuery: fullUrl,
     });
     expect(byFull).toHaveLength(1);
     expect(byFull[0].source_link_url).toBe(fullUrl);
-    // enrichSubjectWithPowProvenance attaches URL from link map
-    const tbMeta = buildStashDecisionMetadata("submit", {}, tapbenchCtx);
+    const humanMeta = buildStashDecisionMetadata("submit", { source_link_id: "tap-link-1" });
     const enriched = enrichSubjectWithPowProvenance(
-      { guest_user_id: "g-url" },
-      [tbMeta],
-      { "tb-link-aaa": fullUrl },
+      { user_id: "u-url" },
+      [humanMeta],
+      { "tap-link-1": fullUrl },
     );
     expect(enriched.source_link_url).toBe(fullUrl);
     expect(
-      filterRegionBuilderSubjects([enriched], { source: "tapbench", linkQuery: "tapbench/tb_tok" }),
+      filterRegionBuilderSubjects([enriched], { source: "human", linkQuery: "tap/session/tok1" }),
     ).toHaveLength(1);
   });
 
-  it("region built from tapbench-only selection only includes those subjects", () => {
-    const selected = selectSubjectsForRegion(subjects, { source: "tapbench" });
-    expect(assertTapbenchOnlySelection(selected)).toBe(true);
-    expect(selected.map((s) => s.guest_user_id).sort()).toEqual([
-      "guest-tb",
-      "guest-tb-2",
-    ]);
-    // Selecting a subset key still respects source filter
-    const keys = new Set([regionBuilderSubjectKey(subjects[1])]);
-    const subset = selectSubjectsForRegion(subjects, { source: "tapbench" }, keys);
+  it("region built from human selection only includes those subjects", () => {
+    const selected = selectSubjectsForRegion(subjects, { source: "human" });
+    expect(selected.every((s) => s.pow_source === "human")).toBe(true);
+    expect(selected.map((s) => s.user_id)).toEqual(["user-human"]);
+    const keys = new Set([regionBuilderSubjectKey(subjects[0])]);
+    const subset = selectSubjectsForRegion(subjects, { source: "human" }, keys);
     expect(subset).toHaveLength(1);
-    expect(subset[0].source_link_id).toBe("tb-link-aaa");
+    expect(subset[0].source_link_id).toBe("tap-link-1");
   });
 
-  it("enrichSubjectWithPowProvenance uses real stash metadata classification", () => {
-    const tbMeta = buildStashDecisionMetadata("submit", {}, tapbenchCtx);
+  it("enrichSubjectWithPowProvenance classifies historical tapbench metadata without minting", () => {
+    const tbMeta = {
+      tapbench: true,
+      tapbench_link_id: "tb-link-aaa",
+      source_link_id: "tb-link-aaa",
+    };
     const humanMeta = buildStashDecisionMetadata("stash", { source: "stash_api" });
     expect(isTapbenchPowMetadata(tbMeta)).toBe(true);
     expect(classifyPowSource(humanMeta)).toBe("human");
@@ -150,31 +134,30 @@ describe("region builder filters (shipped helpers)", () => {
     const enrichedTb = enrichSubjectWithPowProvenance(
       { guest_user_id: "g1" },
       [tbMeta],
-      { "tb-link-aaa": "https://app/tapbench/x" },
+      { "tb-link-aaa": "https://example.invalid/historical" },
     );
     expect(enrichedTb.pow_source).toBe("tapbench");
     expect(enrichedTb.source_link_id).toBe("tb-link-aaa");
-    expect(enrichedTb.source_link_url).toBe("https://app/tapbench/x");
 
     const enrichedHuman = enrichSubjectWithPowProvenance({ user_id: "u1" }, [humanMeta]);
     expect(enrichedHuman.pow_source).toBe("human");
   });
 
-  it("normalizeRegionBuilderSourceFilter accepts aliases", () => {
-    expect(normalizeRegionBuilderSourceFilter("tapbench")).toBe("tapbench");
+  it("normalizeRegionBuilderSourceFilter accepts human aliases and ignores tapbench", () => {
+    expect(normalizeRegionBuilderSourceFilter("tapbench")).toBe("all");
     expect(normalizeRegionBuilderSourceFilter("human_pow")).toBe("human");
     expect(normalizeRegionBuilderSourceFilter("nope")).toBe("all");
   });
 });
 
 describe("region builder UI + API surface", () => {
-  it("panel exposes human vs tapbench filters and TAPBench mint; synthetic create removed", () => {
+  it("panel exposes human PoW filter and does not offer TAPBench as a live source", () => {
     const ui = readFileSync(join(ROOT, "components/CustomVerificationModelsPanel.tsx"), "utf8");
     expect(ui).toContain("data-region-builder");
     expect(ui).toContain("data-region-source-filter");
     expect(ui).toContain("data-region-link-filter");
     expect(ui).toContain('value="human"');
-    expect(ui).toContain('value="tapbench"');
+    expect(ui).not.toContain('value="tapbench"');
     expect(ui).toContain("filterRegionBuilderSubjects");
     expect(ui).not.toContain("create_synthetic");
     expect(ui).not.toContain("FileDropZone");
@@ -191,7 +174,8 @@ describe("region builder UI + API surface", () => {
     );
     expect(store).toContain("source_link_url");
     expect(store).toContain("buildWorkspaceLinkUrlMap");
-    expect(store).toContain("buildTapbenchShareUrl");
+    expect(store).not.toContain("buildTapbenchShareUrl");
+    expect(store).not.toContain("workspace_tapbench_links");
     const route = readFileSync(
       join(ROOT, "app/api/workspace/custom-knowledge-regions/route.ts"),
       "utf8",

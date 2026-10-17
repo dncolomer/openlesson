@@ -10,10 +10,10 @@ import {
   type ApiError,
   type ApiErrorDetails,
   type ErrorCode,
-  type TapbenchErrorDetails,
+  type SessionErrorDetails,
 } from "@/lib/api/error-codes";
 
-export type { ApiError, ApiErrorDetails, ErrorCode, TapbenchErrorDetails };
+export type { ApiError, ApiErrorDetails, ErrorCode, SessionErrorDetails };
 export { statusToErrorCode, toErrorCode };
 
 export type ApiErrorEnvelopeKind = "nested_code" | "string_error" | "unknown";

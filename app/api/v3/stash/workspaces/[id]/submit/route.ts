@@ -2,7 +2,6 @@ import { denyWorkspaceFeatureById } from "@/lib/workspace-feature-gate";
 /**
  * Stash API — Submit decision (System 2).
  * Flushes all buffered PoW units through the regular PoW API, then resets memory.
- * TAPBench sessions include exercise + remaining time; expired tokens are rejected.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -10,7 +9,6 @@ import { errorResponse } from "@/lib/pow-api/auth";
 import { canAccessAgentWorkspace } from "@/lib/pow-api/workspace-access";
 import {
   bufferSubjectId,
-  stashExerciseResponseFields,
   submitBufferedProofOfWork,
 } from "@/lib/pow-api/stash-api";
 import { authenticateStashRequest } from "@/lib/pow-api/authenticate-stash-request";
@@ -39,7 +37,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
 
   const stashAuth = await authenticateStashRequest(req, workspaceId, body);
   if (!stashAuth.ok) return stashAuth.response;
-  let { auth, supabase, tapbenchCtx } = stashAuth;
+  const { auth, supabase } = stashAuth;
 
   const { data: workspace } = await supabase
     .from("workspaces")
@@ -50,11 +48,8 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
   if (!workspace) {
     return errorResponse(404, "workspace_not_found", "Workspace not found");
   }
-  if (!tapbenchCtx && !canAccessAgentWorkspace(auth, workspace)) {
+  if (!canAccessAgentWorkspace(auth, workspace)) {
     return errorResponse(404, "workspace_not_found", "Workspace not found");
-  }
-  if (tapbenchCtx && !auth.organization_id && workspace.organization_id) {
-    auth = { ...auth, organization_id: workspace.organization_id };
   }
 
   const subjectId = bufferSubjectId(auth);
@@ -68,7 +63,6 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
       organization_id: workspace.organization_id ?? auth.organization_id,
     },
     supabase,
-    tapbench: tapbenchCtx,
   });
 
   if (!flush.ok) {
@@ -87,12 +81,9 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
       workspace_id: workspaceId,
       user_id: auth.user_id,
       guest_user_id: auth.guest_user_id,
-      ...stashExerciseResponseFields(tapbenchCtx),
       note: flush.empty
         ? "No buffered proof of work — nothing to submit."
-        : tapbenchCtx
-          ? "Buffered units flushed to PoW API as System 2 (submit) with tapbench pow flag; buffer reset."
-          : "Buffered units flushed to PoW API as System 2 (submit); buffer reset.",
+        : "Buffered units flushed to PoW API as System 2 (submit); buffer reset.",
     },
     { status: flush.empty ? 200 : 201 },
   );

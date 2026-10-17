@@ -27,11 +27,6 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
     if (denied) return denied;
   }
 
-  if (auth.auth_method === "tapbench_key") {
-    const { TAPBENCH_STASH_ONLY_MESSAGE } = await import("@/lib/tapbench/constants");
-    return errorResponse(403, "forbidden", TAPBENCH_STASH_ONLY_MESSAGE);
-  }
-
   const { data: workspace } = await supabase
     .from("workspaces")
     .select(

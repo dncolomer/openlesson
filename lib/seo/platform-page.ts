@@ -45,7 +45,7 @@ export const PLATFORM_PAGE: SeoPlatformPageConfig = {
     "Uncertain Systems is a knowledge workspace with software tools that verify learning through proof of work, proof of work, and cognitive analysis — then augment it with targeted practice. Humans and AI agents perform real work inside the workspace; Uncertain Systems scores whether they actually learned, and routes gaps into improvement loops.",
   metaTitle: "Knowledge Workspace: Learning Efficiency for Humans & Agents",
   metaDescription:
-    "A knowledge workspace that measures learning efficiency from proof of work and augments gaps with practice. Proof-of-Work API, and Think Aloud Protocol (TAP) for Preparing, Learning, Drilling, and Validating.",
+    "A knowledge workspace that measures learning efficiency from proof of work and augments gaps with practice. Proof-of-Work API, and Calibrate, Learn, and Verify.",
   keywords: [
     "knowledge workspace",
     "learning efficiency",
@@ -74,14 +74,14 @@ export const PLATFORM_PAGE: SeoPlatformPageConfig = {
     {
       title: "Verify: Think Aloud Protocol",
       paragraphs: [
-        "Think Aloud Protocol (TAP) captures live human cognition inside the workspace. Issue shareable URLs scoped to a block or entire workspace. People verbalize reasoning while working — signal that polished AI-assisted output cannot fabricate.",
+        "Calibrate, Learn, and Verify captures live human cognition inside the workspace. Issue shareable URLs scoped to a block or entire workspace. People verbalize reasoning while working — signal that polished AI-assisted output cannot fabricate.",
         "Speech becomes think-aloud traces. Socratic probes target hesitations, revisions, and causal chains. Results include marker scores, per-marker rationale, and auditable gap reports.",
       ],
     },
     {
       title: "Augment: Learning",
       paragraphs: [
-        "Learning is a use case of TAP, the same interface used for Preparing, Learning, Drilling, and Validating. Humans improve here after verification surfaces gaps: guided practice, think-aloud sessions, Socratic follow-ups, and targeted blocks until scores move — all inside the same workspace context.",
+        "Learn is the practice flow among Calibrate, Learn, and Verify. Humans improve here after verification surfaces gaps: guided practice, think-aloud sessions, Socratic follow-ups, and targeted blocks until scores move — all inside the same workspace context.",
         "Augmentation is not a separate LMS. It is the improvement layer wired to verification findings, so practice targets what actually broke, with proof of work of progress along the way.",
       ],
     },
@@ -95,7 +95,7 @@ export const PLATFORM_PAGE: SeoPlatformPageConfig = {
     {
       title: "Proof-of-Work API: programmatic workspace access",
       paragraphs: [
-        "The Proof-of-Work API is how builders wire the Workspace into their stack. Upload proof of work on UI-created workspaces, request unified performance reports, issue Think Aloud Protocol links, poll TAP completion, and open practice for the Learning use case.",
+        "The Proof-of-Work API is how builders wire the Workspace into their stack. Upload proof of work on UI-created workspaces, request unified performance reports, issue Calibrate, Learn, and Verify links, poll session completion, and open practice for Learn.",
         "Embed verification and augmentation into CI pipelines, internal portals, agent orchestration, or any system where humans and agents perform knowledge work.",
       ],
     },
@@ -109,7 +109,7 @@ export const PLATFORM_PAGE: SeoPlatformPageConfig = {
     {
       question: "What software tools run in the workspace?",
       answer:
-        "Proof-of-Work API (headless verification from artifacts) and Think Aloud Protocol (TAP) — one interface for Preparing, Learning, Drilling, and Validating.",
+        "Proof-of-Work API (headless verification from artifacts) and Calibrate, Learn, and Verify.",
     },
     {
       question: "When should I use Proof-of-Work API vs. Think Aloud Protocol?",

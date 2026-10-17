@@ -71,12 +71,15 @@ export function isXaiFileId(value: string | null | undefined): value is string {
 }
 
 /** Keep only ids that still resolve in the xAI Files API. */
-export async function filterResolvableXaiFileIds(fileIds: string[]): Promise<string[]> {
+export async function filterResolvableXaiFileIds(
+  fileIds: string[],
+  options?: { apiKey?: string | null }
+): Promise<string[]> {
   const unique = Array.from(new Set(fileIds.filter(isXaiFileId)));
   if (!unique.length) return [];
 
   const checks = await Promise.all(
-    unique.map(async (fileId) => ((await getFileMetadata(fileId)) ? fileId : null))
+    unique.map(async (fileId) => ((await getFileMetadata(fileId, options)) ? fileId : null))
   );
 
   return checks.filter((id): id is string => Boolean(id));
@@ -140,10 +143,13 @@ export async function uploadFileToXAI(
  *
  * The endpoint returns the original file bytes by default (OpenAI-compat).
  */
-export async function getFileContentResponse(fileId: string): Promise<Response> {
+export async function getFileContentResponse(
+  fileId: string,
+  options?: { apiKey?: string | null }
+): Promise<Response> {
   return fetch(
     `${XAI_BASE_URL}/v1/files/${encodeURIComponent(fileId)}/content`,
-    { headers: authHeader() }
+    { headers: authHeader(options?.apiKey) }
   );
 }
 
@@ -153,11 +159,14 @@ export async function getFileContentResponse(fileId: string): Promise<Response> 
  *
  * Returns null if the fetch fails.
  */
-export async function getFileTextContent(fileId: string): Promise<string | null> {
+export async function getFileTextContent(
+  fileId: string,
+  options?: { apiKey?: string | null }
+): Promise<string | null> {
   try {
     const res = await fetch(
       `${XAI_BASE_URL}/v1/files/${encodeURIComponent(fileId)}/content`,
-      { headers: authHeader() }
+      { headers: authHeader(options?.apiKey) }
     );
     if (!res.ok) {
       const body = await res.text().catch(() => "");
@@ -175,9 +184,12 @@ export async function getFileTextContent(fileId: string): Promise<string | null>
 /**
  * Get metadata for a file.
  */
-export async function getFileMetadata(fileId: string): Promise<XAIFileMetadata | null> {
+export async function getFileMetadata(
+  fileId: string,
+  options?: { apiKey?: string | null }
+): Promise<XAIFileMetadata | null> {
   const res = await fetch(`${XAI_BASE_URL}/v1/files/${encodeURIComponent(fileId)}`, {
-    headers: authHeader(),
+    headers: authHeader(options?.apiKey),
   });
   if (!res.ok) return null;
   return (await res.json()) as XAIFileMetadata;
@@ -186,10 +198,13 @@ export async function getFileMetadata(fileId: string): Promise<XAIFileMetadata |
 /**
  * Delete a file from xAI.
  */
-export async function deleteFileFromXAI(fileId: string): Promise<boolean> {
+export async function deleteFileFromXAI(
+  fileId: string,
+  options?: { apiKey?: string | null }
+): Promise<boolean> {
   const res = await fetch(`${XAI_BASE_URL}/v1/files/${encodeURIComponent(fileId)}`, {
     method: "DELETE",
-    headers: authHeader(),
+    headers: authHeader(options?.apiKey),
   });
   return res.ok;
 }

@@ -891,7 +891,7 @@ export function TapScorePhases(props: {
         ) : null}
         {phase === "error" && (
           <SessionFinishedScreen
-            title="Could not end TAP session"
+            title="Could not end Verify session"
             body={resultsError || error}
             actions={
               <TapThoughtButton size="md" variant="primary" onClick={() => setPhase("briefing")}>

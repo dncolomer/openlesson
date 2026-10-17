@@ -253,7 +253,7 @@ export async function POST(request: NextRequest) {
             await getStripe().invoiceItems.create({
               customer: customerId,
               invoice: invoice.id,
-              description: `${tapSessions.toLocaleString()} TAP session${tapSessions === 1 ? "" : "s"} @ ${formatTapSessionPrice()}`,
+              description: `${tapSessions.toLocaleString()} Calibrate/Verify session${tapSessions === 1 ? "" : "s"} @ ${formatTapSessionPrice()}`,
               amount: tapRounded,
               currency: "usd",
             });
@@ -262,7 +262,7 @@ export async function POST(request: NextRequest) {
             await getStripe().invoiceItems.create({
               customer: customerId,
               invoice: invoice.id,
-              description: `${ileSessions.toLocaleString()} Learning session${ileSessions === 1 ? "" : "s"} on TAP (Preparing, Learning, Drilling, and Validating) @ ${formatIleSessionPrice()}`,
+              description: `${ileSessions.toLocaleString()} Learning session${ileSessions === 1 ? "" : "s"} on Calibrate, Learn, and Verify @ ${formatIleSessionPrice()}`,
               amount: ileRounded,
               currency: "usd",
             });

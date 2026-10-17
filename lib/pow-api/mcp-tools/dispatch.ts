@@ -17,11 +17,11 @@ import {
   endHeadlessSession,
   getHeadlessSession,
   HeadlessSessionError,
-  ingestHeadlessProofOfWork,
   parseHeadlessFlowKind,
   presentHeadlessSession,
   startHeadlessSession,
 } from "../headless-session";
+import { ingestHeadlessProofForWorkspace } from "../headless-session-run";
 import {
   buildIntegrationSkillInstructions,
   buildIntegrationSkillPrompt,
@@ -162,7 +162,7 @@ export async function callMcpProofOfWorkTool(
     const workspace = await loadManagedWorkspace(supabase, auth, workspaceId);
     if (!workspace) throw new Error("Workspace not found.");
     const flowKind = parseHeadlessFlowKind(args.flow_kind);
-    if (!flowKind) throw new Error("flow_kind must be calibrate, learn, verify, or tapbench.");
+    if (!flowKind) throw new Error("flow_kind must be calibrate, learn, or verify.");
     const blockId = stringArg(args, "block_id");
     let chapterTitle = stringArg(args, "chapter_title") || "";
     let chapterBrief = stringArg(args, "chapter_brief") || "";
@@ -350,40 +350,15 @@ export async function callMcpProofOfWorkTool(
     const sessionId = stringArg(args, "session_id");
     if (!workspaceId) throw new Error("workspace_id is required.");
     if (!sessionId) throw new Error("session_id is required.");
-    await loadWorkspace(supabase, auth, workspaceId);
-    const events = Array.isArray(args.events)
-      ? (args.events as Record<string, unknown>[]).map((event) => ({
-          type: typeof event.type === "string" ? event.type : "tool",
-          tool_name: typeof event.tool_name === "string" ? event.tool_name : undefined,
-          tool_action:
-            typeof event.tool_action === "string"
-              ? event.tool_action
-              : typeof event.toolAction === "string"
-                ? event.toolAction
-                : undefined,
-          metadata:
-            event.metadata && typeof event.metadata === "object" && !Array.isArray(event.metadata)
-              ? (event.metadata as Record<string, unknown>)
-              : null,
-          timestamp_ms: typeof event.timestamp_ms === "number" ? event.timestamp_ms : null,
-        }))
-      : [];
-    if (typeof args.tool_action === "string" && args.tool_action.trim()) {
-      events.push({
-        type: typeof args.type === "string" ? args.type : "tool",
-        tool_name: typeof args.tool_name === "string" ? args.tool_name : undefined,
-        tool_action: args.tool_action,
-        metadata:
-          args.metadata && typeof args.metadata === "object" && !Array.isArray(args.metadata)
-            ? (args.metadata as Record<string, unknown>)
-            : null,
-        timestamp_ms: typeof args.timestamp_ms === "number" ? args.timestamp_ms : null,
-      });
-    }
     try {
-      const session = await ingestHeadlessProofOfWork({ sessionId, events });
-      if (session.workspace_id !== workspaceId) throw new Error("Session not found.");
-      return await evidenceToolResult(presentHeadlessSession(session), {
+      const session = await ingestHeadlessProofForWorkspace({
+        supabase,
+        auth,
+        workspaceId,
+        sessionId,
+        args,
+      });
+      return await evidenceToolResult(session, {
         endpoint: "upload_proof_of_work",
         workspace_id: workspaceId,
       });

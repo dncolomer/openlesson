@@ -19,12 +19,12 @@ describe("ileTokenFromPowBody", () => {
 });
 
 describe("buildIleSessionUrl", () => {
-  it("builds shareable /ile/session/{token} URLs without trailing slash doubling", () => {
+  it("builds shareable /learn/session/{token} URLs without trailing slash doubling", () => {
     expect(buildIleSessionUrl("https://app.example.com/", "token123")).toBe(
-      "https://app.example.com/ile/session/token123",
+      "https://app.example.com/learn/session/token123",
     );
     expect(buildIleSessionUrl("https://app.example.com", "token123")).toBe(
-      "https://app.example.com/ile/session/token123",
+      "https://app.example.com/learn/session/token123",
     );
   });
 });
@@ -85,9 +85,11 @@ describe("shareable TAP Learning guest PoW wiring", () => {
     expect(perfSource).not.toContain('id: "score"');
   });
 
-  it("treats /ile/session as a public middleware route like TAP", () => {
+  it("treats flow-named session paths as public middleware routes", () => {
     expect(middlewareSource).toContain('"/ile/session"');
     expect(middlewareSource).toContain('"/tap/session"');
-    expect(middlewareSource).toContain('"/ile/session/"');
+    expect(middlewareSource).toContain('"/learn/session/"');
+    expect(middlewareSource).toContain('"/calibrate/session"');
+    expect(middlewareSource).toContain('"/verify/session"');
   });
 });

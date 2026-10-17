@@ -546,7 +546,7 @@ export async function createSyntheticCustomVerificationModel(
     /** Injected profile for tests — skips live Grok when provided. */
     profile?: SyntheticRegionProfile | null;
     /**
-     * Optional uploader for tests — defaults to uploadFileToXAI.
+     * Optional uploader for tests — defaults to org-scoped xAI Files.
      * Only used when files are present and profile is not injected.
      */
     uploadFile?: (
@@ -597,11 +597,18 @@ export async function createSyntheticCustomVerificationModel(
   if (!profile) {
     let fileIds = [...preloadedFileIds];
     if (files.length > 0) {
-      const { uploadFileToXAI } = await import("@/lib/xai-files");
-      const uploader = options.uploadFile || uploadFileToXAI;
+      const { organizationIdFromWorkspace, uploadOrgScopedXaiFile } = await import(
+        "@/lib/organization/org-xai-files"
+      );
+      const organizationId = await organizationIdFromWorkspace(supabase, options.workspaceId);
       for (const f of files) {
         try {
-          const uploaded = await uploader(f.name, f.mimeType, f.data);
+          const uploaded = options.uploadFile
+            ? await options.uploadFile(f.name, f.mimeType, f.data)
+            : await uploadOrgScopedXaiFile(f.name, f.mimeType, f.data, {
+                organizationId,
+                collectionFields: { workspace_id: options.workspaceId },
+              });
           if (uploaded?.file_id) fileIds.push(uploaded.file_id);
         } catch (err) {
           console.error(
@@ -759,7 +766,7 @@ export async function computeKnowledgeDistanceForSubject(
 }
 
 /**
- * Build id → share URL map for TAP / TAP Learning / TAPBench links in a workspace.
+ * Build id → share URL map for TAP / TAP Learning links in a workspace.
  * Used so region-builder can filter by the same listable URLs operators copy.
  */
 export async function buildWorkspaceLinkUrlMap(
@@ -768,13 +775,10 @@ export async function buildWorkspaceLinkUrlMap(
   baseUrl: string = process.env.NEXT_PUBLIC_APP_URL || "https://uncertain.systems",
 ): Promise<Map<string, string>> {
   const { buildGuestLinkUrl } = await import("@/lib/guest-link-access");
-  const { buildTapbenchShareUrl, listStoredTapbenchLinks, toTapbenchListRow } = await import(
-    "./tapbench"
-  );
   const map = new Map<string, string>();
   const base = (baseUrl || "").replace(/\/$/, "") || "https://uncertain.systems";
 
-  const [tapRes, ileRes, tbRes] = await Promise.all([
+  const [tapRes, ileRes] = await Promise.all([
     supabase
       .from("workspace_tap_sessions")
       .select("id, public_token")
@@ -782,11 +786,6 @@ export async function buildWorkspaceLinkUrlMap(
       .limit(500),
     supabase
       .from("workspace_ile_links")
-      .select("id, public_token")
-      .eq("workspace_id", workspaceId)
-      .limit(500),
-    supabase
-      .from("workspace_tapbench_links")
       .select("id, public_token")
       .eq("workspace_id", workspaceId)
       .limit(500),
@@ -801,18 +800,6 @@ export async function buildWorkspaceLinkUrlMap(
     const id = String((row as { id: string }).id);
     const tok = (row as { public_token?: string | null }).public_token;
     if (tok?.trim()) map.set(id, buildGuestLinkUrl(base, "ile", tok.trim()));
-  }
-  for (const row of tbRes.data || []) {
-    const id = String((row as { id: string }).id);
-    const tok = (row as { public_token?: string | null }).public_token;
-    if (tok?.trim()) map.set(id, buildTapbenchShareUrl(base, tok.trim()));
-  }
-
-  // Process-store TAPBench mints not yet in DB
-  for (const link of listStoredTapbenchLinks(workspaceId)) {
-    if (!map.has(link.id)) {
-      map.set(link.id, toTapbenchListRow(link, base).url);
-    }
   }
 
   return map;
@@ -830,10 +817,10 @@ export async function listSubjectsWithKnowledgeConfig(
     embedding_model_id: string;
     as_of_ms: number;
     confidence: number;
-    /** human | tapbench — from associated PoW metadata when available. */
+    /** human | tapbench — historical provenance from associated PoW metadata when available. */
     pow_source: "human" | "tapbench";
     source_link_id: string | null;
-    /** Listable share URL for the source link (TAP / TAP Learning / TAPBench). */
+    /** Listable share URL for the source link (TAP / TAP Learning). */
     source_link_url: string | null;
   }>
 > {

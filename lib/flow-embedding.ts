@@ -32,6 +32,7 @@ export type FlowPowRow = {
   timestamp_ms?: number | null;
   payload?: string | null;
   metadata?: Record<string, unknown> | null;
+  xai_file_id?: string | null;
 };
 
 export type FlowGenModelRaw = {

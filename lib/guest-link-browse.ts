@@ -1,9 +1,9 @@
 /**
- * Client-side browse/search/filter for workspace TAP + TAP Learning + TAPBench links.
+ * Client-side browse/search/filter for workspace TAP + TAP Learning links.
  * Pure transforms so the Settings UI can filter large lists without new APIs.
  */
 
-export type GuestLinkBrowseKind = "tap" | "ile" | "tapbench";
+export type GuestLinkBrowseKind = "tap" | "ile";
 
 /** Normalized row shown on the guest-links Browse surface. */
 export type GuestLinkBrowseRow = {
@@ -19,9 +19,9 @@ export type GuestLinkBrowseRow = {
   block_id: string | null;
   created_at: string;
   completed_at: string | null;
-  /** TAP / TAPBench duration when present. */
+  /** TAP duration when present. */
   requested_duration_seconds?: number | null;
-  /** Optional free-text (e.g. TAPBench exercise) for search. */
+  /** Optional free-text for search. */
   detail?: string | null;
   /** Always-visible share URL when list API provides it. */
   url?: string | null;
@@ -59,19 +59,6 @@ export type IleLinkBrowseSource = {
   completed_at: string | null;
 };
 
-export type TapbenchLinkBrowseSource = {
-  id: string;
-  block_id: string | null;
-  status: string;
-  created_at: string;
-  duration_seconds?: number | null;
-  remaining_ms?: number | null;
-  exercise?: string | null;
-  url?: string | null;
-  public_token?: string | null;
-  guest_user_id?: string | null;
-};
-
 export type BuildGuestLinkBrowseRowsOptions = {
   blockTitleById: Map<string, string> | Record<string, string>;
   entireWorkspaceLabel: string;
@@ -81,9 +68,6 @@ export type BuildGuestLinkBrowseRowsOptions = {
     assigned_user_id: string | null;
     guest_user_id: string | null;
   }) => string;
-  /** Optional TAPBench mint list merged into the same browse surface. */
-  tapbenchLinks?: readonly TapbenchLinkBrowseSource[] | null;
-  tapbenchParticipantLabel?: string;
 };
 
 function blockTitle(
@@ -97,7 +81,7 @@ function blockTitle(
 }
 
 /**
- * Merge TAP + TAP Learning (+ optional TAPBench) API rows into one browse list
+ * Merge TAP + TAP Learning API rows into one browse list
  * (newest first by created_at).
  */
 export function buildGuestLinkBrowseRows(
@@ -109,8 +93,6 @@ export function buildGuestLinkBrowseRows(
     blockTitleById,
     entireWorkspaceLabel,
     participantLabelFor,
-    tapbenchLinks,
-    tapbenchParticipantLabel = "Agent",
   } = options;
 
   const tapRows: GuestLinkBrowseRow[] = tapLinks.map((link) => ({
@@ -142,25 +124,7 @@ export function buildGuestLinkBrowseRows(
     completed_at: link.completed_at,
   }));
 
-  const tbRows: GuestLinkBrowseRow[] = (tapbenchLinks ?? []).map((link) => ({
-    id: link.id,
-    kind: "tapbench" as const,
-    status: link.status || "active",
-    scopeLabel: link.block_id
-      ? blockTitle(blockTitleById, link.block_id)
-      : entireWorkspaceLabel,
-    participantLabel: tapbenchParticipantLabel,
-    guest_user_id: link.guest_user_id ?? null,
-    assigned_user_id: null,
-    block_id: link.block_id,
-    created_at: link.created_at,
-    completed_at: null,
-    requested_duration_seconds: link.duration_seconds ?? null,
-    detail: link.exercise ?? null,
-    url: link.url ?? null,
-  }));
-
-  return [...tapRows, ...ileRows, ...tbRows].sort((a, b) => {
+  return [...tapRows, ...ileRows].sort((a, b) => {
     const ta = Date.parse(a.created_at) || 0;
     const tb = Date.parse(b.created_at) || 0;
     return tb - ta;

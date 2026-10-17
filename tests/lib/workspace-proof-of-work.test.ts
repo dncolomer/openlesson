@@ -167,10 +167,12 @@ describe("surfaces share the exported type list", () => {
   it("MCP upload enum is WORKSPACE_PROOF_OF_WORK_WIRE_TYPES", () => {
     const upload = MCP_EVIDENCE_TOOLS.find((t) => t.name === "upload_proof_of_work");
     const typeSchema = upload?.inputSchema?.properties?.type;
-    expect(typeSchema && "enum" in typeSchema ? typeSchema.enum : undefined).toEqual([
-      ...WORKSPACE_PROOF_OF_WORK_WIRE_TYPES,
-    ]);
-    expect(typeSchema && "enum" in typeSchema ? typeSchema.enum : []).not.toContain("speech");
+    const typeEnum =
+      typeSchema && typeof typeSchema === "object" && "enum" in typeSchema
+        ? typeSchema.enum
+        : undefined;
+    expect(typeEnum).toEqual([...WORKSPACE_PROOF_OF_WORK_WIRE_TYPES]);
+    expect(typeEnum ?? []).not.toContain("speech");
   });
 
   it("TAP Learning capture types are a subset of stored types", () => {
@@ -181,11 +183,12 @@ describe("surfaces share the exported type list", () => {
     expect(ile).not.toContain("video");
   });
 
-  it("TAP product insert goes through checkProofOfWorkSchema", () => {
+  it("thought traces use the shared xAI Files uploader", () => {
     const src = readFileSync(join(ROOT, "app/api/workspace-tap-score/trace/route.ts"), "utf8");
-    expect(src).toContain("checkProofOfWorkSchema");
-    expect(src).toContain("insertWorkspaceProofOfWorkRow");
-    expect(src).toContain("pow_model_version");
+    expect(src).toContain("uploadWorkspaceProofOfWork");
+    expect(src).toContain("TAP_TRACE_TOOL_NAME");
+    expect(src).not.toContain("insertWorkspaceProofOfWorkRow");
+    expect(src).not.toContain("uploadFileToXAI");
   });
 });
 

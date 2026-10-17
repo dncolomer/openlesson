@@ -209,12 +209,12 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
         }),
       });
       const payload = await response.json();
-      if (!response.ok) throw new Error(errorMessageFromBody(payload, "Could not get TAP response"));
+      if (!response.ok) throw new Error(errorMessageFromBody(payload, "Could not get Verify response"));
       const assistant: ChatMessage = { id: `a_${Date.now()}`, role: "assistant", content: payload.message, at: new Date().toISOString() };
       s.apply({ messages: (current) => [...current, assistant] });
       s.handlePowInterruption(payload.interruption ?? null);
     } catch (err) {
-      s.apply({ error: err instanceof Error ? err.message : "Could not get TAP response" });
+      s.apply({ error: err instanceof Error ? err.message : "Could not get Verify response" });
     } finally {
       s.apply({ isSending: false });
     }
@@ -255,7 +255,7 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
       }),
     });
     const payload = await response.json();
-    if (!response.ok) throw new Error(errorMessageFromBody(payload, "Could not get TAP response"));
+    if (!response.ok) throw new Error(errorMessageFromBody(payload, "Could not get Verify response"));
     const content = String(payload.message || "").trim() || "No reply";
     const parsed = parseTapXaiCanvasTurn(content);
     s.handlePowInterruption(payload.interruption ?? null);
@@ -386,7 +386,7 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
         topicTitle: topic?.title,
         conversationLanguage: s.conversationLanguage,
       });
-      if (!ok) throw new Error(errorMessageFromBody(payload, "Could not start TAP session"));
+      if (!ok) throw new Error(errorMessageFromBody(payload, "Could not start Verify session"));
       if (payload.tapSessionId) {
         s.tapSessionIdRef.current = String(payload.tapSessionId);
         s.apply({ tapSessionId: String(payload.tapSessionId) });
@@ -437,7 +437,7 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
       stopLiveSpeechRecognition(s.speechBindings);
       s.apply({ isPracticeMode: false });
       s.isPracticeModeRef.current = false;
-      s.apply({ error: err instanceof Error ? err.message : "Could not start TAP session" });
+      s.apply({ error: err instanceof Error ? err.message : "Could not start Verify session" });
     } finally {
       s.apply({ isStartingSession: false });
     }
@@ -569,7 +569,7 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
         impure,
         practice,
       });
-      if (!ok) throw new Error(errorMessageFromBody(payload, "Could not save TAP session"));
+      if (!ok) throw new Error(errorMessageFromBody(payload, "Could not save Verify session"));
       releaseSessionLocalMemory(s.sessionId);
 
       if (practice) {
@@ -616,7 +616,7 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
       }
       s.router.push("/dashboard");
     } catch (err) {
-      s.apply({ error: err instanceof Error ? err.message : "Could not save TAP session" });
+      s.apply({ error: err instanceof Error ? err.message : "Could not save Verify session" });
       s.apply({ phase: "error" });
       s.isEndingRef.current = false;
     }

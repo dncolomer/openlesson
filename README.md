@@ -2,7 +2,7 @@
 
 **A Human Learning Harness — verify without a test.**
 
-Uncertain Systems is an open-source platform for knowledge acquisition and knowledge verification. Create a **Learning** or **Verification** workspace, then run Calibrate, Learn, Verify, or TAPBench headless. Agents integrate through two APIs — workspace management and headless proof-of-work — plus MCP.
+Uncertain Systems is an open-source platform for knowledge acquisition and knowledge verification. Create a **Learning** or **Verification** workspace, then run Calibrate, Learn, or Verify headless. Agents integrate through two APIs — workspace management and headless proof-of-work — plus MCP.
 
 Live at [uncertain.systems](https://uncertain.systems)
 
@@ -14,27 +14,27 @@ Uncertain Systems is built by [Uncertain Systems](https://x.com/uncertainsys). T
 
 Workspaces come in two durable kinds:
 
-- **Standard (map)** — blocks on a knowledge map, TAP / TAP Learning practice links, TAPBench agent sessions, and the full PoW → Snapshot loop.
-- **Verification Workspace** (stored as `knowledge_region`) — Goals / Verification Flows / Context / Knowledge / Settings. Flows collect proof of work from a question pool and a per-flow agent skill. Context is the same notes, files, and links tab. This kind does not mint TAP / TAP Learning / TAPBench knowledge links.
+- **Standard (map)** — blocks on a knowledge map, Calibrate / Learn / Verify practice links, and the full PoW → Snapshot loop.
+- **Verification Workspace** (stored as `knowledge_region`) — Goals / Verification Flows / Context / Knowledge / Settings. Flows collect proof of work from a question pool and a per-flow agent skill. Context is the same notes, files, and links tab. This kind does not mint practice links.
 
 ## How It Works
 
 1. **Create a workspace** via workspace management (`POST /api/v3/workspaces` / MCP `create_workspace`) — Learning or Verification — or in the product UI (`/workspace/new`).
-2. **Run a flow headless** — `start_session` (calibrate | learn | verify | tapbench) → `upload_proof_of_work` → `end_session`. The server prepares the answers-model tree, infers the path, and enforces the clock.
+2. **Run a flow headless** — `start_session` (calibrate | learn | verify) → `upload_proof_of_work` → `end_session`. The server prepares the answers-model tree, infers the path, and enforces the clock.
 3. **Repeat** — more proof of work improves the inferred path. Regenerate the workspace `skill.md` as context grows.
 
-Agents authorize with a Bearer key (ChatGPT, Claude, or any MCP client) and use only these two APIs. Snapshot, Stash, and TAPBench-as-a-separate-API are not public agent surfaces.
+Agents authorize with a Bearer key (ChatGPT, Claude, or any MCP client) and use only these two APIs. Snapshot and Stash are not public agent surfaces.
 
 ## Key Features
 
 - **Verification workspaces** — assessable blocks, workspace goals, and continuous proof of work
 - **Verification Workspace** — Goals / Verification Flows / Context / Knowledge / Settings; flow-scoped proof of work; custom knowledge regions and Data Studio. Does not mint knowledge links.
-- **Headless proof-of-work** — `start_session` → `upload_proof_of_work` → `end_session` for Calibrate, Learn, Verify, and TAPBench (catalogs 4 / 8 / 16, session clock)
+- **Headless proof-of-work** — `start_session` → `upload_proof_of_work` → `end_session` for Calibrate, Learn, and Verify (catalogs 4 / 8 / 16, session clock)
 - **Public agent APIs + MCP** — workspace management (`/api/v3/workspaces`) and headless proof-of-work (`/api/v3/pow`) with JSON-RPC at `/api/mcp` (Bearer or OAuth)
-- **Think Aloud Protocol (TAP) and TAP Learning** — practice sessions on standard workspaces (knowledge-link mint)
+- **Calibrate, Learn, and Verify** — practice sessions on standard workspaces (knowledge-link mint)
 - **Knowledge map** — React Flow block graph, simulation, DAGs, learner mode
 - **Muse EEG and face tracking** — optional biosignals on session proof of work
-- **unsys** — practice dialogue in TAP Learning session and workspace chat
+- **unsys** — practice dialogue in Learn sessions and workspace chat
 
 ## Tech Stack
 
@@ -116,18 +116,17 @@ The app will be available at `http://localhost:3000`.
 
 ```
 ├── app/                  # Next.js App Router pages & API routes
-│   ├── api/              # REST/MCP routes (workspaces, TAP/TAP Learning, PoW/Snapshot/Stash, admin)
+│   ├── api/              # REST/MCP routes (workspaces, Calibrate/Learn/Verify, PoW/Snapshot/Stash, admin)
 │   ├── workspace/        # Workspace views; create at /workspace/new
-│   ├── session/          # TAP Learning tutoring session pages
-│   ├── tap/              # Think Aloud Protocol sessions
-│   ├── tapbench/         # TAPBench agent sessions
+│   ├── session/          # Learn tutoring session pages
+│   ├── tap/              # Legacy Calibrate/Verify session redirects
 │   ├── dashboard/        # User dashboard & API key management
 │   └── docs/             # Interactive Proof-of-Work API reference
 ├── components/           # React components
-│   ├── SessionView.tsx   # TAP Learning session UI
+│   ├── SessionView.tsx   # Learn session UI
 │   ├── WorkspaceView.tsx # Workspace shell (map vs Verification Workspace)
 │   └── thought-ui/       # Shared dialogue / thought components
-├── lib/                  # Product runtime (PoW, TAP/TAP Learning, xAI, maps, billing)
+├── lib/                  # Product runtime (PoW, Calibrate/Learn/Verify, xAI, maps, billing)
 │   ├── pow-api/          # PoW / Snapshot / Stash / MCP
 │   ├── xai-client.ts     # xAI API client
 │   └── workspace-kind.ts # standard vs knowledge_region
@@ -140,15 +139,15 @@ The app will be available at `http://localhost:3000`.
 └── public/               # Static assets; skill.md for standard-workspace agent integrations
 ```
 
-`utilities/` vs `scripts/`: new operator tools (think-aloud import, TAPBench helpers) go in `utilities/<name>/`. `scripts/` is ops automation (DB, CI, seeds). Product code stays in `app/`, `components/`, and `lib/`.
+`utilities/` vs `scripts/`: new operator tools (think-aloud import) go in `utilities/<name>/`. `scripts/` is ops automation (DB, CI, seeds). Product code stays in `app/`, `components/`, and `lib/`.
 
 ## Operator utilities
 
-These are **not** TAP/TAP Learning/MCP features. Catalog and conventions: [`utilities/README.md`](utilities/README.md).
+These are **not** Calibrate/Learn/Verify/MCP features. Catalog and conventions: [`utilities/README.md`](utilities/README.md).
 
-### Import think-aloud PoW (TAP Learning Explore Solo)
+### Import think-aloud PoW (Learn Explore Solo)
 
-Turns a think-aloud video or audio file into TAP Learning Explore Solo proof of work. Persist is the default; `--dry-run` prints the event list.
+Turns a think-aloud video or audio file into Learn Explore Solo proof of work. Persist is the default; `--dry-run` prints the event list.
 
 ```bash
 npm run import:think-aloud-pow -- --media recording.mp4 --workspace <workspace-id>
@@ -162,9 +161,9 @@ Requires `XAI_API_KEY` (STT + System 2 inference). Persist also needs Supabase s
 Uncertain Systems exposes **two** public agent APIs, with MCP parity at `POST /api/mcp`:
 
 - **Workspace management** (`/api/v3/workspaces`, `/api/v3/account`) — create and edit Learning and Verification workspaces, the map, workspace settings, and account settings.
-- **Headless proof-of-work** (`/api/v3/pow`) — `start_session` (calibrate | learn | verify | tapbench) → `upload_proof_of_work` → `end_session`. TAPBench is this API.
+- **Headless proof-of-work** (`/api/v3/pow`) — `start_session` (calibrate | learn | verify) → `upload_proof_of_work` → `end_session`.
 
-Snapshot, Stash, and TAPBench-as-a-separate-API are product-UI routes, not public agent families. Generate an API key from the dashboard (`/dashboard`).
+Snapshot and Stash are product-UI routes, not public agent families. Generate an API key from the dashboard (`/dashboard`).
 
 See [`public/skill.md`](public/skill.md) and [`docs/PROOF_OF_WORK_API.md`](docs/PROOF_OF_WORK_API.md). Interactive reference: [`/docs/proof-of-work-api`](/docs/proof-of-work-api). Download a **workspace-scoped** skill.md from Settings → Integration.
 

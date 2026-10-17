@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { callXaiJSON, DEFAULT_MODEL, userMessage } from "@/lib/xai-client";
-import { uploadFileToXAI } from "@/lib/xai-files";
+import { uploadOrgScopedXaiFile } from "@/lib/organization/org-xai-files";
 import { persistSkillGridPositions, skillGridNodesFromRefs } from "@/lib/skill-grid-positions";
 import {
   fallbackWorkspaceGoal,
@@ -158,7 +158,13 @@ export async function createVerificationWorkspaceFromPrompt(
   const uploadedFiles: UploadedPlanFile[] = [];
   for (const file of files) {
     try {
-      const xaiFile = await uploadFileToXAI(file.name, file.mime_type, file.data);
+      const xaiFile = await uploadOrgScopedXaiFile(file.name, file.mime_type, file.data, {
+        organizationId: auth.organization_id,
+        collectionFields: {
+          workspace_id: workspace.id,
+          user_id: ownerUserId,
+        },
+      });
       const { data: fileRecord, error: fileError } = await supabase
         .from("workspace_files")
         .insert({

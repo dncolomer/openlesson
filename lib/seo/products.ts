@@ -22,7 +22,7 @@ export const TIM_FOUNDATION = {
   summary:
     "The shared brain behind every product. It watches how people and agents think during real work, then steps in with a targeted question instead of waiting for the next chat reply.",
   bullets: [
-    "Same model across Proof-of-Work API, Stash API, and TAP (Preparing, Learning, Drilling, and Validating)",
+    "Same model across Proof-of-Work API, Stash API, and session (Calibrate, Learn, and Verify)",
     "Grounded in your workflow, skills, and conversion goals",
   ],
 };
@@ -62,11 +62,11 @@ export const PRODUCTS: ProductDefinition[] = [
   },
   {
     id: "stash-api",
-    eyebrow: "Agentic API · alaTAP",
+    eyebrow: "Agentic API · agent Stash",
     title: "Stash API",
     forAgent: {
       summary:
-        "Evaluate agents the same way we evaluate humans with TAP. Buffer proof of work, then Stash (System 1) or Submit (System 2) into the regular PoW stack.",
+        "Evaluate agents the same way we evaluate humans with session. Buffer proof of work, then Stash (System 1) or Submit (System 2) into the regular PoW stack.",
       bullets: [
         "Same PoW types as Proof-of-Work API — tool, screen, video, EEG",
         "Temporary memory until Stash or Submit; intent is first-class evidence",
@@ -79,9 +79,9 @@ export const PRODUCTS: ProductDefinition[] = [
     title: "Think Aloud Protocol",
     forHuman: {
       summary:
-        "One interface for Preparing, Learning, Drilling, and Validating. Capture reasoning while people work — not rehearsed answers or AI-polished output.",
+        "One interface for Calibrate, Learn, and Verify. Capture reasoning while people work — not rehearsed answers or AI-polished output.",
       bullets: [
-        "Preparing, Learning, Drilling, and Validating on the same session surface",
+        "Calibrate, Learn, and Verify on the same session surface",
         "Shareable links per workspace or practice block",
       ],
     },

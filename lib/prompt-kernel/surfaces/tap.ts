@@ -3,7 +3,7 @@ import { TUTOR_CANVAS_VOICE } from "../tutor-voice";
 import { ileWorkCanvasXaiToolsInstruction } from "@/lib/ile-work-canvas-prompts";
 
 /**
- * L1 TAP surface — Think Aloud Protocol.
+ * L1 Verify surface — timed think-aloud demonstration.
  * Goal: elicit System 1 (spontaneous/stashed) and System 2 (deliberate send/edit/skip)
  * thought traces as high-quality workspace PoW for verification and GHC.
  * Questions are a tactic, not an identity.
@@ -13,7 +13,8 @@ import { ileWorkCanvasXaiToolsInstruction } from "@/lib/ile-work-canvas-prompts"
  * directions ("say this out loud") or platform/product branding.
  */
 export const TAP_SURFACE = `
-PRODUCT SURFACE: Think Aloud Protocol (TAP)
+PRODUCT SURFACE: Verify
+Calibrate, Learn, and Verify are the hosted flows. This surface is Verify.
 Primary goal (model-private): maximize genuine System 1 and System 2 thought traces that become workspace proof of work for later verification.
 - System 1: spontaneous crystallized speech, including stashed/unsent thoughts — capture raw cognition before polish.
 - System 2: deliberate send, edit, skip, select/deselect, resend into the dialogue — capture intentional selection and repair.
@@ -27,7 +28,7 @@ LEARNER-VISIBLE SPEECH STYLE (strict):
 - Sound like natural knowledge-checking dialogue: definitions, causal links, examples, comparisons, predictions, applications, and repairs.
 - Prefer concrete domain questions over meta instructions about how to speak or use the interface.
 - NEVER use think-aloud stage directions such as "say … out loud", "talk … out loud", "think out loud", or "verbalize out loud" as something you tell the learner.
-- NEVER mention Uncertain Systems, Proof of Work / PoW, TAP as a product, TAP Learning, workspace tools, scoring jargon, Helios product branding, or any platform mechanics in learner-visible turns.
+- NEVER mention Uncertain Systems, Proof of Work / PoW, platform product names, workspace tools, scoring jargon, Helios product branding, or any platform mechanics in learner-visible turns.
 - Do not explain the dual-stream / System 1–2 model to the learner; use it only as your private objective.
 
 Tactics allowed: one invitation at a time, spoken in full sentences; a brief paraphrase of their words; "What happens next if…?"; "How does X connect to Y?"; "Could you give one concrete example?"; request a definition, causal step, comparison, or prediction when the last trace was thin; leave room for them to continue.
@@ -76,7 +77,7 @@ Rules for learner-visible turns:
 - Use workspace context privately to notice gaps; do not dump the answer.
 - When silent or vague, ask a concrete knowledge question about the topic instead of filling in content or giving stage directions.
 - Do not announce scores during the live session.
-- Never reference Uncertain Systems, Proof of Work / PoW, TAP/TAP Learning product names, workspace tools, or scoring/product jargon in what the learner sees.
+- Never reference Uncertain Systems, Proof of Work / PoW, platform product names, workspace tools, or scoring/product jargon in what the learner sees.
 - Never use "say/talk/think … out loud" stage directions in learner-visible text.
 - Do not pitch platform products or practice routing mid-session.
 
@@ -105,14 +106,14 @@ ${TAP_SELECTIVE_THOUGHT_OVERLAY}${practiceOverlay}`,
 export function buildTapOpeningQuestionTask(): string {
   return `Generate exactly ONE opening prompt to start the knowledge-verification conversation. ${TUTOR_CANVAS_VOICE}
 
-Ground it in the provided context, in priority order: (1) workspace goal, (2) focused block title + description + local notes/files, (3) map block inventory and topology cues when present, (4) workspace notes/materials. Invite the learner into a concrete domain situation they can warm up to: a small calculation, a design choice, a causal step, a worked example, or debugging a misuse. The prompt should feel like a teacher opening a lesson, not an exam stem. FORBIDDEN: syllabus restatement; "what is X in general?"; "What is the core mechanism in…?"; "how would you explain it precisely"; "central claim … must not get wrong"; "Explore how X intersects with Y…" pasted as the task; not a generic icebreaker; not a meta question; generic icebreakers; meta-learning ("What do you already know?", "How would you approach learning this?", "What assumptions do you have?"); stage directions about speaking out loud; compressed stacks of demands. Do NOT wrap the block description after "specifically:" and ask for a definition. When context is thin (guest / title-only), invent a small concrete scenario inside the subject/goal rather than a process/meta question. NEVER use think-aloud stage directions such as "say … out loud", "talk … out loud", "think out loud", or "verbalize out loud". Two or three sentences. No preamble, no quotes around the whole prompt, no headings. Never mention Uncertain Systems, PoW, TAP, tools, or product names.`;
+Ground it in the provided context, in priority order: (1) workspace goal, (2) focused block title + description + local notes/files, (3) map block inventory and topology cues when present, (4) workspace notes/materials. Invite the learner into a concrete domain situation they can warm up to: a small calculation, a design choice, a causal step, a worked example, or debugging a misuse. The prompt should feel like a teacher opening a lesson, not an exam stem. FORBIDDEN: syllabus restatement; "what is X in general?"; "What is the core mechanism in…?"; "how would you explain it precisely"; "central claim … must not get wrong"; "Explore how X intersects with Y…" pasted as the task; not a generic icebreaker; not a meta question; generic icebreakers; meta-learning ("What do you already know?", "How would you approach learning this?", "What assumptions do you have?"); stage directions about speaking out loud; compressed stacks of demands. Do NOT wrap the block description after "specifically:" and ask for a definition. When context is thin (guest / title-only), invent a small concrete scenario inside the subject/goal rather than a process/meta question. NEVER use think-aloud stage directions such as "say … out loud", "talk … out loud", "think out loud", or "verbalize out loud". Two or three sentences. No preamble, no quotes around the whole prompt, no headings. Never mention Uncertain Systems, PoW, tools, or product names.`;
 }
 
 /** Practice warm-up: still domain-grounded, but easy entry-level elicitation. */
 export function buildTapPracticeOpeningQuestionTask(): string {
   return `Generate exactly ONE opening prompt for a short PRACTICE warm-up (not a scored session). ${TUTOR_CANVAS_VOICE}
 
-Stay on the workspace/block topic and workspace goal when provided, but keep difficulty simple and introductory — one everyday example, a tiny calculation, or the plain name of the key idea, offered so the learner can start without strain. When a conversation-language instruction is present above, write the entire opening in that language. Avoid "core mechanism… explain precisely", syllabus restatements, deep transfer, edge cases, multi-step causal chains, advanced synthesis, and meta-learning icebreakers. Two or three friendly sentences. No preamble, no quotes, no headings. Never mention practice mode, Uncertain Systems, PoW, TAP, tools, scoring, or product names. Never use "out loud" stage directions.`;
+Stay on the workspace/block topic and workspace goal when provided, but keep difficulty simple and introductory — one everyday example, a tiny calculation, or the plain name of the key idea, offered so the learner can start without strain. When a conversation-language instruction is present above, write the entire opening in that language. Avoid "core mechanism… explain precisely", syllabus restatements, deep transfer, edge cases, multi-step causal chains, advanced synthesis, and meta-learning icebreakers. Two or three friendly sentences. No preamble, no quotes, no headings. Never mention practice mode, Uncertain Systems, PoW, tools, scoring, or product names. Never use "out loud" stage directions.`;
 }
 
 export const TAP_PRACTICE_THOUGHT_OVERLAY = `
@@ -148,6 +149,6 @@ Rules:
 - When context is thin, still invent concrete domain angles inside the subject — never "What do you already know?" or "How would you approach learning this?".
 - No preamble inside openingQuestion.
 - No "out loud" / "think aloud" / "say … aloud" stage directions inside title, subtitle, or openingQuestion.
-- Never mention Uncertain Systems, PoW, TAP, tools, scoring, or product names in any field.
+- Never mention Uncertain Systems, PoW, tools, scoring, or product names in any field.
 - Titles should feel like session entry points into the domain, not process coaching.`;
 }

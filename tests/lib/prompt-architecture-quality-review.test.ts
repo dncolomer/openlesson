@@ -117,7 +117,7 @@ describe("prompt architecture: TAP call path (shipped builders)", () => {
       workspaceBlock: "Workspace: Linear algebra",
     });
     expect(facilitator.indexOf(WORKSPACE_ONTOLOGY_COMPACT.slice(0, 30))).toBeLessThan(
-      facilitator.indexOf("PRODUCT SURFACE: Think Aloud Protocol"),
+      facilitator.indexOf("PRODUCT SURFACE: Verify"),
     );
     expect(facilitator).toContain(TAP_SURFACE.slice(0, 50));
     expect(facilitator).toMatch(/System 1/);
@@ -179,7 +179,7 @@ describe("prompt architecture: TAP call path (shipped builders)", () => {
     const runtime = buildTapScoreInstructions(sampleBrief, "curious", 12);
     expect(runtime).toContain("Linear algebra fundamentals");
     expect(runtime).toContain("Matrix multiplication");
-    expect(runtime).toMatch(/PRODUCT SURFACE: Think Aloud Protocol|System 1/);
+    expect(runtime).toMatch(/PRODUCT SURFACE: Verify|System 1/);
   });
 
   it("TAP chat route wires selective thought system prompt", () => {
@@ -196,18 +196,18 @@ describe("prompt architecture: TAP Learning call path (shipped builders + regist
   it("Helios chat composes compact ontology + ILE_SURFACE with chapter optimize/augment", () => {
     const chat = buildIleHeliosChatSystemPrompt();
     expect(chat.indexOf(WORKSPACE_ONTOLOGY_COMPACT.slice(0, 30))).toBeLessThan(
-      chat.indexOf("PRODUCT SURFACE: TAP"),
+      chat.indexOf("PRODUCT SURFACE: Learn"),
     );
     expect(chat).not.toContain("PRODUCT SURFACE: TAP Learning");
     expect(chat).toContain(ILE_SURFACE.slice(0, 40));
     expect(chat).toMatch(/Optimize|Augment|current chapter|Mark as Done/i);
-    expect(chat).toMatch(/NOT a TAP dual-stream|not running a TAP dual-stream/i);
+    expect(chat).toMatch(/NOT a dual-stream|not running a dual-stream/i);
     expect(chat).toMatch(/Canvas|Notebook/);
   });
 
   it("welcome uses ILE_SURFACE without full ontology", () => {
     const welcome = buildIleWelcomeSystemPrompt();
-    expect(welcome).toContain("PRODUCT SURFACE: TAP");
+    expect(welcome).toContain("PRODUCT SURFACE: Learn");
     expect(welcome).not.toContain("PRODUCT SURFACE: TAP Learning");
     expect(welcome).not.toContain("TEMPORAL PROOF OF WORK");
   });
@@ -255,7 +255,7 @@ describe("prompt architecture: TAP Learning call path (shipped builders + regist
 
 describe("prompt architecture: domain exercise generation", () => {
   it("author system prompt bans weak openers and out-loud; surfaces differ by audience", () => {
-    for (const surface of ["tapbench", "tap_exercise", "ile_project"] as const) {
+    for (const surface of ["tap_exercise", "ile_project"] as const) {
       const sys = buildDomainExerciseAuthorSystemPrompt(surface);
       expect(sys).toMatch(/Exercise:/);
       expect(sys).toMatch(/Do NOT ask.*think aloud|out loud/i);

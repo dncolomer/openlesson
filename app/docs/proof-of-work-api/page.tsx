@@ -56,7 +56,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
 }`,
     notes: [
       "Same core as /workspace/new.",
-      "Then run Calibrate, Learn, Verify, or TAPBench via start_session.",
+      "Then run Calibrate, Learn, or Verify via start_session.",
     ],
   },
   {
@@ -65,13 +65,13 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     path: "/api/v3/pow/workspaces/{workspace_id}/sessions",
     scope: "workspaces:write",
     summary:
-      "Start a headless Calibrate, Learn, Verify, or TAPBench session. Prepares the answers-model tree and starts the clock. MCP: start_session.",
+      "Start a headless Calibrate, Learn, or Verify session. Prepares the answers-model tree and starts the clock. MCP: start_session.",
     status: "201 Created",
     pathParams: [
       { name: "workspace_id", type: "uuid", required: true, description: "Workspace ID." },
     ],
     requestBody: [
-      { name: "flow_kind", type: "string", required: true, description: "calibrate | learn | verify | tapbench" },
+      { name: "flow_kind", type: "string", required: true, description: "calibrate | learn | verify" },
       { name: "catalog_size", type: "number", description: "4 | 8 | 16" },
       { name: "duration_minutes", type: "integer", description: "1–120; default 15." },
       { name: "block_id", type: "uuid", description: "Optional map block to focus." },
@@ -89,7 +89,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       { name: "answers_model", type: "object", description: "Prepared tree (catalog_size, focus, branch_count)." },
       { name: "status", type: "string", description: "in_progress | ended | expired" },
     ],
-    notes: ["TAPBench is flow_kind=tapbench on this same API."],
+    notes: ["flow_kind is calibrate, learn, or verify."],
   },
   {
     id: "upload-proof-of-work",
@@ -416,8 +416,8 @@ export default function AgenticV2DocsPage() {
           <p className="mt-4 max-w-3xl text-sm leading-relaxed text-neutral-400 sm:text-base">
             Two public agent APIs: workspace management (<code className="text-neutral-300">/api/v3/workspaces</code>) and
             headless proof-of-work (<code className="text-neutral-300">/api/v3/pow</code>). Create Learning or Verification
-            workspaces, then start, run, and end Calibrate, Learn, Verify, or TAPBench sessions — one TAP for Preparing, Learning, Drilling, and Validating, run headless. Snapshot, Stash, and
-            TAPBench-as-a-separate-API are product-UI routes. Bearer endpoints require active{" "}
+            workspaces, then start, run, and end Calibrate, Learn, and Verify sessions headless. Snapshot and Stash are
+            product-UI routes. Bearer endpoints require active{" "}
             <code className="text-neutral-300">api_metered</code>.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
@@ -508,8 +508,8 @@ Content-Type: application/json`}</code>
             fields={[
               { name: "workspaces:read", type: "scope", description: "List workspaces, map, settings, sessions, and flow embeddings; generate integration skills." },
               { name: "workspaces:write", type: "scope", description: "Create and edit workspaces; start, upload, and end headless sessions." },
-              { name: "tap:read", type: "scope", description: "Read TAP-related workspace access (headless sessions use workspaces:read)." },
-              { name: "tap:write", type: "scope", description: "Write TAP-related workspace access (headless TAPBench uses workspaces:write)." },
+              { name: "tap:read", type: "scope", description: "Read session-related workspace access (headless sessions use workspaces:read)." },
+              { name: "tap:write", type: "scope", description: "Write session-related workspace access (headless sessions use workspaces:write)." },
               { name: "org:read", type: "scope", description: "Reserved for org admin keys (future org read endpoints)." },
               { name: "org:write", type: "scope", description: "Create guest users and issue gsk_ keys." },
               { name: "*", type: "scope", description: "All scopes. Org admins only when assigning to sk_ keys." },
@@ -549,7 +549,7 @@ Content-Type: application/json`}</code>
         </div>
 
         <section className={`${sectionClass} mt-6`}>
-          <h2 className="text-lg font-medium text-white">TAP session completion (learner-facing)</h2>
+          <h2 className="text-lg font-medium text-white">Session completion (learner-facing)</h2>
           <p className="mt-2 text-sm text-neutral-400">
             Learners open <code className="text-neutral-300">private_url</code> without an API key. Completion uses web
             APIs (not Proof-of-Work API):

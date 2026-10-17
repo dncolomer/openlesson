@@ -57,12 +57,9 @@ describe("UI monochrome chrome (white outline aesthetic)", () => {
     expect(existsSync(join(ROOT, "components/MobileProbesTab.tsx"))).toBe(false);
   });
 
-  it("TAPBench landing CTAs are white/black monochrome; guest links panel is absent", () => {
+  it("TAPBench landing and guest links panel are absent", () => {
     expect(existsSync(join(ROOT, "components/WorkspaceGuestLinksPanel.tsx"))).toBe(false);
-
-    const landing = read("components/TapbenchLanding.tsx");
-    expect(landing).toMatch(/bg-white|text-white/);
-    expect(landing).not.toMatch(/bg-cyan-|bg-blue-/);
+    expect(existsSync(join(ROOT, "components/TapbenchLanding.tsx"))).toBe(false);
   });
 
   it("LWM generate / score chrome stays neutral-white outline", () => {

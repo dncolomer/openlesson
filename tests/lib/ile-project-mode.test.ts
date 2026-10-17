@@ -294,7 +294,7 @@ describe("structural Project Mode wiring (static source checks)", () => {
     expect(guest).toContain("sessionMode");
     expect(guest).toContain("SessionView");
 
-    const page = read("app/ile/session/[token]/page.tsx");
+    const page = read("app/learn/session/[token]/page.tsx");
     expect(page).toContain("sessionMode");
   });
 

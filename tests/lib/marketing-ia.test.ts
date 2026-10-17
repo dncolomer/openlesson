@@ -82,7 +82,7 @@ function expectNoDroppedLeadOrCostume(text: string) {
 }
 
 describe("landing: hard-domain learning experiences with product layers", () => {
-  it("ships the new hero lead and keeps harness / verification / mapping as layers, TAPBench in catalog", () => {
+  it("ships the new hero lead and keeps harness / verification as layers", () => {
     const landing = read("app/page.tsx");
     const platform = read("lib/marketing/platform.ts");
     const corpus = `${landing}\n${platform}`;
@@ -106,49 +106,23 @@ describe("landing: hard-domain learning experiences with product layers", () => 
     expect(PLATFORM_PRODUCTS.verification.name).toBe("Knowledge Verification");
     expect(PLATFORM_PRODUCTS.harness.image).toBe("/lp-boxes/harness-books-blueprint.jpg");
     expect(PLATFORM_PRODUCTS.verification.image).toBe("/lp-boxes/verification-bottles-blueprint.jpg");
-    expect(PLATFORM_PRODUCTS.tapbench.image).toBe("/lp-boxes/tapbench-maps-blueprint.jpg");
-    expect(PLATFORM_PRODUCTS.tapbench.href).toBe("/tapbench");
-    expect(PLATFORM_PRODUCTS.tapbench.name).toBe("TAPBench");
-    expectExplorationFrame(PLATFORM_PRODUCTS.tapbench.body);
-    expectNoDroppedLeadOrCostume(PLATFORM_PRODUCTS.tapbench.body);
+    expect("tapbench" in PLATFORM_PRODUCTS).toBe(false);
     expect(existsSync(join(ROOT, "public/lp-boxes/harness-books-blueprint.jpg"))).toBe(true);
     expect(existsSync(join(ROOT, "public/lp-boxes/verification-bottles-blueprint.jpg"))).toBe(true);
-    expect(existsSync(join(ROOT, "public/lp-boxes/tapbench-maps-blueprint.jpg"))).toBe(true);
     expect(landing).toContain("grayscale");
   });
 
-  it("frames TAPBench as agents exploring knowledge like a physical place", () => {
-    const landing = read("components/TapbenchLanding.tsx");
-    const intro = read("components/TapbenchResultsIntro.tsx");
-    const experiment = read("components/TapbenchExperimentTutorial.tsx");
-    const heroStart = landing.indexOf("data-tapbench-landing-hero");
-    const heroEnd = landing.indexOf("data-tapbench-tabs");
-    expect(heroStart).toBeGreaterThan(-1);
-    expect(heroEnd).toBeGreaterThan(heroStart);
-    const hero = landing.slice(heroStart, heroEnd);
-    const card = PLATFORM_PRODUCTS.tapbench.body;
-
-    expectExplorationFrame(hero);
-    expectExplorationFrame(intro);
-    expectExplorationFrame(card);
-    expectExplorationFrame(`${hero}\n${intro}\n${card}`);
-    expectNoDroppedLeadOrCostume(hero);
-    expectNoDroppedLeadOrCostume(intro);
-    expectNoDroppedLeadOrCostume(experiment);
-    expectNoDroppedLeadOrCostume(card);
-
-    expect(experiment).toContain("Pick a task");
-    expect(experiment).toContain("Instruct the agent");
-    expect(experiment).toContain("Think aloud, several times");
-    expect(experiment).toContain("Snapshot the runs");
-    expect(experiment).toContain("Build a region");
-    expect(PLATFORM_PRODUCTS.tapbench.name).toBe("TAPBench");
-    expect(PLATFORM_PRODUCTS.tapbench.href).toBe("/tapbench");
-    expect(PLATFORM_PRODUCTS.tapbench.image).toBe("/lp-boxes/tapbench-maps-blueprint.jpg");
-    expect(PLATFORM_LAYER_LIST[2].name).toBe("Custom Knowledge Mapping");
-    expect(PLATFORM_LAYER_LIST[2].body).toBe(
-      "We use this tech to see where a target audience actually is. Knowledge, mapped.",
-    );
+  it("does not ship TAPBench as a product, landing page, or homepage layer", () => {
+    expect(existsSync(join(ROOT, "components/TapbenchLanding.tsx"))).toBe(false);
+    expect(existsSync(join(ROOT, "components/TapbenchResultsIntro.tsx"))).toBe(false);
+    expect(existsSync(join(ROOT, "components/TapbenchExperimentTutorial.tsx"))).toBe(false);
+    expect(existsSync(join(ROOT, "app/tapbench/page.tsx"))).toBe(false);
+    expect("tapbench" in PLATFORM_PRODUCTS).toBe(false);
+    expect(PLATFORM_LAYER_LIST).toHaveLength(2);
+    expect(PLATFORM_LAYER_LIST.map((p) => p.name)).toEqual([
+      "Learning Harness",
+      "Knowledge Verification",
+    ]);
   });
 
   it("keeps landing and Harness stills out of the TAP Learning aesthetics library", () => {
@@ -162,7 +136,6 @@ describe("landing: hard-domain learning experiences with product layers", () => 
 
     expect(PLATFORM_PRODUCTS.harness.image.startsWith("/aesthetics/")).toBe(false);
     expect(PLATFORM_PRODUCTS.verification.image.startsWith("/aesthetics/")).toBe(false);
-    expect(PLATFORM_PRODUCTS.tapbench.image.startsWith("/aesthetics/")).toBe(false);
     for (const point of HARNESS_PRODUCT_COPY.points) {
       expect(point.image.startsWith("/aesthetics/")).toBe(false);
       expect(existsSync(join(ROOT, "public", point.image.replace(/^\//, "")))).toBe(true);
@@ -196,15 +169,15 @@ describe("product pages: verification owns platform/approach/scale; harness owns
     expect(page).toContain("distance to knowledge");
     expect(page).toContain("learning world model");
     expect(page).toContain("TIM — Trace Interruption Model");
-    expect(page).toContain("Think Aloud Protocol (TAP)");
+    expect(page).toContain("Calibrate, Learn, and Verify");
     expect(page).not.toContain("TAP Learning");
-    expect(page).toContain("Preparing, Learning, Drilling, and Validating");
-    expect(page).toContain("data-landing-tapbench");
-    expect(page).toContain("data-landing-tapbench-copy");
-    expect(page).toContain("tapbenchHref");
-    expect(VERIFICATION_PRODUCT_COPY.tapbenchHref).toBe("/tapbench");
-    expect(VERIFICATION_SCALE_COPY.tapbenchHref).toBe("/tapbench");
-    expect(VERIFICATION_SCALE_COPY.tapbench).toMatch(/public benchmark/i);
+    expect(page).not.toMatch(/\bTAP\b/);
+    expect(page).not.toContain("data-landing-tapbench");
+    expect(page).not.toContain("data-landing-tapbench-copy");
+    expect(page).not.toContain("tapbenchHref");
+    expect(page).not.toContain("TAPBench");
+    expect("tapbenchHref" in VERIFICATION_PRODUCT_COPY).toBe(false);
+    expect("tapbenchHref" in VERIFICATION_SCALE_COPY).toBe(false);
     expect(page).toContain("/knowledgeg2.png");
     expect(page).toContain("/ranking_app.png");
     expect(page).toContain("data-landing-knowledge-visual");
@@ -440,7 +413,6 @@ describe("nav and footer hrefs resolve to shipped pages", () => {
   it("Community nav labels and Navbar match the current IA", () => {
     expect(COMMUNITY_LINKS.map((l) => l.label)).toEqual([
       "Community Events",
-      "TAPBench",
       "Kardashev Research",
     ]);
     const navbar = read("components/Navbar.tsx");

@@ -362,7 +362,7 @@ export function buildProofOfWorkSchemaInstructions(
 
 You are an Uncertain Systems proof-of-work architect. Produce a **formal proof-of-work specification** that tells integrators exactly how to submit tool usage into a **headless session**.
 
-Uncertain Systems public agent surface is two APIs: workspace management and headless proof-of-work. Integrators **start_session** (calibrate | learn | verify | tapbench), **upload_proof_of_work** into that session, then **end_session**. The server prepares the answers-model tree, infers the path (catalogs 4 / 8 / 16), enforces the clock, and persists a flow embedding. Snapshot, Stash, and TAPBench-as-a-separate-API are not public agent APIs.
+Uncertain Systems public agent surface is two APIs: workspace management and headless proof-of-work. Integrators **start_session** (calibrate | learn | verify), **upload_proof_of_work** into that session, then **end_session**. The server prepares the answers-model tree, infers the path (catalogs 4 / 8 / 16), enforces the clock, and persists a flow embedding. Snapshot and Stash are not public agent APIs.
 
 Integrators may use **REST** (Bearer API key: POST .../sessions, POST .../sessions/{session_id}/proof-of-work, POST .../sessions/{session_id}/end) or **MCP** (JSON-RPC tools start_session, upload_proof_of_work, end_session) with identical semantics. Document REST paths in contracts; the platform also attaches continuous_evaluation_mcp with those tool names after generation — your continuous_evaluation_summary must mention both surfaces.
 
@@ -395,7 +395,7 @@ Output rules:
    - answers_model: prepared tree (catalog_size, focus_id, branch_count)
    - sequence: inferred path from proof plus actions
    - embedding: flowcfg-v1-d96 after end_session
-   Do not document Snapshot, Stash, or a separate TAPBench API. TAPBench is start_session with flow_kind=tapbench.
+   Do not document Snapshot or Stash as public agent APIs.
 7. "collection_guidance" explains cadence: start_session → upload_proof_of_work (repeat until the clock expires) → end_session. More events during a live session improve the inferred path. When learning world model evidence appetite is provided above, bias collection_guidance and tool_submissions toward want_more types and de-emphasize saturated types.
 8. "continuous_evaluation_summary" must state clearly that:
    - This proof-of-work spec is derived from current workspace context and proof-of-work history

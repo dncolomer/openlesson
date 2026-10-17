@@ -20,11 +20,11 @@ export const MCP_PROOF_OF_WORK_SERVER_VERSION = "1.3.0";
 export const MCP_PROOF_OF_WORK_SERVER_INSTRUCTIONS = `Uncertain Systems public agent MCP — two APIs with REST parity:
 
 1. Workspace management — create and edit Learning and Verification workspaces, the map, workspace settings, and account settings. REST: /api/v3/workspaces and /api/v3/account.
-2. Headless proof-of-work — start, run, and end Calibrate, Learn, Verify, and TAPBench sessions. Submit proof of work; the server prepares the answers-model tree, infers the path, and enforces the session clock. REST: /api/v3/pow.
+2. Headless proof-of-work — start, run, and end Calibrate, Learn, and Verify sessions. Submit proof of work; the server prepares the answers-model tree, infers the path, and enforces the session clock. REST: /api/v3/pow.
 
 Authorize with Authorization: Bearer <api_key or OAuth token> on POST /api/mcp. ChatGPT, Claude, and other agents use these tools to run flows for the user.
 
-Snapshot (/api/v3/snapshot), Stash (/api/v3/stash), and TAPBench (/api/v3/tapbench) are not public agent APIs. TAPBench is start_session with flow_kind=tapbench on the headless proof-of-work API.
+Snapshot (/api/v3/snapshot) and Stash (/api/v3/stash) are not public agent APIs.
 
 Scopes: workspaces:read, workspaces:write, tap:read, tap:write. Teams tier (error code api_plan_required).`;
 

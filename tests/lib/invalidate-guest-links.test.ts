@@ -540,9 +540,9 @@ describe("static wiring: migration, APIs, UI", () => {
     const auth = read("lib/tap-score-session-auth.ts");
     expect(auth).toContain("isGuestLinkRevoked");
     expect(auth).toContain("TAP_LINK_REVOKED_MESSAGE");
-    const page = read("app/tap/session/[token]/page.tsx");
+    const page = read("components/guest-session/private-tap-session-page.tsx");
     expect(page).toContain('status === "revoked"');
-    expect(page).toContain("This TAP link has been revoked");
+    expect(page).toContain("This session link has been revoked");
   });
 
   it("TAP Learning access keeps revoked gate via isGuestLinkRevoked", () => {

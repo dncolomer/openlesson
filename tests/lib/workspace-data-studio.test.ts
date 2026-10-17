@@ -76,13 +76,12 @@ describe("workspace Data Studio surface", () => {
   });
 });
 
-describe("link parse includes TAPBench", () => {
-  it("parses /tapbench/{token}", () => {
+describe("link parse does not treat /tapbench as a live kind", () => {
+  it("does not classify /tapbench/{token} as a TAPBench session", () => {
     const p = parseStudioSessionLinkInput(
       "http://localhost:3000/tapbench/czgktLvZB3di3xXm0UeWGzWisnk32Qosjws1LDLPF3g",
     );
-    expect(p?.kind).toBe("tapbench");
-    expect(p?.token).toBe("czgktLvZB3di3xXm0UeWGzWisnk32Qosjws1LDLPF3g");
+    expect(p?.kind).not.toBe("tapbench" as never);
   });
 });
 

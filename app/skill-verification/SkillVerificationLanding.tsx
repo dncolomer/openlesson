@@ -348,10 +348,9 @@ export function SkillVerificationLanding() {
           </h2>
           <p className="mt-5 max-w-4xl">
             The same stack that powers Self-Service Skill Check and Self-Service Take-Home scales human
-            verification from recruitment campaigns to agency delivery. Hosted Think Aloud Protocol (TAP)
-            covers Preparing, Learning, Drilling, and Validating: TAP Validating sessions and multi-block
-            Learning journeys give you process signal traditional tests and polished portfolio uploads
-            cannot fake.
+            verification from recruitment campaigns to agency delivery. Hosted Calibrate, Learn, and Verify
+            sessions and multi-block Learn journeys give you process signal traditional tests and polished
+            portfolio uploads cannot fake.
           </p>
         </div>
       </section>

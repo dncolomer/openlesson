@@ -211,14 +211,24 @@ export function sourceLinkFromMetadata(
   return null;
 }
 
+/** Advertised guest session path for Calibrate, Learn, and Verify. */
+export function flowSessionPath(
+  kind: GuestLinkKind,
+  interactionKind?: string | null,
+): "/calibrate/session" | "/verify/session" | "/learn/session" {
+  if (kind === "ile") return "/learn/session";
+  if (interactionKind === "scout") return "/calibrate/session";
+  return "/verify/session";
+}
+
 export function buildGuestLinkUrl(
   baseUrl: string,
   kind: GuestLinkKind,
   token: string,
+  interactionKind?: string | null,
 ): string {
   const base = baseUrl.replace(/\/$/, "");
-  const path = kind === "tap" ? "tap" : "ile";
-  return `${base}/${path}/session/${token}`;
+  return `${base}${flowSessionPath(kind, interactionKind)}/${token}`;
 }
 
 /**
@@ -229,10 +239,11 @@ export function guestLinkUrlFromPublicToken(
   baseUrl: string,
   kind: GuestLinkKind,
   publicToken: string | null | undefined,
+  interactionKind?: string | null,
 ): string | null {
   const t = typeof publicToken === "string" ? publicToken.trim() : "";
   if (!t) return null;
-  return buildGuestLinkUrl(baseUrl, kind, t);
+  return buildGuestLinkUrl(baseUrl, kind, t, interactionKind);
 }
 
 export type GuestLinkTable = "workspace_tap_sessions" | "workspace_ile_links";

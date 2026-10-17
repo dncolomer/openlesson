@@ -16,7 +16,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
-import { uploadFileToXAI } from "@/lib/xai-files";
+import {
+  organizationIdFromSession,
+  uploadOrgScopedXaiFile,
+} from "@/lib/organization/org-xai-files";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -87,10 +90,17 @@ export async function POST(req: NextRequest) {
       return jsonError(403, "Forbidden");
     }
 
-    // Upload to xAI Files
     let xaiFileId: string;
     try {
-      const uploaded = await uploadFileToXAI(fileName, mimeType, base64);
+      const organizationId = await organizationIdFromSession(supabase, sessionId);
+      const uploaded = await uploadOrgScopedXaiFile(fileName, mimeType, base64, {
+        organizationId,
+        collectionFields: {
+          session_id: sessionId,
+          user_id: user.id,
+          kind,
+        },
+      });
       xaiFileId = uploaded.file_id;
     } catch (err) {
       console.error(`[session-files/upload] xAI upload failed for kind=${kind}:`, err);

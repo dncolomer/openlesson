@@ -21,12 +21,12 @@ export const VERIFICATION_PITCH_DECK: SolutionSlideDeck = {
       backgroundImage: PITCH_ASSETS.aesthetics.verification,
       cards: [
         {
-          label: "1 · Hosted TAP in the ATS",
+          label: "1 · Hosted session in the ATS",
           body: "At screening or final interview, send a shareable Think Aloud Protocol link scoped to a role skill block. Candidates talk through real work on a clock. Scores and gap reports land back in the applicant record.",
         },
         {
           label: "2 · Learning for senior depth",
-          body: "For staff and technical tracks, run the Learning use case instead of one-shot take-homes. Same interface for Preparing, Learning, Drilling, and Validating; deeper multi-step judgment, debugging, or design tradeoffs.",
+          body: "For staff and technical tracks, run the Learning use case instead of one-shot take-homes. Same interface for Calibrate, Learn, and Verify; deeper multi-step judgment, debugging, or design tradeoffs.",
         },
         {
           label: "3 · PoW API in their stack",
@@ -84,12 +84,12 @@ export const VERIFICATION_PITCH_DECK: SolutionSlideDeck = {
       backgroundImage: PITCH_ASSETS.aesthetics.products,
       cards: [
         {
-          label: "01 · TAP (Think Aloud Protocol)",
+          label: "01 · session (Think Aloud Protocol)",
           body: "Hosted process. Live, time-framed verification links. Ideal for high-volume screening and interview stages without building your own UX.",
         },
         {
           label: "02 · Learning",
-          body: "The Learning use case of TAP. Open-ended assignment and project-style depth for complex judgment, debugging, and design tradeoffs under coach.",
+          body: "The Learning use case of session. Open-ended assignment and project-style depth for complex judgment, debugging, and design tradeoffs under coach.",
         },
         {
           label: "03 · PoW API (Proof-of-Work)",
@@ -105,7 +105,7 @@ export const VERIFICATION_PITCH_DECK: SolutionSlideDeck = {
         "Replace thin take-home signals with verified reasoning. Score live think-aloud sessions or structured practice blocks before candidates reach final interviews.",
       backgroundImage: PITCH_ASSETS.aesthetics.useCase,
       bullets: [
-        "Shareable TAP links scoped to role-critical skill blocks",
+        "Shareable session links scoped to role-critical skill blocks",
         "Marker scores with rationale",
         "Compare candidates on the same workspace scenarios",
         "Surface cognitive skills and judgment moves multiple-choice cannot fake",
@@ -113,7 +113,7 @@ export const VERIFICATION_PITCH_DECK: SolutionSlideDeck = {
     },
     {
       layout: "statement",
-      kicker: "Use case · TAP-cha",
+      kicker: "Use case · human",
       title: "Prove a live human is behind the keyboard.",
       subtitle:
         "A short Think Aloud Protocol session confirms a real person.",
@@ -121,7 +121,7 @@ export const VERIFICATION_PITCH_DECK: SolutionSlideDeck = {
       ...labeledHighlights([
         [
           "Use case",
-          "TAP-cha: a short Think Aloud Protocol to prove a live human is behind the keyboard.",
+          "human: a short Think Aloud Protocol to prove a live human is behind the keyboard.",
         ],
         [
           "Signal that sticks",
@@ -167,11 +167,11 @@ export const VERIFICATION_PITCH_DECK: SolutionSlideDeck = {
       title: "Verify skills before hire or certify.",
       backgroundImage: PITCH_ASSETS.aesthetics.close,
       bullets: [
-        "Map TAP — Preparing, Learning, Drilling, and Validating — and Proof-of-Work API tiers to your HR or recruitment product",
-        "Pilot one gate: screening, TAP-cha, or promotion",
+        "Map session — Calibrate, Learn, and Verify — and Proof-of-Work API tiers to your HR or recruitment product",
+        "Pilot one gate: screening, human, or promotion",
         "Create a Workspace and score the first real scenario this week",
       ],
-      footnote: "uncertain.systems · Learning Verification · TAP · Proof-of-Work API",
+      footnote: "uncertain.systems · Learning Verification · session · Proof-of-Work API",
     },
   ],
 };

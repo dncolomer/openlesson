@@ -296,7 +296,7 @@ describe("TAP / TAP Learning / TAPBench consume the shared assembler", () => {
     expect(src).toContain('from "@/lib/prompt-workspace-context"');
 
     const authorUser = buildDomainExerciseAuthorUserPrompt({
-      surface: "tapbench",
+      surface: "tap_exercise",
       workspaceTitle: richFixture.workspaceTitle,
       rootTopic: richFixture.rootTopic,
       workspaceGoal: richFixture.workspaceGoal,
@@ -416,11 +416,11 @@ describe("prompt impact layers for UI", () => {
     const local = ctx.promptImpactLayers.find((l) => l.id === "local_context");
     expect(local?.present).toBe(true);
     for (const layer of ctx.promptImpactLayers) {
-      expect(layer.feeds, layer.id).toEqual(["TAP", "TAPBench"]);
+      expect(layer.feeds, layer.id).toEqual(["session", "exercise"]);
       expect(layer.summary, layer.id).not.toContain("TAP Learning");
     }
     const surfaces = ctx.promptImpactLayers.find((l) => l.id === "surfaces");
-    expect(surfaces?.summary).toContain("Preparing, Learning, Drilling, and Validating");
+    expect(surfaces?.summary).toContain("Calibrate, Learn, and Verify");
   });
 });
 

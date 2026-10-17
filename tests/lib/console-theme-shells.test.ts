@@ -5,7 +5,7 @@
  */
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -249,8 +249,6 @@ describe("console theme shells", () => {
       "app/pricing/success/page.tsx",
       "components/ScienceWhitepaperPage.tsx",
       "app/invite/[token]/page.tsx",
-      "components/TapbenchShell.tsx",
-      "app/tapbench/[token]/page.tsx",
     ]) {
       const src = read(rel);
       expect(src, rel).toMatch(/PublicConsoleWash|<ConsolePage|data-console-frame/);
@@ -264,18 +262,15 @@ describe("console theme shells", () => {
     expect(read("app/pricing/success/page.tsx")).toContain("pricing.allSet");
     expect(read("components/ScienceWhitepaperPage.tsx")).toContain("data-science-whitepaper");
     expect(read("components/marketing/MarketingChrome.tsx")).not.toContain("overflow-hidden");
-    expect(read("components/TapbenchShell.tsx")).not.toContain("overflow-hidden");
     for (const rel of [
+      "components/TapbenchShell.tsx",
       "components/TapbenchResultsTable.tsx",
       "components/TapbenchResultsIntro.tsx",
       "components/TapbenchExperimentTutorial.tsx",
       "components/TapbenchWorkspaceDetail.tsx",
       "components/TapbenchLanding.tsx",
     ]) {
-      const src = read(rel);
-      expect(src, rel).toContain("console-");
-      expect(src, rel).not.toMatch(/rounded-(sm|md|lg|xl)\b/);
-      expect(src, rel).not.toMatch(/bg-zinc-950\//);
+      expect(existsSync(join(ROOT, rel)), rel).toBe(false);
     }
   });
 

@@ -28,7 +28,7 @@ export interface TapChatMessage {
 }
 
 export const OPENING_MESSAGE_ID = "opening";
-export const THINK_ALOUD_PROTOCOL_LABEL = "Think Aloud Protocol";
+export const THINK_ALOUD_PROTOCOL_LABEL = "Verify";
 export const CHAIN_GAP_MS = 2600;
 
 /** Session length choices in minutes (every 5 from 5–60). */

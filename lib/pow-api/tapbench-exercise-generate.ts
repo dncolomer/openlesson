@@ -78,14 +78,14 @@ function surfaceLabel(surface: DomainExerciseSurface): string {
     case "ile_project":
       return "TAP Learning Explore Solo chapter exercise";
     default:
-      return "TAPBench agent evaluation";
+      return "TAP Learning Explore Solo chapter exercise";
   }
 }
 
 export function buildDomainExerciseAuthorUserPrompt(
   input: GenerateDomainExerciseInput,
 ): string {
-  const surface = input.surface || "tapbench";
+  const surface = input.surface || "tap_exercise";
   const ctx = assemblePromptWorkspaceContext({
     workspaceTitle: input.workspaceTitle,
     rootTopic: input.rootTopic,
@@ -166,7 +166,7 @@ export function buildDomainExerciseAuthorUserPrompt(
 export function buildTapbenchExerciseAuthorUserPrompt(
   input: GenerateDomainExerciseInput,
 ): string {
-  return buildDomainExerciseAuthorUserPrompt({ ...input, surface: "tapbench" });
+  return buildDomainExerciseAuthorUserPrompt({ ...input, surface: "tap_exercise" });
 }
 
 /**
@@ -175,7 +175,7 @@ export function buildTapbenchExerciseAuthorUserPrompt(
 export async function generateDomainExercise(
   input: GenerateDomainExerciseInput,
 ): Promise<{ exercise: string; source: "explicit" | "llm" }> {
-  const surface = input.surface || "tapbench";
+  const surface = input.surface || "tap_exercise";
   const explicit = (input.exerciseText || "").replace(/\s+/g, " ").trim();
   if (
     explicit &&
@@ -267,11 +267,11 @@ export async function generateDomainExercise(
   throw new Error("Failed to generate practice content");
 }
 
-/** TAPBench mint entry — same generator with agent surface. */
+/** TAP drill entry — same generator with tap_exercise surface. */
 export async function generateTapbenchExercise(
   input: GenerateDomainExerciseInput,
 ): Promise<{ exercise: string; source: "explicit" | "llm" }> {
-  return generateDomainExercise({ ...input, surface: input.surface || "tapbench" });
+  return generateDomainExercise({ ...input, surface: input.surface || "tap_exercise" });
 }
 
 /** Human TAP timed drill entry. */

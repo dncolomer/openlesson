@@ -8,7 +8,6 @@ import {
   HARNESS_PRICING_PATH,
   KNOWLEDGE_VERIFICATION_PATH,
   LEARNING_HARNESS_PATH,
-  TAPBENCH_PATH,
   VERIFICATION_PRICING_PATH,
 } from "@/lib/marketing/paths";
 import { HARNESS_PRODUCT_COPY } from "@/lib/marketing/harness-product";
@@ -69,7 +68,7 @@ export const PLATFORM_DELIVERY = {
 
 export const PLATFORM_LAYERS = {
   eyebrow: "INSIDE THE EXPERIENCE",
-  title: "Learning Harness, Knowledge Verification, Custom Knowledge Mapping.",
+  title: "Learning Harness, Knowledge Verification.",
 } as const;
 
 export const PLATFORM_PROOF = {
@@ -128,35 +127,17 @@ export const PLATFORM_PRODUCTS = {
     image: "/lp-boxes/verification-bottles-blueprint.jpg",
     imageAlt: "Blueprint sketch of laboratory bottles with blank plates and red seals",
   },
-  tapbench: {
-    eyebrow: "FOR SCIENCE",
-    name: "TAPBench",
-    title: "Knowledge Mapping",
-    body: "Agents explore knowledge the way a person explores a physical place. We run the benchmark to pick the setup that is best at that job.",
-    href: TAPBENCH_PATH,
-    cta: "Explore",
-    image: "/lp-boxes/tapbench-maps-blueprint.jpg",
-    imageAlt: "Blueprint sketch of topographic sheets, an amber route, a magnifier, and a compass",
-  },
 } as const;
 
-/** Full product catalog. TAPBench stays here and on /tapbench. */
+/** Full product catalog: Learning Harness and Knowledge Verification. */
 export const PLATFORM_PRODUCT_LIST = [
   PLATFORM_PRODUCTS.harness,
   PLATFORM_PRODUCTS.verification,
-  PLATFORM_PRODUCTS.tapbench,
 ] as const;
 
 export const PLATFORM_LAYER_LIST = [
   PLATFORM_PRODUCTS.harness,
   PLATFORM_PRODUCTS.verification,
-  {
-    ...PLATFORM_PRODUCTS.tapbench,
-    eyebrow: "MAPPING",
-    name: "Custom Knowledge Mapping",
-    title: "Custom Knowledge Mapping",
-    body: "We use this tech to see where a target audience actually is. Knowledge, mapped.",
-  },
 ] as const;
 
 /** Flattened homepage copy for contract tests that drive the shipped module. */

@@ -1,7 +1,7 @@
 /**
  * Headless proof-of-work sessions: start, ingest PoW, infer path on the
  * prepared answers-model tree, enforce the session clock, end.
- * Calibrate / Learn / Verify / TAPBench share this entry.
+ * Calibrate / Learn / Verify share this entry.
  */
 
 import { randomUUID } from "node:crypto";
@@ -31,7 +31,6 @@ import {
   TAP_LINK_MIN_MINUTES,
   normalizeTapLinkMinutes,
 } from "./tap-link-config";
-import { TAPBENCH_POW_SOURCE } from "./tapbench";
 import {
   listHeadlessSessionRecords,
   loadHeadlessSessionRecord,
@@ -39,13 +38,19 @@ import {
   saveHeadlessSessionRecord,
   setHeadlessSessionDurableBackendForTests,
 } from "./headless-session-store";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { AuthContext } from "./types";
+import {
+  uploadWorkspaceProofOfWork,
+  type UploadWorkspaceProofOfWorkWorkspace,
+} from "./upload-workspace-proof-of-work";
 
 export {
   setHeadlessSessionDurableBackendForTests,
 } from "./headless-session-store";
 export type { HeadlessSessionDurableBackend } from "./headless-session-store";
 
-export const HEADLESS_FLOW_KINDS = ["calibrate", "learn", "verify", "tapbench"] as const;
+export const HEADLESS_FLOW_KINDS = ["calibrate", "learn", "verify"] as const;
 export type HeadlessFlowKind = (typeof HEADLESS_FLOW_KINDS)[number];
 
 export const HEADLESS_SESSION_EXPIRED_CODE = "session_expired" as const;
@@ -70,7 +75,7 @@ export type HeadlessSessionRecord = {
   sequence: SessionMarkButtonId[];
   inferences: SessionPolicyInference[];
   proof: FlowPowRow[];
-  source: "agent" | "tapbench";
+  source: "agent";
   embedding: StoredFlowEmbedding | null;
 };
 
@@ -125,7 +130,6 @@ export function parseHeadlessFlowKind(value: unknown): HeadlessFlowKind | null {
 }
 
 export function flowKindForEmbedding(kind: HeadlessFlowKind): FlowKind {
-  if (kind === "tapbench") return "verify";
   return kind;
 }
 
@@ -177,6 +181,9 @@ export function presentHeadlessSession(session: HeadlessSessionRecord, atMs = no
     duration_ms: session.duration_ms,
     source: session.source,
     proof_count: session.proof.length,
+    proof_file_ids: session.proof
+      .map((row) => row.xai_file_id)
+      .filter((id): id is string => typeof id === "string" && id.length > 0),
     sequence: session.sequence,
     inferences: session.inferences,
     focus: presentFocus(session.model),
@@ -215,7 +222,7 @@ export async function startHeadlessSession(
 ): Promise<HeadlessSessionRecord> {
   const flowKind = parseHeadlessFlowKind(input.flowKind);
   if (!flowKind) {
-    throw new Error("flow_kind must be calibrate, learn, verify, or tapbench.");
+    throw new Error("flow_kind must be calibrate, learn, or verify.");
   }
   const chapterTitle = (input.chapterTitle || "").trim() || "Session";
   const chapterBrief = (input.chapterBrief || "").trim();
@@ -258,7 +265,7 @@ export async function startHeadlessSession(
     sequence: [],
     inferences: [],
     proof: [],
-    source: flowKind === "tapbench" ? "tapbench" : "agent",
+    source: "agent",
     embedding: null,
   };
   await saveHeadlessSessionRecord(record);
@@ -333,7 +340,6 @@ async function rejectIfClosed(session: HeadlessSessionRecord): Promise<void> {
         session_id: session.id,
         expires_at: new Date(session.expires_at_ms).toISOString(),
         remaining_ms: 0,
-        tapbench: session.flow_kind === "tapbench",
       },
     );
   }
@@ -342,6 +348,11 @@ async function rejectIfClosed(session: HeadlessSessionRecord): Promise<void> {
 export async function ingestHeadlessProofOfWork(input: {
   sessionId: string;
   events?: HeadlessProofEventInput[] | null;
+  persistFiles?: {
+    supabase: SupabaseClient;
+    auth: AuthContext;
+    workspace: UploadWorkspaceProofOfWorkWorkspace;
+  } | null;
 }): Promise<HeadlessSessionRecord> {
   const session = await getHeadlessSession(input.sessionId);
   if (!session) {
@@ -355,6 +366,40 @@ export async function ingestHeadlessProofOfWork(input: {
   }
 
   const rows = events.map((event, index) => asPowRow(event, index));
+  if (input.persistFiles) {
+    const { supabase, auth, workspace } = input.persistFiles;
+    for (const row of rows) {
+      const payload = {
+        type: row.type,
+        tool_name: row.tool_name,
+        tool_action: row.tool_action,
+        timestamp_ms: row.timestamp_ms,
+        payload: row.payload ?? null,
+        metadata: row.metadata ?? null,
+        flow_kind: session.flow_kind,
+        headless_session_id: session.id,
+      };
+      const uploaded = await uploadWorkspaceProofOfWork(supabase, auth, workspace, {
+        workspaceId: session.workspace_id,
+        type: row.type || "tool",
+        mime_type: "application/json",
+        data: Buffer.from(JSON.stringify(payload, null, 2), "utf8").toString("base64"),
+        block_id: session.block_id,
+        session_id: session.id,
+        file_name: `headless-${session.flow_kind}-${row.tool_action || "event"}-${row.timestamp_ms || Date.now()}.json`,
+        timestamp_ms: typeof row.timestamp_ms === "number" ? row.timestamp_ms : Date.now(),
+        tool_name: row.tool_name || "headless_session",
+        tool_action: row.tool_action || "event",
+        metadata: {
+          ...(row.metadata && typeof row.metadata === "object" ? row.metadata : {}),
+          flow_kind: session.flow_kind,
+          headless_session_id: session.id,
+        },
+      });
+      row.xai_file_id =
+        typeof uploaded.xai_file_id === "string" ? uploaded.xai_file_id : null;
+    }
+  }
   session.proof.push(...rows);
 
   const proofEvents: SessionPolicyProofEvent[] = sessionPolicyProofFromCanvas(
@@ -398,7 +443,7 @@ export async function endHeadlessSession(sessionId: string): Promise<HeadlessSes
     workspaceId: session.workspace_id,
     flowKind: flowKindForEmbedding(session.flow_kind),
     runId: session.id,
-    source: session.source === "tapbench" ? TAPBENCH_POW_SOURCE : "headless",
+    source: "headless",
     model: session.prepared,
     catalogSize: session.catalog_size,
     sequence: session.sequence,

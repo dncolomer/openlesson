@@ -7,7 +7,6 @@ import {
   buildTutoringIdleOutcome,
   resolveTutoringContext,
 } from "@/lib/tutoring-runtime";
-import { uploadFileToXAI } from "@/lib/xai-files";
 import { countWorkspaceProofOfWorkForPlan } from "@/lib/pow-api/workspace-proof-of-work";
 import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruption";
 import {stampSourceLinkMetadata, entryQueryParamsFromBody} from "@/lib/guest-link-access";

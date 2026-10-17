@@ -33,9 +33,9 @@ describe("ile session settings vs map routes (shipped)", () => {
     expect(ileSessionSettingsPath({ sessionId: "s1", resume: true })).toBe(
       "/session/settings?id=s1&resume=1",
     );
-    expect(ileSessionMapPath({ sessionId: "s1", ileToken: "tok" })).toBe("/ile/session/tok");
+    expect(ileSessionMapPath({ sessionId: "s1", ileToken: "tok" })).toBe("/learn/session/tok");
     expect(ileSessionSettingsPath({ sessionId: "s1", ileToken: "tok" })).toBe(
-      "/ile/session/tok/settings",
+      "/learn/session/tok/settings",
     );
     expect(
       ileSessionSettingsPath({ sessionId: "s1", ayclToken: "ay" }),

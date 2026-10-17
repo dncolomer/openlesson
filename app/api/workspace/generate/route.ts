@@ -3,7 +3,11 @@ import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { callXaiJSON, callXaiText, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
 import type { Message, MessageContent } from "@/lib/xai-client";
-import { uploadFileToXAI, deleteFileFromXAI } from "@/lib/xai-files";
+import {
+  deleteOrgScopedXaiFile,
+  organizationIdFromUser,
+  uploadOrgScopedXaiFile,
+} from "@/lib/organization/org-xai-files";
 import { callXaiResponses, type ResponsesInputContent } from "@/lib/xai-client";
 import { checkWorkspaceCreation, workspaceLimitErrorResponse } from "@/lib/workspace-limits";
 import { resolveUserBilling } from "@/lib/organization/resolve-user-billing";
@@ -294,13 +298,17 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const organizationId = await organizationIdFromUser(supabase, user.id);
     // Upload all attached files to xAI in parallel
     const processedFiles: ProcessedFile[] = await Promise.all(
       attachedFiles.map(async (f): Promise<ProcessedFile> => {
         const buf = Buffer.from(f.data, "base64");
         let xaiFileId: string | null = null;
         try {
-          const uploaded = await uploadFileToXAI(f.name, f.mimeType, f.data);
+          const uploaded = await uploadOrgScopedXaiFile(f.name, f.mimeType, f.data, {
+            organizationId,
+            collectionFields: { user_id: user.id },
+          });
           xaiFileId = uploaded.file_id;
         } catch (err) {
           console.error(`[generate] xAI upload failed for "${f.name}":`, err);
@@ -465,7 +473,7 @@ export async function POST(req: NextRequest) {
 
       if (!response.success || !response.data) {
         console.error("[generate] Responses API error:", response.error, "text:", response.text?.slice(0, 500));
-        await rollbackXaiUploads(processedFiles);
+        await rollbackXaiUploads(processedFiles, organizationId);
         return jsonError(500, "Failed to generate plan");
       }
 
@@ -500,7 +508,7 @@ export async function POST(req: NextRequest) {
 
       if (!textResponse.success || !textResponse.data) {
         console.error("[generate] Chat (image) error:", textResponse.error);
-        await rollbackXaiUploads(processedFiles);
+        await rollbackXaiUploads(processedFiles, organizationId);
         return jsonError(500, "Failed to generate plan");
       }
 
@@ -518,13 +526,13 @@ export async function POST(req: NextRequest) {
             planData = JSON.parse(cleaned) as PlanData;
           } catch {
             console.error("[generate] Failed to parse JSON from image response:", raw.substring(0, 500));
-            await rollbackXaiUploads(processedFiles);
+            await rollbackXaiUploads(processedFiles, organizationId);
             return jsonError(500, "Failed to generate plan");
           }
         }
       } else {
         console.error("[generate] No JSON in image response:", raw.substring(0, 500));
-        await rollbackXaiUploads(processedFiles);
+        await rollbackXaiUploads(processedFiles, organizationId);
         return jsonError(500, "Failed to generate plan");
       }
     }
@@ -561,7 +569,7 @@ export async function POST(req: NextRequest) {
         hasBlocks: Array.isArray((planData as { blocks?: unknown })?.blocks),
         title: (planData as PlanData | null)?.title,
       });
-      await rollbackXaiUploads(processedFiles);
+      await rollbackXaiUploads(processedFiles, organizationId);
       return jsonError(500, "Invalid plan data format");
     }
 
@@ -602,7 +610,7 @@ export async function POST(req: NextRequest) {
 
     if (planError || !plan) {
       console.error("Failed to create plan:", planError);
-      await rollbackXaiUploads(processedFiles);
+      await rollbackXaiUploads(processedFiles, organizationId);
       return jsonError(500, "Failed to create plan");
     }
 
@@ -611,7 +619,7 @@ export async function POST(req: NextRequest) {
     } catch (insertError) {
       console.error("[generate] Block insert failed; rolling back workspace:", insertError);
       await supabase.from("workspaces").delete().eq("id", plan.id);
-      await rollbackXaiUploads(processedFiles);
+      await rollbackXaiUploads(processedFiles, organizationId);
       return jsonError(
         500,
         insertError instanceof Error
@@ -660,7 +668,7 @@ export async function POST(req: NextRequest) {
       if (insertError) {
         console.error(`[generate] workspace_files insert error for "${pf.name}":`, insertError.message);
         fileStorageWarnings.push(`${pf.name}: ${insertError.message}`);
-        await deleteFileFromXAI(pf.xaiFileId).catch(() => {});
+        await deleteOrgScopedXaiFile(pf.xaiFileId, organizationId).catch(() => {});
       }
     }
 
@@ -682,10 +690,13 @@ export async function POST(req: NextRequest) {
 /**
  * Best-effort cleanup of xAI uploads when plan creation fails after files were uploaded.
  */
-async function rollbackXaiUploads(processed: ProcessedFile[]): Promise<void> {
+async function rollbackXaiUploads(
+  processed: ProcessedFile[],
+  organizationId: string | null = null,
+): Promise<void> {
   await Promise.all(
     processed
       .filter(p => p.xaiFileId)
-      .map(p => deleteFileFromXAI(p.xaiFileId!).catch(() => {}))
+      .map(p => deleteOrgScopedXaiFile(p.xaiFileId!, organizationId).catch(() => {}))
   );
 }

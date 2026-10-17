@@ -135,19 +135,15 @@ describe("landing hard-domain learning experiences copy", () => {
     expect(lp).not.toContain("PLATFORM_LAYERS.lead");
     expect(PLATFORM_LAYERS.title).toMatch(/Learning Harness/);
     expect(PLATFORM_LAYERS.title).toMatch(/Knowledge Verification/);
-    expect(PLATFORM_LAYERS.title).toMatch(/Custom Knowledge Mapping/);
+    expect(PLATFORM_LAYERS.title).not.toMatch(/Custom Knowledge Mapping/);
     expect(PLATFORM_LAYER_LIST.map((p) => p.name)).toEqual([
       "Learning Harness",
       "Knowledge Verification",
-      "Custom Knowledge Mapping",
     ]);
     expect(PLATFORM_LAYER_LIST.map((p) => p.href)).toEqual([
       "/learning-harness",
       "/knowledge-verification",
-      "/tapbench",
     ]);
-    expect(PLATFORM_LAYER_LIST[2].body).toMatch(/target audience/);
-    expect(PLATFORM_LAYER_LIST[2].body).toMatch(/map/i);
     expect(lp).toContain("{product.href}");
     expect(lp).toContain("{product.name}");
     expect(PLATFORM_HERO.h1).not.toMatch(/Learning Harness/);
@@ -207,11 +203,10 @@ describe("landing hard-domain learning experiences copy", () => {
     expect(lp).not.toContain("PLATFORM_PRODUCT_LIST");
   });
 
-  it("keeps TAPBench in the product catalog and on its route, not as a hero peer headline", () => {
-    expect(PLATFORM_PRODUCT_LIST).toHaveLength(3);
-    expect(PLATFORM_PRODUCTS.tapbench.href).toBe("/tapbench");
-    expect(PLATFORM_PRODUCTS.tapbench.name).toBe("TAPBench");
-    expect(fs.existsSync(path.join(REPO_ROOT, "app/tapbench/page.tsx"))).toBe(true);
+  it("keeps Harness and Verification in the catalog and drops TAPBench", () => {
+    expect(PLATFORM_PRODUCT_LIST).toHaveLength(2);
+    expect("tapbench" in PLATFORM_PRODUCTS).toBe(false);
+    expect(fs.existsSync(path.join(REPO_ROOT, "app/tapbench/page.tsx"))).toBe(false);
     expect(fs.existsSync(path.join(REPO_ROOT, "app/learning-harness/page.tsx"))).toBe(true);
     expect(fs.existsSync(path.join(REPO_ROOT, "app/knowledge-verification/page.tsx"))).toBe(true);
     const lp = readRel("app/page.tsx");

@@ -1,17 +1,17 @@
 # Uncertain Systems agent APIs
 
-Use this skill when ChatGPT, Claude, or another agent should authorize against Uncertain Systems and **manage workspaces** or **run Calibrate, Learn, Verify, and TAPBench flows headless**.
+Use this skill when ChatGPT, Claude, or another agent should authorize against Uncertain Systems and **manage workspaces** or **run Calibrate, Learn, and Verify flows headless**.
 
 There are **two** public agent APIs:
 
 1. **Workspace management** — `GET/POST /api/v3/workspaces`, `GET/PATCH /api/v3/workspaces/{id}`, map blocks, workspace settings, account settings (`/api/v3/account`). Create and edit **Learning** workspaces and **Verification Workspace** records.
-2. **Headless proof-of-work** — `POST /api/v3/pow/workspaces/{id}/sessions` (`start_session` with `flow_kind` calibrate | learn | verify | tapbench), submit proof of work, `end_session`. The server prepares the answers-model tree, infers the path from proof plus actions (catalogs **4 / 8 / 16**), and enforces the session clock. TAPBench is this API, not a third one.
+2. **Headless proof-of-work** — `POST /api/v3/pow/workspaces/{id}/sessions` (`start_session` with `flow_kind` calibrate | learn | verify), submit proof of work, `end_session`. The server prepares the answers-model tree, infers the path from proof plus actions (catalogs **4 / 8 / 16**), and enforces the session clock.
 
 **Human-readable spec:** `/docs/proof-of-work-api`  
 **Base URL:** `https://uncertain.systems` (or your self-hosted origin)
 **MCP:** `POST /api/mcp` with `Authorization: Bearer <api_key>`
 
-Snapshot (`/api/v3/snapshot`), Stash (`/api/v3/stash`), and TAPBench (`/api/v3/tapbench`) are **not** public agent APIs.
+Snapshot (`/api/v3/snapshot`) and Stash (`/api/v3/stash`) are **not** public agent APIs.
 
 **Teams tier required.** Plan-gate failures return **`403` with `error.code = "api_plan_required"`**.
 
@@ -287,7 +287,7 @@ Host the returned markdown at your suggested path or inject `skill_md` directly 
 
 ### `POST /api/v3/pow/workspaces/{workspace_id}/sessions` — `workspaces:write` — `start_session`
 
-Start a headless **Calibrate**, **Learn**, **Verify**, or **TAPBench** session. The server prepares the answers-model tree and starts the session clock (1–120 minutes, default 15). TAPBench is this same API (`flow_kind: "tapbench"`).
+Start a headless **Calibrate**, **Learn**, or **Verify** session. The server prepares the answers-model tree and starts the session clock (1–120 minutes, default 15).
 
 **Request:**
 
@@ -302,7 +302,7 @@ Start a headless **Calibrate**, **Learn**, **Verify**, or **TAPBench** session. 
 }
 ```
 
-`flow_kind`: `calibrate` | `learn` | `verify` | `tapbench`. `catalog_size`: `4` | `8` | `16`.
+`flow_kind`: `calibrate` | `learn` | `verify`. `catalog_size`: `4` | `8` | `16`.
 
 **Response `201`:** session_id, remaining_ms, answers_model (catalog_size, focus, branch_count), status.
 
@@ -328,7 +328,7 @@ Submit proof of work into a live headless session. The server infers the path on
 }
 ```
 
-You may also send a single event at the top level (`tool_action` + `metadata`). Stored type is `tool` for simulated TAP.
+You may also send a single event at the top level (`tool_action` + `metadata`). Stored type is `tool` for simulated session.
 
 **Response `200`:** remaining_ms, sequence (inferred path), proof_count, focus, answers_model.
 
@@ -374,7 +374,7 @@ Create (or look up) a guest by email and mint a **new** guest API key. Caller mu
 
 Store `api_key` securely — shown once. Re-calling for the same email issues another key (previous keys may remain active).
 
-When the guest later signs up with the same email, they inherit org membership, TAP session history, and guest keys.
+When the guest later signs up with the same email, they inherit org membership, session history, and guest keys.
 
 ---
 
@@ -397,10 +397,10 @@ Then create a member API key from the dashboard or `POST /api/v3/pow/keys` (sess
 
 ---
 
-## TAP session behavior
+## Session behavior
 
-- **Private link:** `/tap/session/{token}` — bearer URL; learner needs **no** Uncertain Systems login or API key.
-- **Workspace UI:** `/workspace/{workspace_id}/tap` (authenticated web)
+- **Private links:** `/calibrate/session/{token}`, `/learn/session/{token}`, `/verify/session/{token}` — bearer URL; learner needs **no** Uncertain Systems login or API key.
+- **Workspace UI:** `/workspace/{workspace_id}` (authenticated web)
 - **Live APIs:** `POST /api/workspace-tap-score/chat`, `POST /api/workspace-tap-score/complete` (use `privateToken` in body).
 
 Facilitation style: Socratic — one concise question at a time, follow-ups from the learner's words, no lecturing unless asked.
@@ -419,7 +419,7 @@ Facilitation style: Socratic — one concise question at a time, follow-ups from
 | Start / run / end headless session | ✅ | ✅ |
 | Create guest + issue `gsk_` | ✅ `org:write` + `is_org_admin` | ❌ |
 
-**Integration pattern:** Org admin provisions guests with `gsk_` keys. Guests (or ChatGPT / Claude with those keys) create or open a workspace, then `start_session` → `upload_proof_of_work` → `end_session`. TAPBench is `flow_kind=tapbench` on the same loop.
+**Integration pattern:** Org admin provisions guests with `gsk_` keys. Guests (or ChatGPT / Claude with those keys) create or open a workspace, then `start_session` → `upload_proof_of_work` → `end_session`.
 
 ---
 
@@ -429,7 +429,7 @@ Facilitation style: Socratic — one concise question at a time, follow-ups from
 2. `create_workspace` / `POST /api/v3/workspaces` for a Learning or Verification workspace (or `get_workspace` if it already exists).
 3. `list_blocks` / `GET .../blocks` → map contents to your workflow steps.
 4. *(Optional)* `POST .../integration-skill` for a custom `skill.md`.
-5. `start_session` with `flow_kind` calibrate | learn | verify | tapbench.
+5. `start_session` with `flow_kind` calibrate | learn | verify.
 6. `upload_proof_of_work` as the agent produces tool events (repeat until the clock expires).
 7. `end_session` to persist the answers-model tree, inferred path, and flow embedding.
 8. For external learners without accounts: `POST /org/guests` → give them `gsk_` so their agent can run the same loop.

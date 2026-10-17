@@ -37,7 +37,6 @@ function normalizeSurface(raw: unknown): DomainExerciseSurface {
   if (s === "ile_project" || s === "project" || s === "ile-project") {
     return "ile_project";
   }
-  if (s === "tapbench") return "tapbench";
   return "ile_project";
 }
 

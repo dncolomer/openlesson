@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
-import { deleteFileFromXAI, uploadFileToXAI } from "@/lib/xai-files";
+import {
+  deleteOrgScopedXaiFile,
+  organizationIdFromSession,
+  uploadOrgScopedXaiFile,
+} from "@/lib/organization/org-xai-files";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -65,9 +69,16 @@ export async function POST(req: NextRequest) {
     const fileName = `${body.sessionId}_chunk_${chunkIndex}.txt`;
     const base64 = Buffer.from(transcript, "utf-8").toString("base64");
 
+    const organizationId = await organizationIdFromSession(supabase, body.sessionId);
     let xaiFileId: string;
     try {
-      const uploaded = await uploadFileToXAI(fileName, "text/plain", base64);
+      const uploaded = await uploadOrgScopedXaiFile(fileName, "text/plain", base64, {
+        organizationId,
+        collectionFields: {
+          session_id: body.sessionId,
+          user_id: user.id,
+        },
+      });
       xaiFileId = uploaded.file_id;
     } catch (err) {
       console.error("[session-transcripts/upload] xAI upload failed:", err);
@@ -98,7 +109,7 @@ export async function POST(req: NextRequest) {
 
     if (writeError) {
       console.error("[session-transcripts/upload] DB write failed:", writeError.message);
-      await deleteFileFromXAI(xaiFileId).catch(() => {});
+      await deleteOrgScopedXaiFile(xaiFileId, organizationId).catch(() => {});
       return jsonError(500, writeError.message);
     }
 

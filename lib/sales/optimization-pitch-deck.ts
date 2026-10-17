@@ -22,7 +22,7 @@ export const OPTIMIZATION_PITCH_DECK: SolutionSlideDeck = {
       cards: [
         {
           label: "1 · Score post-signup work",
-          body: "After trial activation, PoW API or short TAP sessions score whether users can run the core workflow. Severity-ranked gaps feed the CRM or customer-success queue, not a vanity completion dashboard.",
+          body: "After trial activation, PoW API or short sessions score whether users can run the core workflow. Severity-ranked gaps feed the CRM or customer-success queue, not a vanity completion dashboard.",
         },
         {
           label: "2 · Dynamic onboarding in product",
@@ -64,7 +64,7 @@ export const OPTIMIZATION_PITCH_DECK: SolutionSlideDeck = {
       kicker: "Our thesis",
       title: "Verification findings drive what gets practiced next.",
       subtitle:
-        "Optimization is the second vertical: route humans into the Learning use case of TAP, one interface for Preparing, Learning, Drilling, and Validating, and agents through Proof-of-Work scoring until scores move and outcomes improve.",
+        "Optimization is the second vertical: route humans into the Learning use case of session, one interface for Calibrate, Learn, and Verify, and agents through Proof-of-Work scoring until scores move and outcomes improve.",
       backgroundImage: PITCH_ASSETS.aesthetics.verticals,
       highlights: thesisScienceHighlights("optimization"),
       highlightLabels: [...THESIS_HIGHLIGHT_LABELS],
@@ -83,7 +83,7 @@ export const OPTIMIZATION_PITCH_DECK: SolutionSlideDeck = {
       left: {
         label: "Humans · Learning",
         items: [
-          "Severity-ranked gaps from TAP or Proof-of-Work API",
+          "Severity-ranked gaps from session or Proof-of-Work API",
           "Coached scenarios only where the model says it is needed",
           "Track score movement with proof of work at every step",
           "Managers get a repair path after evaluation",
@@ -173,7 +173,7 @@ export const OPTIMIZATION_PITCH_DECK: SolutionSlideDeck = {
         "Pilot one adoption, coaching, or agent eval motion",
         "Create a Workspace and measure score movement on a live cohort",
       ],
-      footnote: "uncertain.systems · Learning Optimization · TAP · Proof of work · Trace Interruption Model",
+      footnote: "uncertain.systems · Learning Optimization · session · Proof of work · Trace Interruption Model",
     },
   ],
 };

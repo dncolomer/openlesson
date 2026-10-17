@@ -8,7 +8,6 @@ export const WORKSPACE_PRINCIPAL_KINDS = [
   "ile_guest",
   "tap_guest",
   "api_key",
-  "tapbench",
 ] as const;
 
 export type WorkspacePrincipalKind = (typeof WORKSPACE_PRINCIPAL_KINDS)[number];
@@ -203,13 +202,6 @@ export function assertWorkspacePolicy(
       return { ok: false, reason: "deny" };
     }
     return { ok: true, subjectId, attributeAsOwner: false };
-  }
-
-  if (principal.kind === "tapbench") {
-    if (action === "pow_write" || action === "read") {
-      return { ok: true, subjectId, attributeAsOwner: false };
-    }
-    return { ok: false, reason: "deny" };
   }
 
   if (principal.kind === "api_key") {

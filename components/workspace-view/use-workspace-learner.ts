@@ -230,7 +230,7 @@ export function useWorkspaceLearner(input: {
         });
         const launchData = await launchRes.json().catch(() => ({}));
         if (!launchRes.ok || !launchData.sessionId) {
-          throw new Error(errorMessageFromBody(launchData, "Failed to launch TAP Learning"));
+          throw new Error(errorMessageFromBody(launchData, "Failed to launch Learn"));
         }
         router.push(`/session?id=${launchData.sessionId}`);
         return;

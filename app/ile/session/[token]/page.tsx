@@ -1,73 +1,22 @@
-import { notFound, redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import {
-  ensureIleLinkSession,
-  resolveIleLinkAccess,
-} from "@/lib/ile-link-auth";
-import { IleGuestSessionClient } from "@/components/IleGuestSessionClient";
-import {
-  collectEntryQueryParams,
-  recordGuestLinkEntryQueryParams,
-} from "@/lib/guest-link-access";
-import { buildPowParticipantIdentity } from "@/lib/session-participant-identity";
+import { redirect } from "next/navigation";
 
 interface PageProps {
   params: Promise<{ token: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-export default async function PrivateIleSessionPage({ params, searchParams }: PageProps) {
+function queryString(query: Record<string, string | string[] | undefined>): string {
+  const sp = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (typeof value === "string") sp.set(key, value);
+    else if (Array.isArray(value)) for (const item of value) sp.append(key, item);
+  }
+  const qs = sp.toString();
+  return qs ? `?${qs}` : "";
+}
+
+export default async function LegacyIleSessionRedirect({ params, searchParams }: PageProps) {
   const { token } = await params;
   const query = await searchParams;
-  const entryParams = collectEntryQueryParams(query);
-  const access = await resolveIleLinkAccess(token, entryParams);
-  if ("error" in access) notFound();
-
-  if (access.assignedUserId) {
-    const authSupabase = await createClient();
-    const {
-      data: { user },
-    } = await authSupabase.auth.getUser();
-    if (!user) {
-      redirect(`/login?redirect=${encodeURIComponent(`/ile/session/${token}`)}`);
-    }
-    if (user.id !== access.assignedUserId) {
-      notFound();
-    }
-  }
-
-  if (Object.keys(entryParams).length > 0) {
-    await recordGuestLinkEntryQueryParams(
-      access.supabase,
-      "workspace_ile_links",
-      access.linkId,
-      entryParams,
-    ).catch(() => {});
-  }
-
-  const ensured = await ensureIleLinkSession(access);
-  if ("error" in ensured) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a] px-4">
-        <p className="text-sm text-red-400">{ensured.error}</p>
-      </div>
-    );
-  }
-
-  const participantIdentity = buildPowParticipantIdentity({
-    guestUserId: access.guestUserId,
-    assignedUserId: access.assignedUserId,
-  });
-
-  return (
-    <IleGuestSessionClient
-      sessionId={ensured.sessionId}
-      ileToken={token}
-      blockTitle={ensured.blockTitle}
-      showEndSession={access.showEndSession}
-      entryQueryParams={entryParams}
-      participantIdentity={participantIdentity}
-      sessionMode={access.sessionMode ?? ensured.sessionMode}
-    />
-  );
+  redirect(`/learn/session/${token}${queryString(query)}`);
 }

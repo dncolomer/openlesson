@@ -140,7 +140,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (!response.success || !response.data) {
-      return jsonError(500, response.error || "Failed to generate TAP response");
+      return jsonError(500, response.error || "Failed to generate Verify response");
     }
 
     const heliosReply = response.data;

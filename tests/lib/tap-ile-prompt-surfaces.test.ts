@@ -205,7 +205,7 @@ describe("TAP prompt surface (shipped builders)", () => {
 
   it("buildTapScoreInstructions uses the TAP surface (runtime entry)", () => {
     const text = buildTapScoreInstructions(sampleBrief, "curious", 15);
-    expect(text).toMatch(/PRODUCT SURFACE: Think Aloud Protocol|knowledge-verification facilitator|System 1/i);
+    expect(text).toMatch(/PRODUCT SURFACE: Verify|knowledge-verification facilitator|System 1/i);
     expect(text).toContain("Onboarding mastery");
     expect(text).toContain("ICP");
     expect(text).toMatch(/System 1/);
@@ -307,7 +307,9 @@ describe("TAP Learning prompt surface (shipped builders + registry)", () => {
 
     expect(DEFAULT_PROMPTS.session_plan_update).toMatch(/practice coach|Optimize|good enough|Mark as Done/i);
     expect(DEFAULT_PROMPTS.session_plan_update).toMatch(/next or adjacent chapter|adjacent chapter|next chapter/i);
-    expect(DEFAULT_PROMPTS.session_plan_update).toMatch(/not TAP System 1|not TAP dual-stream/i);
+    expect(DEFAULT_PROMPTS.session_plan_update).toMatch(
+      /not System 1\/System 2 elicitation|not TAP System 1|not TAP dual-stream/i,
+    );
     expect(DEFAULT_PROMPTS.session_plan_update).toContain("{chapter_closure_rules}");
     expect(DEFAULT_PROMPTS.session_plan_update).toContain("{chapter_expansion_rules}");
     expect(DEFAULT_PROMPTS.opening_probe).toMatch(/practice coach|canvas|task|deeper work|chapter/i);

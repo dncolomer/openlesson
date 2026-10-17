@@ -1,7 +1,8 @@
 /**
  * Region builder selection — filter subjects / PoW provenance for Knowledge Regions.
  *
- * Supports human PoW vs tapbench PoW and filter by link / TAPBench link id.
+ * Live filter is all | human. Historical tapbench provenance on stored PoW is classified,
+ * not rewritten, and is not a live source option.
  */
 
 import {
@@ -12,14 +13,14 @@ import {
   TAPBENCH_POW_SOURCE,
 } from "./tapbench";
 
-export type RegionBuilderSourceFilter = "all" | PowSourceKind;
+export type RegionBuilderSourceFilter = "all" | typeof HUMAN_POW_SOURCE;
 
 export interface RegionBuilderSubject {
   user_id: string | null;
   guest_user_id: string | null;
   /** human | tapbench — derived from associated PoW metadata when available. */
   pow_source: PowSourceKind;
-  /** Guest link / TAPBench link id that produced the subject's PoW (if any). */
+  /** Guest link id that produced the subject's PoW (if any). */
   source_link_id: string | null;
   /** Optional share URL for the link (listable; not private one-shot). */
   source_link_url: string | null;
@@ -30,19 +31,16 @@ export interface RegionBuilderSubject {
 }
 
 export interface RegionBuilderFilters {
-  /** all | human | tapbench */
+  /** all | human — tapbench is not a live option */
   source: RegionBuilderSourceFilter;
   /**
-   * Filter by link / TAPBench link id or full share URL.
+   * Filter by Calibrate, Learn, or Verify link id or full share URL.
    * Empty string = no link filter.
    */
   linkQuery?: string | null;
 }
 
 export function normalizeRegionBuilderSourceFilter(raw: unknown): RegionBuilderSourceFilter {
-  if (raw === TAPBENCH_POW_SOURCE || raw === "tapbench_pow" || raw === "tapbench-pow") {
-    return TAPBENCH_POW_SOURCE;
-  }
   if (raw === HUMAN_POW_SOURCE || raw === "human_pow" || raw === "human-pow") {
     return HUMAN_POW_SOURCE;
   }

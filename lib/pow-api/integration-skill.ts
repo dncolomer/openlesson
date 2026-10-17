@@ -202,7 +202,7 @@ export function knowledgeRegionIntegrationCopy(): {
 } {
   return {
     skillDescription:
-      "Download a skill.md for this Verification workspace. Agents use workspace management (/api/v3/workspaces) and the headless proof-of-work API (/api/v3/pow) to create, edit, and run Calibrate, Learn, Verify, or TAPBench sessions.",
+      "Download a skill.md for this Verification workspace. Agents use workspace management (/api/v3/workspaces) and the headless proof-of-work API (/api/v3/pow) to create, edit, and run Calibrate, Learn, and Verify sessions.",
     mcpNote:
       "MCP JSON-RPC at POST /api/mcp with Bearer auth. Two APIs: workspace management and headless proof-of-work. ChatGPT or Claude authorizes and runs flows for the user.",
   };
@@ -221,7 +221,7 @@ export function learningWorkspaceIntegrationCopy(): {
 }
 
 export function formatSkillRestEndpointsLine(_kind: unknown): string {
-  return `REST: workspace management GET/POST ${WORKSPACE_API_BASE}, GET/PATCH ${WORKSPACE_API_BASE}/{id}, GET/PATCH .../blocks, GET/PATCH .../settings, GET/PATCH /api/v3/account, POST .../integration-skill; headless proof-of-work POST ${POW_API_BASE}/workspaces/{id}/sessions, GET .../sessions/{session_id}, POST .../proof-of-work, POST .../end, GET .../flow-embeddings. TAPBench is start_session with flow_kind=tapbench. Snapshot and Stash are not public agent APIs.`;
+  return `REST: workspace management GET/POST ${WORKSPACE_API_BASE}, GET/PATCH ${WORKSPACE_API_BASE}/{id}, GET/PATCH .../blocks, GET/PATCH .../settings, GET/PATCH /api/v3/account, POST .../integration-skill; headless proof-of-work POST ${POW_API_BASE}/workspaces/{id}/sessions, GET .../sessions/{session_id}, POST .../proof-of-work, POST .../end, GET .../flow-embeddings. Snapshot and Stash are not public agent APIs.`;
 }
 
 export function buildIntegrationSkillInstructions(
@@ -316,8 +316,8 @@ Return ONLY the markdown document. No JSON wrapper. No code fences around the en
   const mcpToolList = formatSkillMcpToolList(workspaceKind);
   const krStashSection = knowledgeRegion
     ? `
-   - Headless proof-of-work: start_session (calibrate | learn | verify | tapbench) → upload_proof_of_work → end_session
-   - Do not document Snapshot, Stash, or a separate TAPBench API. TAPBench is the same headless session.`
+   - Headless proof-of-work: start_session (calibrate | learn | verify) → upload_proof_of_work → end_session
+   - Do not document Snapshot or Stash as public agent APIs.`
     : "";
   const canonicalRefs = knowledgeRegion
     ? `${request.base_url}/docs/proof-of-work-api`
@@ -326,7 +326,7 @@ Return ONLY the markdown document. No JSON wrapper. No code fences around the en
     ? "create or get workspace → start_session → upload_proof_of_work through the clock → end_session → regenerate skill."
     : "create or get workspace → edit map/settings → start_session → upload_proof_of_work → end_session → regenerate skill.";
   const purposeLine = knowledgeRegion
-    ? "1. Purpose — what this partner agent verifies **given the current Verification workspace status** and how workspace management + headless Calibrate/Learn/Verify/TAPBench fit the workflow."
+    ? "1. Purpose — what this partner agent verifies **given the current Verification workspace status** and how workspace management + headless Calibrate/Learn/Verify fit the workflow."
     : "1. Purpose — what this partner agent verifies **given the current Learning workspace status** and how workspace management + headless Calibrate/Learn/Verify fit the workflow.";
 
   return `Generate a custom integration skill.md document for "${request.integration_name}" integrating with Uncertain Systems Proof-of-Work API.
@@ -368,7 +368,7 @@ Sections to include: ${sections.join(", ")}
 ${proofOfWorkSpecSection}
 
 Required content:
-The downloaded skill.md always ends with "${CANVAS_TAP_SIMULATION_HEADING}". That section is the tool_name and tool_action catalog for simulating a human TAP session as ${POW_MODEL_VERSION}. Do not rename those values or fold them into one generic event.
+The downloaded skill.md always ends with "${CANVAS_TAP_SIMULATION_HEADING}". That section is the tool_name and tool_action catalog for simulating a human session as ${POW_MODEL_VERSION}. Do not rename those values or fold them into one generic event.
 ${purposeLine}
 2. Design principles — checkpoint-agnostic timing, block-scoped vs workspace-global analysis, tool usage as core signal, always fetch the live proof-of-work spec before uploading, **more proof of work improves evaluation quality**.
 3. **Continuous evaluation and regeneration (required section)** — this is a must-have operating model, not optional maintenance. Include:
@@ -389,7 +389,7 @@ ${purposeLine}
 6. Endpoints table covering REST and MCP with **dual documentation** (never hide REST behind MCP):
    - ${restEndpointsLine}
    - MCP (JSON-RPC at POST /api/mcp with Bearer auth): ${mcpToolList}
-   - State that MCP tools have parity with REST for the two public APIs (workspace management and headless proof-of-work). Agents create and edit workspaces. TAPBench is start_session with flow_kind=tapbench.
+   - State that MCP tools have parity with REST for the two public APIs (workspace management and headless proof-of-work). Agents create and edit workspaces.
    - Recommend create_workspace or get_workspace, then start_session${krStashSection}
 7. **Proof-of-work specification (required section)** — explain that payloads are defined by the formal proof-of-work spec returned from POST ${proofOfWorkSchemaPath}. Include:
    - When to call the proof of work spec endpoint (before first upload, after proof-of-work milestones, when eval definition or blocks change)
@@ -398,7 +398,7 @@ ${purposeLine}
    - Instruction to validate tool payloads against the fetched schema before upload
    - Do NOT embed a static schema as the source of truth; reference the API path above
 8. Workspace-specific block mapping guidance and example tool JSON payloads that match the proof of work spec (illustrative only).
-9. **Headless session outcomes (required section)** — after end_session the observable is the answers-model tree, the inferred path, remaining time, and the flow embedding. Do not document Snapshot, Stash flush, or a separate TAPBench API.
+9. **Headless session outcomes (required section)** — after end_session the observable is the answers-model tree, the inferred path, remaining time, and the flow embedding. Do not document Snapshot or Stash flush.
 10. Quick integration checklist: ${checklist}
 
 Canonical API reference links: ${canonicalRefs}

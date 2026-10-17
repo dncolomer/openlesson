@@ -53,13 +53,6 @@ export default function KnowledgeVerificationPage() {
             {VERIFICATION_PRODUCT_COPY.pricingCta}
             <ArrowRight className="ml-2" size={16} />
           </Link>
-          <Link
-            href={VERIFICATION_PRODUCT_COPY.tapbenchHref}
-            data-landing-tapbench
-            className="console-button inline-flex min-h-12 items-center justify-center rounded-none px-5 py-3 text-sm font-medium text-zinc-300 transition hover:border-white/80 hover:text-white"
-          >
-            {VERIFICATION_PRODUCT_COPY.tapbenchCta}
-          </Link>
         </div>
       </section>
 
@@ -159,20 +152,10 @@ export default function KnowledgeVerificationPage() {
               </p>
               <p>
                 Our hosted{" "}
-                <span className="text-zinc-200">Think Aloud Protocol (TAP)</span> is one interface for
-                Preparing, Learning, Drilling, and Validating. TAP Validating runs live, time-framed
-                verification in parallel, without building your own UX. The Learning use case adds
+                <span className="text-zinc-200">Calibrate, Learn, and Verify</span> sessions run live,
+                time-framed verification in parallel, without building your own UX. Learn adds
                 open-ended assignment depth that stays practical as volume grows. We help you surface data
                 that no traditional tech can beat.
-              </p>
-              <p data-landing-tapbench-copy>
-                <Link
-                  href={VERIFICATION_SCALE_COPY.tapbenchHref}
-                  className="text-zinc-200 underline decoration-zinc-700 underline-offset-4 transition hover:text-white hover:decoration-zinc-500"
-                >
-                  {VERIFICATION_SCALE_COPY.tapbenchLabel}
-                </Link>{" "}
-                is the public benchmark of this stack: agents think aloud and build knowledge regions.
               </p>
             </div>
           </div>

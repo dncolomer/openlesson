@@ -1,7 +1,7 @@
 /**
  * Single inventory of public agent tools (MCP tools/list + REST twins).
  * Two families: workspace management and headless proof-of-work.
- * Snapshot, Stash, and TAPBench are not public agent APIs.
+ * Snapshot and Stash are not public agent APIs.
  */
 
 import {
@@ -128,7 +128,7 @@ export const AGENT_TOOL_SURFACE = [
     family: "pow",
     scope: "workspaces:write",
     summary:
-      "Start a headless Calibrate, Learn, Verify, or TAPBench session: prepare the answers-model tree, start the clock.",
+      "Start a headless Calibrate, Learn, or Verify session: prepare the answers-model tree, start the clock.",
     rest: {
       method: "POST",
       path: `${POW_API_BASE}/workspaces/{workspace_id}/sessions`,
@@ -198,7 +198,7 @@ export function agentToolsByFamily(family: PublicAgentApiFamily): AgentToolSurfa
   return AGENT_TOOL_SURFACE.filter((tool) => tool.family === family);
 }
 
-/** Historical TAP / TAP Learning / TAPBench guest-link mint — not public agent tools. */
+/** Historical guest-link mint — not public agent tools. */
 export const KNOWLEDGE_LINK_MINT_TOOL_NAMES = [
   "create_tap_link",
   "list_tap_links",
@@ -206,7 +206,6 @@ export const KNOWLEDGE_LINK_MINT_TOOL_NAMES = [
 
 export const KNOWLEDGE_LINK_MINT_PATH_FRAGMENTS = [
   "tap-links",
-  "tapbench-links",
   "ile-links",
 ] as const;
 

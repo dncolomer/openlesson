@@ -71,7 +71,6 @@ describe("pow-model-v1 agent contract on skill and MCP", () => {
     expect(contract).toContain("Do not invent a new stored type");
     expect(contract).toContain("Do not collapse");
     expect(contract).toContain("one generic event");
-    expect(contract).toContain("formerly called TAPBench PoW");
     expect(contract).toContain("synthetic knowledge regions");
     expect(contract).toContain(ILE_WORK_CANVAS_POW_TOOL_NAME);
     expect(contract).toContain("board_prompt");
@@ -135,7 +134,7 @@ describe("pow-model-v1 agent contract on skill and MCP", () => {
     expect(standard).toContain("upload_proof_of_work");
   });
 
-  it("appends the canvas and TAP tool catalog to the skill an agent downloads", () => {
+  it("appends the canvas tool catalog to the skill an agent downloads", () => {
     const section = canvasTapSimulationSkillSection();
     const skill = withCanvasTapSimulationSkill("# Partner skill\n\nUse the API.");
     expect(section).toContain(CANVAS_TAP_SIMULATION_HEADING);

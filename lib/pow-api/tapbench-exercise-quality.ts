@@ -12,16 +12,14 @@ export interface TapbenchExerciseContext {
 }
 
 /** Who / which product surface the exercise is for. */
-export type DomainExerciseSurface = "tapbench" | "tap_exercise" | "ile_project";
+export type DomainExerciseSurface = "tap_exercise" | "ile_project";
 
 function surfaceLabel(surface: DomainExerciseSurface): string {
   switch (surface) {
     case "tap_exercise":
       return "human TAP timed drill";
-    case "ile_project":
-      return "TAP Learning Explore Solo chapter exercise";
     default:
-      return "TAPBench agent evaluation";
+      return "TAP Learning Explore Solo chapter exercise";
   }
 }
 
@@ -30,14 +28,12 @@ function surfaceLabel(surface: DomainExerciseSurface): string {
  * Pure string — safe for client and server.
  */
 export function buildDomainExerciseAuthorSystemPrompt(
-  surface: DomainExerciseSurface = "tapbench",
+  surface: DomainExerciseSurface = "tap_exercise",
 ): string {
   const who =
-    surface === "tapbench"
-      ? "an AI agent under timed evaluation"
-      : surface === "ile_project"
-        ? "a human learner working a longer-horizon project chapter"
-        : "a human learner in a timed TAP drill (solo exercise, no tutor dialogue)";
+    surface === "ile_project"
+      ? "a human learner working a longer-horizon project chapter"
+      : "a human learner in a timed TAP drill (solo exercise, no tutor dialogue)";
 
   const lengthHint =
     surface === "ile_project"
@@ -76,7 +72,7 @@ export function buildDomainExerciseAuthorSystemPrompt(
 
 /** @deprecated use buildDomainExerciseAuthorSystemPrompt */
 export function buildTapbenchExerciseAuthorSystemPrompt(): string {
-  return buildDomainExerciseAuthorSystemPrompt("tapbench");
+  return buildDomainExerciseAuthorSystemPrompt("tap_exercise");
 }
 
 const BANNED_OPENERS = [

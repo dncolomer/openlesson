@@ -17,7 +17,7 @@ export const UNCERTAIN_SYSTEMS_SCOPE = {
     "Predictive interruptions (TIM) — every response includes interruption (object or null) with delay_ms and intervention hints",
   ],
   workspace_model:
-    "A workspace has blocks (assessable units), a workspace_goal (what success means), and headless Calibrate / Learn / Verify / TAPBench sessions. Progress is continuous: start_session → upload proof of work → end_session → repeat.",
+    "A workspace has blocks (assessable units), a workspace_goal (what success means), and headless Calibrate / Learn / Verify sessions. Progress is continuous: start_session → upload proof of work → end_session → repeat.",
   integrator_model:
     "Partner agents authorize with a Bearer key, manage workspaces, and run flows headless. ChatGPT, Claude, or any MCP client uses the same two APIs.",
   docs: {
@@ -132,7 +132,7 @@ export function buildContinuousEvaluationMcpPolicy(
     proof_of_work_spec: {
       mcp_tool: "start_session",
       rest_equivalent: startRest,
-      purpose: "Start a headless Calibrate, Learn, Verify, or TAPBench session: prepare the answers-model tree and clock",
+      purpose: "Start a headless Calibrate, Learn, or Verify session: prepare the answers-model tree and clock",
       when_to_call: evidenceTriggers,
     },
     integration_skill: {
@@ -214,7 +214,7 @@ export function recommendIntegrationActions(options: {
       priority: 3,
       mcp_tool: "start_session",
       rest_equivalent: `POST ${POW_API_BASE}/workspaces/{id}/sessions`,
-      reason: "Start a headless Calibrate, Learn, Verify, or TAPBench session.",
+      reason: "Start a headless Calibrate, Learn, or Verify session.",
     });
   }
 
@@ -323,11 +323,11 @@ Docs: ${base}${UNCERTAIN_SYSTEMS_SCOPE.docs.api_reference} · ${base}${UNCERTAIN
   if (uri === "uncertain-systems://proof-of-work-loop") {
     return `# Proof-of-work loop and learning progress
 
-Progress is **continuous**, not one-time setup. ChatGPT, Claude, or any MCP client authorizes with a Bearer key and runs Calibrate, Learn, Verify, or TAPBench headless.
+Progress is **continuous**, not one-time setup. ChatGPT, Claude, or any MCP client authorizes with a Bearer key and runs Calibrate, Learn, or Verify headless.
 
 ## Recommended loop
 1. **create_workspace** or **get_workspace** — Learning or Verification workspace, map, settings
-2. **start_session** / POST ${POW_API_BASE}/workspaces/{workspace_id}/sessions — \`flow_kind\` calibrate | learn | verify | tapbench. The server prepares the answers-model tree and starts the clock.
+2. **start_session** / POST ${POW_API_BASE}/workspaces/{workspace_id}/sessions — \`flow_kind\` calibrate | learn | verify. The server prepares the answers-model tree and starts the clock.
 3. **upload_proof_of_work** / POST ${POW_API_BASE}/workspaces/{workspace_id}/sessions/{session_id}/proof-of-work — after each meaningful action (repeat). The server infers the path on the prepared tree (catalogs 4 / 8 / 16). Expired sessions reject further work.
 4. **end_session** / POST ${POW_API_BASE}/workspaces/{workspace_id}/sessions/{session_id}/end — score the inferred path and persist the flow embedding
 5. **generate_integration_skill** as the workspace grows
@@ -345,7 +345,7 @@ Every schema/skill response includes \`continuous_evaluation\` (REST) and \`cont
 
 Every Proof-of-Work API success response also includes \`interruption\` (TIM) — object or null.
 
-Snapshot, Stash, and TAPBench-as-a-separate-API are not public agent tools.
+Snapshot and Stash are not public agent tools.
 `;
   }
 

@@ -65,7 +65,7 @@ describe("entry still resolves exercise client; briefing is intro path", () => {
     expect(resolveTapShellFromSession({ interaction_kind: "exercise" })).toBe("exercise");
     expect(resolveTapShellFromSession({})).toBe("conversational");
 
-    const guest = read("app/tap/session/[token]/page.tsx");
+    const guest = read("components/guest-session/private-tap-session-page.tsx");
     expect(guest).toContain("resolveTapShellFromSession");
     expect(guest).toContain('shell === "scout"');
     expect(guest).not.toContain("ExerciseTapClient");

@@ -65,7 +65,6 @@ export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
 
   const communityLinks = [
     { href: "/community-events", label: "Community Events" },
-    { href: "/tapbench", label: "TAPBench" },
     { href: "/kardashev", label: "Kardashev Research" },
   ];
 

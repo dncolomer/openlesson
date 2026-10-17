@@ -56,7 +56,7 @@ export const LEARNING_VERIFICATION_PAGE: SeoUseCasePageConfig = {
     "Verify what candidates, employees, and agents can actually do — before you hire, promote, certify, or deploy. Built for HR tech, recruitment platforms, and talent marketplaces that need signal beyond polished deliverables and benchmark pass rates.",
   metaTitle: "Learning Verification | HR, Hiring & Agent Skill Validation",
   metaDescription:
-    "Human hard skill and agentic skill validation for HR and recruitment platforms. TAP is one interface for Preparing, Learning, Drilling, and Validating, or use full Proof-of-Work API integration.",
+    "Human hard skill and agentic skill validation for HR and recruitment platforms. session is one interface for Calibrate, Learn, and Verify, or use full Proof-of-Work API integration.",
   keywords: [
     "learning verification",
     "skills validation",
@@ -74,7 +74,7 @@ export const LEARNING_VERIFICATION_PAGE: SeoUseCasePageConfig = {
         "Replace take-home theater with verified reasoning. Score live think-aloud sessions or structured practice blocks before candidates reach final interviews.",
     },
     {
-      title: "TAP-cha",
+      title: "human",
       description:
         "Use a short Think Aloud Protocol session to confirm a live human is behind the keyboard — not a bot, scripted agent, or AI-fed impersonation. Hesitations, self-corrections, and causal reasoning under probe are signal a completion checkbox cannot fake.",
     },
@@ -111,7 +111,7 @@ export const LEARNING_VERIFICATION_PAGE: SeoUseCasePageConfig = {
       product: "Think Aloud Protocol",
       productHref: "/products/think-aloud-protocol",
       description:
-        "Send a shareable TAP link. Candidates or learners work through a scoped scenario on a clock while talking through their thinking. Ideal for high-volume screening, interview stages, and quick hard-skill probes inside your existing ATS or HRIS UI.",
+        "Send a shareable session link. Candidates or learners work through a scoped scenario on a clock while talking through their thinking. Ideal for high-volume screening, interview stages, and quick hard-skill probes inside your existing ATS or HRIS UI.",
     },
     {
       level: "02",
@@ -119,7 +119,7 @@ export const LEARNING_VERIFICATION_PAGE: SeoUseCasePageConfig = {
       product: "Learning",
       productHref: "/products/integrated-learning-environment",
       description:
-        "Run the Learning use case when the role demands complex cognition: multi-step judgment, debugging, design tradeoffs, or extended practice. It is the same TAP interface for Preparing, Learning, Drilling, and Validating, and it replaces one-shot take-homes with coached scenarios and proof-of-work artifacts you can score and compare.",
+        "Run the Learning use case when the role demands complex cognition: multi-step judgment, debugging, design tradeoffs, or extended practice. It is the same session interface for Calibrate, Learn, and Verify, and it replaces one-shot take-homes with coached scenarios and proof-of-work artifacts you can score and compare.",
     },
     {
       level: "03",
@@ -133,7 +133,7 @@ export const LEARNING_VERIFICATION_PAGE: SeoUseCasePageConfig = {
   highlights: [
     "One workspace model for human and agentic validation",
     "Auditable gap reports — not vanity completion metrics",
-    "Pick a TAP use case: Validating for speed, Learning for complexity, PoW API for native integration",
+    "Pick a session use case: Validating for speed, Learning for complexity, PoW API for native integration",
   ],
   faqs: [
     {
@@ -149,7 +149,7 @@ export const LEARNING_VERIFICATION_PAGE: SeoUseCasePageConfig = {
   ],
   closingTitle: "Verify skills before they cost you downstream.",
   closingBody:
-    "Book a demo to map TAP — Preparing, Learning, Drilling, and Validating — and Proof-of-Work API tiers to your HR or recruitment product.",
+    "Book a demo to map session — Calibrate, Learn, and Verify — and Proof-of-Work API tiers to your HR or recruitment product.",
 };
 
 export const LEARNING_OPTIMIZATION_PAGE: SeoUseCasePageConfig = {
@@ -206,7 +206,7 @@ export const LEARNING_OPTIMIZATION_PAGE: SeoUseCasePageConfig = {
   ],
   highlights: [
     "Verification findings drive what gets practiced next",
-    "Learning on TAP for humans, Proof-of-Work scoring for agents — same workspace context",
+    "Learning on session for humans, Proof-of-Work scoring for agents — same workspace context",
     "Tie every intervention to adoption, deploy, and conversion metrics",
   ],
   faqs: [
@@ -250,7 +250,7 @@ export const LEARNING_AUGMENTATION_PAGE: SeoUseCasePageConfig = {
     {
       title: "EdTech platforms & learning apps",
       description:
-        "Drop TAP blocks into lesson flows. TAP is one interface for Preparing, Learning, Drilling, and Validating. Surface hesitations, causal reasoning, and revision patterns that multiple-choice items miss.",
+        "Drop session blocks into lesson flows. session is one interface for Calibrate, Learn, and Verify. Surface hesitations, causal reasoning, and revision patterns that multiple-choice items miss.",
     },
     {
       title: "Certification prep agencies",
@@ -287,7 +287,7 @@ export const LEARNING_AUGMENTATION_PAGE: SeoUseCasePageConfig = {
     {
       question: "Can this replace our existing quiz engine?",
       answer:
-        "For depth checks, yes — TAP measures cognition quizzes cannot. Many teams keep lightweight recall checks and add Uncertain Systems where understanding must be proven.",
+        "For depth checks, yes — session measures cognition quizzes cannot. Many teams keep lightweight recall checks and add Uncertain Systems where understanding must be proven.",
     },
     {
       question: "How do learners experience interruptions?",

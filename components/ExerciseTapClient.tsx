@@ -711,7 +711,7 @@ export function ExerciseTapClient({
           topicTitle: topic?.title,
           conversationLanguage,
       });
-      if (!ok) throw new Error(errorMessageFromBody(payload, "Could not start Exercise TAP"));
+      if (!ok) throw new Error(errorMessageFromBody(payload, "Could not start Verify session"));
       if (typeof payload.tapSessionId === "string" && payload.tapSessionId) {
         tapSessionIdRef.current = payload.tapSessionId;
         setTapSessionId(payload.tapSessionId);
@@ -744,7 +744,7 @@ export function ExerciseTapClient({
       stopLiveSpeechRecognition(speechBindings);
       setIsPracticeMode(false);
       isPracticeModeRef.current = false;
-      setError(err instanceof Error ? err.message : "Could not start Exercise TAP");
+      setError(err instanceof Error ? err.message : "Could not start Verify session");
     } finally {
       setIsStartingSession(false);
       setStartingTopicId(null);
@@ -840,7 +840,7 @@ export function ExerciseTapClient({
       const safeTranscript =
         transcript.length > 0
           ? transcript
-          : [{ role: "assistant", text: exerciseText || "Exercise TAP", at: new Date().toISOString() }];
+          : [{ role: "assistant", text: exerciseText || "Verify", at: new Date().toISOString() }];
 
       const { ok, payload } = await postTutoringSessionComplete({
           workspaceId,
@@ -856,7 +856,7 @@ export function ExerciseTapClient({
           impure,
           practice,
       });
-      if (!ok) throw new Error(errorMessageFromBody(payload, "Could not save Exercise TAP"));
+      if (!ok) throw new Error(errorMessageFromBody(payload, "Could not save Verify session"));
 
       if (practice) {
         setPhase("practice_done");
@@ -890,7 +890,7 @@ export function ExerciseTapClient({
       }
       router.push("/dashboard");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not save Exercise TAP");
+      setError(err instanceof Error ? err.message : "Could not save Verify session");
       setPhase("error");
       isEndingRef.current = false;
     }

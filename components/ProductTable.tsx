@@ -45,11 +45,11 @@ export const LANDING_PRODUCT_ROWS: ProductTableRow[] = [
       "Buffer agent proof of work, then Stash (System 1) or Submit (System 2) into the regular PoW API — pure-API Think Aloud for agents.",
   },
   {
-    name: "Think Aloud Protocol",
+    name: "Calibrate, Learn, Verify",
     icon: Mic,
-    pitch: "One interface for Preparing, Learning, Drilling, and Validating.",
+    pitch: "Three hosted flows for live human work.",
     description:
-      "TAP is the session for Preparing, Learning, Drilling, and Validating. Candidates and learners think aloud while they work. TIM targets reasoning gaps in the moment — including TAP-cha human checks bots cannot fake.",
+      "Calibrate, Learn, and Verify are the hosted sessions. Candidates and learners think aloud while they work. TIM targets reasoning gaps in the moment — including human checks bots cannot fake.",
   },
 ];
 

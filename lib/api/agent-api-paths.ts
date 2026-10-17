@@ -3,7 +3,7 @@
  *   - Workspace management  `/api/v3/workspaces` (+ `/api/v3/account`)
  *   - Headless proof-of-work `/api/v3/pow`
  *
- * Snapshot, Stash, and TAPBench route trees may still exist for the product UI.
+ * Snapshot and Stash route trees may still exist for the product UI.
  * They are not public agent API families.
  */
 
@@ -14,10 +14,8 @@ export const POW_API_BASE = "/api/v3/pow" as const;
 export const SNAPSHOT_API_BASE = "/api/v3/snapshot" as const;
 /** Cookie-auth TAP buffer. Not a public agent family. */
 export const STASH_API_BASE = "/api/v3/stash" as const;
-/** Cookie-auth TAPBench mint UI. Not a public agent family — agents use POW sessions. */
-export const TAPBENCH_API_BASE = "/api/v3/tapbench" as const;
 
-/** Public agent REST families. Snapshot / Stash / TAPBench are excluded. */
+/** Public agent REST families. Snapshot / Stash are excluded. */
 export const PUBLIC_AGENT_API_FAMILIES = ["workspace", "pow"] as const;
 export type PublicAgentApiFamily = (typeof PUBLIC_AGENT_API_FAMILIES)[number];
 

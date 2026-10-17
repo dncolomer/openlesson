@@ -105,11 +105,11 @@ function withTapLinkUrl(
     link.access_mode === "public" ? "public" : "private";
   // Always listable: prefer stored public_token, fall back to session bearer.
   const bearer = link.public_token?.trim() || sessionToken;
-  const url = buildGuestLinkUrl(baseUrl, "tap", bearer);
   const storedKind = normalizeTapInteractionKind(link.interaction_kind);
   const interaction_kind = entryHistoryRequestsScout(link.entry_query_params)
     ? "scout"
     : storedKind;
+  const url = buildGuestLinkUrl(baseUrl, "tap", bearer, interaction_kind);
   return {
     ...link,
     access_mode,

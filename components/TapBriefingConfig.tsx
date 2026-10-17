@@ -23,8 +23,8 @@ export function TapBriefingConfig({
   showDurationPicker,
   disabled,
   /**
-   * Optional kicker above the title (e.g. "Exercise TAP").
-   * Default omits kicker for conversational TAP.
+   * Optional kicker above the title (e.g. "Verify").
+   * Default omits kicker for conversational Verify.
    */
   kicker,
   /**

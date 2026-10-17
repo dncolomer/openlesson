@@ -1,33 +1,16 @@
 /**
- * TAP is the interface for Preparing, Learning, Drilling, and Validating.
- * The retired product word must not remain in comments, markdown, locale
- * strings, or quoted copy. Identifiers, /ile/ routes, billing fields, and
- * stored proof action ids stay.
+ * Live product language names Calibrate, Learn, and Verify.
+ * TAP, TAP Learning, and the retired environment acronym are not product
+ * names on live surfaces. Identifiers, billing fields, and stored proof
+ * action ids stay. Science Think Aloud Protocol copy is out of scope here.
  *
  * Drives shipped sources — not a hand-copied fixture.
  */
 import { describe, expect, it } from "vitest";
-import { readdirSync, readFileSync, statSync } from "node:fs";
-import { extname, join } from "node:path";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 const ROOT = join(__dirname, "../..");
-const SKIP_DIRS = new Set(["node_modules", ".git", ".next", "coverage", "dist", "out"]);
-const TEXT_EXT = new Set([
-  ".ts",
-  ".tsx",
-  ".js",
-  ".jsx",
-  ".mjs",
-  ".cjs",
-  ".md",
-  ".mdx",
-  ".json",
-  ".html",
-  ".txt",
-  ".yml",
-  ".yaml",
-  ".css",
-]);
 
 /** Retired product acronym, built so this file does not contain the token. */
 const RETIRED = ["I", "L", "E"].join("");
@@ -57,18 +40,36 @@ const FORMER_PRODUCT_SLOTS = [
   "lib/seo/products.ts",
   "lib/prompt-kernel/ontology.ts",
   "lib/prompt-kernel/surfaces/ile.ts",
+  "lib/prompt-kernel/surfaces/tap.ts",
   "lib/sales/platform-pitch-deck.ts",
   "lib/marketing/verification-product.ts",
 ];
 
-function walk(dir: string, out: string[]) {
-  for (const name of readdirSync(dir)) {
-    if (SKIP_DIRS.has(name)) continue;
-    const path = join(dir, name);
-    if (statSync(path).isDirectory()) walk(path, out);
-    else if (TEXT_EXT.has(extname(name))) out.push(path);
-  }
-}
+/** Live product surfaces — identifiers and internal comments elsewhere may keep stored names. */
+const LIVE_SURFACES = [
+  ...FORMER_PRODUCT_SLOTS,
+  "README.md",
+  "docs/PROOF_OF_WORK_API.md",
+  "public/docs/proof-of-work-api-guide.md",
+  "public/skill.md",
+  "lib/session-instructions.ts",
+  "lib/pow-api/agent-tool-surface.ts",
+  "lib/pow-api/mcp-tools/evidence-tools.ts",
+  "lib/pow-api/pow-model-agent-contract.ts",
+  "lib/pow-api/stash-api.ts",
+  "lib/prompt-kernel/surfaces/score-context.ts",
+  "app/docs/proof-of-work-api/layout.tsx",
+  "app/docs/proof-of-work-api/page.tsx",
+  "components/exercise-tap/exercise-tap-phases.tsx",
+  "components/tap-score/tap-score-phases.tsx",
+  "components/tap-score/use-tap-score-flow.ts",
+  "components/ExerciseTapClient.tsx",
+  "components/SessionItem.tsx",
+  "components/workspace-view/use-workspace-learner.ts",
+  "components/InsightsDashboardTab.tsx",
+  "components/CustomVerificationModelsPanel.tsx",
+  "components/WorkspaceDataStudioPanel.tsx",
+];
 
 function read(rel: string) {
   return readFileSync(join(ROOT, rel), "utf8");
@@ -82,40 +83,51 @@ function stripComments(source: string) {
 }
 
 describe("retired product language is gone from shipped prose", () => {
-  it("comments, markdown, locale strings, and quoted strings do not name the retired product", () => {
-    const files: string[] = [];
-    walk(ROOT, files);
+  it("live product surfaces do not name the retired environment", () => {
+    const tapWord = /\bTAP\b/;
     const hits: string[] = [];
-    for (const path of files) {
-      const text = readFileSync(path, "utf8");
-      const ext = extname(path);
-      const prose =
-        ext === ".md" || ext === ".mdx" || ext === ".json" || ext === ".html" || ext === ".txt"
-          ? text
-          : text;
-      if (namesRetiredProduct(prose)) {
-        const rel = path.slice(ROOT.length + 1);
-        const line = prose.split("\n").findIndex((row) => namesRetiredProduct(row));
+    for (const rel of LIVE_SURFACES) {
+      const text = stripComments(read(rel));
+      if (namesRetiredProduct(text) || tapWord.test(text) || text.includes("TAP Learning")) {
+        const line = text
+          .split("\n")
+          .findIndex(
+            (row) =>
+              namesRetiredProduct(row) || tapWord.test(row) || row.includes("TAP Learning"),
+          );
+        hits.push(`${rel}:${line + 1}`);
+      }
+    }
+    for (const code of ["en", "de", "es", "pl", "vi", "zh"]) {
+      const rel = `messages/${code}.json`;
+      const text = read(rel);
+      if (namesRetiredProduct(text) || tapWord.test(text) || text.includes("TAP Learning")) {
+        const line = text
+          .split("\n")
+          .findIndex(
+            (row) =>
+              namesRetiredProduct(row) || tapWord.test(row) || row.includes("TAP Learning"),
+          );
         hits.push(`${rel}:${line + 1}`);
       }
     }
     expect(hits).toEqual([]);
   });
 
-  it("former product slots name TAP with Preparing, Learning, Drilling, and Validating", () => {
+  it("former product slots name Calibrate, Learn, and Verify", () => {
+    const tapWord = /\bTAP\b/;
     for (const rel of FORMER_PRODUCT_SLOTS) {
-      const text = read(rel);
-      expect(text, rel).toMatch(/\bTAP\b/);
-      expect(text, rel).toContain("Preparing");
-      expect(text, rel).toContain("Learning");
-      expect(text, rel).toContain("Drilling");
-      expect(text, rel).toContain("Validating");
+      const text = stripComments(read(rel));
+      expect(text, rel).toContain("Calibrate");
+      expect(text, rel).toContain("Learn");
+      expect(text, rel).toContain("Verify");
+      expect(text, rel).not.toMatch(tapWord);
+      expect(text, rel).not.toContain("TAP Learning");
     }
   });
 
-  it("keeps the stored route, meter, and proof id", () => {
+  it("keeps the stored meter and proof id", () => {
     expect(read("lib/ile-tim-chapter-complete.ts")).toContain("upload_ile_chapter_done");
-    expect(read("app/ile/session/[token]/page.tsx")).toContain("/ile/session/");
     expect(read("app/api/stripe/webhook/route.ts")).toContain("ileSessions");
     expect(read("app/api/stripe/webhook/route.ts")).toContain("Learning session");
     expect(read("app/api/stripe/webhook/route.ts")).not.toContain("TAP Learning session");
@@ -148,9 +160,9 @@ describe("retired product language is gone from shipped prose", () => {
     }
   });
 
-  it("lineup copy is one TAP for Preparing, Learning, Drilling, and Validating", () => {
-    const lineup = "Preparing, Learning, Drilling, and Validating";
-    const siblingSessionProduct = "TAP Learning";
+  it("lineup copy is Calibrate, Learn, and Verify", () => {
+    const lineup = "Calibrate, Learn, and Verify";
+    const tapWord = /\bTAP\b/;
     const lineupFiles = [
       "app/layout.tsx",
       "app/knowledge-verification/page.tsx",
@@ -174,40 +186,88 @@ describe("retired product language is gone from shipped prose", () => {
       "lib/prompts.ts",
       "lib/prompt-workspace-context.ts",
       "app/api/stripe/webhook/route.ts",
+      "public/skill.md",
     ];
     for (const rel of lineupFiles) {
       const text = stripComments(read(rel));
       expect(text, rel).toContain(lineup);
-      expect(text, rel).not.toContain(siblingSessionProduct);
+      expect(text, rel).not.toContain("TAP Learning");
+      expect(text, rel).not.toMatch(tapWord);
     }
     expect(read("lib/ile-tim-chapter-complete.ts")).toContain("upload_ile_chapter_done");
-    expect(read("app/ile/session/[token]/page.tsx")).toContain("/ile/session/");
     expect(read("app/api/stripe/webhook/route.ts")).toContain("ileSessions");
   });
 
-  it("locale product rows name one TAP for the four use cases", () => {
-    const lineup = "Preparing, Learning, Drilling, and Validating";
+  it("Verify session chrome names Verify instead of TAP", () => {
+    const tapWord = /\bTAP\b/;
+    const chrome = [
+      "components/exercise-tap/exercise-tap-phases.tsx",
+      "components/tap-score/tap-score-phases.tsx",
+      "components/tap-score/use-tap-score-flow.ts",
+      "components/ExerciseTapClient.tsx",
+    ];
+    for (const rel of chrome) {
+      const text = stripComments(read(rel));
+      expect(text, rel).not.toMatch(tapWord);
+      expect(text, rel).not.toContain("TAP Learning");
+      expect(text, rel).not.toContain("Exercise TAP");
+    }
+    const drill = read("components/exercise-tap/exercise-tap-phases.tsx");
+    expect(drill).toContain('kicker="Verify"');
+    expect(drill).toContain('kicker="Verify complete"');
+    expect(read("components/tap-score/tap-score-phases.tsx")).toContain(
+      'title="Could not end Verify session"',
+    );
+    expect(read("components/tap-score/use-tap-score-flow.ts")).toContain(
+      "Could not start Verify session",
+    );
+    expect(read("components/ExerciseTapClient.tsx")).toContain(
+      "Could not start Verify session",
+    );
+  });
+
+  it("session chrome locales drop TAP as a product name", () => {
+    const tapWord = /\bTAP\b/;
+    for (const code of ["en", "de", "es", "pl", "vi", "zh"]) {
+      const data = JSON.parse(read(`messages/${code}.json`)) as {
+        tap: { welcome: { panelIntro: string } };
+        onboardingGuide: { tap: { title: string } };
+        welcome: { panelIntro: string };
+      };
+      expect(data.tap.welcome.panelIntro, code).toMatch(/^Welcome to Verify\./);
+      expect(data.tap.welcome.panelIntro, code).not.toMatch(tapWord);
+      expect(data.tap.welcome.panelIntro, code).not.toContain("TAP Learning");
+      expect(data.tap.welcome.panelIntro, code).not.toContain("Think Aloud Protocol");
+      expect(data.onboardingGuide.tap.title, code).toBe("Verify");
+      expect(data.welcome.panelIntro, code).toMatch(/^Welcome to Learn\./);
+    }
+  });
+
+  it("locale product rows name Calibrate, Learn, and Verify", () => {
+    const lineup = "Calibrate, Learn, and Verify";
     for (const code of ["en", "de", "es", "pl", "vi", "zh"]) {
       const data = JSON.parse(read(`messages/${code}.json`)) as {
         planView: Record<string, string>;
         welcome: { panelIntro: string };
       };
       const plan = data.planView;
-      expect(plan.productIle, code).toBe("TAP");
+      expect(plan.productIle, code).toBe("Learn");
       expect(plan.productIleHint, code).toBe(lineup);
-      expect(plan.guestLinksFilterKindTap, code).toBe("Preparing and Drilling");
-      expect(plan.guestLinksFilterKindIle, code).toBe("Learning");
-      expect(plan.productIle, code).not.toContain("TAP Learning");
-      expect(data.welcome.panelIntro.startsWith("Welcome to TAP Learning.")).toBe(true);
+      expect(plan.guestLinksFilterKindTap, code).toBe("Calibrate and Verify");
+      expect(plan.guestLinksFilterKindIle, code).toBe("Learn");
+      expect(plan.productIle, code).not.toContain("TAP");
+      expect(data.welcome.panelIntro.startsWith("Welcome to Learn.")).toBe(true);
     }
   });
 
-  it("every locale welcome follows the English TAP Learning wording", () => {
+  it("every locale welcome follows the English Learn wording", () => {
     const en = JSON.parse(read("messages/en.json")) as {
       welcome: { panelIntro: string; panelIntroMobile: string };
     };
-    expect(en.welcome.panelIntro.startsWith("Welcome to TAP Learning.")).toBe(true);
-    expect(en.welcome.panelIntroMobile.startsWith("Welcome to TAP Learning.")).toBe(true);
+    expect(en.welcome.panelIntro.startsWith("Welcome to Learn.")).toBe(true);
+    expect(en.welcome.panelIntroMobile.startsWith("Welcome to Learn.")).toBe(true);
+    expect(en.welcome.panelIntro).not.toMatch(/\bTAP\b/);
+    expect(en.welcome.panelIntroMobile).not.toMatch(/\bTAP\b/);
     for (const code of ["en", "de", "es", "pl", "vi", "zh"]) {
       const data = JSON.parse(read(`messages/${code}.json`)) as {
         welcome: { panelIntro: string; panelIntroMobile: string };

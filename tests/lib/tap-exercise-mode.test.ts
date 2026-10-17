@@ -406,7 +406,7 @@ describe("structural: Settings, block tools, separate Exercise UI", () => {
   });
 
   it("guest + owner entry routes by interaction kind to ExerciseTapClient", () => {
-    const guest = read("app/tap/session/[token]/page.tsx");
+    const guest = read("components/guest-session/private-tap-session-page.tsx");
     expect(guest).toContain("resolveTapShellFromSession");
     expect(guest).toContain("interaction_kind");
     expect(guest).toContain('shell === "scout"');

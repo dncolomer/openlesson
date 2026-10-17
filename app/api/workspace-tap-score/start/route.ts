@@ -180,7 +180,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (privateToken) {
-      return jsonError(500, "TAP session missing for private link");
+      return jsonError(500, "Verify session missing for private link");
     }
 
     const insertRow = (kind: TapInteractionKind) =>
@@ -209,7 +209,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (error || !row) {
-      return jsonError(500, error?.message || "Could not start TAP session");
+      return jsonError(500, error?.message || "Could not start Verify session");
     }
 
     return NextResponse.json({

@@ -34,11 +34,14 @@ describe("private link token model", () => {
 
   it("session URL is built from the bearer token", () => {
     const token = createPrivateToken();
+    expect(buildGuestLinkUrl("https://uncertain.systems/", "tap", token, "scout")).toBe(
+      `https://uncertain.systems/calibrate/session/${token}`,
+    );
     expect(buildGuestLinkUrl("https://uncertain.systems/", "tap", token)).toBe(
-      `https://uncertain.systems/tap/session/${token}`,
+      `https://uncertain.systems/verify/session/${token}`,
     );
     expect(buildGuestLinkUrl("https://uncertain.systems", "ile", token)).toBe(
-      `https://uncertain.systems/ile/session/${token}`,
+      `https://uncertain.systems/learn/session/${token}`,
     );
   });
 });
@@ -195,8 +198,8 @@ describe("session page wiring (static)", () => {
     const { readFileSync } = await import("node:fs");
     const { join } = await import("node:path");
     const root = join(__dirname, "../..");
-    const tap = readFileSync(join(root, "app/tap/session/[token]/page.tsx"), "utf8");
-    const ile = readFileSync(join(root, "app/ile/session/[token]/page.tsx"), "utf8");
+    const tap = readFileSync(join(root, "components/guest-session/private-tap-session-page.tsx"), "utf8");
+    const ile = readFileSync(join(root, "app/learn/session/[token]/page.tsx"), "utf8");
     expect(tap).toContain("collectEntryQueryParams");
     expect(tap).toContain("recordGuestLinkEntryQueryParams");
     expect(tap).toContain("searchParams");

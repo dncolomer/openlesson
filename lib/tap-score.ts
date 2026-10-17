@@ -16,6 +16,7 @@ import {
 } from "@/lib/prompt-workspace-context";
 import { normalizeUnusableCells } from "@/lib/map-ground-rules";
 import { withConversationLanguageInstruction } from "@/lib/tutoring-languages";
+import { buildGuestLinkUrl } from "@/lib/guest-link-access";
 
 export interface TapStartingTopic {
   id: string;
@@ -126,8 +127,12 @@ export const TAP_SCORE_MARKERS = [
 
 export { createPrivateToken, hashPrivateToken };
 
-export function buildTapScoreSessionUrl(baseUrl: string, privateToken: string) {
-  return `${baseUrl.replace(/\/$/, "")}/tap/session/${privateToken}`;
+export function buildTapScoreSessionUrl(
+  baseUrl: string,
+  privateToken: string,
+  interactionKind?: string | null,
+) {
+  return buildGuestLinkUrl(baseUrl, "tap", privateToken, interactionKind);
 }
 
 export function listenerStyle(_mode: TapScoreMode) {

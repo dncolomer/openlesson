@@ -438,7 +438,7 @@ const stopRecording = async () => {
     guestAccessKind === "aycl" && ayclToken
       ? `/learn/${ayclToken}`
       : guestAccessKind === "ile"
-        ? `/ile/session/${ileToken}`
+        ? `/learn/session/${ileToken}`
         : getIlePostSessionPath(finalSession)
   );
 };

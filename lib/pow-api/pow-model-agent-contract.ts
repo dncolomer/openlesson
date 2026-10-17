@@ -33,7 +33,7 @@ export function powModelAgentSimulationContract(): string {
     `Dictated canvas text is tool_action dictate. metadata.prompt is the transcript. It is not draw_text and not a speech segment.`,
     `Voice thoughts stay tool_name ${ILE_TRACE_TOOL_NAME} or ${TAP_TRACE_TOOL_NAME}, not canvas.`,
     `Speech stays tool_name ${ILE_SPEECH_TOOL_NAME} or ${TAP_SPEECH_TOOL_NAME} as a tool row, not a stored type named speech, and not canvas.`,
-    "That simulated stream is the proof of work formerly called TAPBench PoW, produced so it can form synthetic knowledge regions.",
+    "That simulated stream is proof of work produced so it can form synthetic knowledge regions.",
   ].join(" ");
 }
 
@@ -43,10 +43,10 @@ export function powModelVersionFieldDescription(): string {
 }
 
 /** Heading of the catalog appended to every downloaded skill.md. */
-export const CANVAS_TAP_SIMULATION_HEADING = "## Simulate TAP on the canvas";
+export const CANVAS_TAP_SIMULATION_HEADING = "## Simulate canvas work";
 
 /**
- * Compact catalog the agent that reads skill.md uses to simulate a human TAP
+ * Compact catalog the agent that reads skill.md uses to simulate a human
  * session. tool_name and tool_action are the stored values, not labels.
  */
 export function canvasTapSimulationSkillSection(): string {
@@ -55,7 +55,7 @@ export function canvasTapSimulationSkillSection(): string {
   return [
     CANVAS_TAP_SIMULATION_HEADING,
     "",
-    `Simulate a human TAP session as ${POW_MODEL_VERSION}. Stored type is tool. Stamp pow_model_version ${POW_MODEL_VERSION}. Use only these tool_name and tool_action values. Pan, zoom, and scroll are not events.`,
+    `Simulate a human session as ${POW_MODEL_VERSION}. Stored type is tool. Stamp pow_model_version ${POW_MODEL_VERSION}. Use only these tool_name and tool_action values. Pan, zoom, and scroll are not events.`,
     "",
     "| Human action | tool_name | tool_action |",
     "| --- | --- | --- |",

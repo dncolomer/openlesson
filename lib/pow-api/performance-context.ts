@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AuthContext } from "./types";
-import { filterResolvableXaiFileIds, isXaiFileId, uploadFileToXAI } from "@/lib/xai-files";
+import { filterResolvableXaiFileIds, isXaiFileId } from "@/lib/xai-files";
+import { runWithXaiContext } from "@/lib/xai-context";
+import { resolveOrgXaiApiKey, uploadOrgScopedXaiFile } from "@/lib/organization/org-xai-files";
 import { proofOfWorkQueryForAuth } from "./workspace-proof-of-work";
 import { filterSnapshotEligibleProofOfWorkRows } from "./pow-quality";
 
@@ -273,26 +275,48 @@ export async function buildWorkspacePerformanceContext({
       : basePayload;
 
   const dataJson = JSON.stringify(payload, null, 2);
-  const summaryUpload = await uploadFileToXAI(
-    `workspace-performance-${workspaceId}-${Date.now()}.json`,
-    "application/json",
-    Buffer.from(dataJson).toString("base64")
-  );
+  const organizationId =
+    typeof workspace.organization_id === "string" ? workspace.organization_id : null;
+  const orgApiKey = await resolveOrgXaiApiKey(organizationId);
 
-  const candidateArtifactIds = Array.from(
-    new Set(
-      [
-        ...proofOfWorkRows.map((row) => row.xai_file_id),
-        ...(workspaceFiles || []).map((file) => file.xai_file_id),
-      ].filter(isXaiFileId)
-    )
-  ).slice(0, MAX_ARTIFACT_FILE_REFS);
+  const attachFiles = async () => {
+    const summaryUpload = await uploadOrgScopedXaiFile(
+      `workspace-performance-${workspaceId}-${Date.now()}.json`,
+      "application/json",
+      Buffer.from(dataJson).toString("base64"),
+      {
+        organizationId,
+        collectionFields: {
+          workspace_id: workspaceId,
+          kind: "performance-context",
+        },
+      },
+    );
 
-  const artifactFileIds = await filterResolvableXaiFileIds(candidateArtifactIds);
+    const candidateArtifactIds = Array.from(
+      new Set(
+        [
+          ...proofOfWorkRows.map((row) => row.xai_file_id),
+          ...(workspaceFiles || []).map((file) => file.xai_file_id),
+        ].filter(isXaiFileId)
+      )
+    ).slice(0, MAX_ARTIFACT_FILE_REFS);
 
-  const fileIds = [summaryUpload.file_id, ...artifactFileIds];
+    const artifactFileIds = await filterResolvableXaiFileIds(candidateArtifactIds, {
+      apiKey: orgApiKey,
+    });
 
-  return { payload, fileIds, summaryFileId: summaryUpload.file_id };
+    return {
+      payload,
+      fileIds: [summaryUpload.file_id, ...artifactFileIds],
+      summaryFileId: summaryUpload.file_id,
+    };
+  };
+
+  if (orgApiKey) {
+    return runWithXaiContext({ organizationId, apiKey: orgApiKey }, attachFiles);
+  }
+  return attachFiles();
 }
 
 export function buildPerformanceChatInstructions(
@@ -305,14 +329,14 @@ export function buildPerformanceChatInstructions(
 
   return `${scope}
 
-You are an Uncertain Systems performance analyst. Use the attached workspace JSON summary plus any artifact files (tool usage logs, screenshots, video, EEG, Think Aloud Protocol (TAP) results, TAP Learning practice traces, session reports, and uploaded files).
+You are an Uncertain Systems performance analyst. Use the attached workspace JSON summary plus any artifact files (tool usage logs, screenshots, video, EEG, Calibrate, Learn, and Verify traces, session reports, and uploaded files).
 
 When answering:
 1. Ground claims in specific proof of work from the attachments.
 2. Separate demonstrated strengths from emerging gaps.
 3. Be constructive and actionable.
 4. Format responses in markdown.
-5. When recommending next actions, use product- and workflow-specific language only — never suggest Think Aloud Protocol (TAP) sessions, completing workspace blocks, TAP Learning practice, or other Uncertain Systems platform mechanics.
+5. When recommending next actions, use product- and workflow-specific language only — never suggest hosted Calibrate, Learn, or Verify sessions, completing workspace blocks, or other Uncertain Systems platform mechanics.
 
 If proof of work is sparse, say what product/tool proof of work is missing and what observable actions to collect next.${buildPerformanceStyleSection(stylePrompt)}`;
 }

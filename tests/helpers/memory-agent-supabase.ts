@@ -29,15 +29,37 @@ export function createMemoryAgentSupabase(seed: Partial<MemoryDb> = {}) {
             organization_id: "org-1",
             is_org_admin: true,
             plan: "teams",
+            extra_lessons: 0,
+            extra_workspaces: 0,
+            subscription_status: "active",
+            current_period_end: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString(),
+            is_admin: true,
           },
         ],
+  };
+  const extras: Record<string, Row[]> = {
+    organizations: [
+      {
+        id: "org-1",
+        plan: "teams",
+        subscription_status: "active",
+        current_period_end: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString(),
+        extra_lessons: 0,
+        billing_mode: "stripe",
+        kind: "standard",
+        archived_at: null,
+      },
+    ],
+    workspace_proof_of_work: [],
+    sessions: [],
   };
 
   function tableRows(name: string): Row[] {
     if (name === "workspaces") return db.workspaces;
     if (name === "blocks") return db.blocks;
     if (name === "profiles") return db.profiles;
-    return [];
+    if (!extras[name]) extras[name] = [];
+    return extras[name];
   }
 
   function from(table: string) {
@@ -83,11 +105,11 @@ export function createMemoryAgentSupabase(seed: Partial<MemoryDb> = {}) {
       return self();
     };
     builder.delete = () => {
-      const keep = tableRows(table).filter(
+      const rows = tableRows(table);
+      const keep = rows.filter(
         (row) => !state.filters.every(([col, value]) => row[col] === value),
       );
-      const name = table as keyof MemoryDb;
-      (db[name] as Row[]).splice(0, (db[name] as Row[]).length, ...keep);
+      rows.splice(0, rows.length, ...keep);
       state.pending = [];
       return self();
     };

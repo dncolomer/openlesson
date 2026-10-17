@@ -425,8 +425,7 @@ describe("Stash API product surfaces", () => {
     expect(existsSync(join(ROOT, "app/products/stash-api/page.tsx"))).toBe(false);
     const page = readFileSync(join(ROOT, "lib/seo/product-page.ts"), "utf8");
     expect(page).toContain("STASH_API_PAGE");
-    expect(page).toMatch(/evaluate agents the same way we evaluate humans with TAP/i);
-    expect(page).toContain("alaTAP");
+    expect(page).toMatch(/evaluate agents the same way we evaluate humans with session/i);
   });
 
   it("platform pitch products slide has TAP, Stash API, and PoW API; interface slide removed", () => {
@@ -435,9 +434,9 @@ describe("Stash API product surfaces", () => {
     );
     expect(productsSlide).toBeTruthy();
     expect(productsSlide?.cardLayout).toBe("product-stack");
-    // Top→bottom: TAP → Stash → PoW foundation
+    // Top→bottom: session → Stash → PoW foundation
     expect(productsSlide?.cards?.map((c) => c.label.toLowerCase())).toEqual([
-      "tap",
+      "session",
       "stash api",
       "pow api",
     ]);

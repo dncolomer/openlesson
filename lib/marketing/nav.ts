@@ -3,7 +3,6 @@ import {
   HARNESS_PRICING_PATH,
   KNOWLEDGE_VERIFICATION_PATH,
   LEARNING_HARNESS_PATH,
-  TAPBENCH_PATH,
   VERIFICATION_PRICING_PATH,
 } from "@/lib/marketing/paths";
 
@@ -21,7 +20,6 @@ export const PRICING_NAV_LINKS = [
 /** Community dropdown — AYCL lives under the Learning Harness product, not here. */
 export const COMMUNITY_LINKS = [
   { href: "/community-events", label: "Community Events" },
-  { href: TAPBENCH_PATH, label: "TAPBench" },
   { href: "/kardashev", label: "Kardashev Research" },
 ] as const;
 

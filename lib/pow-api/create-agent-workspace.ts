@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { callXaiJSON, DEFAULT_MODEL, userMessage } from "@/lib/xai-client";
-import { uploadFileToXAI } from "@/lib/xai-files";
+import { uploadOrgScopedXaiFile } from "@/lib/organization/org-xai-files";
 import {
   fallbackWorkspaceGoal,
   normalizeWorkspaceGoal,
@@ -123,13 +123,20 @@ async function uploadWorkspaceSeedFiles(
   supabase: SupabaseClient,
   workspaceId: string,
   ownerUserId: string,
-  files: WorkspaceInitialFile[]
+  files: WorkspaceInitialFile[],
+  organizationId: string | null,
 ) {
   const uploadedFiles = [];
 
   for (const file of files) {
     try {
-      const xaiFile = await uploadFileToXAI(file.name, file.mime_type, file.data);
+      const xaiFile = await uploadOrgScopedXaiFile(file.name, file.mime_type, file.data, {
+        organizationId,
+        collectionFields: {
+          workspace_id: workspaceId,
+          user_id: ownerUserId,
+        },
+      });
       const { data: fileRecord, error: fileError } = await supabase
         .from("workspace_files")
         .insert({
@@ -244,7 +251,13 @@ async function createSemanticAgentWorkspace(
       : new Error("Failed to create workspace blocks");
   }
 
-  const uploadedFiles = await uploadWorkspaceSeedFiles(supabase, workspace.id, ownerUserId, files);
+  const uploadedFiles = await uploadWorkspaceSeedFiles(
+    supabase,
+    workspace.id,
+    ownerUserId,
+    files,
+    auth.organization_id,
+  );
 
   const { data: blocks } = await supabase
     .from("blocks")
@@ -318,7 +331,13 @@ async function createOpaqueAgentWorkspace(
     )
   );
 
-  const uploadedFiles = await uploadWorkspaceSeedFiles(supabase, workspace.id, ownerUserId, files);
+  const uploadedFiles = await uploadWorkspaceSeedFiles(
+    supabase,
+    workspace.id,
+    ownerUserId,
+    files,
+    auth.organization_id,
+  );
 
   const { data: blocks } = await supabase
     .from("blocks")

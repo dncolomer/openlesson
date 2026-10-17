@@ -7,18 +7,14 @@ import {
 } from "./workspace-proof-of-work";
 import { createdByApiKeyId } from "./auth";
 import type { AuthContext } from "./types";
-import { uploadFileToXAI, deleteFileFromXAI } from "@/lib/xai-files";
+import { deleteFileFromXAI } from "@/lib/xai-files";
 import {
   assertCanSubmitProofOfWork,
   isUsageLimitReachedError,
   UsageLimitReachedError,
 } from "@/lib/usage-enforcement";
 import type { ErrorCode } from "./types";
-import { createAdminClient } from "@/lib/supabase/admin";
-import {
-  attachFileToOrgCollection,
-  ensureOrgXaiApiKey,
-} from "@/lib/organization/ensure-xai-resources";
+import { uploadOrgScopedXaiFile } from "@/lib/organization/org-xai-files";
 import {
   buildPrivacyMetadata,
   lintOpaquePayload,
@@ -221,36 +217,18 @@ export async function uploadWorkspaceProofOfWork(
     auth.organization_id || workspace.organization_id
   );
 
-  let xaiApiKey: string | undefined;
-  if (organizationId) {
-    try {
-      const admin = createAdminClient();
-      const ensured = await ensureOrgXaiApiKey(admin, organizationId);
-      xaiApiKey = ensured.apiKey;
-    } catch (err) {
-      console.error("[upload-workspace-proof-of-work] org xAI key resolve failed:", err);
-    }
-  }
-
-  const uploaded = await uploadFileToXAI(fileName, mimeType, base64, {
-    apiKey: xaiApiKey,
+  const uploaded = await uploadOrgScopedXaiFile(fileName, mimeType, base64, {
+    organizationId,
+    collectionFields: {
+      ...(organizationId ? { organization_id: organizationId } : {}),
+      workspace_id: input.workspaceId,
+      proof_of_work_type: evidenceType,
+      ...(participantUserId ? { user_id: participantUserId } : {}),
+    },
   });
   const xaiFileId = uploaded.file_id;
-
-  let xaiCollectionId: string | null = null;
-  if (organizationId) {
-    try {
-      const admin = createAdminClient();
-      xaiCollectionId = await attachFileToOrgCollection(admin, organizationId, xaiFileId, {
-        organization_id: organizationId,
-        workspace_id: input.workspaceId,
-        proof_of_work_type: evidenceType,
-        ...(participantUserId ? { user_id: participantUserId } : {}),
-      });
-    } catch (err) {
-      console.error("[upload-workspace-proof-of-work] collection attach failed:", err);
-    }
-  }
+  const xaiApiKey = uploaded.apiKey ?? undefined;
+  const xaiCollectionId = uploaded.collectionId;
 
   const { row, error } = await insertWorkspaceProofOfWorkRow(supabase, {
     workspace_id: input.workspaceId,
@@ -281,7 +259,7 @@ export async function uploadWorkspaceProofOfWork(
   });
 
   if (error || !row) {
-    await deleteFileFromXAI(xaiFileId).catch(() => {});
+    await deleteFileFromXAI(xaiFileId, { apiKey: xaiApiKey }).catch(() => {});
     console.error("[upload-workspace-proof-of-work] DB insert failed:", error);
     throw new Error(
       formatDbError(

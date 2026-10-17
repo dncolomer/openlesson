@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
-import { deleteFileFromXAI } from "@/lib/xai-files";
+import { deleteOrgScopedXaiFile, organizationIdFromSession } from "@/lib/organization/org-xai-files";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -57,9 +57,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Best-effort parallel delete from xAI
+    const organizationId = await organizationIdFromSession(supabase, sessionId);
     await Promise.all(
-      allFileIds.map(id => deleteFileFromXAI(id).catch(() => {}))
+      allFileIds.map((id) => deleteOrgScopedXaiFile(id, organizationId).catch(() => {}))
     );
 
     return NextResponse.json({ success: true, deleted: allFileIds.length });

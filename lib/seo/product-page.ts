@@ -52,7 +52,7 @@ export const TIM_PAGE: SeoProductPageConfig = {
     "TIM is not a product you buy on its own. It is the core model behind every Uncertain Systems surface — trained to decide when to interrupt a learner’s path with the right probe, coaching nudge, or proof-of-work request, at the right moment. That is how we break the linearity of classic analytics and turn-based chat.",
   metaTitle: "Trace Interruption Model (TIM) | Core Learning Interruption Engine",
   metaDescription:
-    "TIM predicts optimal learning-path interruptions across TAP — Preparing, Learning, Drilling, and Validating — and Proof-of-Work API. The shared model behind verification, optimization, and augmentation — not a standalone SKU.",
+    "TIM predicts optimal learning-path interruptions across session — Calibrate, Learn, and Verify — and Proof-of-Work API. The shared model behind verification, optimization, and augmentation — not a standalone SKU.",
   keywords: [
     "trace interruption model",
     "TIM",
@@ -72,7 +72,7 @@ export const TIM_PAGE: SeoProductPageConfig = {
     {
       title: "Think Aloud Protocol probes",
       description:
-        "Live TAP sessions use TIM to target hesitations and reasoning breaks with Socratic follow-ups while the candidate is still in flow — not after a form submit.",
+        "Live sessions use TIM to target hesitations and reasoning breaks with Socratic follow-ups while the candidate is still in flow — not after a form submit.",
     },
     {
       title: "Learning coaching moments",
@@ -97,7 +97,7 @@ export const TIM_PAGE: SeoProductPageConfig = {
   ],
   highlights: [
     "Trained to predict when and how to interrupt — not just what happened last",
-    "Shared across Proof-of-Work API and TAP on every workspace",
+    "Shared across Proof-of-Work API and session on every workspace",
     "Surfaces as interruption payloads with delay, confidence, and consumer obligations",
     "Foundation layer — not sold separately; powers the products you integrate",
   ],
@@ -105,7 +105,7 @@ export const TIM_PAGE: SeoProductPageConfig = {
     {
       question: "Can I call TIM directly?",
       answer:
-        "No. TIM runs inside Uncertain Systems products. You experience it through TAP probes, Learning coaching, PoW API interruption fields, and performance-driven schema evolution — not as a standalone endpoint.",
+        "No. TIM runs inside Uncertain Systems products. You experience it through session probes, Learning coaching, PoW API interruption fields, and performance-driven schema evolution — not as a standalone endpoint.",
     },
     {
       question: "How is this different from funnel analytics?",
@@ -154,7 +154,7 @@ export const POW_API_PAGE: SeoProductPageConfig = {
     {
       title: "Custom verification applications",
       description:
-        "Build hiring screens, certification gates, TAP-cha human checks, or agent readiness bars on top of one workspace. Your UI, our measurement layer — proof of work in, verified capability out.",
+        "Build hiring screens, certification gates, human human checks, or agent readiness bars on top of one workspace. Your UI, our measurement layer — proof of work in, verified capability out.",
     },
     {
       title: "Custom optimization applications",
@@ -200,9 +200,9 @@ export const POW_API_PAGE: SeoProductPageConfig = {
         "Artifacts and traces: documents, recordings, tool logs, session exports, screen captures — anything that proves work happened. The API scores, ranks gaps, and feeds the model that drives what gets asked for next.",
     },
     {
-      question: "How does this relate to TAP?",
+      question: "How does this relate to session?",
       answer:
-        "TAP is the hosted session for Preparing, Learning, Drilling, and Validating. Proof-of-Work API is the programmable layer underneath — for when you need your own UX, your own gates, or agent-native integration while sharing the same workspace and model.",
+        "session is the hosted session for Calibrate, Learn, and Verify. Proof-of-Work API is the programmable layer underneath — for when you need your own UX, your own gates, or agent-native integration while sharing the same workspace and model.",
     },
     {
       question: "Why call it self-evolving?",
@@ -225,7 +225,7 @@ export const TAP_PAGE: SeoProductPageConfig = {
     "Send a link. Candidates or learners talk through their thinking while they work. You get scored evidence of what they understand — signal that polished deliverables and AI-assisted output cannot fake.",
   metaTitle: "Think Aloud Protocol | Hard Skill & Human Verification",
   metaDescription:
-    "One interface for Preparing, Learning, Drilling, and Validating. Live think-aloud sessions with Socratic probes for hard skill verification and human judgment checks inside your workspace.",
+    "One interface for Calibrate, Learn, and Verify. Live think-aloud sessions with Socratic probes for hard skill verification and human judgment checks inside your workspace.",
   keywords: [
     "think aloud protocol",
     "hard skill verification",
@@ -263,14 +263,14 @@ export const TAP_PAGE: SeoProductPageConfig = {
   ],
   faqs: [
     {
-      question: "When should I use TAP instead of the API?",
+      question: "When should I use session instead of the API?",
       answer:
-        "Use TAP when you need live human cognition under probe. Use the Proof-of-Work API when you already have artifacts or traces to score asynchronously.",
+        "Use session when you need live human cognition under probe. Use the Proof-of-Work API when you already have artifacts or traces to score asynchronously.",
     },
     {
       question: "Can candidates use their own tools?",
       answer:
-        "Yes. TAP captures reasoning during real work — spreadsheets, IDEs, dashboards — not artificial puzzle screens.",
+        "Yes. session captures reasoning during real work — spreadsheets, IDEs, dashboards — not artificial puzzle screens.",
     },
   ],
   closingTitle: "Trust the thinking, not the slide deck.",
@@ -284,10 +284,10 @@ export const ILE_PAGE: SeoProductPageConfig = {
   eyebrow: "Learning",
   h1: "Replace tests with cognitive analysis people actually learn from.",
   intro:
-    "Learning is a use case of TAP, one interface for Preparing, Learning, Drilling, and Validating. It is a drop-in alternative to multiple-choice tests and take-home assignments when you care about complex cognition — how someone reasons, adapts, and improves under realistic conditions.",
+    "Learning is a use case of session, one interface for Calibrate, Learn, and Verify. It is a drop-in alternative to multiple-choice tests and take-home assignments when you care about complex cognition — how someone reasons, adapts, and improves under realistic conditions.",
   metaTitle: "Learning | Cognitive Analysis Beyond Tests",
   metaDescription:
-    "The Learning use case of TAP: guided scenarios, coaching, and proof of progress — a replacement for tests and take-homes when depth matters.",
+    "The Learning use case of session: guided scenarios, coaching, and proof of progress — a replacement for tests and take-homes when depth matters.",
   keywords: [
     "learning",
     "think aloud protocol",
@@ -316,11 +316,11 @@ export const ILE_PAGE: SeoProductPageConfig = {
     {
       title: "Post-verification improvement",
       description:
-        "Route TAP or API findings directly into practice until scores move — not into a generic content library.",
+        "Route session or API findings directly into practice until scores move — not into a generic content library.",
     },
   ],
   highlights: [
-    "Practice wired to verification gaps from TAP and Proof-of-Work API",
+    "Practice wired to verification gaps from session and Proof-of-Work API",
     "Progress tracked in the same workspace and learning graph",
     "Designed for complex cognition, not checkbox completion",
   ],
@@ -328,12 +328,12 @@ export const ILE_PAGE: SeoProductPageConfig = {
     {
       question: "Is the Learning use case an LMS?",
       answer:
-        "No. Learning is a use case of TAP — practice targets what verification surfaced in your actual work context.",
+        "No. Learning is a use case of session — practice targets what verification surfaced in your actual work context.",
     },
     {
       question: "Is Learning a separate product?",
       answer:
-        "No. Preparing, Learning, Drilling, and Validating are use cases of one TAP interface. Gaps from Proof-of-Work API or manual review can route into Learning.",
+        "No. Calibrate, Learn, and Verify are use cases of one session interface. Gaps from Proof-of-Work API or manual review can route into Learning.",
     },
   ],
   closingTitle: "Measure depth, not just delivery.",
@@ -344,23 +344,23 @@ export const ILE_PAGE: SeoProductPageConfig = {
 export const STASH_API_PAGE: SeoProductPageConfig = {
   slug: "stash-api",
   path: "/products/stash-api",
-  eyebrow: "Stash API · alaTAP",
-  h1: "Evaluate agents the same way we evaluate humans with TAP.",
+  eyebrow: "Stash API · agent Stash",
+  h1: "Evaluate agents the same way we evaluate humans with session.",
   intro:
-    "Stash API is the first Agentic Product (alaTAP) — a pure-API Think Aloud Protocol for agents. Stream the same proof-of-work types as Proof-of-Work API into temporary memory, then decide Stash (System 1) or Submit (System 2). Every decision flushes into the regular PoW stack with workspace and user references so scoring can contrast intent the same way TAP does for humans.",
-  metaTitle: "Stash API | alaTAP — Agent Evaluation like Think Aloud Protocol",
+    "Stash API is the first Agentic Product (agent Stash) — a pure-API Think Aloud Protocol for agents. Stream the same proof-of-work types as Proof-of-Work API into temporary memory, then decide Stash (System 1) or Submit (System 2). Every decision flushes into the regular PoW stack with workspace and user references so scoring can contrast intent the same way session does for humans.",
+  metaTitle: "Stash API | agent Stash — Agent Evaluation like Think Aloud Protocol",
   metaDescription:
-    "Stash API buffers agent proof of work, then Stash (System 1) or Submit (System 2) into Proof-of-Work API. Evaluate agents the same way we evaluate humans with TAP.",
+    "Stash API buffers agent proof of work, then Stash (System 1) or Submit (System 2) into Proof-of-Work API. Evaluate agents the same way we evaluate humans with session.",
   keywords: [
     "stash API",
-    "alaTAP",
+    "agent Stash",
     "agent evaluation",
     "agent think aloud",
     "system 1 system 2 agents",
     "proof of work stash submit",
     "agentic product",
   ],
-  heroImageAlt: "Stash API — alaTAP agent evaluation",
+  heroImageAlt: "Stash API — agent Stash agent evaluation",
   useCases: [
     {
       title: "Agent think-aloud over REST",
@@ -373,7 +373,7 @@ export const STASH_API_PAGE: SeoProductPageConfig = {
         "Stash marks fast, provisional work (System 1). Submit marks deliberate commits (System 2). Both become durable PoW with intent metadata for scoring.",
     },
     {
-      title: "Same meter as human TAP",
+      title: "Same meter as human session",
       description:
         "Agents are evaluated on the same knowledge-config stack as humans: proof of work → embeddings → distance to labeled regions — not a separate agent quiz.",
     },
@@ -384,7 +384,7 @@ export const STASH_API_PAGE: SeoProductPageConfig = {
     },
   ],
   highlights: [
-    "First Agentic Product (alaTAP) — pure-API TAP for agents",
+    "First Agentic Product (agent Stash) — pure-API session for agents",
     "Same PoW types as Proof-of-Work API: tool, screen, video, EEG",
     "Temporary buffer until Stash (System 1) or Submit (System 2); memory resets after flush",
     "Flushes through the regular PoW API with workspace, user, and system flags",
@@ -393,7 +393,7 @@ export const STASH_API_PAGE: SeoProductPageConfig = {
     {
       question: "How is Stash API different from Proof-of-Work API?",
       answer:
-        "PoW API stores evidence immediately. Stash API holds units in temporary memory until you Stash or Submit — matching TAP’s deliberate intent choice for agents over pure API calls.",
+        "PoW API stores evidence immediately. Stash API holds units in temporary memory until you Stash or Submit — matching session’s deliberate intent choice for agents over pure API calls.",
     },
     {
       question: "What happens on Stash vs Submit?",
@@ -401,9 +401,9 @@ export const STASH_API_PAGE: SeoProductPageConfig = {
         "Both flush every buffered unit through Proof-of-Work API with workspace and user references. Stash attaches System 1 metadata; Submit attaches System 2. The buffer then resets.",
     },
     {
-      question: "Is this a replacement for TAP?",
+      question: "Is this a replacement for session?",
       answer:
-        "No. TAP is the live human protocol. Stash API is alaTAP — the agentic product that applies the same stash/submit evaluation model to agents.",
+        "No. session is the live human protocol. Stash API is agent Stash — the agentic product that applies the same stash/submit evaluation model to agents.",
     },
   ],
   secondaryCta: { label: "View Proof-of-Work API docs", href: "/docs/proof-of-work-api" },

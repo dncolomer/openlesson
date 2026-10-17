@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { ayclTokenFromBody,
   ileTokenFromBody, guardSessionRoute } from "@/lib/api/require-auth";
-import { uploadFileToXAI } from "@/lib/xai-files";
+import { organizationIdFromSession, uploadOrgScopedXaiFile } from "@/lib/organization/org-xai-files";
 import { callXaiResponses, DEFAULT_MODEL, ResponsesInputMessage } from "@/lib/xai-client";
 
 export const runtime = "nodejs";
@@ -96,10 +96,15 @@ export async function POST(req: NextRequest) {
       const fileName = `session-performance-${sessionId}-${Date.now()}.json`;
       
       try {
-        const uploadResult = await uploadFileToXAI(
+        const organizationId = await organizationIdFromSession(supabase, sessionId);
+        const uploadResult = await uploadOrgScopedXaiFile(
           fileName,
           "application/json",
-          Buffer.from(dataJson).toString("base64")
+          Buffer.from(dataJson).toString("base64"),
+          {
+            organizationId,
+            collectionFields: { session_id: sessionId },
+          },
         );
         activeFileIds = [uploadResult.file_id];
       } catch (uploadError) {

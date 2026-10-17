@@ -46,13 +46,13 @@ const nextConfig: NextConfig = {
       { source: "/solutions/:path*", destination: "/", permanent: true },
       { source: "/plan/:id", destination: "/workspace/:id", permanent: true },
       { source: "/plans", destination: "/workspaces", permanent: true },
-      // Results live on /tapbench; do not let /tapbench/results hit [token].
+      { source: "/vision", destination: "/science", permanent: true },
+      { source: "/ile/session/:token", destination: "/learn/session/:token", permanent: true },
       {
-        source: "/tapbench/results",
-        destination: "/tapbench",
+        source: "/ile/session/:token/settings",
+        destination: "/learn/session/:token/settings",
         permanent: true,
       },
-      { source: "/vision", destination: "/science", permanent: true },
     ];
   },
   images: {

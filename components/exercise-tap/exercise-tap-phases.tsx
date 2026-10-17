@@ -285,7 +285,7 @@ export function ExerciseTapPhases(props: {
               </div>
               <TapAestheticSection bgImage={bgImage} kind="shortcuts">
                 <TapBriefingConfig
-                  kicker="Exercise TAP"
+                  kicker="Verify"
                   workspaceTitle={workspaceTitle}
                   minutes={minutes}
                   onMinutesChange={setMinutes}
@@ -476,7 +476,7 @@ export function ExerciseTapPhases(props: {
             />
           ) : (
             <SessionFinishedScreen
-              kicker="Exercise TAP complete"
+              kicker="Verify complete"
               title={t("tap.postSession.resultsTitle")}
               body="Your spoken exercise and submitted thoughts were recorded as proof of work."
               actions={

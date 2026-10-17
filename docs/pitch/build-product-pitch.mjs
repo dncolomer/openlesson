@@ -503,7 +503,7 @@ function addLayerCard(slide, layer, { y, h }) {
     charSpacing: 1,
     margin: 0,
   });
-  slide.addText("UI inside TAP", {
+  slide.addText("UI inside session", {
     x: LEFT_X + 0.22,
     y: 3.9,
     w: LEFT_W - 0.44,
@@ -515,7 +515,7 @@ function addLayerCard(slide, layer, { y, h }) {
     margin: 0,
   });
   slide.addText(
-    "Capture method is the product. Thought UI lives inside Think Aloud Protocol — one interface for Preparing, Learning, Drilling, and Validating — not a bolt-on form.",
+    "Capture method is the product. Thought UI lives inside Think Aloud Protocol — one interface for Calibrate, Learn, and Verify — not a bolt-on form.",
     {
       x: LEFT_X + 0.22,
       y: 4.32,
@@ -539,7 +539,7 @@ function addLayerCard(slide, layer, { y, h }) {
   addTitle(slide, "What each product is for.", { h: 0.5 });
   addImagePlaceholder(slide, "Integration map");
 
-  // Three groups: PoW · TAP · Learning (a TAP use case) — business-value use cases
+  // Three groups: PoW · session · Learning (a session use case) — business-value use cases
   const groups = [
     {
       label: "PoW",
@@ -551,7 +551,7 @@ function addLayerCard(slide, layer, { y, h }) {
       ],
     },
     {
-      label: "TAP",
+      label: "session",
       accent: COLORS.green,
       cases: [
         "Run live think-aloud interviews",

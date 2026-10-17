@@ -30,6 +30,8 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
   }
   try {
     const session = await ingestHeadlessProofForWorkspace({
+      supabase,
+      auth,
       workspaceId,
       sessionId,
       args: body,

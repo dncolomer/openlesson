@@ -470,7 +470,7 @@ describe("data studio structural wiring", () => {
     expect(src).toContain("matchesStudioPowToSessionLink");
     expect(src).toContain("workspace_tap_sessions");
     expect(src).toContain("workspace_ile_links");
-    expect(src).toContain("workspace_tapbench_links");
+    expect(src).not.toContain("workspace_tapbench_links");
     expect(src).toContain("private_token_hash");
     expect(src).toContain("sortStudioRows");
     expect(src).toContain('searchParams.get("link")');

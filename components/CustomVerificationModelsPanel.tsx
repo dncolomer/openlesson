@@ -114,7 +114,7 @@ export function CustomVerificationModelsPanel({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Region builder filters: human PoW vs tapbench PoW + link filter
+  // Region builder filters: all vs human PoW + link filter
   const [sourceFilter, setSourceFilter] = useState<RegionBuilderSourceFilter>("all");
   const [linkFilter, setLinkFilter] = useState("");
   const [flowChoices, setFlowChoices] = useState<Array<{ id: string; topic: string }>>([]);
@@ -441,8 +441,8 @@ export function CustomVerificationModelsPanel({
                   Region builder
                 </div>
                 <p className="mt-1 text-xs leading-relaxed text-neutral-500">
-                  Build regions from actual human PoW or tapbench PoW. Filter by source and by link
-                  / TAPBench link id or URL.
+                  Build regions from actual human PoW. Filter by source and by Calibrate, Learn, or
+                  Verify link id or URL.
                 </p>
               </div>
 
@@ -457,13 +457,12 @@ export function CustomVerificationModelsPanel({
                 >
                   <option value="all">All PoW sources</option>
                   <option value="human">Human PoW</option>
-                  <option value="tapbench">Tapbench PoW</option>
                 </select>
                 <input
                   type="text"
                   value={linkFilter}
                   onChange={(e) => setLinkFilter(e.target.value)}
-                  placeholder="Filter by link / TAPBench link id or URL"
+                  placeholder="Filter by session link id or URL"
                   className="min-w-[14rem] flex-1 rounded-none border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white placeholder:text-neutral-600"
                   data-region-link-filter
                 />
@@ -473,8 +472,8 @@ export function CustomVerificationModelsPanel({
                 <p className="text-xs text-neutral-500">Loading subjects with embeddings…</p>
               ) : filteredSubjects.length === 0 ? (
                 <p className="text-xs text-neutral-500">
-                  No subjects match this filter. Generate an LWM Snapshot after human TAP or
-                  TAPBench sessions so embeddings exist.
+                  No subjects match this filter. Generate an LWM Snapshot after human Calibrate,
+                  Learn, or Verify sessions so embeddings exist.
                 </p>
               ) : (
                 <ul className="max-h-48 space-y-1 overflow-y-auto rounded-none border border-neutral-800 p-2">
@@ -564,7 +563,7 @@ export function CustomVerificationModelsPanel({
                 <p className="text-xs text-neutral-500">Loading regions…</p>
               ) : models.length === 0 ? (
                 <p className="text-xs text-neutral-500">
-                  No custom knowledge regions yet. Create one from human or tapbench PoW on the
+                  No custom knowledge regions yet. Create one from human PoW on the
                   Create tab.
                 </p>
               ) : (

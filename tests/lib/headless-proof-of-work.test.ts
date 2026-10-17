@@ -1,6 +1,6 @@
 /**
  * Drives shipped headless proof-of-work REST + MCP: start, ingest, clock, end.
- * TAPBench uses this same entry. LLM is stubbed the same way session-policy tests do.
+ * Calibrate, Learn, and Verify share this entry. flow_kind=tapbench is rejected.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
@@ -20,12 +20,36 @@ vi.mock("@/lib/pow-api/auth", async (importOriginal) => {
   };
 });
 
+vi.mock("@/lib/usage-enforcement", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/usage-enforcement")>();
+  return {
+    ...actual,
+    assertCanSubmitProofOfWork: vi.fn(async () => undefined),
+  };
+});
+
+vi.mock("@/lib/xai-files", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/xai-files")>();
+  return {
+    ...actual,
+    uploadFileToXAI: vi.fn(async (name: string) => ({
+      file_id: `file_aaaaaaaa-bbbb-4ccc-8ddd-${String(Math.floor(Math.random() * 1e12)).padStart(12, "0")}`,
+      name,
+      size_bytes: 32,
+      content_type: "application/json",
+    })),
+  };
+});
+
 import { authenticateRequest } from "@/lib/pow-api/auth";
+import { uploadFileToXAI } from "@/lib/xai-files";
 import { POST as POST_WORKSPACES } from "@/app/api/v3/workspaces/route";
 import { POST as POST_START } from "@/app/api/v3/pow/workspaces/[id]/sessions/route";
 import { POST as POST_POW } from "@/app/api/v3/pow/workspaces/[id]/sessions/[sessionId]/proof-of-work/route";
 import { POST as POST_END } from "@/app/api/v3/pow/workspaces/[id]/sessions/[sessionId]/end/route";
 import {
+  getHeadlessSession,
+  parseHeadlessFlowKind,
   resetHeadlessSessionsForTests,
   setHeadlessSessionDepsForTests,
   setHeadlessSessionDurableBackendForTests,
@@ -129,7 +153,7 @@ describe("headless proof-of-work REST + MCP", () => {
     vi.mocked(authenticateRequest).mockReset();
   });
 
-  it("starts Calibrate, infers a path from proof, rejects expired work, and ends; TAPBench uses the same entry", async () => {
+  it("starts Calibrate, infers a path from proof, rejects expired work, and ends; Learn and Verify still start", async () => {
     const created = await POST_WORKSPACES(
       jsonRequest("http://localhost/api/v3/workspaces", "POST", {
         kind: "learning",
@@ -195,10 +219,16 @@ describe("headless proof-of-work REST + MCP", () => {
       sequence: string[];
       proof_count: number;
       remaining_ms: number;
+      proof_file_ids?: string[];
     };
     expect(ingestedJson.proof_count).toBe(3);
     expect(ingestedJson.sequence.length).toBeGreaterThanOrEqual(1);
     expect(ingestedJson.remaining_ms).toBeGreaterThan(0);
+    expect(ingestedJson.proof_file_ids?.length).toBe(3);
+    expect(ingestedJson.proof_file_ids?.[0]).toMatch(/^file_/);
+    expect(vi.mocked(uploadFileToXAI)).toHaveBeenCalled();
+    const live = await getHeadlessSession(session4.session_id);
+    expect(live?.proof.every((row) => typeof row.xai_file_id === "string")).toBe(true);
 
     now += 15 * 60_000 + 1;
     const expired = await POST_POW(
@@ -233,8 +263,122 @@ describe("headless proof-of-work REST + MCP", () => {
     expect(endedJson.embedding?.raw.genModel).toBeTruthy();
     expect(endedJson.embedding?.raw.pow.length).toBeGreaterThan(0);
 
-    const tapbench = parseTool(
+    const verifyStart = await POST_START(
+      jsonRequest(`http://localhost/api/v3/pow/workspaces/${workspaceId}/sessions`, "POST", {
+        flow_kind: "verify",
+        catalog_size: 16,
+        duration_minutes: 5,
+        chapter_title: "Priced",
+      }),
+      { params: Promise.resolve({ id: workspaceId }) },
+    );
+    expect(verifyStart.status).toBe(201);
+    const verifySession = (await verifyStart.json()) as { session_id: string; flow_kind: string };
+    expect(verifySession.flow_kind).toBe("verify");
+
+    const verifyPow = await POST_POW(
+      jsonRequest(
+        `http://localhost/api/v3/pow/workspaces/${workspaceId}/sessions/${verifySession.session_id}/proof-of-work`,
+        "POST",
+        { events: [{ tool_action: "think", metadata: { prompt: "Agent reasoning." } }] },
+      ),
+      { params: Promise.resolve({ id: workspaceId, sessionId: verifySession.session_id }) },
+    );
+    expect(verifyPow.status).toBe(200);
+
+    const verifyEnd = await POST_END(
+      jsonRequest(
+        `http://localhost/api/v3/pow/workspaces/${workspaceId}/sessions/${verifySession.session_id}/end`,
+        "POST",
+        {},
+      ),
+      { params: Promise.resolve({ id: workspaceId, sessionId: verifySession.session_id }) },
+    );
+    expect(verifyEnd.status).toBe(200);
+    const verifyEndJson = (await verifyEnd.json()) as {
+      embedding: { flow_kind: string } | null;
+    };
+    expect(verifyEndJson.embedding).toBeTruthy();
+    expect(verifyEndJson.embedding?.flow_kind).toBe("verify");
+
+    const mcpLearn = parseTool(
       (await callMcpProofOfWorkTool(
+        "start_session",
+        {
+          workspace_id: workspaceId,
+          flow_kind: "learn",
+          catalog_size: 4,
+          duration_minutes: 5,
+          chapter_title: "Priced",
+        },
+        { auth, supabase: supabase as never, origin: "https://uncertain.systems" },
+      )) as { content: Array<{ text: string }> },
+    );
+    expect(mcpLearn.flow_kind).toBe("learn");
+    const mcpUpload = parseTool(
+      (await callMcpProofOfWorkTool(
+        "upload_proof_of_work",
+        {
+          workspace_id: workspaceId,
+          session_id: mcpLearn.session_id,
+          events: [{ tool_action: "board_prompt", metadata: { prompt: "MCP close." } }],
+        },
+        { auth, supabase: supabase as never, origin: "https://uncertain.systems" },
+      )) as { content: Array<{ text: string }> },
+    ) as { proof_file_ids?: string[] };
+    expect(mcpUpload.proof_file_ids?.length).toBe(1);
+    expect(mcpUpload.proof_file_ids?.[0]).toMatch(/^file_/);
+
+    mkdirSync(SCRATCH, { recursive: true });
+    writeFileSync(
+      join(SCRATCH, "headless-pow.log"),
+      JSON.stringify(
+        {
+          calibrate: { session4, ingested: ingestedJson, ended: endedJson },
+          learn8: session8,
+          verify: { start: verifySession, end: verifyEndJson },
+          mcpLearn,
+          mcpUpload,
+          expired: expiredJson,
+        },
+        null,
+        2,
+      ),
+    );
+  });
+
+  it("rejects flow_kind=tapbench from the shipped parser, REST start, and MCP start_session", async () => {
+    expect(parseHeadlessFlowKind("tapbench")).toBeNull();
+
+    const created = await POST_WORKSPACES(
+      jsonRequest("http://localhost/api/v3/workspaces", "POST", {
+        kind: "learning",
+        title: "Headless field",
+        blocks: [{ title: "Chapter", description: "Priced field", is_start: true }],
+      }),
+    );
+    const createdJson = (await created.json()) as { workspace: { id: string } };
+    const workspaceId = createdJson.workspace.id;
+
+    const rest = await POST_START(
+      jsonRequest(`http://localhost/api/v3/pow/workspaces/${workspaceId}/sessions`, "POST", {
+        flow_kind: "tapbench",
+        catalog_size: 4,
+        duration_minutes: 15,
+        chapter_title: "Priced",
+      }),
+      { params: Promise.resolve({ id: workspaceId }) },
+    );
+    expect(rest.status).toBe(400);
+    const restJson = (await rest.json()) as { error: { message: string; code: string } };
+    expect(restJson.error.code).toBe("validation_error");
+    expect(restJson.error.message.toLowerCase()).toContain("calibrate");
+    expect(restJson.error.message.toLowerCase()).toContain("learn");
+    expect(restJson.error.message.toLowerCase()).toContain("verify");
+    expect(restJson.error.message.toLowerCase()).not.toContain("tapbench");
+
+    await expect(
+      callMcpProofOfWorkTool(
         "start_session",
         {
           workspace_id: workspaceId,
@@ -244,48 +388,8 @@ describe("headless proof-of-work REST + MCP", () => {
           chapter_title: "Priced",
         },
         { auth, supabase: supabase as never, origin: "https://uncertain.systems" },
-      )) as { content: Array<{ text: string }> },
-    );
-    expect(tapbench.flow_kind).toBe("tapbench");
-    expect((tapbench.answers_model as { catalog_size: number }).catalog_size).toBe(16);
-
-    const tapPow = parseTool(
-      (await callMcpProofOfWorkTool(
-        "upload_proof_of_work",
-        {
-          workspace_id: workspaceId,
-          session_id: tapbench.session_id,
-          events: [{ tool_action: "think", metadata: { prompt: "Agent reasoning." } }],
-        },
-        { auth, supabase: supabase as never, origin: "https://uncertain.systems" },
-      )) as { content: Array<{ text: string }> },
-    );
-    expect((tapPow.proof_count as number) >= 1).toBe(true);
-
-    const tapEnd = parseTool(
-      (await callMcpProofOfWorkTool(
-        "end_session",
-        { workspace_id: workspaceId, session_id: tapbench.session_id },
-        { auth, supabase: supabase as never, origin: "https://uncertain.systems" },
-      )) as { content: Array<{ text: string }> },
-    );
-    expect(tapEnd.embedding).toBeTruthy();
-    expect((tapEnd.embedding as { flow_kind: string }).flow_kind).toBe("verify");
-
-    mkdirSync(SCRATCH, { recursive: true });
-    writeFileSync(
-      join(SCRATCH, "headless-pow.log"),
-      JSON.stringify(
-        {
-          calibrate: { session4, ingested: ingestedJson, ended: endedJson },
-          learn8: session8,
-          tapbench: { start: tapbench, pow: tapPow, end: tapEnd },
-          expired: expiredJson,
-        },
-        null,
-        2,
       ),
-    );
+    ).rejects.toThrow(/calibrate, learn, or verify/i);
   });
 
   it("round-trips start then upload across a fresh store", async () => {

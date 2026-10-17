@@ -16,7 +16,7 @@ const POW_MODEL_VERSION_FIELD = {
   description: powModelVersionFieldDescription(),
 };
 
-const FLOW_KIND_ENUM = ["calibrate", "learn", "verify", "tapbench"] as const;
+const FLOW_KIND_ENUM = ["calibrate", "learn", "verify"] as const;
 const CATALOG_SIZE_ENUM = [4, 8, 16] as const;
 
 type McpTool = {
@@ -190,7 +190,7 @@ const SCHEMAS: Record<string, Omit<McpTool, "name">> = {
     },
   },
   start_session: {
-    description: `Start a headless Calibrate, Learn, Verify, or TAPBench session. Prepares the answers-model tree and starts the clock. REST: POST ${POW_API_BASE}/workspaces/{workspace_id}/sessions.`,
+    description: `Start a headless Calibrate, Learn, or Verify session. Prepares the answers-model tree and starts the clock. REST: POST ${POW_API_BASE}/workspaces/{workspace_id}/sessions.`,
     inputSchema: {
       type: "object",
       properties: {
@@ -199,7 +199,7 @@ const SCHEMAS: Record<string, Omit<McpTool, "name">> = {
         flow_kind: {
           type: "string",
           enum: [...FLOW_KIND_ENUM],
-          description: "calibrate | learn | verify | tapbench (TAPBench is this same API).",
+          description: "calibrate | learn | verify.",
         },
         catalog_size: {
           type: "number",

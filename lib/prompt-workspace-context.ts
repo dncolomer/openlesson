@@ -1,6 +1,6 @@
 /**
- * Shared workspace/block prompt context for TAP openings, starting topics,
- * Exercise TAP, the Learning use case, and TAPBench exercises.
+ * Shared workspace/block prompt context for session openings, starting topics,
+ * Exercise session, the Learning use case, and TAPBench exercises.
  *
  * Pure assembly — callers load files/notes/goal/blocks from DB and pass them in.
  * Layers: workspace-global materials, map topology/inventory, focused block,
@@ -105,7 +105,7 @@ export interface PromptWorkspaceContextInput {
   extra?: string | null;
   /**
    * Prior Scout session mind map (path + canvas text) for this block.
-   * Included in TAP context so a later Work session can use it.
+   * Included in session context so a later Work session can use it.
    */
   scoutArtifacts?: {
     path?: readonly string[] | null;
@@ -157,7 +157,7 @@ export interface PromptImpactLayer {
   label: string;
   summary: string;
   /** Which product prompts this layer feeds. */
-  feeds: Array<"TAP" | "TAPBench">;
+  feeds: Array<"session" | "exercise">;
   present: boolean;
 }
 
@@ -428,7 +428,7 @@ export function mergeGlobalAndLocalFiles(input: {
 }
 
 /**
- * Build the shared TAP/TAPBench prompt context object.
+ * Build the shared session/TAPBench prompt context object.
  * Includes workspace notes/files, block inventory, layout/topology, and local materials.
  */
 export function assemblePromptWorkspaceContext(
@@ -719,7 +719,7 @@ export function buildPromptImpactLayers(input: {
       summary: identityBits.length
         ? identityBits.slice(0, 2).join(" · ")
         : "No workspace title or goal yet.",
-      feeds: ["TAP", "TAPBench"],
+      feeds: ["session", "exercise"],
       present: identityBits.length > 0,
     },
     {
@@ -728,7 +728,7 @@ export function buildPromptImpactLayers(input: {
       summary: input.notes
         ? clip(input.notes, 140)
         : "No workspace notes attached.",
-      feeds: ["TAP", "TAPBench"],
+      feeds: ["session", "exercise"],
       present: Boolean(input.notes),
     },
     {
@@ -738,7 +738,7 @@ export function buildPromptImpactLayers(input: {
         input.fileNames.length > 0
           ? `${input.fileNames.length} file${input.fileNames.length === 1 ? "" : "s"}: ${input.fileNames.slice(0, 4).join(", ")}${input.fileNames.length > 4 ? "…" : ""}${input.fileExcerpts.length ? ` (${input.fileExcerpts.length} with excerpts)` : ""}`
           : "No files attached.",
-      feeds: ["TAP", "TAPBench"],
+      feeds: ["session", "exercise"],
       present: input.fileNames.length > 0,
     },
     {
@@ -748,7 +748,7 @@ export function buildPromptImpactLayers(input: {
         input.blockInventoryLines.length > 0
           ? `${input.blockInventoryLines.length} block${input.blockInventoryLines.length === 1 ? "" : "s"} listed with roles.`
           : "No block inventory yet.",
-      feeds: ["TAP", "TAPBench"],
+      feeds: ["session", "exercise"],
       present: input.blockInventoryLines.length > 0,
     },
     {
@@ -758,7 +758,7 @@ export function buildPromptImpactLayers(input: {
         input.topologyLines.length > 0
           ? `${input.topologyLines.length} layout cue${input.topologyLines.length === 1 ? "" : "s"} (placement, links, locks, unusable ground).`
           : "No placement or link layout yet.",
-      feeds: ["TAP", "TAPBench"],
+      feeds: ["session", "exercise"],
       present: input.topologyLines.length > 0,
     },
     {
@@ -767,7 +767,7 @@ export function buildPromptImpactLayers(input: {
       summary: input.blockTitle
         ? `${input.blockTitle}${input.blockDescription ? ` — ${clip(input.blockDescription, 100)}` : ""}`
         : "No block focused — prompts use the whole workspace.",
-      feeds: ["TAP", "TAPBench"],
+      feeds: ["session", "exercise"],
       present: Boolean(input.blockTitle),
     },
     {
@@ -776,15 +776,15 @@ export function buildPromptImpactLayers(input: {
       summary: input.hasLocalContext
         ? clip(input.localContextLines.join(" · "), 160)
         : "No block-local files or notes. Only workspace-wide materials apply.",
-      feeds: ["TAP", "TAPBench"],
+      feeds: ["session", "exercise"],
       present: input.hasLocalContext,
     },
     {
       id: "surfaces",
       label: "Where this shows up",
       summary:
-        "One TAP for Preparing, Learning, Drilling, and Validating, plus TAPBench agent exercises, all read this same context.",
-      feeds: ["TAP", "TAPBench"],
+        "Calibrate, Learn, and Verify, plus exercise builders, all read this same context.",
+      feeds: ["session", "exercise"],
       present: true,
     },
   ];

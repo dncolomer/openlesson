@@ -98,7 +98,7 @@ describe("TAP UI gate", () => {
   });
 
   it("TAP session page passes show_end_session into TapScoreClient", () => {
-    const page = read("app/tap/session/[token]/page.tsx");
+    const page = read("components/guest-session/private-tap-session-page.tsx");
     expect(page).toContain("show_end_session");
     expect(page).toContain("showEndSession");
   });
@@ -109,7 +109,7 @@ describe("TAP Learning UI gate", () => {
     const auth = read("lib/ile-link-auth.ts");
     expect(auth).toContain("showEndSession");
     expect(auth).toContain("show_end_session");
-    const page = read("app/ile/session/[token]/page.tsx");
+    const page = read("app/learn/session/[token]/page.tsx");
     expect(page).toContain("showEndSession={access.showEndSession}");
     const guest = read("components/IleGuestSessionClient.tsx");
     expect(guest).toContain("showEndSession");

@@ -1,0 +1,151 @@
+import { notFound, redirect } from "next/navigation";
+import { ScoutTapClient } from "@/components/scout-tap/ScoutTapClient";
+import { hashPrivateToken } from "@/lib/tap-score";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+import {
+  collectEntryQueryParams,
+  flowSessionPath,
+  recordGuestLinkEntryQueryParams,
+} from "@/lib/guest-link-access";
+import { buildPowParticipantIdentity } from "@/lib/session-participant-identity";
+import { resolveGuestForLinkQueryParams } from "@/lib/guest-link-query-guest";
+import { resolveTapShellFromSession } from "@/lib/exercise-tap";
+
+interface PageProps {
+  params: Promise<{ token: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export default async function PrivateTapSessionPage({ params, searchParams }: PageProps) {
+  const { token } = await params;
+  const query = await searchParams;
+  const supabase = createAdminClient();
+  const tokenHash = hashPrivateToken(token);
+
+  const tapSessionSelect =
+    "id, workspace_id, block_id, session_id, status, requested_duration_seconds, mode, voice_id, analysis, overall_score, marker_scores, assigned_user_id, guest_user_id, organization_id, user_id, post_session, redirect_url, show_end_session, interaction_kind, entry_query_params, workspaces(title, user_id)";
+
+  let session: Record<string, unknown> | null = null;
+  const { data: byHash } = await supabase
+    .from("workspace_tap_sessions")
+    .select(tapSessionSelect)
+    .eq("private_token_hash", tokenHash)
+    .maybeSingle();
+  session = byHash;
+
+  // Legacy public rows still open.
+  if (!session) {
+    const { data: byPublic } = await supabase
+      .from("workspace_tap_sessions")
+      .select(tapSessionSelect)
+      .eq("public_token", token)
+      .eq("access_mode", "public")
+      .maybeSingle();
+    session = byPublic;
+  }
+
+  if (!session) notFound();
+
+  if (session.status === "revoked") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a] px-4">
+        <p className="text-sm text-red-400">This session link has been revoked</p>
+      </div>
+    );
+  }
+
+  if (session.assigned_user_id) {
+    const authSupabase = await createClient();
+    const {
+      data: { user },
+    } = await authSupabase.auth.getUser();
+    if (!user) {
+      const sessionPath = `${flowSessionPath("tap", String(session.interaction_kind || ""))}/${token}`;
+      redirect(`/login?redirect=${encodeURIComponent(sessionPath)}`);
+    }
+    if (user.id !== session.assigned_user_id) {
+      notFound();
+    }
+  }
+
+  const entryParams = collectEntryQueryParams(query);
+  if (Object.keys(entryParams).length > 0 && typeof session.id === "string") {
+    await recordGuestLinkEntryQueryParams(
+      supabase,
+      "workspace_tap_sessions",
+      session.id,
+      entryParams,
+    ).catch(() => {});
+  }
+
+  // Resolve (and warm-create) guest subject so badge + first PoW match.
+  let resolvedGuestUserId = (session.guest_user_id as string | null) ?? null;
+  if (!session.assigned_user_id && typeof session.id === "string") {
+    const workspaces = session.workspaces as
+      | { user_id?: string }
+      | Array<{ user_id?: string }>
+      | undefined;
+    const wsOwner = Array.isArray(workspaces) ? workspaces[0]?.user_id : workspaces?.user_id;
+    const ownerUserId = (session.user_id as string | null) || wsOwner || null;
+    if (ownerUserId) {
+      try {
+        const resolved = await resolveGuestForLinkQueryParams(supabase, {
+          linkKind: "tap",
+          linkId: session.id,
+          workspaceId: String(session.workspace_id),
+          organizationId: (session.organization_id as string | null) ?? null,
+          ownerUserId,
+          baseGuestUserId: resolvedGuestUserId,
+          params: entryParams,
+        });
+        if (resolved.guestUserId) resolvedGuestUserId = resolved.guestUserId;
+      } catch {
+        // API access path will provision if needed
+      }
+    }
+  }
+
+  const workspaces = session.workspaces as { title?: string } | { title?: string }[] | undefined;
+  const workspaceTitle = Array.isArray(workspaces)
+    ? workspaces[0]?.title
+    : workspaces?.title;
+
+  const showEndSession = session.show_end_session !== false;
+  const initialSession = {
+    ...session,
+    guest_user_id: resolvedGuestUserId,
+    workspaceTitle: workspaceTitle || "Workspace",
+    show_end_session: showEndSession,
+  };
+
+  const participantIdentity = buildPowParticipantIdentity({
+    guestUserId: resolvedGuestUserId,
+    assignedUserId: (session.assigned_user_id as string | null) ?? null,
+  });
+
+  const shell = resolveTapShellFromSession({
+    interaction_kind: session.interaction_kind,
+    entry_query_params: session.entry_query_params,
+    initialSession: {
+      interaction_kind: session.interaction_kind,
+    },
+  });
+  const clientProps = {
+    workspaceId: String(session.workspace_id),
+    privateToken: token,
+    sessionId: (session.session_id as string) || undefined,
+    blockId: (session.block_id as string) || undefined,
+    initialSession,
+    showEndSession,
+    entryQueryParams: entryParams,
+    participantIdentity,
+  };
+
+  if (shell === "scout") {
+    return <ScoutTapClient {...clientProps} />;
+  }
+
+  // The talk-aloud session and the exercise session are not flows.
+  redirect(`/workspace/${String(session.workspace_id)}`);
+}

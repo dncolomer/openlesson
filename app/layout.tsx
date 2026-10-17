@@ -89,7 +89,7 @@ const softwareSchema = {
   featureList: [
     "Workspaces",
     "Proof-of-Work API — headless efficiency scoring",
-    "Think Aloud Protocol (TAP) — one interface for Preparing, Learning, Drilling, and Validating",
+    "Calibrate, Learn, and Verify — three hosted flows",
     "Continuous scoring and gap analysis",
     "Proof-of-Work API for LMS integration",
   ],

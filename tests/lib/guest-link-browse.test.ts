@@ -284,8 +284,8 @@ describe("WorkspaceGuestLinksPanel", () => {
   });
 });
 
-describe("buildGuestLinkBrowseRows includes TAPBench", () => {
-  it("merges tapbench rows with kind filter", () => {
+describe("buildGuestLinkBrowseRows drops TAPBench", () => {
+  it("merges TAP and TAP Learning only", () => {
     const rows = buildGuestLinkBrowseRows(
       [TAP_PENDING],
       [ILE_ACTIVE],
@@ -293,27 +293,10 @@ describe("buildGuestLinkBrowseRows includes TAPBench", () => {
         blockTitleById: { "block-intro": "Intro", "block-advanced": "Adv" },
         entireWorkspaceLabel: "Entire workspace",
         participantLabelFor: (l) => l.participant_type || "—",
-        tapbenchLinks: [
-          {
-            id: "tb-1",
-            block_id: null,
-            status: "active",
-            created_at: "2026-07-22T10:00:00.000Z",
-            duration_seconds: 900,
-            exercise: "Prove something",
-            url: "https://app/tapbench/tok",
-          },
-        ],
       },
     );
-    expect(rows.some((r) => r.kind === "tapbench")).toBe(true);
-    const onlyTb = filterGuestLinkBrowseRows(rows, {
-      query: "",
-      kind: "tapbench",
-      status: "all",
-    });
-    expect(onlyTb).toHaveLength(1);
-    expect(onlyTb[0].id).toBe("tb-1");
-    expect(onlyTb[0].detail).toContain("Prove");
+    expect(rows.some((r) => r.kind === "tap")).toBe(true);
+    expect(rows.some((r) => r.kind === "ile")).toBe(true);
+    expect(rows.some((r) => (r.kind as string) === "tapbench")).toBe(false);
   });
 });

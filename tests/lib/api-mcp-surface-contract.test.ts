@@ -184,6 +184,7 @@ describe("API ↔ MCP surface contract (shipped code)", () => {
     ] as const) {
       expect(mcpNames.has(name)).toBe(true);
     }
+    const mcpNameList = MCP_EVIDENCE_TOOLS.map((t) => t.name);
     for (const name of [
       "lwm_snapshot",
       "get_world_model",
@@ -191,8 +192,8 @@ describe("API ↔ MCP surface contract (shipped code)", () => {
       "stash_proof_of_work",
       "submit_stashed_proof_of_work",
       "create_tapbench_link",
-    ] as const) {
-      expect(mcpNames.has(name)).toBe(false);
+    ]) {
+      expect(mcpNameList).not.toContain(name);
     }
   });
 
@@ -219,7 +220,8 @@ describe("API ↔ MCP surface contract (shipped code)", () => {
 
   it("MCP upload_proof_of_work uses the same headless ingest helper", () => {
     const src = readMcpSurface();
-    expect(src).toMatch(/ingestHeadlessProofOfWork/);
+    expect(src).toMatch(/ingestHeadlessProofForWorkspace/);
+    expect(src).not.toMatch(/uploadFileToXAI/);
   });
 
   it("MCP dispatch does not implement Snapshot, Stash, or TAP-link tools", () => {

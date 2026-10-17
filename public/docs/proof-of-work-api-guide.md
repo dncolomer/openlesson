@@ -1,6 +1,6 @@
 # Uncertain Systems Proof-of-Work API
 
-The two public agent APIs are **workspace management** (`/api/v3/workspaces`) and **headless proof-of-work** (`/api/v3/pow`). Create Learning or Verification workspaces, then start, run, and end Calibrate, Learn, Verify, or TAPBench sessions. Snapshot, Stash, and TAPBench-as-a-separate-API are product-UI routes.
+The two public agent APIs are **workspace management** (`/api/v3/workspaces`) and **headless proof-of-work** (`/api/v3/pow`). Create Learning or Verification workspaces, then start, run, and end Calibrate, Learn, and Verify sessions. Snapshot and Stash are product-UI routes.
 
 Authenticate with `Authorization: Bearer <api_key>`.
 
@@ -26,7 +26,7 @@ Opaque mode stores partner references (`goal_ref`, `external_refs`) without sema
 
 | Method | Path | Scope | Purpose |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/api/v3/pow/workspaces/{workspace_id}/sessions` | `workspaces:write` | Start Calibrate, Learn, Verify, or TAPBench (`flow_kind`). Prepares the answers-model tree and starts the clock. |
+| `POST` | `/api/v3/pow/workspaces/{workspace_id}/sessions` | `workspaces:write` | Start Calibrate, Learn, or Verify (`flow_kind`). Prepares the answers-model tree and starts the clock. |
 | `POST` | `/api/v3/pow/workspaces/{workspace_id}/sessions/{session_id}/proof-of-work` | `workspaces:write` | Upload proof events; infer the path (catalogs 4 / 8 / 16). Expired sessions reject further work. |
 | `GET` | `/api/v3/pow/workspaces/{workspace_id}/sessions/{session_id}` | `workspaces:read` | Remaining time, inferred path, answers model. |
 | `POST` | `/api/v3/pow/workspaces/{workspace_id}/sessions/{session_id}/end` | `workspaces:write` | Score the inferred path and persist the flow embedding. |
@@ -50,15 +50,11 @@ MCP twins: `create_workspace`, `start_session`, `upload_proof_of_work`, `end_ses
 }
 ```
 
-Supported `type` values: `tool`, `screen` (alias `screenshot`), `video`, `eeg`. Simulated TAP is stored type `tool`.
+Supported `type` values: `tool`, `screen` (alias `screenshot`), `video`, `eeg`. Simulated canvas work is stored type `tool`.
 
 ## Create Workspace
 
-`POST /api/v3/workspaces` and MCP `create_workspace` create a Learning or Verification workspace. Then run Calibrate, Learn, Verify, or TAPBench through the headless proof-of-work API (`start_session` → `upload_proof_of_work` → `end_session`).
-
-## TAPBench
-
-TAPBench is `start_session` with `flow_kind=tapbench` on this same API. Product-UI mint routes under `/tapbench` are not public agent APIs.
+`POST /api/v3/workspaces` and MCP `create_workspace` create a Learning or Verification workspace. Then run Calibrate, Learn, or Verify through the headless proof-of-work API (`start_session` → `upload_proof_of_work` → `end_session`).
 
 ## Guests
 

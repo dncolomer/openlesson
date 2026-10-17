@@ -3,8 +3,8 @@
  * Tool names/summaries come from AGENT_TOOL_SURFACE (single source of truth).
  *
  * Two public families: workspace management (/api/v3/workspaces, /api/v3/account)
- * and headless proof-of-work (/api/v3/pow). Snapshot, Stash, and TAPBench are
- * not public agent APIs. TAPBench is start_session with flow_kind=tapbench.
+ * and headless proof-of-work (/api/v3/pow). Snapshot and Stash are
+ * not public agent APIs.
  */
 
 import { AGENT_TOOL_SURFACE, agentToolSurfaceForWorkspace } from "./agent-tool-surface";

@@ -6,9 +6,9 @@ const standardSocial = standardShareSocialMetadata({
 });
 
 export const metadata: Metadata = {
-  title: "Learning Harness pricing",
+  title: "Pricing",
   description:
-    "Fixed monthly Learning Harness subscription of $24.99, or try unlimited for 3 days for $14.99. All-You-Can-Learn lifetime buys live alongside this plan.",
+    "Buy Learning, Verification, or Calibration. Try everything for 3 days for $24.99. Course authoring and custom setup on request.",
   keywords: [
     "AI tutor pricing",
     "learning platform cost",

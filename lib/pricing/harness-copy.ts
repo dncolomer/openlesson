@@ -1,5 +1,6 @@
 /**
- * Learning Harness public pricing copy. Amounts come from shipped plan constants.
+ * Learning pricing copy. Amounts come from shipped plan constants.
+ * Public pricing is the unified page; these fields remain for product-page CTAs.
  */
 import {
   formatHarnessMonthlyPrice,
@@ -7,36 +8,35 @@ import {
 } from "@/lib/plans";
 import { AYCL_PATH } from "@/lib/marketing/paths";
 import { HARNESS_PRICING_THESIS_LINKS } from "@/lib/science/hub";
+import { UNIFIED_PRICING_COPY } from "@/lib/pricing/unified-copy";
 
 export const PRICING_AYCL_HREF = AYCL_PATH;
-export const PRICING_AYCL_LABEL = "All-You-Can-Learn";
-export const PRICING_AYCL_CTA = "Browse ready-made workspaces";
+export const PRICING_AYCL_CTA = UNIFIED_PRICING_COPY.ayclCta;
+export const PRICING_AYCL_LABEL = UNIFIED_PRICING_COPY.ayclLabel;
 
 export const HARNESS_PRICING_COPY = {
-  eyebrow: "LEARNING HARNESS",
-  title: "Learning Harness pricing",
-  lead: "A fixed monthly subscription for the Learning Harness — or try unlimited for 3 days. Public registration via this page is for the harness only.",
+  eyebrow: UNIFIED_PRICING_COPY.eyebrow,
+  title: UNIFIED_PRICING_COPY.title,
+  lead: UNIFIED_PRICING_COPY.lead,
   monthlyLabel: "Monthly",
-  monthlyName: "Learning Harness",
+  monthlyName: "Learning",
   monthlyPrice: formatHarnessMonthlyPrice(),
   monthlyCadence: "/ month",
-  monthlyBody:
-    "Unlimited Learning Harness access. Workspaces, practice, and the system at a fixed monthly price.",
-  monthlyCta: "Start",
-  trialCta: `Try unlimited for 3 days for ${formatHarnessTrialPrice()}`,
+  monthlyBody: "Learning workspaces and Learn sessions at a fixed monthly price.",
+  monthlyCta: "Get Learning",
+  trialCta: `Try everything for 3 days for ${formatHarnessTrialPrice()}`,
   trialPrice: formatHarnessTrialPrice(),
-  needsPlan:
-    "Choose a plan to continue. Start the Learning Harness or try unlimited for 3 days for $14.99.",
+  needsPlan: UNIFIED_PRICING_COPY.needsPlan,
   features: [
-    `${formatHarnessMonthlyPrice()} fixed monthly subscription`,
-    `Try unlimited for 3 days for ${formatHarnessTrialPrice()}`,
-    "Unlimited Learning Harness access",
-    "Unlimited Workspaces",
+    `${formatHarnessMonthlyPrice()} Learning monthly`,
+    `Try everything for 3 days for ${formatHarnessTrialPrice()}`,
+    "Course authoring, Verification, and Calibration as separate modules",
     "All-You-Can-Learn catalog available as lifetime buys",
   ],
   ayclHref: PRICING_AYCL_HREF,
   ayclCta: PRICING_AYCL_CTA,
   ayclLabel: PRICING_AYCL_LABEL,
-  thesisLead: "You are paying for unlimited time in the foraging loop — not a content library.",
+  thesisLead:
+    "You are paying for time in the foraging loop and the measurement modules.",
   thesisLinks: HARNESS_PRICING_THESIS_LINKS,
 } as const;

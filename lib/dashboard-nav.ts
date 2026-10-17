@@ -18,6 +18,7 @@ export const DASHBOARD_TABS = [
   "calibration",
   "calibration_regions",
   "usage",
+  "upgrade",
   "organization",
   "integrations",
   "help",
@@ -34,7 +35,7 @@ export type DashboardRegionsTab = "verification_regions" | "calibration_regions"
 export type DashboardNavItem = {
   id: string;
   label: string;
-  /** Off-dashboard destination (Upgrade → pricing). Tab items omit this. */
+  /** Off-dashboard destination. Tab items omit this. */
   href?: string;
 };
 
@@ -87,7 +88,7 @@ export const DASHBOARD_NAV_GROUPS: readonly DashboardNavGroup[] = [
     label: "Account",
     items: [
       { id: "usage", label: "Usage" },
-      { id: "upgrade", label: "Upgrade", href: "/pricing" },
+      { id: "upgrade", label: "Upgrade" },
       { id: "organization", label: "Organization" },
       { id: "integrations", label: "Integrations" },
     ],
@@ -180,6 +181,7 @@ export function dashboardFrameLabel(tab: DashboardTab): string {
   if (tab === "organization") return "Organization";
   if (tab === "integrations") return "Integrations";
   if (tab === "usage") return "Usage";
+  if (tab === "upgrade") return "Upgrade";
   if (tab === "sessions") return "Sessions";
   if (tab === "config") return "Config";
   return "Home";

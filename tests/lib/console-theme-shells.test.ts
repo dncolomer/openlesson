@@ -258,7 +258,7 @@ describe("console theme shells", () => {
       expect(src, rel).not.toMatch(/rounded-(sm|md|lg|xl)\b/);
       expect(src, rel).not.toMatch(/\b(bg|text|border)-(emerald|green|cyan|violet)-/);
     }
-    expect(read("app/pricing/page.tsx")).toContain("Learning Harness pricing");
+    expect(read("app/pricing/page.tsx")).toContain("UNIFIED_PRICING_COPY.title");
     expect(read("app/pricing/success/page.tsx")).toContain("pricing.allSet");
     expect(read("components/ScienceWhitepaperPage.tsx")).toContain("data-science-whitepaper");
     expect(read("components/marketing/MarketingChrome.tsx")).not.toContain("overflow-hidden");

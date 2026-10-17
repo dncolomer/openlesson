@@ -2,12 +2,29 @@
 // PLAN DEFINITIONS & USAGE LIMITS
 // ============================================
 
+import {
+  COMBO_PLAN_IDS,
+  LEARN_MONTHLY_PRICE_CENTS,
+  TRY_EVERYTHING_PRICE_CENTS,
+  isComboPlanId,
+  modulesForPlan,
+  planDisplayName,
+  planFeatureList,
+  planHasModule,
+  priceCentsForPlan,
+  type ComboPlanId,
+  type ProductModule,
+} from "@/lib/pricing/modules";
+
 /**
  * Current product plans. `inactive` = no personal paid entitlement.
- * Single paid subscription tier: api_metered. Trial is one-time full access.
- * Legacy Individual / Pro-Teams plan ids are removed; migrate rows to api_metered.
+ * Combination plan ids encode which modules an org owns.
+ * `trial` is one-time full access. `api_metered` is full modules plus the API.
+ * Legacy Individual / Pro-Teams plan ids migrate to api_metered.
  */
-export type PlanId = "inactive" | "trial" | "api_metered";
+export type PlanId = "inactive" | "trial" | "api_metered" | ComboPlanId;
+
+export type { ComboPlanId, ProductModule };
 
 /** Subscription statuses we set intentionally (Stripe may pass through others). */
 export type SubscriptionStatus =
@@ -32,16 +49,33 @@ export interface PlanDef {
 
 /** One-time trial: full product access for this many days after payment. */
 export const TRIAL_ACCESS_DAYS = 3;
-/** Public Learning Harness 3-day unlimited trial (cents). */
-export const TRIAL_PRICE_CENTS = 1499;
+/** Try-everything 3-day one-time (cents). */
+export const TRIAL_PRICE_CENTS = TRY_EVERYTHING_PRICE_CENTS;
 
-/** Public Learning Harness fixed monthly subscription (cents). */
-export const HARNESS_MONTHLY_PRICE_CENTS = 2499;
+/** Public Learning module monthly (cents). Alias of the former harness sticker. */
+export const HARNESS_MONTHLY_PRICE_CENTS = LEARN_MONTHLY_PRICE_CENTS;
 
 /** Token-tier regular: fixed PoW allowance when a valid token is present. */
 export const TOKEN_REGULAR_PROOF_OF_WORK_LIMIT = 25;
 
 export const PROOF_OF_WORK_ALLOWANCE_LABEL = "Proof-of-Work submissions";
+
+function comboPlanDef(id: ComboPlanId): PlanDef {
+  return {
+    id,
+    name: planDisplayName(id),
+    price: `$${(priceCentsForPlan(id) / 100).toFixed(2)}`,
+    priceAmount: priceCentsForPlan(id),
+    proofOfWorkPerPeriod: null,
+    workspacesPerPeriod: null,
+    features: planFeatureList(id),
+    stripePriceEnv: null,
+  };
+}
+
+const COMBO_PLANS = Object.fromEntries(
+  COMBO_PLAN_IDS.map((id) => [id, comboPlanDef(id)]),
+) as Record<ComboPlanId, PlanDef>;
 
 export const PLANS: Record<PlanId, PlanDef> = {
   inactive: {
@@ -59,17 +93,12 @@ export const PLANS: Record<PlanId, PlanDef> = {
   },
   trial: {
     id: "trial",
-    name: "3-Day Trial",
-    price: "$14.99",
+    name: "Try everything",
+    price: `$${(TRIAL_PRICE_CENTS / 100).toFixed(2)}`,
     priceAmount: TRIAL_PRICE_CENTS,
     proofOfWorkPerPeriod: null,
     workspacesPerPeriod: null,
-    features: [
-      "Full access for 3 days",
-      "Unlimited Proof-of-Work submissions",
-      "Unlimited Workspaces",
-      "All core product features",
-    ],
+    features: planFeatureList("trial"),
     stripePriceEnv: null,
   },
   api_metered: {
@@ -80,6 +109,7 @@ export const PLANS: Record<PlanId, PlanDef> = {
     proofOfWorkPerPeriod: null,
     workspacesPerPeriod: null,
     features: [
+      "All modules (Learning, authoring, Verification, Calibration)",
       "Unlimited product usage (no monthly cap)",
       "0.05¢ per external/API-direct PoW submission",
       "$1 per timed session · $10 per Learning session",
@@ -91,6 +121,7 @@ export const PLANS: Record<PlanId, PlanDef> = {
     ],
     stripePriceEnv: null,
   },
+  ...COMBO_PLANS,
 };
 
 /** Monthly platform fee for API Metered (cents). */
@@ -128,6 +159,7 @@ export const REMOVED_PLAN_IDS_MIGRATED_TO_API_METERED = [
  */
 export function migratePlanIdToCurrent(plan: string | null | undefined): PlanId {
   if (plan === "trial" || plan === "api_metered") return plan;
+  if (isComboPlanId(plan)) return plan;
   if (
     plan === "regular_2026" ||
     plan === "pro_teams" ||
@@ -143,7 +175,7 @@ export function formatPlanMonthlyPrice(plan: PlanId | string, _volume?: number):
   if (plan === "api_metered") {
     return `$${API_METERED_PLATFORM_FEE_CENTS / 100}/month + usage (0.05¢/API PoW · $1/timed · $10/Learning)`;
   }
-  if (plan === "trial") return `$${TRIAL_PRICE_CENTS / 100} one-time`;
+  if (plan === "trial") return `$${(TRIAL_PRICE_CENTS / 100).toFixed(2)} one-time`;
   if (plan === "inactive") return "$0";
   const def = PLANS[plan as PlanId];
   return def ? `${def.price}/month` : String(plan);
@@ -166,6 +198,7 @@ export function normalizePlanId(plan: string | null | undefined): PlanId {
   if (plan === "trial" || plan === "api_metered") {
     return plan;
   }
+  if (isComboPlanId(plan)) return plan;
   return "inactive";
 }
 
@@ -217,7 +250,7 @@ export type ProductAccessOrg = {
   extra_lessons?: number | null;
 };
 
-const PAID_PRODUCT_PLANS = new Set<PlanId>(["trial", "api_metered"]);
+const PAID_PRODUCT_PLANS = new Set<PlanId>(["trial", "api_metered", ...COMBO_PLAN_IDS]);
 
 /** True when subscription_status is active and the billing window has not ended. */
 export function isBillingPeriodActive(
@@ -366,7 +399,10 @@ export function getProofOfWorkAllowance(profile: UserProfile): Pick<UsageCheckRe
     return { plan: normalized, limit: null, isAdmin: false };
   }
 
-  if (normalized === "trial" && isBillingPeriodActive({ subscription_status, current_period_end })) {
+  if (
+    PAID_PRODUCT_PLANS.has(normalized) &&
+    isBillingPeriodActive({ subscription_status, current_period_end })
+  ) {
     return { plan: normalized, limit: null, isAdmin: false };
   }
 
@@ -463,15 +499,34 @@ export function formatIleSessionPrice(): string {
   return `$${(ILE_SESSION_PRICE_CENTS / 100).toFixed(0)}`;
 }
 
-/** Public Learning Harness monthly sticker ($24.99). */
+/** Public Learning monthly sticker ($24.99). */
 export function formatHarnessMonthlyPrice(): string {
   return `$${(HARNESS_MONTHLY_PRICE_CENTS / 100).toFixed(2)}`;
 }
 
-/** Public Learning Harness 3-day unlimited trial sticker ($14.99). */
+/** Try-everything 3-day sticker ($24.99). */
 export function formatHarnessTrialPrice(): string {
   return `$${(TRIAL_PRICE_CENTS / 100).toFixed(2)}`;
 }
+
+export function hasModuleAccess(
+  profile: ProductAccessProfile | null | undefined,
+  org: ProductAccessOrg | null | undefined,
+  module: ProductModule,
+): boolean {
+  if (!hasProductAccess(profile, org)) return false;
+  if (!profile) return false;
+  if (profile.is_admin) return true;
+  const isTokenValid =
+    profile.token_tier &&
+    (profile.token_validity_expires_at === null ||
+      new Date(profile.token_validity_expires_at) > new Date());
+  if (isTokenValid) return true;
+  const plan = org ? normalizePlanId(org.plan) : normalizePlanId(profile.plan);
+  return planHasModule(plan, module);
+}
+
+export { modulesForPlan, planHasModule, planDisplayName };
 
 /**
  * True when a PoW row should be billed at the external/API rate.

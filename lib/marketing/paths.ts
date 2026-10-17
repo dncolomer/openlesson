@@ -5,8 +5,8 @@ export const KNOWLEDGE_VERIFICATION_PATH = "/knowledge-verification" as const;
 export const KNOWLEDGE_MAPPING_PATH = "/knowledge-mapping" as const;
 export const SUPPORT_PATH = "/support" as const;
 export const HARNESS_PRICING_PATH = "/pricing" as const;
-export const VERIFICATION_PRICING_PATH = "/pricing/verification" as const;
-export const MAPPING_PRICING_PATH = "/pricing/mapping" as const;
+export const VERIFICATION_PRICING_PATH = "/pricing#verification" as const;
+export const MAPPING_PRICING_PATH = "/pricing#mapping" as const;
 export const AUTHORING_PRICING_PATH = "/pricing/authoring" as const;
 export const AYCL_PATH = "/all-you-can-learn" as const;
 

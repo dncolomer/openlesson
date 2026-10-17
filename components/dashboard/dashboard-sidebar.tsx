@@ -22,7 +22,7 @@ export function DashboardSidebar({
 }) {
   return (
     <aside
-      className="flex h-full w-full shrink-0 flex-col border-b border-white/40 bg-black/55 backdrop-blur-[2px] md:col-start-1 md:row-span-2 md:row-start-1 md:border-b-0 md:border-r"
+      className="flex h-full w-full shrink-0 flex-col border-b border-white/40 bg-black/55 backdrop-blur-[2px] md:sticky md:top-0 md:col-start-1 md:row-span-2 md:row-start-1 md:h-full md:max-h-full md:min-h-0 md:self-start md:overflow-y-auto md:border-b-0 md:border-r"
       data-dashboard-sidebar
     >
       {DASHBOARD_NAV_GROUPS.map((group) => (

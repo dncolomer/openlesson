@@ -3,20 +3,25 @@ import {
   TRIAL_ACCESS_DAYS,
   type PlanId,
 } from "@/lib/plans";
-import { PUBLIC_HARNESS_CHECKOUT_PRICE_TYPES } from "@/lib/pricing/harness-checkout";
+import {
+  isModuleSkuId,
+  planIdForSku,
+  type ModuleSkuId,
+} from "@/lib/pricing/modules";
+import { PUBLIC_MODULE_CHECKOUT_PRICE_TYPES } from "@/lib/pricing/harness-checkout";
 
 export type CheckoutPriceType =
   | "api_metered"
-  | "trial_3day"
+  | ModuleSkuId
   | "all_you_can_learn"
   | "rabbit_hole_plays";
 
 export function isGuestCheckoutPriceType(priceType: string): boolean {
-  return (PUBLIC_HARNESS_CHECKOUT_PRICE_TYPES as readonly string[]).includes(priceType);
+  return (PUBLIC_MODULE_CHECKOUT_PRICE_TYPES as readonly string[]).includes(priceType);
 }
 
 export function planIdFromPriceType(priceType: string): PlanId {
-  if (priceType === "trial_3day") return "trial";
+  if (isModuleSkuId(priceType)) return planIdForSku(priceType);
   if (priceType === "api_metered") return "api_metered";
   // Unknown / removed legacy price types (regular_2026, pro_teams, etc.) do not grant a paid plan
   return "inactive";

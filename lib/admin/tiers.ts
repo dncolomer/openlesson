@@ -1,16 +1,26 @@
 import type { PlanId } from "@/lib/plans";
 import { PLANS, TRIAL_ACCESS_DAYS, isTrialExpiredStatus, normalizePlanId } from "@/lib/plans";
+import { COMBO_PLAN_IDS, planDisplayName, priceCentsForPlan } from "@/lib/pricing/modules";
 
 /** Admin-assignable subscription tiers (current product). */
 export const ADMIN_TIER_OPTIONS = [
   { id: "inactive" as const, label: "Inactive", description: "No paid entitlement · use for demotion" },
-  { id: "trial" as const, label: "3-Day Trial", description: "$14.99 one-time · full access for 3 days" },
+  {
+    id: "trial" as const,
+    label: "Try everything",
+    description: "$24.99 one-time · all modules for 3 days",
+  },
   {
     id: "api_metered" as const,
     label: "API Metered",
     description:
-      "$99/mo platform · 0.05¢/API PoW · $1/timed session · $10/Learning session",
+      "All modules · $99/mo platform · 0.05¢/API PoW · $1/timed session · $10/Learning session",
   },
+  ...COMBO_PLAN_IDS.map((id) => ({
+    id,
+    label: planDisplayName(id),
+    description: `$${(priceCentsForPlan(id) / 100).toFixed(2)}/mo · ${planDisplayName(id)}`,
+  })),
 ] as const;
 
 export type AdminTierId = (typeof ADMIN_TIER_OPTIONS)[number]["id"];
@@ -45,12 +55,12 @@ export function planFilterBucket(user: { plan: string; subscription_status: stri
 
 export function tierLabel(plan: string): string {
   if (plan === "api_metered") return "API Metered";
-  if (plan === "trial") return "3-Day Trial";
+  if (plan === "trial") return "Try everything";
   if (plan === "inactive" || plan === "free") return "Inactive";
   // Removed tiers — surface generically if raw DB still has them pre-migration
   if (plan === "regular_2026" || plan === "regular") return "Migrated (was Individual)";
   if (plan === "pro_teams" || plan === "pro") return "Migrated (was Pro/Teams)";
-  return plan;
+  return planDisplayName(plan);
 }
 
 /** Tier indicator color — monochrome admin UI (white / muted). */

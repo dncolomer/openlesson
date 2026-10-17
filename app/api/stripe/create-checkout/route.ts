@@ -2,10 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import Stripe from "stripe";
 import { createClient } from "@/lib/supabase/server";
+import { PUBLIC_MODULE_CHECKOUT_PRICE_TYPES } from "@/lib/pricing/harness-checkout";
 import {
-  harnessMonthlyCheckoutPriceData,
-  harnessTrialCheckoutPriceData,
-} from "@/lib/pricing/harness-checkout";
+  isModuleSkuId,
+  moduleSkuCheckoutPriceData,
+  resolveModuleCheckout,
+} from "@/lib/pricing/modules";
+import { API_METERED_PLATFORM_FEE_CENTS, normalizePlanId } from "@/lib/plans";
 import {
   ayclPurchaseEligibleForUpgrade,
   createPendingAyclPurchase,
@@ -38,9 +41,15 @@ function getStripe() {
 }
 
 const GUEST_CHECKOUT_TYPES = new Set<CheckoutPriceType>([
-  "api_metered",
-  "trial_3day",
+  ...PUBLIC_MODULE_CHECKOUT_PRICE_TYPES,
 ]);
+
+const CHECKOUT_PRICE_TYPES: CheckoutPriceType[] = [
+  ...PUBLIC_MODULE_CHECKOUT_PRICE_TYPES,
+  "api_metered",
+  "all_you_can_learn",
+  "rabbit_hole_plays",
+];
 
 export async function POST(request: NextRequest) {
   const stripe = getStripe();
@@ -65,15 +74,7 @@ export async function POST(request: NextRequest) {
       upgradeFromPurchaseId?: string;
     };
 
-    if (
-      !priceType ||
-      ![
-        "api_metered",
-        "trial_3day",
-        "all_you_can_learn",
-        "rabbit_hole_plays",
-      ].includes(priceType)
-    ) {
+    if (!priceType || !CHECKOUT_PRICE_TYPES.includes(priceType as CheckoutPriceType)) {
       return jsonError(400, "Invalid price type");
     }
     const priceTypeResolved = priceType as CheckoutPriceType;
@@ -103,16 +104,51 @@ export async function POST(request: NextRequest) {
     const mode = checkoutModeForPriceType(priceTypeResolved);
     let lineItem: Stripe.Checkout.SessionCreateParams.LineItem | null = null;
 
-    if (priceTypeResolved === "api_metered") {
+    let targetPlan = "";
+    if (isModuleSkuId(priceTypeResolved)) {
+      let currentPlan = "inactive";
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("organization_id")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (profile?.organization_id) {
+          const { data: org } = await supabase
+            .from("organizations")
+            .select("plan")
+            .eq("id", profile.organization_id)
+            .maybeSingle();
+          currentPlan = normalizePlanId(org?.plan);
+        }
+      }
+      const resolved = resolveModuleCheckout(currentPlan, priceTypeResolved);
+      if (resolved.alreadyEntitled) {
+        return jsonError(400, "This organization already has that module");
+      }
+      targetPlan = resolved.plan;
       lineItem = {
-        price_data: harnessMonthlyCheckoutPriceData(),
+        price_data: moduleSkuCheckoutPriceData(
+          priceTypeResolved,
+          resolved.unitAmount,
+          resolved.plan,
+        ),
         quantity: 1,
       };
-    } else if (priceTypeResolved === "trial_3day") {
+    } else if (priceTypeResolved === "api_metered") {
       lineItem = {
-        price_data: harnessTrialCheckoutPriceData(),
+        price_data: {
+          currency: "usd",
+          unit_amount: API_METERED_PLATFORM_FEE_CENTS,
+          recurring: { interval: "month" as const },
+          product_data: {
+            name: "Uncertain Systems API Metered",
+            description: "All modules plus Proof-of-Work API. $99/mo platform + usage.",
+          },
+        },
         quantity: 1,
       };
+      targetPlan = "api_metered";
     } else if (priceTypeResolved === "all_you_can_learn") {
       const admin = createAdminClient();
       const upgradeFromId =
@@ -259,6 +295,7 @@ export async function POST(request: NextRequest) {
       quantity: "1",
       monthly_volume: "0",
       volume_unit: "",
+      ...(targetPlan ? { target_plan: targetPlan } : {}),
       ...(user ? { supabase_user_id: user.id } : {}),
       ...(priceTypeResolved === "all_you_can_learn" && workspaceId
         ? { workspace_id: workspaceId }
@@ -284,7 +321,9 @@ export async function POST(request: NextRequest) {
           ? `${origin}/register?session_id={CHECKOUT_SESSION_ID}`
           : priceTypeResolved === "rabbit_hole_plays"
             ? `${origin}/rabbit-hole?unlocked=1`
-            : `${origin}/pricing/success?session_id={CHECKOUT_SESSION_ID}`;
+            : user
+              ? `${origin}/dashboard?tab=upgrade&session_id={CHECKOUT_SESSION_ID}`
+              : `${origin}/pricing/success?session_id={CHECKOUT_SESSION_ID}`;
 
     const cancelUrl =
       priceTypeResolved === "all_you_can_learn"

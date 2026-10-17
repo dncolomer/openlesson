@@ -13,34 +13,46 @@ import {
 } from "@/lib/pricing/harness-checkout";
 
 describe("stripe checkout helpers", () => {
-  it("maps price types to plan ids (only trial + api_metered grant paid plans)", () => {
+  it("maps price types to plan ids (module SKUs and api_metered grant paid plans)", () => {
     expect(planIdFromPriceType("trial_3day")).toBe("trial");
     expect(planIdFromPriceType("api_metered")).toBe("api_metered");
+    expect(planIdFromPriceType("module_learn")).toBe("learn");
+    expect(planIdFromPriceType("module_author")).toBe("author");
+    expect(planIdFromPriceType("module_verify")).toBe("verify");
+    expect(planIdFromPriceType("module_calibrate")).toBe("calibrate");
+    expect(planIdFromPriceType("bundle_verify_calibrate")).toBe("verify_calibrate");
     expect(planIdFromPriceType("regular_2026")).toBe("inactive");
     expect(planIdFromPriceType("pro_teams")).toBe("inactive");
     expect(planIdFromPriceType("regular")).toBe("inactive");
     expect(planIdFromPriceType("pro")).toBe("inactive");
   });
 
-  it("uses payment mode for trial and subscription for api_metered", () => {
+  it("uses payment mode for trial and subscription for modules", () => {
     expect(checkoutModeForPriceType("trial_3day")).toBe("payment");
     expect(checkoutModeForPriceType("all_you_can_learn")).toBe("payment");
     expect(checkoutModeForPriceType("api_metered")).toBe("subscription");
+    expect(checkoutModeForPriceType("module_learn")).toBe("subscription");
+    expect(checkoutModeForPriceType("bundle_verify_calibrate")).toBe("subscription");
   });
 
-  it("allows guest checkout for trial and api_metered only", () => {
+  it("allows guest checkout for public module SKUs", () => {
     expect(isGuestCheckoutPriceType("trial_3day")).toBe(true);
-    expect(isGuestCheckoutPriceType("api_metered")).toBe(true);
+    expect(isGuestCheckoutPriceType("module_learn")).toBe(true);
+    expect(isGuestCheckoutPriceType("module_author")).toBe(true);
+    expect(isGuestCheckoutPriceType("module_verify")).toBe(true);
+    expect(isGuestCheckoutPriceType("module_calibrate")).toBe(true);
+    expect(isGuestCheckoutPriceType("bundle_verify_calibrate")).toBe(true);
+    expect(isGuestCheckoutPriceType("api_metered")).toBe(false);
     expect(isGuestCheckoutPriceType("regular_2026")).toBe(false);
     expect(isGuestCheckoutPriceType("pro_teams")).toBe(false);
   });
 
-  it("public harness checkout price_data is $24.99/mo and $14.99 trial", () => {
+  it("public checkout price_data is $24.99/mo Learning and $24.99 try-everything", () => {
     expect(HARNESS_MONTHLY_PRICE_CENTS).toBe(2499);
-    expect(TRIAL_PRICE_CENTS).toBe(1499);
+    expect(TRIAL_PRICE_CENTS).toBe(2499);
     expect(harnessMonthlyCheckoutPriceData().unit_amount).toBe(2499);
     expect(harnessMonthlyCheckoutPriceData().recurring).toEqual({ interval: "month" });
-    expect(harnessTrialCheckoutPriceData().unit_amount).toBe(1499);
+    expect(harnessTrialCheckoutPriceData().unit_amount).toBe(2499);
   });
 
   it("builds a trial profile patch with a 3-day window", () => {

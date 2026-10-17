@@ -1,6 +1,5 @@
 "use client";
 
-import { default as Link } from "next/link";
 import type { OrgUsageSummary } from "@/lib/plans";
 import type { DashboardTab } from "@/lib/dashboard-nav";
 
@@ -134,12 +133,13 @@ export function DashboardUsageTab({
                   </button>
                 )}
                 {!isBillingBypass && (
-                  <Link
-                    href="/pricing"
+                  <button
+                    type="button"
+                    onClick={() => setDashboardTab("upgrade")}
                     className="inline-flex h-10 items-center justify-center rounded-none border border-neutral-700 px-4 text-sm text-neutral-200 transition hover:border-neutral-500 hover:text-white"
                   >
-                    View pricing →
-                  </Link>
+                    View modules →
+                  </button>
                 )}
               </div>
             </div>
@@ -244,12 +244,13 @@ export function DashboardUsageTab({
                           (usageData.plan === "inactive" ||
                             usageData.subscriptionStatus === "trial_expired" ||
                             usageData.plan === "trial") && (
-                            <Link
-                              href="/pricing"
+                            <button
+                              type="button"
+                              onClick={() => setDashboardTab("upgrade")}
                               className="mt-4 inline-flex text-sm text-neutral-300 underline decoration-neutral-600 underline-offset-4 transition hover:text-white"
                             >
                               {t("dashboard.upgradeToPro")} →
-                            </Link>
+                            </button>
                           )}
                       </div>
                     )}

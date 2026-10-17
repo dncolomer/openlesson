@@ -95,10 +95,13 @@ export async function applyBillingToUserOrganization(
 
 /**
  * Cancel org subscription when Stripe subscription is deleted.
+ * If `deletedSubscriptionId` is set, ignore the event when the org already
+ * points at a newer subscription (buy-more replacement).
  */
 export async function cancelOrgBillingForUser(
   admin: SupabaseClient,
-  userId: string
+  userId: string,
+  deletedSubscriptionId?: string | null,
 ): Promise<void> {
   const { data: profile } = await admin
     .from("profiles")
@@ -107,6 +110,19 @@ export async function cancelOrgBillingForUser(
     .single();
 
   if (profile?.organization_id) {
+    if (deletedSubscriptionId) {
+      const { data: org } = await admin
+        .from("organizations")
+        .select("stripe_subscription_id")
+        .eq("id", profile.organization_id)
+        .maybeSingle();
+      if (
+        org?.stripe_subscription_id &&
+        org.stripe_subscription_id !== deletedSubscriptionId
+      ) {
+        return;
+      }
+    }
     await admin
       .from("organizations")
       .update({

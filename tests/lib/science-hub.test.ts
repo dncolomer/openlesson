@@ -91,8 +91,7 @@ describe("combined vision + science hub", () => {
     expect(read("app/learning-harness/page.tsx")).toContain('marker="harness"');
     expect(read("app/knowledge-verification/page.tsx")).toContain('marker="verification"');
     expect(read("app/knowledge-mapping/page.tsx")).toContain('marker="mapping"');
-    expect(read("app/pricing/page.tsx")).toContain('marker="harness-pricing"');
-    expect(read("app/pricing/verification/page.tsx")).toContain('marker="verification-pricing"');
+    expect(read("app/pricing/page.tsx")).not.toContain("ThesisDirectory");
     expect(HARNESS_PRICING_COPY.thesisLinks.length).toBeGreaterThan(0);
     expect(HARNESS_PRICING_COPY.thesisLinks.map((row) => row.label)).toContain("Unsys model");
     expect(VERIFICATION_PRICING_COPY.thesisLinks.length).toBeGreaterThan(0);

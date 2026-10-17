@@ -4,8 +4,6 @@ import {
   KNOWLEDGE_MAPPING_PATH,
   KNOWLEDGE_VERIFICATION_PATH,
   LEARNING_HARNESS_PATH,
-  MAPPING_PRICING_PATH,
-  VERIFICATION_PRICING_PATH,
 } from "@/lib/marketing/paths";
 
 export const MAIN_NAV_PRODUCT_LINKS = [
@@ -15,9 +13,7 @@ export const MAIN_NAV_PRODUCT_LINKS = [
 ] as const;
 
 export const PRICING_NAV_LINKS = [
-  { href: HARNESS_PRICING_PATH, label: "Harness" },
-  { href: VERIFICATION_PRICING_PATH, label: "Verification" },
-  { href: MAPPING_PRICING_PATH, label: "Mapping" },
+  { href: HARNESS_PRICING_PATH, label: "Modules" },
   { href: AUTHORING_PRICING_PATH, label: "Authoring" },
 ] as const;
 

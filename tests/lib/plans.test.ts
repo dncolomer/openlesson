@@ -24,9 +24,12 @@ import {
 } from "@/lib/plans";
 
 describe("plans pricing model", () => {
-  it("only exposes inactive, trial, and api_metered plan ids", () => {
-    const ids = Object.keys(PLANS).sort();
-    expect(ids).toEqual(["api_metered", "inactive", "trial"]);
+  it("exposes inactive, trial, api_metered, and combination module plan ids", () => {
+    expect(PLANS.inactive.id).toBe("inactive");
+    expect(PLANS.trial.id).toBe("trial");
+    expect(PLANS.api_metered.id).toBe("api_metered");
+    expect(PLANS.learn.id).toBe("learn");
+    expect(PLANS.author_verify_calibrate.id).toBe("author_verify_calibrate");
     const invalid = "regular_2026" as PlanId;
     expect(PLANS[invalid]).toBeUndefined();
   });
@@ -60,6 +63,8 @@ describe("plans pricing model", () => {
     expect(normalizePlanId("pro_teams")).toBe("inactive");
     expect(normalizePlanId("trial")).toBe("trial");
     expect(normalizePlanId("api_metered")).toBe("api_metered");
+    expect(normalizePlanId("learn_verify")).toBe("learn_verify");
+    expect(normalizePlanId("author")).toBe("author");
   });
 
   it("migratePlanIdToCurrent rewrites removed paid tiers to api_metered", () => {

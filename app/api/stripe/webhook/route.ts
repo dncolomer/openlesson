@@ -7,13 +7,17 @@ import {
   formatIleSessionPrice,
   formatPowApiCallPrice,
   formatTapSessionPrice,
+  normalizePlanId,
+  type PlanId,
 } from "@/lib/plans";
 import { upsertPendingCheckoutFromSession } from "@/lib/pending-checkout";
 import {
   isGuestCheckoutPriceType,
   periodEndForCheckout,
+  planIdFromPriceType,
   profileUpdateFromCheckout,
 } from "@/lib/stripe-checkout";
+import { isComboPlanId, mergePlanIds } from "@/lib/pricing/modules";
 import { fulfillAyclPurchase } from "@/lib/aycl";
 import {
   countIleSessions,
@@ -39,13 +43,39 @@ function getAdminClient() {
   return createAdminClient();
 }
 
-/** Only api_metered remains as a subscription plan id from Stripe price_type. */
-function subscriptionPlanFromPriceType(priceType: string | null | undefined): "api_metered" | null {
-  if (priceType === "api_metered") return "api_metered";
-  // Legacy Individual / Teams price types are no longer applied as distinct plans.
-  // In-app migration moves those entitlements to api_metered; new Stripe events for
-  // old price objects are ignored so we do not reintroduce removed tier names.
-  return null;
+function subscriptionPlanFromMetadata(
+  priceType: string | null | undefined,
+  targetPlan: string | null | undefined,
+): PlanId | null {
+  if (targetPlan === "api_metered" || targetPlan === "trial" || (targetPlan && isComboPlanId(targetPlan))) {
+    return targetPlan;
+  }
+  const fromType = planIdFromPriceType(priceType || "");
+  if (fromType === "inactive") return null;
+  return fromType;
+}
+
+async function currentOrgPlanForUser(
+  supabase: ReturnType<typeof getAdminClient>,
+  userId: string,
+): Promise<{ plan: PlanId; stripeSubscriptionId: string | null }> {
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("organization_id")
+    .eq("id", userId)
+    .maybeSingle();
+  if (!profile?.organization_id) {
+    return { plan: "inactive", stripeSubscriptionId: null };
+  }
+  const { data: org } = await supabase
+    .from("organizations")
+    .select("plan, stripe_subscription_id")
+    .eq("id", profile.organization_id)
+    .maybeSingle();
+  return {
+    plan: normalizePlanId(org?.plan),
+    stripeSubscriptionId: org?.stripe_subscription_id ?? null,
+  };
 }
 
 export async function POST(request: NextRequest) {
@@ -142,15 +172,20 @@ export async function POST(request: NextRequest) {
         if (!userId) break;
 
         const priceType = subscription.metadata?.price_type;
-        const plan = subscriptionPlanFromPriceType(priceType);
+        const incoming = subscriptionPlanFromMetadata(
+          priceType,
+          subscription.metadata?.target_plan,
+        );
 
-        if (!plan) {
+        if (!incoming) {
           console.warn(
             `[stripe webhook] Ignoring subscription for unsupported price_type=${priceType ?? "null"} user=${userId}`
           );
           break;
         }
 
+        const existing = await currentOrgPlanForUser(supabase, userId);
+        const plan = mergePlanIds(existing.plan, incoming);
         const periodEnd = subscription.items?.data?.[0]?.current_period_end;
         const stripeCustomerId =
           typeof subscription.customer === "string"
@@ -169,6 +204,20 @@ export async function POST(request: NextRequest) {
           stripeCustomerId,
           stripeSubscriptionId: subscription.id,
         });
+
+        if (
+          existing.stripeSubscriptionId &&
+          existing.stripeSubscriptionId !== subscription.id
+        ) {
+          await getStripe()
+            .subscriptions.cancel(existing.stripeSubscriptionId)
+            .catch((err) => {
+              console.warn(
+                `[stripe webhook] Could not cancel previous subscription ${existing.stripeSubscriptionId}:`,
+                err,
+              );
+            });
+        }
         break;
       }
 
@@ -178,7 +227,7 @@ export async function POST(request: NextRequest) {
 
         if (!userId) break;
 
-        await cancelOrgBillingForUser(supabase, userId);
+        await cancelOrgBillingForUser(supabase, userId, subscription.id);
         break;
       }
 
@@ -333,13 +382,17 @@ export async function POST(request: NextRequest) {
 
         const subscription = await getStripe().subscriptions.retrieve(subscriptionId).catch(() => null);
         const priceType = subscription?.metadata?.price_type;
-        const plan = subscriptionPlanFromPriceType(priceType);
+        const incoming = subscriptionPlanFromMetadata(
+          priceType,
+          subscription?.metadata?.target_plan,
+        );
         const periodEnd = subscription?.items?.data?.[0]?.current_period_end;
 
-        if (plan) {
+        if (incoming) {
+          const existing = await currentOrgPlanForUser(supabase, userId);
           await applyBillingToUserOrganization(supabase, {
             userId,
-            plan,
+            plan: mergePlanIds(existing.plan, incoming),
             subscriptionStatus: "active",
             currentPeriodEnd: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
             extraLessons: 0,

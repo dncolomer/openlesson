@@ -37,7 +37,6 @@ export type DashboardPlansTabProps = {
   workspacePageSize: 10;
   workspaceSearch: string;
   workspaceVisibilityFilter: DashboardWorkspaceListFilter;
-  productCount: number;
   productEmpty: boolean;
   surface?: "workspaces" | "shop";
 };
@@ -65,7 +64,6 @@ export function DashboardPlansTab({
     workspacePageSize,
     workspaceSearch,
     workspaceVisibilityFilter,
-    productCount,
     productEmpty,
     surface = "workspaces",
 }: DashboardPlansTabProps) {
@@ -161,28 +159,6 @@ export function DashboardPlansTab({
                   {createLabel}
                 </Link>
                 </div>
-              </div>
-            </div>
-
-            <div
-              className="grid gap-3 sm:grid-cols-2"
-              data-dashboard-product-stats
-            >
-              <div className="console-copy px-4 py-4">
-                <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-neutral-500">
-                  {isShop ? "Listings" : `${productLabel} workspaces`}
-                </p>
-                <p className="mt-2 text-3xl font-medium tracking-tight text-white">
-                  {productCount}
-                </p>
-              </div>
-              <div className="console-copy px-4 py-4">
-                <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-neutral-500">
-                  Showing
-                </p>
-                <p className="mt-2 text-3xl font-medium tracking-tight text-white">
-                  {filteredWorkspaces.length}
-                </p>
               </div>
             </div>
 

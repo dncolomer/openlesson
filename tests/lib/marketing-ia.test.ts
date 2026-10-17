@@ -226,7 +226,7 @@ describe("product pages: verification owns platform/approach/scale; harness owns
     expect(MAPPING_PRODUCT_COPY.lead.toLowerCase()).toMatch(/living map/);
     expect(MAPPING_PRODUCT_COPY.lead.toLowerCase()).toMatch(/verification exam/);
     expect(page).toContain("MAPPING_PRODUCT_COPY.pricingHref");
-    expect(MAPPING_PRODUCT_COPY.pricingHref).toBe("/pricing/mapping");
+    expect(MAPPING_PRODUCT_COPY.pricingHref).toBe("/pricing#mapping");
     expect(MAPPING_PRODUCT_COPY.pricingCta).toMatch(/pricing/i);
   });
 
@@ -322,107 +322,67 @@ describe("Support this Project is footer-only", () => {
   });
 });
 
-describe("split pricing + public harness checkout", () => {
-  it("harness pricing page shows $24.99, $14.99, 3-day unlimited, and AYCL lifetime-buy link", () => {
+describe("unified pricing + public module checkout", () => {
+  it("pricing page shows $24.99 try-everything, Learning, verify, calibrate, and AYCL", () => {
     const page = read("app/pricing/page.tsx");
-    expect(page).toContain("$24.99");
-    expect(page).toContain("$14.99");
-    expect(page).toContain("Try unlimited for 3 days for $14.99");
+    expect(page).toContain("PRICING_PAGE_SKUS");
     expect(page).toContain("data-testid=\"pricing-aycl-link\"");
-    expect(page).toContain("HARNESS_PRICING_COPY.ayclHref");
+    expect(page).toContain("UNIFIED_PRICING_COPY.ayclHref");
     expect(HARNESS_PRICING_COPY.ayclHref).toBe("/all-you-can-learn");
     expect(HARNESS_PRICING_COPY.monthlyPrice).toBe("$24.99");
-    expect(HARNESS_PRICING_COPY.trialPrice).toBe("$14.99");
-    expect(page).toContain('handleCheckout("api_metered")');
-    expect(page).toContain('handleCheckout("trial_3day")');
+    expect(HARNESS_PRICING_COPY.trialPrice).toBe("$24.99");
+    expect(page).toContain("data-testid={`checkout-${sku}`}");
     expect(page).not.toContain("API Metered");
     expect(page).not.toContain("$19.99");
+    expect(page).not.toContain("$14.99");
   });
 
-  it("verification pricing describes Deep Project $10 vs light weight $1 and contact-only setup", () => {
-    const page = read("app/pricing/verification/page.tsx");
-    expect(existsSync(join(ROOT, "app/pricing/verification/page.tsx"))).toBe(true);
-    expect(page).toContain("$10 per assessment");
-    expect(page).toContain("$1 per run");
-    expect(page).toContain("Deep Project style assessment");
-    expect(page).toContain("Light weight verification");
-    expect(page).toContain("daniel@uncertain.systems");
-    expect(page).toContain("to get set-up");
-    expect(page).not.toContain("create-checkout");
-    expect(page).not.toContain("handleCheckout");
-    expect(page).not.toContain("api_metered");
-    expect(page).not.toContain("trial_3day");
-    expect(VERIFICATION_PRICING_COPY.deepProject.difference.toLowerCase()).toMatch(
-      /open-ended|project|assignment/,
-    );
-    expect(VERIFICATION_PRICING_COPY.lightWeight.difference.toLowerCase()).toMatch(
-      /live|time-framed|think aloud/,
-    );
-    expect(VERIFICATION_PRICING_COPY.contactEmail).toBe("daniel@uncertain.systems");
-    expect(VERIFICATION_PRICING_COPY.deepProject.image).toBe("/deep-verification.png");
-    expect(VERIFICATION_PRICING_COPY.lightWeight.image).toBe("/shallow_verification.png");
-    expect(existsSync(join(ROOT, "public/deep-verification.png"))).toBe(true);
-    expect(existsSync(join(ROOT, "public/shallow_verification.png"))).toBe(true);
-    expect(page).toContain("grayscale");
-    expect(page).not.toContain("/aesthetics/");
-  });
-
-  it("mapping pricing is contact-only at $1 per data point", () => {
-    const page = read("app/pricing/mapping/page.tsx");
-    expect(existsSync(join(ROOT, "app/pricing/mapping/page.tsx"))).toBe(true);
-    expect(page).toContain("{MAPPING_PRICING_COPY.title}");
-    expect(page).toContain("{quote.price}");
-    expect(page).toContain("MAPPING_PRICING_COPY.contactMailto");
-    expect(page).not.toContain("create-checkout");
-    expect(page).not.toContain("handleCheckout");
-    expect(MAPPING_PRICING_COPY.quote.priceAmount).toBe("$1");
+  it("legacy verification and mapping routes redirect onto the unified page; authoring stays a page", () => {
+    expect(read("app/pricing/verification/page.tsx")).toContain("/pricing#verification");
+    expect(read("app/pricing/mapping/page.tsx")).toContain("/pricing#mapping");
+    expect(read("app/pricing/authoring/page.tsx")).toContain("AUTHORING_PRICING_COPY");
+    expect(read("app/pricing/authoring/page.tsx")).not.toContain("redirect(");
+    expect(VERIFICATION_PRICING_COPY.deepProject.price).toBe("$10 per assessment");
     expect(MAPPING_PRICING_COPY.quote.price).toBe("$1 per data point");
-    expect(MAPPING_PRICING_COPY.lead).toMatch(/\$1 per data point/);
-    expect(MAPPING_PRICING_COPY.contactEmail).toBe("daniel@uncertain.systems");
-  });
-
-  it("authoring pricing is contact-only starting at $15,000 for a 40h package", () => {
-    const page = read("app/pricing/authoring/page.tsx");
-    expect(existsSync(join(ROOT, "app/pricing/authoring/page.tsx"))).toBe(true);
-    expect(page).toContain("{AUTHORING_PRICING_COPY.title}");
-    expect(page).toContain("{coursePackage.price}");
-    expect(page).toContain("AUTHORING_PRICING_COPY.contactMailto");
-    expect(page).not.toContain("create-checkout");
-    expect(page).not.toContain("handleCheckout");
     expect(AUTHORING_PRICING_COPY.package.priceAmount).toBe("$15,000");
-    expect(AUTHORING_PRICING_COPY.package.name).toMatch(/40h/);
-    expect(AUTHORING_PRICING_COPY.lead).toMatch(/lifetime workspace access/);
-    expect(AUTHORING_PRICING_COPY.contactEmail).toBe("daniel@uncertain.systems");
   });
 
-  it("public checkout price_data is 2499 monthly and 1499 trial — not $99 / $19.99", () => {
+  it("public checkout price_data is 2499 monthly Learning and 2499 try-everything", () => {
     expect(HARNESS_MONTHLY_PRICE_CENTS).toBe(2499);
-    expect(TRIAL_PRICE_CENTS).toBe(1499);
+    expect(TRIAL_PRICE_CENTS).toBe(2499);
     expect(harnessMonthlyCheckoutPriceData().unit_amount).toBe(2499);
-    expect(harnessTrialCheckoutPriceData().unit_amount).toBe(1499);
+    expect(harnessTrialCheckoutPriceData().unit_amount).toBe(2499);
     expect(harnessMonthlyCheckoutPriceData().unit_amount).not.toBe(9900);
     expect(harnessTrialCheckoutPriceData().unit_amount).not.toBe(1999);
 
     const route = read("app/api/stripe/create-checkout/route.ts");
-    expect(route).toContain("harnessMonthlyCheckoutPriceData");
-    expect(route).toContain("harnessTrialCheckoutPriceData");
-    expect(route).not.toContain("API_METERED_PLATFORM_FEE_CENTS");
+    expect(route).toContain("moduleSkuCheckoutPriceData");
+    expect(route).toContain("API_METERED_PLATFORM_FEE_CENTS");
 
-    expect([...PUBLIC_HARNESS_CHECKOUT_PRICE_TYPES]).toEqual(["api_metered", "trial_3day"]);
-    expect(isGuestCheckoutPriceType("api_metered")).toBe(true);
+    expect([...PUBLIC_HARNESS_CHECKOUT_PRICE_TYPES]).toEqual([
+      "trial_3day",
+      "module_learn",
+      "module_author",
+      "module_verify",
+      "module_calibrate",
+      "bundle_verify_calibrate",
+    ]);
+    expect(isGuestCheckoutPriceType("api_metered")).toBe(false);
     expect(isGuestCheckoutPriceType("trial_3day")).toBe(true);
+    expect(isGuestCheckoutPriceType("module_learn")).toBe(true);
   });
 });
 
 describe("sitemap lists new public pages", () => {
-  it("includes product, support, both pricing routes, and community events listing", () => {
+  it("includes product, support, unified pricing, and community events listing", () => {
     const sitemap = read("app/sitemap.ts");
     expect(sitemap).toContain("/learning-harness");
     expect(sitemap).toContain("/knowledge-verification");
     expect(sitemap).toContain("/knowledge-mapping");
-    expect(sitemap).toContain("/pricing/verification");
-    expect(sitemap).toContain("/pricing/mapping");
+    expect(sitemap).toContain("/pricing");
     expect(sitemap).toContain("/pricing/authoring");
+    expect(sitemap).not.toContain("/pricing/verification");
+    expect(sitemap).not.toContain("/pricing/mapping");
     expect(sitemap).toContain("/support");
     expect(sitemap).toContain("/all-you-can-learn");
     expect(sitemap).toContain("/community-events");

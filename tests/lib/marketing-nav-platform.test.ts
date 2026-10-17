@@ -6,7 +6,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { LANDING_PRODUCT_ROWS } from "@/components/ProductTable";
 import { PRODUCTS } from "@/lib/seo/products";
-import { COMMUNITY_LINKS, MAIN_NAV_PRODUCT_LINKS } from "@/lib/marketing/nav";
+import { COMMUNITY_LINKS, MAIN_NAV_PRODUCT_LINKS, PRICING_NAV_LINKS } from "@/lib/marketing/nav";
 
 const ROOT = join(__dirname, "../..");
 
@@ -43,6 +43,11 @@ describe("marketing nav and platform rename", () => {
       "/knowledge-mapping",
     ]);
     expect(nav).toContain("PRICING_NAV_LINKS");
+    expect(PRICING_NAV_LINKS.map((l) => l.label)).toEqual(["Modules", "Authoring"]);
+    expect(PRICING_NAV_LINKS.map((l) => l.href)).toEqual([
+      "/pricing",
+      "/pricing/authoring",
+    ]);
     expect(nav).not.toContain("Create your Workspace");
     expect(nav).not.toContain("TrackedCtaLink");
     expect(MAIN_NAV_PRODUCT_LINKS.map((l) => l.label)).toEqual([

@@ -1,5 +1,5 @@
 /**
- * Split pricing: harness $24.99 / $14.99 / AYCL vs verification $10 / $1 + contact.
+ * Public pricing: sparse module list; course authoring is its own page.
  */
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
@@ -10,16 +10,22 @@ import {
   PRICING_AYCL_HREF,
   PRICING_AYCL_LABEL,
 } from "@/lib/pricing/harness-copy";
+import { UNIFIED_PRICING_COPY } from "@/lib/pricing/unified-copy";
 import { VERIFICATION_PRICING_COPY } from "@/lib/pricing/verification-copy";
 import { AUTHORING_PRICING_COPY } from "@/lib/pricing/authoring-copy";
 import { MAPPING_PRICING_COPY } from "@/lib/pricing/mapping-copy";
-import { AUTHORING_PRICING_PATH, MAPPING_PRICING_PATH } from "@/lib/marketing/paths";
+import {
+  AUTHORING_PRICING_PATH,
+  MAPPING_PRICING_PATH,
+  VERIFICATION_PRICING_PATH,
+} from "@/lib/marketing/paths";
 import {
   formatHarnessMonthlyPrice,
   formatHarnessTrialPrice,
   HARNESS_MONTHLY_PRICE_CENTS,
   TRIAL_PRICE_CENTS,
 } from "@/lib/plans";
+import { PRICING_PAGE_SKUS, PUBLIC_SKU_CARDS } from "@/lib/pricing/modules";
 
 const ROOT = join(__dirname, "../..");
 
@@ -27,43 +33,63 @@ function read(rel: string): string {
   return readFileSync(join(ROOT, rel), "utf8");
 }
 
-describe("harness pricing amounts", () => {
-  it("uses shipped $24.99 monthly and $14.99 3-day trial", () => {
+describe("unified pricing amounts", () => {
+  it("uses $24.99 Learning monthly and $24.99 3-day try-everything", () => {
     expect(HARNESS_MONTHLY_PRICE_CENTS).toBe(2499);
-    expect(TRIAL_PRICE_CENTS).toBe(1499);
+    expect(TRIAL_PRICE_CENTS).toBe(2499);
     expect(formatHarnessMonthlyPrice()).toBe("$24.99");
-    expect(formatHarnessTrialPrice()).toBe("$14.99");
+    expect(formatHarnessTrialPrice()).toBe("$24.99");
     expect(HARNESS_PRICING_COPY.monthlyPrice).toBe("$24.99");
-    expect(HARNESS_PRICING_COPY.trialCta).toContain("$14.99");
-    expect(HARNESS_PRICING_COPY.trialCta.toLowerCase()).toMatch(/try unlimited for 3 days/);
+    expect(HARNESS_PRICING_COPY.trialCta).toContain("$24.99");
+    expect(HARNESS_PRICING_COPY.trialCta.toLowerCase()).toMatch(/try everything for 3 days/);
   });
 });
 
-describe("harness pricing page source", () => {
-  it("keeps harness plan card and trial CTA; drops API Metered / cost scenarios", () => {
+describe("unified pricing page source", () => {
+  it("ships a sparse module list with try-everything and custom contact", () => {
     const pagePath = join(ROOT, "app/pricing/page.tsx");
     expect(existsSync(pagePath)).toBe(true);
     const src = read("app/pricing/page.tsx");
 
     expect(src).toContain('data-testid="pricing-plans"');
-    expect(src).toContain("Learning Harness");
-    expect(src).toContain("$24.99");
-    expect(src).toContain('data-testid="checkout-start-harness"');
-    expect(src).toContain('data-testid="checkout-trial-3day"');
-    expect(src).toMatch(/Start/);
-    expect(src).toMatch(/3 days for \$14\.99/);
+    expect(src).toContain("PRICING_PAGE_SKUS");
+    expect(src).toContain("data-testid={`checkout-${sku}`}");
+    expect(src).toContain("SKU_SECTION_ID");
+    expect(src).toContain('module_learn: "learning"');
+    expect(src).toContain('module_verify: "verification"');
+    expect(src).toContain('module_calibrate: "calibration"');
+    expect(src).toContain('id="custom"');
+    expect(src.match(/console-copy/g)?.length).toBe(1);
+    expect(src).not.toContain("ThesisDirectory");
+    expect(PUBLIC_SKU_CARDS[0]?.priceLabel).toBe("$24.99");
+    expect(PUBLIC_SKU_CARDS.find((card) => card.id === "module_learn")?.priceLabel).toBe("$24.99");
+    expect(PUBLIC_SKU_CARDS.map((card) => card.id)).toEqual([
+      "trial_3day",
+      "module_learn",
+      "module_author",
+      "module_verify",
+      "module_calibrate",
+      "bundle_verify_calibrate",
+    ]);
+    expect(PRICING_PAGE_SKUS.map((card) => card.id)).toEqual([
+      "trial_3day",
+      "module_learn",
+      "module_verify",
+      "module_calibrate",
+      "bundle_verify_calibrate",
+    ]);
 
     expect(src).not.toContain("API Metered");
     expect(src).not.toContain('data-testid="pricing-scenarios"');
-    expect(src).not.toContain("PRICING_SCENARIOS");
-    expect(src).not.toContain("ScenarioPanel");
-    expect(src).not.toContain("Real-world cost scenarios");
-    expect(src).not.toContain("@/lib/pricing/scenarios");
+    expect(src).not.toContain("$14.99");
+    expect(src).not.toContain("AUTHORING_PRICING_COPY");
+    expect(src).not.toContain("MAPPING_PRICING_COPY");
+    expect(src).not.toContain("VERIFICATION_PRICING_COPY");
   });
 
   it("links to All-You-Can-Learn as a visible CTA", () => {
     const src = read("app/pricing/page.tsx");
-    expect(src).toContain("HARNESS_PRICING_COPY.ayclHref");
+    expect(src).toContain("UNIFIED_PRICING_COPY.ayclHref");
     expect(src).toContain('data-testid="pricing-aycl-link"');
     expect(PRICING_AYCL_HREF).toBe("/all-you-can-learn");
     expect(PRICING_AYCL_LABEL).toMatch(/All-You-Can-Learn/);
@@ -71,81 +97,28 @@ describe("harness pricing page source", () => {
   });
 });
 
-describe("verification pricing page source", () => {
-  it("is contact-only with Deep Project vs light weight rates", () => {
-    const src = read("app/pricing/verification/page.tsx");
-    expect(src).toContain("$10 per assessment");
-    expect(src).toContain("$1 per run");
-    expect(src).toContain("Deep Project");
-    expect(src).toContain("Light weight");
-    expect(src).toContain("daniel@uncertain.systems");
-    expect(src).not.toContain("/api/stripe/create-checkout");
+describe("course authoring stays on its own page", () => {
+  it("keeps /pricing/authoring as a live page with the monthly SKU and 40h package", () => {
+    const src = read("app/pricing/authoring/page.tsx");
+    expect(src).not.toContain("redirect(");
+    expect(src).toContain("AUTHORING_PRICING_COPY");
+    expect(src).toContain("checkout-module_author");
+    expect(src).toContain("authoring-40h-package");
+    expect(AUTHORING_PRICING_PATH).toBe("/pricing/authoring");
+    expect(UNIFIED_PRICING_COPY.authoringHref).toBe("/pricing/authoring");
+    expect(read("app/pricing/page.tsx")).toContain("UNIFIED_PRICING_COPY.authoringHref");
+    expect(read("next.config.ts")).not.toContain('source: "/pricing/authoring"');
+  });
+
+  it("folds verification and mapping routes onto /pricing hashes", () => {
+    expect(read("app/pricing/verification/page.tsx")).toContain('redirect("/pricing#verification")');
+    expect(read("app/pricing/mapping/page.tsx")).toContain('redirect("/pricing#mapping")');
+    expect(VERIFICATION_PRICING_PATH).toBe("/pricing#verification");
+    expect(MAPPING_PRICING_PATH).toBe("/pricing#mapping");
+    expect(MAPPING_PRICING_COPY.quote.price).toBe("$1 per data point");
+    expect(AUTHORING_PRICING_COPY.package.price).toMatch(/Starting at \$15,000/);
     expect(VERIFICATION_PRICING_COPY.deepProject.price).toBe("$10 per assessment");
     expect(VERIFICATION_PRICING_COPY.lightWeight.price).toBe("$1 per run");
-    expect(src).toContain("grayscale");
-    expect(src).toContain("deepProject.image");
-    expect(src).toContain("lightWeight.image");
-    expect(existsSync(join(ROOT, "public/deep-verification.png"))).toBe(true);
-    expect(existsSync(join(ROOT, "public/shallow_verification.png"))).toBe(true);
-  });
-});
-
-describe("mapping pricing page source", () => {
-  it("is contact-only with a $1 per data point quote", () => {
-    const pagePath = join(ROOT, "app/pricing/mapping/page.tsx");
-    expect(existsSync(pagePath)).toBe(true);
-    const src = read("app/pricing/mapping/page.tsx");
-
-    expect(src).toContain("{MAPPING_PRICING_COPY.title}");
-    expect(src).toContain("{MAPPING_PRICING_COPY.lead}");
-    expect(src).toContain("{quote.price}");
-    expect(src).toContain("{quote.body}");
-    expect(src).toContain("{MAPPING_PRICING_COPY.contactMailto}");
-    expect(src).toContain("{MAPPING_PRICING_COPY.contactCta}");
-    expect(src).not.toContain("create-checkout");
-    expect(src).not.toContain("handleCheckout");
-    expect(src).not.toContain("api_metered");
-    expect(src).not.toContain("trial_3day");
-    expect(src).not.toMatch(/pay|checkout|buy now|purchase/i);
-
-    expect(MAPPING_PRICING_PATH).toBe("/pricing/mapping");
-    expect(MAPPING_PRICING_COPY.title).toBe("Knowledge Mapping");
-    expect(MAPPING_PRICING_COPY.quote.priceAmount).toBe("$1");
-    expect(MAPPING_PRICING_COPY.quote.price).toBe("$1 per data point");
-    expect(MAPPING_PRICING_COPY.lead).toMatch(/\$1 per data point/);
-    expect(MAPPING_PRICING_COPY.quote.body).toMatch(/data points/);
-    expect(MAPPING_PRICING_COPY.contactEmail).toBe("daniel@uncertain.systems");
-    expect(MAPPING_PRICING_COPY.contactMailto).toBe("mailto:daniel@uncertain.systems");
-  });
-});
-
-describe("authoring pricing page source", () => {
-  it("is contact-only starting at $15,000 for a 40h course package", () => {
-    const pagePath = join(ROOT, "app/pricing/authoring/page.tsx");
-    expect(existsSync(pagePath)).toBe(true);
-    const src = read("app/pricing/authoring/page.tsx");
-
-    expect(src).toContain("{AUTHORING_PRICING_COPY.title}");
-    expect(src).toContain("{AUTHORING_PRICING_COPY.lead}");
-    expect(src).toContain("{coursePackage.price}");
-    expect(src).toContain("{coursePackage.body}");
-    expect(src).toContain("{AUTHORING_PRICING_COPY.contactMailto}");
-    expect(src).toContain("{AUTHORING_PRICING_COPY.contactCta}");
-    expect(src).not.toContain("create-checkout");
-    expect(src).not.toContain("handleCheckout");
-    expect(src).not.toContain("api_metered");
-    expect(src).not.toContain("trial_3day");
-    expect(src).not.toMatch(/pay|checkout|buy now|purchase/i);
-
-    expect(AUTHORING_PRICING_PATH).toBe("/pricing/authoring");
-    expect(AUTHORING_PRICING_COPY.title).toBe("Learning Experience Authoring");
-    expect(AUTHORING_PRICING_COPY.package.priceAmount).toBe("$15,000");
-    expect(AUTHORING_PRICING_COPY.package.price).toMatch(/Starting at \$15,000/);
-    expect(AUTHORING_PRICING_COPY.package.name).toMatch(/40h/);
-    expect(AUTHORING_PRICING_COPY.lead).toMatch(/lifetime workspace access/);
-    expect(AUTHORING_PRICING_COPY.package.body).toMatch(/lifetime workspace access/);
-    expect(AUTHORING_PRICING_COPY.contactBody).toMatch(/custom packages/);
-    expect(AUTHORING_PRICING_COPY.contactEmail).toBe("daniel@uncertain.systems");
-    expect(AUTHORING_PRICING_COPY.contactMailto).toBe("mailto:daniel@uncertain.systems");
+    expect(UNIFIED_PRICING_COPY.custom.mailto).toBe("mailto:daniel@uncertain.systems");
   });
 });

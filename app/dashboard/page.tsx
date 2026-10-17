@@ -9,7 +9,7 @@ import { createClient } from "@/lib/supabase/client";
 import { getSessions, deleteSession, restartSession, getWorkspaces, getIlePostSessionPath, type Session, type Workspace } from "@/lib/storage";
 import { DEFAULT_PROMPTS, PROMPT_META, type PromptKey, type UserPrompts } from "@/lib/prompts";
 import { useI18n } from "@/lib/i18n";
-import { formatPlanMonthlyPrice, hasAgentApiKeyPlan, type PlanId } from "@/lib/plans";
+import { formatPlanMonthlyPrice, hasAgentApiKeyPlan, planDisplayName as formatPlanName, type PlanId } from "@/lib/plans";
 import { dashboardUsesAgenticKeys } from "@/lib/dashboard-agent-access";
 import { OrganizationDashboardTab } from "@/components/OrganizationDashboardTab";
 import { DashboardAtmosphere } from "@/components/dashboard/dashboard-atmosphere";
@@ -21,6 +21,7 @@ import { DashboardKnowledgeRegionsTab } from "@/components/dashboard/dashboard-k
 import { DashboardPlansTab } from "@/components/dashboard/dashboard-plans-tab";
 import { DashboardSessionsTab } from "@/components/dashboard/dashboard-sessions-tab";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
+import { DashboardUpgradeTab } from "@/components/dashboard/dashboard-upgrade-tab";
 import { DashboardUsageTab } from "@/components/dashboard/dashboard-usage-tab";
 import { fetchAestheticPackages } from "@/lib/aesthetics";
 import { buildMcpClientConfig } from "@/lib/pow-api/mcp-proof-of-work-catalog";
@@ -38,7 +39,7 @@ import {
   workspaceMatchesDashboardTypeFilter,
   type DashboardWorkspaceListFilter,
 } from "@/lib/dashboard-workspace-filters";
-import { dashboardRecentWorkspaces, dashboardWorkspaceCounts } from "@/lib/dashboard-home";
+import { dashboardRecentWorkspaces } from "@/lib/dashboard-home";
 import { DASHBOARD_HOME_RECENT_LIMIT } from "@/lib/dashboard-play";
 import {
   dashboardFrameLabel,
@@ -643,10 +644,7 @@ export default function DashboardPage() {
 
   function planDisplayName(plan: string, isAdmin?: boolean) {
     if (isAdmin) return "Platform admin";
-    if (plan === "api_metered") return "API Metered";
-    if (plan === "trial") return "3-Day Trial";
-    if (plan === "inactive") return "Inactive";
-    return plan;
+    return formatPlanName(plan);
   }
 
   function planPriceLabel(plan: string, isAdmin?: boolean) {
@@ -764,7 +762,6 @@ export default function DashboardPage() {
     pinnedWorkspaceIds,
   ]);
 
-  const homeCounts = useMemo(() => dashboardWorkspaceCounts(workspaces), [workspaces]);
   const homeRecentWorkspaces = useMemo(
     () => dashboardRecentWorkspaces(workspaces, DASHBOARD_HOME_RECENT_LIMIT),
     [workspaces],
@@ -824,13 +821,13 @@ export default function DashboardPage() {
     <div
       data-console-frame=""
       data-workspace-shell=""
-      className="relative min-h-screen border border-white/40 bg-black text-white"
+      className="relative min-h-screen border border-white/40 bg-black text-white md:h-dvh md:max-h-dvh md:overflow-hidden"
     >
       <DashboardAtmosphere />
       <SessionConsoleScan />
       <SessionConsoleMarks />
       <div
-        className="relative z-[2] grid min-h-screen grid-cols-1 md:grid-cols-[14rem_minmax(0,1fr)] md:grid-rows-[auto_minmax(0,1fr)]"
+        className="relative z-[2] grid min-h-screen grid-cols-1 md:h-full md:min-h-0 md:grid-cols-[14rem_minmax(0,1fr)] md:grid-rows-[auto_minmax(0,1fr)]"
         data-dashboard-platform
       >
       <div className="md:col-start-2 md:row-start-1">
@@ -838,7 +835,7 @@ export default function DashboardPage() {
       </div>
       <DashboardSidebar activeTab={activeTab} onSelect={setDashboardTab} />
 
-      <div className="min-w-0 md:col-start-2 md:row-start-2">
+      <div className="min-w-0 md:col-start-2 md:row-start-2 md:min-h-0 md:overflow-y-auto">
       <p data-console-frame-label="" className={`pointer-events-none px-4 pt-2 sm:px-6 ${CONSOLE_LABEL_CLASS}`}>
         {dashboardFrameLabel(activeTab)}
       </p>
@@ -885,19 +882,6 @@ export default function DashboardPage() {
             handleTogglePin={handleTogglePin}
             paginatedPlans={paginatedPlans}
             pinnedWorkspaceIds={pinnedWorkspaceIds}
-            productCount={
-              isDashboardShopTab(activeTab)
-                ? workspaces.filter(
-                    (row) =>
-                      workspaceMatchesDashboardTypeFilter(row, "learning") &&
-                      workspaceMatchesDashboardListFilter(row, "aycl"),
-                  ).length
-                : activeTab === "learning"
-                ? homeCounts.learning
-                : activeTab === "verification"
-                  ? homeCounts.verification
-                  : homeCounts.calibration
-            }
             productEmpty={productEmpty}
             productTab={
               activeTab === "verification" || activeTab === "calibration"
@@ -933,6 +917,15 @@ export default function DashboardPage() {
         {activeTab === "help" && <DashboardHelpTab />}
 
         {activeTab === "organization" && <OrganizationDashboardTab />}
+
+        {activeTab === "upgrade" && (
+          <DashboardUpgradeTab
+            plan={usageData?.plan || user?.plan || "inactive"}
+            subscriptionStatus={usageData?.subscriptionStatus || "inactive"}
+            periodEnd={usageData?.periodEnd ?? null}
+            isAdmin={Boolean(usageData?.isAdmin || user?.isAdmin)}
+          />
+        )}
 
         {/* Usage Tab */}
         {activeTab === "usage" && (

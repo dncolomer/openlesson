@@ -9,10 +9,7 @@ const productLinks = [
   { labelKey: "footer.learningHarness", href: "/learning-harness" },
   { labelKey: "footer.knowledgeVerification", href: "/knowledge-verification" },
   { labelKey: "footer.knowledgeMapping", href: "/knowledge-mapping" },
-  { labelKey: "footer.harnessPricing", href: "/pricing" },
-  { labelKey: "footer.verificationPricing", href: "/pricing/verification" },
-  { labelKey: "footer.mappingPricing", href: "/pricing/mapping" },
-  { labelKey: "footer.authoringPricing", href: "/pricing/authoring" },
+  { labelKey: "footer.pricing", href: "/pricing" },
   { labelKey: "footer.vision", href: "/science" },
   { labelKey: "footer.agenticApi", href: "/docs/proof-of-work-api" },
 ];

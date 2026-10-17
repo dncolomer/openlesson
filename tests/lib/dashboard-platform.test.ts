@@ -82,16 +82,16 @@ describe("dashboard nav", () => {
     expect(DASHBOARD_NAV_GROUPS.some((group) => group.id === "products")).toBe(false);
   });
 
-  it("puts Upgrade on the sidebar as a pricing link, not a dashboard tab", () => {
+  it("puts Upgrade on the sidebar as a dashboard tab for owned modules", () => {
     const account = DASHBOARD_NAV_GROUPS.find((group) => group.id === "account");
     const upgrade = account?.items.find((item) => item.id === "upgrade");
     expect(upgrade).toEqual({
       id: "upgrade",
       label: "Upgrade",
-      href: "/pricing",
     });
-    expect(isDashboardNavTabItem(upgrade!)).toBe(false);
-    expect(parseDashboardTab("upgrade")).toBe("home");
+    expect(isDashboardNavTabItem(upgrade!)).toBe(true);
+    expect(parseDashboardTab("upgrade")).toBe("upgrade");
+    expect(dashboardFrameLabel("upgrade")).toBe("Upgrade");
   });
 });
 
@@ -204,9 +204,15 @@ describe("dashboard platform surface", () => {
     const platformAt = dashSrc.lastIndexOf("data-dashboard-platform");
     const platform = dashSrc.slice(platformAt);
     expect(dashSrc).toContain("md:grid-cols-[14rem_minmax(0,1fr)]");
+    expect(dashSrc).toContain("md:h-dvh");
+    expect(dashSrc).toContain("md:overflow-hidden");
+    expect(dashSrc).toContain("md:overflow-y-auto");
     expect(dashSrc).toContain("md:row-span-2");
     expect(platform.indexOf("DashboardSidebar")).toBeLessThan(platform.indexOf("data-console-frame-label"));
     expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain("md:row-span-2");
+    expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain("md:sticky");
+    expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain("md:h-full");
+    expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain("md:max-h-full");
     expect(dashSrc).toContain('data-dashboard-nav={item.id}');
     expect(dashSrc).toContain("DashboardHomeTab");
     expect(dashSrc).toContain("DashboardHelpTab");
@@ -222,6 +228,7 @@ describe("dashboard platform surface", () => {
     expect(dashSrc).not.toContain("data-dashboard-home-stats");
     expect(dashSrc).not.toContain("data-dashboard-recent-flow");
     expect(dashSrc).toContain("data-dashboard-product={productTab}");
+    expect(dashSrc).not.toContain("data-dashboard-product-stats");
     expect(dashSrc).toContain("data-dashboard-shop");
     expect(dashSrc).toContain("data-dashboard-knowledge-regions");
     expect(dashSrc).toContain("DashboardKnowledgeRegionsTab");
@@ -235,8 +242,10 @@ describe("dashboard platform surface", () => {
     expect(dashSrc).toContain("/aesthetics/piotr-binkowski/");
     expect(dashSrc).toContain("bg-black/82");
     expect(dashSrc).toContain("<Navbar productLinks={false} />");
-    expect(dashSrc).toContain("data-dashboard-nav-link");
-    expect(dashSrc).toContain("item.href");
+    expect(dashSrc).toContain("DashboardUpgradeTab");
+    expect(dashSrc).toContain('activeTab === "upgrade"');
+    expect(readRepo("components/dashboard/dashboard-upgrade-tab.tsx")).toContain("data-dashboard-upgrade");
+    expect(readRepo("components/dashboard/dashboard-upgrade-tab.tsx")).toContain("data-dashboard-module");
   });
 
   it("loads owner-wide recent flows from verification and calibration tables", () => {

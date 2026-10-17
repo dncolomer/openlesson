@@ -34,7 +34,7 @@ export async function upsertPendingCheckoutFromSession(
   if (!email || !priceType || !session.id) return null;
 
   const monthlyVolume = Math.max(0, Number(session.metadata?.monthly_volume) || 0);
-  const plan = planIdFromPriceType(priceType);
+  const plan = session.metadata?.target_plan || planIdFromPriceType(priceType);
   const stripeCustomerId =
     typeof session.customer === "string" ? session.customer : session.customer?.id ?? null;
   const stripeSubscriptionId =

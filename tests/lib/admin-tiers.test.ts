@@ -10,8 +10,17 @@ import {
 } from "@/lib/admin/tiers";
 
 describe("admin tiers", () => {
-  it("only offers inactive, trial, and api_metered", () => {
-    expect(ADMIN_TIER_OPTIONS.map((t) => t.id)).toEqual(["inactive", "trial", "api_metered"]);
+  it("offers inactive, trial, api_metered, and combination module tiers", () => {
+    const ids = ADMIN_TIER_OPTIONS.map((t) => t.id);
+    expect(ids).toContain("inactive");
+    expect(ids).toContain("trial");
+    expect(ids).toContain("api_metered");
+    expect(ids).toContain("learn");
+    expect(ids).toContain("author");
+    expect(ids).toContain("verify");
+    expect(ids).toContain("calibrate");
+    expect(ids).toContain("verify_calibrate");
+    expect(ids).toContain("author_verify_calibrate");
   });
 
   it("buckets inactive and trial_expired distinctly", () => {
@@ -26,6 +35,7 @@ describe("admin tiers", () => {
     expect(planFilterBucket({ plan: "regular_2026", subscription_status: "active" })).toBe(
       "inactive"
     );
+    expect(planFilterBucket({ plan: "learn", subscription_status: "active" })).toBe("learn");
   });
 
   it("maps non-active users to inactive tier select", () => {
@@ -42,7 +52,8 @@ describe("admin tiers", () => {
     expect(tierLabel("inactive")).toBe("Inactive");
     expect(tierLabel("free")).toBe("Inactive");
     expect(tierLabel("api_metered")).toBe("API Metered");
-    expect(tierLabel("trial")).toBe("3-Day Trial");
+    expect(tierLabel("trial")).toBe("Try everything");
+    expect(tierLabel("learn_verify")).toBe("Learning + Verification");
   });
 
   it("builds inactive tier update without period end", () => {

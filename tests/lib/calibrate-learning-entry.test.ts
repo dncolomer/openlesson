@@ -32,9 +32,15 @@ describe("learning Calibrate entry", () => {
     expect(productIntentClusterLabel(resolveProductIntent("scout"))).toBe(CALIBRATE_MODE_LABEL);
     expect(PRODUCT_INTENT_LABELS.styleScout).not.toBe("Prepare");
 
-    const prepareAction = WORKSPACE_CIRCULAR_MENU_ACTIONS.find((action) => action.id === "start_prepare");
-    expect(prepareAction?.label).toBe(CALIBRATE_MODE_LABEL);
-    expect(prepareAction?.id).toBe("start_prepare");
+    expect(WORKSPACE_CIRCULAR_MENU_ACTIONS.map((action) => action.id)).toEqual([
+      "start_session",
+    ]);
+    expect(WORKSPACE_CIRCULAR_MENU_ACTIONS.map((action) => action.label)).toEqual([
+      "Learn",
+    ]);
+    expect(
+      WORKSPACE_CIRCULAR_MENU_ACTIONS.find((action) => action.id === "start_prepare"),
+    ).toBeUndefined();
 
     const phases = read("components/scout-tap/scout-tap-phases.tsx");
     const surface = read("components/calibrate/calibrate-sounding-surface.tsx");
@@ -51,13 +57,13 @@ describe("learning Calibrate entry", () => {
       product?: { productIleHint?: string };
     };
 
-    expect(menu).toContain('id: "start_prepare", label: "Calibrate"');
-    expect(badges).toContain('"Calibrate"');
-    expect(sessionItem).toContain('title="Start Calibrate"');
-    expect(sessionItem).toContain("Calibrate");
+    expect(menu).toContain('id: "start_session", label: "Learn"');
+    expect(menu).not.toContain('id: "start_prepare", label: "Calibrate"');
+    expect(badges).not.toContain('"Calibrate"');
+    expect(sessionItem).not.toContain('title="Start Calibrate"');
     expect(edit).not.toContain(">Prepare<");
     expect(edit).not.toContain("data-block-edit-allow-scout");
-    expect(read("components/BlockDetailCard.tsx")).toContain("PRODUCT_INTENT_LABELS.styleScout");
+    expect(read("components/BlockDetailCard.tsx")).not.toContain("PRODUCT_INTENT_LABELS.styleScout");
     expect(en.onboardingGuide.scout.title).toBe(CALIBRATE_MODE_LABEL);
     expect(en.scout.briefing.title).toBe(CALIBRATE_MODE_LABEL);
     expect(en.scout.briefing.kicker).toBe(CALIBRATE_MODE_LABEL);

@@ -97,16 +97,15 @@ describe("desktop layout + block detail chrome", () => {
     expect(card).toContain("resolveLaunchFromStyleAndModality");
     expect(card).toContain("data-style-option={id}");
     expect(card).toContain('id: "explore"');
-    expect(card).toContain('id: "scout"');
-    expect(card).toContain('data-style-option="verify"');
-    expect(card).toContain('onClick={() => setStyle("verify")}');
-    expect(card).toContain("verifySelected");
+    expect(card).not.toContain('id: "scout" as const');
+    expect(card).not.toContain('data-style-option="verify"');
+    expect(card).not.toContain('onClick={() => setStyle("verify")}');
     expect(card).not.toContain("data-modality-control");
     expect(card).not.toContain("data-modality-toggle");
     expect(card).not.toContain("data-modality-option");
     expect(card).not.toContain("data-product-intent-modality-grid");
     expect(card).toContain('data-style-icon="explore"');
-    expect(card).toContain('data-style-icon="scout"');
+    expect(card).not.toContain('data-style-icon="scout"');
     // Style is select-only; Start + duration live on the card
     expect(card).toContain("data-style-select");
     expect(card).toContain("data-launch-start");

@@ -6,7 +6,7 @@
  * Knowledge Portal is not a settings section.
  */
 
-import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
+import { isNoMapWorkspace } from "@/lib/workspace-kind";
 import { workspaceSupportsFeature } from "@/lib/workspace-capabilities";
 
 export type SettingsSubview =
@@ -37,7 +37,7 @@ export const KNOWLEDGE_REGION_SETTINGS_SUBVIEWS: readonly SettingsSubview[] =
   VERIFICATION_SETTINGS_SUBVIEWS;
 
 export function availableSettingsSubviews(kind: unknown): readonly SettingsSubview[] {
-  return isKnowledgeRegionWorkspace(kind)
+  return isNoMapWorkspace(kind)
     ? VERIFICATION_SETTINGS_SUBVIEWS
     : LEARNING_SETTINGS_SUBVIEWS;
 }
@@ -72,7 +72,7 @@ export function settingsSubviewLabel(
     case "data-studio":
       return "Data Studio";
     case "integrations":
-      return isKnowledgeRegionWorkspace(kind) ? "Integration" : "Integrations";
+      return isNoMapWorkspace(kind) ? "Integration" : "Integrations";
   }
 }
 

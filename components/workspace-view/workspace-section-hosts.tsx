@@ -17,7 +17,7 @@ import type { WorkspaceDagRecord } from "@/lib/workspace-dags";
 import type { WorkspaceMapTypesState } from "@/lib/workspace-map-types";
 import type { WorkspaceSectionLayout } from "@/lib/workspace-sections";
 import type { WorkspaceSectionKey } from "@/lib/workspace-sections";
-import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
+import { isNoMapWorkspace } from "@/lib/workspace-kind";
 
 export function WorkspaceSectionHosts({
   isLearnerMode,
@@ -197,7 +197,7 @@ export function WorkspaceSectionHosts({
               workspaceId={workspaceId}
               isOwner={isOwner}
               ayclToken={ayclToken}
-              contextGeneration={isKnowledgeRegionWorkspace(plan.workspace_kind)}
+              contextGeneration={isNoMapWorkspace(plan.workspace_kind)}
             />
           </div>
         </WorkspaceSectionSurface>

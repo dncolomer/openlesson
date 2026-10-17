@@ -10,7 +10,7 @@ import type { WorkspaceExternalResource } from "@/lib/workspace-external-resourc
 import type { Session, SessionPlanStep } from "@/lib/storage";
 import { IleInsightKeptScreen } from "@/components/session-view/ile-insight-kept-screen";
 import { IleMapInsightsWidget } from "@/components/session-view/ile-insight-trophies";
-import { IleSessionImpurityScreen, IleSilenceRestScreen, mountIleSilenceScreen } from "@/components/session-view/ile-silence-lock-screen";
+import { IleSessionImpureScreen, mountIleSilenceScreen } from "@/components/session-view/ile-silence-lock-screen";
 import { IleVoiceBar, IleVoiceBarActions } from "@/components/session-view/ile-voice-bar";
 import { SessionChrome } from "@/components/session-view/session-chrome";
 import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
@@ -21,9 +21,7 @@ import {
   type IlePowCounterArtifact,
   type IlePowTypeCounts,
 } from "@/lib/ile-pow-counters";
-import { ileImpurityExitPlan, type IleSilenceLockOutcome } from "@/lib/practice-voice-challenge";
 import { sessionSidebarHasSection } from "@/lib/session-sidebar";
-import { toSpeechBcp47 } from "@/lib/tutoring-languages";
 
 type LiveScreenCaptureHandle = {
   captureNow: () => Promise<Blob | null>;
@@ -50,7 +48,7 @@ export type SessionLiveStageProps = {
   error: string | null;
   gatherWarning: string | null;
   gatheredResources: WorkspaceExternalResource[];
-  handleConfirmEnd: () => Promise<void>;
+  handleConfirmEnd: (options?: { impure?: boolean }) => Promise<void>;
   handleConnectMuse: () => Promise<void>;
   handleDisconnectMuse: () => void;
   handleIleSessionToolChange: (tool: Tool) => void;
@@ -102,7 +100,7 @@ export type SessionLiveStageProps = {
   showPlanCompleteModal: boolean;
   showWelcomeModal: boolean;
   showWelcomePanel: boolean;
-  silenceLock: { lockCount: number; outcome: IleSilenceLockOutcome; unlock: (challengePassed: boolean) => void; minutes: number; };
+  sessionEndedImpure: boolean;
   stream: MediaStream | null;
   t: (key: string, params?: Record<string, string | number>) => string;
   tutoringLanguage: "en" | "vi" | "zh" | "es" | "de" | "pl" | "ca";
@@ -180,7 +178,7 @@ export function SessionLiveStage({
     showPlanCompleteModal,
     showWelcomeModal,
     showWelcomePanel,
-    silenceLock,
+    sessionEndedImpure,
     stream,
     t,
     tutoringLanguage,
@@ -190,35 +188,9 @@ export function SessionLiveStage({
 }: SessionLiveStageProps) {
   return (
     <div className="h-screen flex bg-[#0a0a0a] overflow-hidden">
-      {silenceLock.outcome === "rest"
+      {sessionEndedImpure
         ? mountIleSilenceScreen(
-            <IleSilenceRestScreen
-              lockCount={silenceLock.lockCount}
-              speechLang={toSpeechBcp47(tutoringLanguage)}
-              onUnlock={() => silenceLock.unlock(true)}
-              onSaveAndLeave={() => {
-                const plan = ileImpurityExitPlan("save");
-                if (!plan.persistSession) return;
-                void pauseAndGoToDashboard();
-              }}
-            />,
-          )
-        : null}
-      {silenceLock.outcome === "impurity"
-        ? mountIleSilenceScreen(
-            <IleSessionImpurityScreen
-              lockCount={silenceLock.lockCount}
-              onSave={() => {
-                const plan = ileImpurityExitPlan("save");
-                if (!plan.persistSession) return;
-                void pauseAndGoToDashboard();
-              }}
-              onLogOff={() => {
-                const plan = ileImpurityExitPlan("logoff");
-                if (!plan.leave) return;
-                void pauseAndGoToDashboard(null, { persistSession: plan.persistSession });
-              }}
-            />,
+            <IleSessionImpureScreen onTryAgain={() => window.location.reload()} />,
           )
         : null}
       <SessionChrome

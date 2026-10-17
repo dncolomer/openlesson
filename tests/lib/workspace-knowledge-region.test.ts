@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  calibrationWorkspaceCreateOutcome,
   isUiWorkspaceCreateMode,
   knowledgeRegionWorkspaceCreateOutcome,
   parseWorkspaceCreateMode,
@@ -24,9 +25,11 @@ import {
 } from "@/lib/workspace-mode";
 import {
   assertWorkspaceAllowsKnowledgeLinkMint,
+  isCalibrationWorkspace,
   isKnowledgeRegionWorkspace,
   parseWorkspaceKind,
   workspaceAllowsKnowledgeLinkMint,
+  workspaceKnowledgeFlowKind,
 } from "@/lib/workspace-kind";
 import {
   availableSettingsSubviews,
@@ -43,6 +46,11 @@ import {
 import { normalizeGoalText } from "@/lib/pow-api/goals";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import { buildWorkspaceSectionNavItems } from "@/components/workspace-view/workspace-section-nav-items";
+import {
+  calibrationWorkspaceFeatures,
+  verificationWorkspaceFeatures,
+  workspaceSupportsFeature,
+} from "@/lib/workspace-capabilities";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
@@ -66,10 +74,12 @@ describe("Knowledge Region create mode", () => {
       "blank",
       "template",
       "knowledge_region",
+      "calibration",
     ]);
     expect(isUiWorkspaceCreateMode("blank")).toBe(true);
     expect(isUiWorkspaceCreateMode("template")).toBe(true);
     expect(isUiWorkspaceCreateMode("knowledge_region")).toBe(true);
+    expect(isUiWorkspaceCreateMode("calibration")).toBe(true);
     expect(isUiWorkspaceCreateMode("files_goal")).toBe(false);
     expect(parseWorkspaceCreateMode("knowledge_region")).toBe("knowledge_region");
     expect(parseWorkspaceCreateMode("knowledge-region")).toBe("knowledge_region");
@@ -77,11 +87,23 @@ describe("Knowledge Region create mode", () => {
     expect(parseWorkspaceCreateMode("kr")).toBe("knowledge_region");
     expect(parseWorkspaceCreateMode("not-a-mode")).toBeNull();
     expect(workspaceKindForCreateMode("knowledge_region")).toBe("knowledge_region");
+    expect(workspaceKindForCreateMode("calibration")).toBe("calibration");
     expect(workspaceKindForCreateMode("blank")).toBe("standard");
     const outcome = knowledgeRegionWorkspaceCreateOutcome();
     expect(outcome.blocks).toEqual([]);
     expect(outcome.mode).toBe("knowledge_region");
     expect(outcome.workspaceKind).toBe("knowledge_region");
+    const calOutcome = calibrationWorkspaceCreateOutcome();
+    expect(calOutcome.blocks).toEqual([]);
+    expect(calOutcome.mode).toBe("calibration");
+    expect(calOutcome.workspaceKind).toBe("calibration");
+    expect(parseWorkspaceCreateMode("calibration")).toBe("calibration");
+    expect(parseWorkspaceKind("calibration")).toBe("calibration");
+    expect(isCalibrationWorkspace("calibration")).toBe(true);
+    expect(isCalibrationWorkspace("knowledge_region")).toBe(false);
+    expect(workspaceKnowledgeFlowKind("calibration")).toBe("calibrate");
+    expect(workspaceKnowledgeFlowKind("knowledge_region")).toBe("verify");
+    expect(workspaceKnowledgeFlowKind("standard")).toBeNull();
 
     const nested = errorMessageFromBody(
       { error: { code: "internal_error", message: "column workspace_kind does not exist" } },
@@ -90,6 +112,15 @@ describe("Knowledge Region create mode", () => {
     expect(nested).toBe("column workspace_kind does not exist");
     expect(nested).not.toBe("[object Object]");
     expect(errorMessageFromBody({ error: { code: "x" } }, "Failed KR")).toBe("Failed KR");
+
+    expect(verificationWorkspaceFeatures()).toContain("verification_flows");
+    expect(verificationWorkspaceFeatures()).not.toContain("calibration_flows");
+    expect(calibrationWorkspaceFeatures()).toContain("calibration_flows");
+    expect(calibrationWorkspaceFeatures()).not.toContain("verification_flows");
+    expect(workspaceSupportsFeature("knowledge_region", "calibration_flows")).toBe(false);
+    expect(workspaceSupportsFeature("calibration", "verification_flows")).toBe(false);
+    expect(workspaceSupportsFeature("calibration", "calibration_flows")).toBe(true);
+    expect(workspaceSupportsFeature("standard", "calibration_flows")).toBe(false);
 
     writeScratch(
       "knowledge-region-create-mode.log",
@@ -115,7 +146,7 @@ describe("Knowledge Region shell", () => {
       isOwner: true,
       workspaceKind: "knowledge_region",
     });
-    expect(owner).toEqual(["goals", "verification_flows", "calibration_flows", "context", "knowledge", "settings"]);
+    expect(owner).toEqual(["goals", "verification_flows", "context", "knowledge", "settings"]);
     const t = (key: string) => key;
     const krNav = buildWorkspaceSectionNavItems({
       t,
@@ -126,7 +157,6 @@ describe("Knowledge Region shell", () => {
     expect(krNav.map((item) => item.key)).toEqual([
       "goals",
       "verification_flows",
-      "calibration_flows",
       "context",
       "knowledge",
       "settings",
@@ -147,7 +177,7 @@ describe("Knowledge Region shell", () => {
         isOwner: true,
         visibleSections: learnerKr,
       }).map((item) => item.key),
-    ).toEqual(["goals", "verification_flows", "calibration_flows", "context", "knowledge", "settings"]);
+    ).toEqual(["goals", "verification_flows", "context", "knowledge", "settings"]);
     const viewSource = readFileSync(
       join(ROOT, "components/WorkspaceView.tsx"),
       "utf8",
@@ -200,7 +230,7 @@ describe("Knowledge Region shell", () => {
         isLoggedIn: true,
         workspaceKind: "knowledge_region",
       }),
-    ).toEqual(["goals", "verification_flows", "calibration_flows", "context", "knowledge", "settings"]);
+    ).toEqual(["goals", "verification_flows", "context", "knowledge", "settings"]);
     expect(
       availableSectionsForMode({
         mode: "learner",
@@ -289,6 +319,7 @@ describe("Knowledge Region shell", () => {
 describe("Knowledge Region knowledge-link deny", () => {
   it("denies mint on KR and allows it on standard; mint routes consult the helper", () => {
     expect(workspaceAllowsKnowledgeLinkMint("knowledge_region")).toBe(false);
+    expect(workspaceAllowsKnowledgeLinkMint("calibration")).toBe(false);
     expect(workspaceAllowsKnowledgeLinkMint("standard")).toBe(true);
     expect(workspaceAllowsKnowledgeLinkMint(undefined)).toBe(true);
     expect(assertWorkspaceAllowsKnowledgeLinkMint("knowledge_region")).toEqual({
@@ -513,10 +544,15 @@ describe("Knowledge Region wiring", () => {
     expect(page).toContain("Verification workspace");
     expect(page).toContain("data-create-mode={card.mode}");
     expect(page).toContain('data-create-mode="knowledge_region"');
-    expect(page).toContain('data-create-layout="two-groups"');
+    expect(page).toContain('data-create-layout="three-groups"');
     expect(page).toContain('data-create-group="learning"');
     expect(page).toContain('data-create-group="verification"');
+    expect(page).toContain('data-create-group="calibration"');
     expect(page).toContain('data-create-mode-span="knowledge_region"');
+    expect(page).toContain('data-create-mode-span="calibration"');
+    expect(page).toContain('data-create-mode="calibration"');
+    expect(page).toContain('createMode: "calibration"');
+    expect(page).toContain("handleCreateCalibration");
     expect(page).toContain("knowledge_region:");
     expect(page).toContain('createMode: "knowledge_region"');
     expect(page).toContain("handleCreateKnowledgeRegion");
@@ -527,6 +563,9 @@ describe("Knowledge Region wiring", () => {
     expect(gen).toContain('createMode === "knowledge_region"');
     expect(gen).toContain("workspace_kind: krOutcome.workspaceKind");
     expect(gen).toContain("knowledgeRegionWorkspaceCreateOutcome");
+    expect(gen).toContain('createMode === "calibration"');
+    expect(gen).toContain("workspace_kind: calOutcome.workspaceKind");
+    expect(gen).toContain("calibrationWorkspaceCreateOutcome");
 
     const view = read("components/WorkspaceView.tsx");
     expect(view).toContain("parseWorkspaceKind");
@@ -539,6 +578,9 @@ describe("Knowledge Region wiring", () => {
 
     const settings = read("components/WorkspaceIntegrationPanel.tsx");
     expect(settings).toContain("settingsSubTabsForKind");
+    expect(settings).toContain("workspaceAllowsCopyToVerification(workspaceKind)");
+    expect(settings).toContain("workspaceSettingsIntegrationCopy(workspaceKind)");
+    expect(settings).toContain("data-kr-integration-skill={isNoMap");
     expect(settings).not.toContain("WorkspaceKnowledgePortalPanel");
     expect(settings).not.toContain('activeSubview === "knowledge-portal"');
     expect(settings).not.toContain('activeSubview === "guest-links"');

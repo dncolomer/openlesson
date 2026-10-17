@@ -6,6 +6,7 @@ import {
   WORKSPACE_LOCAL_TABS,
   availableWorkspaceSections,
   canAccessPrivilegedWorkspaceSections,
+  defaultWorkspaceSection,
   isWorkspaceLocalTab,
   resolveActiveSection,
   resolveWorkspaceSectionLayout,
@@ -173,13 +174,13 @@ describe("availableWorkspaceSections", () => {
         isOwner: true,
         workspaceKind: "knowledge_region",
       }),
-    ).toEqual(["goals", "verification_flows", "calibration_flows", "context", "knowledge", "settings"]);
+    ).toEqual(["goals", "verification_flows", "context", "knowledge", "settings"]);
     expect(
       availableWorkspaceSections({
         isOrgAdmin: true,
         workspaceKind: "knowledge_region",
       }),
-    ).toEqual(["goals", "verification_flows", "calibration_flows", "context", "knowledge", "settings"]);
+    ).toEqual(["goals", "verification_flows", "context", "knowledge", "settings"]);
     expect(
       availableWorkspaceSections({
         isOwner: false,
@@ -204,6 +205,40 @@ describe("availableWorkspaceSections", () => {
         workspaceKind: "knowledge_region",
       }),
     ).toBe("context");
+    expect(
+      availableWorkspaceSections({
+        isOwner: true,
+        workspaceKind: "knowledge_region",
+      }),
+    ).not.toContain("calibration_flows");
+  });
+
+  it("Calibration owner sections are Goals / Calibration Flows / Context / Knowledge / Settings", () => {
+    expect(
+      availableWorkspaceSections({
+        isOwner: true,
+        workspaceKind: "calibration",
+      }),
+    ).toEqual(["goals", "calibration_flows", "context", "knowledge", "settings"]);
+    expect(
+      availableWorkspaceSections({
+        isOwner: true,
+        workspaceKind: "calibration",
+      }),
+    ).not.toContain("verification_flows");
+    expect(
+      availableWorkspaceSections({
+        isOwner: false,
+        workspaceKind: "calibration",
+      }),
+    ).toEqual([]);
+    expect(
+      resolveActiveSection("workspace", {
+        isOwner: true,
+        workspaceKind: "calibration",
+      }),
+    ).toBe("goals");
+    expect(defaultWorkspaceSection("calibration")).toBe("goals");
   });
 });
 

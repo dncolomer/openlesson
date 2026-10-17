@@ -1,6 +1,7 @@
 /**
- * TAP-only session purity: silence auto-stash degrades purity;
- * at 0 the session closes and all session PoW is flagged impure in payload/metadata.
+ * Forced think-aloud session purity for Learn and Verify:
+ * silence auto-stash degrades purity; at 0 the session closes and all session
+ * PoW is flagged impure in payload/metadata.
  */
 
 /** Silence on a non-empty live transcript before auto-stash. */

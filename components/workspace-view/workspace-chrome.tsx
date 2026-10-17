@@ -15,7 +15,7 @@ import {
 import type { AyclCapabilities } from "@/lib/aycl-shared";
 import type { WorkspaceSectionKey } from "@/lib/workspace-sections";
 import type { Workspace } from "@/components/workspace-view/types";
-import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
+import { workspaceProductShell } from "@/lib/workspace-kind";
 
 export function WorkspaceLoading({ message }: { message: string }) {
   return (
@@ -127,16 +127,18 @@ export function WorkspaceViewChrome({
 
       <p
         className="shrink-0 border-b border-neutral-800 bg-neutral-950 px-4 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-neutral-400"
-        data-workspace-product-shell={
-          isKnowledgeRegionWorkspace(plan.workspace_kind) ? "verification" : "learning"
-        }
-        {...(isKnowledgeRegionWorkspace(plan.workspace_kind)
+        data-workspace-product-shell={workspaceProductShell(plan.workspace_kind)}
+        {...(workspaceProductShell(plan.workspace_kind) === "verification"
           ? { "data-verification-workspace-shell": true }
-          : { "data-learning-workspace-shell": true })}
+          : workspaceProductShell(plan.workspace_kind) === "calibration"
+            ? { "data-calibration-workspace-shell": true }
+            : { "data-learning-workspace-shell": true })}
       >
-        {isKnowledgeRegionWorkspace(plan.workspace_kind)
+        {workspaceProductShell(plan.workspace_kind) === "verification"
           ? "Verification workspace"
-          : "Learning workspace"}
+          : workspaceProductShell(plan.workspace_kind) === "calibration"
+            ? "Calibration workspace"
+            : "Learning workspace"}
       </p>
 
       <WorkspaceSectionNav

@@ -127,7 +127,7 @@ describe("tap-session-purity helpers", () => {
   });
 });
 
-describe("TAP client wires purity UX (not TAP Learning)", () => {
+describe("TAP client wires purity UX", () => {
   it("TapScoreClient implements silence auto_stash and impure retry without HUD fade/dots", () => {
     const client = readTapScoreSurface();
     expect(client).toContain("TAP_SILENCE_AUTO_STASH_MS");
@@ -204,10 +204,41 @@ describe("TAP client wires purity UX (not TAP Learning)", () => {
     expect(complete).toContain('sessionQuality === "impure"');
   });
 
-  it("TAP Learning SessionView does not import session purity auto-stash", () => {
+  it("Learn SessionView uses the same session purity auto-stash and impure close", () => {
     const ile = readSessionViewSurface();
-    expect(ile).not.toContain("tap-session-purity");
-    expect(ile).not.toContain("TAP_SILENCE_AUTO_STASH_MS");
+    expect(ile).toContain("tap-session-purity");
+    expect(ile).toContain("TAP_SILENCE_AUTO_STASH_MS");
+    expect(ile).toContain("useIleSessionPurity");
+    expect(ile).toContain("shouldAutoStashOnSilence");
+    expect(ile).toContain("shouldPenalizeEmptyBarSilence");
+    expect(ile).toContain("shouldEvaluateSessionPurity");
+    expect(ile).toContain("isWithinTapPurityGrace");
+    expect(ile).toContain("waitingForHelios: isSendingRef.current");
+    expect(ile).toContain("canvasLoading: canvasLoadingRef.current");
+    expect(ile).toContain("waitingForXaiReply: xaiReplyWaitRef.current");
+    expect(ile).toContain('stashRef.current({ auto: true })');
+    expect(ile).toContain("applyPurityHit");
+    expect(ile).toContain("data-ile-session-impure");
+    expect(ile).toContain("data-ile-impure-retry");
+    expect(ile).toContain("window.location.reload()");
+    expect(ile).toContain("tap.postSession.impureTitle");
+    expect(ile).toContain("{ impure: true }");
+    expect(ile).not.toContain("data-ile-silence-lock-minutes");
+    expect(ile).not.toContain("IleSilenceRestScreen");
+    expect(ile).not.toContain("useIleSilenceLock");
+    const phase = fs.readFileSync(
+      path.join(ROOT, "components/session-view/use-session-phase.ts"),
+      "utf8",
+    );
+    expect(phase).toContain("flagIleSessionProofOfWorkImpure");
+    expect(phase).toContain("withImpurePoWData");
+    expect(phase).toContain("stayOnScreen: impure");
+    const impureRoute = fs.readFileSync(
+      path.join(ROOT, "app/api/workspace/proof-of-work/impure/route.ts"),
+      "utf8",
+    );
+    expect(impureRoute).toContain("flagIleSessionProofOfWorkImpure");
+    expect(impureRoute).toContain("requireSessionWorkspaceProofOfWorkAccess");
   });
 });
 

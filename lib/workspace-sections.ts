@@ -3,11 +3,16 @@
  * Learning workspaces (stored kind `standard`): Workspace, DAGs, Map Types,
  * Context, Insights, and Settings for designers; Workspace and Insights for
  * signed-in play-only viewers. Verification workspaces (stored kind
- * `knowledge_region`): Goals, Verification Flows, Calibration Flows, Context,
- * Knowledge, and Settings. The two products do not share sections.
+ * `knowledge_region`): Goals, Verification Flows, Context, Knowledge, and
+ * Settings. Calibration workspaces (stored kind `calibration`): Goals,
+ * Calibration Flows, Context, Knowledge, and Settings.
  */
 
-import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
+import {
+  isCalibrationWorkspace,
+  isKnowledgeRegionWorkspace,
+  isNoMapWorkspace,
+} from "@/lib/workspace-kind";
 
 export type WorkspaceSectionKey =
   | "workspace"
@@ -76,7 +81,7 @@ export type WorkspaceSectionLayout = {
   mountsGoalsPanel: boolean;
   /** Verification Flows tab — only on a Verification Workspace. */
   mountsVerificationFlowsPanel?: boolean;
-  /** Calibration Flows tab — only on a Verification Workspace. */
+  /** Calibration Flows tab — only on a Calibration Workspace. */
   mountsCalibrationFlowsPanel?: boolean;
   /** Always empty — local tab bar removed from Workspace section. */
   localTabs: readonly WorkspaceLocalTabKey[];
@@ -326,7 +331,7 @@ export function withLearningInsightsSection(
   sections: readonly WorkspaceSectionKey[],
   options: WorkspaceSectionAuth = {},
 ): WorkspaceSectionKey[] {
-  if (isKnowledgeRegionWorkspace(options.workspaceKind)) {
+  if (isNoMapWorkspace(options.workspaceKind)) {
     return [...sections];
   }
   if (!options.isLoggedIn) return [...sections];
@@ -351,7 +356,7 @@ export type WorkspaceSectionAuth = {
 
 /** Default open tab when none is requested (or a hidden section is requested). */
 export function defaultWorkspaceSection(kind?: unknown): WorkspaceSectionKey {
-  return isKnowledgeRegionWorkspace(kind) ? "goals" : "workspace";
+  return isNoMapWorkspace(kind) ? "goals" : "workspace";
 }
 
 /**
@@ -373,9 +378,15 @@ export function resolveActiveSection(
  * and hides this list.
  */
 export function availableWorkspaceSections(options: WorkspaceSectionAuth): WorkspaceSectionKey[] {
+  if (isCalibrationWorkspace(options.workspaceKind)) {
+    if (canAccessPrivilegedWorkspaceSections(options)) {
+      return ["goals", "calibration_flows", "context", "knowledge", "settings"];
+    }
+    return [];
+  }
   if (isKnowledgeRegionWorkspace(options.workspaceKind)) {
     if (canAccessPrivilegedWorkspaceSections(options)) {
-      return ["goals", "verification_flows", "calibration_flows", "context", "knowledge", "settings"];
+      return ["goals", "verification_flows", "context", "knowledge", "settings"];
     }
     return [];
   }

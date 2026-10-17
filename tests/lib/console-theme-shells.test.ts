@@ -70,7 +70,7 @@ describe("console theme shells", () => {
     expect(html).toContain("session.welcomeMessage");
     expect(html).toContain("data-ile-confirm-settings");
     expect(html).toContain("session.confirmSettings");
-    expect(html).toContain("data-ile-silence-lock-minutes");
+    expect(html).not.toContain("data-ile-silence-lock-minutes");
     expect(html).not.toContain("data-ile-learn-presets");
     expect(html).not.toContain("data-ile-session-insight-goal");
     expect(html).toContain("data-ile-aesthetic-picker");
@@ -102,7 +102,7 @@ describe("console theme shells", () => {
         hasSessionPlan: true,
       }),
     );
-    expect(confirmed).toContain("data-ile-silence-lock-minutes");
+    expect(confirmed).not.toContain("data-ile-silence-lock-minutes");
     expect(confirmed).not.toContain("data-ile-learn-presets");
     expect(confirmed).not.toContain("data-ile-session-insight-goal");
     expect(confirmed).toContain("data-ile-aesthetic-picker");
@@ -222,15 +222,15 @@ describe("console theme shells", () => {
     const dash = read("app/dashboard/page.tsx");
     const shell = dash.slice(dash.lastIndexOf("data-workspace-shell"));
     const shellClass = shell.match(/className="([^"]+)"/)?.[1] ?? "";
-    expect(shell).toContain("<Navbar />");
+    expect(shell).toContain("<Navbar productLinks={false} />");
     expect(shellClass).not.toContain("overflow-hidden");
     expect(shellClass).toContain("border-white/40");
     const homeLabelAt = shell.indexOf("data-console-frame-label");
     const homeLabel = shell.slice(homeLabelAt, shell.indexOf("</p>", homeLabelAt));
-    expect(shell.indexOf("<Navbar />")).toBeLessThan(homeLabelAt);
+    expect(shell.indexOf("<Navbar productLinks={false} />")).toBeLessThan(homeLabelAt);
     expect(homeLabel).toContain("px-4 pt-2 sm:px-6");
     expect(homeLabel).not.toContain("absolute");
-    expect(homeLabel).toContain("Home");
+    expect(homeLabel).toContain("dashboardFrameLabel(activeTab)");
 
     const view = read("components/WorkspaceView.tsx");
     expect(view).not.toContain("left-3 top-2");

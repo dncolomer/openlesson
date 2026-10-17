@@ -127,11 +127,17 @@ describe("context generation pool", () => {
     expect(availableWorkspaceSections({ isOwner: true })).toContain("context");
     expect(availableWorkspaceSections({ isOwner: true })).not.toContain("verification_flows");
     expect(availableWorkspaceSections({ isOwner: true })).not.toContain("calibration_flows");
+    expect(
+      availableWorkspaceSections({ isOwner: true, workspaceKind: "calibration" }),
+    ).toEqual(["goals", "calibration_flows", "context", "knowledge", "settings"]);
+    expect(
+      availableWorkspaceSections({ isOwner: true, workspaceKind: "calibration" }),
+    ).not.toContain("verification_flows");
 
     const hosts = read("components/workspace-view/workspace-section-hosts.tsx");
     expect(hosts).toContain("WorkspaceContextPanel");
     expect(hosts).toContain('visibleSections.includes("context")');
-    expect(hosts).toContain("contextGeneration={isKnowledgeRegionWorkspace(plan.workspace_kind)}");
+    expect(hosts).toContain("contextGeneration={isNoMapWorkspace(plan.workspace_kind)}");
     const context = read("components/WorkspaceContextPanel.tsx");
     expect(context).toContain("WorkspaceDantesSearch");
     expect(context).toContain("WorkspaceExternalAddLinkForm");

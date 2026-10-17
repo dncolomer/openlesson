@@ -8,6 +8,7 @@ import { insertGeneratedWorkspaceBlocks } from "@/lib/insert-workspace-blocks";
 import { parseLearningModelSize, type LearningModelSize } from "@/lib/learning-model";
 import {
   parseWorkspaceKind,
+  WORKSPACE_KIND_CALIBRATION,
   WORKSPACE_KIND_KNOWLEDGE_REGION,
   WORKSPACE_KIND_STANDARD,
   type WorkspaceKind,
@@ -20,15 +21,16 @@ import { normalizeWorkspaceGoal } from "./conversion-goal";
 import type { AuthContext } from "./types";
 import { canAccessAgentWorkspace } from "./workspace-access";
 
-export type AgentWorkspaceProduct = "learning" | "verification";
+export type AgentWorkspaceProduct = "learning" | "verification" | "calibration";
 
 export function agentWorkspaceProduct(kind: unknown): AgentWorkspaceProduct {
-  return parseWorkspaceKind(kind) === WORKSPACE_KIND_KNOWLEDGE_REGION
-    ? "verification"
-    : "learning";
+  const parsed = parseWorkspaceKind(kind);
+  if (parsed === WORKSPACE_KIND_KNOWLEDGE_REGION) return "verification";
+  if (parsed === WORKSPACE_KIND_CALIBRATION) return "calibration";
+  return "learning";
 }
 
-/** Accepts product names (learning/verification) and stored kinds. */
+/** Accepts product names (learning/verification/calibration) and stored kinds. */
 export function parseAgentWorkspaceKind(value: unknown): WorkspaceKind {
   if (typeof value === "string") {
     const trimmed = value.trim().toLowerCase();
@@ -39,6 +41,13 @@ export function parseAgentWorkspaceKind(value: unknown): WorkspaceKind {
       trimmed === "knowledgeregion"
     ) {
       return WORKSPACE_KIND_KNOWLEDGE_REGION;
+    }
+    if (
+      trimmed === "calibration" ||
+      trimmed === "calibrate" ||
+      trimmed === "calibration_workspace"
+    ) {
+      return WORKSPACE_KIND_CALIBRATION;
     }
     if (trimmed === "learning" || trimmed === "standard") {
       return WORKSPACE_KIND_STANDARD;
@@ -204,7 +213,11 @@ export async function createManagedWorkspace(
       ? undefined
       : parseLearningModelSize(body.learning_model_size);
 
-  const wantsGeneration = Boolean(initialPrompt) && !title && blocks.length === 0;
+  const wantsGeneration =
+    Boolean(initialPrompt) &&
+    !title &&
+    blocks.length === 0 &&
+    kind !== WORKSPACE_KIND_CALIBRATION;
 
   if (wantsGeneration) {
     const generated =
@@ -251,7 +264,11 @@ export async function createManagedWorkspace(
 
   const workspaceTitle =
     title ||
-    (kind === WORKSPACE_KIND_KNOWLEDGE_REGION ? "Verification workspace" : "Learning workspace");
+    (kind === WORKSPACE_KIND_KNOWLEDGE_REGION
+      ? "Verification workspace"
+      : kind === WORKSPACE_KIND_CALIBRATION
+        ? "Calibration workspace"
+        : "Learning workspace");
   const insertRow: Record<string, unknown> = {
     user_id: ownerUserId,
     organization_id: auth.organization_id,

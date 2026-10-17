@@ -17,14 +17,6 @@ import {
 import { ileWelcomeShowsContinuePreview } from "@/lib/ile-welcome-chapters";
 import { ILE_POW_EXPENSE_DEFAULT } from "@/lib/ile-pow-spend";
 import { ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT } from "@/lib/ile-turn-insights";
-import {
-  ILE_SILENCE_LOCK_MINUTES_DEFAULT,
-  ILE_SILENCE_LOCK_MINUTES_DESC,
-  ILE_SILENCE_LOCK_MINUTES_LABEL,
-  ILE_SILENCE_LOCK_MINUTES_MAX,
-  ILE_SILENCE_LOCK_MINUTES_MIN,
-  clampIleSilenceLockMinutes,
-} from "@/lib/practice-voice-challenge";
 import { DEFAULT_DURATION_MINUTES } from "@/lib/tap-score-client-helpers";
 import { coerceSpokenLocale } from "@/lib/tutoring-languages";
 
@@ -64,8 +56,6 @@ export function SessionWelcomeModal({
   onMinInsightsPerChapterChange: _onMinInsightsPerChapterChange,
   canvasTimerSeconds: _canvasTimerSeconds,
   onCanvasTimerSecondsChange: _onCanvasTimerSecondsChange,
-  silenceLockMinutes = ILE_SILENCE_LOCK_MINUTES_DEFAULT,
-  onSilenceLockMinutesChange,
   autoAdvance,
   onToggleAutoAdvance,
   planError,
@@ -125,31 +115,6 @@ export function SessionWelcomeModal({
                 disabled={isButtonDisabled}
               >
                 <div data-ile-session-chapters className="flex min-h-0 min-w-0 flex-col gap-4">
-                  <div data-ile-silence-lock-minutes>
-                    <div className="mb-1.5 flex items-baseline justify-between gap-3">
-                      <label className="text-sm font-medium text-neutral-100">
-                        {ILE_SILENCE_LOCK_MINUTES_LABEL}
-                      </label>
-                      <span className="font-mono text-[11px] text-neutral-300">
-                        {silenceLockMinutes}m
-                      </span>
-                    </div>
-                    <p className="mb-2 text-[12px] leading-snug text-pretty text-neutral-400">
-                      {ILE_SILENCE_LOCK_MINUTES_DESC}
-                    </p>
-                    <input
-                      type="range"
-                      min={ILE_SILENCE_LOCK_MINUTES_MIN}
-                      max={ILE_SILENCE_LOCK_MINUTES_MAX}
-                      step={1}
-                      value={silenceLockMinutes}
-                      disabled={isButtonDisabled}
-                      onChange={(e) =>
-                        onSilenceLockMinutesChange?.(clampIleSilenceLockMinutes(Number(e.target.value)))
-                      }
-                      className="w-full accent-white"
-                    />
-                  </div>
                   {showContinuePreview ? (
                     <div
                       data-ile-continue-welcome

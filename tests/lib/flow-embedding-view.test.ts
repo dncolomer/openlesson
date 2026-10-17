@@ -79,6 +79,43 @@ describe("flow embedding knowledge view", () => {
     expect(filterFlowEmbeddingRows([ada, knowledgecfg], { flowId: "flow-a" })).toEqual([ada]);
   });
 
+  it("keeps calibrate rows for Calibration Knowledge and verify rows for Verification Knowledge", () => {
+    const verify = row({
+      id: "v1",
+      identity: "ada",
+      createdAt: "2026-10-01T00:00:00.000Z",
+      prompt: "epsilon proof",
+    });
+    const calibrateVector = completeFlowEmbedding({
+      flowKind: "calibrate",
+      pow: [{ type: "speech", tool_name: "runner", timestamp_ms: 1, payload: "gap" }],
+    }).vector;
+    const calibrate: FlowEmbeddingViewRow = {
+      ...verify,
+      id: "c1",
+      flow_kind: "calibrate",
+      flow_id: "flow-cal",
+      vector: calibrateVector,
+      dim: calibrateVector.length,
+    };
+    expect(filterFlowEmbeddingRows([verify, calibrate], { flowKind: "verify" })).toEqual([
+      verify,
+    ]);
+    expect(filterFlowEmbeddingRows([verify, calibrate], { flowKind: "calibrate" })).toEqual([
+      calibrate,
+    ]);
+    expect(
+      filterFlowEmbeddingRows([verify, calibrate], { flowKind: "calibrate" }).some(
+        (item) => item.flow_kind === "verify",
+      ),
+    ).toBe(false);
+    expect(
+      filterFlowEmbeddingRows([verify, calibrate], { flowKind: "verify" }).some(
+        (item) => item.flow_kind === "calibrate",
+      ),
+    ).toBe(false);
+  });
+
   it("keeps 96D overlay regions and drops knowledgecfg centroids", () => {
     const centroid = completeFlowEmbedding({
       flowKind: "verify",

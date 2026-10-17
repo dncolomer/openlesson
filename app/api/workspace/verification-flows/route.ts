@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { requireProductWorkspaceEvalAuth } from "@/lib/product-workspace-auth";
 import { assertWorkspacePolicy } from "@/lib/workspace-access-policy";
-import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
+import { denyWorkspaceFeatureById } from "@/lib/workspace-feature-gate";
 import {
   buildVerificationFlowSkillMarkdown,
   knowledgeRowsFromFlowResults,
@@ -20,17 +20,6 @@ import {
 
 export const runtime = "nodejs";
 
-async function loadKind(workspaceId: string): Promise<unknown> {
-  const auth = await requireProductWorkspaceEvalAuth(workspaceId, null);
-  if (!auth.ok) return null;
-  const { data } = await auth.supabase
-    .from("workspaces")
-    .select("workspace_kind")
-    .eq("id", workspaceId)
-    .maybeSingle();
-  return data?.workspace_kind;
-}
-
 export async function GET(req: NextRequest) {
   try {
     const workspaceId = req.nextUrl.searchParams.get("workspaceId") || "";
@@ -38,6 +27,8 @@ export async function GET(req: NextRequest) {
     const ayclToken = req.nextUrl.searchParams.get("ayclToken");
     const auth = await requireProductWorkspaceEvalAuth(workspaceId, ayclToken);
     if (!auth.ok) return auth.response;
+    const denied = await denyWorkspaceFeatureById(workspaceId, "verification_flows");
+    if (denied) return denied;
     const origin = req.nextUrl.origin;
     const flows = await listVerificationFlows(workspaceId);
     const results = await listVerificationResults(workspaceId);
@@ -79,10 +70,8 @@ export async function POST(req: NextRequest) {
     });
     if (!policy.ok) return jsonError(403, "Forbidden");
 
-    const kind = await loadKind(workspaceId);
-    if (kind && !isKnowledgeRegionWorkspace(kind)) {
-      return jsonError(403, "Verification flows belong to Verification Workspaces");
-    }
+    const denied = await denyWorkspaceFeatureById(workspaceId, "verification_flows");
+    if (denied) return denied;
 
     const action = typeof body.action === "string" ? body.action : "create";
     if (action === "update") {

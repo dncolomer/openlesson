@@ -220,11 +220,14 @@ describe("shared live work surface", () => {
     expect(existsSync(join(ROOT, "components/exercise-tap/exercise-tap-phases.tsx"))).toBe(false);
 
     const silence = read("components/session-view/ile-silence-lock-screen.tsx");
-    expect(silence).toContain("data-ile-silence-rest");
-    expect(silence).toContain("data-ile-session-impurity");
-    expect(silence).toContain("PracticeVoiceChallenge");
-    expect(silence).toContain("data-ile-impurity-save");
-    expect(silence).toContain("data-ile-impurity-logoff");
+    const live = read("components/session-view/session-live-stage.tsx");
+    expect(silence).toContain("data-ile-session-impure");
+    expect(silence).toContain("data-ile-impure-retry");
+    expect(silence).toContain("tap.postSession.impureTitle");
+    expect(live).toContain("window.location.reload()");
+    expect(silence).not.toContain("data-ile-silence-rest");
+    expect(silence).not.toContain("PracticeVoiceChallenge");
+    expect(silence).not.toContain("data-ile-impurity-save");
 
     for (const src of [
       prepare,

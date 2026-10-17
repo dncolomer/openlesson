@@ -8,7 +8,7 @@ import {
   formatProofOfWorkSpecForSkillPrompt,
 } from "./proof-of-work-integration";
 import { POW_API_BASE, WORKSPACE_API_BASE } from "@/lib/api/agent-api-paths";
-import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
+import { isNoMapWorkspace } from "@/lib/workspace-kind";
 import { formatSkillMcpToolList } from "./agent-tool-surface";
 import { CANVAS_TAP_SIMULATION_HEADING } from "./pow-model-agent-contract";
 import { POW_MODEL_VERSION } from "./workspace-proof-of-work";
@@ -220,6 +220,16 @@ export function learningWorkspaceIntegrationCopy(): {
   };
 }
 
+/** Verification and Calibration share the no-map Integrations copy. */
+export function workspaceSettingsIntegrationCopy(kind: unknown): {
+  skillDescription: string;
+  mcpNote: string;
+} {
+  return isNoMapWorkspace(kind)
+    ? knowledgeRegionIntegrationCopy()
+    : learningWorkspaceIntegrationCopy();
+}
+
 export function formatSkillRestEndpointsLine(_kind: unknown): string {
   return `REST: workspace management GET/POST ${WORKSPACE_API_BASE}, GET/PATCH ${WORKSPACE_API_BASE}/{id}, GET/PATCH .../blocks, GET/PATCH .../settings, GET/PATCH /api/v3/account, POST .../integration-skill; headless proof-of-work POST ${POW_API_BASE}/workspaces/{id}/sessions, GET .../sessions/{session_id}, POST .../proof-of-work, POST .../end, GET .../flow-embeddings. Snapshot and Stash are not public agent APIs.`;
 }
@@ -274,7 +284,7 @@ export function buildIntegrationSkillInstructions(
     : "";
 
   const workspaceKind = workspace.workspace_kind ?? status?.workspace.workspace_kind;
-  const knowledgeRegion = isKnowledgeRegionWorkspace(workspaceKind);
+  const knowledgeRegion = isNoMapWorkspace(workspaceKind);
   if (!knowledgeRegion) {
     const mcpToolList = formatSkillMcpToolList(workspaceKind);
     const restEndpointsLine = formatSkillRestEndpointsLine(workspaceKind);
@@ -282,7 +292,7 @@ export function buildIntegrationSkillInstructions(
 
 ${scope}
 
-This workspace is a Learning workspace: a map of blocks plus Calibrate, Learn, and Verify. Agents manage the workspace and run those flows headless. Snapshot and Stash are not public agent APIs.
+This workspace is a Learning workspace: a map of blocks plus Learn. Agents manage the workspace and run that flow headless. Snapshot and Stash are not public agent APIs.
 
 YAML frontmatter (required):
 ---

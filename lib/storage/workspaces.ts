@@ -1,6 +1,7 @@
 // Workspace & block persistence
 import { createClient } from "@/lib/supabase/client";
 import type { Workspace, Block } from "@/lib/domain/types";
+import { parseWorkspaceKind } from "@/lib/workspace-kind";
 
 // ---- Learning Plans ----
 
@@ -36,7 +37,7 @@ export async function getWorkspaces(options?: { includeArchived?: boolean }): Pr
     source_summary: p.source_summary,
     notes: p.notes,
     cover_image_url: p.cover_image_url,
-    workspace_kind: p.workspace_kind === "knowledge_region" ? "knowledge_region" : "standard",
+    workspace_kind: parseWorkspaceKind(p.workspace_kind),
     is_group: p.is_group || false,
     learning_model_size:
       p.learning_model_size === 8 || p.learning_model_size === 16 ? p.learning_model_size : 4,
@@ -127,8 +128,7 @@ export async function getWorkspaceById(workspaceId: string): Promise<Workspace |
     source_url: data.source_url,
     source_summary: data.source_summary,
     notes: data.notes || undefined,
-    workspace_kind:
-      data.workspace_kind === "knowledge_region" ? "knowledge_region" : "standard",
+    workspace_kind: parseWorkspaceKind(data.workspace_kind),
     learning_model_size:
       data.learning_model_size === 8 || data.learning_model_size === 16
         ? data.learning_model_size

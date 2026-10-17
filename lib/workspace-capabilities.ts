@@ -1,15 +1,23 @@
 /**
- * Feature split for the two workspace products.
+ * Feature split for the three workspace products.
  *
  * Learning workspace (stored kind `standard`): a designer builds a map and
  * people in the organisation play it. Selling is AYCL only.
- * Verification workspace (stored kind `knowledge_region`): goals, flows,
- * proof of work, knowledge regions, and analysis.
+ * Verification workspace (stored kind `knowledge_region`): goals, verification
+ * flows, proof of work, knowledge regions, and analysis.
+ * Calibration workspace (stored kind `calibration`): same shell as Verification
+ * with calibration flows and uncertainty embeddings.
  *
  * Knowledge Portal is not a feature of either product.
  */
 
-import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
+import {
+  isCalibrationWorkspace,
+  isKnowledgeRegionWorkspace,
+  parseWorkspaceKind,
+  WORKSPACE_KIND_CALIBRATION,
+  WORKSPACE_KIND_KNOWLEDGE_REGION,
+} from "@/lib/workspace-kind";
 
 export type WorkspaceFeature =
   | "map"
@@ -46,6 +54,19 @@ const LEARNING_FEATURES: readonly WorkspaceFeature[] = [
 const VERIFICATION_FEATURES: readonly WorkspaceFeature[] = [
   "goals",
   "verification_flows",
+  "context",
+  "knowledge",
+  "settings",
+  "make_public",
+  "knowledge_regions",
+  "data_studio",
+  "integrations",
+  "proof_of_work",
+  "snapshots",
+];
+
+const CALIBRATION_FEATURES: readonly WorkspaceFeature[] = [
+  "goals",
   "calibration_flows",
   "context",
   "knowledge",
@@ -60,6 +81,7 @@ const VERIFICATION_FEATURES: readonly WorkspaceFeature[] = [
 
 const LEARNING = new Set<WorkspaceFeature>(LEARNING_FEATURES);
 const VERIFICATION = new Set<WorkspaceFeature>(VERIFICATION_FEATURES);
+const CALIBRATION = new Set<WorkspaceFeature>(CALIBRATION_FEATURES);
 
 export function learningWorkspaceFeatures(): readonly WorkspaceFeature[] {
   return LEARNING_FEATURES;
@@ -69,12 +91,18 @@ export function verificationWorkspaceFeatures(): readonly WorkspaceFeature[] {
   return VERIFICATION_FEATURES;
 }
 
+export function calibrationWorkspaceFeatures(): readonly WorkspaceFeature[] {
+  return CALIBRATION_FEATURES;
+}
+
 export function workspaceSupportsFeature(
   kind: unknown,
   feature: WorkspaceFeature,
 ): boolean {
-  const allowed = isKnowledgeRegionWorkspace(kind) ? VERIFICATION : LEARNING;
-  return allowed.has(feature);
+  const parsed = parseWorkspaceKind(kind);
+  if (parsed === WORKSPACE_KIND_CALIBRATION) return CALIBRATION.has(feature);
+  if (parsed === WORKSPACE_KIND_KNOWLEDGE_REGION) return VERIFICATION.has(feature);
+  return LEARNING.has(feature);
 }
 
 function featurePhrase(feature: WorkspaceFeature): string {
@@ -123,6 +151,7 @@ function featurePhrase(feature: WorkspaceFeature): string {
 }
 
 export function workspaceProductLabel(kind: unknown): string {
+  if (isCalibrationWorkspace(kind)) return "Calibration workspace";
   return isKnowledgeRegionWorkspace(kind)
     ? "Verification workspace"
     : "Learning workspace";
@@ -132,9 +161,11 @@ export function workspaceFeatureDeniedMessage(
   kind: unknown,
   feature: WorkspaceFeature,
 ): string {
-  const product = isKnowledgeRegionWorkspace(kind)
-    ? "Verification workspaces"
-    : "Learning workspaces";
+  const product = isCalibrationWorkspace(kind)
+    ? "Calibration workspaces"
+    : isKnowledgeRegionWorkspace(kind)
+      ? "Verification workspaces"
+      : "Learning workspaces";
   return `${product} do not support ${featurePhrase(feature)}.`;
 }
 

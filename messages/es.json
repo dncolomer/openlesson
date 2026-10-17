@@ -804,7 +804,7 @@
     "mobileDetectedDesc": "Este bloque está optimizada para escritorio. Usa la vista móvil para mejor experiencia en este dispositivo.",
     "savingSession": "Guardando bloque...",
     "welcomeTitle": "Learn",
-    "welcomeMessage": "Set how long silence can run, and the look. Then work on the canvas.",
+    "welcomeMessage": "Choose the look, then work on the canvas. Think out loud the whole time.",
     "chapterPromptFallback": "Trabaja este capítulo enviando pensamientos a unsys.",
     "emptyUserTurn": "Envía un pensamiento para mostrar tu último envío aquí.",
     "pressStart": "Presiona Iniciar bloque para comenzar",

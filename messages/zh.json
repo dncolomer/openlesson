@@ -752,7 +752,7 @@
     "mobileDetectedDesc": "此区块针对桌面进行了优化。使用移动视图在此设备上获得更好的体验。",
     "savingSession": "保存区块中...",
     "welcomeTitle": "Learn",
-    "welcomeMessage": "Set how long silence can run, and the look. Then work on the canvas.",
+    "welcomeMessage": "Choose the look, then work on the canvas. Think out loud the whole time.",
     "chapterPromptFallback": "通过向 unsys 发送想法来完成本章。",
     "emptyUserTurn": "发送一个想法以在此处显示您最新的提交。",
     "pressStart": "按开始区块以开始",

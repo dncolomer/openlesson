@@ -89,8 +89,9 @@ interface CustomVerificationModelsPanelProps {
   workspaceId: string;
   currentUserId: string | null;
   ayclToken?: string;
-  /** Verification Workspace: create regions from a flow or synthetic agents. */
+  /** Verification or Calibration workspace: create regions from a flow or synthetic agents. */
   verificationWorkspace?: boolean;
+  knowledgeFlowKind?: "calibrate" | "verify" | null;
   /** Notify parent when region list changes (for embeddings overlays). */
   onRegionsChange?: (regions: KnowledgeRegionListItem[]) => void;
 }
@@ -100,6 +101,7 @@ export function CustomVerificationModelsPanel({
   currentUserId: _currentUserId,
   ayclToken,
   verificationWorkspace = false,
+  knowledgeFlowKind = null,
   onRegionsChange,
 }: CustomVerificationModelsPanelProps) {
   void _currentUserId;
@@ -234,15 +236,19 @@ export function CustomVerificationModelsPanel({
     const params = new URLSearchParams({ workspaceId });
     if (ayclToken) params.set("ayclToken", ayclToken);
     let cancelled = false;
-    void fetch(`/api/workspace/verification-flows?${params.toString()}`)
+    const path =
+      knowledgeFlowKind === "calibrate"
+        ? "/api/workspace/calibration-flows"
+        : "/api/workspace/verification-flows";
+    void fetch(`${path}?${params.toString()}`)
       .then((response) => response.json())
       .then((payload) => {
         if (cancelled) return;
         const listed = Array.isArray(payload.flows) ? payload.flows : [];
         setFlowChoices(
-          listed.map((flow: { id?: string; topic?: string }) => ({
+          listed.map((flow: { id?: string; topic?: string; goal?: string }) => ({
             id: String(flow.id || ""),
-            topic: String(flow.topic || "Flow"),
+            topic: String(flow.topic || flow.goal || "Flow"),
           })),
         );
       })
@@ -252,7 +258,7 @@ export function CustomVerificationModelsPanel({
     return () => {
       cancelled = true;
     };
-  }, [verificationWorkspace, workspaceId, ayclToken]);
+  }, [ayclToken, knowledgeFlowKind, verificationWorkspace, workspaceId]);
 
   const createVerificationRegion = async (action: "from_flow" | "synthetic_agents") => {
     setCreating(true);

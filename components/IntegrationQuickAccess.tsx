@@ -10,7 +10,7 @@ import {
   buildMcpOAuthDiscovery,
   buildSkillFileUrl,
 } from "@/lib/pow-api/mcp-proof-of-work-catalog";
-import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
+import { isNoMapWorkspace } from "@/lib/workspace-kind";
 
 type IntegrationSection = "skill" | "bearer" | "oauth";
 
@@ -81,7 +81,7 @@ export function IntegrationQuickAccess({
   const copyLabel = (field: string) =>
     copiedField === field ? t("integrationAccess.copied") : t("common.copy");
 
-  const knowledgeRegion = isKnowledgeRegionWorkspace(workspaceKind);
+  const knowledgeRegion = isNoMapWorkspace(workspaceKind);
   const showSkill = sections.includes("skill") && !knowledgeRegion;
   const showBearer = sections.includes("bearer");
   const showOAuth = sections.includes("oauth");

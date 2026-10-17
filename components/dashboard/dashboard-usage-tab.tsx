@@ -2,23 +2,16 @@
 
 import { default as Link } from "next/link";
 import type { OrgUsageSummary } from "@/lib/plans";
+import type { DashboardTab } from "@/lib/dashboard-nav";
 
 type XaiPeriodPreset = "7d" | "30d" | "90d" | "billing";
-
-type DashboardTabId =
-  | "sessions"
-  | "plans"
-  | "usage"
-  | "integrations"
-  | "organization"
-  | "config";
 
 export type DashboardUsageTabProps = {
   handleXaiPeriodChange: (period: XaiPeriodPreset) => void;
   loadingUsage: boolean;
   planDisplayName: (plan: string, isAdmin?: boolean) => string;
   planPriceLabel: (plan: string, isAdmin?: boolean) => string;
-  setDashboardTab: (tab: DashboardTabId) => void;
+  setDashboardTab: (tab: DashboardTab) => void;
   t: (key: string, params?: Record<string, string | number>) => string;
   usageCardClass: "console-copy rounded-none p-5 sm:p-6";
   usageData: { plan: string; used: number; personalUsed: number; limit: number | null; proofOfWorkUsed: number; proofOfWorkPersonalUsed: number; proofOfWorkLimit: number | null; workspacesUsed: number; workspacesLimit: number | null; periodEnd: string | null; subscriptionStatus: string; organization: OrgUsageSummary | null; isAdmin: boolean; billingMode?: "subscription" | "partner" | null; canUseAgentApi?: boolean; apiPowCallsUsed?: number; tapSessionsUsed?: number; ileSessionsUsed?: number; apiMeteredInvoice?: { platformCents: number; usageCents: number; usageCentsRounded?: number; totalCents: number; externalPowCount?: number; tapSessionCount?: number; ileSessionCount?: number; externalPowCents?: number; tapSessionCents?: number; ileSessionCents?: number; } | null; xaiUsage?: { available: boolean; apiKeyId: string; apiKeyName: string | null; periodStart: string; periodEnd: string; totalUsd: number; lines: Array<{ description: string; usd: number; }>; error?: string; } | null; } | null;

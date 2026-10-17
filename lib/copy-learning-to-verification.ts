@@ -6,7 +6,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   WORKSPACE_KIND_KNOWLEDGE_REGION,
-  isKnowledgeRegionWorkspace,
+  isNoMapWorkspace,
 } from "@/lib/workspace-kind";
 
 const REGION_COPY_COLUMNS = [
@@ -23,6 +23,10 @@ const REGION_COPY_COLUMNS = [
   "created_by",
 ] as const;
 
+export function workspaceAllowsCopyToVerification(kind: unknown): boolean {
+  return !isNoMapWorkspace(kind);
+}
+
 export async function copyLearningWorkspaceToVerification(
   supabase: SupabaseClient,
   options: { sourceWorkspaceId: string; ownerUserId: string; title: string },
@@ -38,8 +42,8 @@ export async function copyLearningWorkspaceToVerification(
 
   if (sourceError || !source) throw new Error("Workspace not found");
   if (source.user_id !== options.ownerUserId) throw new Error("Forbidden");
-  if (isKnowledgeRegionWorkspace(source.workspace_kind)) {
-    throw new Error("Verification workspaces cannot be copied this way.");
+  if (!workspaceAllowsCopyToVerification(source.workspace_kind)) {
+    throw new Error("Verification and Calibration workspaces cannot be copied this way.");
   }
 
   const { data: created, error: createError } = await supabase

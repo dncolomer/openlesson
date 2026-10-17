@@ -74,7 +74,7 @@ describe("normalize + allow rules", () => {
 
     expect(blockAllowsPracticeStyle(limited, "drill")).toBe(false);
     expect(blockAllowsPracticeStyle(limited, "explore")).toBe(true);
-    expect(blockAllowsPracticeStyle(limited, "scout")).toBe(true);
+    expect(blockAllowsPracticeStyle(limited, "scout")).toBe(false);
     expect(blockAllowsLaunchTarget(limited, "drill", true)).toBe(false);
     expect(blockAllowsLaunchTarget(limited, "drill", false)).toBe(false);
     expect(blockAllowedDurations(limited)).toEqual([]);
@@ -100,8 +100,8 @@ describe("normalize + allow rules", () => {
     expect(allOff.allowScout).toBe(false);
 
     const combos = enabledPracticeLaunchCombos(limited);
-    expect(combos).toEqual(["scout_dialog", "explore_dialog"]);
-    expect(practiceOptionsIconKeys(limited)).toEqual(["scout", "explore"]);
+    expect(combos).toEqual(["explore_dialog"]);
+    expect(practiceOptionsIconKeys(limited)).toEqual(["explore"]);
     expect(practiceOptionsIsRestricted(limited)).toBe(false);
     expect(practiceOptionsIsRestricted(def)).toBe(false);
 
@@ -185,13 +185,10 @@ describe("structural: Edit drawer + launch + map icons", () => {
     const practiceBadge = badges.slice(
       badges.indexOf("export function BlockPracticeOptionsBadge"),
     );
-    for (const key of ["explore", "scout"] as const) {
-      expect(practiceBadge).toMatch(
-        new RegExp(
-          `className="[^"]*text-white[^"]*"[\\s\\S]{0,60}data-practice-icon="${key}"`,
-        ),
-      );
-    }
+    expect(practiceBadge).toMatch(
+      /className="[^"]*text-white[^"]*"[\s\S]{0,60}data-practice-icon="explore"/,
+    );
+    expect(practiceBadge).not.toContain('data-practice-icon="scout"');
     expect(practiceBadge).not.toContain('data-practice-icon="dialog"');
     expect(practiceBadge).not.toContain('data-practice-icon="solo"');
     expect(practiceBadge).not.toContain('"With AI"');

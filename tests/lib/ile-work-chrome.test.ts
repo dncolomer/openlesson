@@ -226,7 +226,7 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     expect(welcome).not.toContain("data-ile-session-chapter-count");
     expect(welcome).not.toContain("data-ile-session-insight-goal");
     expect(welcome).not.toContain("data-ile-learn-presets");
-    expect(welcome).toContain("data-ile-silence-lock-minutes");
+    expect(welcome).not.toContain("data-ile-silence-lock-minutes");
     expect(welcome).toContain("capIleSessionChapters");
     expect(welcome).not.toMatch(/\bmap type\b|\bboard\b/i);
     expect(welcome).not.toContain("session.powExpense");

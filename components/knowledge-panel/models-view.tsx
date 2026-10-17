@@ -80,6 +80,7 @@ export function KnowledgeModelsView({
     lockSubjectToSelf,
     embeddingSource: flowFilter?.enabled ? "flowcfg" : "knowledgecfg",
     flowId: flowFilter?.enabled ? flowFilter.flowId : null,
+    flowKind: flowFilter?.enabled ? flowFilter.flowKind ?? null : null,
   });
   const flowId = flowFilter?.enabled ? flowFilter.flowId : null;
   const useFlowEmbeddings = Boolean(flowFilter?.enabled);

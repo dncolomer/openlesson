@@ -545,7 +545,7 @@ describe("create surface wiring (structural)", () => {
     expect(viewSrc).not.toContain("InitialChaptersPicker");
     expect(viewSrc).not.toContain("data-ile-session-chapter-count");
     expect(viewSrc).not.toContain("data-ile-session-insight-goal");
-    expect(viewSrc).toContain("data-ile-silence-lock-minutes");
+    expect(viewSrc).not.toContain("data-ile-silence-lock-minutes");
     expect(viewSrc).toContain("session.initialChapters");
     expect(viewSrc).toMatch(/initialChapters,/);
     // Existing chapter maps stay grayed until the user opts into regeneration.
@@ -647,7 +647,7 @@ describe("create surface wiring (structural)", () => {
     expect(welcomeSrc).not.toContain('data-ile-map-type-align="aesthetics"');
     expect(welcomeSrc).not.toContain("data-ile-session-chapter-count");
     expect(welcomeSrc).not.toContain("data-ile-session-insight-goal");
-    expect(welcomeSrc).toContain("data-ile-silence-lock-minutes");
+    expect(welcomeSrc).not.toContain("data-ile-silence-lock-minutes");
     expect(welcomeSrc).toContain("data-ile-session-chapters");
     expect(welcomeSrc).toContain("flex h-full min-h-0 min-w-0 flex-col");
     const miniSrc = readFileSync(

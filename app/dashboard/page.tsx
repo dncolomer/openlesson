@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { SessionConsoleMarks, SessionConsoleScan } from "@/components/session-view/session-console-marks";
 import { CONSOLE_LABEL_CLASS } from "@/components/ui/console-frame";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { getSessions, deleteSession, restartSession, getWorkspaces, getIlePostSessionPath, type Session, type Workspace } from "@/lib/storage";
 import { DEFAULT_PROMPTS, PROMPT_META, type PromptKey, type UserPrompts } from "@/lib/prompts";
@@ -13,15 +12,18 @@ import { useI18n } from "@/lib/i18n";
 import { formatPlanMonthlyPrice, hasAgentApiKeyPlan, type PlanId } from "@/lib/plans";
 import { dashboardUsesAgenticKeys } from "@/lib/dashboard-agent-access";
 import { OrganizationDashboardTab } from "@/components/OrganizationDashboardTab";
+import { DashboardAtmosphere } from "@/components/dashboard/dashboard-atmosphere";
 import { DashboardConfigTab } from "@/components/dashboard/dashboard-config-tab";
+import { DashboardHelpTab } from "@/components/dashboard/dashboard-help-tab";
+import { DashboardHomeTab } from "@/components/dashboard/dashboard-home-tab";
 import { DashboardIntegrationsTab } from "@/components/dashboard/dashboard-integrations-tab";
+import { DashboardKnowledgeRegionsTab } from "@/components/dashboard/dashboard-knowledge-regions-tab";
 import { DashboardPlansTab } from "@/components/dashboard/dashboard-plans-tab";
 import { DashboardSessionsTab } from "@/components/dashboard/dashboard-sessions-tab";
+import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DashboardUsageTab } from "@/components/dashboard/dashboard-usage-tab";
-import { WorkspaceDashboardCard } from "@/components/WorkspaceDashboardCard";
 import { fetchAestheticPackages } from "@/lib/aesthetics";
 import { buildMcpClientConfig } from "@/lib/pow-api/mcp-proof-of-work-catalog";
-import { IntegrationQuickAccess } from "@/components/IntegrationQuickAccess";
 import { DEFAULT_MODEL } from "@/lib/xai-models";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import {
@@ -31,24 +33,23 @@ import {
   togglePinnedWorkspaceId,
 } from "@/lib/dashboard-workspace-pins";
 import {
-  dashboardHasNoWorkspaces,
   isDashboardWorkspaceListFilter,
-  isDashboardWorkspaceTypeFilter,
   workspaceMatchesDashboardListFilter,
   workspaceMatchesDashboardTypeFilter,
   type DashboardWorkspaceListFilter,
-  type DashboardWorkspaceTypeFilter,
 } from "@/lib/dashboard-workspace-filters";
-
-const DASHBOARD_BACKGROUND = "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg";
-
-type Tab =
-  | "sessions"
-  | "plans"
-  | "usage"
-  | "integrations"
-  | "organization"
-  | "config";
+import { dashboardRecentWorkspaces, dashboardWorkspaceCounts } from "@/lib/dashboard-home";
+import { DASHBOARD_HOME_RECENT_LIMIT } from "@/lib/dashboard-play";
+import {
+  dashboardFrameLabel,
+  dashboardListFilterForTab,
+  dashboardTypeFilterForTab,
+  isDashboardProductTab,
+  isDashboardRegionsTab,
+  isDashboardShopTab,
+  parseDashboardTab,
+  type DashboardTab,
+} from "@/lib/dashboard-nav";
 
 interface AvailableModel {
   id: string;
@@ -84,12 +85,8 @@ export default function DashboardPage() {
   const { t } = useI18n();
   const [loading, setLoading] = useState(true);
   const searchParams = useSearchParams();
-  const initialTab = (searchParams.get("tab") as Tab) || "plans";
-  const [activeTab, setActiveTab] = useState<Tab>(
-    ["plans", "usage", "integrations", "organization"].includes(initialTab)
-      ? initialTab
-      : "plans"
-  );
+  const initialTab = parseDashboardTab(searchParams.get("tab"));
+  const [activeTab, setActiveTab] = useState<DashboardTab>(initialTab);
   // User state
   const [user, setUser] = useState<{
     id?: string;
@@ -179,8 +176,6 @@ export default function DashboardPage() {
   /** Filter workspace cards by visibility or AYCL listing: all | public | private | aycl */
   const [workspaceVisibilityFilter, setWorkspaceVisibilityFilter] =
     useState<DashboardWorkspaceListFilter>("all");
-  const [workspaceTypeFilter, setWorkspaceTypeFilter] =
-    useState<DashboardWorkspaceTypeFilter>("all");
   const [archivingWorkspaceId, setArchivingPlanId] = useState<string | null>(null);
   const [workspacePage, setPlanPage] = useState(1);
   const workspacePageSize = 10;
@@ -242,7 +237,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     setPlanPage(1);
-  }, [workspaceSearch]);
+  }, [workspaceSearch, workspaceVisibilityFilter, activeTab]);
 
   const loadData = async () => {
     try {
@@ -700,7 +695,14 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
-    if (activeTab !== "plans") return;
+    if (
+      !isDashboardProductTab(activeTab) &&
+      !isDashboardShopTab(activeTab) &&
+      !isDashboardRegionsTab(activeTab) &&
+      activeTab !== "home"
+    ) {
+      return;
+    }
     void reloadWorkspaces(showArchivedWorkspaces);
   }, [showArchivedWorkspaces, activeTab]);
 
@@ -737,24 +739,47 @@ export default function DashboardPage() {
     }
   };
 
+  const productTypeFilter = dashboardTypeFilterForTab(activeTab);
+  const lockedListFilter = dashboardListFilterForTab(activeTab);
+
   const filteredWorkspaces = useMemo(() => {
+    const typeFilter = productTypeFilter ?? "all";
+    const listFilter = lockedListFilter ?? workspaceVisibilityFilter;
     const filtered = workspaces.filter((p) => {
       const matchesSearch =
         workspaceSearch === "" ||
         p.root_topic.toLowerCase().includes(workspaceSearch.toLowerCase()) ||
         (p.title || "").toLowerCase().includes(workspaceSearch.toLowerCase());
       if (!matchesSearch) return false;
-      if (!workspaceMatchesDashboardListFilter(p, workspaceVisibilityFilter)) return false;
-      return workspaceMatchesDashboardTypeFilter(p, workspaceTypeFilter);
+      if (!workspaceMatchesDashboardListFilter(p, listFilter)) return false;
+      return workspaceMatchesDashboardTypeFilter(p, typeFilter);
     });
     return sortWorkspacesPinnedFirst(filtered, pinnedWorkspaceIds);
   }, [
     workspaces,
     workspaceSearch,
     workspaceVisibilityFilter,
-    workspaceTypeFilter,
+    lockedListFilter,
+    productTypeFilter,
     pinnedWorkspaceIds,
   ]);
+
+  const homeCounts = useMemo(() => dashboardWorkspaceCounts(workspaces), [workspaces]);
+  const homeRecentWorkspaces = useMemo(
+    () => dashboardRecentWorkspaces(workspaces, DASHBOARD_HOME_RECENT_LIMIT),
+    [workspaces],
+  );
+  const productEmpty =
+    (isDashboardProductTab(activeTab) &&
+      workspaces.filter((row) =>
+        workspaceMatchesDashboardTypeFilter(row, activeTab),
+      ).length === 0) ||
+    (isDashboardShopTab(activeTab) &&
+      workspaces.filter(
+        (row) =>
+          workspaceMatchesDashboardTypeFilter(row, "learning") &&
+          workspaceMatchesDashboardListFilter(row, "aycl"),
+      ).length === 0);
 
   const totalPlanPages = Math.ceil(filteredWorkspaces.length / workspacePageSize);
   const paginatedPlans = filteredWorkspaces.slice(
@@ -770,7 +795,7 @@ export default function DashboardPage() {
     });
   };
 
-  const setDashboardTab = (tab: Tab) => {
+  const setDashboardTab = (tab: DashboardTab) => {
     setActiveTab(tab);
     router.replace(`/dashboard?tab=${tab}`, { scroll: false });
   };
@@ -780,9 +805,9 @@ export default function DashboardPage() {
       <div
         data-console-frame=""
         data-workspace-shell=""
-        className="relative flex min-h-screen items-center justify-center overflow-hidden border border-white/40 bg-black bg-cover bg-center"
-        style={{ backgroundImage: `linear-gradient(rgba(10,10,10,0.82), rgba(10,10,10,0.82)), url(${DASHBOARD_BACKGROUND})` }}
+        className="relative flex min-h-screen items-center justify-center overflow-hidden border border-white/40 bg-black"
       >
+        <DashboardAtmosphere />
         <SessionConsoleScan />
         <SessionConsoleMarks />
         <p data-console-frame-label="" className={`absolute left-3 top-3 z-[4] ${CONSOLE_LABEL_CLASS}`}>
@@ -799,48 +824,25 @@ export default function DashboardPage() {
     <div
       data-console-frame=""
       data-workspace-shell=""
-      className="relative min-h-screen border border-white/40 bg-black bg-cover bg-fixed bg-center text-white"
-      style={{ backgroundImage: `linear-gradient(rgba(10,10,10,0.82), rgba(10,10,10,0.82)), url(${DASHBOARD_BACKGROUND})` }}
+      className="relative min-h-screen border border-white/40 bg-black text-white"
     >
+      <DashboardAtmosphere />
       <SessionConsoleScan />
       <SessionConsoleMarks />
-      <div className="relative z-[2]">
-      <Navbar />
-      <p data-console-frame-label="" className={`pointer-events-none px-4 pt-2 sm:px-6 ${CONSOLE_LABEL_CLASS}`}>
-        Home
-      </p>
-
-      {/* Tabs */}
-      <div className="border-b border-neutral-800/60">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-          <div className="flex gap-1 overflow-x-auto">
-            {[
-              { id: "plans", label: "Workspaces" },
-              { id: "usage", label: t("dashboard.usageTab") },
-              { id: "organization", label: "Organization" },
-              { id: "integrations", label: t("dashboard.integrationsTab") },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setDashboardTab(tab.id as Tab)}
-                className={`relative whitespace-nowrap px-4 py-3 text-sm font-medium transition-colors ${
-                  activeTab === tab.id
-                    ? "text-white"
-                    : "text-neutral-500 hover:text-neutral-300"
-                }`}
-              >
-                {tab.label}
-                {activeTab === tab.id && (
-                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-white" />
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
+      <div
+        className="relative z-[2] grid min-h-screen grid-cols-1 md:grid-cols-[14rem_minmax(0,1fr)] md:grid-rows-[auto_minmax(0,1fr)]"
+        data-dashboard-platform
+      >
+      <div className="md:col-start-2 md:row-start-1">
+        <Navbar productLinks={false} />
       </div>
+      <DashboardSidebar activeTab={activeTab} onSelect={setDashboardTab} />
 
-      {/* Content */}
-      <main className="mx-auto w-full max-w-7xl min-w-0 overflow-x-hidden p-4 py-8 sm:px-6 lg:px-8">
+      <div className="min-w-0 md:col-start-2 md:row-start-2">
+      <p data-console-frame-label="" className={`pointer-events-none px-4 pt-2 sm:px-6 ${CONSOLE_LABEL_CLASS}`}>
+        {dashboardFrameLabel(activeTab)}
+      </p>
+      <main className="overflow-x-hidden p-4 py-8 sm:px-6 lg:px-8">
         {/* Sessions Tab */}
         {activeTab === "sessions" && (
           <DashboardSessionsTab
@@ -863,8 +865,17 @@ export default function DashboardPage() {
           />
         )}
 
-        {/* Plans Tab */}
-        {activeTab === "plans" && (
+        {activeTab === "home" && (
+          <DashboardHomeTab
+            workspaces={workspaces}
+            recentWorkspaces={homeRecentWorkspaces}
+            formatDate={formatDate}
+            t={t}
+            workspaceCoverPool={workspaceCoverPool}
+          />
+        )}
+
+        {(isDashboardProductTab(activeTab) || isDashboardShopTab(activeTab)) && (
           <DashboardPlansTab
             archivingWorkspaceId={archivingWorkspaceId}
             filteredWorkspaces={filteredWorkspaces}
@@ -874,10 +885,29 @@ export default function DashboardPage() {
             handleTogglePin={handleTogglePin}
             paginatedPlans={paginatedPlans}
             pinnedWorkspaceIds={pinnedWorkspaceIds}
+            productCount={
+              isDashboardShopTab(activeTab)
+                ? workspaces.filter(
+                    (row) =>
+                      workspaceMatchesDashboardTypeFilter(row, "learning") &&
+                      workspaceMatchesDashboardListFilter(row, "aycl"),
+                  ).length
+                : activeTab === "learning"
+                ? homeCounts.learning
+                : activeTab === "verification"
+                  ? homeCounts.verification
+                  : homeCounts.calibration
+            }
+            productEmpty={productEmpty}
+            productTab={
+              activeTab === "verification" || activeTab === "calibration"
+                ? activeTab
+                : "learning"
+            }
+            surface={isDashboardShopTab(activeTab) ? "shop" : "workspaces"}
             setPlanPage={setPlanPage}
             setPlanSearch={setPlanSearch}
             setShowArchivedPlans={setShowArchivedPlans}
-            setWorkspaceTypeFilter={setWorkspaceTypeFilter}
             setWorkspaceVisibilityFilter={setWorkspaceVisibilityFilter}
             setWorkspaces={setWorkspaces}
             showArchivedWorkspaces={showArchivedWorkspaces}
@@ -887,11 +917,20 @@ export default function DashboardPage() {
             workspacePage={workspacePage}
             workspacePageSize={workspacePageSize}
             workspaceSearch={workspaceSearch}
-            workspaceTypeFilter={workspaceTypeFilter}
             workspaceVisibilityFilter={workspaceVisibilityFilter}
-            workspaces={workspaces}
           />
         )}
+
+        {isDashboardRegionsTab(activeTab) ? (
+          <DashboardKnowledgeRegionsTab
+            kind={activeTab === "calibration_regions" ? "calibration" : "verification"}
+            workspaces={workspaces}
+            workspaceCoverPool={workspaceCoverPool}
+            formatDate={formatDate}
+          />
+        ) : null}
+
+        {activeTab === "help" && <DashboardHelpTab />}
 
         {activeTab === "organization" && <OrganizationDashboardTab />}
 
@@ -947,6 +986,7 @@ export default function DashboardPage() {
         )}
 
       </main>
+      </div>
       </div>
     </div>
   );

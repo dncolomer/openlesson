@@ -7,6 +7,7 @@ import {
 
 export type VerificationFlowFilterState = {
   enabled: boolean;
+  flowKind?: "calibrate" | "verify" | null;
   flows: Array<{ id: string; topic: string }>;
   flowId: string | null;
   rows: VerificationKnowledgeRow[];
@@ -29,7 +30,7 @@ export function VerificationFlowSubtabFilter({
       data-knowledge-subtab-filter={subtab}
     >
       <label className="flex flex-wrap items-center gap-2 text-[11px] text-neutral-400">
-        Verification flow
+        {filter.flowKind === "calibrate" ? "Calibration flow" : "Verification flow"}
         <select
           value={filter.flowId || ""}
           data-verification-flow-select

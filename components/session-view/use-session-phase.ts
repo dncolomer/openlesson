@@ -33,7 +33,12 @@ import {
 import { ileWelcomeShowsRegenerate } from "@/lib/ile-welcome-chapters";
 import { applyIleSessionNameToMetadata } from "@/lib/ile-session-name";
 import { applyIleOpenWorkIdsToMetadata } from "@/lib/ile-pow-spend";
-import { textToBase64, uploadIleProofOfWork } from "@/lib/ile-proof-of-work-client";
+import {
+  flagIleSessionProofOfWorkImpure,
+  textToBase64,
+  uploadIleProofOfWork,
+} from "@/lib/ile-proof-of-work-client";
+import { withImpurePoWData } from "@/lib/tap-session-purity";
 import { postWorkspaceFlowEmbedding } from "@/lib/flow-embedding-client";
 import { FLOW_EMBEDDING_MODEL_ID } from "@/lib/flow-embedding";
 import type { SessionPolicySnapshot } from "@/components/session-view/session-policy-context";
@@ -56,6 +61,7 @@ export type SessionPhaseInput = {
   ayclToken?: string;
   ileToken?: string;
   guestAccessBody: Record<string, unknown>;
+  entryQueryParams?: Record<string, string | string[]>;
   entryParamsKey: string;
   router: ReturnType<typeof useRouter>;
   t: (key: string) => string;
@@ -128,7 +134,7 @@ export type SessionPhaseInput = {
 export function useSessionPhase(input: SessionPhaseInput) {
   const {
     session, setSession, sessionRef, sessionId, guestAccessKind, ayclToken, ileToken,
-    guestAccessBody, entryParamsKey, router, t, isRecording, setIsRecording, isPaused,
+    guestAccessBody, entryQueryParams, entryParamsKey, router, t, isRecording, setIsRecording, isPaused,
     setIsPaused, elapsedSeconds, setElapsedSeconds, elapsedSecondsRef, stream, setStream,
     setError, tutoringLanguage, setTutoringLanguage, setLanguageConfirmed, setSessionPlan,
     sessionPlanRef, setPlanLoading, setPlanError, setChapterPlanStatus, setRegenerateChapters,
@@ -385,14 +391,14 @@ const startRecording = async () => {
   }
 };
 
-const stopRecording = async () => {
+const stopRecording = async (options?: { stayOnScreen?: boolean }) => {
   if (timerRef.current) clearInterval(timerRef.current);
 
   await flushRemainingIlePow({ force: true });
 
   if (stream) { stream.getTracks().forEach((t) => t.stop()); setStream(null); }
   setIsRecording(false);
-  setIsSaving(true);
+  if (!options?.stayOnScreen) setIsSaving(true);
   if (!session) {
     releaseSessionLocalMemory();
     return;
@@ -416,6 +422,7 @@ const stopRecording = async () => {
   // not auto-run on TAP Learning end. PoW is already flushed above.
 
   handleDisconnectMuse();
+  if (options?.stayOnScreen) return;
   releaseSessionLocalMemory(finalSession.id);
 
   router.push(
@@ -685,13 +692,16 @@ const handleWelcomePlay = useCallback(async () => {
   // setters/refs; including them as deps would cause noise.
 }, [isRecording, isPaused]);
 
-const handleConfirmEnd = async () => {
+const handleConfirmEnd = async (options?: { impure?: boolean }) => {
   setShowEndDialog(false);
+  const impure = options?.impure === true;
+  const workspaceId =
+    session && typeof session.metadata?.workspace_id === "string"
+      ? session.metadata.workspace_id
+      : "";
   if (session) {
     const snapshot = input.policyRef?.current;
     if (snapshot?.model) {
-      const workspaceId =
-        typeof session.metadata?.workspace_id === "string" ? session.metadata.workspace_id : "";
       const sequence = snapshot.sequence ?? [];
       if (workspaceId) {
         void postWorkspaceFlowEmbedding({
@@ -711,6 +721,11 @@ const handleConfirmEnd = async () => {
           sessionId: session.id,
           ileToken,
         });
+        const policyMetadata = {
+          flowKind: "learn",
+          embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
+          policy_sequence: sequence,
+        };
         void uploadIleProofOfWork({
           workspaceId,
           sessionId: session.id,
@@ -722,16 +737,13 @@ const handleConfirmEnd = async () => {
               flowKind: "learn",
               catalogSize: snapshot.model.catalogSize,
               sequence,
+              ...(impure ? { quality: "impure", impure: true, session_quality: "impure" } : {}),
             }),
           ),
           file_name: "session-policy.json",
           tool_name: "session_policy",
-          tool_action: "policy_score",
-          metadata: {
-            flowKind: "learn",
-            embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
-            policy_sequence: sequence,
-          },
+          tool_action: impure ? "policy_score_impure" : "policy_score",
+          metadata: impure ? withImpurePoWData(policyMetadata) : policyMetadata,
         });
       }
     }
@@ -739,7 +751,15 @@ const handleConfirmEnd = async () => {
     setSession(finalSession);
     sessionRef.current = finalSession;
   }
-  await stopRecording();
+  await stopRecording({ stayOnScreen: impure });
+  if (impure && workspaceId && session) {
+    void flagIleSessionProofOfWorkImpure({
+      workspaceId,
+      sessionId: session.id,
+      ileToken,
+      entryQueryParams,
+    });
+  }
 };
 
 // Auto-pause on browser close/refresh

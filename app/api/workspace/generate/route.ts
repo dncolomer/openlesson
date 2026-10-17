@@ -37,6 +37,7 @@ import {
   goalFieldsFromPrompt,
   templateDantesContextForPrompt,
   knowledgeRegionWorkspaceCreateOutcome,
+  calibrationWorkspaceCreateOutcome,
   parseWorkspaceCreateMode,
   templateWorkspaceGoalField,
   workspaceKindForCreateMode,
@@ -246,6 +247,61 @@ export async function POST(req: NextRequest) {
         createMode: krOutcome.mode,
         workspaceKind: krOutcome.workspaceKind,
         blockCount: krOutcome.blocks.length,
+      });
+    }
+
+    // ── Calibration: zero-block Goals/Calibration Flows/Knowledge/Settings shell ──
+    if (createMode === "calibration") {
+      const calOutcome = calibrationWorkspaceCreateOutcome();
+      const billing = await resolveUserBilling(supabase, user.id);
+      if ("error" in billing) {
+        return jsonError(500, billing.error);
+      }
+      const workspaceCheck = await checkWorkspaceCreation(
+        supabase,
+        user.id,
+        billing.userProfile,
+      );
+      if (!workspaceCheck.allowed) {
+        return NextResponse.json(workspaceLimitErrorResponse(workspaceCheck), { status: 403 });
+      }
+
+      const calibrationTitle = (typeof body.title === "string" ? body.title : topic).trim();
+      if (!calibrationTitle) {
+        return jsonError(400, "Name is required");
+      }
+      if (calibrationTitle.length > 120) {
+        return jsonError(400, "Name is too long");
+      }
+
+      const { data: plan, error: planError } = await supabase
+        .from("workspaces")
+        .insert({
+          user_id: user.id,
+          title: calibrationTitle,
+          root_topic: calibrationTitle,
+          status: "active",
+          source_type: "topic",
+          notes: "",
+          workspace_kind: calOutcome.workspaceKind,
+        })
+        .select()
+        .single();
+
+      if (planError || !plan) {
+        console.error("[workspace/generate] calibration insert failed:", planError);
+        return jsonError(
+          500,
+          planError?.message || "Failed to create calibration workspace",
+        );
+      }
+
+      return NextResponse.json({
+        workspaceId: plan.id,
+        title: plan.title,
+        createMode: calOutcome.mode,
+        workspaceKind: calOutcome.workspaceKind,
+        blockCount: calOutcome.blocks.length,
       });
     }
 

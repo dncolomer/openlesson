@@ -5,7 +5,7 @@ import { useI18n } from "@/lib/i18n";
 import { KnowledgeConfigTrajectoryPanel } from "@/components/KnowledgeConfigTrajectoryPanel";
 import { WorkspaceSectionSubTabs } from "@/components/WorkspaceSectionSubTabs";
 import { SECTION_TAB_CONTENT_CLASS } from "@/lib/workspace-section-surface";
-import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
+import { isNoMapWorkspace, workspaceKnowledgeFlowKind } from "@/lib/workspace-kind";
 
 type PerformanceSubview = "knowledge" | "insights";
 
@@ -53,7 +53,8 @@ export function WorkspacePerformancePanel({
   void _hideTap;
   void _isGroup;
   const { t } = useI18n();
-  const verificationWorkspace = isKnowledgeRegionWorkspace(workspaceKind);
+  const verificationWorkspace = isNoMapWorkspace(workspaceKind);
+  const knowledgeFlowKind = workspaceKnowledgeFlowKind(workspaceKind);
   const allowedSubviews = lwmEmbeddingsOnly
     ? LEARNER_KNOWLEDGE_SUBVIEWS
     : PERFORMANCE_SUBVIEWS;
@@ -100,6 +101,7 @@ export function WorkspacePerformancePanel({
             lockSubjectToSelf={lwmEmbeddingsOnly}
             panelView="models"
             verificationWorkspace={verificationWorkspace}
+            knowledgeFlowKind={knowledgeFlowKind}
           />
         )}
       </div>

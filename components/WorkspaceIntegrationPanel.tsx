@@ -4,10 +4,10 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n";
 import {
-  knowledgeRegionIntegrationCopy,
-  learningWorkspaceIntegrationCopy,
   slugifyIntegrationName,
+  workspaceSettingsIntegrationCopy,
 } from "@/lib/pow-api/integration-skill";
+import { workspaceAllowsCopyToVerification } from "@/lib/copy-learning-to-verification";
 import { IntegrationQuickAccess } from "@/components/IntegrationQuickAccess";
 import { WorkspaceAccessSettings } from "@/components/WorkspaceAccessSettings";
 import { WorkspaceAyclMarketplaceSettings } from "@/components/WorkspaceAyclMarketplaceSettings";
@@ -19,7 +19,11 @@ import { WorkspaceSectionSubTabs } from "@/components/WorkspaceSectionSubTabs";
 import { readJsonResponse } from "@/lib/read-json-response";
 import { SECTION_TAB_CONTENT_CLASS } from "@/lib/workspace-section-surface";
 import type { Workspace } from "@/components/WorkspaceView";
-import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
+import {
+  isCalibrationWorkspace,
+  isKnowledgeRegionWorkspace,
+  isNoMapWorkspace,
+} from "@/lib/workspace-kind";
 import {
   resolveSettingsSubview,
   settingsShowsMakePublic,
@@ -84,6 +88,8 @@ export function WorkspaceIntegrationPanel({
 
   const showMakePublic = settingsShowsMakePublic(workspaceKind);
   const isKnowledgeRegion = isKnowledgeRegionWorkspace(workspaceKind);
+  const isCalibration = isCalibrationWorkspace(workspaceKind);
+  const isNoMap = isNoMapWorkspace(workspaceKind);
 
   const handleDownloadSkill = async () => {
     setGeneratingSkill(true);
@@ -179,7 +185,7 @@ export function WorkspaceIntegrationPanel({
               </div>
             ) : null}
 
-            {plan && onPlanUpdate && !isKnowledgeRegion ? (
+            {plan && onPlanUpdate && workspaceAllowsCopyToVerification(workspaceKind) ? (
               <WorkspaceCopyToVerification
                 workspaceId={workspaceId}
                 workspaceTitle={plan.title || plan.root_topic || ""}
@@ -221,16 +227,19 @@ export function WorkspaceIntegrationPanel({
             <div className="min-w-0 shrink-0">
               <h2 className="text-sm font-medium text-white">Knowledge Regions</h2>
               <p className="mt-1 max-w-2xl text-xs leading-relaxed text-neutral-500">
-                {isKnowledgeRegion
-                  ? "Regions in flowcfg-v1-d96. Build them from verification flows or synthetic agents, then overlay them on Knowledge embeddings."
-                  : "Regions in knowledgecfg-v1-d64. Build them from verification flows, synthetic agents, or proof-of-work sources, then overlay them on Embeddings."}
+                {isCalibration
+                  ? "Regions in flowcfg-v1-d96. Overlay them on calibration embeddings (uncertainty mapping)."
+                  : isKnowledgeRegion
+                    ? "Regions in flowcfg-v1-d96. Build them from verification flows or synthetic agents, then overlay them on Knowledge embeddings."
+                    : "Regions in knowledgecfg-v1-d64. Build them from verification flows, synthetic agents, or proof-of-work sources, then overlay them on Embeddings."}
               </p>
             </div>
             <CustomVerificationModelsPanel
               workspaceId={workspaceId}
               currentUserId={currentUserId}
               ayclToken={undefined}
-              verificationWorkspace={isKnowledgeRegion}
+              verificationWorkspace={isNoMap}
+              knowledgeFlowKind={isCalibration ? "calibrate" : isKnowledgeRegion ? "verify" : null}
             />
           </section>
         ) : null}
@@ -256,14 +265,12 @@ export function WorkspaceIntegrationPanel({
                   </h2>
                   <p
                     className="mt-1 max-w-2xl text-xs leading-relaxed text-neutral-500"
-                    data-kr-integration-skill={isKnowledgeRegion ? "true" : undefined}
+                    data-kr-integration-skill={isNoMap ? "true" : undefined}
                   >
-                    {isKnowledgeRegion
-                      ? knowledgeRegionIntegrationCopy().skillDescription
-                      : learningWorkspaceIntegrationCopy().skillDescription}
+                    {workspaceSettingsIntegrationCopy(workspaceKind).skillDescription}
                   </p>
                 </div>
-                {isKnowledgeRegion ? (
+                {isNoMap ? (
                   <Link
                     href="/docs/proof-of-work-api"
                     className="shrink-0 text-xs text-neutral-400 underline decoration-neutral-700 underline-offset-2 hover:text-neutral-200"
@@ -299,12 +306,10 @@ export function WorkspaceIntegrationPanel({
             <section className="space-y-3" data-settings-section="mcp">
               <p
                 className="text-xs leading-relaxed text-neutral-500"
-                data-kr-integration-mcp-note={isKnowledgeRegion ? "true" : undefined}
-                data-learning-integration-mcp-note={isKnowledgeRegion ? undefined : "true"}
+                data-kr-integration-mcp-note={isNoMap ? "true" : undefined}
+                data-learning-integration-mcp-note={isNoMap ? undefined : "true"}
               >
-                {isKnowledgeRegion
-                  ? knowledgeRegionIntegrationCopy().mcpNote
-                  : learningWorkspaceIntegrationCopy().mcpNote}
+                {workspaceSettingsIntegrationCopy(workspaceKind).mcpNote}
               </p>
               <IntegrationQuickAccess
                 origin={origin}

@@ -276,7 +276,7 @@ describe("welcome branch continue vs new", () => {
     expect(welcome).not.toContain("InitialChaptersPicker");
     expect(welcome).not.toContain("data-ile-session-chapter-count");
     expect(welcome).not.toContain("data-ile-session-insight-goal");
-    expect(welcome).toContain("data-ile-silence-lock-minutes");
+    expect(welcome).not.toContain("data-ile-silence-lock-minutes");
     expect(welcome).toContain("capIleSessionChapters");
     const picker = read("components/InitialChaptersPicker.tsx");
     expect(picker).toContain("data-density-level");
@@ -289,9 +289,7 @@ describe("welcome branch continue vs new", () => {
     expect(welcome).not.toContain("catalogStrip");
     expect(welcome).not.toContain('data-ile-map-type-align="aesthetics"');
     const continueAt = welcome.indexOf("data-ile-continue-welcome");
-    const silenceAt = welcome.indexOf("data-ile-silence-lock-minutes");
     expect(continueAt).toBeGreaterThan(-1);
-    expect(silenceAt).toBeGreaterThan(-1);
   });
 });
 
@@ -369,7 +367,7 @@ describe("dummy density occupancy + continue mini read-only", () => {
     expect(welcome).toContain("data-ile-session-chapters");
     expect(welcome).not.toContain("data-ile-session-chapter-count");
     expect(welcome).not.toContain("data-ile-session-insight-goal");
-    expect(welcome).toContain("data-ile-silence-lock-minutes");
+    expect(welcome).not.toContain("data-ile-silence-lock-minutes");
     expect(welcome).toContain("flex-1");
     const aycl = read("components/AyclLandingClient.tsx");
     expect(aycl).toContain("h-[min(28rem,55vh)]");
@@ -517,7 +515,7 @@ describe("Practice drawer labels and previous-sessions UI", () => {
     );
     expect(view).not.toContain("data-ile-session-chapter-count");
     expect(view).not.toContain("data-ile-session-insight-goal");
-    expect(view).toContain("data-ile-silence-lock-minutes");
+    expect(view).not.toContain("data-ile-silence-lock-minutes");
     const chrome = read("components/session-view/session-chrome.tsx");
     const phase = read("components/session-view/use-session-phase.ts");
     expect(chrome).not.toContain('testId="ile-save-exit-name"');
@@ -527,7 +525,6 @@ describe("Practice drawer labels and previous-sessions UI", () => {
     expect(chrome).not.toContain('tertiaryTestId="ile-exit-without-saving"');
     expect(view).not.toContain("setShowSaveExitNameDialog");
     expect(view).toContain("void pauseAndGoToDashboard()");
-    expect(view).toContain("persistSession: plan.persistSession");
     expect(phase).toContain("applyIleSessionNameToMetadata");
     expect(phase).toContain("discardUnsavedIleSession");
     expect(phase).toContain("async (");

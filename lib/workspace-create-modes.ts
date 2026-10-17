@@ -9,24 +9,45 @@ import {
 } from "@/lib/workspace-spatial-create";
 import type { InitialChaptersLevel } from "@/lib/initial-chapters";
 import {
+  WORKSPACE_KIND_CALIBRATION,
   WORKSPACE_KIND_KNOWLEDGE_REGION,
   WORKSPACE_KIND_STANDARD,
   type WorkspaceKind,
 } from "@/lib/workspace-kind";
 
-export type WorkspaceCreateMode = "blank" | "template" | "files_goal" | "knowledge_region";
+export type WorkspaceCreateMode =
+  | "blank"
+  | "template"
+  | "files_goal"
+  | "knowledge_region"
+  | "calibration";
 
 /** Modes shown as option cards on `/workspace/new`. Files+Goal is not a UI option. */
 export const UI_WORKSPACE_CREATE_MODES: WorkspaceCreateMode[] = [
   "blank",
   "template",
   "knowledge_region",
+  "calibration",
 ];
 
 export function isUiWorkspaceCreateMode(
   mode: unknown,
 ): mode is Exclude<WorkspaceCreateMode, "files_goal"> {
-  return mode === "blank" || mode === "template" || mode === "knowledge_region";
+  return (
+    mode === "blank" ||
+    mode === "template" ||
+    mode === "knowledge_region" ||
+    mode === "calibration"
+  );
+}
+
+/** Deep-link `?mode=` on `/workspace/new`. Files+Goal is API-only and ignored. */
+export function workspaceCreateModeFromQuery(
+  value: unknown,
+): Exclude<WorkspaceCreateMode, "files_goal"> | null {
+  const parsed = parseWorkspaceCreateMode(value);
+  if (!parsed || !isUiWorkspaceCreateMode(parsed)) return null;
+  return parsed;
 }
 
 /** API / agent semantic create only supports Files + Goal Prompt. */
@@ -37,7 +58,8 @@ export function parseWorkspaceCreateMode(value: unknown): WorkspaceCreateMode | 
     value === "blank" ||
     value === "template" ||
     value === "files_goal" ||
-    value === "knowledge_region"
+    value === "knowledge_region" ||
+    value === "calibration"
   ) {
     return value;
   }
@@ -46,14 +68,15 @@ export function parseWorkspaceCreateMode(value: unknown): WorkspaceCreateMode | 
   if (value === "knowledge-region" || value === "knowledgeRegion" || value === "kr") {
     return "knowledge_region";
   }
+  if (value === "calibrate" || value === "calibration_workspace") return "calibration";
   return null;
 }
 
 /** Durable kind persisted on the workspace row for this create mode. */
 export function workspaceKindForCreateMode(mode: WorkspaceCreateMode): WorkspaceKind {
-  return mode === "knowledge_region"
-    ? WORKSPACE_KIND_KNOWLEDGE_REGION
-    : WORKSPACE_KIND_STANDARD;
+  if (mode === "knowledge_region") return WORKSPACE_KIND_KNOWLEDGE_REGION;
+  if (mode === "calibration") return WORKSPACE_KIND_CALIBRATION;
+  return WORKSPACE_KIND_STANDARD;
 }
 
 export function isApiAllowedCreateMode(mode: WorkspaceCreateMode | null | undefined): boolean {
@@ -295,6 +318,22 @@ export function knowledgeRegionWorkspaceCreateOutcome(): {
     blocks: [],
     mode: "knowledge_region",
     workspaceKind: WORKSPACE_KIND_KNOWLEDGE_REGION,
+  };
+}
+
+/**
+ * Calibration create yields zero blocks and a durable calibration kind.
+ * Same shell as Verification; flows and Knowledge are calibration-only.
+ */
+export function calibrationWorkspaceCreateOutcome(): {
+  blocks: [];
+  mode: "calibration";
+  workspaceKind: typeof WORKSPACE_KIND_CALIBRATION;
+} {
+  return {
+    blocks: [],
+    mode: "calibration",
+    workspaceKind: WORKSPACE_KIND_CALIBRATION,
   };
 }
 

@@ -55,6 +55,35 @@ export async function blobToBase64(blob: Blob): Promise<string> {
   });
 }
 
+export async function flagIleSessionProofOfWorkImpure(input: {
+  workspaceId: string;
+  sessionId: string;
+  ileToken?: string;
+  entryQueryParams?: Record<string, string | string[]>;
+}): Promise<{ ok: boolean; updated?: number; error?: string }> {
+  try {
+    const res = await fetch("/api/workspace/proof-of-work/impure", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        workspaceId: input.workspaceId,
+        session_id: input.sessionId,
+        ...(input.ileToken ? { ileToken: input.ileToken } : {}),
+        ...(input.entryQueryParams && Object.keys(input.entryQueryParams).length > 0
+          ? { entryQueryParams: input.entryQueryParams }
+          : {}),
+      }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { ok: false, error: body?.error || `Proof-of-work flag failed (${res.status})` };
+    }
+    return { ok: true, updated: typeof body?.updated === "number" ? body.updated : 0 };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Proof-of-work flag failed" };
+  }
+}
+
 export async function uploadIleProofOfWork(
   input: UploadIleProofOfWorkInput,
 ): Promise<UploadIleProofOfWorkResult> {

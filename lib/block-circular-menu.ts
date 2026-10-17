@@ -53,9 +53,7 @@ export const ILE_TIM_CIRCULAR_MENU_ACTIONS: readonly BlockCircularMenuAction[] =
 ] as const;
 
 export const WORKSPACE_CIRCULAR_MENU_ACTIONS: readonly BlockCircularMenuAction[] = [
-  { id: "start_prepare", label: "Calibrate" },
   { id: "start_session", label: "Learn" },
-  { id: "start_verify", label: "Verify" },
 ] as const;
 
 export const WORKSPACE_CIRCULAR_MENU_DRAWER_IDS = {} as const;

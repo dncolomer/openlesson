@@ -18,7 +18,7 @@ export const SESSION_INSTRUCTIONS: Record<SessionGuideId, string> = {
 
 /** Start-screen intros. Short complete sentences. Do not stitch titles into them. */
 export const SESSION_BRIEFING_INTRO: Record<SessionGuideId, string> = {
-  learn: "Set how long silence can run, and the look. Then work on the canvas.",
+  learn: "Choose the look, then work on the canvas. Think out loud the whole time.",
   calibrate:
     "Read the opening lines out loud to start. Then tap every question you would not trust yourself to answer. No speaking is required after the opening.",
   verification:

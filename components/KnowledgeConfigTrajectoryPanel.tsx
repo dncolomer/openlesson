@@ -5,6 +5,7 @@ import { resolveModelsTabCanInspectOthers } from "@/lib/pow-api/models-tab-scope
 import { KnowledgeModelsView } from "@/components/knowledge-panel/models-view";
 import type { VerificationFlowFilterState } from "@/components/VerificationFlowSubtabFilter";
 import type { VerificationKnowledgeRow } from "@/lib/verification-flow";
+import type { WorkspaceKnowledgeFlowKind } from "@/lib/workspace-kind";
 
 export type KnowledgePanelView = "models";
 
@@ -21,8 +22,10 @@ interface KnowledgeConfigTrajectoryPanelProps {
   lockSubjectToSelf?: boolean;
   /** models — embeddings + custom knowledge regions */
   panelView?: KnowledgePanelView;
-  /** Verification Workspace: expose a flow filter on this subtab. */
+  /** Verification or Calibration workspace: expose a flow filter on this subtab. */
   verificationWorkspace?: boolean;
+  /** Calibrate vs verify embeddings. Learning leaves this null. */
+  knowledgeFlowKind?: WorkspaceKnowledgeFlowKind | null;
 }
 
 export function KnowledgeConfigTrajectoryPanel({
@@ -33,25 +36,33 @@ export function KnowledgeConfigTrajectoryPanel({
   lockSubjectToSelf = false,
   panelView = "models",
   verificationWorkspace = false,
+  knowledgeFlowKind = null,
 }: KnowledgeConfigTrajectoryPanelProps) {
   const [flowId, setFlowId] = useState<string | null>(null);
   const [flows, setFlows] = useState<Array<{ id: string; topic: string }>>([]);
   const [rows, setRows] = useState<VerificationKnowledgeRow[]>([]);
+  const flowcfgEnabled = Boolean(knowledgeFlowKind || verificationWorkspace);
+  const resolvedFlowKind: WorkspaceKnowledgeFlowKind | null =
+    knowledgeFlowKind ?? (verificationWorkspace ? "verify" : null);
 
   useEffect(() => {
-    if (!verificationWorkspace) return;
+    if (!flowcfgEnabled || !resolvedFlowKind) return;
     const params = new URLSearchParams({ workspaceId });
     if (ayclToken) params.set("ayclToken", ayclToken);
+    const path =
+      resolvedFlowKind === "calibrate"
+        ? "/api/workspace/calibration-flows"
+        : "/api/workspace/verification-flows";
     let cancelled = false;
-    void fetch(`/api/workspace/verification-flows?${params.toString()}`)
+    void fetch(`${path}?${params.toString()}`)
       .then((response) => response.json())
       .then((payload) => {
         if (cancelled) return;
         const listed = Array.isArray(payload.flows) ? payload.flows : [];
         setFlows(
-          listed.map((flow: { id?: string; topic?: string }) => ({
+          listed.map((flow: { id?: string; topic?: string; goal?: string }) => ({
             id: String(flow.id || ""),
-            topic: String(flow.topic || "Flow"),
+            topic: String(flow.topic || flow.goal || "Flow"),
           })),
         );
         setRows(Array.isArray(payload.rows) ? payload.rows : []);
@@ -65,10 +76,11 @@ export function KnowledgeConfigTrajectoryPanel({
     return () => {
       cancelled = true;
     };
-  }, [verificationWorkspace, workspaceId, ayclToken]);
+  }, [ayclToken, flowcfgEnabled, resolvedFlowKind, workspaceId]);
 
   const flowFilter: VerificationFlowFilterState = {
-    enabled: verificationWorkspace,
+    enabled: flowcfgEnabled,
+    flowKind: resolvedFlowKind,
     flows,
     flowId,
     rows,

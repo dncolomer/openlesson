@@ -58,11 +58,13 @@ describe("isDashboardWorkspaceListFilter", () => {
 describe("workspaceMatchesDashboardTypeFilter", () => {
   const learning = { workspace_kind: "standard" };
   const verification = { workspace_kind: "knowledge_region" };
+  const calibration = { workspace_kind: "calibration" };
   const unset = {};
 
-  it("all keeps learning and verification workspaces", () => {
+  it("all keeps learning, verification, and calibration workspaces", () => {
     expect(workspaceMatchesDashboardTypeFilter(learning, "all")).toBe(true);
     expect(workspaceMatchesDashboardTypeFilter(verification, "all")).toBe(true);
+    expect(workspaceMatchesDashboardTypeFilter(calibration, "all")).toBe(true);
     expect(workspaceMatchesDashboardTypeFilter(unset, "all")).toBe(true);
   });
 
@@ -70,12 +72,21 @@ describe("workspaceMatchesDashboardTypeFilter", () => {
     expect(workspaceMatchesDashboardTypeFilter(learning, "learning")).toBe(true);
     expect(workspaceMatchesDashboardTypeFilter(unset, "learning")).toBe(true);
     expect(workspaceMatchesDashboardTypeFilter(verification, "learning")).toBe(false);
+    expect(workspaceMatchesDashboardTypeFilter(calibration, "learning")).toBe(false);
   });
 
   it("verification keeps knowledge-region workspaces", () => {
     expect(workspaceMatchesDashboardTypeFilter(verification, "verification")).toBe(true);
     expect(workspaceMatchesDashboardTypeFilter(learning, "verification")).toBe(false);
+    expect(workspaceMatchesDashboardTypeFilter(calibration, "verification")).toBe(false);
     expect(workspaceMatchesDashboardTypeFilter(unset, "verification")).toBe(false);
+  });
+
+  it("calibration keeps calibration workspaces", () => {
+    expect(workspaceMatchesDashboardTypeFilter(calibration, "calibration")).toBe(true);
+    expect(workspaceMatchesDashboardTypeFilter(learning, "calibration")).toBe(false);
+    expect(workspaceMatchesDashboardTypeFilter(verification, "calibration")).toBe(false);
+    expect(workspaceMatchesDashboardTypeFilter(unset, "calibration")).toBe(false);
   });
 });
 
@@ -85,8 +96,10 @@ describe("isDashboardWorkspaceTypeFilter", () => {
       "all",
       "learning",
       "verification",
+      "calibration",
     ]);
     expect(isDashboardWorkspaceTypeFilter("verification")).toBe(true);
+    expect(isDashboardWorkspaceTypeFilter("calibration")).toBe(true);
     expect(isDashboardWorkspaceTypeFilter("standard")).toBe(false);
   });
 });
@@ -98,8 +111,8 @@ describe("dashboard AYCL filter surface", () => {
     expect(dashSrc).toContain("workspaceMatchesDashboardListFilter");
     expect(dashSrc).toContain("isDashboardWorkspaceListFilter");
     expect(dashSrc).toContain("data-workspace-type-filter");
-    expect(dashSrc).toContain('value="learning"');
-    expect(dashSrc).toContain('value="verification"');
+    expect(dashSrc).toContain("data-dashboard-sidebar");
+    expect(dashSrc).toContain("isDashboardProductTab");
     expect(dashSrc).toContain("workspaceMatchesDashboardTypeFilter");
   });
 });

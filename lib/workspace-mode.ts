@@ -13,7 +13,7 @@ import {
   resolveActiveSection,
   withLearningInsightsSection,
 } from "@/lib/workspace-sections";
-import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
+import { isNoMapWorkspace } from "@/lib/workspace-kind";
 
 export type WorkspaceInteractionMode = "creator" | "learner";
 
@@ -29,7 +29,7 @@ export const DEFAULT_WORKSPACE_INTERACTION_MODE: WorkspaceInteractionMode =
 export function defaultInteractionModeForWorkspace(
   kind: unknown,
 ): WorkspaceInteractionMode {
-  return isKnowledgeRegionWorkspace(kind)
+  return isNoMapWorkspace(kind)
     ? "creator"
     : DEFAULT_WORKSPACE_INTERACTION_MODE;
 }
@@ -50,7 +50,7 @@ export function resolveFixedWorkspaceInteractionMode(input: {
 export function workspaceSurfaceShowsPracticeMenu(input?: {
   workspaceKind?: unknown;
 }): boolean {
-  return !isKnowledgeRegionWorkspace(input?.workspaceKind);
+  return !isNoMapWorkspace(input?.workspaceKind);
 }
 
 /**
@@ -79,7 +79,7 @@ export function workspaceSurfaceShowsAuthoring(input: {
   allowAuthoring?: boolean;
   workspaceKind?: unknown;
 }): boolean {
-  if (isKnowledgeRegionWorkspace(input.workspaceKind)) return false;
+  if (isNoMapWorkspace(input.workspaceKind)) return false;
   if (input.allowAuthoring === false) return false;
   return canAccessPrivilegedWorkspaceSections(input);
 }
@@ -118,8 +118,8 @@ export function workspaceShell(input: {
   isOrgAdmin?: boolean;
   isLoggedIn?: boolean;
 }): WorkspaceShell {
-  const verification = isKnowledgeRegionWorkspace(input.kind);
-  const learnerActivity = Boolean(input.practiceOnly) || !verification;
+  const noMap = isNoMapWorkspace(input.kind);
+  const learnerActivity = Boolean(input.practiceOnly) || !noMap;
   const learnerSurface = learnerActivity && !input.authoring;
   const auth = {
     isOwner: input.isOwner,
@@ -127,7 +127,7 @@ export function workspaceShell(input: {
     isLoggedIn: input.isLoggedIn,
     workspaceKind: input.kind,
   };
-  const sections: WorkspaceSectionKey[] = verification
+  const sections: WorkspaceSectionKey[] = noMap
     ? availableWorkspaceSections(auth)
     : withLearningInsightsSection(
         input.authoring ? availableWorkspaceSections(auth) : ["workspace"],
@@ -135,7 +135,7 @@ export function workspaceShell(input: {
       );
   return {
     sections,
-    authoringDrawers: input.authoring || (verification && !input.practiceOnly),
+    authoringDrawers: input.authoring || (noMap && !input.practiceOnly),
     practiceDrawer: learnerActivity,
     learnerSurface,
     learnerActivity,
@@ -208,7 +208,7 @@ export function availableSectionsForMode(input: {
   workspaceKind?: unknown;
   allowAuthoring?: boolean;
 }): WorkspaceSectionKey[] {
-  if (isKnowledgeRegionWorkspace(input.workspaceKind)) {
+  if (isNoMapWorkspace(input.workspaceKind)) {
     return availableWorkspaceSections({
       isOwner: input.isOwner,
       isOrgAdmin: input.isOrgAdmin,

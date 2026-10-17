@@ -45,7 +45,6 @@ describe("shared TAP settings surface", () => {
     expect(learn).not.toContain("ile-pregame-panel-difficulty");
     expect(learn).not.toContain("ile-pregame-panel-other");
     expect(ILE_LIVE_SETTINGS_KNOBS.map((knob) => knob.id)).toEqual([
-      "silenceLock",
       "spokenLanguage",
     ]);
     expect(learn).not.toContain("data-ile-session-chapter-count");
@@ -69,7 +68,7 @@ describe("shared TAP settings surface", () => {
     expect(learn).not.toContain("ILE_LEARN_PRESETS");
     expect(learn).not.toContain("data-ile-session-insight-goal");
     expect(learn).not.toContain("data-ile-min-insights-slider");
-    expect(learn).toContain("data-ile-silence-lock-minutes");
+    expect(learn).not.toContain("data-ile-silence-lock-minutes");
     expect(learn).not.toContain("data-ile-pregame-preset");
     expect(read("components/SessionView.tsx")).not.toContain("resetIleWorkCanvasSceneOnTimerExpiry");
   });

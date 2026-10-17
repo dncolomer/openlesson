@@ -156,10 +156,10 @@ describe("author Scout enable/disable + at least one of Work/Drill/Scout", () =>
     expect(scoutOnly.allowExplore).toBe(false);
     expect(scoutOnly.allowDrill).toBe(false);
     expect(scoutOnly.allowScout).toBe(true);
-    expect(blockAllowsPracticeStyle(scoutOnly, "scout")).toBe(true);
+    expect(blockAllowsPracticeStyle(scoutOnly, "scout")).toBe(false);
     expect(blockAllowsPracticeStyle(scoutOnly, "explore")).toBe(true);
-    expect(enabledPracticeLaunchCombos(scoutOnly)).toEqual(["scout_dialog", "explore_dialog"]);
-    expect(practiceOptionsIconKeys(scoutOnly)).toEqual(["scout", "explore"]);
+    expect(enabledPracticeLaunchCombos(scoutOnly)).toEqual(["explore_dialog"]);
+    expect(practiceOptionsIconKeys(scoutOnly)).toEqual(["explore"]);
     expect(resolveDefaultPracticeLaunchUi(scoutOnly).style).toBe("explore");
 
     const allOff = normalizeBlockPracticeOptions({
@@ -185,22 +185,15 @@ describe("Learn (not Explore/Work) is the TAP Learning block-launch label", () =
     expect(PRODUCT_INTENT_LABELS.scoutDialog).toBe("Calibrate");
     expect(productIntentClusterLabel(resolveProductIntent("explore"))).toBe("Learn");
     expect(productIntentClusterLabel(resolveProductIntent("scout"))).toBe("Calibrate");
-    expect(WORKSPACE_CIRCULAR_MENU_ACTIONS.map((a) => a.label)).toEqual(
-      expect.arrayContaining(["Calibrate", "Learn", "Verify"]),
-    );
-    expect(WORKSPACE_CIRCULAR_MENU_ACTIONS[0]?.id).toBe("start_prepare");
+    expect(WORKSPACE_CIRCULAR_MENU_ACTIONS.map((a) => a.label)).toEqual(["Learn"]);
+    expect(WORKSPACE_CIRCULAR_MENU_ACTIONS[0]?.id).toBe("start_session");
 
     const card = read("components/BlockDetailCard.tsx");
     expect(card).toContain("PRODUCT_INTENT_LABELS.styleExplore");
-    expect(card).toContain("PRODUCT_INTENT_LABELS.styleScout");
-    expect(card).toContain('id: "scout"');
-    expect(card).toContain("data-practice-allow-scout");
-    const scoutIdx = card.indexOf('id: "scout" as const');
-    const learnIdx = card.indexOf('id: "explore" as const');
-    const verifyIdx = card.indexOf('data-style-option="verify"');
-    expect(scoutIdx).toBeGreaterThan(0);
-    expect(learnIdx).toBeGreaterThan(scoutIdx);
-    expect(verifyIdx).toBeGreaterThan(learnIdx);
+    expect(card).not.toContain("PRODUCT_INTENT_LABELS.styleScout");
+    expect(card).not.toContain('id: "scout" as const');
+    expect(card).toContain('data-practice-allow-scout="false"');
+    expect(card).not.toContain('data-style-option="verify"');
 
     const menu = read("lib/block-circular-menu.ts");
     expect(menu).toContain('id: "start_session", label: "Learn"');
@@ -554,10 +547,10 @@ describe("structural: Scout TAP shell, no think-aloud, Build toggle", () => {
     expect(edit).not.toContain("data-block-edit-allow-scout");
     expect(edit).not.toContain("data-block-edit-practice-options");
     const card = read("components/BlockDetailCard.tsx");
-    expect(card).toContain("PRODUCT_INTENT_LABELS.styleScout");
+    expect(card).not.toContain("PRODUCT_INTENT_LABELS.styleScout");
     expect(card).toContain("PRODUCT_INTENT_LABELS.styleExplore");
-    expect(card).toContain('data-style-option="verify"');
-    expect(card).toContain('onClick={() => setStyle("verify")}');
+    expect(card).not.toContain('data-style-option="verify"');
+    expect(card).not.toContain('onClick={() => setStyle("verify")}');
 
     expect(en).toMatch(/"title": "Calibrate"/);
     expect(en).toMatch(/tap every question/i);

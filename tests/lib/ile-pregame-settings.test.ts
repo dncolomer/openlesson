@@ -306,8 +306,8 @@ describe("Learn research presets", () => {
     expect(welcome).not.toContain("data-ile-learn-presets");
     expect(welcome).not.toContain("applyIleLearnPreset");
     expect(welcome).not.toContain("data-ile-session-insight-goal");
-    expect(welcome).toContain("data-ile-silence-lock-minutes");
-    expect(welcome).toContain("onSilenceLockMinutesChange");
+    expect(welcome).not.toContain("data-ile-silence-lock-minutes");
+    expect(welcome).not.toContain("onSilenceLockMinutesChange");
     expect(welcome).not.toContain("data-ile-pregame-preset");
     expect(en.session.learnPresetSurvey).toBe("Survey");
     expect(en.session.learnPresetStudy).toBe("Study");
@@ -366,7 +366,7 @@ describe("TAP Learning pre-game settings surface", () => {
     expect(welcome).not.toContain("data-ile-session-chapter-count");
     expect(welcome).not.toContain("data-ile-pow-expense-slider");
     expect(welcome).not.toContain("data-ile-session-insight-goal");
-    expect(welcome).toContain("data-ile-silence-lock-minutes");
+    expect(welcome).not.toContain("data-ile-silence-lock-minutes");
     expect(welcome).not.toContain("InitialChaptersPicker");
     expect(welcome).not.toContain("IleContinueMapPreview");
     expect(welcome).not.toContain("data-ile-pregame-map");
@@ -481,7 +481,7 @@ describe("TAP Learning pre-game settings surface", () => {
     expect(welcome).not.toContain("catalogStrip");
     expect(welcome).not.toContain("data-ile-session-chapter-count");
     expect(welcome).not.toContain("data-ile-session-insight-goal");
-    expect(welcome).toContain("data-ile-silence-lock-minutes");
+    expect(welcome).not.toContain("data-ile-silence-lock-minutes");
     expect(welcome).not.toContain("data-ile-pregame-economy-map");
     expect(welcome).toContain("lg:grid-cols-2");
     expect(picker).toContain("line-clamp-3");

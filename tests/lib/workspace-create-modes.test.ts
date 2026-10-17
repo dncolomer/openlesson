@@ -15,24 +15,37 @@ import {
   isApiAllowedCreateMode,
   parseWorkspaceCreateMode,
   isUiWorkspaceCreateMode,
+  workspaceCreateModeFromQuery,
   resolveWorkspaceCreateOverlay,
   UI_WORKSPACE_CREATE_MODES,
+  calibrationWorkspaceCreateOutcome,
+  workspaceKindForCreateMode,
 } from "@/lib/workspace-create-modes";
 import { INITIAL_CHAPTERS_BANDS } from "@/lib/initial-chapters";
 
 describe("workspace create modes", () => {
   it("exposes blank + template as UI modes; files_goal stays API-only", () => {
-    expect(UI_WORKSPACE_CREATE_MODES).toEqual(["blank", "template", "knowledge_region"]);
+    expect(UI_WORKSPACE_CREATE_MODES).toEqual([
+      "blank",
+      "template",
+      "knowledge_region",
+      "calibration",
+    ]);
     expect(UI_WORKSPACE_CREATE_MODES).not.toContain("files_goal");
     expect(isUiWorkspaceCreateMode("blank")).toBe(true);
     expect(isUiWorkspaceCreateMode("template")).toBe(true);
     expect(isUiWorkspaceCreateMode("knowledge_region")).toBe(true);
+    expect(isUiWorkspaceCreateMode("calibration")).toBe(true);
     expect(isUiWorkspaceCreateMode("files_goal")).toBe(false);
+    expect(workspaceCreateModeFromQuery("knowledge_region")).toBe("knowledge_region");
+    expect(workspaceCreateModeFromQuery("calibration")).toBe("calibration");
+    expect(workspaceCreateModeFromQuery("files_goal")).toBeNull();
     expect(API_WORKSPACE_CREATE_MODES).toEqual(["files_goal"]);
     expect(isApiAllowedCreateMode("files_goal")).toBe(true);
     expect(isApiAllowedCreateMode("blank")).toBe(false);
     expect(isApiAllowedCreateMode("template")).toBe(false);
     expect(isApiAllowedCreateMode("knowledge_region")).toBe(false);
+    expect(isApiAllowedCreateMode("calibration")).toBe(false);
   });
 
   it("blank create yields zero blocks", () => {
@@ -51,6 +64,19 @@ describe("workspace create modes", () => {
     expect(outcome.workspaceKind).toBe("knowledge_region");
     expect(outcome.blocks).toEqual([]);
     expect(assertApiCreateMode("knowledge_region").ok).toBe(false);
+  });
+
+  it("calibration create is a UI mode, yields zero blocks, and persists the calibration kind", () => {
+    expect(parseWorkspaceCreateMode("calibration")).toBe("calibration");
+    expect(parseWorkspaceCreateMode("calibrate")).toBe("calibration");
+    expect(parseWorkspaceCreateMode("calibration_workspace")).toBe("calibration");
+    expect(workspaceKindForCreateMode("calibration")).toBe("calibration");
+    expect(workspaceKindForCreateMode("knowledge_region")).toBe("knowledge_region");
+    const outcome = calibrationWorkspaceCreateOutcome();
+    expect(outcome.mode).toBe("calibration");
+    expect(outcome.workspaceKind).toBe("calibration");
+    expect(outcome.blocks).toEqual([]);
+    expect(assertApiCreateMode("calibration").ok).toBe(false);
   });
 
   it("template path composes topic resources + starting size into generate input", () => {

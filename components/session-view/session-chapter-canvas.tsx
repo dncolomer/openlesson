@@ -54,6 +54,7 @@ export function SessionChapterWorkCanvas({
   setSessionInsights,
   onInsightKept,
   policyRef,
+  onLearnerWaitChange,
 }: {
   session: Session | null;
   activeChapterKey: string;
@@ -87,6 +88,7 @@ export function SessionChapterWorkCanvas({
   /** Fires after the insight is accepted, cleaned up, and saved. */
   onInsightKept?: (insight: InsightSummary) => void;
   policyRef?: MutableRefObject<SessionPolicySnapshot>;
+  onLearnerWaitChange?: (wait: { canvasLoading: boolean; waitingForXaiReply: boolean }) => void;
 }) {
   const chapterId = activeStep?.id || activeChapterKey || "chapter";
   useSessionBranchField(
@@ -134,6 +136,7 @@ export function SessionChapterWorkCanvas({
       initialData={whiteboardData || undefined}
       initialSceneData={whiteboardSceneData}
       heliosBusy={isHeliosAssistantPending}
+      onLearnerWaitChange={onLearnerWaitChange}
       onCanvasChange={(data) => {
         setWhiteboardData(data);
         setCanvasDirtyForHelios(true);

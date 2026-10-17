@@ -288,21 +288,6 @@ export function SessionItem({
               : "Start practice"}
         </button>
       )}
-      {!hideTap ? (
-        <button
-          onClick={(e) => handleStartCalibrate(e)}
-          className={
-            isDetail
-              ? `${detailButtonClass} border border-neutral-600 bg-neutral-900/80 text-white hover:border-neutral-400 hover:bg-neutral-800`
-              : "shrink-0 rounded-none border border-neutral-700/80 bg-neutral-900/50 px-2.5 py-1.5 text-xs font-medium text-neutral-300 transition-colors hover:border-neutral-600 hover:text-white"
-          }
-          title="Start Calibrate"
-          data-session-item-prepare
-        >
-          Calibrate
-        </button>
-      ) : null}
-
     </div>
   );
 

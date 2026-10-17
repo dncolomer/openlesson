@@ -20,14 +20,14 @@ import {
 
 type ProgressRing = "neutral" | "completed" | "in_progress";
 
-/** Drawer launch picker: Calibrate / Learn / Verify. Verify is select-only like Calibrate. */
+/** Drawer launch picker: Learn only on a Learning workspace. */
 type LaunchStyle = LearningStyle | "verify";
 
-/** Optional launch options (duration chosen on the card before TAP/Calibrate/Verify). */
+/** Optional launch options (duration chosen on the card before TAP). */
 export type ProductLaunchOptions = {
-  /** Session length in minutes for Calibrate, Verify, and Drill. */
+  /** Session length in minutes for Drill. */
   minutes?: number;
-  /** Learning-workspace Verify launch. Same canvas, verification marks. */
+  /** Unused on Learning launches (Learn only). */
   verification?: boolean;
 };
 
@@ -99,24 +99,6 @@ function ExploreIcon({ className = "h-5 w-5" }: { className?: string }) {
       {/* Compass / open exploration */}
       <circle cx="12" cy="12" r="9" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M14.5 9.5l-2.2 5.3-5.3 2.2 2.2-5.3 5.3-2.2z" />
-    </svg>
-  );
-}
-
-function ScoutIcon({ className = "h-5 w-5" }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      data-style-icon="scout"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-      strokeWidth={1.6}
-      aria-hidden
-    >
-      <circle cx="10" cy="10" r="6" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M14.5 14.5L20 20" />
-      <circle cx="10" cy="10" r="2.2" />
     </svg>
   );
 }
@@ -312,20 +294,15 @@ export function BlockDetailCard({
 
       {/* Select-only style tools — Explore = TAP Learning, Drill = TAP; launch via Start */}
       <div
-        className={`grid gap-2 ${onLaunchIntent ? "grid-cols-3" : "grid-cols-2"}`}
+        className="grid grid-cols-1 gap-2"
         data-block-mode-tools
         data-product-intent-style-grid
         data-practice-allow-explore="true"
         data-practice-allow-drill="false"
-        data-practice-allow-scout="true"
+        data-practice-allow-scout="false"
       >
         {(
           [
-            {
-              id: "scout" as const,
-              label: PRODUCT_INTENT_LABELS.styleScout,
-              Icon: ScoutIcon,
-            },
             {
               id: "explore" as const,
               label: PRODUCT_INTENT_LABELS.styleExplore,
@@ -360,24 +337,6 @@ export function BlockDetailCard({
             </button>
           );
         })}
-        {onLaunchIntent ? (
-          <button
-            type="button"
-            data-style-option="verify"
-            data-style-select
-            data-session-launch="verification"
-            aria-pressed={verifySelected}
-            disabled={isStarting || isLocked || !canLaunchStyle("verify")}
-            onClick={() => setStyle("verify")}
-            className={`inline-flex h-11 items-center justify-center gap-2 rounded-none border-2 px-3 text-left transition disabled:opacity-40 ${
-              verifySelected
-                ? "border-white/55 bg-white/10 text-white"
-                : "border-white/25 bg-transparent text-white hover:border-white/45 hover:bg-white/5"
-            }`}
-          >
-            <span className="text-xs font-semibold tracking-tight">Verify</span>
-          </button>
-        ) : null}
       </div>
 
       {/* Duration for Calibrate, Verify, and Drill. Learn has no clock. */}

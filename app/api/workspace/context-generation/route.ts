@@ -6,7 +6,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { requireProductWorkspaceEvalAuth } from "@/lib/product-workspace-auth";
 import { assertWorkspacePolicy } from "@/lib/workspace-access-policy";
-import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
+import { workspaceSupportsFeature } from "@/lib/workspace-capabilities";
+import { workspaceFeatureDeniedMessage } from "@/lib/workspace-capabilities";
 import { callXaiJSON, DEFAULT_MODEL, systemMessage, userMessage } from "@/lib/xai-client";
 import { loadWorkspacePromptContext } from "@/lib/pow-api/load-workspace-prompt-context";
 import {
@@ -47,8 +48,12 @@ export async function POST(req: NextRequest) {
         .eq("id", workspaceId)
         .maybeSingle();
       const storedKind = workspace?.workspace_kind;
-      if (storedKind && !isKnowledgeRegionWorkspace(storedKind)) {
-        return jsonError(403, "Context generation belongs to Verification Workspaces");
+      if (storedKind && !workspaceSupportsFeature(storedKind, "calibration_flows")) {
+        return jsonError(
+          403,
+          workspaceFeatureDeniedMessage(storedKind, "calibration_flows"),
+          "forbidden",
+        );
       }
       const questions = await generateCalibrationPoolFromGoal({
         goal,
@@ -83,8 +88,14 @@ export async function POST(req: NextRequest) {
       .eq("id", workspaceId)
       .maybeSingle();
     const storedKind = workspace?.workspace_kind;
-    if (storedKind && !isKnowledgeRegionWorkspace(storedKind)) {
-      return jsonError(403, "Context generation belongs to Verification Workspaces");
+    const feature =
+      kind === "verification_flow"
+        ? "verification_flows"
+        : kind === "calibration_flow"
+          ? "calibration_flows"
+          : "goals";
+    if (storedKind && !workspaceSupportsFeature(storedKind, feature)) {
+      return jsonError(403, workspaceFeatureDeniedMessage(storedKind, feature), "forbidden");
     }
 
     const loaded = await loadWorkspacePromptContext(auth.supabase, workspaceId);

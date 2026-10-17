@@ -17,7 +17,10 @@ import { recommendIntegrationActions } from "@/lib/pow-api/integration-discovery
 import {
   buildIntegrationSkillInstructions,
   knowledgeRegionIntegrationCopy,
+  learningWorkspaceIntegrationCopy,
+  workspaceSettingsIntegrationCopy,
 } from "@/lib/pow-api/integration-skill";
+import { workspaceAllowsCopyToVerification } from "@/lib/copy-learning-to-verification";
 import {
   assertWorkspaceAllowsKnowledgeLinkMint,
   workspaceAllowsKnowledgeLinkMint,
@@ -182,17 +185,28 @@ describe("KR vs standard skill/MCP surface (shipped builders)", () => {
     expect(copy.skillDescription).toContain("/api/v3/workspaces");
     expect(copy.skillDescription).not.toContain("lwm_snapshot");
     expect(copy.mcpNote).toContain("/api/mcp");
+    expect(workspaceSettingsIntegrationCopy("knowledge_region")).toEqual(copy);
+    expect(workspaceSettingsIntegrationCopy("calibration")).toEqual(copy);
+    expect(workspaceSettingsIntegrationCopy("standard")).toEqual(
+      learningWorkspaceIntegrationCopy(),
+    );
+    expect(workspaceAllowsCopyToVerification("standard")).toBe(true);
+    expect(workspaceAllowsCopyToVerification("knowledge_region")).toBe(false);
+    expect(workspaceAllowsCopyToVerification("calibration")).toBe(false);
 
     const panel = read("components/WorkspaceIntegrationPanel.tsx");
-    expect(panel).toContain("knowledgeRegionIntegrationCopy");
-    expect(panel).toContain("data-kr-integration-mcp-note");
+    expect(panel).toContain("workspaceSettingsIntegrationCopy");
+    expect(panel).toContain("workspaceAllowsCopyToVerification");
+    expect(panel).toContain("data-kr-integration-mcp-note={isNoMap");
+    expect(panel).toContain("data-kr-integration-skill={isNoMap");
     expect(panel).toContain("workspaceKind={workspaceKind}");
+    expect(panel).not.toContain("!isKnowledgeRegion ?");
     expect(panel).not.toContain("WorkspaceKnowledgePortalPanel");
     expect(panel).not.toContain('activeSubview === "knowledge-portal"');
     expect(panel).not.toContain('activeSubview === "guest-links"');
 
     const quick = read("components/IntegrationQuickAccess.tsx");
-    expect(quick).toContain("isKnowledgeRegionWorkspace");
+    expect(quick).toContain("isNoMapWorkspace");
     expect(quick).toContain("showSkill = sections.includes(\"skill\") && !knowledgeRegion");
 
     const uiSkill = read("app/api/workspace/integration-skill/route.ts");

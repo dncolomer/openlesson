@@ -24,15 +24,19 @@ describe("workspace create + builder static wiring", () => {
     expect(page).toContain("data-aycl-banner");
     expect(page).toContain("/all-you-can-learn");
     expect(page).toContain("md:grid-cols-3");
-    expect(page).toContain('data-create-layout="two-groups"');
+    expect(page).toContain('data-create-layout="three-groups"');
     expect(page).toContain('data-create-group="learning"');
     expect(page).toContain("Learning workspace");
     expect(page).toContain('data-create-group="verification"');
+    expect(page).toContain('data-create-group="calibration"');
     expect(page).toMatch(/id="create-group-verification"[\s\S]{0,240}\n\s*Verification workspace\n/);
+    expect(page).toMatch(/id="create-group-calibration"[\s\S]{0,240}\n\s*Calibration workspace\n/);
     expect(page).toContain('data-create-mode-span="knowledge_region"');
+    expect(page).toContain('data-create-mode-span="calibration"');
     expect(page).toContain('data-create-mode="aycl"');
     expect(page).toContain("data-create-mode={card.mode}");
     expect(page).toContain('data-create-mode="knowledge_region"');
+    expect(page).toContain('data-create-mode="calibration"');
     expect(page).not.toContain("xl:grid-cols-4");
     expect(page).toContain("All You Can Learn");
     // Login control removed from header (auth redirect on submit remains)
@@ -41,6 +45,9 @@ describe("workspace create + builder static wiring", () => {
     expect(page).toContain("createMode: \"blank\"");
     expect(page).toContain("createMode: \"template\"");
     expect(page).toContain("createMode: \"knowledge_region\"");
+    expect(page).toContain("createMode: \"calibration\"");
+    expect(page).toContain("workspaceCreateModeFromQuery");
+    expect(page).toContain('searchParams.get("mode")');
   });
 
   it("blank and template keep creating overlay through workspace redirect", () => {
@@ -270,10 +277,13 @@ describe("workspace create + builder static wiring", () => {
     expect(gen).toContain("blankWorkspaceCreateOutcome");
     expect(gen).toContain('createMode === "blank"');
     expect(gen).toContain('createMode === "knowledge_region"');
+    expect(gen).toContain('createMode === "calibration"');
     expect(gen).toContain('createMode === "template"');
     expect(gen).toContain('createMode === "files_goal"');
     expect(gen).toContain("knowledgeRegionWorkspaceCreateOutcome");
+    expect(gen).toContain("calibrationWorkspaceCreateOutcome");
     expect(gen).toContain('workspace_kind: krOutcome.workspaceKind');
+    expect(gen).toContain("workspace_kind: calOutcome.workspaceKind");
     expect(gen).toContain("composeTemplateCreatePrompt");
     expect(gen).toContain("composeFilesGoalCreatePrompt");
     expect(gen).toContain("composeTemplateWorkspaceNotes");

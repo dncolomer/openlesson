@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { Workspace } from "@/lib/storage";
 import { WorkspaceCardHero } from "@/components/WorkspaceCardHero";
+import { dashboardWorkspaceKindLabel } from "@/lib/dashboard-home";
 
 function heroBadge(label: string) {
   return (
@@ -63,7 +64,11 @@ export function WorkspaceDashboardCard({
           heightClassName="h-52 sm:h-56"
           badges={
             <>
-              {heroBadge(plan.source_type === "youtube" ? "Video" : "Workspace")}
+              {heroBadge(
+                plan.source_type === "youtube"
+                  ? "Video"
+                  : dashboardWorkspaceKindLabel(plan.workspace_kind),
+              )}
               {isPublic ? heroBadge("Public") : null}
               {plan.is_all_you_can_learn ? heroBadge("AYCL") : null}
               {isPinned ? heroBadge("Pinned") : null}

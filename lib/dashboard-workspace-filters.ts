@@ -2,16 +2,24 @@
  * Dashboard workspace list filters (visibility, AYCL listing, and workspace type).
  * Pure so the dashboard page can stay thin and tests don't scrape JSX.
  */
-import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
+import {
+  isCalibrationWorkspace,
+  isKnowledgeRegionWorkspace,
+} from "@/lib/workspace-kind";
 
 export type DashboardWorkspaceListFilter = "all" | "public" | "private" | "aycl";
 
-export type DashboardWorkspaceTypeFilter = "all" | "learning" | "verification";
+export type DashboardWorkspaceTypeFilter =
+  | "all"
+  | "learning"
+  | "verification"
+  | "calibration";
 
 export const DASHBOARD_WORKSPACE_TYPE_FILTERS: DashboardWorkspaceTypeFilter[] = [
   "all",
   "learning",
   "verification",
+  "calibration",
 ];
 
 export const DASHBOARD_WORKSPACE_LIST_FILTERS: DashboardWorkspaceListFilter[] = [
@@ -46,14 +54,22 @@ export function isDashboardWorkspaceTypeFilter(
   return (DASHBOARD_WORKSPACE_TYPE_FILTERS as string[]).includes(value);
 }
 
-/** Learning is the standard map workspace. Verification is a knowledge region. */
+/** Learning is the standard map workspace. Verification and Calibration are no-map products. */
 export function workspaceMatchesDashboardTypeFilter(
   workspace: { workspace_kind?: string | null },
   filter: DashboardWorkspaceTypeFilter,
 ): boolean {
   if (filter === "all") return true;
-  const verification = isKnowledgeRegionWorkspace(workspace.workspace_kind);
-  return filter === "verification" ? verification : !verification;
+  if (filter === "verification") {
+    return isKnowledgeRegionWorkspace(workspace.workspace_kind);
+  }
+  if (filter === "calibration") {
+    return isCalibrationWorkspace(workspace.workspace_kind);
+  }
+  return (
+    !isKnowledgeRegionWorkspace(workspace.workspace_kind) &&
+    !isCalibrationWorkspace(workspace.workspace_kind)
+  );
 }
 
 /** True when the dashboard has no workspaces at all (not a search/filter miss). */

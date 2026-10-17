@@ -36,18 +36,18 @@ export type IlePregamePresetId = (typeof ILE_PREGAME_PRESET_IDS)[number];
 
 /**
  * Knobs that still change a live Learn session and stay on the TAP settings card.
- * Presets and the insight goal are not on the card. Chapter count, the insight
- * goal, and work expense stay at their defaults. Learn has no session-length
- * countdown. The elapsed clock does not clear the board.
+ * Presets, silence minutes, and the insight goal are not on the card. Chapter
+ * count, the insight goal, and work expense stay at their defaults. Learn has
+ * no session-length countdown. The elapsed clock does not clear the board.
+ * Think-aloud purity uses the same 5s / 3-strike protocol as Verify.
  */
 export const ILE_LIVE_SETTINGS_KNOBS = [
-  { id: "silenceLock", attribute: "data-ile-silence-lock-minutes" },
   { id: "spokenLanguage", attribute: "data-tap-briefing-config" },
 ] as const;
 
 /**
- * Research presets. They are not on the Learn settings card. Spoken language,
- * silence, and look are chosen there. These knobs stay available for tests.
+ * Research presets. They are not on the Learn settings card. Spoken language
+ * and look are chosen there. These knobs stay available for tests.
  */
 export const ILE_LEARN_PRESET_IDS = ["survey", "study", "thesis"] as const;
 export type IleLearnPresetId = (typeof ILE_LEARN_PRESET_IDS)[number];

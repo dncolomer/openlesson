@@ -229,13 +229,12 @@ export function serializeBlockPracticeOptions(
   };
 }
 
-/** Whether a learning style is offered. Calibrate and Learn are always on. */
+/** Whether a learning style is offered. Learning workspaces launch Learn only. */
 export function blockAllowsPracticeStyle(
   _opts: BlockPracticeOptions | null | undefined,
   style: LearningStyle,
 ): boolean {
-  if (style === "drill") return false;
-  return style === "scout" || style === "explore";
+  return style === "explore";
 }
 
 /** Whether Dialog or Solo modality is offered. */
@@ -317,16 +316,12 @@ export function clampPracticeDuration(
 }
 
 /**
- * Enabled new-launch combos (Prepare / Learn / Drill — always With AI).
+ * Enabled new-launch combos on a Learning workspace. Learn only.
  */
 export function enabledPracticeLaunchCombos(
   _opts?: BlockPracticeOptions | null,
 ): ProductLaunchTarget["id"][] {
-  const out: ProductLaunchTarget["id"][] = [];
-  for (const style of ["scout", "explore"] as const) {
-    out.push(resolveLaunchFromStyleAndModality(style, false).id);
-  }
-  return out;
+  return [resolveLaunchFromStyleAndModality("explore", false).id];
 }
 
 /**
@@ -336,7 +331,7 @@ export function enabledPracticeLaunchCombos(
 export function practiceOptionsIconKeys(
   _opts?: BlockPracticeOptions | null,
 ): Array<"explore" | "drill" | "scout" | "dialog" | "solo" | "open" | "timed"> {
-  return ["scout", "explore"];
+  return ["explore"];
 }
 
 /** True when options differ from full default surface (for map badge density). */

@@ -4,12 +4,14 @@ import type { Dispatch, SetStateAction } from "react";
 import { default as Link } from "next/link";
 import { WorkspaceDashboardCard } from "@/components/WorkspaceDashboardCard";
 import {
-  dashboardHasNoWorkspaces,
   isDashboardWorkspaceListFilter,
-  isDashboardWorkspaceTypeFilter,
   type DashboardWorkspaceListFilter,
-  type DashboardWorkspaceTypeFilter,
 } from "@/lib/dashboard-workspace-filters";
+import {
+  dashboardCreateHref,
+  dashboardProductLabel,
+  type DashboardProductTab,
+} from "@/lib/dashboard-nav";
 import type { Workspace } from "@/lib/storage";
 
 export type DashboardPlansTabProps = {
@@ -24,7 +26,7 @@ export type DashboardPlansTabProps = {
   setPlanPage: Dispatch<SetStateAction<number>>;
   setPlanSearch: Dispatch<SetStateAction<string>>;
   setShowArchivedPlans: Dispatch<SetStateAction<boolean>>;
-  setWorkspaceTypeFilter: Dispatch<SetStateAction<DashboardWorkspaceTypeFilter>>;
+  productTab: DashboardProductTab;
   setWorkspaceVisibilityFilter: Dispatch<SetStateAction<DashboardWorkspaceListFilter>>;
   setWorkspaces: Dispatch<SetStateAction<Workspace[]>>;
   showArchivedWorkspaces: boolean;
@@ -34,9 +36,10 @@ export type DashboardPlansTabProps = {
   workspacePage: number;
   workspacePageSize: 10;
   workspaceSearch: string;
-  workspaceTypeFilter: DashboardWorkspaceTypeFilter;
   workspaceVisibilityFilter: DashboardWorkspaceListFilter;
-  workspaces: Workspace[];
+  productCount: number;
+  productEmpty: boolean;
+  surface?: "workspaces" | "shop";
 };
 
 export function DashboardPlansTab({
@@ -49,9 +52,9 @@ export function DashboardPlansTab({
     paginatedPlans,
     pinnedWorkspaceIds,
     setPlanPage,
+    productTab,
     setPlanSearch,
     setShowArchivedPlans,
-    setWorkspaceTypeFilter,
     setWorkspaceVisibilityFilter,
     setWorkspaces,
     showArchivedWorkspaces,
@@ -61,37 +64,69 @@ export function DashboardPlansTab({
     workspacePage,
     workspacePageSize,
     workspaceSearch,
-    workspaceTypeFilter,
     workspaceVisibilityFilter,
-    workspaces,
+    productCount,
+    productEmpty,
+    surface = "workspaces",
 }: DashboardPlansTabProps) {
+  const isShop = surface === "shop";
+  const productLabel = dashboardProductLabel(productTab);
+  const createHref = dashboardCreateHref(productTab);
+  const kicker = isShop ? "Your Shop" : productLabel;
+  const heading = isShop
+    ? "Workspaces you listed."
+    : productTab === "learning"
+      ? "Maps you practice on."
+      : productTab === "verification"
+        ? "Flows that map knowledge."
+        : "Flows that map uncertainty.";
+  const body = isShop
+    ? "Learning maps you listed as All You Can Learn."
+    : productTab === "learning"
+      ? "Browse Learning workspaces, pin the ones you return to, and start a new map."
+      : productTab === "verification"
+        ? "Browse Verification workspaces and the verification flows they host."
+        : "Browse Calibration workspaces and the calibration flows they host.";
+  const emptyTitle = isShop
+    ? "No listings yet"
+    : `No ${productLabel.toLowerCase()} workspaces yet`;
+  const createLabel = `Create ${productLabel} workspace →`;
   return (
-          <div className="space-y-6">
-            {dashboardHasNoWorkspaces(workspaces) ? (
+          <div
+            className="space-y-6"
+            data-dashboard-product={productTab}
+            data-dashboard-shop={isShop ? "true" : undefined}
+          >
+            {productEmpty ? (
               <section
-                data-dashboard-empty-workspaces
+                data-dashboard-empty-product
                 className="console-copy px-6 py-14 sm:px-10 sm:py-16"
               >
                 <div className="mx-auto flex max-w-xl flex-col items-center text-center">
                   <p className="mb-4 font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
-                    {t("dashboard.emptyWorkspacesKicker")}
+                    {kicker}
                   </p>
                   <h2 className="text-3xl font-medium tracking-[-1.2px] text-white sm:text-4xl">
-                    {t("dashboard.emptyWorkspacesTitle")}
+                    {emptyTitle}
                   </h2>
                   <p className="mt-4 text-sm leading-relaxed text-neutral-400 sm:text-base">
-                    {t("dashboard.emptyWorkspacesBody")}
+                    {body}
                   </p>
                   <Link
-                    href="/workspace/new"
+                    href={createHref}
                     data-dashboard-empty-create
                     className="mt-8 inline-flex h-12 min-w-[220px] items-center justify-center rounded-none bg-white px-8 text-sm font-medium text-black transition hover:bg-neutral-200"
                   >
-                    {t("dashboard.emptyWorkspacesCta")}
+                    {createLabel}
                   </Link>
-                  <p className="mt-4 text-xs text-neutral-500">
-                    {t("dashboard.emptyWorkspacesHint")}
-                  </p>
+                  {isShop ? (
+                    <Link
+                      href="/all-you-can-learn"
+                      className="mt-3 text-sm text-neutral-400 transition hover:text-white"
+                    >
+                      Browse All You Can Learn
+                    </Link>
+                  ) : null}
                 </div>
               </section>
             ) : (
@@ -100,23 +135,54 @@ export function DashboardPlansTab({
               <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
                 <div>
                   <p className="mb-3 font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
-                    Workspaces
+                    {kicker}
                   </p>
                   <h2 className="max-w-2xl text-3xl font-medium tracking-[-1.2px] text-white sm:text-4xl">
-                    Verification, optimization, and augmentation — in one workspace.
+                    {heading}
                   </h2>
                   <p className="mt-3 max-w-xl text-sm leading-relaxed text-neutral-400">
-                    Define a skill or scenario, attach proof of work, and run every product on the same learning
-                    world model: verify humans and agents before hire or deploy, optimize practice until gaps
-                    close, and augment reasoning inside real workflows.
+                    {body}
                   </p>
                 </div>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  {isShop ? (
+                    <Link
+                      href="/all-you-can-learn"
+                      className="inline-flex h-12 items-center justify-center rounded-none border border-white/40 px-6 text-sm text-white transition hover:border-white/80"
+                    >
+                      Browse catalog
+                    </Link>
+                  ) : null}
                 <Link
-                  href="/workspace/new"
+                  href={createHref}
+                  data-dashboard-product-create
                   className="inline-flex h-12 items-center justify-center rounded-none bg-white px-6 text-sm font-medium text-black transition hover:bg-neutral-200"
                 >
-                  Create a New Workspace →
+                  {createLabel}
                 </Link>
+                </div>
+              </div>
+            </div>
+
+            <div
+              className="grid gap-3 sm:grid-cols-2"
+              data-dashboard-product-stats
+            >
+              <div className="console-copy px-4 py-4">
+                <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-neutral-500">
+                  {isShop ? "Listings" : `${productLabel} workspaces`}
+                </p>
+                <p className="mt-2 text-3xl font-medium tracking-tight text-white">
+                  {productCount}
+                </p>
+              </div>
+              <div className="console-copy px-4 py-4">
+                <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-neutral-500">
+                  Showing
+                </p>
+                <p className="mt-2 text-3xl font-medium tracking-tight text-white">
+                  {filteredWorkspaces.length}
+                </p>
               </div>
             </div>
 
@@ -124,6 +190,7 @@ export function DashboardPlansTab({
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <h3 className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">{t('dashboard.allWorkspaces')}</h3>
                 <div className="flex flex-wrap items-center gap-3">
+                  {isShop ? null : (
                   <label
                     className="flex items-center gap-2 text-xs text-neutral-400"
                     data-workspace-visibility-filter
@@ -147,28 +214,7 @@ export function DashboardPlansTab({
                       <option value="aycl">AYCL</option>
                     </select>
                   </label>
-                  <label
-                    className="flex items-center gap-2 text-xs text-neutral-400"
-                    data-workspace-type-filter
-                  >
-                    <span className="text-neutral-500">Type</span>
-                    <select
-                      value={workspaceTypeFilter}
-                      onChange={(e) => {
-                        const next = e.target.value;
-                        if (isDashboardWorkspaceTypeFilter(next)) {
-                          setWorkspaceTypeFilter(next);
-                          setPlanPage(1);
-                        }
-                      }}
-                      className="rounded-none border border-white/40 bg-black px-2 py-1 text-xs text-neutral-300 focus:border-white/70 focus:outline-none"
-                      aria-label="Filter workspaces by type"
-                    >
-                      <option value="all">All</option>
-                      <option value="learning">Learning</option>
-                      <option value="verification">Verification</option>
-                    </select>
-                  </label>
+                  )}
                   <label className="flex items-center gap-2 text-xs text-neutral-400">
                     <input
                       type="checkbox"
@@ -192,7 +238,7 @@ export function DashboardPlansTab({
             {filteredWorkspaces.length === 0 ? (
               <div className="console-copy py-8 text-center text-neutral-500">
                 <p className="text-sm">{t('dashboard.noMatchingWorkspaces')}</p>
-                <Link href="/workspace/new" className="text-neutral-300 hover:underline mt-2 inline-block text-sm">
+                <Link href={createHref} className="text-neutral-300 hover:underline mt-2 inline-block text-sm">
                   {t('dashboard.createNewPlan')}
                 </Link>
               </div>

@@ -5,7 +5,7 @@ import { useI18n } from "@/lib/i18n";
 import type { Workspace } from "@/components/WorkspaceView";
 import { LearningModelSizePicker } from "@/components/learning-model/LearningModelSizePicker";
 import { parseLearningModelSize, type LearningModelSize } from "@/lib/learning-model";
-import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
+import { isNoMapWorkspace } from "@/lib/workspace-kind";
 
 interface WorkspaceIdentitySettingsProps {
   plan: Workspace;
@@ -31,7 +31,7 @@ export function WorkspaceIdentitySettings({
     parseLearningModelSize(plan.learning_model_size),
   );
   const [saving, setSaving] = useState(false);
-  const showLearningModel = !isKnowledgeRegionWorkspace(plan.workspace_kind);
+  const showLearningModel = !isNoMapWorkspace(plan.workspace_kind);
 
   useEffect(() => {
     setEditTitle(plan.title || plan.root_topic || "");

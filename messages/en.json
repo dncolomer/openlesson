@@ -804,7 +804,7 @@
     "mobileDetectedDesc": "This block is optimized for desktop. Use the mobile view for a better experience on this device.",
     "savingSession": "Saving block...",
     "welcomeTitle": "Learn",
-    "welcomeMessage": "Set how long silence can run, and the look. Then work on the canvas.",
+    "welcomeMessage": "Choose the look, then work on the canvas. Think out loud the whole time.",
     "chapterCount": "Chapters",
     "chapterCountDesc": "How many chapters this session makes available. Presets set this too. The session never opens more than five.",
     "chapterCountFew": "One chapter",

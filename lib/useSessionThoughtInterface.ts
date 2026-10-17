@@ -409,6 +409,7 @@ export function useSessionThoughtInterface({
   const speechResultsLengthRef = useRef(0);
   const consumedResultsIndexRef = useRef(0);
   const isListeningRef = useRef(false);
+  const acceptEmptyTranscriptRef = useRef(false);
 
   useEffect(() => {
     langRef.current = speechLang;
@@ -478,6 +479,7 @@ export function useSessionThoughtInterface({
     setInterimText("");
     crystallizableTextRef.current = "";
     setCrystallizableText("");
+    acceptEmptyTranscriptRef.current = true;
   }
 
   const speechBindings = useMemo<LiveSpeechRecognitionBindings>(
@@ -499,6 +501,16 @@ export function useSessionThoughtInterface({
         }
         finalBufferRef.current = finals;
         const displayText = normalize(`${finals.join(" ")} ${interim}`.trim());
+        if (!displayText) {
+          if (!acceptEmptyTranscriptRef.current && crystallizableTextRef.current) {
+            return;
+          }
+          setInterimText("");
+          crystallizableTextRef.current = "";
+          setCrystallizableText("");
+          return;
+        }
+        acceptEmptyTranscriptRef.current = false;
         setInterimText(interim);
         crystallizableTextRef.current = displayText;
         setCrystallizableText(displayText);
@@ -549,13 +561,23 @@ export function useSessionThoughtInterface({
     return normalizeIleFormingText(crystallizableTextRef.current || crystallizableText);
   }, [crystallizableText]);
 
-  const stashCurrentTranscription = useCallback((providedText?: string) => {
+  const stashCurrentTranscription = useCallback((
+    providedTextOrOptions?: string | { auto?: boolean; fromContext?: boolean },
+  ) => {
+    const options =
+      providedTextOrOptions && typeof providedTextOrOptions === "object"
+        ? providedTextOrOptions
+        : undefined;
+    const providedText =
+      typeof providedTextOrOptions === "string" ? providedTextOrOptions : undefined;
+    const fromContext = Boolean(options?.fromContext || providedText);
+    const auto = options?.auto === true && !fromContext;
     const text = normalizeIleFormingText(
       providedText ?? (crystallizableTextRef.current || crystallizableText),
     );
     clearTranscriptionDisplay();
     restartSpeechRecognitionSession();
-    if (text) addThought(text, providedText ? "auto_stash" : "pause_finalize");
+    if (text) addThought(text, auto ? "auto_stash" : "pause_finalize");
   }, [crystallizableText, restartSpeechRecognitionSession]);
 
   const ingestStashedThought = useCallback((thought: SessionThought) => {

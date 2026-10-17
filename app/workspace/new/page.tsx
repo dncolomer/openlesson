@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Footer } from "@/components/Footer";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
@@ -19,6 +19,7 @@ import {
   UI_WORKSPACE_CREATE_MODES,
   isUiWorkspaceCreateMode,
   resolveWorkspaceCreateOverlay,
+  workspaceCreateModeFromQuery,
   type WorkspaceCreateMode,
 } from "@/lib/workspace-create-modes";
 import {
@@ -109,7 +110,7 @@ function totalTopicResources(topic: DantesTopic) {
 }
 
 const MODE_CARD_COPY: Record<
-  "blank" | "template" | "knowledge_region",
+  "blank" | "template" | "knowledge_region" | "calibration",
   { title: string; description: string; badge: string; details: string[]; cta: string }
 > = {
   blank: {
@@ -148,6 +149,18 @@ const MODE_CARD_COPY: Record<
     ],
     cta: "Name this workspace",
   },
+  calibration: {
+    title: "Calibration workspace",
+    description:
+      "Goals, calibration flows, context, knowledge, and settings. A flow is the link that opens the calibration interface.",
+    badge: "Uncertainty",
+    details: [
+      "Goals, Calibration Flows, Context, Knowledge, Settings",
+      "Each flow has its question pool and public link",
+      "No map designer",
+    ],
+    cta: "Name this workspace",
+  },
 };
 
 const AYCL_CARD = {
@@ -172,11 +185,14 @@ const KR_SPAN_CARD_CLASS =
 
 const MODE_CARDS = UI_WORKSPACE_CREATE_MODES.map((mode) => ({
   mode,
-  ...MODE_CARD_COPY[mode as "blank" | "template" | "knowledge_region"],
+  ...MODE_CARD_COPY[mode as "blank" | "template" | "knowledge_region" | "calibration"],
 }));
 
-const PRIMARY_MODE_CARDS = MODE_CARDS.filter((card) => card.mode !== "knowledge_region");
+const PRIMARY_MODE_CARDS = MODE_CARDS.filter(
+  (card) => card.mode !== "knowledge_region" && card.mode !== "calibration",
+);
 const KNOWLEDGE_REGION_CARD = MODE_CARDS.find((card) => card.mode === "knowledge_region")!;
+const CALIBRATION_CARD = MODE_CARDS.find((card) => card.mode === "calibration")!;
 
 export default function NewWorkspacePage() {
   const [step, setStep] = useState<1 | 2>(1);
@@ -189,6 +205,8 @@ export default function NewWorkspacePage() {
   const [error, setError] = useState("");
   const [createName, setCreateName] = useState("");
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const appliedQueryMode = useRef(false);
 
   // Template topic library
   const [dantesTopics, setDantesTopics] = useState<DantesTopic[]>([]);
@@ -383,7 +401,7 @@ export default function NewWorkspacePage() {
   function selectMode(next: WorkspaceCreateMode) {
     setError("");
     if (!isUiWorkspaceCreateMode(next)) return;
-    if (next === "blank" || next === "knowledge_region") {
+    if (next === "blank" || next === "knowledge_region" || next === "calibration") {
       setMode(next);
       setCreateName("");
       setStep(2);
@@ -392,6 +410,14 @@ export default function NewWorkspacePage() {
     setMode(next);
     setStep(2);
   }
+
+  useEffect(() => {
+    if (appliedQueryMode.current) return;
+    const next = workspaceCreateModeFromQuery(searchParams.get("mode"));
+    if (!next) return;
+    appliedQueryMode.current = true;
+    selectMode(next);
+  }, [searchParams]);
 
   function backToModes() {
     setStep(1);
@@ -458,6 +484,38 @@ export default function NewWorkspacePage() {
         const payload = await response.json().catch(() => ({}));
         throw new Error(
           errorMessageFromBody(payload, "Failed to create verification workspace"),
+        );
+      }
+      const payload = await response.json();
+      trackWorkspaceCreated({ hasFiles: false });
+      router.push(`/workspace/${payload.workspaceId}`);
+      succeeded = true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setBusy(resolveWorkspaceCreateOverlay({ succeeded }).busy);
+    }
+  }
+
+  async function handleCreateCalibration() {
+    if (busy || !createName.trim()) return;
+    setBusy(true);
+    setError("");
+    let succeeded = false;
+    try {
+      if (!(await ensureAuthed())) return;
+      const response = await fetch("/api/workspace/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          createMode: "calibration",
+          title: createName.trim(),
+        }),
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(
+          errorMessageFromBody(payload, "Failed to create calibration workspace"),
         );
       }
       const payload = await response.json();
@@ -578,7 +636,7 @@ export default function NewWorkspacePage() {
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-zinc-400 sm:text-lg">
               {step === 1
-                ? "Pick a Learning workspace or a Verification workspace."
+                ? "Pick a Learning, Verification, or Calibration workspace."
                 : mode === "template"
                   ? "Browse by category, pick a topic, then choose which resources to use as context."
                   : "Name the workspace. You can rename it later in Settings."}
@@ -589,7 +647,7 @@ export default function NewWorkspacePage() {
             <div
               className="mx-auto flex flex-col gap-8 md:gap-10"
               data-create-mode-cards
-              data-create-layout="two-groups"
+              data-create-layout="three-groups"
             >
               <section
                 className="flex flex-col gap-3"
@@ -703,6 +761,48 @@ export default function NewWorkspacePage() {
                 </span>
               </button>
               </section>
+              <section
+                className="flex flex-col gap-3"
+                data-create-group="calibration"
+                aria-labelledby="create-group-calibration"
+              >
+                <h2
+                  id="create-group-calibration"
+                  className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500"
+                >
+                  Calibration workspace
+                </h2>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => selectMode("calibration")}
+                className={KR_SPAN_CARD_CLASS}
+                data-create-mode="calibration"
+                data-create-mode-span="calibration"
+              >
+                <div className="min-w-0 md:max-w-sm md:shrink-0">
+                  <span className="inline-block w-fit rounded-none border border-zinc-700 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
+                    {CALIBRATION_CARD.badge}
+                  </span>
+                  <h2 className="mt-3 text-xl font-medium tracking-tight text-white group-hover:text-zinc-50">
+                    {CALIBRATION_CARD.title}
+                  </h2>
+                  <p className="mt-2 text-sm leading-relaxed text-zinc-500 group-hover:text-zinc-400">
+                    {CALIBRATION_CARD.description}
+                  </p>
+                </div>
+                <ul className="mt-4 flex flex-1 flex-col gap-2 text-[13px] leading-snug text-zinc-400 md:mt-0 md:flex-row md:flex-wrap md:items-center md:gap-x-6 md:gap-y-2">
+                  {CALIBRATION_CARD.details.map((line) => (
+                    <li key={line} className="border-l border-zinc-700 pl-2.5">
+                      {line}
+                    </li>
+                  ))}
+                </ul>
+                <span className="mt-4 shrink-0 text-sm font-medium text-white md:mt-0">
+                  {CALIBRATION_CARD.cta} →
+                </span>
+              </button>
+              </section>
             </div>
           )}
 
@@ -710,19 +810,25 @@ export default function NewWorkspacePage() {
             <p className="mt-4 text-center text-sm text-red-300">{error}</p>
           )}
 
-          {step === 2 && (mode === "blank" || mode === "knowledge_region") && (
+          {step === 2 &&
+            (mode === "blank" || mode === "knowledge_region" || mode === "calibration") && (
             <form
               className="mx-auto max-w-lg rounded-none border border-zinc-800 bg-zinc-950/90 p-6"
               data-create-name-step={mode}
               onSubmit={(event) => {
                 event.preventDefault();
                 if (mode === "blank") void handleCreateBlank();
+                else if (mode === "calibration") void handleCreateCalibration();
                 else void handleCreateKnowledgeRegion();
               }}
             >
               <div className="mb-4 flex items-center justify-between gap-2">
                 <h2 className="text-lg font-medium text-white">
-                  {mode === "blank" ? "Learning workspace" : "Verification workspace"}
+                  {mode === "blank"
+                    ? "Learning workspace"
+                    : mode === "calibration"
+                      ? "Calibration workspace"
+                      : "Verification workspace"}
                 </h2>
                 <button
                   type="button"

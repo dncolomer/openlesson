@@ -703,7 +703,11 @@ describe("verification workspace shell gates", () => {
       workspaceKind: "knowledge_region",
     });
     expect(owner).toContain("verification_flows");
-    expect(owner).toEqual(["goals", "verification_flows", "calibration_flows", "context", "knowledge", "settings"]);
+    expect(owner).toEqual(["goals", "verification_flows", "context", "knowledge", "settings"]);
+    expect(owner).not.toContain("calibration_flows");
+    expect(
+      availableWorkspaceSections({ isOwner: true, workspaceKind: "calibration" }),
+    ).toEqual(["goals", "calibration_flows", "context", "knowledge", "settings"]);
     const standard = availableWorkspaceSections({ isOwner: true });
     expect(standard).not.toContain("verification_flows");
     expect(standard[0]).toBe("workspace");
@@ -713,10 +717,13 @@ describe("verification workspace shell gates", () => {
     const page = read("app/workspace/new/page.tsx");
     expect(page).toContain('title: "Verification workspace"');
     expect(page).toContain('data-create-mode="knowledge_region"');
+    expect(page).toContain('data-create-mode="calibration"');
+    expect(page).toContain("Calibration workspace");
     const shell = read("components/workspace-view/workspace-chrome.tsx");
     expect(shell).toContain("Verification workspace");
     expect(shell).toContain("data-verification-workspace-shell");
-    expect(shell).toContain("isKnowledgeRegionWorkspace");
+    expect(shell).toContain("data-calibration-workspace-shell");
+    expect(shell).toContain("workspaceProductShell");
 
     const flows = read("components/VerificationFlowsPanel.tsx");
     expect(flows).toContain("data-verification-flow-pool");
@@ -739,7 +746,9 @@ describe("verification workspace shell gates", () => {
     expect(regions).toContain("data-synthetic-prompt-modifier");
     expect(regions).toContain("verificationWorkspace ?");
     const settings = read("components/WorkspaceIntegrationPanel.tsx");
-    expect(settings).toContain("verificationWorkspace={isKnowledgeRegion}");
+    expect(settings).toContain("verificationWorkspace={isNoMap}");
+    expect(settings).toContain("workspaceAllowsCopyToVerification(workspaceKind)");
+    expect(settings).toContain("workspaceSettingsIntegrationCopy(workspaceKind)");
     expect(settings).toContain("integration-skill");
     expect(settings).toContain('activeSubview === "integrations"');
 
@@ -758,6 +767,10 @@ describe("verification workspace shell gates", () => {
     expect(modelsView).toContain("data-embeddings-regions-rail");
     expect(modelsView).toContain("Trajectory in");
     expect(modelsView).toContain("knowledgecfg-v1-d64");
+    const trajectory = read("components/KnowledgeConfigTrajectoryPanel.tsx");
+    expect(trajectory).toContain("/api/workspace/calibration-flows");
+    expect(trajectory).toContain("/api/workspace/verification-flows");
+    expect(trajectory).toContain("resolvedFlowKind === \"calibrate\"");
     const embeddingsHook = read("components/knowledge-panel/use-knowledge-embeddings.ts");
     expect(embeddingsHook).toContain("listWorkspaceFlowEmbeddings");
     expect(embeddingsHook).toContain("knowledgeConfigFromFlowEmbeddings");
@@ -771,7 +784,10 @@ describe("verification workspace shell gates", () => {
     expect(filter).toContain("data-verification-flow-filter");
     expect(filter).toContain("filterKnowledgeRowsByVerificationFlow");
     const performance = read("components/WorkspacePerformancePanel.tsx");
-    expect(performance).toContain("isKnowledgeRegionWorkspace(workspaceKind)");
+    expect(performance).toContain("isNoMapWorkspace(workspaceKind)");
+    expect(performance).toContain("workspaceKnowledgeFlowKind");
+    expect(embeddingsHook).toContain("flowKind");
+    expect(modelsView).toContain("flowKind");
 
     expect(existsSync(join(ROOT, "components/knowledge-panel/lwm-view.tsx"))).toBe(false);
 

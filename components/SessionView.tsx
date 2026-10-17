@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState, useCallback, useMemo } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 
 import { usePathname, useRouter } from "next/navigation";
 import { pauseSession, type Session, type SessionPlan, type ToolAction, type ToolName } from "@/lib/storage";
@@ -139,11 +139,7 @@ import {
   type IleWorkCanvasSkeleton,
   type IleWorkCanvasWorkspaceInput,
 } from "@/lib/ile-work-canvas";
-import {
-  ILE_SILENCE_LOCK_MINUTES_DEFAULT,
-  ileMicCountsAsSilence,
-} from "@/lib/practice-voice-challenge";
-import { useIleSilenceLock } from "@/components/session-view/use-ile-silence-lock";
+import { useIleSessionPurity } from "@/components/session-view/use-ile-session-purity";
 import { IleInsightTrophyStrip } from "@/components/session-view/ile-insight-trophies";
 import {
   shouldLogIleSidebarToolSwitch,
@@ -343,9 +339,6 @@ export function SessionView({
   );
   const [chapterCount, setChapterCount] = useState(ILE_SESSION_CHAPTER_COUNT_DEFAULT);
   const chapterCountTouchedRef = useRef(false);
-  const [silenceLockMinutes, setSilenceLockMinutes] = useState(
-    ILE_SILENCE_LOCK_MINUTES_DEFAULT,
-  );
   const [openWorkIds, setOpenWorkIds] = useState<string[]>([]);
   const [mapSelectedChapterId, setMapSelectedChapterId] = useState<string | null>(null);
   const [mapSelectedEmpty, setMapSelectedEmpty] = useState(false);
@@ -1104,6 +1097,7 @@ export function SessionView({
     ayclToken,
     ileToken,
     guestAccessBody,
+    entryQueryParams: stableEntryQueryParams,
     entryParamsKey,
     router,
     t,
@@ -1758,6 +1752,7 @@ export function SessionView({
       setSessionInsights={setSessionInsights}
       onInsightKept={setKeptInsight}
       policyRef={policyRef}
+      onLearnerWaitChange={onLearnerWaitChange}
     />
   );
 
@@ -1828,38 +1823,28 @@ export function SessionView({
       />
     ) : null;
 
-  const micSilent = ileMicCountsAsSilence({
-    muted: isMuted,
-    hasStream: Boolean(stream),
-    audioTracks: (stream?.getAudioTracks() ?? []).map((track) => ({
-      muted: track.muted,
-      enabled: track.enabled,
-      readyState: track.readyState,
-    })),
-  });
-  const silenceLock = useIleSilenceLock({
+  const canvasLoadingRef = useRef(true);
+  const xaiReplyWaitRef = useRef(false);
+  const onLearnerWaitChange = useCallback((wait: {
+    canvasLoading: boolean;
+    waitingForXaiReply: boolean;
+  }) => {
+    canvasLoadingRef.current = wait.canvasLoading;
+    xaiReplyWaitRef.current = wait.waitingForXaiReply;
+  }, []);
+  const handleConfirmEndRef = useRef(handleConfirmEnd);
+  handleConfirmEndRef.current = handleConfirmEnd;
+  const sessionPurity = useIleSessionPurity({
     armed: Boolean(session && !showWelcomeModal && !showWelcomePanel && !isSaving),
-    speechText: sessionThoughtInterface.crystallizableText,
-    micSilent,
-    minutes: silenceLockMinutes,
+    formingText: sessionThoughtInterface.crystallizableText,
+    waitingForHelios: sessionThoughtInterface.isSending,
+    canvasLoadingRef,
+    xaiReplyWaitRef,
+    stashCurrentTranscription: sessionThoughtInterface.stashCurrentTranscription,
+    onDepleted: () => {
+      void handleConfirmEndRef.current({ impure: true });
+    },
   });
-  const silenceRest = silenceLock.outcome === "rest";
-  const wasSilenceRest = useRef(false);
-  const pauseLiveSpeech = sessionThoughtInterface.pauseLiveSpeech;
-  const resumeLiveSpeech = sessionThoughtInterface.resumeLiveSpeech;
-  // The rest challenge needs the only SpeechRecognition instance. Release the
-  // session mic before that challenge's effect starts, and take it back after
-  // the challenge has stopped.
-  useLayoutEffect(() => {
-    if (!silenceRest) return;
-    wasSilenceRest.current = true;
-    pauseLiveSpeech();
-  }, [pauseLiveSpeech, silenceRest]);
-  useEffect(() => {
-    if (silenceRest || !wasSilenceRest.current) return;
-    wasSilenceRest.current = false;
-    resumeLiveSpeech();
-  }, [resumeLiveSpeech, silenceRest]);
   const isHeliosVoicePlaying = useHeliosVoicePlaybackActive();
 
   const thinkAloudTranscript = useThinkAloudTranscript({
@@ -1886,7 +1871,7 @@ export function SessionView({
     );
   }
 
-  if (isSaving) {
+  if (isSaving && !sessionPurity.sessionEndedImpure) {
     return (
       <SessionPageLoading className="min-h-screen" message={t("session.savingSession")} />
     );
@@ -1939,8 +1924,6 @@ export function SessionView({
         onMinInsightsPerChapterChange={(value) =>
           setMinInsightsPerChapter(clampIleMinInsightsPerChapter(value))
         }
-        silenceLockMinutes={silenceLockMinutes}
-        onSilenceLockMinutesChange={setSilenceLockMinutes}
         autoAdvance={autoAdvance}
         onToggleAutoAdvance={() => setAutoAdvance(!autoAdvance)}
         planError={planError}
@@ -2028,7 +2011,7 @@ export function SessionView({
       showPlanCompleteModal={showPlanCompleteModal}
       showWelcomeModal={showWelcomeModal}
       showWelcomePanel={showWelcomePanel}
-      silenceLock={silenceLock}
+      sessionEndedImpure={sessionPurity.sessionEndedImpure}
       stream={stream}
       t={t}
       tutoringLanguage={tutoringLanguage}

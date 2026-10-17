@@ -4,6 +4,7 @@ import {
   serializeBlockPracticeOptions,
 } from "@/lib/block-practice-options";
 import { toSkillGridNodes, withSkillGridPositions } from "@/lib/skill-grid-positions";
+import { parseWorkspaceKind } from "@/lib/workspace-kind";
 
 export interface ForkWorkspaceResult {
   workspaceId: string;
@@ -62,9 +63,7 @@ export async function forkWorkspaceExactCopy(
       source_type: sourcePlan.source_type ?? null,
       source_url: sourcePlan.source_url ?? null,
       source_summary: sourcePlan.source_summary ?? null,
-      workspace_kind: sourcePlan.workspace_kind === "knowledge_region"
-        ? "knowledge_region"
-        : "standard",
+      workspace_kind: parseWorkspaceKind(sourcePlan.workspace_kind),
     })
     .select("id")
     .single();

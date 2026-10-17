@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { requireProductWorkspaceEvalAuth } from "@/lib/product-workspace-auth";
 import { assertWorkspacePolicy } from "@/lib/workspace-access-policy";
-import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
+import { denyWorkspaceFeatureById } from "@/lib/workspace-feature-gate";
 import { calibrationFlowPublicPath } from "@/lib/calibration-flow";
 import { listCalibrationFlows, runCalibrationCommand } from "@/lib/calibration-flow-repository";
 
@@ -19,6 +19,8 @@ export async function GET(req: NextRequest) {
     const ayclToken = req.nextUrl.searchParams.get("ayclToken");
     const auth = await requireProductWorkspaceEvalAuth(workspaceId, ayclToken);
     if (!auth.ok) return auth.response;
+    const denied = await denyWorkspaceFeatureById(workspaceId, "calibration_flows");
+    if (denied) return denied;
     const origin = req.nextUrl.origin;
     const flows = await listCalibrationFlows(workspaceId);
     return NextResponse.json({
@@ -49,15 +51,8 @@ export async function POST(req: NextRequest) {
     });
     if (!policy.ok) return jsonError(403, "Forbidden");
 
-    const { data: workspaceRow } = await auth.supabase
-      .from("workspaces")
-      .select("workspace_kind")
-      .eq("id", workspaceId)
-      .maybeSingle();
-    const kind = workspaceRow?.workspace_kind;
-    if (kind && !isKnowledgeRegionWorkspace(kind)) {
-      return jsonError(403, "Calibration flows belong to Verification Workspaces");
-    }
+    const denied = await denyWorkspaceFeatureById(workspaceId, "calibration_flows");
+    if (denied) return denied;
 
     const action = typeof body.action === "string" ? body.action : "create";
     if (action === "update") {

@@ -16,9 +16,18 @@ interface BreadcrumbItem {
 interface NavbarProps {
   breadcrumbs?: BreadcrumbItem[];
   showNav?: boolean;
+  /**
+   * Upgrade + Dashboard product links. Off on the inner dashboard, where those
+   * live in the sidebar (Upgrade) or are the current page (Dashboard).
+   */
+  productLinks?: boolean;
 }
 
-export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
+export function Navbar({
+  breadcrumbs = [],
+  showNav = true,
+  productLinks = true,
+}: NavbarProps) {
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -68,7 +77,8 @@ export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
     { href: "/kardashev", label: "Kardashev Research" },
   ];
 
-  const showCommunity = isLoggedIn !== true;
+  const showCommunity = isLoggedIn !== true && productLinks;
+  const showProductLinks = showNav && productLinks;
 
   const solutionLinks = [
     { href: "/", label: t('nav.forIndividuals') },
@@ -113,15 +123,16 @@ export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
         {/* Desktop Navigation */}
         {showNav && (
           <div className="hidden md:flex items-center gap-4">
-            {navLinks.map((link) => (
-              <Link 
-                key={link.href} 
-                href={link.href} 
-                className="text-xs sm:text-sm text-neutral-500 hover:text-white transition-colors"
-              >
-                {link.label}
-              </Link>
-            ))}
+            {showProductLinks &&
+              navLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="text-xs sm:text-sm text-neutral-500 hover:text-white transition-colors"
+                >
+                  {link.label}
+                </Link>
+              ))}
 
             {showCommunity &&
               topLinks.map((link) => (
@@ -197,8 +208,8 @@ export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
           </div>
         )}
 
-        {/* Mobile Menu Button */}
-        {showNav && (
+        {/* Mobile: product menu, or Sign Out when product links are hidden. */}
+        {showProductLinks && (
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="md:hidden p-2 text-neutral-400 hover:text-white transition-colors"
@@ -215,10 +226,29 @@ export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
             )}
           </button>
         )}
+        {showNav && !showProductLinks && (
+          <div className="flex items-center gap-3 md:hidden">
+            {isLoggedIn === true ? (
+              <button
+                onClick={handleSignOut}
+                className="text-xs text-neutral-500 hover:text-white transition-colors"
+              >
+                {t("nav.signOut")}
+              </button>
+            ) : isLoggedIn === false ? (
+              <Link
+                href="/login"
+                className="px-3 py-1.5 text-xs bg-neutral-800 hover:bg-neutral-700 text-white rounded-sm transition-colors"
+              >
+                {t("nav.signIn")}
+              </Link>
+            ) : null}
+          </div>
+        )}
       </div>
 
       {/* Mobile Menu Dropdown */}
-      {showNav && mobileMenuOpen && (
+      {showProductLinks && mobileMenuOpen && (
         <div className="md:hidden mt-4 pb-4 border-t border-neutral-800 pt-4">
           <nav className="flex flex-col gap-4">
             {/* Solutions Section - visible only on mobile/tablet where SolutionsBand is hidden */}

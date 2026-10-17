@@ -29,6 +29,7 @@ import type { OverlayDistance } from "@/components/knowledge-panel/types";
 import { assembleSelectedRegionOverlayInputs } from "@/lib/knowledge-region-import";
 import { listWorkspaceFlowEmbeddings } from "@/lib/flow-embedding-client";
 import {
+  filterFlowEmbeddingRows,
   filterFlowEmbeddingRowsBySubjectKeys,
   flowEmbeddingDistanceToRegion,
   knowledgeConfigFromFlowEmbeddings,
@@ -48,8 +49,10 @@ export function useKnowledgeEmbeddings(input: {
   lockSubjectToSelf: boolean;
   /** knowledgecfg snapshots (learning) or flowcfg Calibrate/Learn/Verify embeddings. */
   embeddingSource?: "knowledgecfg" | "flowcfg";
-  /** Verification flow filter; only used with flowcfg. */
+  /** Verification or calibration flow filter; only used with flowcfg. */
   flowId?: string | null;
+  /** Restrict flowcfg rows to calibrate or verify. */
+  flowKind?: string | null;
 }) {
   const {
     workspaceId,
@@ -59,6 +62,7 @@ export function useKnowledgeEmbeddings(input: {
     lockSubjectToSelf,
     embeddingSource = "knowledgecfg",
     flowId = null,
+    flowKind = null,
   } = input;
   const useFlowEmbeddings = embeddingSource === "flowcfg";
 
@@ -183,11 +187,13 @@ export function useKnowledgeEmbeddings(input: {
     setEmbError(null);
     try {
       if (useFlowEmbeddings) {
-        const rows = await listWorkspaceFlowEmbeddings({
+        const listed = await listWorkspaceFlowEmbeddings({
           workspaceId,
           ayclToken,
           flowId,
+          flowKind,
         });
+        const rows = filterFlowEmbeddingRows(listed, { flowId, flowKind });
         setFlowRows((prev) => (sameFlowEmbeddingList(prev, rows) ? prev : rows));
         setAvailableSubjects(subjectsFromFlowEmbeddings(rows));
         return;
@@ -204,7 +210,7 @@ export function useKnowledgeEmbeddings(input: {
     } finally {
       setEmbLoading(false);
     }
-  }, [ayclToken, flowId, knowledgeQueryKey, useFlowEmbeddings, workspaceId]);
+  }, [ayclToken, flowId, flowKind, knowledgeQueryKey, useFlowEmbeddings, workspaceId]);
 
   const loadRegionsForOverlay = useCallback(async () => {
     setRegionsLoading(true);

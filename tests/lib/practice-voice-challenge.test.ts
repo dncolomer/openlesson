@@ -10,22 +10,11 @@ import { join } from "node:path";
 import { readSessionStageSurface } from "../helpers/surface-source";
 import { PracticeVoiceChallenge } from "@/components/PracticeVoiceChallenge";
 import { IleInsightEmptySlots } from "@/components/session-view/ile-insight-trophies";
+import { IleSessionImpureScreen } from "@/components/session-view/ile-silence-lock-screen";
 import {
-  IleSessionImpurityScreen,
-  IleSilenceRestScreen,
-} from "@/components/session-view/ile-silence-lock-screen";
-import {
-  ILE_SESSION_IMPURITY_BODY,
-  ILE_SESSION_IMPURITY_KICKER,
-  ILE_SESSION_IMPURITY_LOG_OFF,
-  ILE_SESSION_IMPURITY_SAVE,
-  ILE_SESSION_IMPURITY_TITLE,
   ILE_SILENCE_LOCK_MINUTES_DEFAULT,
-  ILE_SILENCE_LOCK_MINUTES_DESC,
   ILE_SILENCE_LOCK_MINUTES_MIN,
-  ILE_SILENCE_REST_TITLE,
   PRACTICE_VOICE_CHALLENGE_LOCAL_SKIP,
-  PRACTICE_VOICE_CHALLENGE_READ_NOTE,
   PRACTICE_VOICE_CHALLENGE_SCRIPT,
   PRACTICE_VOICE_CHALLENGE_UNCHECKED,
   TAP_VOICE_CHALLENGE_SENTENCE_TWO,
@@ -384,13 +373,13 @@ describe("TAP Learning silence lock", () => {
     expect(muted.outcome).toBe("rest");
     expect(muted.speech).toBe("");
 
-    const hook = read("components/session-view/use-ile-silence-lock.ts");
+    const hook = read("components/session-view/use-ile-session-purity.ts");
     const view = read("components/SessionView.tsx");
-    expect(hook).toContain("advanceIleSilenceClock");
-    expect(hook).not.toContain("speakingRef");
-    expect(view).toContain("speechText: sessionThoughtInterface.crystallizableText");
-    expect(view).toContain("micSilent,");
-    expect(view).not.toContain("isSpeaking && !micSilent");
+    expect(hook).toContain("TAP_SILENCE_AUTO_STASH_MS");
+    expect(hook).toContain("shouldAutoStashOnSilence");
+    expect(hook).not.toContain("advanceIleSilenceClock");
+    expect(view).toContain("formingText: sessionThoughtInterface.crystallizableText");
+    expect(view).toContain("useIleSessionPurity");
     expect(view).toContain("mountIleSilenceScreen");
   });
 
@@ -462,12 +451,12 @@ describe("shipped voice-challenge UI wiring", () => {
       createElement(PracticeVoiceChallenge, { onPass: () => {}, framing: "rest", variant: "ile" }),
     );
     expect(spoken).not.toContain("data-practice-voice-local-skip");
-    expect(read("components/session-view/ile-silence-lock-screen.tsx")).toContain(
+    expect(read("components/session-view/ile-silence-lock-screen.tsx")).not.toContain(
       "PracticeVoiceChallenge",
     );
-    const impurityFn = read("components/session-view/ile-silence-lock-screen.tsx");
-    const impurityAt = impurityFn.indexOf("function IleSessionImpurityScreen");
-    expect(impurityFn.slice(impurityAt)).not.toContain("PracticeVoiceChallenge");
+    expect(read("components/session-view/ile-silence-lock-screen.tsx")).toContain(
+      "function IleSessionImpureScreen",
+    );
   });
 
   it("TAP Learning start/help is a full-viewport surface with multi-sentence placeholders and the voice challenge wired to workspace start", () => {
@@ -532,7 +521,7 @@ describe("shipped voice-challenge UI wiring", () => {
     expect(challenge).toContain('framing === "rest" ? "Continuing"');
     expect(challenge).not.toContain("animate-spin");
     expect(challenge).not.toContain("min-h-52");
-    expect(read("components/session-view/ile-silence-lock-screen.tsx")).toContain(
+    expect(read("components/session-view/ile-silence-lock-screen.tsx")).not.toContain(
       'framing="rest"',
     );
     expect(read("components/PracticeVoiceChallenge.tsx")).not.toContain("speechSynthesis");
@@ -579,94 +568,52 @@ describe("shipped voice-challenge UI wiring", () => {
     expect(read("lib/practice-voice-challenge.ts")).toContain('variant === "prepare"');
   });
 
-  it("difficulty settings expose the silence-minutes control with no off switch", () => {
+  it("Learn settings have no silence-minutes control; live uses TAP purity", () => {
     const welcome = read("components/session-view/session-welcome-modal.tsx");
-    const at = welcome.indexOf("data-ile-silence-lock-minutes");
-    expect(at).toBeGreaterThan(-1);
-    const block = welcome.slice(at, at + 1400);
-    expect(block).toContain('type="range"');
-    expect(block).toContain("ILE_SILENCE_LOCK_MINUTES_MIN");
-    expect(block).toContain("clampIleSilenceLockMinutes");
-    expect(block).not.toContain('type="checkbox"');
-    expect(block.toLowerCase()).not.toContain("turn off");
-    expect(welcome).toContain("ILE_SILENCE_LOCK_MINUTES_DESC");
-    expect(ILE_SILENCE_LOCK_MINUTES_DESC).toMatch(/cannot be turned off/i);
-    expect(read("components/SessionView.tsx")).toContain("silenceLockMinutes={silenceLockMinutes}");
-    expect(read("components/SessionView.tsx")).toContain("useIleSilenceLock");
+    expect(welcome).not.toContain("data-ile-silence-lock-minutes");
+    expect(welcome).not.toContain("ILE_SILENCE_LOCK_MINUTES_DESC");
+    expect(read("components/SessionView.tsx")).not.toContain("silenceLockMinutes={silenceLockMinutes}");
+    expect(read("components/SessionView.tsx")).toContain("useIleSessionPurity");
+    expect(read("components/session-view/use-ile-session-purity.ts")).toContain(
+      "TAP_SILENCE_AUTO_STASH_MS",
+    );
   });
 
-  it("the impurity screen shows lost-progress session-impurity framing plus save and log off and break-ok copy", () => {
+  it("the impurity screen is TAP Session Invalidated with Try again", () => {
     const screen = read("components/session-view/ile-silence-lock-screen.tsx");
     const view = read("components/SessionView.tsx");
-    expect(ILE_SESSION_IMPURITY_KICKER).toMatch(/session impurity/i);
-    expect(ILE_SESSION_IMPURITY_TITLE).toMatch(/lost progress/i);
-    expect(ILE_SESSION_IMPURITY_BODY).toMatch(/ok to take a break/i);
-    expect(ILE_SESSION_IMPURITY_SAVE).toBe("Save");
-    expect(ILE_SESSION_IMPURITY_LOG_OFF).toBe("Log off");
-    expect(screen).toContain("data-ile-session-impurity");
-    expect(screen).toContain("data-ile-silence-rest");
-    expect(screen).toContain("data-ile-impurity-save");
-    expect(screen).toContain("data-ile-impurity-logoff");
-    expect(screen).toContain("ILE_SESSION_IMPURITY_BODY");
-    expect(ILE_SILENCE_REST_TITLE).toBe("Taking a rest");
+    expect(screen).toContain("data-ile-session-impure");
+    expect(screen).toContain("data-ile-impure-retry");
+    expect(screen).toContain("tap.postSession.impureTitle");
+    expect(screen).toContain("tap.postSession.impureBody");
+    expect(screen).toContain("tap.postSession.impureTryAgain");
+    expect(screen).not.toContain("data-ile-silence-rest");
+    expect(screen).not.toContain("data-ile-impurity-save");
+    expect(screen).not.toContain("PracticeVoiceChallenge");
     const impurity = renderToStaticMarkup(
-      createElement(IleSessionImpurityScreen, {
-        lockCount: 3,
-        onSave: () => {},
-        onLogOff: () => {},
+      createElement(IleSessionImpureScreen, {
+        onTryAgain: () => {},
       }),
     );
-    expect(impurity).not.toContain(ILE_SESSION_IMPURITY_KICKER);
+    expect(impurity).toContain("data-ile-session-impure");
+    expect(impurity).toContain("data-ile-impure-retry");
     expect(impurity).not.toContain("data-console-frame-label");
-    expect(impurity).toContain(ILE_SESSION_IMPURITY_TITLE);
-    expect(impurity).toContain(ILE_SESSION_IMPURITY_BODY);
-    expect(impurity).toContain(ILE_SESSION_IMPURITY_SAVE);
-    expect(impurity).toContain(ILE_SESSION_IMPURITY_LOG_OFF);
     expect(impurity).not.toContain("data-practice-voice-challenge");
-    expect(impurity).not.toContain("data-practice-voice-local-skip");
-    expect(screen).not.toContain("data-practice-voice-local-skip");
-    const rest = renderToStaticMarkup(
-      createElement(IleSilenceRestScreen, {
-        lockCount: 1,
-        onUnlock: () => {},
-        onSaveAndLeave: () => {},
-      }),
-    );
-    expect(rest).toContain(ILE_SILENCE_REST_TITLE);
-    expect(rest).toContain("data-practice-voice-challenge");
-    expect(rest).toContain('data-practice-voice-framing="rest"');
-    expect(rest).toContain('data-practice-voice-sentence="1"');
-    expect(rest).toContain('data-practice-voice-sentence="2"');
-    expect(rest).toContain(">Continue<");
-    expect(rest).toContain(">Try again<");
-    expect(rest).not.toContain("data-console-frame-label");
-    expect(rest).not.toContain("Say these lines out loud");
-    expect(rest).not.toContain(PRACTICE_VOICE_CHALLENGE_READ_NOTE);
-    expect(rest).not.toContain("Nothing captured yet.");
-    expect(rest).not.toContain(PRACTICE_VOICE_CHALLENGE_UNCHECKED);
-    expect(rest).not.toContain("data-practice-voice-local-skip");
-    expect(read("components/session-view/ile-silence-lock-screen.tsx")).toContain("lang={speechLang}");
-    expect(read("components/SessionView.tsx")).toContain("speechLang={toSpeechBcp47(tutoringLanguage)}");
     expect(read("components/PracticeVoiceChallenge.tsx")).toContain("startListening");
     expect(read("components/PracticeVoiceChallenge.tsx")).toContain("getUserMedia");
     expect(read("components/PracticeVoiceChallenge.tsx")).toContain("SessionAudioMonitor");
-    expect(view).toContain("pauseLiveSpeech()");
-    expect(view).toContain("resumeLiveSpeech()");
-    expect(view).toContain("silenceRest");
-    expect(rest).toContain("data-ile-silence-save-and-leave");
-    expect(rest).toContain("Save and leave");
-    expect(read("components/SessionView.tsx")).toContain("ileMicCountsAsSilence");
-    expect(read("components/SessionView.tsx")).toContain("slotCount={minInsightsPerChapter}");
-    expect(view).toContain("IleSessionImpurityScreen");
-    expect(view).toContain("IleSilenceRestScreen");
-    expect(view).toContain('ileImpurityExitPlan("save")');
+    expect(view).not.toContain("pauseLiveSpeech()");
+    expect(view).not.toContain("silenceRest");
+    expect(view).toContain("useIleSessionPurity");
+    expect(view).toContain("slotCount={minInsightsPerChapter}");
+    expect(view).toContain("IleSessionImpureScreen");
+    expect(view).not.toContain("IleSilenceRestScreen");
     expect(view).not.toContain("setShowSaveExitNameDialog");
     expect(read("components/session-view/session-chrome.tsx")).not.toContain(
       'testId="ile-save-exit-name"',
     );
     expect(read("components/session-view/session-chrome.tsx")).not.toContain("data-ile-session-name");
-    expect(view).toContain('ileImpurityExitPlan("logoff")');
     expect(view).toContain("void pauseAndGoToDashboard()");
-    expect(view).toContain("persistSession: plan.persistSession");
+    expect(view).toContain("{ impure: true }");
   });
 });

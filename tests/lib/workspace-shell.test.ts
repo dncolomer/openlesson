@@ -26,6 +26,13 @@ const LEARNING_AUTHOR_SECTIONS = [
 const VERIFICATION_SECTIONS = [
   "goals",
   "verification_flows",
+  "context",
+  "knowledge",
+  "settings",
+] as const;
+
+const CALIBRATION_SECTIONS = [
+  "goals",
   "calibration_flows",
   "context",
   "knowledge",
@@ -74,6 +81,23 @@ describe("workspace shell policy", () => {
       isLoggedIn: true,
     });
     expect(shell.sections).toEqual([...VERIFICATION_SECTIONS]);
+    expect(shell.authoringDrawers).toBe(true);
+    expect(shell.practiceDrawer).toBe(false);
+    expect(shell.learnerSurface).toBe(false);
+    expect(shell.learnerActivity).toBe(false);
+    expect(shell.knowledgeLwmEmbeddingsOnly).toBe(false);
+  });
+
+  it("keeps calibration on its own shell", () => {
+    const shell = workspaceShell({
+      kind: "calibration",
+      authoring: false,
+      practiceOnly: false,
+      isOwner: true,
+      isLoggedIn: true,
+    });
+    expect(shell.sections).toEqual([...CALIBRATION_SECTIONS]);
+    expect(shell.sections).not.toContain("verification_flows");
     expect(shell.authoringDrawers).toBe(true);
     expect(shell.practiceDrawer).toBe(false);
     expect(shell.learnerSurface).toBe(false);

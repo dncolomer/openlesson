@@ -160,13 +160,10 @@ describe("structural: workspace + settings have no With AI vs Solo choice", () =
     expect(card).toContain("resolveLaunchFromStyleAndModality");
     expect(card).toContain("data-style-option={id}");
     expect(card).toContain('id: "explore"');
-    expect(card).toContain('id: "scout"');
-    expect(card).toContain('data-style-option="verify"');
-    expect(card).toContain('onClick={() => setStyle("verify")}');
+    expect(card).not.toContain('id: "scout" as const');
+    expect(card).not.toContain('data-style-option="verify"');
+    expect(card).not.toContain('onClick={() => setStyle("verify")}');
     expect(card).toContain("showDurationPicker");
-    expect(card.indexOf('id: "scout" as const')).toBeLessThan(
-      card.indexOf('id: "explore" as const'),
-    );
     expect(card).not.toContain("data-modality-toggle");
     expect(card).not.toContain("data-modality-option");
     expect(card).not.toContain("data-product-intent-modality-grid");

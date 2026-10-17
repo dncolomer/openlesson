@@ -34,7 +34,6 @@ function namesRetiredProduct(text: string) {
 const FORMER_PRODUCT_SLOTS = [
   "app/layout.tsx",
   "app/knowledge-verification/page.tsx",
-  "app/knowledge-mapping/page.tsx",
   "app/skill-verification/SkillVerificationLanding.tsx",
   "lib/seo/platform-page.ts",
   "lib/seo/product-page.ts",
@@ -44,7 +43,6 @@ const FORMER_PRODUCT_SLOTS = [
   "lib/prompt-kernel/surfaces/tap.ts",
   "lib/sales/platform-pitch-deck.ts",
   "lib/marketing/verification-product.ts",
-  "lib/marketing/mapping-product.ts",
 ];
 
 /** Live product surfaces — identifiers and internal comments elsewhere may keep stored names. */
@@ -166,11 +164,9 @@ describe("retired product language is gone from shipped prose", () => {
     const lineupFiles = [
       "app/layout.tsx",
       "app/knowledge-verification/page.tsx",
-      "app/knowledge-mapping/page.tsx",
       "app/skill-verification/SkillVerificationLanding.tsx",
       "app/docs/proof-of-work-api/page.tsx",
       "lib/marketing/verification-product.ts",
-      "lib/marketing/mapping-product.ts",
       "lib/seo/platform-page.ts",
       "lib/seo/product-page.ts",
       "lib/seo/products.ts",

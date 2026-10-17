@@ -21,10 +21,8 @@ import {
   VERIFICATION_SCALE_COPY,
 } from "@/lib/marketing/verification-product";
 import {
-  MAPPING_APPROACH_COPY,
   MAPPING_PLATFORM_COPY,
   MAPPING_PRODUCT_COPY,
-  MAPPING_SCALE_COPY,
 } from "@/lib/marketing/mapping-product";
 import { SUPPORT_COPY, SUPPORT_PAGE_TITLE } from "@/lib/marketing/support";
 import { HARNESS_PRICING_COPY } from "@/lib/pricing/harness-copy";
@@ -210,23 +208,20 @@ describe("product pages: verification owns platform/approach/scale; harness owns
     const page = read("app/knowledge-mapping/page.tsx");
     expect(page).toContain("knowledge regions");
     expect(page).toContain("position on the map");
-    expect(page).toContain("learning world model");
-    expect(page).toContain("Free Energy Principle");
-    expect(page).toContain("epistemic foraging");
+    expect(page).not.toContain("learning world model");
+    expect(page).not.toContain('id="approach"');
+    expect(page).not.toContain('id="scale"');
+    expect(page).not.toContain("data-landing-ranking-visual");
+    expect(page).not.toContain("/ranking_app.png");
     expect(page).not.toContain("TIM — Trace Interruption Model");
     expect(page).not.toContain("Trace Interruption Model");
-    expect(page).toContain("Calibrate, Learn, and Verify");
     expect(page).not.toContain("TAP Learning");
     expect(page).not.toMatch(/\bTAP\b/);
     expect(page).not.toContain("TAPBench");
     expect(page).toContain("/knowledgeg2.png");
-    expect(page).toContain("/ranking_app.png");
     expect(page).toContain("data-landing-knowledge-visual");
-    expect(page).toContain("data-landing-ranking-visual");
     expect(page).toContain('marker="mapping"');
     expect(MAPPING_PLATFORM_COPY.title).toMatch(/map of regions/i);
-    expect(MAPPING_APPROACH_COPY.title).toMatch(/learning world model/i);
-    expect(MAPPING_SCALE_COPY.title).toMatch(/at scale/i);
     expect(MAPPING_PRODUCT_COPY.lead.toLowerCase()).toMatch(/living map/);
     expect(MAPPING_PRODUCT_COPY.lead.toLowerCase()).toMatch(/verification exam/);
   });

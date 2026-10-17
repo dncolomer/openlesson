@@ -6,10 +6,8 @@ import { MarketingPageShell, SectionHeading } from "@/components/marketing/Marke
 import { ThesisDirectory } from "@/components/science/ThesisDirectory";
 import { KNOWLEDGE_MAPPING_PATH } from "@/lib/marketing/paths";
 import {
-  MAPPING_APPROACH_COPY,
   MAPPING_PLATFORM_COPY,
   MAPPING_PRODUCT_COPY,
-  MAPPING_SCALE_COPY,
 } from "@/lib/marketing/mapping-product";
 import { AccelerandoRun } from "@/components/AccelerandoGlyphs";
 import { standardShareSocialMetadata } from "@/lib/og/standard";
@@ -45,7 +43,7 @@ export default function KnowledgeMappingPage() {
           verification exam.
         </p>
         <div className="mt-8 max-w-4xl">
-          <ThesisDirectory links={MAPPING_APPROACH_COPY.thesisLinks} marker="mapping" />
+          <ThesisDirectory links={MAPPING_PRODUCT_COPY.thesisLinks} marker="mapping" />
         </div>
         <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
           <Link
@@ -58,7 +56,7 @@ export default function KnowledgeMappingPage() {
         </div>
       </section>
 
-      <section id="platform" className="relative z-10 mx-auto max-w-7xl px-6 pb-8 pt-2 sm:pb-10">
+      <section id="platform" className="relative z-10 mx-auto max-w-7xl px-6 pb-12 pt-2 sm:pb-16">
         <SectionHeading
           eyebrow={MAPPING_PLATFORM_COPY.eyebrow}
           title={MAPPING_PLATFORM_COPY.title}
@@ -97,87 +95,6 @@ export default function KnowledgeMappingPage() {
               We help you build a living map of proximity to any kind of knowledge. Knowledge
               regions are the territories. People are positions on that map.
             </p>
-          </div>
-        </div>
-      </section>
-
-      <section id="approach" className="relative z-10 mx-auto max-w-7xl px-6 pb-8 sm:pb-10">
-        <SectionHeading
-          eyebrow={MAPPING_APPROACH_COPY.eyebrow}
-          title={MAPPING_APPROACH_COPY.title}
-        />
-        <div className="console-copy mt-6 p-6 text-lg leading-relaxed text-zinc-400 sm:p-8">
-          <p>
-            Uncertain Systems builds a learning world model from real work: skills, scenarios, proof
-            of work, and where reasoning breaks. Our hosted interfaces as well as our API products
-            are all specially designed to elicit genuine raw work data from the user while at the
-            same time minimizing the disruption of the natural cognitive process.
-          </p>
-          <p className="mt-5">
-            Our conversational interfaces run on a{" "}
-            <span className="text-zinc-200">Free Energy Principle</span> approach based on
-            epistemic foraging: the evolving learner model searches for information that reduces
-            uncertainty, and steers the thinking process toward what is still unknown.
-          </p>
-          <p className="mt-5">{MAPPING_APPROACH_COPY.p3}</p>
-          <p className="mt-5" data-landing-epistemic-foraging>
-            The harness searches for information that reduces uncertainty about what is held. That
-            policy is{" "}
-            <Link
-              href={MAPPING_APPROACH_COPY.foragingHref}
-              className="text-zinc-200 underline decoration-zinc-700 underline-offset-4 transition hover:text-white hover:decoration-zinc-500"
-            >
-              epistemic foraging
-            </Link>
-            .
-          </p>
-        </div>
-      </section>
-
-      <section
-        id="scale"
-        className="relative z-10 mx-auto max-w-7xl px-6 pb-12 sm:pb-16"
-        data-landing-scale-section
-      >
-        <div className="grid items-center gap-8 md:grid-cols-2 md:gap-10 lg:gap-12">
-          <div className="min-w-0">
-            <div className="mb-3 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
-              MAPPING AT SCALE
-            </div>
-            <h2 className="max-w-xl text-3xl font-medium leading-[1.1] tracking-[-1.2px] text-white sm:text-4xl">
-              Map knowledge against your own knowledge regions at scale.
-            </h2>
-            <div className="mt-4 space-y-3 text-base leading-relaxed text-zinc-400 sm:text-[15px]">
-              <p>
-                The same measurement stack runs{" "}
-                <span className="text-zinc-200">knowledge mapping at scale</span> — many people
-                against the same knowledge regions — without sharing proprietary skills and specs
-                into a public repository or database.
-              </p>
-              <p>
-                Our hosted{" "}
-                <span className="text-zinc-200">Calibrate, Learn, and Verify</span> sessions plot
-                live, time-framed positions in parallel, without building your own UX. Learn adds
-                open-ended assignment depth that stays practical as volume grows. We help you
-                surface a map that no traditional tech can beat.
-              </p>
-            </div>
-          </div>
-          <div className="min-w-0 w-full md:justify-self-end">
-            <figure
-              className="console-copy overflow-hidden rounded-none md:max-w-lg lg:max-w-xl md:ml-auto"
-              data-landing-ranking-visual
-            >
-              <Image
-                src="/ranking_app.png"
-                alt="People plotted by proximity to a knowledge region on the map"
-                width={2080}
-                height={1644}
-                className="h-auto w-full object-cover object-center"
-                sizes="(max-width: 768px) 100vw, 560px"
-                priority
-              />
-            </figure>
           </div>
         </div>
       </section>

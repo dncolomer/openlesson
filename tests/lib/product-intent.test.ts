@@ -168,6 +168,8 @@ describe("structural: workspace + settings have no With AI vs Solo choice", () =
     expect(card).not.toContain("data-modality-option");
     expect(card).not.toContain("data-product-intent-modality-grid");
     expect(card).toContain("data-style-select");
+    expect(card).toContain("showStylePicker");
+    expect(card).toContain("styleOptions.length > 1");
     expect(card).toContain("data-launch-start");
     expect(card).toContain("data-launch-duration-picker");
     expect(card).toContain("onClick={() => setStyle(id)}");

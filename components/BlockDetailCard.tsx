@@ -242,6 +242,17 @@ export function BlockDetailCard({
 
   const canStart = canLaunchStyle(style);
 
+  const styleOptions = (
+    [
+      {
+        id: "explore" as const,
+        label: PRODUCT_INTENT_LABELS.styleExplore,
+        Icon: ExploreIcon,
+      },
+    ] as const
+  ).filter(({ id }) => blockAllowsPracticeStyle(practiceLimits, id));
+  const showStylePicker = styleOptions.length > 1;
+
   const launch = (target: ProductLaunchTarget, event?: React.MouseEvent) => {
     const minutes = clampPracticeDuration(practiceLimits, durationMinutes);
     if (verifySelected) {
@@ -288,56 +299,48 @@ export function BlockDetailCard({
 
   const actionButtons = showActions ? (
     <div data-product-intent="workspace-start" data-product-intent-ui="style">
-      <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.14em] text-neutral-500">
-        {PRODUCT_INTENT_LABELS.chooseStyle}
-      </p>
-
-      {/* Select-only style tools — Explore = TAP Learning, Drill = TAP; launch via Start */}
-      <div
-        className="grid grid-cols-1 gap-2"
-        data-block-mode-tools
-        data-product-intent-style-grid
-        data-practice-allow-explore="true"
-        data-practice-allow-drill="false"
-        data-practice-allow-scout="false"
-      >
-        {(
-          [
-            {
-              id: "explore" as const,
-              label: PRODUCT_INTENT_LABELS.styleExplore,
-              Icon: ExploreIcon,
-            },
-          ] as const
-        )
-          .filter(({ id }) => blockAllowsPracticeStyle(practiceLimits, id))
-          .map(({ id, label, Icon }) => {
-          const selected = style === id;
-          const target = resolveLaunchFromStyleAndModality(id, false);
-          return (
-            <button
-              key={id}
-              type="button"
-              data-style-option={id}
-              data-style-select
-              data-product-intent-id={target.id}
-              data-product-tech={target.product}
-              data-block-tool={target.id}
-              aria-pressed={selected}
-              disabled={isStarting || isLocked || !canLaunchStyle(id)}
-              onClick={() => setStyle(id)}
-              className={`inline-flex h-11 items-center justify-center gap-2 rounded-none border-2 px-3 text-left transition disabled:opacity-40 ${
-                selected
-                  ? "border-white/55 bg-white/10 text-white"
-                  : "border-white/25 bg-transparent text-white hover:border-white/45 hover:bg-white/5"
-              }`}
-            >
-              <Icon className="h-5 w-5 shrink-0 opacity-90" />
-              <span className="text-xs font-semibold tracking-tight">{label}</span>
-            </button>
-          );
-        })}
-      </div>
+      {showStylePicker ? (
+        <>
+          <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.14em] text-neutral-500">
+            {PRODUCT_INTENT_LABELS.chooseStyle}
+          </p>
+          <div
+            className="grid grid-cols-1 gap-2"
+            data-block-mode-tools
+            data-product-intent-style-grid
+            data-practice-allow-explore="true"
+            data-practice-allow-drill="false"
+            data-practice-allow-scout="false"
+          >
+            {styleOptions.map(({ id, label, Icon }) => {
+              const selected = style === id;
+              const target = resolveLaunchFromStyleAndModality(id, false);
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  data-style-option={id}
+                  data-style-select
+                  data-product-intent-id={target.id}
+                  data-product-tech={target.product}
+                  data-block-tool={target.id}
+                  aria-pressed={selected}
+                  disabled={isStarting || isLocked || !canLaunchStyle(id)}
+                  onClick={() => setStyle(id)}
+                  className={`inline-flex h-11 items-center justify-center gap-2 rounded-none border-2 px-3 text-left transition disabled:opacity-40 ${
+                    selected
+                      ? "border-white/55 bg-white/10 text-white"
+                      : "border-white/25 bg-transparent text-white hover:border-white/45 hover:bg-white/5"
+                  }`}
+                >
+                  <Icon className="h-5 w-5 shrink-0 opacity-90" />
+                  <span className="text-xs font-semibold tracking-tight">{label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      ) : null}
 
       {/* Duration for Calibrate, Verify, and Drill. Learn has no clock. */}
       {showDurationPicker ? (

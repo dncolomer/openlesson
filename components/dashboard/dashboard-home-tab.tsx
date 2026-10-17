@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Workspace } from "@/lib/storage";
@@ -12,7 +12,6 @@ import {
   DASHBOARD_PLAY_START_PATH,
   dashboardPlayKindLabel,
   normalizeDashboardPlayPrompt,
-  pickDashboardPlayTopics,
   type DashboardPlayKind,
 } from "@/lib/dashboard-play";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
@@ -37,11 +36,6 @@ export function DashboardHomeTab({
   const [prompt, setPrompt] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [suggestions, setSuggestions] = useState(() => pickDashboardPlayTopics(4, () => 0.5));
-
-  useEffect(() => {
-    setSuggestions(pickDashboardPlayTopics(4));
-  }, []);
 
   const emptyWorkspaces = dashboardHasNoWorkspaces(workspaces);
   const canStart = useMemo(() => Boolean(normalizeDashboardPlayPrompt(prompt)), [prompt]);
@@ -131,22 +125,6 @@ export function DashboardHomeTab({
               className="w-full resize-y rounded-none border border-white/40 bg-black px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-white/80 focus:outline-none"
             />
           </label>
-          <div className="flex flex-wrap gap-2" data-dashboard-play-topics>
-            {suggestions.map((topic) => (
-              <button
-                key={topic.discipline}
-                type="button"
-                data-dashboard-play-topic={topic.discipline}
-                onClick={() => setPrompt(topic.prompt)}
-                className="rounded-none border border-white/25 px-3 py-1.5 text-left text-xs text-neutral-300 transition hover:border-white/70 hover:text-white"
-              >
-                <span className="block font-mono text-[10px] uppercase tracking-[0.16em] text-neutral-500">
-                  {topic.discipline}
-                </span>
-                {topic.prompt}
-              </button>
-            ))}
-          </div>
           {error ? <p className="text-sm text-red-300">{error}</p> : null}
           <button
             type="submit"

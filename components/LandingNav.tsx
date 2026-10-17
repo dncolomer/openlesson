@@ -11,6 +11,7 @@ import {
   PRICING_NAV_LINKS,
   TOP_LINKS,
 } from "@/lib/marketing/nav";
+import { createClient } from "@/lib/supabase/client";
 
 type LandingNavProps = {
   overlay?: boolean;
@@ -31,6 +32,22 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
   const [mobilePricingOpen, setMobilePricingOpen] = useState(false);
   const communityRef = useRef<HTMLDivElement>(null);
   const pricingRef = useRef<HTMLDivElement>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => {
+      setIsLoggedIn(!!data.user);
+    });
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsLoggedIn(!!session);
+    });
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     if (!communityOpen && !pricingOpen) return;
@@ -168,9 +185,18 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
-          <Link href="/login" className="px-2 py-2 text-sm text-zinc-500 transition hover:text-white">
-            Login
-          </Link>
+          {isLoggedIn === true ? (
+            <Link
+              href="/dashboard"
+              className="px-2 py-2 text-sm text-zinc-500 transition hover:text-white"
+            >
+              Dashboard
+            </Link>
+          ) : isLoggedIn === false ? (
+            <Link href="/login" className="px-2 py-2 text-sm text-zinc-500 transition hover:text-white">
+              Login
+            </Link>
+          ) : null}
         </div>
 
         <button
@@ -269,11 +295,27 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
                 </ul>
               )}
             </li>
-            <li>
-              <Link href="/login" className="block rounded-sm px-2 py-2 text-zinc-300" onClick={() => setMobileOpen(false)}>
-                Login
-              </Link>
-            </li>
+            {isLoggedIn === true ? (
+              <li>
+                <Link
+                  href="/dashboard"
+                  className="block rounded-sm px-2 py-2 text-zinc-300"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  Dashboard
+                </Link>
+              </li>
+            ) : isLoggedIn === false ? (
+              <li>
+                <Link
+                  href="/login"
+                  className="block rounded-sm px-2 py-2 text-zinc-300"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  Login
+                </Link>
+              </li>
+            ) : null}
           </ul>
         </nav>
       )}

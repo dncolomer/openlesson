@@ -43,6 +43,9 @@ describe("marketing nav and platform rename", () => {
       "/knowledge-mapping",
     ]);
     expect(nav).toContain("PRICING_NAV_LINKS");
+    expect(nav).toContain('href="/dashboard"');
+    expect(nav).toContain("Dashboard");
+    expect(nav).toContain("getUser");
     expect(PRICING_NAV_LINKS.map((l) => l.label)).toEqual(["Modules", "Authoring"]);
     expect(PRICING_NAV_LINKS.map((l) => l.href)).toEqual([
       "/pricing",

@@ -1,13 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { readDashboardSurface, readRepo } from "../helpers/surface-source";
 import {
-  DASHBOARD_PLAY_TOPIC_POOL,
   dashboardPlayHref,
   dashboardPlaySessionMetadata,
   isDashboardPlaySession,
   normalizeDashboardPlayPrompt,
   parseDashboardPlayKind,
-  pickDashboardPlayTopics,
 } from "@/lib/dashboard-play";
 
 describe("dashboard play sessions", () => {
@@ -28,27 +26,14 @@ describe("dashboard play sessions", () => {
     expect(normalizeDashboardPlayPrompt("  Fourier   series  ")).toBe("Fourier series");
   });
 
-  it("samples suggested topics from different disciplines", () => {
-    const seq = [0.1, 0.8, 0.3, 0.9, 0.2, 0.4, 0.7, 0.05, 0.6, 0.5];
-    let i = 0;
-    const picked = pickDashboardPlayTopics(4, () => seq[i++] ?? 0.1);
-    expect(picked).toHaveLength(4);
-    const disciplines = picked.map((row) => row.discipline);
-    expect(new Set(disciplines).size).toBe(4);
-    expect(
-      picked.every((row) =>
-        DASHBOARD_PLAY_TOPIC_POOL.some(
-          (item) => item.discipline === row.discipline && item.prompt === row.prompt,
-        ),
-      ),
-    ).toBe(true);
-  });
-
   it("wires Home play start and play session shells", () => {
     const dash = readDashboardSurface();
     expect(dash).toContain("data-dashboard-play");
     expect(dash).toContain("Quick Session");
     expect(dash).not.toContain("Start a session");
+    expect(dash).not.toContain("data-dashboard-play-topics");
+    expect(dash).not.toContain("pickDashboardPlayTopics");
+    expect(dash).toContain("data-dashboard-play-prompt");
     expect(dash).toContain("data-dashboard-play-start");
     expect(dash).toContain("DASHBOARD_PLAY_START_PATH");
     expect(dash).toContain("PlayCalibrateSession");

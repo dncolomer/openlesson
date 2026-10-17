@@ -398,6 +398,7 @@ describe("Practice drawer labels and previous-sessions UI", () => {
     expect(card).not.toContain("data-see-previous-sessions");
     expect(card).not.toContain("onSeePreviousSessions");
     expect(card).toContain("ileStartLabel");
+    expect(card).toContain("showStylePicker");
     expect(card).toContain("`Start · ${durationMinutes} min`");
 
     const route = read("app/api/workspace/block-sessions/route.ts");

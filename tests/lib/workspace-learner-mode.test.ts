@@ -424,7 +424,8 @@ describe("learner mode UI structural", () => {
     expect(view).toContain('session: "verification"');
     expect(view).toContain('params.set("minutes"');
     expect(read("components/BlockDetailCard.tsx")).toContain("verification: true");
-    expect(read("components/BlockDetailCard.tsx")).toContain(
+    expect(read("components/BlockDetailCard.tsx")).toContain("showStylePicker");
+    expect(read("components/BlockDetailCard.tsx")).not.toContain(
       'onClick={() => setStyle("verify")}',
     );
     expect(read("components/BlockDetailCard.tsx")).toContain(

@@ -10,25 +10,6 @@ export const DASHBOARD_PLAY_START_PATH = "/api/play/start";
 export const DASHBOARD_PLAY_CALIBRATE_QUESTIONS_PATH = "/api/play/calibrate-questions";
 export const DASHBOARD_PLAY_PROMPT_MAX = 400;
 
-export type DashboardPlayTopic = {
-  discipline: string;
-  prompt: string;
-};
-
-/** One prompt per discipline so Home can sample a mixed set. */
-export const DASHBOARD_PLAY_TOPIC_POOL: readonly DashboardPlayTopic[] = [
-  { discipline: "Mathematics", prompt: "Fourier series on the circle" },
-  { discipline: "Physics", prompt: "The second law of thermodynamics" },
-  { discipline: "Biology", prompt: "How CRISPR edits a genome" },
-  { discipline: "Computer science", prompt: "What a Merkle tree actually commits to" },
-  { discipline: "Economics", prompt: "Adverse selection in insurance markets" },
-  { discipline: "Philosophy", prompt: "Gettier cases and knowledge as justified true belief" },
-  { discipline: "History", prompt: "Why the Peace of Westphalia still matters" },
-  { discipline: "Chemistry", prompt: "Why carbon forms so many stable compounds" },
-  { discipline: "Law", prompt: "What strict scrutiny is asking a court to do" },
-  { discipline: "Music", prompt: "How a cadence tells you a phrase has landed" },
-];
-
 export function isDashboardPlayKind(value: unknown): value is DashboardPlayKind {
   return DASHBOARD_PLAY_KINDS.includes(value as DashboardPlayKind);
 }
@@ -53,21 +34,6 @@ export function dashboardPlayKindLabel(kind: DashboardPlayKind): string {
   if (kind === "verify") return "Verification";
   if (kind === "calibrate") return "Calibration";
   return "Learning";
-}
-
-export function pickDashboardPlayTopics(
-  count = 4,
-  random: () => number = Math.random,
-): DashboardPlayTopic[] {
-  const n = Math.max(0, Math.min(count, DASHBOARD_PLAY_TOPIC_POOL.length));
-  const pool = [...DASHBOARD_PLAY_TOPIC_POOL];
-  for (let i = pool.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(random() * (i + 1));
-    const swap = pool[i];
-    pool[i] = pool[j]!;
-    pool[j] = swap!;
-  }
-  return pool.slice(0, n);
 }
 
 export function dashboardPlaySessionMetadata(kind: DashboardPlayKind): Record<string, unknown> {

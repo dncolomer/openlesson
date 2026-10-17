@@ -4,7 +4,6 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { SessionBranchFieldView } from "@/components/session-view/session-branch-field";
-import { SessionMarkControls } from "@/components/session-view/session-mark-controls";
 import {
   assembleSessionBranchDraft,
   mapWithConcurrency,
@@ -398,28 +397,6 @@ describe("session branch model", () => {
     const model = normalizeSessionBranchModel(fieldDraft(), "Just war");
     expect(model).toBeTruthy();
     if (!model) return;
-    const actions = renderToStaticMarkup(
-      createElement(SessionMarkControls, {
-        mode: "learn",
-        questions: model.branches.filter((branch) => branch.status !== "latent").map((branch) => ({
-          id: branch.id,
-          text: branch.title,
-        })),
-        branchModel: model,
-        selectionActive: false,
-        selectedTexts: [],
-        speech: "",
-      }),
-    );
-    const keep = actions.slice(actions.indexOf('data-session-mark="hold"'), actions.indexOf("</button>", actions.indexOf('data-session-mark="hold"')));
-    expect(keep).toContain("(recommended)");
-    expect(keep).toContain("· 4");
-    expect(actions.slice(actions.indexOf('data-session-mark="try"'), actions.indexOf("</button>", actions.indexOf('data-session-mark="try"')))).not.toContain("(recommended)");
-    expect(actions).not.toContain("data-session-branch-focus");
-    expect(actions).not.toContain("data-session-branch-leads");
-    expect(actions).not.toContain("A war can be wrong");
-    expect(actions).not.toContain("data-session-mistake-list");
-
     const field = renderToStaticMarkup(
       createElement(SessionBranchFieldView, {
         slot: { status: "ready", model, error: null },
@@ -437,41 +414,14 @@ describe("session branch model", () => {
     const model = normalizeSessionBranchModel(fieldDraft(), "Just war");
     expect(model).toBeTruthy();
     if (!model) return;
-    const questions = model.branches
-      .filter((branch) => branch.status !== "latent")
-      .map((branch) => ({ id: branch.id, text: branch.title }));
-    for (const mode of ["calibrate", "verification"] as const) {
-      const actions = renderToStaticMarkup(
-        createElement(SessionMarkControls, {
-          mode,
-          questions,
-          branchModel: model,
-          selectionActive: false,
-          selectedTexts: [],
-          speech: "",
-        }),
-      );
-      expect(actions).toContain('data-session-mark="try"');
-      expect(actions).toContain('data-session-mark="hold"');
-      expect(actions).toContain('data-session-mark="drop"');
-      expect(actions).toContain('data-session-mark="insight"');
-      expect(actions).toContain('data-session-mark-disabled="false"');
-      expect(actions).not.toContain("(recommended)");
-      expect(actions).not.toContain("data-session-mark-recommended");
-      expect(actions).not.toContain("data-session-branch-price");
-      expect(actions).not.toContain("data-session-branch-focus");
-      expect(actions).not.toContain("data-session-branch-leads");
-      expect(actions).not.toContain("A war can be wrong");
-      expect(actions).not.toContain("· 4");
-      const field = renderToStaticMarkup(
-        createElement(SessionBranchFieldView, {
-          slot: { status: "ready", model, error: null },
-          showPrices: false,
-        }),
-      );
-      expect(field).toContain("103 branches");
-      expect(field).not.toContain("Exploit 28");
-      expect(field).not.toContain("data-session-branch-prices");
-    }
+    const field = renderToStaticMarkup(
+      createElement(SessionBranchFieldView, {
+        slot: { status: "ready", model, error: null },
+        showPrices: false,
+      }),
+    );
+    expect(field).toContain("103 branches");
+    expect(field).not.toContain("Exploit 28");
+    expect(field).not.toContain("data-session-branch-prices");
   });
 });

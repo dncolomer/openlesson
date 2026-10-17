@@ -35,13 +35,8 @@ describe("programmatic workspace create enabled", () => {
     expect(canonical).not.toContain("WORKSPACE_CREATE_UI_ONLY_MESSAGE");
     expect(canonical).not.toContain("rejectProgrammaticWorkspaceCreate");
 
-    const powAlias = fs.readFileSync(
-      path.join(ROOT, "app/api/v3/pow/workspaces/route.ts"),
-      "utf8",
-    );
-    expect(powAlias).toContain("export async function GET");
-    expect(powAlias).not.toContain("WORKSPACE_CREATE_UI_ONLY_MESSAGE");
-    expect(powAlias).not.toContain("createAgentWorkspace");
+    expect(fs.existsSync(path.join(ROOT, "app/api/v3/pow/workspaces/route.ts"))).toBe(false);
+    expect(fs.existsSync(path.join(ROOT, "lib/pow-api/workspace-create-ui-only.ts"))).toBe(false);
   });
 
   it("MCP dispatch creates workspaces instead of hard-failing", () => {

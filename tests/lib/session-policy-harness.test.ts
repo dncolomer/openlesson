@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -8,7 +8,6 @@ import {
   formatPolicyScoreFigure,
   SessionPolicyScoreResult,
 } from "@/components/session-view/session-policy-score-result";
-import { SessionMarkControls } from "@/components/session-view/session-mark-controls";
 import {
   SessionPolicyProvider,
   useSessionMarkCanvasEffects,
@@ -292,9 +291,7 @@ describe("policy score against the prepared tree", () => {
     expect(read("components/session-view/ile-insight-kept-screen.tsx")).not.toContain(
       "SessionPolicyScoreResult",
     );
-    expect(read("components/exercise-tap/exercise-tap-phases.tsx")).not.toContain(
-      "SessionPolicyScoreResult",
-    );
+    expect(existsSync(join(ROOT, "components/exercise-tap/exercise-tap-phases.tsx"))).toBe(false);
   });
 
   it("changes the embedding when the sequence or the captured proof changes", () => {
@@ -623,48 +620,10 @@ describe("sidebar actions wait until the canvas can place an observation", () =>
     expect(delivered.map((effect) => effect.kind)).toEqual(["try"]);
   });
 
-  it("disables the four actions inside the session until the canvas effect is ready", () => {
-    const model = normalizeSessionBranchModel(
-      {
-        premise: "A ready field.",
-        regions: [{ title: "Region", observation: "The region is open." }],
-      },
-      "Ready",
+  it("does not ship the skipped four-mark rail React", () => {
+    expect(existsSync(join(process.cwd(), "components/session-view/session-mark-controls.tsx"))).toBe(
+      false,
     );
-    expect(model).toBeTruthy();
-    if (!model) return;
-    const inside = renderToStaticMarkup(
-      createElement(
-        SessionPolicyProvider,
-        null,
-        createElement(SessionMarkControls, {
-          mode: "learn",
-          questions: [{ id: "root", text: "Ready" }],
-          branchModel: model,
-          selectionActive: false,
-          selectedTexts: [],
-          speech: "",
-        }),
-      ),
-    );
-    expect(inside).toContain('data-session-actions-ready="false"');
-    expect(inside).toContain('data-session-mark="try"');
-    expect(inside).toContain('data-session-mark="hold"');
-    expect(inside).toContain('data-session-mark="drop"');
-    expect(inside).toContain('data-session-mark="insight"');
-    expect(inside).not.toContain('data-session-mark-disabled="false"');
-    const outside = renderToStaticMarkup(
-      createElement(SessionMarkControls, {
-        mode: "learn",
-        questions: [{ id: "root", text: "Ready" }],
-        branchModel: model,
-        selectionActive: false,
-        selectedTexts: [],
-        speech: "",
-      }),
-    );
-    expect(outside).toContain('data-session-actions-ready="true"');
-    expect(outside).toContain('data-session-mark-disabled="false"');
   });
 
   it("builds the field on the tips screen and starts the clock only when that field is ready", async () => {
@@ -787,7 +746,7 @@ describe("sidebar actions wait until the canvas can place an observation", () =>
       'sidebarMode === "verification-tap"',
     );
     expect(read("components/session-view/session-page-loading.tsx")).toContain("<IleStartLoading");
-    expect(read("components/exercise-tap/exercise-tap-phases.tsx")).toContain("<SessionPageLoading");
+    expect(existsSync(join(ROOT, "components/exercise-tap/exercise-tap-phases.tsx"))).toBe(false);
     expect(read("components/session-view/session-field-gate.tsx")).toContain("<IleStartLoading");
     expect(read("components/session-view/session-branch-prepare.tsx")).toContain("loadSessionBranchField");
     expect(read("components/session-view/session-chapter-canvas.tsx")).toContain("<SessionFieldLoader");

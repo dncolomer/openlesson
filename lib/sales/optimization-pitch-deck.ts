@@ -133,7 +133,7 @@ export const OPTIMIZATION_PITCH_DECK: SolutionSlideDeck = {
       bullets: [
         "Compound efficiency gains instead of one-off training completions",
         "Role transitions get the same gap-driven practice as day-one onboarding",
-        "TIM interrupts shallow fluency mid-path, not only at the end of a course",
+        "Epistemic foraging interrupts shallow fluency mid-path, not only at the end of a course",
         "Managers see marker movement, not attendance logs",
       ],
     },
@@ -147,7 +147,7 @@ export const OPTIMIZATION_PITCH_DECK: SolutionSlideDeck = {
       bullets: [
         "Proof-of-Work scores iterate capabilities until learning efficiency clears your bar",
         "Agents are not born with skills",
-        "Same TIM loop as human optimization, shared workspace blocks",
+        "Same epistemic foraging loop as human optimization, shared workspace blocks",
         "Vendor and internal agents judged on deploy readiness, not demos",
       ],
     },
@@ -173,7 +173,7 @@ export const OPTIMIZATION_PITCH_DECK: SolutionSlideDeck = {
         "Pilot one adoption, coaching, or agent eval motion",
         "Create a Workspace and measure score movement on a live cohort",
       ],
-      footnote: "uncertain.systems · Learning Optimization · session · Proof of work · Trace Interruption Model",
+      footnote: "uncertain.systems · Learning Optimization · session · Proof of work · Free Energy Principle",
     },
   ],
 };

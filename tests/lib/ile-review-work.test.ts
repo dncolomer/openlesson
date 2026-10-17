@@ -71,10 +71,8 @@ describe("Review work chrome (shipped source)", () => {
     );
     expect(chrome).not.toContain("data-ile-identity-row");
 
-    const tabs = read("components/session-view/ile-chapter-tool-tabs.tsx");
-    expect(tabs).not.toContain("thought-history");
-    expect(tabs).not.toContain("Thoughts");
-    expect(tabs).not.toContain("Grokipedia");
+    expect(existsSync(join(ROOT, "components/session-view/ile-chapter-tool-tabs.tsx"))).toBe(false);
+
 
     const panel = read("components/session-view/ile-review-work-panel.tsx");
     expect(panel).toContain("data-ile-review-work-panel");

@@ -2,6 +2,7 @@
 
 export const LEARNING_HARNESS_PATH = "/learning-harness" as const;
 export const KNOWLEDGE_VERIFICATION_PATH = "/knowledge-verification" as const;
+export const KNOWLEDGE_MAPPING_PATH = "/knowledge-mapping" as const;
 export const SUPPORT_PATH = "/support" as const;
 export const HARNESS_PRICING_PATH = "/pricing" as const;
 export const VERIFICATION_PRICING_PATH = "/pricing/verification" as const;

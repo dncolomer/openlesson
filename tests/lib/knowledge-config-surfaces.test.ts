@@ -26,6 +26,7 @@ const FEATURE_SURFACE_FILES = [
   "app/api/workspace/knowledge-config/route.ts",
   "components/KnowledgeConfigTrajectoryPanel.tsx",
   "components/knowledge-panel/widgets.tsx",
+  "components/knowledge-panel/lwm-snapshot-modal.tsx",
   "components/WorkspacePerformancePanel.tsx",
   // Migration + docs (historical create keeps brain_* name; forward renames to knowledge_*)
   "supabase/migrations/20260719140000_learning_world_model_brain_config.sql",
@@ -112,57 +113,28 @@ describe("knowledge config / LWM feature surfaces", () => {
     expect(web).toContain("learning_world_model");
   });
 
-  it("workspace performance UI exposes Models + LWM snapshot control (Eval tab removed)", () => {
+  it("workspace performance UI exposes Models embeddings; unmounted LWM view is gone", () => {
     const panel = read("components/WorkspacePerformancePanel.tsx");
     expect(panel).toContain("KnowledgeConfigTrajectoryPanel");
     expect(panel).toContain('"knowledge"');
     expect(panel).toContain("performanceSubTabModels");
-    // Eval tab removed — snapshot generation lives in LWM box.
     expect(panel).not.toContain("data-eval-subject-picker");
     expect(panel).not.toContain("subjectFocus");
     expect(panel).not.toContain('id: "score"');
     expect(panel).not.toContain("data-knowledge-eval");
     expect(panel).toContain("isOwner={isOwner}");
 
-    const lwm = read("components/KnowledgeConfigTrajectoryPanel.tsx");
-    expect(lwm).toContain("data-lwm-generate-snapshot");
-    expect(lwm).toContain("/api/workspace/performance-report");
-    expect(lwm).toContain("snapshot-history");
-    expect(lwm).not.toContain('params.set("subject", "me")');
-    // Timeline LWM: scores hero + dual trends + history selection
-    expect(lwm).toContain("data-lwm-skill-card");
-    expect(lwm).toContain("data-lwm-skill-score");
-    expect(lwm).toContain("data-lwm-ghc-score");
-    expect(lwm).toContain("data-lwm-last-updated");
-    expect(lwm).toContain("data-lwm-snapshot-sidebar");
-    expect(lwm).toContain("data-lwm-snapshot-list");
-    expect(lwm).toContain("data-lwm-detail");
-    expect(lwm).toContain("data-lwm-detail-tabs");
-    expect(lwm).toContain("data-lwm-detail-spider");
-    expect(lwm).toContain("loadSnapshotHistory");
-    expect(lwm).toContain("selectedLwmRunId");
-    expect(lwm).toContain("selectLwmHistoryRun");
-    // No date-window history UI / separate report card grid
-    expect(lwm).not.toContain("data-lwm-date-from");
-    expect(lwm).not.toContain("data-lwm-score-trend");
-    expect(lwm).not.toContain("defaultLwmTimelineDateWindow");
-    expect(lwm).not.toContain("PerformanceReportCard");
-    // Profile-zones layout: control → snapshot list + integrated detail
-    expect(lwm).toContain('data-lwm-layout="profile-zones"');
-    expect(lwm).toContain('data-lwm-zone="control"');
-    expect(lwm).toContain('data-lwm-zone="overview"');
-    expect(lwm).toContain('data-lwm-zone="report"');
-    expect(lwm).toContain('data-lwm-zone="history"');
-    expect(lwm).toContain("data-lwm-primary");
-    expect(lwm).toContain("data-lwm-history-section");
-    expect(lwm).toMatch(/lwmUpdatedLabel|last_eval_at|as_of/);
-    // Filters + card; no long-form LWM-vs-embeddings teaching copy
-    expect(lwm).toContain("data-lwm-filters");
-    expect(lwm).toContain("data-lwm-controls-column");
-    expect(lwm).toContain("data-lwm-card-column");
-    expect(lwm).not.toContain("data-lwm-vs-embeddings");
-    expect(lwm).not.toContain("data-lwm-ghc-explain");
-    expect(lwm).not.toContain("data-lwm-split-layout");
+    expect(existsSync(join(ROOT, "components/knowledge-panel/lwm-view.tsx"))).toBe(false);
+
+    const surface = read("components/KnowledgeConfigTrajectoryPanel.tsx");
+    expect(surface).toContain("data-models-tab");
+    expect(surface).toContain('data-section="embeddings-projections"');
+    expect(surface).toContain("data-lwm-snapshot-modal");
+    expect(surface).toContain("generateSnapshot");
+    expect(surface).toContain("generateSnapshotAll");
+
+    const report = read("app/api/workspace/performance-report/route.ts");
+    expect(report).toContain("runVerticalScore");
   });
 
   it("Embeddings region overlay picker is always mounted with visible control surface", () => {
@@ -192,24 +164,20 @@ describe("knowledge config / LWM feature surfaces", () => {
   });
 
   it("Embeddings and LWM views do not stack duplicate page+section titles", () => {
-    const src = read("components/KnowledgeConfigTrajectoryPanel.tsx");
+    const src = read("components/knowledge-panel/models-view.tsx");
     // No outer page-level h2 that repeats the Knowledge subtab name.
     expect(src).not.toMatch(/<h2[^>]*>\s*Embeddings\s*<\/h2>/);
     expect(src).not.toMatch(/<h2[^>]*>\s*Learning World Model\s*<\/h2>/);
     // Embeddings section marker + accessible name (not a nested page title).
     expect(src).toContain('data-section="embeddings-projections"');
     expect(src).toContain('aria-label="Embeddings Projections"');
-    // LWM section has no nested title matching the tab label.
-    expect(src).toContain('data-section="lwm"');
-    const lwmBlock = src.slice(src.indexOf('data-section="lwm"'));
-    // SectionCard for LWM should not pass title="Learning World Model".
-    expect(lwmBlock).not.toMatch(
-      /data-section="lwm"[\s\S]{0,120}title="Learning World Model"/,
-    );
+    expect(src).not.toContain('data-section="lwm"');
+    expect(existsSync(join(ROOT, "components/knowledge-panel/lwm-view.tsx"))).toBe(false);
   });
 
   it("Embeddings uses left pickers + center canvas + right regions without whole-tab scroll", () => {
-    const models = read("components/KnowledgeConfigTrajectoryPanel.tsx");
+    const models = read("components/knowledge-panel/models-view.tsx");
+    const widgets = read("components/knowledge-panel/widgets.tsx");
     expect(models).toContain('data-embeddings-layout="left-canvas-right-regions"');
     expect(models).toContain("data-embeddings-sidebar");
     expect(models).toContain("data-embeddings-projection");
@@ -217,7 +185,7 @@ describe("knowledge config / LWM feature surfaces", () => {
     expect(models).toContain('data-picker="embeddings"');
     expect(models).toContain("data-region-overlay-picker");
     expect(models).toContain("data-projection-algorithm-picker");
-    expect(models).toContain("data-projection-widget");
+    expect(widgets).toContain("data-projection-widget");
     // Left: user + algorithm; center: canvas; right: region multi-select + distances.
     const sidebarIdx = models.indexOf("data-embeddings-sidebar");
     const projectionIdx = models.indexOf("data-embeddings-projection");
@@ -235,7 +203,7 @@ describe("knowledge config / LWM feature surfaces", () => {
     expect(algoPickerIdx).toBeLessThan(pickerIdx);
     expect(algoPickerIdx).toBeLessThan(projectionIdx);
     // Users list expands to fill remaining left-rail height (not max-h-40 only).
-    expect(models).toContain("data-embeddings-user-list-fill");
+    expect(widgets).toContain("data-embeddings-user-list-fill");
     expect(models).toContain("fillHeight");
     expect(models).toMatch(/fillHeight[\s\S]{0,80}true|fillHeight\s*\/>/);
     // Region picker lives on the right rail (after projection in DOM).
@@ -250,17 +218,17 @@ describe("knowledge config / LWM feature surfaces", () => {
     expect(models).toContain("enterEmbeddingsFullscreen");
     expect(models).toContain("exitEmbeddingsFullscreen");
     expect(models).toContain("embeddingsShellRef");
-    expect(models).toContain("requestFullscreen");
-    expect(models).toContain("exitFullscreen");
-    expect(models).toContain("fullscreenchange");
+    const embeddingsHook = read("components/knowledge-panel/use-knowledge-embeddings.ts");
+    expect(embeddingsHook).toContain("requestFullscreen");
+    expect(embeddingsHook).toContain("exitFullscreen");
+    expect(embeddingsHook).toContain("fullscreenchange");
     // CSS fallback still covers app chrome above navbar stacking context.
     expect(models).toContain("fixed inset-0");
     expect(models).toContain("z-[100]");
     // Fill-height flex; models root avoids overflow-y-auto (no whole-tab scroll).
     expect(models).toContain("overflow-hidden");
-    expect(models).toMatch(
-      /showModels\s*\?\s*[\s\S]*?overflow-hidden[\s\S]*?:\s*[\s\S]*?overflow-y-auto/,
-    );
+    const shell = read("components/KnowledgeConfigTrajectoryPanel.tsx");
+    expect(shell).toContain("overflow-hidden");
     // No nested SectionCard box around the whole embeddings stack.
     const embBlock = models.slice(
       models.indexOf('data-section="embeddings-projections"'),
@@ -273,37 +241,38 @@ describe("knowledge config / LWM feature surfaces", () => {
 
   it("Models tab uses full-width embeddings + Custom Knowledge Regions; LWM is a separate tab", () => {
     const models = read("components/KnowledgeConfigTrajectoryPanel.tsx");
+    const modelsView = read("components/knowledge-panel/models-view.tsx");
     expect(models).toContain("data-models-tab");
     expect(models).toContain('panelView = "models"');
     expect(models).toContain('panelView?: KnowledgePanelView');
-    expect(models).toContain('"lwm"');
+    expect(models).not.toContain('"lwm"');
     // No global user / user_group / all scope creation UI.
     expect(models).not.toContain("data-models-scope-picker");
     expect(models).not.toContain('value="user_group"');
     expect(models).not.toContain('data-models-scope-mode');
-    // Models: embeddings + regions; LWM has its own section gated by panelView.
-    expect(models).toContain('data-section="embeddings-projections"');
-    expect(models).toContain('data-section="lwm"');
     expect(models).toContain("showModels");
     expect(models).not.toContain("showLwm");
     expect(models).toContain('data-knowledge-judge-report="removed"');
-    expect(models).toContain('data-picker="embeddings"');
-    expect(models).toContain('data-picker="lwm"');
-    expect(models).toContain("data-models-user-picker");
-    // Models: multi-select overlays (regions managed in Settings).
-    expect(models).not.toContain("<CustomVerificationModelsPanel");
-    expect(models).not.toContain('data-section="custom-models"');
-    expect(models).toContain("data-region-overlay-picker");
-    expect(models).toContain("projectTrajectoryAndRegions");
-    expect(models).toContain("regionOverlays");
-    expect(models).toContain("data-projection-widget");
-    expect(models).toContain("data-projection-algorithm-select");
-    expect(models).toContain("PROJECTION_ALGORITHM_OPTIONS");
-    expect(models).toContain("projectionAlgorithm");
-    expect(models).toContain("data-projection-professional");
-    expect(models).toContain("data-projection-grid");
-    expect(models).toContain("min-h-[28rem]");
-    expect(models).toContain("loadRegionsForOverlay");
+    expect(modelsView).toContain('data-section="embeddings-projections"');
+    expect(modelsView).not.toContain('data-section="lwm"');
+    expect(modelsView).toContain('data-picker="embeddings"');
+    expect(modelsView).not.toContain('data-picker="lwm"');
+    const widgets = read("components/knowledge-panel/widgets.tsx");
+    expect(widgets).toContain("data-models-user-picker");
+    expect(modelsView).not.toContain("<CustomVerificationModelsPanel");
+    expect(modelsView).not.toContain('data-section="custom-models"');
+    expect(modelsView).toContain("data-region-overlay-picker");
+    const embeddingsHook = read("components/knowledge-panel/use-knowledge-embeddings.ts");
+    expect(embeddingsHook).toContain("projectTrajectoryAndRegions");
+    expect(modelsView).toContain("regionOverlays");
+    expect(widgets).toContain("data-projection-widget");
+    expect(modelsView).toContain("data-projection-algorithm-select");
+    expect(modelsView).toContain("PROJECTION_ALGORITHM_OPTIONS");
+    expect(modelsView).toContain("projectionAlgorithm");
+    expect(widgets).toContain("data-projection-professional");
+    expect(widgets).toContain("data-projection-grid");
+    expect(widgets).toContain("min-h-[28rem]");
+    expect(modelsView).toContain("loadRegionsForOverlay");
 
     const settings = read("components/WorkspaceIntegrationPanel.tsx");
     const settingsTabs = read("lib/workspace-settings-tabs.ts");
@@ -319,18 +288,17 @@ describe("knowledge config / LWM feature surfaces", () => {
     expect(settingsTabs).not.toContain('"knowledge-portal"');
     expect(settingsTabs).not.toContain('"guest-links"');
     // Full width (no max-w-3xl constraint).
-    expect(models).not.toContain("max-w-3xl");
+    expect(modelsView).not.toContain("max-w-3xl");
     expect(models).toContain("w-full");
-    expect(models).toContain("resolveModelsTabScope");
-    expect(models).toContain("resolveEmbeddingsSubjectSelection");
-    expect(models).toContain("EmbeddingsUserMultiPicker");
-    expect(models).toContain('data-embeddings-user-multiselect="true"');
-    expect(models).toContain("embSelectedKeys");
-    expect(models).toContain("data-embeddings-user-toggle");
-    // Left canvas right-regions layout (not the old projection|LWM grid).
-    expect(models).toContain('data-embeddings-layout="left-canvas-right-regions"');
-    expect(models).toContain("data-embeddings-regions-rail");
-    expect(models).not.toContain("lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]");
+    expect(models).toContain("resolveModelsTabCanInspectOthers");
+    expect(embeddingsHook).toContain("resolveEmbeddingsSubjectSelection");
+    expect(modelsView).toContain("EmbeddingsUserMultiPicker");
+    expect(widgets).toContain('data-embeddings-user-multiselect="true"');
+    expect(modelsView).toContain("embSelectedKeys");
+    expect(widgets).toContain("data-embeddings-user-toggle");
+    expect(modelsView).toContain('data-embeddings-layout="left-canvas-right-regions"');
+    expect(modelsView).toContain("data-embeddings-regions-rail");
+    expect(modelsView).not.toContain("lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]");
 
     const panel = read("components/WorkspacePerformancePanel.tsx");
     expect(panel).toContain('panelView="models"');
@@ -352,7 +320,7 @@ describe("knowledge config / LWM feature surfaces", () => {
     const models = read("components/KnowledgeConfigTrajectoryPanel.tsx");
     // User-visible Knowledge/Models copy must not label people as learners.
     expect(models).not.toMatch(/\blearner(s)?\b/i);
-    expect(models).toContain("data-lwm-timeline");
+    expect(models).toContain("data-models-tab");
     expect(models).toContain("User");
     expect(models).not.toContain("data-lwm-vs-embeddings");
 
@@ -407,8 +375,10 @@ describe("knowledge config / LWM feature surfaces", () => {
   it("ontology names knowledge config dual layer", () => {
     const ontology = read("lib/prompt-kernel/ontology.ts");
     expect(ontology).toMatch(/Knowledge config/i);
-    expect(ontology).toContain("knowledgecfg-v1-d64");
     expect(ontology).toContain("press embeddings");
+    expect(ontology).toMatch(/Learning world model/i);
+    const types = read("lib/knowledge-config/types.ts");
+    expect(types).toContain("knowledgecfg-v1-d64");
   });
 
   it("PoW schema integration loads evidence appetite from durable LWM", () => {

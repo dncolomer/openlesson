@@ -88,6 +88,18 @@ describe("TAP Learning canvas session chapter count and insight goal", () => {
       id: "ch-3",
       prompt: "Prompt three",
     });
+    expect(
+      ileBlockSessionChapter(
+        [
+          {
+            id: "ch-wrap",
+            description:
+              "In one guided conversation, work the last-resort test on a just-war case.",
+          },
+        ],
+        0,
+      )?.prompt,
+    ).toBe("Work the last-resort test on a just-war case.");
     expect(ileBlockSessionChapter(resumed, 2)?.id).toBe("ch-3");
     expect(ileBlockSessionOpenWorkIds(resumed, 2)).toEqual(["ch-3"]);
 

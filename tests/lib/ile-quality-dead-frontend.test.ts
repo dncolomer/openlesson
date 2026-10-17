@@ -30,7 +30,7 @@ describe("TAP Learning dead frontend is gone from the live session", () => {
     const view = readSessionViewSurface();
     const canvas = read("components/ExcalidrawCanvas.tsx");
     const tapPhases = read("components/tap-score/tap-score-phases.tsx");
-    const tapShell = read("components/exercise-tap/ExerciseTapShell.tsx");
+    expect(existsSync(join(ROOT, "components/exercise-tap/ExerciseTapShell.tsx"))).toBe(false);
 
     expect(panes).not.toContain("NotebookSubmitButton");
     expect(panes).not.toContain("onSubmitToHelios");
@@ -71,9 +71,7 @@ describe("TAP Learning dead frontend is gone from the live session", () => {
     expect(canvas).toContain("onSubmitToHelios ?");
 
     expect(tapPhases).toContain("ImDoneAnsweringControl");
-    expect(tapShell).toContain("ImDoneAnsweringControl");
     expect(tapPhases).toContain("ThoughtMemoryPanel");
-    expect(tapShell).toContain("ThoughtMemoryPanel");
 
     writeScratch(
       "ile-quality-dead-frontend.txt",

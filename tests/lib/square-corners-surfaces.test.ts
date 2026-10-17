@@ -23,7 +23,6 @@ const ENTRY_DIRS = ["app/workspace", "app/ile", "app/tap", "app/learn"];
 const ENTRY_SHELLS = [
   "components/WorkspaceView.tsx",
   "components/SessionView.tsx",
-  "components/ExerciseTapClient.tsx",
   "components/TapScoreClient.tsx",
   "components/IleGuestSessionClient.tsx",
   "components/AyclWorkspaceView.tsx",
@@ -43,7 +42,6 @@ const SKIP_REL_PREFIXES = ["components/MapOfKnowledge"];
 const MUST_INCLUDE = [
   "components/RabbitHoleExpandModal.tsx",
   "components/BlockGoalsPanel.tsx",
-  "components/SimulationCollectionAddButton.tsx",
   "components/IntegrationQuickAccess.tsx",
   "components/MultiBlockDagCanvas.tsx",
   "components/MultiBlockDagPreview.tsx",

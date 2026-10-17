@@ -35,6 +35,7 @@ import {
   type IleWorkCanvasAskKind,
   type IleWorkCanvasCommandId,
 } from "@/lib/ile-work-canvas-commands";
+import { stripLearnerFacingWrappers } from "@/lib/session-format-wrapper";
 
 export {
   ILE_CANVAS_TIMER_RESET_LOADING_MS,
@@ -995,12 +996,12 @@ export function applyIleXaiTurnToWorkCanvas(
   options?: IleWorkCanvasPlacementOptions | null,
 ): IleWorkCanvasScene {
   const current = serializeIleWorkCanvasScene(scene);
-  let text = String(payload.text || "").trim();
+  let text = stripLearnerFacingWrappers(String(payload.text || "").trim());
   let extra = normalizeExtraSkeletons(payload.elements);
   let originInput = payload.origin;
   if (ileXaiReplyIsCanvasJson(text)) {
     const parsed = parseIleXaiCanvasTurn(text);
-    text = String(parsed.text || "").trim();
+    text = stripLearnerFacingWrappers(String(parsed.text || "").trim());
     if (extra.length === 0) extra = normalizeExtraSkeletons(parsed.elements);
     if (!ileWorkCanvasFiniteOrigin(originInput)) originInput = parsed.origin ?? originInput;
   }
@@ -2426,7 +2427,7 @@ export function parseIleXaiCanvasTurn(raw: string | null | undefined): IleXaiCan
   const source = String(raw || "").trim();
   if (!source) return { text: "", elements: [] };
   const parsed = extractJsonObject(source);
-  const text = visibleTextFromXaiReply(source, parsed);
+  const text = stripLearnerFacingWrappers(visibleTextFromXaiReply(source, parsed));
   if (!parsed) return { text, elements: [] };
   const elements = normalizeExtraSkeletons(parsed.elements ?? parsed.canvas_elements);
   const origin = originFromParsedCanvasJson(parsed);
@@ -2713,7 +2714,7 @@ export function ileWorkCanvasSceneForTurn(
 
 /** Instruct XAI to suggest a scene origin alongside the restorable board. */
 export const ILE_WORK_CANVAS_TURN_ORIGIN_INSTRUCTION =
-  'Suggest a scene origin for that reply as JSON "origin": {"x": number, "y": number} tucked against the existing cluster, usually directly under nearby marks. Do not jump far to the right.';
+  'Suggest a scene origin for that reply as JSON "origin": {"x": number, "y": number} tucked against the existing cluster, usually directly under nearby marks. Do not jump far to the right. Origin is JSON only — never mention origin, placement, Check/ask, or that a question sits in the right place in "text".';
 
 function formatCanvasMeasure(value: unknown): string {
   const n = Number(value);
@@ -2764,7 +2765,7 @@ export type IleWorkCanvasQuickActionId = typeof ILE_WORK_CANVAS_QUICK_ACTION_CHE
 export function ileWorkCanvasQuickActionPrompt(
   _action: typeof ILE_WORK_CANVAS_QUICK_ACTION_CHECK,
 ): string {
-  return "Check this selection. Say what holds and what to fix, stay on the workspace/block domain, and do not invent unrelated topics.";
+  return "Check this selection. Say what holds and what to fix. Answer directly. Do not mention Check/ask, commands, or placement. Stay on the workspace/block domain, and do not invent unrelated topics.";
 }
 
 function groupIleWorkCanvasSplitParts(parts: string[], joiner: string): string[] {
@@ -3438,10 +3439,12 @@ export function applyIleWorkCanvasAskReply(input: {
   } else if (kind === "declutter" || kind === "clear-overlaps") {
     next = applyIleWorkCanvasPositionEdits(live, selected, layoutReply);
   } else {
-    next = merge(String(input.payload.text || "").trim());
+    next = merge(stripLearnerFacingWrappers(String(input.payload.text || "").trim()));
   }
   if (ileWorkCanvasSceneVisiblyChanged(live, next)) return next;
-  const fallback = String(input.payload.text || "").trim() || ileWorkCanvasAskFallback(kind);
+  const fallback =
+    stripLearnerFacingWrappers(String(input.payload.text || "").trim()) ||
+    ileWorkCanvasAskFallback(kind);
   return merge(fallback);
 }
 

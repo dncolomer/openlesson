@@ -279,7 +279,7 @@ export const LEARNING_AUGMENTATION_PAGE: SeoUseCasePageConfig = {
     },
   ],
   highlights: [
-    "Trace Interruption Model breaks turn-based quiz linearity",
+    "A Free Energy Principle approach based on epistemic foraging breaks turn-based quiz linearity",
     "Embeddable links and API hooks for LMS and course builders",
     "Verification plus practice in one workspace — no bolt-on tutoring tab",
   ],

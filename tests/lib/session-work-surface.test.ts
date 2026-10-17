@@ -5,7 +5,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { SessionFinishedScreen } from "@/components/session-view/session-finished-screen";
 import { readSessionStageSurface } from "../helpers/surface-source";
@@ -30,7 +30,8 @@ describe("shared live work surface", () => {
   const host = read("components/session-view/session-work-surface.tsx");
   const prepare = read("components/scout-tap/scout-tap-phases.tsx");
   const learn = read("components/session-view/session-chrome.tsx");
-  const drill = read("components/exercise-tap/ExerciseTapShell.tsx");
+  expect(existsSync(join(ROOT, "components/exercise-tap/ExerciseTapShell.tsx"))).toBe(false);
+
   const tap = read("components/tap-score/tap-score-phases.tsx");
   const verify = read("components/VerificationFlowRunner.tsx");
 
@@ -80,22 +81,8 @@ describe("shared live work surface", () => {
     }
   });
 
-  it("Drill live play uses the sidebar and keeps the map, stash, I'm done, and thought memory", () => {
-    expect(drill).toContain("<SessionWorkSurface");
-    expect(drill).toContain('mode="tap"');
-    expect(drill).toContain("data-exercise-tap-map-pane");
-    expect(drill).toContain("TapSessionMap");
-    expect(drill).toContain("data-exercise-tap-stash-submit");
-    expect(drill).not.toContain("data-tap-transcript-container");
-    expect(drill).toContain("data-tap-im-done-slot");
-    expect(drill).toContain("<ThoughtMemoryPanel");
-    expect(drill).toContain("ImDoneAnsweringControl");
-    const doneAt = drill.indexOf("data-tap-im-done-slot");
-    const memoryAt = drill.indexOf("<ThoughtMemoryPanel");
-    expect(memoryAt).toBeGreaterThan(doneAt);
-    for (const marker of OLD_LIVE_SPLITS) {
-      expect(drill, marker).not.toContain(marker);
-    }
+  it("Drill live play leftover is gone", () => {
+    expect(existsSync(join(ROOT, "components/exercise-tap/ExerciseTapShell.tsx"))).toBe(false);
   });
 
   it("conversational TAP and Verify live play use the sidebar and keep stash, I'm done, and thought memory", () => {
@@ -145,22 +132,8 @@ describe("shared live work surface", () => {
     expect(tapActions).toContain("data-tap-end-session");
     expect(tapActions).toContain("End session");
 
-    const drillPhases = read("components/exercise-tap/exercise-tap-phases.tsx");
-    const drillShell = read("components/exercise-tap/ExerciseTapShell.tsx");
-    expect(drillPhases).not.toContain("data-exercise-live-control-strip");
-    expect(drillShell).toContain("clock={clock}");
-    expect(drillShell).toContain("actions={actions}");
-    expect(drillShell).not.toContain("controlStrip");
-    const drillClock = drillPhases.slice(drillPhases.indexOf("clock={"), drillPhases.indexOf("actions={"));
-    expect(drillClock).toContain("<TapLiveClock");
-    expect(drillClock).not.toContain("data-tap-end-session");
-    const drillActions = drillPhases.slice(
-      drillPhases.indexOf("actions={"),
-      drillPhases.indexOf("speechBar={"),
-    );
-    expect(drillActions).toContain("showEndSession");
-    expect(drillActions).toContain("data-tap-end-session");
-    expect(drillActions).toContain("End session");
+    expect(existsSync(join(ROOT, "components/exercise-tap/exercise-tap-phases.tsx"))).toBe(false);
+    expect(existsSync(join(ROOT, "components/exercise-tap/ExerciseTapShell.tsx"))).toBe(false);
 
     const voice = read("components/session-view/ile-voice-bar.tsx");
     expect(voice).toContain("data-ile-bar-save");
@@ -229,7 +202,6 @@ describe("shared live work surface", () => {
     const finished = [
       prepare,
       tap,
-      read("components/exercise-tap/exercise-tap-phases.tsx"),
       read("components/session-view/ile-silence-lock-screen.tsx"),
     ];
     for (const src of finished) {
@@ -240,21 +212,13 @@ describe("shared live work surface", () => {
     expect(prepare).toContain("data-scout-restart");
     expect(prepare).toContain("data-scout-workspace");
     expect(prepare).toContain("data-scout-jump-work");
-    expect(prepare).not.toContain("data-scout-jump-drill");
     expect(tap).toContain("data-tap-session-thank-you");
     expect(tap).toContain("data-tap-session-impure");
     expect(tap).toContain("data-tap-practice-done");
     expect(tap).toContain("Could not end Verify session");
     expect(tap).toContain("<PerformanceReportCard");
-    const drill = read("components/exercise-tap/exercise-tap-phases.tsx");
-    expect(drill).toContain("data-tap-practice-done");
-    expect(drill).toContain("data-exercise-practice-retry");
-    expect(drill).toContain("data-tap-session-impure");
-    expect(drill).toContain("data-exercise-session-impure");
-    expect(drill).toContain("data-tap-session-thank-you");
-    expect(drill).toContain("data-exercise-session-thank-you");
-    expect(drill).toContain('kicker="Verify"');
-    expect(drill).toContain("Verify complete");
+    expect(existsSync(join(ROOT, "components/exercise-tap/exercise-tap-phases.tsx"))).toBe(false);
+
     const silence = read("components/session-view/ile-silence-lock-screen.tsx");
     expect(silence).toContain("data-ile-silence-rest");
     expect(silence).toContain("data-ile-session-impurity");
@@ -265,7 +229,6 @@ describe("shared live work surface", () => {
     for (const src of [
       prepare,
       tap,
-      drill,
       read("components/SessionView.tsx"),
       read("components/session-view/session-welcome-modal.tsx"),
     ]) {

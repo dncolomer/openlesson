@@ -75,8 +75,7 @@ describe("eval pow gate wiring", () => {
     const lwm = readKnowledgePanelSurface();
     expect(run).toContain("assertEvalAllowedWithNewPow");
     expect(web).toContain("NO_NEW_POW");
-    expect(lwm).toContain("snapshot-history");
-    expect(lwm).toContain("data-lwm-generate-snapshot");
+    expect(lwm).toContain("data-lwm-snapshot-modal");
     expect(lwm).toContain("snapshotEligibility");
   });
 });

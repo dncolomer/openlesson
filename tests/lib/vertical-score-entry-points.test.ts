@@ -244,15 +244,18 @@ describe("LWM Snapshot entry points (shipped wiring)", () => {
     expect(panel).toContain("lwm");
   });
 
-  it("LWM box hosts Generate new snapshot control with PoW gate", () => {
+  it("snapshot modal still ships generate callbacks; LWM view is gone", () => {
     const lwm = readKnowledgePanelSurface();
-    expect(lwm).toContain("data-lwm-generate-snapshot");
-    expect(lwm).toContain("Generate new snapshot");
-    expect(lwm).toContain("data-lwm-generate-snapshot-all");
-    expect(lwm).toContain("/api/workspace/performance-report");
-    expect(lwm).toContain("/snapshot-all");
-    expect(lwm).toContain("loadSnapshotEligibility");
+    expect(lwm).toContain("data-lwm-snapshot-modal");
+    expect(lwm).toContain("generateSnapshot");
+    expect(lwm).toContain("generateSnapshotAll");
     expect(lwm).toContain("snapshotEligibility");
+    expect(existsSync(join(ROOT, "components/knowledge-panel/lwm-view.tsx"))).toBe(false);
+    const report = readFileSync(
+      join(ROOT, "app/api/workspace/performance-report/route.ts"),
+      "utf8",
+    );
+    expect(report).toContain("runVerticalScore");
   });
 
   it("does not ship a performance chat REST endpoint", () => {

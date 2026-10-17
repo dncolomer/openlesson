@@ -2,7 +2,7 @@
  * Strengths & Gaps: pure browse/link/analysis helpers + Knowledge tab wiring.
  */
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { readKnowledgePanelSurface } from "../helpers/surface-source";
 import {
@@ -329,13 +329,14 @@ describe("Knowledge Strengths & Gaps tab wiring", () => {
     expect(panel).not.toContain('panelView="ranking"');
   });
 
-  it("Knowledge panel mounts strengths_gaps view with structural markers", () => {
+  it("Knowledge panel does not mount strengths_gaps view", () => {
     const kctp = readKnowledgePanelSurface();
     const sgp = readFileSync(join(ROOT, "components/StrengthsGapsPanel.tsx"), "utf8");
 
-    expect(kctp).toMatch(/KnowledgePanelView[\s\S]*strengths_gaps/);
+    expect(kctp).not.toMatch(/KnowledgePanelView[\s\S]*strengths_gaps/);
     expect(kctp).not.toMatch(/panelView === "strengths_gaps"|showStrengthsGaps/);
     expect(kctp).not.toContain("<KnowledgeStrengthsGapsView");
+    expect(existsSync(join(ROOT, "components/knowledge-panel/strengths-gaps-view.tsx"))).toBe(false);
     expect(sgp).toContain('data-section="strengths-gaps"');
     expect(sgp).toContain("data-strengths-gaps-analysis");
     expect(sgp).toContain("data-strengths-gaps-list");

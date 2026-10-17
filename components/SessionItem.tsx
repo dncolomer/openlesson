@@ -177,6 +177,21 @@ export function SessionItem({
     router.push(`/workspace/${workspaceId}/scout?${params.toString()}`);
   };
 
+  const handleStartVerify = (event?: React.MouseEvent, minutes?: number) => {
+    event?.stopPropagation();
+    if (!workspaceId) return;
+    const params = new URLSearchParams({
+      blockId: node.id,
+      session: "verification",
+    });
+    if (typeof minutes === "number" && Number.isFinite(minutes) && minutes > 0) {
+      params.set("minutes", String(Math.trunc(minutes)));
+    }
+    const contextualSessionId = activeSession?.id || node.session_id;
+    if (contextualSessionId) params.set("sessionId", contextualSessionId);
+    router.push(`/workspace/${workspaceId}/tap?${params.toString()}`);
+  };
+
   const handleLaunchIntent = (
     target: {
       id: string;
@@ -184,8 +199,12 @@ export function SessionItem({
       session_mode?: string;
       interaction_kind?: string;
     },
-    options?: { minutes?: number },
+    options?: { minutes?: number; verification?: boolean },
   ) => {
+    if (options?.verification) {
+      handleStartVerify(undefined, options.minutes);
+      return;
+    }
     if (target.product === "ile") {
       void handleStart("learning");
       return;

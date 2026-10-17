@@ -1,6 +1,7 @@
 import {
   AUTHORING_PRICING_PATH,
   HARNESS_PRICING_PATH,
+  KNOWLEDGE_MAPPING_PATH,
   KNOWLEDGE_VERIFICATION_PATH,
   LEARNING_HARNESS_PATH,
   VERIFICATION_PRICING_PATH,
@@ -9,6 +10,7 @@ import {
 export const MAIN_NAV_PRODUCT_LINKS = [
   { href: LEARNING_HARNESS_PATH, label: "Harness" },
   { href: KNOWLEDGE_VERIFICATION_PATH, label: "Verification" },
+  { href: KNOWLEDGE_MAPPING_PATH, label: "Mapping" },
 ] as const;
 
 export const PRICING_NAV_LINKS = [

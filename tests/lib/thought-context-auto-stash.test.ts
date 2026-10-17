@@ -52,16 +52,9 @@ describe("TAP + TAP Learning hide Auto-stash context bar HUD", () => {
   it("surfaces keep context-full auto-stash without mounting the progress bar", () => {
     expect(AUTO_STASH_CONTEXT_LABEL).toBe("Auto-stash context");
 
-    const bar = fs.readFileSync(
-      path.join(ROOT, "components/thought-ui/AutoStashContextBar.tsx"),
-      "utf8",
+    expect(fs.existsSync(path.join(ROOT, "components/thought-ui/AutoStashContextBar.tsx"))).toBe(
+      false,
     );
-    expect(bar).toContain("AUTO_STASH_CONTEXT_LABEL");
-    expect(bar).toContain("data-auto-stash-context-bar");
-    expect(bar).toContain("data-auto-stash-context-label");
-    expect(bar).toContain("data-auto-stash-context-track");
-    expect(bar).toContain("animate-pulse");
-    expect(bar).toContain("thoughtContextBarToneClass");
 
     const tap = readTapScoreSurface();
     expect(tap).not.toContain("AutoStashContextBar");

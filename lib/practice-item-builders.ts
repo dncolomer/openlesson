@@ -25,6 +25,7 @@ import {
   buildTapOpeningQuestionTask,
   buildTapPracticeOpeningQuestionTask,
 } from "@/lib/prompt-kernel/surfaces/tap";
+import { isSessionFormatWrapper } from "@/lib/session-format-wrapper";
 
 export type PracticeExternalLink = {
   title?: string | null;
@@ -471,7 +472,7 @@ export function buildSimulationSamplesSystemPrompt(): string {
     "",
     "CRITICAL for dialogue questions:",
     "- Each question must demand a concrete intermediate result, worked instance, failure mode with a catch signal, or checkable output — NOT a syllabus restatement.",
-    '- FORBIDDEN dialogue wrappers: "What is the core mechanism in…", "how would you explain it precisely", "central claim … must not get wrong", "Explore how X intersects with Y…", "in your own words what is…", pure "what is X?" overview questions.',
+    '- FORBIDDEN dialogue wrappers: "What is the core mechanism in…", "how would you explain it precisely", "central claim … must not get wrong", "Explore how X intersects with Y…", "in your own words what is…", "In one guided conversation…", "In this conversation…", pure "what is X?" overview questions.',
     "- Do NOT paste the block description after \"specifically:\" and ask for a definition of the blurb.",
     "",
     "CRITICAL for exercises:",
@@ -594,6 +595,7 @@ export function isMetaLearningFluff(text: string | null | undefined): boolean {
     /solve a non-trivial problem in\b/i.test(t) ||
     /solve a non-trivial problem involving\b/i.test(t) ||
     /design a mini-problem that requires\b/i.test(t) ||
-    /stay within this scope:\b/i.test(t)
+    /stay within this scope:\b/i.test(t) ||
+    isSessionFormatWrapper(t)
   );
 }

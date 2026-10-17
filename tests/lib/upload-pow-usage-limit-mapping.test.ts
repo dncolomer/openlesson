@@ -3,7 +3,7 @@
  * used by POST /api/v3/pow/workspaces/{id}/proof-of-work.
  */
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { canSubmitProofOfWork, type UserProfile } from "@/lib/plans";
 import {
@@ -40,13 +40,21 @@ function tokenRegularExhaustedProfile(): UserProfile {
 }
 
 describe("upload PoW usage-limit → 402 mapping (REST catch path)", () => {
-  it("v3 proof-of-work route uses mapUploadWorkspaceProofOfWorkError", () => {
-    const src = readFileSync(
-      join(ROOT, "app/api/v3/pow/workspaces/[id]/proof-of-work/route.ts"),
+  it("workspace-level dump is gone; mapper stays on the live helper", () => {
+    expect(
+      existsSync(join(ROOT, "app/api/v3/pow/workspaces/[id]/proof-of-work/route.ts")),
+    ).toBe(false);
+    expect(
+      existsSync(
+        join(ROOT, "app/api/v3/pow/workspaces/[id]/sessions/[sessionId]/proof-of-work/route.ts"),
+      ),
+    ).toBe(true);
+    const helper = readFileSync(
+      join(ROOT, "lib/pow-api/upload-workspace-proof-of-work.ts"),
       "utf8",
     );
-    expect(src).toMatch(/mapUploadWorkspaceProofOfWorkError/);
-    expect(src).not.toMatch(/message\.includes\("monthly"\)/);
+    expect(helper).toMatch(/export function mapUploadWorkspaceProofOfWorkError/);
+    expect(helper).not.toMatch(/message\.includes\("monthly"\)/);
   });
 
   it("maps real canSubmitProofOfWork exhaustion reason to 402 usage_limit_reached", () => {

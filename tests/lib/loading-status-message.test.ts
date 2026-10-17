@@ -15,7 +15,6 @@ function readRepoFile(relativePath: string): string {
 const GATE_FILES = [
   "app/dashboard/page.tsx",
   "app/workspaces/page.tsx",
-  "app/plans/page.tsx",
   "app/organization/page.tsx",
   "app/invite/[token]/page.tsx",
   "app/labs/layout.tsx",

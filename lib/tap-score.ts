@@ -17,6 +17,7 @@ import {
 import { normalizeUnusableCells } from "@/lib/map-ground-rules";
 import { withConversationLanguageInstruction } from "@/lib/tutoring-languages";
 import { buildGuestLinkUrl } from "@/lib/guest-link-access";
+import { stripSessionFormatWrapper } from "@/lib/session-format-wrapper";
 
 export interface TapStartingTopic {
   id: string;
@@ -410,7 +411,8 @@ function normalizeTapStartingTopics(raw: unknown): TapStartingTopic[] | null {
       const record = item as Record<string, unknown>;
       const title = String(record.title || "").trim();
       const subtitle = String(record.subtitle || "").trim();
-      const openingQuestion = String(record.openingQuestion || "").trim();
+      const openingRaw = String(record.openingQuestion || "").trim();
+      const openingQuestion = stripSessionFormatWrapper(openingRaw) || openingRaw;
       if (!title || !openingQuestion) return null;
       const id = String(record.id || "").trim() || slugifyTopicId(title, index);
       return {
@@ -545,7 +547,8 @@ export function resolveTapOpeningQuestionFromLlm(
   practice: boolean,
 ): string {
   const trimmed = typeof llmText === "string" ? llmText.trim() : "";
-  if (trimmed) return trimmed;
+  const cleaned = stripSessionFormatWrapper(trimmed);
+  if (cleaned) return cleaned;
   return practice
     ? buildTapPracticeOpeningQuestionFallback(brief)
     : buildTapOpeningQuestionFallback(brief);

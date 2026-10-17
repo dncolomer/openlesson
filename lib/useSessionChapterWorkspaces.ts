@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
-import type { ChatMessage, PendingChatMessage } from "@/components/HeliosChat";
+import type { ChatMessage, PendingChatMessage } from "@/lib/session-chat-client";
 import type { SessionPlan } from "@/lib/domain/types";
 import type { ChapterWorkspace } from "@/components/session/sessionViewHelpers";
 import {

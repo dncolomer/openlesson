@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TapScoreBrief } from "@/lib/tap-score";
 import { buildConversationLanguageInstruction } from "@/lib/tutoring-languages";
 import { buildTapPracticeOpeningQuestionTask, buildTapStartingTopicsTask } from "@/lib/prompt-kernel/surfaces/tap";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 const { callXaiMock, callXaiJSONMock } = vi.hoisted(() => ({
@@ -160,33 +160,27 @@ describe("Practice topic language structural wiring", () => {
   it("TapScoreClient and ExerciseTapClient send conversationLanguage on topics + start and reload topics on language change", () => {
     for (const rel of [
       "components/TapScoreClient.tsx",
-      "components/ExerciseTapClient.tsx",
     ]) {
       const src = read(rel);
       expect(src).toMatch(/workspace-tap-score\/topics[\s\S]*conversationLanguage/);
       expect(src).toMatch(
-        /}, \[phase, workspaceId, blockId, sessionId, privateToken, minutes, conversationLanguage\]/,
+        /}, \[phase, workspaceId, blockId, sessionId, privateToken, minutes, conversationLanguage, presetStartingTopics\]/,
       );
     }
     const tapFlow = read("components/tap-score/use-tap-score-flow.ts");
-    const exercise = read("components/ExerciseTapClient.tsx");
+    expect(existsSync(path.join(root, "components/ExerciseTapClient.tsx"))).toBe(false);
+
     expect(tapFlow).toMatch(
       /(?:workspace-tap-score\/start|TAP_SESSION_RUNTIME_PATHS\.start|postTutoringSessionStart)[\s\S]*conversationLanguage/,
     );
-    expect(exercise).toMatch(
-      /(?:workspace-tap-score\/start|TAP_SESSION_RUNTIME_PATHS\.start|postTutoringSessionStart)[\s\S]*conversationLanguage/,
-    );
     const tapPhases = read("components/tap-score/tap-score-phases.tsx");
-    const exercisePhases = read("components/exercise-tap/exercise-tap-phases.tsx");
+    expect(existsSync(path.join(root, "components/exercise-tap/exercise-tap-phases.tsx"))).toBe(false);
+
     expect(tapPhases).toContain("choosePractice");
     expect(tapPhases).toContain("scoredTapBriefingStep");
     expect(tapPhases).not.toMatch(/onPracticeFirst=\{\(\) => void startSession\(\{ practice: true \}\)/);
     expect(tapPhases).toContain("startSession({ practice: true })");
-    expect(exercisePhases).toContain("choosePractice");
-    expect(exercisePhases).not.toMatch(/onPracticeFirst=\{\(\) => void startSession\(\{ practice: true \}\)/);
-    expect(exercisePhases).toContain("startSession({ practice: true })");
     expect(tapFlow).toMatch(/practice[\s\S]*conversationLanguage/);
-    expect(exercise).toMatch(/practice[\s\S]*conversationLanguage/);
   });
 
   it("topics + start API routes pass conversationLanguage into Practice generators", () => {

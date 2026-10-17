@@ -132,20 +132,20 @@ async function main() {
   if (!apiKey) {
     record("agent-api", "teams API key configured", false, "missing E2E_TEAMS_API_KEY");
   } else {
-    const bad = await agentJson("/api/v3/pow/workspaces", "sk_invalid_test_key", {
+    const bad = await agentJson("/api/v3/workspaces", "sk_invalid_test_key", {
       method: "POST",
       body: JSON.stringify({ initial_prompt: "noop" }),
     });
     record("agent-api", "invalid API key rejected", bad.res.status === 401, `HTTP ${bad.res.status}`);
 
-    const noAuth = await fetch(`${baseUrl}/api/v3/pow/workspaces`, {
+    const noAuth = await fetch(`${baseUrl}/api/v3/workspaces`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ initial_prompt: "test" }),
     });
     record("agent-api", "missing Authorization rejected", noAuth.status === 401, `HTTP ${noAuth.status}`);
 
-    const badBody = await agentJson("/api/v3/pow/workspaces", apiKey, {
+    const badBody = await agentJson("/api/v3/workspaces", apiKey, {
       method: "POST",
       body: JSON.stringify({}),
     });
@@ -159,7 +159,7 @@ async function main() {
     if (!liveWrites) {
       record("agent-api", "live writes", false, "E2E_ALLOW_LIVE_WRITES not set");
     } else {
-      const create = await agentJson("/api/v3/pow/workspaces", apiKey, {
+      const create = await agentJson("/api/v3/workspaces", apiKey, {
         method: "POST",
         body: JSON.stringify({
           initial_prompt:
@@ -177,7 +177,7 @@ async function main() {
       );
 
       if (workspaceId) {
-        const blocks = await agentJson(`/api/v3/pow/workspaces/${workspaceId}/blocks`, apiKey);
+        const blocks = await agentJson(`/api/v3/workspaces/${workspaceId}/blocks`, apiKey);
         const blockId = blocks.body?.blocks?.[0]?.id;
         record(
           "agent-api",
@@ -186,34 +186,12 @@ async function main() {
           `${blocks.body?.blocks?.length ?? 0} blocks`
         );
 
-        if (blockId) {
-          const link = await agentJson(
-            `/api/v3/pow/workspaces/${workspaceId}/blocks/${blockId}/tap-links`,
-            apiKey,
-            { method: "POST", body: JSON.stringify({ minutes: 15 }) }
-          );
-          const linkId = link.body?.tap_link?.id;
-          record(
-            "agent-api",
-            "POST /blocks/{id}/tap-links",
-            link.res.status === 201 && !!linkId,
-            linkId || `${link.res.status}`
-          );
-
-          const list = await agentJson(`/api/v3/pow/workspaces/${workspaceId}/tap-links`, apiKey);
-          record(
-            "agent-api",
-            "GET /workspaces/{id}/tap-links",
-            list.res.status === 200,
-            `${list.body?.tap_links?.length ?? 0} links`
-          );
-
-          if (link.body?.private_url) {
-            const token = link.body.private_url.split("/").pop();
-            const page = await fetch(`${baseUrl}/tap/session/${token}`, { redirect: "manual" });
-            record("agent-api", "private TAP page loads", page.status === 200, `HTTP ${page.status}`);
-          }
-        }
+        record(
+          "agent-api",
+          "Bearer v3 tap-links removed (cookie-auth /api/workspace/tap-links remains)",
+          true,
+          "skipped",
+        );
       }
 
       const guestEmail = `e2e-guest+${Date.now()}@uncertain.systems`;
@@ -233,7 +211,7 @@ async function main() {
       if (typeof guest.body?.api_key === "string") {
         const guestKey = guest.body.api_key;
         const guestBlocks = await agentJson(
-          `/api/v3/pow/workspaces/${guest.body?.guest ? "00000000-0000-0000-0000-000000000000" : ""}/blocks`,
+          `/api/v3/workspaces/${guest.body?.guest ? "00000000-0000-0000-0000-000000000000" : ""}/blocks`,
           guestKey
         );
         // Guest should not read arbitrary workspace; expect 404/403 not 500

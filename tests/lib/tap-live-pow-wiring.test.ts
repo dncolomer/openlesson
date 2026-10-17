@@ -8,7 +8,7 @@ import {
   TAP_SESSION_RUNTIME_PATHS,
   tapTracePayload,
 } from "@/lib/tap-session-runtime";
-import { readExerciseTapSurface, readTapScoreSurface } from "@/tests/helpers/surface-source";
+import { readTapScoreSurface } from "@/tests/helpers/surface-source";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
@@ -77,24 +77,12 @@ describe("TAP live PoW after map/stash UI swap", () => {
     expect(phases).toContain("data-tap-convo-work-canvas-pane");
     expect(phases).not.toContain("TapSessionMap");
 
-    const exercise = readExerciseTapSurface();
-    expect(exercise).toContain("tapTracePayload");
-    expect(exercise).toContain('"/api/workspace-tap-score/trace"');
-    expect(exercise).toContain('traceType: "system1"');
-    expect(exercise).toContain('traceType: "system2"');
-    expect(exercise).toContain("stashExerciseSpeech");
-    expect(exercise).toContain("promoteExerciseStashToSubmission");
-    expect(exercise).toContain("postTutoringSessionStart");
-    expect(exercise).toContain("postTutoringSessionComplete");
-    expect(exercise).toContain("stashCurrentTranscription");
-    expect(exercise).toContain("sendThought");
-    expect(exercise).toContain("ImDoneAnsweringControl");
-    expect(exercise).toContain("TapSessionMap");
-    expect(exercise).toContain("ThoughtMemoryPanel");
-    const soloShell = read("components/exercise-tap/ExerciseTapShell.tsx");
-    expect(soloShell).not.toContain("ExerciseStashHistory");
-    expect(soloShell).not.toContain("ExerciseSubmissionStack");
-    expect(soloShell).toContain("ThoughtMemoryPanel");
+    expect(existsSync(join(ROOT, "components/ExerciseTapClient.tsx"))).toBe(false);
+
+    expect(existsSync(join(ROOT, "components/exercise-tap"))).toBe(false);
+
+    expect(existsSync(join(ROOT, "components/exercise-tap/ExerciseTapShell.tsx"))).toBe(false);
+
 
     writeScratch(
       "tap-pow-wiring.txt",

@@ -57,7 +57,7 @@ describe("TAP conversation live stash chrome (shipped source)", () => {
     expect(phases).not.toContain("data-tap-last-stash");
     expect(phases).not.toContain("data-tap-see-older-thoughts");
     expect(phases).not.toContain('label="Send"');
-    expect(phases).toContain('label="Stash"');
+    expect(phases).toContain('focusLabel={sidebarMode === "verification-tap" ? null : "Stash"}');
     expect(phases).not.toContain('label="Edit"');
     expect(phases).not.toContain("selectLastStashedThought");
     expect(phases).not.toContain("submitLastStashedThought");
@@ -66,13 +66,10 @@ describe("TAP conversation live stash chrome (shipped source)", () => {
     expect(live).not.toContain("ExerciseStashHistory");
     expect(live).not.toContain("data-exercise-stash-history");
 
-    const shell = read("components/exercise-tap/ExerciseTapShell.tsx");
-    const exercisePhases = read("components/exercise-tap/exercise-tap-phases.tsx");
-    expect(shell).not.toContain("ExerciseStashHistory");
-    expect(exercisePhases).not.toContain("ExerciseStashHistory");
-    expect(shell).not.toContain("Submit last Thought");
-    expect(shell).not.toContain("TAP_SEE_EDIT_PREVIOUS_THOUGHTS_LABEL");
-    expect(shell).toContain("ImDoneAnsweringControl");
+    expect(existsSync(join(ROOT, "components/exercise-tap/ExerciseTapShell.tsx"))).toBe(false);
+
+    expect(existsSync(join(ROOT, "components/exercise-tap/exercise-tap-phases.tsx"))).toBe(false);
+
 
     writeScratch(
       "tap-unify-helios-stash.txt",
@@ -82,7 +79,7 @@ describe("TAP conversation live stash chrome (shipped source)", () => {
         `always-on memory=${phases.includes("data-tap-thought-memory-always")}`,
         `stash=${phases.includes('label="Stash"')} editChip=${phases.includes('label="Edit"')}`,
         `no ExerciseStashHistory on TAP convo=${!live.includes("ExerciseStashHistory")}`,
-        `no ExerciseStashHistory on TAP solo=${!shell.includes("ExerciseStashHistory")}`,
+        "Exercise TAP UI gone",
       ].join("\n"),
     );
   });

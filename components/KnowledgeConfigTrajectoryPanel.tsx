@@ -6,7 +6,7 @@ import { KnowledgeModelsView } from "@/components/knowledge-panel/models-view";
 import type { VerificationFlowFilterState } from "@/components/VerificationFlowSubtabFilter";
 import type { VerificationKnowledgeRow } from "@/lib/verification-flow";
 
-export type KnowledgePanelView = "models" | "lwm" | "ranking" | "strengths_gaps";
+export type KnowledgePanelView = "models";
 
 interface KnowledgeConfigTrajectoryPanelProps {
   workspaceId: string;
@@ -19,12 +19,7 @@ interface KnowledgeConfigTrajectoryPanelProps {
    * no interactive subject picker even when isOwner is true.
    */
   lockSubjectToSelf?: boolean;
-  /**
-   * models — embeddings + custom knowledge regions
-   * lwm — Learning World Model only (own Knowledge tab)
-   * ranking — all-subjects latest Snapshot + GHC leaderboard
-   * strengths_gaps — browsable strengths/gaps + PoW-linked analysis (same snapshot source as ranking)
-   */
+  /** models — embeddings + custom knowledge regions */
   panelView?: KnowledgePanelView;
   /** Verification Workspace: expose a flow filter on this subtab. */
   verificationWorkspace?: boolean;

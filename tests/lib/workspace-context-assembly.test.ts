@@ -428,7 +428,7 @@ describe("structural artifacts", () => {
   it("ships context assembler, map-ground rules, Context UI surfaces", () => {
     expect(existsSync(join(ROOT, "lib/prompt-workspace-context.ts"))).toBe(true);
     expect(existsSync(join(ROOT, "lib/map-ground-rules.ts"))).toBe(true);
-    expect(existsSync(join(ROOT, "components/WorkspacePromptImpactPanel.tsx"))).toBe(true);
+    expect(existsSync(join(ROOT, "components/WorkspacePromptImpactPanel.tsx"))).toBe(false);
     expect(existsSync(join(ROOT, "components/WorkspaceMapAuthoringPane.tsx"))).toBe(true);
     expect(existsSync(join(ROOT, "components/WorkspaceBlockLocalContextPanel.tsx"))).toBe(true);
     expect(
@@ -449,7 +449,7 @@ describe("structural artifacts", () => {
     expect(view).toContain('sectionContext');
     expect(view).toContain("mountsContextPanel");
     // Panel still ships for block-local impact if mounted elsewhere
-    expect(existsSync(join(ROOT, "components/WorkspacePromptImpactPanel.tsx"))).toBe(true);
+    expect(existsSync(join(ROOT, "components/WorkspacePromptImpactPanel.tsx"))).toBe(false);
 
     // Production start + generate-exercise pass layout/local into the shared path.
     const start = read("app/api/workspace-tap-score/start/route.ts");

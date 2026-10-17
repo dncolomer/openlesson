@@ -23,7 +23,7 @@ export function composeIleChapterGenerateSystemMessage(
   const grain =
     resolved === "project"
       ? "Description: a standalone longer-horizon exercise (1–3 sentences, self-contained). Do not script a conversation."
-      : "Description: a topic-horizon conversation (1–2 sentences naming what they can do after a deep dialogue).";
+      : "Description: 1–2 sentences naming the concrete skill or situation they will work. Never start with 'In one guided conversation' or name the session format.";
   return [
     "You create a single TAP Learning chapter for a skill-grid slot.",
     `Return JSON only: ${BLOCK_MAP_GLYPH_JSON_SHAPE}.`,

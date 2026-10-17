@@ -217,6 +217,11 @@ describe("OG share inventory (one unsys standard)", () => {
     expect(verification).toMatch(/openGraph:\s*standardSocial\.openGraph/);
     expect(verification).toMatch(/twitter:\s*standardSocial\.twitter/);
 
+    const mapping = read("app/knowledge-mapping/page.tsx");
+    expect(mapping).toContain("standardShareSocialMetadata");
+    expect(mapping).toMatch(/openGraph:\s*standardSocial\.openGraph/);
+    expect(mapping).toMatch(/twitter:\s*standardSocial\.twitter/);
+
     const docs = read("app/docs/proof-of-work-api/layout.tsx");
     expect(docs).toContain("standardShareSocialMetadata");
 

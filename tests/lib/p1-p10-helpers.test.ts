@@ -40,9 +40,6 @@ import {
   postIleSessionChat,
 } from "@/lib/session-chat-client";
 import {
-  decideIleKeyboardAction,
-} from "@/lib/ile-keyboard-mode";
-import {
   allowProductWorkspaceEvalAccess,
   allowProductWorkspaceLinkAccess,
 } from "@/lib/product-workspace-auth";
@@ -179,8 +176,7 @@ describe("P1–P10 shipped helpers", () => {
     expect(chat.ok).toBe(true);
     expect(chat.data.message).toBe("ok");
 
-    expect(decideIleKeyboardAction({ mode: "project", key: "Delete" })).toBe("helios_stash");
-    expect(decideIleKeyboardAction({ mode: "helios", key: "Enter" })).toBe("ignore");
+    expect(existsSync(join(ROOT, "lib/ile-keyboard-mode.ts"))).toBe(false);
 
     expect(
       allowProductWorkspaceLinkAccess({
@@ -249,7 +245,8 @@ describe("P1–P10 shipped helpers", () => {
     const tapSpeech = read("app/api/workspace-tap-score/speech/route.ts");
     const tapIdle = read("app/api/workspace-tap-score/idle/route.ts");
     const tapScore = read("lib/tap-score.ts");
-    const exercise = read("components/ExerciseTapClient.tsx");
+    expect(existsSync(join(ROOT, "components/ExerciseTapClient.tsx"))).toBe(false);
+
     const tapClient = read("components/TapScoreClient.tsx");
     const sessionView = readSessionViewSurface();
     const stash = read("app/api/v3/stash/workspaces/[id]/stash/route.ts");
@@ -264,8 +261,6 @@ describe("P1–P10 shipped helpers", () => {
     expect(list).toContain("postWorkspaceGridOp");
     expect(list).not.toContain("router.refresh()");
     expect(list).not.toContain("interface Block");
-    expect(exercise).toContain("postTutoringSessionStart");
-    expect(exercise).toContain("postTutoringSessionComplete");
     const tapFlow = read("components/tap-score/use-tap-score-flow.ts");
     expect(tapFlow).toContain("postTutoringSessionStart");
     expect(tapFlow).toContain("postTutoringSessionComplete");
@@ -285,7 +280,6 @@ describe("P1–P10 shipped helpers", () => {
     expect(tapScore).toContain("buildTapStartingTopicsFallback");
     expect(tapScore).toContain("buildTapOpeningQuestionFallback");
     expect(tapScore).not.toContain("Failed to generate practice content");
-    expect(exercise).toContain("tapTracePayload");
     expect(tapClient).toContain("tapTracePayload");
     expect(sessionView).toContain("postIleSessionChat");
     expect(sessionView).toContain("sendThought");

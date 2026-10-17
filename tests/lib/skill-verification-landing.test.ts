@@ -25,7 +25,6 @@ const DISCOVERY_SURFACES = [
   "app/robots.ts",
   "app/sales/page.tsx",
   "app/pricing/page.tsx",
-  "app/plans/page.tsx",
   "components/ProductLandingPage.tsx",
   "components/UseCaseLandingPage.tsx",
   "components/SolutionsBand.tsx",

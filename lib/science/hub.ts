@@ -81,6 +81,12 @@ export const VERIFICATION_THESIS_LINKS: readonly ThesisDeepLink[] = [
   { href: TAP_WHITEPAPER_PATH, label: "Think Aloud Protocol", hint: "How we collect proof" },
 ];
 
+export const MAPPING_THESIS_LINKS: readonly ThesisDeepLink[] = [
+  { href: SCIENCE_FEP_PATH, label: "Free Energy Principle", hint: "Learning is reducing uncertainty" },
+  { href: SCIENCE_EPISTEMIC_FORAGING_PATH, label: "Epistemic foraging", hint: "The policy" },
+  { href: SCIENCE_LEARNING_MODEL_PATH, label: LEARNING_MODEL_PUBLIC_LABEL, hint: "A generative model you can act on" },
+];
+
 export const HARNESS_PRICING_THESIS_LINKS: readonly ThesisDeepLink[] = [
   { href: SCIENCE_EPISTEMIC_FORAGING_PATH, label: "Epistemic foraging", hint: "What you are paying to run" },
   { href: SCIENCE_LEARNING_MODEL_PATH, label: LEARNING_MODEL_PUBLIC_LABEL, hint: "Calibrate, Learn, the generative model" },

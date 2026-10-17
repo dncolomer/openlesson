@@ -5,8 +5,6 @@ import { describe, expect, it } from "vitest";
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { readSessionStageSurface } from "../helpers/surface-source";
-import { ileCompactPaintKey } from "@/lib/ile-blur-screenshare";
-
 const ROOT = join(__dirname, "../..");
 
 function read(rel: string) {
@@ -41,17 +39,11 @@ describe("TAP Learning Work canvas has no PiP peer channel", () => {
     const tap = read("components/tap-score/tap-score-phases.tsx");
     expect(scout).not.toContain("peerId");
     expect(tap).not.toContain("peerId");
-    expect(scout).toContain("boardId=");
+    expect(scout).toContain("<CalibrateSoundingSurface");
+    expect(scout).not.toContain("boardId=");
     expect(tap).toContain("boardId=");
 
-    const hook = read("lib/useIleBlurScreenshare.tsx");
-    expect(hook).not.toContain("ileCompactPaintKey");
-    expect(hook).not.toContain("requestWindow");
-    expect(ileCompactPaintKey({ isScreenSharing: false })).toBe(
-      ileCompactPaintKey({ isScreenSharing: false, formingText: "" }),
-    );
-    expect(ileCompactPaintKey({ isScreenSharing: true })).not.toBe(
-      ileCompactPaintKey({ isScreenSharing: false }),
-    );
+    expect(existsSync(join(ROOT, "lib/useIleBlurScreenshare.tsx"))).toBe(false);
+    expect(existsSync(join(ROOT, "lib/ile-blur-screenshare.ts"))).toBe(false);
   });
 });

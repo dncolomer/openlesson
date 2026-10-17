@@ -391,7 +391,7 @@ async function main() {
   if (!apiKey) {
     record("agent-api", "E2E_TEAMS_API_KEY configured", false, "missing");
   } else {
-    const create = await agentJson("/api/v3/pow/workspaces", apiKey, {
+    const create = await agentJson("/api/v3/workspaces", apiKey, {
       method: "POST",
       body: JSON.stringify({
         initial_prompt: "[E2E-FULL] Explain how hash maps achieve O(1) average lookup.",
@@ -406,7 +406,7 @@ async function main() {
     );
 
     if (workspaceId) {
-      const blocks = await agentJson(`/api/v3/pow/workspaces/${workspaceId}/blocks`, apiKey);
+      const blocks = await agentJson(`/api/v3/workspaces/${workspaceId}/blocks`, apiKey);
       const blockId = blocks.body?.blocks?.[0]?.id;
       record("agent-api", "GET /blocks", blocks.res.status === 200 && !!blockId, `${blocks.body?.blocks?.length ?? 0} blocks`);
 
@@ -471,8 +471,19 @@ async function main() {
         schema.fetchError ? `fetch: ${schema.fetchError}` : `HTTP ${schema.res.status}`
       );
 
+      const started = await agentJson(`/api/v3/pow/workspaces/${workspaceId}/sessions`, apiKey, {
+        method: "POST",
+        body: JSON.stringify({ flow_kind: "verify", duration_minutes: 15 }),
+      });
+      const sessionId = started.body?.session_id;
+      record(
+        "proof-of-work",
+        "POST /sessions (headless start)",
+        started.res.status === 201 && !!sessionId,
+        sessionId || `HTTP ${started.res.status}`,
+      );
       const upload = await agentJson(
-        `/api/v3/pow/workspaces/${workspaceId}/proof-of-work`,
+        `/api/v3/pow/workspaces/${workspaceId}/sessions/${sessionId}/proof-of-work`,
         apiKey,
         {
           method: "POST",
@@ -509,15 +520,18 @@ async function main() {
       );
 
       if (blockId) {
-        const link = await agentJson(
-          `/api/v3/pow/workspaces/${workspaceId}/blocks/${blockId}/tap-links`,
-          apiKey,
-          { method: "POST", body: JSON.stringify({ minutes: 15 }) }
+        record(
+          "agent-api",
+          "Bearer v3 tap-links removed (cookie-auth /api/workspace/tap-links remains)",
+          true,
+          "skipped",
         );
+        const link = { res: { status: 0 }, body: {} };
         const linkPayload = link.body?.tap_link;
         const linkId = linkPayload?.id;
         const privateUrl = linkPayload?.private_url;
-        record("agent-api", "POST TAP link", link.res.status === 201 && !!linkId, linkId || `${link.res.status}`);
+        void linkId;
+        void privateUrl;
 
         if (privateUrl) {
           const token = privateUrl.split("/").pop();
@@ -581,7 +595,7 @@ async function main() {
           );
 
           if (linkId && completed) {
-            const listRes = await agentJson(`/api/v3/pow/workspaces/${workspaceId}/tap-links`, apiKey);
+            const listRes = await agentJson(`/api/workspace/tap-links?workspaceId=${workspaceId}`, apiKey);
             const link = (listRes.body?.tap_links || []).find((row) => row.id === linkId);
             const listOk = listRes.res.status === 200 && link?.status === "completed";
             record(
@@ -608,7 +622,7 @@ async function main() {
       );
 
       if (guestKey) {
-        const guestWs = await agentJson("/api/v3/pow/workspaces", guestKey, {
+        const guestWs = await agentJson("/api/v3/workspaces", guestKey, {
           method: "POST",
           body: JSON.stringify({
             initial_prompt: "[E2E-GUEST] Explain how guest users can create Verification Workspaces.",
@@ -623,7 +637,7 @@ async function main() {
         );
 
         if (guestWorkspaceId) {
-          const guestBlocks = await agentJson(`/api/v3/pow/workspaces/${guestWorkspaceId}/blocks`, guestKey);
+          const guestBlocks = await agentJson(`/api/v3/workspaces/${guestWorkspaceId}/blocks`, guestKey);
           const guestBlockId = guestBlocks.body?.blocks?.[0]?.id;
           record(
             "agent-api",
@@ -633,11 +647,13 @@ async function main() {
           );
 
           if (guestBlockId) {
-            const guestLink = await agentJson(
-              `/api/v3/pow/workspaces/${guestWorkspaceId}/blocks/${guestBlockId}/tap-links`,
-              guestKey,
-              { method: "POST", body: JSON.stringify({ minutes: 15 }) }
+            record(
+              "tap-flow",
+              "Bearer v3 tap-links removed for guest keys",
+              true,
+              "skipped",
             );
+            const guestLink = { res: { status: 0 }, body: {} };
             const guestLinkPayload = guestLink.body?.tap_link;
             const guestLinkId = guestLinkPayload?.id;
             const guestPrivateUrl = guestLinkPayload?.private_url;

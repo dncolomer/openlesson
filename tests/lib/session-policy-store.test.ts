@@ -209,11 +209,6 @@ describe("session policy store", () => {
     expect(restore).toContain("setInferences(record.inferences)");
     expect(restore).not.toContain("publishSlot");
     expect(context).toContain("if (suggestAction.current) setSuggestion(null)");
-    const en = JSON.parse(read("messages/en.json")) as { session: Record<string, string> };
-    expect(en.session.nameSessionBody).toMatch(/saved as you work/i);
-    expect(en.session.nameSessionBody).toMatch(/Proof of Work/i);
-    expect(en.session.nameSessionBody).toMatch(/canvas state will be lost/i);
-    expect(en.session.nameSessionBody).not.toMatch(/\bboard\b/i);
     expect(rememberSessionPolicy("sess-2", sessionPolicyRecordFromLive({
       model: birthTree(),
       birth: birthTree(),

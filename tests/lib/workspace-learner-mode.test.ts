@@ -425,7 +425,10 @@ describe("learner mode UI structural", () => {
     expect(view).toContain('params.set("minutes"');
     expect(read("components/BlockDetailCard.tsx")).toContain("verification: true");
     expect(read("components/BlockDetailCard.tsx")).toContain(
-      "minutes: clampPracticeDuration(practiceLimits, durationMinutes)",
+      'onClick={() => setStyle("verify")}',
+    );
+    expect(read("components/BlockDetailCard.tsx")).toContain(
+      "clampPracticeDuration(practiceLimits, durationMinutes)",
     );
     expect(view).not.toContain('params.set("interactionKind", "exercise")');
     expect(view).toContain("onSavePlanningPrompt");

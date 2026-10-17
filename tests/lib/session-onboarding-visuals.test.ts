@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
-import { readExerciseTapSurface, readSessionStageSurface, readTapScoreSurface } from "@/tests/helpers/surface-source";
+import { readSessionStageSurface, readTapScoreSurface } from "@/tests/helpers/surface-source";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
@@ -237,13 +237,12 @@ describe("session intro visuals", () => {
     expect(guide).not.toContain("stepBody(\"step2\")");
 
     const conversational = readTapScoreSurface();
-    const exercise = readExerciseTapSurface();
+    expect(existsSync(join(ROOT, "components/ExerciseTapClient.tsx"))).toBe(false);
+    expect(existsSync(join(ROOT, "components/exercise-tap"))).toBe(false);
+
     expect(conversational).toContain("SessionOnboardingGuide");
     expect(conversational).toContain("renderStep3Action");
     expect(conversational).toContain("TapStartingTopicCards");
-    expect(exercise).toContain("SessionOnboardingGuide");
-    expect(exercise).toContain("renderStep3Action");
-    expect(exercise).toContain("TapStartingTopicCards");
 
     expect(existsSync(join(ROOT, "components/ProbesPanel.tsx"))).toBe(false);
     expect(existsSync(join(ROOT, "components/MobileProbesTab.tsx"))).toBe(false);

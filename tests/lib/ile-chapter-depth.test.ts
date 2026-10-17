@@ -141,7 +141,8 @@ describe("composeSessionPlanUpdatePrompt + Helios (shipped fill path)", () => {
     expect(learning).toContain("Explain BST insert");
     expect(learning).toMatch(/First-interaction closure is forbidden/i);
     expect(learning).toMatch(/Do NOT invite "Mark as Done" after the first/i);
-    expect(learning).toMatch(/multi-turn guided conversation/i);
+    expect(learning).toMatch(/several turns on this chapter topic/i);
+    expect(learning).toMatch(/Never start with "In one guided conversation"/i);
     expect(learning).toMatch(/chapter map can be expanded/i);
     expect(learning).toMatch(/Proof of Work/i);
 

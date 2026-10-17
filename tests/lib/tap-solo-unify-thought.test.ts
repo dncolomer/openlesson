@@ -4,7 +4,7 @@
 import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { readExerciseTapSurface, readSessionViewSurface, readTapScoreSurface } from "@/tests/helpers/surface-source";
+import { readSessionViewSurface, readTapScoreSurface } from "@/tests/helpers/surface-source";
 import {
   ILE_EDIT_SELECTION_LABEL,
   ILE_SEE_OLDER_THOUGHTS_LABEL,
@@ -48,61 +48,31 @@ const OLDEST_TO_NEWEST = [
 
 describe("TAP solo live Stash Submit chrome", () => {
   it("has last-thought labels and Send/Stash/Edit; no solution stack", () => {
-    const shell = read("components/exercise-tap/ExerciseTapShell.tsx");
-    const phases = read("components/exercise-tap/exercise-tap-phases.tsx");
-    const exercise = readExerciseTapSurface();
+    expect(existsSync(join(ROOT, "components/exercise-tap/ExerciseTapShell.tsx"))).toBe(false);
 
-    expect(shell).not.toContain("Submit last Thought");
-    expect(shell).not.toContain("TAP_SEE_EDIT_PREVIOUS_THOUGHTS_LABEL");
-    expect(shell).not.toContain(ILE_SUBMIT_LAST_THOUGHT_LABEL);
-    expect(shell).not.toContain(ILE_SEE_OLDER_THOUGHTS_LABEL);
-    expect(shell).not.toContain("data-tap-last-stash");
-    expect(shell).not.toContain("selectLastStashedThought");
-    expect(shell).not.toContain("submitLastStashedThought");
-    expect(shell).toContain("ImDoneAnsweringControl");
-    expect(shell).toContain("sendThought");
-    expect(shell).not.toContain("ExerciseSubmissionStack");
-    expect(shell).not.toContain("data-exercise-submission-history");
-    expect(shell).not.toContain("ExerciseStashHistory");
-    expect(shell).not.toContain("data-exercise-dual-history-pane");
+    expect(existsSync(join(ROOT, "components/exercise-tap/exercise-tap-phases.tsx"))).toBe(false);
 
-    expect(phases).not.toContain('label="Send"');
-    expect(phases).toContain('label="Stash"');
-    expect(phases).not.toContain('label="Edit"');
-    expect(phases).not.toContain('label="To solution"');
+    expect(existsSync(join(ROOT, "components/ExerciseTapClient.tsx"))).toBe(false);
 
-    expect(exercise).not.toContain("Submit last Thought");
-    expect(exercise).toContain("ThoughtMemoryPanel");
+    expect(existsSync(join(ROOT, "components/exercise-tap"))).toBe(false);
+
+
+
 
     writeScratch(
       "tap-solo-unify-stash.txt",
-      [
-        `Submit last Thought=${shell.includes(ILE_SUBMIT_LAST_THOUGHT_LABEL)}`,
-        `See / Edit gone=${!shell.includes("TAP_SEE_EDIT_PREVIOUS_THOUGHTS_LABEL")}`,
-        `stash=${phases.includes('label="Stash"')} editChip=${phases.includes('label="Edit"')}`,
-        `no solution stack=${!shell.includes("ExerciseSubmissionStack")}`,
-        `no ExerciseStashHistory=${!shell.includes("ExerciseStashHistory")}`,
-        `imDone=${shell.includes("ImDoneAnsweringControl")}`,
-      ].join("\n"),
+      "Exercise TAP UI gone; conversational TAP remains on TapScoreClient.\n",
     );
   });
 });
 
 describe("TAP solo older-thoughts Thought Memory", () => {
   it("opens ThoughtMemoryPanel with per-thought edit/delete, not multi-select submit", () => {
-    const shell = read("components/exercise-tap/ExerciseTapShell.tsx");
+    expect(existsSync(join(ROOT, "components/exercise-tap/ExerciseTapShell.tsx"))).toBe(false);
+
     const memory = read("components/thought-ui/ThoughtMemoryPanel.tsx");
     const edit = read("components/thought-ui/ThoughtEditPanel.tsx");
 
-    expect(shell).not.toContain("openOlderThoughtsSurface");
-    expect(shell).not.toContain("data-exercise-see-older-thoughts");
-    expect(shell).toContain("data-tap-thought-memory-always");
-    expect(shell).toContain("data-exercise-older-thoughts");
-    expect(shell).toContain("ThoughtMemoryPanel");
-    expect(shell).toContain('insightSurface="tap"');
-    expect(shell).not.toContain("onSendThought={sendThought}");
-    expect(shell).toContain("onEditThought={thoughtsLocked ? undefined : onEditThought}");
-    expect(shell).toContain("onDeleteThought={thoughtsLocked ? undefined : onDeleteThought}");
     expect(memory).toContain("data-tap-edit-thought");
     expect(memory).toContain("data-tap-delete-thought");
     expect(memory).toContain('submitLabel="Save"');
@@ -124,12 +94,8 @@ describe("TAP solo older-thoughts Thought Memory", () => {
 
 describe("Thought Memory is always on TAP solo chrome", () => {
   it("mounts ThoughtMemoryPanel without a See / Edit toggle", () => {
-    const shell = read("components/exercise-tap/ExerciseTapShell.tsx");
-    expect(shell).toContain("data-tap-thought-memory-always");
-    expect(shell).toContain("<ThoughtMemoryPanel");
-    expect(shell).not.toContain("openOlderThoughtsSurface");
-    expect(shell).not.toContain("olderThoughtsOpen");
-    expect(shell).not.toContain("TAP_SEE_EDIT_PREVIOUS_THOUGHTS_LABEL");
+    expect(existsSync(join(ROOT, "components/exercise-tap/ExerciseTapShell.tsx"))).toBe(false);
+
   });
 });
 
@@ -139,14 +105,16 @@ describe("universal Stash Submit labels across TAP Learning + TAP", () => {
     const ileMemory = read("components/thought-ui/ThoughtMemoryPanel.tsx");
     const ilePanes = read("components/session-view/session-tool-panes.tsx");
     const tapConvo = readTapScoreSurface();
-    const tapSolo = readExerciseTapSurface();
+    expect(existsSync(join(ROOT, "components/ExerciseTapClient.tsx"))).toBe(false);
+    expect(existsSync(join(ROOT, "components/exercise-tap"))).toBe(false);
+
     const session = readSessionViewSurface();
 
     expect(ileHelios).not.toContain("Submit last Thought");
     expect(ileHelios).not.toContain("See Your thoughts");
     expect(ileHelios).not.toContain("See Older Thoughts");
     expect(ileHelios).not.toContain("ImDoneAnsweringControl");
-    for (const surface of [tapConvo, tapSolo]) {
+    for (const surface of [tapConvo]) {
       expect(surface).not.toContain("Submit last Thought");
       expect(surface).not.toContain("TAP_SEE_EDIT_PREVIOUS_THOUGHTS_LABEL");
       expect(surface).toContain("data-tap-thought-memory-always");
@@ -158,7 +126,6 @@ describe("universal Stash Submit labels across TAP Learning + TAP", () => {
     expect(ilePanes).toContain("IleReviewWorkPanel");
     expect(session).toContain("IleReviewWorkPanel");
     expect(tapConvo).toContain("ThoughtMemoryPanel");
-    expect(tapSolo).toContain("ThoughtMemoryPanel");
   });
 });
 

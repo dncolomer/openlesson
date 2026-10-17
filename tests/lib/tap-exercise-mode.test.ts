@@ -23,7 +23,7 @@ import {
   stashExerciseSpeech,
   submitExerciseSpeechDirect,
 } from "@/lib/exercise-tap";
-import { readExerciseTapSurface } from "@/tests/helpers/surface-source";
+import {  } from "@/tests/helpers/surface-source";
 
 const ROOT = join(__dirname, "../..");
 
@@ -79,9 +79,7 @@ describe("create TAP link interaction_kind wiring", () => {
 
   it("list routes return interaction_kind", () => {
     expect(read("app/api/workspace/tap-links/route.ts")).toContain("interaction_kind");
-    expect(read("app/api/v3/pow/workspaces/[id]/tap-links/route.ts")).toContain(
-      "interaction_kind",
-    );
+    expect(existsSync(join(ROOT, "app/api/v3/pow/workspaces/[id]/tap-links/route.ts"))).toBe(false);
   });
 
   it("migration adds interaction_kind default conversational", () => {
@@ -367,31 +365,12 @@ describe("structural: Settings, block tools, separate Exercise UI", () => {
   });
 
   it("Exercise session UI is a separate Stash Submit shell without DialogueSplit/Helios bubbles", () => {
-    const client = readExerciseTapSurface();
-    const shell = read("components/exercise-tap/ExerciseTapShell.tsx");
+    expect(existsSync(join(ROOT, "components/ExerciseTapClient.tsx"))).toBe(false);
+    expect(existsSync(join(ROOT, "components/exercise-tap"))).toBe(false);
 
-    expect(client).toContain("ExerciseTapShell");
-    expect(client).toContain("data-exercise-tap-client");
-    expect(client).not.toContain("DialogueSplit");
-    expect(client).not.toContain("HeliosProbeAvatar");
-    expect(client).toContain("stashCurrentTranscription");
-    expect(client).toContain("sendThought");
-    expect(client).toContain("decideSpokenCaptureKeyAction");
-    expect(client).not.toContain("sendCurrentTranscription()");
-    expect(client).toContain("resolveExercisePromptAfterIntro");
-    expect(client).toContain("interaction_kind: \"exercise\"");
+    expect(existsSync(join(ROOT, "components/exercise-tap/ExerciseTapShell.tsx"))).toBe(false);
 
-    expect(shell).toContain("<SessionWorkSurface");
-    expect(shell).toContain("data-exercise-tap-stash-submit");
-    expect(shell).not.toContain("data-exercise-tap-shell");
-    expect(shell).not.toContain("data-exercise-tap-live-split");
-    expect(shell).toContain("data-exercise-tap-stash-submit");
-    expect(shell).toContain("ThoughtMemoryPanel");
-    expect(shell).not.toContain("Submit last Thought");
-    expect(shell).toContain("ImDoneAnsweringControl");
-    expect(shell).not.toContain("ExerciseStashHistory");
-    expect(shell).not.toContain("ExerciseSubmissionStack");
-    expect(shell).not.toContain("DialogueSplit");
+
   });
 
   it("start route LLM-authors solo exercise (not template Teach me) for exercise kind", () => {
@@ -405,11 +384,14 @@ describe("structural: Settings, block tools, separate Exercise UI", () => {
     );
   });
 
-  it("guest + owner entry routes by interaction kind to ExerciseTapClient", () => {
+  it("guest TAP mounts Calibrate for scout and Verify for other kinds", () => {
     const guest = read("components/guest-session/private-tap-session-page.tsx");
     expect(guest).toContain("resolveTapShellFromSession");
     expect(guest).toContain("interaction_kind");
-    expect(guest).toContain('shell === "scout"');
+    expect(guest).toContain("<ScoutTapClient");
+    expect(guest).toContain("<TapScoreClient");
+    expect(guest).toContain('sidebarMode="verification-tap"');
+    expect(guest).not.toContain("redirect(`/workspace/${String(session.workspace_id)}`)");
     expect(guest).not.toContain("ExerciseTapClient");
 
     const owner = read("app/workspace/[id]/tap/page.tsx");

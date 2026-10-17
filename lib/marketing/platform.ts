@@ -6,11 +6,13 @@ import {
   ENTERPRISE_SETUP_EMAIL,
   ENTERPRISE_SETUP_MAILTO,
   HARNESS_PRICING_PATH,
+  KNOWLEDGE_MAPPING_PATH,
   KNOWLEDGE_VERIFICATION_PATH,
   LEARNING_HARNESS_PATH,
   VERIFICATION_PRICING_PATH,
 } from "@/lib/marketing/paths";
 import { HARNESS_PRODUCT_COPY } from "@/lib/marketing/harness-product";
+import { MAPPING_PRODUCT_COPY } from "@/lib/marketing/mapping-product";
 
 export const PLATFORM_PHRASE = "Hard-domain learning experiences" as const;
 
@@ -68,7 +70,7 @@ export const PLATFORM_DELIVERY = {
 
 export const PLATFORM_LAYERS = {
   eyebrow: "INSIDE THE EXPERIENCE",
-  title: "Learning Harness, Knowledge Verification.",
+  title: "Learning Harness, Knowledge Verification, Knowledge Mapping.",
 } as const;
 
 export const PLATFORM_PROOF = {
@@ -127,17 +129,29 @@ export const PLATFORM_PRODUCTS = {
     image: "/lp-boxes/verification-bottles-blueprint.jpg",
     imageAlt: "Blueprint sketch of laboratory bottles with blank plates and red seals",
   },
+  mapping: {
+    eyebrow: "FOR SCIENCE",
+    name: "Knowledge Mapping",
+    title: "Knowledge Mapping",
+    body: MAPPING_PRODUCT_COPY.lead,
+    href: KNOWLEDGE_MAPPING_PATH,
+    cta: "Explore",
+    image: "/lp-boxes/tapbench-maps-blueprint.jpg",
+    imageAlt: "Blueprint sketch of a folded map, compass, and knowledge-region plates",
+  },
 } as const;
 
-/** Full product catalog: Learning Harness and Knowledge Verification. */
+/** Full product catalog: Learning Harness, Knowledge Verification, Knowledge Mapping. */
 export const PLATFORM_PRODUCT_LIST = [
   PLATFORM_PRODUCTS.harness,
   PLATFORM_PRODUCTS.verification,
+  PLATFORM_PRODUCTS.mapping,
 ] as const;
 
 export const PLATFORM_LAYER_LIST = [
   PLATFORM_PRODUCTS.harness,
   PLATFORM_PRODUCTS.verification,
+  PLATFORM_PRODUCTS.mapping,
 ] as const;
 
 /** Flattened homepage copy for contract tests that drive the shipped module. */

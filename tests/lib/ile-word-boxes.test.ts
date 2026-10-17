@@ -7,7 +7,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { readSessionViewSurface, readTapScoreSurface, readExerciseTapSurface } from "@/tests/helpers/surface-source";
+import { readSessionViewSurface, readTapScoreSurface } from "@/tests/helpers/surface-source";
 import {
   ileWordBoxApplyWindowPointerUp,
   ileWordBoxEventTargets,
@@ -268,9 +268,12 @@ describe("TAP Learning word-box surfaces (shipped source)", () => {
     const markdown = read("components/thought-ui/HeliosMarkdown.tsx");
     const panes = read("components/session-view/session-tool-panes.tsx");
     const view = readSessionViewSurface();
-    const overlay = read("components/tap-score/tap-turn-overlay.tsx");
+    expect(existsSync(join(ROOT, "components/tap-score/tap-turn-overlay.tsx"))).toBe(false);
+
     const tap = readTapScoreSurface();
-    const exercise = readExerciseTapSurface();
+    expect(existsSync(join(ROOT, "components/ExerciseTapClient.tsx"))).toBe(false);
+    expect(existsSync(join(ROOT, "components/exercise-tap"))).toBe(false);
+
     const ileSurface = read("lib/prompt-kernel/surfaces/ile.ts");
     const harness = read("lib/ile-chapter-depth.ts");
 
@@ -344,13 +347,8 @@ describe("TAP Learning word-box surfaces (shipped source)", () => {
     expect(existsSync(join(ROOT, "components/GrokGrokipediaTool.tsx"))).toBe(false);
     expect(existsSync(join(ROOT, "components/DantesTool.tsx"))).toBe(false);
 
-    expect(overlay).not.toContain("IleWordBoxText");
-    expect(overlay).not.toContain("data-ile-word-box");
-    expect(overlay).toContain("HeliosMarkdown");
     expect(tap).not.toContain("IleWordBoxText");
     expect(tap).not.toContain("openIleWordBoxTool");
-    expect(exercise).not.toContain("IleWordBoxText");
-    expect(exercise).not.toContain("openIleWordBoxTool");
 
     expect(ileSurface).not.toContain("ILE_CONCEPT_MARK_PROMPT");
     expect(ileSurface).not.toContain("==binary search==");

@@ -279,7 +279,6 @@ describe("console theme shells", () => {
     expect(read("components/tap-score/tap-live-clock.tsx")).toContain("bg-red-500");
     expect(ILE_WORK_CANVAS_STROKE_COLOR).toBe("#1e1e1e");
     expect(read("components/session-view/session-sidebar.tsx")).toContain("overflow-hidden");
-    expect(read("components/exercise-tap/ExerciseTapShell.tsx")).not.toContain("confirmClose");
-    expect(read("components/exercise-tap/ExerciseTapShell.tsx")).not.toContain("TAP_IM_DONE_CONFIRM_TITLE");
+    expect(existsSync(join(ROOT, "components/exercise-tap/ExerciseTapShell.tsx"))).toBe(false);
   });
 });

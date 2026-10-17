@@ -108,10 +108,16 @@ describe("Proof-of-Work API v3 path contract", () => {
     expect(existsSync(join(ROOT, "app/api/v3/stash/workspaces/[id]/stash/route.ts"))).toBe(true);
     expect(existsSync(join(ROOT, "app/api/v3/stash/workspaces/[id]/submit/route.ts"))).toBe(true);
 
-    expect(existsSync(join(ROOT, "app/api/v3/pow/workspaces/route.ts"))).toBe(true);
+    expect(existsSync(join(ROOT, "app/api/v3/pow/workspaces/route.ts"))).toBe(false);
     expect(
       existsSync(join(ROOT, "app/api/v3/pow/workspaces/[id]/proof-of-work/route.ts")),
+    ).toBe(false);
+    expect(
+      existsSync(
+        join(ROOT, "app/api/v3/pow/workspaces/[id]/sessions/[sessionId]/proof-of-work/route.ts"),
+      ),
     ).toBe(true);
+    expect(existsSync(join(ROOT, "app/api/v3/workspaces/route.ts"))).toBe(true);
     expect(
       existsSync(join(ROOT, "app/api/v3/snapshot/workspaces/[id]/lwm-snapshot/route.ts")),
     ).toBe(true);

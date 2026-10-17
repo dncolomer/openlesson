@@ -62,12 +62,11 @@ describe("UI monochrome chrome (white outline aesthetic)", () => {
     expect(existsSync(join(ROOT, "components/TapbenchLanding.tsx"))).toBe(false);
   });
 
-  it("LWM generate / score chrome stays neutral-white outline", () => {
+  it("Knowledge embeddings + snapshot modal chrome stays neutral-white outline", () => {
     const lwm = readKnowledgePanelSurface();
-    expect(lwm).toContain("data-lwm-generate-snapshot");
+    expect(lwm).toContain("data-lwm-snapshot-modal");
     expect(lwm).toMatch(/bg-white/);
     expect(lwm).not.toMatch(/bg-cyan-|text-blue-400|border-amber-/);
-    // Trajectory chrome hex accents remapped off pure cyan
     expect(lwm).not.toContain("#22d3ee");
   });
 });

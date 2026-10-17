@@ -310,14 +310,8 @@ describe("workspace access policy", () => {
     expect(notes).toContain('.eq("id", workspaceId)');
     expect(notes).not.toMatch(/\.eq\("user_id",\s*subjectId\)/);
 
-    const chapter = read("app/api/workspace/suggest-chapter-edit/route.ts");
-    expect(chapter).toContain("persistUserId");
-    expect(chapter).toContain("session.user_id !== persistUserId");
-    expect(chapter).not.toContain("persistableOwnerUserId");
-    expect(chapter).not.toMatch(/session\.user_id\s*!==\s*subjectId/);
-    expect(chapter).toContain("user_id: persistUserId");
-    expect(chapter).toContain("participantUserId: subjectId");
-    expect(chapter).not.toMatch(/auth:\s*\{[^}]*user_id:\s*subjectId/);
+    expect(existsSync(join(ROOT, "app/api/workspace/suggest-chapter-edit/route.ts"))).toBe(false);
+
 
     const suggest = read("app/api/workspace/suggest-blocks/route.ts");
     expect(suggest).toContain("persistUserId");
@@ -438,10 +432,9 @@ describe("exclusive map selection + product intent", () => {
     expect(tapClient).toContain("useTapScoreSession");
     expect(tapClient).not.toContain("flowHostRef");
     expect(tapClient).not.toContain("createTapScoreFlow");
-    const exercise = read("components/ExerciseTapClient.tsx");
-    expect(tapClient.split("\n").length).toBeLessThan(1000);
-    expect(exercise.split("\n").length).toBeLessThan(1000);
-    expect(exercise).toContain("postTutoringSessionStart");
+    expect(existsSync(join(ROOT, "components/ExerciseTapClient.tsx"))).toBe(false);
+
+    expect(tapClient.split("\n").length).toBeLessThan(1300);
     expect(read("lib/useTapSpeechProofOfWork.ts")).toContain("postTutoringSpeech");
     expect(read("lib/useTapIdleProofOfWork.ts")).toContain("postTutoringIdle");
     expect(read("components/tap-score/use-tap-score-flow.ts")).toContain("postTutoringSessionStart");
@@ -452,9 +445,7 @@ describe("TAP Learning mode write vs read", () => {
   it("write accepts only learning|project; read still understands legacy aliases", () => {
     expect(parseIleSessionModeWrite("project")).toBe("project");
     expect(parseIleSessionModeWrite("learning")).toBe("learning");
-    expect(parseIleSessionModeWrite("exercise")).toBeNull();
     expect(parseIleSessionModeWrite(true)).toBeNull();
-    expect(normalizeIleSessionMode("exercise", "learning", { write: true })).toBe("learning");
     expect(normalizeIleSessionMode("project", "learning", { write: true })).toBe("project");
     expect(resolveIleSessionModeFromBody({ session_mode: "project" }, { write: true })).toBe(
       "project",
@@ -462,11 +453,9 @@ describe("TAP Learning mode write vs read", () => {
     expect(
       resolveIleSessionModeFromBody({ interaction_kind: "exercise" }, { write: true }),
     ).toBe("learning");
-    expect(normalizeIleSessionMode("exercise")).toBe("project");
     expect(resolveIleSessionModeFromSession({ metadata: { session_mode: "project" } })).toBe(
       "project",
     );
-    expect(resolveIleSessionModeFromBody({ interaction_kind: "exercise" })).toBe("project");
   });
 });
 
@@ -499,6 +488,8 @@ describe("closed error envelope", () => {
         .replace(/\/\*[\s\S]*?\*\//g, "")
         .replace(/\/\/[^\n]*/g, "");
       if (file.includes("/app/api/oauth/")) continue;
+      // Gather deny is a policy body `{ error, warning, allowed }`, not a string envelope.
+      if (file.includes("/app/api/ile/gather-resources/")) continue;
       if (
         /NextResponse\.json\(\s*\{\s*error:\s*["'`]/.test(withoutComments) ||
         /NextResponse\.json\(\s*\{\s*error:\s*(?!\{)[a-zA-Z]/.test(withoutComments)

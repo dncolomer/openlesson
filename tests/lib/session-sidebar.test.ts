@@ -1,6 +1,6 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { IleVoiceBar, IleVoiceBarActions } from "@/components/session-view/ile-voice-bar";
@@ -10,7 +10,6 @@ import {
 } from "@/components/session-view/ile-insight-trophies";
 import type { InsightSummary } from "@/lib/insights";
 import { SessionSidebar } from "@/components/session-view/session-sidebar";
-import { SessionPolicyPanel } from "@/components/session-view/session-policy-panel";
 import { applySessionPress, emptySessionMarkState, freezeMistakeList } from "@/lib/session-marks";
 import { SessionDataCard } from "@/components/session-view/session-data-card";
 import {
@@ -318,10 +317,7 @@ describe("session sidebar mode configuration", () => {
       join(ROOT, "components/session-view/session-chrome.tsx"),
       "utf8",
     );
-    const marksSource = readFileSync(
-      join(ROOT, "components/session-view/session-mark-controls.tsx"),
-      "utf8",
-    );
+    expect(existsSync(join(ROOT, "components/session-view/session-mark-controls.tsx"))).toBe(false);
     expect(sidebarSource).toContain("useState(false)");
     expect(sidebarSource).toContain('mode === "ile"');
     expect(sidebarSource).not.toContain("data-session-policy-tab");
@@ -337,7 +333,6 @@ describe("session sidebar mode configuration", () => {
     expect(chromeSource).toContain('id="actions"');
     expect(chromeSource).not.toContain("SessionActionsPanel");
     expect(chromeSource).not.toContain('focusLabel="actions"');
-    expect(marksSource).toContain("publishPolicy");
     expect(collapsed).not.toContain("data-session-policy-tab");
     expect(collapsed).not.toContain("data-session-assert-tab");
     expect(collapsed).not.toContain('data-session-sidebar-section="policy"');
@@ -380,17 +375,7 @@ describe("session sidebar mode configuration", () => {
     );
     expect(pressed.ok).toBe(true);
     if (!pressed.ok) return;
-    const policy = renderToStaticMarkup(
-      createElement(SessionPolicyPanel, { state: pressed.state }),
-    );
-    expect(policy).toContain("data-session-policy");
-    expect(policy).toContain("data-session-policy-mistake-status=\"closed\"");
-    expect(policy).toContain("What holds?");
-    expect(policy).toContain("Closed");
-    expect(policy).toContain("Exploit.");
-    expect(policy).toContain("a sketch");
-    expect(policy).toContain("Closed: 1.");
-    expect(policy).not.toContain("Still open at the insight");
+    expect(existsSync(join(ROOT, "components/session-view/session-policy-panel.tsx"))).toBe(false);
 
     expect(renderSidebar("ile", 65)).not.toContain("data-ile-global-resources");
     expect(renderSidebar("ile", 65)).not.toContain('data-session-sidebar-focus-tab="policy"');
@@ -585,12 +570,13 @@ describe("session sidebar mode configuration", () => {
 
   it("mounts the shared sidebar for Prepare, Drill, conversational TAP, and verification TAP", () => {
     const prepare = readFileSync(join(ROOT, "components/scout-tap/scout-tap-phases.tsx"), "utf8");
-    const drill = readFileSync(join(ROOT, "components/exercise-tap/ExerciseTapShell.tsx"), "utf8");
+    expect(existsSync(join(ROOT, "components/exercise-tap/ExerciseTapShell.tsx"))).toBe(false);
+
     const tap = readFileSync(join(ROOT, "components/tap-score/tap-score-phases.tsx"), "utf8");
     const client = readFileSync(join(ROOT, "components/TapScoreClient.tsx"), "utf8");
     const verify = readFileSync(join(ROOT, "components/VerificationFlowRunner.tsx"), "utf8");
     const host = readFileSync(join(ROOT, "components/session-view/session-work-surface.tsx"), "utf8");
-    for (const src of [drill, tap]) {
+    for (const src of [tap]) {
       expect(src).toContain("<SessionWorkSurface");
       expect(src).not.toContain("data-scout-live-split");
       expect(src).not.toContain("data-tap-convo-live-split");
@@ -616,9 +602,6 @@ describe("session sidebar mode configuration", () => {
     expect(prepare).toContain("<TapSessionSignals");
     expect(prepare).not.toContain("captureAudio");
     expect(calibrateSurface).toContain("data-calibrate-sounding");
-    expect(drill).toContain('focusLabel="Stash"');
-    expect(drill).toContain("<SessionTopicChapter");
-    expect(drill).toContain("<TapSessionSignals captureAudio");
     expect(tap).toContain('? null : "Stash"');
     expect(tap).toContain('<SessionGuidePanel guide="verification" remainingSeconds={remainingSeconds} />');
     expect(tap).not.toContain("SessionActionsPanel");
@@ -658,9 +641,8 @@ describe("session sidebar mode configuration", () => {
     expect(chrome).not.toContain("onFocusOpenWork");
     expect(calibrateSurface).not.toContain("<SessionTopicChapter");
     expect(prepare).toContain("<SessionTopicChapter");
-    expect(drill.match(/<SessionTopicChapter/g)).toHaveLength(1);
     expect(tap.match(/<SessionTopicChapter/g)).toHaveLength(1);
-    for (const src of [prepare, drill, tap, chrome]) {
+    for (const src of [prepare, tap, chrome]) {
       expect(src).not.toContain("data-ile-chapter-dock-chapters");
       expect(src).not.toContain(">Chapters<");
     }

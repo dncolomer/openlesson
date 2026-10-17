@@ -99,6 +99,8 @@ describe("desktop layout + block detail chrome", () => {
     expect(card).toContain('id: "explore"');
     expect(card).toContain('id: "scout"');
     expect(card).toContain('data-style-option="verify"');
+    expect(card).toContain('onClick={() => setStyle("verify")}');
+    expect(card).toContain("verifySelected");
     expect(card).not.toContain("data-modality-control");
     expect(card).not.toContain("data-modality-toggle");
     expect(card).not.toContain("data-modality-option");

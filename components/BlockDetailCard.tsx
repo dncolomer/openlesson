@@ -20,6 +20,9 @@ import {
 
 type ProgressRing = "neutral" | "completed" | "in_progress";
 
+/** Drawer launch picker: Calibrate / Learn / Verify. Verify is select-only like Calibrate. */
+type LaunchStyle = LearningStyle | "verify";
+
 /** Optional launch options (duration chosen on the card before TAP/Calibrate/Verify). */
 export type ProductLaunchOptions = {
   /** Session length in minutes for Calibrate, Verify, and Drill. */
@@ -208,7 +211,7 @@ export function BlockDetailCard({
     () => resolveDefaultPracticeLaunchUi(practiceLimits),
     [practiceLimits],
   );
-  const [style, setStyle] = useState<LearningStyle>(defaults.style);
+  const [style, setStyle] = useState<LaunchStyle>(defaults.style);
   const [durationMinutes, setDurationMinutes] = useState<number>(
     defaults.durationMinutes,
   );
@@ -230,11 +233,21 @@ export function BlockDetailCard({
   const drillFamilyAllowed = allowTimed && practiceLimits.allowDrill;
 
   const resolvedTarget = useMemo(
-    () => resolveLaunchFromStyleAndModality(style, false),
+    () =>
+      resolveLaunchFromStyleAndModality(
+        style === "verify" ? "explore" : style,
+        false,
+      ),
     [style],
   );
+  const verifySelected = style === "verify";
+  const showDurationPicker =
+    (style === "drill" && drillFamilyAllowed) ||
+    style === "scout" ||
+    verifySelected;
 
-  const canLaunchStyle = (s: LearningStyle) => {
+  const canLaunchStyle = (s: LaunchStyle) => {
+    if (s === "verify") return Boolean(onLaunchIntent);
     if (s === "drill") return false;
     if (!blockAllowsPracticeStyle(practiceLimits, s)) return false;
     const target = resolveLaunchFromStyleAndModality(s, false);
@@ -248,15 +261,17 @@ export function BlockDetailCard({
   const canStart = canLaunchStyle(style);
 
   const launch = (target: ProductLaunchTarget, event?: React.MouseEvent) => {
-    const minutes =
-      target.product === "tap"
-        ? clampPracticeDuration(practiceLimits, durationMinutes)
-        : undefined;
+    const minutes = clampPracticeDuration(practiceLimits, durationMinutes);
+    if (verifySelected) {
+      onLaunchIntent?.(target, { verification: true, minutes });
+      return;
+    }
+    const tapMinutes = target.product === "tap" ? minutes : undefined;
     if (target.id === "drill_dialog" || target.interaction_kind === "conversational" || target.interaction_kind === "exercise") {
       return;
     }
     if (onLaunchIntent) {
-      onLaunchIntent(target, minutes != null ? { minutes } : undefined);
+      onLaunchIntent(target, tapMinutes != null ? { minutes: tapMinutes } : undefined);
       return;
     }
     if (target.id === "explore_dialog") {
@@ -264,7 +279,7 @@ export function BlockDetailCard({
       return;
     }
     if (target.id === "scout_dialog") {
-      onStartEval?.(event as React.MouseEvent, minutes);
+      onStartEval?.(event as React.MouseEvent, tapMinutes);
     }
   };
 
@@ -349,15 +364,16 @@ export function BlockDetailCard({
           <button
             type="button"
             data-style-option="verify"
+            data-style-select
             data-session-launch="verification"
-            disabled={isStarting || isLocked}
-            onClick={() => {
-              onLaunchIntent(resolvedTarget, {
-                verification: true,
-                minutes: clampPracticeDuration(practiceLimits, durationMinutes),
-              });
-            }}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-none border-2 border-white/25 bg-transparent px-3 text-left text-white transition hover:border-white/45 hover:bg-white/5 disabled:opacity-40"
+            aria-pressed={verifySelected}
+            disabled={isStarting || isLocked || !canLaunchStyle("verify")}
+            onClick={() => setStyle("verify")}
+            className={`inline-flex h-11 items-center justify-center gap-2 rounded-none border-2 px-3 text-left transition disabled:opacity-40 ${
+              verifySelected
+                ? "border-white/55 bg-white/10 text-white"
+                : "border-white/25 bg-transparent text-white hover:border-white/45 hover:bg-white/5"
+            }`}
           >
             <span className="text-xs font-semibold tracking-tight">Verify</span>
           </button>
@@ -365,9 +381,7 @@ export function BlockDetailCard({
       </div>
 
       {/* Duration for Calibrate, Verify, and Drill. Learn has no clock. */}
-      {(style === "drill" && drillFamilyAllowed) ||
-      style === "scout" ||
-      Boolean(onLaunchIntent) ? (
+      {showDurationPicker ? (
         <div className="mt-3" data-launch-duration-picker>
           <p className="mb-1.5 text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
             Session length
@@ -408,14 +422,15 @@ export function BlockDetailCard({
         data-start-new-session={
           resolvedTarget.product !== "tap" && ileStartLabel ? "true" : undefined
         }
-        data-resolved-intent-id={resolvedTarget.id}
+        data-resolved-intent-id={verifySelected ? "verification" : resolvedTarget.id}
+        data-session-launch={verifySelected ? "verification" : undefined}
         disabled={isStarting || isLocked || !canStart}
         onClick={(e) => launch(resolvedTarget, e)}
         className="mt-3 w-full rounded-none bg-white px-3 py-2.5 text-xs font-semibold tracking-tight text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
       >
         {isStarting
           ? t("sessionItem.starting")
-          : resolvedTarget.product === "tap"
+          : verifySelected || resolvedTarget.product === "tap"
             ? `Start · ${durationMinutes} min`
             : ileStartLabel || "Start"}
       </button>

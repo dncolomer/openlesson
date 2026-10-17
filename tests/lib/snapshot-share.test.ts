@@ -219,15 +219,9 @@ describe("generateSnapshotShare + lookupSnapshotShare", () => {
 
 describe("Learning Profiles + landing wiring", () => {
   it("exposes generate-public-URL on selected snapshot and a public landing with all sections", () => {
+    expect(existsSync(join(ROOT, "components/knowledge-panel/lwm-view.tsx"))).toBe(false);
     const lwm = readKnowledgePanelSurface();
-    expect(lwm).toContain("data-lwm-generate-public-url");
-    expect(lwm).toContain("data-lwm-public-share");
-    expect(lwm).toContain("data-lwm-public-url");
-    expect(lwm).toContain("/api/workspace/snapshot-share");
-    expect(lwm).toContain("evalRunHistoryId: selectedLwmRun.id");
-    expect(lwm).toContain("copyPublicShareUrl");
-    expect(lwm).toContain("generatePublicShareUrl");
-    expect(lwm).toMatch(/selectedLwmRun \?/);
+    expect(lwm).toContain("data-lwm-snapshot-modal");
 
     const landing = read("components/SnapshotLandingView.tsx");
     const page = read("app/snapshot/[token]/page.tsx");

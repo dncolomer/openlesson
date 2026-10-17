@@ -56,6 +56,7 @@ import {
   applyIleWorkCanvasRefactor,
   applyIleWorkCanvasSuggestInsight,
   buildIleWorkCanvasAskUserMessage,
+  buildIleWorkCanvasCheckUserMessage,
   buildIleWorkCanvasCommandUserMessage,
   buildIleWorkCanvasCompressUserMessage,
   compressIleWorkCanvasScene,
@@ -443,7 +444,8 @@ describe("TAP Learning Work canvas ask-XAI on selection (shipped)", () => {
       prompt: "Add a worked example on the board.",
     });
     expect(boardWide).toContain("Add a worked example on the board.");
-    expect(boardWide).toContain("Ask about the Work canvas.");
+    expect(boardWide).toContain("Answer this question directly.");
+    expect(boardWide).toMatch(/Do not mention Check\/ask/i);
     expect(boardWide).not.toContain("Selected elements:");
     expect(boardWide).not.toContain("(none)");
     const emptySelection = buildIleWorkCanvasAskUserMessage({
@@ -1020,13 +1022,11 @@ describe("TAP Learning prompts describe one chapter canvas (shipped)", () => {
 
 describe("TAP Learning Work chrome is canvas-only (shipped source)", () => {
   it("has no notebook / grokipedia / dantes Work tabs or panes", () => {
-    const tabs = read("components/session-view/ile-chapter-tool-tabs.tsx");
+    expect(existsSync(join(ROOT, "components/session-view/ile-chapter-tool-tabs.tsx"))).toBe(false);
+
     const panes = read("components/session-view/session-tool-panes.tsx");
     const chrome = read("components/session-view/session-chrome.tsx");
     const view = read("components/SessionView.tsx");
-    expect(tabs).not.toContain("Grokipedia");
-    expect(tabs).not.toContain("Dantes");
-    expect(tabs).not.toContain('"notebook"');
     expect(panes).not.toContain("DantesTool");
     expect(panes).not.toContain("GrokGrokipediaTool");
     expect(panes).not.toContain("session.notebookPlaceholder");
@@ -1105,6 +1105,23 @@ describe("TAP Learning Work canvas XAI suggested origin (shipped parse+apply)", 
     expect(proseAndJson.text).toBe("Keep the invariant in view.");
     expect(proseAndJson.elements?.[0]?.type).toBe("arrow");
     expect(proseAndJson.text).not.toContain("{");
+
+    const commandMeta = parseIleXaiCanvasTurn(
+      "Your question sits in the right place (After Check/Ask). Last resort requires exhausting peaceful means first.",
+    );
+    expect(commandMeta.text).toBe("Last resort requires exhausting peaceful means first.");
+    expect(commandMeta.text).not.toMatch(/sits in the right place|Check\/Ask/i);
+    expect(
+      parseIleXaiCanvasTurn("Your question sits in the right place (After Check/Ask).").text,
+    ).toBe("");
+    const checkMsg = buildIleWorkCanvasCheckUserMessage({
+      selectedElements: convertToExcalidrawElements([
+        { type: "text", text: "When is force last resort?", x: 0, y: 0 },
+      ]),
+    });
+    expect(checkMsg).toMatch(/Answer directly/i);
+    expect(checkMsg).toMatch(/Do not mention Check\/ask/i);
+    expect(ileWorkCanvasXaiToolsInstruction()).toMatch(/sits in the right place/i);
 
     const prose = parseIleXaiCanvasTurn("plain prose reply with no JSON");
     expect(ileWorkCanvasFiniteOrigin(prose.origin)).toBeNull();

@@ -138,7 +138,8 @@ describe("P10 leftovers shipped helpers", () => {
     const list = read("components/SessionList.tsx");
     const grid = readMapGridSurface();
     const tap = read("components/TapScoreClient.tsx");
-    const exercise = read("components/ExerciseTapClient.tsx");
+    expect(existsSync(join(ROOT, "components/ExerciseTapClient.tsx"))).toBe(false);
+
     const sessionChat = read("app/api/session-chat/route.ts");
     const sessionView = readSessionViewSurface();
     const hook = read("lib/useSessionThoughtInterface.ts");
@@ -154,13 +155,9 @@ describe("P10 leftovers shipped helpers", () => {
     expect(view).not.toContain("const inventoryBlocks");
 
     expect(tap).toContain("useSessionThoughtInterface(");
-    expect(exercise).toContain("useSessionThoughtInterface(");
     expect(tap).toContain("isTapLiveThoughtSpeechEnabled");
-    expect(exercise).toContain("isTapLiveThoughtSpeechEnabled");
     expect(tap).toContain("shouldRestartLocalTapSpeechBindings");
-    expect(exercise).toContain("shouldRestartLocalTapSpeechBindings");
     expect(tap).toContain("tapLiveSpeechFlushText");
-    expect(exercise).toContain("tapLiveSpeechFlushText");
     expect(hook).toContain("captureKeys");
 
     expect(sessionChat).toContain("uploadWorkspaceProofOfWork");

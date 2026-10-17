@@ -1,7 +1,7 @@
 import type { PerformanceReport } from "@/lib/pow-api/performance-report";
 import type { VerificationFlowFilterState } from "@/components/VerificationFlowSubtabFilter";
 
-export type KnowledgePanelView = "models" | "lwm" | "ranking" | "strengths_gaps";
+export type KnowledgePanelView = "models";
 
 export type KnowledgeGoalMode = "default" | "adhoc" | "selected";
 
@@ -52,24 +52,6 @@ export interface KnowledgeModelsViewProps {
   ayclToken?: string;
   canInspectOthers: boolean;
   lockSubjectToSelf: boolean;
-  flowFilter?: VerificationFlowFilterState;
-}
-
-export interface KnowledgeLwmViewProps {
-  workspaceId: string;
-  currentUserId?: string | null;
-  isOwner: boolean;
-  ayclToken?: string;
-  canInspectOthers: boolean;
-  lockSubjectToSelf: boolean;
-  flowFilter?: VerificationFlowFilterState;
-}
-
-export interface KnowledgeRankingViewProps {
-  workspaceId: string;
-  currentUserId?: string | null;
-  ayclToken?: string;
-  canInspectOthers: boolean;
   flowFilter?: VerificationFlowFilterState;
 }
 

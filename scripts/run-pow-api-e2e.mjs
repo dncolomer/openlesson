@@ -3,7 +3,7 @@
  * Dedicated Proof-of-Work API product E2E.
  *
  * Teams (pro_teams): direct REST + MCP access — list/read workspaces, proof of work, scores, TAP links.
- * Workspace create is UI-only (POST /api/v3/pow/workspaces → 403) for all keys.
+ * Workspace create is POST /api/v3/workspaces. TAP mint is cookie-auth /api/workspace/tap-links.
  * Individual (regular_2026): Proof-of-Work API gated (api_plan_required); proof of work via TAP Learning/TAP web routes + Performance tab.
  */
 import { readFileSync, existsSync, writeFileSync } from "node:fs";
@@ -175,7 +175,7 @@ async function runTierGates(admin, regularJar) {
   try {
     const { rawKey, id } = await mintRegularApiKey(admin, env.E2E_REGULAR_USER_ID);
     regularKeyId = id;
-    const blocked = await agentJson("/api/v3/pow/workspaces", rawKey, {
+    const blocked = await agentJson("/api/v3/workspaces", rawKey, {
       method: "POST",
       body: JSON.stringify({ initial_prompt: "should be blocked" }),
     });
@@ -203,23 +203,19 @@ async function runTierGates(admin, regularJar) {
     return null;
   }
 
-  // Workspace create is product UI-only for all keys (including Teams).
-  const createBlocked = await agentJson("/api/v3/pow/workspaces", teamsKey, {
+  const created = await agentJson("/api/v3/workspaces", teamsKey, {
     method: "POST",
-    body: JSON.stringify({ initial_prompt: "[E2E-PoW] Teams create probe — must be rejected." }),
+    body: JSON.stringify({ initial_prompt: "[E2E-PoW] Teams create probe." }),
   });
-  const createCode = planGateCode(createBlocked.body);
-  const createMsg = JSON.stringify(createBlocked.body || {});
   record(
     "teams-gate",
-    "teams API key cannot create workspace (UI-only)",
-    createBlocked.res.status === 403 &&
-      (createCode === "forbidden" || /not available via API|UI-only|\/workspace\/new/i.test(createMsg)),
-    `HTTP ${createBlocked.res.status} code=${createCode || "n/a"}`,
+    "teams API key can POST /api/v3/workspaces",
+    created.res.status === 201 || created.res.status === 200,
+    `HTTP ${created.res.status}`,
   );
 
   // Resolve a workspace for the Teams REST/MCP suite via list (or optional env override).
-  const listed = await agentJson("/api/v3/pow/workspaces?limit=10", teamsKey);
+  const listed = await agentJson("/api/v3/workspaces?limit=10", teamsKey);
   let workspaceId =
     (Array.isArray(listed.body?.workspaces) && listed.body.workspaces[0]?.id) ||
     env.E2E_TEAMS_WORKSPACE_ID ||
@@ -238,7 +234,7 @@ async function runTierGates(admin, regularJar) {
 async function runTeamsPowApi(apiKey, workspaceId) {
   console.log("\n== Teams — Proof-of-Work API (REST) ==");
 
-  const ws = await agentJson(`/api/v3/pow/workspaces/${workspaceId}`, apiKey);
+  const ws = await agentJson(`/api/v3/workspaces/${workspaceId}`, apiKey);
   record(
     "teams-rest",
     "GET /workspaces/{id}",
@@ -246,7 +242,7 @@ async function runTeamsPowApi(apiKey, workspaceId) {
     ws.body?.workspace?.title || `HTTP ${ws.res.status}`,
   );
 
-  const blocks = await agentJson(`/api/v3/pow/workspaces/${workspaceId}/blocks`, apiKey);
+  const blocks = await agentJson(`/api/v3/workspaces/${workspaceId}/blocks`, apiKey);
   const blockId = blocks.body?.blocks?.[0]?.id;
   record(
     "teams-rest",
@@ -275,25 +271,45 @@ async function runTeamsPowApi(apiKey, workspaceId) {
     schema.body?.interruption === null ? "null" : "object",
   );
 
-  const upload = await agentJson(`/api/v3/pow/workspaces/${workspaceId}/proof-of-work`, apiKey, {
+  const started = await agentJson(`/api/v3/pow/workspaces/${workspaceId}/sessions`, apiKey, {
     method: "POST",
     body: JSON.stringify({
-      type: "tool",
-      mime_type: "application/json",
-      data: Buffer.from(
-        JSON.stringify({
-          tool_name: "e2e-pow-api",
-          events: [{ action: "explain_collision", detail: "chaining vs probing" }],
-        }),
-      ).toString("base64"),
-      block_id: blockId,
+      flow_kind: "verify",
+      duration_minutes: 15,
+      chapter_title: "E2E PoW",
     }),
   });
+  const sessionId = started.body?.session_id;
   record(
     "teams-rest",
-    "POST /proof-of-work",
-    upload.res.status === 201 && !!upload.body?.proof_of_work?.id,
-    upload.res.status === 201 ? upload.body.proof_of_work.id : `HTTP ${upload.res.status}`,
+    "POST /sessions (headless start)",
+    started.res.status === 201 && !!sessionId,
+    sessionId || `HTTP ${started.res.status}`,
+  );
+
+  const upload = await agentJson(
+    `/api/v3/pow/workspaces/${workspaceId}/sessions/${sessionId}/proof-of-work`,
+    apiKey,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        type: "tool",
+        mime_type: "application/json",
+        data: Buffer.from(
+          JSON.stringify({
+            tool_name: "e2e-pow-api",
+            events: [{ action: "explain_collision", detail: "chaining vs probing" }],
+          }),
+        ).toString("base64"),
+        block_id: blockId,
+      }),
+    },
+  );
+  record(
+    "teams-rest",
+    "POST /sessions/{id}/proof-of-work",
+    upload.res.status === 201 || upload.res.status === 200,
+    upload.res.status === 201 ? upload.body?.proof_of_work?.id || "ok" : `HTTP ${upload.res.status}`,
   );
 
   if (!liveWrites) {
@@ -326,28 +342,12 @@ async function runTeamsPowApi(apiKey, workspaceId) {
       : "missing",
   );
 
-  if (blockId) {
-    const link = await agentJson(
-      `/api/v3/pow/workspaces/${workspaceId}/blocks/${blockId}/tap-links`,
-      apiKey,
-      { method: "POST", body: JSON.stringify({ minutes: 15 }) },
-    );
-    const linkId = link.body?.tap_link?.id;
-    record(
-      "teams-rest",
-      "POST /blocks/{id}/tap-links",
-      link.res.status === 201 && !!linkId,
-      linkId || `HTTP ${link.res.status}`,
-    );
-
-    const list = await agentJson(`/api/v3/pow/workspaces/${workspaceId}/tap-links`, apiKey);
-    record(
-      "teams-rest",
-      "GET /tap-links",
-      list.res.status === 200 && Array.isArray(list.body?.tap_links),
-      `${list.body?.tap_links?.length ?? 0} links`,
-    );
-  }
+  record(
+    "teams-rest",
+    "Bearer v3 tap-links removed (cookie-auth /api/workspace/tap-links remains)",
+    true,
+    "skipped",
+  );
 
   return blockId;
 }
@@ -581,7 +581,7 @@ async function runIndividualIndirect(admin, regularJar) {
   }
 
   // Unauthenticated list requires Bearer; create is UI-only (403) even without auth.
-  const noBearerList = await fetch(`${baseUrl}/api/v3/pow/workspaces`, { method: "GET" });
+  const noBearerList = await fetch(`${baseUrl}/api/v3/workspaces`, { method: "GET" });
   record(
     "individual-indirect",
     "Proof-of-Work API requires Bearer key (individual uses web routes)",

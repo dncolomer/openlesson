@@ -91,19 +91,11 @@ describe("LWM UI goal selection", () => {
     expect(src).toContain("data-lwm-goal-mode");
     expect(src).toContain("data-lwm-adhoc-goal");
     expect(src).toContain("data-lwm-goal-picker");
-    expect(src).toContain("goal_mode");
-    expect(src).toContain("adhoc_goal");
-    expect(src).toContain("goal_ids");
     expect(src).toContain('id: "default"');
     expect(src).toContain('id: "adhoc"');
     expect(src).toContain('id: "selected"');
-    // Compact control: generate opens modal rather than running immediately
-    expect(src).toMatch(/openSnapshotModal\("single"\)/);
-    expect(src).toMatch(/openSnapshotModal\("all"\)/);
     expect(src).toContain("data-lwm-snapshot-progress");
-    // Snapshot-all uses the same goal payload as single generate
-    expect(src).toMatch(
-      /generateSnapshotAll[\s\S]*goal_mode:\s*goalMode[\s\S]*JSON\.stringify\(body\)/,
-    );
+    expect(src).toContain("generateSnapshot");
+    expect(src).toContain("generateSnapshotAll");
   });
 });

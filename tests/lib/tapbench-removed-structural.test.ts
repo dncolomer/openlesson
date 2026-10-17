@@ -41,9 +41,8 @@ describe("TAPBench product surfaces removed", () => {
     expect(existsSync(join(ROOT, "lib/pow-api/tapbench-store.ts"))).toBe(false);
     expect(existsSync(join(ROOT, "lib/pow-api/stash-tapbench-auth.ts"))).toBe(false);
     expect(existsSync(join(ROOT, "lib/pow-api/tapbench-skills-md.ts"))).toBe(false);
-    const powRoute = read("app/api/v3/pow/workspaces/[id]/proof-of-work/route.ts");
-    expect(powRoute).not.toContain("tapbench_key");
-    expect(powRoute).not.toContain("@/lib/tapbench");
+    expect(existsSync(join(ROOT, "app/api/v3/pow/workspaces/[id]/proof-of-work/route.ts"))).toBe(false);
+
   });
 
   it("middleware, next config, sitemap, and nav no longer special-case /tapbench", () => {

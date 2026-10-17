@@ -4,7 +4,7 @@
  * Knowledge filters, and shipped UI gates.
  */
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { FLOW_EMBEDDING_DIM, FLOW_EMBEDDING_MODEL_ID } from "@/lib/flow-embedding";
 import { resolveTapStartingTopicsFromLlm } from "@/lib/tap-score";
@@ -743,16 +743,12 @@ describe("verification workspace shell gates", () => {
     expect(settings).toContain("integration-skill");
     expect(settings).toContain('activeSubview === "integrations"');
 
-    for (const [file, subtab] of [
-      ["components/knowledge-panel/ranking-view.tsx", "ranking"],
-      ["components/knowledge-panel/strengths-gaps-view.tsx", "strengths_gaps"],
-      ["components/knowledge-panel/lwm-view.tsx", "lwm"],
-      ["components/knowledge-panel/models-view.tsx", "embeddings"],
-    ] as const) {
-      const source = read(file);
-      expect(source).toContain("VerificationFlowSubtabFilter");
-      expect(source).toContain(`subtab="${subtab}"`);
-    }
+    expect(existsSync(join(ROOT, "components/knowledge-panel/ranking-view.tsx"))).toBe(false);
+    expect(existsSync(join(ROOT, "components/knowledge-panel/strengths-gaps-view.tsx"))).toBe(false);
+    expect(existsSync(join(ROOT, "components/knowledge-panel/lwm-view.tsx"))).toBe(false);
+    const modelsFilter = read("components/knowledge-panel/models-view.tsx");
+    expect(modelsFilter).toContain("VerificationFlowSubtabFilter");
+    expect(modelsFilter).toContain('subtab="embeddings"');
     const modelsView = read("components/knowledge-panel/models-view.tsx");
     expect(modelsView).toContain('embeddingSource: flowFilter?.enabled ? "flowcfg" : "knowledgecfg"');
     expect(modelsView).toContain("Embeddings in");
@@ -777,21 +773,10 @@ describe("verification workspace shell gates", () => {
     const performance = read("components/WorkspacePerformancePanel.tsx");
     expect(performance).toContain("isKnowledgeRegionWorkspace(workspaceKind)");
 
-    const lwmView = read("components/knowledge-panel/lwm-view.tsx");
-    expect(lwmView).toContain("lwmLoadedSubjectForVerificationFlow");
-    expect(lwmView).toContain("setLwmUserId(next.userId)");
-    expect(lwmView).toContain("setLwmGuestUserId(next.guestUserId)");
-    expect(lwmView).toContain("holdEmptySubject: verificationProfiles");
-    expect(lwmView).toContain("const verificationProfiles = Boolean(flowFilter?.enabled)");
-    expect(lwmView).not.toContain("if (!next) return");
-    expect(lwmView).not.toContain("holdEmptySubject: Boolean(flowId)");
-    expect(lwmView).not.toContain("canInspectOthers: flowId ? true : canInspectOthers");
-    expect(lwmView).not.toContain("lockSubjectToSelf: flowId ? false : lockSubjectToSelf");
-    expect(lwmView).toContain("data-lwm-loaded-user={lwmUserId}");
-    expect(lwmView).toContain("data-lwm-loaded-guest={lwmGuestUserId}");
-    const lwmHook = read("components/knowledge-panel/use-knowledge-lwm.ts");
-    expect(lwmHook).toContain("if (holdEmptySubject) return");
-    expect(lwmHook).toContain("holdEmptySubject && !lwmUserId && !lwmGuestUserId");
+    expect(existsSync(join(ROOT, "components/knowledge-panel/lwm-view.tsx"))).toBe(false);
+
+    expect(existsSync(join(ROOT, "components/knowledge-panel/use-knowledge-lwm.ts"))).toBe(false);
+
 
     const tapStart = read("components/tap-score/tap-score-phases.tsx");
     expect(tapStart).toContain("SessionStartBackButton");

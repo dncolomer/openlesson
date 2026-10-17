@@ -71,7 +71,7 @@ export const VERIFICATION_PITCH_DECK: SolutionSlideDeck = {
       bullets: [
         "Human Knowledge / Skill Validation",
         "Cannot be faked — not a score on a test",
-        "Trace Interruption Model targets where reasoning actually breaks",
+        "Epistemic foraging targets where reasoning actually breaks",
         "Proof of work tied to the decision you need to make",
       ],
     },

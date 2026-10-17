@@ -520,27 +520,18 @@ describe("Practice drawer labels and previous-sessions UI", () => {
     expect(view).toContain("data-ile-silence-lock-minutes");
     const chrome = read("components/session-view/session-chrome.tsx");
     const phase = read("components/session-view/use-session-phase.ts");
-    expect(chrome).toContain('testId="ile-save-exit-name"');
-    expect(chrome).toContain("data-ile-session-name");
-    expect(chrome).toContain('t("session.nameSessionTitle")');
-    expect(chrome).toContain('t("session.nameSessionDiscard")');
-    expect(chrome).toContain('t("session.nameSessionBody")');
-    expect(chrome).toContain('tertiaryTestId="ile-exit-without-saving"');
-    expect(view).toContain("setShowSaveExitNameDialog(true)");
-    expect(view).toContain("pauseAndGoToDashboard(saveExitName)");
-    expect(view).toContain("persistSession: false");
+    expect(chrome).not.toContain('testId="ile-save-exit-name"');
+    expect(chrome).not.toContain("data-ile-session-name");
+    expect(chrome).not.toContain('t("session.nameSessionTitle")');
+    expect(chrome).not.toContain('t("session.nameSessionDiscard")');
+    expect(chrome).not.toContain('tertiaryTestId="ile-exit-without-saving"');
+    expect(view).not.toContain("setShowSaveExitNameDialog");
+    expect(view).toContain("void pauseAndGoToDashboard()");
+    expect(view).toContain("persistSession: plan.persistSession");
     expect(phase).toContain("applyIleSessionNameToMetadata");
     expect(phase).toContain("discardUnsavedIleSession");
     expect(phase).toContain("async (");
     expect(phase).toContain("persistSession");
-
-    const en = JSON.parse(read("messages/en.json")) as {
-      session: Record<string, string>;
-    };
-    expect(en.session.nameSessionBody).toMatch(/Proof of Work/i);
-    expect(en.session.nameSessionBody).toMatch(/canvas state will be lost/i);
-    expect(en.session.nameSessionBody).not.toMatch(/\bboard\b/i);
-    expect(en.session.nameSessionDiscard).toMatch(/without saving/i);
 
     writeScratch(
       "previous-sessions-excerpts.txt",

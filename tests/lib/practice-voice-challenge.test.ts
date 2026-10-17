@@ -5,7 +5,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { readSessionStageSurface } from "../helpers/surface-source";
 import { PracticeVoiceChallenge } from "@/components/PracticeVoiceChallenge";
@@ -574,10 +574,8 @@ describe("shipped voice-challenge UI wiring", () => {
     expect(runner).toContain("data-calibrate-voice-challenge");
     expect(scoutThinkAloudEnabled()).toBe(false);
     expect(phases).toContain("scoutThinkAloudEnabled()");
-    const drill = read("components/exercise-tap/exercise-tap-phases.tsx");
-    expect(drill).toContain('variant="drill"');
-    expect(drill).toContain("omitIntroSlide");
-    expect(drill).not.toMatch(/onPracticeFirst=\{\(\) => void startSession/);
+    expect(existsSync(join(ROOT, "components/exercise-tap/exercise-tap-phases.tsx"))).toBe(false);
+
     expect(read("lib/practice-voice-challenge.ts")).toContain('variant === "prepare"');
   });
 
@@ -662,13 +660,13 @@ describe("shipped voice-challenge UI wiring", () => {
     expect(view).toContain("IleSessionImpurityScreen");
     expect(view).toContain("IleSilenceRestScreen");
     expect(view).toContain('ileImpurityExitPlan("save")');
-    expect(view).toContain("setShowSaveExitNameDialog(true)");
-    expect(read("components/session-view/session-chrome.tsx")).toContain(
+    expect(view).not.toContain("setShowSaveExitNameDialog");
+    expect(read("components/session-view/session-chrome.tsx")).not.toContain(
       'testId="ile-save-exit-name"',
     );
-    expect(read("components/session-view/session-chrome.tsx")).toContain("data-ile-session-name");
+    expect(read("components/session-view/session-chrome.tsx")).not.toContain("data-ile-session-name");
     expect(view).toContain('ileImpurityExitPlan("logoff")');
-    expect(view).toContain("pauseAndGoToDashboard");
+    expect(view).toContain("void pauseAndGoToDashboard()");
     expect(view).toContain("persistSession: plan.persistSession");
   });
 });

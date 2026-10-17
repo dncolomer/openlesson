@@ -92,9 +92,6 @@ export type SessionStatus = "active" | "paused" | "completed" | "ended_by_tutor"
 export const ENDPOINT_SCOPES: Record<string, ApiKeyScope> = {
   "POST /workspaces": "workspaces:write",
   "GET /workspaces/:id/blocks": "workspaces:read",
-  "POST /workspaces/:id/proof-of-work": "workspaces:write",
   "POST /workspaces/:id/proof-of-work-schema": "workspaces:read",
   "POST /workspaces/:id/integration-skill": "workspaces:read",
-  "POST /workspaces/:id/blocks/:blockId/tap-links": "tap:write",
-  "GET /workspaces/:id/tap-links": "tap:read",
 };

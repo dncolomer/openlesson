@@ -4,7 +4,7 @@
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { readExerciseTapSurface, readTapScoreSurface } from "@/tests/helpers/surface-source";
+import { readTapScoreSurface } from "@/tests/helpers/surface-source";
 
 const ROOT = join(__dirname, "../..");
 
@@ -88,10 +88,10 @@ describe("Knowledge Portal removal", () => {
     const newsWidget = read("components/WorkspaceTopicNewsWidget.tsx");
     expect(newsWidget).not.toMatch(/xAI-powered headlines/i);
 
-    const exerciseTap = readExerciseTapSurface();
-    expect(exerciseTap).toContain("SessionOnboardingGuide");
-    expect(exerciseTap).not.toMatch(/Solution Stack — that stack is what will be evaluated/i);
-    expect(exerciseTap).toMatch(/Solo practice|Del stashes|Solution/);
+    expect(existsSync(join(ROOT, "components/ExerciseTapClient.tsx"))).toBe(false);
+
+    expect(existsSync(join(ROOT, "components/exercise-tap"))).toBe(false);
+
     const tapClient = readTapScoreSurface();
     expect(tapClient).toContain("SessionOnboardingGuide");
 

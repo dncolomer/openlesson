@@ -1,4 +1,4 @@
-import type { ChatMessage, PendingChatMessage } from "@/components/HeliosChat";
+import type { ChatMessage, PendingChatMessage } from "@/lib/session-chat-client";
 
 export type LogLevel = "error" | "warning" | "info";
 

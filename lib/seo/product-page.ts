@@ -43,26 +43,26 @@ export function productPageMetadata(page: SeoProductPageConfig): Metadata {
   };
 }
 
-export const TIM_PAGE: SeoProductPageConfig = {
-  slug: "trace-interruption-model",
-  path: "/products/trace-interruption-model",
-  eyebrow: "Trace Interruption Model",
-  h1: "Predict optimal learning-path interruptions — not the next funnel step.",
+export const FEP_PAGE: SeoProductPageConfig = {
+  slug: "free-energy-principle",
+  path: "/products/free-energy-principle",
+  eyebrow: "Free Energy Principle",
+  h1: "Forage for information that reduces uncertainty — not the next funnel step.",
   intro:
-    "TIM is not a product you buy on its own. It is the core model behind every Uncertain Systems surface — trained to decide when to interrupt a learner’s path with the right probe, coaching nudge, or proof-of-work request, at the right moment. That is how we break the linearity of classic analytics and turn-based chat.",
-  metaTitle: "Trace Interruption Model (TIM) | Core Learning Interruption Engine",
+    "The Free Energy Principle is the influence behind every Uncertain Systems surface. Learning is reducing uncertainty: epistemic foraging searches for information that shrinks what is unknown, then steers the thinking process toward the next genuine gap. That is how we break the linearity of classic analytics and turn-based chat.",
+  metaTitle: "Free Energy Principle | Epistemic Foraging",
   metaDescription:
-    "TIM predicts optimal learning-path interruptions across session — Calibrate, Learn, and Verify — and Proof-of-Work API. The shared model behind verification, optimization, and augmentation — not a standalone SKU.",
+    "A Free Energy Principle approach based on epistemic foraging across session — Calibrate, Learn, and Verify — and Proof-of-Work API. The shared influence behind verification, mapping, and the Learning Harness.",
   keywords: [
-    "trace interruption model",
-    "TIM",
-    "learning path interruption",
-    "predictive coaching",
-    "Socratic probing",
+    "free energy principle",
+    "epistemic foraging",
+    "reducing uncertainty",
     "learning world model",
+    "knowledge mapping",
+    "predictive coaching",
     "non-linear learning analytics",
   ],
-  heroImageAlt: "Trace Interruption Model — predictive learning interruptions",
+  heroImageAlt: "Free Energy Principle — epistemic foraging over genuine work",
   useCases: [
     {
       title: "Proof-of-Work API responses",
@@ -72,7 +72,7 @@ export const TIM_PAGE: SeoProductPageConfig = {
     {
       title: "Think Aloud Protocol probes",
       description:
-        "Live sessions use TIM to target hesitations and reasoning breaks with Socratic follow-ups while the candidate is still in flow — not after a form submit.",
+        "Live sessions use epistemic foraging to target hesitations and reasoning breaks with Socratic follow-ups while the candidate is still in flow — not after a form submit.",
     },
     {
       title: "Learning coaching moments",
@@ -87,46 +87,46 @@ export const TIM_PAGE: SeoProductPageConfig = {
     {
       title: "Learning world model growth",
       description:
-        "Each interruption is grounded in accumulated proof of work and performance context. TIM learns what still needs to be measured and when the path should bend — feeding the model that all products share.",
+        "Each probe is grounded in accumulated proof of work and performance context. Epistemic foraging learns what still needs to be measured and when the path should bend — feeding the model that all products share.",
     },
     {
-      title: "Verification vs. augmentation timing",
+      title: "Verification vs. mapping timing",
       description:
-        "The same predictor chooses between checkpoint probes (verify now), coaching nudges (optimize next), and proof reminders (augment with evidence) — aligned to the three verticals on one workspace.",
+        "The same policy chooses between checkpoint probes (verify now), mapping positions (plot on knowledge regions), and proof reminders (augment with evidence) — aligned on one workspace.",
     },
   ],
   highlights: [
-    "Trained to predict when and how to interrupt — not just what happened last",
+    "Forage for information that reduces uncertainty — not just what happened last",
     "Shared across Proof-of-Work API and session on every workspace",
     "Surfaces as interruption payloads with delay, confidence, and consumer obligations",
     "Foundation layer — not sold separately; powers the products you integrate",
   ],
   faqs: [
     {
-      question: "Can I call TIM directly?",
+      question: "Can I call the Free Energy Principle directly?",
       answer:
-        "No. TIM runs inside Uncertain Systems products. You experience it through session probes, Learning coaching, PoW API interruption fields, and performance-driven schema evolution — not as a standalone endpoint.",
+        "No. It is an influence on Uncertain Systems products. You experience it through session probes, Learning coaching, PoW API interruption fields, and knowledge mapping — not as a standalone endpoint.",
     },
     {
       question: "How is this different from funnel analytics?",
       answer:
-        "Funnel tools record that a step completed. TIM predicts whether the learner needs an intervention before they drift, fake understanding, or drop off — using proof-of-work context, not page views alone.",
+        "Funnel tools record that a step completed. Epistemic foraging searches for information that reduces uncertainty before a learner drifts, fakes understanding, or drops off — using proof-of-work context, not page views alone.",
     },
     {
-      question: "What does an interruption look like?",
+      question: "What does a forage look like?",
       answer:
         "A structured prediction: intervention type (reflection, probe, coaching nudge, proof reminder, performance review), message, optional delay in milliseconds, confidence, and rules for supersession when newer API responses arrive.",
     },
     {
-      question: "Does TIM replace my LMS rules engine?",
+      question: "Does this replace my LMS rules engine?",
       answer:
-        "It complements it. You keep your UX; TIM tells your system when Uncertain Systems believes an interruption will advance the learning world model for that user or agent — grounded in workspace evidence.",
+        "It complements it. You keep your UX; epistemic foraging tells your system when Uncertain Systems believes a probe will advance the learning world model for that user or agent — grounded in workspace evidence.",
     },
   ],
   secondaryCta: { label: "See all products", href: "/#products" },
-  closingTitle: "One model. Every product.",
+  closingTitle: "One policy. Every product.",
   closingBody:
-    "Book a demo to see how TIM-powered interruptions flow through verification, optimization, and augmentation in your stack.",
+    "Book a demo to see how a Free Energy Principle approach based on epistemic foraging flows through verification, mapping, and the Learning Harness.",
 };
 
 export const POW_API_PAGE: SeoProductPageConfig = {
@@ -412,4 +412,4 @@ export const STASH_API_PAGE: SeoProductPageConfig = {
     "Book a demo to see Stash API buffer → stash/submit → PoW scoring for agent workflows on the Uncertain Systems stack.",
 };
 
-export const PRODUCT_PAGES = [TIM_PAGE, POW_API_PAGE, STASH_API_PAGE, TAP_PAGE, ILE_PAGE] as const;
+export const PRODUCT_PAGES = [FEP_PAGE, POW_API_PAGE, STASH_API_PAGE, TAP_PAGE, ILE_PAGE] as const;

@@ -429,7 +429,6 @@ describe("custom aesthetic surfaces", () => {
   it("TAP backgrounds use pickTapBackgroundImage from the org-aware listing", () => {
     for (const rel of [
       "components/TapScoreClient.tsx",
-      "components/ExerciseTapClient.tsx",
       "components/scout-tap/ScoutTapClient.tsx",
     ]) {
       const source = read(rel);

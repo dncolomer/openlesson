@@ -112,9 +112,10 @@ export default function KnowledgeVerificationPage() {
             disruption of the natural cognitive process.
           </p>
           <p className="mt-5">
-            Our conversational interfaces run on top of an interruption model (
-            <span className="text-zinc-200">TIM — Trace Interruption Model</span>) that uses the evolving
-            learner model to proactively steer the thinking process.
+            Our conversational interfaces run on a{" "}
+            <span className="text-zinc-200">Free Energy Principle</span> approach based on
+            epistemic foraging: the evolving learner model searches for information that reduces
+            uncertainty, and steers the thinking process toward what is still unknown.
           </p>
           <p className="mt-5">{VERIFICATION_APPROACH_COPY.p3}</p>
           <p className="mt-5" data-landing-epistemic-foraging>

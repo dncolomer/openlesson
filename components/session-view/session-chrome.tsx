@@ -97,12 +97,6 @@ export type SessionChromeProps = {
   showPlanCompleteModal: boolean;
   onCancelPlanComplete: () => void;
   onConfirmPlanComplete: () => void;
-  showSaveExitNameDialog?: boolean;
-  saveExitName?: string;
-  onSaveExitNameChange?: (value: string) => void;
-  onCancelSaveExitName?: () => void;
-  onConfirmSaveExitName?: () => void;
-  onDiscardSaveExitName?: () => void;
   gatherWarning?: string | null;
   onDismissGatherWarning?: () => void;
   closeReviewBlocked?: boolean;
@@ -172,12 +166,6 @@ export function SessionChrome({
   showPlanCompleteModal,
   onCancelPlanComplete,
   onConfirmPlanComplete,
-  showSaveExitNameDialog = false,
-  saveExitName = "",
-  onSaveExitNameChange,
-  onCancelSaveExitName,
-  onConfirmSaveExitName,
-  onDiscardSaveExitName,
   gatherWarning = null,
   onDismissGatherWarning,
   closeReviewBlocked = false,
@@ -393,34 +381,6 @@ export function SessionChrome({
           confirmTone="primary"
         />
       ) : null}
-
-      <ConfirmDialog
-        open={showSaveExitNameDialog}
-        onCancel={() => onCancelSaveExitName?.()}
-        onConfirm={() => onConfirmSaveExitName?.()}
-        onTertiary={onDiscardSaveExitName ? () => onDiscardSaveExitName() : undefined}
-        variant="neutral"
-        title={t("session.nameSessionTitle")}
-        description={t("session.nameSessionBody")}
-        confirmLabel={t("session.nameSessionConfirm")}
-        cancelLabel={t("session.nameSessionStay")}
-        tertiaryLabel={t("session.nameSessionDiscard")}
-        tertiaryTone="ghost"
-        tertiaryTestId="ile-exit-without-saving"
-        confirmTone="primary"
-        autoFocusConfirm={false}
-        confirmOnEnter={false}
-        testId="ile-save-exit-name"
-      >
-        <input
-          data-ile-session-name
-          value={saveExitName}
-          onChange={(e) => onSaveExitNameChange?.(e.target.value)}
-          placeholder={t("session.nameSessionPlaceholder")}
-          maxLength={80}
-          className="w-full rounded-none border border-neutral-700 bg-black/60 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none"
-        />
-      </ConfirmDialog>
 
       <ConfirmDialog
         open={showPlanCompleteModal}

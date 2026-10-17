@@ -19,6 +19,10 @@ import {
   isMetaLearningFluff,
 } from "@/lib/practice-item-builders";
 import {
+  stripLearnerFacingWrappers,
+  stripSessionFormatWrapper,
+} from "@/lib/session-format-wrapper";
+import {
   deriveBlockSimulation,
   partitionSimulationProbes,
 } from "@/lib/block-simulation";
@@ -181,6 +185,7 @@ describe("grounded dialogue + exercise builders (live + thin/guest)", () => {
     expect(task).toMatch(/workspace goal/i);
     expect(task).toMatch(/meta-learning|already know|approach learning/i);
     expect(task).toMatch(/core mechanism|explain it precisely/i);
+    expect(task).toMatch(/In one guided conversation/i);
 
     const simSys = buildSimulationSamplesSystemPrompt();
     expect(simSys).toMatch(/core mechanism|explain it precisely/i);
@@ -206,6 +211,22 @@ describe("grounded dialogue + exercise builders (live + thin/guest)", () => {
     const bad =
       'What is the core mechanism in "Bridging Quantum Optimization and Linear Algebra Techniques" — specifically: Explore how quantum optimization methods intersect with linear algebra primitives such as HHL and quantum singular value estimation. This b… — and how would you explain it precisely?';
     expect(isMetaLearningFluff(bad)).toBe(true);
+    const guided =
+      "In one guided conversation, work the last-resort test on a just-war case.";
+    expect(isMetaLearningFluff(guided)).toBe(true);
+    expect(stripSessionFormatWrapper(guided)).toBe(
+      "Work the last-resort test on a just-war case.",
+    );
+    expect(
+      stripSessionFormatWrapper(
+        "Through a guided dialogue, compare two AVL rotations on the same insert.",
+      ),
+    ).toBe("Compare two AVL rotations on the same insert.");
+    expect(
+      stripLearnerFacingWrappers(
+        "Your question sits in the right place (After Check/Ask). Name the two bodies in the inverse-square law.",
+      ),
+    ).toBe("Name the two bodies in the inverse-square law.");
 
     // Same block fields would have produced the old meta template; new builder is concrete.
     const fixed = buildGroundedDialogueQuestion(

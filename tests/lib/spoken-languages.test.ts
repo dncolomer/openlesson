@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { readSessionViewSurface } from "@/tests/helpers/surface-source";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -270,18 +270,7 @@ describe("conversation language instruction for Explore/Drill model replies", ()
     expect(topics).toContain("conversationLanguage");
     expect(topics).toMatch(/generateTapStartingTopics\([\s\S]*conversationLanguage/);
 
-    // Exercise TAP client mirrors conversational Practice language wiring
-    const exerciseTap = readFileSync(
-      path.join(process.cwd(), "components/ExerciseTapClient.tsx"),
-      "utf8",
-    );
-    expect(exerciseTap).toMatch(/workspace-tap-score\/topics[\s\S]*conversationLanguage/);
-    expect(exerciseTap).toMatch(
-      /(?:workspace-tap-score\/start|TAP_SESSION_RUNTIME_PATHS\.start|postTutoringSessionStart)[\s\S]*conversationLanguage/,
-    );
-    expect(exerciseTap).toMatch(
-      /}, \[phase, workspaceId, blockId, sessionId, privateToken, minutes, conversationLanguage\]/,
-    );
+    expect(existsSync(path.join(process.cwd(), "components/ExerciseTapClient.tsx"))).toBe(false);
 
     // Drill exercise authoring also gets language
     const domain = readFileSync(

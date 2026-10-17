@@ -22,7 +22,6 @@ import {
   type IlePowTypeCounts,
 } from "@/lib/ile-pow-counters";
 import { ileImpurityExitPlan, type IleSilenceLockOutcome } from "@/lib/practice-voice-challenge";
-import { ileSessionNameFromMetadata } from "@/lib/ile-session-name";
 import { sessionSidebarHasSection } from "@/lib/session-sidebar";
 import { toSpeechBcp47 } from "@/lib/tutoring-languages";
 
@@ -77,7 +76,6 @@ export type SessionLiveStageProps = {
   renderSessionToolPanes: () => JSX.Element | null;
   renderWorkCanvas: () => JSX.Element;
   resourceScopeChapterId: string | null;
-  saveExitName: string;
   screenCaptureRef: RefObject<LiveScreenCaptureHandle | null>;
   selectedAesthetic: AestheticPackage;
   session: Session;
@@ -96,15 +94,12 @@ export type SessionLiveStageProps = {
   setIsMuted: Dispatch<SetStateAction<boolean>>;
   setIsWebcamEnabled: Dispatch<SetStateAction<boolean>>;
   setMuteRemaining: Dispatch<SetStateAction<number>>;
-  setSaveExitName: Dispatch<SetStateAction<string>>;
   setSessionResourcesOpen: Dispatch<SetStateAction<boolean>>;
   setShowEndDialog: Dispatch<SetStateAction<boolean>>;
   setShowPlanCompleteModal: Dispatch<SetStateAction<boolean>>;
-  setShowSaveExitNameDialog: Dispatch<SetStateAction<boolean>>;
   setShowWelcomePanel: Dispatch<SetStateAction<boolean>>;
   showEndDialog: boolean;
   showPlanCompleteModal: boolean;
-  showSaveExitNameDialog: boolean;
   showWelcomeModal: boolean;
   showWelcomePanel: boolean;
   silenceLock: { lockCount: number; outcome: IleSilenceLockOutcome; unlock: (challengePassed: boolean) => void; minutes: number; };
@@ -159,7 +154,6 @@ export function SessionLiveStage({
     renderSessionToolPanes,
     renderWorkCanvas,
     resourceScopeChapterId,
-    saveExitName,
     screenCaptureRef,
     selectedAesthetic,
     session,
@@ -178,15 +172,12 @@ export function SessionLiveStage({
     setIsMuted,
     setIsWebcamEnabled,
     setMuteRemaining,
-    setSaveExitName,
     setSessionResourcesOpen,
     setShowEndDialog,
     setShowPlanCompleteModal,
-    setShowSaveExitNameDialog,
     setShowWelcomePanel,
     showEndDialog,
     showPlanCompleteModal,
-    showSaveExitNameDialog,
     showWelcomeModal,
     showWelcomePanel,
     silenceLock,
@@ -208,7 +199,7 @@ export function SessionLiveStage({
               onSaveAndLeave={() => {
                 const plan = ileImpurityExitPlan("save");
                 if (!plan.persistSession) return;
-                setShowSaveExitNameDialog(true);
+                void pauseAndGoToDashboard();
               }}
             />,
           )
@@ -220,7 +211,7 @@ export function SessionLiveStage({
               onSave={() => {
                 const plan = ileImpurityExitPlan("save");
                 if (!plan.persistSession) return;
-                setShowSaveExitNameDialog(true);
+                void pauseAndGoToDashboard();
               }}
               onLogOff={() => {
                 const plan = ileImpurityExitPlan("logoff");
@@ -234,18 +225,6 @@ export function SessionLiveStage({
         t={t}
         activeTool={activeTool}
         onToolChange={handleIleSessionToolChange}
-        showSaveExitNameDialog={showSaveExitNameDialog}
-        saveExitName={saveExitName}
-        onSaveExitNameChange={setSaveExitName}
-        onCancelSaveExitName={() => setShowSaveExitNameDialog(false)}
-        onConfirmSaveExitName={() => {
-          setShowSaveExitNameDialog(false);
-          void pauseAndGoToDashboard(saveExitName);
-        }}
-        onDiscardSaveExitName={() => {
-          setShowSaveExitNameDialog(false);
-          void pauseAndGoToDashboard(null, { persistSession: false });
-        }}
         isWebcamEnabled={isWebcamEnabled}
         isScreenCapturing={isScreenCapturing}
         screenShareStream={isScreenCapturing ? screenCaptureRef.current?.getStream() ?? null : null}
@@ -372,8 +351,7 @@ export function SessionLiveStage({
         actions={
           <IleVoiceBarActions
             onBackToDashboard={() => {
-              setSaveExitName(ileSessionNameFromMetadata(session.metadata) ?? "");
-              setShowSaveExitNameDialog(true);
+              void pauseAndGoToDashboard();
             }}
             showSave={sessionSidebarHasSection("ile", "save")}
           />

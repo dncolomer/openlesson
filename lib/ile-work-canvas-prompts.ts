@@ -57,7 +57,7 @@ export function ileWorkCanvasXaiToolsInstruction(): string {
     `For an ordinary explanation, definition, question, or worked step, omit "elements" or send an empty array. Do not draw a flowchart, box diagram, or extra shape by default.`,
     "Skip eraser and selection — those are learner tools only. Skip image unless you already have a fileId.",
     `Reply as JSON: {"text":"<coaching reply, also placed as a text block>","textWidth":number,"origin":{"x":number,"y":number},"elements":[]}.`,
-    `"text" is what the learner reads on the board. Write it as a wise, warm teacher: complete unhurried sentences, eloquent and plain, easy to start from, with no headings, bullets, or compressed exam stems. Do not put JSON, code fences, or element arrays inside "text".`,
+    `"text" is what the learner reads on the board. Answer the topic directly: complete unhurried sentences, eloquent and plain, easy to start from, with no headings, bullets, or compressed exam stems. Never mention Check/ask, Simplify, origin, placement, or that a question sits in the right place. Do not put JSON, code fences, or element arrays inside "text".`,
     `"textWidth" is the coaching text box width in pixels. Choose it for this reply so the box fits the cluster. Do not reuse one width every time. A text element may set its own "width" the same way.`,
     `Include "elements" only for that necessary diagram (${shapes}). Arrows/lines/freedraw may include "points":[[x,y],...]. Labeled shapes use "label":{"text":"..."}. Place marks near related existing elements. Always include "text". Never mention this JSON format to the learner.`,
   ].join(" ");
@@ -176,8 +176,8 @@ export function buildIleWorkCanvasAskUserMessage(input: {
   const prompt = String(input.prompt || "").trim();
   const live = (input.selectedElements ?? []).filter((el) => !el.isDeleted);
   const body = !live.length
-    ? `Ask about the Work canvas.\n\nQuestion:\n${prompt}`
-    : `Ask about the selected Work canvas elements.\n\nQuestion:\n${prompt}\n\nSelected elements:\n${ileWorkCanvasSelectionSummary(live)}`;
+    ? `Answer this question directly. Do not mention Check/ask, commands, or placement.\n\nQuestion:\n${prompt}`
+    : `Answer this question about the selected Work canvas elements. Do not mention Check/ask, commands, or placement.\n\nQuestion:\n${prompt}\n\nSelected elements:\n${ileWorkCanvasSelectionSummary(live)}`;
   return ileWorkCanvasWithDomainPrefix(body, input.workspace);
 }
 
@@ -258,9 +258,9 @@ export function buildIleWorkCanvasAnswerUserMessage(input: {
   const live = (input.selectedElements ?? []).filter((el) => el && !el.isDeleted);
   const body = [
     "Answer the selected question texts.",
-    "The learner wrote these questions on the canvas. Answer them in complete, unhurried sentences.",
+    "The learner wrote these questions on the canvas. Answer them directly in complete, unhurried sentences.",
     "Leave the selected questions in place. The answer is the reply text.",
-    "Do not repeat the questions.",
+    "Do not repeat the questions. Do not mention Check/ask, commands, or placement.",
     "",
     "Selected elements:",
     ileWorkCanvasCommandSelectionListing(live),
@@ -277,6 +277,7 @@ export function buildIleWorkCanvasCheckUserMessage(input: {
     "Check the selected work.",
     "Say what holds and what to fix, in a few unhurried sentences. Stay on this topic.",
     "Leave the selected marks in place. The check is the reply text.",
+    "Answer directly. Do not mention Check/ask, commands, or that the question sits in the right place.",
     "",
     "Selected elements:",
     ileWorkCanvasCommandSelectionListing(live),

@@ -194,12 +194,13 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     expect(welcome).toContain("h-screen");
     expect(welcome).not.toContain("DialogFrame");
     expect(existsSync(join(ROOT, "app/session/settings/page.tsx"))).toBe(true);
-    expect(existsSync(join(ROOT, "app/ile/session/[token]/settings/page.tsx"))).toBe(true);
+    expect(existsSync(join(ROOT, "app/ile/session/[token]/settings/page.tsx"))).toBe(false);
     expect(existsSync(join(ROOT, "app/learn/[token]/session/settings/page.tsx"))).toBe(true);
     const view = readSessionViewSurface();
     const speech = read("components/session-view/use-session-speech.ts");
     const tapPhases = read("components/tap-score/tap-score-phases.tsx");
-    const tapShell = read("components/exercise-tap/ExerciseTapShell.tsx");
+    expect(existsSync(join(ROOT, "components/exercise-tap/ExerciseTapShell.tsx"))).toBe(false);
+
     const docs = read("docs/ile-pow-resources.md");
 
     expect(helios).not.toContain("ImDoneAnsweringControl");
@@ -208,7 +209,6 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     expect(existsSync(join(ROOT, "components/IleCompactStashWindow.tsx"))).toBe(false);
 
     expect(tapPhases).toContain("ImDoneAnsweringControl");
-    expect(tapShell).toContain("ImDoneAnsweringControl");
 
     expect(welcome).toContain("TapBriefingConfig");
     expect(welcome).toContain("showDurationPicker={false}");
@@ -218,7 +218,6 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     expect(welcome).not.toContain("data-ile-canvas-timer-slider");
     expect(welcome).not.toContain("data-ile-browser-inference");
     expect(welcome).not.toContain("data-ile-pregame-preset");
-    expect(welcome).not.toContain("data-ile-pregame-tabs");
     expect(welcome).not.toContain("applyIlePregamePreset");
     expect(welcome).not.toContain("explainFully");
     expect(welcome).toContain("AestheticPicker");
@@ -292,7 +291,6 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     expect(dockBar).toContain("compact");
     expect(dockBar).not.toContain("data-ile-open-work-count");
     expect(dockBar).not.toContain("data-ile-pow-budget-remaining");
-    expect(dockBar).not.toContain("data-ile-open-work-tabs");
     expect(dockBar).toContain("data-ile-open-work-chip");
     expect(dockBar).toContain("data-ile-chapter-minimized");
     expect(dockBar).toContain("data-ile-chapter-chip-image");
@@ -325,12 +323,8 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     expect(panes).not.toContain("doneWriting");
     expect(view).toContain("thought-history");
     expect(view).not.toContain("renderCompactWorkspace");
-    const tabs = read("components/session-view/ile-chapter-tool-tabs.tsx");
-    expect(tabs).not.toContain("data-ile-chapter-tool-tabs");
-    expect(tabs).not.toContain("Grokipedia");
-    expect(tabs).not.toContain("thought-history");
-    expect(tabs).not.toContain('"data-input"');
-    expect(tabs).not.toContain("logs:");
+    expect(existsSync(join(ROOT, "components/session-view/ile-chapter-tool-tabs.tsx"))).toBe(false);
+
     expect(chrome).not.toContain("data-ile-session-insights-count");
     expect(helios).not.toContain("data-ile-chapter-brief");
     expect(helios).not.toContain("fadeToRight");

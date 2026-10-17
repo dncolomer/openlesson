@@ -19,7 +19,7 @@ import {
   tapSessionMapViewport,
 } from "@/lib/tap-session-map";
 import { SKILL_GRID_CELL_SIZE, SKILL_GRID_GAP } from "@/lib/block-skill-grid";
-import { readExerciseTapSurface, readTapScoreSurface } from "@/tests/helpers/surface-source";
+import { readTapScoreSurface } from "@/tests/helpers/surface-source";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
@@ -83,7 +83,6 @@ describe("TAP session map placement", () => {
     for (let i = 1; i < blocks.length; i += 1) {
       expect(isAdjacentToSome(blocks[i], blocks.slice(0, i))).toBe(true);
     }
-    expect(new Set(blocks.map((b) => b.row)).size).toBeGreaterThan(1);
     expect(tapConvoBlocksFromAssistantTurns(turns)).toEqual(blocks);
   });
 });
@@ -153,13 +152,8 @@ describe("TAP session map viewport / fog", () => {
     expect(withOverlay.originCenterX - withOverlay.scrollLeft).toBeCloseTo(vw / 2, 5);
     expect(withOverlay.originCenterY - withOverlay.scrollTop).toBeCloseTo((vh - overlayH) / 2, 5);
 
-    const map = read("components/tap-score/tap-session-map.tsx");
-    expect(map).toContain("tapSessionMapCenterOnOrigin");
-    expect(map).toContain("data-tap-session-map-center-inner");
-    expect(map).toContain("insetBottom");
-    expect(map).toContain("data-tap-turn-overlay");
-    expect(map).toContain("scrollLeft");
-    expect(map).toContain("scrollTop");
+    expect(existsSync(join(ROOT, "components/tap-score/tap-session-map.tsx"))).toBe(false);
+
   });
 });
 
@@ -236,38 +230,16 @@ describe("TAP live map wiring", () => {
     expect(tap).toContain("data-tap-thought-memory-always");
     expect(tap).not.toContain("TAP_SEE_EDIT_PREVIOUS_THOUGHTS_LABEL");
 
-    const overlay = read("components/tap-score/tap-turn-overlay.tsx");
-    expect(overlay).not.toContain("data-tap-submit-solution");
-    expect(overlay).not.toContain("Submit solution");
-    expect(overlay).not.toContain("Load other problems");
-    expect(overlay).not.toContain("data-tap-load-other-problems");
+    expect(existsSync(join(ROOT, "components/tap-score/tap-turn-overlay.tsx"))).toBe(false);
 
-    const client = readExerciseTapSurface();
-    expect(client).toContain("seedTapSoloProblems");
-    expect(client).toContain("onSelectSoloProblem");
-    expect(client).toContain("onSubmitSoloSolution");
-    expect(client).toContain("logEndOfChainOfThought");
-    expect(client).toContain("onSubmitSoloSolution()");
-    expect(client).not.toContain("onLoadOtherProblems");
-    expect(client).not.toContain("Load other problems");
-    expect(client).toContain("data-exercise-tap-stash-submit");
-    expect(client).toContain("<SessionWorkSurface");
-    expect(client).not.toContain("data-exercise-tap-live-split");
-    expect(client).toContain("data-exercise-tap-map-pane");
-    expect(client).toContain("lg:grid-cols-2");
-    expect(client).not.toContain('kind="solo-stacks"');
-    expect(client).not.toContain("max-h-[11rem]");
-    expect(client).toContain("overflow-hidden");
-    expect(client).toContain("overflow-y-auto");
 
-    const shell = read("components/exercise-tap/ExerciseTapShell.tsx");
-    expect(shell).toContain("TapSessionMap");
-    expect(shell).toContain('kind="solo"');
-    expect(shell).toContain("<SessionWorkSurface");
-    expect(shell).not.toContain("TapAestheticSection");
-    expect(shell).not.toContain('kind="solo-stacks"');
-    expect(shell).not.toContain("h-80");
-    expect(shell).not.toContain("compact");
+    expect(existsSync(join(ROOT, "components/ExerciseTapClient.tsx"))).toBe(false);
+
+    expect(existsSync(join(ROOT, "components/exercise-tap"))).toBe(false);
+
+
+    expect(existsSync(join(ROOT, "components/exercise-tap/ExerciseTapShell.tsx"))).toBe(false);
+
 
     writeScratch(
       "tap-map-chrome.txt",

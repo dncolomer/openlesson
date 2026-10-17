@@ -3,7 +3,7 @@ import { ArrowRight, Bot, BrainCircuit, Layers, User } from "lucide-react";
 import {
   AGENT_COLUMN_PRODUCTS,
   HUMAN_COLUMN_PRODUCTS,
-  TIM_FOUNDATION,
+  FEP_FOUNDATION,
   WORKSPACE_FOUNDATION,
   type AudienceProductCopy,
   type ProductDefinition,
@@ -178,16 +178,16 @@ export function ProductStack({ variant = "landing", showFoundation = true }: Pro
               </div>
               <div>
                 <div className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
-                  {TIM_FOUNDATION.eyebrow}
+                  {FEP_FOUNDATION.eyebrow}
                 </div>
                 <h3 className={`mt-2 font-medium text-white ${compact ? "text-lg" : "text-xl sm:text-2xl"}`}>
-                  {TIM_FOUNDATION.title}
+                  {FEP_FOUNDATION.title}
                 </h3>
                 <p className={`mt-3 leading-relaxed text-zinc-400 ${compact ? "text-sm" : "text-base"}`}>
-                  {TIM_FOUNDATION.summary}
+                  {FEP_FOUNDATION.summary}
                 </p>
                 <ul className={`mt-4 space-y-2 text-zinc-500 ${compact ? "text-xs" : "text-sm"}`}>
-                  {TIM_FOUNDATION.bullets.map((bullet) => (
+                  {FEP_FOUNDATION.bullets.map((bullet) => (
                     <li key={bullet} className="flex gap-2">
                       <span className="text-zinc-600">—</span>
                       <span>{bullet}</span>

@@ -4,6 +4,7 @@
  * Pure — no React. Crafting is never blocked by the goal.
  */
 import { clampIleMinInsightsPerChapter } from "@/lib/ile-turn-insights";
+import { stripSessionFormatWrapper } from "@/lib/session-format-wrapper";
 
 export const ILE_SESSION_CHAPTER_COUNT_MIN = 1;
 export const ILE_SESSION_CHAPTER_COUNT_MAX = 5;
@@ -64,12 +65,14 @@ export function ileBlockSessionChapter<
   for (let index = start; index < list.length; index += 1) {
     const id = String(list[index]?.id ?? "").trim();
     if (!id) continue;
-    return { id, prompt: String(list[index]?.description ?? "").trim() };
+    const raw = String(list[index]?.description ?? "").trim();
+    return { id, prompt: stripSessionFormatWrapper(raw) || raw };
   }
   for (let index = 0; index < start; index += 1) {
     const id = String(list[index]?.id ?? "").trim();
     if (!id) continue;
-    return { id, prompt: String(list[index]?.description ?? "").trim() };
+    const raw = String(list[index]?.description ?? "").trim();
+    return { id, prompt: stripSessionFormatWrapper(raw) || raw };
   }
   return null;
 }

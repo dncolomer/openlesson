@@ -243,8 +243,8 @@ describe("TAP Learning Helios last-stash surface (shipped source)", () => {
     expect(hook).not.toContain("lastStashedThought");
     expect(hook).not.toContain("selectLastStashedThought");
 
-    const slots = read("components/thought-ui/ActiveThoughtSlots.tsx");
-    expect(slots).toContain("ACTIVE_THOUGHT_SLOT_COUNT");
+    expect(existsSync(join(ROOT, "components/thought-ui/ActiveThoughtSlots.tsx"))).toBe(false);
+
   });
 });
 

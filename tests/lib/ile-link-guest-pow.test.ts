@@ -78,7 +78,7 @@ describe("shareable TAP Learning guest PoW wiring", () => {
     // TAP&TAP Learning links moved out of the Knowledge/performance tab body; Eval tab removed.
     expect(perfSource).not.toContain('activeSubview === "tap"');
     expect(perfSource).toMatch(
-      /type PerformanceSubview =\s*\|\s*"knowledge"\s*\|\s*"lwm"\s*\|\s*"ranking"\s*\|\s*"strengths_gaps"\s*\|\s*"insights"/,
+      /type PerformanceSubview =\s*"knowledge"\s*\|\s*"insights"/,
     );
     expect(perfSource).not.toContain('id: "pow"');
     expect(perfSource).toMatch(/@deprecated TAP\/TAP Learning guest links live in Settings/);

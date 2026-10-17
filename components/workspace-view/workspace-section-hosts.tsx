@@ -257,8 +257,7 @@ export function WorkspaceSectionHosts({
                 knowledgeSubviewFromUrl === "insights" ||
                 knowledgeSubviewFromUrl === "score" ||
                 knowledgeSubviewFromUrl === "pow" ||
-                knowledgeSubviewFromUrl === "knowledge" ||
-                knowledgeSubviewFromUrl === "lwm"
+                knowledgeSubviewFromUrl === "knowledge"
                   ? knowledgeSubviewFromUrl
                   : undefined
               }

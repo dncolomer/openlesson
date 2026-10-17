@@ -1,5 +1,5 @@
 /**
- * Marketing chrome: two products in main nav; AYCL not in community; no product-detail /use-cases trees.
+ * Marketing chrome: three products in main nav; AYCL not in community; no product-detail /use-cases trees.
  */
 import { describe, expect, it } from "vitest";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
@@ -29,7 +29,7 @@ function collectPageTsx(dir: string): string[] {
 }
 
 describe("marketing nav and platform rename", () => {
-  it("LandingNav links the two products, not Platform /#platform or Use cases", () => {
+  it("LandingNav links Harness, Verification, and Mapping, not Platform /#platform or Use cases", () => {
     const nav = read("components/LandingNav.tsx");
     expect(nav).not.toMatch(/href=["']\/use-cases/);
     expect(nav).not.toMatch(/>\s*Use cases\s*</);
@@ -40,11 +40,16 @@ describe("marketing nav and platform rename", () => {
     expect(MAIN_NAV_PRODUCT_LINKS.map((l) => l.href)).toEqual([
       "/learning-harness",
       "/knowledge-verification",
+      "/knowledge-mapping",
     ]);
     expect(nav).toContain("PRICING_NAV_LINKS");
     expect(nav).not.toContain("Create your Workspace");
     expect(nav).not.toContain("TrackedCtaLink");
-    expect(MAIN_NAV_PRODUCT_LINKS.map((l) => l.label)).toEqual(["Harness", "Verification"]);
+    expect(MAIN_NAV_PRODUCT_LINKS.map((l) => l.label)).toEqual([
+      "Harness",
+      "Verification",
+      "Mapping",
+    ]);
   });
 
   it("Footer no longer links to /use-cases and links Support this Project", () => {

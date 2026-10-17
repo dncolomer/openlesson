@@ -4,7 +4,7 @@
  * With AI. Drives shipped resolve helpers — no re-implementation of the matrix.
  */
 import { describe, expect, it } from "vitest";
-import { readDashboardSurface, readExerciseTapSurface, readMapGridSurface, readTapScoreSurface } from "../helpers/surface-source";
+import { readDashboardSurface, readMapGridSurface, readTapScoreSurface } from "../helpers/surface-source";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -53,7 +53,6 @@ describe("resolveProductIntent Explore/Drill × Dialog/Solo", () => {
     });
     expect(productIntentClusterLabel(solo)).toBe(PRODUCT_INTENT_LABELS.exploreSolo);
     expect(resolveProductIntent("explore", "project")).toEqual(solo);
-    expect(resolveProductIntent("explore", "exercise")).toEqual(solo);
   });
 
   it("drill dialog stays conversational; drill solo stays an exercise", () => {
@@ -68,7 +67,6 @@ describe("resolveProductIntent Explore/Drill × Dialog/Solo", () => {
       product: "tap",
       interaction_kind: "exercise",
     });
-    expect(resolveProductIntent("drill", "exercise")).toEqual(solo);
   });
 
   it("Drill never launches the learning product; Explore never launches TAP", () => {
@@ -164,6 +162,8 @@ describe("structural: workspace + settings have no With AI vs Solo choice", () =
     expect(card).toContain('id: "explore"');
     expect(card).toContain('id: "scout"');
     expect(card).toContain('data-style-option="verify"');
+    expect(card).toContain('onClick={() => setStyle("verify")}');
+    expect(card).toContain("showDurationPicker");
     expect(card.indexOf('id: "scout" as const')).toBeLessThan(
       card.indexOf('id: "explore" as const'),
     );
@@ -178,7 +178,6 @@ describe("structural: workspace + settings have no With AI vs Solo choice", () =
     expect(card).not.toContain("modalitySolo");
     expect(card).not.toMatch(/TAP Learning · Learning Mode|TAP Learning · Project Mode|Exercise TAP|Think Aloud Protocol/);
     expect(card).not.toContain('data-block-tool="ile-learning"');
-    expect(card).not.toContain('data-block-tool="tap-exercise"');
   });
 
   it("guest links panel is absent", () => {
@@ -251,9 +250,9 @@ describe("structural: workspace + settings have no With AI vs Solo choice", () =
     const score = readTapScoreSurface();
     expect(score).toContain("lockDuration");
     expect(score).toContain("showDurationPicker={!privateToken && !durationLocked}");
-    const exercise = readExerciseTapSurface();
-    expect(exercise).toContain("lockDuration");
-    expect(exercise).toContain("showDurationPicker={!privateToken && !durationLocked}");
+    expect(existsSync(join(ROOT, "components/ExerciseTapClient.tsx"))).toBe(false);
+    expect(existsSync(join(ROOT, "components/exercise-tap"))).toBe(false);
+
   });
 });
 

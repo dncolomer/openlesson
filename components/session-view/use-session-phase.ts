@@ -11,13 +11,10 @@ import {
   pauseSession,
   resetSessionProbes,
   resumeSession,
-  toggleProbeFocused,
   updateSessionStatus,
   type Session,
   type SessionPlan,
-  type Probe,
 } from "@/lib/storage";
-import { playArchiveSound } from "@/lib/sounds";
 import { decideIleSettingsEnterMap } from "@/lib/ile-session-routes";
 import {
   isSessionWelcomeSeen,
@@ -85,9 +82,6 @@ export type SessionPhaseInput = {
   objectives: string[];
   setObjectives: (o: string[]) => void;
   setObjectiveStatuses: (s: Array<"red" | "yellow" | "green" | "blue">) => void;
-  setActiveProbe: (p: Probe | null) => void;
-  setViewingProbeIndex: (n: number) => void;
-  setArchivingProbeId: (id: string | null) => void;
   isPreparing: boolean;
   setIsPreparing: (v: boolean) => void;
   initialChapters: InitialChaptersLevel | string;
@@ -138,8 +132,7 @@ export function useSessionPhase(input: SessionPhaseInput) {
     setIsPaused, elapsedSeconds, setElapsedSeconds, elapsedSecondsRef, stream, setStream,
     setError, tutoringLanguage, setTutoringLanguage, setLanguageConfirmed, setSessionPlan,
     sessionPlanRef, setPlanLoading, setPlanError, setChapterPlanStatus, setRegenerateChapters,
-    regenerateChapters, objectives, setObjectives, setObjectiveStatuses, setActiveProbe,
-    setViewingProbeIndex, setArchivingProbeId, isPreparing, setIsPreparing,
+    regenerateChapters, objectives, setObjectives, setObjectiveStatuses, isPreparing, setIsPreparing,
     initialChapters, chapterCount, resolvedSessionMode,
     setShowWelcomeModal, setShowWelcomePanel, setIsStartingSession, applyIleChapterGridStartup,
     helpPreviousLayoutRef, setPaneVisibility, timerRef, muteTimerRef,
@@ -317,15 +310,6 @@ useEffect(() => {
       }
 
       await objectivesPromise;
-
-      // Fire opening probe (now uses session plan context if available) - but only if session already has probes
-      // Opening probe generation is now handled after language confirmation
-      if (s.probes.length > 0) {
-        // Session already has probes (e.g. page refresh) — show the latest
-        const lastProbe = s.probes[s.probes.length - 1];
-        setActiveProbe(lastProbe);
-        setViewingProbeIndex(s.probes.length - 1);
-      }
     } else {
       if (!cancelled) setPlanLoading(false);
       router.push("/");
@@ -577,8 +561,6 @@ const handleReset = async () => {
     const resetSession = { ...session, probes: [] };
     setSession(resetSession);
     sessionRef.current = resetSession;
-    setActiveProbe(null);
-    setViewingProbeIndex(-1);
     
   } catch (err) {
     console.error("Reset session error:", err);
@@ -702,56 +684,6 @@ const handleWelcomePlay = useCallback(async () => {
   // startRecording / handleResume are defined inline and reference many
   // setters/refs; including them as deps would cause noise.
 }, [isRecording, isPaused]);
-
-// Archive a probe (immediately, without LLM validation)
-const handleArchiveProbe = async (probeId: string) => {
-  if (!session) return;
-  
-  const probe = session.probes.find(p => p.id === probeId);
-  if (!probe) return;
-  
-  setArchivingProbeId(probeId);
-  
-  try {
-    // Archive the probe directly
-    await archiveProbe(probeId);
-    
-    // Update local state
-    const updatedProbes = session.probes.map(p => 
-      p.id === probeId ? { ...p, archived: true } : p
-    );
-    const updatedSession = { ...session, probes: updatedProbes };
-    setSession(updatedSession);
-    sessionRef.current = updatedSession;
-    
-    // Play success sound
-    playArchiveSound();
-  } catch (err) {
-    console.error("Archive probe error:", err);
-  } finally {
-    // Delay clearing to allow animation to complete
-    setTimeout(() => setArchivingProbeId(null), 500);
-  }
-};
-
-// Toggle focus on a probe
-const handleToggleFocus = async (probeId: string, focused: boolean) => {
-  if (!session) return;
-  
-  try {
-    await toggleProbeFocused(probeId, focused);
-    
-    // Update local state
-    const updatedProbes = session.probes.map(p => 
-      p.id === probeId ? { ...p, focused } : p
-    );
-    const updatedSession = { ...session, probes: updatedProbes };
-    setSession(updatedSession);
-    sessionRef.current = updatedSession;
-  } catch (err) {
-    console.error("Toggle focus error:", err);
-  }
-};
 
 const handleConfirmEnd = async () => {
   setShowEndDialog(false);
@@ -980,8 +912,6 @@ if (session.probes.length > 0) {
 const clearedSession = { ...session, probes: [] };
 setSession(clearedSession);
 sessionRef.current = clearedSession;
-setActiveProbe(null);
-setViewingProbeIndex(-1);
 // Plan prep done
 setPlanLoading(false);
 const fieldInput = learnSessionFieldInput({
@@ -1090,8 +1020,6 @@ const handleWelcomeReadyStart = useCallback(async () => {
     pauseAndGoToDashboard,
     handleClose,
     handleWelcomePlay,
-    handleArchiveProbe,
-    handleToggleFocus,
     handleConfirmEnd,
     handleConfirmSettings,
     handleWelcomeReadyStart,

@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { readSessionViewSurface } from "@/tests/helpers/surface-source";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -325,22 +325,10 @@ describe("TAP Learning + TAP speech wiring (structural)", () => {
     expect(tapSrc).toContain("retryMicrophone");
     expect(tapSrc).toContain("tapThoughtSpeech.isListening");
     expect(tapSrc).toContain("tapThoughtSpeech.speechError");
-    const exerciseSrc = readFileSync(
-      path.join(process.cwd(), "components/ExerciseTapClient.tsx"),
-      "utf8",
+    expect(existsSync(path.join(process.cwd(), "components/ExerciseTapClient.tsx"))).toBe(false);
+    expect(existsSync(path.join(process.cwd(), "components/exercise-tap/exercise-tap-phases.tsx"))).toBe(
+      false,
     );
-    expect(exerciseSrc).toContain("tapThoughtSpeech.isListening");
-    expect(exerciseSrc).toContain("tapThoughtSpeech.speechError");
-    const tapPhases = readFileSync(
-      path.join(process.cwd(), "components/tap-score/tap-score-phases.tsx"),
-      "utf8",
-    );
-    const exercisePhases = readFileSync(
-      path.join(process.cwd(), "components/exercise-tap/exercise-tap-phases.tsx"),
-      "utf8",
-    );
-    for (const src of [tapPhases, exercisePhases]) {
-      expect(src).toContain('speechError ? "Retry" : "Start"');
-    }
+    expect(tapSrc).toContain("retryMicrophone");
   });
 });

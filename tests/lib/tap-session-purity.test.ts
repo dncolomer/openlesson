@@ -1,5 +1,7 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { readExerciseTapSurface, readSessionViewSurface, readTapScoreSurface } from "@/tests/helpers/surface-source";
+import { readSessionViewSurface, readTapScoreSurface } from "@/tests/helpers/surface-source";
 import fs from "fs";
 import path from "path";
 import {
@@ -182,20 +184,10 @@ describe("TAP client wires purity UX (not TAP Learning)", () => {
   });
 
   it("Exercise TAP shows the same Session Invalidated screen on purity close", () => {
-    const exercise = readExerciseTapSurface();
-    expect(exercise).toContain("sessionEndedImpure");
-    expect(exercise).toContain("data-tap-session-impure");
-    expect(exercise).toContain("tap.postSession.impureTitle");
-    expect(exercise).toContain("tap.postSession.impureBody");
-    expect(exercise).toContain("tap.postSession.impureTryAgain");
-    expect(exercise).toContain("data-tap-impure-retry");
-    expect(exercise).toContain("setSessionEndedImpure(impure)");
-    expect(exercise).not.toContain("data-tap-session-purity");
-    expect(exercise).not.toContain("data-tap-transcript-fade");
-    expect(exercise).not.toContain("<AutoStashContextBar");
+    expect(existsSync(join(ROOT, "components/ExerciseTapClient.tsx"))).toBe(false);
+    expect(existsSync(join(ROOT, "components/exercise-tap"))).toBe(false);
+
     // Practice purity-close uses the same invalidated copy, not practice-done.
-    expect(exercise).toContain('phase === "practice_done" && !sessionEndedImpure');
-    expect(exercise).toContain('(phase === "results" || phase === "practice_done") && sessionEndedImpure');
   });
 
   it("trace route accepts auto_stash and complete flags session PoW impure", () => {
@@ -274,7 +266,9 @@ describe("TAP live clock", () => {
 
   it("shows a pause icon while waiting and a pulsing red dot while the mic is listening", () => {
     const client = readTapScoreSurface();
-    const exercise = readExerciseTapSurface();
+    expect(existsSync(join(ROOT, "components/ExerciseTapClient.tsx"))).toBe(false);
+    expect(existsSync(join(ROOT, "components/exercise-tap"))).toBe(false);
+
     expect(client).toContain("advanceTapLiveClockPause");
     expect(client).toContain("tapLiveClockRemainingSeconds");
     expect(client).toContain("syncLiveClock(isSending || xaiReplyWaitRef.current)");
@@ -287,7 +281,5 @@ describe("TAP live clock", () => {
     expect(client).toContain('aria-label="Paused"');
     expect(client).toContain('aria-label="Listening"');
     expect(client).toContain("listening && !waiting");
-    expect(exercise).toContain("TapLiveClock");
-    expect(exercise).toContain("listening={isListening}");
   });
 });

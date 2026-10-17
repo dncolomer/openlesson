@@ -1,7 +1,6 @@
-import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { SessionMarkControls } from "@/components/session-view/session-mark-controls";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { convertIleWorkCanvasSkeletons, type IleWorkCanvasElement } from "@/lib/ile-work-canvas";
 import {
   anchorSessionMarkSelection,
@@ -63,46 +62,10 @@ describe("session mark canvas", () => {
     expect(removed.elements.filter((element) => !element.isDeleted).map((element) => element.id)).toEqual(["aside"]);
   });
 
-  it("renders the four actions ready without a selection, and Learn still marks the lowest cost", () => {
-    const idle = renderToStaticMarkup(
-      createElement(SessionMarkControls, {
-        mode: "learn",
-        questions: [{ id: "chapter", text: "Just war" }],
-        selectionActive: false,
-        selectedTexts: [],
-        speech: "",
-      }),
-    );
-    for (const id of ["try", "hold", "drop", "insight"]) {
-      const at = idle.indexOf(`data-session-mark="${id}"`);
-      expect(at).toBeGreaterThan(-1);
-      const button = idle.slice(at, idle.indexOf("</button>", at));
-      expect(button).toContain('data-session-mark-disabled="false"');
-      expect(button).not.toContain('disabled=""');
-      expect(button).toContain("disabled:text-neutral-600");
-      expect(button).toContain("w-full");
-      expect(button).toContain("py-3");
-    }
-    expect(idle).toContain('data-session-mark-buttons');
-    expect(idle).toContain("flex flex-col");
-    expect(idle).not.toContain("grid-cols-2");
-    const recommended = idle.slice(idle.indexOf('data-session-mark="try"'), idle.indexOf("</button>", idle.indexOf('data-session-mark="try"')));
-    expect(recommended).toContain("(recommended)");
-    expect(recommended).toContain('data-session-mark-recommended="true"');
-    expect(idle.slice(idle.indexOf('data-session-mark="hold"'), idle.indexOf("</button>", idle.indexOf('data-session-mark="hold"')))).not.toContain("(recommended)");
-    const live = renderToStaticMarkup(
-      createElement(SessionMarkControls, {
-        mode: "learn",
-        questions: [{ id: "chapter", text: "Just war" }],
-        selectionActive: true,
-        selectedTexts: ["harm stays smaller"],
-        speech: "",
-      }),
-    );
-    const closeAt = live.indexOf('data-session-mark="try"');
-    const close = live.slice(closeAt, live.indexOf("</button>", closeAt));
-    expect(close).toContain('data-session-mark-disabled="false"');
-    expect(close).not.toContain('disabled=""');
+  it("does not ship the skipped four-mark rail React", () => {
+    expect(
+      existsSync(join(__dirname, "../..", "components/session-view/session-mark-controls.tsx")),
+    ).toBe(false);
   });
 });
 

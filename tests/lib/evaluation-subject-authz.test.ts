@@ -388,11 +388,9 @@ describe("Knowledge eval UI + web routes structural", () => {
     expect(panel).toContain("KnowledgeConfigTrajectoryPanel");
 
     const lwm = readKnowledgePanelSurface();
-    expect(lwm).toContain("data-lwm-generate-snapshot");
-    expect(lwm).toContain("/api/workspace/performance-report");
-    expect(lwm).toContain("snapshot-history");
-    // Owner may target selected subject; self uses current user.
-    expect(lwm).toMatch(/user_id|lwmUserId/);
+    expect(lwm).toContain("data-lwm-snapshot-modal");
+    expect(lwm).toContain("generateSnapshot");
+    expect(lwm).toMatch(/user_id/);
   });
 
   it("LWM Snapshot i18n copy uses user not learner", () => {

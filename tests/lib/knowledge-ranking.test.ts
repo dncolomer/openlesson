@@ -120,41 +120,22 @@ describe("latestSnapshotRunBySubject + buildKnowledgeRanking", () => {
 });
 
 describe("Knowledge Ranking surface wiring", () => {
-  it("exposes Ranking tab and mounts ranking panelView", () => {
+  it("ranking view is gone; helper stays for snapshot history consumers", () => {
     const panel = join(ROOT, "components/WorkspacePerformancePanel.tsx");
     const traj = join(ROOT, "components/KnowledgeConfigTrajectoryPanel.tsx");
     const helper = join(ROOT, "lib/pow-api/knowledge-ranking.ts");
     expect(existsSync(panel)).toBe(true);
     expect(existsSync(traj)).toBe(true);
     expect(existsSync(helper)).toBe(true);
+    expect(existsSync(join(ROOT, "components/knowledge-panel/ranking-view.tsx"))).toBe(false);
 
     const panelSrc = readFileSync(panel, "utf8");
     const trajSrc = readKnowledgePanelSurface();
-    const en = readFileSync(join(ROOT, "messages/en.json"), "utf8");
 
     expect(panelSrc).not.toContain('panelView="ranking"');
     expect(panelSrc).not.toContain("performanceSubTabRanking");
-    expect(en).toContain("performanceSubTabRanking");
-
     expect(trajSrc).not.toContain('panelView === "ranking"');
-    expect(trajSrc).toContain('data-section="ranking"');
-    expect(trajSrc).toContain('data-ranking-layout="list-detail"');
-    expect(trajSrc).toContain("data-ranking-list");
-    expect(trajSrc).toContain("data-ranking-sidebar");
-    expect(trajSrc).toContain("data-ranking-card");
-    expect(trajSrc).toContain("data-ranking-detail");
-    expect(trajSrc).toContain("data-ranking-detail-spider");
-    expect(trajSrc).toContain("data-ranking-detail-strengths");
-    expect(trajSrc).toContain("data-ranking-detail-gaps");
-    expect(trajSrc).toContain("data-ranking-snapshot-score");
-    expect(trajSrc).toContain("data-ranking-ghc-score");
-    expect(trajSrc).toContain("selectedRankingKey");
-    expect(trajSrc).toContain("setSelectedRankingKey");
-    expect(trajSrc).toContain("MarkerRadarChart");
-    expect(trajSrc).toContain("buildKnowledgeRanking");
-    expect(trajSrc).toContain("loadRanking");
-    expect(trajSrc).toContain("/api/workspace/snapshot-history");
-    // #1 preselected when list loads
-    expect(trajSrc).toMatch(/rankingCards\[0\]\.subjectKey/);
+    expect(trajSrc).not.toContain('data-section="ranking"');
+    expect(trajSrc).toContain('data-section="embeddings-projections"');
   });
 });

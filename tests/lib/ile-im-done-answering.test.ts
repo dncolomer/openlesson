@@ -51,8 +51,9 @@ describe("decideSpokenCaptureKeyAction (shipped)", () => {
 
     const hook = read("lib/useSessionThoughtInterface.ts");
     const tapConvo = read("components/TapScoreClient.tsx");
-    const tapSolo = read("components/ExerciseTapClient.tsx");
-    for (const source of [hook, tapConvo, tapSolo]) {
+    expect(existsSync(join(ROOT, "components/ExerciseTapClient.tsx"))).toBe(false);
+
+    for (const source of [hook, tapConvo]) {
       expect(source).toContain("decideSpokenCaptureKeyAction");
       expect(source).not.toMatch(/key === "Enter"[\s\S]{0,180}sendCurrentTranscription/);
     }
@@ -249,9 +250,8 @@ describe("TAP solo I'm-done leftover (shipped sendThought path)", () => {
     expect(sends[0]?.ids).toEqual([A.id, B.id]);
     expect(fromClose.submitted.map((item) => item.text)).toContain("still speaking the close");
 
-    const client = read("components/ExerciseTapClient.tsx");
-    expect(client).toContain("applyTapSoloImDoneSend");
-    expect(client).not.toContain("clean.startsWith(promotedText)");
+    expect(existsSync(join(ROOT, "components/ExerciseTapClient.tsx"))).toBe(false);
+
   });
 });
 
@@ -325,17 +325,14 @@ describe("TAP Learning Helios I'm done answering chrome (shipped source)", () =>
     expect(button).not.toMatch(/\.then\(\(result\) => \{[\s\S]*onClearForming/);
 
     const tapPhases = read("components/tap-score/tap-score-phases.tsx");
-    const tapShell = read("components/exercise-tap/ExerciseTapShell.tsx");
+    expect(existsSync(join(ROOT, "components/exercise-tap/ExerciseTapShell.tsx"))).toBe(false);
+
     expect(tapPhases).not.toContain("Submit last Thought");
-    expect(tapShell).not.toContain("Submit last Thought");
     const memory = read("components/thought-ui/ThoughtMemoryPanel.tsx");
     expect(memory).toContain("Edit Selection");
     expect(tapPhases).not.toContain('label="Edit"');
-    expect(tapShell).not.toContain('label="Edit"');
     expect(tapPhases).toContain("data-tap-im-done-slot");
-    expect(tapShell).toContain("data-tap-im-done-slot");
     expect(tapPhases).toContain("I'm done answering");
-    expect(tapShell).toContain("ImDoneAnsweringControl");
     const tapDoneIdx = tapPhases.indexOf("data-tap-im-done-slot");
     const tapMemoryIdx = tapPhases.indexOf("<ThoughtMemoryPanel");
     expect(tapPhases).not.toContain("data-tap-transcript-container");

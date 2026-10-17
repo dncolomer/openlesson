@@ -16,13 +16,13 @@ export type ProductDefinition = {
   forAgent?: AudienceProductCopy;
 };
 
-export const TIM_FOUNDATION = {
+export const FEP_FOUNDATION = {
   eyebrow: "Core layer",
-  title: "Trace Interruption Model",
+  title: "Free Energy Principle",
   summary:
-    "The shared brain behind every product. It watches how people and agents think during real work, then steps in with a targeted question instead of waiting for the next chat reply.",
+    "The shared influence behind every product. Learning is reducing uncertainty: the harness forages for information that shrinks what is unknown, rather than waiting for the next chat reply.",
   bullets: [
-    "Same model across Proof-of-Work API, Stash API, and session (Calibrate, Learn, and Verify)",
+    "Same epistemic foraging policy across Proof-of-Work API, Stash API, and session (Calibrate, Learn, and Verify)",
     "Grounded in your workflow, skills, and conversion goals",
   ],
 };

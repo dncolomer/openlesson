@@ -49,7 +49,8 @@ describe("flow-named session URLs", () => {
     expect(existsSync(join(ROOT, "app/learn/session/[token]/page.tsx"))).toBe(true);
     expect(read("app/tap/session/[token]/page.tsx")).toContain("flowSessionPath");
     expect(read("app/tap/session/[token]/page.tsx")).toContain("redirect");
-    expect(read("app/ile/session/[token]/page.tsx")).toContain("/learn/session/");
+    expect(existsSync(join(ROOT, "app/ile/session/[token]/page.tsx"))).toBe(false);
+    expect(read("next.config.ts")).toContain("/ile/session");
     expect(read("next.config.ts")).toContain("/learn/session/:token");
     const mw = read("middleware.ts");
     expect(mw).toContain('"/calibrate/session"');

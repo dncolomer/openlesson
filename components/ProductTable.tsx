@@ -24,18 +24,18 @@ export const LANDING_PRODUCT_ROWS: ProductTableRow[] = [
     ctaLabel: "Create workspace",
   },
   {
-    name: "Trace Interruption Model",
+    name: "Free Energy Principle",
     icon: BrainCircuit,
-    pitch: "The shared model behind every product — not a standalone SKU.",
+    pitch: "The shared influence behind every product — not a standalone SKU.",
     description:
-      "Trained to predict optimal interruptions on the learning path: when to probe, coach, or request proof instead of waiting for the next linear analytics event.",
+      "Learning as reducing uncertainty: epistemic foraging searches for information that shrinks what is unknown, instead of waiting for the next linear analytics event.",
   },
   {
     name: "Proof-of-Work API",
     icon: Blocks,
     pitch: "Build custom apps on an evolving measurement layer.",
     description:
-      "Headless scoring, agentic MCP tools, and TIM-powered interruption hints — the programmable base for verification, optimization, and augmentation you own end to end.",
+      "Headless scoring, agentic MCP tools, and epistemic foraging over genuine work traces — the programmable base for verification, optimization, and augmentation you own end to end.",
   },
   {
     name: "Stash API",
@@ -49,7 +49,7 @@ export const LANDING_PRODUCT_ROWS: ProductTableRow[] = [
     icon: Mic,
     pitch: "Three hosted flows for live human work.",
     description:
-      "Calibrate, Learn, and Verify are the hosted sessions. Candidates and learners think aloud while they work. TIM targets reasoning gaps in the moment — including human checks bots cannot fake.",
+      "Calibrate, Learn, and Verify are the hosted sessions. Candidates and learners think aloud while they work. Epistemic foraging targets reasoning gaps in the moment — including human checks bots cannot fake.",
   },
 ];
 

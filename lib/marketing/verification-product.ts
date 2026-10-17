@@ -27,7 +27,7 @@ export const VERIFICATION_APPROACH_COPY = {
   eyebrow: "THE APPROACH",
   title: "A learning world model.",
   p1: "Uncertain Systems builds a learning world model from real work: skills, scenarios, proof of work, and where reasoning breaks. Our hosted interfaces as well as our API products are all specially designed to elicit genuine raw work data from the user while at the same time minimizing the disruption of the natural cognitive process.",
-  p2: "Our conversational interfaces run on top of an interruption model (TIM — Trace Interruption Model) that uses the evolving learner model to proactively steer the thinking process.",
+  p2: "Our conversational interfaces run on a Free Energy Principle approach based on epistemic foraging: the evolving learner model searches for information that reduces uncertainty, and steers the thinking process toward what is still unknown.",
   p3: "We score whether people actually hold the knowledge from genuine work traces, with the guarantee that results cannot be cheated or faked.",
   foraging:
     "The harness searches for information that reduces uncertainty about what is held. That policy is epistemic foraging.",

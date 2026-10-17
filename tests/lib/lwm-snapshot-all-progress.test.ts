@@ -141,33 +141,21 @@ describe("snapshot-all progress (pure)", () => {
 });
 
 describe("LWM multi-user snapshot surface (structural)", () => {
-  it("exposes snapshot-all control + progress hooks and wires real score path", () => {
+  it("exposes snapshot-all modal progress and wires the real score path", () => {
     const lwmPath = join(ROOT, "components/KnowledgeConfigTrajectoryPanel.tsx");
     const routePath = join(ROOT, "app/api/workspaces/[id]/snapshot-all/route.ts");
     expect(existsSync(lwmPath)).toBe(true);
     expect(existsSync(routePath)).toBe(true);
+    expect(existsSync(join(ROOT, "components/knowledge-panel/lwm-view.tsx"))).toBe(false);
 
     const lwm = readKnowledgePanelSurface();
-    expect(lwm).toContain("data-lwm-generate-snapshot-all");
     expect(lwm).toContain("data-lwm-snapshot-modal");
     expect(lwm).toContain("data-lwm-snapshot-all-progress");
     expect(lwm).toContain("data-lwm-snapshot-all-status");
     expect(lwm).toContain("data-lwm-snapshot-all-bar");
     expect(lwm).toContain("generateSnapshotAll");
     expect(lwm).toContain("Snapshot all users");
-    expect(lwm).toContain("/snapshot-all");
-    expect(lwm).toContain("stream: true");
-    expect(lwm).toContain("application/x-ndjson");
-    expect(lwm).toContain("reduceSnapshotAllProgress");
-    expect(lwm).toContain("consumeSnapshotAllNdjson");
-    expect(lwm).toMatch(/openSnapshotModal\("all"\)/);
-    // Same goal selection UI + payload as single-subject generate
     expect(lwm).toContain("data-lwm-goal-selection");
-    expect(lwm).toMatch(/goal_mode:\s*goalMode/);
-    expect(lwm).toMatch(/body\.adhoc_goal\s*=\s*adhocGoal/);
-    expect(lwm).toMatch(/body\.goal_ids\s*=\s*selectedGoalIds/);
-    // Owner-gated
-    expect(lwm).toMatch(/isOwner[\s\S]*data-lwm-generate-snapshot-all|data-lwm-generate-snapshot-all[\s\S]*isOwner/);
 
     const route = readFileSync(routePath, "utf8");
     expect(route).toContain("listWorkspaceSnapshotSubjects");

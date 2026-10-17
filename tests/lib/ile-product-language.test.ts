@@ -7,7 +7,7 @@
  * Drives shipped sources — not a hand-copied fixture.
  */
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const ROOT = join(__dirname, "../..");
@@ -34,6 +34,7 @@ function namesRetiredProduct(text: string) {
 const FORMER_PRODUCT_SLOTS = [
   "app/layout.tsx",
   "app/knowledge-verification/page.tsx",
+  "app/knowledge-mapping/page.tsx",
   "app/skill-verification/SkillVerificationLanding.tsx",
   "lib/seo/platform-page.ts",
   "lib/seo/product-page.ts",
@@ -43,6 +44,7 @@ const FORMER_PRODUCT_SLOTS = [
   "lib/prompt-kernel/surfaces/tap.ts",
   "lib/sales/platform-pitch-deck.ts",
   "lib/marketing/verification-product.ts",
+  "lib/marketing/mapping-product.ts",
 ];
 
 /** Live product surfaces — identifiers and internal comments elsewhere may keep stored names. */
@@ -60,10 +62,8 @@ const LIVE_SURFACES = [
   "lib/prompt-kernel/surfaces/score-context.ts",
   "app/docs/proof-of-work-api/layout.tsx",
   "app/docs/proof-of-work-api/page.tsx",
-  "components/exercise-tap/exercise-tap-phases.tsx",
   "components/tap-score/tap-score-phases.tsx",
   "components/tap-score/use-tap-score-flow.ts",
-  "components/ExerciseTapClient.tsx",
   "components/SessionItem.tsx",
   "components/workspace-view/use-workspace-learner.ts",
   "components/InsightsDashboardTab.tsx",
@@ -166,9 +166,11 @@ describe("retired product language is gone from shipped prose", () => {
     const lineupFiles = [
       "app/layout.tsx",
       "app/knowledge-verification/page.tsx",
+      "app/knowledge-mapping/page.tsx",
       "app/skill-verification/SkillVerificationLanding.tsx",
       "app/docs/proof-of-work-api/page.tsx",
       "lib/marketing/verification-product.ts",
+      "lib/marketing/mapping-product.ts",
       "lib/seo/platform-page.ts",
       "lib/seo/product-page.ts",
       "lib/seo/products.ts",
@@ -201,10 +203,8 @@ describe("retired product language is gone from shipped prose", () => {
   it("Verify session chrome names Verify instead of TAP", () => {
     const tapWord = /\bTAP\b/;
     const chrome = [
-      "components/exercise-tap/exercise-tap-phases.tsx",
       "components/tap-score/tap-score-phases.tsx",
       "components/tap-score/use-tap-score-flow.ts",
-      "components/ExerciseTapClient.tsx",
     ];
     for (const rel of chrome) {
       const text = stripComments(read(rel));
@@ -212,18 +212,15 @@ describe("retired product language is gone from shipped prose", () => {
       expect(text, rel).not.toContain("TAP Learning");
       expect(text, rel).not.toContain("Exercise TAP");
     }
-    const drill = read("components/exercise-tap/exercise-tap-phases.tsx");
-    expect(drill).toContain('kicker="Verify"');
-    expect(drill).toContain('kicker="Verify complete"');
+    expect(existsSync(join(ROOT, "components/exercise-tap/exercise-tap-phases.tsx"))).toBe(false);
+
     expect(read("components/tap-score/tap-score-phases.tsx")).toContain(
       'title="Could not end Verify session"',
     );
     expect(read("components/tap-score/use-tap-score-flow.ts")).toContain(
       "Could not start Verify session",
     );
-    expect(read("components/ExerciseTapClient.tsx")).toContain(
-      "Could not start Verify session",
-    );
+    expect(existsSync(join(ROOT, "components/ExerciseTapClient.tsx"))).toBe(false);
   });
 
   it("session chrome locales drop TAP as a product name", () => {

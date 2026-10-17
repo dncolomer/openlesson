@@ -7,7 +7,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { resolveExercisePromptAfterIntro } from "@/lib/exercise-tap";
 import { resolveTapShellFromSession } from "@/lib/exercise-tap";
-import { readExerciseTapSurface, readTapScoreSurface } from "@/tests/helpers/surface-source";
+import { readTapScoreSurface } from "@/tests/helpers/surface-source";
 
 const ROOT = join(__dirname, "../..");
 
@@ -19,19 +19,10 @@ function read(rel: string) {
 
 describe("Exercise TAP briefing uses shared intro", () => {
   it("mounts SessionOnboardingGuide + TapStartingTopicCards + TapBriefingConfig", () => {
-    const client = readExerciseTapSurface();
-    expect(client).toContain("SessionOnboardingGuide");
-    expect(client).toContain('variant="tap"');
-    expect(client).toContain("TapStartingTopicCards");
-    expect(client).toContain("TapBriefingConfig");
-    expect(client).toContain("data-exercise-tap-intro");
-    expect(client).toContain("data-exercise-briefing");
-    expect(client).toContain("SessionStartBackButton");
-    expect(client).toContain("onBackToWorkspace");
-    expect(client).toContain("/api/workspace-tap-score/topics");
+    expect(existsSync(join(ROOT, "components/ExerciseTapClient.tsx"))).toBe(false);
+    expect(existsSync(join(ROOT, "components/exercise-tap"))).toBe(false);
+
     // Not the old single-panel "Start exercise" blurb as the only intro.
-    expect(client).not.toContain("Start exercise");
-    expect(client).not.toMatch(/data-exercise-start/);
   });
 
   it("shared TapBriefingConfig exists and is used by conversational TAP too", () => {
@@ -49,27 +40,25 @@ describe("Exercise TAP briefing uses shared intro", () => {
   });
 
   it("intro start still enters exercise shell with interaction_kind exercise", () => {
-    const client = readExerciseTapSurface();
-    expect(client).toContain('interaction_kind: "exercise"');
-    expect(client).toContain("resolveExercisePromptAfterIntro");
-    expect(client).toContain("onStartTopic");
-    expect(client).toContain("onPracticeFirst");
-    expect(client).toContain("ExerciseTapShell");
-    expect(client).not.toContain("DialogueSplit");
-    expect(client).not.toContain("HeliosProbeAvatar");
+    expect(existsSync(join(ROOT, "components/ExerciseTapClient.tsx"))).toBe(false);
+    expect(existsSync(join(ROOT, "components/exercise-tap"))).toBe(false);
+
   });
 });
 
 describe("entry still resolves exercise client; briefing is intro path", () => {
-  it("guest/owner routes use ExerciseTapClient for exercise kind", () => {
+  it("guest TAP mounts Calibrate for scout and Verify for other kinds", () => {
     expect(resolveTapShellFromSession({ interaction_kind: "exercise" })).toBe("exercise");
     expect(resolveTapShellFromSession({})).toBe("conversational");
 
     const guest = read("components/guest-session/private-tap-session-page.tsx");
     expect(guest).toContain("resolveTapShellFromSession");
     expect(guest).toContain('shell === "scout"');
+    expect(guest).toContain("<ScoutTapClient");
+    expect(guest).toContain("<TapScoreClient");
+    expect(guest).toContain('sidebarMode="verification-tap"');
+    expect(guest).not.toContain("redirect(`/workspace/${String(session.workspace_id)}`)");
     expect(guest).not.toContain("ExerciseTapClient");
-    expect(guest).not.toContain("TapScoreClient");
 
     const owner = read("app/workspace/[id]/tap/page.tsx");
     expect(owner).toContain('sidebarMode="verification-tap"');

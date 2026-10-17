@@ -148,12 +148,11 @@ describe("LWM UI + snapshot-history goals-aware eligibility wiring", () => {
     expect(src).toContain("goal_ids");
   });
 
-  it("KnowledgeConfigTrajectoryPanel sends goal_mode to eligibility and gates all modes", () => {
+  it("snapshot modal gates generate on eligibility for all goal modes", () => {
     const src = readKnowledgePanelSurface();
-    expect(src).toContain('params.set("goal_mode", goalMode)');
-    expect(src).toContain("adhoc_goal");
-    expect(src).toContain("goal_ids");
-    // Generate disabled when eligibility says no for current selection (not only default)
+    expect(src).toContain("data-lwm-goal-mode");
+    expect(src).toContain("adhocGoal");
+    expect(src).toContain("selectedGoalIds");
     expect(src).toContain("snapshotEligibility?.allowed === false");
     expect(src).not.toContain(
       'goalMode === "default" && snapshotEligibility?.allowed === false',

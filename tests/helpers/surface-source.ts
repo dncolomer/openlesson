@@ -119,20 +119,12 @@ export function readTapScoreSurface(): string {
   return parts.join("\n");
 }
 
-export function readExerciseTapSurface(): string {
-  const dir = join(ROOT, "components/exercise-tap");
-  const parts = [readRepo("components/ExerciseTapClient.tsx")];
-  try {
-    for (const name of readdirSync(dir).sort()) {
-      if (name.endsWith(".ts") || name.endsWith(".tsx")) {
-        parts.push(readFileSync(join(dir, name), "utf8"));
-      }
-    }
-  } catch {
-    // Directory is created as Exercise TAP extracts land.
-  }
-  return parts.join("\n");
-}
+/** Exercise TAP UI was deleted. Callers should assert the files are gone. */
+export const EXERCISE_TAP_DELETED_PATHS = [
+  "components/ExerciseTapClient.tsx",
+  "components/exercise-tap/ExerciseTapShell.tsx",
+  "components/exercise-tap/exercise-tap-phases.tsx",
+] as const;
 
 export function readKnowledgePanelSurface(): string {
   const dir = join(ROOT, "components/knowledge-panel");

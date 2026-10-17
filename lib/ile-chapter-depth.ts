@@ -66,7 +66,7 @@ export function ileChapterGrainRules(mode: IleSessionMode): string {
   }
 
   return `DIALOG CHAPTER GRAIN (Explore · Dialog / Learning Mode — topic-horizon conversations):
-- Each chapter is a topic-horizon conversation: a multi-turn guided dialogue on one topic, not a single interaction.
+- Each chapter is a topic-horizon conversation: several turns on one topic, not a single interaction.
 - Sequential micro-acts that belong in one conversation MUST be one chapter, not four. Forbidden Dialog splits (these are turns inside one chapter, never separate chapters):
   * "Summarize what you understand as X"
   * "Draw X on a notebook" / sketch X on the Canvas
@@ -74,7 +74,7 @@ export function ileChapterGrainRules(mode: IleSessionMode): string {
   * "Finish the list from chapter 1" / continue the same artifact
 - Activity types (question | task | suggestion | checkpoint) mix inside a chapter as turns or as the chapter's primary type. They MUST NOT each become their own chapter.
 - Work that uses the same chapter canvas stays in that one chapter. Each chapter has its own board — do not send the learner to a new chapter to keep writing the same canvas.
-- Chapter descriptions name the topic-horizon (what they can do after a deep conversation), not a one-shot micro-task.`;
+- Chapter descriptions name the concrete skill or situation they will work, as a teacher opening a lesson. Never start with "In one guided conversation" or name the session format.`;
 }
 
 export function ileChapterClosureRules(mode: IleSessionMode): string {
@@ -89,7 +89,7 @@ export function ileChapterClosureRules(mode: IleSessionMode): string {
   return `DIALOG MARK-AS-DONE POLICY:
 - Do NOT invite "Mark as Done" after the first shallow interaction or the first workable answer. First-interaction closure is forbidden.
 - A workable first answer is a reason to go deeper in-chapter — ask a follow-up, route a tool, apply, compare, or checkpoint — not to close.
-- Closure is offered only after a multi-turn guided conversation has substantially met that chapter's objective (several learner turns covering elicit → apply/externalize → check).
+- Closure is offered only after several turns on this chapter topic have substantially met that chapter's objective (elicit → apply/externalize → check).
 - Set can_auto_advance true only when that multi-turn / chapter-objective depth is met.
 - Do not invent stricter edge-case tests after a workable answer; go deeper on the same topic instead of closing early.`;
 }

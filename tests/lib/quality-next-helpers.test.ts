@@ -40,8 +40,6 @@ import {
 } from "@/lib/tap-session-runtime";
 import { simulationCollectionToSuggestSnapshots } from "@/lib/suggest-from-simulation";
 import { emptySimulationCollection } from "@/lib/workspace-simulation-collection";
-import { decideIleLeaveFocusScreenshare, decideIleMiniAutoOpen } from "@/lib/ile-blur-screenshare";
-
 import {
   guardWorkspaceRoute,
   requireAuthenticatedUser,
@@ -205,21 +203,7 @@ describe("quality-next shipped helpers", () => {
       }),
     ).toBe("hook first");
     expect(isTapLiveThoughtSpeechEnabled("live")).toBe(true);
-    expect(
-      decideIleLeaveFocusScreenshare({
-        isIleSession: true,
-        sessionActive: true,
-        tabFocused: false,
-        isScreenSharing: false,
-      }),
-    ).toBe("skip");
-    expect(
-      decideIleMiniAutoOpen({
-        sessionActive: true,
-        tabFocused: false,
-        leaveReason: "tab_blur",
-      }),
-    ).not.toBe("ask");
+    expect(existsSync(join(ROOT, "lib/ile-blur-screenshare.ts"))).toBe(false);
     expect(simulationCollectionToSuggestSnapshots(emptySimulationCollection())).toEqual([]);
     const sessionChat = read("app/api/session-chat/route.ts");
     const tapChat = read("app/api/workspace-tap-score/chat/route.ts");
@@ -227,7 +211,8 @@ describe("quality-next shipped helpers", () => {
     const gridOps = readGridOpsSurface();
     const view = readWorkspaceViewSurface();
     const tap = read("components/TapScoreClient.tsx");
-    const exercise = read("components/ExerciseTapClient.tsx");
+    expect(existsSync(join(ROOT, "components/ExerciseTapClient.tsx"))).toBe(false);
+
     const item = read("components/SessionItem.tsx");
     const host = readMapGridSurface();
 
@@ -250,7 +235,6 @@ describe("quality-next shipped helpers", () => {
     );
 
     expect(tap).toContain("tapHookFormingText");
-    expect(exercise).toContain("tapHookFormingText");
     expect(item).not.toMatch(/from\("blocks"\)\s*\n\s*\.update/);
     expect(item).toContain("WORKSPACE_LEARNER_LAUNCH_PATH");
     expect(item).toContain("WORKSPACE_LEARNER_PROMPT_PATH");

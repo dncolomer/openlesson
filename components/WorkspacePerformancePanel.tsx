@@ -7,12 +7,7 @@ import { WorkspaceSectionSubTabs } from "@/components/WorkspaceSectionSubTabs";
 import { SECTION_TAB_CONTENT_CLASS } from "@/lib/workspace-section-surface";
 import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
 
-type PerformanceSubview =
-  | "knowledge"
-  | "lwm"
-  | "ranking"
-  | "strengths_gaps"
-  | "insights";
+type PerformanceSubview = "knowledge" | "insights";
 
 interface WorkspacePerformancePanelProps {
   workspaceId: string;

@@ -41,7 +41,6 @@ describe("lib/pow-api package path (renamed from agent-v2)", () => {
   it("v3/MCP routes import from @/lib/pow-api not agent-v2", () => {
     const samples = [
       "app/api/mcp/route.ts",
-      "app/api/v3/pow/workspaces/route.ts",
       "app/api/v3/snapshot/workspaces/[id]/lwm-snapshot/route.ts",
       "app/api/v3/stash/workspaces/[id]/stash/route.ts",
     ];

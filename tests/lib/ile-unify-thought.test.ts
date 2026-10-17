@@ -22,7 +22,7 @@ import {
 import { applyIleContextFullAutoStash } from "@/lib/ile-context-auto-stash";
 import { emptyIleProjectDualLists } from "@/lib/ile-mode";
 import { THOUGHT_CONTEXT_AUTO_STASH_MAX_CHARS } from "@/lib/thought-context-auto-stash";
-import { decideIleKeyboardAction } from "@/lib/ile-keyboard-mode";
+
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
@@ -138,10 +138,7 @@ describe("See Older Thoughts reachable in both modes", () => {
     const view = readSessionViewSurface();
     expect(view).toContain('activeTool === "thought-history"');
 
-    expect(decideIleKeyboardAction({ mode: "project", key: "Enter" })).toBe("ignore");
-    expect(decideIleKeyboardAction({ mode: "project", key: "Delete" })).toBe("helios_stash");
-    expect(decideIleKeyboardAction({ mode: "helios", key: "Enter" })).toBe("ignore");
-    expect(decideIleKeyboardAction({ mode: "helios", key: "Delete" })).toBe("helios_stash");
+    expect(existsSync(join(ROOT, "lib/ile-keyboard-mode.ts"))).toBe(false);
   });
 });
 

@@ -7,11 +7,14 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { TOP_LINKS } from "@/lib/marketing/nav";
 import { HARNESS_PRODUCT_COPY } from "@/lib/marketing/harness-product";
+import { MAPPING_APPROACH_COPY } from "@/lib/marketing/mapping-product";
 import { VERIFICATION_APPROACH_COPY } from "@/lib/marketing/verification-product";
 import { HARNESS_PRICING_COPY } from "@/lib/pricing/harness-copy";
 import { VERIFICATION_PRICING_COPY } from "@/lib/pricing/verification-copy";
 import {
   HARNESS_THESIS_LINKS,
+  MAPPING_THESIS_LINKS,
+  SCIENCE_FEP_PATH,
   SCIENCE_HUB_DIRECTORY,
   SCIENCE_HUB_PATH,
   SCIENCE_WHY_PATH,
@@ -71,6 +74,12 @@ describe("combined vision + science hub", () => {
   it("harness, verification, and pricing deep-link into the hub", () => {
     expect(HARNESS_PRODUCT_COPY.thesisLinks).toEqual(HARNESS_THESIS_LINKS);
     expect(VERIFICATION_APPROACH_COPY.thesisLinks).toEqual(VERIFICATION_THESIS_LINKS);
+    expect(MAPPING_APPROACH_COPY.thesisLinks).toEqual(MAPPING_THESIS_LINKS);
+    expect(MAPPING_THESIS_LINKS.map((row) => row.href)).toEqual([
+      SCIENCE_FEP_PATH,
+      SCIENCE_EPISTEMIC_FORAGING_PATH,
+      SCIENCE_LEARNING_MODEL_PATH,
+    ]);
     expect(HARNESS_THESIS_LINKS.map((row) => row.href)).toEqual([
       SCIENCE_EPISTEMIC_FORAGING_PATH,
       SCIENCE_LEARNING_MODEL_PATH,
@@ -81,6 +90,7 @@ describe("combined vision + science hub", () => {
     ).toBe("Unsys model");
     expect(read("app/learning-harness/page.tsx")).toContain('marker="harness"');
     expect(read("app/knowledge-verification/page.tsx")).toContain('marker="verification"');
+    expect(read("app/knowledge-mapping/page.tsx")).toContain('marker="mapping"');
     expect(read("app/pricing/page.tsx")).toContain('marker="harness-pricing"');
     expect(read("app/pricing/verification/page.tsx")).toContain('marker="verification-pricing"');
     expect(HARNESS_PRICING_COPY.thesisLinks.length).toBeGreaterThan(0);

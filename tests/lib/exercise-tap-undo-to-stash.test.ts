@@ -55,22 +55,17 @@ describe("demoteExerciseSubmissionToStash", () => {
 
 describe("undo wiring + copy", () => {
   it("live TAP solo no longer mounts solution-stack undo; demote helper remains", () => {
-    const client = read("components/ExerciseTapClient.tsx");
-    const shell = read("components/exercise-tap/ExerciseTapShell.tsx");
-    expect(client).not.toContain("handleUndoSubmissionToStash");
-    expect(shell).not.toContain("ExerciseSubmissionStack");
-    expect(shell).not.toContain("data-exercise-undo-to-stash");
+    expect(existsSync(join(ROOT, "components/ExerciseTapClient.tsx"))).toBe(false);
+
+    expect(existsSync(join(ROOT, "components/exercise-tap/ExerciseTapShell.tsx"))).toBe(false);
+
     const helper = read("lib/exercise-tap.ts");
     expect(helper).toContain("demoteExerciseSubmissionToStash");
   });
 
   it("Solution Stack control labels demote to stash (not discard)", () => {
-    const stack = read("components/exercise-tap/ExerciseSubmissionStack.tsx");
-    expect(stack).toContain("data-exercise-undo-to-stash");
-    expect(stack).toContain("To stash");
-    expect(stack).toContain("Move back to Stash");
-    expect(stack).toContain("undo → stash");
-    expect(stack).not.toMatch(/permanent discard|delete forever/i);
+    expect(existsSync(join(ROOT, "components/exercise-tap/ExerciseSubmissionStack.tsx"))).toBe(false);
+
   });
 });
 

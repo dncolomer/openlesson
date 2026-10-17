@@ -26,7 +26,7 @@ export const AUGMENTATION_PITCH_DECK: SolutionSlideDeck = {
         },
         {
           label: "2 · Interrupt shallow fluency",
-          body: "TIM fires probes when the workspace detects weak causal chains or hesitation—not on a fixed quiz schedule. Completion no longer means only recall passed.",
+          body: "Epistemic foraging fires probes when the workspace detects weak causal chains or hesitation—not on a fixed quiz schedule. Completion no longer means only recall passed.",
         },
         {
           label: "3 · Score and coach in-path",
@@ -64,7 +64,7 @@ export const AUGMENTATION_PITCH_DECK: SolutionSlideDeck = {
       kicker: "Our thesis",
       title: "Interrupt shallow fluency with probes the model already knows to fire.",
       subtitle:
-        "Augmentation is the third vertical: Trace Interruption Model breaks turn-based quiz linearity and embeds verification-plus-practice in the learning path.",
+        "Augmentation is the third vertical: a Free Energy Principle approach based on epistemic foraging breaks turn-based quiz linearity and embeds verification-plus-practice in the learning path.",
       backgroundImage: PITCH_ASSETS.aesthetics.verticals,
       highlights: thesisScienceHighlights("augmentation"),
       highlightLabels: [...THESIS_HIGHLIGHT_LABELS],
@@ -85,7 +85,7 @@ export const AUGMENTATION_PITCH_DECK: SolutionSlideDeck = {
         items: [
           "Drop session blocks into lesson sequences",
           "Shareable probes aligned to real exam or product domains",
-          "Interruptions timed by TIM, not fixed quiz slots",
+          "Interruptions timed by epistemic foraging, not fixed quiz slots",
           "Learners stay inside course context while reasoning is scored",
         ],
       },
@@ -148,7 +148,7 @@ export const AUGMENTATION_PITCH_DECK: SolutionSlideDeck = {
         "Bootcamp & cohort programs get reasoning traces per learner",
         "Instructors calibrate coaching to verified gaps, not homework volume",
         "Prep agencies differentiate on depth, not bank size",
-        "TIM interruptions force reconstruction",
+        "Epistemic foraging interruptions force reconstruction",
       ],
     },
     {
@@ -173,7 +173,7 @@ export const AUGMENTATION_PITCH_DECK: SolutionSlideDeck = {
         "Pilot onboarding, course depth, or certification probes on one cohort",
         "Create a Workspace and drop the first session block into a live lesson",
       ],
-      footnote: "uncertain.systems · Learning Augmentation · session · Trace Interruption Model",
+      footnote: "uncertain.systems · Learning Augmentation · session · Free Energy Principle",
     },
   ],
 };

@@ -20,6 +20,12 @@ import {
   VERIFICATION_PRODUCT_COPY,
   VERIFICATION_SCALE_COPY,
 } from "@/lib/marketing/verification-product";
+import {
+  MAPPING_APPROACH_COPY,
+  MAPPING_PLATFORM_COPY,
+  MAPPING_PRODUCT_COPY,
+  MAPPING_SCALE_COPY,
+} from "@/lib/marketing/mapping-product";
 import { SUPPORT_COPY, SUPPORT_PAGE_TITLE } from "@/lib/marketing/support";
 import { HARNESS_PRICING_COPY } from "@/lib/pricing/harness-copy";
 import { VERIFICATION_PRICING_COPY } from "@/lib/pricing/verification-copy";
@@ -104,11 +110,14 @@ describe("landing: hard-domain learning experiences with product layers", () => 
     expect(PLATFORM_PRODUCTS.harness.name).toBe("Learning Harness");
     expect(PLATFORM_PRODUCTS.harness.body).toBe(HARNESS_PRODUCT_COPY.lead);
     expect(PLATFORM_PRODUCTS.verification.name).toBe("Knowledge Verification");
+    expect(PLATFORM_PRODUCTS.mapping.name).toBe("Knowledge Mapping");
     expect(PLATFORM_PRODUCTS.harness.image).toBe("/lp-boxes/harness-books-blueprint.jpg");
     expect(PLATFORM_PRODUCTS.verification.image).toBe("/lp-boxes/verification-bottles-blueprint.jpg");
+    expect(PLATFORM_PRODUCTS.mapping.image).toBe("/lp-boxes/tapbench-maps-blueprint.jpg");
     expect("tapbench" in PLATFORM_PRODUCTS).toBe(false);
     expect(existsSync(join(ROOT, "public/lp-boxes/harness-books-blueprint.jpg"))).toBe(true);
     expect(existsSync(join(ROOT, "public/lp-boxes/verification-bottles-blueprint.jpg"))).toBe(true);
+    expect(existsSync(join(ROOT, "public/lp-boxes/tapbench-maps-blueprint.jpg"))).toBe(true);
     expect(landing).toContain("grayscale");
   });
 
@@ -118,10 +127,11 @@ describe("landing: hard-domain learning experiences with product layers", () => 
     expect(existsSync(join(ROOT, "components/TapbenchExperimentTutorial.tsx"))).toBe(false);
     expect(existsSync(join(ROOT, "app/tapbench/page.tsx"))).toBe(false);
     expect("tapbench" in PLATFORM_PRODUCTS).toBe(false);
-    expect(PLATFORM_LAYER_LIST).toHaveLength(2);
+    expect(PLATFORM_LAYER_LIST).toHaveLength(3);
     expect(PLATFORM_LAYER_LIST.map((p) => p.name)).toEqual([
       "Learning Harness",
       "Knowledge Verification",
+      "Knowledge Mapping",
     ]);
   });
 
@@ -136,6 +146,7 @@ describe("landing: hard-domain learning experiences with product layers", () => 
 
     expect(PLATFORM_PRODUCTS.harness.image.startsWith("/aesthetics/")).toBe(false);
     expect(PLATFORM_PRODUCTS.verification.image.startsWith("/aesthetics/")).toBe(false);
+    expect(PLATFORM_PRODUCTS.mapping.image.startsWith("/aesthetics/")).toBe(false);
     for (const point of HARNESS_PRODUCT_COPY.points) {
       expect(point.image.startsWith("/aesthetics/")).toBe(false);
       expect(existsSync(join(ROOT, "public", point.image.replace(/^\//, "")))).toBe(true);
@@ -168,7 +179,10 @@ describe("product pages: verification owns platform/approach/scale; harness owns
     expect(page).toContain("knowledge regions");
     expect(page).toContain("distance to knowledge");
     expect(page).toContain("learning world model");
-    expect(page).toContain("TIM — Trace Interruption Model");
+    expect(page).toContain("Free Energy Principle");
+    expect(page).toContain("epistemic foraging");
+    expect(page).not.toContain("TIM — Trace Interruption Model");
+    expect(page).not.toContain("Trace Interruption Model");
     expect(page).toContain("Calibrate, Learn, and Verify");
     expect(page).not.toContain("TAP Learning");
     expect(page).not.toMatch(/\bTAP\b/);
@@ -187,6 +201,34 @@ describe("product pages: verification owns platform/approach/scale; harness owns
     expect(VERIFICATION_APPROACH_COPY.title).toMatch(/learning world model/i);
     expect(VERIFICATION_SCALE_COPY.title).toMatch(/at scale/i);
     expect(VERIFICATION_PRODUCT_COPY.lead.toLowerCase()).toMatch(/without traditional tests/);
+    expect(VERIFICATION_APPROACH_COPY.p2).toMatch(/Free Energy Principle/);
+    expect(VERIFICATION_APPROACH_COPY.p2).toMatch(/epistemic foraging/);
+  });
+
+  it("mapping product page clones verification structure as a map of knowledge regions", () => {
+    expect(existsSync(join(ROOT, "app/knowledge-mapping/page.tsx"))).toBe(true);
+    const page = read("app/knowledge-mapping/page.tsx");
+    expect(page).toContain("knowledge regions");
+    expect(page).toContain("position on the map");
+    expect(page).toContain("learning world model");
+    expect(page).toContain("Free Energy Principle");
+    expect(page).toContain("epistemic foraging");
+    expect(page).not.toContain("TIM — Trace Interruption Model");
+    expect(page).not.toContain("Trace Interruption Model");
+    expect(page).toContain("Calibrate, Learn, and Verify");
+    expect(page).not.toContain("TAP Learning");
+    expect(page).not.toMatch(/\bTAP\b/);
+    expect(page).not.toContain("TAPBench");
+    expect(page).toContain("/knowledgeg2.png");
+    expect(page).toContain("/ranking_app.png");
+    expect(page).toContain("data-landing-knowledge-visual");
+    expect(page).toContain("data-landing-ranking-visual");
+    expect(page).toContain('marker="mapping"');
+    expect(MAPPING_PLATFORM_COPY.title).toMatch(/map of regions/i);
+    expect(MAPPING_APPROACH_COPY.title).toMatch(/learning world model/i);
+    expect(MAPPING_SCALE_COPY.title).toMatch(/at scale/i);
+    expect(MAPPING_PRODUCT_COPY.lead.toLowerCase()).toMatch(/living map/);
+    expect(MAPPING_PRODUCT_COPY.lead.toLowerCase()).toMatch(/verification exam/);
   });
 
   it("harness product path includes All-You-Can-Learn", () => {
@@ -364,6 +406,7 @@ describe("sitemap lists new public pages", () => {
     const sitemap = read("app/sitemap.ts");
     expect(sitemap).toContain("/learning-harness");
     expect(sitemap).toContain("/knowledge-verification");
+    expect(sitemap).toContain("/knowledge-mapping");
     expect(sitemap).toContain("/pricing/verification");
     expect(sitemap).toContain("/pricing/authoring");
     expect(sitemap).toContain("/support");

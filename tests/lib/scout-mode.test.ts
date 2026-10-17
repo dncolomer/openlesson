@@ -557,6 +557,7 @@ describe("structural: Scout TAP shell, no think-aloud, Build toggle", () => {
     expect(card).toContain("PRODUCT_INTENT_LABELS.styleScout");
     expect(card).toContain("PRODUCT_INTENT_LABELS.styleExplore");
     expect(card).toContain('data-style-option="verify"');
+    expect(card).toContain('onClick={() => setStyle("verify")}');
 
     expect(en).toMatch(/"title": "Calibrate"/);
     expect(en).toMatch(/tap every question/i);

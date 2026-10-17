@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { emptyExerciseDualLists, stashExerciseSpeech } from "@/lib/exercise-tap";
-import { readExerciseTapSurface, readTapScoreSurface } from "@/tests/helpers/surface-source";
+import { readTapScoreSurface } from "@/tests/helpers/surface-source";
 import {
   TAP_IM_DONE_CONFIRM_BODY,
   TAP_IM_DONE_CONFIRM_CANCEL,
@@ -110,11 +110,13 @@ describe("TAP local thought edit/delete helpers", () => {
 describe("TAP convo + exercise chrome for local thought memory", () => {
   it("always shows Thought Memory with local edit/delete; convo confirms I'm done, drill does not", () => {
     const convo = readTapScoreSurface();
-    const exercise = readExerciseTapSurface();
+    expect(existsSync(join(ROOT, "components/ExerciseTapClient.tsx"))).toBe(false);
+    expect(existsSync(join(ROOT, "components/exercise-tap"))).toBe(false);
+
     const memory = read("components/thought-ui/ThoughtMemoryPanel.tsx");
     const done = read("components/thought-ui/ImDoneAnsweringButton.tsx");
 
-    for (const surface of [convo, exercise]) {
+    for (const surface of [convo]) {
       expect(surface).not.toContain("TAP_SEE_EDIT_PREVIOUS_THOUGHTS_LABEL");
       expect(surface).toContain("data-tap-thought-memory-always");
       expect(surface).toContain("onEditThought");
@@ -126,8 +128,6 @@ describe("TAP convo + exercise chrome for local thought memory", () => {
 
     expect(convo).toContain("confirmClose");
     expect(convo).toContain("TAP_IM_DONE_CONFIRM_TITLE");
-    expect(exercise).not.toContain("confirmClose");
-    expect(exercise).not.toContain("TAP_IM_DONE_CONFIRM_TITLE");
 
     expect(memory).toContain("data-tap-edit-thought");
     expect(memory).toContain("data-tap-delete-thought");
@@ -150,10 +150,6 @@ describe("TAP convo + exercise chrome for local thought memory", () => {
     expect(TAP_IM_DONE_CONFIRM_CANCEL.toLowerCase()).toContain("thinking");
 
     const helios = read("components/SessionHeliosPanel.tsx");
-    expect(exercise).toContain("isTapExerciseThoughtMemoryLocked");
-    expect(exercise).toContain("data-tap-thoughts-locked");
-    expect(exercise).toContain("thoughtsLocked ? undefined : onEditThought");
-    expect(exercise).toContain("thoughtsLocked ? undefined : onDeleteThought");
     expect(convo).not.toContain("isTapExerciseThoughtMemoryLocked");
 
     expect(helios).not.toContain("confirmClose");

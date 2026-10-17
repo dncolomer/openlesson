@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, useCallback, useMemo } from "react";
 
 import { usePathname, useRouter } from "next/navigation";
-import { pauseSession, type Session, type SessionPlan, type Probe, type ToolAction, type ToolName } from "@/lib/storage";
+import { pauseSession, type Session, type SessionPlan, type ToolAction, type ToolName } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/client";
 import { MobileBlockScreen } from "./MobileBlockScreen";
 import { useSessionChrome } from "@/components/session-view/use-session-chrome";
@@ -116,7 +116,6 @@ import {
 import { resolveBlockMapGlyph } from "@/lib/block-map-glyph";
 
 import { ileTimProgressByTileId } from "@/lib/ile-tim-chapter-complete";
-import { ileSessionNameFromMetadata } from "@/lib/ile-session-name";
 import {
   isIleChapterThoughtsLocked,
   isIleProjectMode,
@@ -262,17 +261,11 @@ export function SessionView({
   const [isMuted, setIsMuted] = useState(false);
   const [muteRemaining, setMuteRemaining] = useState(0);
 
-  // Probes
-  const [activeProbe, setActiveProbe] = useState<Probe | null>(null);
-  const [viewingProbeIndex, setViewingProbeIndex] = useState<number>(-1);
-
   // Session ending / saving
   const [isSaving, setIsSaving] = useState(false);
   // Tutor-end dialog
   const [showEndDialog, setShowEndDialog] = useState(false);
   const [endReason, setEndReason] = useState("");
-  const [showSaveExitNameDialog, setShowSaveExitNameDialog] = useState(false);
-  const [saveExitName, setSaveExitName] = useState("");
 
   // Session Plan state (needed before chapter workspaces hook)
   // Session Plan state
@@ -329,9 +322,6 @@ export function SessionView({
   const [objectives, setObjectives] = useState<string[]>([]);
   const [objectiveStatuses, setObjectiveStatuses] = useState<("red" | "yellow" | "green" | "blue")[]>([]);
 
-  // Archive/Focus probe state
-  const [archivingProbeId, setArchivingProbeId] = useState<string | null>(null);
-  
   // Plan complete modal (shown when all steps are done)
   const [showPlanCompleteModal, setShowPlanCompleteModal] = useState(false);
 
@@ -1101,8 +1091,6 @@ export function SessionView({
     pauseAndGoToDashboard,
     handleClose,
     handleWelcomePlay,
-    handleArchiveProbe,
-    handleToggleFocus,
     handleConfirmEnd,
     handleConfirmSettings: handleConfirmSettingsPhase,
     handleWelcomeReadyStart: handleWelcomeReadyStartPhase,
@@ -1142,9 +1130,6 @@ export function SessionView({
     objectives,
     setObjectives,
     setObjectiveStatuses,
-    setActiveProbe,
-    setViewingProbeIndex,
-    setArchivingProbeId,
     isPreparing,
     setIsPreparing,
     initialChapters,
@@ -1838,8 +1823,7 @@ export function SessionView({
             }
           }
           setCraftingInsightsOpen(false);
-          setSaveExitName(ileSessionNameFromMetadata(session.metadata) ?? "");
-          setShowSaveExitNameDialog(true);
+          void pauseAndGoToDashboard();
         }}
       />
     ) : null;
@@ -2018,7 +2002,6 @@ export function SessionView({
       renderSessionToolPanes={renderSessionToolPanes}
       renderWorkCanvas={renderWorkCanvas}
       resourceScopeChapterId={resourceScopeChapterId}
-      saveExitName={saveExitName}
       screenCaptureRef={screenCaptureRef}
       selectedAesthetic={selectedAesthetic}
       session={session}
@@ -2037,15 +2020,12 @@ export function SessionView({
       setIsMuted={setIsMuted}
       setIsWebcamEnabled={setIsWebcamEnabled}
       setMuteRemaining={setMuteRemaining}
-      setSaveExitName={setSaveExitName}
       setSessionResourcesOpen={setSessionResourcesOpen}
       setShowEndDialog={setShowEndDialog}
       setShowPlanCompleteModal={setShowPlanCompleteModal}
-      setShowSaveExitNameDialog={setShowSaveExitNameDialog}
       setShowWelcomePanel={setShowWelcomePanel}
       showEndDialog={showEndDialog}
       showPlanCompleteModal={showPlanCompleteModal}
-      showSaveExitNameDialog={showSaveExitNameDialog}
       showWelcomeModal={showWelcomeModal}
       showWelcomePanel={showWelcomePanel}
       silenceLock={silenceLock}

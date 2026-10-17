@@ -4,7 +4,7 @@
 import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { readTapScoreSurface, readExerciseTapSurface } from "@/tests/helpers/surface-source";
+import { readTapScoreSurface } from "@/tests/helpers/surface-source";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
@@ -36,16 +36,18 @@ describe("TAP Learning hunt-for-answers pill (removed)", () => {
     expect(chrome).not.toContain("data-ile-identity-row");
 
     const tapPhases = read("components/tap-score/tap-score-phases.tsx");
-    const tapSolo = read("components/exercise-tap/exercise-tap-phases.tsx");
+    expect(existsSync(join(ROOT, "components/exercise-tap/exercise-tap-phases.tsx"))).toBe(false);
+
     const tapSurface = readTapScoreSurface();
-    const exerciseSurface = readExerciseTapSurface();
-    for (const surface of [helios, tapPhases, tapSolo, tapSurface, exerciseSurface]) {
+    expect(existsSync(join(ROOT, "components/ExerciseTapClient.tsx"))).toBe(false);
+    expect(existsSync(join(ROOT, "components/exercise-tap"))).toBe(false);
+
+    for (const surface of [helios, tapPhases, tapSurface]) {
       expect(surface).not.toContain("IleHuntAnswersPill");
       expect(surface).not.toContain("ILE_HUNT_ANSWERS_PILL_COPY");
       expect(surface).not.toContain("data-ile-hunt-answers-pill");
     }
     expect(tapPhases).not.toContain("SessionIdentityBadge");
-    expect(tapSolo).not.toContain("SessionIdentityBadge");
 
     expect(existsSync(join(ROOT, "components/IleHuntAnswersPill.tsx"))).toBe(false);
     expect(existsSync(join(ROOT, "lib/ile-hunt-answers-pill.ts"))).toBe(false);

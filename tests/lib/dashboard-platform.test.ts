@@ -352,7 +352,7 @@ describe("dashboard platform surface", () => {
     expect(readRepo("components/dashboard/dashboard-atmosphere.tsx")).toContain("#1a1a1a");
     expect(readRepo("components/dashboard/dashboard-atmosphere.tsx")).toContain("72px 72px");
     const panelCss = readRepo("app/globals.css");
-    expect(panelCss).toContain("--console-panel-bg: rgba(0, 0, 0, 0.55)");
+    expect(panelCss).toContain("--console-panel-bg: #1a1a1a");
     expect(panelCss).toContain(".console-panel-fill");
     expect(panelCss).toContain(".console-panel-fill,\n.console-copy {");
     expect(panelCss).toContain("background-color: var(--console-panel-bg)");
@@ -362,6 +362,8 @@ describe("dashboard platform surface", () => {
     );
     expect(copyBlock).toContain("background-color: var(--console-panel-bg)");
     expect(copyBlock).not.toContain("background-color: #000");
+    expect(copyBlock).not.toContain("rgba(0, 0, 0, 0.55)");
+    expect(copyBlock).not.toContain("backdrop-filter");
     expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain("console-panel-fill");
     expect(readRepo("app/page.tsx")).toContain("console-copy");
     expect(dashSrc).not.toContain("<Navbar");

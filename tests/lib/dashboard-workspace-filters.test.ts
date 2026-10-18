@@ -122,6 +122,14 @@ describe("dashboard empty workspace CTA", () => {
     expect(dashboardHasNoWorkspaces([])).toBe(true);
     expect(dashboardHasNoWorkspaces(null)).toBe(true);
     expect(dashboardHasNoWorkspaces([{ id: "w1" }])).toBe(false);
+    expect(dashboardHasNoWorkspaces([{ workspace_kind: "knowledge_region" }])).toBe(true);
+    expect(dashboardHasNoWorkspaces([{ workspace_kind: "calibration" }])).toBe(true);
+    expect(
+      dashboardHasNoWorkspaces([
+        { workspace_kind: "knowledge_region" },
+        { workspace_kind: "standard" },
+      ]),
+    ).toBe(false);
   });
 
   it("renders a first-run create CTA instead of search/filter chrome", () => {

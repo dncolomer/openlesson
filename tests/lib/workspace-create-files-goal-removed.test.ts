@@ -28,17 +28,12 @@ function writeScratch(name: string, body: string) {
 
 describe("workspace create UI modes", () => {
   it("shipped list is blank + template; files_goal is not selectable", () => {
-    expect(UI_WORKSPACE_CREATE_MODES).toEqual([
-      "blank",
-      "template",
-      "knowledge_region",
-      "calibration",
-    ]);
+    expect(UI_WORKSPACE_CREATE_MODES).toEqual(["blank", "template"]);
     expect(UI_WORKSPACE_CREATE_MODES).not.toContain("files_goal");
     expect(isUiWorkspaceCreateMode("blank")).toBe(true);
     expect(isUiWorkspaceCreateMode("template")).toBe(true);
-    expect(isUiWorkspaceCreateMode("knowledge_region")).toBe(true);
-    expect(isUiWorkspaceCreateMode("calibration")).toBe(true);
+    expect(isUiWorkspaceCreateMode("knowledge_region")).toBe(false);
+    expect(isUiWorkspaceCreateMode("calibration")).toBe(false);
     expect(isUiWorkspaceCreateMode("files_goal")).toBe(false);
     expect(isUiWorkspaceCreateMode("files+goal")).toBe(false);
 
@@ -63,11 +58,11 @@ describe("workspace create UI modes", () => {
     expect(page).toContain("From Template");
     expect(page).toContain("createMode: \"blank\"");
     expect(page).toContain("createMode: \"template\"");
-    expect(page).toContain("createMode: \"knowledge_region\"");
+    expect(page).not.toContain("createMode: \"knowledge_region\"");
     expect(page).toContain("handleCreateBlank");
     expect(page).toContain("handleCreateTemplate");
-    expect(page).toContain("handleCreateKnowledgeRegion");
-    expect(page).toContain("Verification workspace");
+    expect(page).not.toContain("handleCreateKnowledgeRegion");
+    expect(page).not.toContain("Verification workspace");
     expect(page).not.toMatch(/From Files \+ Goal/);
     expect(page).not.toContain("files_goal");
     expect(page).not.toContain("handleCreateFilesGoal");
@@ -78,11 +73,11 @@ describe("workspace create UI modes", () => {
       "workspace-create-excerpts.txt",
       [
         "page uses UI_WORKSPACE_CREATE_MODES for MODE_CARDS",
-        "cards: Learning holds AYCL, Blank, From Template; Verification and Calibration are sibling products",
+        "cards: Learning holds AYCL, Blank, From Template; flows live on Dashboard",
         "no From Files + Goal card",
         "no files_goal form/step",
         "no handleCreateFilesGoal",
-        "createMode blank + template + knowledge_region + calibration remain",
+        "createMode blank + template remain on /workspace/new",
       ].join("\n"),
     );
   });

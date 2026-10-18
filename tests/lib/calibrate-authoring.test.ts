@@ -219,6 +219,13 @@ describe("calibration authoring", () => {
     expect(runner).toContain("identity: claimedIdentity");
     expect(runner).toContain("data-calibration-live-clock");
     expect(panel).toContain("data-calibration-flow-minutes");
+    expect(panel).toContain("data-calibration-flow-add-question");
+    expect(read("components/product-flow/product-flow-page.tsx")).toContain(
+      "data-calibration-flow-add-question",
+    );
+    expect(read("components/product-flow/product-flow-wizard.tsx")).toContain(
+      "data-calibration-generate-from-goal",
+    );
     expect(read("components/VerificationFlowsPanel.tsx")).not.toContain("data-verification-flow-minutes");
     expect(read("components/VerificationFlowsPanel.tsx")).not.toContain("Countdown");
     expect(read("components/VerificationFlowRunner.tsx")).not.toContain("lockDuration");
@@ -236,6 +243,7 @@ describe("calibration authoring", () => {
     const flow: VerificationFlow = {
       id: "verify-1",
       workspaceId: "ws-cal",
+      name: "Limits",
       topic: "Limits",
       questions: MANUAL_QUESTIONS.map((text, index) => ({ id: `v-${index + 1}`, text })),
       durationMinutes: 15,

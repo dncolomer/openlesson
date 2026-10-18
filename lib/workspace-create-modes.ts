@@ -22,23 +22,16 @@ export type WorkspaceCreateMode =
   | "knowledge_region"
   | "calibration";
 
-/** Modes shown as option cards on `/workspace/new`. Files+Goal is not a UI option. */
+/** Modes shown as option cards on `/workspace/new`. Learning only. */
 export const UI_WORKSPACE_CREATE_MODES: WorkspaceCreateMode[] = [
   "blank",
   "template",
-  "knowledge_region",
-  "calibration",
 ];
 
 export function isUiWorkspaceCreateMode(
   mode: unknown,
-): mode is Exclude<WorkspaceCreateMode, "files_goal"> {
-  return (
-    mode === "blank" ||
-    mode === "template" ||
-    mode === "knowledge_region" ||
-    mode === "calibration"
-  );
+): mode is Exclude<WorkspaceCreateMode, "files_goal" | "knowledge_region" | "calibration"> {
+  return mode === "blank" || mode === "template";
 }
 
 /** Deep-link `?mode=` on `/workspace/new`. Files+Goal is API-only and ignored. */

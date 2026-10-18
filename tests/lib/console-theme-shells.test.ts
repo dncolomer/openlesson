@@ -232,15 +232,6 @@ describe("console theme shells", () => {
     expect(homeLabel).not.toContain("absolute");
     expect(homeLabel).toContain("dashboardFrameLabel(activeTab)");
 
-    const view = read("components/WorkspaceView.tsx");
-    expect(view).not.toContain("left-3 top-2");
-    const chrome = read("components/workspace-view/workspace-chrome.tsx");
-    const mapLabelAt = chrome.lastIndexOf("data-console-frame-label");
-    const mapLabel = chrome.slice(mapLabelAt, chrome.indexOf("</p>", mapLabelAt));
-    expect(mapLabel).toContain("px-4 pt-2 sm:px-6");
-    expect(mapLabel).toContain("Map");
-    expect(chrome.indexOf("<Navbar />")).toBeLessThan(mapLabelAt);
-
     for (const rel of [
       "app/pricing/page.tsx",
       "app/legal/page.tsx",
@@ -272,6 +263,22 @@ describe("console theme shells", () => {
     ]) {
       expect(existsSync(join(ROOT, rel)), rel).toBe(false);
     }
+  });
+
+  it("sits workspace tabs flush under the navbar", () => {
+    const view = read("components/WorkspaceView.tsx");
+    expect(view).not.toContain("left-3 top-2");
+    const chrome = read("components/workspace-view/workspace-chrome.tsx");
+    const mapLabelAt = chrome.lastIndexOf("data-console-frame-label");
+    const mapLabel = chrome.slice(mapLabelAt, chrome.indexOf("</p>", mapLabelAt));
+    expect(mapLabel).toContain("absolute left-3 top-3");
+    expect(mapLabel).toContain("Map");
+    expect(mapLabel).not.toContain("px-4 pt-2 sm:px-6");
+    expect(mapLabel).not.toContain("shrink-0");
+    expect(chrome.indexOf("<Navbar />")).toBeLessThan(mapLabelAt);
+    expect(chrome).not.toContain("border-b border-neutral-800 bg-neutral-950 px-4 py-1.5");
+    expect(chrome).toContain("<WorkspaceSectionNav");
+    expect(read("components/WorkspaceSectionNav.tsx")).toContain("data-workspace-section-nav");
   });
 
   it("leaves insight flags, the listening dot, and stored canvas ink alone", () => {

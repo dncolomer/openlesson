@@ -45,32 +45,24 @@ describe("workspace snapshot-all subjects (pure)", () => {
 });
 
 describe("workspace dashboard card layout", () => {
-  it("shows two cards per row; no Snapshot button on dashboard cards", () => {
-    const card = join(root, "components/WorkspaceDashboardCard.tsx");
+  it("lists workspaces in a paginated table; no Snapshot button on dashboard rows", () => {
     const dash = join(root, "app/dashboard/page.tsx");
     const route = join(root, "app/api/workspaces/[id]/snapshot-all/route.ts");
-    expect(existsSync(card)).toBe(true);
     expect(existsSync(dash)).toBe(true);
     expect(existsSync(route)).toBe(true);
 
-    const cardSrc = readFileSync(card, "utf8");
     const dashSrc = readDashboardSurface();
     const routeSrc = readFileSync(route, "utf8");
 
-    // Snapshot is LWM-only; dashboard cards keep pin / archive / visibility only
-    expect(cardSrc).not.toContain("data-workspace-snapshot-all");
-    expect(cardSrc).not.toContain("onSnapshotAll");
-    expect(cardSrc).not.toMatch(/>\s*Snapshot\s*</);
-    expect(cardSrc).toContain("publicLabel");
-    expect(cardSrc).toContain("privateLabel");
-    expect(cardSrc).toContain("onTogglePin");
-
-    expect(dashSrc).toContain("md:grid-cols-2");
-    expect(dashSrc).not.toContain("xl:grid-cols-3");
-    expect(dashSrc).toContain("data-workspace-cards-grid");
+    expect(dashSrc).toContain("data-dashboard-workspace-table");
+    expect(dashSrc).toContain("data-dashboard-workspace-pagination");
+    expect(dashSrc).toContain("data-workspace-pin");
+    expect(dashSrc).toContain("handleTogglePin");
+    expect(dashSrc).not.toContain("data-workspace-cards-grid");
     expect(dashSrc).not.toContain("handleSnapshotAll");
     expect(dashSrc).not.toContain("onSnapshotAll");
     expect(dashSrc).not.toContain("snapshottingWorkspaceId");
+    expect(dashSrc).not.toContain("data-workspace-snapshot-all");
 
     // snapshot-all API remains for in-workspace LWM
     expect(routeSrc).toContain("listWorkspaceSnapshotSubjects");
@@ -83,7 +75,6 @@ describe("workspace dashboard card layout", () => {
   it("filters workspaces by public / private / AYCL next to archived", () => {
     const dashSrc = readDashboardSurface();
     const storageSrc = readFileSync(join(root, "lib/storage/workspaces.ts"), "utf8");
-    const cardSrc = readFileSync(join(root, "components/WorkspaceDashboardCard.tsx"), "utf8");
     expect(dashSrc).toContain("data-workspace-visibility-filter");
     expect(dashSrc).toContain("workspaceVisibilityFilter");
     expect(dashSrc).toContain("workspaceMatchesDashboardListFilter");
@@ -92,7 +83,7 @@ describe("workspace dashboard card layout", () => {
     expect(dashSrc).toContain('value="aycl"');
     expect(dashSrc).toContain("Show archived");
     expect(storageSrc).toContain("is_all_you_can_learn");
-    expect(cardSrc).toContain("heroBadge(\"AYCL\")");
-    expect(cardSrc).toContain("data-workspace-aycl");
+    expect(dashSrc).toContain("AYCL");
+    expect(dashSrc).toContain("data-workspace-aycl");
   });
 });

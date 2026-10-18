@@ -1,6 +1,4 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
-import fs from "fs";
-import path from "path";
 import {
   dashboardPinsStorageKey,
   loadPinnedWorkspaceIds,
@@ -9,8 +7,6 @@ import {
   togglePinnedWorkspaceId,
 } from "@/lib/dashboard-workspace-pins";
 import { readDashboardSurface } from "../helpers/surface-source";
-
-const ROOT = process.cwd();
 
 describe("sortWorkspacesPinnedFirst", () => {
   it("places pinned before unpinned; secondary created_at desc", () => {
@@ -79,17 +75,14 @@ describe("dashboard pin persistence (localStorage)", () => {
 });
 
 describe("Dashboard pin UI surface", () => {
-  it("card and page wire pin control + sort helper", () => {
-    const card = fs.readFileSync(path.join(ROOT, "components/WorkspaceDashboardCard.tsx"), "utf8");
-    expect(card).toContain("data-workspace-pin");
-    expect(card).toContain("onTogglePin");
-    expect(card).toMatch(/Pin|Unpin|pinned/i);
-
+  it("table and page wire pin control + sort helper", () => {
     const page = readDashboardSurface();
+    expect(page).toContain("data-workspace-pin");
+    expect(page).toContain("handleTogglePin");
+    expect(page).toMatch(/Pin|Unpin|pinned/i);
     expect(page).toContain("sortWorkspacesPinnedFirst");
     expect(page).toContain("loadPinnedWorkspaceIds");
     expect(page).toContain("savePinnedWorkspaceIds");
-    expect(page).toContain("onTogglePin");
     expect(page).toContain("pinnedWorkspaceIds");
   });
 });

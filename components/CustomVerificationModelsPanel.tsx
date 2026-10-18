@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useConfirm } from "@/lib/useConfirm";
+import { productFlowNewPath } from "@/lib/product-flow";
 import { WorkspaceSectionSubTabs } from "@/components/WorkspaceSectionSubTabs";
 import type { RegionBuilderSourceFilter } from "@/lib/pow-api/region-builder";
 import {
@@ -246,9 +248,9 @@ export function CustomVerificationModelsPanel({
         if (cancelled) return;
         const listed = Array.isArray(payload.flows) ? payload.flows : [];
         setFlowChoices(
-          listed.map((flow: { id?: string; topic?: string; goal?: string }) => ({
+          listed.map((flow: { id?: string; name?: string; topic?: string; goal?: string }) => ({
             id: String(flow.id || ""),
-            topic: String(flow.topic || flow.goal || "Flow"),
+            topic: String(flow.name || flow.topic || flow.goal || "Flow"),
           })),
         );
       })
@@ -384,6 +386,13 @@ export function CustomVerificationModelsPanel({
                       </option>
                     ))}
                   </select>
+                  <Link
+                    href={productFlowNewPath(knowledgeFlowKind === "calibrate" ? "calibration" : "verification")}
+                    data-create-flow-first=""
+                    className="text-[11px] text-neutral-300 underline"
+                  >
+                    Create a Flow
+                  </Link>
                   <div className="flex flex-wrap gap-2">
                     <input
                       type="text"

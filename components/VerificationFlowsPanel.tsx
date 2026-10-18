@@ -9,9 +9,11 @@ import {
   verificationFlowSkillFilename,
   type VerificationQuestion,
 } from "@/lib/verification-flow";
+import { CopyFlowUrlButton } from "@/components/product-flow/copy-flow-url-button";
 
 type FlowRecord = {
   id: string;
+  name?: string;
   topic: string;
   questions: VerificationQuestion[];
   actionCatalog?: LearningModelSize;
@@ -38,6 +40,7 @@ export function VerificationFlowsPanel({
   ayclToken?: string;
 }) {
   const [flows, setFlows] = useState<FlowRecord[]>([]);
+  const [name, setName] = useState("");
   const [topic, setTopic] = useState("");
   const [catalog, setCatalog] = useState<LearningModelSize>(4);
   const [draftQuestions, setDraftQuestions] = useState<string[]>([""]);
@@ -80,6 +83,7 @@ export function VerificationFlowsPanel({
           ayclToken,
           action: editingId ? "update" : "create",
           flowId: editingId,
+          name,
           topic,
           questions: questionsFromDraft(),
           actionCatalog: catalog,
@@ -90,6 +94,7 @@ export function VerificationFlowsPanel({
         setError(payload?.error?.message || "Could not save verification flow");
         return;
       }
+      setName("");
       setTopic("");
       setDraftQuestions([""]);
       setCatalog(4);
@@ -149,6 +154,13 @@ export function VerificationFlowsPanel({
       />
 
       <section className="space-y-3 border border-neutral-800 p-4" data-verification-flow-editor>
+        <input
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          placeholder="Flow name"
+          data-flow-name=""
+          className="w-full border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
+        />
         <input
           value={topic}
           onChange={(event) => setTopic(event.target.value)}
@@ -210,7 +222,7 @@ export function VerificationFlowsPanel({
           <li key={flow.id} className="space-y-2 border border-neutral-800 p-4" data-verification-flow-card>
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-sm text-white">{flow.topic}</p>
+                <p className="text-sm text-white" data-flow-name>{flow.name || flow.topic}</p>
                 <p className="text-[11px] text-neutral-500">
                   {flow.questions.length} starting question{flow.questions.length === 1 ? "" : "s"}
                   {" · "}
@@ -223,6 +235,7 @@ export function VerificationFlowsPanel({
                   className="text-[11px] text-neutral-300 underline"
                   onClick={() => {
                     setEditingId(flow.id);
+                    setName(flow.name || flow.topic);
                     setTopic(flow.topic);
                     setCatalog(parseLearningModelSize(flow.actionCatalog));
                     setDraftQuestions(
@@ -242,9 +255,12 @@ export function VerificationFlowsPanel({
                 </button>
               </div>
             </div>
-            <p className="break-all font-mono text-[11px] text-neutral-300" data-verification-flow-public-link>
-              {flow.publicUrl}
-            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="min-w-0 flex-1 break-all font-mono text-[11px] text-neutral-300" data-verification-flow-public-link>
+                {flow.publicUrl}
+              </p>
+              <CopyFlowUrlButton url={flow.publicUrl} />
+            </div>
             <button
               type="button"
               data-verification-flow-skill

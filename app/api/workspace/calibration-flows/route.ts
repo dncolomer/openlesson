@@ -60,6 +60,7 @@ export async function POST(req: NextRequest) {
         type: "update",
         workspaceId,
         flowId: String(body.flowId || ""),
+        name: typeof body.name === "string" ? body.name : undefined,
         goal: typeof body.goal === "string" ? body.goal : undefined,
         questions: body.questions,
         durationMinutes: body.durationMinutes as number | undefined,
@@ -81,6 +82,7 @@ export async function POST(req: NextRequest) {
     const created = await runCalibrationCommand({
       type: "create",
       workspaceId,
+      name: typeof body.name === "string" ? body.name : undefined,
       goal: String(body.goal || ""),
       questions: body.questions,
       durationMinutes: body.durationMinutes as number | undefined,

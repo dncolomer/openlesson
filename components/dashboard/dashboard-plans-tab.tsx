@@ -2,7 +2,6 @@
 
 import type { Dispatch, SetStateAction } from "react";
 import { default as Link } from "next/link";
-import { WorkspaceDashboardCard } from "@/components/WorkspaceDashboardCard";
 import {
   isDashboardWorkspaceListFilter,
   type DashboardWorkspaceListFilter,
@@ -32,7 +31,6 @@ export type DashboardPlansTabProps = {
   showArchivedWorkspaces: boolean;
   t: (key: string, params?: Record<string, string | number>) => string;
   totalPlanPages: number;
-  workspaceCoverPool: string[] | null;
   workspacePage: number;
   workspacePageSize: 10;
   workspaceSearch: string;
@@ -59,7 +57,6 @@ export function DashboardPlansTab({
     showArchivedWorkspaces,
     t,
     totalPlanPages,
-    workspaceCoverPool,
     workspacePage,
     workspacePageSize,
     workspaceSearch,
@@ -219,66 +216,157 @@ export function DashboardPlansTab({
                 </Link>
               </div>
             ) : (
-              <div className="grid gap-6 md:grid-cols-2" data-workspace-cards-grid>
-                {paginatedPlans.map((plan) => (
-                  <WorkspaceDashboardCard
-                    key={plan.id}
-                    plan={plan}
-                    imagePool={workspaceCoverPool}
-                    formatDate={formatDate}
-                    archivingWorkspaceId={archivingWorkspaceId}
-                    publicLabel={t("dashboard.public")}
-                    privateLabel={t("dashboard.private")}
-                    isPinned={pinnedWorkspaceIds.has(plan.id)}
-                    onTogglePin={handleTogglePin}
-                    onArchive={handleArchivePlan}
-                    onRestore={handleRestorePlan}
-                    onToggleVisibility={async (workspace) => {
-                      try {
-                        const isPublic = workspace.is_public ?? false;
-                        const res = await fetch(`/api/workspaces/${workspace.id}/visibility`, {
-                          method: "PUT",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ is_public: !isPublic }),
-                        });
-                        const data = await res.json();
-                        if (data.success) {
-                          setWorkspaces((plans) =>
-                            plans.map((entry) =>
-                              entry.id === workspace.id ? { ...entry, is_public: !isPublic } : entry,
-                            ),
-                          );
-                        }
-                      } catch (err) {
-                        console.error("Error toggling visibility:", err);
-                      }
-                    }}
-                  />
-                ))}
-              </div>
-            )}
-
-            {totalPlanPages > 1 && (
-              <div className="flex items-center justify-between pt-4 border-t border-neutral-800/60">
-                <p className="text-xs text-neutral-500">
-                  {t('dashboard.showingResults', { start: String((workspacePage - 1) * workspacePageSize + 1), end: String(Math.min(workspacePage * workspacePageSize, filteredWorkspaces.length)), total: String(filteredWorkspaces.length) })}
-                </p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setPlanPage((p) => Math.max(1, p - 1))}
-                    disabled={workspacePage === 1}
-                    className="console-button px-3 py-1 text-xs text-neutral-400 transition hover:border-white/80 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+              <div className="console-copy overflow-x-auto" data-dashboard-workspace-table>
+                <table className="w-full min-w-[48rem] border-collapse text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-white/20 font-mono text-[10px] uppercase tracking-[0.18em] text-neutral-500">
+                      <th className="px-4 py-3 font-medium">Name</th>
+                      <th className="px-4 py-3 font-medium">Topic</th>
+                      <th className="px-4 py-3 font-medium">Visibility</th>
+                      <th className="px-4 py-3 font-medium">Status</th>
+                      <th className="px-4 py-3 font-medium">Created</th>
+                      <th className="px-4 py-3 font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginatedPlans.map((plan) => {
+                      const isPublic = plan.is_public ?? false;
+                      const isPinned = pinnedWorkspaceIds.has(plan.id);
+                      const publicLabel = t("dashboard.public");
+                      const privateLabel = t("dashboard.private");
+                      return (
+                        <tr
+                          key={plan.id}
+                          className="border-b border-white/10 last:border-b-0"
+                          data-dashboard-workspace
+                          data-workspace-pinned={isPinned ? "true" : "false"}
+                          data-workspace-aycl={plan.is_all_you_can_learn ? "true" : "false"}
+                        >
+                          <td className="px-4 py-3">
+                            <Link
+                              href={`/workspace/${plan.id}`}
+                              className="font-medium text-white underline decoration-white/20 underline-offset-2 hover:decoration-white"
+                              data-workspace-name
+                            >
+                              {plan.title || plan.root_topic}
+                            </Link>
+                          </td>
+                          <td className="px-4 py-3 text-neutral-400">{plan.root_topic || "—"}</td>
+                          <td className="px-4 py-3 text-neutral-400">
+                            {isPublic ? publicLabel : privateLabel}
+                            {plan.is_all_you_can_learn ? " · AYCL" : ""}
+                          </td>
+                          <td className="px-4 py-3 capitalize text-neutral-400">{plan.status}</td>
+                          <td className="px-4 py-3 text-neutral-400">
+                            {formatDate(plan.created_at ?? "")}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleTogglePin(plan)}
+                                data-workspace-pin
+                                data-workspace-pin-state={isPinned ? "pinned" : "unpinned"}
+                                aria-pressed={isPinned}
+                                aria-label={isPinned ? "Unpin workspace" : "Pin workspace"}
+                                title={isPinned ? "Unpin from top of list" : "Pin to top of list"}
+                                className={`console-button shrink-0 px-2.5 py-1 text-xs transition ${
+                                  isPinned
+                                    ? "border-white/80 text-white"
+                                    : "text-neutral-400 hover:border-white/80 hover:text-neutral-200"
+                                }`}
+                              >
+                                {isPinned ? "Unpin" : "Pin"}
+                              </button>
+                              {plan.status === "archived" ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRestorePlan(plan.id)}
+                                  disabled={archivingWorkspaceId === plan.id}
+                                  className="console-button px-2.5 py-1 text-xs text-neutral-300 transition hover:border-white/80 hover:text-white disabled:opacity-50"
+                                >
+                                  {archivingWorkspaceId === plan.id ? "Restoring…" : "Restore"}
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleArchivePlan(plan.id)}
+                                  disabled={archivingWorkspaceId === plan.id}
+                                  className="console-button px-2.5 py-1 text-xs text-neutral-400 transition hover:border-white/80 hover:text-neutral-200 disabled:opacity-50"
+                                >
+                                  {archivingWorkspaceId === plan.id ? "Archiving…" : "Archive"}
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  try {
+                                    const res = await fetch(`/api/workspaces/${plan.id}/visibility`, {
+                                      method: "PUT",
+                                      headers: { "Content-Type": "application/json" },
+                                      body: JSON.stringify({ is_public: !isPublic }),
+                                    });
+                                    const data = await res.json();
+                                    if (data.success) {
+                                      setWorkspaces((plans) =>
+                                        plans.map((entry) =>
+                                          entry.id === plan.id ? { ...entry, is_public: !isPublic } : entry,
+                                        ),
+                                      );
+                                    }
+                                  } catch (err) {
+                                    console.error("Error toggling visibility:", err);
+                                  }
+                                }}
+                                className={`console-button px-2.5 py-1 text-xs transition ${
+                                  isPublic
+                                    ? "border-white/80 text-white"
+                                    : "text-neutral-500 hover:border-white/80 hover:text-neutral-300"
+                                }`}
+                              >
+                                {isPublic ? publicLabel : privateLabel}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                {totalPlanPages > 1 ? (
+                  <div
+                    className="flex items-center justify-between border-t border-white/20 px-4 py-3"
+                    data-dashboard-workspace-pagination
                   >
-                    {t('dashboard.previous')}
-                  </button>
-                  <button
-                    onClick={() => setPlanPage((p) => Math.min(totalPlanPages, p + 1))}
-                    disabled={workspacePage === totalPlanPages}
-                    className="console-button px-3 py-1 text-xs text-neutral-400 transition hover:border-white/80 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {t('dashboard.next')}
-                  </button>
-                </div>
+                    <p className="text-xs text-neutral-500">
+                      {t("dashboard.showingResults", {
+                        start: String((workspacePage - 1) * workspacePageSize + 1),
+                        end: String(Math.min(workspacePage * workspacePageSize, filteredWorkspaces.length)),
+                        total: String(filteredWorkspaces.length),
+                      })}
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        data-dashboard-workspace-prev
+                        onClick={() => setPlanPage((p) => Math.max(1, p - 1))}
+                        disabled={workspacePage === 1}
+                        className="console-button px-3 py-1 text-xs text-neutral-400 transition hover:border-white/80 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {t("dashboard.previous")}
+                      </button>
+                      <button
+                        type="button"
+                        data-dashboard-workspace-next
+                        onClick={() => setPlanPage((p) => Math.min(totalPlanPages, p + 1))}
+                        disabled={workspacePage === totalPlanPages}
+                        className="console-button px-3 py-1 text-xs text-neutral-400 transition hover:border-white/80 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {t("dashboard.next")}
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             )}
             </>

@@ -46,13 +46,13 @@ export async function GET() {
     const [verificationRes, calibrationRes] = await Promise.all([
       auth.supabase
         .from("workspace_verification_flows")
-        .select("id, workspace_id, topic, questions, public_token, created_at")
+        .select("id, workspace_id, name, topic, questions, public_token, created_at")
         .in("workspace_id", ids)
         .order("created_at", { ascending: false })
         .limit(FLOW_LIMIT),
       auth.supabase
         .from("workspace_calibration_flows")
-        .select("id, workspace_id, goal, questions, public_token, created_at")
+        .select("id, workspace_id, name, goal, questions, public_token, created_at")
         .in("workspace_id", ids)
         .order("created_at", { ascending: false })
         .limit(FLOW_LIMIT),
@@ -64,6 +64,7 @@ export async function GET() {
           presentDashboardRecentFlow({
             id: row.id,
             kind: "verify",
+            name: (row as { name?: unknown }).name,
             title: row.topic,
             workspaceId: row.workspace_id,
             workspaceTitle: titles.get(String(row.workspace_id)),
@@ -82,6 +83,7 @@ export async function GET() {
           presentDashboardRecentFlow({
             id: row.id,
             kind: "calibrate",
+            name: (row as { name?: unknown }).name,
             title: row.goal,
             workspaceId: row.workspace_id,
             workspaceTitle: titles.get(String(row.workspace_id)),

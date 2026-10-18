@@ -1,8 +1,9 @@
 /**
- * Owner dashboard Knowledge regions: overlay models on Verification
- * and Calibration workspaces.
+ * Owner dashboard Knowledge regions: overlay models for Verification
+ * and Calibration flows, listed without a workspace type.
  */
 
+import { productRegionNewPath, productRegionPagePath } from "@/lib/product-flow";
 import {
   workspaceProductShell,
   type WorkspaceProductShell,
@@ -29,10 +30,17 @@ export function parseDashboardKnowledgeRegionKind(
   return null;
 }
 
-export function dashboardKnowledgeRegionHref(workspaceId: string): string {
-  const id = String(workspaceId || "").trim();
-  if (!id) return "/dashboard";
-  return `/workspace/${id}?section=knowledge`;
+export function dashboardKnowledgeRegionHref(
+  kind: DashboardKnowledgeRegionKind,
+  regionId: string,
+): string {
+  const id = String(regionId || "").trim();
+  if (!id) return productRegionNewPath(kind);
+  return productRegionPagePath(kind, id);
+}
+
+export function dashboardKnowledgeRegionCreateHref(kind: DashboardKnowledgeRegionKind): string {
+  return productRegionNewPath(kind);
 }
 
 export function presentDashboardKnowledgeRegions(

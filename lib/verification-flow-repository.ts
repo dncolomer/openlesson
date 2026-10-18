@@ -82,10 +82,12 @@ async function resolveBackend(): Promise<"supabase" | "memory"> {
 }
 
 function mapFlow(row: Record<string, unknown>): VerificationFlow {
+  const topic = String(row.topic || "");
   return {
     id: String(row.id),
     workspaceId: String(row.workspace_id),
-    topic: String(row.topic || ""),
+    name: String(row.name || "").trim() || topic,
+    topic,
     questions: normalizeQuestionPool(row.questions),
     durationMinutes: flowCountdownMinutes(row.duration_minutes),
     actionCatalog: parseLearningModelSize(row.action_catalog),
@@ -151,6 +153,7 @@ async function persistCommand(
     const { error } = await writeVerificationFlow(supabase, "insert", value.flow.id, {
       id: value.flow.id,
       workspace_id: value.flow.workspaceId,
+      name: value.flow.name,
       topic: value.flow.topic,
       questions: value.flow.questions,
       duration_minutes: value.flow.durationMinutes,
@@ -164,6 +167,7 @@ async function persistCommand(
   }
   if (command.type === "update" && value.flow) {
     const { error } = await writeVerificationFlow(supabase, "update", value.flow.id, {
+      name: value.flow.name,
       topic: value.flow.topic,
       questions: value.flow.questions,
       duration_minutes: value.flow.durationMinutes,
@@ -244,7 +248,7 @@ async function writeVerificationFlow(
       ? supabase.from("workspace_verification_flows").insert(body)
       : supabase.from("workspace_verification_flows").update(body).eq("id", id);
   let current = row;
-  for (const optional of ["action_catalog", "duration_minutes"] as const) {
+  for (const optional of ["name", "action_catalog", "duration_minutes"] as const) {
     const result = await run(current);
     if (!result.error) return result;
     if (!String(result.error.message).includes(optional) || !(optional in current)) return result;
@@ -253,6 +257,38 @@ async function writeVerificationFlow(
     current = next;
   }
   return run(current);
+}
+
+export async function getVerificationFlowById(flowId: string): Promise<VerificationFlow | null> {
+  const id = String(flowId || "").trim();
+  if (!id) return null;
+  if ((await resolveBackend()) === "memory") {
+    const flow = verificationRepositoryGlobal().memory.flows.find((item) => item.id === id);
+    return flow ? presentFlow(flow) : null;
+  }
+  const state = await loadSupabaseState({ flowId: id });
+  const flow = state.flows.find((item) => item.id === id);
+  return flow ? presentFlow(flow) : null;
+}
+
+export async function listVerificationFlowsForWorkspaceIds(
+  workspaceIds: readonly string[],
+): Promise<VerificationFlow[]> {
+  const ids = [...new Set(workspaceIds.map((id) => String(id || "").trim()).filter(Boolean))];
+  if (ids.length === 0) return [];
+  if ((await resolveBackend()) === "memory") {
+    return verificationRepositoryGlobal()
+      .memory.flows.filter((flow) => ids.includes(flow.workspaceId))
+      .map(presentFlow);
+  }
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("workspace_verification_flows")
+    .select("*")
+    .in("workspace_id", ids)
+    .order("created_at", { ascending: false });
+  if (error || !Array.isArray(data)) return [];
+  return data.map((row) => presentFlow(mapFlow(row as Record<string, unknown>)));
 }
 
 export async function listVerificationFlows(workspaceId: string): Promise<VerificationFlow[]> {

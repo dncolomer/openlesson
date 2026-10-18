@@ -9,7 +9,11 @@ import {
   type DashboardKnowledgeRegion,
   type DashboardKnowledgeRegionKind,
 } from "@/lib/dashboard-knowledge-regions";
-import { dashboardCreateHref, dashboardProductLabel } from "@/lib/dashboard-nav";
+import {
+  dashboardProductLabel,
+  dashboardRegionCreateHref,
+} from "@/lib/dashboard-nav";
+import { productFlowNewPath } from "@/lib/product-flow";
 import type { Workspace } from "@/lib/storage";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 
@@ -28,7 +32,8 @@ export function DashboardKnowledgeRegionsTab({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const productLabel = dashboardProductLabel(kind);
-  const createHref = dashboardCreateHref(kind);
+  const createHref = dashboardRegionCreateHref(kind);
+  const createFlowHref = productFlowNewPath(kind);
   const workspaceById = useMemo(() => {
     const map = new Map<string, Workspace>();
     for (const workspace of workspaces) map.set(workspace.id, workspace);
@@ -65,15 +70,25 @@ export function DashboardKnowledgeRegionsTab({
   return (
     <div className="space-y-6" data-dashboard-knowledge-regions={kind}>
       <div className="console-copy px-6 py-7 sm:px-8 sm:py-8">
-        <p className="mb-3 font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
-          {productLabel}
-        </p>
-        <h2 className="max-w-2xl text-3xl font-medium tracking-[-1.2px] text-white sm:text-4xl">
-          Knowledge regions
-        </h2>
-        <p className="mt-3 max-w-xl text-sm leading-relaxed text-neutral-400">
-          Overlay regions from your {productLabel.toLowerCase()} workspaces.
-        </p>
+        <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="mb-3 font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
+              {productLabel}
+            </p>
+            <h2 className="max-w-2xl text-3xl font-medium tracking-[-1.2px] text-white sm:text-4xl">
+              Knowledge regions
+            </h2>
+            <p className="mt-3 max-w-xl text-sm leading-relaxed text-neutral-400">
+              Overlay regions from your {productLabel.toLowerCase()} flows.
+            </p>
+          </div>
+          <Link
+            href={createHref}
+            className="inline-flex h-12 items-center justify-center rounded-none bg-white px-6 text-sm font-medium text-black"
+          >
+            Create knowledge region →
+          </Link>
+        </div>
       </div>
 
       {error ? <p className="text-sm text-red-300">{error}</p> : null}
@@ -89,13 +104,20 @@ export function DashboardKnowledgeRegionsTab({
               No knowledge regions yet
             </h3>
             <p className="mt-3 text-sm leading-relaxed text-neutral-400">
-              Create a {productLabel.toLowerCase()} workspace, then add regions in Knowledge.
+              Select existing flows or create a flow first, then publish a region.
             </p>
             <Link
               href={createHref}
               className="mt-8 inline-flex h-12 min-w-[220px] items-center justify-center rounded-none bg-white px-8 text-sm font-medium text-black transition hover:bg-neutral-200"
             >
-              Create {productLabel} workspace →
+              Create knowledge region →
+            </Link>
+            <Link
+              href={createFlowHref}
+              data-create-flow-first=""
+              className="mt-3 text-sm text-neutral-400 underline"
+            >
+              Create a Flow
             </Link>
           </div>
         </section>
@@ -106,7 +128,7 @@ export function DashboardKnowledgeRegionsTab({
             return (
               <Link
                 key={region.id}
-                href={dashboardKnowledgeRegionHref(region.workspaceId)}
+                href={dashboardKnowledgeRegionHref(kind, region.id)}
                 className="console-copy group block overflow-hidden transition hover:border-white/80"
                 data-dashboard-knowledge-region
               >

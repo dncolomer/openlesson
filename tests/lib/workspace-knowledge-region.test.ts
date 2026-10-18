@@ -69,17 +69,12 @@ function writeScratch(name: string, body: string) {
 }
 
 describe("Knowledge Region create mode", () => {
-  it("is a UI-selectable mode beside blank and template; files_goal stays non-UI", () => {
-    expect(UI_WORKSPACE_CREATE_MODES).toEqual([
-      "blank",
-      "template",
-      "knowledge_region",
-      "calibration",
-    ]);
+  it("stays an internal owner-container mode; Learning create is blank + template", () => {
+    expect(UI_WORKSPACE_CREATE_MODES).toEqual(["blank", "template"]);
     expect(isUiWorkspaceCreateMode("blank")).toBe(true);
     expect(isUiWorkspaceCreateMode("template")).toBe(true);
-    expect(isUiWorkspaceCreateMode("knowledge_region")).toBe(true);
-    expect(isUiWorkspaceCreateMode("calibration")).toBe(true);
+    expect(isUiWorkspaceCreateMode("knowledge_region")).toBe(false);
+    expect(isUiWorkspaceCreateMode("calibration")).toBe(false);
     expect(isUiWorkspaceCreateMode("files_goal")).toBe(false);
     expect(parseWorkspaceCreateMode("knowledge_region")).toBe("knowledge_region");
     expect(parseWorkspaceCreateMode("knowledge-region")).toBe("knowledge_region");
@@ -541,23 +536,26 @@ describe("Knowledge Region embeddings import overlay", () => {
 describe("Knowledge Region wiring", () => {
   it("create page, generate path, shell, settings, mint, embeddings import are wired", () => {
     const page = read("app/workspace/new/page.tsx");
-    expect(page).toContain("Verification workspace");
+    expect(page).not.toContain("Verification workspace");
+    expect(page).not.toContain("Calibration workspace");
     expect(page).toContain("data-create-mode={card.mode}");
-    expect(page).toContain('data-create-mode="knowledge_region"');
-    expect(page).toContain('data-create-layout="three-groups"');
+    expect(page).not.toContain('data-create-mode="knowledge_region"');
+    expect(page).toContain('data-create-layout="learning"');
     expect(page).toContain('data-create-group="learning"');
-    expect(page).toContain('data-create-group="verification"');
-    expect(page).toContain('data-create-group="calibration"');
-    expect(page).toContain('data-create-mode-span="knowledge_region"');
-    expect(page).toContain('data-create-mode-span="calibration"');
-    expect(page).toContain('data-create-mode="calibration"');
-    expect(page).toContain('createMode: "calibration"');
-    expect(page).toContain("handleCreateCalibration");
-    expect(page).toContain("knowledge_region:");
-    expect(page).toContain('createMode: "knowledge_region"');
-    expect(page).toContain("handleCreateKnowledgeRegion");
+    expect(page).not.toContain('data-create-group="verification"');
+    expect(page).not.toContain('data-create-group="calibration"');
+    expect(page).not.toContain('data-create-mode-span="knowledge_region"');
+    expect(page).not.toContain('data-create-mode-span="calibration"');
+    expect(page).not.toContain('data-create-mode="calibration"');
+    expect(page).not.toContain("handleCreateCalibration");
+    expect(page).not.toContain("handleCreateKnowledgeRegion");
     expect(page).toContain("errorMessageFromBody");
     expect(page).not.toContain("payload.error ||");
+    expect(read("app/verification/flows/new/page.tsx")).toContain("ProductFlowWizard");
+    expect(read("app/calibration/flows/new/page.tsx")).toContain("ProductFlowWizard");
+    expect(read("components/product-flow/knowledge-region-create.tsx")).toContain(
+      "data-region-create-from-flow",
+    );
 
     const gen = read("app/api/workspace/generate/route.ts");
     expect(gen).toContain('createMode === "knowledge_region"');

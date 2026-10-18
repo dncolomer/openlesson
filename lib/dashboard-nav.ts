@@ -7,6 +7,7 @@ import type {
   DashboardWorkspaceListFilter,
   DashboardWorkspaceTypeFilter,
 } from "@/lib/dashboard-workspace-filters";
+import { productFlowNewPath, productRegionNewPath } from "@/lib/product-flow";
 import type { WorkspaceCreateMode } from "@/lib/workspace-create-modes";
 
 export const DASHBOARD_TABS = [
@@ -63,7 +64,7 @@ export const DASHBOARD_NAV_GROUPS: readonly DashboardNavGroup[] = [
     id: "learning",
     label: "Learning",
     items: [
-      { id: "learning", label: "Workspaces" },
+      { id: "learning", label: "Build" },
       { id: "shop", label: "Your Shop" },
     ],
   },
@@ -71,7 +72,7 @@ export const DASHBOARD_NAV_GROUPS: readonly DashboardNavGroup[] = [
     id: "verification",
     label: "Verification",
     items: [
-      { id: "verification", label: "Workspaces" },
+      { id: "verification", label: "Flows" },
       { id: "verification_regions", label: "Knowledge regions" },
     ],
   },
@@ -79,7 +80,7 @@ export const DASHBOARD_NAV_GROUPS: readonly DashboardNavGroup[] = [
     id: "calibration",
     label: "Calibration",
     items: [
-      { id: "calibration", label: "Workspaces" },
+      { id: "calibration", label: "Flows" },
       { id: "calibration_regions", label: "Knowledge regions" },
     ],
   },
@@ -156,14 +157,25 @@ export function dashboardListFilterForTab(
 }
 
 export function dashboardCreateHref(tab: DashboardProductTab): string {
-  if (tab === "verification") return "/workspace/new?mode=knowledge_region";
-  if (tab === "calibration") return "/workspace/new?mode=calibration";
+  if (tab === "verification") return productFlowNewPath("verification");
+  if (tab === "calibration") return productFlowNewPath("calibration");
+  return "/workspace/new";
+}
+
+export function dashboardRegionCreateHref(
+  tab: DashboardProductTab | DashboardRegionsTab,
+): string {
+  if (tab === "calibration" || tab === "calibration_regions") {
+    return productRegionNewPath("calibration");
+  }
+  if (tab === "verification" || tab === "verification_regions") {
+    return productRegionNewPath("verification");
+  }
   return "/workspace/new";
 }
 
 export function dashboardCreateMode(tab: DashboardProductTab): WorkspaceCreateMode | null {
-  if (tab === "verification") return "knowledge_region";
-  if (tab === "calibration") return "calibration";
+  if (tab === "learning") return null;
   return null;
 }
 

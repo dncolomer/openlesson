@@ -6,9 +6,11 @@ import type { CalibrateQuestion } from "@/lib/calibrate-session";
 import { LearningModelSizePicker } from "@/components/learning-model/LearningModelSizePicker";
 import { FLOW_COUNTDOWN_MINUTES, flowCountdownMinutes } from "@/lib/flow-countdown";
 import { parseLearningModelSize, type LearningModelSize } from "@/lib/learning-model";
+import { CopyFlowUrlButton } from "@/components/product-flow/copy-flow-url-button";
 
 type FlowRecord = {
   id: string;
+  name?: string;
   goal: string;
   questions: CalibrateQuestion[];
   durationMinutes?: number;
@@ -25,6 +27,7 @@ export function CalibrationFlowsPanel({
   ayclToken?: string;
 }) {
   const [flows, setFlows] = useState<FlowRecord[]>([]);
+  const [name, setName] = useState("");
   const [goal, setGoal] = useState("");
   const [minutes, setMinutes] = useState(15);
   const [catalog, setCatalog] = useState<LearningModelSize>(4);
@@ -68,6 +71,7 @@ export function CalibrationFlowsPanel({
           ayclToken,
           action: editingId ? "update" : "create",
           flowId: editingId,
+          name,
           goal,
           questions: questionsFromDraft(),
           durationMinutes: minutes,
@@ -79,6 +83,7 @@ export function CalibrationFlowsPanel({
         setError(payload?.error?.message || "Could not save calibration flow");
         return;
       }
+      setName("");
       setGoal("");
       setDraftQuestions([""]);
       setMinutes(15);
@@ -173,6 +178,13 @@ export function CalibrationFlowsPanel({
       />
 
       <section className="space-y-3 border border-neutral-800 p-4" data-calibration-flow-editor>
+        <input
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          placeholder="Flow name"
+          data-flow-name=""
+          className="w-full border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
+        />
         <textarea
           value={goal}
           onChange={(event) => setGoal(event.target.value)}
@@ -260,7 +272,7 @@ export function CalibrationFlowsPanel({
           <li key={flow.id} className="space-y-2 border border-neutral-800 p-4" data-calibration-flow-card>
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-sm text-white">{flow.goal}</p>
+                <p className="text-sm text-white" data-flow-name>{flow.name || flow.goal}</p>
                 <p className="text-[11px] text-neutral-500">
                   {flow.questions.length} question{flow.questions.length === 1 ? "" : "s"}
                   {" · "}
@@ -275,6 +287,7 @@ export function CalibrationFlowsPanel({
                   className="text-[11px] text-neutral-300 underline"
                   onClick={() => {
                     setEditingId(flow.id);
+                    setName(flow.name || flow.goal);
                     setGoal(flow.goal);
                     setMinutes(flowCountdownMinutes(flow.durationMinutes));
                     setCatalog(parseLearningModelSize(flow.actionCatalog));
@@ -295,9 +308,12 @@ export function CalibrationFlowsPanel({
                 </button>
               </div>
             </div>
-            <p className="break-all font-mono text-[11px] text-neutral-300" data-calibration-flow-public-link>
-              {flow.publicUrl}
-            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="min-w-0 flex-1 break-all font-mono text-[11px] text-neutral-300" data-calibration-flow-public-link>
+                {flow.publicUrl}
+              </p>
+              <CopyFlowUrlButton url={flow.publicUrl} />
+            </div>
           </li>
         ))}
       </ul>

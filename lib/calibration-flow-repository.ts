@@ -83,10 +83,12 @@ async function resolveBackend(): Promise<"supabase" | "memory"> {
 }
 
 function mapFlow(row: Record<string, unknown>): CalibrationFlow {
+  const goal = String(row.goal || "");
   return {
     id: String(row.id),
     workspaceId: String(row.workspace_id),
-    goal: String(row.goal || ""),
+    name: String(row.name || "").trim() || goal,
+    goal,
     questions: normalizeCalibrateQuestions(row.questions),
     durationMinutes: flowCountdownMinutes(row.duration_minutes),
     actionCatalog: parseLearningModelSize(row.action_catalog),
@@ -146,6 +148,7 @@ async function persistCommand(
     const { error } = await insertFlowRow(supabase, "workspace_calibration_flows", {
       id: value.flow.id,
       workspace_id: value.flow.workspaceId,
+      name: value.flow.name,
       goal: value.flow.goal,
       questions: value.flow.questions,
       duration_minutes: value.flow.durationMinutes,
@@ -159,6 +162,7 @@ async function persistCommand(
   }
   if (command.type === "update" && value.flow) {
     const { error } = await updateFlowRow(supabase, "workspace_calibration_flows", value.flow.id, {
+      name: value.flow.name,
       goal: value.flow.goal,
       questions: value.flow.questions,
       duration_minutes: value.flow.durationMinutes,
@@ -245,7 +249,7 @@ async function writeFlowRowWithOptionalColumns(
   row: Record<string, unknown>,
 ): Promise<{ error: { message: string } | null }> {
   let current = row;
-  for (const optional of ["action_catalog", "duration_minutes"] as const) {
+  for (const optional of ["name", "action_catalog", "duration_minutes"] as const) {
     const result = await run(current);
     if (!result.error) return result;
     if (!String(result.error.message).includes(optional) || !(optional in current)) return result;
@@ -254,6 +258,38 @@ async function writeFlowRowWithOptionalColumns(
     current = next;
   }
   return run(current);
+}
+
+export async function getCalibrationFlowById(flowId: string): Promise<CalibrationFlow | null> {
+  const id = String(flowId || "").trim();
+  if (!id) return null;
+  if ((await resolveBackend()) === "memory") {
+    const flow = memoryState().flows.find((item) => item.id === id);
+    return flow ? presentFlow(flow) : null;
+  }
+  const state = await loadSupabaseState({ flowId: id });
+  const flow = state.flows.find((item) => item.id === id);
+  return flow ? presentFlow(flow) : null;
+}
+
+export async function listCalibrationFlowsForWorkspaceIds(
+  workspaceIds: readonly string[],
+): Promise<CalibrationFlow[]> {
+  const ids = [...new Set(workspaceIds.map((id) => String(id || "").trim()).filter(Boolean))];
+  if (ids.length === 0) return [];
+  if ((await resolveBackend()) === "memory") {
+    return memoryState()
+      .flows.filter((flow) => ids.includes(flow.workspaceId))
+      .map(presentFlow);
+  }
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("workspace_calibration_flows")
+    .select("*")
+    .in("workspace_id", ids)
+    .order("created_at", { ascending: false });
+  if (error || !Array.isArray(data)) return [];
+  return data.map((row) => presentFlow(mapFlow(row as Record<string, unknown>)));
 }
 
 export async function listCalibrationFlows(workspaceId: string): Promise<CalibrationFlow[]> {

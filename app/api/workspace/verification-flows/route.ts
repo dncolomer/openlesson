@@ -79,6 +79,7 @@ export async function POST(req: NextRequest) {
         type: "update",
         workspaceId,
         flowId: String(body.flowId || ""),
+        name: typeof body.name === "string" ? body.name : undefined,
         topic: typeof body.topic === "string" ? body.topic : undefined,
         questions: body.questions,
         durationMinutes: body.durationMinutes as number | undefined,
@@ -100,6 +101,7 @@ export async function POST(req: NextRequest) {
     const created = await runVerificationCommand({
       type: "create",
       workspaceId,
+      name: typeof body.name === "string" ? body.name : undefined,
       topic: String(body.topic || ""),
       questions: body.questions,
       durationMinutes: body.durationMinutes as number | undefined,

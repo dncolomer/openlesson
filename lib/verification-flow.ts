@@ -5,6 +5,8 @@
  * Callers (UI, routes) must use these functions — do not re-implement them.
  */
 
+import { normalizeFlowName } from "@/lib/product-flow";
+import { TUTOR_CANVAS_VOICE } from "@/lib/prompt-kernel/tutor-voice";
 import { completeFlowEmbedding, FLOW_EMBEDDING_MODEL_ID } from "@/lib/flow-embedding";
 import type { SessionMarkButtonId } from "@/lib/session-marks";
 import type { SessionBranchModel } from "@/lib/session-branch-model";
@@ -29,6 +31,7 @@ export type VerificationQuestion = {
 export type VerificationFlow = {
   id: string;
   workspaceId: string;
+  name: string;
   topic: string;
   questions: VerificationQuestion[];
   /** Stored default; the run clock is chosen on the session start screen. */
@@ -455,6 +458,7 @@ export type VerificationCommand =
   | {
       type: "create";
       workspaceId: string;
+      name?: string;
       topic: string;
       questions: unknown;
       durationMinutes?: number;
@@ -466,6 +470,7 @@ export type VerificationCommand =
       type: "update";
       workspaceId: string;
       flowId: string;
+      name?: string;
       topic?: string;
       questions?: unknown;
       durationMinutes?: number;
@@ -511,6 +516,7 @@ export function applyVerificationCommand(
     const flow: VerificationFlow = {
       id: command.id || makeId("vf"),
       workspaceId: command.workspaceId,
+      name: normalizeFlowName(command.name, topic),
       topic,
       questions: normalizeQuestionPool(command.questions),
       durationMinutes: flowCountdownMinutes(command.durationMinutes),
@@ -532,6 +538,10 @@ export function applyVerificationCommand(
     if (!topic) return { ok: false, reason: "topic_required", state };
     const flow: VerificationFlow = {
       ...current,
+      name:
+        command.name === undefined
+          ? normalizeFlowName(current.name, topic)
+          : normalizeFlowName(command.name, topic),
       topic,
       questions:
         command.questions === undefined
@@ -632,4 +642,65 @@ export function startChoicesForFlow(
   random: () => number = Math.random,
 ): VerificationFlowStartChoices {
   return verificationFlowStartChoices(flow.questions, random);
+}
+
+export function buildVerificationPoolFromTopicRequest(topic: string): {
+  kind: "verification_from_topic";
+  instructions: string;
+  user: string;
+} {
+  const text = topic.trim();
+  return {
+    kind: "verification_from_topic",
+    instructions: [
+      "Generate starting questions for a verification flow from the topic.",
+      "Return JSON { \"questions\": string[] } with 3 to 5 starting questions.",
+      "Each question is what a person reads before they answer: two or three unhurried sentences, easy to warm up to, specific to the topic, and free of headings or stacked demands.",
+      TUTOR_CANVAS_VOICE,
+    ].join(" "),
+    user: `Topic:\n${text}`,
+  };
+}
+
+export function parseVerificationQuestionTexts(raw: unknown): string[] {
+  let list: unknown[] = [];
+  if (Array.isArray(raw)) list = raw;
+  else if (raw && typeof raw === "object") {
+    const record = raw as { questions?: unknown; flows?: unknown };
+    if (Array.isArray(record.questions)) list = record.questions;
+    else if (Array.isArray(record.flows)) {
+      const first = record.flows[0];
+      if (first && typeof first === "object" && Array.isArray((first as { questions?: unknown }).questions)) {
+        list = (first as { questions: unknown[] }).questions;
+      }
+    }
+  }
+  const questions: string[] = [];
+  const seen = new Set<string>();
+  for (const item of list) {
+    const record = item && typeof item === "object" ? (item as { text?: unknown; question?: unknown }) : null;
+    const text = String(
+      typeof item === "string" ? item : record?.text ?? record?.question ?? "",
+    ).trim();
+    if (!text) continue;
+    const key = text.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    questions.push(text);
+    if (questions.length >= 8) break;
+  }
+  return questions;
+}
+
+export async function generateVerificationPoolFromTopic(input: {
+  topic: string;
+  complete: (request: {
+    kind: "verification_from_topic";
+    instructions: string;
+    user: string;
+  }) => Promise<unknown>;
+}): Promise<string[]> {
+  const request = buildVerificationPoolFromTopicRequest(input.topic);
+  const raw = await input.complete(request);
+  return parseVerificationQuestionTexts(raw);
 }

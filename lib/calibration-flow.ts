@@ -4,6 +4,7 @@
  * sounding. It does not pick one verification question.
  */
 
+import { normalizeFlowName } from "@/lib/product-flow";
 import { TUTOR_CANVAS_VOICE } from "@/lib/prompt-kernel/tutor-voice";
 import {
   buildCalibrateProofMetadata,
@@ -20,6 +21,7 @@ import { acceptParticipantIdentity } from "@/lib/verification-flow";
 export type CalibrationFlow = {
   id: string;
   workspaceId: string;
+  name: string;
   goal: string;
   questions: CalibrateQuestion[];
   /** Countdown chosen when the flow is created, in minutes. */
@@ -104,6 +106,7 @@ export type CalibrationCommand =
   | {
       type: "create";
       workspaceId: string;
+      name?: string;
       goal: string;
       questions: unknown;
       durationMinutes?: number;
@@ -115,6 +118,7 @@ export type CalibrationCommand =
       type: "update";
       workspaceId: string;
       flowId: string;
+      name?: string;
       goal?: string;
       questions?: unknown;
       durationMinutes?: number;
@@ -193,6 +197,7 @@ export function applyCalibrationCommand(
     const flow: CalibrationFlow = {
       id: command.id || makeId(),
       workspaceId: command.workspaceId,
+      name: normalizeFlowName(command.name, draft.goal),
       goal: draft.goal,
       questions: draft.questions,
       durationMinutes: flowCountdownMinutes(command.durationMinutes),
@@ -217,6 +222,10 @@ export function applyCalibrationCommand(
     if (questions.length === 0) return { ok: false, reason: "questions_required", state };
     const flow: CalibrationFlow = {
       ...current,
+      name:
+        command.name === undefined
+          ? normalizeFlowName(current.name, goal)
+          : normalizeFlowName(command.name, goal),
       goal,
       questions,
       durationMinutes:

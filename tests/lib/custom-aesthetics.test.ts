@@ -479,11 +479,9 @@ describe("custom aesthetic surfaces", () => {
     expect(covers).toContain("pickWorkspaceCoverFromPool");
 
     const dashboard = readDashboardSurface();
-    const card = read("components/WorkspaceDashboardCard.tsx");
     expect(dashboard).toContain("fetchAestheticPackages");
     expect(dashboard).toContain("imagePool={workspaceCoverPool}");
-    expect(card).toContain("imagePool={imagePool}");
-    expect(card).not.toContain("public/aesthetics");
+    expect(read("components/dashboard/dashboard-knowledge-regions-tab.tsx")).not.toContain("public/aesthetics");
     // No new control that chooses a named pack versus the custom set.
     expect(covers).not.toContain("Greco-futurism");
     expect(sessionChrome).toContain("selectedAestheticId");

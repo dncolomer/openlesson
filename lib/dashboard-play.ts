@@ -5,7 +5,6 @@ export type DashboardPlayKind = (typeof DASHBOARD_PLAY_KINDS)[number];
 
 export const DASHBOARD_PLAY_KIND_META_KEY = "play_kind";
 export const DASHBOARD_PLAY_DISPOSABLE_META_KEY = "disposable";
-export const DASHBOARD_HOME_RECENT_LIMIT = 3;
 export const DASHBOARD_PLAY_START_PATH = "/api/play/start";
 export const DASHBOARD_PLAY_CALIBRATE_QUESTIONS_PATH = "/api/play/calibrate-questions";
 export const DASHBOARD_PLAY_PROMPT_MAX = 400;

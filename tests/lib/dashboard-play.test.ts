@@ -29,7 +29,7 @@ describe("dashboard play sessions", () => {
   it("wires Home play start and play session shells", () => {
     const dash = readDashboardSurface();
     expect(dash).toContain("data-dashboard-play");
-    expect(dash).toContain("Quick Session");
+    expect(dash).toContain("Quick Work Session");
     expect(dash).not.toContain("Start a session");
     expect(dash).not.toContain("data-dashboard-play-topics");
     expect(dash).not.toContain("pickDashboardPlayTopics");

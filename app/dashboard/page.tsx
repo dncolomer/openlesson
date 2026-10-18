@@ -17,6 +17,7 @@ import { DashboardConfigTab } from "@/components/dashboard/dashboard-config-tab"
 import { DashboardHelpTab } from "@/components/dashboard/dashboard-help-tab";
 import { DashboardHomeTab } from "@/components/dashboard/dashboard-home-tab";
 import { DashboardIntegrationsTab } from "@/components/dashboard/dashboard-integrations-tab";
+import { DashboardFlowsTab } from "@/components/dashboard/dashboard-flows-tab";
 import { DashboardKnowledgeRegionsTab } from "@/components/dashboard/dashboard-knowledge-regions-tab";
 import { DashboardPlansTab } from "@/components/dashboard/dashboard-plans-tab";
 import { DashboardSessionsTab } from "@/components/dashboard/dashboard-sessions-tab";
@@ -39,8 +40,6 @@ import {
   workspaceMatchesDashboardTypeFilter,
   type DashboardWorkspaceListFilter,
 } from "@/lib/dashboard-workspace-filters";
-import { dashboardRecentWorkspaces } from "@/lib/dashboard-home";
-import { DASHBOARD_HOME_RECENT_LIMIT } from "@/lib/dashboard-play";
 import {
   dashboardFrameLabel,
   dashboardListFilterForTab,
@@ -762,8 +761,8 @@ export default function DashboardPage() {
     pinnedWorkspaceIds,
   ]);
 
-  const homeRecentWorkspaces = useMemo(
-    () => dashboardRecentWorkspaces(workspaces, DASHBOARD_HOME_RECENT_LIMIT),
+  const learningWorkspaces = useMemo(
+    () => workspaces.filter((row) => workspaceMatchesDashboardTypeFilter(row, "learning")),
     [workspaces],
   );
   const productEmpty =
@@ -864,15 +863,16 @@ export default function DashboardPage() {
 
         {activeTab === "home" && (
           <DashboardHomeTab
-            workspaces={workspaces}
-            recentWorkspaces={homeRecentWorkspaces}
-            formatDate={formatDate}
+            workspaces={learningWorkspaces}
             t={t}
-            workspaceCoverPool={workspaceCoverPool}
           />
         )}
 
-        {(isDashboardProductTab(activeTab) || isDashboardShopTab(activeTab)) && (
+        {(activeTab === "verification" || activeTab === "calibration") && (
+          <DashboardFlowsTab productTab={activeTab} formatDate={formatDate} />
+        )}
+
+        {(activeTab === "learning" || isDashboardShopTab(activeTab)) && (
           <DashboardPlansTab
             archivingWorkspaceId={archivingWorkspaceId}
             filteredWorkspaces={filteredWorkspaces}
@@ -883,11 +883,7 @@ export default function DashboardPage() {
             paginatedPlans={paginatedPlans}
             pinnedWorkspaceIds={pinnedWorkspaceIds}
             productEmpty={productEmpty}
-            productTab={
-              activeTab === "verification" || activeTab === "calibration"
-                ? activeTab
-                : "learning"
-            }
+            productTab="learning"
             surface={isDashboardShopTab(activeTab) ? "shop" : "workspaces"}
             setPlanPage={setPlanPage}
             setPlanSearch={setPlanSearch}
@@ -897,7 +893,6 @@ export default function DashboardPage() {
             showArchivedWorkspaces={showArchivedWorkspaces}
             t={t}
             totalPlanPages={totalPlanPages}
-            workspaceCoverPool={workspaceCoverPool}
             workspacePage={workspacePage}
             workspacePageSize={workspacePageSize}
             workspaceSearch={workspaceSearch}

@@ -72,9 +72,10 @@ export function workspaceMatchesDashboardTypeFilter(
   );
 }
 
-/** True when the dashboard has no workspaces at all (not a search/filter miss). */
+/** True when the dashboard has no Learning workspaces (owner containers stay hidden). */
 export function dashboardHasNoWorkspaces(
-  workspaces: readonly unknown[] | null | undefined,
+  workspaces: readonly { workspace_kind?: string | null }[] | null | undefined,
 ): boolean {
-  return !workspaces || workspaces.length === 0;
+  if (!workspaces || workspaces.length === 0) return true;
+  return !workspaces.some((row) => workspaceMatchesDashboardTypeFilter(row, "learning"));
 }

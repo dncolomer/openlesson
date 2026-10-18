@@ -25,20 +25,15 @@ import { INITIAL_CHAPTERS_BANDS } from "@/lib/initial-chapters";
 
 describe("workspace create modes", () => {
   it("exposes blank + template as UI modes; files_goal stays API-only", () => {
-    expect(UI_WORKSPACE_CREATE_MODES).toEqual([
-      "blank",
-      "template",
-      "knowledge_region",
-      "calibration",
-    ]);
+    expect(UI_WORKSPACE_CREATE_MODES).toEqual(["blank", "template"]);
     expect(UI_WORKSPACE_CREATE_MODES).not.toContain("files_goal");
     expect(isUiWorkspaceCreateMode("blank")).toBe(true);
     expect(isUiWorkspaceCreateMode("template")).toBe(true);
-    expect(isUiWorkspaceCreateMode("knowledge_region")).toBe(true);
-    expect(isUiWorkspaceCreateMode("calibration")).toBe(true);
+    expect(isUiWorkspaceCreateMode("knowledge_region")).toBe(false);
+    expect(isUiWorkspaceCreateMode("calibration")).toBe(false);
     expect(isUiWorkspaceCreateMode("files_goal")).toBe(false);
-    expect(workspaceCreateModeFromQuery("knowledge_region")).toBe("knowledge_region");
-    expect(workspaceCreateModeFromQuery("calibration")).toBe("calibration");
+    expect(workspaceCreateModeFromQuery("knowledge_region")).toBeNull();
+    expect(workspaceCreateModeFromQuery("calibration")).toBeNull();
     expect(workspaceCreateModeFromQuery("files_goal")).toBeNull();
     expect(API_WORKSPACE_CREATE_MODES).toEqual(["files_goal"]);
     expect(isApiAllowedCreateMode("files_goal")).toBe(true);

@@ -20,6 +20,7 @@ import {
   emptyVerificationState,
   filterKnowledgeRowsByVerificationFlow,
   generateSyntheticPowItems,
+  generateVerificationPoolFromTopic,
   knowledgeRowsFromFlowResults,
   localVerificationOpening,
   pickVerificationFlowQuestion,
@@ -713,21 +714,55 @@ describe("verification workspace shell gates", () => {
     expect(standard[0]).toBe("workspace");
   });
 
-  it("names the create card and shell Verification Workspace and mounts flow controls only for this kind", () => {
+  it("names the create card and shell Verification Workspace and mounts flow controls only for this kind", async () => {
     const page = read("app/workspace/new/page.tsx");
-    expect(page).toContain('title: "Verification workspace"');
-    expect(page).toContain('data-create-mode="knowledge_region"');
-    expect(page).toContain('data-create-mode="calibration"');
-    expect(page).toContain("Calibration workspace");
+    expect(page).not.toContain('title: "Verification workspace"');
+    expect(page).not.toContain('data-create-mode="knowledge_region"');
+    expect(page).not.toContain('data-create-mode="calibration"');
+    expect(page).not.toContain("Calibration workspace");
+    expect(read("app/verification/flows/new/page.tsx")).toContain("ProductFlowWizard");
+    expect(read("components/product-flow/product-flow-wizard.tsx")).toContain("Publish");
+    expect(read("components/product-flow/product-flow-wizard.tsx")).toContain(
+      "data-verification-generate-from-topic",
+    );
+    expect(read("components/product-flow/product-flow-wizard.tsx")).toContain(
+      "DASHBOARD_FLOWS_GENERATE_PATH",
+    );
+    const generated = await generateVerificationPoolFromTopic({
+      topic: "Limits",
+      complete: async (request) => {
+        expect(request.kind).toBe("verification_from_topic");
+        expect(request.user).toContain("Limits");
+        expect(request.instructions).toContain("3 to 5");
+        return { questions: ["What is a limit?", "How does a sequence converge?"] };
+      },
+    });
+    expect(generated).toEqual(["What is a limit?", "How does a sequence converge?"]);
+    const generateRoute = read("app/api/dashboard/flows/generate-questions/route.ts");
+    expect(generateRoute).toContain("generateVerificationPoolFromTopic");
+    expect(generateRoute).toContain("generateCalibrationPoolFromGoal");
+    expect(generateRoute).toContain("callXaiJSON");
+    expect(generateRoute).toContain("requireAuthenticatedUser");
+    expect(read("components/product-flow/product-flow-page.tsx")).toContain(
+      "data-verification-flow-pool",
+    );
+    expect(read("components/product-flow/product-flow-page.tsx")).toContain(
+      "data-calibration-flow-add-question",
+    );
     const shell = read("components/workspace-view/workspace-chrome.tsx");
-    expect(shell).toContain("Verification workspace");
     expect(shell).toContain("data-verification-workspace-shell");
     expect(shell).toContain("data-calibration-workspace-shell");
     expect(shell).toContain("workspaceProductShell");
+    expect(shell).not.toContain("Verification workspace");
+    expect(shell).not.toContain("Calibration workspace");
+    expect(shell).not.toContain("Learning workspace");
 
     const flows = read("components/VerificationFlowsPanel.tsx");
     expect(flows).toContain("data-verification-flow-pool");
     expect(flows).toContain("data-verification-flow-public-link");
+    expect(flows).toContain("CopyFlowUrlButton");
+    expect(read("components/CalibrationFlowsPanel.tsx")).toContain("CopyFlowUrlButton");
+    expect(read("components/product-flow/copy-flow-url-button.tsx")).toContain("data-flow-copy-url");
     expect(flows).toContain("data-verification-flow-skill");
     expect(flows).toContain("Generate skill");
     expect(flows).toContain("buildVerificationFlowSkillMarkdown");
@@ -740,6 +775,7 @@ describe("verification workspace shell gates", () => {
 
     const regions = read("components/CustomVerificationModelsPanel.tsx");
     expect(regions).toContain("data-region-create-from-flow");
+    expect(regions).toContain("data-create-flow-first");
     expect(regions).toContain("Create from verification flow");
     expect(regions).toContain("data-region-create-from-synthetic");
     expect(regions).toContain("Create from Synthetic Agents");

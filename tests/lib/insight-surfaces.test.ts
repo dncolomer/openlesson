@@ -172,11 +172,10 @@ describe("shipped insight surface wiring", () => {
     "utf8",
   );
 
-  it("removes Insights from the Dashboard tab set and mount", () => {
+  it("keeps workspace InsightsDashboardTab off the Dashboard", () => {
     expect(dashboard).not.toContain("InsightsDashboardTab");
-    expect(dashboard).not.toMatch(/id:\s*"insights"/);
-    expect(dashboard).not.toContain('activeTab === "insights"');
-    expect(dashboard).not.toMatch(/\|\s*"insights"/);
+    expect(dashboard).not.toContain("DashboardInsightsTab");
+    expect(dashboard).not.toContain("isDashboardInsightsTab");
   });
 
   it("hosts workspace-scoped Insights inside Knowledge performance panel", () => {

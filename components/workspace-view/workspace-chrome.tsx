@@ -82,16 +82,13 @@ export function WorkspaceViewChrome({
   onSelectSection: (section: WorkspaceSectionKey) => void;
   plan: Workspace;
 }) {
+  const productShell = workspaceProductShell(plan.workspace_kind);
   return (
     <>
       {!hideNavbar ? <Navbar /> : null}
       <p
         data-console-frame-label=""
-        className={
-          hideNavbar
-            ? `pointer-events-none absolute left-3 top-3 z-[4] ${CONSOLE_LABEL_CLASS}`
-            : `pointer-events-none shrink-0 px-4 pt-2 sm:px-6 ${CONSOLE_LABEL_CLASS}`
-        }
+        className={`pointer-events-none absolute left-3 top-3 z-[4] ${CONSOLE_LABEL_CLASS}`}
       >
         Map
       </p>
@@ -125,29 +122,22 @@ export function WorkspaceViewChrome({
         </div>
       ) : null}
 
-      <p
-        className="shrink-0 border-b border-neutral-800 bg-neutral-950 px-4 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-neutral-400"
-        data-workspace-product-shell={workspaceProductShell(plan.workspace_kind)}
-        {...(workspaceProductShell(plan.workspace_kind) === "verification"
+      <div
+        data-workspace-product-shell={productShell}
+        {...(productShell === "verification"
           ? { "data-verification-workspace-shell": true }
-          : workspaceProductShell(plan.workspace_kind) === "calibration"
+          : productShell === "calibration"
             ? { "data-calibration-workspace-shell": true }
             : { "data-learning-workspace-shell": true })}
       >
-        {workspaceProductShell(plan.workspace_kind) === "verification"
-          ? "Verification workspace"
-          : workspaceProductShell(plan.workspace_kind) === "calibration"
-            ? "Calibration workspace"
-            : "Learning workspace"}
-      </p>
-
-      <WorkspaceSectionNav
-        sections={sections}
-        activeSection={activeSection}
-        onChange={onSelectSection}
-        variant="bar"
-        workspaceTitle={plan.title || plan.root_topic}
-      />
+        <WorkspaceSectionNav
+          sections={sections}
+          activeSection={activeSection}
+          onChange={onSelectSection}
+          variant="bar"
+          workspaceTitle={plan.title || plan.root_topic}
+        />
+      </div>
     </>
   );
 }

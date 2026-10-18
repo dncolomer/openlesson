@@ -4,8 +4,6 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Workspace } from "@/lib/storage";
-import { WorkspaceCardHero } from "@/components/WorkspaceCardHero";
-import { dashboardWorkspaceKindLabel } from "@/lib/dashboard-home";
 import { dashboardHasNoWorkspaces } from "@/lib/dashboard-workspace-filters";
 import {
   DASHBOARD_PLAY_KINDS,
@@ -18,18 +16,12 @@ import { errorMessageFromBody } from "@/lib/api-error-envelope";
 
 export type DashboardHomeTabProps = {
   workspaces: Workspace[];
-  recentWorkspaces: Workspace[];
-  formatDate: (value: string) => string;
   t: (key: string, params?: Record<string, string | number>) => string;
-  workspaceCoverPool?: readonly string[] | null;
 };
 
 export function DashboardHomeTab({
   workspaces,
-  recentWorkspaces,
-  formatDate,
   t,
-  workspaceCoverPool = null,
 }: DashboardHomeTabProps) {
   const router = useRouter();
   const [kind, setKind] = useState<DashboardPlayKind>("learn");
@@ -78,7 +70,7 @@ export function DashboardHomeTab({
           Play
         </p>
         <h2 className="max-w-2xl text-3xl font-medium tracking-[-1.2px] text-white sm:text-4xl">
-          Quick Session
+          Quick Work Session
         </h2>
         <p className="mt-3 max-w-xl text-sm leading-relaxed text-neutral-400">
           A prompt is enough. These runs are disposable — they are not attached to a workspace
@@ -157,44 +149,7 @@ export function DashboardHomeTab({
             {t("dashboard.emptyWorkspacesCta")}
           </Link>
         </section>
-      ) : (
-        <section className="space-y-3" data-dashboard-home-recent-workspaces>
-          <h3 className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
-            Recent workspaces
-          </h3>
-          <div className="grid gap-3 md:grid-cols-3">
-            {recentWorkspaces.map((workspace) => (
-              <Link
-                key={workspace.id}
-                href={`/workspace/${workspace.id}`}
-                className="console-copy group block overflow-hidden transition hover:border-white/80"
-                data-dashboard-recent-workspace
-              >
-                <WorkspaceCardHero
-                  workspaceId={workspace.id}
-                  coverImageUrl={workspace.cover_image_url}
-                  imagePool={workspaceCoverPool}
-                  fallback="aesthetic"
-                  heightClassName="h-36 sm:h-40"
-                  badges={
-                    <span className="console-chip px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300">
-                      {dashboardWorkspaceKindLabel(workspace.workspace_kind)}
-                    </span>
-                  }
-                />
-                <div className="p-4">
-                  <h4 className="line-clamp-2 text-base font-medium text-white">
-                    {workspace.title || workspace.root_topic}
-                  </h4>
-                  {workspace.created_at ? (
-                    <p className="mt-1 text-xs text-neutral-500">{formatDate(workspace.created_at)}</p>
-                  ) : null}
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
+      ) : null}
     </div>
   );
 }

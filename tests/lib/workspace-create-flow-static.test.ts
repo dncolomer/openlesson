@@ -16,7 +16,8 @@ describe("workspace create + builder static wiring", () => {
     expect(page).toContain("isUiWorkspaceCreateMode");
     expect(page).toContain("Blank");
     expect(page).toContain("From Template");
-    expect(page).toContain("Verification workspace");
+    expect(page).not.toContain("Verification workspace");
+    expect(page).not.toContain("Calibration workspace");
     expect(page).not.toContain("From Files + Goal");
     expect(page).not.toContain("files_goal");
     expect(page).not.toContain("handleCreateFilesGoal");
@@ -24,19 +25,17 @@ describe("workspace create + builder static wiring", () => {
     expect(page).toContain("data-aycl-banner");
     expect(page).toContain("/all-you-can-learn");
     expect(page).toContain("md:grid-cols-3");
-    expect(page).toContain('data-create-layout="three-groups"');
+    expect(page).toContain('data-create-layout="learning"');
     expect(page).toContain('data-create-group="learning"');
     expect(page).toContain("Learning workspace");
-    expect(page).toContain('data-create-group="verification"');
-    expect(page).toContain('data-create-group="calibration"');
-    expect(page).toMatch(/id="create-group-verification"[\s\S]{0,240}\n\s*Verification workspace\n/);
-    expect(page).toMatch(/id="create-group-calibration"[\s\S]{0,240}\n\s*Calibration workspace\n/);
-    expect(page).toContain('data-create-mode-span="knowledge_region"');
-    expect(page).toContain('data-create-mode-span="calibration"');
+    expect(page).not.toContain('data-create-group="verification"');
+    expect(page).not.toContain('data-create-group="calibration"');
+    expect(page).not.toContain('data-create-mode-span="knowledge_region"');
+    expect(page).not.toContain('data-create-mode-span="calibration"');
     expect(page).toContain('data-create-mode="aycl"');
     expect(page).toContain("data-create-mode={card.mode}");
-    expect(page).toContain('data-create-mode="knowledge_region"');
-    expect(page).toContain('data-create-mode="calibration"');
+    expect(page).not.toContain('data-create-mode="knowledge_region"');
+    expect(page).not.toContain('data-create-mode="calibration"');
     expect(page).not.toContain("xl:grid-cols-4");
     expect(page).toContain("All You Can Learn");
     // Login control removed from header (auth redirect on submit remains)
@@ -44,8 +43,8 @@ describe("workspace create + builder static wiring", () => {
     expect(page).toMatch(/Login removed from workspace new screen/);
     expect(page).toContain("createMode: \"blank\"");
     expect(page).toContain("createMode: \"template\"");
-    expect(page).toContain("createMode: \"knowledge_region\"");
-    expect(page).toContain("createMode: \"calibration\"");
+    expect(page).not.toContain("createMode: \"knowledge_region\"");
+    expect(page).not.toContain("createMode: \"calibration\"");
     expect(page).toContain("workspaceCreateModeFromQuery");
     expect(page).toContain('searchParams.get("mode")');
   });
@@ -103,11 +102,11 @@ describe("workspace create + builder static wiring", () => {
     expect(en.planView.planBuilder).toBe("Builder");
   });
 
-  it("workspace Knowledge hosts InsightsDashboardTab; Dashboard no longer has Insights tab", () => {
+  it("workspace Knowledge hosts InsightsDashboardTab; Dashboard has no Insights diary", () => {
     const dash = read("app/dashboard/page.tsx");
     expect(dash).not.toContain("InsightsDashboardTab");
-    expect(dash).not.toMatch(/id:\s*"insights"/);
-    expect(dash).not.toContain('activeTab === "insights"');
+    expect(dash).not.toContain("DashboardInsightsTab");
+    expect(dash).not.toContain("isDashboardInsightsTab");
 
     // Workspace-scoped list UI; not Performance chat
     const insightsTab = read("components/InsightsDashboardTab.tsx");

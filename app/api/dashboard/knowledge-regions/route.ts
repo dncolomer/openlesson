@@ -1,5 +1,5 @@
 /**
- * Owner dashboard: Knowledge regions on Verification or Calibration workspaces.
+ * Owner dashboard: Knowledge regions for Verification or Calibration flows.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
@@ -8,6 +8,15 @@ import {
   parseDashboardKnowledgeRegionKind,
   presentDashboardKnowledgeRegions,
 } from "@/lib/dashboard-knowledge-regions";
+import { parseProductFlowKind, productRegionPagePath } from "@/lib/product-flow";
+import { listProductFlowWorkspaceIds } from "@/lib/product-flow-owner";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { buildRegionFromFlowEmbeddings } from "@/lib/verification-flow";
+import { getCalibrationFlowById } from "@/lib/calibration-flow-repository";
+import {
+  getVerificationFlowById,
+  listVerificationResults,
+} from "@/lib/verification-flow-repository";
 
 export const runtime = "nodejs";
 
@@ -54,6 +63,79 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to load knowledge regions";
+    return jsonError(500, message);
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const auth = await requireAuthenticatedUser();
+    if (!auth.ok) return auth.response;
+    const body = (await req.json()) as Record<string, unknown>;
+    const kind = parseProductFlowKind(body.kind) || parseDashboardKnowledgeRegionKind(body.kind);
+    if (!kind) return jsonError(400, "kind must be verification or calibration");
+    const name = String(body.name || "").trim();
+    if (!name) return jsonError(400, "name is required");
+    const flowId = String(body.flowId || "").trim();
+    if (!flowId) return jsonError(400, "flowId is required");
+
+    const workspaceIds = await listProductFlowWorkspaceIds(auth.supabase, auth.user.id, kind);
+    const flow =
+      kind === "calibration"
+        ? await getCalibrationFlowById(flowId)
+        : await getVerificationFlowById(flowId);
+    if (!flow || !workspaceIds.includes(flow.workspaceId)) {
+      return jsonError(404, "Flow not found");
+    }
+
+    const results = await listVerificationResults(flow.workspaceId);
+    const spec = buildRegionFromFlowEmbeddings({
+      name,
+      flowId,
+      items: results,
+    });
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      return NextResponse.json({
+        kind,
+        persisted: false,
+        spec,
+        regionPath: productRegionPagePath(kind, ""),
+      });
+    }
+    const supabase = createAdminClient();
+    const { data, error } = await supabase
+      .from("custom_verification_models")
+      .insert({
+        workspace_id: flow.workspaceId,
+        name: spec.name,
+        description: `${kind}-flow:${flowId}`,
+        embedding_model_id: spec.embedding_model_id,
+        dim: spec.dim,
+        centroid: spec.centroid,
+        cohort_cohesion: spec.cohort_cohesion,
+        mean_radius: spec.mean_radius,
+        cosine_threshold: spec.cosine_threshold,
+        subject_count: spec.subject_count,
+        subjects: spec.subjects,
+        created_by: auth.user.id,
+        updated_at: new Date().toISOString(),
+      })
+      .select("id")
+      .maybeSingle();
+    if (error || !data?.id) {
+      return jsonError(500, error?.message || "Failed to create knowledge region");
+    }
+    const id = String(data.id);
+    return NextResponse.json({
+      kind,
+      persisted: true,
+      id,
+      regionPath: productRegionPagePath(kind, id),
+      subject_count: spec.subject_count,
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to create knowledge region";
     return jsonError(500, message);
   }
 }

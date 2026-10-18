@@ -1,5 +1,5 @@
 /**
- * Home dashboard summaries: product counts, recent workspaces, recent flows.
+ * Home dashboard summaries: product counts and recent flows.
  */
 
 import {
@@ -9,6 +9,11 @@ import {
 import { workspaceProductShell } from "@/lib/workspace-kind";
 import { calibrationFlowPublicPath } from "@/lib/calibration-flow";
 import { verificationFlowPublicPath } from "@/lib/verification-flow";
+import {
+  flowDisplayName,
+  productFlowKindFromDashboardKind,
+  productFlowPagePath,
+} from "@/lib/product-flow";
 
 export type DashboardWorkspaceCountKey = DashboardWorkspaceTypeFilter;
 
@@ -39,37 +44,30 @@ export function dashboardWorkspaceCounts(
   };
 }
 
-export function dashboardRecentWorkspaces<T extends { created_at?: string }>(
-  workspaces: readonly T[],
-  limit = 6,
-): T[] {
-  return [...workspaces]
-    .sort((a, b) => Date.parse(b.created_at || "") - Date.parse(a.created_at || ""))
-    .slice(0, Math.max(0, limit));
-}
-
 export type DashboardRecentFlowKind = "verify" | "calibrate";
 
 export type DashboardRecentFlow = {
   id: string;
   kind: DashboardRecentFlowKind;
+  name: string;
   title: string;
   workspaceId: string;
   workspaceTitle: string;
   createdAt: string;
   publicPath: string;
   workspacePath: string;
+  flowPath: string;
   questionCount: number;
 };
 
-export function dashboardFlowWorkspacePath(kind: DashboardRecentFlowKind, workspaceId: string): string {
-  const section = kind === "calibrate" ? "calibration_flows" : "verification_flows";
-  return `/workspace/${workspaceId}?section=${section}`;
+export function dashboardFlowWorkspacePath(kind: DashboardRecentFlowKind, flowId: string): string {
+  return productFlowPagePath(productFlowKindFromDashboardKind(kind), flowId);
 }
 
 export function presentDashboardRecentFlow(input: {
   id: unknown;
   kind: DashboardRecentFlowKind;
+  name?: unknown;
   title?: unknown;
   workspaceId: unknown;
   workspaceTitle?: unknown;
@@ -85,15 +83,22 @@ export function presentDashboardRecentFlow(input: {
     input.kind === "calibrate"
       ? calibrationFlowPublicPath(token)
       : verificationFlowPublicPath(token);
+  const name = flowDisplayName({
+    name: input.name,
+    title: input.title,
+  });
+  const flowPath = dashboardFlowWorkspacePath(input.kind, id);
   return {
     id,
     kind: input.kind,
-    title: String(input.title || "").trim() || "Untitled flow",
+    name,
+    title: name,
     workspaceId,
     workspaceTitle: String(input.workspaceTitle || "").trim() || "Workspace",
     createdAt: String(input.createdAt || ""),
-    publicPath: token ? publicPath : dashboardFlowWorkspacePath(input.kind, workspaceId),
-    workspacePath: dashboardFlowWorkspacePath(input.kind, workspaceId),
+    publicPath: token ? publicPath : flowPath,
+    workspacePath: flowPath,
+    flowPath,
     questionCount: questionCountFromUnknown(input.questionCount),
   };
 }
@@ -105,6 +110,38 @@ export function sortDashboardRecentFlows(
   return [...rows]
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
     .slice(0, Math.max(0, limit));
+}
+
+export const DASHBOARD_FLOWS_PAGE_SIZE = 10;
+
+export type DashboardFlowPage<T> = {
+  page: number;
+  totalPages: number;
+  start: number;
+  end: number;
+  total: number;
+  rows: T[];
+};
+
+export function paginateDashboardFlows<T>(
+  rows: readonly T[],
+  page: number,
+  pageSize = DASHBOARD_FLOWS_PAGE_SIZE,
+): DashboardFlowPage<T> {
+  const size = Math.max(1, Math.round(pageSize) || DASHBOARD_FLOWS_PAGE_SIZE);
+  const total = rows.length;
+  const totalPages = Math.max(1, Math.ceil(total / size));
+  const safePage = Math.min(Math.max(1, Math.round(page) || 1), totalPages);
+  const startIndex = (safePage - 1) * size;
+  const slice = rows.slice(startIndex, startIndex + size);
+  return {
+    page: safePage,
+    totalPages,
+    start: total === 0 ? 0 : startIndex + 1,
+    end: startIndex + slice.length,
+    total,
+    rows: slice,
+  };
 }
 
 export function dashboardWorkspaceKindLabel(kind: unknown): string {

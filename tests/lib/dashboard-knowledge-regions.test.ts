@@ -1,10 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { readDashboardSurface, readRepo } from "../helpers/surface-source";
 import {
+  dashboardKnowledgeRegionCreateHref,
   dashboardKnowledgeRegionHref,
   parseDashboardKnowledgeRegionKind,
   presentDashboardKnowledgeRegions,
 } from "@/lib/dashboard-knowledge-regions";
+import {
+  knowledgeRegionCreateOffersFlowSelect,
+  productFlowNewPath,
+  productRegionNewPath,
+  productRegionPagePath,
+} from "@/lib/product-flow";
 
 describe("dashboard knowledge regions", () => {
   it("keeps verification and calibration regions on their own workspaces", () => {
@@ -46,7 +53,20 @@ describe("dashboard knowledge regions", () => {
     expect(calibrate[0]?.description).toBe("thin");
     expect(parseDashboardKnowledgeRegionKind("verification")).toBe("verification");
     expect(parseDashboardKnowledgeRegionKind("learning")).toBeNull();
-    expect(dashboardKnowledgeRegionHref("ws-1")).toBe("/workspace/ws-1?section=knowledge");
+    expect(dashboardKnowledgeRegionHref("verification", "r-1")).toBe(
+      "/verification/regions/r-1",
+    );
+    expect(dashboardKnowledgeRegionHref("calibration", "r-c")).toBe(
+      productRegionPagePath("calibration", "r-c"),
+    );
+    expect(dashboardKnowledgeRegionCreateHref("verification")).toBe(
+      productRegionNewPath("verification"),
+    );
+    expect(knowledgeRegionCreateOffersFlowSelect(0)).toEqual({
+      canSelectExistingFlow: false,
+      needsCreateFlowFirst: true,
+    });
+    expect(knowledgeRegionCreateOffersFlowSelect(2).canSelectExistingFlow).toBe(true);
   });
 
   it("wires the owner dashboard regions API and tab", () => {
@@ -58,5 +78,30 @@ describe("dashboard knowledge regions", () => {
     expect(dash).toContain("data-dashboard-knowledge-regions");
     expect(dash).toContain("DASHBOARD_KNOWLEDGE_REGIONS_PATH");
     expect(dash).toContain("Your Shop");
+    expect(dash).toContain("data-create-flow-first");
+    expect(readRepo("components/product-flow/knowledge-region-create.tsx")).toContain(
+      "data-region-create-from-flow",
+    );
+    expect(readRepo("components/product-flow/knowledge-region-create.tsx")).toContain(
+      "data-create-flow-first",
+    );
+    expect(readRepo("components/product-flow/knowledge-region-page.tsx")).toContain(
+      "WorkspacePerformancePanel",
+    );
+    expect(readRepo("components/product-flow/knowledge-region-page.tsx")).toContain(
+      "data-knowledge-overlay",
+    );
+    expect(readRepo("components/knowledge-panel/models-view.tsx")).toContain(
+      "Overlay regions on the right.",
+    );
+    expect(readRepo("app/verification/regions/new/page.tsx")).toContain('kind="verification"');
+    expect(readRepo("app/calibration/regions/[id]/page.tsx")).toContain("KnowledgeRegionPage");
+    expect(readRepo("components/dashboard/dashboard-knowledge-regions-tab.tsx")).toContain(
+      "dashboardKnowledgeRegionHref(kind, region.id)",
+    );
+    expect(readRepo("components/dashboard/dashboard-knowledge-regions-tab.tsx")).not.toContain(
+      "?section=knowledge",
+    );
+    expect(productFlowNewPath("verification")).toBe("/verification/flows/new");
   });
 });

@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { Mic } from "lucide-react";
 import { HeliosMarkdown } from "@/components/thought-ui/HeliosMarkdown";
 import { HeliosProbeAvatar } from "@/components/thought-ui/ThoughtUi";
 import { toSpeechBcp47 } from "@/lib/tutoring-languages";
@@ -618,14 +619,16 @@ export function WorkspaceHeliosChat({
             type="button"
             onClick={toggleMic}
             aria-pressed={listening}
+            aria-label={listening ? "Stop microphone" : "Start microphone"}
+            title={listening ? "Stop microphone" : "Start microphone"}
             data-workspace-helios-chat-mic
-            className={`shrink-0 border px-3 py-2 text-[11px] uppercase tracking-[0.16em] ${
+            className={`flex shrink-0 items-center justify-center border p-2 ${
               listening
                 ? "border-white/40 bg-white/10 text-neutral-100"
                 : "border-white/15 text-neutral-300"
             }`}
           >
-            {listening ? "Mic on" : "Mic"}
+            <Mic className="h-4 w-4" aria-hidden="true" />
           </button>
           <button
             type="submit"

@@ -181,6 +181,10 @@ describe("Helios map right-column chrome", () => {
       /className="w-full resize-none bg-transparent text-sm text-neutral-100 outline-none placeholder:text-neutral-600"/,
     );
     expect(chat).toContain("data-workspace-helios-chat-mic");
+    expect(chat).toContain('import { Mic } from "lucide-react"');
+    expect(chat).toContain('<Mic className="h-4 w-4" aria-hidden="true" />');
+    expect(chat).not.toContain(">Mic</");
+    expect(chat).not.toContain(">Mic on</");
     expect(chat).toMatch(
       /data-workspace-helios-chat-mic[\s\S]*data-workspace-helios-chat-send/,
     );

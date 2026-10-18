@@ -194,6 +194,7 @@ describe("landing hard-domain learning experiences copy", () => {
     expect(PLATFORM_PUBLIC_MAPS.signupHref).toBe(LANDING_MAP_SIGNUP_HREF);
     expect(PLATFORM_PUBLIC_MAPS.signupHref).toBe("/register");
     expect(readRel("app/api/landing/maps/route.ts")).toContain("presentPublicMapCatalog");
+    expect(readRel("app/api/landing/maps/route.ts")).toContain("LANDING_FEATURED_MAP_IDS");
     expect(readRel("app/api/landing/maps/route.ts")).toContain("createAdminClient");
   });
 

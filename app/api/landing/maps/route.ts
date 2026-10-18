@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import {
-  LANDING_PUBLIC_MAPS_LIMIT,
   PUBLIC_MAP_CATALOG_SELECT,
   presentPublicMapCatalog,
 } from "@/lib/dashboard-home-catalog";
+import {
+  LANDING_FEATURED_MAP_IDS,
+  orderLandingFeaturedMaps,
+} from "@/lib/marketing/landing-featured-maps";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
@@ -15,11 +18,10 @@ export async function GET() {
     const { data, error } = await supabase
       .from("workspaces")
       .select(PUBLIC_MAP_CATALOG_SELECT)
-      .eq("is_public", true)
-      .order("created_at", { ascending: false })
-      .limit(LANDING_PUBLIC_MAPS_LIMIT);
+      .in("id", [...LANDING_FEATURED_MAP_IDS]);
     if (error) return jsonError(500, error.message);
-    return NextResponse.json({ maps: presentPublicMapCatalog(data || []) });
+    const maps = orderLandingFeaturedMaps(presentPublicMapCatalog(data || []));
+    return NextResponse.json({ maps });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load maps";
     return jsonError(500, message);

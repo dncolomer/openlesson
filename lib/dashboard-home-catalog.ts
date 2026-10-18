@@ -130,7 +130,12 @@ export function presentPublicMapCatalogItem(
     null;
   const isAycl = Boolean(row.is_all_you_can_learn);
   const priceLabel = isAycl
-    ? formatAyclPriceCents(resolveAyclCheckoutCents("full", row))
+    ? formatAyclPriceCents(
+        resolveAyclCheckoutCents("full", {
+          aycl_full_price_cents:
+            typeof row.aycl_full_price_cents === "number" ? row.aycl_full_price_cents : null,
+        }),
+      )
     : null;
   const createdAt = typeof row.created_at === "string" ? row.created_at : null;
   return {

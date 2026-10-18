@@ -19,9 +19,14 @@ export { AYCL_SUGGESTED_CATEGORIES };
 export const DASHBOARD_CATALOG_PATH = "/api/dashboard/catalog";
 export const DASHBOARD_MAPS_ADD_PATH = "/api/dashboard/maps/add";
 export const DASHBOARD_MAPS_TRY_PATH = "/api/dashboard/maps/try";
+export const LANDING_PUBLIC_MAPS_PATH = "/api/landing/maps";
+export const LANDING_MAP_SIGNUP_HREF = "/register";
+export const LANDING_PUBLIC_MAPS_LIMIT = 16;
 export const DASHBOARD_HOME_HERO_COUNT = 5;
 export const DASHBOARD_HOME_SECONDARY_COUNT = 8;
 export const PUBLIC_MAP_CARD_SUMMARY_MAX = 160;
+export const PUBLIC_MAP_CATALOG_SELECT =
+  "id, title, root_topic, description, workspace_goal, cover_image_url, created_at, is_public, is_all_you_can_learn, is_play_copy, workspace_kind, aycl_category, aycl_summary, aycl_full_price_cents";
 
 export const PUBLISH_PLAY_COPY_MESSAGE =
   "Play copies cannot be listed on Home";

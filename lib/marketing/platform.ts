@@ -19,9 +19,15 @@ export const PLATFORM_PHRASE = "Hard-domain learning experiences" as const;
 
 export const PLATFORM_HERO = {
   pill: "HARD-DOMAIN LEARNING",
-  h1: "We author and run hard-domain learning experiences where experts are scarce.",
+  h1: "We craft and run hard-domain learning experiences where experts are scarce.",
   p1: "Frontier topics don't fail because people lack curiosity. They fail because the people who can teach them won't build the course.",
   p2: "Frontier topics are not learned by dumping slides in front of an audience. They need a different approach: an active search that shrinks what you don't know, instead of a lecture you sit through. We author and run them that way.",
+} as const;
+
+export const PLATFORM_PUBLIC_MAPS = {
+  title: "Explore our Learning Maps",
+  lead: "Try out any of our learning maps.",
+  signupHref: "/register",
 } as const;
 
 export const PLATFORM_SPINE = {
@@ -163,6 +169,9 @@ export function homepageCopyText(): string {
     PLATFORM_HERO.h1,
     PLATFORM_HERO.p1,
     PLATFORM_HERO.p2,
+    PLATFORM_PUBLIC_MAPS.title,
+    PLATFORM_PUBLIC_MAPS.lead,
+    PLATFORM_PUBLIC_MAPS.signupHref,
     PLATFORM_SPINE.eyebrow,
     PLATFORM_SPINE.title,
     ...PLATFORM_SPINE.items.flatMap((item) => [item.eyebrow, item.name, item.body]),

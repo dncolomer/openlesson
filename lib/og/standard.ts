@@ -22,7 +22,7 @@ export const UNSYS_STANDARD_HTML_TITLE =
  * Length is 120–160 for SERP and under ~200 for X.
  */
 export const UNSYS_STANDARD_SHARE_DESCRIPTION =
-  "We author and run hard-domain learning experiences where experts are scarce. Curriculum, Unsys workspace, optional skill validation, and on-site training." as const;
+  "We craft and run hard-domain learning experiences where experts are scarce. Curriculum, Unsys workspace, optional skill validation, and on-site training." as const;
 
 /** LP hero platform phrase — hard-domain learning experiences */
 export const UNSYS_STANDARD_SHARE_EYEBROW = PLATFORM_PHRASE;

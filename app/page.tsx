@@ -6,6 +6,7 @@ import { ArrowRight } from "lucide-react";
 import { AccelerandoRun } from "@/components/AccelerandoGlyphs";
 import { Footer } from "@/components/Footer";
 import { LandingNav } from "@/components/LandingNav";
+import { LandingPublicMapsCarousel } from "@/components/marketing/LandingPublicMapsCarousel";
 import { SectionHeading } from "@/components/marketing/MarketingChrome";
 import { TrackedCtaLink } from "@/components/TrackedCtaLink";
 import { PublicConsoleWash } from "@/components/ui/console-frame";
@@ -76,6 +77,7 @@ export default function B2BLandingPage() {
               {PLATFORM_CTA.email}
             </a>
           </div>
+          <LandingPublicMapsCarousel />
         </div>
       </section>
 

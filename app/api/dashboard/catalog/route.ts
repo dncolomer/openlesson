@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
-import { presentPublicMapCatalog } from "@/lib/dashboard-home-catalog";
+import {
+  PUBLIC_MAP_CATALOG_SELECT,
+  presentPublicMapCatalog,
+} from "@/lib/dashboard-home-catalog";
 
 export const runtime = "nodejs";
-
-const CATALOG_SELECT =
-  "id, title, root_topic, description, workspace_goal, cover_image_url, created_at, is_public, is_all_you_can_learn, is_play_copy, workspace_kind, aycl_category, aycl_summary, aycl_full_price_cents";
 
 export async function GET(req: NextRequest) {
   try {
@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
     void req;
     const { data, error } = await auth.supabase
       .from("workspaces")
-      .select(CATALOG_SELECT)
+      .select(PUBLIC_MAP_CATALOG_SELECT)
       .eq("is_public", true)
       .order("created_at", { ascending: false })
       .limit(200);

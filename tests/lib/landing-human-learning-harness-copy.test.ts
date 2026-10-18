@@ -15,8 +15,13 @@ import {
   PLATFORM_PRODUCT_LIST,
   PLATFORM_PRODUCTS,
   PLATFORM_PROOF,
+  PLATFORM_PUBLIC_MAPS,
   PLATFORM_SPINE,
 } from "@/lib/marketing/platform";
+import {
+  LANDING_MAP_SIGNUP_HREF,
+  LANDING_PUBLIC_MAPS_PATH,
+} from "@/lib/dashboard-home-catalog";
 import {
   UNSYS_STANDARD_HTML_TITLE,
   UNSYS_STANDARD_SHARE_DESCRIPTION,
@@ -71,6 +76,7 @@ describe("landing hard-domain learning experiences copy", () => {
     expect(copy).toMatch(/where experts are scarce/);
     expect(PLATFORM_HERO.h1).toMatch(/hard-domain learning experiences/);
     expect(PLATFORM_HERO.h1).toMatch(/where experts are scarce/);
+    expect(PLATFORM_HERO.h1).toMatch(/^We craft and run hard-domain/);
     expect(PLATFORM_HERO.p1).toMatch(/won't build the course|will not build the course/);
     expect(PLATFORM_HERO.p1).not.toMatch(/fake the expertise/);
     expect(PLATFORM_HERO.p1).not.toMatch(/orgs that need the course/);
@@ -88,6 +94,10 @@ describe("landing hard-domain learning experiences copy", () => {
     expect(lp).not.toMatch(/\bagents?\b/i);
     expect(lp).not.toMatch(/agentic/i);
     expect(lp).not.toContain("VERIFICATION . OPTIMIZATION . AUGMENTATION");
+    expect(lp).toContain("LandingPublicMapsCarousel");
+    expect(lp).toMatch(
+      /data-home-hero[\s\S]*<LandingPublicMapsCarousel \/>[\s\S]*<\/section>[\s\S]*data-home-spine/,
+    );
   });
 
   it("ships the four-part spine, both delivery modes, layers, proof, and scoped CTA from interpolated copy", () => {
@@ -204,6 +214,20 @@ describe("landing hard-domain learning experiences copy", () => {
     expect(copy).toContain("daniel@uncertain.systems");
 
     expect(lp).not.toContain("PLATFORM_PRODUCT_LIST");
+
+    const carousel = readRel("components/marketing/LandingPublicMapsCarousel.tsx");
+    expect(carousel).toContain("data-home-maps-carousel");
+    expect(carousel).toContain("data-home-map-card");
+    expect(carousel).not.toContain("SectionHeading");
+    expect(carousel).toContain("LANDING_PUBLIC_MAPS_PATH");
+    expect(carousel).toContain(LANDING_PUBLIC_MAPS_PATH);
+    expect(carousel).toContain("LANDING_MAP_SIGNUP_HREF");
+    expect(PLATFORM_PUBLIC_MAPS.title).toBe("Explore our Learning Maps");
+    expect(PLATFORM_PUBLIC_MAPS.lead).toBe("Try out any of our learning maps.");
+    expect(PLATFORM_PUBLIC_MAPS.signupHref).toBe(LANDING_MAP_SIGNUP_HREF);
+    expect(PLATFORM_PUBLIC_MAPS.signupHref).toBe("/register");
+    expect(readRel("app/api/landing/maps/route.ts")).toContain("presentPublicMapCatalog");
+    expect(readRel("app/api/landing/maps/route.ts")).toContain("createAdminClient");
   });
 
   it("keeps Harness, Verification, and Mapping in the catalog and drops TAPBench", () => {

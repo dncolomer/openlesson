@@ -42,6 +42,9 @@ describe("dashboard play sessions", () => {
     const dash = readDashboardSurface();
     expect(dash).toContain("data-dashboard-play");
     expect(dash).toContain("Quick Work Session");
+    expect(readRepo("components/dashboard/dashboard-home-tab.tsx")).toMatch(
+      /className="console-copy sticky[^"]*"[\s\S]*data-dashboard-play-bar/,
+    );
     expect(dash).not.toContain("Start a session");
     expect(dash).not.toContain("data-dashboard-play-topics");
     expect(dash).not.toContain("pickDashboardPlayTopics");

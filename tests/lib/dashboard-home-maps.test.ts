@@ -286,6 +286,9 @@ describe("dashboard home and my maps surface", () => {
     const dash = readDashboardSurface();
     expect(readRepo("lib/dashboard-home-catalog.ts")).toContain("orderLandingFeaturedMaps");
     expect(readRepo("lib/dashboard-home-catalog.ts")).toContain("landing-featured-ids");
+    expect(readRepo("components/dashboard/dashboard-home-tab.tsx")).toMatch(
+      /className="console-copy sticky[^"]*"[\s\S]*data-dashboard-play-bar/,
+    );
     expect(dash).toContain("data-dashboard-home-hero");
     expect(dash).toContain("data-dashboard-map-hero-summary");
     expect(dash).toContain("data-dashboard-map-card-summary");

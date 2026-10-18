@@ -293,7 +293,7 @@ export function DashboardHomeTab({
   return (
     <div className="space-y-8" data-dashboard-home>
       <section
-        className="sticky top-0 z-20 border-b border-white/15 bg-black/80 px-4 py-3 backdrop-blur sm:px-5"
+        className="console-copy sticky top-0 z-20 px-4 py-3 sm:px-5"
         data-dashboard-play
         data-dashboard-play-bar
         data-dashboard-home-search

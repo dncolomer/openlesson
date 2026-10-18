@@ -61,8 +61,7 @@ export function DashboardIntegrationsTab({
           <div className="space-y-8">
             <div className="console-copy flex flex-wrap items-center justify-between gap-3 px-6 py-5">
               <div>
-                <p className={usageLabelClass}>Integrations</p>
-                <h2 className="mt-2 text-2xl font-medium tracking-[-0.5px] text-white">{t("dashboard.integrationsTab")}</h2>
+                <h2 className="text-2xl font-medium tracking-[-0.5px] text-white">{t("dashboard.integrationsTab")}</h2>
                 <p className="mt-1 text-sm text-neutral-500">{t("dashboard.integrationsSubtitle")}</p>
               </div>
               {usesAgenticV2Keys && (

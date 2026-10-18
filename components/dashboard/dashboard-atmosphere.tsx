@@ -1,7 +1,6 @@
-/** Dim still + field grid under the dashboard console. Scan/marks stay on the page shell. */
+/** Dark grey field + MAGI square grid under the dashboard console. */
 
-export const DASHBOARD_STILL =
-  "/aesthetics/piotr-binkowski/HGHQJOtWgAAOGtm.jpeg";
+export const DASHBOARD_FIELD = "#1a1a1a";
 
 export function DashboardAtmosphere() {
   return (
@@ -9,23 +8,16 @@ export function DashboardAtmosphere() {
       <div
         data-dashboard-atmosphere=""
         aria-hidden
-        className="pointer-events-none absolute inset-0 z-0 bg-cover bg-center"
-        style={{ backgroundImage: `url(${DASHBOARD_STILL})` }}
+        className="pointer-events-none absolute inset-0 z-0"
+        style={{ backgroundColor: DASHBOARD_FIELD }}
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 z-0 bg-black/82"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.45)_100%)]"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 z-0 opacity-30"
+        data-dashboard-atmosphere-grid=""
+        className="pointer-events-none absolute inset-0 z-0 opacity-40"
         style={{
           backgroundImage:
-            "linear-gradient(rgba(255,255,255,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.045) 1px, transparent 1px)",
+            "linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px)",
           backgroundSize: "72px 72px",
         }}
       />

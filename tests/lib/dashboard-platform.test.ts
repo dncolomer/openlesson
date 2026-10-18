@@ -5,6 +5,8 @@ import {
   dashboardCreateHref,
   dashboardCreateLabel,
   dashboardFrameLabel,
+  dashboardHrefForTab,
+  dashboardTabForProductSurface,
   dashboardListFilterForTab,
   dashboardProductLabel,
   dashboardRegionsProduct,
@@ -78,6 +80,10 @@ describe("dashboard nav", () => {
     expect(dashboardFrameLabel("help")).toBe("How it works");
     expect(dashboardFrameLabel("calibration")).toBe("Calibration");
     expect(dashboardFrameLabel("home")).toBe("Home");
+    expect(dashboardHrefForTab("home")).toBe("/dashboard");
+    expect(dashboardHrefForTab("verification")).toBe("/dashboard?tab=verification");
+    expect(dashboardTabForProductSurface("verification")).toBe("verification");
+    expect(dashboardTabForProductSurface("calibration", "region")).toBe("calibration_regions");
   });
 
   it("subdivides the sidebar into Learning, Verification, and Calibration", () => {
@@ -216,13 +222,22 @@ describe("dashboard platform surface", () => {
     expect(dashSrc).toContain("data-dashboard-platform");
     const platformAt = dashSrc.lastIndexOf("data-dashboard-platform");
     const platform = dashSrc.slice(platformAt);
-    expect(dashSrc).toContain("md:grid-cols-[14rem_minmax(0,1fr)]");
+    expect(dashSrc).toContain("md:grid-cols-[16rem_minmax(0,1fr)]");
+    expect(dashSrc).not.toContain("md:grid-cols-[14rem_minmax(0,1fr)]");
     expect(dashSrc).toContain("md:h-dvh");
     expect(dashSrc).toContain("md:overflow-hidden");
     expect(dashSrc).toContain("md:overflow-y-auto");
-    expect(dashSrc).toContain("md:row-span-2");
-    expect(platform.indexOf("DashboardSidebar")).toBeLessThan(platform.indexOf("data-console-frame-label"));
-    expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain("md:row-span-2");
+    expect(dashSrc).not.toContain("md:row-span-2");
+    expect(platform).toContain("DashboardSidebar");
+    expect(platform).not.toContain("data-console-frame-label");
+    expect(platform).not.toContain("dashboardFrameLabel");
+    expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain("data-dashboard-sidebar-brand");
+    expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain("BrandLogo");
+    expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain("size={28}");
+    expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain("px-3.5 py-4");
+    expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain("LanguageSwitcher");
+    expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain("data-dashboard-sign-out");
+    expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain("py-1");
     expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain("md:sticky");
     expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain("md:h-full");
     expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain("md:max-h-full");
@@ -267,6 +282,12 @@ describe("dashboard platform surface", () => {
     expect(paginateDashboardFlows([{ id: "a" }], 9).page).toBe(1);
     expect(dashSrc).toContain("data-dashboard-product-create");
     expect(dashSrc).toContain("data-flow-name");
+    expect(readRepo("components/product-flow/product-surface.tsx")).toContain("DashboardSidebar");
+    expect(readRepo("components/product-flow/product-surface.tsx")).toContain("data-dashboard-platform");
+    expect(readRepo("components/product-flow/product-surface.tsx")).not.toContain("Navbar");
+    expect(readRepo("components/product-flow/product-flow-wizard.tsx")).toContain(
+      "dashboardTabForProductSurface(kind)",
+    );
     expect(readRepo("components/product-flow/product-flow-wizard.tsx")).toContain("data-flow-name");
     expect(readRepo("components/product-flow/product-flow-wizard.tsx")).toContain("Publish");
     expect(readRepo("components/product-flow/product-flow-wizard.tsx")).toContain("data-flow-publish");
@@ -325,9 +346,26 @@ describe("dashboard platform surface", () => {
     expect(dashSrc).not.toContain("DASHBOARD_BACKGROUND");
     expect(dashSrc).not.toContain("/aesthetics/Greco-futurism/");
     expect(dashSrc).toContain("data-dashboard-atmosphere");
-    expect(dashSrc).toContain("/aesthetics/piotr-binkowski/");
-    expect(dashSrc).toContain("bg-black/82");
-    expect(dashSrc).toContain("<Navbar productLinks={false} />");
+    expect(dashSrc).toContain("data-dashboard-atmosphere-grid");
+    expect(dashSrc).not.toContain("/aesthetics/piotr-binkowski/");
+    expect(dashSrc).not.toContain("bg-black/82");
+    expect(readRepo("components/dashboard/dashboard-atmosphere.tsx")).toContain("#1a1a1a");
+    expect(readRepo("components/dashboard/dashboard-atmosphere.tsx")).toContain("72px 72px");
+    const panelCss = readRepo("app/globals.css");
+    expect(panelCss).toContain("--console-panel-bg: rgba(0, 0, 0, 0.55)");
+    expect(panelCss).toContain(".console-panel-fill");
+    expect(panelCss).toContain(".console-panel-fill,\n.console-copy {");
+    expect(panelCss).toContain("background-color: var(--console-panel-bg)");
+    const copyBlock = panelCss.slice(
+      panelCss.indexOf(".console-panel-fill,"),
+      panelCss.indexOf(".console-copy:has"),
+    );
+    expect(copyBlock).toContain("background-color: var(--console-panel-bg)");
+    expect(copyBlock).not.toContain("background-color: #000");
+    expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain("console-panel-fill");
+    expect(readRepo("app/page.tsx")).toContain("console-copy");
+    expect(dashSrc).not.toContain("<Navbar");
+    expect(readRepo("app/dashboard/page.tsx")).not.toContain("Navbar");
     expect(dashSrc).toContain("DashboardUpgradeTab");
     expect(dashSrc).toContain('activeTab === "usage"');
     expect(dashSrc).not.toContain('activeTab === "upgrade"');

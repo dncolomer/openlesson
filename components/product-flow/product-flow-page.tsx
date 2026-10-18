@@ -13,6 +13,7 @@ import { parseLearningModelSize, type LearningModelSize } from "@/lib/learning-m
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import { DASHBOARD_FLOWS_PATH, type ProductFlowKind } from "@/lib/product-flow";
 import { ProductSurface } from "@/components/product-flow/product-surface";
+import { dashboardTabForProductSurface } from "@/lib/dashboard-nav";
 import { CopyFlowUrlButton } from "@/components/product-flow/copy-flow-url-button";
 
 type LoadedFlow = {
@@ -135,9 +136,12 @@ export function ProductFlowPage({
   }
 
   return (
-    <ProductSurface label={`${productLabel} flow`}>
+    <ProductSurface
+      label={`${productLabel} flow`}
+      activeTab={dashboardTabForProductSurface(kind)}
+    >
       <div
-        className="space-y-4"
+        className="mx-auto w-full max-w-3xl space-y-4"
         data-product-flow-page={kind}
         data-verification-flows-panel={kind === "verification" ? "" : undefined}
         data-calibration-flows-panel={kind === "calibration" ? "" : undefined}

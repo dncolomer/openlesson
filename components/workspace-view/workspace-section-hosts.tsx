@@ -8,7 +8,6 @@ import { WorkspaceGoalsPanel } from "@/components/WorkspaceGoalsPanel";
 import { CalibrationFlowsPanel } from "@/components/CalibrationFlowsPanel";
 import { VerificationFlowsPanel } from "@/components/VerificationFlowsPanel";
 import { WorkspaceIntegrationPanel } from "@/components/WorkspaceIntegrationPanel";
-import { InsightsDashboardTab } from "@/components/InsightsDashboardTab";
 import { WorkspaceKpisPanel } from "@/components/WorkspaceKpisPanel";
 import { WorkspacePerformancePanel } from "@/components/WorkspacePerformancePanel";
 import { WorkspaceSectionSurface } from "@/components/WorkspaceSectionSurface";
@@ -277,27 +276,6 @@ export function WorkspaceSectionHosts({
             className="flex h-full min-h-0 flex-col overflow-hidden rounded-none border border-neutral-800/70 bg-neutral-950/80 shadow-[0_10px_40px_rgba(0,0,0,0.4)] backdrop-blur-md"
           >
             <WorkspaceKpisPanel workspaceId={workspaceId} />
-          </div>
-        </WorkspaceSectionSurface>
-      )}
-
-      {sectionLayout.mountsInsightsPanel &&
-        visibleSections.includes("insights") && (
-        <WorkspaceSectionSurface
-          kind="insights"
-          imageSrc={workspaceImage}
-          identity={identity}
-        >
-          <div
-            data-workspace-insights-host
-            data-play-insights-tab
-            className="flex h-full min-h-0 flex-col overflow-hidden rounded-none border border-neutral-800/70 bg-neutral-950/80 shadow-[0_10px_40px_rgba(0,0,0,0.4)] backdrop-blur-md"
-          >
-            <InsightsDashboardTab
-              workspaceId={workspaceId}
-              workspaceTitle={plan.title || plan.root_topic}
-              compact
-            />
           </div>
         </WorkspaceSectionSurface>
       )}

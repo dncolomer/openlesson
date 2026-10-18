@@ -49,7 +49,7 @@ export interface WorkspaceViewProps {
    * Explicit workspace id when not on /workspace/[id] (e.g. /learn/[token]).
    */
   workspaceIdOverride?: string;
-  /** Hide main Navbar (AYCL page provides its own chrome). */
+  /** Kept for callers; workspace chrome has no top Navbar. */
   hideNavbar?: boolean;
   /** Optional top banner under nav (e.g. Lifetime access). */
   accessBanner?: ReactNode;

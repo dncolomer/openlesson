@@ -344,8 +344,7 @@ export function OrganizationDashboardTab() {
   if (!organization) {
     return (
       <div className={`${cardPaddedClass} text-center`}>
-        <p className={labelClass}>Organization</p>
-        <h2 className="mt-2 text-2xl font-medium tracking-[-0.5px] text-white">
+        <h2 className="text-2xl font-medium tracking-[-0.5px] text-white">
           {t("organization.noOrganization")}
         </h2>
         <p className="mx-auto mt-3 max-w-md text-sm text-neutral-400">
@@ -380,8 +379,7 @@ export function OrganizationDashboardTab() {
             )}
           </div>
           <div className="min-w-0">
-            <p className={labelClass}>Organization</p>
-            <h2 className="mt-1 text-2xl font-medium tracking-[-0.5px] text-white sm:text-3xl">
+            <h2 className="text-2xl font-medium tracking-[-0.5px] text-white sm:text-3xl">
               {organization.name}
             </h2>
             <div className="mt-2 flex flex-wrap items-center gap-2">

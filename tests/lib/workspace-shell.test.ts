@@ -19,7 +19,6 @@ const LEARNING_AUTHOR_SECTIONS = [
   "dags",
   "map_types",
   "context",
-  "insights",
   "settings",
 ] as const;
 
@@ -64,7 +63,7 @@ describe("workspace shell policy", () => {
       isOwner: false,
       isLoggedIn: true,
     });
-    expect(shell.sections).toEqual(["workspace", "insights"]);
+    expect(shell.sections).toEqual(["workspace"]);
     expect(shell.authoringDrawers).toBe(false);
     expect(shell.practiceDrawer).toBe(true);
     expect(shell.learnerSurface).toBe(true);

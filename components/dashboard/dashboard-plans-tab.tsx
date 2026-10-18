@@ -66,7 +66,6 @@ export function DashboardPlansTab({
   const productLabel = dashboardProductLabel(productTab);
   const createHref = dashboardCreateHref(productTab);
   const [visibilityError, setVisibilityError] = useState("");
-  const kicker = isShop ? "Your Shop" : productLabel;
   const heading = isShop
     ? "Workspaces you listed."
     : productTab === "learning"
@@ -97,9 +96,6 @@ export function DashboardPlansTab({
                 className="console-copy px-6 py-14 sm:px-10 sm:py-16"
               >
                 <div className="mx-auto flex max-w-xl flex-col items-center text-center">
-                  <p className="mb-4 font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
-                    {kicker}
-                  </p>
                   <h2 className="text-3xl font-medium tracking-[-1.2px] text-white sm:text-4xl">
                     {emptyTitle}
                   </h2>
@@ -128,9 +124,6 @@ export function DashboardPlansTab({
             <div className="console-copy px-6 py-7 sm:px-8 sm:py-8">
               <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
                 <div>
-                  <p className="mb-3 font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
-                    {kicker}
-                  </p>
                   <h2 className="max-w-2xl text-3xl font-medium tracking-[-1.2px] text-white sm:text-4xl">
                     {heading}
                   </h2>

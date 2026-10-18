@@ -1,8 +1,8 @@
 /**
  * Top-level workspace shell sections.
  * Learning workspaces (stored kind `standard`): Workspace, DAGs, Map Types,
- * Context, Insights, and Settings for designers; Workspace and Insights for
- * signed-in play-only viewers. Verification workspaces (stored kind
+ * Context, and Settings for designers; Workspace for play-only viewers.
+ * Verification workspaces (stored kind
  * `knowledge_region`): Goals, Verification Flows, Context, Knowledge, and
  * Settings. Calibration workspaces (stored kind `calibration`): Goals,
  * Calibration Flows, Context, Knowledge, and Settings.
@@ -324,26 +324,13 @@ export function canAccessPrivilegedWorkspaceSections(options: {
 }
 
 /**
- * Signed-in viewers of a learning workspace get Insights so they can open
- * insights they crafted. Verification keeps Knowledge instead.
+ * Insights is not a workspace section. Kept so existing callers stay stable.
  */
 export function withLearningInsightsSection(
   sections: readonly WorkspaceSectionKey[],
-  options: WorkspaceSectionAuth = {},
+  _options: WorkspaceSectionAuth = {},
 ): WorkspaceSectionKey[] {
-  if (isNoMapWorkspace(options.workspaceKind)) {
-    return [...sections];
-  }
-  if (!options.isLoggedIn) return [...sections];
-  if (sections.includes("insights")) return [...sections];
-  const list = [...sections];
-  const settingsAt = list.indexOf("settings");
-  if (settingsAt >= 0) {
-    list.splice(settingsAt, 0, "insights");
-    return list;
-  }
-  list.push("insights");
-  return list;
+  return sections.filter((section) => section !== "insights");
 }
 
 export type WorkspaceSectionAuth = {

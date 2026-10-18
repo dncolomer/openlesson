@@ -8,6 +8,7 @@ import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import { DASHBOARD_KNOWLEDGE_REGIONS_PATH } from "@/lib/dashboard-knowledge-regions";
 import { productFlowNewPath, type ProductFlowKind } from "@/lib/product-flow";
 import { ProductSurface } from "@/components/product-flow/product-surface";
+import { dashboardTabForProductSurface } from "@/lib/dashboard-nav";
 
 export function KnowledgeRegionPage({
   kind,
@@ -42,8 +43,11 @@ export function KnowledgeRegionPage({
   }, [kind, regionId]);
 
   return (
-    <ProductSurface label={`${productLabel} knowledge region`}>
-      <div className="space-y-6" data-knowledge-region-page={kind}>
+    <ProductSurface
+      label={`${productLabel} knowledge region`}
+      activeTab={dashboardTabForProductSurface(kind, "region")}
+    >
+      <div className="mx-auto w-full max-w-3xl space-y-6" data-knowledge-region-page={kind}>
         <Link href={`/dashboard?tab=${kind}_regions`} className="text-xs text-neutral-400 underline">
           Back to knowledge regions
         </Link>

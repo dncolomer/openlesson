@@ -67,7 +67,6 @@ describe("one workspace surface", () => {
       "dags",
       "map_types",
       "context",
-      "insights",
       "settings",
     ]);
     expect(workspaceSurfaceShowsAuthoring({ isOwner: true })).toBe(true);

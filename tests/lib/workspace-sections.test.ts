@@ -149,21 +149,19 @@ describe("availableWorkspaceSections", () => {
       "dags",
       "map_types",
       "context",
-      "insights",
       "settings",
     ]);
     expect(
       availableWorkspaceSections({ isOwner: false, isLoggedIn: true }),
-    ).toEqual(["workspace", "insights"]);
-    expect(resolveActiveSection("insights", { isLoggedIn: true })).toBe("insights");
+    ).toEqual(["workspace"]);
+    expect(resolveActiveSection("insights", { isLoggedIn: true })).toBe("workspace");
     expect(resolveActiveSection("insights", { isOwner: true })).toBe("workspace");
     expect(
       withLearningInsightsSection(["workspace", "settings"], { isLoggedIn: true }),
-    ).toEqual(["workspace", "insights", "settings"]);
+    ).toEqual(["workspace", "settings"]);
     expect(
-      withLearningInsightsSection(["workspace"], {
+      withLearningInsightsSection(["workspace", "insights"], {
         isLoggedIn: true,
-        workspaceKind: "knowledge_region",
       }),
     ).toEqual(["workspace"]);
   });

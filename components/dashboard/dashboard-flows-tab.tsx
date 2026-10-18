@@ -60,9 +60,6 @@ export function DashboardFlowsTab({
       <div className="console-copy px-6 py-7 sm:px-8 sm:py-8">
         <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="mb-3 font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
-              {productLabel}
-            </p>
             <h2 className="max-w-2xl text-3xl font-medium tracking-[-1.2px] text-white sm:text-4xl">
               Flows
             </h2>

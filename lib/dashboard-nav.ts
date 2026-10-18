@@ -7,7 +7,11 @@ import type {
   DashboardWorkspaceListFilter,
   DashboardWorkspaceTypeFilter,
 } from "@/lib/dashboard-workspace-filters";
-import { productFlowNewPath, productRegionNewPath } from "@/lib/product-flow";
+import {
+  productFlowNewPath,
+  productRegionNewPath,
+  type ProductFlowKind,
+} from "@/lib/product-flow";
 import type { WorkspaceCreateMode } from "@/lib/workspace-create-modes";
 
 export const DASHBOARD_TABS = [
@@ -159,6 +163,20 @@ export function dashboardListFilterForTab(
 ): DashboardWorkspaceListFilter | null {
   if (tab === "shop") return "aycl";
   return null;
+}
+
+export function dashboardHrefForTab(tab: DashboardTab): string {
+  return tab === "home" ? "/dashboard" : `/dashboard?tab=${tab}`;
+}
+
+export function dashboardTabForProductSurface(
+  kind: ProductFlowKind,
+  area: "flow" | "region" = "flow",
+): DashboardTab {
+  if (area === "region") {
+    return kind === "calibration" ? "calibration_regions" : "verification_regions";
+  }
+  return kind;
 }
 
 export function dashboardCreateHref(tab: DashboardProductTab): string {

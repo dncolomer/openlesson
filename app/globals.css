@@ -3,6 +3,7 @@
 :root {
   --background: #0a0a0a;
   --foreground: #ededed;
+  --console-panel-bg: rgba(0, 0, 0, 0.55);
 }
 
 @import "./ile-excalidraw-theme.css";
@@ -13,7 +14,15 @@ body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-/* Public copy panels: opaque black, white hairline, four corner ticks.
+/* Same fill as the dashboard sidebar so LP and dashboard boxes sit on the grid. */
+.console-panel-fill,
+.console-copy {
+  background-color: var(--console-panel-bg);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+/* Public copy panels: sidebar fill, white hairline, four corner ticks.
    A photo in the card paints over that border, so media cards redraw the
    frame on top of the image. */
 .console-copy {
@@ -22,7 +31,6 @@ body {
   isolation: isolate;
   border-radius: 0;
   border: 1px solid var(--console-frame);
-  background-color: #000;
   box-shadow:
     inset 7px 7px 0 -6px rgba(255, 255, 255, 0.9),
     inset -7px 7px 0 -6px rgba(255, 255, 255, 0.9),

@@ -222,15 +222,12 @@ describe("console theme shells", () => {
     const dash = read("app/dashboard/page.tsx");
     const shell = dash.slice(dash.lastIndexOf("data-workspace-shell"));
     const shellClass = shell.match(/className="([^"]+)"/)?.[1] ?? "";
-    expect(shell).toContain("<Navbar productLinks={false} />");
-    expect(shellClass).not.toContain("overflow-hidden");
+    expect(shell).not.toContain("<Navbar");
+    expect(shell).toContain("DashboardSidebar");
+    expect(shellClass).toContain("md:overflow-hidden");
     expect(shellClass).toContain("border-white/40");
-    const homeLabelAt = shell.indexOf("data-console-frame-label");
-    const homeLabel = shell.slice(homeLabelAt, shell.indexOf("</p>", homeLabelAt));
-    expect(shell.indexOf("<Navbar productLinks={false} />")).toBeLessThan(homeLabelAt);
-    expect(homeLabel).toContain("px-4 pt-2 sm:px-6");
-    expect(homeLabel).not.toContain("absolute");
-    expect(homeLabel).toContain("dashboardFrameLabel(activeTab)");
+    expect(shell).not.toContain("data-console-frame-label");
+    expect(shell).not.toContain("dashboardFrameLabel");
 
     for (const rel of [
       "app/pricing/page.tsx",
@@ -275,7 +272,9 @@ describe("console theme shells", () => {
     expect(mapLabel).toContain("Map");
     expect(mapLabel).not.toContain("px-4 pt-2 sm:px-6");
     expect(mapLabel).not.toContain("shrink-0");
-    expect(chrome.indexOf("<Navbar />")).toBeLessThan(mapLabelAt);
+    expect(chrome).not.toContain("<Navbar");
+    expect(chrome).toContain("data-workspace-back-dashboard");
+    expect(chrome).toContain("WorkspaceDashboardLink");
     expect(chrome).not.toContain("border-b border-neutral-800 bg-neutral-950 px-4 py-1.5");
     expect(chrome).toContain("<WorkspaceSectionNav");
     expect(read("components/WorkspaceSectionNav.tsx")).toContain("data-workspace-section-nav");

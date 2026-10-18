@@ -2,9 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Navbar } from "@/components/Navbar";
 import { SessionConsoleMarks, SessionConsoleScan } from "@/components/session-view/session-console-marks";
-import { CONSOLE_LABEL_CLASS } from "@/components/ui/console-frame";
 import { createClient } from "@/lib/supabase/client";
 import { getSessions, deleteSession, restartSession, getWorkspaces, getIlePostSessionPath, type Session, type Workspace } from "@/lib/storage";
 import { DEFAULT_PROMPTS, PROMPT_META, type PromptKey, type UserPrompts } from "@/lib/prompts";
@@ -36,7 +34,6 @@ import {
   type DashboardWorkspaceListFilter,
 } from "@/lib/dashboard-workspace-filters";
 import {
-  dashboardFrameLabel,
   dashboardListFilterForTab,
   dashboardTypeFilterForTab,
   isDashboardMyMapsTab,
@@ -837,9 +834,6 @@ export default function DashboardPage() {
         <DashboardAtmosphere />
         <SessionConsoleScan />
         <SessionConsoleMarks />
-        <p data-console-frame-label="" className={`absolute left-3 top-3 z-[4] ${CONSOLE_LABEL_CLASS}`}>
-          Home
-        </p>
         <div className="relative z-[2]">
           <LoadingStatusMessage message={t('common.loading')} />
         </div>
@@ -857,22 +851,16 @@ export default function DashboardPage() {
       <SessionConsoleScan />
       <SessionConsoleMarks />
       <div
-        className="relative z-[2] grid min-h-screen grid-cols-1 md:h-full md:min-h-0 md:grid-cols-[14rem_minmax(0,1fr)] md:grid-rows-[auto_minmax(0,1fr)]"
+        className="relative z-[2] grid min-h-screen grid-cols-1 md:h-full md:min-h-0 md:grid-cols-[16rem_minmax(0,1fr)]"
         data-dashboard-platform
       >
-      <div className="md:col-start-2 md:row-start-1">
-        <Navbar productLinks={false} />
-      </div>
       <DashboardSidebar
         activeTab={activeTab}
         onSelect={setDashboardTab}
         hasPaidAccess={hasPaidAccess}
       />
 
-      <div className="min-w-0 md:col-start-2 md:row-start-2 md:min-h-0 md:overflow-y-auto">
-      <p data-console-frame-label="" className={`pointer-events-none px-4 pt-2 sm:px-6 ${CONSOLE_LABEL_CLASS}`}>
-        {dashboardFrameLabel(activeTab)}
-      </p>
+      <div className="min-w-0 md:min-h-0 md:overflow-y-auto">
       <main className="overflow-x-hidden p-4 py-8 sm:px-6 lg:px-8">
         {/* Sessions Tab */}
         {activeTab === "sessions" && (

@@ -112,8 +112,7 @@ export function DashboardUsageTab({
             {/* Page header */}
             <div className="console-copy flex flex-wrap items-center justify-between gap-3 px-6 py-5">
               <div>
-                <p className={usageLabelClass}>Account</p>
-                <h2 className="mt-2 text-2xl font-medium tracking-[-0.5px] text-white">
+                <h2 className="text-2xl font-medium tracking-[-0.5px] text-white">
                   {isBillingBypass ? "Usage" : t("dashboard.yourSubscription")}
                 </h2>
                 <p className="mt-1 text-sm text-neutral-500">

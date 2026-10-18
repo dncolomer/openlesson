@@ -289,6 +289,9 @@ describe("dashboard home and my maps surface", () => {
     expect(readRepo("components/dashboard/dashboard-home-tab.tsx")).toMatch(
       /className="console-copy sticky[^"]*"[\s\S]*data-dashboard-play-bar/,
     );
+    expect(readRepo("components/dashboard/dashboard-home-tab.tsx").indexOf("data-dashboard-home-hero")).toBeLessThan(
+      readRepo("components/dashboard/dashboard-home-tab.tsx").indexOf("data-dashboard-play-bar"),
+    );
     expect(dash).toContain("data-dashboard-home-hero");
     expect(dash).toContain("data-dashboard-map-hero-summary");
     expect(dash).toContain("data-dashboard-map-card-summary");
@@ -347,6 +350,12 @@ describe("dashboard home and my maps surface", () => {
     expect(readRepo("components/WorkspaceView.tsx")).toContain("playCopy:");
     expect(readRepo("components/workspace-view/workspace-chrome.tsx")).toContain(
       "data-workspace-play-view",
+    );
+    expect(readRepo("components/workspace-view/workspace-chrome.tsx")).toContain(
+      "data-workspace-back-dashboard",
+    );
+    expect(readRepo("components/workspace-view/workspace-chrome.tsx")).not.toContain(
+      "<Navbar",
     );
     expect(readRepo("components/workspace-view/workspace-play-sidebar.tsx")).toContain(
       "data-workspace-play-block-sidebar",

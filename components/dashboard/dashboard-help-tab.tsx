@@ -3,9 +3,6 @@
 export function DashboardHelpTab() {
   return (
     <section className="console-copy px-6 py-14 sm:px-10 sm:py-16" data-dashboard-help>
-      <p className="mb-4 font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
-        Support
-      </p>
       <h2 className="text-3xl font-medium tracking-[-1.2px] text-white sm:text-4xl">
         How it works
       </h2>

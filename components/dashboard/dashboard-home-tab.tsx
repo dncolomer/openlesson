@@ -292,6 +292,73 @@ export function DashboardHomeTab({
 
   return (
     <div className="space-y-8" data-dashboard-home>
+      {!catalogLoading && parts.hero.length > 0 ? (
+        <section data-dashboard-home-hero className="space-y-3">
+          <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
+            Featured
+          </p>
+          {hero ? (
+            <button
+              type="button"
+              onClick={() => void openDetail(hero)}
+              className="group relative block min-h-[22rem] w-full overflow-hidden rounded-none border border-white/25 text-left sm:min-h-[28rem] lg:min-h-[32rem]"
+            >
+              <WorkspaceCardHero
+                workspaceId={hero.id}
+                coverImageUrl={hero.coverImageUrl}
+                imagePool={coverImagePool}
+                fallback="aesthetic"
+                heightClassName="absolute inset-0 h-full min-h-[22rem] sm:min-h-[28rem] lg:min-h-[32rem]"
+              />
+              <div className="relative flex h-full min-h-[22rem] flex-col justify-end p-6 sm:min-h-[28rem] sm:p-10 lg:min-h-[32rem]">
+                <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-300">
+                  {hero.category}
+                  {hero.isAycl && hero.priceLabel ? ` · ${hero.priceLabel}` : ""}
+                </p>
+                <h3 className="mt-2 max-w-3xl text-4xl font-medium tracking-[-1.4px] text-white sm:text-5xl lg:text-6xl">
+                  {hero.title}
+                </h3>
+                {heroSummary ? (
+                  <p
+                    className="mt-3 max-w-2xl text-sm leading-relaxed text-neutral-100 line-clamp-5 sm:text-base"
+                    data-dashboard-map-hero-summary
+                  >
+                    {heroSummary}
+                  </p>
+                ) : null}
+              </div>
+            </button>
+          ) : null}
+          {parts.hero.length > 1 ? (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  setHeroIndex((index) =>
+                    (index - 1 + parts.hero.length) % parts.hero.length,
+                  )
+                }
+                className="rounded-none border border-white/40 px-3 py-1.5 text-xs text-white hover:border-white/80"
+              >
+                Previous
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setHeroIndex((index) => (index + 1) % parts.hero.length)
+                }
+                className="rounded-none border border-white/40 px-3 py-1.5 text-xs text-white hover:border-white/80"
+              >
+                Next
+              </button>
+              <p className="font-mono text-[10px] text-neutral-500">
+                {heroIndex + 1} / {parts.hero.length}
+              </p>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
       <section
         className="console-copy sticky top-0 z-20 px-4 py-3 sm:px-5"
         data-dashboard-play
@@ -403,73 +470,6 @@ export function DashboardHomeTab({
         </p>
       ) : (
         <>
-          {parts.hero.length > 0 ? (
-            <section data-dashboard-home-hero className="space-y-3">
-              <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
-                Featured
-              </p>
-              {hero ? (
-                <button
-                  type="button"
-                  onClick={() => void openDetail(hero)}
-                  className="group relative block min-h-[22rem] w-full overflow-hidden rounded-none border border-white/25 text-left sm:min-h-[28rem] lg:min-h-[32rem]"
-                >
-                  <WorkspaceCardHero
-                    workspaceId={hero.id}
-                    coverImageUrl={hero.coverImageUrl}
-                    imagePool={coverImagePool}
-                    fallback="aesthetic"
-                    heightClassName="absolute inset-0 h-full min-h-[22rem] sm:min-h-[28rem] lg:min-h-[32rem]"
-                  />
-                  <div className="relative flex h-full min-h-[22rem] flex-col justify-end p-6 sm:min-h-[28rem] sm:p-10 lg:min-h-[32rem]">
-                    <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-300">
-                      {hero.category}
-                      {hero.isAycl && hero.priceLabel ? ` · ${hero.priceLabel}` : ""}
-                    </p>
-                    <h3 className="mt-2 max-w-3xl text-4xl font-medium tracking-[-1.4px] text-white sm:text-5xl lg:text-6xl">
-                      {hero.title}
-                    </h3>
-                    {heroSummary ? (
-                      <p
-                        className="mt-3 max-w-2xl text-sm leading-relaxed text-neutral-100 line-clamp-5 sm:text-base"
-                        data-dashboard-map-hero-summary
-                      >
-                        {heroSummary}
-                      </p>
-                    ) : null}
-                  </div>
-                </button>
-              ) : null}
-              {parts.hero.length > 1 ? (
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setHeroIndex((index) =>
-                        (index - 1 + parts.hero.length) % parts.hero.length,
-                      )
-                    }
-                    className="rounded-none border border-white/40 px-3 py-1.5 text-xs text-white hover:border-white/80"
-                  >
-                    Previous
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setHeroIndex((index) => (index + 1) % parts.hero.length)
-                    }
-                    className="rounded-none border border-white/40 px-3 py-1.5 text-xs text-white hover:border-white/80"
-                  >
-                    Next
-                  </button>
-                  <p className="font-mono text-[10px] text-neutral-500">
-                    {heroIndex + 1} / {parts.hero.length}
-                  </p>
-                </div>
-              ) : null}
-            </section>
-          ) : null}
-
           {parts.secondary.length > 0 ? (
             <section data-dashboard-home-secondary className="space-y-3">
               <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">

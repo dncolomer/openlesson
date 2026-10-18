@@ -22,6 +22,7 @@ import {
   type ProductFlowWizardStep,
 } from "@/lib/product-flow";
 import { ProductSurface } from "@/components/product-flow/product-surface";
+import { dashboardTabForProductSurface } from "@/lib/dashboard-nav";
 
 export function ProductFlowWizard({ kind }: { kind: ProductFlowKind }) {
   const router = useRouter();
@@ -118,9 +119,12 @@ export function ProductFlowWizard({ kind }: { kind: ProductFlowKind }) {
   }
 
   return (
-    <ProductSurface label={`${productLabel} flow`}>
+    <ProductSurface
+      label={`${productLabel} flow`}
+      activeTab={dashboardTabForProductSurface(kind)}
+    >
       <div
-        className="space-y-6"
+        className="mx-auto w-full max-w-3xl space-y-6"
         data-flow-wizard=""
         data-flow-wizard-kind={kind}
         data-flow-wizard-step={step}

@@ -12,6 +12,7 @@ import {
   type ProductFlowKind,
 } from "@/lib/product-flow";
 import { ProductSurface } from "@/components/product-flow/product-surface";
+import { dashboardTabForProductSurface } from "@/lib/dashboard-nav";
 
 type FlowChoice = { id: string; name: string; title?: string };
 
@@ -73,8 +74,11 @@ export function KnowledgeRegionCreate({ kind }: { kind: ProductFlowKind }) {
   }
 
   return (
-    <ProductSurface label={`${productLabel} knowledge region`}>
-      <div className="space-y-6" data-knowledge-region-create={kind}>
+    <ProductSurface
+      label={`${productLabel} knowledge region`}
+      activeTab={dashboardTabForProductSurface(kind, "region")}
+    >
+      <div className="mx-auto w-full max-w-3xl space-y-6" data-knowledge-region-create={kind}>
         <Link href={`/dashboard?tab=${kind}_regions`} className="text-xs text-neutral-400 underline">
           Back to knowledge regions
         </Link>

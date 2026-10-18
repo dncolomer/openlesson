@@ -93,7 +93,7 @@ export function WorkspaceView({
   ayclOwnerUserId,
   ayclAccessTier: ayclAccessTierProp,
   workspaceIdOverride,
-  hideNavbar = false,
+  hideNavbar: _hideNavbar = false,
   accessBanner,
 }: WorkspaceViewProps) {
   const { t, locale } = useI18n();
@@ -753,7 +753,6 @@ export function WorkspaceView({
       <div className="relative z-[2] flex min-h-0 flex-1 flex-col overflow-hidden">
       <WorkspaceViewChrome
         isAycl={isAycl}
-        hideNavbar={hideNavbar}
         accessBanner={shell.playView ? undefined : accessBanner}
         ayclCapabilities={ayclCapabilities}
         ayclUpgradePriceLabel={ayclUpgradePriceLabel}

@@ -721,6 +721,11 @@ describe("verification workspace shell gates", () => {
     expect(page).not.toContain('data-create-mode="calibration"');
     expect(page).not.toContain("Calibration workspace");
     expect(read("app/verification/flows/new/page.tsx")).toContain("ProductFlowWizard");
+    expect(read("components/product-flow/product-surface.tsx")).toContain("DashboardSidebar");
+    expect(read("components/product-flow/product-surface.tsx")).not.toContain("Navbar");
+    expect(read("components/product-flow/product-flow-wizard.tsx")).toContain(
+      "dashboardTabForProductSurface(kind)",
+    );
     expect(read("components/product-flow/product-flow-wizard.tsx")).toContain("Publish");
     expect(read("components/product-flow/product-flow-wizard.tsx")).toContain(
       "data-verification-generate-from-topic",

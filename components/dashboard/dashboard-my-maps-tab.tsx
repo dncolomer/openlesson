@@ -17,9 +17,6 @@ export function DashboardMyMapsTab({
   return (
     <div className="space-y-6" data-dashboard-my-maps>
       <section className="console-copy px-6 py-7 sm:px-8 sm:py-8">
-        <p className="mb-3 font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
-          My Maps
-        </p>
         <h2 className="max-w-2xl text-3xl font-medium tracking-[-1.2px] text-white sm:text-4xl">
           Maps you play.
         </h2>

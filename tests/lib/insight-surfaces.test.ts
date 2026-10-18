@@ -109,15 +109,13 @@ describe("workspaceKnowledgeInsightsPath", () => {
 });
 
 describe("Play-only Insights tab + Generate Insights", () => {
-  it("lists Insights on a learning workspace for signed-in viewers", () => {
+  it("keeps Insights off the workspace page", () => {
     expect(availableSectionsForMode({ mode: "learner", isLoggedIn: true })).toEqual([
       "workspace",
-      "insights",
     ]);
     expect(
       availableSectionsForMode({ mode: "creator", isOwner: true, isLoggedIn: true }),
-    ).toContain("insights");
-    expect(workspacePlayInsightsPath("abc")).toBe("/workspace/abc?section=insights");
+    ).not.toContain("insights");
     expect(insightsTracesUrl("ws-1", "block-9")).toContain("blockId=block-9");
     expect(LEARNER_WORK_DRAWER_TITLE).toBe("Work");
     expect(GENERATE_INSIGHTS_ACTION_LABEL).toBe("Generate Insights");
@@ -140,11 +138,9 @@ describe("Play-only Insights tab + Generate Insights", () => {
       path.join(REPO_ROOT, "components/WorkspaceLearnerBlockPane.tsx"),
       "utf8",
     );
-    expect(nav).toContain('key: "insights"');
-    expect(nav).toContain('visibleSections.includes("insights")');
-    expect(hosts).toContain("InsightsDashboardTab");
-    expect(hosts).toContain("data-play-insights-tab");
-    expect(hosts).toContain("mountsInsightsPanel");
+    expect(nav).not.toContain('key: "insights"');
+    expect(hosts).not.toContain("InsightsDashboardTab");
+    expect(hosts).not.toContain("data-play-insights-tab");
     expect(learner).not.toContain("data-generate-insights-drawer");
     expect(learner).not.toContain("data-generate-insights-prompt");
     expect(learner).not.toContain(GENERATE_INSIGHTS_ACTION_LABEL);

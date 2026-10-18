@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { SessionConsoleMarks, SessionConsoleScan } from "@/components/session-view/session-console-marks";
 import { CONSOLE_LABEL_CLASS, ConsolePage } from "@/components/ui/console-frame";
-import { Navbar } from "@/components/Navbar";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { WorkspaceSectionNav } from "@/components/WorkspaceSectionNav";
 import type { WorkspaceSectionNavItem } from "@/components/WorkspaceSectionNav";
@@ -15,7 +14,26 @@ import {
 import type { AyclCapabilities } from "@/lib/aycl-shared";
 import type { WorkspaceSectionKey } from "@/lib/workspace-sections";
 import type { Workspace } from "@/components/workspace-view/types";
+import { dashboardHrefForTab } from "@/lib/dashboard-nav";
 import { workspaceProductShell } from "@/lib/workspace-kind";
+import { useI18n } from "@/lib/i18n";
+
+export function WorkspaceDashboardLink({
+  className = "shrink-0 py-2.5 pl-12 pr-3 text-sm text-neutral-400 transition-colors hover:text-white sm:pl-14",
+}: {
+  className?: string;
+}) {
+  const { t } = useI18n();
+  return (
+    <Link
+      href={dashboardHrefForTab("home")}
+      data-workspace-back-dashboard
+      className={className}
+    >
+      {t("nav.dashboard")}
+    </Link>
+  );
+}
 
 export function WorkspaceLoading({ message }: { message: string }) {
   return (
@@ -59,7 +77,6 @@ export function WorkspaceLoadError({
 
 export function WorkspaceViewChrome({
   isAycl,
-  hideNavbar,
   accessBanner,
   ayclCapabilities,
   ayclUpgradePriceLabel,
@@ -72,7 +89,6 @@ export function WorkspaceViewChrome({
   playView = false,
 }: {
   isAycl: boolean;
-  hideNavbar: boolean;
   accessBanner?: ReactNode;
   ayclCapabilities: AyclCapabilities | null;
   ayclUpgradePriceLabel: string;
@@ -85,9 +101,9 @@ export function WorkspaceViewChrome({
   playView?: boolean;
 }) {
   const productShell = workspaceProductShell(plan.workspace_kind);
+  const title = plan.title || plan.root_topic;
   return (
     <>
-      {!hideNavbar ? <Navbar /> : null}
       <p
         data-console-frame-label=""
         className={`pointer-events-none absolute left-3 top-3 z-[4] ${CONSOLE_LABEL_CLASS}`}
@@ -125,8 +141,16 @@ export function WorkspaceViewChrome({
       ) : null}
 
       {playView ? (
-        <div data-workspace-play-view="" className="sr-only">
-          Play
+        <div
+          data-workspace-play-view=""
+          className="flex shrink-0 items-center justify-between border-b border-neutral-800/60 bg-[#0b0b0b]"
+        >
+          <WorkspaceDashboardLink />
+          {title ? (
+            <p className="min-w-0 truncate px-3 py-2.5 text-right text-sm font-medium text-neutral-200">
+              {title}
+            </p>
+          ) : null}
         </div>
       ) : (
       <div
@@ -143,6 +167,7 @@ export function WorkspaceViewChrome({
           onChange={onSelectSection}
           variant="bar"
           workspaceTitle={plan.title || plan.root_topic}
+          leading={<WorkspaceDashboardLink />}
         />
       </div>
       )}

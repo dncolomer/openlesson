@@ -17,6 +17,8 @@ interface WorkspaceSectionNavProps {
   variant?: "bar" | "pills";
   /** Workspace name shown on the right of the section tabs. */
   workspaceTitle?: string | null;
+  /** Leading control, e.g. Dashboard back link. */
+  leading?: ReactNode;
 }
 
 export function WorkspaceSectionNav({
@@ -25,6 +27,7 @@ export function WorkspaceSectionNav({
   onChange,
   variant = "bar",
   workspaceTitle,
+  leading,
 }: WorkspaceSectionNavProps) {
   const { t } = useI18n();
   const navLabel = t("planView.topLevelSectionsNav");
@@ -80,6 +83,7 @@ export function WorkspaceSectionNav({
       className="flex shrink-0 items-center border-b border-neutral-800/60 bg-[#0b0b0b]"
       data-workspace-section-nav
     >
+      {leading}
       {sections.length > 0 ? (
       <nav
         className="flex min-w-0 flex-1 overflow-x-auto"

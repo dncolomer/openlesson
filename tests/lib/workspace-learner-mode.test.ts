@@ -41,13 +41,13 @@ describe("workspace mode pure resolvers", () => {
   it("Play mode is the map only; Build is the designer shell", () => {
     expect(
       availableSectionsForMode({ mode: "learner", isLoggedIn: true }),
-    ).toEqual(["workspace", "insights"]);
+    ).toEqual(["workspace"]);
     expect(
       availableSectionsForMode({ mode: "learner", isLoggedIn: false }),
     ).toEqual(["workspace"]);
     expect(
       availableSectionsForMode({ mode: "creator", isOwner: true, isLoggedIn: true }),
-    ).toEqual(["workspace", "dags", "map_types", "context", "insights", "settings"]);
+    ).toEqual(["workspace", "dags", "map_types", "context", "settings"]);
   });
 
   it("Creator keeps the learning designer sections", () => {
@@ -112,7 +112,7 @@ describe("workspace mode pure resolvers", () => {
         isOwner: false,
         isLoggedIn: true,
       }),
-    ).toEqual(["workspace", "insights"]);
+    ).toEqual(["workspace"]);
 
     const view = readWorkspaceViewSurface();
     expect(view).toContain("workspaceShell(");

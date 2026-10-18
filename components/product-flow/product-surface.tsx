@@ -2,7 +2,6 @@
 
 import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { SessionConsoleMarks, SessionConsoleScan } from "@/components/session-view/session-console-marks";
 import { CONSOLE_LABEL_CLASS } from "@/components/ui/console-frame";
 import { DashboardAtmosphere } from "@/components/dashboard/dashboard-atmosphere";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
@@ -29,8 +28,6 @@ export function ProductSurface({
       className="relative min-h-screen border border-white/40 bg-black text-white md:h-dvh md:max-h-dvh md:overflow-hidden"
     >
       <DashboardAtmosphere />
-      <SessionConsoleScan />
-      <SessionConsoleMarks />
       <div
         className="relative z-[2] grid min-h-screen grid-cols-1 md:h-full md:min-h-0 md:grid-cols-[16rem_minmax(0,1fr)]"
         data-dashboard-platform

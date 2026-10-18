@@ -16,6 +16,10 @@ export const CONSOLE_GRID_STYLE = {
   backgroundSize: "16px 16px",
 } as const;
 
+/** Coarse MAGI grid used on landing pages over PublicConsoleWash. */
+export const PUBLIC_MAGI_GRID_CLASS =
+  "bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:72px_72px] opacity-40";
+
 /**
  * Background field for public and marketing pages. Sits under page copy.
  * Corner brackets and a short index match the session rail.

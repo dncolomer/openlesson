@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { SessionConsoleMarks, SessionConsoleScan } from "@/components/session-view/session-console-marks";
+
 import { createClient } from "@/lib/supabase/client";
 import { getSessions, deleteSession, restartSession, getWorkspaces, getIlePostSessionPath, type Session, type Workspace } from "@/lib/storage";
 import { DEFAULT_PROMPTS, PROMPT_META, type PromptKey, type UserPrompts } from "@/lib/prompts";
@@ -832,8 +832,6 @@ export default function DashboardPage() {
         className="relative flex min-h-screen items-center justify-center overflow-hidden border border-white/40 bg-black"
       >
         <DashboardAtmosphere />
-        <SessionConsoleScan />
-        <SessionConsoleMarks />
         <div className="relative z-[2]">
           <LoadingStatusMessage message={t('common.loading')} />
         </div>
@@ -848,8 +846,6 @@ export default function DashboardPage() {
       className="relative min-h-screen border border-white/40 bg-black text-white md:h-dvh md:max-h-dvh md:overflow-hidden"
     >
       <DashboardAtmosphere />
-      <SessionConsoleScan />
-      <SessionConsoleMarks />
       <div
         className="relative z-[2] grid min-h-screen grid-cols-1 md:h-full md:min-h-0 md:grid-cols-[16rem_minmax(0,1fr)]"
         data-dashboard-platform

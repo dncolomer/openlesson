@@ -350,9 +350,15 @@ describe("dashboard platform surface", () => {
     expect(dashSrc).not.toContain("/aesthetics/piotr-binkowski/");
     expect(dashSrc).not.toContain("bg-black/82");
     expect(readRepo("components/dashboard/dashboard-atmosphere.tsx")).toContain("#1a1a1a");
-    expect(readRepo("components/dashboard/dashboard-atmosphere.tsx")).toContain("72px 72px");
+    expect(readRepo("components/dashboard/dashboard-atmosphere.tsx")).toContain("PublicConsoleWash");
+    expect(readRepo("components/dashboard/dashboard-atmosphere.tsx")).toContain("PUBLIC_MAGI_GRID_CLASS");
+    expect(readRepo("components/ui/console-frame.tsx")).toContain("PUBLIC_MAGI_GRID_CLASS");
+    expect(readRepo("components/ui/console-frame.tsx")).toContain("72px_72px");
+    expect(readRepo("components/ui/console-frame.tsx")).toContain("rgba(255,255,255,0.025)");
+    expect(readRepo("app/page.tsx")).toContain("PUBLIC_MAGI_GRID_CLASS");
+    expect(readRepo("components/dashboard/dashboard-atmosphere.tsx")).not.toContain("rgba(255,255,255,0.06)");
     const panelCss = readRepo("app/globals.css");
-    expect(panelCss).toContain("--console-panel-bg: #1a1a1a");
+    expect(panelCss).toContain("--console-panel-bg: #000");
     expect(panelCss).toContain(".console-panel-fill");
     expect(panelCss).toContain(".console-panel-fill,\n.console-copy {");
     expect(panelCss).toContain("background-color: var(--console-panel-bg)");
@@ -361,8 +367,8 @@ describe("dashboard platform surface", () => {
       panelCss.indexOf(".console-copy:has"),
     );
     expect(copyBlock).toContain("background-color: var(--console-panel-bg)");
-    expect(copyBlock).not.toContain("background-color: #000");
     expect(copyBlock).not.toContain("rgba(0, 0, 0, 0.55)");
+    expect(copyBlock).not.toContain("#1a1a1a");
     expect(copyBlock).not.toContain("backdrop-filter");
     expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain("console-panel-fill");
     expect(readRepo("app/page.tsx")).toContain("console-copy");

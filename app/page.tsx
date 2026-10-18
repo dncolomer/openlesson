@@ -9,7 +9,7 @@ import { LandingNav } from "@/components/LandingNav";
 import { LandingPublicMapsCarousel } from "@/components/marketing/LandingPublicMapsCarousel";
 import { SectionHeading } from "@/components/marketing/MarketingChrome";
 import { TrackedCtaLink } from "@/components/TrackedCtaLink";
-import { PublicConsoleWash } from "@/components/ui/console-frame";
+import { PUBLIC_MAGI_GRID_CLASS, PublicConsoleWash } from "@/components/ui/console-frame";
 import {
   PLATFORM_CTA,
   PLATFORM_HERO,
@@ -38,7 +38,7 @@ export default function B2BLandingPage() {
       {bgImage && <div className="fixed inset-0 z-0 bg-cover bg-fixed bg-center" style={{ backgroundImage: `url(${bgImage})` }} />}
       <div className="fixed inset-0 z-0 bg-[#0a0a0a]/78" />
       <PublicConsoleWash />
-      <div className="fixed inset-0 z-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:72px_72px] opacity-40" />
+      <div className={`fixed inset-0 z-0 ${PUBLIC_MAGI_GRID_CLASS}`} />
 
       <LandingNav />
 

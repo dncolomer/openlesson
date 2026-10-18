@@ -1,4 +1,6 @@
-/** Dark grey field + MAGI square grid under the dashboard console. */
+import { PUBLIC_MAGI_GRID_CLASS, PublicConsoleWash } from "@/components/ui/console-frame";
+
+/** Dark grey field + the landing-page MAGI wash (fine grid, constellation, 72px overlay). */
 
 export const DASHBOARD_FIELD = "#1a1a1a";
 
@@ -11,15 +13,11 @@ export function DashboardAtmosphere() {
         className="pointer-events-none absolute inset-0 z-0"
         style={{ backgroundColor: DASHBOARD_FIELD }}
       />
+      <PublicConsoleWash className="absolute inset-0 z-0" />
       <div
         aria-hidden
         data-dashboard-atmosphere-grid=""
-        className="pointer-events-none absolute inset-0 z-0 opacity-40"
-        style={{
-          backgroundImage:
-            "linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px)",
-          backgroundSize: "72px 72px",
-        }}
+        className={`pointer-events-none absolute inset-0 z-0 ${PUBLIC_MAGI_GRID_CLASS}`}
       />
     </>
   );

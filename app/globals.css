@@ -3,7 +3,7 @@
 :root {
   --background: #0a0a0a;
   --foreground: #ededed;
-  --console-panel-bg: #1a1a1a;
+  --console-panel-bg: #000;
 }
 
 @import "./ile-excalidraw-theme.css";
@@ -14,7 +14,7 @@ body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-/* Opaque dark grey shared by the dashboard sidebar and copy boxes. */
+/* Opaque black shared by the dashboard sidebar and copy boxes. */
 .console-panel-fill,
 .console-copy {
   background-color: var(--console-panel-bg);

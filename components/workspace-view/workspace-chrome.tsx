@@ -69,6 +69,7 @@ export function WorkspaceViewChrome({
   activeSection,
   onSelectSection,
   plan,
+  playView = false,
 }: {
   isAycl: boolean;
   hideNavbar: boolean;
@@ -81,6 +82,7 @@ export function WorkspaceViewChrome({
   activeSection: WorkspaceSectionKey;
   onSelectSection: (section: WorkspaceSectionKey) => void;
   plan: Workspace;
+  playView?: boolean;
 }) {
   const productShell = workspaceProductShell(plan.workspace_kind);
   return (
@@ -122,6 +124,11 @@ export function WorkspaceViewChrome({
         </div>
       ) : null}
 
+      {playView ? (
+        <div data-workspace-play-view="" className="sr-only">
+          Play
+        </div>
+      ) : (
       <div
         data-workspace-product-shell={productShell}
         {...(productShell === "verification"
@@ -138,6 +145,7 @@ export function WorkspaceViewChrome({
           workspaceTitle={plan.title || plan.root_topic}
         />
       </div>
+      )}
     </>
   );
 }

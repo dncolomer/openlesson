@@ -66,13 +66,16 @@ export async function POST(request: NextRequest) {
       ayclAccessTier: rawTier,
       ayclToken: rawAyclToken,
       upgradeFromPurchaseId: rawUpgradeId,
+      dashboardPlayCopy: rawDashboardPlayCopy,
     } = body as {
       priceType?: string;
       workspaceId?: string;
       ayclAccessTier?: string;
       ayclToken?: string;
       upgradeFromPurchaseId?: string;
+      dashboardPlayCopy?: boolean;
     };
+    const dashboardPlayCopy = rawDashboardPlayCopy === true;
 
     if (!priceType || !CHECKOUT_PRICE_TYPES.includes(priceType as CheckoutPriceType)) {
       return jsonError(400, "Invalid price type");
@@ -312,11 +315,14 @@ export async function POST(request: NextRequest) {
             upgrade_from_purchase_id: ayclUpgradePurchaseId,
           }
         : {}),
+      ...(dashboardPlayCopy ? { dashboard_play_copy: "1" } : {}),
     };
 
     const successUrl =
       priceTypeResolved === "all_you_can_learn"
-        ? `${origin}/all-you-can-learn/success?session_id={CHECKOUT_SESSION_ID}`
+        ? dashboardPlayCopy
+          ? `${origin}/dashboard?tab=my_maps&session_id={CHECKOUT_SESSION_ID}`
+          : `${origin}/all-you-can-learn/success?session_id={CHECKOUT_SESSION_ID}`
         : isGuestCheckout
           ? `${origin}/register?session_id={CHECKOUT_SESSION_ID}`
           : priceTypeResolved === "rabbit_hole_plays"

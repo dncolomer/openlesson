@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import {
-  DASHBOARD_NAV_GROUPS,
   isDashboardNavTabItem,
   isDashboardProductTab,
   type DashboardTab,
 } from "@/lib/dashboard-nav";
+import { dashboardNavGroupsForAccess } from "@/lib/free-tier";
 
 const itemClass =
   "block w-full whitespace-nowrap rounded-none px-2 py-2 text-left text-sm transition";
@@ -16,16 +16,19 @@ const activeClass = "border border-white/55 bg-white/10 text-white";
 export function DashboardSidebar({
   activeTab,
   onSelect,
+  hasPaidAccess = true,
 }: {
   activeTab: DashboardTab;
   onSelect: (tab: DashboardTab) => void;
+  hasPaidAccess?: boolean;
 }) {
+  const groups = dashboardNavGroupsForAccess(hasPaidAccess);
   return (
     <aside
       className="flex h-full w-full shrink-0 flex-col border-b border-white/40 bg-black/55 backdrop-blur-[2px] md:sticky md:top-0 md:col-start-1 md:row-span-2 md:row-start-1 md:h-full md:max-h-full md:min-h-0 md:self-start md:overflow-y-auto md:border-b-0 md:border-r"
       data-dashboard-sidebar
     >
-      {DASHBOARD_NAV_GROUPS.map((group) => (
+      {groups.map((group) => (
         <nav
           key={group.id}
           className="border-b border-white/20 px-3 py-4 last:border-b-0"

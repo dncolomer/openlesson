@@ -3,6 +3,7 @@ import { readDashboardSurface, readRepo } from "../helpers/surface-source";
 import {
   DASHBOARD_NAV_GROUPS,
   dashboardCreateHref,
+  dashboardCreateLabel,
   dashboardFrameLabel,
   dashboardListFilterForTab,
   dashboardProductLabel,
@@ -72,6 +73,8 @@ describe("dashboard nav", () => {
     expect(dashboardCreateHref("verification")).toBe(productFlowNewPath("verification"));
     expect(dashboardCreateHref("calibration")).toBe(productFlowNewPath("calibration"));
     expect(dashboardProductLabel("verification")).toBe("Verification");
+    expect(dashboardCreateLabel("learning")).toBe("Create a Learning Map →");
+    expect(dashboardCreateLabel("verification")).toBe("Create Verification workspace →");
     expect(dashboardFrameLabel("help")).toBe("How it works");
     expect(dashboardFrameLabel("calibration")).toBe("Calibration");
     expect(dashboardFrameLabel("home")).toBe("Home");
@@ -81,8 +84,8 @@ describe("dashboard nav", () => {
     const learning = DASHBOARD_NAV_GROUPS.find((group) => group.id === "learning");
     const verification = DASHBOARD_NAV_GROUPS.find((group) => group.id === "verification");
     const calibration = DASHBOARD_NAV_GROUPS.find((group) => group.id === "calibration");
-    expect(learning?.items.map((item) => item.id)).toEqual(["learning", "shop"]);
-    expect(learning?.items.map((item) => item.label)).toEqual(["Build", "Your Shop"]);
+    expect(learning?.items.map((item) => item.id)).toEqual(["my_maps", "learning", "shop"]);
+    expect(learning?.items.map((item) => item.label)).toEqual(["My Maps", "Build", "Your Shop"]);
     expect(verification?.items.map((item) => item.label)).toEqual(["Flows", "Knowledge regions"]);
     expect(calibration?.items.map((item) => item.label)).toEqual(["Flows", "Knowledge regions"]);
     expect(verification?.items.map((item) => item.label)).not.toContain("Workspaces");
@@ -98,16 +101,17 @@ describe("dashboard nav", () => {
     expect(DASHBOARD_NAV_GROUPS.some((group) => group.id === "products")).toBe(false);
   });
 
-  it("puts Upgrade on the sidebar as a dashboard tab for owned modules", () => {
+  it("puts Usage on the sidebar and folds Upgrade into that page", () => {
     const account = DASHBOARD_NAV_GROUPS.find((group) => group.id === "account");
-    const upgrade = account?.items.find((item) => item.id === "upgrade");
-    expect(upgrade).toEqual({
-      id: "upgrade",
-      label: "Upgrade",
-    });
-    expect(isDashboardNavTabItem(upgrade!)).toBe(true);
-    expect(parseDashboardTab("upgrade")).toBe("upgrade");
-    expect(dashboardFrameLabel("upgrade")).toBe("Upgrade");
+    expect(account?.items.map((item) => item.id)).toEqual([
+      "usage",
+      "organization",
+      "integrations",
+    ]);
+    expect(account?.items.some((item) => item.id === "upgrade")).toBe(false);
+    expect(parseDashboardTab("upgrade")).toBe("usage");
+    expect(parseDashboardTab("usage")).toBe("usage");
+    expect(dashboardFrameLabel("usage")).toBe("Usage");
   });
 });
 
@@ -325,9 +329,11 @@ describe("dashboard platform surface", () => {
     expect(dashSrc).toContain("bg-black/82");
     expect(dashSrc).toContain("<Navbar productLinks={false} />");
     expect(dashSrc).toContain("DashboardUpgradeTab");
-    expect(dashSrc).toContain('activeTab === "upgrade"');
+    expect(dashSrc).toContain('activeTab === "usage"');
+    expect(dashSrc).not.toContain('activeTab === "upgrade"');
     expect(readRepo("components/dashboard/dashboard-upgrade-tab.tsx")).toContain("data-dashboard-upgrade");
     expect(readRepo("components/dashboard/dashboard-upgrade-tab.tsx")).toContain("data-dashboard-module");
+    expect(readRepo("components/dashboard/dashboard-usage-tab.tsx")).toContain("DashboardUpgradeTab");
   });
 
   it("loads owner-wide recent flows from verification and calibration tables", () => {

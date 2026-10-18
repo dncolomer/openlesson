@@ -49,6 +49,7 @@ export function WorkspaceMapColumn({
   expandJobs,
   clusterMapJob,
   onAbortExpandJob,
+  playView = false,
 }: {
   mobileColumn: MobileColumn;
   nodes: Block[];
@@ -94,9 +95,10 @@ export function WorkspaceMapColumn({
   expandJobs: AddExpandJob[];
   clusterMapJob: ClusterMapJob;
   onAbortExpandJob: (jobId: string) => void;
+  playView?: boolean;
 }) {
   return (
-    <aside className={`${mobileColumn === "sessions" ? "flex" : "hidden"} relative flex-1 min-h-0 flex-col border-b border-neutral-800/50 bg-[#0b0b0b] md:flex md:h-full ${WORKSPACE_MAP_DESKTOP_MAP_WIDTH_CLASS} md:border-b-0 md:border-r`}>
+    <aside className={`${playView || mobileColumn === "sessions" ? "flex" : "hidden"} relative flex-1 min-h-0 flex-col border-b border-neutral-800/50 bg-[#0b0b0b] md:flex md:h-full md:border-b-0 ${playView ? "md:w-full md:flex-1" : `${WORKSPACE_MAP_DESKTOP_MAP_WIDTH_CLASS} md:border-r`}`}>
       <SessionList
         nodes={nodes}
         onSelect={() => {}}

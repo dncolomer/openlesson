@@ -116,6 +116,7 @@ describe("Knowledge Region create mode", () => {
     expect(workspaceSupportsFeature("calibration", "verification_flows")).toBe(false);
     expect(workspaceSupportsFeature("calibration", "calibration_flows")).toBe(true);
     expect(workspaceSupportsFeature("standard", "calibration_flows")).toBe(false);
+    expect(workspaceSupportsFeature("standard", "make_public")).toBe(true);
 
     writeScratch(
       "knowledge-region-create-mode.log",
@@ -576,7 +577,8 @@ describe("Knowledge Region wiring", () => {
 
     const settings = read("components/WorkspaceIntegrationPanel.tsx");
     expect(settings).toContain("settingsSubTabsForKind");
-    expect(settings).toContain("workspaceAllowsCopyToVerification(workspaceKind)");
+    expect(settings).not.toContain("workspaceAllowsCopyToVerification");
+    expect(settings).not.toContain("WorkspaceCopyToVerification");
     expect(settings).toContain("workspaceSettingsIntegrationCopy(workspaceKind)");
     expect(settings).toContain("data-kr-integration-skill={isNoMap");
     expect(settings).not.toContain("WorkspaceKnowledgePortalPanel");

@@ -1,6 +1,6 @@
 /**
  * Settings subtabs by workspace product.
- * Learning workspace: General, AYCL, Integrations.
+ * Learning workspace: General (includes Make Public for Home), AYCL, Integrations.
  * Verification workspace: General (includes Make Public), Knowledge Regions,
  * Data Studio, Integration.
  * Knowledge Portal is not a settings section.

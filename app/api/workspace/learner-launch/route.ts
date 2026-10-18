@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
+import { rejectIfFreeWeeklySessionLimit } from "@/lib/api/free-session-quota";
+import { loadProductAccessSnapshot } from "@/lib/api/product-access";
 import { ayclTokenFromBody, ileTokenFromBody, guardWorkspaceRoute } from "@/lib/api/require-auth";
+import { isPaidOnlyWorkspaceKind } from "@/lib/free-tier";
 import { buildLearnerLaunchBody } from "@/lib/workspace-learner-writes";
 
 export const runtime = "nodejs";
@@ -29,8 +32,34 @@ export async function POST(request: NextRequest) {
       feature: "map",
       ayclToken: ayclTokenFromBody(body),
       ileToken: ileTokenFromBody(body),
+      requireProductAccess: false,
     });
     if (!auth.ok) return auth.response;
+
+    if (auth.principal.kind === "cookie_user") {
+      const access = await loadProductAccessSnapshot(auth.supabase, auth.persistUserId);
+      if (!access.ok) return access.response;
+      if (!access.hasPaidAccess) {
+        const { data: workspaceKindRow } = await auth.supabase
+          .from("workspaces")
+          .select("workspace_kind")
+          .eq("id", workspaceId)
+          .maybeSingle();
+        if (isPaidOnlyWorkspaceKind(workspaceKindRow?.workspace_kind)) {
+          return jsonError(
+            403,
+            "Upgrade to run Verification or Calibration.",
+            "product_access_required",
+            { renew_url: "/pricing" },
+          );
+        }
+        const denied = await rejectIfFreeWeeklySessionLimit(
+          auth.supabase,
+          auth.persistUserId,
+        );
+        if (denied) return denied;
+      }
+    }
 
     const { data: block, error: blockError } = await auth.supabase
       .from("blocks")

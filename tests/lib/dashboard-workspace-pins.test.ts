@@ -75,14 +75,12 @@ describe("dashboard pin persistence (localStorage)", () => {
 });
 
 describe("Dashboard pin UI surface", () => {
-  it("table and page wire pin control + sort helper", () => {
+  it("workspace table has no pin/unpin actions", () => {
     const page = readDashboardSurface();
-    expect(page).toContain("data-workspace-pin");
-    expect(page).toContain("handleTogglePin");
-    expect(page).toMatch(/Pin|Unpin|pinned/i);
-    expect(page).toContain("sortWorkspacesPinnedFirst");
-    expect(page).toContain("loadPinnedWorkspaceIds");
-    expect(page).toContain("savePinnedWorkspaceIds");
-    expect(page).toContain("pinnedWorkspaceIds");
+    expect(page).not.toContain("data-workspace-pin");
+    expect(page).not.toContain("handleTogglePin");
+    expect(page).not.toContain("pinnedWorkspaceIds");
+    expect(page).not.toContain("loadPinnedWorkspaceIds");
+    expect(page).not.toContain("savePinnedWorkspaceIds");
   });
 });

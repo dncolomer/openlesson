@@ -1,13 +1,15 @@
 "use client";
 
-import type { Dispatch, SetStateAction } from "react";
+import { useState, type Dispatch, type SetStateAction } from "react";
 import { default as Link } from "next/link";
+import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import {
   isDashboardWorkspaceListFilter,
   type DashboardWorkspaceListFilter,
 } from "@/lib/dashboard-workspace-filters";
 import {
   dashboardCreateHref,
+  dashboardCreateLabel,
   dashboardProductLabel,
   type DashboardProductTab,
 } from "@/lib/dashboard-nav";
@@ -19,9 +21,7 @@ export type DashboardPlansTabProps = {
   formatDate: (dateStr: string) => string;
   handleArchivePlan: (workspaceId: string) => Promise<void>;
   handleRestorePlan: (workspaceId: string) => Promise<void>;
-  handleTogglePin: (workspace: Workspace) => void;
   paginatedPlans: Workspace[];
-  pinnedWorkspaceIds: Set<string>;
   setPlanPage: Dispatch<SetStateAction<number>>;
   setPlanSearch: Dispatch<SetStateAction<string>>;
   setShowArchivedPlans: Dispatch<SetStateAction<boolean>>;
@@ -45,9 +45,7 @@ export function DashboardPlansTab({
     formatDate,
     handleArchivePlan,
     handleRestorePlan,
-    handleTogglePin,
     paginatedPlans,
-    pinnedWorkspaceIds,
     setPlanPage,
     productTab,
     setPlanSearch,
@@ -67,6 +65,7 @@ export function DashboardPlansTab({
   const isShop = surface === "shop";
   const productLabel = dashboardProductLabel(productTab);
   const createHref = dashboardCreateHref(productTab);
+  const [visibilityError, setVisibilityError] = useState("");
   const kicker = isShop ? "Your Shop" : productLabel;
   const heading = isShop
     ? "Workspaces you listed."
@@ -78,14 +77,14 @@ export function DashboardPlansTab({
   const body = isShop
     ? "Learning maps you listed as All You Can Learn."
     : productTab === "learning"
-      ? "Browse Learning workspaces, pin the ones you return to, and start a new map."
+      ? "Browse Learning workspaces and start a new map."
       : productTab === "verification"
         ? "Browse Verification workspaces and the verification flows they host."
         : "Browse Calibration workspaces and the calibration flows they host.";
   const emptyTitle = isShop
     ? "No listings yet"
     : `No ${productLabel.toLowerCase()} workspaces yet`;
-  const createLabel = `Create ${productLabel} workspace →`;
+  const createLabel = dashboardCreateLabel(productTab);
   return (
           <div
             className="space-y-6"
@@ -208,6 +207,12 @@ export function DashboardPlansTab({
               />
             </div>
 
+            {visibilityError ? (
+              <p className="text-sm text-red-400" data-dashboard-visibility-error>
+                {visibilityError}
+              </p>
+            ) : null}
+
             {filteredWorkspaces.length === 0 ? (
               <div className="console-copy py-8 text-center text-neutral-500">
                 <p className="text-sm">{t('dashboard.noMatchingWorkspaces')}</p>
@@ -231,7 +236,6 @@ export function DashboardPlansTab({
                   <tbody>
                     {paginatedPlans.map((plan) => {
                       const isPublic = plan.is_public ?? false;
-                      const isPinned = pinnedWorkspaceIds.has(plan.id);
                       const publicLabel = t("dashboard.public");
                       const privateLabel = t("dashboard.private");
                       return (
@@ -239,7 +243,6 @@ export function DashboardPlansTab({
                           key={plan.id}
                           className="border-b border-white/10 last:border-b-0"
                           data-dashboard-workspace
-                          data-workspace-pinned={isPinned ? "true" : "false"}
                           data-workspace-aycl={plan.is_all_you_can_learn ? "true" : "false"}
                         >
                           <td className="px-4 py-3">
@@ -262,22 +265,6 @@ export function DashboardPlansTab({
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex flex-wrap items-center gap-2">
-                              <button
-                                type="button"
-                                onClick={() => handleTogglePin(plan)}
-                                data-workspace-pin
-                                data-workspace-pin-state={isPinned ? "pinned" : "unpinned"}
-                                aria-pressed={isPinned}
-                                aria-label={isPinned ? "Unpin workspace" : "Pin workspace"}
-                                title={isPinned ? "Unpin from top of list" : "Pin to top of list"}
-                                className={`console-button shrink-0 px-2.5 py-1 text-xs transition ${
-                                  isPinned
-                                    ? "border-white/80 text-white"
-                                    : "text-neutral-400 hover:border-white/80 hover:text-neutral-200"
-                                }`}
-                              >
-                                {isPinned ? "Unpin" : "Pin"}
-                              </button>
                               {plan.status === "archived" ? (
                                 <button
                                   type="button"
@@ -300,22 +287,34 @@ export function DashboardPlansTab({
                               <button
                                 type="button"
                                 onClick={async () => {
+                                  const makingPublic = !isPublic;
                                   try {
                                     const res = await fetch(`/api/workspaces/${plan.id}/visibility`, {
                                       method: "PUT",
                                       headers: { "Content-Type": "application/json" },
-                                      body: JSON.stringify({ is_public: !isPublic }),
+                                      body: JSON.stringify({
+                                        is_public: makingPublic,
+                                      }),
                                     });
-                                    const data = await res.json();
-                                    if (data.success) {
-                                      setWorkspaces((plans) =>
-                                        plans.map((entry) =>
-                                          entry.id === plan.id ? { ...entry, is_public: !isPublic } : entry,
-                                        ),
+                                    const data = await res.json().catch(() => ({}));
+                                    if (!res.ok || !data.success) {
+                                      throw new Error(
+                                        errorMessageFromBody(data, "Could not update visibility"),
                                       );
                                     }
+                                    setVisibilityError("");
+                                    setWorkspaces((plans) =>
+                                      plans.map((entry) =>
+                                        entry.id === plan.id ? { ...entry, is_public: makingPublic } : entry,
+                                      ),
+                                    );
                                   } catch (err) {
                                     console.error("Error toggling visibility:", err);
+                                    setVisibilityError(
+                                      err instanceof Error
+                                        ? err.message
+                                        : "Could not update visibility",
+                                    );
                                   }
                                 }}
                                 className={`console-button px-2.5 py-1 text-xs transition ${

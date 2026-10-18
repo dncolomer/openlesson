@@ -233,6 +233,27 @@ export async function countIleSessions(
 }
 
 /**
+ * Count every `sessions` row for a user since `periodStart` (Free weekly cap).
+ * Includes disposable Home play sessions, not only billable Learning rows.
+ */
+export async function countUserSessionsSince(
+  supabase: SupabaseClient,
+  userId: string,
+  periodStart: Date,
+): Promise<number> {
+  const { count, error } = await supabase
+    .from("sessions")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .gte("created_at", periodStart.toISOString());
+  if (error) {
+    console.error("[usage-metrics] free-tier session count failed:", error);
+    return 0;
+  }
+  return count ?? 0;
+}
+
+/**
  * Count billable TAP sessions attributed to the user (`workspace_tap_sessions`).
  * Only real runs (in_progress / completed) — not pending unused links or revoked.
  */

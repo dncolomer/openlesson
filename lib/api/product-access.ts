@@ -14,21 +14,29 @@ export type ProductAccessResult =
   | { ok: true; profile: ProductAccessProfile; org: ProductAccessOrg | null }
   | { ok: false; response: NextResponse };
 
+export type ProductAccessSnapshot =
+  | {
+      ok: true;
+      profile: ProductAccessProfile;
+      org: ProductAccessOrg | null;
+      hasPaidAccess: boolean;
+    }
+  | { ok: false; response: NextResponse };
+
 /**
- * Verify the authenticated user has product entitlement (admin, valid token,
- * or entitled organization). Same rules as middleware `hasProductAccess`.
- * Skip this for AYCL token, TAP private-token, and Proof-of-Work API-key auth paths.
+ * Load profile + org billing without requiring a paid module.
+ * Free accounts (`hasPaidAccess === false`) may still use Home / My Maps.
  */
-export async function requireProductAccess(
+export async function loadProductAccessSnapshot(
   supabase: SupabaseClient,
-  user: User
-): Promise<ProductAccessResult> {
+  userId: string,
+): Promise<ProductAccessSnapshot> {
   const { data: rawProfile, error } = await supabase
     .from("profiles")
     .select(
       "plan, subscription_status, is_admin, organization_id, token_tier, token_validity_expires_at, current_period_end"
     )
-    .eq("id", user.id)
+    .eq("id", userId)
     .single();
 
   if (error || !rawProfile) {
@@ -46,9 +54,9 @@ export async function requireProductAccess(
   };
   try {
     const admin = createAdminClient();
-    profile = await ensureTrialExpiryApplied(admin, user.id, profile);
+    profile = await ensureTrialExpiryApplied(admin, userId, profile);
   } catch {
-    profile = await ensureTrialExpiryApplied(supabase, user.id, profile);
+    profile = await ensureTrialExpiryApplied(supabase, userId, profile);
   }
 
   let org: ProductAccessOrg | null = null;
@@ -71,7 +79,26 @@ export async function requireProductAccess(
     }
   }
 
-  if (!hasProductAccess(profile, org)) {
+  return {
+    ok: true,
+    profile,
+    org,
+    hasPaidAccess: hasProductAccess(profile, org),
+  };
+}
+
+/**
+ * Verify the authenticated user has product entitlement (admin, valid token,
+ * or entitled organization). Same rules as middleware `hasProductAccess`.
+ * Skip this for AYCL token, TAP private-token, and Proof-of-Work API-key auth paths.
+ */
+export async function requireProductAccess(
+  supabase: SupabaseClient,
+  user: User
+): Promise<ProductAccessResult> {
+  const snapshot = await loadProductAccessSnapshot(supabase, user.id);
+  if (!snapshot.ok) return snapshot;
+  if (!snapshot.hasPaidAccess) {
     return {
       ok: false,
       response: jsonError(403, "Active subscription required", "product_access_required", {
@@ -79,6 +106,5 @@ export async function requireProductAccess(
       }),
     };
   }
-
-  return { ok: true, profile, org };
+  return { ok: true, profile: snapshot.profile, org: snapshot.org };
 }

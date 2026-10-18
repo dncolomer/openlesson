@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
+import { rejectIfFreeWeeklySessionLimit } from "@/lib/api/free-session-quota";
+import { loadProductAccessSnapshot } from "@/lib/api/product-access";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import {
   dashboardPlayHref,
@@ -20,6 +22,13 @@ export async function POST(req: NextRequest) {
     const prompt = normalizeDashboardPlayPrompt(body.prompt);
     if (!kind) return jsonError(400, "kind must be learn, verify, or calibrate");
     if (!prompt) return jsonError(400, "prompt is required");
+
+    const access = await loadProductAccessSnapshot(auth.supabase, auth.user.id);
+    if (!access.ok) return access.response;
+    if (!access.hasPaidAccess) {
+      const denied = await rejectIfFreeWeeklySessionLimit(auth.supabase, auth.user.id);
+      if (denied) return denied;
+    }
 
     const { data, error } = await auth.supabase
       .from("sessions")

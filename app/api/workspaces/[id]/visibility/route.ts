@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { ayclTokenFromBody, guardWorkspaceRoute, requireAuthenticatedUser } from "@/lib/api/require-auth";
+import { normalizeAyclCategory } from "@/lib/aycl-marketplace";
+import { rejectPublishPlayCopy } from "@/lib/dashboard-home-catalog";
 import { normalizeWorkspaceGoal } from "@/lib/pow-api/conversion-goal";
 import { denyWorkspaceFeatureResponse } from "@/lib/workspace-feature-gate";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -16,7 +18,7 @@ export async function PUT(
     const { user, supabase } = auth;
 
     const body = await req.json();
-    const { is_public, title, description, workspace_goal, learning_model_size } = body;
+    const { is_public, title, description, workspace_goal, learning_model_size, aycl_category } = body;
 
     const admin = createAdminClient();
     const { data: kindRow } = await admin
@@ -33,10 +35,32 @@ export async function PUT(
       if (denied) return denied;
     }
 
+    const { data: existingPlan, error: checkError } = await supabase
+      .from("workspaces")
+      .select("id, user_id, is_public, aycl_category, is_play_copy")
+      .eq("id", workspaceId)
+      .single();
+
+    if (checkError) {
+      console.error("Check error:", checkError);
+      return jsonError(500, "Cannot access plan: " + checkError.message);
+    }
+
     const updates: Record<string, unknown> = {};
 
     if (typeof is_public === "boolean") {
       updates.is_public = is_public;
+    }
+
+    if (typeof is_public === "boolean" && is_public) {
+      const playCopyError = rejectPublishPlayCopy({
+        makingPublic: true,
+        isPlayCopy: Boolean(existingPlan?.is_play_copy),
+      });
+      if (playCopyError) return jsonError(403, playCopyError);
+    }
+    if (aycl_category !== undefined) {
+      updates.aycl_category = normalizeAyclCategory(aycl_category);
     }
 
     if (typeof title === "string" && title.trim()) {
@@ -60,18 +84,6 @@ export async function PUT(
 
     if (Object.keys(updates).length === 0) {
       return jsonError(400, "No valid fields to update");
-    }
-
-    // First, let's check if we can read the plan
-    const { data: existingPlan, error: checkError } = await supabase
-      .from("workspaces")
-      .select("id, user_id, is_public")
-      .eq("id", workspaceId)
-      .single();
-
-    if (checkError) {
-      console.error("Check error:", checkError);
-      return jsonError(500, "Cannot access plan: " + checkError.message);
     }
 
     console.log("Existing plan:", existingPlan);

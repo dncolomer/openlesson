@@ -205,6 +205,54 @@ async function registerFromCheckout(body: { sessionId?: string; password?: strin
   });
 }
 
+async function registerFromFree(body: { email?: string; password?: string }) {
+  const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+  const password = typeof body.password === "string" ? body.password : "";
+
+  if (!email || !email.includes("@")) {
+    return jsonError(400, "A valid email is required");
+  }
+  if (!password || password.length < 6) {
+    return jsonError(400, "Password must be at least 6 characters");
+  }
+
+  const admin = createAdminClient();
+  const { data: created, error: createError } = await admin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+  });
+
+  if (createError || !created.user) {
+    console.error("createUser (free) error:", createError);
+    const message = createError?.message || "Failed to create account";
+    if (/already|registered|exists/i.test(message)) {
+      return jsonError(409, "An account with this email already exists. Sign in instead.", "email_exists");
+    }
+    return jsonError(500, message);
+  }
+
+  const userId = created.user.id;
+  try {
+    await ensureUserProfile(admin, userId, { email });
+  } catch (err) {
+    console.error("[register-free] ensureUserProfile failed:", err);
+    await admin.auth.admin.deleteUser(userId).catch(() => {});
+    return jsonError(500, "Account could not be fully set up. Please try again.");
+  }
+
+  await ensurePersonalOrganization(admin, userId, { email }).catch((err) => {
+    console.error("[register-free] ensurePersonalOrganization failed:", err);
+  });
+
+  return NextResponse.json({
+    ok: true,
+    email,
+    userId,
+    plan: "inactive",
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
@@ -213,7 +261,11 @@ export async function POST(request: NextRequest) {
       return await registerFromInvite(body);
     }
 
-    return await registerFromCheckout(body);
+    if (typeof body?.sessionId === "string" && body.sessionId.trim()) {
+      return await registerFromCheckout(body);
+    }
+
+    return await registerFromFree(body);
   } catch (error) {
     console.error("register error:", error);
     return jsonError(500, "Failed to create account");

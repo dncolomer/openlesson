@@ -47,6 +47,7 @@ const LEARNING_FEATURES: readonly WorkspaceFeature[] = [
   "map_types",
   "context",
   "settings",
+  "make_public",
   "aycl",
   "integrations",
 ];

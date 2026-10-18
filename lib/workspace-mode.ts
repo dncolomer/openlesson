@@ -108,6 +108,8 @@ export type WorkspaceShell = {
   learnerSurface: boolean;
   learnerActivity: boolean;
   knowledgeLwmEmbeddingsOnly: boolean;
+  /** Full-screen map View for Add to my Maps / AYCL play copies. */
+  playView: boolean;
 };
 
 export function workspaceShell(input: {
@@ -117,7 +119,19 @@ export function workspaceShell(input: {
   isOwner?: boolean;
   isOrgAdmin?: boolean;
   isLoggedIn?: boolean;
+  playCopy?: boolean;
 }): WorkspaceShell {
+  if (input.playCopy) {
+    return {
+      sections: ["workspace"],
+      authoringDrawers: false,
+      practiceDrawer: false,
+      learnerSurface: true,
+      learnerActivity: true,
+      knowledgeLwmEmbeddingsOnly: true,
+      playView: true,
+    };
+  }
   const noMap = isNoMapWorkspace(input.kind);
   const learnerActivity = Boolean(input.practiceOnly) || !noMap;
   const learnerSurface = learnerActivity && !input.authoring;
@@ -140,6 +154,7 @@ export function workspaceShell(input: {
     learnerSurface,
     learnerActivity,
     knowledgeLwmEmbeddingsOnly: learnerSurface,
+    playView: false,
   };
 }
 

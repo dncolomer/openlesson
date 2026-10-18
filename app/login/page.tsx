@@ -207,7 +207,7 @@ function LoginForm() {
             );
           }
           return (
-            <Link href="/pricing" className="text-neutral-400 hover:text-white transition-colors">
+            <Link href="/register" className="text-neutral-400 hover:text-white transition-colors">
               {t('auth.signUp')}
             </Link>
           );

@@ -86,7 +86,7 @@ function RegisterForm() {
     }
 
     if (!sessionId) {
-      router.replace("/pricing");
+      setVerifying(false);
       return;
     }
 
@@ -171,6 +171,53 @@ function RegisterForm() {
         // Join failed server-side; land on invite page to retry accept.
         router.push(invitePath || "/dashboard");
       }
+      router.refresh();
+    } catch {
+      setError(t("common.error"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFreeRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+        }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (data.code === "email_exists") {
+          setError("An account with this email already exists.");
+        } else {
+          setError(data.error || t("common.error"));
+        }
+        return;
+      }
+
+      const supabase = createClient();
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: data.email || email.trim(),
+        password,
+      });
+
+      if (signInError) {
+        setError("Account created but sign-in failed. Please log in.");
+        router.push("/login?redirect=%2Fdashboard");
+        return;
+      }
+
+      trackSignupCompleted({ hasReferral: false });
+      router.push("/dashboard");
       router.refresh();
     } catch {
       setError(t("common.error"));
@@ -317,6 +364,85 @@ function RegisterForm() {
     );
   }
 
+  // ── Free signup ────────────────────────────────────────────────────────────
+  if (!sessionId) {
+    return (
+      <>
+        <div className="mb-4 rounded-none border border-white/10 bg-white/[0.03] p-3">
+          <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-500">
+            Free
+          </p>
+          <p className="mt-1 text-sm text-neutral-300">
+            Home, My Maps, and Quick Work Session, with 3 sessions a week. Upgrade any time for
+            Build, Your Shop, Verification, and Calibration.
+          </p>
+        </div>
+
+        <form onSubmit={handleFreeRegister} className="space-y-3.5">
+          <div>
+            <label
+              htmlFor="email"
+              className="mb-1.5 block text-[11px] font-mono uppercase tracking-[0.18em] text-neutral-500"
+            >
+              {t("auth.email")}
+            </label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              className="w-full rounded-none border border-neutral-800 bg-neutral-900/80 px-3.5 py-2.5 text-sm text-white transition-colors focus:border-neutral-600 focus:outline-none"
+              required
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="password"
+              className="mb-1.5 block text-[11px] font-mono uppercase tracking-[0.18em] text-neutral-500"
+            >
+              {t("auth.password")}
+            </label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="new-password"
+              className="w-full rounded-none border border-neutral-800 bg-neutral-900/80 px-3.5 py-2.5 text-sm text-white transition-colors focus:border-neutral-600 focus:outline-none"
+              minLength={6}
+              required
+            />
+            <p className="mt-1 text-[11px] text-neutral-600">At least 6 characters</p>
+          </div>
+
+          {error && (
+            <div className="rounded-none border border-white/30 bg-black p-3 text-xs text-white/80">
+              {error}
+              {error.includes("already exists") && (
+                <span>
+                  {" "}
+                  <Link href="/login" className="underline">
+                    Sign in
+                  </Link>
+                </span>
+              )}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="mt-2 w-full rounded-none bg-white py-2.5 text-sm font-medium text-black transition-colors hover:bg-neutral-200 disabled:bg-neutral-800 disabled:text-neutral-600"
+          >
+            {loading ? t("auth.creatingAccount") : "Create Free account →"}
+          </button>
+        </form>
+      </>
+    );
+  }
+
   // ── Paid checkout signup ───────────────────────────────────────────────────
   if (verifying) {
     return (
@@ -418,6 +544,7 @@ function RegisterShell() {
   const { t } = useI18n();
   const searchParams = useSearchParams();
   const inviteToken = extractInviteToken(searchParams);
+  const sessionId = searchParams.get("session_id");
   const invitePath = inviteToken ? `/invite/${inviteToken}` : null;
 
   return (
@@ -430,7 +557,9 @@ function RegisterShell() {
           <p className="mb-8 text-sm text-neutral-500">
             {inviteToken
               ? "Set your email and password to join the organization."
-              : "You've paid — set a password to activate your account."}
+              : sessionId
+                ? "You've paid — set a password to activate your account."
+                : "Create a Free account to browse maps and run Quick Work Session — 3 sessions a week."}
           </p>
           <RegisterForm />
 

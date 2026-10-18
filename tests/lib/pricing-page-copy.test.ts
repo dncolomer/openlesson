@@ -59,6 +59,11 @@ describe("unified pricing page source", () => {
     expect(src).toContain('module_verify: "verification"');
     expect(src).toContain('module_calibrate: "calibration"');
     expect(src).toContain('id="custom"');
+    expect(src).toContain('data-testid="pricing-sku-free"');
+    expect(src).toContain("UNIFIED_PRICING_COPY.free");
+    expect(UNIFIED_PRICING_COPY.free.name).toBe("Free");
+    expect(UNIFIED_PRICING_COPY.free.priceLabel).toBe("$0");
+    expect(UNIFIED_PRICING_COPY.free.href).toBe("/register");
     expect(src.match(/console-copy/g)?.length).toBe(1);
     expect(src).not.toContain("ThesisDirectory");
     expect(PUBLIC_SKU_CARDS[0]?.priceLabel).toBe("$24.99");

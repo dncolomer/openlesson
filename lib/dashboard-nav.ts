@@ -12,6 +12,7 @@ import type { WorkspaceCreateMode } from "@/lib/workspace-create-modes";
 
 export const DASHBOARD_TABS = [
   "home",
+  "my_maps",
   "learning",
   "shop",
   "verification",
@@ -19,7 +20,6 @@ export const DASHBOARD_TABS = [
   "calibration",
   "calibration_regions",
   "usage",
-  "upgrade",
   "organization",
   "integrations",
   "help",
@@ -64,6 +64,7 @@ export const DASHBOARD_NAV_GROUPS: readonly DashboardNavGroup[] = [
     id: "learning",
     label: "Learning",
     items: [
+      { id: "my_maps", label: "My Maps" },
       { id: "learning", label: "Build" },
       { id: "shop", label: "Your Shop" },
     ],
@@ -89,7 +90,6 @@ export const DASHBOARD_NAV_GROUPS: readonly DashboardNavGroup[] = [
     label: "Account",
     items: [
       { id: "usage", label: "Usage" },
-      { id: "upgrade", label: "Upgrade" },
       { id: "organization", label: "Organization" },
       { id: "integrations", label: "Integrations" },
     ],
@@ -115,6 +115,10 @@ export function isDashboardShopTab(value: unknown): value is "shop" {
   return value === "shop";
 }
 
+export function isDashboardMyMapsTab(value: unknown): value is "my_maps" {
+  return value === "my_maps";
+}
+
 export function isDashboardRegionsTab(value: unknown): value is DashboardRegionsTab {
   return value === "verification_regions" || value === "calibration_regions";
 }
@@ -136,6 +140,7 @@ export function isDashboardNavTabItem(
 /** Query `tab` → sidebar section. `plans` is the old Workspaces tab. */
 export function parseDashboardTab(value: unknown): DashboardTab {
   if (value === "plans") return "learning";
+  if (value === "upgrade") return "usage";
   if (isDashboardTab(value)) return value;
   return "home";
 }
@@ -143,7 +148,7 @@ export function parseDashboardTab(value: unknown): DashboardTab {
 export function dashboardTypeFilterForTab(
   tab: DashboardTab,
 ): DashboardWorkspaceTypeFilter | null {
-  if (tab === "learning" || tab === "shop") return "learning";
+  if (tab === "learning" || tab === "shop" || tab === "my_maps") return "learning";
   if (tab === "verification" || tab === "verification_regions") return "verification";
   if (tab === "calibration" || tab === "calibration_regions") return "calibration";
   return null;
@@ -185,7 +190,13 @@ export function dashboardProductLabel(tab: DashboardProductTab): string {
   return "Learning";
 }
 
+export function dashboardCreateLabel(tab: DashboardProductTab): string {
+  if (tab === "learning") return "Create a Learning Map →";
+  return `Create ${dashboardProductLabel(tab)} workspace →`;
+}
+
 export function dashboardFrameLabel(tab: DashboardTab): string {
+  if (tab === "my_maps") return "My Maps";
   if (tab === "shop") return "Your Shop";
   if (isDashboardRegionsTab(tab)) return "Knowledge regions";
   if (isDashboardProductTab(tab)) return dashboardProductLabel(tab);
@@ -193,7 +204,6 @@ export function dashboardFrameLabel(tab: DashboardTab): string {
   if (tab === "organization") return "Organization";
   if (tab === "integrations") return "Integrations";
   if (tab === "usage") return "Usage";
-  if (tab === "upgrade") return "Upgrade";
   if (tab === "sessions") return "Sessions";
   if (tab === "config") return "Config";
   return "Home";

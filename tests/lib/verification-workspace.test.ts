@@ -783,7 +783,8 @@ describe("verification workspace shell gates", () => {
     expect(regions).toContain("verificationWorkspace ?");
     const settings = read("components/WorkspaceIntegrationPanel.tsx");
     expect(settings).toContain("verificationWorkspace={isNoMap}");
-    expect(settings).toContain("workspaceAllowsCopyToVerification(workspaceKind)");
+    expect(settings).not.toContain("workspaceAllowsCopyToVerification");
+    expect(settings).not.toContain("WorkspaceCopyToVerification");
     expect(settings).toContain("workspaceSettingsIntegrationCopy(workspaceKind)");
     expect(settings).toContain("integration-skill");
     expect(settings).toContain('activeSubview === "integrations"');

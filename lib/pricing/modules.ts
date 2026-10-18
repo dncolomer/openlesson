@@ -257,11 +257,11 @@ export const MODULE_LABELS: Record<ProductModule, string> = {
 };
 
 export function planDisplayName(plan: string | null | undefined): string {
-  if (plan === "inactive") return "Inactive";
+  if (plan === "inactive") return "Free";
   if (plan === "trial") return "Try everything";
   if (plan === "api_metered") return "API Metered";
   const modules = modulesForPlan(plan);
-  if (modules.length === 0) return plan || "Inactive";
+  if (modules.length === 0) return plan || "Free";
   return modules.map((module) => MODULE_LABELS[module]).join(" + ");
 }
 
@@ -277,7 +277,10 @@ export function planFeatureList(plan: string | null | undefined): string[] {
     features.push("Proof-of-Work API keys + MCP");
     features.push("$99/mo platform + usage");
   }
-  if (features.length === 0) features.push("No active modules");
+  if (features.length === 0) {
+    features.push("Home, My Maps, and Quick Work Session");
+    features.push("3 sessions per week");
+  }
   return features;
 }
 

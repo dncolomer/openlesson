@@ -541,10 +541,10 @@ export default function NewWorkspacePage() {
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-zinc-400 sm:text-lg">
               {step === 1
-                ? "Pick a Learning workspace."
+                ? "Pick a Learning Map."
                 : mode === "template"
                   ? "Browse by category, pick a topic, then choose which resources to use as context."
-                  : "Name the workspace. You can rename it later in Settings."}
+                  : "Name the map. You can rename it later in Settings."}
             </p>
           </div>
 
@@ -563,7 +563,7 @@ export default function NewWorkspacePage() {
                   id="create-group-learning"
                   className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500"
                 >
-                  Learning workspace
+                  Learning Map
                 </h2>
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-3 md:gap-4">
                 <a
@@ -642,7 +642,7 @@ export default function NewWorkspacePage() {
             >
               <div className="mb-4 flex items-center justify-between gap-2">
                 <h2 className="text-lg font-medium text-white">
-                  Learning workspace
+                  Learning Map
                 </h2>
                 <button
                   type="button"
@@ -673,7 +673,7 @@ export default function NewWorkspacePage() {
                 className="mt-5 rounded-none bg-white px-4 py-2 text-sm font-medium text-black disabled:opacity-50"
                 data-create-name-submit
               >
-                Create learning workspace
+                Create a Learning Map
               </button>
             </form>
           )}

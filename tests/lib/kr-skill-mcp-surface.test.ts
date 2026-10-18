@@ -196,7 +196,8 @@ describe("KR vs standard skill/MCP surface (shipped builders)", () => {
 
     const panel = read("components/WorkspaceIntegrationPanel.tsx");
     expect(panel).toContain("workspaceSettingsIntegrationCopy");
-    expect(panel).toContain("workspaceAllowsCopyToVerification");
+    expect(panel).not.toContain("workspaceAllowsCopyToVerification");
+    expect(panel).not.toContain("WorkspaceCopyToVerification");
     expect(panel).toContain("data-kr-integration-mcp-note={isNoMap");
     expect(panel).toContain("data-kr-integration-skill={isNoMap");
     expect(panel).toContain("workspaceKind={workspaceKind}");

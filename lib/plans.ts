@@ -80,14 +80,15 @@ const COMBO_PLANS = Object.fromEntries(
 export const PLANS: Record<PlanId, PlanDef> = {
   inactive: {
     id: "inactive",
-    name: "Inactive",
+    name: "Free",
     price: "$0",
     priceAmount: 0,
     proofOfWorkPerPeriod: 0,
     workspacesPerPeriod: 0,
     features: [
-      "No active subscription",
-      "Upgrade or start a trial to use the product",
+      "Home, My Maps, and Quick Work Session",
+      "3 sessions per week",
+      "Upgrade to unlock Build, Your Shop, Verification, and Calibration",
     ],
     stripePriceEnv: null,
   },

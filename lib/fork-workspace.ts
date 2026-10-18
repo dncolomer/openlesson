@@ -23,6 +23,7 @@ export async function forkWorkspaceExactCopy(
     title?: string;
     originalWorkspaceId?: string;
     isAyclFork?: boolean;
+    isPlayCopy?: boolean;
   }
 ): Promise<ForkWorkspaceResult> {
   const { data: sourcePlan, error: planQueryError } = await supabase
@@ -64,6 +65,7 @@ export async function forkWorkspaceExactCopy(
       source_url: sourcePlan.source_url ?? null,
       source_summary: sourcePlan.source_summary ?? null,
       workspace_kind: parseWorkspaceKind(sourcePlan.workspace_kind),
+      is_play_copy: params.isPlayCopy === true,
     })
     .select("id")
     .single();

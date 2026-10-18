@@ -117,6 +117,34 @@ function PricingPageContent() {
 
           <div data-testid="pricing-layout" className="mt-12 w-full">
             <div data-testid="pricing-plans" className="divide-y divide-neutral-800 border-y border-neutral-800">
+              <div
+                id="free"
+                data-testid="pricing-sku-free"
+                className="flex flex-col gap-3 py-5 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="min-w-0">
+                  <h2 className="text-lg font-medium text-white">
+                    {UNIFIED_PRICING_COPY.free.name}
+                  </h2>
+                  <p className="mt-1 text-sm text-neutral-500">
+                    {UNIFIED_PRICING_COPY.free.priceLabel} · {UNIFIED_PRICING_COPY.free.cadence}
+                  </p>
+                  <p className="mt-1 text-sm text-neutral-500">
+                    {UNIFIED_PRICING_COPY.free.body}
+                  </p>
+                </div>
+                {user?.authenticated && currentPlan === "inactive" ? (
+                  <span className="text-sm text-neutral-500">Current</span>
+                ) : user?.authenticated ? null : (
+                  <Link
+                    href={UNIFIED_PRICING_COPY.free.href}
+                    data-testid="pricing-free-cta"
+                    className="rounded-none border border-neutral-600 px-4 py-2 text-sm font-medium text-neutral-200 transition hover:border-neutral-400"
+                  >
+                    {UNIFIED_PRICING_COPY.free.cta}
+                  </Link>
+                )}
+              </div>
               {PRICING_PAGE_SKUS.map((card) => {
                 const owned =
                   Boolean(user?.authenticated) &&

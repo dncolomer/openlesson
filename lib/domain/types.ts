@@ -438,6 +438,8 @@ export interface Workspace {
   /** 4, 8, or 16 actions on the unsys model. Learning workspaces only. */
   learning_model_size?: 4 | 8 | 16;
   is_all_you_can_learn?: boolean;
+  /** Permanent play-only copy from Home Add to my Maps or AYCL buy. */
+  is_play_copy?: boolean;
   aycl_category?: string | null;
   aycl_summary?: string | null;
   aycl_author_name?: string | null;

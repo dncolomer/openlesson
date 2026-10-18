@@ -71,7 +71,7 @@ export function DashboardUpgradeTab({
             ? plan === "trial"
               ? `All modules through ${periodEnd ? new Date(periodEnd).toLocaleDateString() : "the trial window"}.`
               : `Active · ${formatUsdFromCents(priceCentsForPlan(plan))}${plan === "trial" ? " one-time" : "/mo"}`
-            : "No active modules. Buy a module or try everything for three days."}
+            : "Free · Home, My Maps, and Quick Work Session · 3 sessions a week. Upgrade to unlock Build, Your Shop, Verification, and Calibration."}
         </p>
         <ul className="mt-6 grid gap-2 sm:grid-cols-2">
           {(Object.keys(MODULE_LABELS) as ProductModule[]).map((module) => {

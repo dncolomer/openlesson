@@ -6,11 +6,13 @@ import {
   canCreateWorkspace,
   canSubmitProofOfWork,
   estimateApiMeteredInvoice,
+  hasProductAccess,
   isApiMeteredPlan,
   PLANS,
   type OrgUsageSummary,
   type PlanId,
 } from "@/lib/plans";
+import { presentFreeWeeklySessionQuota, utcMondayWeekWindow } from "@/lib/free-tier";
 import {
   billingEntityToUserProfile,
   resolveBillingEntity,
@@ -26,6 +28,7 @@ import {
   countTapSessions,
   countOrgIleSessions,
   countOrgTapSessions,
+  countUserSessionsSince,
   loadUsageProfile,
 } from "@/lib/usage-metrics";
 import {
@@ -68,6 +71,12 @@ export async function GET() {
         isAdmin: false,
         workspacesUsed: 0,
         workspacesLimit: PLANS.inactive.workspacesPerPeriod,
+        hasPaidAccess: false,
+        freeTier: true,
+        weeklySessionsUsed: 0,
+        weeklySessionsLimit: 3,
+        weeklySessionsResetAt: null,
+        weeklySessionsAllowed: false,
       });
     }
 
@@ -279,6 +288,22 @@ export async function GET() {
       }
     }
 
+    const hasPaidAccess = hasProductAccess(
+      {
+        plan: (profile.plan || "inactive") as PlanId,
+        is_admin: profile.is_admin ?? false,
+        subscription_status: profile.subscription_status ?? "inactive",
+        current_period_end: profile.current_period_end,
+        token_tier: profile.token_tier,
+        token_validity_expires_at: profile.token_validity_expires_at,
+        organization_id: profile.organization_id,
+      },
+      org,
+    );
+    const weekStart = utcMondayWeekWindow().start;
+    const weeklyUsed = await countUserSessionsSince(admin, user.id, weekStart);
+    const weekly = presentFreeWeeklySessionQuota(weeklyUsed);
+
     return NextResponse.json({
       allowed: result.allowed,
       reason: result.reason,
@@ -301,6 +326,12 @@ export async function GET() {
       xaiUsage,
       // API Metered product features (org-resolved plan)
       canUseAgentApi: result.isAdmin || result.plan === "api_metered",
+      hasPaidAccess,
+      freeTier: !hasPaidAccess,
+      weeklySessionsUsed: weekly.used,
+      weeklySessionsLimit: hasPaidAccess ? null : weekly.limit,
+      weeklySessionsResetAt: weekly.resetAt,
+      weeklySessionsAllowed: hasPaidAccess || weekly.allowed,
       ...proofOfWorkPayload,
     });
   } catch (error) {

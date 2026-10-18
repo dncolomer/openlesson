@@ -19,6 +19,7 @@ import {
 } from "@/lib/aycl-shared";
 import { createPrivateToken, hashPrivateToken } from "@/lib/private-token";
 import { forkWorkspaceExactCopy } from "@/lib/fork-workspace";
+import { playCopyFulfillOwnerUserId } from "@/lib/workspace-play-copy";
 import { emailFromCheckoutSession } from "@/lib/stripe-checkout";
 import {
   ayclComplimentaryPurchaseRow,
@@ -384,15 +385,33 @@ export async function fulfillAyclPurchase(
     existing.access_tier || meta.aycl_access_tier || "full",
   );
 
-  const guest = await createAyclForkGuestUser(supabase);
+  const dashboardPlayCopy = meta.dashboard_play_copy === "1";
+  const purchaserUserId = String(meta.supabase_user_id || "").trim() || null;
+  const guest =
+    dashboardPlayCopy && purchaserUserId
+      ? { id: purchaserUserId }
+      : await createAyclForkGuestUser(supabase);
+  const ownerUserId = playCopyFulfillOwnerUserId({
+    dashboardPlayCopy,
+    purchaserUserId,
+    guestUserId: guest.id,
+  });
   const fork = await forkWorkspaceExactCopy(
     supabase,
-    ayclForkWorkspaceParams({
-      sourceWorkspaceId,
-      catalogOwnerUserId: sourceWorkspace.user_id,
-      guestUserId: guest.id,
-      title: sourceWorkspace.title || sourceWorkspace.root_topic,
-    }),
+    dashboardPlayCopy
+      ? {
+          sourceWorkspaceId,
+          ownerUserId,
+          title: sourceWorkspace.title || sourceWorkspace.root_topic,
+          originalWorkspaceId: sourceWorkspaceId,
+          isPlayCopy: true,
+        }
+      : ayclForkWorkspaceParams({
+          sourceWorkspaceId,
+          catalogOwnerUserId: sourceWorkspace.user_id,
+          guestUserId: guest.id,
+          title: sourceWorkspace.title || sourceWorkspace.root_topic,
+        }),
   );
 
   const { error: updateError } = await supabase

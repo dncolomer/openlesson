@@ -27,7 +27,9 @@ describe("workspace create + builder static wiring", () => {
     expect(page).toContain("md:grid-cols-3");
     expect(page).toContain('data-create-layout="learning"');
     expect(page).toContain('data-create-group="learning"');
-    expect(page).toContain("Learning workspace");
+    expect(page).toContain("Learning Map");
+    expect(page).toContain("Create a Learning Map");
+    expect(page).not.toContain("Create learning workspace");
     expect(page).not.toContain('data-create-group="verification"');
     expect(page).not.toContain('data-create-group="calibration"');
     expect(page).not.toContain('data-create-mode-span="knowledge_region"');

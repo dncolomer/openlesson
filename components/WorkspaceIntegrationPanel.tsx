@@ -7,11 +7,9 @@ import {
   slugifyIntegrationName,
   workspaceSettingsIntegrationCopy,
 } from "@/lib/pow-api/integration-skill";
-import { workspaceAllowsCopyToVerification } from "@/lib/copy-learning-to-verification";
 import { IntegrationQuickAccess } from "@/components/IntegrationQuickAccess";
 import { WorkspaceAccessSettings } from "@/components/WorkspaceAccessSettings";
 import { WorkspaceAyclMarketplaceSettings } from "@/components/WorkspaceAyclMarketplaceSettings";
-import { WorkspaceCopyToVerification } from "@/components/WorkspaceCopyToVerification";
 import { WorkspaceIdentitySettings } from "@/components/WorkspaceIdentitySettings";
 import { CustomVerificationModelsPanel } from "@/components/CustomVerificationModelsPanel";
 import { WorkspaceDataStudioPanel } from "@/components/WorkspaceDataStudioPanel";
@@ -183,14 +181,6 @@ export function WorkspaceIntegrationPanel({
                   onPlanUpdate={onPlanUpdate}
                 />
               </div>
-            ) : null}
-
-            {plan && onPlanUpdate && workspaceAllowsCopyToVerification(workspaceKind) ? (
-              <WorkspaceCopyToVerification
-                workspaceId={workspaceId}
-                workspaceTitle={plan.title || plan.root_topic || ""}
-                isOwner={isOwner}
-              />
             ) : null}
 
             {!plan || !onPlanUpdate ? (

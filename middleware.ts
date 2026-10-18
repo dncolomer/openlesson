@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { isFreeTierAllowedPath } from "@/lib/free-tier";
 import { hasProductAccess } from "@/lib/plans";
 import { ensureTrialExpiryApplied } from "@/lib/usage-metrics";
 
@@ -107,21 +108,6 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse;
   }
 
-  if (pathname.startsWith("/register")) {
-    const sessionId = request.nextUrl.searchParams.get("session_id");
-    const returnUrl = request.nextUrl.searchParams.get("returnUrl");
-    const inviteToken =
-      request.nextUrl.searchParams.get("inviteToken") ||
-      request.nextUrl.searchParams.get("invite");
-    const isInviteSignup =
-      Boolean(inviteToken?.trim()) ||
-      Boolean(returnUrl?.startsWith("/invite/"));
-    // Paid checkout (session_id) or organization invite signup only.
-    if (!sessionId && !isInviteSignup) {
-      return NextResponse.redirect(new URL("/pricing", request.url));
-    }
-  }
-
   // Auth routes - redirect to dashboard if already logged in
   const authRoutes = ["/login", "/register"];
   const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route));
@@ -185,12 +171,10 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(new URL(postAuthRedirect, request.url));
       }
 
-      return NextResponse.redirect(
-        new URL(canUseProduct ? "/dashboard" : "/pricing", request.url)
-      );
+      return NextResponse.redirect(new URL("/dashboard", request.url));
     }
 
-    if (!canUseProduct) {
+    if (!canUseProduct && !isFreeTierAllowedPath(pathname)) {
       const pricingUrl = new URL("/pricing", request.url);
       pricingUrl.searchParams.set("required", "1");
       return NextResponse.redirect(pricingUrl);

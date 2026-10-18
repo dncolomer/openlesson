@@ -35,6 +35,12 @@ export function isDashboardWorkspaceListFilter(
   return (DASHBOARD_WORKSPACE_LIST_FILTERS as string[]).includes(value);
 }
 
+export function workspaceIsPlayCopy(workspace: {
+  is_play_copy?: boolean | null;
+}): boolean {
+  return Boolean(workspace.is_play_copy);
+}
+
 export function workspaceMatchesDashboardListFilter(
   workspace: {
     is_public?: boolean | null;

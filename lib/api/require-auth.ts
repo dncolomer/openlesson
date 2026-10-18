@@ -273,7 +273,7 @@ export type GuardSessionOptions = {
   ileToken?: string | null;
   /** When true, sessionId must be present for non-AYCL auth. Default false for back-compat. */
   requireSessionId?: boolean;
-  /** Enforce product entitlement for cookie-auth users. Default true. */
+  /** Enforce product entitlement for cookie-auth users. Default false (Free sessions). */
   requireProductAccess?: boolean;
 };
 
@@ -284,7 +284,8 @@ export async function guardSessionRoute(
 ): Promise<AuthenticatedRequest> {
   const ayclToken = options?.ayclToken?.trim() || "";
   const ileToken = options?.ileToken?.trim() || "";
-  const requireProduct = options?.requireProductAccess !== false;
+  // Default off so Free accounts can run a started Home / My Maps session.
+  const requireProduct = options?.requireProductAccess === true;
 
   if (ayclToken && sessionId) {
     const aycl = await resolveAyclSessionAccess(ayclToken, sessionId);

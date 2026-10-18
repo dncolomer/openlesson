@@ -2,6 +2,8 @@
 
 import type { OrgUsageSummary } from "@/lib/plans";
 import type { DashboardTab } from "@/lib/dashboard-nav";
+import { formatFreeWeekReset } from "@/lib/free-tier";
+import { DashboardUpgradeTab } from "@/components/dashboard/dashboard-upgrade-tab";
 
 type XaiPeriodPreset = "7d" | "30d" | "90d" | "billing";
 
@@ -13,7 +15,7 @@ export type DashboardUsageTabProps = {
   setDashboardTab: (tab: DashboardTab) => void;
   t: (key: string, params?: Record<string, string | number>) => string;
   usageCardClass: "console-copy rounded-none p-5 sm:p-6";
-  usageData: { plan: string; used: number; personalUsed: number; limit: number | null; proofOfWorkUsed: number; proofOfWorkPersonalUsed: number; proofOfWorkLimit: number | null; workspacesUsed: number; workspacesLimit: number | null; periodEnd: string | null; subscriptionStatus: string; organization: OrgUsageSummary | null; isAdmin: boolean; billingMode?: "subscription" | "partner" | null; canUseAgentApi?: boolean; apiPowCallsUsed?: number; tapSessionsUsed?: number; ileSessionsUsed?: number; apiMeteredInvoice?: { platformCents: number; usageCents: number; usageCentsRounded?: number; totalCents: number; externalPowCount?: number; tapSessionCount?: number; ileSessionCount?: number; externalPowCents?: number; tapSessionCents?: number; ileSessionCents?: number; } | null; xaiUsage?: { available: boolean; apiKeyId: string; apiKeyName: string | null; periodStart: string; periodEnd: string; totalUsd: number; lines: Array<{ description: string; usd: number; }>; error?: string; } | null; } | null;
+  usageData: { plan: string; used: number; personalUsed: number; limit: number | null; proofOfWorkUsed: number; proofOfWorkPersonalUsed: number; proofOfWorkLimit: number | null; workspacesUsed: number; workspacesLimit: number | null; periodEnd: string | null; subscriptionStatus: string; organization: OrgUsageSummary | null; isAdmin: boolean; billingMode?: "subscription" | "partner" | null; canUseAgentApi?: boolean; apiPowCallsUsed?: number; tapSessionsUsed?: number; ileSessionsUsed?: number; apiMeteredInvoice?: { platformCents: number; usageCents: number; usageCentsRounded?: number; totalCents: number; externalPowCount?: number; tapSessionCount?: number; ileSessionCount?: number; externalPowCents?: number; tapSessionCents?: number; ileSessionCents?: number; } | null; xaiUsage?: { available: boolean; apiKeyId: string; apiKeyName: string | null; periodStart: string; periodEnd: string; totalUsd: number; lines: Array<{ description: string; usd: number; }>; error?: string; } | null; hasPaidAccess?: boolean; freeTier?: boolean; weeklySessionsUsed?: number; weeklySessionsLimit?: number | null; weeklySessionsResetAt?: string | null; weeklySessionsAllowed?: boolean; } | null;
   usageLabelClass: "font-mono text-[10px] uppercase tracking-[2px] text-neutral-500";
   usageProgress: (used: number, limit: number | null) => number;
   xaiPeriod: "7d" | "30d" | "90d" | "billing";
@@ -71,7 +73,7 @@ export function DashboardUsageTab({
             }
             return (
               <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-neutral-400">
-                Inactive
+                Free
               </span>
             );
           })();
@@ -106,7 +108,7 @@ export function DashboardUsageTab({
           );
 
           return (
-          <div className="space-y-10">
+          <div className="space-y-10" data-dashboard-usage>
             {/* Page header */}
             <div className="console-copy flex flex-wrap items-center justify-between gap-3 px-6 py-5">
               <div>
@@ -130,15 +132,6 @@ export function DashboardUsageTab({
                     {usageData.organization.isOrgAdmin
                       ? "Manage organization →"
                       : "View organization →"}
-                  </button>
-                )}
-                {!isBillingBypass && (
-                  <button
-                    type="button"
-                    onClick={() => setDashboardTab("upgrade")}
-                    className="inline-flex h-10 items-center justify-center rounded-none border border-neutral-700 px-4 text-sm text-neutral-200 transition hover:border-neutral-500 hover:text-white"
-                  >
-                    View modules →
                   </button>
                 )}
               </div>
@@ -177,7 +170,10 @@ export function DashboardUsageTab({
                           <p className="mt-2 text-sm text-neutral-500">
                             {planPriceLabel(usageData.plan, usageData.isAdmin)}
                           </p>
-                          {!usageData.isAdmin && usageData.subscriptionStatus !== "active" && (
+                          {!usageData.isAdmin &&
+                            usageData.subscriptionStatus !== "active" &&
+                            !usageData.freeTier &&
+                            usageData.hasPaidAccess !== false && (
                             <p className="mt-3 text-xs text-neutral-600">
                               {usageData.subscriptionStatus === "trial_expired"
                                 ? "Your 3-day trial has ended. Upgrade to continue."
@@ -185,6 +181,23 @@ export function DashboardUsageTab({
                             </p>
                           )}
                         </>
+                      )}
+                      {(usageData.freeTier || usageData.hasPaidAccess === false) && (
+                        <div
+                          className="mt-6 border-t border-white/10 pt-4"
+                          data-dashboard-free-quota
+                        >
+                          <p className={usageLabelClass}>Weekly sessions</p>
+                          <p className="mt-1 text-sm text-white">
+                            {usageData.weeklySessionsUsed ?? 0} of{" "}
+                            {usageData.weeklySessionsLimit ?? 3} used
+                          </p>
+                          {usageData.weeklySessionsResetAt ? (
+                            <p className="mt-1 text-xs text-neutral-500">
+                              Resets {formatFreeWeekReset(usageData.weeklySessionsResetAt)} (UTC).
+                            </p>
+                          ) : null}
+                        </div>
                       )}
                       {usageData.organization && (
                         <p className="mt-4 border-t border-neutral-800 pt-3 text-xs text-neutral-500">
@@ -246,7 +259,11 @@ export function DashboardUsageTab({
                             usageData.plan === "trial") && (
                             <button
                               type="button"
-                              onClick={() => setDashboardTab("upgrade")}
+                              onClick={() =>
+                                document
+                                  .getElementById("dashboard-upgrade")
+                                  ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                              }
                               className="mt-4 inline-flex text-sm text-neutral-300 underline decoration-neutral-600 underline-offset-4 transition hover:text-white"
                             >
                               {t("dashboard.upgradeToPro")} →
@@ -546,6 +563,15 @@ export function DashboardUsageTab({
                 {t("dashboard.unableToLoadUsage")}
               </div>
             )}
+
+            <div id="dashboard-upgrade">
+              <DashboardUpgradeTab
+                plan={usageData?.plan || "inactive"}
+                subscriptionStatus={usageData?.subscriptionStatus || "inactive"}
+                periodEnd={usageData?.periodEnd ?? null}
+                isAdmin={Boolean(usageData?.isAdmin)}
+              />
+            </div>
           </div>
           );
 }

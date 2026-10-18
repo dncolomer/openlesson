@@ -56,8 +56,8 @@ describe("workspace dashboard card layout", () => {
 
     expect(dashSrc).toContain("data-dashboard-workspace-table");
     expect(dashSrc).toContain("data-dashboard-workspace-pagination");
-    expect(dashSrc).toContain("data-workspace-pin");
-    expect(dashSrc).toContain("handleTogglePin");
+    expect(dashSrc).not.toContain("data-workspace-pin");
+    expect(dashSrc).not.toContain("handleTogglePin");
     expect(dashSrc).not.toContain("data-workspace-cards-grid");
     expect(dashSrc).not.toContain("handleSnapshotAll");
     expect(dashSrc).not.toContain("onSnapshotAll");

@@ -76,6 +76,13 @@ import {
   type AyclCapabilities,
 } from "@/lib/aycl-shared";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
+import {
+  isPlayCopyWorkspace,
+  playCopyBlockSidebar,
+  playCopyStartSessionLabel,
+  playCopyStartSessionTarget,
+} from "@/lib/workspace-play-copy";
+import { WorkspacePlaySidebar } from "@/components/workspace-view/workspace-play-sidebar";
 
 export type { Block, Workspace, WorkspaceViewProps };
 
@@ -143,6 +150,7 @@ export function WorkspaceView({
     id: string;
     nonce: number;
   } | null>(null);
+  const [playStartBusy, setPlayStartBusy] = useState(false);
   /** AYCL purchase tier capabilities (null = non-AYCL). Seeded from prop. */
   const [ayclCapabilities, setAyclCapabilities] = useState<AyclCapabilities | null>(
     () =>
@@ -156,12 +164,15 @@ export function WorkspaceView({
     : currentUserId
       ? plan?.user_id === currentUserId
       : false;
+  const playCopy = isPlayCopyWorkspace(plan);
   const authoringOnMap = workspaceSurfaceShowsAuthoring({
     isOwner,
     isOrgAdmin,
-    allowAuthoring: ayclCapabilities
-      ? ayclCapabilities.allowCreatorModeToggle
-      : undefined,
+    allowAuthoring: playCopy
+      ? false
+      : ayclCapabilities
+        ? ayclCapabilities.allowCreatorModeToggle
+        : undefined,
     workspaceKind: parseWorkspaceKind(plan?.workspace_kind),
   });
   const {
@@ -608,6 +619,7 @@ export function WorkspaceView({
         isOwner,
         isOrgAdmin,
         isLoggedIn: Boolean(currentUserId) || Boolean(ayclToken),
+        playCopy: playCopy,
       }),
     [
       authoringOnMap,
@@ -615,6 +627,7 @@ export function WorkspaceView({
       currentUserId,
       isOrgAdmin,
       isOwner,
+      playCopy,
       practiceOnlyAycl,
       workspaceKind,
     ],
@@ -741,7 +754,7 @@ export function WorkspaceView({
       <WorkspaceViewChrome
         isAycl={isAycl}
         hideNavbar={hideNavbar}
-        accessBanner={accessBanner}
+        accessBanner={shell.playView ? undefined : accessBanner}
         ayclCapabilities={ayclCapabilities}
         ayclUpgradePriceLabel={ayclUpgradePriceLabel}
         ayclUpgradeBusy={ayclUpgradeBusy}
@@ -750,9 +763,10 @@ export function WorkspaceView({
         activeSection={resolvedSection}
         onSelectSection={selectSection}
         plan={plan}
+        playView={shell.playView}
       />
 
-      <WorkspaceSectionHosts
+      {shell.playView ? null : <WorkspaceSectionHosts
         isLearnerMode={isLearnerMode}
         isOwner={isOwner}
         canAccessPrivilegedSections={canAccessPrivilegedSections}
@@ -784,10 +798,11 @@ export function WorkspaceView({
         knowledgeSubviewFromUrl={knowledgeSubviewFromUrl}
         onPlanUpdate={setPlan}
         t={t}
-      />
+      />}
 
       {sectionLayout.showBlockMapChrome && (
       <div className="flex-1 min-h-0 flex flex-col md:flex-row overflow-hidden">
+        {shell.playView ? null : (
         <WorkspaceMobilePlanAside
           mobileColumn={mobileColumn}
           plan={plan}
@@ -800,6 +815,7 @@ export function WorkspaceView({
           }}
           onShare={handleShare}
         />
+        )}
 
         <WorkspaceMapColumn
           mobileColumn={mobileColumn}
@@ -887,8 +903,29 @@ export function WorkspaceView({
           expandJobs={isLearnerMode ? [] : expandJobs}
           clusterMapJob={isLearnerMode ? null : clusterMapJob}
           onAbortExpandJob={handleAbortExpandJob}
+          playView={shell.playView}
         />
 
+        {shell.playView ? (
+          playCopyBlockSidebar(detailBlock) ? (
+            <WorkspacePlaySidebar
+              title={playCopyBlockSidebar(detailBlock)!.title}
+              description={playCopyBlockSidebar(detailBlock)!.description}
+              startLabel={playCopyStartSessionLabel()}
+              busy={playStartBusy}
+              onClose={handleCloseBlockDetail}
+              onStart={() => {
+                if (!detailBlock || playStartBusy) return;
+                setPlayStartBusy(true);
+                void handleLaunchIntent(detailBlock, playCopyStartSessionTarget())
+                  .catch((err) => {
+                    alert(err instanceof Error ? err.message : "Could not start session");
+                  })
+                  .finally(() => setPlayStartBusy(false));
+              }}
+            />
+          ) : null
+        ) : (
         <WorkspaceRightDrawers
           mobileColumn={mobileColumn}
           workspaceImage={workspaceImage}
@@ -996,15 +1033,16 @@ export function WorkspaceView({
           generateShapeCells={generateShapeCells}
           onSubmitGenerateShape={handleSubmitGenerateShape}
         />
+        )}
       </div>
       )}
 
-      {sectionLayout.showBlockMapChrome && (
+      {sectionLayout.showBlockMapChrome && !shell.playView ? (
         <WorkspaceMobileTabBar
           mobileColumn={mobileColumn}
           onChange={setMobileColumn}
         />
-      )}
+      ) : null}
       </div>
     </div>
   );

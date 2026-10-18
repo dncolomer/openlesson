@@ -16,26 +16,21 @@ import { DashboardAtmosphere } from "@/components/dashboard/dashboard-atmosphere
 import { DashboardConfigTab } from "@/components/dashboard/dashboard-config-tab";
 import { DashboardHelpTab } from "@/components/dashboard/dashboard-help-tab";
 import { DashboardHomeTab } from "@/components/dashboard/dashboard-home-tab";
+import { DashboardMyMapsTab } from "@/components/dashboard/dashboard-my-maps-tab";
 import { DashboardIntegrationsTab } from "@/components/dashboard/dashboard-integrations-tab";
 import { DashboardFlowsTab } from "@/components/dashboard/dashboard-flows-tab";
 import { DashboardKnowledgeRegionsTab } from "@/components/dashboard/dashboard-knowledge-regions-tab";
 import { DashboardPlansTab } from "@/components/dashboard/dashboard-plans-tab";
 import { DashboardSessionsTab } from "@/components/dashboard/dashboard-sessions-tab";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
-import { DashboardUpgradeTab } from "@/components/dashboard/dashboard-upgrade-tab";
 import { DashboardUsageTab } from "@/components/dashboard/dashboard-usage-tab";
 import { fetchAestheticPackages } from "@/lib/aesthetics";
 import { buildMcpClientConfig } from "@/lib/pow-api/mcp-proof-of-work-catalog";
 import { DEFAULT_MODEL } from "@/lib/xai-models";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import {
-  loadPinnedWorkspaceIds,
-  savePinnedWorkspaceIds,
-  sortWorkspacesPinnedFirst,
-  togglePinnedWorkspaceId,
-} from "@/lib/dashboard-workspace-pins";
-import {
   isDashboardWorkspaceListFilter,
+  workspaceIsPlayCopy,
   workspaceMatchesDashboardListFilter,
   workspaceMatchesDashboardTypeFilter,
   type DashboardWorkspaceListFilter,
@@ -44,12 +39,14 @@ import {
   dashboardFrameLabel,
   dashboardListFilterForTab,
   dashboardTypeFilterForTab,
+  isDashboardMyMapsTab,
   isDashboardProductTab,
   isDashboardRegionsTab,
   isDashboardShopTab,
   parseDashboardTab,
   type DashboardTab,
 } from "@/lib/dashboard-nav";
+import { clampDashboardTabForAccess } from "@/lib/free-tier";
 
 interface AvailableModel {
   id: string;
@@ -94,11 +91,6 @@ export default function DashboardPage() {
     plan?: string;
     isAdmin?: boolean;
   } | null>(null);
-  /** User-scoped pinned workspace ids (persisted in localStorage). */
-  const [pinnedWorkspaceIds, setPinnedWorkspaceIds] = useState<Set<string>>(
-    () => new Set(),
-  );
-
   // Usage tab
   const [usageData, setUsageData] = useState<{
     plan: string;
@@ -144,6 +136,12 @@ export default function DashboardPage() {
       lines: Array<{ description: string; usd: number }>;
       error?: string;
     } | null;
+    hasPaidAccess?: boolean;
+    freeTier?: boolean;
+    weeklySessionsUsed?: number;
+    weeklySessionsLimit?: number | null;
+    weeklySessionsResetAt?: string | null;
+    weeklySessionsAllowed?: boolean;
   } | null>(null);
   const [loadingUsage, setLoadingUsage] = useState(false);
 
@@ -249,7 +247,6 @@ export default function DashboardPage() {
       }
 
       setUser({ id: authUser.id, email: authUser.email });
-      setPinnedWorkspaceIds(loadPinnedWorkspaceIds(authUser.id));
 
       // Fetch profile
       const { data: profile } = await supabase
@@ -341,6 +338,15 @@ export default function DashboardPage() {
             ileSessionsUsed: usageResult.ileSessionsUsed ?? 0,
             apiMeteredInvoice: usageResult.apiMeteredInvoice ?? null,
             xaiUsage: usageResult.xaiUsage ?? null,
+            hasPaidAccess: usageResult.hasPaidAccess === true,
+            freeTier: usageResult.freeTier === true || usageResult.hasPaidAccess === false,
+            weeklySessionsUsed: usageResult.weeklySessionsUsed ?? 0,
+            weeklySessionsLimit:
+              usageResult.weeklySessionsLimit === undefined
+                ? null
+                : usageResult.weeklySessionsLimit,
+            weeklySessionsResetAt: usageResult.weeklySessionsResetAt ?? null,
+            weeklySessionsAllowed: usageResult.weeklySessionsAllowed !== false,
           });
           setXaiUsageOverride(null);
           setXaiPeriod("billing");
@@ -743,6 +749,11 @@ export default function DashboardPage() {
     const typeFilter = productTypeFilter ?? "all";
     const listFilter = lockedListFilter ?? workspaceVisibilityFilter;
     const filtered = workspaces.filter((p) => {
+      if (isDashboardMyMapsTab(activeTab)) {
+        if (!workspaceIsPlayCopy(p)) return false;
+      } else if (workspaceIsPlayCopy(p)) {
+        return false;
+      }
       const matchesSearch =
         workspaceSearch === "" ||
         p.root_topic.toLowerCase().includes(workspaceSearch.toLowerCase()) ||
@@ -751,30 +762,46 @@ export default function DashboardPage() {
       if (!workspaceMatchesDashboardListFilter(p, listFilter)) return false;
       return workspaceMatchesDashboardTypeFilter(p, typeFilter);
     });
-    return sortWorkspacesPinnedFirst(filtered, pinnedWorkspaceIds);
+    return [...filtered].sort((a, b) => {
+      const aTime = Date.parse(a.created_at || "") || 0;
+      const bTime = Date.parse(b.created_at || "") || 0;
+      if (aTime !== bTime) return bTime - aTime;
+      return (a.id || "").localeCompare(b.id || "");
+    });
   }, [
     workspaces,
     workspaceSearch,
     workspaceVisibilityFilter,
     lockedListFilter,
     productTypeFilter,
-    pinnedWorkspaceIds,
+    activeTab,
   ]);
 
   const learningWorkspaces = useMemo(
-    () => workspaces.filter((row) => workspaceMatchesDashboardTypeFilter(row, "learning")),
+    () =>
+      workspaces.filter(
+        (row) =>
+          workspaceMatchesDashboardTypeFilter(row, "learning") && !workspaceIsPlayCopy(row),
+      ),
+    [workspaces],
+  );
+  const myMaps = useMemo(
+    () => workspaces.filter((row) => workspaceIsPlayCopy(row)),
     [workspaces],
   );
   const productEmpty =
     (isDashboardProductTab(activeTab) &&
-      workspaces.filter((row) =>
-        workspaceMatchesDashboardTypeFilter(row, activeTab),
+      workspaces.filter(
+        (row) =>
+          workspaceMatchesDashboardTypeFilter(row, activeTab) &&
+          (activeTab !== "learning" || !workspaceIsPlayCopy(row)),
       ).length === 0) ||
     (isDashboardShopTab(activeTab) &&
       workspaces.filter(
         (row) =>
           workspaceMatchesDashboardTypeFilter(row, "learning") &&
-          workspaceMatchesDashboardListFilter(row, "aycl"),
+          workspaceMatchesDashboardListFilter(row, "aycl") &&
+          !workspaceIsPlayCopy(row),
       ).length === 0);
 
   const totalPlanPages = Math.ceil(filteredWorkspaces.length / workspacePageSize);
@@ -783,18 +810,22 @@ export default function DashboardPage() {
     workspacePage * workspacePageSize
   );
 
-  const handleTogglePin = (workspace: Workspace) => {
-    setPinnedWorkspaceIds((prev) => {
-      const next = togglePinnedWorkspaceId(prev, workspace.id);
-      savePinnedWorkspaceIds(user?.id, next);
-      return next;
-    });
-  };
+  const accessKnown = usageData != null;
+  const hasPaidAccess = usageData?.hasPaidAccess === true;
 
   const setDashboardTab = (tab: DashboardTab) => {
-    setActiveTab(tab);
-    router.replace(`/dashboard?tab=${tab}`, { scroll: false });
+    const next = accessKnown ? clampDashboardTabForAccess(tab, hasPaidAccess) : tab;
+    setActiveTab(next);
+    router.replace(`/dashboard?tab=${next}`, { scroll: false });
   };
+
+  useEffect(() => {
+    if (!accessKnown) return;
+    const next = clampDashboardTabForAccess(activeTab, hasPaidAccess);
+    if (next === activeTab) return;
+    setActiveTab(next);
+    router.replace(`/dashboard?tab=${next}`, { scroll: false });
+  }, [accessKnown, activeTab, hasPaidAccess, router]);
 
   if (loading) {
     return (
@@ -832,7 +863,11 @@ export default function DashboardPage() {
       <div className="md:col-start-2 md:row-start-1">
         <Navbar productLinks={false} />
       </div>
-      <DashboardSidebar activeTab={activeTab} onSelect={setDashboardTab} />
+      <DashboardSidebar
+        activeTab={activeTab}
+        onSelect={setDashboardTab}
+        hasPaidAccess={hasPaidAccess}
+      />
 
       <div className="min-w-0 md:col-start-2 md:row-start-2 md:min-h-0 md:overflow-y-auto">
       <p data-console-frame-label="" className={`pointer-events-none px-4 pt-2 sm:px-6 ${CONSOLE_LABEL_CLASS}`}>
@@ -865,6 +900,20 @@ export default function DashboardPage() {
           <DashboardHomeTab
             workspaces={learningWorkspaces}
             t={t}
+            hasPaidAccess={hasPaidAccess}
+            weeklySessionsUsed={usageData?.weeklySessionsUsed ?? 0}
+            weeklySessionsLimit={usageData?.weeklySessionsLimit ?? null}
+            weeklySessionsResetAt={usageData?.weeklySessionsResetAt ?? null}
+            weeklySessionsAllowed={usageData?.weeklySessionsAllowed !== false}
+            coverImagePool={workspaceCoverPool}
+          />
+        )}
+
+        {isDashboardMyMapsTab(activeTab) && (
+          <DashboardMyMapsTab
+            maps={myMaps}
+            formatDate={formatDate}
+            coverImagePool={workspaceCoverPool}
           />
         )}
 
@@ -879,9 +928,7 @@ export default function DashboardPage() {
             formatDate={formatDate}
             handleArchivePlan={handleArchivePlan}
             handleRestorePlan={handleRestorePlan}
-            handleTogglePin={handleTogglePin}
             paginatedPlans={paginatedPlans}
-            pinnedWorkspaceIds={pinnedWorkspaceIds}
             productEmpty={productEmpty}
             productTab="learning"
             surface={isDashboardShopTab(activeTab) ? "shop" : "workspaces"}
@@ -913,16 +960,6 @@ export default function DashboardPage() {
 
         {activeTab === "organization" && <OrganizationDashboardTab />}
 
-        {activeTab === "upgrade" && (
-          <DashboardUpgradeTab
-            plan={usageData?.plan || user?.plan || "inactive"}
-            subscriptionStatus={usageData?.subscriptionStatus || "inactive"}
-            periodEnd={usageData?.periodEnd ?? null}
-            isAdmin={Boolean(usageData?.isAdmin || user?.isAdmin)}
-          />
-        )}
-
-        {/* Usage Tab */}
         {activeTab === "usage" && (
           <DashboardUsageTab
             handleXaiPeriodChange={handleXaiPeriodChange}

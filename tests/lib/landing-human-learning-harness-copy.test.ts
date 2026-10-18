@@ -8,7 +8,6 @@ import path from "node:path";
 import {
   homepageCopyText,
   PLATFORM_CTA,
-  PLATFORM_DELIVERY,
   PLATFORM_HERO,
   PLATFORM_LAYER_LIST,
   PLATFORM_LAYERS,
@@ -16,7 +15,6 @@ import {
   PLATFORM_PRODUCTS,
   PLATFORM_PROOF,
   PLATFORM_PUBLIC_MAPS,
-  PLATFORM_SPINE,
 } from "@/lib/marketing/platform";
 import {
   LANDING_MAP_SIGNUP_HREF,
@@ -96,48 +94,17 @@ describe("landing hard-domain learning experiences copy", () => {
     expect(lp).not.toContain("VERIFICATION . OPTIMIZATION . AUGMENTATION");
     expect(lp).toContain("LandingPublicMapsCarousel");
     expect(lp).toMatch(
-      /data-home-hero[\s\S]*<LandingPublicMapsCarousel \/>[\s\S]*<\/section>[\s\S]*data-home-spine/,
+      /data-home-hero[\s\S]*<LandingPublicMapsCarousel \/>[\s\S]*<\/section>[\s\S]*data-home-layers/,
     );
+    expect(lp).not.toContain("data-home-spine");
+    expect(lp).not.toContain("data-home-delivery");
+    expect(lp).not.toContain("PLATFORM_SPINE");
+    expect(lp).not.toContain("PLATFORM_DELIVERY");
   });
 
-  it("ships the four-part spine, both delivery modes, layers, proof, and scoped CTA from interpolated copy", () => {
+  it("ships layers, proof, and scoped CTA from interpolated copy", () => {
     const lp = readRel("app/page.tsx");
     const copy = homepageCopyText();
-
-    expect(lp).toContain("PLATFORM_SPINE");
-    expect(lp).toContain("{item.name}");
-    expect(lp).toContain("{item.body}");
-    expect(PLATFORM_SPINE.items).toHaveLength(4);
-    expect(PLATFORM_SPINE.items.map((item) => item.name)).toEqual([
-      "Authored curriculum",
-      "Unsys workspace",
-      "Optional skill validation",
-      "Optional live layer",
-    ]);
-    expect(PLATFORM_SPINE.items[0].body).toMatch(/Expert-grade assets/);
-    expect(PLATFORM_SPINE.items[0].body).toMatch(/adapt to your specific needs/);
-    expect(PLATFORM_SPINE.items[1].body).toMatch(/Learning Harness/);
-    expect(PLATFORM_SPINE.items[1].body).toMatch(/lifetime access/);
-    expect(PLATFORM_SPINE.items[2].body).toMatch(/Knowledge Verification/);
-    expect(PLATFORM_SPINE.items[2].body).toMatch(/real work/);
-    expect(PLATFORM_SPINE.items[3].body).toMatch(/on-site training/);
-    expect(PLATFORM_SPINE.items[3].body).toMatch(/hardware labs/);
-
-    expect(lp).toContain("PLATFORM_DELIVERY");
-    expect(PLATFORM_DELIVERY.items.map((item) => item.name)).toEqual([
-      "Program embed",
-      "On-site training / intensive",
-    ]);
-    expect(PLATFORM_DELIVERY.items[0].body).toMatch(/institutes/);
-    expect(PLATFORM_DELIVERY.items[0].body).toMatch(/workforce/);
-    expect(PLATFORM_DELIVERY.items[0].body).toMatch(/Unsys workspace/);
-    expect(PLATFORM_DELIVERY.items[1].body).toMatch(/async and online/);
-    expect(PLATFORM_DELIVERY.items[1].body).toMatch(/real world/);
-    expect(PLATFORM_DELIVERY.items[1].body).not.toMatch(/hardware lab/);
-    expect(PLATFORM_DELIVERY.items[1].body).not.toMatch(/Sponsor-friendly/);
-    expect(copy).toMatch(/program embed/i);
-    expect(copy).toMatch(/on-site training/i);
-    expect(copy).not.toMatch(/school[-\s]day/i);
 
     expect(lp).toContain("PLATFORM_LAYER_LIST");
     expect(lp).toContain("PLATFORM_LAYERS");

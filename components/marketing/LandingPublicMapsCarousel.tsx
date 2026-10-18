@@ -38,7 +38,7 @@ export function LandingPublicMapsCarousel() {
   function scrollByCard(direction: -1 | 1) {
     const node = scrollerRef.current;
     if (!node) return;
-    const amount = Math.max(280, Math.round(node.clientWidth * 0.8));
+    const amount = Math.max(360, Math.round(node.clientWidth * 0.8));
     node.scrollBy({ left: direction * amount, behavior: "smooth" });
   }
 
@@ -59,7 +59,7 @@ export function LandingPublicMapsCarousel() {
         </button>
         <div
           ref={scrollerRef}
-          className="flex min-w-0 flex-1 gap-3 overflow-x-auto scroll-smooth pb-2 snap-x snap-mandatory"
+          className="scrollbar-hide flex min-w-0 flex-1 gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory"
         >
           {maps.map((item) => {
             const summary = truncatePublicMapSummary(item.summary);
@@ -68,22 +68,22 @@ export function LandingPublicMapsCarousel() {
                 key={item.id}
                 href={PLATFORM_PUBLIC_MAPS.signupHref satisfies typeof LANDING_MAP_SIGNUP_HREF}
                 data-home-map-card
-                className="group relative min-h-[16rem] w-[16rem] shrink-0 snap-start overflow-hidden rounded-none border border-white/20 text-left transition hover:border-white/60 sm:w-[18rem]"
+                className="group relative min-h-[22rem] w-[20rem] shrink-0 snap-start overflow-hidden rounded-none border border-white/20 text-left transition hover:border-white/60 sm:min-h-[24rem] sm:w-[24rem] lg:min-h-[26rem] lg:w-[28rem]"
               >
                 <WorkspaceCardHero
                   workspaceId={item.id}
                   coverImageUrl={item.coverImageUrl}
                   fallback="aesthetic"
-                  heightClassName="absolute inset-0 h-full min-h-[16rem]"
+                  heightClassName="absolute inset-0 h-full min-h-[22rem] sm:min-h-[24rem] lg:min-h-[26rem]"
                 />
-                <div className="relative flex min-h-[16rem] flex-col justify-end p-3 sm:p-4">
+                <div className="relative flex min-h-[22rem] flex-col justify-end p-4 sm:min-h-[24rem] sm:p-5 lg:min-h-[26rem]">
                   <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300">
                     {item.category || "Map"}
                     {item.isAycl && item.priceLabel ? ` · ${item.priceLabel}` : ""}
                   </p>
-                  <p className="mt-1 text-sm font-medium text-white">{item.title}</p>
+                  <p className="mt-1 text-base font-medium text-white sm:text-lg">{item.title}</p>
                   {summary ? (
-                    <p className="mt-1 line-clamp-3 text-xs leading-relaxed text-neutral-200">
+                    <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-neutral-200">
                       {summary}
                     </p>
                   ) : null}

@@ -12,12 +12,10 @@ import { TrackedCtaLink } from "@/components/TrackedCtaLink";
 import { PublicConsoleWash } from "@/components/ui/console-frame";
 import {
   PLATFORM_CTA,
-  PLATFORM_DELIVERY,
   PLATFORM_HERO,
   PLATFORM_LAYER_LIST,
   PLATFORM_LAYERS,
   PLATFORM_PROOF,
-  PLATFORM_SPINE,
 } from "@/lib/marketing/platform";
 
 const BACKGROUND_IMAGES = [
@@ -79,35 +77,6 @@ export default function B2BLandingPage() {
           </div>
           <LandingPublicMapsCarousel />
         </div>
-      </section>
-
-      <section className="relative z-10 mx-auto max-w-7xl px-6 py-10 sm:py-12" data-home-spine>
-        <SectionHeading eyebrow={PLATFORM_SPINE.eyebrow} title={PLATFORM_SPINE.title} />
-        <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {PLATFORM_SPINE.items.map((item) => (
-            <li key={item.name} className="console-copy p-5 sm:p-6">
-              <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">{item.eyebrow}</p>
-              <h3 className="mt-3 text-xl font-medium tracking-[-0.6px] text-white">{item.name}</h3>
-              <p className="mt-3 text-sm leading-relaxed text-zinc-400">{item.body}</p>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section className="relative z-10 mx-auto max-w-7xl px-6 py-10 sm:py-12" data-home-delivery>
-        <SectionHeading eyebrow={PLATFORM_DELIVERY.eyebrow} title={PLATFORM_DELIVERY.title} />
-        <p className="mt-6 max-w-3xl text-base leading-relaxed text-zinc-400 sm:text-lg">
-          {PLATFORM_DELIVERY.lead}
-        </p>
-        <ul className="mt-8 grid gap-4 md:grid-cols-2">
-          {PLATFORM_DELIVERY.items.map((item) => (
-            <li key={item.name} className="console-copy p-5 sm:p-6">
-              <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">{item.eyebrow}</p>
-              <h3 className="mt-3 text-xl font-medium tracking-[-0.6px] text-white">{item.name}</h3>
-              <p className="mt-3 text-sm leading-relaxed text-zinc-400">{item.body}</p>
-            </li>
-          ))}
-        </ul>
       </section>
 
       <section className="relative z-10 mx-auto max-w-7xl px-6 py-10 sm:py-12" data-home-layers>

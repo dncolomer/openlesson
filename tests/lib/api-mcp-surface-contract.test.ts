@@ -134,6 +134,16 @@ describe("API ↔ MCP surface contract (shipped code)", () => {
     }
   });
 
+  it("Helios map tools have GET/POST twins on /map-tools", () => {
+    const route = join(ROOT, "app/api/v3/workspaces/[id]/map-tools/route.ts");
+    expect(existsSync(route)).toBe(true);
+    const src = readFileSync(route, "utf8");
+    expect(src).toMatch(/export async function GET/);
+    expect(src).toMatch(/export async function POST/);
+    expect(agentToolNames()).toContain("list_map_tools");
+    expect(agentToolNames()).toContain("apply_map_tool");
+  });
+
   it("REST workspace collection create exists on /api/v3/workspaces", () => {
     const collectionRoute = join(ROOT, "app/api/v3/workspaces/route.ts");
     expect(existsSync(collectionRoute)).toBe(true);
@@ -170,6 +180,8 @@ describe("API ↔ MCP surface contract (shipped code)", () => {
       "update_workspace",
       "list_blocks",
       "update_blocks",
+      "list_map_tools",
+      "apply_map_tool",
       "get_workspace_settings",
       "update_workspace_settings",
       "get_account_settings",

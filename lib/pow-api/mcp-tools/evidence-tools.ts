@@ -9,6 +9,7 @@ import {
 } from "../pow-model-agent-contract";
 import { AGENT_TOOL_SURFACE } from "../agent-tool-surface";
 import { WORKSPACE_API_BASE, POW_API_BASE, ACCOUNT_API_BASE } from "@/lib/api/agent-api-paths";
+import { HELIOS_MAP_TOOL_IDS } from "@/lib/workspace-helios-tools";
 
 const POW_MODEL_VERSION_FIELD = {
   type: "string" as const,
@@ -122,6 +123,36 @@ const SCHEMAS: Record<string, Omit<McpTool, "name">> = {
         blocks: { type: "array", items: { type: "object" } },
       },
       required: ["workspace_id", "blocks"],
+      additionalProperties: false,
+    },
+  },
+  list_map_tools: {
+    description: `List Helios Learning Map builder tools and the current map snapshot (blocks, unusable ground, notes, drawing layers). Learning workspaces only. REST: GET ${WORKSPACE_API_BASE}/{workspace_id}/map-tools.`,
+    inputSchema: {
+      type: "object",
+      properties: { workspace_id: { type: "string" } },
+      required: ["workspace_id"],
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true },
+  },
+  apply_map_tool: {
+    description: `Apply one Helios map tool or a batch (tool_calls) atomically — same catalog as in-app Helios (add_block, generate_shape, split/clone/expand/combine/bridge/cluster, mark_unusable, generative effects, apply_dag, edit/delete, overlay notes and drawing layers). Learning workspaces only. REST: POST ${WORKSPACE_API_BASE}/{workspace_id}/map-tools.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        workspace_id: { type: "string" },
+        tool: { type: "string", enum: [...HELIOS_MAP_TOOL_IDS] },
+        name: { type: "string", enum: [...HELIOS_MAP_TOOL_IDS] },
+        id: { type: "string", description: "Alias for tool id." },
+        arguments: { type: "object" },
+        args: { type: "object" },
+        payload: { type: "object" },
+        tool_calls: { type: "array", items: { type: "object" } },
+        toolCalls: { type: "array", items: { type: "object" } },
+        calls: { type: "array", items: { type: "object" } },
+      },
+      required: ["workspace_id"],
       additionalProperties: false,
     },
   },

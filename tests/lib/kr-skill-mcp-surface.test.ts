@@ -94,6 +94,10 @@ describe("KR vs standard skill/MCP surface (shipped builders)", () => {
       expect(krNames).toContain(name);
       expect(standardNames).toContain(name);
     }
+    expect(standardNames).toContain("list_map_tools");
+    expect(standardNames).toContain("apply_map_tool");
+    expect(krNames).not.toContain("list_map_tools");
+    expect(krNames).not.toContain("apply_map_tool");
     expect(krNames).not.toContain("lwm_snapshot");
     expect(standardNames).not.toContain("lwm_snapshot");
     expect(krNames).not.toContain("buffer_proof_of_work");

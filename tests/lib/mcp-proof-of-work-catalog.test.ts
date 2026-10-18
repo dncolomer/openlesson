@@ -11,6 +11,8 @@ describe("MCP_PROOF_OF_WORK_TOOL_CATALOG", () => {
     const names = MCP_PROOF_OF_WORK_TOOL_CATALOG.map((tool) => tool.name);
     expect(names).toContain("create_workspace");
     expect(names).toContain("update_workspace");
+    expect(names).toContain("list_map_tools");
+    expect(names).toContain("apply_map_tool");
     expect(names).toContain("start_session");
     expect(names).toContain("upload_proof_of_work");
     expect(names).toContain("end_session");

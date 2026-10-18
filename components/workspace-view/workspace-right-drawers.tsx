@@ -1,9 +1,11 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import {
   WorkspaceAddBlockPane,
   type WorkspaceAddBlockSubmitOpts,
 } from "@/components/WorkspaceAddBlockPane";
+import { WorkspaceHeliosChat } from "@/components/WorkspaceHeliosChat";
 import { WorkspaceBlockDangerDrawer } from "@/components/WorkspaceBlockDangerPanel";
 import { WorkspaceBlockDetailPane } from "@/components/WorkspaceBlockDetailPane";
 import { WorkspaceBlockLocalContextPanel } from "@/components/WorkspaceBlockLocalContextPanel";
@@ -11,7 +13,12 @@ import { WorkspaceCombineBlocksPane } from "@/components/WorkspaceCombineBlocksP
 import { WorkspaceGenerateShapePane } from "@/components/WorkspaceGenerateShapePane";
 import { WorkspaceLearnerBlockPane } from "@/components/WorkspaceLearnerBlockPane";
 import { WorkspaceMapAuthoringPane } from "@/components/WorkspaceMapAuthoringPane";
-import type { Block, MobileColumn, Workspace } from "@/components/workspace-view/types";
+import type {
+  Block,
+  HeliosMapOverlay,
+  MobileColumn,
+  Workspace,
+} from "@/components/workspace-view/types";
 import type { ProductLaunchOptions } from "@/components/BlockDetailCard";
 import type { BlockCreatorEffects, GeneratorTargetCell } from "@/lib/block-creator-effects";
 import { parseBlockCreatorEffects } from "@/lib/block-creator-effects";
@@ -22,8 +29,21 @@ import type { ProductLaunchTarget } from "@/lib/product-intent";
 import type { BlockLocalContextInput, WorkspaceFileContextItem } from "@/lib/prompt-workspace-context";
 import type { WorkspaceExpandBlockSubmitOpts } from "@/components/WorkspaceExpandBlockPane";
 import type { WorkspaceAddTargetCell } from "@/lib/workspace-right-pane";
+import type { WorkspaceMapSelection } from "@/lib/workspace-map-selection";
+import type { WorkspaceMapTypesState } from "@/lib/workspace-map-types";
 import { WORKSPACE_MAP_DESKTOP_RIGHT_WIDTH_CLASS } from "@/lib/workspace-right-pane";
 import { useI18n } from "@/lib/i18n";
+import {
+  DEFAULT_WORKSPACE_HELIOS_COLUMN_MODE,
+  normalizeWorkspaceHeliosColumnMode,
+  resolveWorkspaceHeliosColumnSurface,
+  type WorkspaceHeliosColumnMode,
+} from "@/lib/workspace-helios-mode";
+import {
+  heliosMapSnapshotFromBlocks,
+  heliosMapSnapshotToAuthoringNodes,
+  type HeliosMapToolHost,
+} from "@/lib/workspace-helios-tools";
 
 export function WorkspaceRightDrawers({
   mobileColumn,
@@ -41,6 +61,8 @@ export function WorkspaceRightDrawers({
   ayclToken,
   locale,
   nodes,
+  mapSelection,
+  workspaceMapTypes,
   unusableCells,
   selectiveExplanationPolygon,
   selectiveExplanationActive,
@@ -77,10 +99,14 @@ export function WorkspaceRightDrawers({
   cloneArmed = false,
   onCloneArm,
   onCloneCancel,
+  onClonePaste,
   onExpandBlock,
   onGenerateMap,
   onGenerateMapPreviewChange,
   onSetUnusableCells,
+  onPreviewUnusableCells,
+  onApplyHeliosOverlay,
+  mapOverlay,
   onExpandPreviewChange,
   onGeneratorTargetPreviewChange,
   onGeneratorPickModeChange,
@@ -113,6 +139,8 @@ export function WorkspaceRightDrawers({
   ayclToken?: string;
   locale: string;
   nodes: Block[];
+  mapSelection?: WorkspaceMapSelection | null;
+  workspaceMapTypes?: WorkspaceMapTypesState | null;
   unusableCells: UnusableCell[];
   selectiveExplanationPolygon: Array<{ x: number; y: number }> | null;
   selectiveExplanationActive: boolean;
@@ -188,6 +216,10 @@ export function WorkspaceRightDrawers({
   cloneArmed?: boolean;
   onCloneArm?: (blockId: string) => void;
   onCloneCancel?: () => void;
+  onClonePaste?: (
+    sourceBlockId: string,
+    target: { row: number; col: number },
+  ) => Promise<void>;
   onExpandBlock?: (
     source: ExpandSourceIdentity,
     opts: WorkspaceExpandBlockSubmitOpts,
@@ -200,6 +232,9 @@ export function WorkspaceRightDrawers({
   }) => Promise<void>;
   onGenerateMapPreviewChange?: (cells: Array<{ row: number; col: number }> | null) => void;
   onSetUnusableCells?: (cells: Array<{ row: number; col: number }>) => Promise<void>;
+  onPreviewUnusableCells?: (cells: Array<{ row: number; col: number }>) => void;
+  onApplyHeliosOverlay?: (overlay: HeliosMapOverlay) => void;
+  mapOverlay?: HeliosMapOverlay | null;
   onExpandPreviewChange: (cells: Array<{ row: number; col: number }> | null) => void;
   onGeneratorTargetPreviewChange: (cells: GeneratorTargetCell[] | null) => void;
   onGeneratorPickModeChange: (active: boolean) => void;
@@ -228,24 +263,180 @@ export function WorkspaceRightDrawers({
   }) => Promise<void>;
 }) {
   const { t } = useI18n();
+  const [heliosColumnMode, setHeliosColumnMode] =
+    useState<WorkspaceHeliosColumnMode>(DEFAULT_WORKSPACE_HELIOS_COLUMN_MODE);
+  const heliosSurface = resolveWorkspaceHeliosColumnSurface({
+    authoring: showCreatorDrawers,
+    mode: heliosColumnMode,
+  });
+  const heliosSnapshot = useMemo(
+    () =>
+      heliosMapSnapshotFromBlocks({
+        blocks: nodes.map((n) => ({
+          id: n.id,
+          title: n.title,
+          description: n.description,
+          position_x: n.position_x ?? 0,
+          position_y: n.position_y ?? 0,
+          span_w: n.span_w,
+          span_h: n.span_h,
+          shape_cells: n.shape_cells,
+          next_block_ids: n.next_block_ids,
+          lock_until_block_ids: n.lock_until_block_ids,
+          creator_effects: n.creator_effects,
+          planning_prompt: n.planning_prompt,
+        })),
+        unusableCells,
+        notes: mapOverlay?.notes,
+        annotationLayers: mapOverlay?.annotationLayers,
+      }),
+    [mapOverlay, nodes, unusableCells],
+  );
+  const heliosHost = useMemo<HeliosMapToolHost>(
+    () => ({
+      applySnapshot: (snap) => {
+        onBlocksUpdated(heliosMapSnapshotToAuthoringNodes(snap, nodes));
+        onPreviewUnusableCells?.(snap.unusableCells);
+        onApplyHeliosOverlay?.({
+          notes: snap.notes || [],
+          annotationLayers: snap.annotationLayers || [],
+        });
+      },
+      addBlock: async ({ prompt, cell }) => {
+        await onSubmitAddBlock(prompt, cell);
+      },
+      generateShape: async ({ prompt, cells }) => {
+        await onSubmitGenerateShape({ prompt, cells });
+      },
+      splitBlock: onSplitBlock
+        ? async ({ blockId, prompt }) => {
+            await onSplitBlock({ blockId, prompt });
+          }
+        : undefined,
+      cloneBlock: onClonePaste
+        ? async ({ blockId, cell }) => {
+            await onClonePaste(blockId, cell);
+          }
+        : undefined,
+      editBlock: async ({ blockId, title, description }) => {
+        await onUpdateBlock({ blockId, title, description });
+      },
+      expandBlock: onExpandBlock
+        ? async ({ blockId, prompt, range, density, frozenSlots }) => {
+            const source = nodes.find((n) => n.id === blockId);
+            if (!source) return;
+            await onExpandBlock(
+              {
+                id: source.id,
+                title: source.title,
+                description: source.description,
+                planning_prompt: source.planning_prompt,
+              },
+              {
+                frozenSlots,
+                range,
+                density,
+                userGuidance: prompt,
+              },
+            );
+          }
+        : undefined,
+      combineBlocks: onCombine,
+      generateBridge: onGenerateBridge,
+      clusterBlocks: onClusterBlocks,
+      applyDag: onApplyDag,
+      setUnusableCells: onSetUnusableCells,
+      saveCreatorEffects: onSaveCreatorEffects,
+      deleteBlock: onDeleteBlock,
+    }),
+    [
+      nodes,
+      onApplyDag,
+      onBlocksUpdated,
+      onPreviewUnusableCells,
+      onApplyHeliosOverlay,
+      onClonePaste,
+      onClusterBlocks,
+      onCombine,
+      onDeleteBlock,
+      onExpandBlock,
+      onGenerateBridge,
+      onSaveCreatorEffects,
+      onSetUnusableCells,
+      onSplitBlock,
+      onSubmitAddBlock,
+      onSubmitGenerateShape,
+      onUpdateBlock,
+    ],
+  );
   return (
-    <section className={`${mobileColumn === "workspace" ? "flex" : "hidden"} relative min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#080808] md:flex ${WORKSPACE_MAP_DESKTOP_RIGHT_WIDTH_CLASS} md:flex-none`}>
+    <section className={`${mobileColumn === "workspace" ? "flex" : "hidden"} relative min-h-0 min-w-0 flex-1 flex-col overflow-hidden p-0 bg-[#080808] md:flex ${WORKSPACE_MAP_DESKTOP_RIGHT_WIDTH_CLASS} md:flex-none`}>
       {workspaceImage && (
         <img
           src={workspaceImage}
           alt=""
-          className="absolute inset-0 h-full w-full object-cover opacity-35 saturate-75"
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-35 saturate-75"
         />
       )}
-      <div className="absolute inset-0 bg-black/35" />
-      <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/20 to-black/70" />
+      <div className="pointer-events-none absolute inset-0 bg-black/35" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/70 via-black/20 to-black/70" />
 
       <main
         className="relative z-10 flex min-h-0 flex-1 flex-col overflow-y-auto p-0"
         data-workspace-right-column
         data-workspace-right-pane={rightPane}
+        data-helios-map-mode={heliosSurface.mode}
       >
-        {showCreatorDrawers &&
+        {heliosSurface.showModeToggle ? (
+          <div
+            className="flex shrink-0 border-b border-white/10"
+            data-workspace-helios-mode-toggle=""
+          >
+            <button
+              type="button"
+              className={`flex-1 px-2 py-2 text-[10px] uppercase tracking-[0.16em] ${
+                heliosSurface.mode === "helios"
+                  ? "bg-white/10 text-neutral-100"
+                  : "text-neutral-500"
+              }`}
+              aria-pressed={heliosSurface.mode === "helios"}
+              data-helios-map-mode-option="helios"
+              onClick={() =>
+                setHeliosColumnMode(normalizeWorkspaceHeliosColumnMode("helios"))
+              }
+            >
+              Helios
+            </button>
+            <button
+              type="button"
+              className={`flex-1 px-2 py-2 text-[10px] uppercase tracking-[0.16em] ${
+                heliosSurface.mode === "manual"
+                  ? "bg-white/10 text-neutral-100"
+                  : "text-neutral-500"
+              }`}
+              aria-pressed={heliosSurface.mode === "manual"}
+              data-helios-map-mode-option="manual"
+              onClick={() =>
+                setHeliosColumnMode(normalizeWorkspaceHeliosColumnMode("manual"))
+              }
+            >
+              Manual Mode
+            </button>
+          </div>
+        ) : null}
+        {heliosSurface.showHeliosChat ? (
+          <WorkspaceHeliosChat
+            workspaceId={workspaceId}
+            ayclToken={ayclToken}
+            locale={locale}
+            snapshot={heliosSnapshot}
+            host={heliosHost}
+            mapSelection={mapSelection}
+            workspaceFileItems={workspaceFileItems}
+            workspaceMapTypes={workspaceMapTypes}
+          />
+        ) : heliosSurface.showManualDrawers &&
+          showCreatorDrawers &&
           rightPane === "combine_blocks" &&
           combineBlockIds.length >= 2 ? (
           <WorkspaceCombineBlocksPane
@@ -269,7 +460,10 @@ export function WorkspaceRightDrawers({
               cancel: t("sessionList.gridAddCancel") || "Cancel",
             }}
           />
-        ) : showCreatorDrawers && rightPane === "add_block" && addTargetCell ? (
+        ) : heliosSurface.showManualDrawers &&
+          showCreatorDrawers &&
+          rightPane === "add_block" &&
+          addTargetCell ? (
           <WorkspaceAddBlockPane
             key={`add-${addTargetCell.row}-${addTargetCell.col}`}
             cell={addTargetCell}
@@ -292,7 +486,8 @@ export function WorkspaceRightDrawers({
               addCancel: t("sessionList.gridAddCancel"),
             }}
           />
-        ) : showCreatorDrawers &&
+        ) : heliosSurface.showManualDrawers &&
+          showCreatorDrawers &&
           rightPane === "generate_shape" &&
           generateShapeCells ? (
           <WorkspaceGenerateShapePane
@@ -313,7 +508,8 @@ export function WorkspaceRightDrawers({
               addCancel: t("sessionList.gridAddCancel"),
             }}
           />
-        ) : rightPane === "block_detail" &&
+        ) : heliosSurface.showManualDrawers &&
+          rightPane === "block_detail" &&
           detailBlock &&
           detailIndex >= 0 &&
           (showCreatorDrawers || showLearnerDrawer) ? (

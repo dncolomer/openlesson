@@ -39,6 +39,13 @@ export {
   buildIleWelcomeSystemPrompt,
 } from "./surfaces/ile";
 export {
+  HELIOS_MAP_EXPERTISE_BLOCK,
+  HELIOS_MAP_SURFACE,
+  HELIOS_MAP_TOOLS_BLOCK,
+  HELIOS_MAP_TYPES_BLOCK,
+  buildHeliosMapBuilderSystemPrompt,
+} from "./surfaces/helios-map";
+export {
   SCORE_POW_CONTEXT_LAYER,
   SCORE_POW_CONTEXT_LAYER_OPAQUE,
   SCORE_VERIFICATION_SUBMIT_STASH_OVERLAY,

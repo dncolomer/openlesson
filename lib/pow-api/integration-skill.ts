@@ -9,6 +9,7 @@ import {
 } from "./proof-of-work-integration";
 import { POW_API_BASE, WORKSPACE_API_BASE } from "@/lib/api/agent-api-paths";
 import { isNoMapWorkspace } from "@/lib/workspace-kind";
+import { workspaceSupportsFeature } from "@/lib/workspace-capabilities";
 import { formatSkillMcpToolList } from "./agent-tool-surface";
 import { CANVAS_TAP_SIMULATION_HEADING } from "./pow-model-agent-contract";
 import { POW_MODEL_VERSION } from "./workspace-proof-of-work";
@@ -230,8 +231,11 @@ export function workspaceSettingsIntegrationCopy(kind: unknown): {
     : learningWorkspaceIntegrationCopy();
 }
 
-export function formatSkillRestEndpointsLine(_kind: unknown): string {
-  return `REST: workspace management GET/POST ${WORKSPACE_API_BASE}, GET/PATCH ${WORKSPACE_API_BASE}/{id}, GET/PATCH .../blocks, GET/PATCH .../settings, GET/PATCH /api/v3/account, POST .../integration-skill; headless proof-of-work POST ${POW_API_BASE}/workspaces/{id}/sessions, GET .../sessions/{session_id}, POST .../proof-of-work, POST .../end, GET .../flow-embeddings. Snapshot and Stash are not public agent APIs.`;
+export function formatSkillRestEndpointsLine(kind: unknown): string {
+  const mapTools = workspaceSupportsFeature(kind, "map")
+    ? ", GET/POST .../map-tools"
+    : "";
+  return `REST: workspace management GET/POST ${WORKSPACE_API_BASE}, GET/PATCH ${WORKSPACE_API_BASE}/{id}, GET/PATCH .../blocks${mapTools}, GET/PATCH .../settings, GET/PATCH /api/v3/account, POST .../integration-skill; headless proof-of-work POST ${POW_API_BASE}/workspaces/{id}/sessions, GET .../sessions/{session_id}, POST .../proof-of-work, POST .../end, GET .../flow-embeddings. Snapshot and Stash are not public agent APIs.`;
 }
 
 export function buildIntegrationSkillInstructions(
@@ -316,7 +320,7 @@ Required content:
    - ${restEndpointsLine}
    - MCP (JSON-RPC at POST /api/mcp with Bearer auth): ${mcpToolList}
 4. Workspace-specific block list from the current status.
-5. Quick checklist: create_workspace or get_workspace → update_workspace / update_blocks → start_session → upload_proof_of_work → end_session.
+5. Quick checklist: create_workspace or get_workspace → list_map_tools / apply_map_tool (or update_blocks) → start_session → upload_proof_of_work → end_session.
 
 ${statusSection}
 

@@ -30,6 +30,10 @@ import {
   parseIntegrationSkillRequest,
 } from "../integration-skill";
 import { withCanvasTapSimulationSkill } from "../pow-model-agent-contract";
+import {
+  applyHeliosMapToolsForAgent,
+  listHeliosMapToolsForAgent,
+} from "../helios-map-agent";
 import { buildWorkspacePerformanceContext } from "../performance-context";
 import { callXaiResponsesWithFiles } from "@/lib/xai-client";
 import { getFlowEmbedding, listFlowEmbeddings, presentFlowEmbedding } from "@/lib/flow-embedding-store";
@@ -151,6 +155,36 @@ export async function callMcpProofOfWorkTool(
     if (!updated) throw new Error("Workspace not found.");
     return await evidenceToolResult(updated, {
       endpoint: "update_blocks",
+      workspace_id: workspaceId,
+    });
+  }
+
+  if (name === "list_map_tools") {
+    requireScope(auth.scopes, "workspaces:read");
+    const workspaceId = stringArg(args, "workspace_id");
+    if (!workspaceId) throw new Error("workspace_id is required.");
+    const workspace = await loadManagedWorkspace(supabase, auth, workspaceId);
+    if (!workspace) throw new Error("Workspace not found.");
+    const payload = await listHeliosMapToolsForAgent(supabase, workspaceId);
+    return await evidenceToolResult(payload, {
+      endpoint: "list_map_tools",
+      workspace_id: workspaceId,
+    });
+  }
+
+  if (name === "apply_map_tool") {
+    requireScope(auth.scopes, "workspaces:write");
+    const workspaceId = stringArg(args, "workspace_id");
+    if (!workspaceId) throw new Error("workspace_id is required.");
+    const workspace = await loadManagedWorkspace(supabase, auth, workspaceId);
+    if (!workspace) throw new Error("Workspace not found.");
+    const payload = await applyHeliosMapToolsForAgent({
+      supabase,
+      workspaceId,
+      body: args,
+    });
+    return await evidenceToolResult(payload, {
+      endpoint: "apply_map_tool",
       workspace_id: workspaceId,
     });
   }

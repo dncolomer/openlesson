@@ -79,6 +79,28 @@ export const AGENT_TOOL_SURFACE = [
     },
   },
   {
+    name: "list_map_tools",
+    family: "workspace",
+    scope: "workspaces:read",
+    summary:
+      "List Helios Learning Map builder tools (topologies, unusable ground, generative effects, DAG, edit/delete, overlay notes and drawing layers) and the current map snapshot.",
+    rest: {
+      method: "GET",
+      path: `${WORKSPACE_API_BASE}/{workspace_id}/map-tools`,
+    },
+  },
+  {
+    name: "apply_map_tool",
+    family: "workspace",
+    scope: "workspaces:write",
+    summary:
+      "Apply one or more Helios Learning Map builder tools atomically (same catalog as in-app Helios). Learning workspaces only.",
+    rest: {
+      method: "POST",
+      path: `${WORKSPACE_API_BASE}/{workspace_id}/map-tools`,
+    },
+  },
+  {
     name: "get_workspace_settings",
     family: "workspace",
     scope: "workspaces:read",

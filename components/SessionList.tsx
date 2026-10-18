@@ -71,6 +71,15 @@ interface SessionListProps {
     y: number;
     source?: "creator" | "learner";
   } | null;
+  injectHeliosOverlay?: {
+    token: number;
+    notes: import("@/lib/learner-map-notes").LearnerMapNote[];
+    annotationLayers: import("@/lib/map-annotation-layers").AnnotationLayer[];
+  } | null;
+  onMapOverlayChange?: (overlay: {
+    notes: import("@/lib/learner-map-notes").LearnerMapNote[];
+    annotationLayers: import("@/lib/map-annotation-layers").AnnotationLayer[];
+  }) => void;
   /** Unusable map ground cells (path-shaping). */
   unusableCells?: Array<{ row: number; col: number }> | null;
   /** Persist lock-until / unusable ground from left toolbar + selection. */
@@ -186,6 +195,8 @@ export function SessionList({
   selectiveExplanationPolygon = null,
   onSelectiveExplanationComplete,
   injectMapNote = null,
+  injectHeliosOverlay = null,
+  onMapOverlayChange,
   unusableCells = null,
   onMapGround,
   workspaceNotes = null,
@@ -485,6 +496,8 @@ export function SessionList({
             selectiveExplanationPolygon={selectiveExplanationPolygon}
             onSelectiveExplanationComplete={onSelectiveExplanationComplete}
             injectMapNote={injectMapNote}
+            injectHeliosOverlay={injectHeliosOverlay}
+            onMapOverlayChange={onMapOverlayChange}
             appearingNodeIds={appearingNodeIds}
             onAppearingComplete={() => setAppearingNodeIds([])}
             labels={{

@@ -7,6 +7,8 @@ import { useI18n } from "@/lib/i18n";
 import {
   mapWorkspaceNodes,
   type Block,
+  type HeliosMapOverlay,
+  type InjectHeliosOverlay,
   type Workspace,
   type WorkspaceViewProps,
   planShareSlug,
@@ -83,6 +85,8 @@ import {
   playCopyStartSessionTarget,
 } from "@/lib/workspace-play-copy";
 import { WorkspacePlaySidebar } from "@/components/workspace-view/workspace-play-sidebar";
+import { loadCreatorMapNotes } from "@/lib/learner-map-notes";
+import { loadAnnotationLayers } from "@/lib/map-annotation-layers";
 
 export type { Block, Workspace, WorkspaceViewProps };
 
@@ -138,6 +142,33 @@ export function WorkspaceView({
     Array<{ row: number; col: number }> | null
   >(null);
   const [unusableCells, setUnusableCells] = useState<UnusableCell[]>([]);
+  const [mapOverlay, setMapOverlay] = useState<HeliosMapOverlay>({
+    notes: [],
+    annotationLayers: [],
+  });
+  const [injectHeliosOverlay, setInjectHeliosOverlay] =
+    useState<InjectHeliosOverlay | null>(null);
+  const handleMapOverlayChange = useCallback((overlay: HeliosMapOverlay) => {
+    setMapOverlay(overlay);
+  }, []);
+  const handleApplyHeliosOverlay = useCallback((overlay: HeliosMapOverlay) => {
+    setMapOverlay(overlay);
+    setInjectHeliosOverlay((prev) => ({
+      token: (prev?.token || 0) + 1,
+      notes: overlay.notes,
+      annotationLayers: overlay.annotationLayers,
+    }));
+  }, []);
+  useEffect(() => {
+    if (!workspaceId) return;
+    setMapOverlay({
+      notes: loadCreatorMapNotes({ workspaceId, mapKind: "workspace" }),
+      annotationLayers: loadAnnotationLayers({
+        workspaceId,
+        mapKind: "workspace",
+      }),
+    });
+  }, [workspaceId]);
   const [workspaceDags, setWorkspaceDags] = useState<WorkspaceDagRecord[]>(() =>
     normalizeWorkspaceDags(initialPlan?.workspace_dags),
   );
@@ -854,6 +885,8 @@ export function WorkspaceView({
           selectiveExplanationPolygon={selectiveExplanationPolygon}
           onSelectiveExplanationComplete={handleSelectiveExplanationComplete}
           injectMapNote={injectMapNote}
+          injectHeliosOverlay={injectHeliosOverlay}
+          onMapOverlayChange={handleMapOverlayChange}
           unusableCells={unusableCells}
           onMapGround={
             isOwner && !isLearnerMode ? handleMapGround : undefined
@@ -941,6 +974,8 @@ export function WorkspaceView({
           ayclToken={ayclToken}
           locale={locale}
           nodes={nodes}
+          mapSelection={mapSelection}
+          workspaceMapTypes={workspaceMapTypes}
           unusableCells={unusableCells}
           selectiveExplanationPolygon={selectiveExplanationPolygon}
           selectiveExplanationActive={selectiveExplanationActive}
@@ -1003,6 +1038,7 @@ export function WorkspaceView({
           cloneArmed={cloneArm.armed}
           onCloneArm={isOwner && !isLearnerMode ? handleCloneArm : undefined}
           onCloneCancel={handleCloneCancel}
+          onClonePaste={isOwner ? handleClonePaste : undefined}
           onExpandBlock={isOwner ? handleExpandFromSourceBlock : undefined}
           onGenerateMap={isOwner ? handleGenerateMap : undefined}
           onGenerateMapPreviewChange={setGenerateMapPreviewCells}
@@ -1016,6 +1052,9 @@ export function WorkspaceView({
                 }
               : undefined
           }
+          onPreviewUnusableCells={isOwner ? setUnusableCells : undefined}
+          onApplyHeliosOverlay={isOwner ? handleApplyHeliosOverlay : undefined}
+          mapOverlay={mapOverlay}
           onExpandPreviewChange={setAddExpandPreviewCells}
           onGeneratorTargetPreviewChange={setGeneratorTargetPreviewCells}
           onGeneratorPickModeChange={setGeneratorPickActiveSafe}

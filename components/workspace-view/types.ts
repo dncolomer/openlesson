@@ -2,6 +2,8 @@
 
 import type { ReactNode } from "react";
 import type { Block, Workspace } from "@/lib/domain/types";
+import type { AnnotationLayer } from "@/lib/map-annotation-layers";
+import type { LearnerMapNote } from "@/lib/learner-map-notes";
 import { parseBlockCreatorEffects } from "@/lib/block-creator-effects";
 import { parseWorkspacePracticeOptions } from "@/lib/block-practice-options";
 import { parseBlockLocalContext } from "@/lib/prompt-workspace-context";
@@ -19,6 +21,15 @@ export type InjectMapNote = {
   x: number;
   y: number;
   source?: "creator" | "learner";
+};
+
+export type HeliosMapOverlay = {
+  notes: LearnerMapNote[];
+  annotationLayers: AnnotationLayer[];
+};
+
+export type InjectHeliosOverlay = HeliosMapOverlay & {
+  token: number;
 };
 
 export type ClusterMapJob = {

@@ -44,6 +44,8 @@ Canonical protocol `agent-trace-v3` phases: `enumerate` → `fingerprint` → `a
 | `PATCH` | `/{workspace_id}` | `workspaces:write` | `update_workspace` | Edit settings, contents, and map. |
 | `GET` | `/{workspace_id}/blocks` | `workspaces:read` | `list_blocks` | Map blocks / contents. |
 | `PATCH` | `/{workspace_id}/blocks` | `workspaces:write` | `update_blocks` | Replace or patch the map. |
+| `GET` | `/{workspace_id}/map-tools` | `workspaces:read` | `list_map_tools` | Helios Learning Map builder catalog + current snapshot (blocks, unusable ground, notes, drawing layers). Learning workspaces only. |
+| `POST` | `/{workspace_id}/map-tools` | `workspaces:write` | `apply_map_tool` | Apply one Helios map tool or an atomic `tool_calls` batch (same catalog as in-app Helios). |
 | `GET` | `/{workspace_id}/settings` | `workspaces:read` | `get_workspace_settings` | Workspace settings. |
 | `PATCH` | `/{workspace_id}/settings` | `workspaces:write` | `update_workspace_settings` | Patch workspace settings. |
 | `POST` | `/{workspace_id}/integration-skill` | `workspaces:read` | `generate_integration_skill` | Partner `skill.md` so ChatGPT / Claude can authorize and run the two APIs. |

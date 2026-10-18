@@ -327,10 +327,10 @@ describe("WorkspaceView section shell wiring", () => {
     expect(viewSource).toContain('selectSection("settings")');
   });
 
-  it("gates block-map chrome to the Workspace section only and does not mount builder chat", () => {
+  it("gates block-map chrome to the Workspace section only and does not mount retired WorkspaceChat", () => {
     expect(viewSource).toContain("sectionLayout.showBlockMapChrome");
     expect(viewSource).toContain("<SessionList");
-    expect(viewSource).not.toContain("WorkspaceChat");
+    expect(viewSource).not.toContain("<WorkspaceChat");
     expect(viewSource).not.toContain("<ChatPanel");
     expect(viewSource).not.toContain("WorkspaceTabBar");
     expect(viewSource).not.toContain("activeTab");

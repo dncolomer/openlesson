@@ -75,6 +75,15 @@ export interface BlockSkillGridProps {
     y: number;
     source?: "creator" | "learner";
   } | null;
+  injectHeliosOverlay?: {
+    token: number;
+    notes: import("@/lib/learner-map-notes").LearnerMapNote[];
+    annotationLayers: import("@/lib/map-annotation-layers").AnnotationLayer[];
+  } | null;
+  onMapOverlayChange?: (overlay: {
+    notes: import("@/lib/learner-map-notes").LearnerMapNote[];
+    annotationLayers: import("@/lib/map-annotation-layers").AnnotationLayer[];
+  }) => void;
   canEdit: boolean;
   learnerMode?: boolean;
   viewOnly?: boolean;

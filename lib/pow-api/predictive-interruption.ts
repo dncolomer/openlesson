@@ -81,6 +81,8 @@ const NO_INTERRUPTION_ENDPOINTS = new Set<ProofOfWorkApiEndpoint>([
   "get_account_settings",
   "update_account_settings",
   "list_blocks",
+  "list_map_tools",
+  "apply_map_tool",
   "start_session",
   "get_session",
   "end_session",

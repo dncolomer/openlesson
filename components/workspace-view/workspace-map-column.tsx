@@ -1,7 +1,15 @@
 "use client";
 
 import { SessionList } from "@/components/SessionList";
-import type { Block, ClusterMapJob, InjectMapNote, MobileColumn, Workspace } from "@/components/workspace-view/types";
+import type {
+  Block,
+  ClusterMapJob,
+  HeliosMapOverlay,
+  InjectHeliosOverlay,
+  InjectMapNote,
+  MobileColumn,
+  Workspace,
+} from "@/components/workspace-view/types";
 import type { AddExpandJob } from "@/lib/add-block-range-density";
 import type { GeneratorTargetCell } from "@/lib/block-creator-effects";
 import type { UnusableCell } from "@/lib/map-ground-rules";
@@ -35,6 +43,8 @@ export function WorkspaceMapColumn({
   selectiveExplanationPolygon,
   onSelectiveExplanationComplete,
   injectMapNote,
+  injectHeliosOverlay,
+  onMapOverlayChange,
   unusableCells,
   onMapGround,
   workspaceNotes,
@@ -76,6 +86,8 @@ export function WorkspaceMapColumn({
   selectiveExplanationPolygon: Array<{ x: number; y: number }> | null;
   onSelectiveExplanationComplete: (polygon: Array<{ x: number; y: number }>) => void;
   injectMapNote: InjectMapNote | null;
+  injectHeliosOverlay?: InjectHeliosOverlay | null;
+  onMapOverlayChange?: (overlay: HeliosMapOverlay) => void;
   unusableCells: UnusableCell[];
   onMapGround?: (payload: {
     op: "set_lock_until" | "set_unusable_cells";
@@ -127,6 +139,8 @@ export function WorkspaceMapColumn({
         selectiveExplanationPolygon={selectiveExplanationPolygon}
         onSelectiveExplanationComplete={onSelectiveExplanationComplete}
         injectMapNote={injectMapNote}
+        injectHeliosOverlay={injectHeliosOverlay}
+        onMapOverlayChange={onMapOverlayChange}
         unusableCells={unusableCells}
         onMapGround={onMapGround}
         workspaceNotes={workspaceNotes}

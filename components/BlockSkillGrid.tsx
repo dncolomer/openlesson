@@ -108,6 +108,8 @@ export function BlockSkillGrid({
   selectiveExplanationPolygon = null,
   onSelectiveExplanationComplete,
   injectMapNote = null,
+  injectHeliosOverlay = null,
+  onMapOverlayChange,
   canEdit: canEditProp,
   learnerMode = false,
   viewOnly = false,
@@ -387,6 +389,31 @@ export function BlockSkillGrid({
     persistLearnerNotes,
     overlayPersist,
   ]);
+
+  const injectHeliosOverlayTokenRef = useRef(0);
+  useEffect(() => {
+    if (!injectHeliosOverlay || !injectHeliosOverlay.token) return;
+    if (injectHeliosOverlay.token === injectHeliosOverlayTokenRef.current) return;
+    injectHeliosOverlayTokenRef.current = injectHeliosOverlay.token;
+    if (!mountMapNotes || !overlayPersist || learnerMode || viewOnly) return;
+    persistCreatorNotes(injectHeliosOverlay.notes || []);
+    persistAnnotationLayers(injectHeliosOverlay.annotationLayers || []);
+  }, [
+    injectHeliosOverlay,
+    learnerMode,
+    mountMapNotes,
+    overlayPersist,
+    persistAnnotationLayers,
+    persistCreatorNotes,
+    viewOnly,
+  ]);
+
+  useEffect(() => {
+    onMapOverlayChange?.({
+      notes: creatorNotes,
+      annotationLayers,
+    });
+  }, [annotationLayers, creatorNotes, onMapOverlayChange]);
 
   // Drop optimistic rows once parent nodes catch up from the server.
   useEffect(() => {

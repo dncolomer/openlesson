@@ -6,6 +6,7 @@ import {
   buildIntegrationSkillApiPath,
 } from "./proof-of-work-integration";
 import { POW_API_BASE, WORKSPACE_API_BASE } from "@/lib/api/agent-api-paths";
+import { workspaceSupportsFeature } from "@/lib/workspace-capabilities";
 
 export const UNCERTAIN_SYSTEMS_SCOPE = {
   product: "Uncertain Systems",
@@ -206,6 +207,16 @@ export function recommendIntegrationActions(options: {
       mcp_tool: "list_blocks",
       rest_equivalent: `GET ${WORKSPACE_API_BASE}/{id}/blocks`,
       reason: "Read the map / contents. Both Learning and Verification workspaces share this API.",
+    });
+  }
+
+  if (workspaceSupportsFeature(options.workspace_kind, "map")) {
+    actions.push({
+      priority: 2,
+      mcp_tool: "list_map_tools",
+      rest_equivalent: `GET ${WORKSPACE_API_BASE}/{id}/map-tools`,
+      reason:
+        "Read the Helios Learning Map builder catalog (topologies, unusable ground, generative effects, DAG, overlay notes and drawing layers).",
     });
   }
 

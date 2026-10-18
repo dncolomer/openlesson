@@ -19,7 +19,7 @@ export const MCP_PROOF_OF_WORK_SERVER_VERSION = "1.3.0";
 
 export const MCP_PROOF_OF_WORK_SERVER_INSTRUCTIONS = `Uncertain Systems public agent MCP — two APIs with REST parity:
 
-1. Workspace management — create and edit Learning and Verification workspaces, the map, workspace settings, and account settings. REST: /api/v3/workspaces and /api/v3/account.
+1. Workspace management — create and edit Learning and Verification workspaces, the map, workspace settings, and account settings. Learning maps use list_map_tools / apply_map_tool (Helios catalog: topologies, unusable ground, generative effects, DAG, overlay notes and drawing layers). REST: /api/v3/workspaces (including /map-tools) and /api/v3/account.
 2. Headless proof-of-work — start, run, and end Calibrate, Learn, and Verify sessions. Submit proof of work; the server prepares the answers-model tree, infers the path, and enforces the session clock. REST: /api/v3/pow.
 
 Authorize with Authorization: Bearer <api_key or OAuth token> on POST /api/mcp. ChatGPT, Claude, and other agents use these tools to run flows for the user.

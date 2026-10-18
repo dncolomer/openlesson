@@ -127,7 +127,7 @@ Content-Type: application/json
 
 **Tools (100% parity with public agent REST under `/api/v3/workspaces` and `/api/v3/pow`; two families only; key CRUD is browser-session only):**
 
-`list_workspaces`, `get_workspace`, `create_workspace`, `update_workspace`, `list_blocks`, `update_blocks`, `get_workspace_settings`, `update_workspace_settings`, `get_account_settings`, `update_account_settings`, `generate_integration_skill`, `start_session`, `get_session`, `upload_proof_of_work`, `end_session`, `list_flow_embeddings`, `get_flow_embedding`
+`list_workspaces`, `get_workspace`, `create_workspace`, `update_workspace`, `list_blocks`, `update_blocks`, `list_map_tools`, `apply_map_tool`, `get_workspace_settings`, `update_workspace_settings`, `get_account_settings`, `update_account_settings`, `generate_integration_skill`, `start_session`, `get_session`, `upload_proof_of_work`, `end_session`, `list_flow_embeddings`, `get_flow_embedding`
 
 **Partner agents:** `create_workspace` or `get_workspace`, then `start_session` → `upload_proof_of_work` → `end_session`. PumaDoc policy snippets: `/customer-agent-uncertain-systems-policy.md`, `/pumaclaw-mentor-uncertain-systems-policy.md`.
 
@@ -427,7 +427,7 @@ Facilitation style: Socratic — one concise question at a time, follow-ups from
 
 1. Teams user creates org (`POST /api/organization`) and API key (`sk_` with default scopes).
 2. `create_workspace` / `POST /api/v3/workspaces` for a Learning or Verification workspace (or `get_workspace` if it already exists).
-3. `list_blocks` / `GET .../blocks` → map contents to your workflow steps.
+3. `list_blocks` / `GET .../blocks` → map contents to your workflow steps. On Learning workspaces, `list_map_tools` / `GET .../map-tools` lists the Helios builder catalog; `apply_map_tool` / `POST .../map-tools` applies those tools atomically.
 4. *(Optional)* `POST .../integration-skill` for a custom `skill.md`.
 5. `start_session` with `flow_kind` calibrate | learn | verify.
 6. `upload_proof_of_work` as the agent produces tool events (repeat until the clock expires).

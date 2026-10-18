@@ -65,6 +65,8 @@ export type ProofOfWorkApiEndpoint =
   | "get_account_settings"
   | "update_account_settings"
   | "list_blocks"
+  | "list_map_tools"
+  | "apply_map_tool"
   | "generate_proof_of_work_schema"
   | "generate_integration_skill"
   | "start_session"

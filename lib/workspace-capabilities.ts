@@ -194,6 +194,9 @@ export function agentToolFeature(name: string): WorkspaceFeature | null {
     case "list_flow_embeddings":
     case "get_flow_embedding":
       return null;
+    case "list_map_tools":
+    case "apply_map_tool":
+      return "map";
     case "generate_proof_of_work_schema":
     case "buffer_proof_of_work":
     case "stash_proof_of_work":

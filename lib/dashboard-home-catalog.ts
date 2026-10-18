@@ -9,6 +9,7 @@ import {
   normalizeAyclCategory,
   resolveAyclCheckoutCents,
 } from "@/lib/aycl-marketplace";
+import { orderLandingFeaturedMaps } from "@/lib/marketing/landing-featured-ids";
 import {
   WORKSPACE_KIND_STANDARD,
   parseWorkspaceKind,
@@ -211,19 +212,18 @@ export function collectPublicMapCategories(
 export function partitionPublicMapCatalog(
   items: readonly PublicMapCatalogItem[],
 ): PublicMapCatalogPartition {
-  const sorted = sortPublicMapCatalog(items);
-  const hero = sorted.slice(0, DASHBOARD_HOME_HERO_COUNT);
-  const secondary = sorted.slice(
+  const featured = orderLandingFeaturedMaps(items);
+  const hero = featured.slice(0, DASHBOARD_HOME_HERO_COUNT);
+  const secondary = featured.slice(
     DASHBOARD_HOME_HERO_COUNT,
     DASHBOARD_HOME_HERO_COUNT + DASHBOARD_HOME_SECONDARY_COUNT,
   );
-  const grid = sorted.slice(
-    DASHBOARD_HOME_HERO_COUNT + DASHBOARD_HOME_SECONDARY_COUNT,
-  );
+  const pinned = new Set([...hero, ...secondary].map((item) => item.id));
+  const grid = sortPublicMapCatalog(items.filter((item) => !pinned.has(item.id)));
   return {
     hero,
     secondary,
     grid,
-    ayclPaid: sorted.filter((item) => item.isAycl),
+    ayclPaid: items.filter((item) => item.isAycl),
   };
 }

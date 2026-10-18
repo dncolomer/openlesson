@@ -5,6 +5,12 @@
  */
 
 import { createHash } from "node:crypto";
+import { LANDING_FEATURED_MAP_IDS } from "@/lib/marketing/landing-featured-ids";
+
+export {
+  LANDING_FEATURED_MAP_IDS,
+  orderLandingFeaturedMaps,
+} from "@/lib/marketing/landing-featured-ids";
 
 /** DNS namespace UUID; namespaced as openlesson.landing.featured.v1.<name> */
 const LANDING_FEATURED_NS = Buffer.from("6ba7b8109dad11d180b400c04fd430c8", "hex");
@@ -1636,24 +1642,8 @@ export const LANDING_FEATURED_MAPS: readonly LandingFeaturedMap[] = DEFS.map((de
   })),
 }));
 
-export const LANDING_FEATURED_MAP_IDS: readonly string[] = LANDING_FEATURED_MAPS.map(
-  (map) => map.id,
-);
-
 export function landingFeaturedMapById(id: string): LandingFeaturedMap | undefined {
   return LANDING_FEATURED_MAPS.find((map) => map.id === id);
-}
-
-export function orderLandingFeaturedMaps<T extends { id: string }>(
-  items: readonly T[],
-): T[] {
-  const byId = new Map(items.map((item) => [item.id, item]));
-  const ordered: T[] = [];
-  for (const id of LANDING_FEATURED_MAP_IDS) {
-    const item = byId.get(id);
-    if (item) ordered.push(item);
-  }
-  return ordered;
 }
 
 export function assertLandingFeaturedCatalog(): {
@@ -1662,6 +1652,10 @@ export function assertLandingFeaturedCatalog(): {
 } {
   if (LANDING_FEATURED_MAPS.length < 20) {
     throw new Error(`Need at least 20 featured maps, got ${LANDING_FEATURED_MAPS.length}`);
+  }
+  const computedIds = LANDING_FEATURED_MAPS.map((map) => map.id);
+  if (computedIds.join(",") !== LANDING_FEATURED_MAP_IDS.join(",")) {
+    throw new Error("Featured map UUID v5 ids drifted from LANDING_FEATURED_MAP_IDS");
   }
   const slugs = new Set<string>();
   const ids = new Set<string>();

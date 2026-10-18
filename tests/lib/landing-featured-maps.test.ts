@@ -63,5 +63,8 @@ describe("landing featured maps catalog", () => {
     );
     expect(read("scripts/seed-landing-featured-maps.ts")).toContain("LANDING_FEATURED_MAPS");
     expect(read("scripts/seed-landing-featured-maps.ts")).toContain("--target=prod");
+    expect(read("lib/dashboard-home-catalog.ts")).toContain("orderLandingFeaturedMaps");
+    expect(read("lib/dashboard-home-catalog.ts")).toContain("landing-featured-ids");
+    expect(read("lib/marketing/landing-featured-ids.ts")).not.toContain('from "node:crypto"');
   });
 });

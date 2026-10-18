@@ -7,6 +7,8 @@ import {
   PUBLISH_PLAY_COPY_MESSAGE,
   collectPublicMapCategories,
   filterPublicMapCatalog,
+  DASHBOARD_HOME_HERO_COUNT,
+  DASHBOARD_HOME_SECONDARY_COUNT,
   partitionPublicMapCatalog,
   pickHomeMapTryBlock,
   presentPublicMapCatalog,
@@ -39,6 +41,7 @@ import {
 } from "@/lib/workspace-play-copy";
 import { workspaceShell } from "@/lib/workspace-mode";
 import { START_NEW_SESSION_LABEL } from "@/lib/block-previous-sessions";
+import { LANDING_FEATURED_MAP_IDS } from "@/lib/marketing/landing-featured-ids";
 
 function row(
   overrides: Record<string, unknown> = {},
@@ -102,12 +105,23 @@ describe("dashboard home public catalog", () => {
   });
 
   it("searches by name and category and partitions hero, secondary, grid, and AYCL paid", () => {
+    const pinned = LANDING_FEATURED_MAP_IDS.slice(
+      0,
+      DASHBOARD_HOME_HERO_COUNT + DASHBOARD_HOME_SECONDARY_COUNT + 2,
+    );
     const items = presentPublicMapCatalog([
-      row({ id: "h1", title: "Hero one", created_at: "2026-06-10T00:00:00.000Z" }),
-      row({ id: "h2", title: "Hero two", created_at: "2026-06-09T00:00:00.000Z" }),
-      row({ id: "h3", title: "Hero three", created_at: "2026-06-08T00:00:00.000Z" }),
-      row({ id: "h4", title: "Hero four", created_at: "2026-06-07T00:00:00.000Z" }),
-      row({ id: "h5", title: "Hero five", created_at: "2026-06-06T00:00:00.000Z" }),
+      row({
+        id: "newer-public",
+        title: "Newer public map",
+        created_at: "2026-10-01T00:00:00.000Z",
+      }),
+      ...pinned.map((id, index) =>
+        row({
+          id,
+          title: `Featured ${index}`,
+          created_at: `2026-01-${String(index + 1).padStart(2, "0")}T00:00:00.000Z`,
+        }),
+      ),
       row({
         id: "s1",
         title: "Secondary algebra",
@@ -130,10 +144,21 @@ describe("dashboard home public catalog", () => {
       ),
     ]);
     const parts = partitionPublicMapCatalog(items);
-    expect(parts.hero).toHaveLength(5);
-    expect(parts.hero[0]?.id).toBe("h1");
-    expect(parts.secondary).toHaveLength(8);
-    expect(parts.grid.length).toBeGreaterThan(0);
+    expect(parts.hero.map((item) => item.id)).toEqual(
+      LANDING_FEATURED_MAP_IDS.slice(0, DASHBOARD_HOME_HERO_COUNT),
+    );
+    expect(parts.hero[0]?.id).toBe(LANDING_FEATURED_MAP_IDS[0]);
+    expect(parts.secondary.map((item) => item.id)).toEqual(
+      LANDING_FEATURED_MAP_IDS.slice(
+        DASHBOARD_HOME_HERO_COUNT,
+        DASHBOARD_HOME_HERO_COUNT + DASHBOARD_HOME_SECONDARY_COUNT,
+      ),
+    );
+    expect(parts.grid.map((item) => item.id)).toContain("newer-public");
+    expect(parts.grid.map((item) => item.id)).toContain(
+      LANDING_FEATURED_MAP_IDS[DASHBOARD_HOME_HERO_COUNT + DASHBOARD_HOME_SECONDARY_COUNT],
+    );
+    expect(parts.grid.map((item) => item.id)).not.toContain(LANDING_FEATURED_MAP_IDS[0]);
     expect(parts.ayclPaid.map((item) => item.id)).toEqual(["paid"]);
     expect(filterPublicMapCatalog(items, { query: "algebra" }).map((item) => item.id)).toEqual([
       "s1",
@@ -259,6 +284,8 @@ describe("dashboard home and my maps surface", () => {
     expect(dashboardFrameLabel("my_maps")).toBe("My Maps");
 
     const dash = readDashboardSurface();
+    expect(readRepo("lib/dashboard-home-catalog.ts")).toContain("orderLandingFeaturedMaps");
+    expect(readRepo("lib/dashboard-home-catalog.ts")).toContain("landing-featured-ids");
     expect(dash).toContain("data-dashboard-home-hero");
     expect(dash).toContain("data-dashboard-map-hero-summary");
     expect(dash).toContain("data-dashboard-map-card-summary");

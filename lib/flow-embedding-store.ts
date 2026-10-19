@@ -41,6 +41,7 @@ export type PersistFlowEmbeddingInput = {
   identity?: string | null;
   source?: string | null;
   model?: SessionBranchModel | null;
+  /** Ignored. Catalog size is no longer part of the gen model. */
   catalogSize?: unknown;
   sequence?: readonly string[] | null;
   pow?: readonly FlowPowRow[] | null;
@@ -144,7 +145,6 @@ export async function persistCompletedFlowEmbedding(
     : completeFlowEmbedding({
         flowKind: input.flowKind,
         model: input.model,
-        catalogSize: input.catalogSize,
         sequence: input.sequence,
         pow: input.pow,
       });

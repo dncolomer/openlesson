@@ -1,6 +1,6 @@
 /**
- * Distance of a person's action sequence from the prepared tree's prices.
- * The lowest-priced action at each step is the prepared policy. xAI writes those prices.
+ * Distance of a person's hidden-state path from the prepared tree's prices.
+ * The cheapest outgoing edge at each step is the prepared policy. xAI writes those prices.
  * The embedding is the knowledgecfg vector of that distance plus the proof already captured.
  */
 
@@ -11,9 +11,9 @@ import {
   advanceSessionBranchModel,
   recommendSessionBranchAction,
   sessionBranchById,
+  sessionBranchEdgeBetween,
   type SessionBranchModel,
 } from "@/lib/session-branch-model";
-import type { SessionMarkButtonId } from "@/lib/session-marks";
 
 export const SESSION_POLICY_TOOL_NAME = "session_policy";
 export const SESSION_POLICY_TOOL_ACTION = "policy_score";
@@ -22,7 +22,7 @@ export type PolicyScore = {
   steps: number;
   excess: number;
   distance: number;
-  sequence: SessionMarkButtonId[];
+  sequence: string[];
 };
 
 export type PolicyScoreEmbedding = {
@@ -35,7 +35,7 @@ export type PolicyScoreEmbedding = {
   metadata: Record<string, unknown>;
 };
 
-const BUTTONS = new Set<SessionMarkButtonId>(["try", "hold", "drop", "insight"]);
+
 
 /**
  * The first ready model is the tree the session was prepared with.
@@ -70,17 +70,19 @@ export function sessionPolicySnapshot(
     model?: SessionBranchModel | null;
     birth?: SessionBranchModel | null;
   } | null | undefined,
-  presses: readonly { button: SessionMarkButtonId }[] | null | undefined,
+  presses: readonly { hiddenStateId?: string; button?: string }[] | null | undefined,
 ): {
   prepared: SessionBranchModel | null;
-  snapshot: { model: SessionBranchModel | null; sequence: SessionMarkButtonId[] };
+  snapshot: { model: SessionBranchModel | null; sequence: string[] };
 } {
   const model = rememberPreparedSessionModel(prepared, slot);
   return {
     prepared: model,
     snapshot: {
       model,
-      sequence: (presses ?? []).map((press) => press.button),
+      sequence: (presses ?? [])
+        .map((press) => String(press.hiddenStateId || press.button || "").trim())
+        .filter(Boolean),
     },
   };
 }
@@ -90,7 +92,7 @@ export function policyScoreFromSnapshot(
   snapshot:
     | {
         model?: SessionBranchModel | null;
-        sequence?: readonly SessionMarkButtonId[] | null;
+        sequence?: readonly string[] | null;
       }
     | null
     | undefined,
@@ -102,21 +104,23 @@ export function policyScoreFromSnapshot(
 /** Replay the prepared tree. Excess is how much dearer each choice was than the lowest price. */
 export function scorePolicySequence(
   model: SessionBranchModel,
-  sequence: readonly SessionMarkButtonId[],
+  sequence: readonly string[],
 ): PolicyScore {
   let cursor = model;
   let excess = 0;
-  const taken: SessionMarkButtonId[] = [];
-  for (const action of sequence) {
+  const taken: string[] = [];
+  for (const hiddenStateId of sequence) {
     const focus = sessionBranchById(cursor, cursor.focusId);
     if (!focus) break;
+    const target = sessionBranchById(cursor, hiddenStateId);
+    if (!target) break;
     const best = recommendSessionBranchAction(cursor, cursor.focusId);
-    const chosen = focus.actions.find((row) => row.id === action);
+    const chosen = sessionBranchEdgeBetween(cursor, cursor.focusId, target.id);
     const chosenPrice = chosen?.price ?? 0;
     const bestPrice = best?.price ?? chosenPrice;
     excess += Math.max(0, chosenPrice - bestPrice);
-    taken.push(action);
-    const next = advanceSessionBranchModel(cursor, { action, branchId: cursor.focusId });
+    taken.push(target.id);
+    const next = advanceSessionBranchModel(cursor, { toId: target.id, fromId: cursor.focusId });
     if (next === cursor) break;
     cursor = next;
   }
@@ -131,7 +135,7 @@ export function scorePolicySequence(
 
 export function embedPolicyScore(input: {
   model: SessionBranchModel;
-  sequence: readonly SessionMarkButtonId[];
+  sequence: readonly string[];
   workspaceId?: string | null;
   proofRows?: readonly PowFeatureRow[];
   note?: string | null;
@@ -207,7 +211,7 @@ export function policyScoreProofEvent(scored: PolicyScoreEmbedding): {
 
 export function policyScoreFromUnknown(
   raw: unknown,
-): { model: SessionBranchModel; sequence: SessionMarkButtonId[] } | null {
+): { model: SessionBranchModel; sequence: string[] } | null {
   if (!raw || typeof raw !== "object") return null;
   const record = raw as { model?: unknown; sequence?: unknown };
   const model = record.model;
@@ -215,8 +219,8 @@ export function policyScoreFromUnknown(
   const branches = (model as SessionBranchModel).branches;
   if (!Array.isArray(branches) || branches.length === 0) return null;
   if (!Array.isArray(record.sequence)) return null;
-  const sequence = record.sequence.filter((id): id is SessionMarkButtonId =>
-    typeof id === "string" && BUTTONS.has(id as SessionMarkButtonId),
+  const sequence = record.sequence.filter(
+    (id): id is string => typeof id === "string" && id.trim().length > 0,
   );
   return { model: model as SessionBranchModel, sequence };
 }

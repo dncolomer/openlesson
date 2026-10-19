@@ -456,11 +456,11 @@ describe("Simulation shares live practice builders", () => {
     expect(route).toContain("runSimulateInsightsJob");
 
     const detail = read("components/WorkspaceBlockDetailPane.tsx");
-    expect(detail).toContain('title="Simulate Insights"');
-    expect(detail).toContain("WorkspaceBlockSimulationPanel");
+    expect(detail).not.toContain('title="Simulate Insights"');
+    expect(detail).not.toContain("WorkspaceBlockSimulationPanel");
 
     const view = readWorkspaceViewSurface();
-    expect(view).toMatch(/workspaceGoal=\{plan\.workspace_goal\}/);
+    expect(view).not.toMatch(/workspaceGoal=\{plan\.workspace_goal\}/);
 
     const overview = deriveWorkspaceSimulationOverview(
       [

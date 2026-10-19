@@ -36,13 +36,13 @@ export type EmptySelectionSurface =
 export const WORKSPACE_MAP_DESKTOP_MAP_WIDTH_CLASS = "md:w-3/4";
 export const WORKSPACE_MAP_DESKTOP_RIGHT_WIDTH_CLASS = "md:w-1/4";
 
-/** Shared Danger zone drawer — last in the combined authoring + practice column. */
+/** Shared Danger zone drawer — last in the authoring column. */
 export const WORKSPACE_EDITOR_DANGER_DRAWER_ID = "danger";
 export const WORKSPACE_EDITOR_DANGER_DRAWER_TITLE = "Danger zone";
 
 /**
  * Drawer ids on the 1-block editor surface (creator block detail).
- * Danger zone is a peer of Edit, hosted last after practice drawers.
+ * Danger zone is a peer of Edit, hosted last.
  */
 export function workspaceBlockDetailDrawerIds(input: {
   canEdit?: boolean;
@@ -51,7 +51,8 @@ export function workspaceBlockDetailDrawerIds(input: {
   hasGoals?: boolean;
   showEffects?: boolean;
 } = {}): string[] {
-  const ids: string[] = ["simulation"];
+  const ids: string[] = [];
+  if (input.canEdit) ids.push("unsys_model");
   if (input.showSplit) ids.push("split");
   if (input.showExpand) ids.push("expand_block");
   if (input.canEdit) {
@@ -61,7 +62,6 @@ export function workspaceBlockDetailDrawerIds(input: {
   if (input.showEffects ?? Boolean(input.canEdit)) {
     ids.push("effect_dynamic", "effect_generator");
   }
-  ids.push("local");
   if (input.canEdit) ids.push(WORKSPACE_EDITOR_DANGER_DRAWER_ID);
   return ids;
 }
@@ -76,7 +76,6 @@ export function workspaceMultiSelectDrawerIds(): string[] {
     "bridge",
     "cluster",
     "dag",
-    "simulation",
     WORKSPACE_EDITOR_DANGER_DRAWER_ID,
   ];
 }
@@ -86,27 +85,17 @@ export function isWorkspaceEditorDangerDrawer(id: string | null | undefined): bo
 }
 
 /**
- * Block-detail drawers (Photoshop-style exclusive panels).
- * Prompt tab removed — local context + simulation only.
+ * Block-detail exclusive-drawer helper (accordion fallback).
+ * Work / Simulate Insights / Local context drawers are unmounted.
  */
-export type BlockDetailMiniTab =
-  | "local"
-  | "examples"
-  | "content_samples"
-  | "simulation";
+export type BlockDetailMiniTab = "edit";
 
 export const BLOCK_DETAIL_MINI_TABS: readonly BlockDetailMiniTab[] = [
-  "local",
-  "simulation",
+  "edit",
 ] as const;
 
 export function isBlockDetailMiniTab(value: unknown): value is BlockDetailMiniTab {
-  return (
-    value === "local" ||
-    value === "examples" ||
-    value === "content_samples" ||
-    value === "simulation"
-  );
+  return value === "edit";
 }
 
 export function nextBlockDetailMiniTab(
@@ -114,7 +103,7 @@ export function nextBlockDetailMiniTab(
   next: unknown,
 ): BlockDetailMiniTab {
   if (isBlockDetailMiniTab(next)) return next;
-  return current && isBlockDetailMiniTab(current) ? current : "local";
+  return current && isBlockDetailMiniTab(current) ? current : "edit";
 }
 
 /**
@@ -126,7 +115,7 @@ export function resolveExclusiveBlockDetailDrawer(
   clicked: unknown,
 ): BlockDetailMiniTab {
   if (isBlockDetailMiniTab(clicked)) return clicked;
-  return current && isBlockDetailMiniTab(current) ? current : "local";
+  return current && isBlockDetailMiniTab(current) ? current : "edit";
 }
 
 function unusableKeySet(

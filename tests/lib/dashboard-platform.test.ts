@@ -397,9 +397,12 @@ describe("workspace create query mode", () => {
     expect(workspaceCreateModeFromQuery("calibration")).toBeNull();
     expect(workspaceCreateModeFromQuery("blank")).toBe("blank");
     expect(workspaceCreateModeFromQuery("files_goal")).toBeNull();
+    expect(workspaceCreateModeFromQuery("template")).toBeNull();
     expect(workspaceCreateModeFromQuery("nope")).toBeNull();
     const page = readRepo("app/workspace/new/page.tsx");
-    expect(page).toContain("workspaceCreateModeFromQuery");
-    expect(page).toContain('searchParams.get("mode")');
+    expect(page).toContain("data-create-blank-map");
+    expect(page).toContain("createBlankMap");
+    expect(page).not.toContain("workspaceCreateModeFromQuery");
+    expect(page).not.toContain('searchParams.get("mode")');
   });
 });

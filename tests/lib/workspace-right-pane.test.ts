@@ -334,7 +334,7 @@ describe("structural: right pane not map modal", () => {
     expect(view).toContain("WorkspaceMapAuthoringPane");
     expect(view).toContain("WorkspaceAddBlockPane");
     expect(view).toContain("WorkspaceGenerateShapePane");
-    expect(view).toContain("WorkspaceBlockLocalContextPanel");
+    expect(view).not.toContain("WorkspaceBlockLocalContextPanel");
     expect(view).toContain("expandedBlockId");
     expect(view).toContain("emptySurface");
     expect(view).toContain("handleCloseBlockDetail");
@@ -532,7 +532,7 @@ describe("structural: right pane not map modal", () => {
     );
   });
 
-  it("block detail stacks Details + Local context + Simulation; simulation collapsed; no X", () => {
+  it("block detail stacks Edit and authoring drawers; no Work, Simulate Insights, or Local context; no X", () => {
     const pane = read("components/WorkspaceBlockDetailPane.tsx");
     const drawer = read("components/WorkspaceRightPaneDrawer.tsx");
 
@@ -546,29 +546,20 @@ describe("structural: right pane not map modal", () => {
     expect(drawer).toContain("data-drawer-accordion");
     // Peer top-level drawers — no Sessions/detail drawer (Edit owns title/body)
     expect(pane).not.toContain('drawerId="detail"');
-    expect(pane).toContain('drawerId="local"');
-    expect(pane).toContain('drawerId="simulation"');
+    expect(pane).not.toContain('drawerId="local"');
+    expect(pane).not.toContain('drawerId="simulation"');
+    expect(pane).not.toContain('drawerId="practice"');
     expect(pane).toContain('drawerId="edit"');
     expect(pane).not.toContain("WORKSPACE_EDITOR_DANGER_DRAWER_ID");
     expect(pane).not.toContain("WorkspaceBlockDangerPanel");
-    expect(pane).toContain('title="Local context"');
-    expect(pane).toContain('title="Simulate Insights"');
-    expect(pane).toContain("WorkspaceBlockSimulationPanel");
-    // Order: simulation → edit → … → local; Danger zone last in the combined column
-    expect(pane).toMatch(
-      /drawerId="simulation"[\s\S]*?drawerId="edit"[\s\S]*?drawerId="local"/,
-    );
+    expect(pane).not.toContain('title="Local context"');
+    expect(pane).not.toContain('title="Simulate Insights"');
+    expect(pane).not.toContain("WorkspaceBlockSimulationPanel");
     const drawers = read("components/workspace-view/workspace-right-drawers.tsx");
     expect(drawers).toContain("WorkspaceBlockDangerDrawer");
-    expect(drawers.lastIndexOf("WorkspaceLearnerBlockPane")).toBeLessThan(
+    expect(drawers).not.toContain("WorkspaceLearnerBlockPane");
+    expect(drawers.lastIndexOf("WorkspaceBlockDetailPane")).toBeLessThan(
       drawers.lastIndexOf("WorkspaceBlockDangerDrawer"),
-    );
-    // Simulation collapsed; local opens when materials exist
-    expect(pane).toMatch(
-      /drawerId="local"[\s\S]*?defaultExpanded=\{hasLocalMaterials\}/,
-    );
-    expect(pane).toMatch(
-      /drawerId="simulation"[\s\S]*?defaultExpanded=\{false\}/,
     );
     // No X close on drawer chrome
     expect(pane).not.toContain("data-block-detail-close");
@@ -590,8 +581,7 @@ describe("structural: right pane not map modal", () => {
           drawers.includes("WorkspaceBlockDangerDrawer"),
         "localDrawer=" + pane.includes('drawerId="local"'),
         "simulationDrawer=" + pane.includes('drawerId="simulation"'),
-        "simulationCollapsedDefault=" +
-          /drawerId="simulation"[\s\S]*?defaultExpanded=\{false\}/.test(pane),
+        "workDrawer=" + drawers.includes("WorkspaceLearnerBlockPane"),
         "noXOnShell=" + !drawer.includes("closeDataAttr"),
       ].join("\n"),
     );

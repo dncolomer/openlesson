@@ -633,7 +633,7 @@
     "emptyWorkspacesTitle": "Create your first workspace",
     "emptyWorkspacesBody": "A workspace is the map you practice on. Create one to add topics, then Calibrate, Learn, or Drill.",
     "emptyWorkspacesCta": "Create a Learning Map",
-    "emptyWorkspacesHint": "You can start from a blank map or generate one from a topic.",
+    "emptyWorkspacesHint": "Create a blank map and start adding topics.",
     "proofOfWorkThisPeriod": "Proof-of-Work Submissions This Period",
     "unlimitedProofOfWork": "Unlimited Proof-of-Work submissions on your plan.",
     "proofOfWorkRemaining": "{count} Proof-of-Work submissions remaining"
@@ -2080,6 +2080,7 @@
     "ileLinksRevokedHint": "no longer usable",
     "sectionDags": "DAGs",
     "sectionMapTypes": "Map Types",
+    "sectionUnsysModels": "Unsys 模型",
     "mapTypesIntro": "Define chapter-map types for new learning sessions. Core types start selected from the library; add more or create your own. Types are generator hints — spawn and blocked cells — not 1:1 templates.",
     "mapTypesBuiltins": "Built-in types",
     "mapTypesCustom": "Custom types",

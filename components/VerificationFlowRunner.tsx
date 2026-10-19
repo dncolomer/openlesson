@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { TapScoreClient } from "@/components/TapScoreClient";
 import type { TapStartingTopic } from "@/lib/tap-score";
-import { parseLearningModelSize } from "@/lib/learning-model";
 import {
   VERIFICATION_PRACTICE_OPENING,
   verificationQuestionStartingPrompt,
@@ -16,7 +15,6 @@ export function VerificationFlowRunner({ token }: { token: string }) {
   const [identity, setIdentity] = useState("");
   const [claimedIdentity, setClaimedIdentity] = useState("");
   const [topic, setTopic] = useState("");
-  const [actionCatalog, setActionCatalog] = useState<4 | 8 | 16>(4);
   const [question, setQuestion] = useState<TapStartingTopic | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -57,7 +55,6 @@ export function VerificationFlowRunner({ token }: { token: string }) {
         openingQuestion: opening,
       });
       setTopic(String(payload.topic || ""));
-      setActionCatalog(parseLearningModelSize(payload.actionCatalog));
       setPhase("pick");
     } finally {
       setBusy(false);
@@ -98,7 +95,6 @@ export function VerificationFlowRunner({ token }: { token: string }) {
           localOpening
           sidebarMode="verification-tap"
           verificationToken={token}
-          actionCatalog={actionCatalog}
           localPracticePrompt={VERIFICATION_PRACTICE_OPENING}
           onLocalProof={storeProof}
           initialSession={{ workspaceTitle: topic || "Verification flow", post_session: "show_results" }}

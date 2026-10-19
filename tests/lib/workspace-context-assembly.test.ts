@@ -441,7 +441,7 @@ describe("structural artifacts", () => {
     const view = readWorkspaceViewSurface();
     expect(view).toContain("data-workspace-context-section");
     expect(view).toContain("WorkspaceMapAuthoringPane");
-    expect(view).toContain("WorkspaceBlockLocalContextPanel");
+    expect(view).not.toContain("WorkspaceBlockLocalContextPanel");
     expect(view).toContain("WorkspaceContextPanel");
     // Prompt-impact is not Workspace map primary chrome (Context hosts materials).
     expect(view).not.toContain("WorkspacePromptImpactPanel");

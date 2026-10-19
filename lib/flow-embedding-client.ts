@@ -10,6 +10,7 @@ export async function postWorkspaceFlowEmbedding(input: {
   identity?: string | null;
   source?: string | null;
   model?: SessionBranchModel | null;
+  /** Ignored. Catalog size is no longer part of the gen model. */
   catalogSize?: unknown;
   sequence?: readonly string[] | null;
   pow?: readonly FlowPowRow[] | null;
@@ -33,7 +34,6 @@ export async function postWorkspaceFlowEmbedding(input: {
         identity: input.identity ?? null,
         source: input.source ?? null,
         model: input.model ?? null,
-        catalogSize: input.catalogSize ?? input.model?.catalogSize ?? null,
         sequence: input.sequence ?? null,
         pow: input.pow ?? [],
         sessionId: input.sessionId ?? null,

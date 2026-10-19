@@ -180,35 +180,6 @@ export function BlockDependencyLockBadge({
   );
 }
 
-/** Small document badge for blocks with attached local context materials. */
-export function BlockLocalContextDocBadge() {
-  return (
-    <span
-      className="absolute bottom-1 left-1.5 z-[1] inline-flex items-center justify-center rounded-none px-0.5 py-px text-neutral-400"
-      data-block-local-context-badge
-      title="Has attached local context"
-      aria-hidden
-    >
-      <svg
-        className="h-3 w-3"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={2}
-        data-block-local-context-icon
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M7 3.75h6.75L19 9v11.25A1.5 1.5 0 0117.5 21.75h-10.5A1.5 1.5 0 015.5 20.25V5.25A1.5 1.5 0 017 3.75z"
-        />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 3.75V9H19" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 13.5h6M9 17h4.5" />
-      </svg>
-    </span>
-  );
-}
-
 export function BlockCreatorEffectsBadge({
   keys,
   learnerMode = false,

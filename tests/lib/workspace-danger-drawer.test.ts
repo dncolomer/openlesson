@@ -93,9 +93,7 @@ describe("single and multi editor panes", () => {
     expect(host).toContain("WorkspaceBlockDangerDrawer");
     expect(host).toContain("data-workspace-block-danger-host");
     expect(host).toContain("onDelete={onDeleteBlock}");
-    expect(host.lastIndexOf("WorkspaceLearnerBlockPane")).toBeLessThan(
-      host.lastIndexOf("WorkspaceBlockDangerDrawer"),
-    );
+    expect(host).not.toContain("WorkspaceLearnerBlockPane");
     expect(host.lastIndexOf("WorkspaceBlockDetailPane")).toBeLessThan(
       host.lastIndexOf("WorkspaceBlockDangerDrawer"),
     );
@@ -121,8 +119,9 @@ describe("single and multi editor panes", () => {
     expect(combine).toContain("data-multi-block-delete");
     expect(combine).toContain("data-block-danger-drawer");
     expect(combine).toContain('tone="danger"');
+    expect(combine).not.toContain('drawerId="simulation"');
     expect(combine.lastIndexOf("WORKSPACE_EDITOR_DANGER_DRAWER_ID")).toBeGreaterThan(
-      combine.lastIndexOf('drawerId="simulation"'),
+      combine.lastIndexOf('drawerId="dag"'),
     );
     expect(combine).not.toContain('drawerId="delete"');
     expect(combine).not.toContain('title="Delete"');
@@ -131,7 +130,7 @@ describe("single and multi editor panes", () => {
       "workspace-danger-drawer-excerpts.txt",
       [
         "WorkspaceBlockDetailPane: no Danger zone (hosted last in right drawers)",
-        "WorkspaceBlockDangerDrawer: last after learner pane",
+        "WorkspaceBlockDangerDrawer: last after authoring drawers",
         "WorkspaceBlockEditPanel: no Danger zone / no delete",
         "WorkspaceBlockDangerPanel: delete for one block",
         "WorkspaceCombineBlocksPane: Danger zone drawer + batch delete",

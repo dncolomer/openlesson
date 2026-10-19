@@ -23,67 +23,68 @@ function read(path: string): string {
   return readFileSync(join(ROOT, path), "utf8");
 }
 
-function fixtureModel(catalogSize: 4 | 8 | 16 = 4) {
+function fixtureModel(regionTitle = "Region") {
   const model = normalizeSessionBranchModel(
     {
       premise: "A priced field.",
-      closePrice: 10,
-      keepPrice: 40,
-      discardPrice: 80,
-      insightPrice: 90,
-      closeObservation: "Closing writes the next observation.",
-      keepObservation: "Keeping writes the next observation.",
-      discardObservation: "Discarding writes the next observation.",
-      insightObservation: "Insight writes the next observation.",
+      question: "What is still open?",
+      territory: "A priced field.",
+      observation: "The field is open.",
       regions: [
         {
-          title: "Region",
-          observation: "The region is open.",
-          closePrice: 20,
-          keepPrice: 30,
-          discardPrice: 70,
-          insightPrice: 95,
+          title: regionTitle,
+          question: `What is ${regionTitle}?`,
+          territory: `${regionTitle} of the field.`,
+          observation: `${regionTitle} is open.`,
+          edgePrice: 10,
+        },
+        {
+          title: `${regionTitle} dear`,
+          question: `What is dear in ${regionTitle}?`,
+          territory: `Dear ${regionTitle}.`,
+          observation: `${regionTitle} dear is open.`,
+          edgePrice: 80,
         },
       ],
     },
     "Priced",
-    catalogSize,
   );
   if (!model) throw new Error("fixture tree was refused");
   return model;
 }
 
 describe("flowcfg-v1-d96 embeddings", () => {
-  const model = fixtureModel(4);
-  const eight = fixtureModel(8);
+  const model = fixtureModel("Region");
+  const eight = fixtureModel("Other region");
 
   it("embeds Calibrate without a projected policy and Learn/Verify with one", () => {
     const calibrate = completeFlowEmbedding({
       flowKind: "calibrate",
       model,
-      catalogSize: 4,
-      sequence: ["try", "hold"],
+      sequence: ["r1", "r2"],
       pow: [{ type: "tool", tool_name: "probe", tool_action: "sounding", timestamp_ms: 1, payload: "band" }],
     });
     const learn = completeFlowEmbedding({
       flowKind: "learn",
       model,
-      sequence: ["try"],
-      pow: [{ type: "tool", tool_name: "session_policy", tool_action: "try", timestamp_ms: 1 }],
+      sequence: ["r1"],
+      pow: [{ type: "tool", tool_name: "session_policy", tool_action: "r1", timestamp_ms: 1 }],
     });
     const verify = completeFlowEmbedding({
       flowKind: "verify",
       model,
-      sequence: ["try"],
+      sequence: ["r1"],
       pow: [{ type: "speech", tool_name: "runner", timestamp_ms: 1, payload: "proof" }],
     });
     expect(calibrate.embedding_model_id).toBe(FLOW_EMBEDDING_MODEL_ID);
     expect(calibrate.embedding_model_id).not.toBe("knowledgecfg-v1-d64");
     expect(calibrate.vector).toHaveLength(FLOW_EMBEDDING_DIM);
     expect(calibrate.raw.projectedPolicy).toBeNull();
-    expect(calibrate.raw.genModel.catalogSize).toBe(4);
+    expect(
+      calibrate.raw.genModel.branches.find((branch) => branch.id === "root")?.edges.length,
+    ).toBeGreaterThan(0);
     expect(learn.raw.projectedPolicy).not.toBeNull();
-    expect(learn.raw.projectedPolicy?.sequence).toEqual(["try"]);
+    expect(learn.raw.projectedPolicy?.sequence).toEqual(["r1"]);
     expect(verify.raw.projectedPolicy).not.toBeNull();
     expect(verify.raw.pow[0]?.payload).toBe("proof");
   });
@@ -92,25 +93,25 @@ describe("flowcfg-v1-d96 embeddings", () => {
     const base = completeFlowEmbedding({
       flowKind: "verify",
       model,
-      sequence: ["try"],
+      sequence: ["r1"],
       pow: [{ type: "speech", tool_name: "runner", timestamp_ms: 1, payload: "a" }],
     });
     const otherModel = completeFlowEmbedding({
       flowKind: "verify",
       model: eight,
-      sequence: ["try"],
+      sequence: ["r1"],
       pow: [{ type: "speech", tool_name: "runner", timestamp_ms: 1, payload: "a" }],
     });
     const otherPolicy = completeFlowEmbedding({
       flowKind: "verify",
       model,
-      sequence: ["hold"],
+      sequence: ["r2"],
       pow: [{ type: "speech", tool_name: "runner", timestamp_ms: 1, payload: "a" }],
     });
     const otherPow = completeFlowEmbedding({
       flowKind: "verify",
       model,
-      sequence: ["try"],
+      sequence: ["r1"],
       pow: [{ type: "speech", tool_name: "runner", timestamp_ms: 1, payload: "b" }],
     });
     expect(base.vector).not.toEqual(otherModel.vector);
@@ -119,8 +120,10 @@ describe("flowcfg-v1-d96 embeddings", () => {
     const recovered = recoverFlowEmbeddingRaw(base);
     expect(recovered).toEqual(base.raw);
     expect(vectorsMatch(reembedFlowRaw(recovered!), base.vector)).toBe(true);
-    expect(otherModel.raw.genModel.catalogSize).toBe(8);
-    expect(otherModel.raw.genModel.branches.some((branch) => branch.actions.length > 4)).toBe(true);
+    expect(
+      otherModel.raw.genModel.branches.find((branch) => branch.id === "root")?.edges.length,
+    ).toBeGreaterThan(0);
+    expect(otherModel.raw.genModel.chapterTitle).toBe("Priced");
   });
 });
 

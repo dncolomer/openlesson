@@ -1,23 +1,25 @@
 /**
  * Session start for Learn, Calibrate, and Verification.
  * xAI prepares the field. Nothing local fills it in.
- * Catalog size comes from the flow or workspace so all three flows share one gen model.
+ * The author seed is used when present. Otherwise xAI writes the field.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { guardSessionRoute } from "@/lib/api/require-auth";
 import { entryQueryParamsFromBody } from "@/lib/guest-link-access";
 import { getCalibrationFlowByToken } from "@/lib/calibration-flow-repository";
-import { parseLearningModelSize, type LearningModelSize } from "@/lib/learning-model";
+import { studentSessionModelFromAuthorSeed } from "@/lib/author-unsys-model";
 import {
   continueSessionBranchModel,
   generateSessionBranchOpening,
   type SessionBranchContinuation,
 } from "@/lib/session-branch-model-generate";
 import {
+  authorSeedBlockIdFromPreparePlan,
+  authorSeedSessionIdFromPreparePlan,
   planSessionBranchPrepare,
+  sessionPrepareBlockId,
   type SessionBranchPrepareInput,
-  type SessionBranchPreparePlan,
 } from "@/lib/session-branch-prepare";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveTapSessionAccess } from "@/lib/tap-score-session-auth";
@@ -25,61 +27,6 @@ import { getVerificationFlowByToken } from "@/lib/verification-flow-repository";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
-
-async function workspaceCatalogSize(workspaceId: string): Promise<LearningModelSize | null> {
-  const id = workspaceId.trim();
-  if (!id) return null;
-  try {
-    const supabase = createAdminClient();
-    const { data } = await supabase
-      .from("workspaces")
-      .select("learning_model_size")
-      .eq("id", id)
-      .maybeSingle();
-    if (!data) return null;
-    return parseLearningModelSize(data.learning_model_size);
-  } catch {
-    return null;
-  }
-}
-
-async function sessionWorkspaceCatalogSize(sessionId: string): Promise<LearningModelSize | null> {
-  const id = sessionId.trim();
-  if (!id) return null;
-  try {
-    const supabase = createAdminClient();
-    const { data } = await supabase.from("sessions").select("metadata").eq("id", id).maybeSingle();
-    const workspaceId =
-      data?.metadata && typeof data.metadata === "object" && !Array.isArray(data.metadata)
-        ? (data.metadata as { workspace_id?: unknown }).workspace_id
-        : null;
-    if (typeof workspaceId !== "string") return null;
-    return workspaceCatalogSize(workspaceId);
-  } catch {
-    return null;
-  }
-}
-
-async function resolveCatalogSize(
-  plan: Exclude<SessionBranchPreparePlan, { kind: "none" } | { kind: "missing-material" }>,
-  requested: unknown,
-): Promise<LearningModelSize> {
-  const fallback = parseLearningModelSize(requested ?? plan.catalogSize);
-  if (plan.kind === "calibration") {
-    const flow = await getCalibrationFlowByToken(plan.token);
-    return parseLearningModelSize(flow?.actionCatalog ?? fallback);
-  }
-  if (plan.kind === "verification") {
-    const flow = await getVerificationFlowByToken(plan.token);
-    return parseLearningModelSize(flow?.actionCatalog ?? fallback);
-  }
-  if (plan.kind === "workspace") {
-    const fromWorkspace = await workspaceCatalogSize(plan.workspaceId);
-    return fromWorkspace ?? fallback;
-  }
-  const fromSession = await sessionWorkspaceCatalogSize(plan.sessionId);
-  return fromSession ?? fallback;
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -120,12 +67,45 @@ export async function POST(request: NextRequest) {
       if (!auth.ok) return auth.response;
     }
 
-    const catalogSize = await resolveCatalogSize(plan, body.catalogSize);
     const material = {
       chapterTitle: plan.chapterTitle,
       chapterBrief: plan.chapterBrief,
-      catalogSize,
     };
+    if (body.phase !== "continue") {
+      try {
+        const supabase = createAdminClient();
+        let blockId = authorSeedBlockIdFromPreparePlan(plan);
+        if (!blockId) {
+          const sessionId = authorSeedSessionIdFromPreparePlan(plan);
+          if (sessionId) {
+            const { data: sessionRow } = await supabase
+              .from("sessions")
+              .select("metadata")
+              .eq("id", sessionId)
+              .maybeSingle();
+            blockId = sessionPrepareBlockId(sessionRow?.metadata);
+          }
+        }
+        if (blockId) {
+          const { data } = await supabase
+            .from("blocks")
+            .select("answers_model_seed")
+            .eq("id", blockId)
+            .maybeSingle();
+          const seeded = studentSessionModelFromAuthorSeed(data?.answers_model_seed);
+          if (seeded) {
+            return NextResponse.json({
+              model: seeded,
+              continuation: null,
+              done: true,
+              seeded: true,
+            });
+          }
+        }
+      } catch {
+        /* Missing column or row: fall through to on-the-fly opening. */
+      }
+    }
     if (body.phase === "continue") {
       const continuation = body.continuation;
       if (!continuation || typeof continuation !== "object" || Array.isArray(continuation)) {

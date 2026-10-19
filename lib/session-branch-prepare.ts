@@ -5,7 +5,6 @@
  */
 
 import { ileBlockSessionFrame } from "@/lib/ile-canvas-session";
-import { parseLearningModelSize, type LearningModelSize } from "@/lib/learning-model";
 
 export type SessionBranchPrepareInput = {
   enabled?: boolean;
@@ -23,8 +22,6 @@ export type SessionBranchPrepareInput = {
   entryQueryParams?: Record<string, string | string[]> | null;
   /** Client-only. A new chapter refetches even when the title text matches. */
   scope?: string | null;
-  /** 4, 8, or 16 — the catalog this run prepares. */
-  catalogSize?: LearningModelSize | number | null;
 };
 
 export type SessionBranchPreparePlan =
@@ -35,23 +32,22 @@ export type SessionBranchPreparePlan =
       token: string;
       chapterTitle: string;
       chapterBrief: string;
-      catalogSize: LearningModelSize;
     }
   | {
       kind: "verification";
       token: string;
       chapterTitle: string;
       chapterBrief: string;
-      catalogSize: LearningModelSize;
     }
   | {
       kind: "learn";
       sessionId: string;
       ileToken: string;
       ayclToken: string;
+      blockId: string;
+      workspaceId: string;
       chapterTitle: string;
       chapterBrief: string;
-      catalogSize: LearningModelSize;
     }
   | {
       kind: "workspace";
@@ -63,11 +59,44 @@ export type SessionBranchPreparePlan =
       entryQueryParams: Record<string, string | string[]>;
       chapterTitle: string;
       chapterBrief: string;
-      catalogSize: LearningModelSize;
     };
 
 function text(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
+}
+
+/** Block id the author seed is stored on. Direct id, or session metadata. */
+export function sessionPrepareBlockId(raw: unknown): string {
+  if (typeof raw === "string") return text(raw);
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return "";
+  const row = raw as {
+    blockId?: unknown;
+    block_id?: unknown;
+    focus_block_id?: unknown;
+    metadata?: unknown;
+  };
+  return (
+    text(row.blockId) ||
+    text(row.block_id) ||
+    text(row.focus_block_id) ||
+    (row.metadata && row.metadata !== raw ? sessionPrepareBlockId(row.metadata) : "")
+  );
+}
+
+/** Workspace id from a prepare input or session metadata. */
+export function sessionPrepareWorkspaceId(raw: unknown): string {
+  if (typeof raw === "string") return text(raw);
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return "";
+  const row = raw as {
+    workspaceId?: unknown;
+    workspace_id?: unknown;
+    metadata?: unknown;
+  };
+  return (
+    text(row.workspaceId) ||
+    text(row.workspace_id) ||
+    (row.metadata && row.metadata !== raw ? sessionPrepareWorkspaceId(row.metadata) : "")
+  );
 }
 
 function stableParams(
@@ -96,23 +125,26 @@ export function planSessionBranchPrepare(
 
   const sessionId = text(input.sessionId);
   const tapSessionId = text(input.tapSessionId);
-  const workspaceId = text(input.workspaceId);
+  const workspaceId = text(input.workspaceId) || sessionPrepareWorkspaceId(input);
   const privateToken = text(input.privateToken);
   const calibrationToken = text(input.calibrationToken);
   const verificationToken = text(input.verificationToken);
-  const catalogSize = parseLearningModelSize(input.catalogSize);
-  const material = { chapterTitle, chapterBrief, catalogSize };
+  const material = { chapterTitle, chapterBrief };
+  const blockId = sessionPrepareBlockId(input.blockId) || sessionPrepareBlockId(input);
+  // Owned Learn keeps the session route even when metadata has a workspace id.
+  // TAP / guest links still use the workspace path.
+  const ownedLearn = Boolean(sessionId) && !tapSessionId && !privateToken;
 
   // A real workspace or guest link wins over a flow token.
   // A public flow has no workspace. Its local canvas id is not a TAP session row.
-  if (workspaceId || privateToken) {
+  if ((workspaceId || privateToken) && !ownedLearn) {
     return {
       kind: "workspace",
       workspaceId,
       sessionId,
       tapSessionId,
       privateToken,
-      blockId: text(input.blockId),
+      blockId,
       entryQueryParams: stableParams(input.entryQueryParams),
       ...material,
     };
@@ -127,6 +159,8 @@ export function planSessionBranchPrepare(
       sessionId,
       ileToken: text(input.ileToken),
       ayclToken: text(input.ayclToken),
+      blockId,
+      workspaceId,
       ...material,
     };
   }
@@ -138,7 +172,7 @@ export function planSessionBranchPrepare(
       sessionId,
       tapSessionId,
       privateToken,
-      blockId: text(input.blockId),
+      blockId,
       entryQueryParams: stableParams(input.entryQueryParams),
       ...material,
     };
@@ -155,7 +189,6 @@ export function sessionBranchPrepareRequest(
   const body: Record<string, unknown> = {
     chapterTitle: plan.chapterTitle,
     chapterBrief: plan.chapterBrief,
-    catalogSize: plan.catalogSize,
   };
   if (plan.kind === "calibration") body.calibrationToken = plan.token;
   else if (plan.kind === "verification") body.verificationToken = plan.token;
@@ -163,6 +196,8 @@ export function sessionBranchPrepareRequest(
     body.sessionId = plan.sessionId;
     if (plan.ileToken) body.ileToken = plan.ileToken;
     if (plan.ayclToken) body.ayclToken = plan.ayclToken;
+    if (plan.blockId) body.blockId = plan.blockId;
+    if (plan.workspaceId) body.workspaceId = plan.workspaceId;
   } else {
     if (plan.workspaceId) body.workspaceId = plan.workspaceId;
     if (plan.sessionId) body.sessionId = plan.sessionId;
@@ -172,6 +207,22 @@ export function sessionBranchPrepareRequest(
     if (Object.keys(plan.entryQueryParams).length) body.entryQueryParams = plan.entryQueryParams;
   }
   return body;
+}
+
+/** Block the opening should load an author seed from, if any. */
+export function authorSeedBlockIdFromPreparePlan(
+  plan: SessionBranchPreparePlan,
+): string {
+  if (plan.kind === "learn" || plan.kind === "workspace") return plan.blockId || "";
+  return "";
+}
+
+export function authorSeedSessionIdFromPreparePlan(
+  plan: SessionBranchPreparePlan,
+): string {
+  if (plan.kind === "learn") return plan.sessionId;
+  if (plan.kind === "workspace") return plan.sessionId;
+  return "";
 }
 
 function uniqueLines(parts: readonly (string | null | undefined)[]): string[] {
@@ -197,7 +248,9 @@ export function learnSessionFieldInput(input: {
   ileToken?: string | null;
   ayclToken?: string | null;
   fallbackTitle?: string | null;
-  catalogSize?: unknown;
+  blockId?: string | null;
+  workspaceId?: string | null;
+  metadata?: unknown;
 }): SessionBranchPrepareInput | null {
   const sessionId = text(input.sessionId);
   const frame = ileBlockSessionFrame(input.plan);
@@ -215,8 +268,12 @@ export function learnSessionFieldInput(input: {
     chapterBrief: uniqueLines([problem, description, prompt]).join("\n\n"),
     ileToken: text(input.ileToken),
     ayclToken: text(input.ayclToken),
-    catalogSize: parseLearningModelSize(input.catalogSize),
     scope: text(step?.id) || frame.id,
+    blockId:
+      sessionPrepareBlockId(input.blockId) || sessionPrepareBlockId(input.metadata),
+    workspaceId:
+      sessionPrepareWorkspaceId(input.workspaceId) ||
+      sessionPrepareWorkspaceId(input.metadata),
   };
 }
 
@@ -232,7 +289,6 @@ export function calibrateFieldPrepareInput(input: {
   privateToken?: string | null;
   calibrationToken?: string | null;
   entryQueryParams?: Record<string, string | string[]> | null;
-  catalogSize?: unknown;
 }): SessionBranchPrepareInput {
   const chapterTitle = text(input.topicText) || "This topic";
   return {
@@ -249,7 +305,6 @@ export function calibrateFieldPrepareInput(input: {
     privateToken: input.privateToken,
     calibrationToken: input.calibrationToken,
     entryQueryParams: input.entryQueryParams,
-    catalogSize: parseLearningModelSize(input.catalogSize),
     scope: text(input.topicId) || "topic",
   };
 }
@@ -266,7 +321,6 @@ export function verificationFieldPrepareInput(input: {
   privateToken?: string | null;
   verificationToken?: string | null;
   entryQueryParams?: Record<string, string | string[]> | null;
-  catalogSize?: unknown;
 }): SessionBranchPrepareInput {
   const topicId = text(input.topicId);
   const topic = (input.topics ?? []).find((row) => text(row?.id) === topicId);
@@ -282,7 +336,6 @@ export function verificationFieldPrepareInput(input: {
     privateToken: input.privateToken,
     verificationToken: input.verificationToken,
     entryQueryParams: input.entryQueryParams,
-    catalogSize: parseLearningModelSize(input.catalogSize),
     scope: topicId || "topic",
   };
 }

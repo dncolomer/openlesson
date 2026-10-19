@@ -18,6 +18,7 @@ const LEARNING_AUTHOR_SECTIONS = [
   "workspace",
   "dags",
   "map_types",
+  "unsys_models",
   "context",
   "settings",
 ] as const;

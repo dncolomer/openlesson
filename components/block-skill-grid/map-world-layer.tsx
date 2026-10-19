@@ -2,7 +2,6 @@
 
 import type { MouseEvent, PointerEvent, ReactNode } from "react";
 import {
-  blockHasAttachedLocalContext,
   skillGridMetrics,
   skillNodeOccupiedCells,
   type GridCell,
@@ -607,7 +606,6 @@ export function MapWorldLayer({
                   ? "none"
                   : undefined,
             } as const;
-            const hasLocalContext = blockHasAttachedLocalContext(node);
             const isStarter = Boolean(node.is_start);
             // Dynamic “?” once configured (creator + learner) until generated.
             const mapTitle = learnerDynamicMapLabel({
@@ -740,7 +738,6 @@ export function MapWorldLayer({
                           data-block-selected={isBlockHighlighted ? "true" : "false"}
                           data-block-locked={lockedByPrereq ? "true" : "false"}
                           data-block-has-dependencies={hasDependencies ? "true" : "false"}
-                          data-block-has-local-context={hasLocalContext ? "true" : "false"}
                           data-block-is-start={isStarter ? "true" : "false"}
                           data-block-has-previous-sessions={
                             hasPreviousSessions ? "true" : "false"
@@ -800,9 +797,7 @@ export function MapWorldLayer({
                                   ? `${node.title} (locked — select, then Lock until to edit/clear prereqs)`
                                   : hasDependencies
                                     ? `${node.title} (depends on ${dependencyIds.length} block${dependencyIds.length === 1 ? "" : "s"})`
-                                    : hasLocalContext
-                                      ? `${node.title} (has local context)`
-                                      : node.title
+                                    : node.title
                           }
                           className={`relative flex h-full w-full flex-col items-center justify-center overflow-hidden px-2 text-center transition ${
                             generationLocked
@@ -925,7 +920,6 @@ export function MapWorldLayer({
                   data-block-selected={isBlockHighlighted ? "true" : "false"}
                   data-block-locked={lockedByPrereq ? "true" : "false"}
                   data-block-has-dependencies={hasDependencies ? "true" : "false"}
-                  data-block-has-local-context={hasLocalContext ? "true" : "false"}
                   data-block-is-start={isStarter ? "true" : "false"}
                   data-block-has-previous-sessions={
                     hasPreviousSessions ? "true" : "false"
@@ -989,9 +983,7 @@ export function MapWorldLayer({
                           ? `${node.title} (locked — select, then Lock until to edit/clear prereqs)`
                           : hasDependencies
                             ? `${node.title} (depends on ${dependencyIds.length} block${dependencyIds.length === 1 ? "" : "s"})`
-                            : hasLocalContext
-                              ? `${node.title} (has local context)`
-                              : node.title
+                            : node.title
                   }
                 >
                   {tileAesthetic ? (

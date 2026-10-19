@@ -8,10 +8,8 @@ import {
 import { WorkspaceHeliosChat } from "@/components/WorkspaceHeliosChat";
 import { WorkspaceBlockDangerDrawer } from "@/components/WorkspaceBlockDangerPanel";
 import { WorkspaceBlockDetailPane } from "@/components/WorkspaceBlockDetailPane";
-import { WorkspaceBlockLocalContextPanel } from "@/components/WorkspaceBlockLocalContextPanel";
 import { WorkspaceCombineBlocksPane } from "@/components/WorkspaceCombineBlocksPane";
 import { WorkspaceGenerateShapePane } from "@/components/WorkspaceGenerateShapePane";
-import { WorkspaceLearnerBlockPane } from "@/components/WorkspaceLearnerBlockPane";
 import { WorkspaceMapAuthoringPane } from "@/components/WorkspaceMapAuthoringPane";
 import type {
   Block,
@@ -19,14 +17,13 @@ import type {
   MobileColumn,
   Workspace,
 } from "@/components/workspace-view/types";
-import type { ProductLaunchOptions } from "@/components/BlockDetailCard";
+import type { AuthorUnsysModelSeed } from "@/lib/author-unsys-model";
 import type { BlockCreatorEffects, GeneratorTargetCell } from "@/lib/block-creator-effects";
 import { parseBlockCreatorEffects } from "@/lib/block-creator-effects";
 import type { BlockPracticeOptions } from "@/lib/block-practice-options";
 import type { ExpandSourceIdentity } from "@/lib/expand-block-from-source";
 import type { UnusableCell } from "@/lib/map-ground-rules";
-import type { ProductLaunchTarget } from "@/lib/product-intent";
-import type { BlockLocalContextInput, WorkspaceFileContextItem } from "@/lib/prompt-workspace-context";
+import type { WorkspaceFileContextItem } from "@/lib/prompt-workspace-context";
 import type { WorkspaceExpandBlockSubmitOpts } from "@/components/WorkspaceExpandBlockPane";
 import type { WorkspaceAddTargetCell } from "@/lib/workspace-right-pane";
 import type { WorkspaceMapSelection } from "@/lib/workspace-map-selection";
@@ -52,10 +49,6 @@ export function WorkspaceRightDrawers({
   rightPane,
   isOwner,
   showCreatorDrawers,
-  showLearnerDrawer,
-  requestedDrawerId,
-  requestedDrawerNonce,
-  isLearnerMode,
   learnerNotes,
   workspaceId,
   ayclToken,
@@ -73,12 +66,7 @@ export function WorkspaceRightDrawers({
   onCreateNoteFromSummary,
   detailBlock,
   detailIndex,
-  currentUserId,
-  locked,
   onBlocksUpdated,
-  onDynamicGenerated,
-  onSavePlanningPrompt,
-  onLaunchIntent,
   combineBlockIds,
   isAddingBlock,
   onCombine,
@@ -89,12 +77,13 @@ export function WorkspaceRightDrawers({
   onDeleteBlocks,
   onBridgePreviewChange,
   onCancelCombine,
-  detailLockTitles,
   plan,
   notesContent,
   onUpdateBlock,
   onDeleteBlock,
   onSaveCreatorEffects,
+  onSaveAnswersModelSeed,
+  onOpenUnsysStudio,
   onSplitBlock,
   cloneArmed = false,
   onCloneArm,
@@ -115,8 +104,6 @@ export function WorkspaceRightDrawers({
   onDynamicPickModeChange,
   onRegisterDynamicBlockToggle,
   workspaceFileItems,
-  onSaveLocalContext,
-  mapGroundBusy,
   addTargetCell,
   onSubmitAddBlock,
   onCancelEmptyCreate,
@@ -130,10 +117,6 @@ export function WorkspaceRightDrawers({
   rightPane: string;
   isOwner: boolean;
   showCreatorDrawers: boolean;
-  showLearnerDrawer: boolean;
-  requestedDrawerId?: string | null;
-  requestedDrawerNonce?: number | null;
-  isLearnerMode: boolean;
   learnerNotes: boolean;
   workspaceId: string;
   ayclToken?: string;
@@ -156,15 +139,7 @@ export function WorkspaceRightDrawers({
   }) => void;
   detailBlock: Block | null;
   detailIndex: number;
-  currentUserId: string | null;
-  locked: boolean;
   onBlocksUpdated: (raw: unknown[]) => void;
-  onDynamicGenerated: (blockId: string) => void;
-  onSavePlanningPrompt: (prompt: string) => Promise<void>;
-  onLaunchIntent?: (
-    target: ProductLaunchTarget,
-    options?: ProductLaunchOptions,
-  ) => Promise<void>;
   combineBlockIds: string[];
   isAddingBlock: boolean;
   onCombine: (input: { blockIds: string[]; prompt?: string }) => Promise<void>;
@@ -197,7 +172,6 @@ export function WorkspaceRightDrawers({
   onDeleteBlocks: (input: { blockIds: string[] }) => Promise<void>;
   onBridgePreviewChange: (cells: Array<{ row: number; col: number }> | null) => void;
   onCancelCombine: () => void;
-  detailLockTitles: string[];
   plan: Workspace;
   notesContent: string;
   onUpdateBlock: (input: {
@@ -212,6 +186,11 @@ export function WorkspaceRightDrawers({
     blockId: string;
     effects: BlockCreatorEffects;
   }) => Promise<void>;
+  onSaveAnswersModelSeed?: (input: {
+    blockId: string;
+    seed: AuthorUnsysModelSeed | null;
+  }) => Promise<void>;
+  onOpenUnsysStudio?: (blockId: string) => void;
   onSplitBlock?: (input: { blockId: string; prompt?: string }) => Promise<void>;
   cloneArmed?: boolean;
   onCloneArm?: (blockId: string) => void;
@@ -245,8 +224,6 @@ export function WorkspaceRightDrawers({
   onDynamicPickModeChange: (active: boolean) => void;
   onRegisterDynamicBlockToggle: (fn: ((blockId: string) => void) | null) => void;
   workspaceFileItems: WorkspaceFileContextItem[];
-  onSaveLocalContext: (blockId: string, localContext: BlockLocalContextInput) => Promise<void>;
-  mapGroundBusy: boolean;
   addTargetCell: WorkspaceAddTargetCell | null;
   onSubmitAddBlock: (
     prompt: string,
@@ -509,30 +486,26 @@ export function WorkspaceRightDrawers({
             }}
           />
         ) : heliosSurface.showManualDrawers &&
+          showCreatorDrawers &&
           rightPane === "block_detail" &&
           detailBlock &&
-          detailIndex >= 0 &&
-          (showCreatorDrawers || showLearnerDrawer) ? (
+          detailIndex >= 0 ? (
           <div
             className="flex h-full min-h-0 flex-col overflow-y-auto"
             data-workspace-block-drawers=""
           >
-            {showCreatorDrawers ? (
-              <div className="min-h-0 shrink-0">
+            <div className="min-h-0 shrink-0">
                 <WorkspaceBlockDetailPane
                   key={detailBlock.id}
                   blockId={detailBlock.id}
                   blockTitle={detailBlock.title}
                   blockDescription={detailBlock.description}
                   planningPrompt={detailBlock.planning_prompt}
-                  localContext={detailBlock.local_context}
-                  blockStatus={detailBlock.status}
                   isStart={detailBlock.is_start}
                   creatorEffects={parseBlockCreatorEffects(
                     detailBlock.creator_effects,
                     { selfBlockId: detailBlock.id },
                   )}
-                  lockUntilTitles={detailLockTitles}
                   spanW={detailBlock.span_w}
                   spanH={detailBlock.span_h}
                   shapeCells={detailBlock.shape_cells}
@@ -543,12 +516,11 @@ export function WorkspaceRightDrawers({
                   locale={locale}
                   canEdit={isOwner}
                   editBusy={isAddingBlock}
-                  workspaceGoal={plan.workspace_goal}
-                  workspaceTitle={plan.title || plan.root_topic}
-                  rootTopic={plan.root_topic}
-                  workspaceNotes={notesContent || plan.notes}
                   onUpdateBlock={onUpdateBlock}
                   onSaveCreatorEffects={onSaveCreatorEffects}
+                  onSaveAnswersModelSeed={onSaveAnswersModelSeed}
+                  onOpenUnsysStudio={onOpenUnsysStudio}
+                  answersModelSeed={detailBlock.answers_model_seed}
                   onSplitBlock={onSplitBlock}
                   cloneArmed={cloneArmed}
                   onCloneArm={onCloneArm}
@@ -563,45 +535,9 @@ export function WorkspaceRightDrawers({
                   onDynamicUnlockPreviewChange={onDynamicUnlockPreviewChange}
                   onDynamicPickModeChange={onDynamicPickModeChange}
                   onRegisterDynamicBlockToggle={onRegisterDynamicBlockToggle}
-                  localContextPanel={
-                    <WorkspaceBlockLocalContextPanel
-                      key={detailBlock.id}
-                      canEdit={isOwner}
-                      blockId={detailBlock.id}
-                      blockTitle={detailBlock.title}
-                      blockDescription={detailBlock.description}
-                      blockStatus={detailBlock.status}
-                      lockUntilTitles={detailLockTitles}
-                      localContext={detailBlock.local_context}
-                      workspaceFiles={workspaceFileItems}
-                      onSaveLocalContext={onSaveLocalContext}
-                      busy={mapGroundBusy}
-                    />
-                  }
                 />
-              </div>
-            ) : null}
-            {showLearnerDrawer ? (
-              <div className="min-h-0 shrink-0">
-                <WorkspaceLearnerBlockPane
-                  key={`learner-${detailBlock.id}`}
-                  block={detailBlock}
-                  blocks={nodes}
-                  workspaceId={workspaceId}
-                  ayclToken={ayclToken}
-                  locale={locale}
-                  learnerUserKey={currentUserId || ayclToken || "local"}
-                  requestedDrawerId={requestedDrawerId}
-                  requestedDrawerNonce={requestedDrawerNonce}
-                  locked={locked}
-                  onBlocksUpdated={onBlocksUpdated}
-                  onDynamicGenerated={onDynamicGenerated}
-                  onSavePlanningPrompt={onSavePlanningPrompt}
-                  onLaunchIntent={onLaunchIntent}
-                />
-              </div>
-            ) : null}
-            {showCreatorDrawers && isOwner ? (
+            </div>
+            {isOwner ? (
               <div
                 className="mt-auto min-h-0 shrink-0"
                 data-workspace-block-danger-host

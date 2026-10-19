@@ -36,6 +36,7 @@ describe("AYCL section layout mapping (shared helper)", () => {
       "workspace",
       "dags",
       "map_types",
+      "unsys_models",
       "context",
       "settings",
     ]);

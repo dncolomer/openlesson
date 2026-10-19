@@ -4,8 +4,12 @@
  * The xAI call lives in lib/session-policy-infer-xai.ts and is not imported here.
  */
 
-import { advanceSessionBranchModel, SESSION_BRANCH_ACTION_ORDER, type SessionBranchModel } from "@/lib/session-branch-model";
-import type { SessionMarkButtonId } from "@/lib/session-marks";
+import {
+  advanceSessionBranchModel,
+  sessionBranchById,
+  sessionBranchInferCandidates,
+  type SessionBranchModel,
+} from "@/lib/session-branch-model";
 
 /** Live sessions wait for more than one new proof event, or for this much time. */
 export const SESSION_POLICY_INFER_EVENT_THRESHOLD = 3;
@@ -21,37 +25,14 @@ export type SessionPolicyProofEvent = {
   prompt?: string;
 };
 
-export type SessionPolicyConfidence = Record<SessionMarkButtonId, number>;
-
 export type SessionPolicyInference = {
-  action: SessionMarkButtonId;
+  hiddenStateId: string;
+  fromId: string;
   confidence: number;
   label: string;
 };
 
-const ALIASES: Record<string, SessionMarkButtonId> = {
-  close: "try",
-  try: "try",
-  exploit: "try",
-  keep: "hold",
-  hold: "hold",
-  forage: "hold",
-  sample: "hold",
-  discard: "drop",
-  drop: "drop",
-  avoid: "drop",
-  insight: "insight",
-  infer: "insight",
-};
-
 const RAW_LABEL = /^(close|keep|discard|insight|forage|exploit|avoid|infer|sample|predict)[.!?]*$/i;
-
-const ACTION_LINE_KEY: Record<SessionMarkButtonId, string> = {
-  try: "closeLine",
-  hold: "keepLine",
-  drop: "discardLine",
-  insight: "insightLine",
-};
 
 /**
  * An empty batch never calls. Crossing the event count or the elapsed time does,
@@ -65,6 +46,23 @@ export function sessionPolicyInferDue(input: {
   if (input.pendingEvents <= 0) return false;
   if (input.pendingEvents >= input.thresholds.eventCount) return true;
   return input.elapsedMs >= input.thresholds.elapsedMs;
+}
+
+export function sessionPolicyCandidateLines(model: SessionBranchModel): string {
+  return sessionBranchInferCandidates(model)
+    .map((branch) => {
+      const question = branch.question.trim();
+      const observation = branch.observation.trim();
+      return [
+        `- id: ${branch.id}`,
+        `  title: ${branch.title}`,
+        question ? `  question: ${question}` : "",
+        observation ? `  observation: ${observation}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+    })
+    .join("\n");
 }
 
 export function sessionPolicyProofFromCanvas(
@@ -92,63 +90,25 @@ function extractJsonObject(text: string): string | null {
   return text.slice(start, end + 1);
 }
 
-/** Four confidences. 0–1, or 0–100 when any value is above 1. A bad reply is null. */
-export function parsePolicyConfidenceReply(raw: string): SessionPolicyConfidence | null {
-  const packed = extractJsonObject(raw.trim());
-  if (!packed) return null;
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(packed);
-  } catch {
-    return null;
-  }
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
-  const found = new Map<SessionMarkButtonId, number>();
-  for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
-    const action = ALIASES[key.trim().toLowerCase()];
-    if (!action) continue;
-    if (typeof value !== "number" || !Number.isFinite(value)) return null;
-    if (found.has(action)) return null;
-    found.set(action, value);
-  }
-  if (found.size !== SESSION_BRANCH_ACTION_ORDER.length) return null;
-  const numbers = SESSION_BRANCH_ACTION_ORDER.map((id) => found.get(id) ?? Number.NaN);
-  if (numbers.some((value) => value < 0)) return null;
-  const scale = numbers.some((value) => value > 1) ? 100 : 1;
-  const confidence = {} as SessionPolicyConfidence;
-  for (const id of SESSION_BRANCH_ACTION_ORDER) {
-    const value = (found.get(id) ?? Number.NaN) / scale;
-    if (value < 0 || value > 1) return null;
-    confidence[id] = value;
-  }
-  return confidence;
-}
-
-/** Highest confidence. A tie keeps the earlier action: Close, Keep, Discard, Insight. */
-export function chooseHighestPolicyConfidence(
-  confidence: SessionPolicyConfidence,
-): { action: SessionMarkButtonId; confidence: number } {
-  let action: SessionMarkButtonId = SESSION_BRANCH_ACTION_ORDER[0];
-  let best = Number.NEGATIVE_INFINITY;
-  for (const id of SESSION_BRANCH_ACTION_ORDER) {
-    const value = confidence[id];
-    if (value > best) {
-      best = value;
-      action = id;
-    }
-  }
-  return { action, confidence: best };
-}
-
 export function policySuggestionIsRawLabel(text: string): boolean {
   return RAW_LABEL.test(text.trim());
 }
 
-/**
- * The learner-facing line for one internal action.
- * A missing line, or a line that is only the raw name, is null.
- */
-export function parsePolicyActionLine(raw: string, action: SessionMarkButtonId): string | null {
+export type SessionPolicyHiddenStateReply = {
+  hiddenStateId: string;
+  confidence: number;
+  label: string;
+};
+
+function clampConfidence(value: unknown): number | null {
+  if (typeof value !== "number" || !Number.isFinite(value)) return null;
+  const scaled = value > 1 ? value / 100 : value;
+  if (scaled < 0 || scaled > 1) return null;
+  return scaled;
+}
+
+/** Hidden-state id plus confidence. A bad reply is null. */
+export function parsePolicyHiddenStateReply(raw: string): SessionPolicyHiddenStateReply | null {
   const packed = extractJsonObject(raw.trim());
   if (!packed) return null;
   let parsed: unknown;
@@ -158,11 +118,19 @@ export function parsePolicyActionLine(raw: string, action: SessionMarkButtonId):
     return null;
   }
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
-  const value = (parsed as Record<string, unknown>)[ACTION_LINE_KEY[action]];
-  if (typeof value !== "string") return null;
-  const text = value.replace(/\s+/g, " ").trim();
-  if (!text || text.length > 400 || policySuggestionIsRawLabel(text)) return null;
-  return text;
+  const rec = parsed as Record<string, unknown>;
+  const hiddenStateId = String(
+    rec.hiddenStateId ?? rec.candidateId ?? rec.id ?? "",
+  ).trim();
+  if (!hiddenStateId) return null;
+  const confidence = clampConfidence(rec.confidence);
+  if (confidence == null) return null;
+  const line = typeof rec.line === "string" ? rec.line.replace(/\s+/g, " ").trim() : "";
+  return {
+    hiddenStateId,
+    confidence,
+    label: line && line.length <= 400 && !policySuggestionIsRawLabel(line) ? line : "",
+  };
 }
 
 /** A rephrased next step. An empty reply or a raw action label is null. */
@@ -186,24 +154,29 @@ export function parsePolicySuggestionReply(raw: string): string | null {
 }
 
 /**
- * Parse a reply, take the winner, and advance the field the way a press did.
- * A bad reply, or an action that cannot move a closed focus, appends nothing.
+ * Parse a reply, take the inferred hidden state, and travel that edge.
+ * A bad reply, or an id that is not on the field, appends nothing.
  */
 export function applyPolicyInference(
   model: SessionBranchModel,
   reply: string,
 ): { model: SessionBranchModel; entry: SessionPolicyInference } | null {
-  const confidence = parsePolicyConfidenceReply(reply);
-  if (!confidence) return null;
-  const winner = chooseHighestPolicyConfidence(confidence);
-  const next = advanceSessionBranchModel(model, { action: winner.action });
-  if (next === model) return null;
+  const parsed = parsePolicyHiddenStateReply(reply);
+  if (!parsed) return null;
+  const allowed = new Set(sessionBranchInferCandidates(model).map((branch) => branch.id));
+  if (!allowed.has(parsed.hiddenStateId) && !sessionBranchById(model, parsed.hiddenStateId)) {
+    return null;
+  }
+  const target = sessionBranchById(model, parsed.hiddenStateId);
+  if (!target) return null;
+  const next = advanceSessionBranchModel(model, { toId: target.id, fromId: model.focusId });
   return {
     model: next,
     entry: {
-      action: winner.action,
-      confidence: winner.confidence,
-      label: parsePolicyActionLine(reply, winner.action) ?? "",
+      hiddenStateId: target.id,
+      fromId: model.focusId,
+      confidence: parsed.confidence,
+      label: parsed.label,
     },
   };
 }

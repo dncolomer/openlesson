@@ -71,6 +71,10 @@ import {
   serializeBlockCreatorEffects,
   validateBlockCreatorEffects,
 } from "@/lib/block-creator-effects";
+import {
+  normalizeAuthorUnsysModelSeed,
+  serializeAuthorUnsysModelSeed,
+} from "@/lib/author-unsys-model";
 
 export async function handle_update_block(ctx: GridOpContext): Promise<Response | null> {
   const {
@@ -140,21 +144,36 @@ export async function handle_update_block(ctx: GridOpContext): Promise<Response 
       );
     }
 
+    const seedRaw =
+      (body as { answers_model_seed?: unknown; answersModelSeed?: unknown })
+        .answers_model_seed ??
+      (body as { answersModelSeed?: unknown }).answersModelSeed;
+    if (seedRaw !== undefined) {
+      const seed = normalizeAuthorUnsysModelSeed(seedRaw);
+      if (seedRaw != null && !seed) {
+        return jsonError(400, "A valid unsys model seed is required.");
+      }
+      updateFields.answers_model_seed = seed
+        ? serializeAuthorUnsysModelSeed(seed)
+        : null;
+    }
+
     let { error: updateError } = await supabase
       .from("blocks")
       .update(updateFields)
       .eq("id", blockId);
 
-    // Graceful if practice_options / creator_effects columns not migrated yet.
+    // Graceful if optional jsonb columns are not migrated yet.
     if (
       updateError &&
-      /practice_options|creator_effects|schema cache/i.test(
+      /practice_options|creator_effects|answers_model_seed|schema cache/i.test(
         updateError.message || "",
       )
     ) {
       const {
         practice_options: _po,
         creator_effects: _ce,
+        answers_model_seed: _seed,
         ...withoutOptional
       } = updateFields;
       // Retry without missing columns one at a time.
@@ -167,7 +186,11 @@ export async function handle_update_block(ctx: GridOpContext): Promise<Response 
         const { practice_options: __po, ...rest } = retryFields;
         retryFields = rest;
       }
-      // If message is generic schema cache, drop both optional fields.
+      if (/answers_model_seed/i.test(updateError.message || "")) {
+        const { answers_model_seed: __seed, ...rest } = retryFields;
+        retryFields = rest;
+      }
+      // If message is generic schema cache, drop optional fields.
       if (/schema cache/i.test(updateError.message || "")) {
         retryFields = withoutOptional;
       }

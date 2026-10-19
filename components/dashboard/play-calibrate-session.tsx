@@ -185,7 +185,6 @@ export function PlayCalibrateSession({ sessionId }: { sessionId: string }) {
           topicId: "play-calibrate",
           questions,
           sessionId,
-          catalogSize: 4,
         }),
       );
       if (!sessionClockMayStart({ mode: "calibrate", fieldReady: field.ok })) {
@@ -348,7 +347,6 @@ export function PlayCalibrateSession({ sessionId }: { sessionId: string }) {
                   topicId: "play-calibrate",
                   questions: questionsRef.current,
                   sessionId,
-                  catalogSize: 4,
                 }),
                 stillText: live.proof.stillText,
                 transcript,

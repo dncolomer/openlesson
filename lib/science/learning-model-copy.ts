@@ -48,14 +48,14 @@ export const SCIENCE_LEARNING_MODEL_COPY = {
   conceptsTitle: "The six Concepts",
   catalogsTitle: "Actions",
   catalogsLead:
-    "An action is a move from the current hidden state. Live sessions use four: Forage, Exploit, Avoid, Infer. Eight and sixteen are finer catalogs a workspace or a flow can pick. Each action below includes a move a learner would make on Integrals, and how the system classifies it.",
+    "Live inference is hidden-state travel on priced edges. It does not switch a 4, 8, or 16 action catalog. The lists below are historical names for those moves, each with an Integrals example of how we would have classified the work.",
   fourTitle: "4 actions",
   fourLead:
-    "Forage seeks information. Exploit settles the current hidden state. Avoid withdraws. Infer crafts the insight: the hidden state the work found. That four-action policy is what a live session uses. Each action has a cost on the current hidden state: cheaper is the preferred policy. In Learn those costs stay visible; in Verify they stay hidden and the score is distance from the cheapest policy. The Integrals lines are the observations we would project onto each action.",
+    "A historical four-name catalog: Forage seeks information, Exploit settles the current hidden state, Avoid withdraws, Infer crafts the insight. Live sessions do not pick this catalog as the inference target. They infer which priced edge the work travelled. The Integrals lines are how we would have classified each move.",
   eightLead:
-    "Adds travel on the generative model (Descend, Ascend, Switch) and splits foraging into Sample and Predict. Same Integrals concept; finer actions.",
+    "A historical eight-action catalog. Adds travel names (Descend, Ascend, Switch) and splits foraging into Sample and Predict. Same Integrals concept; not the live inference target.",
   sixteenLead:
-    "Adds precision, prediction error, and prior preference over observations. Same Integrals concept; the full catalog.",
+    "A historical sixteen-action catalog. Adds precision, prediction error, and prior preference over observations. Same Integrals concept; not the live inference target.",
   modesTitle: "Three sessions, one generative model",
   projectionTitle: "Projection",
   projectionHeading: "Work projects onto a policy.",
@@ -64,14 +64,14 @@ export const SCIENCE_LEARNING_MODEL_COPY = {
   calibrate:
     "The user taps hidden states they would not trust themselves on, for the concept they are trying to learn or verify. Taps that stay on one state factor are a hole. Speech about how they would look next is projected onto nearby hidden states of the same state factor. The result is a prior over hidden states: the starting point Learn and Verify later price against.",
   learn:
-    "The user talks, writes, and draws. That work is projected onto Forage, Exploit, Avoid, and Infer. Each action on the current hidden state has a cost: its expected-free-energy price. The cheapest cost is the preferred next policy, and those costs stay visible so the policy can steer learning. Infer records the insight: the hidden state they found.",
+    "The user talks, writes, and draws. Live inference projects that work onto hidden-state travel on priced edges. The cheapest outgoing edge is the preferred next policy, and those costs stay visible so the policy can steer learning.",
   verify:
-    "The same projection, on a clock, for someone whose knowledge we are verifying. Action costs stay hidden. Each projected action is compared with the cheapest policy on that hidden state. Distance is the average of how much more those actions cost. Distance 0 means every step followed the cheapest policy. The score is stored with the identity they claimed.",
+    "The same projection, on a clock, for someone whose knowledge we are verifying. Edge costs stay hidden. Each projected step is compared with the cheapest priced edge on that hidden state. Distance is the average of how much more those steps cost. Distance 0 means every step followed the cheapest policy. The score is stored with the identity they claimed.",
   caveat:
     "The Free Energy Principle is an influence on the unsys model. We do not claim that Uncertain Systems is Friston’s full formal theory, and we do not claim completed FEP empirical results.",
   explorerTitle: "A small generative model",
   explorerLead:
-    "Integrals is a frozen generative model of the concept the user is trying to learn or verify. Three state factors structure it: Meaning, Technique, and Setup. A hidden state can open several finer hidden states at the same depth. Each hidden state carries an observation: what we would expect while focusing on it. Each of the four actions from that hidden state has a cost: the expected-free-energy price of taking it. Costs change with the hidden state you are on. Forage is cheap while finer hidden states remain; Infer is cheap on a leaf. Switch the explorer between Learn and Verify. In Learn the costs stay visible and the cheapest action is marked as the policy, so the policy can steer. In Verify the costs stay hidden; each action you take is scored as distance from that cheapest policy. Click or drag a hidden state, then take an action. The system uses the same four actions a live session uses to learn or verify.",
+    "Integrals is a frozen generative model of the concept the user is trying to learn or verify. Three state factors structure it: Meaning, Technique, and Setup. A hidden state can open several finer hidden states at the same depth. Each hidden state carries an observation: what we would expect while focusing on it. Travel from a hidden state is a priced edge: the expected-free-energy cost of going to the next hidden state. Costs change with the hidden state you are on. Switch the explorer between Learn and Verify. In Learn the costs stay visible and the cheapest edge is marked as the policy, so the policy can steer. In Verify the costs stay hidden; each step is scored as distance from that cheapest policy. Click or drag a hidden state, then take an edge. Live inference is that hidden-state travel, not a 4/8/16 catalog switch.",
   explorerOpening:
     "You are on Integrals, the frozen generative model. Click or drag a hidden state, or take an action.",
   explorerDragHint: "Drag a hidden state. It returns.",
@@ -165,7 +165,7 @@ export const SCIENCE_LEARNING_MODEL_MODES = [
     name: "Learn",
     job: "Follow a policy",
     input: "Talk, write, draw, then Infer",
-    projection: "Canvas work onto Forage, Exploit, Avoid, Infer, costs visible",
+    projection: "Canvas work onto priced edges, costs visible",
     result: "A kept posterior",
     body: SCIENCE_LEARNING_MODEL_COPY.learn,
   },
@@ -174,7 +174,7 @@ export const SCIENCE_LEARNING_MODEL_MODES = [
     name: "Verify",
     job: "Measure the policy",
     input: "Work the concept before the clock ends",
-    projection: "Canvas work onto the same four actions, costs hidden",
+    projection: "Canvas work onto priced edges, costs hidden",
     result: "Distance from the cheapest policy",
     body: SCIENCE_LEARNING_MODEL_COPY.verify,
   },

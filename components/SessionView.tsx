@@ -1718,7 +1718,9 @@ export function SessionView({
     ileToken,
     ayclToken,
     fallbackTitle: t("session.chapterPromptFallback"),
-    catalogSize: session?.metadata?.learning_model_size,
+    blockId: sessionBlockId,
+    workspaceId,
+    metadata: session?.metadata,
   });
 
   const renderWorkCanvas = () => (
@@ -1743,7 +1745,8 @@ export function SessionView({
       chapterTitle={learnField?.chapterTitle || ""}
       chapterBrief={learnField?.chapterBrief || ""}
       fieldScope={learnField?.scope}
-      workspaceId={workspaceId}
+      workspaceId={learnField?.workspaceId || workspaceId}
+      blockId={learnField?.blockId || sessionBlockId}
       ileToken={ileToken}
       ayclToken={ayclToken}
       recordSessionPowArtifact={recordSessionPowArtifact}

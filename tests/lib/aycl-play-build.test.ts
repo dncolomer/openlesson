@@ -221,14 +221,14 @@ describe("Explore on purchased clones", () => {
         isOwner: true,
         allowAuthoring: learner.allowCreatorModeToggle,
       }),
-    ).toEqual(["workspace", "dags", "map_types", "context", "settings"]);
+    ).toEqual(["workspace", "dags", "map_types", "unsys_models", "context", "settings"]);
     expect(
       availableSectionsForMode({
         mode: "learner",
         isOwner: true,
         allowAuthoring: full.allowCreatorModeToggle,
       }),
-    ).toEqual(["workspace", "dags", "map_types", "context", "settings"]);
+    ).toEqual(["workspace", "dags", "map_types", "unsys_models", "context", "settings"]);
 
     expect(
       parseAyclClonePracticeOptions({ allow_explore: false }).allowExplore,

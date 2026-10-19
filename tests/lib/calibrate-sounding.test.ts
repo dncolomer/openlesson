@@ -35,11 +35,7 @@ import {
   submitSoundingProof,
   type SoundingStill,
 } from "@/lib/calibrate-sounding";
-import {
-  SESSION_BRANCH_ACTION_ORDER,
-  type SessionBranchModel,
-} from "@/lib/session-branch-model";
-import type { SessionMarkButtonId } from "@/lib/session-marks";
+import { type SessionBranchModel } from "@/lib/session-branch-model";
 import {
   PREPARE_VOICE_CHALLENGE_SCRIPT,
   PREPARE_VOICE_CHALLENGE_SENTENCE_ONE,
@@ -65,13 +61,10 @@ function still(
   };
 }
 
-function pricedActions(cheap: SessionMarkButtonId = "hold") {
-  return SESSION_BRANCH_ACTION_ORDER.map((id) => ({
-    id,
-    price: id === cheap ? 10 : id === "insight" ? 90 : 40,
-    leads: `${id} leads`,
-    observation: `${id} observation`,
-  }));
+function edgesFrom(parentId: string, stills: SoundingStill[]) {
+  return stills
+    .filter((row) => row.parentId === parentId)
+    .map((row, index) => ({ toId: row.id, price: 10 + index * 8 }));
 }
 
 function fixtureModel(stills: SoundingStill[] = fixtureTree()): SessionBranchModel {
@@ -80,7 +73,6 @@ function fixtureModel(stills: SoundingStill[] = fixtureTree()): SessionBranchMod
     rootId: "root",
     focusId: stills[0]?.id ?? "root",
     step: 0,
-    catalogSize: 4,
     boardNotes: [],
     branches: [
       {
@@ -92,7 +84,7 @@ function fixtureModel(stills: SoundingStill[] = fixtureTree()): SessionBranchMod
         observation: "The topic is open.",
         depth: 0,
         status: "open",
-        actions: pricedActions("try"),
+        edges: edgesFrom("root", stills),
       },
       ...stills.map((row) => ({
         id: row.id,
@@ -103,7 +95,7 @@ function fixtureModel(stills: SoundingStill[] = fixtureTree()): SessionBranchMod
         observation: row.observation,
         depth: row.depth,
         status: (row.depth === 1 ? "open" : "latent") as "open" | "latent",
-        actions: pricedActions("hold"),
+        edges: edgesFrom(row.id, stills),
       })),
     ],
   };
@@ -379,7 +371,7 @@ describe("sounding tree freeze", () => {
         rootId: "root",
         focusId: "root",
         step: 0,
-        catalogSize: 4,
+
         boardNotes: [],
         branches: [
           {
@@ -391,7 +383,7 @@ describe("sounding tree freeze", () => {
             observation: "Limits",
             depth: 0,
             status: "open",
-            actions: [],
+            edges: [],
           },
           {
             id: "r1",
@@ -402,7 +394,7 @@ describe("sounding tree freeze", () => {
             observation: "Factor before naming the form.",
             depth: 1,
             status: "open",
-            actions: [],
+            edges: [],
           },
           {
             id: "r2",
@@ -413,7 +405,7 @@ describe("sounding tree freeze", () => {
             observation: "The standard trig limit is 1.",
             depth: 1,
             status: "open",
-            actions: [],
+            edges: [],
           },
           {
             id: "r3",
@@ -424,7 +416,7 @@ describe("sounding tree freeze", () => {
             observation: "Matching values do not give a derivative.",
             depth: 1,
             status: "open",
-            actions: [],
+            edges: [],
           },
         ],
       },
@@ -452,7 +444,7 @@ describe("sounding tree freeze", () => {
         rootId: "root",
         focusId: "root",
         step: 0,
-        catalogSize: 4,
+
         boardNotes: [],
         branches: [
           {
@@ -464,7 +456,7 @@ describe("sounding tree freeze", () => {
             observation: "SQL",
             depth: 0,
             status: "open",
-            actions: [],
+            edges: [],
           },
           {
             id: "r1",
@@ -475,7 +467,7 @@ describe("sounding tree freeze", () => {
             observation: "Joins multiply rows when keys repeat.",
             depth: 1,
             status: "open",
-            actions: [],
+            edges: [],
           },
         ],
       },

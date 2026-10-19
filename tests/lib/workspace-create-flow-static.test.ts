@@ -10,59 +10,52 @@ function read(rel: string) {
 }
 
 describe("workspace create + builder static wiring", () => {
-  it("workspace new UI has blank + template cards, AYCL banner, and no Login control", () => {
+  it("workspace new auto-creates a blank map and skips template / Dantes / AYCL chooser", () => {
     const page = read("app/workspace/new/page.tsx");
-    expect(page).toContain("UI_WORKSPACE_CREATE_MODES");
-    expect(page).toContain("isUiWorkspaceCreateMode");
-    expect(page).toContain("Blank");
-    expect(page).toContain("From Template");
+    expect(page).toContain("data-create-blank-map");
+    expect(page).toContain("createBlankMap");
+    expect(page).toContain("BLANK_MAP_DEFAULT_TITLE");
+    expect(page).toContain('createMode: "blank"');
+    expect(page).not.toContain("UI_WORKSPACE_CREATE_MODES");
+    expect(page).not.toContain("isUiWorkspaceCreateMode");
+    expect(page).not.toContain("From Template");
+    expect(page).not.toContain("handleCreateTemplate");
+    expect(page).not.toContain("handleCreateBlank");
+    expect(page).not.toContain("MODE_CARDS");
+    expect(page).not.toContain("data-create-mode-cards");
+    expect(page).not.toContain("data-aycl-banner");
+    expect(page).not.toContain("All You Can Learn");
     expect(page).not.toContain("Verification workspace");
     expect(page).not.toContain("Calibration workspace");
     expect(page).not.toContain("From Files + Goal");
     expect(page).not.toContain("files_goal");
     expect(page).not.toContain("handleCreateFilesGoal");
-    expect(page).toContain("data-create-mode-cards");
-    expect(page).toContain("data-aycl-banner");
-    expect(page).toContain("/all-you-can-learn");
-    expect(page).toContain("md:grid-cols-3");
-    expect(page).toContain('data-create-layout="learning"');
-    expect(page).toContain('data-create-group="learning"');
-    expect(page).toContain("Learning Map");
-    expect(page).toContain("Create a Learning Map");
-    expect(page).not.toContain("Create learning workspace");
-    expect(page).not.toContain('data-create-group="verification"');
-    expect(page).not.toContain('data-create-group="calibration"');
-    expect(page).not.toContain('data-create-mode-span="knowledge_region"');
-    expect(page).not.toContain('data-create-mode-span="calibration"');
-    expect(page).toContain('data-create-mode="aycl"');
-    expect(page).toContain("data-create-mode={card.mode}");
+    expect(page).not.toContain("FileDropZone");
+    expect(page).not.toContain("InitialChaptersPicker");
+    expect(page).not.toContain("dantes");
+    expect(page).not.toContain("Dantes");
+    expect(page).not.toContain('createMode: "template"');
+    expect(page).not.toContain("workspaceCreateModeFromQuery");
+    expect(page).not.toContain('searchParams.get("mode")');
+    expect(page).not.toContain('data-create-layout="learning"');
+    expect(page).not.toContain('data-create-group="learning"');
+    expect(page).not.toContain('data-create-mode="aycl"');
+    expect(page).not.toContain("data-create-mode={card.mode}");
     expect(page).not.toContain('data-create-mode="knowledge_region"');
     expect(page).not.toContain('data-create-mode="calibration"');
-    expect(page).not.toContain("xl:grid-cols-4");
-    expect(page).toContain("All You Can Learn");
-    // Login control removed from header (auth redirect on submit remains)
+    expect(page).not.toContain("Create a Learning Map");
     expect(page).not.toMatch(/href=["']\/login["']/);
     expect(page).toMatch(/Login removed from workspace new screen/);
-    expect(page).toContain("createMode: \"blank\"");
-    expect(page).toContain("createMode: \"template\"");
-    expect(page).not.toContain("createMode: \"knowledge_region\"");
-    expect(page).not.toContain("createMode: \"calibration\"");
-    expect(page).toContain("workspaceCreateModeFromQuery");
-    expect(page).toContain('searchParams.get("mode")');
   });
 
-  it("blank and template keep creating overlay through workspace redirect", () => {
+  it("blank auto-create keeps creating overlay through workspace redirect", () => {
     const page = read("app/workspace/new/page.tsx");
     expect(page).toContain("resolveWorkspaceCreateOverlay");
     expect(page).toContain("LoadingStatusMessage");
     expect(page).toContain("Creating workspace");
     expect(page).toContain("router.push(`/workspace/${payload.workspaceId}`)");
     expect(page).not.toMatch(/finally\s*\{\s*setBusy\(false\)\s*\}/);
-    const blankFn = page.slice(
-      page.indexOf("async function handleCreateBlank"),
-      page.indexOf("async function handleCreateTemplate"),
-    );
-    const templateFn = page.slice(page.indexOf("async function handleCreateTemplate"));
+    const blankFn = page.slice(page.indexOf("async function createBlankMap"));
     expect(blankFn).toContain("succeeded = true");
     expect(blankFn).toContain(
       "setBusy(resolveWorkspaceCreateOverlay({ succeeded }).busy)",
@@ -71,14 +64,7 @@ describe("workspace create + builder static wiring", () => {
     expect(blankFn.indexOf("succeeded = true")).toBeGreaterThan(
       blankFn.indexOf("router.push"),
     );
-    expect(templateFn).toContain("succeeded = true");
-    expect(templateFn).toContain(
-      "setBusy(resolveWorkspaceCreateOverlay({ succeeded }).busy)",
-    );
-    expect(templateFn.indexOf("router.push")).toBeGreaterThan(-1);
-    expect(templateFn.indexOf("succeeded = true")).toBeGreaterThan(
-      templateFn.indexOf("router.push"),
-    );
+    expect(blankFn).toContain("data-create-blank-retry");
 
     const wiringScratch =
       process.env.GROK_GOAL_SCRATCH ||
@@ -89,8 +75,6 @@ describe("workspace create + builder static wiring", () => {
       [
         "uses_overlay_helper=" + page.includes("resolveWorkspaceCreateOverlay"),
         "blank_push=" + blankFn.includes("router.push(`/workspace/${payload.workspaceId}`)"),
-        "template_push=" +
-          templateFn.includes("router.push(`/workspace/${payload.workspaceId}`)"),
         "no_unconditional_finally_clear=" +
           String(!/finally\s*\{\s*setBusy\(false\)\s*\}/.test(page)),
         "overlay_copy=" + page.includes("Creating workspace"),
@@ -288,6 +272,7 @@ describe("workspace create + builder static wiring", () => {
     expect(gen).toContain("composeTemplateCreatePrompt");
     expect(gen).toContain("composeFilesGoalCreatePrompt");
     expect(gen).toContain("composeTemplateWorkspaceNotes");
+    expect(gen).toContain("resolveBlankWorkspaceTitle");
     // Blank short-circuit: uses pure zero-block outcome
     const blankIdx = gen.indexOf('createMode === "blank"');
     const blankReturn = gen.indexOf("blockCount: blankOutcome.blocks.length");
@@ -299,23 +284,13 @@ describe("workspace create + builder static wiring", () => {
     expect(afterBlank).toContain("composeFilesGoalCreatePrompt(");
   });
 
-  it("template create accepts own files, a goal, and a default map type; block detail can Generate Map", () => {
+  it("template generate API still accepts files, a goal, and a map type; block detail can Generate Map", () => {
     const page = read("app/workspace/new/page.tsx");
-    const templateStep = page.slice(page.indexOf('step === 2 && mode === "template"'));
-    expect(templateStep).toContain("data-template-file-upload");
-    expect(templateStep).toContain("FileDropZone");
-    expect(read("components/FileDropZone.tsx")).toContain('type="file"');
-    expect(templateStep).toContain("Goal / prompt");
-    expect(templateStep).toContain("data-template-goal");
-    expect(templateStep).toContain("data-template-map-type-picker");
-    expect(templateStep).toContain("InitialChaptersPicker");
-    expect(templateStep).toContain("disabled={busy || !templateReady}");
-    expect(templateStep).not.toContain("disabled={!selectedTopic || busy}");
-    const submit = page.slice(page.indexOf("async function handleCreateTemplate"));
-    expect(submit).toContain('createMode: "template"');
-    expect(submit).toContain("goal: templateGoalText");
-    expect(submit).toContain("files: templateFiles.map");
-    expect(submit).toContain("initialChapters");
+    expect(page).not.toContain('step === 2 && mode === "template"');
+    expect(page).not.toContain("data-template-file-upload");
+    expect(page).not.toContain("data-template-goal");
+    expect(page).not.toContain("handleCreateTemplate");
+    expect(page).not.toContain("InitialChaptersPicker");
 
     const route = read("app/api/workspace/generate/route.ts");
     expect(route).toContain("templateDantesContextForPrompt");

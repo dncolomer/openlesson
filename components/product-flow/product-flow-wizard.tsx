@@ -3,9 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { LearningModelSizePicker } from "@/components/learning-model/LearningModelSizePicker";
 import { FLOW_COUNTDOWN_MINUTES, flowCountdownMinutes } from "@/lib/flow-countdown";
-import { parseLearningModelSize, type LearningModelSize } from "@/lib/learning-model";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import {
   acceptProductFlowPublish,
@@ -32,7 +30,6 @@ export function ProductFlowWizard({ kind }: { kind: ProductFlowKind }) {
   const [error, setError] = useState("");
   const productLabel = kind === "calibration" ? "Calibration" : "Verification";
   const canAdvance = productFlowWizardCanAdvance(step, draft);
-  const catalog = parseLearningModelSize(draft.actionCatalog);
 
   const stepIndex = PRODUCT_FLOW_WIZARD_STEPS.indexOf(step);
   const heading = useMemo(() => {
@@ -163,12 +160,6 @@ export function ProductFlowWizard({ kind }: { kind: ProductFlowKind }) {
             >
               {busy ? "Generating…" : "Generate questions from this topic"}
             </button>
-            <LearningModelSizePicker
-              name="verification-flow-learning-model"
-              value={catalog}
-              onChange={(value: LearningModelSize) => patch({ actionCatalog: value })}
-              disabled={busy}
-            />
             <div className="space-y-2" data-verification-flow-pool>
               {draft.questions.map((value, index) => (
                 <input
@@ -228,12 +219,6 @@ export function ProductFlowWizard({ kind }: { kind: ProductFlowKind }) {
                 ))}
               </select>
             </label>
-            <LearningModelSizePicker
-              name="calibration-flow-learning-model"
-              value={catalog}
-              onChange={(value: LearningModelSize) => patch({ actionCatalog: value })}
-              disabled={busy}
-            />
             <div className="space-y-2" data-calibration-flow-pool>
               {draft.questions.map((value, index) => (
                 <textarea
@@ -267,7 +252,7 @@ export function ProductFlowWizard({ kind }: { kind: ProductFlowKind }) {
               {kind === "calibration" ? draft.goal : draft.topic}
             </p>
             <p className="text-xs text-neutral-500">
-              {draft.questions.filter((item) => item.trim()).length} questions · {catalog} actions
+              {draft.questions.filter((item) => item.trim()).length} questions
             </p>
           </section>
         ) : null}

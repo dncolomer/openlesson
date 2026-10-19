@@ -19,7 +19,6 @@ export type SessionBranchContinuation = {
   regionFailures: number;
   failed: string[];
   settled?: string[];
-  catalogSize?: 4 | 8 | 16;
 };
 
 export type SessionBranchFieldLoadResult =

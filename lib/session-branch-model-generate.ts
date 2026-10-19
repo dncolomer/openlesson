@@ -4,86 +4,46 @@
  * The session opens after the premise and the first regions. The rest of the field
  * is written in small batches while the session is already on.
  * Avenues and inquiries stay in small slices so one call can finish inside the request timeout.
+ * Each parent gets between 2 and 8 children; xAI chooses how many.
  */
 
 import {
-  extraCatalogActionIds,
-  extraCatalogPriceKey,
   normalizeSessionBranchModel,
   SESSION_BRANCH_ACCEPT_COUNT,
   SESSION_BRANCH_AVENUE_COUNT,
+  SESSION_BRANCH_CHILD_MAX,
+  SESSION_BRANCH_CHILD_MIN,
   SESSION_BRANCH_INQUIRY_COUNT,
   SESSION_BRANCH_REGION_COUNT,
   SESSION_BRANCH_TARGET_COUNT,
   type SessionBranchDraft,
   type SessionBranchModel,
 } from "@/lib/session-branch-model";
-import { parseLearningModelSize, type LearningModelSize } from "@/lib/learning-model";
 import { callXai, systemMessage, userMessage, type JsonSchema } from "@/lib/xai-client";
 
 export type SessionBranchGenerateResult =
   | { ok: true; model: SessionBranchModel }
   | { ok: false; error: string };
 
-const STORED_NODE_KEYS = [
-  "title",
-  "question",
-  "territory",
-  "observation",
-  "closePrice",
-  "keepPrice",
-  "discardPrice",
-  "insightPrice",
-  "closeLeads",
-  "keepLeads",
-  "discardLeads",
-  "insightLeads",
-  "closeObservation",
-  "keepObservation",
-  "discardObservation",
-  "insightObservation",
-] as const;
+const NODE_PROPERTIES = {
+  title: { type: "string" },
+  question: { type: "string" },
+  territory: { type: "string" },
+  observation: { type: "string" },
+  edgePrice: { type: "number" },
+} as const;
 
-function nodeKeysForCatalog(size: LearningModelSize): string[] {
-  return [
-    ...STORED_NODE_KEYS,
-    ...extraCatalogActionIds(size).map((id) => extraCatalogPriceKey(id)),
-  ];
-}
+const NODE_REQUIRED = ["title", "question", "territory", "observation", "edgePrice"] as const;
 
-function systemForCatalog(size: LearningModelSize): string {
-  const extra = extraCatalogActionIds(size);
-  const extraLine = extra.length
-    ? `Also set ${extra.map((id) => extraCatalogPriceKey(id)).join(", ")} from 0 to 100. Those are the extra catalog actions on this ${size}-action generative model.`
-    : "";
-  return [
-    "You write one slice of a session field as JSON.",
-    "Every title is a short phrase.",
-    "Every question is one original interrogative sentence a learner would be asked. Write it from scratch. Never wrap the title or territory into a stock sentence.",
-    "Every territory, observation, leads line, and action observation is one or two complete sentences about this chapter.",
-    "Prices are numbers from 0 to 100. A lower price is the better next policy on that node.",
-    "Close is cheap when the observation would settle the node. Keep is cheap when a further observation is still needed. Discard is cheap on a dead end. Insight is expensive until the territory is settled.",
-    extraLine,
-    "No headings, no bullets, no product names.",
-  ]
-    .filter(Boolean)
-    .join(" ");
-}
-
-function nodeProperties(
-  size: LearningModelSize,
-  extra: Record<string, unknown> = {},
-): Record<string, unknown> {
-  const properties: Record<string, unknown> = { ...extra };
-  for (const key of nodeKeysForCatalog(size)) {
-    properties[key] = key.endsWith("Price") ? { type: "number" } : { type: "string" };
-  }
-  return properties;
-}
-
-function nodeRequired(size: LearningModelSize, extra: string[] = []): string[] {
-  return [...extra, ...nodeKeysForCatalog(size)];
-}
+const SYSTEM = [
+  "You write one slice of a session field as JSON.",
+  "Every title is a short phrase.",
+  "Every question is one original interrogative sentence a learner would be asked. Write it from scratch. Never wrap the title or territory into a stock sentence.",
+  "Every territory and observation is one or two complete sentences about this chapter.",
+  "edgePrice is a number from 0 to 100: the cost of travelling to that hidden state from its parent. A lower edgePrice is the better next hidden state.",
+  `Choose how many children the concept needs, between ${SESSION_BRANCH_CHILD_MIN} and ${SESSION_BRANCH_CHILD_MAX}. Do not pad.`,
+  "No headings, no bullets, no product names.",
+].join(" ");
 
 function objectSchema(
   name: string,
@@ -102,105 +62,59 @@ function objectSchema(
   };
 }
 
-function storedRootProperties(size: LearningModelSize): Record<string, unknown> {
-  const properties: Record<string, unknown> = {
-    premise: { type: "string" },
-    closePrice: { type: "number" },
-    keepPrice: { type: "number" },
-    discardPrice: { type: "number" },
-    insightPrice: { type: "number" },
-    closeLeads: { type: "string" },
-    keepLeads: { type: "string" },
-    discardLeads: { type: "string" },
-    insightLeads: { type: "string" },
-    closeObservation: { type: "string" },
-    keepObservation: { type: "string" },
-    discardObservation: { type: "string" },
-    insightObservation: { type: "string" },
+function nodeItemSchema(extra: Record<string, unknown> = {}, extraRequired: string[] = []) {
+  return {
+    type: "object",
+    additionalProperties: false,
+    required: [...extraRequired, ...NODE_REQUIRED],
+    properties: { ...extra, ...NODE_PROPERTIES },
   };
-  for (const id of extraCatalogActionIds(size)) {
-    properties[extraCatalogPriceKey(id)] = { type: "number" };
-  }
-  return properties;
 }
 
-function storedRootRequired(size: LearningModelSize): string[] {
-  return [
-    "premise",
-    "closePrice",
-    "keepPrice",
-    "discardPrice",
-    "insightPrice",
-    "closeLeads",
-    "keepLeads",
-    "discardLeads",
-    "insightLeads",
-    "closeObservation",
-    "keepObservation",
-    "discardObservation",
-    "insightObservation",
-    ...extraCatalogActionIds(size).map((id) => extraCatalogPriceKey(id)),
-  ];
+const ROOT_PROPERTIES = {
+  premise: { type: "string" },
+  question: { type: "string" },
+  territory: { type: "string" },
+  observation: { type: "string" },
+} as const;
+
+function regionSchema(): JsonSchema {
+  return objectSchema("session_branch_regions", ["premise", "question", "territory", "observation", "regions"], {
+    ...ROOT_PROPERTIES,
+    regions: { type: "array", items: nodeItemSchema() },
+  });
 }
 
-function regionSchema(size: LearningModelSize): JsonSchema {
-  return objectSchema(
-    "session_branch_regions",
-    [...storedRootRequired(size), "regions"],
-    {
-      ...storedRootProperties(size),
-      regions: {
-        type: "array",
-        items: {
-          type: "object",
-          additionalProperties: false,
-          required: nodeRequired(size),
-          properties: nodeProperties(size),
-        },
-      },
-    },
-  );
-}
-
-function avenueSchema(size: LearningModelSize): JsonSchema {
+function avenueSchema(): JsonSchema {
   return objectSchema("session_branch_avenues", ["avenues"], {
     avenues: {
       type: "array",
-      items: {
-        type: "object",
-        additionalProperties: false,
-        required: nodeRequired(size, ["region"]),
-        properties: nodeProperties(size, { region: { type: "number" } }),
-      },
+      items: nodeItemSchema({ region: { type: "number" } }, ["region"]),
     },
   });
 }
 
-function singleRegionSchema(size: LearningModelSize): JsonSchema {
+function singleRegionSchema(): JsonSchema {
   return objectSchema("session_branch_region", ["region"], {
-    region: {
-      type: "object",
-      additionalProperties: false,
-      required: nodeRequired(size),
-      properties: nodeProperties(size),
-    },
+    region: nodeItemSchema(),
   });
 }
 
-function inquirySchema(size: LearningModelSize): JsonSchema {
+function inquirySchema(): JsonSchema {
   return objectSchema("session_branch_inquiries", ["inquiries"], {
     inquiries: {
       type: "array",
-      items: {
-        type: "object",
-        additionalProperties: false,
-        required: nodeRequired(size, ["region", "avenue"]),
-        properties: nodeProperties(size, {
-          region: { type: "number" },
-          avenue: { type: "number" },
-        }),
-      },
+      items: nodeItemSchema(
+        { region: { type: "number" }, avenue: { type: "number" } },
+        ["region", "avenue"],
+      ),
     },
+  });
+}
+
+function childrenSchema(): JsonSchema {
+  return objectSchema("session_branch_children", ["children"], {
+    children: { type: "array", items: nodeItemSchema() },
   });
 }
 
@@ -245,13 +159,12 @@ function materialBlock(input: { chapterTitle: string; chapterBrief?: string | nu
 }
 
 async function ask(
-  size: LearningModelSize,
   schema: JsonSchema,
   prompt: string,
   maxTokens: number,
 ): Promise<{ ok: true; data: FieldNode } | { ok: false; error: string }> {
   const response = await callXai<FieldNode>(
-    [systemMessage(systemForCatalog(size)), userMessage(prompt)],
+    [systemMessage(SYSTEM), userMessage(prompt)],
     {
       maxTokens,
       temperature: 0.3,
@@ -269,21 +182,19 @@ async function ask(
 }
 
 function listedCount(data: FieldNode): number {
-  return filled(asList(data.regions ?? data.avenues ?? data.inquiries));
+  return filled(asList(data.regions ?? data.avenues ?? data.inquiries ?? data.children));
 }
 
 async function askUntil(
-  size: LearningModelSize,
   schema: JsonSchema,
   prompt: string,
   maxTokens: number,
   accept: (data: FieldNode) => boolean,
 ): Promise<{ ok: true; data: FieldNode } | { ok: false; error: string }> {
-  const first = await ask(size, schema, prompt, maxTokens);
+  const first = await ask(schema, prompt, maxTokens);
   if (!first.ok) return first;
   if (accept(first.data)) return first;
   const second = await ask(
-    size,
     schema,
     `${prompt}\n\nThe last reply was too small. Write every item this request asks for. Do not stop early.`,
     maxTokens,
@@ -387,22 +298,137 @@ export function assembleSessionBranchDraft(input: {
   return { ...input.root, regions };
 }
 
-export async function generateSessionBranchModel(input: {
+function clampChildCount(value: unknown, fallback = SESSION_BRANCH_CHILD_MAX): number {
+  const n = Math.floor(Number(value));
+  if (!Number.isFinite(n) || n < 1) return fallback;
+  return Math.max(SESSION_BRANCH_CHILD_MIN, Math.min(SESSION_BRANCH_CHILD_MAX, n));
+}
+
+export async function generateSessionBranchFirstLevel(input: {
   chapterTitle: string;
   chapterBrief?: string | null;
-  catalogSize?: unknown;
+  regionCount?: number;
 }): Promise<SessionBranchGenerateResult> {
   const chapterTitle = textOf(input.chapterTitle);
   const chapterBrief = textOf(input.chapterBrief);
-  const catalogSize = parseLearningModelSize(input.catalogSize);
+  const regionMax = clampChildCount(input.regionCount, SESSION_BRANCH_CHILD_MAX);
+  if (!chapterTitle && !chapterBrief) {
+    return { ok: false, error: "A chapter is required." };
+  }
+  const material = { chapterTitle: chapterTitle || chapterBrief, chapterBrief };
+  const regionsReply = await askUntil(
+    regionSchema(),
+    [
+      materialBlock(material),
+      `Write the premise and between ${SESSION_BRANCH_CHILD_MIN} and ${regionMax} regions.`,
+      "Choose how many regions the concept needs. Do not pad.",
+      "Do not write avenues or inquiries in this reply.",
+      "The regions must cover different parts of the chapter.",
+    ].join("\n\n"),
+    tokensForNodes(regionMax),
+    (data) => filled(asList(data.regions)) >= SESSION_BRANCH_CHILD_MIN && Boolean(textOf(data.premise)),
+  );
+  if (!regionsReply.ok) return regionsReply;
+  const regions = asList(regionsReply.data.regions).slice(0, regionMax);
+  if (filled(regions) < 1 || !textOf(regionsReply.data.premise)) {
+    return { ok: false, error: "The field came back too small to work in." };
+  }
+  const model = modelFromContinuation(
+    asContinuation({
+      ...emptySessionBranchContinuation(regionsReply.data),
+      regions,
+    }),
+    material.chapterTitle,
+  );
+  if (!model) return { ok: false, error: "The field came back too small to work in." };
+  return { ok: true, model };
+}
+
+export type SessionBranchChildDraft = {
+  title: string;
+  question: string;
+  territory: string;
+  observation: string;
+  edgePrice: number;
+};
+
+function childDraftFromNode(node: FieldNode): SessionBranchChildDraft | null {
+  const title = textOf(node.title);
+  const question = textOf(node.question);
+  const observation = textOf(node.observation) || title;
+  if (!title || !question) return null;
+  const edgePrice = Number(node.edgePrice);
+  return {
+    title,
+    question,
+    territory: textOf(node.territory) || observation,
+    observation,
+    edgePrice: Number.isFinite(edgePrice) ? Math.max(0, Math.min(100, Math.round(edgePrice))) : 20,
+  };
+}
+
+export async function generateSessionBranchChildren(input: {
+  chapterTitle: string;
+  chapterBrief?: string | null;
+  parentTitle: string;
+  parentQuestion?: string;
+  parentTerritory?: string;
+  siblingTitles?: string[];
+  count?: number;
+}): Promise<
+  | { ok: true; children: SessionBranchChildDraft[] }
+  | { ok: false; error: string }
+> {
+  const chapterTitle = textOf(input.chapterTitle);
+  const chapterBrief = textOf(input.chapterBrief);
+  const maxCount = clampChildCount(input.count, SESSION_BRANCH_CHILD_MAX);
+  const parentTitle = textOf(input.parentTitle);
+  if ((!chapterTitle && !chapterBrief) || !parentTitle) {
+    return { ok: false, error: "A chapter is required." };
+  }
+  const material = { chapterTitle: chapterTitle || chapterBrief, chapterBrief };
+  const siblings = (input.siblingTitles ?? [])
+    .map((title) => textOf(title))
+    .filter(Boolean);
+  const reply = await askUntil(
+    childrenSchema(),
+    [
+      materialBlock(material),
+      `Parent hidden state: ${parentTitle}.`,
+      textOf(input.parentQuestion) ? `Parent question: ${textOf(input.parentQuestion)}` : "",
+      textOf(input.parentTerritory) ? `Parent territory: ${textOf(input.parentTerritory)}` : "",
+      siblings.length ? `Already on this parent:\n${siblings.map((title) => `- ${title}`).join("\n")}` : "",
+      `Write between ${SESSION_BRANCH_CHILD_MIN} and ${maxCount} hidden states one step deeper than the parent.`,
+      "Choose how many the concept needs. Do not pad.",
+      "They must diverge. Do not repeat the parent title or a title already listed.",
+    ]
+      .filter(Boolean)
+      .join("\n\n"),
+    tokensForNodes(maxCount),
+    (data) => filled(asList(data.children)) >= SESSION_BRANCH_CHILD_MIN,
+  );
+  if (!reply.ok) return reply;
+  const children = asList(reply.data.children)
+    .map((node) => childDraftFromNode(node))
+    .filter((row): row is SessionBranchChildDraft => Boolean(row))
+    .slice(0, maxCount);
+  if (!children.length) return { ok: false, error: "The field came back too small to work in." };
+  return { ok: true, children };
+}
+
+export async function generateSessionBranchModel(input: {
+  chapterTitle: string;
+  chapterBrief?: string | null;
+}): Promise<SessionBranchGenerateResult> {
+  const chapterTitle = textOf(input.chapterTitle);
+  const chapterBrief = textOf(input.chapterBrief);
   if (!chapterTitle && !chapterBrief) {
     return { ok: false, error: "A chapter is required." };
   }
   const material = { chapterTitle: chapterTitle || chapterBrief, chapterBrief };
 
   const regionsReply = await askUntil(
-    catalogSize,
-    regionSchema(catalogSize),
+    regionSchema(),
     [
       materialBlock(material),
       `Write the premise and exactly ${SESSION_BRANCH_REGION_COUNT} regions.`,
@@ -426,8 +452,7 @@ export async function generateSessionBranchModel(input: {
     const region = regions[call.regionOffset];
     const regionNumber = call.regionOffset + 1;
     const reply = await askUntil(
-      catalogSize,
-      avenueSchema(catalogSize),
+      avenueSchema(),
       [
         materialBlock(material),
         "Region already chosen:",
@@ -475,8 +500,7 @@ export async function generateSessionBranchModel(input: {
       },
     );
     const reply = await askUntil(
-      catalogSize,
-      inquirySchema(catalogSize),
+      inquirySchema(),
       [
         materialBlock(material),
         "Avenues to go further into:",
@@ -515,7 +539,7 @@ export async function generateSessionBranchModel(input: {
     avenues,
     inquiries,
   });
-  const model = normalizeSessionBranchModel(draft, material.chapterTitle, catalogSize);
+  const model = normalizeSessionBranchModel(draft, material.chapterTitle);
   if (!model || model.branches.length < SESSION_BRANCH_ACCEPT_COUNT) {
     return {
       ok: false,
@@ -540,7 +564,6 @@ export type SessionBranchContinuation = {
   failed: string[];
   /** Slices that returned something. A short reply is kept and not asked again. */
   settled: string[];
-  catalogSize: LearningModelSize;
 };
 
 type ContinuationSlice =
@@ -550,7 +573,6 @@ type ContinuationSlice =
 
 export function emptySessionBranchContinuation(
   root: Record<string, unknown>,
-  catalogSize: unknown = 4,
 ): SessionBranchContinuation {
   return {
     root,
@@ -560,7 +582,6 @@ export function emptySessionBranchContinuation(
     regionFailures: 0,
     failed: [],
     settled: [],
-    catalogSize: parseLearningModelSize(catalogSize),
   };
 }
 
@@ -573,7 +594,6 @@ function asContinuation(value: SessionBranchContinuation | null | undefined): Se
     regionFailures: Math.max(0, Number(value?.regionFailures) || 0),
     failed: Array.isArray(value?.failed) ? value.failed.filter((item) => typeof item === "string") : [],
     settled: Array.isArray(value?.settled) ? value.settled.filter((item) => typeof item === "string") : [],
-    catalogSize: parseLearningModelSize(value?.catalogSize),
   };
 }
 
@@ -634,28 +654,24 @@ function modelFromContinuation(
       inquiries: continuation.inquiries,
     }),
     chapterTitle,
-    continuation.catalogSize,
   );
 }
 
 export async function generateSessionBranchOpening(input: {
   chapterTitle: string;
   chapterBrief?: string | null;
-  catalogSize?: unknown;
 }): Promise<
   | { ok: true; model: SessionBranchModel; continuation: SessionBranchContinuation }
   | { ok: false; error: string }
 > {
   const chapterTitle = textOf(input.chapterTitle);
   const chapterBrief = textOf(input.chapterBrief);
-  const catalogSize = parseLearningModelSize(input.catalogSize);
   if (!chapterTitle && !chapterBrief) {
     return { ok: false, error: "A chapter is required." };
   }
   const material = { chapterTitle: chapterTitle || chapterBrief, chapterBrief };
   const reply = await ask(
-    catalogSize,
-    regionSchema(catalogSize),
+    regionSchema(),
     [
       materialBlock(material),
       "Write the premise and exactly 1 region.",
@@ -670,7 +686,7 @@ export async function generateSessionBranchOpening(input: {
     return { ok: false, error: "The field came back too small to work in." };
   }
   const continuation = asContinuation({
-    ...emptySessionBranchContinuation(reply.data, catalogSize),
+    ...emptySessionBranchContinuation(reply.data),
     regions,
   });
   const model = modelFromContinuation(continuation, material.chapterTitle);
@@ -693,14 +709,12 @@ async function writeContinuationSlice(
   material: { chapterTitle: string; chapterBrief?: string | null },
 ): Promise<SliceDelta> {
   const next = asContinuation(continuation);
-  const catalogSize = next.catalogSize;
   if (slice.kind === "region") {
     const chosen = next.regions
       .map((region, index) => `${index + 1}. ${textOf(region.title)} — ${textOf(region.territory)}`)
       .join("\n");
     const reply = await ask(
-      catalogSize,
-      singleRegionSchema(catalogSize),
+      singleRegionSchema(),
       [
         materialBlock(material),
         chosen ? `Regions already chosen:\n${chosen}` : "",
@@ -721,19 +735,21 @@ async function writeContinuationSlice(
   if (slice.kind === "avenues") {
     const region = next.regions[slice.regionNumber - 1];
     const reply = await ask(
-      catalogSize,
-      avenueSchema(catalogSize),
+      avenueSchema(),
       [
         materialBlock(material),
         "Region already chosen:",
         `${slice.regionNumber}. ${textOf(region?.title)} — ${textOf(region?.territory)}`,
-        `Write exactly ${SESSION_BRANCH_AVENUE_COUNT} avenues for region ${slice.regionNumber}.`,
+        `Write between ${SESSION_BRANCH_CHILD_MIN} and ${SESSION_BRANCH_AVENUE_COUNT} avenues for region ${slice.regionNumber}.`,
+        "Choose how many avenues the concept needs. Do not pad.",
         `Set region to ${slice.regionNumber} on every avenue.`,
         "Avenues must diverge. Do not write inquiries in this reply.",
       ].join("\n\n"),
       tokensForNodes(SESSION_BRANCH_AVENUE_COUNT),
     );
-    const avenues = reply.ok ? asList(reply.data.avenues).slice(0, SESSION_BRANCH_AVENUE_COUNT) : [];
+    const avenues = reply.ok
+      ? asList(reply.data.avenues).slice(0, SESSION_BRANCH_AVENUE_COUNT)
+      : [];
     if (filled(avenues) < 1) return { failedKey: `avenues:${slice.regionNumber}` };
     return {
       settledKey: `avenues:${slice.regionNumber}`,
@@ -757,13 +773,13 @@ async function writeContinuationSlice(
     };
   });
   const reply = await ask(
-    catalogSize,
-    inquirySchema(catalogSize),
+    inquirySchema(),
     [
       materialBlock(material),
       "Avenues to go further into:",
       listed.map((item) => item.line).join("\n"),
-      `Write exactly ${SESSION_BRANCH_INQUIRY_COUNT} inquiries for every avenue listed.`,
+      `Write between ${SESSION_BRANCH_CHILD_MIN} and ${SESSION_BRANCH_INQUIRY_COUNT} inquiries for every avenue listed.`,
+      "Choose how many inquiries each avenue needs. Do not pad.",
       "region is the first number and avenue is the second number. Copy both onto every inquiry for that avenue.",
       "An inquiry goes further into that avenue. It must not repeat the avenue title.",
     ].join("\n\n"),
@@ -785,7 +801,6 @@ async function writeContinuationSlice(
 export async function continueSessionBranchModel(input: {
   chapterTitle: string;
   chapterBrief?: string | null;
-  catalogSize?: unknown;
   continuation: SessionBranchContinuation;
 }): Promise<
   | { ok: true; model: SessionBranchModel; continuation: SessionBranchContinuation; done: boolean }
@@ -795,10 +810,7 @@ export async function continueSessionBranchModel(input: {
   const chapterBrief = textOf(input.chapterBrief);
   if (!chapterTitle && !chapterBrief) return { ok: false, error: "A chapter is required." };
   const material = { chapterTitle: chapterTitle || chapterBrief, chapterBrief };
-  let continuation = asContinuation({
-    ...input.continuation,
-    catalogSize: parseLearningModelSize(input.catalogSize ?? input.continuation.catalogSize),
-  });
+  let continuation = asContinuation(input.continuation);
   const slices = nextSessionBranchSlices(continuation);
   if (!slices.length) {
     const model = modelFromContinuation(continuation, material.chapterTitle);

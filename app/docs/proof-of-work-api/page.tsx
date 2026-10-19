@@ -45,7 +45,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       { name: "kind", type: "string", description: "learning | verification" },
       { name: "title", type: "string", description: "Workspace title." },
       { name: "workspace_goal", type: "string", description: "What success looks like." },
-      { name: "learning_model_size", type: "number", description: "Action catalog 4 | 8 | 16." },
+      { name: "learning_model_size", type: "number", description: "Unused stored field. Live inference does not switch a 4/8/16 catalog." },
       { name: "blocks", type: "array", description: "Optional map blocks." },
       { name: "initial_prompt", type: "string", description: "Optional generation prompt." },
     ],
@@ -72,7 +72,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     ],
     requestBody: [
       { name: "flow_kind", type: "string", required: true, description: "calibrate | learn | verify" },
-      { name: "catalog_size", type: "number", description: "4 | 8 | 16" },
+      { name: "catalog_size", type: "number", description: "Unused. Live inference is hidden-state travel on priced edges." },
       { name: "duration_minutes", type: "integer", description: "1–120; default 15." },
       { name: "block_id", type: "uuid", description: "Optional map block to focus." },
       { name: "chapter_title", type: "string", description: "Optional chapter title." },
@@ -80,7 +80,6 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     ],
     requestExample: `{
   "flow_kind": "calibrate",
-  "catalog_size": 8,
   "duration_minutes": 15
 }`,
     responseBody: [

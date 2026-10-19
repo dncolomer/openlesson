@@ -219,7 +219,7 @@ export interface Session {
      * Resume opens this instead of preparing a new field. The session name is separate.
      */
     session_policy?: unknown;
-    /** Workspace catalog size (4, 8, or 16) copied onto the session for field prep. */
+    /** Unused optional. Legacy workspace catalog size (4, 8, or 16). */
     learning_model_size?: 4 | 8 | 16;
   };
 }
@@ -435,7 +435,7 @@ export interface Workspace {
   notes?: string;
   workspace_goal?: string | null;
   cover_image_url?: string;
-  /** 4, 8, or 16 actions on the unsys model. Learning workspaces only. */
+  /** Unused optional. Legacy catalog size (4, 8, or 16). Learning workspaces only. */
   learning_model_size?: 4 | 8 | 16;
   is_all_you_can_learn?: boolean;
   /** Permanent play-only copy from Home Add to my Maps or AYCL buy. */
@@ -476,6 +476,8 @@ export interface Block {
   } | null;
   practice_options?: BlockPracticeOptions | null;
   creator_effects?: unknown;
+  /** Author seed + Calibrate result for the block unsys answers-model. */
+  answers_model_seed?: unknown;
   map_keyword?: string | null;
   map_icon?: string | null;
 }

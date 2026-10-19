@@ -1,5 +1,5 @@
 /**
- * Infer a discrete policy action from canvas proof, or rephrase the next one.
+ * Infer which hidden state the canvas work is on, or rephrase the cheapest next one.
  * The same session check as the field route. A refusal does not end the session.
  */
 import { NextRequest, NextResponse } from "next/server";
@@ -17,14 +17,11 @@ import {
   planSessionBranchPrepare,
   type SessionBranchPrepareInput,
 } from "@/lib/session-branch-prepare";
-import type { SessionMarkButtonId } from "@/lib/session-marks";
 import { resolveTapSessionAccess } from "@/lib/tap-score-session-auth";
 import { getVerificationFlowByToken } from "@/lib/verification-flow-repository";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
-
-const ACTIONS = new Set<SessionMarkButtonId>(["try", "hold", "drop", "insight"]);
 
 function proofEvents(raw: unknown): SessionPolicyProofEvent[] | null {
   if (!Array.isArray(raw) || raw.length === 0) return null;
@@ -87,6 +84,7 @@ export async function POST(request: NextRequest) {
         events,
         chapterTitle: plan.chapterTitle,
         chapterBrief: plan.chapterBrief,
+        candidates: typeof body.candidates === "string" ? body.candidates : null,
       });
       if (!prepared.ok) {
         console.error("[session-policy-infer] infer", prepared.error);
@@ -131,12 +129,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (body.phase === "suggest") {
-      const action = body.action;
-      if (typeof action !== "string" || !ACTIONS.has(action as SessionMarkButtonId)) {
-        return jsonError(400, "The policy could not be read.");
-      }
       const prepared = await suggestSessionPolicyReply({
-        action: action as SessionMarkButtonId,
         nodeTitle: typeof body.nodeTitle === "string" ? body.nodeTitle : "",
         observation: typeof body.observation === "string" ? body.observation : "",
         intent: typeof body.intent === "string" ? body.intent : "",

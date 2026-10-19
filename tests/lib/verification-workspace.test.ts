@@ -716,6 +716,7 @@ describe("verification workspace shell gates", () => {
 
   it("names the create card and shell Verification Workspace and mounts flow controls only for this kind", async () => {
     const page = read("app/workspace/new/page.tsx");
+    expect(page).toContain("data-create-blank-map");
     expect(page).not.toContain('title: "Verification workspace"');
     expect(page).not.toContain('data-create-mode="knowledge_region"');
     expect(page).not.toContain('data-create-mode="calibration"');

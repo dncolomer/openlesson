@@ -3,9 +3,11 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   API_WORKSPACE_CREATE_MODES,
+  BLANK_MAP_DEFAULT_TITLE,
   assertApiCreateMode,
   blankWorkspaceCreateOutcome,
   knowledgeRegionWorkspaceCreateOutcome,
+  resolveBlankWorkspaceTitle,
   composeBlockGenerationContext,
   composeDantesResourceContext,
   composeFilesGoalCreatePrompt,
@@ -24,14 +26,17 @@ import {
 import { INITIAL_CHAPTERS_BANDS } from "@/lib/initial-chapters";
 
 describe("workspace create modes", () => {
-  it("exposes blank + template as UI modes; files_goal stays API-only", () => {
-    expect(UI_WORKSPACE_CREATE_MODES).toEqual(["blank", "template"]);
+  it("exposes blank as the only UI mode; template and files_goal stay API-only", () => {
+    expect(UI_WORKSPACE_CREATE_MODES).toEqual(["blank"]);
+    expect(UI_WORKSPACE_CREATE_MODES).not.toContain("template");
     expect(UI_WORKSPACE_CREATE_MODES).not.toContain("files_goal");
     expect(isUiWorkspaceCreateMode("blank")).toBe(true);
-    expect(isUiWorkspaceCreateMode("template")).toBe(true);
+    expect(isUiWorkspaceCreateMode("template")).toBe(false);
     expect(isUiWorkspaceCreateMode("knowledge_region")).toBe(false);
     expect(isUiWorkspaceCreateMode("calibration")).toBe(false);
     expect(isUiWorkspaceCreateMode("files_goal")).toBe(false);
+    expect(workspaceCreateModeFromQuery("blank")).toBe("blank");
+    expect(workspaceCreateModeFromQuery("template")).toBeNull();
     expect(workspaceCreateModeFromQuery("knowledge_region")).toBeNull();
     expect(workspaceCreateModeFromQuery("calibration")).toBeNull();
     expect(workspaceCreateModeFromQuery("files_goal")).toBeNull();
@@ -48,6 +53,15 @@ describe("workspace create modes", () => {
     expect(outcome.mode).toBe("blank");
     expect(outcome.blocks).toEqual([]);
     expect(outcome.blocks).toHaveLength(0);
+  });
+
+  it("blank map title defaults to Untitled map", () => {
+    expect(BLANK_MAP_DEFAULT_TITLE).toBe("Untitled map");
+    expect(resolveBlankWorkspaceTitle("")).toBe("Untitled map");
+    expect(resolveBlankWorkspaceTitle("   ")).toBe("Untitled map");
+    expect(resolveBlankWorkspaceTitle(null)).toBe("Untitled map");
+    expect(resolveBlankWorkspaceTitle("Linear Algebra")).toBe("Linear Algebra");
+    expect(resolveBlankWorkspaceTitle("x".repeat(200))).toHaveLength(120);
   });
 
   it("knowledge region create is a UI mode, yields zero blocks, and is not API-only", () => {
@@ -171,29 +185,22 @@ const OVERLAY_SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
   "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-1caf392ccbf2/implementer";
 
-describe("workspace create overlay after blank/template attempt", () => {
-  it("keeps overlay on success and restores chooser on failure", () => {
+describe("workspace create overlay after blank attempt", () => {
+  it("keeps overlay on success and restores retry on failure", () => {
     const blankOk = resolveWorkspaceCreateOverlay({ succeeded: true });
-    const templateOk = resolveWorkspaceCreateOverlay({ succeeded: true });
     const blankFail = resolveWorkspaceCreateOverlay({ succeeded: false });
-    const templateFail = resolveWorkspaceCreateOverlay({ succeeded: false });
 
     expect(blankOk.busy).toBe(true);
-    expect(templateOk.busy).toBe(true);
     expect(blankFail.busy).toBe(false);
-    expect(templateFail.busy).toBe(false);
 
     mkdirSync(OVERLAY_SCRATCH, { recursive: true });
     writeFileSync(
       join(OVERLAY_SCRATCH, "workspace-create-busy.log"),
       [
         "blank_success_busy=" + blankOk.busy,
-        "template_success_busy=" + templateOk.busy,
         "blank_failure_busy=" + blankFail.busy,
-        "template_failure_busy=" + templateFail.busy,
-        "success_keeps_overlay=" + String(blankOk.busy && templateOk.busy),
-        "failure_restores_chooser=" +
-          String(!blankFail.busy && !templateFail.busy),
+        "success_keeps_overlay=" + String(blankOk.busy),
+        "failure_restores_retry=" + String(!blankFail.busy),
       ].join("\n") + "\n",
       "utf8",
     );

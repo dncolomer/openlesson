@@ -36,6 +36,7 @@ import { WorkspaceMobilePlanAside } from "@/components/workspace-view/workspace-
 import { WorkspaceMobileTabBar } from "@/components/workspace-view/workspace-mobile-tab-bar";
 import { WorkspaceMapColumn } from "@/components/workspace-view/workspace-map-column";
 import { WorkspaceRightDrawers } from "@/components/workspace-view/workspace-right-drawers";
+import { WorkspaceUnsysSeedStudio } from "@/components/WorkspaceUnsysSeedStudio";
 import {
   canAccessPrivilegedWorkspaceSections,
   defaultWorkspaceSection,
@@ -44,18 +45,14 @@ import {
 } from "@/lib/workspace-sections";
 import {
   workspaceIdlePaneShowsExplore,
-  workspaceLearnerPaneMounted,
   workspaceShell,
   workspaceSurfaceShowsAuthoring,
 } from "@/lib/workspace-mode";
 import { parseWorkspaceKind } from "@/lib/workspace-kind";
 import {
-  isBlockLockedUntilCompleted,
-  type MapGroundBlockRef,
   normalizeUnusableCells,
   type UnusableCell,
 } from "@/lib/map-ground-rules";
-import { isLearnerMapBlockLocked } from "@/lib/learner-local-dag";
 import {
   parseBlockLocalContext,
   type WorkspaceFileContextItem,
@@ -176,12 +173,13 @@ export function WorkspaceView({
     normalizeWorkspaceMapTypes(initialPlan?.workspace_map_types),
   );
   const [workspaceFileItems, setWorkspaceFileItems] = useState<WorkspaceFileContextItem[]>([]);
-  const [mapGroundBusy, setMapGroundBusy] = useState(false);
+  const [, setMapGroundBusy] = useState(false);
   const [learnerDrawerRequest, setLearnerDrawerRequest] = useState<{
     id: string;
     nonce: number;
   } | null>(null);
   const [playStartBusy, setPlayStartBusy] = useState(false);
+  const [unsysStudioBlockId, setUnsysStudioBlockId] = useState<string | null>(null);
   /** AYCL purchase tier capabilities (null = non-AYCL). Seeded from prop. */
   const [ayclCapabilities, setAyclCapabilities] = useState<AyclCapabilities | null>(
     () =>
@@ -338,6 +336,7 @@ export function WorkspaceView({
     handleSubmitGenerateShape,
     handleUpdateBlock,
     handleSaveCreatorEffects,
+    handleSaveAnswersModelSeed,
     handleDeleteBlock,
     handleDeleteBlocks,
     handleClusterBlocks,
@@ -345,7 +344,6 @@ export function WorkspaceView({
     handleApplyDag,
     handleDeleteDag,
     handleMapGround,
-    handleSaveLocalContext,
   } = useWorkspaceAuthoring({
     workspaceId,
     isOwner,
@@ -709,8 +707,6 @@ export function WorkspaceView({
   const {
     dynamicGeneratedIds,
     handleBlocksUpdated,
-    handleDynamicGenerated,
-    handleSavePlanningPrompt,
     handleLaunchIntent,
   } = useWorkspaceLearner({
     workspaceId,
@@ -722,6 +718,22 @@ export function WorkspaceView({
     setNodes,
     router,
   });
+
+  useEffect(() => {
+    if (shell.learnerSurface || !isOwner) {
+      setUnsysStudioBlockId(null);
+      setUnsysStudioCatalogSize(null);
+    }
+  }, [isOwner, shell.learnerSurface]);
+
+  useEffect(() => {
+    if (
+      unsysStudioBlockId &&
+      !nodes.some((node) => node.id === unsysStudioBlockId)
+    ) {
+      setUnsysStudioBlockId(null);
+    }
+  }, [nodes, unsysStudioBlockId]);
 
   if (loading) {
     return <WorkspaceLoading message={t("planView.loading")} />;
@@ -753,12 +765,11 @@ export function WorkspaceView({
           : isOwner || isOrgAdmin,
   });
   const isLearnerMode = shell.learnerSurface;
+  const unsysStudioBlock =
+    isOwner && !isLearnerMode && unsysStudioBlockId
+      ? nodes.find((node) => node.id === unsysStudioBlockId) ?? null
+      : null;
   const showCreatorDrawers = shell.authoringDrawers;
-  const showLearnerDrawer = workspaceLearnerPaneMounted({
-    authoring: authoringOnMap,
-    practiceDrawer: shell.practiceDrawer,
-    learnerActionRequested: learnerDrawerRequest != null,
-  });
 
   const sectionConfig = buildWorkspaceSectionNavItems({
     t,
@@ -766,11 +777,6 @@ export function WorkspaceView({
     isOwner,
     visibleSections,
   });
-
-  const detailLockTitles =
-    detailBlock?.lock_until_block_ids
-      ?.map((id) => nodes.find((n) => n.id === id)?.title || id)
-      .filter(Boolean) || [];
 
   return (
     <div
@@ -796,6 +802,25 @@ export function WorkspaceView({
         playView={shell.playView}
       />
 
+      {unsysStudioBlock && !shell.playView ? (
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <WorkspaceUnsysSeedStudio
+            blockId={unsysStudioBlock.id}
+            blockTitle={unsysStudioBlock.title}
+            blockDescription={unsysStudioBlock.description}
+            seed={unsysStudioBlock.answers_model_seed}
+            workspaceId={workspaceId}
+            ayclToken={ayclToken}
+            locale={locale}
+            busy={isAddingBlock}
+            onClose={() => {
+              setUnsysStudioBlockId(null);
+            }}
+            onSaveSeed={handleSaveAnswersModelSeed}
+          />
+        </div>
+      ) : (
+      <>
       {shell.playView ? null : <WorkspaceSectionHosts
         isLearnerMode={isLearnerMode}
         isOwner={isOwner}
@@ -823,6 +848,16 @@ export function WorkspaceView({
         isAddingBlock={isAddingBlock}
         onSaveDagEdit={handleApplyDag}
         onDeleteDag={handleDeleteDag}
+        onOpenUnsysStudio={
+          isOwner && !isLearnerMode
+            ? ({ blockId }) => {
+                setUnsysStudioBlockId(blockId);
+              }
+            : undefined
+        }
+        onSaveAnswersModelSeed={
+          isOwner ? handleSaveAnswersModelSeed : undefined
+        }
         currentUserId={currentUserId}
         knowledgeLwmEmbeddingsOnly={shell.knowledgeLwmEmbeddingsOnly}
         knowledgeSubviewFromUrl={knowledgeSubviewFromUrl}
@@ -965,10 +1000,6 @@ export function WorkspaceView({
           rightPane={rightPane}
           isOwner={isOwner}
           showCreatorDrawers={showCreatorDrawers}
-          showLearnerDrawer={showLearnerDrawer}
-          requestedDrawerId={learnerDrawerRequest?.id ?? null}
-          requestedDrawerNonce={learnerDrawerRequest?.nonce ?? null}
-          isLearnerMode={isLearnerMode}
           learnerNotes={shell.learnerActivity}
           workspaceId={workspaceId}
           ayclToken={ayclToken}
@@ -992,30 +1023,7 @@ export function WorkspaceView({
           onCreateNoteFromSummary={handleCreateNoteFromSummary}
           detailBlock={detailBlock}
           detailIndex={detailIndex}
-          currentUserId={currentUserId}
-          locked={
-            detailBlock
-              ? isLearnerMode
-                ? isLearnerMapBlockLocked(detailBlock, nodes)
-                : isBlockLockedUntilCompleted(
-                    detailBlock as MapGroundBlockRef,
-                    new Map(nodes.map((n) => [n.id, n as MapGroundBlockRef])),
-                  )
-              : false
-          }
           onBlocksUpdated={handleBlocksUpdated}
-          onDynamicGenerated={handleDynamicGenerated}
-          onSavePlanningPrompt={async (prompt) => {
-            if (!detailBlock) return;
-            await handleSavePlanningPrompt(detailBlock.id, prompt);
-          }}
-          onLaunchIntent={
-            currentUserId && detailBlock
-              ? async (target, options) => {
-                  await handleLaunchIntent(detailBlock, target, options);
-                }
-              : undefined
-          }
           combineBlockIds={combineBlockIds}
           isAddingBlock={isAddingBlock}
           onCombine={handleCombineBlocks}
@@ -1026,13 +1034,18 @@ export function WorkspaceView({
           onDeleteBlocks={handleDeleteBlocks}
           onBridgePreviewChange={setAddExpandPreviewCells}
           onCancelCombine={handleCloseCombine}
-          detailLockTitles={detailLockTitles}
           plan={plan}
           notesContent={notesContent}
           onUpdateBlock={handleUpdateBlock}
           onDeleteBlock={handleDeleteBlock}
           onSaveCreatorEffects={
             isOwner ? handleSaveCreatorEffects : undefined
+          }
+          onSaveAnswersModelSeed={
+            isOwner ? handleSaveAnswersModelSeed : undefined
+          }
+          onOpenUnsysStudio={
+            isOwner && !isLearnerMode ? setUnsysStudioBlockId : undefined
           }
           onSplitBlock={isOwner ? handleSplitBlock : undefined}
           cloneArmed={cloneArm.armed}
@@ -1063,8 +1076,6 @@ export function WorkspaceView({
           onDynamicPickModeChange={setDynamicPickActiveSafe}
           onRegisterDynamicBlockToggle={registerDynamicBlockToggle}
           workspaceFileItems={workspaceFileItems}
-          onSaveLocalContext={handleSaveLocalContext}
-          mapGroundBusy={mapGroundBusy}
           addTargetCell={addTargetCell}
           onSubmitAddBlock={handleSubmitAddBlock}
           onCancelEmptyCreate={handleCloseEmptyCreate}
@@ -1074,8 +1085,10 @@ export function WorkspaceView({
         )}
       </div>
       )}
+      </>
+      )}
 
-      {sectionLayout.showBlockMapChrome && !shell.playView ? (
+      {sectionLayout.showBlockMapChrome && !shell.playView && !unsysStudioBlock ? (
         <WorkspaceMobileTabBar
           mobileColumn={mobileColumn}
           onChange={setMobileColumn}

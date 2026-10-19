@@ -66,6 +66,7 @@ describe("one workspace surface", () => {
       "workspace",
       "dags",
       "map_types",
+      "unsys_models",
       "context",
       "settings",
     ]);
@@ -118,8 +119,8 @@ describe("one workspace surface", () => {
     );
     const shell = read("components/WorkspaceView.tsx");
     expect(shell).toContain("authoring: authoringOnMap");
-    expect(shell).toContain("workspaceLearnerPaneMounted");
-    expect(shell).toContain("learnerActionRequested: learnerDrawerRequest != null");
+    expect(shell).not.toContain("workspaceLearnerPaneMounted");
+    expect(shell).not.toContain("learnerActionRequested: learnerDrawerRequest != null");
     const explorePane = read("components/WorkspaceEmptyMapPane.tsx");
     expect(explorePane).toContain("Expand Map");
     expect(explorePane).toContain("data-expand-map-title");

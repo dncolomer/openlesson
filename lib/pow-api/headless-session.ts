@@ -10,13 +10,13 @@ import {
   type StoredFlowEmbedding,
 } from "@/lib/flow-embedding-store";
 import type { FlowKind, FlowPowRow } from "@/lib/flow-embedding";
-import { parseLearningModelSize, type LearningModelSize } from "@/lib/learning-model";
 import {
   sessionBranchById,
   type SessionBranchModel,
 } from "@/lib/session-branch-model";
 import {
   applyPolicyInference,
+  sessionPolicyCandidateLines,
   sessionPolicyProofFromCanvas,
   type SessionPolicyInference,
   type SessionPolicyProofEvent,
@@ -24,7 +24,6 @@ import {
 import { generateSessionBranchModel } from "@/lib/session-branch-model-generate";
 import { inferSessionPolicyReply } from "@/lib/session-policy-infer-xai";
 import { scorePolicySequence } from "@/lib/session-policy-score";
-import type { SessionMarkButtonId } from "@/lib/session-marks";
 import {
   TAP_LINK_DEFAULT_MINUTES,
   TAP_LINK_MAX_MINUTES,
@@ -63,7 +62,8 @@ export type HeadlessSessionRecord = {
   workspace_id: string;
   block_id: string | null;
   flow_kind: HeadlessFlowKind;
-  catalog_size: LearningModelSize;
+  /** Unused. Kept for stored rows. New records write 0. */
+  catalog_size?: number;
   chapter_title: string;
   chapter_brief: string;
   started_at_ms: number;
@@ -72,7 +72,7 @@ export type HeadlessSessionRecord = {
   status: "in_progress" | "ended" | "expired";
   prepared: SessionBranchModel;
   model: SessionBranchModel;
-  sequence: SessionMarkButtonId[];
+  sequence: string[];
   inferences: SessionPolicyInference[];
   proof: FlowPowRow[];
   source: "agent";
@@ -172,7 +172,7 @@ export function presentHeadlessSession(session: HeadlessSessionRecord, atMs = no
     workspace_id: session.workspace_id,
     block_id: session.block_id,
     flow_kind: session.flow_kind,
-    catalog_size: session.catalog_size,
+    catalog_size: session.catalog_size ?? 0,
     chapter_title: session.chapter_title,
     status: session.status,
     started_at: new Date(session.started_at_ms).toISOString(),
@@ -188,7 +188,6 @@ export function presentHeadlessSession(session: HeadlessSessionRecord, atMs = no
     inferences: session.inferences,
     focus: presentFocus(session.model),
     answers_model: {
-      catalog_size: session.prepared.catalogSize,
       chapter_title: session.prepared.chapterTitle,
       root_id: session.prepared.rootId,
       focus_id: session.model.focusId,
@@ -210,6 +209,7 @@ export type StartHeadlessSessionInput = {
   workspaceId: string;
   blockId?: string | null;
   flowKind: HeadlessFlowKind;
+  /** Ignored. The answers model no longer takes a catalog size. */
   catalogSize?: unknown;
   durationMinutes?: unknown;
   chapterTitle?: string | null;
@@ -226,7 +226,6 @@ export async function startHeadlessSession(
   }
   const chapterTitle = (input.chapterTitle || "").trim() || "Session";
   const chapterBrief = (input.chapterBrief || "").trim();
-  const catalogSize = parseLearningModelSize(input.catalogSize);
   const minutes = normalizeTapLinkMinutes(
     input.durationMinutes,
     TAP_LINK_DEFAULT_MINUTES,
@@ -240,7 +239,6 @@ export async function startHeadlessSession(
     const generated = await generateModel()({
       chapterTitle,
       chapterBrief,
-      catalogSize,
     });
     if (!generated.ok) {
       throw new Error(generated.error || "Failed to prepare the answers model.");
@@ -253,7 +251,7 @@ export async function startHeadlessSession(
     workspace_id: input.workspaceId,
     block_id: input.blockId?.trim() || null,
     flow_kind: flowKind,
-    catalog_size: prepared.catalogSize || catalogSize,
+    catalog_size: 0,
     chapter_title: chapterTitle,
     chapter_brief: chapterBrief,
     started_at_ms: started,
@@ -414,13 +412,14 @@ export async function ingestHeadlessProofOfWork(input: {
       events: proofEvents,
       chapterTitle: session.chapter_title,
       chapterBrief: session.chapter_brief,
+      candidates: sessionPolicyCandidateLines(session.model),
     });
     if (inferred.ok) {
       const applied = applyPolicyInference(session.model, inferred.reply);
       if (applied) {
         session.model = applied.model;
         session.inferences = [...session.inferences, applied.entry];
-        session.sequence = [...session.sequence, applied.entry.action];
+        session.sequence = [...session.sequence, applied.entry.hiddenStateId];
       }
     }
   }
@@ -445,7 +444,6 @@ export async function endHeadlessSession(sessionId: string): Promise<HeadlessSes
     runId: session.id,
     source: "headless",
     model: session.prepared,
-    catalogSize: session.catalog_size,
     sequence: session.sequence,
     pow: session.proof,
   });

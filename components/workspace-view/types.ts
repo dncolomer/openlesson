@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import type { Block, Workspace } from "@/lib/domain/types";
 import type { AnnotationLayer } from "@/lib/map-annotation-layers";
 import type { LearnerMapNote } from "@/lib/learner-map-notes";
+import { normalizeAuthorUnsysModelSeed } from "@/lib/author-unsys-model";
 import { parseBlockCreatorEffects } from "@/lib/block-creator-effects";
 import { parseWorkspacePracticeOptions } from "@/lib/block-practice-options";
 import { parseBlockLocalContext } from "@/lib/prompt-workspace-context";
@@ -42,6 +43,7 @@ export type WorkspaceBlockApiNode = Block & {
   local_context?: unknown;
   practice_options?: unknown;
   creator_effects?: unknown;
+  answers_model_seed?: unknown;
 };
 
 export interface WorkspaceViewProps {
@@ -81,6 +83,7 @@ export function parseSectionParam(value: string | null): WorkspaceSectionKey | n
     value === "simulation" ||
     value === "dags" ||
     value === "map_types" ||
+    value === "unsys_models" ||
     value === "goals" ||
     value === "verification_flows" ||
     value === "calibration_flows" ||
@@ -107,6 +110,7 @@ export function mapWorkspaceNodes(
     creator_effects: parseBlockCreatorEffects(n.creator_effects, {
       selfBlockId: n.id,
     }),
+    answers_model_seed: normalizeAuthorUnsysModelSeed(n.answers_model_seed),
   }));
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   LEARNING_MODEL_CATALOG_16,
@@ -23,9 +23,6 @@ describe("learning model vocabulary and catalogs", () => {
   it("names the product the unsys model", () => {
     expect(LEARNING_MODEL_NAME).toBe("unsys model");
     expect(LEARNING_MODEL_PUBLIC_LABEL).toBe("Unsys model");
-    expect(read("components/learning-model/LearningModelSizePicker.tsx")).toContain(
-      "LEARNING_MODEL_PUBLIC_LABEL",
-    );
     expect(read("lib/science/learning-model-copy.ts")).toContain("The unsys model");
     expect(read("lib/science/learning-model-copy.ts")).toContain("UNSYS MODEL");
     expect(read("lib/science/hub.ts")).toContain("LEARNING_MODEL_PUBLIC_LABEL");
@@ -73,14 +70,16 @@ describe("learning model vocabulary and catalogs", () => {
     ]);
   });
 
-  it("lets a learning workspace pick size in settings and a flow pick size per flow", () => {
-    expect(read("components/WorkspaceIdentitySettings.tsx")).toContain("LearningModelSizePicker");
-    expect(read("components/WorkspaceIdentitySettings.tsx")).toContain("showLearningModel");
-    expect(read("components/CalibrationFlowsPanel.tsx")).toContain("LearningModelSizePicker");
-    expect(read("components/CalibrationFlowsPanel.tsx")).toContain("actionCatalog");
-    expect(read("components/VerificationFlowsPanel.tsx")).toContain("LearningModelSizePicker");
-    expect(read("app/api/workspace/calibration-flows/route.ts")).toContain("actionCatalog");
-    expect(read("app/api/workspace/verification-flows/route.ts")).toContain("actionCatalog");
+  it("does not let product pages pick a 4/8/16 action catalog", () => {
+    expect(existsSync(join(ROOT, "components/learning-model/LearningModelSizePicker.tsx"))).toBe(
+      false,
+    );
+    expect(read("components/WorkspaceIdentitySettings.tsx")).not.toContain("LearningModelSizePicker");
+    expect(read("components/CalibrationFlowsPanel.tsx")).not.toContain("LearningModelSizePicker");
+    expect(read("components/VerificationFlowsPanel.tsx")).not.toContain("LearningModelSizePicker");
+    expect(read("components/product-flow/product-flow-wizard.tsx")).not.toContain(
+      "LearningModelSizePicker",
+    );
     expect(read("app/api/workspaces/[id]/visibility/route.ts")).toContain("learning_model_size");
   });
 });

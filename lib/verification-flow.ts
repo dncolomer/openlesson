@@ -8,7 +8,6 @@
 import { normalizeFlowName } from "@/lib/product-flow";
 import { TUTOR_CANVAS_VOICE } from "@/lib/prompt-kernel/tutor-voice";
 import { completeFlowEmbedding, FLOW_EMBEDDING_MODEL_ID } from "@/lib/flow-embedding";
-import type { SessionMarkButtonId } from "@/lib/session-marks";
 import type { SessionBranchModel } from "@/lib/session-branch-model";
 import {
   createCustomVerificationModelFromVectors,
@@ -284,15 +283,15 @@ export function verificationProofEmbedding(input: {
   prompt: string;
   source?: "runner" | "skill" | "synthetic";
   workspaceId?: string;
+  /** Ignored. Catalog size is no longer part of the gen model. */
   catalogSize?: unknown;
-  /** Prepared tree and the actions taken. The embedding then includes the policy distance. */
-  policy?: { model: SessionBranchModel; sequence: readonly SessionMarkButtonId[] } | null;
+  /** Prepared tree and the hidden-state path. The embedding then includes the policy distance. */
+  policy?: { model: SessionBranchModel; sequence: readonly string[] } | null;
 }): number[] {
   const source = input.source ?? "runner";
   return completeFlowEmbedding({
     flowKind: "verify",
     model: input.policy?.model ?? null,
-    catalogSize: input.catalogSize ?? input.policy?.model?.catalogSize,
     sequence: input.policy?.sequence ?? null,
     pow: [
       {

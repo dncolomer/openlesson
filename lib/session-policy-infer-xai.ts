@@ -1,10 +1,9 @@
 /**
- * Ask xAI which discrete policy action matches a batch of canvas proof,
- * or to rephrase the lowest-cost next action for the Learn sidebar.
+ * Ask xAI which hidden state matches a batch of canvas proof,
+ * or to rephrase the cheapest next hidden state for the Learn sidebar.
  * Do not import this module from a "use client" file or from a test.
  */
 
-import type { SessionMarkButtonId } from "@/lib/session-marks";
 import type { SessionPolicyProofEvent } from "@/lib/session-policy-infer";
 import { callXai, systemMessage, userMessage, type JsonSchema, type Message } from "@/lib/xai-client";
 
@@ -44,31 +43,17 @@ async function callPolicyXai<T extends Record<string, unknown>>(
   return { ok: false, error: "The policy could not be read." };
 }
 
-const CONFIDENCE_SCHEMA: JsonSchema = {
-  name: "session_policy_confidence",
+const HIDDEN_STATE_SCHEMA: JsonSchema = {
+  name: "session_policy_hidden_state",
   strict: true,
   schema: {
     type: "object",
     additionalProperties: false,
-    required: [
-      "close",
-      "keep",
-      "discard",
-      "insight",
-      "closeLine",
-      "keepLine",
-      "discardLine",
-      "insightLine",
-    ],
+    required: ["hiddenStateId", "confidence", "line"],
     properties: {
-      close: { type: "number" },
-      keep: { type: "number" },
-      discard: { type: "number" },
-      insight: { type: "number" },
-      closeLine: { type: "string" },
-      keepLine: { type: "string" },
-      discardLine: { type: "string" },
-      insightLine: { type: "string" },
+      hiddenStateId: { type: "string" },
+      confidence: { type: "number" },
+      line: { type: "string" },
     },
   },
 };
@@ -101,18 +86,16 @@ const SUGGESTION_SCHEMA: JsonSchema = {
 };
 
 const INFER_SYSTEM = [
-  "You match a learner's canvas work to four internal actions.",
-  "close: they are finishing this line and moving on.",
-  "keep: they are staying with this line and opening it further.",
-  "discard: they are setting this line aside.",
-  "insight: they are stating a conclusion.",
-  "Return a confidence from 0 to 1 for each action.",
-  "Also write closeLine, keepLine, discardLine, and insightLine.",
-  "Each line is one sentence a learner would recognize in this chapter, about the work just given.",
+  "You match a learner's canvas work to one hidden state on a frozen map.",
+  "Candidates are listed with id, title, question, and observation.",
+  "Pick the candidate whose observation or question best matches the work.",
+  "hiddenStateId must be one of the listed ids.",
+  "Return confidence from 0 to 1.",
+  "line is one sentence a learner would recognize in this chapter, about that hidden state and the work just given.",
   "Address the learner as you. Do not use I, me, or my.",
   "Do not use the words Close, Keep, Discard, Insight, Forage, Exploit, Avoid, or Infer.",
   "Do not mention a price, a score, or a policy.",
-  "Use only the chapter and the work given.",
+  "Use only the chapter, the candidates, and the work given.",
 ].join("\n");
 
 const GAP_SYSTEM = [
@@ -125,19 +108,13 @@ const GAP_SYSTEM = [
 ].join("\n");
 
 const SUGGEST_SYSTEM = [
-  "Write one short sentence that tells the learner what to do next on the canvas.",
+  "Write one short sentence that points the learner at the next hidden state.",
   "Address the learner as you. Do not use I, me, or my.",
-  "Follow the intent. Use the canvas notes when they make the sentence more specific.",
+  "Name the work they should do toward that hidden state's question or observation.",
+  "Use the canvas notes when they make the sentence more specific.",
   "Do not use the words Close, Keep, Discard, Insight, Forage, Exploit, Avoid, or Infer.",
   "Do not mention a price, a score, or a policy.",
 ].join("\n");
-
-const PRIVATE_INTENT: Record<SessionMarkButtonId, string> = {
-  try: "Finish this line and move to the next one.",
-  hold: "Stay with this line and open it further.",
-  drop: "Set this line aside.",
-  insight: "State the conclusion this work is pointing at.",
-};
 
 function textOf(value: unknown): string {
   return typeof value === "string" ? value.replace(/\s+/g, " ").trim() : "";
@@ -154,6 +131,7 @@ export async function inferSessionPolicyReply(input: {
   events: readonly SessionPolicyProofEvent[];
   chapterTitle?: string | null;
   chapterBrief?: string | null;
+  candidates?: string | null;
 }): Promise<{ ok: true; reply: string } | { ok: false; error: string }> {
   const events = input.events;
   if (!events.length) return { ok: false, error: "The policy could not be read." };
@@ -162,14 +140,15 @@ export async function inferSessionPolicyReply(input: {
   const prompt = [
     title ? `Chapter: ${title}.` : "",
     brief ? `Material:\n${brief}` : "",
+    textOf(input.candidates) ? `Hidden states:\n${textOf(input.candidates)}` : "",
     `Work:\n${workLines(events)}`,
   ]
     .filter(Boolean)
     .join("\n\n");
   const response = await callPolicyXai<Record<string, unknown>>(
     [systemMessage(INFER_SYSTEM), userMessage(prompt)],
-    CONFIDENCE_SCHEMA,
-    { maxTokens: 500, temperature: 0.2 },
+    HIDDEN_STATE_SCHEMA,
+    { maxTokens: 400, temperature: 0.2 },
   );
   if (!response.ok) return { ok: false, error: response.error };
   return { ok: true, reply: JSON.stringify(response.data) };
@@ -208,13 +187,12 @@ export async function inferSessionGapReply(input: {
 }
 
 export async function suggestSessionPolicyReply(input: {
-  action: SessionMarkButtonId;
   nodeTitle: string;
   observation: string;
   intent: string;
   canvasNote: string;
 }): Promise<{ ok: true; reply: string } | { ok: false; error: string }> {
-  const intent = textOf(input.intent) || textOf(input.observation) || PRIVATE_INTENT[input.action];
+  const intent = textOf(input.intent) || textOf(input.observation);
   if (!intent) return { ok: false, error: "The policy could not be read." };
   const prompt = [
     textOf(input.nodeTitle) ? `Node: ${textOf(input.nodeTitle)}.` : "",

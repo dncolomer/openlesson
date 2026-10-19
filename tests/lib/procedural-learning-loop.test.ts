@@ -148,11 +148,11 @@ describe("product-intent surfaces (Explore/Drill always With AI)", () => {
     expect(sessionItem).not.toContain("Start Timed Exploration");
     expect(sessionItem).not.toMatch(/>\s*Timed\s*</);
 
-    // Map practice badges: Explore / Drill only
+    // Map practice badges: Learn only
     const badges = read("components/block-skill-grid/map-tile-badges.tsx");
     expect(badges).toContain('"Learn"');
     expect(badges).not.toContain('"Drill"');
-    expect(badges).toContain('"Calibrate"');
+    expect(badges).not.toContain('"Calibrate"');
     expect(badges).not.toContain('? "With AI"');
     expect(badges).not.toContain(': "Solo"');
     expect(badges).not.toContain('? "Open-ended"');
@@ -528,16 +528,15 @@ describe("simulation collection CRUD + modifier", () => {
     expect(multi).toContain("multi_block");
 
     const combine = read("components/WorkspaceCombineBlocksPane.tsx");
-    expect(combine).toContain("WorkspaceMultiBlockSimulationPanel");
-    expect(combine).toContain('drawerId="simulation"');
-    expect(combine).toContain("data-multi-block-simulation-drawer");
+    expect(combine).not.toContain("WorkspaceMultiBlockSimulationPanel");
+    expect(combine).not.toContain('drawerId="simulation"');
+    expect(combine).not.toContain("data-multi-block-simulation-drawer");
 
-    // Single-block drawer still on block detail
     const detail = read("components/WorkspaceBlockDetailPane.tsx");
-    expect(detail).toContain("WorkspaceBlockSimulationPanel");
-    expect(detail).toContain('drawerId="simulation"');
-    expect(detail).toContain('title="Simulate Insights"');
-    expect(combine).toContain('title="Simulate Insights"');
+    expect(detail).not.toContain("WorkspaceBlockSimulationPanel");
+    expect(detail).not.toContain('drawerId="simulation"');
+    expect(detail).not.toContain('title="Simulate Insights"');
+    expect(combine).not.toContain('title="Simulate Insights"');
     const jobRoute = read("app/api/workspace/simulate-insights/route.ts");
     expect(jobRoute).toContain("Simulate Insights runs on a block");
     expect(jobRoute).toContain("runSimulateInsightsJob");
@@ -551,8 +550,8 @@ describe("simulation collection CRUD + modifier", () => {
       uiPrev +
         [
           "section=Simulate Insights",
-          "block_drawer=Simulate Insights",
-          "multi_drawer=Simulate Insights",
+          "block_drawer=unmounted",
+          "multi_drawer=unmounted",
           "keep=data-simulate-insights-keep",
           "job_start=POST /api/workspace/simulate-insights",
           "job_read=GET after status completed",

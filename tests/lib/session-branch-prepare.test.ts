@@ -33,7 +33,31 @@ describe("session branch prepare", () => {
       chapterBrief: "A cause can fail.",
       sessionId: "session-1",
       ileToken: "ile",
-      catalogSize: 4,
+    });
+  });
+
+  it("keeps Learn on the session route and sends the block seed id", () => {
+    const learn = learnSessionFieldInput({
+      sessionId: "session-1",
+      problem: "A cause",
+      plan: {
+        steps: [{ id: "chapter-1", description: "Just war" }],
+        currentStepIndex: 0,
+      },
+      ileToken: "ile",
+      metadata: { workspace_id: "ws-1", block_id: "block-1" },
+    });
+    expect(learn?.blockId).toBe("block-1");
+    expect(learn?.workspaceId).toBe("ws-1");
+    const plan = planSessionBranchPrepare(learn);
+    expect(plan.kind).toBe("learn");
+    if (plan.kind !== "learn") return;
+    expect(plan.blockId).toBe("block-1");
+    expect(sessionBranchPrepareRequest(plan)).toMatchObject({
+      sessionId: "session-1",
+      blockId: "block-1",
+      workspaceId: "ws-1",
+      ileToken: "ile",
     });
   });
 
@@ -62,7 +86,6 @@ describe("session branch prepare", () => {
       chapterTitle: "Verification",
       chapterBrief: "",
       verificationToken: "ver-token",
-      catalogSize: 4,
     });
     expect(request).not.toHaveProperty("sessionId");
   });
@@ -149,51 +172,54 @@ describe("session branch prepare", () => {
     expect(planSessionBranchPrepare(verification).kind).toBe("verification");
   });
 
-  it("puts catalog size on every prepare request so 4/8/16 reach field prep", () => {
+  it("prepares Learn, Calibrate, and Verify without an action catalog size", () => {
     expect(
       sessionBranchPrepareRequest(
         planSessionBranchPrepare({
           chapterTitle: "Learn",
           sessionId: "session-1",
-          catalogSize: 8,
         }),
       ),
-    ).toMatchObject({ catalogSize: 8, sessionId: "session-1" });
+    ).toMatchObject({ sessionId: "session-1" });
+    expect(
+      sessionBranchPrepareRequest(
+        planSessionBranchPrepare({
+          chapterTitle: "Learn",
+          sessionId: "session-1",
+        }),
+      ),
+    ).not.toHaveProperty("catalogSize");
     expect(
       sessionBranchPrepareRequest(
         planSessionBranchPrepare({
           chapterTitle: "Calibration",
           calibrationToken: "cal-token",
-          catalogSize: 16,
         }),
       ),
-    ).toMatchObject({ catalogSize: 16, calibrationToken: "cal-token" });
+    ).toMatchObject({ calibrationToken: "cal-token" });
     expect(
       sessionBranchPrepareRequest(
         planSessionBranchPrepare({
           chapterTitle: "Verification",
           verificationToken: "ver-token",
-          catalogSize: 8,
         }),
       ),
-    ).toMatchObject({ catalogSize: 8, verificationToken: "ver-token" });
-    expect(calibrateFieldPrepareInput({ topicText: "Seed", catalogSize: 16 }).catalogSize).toBe(16);
-    expect(verificationFieldPrepareInput({ workspaceTitle: "W", catalogSize: 8 }).catalogSize).toBe(8);
+    ).toMatchObject({ verificationToken: "ver-token" });
+    expect(calibrateFieldPrepareInput({ topicText: "Seed" })).not.toHaveProperty("catalogSize");
+    expect(verificationFieldPrepareInput({ workspaceTitle: "W" })).not.toHaveProperty("catalogSize");
     expect(
       learnSessionFieldInput({
         sessionId: "s",
         problem: "P",
         plan: { steps: [{ id: "chapter-1", description: "C" }], currentStepIndex: 0 },
-        catalogSize: 8,
-      })?.catalogSize,
-    ).toBe(8);
+      }),
+    ).not.toHaveProperty("catalogSize");
     const route = read("app/api/ile/session-branch-model/route.ts");
-    expect(route).toContain("resolveCatalogSize");
+    expect(route).not.toContain("resolveCatalogSize");
     expect(route).toContain("generateSessionBranchOpening");
-    expect(read("lib/session-branch-model-generate.ts")).toContain("catalogSize");
-    expect(read("components/CalibrationFlowRunner.tsx")).toContain("catalogSize:");
-    expect(read("components/scout-tap/ScoutTapClient.tsx")).toContain("catalogSize");
-    expect(read("components/VerificationFlowRunner.tsx")).toContain("actionCatalog");
+    expect(read("lib/session-branch-model-generate.ts")).not.toContain("catalogSize");
+    expect(read("lib/session-branch-model-generate.ts")).toContain("SESSION_BRANCH_CHILD_MIN");
+    expect(read("lib/session-branch-model-generate.ts")).toContain("SESSION_BRANCH_CHILD_MAX");
   });
 
   it("prepares the field for Calibrate and Verification, and leaves conversational TAP alone", () => {

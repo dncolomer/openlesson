@@ -374,7 +374,8 @@ describe("circular menu source wiring", () => {
     expect(sessionList).not.toContain("practiceMenu");
     expect(wsView).not.toContain("nextLearnerDrawerRequest");
     expect(learner).toContain("requestedDrawerId");
-    expect(drawers).toContain("requestedDrawerId");
+    expect(drawers).not.toContain("requestedDrawerId");
+    expect(drawers).not.toContain("WorkspaceLearnerBlockPane");
     expect(workspaceCircularMenuDrawerId("start_session")).toBeNull();
     expect(workspaceCircularMenuStartsFreshExplore("start_prepare")).toBe(true);
     expect(workspaceCircularMenuStartsFreshExplore("start_session")).toBe(true);

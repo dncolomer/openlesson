@@ -119,75 +119,50 @@ describe("session branch model", () => {
     expect(model.boardNotes.map((note) => note.key)).toContain("r2-a3-q1");
     expect(model.focusId).toBe("root");
     expect(sessionBranchById(model, "r2-a3-q1")?.status).toBe("latent");
-    expect(sessionBranchById(model, "root")?.actions.find((action) => action.id === "hold")?.price).toBe(4);
+    expect(
+      sessionBranchById(model, "root")?.edges.find((edge) => edge.toId === "r1")?.price,
+    ).toBe(12);
     const clamped = normalizeSessionBranchModel(
-      { ...fieldDraft(), closePrice: 140, keepPrice: -8 },
+      {
+        ...fieldDraft(),
+        regions: [
+          {
+            ...(fieldDraft().regions as Record<string, unknown>[])[0]!,
+            edgePrice: 140,
+          },
+          ...((fieldDraft().regions as Record<string, unknown>[]).slice(1)),
+        ],
+      },
       "Just war",
     );
-    expect(sessionBranchById(clamped!, "root")?.actions.map((action) => action.price)).toEqual([100, 0, 60, 1]);
+    expect(
+      sessionBranchById(clamped!, "root")?.edges.find((edge) => edge.toId === "r1")?.price,
+    ).toBe(100);
   });
 
-  it("recommends the cheapest open action and insight only when nothing is open", () => {
+  it("recommends the cheapest outgoing hidden state", () => {
     const model = normalizeSessionBranchModel(fieldDraft(), "Just war");
     expect(model).toBeTruthy();
     if (!model) return;
-    expect(recommendSessionBranchAction(model, "root")?.id).toBe("hold");
-    const settled = {
-      ...model,
-      branches: model.branches.map((branch) => ({ ...branch, status: "closed" as const })),
-    };
-    expect(recommendSessionBranchAction(settled, "root")?.id).toBe("insight");
+    expect(recommendSessionBranchAction(model, "root")?.toId).toBe("r1");
+    expect(recommendSessionBranchAction(model, "root")?.price).toBe(12);
   });
 
-  it("opens the next ring and writes the observation", () => {
+  it("travels a priced edge and writes the observation", () => {
     const model = normalizeSessionBranchModel(fieldDraft(), "Just war");
     expect(model).toBeTruthy();
     if (!model) return;
-    const held = advanceSessionBranchModel(model, { action: "hold", branchId: "r1" });
+    const held = advanceSessionBranchModel(model, { toId: "r1", fromId: "root" });
     expect(held.focusId).toBe("r1");
-    expect(sessionBranchById(held, "r1-a1")?.status).toBe("open");
-    expect(sessionBranchById(held, "r1-a2")?.status).toBe("latent");
-    expect(held.boardNotes.some((note) => note.key === "r1-a1")).toBe(true);
+    expect(sessionBranchById(held, "r1")?.status).toBe("open");
+    expect(held.boardNotes.some((note) => note.text.includes("Region 1"))).toBe(true);
 
-    const dropped = advanceSessionBranchModel(held, { action: "drop", branchId: "r1-a1" });
-    expect(dropped.focusId).toBe("r1-a1");
-    expect(sessionBranchById(dropped, "r1-a2")?.status).toBe("open");
+    const deeper = advanceSessionBranchModel(held, { toId: "r1-a1", fromId: "r1" });
+    expect(deeper.focusId).toBe("r1-a1");
+    expect(sessionBranchById(deeper, "r1-a1")?.status).toBe("open");
 
-    const closed = advanceSessionBranchModel(model, { action: "try", branchId: "r1" });
-    expect(sessionBranchById(closed, "r1")?.status).toBe("closed");
-    expect(sessionBranchById(closed, "r1-a1")?.status).toBe("open");
-    expect(sessionBranchById(closed, "r1-a4")?.status).toBe("open");
-    expect(closed.focusId).toBe("r1-a1");
-
-    const finished = {
-      ...closed,
-      focusId: "r1-a1-q1",
-      branches: closed.branches.map((branch) =>
-        branch.id === "r1-a1-q1" ? { ...branch, status: "closed" as const } : branch,
-      ),
-    };
-    const insight = advanceSessionBranchModel(finished, { action: "insight", branchId: "r1-a1-q1" });
-    expect(insight.step).toBe(closed.step + 1);
-    expect(insight.boardNotes.some((note) => note.text.includes("settled"))).toBe(true);
-
-    const focus = sessionBranchById(model, "root");
-    const repeated = {
-      ...model,
-      branches: model.branches.map((branch) =>
-        branch.id === "root"
-          ? {
-              ...branch,
-              actions: branch.actions.map((action) =>
-                action.id === "hold"
-                  ? { ...action, observation: branch.observation, leads: "" }
-                  : action,
-              ),
-            }
-          : branch,
-      ),
-    };
-    const again = advanceSessionBranchModel(repeated, { action: "hold", branchId: "root" });
-    expect(again.boardNotes.some((note) => note.key === "root:hold:1" && note.text === focus?.observation)).toBe(true);
+    const again = advanceSessionBranchModel(model, { toId: "r1", fromId: "root" });
+    expect(again.boardNotes.some((note) => note.key.includes("root->r1"))).toBe(true);
   });
 
   it("grafts branches that arrive after the learner has already moved", () => {
@@ -207,12 +182,11 @@ describe("session branch model", () => {
     );
     expect(full && partial).toBeTruthy();
     if (!full || !partial) return;
-    const closed = advanceSessionBranchModel(partial, { action: "try", branchId: "r1" });
+    const closed = advanceSessionBranchModel(partial, { toId: "r1", fromId: "root" });
     const grafted = graftSessionBranchModel(closed, full);
     expect(grafted.step).toBe(closed.step);
     expect(grafted.focusId).toBe(closed.focusId);
-    expect(sessionBranchById(grafted, "r1")?.status).toBe("closed");
-    expect(sessionBranchById(grafted, "r1-a1")?.status).toBe("open");
+    expect(sessionBranchById(grafted, "r1")?.status).toBe("open");
     expect(sessionBranchById(grafted, "r2")?.status).toBe("open");
     expect(grafted.boardNotes.some((note) => note.key === "r2" && note.text.includes("Region 2"))).toBe(true);
     expect(grafted.boardNotes.some((note) => note.key === "r1-a1")).toBe(true);
@@ -298,7 +272,7 @@ describe("session branch model", () => {
         .map((element) => element.customData?.sessionBranchNote),
     ).toEqual(["r1-a1", "r1-a1-q1", "r2"]);
 
-    const moved = advanceSessionBranchModel(opening, { action: "hold" });
+    const moved = advanceSessionBranchModel(opening, { toId: "r1", fromId: "root" });
     const grafted = graftSessionBranchModel(moved, later);
     expect(grafted.step).toBe(1);
     expect(sessionBranchById(grafted, "r1-a1")?.status).toBe("latent");
@@ -346,14 +320,13 @@ describe("session branch model", () => {
       chapterTitle: "Just war",
       chapterBrief: "When is a war permitted?",
     });
-    expect(prompt).toContain("6 regions");
-    expect(prompt).toContain("4 avenues");
-    expect(prompt).toContain("3 inquiries");
+    expect(prompt).toContain("between 2 and 8 hidden states");
     expect(prompt).toContain("not a short quiz");
     expect(prompt).toContain("three-step maze");
     expect(prompt).toContain("genuine question");
     expect(prompt).toContain("Never wrap the title");
-    expect(SESSION_BRANCH_ACCEPT_COUNT).toBeGreaterThan(31);
+    expect(prompt).toContain("edgePrice");
+    expect(SESSION_BRANCH_ACCEPT_COUNT).toBe(8);
   });
 
   it("assembles a staged reply into one field", () => {
@@ -405,7 +378,7 @@ describe("session branch model", () => {
     expect(field).toContain("103 branches");
     expect(field).toContain('data-session-branch-state="latent"');
     expect(field).toContain("Ahead");
-    expect(field).toContain("Exploit 28");
+    expect(field).toContain("r1 12");
     expect(renderToStaticMarkup(createElement(SessionBranchFieldView, { slot: { status: "idle", model: null, error: null } }))).toBe("");
     expect(renderToStaticMarkup(createElement(SessionBranchFieldView, { slot: null }))).toBe("");
   });
@@ -421,7 +394,7 @@ describe("session branch model", () => {
       }),
     );
     expect(field).toContain("103 branches");
-    expect(field).not.toContain("Exploit 28");
+    expect(field).not.toContain("r1 12");
     expect(field).not.toContain("data-session-branch-prices");
   });
 });

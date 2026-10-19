@@ -31,6 +31,7 @@ import {
   recordPolicyInference,
   SESSION_POLICY_INFER_EVENT_THRESHOLD,
   SESSION_POLICY_INFER_INTERVAL_MS,
+  sessionPolicyCandidateLines,
   sessionPolicyInferDue,
   sessionPolicyProofFromCanvas,
   type SessionPolicyInference,
@@ -39,7 +40,7 @@ import {
 import { sessionPolicySnapshot } from "@/lib/session-policy-score";
 import type { SessionPolicyRecord } from "@/lib/session-policy-store";
 import { SessionCommandBridgeProvider } from "@/components/session-view/session-command-bridge";
-import type { SessionMarkButtonId, SessionMarkMode, SessionMarkState } from "@/lib/session-marks";
+import type { SessionMarkMode, SessionMarkState } from "@/lib/session-marks";
 
 const PublishContext = createContext<((state: SessionMarkState) => void) | null>(null);
 const StateContext = createContext<SessionMarkState | null>(null);
@@ -304,7 +305,12 @@ function SessionPolicyInferLoop({
     const batch = proofRef.current.slice();
     const token = inferToken.current;
     inflight.current = true;
-    void requestSessionPolicyReply({ ...prepare, phase: "infer", events: batch }).then((reply) => {
+    void requestSessionPolicyReply({
+      ...prepare,
+      phase: "infer",
+      events: batch,
+      candidates: sessionPolicyCandidateLines(model),
+    }).then((reply) => {
       if (inferToken.current !== token) return;
       lastInferAt.current = Date.now();
       if (!reply) return;
@@ -364,9 +370,8 @@ function SessionPolicyInferLoop({
     void requestSessionPolicyReply({
       ...prepare,
       phase: "suggest",
-      action: recommended.id,
-      nodeTitle: focus?.title ?? "",
-      observation: focus?.observation ?? "",
+      nodeTitle: recommended.leads || focus?.title || "",
+      observation: recommended.observation || focus?.observation || "",
       intent: recommended.observation.trim() || recommended.leads.trim(),
       canvasNote,
     }).then((reply) => {
@@ -451,7 +456,7 @@ export function useRestoreSessionPolicy(): (record: SessionPolicyRecord) => void
 
 export type SessionPolicySnapshot = {
   model: SessionBranchModel | null;
-  sequence: SessionMarkButtonId[];
+  sequence: string[];
 };
 
 export function emptySessionPolicySnapshot(): SessionPolicySnapshot {
@@ -466,7 +471,7 @@ export function SessionPolicyBridge({ target }: { target: MutableRefObject<Sessi
   const next = sessionPolicySnapshot(
     preparedRef.current,
     slot,
-    inferences.map((entry) => ({ button: entry.action })),
+    inferences.map((entry) => ({ hiddenStateId: entry.hiddenStateId })),
   );
   preparedRef.current = next.prepared;
   target.current = next.snapshot;

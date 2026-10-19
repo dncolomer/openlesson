@@ -57,7 +57,7 @@ export type WorkspaceAddBlockSubmitOpts = {
 /**
  * Right-column Add block form for a single empty placeable cell.
  * One drawer only: prompt, attach context (generation + save), expand, starter.
- * Post-create Local context / Dynamic / Generator live on the block detail pane.
+ * Post-create Dynamic / Generator live on the block detail pane.
  *
  * Range/Density expand a circle of placeable empties for multi 1×1 create
  * (cold-start) — not generate-in-shape.

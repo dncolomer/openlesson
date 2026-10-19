@@ -1,6 +1,6 @@
 /**
- * /workspace/new no longer offers From Files + Goal.
- * Drives the shipped UI mode list and a static read of the create page.
+ * /workspace/new auto-creates a blank map.
+ * Template / Files + Goal remain API generate paths, not create-page cards.
  */
 import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -27,11 +27,12 @@ function writeScratch(name: string, body: string) {
 }
 
 describe("workspace create UI modes", () => {
-  it("shipped list is blank + template; files_goal is not selectable", () => {
-    expect(UI_WORKSPACE_CREATE_MODES).toEqual(["blank", "template"]);
+  it("shipped list is blank-only; template and files_goal are not selectable", () => {
+    expect(UI_WORKSPACE_CREATE_MODES).toEqual(["blank"]);
+    expect(UI_WORKSPACE_CREATE_MODES).not.toContain("template");
     expect(UI_WORKSPACE_CREATE_MODES).not.toContain("files_goal");
     expect(isUiWorkspaceCreateMode("blank")).toBe(true);
-    expect(isUiWorkspaceCreateMode("template")).toBe(true);
+    expect(isUiWorkspaceCreateMode("template")).toBe(false);
     expect(isUiWorkspaceCreateMode("knowledge_region")).toBe(false);
     expect(isUiWorkspaceCreateMode("calibration")).toBe(false);
     expect(isUiWorkspaceCreateMode("files_goal")).toBe(false);
@@ -49,35 +50,36 @@ describe("workspace create UI modes", () => {
     );
   });
 
-  it("create page has no From Files + Goal card or files_goal step", () => {
+  it("create page auto-creates blank and has no template / files_goal step", () => {
     const page = read("app/workspace/new/page.tsx");
-    expect(page).toContain("UI_WORKSPACE_CREATE_MODES");
-    expect(page).toContain("MODE_CARDS");
-    expect(page).toContain("data-create-mode-cards");
-    expect(page).toContain("Blank");
-    expect(page).toContain("From Template");
-    expect(page).toContain("createMode: \"blank\"");
-    expect(page).toContain("createMode: \"template\"");
+    expect(page).toContain("data-create-blank-map");
+    expect(page).toContain("createBlankMap");
+    expect(page).toContain('createMode: "blank"');
+    expect(page).not.toContain("UI_WORKSPACE_CREATE_MODES");
+    expect(page).not.toContain("MODE_CARDS");
+    expect(page).not.toContain("data-create-mode-cards");
+    expect(page).not.toContain("From Template");
+    expect(page).not.toContain('createMode: "template"');
     expect(page).not.toContain("createMode: \"knowledge_region\"");
-    expect(page).toContain("handleCreateBlank");
-    expect(page).toContain("handleCreateTemplate");
+    expect(page).not.toContain("handleCreateBlank");
+    expect(page).not.toContain("handleCreateTemplate");
     expect(page).not.toContain("handleCreateKnowledgeRegion");
     expect(page).not.toContain("Verification workspace");
     expect(page).not.toMatch(/From Files \+ Goal/);
     expect(page).not.toContain("files_goal");
     expect(page).not.toContain("handleCreateFilesGoal");
-    expect(page).toContain("data-template-file-upload");
-    expect(page).toContain("isUiWorkspaceCreateMode");
+    expect(page).not.toContain("data-template-file-upload");
+    expect(page).not.toContain("isUiWorkspaceCreateMode");
 
     writeScratch(
       "workspace-create-excerpts.txt",
       [
-        "page uses UI_WORKSPACE_CREATE_MODES for MODE_CARDS",
-        "cards: Learning holds AYCL, Blank, From Template; flows live on Dashboard",
+        "page auto-creates blank map on /workspace/new",
+        "no MODE_CARDS / From Template / AYCL chooser",
         "no From Files + Goal card",
         "no files_goal form/step",
         "no handleCreateFilesGoal",
-        "createMode blank + template remain on /workspace/new",
+        "createMode blank only on /workspace/new",
       ].join("\n"),
     );
   });

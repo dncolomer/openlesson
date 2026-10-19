@@ -89,7 +89,8 @@ describe("science learning model page", () => {
     expect(SCIENCE_LEARNING_MODEL_COPY.calibrate).toMatch(/prior over hidden states/);
     expect(SCIENCE_LEARNING_MODEL_COPY.learn).toMatch(/cost/);
     expect(SCIENCE_LEARNING_MODEL_COPY.learn).toMatch(/visible/);
-    expect(SCIENCE_LEARNING_MODEL_COPY.learn).toMatch(/expected-free-energy price/);
+    expect(SCIENCE_LEARNING_MODEL_COPY.learn).toMatch(/priced edges/);
+    expect(SCIENCE_LEARNING_MODEL_COPY.how).toMatch(/expected-free-energy price/);
     expect(SCIENCE_LEARNING_MODEL_COPY.verify).toMatch(/hidden/);
     expect(SCIENCE_LEARNING_MODEL_COPY.verify).toMatch(/Distance 0/);
     expect(SCIENCE_LEARNING_MODEL_COPY.verify).toMatch(/cheapest policy/);

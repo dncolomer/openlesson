@@ -88,8 +88,6 @@ export type TapScoreSession = {
   sidebarMode?: Extract<SessionSidebarMode, "tap" | "verification-tap">;
   workspaceTitle?: string;
   verificationToken?: string | null;
-  /** 4, 8, or 16 — the catalog this verification run prepares. */
-  actionCatalog?: 4 | 8 | 16;
   startingTopics?: readonly TapStartingTopic[];
   logTapTrace: (input: {
     traceType: TapTraceType;
@@ -347,7 +345,6 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
               privateToken: s.privateToken,
               verificationToken: s.verificationToken,
               entryQueryParams: s.entryQueryParamsRef.current,
-              catalogSize: s.actionCatalog,
             }),
           );
           if (!sessionClockMayStart({ mode: "verification", fieldReady: field.ok })) {
@@ -408,7 +405,6 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
             privateToken: s.privateToken,
             verificationToken: s.verificationToken,
             entryQueryParams: s.entryQueryParamsRef.current,
-            catalogSize: s.actionCatalog,
           }),
         );
         if (!sessionClockMayStart({ mode: "verification", fieldReady: field.ok })) {
@@ -507,7 +503,6 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
         runId: s.tapSessionIdRef.current || s.sessionId || null,
         source: "runner",
         model: policy.model,
-        catalogSize: policy.model.catalogSize ?? s.actionCatalog,
         sequence: policy.sequence,
         pow: [
           { type: "speech", tool_name: "runner", timestamp_ms: 1, payload: prompt },

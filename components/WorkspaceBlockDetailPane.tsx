@@ -1,13 +1,18 @@
 "use client";
 
-import { useMemo, type ReactNode } from "react";
+import { useMemo } from "react";
 import {
   WorkspaceRightPaneDrawer,
   WorkspaceRightPaneDrawerGroup,
   resolveDetailDrawerDefaultOpenId,
 } from "@/components/WorkspaceRightPaneDrawer";
 import { WorkspaceBlockEditPanel } from "@/components/WorkspaceBlockEditPanel";
-import { WorkspaceBlockSimulationPanel } from "@/components/WorkspaceBlockSimulationPanel";
+import { WorkspaceBlockUnsysModelPanel } from "@/components/WorkspaceBlockUnsysModelPanel";
+import {
+  AUTHOR_UNSYS_MODEL_DRAWER_ID,
+  AUTHOR_UNSYS_MODEL_DRAWER_TITLE,
+  type AuthorUnsysModelSeed,
+} from "@/lib/author-unsys-model";
 import { WorkspaceSplitBlockPane } from "@/components/WorkspaceSplitBlockPane";
 import { WorkspaceCloneBlockPane } from "@/components/WorkspaceCloneBlockPane";
 import {
@@ -24,10 +29,6 @@ import {
   blockOffersSplitDrawer,
   type SplitCandidateBlock,
 } from "@/lib/workspace-right-pane";
-import {
-  normalizeBlockLocalContext,
-  type BlockLocalContextInput,
-} from "@/lib/prompt-workspace-context";
 import type { ExpandSourceIdentity } from "@/lib/expand-block-from-source";
 import type { SkillGridNode } from "@/lib/block-skill-grid";
 import type { PlacedBlockRef } from "@/lib/skill-grid-ops";
@@ -35,25 +36,22 @@ import type { BlockCreatorEffects } from "@/lib/block-creator-effects";
 
 /**
  * Block-detail right column (creator mode): peer top-level drawers —
- * Simulation, Split (multi-cell), Expand, Edit, Goals (post-creation),
- * Dynamic / Generator effects, Local context.
+ * Unsys model, Split (multi-cell), Expand, Edit, Goals (post-creation),
+ * Dynamic / Generator effects.
  * Title/description live in Edit; delete lives in the Danger zone drawer
- * at the bottom of the combined authoring + practice column.
+ * at the bottom of the authoring column.
  * Clone is a drawer on this stack (arm, then click an empty cell).
  * Accordion: opening any drawer collapses the others.
  * No X close on drawers; dismiss via map selection clear.
  */
 export function WorkspaceBlockDetailPane({
-  localContextPanel,
   blockId,
   blockTitle,
   blockDescription,
   planningPrompt,
-  localContext,
-  blockStatus,
   isStart,
   creatorEffects = null,
-  lockUntilTitles,
+  answersModelSeed = null,
   spanW,
   spanH,
   shapeCells,
@@ -66,6 +64,8 @@ export function WorkspaceBlockDetailPane({
   editBusy = false,
   onUpdateBlock,
   onSaveCreatorEffects,
+  onSaveAnswersModelSeed,
+  onOpenUnsysStudio,
   onSplitBlock,
   cloneArmed = false,
   onCloneArm,
@@ -80,22 +80,16 @@ export function WorkspaceBlockDetailPane({
   onDynamicUnlockPreviewChange,
   onDynamicPickModeChange,
   onRegisterDynamicBlockToggle,
-  workspaceGoal,
-  workspaceTitle,
-  rootTopic,
-  workspaceNotes,
 }: {
-  localContextPanel: ReactNode;
   blockId: string;
   blockTitle: string;
   blockDescription?: string | null;
   planningPrompt?: string | null;
-  localContext?: BlockLocalContextInput | null;
-  blockStatus?: string | null;
   isStart?: boolean | null;
   /** Combinable Dynamic / Generator effects. */
   creatorEffects?: BlockCreatorEffects | null;
-  lockUntilTitles?: string[];
+  /** Saved unsys answers-model seed for this block. */
+  answersModelSeed?: unknown;
   spanW?: number | null;
   spanH?: number | null;
   shapeCells?: SplitCandidateBlock["shape_cells"];
@@ -105,11 +99,6 @@ export function WorkspaceBlockDetailPane({
   workspaceId?: string;
   ayclToken?: string;
   locale?: string;
-  /** Workspace identity for Simulation probe grounding (live Explore/Drill parity). */
-  workspaceGoal?: string | null;
-  workspaceTitle?: string | null;
-  rootTopic?: string | null;
-  workspaceNotes?: string | null;
   canEdit?: boolean;
   editBusy?: boolean;
   onUpdateBlock?: (input: {
@@ -121,6 +110,11 @@ export function WorkspaceBlockDetailPane({
   onSaveCreatorEffects?: (
     input: WorkspaceBlockEffectsSaveInput,
   ) => Promise<void> | void;
+  onSaveAnswersModelSeed?: (input: {
+    blockId: string;
+    seed: AuthorUnsysModelSeed | null;
+  }) => Promise<void> | void;
+  onOpenUnsysStudio?: (blockId: string) => void;
   onSplitBlock?: (input: {
     blockId: string;
     prompt?: string;
@@ -156,8 +150,6 @@ export function WorkspaceBlockDetailPane({
   /** @deprecated Selection-driven dismiss; no drawer X. */
   onClose?: () => void;
 }) {
-  const localNorm = normalizeBlockLocalContext(localContext);
-  const hasLocalMaterials = localNorm.hasLocalMaterials;
   const splitCandidate: SplitCandidateBlock & {
     id: string;
     title?: string | null;
@@ -196,7 +188,6 @@ export function WorkspaceBlockDetailPane({
   );
 
   const defaultOpenId = resolveDetailDrawerDefaultOpenId({
-    hasLocalMaterials,
     showSplit: showSplitDrawer,
     canEdit,
   });
@@ -208,37 +199,33 @@ export function WorkspaceBlockDetailPane({
       data-workspace-block-detail-pane
       data-block-detail-drawers
       data-block-detail-mini-tabs
-      data-block-has-local-context={hasLocalMaterials ? "true" : "false"}
       className="flex h-full w-full min-h-0 flex-col overflow-hidden bg-neutral-950/95"
     >
-      <WorkspaceRightPaneDrawer
-        variant="section"
-        drawerId="simulation"
-        title="Simulate Insights"
-        defaultExpanded={false}
-        bodyClassName="space-y-3"
-      >
-        <div data-block-detail-tab-content="simulation">
-          <WorkspaceBlockSimulationPanel
-            workspaceId={workspaceId}
-            blockId={blockId}
-            blockTitle={blockTitle}
-            blockDescription={blockDescription}
-            planningPrompt={planningPrompt}
-            localContext={localContext}
-            blockStatus={blockStatus}
-            isStart={isStart}
-            lockUntilTitles={lockUntilTitles}
-            canEdit={canEdit}
-            ayclToken={ayclToken}
-            locale={locale}
-            workspaceGoal={workspaceGoal}
-            workspaceTitle={workspaceTitle}
-            rootTopic={rootTopic}
-            workspaceNotes={workspaceNotes}
-          />
-        </div>
-      </WorkspaceRightPaneDrawer>
+      {canEdit ? (
+        <WorkspaceRightPaneDrawer
+          variant="section"
+          drawerId={AUTHOR_UNSYS_MODEL_DRAWER_ID}
+          title={AUTHOR_UNSYS_MODEL_DRAWER_TITLE}
+          defaultExpanded={false}
+          bodyClassName="space-y-3"
+          surfaceDataAttr="data-author-unsys-model-drawer"
+        >
+          <div data-block-detail-tab-content="unsys_model">
+            <WorkspaceBlockUnsysModelPanel
+              blockId={blockId}
+              blockTitle={blockTitle}
+              seed={answersModelSeed}
+              canEdit={canEdit}
+              busy={editBusy}
+              workspaceId={workspaceId}
+              ayclToken={ayclToken}
+              locale={locale}
+              onOpenStudio={onOpenUnsysStudio}
+              onSaveSeed={onSaveAnswersModelSeed}
+            />
+          </div>
+        </WorkspaceRightPaneDrawer>
+      ) : null}
 
       {showSplitDrawer ? (
         <WorkspaceRightPaneDrawer
@@ -400,18 +387,6 @@ export function WorkspaceBlockDetailPane({
           </WorkspaceRightPaneDrawer>
         </>
       ) : null}
-
-      <WorkspaceRightPaneDrawer
-        variant="section"
-        drawerId="local"
-        title="Local context"
-        // Prefer local when materials exist *and* it is the only default — still
-        // collapses when another drawer is opened (accordion).
-        defaultExpanded={hasLocalMaterials}
-        bodyClassName="space-y-2"
-      >
-        <div data-block-detail-tab-content="local">{localContextPanel}</div>
-      </WorkspaceRightPaneDrawer>
     </WorkspaceRightPaneDrawerGroup>
   );
 }

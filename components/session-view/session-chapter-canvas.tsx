@@ -11,6 +11,7 @@ import {
   type SessionPolicySnapshot,
 } from "@/components/session-view/session-policy-context";
 import { sessionCanvasMayOpen } from "@/lib/session-field-gate";
+import { sessionPrepareBlockId } from "@/lib/session-branch-prepare";
 import type { IleCanvasCraftInsightConfig } from "@/components/session-view/ile-canvas-craft-insight";
 import type { InsightSummary } from "@/lib/insights";
 import type { IlePowCounterArtifact } from "@/lib/ile-pow-counters";
@@ -46,6 +47,7 @@ export function SessionChapterWorkCanvas({
   chapterBrief,
   fieldScope,
   workspaceId,
+  blockId,
   ileToken,
   ayclToken,
   recordSessionPowArtifact,
@@ -79,6 +81,7 @@ export function SessionChapterWorkCanvas({
   /** Same slice key the tips screen used. A later chapter passes its own id. */
   fieldScope?: string | null;
   workspaceId?: string | null;
+  blockId?: string | null;
   ileToken?: string;
   ayclToken?: string;
   recordSessionPowArtifact: IleCanvasCraftInsightConfig["recordSessionPowArtifact"];
@@ -100,6 +103,8 @@ export function SessionChapterWorkCanvas({
       ileToken,
       ayclToken,
       scope: fieldScope || chapterId,
+      workspaceId: workspaceId || undefined,
+      blockId: blockId || sessionPrepareBlockId(session?.metadata) || undefined,
     },
     session?.metadata,
   );

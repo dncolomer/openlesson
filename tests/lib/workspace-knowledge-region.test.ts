@@ -69,10 +69,10 @@ function writeScratch(name: string, body: string) {
 }
 
 describe("Knowledge Region create mode", () => {
-  it("stays an internal owner-container mode; Learning create is blank + template", () => {
-    expect(UI_WORKSPACE_CREATE_MODES).toEqual(["blank", "template"]);
+  it("stays an internal owner-container mode; Learning create is blank-only", () => {
+    expect(UI_WORKSPACE_CREATE_MODES).toEqual(["blank"]);
     expect(isUiWorkspaceCreateMode("blank")).toBe(true);
-    expect(isUiWorkspaceCreateMode("template")).toBe(true);
+    expect(isUiWorkspaceCreateMode("template")).toBe(false);
     expect(isUiWorkspaceCreateMode("knowledge_region")).toBe(false);
     expect(isUiWorkspaceCreateMode("calibration")).toBe(false);
     expect(isUiWorkspaceCreateMode("files_goal")).toBe(false);
@@ -252,6 +252,7 @@ describe("Knowledge Region shell", () => {
       "workspace",
       "dags",
       "map_types",
+      "unsys_models",
       "context",
       "settings",
     ]);
@@ -539,10 +540,12 @@ describe("Knowledge Region wiring", () => {
     const page = read("app/workspace/new/page.tsx");
     expect(page).not.toContain("Verification workspace");
     expect(page).not.toContain("Calibration workspace");
-    expect(page).toContain("data-create-mode={card.mode}");
+    expect(page).toContain("data-create-blank-map");
+    expect(page).toContain("createBlankMap");
+    expect(page).not.toContain("data-create-mode={card.mode}");
     expect(page).not.toContain('data-create-mode="knowledge_region"');
-    expect(page).toContain('data-create-layout="learning"');
-    expect(page).toContain('data-create-group="learning"');
+    expect(page).not.toContain('data-create-layout="learning"');
+    expect(page).not.toContain('data-create-group="learning"');
     expect(page).not.toContain('data-create-group="verification"');
     expect(page).not.toContain('data-create-group="calibration"');
     expect(page).not.toContain('data-create-mode-span="knowledge_region"');

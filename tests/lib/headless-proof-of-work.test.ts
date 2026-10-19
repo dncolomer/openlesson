@@ -9,7 +9,7 @@ import { join } from "node:path";
 import { createMemoryAgentSupabase } from "@/tests/helpers/memory-agent-supabase";
 import type { AuthContext } from "@/lib/pow-api/types";
 import { normalizeSessionBranchModel } from "@/lib/session-branch-model";
-import type { LearningModelSize } from "@/lib/learning-model";
+
 import { resetFlowEmbeddingStore } from "@/lib/flow-embedding-store";
 
 vi.mock("@/lib/pow-api/auth", async (importOriginal) => {
@@ -71,40 +71,32 @@ const auth: AuthContext = {
   scopes: ["workspaces:read", "workspaces:write", "tap:read", "tap:write"],
 };
 
-function birthTree(catalogSize: LearningModelSize = 4) {
+function birthTree() {
   return normalizeSessionBranchModel(
     {
       premise: "A priced field.",
-      closePrice: 10,
-      keepPrice: 40,
-      discardPrice: 70,
-      insightPrice: 90,
+      question: "What is still open?",
+      territory: "A priced field.",
+      observation: "The field is open.",
       regions: [
         {
           title: "Region",
+          question: "What is this region?",
+          territory: "Region of the field.",
           observation: "The region is open.",
-          closePrice: 10,
-          keepPrice: 40,
-          discardPrice: 70,
-          insightPrice: 90,
+          edgePrice: 10,
         },
       ],
     },
     "Priced",
-    catalogSize,
   );
 }
 
 function confidenceReply() {
   return JSON.stringify({
-    close: 0.82,
-    keep: 0.05,
-    discard: 0.04,
-    insight: 0.03,
-    closeLine: "Close this observation.",
-    keepLine: "Keep looking.",
-    discardLine: "Drop this line.",
-    insightLine: "Insight waits.",
+    hiddenStateId: "r1",
+    confidence: 0.82,
+    line: "Stay with this region.",
   });
 }
 
@@ -138,9 +130,8 @@ describe("headless proof-of-work REST + MCP", () => {
     resetFlowEmbeddingStore("memory");
     setHeadlessSessionDepsForTests({
       nowMs: () => now,
-      generateModel: async (input) => {
-        const size = (input.catalogSize as LearningModelSize) || 4;
-        const model = birthTree(size);
+      generateModel: async () => {
+        const model = birthTree();
         if (!model) throw new Error("failed tree");
         return { ok: true, model };
       },
@@ -177,12 +168,11 @@ describe("headless proof-of-work REST + MCP", () => {
     expect(start4.status).toBe(201);
     const session4 = (await start4.json()) as {
       session_id: string;
-      answers_model: { catalog_size: number; branch_count: number };
+      answers_model: { branch_count: number };
       remaining_ms: number;
       flow_kind: string;
     };
     expect(session4.flow_kind).toBe("calibrate");
-    expect(session4.answers_model.catalog_size).toBe(4);
     expect(session4.answers_model.branch_count).toBeGreaterThan(0);
     expect(session4.remaining_ms).toBe(15 * 60_000);
 
@@ -196,9 +186,9 @@ describe("headless proof-of-work REST + MCP", () => {
       { params: Promise.resolve({ id: workspaceId }) },
     );
     const session8 = (await start8.json()) as {
-      answers_model: { catalog_size: number };
+      answers_model: { branch_count: number };
     };
-    expect(session8.answers_model.catalog_size).toBe(8);
+    expect(session8.answers_model.branch_count).toBeGreaterThan(0);
 
     const ingested = await POST_POW(
       jsonRequest(
@@ -436,9 +426,8 @@ describe("headless proof-of-work REST + MCP", () => {
     resetHeadlessSessionsForTests();
     setHeadlessSessionDepsForTests({
       nowMs: () => now,
-      generateModel: async (input) => {
-        const size = (input.catalogSize as LearningModelSize) || 4;
-        const model = birthTree(size);
+      generateModel: async () => {
+        const model = birthTree();
         if (!model) throw new Error("failed tree");
         return { ok: true, model };
       },

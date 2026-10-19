@@ -49,7 +49,6 @@ import {
   sessionPolicySnapshot,
 } from "@/lib/session-policy-score";
 import type { SessionMarkCanvasEffect } from "@/lib/session-mark-canvas";
-import type { SessionMarkButtonId } from "@/lib/session-marks";
 import { buildRegionFromFlowEmbeddings, verificationProofEmbedding } from "@/lib/verification-flow";
 
 const ROOT = process.cwd();
@@ -180,7 +179,13 @@ function fixtureTree(): SessionBranchModel {
       regions: [
         {
           ...region,
+          edgePrice: 10,
           avenues: [pricedNode("Avenue")],
+        },
+        {
+          ...pricedNode("Dear region"),
+          edgePrice: 80,
+          avenues: [pricedNode("Dear avenue")],
         },
       ],
     },
@@ -194,19 +199,19 @@ function walkSequence(
   model: SessionBranchModel,
   pick: (
     bestId: string,
-    actions: { id: string; price: number }[],
+    edges: { toId: string; price: number }[],
   ) => string,
-): SessionMarkButtonId[] {
-  const sequence: SessionMarkButtonId[] = [];
+): string[] {
+  const sequence: string[] = [];
   let cursor = model;
   for (let step = 0; step < 3; step += 1) {
     const focus = sessionBranchById(cursor, cursor.focusId);
     const best = recommendSessionBranchAction(cursor, cursor.focusId);
     if (!focus || !best) break;
-    const action = pick(best.id, focus.actions);
-    if (action !== "try" && action !== "hold" && action !== "drop" && action !== "insight") break;
-    sequence.push(action);
-    const next = advanceSessionBranchModel(cursor, { action, branchId: cursor.focusId });
+    const toId = pick(best.toId, focus.edges);
+    if (!toId) break;
+    sequence.push(toId);
+    const next = advanceSessionBranchModel(cursor, { toId, fromId: cursor.focusId });
     if (next === cursor) break;
     cursor = next;
   }
@@ -216,14 +221,14 @@ function walkSequence(
 describe("policy score against the prepared tree", () => {
   const model = fixtureTree();
   const lowest = walkSequence(model, (bestId) => bestId);
-  const higher = walkSequence(model, (bestId, actions) => {
-    const dearer = actions
-      .filter((action) => action.id !== bestId && action.id !== "insight")
+  const higher = walkSequence(model, (bestId, edges) => {
+    const dearer = edges
+      .filter((edge) => edge.toId !== bestId)
       .sort((a, b) => b.price - a.price)[0];
-    if (!dearer || dearer.price <= (actions.find((action) => action.id === bestId)?.price ?? 0)) {
-      throw new Error("fixture has no dearer action");
+    if (!dearer || dearer.price <= (edges.find((edge) => edge.toId === bestId)?.price ?? 0)) {
+      return bestId;
     }
-    return dearer.id;
+    return dearer.toId;
   });
 
   it("scores the lowest-priced sequence closer than a dearer sequence on the same tree", () => {
@@ -476,7 +481,7 @@ describe("policy score against the prepared tree", () => {
   });
 });
 
-function scorePair(model: SessionBranchModel, sequence: readonly SessionMarkButtonId[]) {
+function scorePair(model: SessionBranchModel, sequence: readonly string[]) {
   return embedPolicyScore({ model, sequence, workspaceId: "ws-policy" }).score;
 }
 
@@ -507,14 +512,17 @@ describe("policy score starts from the prepared tree", () => {
     );
     expect(birth).toBeTruthy();
     if (!birth) return;
-    const afterClose = advanceSessionBranchModel(birth, { action: "try", branchId: birth.focusId });
+    const afterClose = advanceSessionBranchModel(birth, { toId: "r1", fromId: birth.focusId });
     expect(afterClose.focusId).not.toBe(birth.focusId);
+    expect(afterClose.focusId).toBe("r1");
 
-    const opened = sessionPolicySnapshot(null, { status: "ready", model: birth }, [{ button: "try" }]);
+    const opened = sessionPolicySnapshot(null, { status: "ready", model: birth }, [
+      { hiddenStateId: "r1" },
+    ]);
     const replayed = sessionPolicySnapshot(
       opened.prepared,
       { status: "ready", model: afterClose },
-      [{ button: "try" }],
+      [{ hiddenStateId: "r1" }],
     );
     expect(replayed.snapshot.model).toBe(birth);
     const fuller = normalizeSessionBranchModel(
@@ -530,31 +538,26 @@ describe("policy score starts from the prepared tree", () => {
     const upgraded = sessionPolicySnapshot(
       replayed.prepared,
       { status: "ready", model: afterClose, birth: fuller },
-      [{ button: "try" }],
+      [{ hiddenStateId: "r1" }],
     );
     expect(upgraded.snapshot.model).toBe(fuller);
-    expect(replayed.snapshot.sequence).toEqual(["try"]);
+    expect(replayed.snapshot.sequence).toEqual(["r1"]);
 
     const fromPrepared = scorePolicySequence(replayed.snapshot.model!, replayed.snapshot.sequence);
     const fromAdvanced = scorePolicySequence(afterClose, replayed.snapshot.sequence);
-    const dearerKeep = scorePolicySequence(birth, ["hold"]);
+    const dearerPath = scorePolicySequence(fuller, ["r2"]);
     expect(fromPrepared.steps).toBeGreaterThan(0);
-    expect(fromPrepared.distance).toBeLessThan(dearerKeep.distance);
-    expect(fromPrepared.distance).toBeLessThan(fromAdvanced.distance);
-    expect(fromAdvanced.distance).toBeGreaterThan(dearerKeep.distance);
+    expect(fromPrepared.distance).toBeLessThan(dearerPath.distance);
+    expect(fromPrepared).toEqual(scorePolicySequence(birth, ["r1"]));
+    expect(fromAdvanced.sequence).toEqual(["r1"]);
 
     const embedded = embedPolicyScore({
       model: replayed.snapshot.model!,
       sequence: replayed.snapshot.sequence,
       workspaceId: "ws-policy",
     });
-    const embeddedAdvanced = embedPolicyScore({
-      model: afterClose,
-      sequence: replayed.snapshot.sequence,
-      workspaceId: "ws-policy",
-    });
+    expect(embedded.score).toEqual(fromPrepared);
     expect(embedded.score.distance).toBe(fromPrepared.distance);
-    expect(embedded.embedding).not.toEqual(embeddedAdvanced.embedding);
 
     const cleared = sessionPolicySnapshot(birth, { status: "preparing", model: null }, []);
     expect(cleared.snapshot.model).toBeNull();

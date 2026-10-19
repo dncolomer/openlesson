@@ -25,7 +25,7 @@ export function LearningModelCatalogs() {
   const [size, setSize] = useState<LearningModelSize>(4);
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2" role="tablist" aria-label="Action catalog size">
+      <div className="flex flex-wrap gap-2" role="tablist" aria-label="Historical action catalogs">
         {CATALOGS.map((catalog) => {
           const selected = size === catalog.size;
           return (

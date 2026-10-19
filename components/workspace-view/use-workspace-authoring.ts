@@ -4,6 +4,10 @@ import { useCallback, type Dispatch, type SetStateAction } from "react";
 import type { Block } from "@/components/workspace-view/types";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import { afterClonePaste, type CloneArmState } from "@/lib/clone-block";
+import {
+  serializeAuthorUnsysModelSeed,
+  type AuthorUnsysModelSeed,
+} from "@/lib/author-unsys-model";
 import { buildUpdateBlockPayload } from "@/lib/block-starter-flag";
 import {
   parseWorkspacePracticeOptions,
@@ -25,7 +29,7 @@ import { nextWorkspaceMapSelection, type WorkspaceMapSelection } from "@/lib/wor
 import { postWorkspaceGridOp } from "@/lib/workspace-grid-ops-client";
 import type { WorkspaceAddTargetCell } from "@/lib/workspace-right-pane";
 import { DEFAULT_MODEL } from "@/lib/xai-models";
-import type { ClusterMapJob } from "@/components/workspace-view/types";
+import { mapWorkspaceNodes, type ClusterMapJob } from "@/components/workspace-view/types";
 import { buildSkillGridLayout, getWeightedNeighborhood } from "@/lib/block-skill-grid";
 
 export function useWorkspaceAuthoring(input: {
@@ -482,6 +486,44 @@ export function useWorkspaceAuthoring(input: {
     [ayclToken, isOwner, nodes, refreshNodes, router, workspaceId],
   );
 
+  const handleSaveAnswersModelSeed = useCallback(
+    async (input: { blockId: string; seed: AuthorUnsysModelSeed | null }) => {
+      if (!workspaceId || !isOwner) return;
+      const block = nodes.find((n) => n.id === input.blockId);
+      if (!block) throw new Error("Block not found");
+      setIsAddingBlock(true);
+      try {
+        const response = await gridOpsFetch("/api/workspace/grid-ops", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            workspaceId,
+            ...(ayclToken ? { ayclToken } : {}),
+            op: "update_block",
+            blockId: input.blockId,
+            title: block.title,
+            description: block.description || "",
+            answers_model_seed: input.seed
+              ? serializeAuthorUnsysModelSeed(input.seed)
+              : null,
+          }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(errorMessageFromBody(data, "Failed to save unsys model seed"));
+        }
+        if (Array.isArray(data.updatedNodes)) {
+          setNodes(
+            mapWorkspaceNodes(data.updatedNodes, { ayclClone: Boolean(ayclToken) }),
+          );
+        }
+      } finally {
+        setIsAddingBlock(false);
+      }
+    },
+    [ayclToken, isOwner, nodes, workspaceId],
+  );
+
   /** Delete block from the Edit drawer; clears selection after. */
   const handleDeleteBlock = useCallback(
     async (blockId: string) => {
@@ -747,6 +789,7 @@ export function useWorkspaceAuthoring(input: {
     handleSubmitGenerateShape,
     handleUpdateBlock,
     handleSaveCreatorEffects,
+    handleSaveAnswersModelSeed,
     handleDeleteBlock,
     handleDeleteBlocks,
     handleClusterBlocks,

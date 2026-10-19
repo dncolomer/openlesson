@@ -256,7 +256,7 @@ describe("workspace Mark as Done + tile glyphs", () => {
 
     expect(view).toContain("recordMapItemWorkedOn");
     expect(view).not.toContain("onMarkDone");
-    expect(view).toContain("WorkspaceLearnerBlockPane");
+    expect(view).not.toContain("WorkspaceLearnerBlockPane");
 
     writeScratch(
       "map-done-progress-excerpts.txt",

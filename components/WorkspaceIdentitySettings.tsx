@@ -3,9 +3,6 @@
 import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import type { Workspace } from "@/components/WorkspaceView";
-import { LearningModelSizePicker } from "@/components/learning-model/LearningModelSizePicker";
-import { parseLearningModelSize, type LearningModelSize } from "@/lib/learning-model";
-import { isNoMapWorkspace } from "@/lib/workspace-kind";
 
 interface WorkspaceIdentitySettingsProps {
   plan: Workspace;
@@ -27,11 +24,7 @@ export function WorkspaceIdentitySettings({
   const { t } = useI18n();
   const [editTitle, setEditTitle] = useState(plan.title || plan.root_topic || "");
   const [editDescription, setEditDescription] = useState(plan.description || "");
-  const [modelSize, setModelSize] = useState<LearningModelSize>(() =>
-    parseLearningModelSize(plan.learning_model_size),
-  );
   const [saving, setSaving] = useState(false);
-  const showLearningModel = !isNoMapWorkspace(plan.workspace_kind);
 
   useEffect(() => {
     setEditTitle(plan.title || plan.root_topic || "");
@@ -41,19 +34,13 @@ export function WorkspaceIdentitySettings({
     setEditDescription(plan.description || "");
   }, [plan.description]);
 
-  useEffect(() => {
-    setModelSize(parseLearningModelSize(plan.learning_model_size));
-  }, [plan.learning_model_size]);
-
   if (!isOwner) return null;
 
   const titleDirty =
     editTitle.trim() !== (plan.title || plan.root_topic || "").trim();
   const descriptionDirty =
     (editDescription || "").trim() !== (plan.description || "").trim();
-  const modelDirty =
-    showLearningModel && modelSize !== parseLearningModelSize(plan.learning_model_size);
-  const isDirty = titleDirty || descriptionDirty || modelDirty;
+  const isDirty = titleDirty || descriptionDirty;
   const canSave = editTitle.trim().length > 0 && isDirty && !saving;
 
   const saveIdentity = async () => {
@@ -66,7 +53,6 @@ export function WorkspaceIdentitySettings({
         body: JSON.stringify({
           title: editTitle.trim(),
           description: editDescription,
-          ...(showLearningModel ? { learning_model_size: modelSize } : {}),
         }),
       });
       const data = await res.json();
@@ -80,9 +66,6 @@ export function WorkspaceIdentitySettings({
             typeof data.description === "string"
               ? data.description || undefined
               : editDescription || undefined,
-          learning_model_size: showLearningModel
-            ? parseLearningModelSize(data.learning_model_size ?? modelSize)
-            : plan.learning_model_size,
         });
       }
     } catch (err) {
@@ -152,10 +135,6 @@ export function WorkspaceIdentitySettings({
             {t("planView.workspaceDescriptionHelper")}
           </p>
         </div>
-
-        {showLearningModel ? (
-          <LearningModelSizePicker value={modelSize} onChange={setModelSize} disabled={saving} />
-        ) : null}
 
         <div className="pt-1">
           <button

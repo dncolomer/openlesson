@@ -25,7 +25,6 @@ export async function POST(
   const embedding = completeFlowEmbedding({
     flowKind: "verify",
     model: policy?.model ?? null,
-    catalogSize: policy?.model?.catalogSize ?? flow?.actionCatalog,
     sequence: policy?.sequence ?? null,
     pow: [
       {

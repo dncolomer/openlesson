@@ -46,6 +46,11 @@ export {
   buildHeliosMapBuilderSystemPrompt,
 } from "./surfaces/helios-map";
 export {
+  HELIOS_UNSYS_SEED_SURFACE,
+  HELIOS_UNSYS_SEED_TOOLS_BLOCK,
+  buildHeliosUnsysSeedSystemPrompt,
+} from "./surfaces/helios-unsys-seed";
+export {
   SCORE_POW_CONTEXT_LAYER,
   SCORE_POW_CONTEXT_LAYER_OPAQUE,
   SCORE_VERIFICATION_SUBMIT_STASH_OVERLAY,

@@ -7,9 +7,7 @@ import {
 } from "@/lib/session-branch-model";
 import {
   applyPolicyInference,
-  chooseHighestPolicyConfidence,
-  parsePolicyActionLine,
-  parsePolicyConfidenceReply,
+  parsePolicyHiddenStateReply,
   parsePolicySuggestionReply,
   policySuggestionIsRawLabel,
   recordPolicyInference,
@@ -20,7 +18,6 @@ import {
   type SessionPolicyInference,
 } from "@/lib/session-policy-infer";
 import { scorePolicySequence } from "@/lib/session-policy-score";
-import type { SessionMarkButtonId } from "@/lib/session-marks";
 
 const ROOT = process.cwd();
 
@@ -30,19 +27,11 @@ function read(path: string): string {
 
 const thresholds = { eventCount: 3, elapsedMs: 1_000 };
 
-function confidenceReply(winner: SessionMarkButtonId, high = 0.82): string {
-  const scores: Record<SessionMarkButtonId, number> = {
-    try: 0.05,
-    hold: 0.04,
-    drop: 0.03,
-    insight: 0.02,
-  };
-  scores[winner] = high;
+function hiddenReply(hiddenStateId: string, confidence = 0.82, line = ""): string {
   return JSON.stringify({
-    close: scores.try,
-    keep: scores.hold,
-    discard: scores.drop,
-    insight: scores.insight,
+    hiddenStateId,
+    confidence,
+    line,
   });
 }
 
@@ -50,18 +39,23 @@ function birthTree() {
   return normalizeSessionBranchModel(
     {
       premise: "A priced field.",
-      closePrice: 10,
-      keepPrice: 40,
-      discardPrice: 70,
-      insightPrice: 90,
+      question: "What is still open?",
+      territory: "A priced field.",
+      observation: "The field is open.",
       regions: [
         {
-          title: "Region",
-          observation: "The region is open.",
-          closePrice: 10,
-          keepPrice: 40,
-          discardPrice: 70,
-          insightPrice: 90,
+          title: "Cheap region",
+          question: "What is cheap here?",
+          territory: "Cheap region of the field.",
+          observation: "The cheap region is open.",
+          edgePrice: 8,
+        },
+        {
+          title: "Dear region",
+          question: "What is dear here?",
+          territory: "Dear region of the field.",
+          observation: "The dear region is open.",
+          edgePrice: 70,
         },
       ],
     },
@@ -89,49 +83,34 @@ describe("session policy inference", () => {
     ).toBe(false);
   });
 
-  it("selects the highest confidence from a supplied reply and advances the field", () => {
+  it("selects a hidden state from a supplied reply and travels that edge", () => {
     const birth = birthTree();
     expect(birth).toBeTruthy();
     if (!birth) return;
-    const reply = '{"close":0.1,"keep":0.82,"discard":0.05,"insight":0.03}';
-    const confidence = parsePolicyConfidenceReply(reply);
-    expect(confidence).toEqual({ try: 0.1, hold: 0.82, drop: 0.05, insight: 0.03 });
-    expect(chooseHighestPolicyConfidence(confidence!).action).toBe("hold");
+    const parsed = parsePolicyHiddenStateReply(hiddenReply("r1", 0.82));
+    expect(parsed).toMatchObject({ hiddenStateId: "r1", confidence: 0.82, label: "" });
+    expect(parsePolicyHiddenStateReply("not json")).toBeNull();
+    expect(parsePolicyHiddenStateReply('{"hiddenStateId":"r1"}')).toBeNull();
+    expect(parsePolicyHiddenStateReply('{"hiddenStateId":"r1","confidence":"high"}')).toBeNull();
 
-    const tied = parsePolicyConfidenceReply('{"close":0.4,"keep":0.4,"discard":0.1,"insight":0.1}');
-    expect(chooseHighestPolicyConfidence(tied!).action).toBe("try");
+    const percent = parsePolicyHiddenStateReply(JSON.stringify({ hiddenStateId: "r2", confidence: 80 }));
+    expect(percent?.confidence).toBeCloseTo(0.8);
 
-    const percent = parsePolicyConfidenceReply('{"try":10,"hold":80,"drop":5,"insight":5}');
-    expect(percent?.hold).toBeCloseTo(0.8);
-    expect(chooseHighestPolicyConfidence(percent!).action).toBe("hold");
-
-    expect(parsePolicyConfidenceReply("not json")).toBeNull();
-    expect(parsePolicyConfidenceReply('{"close":0.1,"keep":"high","discard":0.1,"insight":0.1}')).toBeNull();
-    expect(parsePolicyConfidenceReply('{"close":0.2,"keep":0.2,"discard":0.2}')).toBeNull();
-    expect(parsePolicyConfidenceReply('{"close":0.2,"try":0.9,"keep":0.1,"discard":0.1,"insight":0.1}')).toBeNull();
-
-    const applied = applyPolicyInference(birth, reply);
+    const applied = applyPolicyInference(birth, hiddenReply("r1", 0.82));
     expect(applied).toBeTruthy();
-    expect(applied!.entry).toMatchObject({ action: "hold", confidence: 0.82, label: "" });
+    expect(applied!.entry).toMatchObject({
+      hiddenStateId: "r1",
+      fromId: birth.focusId,
+      confidence: 0.82,
+      label: "",
+    });
     const line = "Stay with the ray and mark the end that is still open.";
-    const lined = applyPolicyInference(
-      birth,
-      JSON.stringify({
-        close: 0.1,
-        keep: 0.82,
-        discard: 0.05,
-        insight: 0.03,
-        closeLine: "Close",
-        keepLine: line,
-        discardLine: "Discard",
-        insightLine: "Insight",
-      }),
-    );
+    const lined = applyPolicyInference(birth, hiddenReply("r1", 0.82, line));
     expect(lined?.entry.label).toBe(line);
-    expect(parsePolicyActionLine(reply, "hold")).toBeNull();
-    expect(parsePolicyActionLine('{"keepLine":"Keep"}', "hold")).toBeNull();
     expect(applied!.model.step).toBe(birth.step + 1);
+    expect(applied!.model.focusId).toBe("r1");
     expect(applied!.model).not.toBe(birth);
+    expect(applyPolicyInference(birth, hiddenReply("missing", 0.9))).toBeNull();
 
     const proof = sessionPolicyProofFromCanvas([
       { toolAction: "draw_freedraw", metadata: {} },
@@ -143,7 +122,7 @@ describe("session policy inference", () => {
     ]);
   });
 
-  it("appends nothing on a failed reply and scores the inferred sequence on the birth tree", () => {
+  it("appends nothing on a failed reply and scores the inferred path on the birth tree", () => {
     const birth = birthTree();
     expect(birth).toBeTruthy();
     if (!birth) return;
@@ -153,44 +132,22 @@ describe("session policy inference", () => {
     expect(failed.log).toBe(empty);
     expect(failed.log).toHaveLength(0);
 
-    let model = birth;
-    let log: readonly SessionPolicyInference[] = [];
-    for (let step = 0; step < 3; step += 1) {
-      const best = recommendSessionBranchAction(model, model.focusId);
-      expect(best).toBeTruthy();
-      if (!best) return;
-      expect(["try", "hold", "drop", "insight"]).toContain(best.id);
-      if (best.id !== "try" && best.id !== "hold" && best.id !== "drop" && best.id !== "insight") return;
-      const recorded = recordPolicyInference(model, log, confidenceReply(best.id, 0.91));
-      expect(recorded.log).toHaveLength(step + 1);
-      expect(recorded.log[step]?.action).toBe(best.id);
-      expect(recorded.model.step).toBe(model.step + 1);
-      model = recorded.model;
-      log = recorded.log;
-    }
-    const stalled = recordPolicyInference(model, log, "still not json");
-    expect(stalled.model).toBe(model);
-    expect(stalled.log).toBe(log);
+    const best = recommendSessionBranchAction(birth, birth.focusId);
+    expect(best?.toId).toBe("r1");
+    const recorded = recordPolicyInference(birth, empty, hiddenReply(best!.toId, 0.91));
+    expect(recorded.log).toHaveLength(1);
+    expect(recorded.log[0]?.hiddenStateId).toBe("r1");
+    expect(recorded.model.step).toBe(birth.step + 1);
 
-    const lowest = scorePolicySequence(
-      birth,
-      log.map((entry) => entry.action),
-    );
-    const dearer = scorePolicySequence(birth, ["hold", "hold", "hold"]);
-    expect(lowest.steps).toBeGreaterThan(0);
-    expect(dearer.steps).toBeGreaterThan(0);
+    const stalled = recordPolicyInference(recorded.model, recorded.log, "still not json");
+    expect(stalled.model).toBe(recorded.model);
+    expect(stalled.log).toBe(recorded.log);
+
+    const lowest = scorePolicySequence(birth, ["r1"]);
+    const dearer = scorePolicySequence(birth, ["r2"]);
+    expect(lowest.steps).toBe(1);
+    expect(dearer.steps).toBe(1);
     expect(lowest.distance).toBeLessThan(dearer.distance);
-
-    const closed = birthTree();
-    expect(closed).toBeTruthy();
-    if (!closed) return;
-    let cursor = closed;
-    for (let step = 0; step < 6; step += 1) {
-      const next = applyPolicyInference(cursor, confidenceReply("try", 0.99));
-      if (!next) break;
-      cursor = next.model;
-    }
-    expect(applyPolicyInference(cursor, confidenceReply("hold", 0.99))).toBeNull();
   });
 
   it("keeps a rephrased suggestion and rejects a raw action label", () => {
@@ -219,6 +176,7 @@ describe("session policy inference", () => {
     expect(context).not.toContain("xai-client");
     expect(context).toContain("sessionPolicyInferDue");
     expect(context).toContain("recordPolicyInference");
+    expect(context).toContain("sessionPolicyCandidateLines");
     expect(bridge).toContain("useSessionPolicyInferences");
     expect(bridge).toContain("sessionPolicySnapshot(");
     expect(bridge).toContain("target.current = next.snapshot");
@@ -227,7 +185,7 @@ describe("session policy inference", () => {
     const xai = read("lib/session-policy-infer-xai.ts");
     expect(xai).toContain("callXai");
     expect(xai).toContain("callPolicyXai");
-    expect(xai).toContain("closeLine");
+    expect(xai).toContain("hiddenStateId");
     expect(xai).toContain("inferSessionGapReply");
     expect(xai).toContain("Do not use the words Close, Keep, Discard, Insight, Forage, Exploit, Avoid, or Infer.");
     expect(xai.match(/Address the learner as you\. Do not use I, me, or my\./g)).toHaveLength(2);

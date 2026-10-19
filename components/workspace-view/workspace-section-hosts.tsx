@@ -4,6 +4,7 @@ import type { Dispatch, SetStateAction } from "react";
 import { WorkspaceContextPanel } from "@/components/WorkspaceContextPanel";
 import { WorkspaceDagsPanel } from "@/components/WorkspaceDagsPanel";
 import { WorkspaceMapTypesPanel } from "@/components/WorkspaceMapTypesPanel";
+import { WorkspaceUnsysModelsPanel } from "@/components/WorkspaceUnsysModelsPanel";
 import { WorkspaceGoalsPanel } from "@/components/WorkspaceGoalsPanel";
 import { CalibrationFlowsPanel } from "@/components/CalibrationFlowsPanel";
 import { VerificationFlowsPanel } from "@/components/VerificationFlowsPanel";
@@ -12,6 +13,7 @@ import { WorkspaceKpisPanel } from "@/components/WorkspaceKpisPanel";
 import { WorkspacePerformancePanel } from "@/components/WorkspacePerformancePanel";
 import { WorkspaceSectionSurface } from "@/components/WorkspaceSectionSurface";
 import type { Block, Workspace } from "@/components/workspace-view/types";
+import type { AuthorUnsysModelSeed } from "@/lib/author-unsys-model";
 import type { WorkspaceDagRecord } from "@/lib/workspace-dags";
 import type { WorkspaceMapTypesState } from "@/lib/workspace-map-types";
 import type { WorkspaceSectionLayout } from "@/lib/workspace-sections";
@@ -42,6 +44,8 @@ export function WorkspaceSectionHosts({
   isAddingBlock,
   onSaveDagEdit,
   onDeleteDag,
+  onOpenUnsysStudio,
+  onSaveAnswersModelSeed,
   currentUserId,
   knowledgeLwmEmbeddingsOnly,
   knowledgeSubviewFromUrl,
@@ -78,6 +82,11 @@ export function WorkspaceSectionHosts({
     dagId?: string;
   }) => Promise<void>;
   onDeleteDag: (input: { dagId: string }) => Promise<void>;
+  onOpenUnsysStudio?: (input: { blockId: string }) => void;
+  onSaveAnswersModelSeed?: (input: {
+    blockId: string;
+    seed: AuthorUnsysModelSeed | null;
+  }) => Promise<void> | void;
   currentUserId: string | null;
   knowledgeLwmEmbeddingsOnly: boolean;
   knowledgeSubviewFromUrl: string | null;
@@ -150,6 +159,29 @@ export function WorkspaceSectionHosts({
                 });
               }}
               onDelete={onDeleteDag}
+            />
+          </div>
+        </WorkspaceSectionSurface>
+      )}
+
+      {!isLearnerMode &&
+        isOwner &&
+        sectionLayout.mountsUnsysModelsPanel &&
+        visibleSections.includes("unsys_models") && (
+        <WorkspaceSectionSurface
+          kind="settings"
+          imageSrc={workspaceImage}
+          identity={identity}
+        >
+          <div
+            data-workspace-unsys-models-host
+            className="flex h-full min-h-0 flex-col overflow-hidden p-3 sm:p-4"
+          >
+            <WorkspaceUnsysModelsPanel
+              blocks={nodes}
+              busy={isAddingBlock}
+              onEdit={(input) => onOpenUnsysStudio?.(input)}
+              onSaveSeed={onSaveAnswersModelSeed ?? (async () => undefined)}
             />
           </div>
         </WorkspaceSectionSurface>

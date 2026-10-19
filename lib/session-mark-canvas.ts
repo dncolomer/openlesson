@@ -13,6 +13,7 @@ import {
 import {
   advanceSessionBranchModel,
   appendSessionBranchNotes,
+  recommendSessionBranchAction,
   type SessionBranchModel,
 } from "@/lib/session-branch-model";
 import type { SessionMarkButtonId } from "@/lib/session-marks";
@@ -229,10 +230,11 @@ export function commitSessionAction(input: {
   let model = input.model;
   let added: IleWorkCanvasElement[] = [];
   if (input.model) {
-    const next = advanceSessionBranchModel(input.model, {
-      branchId: input.branchId,
-      action: input.action,
-    });
+    const fromId = input.branchId || input.model.focusId;
+    const recommended = recommendSessionBranchAction(input.model, fromId);
+    const next = recommended
+      ? advanceSessionBranchModel(input.model, { toId: recommended.toId, fromId })
+      : input.model;
     if (next !== input.model) {
       model = next;
       const placed = appendSessionBranchNotes(elements, next.boardNotes);

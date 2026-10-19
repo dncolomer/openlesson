@@ -132,16 +132,14 @@ describe("desktop layout + block detail chrome", () => {
     const detail = read("components/WorkspaceBlockDetailPane.tsx");
     expect(detail).toContain("data-block-detail-mini-tabs");
     expect(detail).toContain("data-block-detail-drawers");
-    expect(detail).toContain('drawerId="local"');
-    expect(detail).toContain('drawerId="simulation"');
+    expect(detail).not.toContain('drawerId="local"');
+    expect(detail).not.toContain('drawerId="simulation"');
+    expect(detail).not.toContain('drawerId="practice"');
     // Creator Details/Sessions drawer removed — Edit owns title/description.
     expect(detail).not.toContain('drawerId="detail"');
-    expect(detail).toContain('title="Local context"');
-    expect(detail).toContain('title="Simulate Insights"');
-    // Local drawer expands when materials already attached; simulation stays collapsed.
-    expect(detail).toContain("defaultExpanded={hasLocalMaterials}");
+    expect(detail).not.toContain('title="Local context"');
+    expect(detail).not.toContain('title="Simulate Insights"');
     expect(detail).toContain("defaultExpanded={false}");
-    expect(detail).toContain("hasLocalMaterials");
     // Edit drawer (update) + peer Danger zone drawer (delete)
     expect(detail).toContain('drawerId="edit"');
     expect(detail).toContain("WorkspaceBlockEditPanel");
@@ -162,7 +160,7 @@ describe("desktop layout + block detail chrome", () => {
     expect(tools).toContain("BLOCK_MAP_TOOL_STRIP: readonly BlockMapToolId[] = []");
     expect(detail).not.toContain('prompt: "Prompt"');
     expect(detail).not.toContain("WorkspacePromptImpactPanel");
-    expect(detail).toContain("WorkspaceBlockSimulationPanel");
+    expect(detail).not.toContain("WorkspaceBlockSimulationPanel");
     expect(detail).not.toContain("data-block-detail-close");
 
     const simPanel = read("components/WorkspaceBlockSimulationPanel.tsx");
@@ -172,21 +170,15 @@ describe("desktop layout + block detail chrome", () => {
     expect(simPanel).not.toContain("/api/workspace/block-content-samples");
     expect(simPanel).not.toContain("data-simulation-audience");
 
-    const local = read("components/WorkspaceBlockLocalContextPanel.tsx");
-    expect(local).not.toContain("WorkspacePromptImpactPanel");
-    expect(local).not.toContain("How context shapes practice");
-    // Flat authoring — no outer nested card chrome stack
-    expect(local).toContain('data-block-local-authoring');
-    expect(local).not.toMatch(/rounded-xl border[\s\S]{0,40}rounded-xl border/);
-
-    expect(BLOCK_DETAIL_MINI_TABS).toEqual(["local", "simulation"]);
+    expect(BLOCK_DETAIL_MINI_TABS).toEqual(["edit"]);
     expect(BLOCK_DETAIL_MINI_TABS).not.toContain("prompt" as never);
-    expect(nextBlockDetailMiniTab("local", "simulation")).toBe("simulation");
-    expect(nextBlockDetailMiniTab("local", "prompt")).toBe("local");
-    expect(nextBlockDetailMiniTab("local", "nope")).toBe("local");
-    expect(resolveExclusiveBlockDetailDrawer("local", "simulation")).toBe("simulation");
-    expect(resolveExclusiveBlockDetailDrawer("simulation", "local")).toBe("local");
-    expect(resolveExclusiveBlockDetailDrawer("local", "prompt")).toBe("local");
+    expect(BLOCK_DETAIL_MINI_TABS).not.toContain("local" as never);
+    expect(BLOCK_DETAIL_MINI_TABS).not.toContain("simulation" as never);
+    expect(nextBlockDetailMiniTab("edit", "edit")).toBe("edit");
+    expect(nextBlockDetailMiniTab("edit", "prompt")).toBe("edit");
+    expect(nextBlockDetailMiniTab("edit", "nope")).toBe("edit");
+    expect(resolveExclusiveBlockDetailDrawer("edit", "edit")).toBe("edit");
+    expect(resolveExclusiveBlockDetailDrawer("edit", "prompt")).toBe("edit");
 
     const examples = deriveBlockExampleTopics({
       title: "Bayes rule",
@@ -221,10 +213,8 @@ describe("desktop layout + block detail chrome", () => {
         "drawersMarker=" + detail.includes("data-block-detail-drawers"),
         "peerLocal=" + detail.includes('drawerId="local"'),
         "peerSimulation=" + detail.includes('drawerId="simulation"'),
-        "localCollapsed=" +
-          /drawerId="local"[\s\S]*?defaultExpanded=\{false\}/.test(detail),
-        "nextInvalidStaysLocal=" +
-          String(nextBlockDetailMiniTab("local", "prompt") === "local"),
+        "nextInvalidStaysEdit=" +
+          String(nextBlockDetailMiniTab("edit", "prompt") === "edit"),
       ].join("\n"),
     );
     writeEvidence(

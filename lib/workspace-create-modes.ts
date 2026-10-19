@@ -1,6 +1,8 @@
 /**
- * Pure helpers for workspace create modes (Blank / Template / Knowledge Region
- * on the UI; Files+Goal remains API-only) and shared AI context assembly.
+ * Pure helpers for workspace create modes. Learning UI create is blank-only
+ * (`/workspace/new` jumps straight to an empty map). Template / Files+Goal
+ * remain API generate paths. Knowledge Region and Calibration are not
+ * Learning create cards.
  */
 
 import {
@@ -22,25 +24,31 @@ export type WorkspaceCreateMode =
   | "knowledge_region"
   | "calibration";
 
-/** Modes shown as option cards on `/workspace/new`. Learning only. */
-export const UI_WORKSPACE_CREATE_MODES: WorkspaceCreateMode[] = [
-  "blank",
-  "template",
-];
+/** Modes the Learning create page will start. Blank only. */
+export const UI_WORKSPACE_CREATE_MODES: WorkspaceCreateMode[] = ["blank"];
 
 export function isUiWorkspaceCreateMode(
   mode: unknown,
-): mode is Exclude<WorkspaceCreateMode, "files_goal" | "knowledge_region" | "calibration"> {
-  return mode === "blank" || mode === "template";
+): mode is "blank" {
+  return mode === "blank";
 }
 
-/** Deep-link `?mode=` on `/workspace/new`. Files+Goal is API-only and ignored. */
+/** Deep-link `?mode=` on `/workspace/new`. Template and Files+Goal are ignored. */
 export function workspaceCreateModeFromQuery(
   value: unknown,
-): Exclude<WorkspaceCreateMode, "files_goal"> | null {
+): "blank" | null {
   const parsed = parseWorkspaceCreateMode(value);
   if (!parsed || !isUiWorkspaceCreateMode(parsed)) return null;
   return parsed;
+}
+
+/** Default title when Learning create skips the name step. */
+export const BLANK_MAP_DEFAULT_TITLE = "Untitled map";
+
+export function resolveBlankWorkspaceTitle(value: unknown): string {
+  const trimmed = typeof value === "string" ? value.trim() : "";
+  if (!trimmed) return BLANK_MAP_DEFAULT_TITLE;
+  return trimmed.slice(0, 120);
 }
 
 /** API / agent semantic create only supports Files + Goal Prompt. */
@@ -331,9 +339,9 @@ export function calibrationWorkspaceCreateOutcome(): {
 }
 
 /**
- * Overlay after a blank/template create attempt on `/workspace/new`.
- * Success keeps busy through `router.push` so the chooser does not flash.
- * Failure clears busy so the form/error is usable again.
+ * Overlay after a blank create attempt on `/workspace/new`.
+ * Success keeps busy through `router.push` so the create screen does not flash.
+ * Failure clears busy so retry/error is usable again.
  */
 export function resolveWorkspaceCreateOverlay(input: {
   succeeded: boolean;

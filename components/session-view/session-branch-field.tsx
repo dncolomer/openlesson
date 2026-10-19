@@ -5,7 +5,6 @@ import {
   type SessionBranchSlot,
 } from "@/components/session-view/session-policy-context";
 import { sessionBranchFieldCounts, type SessionBranchModel } from "@/lib/session-branch-model";
-import { SESSION_MARK_BUTTONS } from "@/lib/session-marks";
 
 const LABEL = "font-mono text-[9px] uppercase tracking-[0.22em] text-white/45";
 
@@ -16,12 +15,7 @@ function statusLabel(status: string): string {
 }
 
 function priceLine(model: SessionBranchModel["branches"][number]): string {
-  return model.actions
-    .map((action) => {
-      const label = SESSION_MARK_BUTTONS.find((button) => button.id === action.id)?.label ?? action.id;
-      return `${label} ${action.price}`;
-    })
-    .join(" · ");
+  return model.edges.map((edge) => `${edge.toId} ${edge.price}`).join(" · ");
 }
 
 /** The whole prepared field. Idle and a missing provider render nothing. Prices are a Learn-only view. */

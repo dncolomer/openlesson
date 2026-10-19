@@ -1,6 +1,6 @@
 /**
  * Deterministic embeddings for a completed Calibrate, Learn, or Verify run.
- * The vector encodes the generative model (tree + catalog size), the projected
+ * The vector encodes the generative model (tree + priced edges), the projected
  * policy when the flow produced one, and the proof of work. The raw payload is
  * stored with the vector so it can be recovered and re-embedded.
  *
@@ -14,7 +14,6 @@ import {
   projectWithMatrix,
   seededRandomProjection,
 } from "@/lib/knowledge-config/math";
-import { parseLearningModelSize, type LearningModelSize } from "@/lib/learning-model";
 import type { SessionBranchModel } from "@/lib/session-branch-model";
 import { scorePolicySequence } from "@/lib/session-policy-score";
 
@@ -36,7 +35,6 @@ export type FlowPowRow = {
 };
 
 export type FlowGenModelRaw = {
-  catalogSize: LearningModelSize;
   chapterTitle: string;
   rootId: string;
   branches: Array<{
@@ -48,7 +46,7 @@ export type FlowGenModelRaw = {
     observation: string;
     depth: number;
     status: string;
-    actions: Array<{ id: string; price: number }>;
+    edges: Array<{ toId: string; price: number }>;
   }>;
 };
 
@@ -130,29 +128,49 @@ function hashBag(texts: readonly string[]): number[] {
   return bag.map((n) => n / max);
 }
 
-function compactGenModel(model: SessionBranchModel | null | undefined, catalogSize: LearningModelSize): FlowGenModelRaw {
+function compactEdges(rawEdges: unknown, rawActions?: unknown): Array<{ toId: string; price: number }> {
+  const fromList = (raw: unknown, idKeys: readonly string[]) => {
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .filter((row): row is Record<string, unknown> => !!row && typeof row === "object")
+      .map((row) => {
+        let toId = "";
+        for (const key of idKeys) {
+          toId = textOf(row[key]);
+          if (toId) break;
+        }
+        return {
+          toId,
+          price: Math.max(0, Math.min(100, Math.round(numberOf(row.price)))),
+        };
+      })
+      .filter((edge) => edge.toId)
+      .sort((a, b) => a.toId.localeCompare(b.toId) || a.price - b.price);
+  };
+  const edges = fromList(rawEdges, ["toId", "id", "leadsBranchId"]);
+  if (edges.length) return edges;
+  return fromList(rawActions, ["toId", "leadsBranchId", "id"]);
+}
+
+function compactGenModel(model: SessionBranchModel | null | undefined): FlowGenModelRaw {
   const branches = (model?.branches ?? [])
-    .map((branch) => ({
-      id: textOf(branch.id),
-      parentId: branch.parentId == null ? null : textOf(branch.parentId) || null,
-      title: textOf(branch.title),
-      question: textOf(branch.question),
-      territory: textOf(branch.territory),
-      observation: textOf(branch.observation),
-      depth: Math.max(0, Math.round(numberOf(branch.depth))),
-      status: textOf(branch.status) || "open",
-      actions: (branch.actions ?? [])
-        .map((action) => ({
-          id: textOf(action.id),
-          price: Math.max(0, Math.min(100, Math.round(numberOf(action.price)))),
-        }))
-        .filter((action) => action.id)
-        .sort((a, b) => a.id.localeCompare(b.id)),
-    }))
+    .map((branch) => {
+      const legacy = branch as { edges?: unknown; actions?: unknown };
+      return {
+        id: textOf(branch.id),
+        parentId: branch.parentId == null ? null : textOf(branch.parentId) || null,
+        title: textOf(branch.title),
+        question: textOf(branch.question),
+        territory: textOf(branch.territory),
+        observation: textOf(branch.observation),
+        depth: Math.max(0, Math.round(numberOf(branch.depth))),
+        status: textOf(branch.status) || "open",
+        edges: compactEdges(legacy.edges, legacy.actions),
+      };
+    })
     .filter((branch) => branch.id)
     .sort((a, b) => a.id.localeCompare(b.id));
   return {
-    catalogSize,
     chapterTitle: textOf(model?.chapterTitle),
     rootId: textOf(model?.rootId) || "root",
     branches,
@@ -181,7 +199,7 @@ function compactPolicy(
 ): FlowProjectedPolicyRaw | null {
   if (flowKind === "calibrate") return null;
   if (!model || !Array.isArray(sequence) || sequence.length === 0) return null;
-  const scored = scorePolicySequence(model, sequence as never);
+  const scored = scorePolicySequence(model, sequence);
   return {
     sequence: scored.sequence.slice(),
     steps: scored.steps,
@@ -193,15 +211,15 @@ function compactPolicy(
 export function buildFlowEmbeddingRaw(input: {
   flowKind: FlowKind | string;
   model?: SessionBranchModel | null;
+  /** Ignored. Catalog size is no longer part of the gen model. */
   catalogSize?: unknown;
   sequence?: readonly string[] | null;
   pow?: readonly FlowPowRow[] | null;
 }): FlowEmbeddingRaw {
   const flowKind = parseFlowKind(input.flowKind);
-  const catalogSize = parseLearningModelSize(input.catalogSize ?? input.model?.catalogSize);
   return {
     flowKind,
-    genModel: compactGenModel(input.model, catalogSize),
+    genModel: compactGenModel(input.model),
     projectedPolicy: compactPolicy(flowKind, input.model, input.sequence),
     pow: compactPow(input.pow),
   };
@@ -219,7 +237,6 @@ export function recoverFlowEmbeddingRaw(value: unknown): FlowEmbeddingRaw | null
   const tree = gen as Record<string, unknown>;
   const branches = Array.isArray(tree.branches) ? tree.branches : [];
   const flowKind = parseFlowKind(source.flowKind);
-  const catalogSize = parseLearningModelSize(tree.catalogSize);
   const policyRaw = source.projectedPolicy;
   let projectedPolicy: FlowProjectedPolicyRaw | null = null;
   if (flowKind !== "calibrate" && policyRaw && typeof policyRaw === "object" && !Array.isArray(policyRaw)) {
@@ -240,7 +257,6 @@ export function recoverFlowEmbeddingRaw(value: unknown): FlowEmbeddingRaw | null
   return {
     flowKind,
     genModel: {
-      catalogSize,
       chapterTitle: textOf(tree.chapterTitle),
       rootId: textOf(tree.rootId) || "root",
       branches: branches
@@ -254,15 +270,7 @@ export function recoverFlowEmbeddingRaw(value: unknown): FlowEmbeddingRaw | null
           observation: textOf(branch.observation),
           depth: Math.max(0, Math.round(numberOf(branch.depth))),
           status: textOf(branch.status) || "open",
-          actions: Array.isArray(branch.actions)
-            ? branch.actions
-                .filter((action): action is Record<string, unknown> => !!action && typeof action === "object")
-                .map((action) => ({
-                  id: textOf(action.id),
-                  price: Math.max(0, Math.min(100, Math.round(numberOf(action.price)))),
-                }))
-                .filter((action) => action.id)
-            : [],
+          edges: compactEdges(branch.edges, branch.actions),
         }))
         .filter((branch) => branch.id),
     },
@@ -273,7 +281,7 @@ export function recoverFlowEmbeddingRaw(value: unknown): FlowEmbeddingRaw | null
 
 function structFeatures(raw: FlowEmbeddingRaw): number[] {
   const branches = raw.genModel.branches;
-  const prices = branches.flatMap((branch) => branch.actions.map((action) => action.price));
+  const prices = branches.flatMap((branch) => branch.edges.map((edge) => edge.price));
   const meanPrice = prices.length ? prices.reduce((a, b) => a + b, 0) / prices.length : 0;
   const variance =
     prices.length > 1
@@ -286,7 +294,7 @@ function structFeatures(raw: FlowEmbeddingRaw): number[] {
   const pow = raw.pow;
   const features = new Array(FLOW_EMBEDDING_STRUCT_DIM).fill(0);
   features[0] = raw.flowKind === "calibrate" ? 0 : raw.flowKind === "learn" ? 0.5 : 1;
-  features[1] = raw.genModel.catalogSize / 16;
+  features[1] = clip01(prices.length / 64);
   features[2] = clip01(branches.length / 200);
   features[3] = clip01(meanPrice / 100);
   features[4] = clip01(Math.sqrt(variance) / 50);
@@ -297,7 +305,7 @@ function structFeatures(raw: FlowEmbeddingRaw): number[] {
   features[9] = clip01((policy?.excess ?? 0) / 400);
   features[10] = clip01(pow.length / 64);
   features[11] = hashUnit(`kind:${raw.flowKind}`);
-  features[12] = hashUnit(`catalog:${raw.genModel.catalogSize}`);
+  features[12] = hashUnit(`prices:${prices.slice().sort((a, b) => a - b).join(",")}`);
   features[13] = hashUnit(`title:${raw.genModel.chapterTitle}`);
   features[14] = hashUnit(`root:${raw.genModel.rootId}`);
   features[15] = hashUnit(`tree:${canonical(raw.genModel)}`);
@@ -305,8 +313,8 @@ function structFeatures(raw: FlowEmbeddingRaw): number[] {
   features[17] = hashUnit(`pow:${canonical(pow)}`);
   features[18] = clip01(branches.filter((branch) => branch.status === "open").length / Math.max(1, branches.length));
   features[19] = clip01(branches.filter((branch) => branch.depth >= 2).length / Math.max(1, branches.length));
-  const actionIds = branches.flatMap((branch) => branch.actions.map((action) => action.id)).sort();
-  features[20] = hashUnit(`actions:${actionIds.join(",")}`);
+  const edgeIds = branches.flatMap((branch) => branch.edges.map((edge) => edge.toId)).sort();
+  features[20] = hashUnit(`edges:${edgeIds.join(",")}`);
   features[21] = hashUnit(`seq:${policy?.sequence.join(" ") ?? ""}`);
   features[22] = hashUnit(`pow-names:${pow.map((row) => `${row.tool_name}:${row.tool_action}`).join("|")}`);
   for (let i = 23; i < FLOW_EMBEDDING_STRUCT_DIM; i += 1) {
@@ -321,13 +329,13 @@ export function embedFlowOutput(rawInput: FlowEmbeddingRaw): FlowEmbeddingRecord
   const struct = l2Normalize(structFeatures(raw));
   const texts = [
     raw.flowKind,
-    String(raw.genModel.catalogSize),
     raw.genModel.chapterTitle,
     ...raw.genModel.branches.flatMap((branch) => [
       branch.title,
       branch.question,
       branch.territory,
       branch.observation,
+      ...branch.edges.map((edge) => `edge ${edge.toId} ${edge.price}`),
     ]),
     ...(raw.projectedPolicy?.sequence ?? []),
     ...raw.pow.flatMap((row) => [row.tool_name, row.tool_action, row.payload, row.type]),
@@ -350,6 +358,7 @@ export function embedFlowOutput(rawInput: FlowEmbeddingRaw): FlowEmbeddingRecord
 export function completeFlowEmbedding(input: {
   flowKind: FlowKind | string;
   model?: SessionBranchModel | null;
+  /** Ignored. Catalog size is no longer part of the gen model. */
   catalogSize?: unknown;
   sequence?: readonly string[] | null;
   pow?: readonly FlowPowRow[] | null;

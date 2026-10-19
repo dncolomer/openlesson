@@ -54,6 +54,7 @@ describe("Context section layout resolver", () => {
       "workspace",
       "dags",
       "map_types",
+      "unsys_models",
       "context",
       "settings",
     ]);
@@ -142,7 +143,7 @@ describe("structural wiring in WorkspaceView + AYCL", () => {
     expect(view).toContain("data-workspace-context-section");
     expect(view).toContain("WorkspaceContextPanel");
     expect(view).toContain("WorkspaceMapAuthoringPane");
-    expect(view).toContain("WorkspaceBlockLocalContextPanel");
+    expect(view).not.toContain("WorkspaceBlockLocalContextPanel");
     expect(view).toContain('t("planView.sectionContext")');
     // Prompt-impact is not Workspace map primary chrome
     expect(view).not.toContain("WorkspacePromptImpactPanel");
@@ -167,7 +168,7 @@ describe("structural wiring in WorkspaceView + AYCL", () => {
     // Draft must reset when switching blocks (no stale Save onto wrong block).
     expect(local).toMatch(/useEffect\([\s\S]*blockId[\s\S]*localContext/);
     expect(view).toContain("key={detailBlock.id}");
-    expect(view).toContain("handleSaveLocalContext");
+    expect(view).not.toContain("onSaveLocalContext={handleSaveLocalContext}");
     // After create, local_context is parsed into node state (not dropped).
     expect(view).toContain("parseBlockLocalContext(n.local_context)");
 
@@ -180,18 +181,18 @@ describe("structural wiring in WorkspaceView + AYCL", () => {
 
     // Map tiles show a document icon when local context is attached.
     const mapGrid = readMapGridSurface();
-    expect(mapGrid).toContain("blockHasAttachedLocalContext");
-    expect(mapGrid).toContain("data-block-local-context-badge");
-    expect(mapGrid).toContain("data-block-has-local-context");
-    expect(mapGrid).toContain("BlockLocalContextDocBadge");
+    expect(mapGrid).not.toContain("blockHasAttachedLocalContext");
+    expect(mapGrid).not.toContain("data-block-local-context-badge");
+    expect(mapGrid).not.toContain("data-block-has-local-context");
+    expect(mapGrid).not.toContain("BlockLocalContextDocBadge");
     const skillGrid = read("lib/block-skill-grid.ts");
     expect(skillGrid).toContain("export function blockHasAttachedLocalContext");
     expect(skillGrid).toContain("local_context?");
 
     const detail = read("components/WorkspaceBlockDetailPane.tsx");
-    expect(detail).toContain("hasLocalMaterials");
-    expect(detail).toContain("defaultExpanded={hasLocalMaterials}");
-    expect(detail).toContain("data-block-has-local-context");
+    expect(detail).not.toContain("hasLocalMaterials");
+    expect(detail).not.toContain("defaultExpanded={hasLocalMaterials}");
+    expect(detail).not.toContain("data-block-has-local-context");
     expect(detail).toContain('drawerId="edit"');
     expect(detail).toContain("WorkspaceBlockEditPanel");
     expect(view).toContain("handleUpdateBlock");
@@ -231,7 +232,7 @@ describe("structural wiring in WorkspaceView + AYCL", () => {
     expect(aycl).toContain("ayclToken={accessToken}");
     expect(view).toContain("mountsContextPanel");
     expect(view).toContain("WorkspaceMapAuthoringPane");
-    expect(view).toContain("WorkspaceBlockLocalContextPanel");
+    expect(view).not.toContain("WorkspaceBlockLocalContextPanel");
     expect(view).toContain('t("planView.sectionContext")');
     expect(view).toContain("data-workspace-context-section");
   });

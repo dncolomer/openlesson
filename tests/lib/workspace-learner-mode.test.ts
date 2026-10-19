@@ -47,7 +47,7 @@ describe("workspace mode pure resolvers", () => {
     ).toEqual(["workspace"]);
     expect(
       availableSectionsForMode({ mode: "creator", isOwner: true, isLoggedIn: true }),
-    ).toEqual(["workspace", "dags", "map_types", "context", "settings"]);
+    ).toEqual(["workspace", "dags", "map_types", "unsys_models", "context", "settings"]);
   });
 
   it("Creator keeps the learning designer sections", () => {
@@ -55,7 +55,7 @@ describe("workspace mode pure resolvers", () => {
       mode: "creator",
       isOwner: true,
     });
-    expect(owner).toEqual(["workspace", "dags", "map_types", "context", "settings"]);
+    expect(owner).toEqual(["workspace", "dags", "map_types", "unsys_models", "context", "settings"]);
     expect(owner).not.toContain("simulation");
     expect(owner).not.toContain("knowledge");
     expect(owner).not.toContain("goals");
@@ -387,26 +387,24 @@ describe("learner mode UI structural", () => {
     expect(view).not.toContain("selectInteractionMode");
     expect(grid).not.toMatch(/label:\s*"Creator"/);
     expect(grid).not.toMatch(/label:\s*"Learner"/);
-    expect(view).toContain("WorkspaceLearnerBlockPane");
+    expect(view).not.toContain("WorkspaceLearnerBlockPane");
     expect(view).not.toContain("resolveFixedWorkspaceInteractionMode");
     expect(view).toContain("workspaceShell(");
     expect(view).not.toContain("clearMapChromeForModeFlip");
     const selection = read("components/workspace-view/use-workspace-map-selection.ts");
     expect(selection).not.toContain("workspaceModeFlipClearsMapSelection");
     expect(view).not.toContain("if (next === interactionMode) return");
-    expect(view).toContain("showLearnerDrawer");
+    expect(view).not.toContain("showLearnerDrawer");
     expect(view).toContain("showCreatorDrawers");
     expect(grid).toContain("learnerModeRef");
     expect(grid).not.toContain("workspaceModeFlipClearsMapSelection");
     expect(grid).not.toMatch(
       /if \(workspaceModeFlipClearsMapSelection\(\)\) \{[\s\S]*?setSelectedBlockIds\(\[\]\)/,
     );
-    // Practice Explore/Drill live on learner drawer; authoring on creator drawers.
-    // (SessionItem still supports hidePracticeLaunch; map shell uses mode panes.)
-    expect(view).toMatch(
+    // Work drawer unmounted; authoring lives on creator drawers.
+    expect(view).not.toMatch(
       /showLearnerDrawer[\s\S]*WorkspaceLearnerBlockPane/,
     );
-    // Learner pane mounts only when showLearnerDrawer (not in creator branch)
     expect(view).toMatch(
       /showCreatorDrawers[\s\S]*WorkspaceBlockDetailPane/,
     );
@@ -416,8 +414,8 @@ describe("learner mode UI structural", () => {
     expect(view).not.toContain("proof-of-work-stats");
     expect(view).not.toContain("onFetchPowSummary");
     expect(view).not.toContain("onMarkDone");
-    // Real Explore / Drill entry points via product intent
-    expect(view).toContain("onLaunchIntent");
+    // Session launch stays on the learner hook / play sidebar.
+    expect(view).toContain("handleLaunchIntent");
     expect(view).toContain("WORKSPACE_LEARNER_LAUNCH_PATH");
     expect(view).toContain("/session?id=");
     expect(view).toContain("/workspace/${workspaceId}/tap?");
@@ -432,7 +430,7 @@ describe("learner mode UI structural", () => {
       "clampPracticeDuration(practiceLimits, durationMinutes)",
     );
     expect(view).not.toContain('params.set("interactionKind", "exercise")');
-    expect(view).toContain("onSavePlanningPrompt");
+    expect(view).not.toContain("onSavePlanningPrompt");
     expect(view).toContain("lwmEmbeddingsOnly={knowledgeLwmEmbeddingsOnly}");
     expect(grid).toContain("learnerMode");
     expect(grid).toContain("data-learner-mode");
@@ -536,7 +534,7 @@ describe("learner mode UI structural", () => {
         "learner_custom_prompt=" + learner.includes("data-learner-planning-prompt"),
         "real_session=" + view.includes("createSession"),
         "real_tap=" + view.includes("/tap?"),
-        "launch_intent=" + view.includes("onLaunchIntent"),
+        "launch_intent=" + view.includes("handleLaunchIntent"),
         "pow_parser=" + view.includes("parseLearnerPowSummaryFromApi"),
         "subject_me=" + view.includes('subjectKey: "me"'),
         "quality_all=" + view.includes('quality: "all"'),

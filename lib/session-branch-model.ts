@@ -1,9 +1,7 @@
 /**
- * The generative model prepared at the start of a session.
- * Hidden states (branches) sit on state factors (territory). Each has a
- * likelihood (observation) and catalog-sized actions with expected-free-energy
- * prices. Live chrome still presses the four stored ids (try/hold/drop/insight).
- * Forage, Exploit, and Avoid reveal the next ring. Infer is the last step.
+ * Generative model for a session: hidden states on state factors, each with
+ * a predicted observation. Travel is a priced edge from one hidden state to
+ * another. Learn and Verify infer which hidden state the work is on.
  */
 
 import {
@@ -11,16 +9,12 @@ import {
   ileWorkCanvasContentBounds,
   type IleWorkCanvasElement,
 } from "@/lib/ile-work-canvas";
-import {
-  learningModelCatalog,
-  parseLearningModelSize,
-  type LearningModelSize,
-} from "@/lib/learning-model";
-import type { SessionMarkButtonId } from "@/lib/session-marks";
 
 export const SESSION_BRANCH_REGION_COUNT = 6;
 export const SESSION_BRANCH_AVENUE_COUNT = 4;
 export const SESSION_BRANCH_INQUIRY_COUNT = 3;
+export const SESSION_BRANCH_CHILD_MIN = 2;
+export const SESSION_BRANCH_CHILD_MAX = 8;
 /** Root + regions + avenues. Inquiries make it a field rather than a short path. */
 export const SESSION_BRANCH_MIN_COUNT =
   1 +
@@ -34,22 +28,13 @@ export const SESSION_BRANCH_TARGET_COUNT =
   SESSION_BRANCH_REGION_COUNT * SESSION_BRANCH_AVENUE_COUNT * SESSION_BRANCH_INQUIRY_COUNT;
 /**
  * Smallest field worth keeping after a short model reply.
- * Below this the session refuses the field instead of starting a tiny maze.
+ * Author first-ring samples are smaller; live session trees still grow.
  */
-export const SESSION_BRANCH_ACCEPT_COUNT = 80;
+export const SESSION_BRANCH_ACCEPT_COUNT = 8;
 
-export const SESSION_BRANCH_ACTION_ORDER = ["try", "hold", "drop", "insight"] as const;
-
-const LIVE_ACTION_IDS = new Set<string>(SESSION_BRANCH_ACTION_ORDER);
-
-export type SessionBranchAction = {
-  /** Catalog action id, or a stored four-action id (try/hold/drop/insight). */
-  id: string;
+export type SessionBranchEdge = {
+  toId: string;
   price: number;
-  /** Where this action takes the learner. */
-  leads: string;
-  /** The observation this action writes on the board. */
-  observation: string;
 };
 
 export type SessionBranchStatus = "open" | "closed" | "latent";
@@ -66,7 +51,7 @@ export type SessionBranch = {
   observation: string;
   depth: number;
   status: SessionBranchStatus;
-  actions: SessionBranchAction[];
+  edges: SessionBranchEdge[];
 };
 
 export type SessionBranchNote = {
@@ -79,59 +64,40 @@ export type SessionBranchModel = {
   rootId: string;
   focusId: string;
   step: number;
-  /** 4, 8, or 16 — the catalog this tree was prepared with. */
-  catalogSize: LearningModelSize;
   branches: SessionBranch[];
   boardNotes: SessionBranchNote[];
 };
 
-type RawActionPrices = {
-  closePrice?: unknown;
-  keepPrice?: unknown;
-  discardPrice?: unknown;
-  insightPrice?: unknown;
-  closeLeads?: unknown;
-  keepLeads?: unknown;
-  discardLeads?: unknown;
-  insightLeads?: unknown;
-  closeObservation?: unknown;
-  keepObservation?: unknown;
-  discardObservation?: unknown;
-  insightObservation?: unknown;
-  [key: string]: unknown;
+/** Cheapest outgoing edge, framed as the next hidden state. */
+export type SessionBranchRecommended = {
+  id: string;
+  toId: string;
+  price: number;
+  leads: string;
+  observation: string;
+  leadsBranchId: string;
 };
 
-type RawInquiry = RawActionPrices & {
+type RawNode = {
   title?: unknown;
   question?: unknown;
   territory?: unknown;
   observation?: unknown;
-};
-
-type RawAvenue = RawInquiry & {
-  inquiries?: unknown;
-};
-
-type RawRegion = RawInquiry & {
-  avenues?: unknown;
-};
-
-export type SessionBranchDraft = RawActionPrices & {
-  premise?: unknown;
+  edgePrice?: unknown;
+  closePrice?: unknown;
+  keepPrice?: unknown;
+  discardPrice?: unknown;
+  insightPrice?: unknown;
+  children?: unknown;
   regions?: unknown;
+  avenues?: unknown;
+  inquiries?: unknown;
+  [key: string]: unknown;
 };
 
-const ACTION_FIELDS: Array<{
-  id: SessionMarkButtonId;
-  price: keyof RawActionPrices;
-  leads: keyof RawActionPrices;
-  observation: keyof RawActionPrices;
-}> = [
-  { id: "try", price: "closePrice", leads: "closeLeads", observation: "closeObservation" },
-  { id: "hold", price: "keepPrice", leads: "keepLeads", observation: "keepObservation" },
-  { id: "drop", price: "discardPrice", leads: "discardLeads", observation: "discardObservation" },
-  { id: "insight", price: "insightPrice", leads: "insightLeads", observation: "insightObservation" },
-];
+export type SessionBranchDraft = RawNode & {
+  premise?: unknown;
+};
 
 function textOf(value: unknown, fallback = ""): string {
   return typeof value === "string" ? value.replace(/\s+/g, " ").trim() : fallback;
@@ -143,68 +109,225 @@ function priceOf(value: unknown, fallback: number): number {
   return Math.max(0, Math.min(100, Math.round(price)));
 }
 
-/** Catalog actions that are not the four stored live buttons. */
-export function extraCatalogActionIds(size: unknown): string[] {
-  return learningModelCatalog(size)
-    .filter((action) => !action.storedId)
-    .map((action) => action.id);
+function edgePriceFromRaw(raw: RawNode | null | undefined, fallback: number): number {
+  if (!raw) return fallback;
+  if (raw.edgePrice != null && Number.isFinite(Number(raw.edgePrice))) {
+    return priceOf(raw.edgePrice, fallback);
+  }
+  const priced = [raw.keepPrice, raw.closePrice, raw.discardPrice, raw.insightPrice]
+    .map((value) => Number(value))
+    .filter((value) => Number.isFinite(value));
+  if (!priced.length) return fallback;
+  return priceOf(Math.min(...priced), fallback);
 }
 
-export function extraCatalogPriceKey(actionId: string): string {
-  return `${actionId}Price`;
+function cloneEdges(edges: readonly SessionBranchEdge[] | null | undefined): SessionBranchEdge[] {
+  return (edges ?? []).map((edge) => ({
+    toId: String(edge.toId || "").trim(),
+    price: priceOf(edge.price, 20),
+  })).filter((edge) => edge.toId);
 }
 
-function extraActionsFrom(
-  raw: RawActionPrices,
-  observation: string,
-  catalogSize: LearningModelSize,
-): SessionBranchAction[] {
-  return extraCatalogActionIds(catalogSize).map((id, index) => ({
-    id,
-    price: priceOf(raw[extraCatalogPriceKey(id)], 22 + index * 6),
-    leads: "",
-    observation,
-  }));
+function childrenOf(model: Pick<SessionBranchModel, "branches">, parentId: string): SessionBranch[] {
+  return model.branches.filter((branch) => branch.parentId === parentId);
 }
 
-function actionsFrom(
-  raw: RawActionPrices,
-  observation: string,
-  catalogSize: LearningModelSize,
-): SessionBranchAction[] {
-  const stored = ACTION_FIELDS.map((field, index) => ({
-    id: field.id,
-    price: priceOf(raw[field.price], 20 + index * 15),
-    leads: textOf(raw[field.leads], "The next ring of this territory opens on the board."),
-    observation: textOf(raw[field.observation], observation),
-  }));
-  return [...stored, ...extraActionsFrom(raw, observation, catalogSize)];
+function attachChildEdges(branches: SessionBranch[]): SessionBranch[] {
+  const ids = new Set(branches.map((branch) => branch.id));
+  return branches.map((branch) => {
+    const kids = branches.filter((row) => row.parentId === branch.id);
+    const byTo = new Map(branch.edges.map((edge) => [edge.toId, edge]));
+    const edges: SessionBranchEdge[] = kids
+      .filter((child) => ids.has(child.id))
+      .map((child, index) => {
+        const existing = byTo.get(child.id);
+        return {
+          toId: child.id,
+          price: existing ? priceOf(existing.price, 20 + index * 8) : 20 + index * 8,
+        };
+      });
+    return { ...branch, edges };
+  });
 }
 
-export function liveSessionBranchActions(
-  branch: SessionBranch | null | undefined,
-): SessionBranchAction[] {
-  if (!branch) return [];
-  return branch.actions.filter((action) => LIVE_ACTION_IDS.has(action.id));
+function edgesFromLegacyActions(
+  rawEdges: unknown,
+  rawActions: unknown,
+  childIds: string[],
+): SessionBranchEdge[] {
+  if (Array.isArray(rawEdges) && rawEdges.length) {
+    const listed = cloneEdges(rawEdges as SessionBranchEdge[]);
+    const allowed = new Set(childIds);
+    const filtered = listed.filter((edge) => allowed.has(edge.toId));
+    if (filtered.length) return filtered;
+  }
+  const actions = Array.isArray(rawActions) ? rawActions : [];
+  const edges: SessionBranchEdge[] = [];
+  const seen = new Set<string>();
+  for (const item of actions) {
+    if (!item || typeof item !== "object") continue;
+    const row = item as { leadsBranchId?: unknown; leads?: unknown; price?: unknown };
+    const lead = textOf(row.leadsBranchId) || textOf(row.leads);
+    if (!lead || !childIds.includes(lead) || seen.has(lead)) continue;
+    seen.add(lead);
+    edges.push({ toId: lead, price: priceOf(row.price, 20) });
+  }
+  if (edges.length) return edges;
+  return childIds.map((toId, index) => ({ toId, price: 20 + index * 8 }));
 }
 
-function pushBranch(
-  branches: SessionBranch[],
-  branch: SessionBranch,
-): void {
+export function sessionBranchById(
+  model: SessionBranchModel,
+  id: string | null | undefined,
+): SessionBranch | null {
+  if (!id) return null;
+  return model.branches.find((branch) => branch.id === id) ?? null;
+}
+
+export function sessionBranchOutgoing(
+  model: SessionBranchModel,
+  branchId: string | null | undefined,
+): SessionBranchEdge[] {
+  const focus = sessionBranchById(model, branchId);
+  if (!focus) return [];
+  const ids = new Set(model.branches.map((branch) => branch.id));
+  return focus.edges.filter((edge) => ids.has(edge.toId));
+}
+
+export function sessionBranchEdgeBetween(
+  model: SessionBranchModel,
+  fromId: string | null | undefined,
+  toId: string | null | undefined,
+): SessionBranchEdge | null {
+  if (!fromId || !toId) return null;
+  const listed = sessionBranchOutgoing(model, fromId).find((edge) => edge.toId === toId);
+  if (listed) return listed;
+  const target = sessionBranchById(model, toId);
+  if (target?.parentId === fromId) return { toId, price: 20 };
+  return null;
+}
+
+export function recommendSessionBranchEdge(
+  model: SessionBranchModel,
+  branchId: string | null | undefined,
+): { edge: SessionBranchEdge; target: SessionBranch } | null {
+  const focusId = branchId || model.focusId;
+  const ranked = sessionBranchOutgoing(model, focusId)
+    .slice()
+    .sort((a, b) => a.price - b.price || a.toId.localeCompare(b.toId));
+  for (const edge of ranked) {
+    const target = sessionBranchById(model, edge.toId);
+    if (target) return { edge, target };
+  }
+  return null;
+}
+
+export function recommendSessionBranchAction(
+  model: SessionBranchModel,
+  branchId: string | null | undefined,
+): SessionBranchRecommended | null {
+  const recommended = recommendSessionBranchEdge(model, branchId);
+  if (!recommended) return null;
+  return {
+    id: recommended.target.id,
+    toId: recommended.target.id,
+    price: recommended.edge.price,
+    leads: recommended.target.title,
+    observation: recommended.target.observation || recommended.target.question,
+    leadsBranchId: recommended.target.id,
+  };
+}
+
+/** Nearby hidden states the live classifier may pick. */
+export function sessionBranchInferCandidates(
+  model: SessionBranchModel,
+  branchId?: string | null,
+): SessionBranch[] {
+  const focus = sessionBranchById(model, branchId || model.focusId);
+  if (!focus) return model.branches.filter((branch) => branch.status !== "latent").slice(0, 12);
+  const nearby: SessionBranch[] = [focus];
+  const seen = new Set<string>([focus.id]);
+  const push = (branch: SessionBranch | null) => {
+    if (!branch || seen.has(branch.id)) return;
+    seen.add(branch.id);
+    nearby.push(branch);
+  };
+  for (const child of childrenOf(model, focus.id)) push(child);
+  if (focus.parentId) {
+    push(sessionBranchById(model, focus.parentId));
+    for (const sibling of childrenOf(model, focus.parentId)) push(sibling);
+  }
+  return nearby;
+}
+
+function pushBranch(branches: SessionBranch[], branch: SessionBranch): void {
   branches.push(branch);
+}
+
+function nodeFromRaw(
+  raw: RawNode,
+  id: string,
+  parentId: string | null,
+  depth: number,
+  fallbackTitle: string,
+  fallbackPrice: number,
+): { branch: SessionBranch; edgePrice: number } {
+  const title = textOf(raw.title, fallbackTitle);
+  const observation = textOf(raw.observation, title);
+  return {
+    edgePrice: edgePriceFromRaw(raw, fallbackPrice),
+    branch: {
+      id,
+      parentId,
+      title,
+      question: textOf(raw.question),
+      territory: textOf(raw.territory, observation),
+      observation,
+      depth,
+      status: depth <= 1 ? "open" : "latent",
+      edges: [],
+    },
+  };
+}
+
+function walkChildren(
+  branches: SessionBranch[],
+  parent: SessionBranch,
+  kids: RawNode[],
+  idPrefix: string,
+): void {
+  kids.forEach((raw, index) => {
+    const id = `${idPrefix}${index + 1}`;
+    const made = nodeFromRaw(
+      raw,
+      id,
+      parent.id,
+      parent.depth + 1,
+      `${parent.title}, ${index + 1}`,
+      20 + index * 8,
+    );
+    pushBranch(branches, made.branch);
+    parent.edges.push({ toId: id, price: made.edgePrice });
+    const nested = Array.isArray(raw.children) ? (raw.children as RawNode[]) : [];
+    const avenues = Array.isArray(raw.avenues) ? (raw.avenues as RawNode[]) : [];
+    const inquiries = Array.isArray(raw.inquiries) ? (raw.inquiries as RawNode[]) : [];
+    if (nested.length) walkChildren(branches, made.branch, nested, `${id}-c`);
+    else if (avenues.length) walkChildren(branches, made.branch, avenues, `${id}-a`);
+    else if (inquiries.length) walkChildren(branches, made.branch, inquiries, `${id}-q`);
+  });
 }
 
 export function normalizeSessionBranchModel(
   draft: SessionBranchDraft | null | undefined,
   chapterTitle: string,
-  catalogSize: unknown = 4,
+  _unusedCatalogSize?: unknown,
 ): SessionBranchModel | null {
-  const regions = Array.isArray(draft?.regions) ? (draft.regions as RawRegion[]) : [];
-  if (!regions.length) return null;
-  const size = parseLearningModelSize(catalogSize);
   const title = textOf(chapterTitle, "This chapter");
   const premise = textOf(draft?.premise, title);
+  const regions = Array.isArray(draft?.regions) ? (draft?.regions as RawNode[]) : [];
+  const children = Array.isArray(draft?.children) ? (draft?.children as RawNode[]) : [];
+  const first = children.length ? children : regions;
+  if (!first.length) return null;
   const branches: SessionBranch[] = [];
   const root: SessionBranch = {
     id: "root",
@@ -215,79 +338,97 @@ export function normalizeSessionBranchModel(
     observation: premise,
     depth: 0,
     status: "open",
-    actions: actionsFrom(draft ?? {}, premise, size),
+    edges: [],
   };
   pushBranch(branches, root);
-
-  regions.forEach((region, regionIndex) => {
-    const regionId = `r${regionIndex + 1}`;
-    const regionTitle = textOf(region?.title, `Region ${regionIndex + 1}`);
-    const regionObservation = textOf(region?.observation, regionTitle);
-    pushBranch(branches, {
-      id: regionId,
-      parentId: root.id,
-      title: regionTitle,
-      question: textOf(region?.question),
-      territory: textOf(region?.territory, regionObservation),
-      observation: regionObservation,
-      depth: 1,
-      status: "open",
-      actions: actionsFrom(region ?? {}, regionObservation, size),
-    });
-    const avenues = Array.isArray(region?.avenues) ? (region.avenues as RawAvenue[]) : [];
-    avenues.forEach((avenue, avenueIndex) => {
-      const avenueId = `${regionId}-a${avenueIndex + 1}`;
-      const avenueTitle = textOf(avenue?.title, `${regionTitle}, avenue ${avenueIndex + 1}`);
-      const avenueObservation = textOf(avenue?.observation, avenueTitle);
-      pushBranch(branches, {
-        id: avenueId,
-        parentId: regionId,
-        title: avenueTitle,
-        question: textOf(avenue?.question),
-        territory: textOf(avenue?.territory, avenueObservation),
-        observation: avenueObservation,
-        depth: 2,
-        status: "latent",
-        actions: actionsFrom(avenue ?? {}, avenueObservation, size),
-      });
-      const inquiries = Array.isArray(avenue?.inquiries) ? (avenue.inquiries as RawInquiry[]) : [];
-      inquiries.forEach((inquiry, inquiryIndex) => {
-        const inquiryTitle = textOf(inquiry?.title, `${avenueTitle}, inquiry ${inquiryIndex + 1}`);
-        const inquiryObservation = textOf(inquiry?.observation, inquiryTitle);
-        pushBranch(branches, {
-          id: `${avenueId}-q${inquiryIndex + 1}`,
-          parentId: avenueId,
-          title: inquiryTitle,
-          question: textOf(inquiry?.question),
-          territory: textOf(inquiry?.territory, inquiryObservation),
-          observation: inquiryObservation,
-          depth: 3,
-          status: "latent",
-          actions: actionsFrom(inquiry ?? {}, inquiryObservation, size),
-        });
-      });
-    });
-  });
-
+  walkChildren(branches, root, first, children.length ? "c" : "r");
+  const attached = attachChildEdges(branches);
   return {
     chapterTitle: title,
     rootId: root.id,
     focusId: root.id,
     step: 0,
-    catalogSize: size,
-    branches,
-    boardNotes: branches
+    branches: attached,
+    boardNotes: attached
       .filter((branch) => branch.observation.trim())
       .map((branch) => ({ key: branch.id, text: branch.observation })),
   };
 }
 
-export function sessionBranchById(
-  model: SessionBranchModel,
-  id: string | null | undefined,
-): SessionBranch | null {
+function parseStoredBranch(raw: unknown): SessionBranch | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const row = raw as Record<string, unknown>;
+  const id = textOf(row.id);
   if (!id) return null;
-  return model.branches.find((branch) => branch.id === id) ?? null;
+  const parentRaw = row.parentId;
+  return {
+    id,
+    parentId: parentRaw == null || parentRaw === "" ? null : textOf(parentRaw),
+    title: textOf(row.title, id),
+    question: textOf(row.question),
+    territory: textOf(row.territory),
+    observation: textOf(row.observation),
+    depth: Number.isFinite(Number(row.depth)) ? Math.max(0, Math.floor(Number(row.depth))) : 0,
+    status:
+      row.status === "closed" || row.status === "latent" || row.status === "open"
+        ? row.status
+        : "open",
+    edges: cloneEdges(row.edges as SessionBranchEdge[]),
+  };
+}
+
+/** Read a stored or live tree. Legacy action catalogs become priced parent→child edges. */
+export function hydrateSessionBranchModel(raw: unknown): SessionBranchModel | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const row = raw as Record<string, unknown>;
+  const listed = Array.isArray(row.branches) ? row.branches : [];
+  const parsed = listed
+    .map(parseStoredBranch)
+    .filter((branch): branch is SessionBranch => Boolean(branch));
+  if (!parsed.length) {
+    return normalizeSessionBranchModel(row as SessionBranchDraft, textOf(row.chapterTitle, "This chapter"));
+  }
+  const ids = new Set(parsed.map((branch) => branch.id));
+  const withEdges = parsed.map((branch) => {
+    const childIds = parsed.filter((row) => row.parentId === branch.id).map((row) => row.id);
+    const source = listed.find((item) => {
+      if (!item || typeof item !== "object") return false;
+      return textOf((item as { id?: unknown }).id) === branch.id;
+    }) as { edges?: unknown; actions?: unknown } | undefined;
+    return {
+      ...branch,
+      edges: edgesFromLegacyActions(source?.edges ?? branch.edges, source?.actions, childIds).filter(
+        (edge) => ids.has(edge.toId),
+      ),
+    };
+  });
+  const rootId =
+    textOf(row.rootId) && ids.has(textOf(row.rootId))
+      ? textOf(row.rootId)
+      : withEdges.find((branch) => branch.parentId == null)?.id || withEdges[0]!.id;
+  const focusId =
+    textOf(row.focusId) && ids.has(textOf(row.focusId)) ? textOf(row.focusId) : rootId;
+  const boardNotes: SessionBranchNote[] = Array.isArray(row.boardNotes)
+    ? (row.boardNotes as unknown[])
+        .map((note) => {
+          if (!note || typeof note !== "object") return null;
+          const rec = note as { key?: unknown; text?: unknown };
+          const key = textOf(rec.key);
+          const text = textOf(rec.text);
+          return key && text ? { key, text } : null;
+        })
+        .filter((note): note is SessionBranchNote => Boolean(note))
+    : withEdges
+        .filter((branch) => branch.observation.trim())
+        .map((branch) => ({ key: branch.id, text: branch.observation }));
+  return {
+    chapterTitle: textOf(row.chapterTitle, "This chapter"),
+    rootId,
+    focusId,
+    step: Number.isInteger(Number(row.step)) ? Math.max(0, Number(row.step)) : 0,
+    branches: withEdges,
+    boardNotes,
+  };
 }
 
 /** Branches the learner can close. Latent inquiries stay off the frozen list. */
@@ -303,26 +444,7 @@ export function openSessionBranchQuestions(
     }));
 }
 
-export function recommendSessionBranchAction(
-  model: SessionBranchModel,
-  branchId: string | null | undefined,
-): SessionBranchAction | null {
-  const focus = sessionBranchById(model, branchId || model.focusId);
-  if (!focus) return null;
-  const live = liveSessionBranchActions(focus);
-  const openLeft = model.branches.some((branch) => branch.status === "open");
-  if (!openLeft) return live.find((action) => action.id === "insight") ?? null;
-  const ranked = live
-    .filter((action) => action.id !== "insight")
-    .slice()
-    .sort((a, b) => a.price - b.price || a.id.localeCompare(b.id));
-  return ranked[0] ?? null;
-}
-
-function openLatent(
-  branches: SessionBranch[],
-  ids: string[],
-): SessionBranch[] {
+function openLatent(branches: SessionBranch[], ids: string[]): SessionBranch[] {
   const wanted = new Set(ids);
   return branches.map((branch) =>
     wanted.has(branch.id) && branch.status === "latent" ? { ...branch, status: "open" } : branch,
@@ -336,72 +458,43 @@ function noteFor(key: string, text: string, seen: Set<string>): SessionBranchNot
   return { key, text: clean };
 }
 
+function cloneModelBranches(model: SessionBranchModel): SessionBranch[] {
+  return model.branches.map((branch) => ({
+    ...branch,
+    edges: cloneEdges(branch.edges),
+  }));
+}
+
 export function advanceSessionBranchModel(
   model: SessionBranchModel,
-  input: { branchId?: string | null; action: SessionMarkButtonId },
+  input: { toId?: string | null; fromId?: string | null; branchId?: string | null },
 ): SessionBranchModel {
-  const focusId = input.branchId || model.focusId;
-  const focus = sessionBranchById(model, focusId);
-  if (!focus) return model;
-  // Insight is allowed on the last closed node, once nothing is left open.
-  if (focus.status === "closed" && input.action !== "insight") return model;
-  const action = focus.actions.find((row) => row.id === input.action);
+  const fromId = input.fromId || input.branchId || model.focusId;
+  const toId = textOf(input.toId) || fromId;
+  const from = sessionBranchById(model, fromId);
+  const target = sessionBranchById(model, toId);
+  if (!from || !target) return model;
   const step = model.step + 1;
-  let branches = model.branches.map((branch) => ({ ...branch, actions: branch.actions.map((row) => ({ ...row })) }));
+  let branches = cloneModelBranches(model);
+  if (target.status === "latent") branches = openLatent(branches, [target.id]);
   const seen = new Set(model.boardNotes.map((note) => note.key));
   const notes: SessionBranchNote[] = [];
-
-  if (input.action === "try") {
-    branches = branches.map((branch) =>
-      branch.id === focus.id ? { ...branch, status: "closed" } : branch,
-    );
-    const childIds = branches
-      .filter((branch) => branch.parentId === focus.id && branch.status === "latent")
-      .map((branch) => branch.id);
-    branches = openLatent(branches, childIds);
-  } else if (input.action === "hold") {
-    const child = branches.find((branch) => branch.parentId === focus.id && branch.status === "latent");
-    if (child) branches = openLatent(branches, [child.id]);
-  } else if (input.action === "drop") {
-    const sibling = branches.find(
-      (branch) => branch.parentId === focus.parentId && branch.id !== focus.id && branch.status === "latent",
-    );
-    if (sibling) branches = openLatent(branches, [sibling.id]);
-  }
-
-  const prepared = action?.observation?.trim() || action?.leads?.trim() || "";
-  const actionNote = prepared
-    ? noteFor(`${focus.id}:${input.action}:${step}`, prepared, seen)
-    : null;
-  if (actionNote) notes.push(actionNote);
+  const moved = noteFor(`${from.id}->${target.id}:${step}`, target.observation, seen);
+  if (moved) notes.push(moved);
   for (const branch of branches) {
     if (branch.status !== "open") continue;
     const opened = noteFor(branch.id, branch.observation, seen);
     if (opened && !model.boardNotes.some((note) => note.key === opened.key)) notes.push(opened);
   }
-
-  const nextFocus =
-    branches.find((branch) => branch.status === "open" && branch.parentId === focus.id)?.id ||
-    branches.find((branch) => branch.status === "open" && branch.depth >= focus.depth && branch.id !== focus.id)?.id ||
-    branches.find((branch) => branch.status === "open")?.id ||
-    focus.id;
-
   return {
     ...model,
     step,
-    focusId: input.action === "try" ? nextFocus : focus.id,
+    focusId: target.id,
     branches,
     boardNotes: [...model.boardNotes, ...notes],
   };
 }
 
-/**
- * Add branches that arrived after the session opened.
- * Status, focus, and notes already on the live tree stay.
- * A latent child of a node the learner already closed opens, because Close asked for that ring.
- * Every new branch places its observation, including ones that stay latent, so a later slice
- * reaches the board without an action press.
- */
 export function graftSessionBranchModel(
   live: SessionBranchModel,
   incoming: SessionBranchModel,
@@ -424,13 +517,13 @@ export function graftSessionBranchModel(
       seen.add(born.id);
       notes.push({ key: born.id, text });
     }
-    return { ...born, status, actions: born.actions.map((action) => ({ ...action })) };
+    return { ...born, status, edges: cloneEdges(born.edges) };
   });
-  const focusId = branches.some((branch) => branch.id === live.focusId) ? live.focusId : incoming.focusId;
-  return { ...live, focusId, branches, boardNotes: notes };
+  const hydrated = attachChildEdges(branches);
+  const focusId = hydrated.some((branch) => branch.id === live.focusId) ? live.focusId : incoming.focusId;
+  return { ...live, focusId, branches: hydrated, boardNotes: notes };
 }
 
-/** The live tree wins once the learner has moved. A fuller birth tree replaces an untouched one. */
 export function adoptSessionBranchGrowth(
   current: { status: string; model: SessionBranchModel | null; birth?: SessionBranchModel | null; error: string | null },
   incoming: SessionBranchModel,
@@ -470,13 +563,17 @@ export function sessionBranchFieldCounts(model: SessionBranchModel): {
   };
 }
 
-/** Accept a prepared tree from a completion payload. Empty trees are refused. */
 export function sessionBranchModelFromUnknown(raw: unknown): SessionBranchModel | null {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
-  const branches = (raw as SessionBranchModel).branches;
-  if (!Array.isArray(branches) || branches.length === 0) return null;
-  return raw as SessionBranchModel;
+  return hydrateSessionBranchModel(raw);
 }
+
+const NODE_PROPERTIES = {
+  title: { type: "string" },
+  question: { type: "string" },
+  territory: { type: "string" },
+  observation: { type: "string" },
+  edgePrice: { type: "number" },
+} as const;
 
 export const SESSION_BRANCH_MODEL_SCHEMA = {
   name: "session_branch_field",
@@ -484,161 +581,19 @@ export const SESSION_BRANCH_MODEL_SCHEMA = {
   schema: {
     type: "object" as const,
     additionalProperties: false,
-    required: [
-      "premise",
-      "closePrice",
-      "keepPrice",
-      "discardPrice",
-      "insightPrice",
-      "closeLeads",
-      "keepLeads",
-      "discardLeads",
-      "insightLeads",
-      "closeObservation",
-      "keepObservation",
-      "discardObservation",
-      "insightObservation",
-      "regions",
-    ],
+    required: ["premise", "question", "territory", "observation", "children"],
     properties: {
       premise: { type: "string" },
-      closePrice: { type: "number" },
-      keepPrice: { type: "number" },
-      discardPrice: { type: "number" },
-      insightPrice: { type: "number" },
-      closeLeads: { type: "string" },
-      keepLeads: { type: "string" },
-      discardLeads: { type: "string" },
-      insightLeads: { type: "string" },
-      closeObservation: { type: "string" },
-      keepObservation: { type: "string" },
-      discardObservation: { type: "string" },
-      insightObservation: { type: "string" },
-      regions: {
+      question: { type: "string" },
+      territory: { type: "string" },
+      observation: { type: "string" },
+      children: {
         type: "array",
         items: {
           type: "object",
           additionalProperties: false,
-          required: [
-            "title",
-            "question",
-            "territory",
-            "observation",
-            "closePrice",
-            "keepPrice",
-            "discardPrice",
-            "insightPrice",
-            "closeLeads",
-            "keepLeads",
-            "discardLeads",
-            "insightLeads",
-            "closeObservation",
-            "keepObservation",
-            "discardObservation",
-            "insightObservation",
-            "avenues",
-          ],
-          properties: {
-            title: { type: "string" },
-            question: { type: "string" },
-            territory: { type: "string" },
-            observation: { type: "string" },
-            closePrice: { type: "number" },
-            keepPrice: { type: "number" },
-            discardPrice: { type: "number" },
-            insightPrice: { type: "number" },
-            closeLeads: { type: "string" },
-            keepLeads: { type: "string" },
-            discardLeads: { type: "string" },
-            insightLeads: { type: "string" },
-            closeObservation: { type: "string" },
-            keepObservation: { type: "string" },
-            discardObservation: { type: "string" },
-            insightObservation: { type: "string" },
-            avenues: {
-              type: "array",
-              items: {
-                type: "object",
-                additionalProperties: false,
-                required: [
-                  "title",
-                  "territory",
-                  "observation",
-                  "closePrice",
-                  "keepPrice",
-                  "discardPrice",
-                  "insightPrice",
-                  "closeLeads",
-                  "keepLeads",
-                  "discardLeads",
-                  "insightLeads",
-                  "closeObservation",
-                  "keepObservation",
-                  "discardObservation",
-                  "insightObservation",
-                  "inquiries",
-                ],
-                properties: {
-                  title: { type: "string" },
-                  territory: { type: "string" },
-                  observation: { type: "string" },
-                  closePrice: { type: "number" },
-                  keepPrice: { type: "number" },
-                  discardPrice: { type: "number" },
-                  insightPrice: { type: "number" },
-                  closeLeads: { type: "string" },
-                  keepLeads: { type: "string" },
-                  discardLeads: { type: "string" },
-                  insightLeads: { type: "string" },
-                  closeObservation: { type: "string" },
-                  keepObservation: { type: "string" },
-                  discardObservation: { type: "string" },
-                  insightObservation: { type: "string" },
-                  inquiries: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      additionalProperties: false,
-                      required: [
-                        "title",
-                        "territory",
-                        "observation",
-                        "closePrice",
-                        "keepPrice",
-                        "discardPrice",
-                        "insightPrice",
-                        "closeLeads",
-                        "keepLeads",
-                        "discardLeads",
-                        "insightLeads",
-                        "closeObservation",
-                        "keepObservation",
-                        "discardObservation",
-                        "insightObservation",
-                      ],
-                      properties: {
-                        title: { type: "string" },
-                        territory: { type: "string" },
-                        observation: { type: "string" },
-                        closePrice: { type: "number" },
-                        keepPrice: { type: "number" },
-                        discardPrice: { type: "number" },
-                        insightPrice: { type: "number" },
-                        closeLeads: { type: "string" },
-                        keepLeads: { type: "string" },
-                        discardLeads: { type: "string" },
-                        insightLeads: { type: "string" },
-                        closeObservation: { type: "string" },
-                        keepObservation: { type: "string" },
-                        discardObservation: { type: "string" },
-                        insightObservation: { type: "string" },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
+          required: ["title", "question", "territory", "observation", "edgePrice"],
+          properties: { ...NODE_PROPERTIES },
         },
       },
     },
@@ -648,33 +603,18 @@ export const SESSION_BRANCH_MODEL_SCHEMA = {
 export function sessionBranchModelPrompt(input: {
   chapterTitle: string;
   chapterBrief?: string | null;
-  catalogSize?: unknown;
 }): string {
   const brief = textOf(input.chapterBrief);
-  const size = parseLearningModelSize(input.catalogSize);
-  const extra = extraCatalogActionIds(size);
-  const extraLine = extra.length
-    ? `Also price these extra catalog actions from 0 to 100 on every node: ${extra.join(", ")}.`
-    : "";
   return [
     `Prepare the working field for a session on "${textOf(input.chapterTitle, "this chapter")}".`,
     brief ? `Chapter material:\n${brief}` : "",
-    `This is a landscape of inquiry, not a short quiz and not a three-step maze.`,
-    `Write ${SESSION_BRANCH_REGION_COUNT} regions.`,
-    `Under every region write ${SESSION_BRANCH_AVENUE_COUNT} avenues.`,
-    `Under every avenue write ${SESSION_BRANCH_INQUIRY_COUNT} inquiries.`,
-    `The generative model uses a ${size}-action catalog.`,
-    "Every node needs its own territory, a genuine question, a board observation of one or two sentences, and four live actions: close, keep, discard, and insight.",
+    "This is a landscape of inquiry, not a short quiz and not a three-step maze.",
+    `Write between ${SESSION_BRANCH_CHILD_MIN} and ${SESSION_BRANCH_CHILD_MAX} hidden states branching from the opening state.`,
+    "Choose how many branches the concept actually needs. Do not pad.",
+    "Every node needs its own territory, a genuine question, a board observation of one or two sentences, and an edgePrice from 0 to 100: the cost of travelling to that hidden state from its parent.",
     "The question is one original interrogative sentence a learner would be asked. Write it from scratch. Never wrap the title or territory into a stock sentence.",
-    extraLine,
-    "Price each action from 0 to 100. A lower price is the better next policy for that node.",
-    "Close should be cheap when the observation would settle that node, and expensive when the node is still only a hunch.",
-    "Keep should be cheap when the node needs a further observation before it can be settled.",
-    "Discard should be cheap when the node is a dead end and another avenue should be opened.",
-    "Insight should be expensive on early nodes and cheaper only where the territory is already settled.",
-    "leads says where that action takes the learner next, in one sentence.",
-    "observation on an action is the new text that action would place on the board, one or two sentences, specific to this chapter.",
-    "The regions must cover different parts of the chapter. Avenues under one region must diverge. Inquiries must go further into that avenue, not repeat its title.",
+    "A lower edgePrice is the better next hidden state from the parent.",
+    "The branches must cover different parts of the chapter.",
     "Write in complete sentences a learner can read. No headings, no bullets, no product names.",
   ]
     .filter(Boolean)

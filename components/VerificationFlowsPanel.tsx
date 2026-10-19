@@ -2,8 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { ContextGenerationPool } from "@/components/ContextGenerationPool";
-import { LearningModelSizePicker } from "@/components/learning-model/LearningModelSizePicker";
-import { parseLearningModelSize, type LearningModelSize } from "@/lib/learning-model";
 import {
   buildVerificationFlowSkillMarkdown,
   verificationFlowSkillFilename,
@@ -16,7 +14,6 @@ type FlowRecord = {
   name?: string;
   topic: string;
   questions: VerificationQuestion[];
-  actionCatalog?: LearningModelSize;
   publicToken: string;
   publicUrl: string;
   skillMd: string;
@@ -42,7 +39,6 @@ export function VerificationFlowsPanel({
   const [flows, setFlows] = useState<FlowRecord[]>([]);
   const [name, setName] = useState("");
   const [topic, setTopic] = useState("");
-  const [catalog, setCatalog] = useState<LearningModelSize>(4);
   const [draftQuestions, setDraftQuestions] = useState<string[]>([""]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -86,7 +82,6 @@ export function VerificationFlowsPanel({
           name,
           topic,
           questions: questionsFromDraft(),
-          actionCatalog: catalog,
         }),
       });
       const payload = await response.json();
@@ -97,7 +92,6 @@ export function VerificationFlowsPanel({
       setName("");
       setTopic("");
       setDraftQuestions([""]);
-      setCatalog(4);
       setEditingId(null);
       await load();
     } finally {
@@ -168,12 +162,6 @@ export function VerificationFlowsPanel({
           data-verification-flow-topic
           className="w-full border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
         />
-        <LearningModelSizePicker
-          name="verification-flow-learning-model"
-          value={catalog}
-          onChange={setCatalog}
-          disabled={busy}
-        />
         <div className="space-y-2" data-verification-flow-pool>
           {draftQuestions.map((value, index) => (
             <div key={index} className="flex gap-2">
@@ -225,8 +213,6 @@ export function VerificationFlowsPanel({
                 <p className="text-sm text-white" data-flow-name>{flow.name || flow.topic}</p>
                 <p className="text-[11px] text-neutral-500">
                   {flow.questions.length} starting question{flow.questions.length === 1 ? "" : "s"}
-                  {" · "}
-                  {parseLearningModelSize(flow.actionCatalog)} actions
                 </p>
               </div>
               <div className="flex gap-2">
@@ -237,7 +223,6 @@ export function VerificationFlowsPanel({
                     setEditingId(flow.id);
                     setName(flow.name || flow.topic);
                     setTopic(flow.topic);
-                    setCatalog(parseLearningModelSize(flow.actionCatalog));
                     setDraftQuestions(
                       flow.questions.length ? flow.questions.map((question) => question.text) : [""],
                     );

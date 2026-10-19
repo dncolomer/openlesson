@@ -31,6 +31,7 @@ import {
 } from "@/lib/insert-workspace-blocks";
 import {
   blankWorkspaceCreateOutcome,
+  resolveBlankWorkspaceTitle,
   composeFilesGoalCreatePrompt,
   composeTemplateCreatePrompt,
   composeTemplateWorkspaceNotes,
@@ -157,13 +158,9 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(workspaceLimitErrorResponse(workspaceCheck), { status: 403 });
       }
 
-      const blankTitle = (typeof body.title === "string" ? body.title : topic).trim();
-      if (!blankTitle) {
-        return jsonError(400, "Name is required");
-      }
-      if (blankTitle.length > 120) {
-        return jsonError(400, "Name is too long");
-      }
+      const blankTitle = resolveBlankWorkspaceTitle(
+        typeof body.title === "string" ? body.title : topic,
+      );
 
       const { data: plan, error: planError } = await supabase
         .from("workspaces")

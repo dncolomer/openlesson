@@ -9,7 +9,12 @@ import {
   SESSION_MARK_ANCHOR_KEY,
   SESSION_MARK_KEPT_KEY,
 } from "@/lib/session-mark-canvas";
-import { appendSessionBranchNotes, normalizeSessionBranchModel, type SessionBranchModel } from "@/lib/session-branch-model";
+import {
+  appendSessionBranchNotes,
+  normalizeSessionBranchModel,
+  recommendSessionBranchAction,
+  type SessionBranchModel,
+} from "@/lib/session-branch-model";
 import type { SessionMarkButtonId } from "@/lib/session-marks";
 
 function marks(): IleWorkCanvasElement[] {
@@ -110,41 +115,35 @@ function placedTexts(elements: readonly IleWorkCanvasElement[]): string[] {
 }
 
 describe("commit session action", () => {
-  it("places the next observation for every action with an empty selection and with a selection", () => {
+  it("places the next hidden-state observation with an empty selection and with a selection", () => {
     const model = fieldModel();
-    const actions: SessionMarkButtonId[] = ["try", "hold", "drop", "insight"];
-    for (const action of actions) {
-      const empty = commitSessionAction({
-        elements: boardOf(model),
-        selectedIds: [],
-        model,
-        action,
-      });
-      const written = model.branches
-        .find((branch) => branch.id === model.focusId)
-        ?.actions.find((row) => row.id === action)?.observation;
-      expect(written?.trim()).toBeTruthy();
-      expect(placedTexts(empty.added)).toContain(written);
-      expect(empty.model?.step).toBe(model.step + 1);
+    const recommended = recommendSessionBranchAction(model, model.focusId);
+    expect(recommended?.observation.trim()).toBeTruthy();
+    const empty = commitSessionAction({
+      elements: boardOf(model),
+      selectedIds: [],
+      model,
+      action: "try",
+    });
+    expect(placedTexts(empty.added)).toContain(recommended?.observation);
+    expect(empty.model?.step).toBe(model.step + 1);
 
-      const selected = commitSessionAction({
-        elements: marks().concat(boardOf(model)),
-        selectedIds: ["box"],
-        model,
-        action,
-      });
-      expect(placedTexts(selected.added)).toContain(written);
-      const box = selected.elements.find((element) => element.id === "box");
-      if (action === "hold") {
-        expect(box?.locked).toBe(true);
-        expect(selected.elements.some((element) => element.customData?.[SESSION_MARK_ANCHOR_KEY] === true)).toBe(true);
-      } else if (action === "drop") {
-        expect(box?.isDeleted).toBe(true);
-      } else {
-        expect(box?.isDeleted).toBeFalsy();
-        expect(box?.locked).toBeFalsy();
-      }
-    }
+    const selectedHold = commitSessionAction({
+      elements: marks().concat(boardOf(model)),
+      selectedIds: ["box"],
+      model,
+      action: "hold",
+    });
+    expect(placedTexts(selectedHold.added)).toContain(recommended?.observation);
+    expect(selectedHold.elements.find((element) => element.id === "box")?.locked).toBe(true);
+
+    const selectedDrop = commitSessionAction({
+      elements: marks().concat(boardOf(model)),
+      selectedIds: ["box"],
+      model,
+      action: "drop",
+    });
+    expect(selectedDrop.elements.find((element) => element.id === "box")?.isDeleted).toBe(true);
   });
 
   it("still edits a selection when the field is missing, and places nothing new", () => {

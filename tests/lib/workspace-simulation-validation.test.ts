@@ -189,7 +189,7 @@ describe("Simulation validation module remains pure (tab UI no longer primary ho
     expect(surface).toContain("data-simulation-generate");
     expect(surface).toContain("data-simulate-insights-keep");
     expect(view).not.toContain("WorkspaceSimulationPanel");
-    expect(view).toMatch(/workspaceGoal|workspace_goal/);
+    expect(view).not.toMatch(/workspaceGoal=\{plan\.workspace_goal\}/);
     expect(aycl).toContain("WorkspaceView");
 
     // Per-block drawer does not host workspace validation

@@ -184,15 +184,10 @@ describe("learner Locked + DAG drawer structural", () => {
     expect(canvas).toContain("readOnly");
     expect(canvas).toContain("data-dag-read-only");
 
-    expect(view).toContain("showLearnerDrawer");
-    expect(view).toMatch(
-      /showLearnerDrawer[\s\S]*WorkspaceLearnerBlockPane/,
-    );
+    expect(view).not.toContain("showLearnerDrawer");
+    expect(view).not.toContain("WorkspaceLearnerBlockPane");
     expect(view).toMatch(
       /showCreatorDrawers[\s\S]*WorkspaceBlockDetailPane/,
-    );
-    expect(view).not.toMatch(
-      /showCreatorDrawers[\s\S]{0,200}WorkspaceLearnerBlockPane/,
     );
 
     mkdirSync(SCRATCH, { recursive: true });
@@ -206,7 +201,7 @@ describe("learner Locked + DAG drawer structural", () => {
         "drawer=" + learner.includes("data-learner-dag-drawer"),
         "mini_canvas=" + learner.includes("MultiBlockDagCanvas"),
         "read_only=" + learner.includes("readOnly"),
-        "learner_only_pane=" + view.includes("showLearnerDrawer"),
+        "learner_only_pane=" + view.includes("WorkspaceLearnerBlockPane"),
         "locked_helper=" + mod.includes("isLearnerMapBlockLocked"),
       ].join("\n") + "\n",
     );

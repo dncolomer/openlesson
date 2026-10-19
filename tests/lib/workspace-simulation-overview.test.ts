@@ -99,8 +99,8 @@ describe("workspace Simulation section helpers + UI structure", () => {
     expect(view).not.toContain("WorkspaceSimulationPanel");
     expect(view).not.toContain("data-workspace-simulation-host");
     expect(aycl).toContain("WorkspaceView");
-    expect(detail).toContain('title="Simulate Insights"');
-    expect(detail).toContain("WorkspaceBlockSimulationPanel");
+    expect(detail).not.toContain('title="Simulate Insights"');
+    expect(detail).not.toContain("WorkspaceBlockSimulationPanel");
 
     mkdirSync(SCRATCH, { recursive: true });
     const empty = deriveWorkspaceSimulationOverview([]);
@@ -160,8 +160,8 @@ describe("workspace Simulation section helpers + UI structure", () => {
 
     expect(hosts).not.toContain("WorkspaceSimulationPanel");
     expect(availableWorkspaceSections({ isOwner: true })).not.toContain("simulation");
-    expect(detail).toContain('title="Simulate Insights"');
-    expect(combine).toContain('title="Simulate Insights"');
+    expect(detail).not.toContain('title="Simulate Insights"');
+    expect(combine).not.toContain('title="Simulate Insights"');
     expect(route).toContain("Simulate Insights runs on a block");
     expect(surface).toContain("data-simulate-insights-keep");
     expect(surface).toContain("data-simulate-insights-start");

@@ -125,6 +125,7 @@ describe("availableWorkspaceSections", () => {
       "workspace",
       "dags",
       "map_types",
+      "unsys_models",
       "context",
       "settings",
     ]);
@@ -148,6 +149,7 @@ describe("availableWorkspaceSections", () => {
       "workspace",
       "dags",
       "map_types",
+      "unsys_models",
       "context",
       "settings",
     ]);

@@ -1,7 +1,8 @@
 /**
- * Action catalogs for the unsys model.
- * Size 4 is live. Sizes 8 and 16 are the finer policy sets a workspace or
- * flow can select. Stored four-action ids stay try / hold / drop / insight.
+ * Historical action catalogs for the unsys model.
+ * Size 4 names Forage / Exploit / Avoid / Infer. Sizes 8 and 16 were finer
+ * policy sets. Live inference is hidden-state travel on priced edges.
+ * Stored four-action ids stay try / hold / drop / insight.
  */
 
 export const LEARNING_MODEL_SIZES = [4, 8, 16] as const;
@@ -269,15 +270,15 @@ export const LEARNING_MODEL_SIZE_COPY: Record<
 > = {
   4: {
     title: "4 actions",
-    body: "Forage, Exploit, Avoid, Infer. The core policy: seek information, act on a preference, withdraw, or report the posterior.",
+    body: "Historical names: Forage, Exploit, Avoid, Infer. Seek information, act on a preference, withdraw, or report the posterior.",
   },
   8: {
     title: "8 actions",
-    body: "Adds travel on the generative model (Descend, Ascend, Switch) and splits foraging into Sample and Predict.",
+    body: "Historical catalog. Adds travel names (Descend, Ascend, Switch) and splits foraging into Sample and Predict.",
   },
   16: {
     title: "16 actions",
-    body: "Adds Divert, Dwell, Reopen, Compare, Novelty, Sharpen, Relax, and Prefer: precision, prediction error, and prior preferences.",
+    body: "Historical catalog. Adds Divert, Dwell, Reopen, Compare, Novelty, Sharpen, Relax, and Prefer.",
   },
 };
 

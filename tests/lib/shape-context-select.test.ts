@@ -280,14 +280,8 @@ describe("structural: dialog + grid-ops wire selection → local_context + promp
     expect(pane).not.toContain('drawerId="effect_dynamic"');
     expect(pane).not.toContain('drawerId="effect_generator"');
 
-    // After create: select block → Local context panel with explicit Save for edits
-    const local = read("components/WorkspaceBlockLocalContextPanel.tsx");
-    expect(local).toContain("data-block-local-save");
-    expect(local).toContain("Save context to this block");
-    expect(local).toContain("onSaveLocalContext");
-
     const detail = read("components/WorkspaceBlockDetailPane.tsx");
-    expect(detail).toContain('drawerId="local"');
+    expect(detail).not.toContain('drawerId="local"');
     expect(detail).toContain('drawerId="effect_dynamic"');
     expect(detail).toContain('drawerId="effect_generator"');
 
@@ -295,9 +289,8 @@ describe("structural: dialog + grid-ops wire selection → local_context + promp
     expect(view).toContain("WorkspaceAddBlockPane");
     expect(view).toContain("contextSourceKeys");
     expect(view).toContain("workspaceNotes=");
-    expect(view).toContain("WorkspaceBlockLocalContextPanel");
-    expect(view).toContain("handleSaveLocalContext");
-    expect(view).toContain("set_local_context");
+    expect(view).not.toContain("WorkspaceBlockLocalContextPanel");
+    expect(view).not.toContain("onSaveLocalContext={handleSaveLocalContext}");
 
     // API maps selection → generation snippet + persisted local_context + link bodies
     const slot = read("app/api/workspace/add-block-at-slot/route.ts");
@@ -322,7 +315,7 @@ describe("structural: dialog + grid-ops wire selection → local_context + promp
         "paneShapePicker=" + pane.includes("data-shape-context-picker"),
         "paneSubmitKeys=" + /contextSourceKeys/.test(pane),
         "paneNoLocalDrawer=" + !pane.includes('drawerId="local"'),
-        "localSaveBtn=" + local.includes("data-block-local-save"),
+        "localSaveBtn=unmounted",
         "slotLocalContext=" + slot.includes("shapeSelectionToLocalContext"),
         "slotLinkBody=" + slot.includes("enrichSelectedOptionsWithFetchedLinkBodies"),
         "viewKeys=" + view.includes("contextSourceKeys"),

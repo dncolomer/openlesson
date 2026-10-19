@@ -710,7 +710,6 @@ const handleConfirmEnd = async (options?: { impure?: boolean }) => {
           runId: session.id,
           source: "learn",
           model: snapshot.model,
-          catalogSize: snapshot.model.catalogSize,
           sequence,
           pow: sequence.map((action, index) => ({
             type: "tool",
@@ -735,7 +734,6 @@ const handleConfirmEnd = async (options?: { impure?: boolean }) => {
           data: textToBase64(
             JSON.stringify({
               flowKind: "learn",
-              catalogSize: snapshot.model.catalogSize,
               sequence,
               ...(impure ? { quality: "impure", impure: true, session_quality: "impure" } : {}),
             }),
@@ -941,7 +939,7 @@ const fieldInput = learnSessionFieldInput({
   ileToken,
   ayclToken,
   fallbackTitle: t("session.chapterPromptFallback"),
-  catalogSize: session.metadata?.learning_model_size,
+  metadata: session.metadata,
 });
 const storedField = learnFieldFromStoredPolicy(session.metadata, fieldInput);
 const field = storedField
@@ -1001,7 +999,7 @@ const handleWelcomeReadyStart = useCallback(async () => {
       ileToken,
       ayclToken,
       fallbackTitle: t("session.chapterPromptFallback"),
-      catalogSize: session.metadata?.learning_model_size,
+      metadata: session.metadata,
     });
     const storedField = learnFieldFromStoredPolicy(session.metadata, fieldInput);
     const field = storedField

@@ -4,7 +4,6 @@
  */
 
 import { formatCountdown } from "@/lib/tap-score-client-helpers";
-import { learningModelActionLabel } from "@/lib/learning-model";
 import {
   recommendSessionBranchAction,
   type SessionBranchModel,
@@ -20,20 +19,13 @@ export const FLOW_END_KICKERS = {
 
 export type SessionStageKind = keyof typeof FLOW_END_KICKERS;
 
-function storedActionLabel(id: string): string {
-  if (id === "try" || id === "hold" || id === "drop" || id === "insight") {
-    return learningModelActionLabel(id);
-  }
-  return id;
-}
-
 export function sessionLearnPolicyProgressLabel(
   model: SessionBranchModel | null | undefined,
 ): string {
   if (!model) return "Policy";
   const recommended = recommendSessionBranchAction(model, model.focusId);
   if (!recommended) return "Policy";
-  return `Policy · ${storedActionLabel(recommended.id)}`;
+  return `Policy · ${recommended.leads}`;
 }
 
 export function sessionStageProgressLine(input: {

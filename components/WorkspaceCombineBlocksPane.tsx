@@ -39,7 +39,6 @@ import {
   type MultiBlockDagDraft,
 } from "@/lib/multi-block-dag";
 import { WorkspacePromptContextAlternatives } from "@/components/WorkspacePromptContextAlternatives";
-import { WorkspaceMultiBlockSimulationPanel } from "@/components/WorkspaceMultiBlockSimulationPanel";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import { normalizeSuggestDagResponse } from "@/lib/suggest-dag";
 import {
@@ -1041,23 +1040,6 @@ export function WorkspaceCombineBlocksPane({
             </>
           )}
         </div>
-      </WorkspaceRightPaneDrawer>
-
-      {/* Multi-block Simulation — deposits to Sim tab collection */}
-      <WorkspaceRightPaneDrawer
-        variant="section"
-        drawerId="simulation"
-        title="Simulate Insights"
-        defaultExpanded={false}
-        bodyClassName="space-y-3"
-        surfaceDataAttr="data-multi-block-simulation-drawer"
-      >
-        <WorkspaceMultiBlockSimulationPanel
-          workspaceId={workspaceId}
-          ayclToken={ayclToken}
-          blockIds={selected.map((b) => b.id)}
-          blockTitles={selected.map((b) => b.title || "Untitled")}
-        />
       </WorkspaceRightPaneDrawer>
 
       {/* Danger zone — batch delete for the multi-selected blocks */}

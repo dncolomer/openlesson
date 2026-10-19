@@ -58,13 +58,20 @@ describe("session policy store", () => {
     const birth = birthTree();
     expect(birth).not.toBeNull();
     if (!birth) return;
-    const live = advanceSessionBranchModel(birth, { action: "hold" });
+    const live = advanceSessionBranchModel(birth, { toId: "r1", fromId: birth.focusId });
     expect(live.step).toBe(1);
+    expect(live.focusId).toBe("r1");
     const sentence = "Stay with the line you just drew and open the part that is still thin.";
+    const inference = {
+      hiddenStateId: "r1",
+      fromId: birth.focusId,
+      confidence: 0.82,
+      label: sentence,
+    };
     const record = sessionPolicyRecordFromLive({
       model: live,
       birth,
-      inferences: [{ action: "hold", confidence: 0.82, label: sentence }],
+      inferences: [inference],
       suggestion: sentence,
     });
     expect(record).not.toBeNull();
@@ -81,7 +88,7 @@ describe("session policy store", () => {
     expect(restored?.model.focusId).toBe(live.focusId);
     expect(restored?.model.chapterTitle).toBe("Heat");
     expect(restored?.birth.step).toBe(0);
-    expect(restored?.inferences).toEqual([{ action: "hold", confidence: 0.82, label: sentence }]);
+    expect(restored?.inferences).toEqual([inference]);
     expect(
       readSessionPolicyRecord({
         [SESSION_POLICY_META_KEY]: {
@@ -94,9 +101,12 @@ describe("session policy store", () => {
       })?.inferences[0]?.label,
     ).toBe("");
     expect(restored?.suggestion).toBe(sentence);
-    expect(scorePolicySequence(restored!.birth, restored!.inferences.map((entry) => entry.action))).toEqual(
-      scorePolicySequence(birth, ["hold"]),
-    );
+    expect(
+      scorePolicySequence(
+        restored!.birth,
+        restored!.inferences.map((entry) => entry.hiddenStateId),
+      ),
+    ).toEqual(scorePolicySequence(birth, ["r1"]));
     const again = applySessionPolicyToMetadata(metadata, record);
     expect(again).toBe(metadata);
 
@@ -129,7 +139,7 @@ describe("session policy store", () => {
         suggestion: "Keep",
       }),
     ).toBeNull();
-    const live = advanceSessionBranchModel(birth, { action: "hold" });
+    const live = advanceSessionBranchModel(birth, { toId: "r1", fromId: birth.focusId });
     const record = sessionPolicyRecordFromLive({
       model: live,
       birth,

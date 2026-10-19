@@ -609,10 +609,10 @@ describe("create surface wiring (structural)", () => {
       path.join(process.cwd(), "app/workspace/new/page.tsx"),
       "utf8",
     );
-    expect(newWorkspaceSrc).toContain("initialChapters");
-    expect(newWorkspaceSrc).toContain("InitialChaptersPicker");
-    expect(newWorkspaceSrc).toMatch(/initialChapters,/);
-    expect(newWorkspaceSrc).toMatch(/Map type|Starting map|Starting size|Initial chapters/i);
+    expect(newWorkspaceSrc).not.toContain("initialChapters");
+    expect(newWorkspaceSrc).not.toContain("InitialChaptersPicker");
+    expect(newWorkspaceSrc).toContain("createBlankMap");
+    expect(newWorkspaceSrc).toContain("data-create-blank-map");
     const pickerSrc = readFileSync(
       path.join(process.cwd(), "components/InitialChaptersPicker.tsx"),
       "utf8",

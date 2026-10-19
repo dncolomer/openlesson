@@ -3,13 +3,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { LearningModelSizePicker } from "@/components/learning-model/LearningModelSizePicker";
 import {
   buildVerificationFlowSkillMarkdown,
   verificationFlowSkillFilename,
 } from "@/lib/verification-flow";
 import { FLOW_COUNTDOWN_MINUTES, flowCountdownMinutes } from "@/lib/flow-countdown";
-import { parseLearningModelSize, type LearningModelSize } from "@/lib/learning-model";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import { DASHBOARD_FLOWS_PATH, type ProductFlowKind } from "@/lib/product-flow";
 import { ProductSurface } from "@/components/product-flow/product-surface";
@@ -22,7 +20,6 @@ type LoadedFlow = {
   topic?: string;
   goal?: string;
   questions: Array<{ id?: string; text?: string }>;
-  actionCatalog?: number;
   durationMinutes?: number;
   publicToken: string;
   workspaceId: string;
@@ -50,7 +47,6 @@ export function ProductFlowPage({
   const [name, setName] = useState("");
   const [topic, setTopic] = useState("");
   const [goal, setGoal] = useState("");
-  const [catalog, setCatalog] = useState<LearningModelSize>(4);
   const [minutes, setMinutes] = useState(15);
   const [draftQuestions, setDraftQuestions] = useState<string[]>([""]);
   const [publicUrl, setPublicUrl] = useState("");
@@ -70,7 +66,6 @@ export function ProductFlowPage({
     setName(String(next.name || payload.name || ""));
     setTopic(String(next.topic || ""));
     setGoal(String(next.goal || ""));
-    setCatalog(parseLearningModelSize(next.actionCatalog));
     setMinutes(flowCountdownMinutes(next.durationMinutes));
     setDraftQuestions(
       Array.isArray(next.questions) && next.questions.length
@@ -98,7 +93,6 @@ export function ProductFlowPage({
           topic,
           goal,
           questions: draftQuestions.map((text, index) => ({ id: `q-${index + 1}`, text })),
-          actionCatalog: catalog,
           durationMinutes: minutes,
         }),
       });
@@ -169,12 +163,6 @@ export function ProductFlowPage({
               data-verification-flow-topic
               className="w-full border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
             />
-            <LearningModelSizePicker
-              name="verification-flow-learning-model"
-              value={catalog}
-              onChange={setCatalog}
-              disabled={busy}
-            />
             <div className="space-y-2" data-verification-flow-pool>
               {draftQuestions.map((value, index) => (
                 <input
@@ -225,12 +213,6 @@ export function ProductFlowPage({
                 ))}
               </select>
             </label>
-            <LearningModelSizePicker
-              name="calibration-flow-learning-model"
-              value={catalog}
-              onChange={setCatalog}
-              disabled={busy}
-            />
             <div className="space-y-2" data-calibration-flow-pool>
               {draftQuestions.map((value, index) => (
                 <textarea

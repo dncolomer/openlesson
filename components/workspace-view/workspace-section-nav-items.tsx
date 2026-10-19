@@ -10,7 +10,7 @@ export function buildWorkspaceSectionNavItems(input: {
   visibleSections: WorkspaceSectionKey[];
 }): WorkspaceSectionNavItem[] {
   const { t, isLearnerMode, isOwner, visibleSections } = input;
-  // One learning surface: Workspace, DAGs, Map Types, Context, Settings.
+  // One learning surface: Workspace, DAGs, Map Types, Unsys models, Context, Settings.
   // when those sections are in the list. Verification keeps its own list.
   return [
     ...(visibleSections.includes("workspace")
@@ -51,6 +51,20 @@ export function buildWorkspaceSectionNavItems(input: {
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 6.75v10.5M12 6.75v10.5m5.25-10.5v10.5" />
+              </svg>
+            ),
+          },
+        ]
+      : []),
+    ...(isOwner && visibleSections.includes("unsys_models")
+      ? [
+          {
+            key: "unsys_models" as const,
+            label: t("planView.sectionUnsysModels") || "Unsys models",
+            icon: (
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.75l4.5 2.598v5.304L12 17.25l-4.5-2.598V9.348L12 6.75z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 12v5.25M7.5 9.348l9 5.196M16.5 9.348l-9 5.196" />
               </svg>
             ),
           },

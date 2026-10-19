@@ -35,14 +35,14 @@ describe("blockHasAttachedLocalContext", () => {
     ).toBe(true);
   });
 
-  it("BlockSkillGrid wires document badge from pure helper", () => {
+  it("map tiles do not show a local-context badge", () => {
     const root = join(__dirname, "../..");
     const grid = readMapGridSurface();
     expect(existsSync(join(root, "lib/block-skill-grid.ts"))).toBe(true);
-    expect(grid).toContain("blockHasAttachedLocalContext");
-    expect(grid).toContain("data-block-local-context-badge");
-    expect(grid).toContain("data-block-local-context-icon");
-    expect(grid).toContain('data-block-has-local-context={hasLocalContext ? "true" : "false"}');
+    expect(grid).not.toContain("blockHasAttachedLocalContext");
+    expect(grid).not.toContain("data-block-local-context-badge");
+    expect(grid).not.toContain("data-block-local-context-icon");
+    expect(grid).not.toContain("data-block-has-local-context");
     expect(grid).not.toContain("localContextBadge");
     expect(grid).not.toContain("resolveMapOccupiedTileBadges");
   });

@@ -1,7 +1,8 @@
 /**
  * Top-level workspace shell sections.
  * Learning workspaces (stored kind `standard`): Workspace, DAGs, Map Types,
- * Context, and Settings for designers; Workspace for play-only viewers.
+ * Unsys models, Context, and Settings for designers; Workspace for play-only
+ * viewers.
  * Verification workspaces (stored kind
  * `knowledge_region`): Goals, Verification Flows, Context, Knowledge, and
  * Settings. Calibration workspaces (stored kind `calibration`): Goals,
@@ -20,6 +21,7 @@ export type WorkspaceSectionKey =
   | "simulation"
   | "dags"
   | "map_types"
+  | "unsys_models"
   | "goals"
   | "verification_flows"
   | "calibration_flows"
@@ -37,6 +39,7 @@ export type WorkspaceMainSurface =
   | "simulation"
   | "dags"
   | "map_types"
+  | "unsys_models"
   | "goals"
   | "verification_flows"
   | "calibration_flows"
@@ -49,6 +52,7 @@ export const WORKSPACE_SECTION_KEYS: readonly WorkspaceSectionKey[] = [
   "workspace",
   "dags",
   "map_types",
+  "unsys_models",
   "goals",
   "verification_flows",
   "calibration_flows",
@@ -77,6 +81,8 @@ export type WorkspaceSectionLayout = {
   mountsDagsPanel: boolean;
   /** Creator Map Types tab — custom chapter-map types + built-in enable/disable. */
   mountsMapTypesPanel: boolean;
+  /** Owner Unsys models tab — saved block answers-model seeds. */
+  mountsUnsysModelsPanel?: boolean;
   /** Goals tab — multi workspace goals CRUD. */
   mountsGoalsPanel: boolean;
   /** Verification Flows tab — only on a Verification Workspace. */
@@ -162,6 +168,24 @@ export function resolveWorkspaceSectionLayout(
         mountsSimulationPanel: false,
         mountsDagsPanel: false,
         mountsMapTypesPanel: true,
+        mountsGoalsPanel: false,
+        localTabs: [],
+        mountsPerformancePanel: false,
+        mountsIntegrationPanel: false,
+        mountsInsightsPanel: false,
+        mountsKpisPanel: false,
+      };
+    case "unsys_models":
+      return {
+        section: "unsys_models",
+        mainSurface: "unsys_models",
+        showBlockMapChrome: false,
+        showSessionsColumn: false,
+        mountsContextPanel: false,
+        mountsSimulationPanel: false,
+        mountsDagsPanel: false,
+        mountsMapTypesPanel: false,
+        mountsUnsysModelsPanel: true,
         mountsGoalsPanel: false,
         localTabs: [],
         mountsPerformancePanel: false,
@@ -379,7 +403,7 @@ export function availableWorkspaceSections(options: WorkspaceSectionAuth): Works
   }
   if (canAccessPrivilegedWorkspaceSections(options)) {
     const sections: WorkspaceSectionKey[] = ["workspace"];
-    if (options.isOwner) sections.push("dags", "map_types");
+    if (options.isOwner) sections.push("dags", "map_types", "unsys_models");
     sections.push("context", "settings");
     return withLearningInsightsSection(sections, options);
   }

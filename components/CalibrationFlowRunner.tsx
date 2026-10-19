@@ -14,7 +14,6 @@ import { TapSessionSignals } from "@/components/session-view/session-signals";
 import { TapThoughtButton } from "@/components/tap-score/tap-thought-button";
 import { FLOW_END_KICKERS } from "@/lib/session-stage-progress";
 import { beginCalibrationSession } from "@/lib/calibration-flow";
-import { parseLearningModelSize } from "@/lib/learning-model";
 import { fetchAestheticPackages } from "@/lib/aesthetics";
 import { pickTapBackgroundImage } from "@/lib/tap-score-client-helpers";
 import { IleStartLoading } from "@/components/session-view/ile-start-loading";
@@ -73,7 +72,6 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
     goal: string;
     identity: string;
     minutes: number;
-    catalogSize: 4 | 8 | 16;
     session: CalibrateState;
   } | null>(null);
   const [stored, setStored] = useState(false);
@@ -131,7 +129,6 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
         topicId: "calibration-goal",
         questions: [],
         calibrationToken: token,
-        catalogSize: pending.catalogSize,
       }),
     );
     if (!sessionClockMayStart({ mode: "calibrate", fieldReady: field.ok })) {
@@ -178,7 +175,6 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
         identity?: string;
         goal?: string;
         durationMinutes?: number;
-        actionCatalog?: number;
       } = {};
       if (raw.trim()) {
         try {
@@ -217,7 +213,6 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
         goal: goalText,
         identity: claimed,
         minutes,
-        catalogSize: parseLearningModelSize(payload.actionCatalog),
         session: started.session,
       };
       setClaimedIdentity(claimed);
@@ -255,7 +250,6 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
         events: [soundingProofEvent(closed)],
         metadata: soundingProofMetadata(closed),
         model: closed.model,
-        catalogSize: closed.model?.catalogSize ?? pendingRef.current?.catalogSize,
       }),
     });
     if (!response.ok) {
@@ -419,7 +413,6 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
                   topicId: "calibration-goal",
                   questions: [],
                   calibrationToken: token,
-                  catalogSize: pendingRef.current?.catalogSize,
                 }),
                 stillText: live.proof.stillText,
                 transcript,

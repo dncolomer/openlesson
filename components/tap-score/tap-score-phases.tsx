@@ -96,7 +96,6 @@ export function TapScorePhases(props: {
   sidebarMode?: Extract<SessionSidebarMode, "tap" | "verification-tap">;
   /** Public verification flow. Workspace verification uses the session instead. */
   verificationToken?: string | null;
-  actionCatalog?: 4 | 8 | 16;
   policyRef?: MutableRefObject<SessionPolicySnapshot>;
   durationLocked: boolean;
   isStartingSession: boolean;
@@ -191,7 +190,6 @@ export function TapScorePhases(props: {
     localOpening = false,
     sidebarMode = "tap",
     verificationToken = null,
-    actionCatalog,
     durationLocked,
     isStartingSession,
     startingTopics,
@@ -464,7 +462,6 @@ export function TapScorePhases(props: {
     privateToken,
     verificationToken,
     entryQueryParams,
-    catalogSize: actionCatalog,
   });
   const verificationTitle = verificationField.chapterTitle || "This topic";
   const verificationBrief = verificationField.chapterBrief || "";

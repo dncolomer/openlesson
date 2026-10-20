@@ -1,7 +1,7 @@
 /**
  * Learn shows the contextual next-step sentence under the command dock.
- * The bar starts full and reaches zero at LEARN_SUGGESTION_TOAST_MS.
- * Add to canvas places that sentence as its own text mark.
+ * The note stays until dismiss or add. Add to canvas places that sentence
+ * as its own text mark.
  */
 import type { IleCommandDockMode } from "@/lib/ile-command-dock";
 import {
@@ -16,24 +16,13 @@ import {
 } from "@/lib/ile-work-canvas";
 import { policySuggestionIsRawLabel } from "@/lib/session-policy-infer";
 
-export const LEARN_SUGGESTION_TOAST_MS = 8000;
 export const LEARN_SUGGESTION_AUTHOR = "suggestion";
 export const LEARN_SUGGESTION_ADD_LABEL = "add to canvas";
+export const LEARN_SUGGESTION_DISMISS_LABEL = "dismiss";
 
 const SUGGESTION_FONT_SIZE = 20;
 
 export type LearnSuggestionToastPlacement = "under" | "beside-right" | "beside-left";
-
-/** 1 when the toast appears, 0 when it should unmount. */
-export function learnSuggestionToastProgress(
-  elapsedMs: number,
-  durationMs = LEARN_SUGGESTION_TOAST_MS,
-): number {
-  const duration = durationMs > 0 ? durationMs : LEARN_SUGGESTION_TOAST_MS;
-  if (!Number.isFinite(elapsedMs) || elapsedMs <= 0) return 1;
-  if (elapsedMs >= duration) return 0;
-  return 1 - elapsedMs / duration;
-}
 
 /**
  * The sentence to show. Learn only. A raw action name, a blank line,
@@ -52,13 +41,13 @@ export function learnSuggestionToastText(input: {
   return text;
 }
 
-/** Timeout only dismisses. Add dismisses and places the same sentence. */
+/** Dismiss hides the note. Add hides it and places the same sentence. */
 export function learnSuggestionToastAction(
-  kind: "add" | "timeout",
+  kind: "add" | "dismiss",
   text: string,
 ): { dismiss: string; place: string | null } {
   const clean = String(text || "").replace(/\s+/g, " ").trim();
-  if (kind === "timeout") return { dismiss: clean, place: null };
+  if (kind === "dismiss") return { dismiss: clean, place: null };
   return { dismiss: clean, place: clean };
 }
 

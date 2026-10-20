@@ -18,12 +18,12 @@ import { SESSION_INSTRUCTIONS, type SessionGuideId } from "@/lib/session-instruc
 const TAB_CLASS =
   "flex min-w-0 items-center justify-center rounded-none px-1 py-1.5 text-center font-mono text-[10px] font-semibold uppercase tracking-[0.12em]";
 
-type GuideTab = "commands" | "help" | "harness";
+type GuideTab = "commands" | "harness" | "help";
 
 /**
  * Sidebar focus for Learn, Calibrate, and Verification.
  * Learn and Verification run canvas commands from this rail.
- * Calibrate has no canvas, so this panel is Help and Harness.
+ * Calibrate has no canvas, so this panel is Harness and Help.
  */
 export function SessionGuidePanel({
   guide,
@@ -64,22 +64,22 @@ export function SessionGuidePanel({
           <button
             type="button"
             role="tab"
-            data-session-guide-tab="help"
-            aria-selected={tab === "help"}
-            onClick={() => setTab("help")}
-            className={`${TAB_CLASS} ${tab === "help" ? "bg-white text-black" : "text-white/40 hover:text-white"}`}
-          >
-            help
-          </button>
-          <button
-            type="button"
-            role="tab"
             data-session-guide-tab="harness"
             aria-selected={harnessOpen}
             onClick={() => setTab("harness")}
             className={`${TAB_CLASS} ${harnessOpen ? "bg-white text-black" : "text-white/40 hover:text-white"}`}
           >
             harness
+          </button>
+          <button
+            type="button"
+            role="tab"
+            data-session-guide-tab="help"
+            aria-selected={tab === "help"}
+            onClick={() => setTab("help")}
+            className={`${TAB_CLASS} ${tab === "help" ? "bg-white text-black" : "text-white/40 hover:text-white"}`}
+          >
+            help
           </button>
         </div>
       </div>

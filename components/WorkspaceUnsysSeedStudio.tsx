@@ -241,13 +241,29 @@ export function WorkspaceUnsysSeedStudio({
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
         <div className="relative min-h-[22rem] flex-1 overflow-hidden lg:min-h-0">
-          <WorkspaceUnsysSeedGraph
-            key={`${blockId}:${graphEpoch}`}
-            model={model}
-            focusId={focusId}
-            disabled={disabled}
-            onSelect={setFocusId}
-          />
+          <div
+            className={
+              generating
+                ? "pointer-events-none absolute inset-0 select-none blur-sm saturate-50"
+                : "absolute inset-0"
+            }
+            inert={generating ? true : undefined}
+          >
+            <WorkspaceUnsysSeedGraph
+              key={`${blockId}:${graphEpoch}`}
+              model={model}
+              focusId={focusId}
+              disabled={disabled}
+              onSelect={setFocusId}
+            />
+          </div>
+          {generating ? (
+            <div
+              data-author-unsys-generating=""
+              aria-busy="true"
+              className="absolute inset-0 z-10 cursor-wait bg-black/45"
+            />
+          ) : null}
         </div>
 
         <aside

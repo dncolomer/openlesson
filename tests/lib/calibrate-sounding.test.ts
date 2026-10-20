@@ -584,7 +584,7 @@ describe("sounding wiring contract", () => {
     expect(surface).not.toContain("SessionBranchFieldMap");
     expect(surface).not.toContain("SessionStageProgress");
     expect(surface).toContain("usePublishSessionFieldReveal");
-    expect(readFileSync(join(ROOT, "components/session-view/session-harness-panel.tsx"), "utf8")).toContain(
+    expect(readFileSync(join(ROOT, "components/session-view/session-harness-panel.tsx"), "utf8")).not.toContain(
       "SessionBranchFieldMap",
     );
     expect(surface).not.toContain('kind="sounding"');

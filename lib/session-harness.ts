@@ -1,5 +1,5 @@
 /**
- * Harness tab copy: the field plus one next-step sentence.
+ * Harness tab copy: one next-step sentence. No graph.
  * The sentence uses the learner's work. It never names an action.
  */
 import { policySuggestionIsRawLabel } from "@/lib/session-policy-infer";
@@ -34,15 +34,13 @@ export function sessionHarnessNextLine(input: {
 }
 
 /**
- * Verify scores Distance at the end. The Harness tab must not coach a next
- * step or show the Learn focus hint.
+ * Learn and Verify show the live recommendation. Calibrate keeps the tap line.
  */
 export function sessionHarnessFocusLine(input: {
   guide: SessionGuideId;
   suggestion?: string | null;
   inferenceLabel?: string | null;
-}): string | null {
-  if (input.guide === "verification") return null;
+}): string {
   if (input.guide === "calibrate") {
     return sessionHarnessNextLine({
       fallback: SESSION_HARNESS_FALLBACK.calibrate,
@@ -51,6 +49,9 @@ export function sessionHarnessFocusLine(input: {
   return sessionHarnessNextLine({
     suggestion: input.suggestion,
     inferenceLabel: input.inferenceLabel,
-    fallback: SESSION_HARNESS_FALLBACK.learn,
+    fallback:
+      input.guide === "verification"
+        ? SESSION_HARNESS_FALLBACK.verification
+        : SESSION_HARNESS_FALLBACK.learn,
   });
 }

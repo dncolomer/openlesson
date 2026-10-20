@@ -23,6 +23,9 @@ describe("session guide panel", () => {
     expect(html).not.toContain("data-session-commands");
     expect(html).toContain('data-session-guide-tab="help"');
     expect(html).toContain('data-session-guide-tab="harness"');
+    expect(html.indexOf('data-session-guide-tab="harness"')).toBeLessThan(
+      html.indexOf('data-session-guide-tab="help"'),
+    );
     expect(html).toContain("data-session-instructions");
     expect(html).toContain(">help<");
     expect(html).toContain(">harness<");
@@ -40,6 +43,12 @@ describe("session guide panel", () => {
     expect(learn).toContain('data-session-guide-tab="commands"');
     expect(learn).toContain('data-session-guide-tab="help"');
     expect(learn).toContain('data-session-guide-tab="harness"');
+    expect(learn.indexOf('data-session-guide-tab="commands"')).toBeLessThan(
+      learn.indexOf('data-session-guide-tab="harness"'),
+    );
+    expect(learn.indexOf('data-session-guide-tab="harness"')).toBeLessThan(
+      learn.indexOf('data-session-guide-tab="help"'),
+    );
     expect(learn).toContain("grid-cols-3");
     expect(learn).toContain(">help<");
     expect(learn).toContain("data-session-commands");
@@ -169,9 +178,19 @@ describe("session guide panel", () => {
         suggestion: hint,
         inferenceLabel: hint,
       }),
-    ).toBeNull();
+    ).toBe(hint);
+    expect(
+      sessionHarnessFocusLine({
+        guide: "verification",
+        suggestion: "Keep",
+        inferenceLabel: "Insight",
+      }),
+    ).toBe(SESSION_HARNESS_FALLBACK.verification);
     const harness = readFileSync(join(ROOT, "components/session-view/session-harness-panel.tsx"), "utf8");
     expect(harness).toContain("sessionHarnessFocusLine");
+    expect(harness).toContain("data-session-harness-next");
+    expect(harness).not.toContain("SessionBranchFieldMap");
+    expect(harness).not.toContain("data-session-branch-field-map");
     expect(harness).not.toContain("SESSION_HARNESS_FALLBACK[guide]");
   });
 });

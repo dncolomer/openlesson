@@ -8,12 +8,11 @@ import { LearnSuggestionToast } from "@/components/session-view/learn-suggestion
 import {
   LEARN_SUGGESTION_ADD_LABEL,
   LEARN_SUGGESTION_AUTHOR,
-  LEARN_SUGGESTION_TOAST_MS,
+  LEARN_SUGGESTION_DISMISS_LABEL,
   appendLearnSuggestionText,
   learnSuggestionToastAction,
   learnSuggestionToastClass,
   learnSuggestionToastPlacement,
-  learnSuggestionToastProgress,
   learnSuggestionToastText,
 } from "@/lib/ile-learn-suggestion";
 import {
@@ -57,14 +56,8 @@ function promptBar(mode: SessionMarkMode) {
 }
 
 describe("learn suggestion toast", () => {
-  it("drains from full to zero and only places the sentence on add", () => {
-    expect(LEARN_SUGGESTION_TOAST_MS).toBe(8000);
-    expect(learnSuggestionToastProgress(0)).toBe(1);
-    expect(learnSuggestionToastProgress(-20)).toBe(1);
-    expect(learnSuggestionToastProgress(LEARN_SUGGESTION_TOAST_MS / 2)).toBeCloseTo(0.5);
-    expect(learnSuggestionToastProgress(LEARN_SUGGESTION_TOAST_MS)).toBe(0);
-    expect(learnSuggestionToastProgress(LEARN_SUGGESTION_TOAST_MS + 50)).toBe(0);
-    expect(learnSuggestionToastAction("timeout", `  ${SENTENCE}  `)).toEqual({
+  it("places the sentence only on add, and dismiss hides it", () => {
+    expect(learnSuggestionToastAction("dismiss", `  ${SENTENCE}  `)).toEqual({
       dismiss: SENTENCE,
       place: null,
     });
@@ -106,7 +99,7 @@ describe("learn suggestion toast", () => {
     expect(learnSuggestionToastClass("beside-left")).toContain("right-full");
   });
 
-  it("renders the sentence, the add button, and a bar that drains to zero", () => {
+  it("renders the sentence, dismiss, and add, with no auto-hide timer", () => {
     const html = renderToStaticMarkup(
       createElement(LearnSuggestionToast, {
         text: SENTENCE,
@@ -117,14 +110,14 @@ describe("learn suggestion toast", () => {
     );
     expect(html).toContain("data-ile-learn-suggestion");
     expect(html).toContain("data-ile-learn-suggestion-add");
+    expect(html).toContain("data-ile-learn-suggestion-dismiss");
     expect(html).toContain(`>${LEARN_SUGGESTION_ADD_LABEL}<`);
+    expect(html).toContain(`>${LEARN_SUGGESTION_DISMISS_LABEL}<`);
     expect(LEARN_SUGGESTION_ADD_LABEL).toBe("add to canvas");
+    expect(LEARN_SUGGESTION_DISMISS_LABEL).toBe("dismiss");
     expect(html).toContain(SENTENCE);
-    expect(html).toContain("data-ile-learn-suggestion-bar");
-    expect(html).toContain("origin-left");
-    expect(html).toContain(`${LEARN_SUGGESTION_TOAST_MS}ms`);
-    expect(html).toContain("scaleX(1)");
-    expect(html).toContain("scaleX(0)");
+    expect(html).not.toContain("data-ile-learn-suggestion-bar");
+    expect(html).not.toContain("ile-learn-suggestion-drain");
     expect(html).toContain("mt-1");
     expect(html).not.toMatch(/\b(Close|Keep|Discard|Insight)\b/);
 
@@ -140,10 +133,9 @@ describe("learn suggestion toast", () => {
     expect(beside).toContain("left-full");
 
     const toast = read("components/session-view/learn-suggestion-toast.tsx");
-    const timeout = toast.slice(toast.indexOf("window.setTimeout"), toast.indexOf("return () => window.clearTimeout"));
-    expect(timeout).toContain('learnSuggestionToastAction("timeout"');
-    expect(timeout).toContain("LEARN_SUGGESTION_TOAST_MS");
-    expect(timeout).not.toContain("onAddRef");
+    expect(toast).not.toContain("setTimeout");
+    expect(toast).not.toContain("LEARN_SUGGESTION_TOAST_MS");
+    expect(toast).toContain('learnSuggestionToastAction("dismiss"');
     const addAt = toast.indexOf('learnSuggestionToastAction("add"');
     const click = toast.slice(addAt, addAt + 220);
     expect(addAt).toBeGreaterThan(toast.indexOf("data-ile-learn-suggestion-add"));

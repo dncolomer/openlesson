@@ -84,6 +84,9 @@ describe("author unsys model Manual Mode wiring", () => {
     expect(studio).not.toContain("data-author-unsys-catalogs");
     expect(studio).not.toContain("data-author-unsys-catalog-size");
     expect(studio).toContain("data-author-unsys-generate");
+    expect(studio).toContain("data-author-unsys-generating");
+    expect(studio).toContain("blur-sm");
+    expect(studio).not.toContain("Generating with xAI");
     expect(studio).toContain("data-author-unsys-regenerate");
     expect(studio).toContain("data-author-unsys-save-seed");
     expect(studio).toContain("data-author-unsys-delete-seed");

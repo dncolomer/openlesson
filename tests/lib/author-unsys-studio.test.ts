@@ -152,6 +152,9 @@ describe("author unsys seed studio", () => {
     expect(studio).toContain('data-helios-map-mode-option="manual"');
     expect(studio).toContain("resolveWorkspaceHeliosColumnSurface");
     expect(studio).toContain("onGenerateGraph");
+    expect(studio).toContain("data-author-unsys-generating");
+    expect(studio).toContain("blur-sm");
+    expect(studio).not.toContain("Generating with xAI");
     const inspector = read("components/WorkspaceUnsysSeedInspector.tsx");
     expect(inspector).toContain("data-author-unsys-action-price");
     expect(inspector).toContain("data-author-unsys-branch-title");

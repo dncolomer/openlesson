@@ -15,7 +15,7 @@ function pointOf(
 }
 
 /**
- * Geometric hidden-state field. The Harness tab draws it as a panel.
+ * Geometric hidden-state field. Kept for layout tests and other surfaces.
  * hud/underlay stay for tests; live flows no longer paint it on the stage.
  */
 export function SessionBranchFieldMap({

@@ -264,7 +264,7 @@ export function WorkspaceUnsysSeedStudio({
             <div
               data-author-unsys-generating=""
               aria-busy="true"
-              className="absolute inset-0 z-10 cursor-wait bg-white/10 backdrop-blur-sm"
+              className="absolute inset-0 z-10 cursor-wait bg-white/5 backdrop-blur-[1px]"
             />
           ) : null}
         </div>

@@ -85,8 +85,9 @@ describe("author unsys model Manual Mode wiring", () => {
     expect(studio).not.toContain("data-author-unsys-catalog-size");
     expect(studio).toContain("data-author-unsys-generate");
     expect(studio).toContain("data-author-unsys-generating");
-    expect(studio).toContain("blur-sm");
-    expect(studio).toContain("backdrop-blur-sm");
+    expect(studio).toContain("backdrop-blur-[1px]");
+    expect(studio).not.toContain("backdrop-blur-sm");
+    expect(studio).not.toContain("blur-sm");
     expect(studio).not.toContain("bg-black/45");
     expect(studio).toContain('normalizeWorkspaceHeliosColumnMode("manual")');
     expect(studio).not.toContain("Generating with xAI");

@@ -897,6 +897,7 @@ export default function DashboardPage() {
         {isDashboardMyMapsTab(activeTab) && (
           <DashboardMyMapsTab
             maps={myMaps}
+            authoredMaps={learningWorkspaces}
             formatDate={formatDate}
             coverImagePool={workspaceCoverPool}
           />

@@ -93,12 +93,16 @@ export function decideRemoveFromMyMaps(input: {
     is_play_copy?: boolean | null;
   }[];
 }): RemoveFromMyMapsDecision {
-  const copyId = findExistingPlayCopyId(
-    input.existingCopies || [],
-    input.sourceWorkspaceId,
-  );
-  if (!copyId) return { action: "reject", reason: "not_found" };
-  return { action: "remove", copyId };
+  const requested = String(input.sourceWorkspaceId || "").trim();
+  if (!requested) return { action: "reject", reason: "not_found" };
+  const bySource = findExistingPlayCopyId(input.existingCopies || [], requested);
+  if (bySource) return { action: "remove", copyId: bySource };
+  for (const copy of input.existingCopies || []) {
+    if (!isPlayCopyWorkspace(copy)) continue;
+    const id = String(copy.id || "").trim();
+    if (id === requested) return { action: "remove", copyId: id };
+  }
+  return { action: "reject", reason: "not_found" };
 }
 
 export function catalogMapIsInMyMaps(

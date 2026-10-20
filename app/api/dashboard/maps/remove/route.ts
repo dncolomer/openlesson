@@ -15,17 +15,21 @@ export async function POST(req: NextRequest) {
     const workspaceId = String(body.workspaceId || "").trim();
     if (!workspaceId) return jsonError(400, "workspaceId is required");
 
-    const { data: existingRows } = await auth.supabase
-      .from("workspaces")
-      .select("id, original_workspace_id, is_play_copy")
-      .eq("user_id", auth.user.id)
-      .eq("is_play_copy", true)
-      .eq("original_workspace_id", workspaceId)
-      .neq("status", "archived");
+    const copySelect = () =>
+      auth.supabase
+        .from("workspaces")
+        .select("id, original_workspace_id, is_play_copy")
+        .eq("user_id", auth.user.id)
+        .eq("is_play_copy", true)
+        .neq("status", "archived");
+    const [{ data: bySource }, { data: byCopy }] = await Promise.all([
+      copySelect().eq("original_workspace_id", workspaceId),
+      copySelect().eq("id", workspaceId),
+    ]);
 
     const decision = decideRemoveFromMyMaps({
       sourceWorkspaceId: workspaceId,
-      existingCopies: existingRows || [],
+      existingCopies: [...(bySource || []), ...(byCopy || [])],
     });
     if (decision.action === "reject") {
       return jsonError(404, "Map is not in My Maps");

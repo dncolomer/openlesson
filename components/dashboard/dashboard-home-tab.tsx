@@ -3,8 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BlockSkillGrid } from "@/components/BlockSkillGrid";
 import type { Workspace } from "@/lib/storage";
+import {
+  DashboardHomeMapDetail,
+  type DashboardHomeMapDetailState,
+} from "@/components/dashboard/dashboard-home-map-detail";
 import { dashboardHasNoWorkspaces } from "@/lib/dashboard-workspace-filters";
 import {
   DASHBOARD_PLAY_CURIOUS_PATH,
@@ -32,14 +35,10 @@ import {
   type PublicMapCatalogItem,
 } from "@/lib/dashboard-home-catalog";
 import {
-  ADD_TO_MY_MAPS_LABEL,
-  REMOVE_FROM_MY_MAPS_LABEL,
   catalogMapIsInMyMaps,
   dashboardMapBuyCheckoutBody,
   playCopyMyMapsHref,
 } from "@/lib/workspace-play-copy";
-import type { AyclLandingSummary } from "@/lib/aycl-landing";
-import type { SkillGridNode } from "@/lib/block-skill-grid";
 
 export type DashboardHomeTabProps = {
   workspaces: Workspace[];
@@ -53,10 +52,7 @@ export type DashboardHomeTabProps = {
   coverImagePool?: readonly string[] | null;
 };
 
-type CatalogDetail = {
-  map: PublicMapCatalogItem;
-  landing: AyclLandingSummary | null;
-};
+
 
 export function DashboardHomeTab({
   workspaces,
@@ -82,7 +78,7 @@ export function DashboardHomeTab({
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [heroIndex, setHeroIndex] = useState(0);
-  const [detail, setDetail] = useState<CatalogDetail | null>(null);
+  const [detail, setDetail] = useState<DashboardHomeMapDetailState | null>(null);
   const [detailBusy, setDetailBusy] = useState(false);
   const [detailError, setDetailError] = useState("");
   const [acquireBusy, setAcquireBusy] = useState(false);
@@ -336,8 +332,31 @@ export function DashboardHomeTab({
 
   const searching = Boolean(query.trim()) || (category !== "all" && category !== "");
 
+  if (detail) {
+    return (
+      <div className="space-y-8" data-dashboard-home data-dashboard-home-detail="">
+        <DashboardHomeMapDetail
+          detail={detail}
+          busy={detailBusy}
+          error={detailError}
+          inMyMaps={detailInMyMaps}
+          acquireBusy={acquireBusy}
+          tryBusy={tryBusy}
+          onBack={() => {
+            setDetail(null);
+            setDetailError("");
+          }}
+          onAdd={(item) => void addToMyMaps(item)}
+          onRemove={(item) => void removeFromMyMaps(item)}
+          onBuy={(item) => void buyMap(item)}
+          onTry={(item) => void tryNow(item)}
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-8" data-dashboard-home>
+    <div className="space-y-8" data-dashboard-home data-dashboard-home-list="">
       {!catalogLoading && parts.hero.length > 0 ? (
         <section data-dashboard-home-hero className="space-y-3">
           <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
@@ -597,156 +616,6 @@ export function DashboardHomeTab({
         </section>
       ) : null}
 
-      {detail ? (
-        <div
-          className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-black/80 p-4 sm:p-8"
-          data-dashboard-map-detail
-          role="dialog"
-          aria-modal="true"
-        >
-          <div className="console-copy relative w-full max-w-5xl space-y-6 p-5 sm:p-8">
-            <button
-              type="button"
-              onClick={() => setDetail(null)}
-              className="absolute right-4 top-4 text-xs text-neutral-400 hover:text-white"
-            >
-              Close
-            </button>
-            <div>
-              <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
-                {detail.map.category}
-                {detail.map.isAycl ? " · All You Can Learn" : ""}
-              </p>
-              <h3 className="mt-2 text-3xl font-medium tracking-[-1px] text-white">
-                {detail.map.title}
-              </h3>
-              {detail.map.summary ? (
-                <p className="mt-3 max-w-2xl text-sm leading-relaxed text-neutral-300">
-                  {detail.map.summary}
-                </p>
-              ) : null}
-            </div>
-            {detailError ? <p className="text-sm text-red-300">{detailError}</p> : null}
-            {detailBusy ? (
-              <p className="text-sm text-neutral-500">Loading preview…</p>
-            ) : null}
-            {detail.landing ? (
-              <div
-                className="console-copy relative h-[min(28rem,55vh)] overflow-hidden"
-                data-dashboard-map-preview
-              >
-                {detail.landing.map.nodes.length === 0 ? (
-                  <div className="flex h-full items-center justify-center text-sm text-neutral-500">
-                    Map preview will appear when chapters are published.
-                  </div>
-                ) : (
-                  <BlockSkillGrid
-                    nodes={detail.landing.map.nodes as SkillGridNode[]}
-                    selectedNodeId={null}
-                    onSelectNode={() => {}}
-                    canEdit={false}
-                    viewOnly
-                    learnerMode
-                    workspaceId={detail.landing.workspaceId}
-                    showProgress={false}
-                    onAddBlock={async () => {}}
-                    labels={{
-                      emptyCell: "",
-                      addTitle: "",
-                      addPlaceholder: "",
-                      addSubmit: "",
-                      addCancel: "",
-                      suggestTopics: "",
-                      suggesting: "",
-                      suggestError: "",
-                      recenter: "Recenter",
-                      zoomIn: "Zoom in",
-                      zoomOut: "Zoom out",
-                    }}
-                  />
-                )}
-              </div>
-            ) : null}
-            <div className="flex flex-wrap gap-3">
-              {detailInMyMaps ? (
-                <>
-                  <button
-                    type="button"
-                    data-dashboard-add-to-my-maps
-                    data-dashboard-remove-from-my-maps=""
-                    disabled={acquireBusy || tryBusy}
-                    onClick={() => void removeFromMyMaps(detail.map)}
-                    className="inline-flex h-11 items-center justify-center rounded-none bg-white px-6 text-sm font-medium text-black hover:bg-neutral-200 disabled:opacity-40"
-                  >
-                    {acquireBusy ? "Removing…" : REMOVE_FROM_MY_MAPS_LABEL}
-                  </button>
-                  <button
-                    type="button"
-                    data-dashboard-map-buy
-                    className="hidden"
-                    aria-hidden
-                    tabIndex={-1}
-                  />
-                </>
-              ) : detail.map.isAycl ? (
-                <button
-                  type="button"
-                  data-dashboard-map-buy
-                  data-dashboard-add-to-my-maps
-                  disabled={acquireBusy || tryBusy}
-                  onClick={() => void buyMap(detail.map)}
-                  className="inline-flex h-11 items-center justify-center rounded-none bg-white px-6 text-sm font-medium text-black hover:bg-neutral-200 disabled:opacity-40"
-                >
-                  {acquireBusy
-                    ? "Redirecting…"
-                    : `Buy${detail.map.priceLabel ? ` · ${detail.map.priceLabel}` : ""}`}
-                </button>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    data-dashboard-add-to-my-maps
-                    disabled={acquireBusy || tryBusy}
-                    onClick={() => void addToMyMaps(detail.map)}
-                    className="inline-flex h-11 items-center justify-center rounded-none bg-white px-6 text-sm font-medium text-black hover:bg-neutral-200 disabled:opacity-40"
-                  >
-                    {acquireBusy ? "Adding…" : ADD_TO_MY_MAPS_LABEL}
-                  </button>
-                  <button
-                    type="button"
-                    data-dashboard-map-buy
-                    className="hidden"
-                    aria-hidden
-                    tabIndex={-1}
-                  />
-                </>
-              )}
-              <button
-                type="button"
-                data-dashboard-map-try-now
-                disabled={
-                  acquireBusy ||
-                  tryBusy ||
-                  detailBusy ||
-                  !detail.landing ||
-                  detail.landing.map.nodes.length === 0
-                }
-                onClick={() => void tryNow(detail.map)}
-                className="inline-flex h-11 items-center justify-center rounded-none border border-white/40 px-6 text-sm font-medium text-white transition hover:border-white/80 disabled:opacity-40"
-              >
-                {tryBusy ? "Starting…" : "Try Now"}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <>
-          <div data-dashboard-map-detail className="hidden" aria-hidden />
-          <button type="button" data-dashboard-add-to-my-maps className="hidden" aria-hidden />
-          <button type="button" data-dashboard-map-buy className="hidden" aria-hidden />
-          <button type="button" data-dashboard-map-try-now className="hidden" aria-hidden />
-        </>
-      )}
     </div>
   );
 }

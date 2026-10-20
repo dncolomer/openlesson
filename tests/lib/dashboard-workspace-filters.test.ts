@@ -4,6 +4,7 @@ import {
   DASHBOARD_WORKSPACE_LIST_FILTERS,
   DASHBOARD_WORKSPACE_TYPE_FILTERS,
   dashboardHasNoWorkspaces,
+  isAuthoredLearningMap,
   isDashboardWorkspaceListFilter,
   isDashboardWorkspaceTypeFilter,
   workspaceMatchesDashboardListFilter,
@@ -87,6 +88,18 @@ describe("workspaceMatchesDashboardTypeFilter", () => {
     expect(workspaceMatchesDashboardTypeFilter(learning, "calibration")).toBe(false);
     expect(workspaceMatchesDashboardTypeFilter(verification, "calibration")).toBe(false);
     expect(workspaceMatchesDashboardTypeFilter(unset, "calibration")).toBe(false);
+  });
+
+  it("authored learning maps include private owner maps and drop play copies", () => {
+    expect(
+      isAuthoredLearningMap({ workspace_kind: "standard", is_play_copy: false }),
+    ).toBe(true);
+    expect(isAuthoredLearningMap({ workspace_kind: "standard" })).toBe(true);
+    expect(
+      isAuthoredLearningMap({ workspace_kind: "standard", is_play_copy: true }),
+    ).toBe(false);
+    expect(isAuthoredLearningMap({ workspace_kind: "knowledge_region" })).toBe(false);
+    expect(isAuthoredLearningMap({ workspace_kind: "calibration" })).toBe(false);
   });
 });
 

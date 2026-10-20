@@ -41,6 +41,17 @@ export function workspaceIsPlayCopy(workspace: {
   return Boolean(workspace.is_play_copy);
 }
 
+/** Owner Learning maps on My Maps, including private. Play copies stay in the play section. */
+export function isAuthoredLearningMap(workspace: {
+  is_play_copy?: boolean | null;
+  workspace_kind?: string | null;
+}): boolean {
+  return (
+    !workspaceIsPlayCopy(workspace) &&
+    workspaceMatchesDashboardTypeFilter(workspace, "learning")
+  );
+}
+
 export function workspaceMatchesDashboardListFilter(
   workspace: {
     is_public?: boolean | null;

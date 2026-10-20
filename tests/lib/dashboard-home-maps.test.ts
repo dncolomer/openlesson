@@ -270,6 +270,14 @@ describe("add to my maps and play copies", () => {
     expect(
       decideRemoveFromMyMaps({ sourceWorkspaceId: "src", existingCopies: [] }),
     ).toEqual({ action: "reject", reason: "not_found" });
+    expect(
+      decideRemoveFromMyMaps({
+        sourceWorkspaceId: "copy-1",
+        existingCopies: [
+          { id: "copy-1", original_workspace_id: "src", is_play_copy: true },
+        ],
+      }),
+    ).toEqual({ action: "remove", copyId: "copy-1" });
     expect(ADD_TO_MY_MAPS_LABEL).toBe("Add to my Maps");
     expect(REMOVE_FROM_MY_MAPS_LABEL).toBe("Remove from my Maps");
   });
@@ -330,17 +338,52 @@ describe("dashboard home and my maps surface", () => {
     expect(dash).toContain("data-dashboard-play-bar");
     expect(dash).toContain("Quick Work Session");
     expect(dash).toContain("data-dashboard-map-detail");
+    expect(dash).toContain("data-dashboard-home-detail");
+    expect(dash).toContain("data-dashboard-home-list");
+    expect(dash).toContain("data-dashboard-map-back");
+    expect(dash).toContain("Back to maps");
+    expect(dash).toContain("data-dashboard-map-detail-summary");
+    expect(dash).toContain("data-dashboard-map-detail-cta");
+    expect(dash).toContain("data-dashboard-map-detail-explore");
+    expect(dash).toContain("Explore and Learn");
+    expect(dash).toContain("Workspace map");
+    expect(readRepo("components/dashboard/dashboard-home-tab.tsx")).not.toContain(
+      'aria-modal="true"',
+    );
+    expect(readRepo("components/dashboard/dashboard-home-tab.tsx")).not.toContain(
+      'role="dialog"',
+    );
+    expect(readRepo("components/dashboard/dashboard-home-map-detail.tsx")).not.toContain(
+      'aria-modal="true"',
+    );
     expect(dash).toContain("data-dashboard-add-to-my-maps");
     expect(dash).toContain("data-dashboard-map-buy");
     expect(dash).toContain("data-dashboard-map-try-now");
     expect(dash).toContain("Try Now");
     expect(dash).toContain("data-dashboard-my-maps");
     expect(dash).toContain("data-dashboard-my-maps-card");
+    expect(dash).toContain("data-dashboard-my-maps-authored");
+    expect(dash).toContain("data-dashboard-my-maps-authored-card");
+    expect(dash).toContain("data-dashboard-my-maps-play");
+    expect(dash).toContain("authoredMaps={learningWorkspaces}");
+    expect(dash).toContain("isAuthoredLearningMap");
     expect(readRepo("components/dashboard/dashboard-my-maps-tab.tsx")).toContain(
       "WorkspaceCardHero",
     );
     expect(readRepo("components/dashboard/dashboard-my-maps-tab.tsx")).toContain(
       'fallback="aesthetic"',
+    );
+    expect(readRepo("components/dashboard/dashboard-my-maps-tab.tsx")).toContain(
+      "DASHBOARD_MAPS_REMOVE_PATH",
+    );
+    expect(readRepo("components/dashboard/dashboard-my-maps-tab.tsx")).toContain(
+      "data-dashboard-remove-from-my-maps",
+    );
+    expect(readRepo("components/dashboard/dashboard-my-maps-tab.tsx")).toContain(
+      "REMOVE_FROM_MY_MAPS_LABEL",
+    );
+    expect(readRepo("app/api/dashboard/maps/remove/route.ts")).toContain(
+      'copySelect().eq("id", workspaceId)',
     );
     expect(dash).toContain("DASHBOARD_CATALOG_PATH");
     expect(dash).toContain("DASHBOARD_MAPS_ADD_PATH");

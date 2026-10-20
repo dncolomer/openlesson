@@ -171,8 +171,8 @@ describe("TAP client wires purity UX", () => {
     expect(en.tap.postSession.impureTitle).toBe("Session Invalidated");
     expect(en.tap.postSession.impureBody.toLowerCase()).toContain("silent for too long");
     expect(en.tap.postSession.impureBody.toLowerCase()).toContain("think out loud");
-    expect(en.tap.postSession.impureBody.toLowerCase()).toContain("practice run");
-    expect(en.tap.postSession.impureBody.toLowerCase()).toContain("no limit");
+    expect(en.tap.postSession.impureBody.toLowerCase()).not.toContain("practice run");
+    expect(en.tap.postSession.impureBody.toLowerCase()).not.toContain("no limit");
     expect(en.tap.postSession.impureTryAgain).toBe("Try again");
     // Dedicated impure results branch (not generic thank-you)
     expect(client).toContain("sessionEndedImpure");

@@ -2754,7 +2754,7 @@
       "exploreUncertainSystems": "Explore Uncertain Systems",
       "backToWorkspace": "Back to workspace",
       "impureTitle": "Session Invalidated",
-      "impureBody": "This session was invalidated because you remained silent for too long.\n\nYou can start again. Remember to think out loud the whole time — including while reading the question(s).\n\nIf you want, you can do a practice run before starting a new run. There is no limit on attempts. You can try as many times as you need.",
+      "impureBody": "This session was invalidated because you remained silent for too long.\n\nYou can start again. Remember to think out loud the whole time — including while reading the question(s).",
       "impureTryAgain": "Try again"
     },
     "briefing": {

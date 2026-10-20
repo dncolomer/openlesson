@@ -14,6 +14,11 @@ import {
   type ScienceLearningModelNode,
 } from "@/lib/science/learning-model-copy";
 import { LearningModelFactorCopy } from "@/components/science/LearningModelFactorCopy";
+import {
+  graphDiamondEdge,
+  graphDiamondPointsAttr,
+  graphDiamondRadius,
+} from "@/lib/graph-diamond";
 
 type Point = { x: number; y: number };
 type ExplorerMode = "learn" | "verify";
@@ -53,11 +58,13 @@ function subtreeIdsOf(nodes: ScienceLearningModelNode[], rootId: string): string
 }
 
 function layout2d(nodes: ScienceLearningModelNode[], width: number, height: number): Map<string, Point> {
-  const map = new Map<string, Point>();
+  const placed = new Map<string, Point>();
+  const padX = 80;
+  const padY = 64;
   const cx = width * 0.5;
-  const cy = height * 0.52;
-  const span = Math.min(width, height);
-  map.set(SCIENCE_LEARNING_MODEL_ROOT.id, { x: cx, y: cy });
+  const cy = height * 0.5;
+  const span = Math.min(Math.max(120, width - padX * 2), Math.max(120, height - padY * 2));
+  placed.set(SCIENCE_LEARNING_MODEL_ROOT.id, { x: cx, y: cy });
   SCIENCE_LEARNING_MODEL_FACTORS.forEach((factor, index) => {
     const baseAngle = (index / SCIENCE_LEARNING_MODEL_FACTORS.length) * Math.PI * 2 - Math.PI / 2;
     const remaining = factor.states.map((state) => state.id);
@@ -66,7 +73,7 @@ function layout2d(nodes: ScienceLearningModelNode[], width: number, height: numb
       guard += 1;
       const ready = remaining.filter((id) => {
         const node = nodes.find((row) => row.id === id);
-        return node?.parentId === SCIENCE_LEARNING_MODEL_ROOT.id || map.has(node?.parentId ?? "");
+        return node?.parentId === SCIENCE_LEARNING_MODEL_ROOT.id || placed.has(node?.parentId ?? "");
       });
       if (ready.length === 0) break;
       for (const id of ready) {
@@ -76,23 +83,42 @@ function layout2d(nodes: ScienceLearningModelNode[], width: number, height: numb
           (row) => row.parentId === node.parentId && row.factorId === factor.id,
         );
         const siblingIndex = siblings.findIndex((row) => row.id === id);
-        const fan =
-          siblings.length <= 1 ? 0 : (siblingIndex - (siblings.length - 1) / 2) * (0.52 / siblings.length + 0.22);
-        const depth = nodeDepth(nodes, id);
-        const radius = span * (0.16 + (depth - 1) * 0.14);
-        const angle = baseAngle + fan;
-        map.set(id, {
-          x: cx + Math.cos(angle) * radius,
-          y: cy + Math.sin(angle) * radius,
-        });
+        const parentPoint = placed.get(node.parentId ?? "") ?? { x: cx, y: cy };
+        if (node.parentId === SCIENCE_LEARNING_MODEL_ROOT.id) {
+          const radius = span * 0.28;
+          placed.set(id, {
+            x: cx + Math.cos(baseAngle) * radius,
+            y: cy + Math.sin(baseAngle) * radius,
+          });
+        } else {
+          const outward = Math.atan2(parentPoint.y - cy, parentPoint.x - cx);
+          const fan =
+            siblings.length <= 1
+              ? 0
+              : (siblingIndex - (siblings.length - 1) / 2) *
+                (0.72 / Math.max(1, siblings.length - 1));
+          const radius = span * (0.17 + Math.min(nodeDepth(nodes, id), 4) * 0.012);
+          placed.set(id, {
+            x: parentPoint.x + Math.cos(outward + fan) * radius,
+            y: parentPoint.y + Math.sin(outward + fan) * radius,
+          });
+        }
         remaining.splice(remaining.indexOf(id), 1);
       }
     }
   });
   for (const node of nodes) {
-    if (!map.has(node.id)) map.set(node.id, { x: cx, y: cy });
+    if (!placed.has(node.id)) placed.set(node.id, { x: cx, y: cy });
   }
-  return map;
+  return placed;
+}
+
+function labelOffset(point: Point, parent: Point | null, radius: number): Point {
+  if (!parent) return { x: 0, y: radius + 16 };
+  const dx = point.x - parent.x;
+  const dy = point.y - parent.y;
+  const len = Math.max(1, Math.hypot(dx, dy));
+  return { x: (dx / len) * (radius + 16), y: (dy / len) * (radius + 16) };
 }
 
 function LearningModelMap2D({
@@ -251,60 +277,104 @@ function LearningModelMap2D({
       style={{ touchAction: draggingId ? "none" : undefined, cursor: draggingId ? "grabbing" : undefined }}
     >
       <svg
-        viewBox={`0 0 ${size.width} ${size.height}`}
-        className="absolute inset-0 h-full w-full"
+        width={size.width}
+        height={size.height}
+        className="absolute left-0 top-0 overflow-visible"
         aria-hidden
       >
         <rect width={size.width} height={size.height} fill="#050505" />
-        {Array.from({ length: Math.ceil(size.width / 16) }, (_, i) => (
+        {Array.from({ length: Math.ceil(size.width / 16) + 1 }, (_, i) => (
           <line
             key={`vx-${i}`}
             x1={i * 16}
             y1={0}
             x2={i * 16}
             y2={size.height}
-            stroke="rgba(255,255,255,0.06)"
+            stroke={i % 5 === 0 ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.045)"}
           />
         ))}
-        {Array.from({ length: Math.ceil(size.height / 16) }, (_, i) => (
+        {Array.from({ length: Math.ceil(size.height / 16) + 1 }, (_, i) => (
           <line
             key={`hy-${i}`}
             x1={0}
             y1={i * 16}
             x2={size.width}
             y2={i * 16}
-            stroke="rgba(255,255,255,0.06)"
+            stroke={i % 5 === 0 ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.045)"}
           />
         ))}
+        <defs>
+          <filter
+            id="learning-model-diamond-glow"
+            x="-80%"
+            y="-80%"
+            width="260%"
+            height="260%"
+          >
+            <feGaussianBlur stdDeviation="2.4" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
         {nodes.map((node) => {
           if (!node.parentId) return null;
           const from = pointOf(node.parentId);
           const to = pointOf(node.id);
+          const fromRadius = graphDiamondRadius(node.parentId === SCIENCE_LEARNING_MODEL_ROOT.id);
+          const toRadius = graphDiamondRadius(false);
+          const segment = graphDiamondEdge(from, to, fromRadius, toRadius);
+          const activeEdge = node.id === focusId || node.parentId === focusId;
           return (
             <line
               key={`edge-${node.id}`}
-              x1={from.x}
-              y1={from.y}
-              x2={to.x}
-              y2={to.y}
+              x1={segment.x1}
+              y1={segment.y1}
+              x2={segment.x2}
+              y2={segment.y2}
               stroke={factorColor(node.factorId)}
-              strokeOpacity={0.75}
-              strokeWidth={1.25}
+              strokeOpacity={activeEdge ? 0.95 : 0.55}
+              strokeWidth={activeEdge ? 1.75 : 1.2}
+              strokeLinecap="round"
             />
+          );
+        })}
+        {nodes.map((node) => {
+          const point = pointOf(node.id);
+          const active = node.id === focusId;
+          const color = factorColor(node.factorId);
+          const radius = graphDiamondRadius(node.id === SCIENCE_LEARNING_MODEL_ROOT.id);
+          return (
+            <g key={`mark-${node.id}`}>
+              <polygon
+                points={graphDiamondPointsAttr(point, radius + 3.5)}
+                fill="none"
+                stroke={active ? "#fff" : color}
+                strokeOpacity={active ? 0.35 : 0.18}
+                strokeWidth={1}
+              />
+              <polygon
+                data-explorer-diamond={node.id}
+                points={graphDiamondPointsAttr(point, radius)}
+                fill="#050505"
+                stroke={active ? "#fff" : color}
+                strokeWidth={active ? 2 : 1.35}
+                filter={active ? "url(#learning-model-diamond-glow)" : undefined}
+              />
+            </g>
           );
         })}
       </svg>
       {nodes.map((node) => {
         const point = pointOf(node.id);
-        const rest = layout.get(node.id) ?? restRoot;
+        const parentPoint = node.parentId ? pointOf(node.parentId) : null;
         const active = node.id === focusId;
         const color = factorColor(node.factorId);
-        const dx = rest.x - restRoot.x;
-        const dy = rest.y - restRoot.y;
-        const len = Math.max(1, Math.hypot(dx, dy));
-        const labelX = node.id === SCIENCE_LEARNING_MODEL_ROOT.id ? 0 : (dx / len) * 22;
-        const labelY = node.id === SCIENCE_LEARNING_MODEL_ROOT.id ? 22 : (dy / len) * 22;
+        const radius = graphDiamondRadius(node.id === SCIENCE_LEARNING_MODEL_ROOT.id);
+        const shift = labelOffset(point, parentPoint, radius);
         const inDragBranch = draggingBranch.includes(node.id);
+        const hit = radius * 2 + 12;
         return (
           <button
             key={node.id}
@@ -325,25 +395,26 @@ function LearningModelMap2D({
               }
               onSelect(node.id);
             }}
-            className="absolute flex -translate-x-1/2 -translate-y-1/2 cursor-grab flex-col items-center p-2 touch-none active:cursor-grabbing"
-            style={{ left: point.x, top: point.y, zIndex: inDragBranch ? 5 : 1 }}
+            className="absolute cursor-grab touch-none bg-transparent active:cursor-grabbing"
+            style={{
+              left: point.x,
+              top: point.y,
+              width: hit,
+              height: hit,
+              transform: "translate(-50%, -50%)",
+              zIndex: inDragBranch ? 5 : 1,
+            }}
             aria-label={node.title}
             aria-pressed={active}
           >
             <span
-              className="block h-5 w-5 rotate-45 border bg-black"
-              style={{
-                borderColor: active ? "#fff" : color,
-                borderWidth: active ? 2 : 1.25,
-                width: node.id === SCIENCE_LEARNING_MODEL_ROOT.id ? 18 : 14,
-                height: node.id === SCIENCE_LEARNING_MODEL_ROOT.id ? 18 : 14,
-              }}
-            />
-            <span
               className="pointer-events-none absolute whitespace-nowrap font-mono text-[10px] uppercase tracking-[0.12em]"
               style={{
+                left: "50%",
+                top: "50%",
                 color: active ? "#fff" : color,
-                transform: `translate(${labelX}px, ${labelY}px)`,
+                transform: `translate(-50%, -50%) translate(${shift.x}px, ${shift.y}px)`,
+                textShadow: "0 0 8px #050505, 0 1px 0 #050505",
               }}
             >
               {node.title}

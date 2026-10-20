@@ -16,6 +16,11 @@ import {
   type AuthorUnsysGraphPoint,
 } from "@/lib/author-unsys-layout";
 import type { SessionBranchModel } from "@/lib/session-branch-model";
+import {
+  graphDiamondEdge,
+  graphDiamondPointsAttr,
+  graphDiamondRadius,
+} from "@/lib/graph-diamond";
 
 const DRAG_THRESHOLD_PX = 4;
 const GRID_FINE = 16;
@@ -250,18 +255,36 @@ export function WorkspaceUnsysSeedGraph({
           height={1}
           aria-hidden
         >
+          <defs>
+            <filter
+              id="author-unsys-diamond-glow"
+              x="-80%"
+              y="-80%"
+              width="260%"
+              height="260%"
+            >
+              <feGaussianBlur stdDeviation="2.4" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
           {edges.map((edge) => {
             const from = positions[edge.from] ?? restRoot;
             const to = positions[edge.to] ?? restRoot;
+            const fromRadius = graphDiamondRadius(edge.from === model?.rootId);
+            const toRadius = graphDiamondRadius(edge.to === model?.rootId);
+            const segment = graphDiamondEdge(from, to, fromRadius, toRadius);
             const fromFocus = edge.from === focusId;
             const recommended = fromFocus && edge.to === recommendedToId;
             return (
               <line
                 key={`${edge.from}-${edge.to}`}
-                x1={from.x}
-                y1={from.y}
-                x2={to.x}
-                y2={to.y}
+                x1={segment.x1}
+                y1={segment.y1}
+                x2={segment.x2}
+                y2={segment.y2}
                 stroke={
                   recommended
                     ? "#fff"
@@ -269,9 +292,42 @@ export function WorkspaceUnsysSeedGraph({
                       ? authorUnsysRegionColor(model, edge.to)
                       : AUTHOR_UNSYS_ROOT_COLOR
                 }
-                strokeOpacity={fromFocus || recommended ? 1 : 0.75}
-                strokeWidth={recommended ? 2.25 : fromFocus ? 1.75 : 1.25}
+                strokeOpacity={fromFocus || recommended ? 1 : 0.55}
+                strokeWidth={recommended ? 2.25 : fromFocus ? 1.75 : 1.2}
+                strokeLinecap="round"
               />
+            );
+          })}
+          {(model?.branches ?? []).map((branch) => {
+            const point = positions[branch.id] ?? restRoot;
+            const active = branch.id === focusId;
+            const recommended = branch.id === recommendedToId;
+            const color =
+              branch.id === model?.rootId
+                ? AUTHOR_UNSYS_ROOT_COLOR
+                : model
+                  ? authorUnsysRegionColor(model, branch.id)
+                  : AUTHOR_UNSYS_ROOT_COLOR;
+            const radius = graphDiamondRadius(branch.id === model?.rootId);
+            const lit = active || recommended;
+            return (
+              <g key={`mark-${branch.id}`}>
+                <polygon
+                  points={graphDiamondPointsAttr(point, radius + 3.5)}
+                  fill="none"
+                  stroke={lit ? "#fff" : color}
+                  strokeOpacity={lit ? 0.35 : 0.18}
+                  strokeWidth={1}
+                />
+                <polygon
+                  data-author-unsys-diamond={branch.id}
+                  points={graphDiamondPointsAttr(point, radius)}
+                  fill="#050505"
+                  stroke={lit ? "#fff" : color}
+                  strokeWidth={lit ? 2 : 1.35}
+                  filter={active ? "url(#author-unsys-diamond-glow)" : undefined}
+                />
+              </g>
             );
           })}
         </svg>
@@ -280,6 +336,9 @@ export function WorkspaceUnsysSeedGraph({
           if (edge.price == null) return null;
           const from = positions[edge.from] ?? restRoot;
           const to = positions[edge.to] ?? restRoot;
+          const fromRadius = graphDiamondRadius(edge.from === model?.rootId);
+          const toRadius = graphDiamondRadius(edge.to === model?.rootId);
+          const segment = graphDiamondEdge(from, to, fromRadius, toRadius);
           const recommended = edge.from === focusId && edge.to === recommendedToId;
           return (
             <button
@@ -289,8 +348,8 @@ export function WorkspaceUnsysSeedGraph({
               data-author-unsys-action-lead-child={edge.to}
               className="absolute z-10 -translate-x-1/2 -translate-y-1/2 border px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.12em]"
               style={{
-                left: (from.x + to.x) / 2,
-                top: (from.y + to.y) / 2,
+                left: (segment.x1 + segment.x2) / 2,
+                top: (segment.y1 + segment.y2) / 2,
                 borderColor: recommended ? "#fff" : "rgba(255,255,255,0.35)",
                 color: recommended ? "#fff" : "#d4d4d4",
                 background: "#050505",
@@ -309,19 +368,33 @@ export function WorkspaceUnsysSeedGraph({
 
         {(model?.branches ?? []).map((branch) => {
           const point = positions[branch.id] ?? restRoot;
+          const parentPoint = branch.parentId ? (positions[branch.parentId] ?? restRoot) : null;
           const active = branch.id === focusId;
-          const recommended = branch.id === recommendedToId;
           const color =
             branch.id === model?.rootId
               ? AUTHOR_UNSYS_ROOT_COLOR
               : model
                 ? authorUnsysRegionColor(model, branch.id)
                 : AUTHOR_UNSYS_ROOT_COLOR;
+          const radius = graphDiamondRadius(branch.id === model?.rootId);
+          const hit = radius * 2 + 12;
+          const dx = parentPoint ? point.x - parentPoint.x : 0;
+          const dy = parentPoint ? point.y - parentPoint.y : radius + 16;
+          const len = Math.max(1, Math.hypot(dx, dy));
+          const labelX = parentPoint ? (dx / len) * (radius + 16) : 0;
+          const labelY = parentPoint ? (dy / len) * (radius + 16) : radius + 16;
           return (
             <div
               key={branch.id}
-              className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center"
-              style={{ left: point.x, top: point.y, zIndex: active ? 6 : 2 }}
+              className="absolute cursor-grab"
+              style={{
+                left: point.x,
+                top: point.y,
+                width: hit,
+                height: hit,
+                transform: "translate(-50%, -50%)",
+                zIndex: active ? 6 : 2,
+              }}
               data-author-unsys-node={branch.id}
               data-author-unsys-focus={active ? "true" : "false"}
               onPointerDown={(event) => onNodePointerDown(event, branch.id)}
@@ -334,17 +407,14 @@ export function WorkspaceUnsysSeedGraph({
               }}
             >
               <span
-                className="block rotate-45 cursor-grab border bg-black"
+                className="pointer-events-none absolute max-w-[9rem] truncate whitespace-nowrap font-mono text-[10px] uppercase tracking-[0.12em]"
                 style={{
-                  borderColor: active || recommended ? "#fff" : color,
-                  borderWidth: active || recommended ? 2 : 1.25,
-                  width: branch.id === model?.rootId ? 18 : 14,
-                  height: branch.id === model?.rootId ? 18 : 14,
+                  left: "50%",
+                  top: "50%",
+                  color: active ? "#fff" : color,
+                  transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
+                  textShadow: "0 0 8px #050505, 0 1px 0 #050505",
                 }}
-              />
-              <span
-                className="pointer-events-none mt-2 max-w-[9rem] truncate whitespace-nowrap font-mono text-[10px] uppercase tracking-[0.12em]"
-                style={{ color: active ? "#fff" : color }}
               >
                 {branch.title}
               </span>

@@ -169,6 +169,9 @@ describe("author unsys seed studio", () => {
     expect(studio).not.toContain("data-author-unsys-catalogs");
     expect(graph).toContain("data-author-unsys-graph-infinite");
     expect(graph).toContain("data-author-unsys-graph-grid");
+    expect(graph).toContain("data-author-unsys-diamond");
+    expect(graph).toContain("graphDiamondEdge");
+    expect(graph).not.toContain("rotate-45");
     expect(graph).toContain("seedAuthorUnsysPositions");
     expect(studio).toContain("onGenerateDeeper");
     expect(route).toContain("generateAuthorUnsysSessionField");

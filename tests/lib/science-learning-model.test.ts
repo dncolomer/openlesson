@@ -214,6 +214,9 @@ describe("science learning model page", () => {
     expect(page).not.toContain("max-w-4xl");
     expect(existsSync(join(ROOT, "components/science/LearningModelCatalogs.tsx"))).toBe(false);
     expect(read("components/science/LearningModelScene.tsx")).toContain("data-explorer-edge");
+    expect(read("components/science/LearningModelScene.tsx")).toContain("data-explorer-diamond");
+    expect(read("components/science/LearningModelScene.tsx")).toContain("graphDiamondEdge");
+    expect(read("components/science/LearningModelScene.tsx")).not.toContain("rotate-45");
     expect(read("components/science/LearningModelScene.tsx")).toContain("data-explorer-draggable");
     expect(read("components/science/LearningModelScene.tsx")).toContain("data-explorer-dragging");
     expect(read("components/science/LearningModelScene.tsx")).toContain("onPointerDown");

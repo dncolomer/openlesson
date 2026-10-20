@@ -9,7 +9,10 @@ import { fetchAestheticPackages } from "@/lib/aesthetics";
 import { useTapPredictiveInterruption } from "@/lib/useTapPredictiveInterruption";
 import { useTapIdleProofOfWork } from "@/lib/useTapIdleProofOfWork";
 import { useTapSpeechProofOfWork } from "@/lib/useTapSpeechProofOfWork";
-import { emptySessionPolicySnapshot } from "@/components/session-view/session-policy-context";
+import {
+  emptySessionPolicySnapshot,
+  type SessionPolicySnapshot,
+} from "@/components/session-view/session-policy-context";
 import type { ProofOfWorkApiInterruption } from "@/lib/pow-api/predictive-interruption";
 import type { IleWorkCanvasScene } from "@/lib/ile-work-canvas";
 import {
@@ -124,7 +127,10 @@ interface TapScoreClientProps {
     prompt: string;
     practice: boolean;
     questionId: string | null;
-    policy?: { model: import("@/lib/session-branch-model").SessionBranchModel; sequence: import("@/lib/session-marks").SessionMarkButtonId[] } | null;
+    policy?: {
+      model: NonNullable<SessionPolicySnapshot["model"]>;
+      sequence: SessionPolicySnapshot["sequence"];
+    } | null;
   }) => Promise<void> | void;
   /** Verification entry uses verification-tap. Other callers stay on tap. */
   sidebarMode?: Extract<SessionSidebarMode, "tap" | "verification-tap">;

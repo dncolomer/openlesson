@@ -52,6 +52,7 @@ export function WorkspaceUnsysSeedStudio({
   ayclToken?: string;
   locale?: string;
   busy?: boolean;
+  onClose?: () => void;
   onSaveSeed?: (input: {
     blockId: string;
     seed: AuthorUnsysModelSeed | null;

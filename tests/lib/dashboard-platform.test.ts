@@ -104,7 +104,7 @@ describe("dashboard nav", () => {
       "calibration",
       "calibration_regions",
     ]);
-    expect(DASHBOARD_NAV_GROUPS.some((group) => group.id === "products")).toBe(false);
+    expect(DASHBOARD_NAV_GROUPS.map((group) => group.id)).not.toContain("products");
   });
 
   it("puts Usage on the sidebar and folds Upgrade into that page", () => {

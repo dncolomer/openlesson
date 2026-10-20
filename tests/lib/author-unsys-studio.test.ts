@@ -137,6 +137,7 @@ describe("author unsys seed studio", () => {
     expect(view).toContain("onOpenUnsysStudio");
     expect(panel).toContain("data-author-unsys-open");
     expect(studio).toContain("Back to map");
+    expect(studio).toMatch(/onClose\?: \(\) => void/);
     expect(studio).toContain("Generate sample");
     expect(studio).toContain("Regenerate sample");
     expect(studio).toContain("Delete seed");

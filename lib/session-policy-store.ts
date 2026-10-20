@@ -141,7 +141,7 @@ export function readSessionPolicyRecord(metadata: unknown): SessionPolicyRecord 
 export function sessionPolicyRecordFromLive(input: {
   model?: SessionBranchModel | null;
   birth?: SessionBranchModel | null;
-  inferences?: readonly SessionPolicyInference[] | null;
+  inferences?: unknown;
   suggestion?: string | null;
 }): SessionPolicyRecord | null {
   return readSessionPolicyRecord({

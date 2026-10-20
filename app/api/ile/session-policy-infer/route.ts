@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
       });
       if (!prepared.ok) {
         console.error("[session-policy-infer] infer", prepared.error);
-        return jsonError(502, "The policy could not be read.");
+        return NextResponse.json({ reply: null });
       }
       return NextResponse.json({ reply: prepared.reply });
     }
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
       });
       if (!prepared.ok) {
         console.error("[session-policy-infer] project", prepared.error);
-        return jsonError(502, "The policy could not be read.");
+        return NextResponse.json({ reply: null });
       }
       return NextResponse.json({ reply: prepared.reply });
     }
@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
       });
       if (!prepared.ok) {
         console.error("[session-policy-infer] suggest", prepared.error);
-        return jsonError(502, "The policy could not be read.");
+        return NextResponse.json({ reply: null });
       }
       return NextResponse.json({ reply: prepared.reply });
     }

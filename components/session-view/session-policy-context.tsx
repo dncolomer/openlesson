@@ -33,6 +33,7 @@ import {
   SESSION_POLICY_INFER_INTERVAL_MS,
   sessionPolicyCandidateLines,
   sessionPolicyInferDue,
+  sessionPolicyLocalSuggestion,
   sessionPolicyProofFromCanvas,
   type SessionPolicyInference,
   type SessionPolicyProofEvent,
@@ -358,6 +359,12 @@ function SessionPolicyInferLoop({
       suggestAction.current = recommended.id;
     }
     latestWanted.current = key;
+    const local = sessionPolicyLocalSuggestion({
+      nodeTitle: recommended.leads || focus?.title || "",
+      observation: recommended.observation || focus?.observation || "",
+      intent: recommended.observation.trim() || recommended.leads.trim(),
+    });
+    if (suggestKey.current !== key && local) setSuggestion(local);
     if (suggestInflight.current) return;
     if (suggestKey.current === key) return;
     const sameStep = suggestKey.current.startsWith(`${model.focusId}:${model.step}:${recommended.id}:`);
@@ -376,7 +383,7 @@ function SessionPolicyInferLoop({
       canvasNote,
     }).then((reply) => {
       if (latestWanted.current !== key) return;
-      const text = reply ? parsePolicySuggestionReply(reply) : null;
+      const text = reply ? parsePolicySuggestionReply(reply) : local;
       if (text) setSuggestion(text);
     }).finally(() => {
       suggestInflight.current = false;

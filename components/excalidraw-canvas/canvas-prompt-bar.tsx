@@ -282,7 +282,7 @@ export function CanvasPromptBar({
     <LearnSuggestionToast
       key={learnSuggestion}
       text={learnSuggestion}
-      placement="under"
+      placement={commandDockVisible ? "under" : "notification"}
       onDone={(text) => setDismissedSuggestion(text)}
       onAdd={(text) => placeSuggestionRef.current?.(text)}
     />
@@ -447,7 +447,7 @@ export function CanvasPromptBar({
   ) : suggestionNote || (showCraftInsight && craftInsight && craftInsightOpen) ? (
     <div
       data-ile-canvas-side-note
-      className="pointer-events-none absolute bottom-2 left-2 z-[58] flex w-[min(28rem,calc(100%-1rem))] flex-col gap-1"
+      className="pointer-events-none absolute right-3 top-3 z-[58] flex w-[min(22rem,calc(100%-1.5rem))] flex-col gap-1"
     >
       {showCraftInsight && craftInsight ? (
         <IleCanvasCraftInsightForm

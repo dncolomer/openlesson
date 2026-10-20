@@ -7,8 +7,12 @@
  * Each parent gets between 2 and 8 children; xAI chooses how many.
  */
 
+import { addAuthorUnsysGeneratedChildren } from "@/lib/author-unsys-model";
 import {
+  hydrateSessionBranchModel,
   normalizeSessionBranchModel,
+  sessionBranchById,
+  sessionBranchParentsNeedingGrowth,
   SESSION_BRANCH_ACCEPT_COUNT,
   SESSION_BRANCH_AVENUE_COUNT,
   SESSION_BRANCH_CHILD_MAX,
@@ -564,6 +568,8 @@ export type SessionBranchContinuation = {
   failed: string[];
   /** Slices that returned something. A short reply is kept and not asked again. */
   settled: string[];
+  /** Author seed (or already-grown seed) to graft onto. Opening loads this as-is. */
+  seedModel?: SessionBranchModel | null;
 };
 
 type ContinuationSlice =
@@ -586,6 +592,7 @@ export function emptySessionBranchContinuation(
 }
 
 function asContinuation(value: SessionBranchContinuation | null | undefined): SessionBranchContinuation {
+  const seedModel = hydrateSessionBranchModel(value?.seedModel);
   return {
     root: asRecord(value?.root) ?? {},
     regions: asList(value?.regions),
@@ -594,6 +601,128 @@ function asContinuation(value: SessionBranchContinuation | null | undefined): Se
     regionFailures: Math.max(0, Number(value?.regionFailures) || 0),
     failed: Array.isArray(value?.failed) ? value.failed.filter((item) => typeof item === "string") : [],
     settled: Array.isArray(value?.settled) ? value.settled.filter((item) => typeof item === "string") : [],
+    seedModel,
+  };
+}
+
+function nodeFromBranch(branch: {
+  title: string;
+  question: string;
+  territory: string;
+  observation: string;
+  edges?: { price: number }[];
+}): FieldNode {
+  return {
+    title: branch.title,
+    question: branch.question,
+    territory: branch.territory,
+    observation: branch.observation,
+    edgePrice: branch.edges?.[0]?.price ?? 20,
+  };
+}
+
+/** Opening continuation for an author seed. Later rounds graft children onto seedModel. */
+export function sessionBranchContinuationFromSeed(
+  model: SessionBranchModel,
+): SessionBranchContinuation {
+  const root = sessionBranchById(model, model.rootId);
+  const regions = model.branches.filter((branch) => branch.depth === 1);
+  const avenues = model.branches.filter((branch) => branch.depth === 2);
+  const inquiries = model.branches.filter((branch) => branch.depth >= 3);
+  const numberedAvenues = avenues.map((branch, index) => {
+    const regionIndex = regions.findIndex((region) => region.id === branch.parentId);
+    return {
+      ...nodeFromBranch(branch),
+      region: regionIndex >= 0 ? regionIndex + 1 : 1,
+      avenue: index + 1,
+    };
+  });
+  return asContinuation({
+    root: {
+      premise: root?.territory || model.chapterTitle,
+      title: root?.title || model.chapterTitle,
+      question: root?.question || "",
+      territory: root?.territory || model.chapterTitle,
+      observation: root?.observation || "",
+    },
+    regions: regions.map(nodeFromBranch),
+    avenues: numberedAvenues,
+    inquiries: inquiries.map((branch) => {
+      const parent = sessionBranchById(model, branch.parentId);
+      const regionIndex = regions.findIndex(
+        (region) => region.id === parent?.parentId || region.id === branch.parentId,
+      );
+      const avenueIndex = avenues.findIndex((avenue) => avenue.id === branch.parentId);
+      return {
+        ...nodeFromBranch(branch),
+        region: regionIndex >= 0 ? regionIndex + 1 : 1,
+        avenue: avenueIndex >= 0 ? avenueIndex + 1 : 1,
+      };
+    }),
+    regionFailures: 0,
+    failed: [],
+    settled: [],
+    seedModel: model,
+  });
+}
+
+async function growSeededSessionBranchModel(input: {
+  chapterTitle: string;
+  chapterBrief?: string | null;
+  continuation: SessionBranchContinuation;
+}): Promise<
+  | { ok: true; model: SessionBranchModel; continuation: SessionBranchContinuation; done: boolean }
+  | { ok: false; error: string }
+> {
+  const model = hydrateSessionBranchModel(input.continuation.seedModel);
+  if (!model) return { ok: false, error: "The field could not be prepared." };
+  const parents = sessionBranchParentsNeedingGrowth(model, input.continuation.failed).slice(
+    0,
+    SESSION_BRANCH_CONTINUATION_BATCH,
+  );
+  if (!parents.length) {
+    return {
+      ok: true,
+      model,
+      continuation: { ...input.continuation, seedModel: model },
+      done: true,
+    };
+  }
+  const results = await mapWithConcurrency(parents, CONTINUE_CONCURRENCY, async (row) => {
+    const siblings = model.branches.filter((branch) => branch.parentId === row.parent.id);
+    const prepared = await generateSessionBranchChildren({
+      chapterTitle: input.chapterTitle,
+      chapterBrief: input.chapterBrief,
+      parentTitle: row.parent.title,
+      parentQuestion: row.parent.question,
+      parentTerritory: row.parent.territory,
+      siblingTitles: siblings.map((branch) => branch.title),
+      count: row.need,
+    });
+    return {
+      parentId: row.parent.id,
+      children: prepared.ok ? prepared.children : [],
+      failed: prepared.ok ? null : `seed:${row.parent.id}`,
+    };
+  });
+  let next = model;
+  const failed = [...input.continuation.failed];
+  for (const result of results) {
+    if (result.children.length) {
+      next = addAuthorUnsysGeneratedChildren(next, result.parentId, result.children);
+    }
+    if (result.failed && !failed.includes(result.failed)) failed.push(result.failed);
+  }
+  const continuation = {
+    ...input.continuation,
+    failed,
+    seedModel: next,
+  };
+  return {
+    ok: true,
+    model: next,
+    continuation,
+    done: sessionBranchParentsNeedingGrowth(next, failed).length === 0,
   };
 }
 
@@ -811,6 +940,13 @@ export async function continueSessionBranchModel(input: {
   if (!chapterTitle && !chapterBrief) return { ok: false, error: "A chapter is required." };
   const material = { chapterTitle: chapterTitle || chapterBrief, chapterBrief };
   let continuation = asContinuation(input.continuation);
+  if (continuation.seedModel) {
+    return growSeededSessionBranchModel({
+      chapterTitle: material.chapterTitle,
+      chapterBrief: material.chapterBrief,
+      continuation,
+    });
+  }
   const slices = nextSessionBranchSlices(continuation);
   if (!slices.length) {
     const model = modelFromContinuation(continuation, material.chapterTitle);

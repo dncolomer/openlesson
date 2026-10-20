@@ -125,6 +125,9 @@ describe("author unsys model seed", () => {
     expect(route).toContain("studentSessionModelFromAuthorSeed");
     expect(route).not.toMatch(/studentSessionModelFromAuthorSeed\([\s\S]*catalogSize/);
     expect(route).toContain("answers_model_seed");
+    expect(route).toContain("sessionBranchContinuationFromSeed");
+    expect(route).toContain("sessionBranchParentsNeedingGrowth");
+    expect(route).not.toContain("continuation: null,\n              done: true");
     const view = readFileSync(
       join(__dirname, "../../components/SessionView.tsx"),
       "utf8",

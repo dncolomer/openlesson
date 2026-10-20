@@ -22,7 +22,7 @@ export const LEARN_SUGGESTION_DISMISS_LABEL = "dismiss";
 
 const SUGGESTION_FONT_SIZE = 20;
 
-export type LearnSuggestionToastPlacement = "under" | "beside-right" | "beside-left";
+export type LearnSuggestionToastPlacement = "under" | "beside-right" | "beside-left" | "notification";
 
 /**
  * The sentence to show. Learn only. A raw action name, a blank line,
@@ -64,6 +64,9 @@ export function learnSuggestionToastClass(placement: LearnSuggestionToastPlaceme
   }
   if (placement === "beside-left") {
     return "pointer-events-auto absolute bottom-2 right-full z-30 mr-1 w-64";
+  }
+  if (placement === "notification") {
+    return "pointer-events-auto relative z-30 w-full";
   }
   return "pointer-events-auto relative z-30 mt-1 w-full";
 }

@@ -184,6 +184,40 @@ export function sessionBranchById(
   return model.branches.find((branch) => branch.id === id) ?? null;
 }
 
+/**
+ * How many children a live session still wants under this depth.
+ * The author's first ring (root children) stays as written.
+ * Depth 1 grows to avenues, depth 2 to inquiries.
+ */
+export function sessionBranchChildQuota(depth: number): number {
+  if (depth === 1) return SESSION_BRANCH_AVENUE_COUNT;
+  if (depth === 2) return SESSION_BRANCH_INQUIRY_COUNT;
+  return 0;
+}
+
+export function sessionBranchParentsNeedingGrowth(
+  model: SessionBranchModel,
+  failed: readonly string[] = [],
+): { parent: SessionBranch; need: number }[] {
+  const blocked = new Set(
+    failed
+      .map((key) => (key.startsWith("seed:") ? key.slice("seed:".length) : ""))
+      .filter(Boolean),
+  );
+  const out: { parent: SessionBranch; need: number }[] = [];
+  for (const parent of model.branches) {
+    if (blocked.has(parent.id)) continue;
+    const quota = sessionBranchChildQuota(parent.depth);
+    if (quota <= 0) continue;
+    const have = model.branches.filter((branch) => branch.parentId === parent.id).length;
+    if (have >= quota) continue;
+    out.push({ parent, need: quota - have });
+  }
+  return out.sort(
+    (a, b) => a.parent.depth - b.parent.depth || a.parent.id.localeCompare(b.parent.id),
+  );
+}
+
 export function sessionBranchOutgoing(
   model: SessionBranchModel,
   branchId: string | null | undefined,

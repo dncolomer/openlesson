@@ -6,7 +6,9 @@
 
 import {
   advanceSessionBranchModel,
+  recommendSessionBranchAction,
   sessionBranchById,
+  sessionBranchEdgeBetween,
   sessionBranchInferCandidates,
   type SessionBranchModel,
 } from "@/lib/session-branch-model";
@@ -49,20 +51,46 @@ export function sessionPolicyInferDue(input: {
 }
 
 export function sessionPolicyCandidateLines(model: SessionBranchModel): string {
+  const cheapest = recommendSessionBranchAction(model, model.focusId);
   return sessionBranchInferCandidates(model)
     .map((branch) => {
       const question = branch.question.trim();
       const observation = branch.observation.trim();
+      const fromParent = sessionBranchEdgeBetween(model, branch.parentId, branch.id);
+      const fromFocus = sessionBranchEdgeBetween(model, model.focusId, branch.id);
+      const price = fromFocus?.price ?? fromParent?.price;
       return [
         `- id: ${branch.id}`,
         `  title: ${branch.title}`,
         question ? `  question: ${question}` : "",
         observation ? `  observation: ${observation}` : "",
+        price != null ? `  price: ${price}` : "",
+        cheapest?.toId === branch.id ? "  cheapest: true" : "",
       ]
         .filter(Boolean)
         .join("\n");
     })
     .join("\n");
+}
+
+/**
+ * A learner-facing next-step line from the cheapest outgoing hidden state.
+ * Prefer the node's own question, then its observation. Never a raw action name.
+ */
+export function sessionPolicyLocalSuggestion(input: {
+  nodeTitle?: string | null;
+  observation?: string | null;
+  intent?: string | null;
+}): string | null {
+  const questionOrObservation = [input.intent, input.observation]
+    .map((value) => String(value ?? "").replace(/\s+/g, " ").trim())
+    .find(Boolean);
+  if (questionOrObservation && !policySuggestionIsRawLabel(questionOrObservation)) {
+    return questionOrObservation;
+  }
+  const title = String(input.nodeTitle ?? "").replace(/\s+/g, " ").trim();
+  if (title && !policySuggestionIsRawLabel(title)) return title;
+  return null;
 }
 
 export function sessionPolicyProofFromCanvas(

@@ -19,6 +19,7 @@ export type SessionBranchContinuation = {
   regionFailures: number;
   failed: string[];
   settled?: string[];
+  seedModel?: unknown;
 };
 
 export type SessionBranchFieldLoadResult =
@@ -97,6 +98,7 @@ function isModel(value: unknown): value is SessionBranchModel {
 function isContinuation(value: unknown): value is SessionBranchContinuation {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const record = value as SessionBranchContinuation;
+  if (record.seedModel && typeof record.seedModel === "object") return true;
   return Array.isArray(record.regions) && record.regions.length > 0;
 }
 

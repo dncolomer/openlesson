@@ -4,9 +4,15 @@
 
 import { START_NEW_SESSION_LABEL } from "@/lib/block-previous-sessions";
 import { resolveLaunchFromStyleAndModality } from "@/lib/product-intent";
-import { DASHBOARD_MAPS_ADD_PATH } from "@/lib/dashboard-home-catalog";
+import {
+  DASHBOARD_MAPS_ADD_PATH,
+  DASHBOARD_MAPS_REMOVE_PATH,
+} from "@/lib/dashboard-home-catalog";
 
-export { DASHBOARD_MAPS_ADD_PATH };
+export { DASHBOARD_MAPS_ADD_PATH, DASHBOARD_MAPS_REMOVE_PATH };
+
+export const ADD_TO_MY_MAPS_LABEL = "Add to my Maps";
+export const REMOVE_FROM_MY_MAPS_LABEL = "Remove from my Maps";
 
 export function isPlayCopyWorkspace(row: {
   is_play_copy?: boolean | null;
@@ -73,6 +79,37 @@ export function decideAddToMyMaps(input: {
   if (reuse) return { action: "reuse", copyId: reuse };
   if (input.source.is_all_you_can_learn) return { action: "buy" };
   return { action: "fork" };
+}
+
+export type RemoveFromMyMapsDecision =
+  | { action: "remove"; copyId: string }
+  | { action: "reject"; reason: "not_found" };
+
+export function decideRemoveFromMyMaps(input: {
+  sourceWorkspaceId: string;
+  existingCopies?: readonly {
+    id?: unknown;
+    original_workspace_id?: unknown;
+    is_play_copy?: boolean | null;
+  }[];
+}): RemoveFromMyMapsDecision {
+  const copyId = findExistingPlayCopyId(
+    input.existingCopies || [],
+    input.sourceWorkspaceId,
+  );
+  if (!copyId) return { action: "reject", reason: "not_found" };
+  return { action: "remove", copyId };
+}
+
+export function catalogMapIsInMyMaps(
+  copies: readonly {
+    id?: unknown;
+    original_workspace_id?: unknown;
+    is_play_copy?: boolean | null;
+  }[],
+  sourceWorkspaceId: string,
+): boolean {
+  return Boolean(findExistingPlayCopyId(copies, sourceWorkspaceId));
 }
 
 export function playCopyFulfillOwnerUserId(input: {

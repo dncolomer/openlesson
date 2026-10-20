@@ -21,7 +21,9 @@ import {
   SESSION_BRANCH_ACCEPT_COUNT,
   SESSION_BRANCH_TARGET_COUNT,
   sessionBranchById,
+  sessionBranchChildQuota,
   sessionBranchModelPrompt,
+  sessionBranchParentsNeedingGrowth,
   type SessionBranchDraft,
 } from "@/lib/session-branch-model";
 
@@ -146,6 +148,39 @@ describe("session branch model", () => {
     if (!model) return;
     expect(recommendSessionBranchAction(model, "root")?.toId).toBe("r1");
     expect(recommendSessionBranchAction(model, "root")?.price).toBe(12);
+    expect(sessionBranchChildQuota(0)).toBe(0);
+    expect(sessionBranchChildQuota(1)).toBe(4);
+    expect(sessionBranchChildQuota(2)).toBe(3);
+    expect(sessionBranchParentsNeedingGrowth(model)).toEqual([]);
+    const opening = normalizeSessionBranchModel(
+      {
+        premise: "A priced field.",
+        question: "What is still open?",
+        territory: "A priced field.",
+        observation: "The field is open.",
+        regions: [
+          {
+            title: "Cheap region",
+            question: "What is cheap here?",
+            territory: "Cheap region of the field.",
+            observation: "The cheap region is open.",
+            edgePrice: 2,
+          },
+          {
+            title: "Dear region",
+            question: "What is dear here?",
+            territory: "Dear region of the field.",
+            observation: "The dear region is open.",
+            edgePrice: 70,
+          },
+        ],
+      },
+      "Priced",
+    );
+    expect(opening).toBeTruthy();
+    const growing = sessionBranchParentsNeedingGrowth(opening!);
+    expect(growing.map((row) => row.parent.id)).toEqual(["r1", "r2"]);
+    expect(growing.every((row) => row.need === 4)).toBe(true);
   });
 
   it("travels a priced edge and writes the observation", () => {

@@ -12,8 +12,10 @@ import { studentSessionModelFromAuthorSeed } from "@/lib/author-unsys-model";
 import {
   continueSessionBranchModel,
   generateSessionBranchOpening,
+  sessionBranchContinuationFromSeed,
   type SessionBranchContinuation,
 } from "@/lib/session-branch-model-generate";
+import { sessionBranchParentsNeedingGrowth } from "@/lib/session-branch-model";
 import {
   authorSeedBlockIdFromPreparePlan,
   authorSeedSessionIdFromPreparePlan,
@@ -94,10 +96,12 @@ export async function POST(request: NextRequest) {
             .maybeSingle();
           const seeded = studentSessionModelFromAuthorSeed(data?.answers_model_seed);
           if (seeded) {
+            const continuation = sessionBranchContinuationFromSeed(seeded);
+            const done = sessionBranchParentsNeedingGrowth(seeded).length === 0;
             return NextResponse.json({
               model: seeded,
-              continuation: null,
-              done: true,
+              continuation: done ? null : continuation,
+              done,
               seeded: true,
             });
           }

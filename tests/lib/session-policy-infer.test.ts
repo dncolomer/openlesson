@@ -13,7 +13,9 @@ import {
   recordPolicyInference,
   SESSION_POLICY_INFER_EVENT_THRESHOLD,
   SESSION_POLICY_INFER_INTERVAL_MS,
+  sessionPolicyCandidateLines,
   sessionPolicyInferDue,
+  sessionPolicyLocalSuggestion,
   sessionPolicyProofFromCanvas,
   type SessionPolicyInference,
 } from "@/lib/session-policy-infer";
@@ -134,6 +136,13 @@ describe("session policy inference", () => {
 
     const best = recommendSessionBranchAction(birth, birth.focusId);
     expect(best?.toId).toBe("r1");
+    expect(sessionPolicyLocalSuggestion({
+      nodeTitle: best?.leads,
+      observation: best?.observation,
+      intent: best?.observation,
+    })).toBe("The cheap region is open.");
+    expect(sessionPolicyCandidateLines(birth)).toContain("cheapest: true");
+    expect(sessionPolicyCandidateLines(birth)).toContain("price: 8");
     const recorded = recordPolicyInference(birth, empty, hiddenReply(best!.toId, 0.91));
     expect(recorded.log).toHaveLength(1);
     expect(recorded.log[0]?.hiddenStateId).toBe("r1");
@@ -177,12 +186,16 @@ describe("session policy inference", () => {
     expect(context).toContain("sessionPolicyInferDue");
     expect(context).toContain("recordPolicyInference");
     expect(context).toContain("sessionPolicyCandidateLines");
+    expect(context).toContain("sessionPolicyLocalSuggestion");
+    expect(infer).toContain("cheapest: true");
     expect(bridge).toContain("useSessionPolicyInferences");
     expect(bridge).toContain("sessionPolicySnapshot(");
     expect(bridge).toContain("target.current = next.snapshot");
     expect(bridge).not.toContain("presses");
     expect(bridge).not.toContain("slot.model");
     const xai = read("lib/session-policy-infer-xai.ts");
+    expect(xai).toContain("sessionPolicyLocalSuggestion");
+    expect(xai).toContain("Stay on it.");
     expect(xai).toContain("callXai");
     expect(xai).toContain("callPolicyXai");
     expect(xai).toContain("hiddenStateId");
@@ -197,6 +210,8 @@ describe("session policy inference", () => {
     expect(context).not.toContain('draft?.mode !== "learn"');
     expect(read("app/api/ile/session-policy-infer/route.ts")).toContain("planSessionBranchPrepare");
     expect(read("app/api/ile/session-policy-infer/route.ts")).toContain('body.phase === "project"');
+    expect(read("app/api/ile/session-policy-infer/route.ts")).toContain("NextResponse.json({ reply: null })");
+    expect(read("app/api/ile/session-policy-infer/route.ts")).not.toContain('jsonError(502, "The policy could not be read.")');
     expect(read("components/ExcalidrawCanvas.tsx")).toContain("usePublishSessionProof");
   });
 });

@@ -883,6 +883,7 @@ export default function DashboardPage() {
         {activeTab === "home" && (
           <DashboardHomeTab
             workspaces={learningWorkspaces}
+            playCopies={myMaps}
             t={t}
             hasPaidAccess={hasPaidAccess}
             weeklySessionsUsed={usageData?.weeklySessionsUsed ?? 0}

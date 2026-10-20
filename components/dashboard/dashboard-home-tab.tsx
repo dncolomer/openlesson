@@ -23,6 +23,7 @@ import { WorkspaceCardHero } from "@/components/WorkspaceCardHero";
 import {
   DASHBOARD_CATALOG_PATH,
   DASHBOARD_MAPS_ADD_PATH,
+  DASHBOARD_MAPS_REMOVE_PATH,
   DASHBOARD_MAPS_TRY_PATH,
   collectPublicMapCategories,
   filterPublicMapCatalog,
@@ -31,6 +32,9 @@ import {
   type PublicMapCatalogItem,
 } from "@/lib/dashboard-home-catalog";
 import {
+  ADD_TO_MY_MAPS_LABEL,
+  REMOVE_FROM_MY_MAPS_LABEL,
+  catalogMapIsInMyMaps,
   dashboardMapBuyCheckoutBody,
   playCopyMyMapsHref,
 } from "@/lib/workspace-play-copy";
@@ -39,6 +43,7 @@ import type { SkillGridNode } from "@/lib/block-skill-grid";
 
 export type DashboardHomeTabProps = {
   workspaces: Workspace[];
+  playCopies?: Workspace[];
   t: (key: string, params?: Record<string, string | number>) => string;
   hasPaidAccess?: boolean;
   weeklySessionsUsed?: number;
@@ -55,6 +60,7 @@ type CatalogDetail = {
 
 export function DashboardHomeTab({
   workspaces,
+  playCopies = [],
   t,
   hasPaidAccess = false,
   weeklySessionsUsed = 0,
@@ -81,6 +87,7 @@ export function DashboardHomeTab({
   const [detailError, setDetailError] = useState("");
   const [acquireBusy, setAcquireBusy] = useState(false);
   const [tryBusy, setTryBusy] = useState(false);
+  const [removedSourceIds, setRemovedSourceIds] = useState<string[]>([]);
 
   const emptyWorkspaces = dashboardHasNoWorkspaces(workspaces);
   const canStart = useMemo(
@@ -241,6 +248,17 @@ export function DashboardHomeTab({
     }
   }
 
+  const copiesInMyMaps = useMemo(
+    () =>
+      playCopies.filter(
+        (row) => !removedSourceIds.includes(String(row.original_workspace_id || "").trim()),
+      ),
+    [playCopies, removedSourceIds],
+  );
+  const detailInMyMaps = detail
+    ? catalogMapIsInMyMaps(copiesInMyMaps, detail.map.id)
+    : false;
+
   async function addToMyMaps(item: PublicMapCatalogItem) {
     if (acquireBusy || tryBusy) return;
     setAcquireBusy(true);
@@ -262,6 +280,34 @@ export function DashboardHomeTab({
       router.push(String(payload.href || playCopyMyMapsHref()));
     } catch (err) {
       setDetailError(err instanceof Error ? err.message : "Could not add map");
+    } finally {
+      setAcquireBusy(false);
+    }
+  }
+
+  async function removeFromMyMaps(item: PublicMapCatalogItem) {
+    if (acquireBusy || tryBusy) return;
+    setAcquireBusy(true);
+    setDetailError("");
+    try {
+      const res = await fetch(
+        "/api/dashboard/maps/remove" satisfies typeof DASHBOARD_MAPS_REMOVE_PATH,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ workspaceId: item.id }),
+        },
+      );
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(errorMessageFromBody(payload, "Could not remove map"));
+      }
+      setRemovedSourceIds((ids) =>
+        ids.includes(item.id) ? ids : [...ids, item.id],
+      );
+      router.refresh();
+    } catch (err) {
+      setDetailError(err instanceof Error ? err.message : "Could not remove map");
     } finally {
       setAcquireBusy(false);
     }
@@ -622,7 +668,27 @@ export function DashboardHomeTab({
               </div>
             ) : null}
             <div className="flex flex-wrap gap-3">
-              {detail.map.isAycl ? (
+              {detailInMyMaps ? (
+                <>
+                  <button
+                    type="button"
+                    data-dashboard-add-to-my-maps
+                    data-dashboard-remove-from-my-maps=""
+                    disabled={acquireBusy || tryBusy}
+                    onClick={() => void removeFromMyMaps(detail.map)}
+                    className="inline-flex h-11 items-center justify-center rounded-none bg-white px-6 text-sm font-medium text-black hover:bg-neutral-200 disabled:opacity-40"
+                  >
+                    {acquireBusy ? "Removing…" : REMOVE_FROM_MY_MAPS_LABEL}
+                  </button>
+                  <button
+                    type="button"
+                    data-dashboard-map-buy
+                    className="hidden"
+                    aria-hidden
+                    tabIndex={-1}
+                  />
+                </>
+              ) : detail.map.isAycl ? (
                 <button
                   type="button"
                   data-dashboard-map-buy
@@ -644,7 +710,7 @@ export function DashboardHomeTab({
                     onClick={() => void addToMyMaps(detail.map)}
                     className="inline-flex h-11 items-center justify-center rounded-none bg-white px-6 text-sm font-medium text-black hover:bg-neutral-200 disabled:opacity-40"
                   >
-                    {acquireBusy ? "Adding…" : "Add to my Maps"}
+                    {acquireBusy ? "Adding…" : ADD_TO_MY_MAPS_LABEL}
                   </button>
                   <button
                     type="button"

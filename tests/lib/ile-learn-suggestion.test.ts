@@ -94,6 +94,8 @@ describe("learn suggestion toast", () => {
     expect(learnSuggestionToastPlacement("left")).toBe("beside-right");
     expect(learnSuggestionToastPlacement("right")).toBe("beside-left");
     expect(learnSuggestionToastClass("under")).toContain("mt-1");
+    expect(learnSuggestionToastClass("notification")).toContain("w-full");
+    expect(learnSuggestionToastClass("notification")).not.toContain("mt-1");
     expect(learnSuggestionToastClass("under")).not.toContain("left-full");
     expect(learnSuggestionToastClass("beside-right")).toContain("left-full");
     expect(learnSuggestionToastClass("beside-left")).toContain("right-full");
@@ -186,6 +188,8 @@ describe("learn suggestion toast", () => {
     expect(prompt).toContain("data-ile-canvas-side-note");
     expect(prompt).toContain("key={learnSuggestion}");
     expect(prompt).toContain("[data-ile-learn-suggestion]");
+    expect(prompt).toContain('placement={commandDockVisible ? "under" : "notification"}');
+    expect(prompt).toContain("right-3 top-3");
     const dockAt = prompt.indexOf("data-ile-learn-more-actions");
     const noteAt = prompt.indexOf("data-ile-canvas-side-note");
     expect(noteAt).toBeGreaterThan(dockAt);

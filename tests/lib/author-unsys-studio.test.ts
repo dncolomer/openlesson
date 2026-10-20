@@ -154,6 +154,10 @@ describe("author unsys seed studio", () => {
     expect(studio).toContain("onGenerateGraph");
     expect(studio).toContain("data-author-unsys-generating");
     expect(studio).toContain("blur-sm");
+    expect(studio).toContain("backdrop-blur-sm");
+    expect(studio).not.toContain("bg-black/45");
+    expect(studio).toContain('normalizeWorkspaceHeliosColumnMode("manual")');
+    expect(studio).not.toContain("onSelect={setFocusId}");
     expect(studio).not.toContain("Generating with xAI");
     const inspector = read("components/WorkspaceUnsysSeedInspector.tsx");
     expect(inspector).toContain("data-author-unsys-action-price");

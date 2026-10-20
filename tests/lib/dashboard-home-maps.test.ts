@@ -3,6 +3,7 @@ import { readDashboardSurface, readRepo } from "../helpers/surface-source";
 import {
   DASHBOARD_CATALOG_PATH,
   DASHBOARD_MAPS_ADD_PATH,
+  DASHBOARD_MAPS_REMOVE_PATH,
   DASHBOARD_MAPS_TRY_PATH,
   PUBLISH_PLAY_COPY_MESSAGE,
   collectPublicMapCategories,
@@ -29,7 +30,11 @@ import {
 } from "@/lib/dashboard-nav";
 import {
   dashboardMapBuyCheckoutBody,
+  ADD_TO_MY_MAPS_LABEL,
+  REMOVE_FROM_MY_MAPS_LABEL,
+  catalogMapIsInMyMaps,
   decideAddToMyMaps,
+  decideRemoveFromMyMaps,
   findExistingPlayCopyId,
   isPlayCopyWorkspace,
   playCopyBlockSidebar,
@@ -247,6 +252,26 @@ describe("add to my maps and play copies", () => {
         guestUserId: "guest-1",
       }),
     ).toBe("guest-1");
+    expect(
+      catalogMapIsInMyMaps(
+        [{ id: "copy-1", original_workspace_id: "src", is_play_copy: true }],
+        "src",
+      ),
+    ).toBe(true);
+    expect(catalogMapIsInMyMaps([], "src")).toBe(false);
+    expect(
+      decideRemoveFromMyMaps({
+        sourceWorkspaceId: "src",
+        existingCopies: [
+          { id: "copy-1", original_workspace_id: "src", is_play_copy: true },
+        ],
+      }),
+    ).toEqual({ action: "remove", copyId: "copy-1" });
+    expect(
+      decideRemoveFromMyMaps({ sourceWorkspaceId: "src", existingCopies: [] }),
+    ).toEqual({ action: "reject", reason: "not_found" });
+    expect(ADD_TO_MY_MAPS_LABEL).toBe("Add to my Maps");
+    expect(REMOVE_FROM_MY_MAPS_LABEL).toBe("Remove from my Maps");
   });
 
   it("play View chrome is map-only with a block sidebar and start-session target", () => {
@@ -319,10 +344,21 @@ describe("dashboard home and my maps surface", () => {
     );
     expect(dash).toContain("DASHBOARD_CATALOG_PATH");
     expect(dash).toContain("DASHBOARD_MAPS_ADD_PATH");
+    expect(dash).toContain("DASHBOARD_MAPS_REMOVE_PATH");
     expect(dash).toContain("DASHBOARD_MAPS_TRY_PATH");
     expect(dash).toContain(DASHBOARD_CATALOG_PATH);
     expect(dash).toContain(DASHBOARD_MAPS_ADD_PATH);
+    expect(dash).toContain(DASHBOARD_MAPS_REMOVE_PATH);
     expect(dash).toContain(DASHBOARD_MAPS_TRY_PATH);
+    expect(dash).toContain("REMOVE_FROM_MY_MAPS_LABEL");
+    expect(dash).toContain("playCopies={myMaps}");
+    expect(dash).toContain("data-dashboard-remove-from-my-maps");
+    expect(readRepo("app/api/dashboard/maps/remove/route.ts")).toContain(
+      "decideRemoveFromMyMaps",
+    );
+    expect(readRepo("app/api/dashboard/maps/remove/route.ts")).toContain(
+      "setWorkspaceArchived",
+    );
 
     const tryRoute = readRepo("app/api/dashboard/maps/try/route.ts");
     expect(tryRoute).toContain("pickHomeMapTryBlock");

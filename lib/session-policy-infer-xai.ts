@@ -4,7 +4,10 @@
  * Do not import this module from a "use client" file or from a test.
  */
 
-import type { SessionPolicyProofEvent } from "@/lib/session-policy-infer";
+import {
+  sessionPolicyLocalSuggestion,
+  type SessionPolicyProofEvent,
+} from "@/lib/session-policy-infer";
 import { callXai, systemMessage, userMessage, type JsonSchema, type Message } from "@/lib/xai-client";
 
 /** Stay under the route maxDuration. json_schema plus one json fallback, each 12s. */
@@ -87,8 +90,9 @@ const SUGGESTION_SCHEMA: JsonSchema = {
 
 const INFER_SYSTEM = [
   "You match a learner's canvas work to one hidden state on a frozen map.",
-  "Candidates are listed with id, title, question, and observation.",
+  "Candidates are listed with id, title, question, observation, and price.",
   "Pick the candidate whose observation or question best matches the work.",
+  "When several candidates match equally, pick the one marked cheapest.",
   "hiddenStateId must be one of the listed ids.",
   "Return confidence from 0 to 1.",
   "line is one sentence a learner would recognize in this chapter, about that hidden state and the work just given.",
@@ -109,9 +113,11 @@ const GAP_SYSTEM = [
 
 const SUGGEST_SYSTEM = [
   "Write one short sentence that points the learner at the next hidden state.",
+  "That node is the cheapest outgoing hidden state from where they are. Stay on it.",
   "Address the learner as you. Do not use I, me, or my.",
-  "Name the work they should do toward that hidden state's question or observation.",
+  "Use that hidden state's question when it is a genuine question. Otherwise use its observation.",
   "Use the canvas notes when they make the sentence more specific.",
+  "Do not pick a different node.",
   "Do not use the words Close, Keep, Discard, Insight, Forage, Exploit, Avoid, or Infer.",
   "Do not mention a price, a score, or a policy.",
 ].join("\n");
@@ -207,8 +213,24 @@ export async function suggestSessionPolicyReply(input: {
     SUGGESTION_SCHEMA,
     { maxTokens: 180, temperature: 0.4 },
   );
-  if (!response.ok) return { ok: false, error: response.error };
+  if (!response.ok) {
+    const local = sessionPolicyLocalSuggestion({
+      nodeTitle: input.nodeTitle,
+      observation: input.observation,
+      intent: input.intent,
+    });
+    if (local) return { ok: true, reply: local };
+    return { ok: false, error: response.error };
+  }
   const text = textOf(response.data.text);
-  if (!text) return { ok: false, error: "The policy could not be read." };
+  if (!text) {
+    const local = sessionPolicyLocalSuggestion({
+      nodeTitle: input.nodeTitle,
+      observation: input.observation,
+      intent: input.intent,
+    });
+    if (local) return { ok: true, reply: local };
+    return { ok: false, error: "The policy could not be read." };
+  }
   return { ok: true, reply: text };
 }

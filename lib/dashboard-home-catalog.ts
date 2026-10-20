@@ -19,6 +19,7 @@ export { AYCL_SUGGESTED_CATEGORIES };
 
 export const DASHBOARD_CATALOG_PATH = "/api/dashboard/catalog";
 export const DASHBOARD_MAPS_ADD_PATH = "/api/dashboard/maps/add";
+export const DASHBOARD_MAPS_REMOVE_PATH = "/api/dashboard/maps/remove";
 export const DASHBOARD_MAPS_TRY_PATH = "/api/dashboard/maps/try";
 export const LANDING_PUBLIC_MAPS_PATH = "/api/landing/maps";
 export const LANDING_MAP_SIGNUP_HREF = "/register";

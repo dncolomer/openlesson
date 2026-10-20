@@ -244,7 +244,7 @@ export function WorkspaceUnsysSeedStudio({
           <div
             className={
               generating
-                ? "pointer-events-none absolute inset-0 select-none blur-sm saturate-50"
+                ? "pointer-events-none absolute inset-0 select-none"
                 : "absolute inset-0"
             }
             inert={generating ? true : undefined}
@@ -254,14 +254,17 @@ export function WorkspaceUnsysSeedStudio({
               model={model}
               focusId={focusId}
               disabled={disabled}
-              onSelect={setFocusId}
+              onSelect={(id) => {
+                setFocusId(id);
+                setHeliosColumnMode(normalizeWorkspaceHeliosColumnMode("manual"));
+              }}
             />
           </div>
           {generating ? (
             <div
               data-author-unsys-generating=""
               aria-busy="true"
-              className="absolute inset-0 z-10 cursor-wait bg-black/45"
+              className="absolute inset-0 z-10 cursor-wait bg-white/10 backdrop-blur-sm"
             />
           ) : null}
         </div>

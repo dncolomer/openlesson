@@ -12,9 +12,18 @@ import {
   generateSessionBranchModel,
   generateSessionBranchOpening,
   nextSessionBranchSlices,
+  sessionBranchContinuationFromSeed,
   tokensForNodes,
 } from "@/lib/session-branch-model-generate";
-import { SESSION_BRANCH_TARGET_COUNT } from "@/lib/session-branch-model";
+import {
+  addAuthorUnsysBranch,
+  setAuthorUnsysEdgePrice,
+} from "@/lib/author-unsys-model";
+import {
+  normalizeSessionBranchModel,
+  sessionBranchById,
+  SESSION_BRANCH_TARGET_COUNT,
+} from "@/lib/session-branch-model";
 
 type ChatMessage = { role: string; content: string };
 type ChatConfig = { maxTokens?: number; fetchTimeout?: number; retries?: number };
@@ -235,5 +244,72 @@ describe("session field opens before the rest is written", () => {
     expect(callXai.mock.calls.some((call) => promptOf(call[0] as ChatMessage[]).includes("avenues for region"))).toBe(
       false,
     );
+  });
+
+  it("loads an author seed as the opening and grafts deeper children onto it", async () => {
+    let seed = normalizeSessionBranchModel(
+      {
+        premise: "A priced field.",
+        question: "What is still open?",
+        territory: "A priced field.",
+        observation: "The field is open.",
+        regions: [
+          {
+            title: "Cheap region",
+            question: "What is cheap here?",
+            territory: "Cheap region of the field.",
+            observation: "The cheap region is open.",
+            edgePrice: 1,
+          },
+          {
+            title: "Dear region",
+            question: "What is dear here?",
+            territory: "Dear region of the field.",
+            observation: "The dear region is open.",
+            edgePrice: 80,
+          },
+        ],
+      },
+      "Priced",
+    );
+    expect(seed).toBeTruthy();
+    if (!seed) return;
+    seed = setAuthorUnsysEdgePrice(seed, "root", "r1", 1);
+    seed = addAuthorUnsysBranch(seed, "root", {
+      title: "Manual cheap branch",
+      question: "What would you check on the cheap branch?",
+      territory: "Manual cheap branch of the field.",
+      observation: "The manual cheap branch is on the board.",
+      edgePrice: 0,
+    });
+    const continuation = sessionBranchContinuationFromSeed(seed);
+    expect(continuation.seedModel?.branches.map((branch) => branch.id)).toEqual(
+      seed.branches.map((branch) => branch.id),
+    );
+    callXai.mockImplementation(async () => ({
+      success: true,
+      data: {
+        children: [node("Grown 1"), node("Grown 2"), node("Grown 3"), node("Grown 4")],
+      },
+    }));
+    const result = await continueSessionBranchModel({
+      chapterTitle: "Priced",
+      chapterBrief: "A priced field.",
+      continuation,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(sessionBranchById(result.model, "r1")?.title).toBe("Cheap region");
+    expect(
+      sessionBranchById(result.model, "root")?.edges.find((edge) => edge.toId === "r1")?.price,
+    ).toBe(1);
+    const manual = result.model.branches.find((branch) => branch.title === "Manual cheap branch");
+    expect(manual).toBeTruthy();
+    expect(
+      sessionBranchById(result.model, "root")?.edges.find((edge) => edge.toId === manual!.id)?.price,
+    ).toBe(0);
+    expect(result.model.branches.length).toBeGreaterThan(seed.branches.length);
+    expect(result.model.branches.some((branch) => branch.parentId === "r1")).toBe(true);
+    expect(result.continuation.seedModel?.branches.length).toBe(result.model.branches.length);
   });
 });

@@ -145,6 +145,7 @@ describe("author unsys model Manual Mode wiring", () => {
     expect(view).toContain("onSaveAnswersModelSeed");
     expect(view).toContain("WorkspaceUnsysSeedStudio");
     expect(view).toContain("unsysStudioBlockId");
+    expect(view).not.toContain("setUnsysStudioCatalogSize");
     expect(view).toContain("onOpenUnsysStudio");
     expect(drawers).toContain("onOpenUnsysStudio");
     expect(route).toContain("studentSessionModelFromAuthorSeed");

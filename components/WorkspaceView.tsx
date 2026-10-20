@@ -722,7 +722,6 @@ export function WorkspaceView({
   useEffect(() => {
     if (shell.learnerSurface || !isOwner) {
       setUnsysStudioBlockId(null);
-      setUnsysStudioCatalogSize(null);
     }
   }, [isOwner, shell.learnerSurface]);
 

@@ -1,23 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
-import { LEARNING_MODEL_CATALOG_4 } from "@/lib/learning-model";
 import {
-  SCIENCE_LEARNING_MODEL_ACTION_HINTS,
   SCIENCE_LEARNING_MODEL_COPY,
   SCIENCE_LEARNING_MODEL_FACTORS,
   SCIENCE_LEARNING_MODEL_ROOT,
   formatScienceLearningModelCost,
-  scienceLearningModelActionCosts,
-  scienceLearningModelActionScore,
-  scienceLearningModelCheapestAction,
+  scienceLearningModelCheapestEdge,
   scienceLearningModelFactor,
   scienceLearningModelNodes,
-  scienceLearningModelStep,
-  type ScienceLearningModelLiveAction,
+  scienceLearningModelOutgoingEdges,
+  scienceLearningModelTravel,
   type ScienceLearningModelNode,
 } from "@/lib/science/learning-model-copy";
-import { LearningModelActionGlyph } from "@/components/science/LearningModelMarks";
 import { LearningModelFactorCopy } from "@/components/science/LearningModelFactorCopy";
 
 type Point = { x: number; y: number };
@@ -365,17 +360,15 @@ export function LearningModelScene() {
   const opening = SCIENCE_LEARNING_MODEL_ROOT;
   const [focusId, setFocusId] = useState(opening.id);
   const [log, setLog] = useState<string>(SCIENCE_LEARNING_MODEL_COPY.explorerOpening);
-  const [lastAction, setLastAction] = useState<string | null>(null);
+  const [lastToId, setLastToId] = useState<string | null>(null);
   const [explorerMode, setExplorerMode] = useState<ExplorerMode>("learn");
   const [excess, setExcess] = useState(0);
   const [steps, setSteps] = useState(0);
   const [distance, setDistance] = useState(0);
   const focus = nodes.find((row) => row.id === focusId) ?? opening;
   const focusFactor = scienceLearningModelFactor(focus.factorId);
-  const costs = scienceLearningModelActionCosts(focusId);
-  const cheapestId = scienceLearningModelCheapestAction(focusId);
-  const cheapestLabel =
-    LEARNING_MODEL_CATALOG_4.find((row) => row.id === cheapestId)?.label ?? cheapestId;
+  const edges = scienceLearningModelOutgoingEdges(focusId);
+  const cheapest = scienceLearningModelCheapestEdge(focusId);
   const showCosts = explorerMode === "learn";
 
   function resetDistance() {
@@ -386,7 +379,7 @@ export function LearningModelScene() {
 
   function selectMode(mode: ExplorerMode) {
     setExplorerMode(mode);
-    setLastAction(null);
+    setLastToId(null);
     resetDistance();
     setLog(
       mode === "learn"
@@ -399,7 +392,7 @@ export function LearningModelScene() {
     const node = nodes.find((row) => row.id === id);
     if (!node) return;
     setFocusId(node.id);
-    setLastAction(null);
+    setLastToId(null);
     resetDistance();
     const factor = scienceLearningModelFactor(node.factorId);
     setLog(
@@ -409,17 +402,13 @@ export function LearningModelScene() {
     );
   }
 
-  function takeAction(actionId: string) {
-    const score = scienceLearningModelActionScore(focusId, actionId);
-    const next = scienceLearningModelStep(focusId, actionId);
-    const cheapestName =
-      LEARNING_MODEL_CATALOG_4.find((row) => row.id === score.cheapestId)?.label ??
-      score.cheapestId;
+  function takeEdge(toId: string) {
+    const next = scienceLearningModelTravel(focusId, toId);
     setFocusId(next.focusId);
-    setLastAction(actionId);
+    setLastToId(toId);
     if (explorerMode === "verify") {
       const nextSteps = steps + 1;
-      const nextExcess = Math.round((excess + score.excess) * 10) / 10;
+      const nextExcess = Math.round((excess + next.excess) * 10) / 10;
       const nextDistance = Math.round((nextExcess / nextSteps) * 10) / 10;
       setSteps(nextSteps);
       setExcess(nextExcess);
@@ -428,9 +417,11 @@ export function LearningModelScene() {
       return;
     }
     const extra =
-      score.excess === 0
-        ? ` Cost ${formatScienceLearningModelCost(score.cost)}, the cheapest policy.`
-        : ` Cost ${formatScienceLearningModelCost(score.cost)}. Cheapest policy: ${cheapestName} at ${formatScienceLearningModelCost(score.cheapestCost)}.`;
+      next.edge && next.excess === 0
+        ? ` Cost ${formatScienceLearningModelCost(next.edge.cost)}, the cheapest policy.`
+        : next.edge && next.cheapest
+          ? ` Cost ${formatScienceLearningModelCost(next.edge.cost)}. Cheapest policy: ${next.cheapest.title} at ${formatScienceLearningModelCost(next.cheapest.cost)}.`
+          : "";
     setLog(`${next.log}${extra}`);
   }
 
@@ -441,7 +432,7 @@ export function LearningModelScene() {
       data-explorer-mode={explorerMode}
     >
       <div
-        className="relative min-h-[28rem] overflow-hidden bg-black lg:min-h-[40rem]"
+        className="relative min-h-[28rem] overflow-clip bg-black lg:min-h-[40rem]"
         data-learning-model-schematic
       >
         <LearningModelMap2D focusId={focusId} onSelect={selectNode} />
@@ -511,9 +502,9 @@ export function LearningModelScene() {
             ) : null}
           </span>
           <span className="mt-1 block">{focus.observation}</span>
-          {showCosts ? (
+          {showCosts && cheapest ? (
             <span className="mt-1 block font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500">
-              Cheapest policy · {cheapestLabel} {formatScienceLearningModelCost(costs[cheapestId])}
+              Cheapest policy · {cheapest.title} {formatScienceLearningModelCost(cheapest.cost)}
             </span>
           ) : (
             <span
@@ -525,41 +516,38 @@ export function LearningModelScene() {
             </span>
           )}
         </p>
-        {LEARNING_MODEL_CATALOG_4.map((action) => {
-          const actionId = action.id as ScienceLearningModelLiveAction;
-          const cost = costs[actionId];
-          const isCheapest = cheapestId === actionId;
+        {edges.map((edge) => {
+          const isCheapest = cheapest?.toId === edge.toId;
           return (
             <button
-              key={action.id}
+              key={edge.toId}
               type="button"
-              data-explorer-action={action.id}
-              data-explorer-action-cost={showCosts ? cost : undefined}
+              data-explorer-edge={edge.toId}
+              data-explorer-edge-cost={showCosts ? edge.cost : undefined}
               data-explorer-cheapest={showCosts && isCheapest ? "true" : undefined}
-              onClick={() => takeAction(action.id)}
+              onClick={() => takeEdge(edge.toId)}
               className={`flex items-start gap-3 border px-3 py-3 text-left text-sm ${
-                lastAction === action.id
+                lastToId === edge.toId
                   ? "border-white bg-white/10 text-white"
                   : showCosts && isCheapest
                     ? "border-white/70 text-white"
                     : "border-white/25 text-zinc-200 hover:border-white"
               }`}
             >
-              <span className="relative mt-0.5 h-5 w-5 shrink-0 overflow-clip text-[#b0d6be] [clip-path:inset(0)]">
-                <LearningModelActionGlyph id={action.id} />
-              </span>
               <span className="min-w-0 flex-1">
                 <span className="flex items-baseline justify-between gap-2">
-                  <span className="font-medium">{action.label}</span>
+                  <span className="font-medium">{edge.title}</span>
                   {showCosts ? (
                     <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-400">
-                      cost {formatScienceLearningModelCost(cost)}
+                      cost {formatScienceLearningModelCost(edge.cost)}
                       {isCheapest ? <span className="ml-2 text-white">policy</span> : null}
                     </span>
                   ) : null}
                 </span>
                 <span className="mt-0.5 block text-xs text-zinc-400">
-                  {SCIENCE_LEARNING_MODEL_ACTION_HINTS[action.id] ?? action.meaning}
+                  {edge.kind === "parent"
+                    ? "Return to the coarser hidden state."
+                    : "Travel to this hidden state."}
                 </span>
               </span>
             </button>

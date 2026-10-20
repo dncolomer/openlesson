@@ -5,12 +5,7 @@
  * uses that model. Do not call the generative model a map.
  */
 
-import {
-  LEARNING_MODEL_CATALOG_4,
-  LEARNING_MODEL_CATALOG_8,
-  LEARNING_MODEL_CATALOG_16,
-  LEARNING_MODEL_OBJECTS,
-} from "@/lib/learning-model";
+import { LEARNING_MODEL_OBJECTS } from "@/lib/learning-model";
 
 export const SCIENCE_LEARNING_MODEL_PATH = "/science/learning-model" as const;
 
@@ -21,10 +16,7 @@ export const SCIENCE_LEARNING_MODEL_TERMS = [
   "observation",
   "action",
   "policy",
-  "Forage",
-  "Exploit",
-  "Avoid",
-  "Infer",
+  "priced edge",
   "Calibrate",
   "Learn",
   "Verify",
@@ -38,29 +30,19 @@ export const SCIENCE_LEARNING_MODEL_COPY = {
   eyebrow: "UNSYS MODEL",
   title: "A generative model you can act on.",
   lead:
-    "The unsys model is a generative model of a concept the user is trying to learn or verify: hidden states, state factors, observations, actions, and policies. Our system generates a learning simulation of that model and uses it to calibrate sessions, verify knowledge, and steer learning.",
+    "The unsys model is a generative model of a concept the user is trying to learn or verify: hidden states, state factors, observations, priced edges, and policies. Our system generates a learning simulation of that model and uses it to calibrate sessions, verify knowledge, and steer learning.",
   foundationTitle: "Where this comes from",
   foundation:
     "Karl Friston’s Free Energy Principle says living systems keep a generative model of the world, then act to reduce uncertainty about its hidden states. A mismatch between the observation a hidden state would generate and what the learner produces is a surprise. We use those Concepts for Calibrate, Learn, and Verify. We do not compute variational free energy, and we do not claim the full formal theory.",
   howTitle: "What the system does",
   how:
-    "Before a session starts we freeze a generative model of the concept. Related hidden states share a state factor. Each hidden state carries an observation: what we would expect while focusing on it. An action is a move from the current hidden state, with a cost: its expected-free-energy price. A policy is a sequence of those actions, or the cheapest next action. Taps, speech, and canvas work are projected onto a policy. Learn shows those costs so the policy can steer. Verify hides them and scores distance from the cheapest policy.",
+    "Before a session starts we freeze a generative model of the concept. Related hidden states share a state factor. Each hidden state carries an observation: what we would expect while focusing on it. An action is travel along a priced edge from the current hidden state to another, with a cost: its expected-free-energy price. A policy is a sequence of those hidden states, or the cheapest outgoing edge. Taps, speech, and canvas work are projected onto a policy. Learn shows those costs so the policy can steer. Verify hides them and scores distance from the cheapest policy.",
   conceptsTitle: "The six Concepts",
-  catalogsTitle: "Actions",
-  catalogsLead:
-    "Live inference is hidden-state travel on priced edges. It does not switch a 4, 8, or 16 action catalog. The lists below are historical names for those moves, each with an Integrals example of how we would have classified the work.",
-  fourTitle: "4 actions",
-  fourLead:
-    "A historical four-name catalog: Forage seeks information, Exploit settles the current hidden state, Avoid withdraws, Infer crafts the insight. Live sessions do not pick this catalog as the inference target. They infer which priced edge the work travelled. The Integrals lines are how we would have classified each move.",
-  eightLead:
-    "A historical eight-action catalog. Adds travel names (Descend, Ascend, Switch) and splits foraging into Sample and Predict. Same Integrals concept; not the live inference target.",
-  sixteenLead:
-    "A historical sixteen-action catalog. Adds precision, prediction error, and prior preference over observations. Same Integrals concept; not the live inference target.",
   modesTitle: "Three sessions, one generative model",
   projectionTitle: "Projection",
   projectionHeading: "Work projects onto a policy.",
   projection:
-    "Taps, canvas work, or one spoken plan are projected onto a hidden state or an action on the frozen generative model. The check is whether that projection matches the cheapest policy, or a nearby hidden state. Expected free energy is the influence on those costs. Learn shows the costs. Verify hides them and records distance from the cheapest policy. The system records which policy the user followed while learning or verifying.",
+    "Taps, canvas work, or one spoken plan are projected onto a nearby hidden state on the frozen generative model. That travel is an action: a priced edge. The check is whether that projection matches the cheapest policy. Expected free energy is the influence on those costs. Learn shows the costs. Verify hides them and records distance from the cheapest policy. The system records which policy the user followed while learning or verifying.",
   calibrate:
     "The user taps hidden states they would not trust themselves on, for the concept they are trying to learn or verify. Taps that stay on one state factor are a hole. Speech about how they would look next is projected onto nearby hidden states of the same state factor. The result is a prior over hidden states: the starting point Learn and Verify later price against.",
   learn:
@@ -71,83 +53,35 @@ export const SCIENCE_LEARNING_MODEL_COPY = {
     "The Free Energy Principle is an influence on the unsys model. We do not claim that Uncertain Systems is Friston’s full formal theory, and we do not claim completed FEP empirical results.",
   explorerTitle: "A small generative model",
   explorerLead:
-    "Integrals is a frozen generative model of the concept the user is trying to learn or verify. Three state factors structure it: Meaning, Technique, and Setup. A hidden state can open several finer hidden states at the same depth. Each hidden state carries an observation: what we would expect while focusing on it. Travel from a hidden state is a priced edge: the expected-free-energy cost of going to the next hidden state. Costs change with the hidden state you are on. Switch the explorer between Learn and Verify. In Learn the costs stay visible and the cheapest edge is marked as the policy, so the policy can steer. In Verify the costs stay hidden; each step is scored as distance from that cheapest policy. Click or drag a hidden state, then take an edge. Live inference is that hidden-state travel, not a 4/8/16 catalog switch.",
+    "Integrals is a frozen generative model of the concept the user is trying to learn or verify. Three state factors structure it: Meaning, Technique, and Setup. A hidden state can open several finer hidden states at the same depth. Each hidden state carries an observation: what we would expect while focusing on it. Travel from a hidden state is a priced edge: the expected-free-energy cost of going to the next hidden state. Costs change with the hidden state you are on. Switch the explorer between Learn and Verify. In Learn the costs stay visible and the cheapest edge is marked as the policy, so the policy can steer. In Verify the costs stay hidden; each step is scored as distance from that cheapest policy. Click or drag a hidden state, then take an edge.",
   explorerOpening:
-    "You are on Integrals, the frozen generative model. Click or drag a hidden state, or take an action.",
+    "You are on Integrals, the frozen generative model. Click or drag a hidden state, then take a priced edge.",
   explorerDragHint: "Drag a hidden state. It returns.",
   explorerLearnCaption:
-    "Action costs stay visible. The cheapest action is the policy.",
+    "Edge costs stay visible. The cheapest outgoing hidden state is the policy.",
   explorerVerifyCaption:
-    "Action costs stay hidden. Distance is how much more each action cost than the cheapest policy, averaged over the steps.",
+    "Edge costs stay hidden. Distance is how much more each travel cost than the cheapest policy, averaged over the steps.",
   schematicTitle: "Integrals",
   schematicLead:
-    "One frozen generative model of Integrals. Three state factors, each with its own color. Hidden states branch off those factors: one hidden state can have several finer hidden states at the same depth. The observation sits on the hidden state you are on. Actions leave that hidden state, each with a cost that depends on where you are.",
+    "One frozen generative model of Integrals. Three state factors, each with its own color. Hidden states branch off those factors: one hidden state can have several finer hidden states at the same depth. The observation sits on the hidden state you are on. Priced edges leave that hidden state for another, each with a cost that depends on where you are.",
   pipelinesTitle: "Calibrate, Learn, Verify",
   pipelinesLead:
-    "The same frozen generative model. Calibrate builds a prior over hidden states. Learn follows a policy: action costs stay visible, and the cheapest action is the compass. Verify hides those costs and measures distance from the cheapest policy.",
+    "The same frozen generative model. Calibrate builds a prior over hidden states. Learn follows a policy: edge costs stay visible, and the cheapest outgoing hidden state is the compass. Verify hides those costs and measures distance from the cheapest policy.",
 } as const;
 
 export const SCIENCE_LEARNING_MODEL_CONCEPT_BLURBS: Record<string, string> = {
   "generative-model":
-    "The generative model represents a concept's hidden states, our observations of those states, and how certain actions affect what we learn about it. Our system generates a learning simulation of this model that is then used to calibrate the learner's sessions, verify someone's knowledge, and serve as a learning compass to help someone learn more optimally.",
+    "The generative model represents a concept's hidden states, our observations of those states, and the priced edges that travel between them. Our system generates a learning simulation of this model that is then used to calibrate the learner's sessions, verify someone's knowledge, and serve as a learning compass to help someone learn more optimally.",
   "hidden-state":
-    "A hidden state represents one hypothesis about the concept that the user is trying to learn or verify. The system observes which hidden state the user is focusing on, and treats Infer as the moment that work finds a hidden state, while calibrating, learning, or verifying.",
+    "A hidden state represents one hypothesis about the concept that the user is trying to learn or verify. The system infers which hidden state the user is focusing on while calibrating, learning, or verifying.",
   "state-factor":
     "A state factor represents one dimension of the concept, grouping the hidden states that answer the same kind of question. The system uses state factors to structure the generative model so calibration can find where understanding is thin, and so learning and verification stay oriented to that dimension.",
   observation:
     "An observation represents what we would expect while the user is focusing on a hidden state. The system keeps that observation with the hidden state and uses it, in calibration, learning, and verification, to project what the learner produces onto the generative model.",
   action:
-    "An action represents a move from the current hidden state, and how taking it changes what we can learn about the concept. Each action carries a cost: its expected-free-energy price from that hidden state. The system generates the allowed actions at each hidden state, shows those costs while learning so the cheapest policy can steer, and records the same costs as distance while verifying.",
+    "An action represents travel from the current hidden state to another along a priced edge, and how that travel changes what we can learn about the concept. Each edge carries a cost: its expected-free-energy price. The system shows those costs while learning so the cheapest policy can steer, and records the same costs as distance while verifying.",
   policy:
-    "A policy represents a sequence of actions through the generative model, or the next preferred action from the current hidden state: the one with the cheapest cost. The system uses that cheapest policy as the learning compass. Calibration writes the prior the policy will use; learning shows the cheapest action; verification scores distance from it.",
-};
-
-export const SCIENCE_LEARNING_MODEL_ACTION_HINTS: Record<string, string> = {
-  forage: "Seek information on this hidden state.",
-  exploit: "Settle this hidden state.",
-  avoid: "Withdraw from this hidden state.",
-  infer: "Craft the insight: the hidden state you found.",
-};
-
-/**
- * Natural-language Integrals moves the system would classify as each action.
- * Every catalog action id must have a row.
- */
-export const SCIENCE_LEARNING_MODEL_ACTION_EXAMPLES: Record<string, string> = {
-  forage:
-    "You are on Accumulation and you say you still cannot tell whether the integral is net change or signed area. You sketch rectangles under y = x² from 0 to 1 to get a finer observation. We classify that as Forage: seeking information and opening a finer hidden state on the Meaning state factor.",
-  exploit:
-    "You write F(1) - F(0) for the integral of 2x from 0 to 1, treat Antiderivative as precise enough, and go on to the next integrand. We classify that as Exploit: settling the current hidden state and acting on a preferred outcome.",
-  avoid:
-    "You start a u-substitution on the integral of x cos(x), see a product in the integrand rather than a composition, and drop that line. We classify that as Avoid: this is not the hidden state in focus, so you withdraw.",
-  infer:
-    "You write that the definite integral is the net change of an antiderivative, the Fundamental Theorem. We classify that as Infer: crafting the insight, the hidden state the work found.",
-  descend:
-    "You are on Riemann sum and you open Substitution, one of the finer hidden states at this depth on Technique, beside By parts and Fractions. We classify that as Descend: travel to a finer hidden state of the same state factor.",
-  ascend:
-    "You leave Substitution and return to Riemann sum, the coarser hidden state on Technique. We classify that as Ascend: travel to the coarser hidden state.",
-  switch:
-    "You were treating the integral as Signed area; you now try Net change, a rival hidden state on Meaning at the same depth under Accumulation. We classify that as Switch.",
-  sample:
-    "You stay on Definite and pick a new integrand, sin(x) from 0 to pi, to see whether this hidden state still generates the observation you expect. We classify that as Sample: a new observation, no change of hidden state.",
-  predict:
-    "Before working the next problem you state the observation: we are focusing on Substitution if the integrand hides a composition u = g(x). We classify that as Predict: generating the observation we would expect while focusing on this hidden state.",
-  divert:
-    "You stop asking what the integral means and open Technique: how to compute it. We classify that as Divert: leaving one state factor for a hidden state on another.",
-  dwell:
-    "You stay on By parts and work the product integrands x e^x and ln(x), without changing hidden state. We classify that as Dwell: remaining in place and gathering observations.",
-  reopen:
-    "You had settled Definite, then you undo that and ask again whether the integral is Indefinite. We classify that as Reopen: reversing an exploit so the hidden state is open again.",
-  compare:
-    "You predicted F(1) - F(0) = 1 from the observation on Antiderivative; the worked integral is 1; you read the prediction error as zero. We classify that as Compare.",
-  novelty:
-    "You look for an integrand this hidden state would not generate — an improper limit, or a jump discontinuity — to see where the observation fails. We classify that as Novelty: seeking an unexpected observation.",
-  sharpen:
-    "You say you now trust the antiderivative reading of the Fundamental Theorem, and you raise precision on that hidden state. We classify that as Sharpen.",
-  relax:
-    "You say the substitution on this integrand might be a coincidence, and you lower precision on Substitution. We classify that as Relax: the prediction is not trusted.",
-  prefer:
-    "You mark a worked F(b) - F(a) as the observation you want Antiderivative to keep generating. We classify that as Prefer: updating the prior preference over observations for this hidden state.",
+    "A policy represents a sequence of hidden states through the generative model, or the cheapest outgoing edge from the current hidden state. The system uses that cheapest policy as the learning compass. Calibration writes the prior the policy will use; learning shows the cheapest edge; verification scores distance from it.",
 };
 
 export const SCIENCE_LEARNING_MODEL_MODES = [
@@ -156,7 +90,7 @@ export const SCIENCE_LEARNING_MODEL_MODES = [
     name: "Calibrate",
     job: "Build a prior over hidden states",
     input: "Tap hidden states you would not trust",
-    projection: "Spoken forage onto nearby hidden states of the same state factor",
+    projection: "Spoken plan onto nearby hidden states of the same state factor",
     result: "A prior: lost, localized, coverage, or unsettled",
     body: SCIENCE_LEARNING_MODEL_COPY.calibrate,
   },
@@ -164,7 +98,7 @@ export const SCIENCE_LEARNING_MODEL_MODES = [
     id: "learn",
     name: "Learn",
     job: "Follow a policy",
-    input: "Talk, write, draw, then Infer",
+    input: "Talk, write, draw",
     projection: "Canvas work onto priced edges, costs visible",
     result: "A kept posterior",
     body: SCIENCE_LEARNING_MODEL_COPY.learn,
@@ -378,150 +312,105 @@ export function scienceLearningModelFactor(factorId: string) {
   return SCIENCE_LEARNING_MODEL_FACTORS.find((row) => row.id === factorId) ?? null;
 }
 
-export function scienceLearningModelStep(
-  focusId: string,
-  actionId: string,
-): { focusId: string; log: string } {
-  const nodes = scienceLearningModelNodes();
-  const focus = nodes.find((row) => row.id === focusId) ?? SCIENCE_LEARNING_MODEL_ROOT;
-  const children = nodes.filter((row) => row.parentId === focus.id);
-  const parent = nodes.find((row) => row.id === focus.parentId) ?? null;
-  const factor = scienceLearningModelFactor(focus.factorId);
-  const factorLabel = factor?.label ?? "the model";
-
-  if (actionId === "forage") {
-    const next = children[0];
-    if (!next) {
-      return {
-        focusId: focus.id,
-        log: `Forage. Still on hidden state ${focus.title}. No finer hidden state on this state factor.`,
-      };
-    }
-    const nextFactor = scienceLearningModelFactor(next.factorId);
-    const finerTitles = children.map((row) => row.title).join(", ");
-    const branch =
-      children.length > 1 ? ` Finer hidden states at this depth: ${finerTitles}.` : "";
-    return {
-      focusId: next.id,
-      log: `Forage.${branch} Now on hidden state ${next.title} (${nextFactor?.label ?? factorLabel} state factor).`,
-    };
-  }
-  if (actionId === "avoid") {
-    if (!parent) {
-      return {
-        focusId: focus.id,
-        log: `Avoid. Already on hidden state ${focus.title}, the root of the generative model.`,
-      };
-    }
-    const parentFactor = scienceLearningModelFactor(parent.factorId);
-    return {
-      focusId: parent.id,
-      log: `Avoid. Withdraw to hidden state ${parent.title}${parentFactor ? ` (${parentFactor.label} state factor)` : ""}.`,
-    };
-  }
-  if (actionId === "exploit") {
-    return {
-      focusId: focus.id,
-      log: `Exploit. Hidden state ${focus.title} is treated as settled.`,
-    };
-  }
-  if (actionId === "infer") {
-    return {
-      focusId: focus.id,
-      log: `Infer. The insight is hidden state ${focus.title}.`,
-    };
-  }
-  return { focusId: focus.id, log: `Hidden state ${focus.title}.` };
-}
-
-export const SCIENCE_LEARNING_MODEL_LIVE_ACTIONS = [
-  "forage",
-  "exploit",
-  "avoid",
-  "infer",
-] as const;
-
-export type ScienceLearningModelLiveAction =
-  (typeof SCIENCE_LEARNING_MODEL_LIVE_ACTIONS)[number];
-
-export type ScienceLearningModelActionCosts = Record<
-  ScienceLearningModelLiveAction,
-  number
->;
-
-function isLiveAction(id: string): id is ScienceLearningModelLiveAction {
-  return (SCIENCE_LEARNING_MODEL_LIVE_ACTIONS as readonly string[]).includes(id);
-}
+export type ScienceLearningModelEdge = {
+  toId: string;
+  title: string;
+  cost: number;
+  kind: "child" | "parent";
+};
 
 function roundCost(value: number): number {
   return Math.round(value * 10) / 10;
 }
 
-/** Expected-free-energy costs G(π) for the four live actions on this hidden state. */
-export function scienceLearningModelActionCosts(
-  focusId: string,
-): ScienceLearningModelActionCosts {
+/** Outgoing priced edges from this hidden state: children, then the parent. */
+export function scienceLearningModelOutgoingEdges(focusId: string): ScienceLearningModelEdge[] {
   const nodes = scienceLearningModelNodes();
   const focus = nodes.find((row) => row.id === focusId) ?? SCIENCE_LEARNING_MODEL_ROOT;
-  let childCount = 0;
-  for (const row of nodes) {
-    if (row.parentId === focus.id) childCount += 1;
+  const children = nodes.filter((row) => row.parentId === focus.id);
+  const edges: ScienceLearningModelEdge[] = children.map((child, index) => ({
+    toId: child.id,
+    title: child.title,
+    cost: roundCost(0.3 + index * 0.5),
+    kind: "child",
+  }));
+  if (focus.parentId) {
+    const parent = nodes.find((row) => row.id === focus.parentId);
+    if (parent) {
+      edges.push({
+        toId: parent.id,
+        title: parent.title,
+        cost: 1.8,
+        kind: "parent",
+      });
+    }
   }
-  const atRoot = !focus.parentId;
-  const atLeaf = childCount === 0;
-  if (atRoot) {
-    return { forage: 0.3, exploit: 1.8, avoid: 2.2, infer: 1.6 };
-  }
-  if (atLeaf) {
-    return { forage: 2.2, exploit: 0.7, avoid: 0.9, infer: 0.4 };
-  }
-  return { forage: 0.4, exploit: 1.3, avoid: 0.9, infer: 1.1 };
+  return edges;
 }
 
-export function scienceLearningModelCheapestAction(
+export function scienceLearningModelCheapestEdge(
   focusId: string,
-): ScienceLearningModelLiveAction {
-  const costs = scienceLearningModelActionCosts(focusId);
-  let best: ScienceLearningModelLiveAction = SCIENCE_LEARNING_MODEL_LIVE_ACTIONS[0];
-  for (const id of SCIENCE_LEARNING_MODEL_LIVE_ACTIONS) {
-    if (costs[id] < costs[best]) best = id;
-  }
-  return best;
+): ScienceLearningModelEdge | null {
+  const edges = scienceLearningModelOutgoingEdges(focusId);
+  if (edges.length === 0) return null;
+  return edges.slice().sort((a, b) => a.cost - b.cost || a.toId.localeCompare(b.toId))[0] ?? null;
 }
 
-export function scienceLearningModelActionScore(
+export function scienceLearningModelTravel(
   focusId: string,
-  actionId: string,
+  toId: string,
 ): {
-  cost: number;
-  cheapestId: ScienceLearningModelLiveAction;
-  cheapestCost: number;
+  focusId: string;
+  log: string;
+  edge: ScienceLearningModelEdge | null;
+  cheapest: ScienceLearningModelEdge | null;
   excess: number;
 } {
-  const costs = scienceLearningModelActionCosts(focusId);
-  const cheapestId = scienceLearningModelCheapestAction(focusId);
-  const cheapestCost = costs[cheapestId];
-  const cost = isLiveAction(actionId) ? costs[actionId] : cheapestCost;
+  const nodes = scienceLearningModelNodes();
+  const focus = nodes.find((row) => row.id === focusId) ?? SCIENCE_LEARNING_MODEL_ROOT;
+  const edges = scienceLearningModelOutgoingEdges(focus.id);
+  const cheapest = scienceLearningModelCheapestEdge(focus.id);
+  const edge = edges.find((row) => row.toId === toId) ?? null;
+  if (!edge) {
+    return {
+      focusId: focus.id,
+      log: `Still on hidden state ${focus.title}.`,
+      edge: null,
+      cheapest,
+      excess: 0,
+    };
+  }
+  const target = nodes.find((row) => row.id === edge.toId) ?? SCIENCE_LEARNING_MODEL_ROOT;
+  const factor = scienceLearningModelFactor(target.factorId);
+  const excess = roundCost(Math.max(0, edge.cost - (cheapest?.cost ?? edge.cost)));
+  const siblings = edges.filter((row) => row.kind === "child" && row.toId !== edge.toId);
+  const siblingTitles = siblings.map((row) => row.title).join(", ");
+  const branch =
+    edge.kind === "child" && siblings.length > 0
+      ? ` Other hidden states at this depth: ${siblingTitles}.`
+      : "";
+  const factorBit = factor ? ` (${factor.label} state factor)` : "";
   return {
-    cost,
-    cheapestId,
-    cheapestCost,
-    excess: roundCost(Math.max(0, cost - cheapestCost)),
+    focusId: target.id,
+    log: `Travel to hidden state ${target.title}${factorBit}.${branch}`,
+    edge,
+    cheapest,
+    excess,
   };
 }
 
 export function scienceLearningModelPolicyDistance(
   startId: string,
-  actionIds: readonly string[],
+  toIds: readonly string[],
 ): { focusId: string; excess: number; steps: number; distance: number } {
   let focusId = startId;
   let excess = 0;
-  for (const actionId of actionIds) {
-    const score = scienceLearningModelActionScore(focusId, actionId);
-    excess = roundCost(excess + score.excess);
-    focusId = scienceLearningModelStep(focusId, actionId).focusId;
+  for (const toId of toIds) {
+    const step = scienceLearningModelTravel(focusId, toId);
+    excess = roundCost(excess + step.excess);
+    focusId = step.focusId;
   }
-  const steps = actionIds.length;
+  const steps = toIds.length;
   return {
     focusId,
     excess,
@@ -538,13 +427,7 @@ export function getScienceLearningModelFullText(): string {
   const concepts = LEARNING_MODEL_OBJECTS.map(
     (row) => `${row.name} ${SCIENCE_LEARNING_MODEL_CONCEPT_BLURBS[row.id] ?? row.meaning}`,
   ).join("\n");
-  const catalogs = [...LEARNING_MODEL_CATALOG_4, ...LEARNING_MODEL_CATALOG_8, ...LEARNING_MODEL_CATALOG_16]
-    .map((row) => `${row.label} ${row.meaning} ${row.efe}`)
-    .join("\n");
   const modes = SCIENCE_LEARNING_MODEL_MODES.map((row) => `${row.name} ${row.job} ${row.body}`).join("\n");
-  const examples = Object.entries(SCIENCE_LEARNING_MODEL_ACTION_EXAMPLES)
-    .map(([id, example]) => `${id} ${example}`)
-    .join("\n");
   const copy = SCIENCE_LEARNING_MODEL_COPY;
   const factors = SCIENCE_LEARNING_MODEL_FACTORS.map((row) => row.label).join(" ");
   return [
@@ -561,15 +444,10 @@ export function getScienceLearningModelFullText(): string {
     copy.pipelinesTitle,
     copy.pipelinesLead,
     concepts,
-    catalogs,
     modes,
-    examples,
     copy.projectionHeading,
     copy.projection,
     copy.caveat,
-    copy.fourLead,
-    copy.eightLead,
-    copy.sixteenLead,
     copy.explorerTitle,
     copy.explorerLead,
     copy.explorerOpening,

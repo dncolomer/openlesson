@@ -29,7 +29,6 @@ export const FEP_PUBLIC_SURFACE_FILES = [
   "lib/science/hub.ts",
   "app/science/learning-model/page.tsx",
   "components/science/LearningModelScene.tsx",
-  "components/science/LearningModelCatalogs.tsx",
   "components/science/LearningModelPipelines.tsx",
   "components/science/LearningModelMarks.tsx",
   "components/science/LearningModelFactorCopy.tsx",
@@ -72,7 +71,7 @@ export const LEARNING_MODEL_OBJECTS = [
     symbol: "s",
     stored: "branch / still",
     meaning:
-      "One discrete hypothesis on the generative model. Focusing on a hidden state is entertaining that hypothesis. Infer crafts an insight when the work has found a hidden state.",
+      "One discrete hypothesis on the generative model. Focusing on a hidden state is entertaining that hypothesis. Live inference names the hidden state the work is on.",
   },
   {
     id: "state-factor",
@@ -96,15 +95,15 @@ export const LEARNING_MODEL_OBJECTS = [
     symbol: "u",
     stored: "session mark",
     meaning:
-      "A legal control from the current hidden state. Each action has an expected-free-energy price. A lower price is the preferred next policy.",
+      "Travel along a priced edge from the current hidden state to another. Each edge has an expected-free-energy price. A lower price is the preferred next policy.",
   },
   {
     id: "policy",
     name: "Policy",
     symbol: "π",
-    stored: "action sequence",
+    stored: "hidden-state sequence",
     meaning:
-      "A set of actions, or the cheapest legal next action on the generative model. Projection lands learner work on a policy without grading prose.",
+      "A sequence of hidden states, or the cheapest outgoing edge on the generative model. Projection lands learner work on a policy without grading prose.",
   },
 ] as const;
 

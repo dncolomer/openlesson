@@ -2,12 +2,6 @@ import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  LEARNING_MODEL_CATALOG_16,
-  LEARNING_MODEL_CATALOG_4,
-  LEARNING_MODEL_CATALOG_8,
-} from "@/lib/learning-model";
-import {
-  SCIENCE_LEARNING_MODEL_ACTION_EXAMPLES,
   SCIENCE_LEARNING_MODEL_CONCEPT_BLURBS,
   SCIENCE_LEARNING_MODEL_COPY,
   SCIENCE_LEARNING_MODEL_FACTORS,
@@ -16,12 +10,11 @@ import {
   SCIENCE_LEARNING_MODEL_TERMS,
   formatScienceLearningModelCost,
   getScienceLearningModelFullText,
-  scienceLearningModelActionCosts,
-  scienceLearningModelActionScore,
-  scienceLearningModelCheapestAction,
+  scienceLearningModelCheapestEdge,
   scienceLearningModelNodes,
+  scienceLearningModelOutgoingEdges,
   scienceLearningModelPolicyDistance,
-  scienceLearningModelStep,
+  scienceLearningModelTravel,
   splitFactorColoredParts,
 } from "@/lib/science/learning-model-copy";
 
@@ -32,7 +25,7 @@ function read(rel: string): string {
 }
 
 describe("science learning model page", () => {
-  it("explains the generative model, actions, projection, and three sessions", () => {
+  it("explains the generative model, priced edges, projection, and three sessions", () => {
     const full = getScienceLearningModelFullText();
     for (const term of SCIENCE_LEARNING_MODEL_TERMS) {
       expect(full.toLowerCase(), term).toContain(term.toLowerCase());
@@ -61,7 +54,7 @@ describe("science learning model page", () => {
       /what we would expect while the user is focusing/,
     );
     expect(SCIENCE_LEARNING_MODEL_CONCEPT_BLURBS.action).toMatch(
-      /move from the current hidden state/,
+      /priced edge/,
     );
     expect(SCIENCE_LEARNING_MODEL_CONCEPT_BLURBS.policy).toMatch(/learning compass/);
     for (const blurb of Object.values(SCIENCE_LEARNING_MODEL_CONCEPT_BLURBS)) {
@@ -80,7 +73,7 @@ describe("science learning model page", () => {
       expect(value.toLowerCase(), value).not.toMatch(/\bobjects?\b/);
     }
     expect(full.toLowerCase()).toMatch(/free energy principle/);
-    expect(full.toLowerCase()).toMatch(/forage/);
+    expect(full.toLowerCase()).toMatch(/priced edge/);
     expect(full.toLowerCase()).toMatch(/calibrate/);
     expect(full.toLowerCase()).toMatch(/projection/);
     expect(SCIENCE_LEARNING_MODEL_COPY.caveat.toLowerCase()).toMatch(/influence/);
@@ -157,89 +150,59 @@ describe("science learning model page", () => {
     }
   });
 
-  it("walks forage and avoid on the Integrals generative model", () => {
-    const first = scienceLearningModelStep(SCIENCE_LEARNING_MODEL_ROOT.id, "forage");
+  it("walks priced edges on the Integrals generative model", () => {
+    const first = scienceLearningModelTravel(SCIENCE_LEARNING_MODEL_ROOT.id, "accumulation");
     expect(first.focusId).toBe("accumulation");
-    expect(first.log.toLowerCase()).toMatch(/forage/);
-    expect(first.log.toLowerCase()).toMatch(/hidden state/);
-    expect(first.log).toMatch(/Finer hidden states at this depth/);
-    const finer = scienceLearningModelStep("accumulation", "forage");
+    expect(first.log.toLowerCase()).toMatch(/travel to hidden state/);
+    expect(first.log).toMatch(/Other hidden states at this depth/);
+    expect(first.excess).toBe(0);
+    const finer = scienceLearningModelTravel("accumulation", "signed-area");
     expect(finer.focusId).toBe("signed-area");
-    expect(finer.log).toMatch(/Signed area, Net change/);
-    const leaf = scienceLearningModelStep("signed-area", "forage");
+    expect(finer.log).toMatch(/Net change/);
+    const leaf = scienceLearningModelTravel("signed-area", "signed-area");
     expect(leaf.focusId).toBe("signed-area");
-    const net = scienceLearningModelStep("net-change", "forage");
+    const net = scienceLearningModelTravel("net-change", "antiderivative");
     expect(net.focusId).toBe("antiderivative");
-    const back = scienceLearningModelStep("signed-area", "avoid");
+    const back = scienceLearningModelTravel("signed-area", "accumulation");
     expect(back.focusId).toBe("accumulation");
-    const riemann = scienceLearningModelStep("riemann", "forage");
+    const riemann = scienceLearningModelTravel("riemann", "substitution");
     expect(riemann.focusId).toBe("substitution");
-    expect(riemann.log).toMatch(/Substitution, By parts, Fractions/);
-    expect(scienceLearningModelStep("accumulation", "infer").log.toLowerCase()).toMatch(
-      /insight is hidden state/,
-    );
+    expect(riemann.log).toMatch(/By parts, Fractions/);
   });
 
-  it("prices forage cheap at the root and infer cheap on a leaf", () => {
-    const root = scienceLearningModelActionCosts("integrals");
-    expect(scienceLearningModelCheapestAction("integrals")).toBe("forage");
-    expect(root.forage).toBeLessThan(root.exploit);
-    expect(root.forage).toBeLessThan(root.avoid);
-    expect(root.forage).toBeLessThan(root.infer);
-    expect(scienceLearningModelActionScore("integrals", "forage").excess).toBe(0);
-    expect(scienceLearningModelActionScore("integrals", "avoid").excess).toBeGreaterThan(0);
+  it("prices the cheapest child edge at the root and a parent edge on a leaf", () => {
+    const rootEdges = scienceLearningModelOutgoingEdges("integrals");
+    expect(scienceLearningModelCheapestEdge("integrals")?.toId).toBe("accumulation");
+    expect(rootEdges[0]?.cost).toBeLessThan(rootEdges[1]?.cost ?? 99);
+    expect(scienceLearningModelTravel("integrals", "accumulation").excess).toBe(0);
+    expect(scienceLearningModelTravel("integrals", "riemann").excess).toBeGreaterThan(0);
 
-    const interior = scienceLearningModelActionCosts("accumulation");
-    expect(scienceLearningModelCheapestAction("accumulation")).toBe("forage");
-    expect(interior.forage).toBeLessThan(interior.infer);
+    expect(scienceLearningModelCheapestEdge("accumulation")?.toId).toBe("signed-area");
+    expect(scienceLearningModelCheapestEdge("signed-area")?.toId).toBe("accumulation");
+    expect(scienceLearningModelCheapestEdge("substitution")?.kind).toBe("parent");
+    expect(scienceLearningModelCheapestEdge("limits")?.kind).toBe("parent");
 
-    const leaf = scienceLearningModelActionCosts("signed-area");
-    expect(scienceLearningModelCheapestAction("signed-area")).toBe("infer");
-    expect(leaf.infer).toBeLessThan(leaf.forage);
-    expect(leaf.infer).toBeLessThan(leaf.exploit);
-    expect(scienceLearningModelCheapestAction("substitution")).toBe("infer");
-    expect(scienceLearningModelCheapestAction("limits")).toBe("infer");
-
-    const cheapestWalk = scienceLearningModelPolicyDistance("integrals", ["forage", "forage"]);
+    const cheapestWalk = scienceLearningModelPolicyDistance("integrals", [
+      "accumulation",
+      "signed-area",
+    ]);
     expect(cheapestWalk.focusId).toBe("signed-area");
     expect(cheapestWalk.distance).toBe(0);
     expect(cheapestWalk.excess).toBe(0);
 
-    const dear = scienceLearningModelPolicyDistance("integrals", ["exploit"]);
-    expect(dear.distance).toBe(scienceLearningModelActionScore("integrals", "exploit").excess);
+    const dear = scienceLearningModelPolicyDistance("integrals", ["riemann"]);
+    expect(dear.distance).toBe(scienceLearningModelTravel("integrals", "riemann").excess);
     expect(dear.distance).toBeGreaterThan(0);
-    expect(formatScienceLearningModelCost(root.forage)).toBe("0.3");
+    expect(formatScienceLearningModelCost(rootEdges[0]!.cost)).toBe("0.3");
   });
 
-  it("gives each catalog action an Integrals natural-language example", () => {
-    const ids = new Set(
-      [...LEARNING_MODEL_CATALOG_4, ...LEARNING_MODEL_CATALOG_8, ...LEARNING_MODEL_CATALOG_16].map(
-        (row) => row.id,
-      ),
-    );
-    expect(Object.keys(SCIENCE_LEARNING_MODEL_ACTION_EXAMPLES).sort()).toEqual([...ids].sort());
-    for (const [id, example] of Object.entries(SCIENCE_LEARNING_MODEL_ACTION_EXAMPLES)) {
-      expect(example, id).toMatch(/We classify that as /);
-      expect(example.toLowerCase(), id).toMatch(/integral|integrand|antiderivative|riemann/);
-      expect(example, id).not.toMatch(/\bmaps?\b/i);
-      expect(example, id).not.toMatch(/\bobjects?\b/i);
-      expect(example, id).not.toMatch(/\bguess(es)?\b/i);
-    }
-    const catalogs = read("components/science/LearningModelCatalogs.tsx");
-    expect(catalogs).toContain("SCIENCE_LEARNING_MODEL_ACTION_EXAMPLES");
-    expect(catalogs).toContain("data-learning-model-action-example");
-    expect(catalogs).toContain("On Integrals");
-    expect(catalogs).toContain("LearningModelFactorCopy");
-    expect(read("app/science/learning-model/page.tsx")).toContain("LearningModelFactorCopy");
-    expect(read("components/science/LearningModelScene.tsx")).toContain("LearningModelFactorCopy");
-  });
-
-  it("ships an interactive 4-action explorer on /science/learning-model", () => {
+  it("ships an interactive priced-edge explorer on /science/learning-model", () => {
     expect(SCIENCE_LEARNING_MODEL_PATH).toBe("/science/learning-model");
     expect(existsSync(join(ROOT, "app/science/learning-model/page.tsx"))).toBe(true);
     const page = read("app/science/learning-model/page.tsx");
     expect(page).toContain("LearningModelScene");
-    expect(page).toContain("LearningModelCatalogs");
+    expect(page).not.toContain("LearningModelCatalogs");
+    expect(page).not.toContain("learning-model-catalogs");
     expect(page).toContain("LearningModelPipelines");
     expect(page).toContain("LearningModelObjectGlyph");
     expect(page).toContain("data-science-learning-model");
@@ -249,10 +212,8 @@ describe("science learning model page", () => {
     expect(page).not.toContain("objectsTitle");
     expect(page).not.toContain("max-w-3xl");
     expect(page).not.toContain("max-w-4xl");
-    expect(read("components/science/LearningModelCatalogs.tsx")).toContain(
-      "data-learning-model-catalog={catalog.size}",
-    );
-    expect(read("components/science/LearningModelScene.tsx")).toContain("data-explorer-action");
+    expect(existsSync(join(ROOT, "components/science/LearningModelCatalogs.tsx"))).toBe(false);
+    expect(read("components/science/LearningModelScene.tsx")).toContain("data-explorer-edge");
     expect(read("components/science/LearningModelScene.tsx")).toContain("data-explorer-draggable");
     expect(read("components/science/LearningModelScene.tsx")).toContain("data-explorer-dragging");
     expect(read("components/science/LearningModelScene.tsx")).toContain("onPointerDown");
@@ -261,16 +222,16 @@ describe("science learning model page", () => {
     expect(read("components/science/LearningModelScene.tsx")).toContain("data-explorer-mode-tab");
     expect(read("components/science/LearningModelScene.tsx")).toContain("data-explorer-cheapest");
     expect(read("components/science/LearningModelScene.tsx")).toContain("data-explorer-distance");
-    expect(read("components/science/LearningModelScene.tsx")).toContain("data-explorer-action-cost");
-    expect(read("components/science/LearningModelScene.tsx")).toContain("scienceLearningModelActionCosts");
+    expect(read("components/science/LearningModelScene.tsx")).toContain("data-explorer-edge-cost");
+    expect(read("components/science/LearningModelScene.tsx")).toContain("scienceLearningModelOutgoingEdges");
     expect(read("components/science/LearningModelScene.tsx")).toContain(
-      "scienceLearningModelCheapestAction",
+      "scienceLearningModelCheapestEdge",
     );
     expect(read("components/science/LearningModelScene.tsx")).toContain('data-learning-model-canvas="2d"');
     expect(read("components/science/LearningModelScene.tsx")).not.toContain("OrbitControls");
     expect(read("components/science/LearningModelScene.tsx")).not.toContain('from "three"');
-    expect(read("components/science/LearningModelScene.tsx")).toContain("scienceLearningModelStep");
-    expect(read("lib/science/learning-model-copy.ts")).toContain('actionId === "forage"');
+    expect(read("components/science/LearningModelScene.tsx")).toContain("scienceLearningModelTravel");
+    expect(read("lib/science/learning-model-copy.ts")).not.toContain('actionId === "forage"');
     expect(read("components/science/LearningModelScene.tsx")).toContain("data-learning-model-schematic");
     expect(read("components/science/LearningModelPipelines.tsx")).toContain("data-learning-model-mode");
     expect(read("components/science/LearningModelPipelines.tsx")).not.toContain(
@@ -280,10 +241,11 @@ describe("science learning model page", () => {
     expect(read("components/science/LearningModelMarks.tsx")).toContain("AccelerandoMark");
     expect(read("components/excalidraw-canvas/command-plate.tsx")).toContain("AccelerandoMark");
     expect(read("app/science/learning-model/page.tsx")).toContain("overflow-clip");
-    expect(read("components/science/LearningModelCatalogs.tsx")).toContain("overflow-clip");
     expect(read("components/science/LearningModelPipelines.tsx")).toContain("overflow-clip");
     expect(read("components/science/LearningModelScene.tsx")).toContain("overflow-clip");
     expect(read("app/science/page.tsx")).toContain("SCIENCE_LEARNING_MODEL_PATH");
     expect(read("app/sitemap.ts")).toContain("/science/learning-model");
+    expect(read("app/science/learning-model/page.tsx")).toContain("LearningModelFactorCopy");
+    expect(read("components/science/LearningModelScene.tsx")).toContain("LearningModelFactorCopy");
   });
 });

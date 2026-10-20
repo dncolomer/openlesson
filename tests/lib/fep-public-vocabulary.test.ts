@@ -21,7 +21,6 @@ import {
   HARNESS_PRICING_THESIS_LINKS,
 } from "@/lib/science/hub";
 import {
-  SCIENCE_LEARNING_MODEL_ACTION_EXAMPLES,
   SCIENCE_LEARNING_MODEL_CONCEPT_BLURBS,
   SCIENCE_LEARNING_MODEL_COPY,
   getScienceLearningModelFullText,
@@ -74,7 +73,6 @@ describe("FEP public vocabulary", () => {
       getScienceLearningModelFullText(),
       ...Object.values(SCIENCE_LEARNING_MODEL_COPY),
       ...Object.values(SCIENCE_LEARNING_MODEL_CONCEPT_BLURBS),
-      ...Object.values(SCIENCE_LEARNING_MODEL_ACTION_EXAMPLES),
       ...LEARNING_MODEL_OBJECTS.map((row) => `${row.name} ${row.meaning}`),
       ...Object.values(LEARNING_MODEL_SIZE_COPY).map((row) => `${row.title} ${row.body}`),
       SCIENCE_HUB_COPY.directoryLead,

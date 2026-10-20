@@ -3,7 +3,6 @@ import Link from "next/link";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Footer } from "@/components/Footer";
 import { LandingNav } from "@/components/LandingNav";
-import { LearningModelCatalogs } from "@/components/science/LearningModelCatalogs";
 import { LearningModelFactorCopy } from "@/components/science/LearningModelFactorCopy";
 import { LearningModelObjectGlyph } from "@/components/science/LearningModelMarks";
 import { LearningModelPipelines } from "@/components/science/LearningModelPipelines";
@@ -127,21 +126,6 @@ export default function ScienceLearningModelPage() {
                   </div>
                 </article>
               ))}
-            </div>
-          </section>
-
-          <section className="mt-16" aria-labelledby="learning-model-catalogs">
-            <h2
-              id="learning-model-catalogs"
-              className="text-2xl font-medium tracking-[-0.6px] text-white"
-            >
-              {copy.catalogsTitle}
-            </h2>
-            <p className="mt-4 text-base leading-relaxed text-zinc-400">
-              {copy.catalogsLead}
-            </p>
-            <div className="mt-6">
-              <LearningModelCatalogs />
             </div>
           </section>
 

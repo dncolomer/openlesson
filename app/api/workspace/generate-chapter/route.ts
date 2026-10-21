@@ -10,8 +10,8 @@ import {
   composeIleChapterGenerateSystemMessage,
   composeIleChapterGenerateUserPrompt,
   normalizeIleChapterGenerateResult,
-} from "@/lib/ile-chapter-generate";
-import { resolveIleSessionModeFromBody } from "@/lib/ile-mode";
+} from "@/lib/learn-chapter-generate";
+import { resolveIleSessionModeFromBody } from "@/lib/learn-mode";
 
 interface GenerateChapterResponse {
   title?: string;

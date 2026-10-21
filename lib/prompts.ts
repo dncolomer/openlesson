@@ -16,13 +16,13 @@ import {
   ILE_CONTEXT_BODY,
   ILE_SURFACE,
   ILE_TOOLS_BLOCK,
-} from "@/lib/prompt-kernel/surfaces/ile";
+} from "@/lib/prompt-kernel/surfaces/learn";
 import { TUTOR_CANVAS_VOICE } from "@/lib/prompt-kernel/tutor-voice";
 
 // ============================================
 // Learning use case CONTEXT
 // Practice coach: chapter progress + tool-driven deeper work (model-private: PoW).
-// Canonical surface text also lives in lib/prompt-kernel/surfaces/ile.ts
+// Canonical surface text also lives in lib/prompt-kernel/surfaces/learn.ts
 // ============================================
 
 export const ILE_CONTEXT = ILE_CONTEXT_BODY;

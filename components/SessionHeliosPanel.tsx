@@ -20,15 +20,15 @@ import {
   shouldAutoStashOnContextFull,
   thoughtContextFillRatio,
 } from "@/lib/thought-context-auto-stash";
-import { applyIleContextFullAutoStash } from "@/lib/ile-context-auto-stash";
+import { applyIleContextFullAutoStash } from "@/lib/learn-context-auto-stash";
 import type { ExerciseThought } from "@/lib/exercise-tap";
-import type { ChapterFollowUpSuggestion } from "@/lib/ile-chapter-follow-ups";
+import type { ChapterFollowUpSuggestion } from "@/lib/learn-chapter-follow-ups";
 import { HeliosMarkdown } from "@/components/thought-ui/HeliosMarkdown";
-import type { IleWordBoxMenuAction } from "@/lib/ile-word-boxes";
+import type { IleWordBoxMenuAction } from "@/lib/learn-word-boxes";
 import {
   IleChapterHeliosActions,
   type IleChapterHeliosActionsProps,
-} from "@/components/session-view/ile-chapter-helios-actions";
+} from "@/components/session-view/learn-chapter-helios-actions";
 
 import type { PowParticipantIdentity } from "@/lib/session-participant-identity";
 

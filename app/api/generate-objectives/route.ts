@@ -8,7 +8,7 @@ import {
   requireAuthenticatedProductUser,
 } from "@/lib/api/require-auth";
 import { resolveAyclAccess } from "@/lib/aycl-session-auth";
-import { resolveIleLinkAccess } from "@/lib/ile-link-auth";
+import { resolveIleLinkAccess } from "@/lib/learn-link-auth";
 
 export const runtime = "nodejs";
 export const maxDuration = 45;

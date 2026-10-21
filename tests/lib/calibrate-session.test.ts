@@ -5,14 +5,14 @@ import { describe, expect, it } from "vitest";
 import {
   appendIleDictatedTextToWorkCanvas,
   syncIleDictatedTextOnWorkCanvas,
-} from "@/lib/ile-canvas-dictate";
+} from "@/lib/learn-canvas-dictate";
 import {
   BOARD_INSTRUCTION_NOTE_BODY_FILL,
   BOARD_INSTRUCTION_NOTE_LABEL,
   ileWorkCanvasContentBounds,
   ileWorkCanvasFitScroll,
   ILE_WORK_CANVAS_STROKE_COLOR,
-} from "@/lib/ile-work-canvas";
+} from "@/lib/learn-work-canvas";
 import {
   CALIBRATE_ANSWER_WELL_LABEL,
   CALIBRATE_EXPLAIN_WELL_LABEL,

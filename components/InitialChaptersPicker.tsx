@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { ChapterMiniMap } from "@/components/ChapterMiniMap";
-import { dummyDensityCells } from "@/lib/ile-chapter-mini-map";
+import { dummyDensityCells } from "@/lib/learn-chapter-mini-map";
 import {
   INITIAL_CHAPTERS_CATALOG,
   type InitialChaptersLevel,
@@ -14,7 +14,7 @@ import {
   stepMapTypeCatalog,
   type MapTypePickerItem,
 } from "@/lib/workspace-map-types";
-import { ileMapTypeSessionExplanation } from "@/lib/ile-pregame-settings";
+import { ileMapTypeSessionExplanation } from "@/lib/learn-pregame-settings";
 
 export function InitialChaptersPicker({
   value,

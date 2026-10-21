@@ -224,7 +224,7 @@ describe("completion paths persist flow embeddings instead of snapshots", () => 
     const sounding = read("components/calibrate/calibrate-sounding-surface.tsx");
     expect(sounding).toContain("data-calibrate-sounding");
     expect(sounding).not.toContain("Comfortable");
-    const learnKept = read("components/session-view/ile-insight-kept-screen.tsx");
+    const learnKept = read("components/session-view/learn-insight-kept-screen.tsx");
     expect(learnKept).not.toContain("SessionPolicyScoreResult");
     const verify = read("components/tap-score/tap-score-phases.tsx");
     expect(verify).toContain("SessionPolicyScoreResult");

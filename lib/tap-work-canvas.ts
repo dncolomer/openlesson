@@ -2,7 +2,7 @@
  * TAP conversational Work canvas: one session-scoped Excalidraw board.
  * Reuses TAP Learning scene apply / pull / PoW units — TAP does not fork Excalidraw.
  */
-import { buildIleWorkCanvasAskUserMessage } from "@/lib/ile-work-canvas-prompts";
+import { buildIleWorkCanvasAskUserMessage } from "@/lib/learn-work-canvas-prompts";
 import {
   applyIleXaiReplyToWorkCanvas,
   applyIleXaiTurnToWorkCanvas,
@@ -23,13 +23,13 @@ import {
   type IleWorkCanvasElement,
   type IleWorkCanvasScene,
   type IleXaiCanvasTurnPayload,
-} from "@/lib/ile-work-canvas";
+} from "@/lib/learn-work-canvas";
 
 export { ILE_XAI_LOADING_CUSTOM_DATA_KEY, ILE_XAI_LOADING_TEXT };
 import {
   buildIleCanvasUploadItem,
   buildIleExcalidrawToolUploadItem,
-} from "@/lib/ile-realtime-pow";
+} from "@/lib/learn-realtime-pow";
 import {
   buildIleWorkCanvasActionUploadItem,
   buildIleWorkCanvasAskPowEvent,
@@ -37,10 +37,10 @@ import {
   classifyIleWorkCanvasSceneDiff,
   ileWorkCanvasElementContentFingerprint,
   type IleWorkCanvasPowEvent,
-} from "@/lib/ile-work-canvas-pow";
-import { textToBase64 } from "@/lib/ile-proof-of-work-client";
+} from "@/lib/learn-work-canvas-pow";
+import { textToBase64 } from "@/lib/learn-proof-of-work-client";
 import { TAP_SESSION_RUNTIME_PATHS } from "@/lib/tap-session-runtime";
-import type { IleProofOfWorkUploadItem } from "@/lib/ile-evidence-buffer";
+import type { IleProofOfWorkUploadItem } from "@/lib/learn-evidence-buffer";
 
 export {
   applyIleXaiReplyToWorkCanvas as applyTapXaiReplyToWorkCanvas,

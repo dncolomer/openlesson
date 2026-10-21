@@ -7,7 +7,7 @@
  */
 
 import type { CalibrateQuestion } from "@/lib/calibrate-session";
-import type { IleProofOfWorkUploadItem } from "@/lib/ile-evidence-buffer";
+import type { IleProofOfWorkUploadItem } from "@/lib/learn-evidence-buffer";
 import {
   sessionBranchById,
   type SessionBranch,

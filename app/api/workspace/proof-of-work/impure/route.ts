@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
-import { flagIleSessionProofOfWorkImpure } from "@/lib/ile-session-purity";
+import { flagIleSessionProofOfWorkImpure } from "@/lib/learn-session-purity";
 import {
   ileTokenFromPowBody,
   requireSessionWorkspaceProofOfWorkAccess,

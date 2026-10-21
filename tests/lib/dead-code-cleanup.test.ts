@@ -22,6 +22,7 @@ const DELETED_PATHS = [
   "components/session-view/session-policy-panel.tsx",
   "components/session-view/session-assert-graph.tsx",
   "components/session-view/ile-chapter-tool-tabs.tsx",
+  "components/session-view/learn-chapter-tool-tabs.tsx",
   "app/api/generate-probe/route.ts",
   "lib/session-analysis.ts",
   "lib/retry.ts",
@@ -38,6 +39,8 @@ const DELETED_PATHS = [
   "components/knowledge-panel/strengths-gaps-view.tsx",
   "lib/ile-path-overlay.ts",
   "lib/ile-altitude-map.ts",
+  "lib/learn-path-overlay.ts",
+  "lib/learn-altitude-map.ts",
   "app/ile/session/[token]/page.tsx",
   "app/api/workspace/suggest-chapter-edit/route.ts",
   "components/HeliosChat.tsx",
@@ -84,7 +87,7 @@ describe("upgrade leftovers are gone", () => {
 
   it("cookie-auth mint and headless session ingest remain", () => {
     expect(existsSync(join(ROOT, "app/api/workspace/tap-links/route.ts"))).toBe(true);
-    expect(existsSync(join(ROOT, "app/api/workspace/ile-links/route.ts"))).toBe(true);
+    expect(existsSync(join(ROOT, "app/api/workspace/learn-links/route.ts"))).toBe(true);
     expect(
       existsSync(
         join(ROOT, "app/api/v3/pow/workspaces/[id]/sessions/[sessionId]/proof-of-work/route.ts"),

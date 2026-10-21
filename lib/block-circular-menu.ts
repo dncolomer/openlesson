@@ -6,7 +6,7 @@ import {
   ileGatherResourceBlockId,
   isIleGatherResource,
   type IleGatherJob,
-} from "@/lib/ile-gather-resources";
+} from "@/lib/learn-gather-resources";
 import type { WorkspaceExternalResource } from "@/lib/workspace-external-resources";
 
 export type BlockCircularMenuSurface = "ile" | "workspace-learner" | "none";

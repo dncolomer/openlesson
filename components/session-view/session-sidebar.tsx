@@ -8,7 +8,7 @@ import {
   type SessionSidebarMode,
 } from "@/lib/session-sidebar";
 import { SessionConsoleMarks, SessionConsoleScan } from "@/components/session-view/session-console-marks";
-import { LearnElapsedTimer, SessionTopicCardTimerProvider } from "@/components/session-view/ile-work-dock-bar";
+import { LearnElapsedTimer, SessionTopicCardTimerProvider } from "@/components/session-view/learn-work-dock-bar";
 
 const SECTION_LABEL = {
   signals: "Data",

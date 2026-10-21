@@ -4,7 +4,7 @@
  * prompt builder, and TAP Learning context merge. Tests inject question arrays.
  */
 
-import { ileWorkCanvasXaiToolsInstruction } from "@/lib/ile-work-canvas-prompts";
+import { ileWorkCanvasXaiToolsInstruction } from "@/lib/learn-work-canvas-prompts";
 import { TUTOR_CANVAS_VOICE } from "@/lib/prompt-kernel/tutor-voice";
 import {
   convertToExcalidrawElements,
@@ -15,7 +15,7 @@ import {
   wrapIleWorkCanvasText,
   type IleWorkCanvasElement,
   type IleWorkCanvasScene,
-} from "@/lib/ile-work-canvas";
+} from "@/lib/learn-work-canvas";
 import type { PromptWorkspaceContextInput } from "@/lib/prompt-workspace-context";
 import type { BlockPracticeOptions } from "@/lib/block-practice-options";
 

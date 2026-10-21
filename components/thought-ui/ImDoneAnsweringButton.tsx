@@ -7,7 +7,7 @@ import {
   collectUnflaggedIleDoneAnsweringPow,
   type IleEndOfChainOfThoughtEvent,
   type IleImDoneAnsweringThought,
-} from "@/lib/ile-im-done-answering";
+} from "@/lib/learn-im-done-answering";
 
 /**
  * Standard white spoken close. Distinct outline from compact Del/Edit chips.

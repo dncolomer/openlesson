@@ -37,7 +37,7 @@ export {
   ILE_CONTEXT_BODY,
   buildIleHeliosChatSystemPrompt,
   buildIleWelcomeSystemPrompt,
-} from "./surfaces/ile";
+} from "./surfaces/learn";
 export {
   HELIOS_MAP_EXPERTISE_BLOCK,
   HELIOS_MAP_SURFACE,

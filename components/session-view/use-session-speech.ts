@@ -5,7 +5,7 @@ import {
   applyIleProjectThoughtMutation,
   emptyIleProjectDualLists,
   type ExerciseDualLists,
-} from "@/lib/ile-mode";
+} from "@/lib/learn-mode";
 import {
   buildIleThoughtTracePayload,
   ileTabUnfocusPowFromFocusEvent,
@@ -14,12 +14,12 @@ import {
   ILE_TRACE_TOOL_NAME,
   type IleSystem1Action,
   type IleSystem2Action,
-} from "@/lib/ile-thought-traces";
+} from "@/lib/learn-thought-traces";
 import { storedTraceFamily, storedTraceToolAction } from "@/lib/pow-trace-family";
 import {
   uploadIleProofOfWork,
   textToBase64,
-} from "@/lib/ile-proof-of-work-client";
+} from "@/lib/learn-proof-of-work-client";
 import { ILE_POW_API_PATHS } from "@/lib/session-pow-api-paths";
 import type { Session, SessionPlanStep, ToolAction, ToolName } from "@/lib/storage";
 import { toSpeechBcp47, type SpokenLocale } from "@/lib/tutoring-languages";
@@ -33,7 +33,7 @@ import type { ProofOfWorkApiInterruption } from "@/lib/pow-api/predictive-interr
 import type { IlePowInterruptionHandler } from "@/components/session-view/use-session-idle";
 import type { HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
 import type { TransferHealth } from "@/components/session/sessionViewHelpers";
-import type { IlePowCounterArtifact } from "@/lib/ile-pow-counters";
+import type { IlePowCounterArtifact } from "@/lib/learn-pow-counters";
 
 export type SessionSpeechInput = {
   powSessionEnabled: boolean;

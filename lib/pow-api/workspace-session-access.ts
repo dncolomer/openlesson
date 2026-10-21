@@ -7,7 +7,7 @@ import { resolveBillingEntity, billingEntityHasApiAccess } from "@/lib/billing-e
 import {
   resolveIleLinkAccess,
   resolveIleLinkSessionAccess,
-} from "@/lib/ile-link-auth";
+} from "@/lib/learn-link-auth";
 import { resolveAyclAccess } from "@/lib/aycl-session-auth";
 import {
   assertWorkspacePolicy,

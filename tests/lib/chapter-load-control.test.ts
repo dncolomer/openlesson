@@ -95,7 +95,7 @@ describe("resolveChapterLoadControl (shipped helper)", () => {
 
 describe("chapter-map load control wiring (shipped source)", () => {
   it("Helios actions omit load/reload; SessionView still loads from the map", () => {
-    const panel = read("components/session-view/ile-chapter-helios-actions.tsx");
+    const panel = read("components/session-view/learn-chapter-helios-actions.tsx");
     const view = readSessionViewSurface();
 
     expect(panel).not.toContain("resolveChapterLoadControl");

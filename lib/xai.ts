@@ -21,7 +21,7 @@ import {
 import { blockMapGlyphDbFields, randFromSeed } from "@/lib/block-map-glyph";
 import { getPrompt, type UserPrompts } from "./prompts";
 import { getInitialChaptersBand } from "./initial-chapters";
-import { relocateChapterStepsOffBlocked } from "./ile-chapter-blocked";
+import { relocateChapterStepsOffBlocked } from "./learn-chapter-blocked";
 import {
   composeSessionPlanCreatePrompt,
   normalizeSessionPlanCreateSteps,
@@ -36,7 +36,7 @@ import {
 } from "./workspace-map-types";
 import {
   type IleSessionMode,
-} from "./ile-mode";
+} from "./learn-mode";
 
 const MODEL = DEFAULT_MODEL;
 

@@ -8,7 +8,7 @@ import {
   applyIleXaiTurnToWorkCanvas,
   emptyIleWorkCanvasScene,
   parseIleXaiCanvasTurn,
-} from "@/lib/ile-work-canvas";
+} from "@/lib/learn-work-canvas";
 
 describe("learner-facing wrappers", () => {
   it("strips Check/ask placement chatter and leaves a direct answer", () => {

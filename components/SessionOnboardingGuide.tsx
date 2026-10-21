@@ -8,7 +8,7 @@ import { ileWorkspaceStartAllowed } from "@/lib/practice-voice-challenge";
 import {
   clampIleMinInsightsPerChapter,
   ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT,
-} from "@/lib/ile-turn-insights";
+} from "@/lib/learn-turn-insights";
 
 type OnboardingVariant = "ile" | "tap" | "scout";
 

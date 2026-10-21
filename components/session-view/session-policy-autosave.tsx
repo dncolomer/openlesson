@@ -7,7 +7,7 @@ import {
   useSessionPolicySuggestion,
 } from "@/components/session-view/session-policy-context";
 import type { Session } from "@/lib/domain/types";
-import { persistIleSessionRow } from "@/lib/ile-session-persist";
+import { persistIleSessionRow } from "@/lib/learn-session-persist";
 import {
   applySessionPolicyToMetadata,
   rememberSessionPolicy,

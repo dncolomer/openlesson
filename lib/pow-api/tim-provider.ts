@@ -2,7 +2,7 @@ import type { ProofOfWorkApiInterruption } from "./predictive-interruption-types
 import { normalizePredictedInterruption } from "./tim-normalize";
 import type { TimFeatureEnvelopeV1 } from "./tim-feature-envelope";
 import { predictRawFromFeaturesWithLlm } from "./tim-llm-predictor";
-import { predictIleChapterCompleteInterruption } from "@/lib/ile-tim-chapter-complete";
+import { predictIleChapterCompleteInterruption } from "@/lib/learn-tim-chapter-complete";
 
 /**
  * Pluggable expected-free-energy interruption backend.

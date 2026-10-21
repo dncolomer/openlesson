@@ -1,7 +1,7 @@
 "use client";
 
 import type { HTMLAttributes, ReactNode } from "react";
-import { IleStartLoading } from "@/components/session-view/ile-start-loading";
+import { IleStartLoading } from "@/components/session-view/learn-start-loading";
 import { SessionConsoleMarks, SessionConsoleScan } from "@/components/session-view/session-console-marks";
 import { useI18n } from "@/lib/i18n";
 import { CONSOLE_GRID_STYLE } from "@/components/ui/console-frame";

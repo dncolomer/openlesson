@@ -214,7 +214,7 @@ describe("session branch prepare", () => {
         plan: { steps: [{ id: "chapter-1", description: "C" }], currentStepIndex: 0 },
       }),
     ).not.toHaveProperty("catalogSize");
-    const route = read("app/api/ile/session-branch-model/route.ts");
+    const route = read("app/api/learn/session-branch-model/route.ts");
     expect(route).not.toContain("resolveCatalogSize");
     expect(route).toContain("generateSessionBranchOpening");
     expect(read("lib/session-branch-model-generate.ts")).not.toContain("catalogSize");
@@ -227,7 +227,7 @@ describe("session branch prepare", () => {
     const publicCalibrate = read("components/CalibrationFlowRunner.tsx");
     const verification = read("components/tap-score/tap-score-phases.tsx");
     const learn = read("components/session-view/session-chapter-canvas.tsx");
-    const route = read("app/api/ile/session-branch-model/route.ts");
+    const route = read("app/api/learn/session-branch-model/route.ts");
     const prompt = read("components/excalidraw-canvas/canvas-prompt-bar.tsx");
     expect(calibrate).toContain("calibrateFieldPrepareInput");
     expect(calibrate).toContain("loadSessionBranchField");

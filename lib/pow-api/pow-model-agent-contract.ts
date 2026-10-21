@@ -3,12 +3,12 @@
  * upload / stash-buffer tools. Instructions only — not an encoder.
  */
 
-import { ILE_SPEECH_TOOL_NAME, ILE_TRACE_TOOL_NAME } from "@/lib/ile-thought-traces";
+import { ILE_SPEECH_TOOL_NAME, ILE_TRACE_TOOL_NAME } from "@/lib/learn-thought-traces";
 import {
   ILE_WORK_CANVAS_COMMAND_POW_IDS,
   ILE_WORK_CANVAS_POW_TOOL_NAME,
   ILE_WORK_CANVAS_USE_AND_PROMPT_ACTIONS,
-} from "@/lib/ile-work-canvas-pow";
+} from "@/lib/learn-work-canvas-pow";
 import { TAP_SPEECH_TOOL_NAME } from "@/lib/tap-speech-proof-of-work";
 import { TAP_TRACE_TOOL_NAME } from "@/lib/tap-score-traces";
 import { POW_MODEL_VERSION } from "./workspace-proof-of-work";

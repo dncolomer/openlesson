@@ -493,7 +493,7 @@ None. Appetite vocabulary, TAPBench identity, TAP opaque policy, and pin-vs-requ
 - `lib/admin/proof-of-work.ts` / `lib/pow-api/studio-pow-mutate.ts` — admin select / PATCH
 - `lib/tap-score-session-auth.ts` — `authContextFromTapAccess`
 - `lib/tap-speech-proof-of-work.ts` — `tap-speech-segment`
-- `lib/ile-proof-of-work-client.ts` / `app/api/workspace/proof-of-work/route.ts` — TAP Learning capture + product persist
+- `lib/learn-proof-of-work-client.ts` / `app/api/workspace/proof-of-work/route.ts` — TAP Learning capture + product persist
 - `app/api/workspace-tap-score/trace/route.ts` — remaining bypass
 - `app/api/workspace-tap-score/{speech,chat,idle,complete}/route.ts` — persist template
 - `app/api/v3/pow/workspaces/[id]/route.ts` — workspace PATCH (pin)
@@ -525,7 +525,7 @@ Each PR is independently reviewable and mergeable. Versioning scaffolding is mix
 
 - **Title:** `pow: align spec/MCP/TAP Learning with pow-model-v1`
 - **Depends on:** PR 1; parallel to PR 2
-- **Files:** `lib/pow-api/proof-of-work-schema.ts`, `proof-of-work-integration.ts`, `opaque-evaluation.ts`, `mcp-tools/helpers.ts`, **`mcp-tools/dispatch.ts`**, `integration-skill.ts`, `lib/ile-proof-of-work-client.ts`, **`app/api/workspace/proof-of-work/route.ts`**, `lib/pow-api/types.ts` (delete `AnalysisInput` + `AudioInput` / `ImageInput` / `TextInput`), `docs/PROOF_OF_WORK_API.md`, `public/skill.md`
+- **Files:** `lib/pow-api/proof-of-work-schema.ts`, `proof-of-work-integration.ts`, `opaque-evaluation.ts`, `mcp-tools/helpers.ts`, **`mcp-tools/dispatch.ts`**, `integration-skill.ts`, `lib/learn-proof-of-work-client.ts`, **`app/api/workspace/proof-of-work/route.ts`**, `lib/pow-api/types.ts` (delete `AnalysisInput` + `AudioInput` / `ImageInput` / `TextInput`), `docs/PROOF_OF_WORK_API.md`, `public/skill.md`
 - **Changes:** Spec responses include `pow_model_id` distinct from `spec_version`. `common_fields` uses wire `type`. MCP schema **and** dispatch forward `band_powers`, `device_name`, `sample_count`, `chunk_index`, `pow_model_id`. TAP Learning product route forwards EEG fields. TAP Learning client imports model types (video unused is fine). Leftover analysis-input types removed. **No** encoder detector / appetite work.
 
 ### PR 3b — Thought detector + appetite vocabulary

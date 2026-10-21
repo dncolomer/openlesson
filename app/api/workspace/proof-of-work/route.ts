@@ -10,7 +10,7 @@ import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruptio
 import { resolvePowInterruptionContext } from "@/lib/pow-interruption-resolver";
 import { entryQueryParamsFromBody, stampSourceLinkMetadata } from "@/lib/guest-link-access";
 import { loadLearningWorldModel } from "@/lib/pow-api/learning-world-model-store";
-import { isIleChapterDonePow } from "@/lib/ile-tim-chapter-complete";
+import { isIleChapterDonePow } from "@/lib/learn-tim-chapter-complete";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;

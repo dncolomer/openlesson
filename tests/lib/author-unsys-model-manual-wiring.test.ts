@@ -42,7 +42,7 @@ describe("author unsys model Manual Mode wiring", () => {
     const view = read("components/WorkspaceView.tsx");
     const studio = read("components/WorkspaceUnsysSeedStudio.tsx");
     const graph = read("components/WorkspaceUnsysSeedGraph.tsx");
-    const route = read("app/api/ile/session-branch-model/route.ts");
+    const route = read("app/api/learn/session-branch-model/route.ts");
     const update = read("lib/workspace-grid-ops/update_block.ts");
 
     expect(MANUAL_MAP_MODE_LABEL).toBe("Manual Mode");

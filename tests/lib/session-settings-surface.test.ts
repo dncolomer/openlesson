@@ -5,7 +5,7 @@
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { ILE_LIVE_SETTINGS_KNOBS } from "@/lib/ile-pregame-settings";
+import { ILE_LIVE_SETTINGS_KNOBS } from "@/lib/learn-pregame-settings";
 
 const ROOT = join(__dirname, "../..");
 

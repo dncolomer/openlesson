@@ -12,12 +12,12 @@ import {
   resolveMapTypeIdFromBody,
   resolveMapTypeRecord,
 } from "@/lib/workspace-map-types";
-import { capIleSessionChapters } from "@/lib/ile-canvas-session";
+import { capIleSessionChapters } from "@/lib/learn-canvas-session";
 import { toPersistedCreatePlanSteps } from "@/lib/session-plan-create";
 import {
   resolveIleSessionModeFromBody,
   resolveIleSessionModeFromSession,
-} from "@/lib/ile-mode";
+} from "@/lib/learn-mode";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;

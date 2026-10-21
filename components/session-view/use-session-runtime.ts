@@ -16,16 +16,16 @@ import {
   eegChannelsFromMap,
   scoreEegContactWindow,
 } from "@/lib/muse-eeg-quality";
-import type { IlePowCounterArtifact } from "@/lib/ile-pow-counters";
+import type { IlePowCounterArtifact } from "@/lib/learn-pow-counters";
 import {
   appendIlePowSessionLedger,
   emptyIlePowSessionLedger,
-} from "@/lib/ile-pow-counters";
-import type { IleProofOfWorkUploadItem } from "@/lib/ile-evidence-buffer";
+} from "@/lib/learn-pow-counters";
+import type { IleProofOfWorkUploadItem } from "@/lib/learn-evidence-buffer";
 import {
   uploadIleEvidenceItem,
   uploadIleScreenshot,
-} from "@/lib/ile-proof-of-work-client";
+} from "@/lib/learn-proof-of-work-client";
 import {
   buildIleCanvasUploadItem,
   buildGatedIleEegUploadItem,
@@ -37,11 +37,11 @@ import {
   meetsEegUploadThreshold,
   meetsFacialUploadThreshold,
   totalIleEegSamples,
-} from "@/lib/ile-realtime-pow";
+} from "@/lib/learn-realtime-pow";
 import type { DeviceStatus } from "@/lib/muse-athena";
 import { createScreenCapture } from "@/lib/screen-capture";
 import type { IlePowInterruptionHandler } from "@/components/session-view/use-session-idle";
-import { ilePowInterruptionOriginFromTool } from "@/lib/ile-tim-chapter-complete";
+import { ilePowInterruptionOriginFromTool } from "@/lib/learn-tim-chapter-complete";
 import type { Session, ToolAction, ToolName } from "@/lib/storage";
 import { isIleSpeechCaptureEnabled } from "@/lib/useSessionThoughtInterface";
 

@@ -1,7 +1,7 @@
 import {
   composeIleEndOfChainOfThoughtEvent,
   ILE_END_OF_CHAIN_OF_THOUGHT_ACTION,
-} from "@/lib/ile-im-done-answering";
+} from "@/lib/learn-im-done-answering";
 import { sortIleSoloTimeline } from "./timeline";
 import type { IleSoloThoughtEvent, IleSoloTimelineEvent, System2Inference } from "./types";
 

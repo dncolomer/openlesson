@@ -208,10 +208,10 @@ describe("session policy inference", () => {
     expect(xai).toContain("retries: 1");
     expect(xai).not.toContain("fetchTimeout: 30_000");
     expect(context).not.toContain('draft?.mode !== "learn"');
-    expect(read("app/api/ile/session-policy-infer/route.ts")).toContain("planSessionBranchPrepare");
-    expect(read("app/api/ile/session-policy-infer/route.ts")).toContain('body.phase === "project"');
-    expect(read("app/api/ile/session-policy-infer/route.ts")).toContain("NextResponse.json({ reply: null })");
-    expect(read("app/api/ile/session-policy-infer/route.ts")).not.toContain('jsonError(502, "The policy could not be read.")');
+    expect(read("app/api/learn/session-policy-infer/route.ts")).toContain("planSessionBranchPrepare");
+    expect(read("app/api/learn/session-policy-infer/route.ts")).toContain('body.phase === "project"');
+    expect(read("app/api/learn/session-policy-infer/route.ts")).toContain("NextResponse.json({ reply: null })");
+    expect(read("app/api/learn/session-policy-infer/route.ts")).not.toContain('jsonError(502, "The policy could not be read.")');
     expect(read("components/ExcalidrawCanvas.tsx")).toContain("usePublishSessionProof");
   });
 });

@@ -16,7 +16,7 @@ import {
 import { uploadWorkspaceProofOfWork } from "@/lib/pow-api/upload-workspace-proof-of-work";
 import { parseStashIngestInput } from "@/lib/pow-api/stash-api";
 import { MCP_EVIDENCE_TOOLS } from "@/lib/pow-api/mcp-tools/helpers";
-import type { IleProofOfWorkCaptureType } from "@/lib/ile-proof-of-work-client";
+import type { IleProofOfWorkCaptureType } from "@/lib/learn-proof-of-work-client";
 
 describe("workspace proof of work helpers", () => {
   it("normalizes proof-of-work type aliases", () => {

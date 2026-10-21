@@ -8,10 +8,10 @@ import type { DeviceStatus } from "@/lib/muse-athena";
 import type { SessionThoughtInterface } from "@/lib/useSessionThoughtInterface";
 import type { WorkspaceExternalResource } from "@/lib/workspace-external-resources";
 import type { Session, SessionPlanStep } from "@/lib/storage";
-import { IleInsightKeptScreen } from "@/components/session-view/ile-insight-kept-screen";
-import { IleMapInsightsWidget } from "@/components/session-view/ile-insight-trophies";
-import { IleSessionImpureScreen, mountIleSilenceScreen } from "@/components/session-view/ile-silence-lock-screen";
-import { IleVoiceBar, IleVoiceBarActions } from "@/components/session-view/ile-voice-bar";
+import { IleInsightKeptScreen } from "@/components/session-view/learn-insight-kept-screen";
+import { IleMapInsightsWidget } from "@/components/session-view/learn-insight-trophies";
+import { IleSessionImpureScreen, mountIleSilenceScreen } from "@/components/session-view/learn-silence-lock-screen";
+import { IleVoiceBar, IleVoiceBarActions } from "@/components/session-view/learn-voice-bar";
 import { SessionChrome } from "@/components/session-view/session-chrome";
 import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
 import { WorkspaceResourcesPanel } from "@/components/WorkspaceResourcesPanel";
@@ -20,7 +20,7 @@ import {
   toIlePowDisplayCounts,
   type IlePowCounterArtifact,
   type IlePowTypeCounts,
-} from "@/lib/ile-pow-counters";
+} from "@/lib/learn-pow-counters";
 import { sessionSidebarHasSection } from "@/lib/session-sidebar";
 
 type LiveScreenCaptureHandle = {

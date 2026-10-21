@@ -464,7 +464,7 @@ describe("access resolution rejects revoked links", () => {
     vi.doMock("@/lib/supabase/admin", () => ({
       createAdminClient: vi.fn(() => ({ from })),
     }));
-    vi.doMock("@/lib/ile-link", () => ({
+    vi.doMock("@/lib/learn-link", () => ({
       hashPrivateToken: (t: string) => `hash:${t}`,
     }));
     vi.doMock("@/lib/guest-link-query-guest", () => ({
@@ -493,7 +493,7 @@ describe("access resolution rejects revoked links", () => {
       error: null,
     });
 
-    const { resolveIleLinkAccess } = await import("@/lib/ile-link-auth");
+    const { resolveIleLinkAccess } = await import("@/lib/learn-link-auth");
     const denied = await resolveIleLinkAccess("dead-token");
     expect(denied).toEqual({ error: ILE_LINK_REVOKED_MESSAGE, status: 403 });
 
@@ -539,7 +539,7 @@ describe("static wiring: migration, APIs, UI", () => {
   it("API routes wire invalidate_link_id and invalidate_all", () => {
     for (const rel of [
       "app/api/workspace/tap-links/route.ts",
-      "app/api/workspace/ile-links/route.ts",
+      "app/api/workspace/learn-links/route.ts",
     ]) {
       const src = read(rel);
       expect(src).toContain("invalidate_link_id");
@@ -547,7 +547,7 @@ describe("static wiring: migration, APIs, UI", () => {
       expect(src).toMatch(/invalidateTap|invalidateIle/);
     }
     expect(read("app/api/workspace/tap-links/route.ts")).toContain("invalidateTapLinksAll");
-    expect(read("app/api/workspace/ile-links/route.ts")).toContain("invalidateIleLinksAll");
+    expect(read("app/api/workspace/learn-links/route.ts")).toContain("invalidateIleLinksAll");
   });
 
   it("TAP access resolution and session page reject revoked", () => {
@@ -560,7 +560,7 @@ describe("static wiring: migration, APIs, UI", () => {
   });
 
   it("TAP Learning access keeps revoked gate via isGuestLinkRevoked", () => {
-    const auth = read("lib/ile-link-auth.ts");
+    const auth = read("lib/learn-link-auth.ts");
     expect(auth).toContain("isGuestLinkRevoked");
     expect(auth).toContain("ILE_LINK_REVOKED_MESSAGE");
   });

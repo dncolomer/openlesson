@@ -12,17 +12,17 @@ import {
 } from "@/components/session-view/session-policy-context";
 import { sessionCanvasMayOpen } from "@/lib/session-field-gate";
 import { sessionPrepareBlockId } from "@/lib/session-branch-prepare";
-import type { IleCanvasCraftInsightConfig } from "@/components/session-view/ile-canvas-craft-insight";
+import type { IleCanvasCraftInsightConfig } from "@/components/session-view/learn-canvas-craft-insight";
 import type { InsightSummary } from "@/lib/insights";
-import type { IlePowCounterArtifact } from "@/lib/ile-pow-counters";
-import { ilePowNextIndex } from "@/lib/ile-pow-counters";
-import { ileChapterCanvasRemountKey } from "@/lib/ile-session-global-context";
+import type { IlePowCounterArtifact } from "@/lib/learn-pow-counters";
+import { ilePowNextIndex } from "@/lib/learn-pow-counters";
+import { ileChapterCanvasRemountKey } from "@/lib/learn-session-global-context";
 import {
   serializeIleWorkCanvasScene,
   type IleWorkCanvasElement,
   type IleWorkCanvasScene,
-} from "@/lib/ile-work-canvas";
-import type { IleWorkCanvasPowEvent } from "@/lib/ile-work-canvas-pow";
+} from "@/lib/learn-work-canvas";
+import type { IleWorkCanvasPowEvent } from "@/lib/learn-work-canvas-pow";
 import type { Session } from "@/lib/storage";
 
 export function SessionChapterWorkCanvas({

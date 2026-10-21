@@ -10,9 +10,9 @@ import {
   TAP_DIALOGUE_AVATAR_SIZE_CLASS,
   ileHeliosThinkingLine,
   resolveIleDialogueTurn,
-} from "@/lib/ile-dialogue-turn";
+} from "@/lib/learn-dialogue-turn";
 import { HeliosMarkdown } from "@/components/thought-ui/HeliosMarkdown";
-import type { IleWordBoxMenuAction } from "@/lib/ile-word-boxes";
+import type { IleWordBoxMenuAction } from "@/lib/learn-word-boxes";
 
 export type HeliosTurnMode = "idle" | "responding" | "interruption";
 

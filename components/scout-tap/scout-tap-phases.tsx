@@ -8,9 +8,9 @@ import { SessionFinishedScreen } from "@/components/session-view/session-finishe
 import { SessionGuidePanel } from "@/components/session-view/session-guide-panel";
 import { SessionSoundingResult } from "@/components/session-view/session-sounding-result";
 import { SessionWorkSurface } from "@/components/session-view/session-work-surface";
-import { SessionTopicChapter } from "@/components/session-view/ile-work-dock-bar";
+import { SessionTopicChapter } from "@/components/session-view/learn-work-dock-bar";
 import { TapSessionSignals } from "@/components/session-view/session-signals";
-import { IleStartLoading } from "@/components/session-view/ile-start-loading";
+import { IleStartLoading } from "@/components/session-view/learn-start-loading";
 import { SessionPageLoading } from "@/components/session-view/session-page-loading";
 import { SessionStartBackButton } from "@/components/session-view/session-start-back-button";
 import { SessionStartShell } from "@/components/session-view/session-start-shell";

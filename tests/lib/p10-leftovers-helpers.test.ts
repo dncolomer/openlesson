@@ -22,13 +22,13 @@ import {
 import {
   buildIleSessionChatPowFile,
   resolveIleSessionChatPowUpload,
-} from "@/lib/ile-session-chat-pow";
+} from "@/lib/learn-session-chat-pow";
 import {
   emptyIleProjectDualLists,
   ileProjectThoughtsStorageKey,
   parseIleProjectThoughtsStored,
   serializeIleProjectThoughts,
-} from "@/lib/ile-mode";
+} from "@/lib/learn-mode";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =

@@ -21,10 +21,10 @@ import {
   isMapTypeLibraryId,
   type MapTypeLibraryEntry,
 } from "@/lib/map-type-library";
-import { DUMMY_PATTERN_FRAME } from "@/lib/ile-chapter-mini-map";
-import type { MiniMapCell } from "@/lib/ile-chapter-mini-map";
+import { DUMMY_PATTERN_FRAME } from "@/lib/learn-chapter-mini-map";
+import type { MiniMapCell } from "@/lib/learn-chapter-mini-map";
 import { getCellKey } from "@/lib/block-skill-grid";
-import { nextFreeChapterCell } from "@/lib/ile-chapter-blocked";
+import { nextFreeChapterCell } from "@/lib/learn-chapter-blocked";
 
 export const MAP_TYPE_CELL_MARKS = ["spawn", "blocked"] as const;
 

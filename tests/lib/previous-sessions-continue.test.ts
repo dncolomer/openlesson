@@ -28,22 +28,22 @@ import {
   ileSessionNameFromMetadata,
   isIleSessionUnsavedExit,
   normalizeIleSessionName,
-} from "@/lib/ile-session-name";
+} from "@/lib/learn-session-name";
 import {
   ileUnsavedExitSessionPatch,
   SESSION_PLAN_DISCARD_PATH,
-} from "@/lib/ile-unsaved-exit";
+} from "@/lib/learn-unsaved-exit";
 import {
   continueMiniCellsFromPlanSteps,
   dummyDensityOccupiedCount,
   ILE_CONTINUE_MAP_PREVIEW_FRAME_CLASS,
   miniMapInteractive,
-} from "@/lib/ile-chapter-mini-map";
+} from "@/lib/learn-chapter-mini-map";
 import {
   ileWelcomeShowsContinuePreview,
   ileWelcomeShowsRegenerate,
   ileWelcomeShowsSizePicker,
-} from "@/lib/ile-welcome-chapters";
+} from "@/lib/learn-welcome-chapters";
 import type { SessionPlanStep } from "@/lib/domain/types";
 
 const ROOT = join(__dirname, "../..");
@@ -300,7 +300,7 @@ describe("dummy density occupancy + continue mini read-only", () => {
     expect(n).toBeGreaterThan(0);
     expect(b).toBeGreaterThan(n);
 
-    const miniLib = read("lib/ile-chapter-mini-map.ts");
+    const miniLib = read("lib/learn-chapter-mini-map.ts");
     expect(miniLib).toContain("Dummy occupancy");
     expect(miniLib).not.toMatch(/from\(\"session_plans\"\)/);
     expect(miniLib).toContain("DUMMY_DENSITY_CELLS");
@@ -355,7 +355,7 @@ describe("dummy density occupancy + continue mini read-only", () => {
     expect(welcome).toContain("capIleSessionChapters");
     expect(welcome).toContain("sessionPlan?.steps");
     expect(
-      existsSync(join(ROOT, "components/session-view/ile-continue-map-preview.tsx")),
+      existsSync(join(ROOT, "components/session-view/learn-continue-map-preview.tsx")),
     ).toBe(false);
     expect(ILE_CONTINUE_MAP_PREVIEW_FRAME_CLASS).toContain("h-full");
     expect(ILE_CONTINUE_MAP_PREVIEW_FRAME_CLASS).toContain(

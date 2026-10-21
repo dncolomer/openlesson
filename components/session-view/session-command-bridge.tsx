@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, type ReactNode } from "react";
-import type { IleWorkCanvasCommandId } from "@/lib/ile-work-canvas-commands";
+import type { IleWorkCanvasCommandId } from "@/lib/learn-work-canvas-commands";
 
 export type SessionCanvasDictate = {
   transcript: string;

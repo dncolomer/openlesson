@@ -4,7 +4,7 @@ import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import {
   allowIleTypedInsightCreate,
   parseIleTypedInsightVerdict,
-} from "@/lib/ile-turn-insights";
+} from "@/lib/learn-turn-insights";
 import { callXaiJSON, systemMessage, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
 
 type EvaluateInsightResponse = {

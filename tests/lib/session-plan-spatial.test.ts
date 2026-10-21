@@ -20,14 +20,14 @@ import {
 import {
   isChapterSlotBlocked,
   relocateChapterStepsOffBlocked,
-} from "@/lib/ile-chapter-blocked";
+} from "@/lib/learn-chapter-blocked";
 import {
   dummyDensityBlockedCount,
   dummyDensityOccupiedCount,
   dummyOccupiedClusterCount,
   dummyPatternCells,
   miniMapDummyFrame,
-} from "@/lib/ile-chapter-mini-map";
+} from "@/lib/learn-chapter-mini-map";
 import {
   composeSessionPlanCreatePrompt,
   normalizeSessionPlanCreateSteps,

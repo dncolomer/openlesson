@@ -1,6 +1,6 @@
 "use client";
 
-import { ileHeliosThinkingLine } from "@/lib/ile-dialogue-turn";
+import { ileHeliosThinkingLine } from "@/lib/learn-dialogue-turn";
 
 export function CanvasThinkingChips({
   thinkingChips,

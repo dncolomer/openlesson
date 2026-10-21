@@ -25,7 +25,7 @@ import {
   beginEditSelectedThoughts,
   submitEditedThoughtSelection,
   submitSelectedThoughts,
-} from "@/lib/ile-last-stash";
+} from "@/lib/learn-last-stash";
 import { cn } from "@/lib/utils";
 
 const INSIGHTS_AUTH_MESSAGE = "You need to have a user and be logged in — not available as a guest user.";

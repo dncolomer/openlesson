@@ -7,7 +7,7 @@ import {
   ILE_TRACE_TOOL_NAME,
   type IleSystem1Action,
   type IleSystem2Action,
-} from "@/lib/ile-thought-traces";
+} from "@/lib/learn-thought-traces";
 import { ILE_IMPORT_CAPTURE_CHANNEL, ILE_IMPORT_SESSION_MODE } from "./constants";
 import type {
   IleSoloImportContext,

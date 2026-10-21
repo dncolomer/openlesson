@@ -4,16 +4,16 @@ import { buildImageContent, callXaiText, systemMessage, userMessage, DEFAULT_MOD
 import { withConversationLanguageInstruction } from "@/lib/tutoring-languages";
 import { ayclTokenFromBody,
   ileTokenFromBody, guardSessionRoute } from "@/lib/api/require-auth";
-import { buildIleHeliosChatSystemPrompt } from "@/lib/prompt-kernel/surfaces/ile";
-import { ileChapterSuggestionPowFromCoachText } from "@/lib/ile-chapter-depth";
-import { ileWorkCanvasWorkspaceFromChatBody } from "@/lib/ile-work-canvas-prompts";
+import { buildIleHeliosChatSystemPrompt } from "@/lib/prompt-kernel/surfaces/learn";
+import { ileChapterSuggestionPowFromCoachText } from "@/lib/learn-chapter-depth";
+import { ileWorkCanvasWorkspaceFromChatBody } from "@/lib/learn-work-canvas-prompts";
 import {
   ileSessionChatCanvasReply,
   ileWorkCanvasTurnContextMessage,
   serializeIleWorkCanvasScene,
-} from "@/lib/ile-work-canvas";
+} from "@/lib/learn-work-canvas";
 import { assemblePromptWorkspaceContext } from "@/lib/prompt-workspace-context";
-import { resolveIleDurableSessionMode } from "@/lib/ile-mode";
+import { resolveIleDurableSessionMode } from "@/lib/learn-mode";
 import { powAttributionColumnsFromIds } from "@/lib/session-participant-identity";
 import { uploadWorkspaceProofOfWork } from "@/lib/pow-api/upload-workspace-proof-of-work";
 import {
@@ -21,7 +21,7 @@ import {
   ILE_SESSION_CHAT_POW_TOOL_ACTION,
   ILE_SESSION_CHAT_POW_TOOL_NAME,
   resolveIleSessionChatPowUpload,
-} from "@/lib/ile-session-chat-pow";
+} from "@/lib/learn-session-chat-pow";
 
 function sanitizeAssistantText(text: string) {
   return text

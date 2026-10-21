@@ -4,7 +4,7 @@ import path from "path";
 import { BRAND_NAME, BRAND_SHORT, BRAND_SLUG, MCP_RESOURCE_SCHEME } from "@/lib/brand";
 import { MCP_PROOF_OF_WORK_SERVER_NAME } from "@/lib/pow-api/mcp-proof-of-work-server";
 import { buildTapThoughtTracePayload } from "@/lib/tap-score-traces";
-import { buildIleThoughtTracePayload } from "@/lib/ile-thought-traces";
+import { buildIleThoughtTracePayload } from "@/lib/learn-thought-traces";
 import { deriveSkillName } from "@/lib/pow-api/integration-skill";
 import { buildMcpClientConfig } from "@/lib/pow-api/mcp-proof-of-work-catalog";
 import { UNCERTAIN_SYSTEMS_SCOPE } from "@/lib/pow-api/integration-discovery";

@@ -147,7 +147,7 @@ async function finishSessionBranchField(
   for (let round = 0; round < CONTINUATION_ROUNDS && next; round += 1) {
     if (cache.get(key)?.token !== token) return;
     try {
-      const response = await fetchImpl("/api/ile/session-branch-model", {
+      const response = await fetchImpl("/api/learn/session-branch-model", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...body, phase: "continue", continuation: next }),
@@ -186,7 +186,7 @@ export async function loadSessionBranchField(
   else options?.signal?.addEventListener("abort", onAbort);
   const fetchImpl = options?.fetchImpl ?? fetch;
   const body = (JSON.parse(key) as { body: Record<string, unknown> }).body;
-  const promise = fetchImpl("/api/ile/session-branch-model", {
+  const promise = fetchImpl("/api/learn/session-branch-model", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     signal: controller.signal,

@@ -56,7 +56,7 @@ describe("session extras + product workspace auth shape", () => {
 
     const linkRoutes = [
       "app/api/workspace/tap-links/route.ts",
-      "app/api/workspace/ile-links/route.ts",
+      "app/api/workspace/learn-links/route.ts",
     ];
     for (const rel of linkRoutes) {
       const src = read(rel);

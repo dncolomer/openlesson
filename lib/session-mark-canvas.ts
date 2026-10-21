@@ -9,7 +9,7 @@ import {
   ILE_WORK_CANVAS_STROKE_COLOR,
   ileWorkCanvasContentBounds,
   type IleWorkCanvasElement,
-} from "@/lib/ile-work-canvas";
+} from "@/lib/learn-work-canvas";
 import {
   advanceSessionBranchModel,
   appendSessionBranchNotes,

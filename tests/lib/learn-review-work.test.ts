@@ -1,0 +1,120 @@
+import { describe, expect, it } from "vitest";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import {
+  emptyIleReviewWorkItems,
+  ILE_REVIEW_WORK_LABEL,
+  ILE_REVIEW_WORK_TOOL,
+  listIleUnsubmittedReviewItems,
+} from "@/lib/learn-review-work";
+import { ILE_MAP_OVERLAY_TOOLS, ILE_CHAPTER_WIDGET_TOOLS } from "@/lib/learn-map-chrome";
+
+const ROOT = join(__dirname, "../..");
+const SCRATCH =
+  process.env.GROK_GOAL_SCRATCH ||
+  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-ile-review-work/implementer";
+
+function read(rel: string) {
+  expect(existsSync(join(ROOT, rel)), `missing ${rel}`).toBe(true);
+  return readFileSync(join(ROOT, rel), "utf8");
+}
+
+function writeScratch(name: string, body: string) {
+  mkdirSync(SCRATCH, { recursive: true });
+  writeFileSync(join(SCRATCH, name), body, "utf8");
+}
+
+describe("listIleUnsubmittedReviewItems", () => {
+  it("groups forming speech, stashed thoughts, and dirty tools; other types stay empty", () => {
+    expect(listIleUnsubmittedReviewItems({})).toEqual(emptyIleReviewWorkItems());
+    const items = listIleUnsubmittedReviewItems({
+      thoughts: [
+        { id: "t1", text: "first stash" },
+        { id: "skip", text: "   " },
+      ],
+      formingText: "still speaking",
+      canvasDirty: true,
+      notebookDirty: true,
+      notebookContent: "draft notes",
+    });
+    expect(items.thoughts.map((row) => row.id)).toEqual(["forming-speech", "t1"]);
+    expect(items.thoughts[0]?.live).toBe(true);
+    expect(items.tool.map((row) => row.id)).toEqual(["canvas"]);
+    expect(items.screen).toEqual([]);
+    expect(items.video).toEqual([]);
+    expect(items.eeg).toEqual([]);
+    expect(items.tool[0]?.label).toMatch(/canvas/i);
+  });
+});
+
+describe("Review work chrome (shipped source)", () => {
+  it("is a map overlay with resource-type tabs; Thoughts is not a chapter tab", () => {
+    expect(ILE_REVIEW_WORK_LABEL).toBe("Review work");
+    expect(ILE_REVIEW_WORK_TOOL).toBe("thought-history");
+    expect(ILE_MAP_OVERLAY_TOOLS).toContain("thought-history");
+    expect(ILE_MAP_OVERLAY_TOOLS).not.toContain("plan-resources");
+    expect(ILE_CHAPTER_WIDGET_TOOLS).not.toContain("thought-history");
+
+    const chrome = read("components/session-view/session-chrome.tsx");
+    expect(chrome).not.toContain("data-ile-review-work");
+    expect(chrome).toContain("ILE_REVIEW_WORK_LABEL");
+    expect(chrome).not.toContain("onReviewWork");
+    expect(chrome).not.toContain("data-ile-pow-resource-bar");
+    expect(chrome).not.toContain("IleSubmitWorkButton");
+    expect(chrome).not.toContain("data-ile-review-work");
+    expect(chrome).not.toContain("data-ile-session-insights-count");
+    expect(chrome).not.toContain("data-ile-global-resources");
+    expect(chrome).not.toContain("onOpenGlobalResources");
+    expect(chrome).toContain("resources={resources}");
+    expect(read("components/session-view/session-sidebar.tsx")).toContain(
+      "data-ile-global-resources",
+    );
+    expect(chrome).not.toContain("data-ile-identity-row");
+
+    expect(existsSync(join(ROOT, "components/session-view/learn-chapter-tool-tabs.tsx"))).toBe(false);
+
+
+    const panel = read("components/session-view/learn-review-work-panel.tsx");
+    expect(panel).toContain("data-ile-review-work-panel");
+    expect(panel).toContain("IlePowTypeIcon");
+    expect(panel).toContain("ILE_POW_DISPLAY_COUNTER_TYPES");
+    expect(panel).not.toContain("Memory");
+    expect(panel).not.toContain("Insights");
+    expect(panel).not.toContain("ThoughtMemoryPanel");
+
+    const panes = read("components/session-view/session-tool-panes.tsx");
+    expect(panes).toContain("IleReviewWorkPanel");
+    expect(panes).not.toContain("ThoughtMemoryPanel");
+    expect(panes).toContain('activeTool === "thought-history"');
+
+    const view = read("components/SessionView.tsx");
+    expect(view).not.toContain("data-ile-compact-review-work");
+    expect(view).not.toContain("renderCompactWorkspace");
+    expect(view).not.toContain("data-ile-compact-insight-craft");
+    expect(view).not.toContain("turnInsightCraft()");
+    expect(view).not.toContain("onReviewWork");
+    const dockBar = read("components/session-view/learn-work-dock-bar.tsx");
+    expect(dockBar).not.toContain("data-ile-review-work");
+    expect(dockBar).not.toContain("data-ile-end-turn");
+    expect(dockBar).not.toContain("data-ile-chapter-dock-chapters");
+    expect(chrome).not.toContain("onReviewWork");
+
+    const icons = read("components/session-view/learn-pow-icons.tsx");
+    expect(icons).toContain("thoughts:");
+    expect(icons).toContain("Wrench");
+    expect(icons).toContain("Monitor");
+    expect(icons).toContain("Video");
+    expect(icons).toContain("Activity");
+    expect(icons).toContain("MessageCircle");
+
+    writeScratch(
+      "ile-review-work.txt",
+      [
+        "Review work has no TAP Learning chrome button; panel remains as a buried overlay tool",
+        "overlay tool=thought-history",
+        "tabs=tool/screen/video/eeg/thoughts",
+        "chapter widget has no Thoughts tab",
+      ].join("\n"),
+    );
+  });
+});

@@ -38,7 +38,7 @@ import type {
   IleWorkCanvasElement,
   IleWorkCanvasScene as TapWorkCanvasScene,
   IleWorkCanvasSkeleton,
-} from "@/lib/ile-work-canvas";
+} from "@/lib/learn-work-canvas";
 
 /** Live TAP dialog session — data + one apply, not a setter-host bag. */
 export type TapScoreSession = {

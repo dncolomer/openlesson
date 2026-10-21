@@ -7,7 +7,7 @@ import {
   isUuid,
 } from "@/lib/domain/types";
 import { logToolUsage } from "@/lib/storage/media";
-import { isIleSessionUnsavedExit } from "@/lib/ile-session-name";
+import { isIleSessionUnsavedExit } from "@/lib/learn-session-name";
 
 // ---- Helpers: map DB rows → Session ----
 

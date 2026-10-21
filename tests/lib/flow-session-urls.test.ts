@@ -6,9 +6,9 @@ import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { buildGuestLinkUrl, flowSessionPath } from "@/lib/guest-link-access";
-import { buildIleSessionUrl } from "@/lib/ile-link";
+import { buildIleSessionUrl } from "@/lib/learn-link";
 import { buildTapScoreSessionUrl } from "@/lib/tap-score";
-import { ileSessionMapPath, ileSessionSettingsPath } from "@/lib/ile-session-routes";
+import { ileSessionMapPath, ileSessionSettingsPath } from "@/lib/learn-session-routes";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =

@@ -21,20 +21,20 @@ import {
   applyChapterCompleteTimExpansionToPlan,
   rejectTimChapterFromPlan,
   revealTimChapterIconOnPlan,
-} from "@/lib/ile-tim-chapter-complete";
+} from "@/lib/learn-tim-chapter-complete";
 import type { PredictiveInterruption } from "@/lib/pow-api/predictive-interruption";
 import {
   applyIleChapterUndoDone,
   planIleChapterClose,
   resolveIleChapterDoneIndex,
-} from "@/lib/ile-chapter-close-review";
-import type { IlePowCounterArtifact, IlePowTypeCounts } from "@/lib/ile-pow-counters";
-import { buildIleChapterAddPowToolData, buildIleChapterLoadPowToolData } from "@/lib/ile-chapter-depth";
+} from "@/lib/learn-chapter-close-review";
+import type { IlePowCounterArtifact, IlePowTypeCounts } from "@/lib/learn-pow-counters";
+import { buildIleChapterAddPowToolData, buildIleChapterLoadPowToolData } from "@/lib/learn-chapter-depth";
 import {
   buildFollowUpChapterDescription,
   findAdjacentFreeChapterSlot,
   type ChapterFollowUpSuggestion,
-} from "@/lib/ile-chapter-follow-ups";
+} from "@/lib/learn-chapter-follow-ups";
 import {
   buildIleChapterDonePowToolData,
   buildIleProjectChapterExercisePrompt,
@@ -45,7 +45,7 @@ import {
   serializeIleProjectThoughts,
   type ExerciseDualLists,
   type IleSessionMode,
-} from "@/lib/ile-mode";
+} from "@/lib/learn-mode";
 import { postIleSessionChat } from "@/lib/session-chat-client";
 import { playSessionCompleteSound, playStepCompleteSound } from "@/lib/sounds";
 import {

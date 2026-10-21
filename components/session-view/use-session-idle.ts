@@ -11,12 +11,12 @@ import {
   ileHeliosTriggerKindFromPowOrigin,
   type IleHeliosPowOrigin,
   type IleHeliosTriggerKind,
-} from "@/lib/ile-helios-trigger";
+} from "@/lib/learn-helios-trigger";
 import {
   createIleMapInterruptionScheduler,
   isChapterMapExpandInterruption,
   type IleMapSchedulerPending,
-} from "@/lib/ile-tim-chapter-complete";
+} from "@/lib/learn-tim-chapter-complete";
 import type { HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
 import type { ChatMessage } from "@/lib/session-chat-client";
 

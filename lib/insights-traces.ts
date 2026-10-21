@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { queryWorkspaceProofOfWorkRows } from "@/lib/pow-api/workspace-proof-of-work";
-import { ILE_TRACE_TOOL_NAME } from "@/lib/ile-thought-traces";
+import { ILE_TRACE_TOOL_NAME } from "@/lib/learn-thought-traces";
 
 /** Max PoW rows scanned when building Knowledge insight suggestions. */
 export const INSIGHT_TRACE_SCAN_LIMIT = 200;

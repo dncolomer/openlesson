@@ -2,11 +2,11 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
 import { advanceSessionBranchModel, normalizeSessionBranchModel } from "@/lib/session-branch-model";
-import { applyIleSessionNameToMetadata } from "@/lib/ile-session-name";
+import { applyIleSessionNameToMetadata } from "@/lib/learn-session-name";
 import {
   enqueueIleSessionSave,
   resetIleSessionSaveQueueForTests,
-} from "@/lib/ile-session-save-queue";
+} from "@/lib/learn-session-save-queue";
 import { scorePolicySequence } from "@/lib/session-policy-score";
 import {
   applySessionPolicyToMetadata,
@@ -185,7 +185,7 @@ describe("session policy store", () => {
     const phase = read("components/session-view/use-session-phase.ts");
     const canvas = read("components/session-view/session-chapter-canvas.tsx");
     const autosave = read("components/session-view/session-policy-autosave.tsx");
-    const persist = read("lib/ile-session-persist.ts");
+    const persist = read("lib/learn-session-persist.ts");
     const context = read("components/session-view/session-policy-context.tsx");
     const confirmAt = phase.indexOf("const handleConfirmSettings");
     const readyAt = phase.indexOf("const handleWelcomeReadyStart");

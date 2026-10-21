@@ -45,7 +45,7 @@ describe("normalizeShowEndSession / resolveShowEndSessionFromBody", () => {
 describe("create TAP/TAP Learning link wiring", () => {
   it("create modules persist show_end_session from body and select the field", () => {
     const tap = read("lib/pow-api/create-tap-link.ts");
-    const ile = read("lib/pow-api/create-ile-link.ts");
+    const ile = read("lib/pow-api/create-learn-link.ts");
     for (const src of [tap, ile]) {
       expect(src).toContain("resolveShowEndSessionFromBody");
       expect(src).toContain("show_end_session");
@@ -58,7 +58,7 @@ describe("create TAP/TAP Learning link wiring", () => {
 
   it("list routes return show_end_session", () => {
     expect(read("app/api/workspace/tap-links/route.ts")).toContain("show_end_session");
-    expect(read("app/api/workspace/ile-links/route.ts")).toContain("show_end_session");
+    expect(read("app/api/workspace/learn-links/route.ts")).toContain("show_end_session");
     expect(existsSync(join(ROOT, "app/api/v3/pow/workspaces/[id]/tap-links/route.ts"))).toBe(false);
   });
 
@@ -104,12 +104,12 @@ describe("TAP UI gate", () => {
 
 describe("TAP Learning UI gate", () => {
   it("resolveIleLinkAccess exposes showEndSession; session page passes it", () => {
-    const auth = read("lib/ile-link-auth.ts");
+    const auth = read("lib/learn-link-auth.ts");
     expect(auth).toContain("showEndSession");
     expect(auth).toContain("show_end_session");
     const page = read("app/learn/session/[token]/page.tsx");
     expect(page).toContain("showEndSession={access.showEndSession}");
-    const guest = read("components/IleGuestSessionClient.tsx");
+    const guest = read("components/LearnGuestSessionClient.tsx");
     expect(guest).toContain("showEndSession");
     expect(guest).toContain("SessionView");
   });

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { convertIleWorkCanvasSkeletons, type IleWorkCanvasElement } from "@/lib/ile-work-canvas";
+import { convertIleWorkCanvasSkeletons, type IleWorkCanvasElement } from "@/lib/learn-work-canvas";
 import {
   anchorSessionMarkSelection,
   commitSessionAction,

@@ -330,7 +330,7 @@ describe("Knowledge Region knowledge-link deny", () => {
     );
 
     const tap = read("app/api/workspace/tap-links/route.ts");
-    const ile = read("app/api/workspace/ile-links/route.ts");
+    const ile = read("app/api/workspace/learn-links/route.ts");
     expect(tap).toContain("assertWorkspaceAllowsKnowledgeLinkMint");
     expect(ile).toContain("assertWorkspaceAllowsKnowledgeLinkMint");
     expect(existsSync(join(ROOT, "app/api/workspace/tapbench-links/route.ts"))).toBe(
@@ -339,7 +339,7 @@ describe("Knowledge Region knowledge-link deny", () => {
     expect(read("lib/pow-api/create-tap-link.ts")).toContain(
       "workspaceAllowsKnowledgeLinkMint",
     );
-    expect(read("lib/pow-api/create-ile-link.ts")).toContain(
+    expect(read("lib/pow-api/create-learn-link.ts")).toContain(
       "workspaceAllowsKnowledgeLinkMint",
     );
     expect(existsSync(join(ROOT, "lib/pow-api/create-tapbench-link.ts"))).toBe(false);

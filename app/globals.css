@@ -6,7 +6,7 @@
   --console-panel-bg: #000;
 }
 
-@import "./ile-excalidraw-theme.css";
+@import "./learn-excalidraw-theme.css";
 
 body {
   background: var(--background);

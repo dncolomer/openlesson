@@ -1,4 +1,4 @@
-import { ILE_SESSION_UNSAVED_EXIT_META_KEY } from "@/lib/ile-session-name";
+import { ILE_SESSION_UNSAVED_EXIT_META_KEY } from "@/lib/learn-session-name";
 
 export const DASHBOARD_PLAY_KINDS = ["learn", "verify", "calibrate"] as const;
 export type DashboardPlayKind = (typeof DASHBOARD_PLAY_KINDS)[number];

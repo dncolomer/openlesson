@@ -42,7 +42,7 @@ import { UNSYS_STANDARD_SHARE_TITLE } from "@/lib/og/standard";
 import {
   ILE_TURN_INSIGHT_CREATE_PATH,
   ILE_TURN_INSIGHT_EVALUATE_PATH,
-} from "@/lib/ile-turn-insights";
+} from "@/lib/learn-turn-insights";
 import { availableSectionsForMode } from "@/lib/workspace-mode";
 
 const REPO_ROOT = path.resolve(__dirname, "../..");
@@ -231,7 +231,7 @@ describe("shipped insight surface wiring", () => {
       "utf8",
     );
     const craft = fs.readFileSync(
-      path.join(REPO_ROOT, "components/session-view/ile-canvas-craft-insight.tsx"),
+      path.join(REPO_ROOT, "components/session-view/learn-canvas-craft-insight.tsx"),
       "utf8",
     );
     expect(create).toContain("buildInsightCreateInsert");
@@ -250,7 +250,7 @@ describe("shipped insight surface wiring", () => {
     expect(evaluate).toContain("allowIleTypedInsightCreate");
     expect(craft).toContain("buildIleTurnInsightPersistPayload");
     const trophies = fs.readFileSync(
-      path.join(REPO_ROOT, "components/session-view/ile-insight-trophies.tsx"),
+      path.join(REPO_ROOT, "components/session-view/learn-insight-trophies.tsx"),
       "utf8",
     );
     expect(trophies).toContain("insightPublicPath");

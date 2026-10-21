@@ -1,6 +1,6 @@
 import { composePrompt } from "../compose";
 import { TUTOR_CANVAS_VOICE } from "../tutor-voice";
-import { ileWorkCanvasXaiToolsInstruction } from "@/lib/ile-work-canvas-prompts";
+import { ileWorkCanvasXaiToolsInstruction } from "@/lib/learn-work-canvas-prompts";
 
 /**
  * L1 Verify surface — timed demonstration on a frozen generative model.

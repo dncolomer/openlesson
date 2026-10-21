@@ -293,7 +293,7 @@ describe("policy score against the prepared tree", () => {
     expect(calibrate).not.toContain("SoundingFinishedStage");
     expect(calibrate).toContain("soundingResultPresentation");
 
-    expect(read("components/session-view/ile-insight-kept-screen.tsx")).not.toContain(
+    expect(read("components/session-view/learn-insight-kept-screen.tsx")).not.toContain(
       "SessionPolicyScoreResult",
     );
     expect(existsSync(join(ROOT, "components/exercise-tap/exercise-tap-phases.tsx"))).toBe(false);

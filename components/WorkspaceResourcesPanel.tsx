@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useI18n } from "@/lib/i18n";
-import { mergeIleGatherPlannedResources } from "@/lib/ile-gather-resources";
+import { mergeIleGatherPlannedResources } from "@/lib/learn-gather-resources";
 import { filterPlannedResourcesByScope } from "@/lib/block-circular-menu";
 import {
   normalizeExternalResourceList,

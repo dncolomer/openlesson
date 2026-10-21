@@ -1,0 +1,608 @@
+/**
+ * TAP Learning insights: canvas craft (evaluate/persist), per-chapter quota for
+ * End turn, and trophy grouping. Unused-PoW slot math remains for economy
+ * sliders; it no longer gates completing a turn.
+ *
+ * Pure — no React. Insights are crafted on a chapter Work canvas and
+ * linked to that chapter. End turn only completes when each active
+ * chapter already meets the difficulty min-insight quota.
+ */
+import {
+  emptyIlePowTypeCounts,
+  type IlePowCounterArtifact,
+  type IlePowTypeCounts,
+} from "@/lib/learn-pow-counters";
+import { ilePowUnifiedPool } from "@/lib/learn-pow-spend";
+import {
+  buildGenerateInsightsSuggestBody,
+  insightsSessionListUrl,
+  resolveInsightBlockAndChapterIds,
+} from "@/lib/insights";
+
+export { insightsSessionListUrl };
+
+export const ILE_TURN_INSIGHT_SLOT_MIN = 1;
+export const ILE_TURN_INSIGHT_SLOT_CEILING = 5;
+export const ILE_TURN_INSIGHT_SLOT_MAX = 3;
+
+/** Difficulty: accepted insights required per currently active chapter. */
+export const ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT = 1;
+export const ILE_MIN_INSIGHTS_PER_CHAPTER_MIN = 1;
+export const ILE_MIN_INSIGHTS_PER_CHAPTER_CEILING = 5;
+
+export const ILE_CRAFT_INSIGHT_LABEL = "commit (insight)";
+
+export const ILE_END_TURN_BLOCKED_NO_ACTIVE =
+  "Open a chapter and craft insights on its Work canvas before you can End turn.";
+
+export function clampIleMinInsightsPerChapter(value: unknown): number {
+  const n = Math.round(Number(value));
+  if (!Number.isFinite(n)) return ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT;
+  if (n <= ILE_MIN_INSIGHTS_PER_CHAPTER_MIN) return ILE_MIN_INSIGHTS_PER_CHAPTER_MIN;
+  if (n >= ILE_MIN_INSIGHTS_PER_CHAPTER_CEILING) {
+    return ILE_MIN_INSIGHTS_PER_CHAPTER_CEILING;
+  }
+  return n;
+}
+
+export function formatIleEndTurnBlockedMissingInsights(minPerChapter: unknown): string {
+  const n = clampIleMinInsightsPerChapter(minPerChapter);
+  const noun = n === 1 ? "insight" : "insights";
+  return `Craft at least ${n} ${noun} on each active chapter before you can End turn.`;
+}
+
+export function clampIleTurnInsightSlotMax(value: unknown): number {
+  const n = Math.round(Number(value));
+  if (!Number.isFinite(n)) return ILE_TURN_INSIGHT_SLOT_MAX;
+  if (n <= ILE_TURN_INSIGHT_SLOT_MIN) return ILE_TURN_INSIGHT_SLOT_MIN;
+  if (n >= ILE_TURN_INSIGHT_SLOT_CEILING) return ILE_TURN_INSIGHT_SLOT_CEILING;
+  return n;
+}
+export const ILE_TURN_INSIGHT_DOCK_LINK_LABEL = "Linked to a docked chapter";
+export const ILE_TURN_INSIGHT_EVALUATE_PATH = "/api/insights/evaluate";
+export const ILE_TURN_INSIGHT_CREATE_PATH = "/api/insights/create";
+export const ILE_TURN_INSIGHT_SUGGEST_PATH = "/api/insights/suggest";
+
+/** Typed tool PoW for an accepted insight craft — not a thought-trace. */
+export const ILE_INSIGHT_CRAFT_TOOL_NAME = "insight-crafting" as const;
+export const ILE_INSIGHT_CRAFT_TOOL_ACTION = "accepted-craft" as const;
+export const ILE_INSIGHT_CRAFT_POW_FILE = "ile-insight-crafting.json" as const;
+export const ILE_INSIGHT_CRAFT_META_TYPE =
+  "uncertain_systems_ile_insight_craft" as const;
+
+export type IleTypedInsightVerdict = {
+  accepted: boolean;
+  correct: boolean;
+  goodEnough: boolean;
+  title: string;
+  summary: string;
+  reason: string;
+};
+
+export type IleTurnInsightThought = {
+  id: string;
+  text: string;
+};
+
+export type IleTurnInsightPersistPayload = {
+  title: string;
+  summary: string;
+  sessionId: string;
+  workspaceId: string | null;
+  blockId: string | null;
+  chapterId: string | null;
+  thoughts: IleTurnInsightThought[];
+  thoughtIds: string[];
+  evaluated: true;
+};
+
+/** Leftover unified PoW (typed leftover + thoughts − extra spent units). */
+export function unusedIlePowForInsights(input: {
+  available: IlePowTypeCounts;
+  thoughts?: number | null;
+  spentUnits?: number | null;
+  spentTyped?: IlePowTypeCounts | null;
+}): number {
+  return ilePowUnifiedPool({
+    available: input.available ?? emptyIlePowTypeCounts(),
+    thoughts: input.thoughts,
+    spentUnits: input.spentUnits,
+    spentTyped: input.spentTyped,
+  });
+}
+
+/**
+ * Available insight slots this turn: unused PoW, capped by the session
+ * slider (default 3, never below 0).
+ */
+export function ileTurnInsightSlotCount(
+  unusedPow: unknown,
+  slotMax: unknown = ILE_TURN_INSIGHT_SLOT_MAX,
+): number {
+  const n = Math.floor(Number(unusedPow));
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return Math.min(clampIleTurnInsightSlotMax(slotMax), n);
+}
+
+/**
+ * Capture leftover unused PoW at End turn. The open craft must keep using
+ * this number — newly recorded insight-craft PoW must not reopen slots.
+ */
+export function freezeIleTurnInsightUnusedPow(unusedPow: unknown): number {
+  const n = Math.floor(Number(unusedPow));
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return n;
+}
+
+export function ileTurnInsightSlotsFromUnusedPow(input: {
+  available: IlePowTypeCounts;
+  thoughts?: number | null;
+  spentUnits?: number | null;
+  spentTyped?: IlePowTypeCounts | null;
+  slotMax?: unknown;
+}): number {
+  return ileTurnInsightSlotCount(unusedIlePowForInsights(input), input.slotMax);
+}
+
+export function remainingIleTurnInsightSlots(input: {
+  unusedPow?: unknown;
+  slotCount?: unknown;
+  craftedCount: unknown;
+  slotMax?: unknown;
+}): number {
+  const max =
+    input.slotCount !== undefined
+      ? ileTurnInsightSlotCount(input.slotCount, input.slotMax)
+      : ileTurnInsightSlotCount(input.unusedPow, input.slotMax);
+  const crafted = Math.max(0, Math.floor(Number(input.craftedCount) || 0));
+  return Math.max(0, max - crafted);
+}
+
+export function insightLinkedChapterId(insight: {
+  chapterId?: string | null;
+  chapter_id?: string | null;
+} | null | undefined): string {
+  return String(insight?.chapter_id ?? insight?.chapterId ?? "").trim();
+}
+
+export function countIleInsightsForChapter(
+  insights:
+    | readonly { chapterId?: string | null; chapter_id?: string | null }[]
+    | null
+    | undefined,
+  chapterId: unknown,
+): number {
+  const wanted = String(chapterId ?? "").trim();
+  if (!wanted) return 0;
+  let n = 0;
+  for (const insight of insights ?? []) {
+    if (insightLinkedChapterId(insight) === wanted) n += 1;
+  }
+  return n;
+}
+
+export function ileInsightsForChapter<
+  T extends { chapterId?: string | null; chapter_id?: string | null },
+>(insights: readonly T[] | null | undefined, chapterId: unknown): T[] {
+  const wanted = String(chapterId ?? "").trim();
+  if (!wanted) return [];
+  return (insights ?? []).filter((row) => insightLinkedChapterId(row) === wanted);
+}
+
+export function ileChapterInsightCounts(
+  insights:
+    | readonly { chapterId?: string | null; chapter_id?: string | null }[]
+    | null
+    | undefined,
+): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const insight of insights ?? []) {
+    const id = insightLinkedChapterId(insight);
+    if (!id) continue;
+    counts[id] = (counts[id] ?? 0) + 1;
+  }
+  return counts;
+}
+
+export type IleActiveChapterInsightQuotaRow = {
+  chapterId: string;
+  count: number;
+  needed: number;
+  met: boolean;
+};
+
+export function ileActiveChapterInsightQuota(input: {
+  activeChapterIds: readonly string[] | null | undefined;
+  insights?:
+    | readonly { chapterId?: string | null; chapter_id?: string | null }[]
+    | null;
+  minPerChapter?: unknown;
+}): {
+  minPerChapter: number;
+  chapters: IleActiveChapterInsightQuotaRow[];
+  unmetChapterIds: string[];
+  met: boolean;
+} {
+  const minPerChapter = clampIleMinInsightsPerChapter(input.minPerChapter);
+  const seen = new Set<string>();
+  const chapters: IleActiveChapterInsightQuotaRow[] = [];
+  for (const raw of input.activeChapterIds ?? []) {
+    const chapterId = String(raw || "").trim();
+    if (!chapterId || seen.has(chapterId)) continue;
+    seen.add(chapterId);
+    const count = countIleInsightsForChapter(input.insights, chapterId);
+    chapters.push({
+      chapterId,
+      count,
+      needed: minPerChapter,
+      met: count >= minPerChapter,
+    });
+  }
+  const unmetChapterIds = chapters.filter((row) => !row.met).map((row) => row.chapterId);
+  return {
+    minPerChapter,
+    chapters,
+    unmetChapterIds,
+    met: chapters.length > 0 && unmetChapterIds.length === 0,
+  };
+}
+
+export type IleEndTurnInsightGate = {
+  canComplete: boolean;
+  reason: string | null;
+  minPerChapter: number;
+  unmetChapterIds: string[];
+  chaptersToComplete: string[];
+};
+
+/** End turn completes only when every active chapter already meets N insights. */
+export function evaluateIleEndTurnInsightGate(input: {
+  activeChapterIds: readonly string[] | null | undefined;
+  insights?:
+    | readonly { chapterId?: string | null; chapter_id?: string | null }[]
+    | null;
+  minPerChapter?: unknown;
+}): IleEndTurnInsightGate {
+  const quota = ileActiveChapterInsightQuota(input);
+  if (quota.chapters.length === 0) {
+    return {
+      canComplete: false,
+      reason: ILE_END_TURN_BLOCKED_NO_ACTIVE,
+      minPerChapter: quota.minPerChapter,
+      unmetChapterIds: [],
+      chaptersToComplete: [],
+    };
+  }
+  if (!quota.met) {
+    return {
+      canComplete: false,
+      reason: formatIleEndTurnBlockedMissingInsights(quota.minPerChapter),
+      minPerChapter: quota.minPerChapter,
+      unmetChapterIds: quota.unmetChapterIds,
+      chaptersToComplete: [],
+    };
+  }
+  return {
+    canComplete: true,
+    reason: null,
+    minPerChapter: quota.minPerChapter,
+    unmetChapterIds: [],
+    chaptersToComplete: quota.chapters.map((row) => row.chapterId),
+  };
+}
+
+export function ileEndTurnChaptersToMarkDone(
+  gate: IleEndTurnInsightGate | null | undefined,
+): string[] {
+  if (!gate?.canComplete) return [];
+  return [...gate.chaptersToComplete];
+}
+
+/**
+ * @deprecated Unused-PoW slot-cap complete is replaced by
+ * `evaluateIleEndTurnInsightGate`. Kept as a thin wrapper so leftover
+ * callers fail closed unless the per-chapter quota is met.
+ */
+export function canCompleteIleTurnInsightCraft(input: {
+  craftedCount?: unknown;
+  unusedPow?: unknown;
+  slotCount?: unknown;
+  slotMax?: unknown;
+  activeChapterIds?: readonly string[] | null;
+  insights?:
+    | readonly { chapterId?: string | null; chapter_id?: string | null }[]
+    | null;
+  minPerChapter?: unknown;
+}): boolean {
+  if (input.activeChapterIds !== undefined || input.insights !== undefined) {
+    return evaluateIleEndTurnInsightGate({
+      activeChapterIds: input.activeChapterIds,
+      insights: input.insights,
+      minPerChapter: input.minPerChapter,
+    }).canComplete;
+  }
+  return false;
+}
+
+export function ileCanvasCraftInsightSelectionCount(
+  selectedElementIds?: Record<string, unknown> | null,
+): number {
+  return Object.keys(selectedElementIds ?? {}).filter((id) =>
+    Boolean(selectedElementIds?.[id]),
+  ).length;
+}
+
+/** Craft insight is always usable from the Work prompt bar — no selection required. */
+export function ileCanvasCraftInsightUsable(_selectedCount?: unknown): boolean {
+  return true;
+}
+
+/** Learn keeps the craft button. Calibrate and Verification do not. */
+export function ileCanvasShowsCraftInsight(mode: string | null | undefined): boolean {
+  return mode !== "calibrate" && mode !== "verification";
+}
+
+export function buildIleCanvasCraftInsightEvaluateRequest(input: {
+  text: unknown;
+  chapterLabel?: string | null;
+  selectedElements?: readonly { id?: string; text?: string; originalText?: string }[] | null;
+}): { text: string; chapterLabel?: string } {
+  void input.selectedElements;
+  return buildIleTypedInsightEvaluateRequest({
+    text: input.text,
+    chapterLabel: input.chapterLabel,
+  });
+}
+
+function asRecord(raw: unknown): Record<string, unknown> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  return raw as Record<string, unknown>;
+}
+
+function asBool(value: unknown): boolean | null {
+  if (value === true) return true;
+  if (value === false) return false;
+  if (typeof value === "string") {
+    const n = value.trim().toLowerCase();
+    if (n === "true" || n === "yes" || n === "ok") return true;
+    if (n === "false" || n === "no") return false;
+  }
+  return null;
+}
+
+/** Normalize an XAI evaluate payload into a verdict the allow helper can read. */
+export function parseIleTypedInsightVerdict(raw: unknown): IleTypedInsightVerdict {
+  const rec = asRecord(raw);
+  const nested = asRecord(rec.verdict);
+  const src = Object.keys(nested).length > 0 ? { ...rec, ...nested } : rec;
+  const correct = asBool(src.correct) === true;
+  const goodEnough =
+    asBool(src.goodEnough) === true || asBool(src.good_enough) === true;
+  const acceptedFlag =
+    asBool(src.accepted) === true ||
+    asBool(src.ok) === true ||
+    asBool(src.allow) === true;
+  const refused =
+    asBool(src.accepted) === false ||
+    asBool(src.ok) === false ||
+    asBool(src.allow) === false;
+  const hasQuality =
+    src.correct !== undefined ||
+    src.goodEnough !== undefined ||
+    src.good_enough !== undefined;
+  const qualityFromAccepted = !hasQuality && acceptedFlag && !refused;
+  return {
+    accepted: !refused && (acceptedFlag || correct || goodEnough || qualityFromAccepted),
+    correct,
+    goodEnough: goodEnough || qualityFromAccepted,
+    title: String(src.title ?? "").trim(),
+    summary: String(src.summary ?? "").trim(),
+    reason: String(src.reason ?? src.message ?? "").trim(),
+  };
+}
+
+/**
+ * Typed path: refuse unless the verdict is correct or good enough.
+ * Explicit accepted:false always refuses.
+ */
+export function allowIleTypedInsightCreate(
+  verdict: IleTypedInsightVerdict | null | undefined,
+): boolean {
+  if (!verdict) return false;
+  if (verdict.accepted === false) return false;
+  return Boolean(verdict.correct) || Boolean(verdict.goodEnough);
+}
+
+export function buildIleTypedInsightEvaluateRequest(input: {
+  text: unknown;
+  chapterLabel?: string | null;
+}): { text: string; chapterLabel?: string } {
+  const text = String(input.text ?? "").trim();
+  const chapterLabel = String(input.chapterLabel ?? "").trim();
+  return chapterLabel ? { text, chapterLabel } : { text };
+}
+
+export function typedInsightRecordFromVerdict(input: {
+  draft: string;
+  verdict: IleTypedInsightVerdict;
+}): { title: string; summary: string } | null {
+  if (!allowIleTypedInsightCreate(input.verdict)) return null;
+  const draft = String(input.draft || "").trim();
+  const title =
+    input.verdict.title ||
+    draft.split(/\n/)[0]?.split(/\s+/).slice(0, 12).join(" ") ||
+    "Insight";
+  const summary = input.verdict.summary || draft;
+  if (!title.trim() || !summary.trim()) return null;
+  return { title: title.trim(), summary: summary.trim() };
+}
+
+/** Thoughts-pool path: selected traces → existing /api/insights/suggest body. */
+export function buildIleThoughtsPoolCandidateRequest(input: {
+  thoughts: readonly IleTurnInsightThought[] | null | undefined;
+  selectedIds: readonly string[] | null | undefined;
+  modifyingPrompt?: string | null;
+}): { thoughts: Array<{ id: string; text: string }>; modifyingPrompt?: string } {
+  const wanted = new Set(
+    (input.selectedIds ?? []).map((id) => String(id || "").trim()).filter(Boolean),
+  );
+  const thoughts = (input.thoughts ?? []).filter((thought) => {
+    if (!thought?.id || !String(thought.text || "").trim()) return false;
+    return wanted.size === 0 ? false : wanted.has(thought.id);
+  });
+  return buildGenerateInsightsSuggestBody({
+    thoughts: thoughts.map((thought) => ({
+      id: thought.id,
+      text: thought.text,
+    })),
+    modifyingPrompt: input.modifyingPrompt,
+  });
+}
+
+/**
+ * Tool rows uploaded since the previous insight, plus the sentence being crafted.
+ * The public page counts these ids as Proof of Work.
+ */
+export function ileInsightWorkThoughtsSinceMark(input: {
+  artifacts?: readonly {
+    n?: number;
+    type?: string | null;
+    proof_of_work_type?: string | null;
+    kind?: string | null;
+    tool_action?: string | null;
+    tool_name?: string | null;
+  }[] | null;
+  sinceIndex?: number | null;
+  draft: { id: string; text: string };
+}): { id: string; text: string }[] {
+  const start = Math.max(0, Math.floor(Number(input.sinceIndex) || 0));
+  const artifacts = input.artifacts ?? [];
+  const hasN = artifacts.some((item) => typeof item.n === "number");
+  const slice = hasN
+    ? artifacts.filter((item) => (item.n ?? 0) >= start)
+    : artifacts.slice(start);
+  const rows: { id: string; text: string }[] = [];
+  slice.forEach((item, index) => {
+    const type = String(item?.type || item?.proof_of_work_type || item?.kind || "")
+      .trim()
+      .toLowerCase();
+    if (type && type !== "tool") return;
+    const action = String(item?.tool_action || item?.tool_name || "work").trim() || "work";
+    const ordinal = typeof item.n === "number" ? item.n : start + index;
+    rows.push({
+      id: `work-${ordinal}-${action}`.slice(0, 80),
+      text: action,
+    });
+  });
+  const draftId = String(input.draft.id || "").trim();
+  const draftText = String(input.draft.text || "").trim();
+  if (draftId && draftText && !rows.some((row) => row.id === draftId)) {
+    rows.push({ id: draftId, text: draftText });
+  }
+  return rows;
+}
+
+/** Persist an accepted craft as the existing insight row (session + optional chapter). */
+export function buildIleTurnInsightPersistPayload(input: {
+  title: unknown;
+  summary: unknown;
+  sessionId: unknown;
+  workspaceId?: string | null;
+  blockId?: string | null;
+  chapterId?: string | null;
+  thoughts?: readonly IleTurnInsightThought[] | null;
+  thoughtIds?: readonly string[] | null;
+}): IleTurnInsightPersistPayload {
+  const thoughts = (input.thoughts ?? [])
+    .filter((thought) => thought?.id && String(thought.text || "").trim())
+    .map((thought) => ({
+      id: String(thought.id),
+      text: String(thought.text).trim(),
+    }));
+  const thoughtIds = (input.thoughtIds ?? thoughts.map((thought) => thought.id))
+    .map((id) => String(id || "").trim())
+    .filter(Boolean);
+  const workspaceId = String(input.workspaceId ?? "").trim() || null;
+  const link = resolveInsightBlockAndChapterIds({
+    blockId: input.blockId,
+    chapterId: input.chapterId,
+  });
+  return {
+    title: String(input.title ?? "").trim(),
+    summary: String(input.summary ?? "").trim(),
+    sessionId: String(input.sessionId ?? "").trim(),
+    workspaceId,
+    blockId: link.blockId,
+    chapterId: link.chapterId,
+    thoughts,
+    thoughtIds,
+    evaluated: true,
+  };
+}
+
+/**
+ * Snapshot-eligible tool PoW for one accepted persist. Missing insight or
+ * session id → no event (refused / failed / zero crafts never call this
+ * with a saved row).
+ */
+export function buildIleInsightCraftPowArtifact(input: {
+  insightId: unknown;
+  sessionId: unknown;
+  workspaceId?: string | null;
+  blockId?: string | null;
+  chapterId?: string | null;
+  title?: string | null;
+}): IlePowCounterArtifact | null {
+  const insightId = String(input.insightId ?? "").trim();
+  const sessionId = String(input.sessionId ?? "").trim();
+  if (!insightId || !sessionId) return null;
+  const workspaceId = String(input.workspaceId ?? "").trim() || null;
+  const blockId = String(input.blockId ?? "").trim() || null;
+  const chapterId = String(input.chapterId ?? "").trim() || null;
+  const title = String(input.title ?? "").trim() || null;
+  return {
+    type: "tool",
+    tool_name: ILE_INSIGHT_CRAFT_TOOL_NAME,
+    tool_action: ILE_INSIGHT_CRAFT_TOOL_ACTION,
+    block_id: blockId,
+    chapter_id: chapterId,
+    metadata: {
+      type: ILE_INSIGHT_CRAFT_META_TYPE,
+      insight_id: insightId,
+      session_id: sessionId,
+      ...(workspaceId ? { workspace_id: workspaceId } : {}),
+      ...(title ? { title } : {}),
+    },
+  };
+}
+
+/** Only a successful insight create emits craft PoW. */
+export function ileInsightCraftPowFromAcceptedPersist(input: {
+  persistOk: boolean;
+  insight?: {
+    id?: string | null;
+    title?: string | null;
+    block_id?: string | null;
+    chapter_id?: string | null;
+    session_id?: string | null;
+    workspace_id?: string | null;
+  } | null;
+  sessionId: unknown;
+  workspaceId?: string | null;
+  blockId?: string | null;
+  chapterId?: string | null;
+}): IlePowCounterArtifact | null {
+  if (!input.persistOk) return null;
+  const insight = input.insight;
+  if (!insight?.id) return null;
+  return buildIleInsightCraftPowArtifact({
+    insightId: insight.id,
+    sessionId: insight.session_id || input.sessionId,
+    workspaceId: insight.workspace_id ?? input.workspaceId,
+    blockId: insight.block_id ?? input.blockId,
+    chapterId: insight.chapter_id ?? input.chapterId,
+    title: insight.title,
+  });
+}
+
+

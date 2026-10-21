@@ -15,8 +15,8 @@ import {
   ILE_CHAPTER_SOURCE_TIM,
   displayChapterMapIcon,
   isTimUnopenedChapter,
-} from "@/lib/ile-tim-chapter-complete";
-import { isChapterSlotBlocked, relocateChapterStepsOffBlocked } from "@/lib/ile-chapter-blocked";
+} from "@/lib/learn-tim-chapter-complete";
+import { isChapterSlotBlocked, relocateChapterStepsOffBlocked } from "@/lib/learn-chapter-blocked";
 
 export function isChapterSlotAvailable(plan: SessionPlan, row: number, col: number) {
   if (isChapterSlotBlocked(plan, row, col)) return false;

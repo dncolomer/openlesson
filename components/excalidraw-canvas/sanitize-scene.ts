@@ -1,4 +1,4 @@
-import { withIleWorkCanvasGridAppState } from "@/lib/ile-work-canvas";
+import { withIleWorkCanvasGridAppState } from "@/lib/learn-work-canvas";
 
 // Excalidraw's appState contains runtime-only fields like collaborators
 // (a Map) that do not survive JSON storage. Persist only restorable state.

@@ -14,7 +14,7 @@ import { SessionFinishedScreen } from "@/components/session-view/session-finishe
 import { SessionWelcomeModal } from "@/components/session-view/session-welcome-modal";
 import { WorkspaceLoading } from "@/components/workspace-view/workspace-chrome";
 import { ConsolePage } from "@/components/ui/console-frame";
-import { ILE_WORK_CANVAS_STROKE_COLOR } from "@/lib/ile-work-canvas";
+import { ILE_WORK_CANVAS_STROKE_COLOR } from "@/lib/learn-work-canvas";
 
 const ROOT = join(__dirname, "../..");
 
@@ -281,7 +281,7 @@ describe("console theme shells", () => {
   });
 
   it("leaves insight flags, the listening dot, and stored canvas ink alone", () => {
-    expect(read("components/session-view/ile-insight-trophies.tsx")).toContain("bg-amber-300");
+    expect(read("components/session-view/learn-insight-trophies.tsx")).toContain("bg-amber-300");
     expect(read("components/tap-score/tap-live-clock.tsx")).toContain("bg-red-500");
     expect(ILE_WORK_CANVAS_STROKE_COLOR).toBe("#1e1e1e");
     expect(read("components/session-view/session-sidebar.tsx")).toContain("overflow-hidden");

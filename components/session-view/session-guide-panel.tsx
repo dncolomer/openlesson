@@ -7,12 +7,12 @@ import {
   ILE_CANVAS_COMMAND_SIDEBAR_CLASS,
   ileWorkCanvasCommandIndex,
 } from "@/components/excalidraw-canvas/command-plate";
-import { IleCraftInsightButton } from "@/components/session-view/ile-canvas-craft-insight";
-import { IleCanvasDictateButton } from "@/components/session-view/ile-canvas-dictate-button";
+import { IleCraftInsightButton } from "@/components/session-view/learn-canvas-craft-insight";
+import { IleCanvasDictateButton } from "@/components/session-view/learn-canvas-dictate-button";
 import { SessionHarnessPanel } from "@/components/session-view/session-harness-panel";
 import { useSessionCanvasCommands } from "@/components/session-view/session-command-bridge";
-import { ILE_WORK_CANVAS_COMMANDS } from "@/lib/ile-work-canvas-commands";
-import { ileCanvasCraftInsightUsable } from "@/lib/ile-turn-insights";
+import { ILE_WORK_CANVAS_COMMANDS } from "@/lib/learn-work-canvas-commands";
+import { ileCanvasCraftInsightUsable } from "@/lib/learn-turn-insights";
 import { SESSION_INSTRUCTIONS, type SessionGuideId } from "@/lib/session-instructions";
 
 const TAB_CLASS =

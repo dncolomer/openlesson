@@ -4,9 +4,9 @@ export const TAP_POW_API_PATHS = {
 } as const;
 
 export const ILE_POW_API_PATHS = {
-  idle: "/api/workspace-ile/idle",
-  speech: "/api/workspace-ile/speech",
-  performance: "/api/workspace-ile/performance",
+  idle: "/api/workspace-learn/idle",
+  speech: "/api/workspace-learn/speech",
+  performance: "/api/workspace-learn/performance",
 } as const;
 
 export interface SessionPowContext {

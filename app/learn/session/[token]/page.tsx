@@ -3,8 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import {
   ensureIleLinkSession,
   resolveIleLinkAccess,
-} from "@/lib/ile-link-auth";
-import { IleGuestSessionClient } from "@/components/IleGuestSessionClient";
+} from "@/lib/learn-link-auth";
+import { LearnGuestSessionClient } from "@/components/LearnGuestSessionClient";
 import {
   collectEntryQueryParams,
   recordGuestLinkEntryQueryParams,
@@ -60,7 +60,7 @@ export default async function PrivateLearnSessionPage({ params, searchParams }: 
   });
 
   return (
-    <IleGuestSessionClient
+    <LearnGuestSessionClient
       sessionId={ensured.sessionId}
       ileToken={token}
       blockTitle={ensured.blockTitle}

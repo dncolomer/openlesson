@@ -17,7 +17,7 @@ import {
   buildExercisePromptText,
   resolveExercisePromptContext,
 } from "@/lib/exercise-tap";
-import { buildIleProjectChapterExercisePrompt } from "@/lib/ile-mode";
+import { buildIleProjectChapterExercisePrompt } from "@/lib/learn-mode";
 import { buildTapbenchExercise } from "@/lib/pow-api/tapbench";
 import { buildDomainExerciseAuthorUserPrompt } from "@/lib/pow-api/tapbench-exercise-generate";
 import { buildTapScoreInstructions, type TapScoreBrief } from "@/lib/tap-score";
@@ -280,7 +280,7 @@ describe("TAP / TAP Learning / TAPBench consume the shared assembler", () => {
       blockDescription: richFixture.blockDescription,
     });
     expect(emptyChapter).toBe("");
-    const ileSrc = read("lib/ile-mode.ts");
+    const ileSrc = read("lib/learn-mode.ts");
     expect(ileSrc).toContain("buildExercisePromptText");
     expect(ileSrc).toContain("blocks:");
     expect(ileSrc).toContain("blockLocalContext");

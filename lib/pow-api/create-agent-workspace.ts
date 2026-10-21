@@ -23,7 +23,7 @@ import {
   resolveInitialChaptersFromBody,
   type InitialChaptersLevel,
 } from "@/lib/initial-chapters";
-import { relocatePositionsOffBlockedSlots } from "@/lib/ile-chapter-blocked";
+import { relocatePositionsOffBlockedSlots } from "@/lib/learn-chapter-blocked";
 import {
   normalizeGeneratedWorkspaceBlocks,
   type WorkspaceBlockRef,

@@ -2,9 +2,9 @@
 
 import { AestheticPicker } from "@/components/AestheticPicker";
 import { TapBriefingConfig } from "@/components/TapBriefingConfig";
-import { IleStartLoading } from "@/components/session-view/ile-start-loading";
+import { IleStartLoading } from "@/components/session-view/learn-start-loading";
 import { SessionPageLoading } from "@/components/session-view/session-page-loading";
-import { isIleConfirmSettingsBlocked } from "@/components/session-view/ile-confirm-settings";
+import { isIleConfirmSettingsBlocked } from "@/components/session-view/learn-confirm-settings";
 import { SessionStartBackButton } from "@/components/session-view/session-start-back-button";
 import { SessionStartShell } from "@/components/session-view/session-start-shell";
 import type { SessionWelcomeModalProps } from "@/components/session-view/types";
@@ -13,10 +13,10 @@ import { FLOW_END_KICKERS } from "@/lib/session-stage-progress";
 import {
   ILE_SESSION_CHAPTER_COUNT_DEFAULT,
   capIleSessionChapters,
-} from "@/lib/ile-canvas-session";
-import { ileWelcomeShowsContinuePreview } from "@/lib/ile-welcome-chapters";
-import { ILE_POW_EXPENSE_DEFAULT } from "@/lib/ile-pow-spend";
-import { ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT } from "@/lib/ile-turn-insights";
+} from "@/lib/learn-canvas-session";
+import { ileWelcomeShowsContinuePreview } from "@/lib/learn-welcome-chapters";
+import { ILE_POW_EXPENSE_DEFAULT } from "@/lib/learn-pow-spend";
+import { ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT } from "@/lib/learn-turn-insights";
 import { DEFAULT_DURATION_MINUTES } from "@/lib/tap-score-client-helpers";
 import { coerceSpokenLocale } from "@/lib/tutoring-languages";
 

@@ -3,11 +3,11 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { IleVoiceBar, IleVoiceBarActions } from "@/components/session-view/ile-voice-bar";
+import { IleVoiceBar, IleVoiceBarActions } from "@/components/session-view/learn-voice-bar";
 import {
   IleMapInsightsWidget,
   IleWorkCanvasTimer,
-} from "@/components/session-view/ile-insight-trophies";
+} from "@/components/session-view/learn-insight-trophies";
 import type { InsightSummary } from "@/lib/insights";
 import { SessionSidebar } from "@/components/session-view/session-sidebar";
 import { applySessionPress, emptySessionMarkState, freezeMistakeList } from "@/lib/session-marks";
@@ -15,7 +15,7 @@ import { SessionDataCard } from "@/components/session-view/session-data-card";
 import {
   SessionTopicCard,
   sessionSidebarTopic,
-} from "@/components/session-view/ile-work-dock-bar";
+} from "@/components/session-view/learn-work-dock-bar";
 import {
   SESSION_DATA_CARD_REM,
   SESSION_SIDEBAR_COLLAPSED_REM,

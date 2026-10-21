@@ -229,7 +229,7 @@ describe("self-progress persist helper", () => {
 describe("workspace Mark as Done + tile glyphs", () => {
   it("workspace pane marks Done; both maps render tick/gear from the chrome mapper", () => {
     const pane = read("components/WorkspaceLearnerBlockPane.tsx");
-    const chapter = read("components/session-view/ile-chapter-helios-actions.tsx");
+    const chapter = read("components/session-view/learn-chapter-helios-actions.tsx");
     const grid = readMapGridSurface();
     const view = readWorkspaceViewSurface();
 

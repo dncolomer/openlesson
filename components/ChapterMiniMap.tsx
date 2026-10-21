@@ -6,7 +6,7 @@ import {
   miniMapHasCell,
   miniMapInteractive,
   type MiniMapCell,
-} from "@/lib/ile-chapter-mini-map";
+} from "@/lib/learn-chapter-mini-map";
 import type { InitialChaptersLevel } from "@/lib/initial-chapters";
 
 export function ChapterMiniMap({

@@ -9,8 +9,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { readSessionStageSurface } from "../helpers/surface-source";
 import { PracticeVoiceChallenge } from "@/components/PracticeVoiceChallenge";
-import { IleInsightEmptySlots } from "@/components/session-view/ile-insight-trophies";
-import { IleSessionImpureScreen } from "@/components/session-view/ile-silence-lock-screen";
+import { IleInsightEmptySlots } from "@/components/session-view/learn-insight-trophies";
+import { IleSessionImpureScreen } from "@/components/session-view/learn-silence-lock-screen";
 import {
   ILE_SILENCE_LOCK_MINUTES_DEFAULT,
   ILE_SILENCE_LOCK_MINUTES_MIN,
@@ -44,7 +44,7 @@ import {
   scoredTapBriefingStep,
   voiceChallengeStartSucceeded,
 } from "@/lib/practice-voice-challenge";
-import { applyIlePregameDifficultyPreset } from "@/lib/ile-pregame-settings";
+import { applyIlePregameDifficultyPreset } from "@/lib/learn-pregame-settings";
 import { scoutThinkAloudEnabled } from "@/lib/scout-session";
 
 const ROOT = join(__dirname, "../..");
@@ -373,7 +373,7 @@ describe("TAP Learning silence lock", () => {
     expect(muted.outcome).toBe("rest");
     expect(muted.speech).toBe("");
 
-    const hook = read("components/session-view/use-ile-session-purity.ts");
+    const hook = read("components/session-view/use-learn-session-purity.ts");
     const view = read("components/SessionView.tsx");
     expect(hook).toContain("TAP_SILENCE_AUTO_STASH_MS");
     expect(hook).toContain("shouldAutoStashOnSilence");
@@ -451,10 +451,10 @@ describe("shipped voice-challenge UI wiring", () => {
       createElement(PracticeVoiceChallenge, { onPass: () => {}, framing: "rest", variant: "ile" }),
     );
     expect(spoken).not.toContain("data-practice-voice-local-skip");
-    expect(read("components/session-view/ile-silence-lock-screen.tsx")).not.toContain(
+    expect(read("components/session-view/learn-silence-lock-screen.tsx")).not.toContain(
       "PracticeVoiceChallenge",
     );
-    expect(read("components/session-view/ile-silence-lock-screen.tsx")).toContain(
+    expect(read("components/session-view/learn-silence-lock-screen.tsx")).toContain(
       "function IleSessionImpureScreen",
     );
   });
@@ -516,12 +516,12 @@ describe("shipped voice-challenge UI wiring", () => {
     const challenge = read("components/PracticeVoiceChallenge.tsx");
     expect(challenge).toContain("data-practice-voice-loading");
     expect(challenge).toContain("<IleStartLoading");
-    expect(read("components/session-view/ile-start-loading.tsx")).toContain("data-ile-start-tips");
+    expect(read("components/session-view/learn-start-loading.tsx")).toContain("data-ile-start-tips");
     expect(challenge).toContain("Starting the session");
     expect(challenge).toContain('framing === "rest" ? "Continuing"');
     expect(challenge).not.toContain("animate-spin");
     expect(challenge).not.toContain("min-h-52");
-    expect(read("components/session-view/ile-silence-lock-screen.tsx")).not.toContain(
+    expect(read("components/session-view/learn-silence-lock-screen.tsx")).not.toContain(
       'framing="rest"',
     );
     expect(read("components/PracticeVoiceChallenge.tsx")).not.toContain("speechSynthesis");
@@ -574,13 +574,13 @@ describe("shipped voice-challenge UI wiring", () => {
     expect(welcome).not.toContain("ILE_SILENCE_LOCK_MINUTES_DESC");
     expect(read("components/SessionView.tsx")).not.toContain("silenceLockMinutes={silenceLockMinutes}");
     expect(read("components/SessionView.tsx")).toContain("useIleSessionPurity");
-    expect(read("components/session-view/use-ile-session-purity.ts")).toContain(
+    expect(read("components/session-view/use-learn-session-purity.ts")).toContain(
       "TAP_SILENCE_AUTO_STASH_MS",
     );
   });
 
   it("the impurity screen is TAP Session Invalidated with Try again", () => {
-    const screen = read("components/session-view/ile-silence-lock-screen.tsx");
+    const screen = read("components/session-view/learn-silence-lock-screen.tsx");
     const view = read("components/SessionView.tsx");
     expect(screen).toContain("data-ile-session-impure");
     expect(screen).toContain("data-ile-impure-retry");

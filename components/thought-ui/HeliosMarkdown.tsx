@@ -8,8 +8,8 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 import { processHeliosMarkdown } from "@/lib/helios-markdown";
-import { IleWordBoxText } from "@/components/thought-ui/IleWordBoxText";
-import type { IleWordBoxMenuAction } from "@/lib/ile-word-boxes";
+import { LearnWordBoxText } from "@/components/thought-ui/LearnWordBoxText";
+import type { IleWordBoxMenuAction } from "@/lib/learn-word-boxes";
 import { cn } from "@/lib/utils";
 
 function wrapMarkdownTextNodes(
@@ -22,7 +22,7 @@ function wrapMarkdownTextNodes(
       const text = String(child);
       if (!text) return child;
       return (
-        <IleWordBoxText
+        <LearnWordBoxText
           key={`wb-${index}`}
           text={text}
           onOpenTool={onOpenTool}

@@ -4,7 +4,7 @@
  * The embedding is the knowledgecfg vector of that distance plus the proof already captured.
  */
 
-import type { IleProofOfWorkUploadItem } from "@/lib/ile-evidence-buffer";
+import type { IleProofOfWorkUploadItem } from "@/lib/learn-evidence-buffer";
 import { encodeKnowledgeConfig, type PowFeatureRow } from "@/lib/knowledge-config/encoder";
 import { KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID } from "@/lib/knowledge-config/types";
 import {

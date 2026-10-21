@@ -74,7 +74,7 @@ describe("session stage progress", () => {
       learn: "Learn",
       verify: "Verify",
     });
-    expect(read("components/session-view/ile-insight-kept-screen.tsx")).toContain(
+    expect(read("components/session-view/learn-insight-kept-screen.tsx")).toContain(
       "FLOW_END_KICKERS.learn",
     );
     expect(read("components/scout-tap/scout-tap-phases.tsx")).toContain("FLOW_END_KICKERS.calibrate");

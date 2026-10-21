@@ -7,7 +7,7 @@ export async function requestSessionPolicyReply(
   body: Record<string, unknown>,
 ): Promise<string | null> {
   try {
-    const response = await fetch("/api/ile/session-policy-infer", {
+    const response = await fetch("/api/learn/session-policy-infer", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),

@@ -4,9 +4,9 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { SessionGuidePanel } from "@/components/session-view/session-guide-panel";
-import { ILE_WORK_CANVAS_COMMANDS } from "@/lib/ile-work-canvas-commands";
+import { ILE_WORK_CANVAS_COMMANDS } from "@/lib/learn-work-canvas-commands";
 import { SESSION_BRIEFING_INTRO, SESSION_INSTRUCTIONS } from "@/lib/session-instructions";
-import { ileCanvasCommandDraft } from "@/lib/ile-work-canvas-commands";
+import { ileCanvasCommandDraft } from "@/lib/learn-work-canvas-commands";
 import {
   sessionHarnessFocusLine,
   sessionHarnessNextLine,

@@ -26,7 +26,7 @@ import { TapStartingTopicCards } from "@/components/TapStartingTopicCards";
 import { TapBriefingConfig } from "@/components/TapBriefingConfig";
 import { SessionFinishedScreen } from "@/components/session-view/session-finished-screen";
 import { SessionPolicyScoreResult } from "@/components/session-view/session-policy-score-result";
-import { IleStartLoading } from "@/components/session-view/ile-start-loading";
+import { IleStartLoading } from "@/components/session-view/learn-start-loading";
 import { SessionPageLoading } from "@/components/session-view/session-page-loading";
 import { verificationFieldPrepareInput } from "@/lib/session-branch-prepare";
 import { policyScoreFromSnapshot } from "@/lib/session-policy-score";
@@ -36,7 +36,7 @@ import { PerformanceReportCard } from "@/components/PerformanceReportCard";
 import { TapLiveClock } from "@/components/tap-score/tap-live-clock";
 import { TapThoughtButton } from "@/components/tap-score/tap-thought-button";
 import { TapAestheticSection } from "@/components/tap-score/tap-aesthetic-section";
-import { SessionTopicChapter } from "@/components/session-view/ile-work-dock-bar";
+import { SessionTopicChapter } from "@/components/session-view/learn-work-dock-bar";
 import { TapSessionSignals } from "@/components/session-view/session-signals";
 import { SessionWorkSurface } from "@/components/session-view/session-work-surface";
 import { SESSION_BRIEFING_INTRO } from "@/lib/session-instructions";
@@ -67,15 +67,15 @@ import {
   tapWorkCanvasShouldAcceptSceneUpdate,
   uploadTapWorkCanvasPow,
 } from "@/lib/tap-work-canvas";
-import type { IleWorkCanvasPowEvent } from "@/lib/ile-work-canvas-pow";
-import { ILE_POW_DEBOUNCE_MS } from "@/lib/ile-realtime-pow";
-import { buildIleWorkCanvasCommandUserMessage } from "@/lib/ile-work-canvas-prompts";
+import type { IleWorkCanvasPowEvent } from "@/lib/learn-work-canvas-pow";
+import { ILE_POW_DEBOUNCE_MS } from "@/lib/learn-realtime-pow";
+import { buildIleWorkCanvasCommandUserMessage } from "@/lib/learn-work-canvas-prompts";
 import {
   type IleWorkCanvasAskKind,
   type IleWorkCanvasElement,
   type IleWorkCanvasScene,
   type IleWorkCanvasSkeleton,
-} from "@/lib/ile-work-canvas";
+} from "@/lib/learn-work-canvas";
 import type { MutableRefObject } from "react";
 
 type Translate = (key: string, vars?: Record<string, string | number>) => string;

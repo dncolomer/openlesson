@@ -49,10 +49,10 @@ import {
 } from "@/lib/pow-api/tapbench-exercise-generate";
 import { isLowQualityTapbenchExercise } from "@/lib/pow-api/tapbench-exercise-quality";
 import { TUTOR_CANVAS_VOICE } from "@/lib/prompt-kernel/tutor-voice";
-import { ileWorkCanvasXaiToolsInstruction } from "@/lib/ile-work-canvas-prompts";
+import { ileWorkCanvasXaiToolsInstruction } from "@/lib/learn-work-canvas-prompts";
 import { buildCalibratePoolSystemMessage } from "@/lib/calibrate-session";
 import { buildScoutQuestionsSystemMessage } from "@/lib/scout-session";
-import { composeIleChapterGenerateSystemMessage } from "@/lib/ile-chapter-generate";
+import { composeIleChapterGenerateSystemMessage } from "@/lib/learn-chapter-generate";
 import {
   stripLearnerFacingWrappers,
   stripSessionFormatWrapper,

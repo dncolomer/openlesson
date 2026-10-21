@@ -1,5 +1,5 @@
 import type { AestheticPackage } from "@/lib/aesthetics";
-import type { IleSessionMode } from "@/lib/ile-mode";
+import type { IleSessionMode } from "@/lib/learn-mode";
 import type { InitialChaptersLevel } from "@/lib/initial-chapters";
 import type { MapTypePickerItem } from "@/lib/workspace-map-types";
 import type { SessionPlan } from "@/lib/domain/types";

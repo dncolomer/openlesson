@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type RefObject } from "react";
-import { ILE_CANVAS_PROMPT_BAR_FALLBACK_WIDTH, ileCanvasSlashBarOpen } from "@/lib/ile-work-canvas";
+import { ILE_CANVAS_PROMPT_BAR_FALLBACK_WIDTH, ileCanvasSlashBarOpen } from "@/lib/learn-work-canvas";
 import {
   ILE_COMMAND_DOCK_STORAGE_KEY,
   clampIleCommandDockPoint,
@@ -13,25 +13,25 @@ import {
   serializeIleCommandDock,
   type IleCommandDockMode,
   type IleCommandDockState,
-} from "@/lib/ile-command-dock";
+} from "@/lib/learn-command-dock";
 import {
   filterIleWorkCanvasCommands,
   ILE_WORK_CANVAS_COMMANDS,
   ileCanvasCommandDraft,
   ileWorkCanvasCommandNeedsSelection,
   type IleWorkCanvasCommandId,
-} from "@/lib/ile-work-canvas-commands";
-import type { IleWorkCanvasElement } from "@/lib/ile-work-canvas";
-import { ileCanvasCraftInsightUsable, ileCanvasShowsCraftInsight } from "@/lib/ile-turn-insights";
-import { IleCanvasDictateButton } from "@/components/session-view/ile-canvas-dictate-button";
+} from "@/lib/learn-work-canvas-commands";
+import type { IleWorkCanvasElement } from "@/lib/learn-work-canvas";
+import { ileCanvasCraftInsightUsable, ileCanvasShowsCraftInsight } from "@/lib/learn-turn-insights";
+import { IleCanvasDictateButton } from "@/components/session-view/learn-canvas-dictate-button";
 import {
   IleCanvasCraftInsightForm,
   IleCraftInsightButton,
   type IleCanvasCraftInsightConfig,
-} from "@/components/session-view/ile-canvas-craft-insight";
+} from "@/components/session-view/learn-canvas-craft-insight";
 import { usePublishSessionCanvasCommands } from "@/components/session-view/session-command-bridge";
 import { LearnSuggestionToast } from "@/components/session-view/learn-suggestion-toast";
-import { learnSuggestionToastText } from "@/lib/ile-learn-suggestion";
+import { learnSuggestionToastText } from "@/lib/learn-suggestion";
 import {
   usePublishSessionMarkDraft,
   useSessionPolicySuggestion,
@@ -226,7 +226,7 @@ export function CanvasPromptBar({
   const beginDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) return;
     const target = event.target;
-    if (target instanceof Element && target.closest("input, textarea, [data-ile-learn-suggestion]")) return;
+    if (target instanceof Element && target.closest("input, textarea, [data-learn-suggestion]")) return;
     const form = formRef.current;
     const host = form?.offsetParent instanceof HTMLElement ? form.offsetParent : null;
     if (!form || !host) return;

@@ -5,7 +5,7 @@ import {
   buildIleThoughtMemoryRecord,
   normalizeIleFormingText,
   type IleThoughtMemoryRecord,
-} from "@/lib/ile-context-auto-stash";
+} from "@/lib/learn-context-auto-stash";
 import { decideSpokenCaptureKeyAction } from "@/lib/spoken-thought-shortcut";
 
 

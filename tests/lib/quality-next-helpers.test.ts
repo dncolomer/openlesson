@@ -203,11 +203,11 @@ describe("quality-next shipped helpers", () => {
       }),
     ).toBe("hook first");
     expect(isTapLiveThoughtSpeechEnabled("live")).toBe(true);
-    expect(existsSync(join(ROOT, "lib/ile-blur-screenshare.ts"))).toBe(false);
+    expect(existsSync(join(ROOT, "lib/learn-blur-screenshare.ts"))).toBe(false);
     expect(simulationCollectionToSuggestSnapshots(emptySimulationCollection())).toEqual([]);
     const sessionChat = read("app/api/session-chat/route.ts");
     const tapChat = read("app/api/workspace-tap-score/chat/route.ts");
-    const ileSpeech = read("app/api/workspace-ile/speech/route.ts");
+    const ileSpeech = read("app/api/workspace-learn/speech/route.ts");
     const gridOps = readGridOpsSurface();
     const view = readWorkspaceViewSurface();
     const tap = read("components/TapScoreClient.tsx");

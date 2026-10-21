@@ -19,7 +19,7 @@ import {
   sessionTopicCardStill,
   ORG_CUSTOM_AESTHETIC_PACKAGE_ID,
 } from "@/lib/aesthetics";
-import { SessionTopicCard } from "@/components/session-view/ile-work-dock-bar";
+import { SessionTopicCard } from "@/components/session-view/learn-work-dock-bar";
 import {
   addCustomAestheticUrls,
   authorizeCustomAestheticEdit,
@@ -451,9 +451,9 @@ describe("custom aesthetic surfaces", () => {
       expect(source).not.toContain("public/aesthetics");
     }
 
-    const dock = read("components/session-view/ile-work-dock-bar.tsx");
+    const dock = read("components/session-view/learn-work-dock-bar.tsx");
     const map = read("components/block-skill-grid/map-world-layer.tsx");
-    const craft = read("components/session-view/ile-turn-insight-craft.tsx");
+    const craft = read("components/session-view/learn-turn-insight-craft.tsx");
     expect(workspace).toContain("selectSurfaceAestheticImages");
     expect(workspace).toContain("aestheticImageForId(workspaceId, selection.images)");
     expect(workspace).not.toMatch(/aestheticImageForId\(workspaceId\)/);

@@ -87,8 +87,8 @@ describe("guest-link + map attribution wiring", () => {
     );
     expect(tapSpeech).toMatch(/guestUserId \? null/);
     for (const rel of [
-      "app/api/workspace-ile/speech/route.ts",
-      "app/api/workspace-ile/idle/route.ts",
+      "app/api/workspace-learn/speech/route.ts",
+      "app/api/workspace-learn/idle/route.ts",
     ]) {
       const src = fs.readFileSync(path.join(ROOT, rel), "utf8");
       expect(src, rel).toMatch(/guest_user_id \? null/);

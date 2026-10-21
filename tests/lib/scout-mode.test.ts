@@ -29,7 +29,7 @@ import {
 } from "@/lib/pow-api/tap-link-config";
 import { resolveTapShellFromSession } from "@/lib/exercise-tap";
 import { assemblePromptWorkspaceContext } from "@/lib/prompt-workspace-context";
-import { convertToExcalidrawElements, ileWorkCanvasXaiToolsInstruction } from "@/lib/ile-work-canvas";
+import { convertToExcalidrawElements, ileWorkCanvasXaiToolsInstruction } from "@/lib/learn-work-canvas";
 import {
   SCOUT_CHILD_GAP_Y,
   SCOUT_FOLLOWUP_QUESTION_COUNT,

@@ -176,7 +176,7 @@ describe("P1–P10 shipped helpers", () => {
     expect(chat.ok).toBe(true);
     expect(chat.data.message).toBe("ok");
 
-    expect(existsSync(join(ROOT, "lib/ile-keyboard-mode.ts"))).toBe(false);
+    expect(existsSync(join(ROOT, "lib/learn-keyboard-mode.ts"))).toBe(false);
 
     expect(
       allowProductWorkspaceLinkAccess({
@@ -237,11 +237,11 @@ describe("P1–P10 shipped helpers", () => {
     const view = readWorkspaceViewSurface();
     const list = read("components/SessionList.tsx");
     const launchRoute = read("app/api/workspace/learner-launch/route.ts");
-    const ileAuth = read("lib/ile-link-auth.ts");
+    const ileAuth = read("lib/learn-link-auth.ts");
     const tapAuthSrc = read("lib/tap-score-session-auth.ts");
     const tapChat = read("app/api/workspace-tap-score/chat/route.ts");
-    const ileSpeech = read("app/api/workspace-ile/speech/route.ts");
-    const ileIdle = read("app/api/workspace-ile/idle/route.ts");
+    const ileSpeech = read("app/api/workspace-learn/speech/route.ts");
+    const ileIdle = read("app/api/workspace-learn/idle/route.ts");
     const tapSpeech = read("app/api/workspace-tap-score/speech/route.ts");
     const tapIdle = read("app/api/workspace-tap-score/idle/route.ts");
     const tapScore = read("lib/tap-score.ts");

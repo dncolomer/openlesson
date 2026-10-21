@@ -15,8 +15,8 @@ import {
   wrapIleWorkCanvasText,
   type IleWorkCanvasElement,
   type IleWorkCanvasScene,
-} from "@/lib/ile-work-canvas";
-import { clearCalibrateResponseOverlap, ILE_CANVAS_DICTATE_AUTHOR } from "@/lib/ile-canvas-dictate";
+} from "@/lib/learn-work-canvas";
+import { clearCalibrateResponseOverlap, ILE_CANVAS_DICTATE_AUTHOR } from "@/lib/learn-canvas-dictate";
 
 export const CALIBRATE_COMFORTABLE_REQUIRED = 3;
 export const CALIBRATE_UNCONFIDENT_REQUIRED = 2;

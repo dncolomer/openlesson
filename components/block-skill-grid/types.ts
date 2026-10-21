@@ -1,5 +1,5 @@
 import type { AddExpandJob } from "@/lib/add-block-range-density";
-import type { IleGatherJob } from "@/lib/ile-gather-resources";
+import type { IleGatherJob } from "@/lib/learn-gather-resources";
 import type { GridCell, SkillGridNode } from "@/lib/block-skill-grid";
 import type { UnusableCell } from "@/lib/map-ground-rules";
 import type { StretchHandle } from "@/lib/skill-grid-ops";

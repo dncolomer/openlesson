@@ -4,7 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { jsonError } from "@/lib/api-error-envelope";
 import { createClient } from "@/lib/supabase/server";
 import { resolveAyclAccess, resolveAyclSessionAccess } from "@/lib/aycl-session-auth";
-import { resolveIleLinkAccess, resolveIleLinkSessionAccess } from "@/lib/ile-link-auth";
+import { resolveIleLinkAccess, resolveIleLinkSessionAccess } from "@/lib/learn-link-auth";
 import { requireProductAccess } from "@/lib/api/product-access";
 import type { AyclCapabilities } from "@/lib/aycl-shared";
 import {

@@ -17,7 +17,7 @@ import {
   submitEditedThoughtSelection,
   submitLastStashedThought,
   submitSelectedThoughts,
-} from "@/lib/ile-last-stash";
+} from "@/lib/learn-last-stash";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =

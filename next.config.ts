@@ -55,6 +55,17 @@ const nextConfig: NextConfig = {
         destination: "/learn/session/:token/settings",
         permanent: true,
       },
+      { source: "/api/ile/:path*", destination: "/api/learn/:path*", permanent: true },
+      {
+        source: "/api/workspace-ile/:path*",
+        destination: "/api/workspace-learn/:path*",
+        permanent: true,
+      },
+      {
+        source: "/api/workspace/ile-links",
+        destination: "/api/workspace/learn-links",
+        permanent: true,
+      },
       {
         source: "/workspace/:id/scout",
         destination: "/workspace/:id/calibrate",

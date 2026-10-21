@@ -553,7 +553,7 @@ describe("LWM Snapshot conscious trigger only", () => {
     expect(tapPerf).toMatch(/not invoked automatically|not auto/i);
     expect(tapPerf).toContain("runVerticalScore");
 
-    const ilePerf = read("app/api/workspace-ile/performance/route.ts");
+    const ilePerf = read("app/api/workspace-learn/performance/route.ts");
     expect(ilePerf).toMatch(/not invoked automatically|not auto/i);
 
     writeEvidence(

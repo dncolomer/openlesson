@@ -137,7 +137,7 @@ describe("TAP/TAP Learning link reuse wiring", () => {
   const root = join(__dirname, "../..");
 
   it("TAP Learning ensureIleLinkSession no longer hard-blocks completed links", () => {
-    const src = readFileSync(join(root, "lib/ile-link-auth.ts"), "utf8");
+    const src = readFileSync(join(root, "lib/learn-link-auth.ts"), "utf8");
     expect(src).not.toContain("This TAP Learning practice session is complete");
     expect(src).toContain("completed_at: null");
     expect(src).toContain("multi-use");
@@ -151,16 +151,16 @@ describe("TAP/TAP Learning link reuse wiring", () => {
 
   it("create TAP/TAP Learning link paths accept guest_user_id reuse helper", () => {
     const tap = readFileSync(join(root, "lib/pow-api/create-tap-link.ts"), "utf8");
-    const ile = readFileSync(join(root, "lib/pow-api/create-ile-link.ts"), "utf8");
+    const ile = readFileSync(join(root, "lib/pow-api/create-learn-link.ts"), "utf8");
     expect(tap).toContain("assertReusableWorkspaceGuest");
     expect(ile).toContain("assertReusableWorkspaceGuest");
   });
 
   it("TAP/TAP Learning reissue helpers rotate token; guest links panel is absent", () => {
     const tap = readFileSync(join(root, "lib/pow-api/create-tap-link.ts"), "utf8");
-    const ile = readFileSync(join(root, "lib/pow-api/create-ile-link.ts"), "utf8");
+    const ile = readFileSync(join(root, "lib/pow-api/create-learn-link.ts"), "utf8");
     const tapRoute = readFileSync(join(root, "app/api/workspace/tap-links/route.ts"), "utf8");
-    const ileRoute = readFileSync(join(root, "app/api/workspace/ile-links/route.ts"), "utf8");
+    const ileRoute = readFileSync(join(root, "app/api/workspace/learn-links/route.ts"), "utf8");
 
     expect(tap).toContain("export async function reissueWorkspaceTapLink");
     expect(ile).toContain("export async function reissueWorkspaceIleLink");

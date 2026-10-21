@@ -4,7 +4,7 @@
  * TAP session. A public flow token is enough when there is no session row.
  */
 
-import { ileBlockSessionFrame } from "@/lib/ile-canvas-session";
+import { ileBlockSessionFrame } from "@/lib/learn-canvas-session";
 
 export type SessionBranchPrepareInput = {
   enabled?: boolean;
@@ -181,7 +181,7 @@ export function planSessionBranchPrepare(
   return { kind: "none" };
 }
 
-/** JSON body for POST /api/ile/session-branch-model. Null when the call should wait. */
+/** JSON body for POST /api/learn/session-branch-model. Null when the call should wait. */
 export function sessionBranchPrepareRequest(
   plan: SessionBranchPreparePlan,
 ): Record<string, unknown> | null {

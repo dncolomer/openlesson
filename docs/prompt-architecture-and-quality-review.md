@@ -33,7 +33,7 @@ composePrompt({ ontology, surface, task, contextNotes? })
 | Surface | File | Primary private goal |
 |---|---|---|
 | `TAP_SURFACE` (+ selective / practice overlays) | `lib/prompt-kernel/surfaces/tap.ts` | Maximize genuine observation/action thought traces as PoW |
-| `ILE_SURFACE` (+ tools block / context body) | `lib/prompt-kernel/surfaces/ile.ts` | Optimize chapter progress + augment with tool-routed practice artifacts |
+| `ILE_SURFACE` (+ tools block / context body) | `lib/prompt-kernel/surfaces/learn.ts` | Optimize chapter progress + augment with tool-routed practice artifacts |
 | `buildScoreContextSurface(vertical)` | `lib/prompt-kernel/surfaces/score-context.ts` | Score from PoW only; verification adds submit/stash analysis |
 
 ### 1.3 Central registry (user-overridable)

@@ -10,11 +10,11 @@ import {
   ILE_IDLE_TOOL_NAME,
   ILE_SPEECH_TOOL_NAME,
   ILE_TRACE_TOOL_NAME,
-} from "@/lib/ile-thought-traces";
+} from "@/lib/learn-thought-traces";
 import { TAP_SPEECH_TOOL_NAME } from "@/lib/tap-speech-proof-of-work";
 import { TAP_TRACE_TOOL_NAME, TAP_CHAT_TOOL_NAME } from "@/lib/tap-score-traces";
 import { TAP_IDLE_TOOL_NAME } from "@/lib/tap-idle-proof-of-work";
-import { ILE_END_OF_CHAIN_OF_THOUGHT_ACTION } from "@/lib/ile-im-done-answering";
+import { ILE_END_OF_CHAIN_OF_THOUGHT_ACTION } from "@/lib/learn-im-done-answering";
 import {
   ILE_IMPORT_AUTO_STASH_MS,
   ILE_IMPORT_IDLE_MS,

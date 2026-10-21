@@ -1,4 +1,4 @@
-import type { IleSystem1Action, IleSystem2Action, IleTraceType } from "@/lib/ile-thought-traces";
+import type { IleSystem1Action, IleSystem2Action, IleTraceType } from "@/lib/learn-thought-traces";
 import type { UploadWorkspaceProofOfWorkInput } from "@/lib/pow-api/upload-workspace-proof-of-work";
 
 /** Word-level STT timing. `start` / `end` are seconds from media t=0 (xAI STT). */

@@ -1,8 +1,8 @@
-import { ILE_THOUGHT_CHAIN_GAP_MS } from "@/lib/ile-context-auto-stash";
-import { ILE_IDLE_POW_INTERVAL_MS } from "@/lib/ile-thought-traces";
+import { ILE_THOUGHT_CHAIN_GAP_MS } from "@/lib/learn-context-auto-stash";
+import { ILE_IDLE_POW_INTERVAL_MS } from "@/lib/learn-thought-traces";
 import { TAP_SPEECH_SEGMENT_GAP_MS } from "@/lib/tap-speech-proof-of-work";
 import { TAP_SILENCE_AUTO_STASH_MS } from "@/lib/tap-session-purity";
-import { ILE_SESSION_MODE_LABELS } from "@/lib/ile-mode";
+import { ILE_SESSION_MODE_LABELS } from "@/lib/learn-mode";
 
 /** Speech start/stop gap — same 2600ms the live TAP Learning/TAP mic uses. */
 export const ILE_IMPORT_SPEECH_GAP_MS = TAP_SPEECH_SEGMENT_GAP_MS;

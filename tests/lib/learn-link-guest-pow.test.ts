@@ -1,0 +1,95 @@
+import { describe, expect, it } from "vitest";
+import { readSessionViewSurface } from "@/tests/helpers/surface-source";
+import fs from "node:fs";
+import path from "node:path";
+import { ileTokenFromPowBody } from "@/lib/pow-api/workspace-session-access";
+import { buildIleSessionUrl } from "@/lib/learn-link";
+
+const REPO_ROOT = path.resolve(__dirname, "../..");
+
+describe("ileTokenFromPowBody", () => {
+  it("accepts ileToken, ile_token, privateToken, and private_token", () => {
+    expect(ileTokenFromPowBody({ ileToken: "abc" })).toBe("abc");
+    expect(ileTokenFromPowBody({ ile_token: " def " })).toBe("def");
+    expect(ileTokenFromPowBody({ privateToken: "tok" })).toBe("tok");
+    expect(ileTokenFromPowBody({ private_token: "pt" })).toBe("pt");
+    expect(ileTokenFromPowBody({})).toBeNull();
+    expect(ileTokenFromPowBody({ ileToken: "" })).toBeNull();
+  });
+});
+
+describe("buildIleSessionUrl", () => {
+  it("builds shareable /learn/session/{token} URLs without trailing slash doubling", () => {
+    expect(buildIleSessionUrl("https://app.example.com/", "token123")).toBe(
+      "https://app.example.com/learn/session/token123",
+    );
+    expect(buildIleSessionUrl("https://app.example.com", "token123")).toBe(
+      "https://app.example.com/learn/session/token123",
+    );
+  });
+});
+
+describe("shareable TAP Learning guest PoW wiring", () => {
+  const accessSource = fs.readFileSync(
+    path.join(REPO_ROOT, "lib/pow-api/workspace-session-access.ts"),
+    "utf8",
+  );
+  const speechSource = fs.readFileSync(
+    path.join(REPO_ROOT, "app/api/workspace-learn/speech/route.ts"),
+    "utf8",
+  );
+  const idleSource = fs.readFileSync(
+    path.join(REPO_ROOT, "app/api/workspace-learn/idle/route.ts"),
+    "utf8",
+  );
+  const powSource = fs.readFileSync(
+    path.join(REPO_ROOT, "app/api/workspace/proof-of-work/route.ts"),
+    "utf8",
+  );
+  const sessionSource = readSessionViewSurface();
+  const perfSource = fs.readFileSync(
+    path.join(REPO_ROOT, "components/WorkspacePerformancePanel.tsx"),
+    "utf8",
+  );
+  const middlewareSource = fs.readFileSync(path.join(REPO_ROOT, "middleware.ts"), "utf8");
+
+  it("resolves TAP Learning private tokens in session PoW access helper", () => {
+    expect(accessSource).toContain("resolveIleLinkAccess");
+    expect(accessSource).toContain("resolveIleLinkSessionAccess");
+    expect(accessSource).toContain("ileToken");
+    expect(accessSource).toContain('key_id: "ile-link"');
+  });
+
+  it("wires ileToken into TAP Learning speech, idle, and proof-of-work API routes", () => {
+    expect(speechSource).toContain("ileTokenFromPowBody");
+    expect(idleSource).toContain("ileTokenFromPowBody");
+    expect(powSource).toContain("ileTokenFromPowBody");
+    expect(speechSource).toContain("ileToken:");
+    expect(idleSource).toContain("ileToken:");
+    expect(powSource).toContain("ileToken:");
+  });
+
+  it("sends the shareable TAP Learning token from SessionView guest PoW context", () => {
+    expect(sessionSource).toContain("privateToken: ileToken");
+    expect(sessionSource).toContain("ileToken ? { ileToken }");
+  });
+
+  it("keeps TAP/TAP Learning guest links out of performance subviews (Settings surface)", () => {
+    // TAP&TAP Learning links moved out of the Knowledge/performance tab body; Eval tab removed.
+    expect(perfSource).not.toContain('activeSubview === "tap"');
+    expect(perfSource).toMatch(
+      /type PerformanceSubview =\s*"knowledge"\s*\|\s*"insights"/,
+    );
+    expect(perfSource).not.toContain('id: "pow"');
+    expect(perfSource).toMatch(/@deprecated TAP\/TAP Learning guest links live in Settings/);
+    expect(perfSource).not.toContain('id: "score"');
+  });
+
+  it("treats flow-named session paths as public middleware routes", () => {
+    expect(middlewareSource).toContain('"/ile/session"');
+    expect(middlewareSource).toContain('"/tap/session"');
+    expect(middlewareSource).toContain('"/learn/session/"');
+    expect(middlewareSource).toContain('"/calibrate/session"');
+    expect(middlewareSource).toContain('"/verify/session"');
+  });
+});

@@ -30,7 +30,7 @@ const SCORE_SURFACE_FILES = [
   "app/api/v3/snapshot/workspaces/[id]/lwm-snapshot/route.ts",
   "app/api/workspace/performance-report/route.ts",
   "app/api/workspace-tap-score/performance/route.ts",
-  "app/api/workspace-ile/performance/route.ts",
+  "app/api/workspace-learn/performance/route.ts",
   // Core score libs
   "lib/pow-api/performance-report.ts",
   "lib/pow-api/workspace-goal.ts",
@@ -213,7 +213,7 @@ describe("LWM Snapshot entry points (shipped wiring)", () => {
     expect(tapRoute).toMatch(/not invoked automatically|not auto/i);
 
     const ileRoute = readFileSync(
-      join(ROOT, "app/api/workspace-ile/performance/route.ts"),
+      join(ROOT, "app/api/workspace-learn/performance/route.ts"),
       "utf8",
     );
     expect(ileRoute).toContain("runVerticalScore");

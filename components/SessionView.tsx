@@ -28,14 +28,14 @@ import {
   ILE_SUBMIT_WORK_CONTINUE_TEXT,
   partitionIleThoughtsByOpenWork,
   resolveIleWorkChatTarget,
-} from "@/lib/ile-session-turn-close";
+} from "@/lib/learn-session-turn-close";
 import {
   clampIlePowExpense,
   ILE_POW_EXPENSE_DEFAULT,
   parseIleOpenWorkIdsFromMetadata,
   removeIleOpenWork,
   restoreIleOpenWorkIds,
-} from "@/lib/ile-pow-spend";
+} from "@/lib/learn-pow-spend";
 import {
   clampIleMinInsightsPerChapter,
   evaluateIleEndTurnInsightGate,
@@ -46,24 +46,24 @@ import {
   ILE_TURN_INSIGHT_SLOT_MAX,
   clampIleTurnInsightSlotMax,
   type IleEndTurnInsightGate,
-} from "@/lib/ile-turn-insights";
+} from "@/lib/learn-turn-insights";
 import {
   ILE_GATHER_MAX_PER_SESSION,
   clampIleGatherMaxPerSession,
-} from "@/lib/ile-gather-resources";
+} from "@/lib/learn-gather-resources";
 import {
   decideIleSettingsEnterMap,
   ileSessionMapPath,
   ileSessionSettingsPath,
   ileWelcomeRouteSync,
   isIleSessionSettingsPath,
-} from "@/lib/ile-session-routes";
+} from "@/lib/learn-session-routes";
 import {
   isIleSessionSettingsConfirmed,
   isSessionWelcomeSeen,
 } from "@/lib/welcomeState";
 import { insightsSessionListUrl, type InsightSummary } from "@/lib/insights";
-import { IleTurnInsightCraft } from "@/components/session-view/ile-turn-insight-craft";
+import { IleTurnInsightCraft } from "@/components/session-view/learn-turn-insight-craft";
 import { useThinkAloudTranscript, type SpeechTranscriptEntry } from "@/lib/useThinkAloudTranscript";
 import { useHeliosVoicePlaybackActive } from "@/lib/useHeliosVoicePlayback";
 import type { HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
@@ -77,7 +77,7 @@ import {
   ILE_SESSION_CHAPTER_COUNT_DEFAULT,
   readIleCanvasSessionConfig,
   writeIleCanvasSessionConfig,
-} from "@/lib/ile-canvas-session";
+} from "@/lib/learn-canvas-session";
 import { DEFAULT_INITIAL_CHAPTERS } from "@/lib/initial-chapters";
 import type { MapTypePickerItem } from "@/lib/workspace-map-types";
 import { SessionWelcomeModal } from "@/components/session-view/session-welcome-modal";
@@ -90,8 +90,8 @@ import { SessionLiveStage } from "@/components/session-view/session-live-stage";
 import {
   isIleMapOverlayTool,
   isIleSessionModalTool,
-} from "@/lib/ile-map-chrome";
-import { useIleGatherResources } from "@/components/session-view/use-ile-gather-resources";
+} from "@/lib/learn-map-chrome";
+import { useIleGatherResources } from "@/components/session-view/use-learn-gather-resources";
 import {
   blockHasUnseenGatherNotification,
   ileGatherJobTileId,
@@ -112,19 +112,19 @@ import {
   latestSettledAssistantId,
   resolveIleDockChipStatus,
   sameIleIdList,
-} from "@/lib/ile-work-dock-status";
+} from "@/lib/learn-work-dock-status";
 import { resolveBlockMapGlyph } from "@/lib/block-map-glyph";
 
-import { ileTimProgressByTileId } from "@/lib/ile-tim-chapter-complete";
+import { ileTimProgressByTileId } from "@/lib/learn-tim-chapter-complete";
 import {
   isIleChapterThoughtsLocked,
   isIleProjectMode,
   resolveIleDurableSessionMode,
   type IleSessionMode,
-} from "@/lib/ile-mode";
+} from "@/lib/learn-mode";
 import { shouldShowHeliosReplyForChapter } from "@/lib/chapter-load-control";
 import { useSessionChapterWorkspaces } from "@/lib/useSessionChapterWorkspaces";
-import { buildIleWorkCanvasCommandUserMessage } from "@/lib/ile-work-canvas-prompts";
+import { buildIleWorkCanvasCommandUserMessage } from "@/lib/learn-work-canvas-prompts";
 import {
   applyIleXaiTurnAtCommit,
   ileWorkCanvasAskFromSessionChat,
@@ -138,13 +138,13 @@ import {
   type IleWorkCanvasScene,
   type IleWorkCanvasSkeleton,
   type IleWorkCanvasWorkspaceInput,
-} from "@/lib/ile-work-canvas";
-import { useIleSessionPurity } from "@/components/session-view/use-ile-session-purity";
-import { IleInsightTrophyStrip } from "@/components/session-view/ile-insight-trophies";
+} from "@/lib/learn-work-canvas";
+import { useIleSessionPurity } from "@/components/session-view/use-learn-session-purity";
+import { IleInsightTrophyStrip } from "@/components/session-view/learn-insight-trophies";
 import {
   shouldLogIleSidebarToolSwitch,
   type IleWorkCanvasPowEvent,
-} from "@/lib/ile-work-canvas-pow";
+} from "@/lib/learn-work-canvas-pow";
 
 
 /** Stable empty map — never use `= {}` as a prop default (new identity every render). */

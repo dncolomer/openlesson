@@ -4,7 +4,7 @@ import { AccelerandoMark } from "@/components/AccelerandoGlyphs";
 import {
   ILE_WORK_CANVAS_COMMANDS,
   type IleWorkCanvasCommandId,
-} from "@/lib/ile-work-canvas-commands";
+} from "@/lib/learn-work-canvas-commands";
 
 export const ILE_CANVAS_COMMAND_BUTTON_CLASS =
   "pointer-events-auto relative flex h-full flex-col min-w-0 items-center justify-center gap-1 whitespace-normal rounded-none border border-white/45 bg-black px-1.5 pb-1.5 pt-3 text-center font-mono text-[11px] leading-tight text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] hover:border-white hover:bg-neutral-950 disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-950 disabled:text-neutral-600 disabled:opacity-100 disabled:shadow-none disabled:hover:border-neutral-800 disabled:hover:bg-neutral-950 disabled:hover:text-neutral-600";

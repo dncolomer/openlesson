@@ -9,7 +9,7 @@ import {
   ileTokenFromBody,
   guardSessionRoute,
 } from "@/lib/api/require-auth";
-import { ileUnsavedExitSessionPatch } from "@/lib/ile-unsaved-exit";
+import { ileUnsavedExitSessionPatch } from "@/lib/learn-unsaved-exit";
 import { deleteSessionPlanBySessionId } from "@/lib/storage/session-plans";
 
 export const runtime = "nodejs";

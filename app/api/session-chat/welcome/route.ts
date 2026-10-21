@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
       })
       .join("\n") || "No prior completed sessions available.";
 
-    const { buildIleWelcomeSystemPrompt } = await import("@/lib/prompt-kernel/surfaces/ile");
+    const { buildIleWelcomeSystemPrompt } = await import("@/lib/prompt-kernel/surfaces/learn");
     const welcomeSystem = withConversationLanguageInstruction(
       `${buildIleWelcomeSystemPrompt()}
 

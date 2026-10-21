@@ -117,7 +117,7 @@ describe("author unsys model seed", () => {
     ).toBe("seed");
 
     const route = readFileSync(
-      join(__dirname, "../../app/api/ile/session-branch-model/route.ts"),
+      join(__dirname, "../../app/api/learn/session-branch-model/route.ts"),
       "utf8",
     );
     expect(route).toContain("authorSeedBlockIdFromPreparePlan");

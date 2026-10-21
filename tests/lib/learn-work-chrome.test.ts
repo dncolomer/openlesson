@@ -1,0 +1,785 @@
+/**
+ * TAP Learning Work chrome: no I'm done answering on chapter/PiP; session turn close;
+ * expense slider beside aesthetics/map type; Work/PoW visualization.
+ */
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it } from "vitest";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import {
+  ILE_MAP_INSIGHT_PLACEHOLDER_COUNT,
+  IleMapInsightsWidget,
+} from "@/components/session-view/learn-insight-trophies";
+import { SessionTopicCard, sessionSidebarTopic } from "@/components/session-view/learn-work-dock-bar";
+import {
+  IleTurnInsightCraft,
+  ileTurnInsightTopic,
+} from "@/components/session-view/learn-turn-insight-craft";
+import {
+  ileBlockSessionFrame,
+  ileBlockSessionOpenWorkIds,
+} from "@/lib/learn-canvas-session";
+import { resolveBlockMapGlyph } from "@/lib/block-map-glyph";
+import type { InsightSummary } from "@/lib/insights";
+import { readSessionViewSurface } from "@/tests/helpers/surface-source";
+import { ILE_END_TURN_LABEL, ILE_SUBMIT_TURN_LABEL } from "@/lib/learn-session-turn-close";
+import {
+  aestheticImageForId,
+  assignIleWorkAestheticImages,
+  ileChapterAestheticIds,
+  parseIleWorkAestheticStored,
+  resolveIleWorkAestheticImage,
+} from "@/lib/aesthetics";
+import { ileTabUnfocusPowFromFocusEvent, ILE_TAB_UNFOCUS_TOOL_ACTION } from "@/lib/learn-thought-traces";
+import {
+  SESSION_SIDEBAR_COLLAPSED_REM,
+  SESSION_SIDEBAR_EXPANDED_REM,
+} from "@/lib/session-sidebar";
+
+const ROOT = join(__dirname, "../..");
+const SCRATCH =
+  process.env.GROK_GOAL_SCRATCH ||
+  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-a4905160ec41/implementer";
+
+function read(rel: string) {
+  const path = join(ROOT, rel);
+  expect(existsSync(path), `missing ${rel}`).toBe(true);
+  return readFileSync(path, "utf8");
+}
+
+function writeScratch(name: string, body: string) {
+  mkdirSync(SCRATCH, { recursive: true });
+  writeFileSync(join(SCRATCH, name), body, "utf8");
+}
+
+describe("assignIleWorkAestheticImages", () => {
+  it("keeps existing picks and assigns unused images to new Work ids", () => {
+    const pool = ["/a.jpg", "/b.jpg", "/c.jpg"];
+    const first = assignIleWorkAestheticImages({
+      ids: ["ch-a"],
+      images: pool,
+      random: () => 0,
+    });
+    expect(first["ch-a"]).toBe("/a.jpg");
+    const second = assignIleWorkAestheticImages({
+      ids: ["ch-a", "ch-b"],
+      current: first,
+      images: pool,
+      random: () => 0,
+    });
+    expect(second["ch-a"]).toBe("/a.jpg");
+    expect(second["ch-b"]).toBe("/b.jpg");
+    const dropped = assignIleWorkAestheticImages({
+      ids: ["ch-b"],
+      current: second,
+      images: pool,
+      random: () => 0,
+    });
+    expect(dropped).toEqual({ "ch-b": "/b.jpg" });
+  });
+});
+
+describe("resolveIleWorkAestheticImage", () => {
+  it("uses the session-lived assigned still, else a stable per-id pick", () => {
+    const pool = ["/a.jpg", "/b.jpg", "/c.jpg"];
+    expect(
+      resolveIleWorkAestheticImage({
+        id: "ch-a",
+        assigned: "/b.jpg",
+        images: pool,
+      }),
+    ).toBe("/b.jpg");
+    expect(
+      resolveIleWorkAestheticImage({
+        id: "ch-a",
+        images: pool,
+      }),
+    ).toBe(aestheticImageForId("ch-a", pool));
+    expect(
+      resolveIleWorkAestheticImage({
+        id: "ch-b",
+        assigned: "  ",
+        images: pool,
+      }),
+    ).toBe(aestheticImageForId("ch-b", pool));
+
+    const firstVisit = assignIleWorkAestheticImages({
+      ids: ["ch-a"],
+      images: pool,
+    });
+    expect(firstVisit["ch-a"]).toBe(aestheticImageForId("ch-a", pool));
+    const stored = JSON.stringify(firstVisit);
+    const parsed = parseIleWorkAestheticStored(stored);
+    const remount = assignIleWorkAestheticImages({
+      ids: ["ch-a"],
+      current: parsed,
+      images: pool,
+    });
+    expect(remount["ch-a"]).toBe(firstVisit["ch-a"]);
+    expect(remount["ch-a"]).toBeTruthy();
+  });
+});
+
+describe("ileChapterAestheticIds", () => {
+  it("locks the bar still to the same pick Work will use", () => {
+    const pool = ["/a.jpg", "/b.jpg", "/c.jpg"];
+    expect(
+      ileChapterAestheticIds({
+        stepIds: ["ch-a", "ch-b"],
+        openWorkIds: [],
+        selectedId: "ch-b",
+      }),
+    ).toEqual(["ch-a", "ch-b"]);
+    const preview = assignIleWorkAestheticImages({
+      ids: ileChapterAestheticIds({
+        stepIds: ["ch-a", "ch-b"],
+        selectedId: "ch-b",
+      }),
+      images: pool,
+    });
+    const bar = resolveIleWorkAestheticImage({
+      id: "ch-b",
+      assigned: preview["ch-b"],
+      images: pool,
+    });
+    const afterWork = assignIleWorkAestheticImages({
+      ids: ileChapterAestheticIds({
+        stepIds: ["ch-a", "ch-b"],
+        openWorkIds: ["ch-b"],
+      }),
+      current: preview,
+      images: pool,
+    });
+    expect(afterWork["ch-b"]).toBe(bar);
+    expect(afterWork["ch-a"]).toBe(preview["ch-a"]);
+  });
+});
+
+describe("TAP Learning tab unfocus PoW (shipped)", () => {
+  it("visibilitychange hidden and blur produce a stable tab_unfocus action", () => {
+    const hidden = ileTabUnfocusPowFromFocusEvent({
+      type: "visibilitychange",
+      hidden: true,
+      sessionId: "s1",
+      workspaceId: "w1",
+    });
+    expect(hidden?.toolAction).toBe(ILE_TAB_UNFOCUS_TOOL_ACTION);
+    expect(hidden?.toolAction).toBe("tab_unfocus");
+    expect(hidden?.reason).toBe("tab_hidden");
+
+    const visible = ileTabUnfocusPowFromFocusEvent({
+      type: "visibilitychange",
+      hidden: false,
+    });
+    expect(visible).toBeNull();
+
+    const blur = ileTabUnfocusPowFromFocusEvent({ type: "blur" });
+    expect(blur?.toolAction).toBe("tab_unfocus");
+    expect(blur?.reason).toBe("window_blur");
+
+    const speech = read("components/session-view/use-session-speech.ts");
+    expect(speech).toContain("ileTabUnfocusPowFromFocusEvent");
+    expect(speech).toContain("visibilitychange");
+    expect(speech).toContain('addEventListener("blur"');
+  });
+});
+
+describe("TAP Learning Work / PoW chrome (shipped source)", () => {
+  it("chapter widget and PiP omit I'm done answering; TAP keeps it; slider and Work bar ship", () => {
+    const helios = read("components/SessionHeliosPanel.tsx");
+    const chrome = read("components/session-view/session-chrome.tsx");
+    const welcome = read("components/session-view/session-welcome-modal.tsx");
+    expect(welcome).toContain("data-ile-session-settings");
+    expect(welcome).toContain("h-screen");
+    expect(welcome).not.toContain("DialogFrame");
+    expect(existsSync(join(ROOT, "app/session/settings/page.tsx"))).toBe(true);
+    expect(existsSync(join(ROOT, "app/ile/session/[token]/settings/page.tsx"))).toBe(false);
+    expect(existsSync(join(ROOT, "app/learn/[token]/session/settings/page.tsx"))).toBe(true);
+    const view = readSessionViewSurface();
+    const speech = read("components/session-view/use-session-speech.ts");
+    const tapPhases = read("components/tap-score/tap-score-phases.tsx");
+    expect(existsSync(join(ROOT, "components/exercise-tap/ExerciseTapShell.tsx"))).toBe(false);
+
+    const docs = read("docs/learn-pow-resources.md");
+
+    expect(helios).not.toContain("ImDoneAnsweringControl");
+    expect(helios).not.toContain("data-ile-im-done-answering-overlay");
+    expect(helios).not.toContain("I'm done answering");
+    expect(existsSync(join(ROOT, "components/IleCompactStashWindow.tsx"))).toBe(false);
+
+    expect(tapPhases).toContain("ImDoneAnsweringControl");
+
+    expect(welcome).toContain("TapBriefingConfig");
+    expect(welcome).toContain("showDurationPicker={false}");
+    expect(welcome).not.toContain("data-ile-pow-expense-slider");
+    expect(welcome).not.toContain("data-ile-insight-slot-slider");
+    expect(welcome).not.toContain("data-ile-gather-max-slider");
+    expect(welcome).not.toContain("data-ile-canvas-timer-slider");
+    expect(welcome).not.toContain("data-ile-browser-inference");
+    expect(welcome).not.toContain("data-ile-pregame-preset");
+    expect(welcome).not.toContain("applyIlePregamePreset");
+    expect(welcome).not.toContain("explainFully");
+    expect(welcome).toContain("AestheticPicker");
+    expect(welcome).not.toContain("InitialChaptersPicker");
+    expect(welcome).not.toContain("IleContinueMapPreview");
+    expect(welcome).not.toContain("data-ile-session-chapter-count");
+    expect(welcome).not.toContain("data-ile-session-insight-goal");
+    expect(welcome).not.toContain("data-ile-learn-presets");
+    expect(welcome).not.toContain("data-ile-silence-lock-minutes");
+    expect(welcome).toContain("capIleSessionChapters");
+    expect(welcome).not.toMatch(/\bmap type\b|\bboard\b/i);
+    expect(welcome).not.toContain("session.powExpense");
+    expect(welcome).toContain("session.confirmSettings");
+    expect(welcome).toContain("data-ile-confirm-settings");
+    expect(welcome).not.toContain("session.getStarted");
+    expect(view).toContain("powExpense={powExpense}");
+    expect(view).toContain("insightSlotMax={insightSlotMax}");
+    expect(view).toContain("maxPerSession: gatherMaxPerSession");
+    expect(view).toContain("tryStartWork");
+    expect(view).toContain("handleWorkChapter");
+    expect(view).toContain("closeIleOpenWorkTurn");
+    expect(view).toContain("resolveIleWorkChatTarget");
+    expect(view).toContain("chapterId");
+    expect(view).toContain("spentUnits");
+    expect(speech).toContain("submitHeliosChatMessageNow(text, undefined, chapterId)");
+
+    expect(chrome).not.toContain("data-ile-pow-resource-bar");
+    expect(chrome).not.toContain("data-ile-pow-submitted");
+    expect(chrome).not.toContain("data-ile-pow-unsubmitted");
+    expect(chrome).not.toContain("data-ile-pow-dual-pill");
+    expect(chrome).toContain('data-ile-canvas-stage="true"');
+    expect(chrome).toContain("data-ile-work-dock");
+    expect(chrome).toContain("SessionTopicCard");
+    expect(chrome).toContain("sessionSidebarTopic");
+    expect(chrome).not.toContain("IleWorkDockBar");
+    expect(chrome).not.toContain("onFocusOpenWork");
+    expect(chrome).not.toContain("IleSubmitWorkButton");
+    expect(chrome).not.toContain("IleChapterToolTabs");
+    expect(chrome).toContain("{workCanvas}");
+    expect(chrome).not.toContain("data-ile-work-dock-shifted");
+    expect(chrome).not.toContain("data-ile-chapter-dock-panel");
+    expect(chrome).toContain("ILE_MAP_WIDGET_FRAME_CLASS");
+    expect(chrome).not.toContain("IleChapterWidgetFrame");
+    expect(chrome).toContain('id="actions"');
+    expect(chrome).toContain("SessionGuidePanel");
+    expect(chrome).not.toContain('id="insights"');
+    expect(chrome).toContain('id="chapters"');
+    expect(chrome).toContain('id="sensors"');
+    const dockBar = read("components/session-view/learn-work-dock-bar.tsx");
+    expect(dockBar).not.toContain("export function IleWorkDockBar");
+    expect(dockBar).not.toContain("data-ile-work-dock-bar");
+    expect(dockBar).toContain("export function SessionTopicCard");
+    expect(dockBar).toContain("export function sessionSidebarTopic");
+    expect(dockBar).not.toContain("data-ile-global-resources");
+    expect(dockBar).not.toContain("data-ile-submit-turn");
+    expect(dockBar).not.toContain("data-ile-end-turn");
+    expect(dockBar).not.toContain("data-ile-end-turn-cluster");
+    expect(dockBar).not.toContain("data-ile-show-map");
+    expect(dockBar).not.toContain("ILE_SHOW_MAP_LABEL");
+    expect(dockBar).not.toContain("onShowMap");
+    expect(chrome).not.toContain("onShowMap=");
+    expect(chrome).not.toContain("onSubmitTurn=");
+    expect(view).not.toContain("onShowMap={() => setHeliosWidgetOpen(false)}");
+    expect(view).not.toContain("onSubmitTurn={() => void handleSubmitTurn()}");
+    expect(dockBar).not.toContain("data-ile-chapter-dock-chapters");
+    expect(dockBar).toContain("export function SessionTopicCard");
+    expect(dockBar).not.toContain("data-ile-end-turn-stem");
+    expect(dockBar).not.toContain("data-ile-review-work");
+    expect(dockBar).toContain("const chipSize = compact");
+    expect(dockBar).not.toContain("sizeClass={chipSize}");
+    expect(dockBar).toContain("compact");
+    expect(dockBar).not.toContain("data-ile-open-work-count");
+    expect(dockBar).not.toContain("data-ile-pow-budget-remaining");
+    expect(dockBar).toContain("data-ile-open-work-chip");
+    expect(dockBar).toContain("data-ile-chapter-minimized");
+    expect(dockBar).toContain("data-ile-chapter-chip-image");
+    expect(dockBar).toContain("data-ile-chapter-chip-keyword");
+    expect(dockBar).toContain("resolveIleWorkAestheticImage");
+    expect(dockBar).toContain("assigned: work.image");
+    expect(view).toContain("assignIleWorkAestheticImages");
+    expect(view).toContain("ileChapterAestheticIds");
+    expect(view).toContain("stepIds: sessionPlan?.steps?.map((step) => step.id)");
+    expect(view).toContain("selectedId: mapSelectedChapterId");
+    expect(view).toContain("workAestheticById");
+    expect(view).toContain("workAestheticImage={workAestheticById[activeChapterKey]}");
+    const thoughtPane = read("components/session-view/session-thought-pane.tsx");
+    expect(thoughtPane).toContain("workId={activeChapterKey}");
+    expect(thoughtPane).toContain("workAestheticImage={workAestheticImage}");
+    expect(helios).toContain("resolveIleWorkAestheticImage");
+    expect(helios).toContain("assigned: workAestheticImage");
+    expect(helios).not.toContain("Math.random");
+    expect(helios).not.toContain("THOUGHT_BACKGROUND_IMAGES");
+    expect(dockBar).toContain("FALLBACK_AESTHETIC_IMAGES");
+    expect(dockBar).toContain("h-24");
+    expect(view).toContain("resolveBlockMapGlyph");
+    expect(view).toContain("map_keyword");
+    expect(view).toContain("countIleUnsubmittedPowDisplay");
+    expect(view).toContain("handleSubmitToHelios");
+    expect(view).toContain("canvasDirtyForHelios");
+    const panes = read("components/session-view/session-tool-panes.tsx");
+    expect(panes).not.toContain("onSubmitToHelios");
+    expect(panes).not.toContain("NotebookSubmitButton");
+    expect(panes).not.toContain("doneWriting");
+    expect(view).toContain("thought-history");
+    expect(view).not.toContain("renderCompactWorkspace");
+    expect(existsSync(join(ROOT, "components/session-view/learn-chapter-tool-tabs.tsx"))).toBe(false);
+
+    expect(chrome).not.toContain("data-ile-session-insights-count");
+    expect(helios).not.toContain("data-ile-chapter-brief");
+    expect(helios).not.toContain("fadeToRight");
+    const voiceBar = read("components/session-view/learn-voice-bar.tsx");
+    expect(voiceBar).toContain("ILE_VOICE_BAR_HEIGHT_CLASS");
+    expect(voiceBar).toContain("bg-black");
+    expect(voiceBar).not.toContain("data-ile-voice-aesthetic");
+    expect(voiceBar).not.toContain("backgroundImage");
+    expect(voiceBar).not.toContain("data-ile-voice-chapter-brief");
+    expect(voiceBar).not.toContain("IleVoiceActionPad");
+    expect(voiceBar).not.toContain("actionPad");
+    expect(voiceBar).toContain("data-ile-transcription-region");
+    expect(voiceBar).not.toContain("data-ile-bar-data");
+    expect(voiceBar).not.toContain("data-ile-bar-logs");
+    expect(voiceBar).not.toContain(">Logs<");
+    expect(voiceBar).toContain("data-ile-bar-save");
+    expect(voiceBar).toMatch(/data-ile-bar-save[\s\S]{0,400}\n\s*Exit/);
+    expect(voiceBar.indexOf("data-ile-transcription-box")).toBeLessThan(
+      voiceBar.indexOf("data-ile-voice-bar-actions"),
+    );
+    const sessionView = read("components/SessionView.tsx");
+    expect(sessionView).not.toContain("onVoicePadChange");
+    expect(sessionView).toContain("voicePadActionRef");
+    expect(sessionView).not.toContain("onSelectEmptyCell");
+    expect(sessionView).not.toContain("onSelectBlockedCell");
+    expect(sessionView).not.toContain("session.emptyBlockTitle");
+    expect(sessionView).not.toContain("session.blockedBlockTitle");
+    expect(sessionView).not.toContain("<ChapterMapPanel");
+    expect(sessionView).not.toContain('circularMenuSurface="ile"');
+    const en = JSON.parse(read("messages/en.json")) as {
+      session: Record<string, string>;
+    };
+    expect(en.session.emptyBlockTitle).toBe("That's an empty block");
+    expect(en.session.emptyBlockDesc).toMatch(/enough Work/i);
+    expect(en.session.blockedBlockTitle).toBe("This area is blocked");
+    expect(en.session.blockedBlockDesc).toMatch(/cannot build/i);
+    expect(chrome).not.toContain("data-ile-review-work");
+    expect(chrome).not.toContain("absolute right-2");
+    expect(chrome).toContain('mode="ile"');
+    expect(chrome).toContain("data-ile-canvas-sidebar-split");
+    expect(chrome).toContain("flex-row");
+    expect(SESSION_SIDEBAR_COLLAPSED_REM).toBeGreaterThanOrEqual(5.5);
+    expect(SESSION_SIDEBAR_COLLAPSED_REM).toBeLessThanOrEqual(7.5);
+    expect(SESSION_SIDEBAR_EXPANDED_REM).toBeLessThanOrEqual(24);
+    expect(SESSION_SIDEBAR_COLLAPSED_REM).toBeLessThan(SESSION_SIDEBAR_EXPANDED_REM);
+    expect(read("components/session-view/session-sidebar.tsx")).toContain("data-session-sidebar");
+    expect(read("components/session-view/session-sidebar.tsx")).toContain(
+      "data-ile-global-resources",
+    );
+    const dockSlice = chrome.slice(chrome.indexOf("data-ile-work-dock"));
+    expect(dockSlice).not.toContain("onOpenGlobalResources");
+    expect(dockSlice).not.toContain("onSubmitTurn");
+    expect(dockSlice).not.toContain("onReviewWork");
+    expect(chrome).not.toContain("data-ile-pow-resource-bar");
+    expect(chrome).not.toContain("data-ile-global-resources");
+    expect(chrome).not.toContain("onOpenGlobalResources");
+    expect(chrome).not.toContain("globalResourcesOpen");
+    expect(chrome).toContain("resources={resources}");
+    expect(chrome).toContain("resourcesOpen={resourcesOpen}");
+    expect(chrome).not.toContain("data-ile-pow-resource-actions");
+    expect(chrome).not.toContain("IleSubmitWorkButton");
+    expect(chrome).not.toContain("data-ile-review-work");
+    expect(chrome).not.toContain("data-ile-submit-turn");
+    expect(chrome).not.toContain("End turn");
+    expect(view).toContain("compact");
+    expect(view).not.toContain("onSubmitTurn={() => void handleSubmitTurn()}");
+    expect(read("components/SessionView.tsx")).not.toContain("<ChapterMapPanel");
+    expect(view).not.toContain("data-ile-compact-insight-craft");
+    expect(view).not.toContain("turnInsightCraft()");
+    expect(view).not.toContain("boardInterior=");
+    expect(view).not.toContain("insightCraft={turnInsightCraft()}");
+    expect(view).not.toContain("turnInsightCraft(true)");
+    expect(view).toContain("ileSessionSettingsPath");
+    expect(view).toContain("if (showWelcomeModal)");
+    expect(view).toContain("IleTurnInsightCraft");
+    expect(view).not.toContain("IleSessionInsightsPanel");
+    expect(view).toContain("IleMapInsightsWidget");
+    const craft = read("components/session-view/learn-turn-insight-craft.tsx");
+    expect(craft).toContain("data-ile-turn-insight-craft");
+    expect(craft).toContain("data-ile-end-turn-screen");
+    expect(craft).toContain("data-ile-end-turn-blocked-reason");
+    expect(craft).toContain("data-ile-turn-insight-chapters");
+    expect(craft).toContain("data-ile-turn-insight-chapter-list");
+    expect(craft).toContain("ileTurnInsightTopic");
+    expect(craft).not.toContain("dockedChapters.map");
+    expect(craft).toContain("IleWorkDockChip");
+    expect(read("components/SessionView.tsx")).toContain("ileBlockSessionOpenWorkIds");
+    expect(craft).toContain("compact");
+    expect(craft).not.toContain("bg-amber-300/10");
+    expect(craft).not.toContain("text-amber-100");
+    expect(craft).not.toContain("data-ile-turn-insight-draft");
+    expect(craft).not.toContain("data-ile-turn-insight-evaluate");
+    expect(craft).not.toContain("Thoughts pool");
+    expect(craft).not.toContain("Link to an active chapter");
+    expect(view).toContain("dockedChapters={openWorkDockLabels}");
+    expect(craft).toContain("Continue with the next turn");
+    expect(craft).toContain("Save and go out of the workspace");
+    expect(craft).toContain("Back to work");
+    expect(craft).not.toContain("DialogFrame");
+    expect(craft).not.toContain("portal={portal}");
+    expect(chrome).not.toContain("data-ile-insight-craft-widget");
+    expect(chrome).not.toContain("ileMapInsightCraftFrameClass()");
+    expect(chrome).not.toContain("data-ile-work-dock-covered");
+    expect(chrome).not.toContain("End turn");
+    expect(chrome).not.toContain("{insightCraft}");
+    expect(view).toContain("onMinimizeHelios");
+    expect(view).toContain("aestheticImages={selectedAesthetic?.images}");
+    expect(read("components/SessionView.tsx")).not.toContain("openWorkIds={openWorkIds}");
+    expect(existsSync(join(ROOT, "components/ChapterMapPanel.tsx"))).toBe(false);
+    const gridHost = read("components/BlockSkillGrid.tsx");
+    expect(gridHost).not.toContain("boardInterior");
+    expect(gridHost).not.toContain("suggestMode");
+    const world = read("components/block-skill-grid/map-world-layer.tsx");
+    expect(world).not.toContain("data-ile-end-turn-board");
+    expect(world).toContain("data-ile-open-work-tile-image");
+    expect(world).not.toContain("workAestheticById");
+    expect(world).not.toContain("resolveIleWorkAestheticImage");
+    expect(world).toContain("aestheticImageForId");
+    expect(world).toContain("hideIcon={Boolean(tileAesthetic)}");
+    expect(world).not.toContain("IleChapterInsightCountBadge");
+    expect(view).toContain("IleInsightTrophyStrip");
+    expect(view).toContain("slotCount={minInsightsPerChapter}");
+    expect(view).toContain("workCanvasHeaderLeading={workCanvasInsightSlots}");
+    expect(view).not.toContain("compactHeaderLeading");
+    expect(view).not.toContain('renderWorkCanvas("pip")');
+    expect(view).toContain("IleMapInsightsWidget");
+    expect(read("components/SessionView.tsx")).not.toContain("IleWorkCanvasTimer");
+    expect(read("components/SessionView.tsx")).not.toContain("workCanvasHeaderExtra");
+    expect(chrome).not.toContain("workCanvasHeaderExtra");
+    expect(chrome).not.toContain("clock=");
+    expect(chrome).not.toContain("IleWorkCanvasTimer");
+    expect(chrome).not.toContain("left-1/2 top-2");
+    expect(chrome).not.toContain("-translate-x-1/2");
+    expect(chrome).toContain('id="actions"');
+    expect(chrome).toContain("SessionGuidePanel");
+    expect(chrome).not.toContain('id="insights"');
+    expect(chrome).toContain('id="chapters"');
+    expect(chrome).toContain('id="sensors"');
+    expect(chrome).not.toContain("transcript={voiceBar}");
+    expect(read("components/session-view/learn-voice-bar.tsx")).not.toContain("inset-x-0 bottom-0");
+    expect(read("components/session-view/session-sidebar.tsx")).not.toContain(
+      "data-session-sidebar-toggle",
+    );
+    expect(read("components/session-view/session-sidebar.tsx")).toContain(
+      "data-session-sidebar-focus",
+    );
+    expect(chrome).toContain("mapInsightsWidget");
+    const trophies = read("components/session-view/learn-insight-trophies.tsx");
+    expect(trophies).toContain("data-ile-insight-trophy");
+    expect(trophies).toContain("data-ile-insight-slot-empty");
+    expect(trophies).toContain("data-ile-map-insights-widget");
+    expect(trophies).toContain("ILE_MAP_INSIGHT_PLACEHOLDER_COUNT = 3");
+    expect(trophies).toContain("data-ile-map-insights-more");
+    expect(trophies).toContain("ILE_MAP_INSIGHTS_MORE_LABEL");
+    expect(trophies).toContain("Math.max(goal, insights.length)");
+    expect(trophies).toContain('data-ile-insight-slot-card="empty"');
+    expect(trophies).toContain("ILE_INSIGHT_EMPTY_SLOT_LABEL");
+    expect(trophies).not.toContain("Craft insights on the Work canvas.");
+    expect(trophies).toContain("data-ile-work-canvas-timer");
+    expect(trophies).toContain("data-ile-insight-trophy-icon");
+    expect(trophies).toContain("data-ile-insight-flag-icon");
+    expect(trophies).not.toMatch(/border-amber-/);
+    expect(trophies).toContain("data-ile-chapter-insight-count");
+    const expand = read("components/session-view/learn-canvas-craft-insight.tsx");
+    expect(expand).toContain("data-ile-craft-insight");
+    expect(expand).toContain("ILE_CRAFT_INSIGHT_LABEL");
+    const enHelp = JSON.parse(read("messages/en.json")) as {
+      onboardingGuide: {
+        ile: {
+          title: string;
+          titleOne: string;
+          step3: { body: string; highlight: string; quoteText: string };
+        };
+      };
+    };
+    expect(enHelp.onboardingGuide.ile.title).toMatch(/Craft \{count\} insights/);
+    expect(enHelp.onboardingGuide.ile.titleOne).toMatch(/Craft 1 insight/);
+    expect(enHelp.onboardingGuide.ile.step3.body).toMatch(/craft insights/i);
+    expect(enHelp.onboardingGuide.ile.step3.body).toMatch(/canvas/i);
+    expect(enHelp.onboardingGuide.ile.step3.body).not.toMatch(/\bboard\b|end turn/i);
+    expect(enHelp.onboardingGuide.ile.step3.highlight).toBe("");
+    expect(enHelp.onboardingGuide.ile.step3.quoteText).toBe("");
+    const guide = read("components/SessionOnboardingGuide.tsx");
+    expect(guide).toContain('variant === "ile"');
+    expect(guide).toContain("data-ile-voice-challenge");
+    expect(guide).not.toContain("IleInsightEmptySlots");
+    expect(guide).toContain("insightGoalCount");
+    expect(trophies).toContain("data-ile-welcome-insight-slots");
+    expect(trophies).toContain("IleInsightEmptySlots");
+    const badges = read("components/block-skill-grid/map-tile-badges.tsx");
+    expect(badges).toContain("hideIcon");
+    expect(view).toContain("parseIleOpenWorkIdsFromMetadata");
+    expect(view).toContain("restoreIleOpenWorkIds");
+    expect(view).toContain("openWorkIdsRef");
+    const phase = read("components/session-view/use-session-phase.ts");
+    expect(phase).toContain("applyIleOpenWorkIdsToMetadata");
+    expect(phase).toContain("openWorkIdsRef.current");
+    expect(existsSync(join(ROOT, "components/session-view/learn-chapter-widget-frame.tsx"))).toBe(
+      false,
+    );
+    expect(chrome).not.toContain("ileMapWorkFrameClass()");
+    expect(chrome).not.toContain("onToggleWide");
+    expect(chrome).not.toContain("workCanvasWide");
+    expect(ILE_END_TURN_LABEL).toBe("End turn");
+    expect(ILE_SUBMIT_TURN_LABEL).toBe(ILE_END_TURN_LABEL);
+    expect(ILE_END_TURN_LABEL.toLowerCase()).toMatch(/end|turn/);
+
+    expect(docs).toMatch(/Work expense/i);
+    expect(docs).not.toMatch(/End turn/);
+    expect(docs).toMatch(/Gather appetite/);
+    expect(docs).toMatch(/work canvas/i);
+    expect(docs).toMatch(/transcript bar with Exit/);
+    expect(docs).not.toMatch(/Data and Exit/);
+    expect(docs).not.toMatch(/Data, Logs, and Save/);
+
+    const sessionList = read("components/SessionList.tsx");
+    expect(sessionList).not.toContain("resolveBlockCircularMenuSurface");
+    expect(sessionList).not.toContain("practiceMenu");
+    expect(read("components/SessionView.tsx")).not.toContain('circularMenuSurface="ile"');
+    expect(read("components/SessionView.tsx")).not.toContain("<ChapterMapPanel");
+
+    const locales = ["en", "de", "es", "pl", "vi", "zh"] as const;
+    const settingKeys = [
+      "welcomeMessage",
+      "chapterCount",
+      "chapterCountDesc",
+      "chapterCountFew",
+      "chapterCountMany",
+      "minInsightsPerChapter",
+      "minInsightsPerChapterDesc",
+      "pregamePresetSkirmishDesc",
+      "pregamePresetCampaignDesc",
+      "pregamePresetBlitzDesc",
+      "pregameTabEconomy",
+      "canvasTimerDesc",
+      "startTipActions",
+      "startTipSelection",
+      "startTipCommands",
+      "startTipDictate",
+      "startTipLeave",
+    ] as const;
+    const localeNotes: string[] = [];
+    for (const locale of locales) {
+      const messages = JSON.parse(read(`messages/${locale}.json`)) as {
+        session: Record<string, string>;
+        onboardingGuide: { ile: { step2: { body: string }; step3: { body: string; bodyProject: string } } };
+      };
+      expect(messages.session.chapterCount).toBeTruthy();
+      expect(messages.session.minInsightsPerChapter).toBeTruthy();
+      for (const key of settingKeys) {
+        const value = messages.session[key] || "";
+        expect(value, `${locale} session.${key}`).not.toMatch(/\bmap\b|\bboard\b/i);
+        localeNotes.push(`${locale}.${key}=${value}`);
+      }
+      expect(messages.onboardingGuide.ile.step3.body).not.toMatch(/\bboard\b|end turn/i);
+      expect(messages.onboardingGuide.ile.step3.bodyProject).not.toMatch(/\bboard\b|end turn/i);
+      expect(messages.onboardingGuide.ile.step2.body).not.toMatch(/\bboard\b|end turn/i);
+    }
+
+    writeScratch(
+      "ile-canvas-chrome.txt",
+      [
+        "stage=work canvas (data-ile-canvas-stage)",
+        "top-resource-bar=absent",
+        "end-turn-label=absent",
+        "end-turn-control=absent",
+        "settings=chapter count + session insight goal + aesthetics",
+        "settings-map-or-board-wording=absent",
+        "left-sidebar=insights + chapters + signals + transcript + clock",
+        "collapse=sidebar rail plus per-section insights, chapters, sensors",
+        "ile-circular-menu=not mounted",
+        "workspace-learner-menu=remains",
+        ...localeNotes,
+      ].join("\n") + "\n",
+    );
+    writeScratch(
+      "ile-work-chrome.txt",
+      [
+        "stage is the work canvas",
+        "no top resource bar",
+        "no End turn control",
+        "left sidebar stacks the Data panel and Exit",
+        "insights, chapters, and sensors collapse inside the sidebar",
+        "settings set chapter count and the session insight goal",
+      ].join("\n"),
+    );
+  });
+});
+
+describe("one current chapter", () => {
+  it("uses the plan frame for the card and the seeded prompt", () => {
+    const steps = [
+      { id: "ch-1", description: "Prompt one", map_keyword: "One" },
+      { id: "ch-2", description: "Prompt two", map_keyword: "Two" },
+      { id: "ch-3", description: "Prompt three", map_keyword: "Three" },
+    ];
+    const frame = ileBlockSessionFrame({ steps, currentStepIndex: 2 });
+    expect(frame).toEqual({ index: 2, id: "ch-3", prompt: "Prompt three" });
+    expect(ileBlockSessionFrame(null)).toBeNull();
+    const openIds = frame ? [frame.id] : [];
+    expect(openIds).toEqual(["ch-3"]);
+    const step = steps[frame?.index ?? 0]!;
+    const card = sessionSidebarTopic([
+      {
+        id: openIds[0],
+        label: `Ch ${(frame?.index ?? 0) + 1}`,
+        keyword: resolveBlockMapGlyph({
+          map_keyword: step.map_keyword,
+          title: step.description,
+        }).keyword,
+        focused: openIds[0] === step.id,
+      },
+    ]);
+    expect(card.id).toBe("ch-3");
+    expect(card.title).toBe("Three");
+    expect(frame?.prompt).toBe(step.description);
+    expect(card.id).not.toBe(steps[0]?.id);
+    const view = readFileSync(join(ROOT, "components/SessionView.tsx"), "utf8");
+    const hook = readFileSync(join(ROOT, "lib/useSessionChapterWorkspaces.ts"), "utf8");
+    expect(view).toContain("ileBlockSessionFrame(sessionPlan)");
+    expect(view).toContain("if (!heliosWidgetOpen || !blockFrame) return");
+    expect(view).toContain("seedChapterWorkCanvas(blockFrame.id, text)");
+    expect(view).not.toContain("ileBlockSessionChapter(sessionPlan?.steps, activeChapterIndex)");
+    expect(hook).toContain("const frame = ileBlockSessionFrame(sessionPlan)");
+    expect(hook).toContain("const activeChapterKey = frame?.id ?? null");
+    expect(hook).not.toContain("setActiveChapterIndex(");
+    expect(hook).not.toContain("`step-${activeChapterIndex}`");
+    expect(hook).not.toContain("planInitializedRef");
+  });
+});
+
+describe("end turn topic chip", () => {
+  it("draws one dock chip for the session chapter when several labels are passed", () => {
+    const steps = [
+      { id: "initial-prompt" },
+      { id: "chapter-2" },
+      { id: "chapter-3" },
+      { id: "chapter-4" },
+      { id: "chapter-5" },
+    ];
+    expect(ileBlockSessionOpenWorkIds(steps)).toEqual(["initial-prompt"]);
+    const labels = steps.map((step, index) => ({
+      id: step.id,
+      label: `Ch ${index + 1}`,
+      keyword: index === 0 ? "Initial prompt" : `Later ${index}`,
+      focused: index === 2,
+    }));
+    expect(ileTurnInsightTopic(labels)?.id).toBe("chapter-3");
+    const html = renderToStaticMarkup(
+      createElement(IleTurnInsightCraft, {
+        open: true,
+        dockedChapters: labels,
+        gate: {
+          canComplete: false,
+          reason: "Each chapter needs an insight.",
+          minPerChapter: 1,
+          unmetChapterIds: labels.map((row) => row.id),
+          chaptersToComplete: [],
+        },
+        onContinue: () => {},
+        onSaveAndExit: () => {},
+        onBack: () => {},
+      }),
+    );
+    expect(html.match(/data-ile-open-work-chip=/g)).toHaveLength(1);
+    expect(html).toContain('data-ile-open-work-chip="chapter-3"');
+    expect(html).not.toContain('data-ile-open-work-chip="initial-prompt"');
+    expect(html).not.toContain('data-ile-open-work-chip="chapter-2"');
+    expect(html).not.toContain('data-ile-open-work-chip="chapter-5"');
+    expect(html.match(/data-ile-turn-insight-chapter=/g)).toHaveLength(1);
+  });
+});
+
+describe("session topic card", () => {
+  it("keeps the focused chapter and draws one static card", () => {
+    const topic = sessionSidebarTopic([
+      { id: "ch-a", label: "Chapter A", keyword: "alpha", focused: true },
+      { id: "ch-b", label: "Chapter B", keyword: "beta" },
+      { id: "ch-c", label: "Chapter C", keyword: "gamma" },
+    ]);
+    expect(topic.id).toBe("ch-a");
+    expect(topic.title).toBe("alpha");
+    const html = renderToStaticMarkup(
+      createElement(SessionTopicCard, {
+        id: topic.id,
+        title: topic.title,
+        customUrls: ["https://example.com/still.jpg"],
+      }),
+    );
+    expect(html).not.toContain("data-ile-chapter-dock-chapters");
+    expect(html).not.toContain("grid-cols-2");
+    expect(html.match(/<button/g)).toHaveLength(1);
+    expect(html).toContain('data-session-topic-card-media="image"');
+    expect(html).not.toContain("overflow-x-auto");
+    expect(html).not.toContain("w-[7rem]");
+    expect(html.match(/data-session-topic-card=/g)).toHaveLength(1);
+    expect(html).toContain('data-session-topic-card="ch-a"');
+    expect(html).toContain("alpha");
+    expect(html).not.toContain('data-session-topic-card="ch-b"');
+    expect(html).toContain("w-full min-w-0");
+  });
+});
+
+function insightFixture(id: string): InsightSummary {
+  return {
+    id,
+    title: id,
+    summary: "",
+    created_at: "2026-01-01T00:00:00.000Z",
+  };
+}
+
+describe("IleMapInsightsWidget slots", () => {
+  it("draws one empty slot when the insight goal is one", () => {
+    const html = renderToStaticMarkup(
+      createElement(IleMapInsightsWidget, {
+        insights: [],
+        visible: true,
+        slotCount: 1,
+      }),
+    );
+    const empties = html.match(/data-ile-insight-slot-card="empty"/g) ?? [];
+    expect(ILE_MAP_INSIGHT_PLACEHOLDER_COUNT).toBe(3);
+    expect(empties).toHaveLength(1);
+    expect(html).toContain('data-ile-map-insights-slot-count="1"');
+    expect(html).not.toContain("data-ile-map-insights-more");
+    expect(html).not.toContain("<button");
+  });
+
+  it("draws as many empty slots as the insight goal", () => {
+    const html = renderToStaticMarkup(
+      createElement(IleMapInsightsWidget, {
+        insights: [],
+        visible: true,
+        slotCount: 5,
+      }),
+    );
+    const empties = html.match(/data-ile-insight-slot-card="empty"/g) ?? [];
+    expect(empties).toHaveLength(5);
+    expect(html).toContain('data-ile-map-insights-goal="5"');
+    expect(html).toContain('data-ile-map-insights-slot-count="5"');
+  });
+
+  it("keeps every accepted insight past the goal and does not add empty rows", () => {
+    const html = renderToStaticMarkup(
+      createElement(IleMapInsightsWidget, {
+        insights: [insightFixture("a"), insightFixture("b")],
+        visible: true,
+        slotCount: 1,
+      }),
+    );
+    const filled = html.match(/data-ile-insight-slot-card="filled"/g) ?? [];
+    const empties = html.match(/data-ile-insight-slot-card="empty"/g) ?? [];
+    expect(filled).toHaveLength(2);
+    expect(empties).toHaveLength(0);
+    expect(html).toContain("data-ile-map-insights-more");
+  });
+});

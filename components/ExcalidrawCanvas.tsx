@@ -7,14 +7,14 @@ import {
   useEffect,
 } from "react";
 import { useI18n } from "@/lib/i18n";
-import { bindIleSurfaceEditorEvents, bindIleSurfaceWheelZoom } from "@/lib/ile-compact-window";
-import { ILE_HELIOS_THINKING_ROTATE_MS } from "@/lib/ile-dialogue-turn";
-import { ILE_CANVAS_TIMER_RESET_LOADING_MS } from "@/lib/ile-work-canvas-timer";
+import { bindIleSurfaceEditorEvents, bindIleSurfaceWheelZoom } from "@/lib/learn-compact-window";
+import { ILE_HELIOS_THINKING_ROTATE_MS } from "@/lib/learn-dialogue-turn";
+import { ILE_CANVAS_TIMER_RESET_LOADING_MS } from "@/lib/learn-work-canvas-timer";
 import {
   ileCanvasCommandDraft,
   ileWorkCanvasCommandNeedsSelection,
   type IleWorkCanvasCommandId,
-} from "@/lib/ile-work-canvas-commands";
+} from "@/lib/learn-work-canvas-commands";
 import { CanvasPromptBar } from "@/components/excalidraw-canvas/canvas-prompt-bar";
 import {
   usePublishSessionBranchSlot,
@@ -37,7 +37,7 @@ import { CanvasThinkingChips } from "@/components/excalidraw-canvas/canvas-think
 import {
   IleExcalidrawErrorBoundary,
   IleExcalidrawMount,
-} from "@/components/excalidraw-canvas/ile-excalidraw-mount";
+} from "@/components/excalidraw-canvas/learn-excalidraw-mount";
 import { sanitizeSceneData } from "@/components/excalidraw-canvas/sanitize-scene";
 import {
   applyIleWorkCanvasAskReply,
@@ -73,18 +73,18 @@ import {
   type IleWorkCanvasElement,
   type IleWorkCanvasScene,
   type IleWorkCanvasSkeleton,
-} from "@/lib/ile-work-canvas";
-import { syncIleDictatedTextOnWorkCanvas } from "@/lib/ile-canvas-dictate";
-import { appendLearnSuggestionText } from "@/lib/ile-learn-suggestion";
-import { type IleCanvasCraftInsightConfig } from "@/components/session-view/ile-canvas-craft-insight";
+} from "@/lib/learn-work-canvas";
+import { syncIleDictatedTextOnWorkCanvas } from "@/lib/learn-canvas-dictate";
+import { appendLearnSuggestionText } from "@/lib/learn-suggestion";
+import { type IleCanvasCraftInsightConfig } from "@/components/session-view/learn-canvas-craft-insight";
 import {
   IleWorkCanvasPowCollector,
   ileWorkCanvasGestureBusy,
   type IleWorkCanvasPowEvent,
-} from "@/lib/ile-work-canvas-pow";
+} from "@/lib/learn-work-canvas-pow";
 // Excalidraw CSS - required for proper rendering
 import "@excalidraw/excalidraw/index.css";
-import "@/app/ile-excalidraw-theme.css";
+import "@/app/learn-excalidraw-theme.css";
 
 // Dynamic import for Next.js SSR compatibility
 type ExcalidrawAPIRef = any;

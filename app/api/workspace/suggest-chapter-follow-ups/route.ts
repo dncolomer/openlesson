@@ -9,7 +9,7 @@ import { callXaiJSON, systemMessage, userMessage, DEFAULT_MODEL } from "@/lib/xa
 import {
   buildChapterFollowUpContext,
   normalizeChapterFollowUpSuggestions,
-} from "@/lib/ile-chapter-follow-ups";
+} from "@/lib/learn-chapter-follow-ups";
 import { composeBlockMapGlyphJsonInstruction } from "@/lib/block-map-glyph";
 
 interface SuggestChapterFollowUpsResponse {

@@ -15,7 +15,7 @@ import {
   type Session,
   type SessionPlan,
 } from "@/lib/storage";
-import { decideIleSettingsEnterMap } from "@/lib/ile-session-routes";
+import { decideIleSettingsEnterMap } from "@/lib/learn-session-routes";
 import {
   isSessionWelcomeSeen,
   markIleSessionSettingsConfirmed,
@@ -30,26 +30,26 @@ import {
   fetchSessionPlanChaptersStatus,
   fetchWelcomeChapterSnapshot,
 } from "@/lib/session-plan-chapters-status";
-import { ileWelcomeShowsRegenerate } from "@/lib/ile-welcome-chapters";
-import { applyIleSessionNameToMetadata } from "@/lib/ile-session-name";
-import { applyIleOpenWorkIdsToMetadata } from "@/lib/ile-pow-spend";
+import { ileWelcomeShowsRegenerate } from "@/lib/learn-welcome-chapters";
+import { applyIleSessionNameToMetadata } from "@/lib/learn-session-name";
+import { applyIleOpenWorkIdsToMetadata } from "@/lib/learn-pow-spend";
 import {
   flagIleSessionProofOfWorkImpure,
   textToBase64,
   uploadIleProofOfWork,
-} from "@/lib/ile-proof-of-work-client";
+} from "@/lib/learn-proof-of-work-client";
 import { withImpurePoWData } from "@/lib/tap-session-purity";
 import { postWorkspaceFlowEmbedding } from "@/lib/flow-embedding-client";
 import { FLOW_EMBEDDING_MODEL_ID } from "@/lib/flow-embedding";
 import type { SessionPolicySnapshot } from "@/components/session-view/session-policy-context";
 import { loadSessionBranchField, sessionClockMayStart } from "@/lib/session-branch-field-load";
 import { learnSessionFieldInput } from "@/lib/session-branch-prepare";
-import { persistIleSessionRow } from "@/lib/ile-session-persist";
+import { persistIleSessionRow } from "@/lib/learn-session-persist";
 import { learnFieldFromStoredPolicy } from "@/lib/session-policy-store";
-import { discardUnsavedIleSession } from "@/lib/ile-unsaved-exit";
+import { discardUnsavedIleSession } from "@/lib/learn-unsaved-exit";
 import type { GuestAccessKind, ChapterPlanStatus, HelpPreviousLayout } from "@/components/session-view/types";
 import type { InitialChaptersLevel } from "@/lib/initial-chapters";
-import type { IleSessionMode } from "@/lib/ile-mode";
+import type { IleSessionMode } from "@/lib/learn-mode";
 
 
 export type SessionPhaseInput = {
@@ -227,7 +227,7 @@ useEffect(() => {
       guestAccessKind === "aycl" && ayclToken
         ? await (await import("@/lib/aycl-storage")).getAyclSession(ayclToken, sessionId)
         : guestAccessKind === "ile" && ileToken
-          ? await (await import("@/lib/ile-link-storage")).getIleLinkSession(ileToken, sessionId)
+          ? await (await import("@/lib/learn-link-storage")).getIleLinkSession(ileToken, sessionId)
           : await getSession(sessionId);
     if (cancelled) return;
     if (s) {
@@ -806,7 +806,7 @@ if (guestAccessKind === "aycl" && ayclToken) {
     metadata: { ...(session.metadata || {}), tutoringLanguage },
   });
 } else if (guestAccessKind === "ile" && ileToken) {
-  const { saveIleLinkSession } = await import("@/lib/ile-link-storage");
+  const { saveIleLinkSession } = await import("@/lib/learn-link-storage");
   await saveIleLinkSession(ileToken, {
     ...session,
     metadata: { ...(session.metadata || {}), tutoringLanguage },

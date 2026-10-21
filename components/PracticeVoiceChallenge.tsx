@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { SessionAudioMonitor } from "@/components/session-view/session-data-card";
-import { IleStartLoading } from "@/components/session-view/ile-start-loading";
+import { IleStartLoading } from "@/components/session-view/learn-start-loading";
 import { SessionPageLoading } from "@/components/session-view/session-page-loading";
 import { useI18n } from "@/lib/i18n";
 import {

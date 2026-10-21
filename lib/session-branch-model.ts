@@ -8,7 +8,7 @@ import {
   boardInstructionNoteElements,
   ileWorkCanvasContentBounds,
   type IleWorkCanvasElement,
-} from "@/lib/ile-work-canvas";
+} from "@/lib/learn-work-canvas";
 
 export const SESSION_BRANCH_REGION_COUNT = 6;
 export const SESSION_BRANCH_AVENUE_COUNT = 4;

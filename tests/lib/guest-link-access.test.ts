@@ -182,7 +182,7 @@ describe("PoW source link traceability", () => {
     expect(normalizeGuestLinkAccessMode({ access_mode: "public" })).toBe("public");
     expect(normalizeGuestLinkAccessMode({ access_mode: "private" })).toBe("private");
     const createTap = await import("@/lib/pow-api/create-tap-link");
-    const createIle = await import("@/lib/pow-api/create-ile-link");
+    const createIle = await import("@/lib/pow-api/create-learn-link");
     expect(typeof createTap.createWorkspaceTapLink).toBe("function");
     expect(typeof createIle.createWorkspaceIleLink).toBe("function");
     const tapSrc = (await import("node:fs")).readFileSync(
@@ -221,13 +221,13 @@ describe("session page wiring (static)", () => {
       "app/api/workspace-tap-score/idle/route.ts",
       "app/api/workspace-tap-score/complete/route.ts",
       "app/api/workspace/proof-of-work/route.ts",
-      "app/api/workspace-ile/speech/route.ts",
-      "app/api/workspace-ile/idle/route.ts",
+      "app/api/workspace-learn/speech/route.ts",
+      "app/api/workspace-learn/idle/route.ts",
     ]) {
       const src = readFileSync(join(root, rel), "utf8");
       expect(src, rel).toContain("stampSourceLinkMetadata");
       // Guest TAP Learning paths must gate stamping on access.ileLinkId from ileToken auth
-      if (rel.includes("workspace-ile/")) {
+      if (rel.includes("workspace-learn/")) {
         expect(src, rel).toContain("access.ileLinkId");
         expect(src, rel).toMatch(/stampSourceLinkMetadata\([\s\S]*kind:\s*["']learn["']/);
       }

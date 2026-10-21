@@ -4,9 +4,9 @@
  */
 import {
   applyIleChapterModeInstructions,
-} from "@/lib/ile-chapter-depth";
+} from "@/lib/learn-chapter-depth";
 import { composeChapterMapGlyphJsonInstruction } from "@/lib/block-map-glyph";
-import type { IleSessionMode } from "@/lib/ile-mode";
+import type { IleSessionMode } from "@/lib/learn-mode";
 
 /** Prompt fill only needs type / description / status — LLM and domain steps both fit. */
 export type SessionPlanUpdateStep = {

@@ -3,7 +3,7 @@
  * normalization (including spatial grid coordinates).
  */
 
-import { clampIleSessionChapterCount } from "@/lib/ile-canvas-session";
+import { clampIleSessionChapterCount } from "@/lib/learn-canvas-session";
 import {
   parseInitialChaptersLevel,
   type InitialChaptersLevel,
@@ -14,8 +14,8 @@ import {
   type WorkspaceMapTypeRecord,
   type WorkspaceMapTypesState,
 } from "@/lib/workspace-map-types";
-import { applyIleChapterModeInstructions } from "@/lib/ile-chapter-depth";
-import type { IleSessionMode } from "@/lib/ile-mode";
+import { applyIleChapterModeInstructions } from "@/lib/learn-chapter-depth";
+import type { IleSessionMode } from "@/lib/learn-mode";
 import type { RequestType, SessionPlanStep } from "@/lib/domain/types";
 import {
   blockMapGlyphDbFields,

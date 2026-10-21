@@ -7,7 +7,7 @@ import {
   ileGatherProgressFraction,
   ILE_GATHER_RESOURCES_TOOL,
   type IleGatherJob,
-} from "@/lib/ile-gather-resources";
+} from "@/lib/learn-gather-resources";
 import { ileGatherJobTileId } from "@/lib/block-circular-menu";
 
 type MapSaveJob = {

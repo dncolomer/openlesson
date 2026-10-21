@@ -226,12 +226,12 @@ describe("KR vs standard skill/MCP surface (shipped builders)", () => {
     expect(workspaceAllowsKnowledgeLinkMint("standard")).toBe(true);
     expect(assertWorkspaceAllowsKnowledgeLinkMint("knowledge_region").ok).toBe(false);
     expect(read("lib/pow-api/create-tap-link.ts")).toContain("workspaceAllowsKnowledgeLinkMint");
-    expect(read("lib/pow-api/create-ile-link.ts")).toContain("workspaceAllowsKnowledgeLinkMint");
+    expect(read("lib/pow-api/create-learn-link.ts")).toContain("workspaceAllowsKnowledgeLinkMint");
     expect(existsSync(join(ROOT, "lib/pow-api/create-tapbench-link.ts"))).toBe(false);
     expect(read("app/api/workspace/tap-links/route.ts")).toContain(
       "assertWorkspaceAllowsKnowledgeLinkMint",
     );
-    expect(read("app/api/workspace/ile-links/route.ts")).toContain(
+    expect(read("app/api/workspace/learn-links/route.ts")).toContain(
       "assertWorkspaceAllowsKnowledgeLinkMint",
     );
     expect(existsSync(join(ROOT, "app/api/workspace/tapbench-links/route.ts"))).toBe(
@@ -276,7 +276,7 @@ describe("KR vs standard skill/MCP surface (shipped builders)", () => {
         `standard_allows=${workspaceAllowsKnowledgeLinkMint("standard")}`,
         `kr_assert=${JSON.stringify(assertWorkspaceAllowsKnowledgeLinkMint("knowledge_region"))}`,
         `tap_create_consults=${read("lib/pow-api/create-tap-link.ts").includes("workspaceAllowsKnowledgeLinkMint")}`,
-        `ile_create_consults=${read("lib/pow-api/create-ile-link.ts").includes("workspaceAllowsKnowledgeLinkMint")}`,
+        `ile_create_consults=${read("lib/pow-api/create-learn-link.ts").includes("workspaceAllowsKnowledgeLinkMint")}`,
         `tapbench_create_file_exists=${existsSync(join(ROOT, "lib/pow-api/create-tapbench-link.ts"))}`,
       ].join("\n") + "\n",
     );

@@ -3,13 +3,13 @@
 import { SessionHeliosPanel } from "@/components/SessionHeliosPanel";
 import type { HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
 import type { AestheticPackage } from "@/lib/aesthetics";
-import type { ExerciseDualLists } from "@/lib/ile-mode";
-import type { ChapterFollowUpSuggestion } from "@/lib/ile-chapter-follow-ups";
+import type { ExerciseDualLists } from "@/lib/learn-mode";
+import type { ChapterFollowUpSuggestion } from "@/lib/learn-chapter-follow-ups";
 import type { SpokenLocale } from "@/lib/tutoring-languages";
 import type { SessionThoughtInterface } from "@/lib/useSessionThoughtInterface";
 import type { PowParticipantIdentity } from "@/lib/session-participant-identity";
-import type { IleWordBoxMenuAction } from "@/lib/ile-word-boxes";
-import type { IleChapterHeliosActionsProps } from "@/components/session-view/ile-chapter-helios-actions";
+import type { IleWordBoxMenuAction } from "@/lib/learn-word-boxes";
+import type { IleChapterHeliosActionsProps } from "@/components/session-view/learn-chapter-helios-actions";
 
 export type SessionThoughtPaneProps = {
   activeChapterKey: string;

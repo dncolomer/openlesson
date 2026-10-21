@@ -68,7 +68,7 @@ describe("TAP and TAP Learning mount desktop-only smartphone gate", () => {
 
     const tap = readFileSync(join(ROOT, "components/TapScoreClient.tsx"), "utf8");
     const session = readSessionViewSurface();
-    const ile = readFileSync(join(ROOT, "components/IleGuestSessionClient.tsx"), "utf8");
+    const ile = readFileSync(join(ROOT, "components/LearnGuestSessionClient.tsx"), "utf8");
     const block = readFileSync(join(ROOT, "components/MobileBlockScreen.tsx"), "utf8");
 
     expect(tap).toContain("isSmartphoneClient");

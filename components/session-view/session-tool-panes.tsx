@@ -2,9 +2,9 @@
 
 import { DataInputTool } from "@/components/DataInputTool";
 import { FacialDataPoint } from "@/components/FaceTracker";
-import { IleReviewWorkPanel } from "@/components/session-view/ile-review-work-panel";
+import { IleReviewWorkPanel } from "@/components/session-view/learn-review-work-panel";
 import type { Tool } from "@/components/ToolsPanel";
-import type { IleSessionMode } from "@/lib/ile-mode";
+import type { IleSessionMode } from "@/lib/learn-mode";
 import type { DeviceStatus } from "@/lib/muse-athena";
 import type { Session, SessionPlanStep } from "@/lib/storage";
 import type { SessionThoughtInterface } from "@/lib/useSessionThoughtInterface";

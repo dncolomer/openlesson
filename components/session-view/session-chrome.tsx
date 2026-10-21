@@ -15,17 +15,17 @@ import {
   ILE_SESSION_CHROME_ABOVE_WORK_Z_CLASS,
   isIleMapOverlayTool,
   isIleSessionModalTool,
-} from "@/lib/ile-map-chrome";
+} from "@/lib/learn-map-chrome";
 import {
   SessionTopicCard,
   sessionSidebarTopic,
-} from "@/components/session-view/ile-work-dock-bar";
+} from "@/components/session-view/learn-work-dock-bar";
 import { ORG_CUSTOM_AESTHETIC_PACKAGE_ID } from "@/lib/aesthetics";
 import {
   emptyIlePowDisplayCounts,
   type IlePowDisplayCounts,
-} from "@/lib/ile-pow-counters";
-import { ILE_REVIEW_WORK_LABEL, ILE_REVIEW_WORK_TOOL } from "@/lib/ile-review-work";
+} from "@/lib/learn-pow-counters";
+import { ILE_REVIEW_WORK_LABEL, ILE_REVIEW_WORK_TOOL } from "@/lib/learn-review-work";
 
 export type SessionChromeProps = {
   t: SessionViewTranslate;

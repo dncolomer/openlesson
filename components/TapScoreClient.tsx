@@ -14,7 +14,7 @@ import {
   type SessionPolicySnapshot,
 } from "@/components/session-view/session-policy-context";
 import type { ProofOfWorkApiInterruption } from "@/lib/pow-api/predictive-interruption";
-import type { IleWorkCanvasScene } from "@/lib/ile-work-canvas";
+import type { IleWorkCanvasScene } from "@/lib/learn-work-canvas";
 import {
   THOUGHT_CONTEXT_AUTO_STASH_MAX_CHARS,
   shouldAutoStashOnContextFull,

@@ -7,7 +7,7 @@ import {
   serializeIleWorkCanvasScene,
   type IleWorkCanvasScene,
   type IleWorkCanvasWorkspaceInput,
-} from "@/lib/ile-work-canvas";
+} from "@/lib/learn-work-canvas";
 
 export type StuckAction = "ask" | "theory" | "practice" | "break";
 

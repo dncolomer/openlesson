@@ -23,7 +23,7 @@ import {
   welcomePlanFromPayload,
 } from "@/lib/session-plan-chapters-status";
 import { lookupSessionPlanChaptersForRequest } from "@/lib/session-plan-has-chapters-request";
-import { isIleConfirmSettingsBlocked } from "@/components/session-view/ile-confirm-settings";
+import { isIleConfirmSettingsBlocked } from "@/components/session-view/learn-confirm-settings";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
@@ -421,7 +421,7 @@ describe("Confirm is blocked only until the cheap existence result", () => {
     expect(isIleConfirmSettingsBlocked("failed", false)).toBe(false);
     expect(isIleConfirmSettingsBlocked("exists", true)).toBe(true);
 
-    const blockerSrc = read("components/session-view/ile-confirm-settings.ts");
+    const blockerSrc = read("components/session-view/learn-confirm-settings.ts");
     expect(blockerSrc).not.toMatch(/planLoading/);
     expect(blockerSrc).toContain('chapterPlanStatus === "unknown"');
 

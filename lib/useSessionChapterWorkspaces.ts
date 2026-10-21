@@ -19,8 +19,8 @@ import {
   readIleFocusedChapterWorkspace,
   type IleSessionContext,
   type IleSessionContextMap,
-} from "@/lib/ile-session-global-context";
-import { ileBlockSessionFrame } from "@/lib/ile-canvas-session";
+} from "@/lib/learn-session-global-context";
+import { ileBlockSessionFrame } from "@/lib/learn-canvas-session";
 
 export function useSessionChapterWorkspaces(
   sessionId: string,

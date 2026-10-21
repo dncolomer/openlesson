@@ -7,7 +7,7 @@ import {
   parseInitialChaptersLevel,
   type InitialChaptersLevel,
 } from "@/lib/initial-chapters";
-import { relocatePositionsOffBlockedSlots } from "@/lib/ile-chapter-blocked";
+import { relocatePositionsOffBlockedSlots } from "@/lib/learn-chapter-blocked";
 import {
   BLOCK_MAP_GLYPH_JSON_SHAPE,
   blockMapGlyphDbFields,

@@ -9,7 +9,7 @@ import {
   buildExercisePromptText,
   resolveExercisePromptAfterIntro,
 } from "@/lib/exercise-tap";
-import { buildIleProjectChapterExercisePrompt } from "@/lib/ile-mode";
+import { buildIleProjectChapterExercisePrompt } from "@/lib/learn-mode";
 import {
   assemblePromptWorkspaceContext,
   containsOutLoudStageDirection,

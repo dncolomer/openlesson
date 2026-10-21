@@ -5,7 +5,7 @@
 import {
   ileSessionNameFromMetadata,
   isIleSessionUnsavedExit,
-} from "@/lib/ile-session-name";
+} from "@/lib/learn-session-name";
 
 export const SEE_PREVIOUS_SESSIONS_LABEL = "See Previous Sessions";
 export const START_NEW_SESSION_LABEL = "Start a New Session";

@@ -7,7 +7,7 @@ import {
   learnSuggestionToastAction,
   learnSuggestionToastClass,
   type LearnSuggestionToastPlacement,
-} from "@/lib/ile-learn-suggestion";
+} from "@/lib/learn-suggestion";
 
 /** Learn note. Stays until dismiss or add. */
 export function LearnSuggestionToast({
@@ -27,8 +27,8 @@ export function LearnSuggestionToast({
   onDoneRef.current = onDone;
   return (
     <div
-      data-ile-learn-suggestion
-      data-ile-learn-suggestion-placement={placement}
+      data-learn-suggestion
+      data-learn-suggestion-placement={placement}
       role="status"
       className={`${learnSuggestionToastClass(placement)} border border-white bg-neutral-950 text-white shadow-[0_12px_40px_rgba(0,0,0,0.55)]`}
       onPointerDown={(event) => event.stopPropagation()}
@@ -38,7 +38,7 @@ export function LearnSuggestionToast({
         <div className="flex shrink-0 flex-col gap-1">
           <button
             type="button"
-            data-ile-learn-suggestion-dismiss
+            data-learn-suggestion-dismiss
             className="border border-white/50 px-2 py-1 font-mono text-[11px] leading-tight text-white hover:border-white hover:bg-white/10"
             onClick={() => {
               const action = learnSuggestionToastAction("dismiss", text);
@@ -49,7 +49,7 @@ export function LearnSuggestionToast({
           </button>
           <button
             type="button"
-            data-ile-learn-suggestion-add
+            data-learn-suggestion-add
             className="border border-white bg-white px-2 py-1 font-mono text-[11px] leading-tight text-neutral-950 hover:bg-neutral-200"
             onClick={() => {
               const action = learnSuggestionToastAction("add", text);

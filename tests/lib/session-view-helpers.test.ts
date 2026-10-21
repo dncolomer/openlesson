@@ -52,7 +52,7 @@ describe("sessionViewHelpers", () => {
     const panes = read("components/session-view/session-tool-panes.tsx");
     const runtime = read("components/session-view/use-session-runtime.ts");
     const chrome = read("components/session-view/session-chrome.tsx");
-    const voice = read("components/session-view/ile-voice-bar.tsx");
+    const voice = read("components/session-view/learn-voice-bar.tsx");
 
     expect(panes).not.toContain("data-ile-logs-pane");
     expect(panes).not.toContain("LogsTool");

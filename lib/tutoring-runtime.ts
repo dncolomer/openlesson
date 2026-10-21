@@ -16,7 +16,7 @@ import {
   buildIleSpeechSegmentPayload,
   ILE_IDLE_TOOL_NAME,
   ILE_SPEECH_TOOL_NAME,
-} from "@/lib/ile-thought-traces";
+} from "@/lib/learn-thought-traces";
 import {
   TAP_IDLE_TOOL_NAME,
   buildTapIdleHeartbeatPayload,
@@ -29,7 +29,7 @@ import {
   applyIleProjectThoughtMutation,
   type IleProjectThoughtMutation,
   type IleProjectThoughtMutationResult,
-} from "@/lib/ile-mode";
+} from "@/lib/learn-mode";
 
 export type TutoringProduct = "ile" | "tap";
 export type TutoringModality = "dialog" | "solo";

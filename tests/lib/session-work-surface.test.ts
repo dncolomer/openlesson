@@ -138,7 +138,7 @@ describe("shared live work surface", () => {
     expect(existsSync(join(ROOT, "components/exercise-tap/exercise-tap-phases.tsx"))).toBe(false);
     expect(existsSync(join(ROOT, "components/exercise-tap/ExerciseTapShell.tsx"))).toBe(false);
 
-    const voice = read("components/session-view/ile-voice-bar.tsx");
+    const voice = read("components/session-view/learn-voice-bar.tsx");
     expect(voice).toContain("data-ile-bar-save");
     expect(voice).toContain("data-save-and-exit");
     expect(voice).toMatch(/data-ile-bar-save[\s\S]{0,400}\n\s*Exit/);
@@ -205,7 +205,7 @@ describe("shared live work surface", () => {
     const finished = [
       prepare,
       tap,
-      read("components/session-view/ile-silence-lock-screen.tsx"),
+      read("components/session-view/learn-silence-lock-screen.tsx"),
     ];
     for (const src of finished) {
       expect(src).toContain("<SessionFinishedScreen");
@@ -222,7 +222,7 @@ describe("shared live work surface", () => {
     expect(tap).toContain("<PerformanceReportCard");
     expect(existsSync(join(ROOT, "components/exercise-tap/exercise-tap-phases.tsx"))).toBe(false);
 
-    const silence = read("components/session-view/ile-silence-lock-screen.tsx");
+    const silence = read("components/session-view/learn-silence-lock-screen.tsx");
     const live = read("components/session-view/session-live-stage.tsx");
     expect(silence).toContain("data-ile-session-impure");
     expect(silence).toContain("data-ile-impure-retry");
@@ -243,7 +243,7 @@ describe("shared live work surface", () => {
     expect(read("components/session-view/session-welcome-modal.tsx")).toContain(
       "data-ile-start-loading-page",
     );
-    expect(read("components/session-view/ile-start-loading.tsx")).toContain("data-ile-start-loading");
+    expect(read("components/session-view/learn-start-loading.tsx")).toContain("data-ile-start-loading");
     expect(read("components/session-view/session-page-loading.tsx")).toContain(
       "data-session-page-loading",
     );

@@ -36,7 +36,7 @@ import {
   ileWorkCanvasXaiToolsInstruction,
   mapExcalidrawToolToIlePow,
   wrapIleWorkCanvasText,
-} from "@/lib/ile-work-canvas";
+} from "@/lib/learn-work-canvas";
 import { readTapScoreSurface } from "@/tests/helpers/surface-source";
 
 const ROOT = join(__dirname, "../..");

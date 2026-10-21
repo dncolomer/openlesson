@@ -31,7 +31,7 @@ import {
   BLOCK_CIRCULAR_MENU_RING_THICKNESS_PX,
   circularMenuActionPosition,
 } from "@/lib/block-circular-menu";
-import { applyIleChapterUndoDone } from "@/lib/ile-chapter-close-review";
+import { applyIleChapterUndoDone } from "@/lib/learn-chapter-close-review";
 import type { WorkspaceExternalResource } from "@/lib/workspace-external-resources";
 
 const ROOT = join(__dirname, "../..");
@@ -192,14 +192,14 @@ describe("circular menu source wiring", () => {
     const world = read("components/block-skill-grid/map-world-layer.tsx");
     const ring = read("components/block-skill-grid/block-circular-menu.tsx");
     const authoring = read("components/block-skill-grid/use-map-authoring.ts");
-    const actions = read("components/session-view/ile-chapter-helios-actions.tsx");
+    const actions = read("components/session-view/learn-chapter-helios-actions.tsx");
     const helios = read("components/SessionHeliosPanel.tsx");
     const view = read("components/SessionView.tsx");
     const sessionList = read("components/SessionList.tsx");
     const learner = read("components/WorkspaceLearnerBlockPane.tsx");
     const wsView = read("components/WorkspaceView.tsx");
     const drawers = read("components/workspace-view/workspace-right-drawers.tsx");
-    expect(existsSync(join(ROOT, "components/session-view/ile-continue-map-preview.tsx"))).toBe(false);
+    expect(existsSync(join(ROOT, "components/session-view/learn-continue-map-preview.tsx"))).toBe(false);
     const landing = read("components/AyclLandingClient.tsx");
 
     expect(ring).toContain("data-block-circular-menu");

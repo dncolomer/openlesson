@@ -41,7 +41,7 @@ import {
   parseIleSessionModeWrite,
   resolveIleSessionModeFromBody,
   resolveIleSessionModeFromSession,
-} from "@/lib/ile-mode";
+} from "@/lib/learn-mode";
 import {
   classifyApiErrorEnvelope,
   jsonError,
@@ -105,9 +105,9 @@ describe("tutoring runtime (speech/idle/mutate)", () => {
     expect(solo.rejected).toBe(false);
     expect(solo.lists.stash.length).toBe(1);
 
-    const ileSpeech = read("app/api/workspace-ile/speech/route.ts");
+    const ileSpeech = read("app/api/workspace-learn/speech/route.ts");
     const tapSpeech = read("app/api/workspace-tap-score/speech/route.ts");
-    const ileMutate = read("app/api/ile/session-mutate/route.ts");
+    const ileMutate = read("app/api/learn/session-mutate/route.ts");
     const ayclMutate = read("app/api/aycl/session-mutate/route.ts");
     expect(ileSpeech).toContain("buildTutoringSpeechOutcome");
     expect(tapSpeech).toContain("buildTutoringSpeechOutcome");
@@ -186,7 +186,7 @@ describe("workspace access policy", () => {
     expect(productAuth).toContain("assertWorkspacePolicy");
     expect(productAuth).toContain("workspaceOwnerId");
 
-    const perf = read("app/api/workspace-ile/performance/route.ts");
+    const perf = read("app/api/workspace-learn/performance/route.ts");
     expect(perf).toContain("requireSessionWorkspaceProofOfWorkAccess");
     expect(perf).not.toMatch(/createClient\(\)[\s\S]*getUser\(\)[\s\S]*from\("workspaces"\)/);
   });
@@ -254,7 +254,7 @@ describe("workspace access policy", () => {
     expect(ayclAuth).toContain("ayclSubjectId(purchase.id)");
     expect(ayclAuth).not.toContain("actingUser");
 
-    const ileAuth = read("lib/ile-link-auth.ts");
+    const ileAuth = read("lib/learn-link-auth.ts");
     expect(ileAuth).not.toContain("actingUser");
 
     const policySrc = read("lib/workspace-access-policy.ts");
@@ -271,7 +271,7 @@ describe("workspace access policy", () => {
     expect(report).not.toContain("persistableOwnerUserId");
     expect(report).not.toMatch(/user_id:\s*ownerUserId/);
 
-    const ilePerf = read("app/api/workspace-ile/performance/route.ts");
+    const ilePerf = read("app/api/workspace-learn/performance/route.ts");
     expect(ilePerf).toContain("requireSessionWorkspaceProofOfWorkAccess");
     expect(ilePerf).toContain("ayclToken");
     expect(ilePerf).not.toContain("guardWorkspaceRoute");
@@ -337,7 +337,7 @@ describe("workspace access policy", () => {
     const libAndApi = [
       "lib/api/require-auth.ts",
       "lib/aycl-session-auth.ts",
-      "lib/ile-link-auth.ts",
+      "lib/learn-link-auth.ts",
       "lib/product-workspace-auth.ts",
       "lib/workspace-access-policy.ts",
     ];
@@ -404,7 +404,7 @@ describe("exclusive map selection + product intent", () => {
       "/session",
     );
     expect(launchPracticeHref(drill, { workspaceId: "ws", blockId: "b1" })).toBe(
-      "/workspace/ws",
+      "/workspace/ws/verify?session=verification&blockId=b1",
     );
 
     const mapShell = read("components/block-skill-grid/map-grid-shell.tsx");
@@ -489,7 +489,7 @@ describe("closed error envelope", () => {
         .replace(/\/\/[^\n]*/g, "");
       if (file.includes("/app/api/oauth/")) continue;
       // Gather deny is a policy body `{ error, warning, allowed }`, not a string envelope.
-      if (file.includes("/app/api/ile/gather-resources/")) continue;
+      if (file.includes("/app/api/learn/gather-resources/")) continue;
       if (
         /NextResponse\.json\(\s*\{\s*error:\s*["'`]/.test(withoutComments) ||
         /NextResponse\.json\(\s*\{\s*error:\s*(?!\{)[a-zA-Z]/.test(withoutComments)

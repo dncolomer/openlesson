@@ -778,23 +778,33 @@ export async function buildWorkspaceLinkUrlMap(
   const map = new Map<string, string>();
   const base = (baseUrl || "").replace(/\/$/, "") || "https://uncertain.systems";
 
-  const [tapRes, ileRes] = await Promise.all([
+  const [calibrateRes, verifyRes, ileRes] = await Promise.all([
     supabase
-      .from("workspace_tap_sessions")
+      .from("workspace_calibrate_sessions")
       .select("id, public_token")
       .eq("workspace_id", workspaceId)
       .limit(500),
     supabase
-      .from("workspace_ile_links")
+      .from("workspace_verify_sessions")
+      .select("id, public_token")
+      .eq("workspace_id", workspaceId)
+      .limit(500),
+    supabase
+      .from("workspace_learn_links")
       .select("id, public_token")
       .eq("workspace_id", workspaceId)
       .limit(500),
   ]);
 
-  for (const row of tapRes.data || []) {
+  for (const row of calibrateRes.data || []) {
     const id = String((row as { id: string }).id);
     const tok = (row as { public_token?: string | null }).public_token;
-    if (tok?.trim()) map.set(id, buildGuestLinkUrl(base, "tap", tok.trim()));
+    if (tok?.trim()) map.set(id, buildGuestLinkUrl(base, "calibrate", tok.trim(), "calibrate"));
+  }
+  for (const row of verifyRes.data || []) {
+    const id = String((row as { id: string }).id);
+    const tok = (row as { public_token?: string | null }).public_token;
+    if (tok?.trim()) map.set(id, buildGuestLinkUrl(base, "verify", tok.trim()));
   }
   for (const row of ileRes.data || []) {
     const id = String((row as { id: string }).id);

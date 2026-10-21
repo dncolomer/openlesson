@@ -73,13 +73,19 @@ export const ILE_POW_COUNTER_LABELS: Record<IlePowDisplayCounterType, string> = 
   thoughts: "Thoughts",
 };
 
-const SPOKEN_TOOL_NAMES = new Set<string>(["ile-speech-segment", "tap-speech-segment"]);
+const SPOKEN_TOOL_NAMES = new Set<string>([
+  "speech-segment",
+  "ile-speech-segment",
+  "tap-speech-segment",
+]);
 const THOUGHT_TRACE_TOOL_NAMES = new Set<string>([ILE_TRACE_TOOL_NAME, TAP_TRACE_TOOL_NAME]);
 const SPOKEN_META_TYPES = new Set([
+  "uncertain_systems_speech_segment",
   "uncertain_systems_ile_speech_segment",
   "uncertain_systems_tap_speech_segment",
 ]);
 const THOUGHT_TRACE_META_TYPES = new Set([
+  "uncertain_systems_thought_trace",
   "uncertain_systems_ile_thought_trace",
   "uncertain_systems_tap_thought_trace",
 ]);

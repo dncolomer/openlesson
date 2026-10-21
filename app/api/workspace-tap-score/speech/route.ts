@@ -84,7 +84,10 @@ export async function POST(req: NextRequest) {
           segment_duration_ms: segmentDurationMs ?? null,
           transcript_snapshot: transcriptSnapshot || null,
         },
-        { kind: "tap", linkId: access.tapSessionId },
+        {
+          kind: access.sessionTable.includes("calibrate") ? "calibrate" : "verify",
+          linkId: access.tapSessionId,
+        },
       ),
       practice,
     );

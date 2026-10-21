@@ -1,6 +1,10 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hashPrivateToken } from "@/lib/ile-link";
-import type { EntryQueryParams, GuestLinkAccessMode } from "@/lib/guest-link-access";
+import {
+  stampSourceLinkMetadata,
+  type EntryQueryParams,
+  type GuestLinkAccessMode,
+} from "@/lib/guest-link-access";
 import { resolveGuestForLinkQueryParams } from "@/lib/guest-link-query-guest";
 import {
   ILE_LINK_REVOKED_MESSAGE,
@@ -53,7 +57,7 @@ export async function resolveIleLinkAccess(
   // Private bearer hash; legacy public_token still resolves existing rows.
   let link: Record<string, unknown> | null = null;
   const { data: byHash } = await supabase
-    .from("workspace_ile_links")
+    .from("workspace_learn_links")
     .select(LINK_SELECT)
     .eq("private_token_hash", tokenHash)
     .maybeSingle();
@@ -61,7 +65,7 @@ export async function resolveIleLinkAccess(
 
   if (!link) {
     const { data: byPublic } = await supabase
-      .from("workspace_ile_links")
+      .from("workspace_learn_links")
       .select(LINK_SELECT)
       .eq("public_token", token)
       .eq("access_mode", "public")
@@ -115,7 +119,7 @@ export async function resolveIleLinkAccess(
       });
       guestUserId = created.id;
       await supabase
-        .from("workspace_ile_links")
+        .from("workspace_learn_links")
         .update({ guest_user_id: guestUserId })
         .eq("id", String(link.id));
     }
@@ -126,7 +130,7 @@ export async function resolveIleLinkAccess(
     assignedUserId,
   });
   if (!attribution.userId && !attribution.guestUserId) {
-    return { error: "TAP Learning guest participant is not provisioned", status: 500 };
+    return { error: "Learn guest participant is not provisioned", status: 500 };
   }
 
   return {
@@ -276,25 +280,25 @@ export async function ensureIleLinkSession(
       problem: blockTitle,
       status: "active",
       planning_prompt: planningPrompt,
-      metadata: {
-        workspace_id: workspaceId,
-        block_id: blockId,
-        block_title: blockTitle,
-        ile_link_id: linkId,
-        source_link_kind: "ile",
-        source_link_id: linkId,
-        guest_user_id: guestUserId,
-        ile_guest_access: true,
-        session_mode: sessionMode,
-        ile_session_mode: sessionMode,
-      },
+      metadata: stampSourceLinkMetadata(
+        {
+          workspace_id: workspaceId,
+          block_id: blockId,
+          block_title: blockTitle,
+          guest_user_id: guestUserId,
+          ile_guest_access: true,
+          session_mode: sessionMode,
+          ile_session_mode: sessionMode,
+        },
+        { kind: "learn", linkId },
+      ),
     })
     .select("id")
     .single();
 
   if (sessionError || !session) {
     console.error("[ile-link] Session create error:", sessionError);
-    return { error: "Failed to create TAP Learning session", status: 500 };
+    return { error: "Failed to create Learn session", status: 500 };
   }
 
   await supabase
@@ -315,7 +319,7 @@ export async function ensureIleLinkSession(
 
   const now = new Date().toISOString();
   await supabase
-    .from("workspace_ile_links")
+    .from("workspace_learn_links")
     .update({
       session_id: session.id,
       status: "active",

@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
     "id, workspace_id, block_id, status, participant_type, guest_user_id, assigned_user_id, session_id, created_at, started_at, completed_at, access_mode, public_token, entry_query_params, show_end_session";
 
   let { data: links, error } = await access.supabase
-    .from("workspace_ile_links")
+    .from("workspace_learn_links")
     .select(ILE_LIST_SELECT_WITH_MODE)
     .eq("workspace_id", workspaceId)
     .order("created_at", { ascending: false });
@@ -58,13 +58,13 @@ export async function GET(req: NextRequest) {
         "[workspace/ile-links] session_mode missing — falling back to legacy select. Apply migration 20260728120000_ile_session_mode.",
       );
       const legacy = await access.supabase
-        .from("workspace_ile_links")
+        .from("workspace_learn_links")
         .select(ILE_LIST_SELECT_LEGACY)
         .eq("workspace_id", workspaceId)
         .order("created_at", { ascending: false });
       if (legacy.error) {
         console.error("[workspace/ile-links] List error:", legacy.error);
-        return jsonError(500, "Failed to list TAP Learning links");
+        return jsonError(500, "Failed to list Learn links");
       }
       links = (legacy.data || []).map((row) => ({
         ...row,
@@ -76,7 +76,7 @@ export async function GET(req: NextRequest) {
 
   if (error) {
     console.error("[workspace/ile-links] List error:", error);
-    return jsonError(500, "Failed to list TAP Learning links");
+    return jsonError(500, "Failed to list Learn links");
   }
 
   const origin = baseUrl(req);
@@ -171,7 +171,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (!blockId) {
-      return jsonError(400, "blockId is required for TAP Learning links");
+      return jsonError(400, "blockId is required for Learn links");
     }
 
     const ileLink = await createWorkspaceIleLink({
@@ -190,6 +190,6 @@ export async function POST(req: NextRequest) {
       return jsonError(error.status, error.message, error.code);
     }
     console.error("[workspace/ile-links] Create error:", error);
-    return jsonError(500, "Failed to create TAP Learning link");
+    return jsonError(500, "Failed to create Learn link");
   }
 }

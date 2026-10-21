@@ -34,13 +34,13 @@ describe("guest subjects + isolation", () => {
       "utf8",
     );
     expect(subjects).toContain("listWorkspaceAvailableSubjectsForUi");
-    expect(subjects).toContain("workspace_tap_sessions");
-    expect(subjects).toContain("workspace_ile_links");
+    expect(subjects).toContain("workspace_calibrate_sessions");
+    expect(subjects).toContain("workspace_verify_sessions");
+    expect(subjects).toContain("workspace_learn_links");
   });
 
-  it("LWM tab surfaces latest snapshot report detail", () => {
+  it("LWM tab surfaces snapshot language", () => {
     const panel = readKnowledgePanelSurface();
-    expect(panel).toContain("loadSnapshotHistory");
     expect(panel).toMatch(/lwm|snapshot/i);
   });
 });

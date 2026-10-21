@@ -12,7 +12,7 @@ import crypto from "crypto";
 export const GUEST_LINK_ACCESS_MODES = ["private", "public"] as const;
 export type GuestLinkAccessMode = (typeof GUEST_LINK_ACCESS_MODES)[number];
 
-export type GuestLinkKind = "tap" | "ile";
+export type GuestLinkKind = "tap" | "ile" | "calibrate" | "verify" | "learn";
 
 export type EntryQueryParamValue = string | string[];
 export type EntryQueryParams = Record<string, EntryQueryParamValue>;
@@ -179,15 +179,18 @@ export function stampSourceLinkMetadata(
     metadata && typeof metadata === "object" && !Array.isArray(metadata) ? { ...metadata } : {};
   const linkId = source.linkId.trim();
   if (!linkId) return base;
-  base.source_link_kind = source.kind;
+  const storedKind =
+    source.kind === "ile" || source.kind === "learn"
+      ? "learn"
+      : source.kind === "calibrate"
+        ? "calibrate"
+        : "verify";
+  base.source_link_kind = storedKind;
   base.source_link_id = linkId;
-  if (source.kind === "tap") {
-    // TAP link row id is also the historical tap_session_id on PoW metadata.
-    if (base.tap_session_id === undefined || base.tap_session_id === null) {
-      base.tap_session_id = linkId;
-    }
-  } else {
+  if (storedKind === "learn") {
     base.ile_link_id = linkId;
+  } else if (base.tap_session_id === undefined || base.tap_session_id === null) {
+    base.tap_session_id = linkId;
   }
   return base;
 }
@@ -198,15 +201,23 @@ export function sourceLinkFromMetadata(
   if (!metadata || typeof metadata !== "object") return null;
   const kindRaw = metadata.source_link_kind;
   const idRaw = metadata.source_link_id;
-  if ((kindRaw === "tap" || kindRaw === "ile") && typeof idRaw === "string" && idRaw.trim()) {
+  if (
+    (kindRaw === "tap" ||
+      kindRaw === "ile" ||
+      kindRaw === "calibrate" ||
+      kindRaw === "verify" ||
+      kindRaw === "learn") &&
+    typeof idRaw === "string" &&
+    idRaw.trim()
+  ) {
     return { kind: kindRaw, linkId: idRaw.trim() };
   }
   // Legacy fallbacks
   if (typeof metadata.tap_session_id === "string" && metadata.tap_session_id.trim()) {
-    return { kind: "tap", linkId: metadata.tap_session_id.trim() };
+    return { kind: "verify", linkId: metadata.tap_session_id.trim() };
   }
   if (typeof metadata.ile_link_id === "string" && metadata.ile_link_id.trim()) {
-    return { kind: "ile", linkId: metadata.ile_link_id.trim() };
+    return { kind: "learn", linkId: metadata.ile_link_id.trim() };
   }
   return null;
 }
@@ -216,8 +227,15 @@ export function flowSessionPath(
   kind: GuestLinkKind,
   interactionKind?: string | null,
 ): "/calibrate/session" | "/verify/session" | "/learn/session" {
-  if (kind === "ile") return "/learn/session";
-  if (interactionKind === "scout") return "/calibrate/session";
+  if (kind === "ile" || kind === "learn") return "/learn/session";
+  if (
+    kind === "calibrate" ||
+    interactionKind === "scout" ||
+    interactionKind === "calibrate" ||
+    interactionKind === "scouting"
+  ) {
+    return "/calibrate/session";
+  }
   return "/verify/session";
 }
 
@@ -246,7 +264,10 @@ export function guestLinkUrlFromPublicToken(
   return buildGuestLinkUrl(baseUrl, kind, t, interactionKind);
 }
 
-export type GuestLinkTable = "workspace_tap_sessions" | "workspace_ile_links";
+export type GuestLinkTable =
+  | "workspace_calibrate_sessions"
+  | "workspace_verify_sessions"
+  | "workspace_learn_links";
 
 /**
  * Append entry query params on a guest link open. Returns the new history array.

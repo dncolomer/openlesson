@@ -147,7 +147,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       { name: "api_key", type: "string", description: "Raw gsk_ key — shown once; store securely." },
       { name: "key.id", type: "uuid", description: "agent_api_keys.id" },
       { name: "key.key_prefix", type: "string", description: "First 13 chars of key for identification." },
-      { name: "key.scopes", type: "string[]", description: "workspaces:read, workspaces:write, tap:read, tap:write" },
+      { name: "key.scopes", type: "string[]", description: "workspaces:read, workspaces:write, sessions:read, sessions:write" },
       { name: "key.rate_limit", type: "integer", description: "Requests per minute (default 120)." },
       { name: "key.created_at", type: "ISO-8601", description: "Key creation time." },
     ],
@@ -165,7 +165,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
   "key": {
     "id": "a1b2c3d4-5678-90ab-cdef-1234567890ab",
     "key_prefix": "gsk_a1b2c3d4",
-    "scopes": ["workspaces:read", "workspaces:write", "tap:read", "tap:write"],
+    "scopes": ["workspaces:read", "workspaces:write", "sessions:read", "sessions:write"],
     "rate_limit": 120,
     "created_at": "2026-06-23T13:00:01+00:00"
   }
@@ -201,7 +201,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       "id": "a1b2c3d4-5678-90ab-cdef-1234567890ab",
       "label": "Production agent",
       "key_prefix": "sk_a1b2c3d4e5",
-      "scopes": ["workspaces:read", "workspaces:write", "tap:read", "tap:write"],
+      "scopes": ["workspaces:read", "workspaces:write", "sessions:read", "sessions:write"],
       "rate_limit": 120,
       "is_active": true,
       "created_at": "2026-06-23T12:00:00+00:00",
@@ -224,13 +224,13 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       {
         name: "scopes",
         type: "string[]",
-        description: "Optional. Default: workspaces:read, workspaces:write, tap:read, tap:write. org:read/org:write require org admin.",
+        description: "Optional. Default: workspaces:read, workspaces:write, sessions:read, sessions:write. org:read/org:write require org admin.",
       },
       { name: "expires_in_days", type: "integer", description: "Optional expiry: 1–365 days." },
     ],
     requestExample: `{
   "label": "CI pipeline",
-  "scopes": ["workspaces:read", "workspaces:write", "tap:read", "tap:write", "org:write"],
+  "scopes": ["workspaces:read", "workspaces:write", "sessions:read", "sessions:write", "org:write"],
   "expires_in_days": 90
 }`,
     responseBody: [
@@ -248,7 +248,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     "id": "a1b2c3d4-5678-90ab-cdef-1234567890ab",
     "label": "CI pipeline",
     "key_prefix": "sk_a1b2c3d4e5",
-    "scopes": ["workspaces:read", "workspaces:write", "tap:read", "tap:write", "org:write"],
+    "scopes": ["workspaces:read", "workspaces:write", "sessions:read", "sessions:write", "org:write"],
     "rate_limit": 120,
     "created_at": "2026-06-23T12:00:00+00:00",
     "expires_at": "2026-09-21T12:00:00+00:00"
@@ -257,7 +257,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
 }`,
     notes: [
       "Requires Teams tier (403 api_plan_required).",
-      "Valid scopes: *, workspaces:read, workspaces:write, tap:read, tap:write, org:read, org:write.",
+      "Valid scopes: *, workspaces:read, workspaces:write, sessions:read, sessions:write, org:read, org:write.",
       "403 if more than 10 active keys or if non-admin requests org scopes.",
     ],
   },
@@ -295,7 +295,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       { name: "scopes", type: "string[]", required: true, description: "Non-empty array of valid scope strings." },
     ],
     requestExample: `{
-  "scopes": ["workspaces:read", "tap:read"]
+  "scopes": ["workspaces:read", "sessions:read"]
 }`,
     responseBody: [
       { name: "key.id", type: "uuid", description: "Updated key ID." },
@@ -305,7 +305,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     responseExample: `{
   "key": {
     "id": "a1b2c3d4-5678-90ab-cdef-1234567890ab",
-    "scopes": ["workspaces:read", "tap:read"],
+    "scopes": ["workspaces:read", "sessions:read"],
     "updated_at": "2026-06-23T13:10:00+00:00"
   }
 }`,
@@ -507,15 +507,15 @@ Content-Type: application/json`}</code>
             fields={[
               { name: "workspaces:read", type: "scope", description: "List workspaces, map, settings, sessions, and flow embeddings; generate integration skills." },
               { name: "workspaces:write", type: "scope", description: "Create and edit workspaces; start, upload, and end headless sessions." },
-              { name: "tap:read", type: "scope", description: "Read session-related workspace access (headless sessions use workspaces:read)." },
-              { name: "tap:write", type: "scope", description: "Write session-related workspace access (headless sessions use workspaces:write)." },
+              { name: "sessions:read", type: "scope", description: "Read session-related workspace access (headless sessions use workspaces:read)." },
+              { name: "sessions:write", type: "scope", description: "Write session-related workspace access (headless sessions use workspaces:write)." },
               { name: "org:read", type: "scope", description: "Reserved for org admin keys (future org read endpoints)." },
               { name: "org:write", type: "scope", description: "Create guest users and issue gsk_ keys." },
               { name: "*", type: "scope", description: "All scopes. Org admins only when assigning to sk_ keys." },
             ]}
           />
           <p className="mt-3 text-sm text-neutral-500">
-            Default sk_ key scopes: workspaces:read, workspaces:write, tap:read, tap:write. Guest gsk_ keys receive the
+            Default sk_ key scopes: workspaces:read, workspaces:write, sessions:read, sessions:write. Guest gsk_ keys receive the
             same four scopes automatically.
           </p>
         </section>

@@ -74,7 +74,10 @@ export async function POST(req: NextRequest) {
           idle_duration_ms: idleDurationMs,
           has_pending_transcription: hasPendingTranscription,
         },
-        { kind: "tap", linkId: access.tapSessionId },
+        {
+          kind: access.sessionTable.includes("calibrate") ? "calibrate" : "verify",
+          linkId: access.tapSessionId,
+        },
       ),
       practice,
     );

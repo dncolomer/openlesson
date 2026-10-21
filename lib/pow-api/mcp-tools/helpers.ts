@@ -26,7 +26,7 @@ Authorize with Authorization: Bearer <api_key or OAuth token> on POST /api/mcp. 
 
 Snapshot (/api/v3/snapshot) and Stash (/api/v3/stash) are not public agent APIs.
 
-Scopes: workspaces:read, workspaces:write, tap:read, tap:write. Teams tier (error code api_plan_required).`;
+Scopes: workspaces:read, workspaces:write, sessions:read, sessions:write. Teams tier (error code api_plan_required).`;
 
 export { MCP_EVIDENCE_TOOLS } from "./evidence-tools";
 

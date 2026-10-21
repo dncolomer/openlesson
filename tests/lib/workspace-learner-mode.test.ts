@@ -418,7 +418,7 @@ describe("learner mode UI structural", () => {
     expect(view).toContain("handleLaunchIntent");
     expect(view).toContain("WORKSPACE_LEARNER_LAUNCH_PATH");
     expect(view).toContain("/session?id=");
-    expect(view).toContain("/workspace/${workspaceId}/tap?");
+    expect(view).toContain("/workspace/${workspaceId}/verify?");
     expect(view).toContain('session: "verification"');
     expect(view).toContain('params.set("minutes"');
     expect(read("components/BlockDetailCard.tsx")).toContain("verification: true");

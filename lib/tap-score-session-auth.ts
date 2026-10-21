@@ -14,6 +14,13 @@ import {
 } from "@/lib/pow-api/invalidate-guest-links";
 import { createAnonymousTapGuest } from "@/lib/pow-api/anonymous-tap-guest";
 import { resolveGuestLinkAttribution } from "@/lib/session-participant-identity";
+import {
+  GUEST_SESSION_SELECT,
+  VERIFY_SESSIONS_TABLE,
+  findCalibrateOrVerifySessionById,
+  findCalibrateOrVerifySessionByToken,
+  type CalibrateVerifyTable,
+} from "@/lib/guest-session-tables";
 
 export interface ResolvedTapSessionContext {
   supabase: ReturnType<typeof createAdminClient>;
@@ -31,17 +38,17 @@ export interface ResolvedTapSessionContext {
   blockId: string | null;
   focusSessionId: string | null;
   tapSessionId: string;
+  sessionTable: CalibrateVerifyTable;
   postSession: TapPostSessionMode;
   redirectUrl: string | null;
   completionWebhookUrl: string | null;
   existingSession: Record<string, unknown> | null;
 }
 
-export const TAP_SESSION_SELECT =
-  "id, workspace_id, user_id, guest_user_id, assigned_user_id, organization_id, block_id, session_id, status, started_at, requested_duration_seconds, focus_block_ids, post_session, redirect_url, completion_webhook_url, access_mode, public_token, entry_query_params, interaction_kind, workspaces!inner(user_id)";
+export const TAP_SESSION_SELECT = GUEST_SESSION_SELECT;
 
 const TAP_SESSION_SELECT_NO_JOIN =
-  "id, workspace_id, user_id, guest_user_id, assigned_user_id, organization_id, block_id, session_id, status, started_at, requested_duration_seconds, focus_block_ids, post_session, redirect_url, completion_webhook_url, access_mode, public_token, entry_query_params, interaction_kind";
+  "id, workspace_id, user_id, guest_user_id, assigned_user_id, organization_id, block_id, session_id, status, started_at, requested_duration_seconds, focus_block_ids, post_session, redirect_url, completion_webhook_url, access_mode, public_token, entry_query_params, interaction_kind, session_shell";
 
 export function authContextFromTapAccess(
   access: {
@@ -160,31 +167,20 @@ export async function resolveTapSessionAccess(input: {
   if (privateToken) {
     const supabase = createAdminClient();
     const tokenHash = hashPrivateToken(privateToken);
-    let session: Record<string, unknown> | null = null;
-    const { data: byHash } = await supabase
-      .from("workspace_tap_sessions")
-      .select(TAP_SESSION_SELECT)
-      .eq("private_token_hash", tokenHash)
-      .maybeSingle();
-    session = byHash;
+    const found = await findCalibrateOrVerifySessionByToken(
+      supabase,
+      tokenHash,
+      privateToken,
+      TAP_SESSION_SELECT,
+    );
+    const session = found?.session ?? null;
 
-    // Legacy public tokens still resolve for existing rows.
-    if (!session) {
-      const { data: byPublic } = await supabase
-        .from("workspace_tap_sessions")
-        .select(TAP_SESSION_SELECT)
-        .eq("public_token", privateToken)
-        .eq("access_mode", "public")
-        .maybeSingle();
-      session = byPublic;
-    }
-
-    if (!session) return { error: "TAP block not found", status: 404 };
+    if (!session) return { error: "Session not found", status: 404 };
     if (isGuestLinkRevoked(session.status as string | null | undefined)) {
       return { error: TAP_LINK_REVOKED_MESSAGE, status: 403 };
     }
     if (tapSessionId && session.id !== tapSessionId) {
-      return { error: "TAP session ID does not match private link", status: 403 };
+      return { error: "Session ID does not match private link", status: 403 };
     }
 
     if (session.assigned_user_id) {
@@ -192,9 +188,9 @@ export async function resolveTapSessionAccess(input: {
       const {
         data: { user },
       } = await authSupabase.auth.getUser();
-      if (!user) return { error: "Sign in required for this TAP link", status: 401 };
+      if (!user) return { error: "Sign in required for this session link", status: 401 };
       if (user.id !== session.assigned_user_id) {
-        return { error: "This TAP link is assigned to another user", status: 403 };
+        return { error: "This session link is assigned to another user", status: 403 };
       }
     }
 
@@ -243,7 +239,7 @@ export async function resolveTapSessionAccess(input: {
         });
         guestUserId = created.id;
         await supabase
-          .from("workspace_tap_sessions")
+          .from(found.table)
           .update({ guest_user_id: guestUserId })
           .eq("id", sessionRow.id);
         sessionRow.guest_user_id = guestUserId;
@@ -255,7 +251,7 @@ export async function resolveTapSessionAccess(input: {
       assignedUserId: participant.assignedUserId,
     });
     if (!attribution.userId && !attribution.guestUserId) {
-      return { error: "TAP guest participant is not provisioned", status: 500 };
+      return { error: "Session guest participant is not provisioned", status: 500 };
     }
 
     return {
@@ -269,6 +265,7 @@ export async function resolveTapSessionAccess(input: {
       blockId: sessionRow.block_id || null,
       focusSessionId: sessionRow.session_id || null,
       tapSessionId: sessionRow.id,
+      sessionTable: found.table,
       postSession: (sessionRow.post_session as TapPostSessionMode) || "redirect_workspace",
       redirectUrl: sessionRow.redirect_url || null,
       completionWebhookUrl: sessionRow.completion_webhook_url || null,
@@ -295,16 +292,19 @@ export async function resolveTapSessionAccess(input: {
 
   const supabase = createAdminClient();
   let existingSession: Record<string, unknown> | null = null;
+  let sessionTable: CalibrateVerifyTable = VERIFY_SESSIONS_TABLE;
 
   if (tapSessionId) {
-    const { data: session, error } = await supabase
-      .from("workspace_tap_sessions")
-      .select(TAP_SESSION_SELECT_NO_JOIN)
-      .eq("id", tapSessionId)
-      .eq("workspace_id", workspaceId)
-      .single();
+    const foundById = await findCalibrateOrVerifySessionById(
+      supabase,
+      tapSessionId,
+      TAP_SESSION_SELECT_NO_JOIN,
+    );
+    const session = foundById?.session ?? null;
 
-    if (error || !session) return { error: "TAP session not found", status: 404 };
+    if (!session || session.workspace_id !== workspaceId) {
+      return { error: "Session not found", status: 404 };
+    }
     if (session.assigned_user_id && session.assigned_user_id !== user.id) {
       return { error: "Not authorized", status: 403 };
     }
@@ -312,6 +312,7 @@ export async function resolveTapSessionAccess(input: {
       return { error: "Not authorized", status: 403 };
     }
     existingSession = session;
+    sessionTable = foundById!.table;
   }
 
   const { data: workspaceRow } = await supabase
@@ -331,6 +332,7 @@ export async function resolveTapSessionAccess(input: {
     blockId: input.blockId || existingSession?.block_id?.toString() || null,
     focusSessionId: input.focusSessionId || existingSession?.session_id?.toString() || null,
     tapSessionId: tapSessionId || "",
+    sessionTable,
     postSession: (existingSession?.post_session as TapPostSessionMode) || "redirect_workspace",
     redirectUrl: (existingSession?.redirect_url as string | null) || null,
     completionWebhookUrl: (existingSession?.completion_webhook_url as string | null) || null,

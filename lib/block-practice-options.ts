@@ -56,8 +56,14 @@ export type BlockPracticeOptionsInput = Partial<{
   allowedDurationsMinutes: unknown;
   /** snake_case aliases from DB/JSON */
   allow_explore: unknown;
+  allow_learn: unknown;
+  allowLearn: unknown;
   allow_drill: unknown;
+  allow_verify: unknown;
+  allowVerify: unknown;
   allow_scout: unknown;
+  allow_calibrate: unknown;
+  allowCalibrate: unknown;
   allow_dialog: unknown;
   allow_solo: unknown;
   allow_open_ended: unknown;
@@ -114,11 +120,14 @@ export function normalizeBlockPracticeOptions(
   if (raw == null || typeof raw !== "object") return def;
 
   let allowExplore = asBool(
-    raw.allowExplore ?? raw.allow_explore,
+    raw.allowExplore ?? raw.allow_explore ?? raw.allowLearn ?? raw.allow_learn,
     def.allowExplore,
   );
   const allowDrill = false;
-  let allowScout = asBool(raw.allowScout ?? raw.allow_scout, def.allowScout);
+  let allowScout = asBool(
+    raw.allowScout ?? raw.allow_scout ?? raw.allowCalibrate ?? raw.allow_calibrate,
+    def.allowScout,
+  );
 
   // Prefer explicit dialog/solo; fall back to open_ended/timed legacy keys.
   const dialogRaw = raw.allowDialog ?? raw.allow_dialog;
@@ -218,8 +227,11 @@ export function serializeBlockPracticeOptions(
   const n = normalizeBlockPracticeOptions(opts);
   return {
     allow_explore: n.allowExplore,
+    allow_learn: n.allowExplore,
     allow_drill: n.allowDrill,
+    allow_verify: n.allowDrill,
     allow_scout: n.allowScout,
+    allow_calibrate: n.allowScout,
     allow_dialog: n.allowDialog,
     allow_solo: n.allowSolo,
     // Legacy mirrors

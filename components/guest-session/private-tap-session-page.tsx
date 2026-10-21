@@ -9,6 +9,16 @@ import {
   flowSessionPath,
   recordGuestLinkEntryQueryParams,
 } from "@/lib/guest-link-access";
+import {
+  CALIBRATE_SESSIONS_TABLE,
+  GUEST_SESSION_OPEN_SELECT,
+  VERIFY_SESSIONS_TABLE,
+  findCalibrateOrVerifySessionByToken,
+  findCalibrateSessionByToken,
+  findVerifySessionByToken,
+  guestFlowFromStoredKind,
+  type CalibrateVerifyTable,
+} from "@/lib/guest-session-tables";
 import { buildPowParticipantIdentity } from "@/lib/session-participant-identity";
 import { resolveGuestForLinkQueryParams } from "@/lib/guest-link-query-guest";
 import { resolveTapShellFromSession } from "@/lib/exercise-tap";
@@ -16,37 +26,46 @@ import { resolveTapShellFromSession } from "@/lib/exercise-tap";
 interface PageProps {
   params: Promise<{ token: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
+  flow?: "calibrate" | "verify";
 }
 
-export default async function PrivateTapSessionPage({ params, searchParams }: PageProps) {
+export default async function PrivateTapSessionPage({ params, searchParams, flow }: PageProps) {
   const { token } = await params;
   const query = await searchParams;
   const supabase = createAdminClient();
   const tokenHash = hashPrivateToken(token);
 
-  const tapSessionSelect =
-    "id, workspace_id, block_id, session_id, status, requested_duration_seconds, mode, voice_id, analysis, overall_score, marker_scores, assigned_user_id, guest_user_id, organization_id, user_id, post_session, redirect_url, show_end_session, interaction_kind, entry_query_params, workspaces(title, user_id)";
-
+  let table: CalibrateVerifyTable = flow === "calibrate" ? CALIBRATE_SESSIONS_TABLE : VERIFY_SESSIONS_TABLE;
   let session: Record<string, unknown> | null = null;
-  const { data: byHash } = await supabase
-    .from("workspace_tap_sessions")
-    .select(tapSessionSelect)
-    .eq("private_token_hash", tokenHash)
-    .maybeSingle();
-  session = byHash;
-
-  // Legacy public rows still open.
-  if (!session) {
-    const { data: byPublic } = await supabase
-      .from("workspace_tap_sessions")
-      .select(tapSessionSelect)
-      .eq("public_token", token)
-      .eq("access_mode", "public")
-      .maybeSingle();
-    session = byPublic;
+  if (flow === "calibrate") {
+    session = await findCalibrateSessionByToken(supabase, tokenHash, token, GUEST_SESSION_OPEN_SELECT);
+  } else if (flow === "verify") {
+    session = await findVerifySessionByToken(supabase, tokenHash, token, GUEST_SESSION_OPEN_SELECT);
+  } else {
+    const found = await findCalibrateOrVerifySessionByToken(
+      supabase,
+      tokenHash,
+      token,
+      GUEST_SESSION_OPEN_SELECT,
+    );
+    session = found?.session ?? null;
+    if (found) table = found.table;
   }
 
   if (!session) notFound();
+
+  const storedFlow = guestFlowFromStoredKind(session.interaction_kind);
+  if (flow && storedFlow !== flow) {
+    const path = flowSessionPath("tap", storedFlow);
+    const sp = new URLSearchParams();
+    for (const [key, value] of Object.entries(query)) {
+      if (typeof value === "string") sp.set(key, value);
+      else if (Array.isArray(value)) for (const item of value) sp.append(key, item);
+    }
+    const qs = sp.toString();
+    redirect(`${path}/${token}${qs ? `?${qs}` : ""}`);
+  }
+  if (!flow) table = storedFlow === "calibrate" ? CALIBRATE_SESSIONS_TABLE : VERIFY_SESSIONS_TABLE;
 
   if (session.status === "revoked") {
     return (
@@ -74,7 +93,7 @@ export default async function PrivateTapSessionPage({ params, searchParams }: Pa
   if (Object.keys(entryParams).length > 0 && typeof session.id === "string") {
     await recordGuestLinkEntryQueryParams(
       supabase,
-      "workspace_tap_sessions",
+      table,
       session.id,
       entryParams,
     ).catch(() => {});
@@ -127,9 +146,11 @@ export default async function PrivateTapSessionPage({ params, searchParams }: Pa
 
   const shell = resolveTapShellFromSession({
     interaction_kind: session.interaction_kind,
+    session_shell: session.session_shell,
     entry_query_params: session.entry_query_params,
     initialSession: {
       interaction_kind: session.interaction_kind,
+      session_shell: session.session_shell,
     },
   });
   const clientProps = {

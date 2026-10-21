@@ -87,7 +87,7 @@ describe("learning Calibrate entry", () => {
     expect(phases).toContain('variant="prepare"');
     expect(phases).toContain('data-prepare-briefing-step="challenge"');
     expect(phases).toContain("<TapSessionSignals");
-    expect(client).toContain('interaction_kind: "scout"');
+    expect(client).toContain('interaction_kind: "calibrate"');
     expect(client).toContain('purpose: "calibrate"');
     expect(client).toContain("createSoundingState");
     expect(client).toContain("soundingProofUploadItem");

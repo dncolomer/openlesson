@@ -71,17 +71,19 @@ export async function assertReusableWorkspaceGuest(
       return guest.id;
     }
 
-    const { data: tapHit } = await supabase
-      .from("workspace_tap_sessions")
-      .select("id")
-      .eq("workspace_id", input.workspaceId)
-      .eq("guest_user_id", guestUserId)
-      .limit(1)
-      .maybeSingle();
-    if (tapHit) return guest.id;
+    for (const table of ["workspace_calibrate_sessions", "workspace_verify_sessions"] as const) {
+      const { data: tapHit } = await supabase
+        .from(table)
+        .select("id")
+        .eq("workspace_id", input.workspaceId)
+        .eq("guest_user_id", guestUserId)
+        .limit(1)
+        .maybeSingle();
+      if (tapHit) return guest.id;
+    }
 
     const { data: ileHit } = await supabase
-      .from("workspace_ile_links")
+      .from("workspace_learn_links")
       .select("id")
       .eq("workspace_id", input.workspaceId)
       .eq("guest_user_id", guestUserId)

@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
         : { source: "ile_session" };
     const metadata =
       access.ileLinkId
-        ? stampSourceLinkMetadata(rawMetadata, { kind: "ile", linkId: access.ileLinkId })
+        ? stampSourceLinkMetadata(rawMetadata, { kind: "learn", linkId: access.ileLinkId })
         : rawMetadata;
 
     const row = await uploadWorkspaceProofOfWork(

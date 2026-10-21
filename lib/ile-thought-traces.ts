@@ -1,12 +1,12 @@
-export const ILE_TRACE_TOOL_NAME = "ile-thought-trace";
-export const ILE_CHAT_TOOL_NAME = "ile-helios-chat";
-export const ILE_IDLE_TOOL_NAME = "ile-idle-heartbeat";
-export const ILE_SPEECH_TOOL_NAME = "ile-speech-segment";
-export const ILE_TAB_UNFOCUS_TOOL_NAME = "ile-tab-unfocus";
+export const ILE_TRACE_TOOL_NAME = "thought-trace";
+export const ILE_CHAT_TOOL_NAME = "learn-chat";
+export const ILE_IDLE_TOOL_NAME = "idle-heartbeat";
+export const ILE_SPEECH_TOOL_NAME = "speech-segment";
+export const ILE_TAB_UNFOCUS_TOOL_NAME = "tab-unfocus";
 export const ILE_TAB_UNFOCUS_TOOL_ACTION = "tab_unfocus";
 export const ILE_IDLE_POW_INTERVAL_MS = 60_000;
 
-export type IleTraceType = "system1" | "system2";
+export type IleTraceType = "observation" | "action" | "system1" | "system2";
 export type IleSystem1Action = "crystallize" | "pause_finalize" | "auto_stash";
 /** send/promote/submit; remove = demote solution → stash (Exercise TAP parity). */
 export type IleSystem2Action =

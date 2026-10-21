@@ -46,11 +46,11 @@ Content-Type: application/json
 | Organization member (Teams admin) | `sk_` | Dashboard **Usage → API Access**, or `POST /api/v3/pow/keys` (browser session) |
 | Organization guest | `gsk_` | `POST /api/v3/pow/org/guests` (org-admin key with `org:write`) |
 
-**Default scopes** for new member keys: `workspaces:read`, `workspaces:write`, `tap:read`, `tap:write`.
+**Default scopes** for new member keys: `workspaces:read`, `workspaces:write`, `sessions:read`, `sessions:write`.
 
 **Organization scopes** `org:read` and `org:write` may only be assigned to keys owned by an **organization admin** (`is_org_admin`). Non-admin Teams users cannot add `org:*` scopes to their keys.
 
-**Guest keys** are always issued with: `workspaces:read`, `workspaces:write`, `tap:read`, `tap:write` — no `org:*`.
+**Guest keys** are always issued with: `workspaces:read`, `workspaces:write`, `sessions:read`, `sessions:write` — no `org:*`.
 
 **Rate limit:** 120 requests per minute per key (best-effort per server instance). Exceeded → `429` with `error.code = "rate_limit_exceeded"`.
 
@@ -366,7 +366,7 @@ Create (or look up) a guest by email and mint a **new** guest API key. Caller mu
   "key": {
     "id": "uuid",
     "key_prefix": "gsk_...",
-    "scopes": ["workspaces:read", "tap:read", "tap:write"],
+    "scopes": ["workspaces:read", "sessions:read", "sessions:write"],
     "rate_limit": 120
   }
 }

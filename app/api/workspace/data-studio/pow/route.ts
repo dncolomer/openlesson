@@ -49,23 +49,25 @@ async function resolveSessionLinkFromToken(
 
   for (const kind of tryKinds) {
     if (kind === "tap") {
-      const { data } = await supabase
-        .from("workspace_tap_sessions")
-        .select("id, workspace_id, status")
-        .eq("private_token_hash", tokenHash)
-        .eq("workspace_id", workspaceId)
-        .maybeSingle();
-      if (data?.id) {
-        return {
-          kind: "tap",
-          linkId: data.id as string,
-          sessionId: data.id as string,
-          workspaceId: (data.workspace_id as string | null) ?? workspaceId,
-        };
+      for (const table of ["workspace_calibrate_sessions", "workspace_verify_sessions"] as const) {
+        const { data } = await supabase
+          .from(table)
+          .select("id, workspace_id, status")
+          .eq("private_token_hash", tokenHash)
+          .eq("workspace_id", workspaceId)
+          .maybeSingle();
+        if (data?.id) {
+          return {
+            kind: "tap",
+            linkId: data.id as string,
+            sessionId: data.id as string,
+            workspaceId: (data.workspace_id as string | null) ?? workspaceId,
+          };
+        }
       }
     } else if (kind === "ile") {
       const { data } = await supabase
-        .from("workspace_ile_links")
+        .from("workspace_learn_links")
         .select("id, workspace_id, session_id, status")
         .eq("private_token_hash", tokenHash)
         .eq("workspace_id", workspaceId)

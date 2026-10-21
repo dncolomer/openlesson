@@ -91,7 +91,7 @@ describe("appendEntryQueryCapture + recordGuestLinkEntryQueryParams", () => {
     const updates: unknown[] = [];
     const supabase = {
       from(table: string) {
-        expect(table).toBe("workspace_ile_links");
+        expect(table).toBe("workspace_learn_links");
         return {
           select() {
             return {
@@ -120,7 +120,7 @@ describe("appendEntryQueryCapture + recordGuestLinkEntryQueryParams", () => {
 
     const next = await recordGuestLinkEntryQueryParams(
       supabase,
-      "workspace_ile_links",
+      "workspace_learn_links",
       "link-uuid-1",
       { campaign: "x", ref: "y" },
     );
@@ -135,7 +135,7 @@ describe("appendEntryQueryCapture + recordGuestLinkEntryQueryParams", () => {
     const supabase = { from };
     const next = await recordGuestLinkEntryQueryParams(
       supabase,
-      "workspace_tap_sessions",
+      "workspace_verify_sessions",
       "link-uuid-2",
       {},
     );
@@ -150,10 +150,10 @@ describe("PoW source link traceability", () => {
       { tap_session_id: "tap-link-1", trace_type: "system1" },
       { kind: "tap", linkId: "tap-link-1" },
     );
-    expect(meta.source_link_kind).toBe("tap");
+    expect(meta.source_link_kind).toBe("verify");
     expect(meta.source_link_id).toBe("tap-link-1");
     expect(meta.tap_session_id).toBe("tap-link-1");
-    expect(sourceLinkFromMetadata(meta)).toEqual({ kind: "tap", linkId: "tap-link-1" });
+    expect(sourceLinkFromMetadata(meta)).toEqual({ kind: "verify", linkId: "tap-link-1" });
   });
 
   it("stamps TAP Learning PoW metadata with source_link_kind + source_link_id and ile_link_id", () => {
@@ -161,19 +161,19 @@ describe("PoW source link traceability", () => {
       { source: "ile_session", tool: "canvas" },
       { kind: "ile", linkId: "ile-link-9" },
     );
-    expect(meta.source_link_kind).toBe("ile");
+    expect(meta.source_link_kind).toBe("learn");
     expect(meta.source_link_id).toBe("ile-link-9");
     expect(meta.ile_link_id).toBe("ile-link-9");
-    expect(sourceLinkFromMetadata(meta)).toEqual({ kind: "ile", linkId: "ile-link-9" });
+    expect(sourceLinkFromMetadata(meta)).toEqual({ kind: "learn", linkId: "ile-link-9" });
   });
 
   it("sourceLinkFromMetadata falls back to legacy tap_session_id / ile_link_id", () => {
     expect(sourceLinkFromMetadata({ tap_session_id: "legacy-tap" })).toEqual({
-      kind: "tap",
+      kind: "verify",
       linkId: "legacy-tap",
     });
     expect(sourceLinkFromMetadata({ ile_link_id: "legacy-ile" })).toEqual({
-      kind: "ile",
+      kind: "learn",
       linkId: "legacy-ile",
     });
   });
@@ -203,7 +203,8 @@ describe("session page wiring (static)", () => {
     expect(tap).toContain("collectEntryQueryParams");
     expect(tap).toContain("recordGuestLinkEntryQueryParams");
     expect(tap).toContain("searchParams");
-    expect(tap).toContain('access_mode", "public"');
+    expect(tap).toContain("findCalibrateSessionByToken");
+    expect(tap).toContain("findVerifySessionByToken");
     expect(ile).toContain("collectEntryQueryParams");
     expect(ile).toContain("recordGuestLinkEntryQueryParams");
     expect(ile).toContain("searchParams");
@@ -228,7 +229,7 @@ describe("session page wiring (static)", () => {
       // Guest TAP Learning paths must gate stamping on access.ileLinkId from ileToken auth
       if (rel.includes("workspace-ile/")) {
         expect(src, rel).toContain("access.ileLinkId");
-        expect(src, rel).toMatch(/stampSourceLinkMetadata\([\s\S]*kind:\s*["']ile["']/);
+        expect(src, rel).toMatch(/stampSourceLinkMetadata\([\s\S]*kind:\s*["']learn["']/);
       }
     }
   });
@@ -244,11 +245,11 @@ describe("session page wiring (static)", () => {
       },
       { kind: "ile", linkId: "ile-link-speech" },
     );
-    expect(speechMeta.source_link_kind).toBe("ile");
+    expect(speechMeta.source_link_kind).toBe("learn");
     expect(speechMeta.source_link_id).toBe("ile-link-speech");
     expect(speechMeta.ile_link_id).toBe("ile-link-speech");
     expect(sourceLinkFromMetadata(speechMeta)).toEqual({
-      kind: "ile",
+      kind: "learn",
       linkId: "ile-link-speech",
     });
 
@@ -260,7 +261,7 @@ describe("session page wiring (static)", () => {
       },
       { kind: "ile", linkId: "ile-link-idle" },
     );
-    expect(idleMeta.source_link_kind).toBe("ile");
+    expect(idleMeta.source_link_kind).toBe("learn");
     expect(idleMeta.source_link_id).toBe("ile-link-idle");
     expect(sourceLinkFromMetadata(idleMeta)?.linkId).toBe("ile-link-idle");
   });

@@ -37,11 +37,13 @@ export async function GET(request: Request) {
             .update({ organization_id: guest.organization_id, is_org_admin: false })
             .eq("id", user.id);
 
-          await admin
-            .from("workspace_tap_sessions")
-            .update({ user_id: user.id })
-            .eq("guest_user_id", guest.id)
-            .is("user_id", null);
+          for (const table of ["workspace_calibrate_sessions", "workspace_verify_sessions"] as const) {
+            await admin
+              .from(table)
+              .update({ user_id: user.id })
+              .eq("guest_user_id", guest.id)
+              .is("user_id", null);
+          }
 
           await admin
             .from("agent_api_keys")

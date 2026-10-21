@@ -631,7 +631,7 @@
     "noApiKeysYet": "Chưa có API key",
     "emptyWorkspacesKicker": "Get started",
     "emptyWorkspacesTitle": "Create your first workspace",
-    "emptyWorkspacesBody": "A workspace is the map you practice on. Create one to add topics, then Calibrate, Learn, or Drill.",
+    "emptyWorkspacesBody": "A workspace is the map you practice on. Create one to add topics, then Calibrate, Learn, or Verify.",
     "emptyWorkspacesCta": "Create a Learning Map",
     "emptyWorkspacesHint": "Create a blank map and start adding topics.",
     "proofOfWorkThisPeriod": "Proof-of-Work Submissions This Period",
@@ -1839,12 +1839,12 @@
     "ileLearningCtaHint": "Guided practice with a dialogue partner — no clock",
     "ileProjectCtaLabel": "Explore · Solo Exercise",
     "ileProjectCtaHint": "Exercises per chapter — dual-stack Thoughts",
-    "exerciseHelpTitle": "Drill · Solo Exercise",
+    "exerciseHelpTitle": "Verify · Solo Exercise",
     "exerciseHelpSummary": "A solo timed exercise prompt — solve out loud without a dialogue partner.",
     "exerciseHelpPoint1": "One exercise text at the top; no dialogue bubbles.",
     "exerciseHelpPoint2": "Speak your solution out loud and submit thoughts as proof of work.",
     "exerciseHelpPoint3": "Remove submitted thoughts later — removals are also useful PoW signal.",
-    "exerciseCtaLabel": "Drill · Solo Exercise",
+    "exerciseCtaLabel": "Verify · Solo Exercise",
     "exerciseCtaHint": "Timed solo exercise — speak and submit your solution",
     "customizeSessionLabel": "Customize the session"
   },
@@ -2022,8 +2022,8 @@
     "powStatsScoped": "Block-scoped",
     "tapLinksTitle": "Share links",
     "tapLinksHint": "Private Calibrate and Verify links for anonymous guests or org members. Save the URL when you create or reissue it; the secret is only shown once. After a session, guests see a thank-you screen confirming Proof of Work data was stored. Use Regenerate Link to rotate the URL on this card while keeping the guest UUID, time, and scope.",
-    "tapLinksExerciseMode": "Drill · Solo Exercise",
-    "tapLinksExerciseModeHint": "Unchecked = Drill · Dialog. Checked = Drill · Solo Exercise.",
+    "tapLinksExerciseMode": "Verify · Solo Exercise",
+    "tapLinksExerciseModeHint": "Unchecked = Verify · Dialog. Checked = Verify · Solo Exercise.",
     "tapLinksReuseGuest": "Regenerate Link",
     "tapLinksMinutes": "Duration (minutes)",
     "tapLinksPostSession": "After session",
@@ -2737,8 +2737,8 @@
     "welcome": {
       "greeting": "Xin chào, tôi là {name}.",
       "panelIntro": "Welcome to Verify. Work the question before the clock ends. Speak, write, and draw as you go.\n\nHow it works: speak out loud — your transcription accumulates in the bar. Stash thoughts as you go, then press I'm done answering to close your turn. I respond under my avatar with one question at a time. Thought Memory keeps every trace for resend or bookmarking.\n\nSession length and conversation language are on the right. When time runs out, you'll return to the workspace — open the Performance tab when you're ready for unified scoring.",
-      "callToAction": "Khi sẵn sàng, nhấn Play. Bộ đếm thời gian bắt đầu và tôi sẽ mở bằng câu hỏi cụ thể về những gì bạn học ở đây.",
-      "play": "Play",
+      "callToAction": "Khi sẵn sàng, nhấn Start. Bộ đếm thời gian bắt đầu và tôi sẽ mở bằng câu hỏi cụ thể về những gì bạn học ở đây.",
+      "play": "Start",
       "starting": "Đang bắt đầu…",
       "skipTyping": "Bỏ qua gõ chữ"
     },
@@ -2888,7 +2888,7 @@
         "body": "Choose a starting angle. The timer begins with that topic’s question.",
         "quoteText": "The expert in anything was once a beginner who refused to give up.",
         "quoteAuthor": "",
-        "start": "Play",
+        "start": "Start",
         "starting": "Starting…"
       }
     },
@@ -2932,7 +2932,7 @@
       "restart": "Restart",
       "workspace": "Back to workspace",
       "work": "Jump into Learn",
-      "drill": "Jump into Drill"
+      "drill": "Jump into Verify"
     }
   }
 }

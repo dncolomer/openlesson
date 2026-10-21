@@ -39,7 +39,7 @@ export default async function PrivateLearnSessionPage({ params, searchParams }: 
   if (Object.keys(entryParams).length > 0) {
     await recordGuestLinkEntryQueryParams(
       access.supabase,
-      "workspace_ile_links",
+      "workspace_learn_links",
       access.linkId,
       entryParams,
     ).catch(() => {});

@@ -26,6 +26,7 @@ import {
   ILE_SESSION_MODE_DEFAULT,
   normalizeIleSessionMode,
   resolveIleSessionModeFromBody,
+  storedLearnSessionMode,
   type IleSessionMode,
 } from "@/lib/ile-mode";
 import {
@@ -48,7 +49,7 @@ export interface CreateIleLinkOptions {
   supabase: SupabaseClient;
   auth: AuthContext;
   workspaceId: string;
-  /** Required — TAP Learning practice is scoped to a single block. */
+  /** Required — Learn practice is scoped to a single block. */
   blockId: string;
   body: CreateTapLinkInput;
   baseUrl: string;
@@ -68,7 +69,7 @@ export interface CreatedIleLink {
   public_token: string | null;
   entry_query_params: unknown;
   show_end_session: boolean;
-  /** learning (default) | project — durable TAP Learning shell mode for this link. */
+  /** learning (default) | project — durable Learn shell mode for this link. */
   session_mode: IleSessionMode;
   url: string;
   private_url: string;
@@ -151,7 +152,7 @@ async function resolveGuestUserId(
       return guest.id;
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Failed to provision anonymous TAP Learning participant";
+        error instanceof Error ? error.message : "Failed to provision anonymous Learn participant";
       throw new CreateIleLinkError(message, 500, "internal_error");
     }
   }
@@ -160,7 +161,7 @@ async function resolveGuestUserId(
 
   if (!auth.is_org_admin || !auth.organization_id) {
     throw new CreateIleLinkError(
-      "Only organization admins can assign TAP Learning links to named guests",
+      "Only organization admins can assign Learn links to named guests",
       403,
       "forbidden"
     );
@@ -199,7 +200,7 @@ async function resolveAssignedUserId(
   }
 
   if (!requestedUserId || !isUuid(requestedUserId)) {
-    throw new CreateIleLinkError("A valid user_id is required for member TAP Learning links", 400, "validation_error");
+    throw new CreateIleLinkError("A valid user_id is required for member Learn links", 400, "validation_error");
   }
 
   const ownerUserId = auth.user_id || workspace.user_id;
@@ -228,7 +229,7 @@ async function resolveAssignedUserId(
   if (groupSession) return requestedUserId;
 
   if (!auth.is_org_admin && ownerUserId !== auth.user_id) {
-    throw new CreateIleLinkError("Not authorized to assign TAP Learning links to this user", 403, "forbidden");
+    throw new CreateIleLinkError("Not authorized to assign Learn links to this user", 403, "forbidden");
   }
 
   throw new CreateIleLinkError("User is not a member of this workspace", 404, "not_found");
@@ -239,7 +240,7 @@ export async function createWorkspaceIleLink(options: CreateIleLinkOptions): Pro
   const blockId = typeof options.blockId === "string" ? options.blockId.trim() : "";
 
   if (!blockId || !isUuid(blockId)) {
-    throw new CreateIleLinkError("blockId is required for TAP Learning links", 400, "validation_error");
+    throw new CreateIleLinkError("blockId is required for Learn links", 400, "validation_error");
   }
 
   const participantType =
@@ -283,7 +284,7 @@ export async function createWorkspaceIleLink(options: CreateIleLinkOptions): Pro
   }
 
   if (participantType === "anonymous" && !auth.is_org_admin && !allowAnonymousForNonAdmin && !auth.user_id) {
-    throw new CreateIleLinkError("Only workspace owners can create anonymous TAP Learning links", 403, "forbidden");
+    throw new CreateIleLinkError("Only workspace owners can create anonymous Learn links", 403, "forbidden");
   }
 
   const assignedUserId = await resolveAssignedUserId(supabase, auth, body, participantType, workspace);
@@ -292,11 +293,11 @@ export async function createWorkspaceIleLink(options: CreateIleLinkOptions): Pro
     : await resolveGuestUserId(supabase, auth, body, participantType, workspace);
 
   if (participantType === "user" && !assignedUserId) {
-    throw new CreateIleLinkError("A valid user_id is required for member TAP Learning links", 400, "validation_error");
+    throw new CreateIleLinkError("A valid user_id is required for member Learn links", 400, "validation_error");
   }
 
   if (participantType === "anonymous" && !guestUserId) {
-    throw new CreateIleLinkError("Failed to provision anonymous TAP Learning participant", 500, "internal_error");
+    throw new CreateIleLinkError("Failed to provision anonymous Learn participant", 500, "internal_error");
   }
 
   const accessMode = normalizeGuestLinkAccessMode(body);
@@ -307,7 +308,7 @@ export async function createWorkspaceIleLink(options: CreateIleLinkOptions): Pro
   const publicToken = durableGuestLinkPublicToken(sessionToken);
 
   const { data: link, error } = await supabase
-    .from("workspace_ile_links")
+    .from("workspace_learn_links")
     .insert({
       workspace_id: workspaceId,
       block_id: blockId,
@@ -321,7 +322,7 @@ export async function createWorkspaceIleLink(options: CreateIleLinkOptions): Pro
       public_token: publicToken,
       entry_query_params: [],
       show_end_session: showEndSession,
-      session_mode: sessionMode,
+      session_mode: storedLearnSessionMode(sessionMode),
       status: "pending",
       participant_type: participantType,
     })
@@ -330,7 +331,7 @@ export async function createWorkspaceIleLink(options: CreateIleLinkOptions): Pro
 
   if (error || !link) {
     console.error("[create-ile-link] Insert error:", error);
-    throw new CreateIleLinkError("Failed to create TAP Learning link", 500, "internal_error");
+    throw new CreateIleLinkError("Failed to create Learn link", 500, "internal_error");
   }
 
   return withIleLinkUrl(link, baseUrl, sessionToken);
@@ -345,7 +346,7 @@ export interface ReissueIleLinkOptions {
 }
 
 /**
- * Rotate the private token on an existing TAP Learning link row.
+ * Rotate the private token on an existing Learn link row.
  * Keeps guest, block scope, and participant settings on the same card.
  * Invalidates any previously issued URL for this link.
  */
@@ -359,7 +360,7 @@ export async function reissueWorkspaceIleLink(
   }
 
   const { data: existing, error: loadError } = await supabase
-    .from("workspace_ile_links")
+    .from("workspace_learn_links")
     .select(
       "id, workspace_id, block_id, status, created_at, participant_type, guest_user_id, assigned_user_id, private_token_hash, access_mode, public_token, entry_query_params, workspaces(id, user_id, organization_id, guest_user_id)"
     )
@@ -369,10 +370,10 @@ export async function reissueWorkspaceIleLink(
 
   if (loadError) {
     console.error("[reissue-ile-link] Load error:", loadError);
-    throw new CreateIleLinkError("Failed to load TAP Learning link", 500, "internal_error");
+    throw new CreateIleLinkError("Failed to load Learn link", 500, "internal_error");
   }
   if (!existing?.private_token_hash && !existing?.public_token) {
-    throw new CreateIleLinkError("TAP Learning link not found", 404, "not_found");
+    throw new CreateIleLinkError("Learn link not found", 404, "not_found");
   }
 
   const workspaceRaw = (existing as { workspaces: unknown }).workspaces;
@@ -390,11 +391,11 @@ export async function reissueWorkspaceIleLink(
   // Reissue rotates bearer; always keep public_token in sync so list URLs stay copyable.
   const sessionToken = createPrivateToken();
   if (!sessionToken) {
-    throw new CreateIleLinkError("Failed to mint TAP Learning link token", 500, "internal_error");
+    throw new CreateIleLinkError("Failed to mint Learn link token", 500, "internal_error");
   }
 
   const { data: link, error } = await supabase
-    .from("workspace_ile_links")
+    .from("workspace_learn_links")
     .update({
       private_token_hash: hashPrivateToken(sessionToken),
       public_token: durableGuestLinkPublicToken(sessionToken),
@@ -410,7 +411,7 @@ export async function reissueWorkspaceIleLink(
 
   if (error || !link) {
     console.error("[reissue-ile-link] Update error:", error);
-    throw new CreateIleLinkError("Failed to reissue TAP Learning link", 500, "internal_error");
+    throw new CreateIleLinkError("Failed to reissue Learn link", 500, "internal_error");
   }
 
   return withIleLinkUrl(link, baseUrl, sessionToken);

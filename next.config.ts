@@ -55,6 +55,16 @@ const nextConfig: NextConfig = {
         destination: "/learn/session/:token/settings",
         permanent: true,
       },
+      {
+        source: "/workspace/:id/scout",
+        destination: "/workspace/:id/calibrate",
+        permanent: true,
+      },
+      {
+        source: "/workspace/:id/tap",
+        destination: "/workspace/:id/verify",
+        permanent: true,
+      },
     ];
   },
   images: {

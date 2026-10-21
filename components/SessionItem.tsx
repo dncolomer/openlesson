@@ -174,7 +174,7 @@ export function SessionItem({
     }
     const contextualSessionId = activeSession?.id || node.session_id;
     if (contextualSessionId) params.set("sessionId", contextualSessionId);
-    router.push(`/workspace/${workspaceId}/scout?${params.toString()}`);
+    router.push(`/workspace/${workspaceId}/calibrate?${params.toString()}`);
   };
 
   const handleStartVerify = (event?: React.MouseEvent, minutes?: number) => {
@@ -189,7 +189,7 @@ export function SessionItem({
     }
     const contextualSessionId = activeSession?.id || node.session_id;
     if (contextualSessionId) params.set("sessionId", contextualSessionId);
-    router.push(`/workspace/${workspaceId}/tap?${params.toString()}`);
+    router.push(`/workspace/${workspaceId}/verify?${params.toString()}`);
   };
 
   const handleLaunchIntent = (

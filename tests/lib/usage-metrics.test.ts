@@ -170,6 +170,7 @@ describe("applyBillable*Filters (query builders used by counters)", () => {
 function makeCountMock(opts: {
   table: string;
   count: number;
+  extraTables?: string[];
 }) {
   const ops: Array<{ method: string; args: unknown[] }> = [];
   const methods = [
@@ -200,7 +201,8 @@ function makeCountMock(opts: {
   }
 
   const from = vi.fn((table: string) => {
-    expect(table).toBe(opts.table);
+    const allowed = opts.extraTables ?? [opts.table];
+    expect(allowed).toContain(table);
     return thenable;
   });
 
@@ -212,11 +214,12 @@ function makeCountMock(opts: {
 }
 
 describe("countTapSessions drives production TAP filters", () => {
-  it("queries workspace_tap_sessions with billable status filter (not pending/revoked)", async () => {
-    const mock = makeCountMock({ table: "workspace_tap_sessions", count: 2 });
+  it("queries Calibrate and Verify tables with billable status filter (not pending/revoked)", async () => {
+    const mock = makeCountMock({ table: "workspace_verify_sessions", count: 2, extraTables: ["workspace_calibrate_sessions", "workspace_verify_sessions"] });
     const n = await countTapSessions(mock.client, "user-1", new Date("2026-06-01T00:00:00.000Z"));
-    expect(n).toBe(2);
-    expect(mock.from).toHaveBeenCalledWith("workspace_tap_sessions");
+    expect(n).toBe(4);
+    expect(mock.from).toHaveBeenCalledWith("workspace_calibrate_sessions");
+    expect(mock.from).toHaveBeenCalledWith("workspace_verify_sessions");
     expect(mock.ops).toContainEqual({
       method: "eq",
       args: ["user_id", "user-1"],

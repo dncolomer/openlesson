@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
       transcript_snapshot: transcriptSnapshot || null,
     };
     const metadata = access.ileLinkId
-      ? stampSourceLinkMetadata(baseMetadata, { kind: "ile", linkId: access.ileLinkId })
+      ? stampSourceLinkMetadata(baseMetadata, { kind: "learn", linkId: access.ileLinkId })
       : baseMetadata;
 
     const row = await uploadWorkspaceProofOfWork(

@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
       has_pending_transcription: hasPendingTranscription,
     };
     const metadata = access.ileLinkId
-      ? stampSourceLinkMetadata(baseMetadata, { kind: "ile", linkId: access.ileLinkId })
+      ? stampSourceLinkMetadata(baseMetadata, { kind: "learn", linkId: access.ileLinkId })
       : baseMetadata;
 
     const row = await uploadWorkspaceProofOfWork(

@@ -30,29 +30,46 @@ export async function GET(req: NextRequest) {
   }
 
   const access = await requireProductWorkspaceLinkAuth(workspaceId, [
-    "tap:read",
-    "tap:write",
+    "sessions:read",
+    "sessions:write",
   ]);
   if (!access.ok) return access.response;
 
-  const { data: links, error } = await access.supabase
-    .from("workspace_tap_sessions")
-    .select(
-      "id, workspace_id, block_id, status, requested_duration_seconds, duration_seconds, participant_type, post_session, redirect_url, guest_user_id, assigned_user_id, created_at, started_at, completed_at, access_mode, public_token, entry_query_params, show_end_session, interaction_kind"
-    )
-    .eq("workspace_id", workspaceId)
-    .not("private_token_hash", "is", null)
-    .order("created_at", { ascending: false });
+  const select =
+    "id, workspace_id, block_id, status, requested_duration_seconds, duration_seconds, participant_type, post_session, redirect_url, guest_user_id, assigned_user_id, created_at, started_at, completed_at, access_mode, public_token, entry_query_params, show_end_session, interaction_kind, session_shell";
+  const [calibrate, verify] = await Promise.all([
+    access.supabase
+      .from("workspace_calibrate_sessions")
+      .select(select)
+      .eq("workspace_id", workspaceId)
+      .not("private_token_hash", "is", null)
+      .order("created_at", { ascending: false }),
+    access.supabase
+      .from("workspace_verify_sessions")
+      .select(select)
+      .eq("workspace_id", workspaceId)
+      .not("private_token_hash", "is", null)
+      .order("created_at", { ascending: false }),
+  ]);
 
-  if (error) {
-    console.error("[workspace/tap-links] List error:", error);
-    return jsonError(500, "Failed to list TAP links");
+  if (calibrate.error) {
+    console.error("[workspace/tap-links] List error:", calibrate.error);
+    return jsonError(500, "Failed to list session links");
+  }
+  if (verify.error) {
+    console.error("[workspace/tap-links] List error:", verify.error);
+    return jsonError(500, "Failed to list session links");
   }
 
   const origin = baseUrl(req);
-  // Always attach listable share URLs from durable public_token (not one-shot client memory).
-  const tap_links = (links || []).map((link) => {
-    const url = guestLinkUrlFromPublicToken(origin, "tap", link.public_token);
+  const links = [...(calibrate.data || []), ...(verify.data || [])];
+  const tap_links = links.map((link) => {
+    const url = guestLinkUrlFromPublicToken(
+      origin,
+      "tap",
+      link.public_token,
+      String(link.interaction_kind || ""),
+    );
     return {
       ...link,
       url: url ?? null,
@@ -152,6 +169,6 @@ export async function POST(req: NextRequest) {
       return jsonError(error.status, error.message, error.code);
     }
     console.error("[workspace/tap-links] Create error:", error);
-    return jsonError(500, "Failed to create TAP link");
+    return jsonError(500, "Failed to create session link");
   }
 }

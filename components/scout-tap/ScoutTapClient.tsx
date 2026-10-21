@@ -367,10 +367,10 @@ export function ScoutTapClient({
         entryQueryParams: entryQueryParamsRef.current,
         minutes: sessionMinutes,
         tapSessionId: tapSessionIdRef.current,
-        interaction_kind: "scout",
+        interaction_kind: "calibrate",
         conversationLanguage,
       });
-      if (!ok) throw new Error(errorMessageFromBody(payload, "Could not start Scout"));
+      if (!ok) throw new Error(errorMessageFromBody(payload, "Could not start Calibrate"));
       if (typeof payload.tapSessionId === "string" && payload.tapSessionId) {
         tapSessionIdRef.current = payload.tapSessionId;
         setTapSessionId(payload.tapSessionId);

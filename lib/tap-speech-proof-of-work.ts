@@ -1,4 +1,4 @@
-export const TAP_SPEECH_TOOL_NAME = "tap-speech-segment";
+export const TAP_SPEECH_TOOL_NAME = "speech-segment";
 
 /** Pause length after the last transcript before a speech segment is considered stopped. */
 export const TAP_SPEECH_SEGMENT_GAP_MS = 2_600;

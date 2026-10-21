@@ -1,6 +1,6 @@
 /**
  * Product intent framing for learner/owner surfaces.
- * Technical products remain TAP Learning/TAP in code; UI speaks Work / Drill / Scout.
+ * Technical products remain Learn/Verify in code; UI speaks Learn / Verify / Calibrate.
  *
  * resolveProductIntent keeps the Dialog / Solo matrix:
  * - Explore + Dialog → learning
@@ -72,7 +72,7 @@ export type ProductLaunchTarget = {
 /** Human labels used on workspace + settings (English defaults; i18n keys mirror these). */
 export const PRODUCT_INTENT_LABELS = {
   styleExplore: "Learn",
-  styleDrill: "Drill / Practice",
+  styleDrill: "Verify",
   styleScout: "Calibrate",
   /** LLM-powered dialog practice (user-facing: "With AI"). */
   modalityDialog: "With AI",
@@ -84,14 +84,14 @@ export const PRODUCT_INTENT_LABELS = {
   horizonTimed: "Solo",
   exploreDialog: "Learn",
   exploreSolo: "Learn",
-  drillDialog: "Drill",
-  drillSolo: "Drill",
+  drillDialog: "Verify",
+  drillSolo: "Verify",
   scoutDialog: "Calibrate",
   /** Legacy label keys — map to new names so old i18n/UI still resolve. */
   openEndedExplore: "Explore",
   openEndedDrill: "Explore",
-  timedExplore: "Drill",
-  timedDrill: "Drill",
+  timedExplore: "Verify",
+  timedDrill: "Verify",
   exploreDialogHint:
     "Guided dialogue practice with an LLM partner — no clock.",
   exploreSoloHint:
@@ -114,7 +114,7 @@ export const PRODUCT_INTENT_LABELS = {
   chooseModality: "How do you want to practice?",
   chooseHorizon: "How do you want to practice?",
   questionExplore: "Do you want to Learn?",
-  questionDrill: "Do you want to Drill / Practice?",
+  questionDrill: "Do you want to Verify?",
   questionScout: "Do you want to Calibrate?",
   questionDialog: "With AI?",
   questionSolo: "With AI?",
@@ -480,11 +480,14 @@ export function launchPracticeHref(
     if (input.sessionId) scoutParams.set("sessionId", String(input.sessionId));
     const scoutQ = scoutParams.toString();
     return scoutQ
-      ? `/workspace/${workspaceId}/scout?${scoutQ}`
-      : `/workspace/${workspaceId}/scout`;
+      ? `/workspace/${workspaceId}/calibrate?${scoutQ}`
+      : `/workspace/${workspaceId}/calibrate`;
   }
-  // Conversational and exercise targets are not sessions.
-  return `/workspace/${workspaceId}`;
+  const verifyParams = new URLSearchParams();
+  verifyParams.set("session", "verification");
+  if (input.blockId) verifyParams.set("blockId", String(input.blockId));
+  if (input.sessionId) verifyParams.set("sessionId", String(input.sessionId));
+  return `/workspace/${workspaceId}/verify?${verifyParams.toString()}`;
 }
 
 /** Style extracted from a launch target. */

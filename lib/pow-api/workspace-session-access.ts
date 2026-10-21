@@ -299,7 +299,7 @@ export async function requireSessionWorkspaceProofOfWorkAccess(
     const participantUserId = ile.assignedUserId;
     const participantGuestUserId = ile.assignedUserId ? null : ile.guestUserId;
     if (!participantUserId && !participantGuestUserId) {
-      return jsonError(500, "TAP Learning guest participant is not provisioned", "guest_missing");
+      return jsonError(500, "Learn guest participant is not provisioned", "guest_missing");
     }
 
     const auth: AuthContext = {

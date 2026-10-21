@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
     if (privateToken && access.tapSessionId) {
       const patch = buildTapInProgressPatch(existing);
       await access.supabase
-        .from("workspace_tap_sessions")
+        .from(access.sessionTable)
         .update(patch)
         .eq("id", access.tapSessionId);
 
@@ -171,7 +171,10 @@ export async function POST(req: NextRequest) {
             learner_thought: latestThought,
             helios_reply: heliosReply,
           },
-          { kind: "tap", linkId: access.tapSessionId },
+          {
+            kind: access.sessionTable.includes("calibrate") ? "calibrate" : "verify",
+            linkId: access.tapSessionId,
+          },
         ),
         practice,
       );

@@ -15,6 +15,7 @@ import {
   type IleSystem1Action,
   type IleSystem2Action,
 } from "@/lib/ile-thought-traces";
+import { storedTraceFamily, storedTraceToolAction } from "@/lib/pow-trace-family";
 import {
   uploadIleProofOfWork,
   textToBase64,
@@ -179,9 +180,9 @@ const uploadIleThoughtTrace = useCallback(
       file_name: fileName,
       timestamp_ms: payload.timestampMs ?? Date.now(),
       tool_name: ILE_TRACE_TOOL_NAME,
-      tool_action: `${payload.traceType}:${payload.action}`,
+      tool_action: storedTraceToolAction(payload.traceType, payload.action),
       metadata: {
-        trace_type: payload.traceType,
+        trace_type: storedTraceFamily(payload.traceType),
         action: payload.action,
         thought_id: payload.thoughtId ?? null,
         thought_ids: payload.thoughtIds ?? null,
@@ -200,10 +201,10 @@ const uploadIleThoughtTrace = useCallback(
       recordSessionPowArtifact?.({
         type: "tool",
         tool_name: ILE_TRACE_TOOL_NAME,
-        tool_action: `${payload.traceType}:${payload.action}`,
+        tool_action: storedTraceToolAction(payload.traceType, payload.action),
         metadata: {
-          type: "uncertain_systems_ile_thought_trace",
-          trace_type: payload.traceType,
+          type: "uncertain_systems_thought_trace",
+          trace_type: storedTraceFamily(payload.traceType),
           action: payload.action,
         },
       });

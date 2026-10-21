@@ -90,7 +90,7 @@ describe("assertReusableWorkspaceGuest", () => {
     const supabase = {
       from: vi.fn((table: string) => {
         if (table === "organization_guest_users") return guestApi;
-        if (table === "workspace_tap_sessions") return tapApi;
+        if (table === "workspace_calibrate_sessions" || table === "workspace_verify_sessions") return tapApi;
         return chainableGuest(null);
       }),
     };

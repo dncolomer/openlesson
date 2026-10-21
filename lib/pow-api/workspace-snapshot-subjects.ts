@@ -80,7 +80,7 @@ export async function listWorkspaceSnapshotSubjects(
   workspaceId: string,
   ownerUserId?: string | null,
 ): Promise<SnapshotSubjectRef[]> {
-  const [powRes, sessionsRes, kcRes, tapRes, ileRes] = await Promise.all([
+  const [powRes, sessionsRes, kcRes, calibrateRes, verifyRes, ileRes] = await Promise.all([
     supabase
       .from("workspace_proof_of_work")
       .select("user_id, guest_user_id")
@@ -97,12 +97,17 @@ export async function listWorkspaceSnapshotSubjects(
       .eq("workspace_id", workspaceId)
       .limit(1000),
     supabase
-      .from("workspace_tap_sessions")
+      .from("workspace_calibrate_sessions")
       .select("guest_user_id, assigned_user_id")
       .eq("workspace_id", workspaceId)
       .limit(1000),
     supabase
-      .from("workspace_ile_links")
+      .from("workspace_verify_sessions")
+      .select("guest_user_id, assigned_user_id")
+      .eq("workspace_id", workspaceId)
+      .limit(1000),
+    supabase
+      .from("workspace_learn_links")
       .select("guest_user_id, assigned_user_id")
       .eq("workspace_id", workspaceId)
       .limit(1000),
@@ -117,15 +122,18 @@ export async function listWorkspaceSnapshotSubjects(
   if (kcRes.error) {
     console.warn("[workspace-snapshot-subjects] knowledge list:", kcRes.error.message);
   }
-  if (tapRes.error) {
-    console.warn("[workspace-snapshot-subjects] tap links list:", tapRes.error.message);
+  if (calibrateRes.error) {
+    console.warn("[workspace-snapshot-subjects] calibrate links list:", calibrateRes.error.message);
+  }
+  if (verifyRes.error) {
+    console.warn("[workspace-snapshot-subjects] verify links list:", verifyRes.error.message);
   }
   if (ileRes.error) {
-    console.warn("[workspace-snapshot-subjects] ile links list:", ileRes.error.message);
+    console.warn("[workspace-snapshot-subjects] learn links list:", ileRes.error.message);
   }
 
   const linkSubjects: SnapshotSubjectRef[] = [];
-  for (const row of [...(tapRes.data || []), ...(ileRes.data || [])]) {
+  for (const row of [...(calibrateRes.data || []), ...(verifyRes.data || []), ...(ileRes.data || [])]) {
     if (row.guest_user_id) {
       linkSubjects.push({ guest_user_id: row.guest_user_id as string, user_id: null });
     }

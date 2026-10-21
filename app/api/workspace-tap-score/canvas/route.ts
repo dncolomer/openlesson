@@ -66,7 +66,10 @@ export async function POST(req: NextRequest) {
             ? (body.metadata as Record<string, unknown>)
             : {}),
         },
-        { kind: "tap", linkId: access.tapSessionId },
+        {
+          kind: access.sessionTable.includes("calibrate") ? "calibrate" : "verify",
+          linkId: access.tapSessionId,
+        },
       ),
       practice,
     );

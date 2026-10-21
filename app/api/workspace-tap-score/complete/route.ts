@@ -139,7 +139,7 @@ export async function POST(req: NextRequest) {
               ? "complete_impure"
               : "complete",
       metadata: stampSourceLinkMetadata(transcriptMetadataBase, {
-        kind: "tap",
+        kind: access.sessionTable.includes("calibrate") ? "calibrate" : "verify",
         linkId: resolvedTapSessionId,
       }),
     });
@@ -161,10 +161,10 @@ export async function POST(req: NextRequest) {
 
     const query = access.existingSession
       ? access.supabase
-          .from("workspace_tap_sessions")
+          .from(access.sessionTable)
           .update(sessionPayload)
           .eq("id", resolvedTapSessionId)
-      : access.supabase.from("workspace_tap_sessions").insert({
+      : access.supabase.from(access.sessionTable).insert({
           workspace_id: access.workspaceId,
           user_id: access.guestUserId ? null : access.userId,
           guest_user_id: access.guestUserId,

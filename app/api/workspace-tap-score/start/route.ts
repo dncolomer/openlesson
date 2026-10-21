@@ -17,6 +17,7 @@ import {
   tapSessionInsertRetryKind,
   type TapInteractionKind,
 } from "@/lib/pow-api/tap-link-config";
+import { storedCalibrateVerifyWrite } from "@/lib/guest-session-tables";
 import { looksLikeConversationalOpening } from "@/lib/exercise-tap";
 import { generateTapExercisePrompt } from "@/lib/pow-api/tapbench-exercise-generate";
 
@@ -151,7 +152,7 @@ export async function POST(req: NextRequest) {
     // on the same row, preserving guest_user_id / assigned_user_id for identity.
     if (access.existingSession?.id) {
       await access.supabase
-        .from("workspace_tap_sessions")
+        .from(access.sessionTable)
         .update({
           status: "in_progress",
           started_at: new Date().toISOString(),
@@ -183,9 +184,10 @@ export async function POST(req: NextRequest) {
       return jsonError(500, "Verify session missing for private link");
     }
 
-    const insertRow = (kind: TapInteractionKind) =>
-      access.supabase
-        .from("workspace_tap_sessions")
+    const insertRow = (kind: TapInteractionKind) => {
+      const write = storedCalibrateVerifyWrite(kind);
+      return access.supabase
+        .from(write.table)
         .insert({
           workspace_id: access.workspaceId,
           user_id: access.userId,
@@ -195,10 +197,12 @@ export async function POST(req: NextRequest) {
           status: "in_progress",
           started_at: new Date().toISOString(),
           mode: "curious",
-          interaction_kind: kind,
+          interaction_kind: write.interaction_kind,
+          session_shell: write.session_shell,
         })
         .select("id")
         .single();
+    };
 
     let { data: row, error } = await insertRow(interactionKind);
     const retryKind = tapSessionInsertRetryKind(interactionKind, error?.message);

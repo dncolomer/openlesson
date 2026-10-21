@@ -210,7 +210,7 @@ export function useWorkspaceLearner(input: {
           params.set("minutes", String(Math.trunc(options.minutes)));
         }
         if (block.session_id) params.set("sessionId", block.session_id);
-        router.push(`/workspace/${workspaceId}/tap?${params.toString()}`);
+        router.push(`/workspace/${workspaceId}/verify?${params.toString()}`);
         return;
       }
       // Same product intent map as SessionItem / BlockDetailCard.
@@ -249,7 +249,7 @@ export function useWorkspaceLearner(input: {
       if (block.session_id) {
         params.set("sessionId", block.session_id);
       }
-      router.push(`/workspace/${workspaceId}/scout?${params.toString()}`);
+      router.push(`/workspace/${workspaceId}/calibrate?${params.toString()}`);
     },
     [ayclToken, currentUserId, router, workspaceId],
   );

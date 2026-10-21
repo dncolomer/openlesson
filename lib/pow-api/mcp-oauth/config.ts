@@ -7,8 +7,8 @@ export const MCP_OAUTH_RESOURCE_PATH = "/api/mcp";
 export const MCP_OAUTH_SCOPES: ApiKeyScope[] = [
   "workspaces:read",
   "workspaces:write",
-  "tap:read",
-  "tap:write",
+  "sessions:read",
+  "sessions:write",
   "org:read",
   "org:write",
 ];

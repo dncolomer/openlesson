@@ -62,13 +62,13 @@ export async function POST(request: NextRequest) {
 
     if (body.session?.status === "completed") {
       await ctx.supabase
-        .from("workspace_ile_links")
+        .from("workspace_learn_links")
         .update({ status: "completed", completed_at: new Date().toISOString() })
         .eq("id", ctx.linkId);
     }
     return Response.json({ success: true });
   } catch (error) {
     console.error("[ile/session-mutate]", error);
-    return jsonError(500, "Failed to mutate TAP Learning session");
+    return jsonError(500, "Failed to mutate Learn session");
   }
 }

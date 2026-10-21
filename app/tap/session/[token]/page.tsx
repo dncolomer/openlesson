@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { hashPrivateToken } from "@/lib/tap-score";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { flowSessionPath } from "@/lib/guest-link-access";
+import { findCalibrateOrVerifySessionByToken } from "@/lib/guest-session-tables";
 
 interface PageProps {
   params: Promise<{ token: string }>;
@@ -23,24 +24,13 @@ export default async function LegacyTapSessionRedirect({ params, searchParams }:
   const query = await searchParams;
   const supabase = createAdminClient();
   const tokenHash = hashPrivateToken(token);
-  const tapSessionSelect = "id, status, interaction_kind, public_token, access_mode";
-
-  let session: Record<string, unknown> | null = null;
-  const { data: byHash } = await supabase
-    .from("workspace_tap_sessions")
-    .select(tapSessionSelect)
-    .eq("private_token_hash", tokenHash)
-    .maybeSingle();
-  session = byHash;
-  if (!session) {
-    const { data: byPublic } = await supabase
-      .from("workspace_tap_sessions")
-      .select(tapSessionSelect)
-      .eq("public_token", token)
-      .eq("access_mode", "public")
-      .maybeSingle();
-    session = byPublic;
-  }
+  const found = await findCalibrateOrVerifySessionByToken(
+    supabase,
+    tokenHash,
+    token,
+    "id, status, interaction_kind, public_token, access_mode",
+  );
+  const session = found?.session ?? null;
   if (!session) notFound();
 
   const path = flowSessionPath("tap", String(session.interaction_kind || ""));

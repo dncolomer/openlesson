@@ -189,7 +189,7 @@ describe("TAP session auth brief vs participant", () => {
     });
 
     // Lookup used hashed token path
-    expect(from).toHaveBeenCalledWith("workspace_tap_sessions");
+    expect(from).toHaveBeenCalledWith("workspace_calibrate_sessions");
     expect(hashPrivateToken("secret-guest-token")).toBe("hash:secret-guest-token");
   });
 

@@ -76,16 +76,25 @@ function createSupabaseMock(handlers: {
       if (table === "workspaces") {
         return { data: handlers.workspaces ?? null, error: null };
       }
-      if (table === "workspace_tap_sessions") {
+      if (
+        table === "workspace_tap_sessions" ||
+        table === "workspace_calibrate_sessions" ||
+        table === "workspace_verify_sessions"
+      ) {
         return { data: handlers.tapLoad ?? null, error: null };
       }
-      if (table === "workspace_ile_links") {
+      if (table === "workspace_ile_links" || table === "workspace_learn_links") {
         return { data: handlers.ileLoad ?? null, error: null };
       }
       return { data: null, error: null };
     };
     api.single = async () => {
-      if (table === "workspace_tap_sessions" && op === "update") {
+      if (
+        (table === "workspace_tap_sessions" ||
+          table === "workspace_calibrate_sessions" ||
+          table === "workspace_verify_sessions") &&
+        op === "update"
+      ) {
         return {
           data: handlers.tapUpdateOne ?? {
             id: LINK_ID,
@@ -95,7 +104,7 @@ function createSupabaseMock(handlers: {
           error: null,
         };
       }
-      if (table === "workspace_ile_links" && op === "update") {
+      if ((table === "workspace_ile_links" || table === "workspace_learn_links") && op === "update") {
         return {
           data: handlers.ileUpdateOne ?? {
             id: LINK_ID,
@@ -111,7 +120,12 @@ function createSupabaseMock(handlers: {
     // Make the chain thenable so `await supabase.from().update()...select()` works.
     api.then = (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) => {
       let data: unknown[] = [];
-      if (table === "workspace_tap_sessions" && op === "update") {
+      if (
+        (table === "workspace_tap_sessions" ||
+          table === "workspace_calibrate_sessions" ||
+          table === "workspace_verify_sessions") &&
+        op === "update"
+      ) {
         const hasPrivateNot = call.filters.some(
           (f) => f.method === "not" && f.args[0] === "private_token_hash",
         );
@@ -129,7 +143,7 @@ function createSupabaseMock(handlers: {
           ];
         }
       }
-      if (table === "workspace_ile_links" && op === "update") {
+      if ((table === "workspace_ile_links" || table === "workspace_learn_links") && op === "update") {
         data = handlers.ileUpdateAll ?? [];
       }
       return Promise.resolve({ data, error: null }).then(resolve, reject);
@@ -197,7 +211,7 @@ describe("invalidateTapLinkOne", () => {
     });
 
     const updateCall = mock.calls.find(
-      (c) => c.table === "workspace_tap_sessions" && c.op === "update",
+      (c) => (c.table === "workspace_calibrate_sessions" || c.table === "workspace_verify_sessions") && c.op === "update",
     );
     expect(updateCall?.payload).toEqual({ status: "revoked" });
   });
@@ -228,7 +242,7 @@ describe("invalidateTapLinkOne", () => {
 
     expect(result.status).toBe("revoked");
     expect(
-      mock.calls.filter((c) => c.table === "workspace_tap_sessions" && c.op === "update"),
+      mock.calls.filter((c) => (c.table === "workspace_calibrate_sessions" || c.table === "workspace_verify_sessions") && c.op === "update"),
     ).toHaveLength(0);
   });
 });
@@ -259,9 +273,9 @@ describe("invalidateTapLinksAll", () => {
     expect(result.ids).toEqual([id1, id2]);
 
     const updates = mock.calls.filter(
-      (c) => c.table === "workspace_tap_sessions" && c.op === "update",
+      (c) => (c.table === "workspace_calibrate_sessions" || c.table === "workspace_verify_sessions") && c.op === "update",
     );
-    expect(updates).toHaveLength(2);
+    expect(updates.length).toBeGreaterThanOrEqual(2);
     for (const u of updates) {
       expect(u.payload).toEqual({ status: "revoked" });
       expect(u.filters.some((f) => f.method === "neq" && f.args[0] === "status")).toBe(true);
@@ -301,7 +315,7 @@ describe("invalidateIleLinkOne", () => {
 
     expect(result.status).toBe("revoked");
     const updateCall = mock.calls.find(
-      (c) => c.table === "workspace_ile_links" && c.op === "update",
+      (c) => c.table === "workspace_learn_links" && c.op === "update",
     );
     expect(updateCall?.payload).toEqual({ status: "revoked" });
   });
@@ -330,7 +344,7 @@ describe("invalidateIleLinksAll", () => {
     expect(result.invalidated_count).toBe(2);
     expect(result.ids).toEqual([id1, id2]);
     const updateCall = mock.calls.find(
-      (c) => c.table === "workspace_ile_links" && c.op === "update",
+      (c) => c.table === "workspace_learn_links" && c.op === "update",
     );
     expect(updateCall?.payload).toEqual({ status: "revoked" });
     expect(

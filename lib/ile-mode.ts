@@ -40,7 +40,14 @@ export const ILE_SESSION_MODE_LABELS: Record<IleSessionMode, string> = {
  */
 export function parseIleSessionModeWrite(value: unknown): IleSessionMode | null {
   if (value === "learning" || value === "project") return value;
+  if (value === "dialog") return "learning";
+  if (value === "solo") return "project";
   return null;
+}
+
+/** Persist Learn session_mode as dialog | solo. */
+export function storedLearnSessionMode(mode: IleSessionMode): "dialog" | "solo" {
+  return mode === "project" ? "solo" : "dialog";
 }
 
 export function normalizeIleSessionMode(
@@ -68,6 +75,7 @@ export function normalizeIleSessionMode(
     if (
       raw === "learning" ||
       raw === "learn" ||
+      raw === "dialog" ||
       raw === "conversational" ||
       raw === "dialogue" ||
       raw === "chat" ||

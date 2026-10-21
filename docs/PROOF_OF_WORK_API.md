@@ -19,7 +19,7 @@ Public agent bodies use **snake_case**. Plan-gate failures return **`403` with `
 Authorization: Bearer <api_key>
 ```
 
-Valid scopes are `workspaces:read`, `workspaces:write`, `tap:read`, `tap:write`, `org:read`, `org:write`, and `*`.
+Valid scopes are `workspaces:read`, `workspaces:write`, `sessions:read`, `sessions:write`, `org:read`, `org:write`, and `*`.
 
 ## Evaluation Modes
 
@@ -108,7 +108,7 @@ Types: `tool`, `screen` (`screenshot` alias), `video`, `eeg`. Simulated canvas w
 
 ## Organizations And Guests
 
-Users on the Teams tier can create an organization with `POST /api/organization` and become its admin. Organization admins can use `POST /api/v3/pow/org/guests` with an `org:write` API key to create guest users by email. Guest users receive individual API keys scoped to workspace management and headless proof-of-work (`workspaces:read`, `workspaces:write`, `tap:read`, `tap:write`). Workspace **creation** is available via `POST /api/v3/workspaces` and MCP `create_workspace`.
+Users on the Teams tier can create an organization with `POST /api/organization` and become its admin. Organization admins can use `POST /api/v3/pow/org/guests` with an `org:write` API key to create guest users by email. Guest users receive individual API keys scoped to workspace management and headless proof-of-work (`workspaces:read`, `workspaces:write`, `sessions:read`, `sessions:write`). Workspace **creation** is available via `POST /api/v3/workspaces` and MCP `create_workspace`.
 
 Organization-owned workspaces are visible to all real users and guest users in that organization. When a guest signs up later with the same email, their real user account inherits the guest organization membership, practice sessions, and guest API keys.
 

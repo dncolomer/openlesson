@@ -35,6 +35,10 @@ import {
   type GuestLinkAccessMode,
 } from "@/lib/guest-link-access";
 import {
+  findCalibrateOrVerifySessionById,
+  storedCalibrateVerifyWrite,
+} from "@/lib/guest-session-tables";
+import {
   knowledgeLinkMintDeniedMessage,
   workspaceAllowsKnowledgeLinkMint,
 } from "@/lib/workspace-kind";
@@ -170,7 +174,7 @@ async function resolveGuestUserId(
 
   if (!auth.is_org_admin || !auth.organization_id) {
     throw new CreateTapLinkError(
-      "Only organization admins can assign TAP links to named guests",
+      "Only organization admins can assign session links to named guests",
       403,
       "forbidden"
     );
@@ -209,7 +213,7 @@ async function resolveAssignedUserId(
   }
 
   if (!requestedUserId || !isUuid(requestedUserId)) {
-    throw new CreateTapLinkError("A valid user_id is required for member TAP links", 400, "validation_error");
+    throw new CreateTapLinkError("A valid user_id is required for member session links", 400, "validation_error");
   }
 
   const ownerUserId = auth.user_id || workspace.user_id;
@@ -238,7 +242,7 @@ async function resolveAssignedUserId(
   if (groupSession) return requestedUserId;
 
   if (!auth.is_org_admin && ownerUserId !== auth.user_id) {
-    throw new CreateTapLinkError("Not authorized to assign TAP links to this user", 403, "forbidden");
+    throw new CreateTapLinkError("Not authorized to assign session links to this user", 403, "forbidden");
   }
 
   throw new CreateTapLinkError("User is not a member of this workspace", 404, "not_found");
@@ -324,18 +328,18 @@ export async function createWorkspaceTapLink(options: CreateTapLinkOptions): Pro
   }
 
   if (participantType === "anonymous" && !auth.is_org_admin && !allowAnonymousForNonAdmin && !auth.user_id) {
-    throw new CreateTapLinkError("Only workspace owners can create anonymous TAP links", 403, "forbidden");
+    throw new CreateTapLinkError("Only workspace owners can create anonymous session links", 403, "forbidden");
   }
 
   const assignedUserId = await resolveAssignedUserId(supabase, auth, body, participantType, workspace);
   const guestUserId = assignedUserId ? null : await resolveGuestUserId(supabase, auth, body, participantType, workspace);
 
   if (participantType === "user" && !assignedUserId) {
-    throw new CreateTapLinkError("A valid user_id is required for member TAP links", 400, "validation_error");
+    throw new CreateTapLinkError("A valid user_id is required for member session links", 400, "validation_error");
   }
 
   if (participantType === "anonymous" && !guestUserId) {
-    throw new CreateTapLinkError("Failed to provision anonymous TAP participant", 500, "internal_error");
+    throw new CreateTapLinkError("Failed to provision anonymous session participant", 500, "internal_error");
   }
 
   try {
@@ -359,9 +363,10 @@ export async function createWorkspaceTapLink(options: CreateTapLinkOptions): Pro
       ? [{ at: new Date().toISOString(), params: { shell: "scout" } }]
       : [];
 
-  const insertLink = (interactionKind: TapInteractionKind) =>
-    supabase
-      .from("workspace_tap_sessions")
+  const insertLink = (interactionKind: TapInteractionKind) => {
+    const write = storedCalibrateVerifyWrite(interactionKind);
+    return supabase
+      .from(write.table)
       .insert({
         workspace_id: workspaceId,
         user_id: ownerUserId,
@@ -374,7 +379,8 @@ export async function createWorkspaceTapLink(options: CreateTapLinkOptions): Pro
         public_token: publicToken,
         entry_query_params: scoutMarker,
         show_end_session: showEndSession,
-        interaction_kind: interactionKind,
+        interaction_kind: write.interaction_kind,
+        session_shell: write.session_shell,
         requested_duration_seconds: Math.round(minutes * 60),
         block_id: blockId,
         mode: "curious",
@@ -388,6 +394,7 @@ export async function createWorkspaceTapLink(options: CreateTapLinkOptions): Pro
       })
       .select(TAP_LINK_SELECT)
       .single();
+  };
 
   let { data: link, error } = await insertLink(interactionKind);
   const retryKind = tapSessionInsertRetryKind(interactionKind, error?.message);
@@ -399,7 +406,7 @@ export async function createWorkspaceTapLink(options: CreateTapLinkOptions): Pro
 
   if (error || !link) {
     console.error("[create-tap-link] Insert error:", error);
-    throw new CreateTapLinkError("Failed to create TAP link", 500, "internal_error");
+    throw new CreateTapLinkError("Failed to create session link", 500, "internal_error");
   }
 
   return withTapLinkUrl(link, baseUrl, sessionToken);
@@ -427,21 +434,18 @@ export async function reissueWorkspaceTapLink(
     throw new CreateTapLinkError("linkId must be a UUID", 400, "validation_error");
   }
 
-  const { data: existing, error: loadError } = await supabase
-    .from("workspace_tap_sessions")
-    .select(
-      "id, workspace_id, block_id, status, requested_duration_seconds, focus_block_ids, created_at, participant_type, post_session, redirect_url, guest_user_id, assigned_user_id, private_token_hash, access_mode, public_token, entry_query_params, workspaces(id, user_id, organization_id, guest_user_id)"
-    )
-    .eq("id", linkId)
-    .eq("workspace_id", workspaceId)
-    .maybeSingle();
+  const found = await findCalibrateOrVerifySessionById(
+    supabase,
+    linkId,
+    "id, workspace_id, block_id, status, requested_duration_seconds, focus_block_ids, created_at, participant_type, post_session, redirect_url, guest_user_id, assigned_user_id, private_token_hash, access_mode, public_token, entry_query_params, workspaces(id, user_id, organization_id, guest_user_id)",
+  );
+  const existing = found?.session ?? null;
 
-  if (loadError) {
-    console.error("[reissue-tap-link] Load error:", loadError);
-    throw new CreateTapLinkError("Failed to load TAP link", 500, "internal_error");
+  if (!existing || existing.workspace_id !== workspaceId) {
+    throw new CreateTapLinkError("Session link not found", 404, "not_found");
   }
-  if (!existing?.private_token_hash && !existing?.public_token) {
-    throw new CreateTapLinkError("TAP link not found", 404, "not_found");
+  if (!existing.private_token_hash && !existing.public_token) {
+    throw new CreateTapLinkError("Session link not found", 404, "not_found");
   }
 
   const workspaceRaw = (existing as { workspaces: unknown }).workspaces;
@@ -459,11 +463,11 @@ export async function reissueWorkspaceTapLink(
   // Reissue rotates bearer; always keep public_token in sync so list URLs stay copyable.
   const sessionToken = createPrivateToken();
   if (!sessionToken) {
-    throw new CreateTapLinkError("Failed to mint TAP link token", 500, "internal_error");
+    throw new CreateTapLinkError("Failed to mint session link token", 500, "internal_error");
   }
 
   const { data: link, error } = await supabase
-    .from("workspace_tap_sessions")
+    .from(found.table)
     .update({
       private_token_hash: hashPrivateToken(sessionToken),
       public_token: durableGuestLinkPublicToken(sessionToken),
@@ -480,7 +484,7 @@ export async function reissueWorkspaceTapLink(
 
   if (error || !link) {
     console.error("[reissue-tap-link] Update error:", error);
-    throw new CreateTapLinkError("Failed to reissue TAP link", 500, "internal_error");
+    throw new CreateTapLinkError("Failed to reissue session link", 500, "internal_error");
   }
 
   return withTapLinkUrl(link, baseUrl, sessionToken);

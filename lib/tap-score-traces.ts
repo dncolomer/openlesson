@@ -2,9 +2,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { queryWorkspaceProofOfWorkRows } from "@/lib/pow-api/workspace-proof-of-work";
 import { withPracticePoWData } from "@/lib/tap-practice";
 
-export const TAP_TRACE_TOOL_NAME = "tap-thought-trace";
-export const TAP_CHAT_TOOL_NAME = "tap-helios-chat";
-export const TAP_TRANSCRIPT_TOOL_NAME = "tap-transcript";
+export const TAP_TRACE_TOOL_NAME = "thought-trace";
+export const TAP_CHAT_TOOL_NAME = "session-chat";
+export const TAP_TRANSCRIPT_TOOL_NAME = "transcript";
 
 export interface TapTranscriptEntry {
   role: string;

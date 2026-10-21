@@ -187,7 +187,7 @@ export function parseStudioSessionLinkInput(
 /** Resolved guest-link / session identity used to match PoW rows. */
 export type StudioResolvedSessionLink = {
   kind: StudioSessionLinkKind;
-  /** workspace_tap_sessions.id or workspace_ile_links.id */
+  /** workspace_calibrate_sessions.id, workspace_verify_sessions.id, or workspace_learn_links.id */
   linkId: string;
   /** sessions.id when the link has started a session (TAP Learning often; TAP link id is often also the session). */
   sessionId: string | null;

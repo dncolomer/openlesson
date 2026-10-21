@@ -13,6 +13,7 @@ import { countWorkspaceProofOfWorkForPlan } from "@/lib/pow-api/workspace-proof-
 import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruption";
 import {stampSourceLinkMetadata, entryQueryParamsFromBody} from "@/lib/guest-link-access";
 import { isTapPracticeRequest, stampPoWPracticeFlag } from "@/lib/tap-practice";
+import { storedTraceFamily, storedTraceToolAction } from "@/lib/pow-trace-family";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -103,7 +104,7 @@ export async function POST(req: NextRequest) {
       stampSourceLinkMetadata(
         {
           tap_session_id: access.tapSessionId,
-          trace_type: traceType,
+          trace_type: storedTraceFamily(traceType),
           action,
           thought_id: thoughtId || null,
           thought_ids: thoughtIds || null,
@@ -112,7 +113,10 @@ export async function POST(req: NextRequest) {
           original_text: originalText || null,
           combined,
         },
-        { kind: "tap", linkId: access.tapSessionId },
+        {
+          kind: access.sessionTable.includes("calibrate") ? "calibrate" : "verify",
+          linkId: access.tapSessionId,
+        },
       ),
       practice,
     );
@@ -139,7 +143,7 @@ export async function POST(req: NextRequest) {
         file_name: fileName,
         timestamp_ms: timestampMs,
         tool_name: TAP_TRACE_TOOL_NAME,
-        tool_action: `${traceType}:${action}`,
+        tool_action: storedTraceToolAction(traceType, action),
         metadata,
       },
     );

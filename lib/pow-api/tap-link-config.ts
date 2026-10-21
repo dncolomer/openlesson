@@ -189,7 +189,8 @@ export function normalizeTapInteractionKind(
   if (typeof value === "string") {
     const raw = value.trim().toLowerCase();
     if (raw === "exercise" || raw === "solo" || raw === "prompt") return "exercise";
-    if (raw === "scout" || raw === "scouting") return "scout";
+    if (raw === "scout" || raw === "scouting" || raw === "calibrate") return "scout";
+    if (raw === "verify") return "conversational";
     if (raw === "conversational" || raw === "dialogue" || raw === "chat" || raw === "conversation") {
       return "conversational";
     }

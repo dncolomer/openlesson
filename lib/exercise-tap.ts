@@ -48,10 +48,12 @@ export type TapShellKind = "conversational" | "exercise" | "scout";
 export function resolveTapShellFromSession(input: {
   interaction_kind?: unknown;
   interactionKind?: unknown;
+  session_shell?: unknown;
   entry_query_params?: unknown;
   initialSession?: {
     interaction_kind?: unknown;
     interactionKind?: unknown;
+    session_shell?: unknown;
   } | null;
 }): TapShellKind {
   const fromSession =
@@ -60,9 +62,14 @@ export function resolveTapShellFromSession(input: {
     input.interaction_kind ??
     input.interactionKind;
   const kind = normalizeTapInteractionKind(fromSession, TAP_INTERACTION_KIND_DEFAULT);
+  if (kind === "scout" || fromSession === "calibrate") return "scout";
   if (kind !== "scout" && entryHistoryRequestsScout(input.entry_query_params)) {
     return "scout";
   }
+  const shell = String(
+    input.initialSession?.session_shell ?? input.session_shell ?? "",
+  ).toLowerCase();
+  if (shell === "solo" || kind === "exercise") return "exercise";
   return kind;
 }
 

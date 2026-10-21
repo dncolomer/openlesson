@@ -7,6 +7,8 @@
 export type ApiKeyScope =
   | "workspaces:read"
   | "workspaces:write"
+  | "sessions:read"
+  | "sessions:write"
   | "tap:read"
   | "tap:write"
   | "org:read"

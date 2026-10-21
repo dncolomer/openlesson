@@ -211,7 +211,7 @@ describe("Learn (not Explore/Work) is the TAP Learning block-launch label", () =
       workspaceId: "ws-1",
       blockId: "b-1",
     });
-    expect(scoutHref).toContain("/workspace/ws-1/scout");
+    expect(scoutHref).toContain("/workspace/ws-1/calibrate");
     expect(scoutHref).toContain("blockId=b-1");
     expect(scoutHref).not.toContain("/tap");
   });
@@ -532,10 +532,10 @@ describe("structural: Scout TAP shell, no think-aloud, Build toggle", () => {
     expect(phases).not.toContain("tap-session-purity");
     expect(phases).not.toContain("retryMicrophone");
 
-    expect(client).toContain('interaction_kind: "scout"');
+    expect(client).toContain('interaction_kind: "calibrate"');
     const learner = read("components/workspace-view/use-workspace-learner.ts");
-    expect(learner).toContain("/workspace/${workspaceId}/scout?");
-    expect(learner).toContain("/workspace/${workspaceId}/tap?");
+    expect(learner).toContain("/workspace/${workspaceId}/calibrate?");
+    expect(learner).toContain("/workspace/${workspaceId}/verify?");
     expect(client).not.toContain("useSessionThoughtInterface");
     expect(client).not.toContain("tap-session-purity");
     expect(client).not.toContain("useTapSpeechProofOfWork");

@@ -253,6 +253,30 @@ describe("retired product language is gone from shipped prose", () => {
     }
   });
 
+  it("locales drop Drill as a product name and Play as a session verb", () => {
+    for (const code of ["en", "de", "es", "pl", "vi", "zh"]) {
+      const data = JSON.parse(read(`messages/${code}.json`)) as {
+        dashboard: { emptyWorkspacesBody: string };
+        tap: { welcome: { play: string; callToAction: string; panelIntro: string } };
+        scout: { thankYou: { drill: string } };
+      };
+      expect(data.dashboard.emptyWorkspacesBody, code).toContain("Calibrate, Learn, or Verify");
+      expect(data.dashboard.emptyWorkspacesBody, code).not.toContain("Drill");
+      expect(data.tap.welcome.play, code).toBe("Start");
+      expect(data.tap.welcome.callToAction, code).not.toMatch(/\bPlay\b/);
+      expect(data.tap.welcome.panelIntro, code).not.toContain("Drill");
+      expect(data.scout.thankYou.drill, code).toContain("Verify");
+      expect(data.scout.thankYou.drill, code).not.toContain("Drill");
+    }
+  });
+
+  it("prompt inventory and kernel scores drop TAP Learning", () => {
+    expect(read("data/prompt-inventory.json")).not.toContain("TAP Learning");
+    expect(read("lib/prompt-kernel/scores.ts")).not.toContain("TAP Learning");
+    expect(read("public/skill.md")).toContain("sessions:read");
+    expect(read("public/skill.md")).not.toContain("tap:read");
+  });
+
   it("every locale welcome follows the English Learn wording", () => {
     const en = JSON.parse(read("messages/en.json")) as {
       welcome: { panelIntro: string; panelIntroMobile: string };

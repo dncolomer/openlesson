@@ -3,6 +3,8 @@
  * touch Calibrate. Drives shipped helpers with a fake client.
  */
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   CALIBRATE_SESSIONS_TABLE,
   VERIFY_SESSIONS_TABLE,
@@ -11,6 +13,8 @@ import {
   insertGuestSession,
   storedCalibrateVerifyWrite,
 } from "@/lib/guest-session-tables";
+import { tapSessionInsertRetryKind } from "@/lib/pow-api/tap-link-config";
+import { tapStartInteractionKind } from "@/lib/exercise-tap";
 
 function fakeClient() {
   const calls: { table: string; op: "select" | "insert" }[] = [];
@@ -85,5 +89,39 @@ describe("Calibrate vs Verify table isolation", () => {
     expect(write.table).toBe(VERIFY_SESSIONS_TABLE);
     expect(write.interaction_kind).toBe("verify");
     expect(write.session_shell).toBe("solo");
+  });
+
+  it("scout insert retry does not remap onto the Verify table", () => {
+    const requested = "scout" as const;
+    const retry = tapSessionInsertRetryKind(requested, "violates check constraint");
+    expect(retry).toBeNull();
+    const write = storedCalibrateVerifyWrite(requested);
+    expect(write.table).toBe(CALIBRATE_SESSIONS_TABLE);
+    expect(write.interaction_kind).toBe("calibrate");
+  });
+
+  it("reopening a stored Verify solo row stays on the exercise start path", () => {
+    expect(
+      tapStartInteractionKind({
+        existingSession: {
+          id: "row-solo",
+          interaction_kind: "verify",
+          session_shell: "solo",
+        },
+        bodyKind: "conversational",
+      }),
+    ).toBe("exercise");
+  });
+
+  it("cutover SQL sets matching kind defaults, Calibrate PK, and PoW calibrate vs verify", () => {
+    const sql = readFileSync(
+      join(__dirname, "../../supabase/migrations/20261021120000_product_language_cutover.sql"),
+      "utf8",
+    );
+    expect(sql).toContain("ALTER COLUMN interaction_kind SET DEFAULT 'verify'");
+    expect(sql).toContain("ALTER COLUMN interaction_kind SET DEFAULT 'calibrate'");
+    expect(sql).toContain("ADD CONSTRAINT workspace_calibrate_sessions_pkey PRIMARY KEY (id)");
+    expect(sql).toContain("workspace_calibrate_sessions c");
+    expect(sql).toMatch(/THEN 'calibrate'/);
   });
 });

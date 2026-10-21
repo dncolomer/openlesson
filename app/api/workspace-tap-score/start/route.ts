@@ -12,13 +12,12 @@ import {
   TAP_PRACTICE_DURATION_SECONDS,
 } from "@/lib/tap-practice";
 import {
-  normalizeTapInteractionKind,
   resolveTapInteractionKindFromBody,
   tapSessionInsertRetryKind,
   type TapInteractionKind,
 } from "@/lib/pow-api/tap-link-config";
 import { storedCalibrateVerifyWrite } from "@/lib/guest-session-tables";
-import { looksLikeConversationalOpening } from "@/lib/exercise-tap";
+import { looksLikeConversationalOpening, tapStartInteractionKind } from "@/lib/exercise-tap";
 import { generateTapExercisePrompt } from "@/lib/pow-api/tapbench-exercise-generate";
 
 export const runtime = "nodejs";
@@ -70,15 +69,20 @@ export async function POST(req: NextRequest) {
     );
 
     // Prefer kind already stored on the link row; body can set it for owner starts.
-    const existingKind = normalizeTapInteractionKind(
-      (access.existingSession as { interaction_kind?: unknown } | null | undefined)?.interaction_kind,
-    );
-    const interactionKind: TapInteractionKind =
-      access.existingSession?.id && existingKind === "exercise"
-        ? "exercise"
-        : access.existingSession?.id
-          ? existingKind
-          : bodyInteractionKind;
+    // Stored Verify uses interaction_kind=verify plus session_shell; reopen reads both.
+    const existingRow = access.existingSession as
+      | {
+          id?: unknown;
+          interaction_kind?: unknown;
+          session_shell?: unknown;
+          entry_query_params?: unknown;
+        }
+      | null
+      | undefined;
+    const interactionKind: TapInteractionKind = tapStartInteractionKind({
+      existingSession: existingRow,
+      bodyKind: bodyInteractionKind,
+    });
 
     const requestedOpeningQuestion = body.openingQuestion ? String(body.openingQuestion).trim() : "";
     let openingQuestion: string;

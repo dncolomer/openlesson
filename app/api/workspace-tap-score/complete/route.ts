@@ -16,6 +16,10 @@ import {
   stampPoWPracticeFlag,
   TAP_PRACTICE_DURATION_SECONDS,
 } from "@/lib/tap-practice";
+import {
+  CALIBRATE_SESSIONS_TABLE,
+  storedCalibrateVerifyWrite,
+} from "@/lib/guest-session-tables";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -159,6 +163,9 @@ export async function POST(req: NextRequest) {
       completed_at: completedAt,
     };
 
+    const write = storedCalibrateVerifyWrite(
+      access.sessionTable === CALIBRATE_SESSIONS_TABLE ? "calibrate" : "verify",
+    );
     const query = access.existingSession
       ? access.supabase
           .from(access.sessionTable)
@@ -176,6 +183,8 @@ export async function POST(req: NextRequest) {
           status: "completed",
           completed_at: completedAt,
           private_token_hash: privateToken ? hashPrivateToken(privateToken) : null,
+          interaction_kind: write.interaction_kind,
+          session_shell: write.session_shell,
         });
 
     const { data: row, error: writeError } = await query

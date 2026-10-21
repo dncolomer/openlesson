@@ -110,6 +110,20 @@ CREATE UNIQUE INDEX IF NOT EXISTS workspace_calibrate_sessions_public_token_key
 CREATE INDEX IF NOT EXISTS idx_workspace_calibrate_sessions_access_mode
   ON public.workspace_calibrate_sessions (workspace_id, access_mode, created_at DESC);
 
+-- LIKE … INCLUDING CONSTRAINTS does not copy PRIMARY KEY (that needs INCLUDING INDEXES,
+-- which would collide with Verify index names). Restore a named PK on id.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public.workspace_calibrate_sessions'::regclass
+      AND contype = 'p'
+  ) THEN
+    ALTER TABLE public.workspace_calibrate_sessions
+      ADD CONSTRAINT workspace_calibrate_sessions_pkey PRIMARY KEY (id);
+  END IF;
+END $$;
+
 ALTER TABLE public.workspace_verify_sessions
   ADD COLUMN IF NOT EXISTS session_shell text;
 
@@ -150,6 +164,14 @@ ALTER TABLE public.workspace_calibrate_sessions
 ALTER TABLE public.workspace_calibrate_sessions
   ADD CONSTRAINT workspace_calibrate_sessions_interaction_kind_check
   CHECK (interaction_kind IN ('calibrate'));
+
+-- LIKE copied DEFAULT 'conversational', which fails the new CHECKs on omitted-kind inserts.
+ALTER TABLE public.workspace_verify_sessions
+  ALTER COLUMN interaction_kind SET DEFAULT 'verify';
+ALTER TABLE public.workspace_calibrate_sessions
+  ALTER COLUMN interaction_kind SET DEFAULT 'calibrate';
+ALTER TABLE public.workspace_verify_sessions
+  ALTER COLUMN session_shell SET DEFAULT 'dialog';
 
 ALTER TABLE public.workspace_calibrate_sessions ENABLE ROW LEVEL SECURITY;
 
@@ -324,16 +346,23 @@ SET metadata = jsonb_set(metadata, '{trace_type}', to_jsonb(
 WHERE metadata ? 'trace_type'
   AND metadata->>'trace_type' IN ('system1', 'system2');
 
-UPDATE public.workspace_proof_of_work
-SET metadata = jsonb_set(metadata, '{source_link_kind}', to_jsonb(
-  CASE metadata->>'source_link_kind'
-    WHEN 'tap' THEN 'verify'
-    WHEN 'ile' THEN 'learn'
-    ELSE metadata->>'source_link_kind'
+UPDATE public.workspace_proof_of_work pow
+SET metadata = jsonb_set(pow.metadata, '{source_link_kind}', to_jsonb(
+  CASE
+    WHEN EXISTS (
+      SELECT 1 FROM public.workspace_calibrate_sessions c
+      WHERE c.id::text IN (
+        pow.metadata->>'source_link_id',
+        pow.metadata->>'tap_session_id'
+      )
+    ) THEN 'calibrate'
+    WHEN pow.metadata->>'source_link_kind' = 'tap' THEN 'verify'
+    WHEN pow.metadata->>'source_link_kind' = 'ile' THEN 'learn'
+    ELSE pow.metadata->>'source_link_kind'
   END
 ))
-WHERE metadata ? 'source_link_kind'
-  AND metadata->>'source_link_kind' IN ('tap', 'ile');
+WHERE pow.metadata ? 'source_link_kind'
+  AND pow.metadata->>'source_link_kind' IN ('tap', 'ile');
 
 UPDATE public.workspace_proof_of_work
 SET metadata = jsonb_set(metadata, '{type}', to_jsonb(

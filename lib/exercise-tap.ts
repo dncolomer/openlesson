@@ -73,6 +73,28 @@ export function resolveTapShellFromSession(input: {
   return kind;
 }
 
+/**
+ * Kind used when starting or reopening a Calibrate/Verify run.
+ * Stored Verify rows are interaction_kind=verify plus session_shell; reopen
+ * must not collapse solo back to conversational.
+ */
+export function tapStartInteractionKind(input: {
+  existingSession?: {
+    id?: unknown;
+    interaction_kind?: unknown;
+    session_shell?: unknown;
+    entry_query_params?: unknown;
+  } | null;
+  bodyKind: TapInteractionKind;
+}): TapInteractionKind {
+  if (!input.existingSession?.id) return input.bodyKind;
+  return resolveTapShellFromSession({
+    interaction_kind: input.existingSession.interaction_kind,
+    session_shell: input.existingSession.session_shell,
+    entry_query_params: input.existingSession.entry_query_params,
+  });
+}
+
 /** True when text is already a solo exercise frame (idempotent re-run safe). */
 export function isAlreadyFramedExercisePrompt(text: string): boolean {
   const t = normalize(text);

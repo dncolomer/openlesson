@@ -22,6 +22,7 @@ import {
   resolveTapShellFromSession,
   stashExerciseSpeech,
   submitExerciseSpeechDirect,
+  tapStartInteractionKind,
 } from "@/lib/exercise-tap";
 import {  } from "@/tests/helpers/surface-source";
 
@@ -71,7 +72,7 @@ describe("create TAP link interaction_kind wiring", () => {
     const tap = read("lib/pow-api/create-tap-link.ts");
     expect(tap).toContain("resolveTapInteractionKindFromBody");
     expect(tap).toContain("interaction_kind");
-    expect(tap).toMatch(/interaction_kind:\s*interactionKind/);
+    expect(tap).toMatch(/interaction_kind:\s*write\.interaction_kind/);
     expect(tap).toContain("interaction_kind");
     // Does not overload facilitator mode
     expect(tap).toMatch(/mode:\s*"curious"/);
@@ -288,6 +289,53 @@ describe("resolveTapShellFromSession", () => {
     expect(resolveTapShellFromSession({ initialSession: {} })).toBe("conversational");
     expect(resolveTapShellFromSession({ interaction_kind: "nope" })).toBe("conversational");
   });
+
+  it("stored Verify session_shell solo reopens as exercise", () => {
+    expect(
+      resolveTapShellFromSession({
+        interaction_kind: "verify",
+        session_shell: "solo",
+      }),
+    ).toBe("exercise");
+    expect(
+      resolveTapShellFromSession({
+        interaction_kind: "verify",
+        session_shell: "dialog",
+      }),
+    ).toBe("conversational");
+    expect(resolveTapShellFromSession({ interaction_kind: "calibrate" })).toBe("scout");
+  });
+});
+
+describe("tapStartInteractionKind", () => {
+  it("reopen uses stored session_shell so solo Verify generates the exercise prompt path", () => {
+    expect(
+      tapStartInteractionKind({
+        existingSession: {
+          id: "verify-solo-1",
+          interaction_kind: "verify",
+          session_shell: "solo",
+        },
+        bodyKind: "conversational",
+      }),
+    ).toBe("exercise");
+    expect(
+      tapStartInteractionKind({
+        existingSession: {
+          id: "verify-dialog-1",
+          interaction_kind: "verify",
+          session_shell: "dialog",
+        },
+        bodyKind: "exercise",
+      }),
+    ).toBe("conversational");
+    expect(
+      tapStartInteractionKind({
+        existingSession: null,
+        bodyKind: "exercise",
+      }),
+    ).toBe("exercise");
+  });
 });
 
 describe("resolveExercisePromptAfterIntro", () => {
@@ -375,6 +423,7 @@ describe("structural: Settings, block tools, separate Exercise UI", () => {
 
   it("start route LLM-authors solo exercise (not template Teach me) for exercise kind", () => {
     const start = read("app/api/workspace-tap-score/start/route.ts");
+    expect(start).toContain("tapStartInteractionKind");
     expect(start).toContain('interactionKind === "exercise"');
     expect(start).toContain("generateTapExercisePrompt");
     expect(start).toContain("looksLikeConversationalOpening");

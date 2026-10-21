@@ -213,11 +213,6 @@ export function resolveTapInteractionKindFromBody(
   return TAP_INTERACTION_KIND_DEFAULT;
 }
 
-/**
- * Unmigrated DBs still CHECK interaction_kind in (conversational, exercise).
- * Scout workspace launches retry the insert as conversational; the /scout
- * URL is the shell selector. Returns null when no retry should run.
- */
 /** True when a stored guest-link entry history marks the shell as Prepare. */
 export function entryHistoryRequestsScout(history: unknown): boolean {
   if (!Array.isArray(history)) return false;
@@ -230,11 +225,14 @@ export function entryHistoryRequestsScout(history: unknown): boolean {
   });
 }
 
+/**
+ * Calibrate and Verify live on separate tables with CHECKs that match
+ * storedCalibrateVerifyWrite. Do not remap scout → conversational: that
+ * insert would land on workspace_verify_sessions.
+ */
 export function tapSessionInsertRetryKind(
-  requested: TapInteractionKind,
-  errorMessage?: unknown,
+  _requested: TapInteractionKind,
+  _errorMessage?: unknown,
 ): TapInteractionKind | null {
-  if (requested !== "scout") return null;
-  void errorMessage;
-  return "conversational";
+  return null;
 }

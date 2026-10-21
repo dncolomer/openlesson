@@ -487,9 +487,7 @@ describe("structural: Scout TAP shell, no think-aloud, Build toggle", () => {
     expect(scoutSessionPurityEnabled()).toBe(false);
     expect(scoutLiveSpeechEnabled("live")).toBe(false);
     expect(normalizeTapInteractionKind("scout")).toBe("scout");
-    expect(tapSessionInsertRetryKind("scout", "violates check constraint")).toBe(
-      "conversational",
-    );
+    expect(tapSessionInsertRetryKind("scout", "violates check constraint")).toBeNull();
     expect(tapSessionInsertRetryKind("exercise", "violates check constraint")).toBeNull();
     expect(resolveTapShellFromSession({ interaction_kind: "scout" })).toBe("scout");
     expect(allBlockPracticeLaunchTargets().map((t) => t.id)).toEqual([

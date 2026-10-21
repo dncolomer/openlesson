@@ -189,7 +189,8 @@ describe("learn suggestion toast", () => {
     expect(prompt).toContain("key={learnSuggestion}");
     expect(prompt).toContain("[data-ile-learn-suggestion]");
     expect(prompt).toContain('placement={commandDockVisible ? "under" : "notification"}');
-    expect(prompt).toContain("right-3 top-3");
+    expect(prompt).toContain("bottom-3 left-3");
+    expect(prompt).not.toContain("right-3 top-3");
     const dockAt = prompt.indexOf("data-ile-learn-more-actions");
     const noteAt = prompt.indexOf("data-ile-canvas-side-note");
     expect(noteAt).toBeGreaterThan(dockAt);

@@ -148,6 +148,7 @@ describe("session sidebar mode configuration", () => {
   it("locks the rail and expanded column widths", () => {
     expect(SESSION_SIDEBAR_COLLAPSED_REM).toBeGreaterThanOrEqual(5.5);
     expect(SESSION_SIDEBAR_COLLAPSED_REM).toBeLessThanOrEqual(7.5);
+    expect(SESSION_SIDEBAR_EXPANDED_REM).toBe(16);
     expect(SESSION_SIDEBAR_EXPANDED_REM).toBeLessThanOrEqual(24);
     expect(SESSION_SIDEBAR_COLLAPSED_REM).toBeLessThan(SESSION_SIDEBAR_EXPANDED_REM);
     expect(sessionSidebarWidthRem(true)).toBe(SESSION_SIDEBAR_COLLAPSED_REM);
@@ -216,9 +217,8 @@ describe("session sidebar mode configuration", () => {
     expect(html.slice(focusAt, signalsAt)).toContain(">02<");
     expect(html.slice(signalsAt, html.indexOf("data-session-sidebar-signals-frame"))).toContain(">03<");
     const sidebarSource = readFileSync(join(ROOT, "components/session-view/session-sidebar.tsx"), "utf8");
-    expect(sidebarSource).toContain(
-      'className="relative box-border flex h-full min-h-0 flex-col overflow-hidden border-l border-white/40 bg-black"',
-    );
+    expect(sidebarSource).toContain("border-r border-white/30");
+    expect(sidebarSource).not.toContain("border-l border-white/40");
     expect(sidebarSource).not.toContain("overflow-y-auto border-l");
     expect(sidebarSource).not.toContain("SESSION_SIDEBAR_FOCUS_REM");
     const asideClass = html.slice(html.indexOf('class="'), html.indexOf(">", html.indexOf('class="')));
@@ -242,6 +242,7 @@ describe("session sidebar mode configuration", () => {
     const signalsFrameAt = html.indexOf("data-session-sidebar-signals-frame");
     expect(signalsFrameAt).toBeGreaterThan(signalsAt);
     const signalsFrame = html.slice(signalsFrameAt, html.indexOf("data-session-sidebar-actions"));
+    expect(SESSION_DATA_CARD_REM).toBe(9);
     expect(SESSION_TOPIC_CARD_REM).toBeGreaterThan(SESSION_DATA_CARD_REM);
     expect(signalsFrame).toContain(`height:${SESSION_DATA_CARD_REM}rem`);
     expect(signalsFrame).not.toContain(`height:${SESSION_TOPIC_CARD_REM}rem`);

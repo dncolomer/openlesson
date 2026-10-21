@@ -226,9 +226,6 @@ export function SessionChrome({
           data-ile-canvas-sidebar-split
           className="relative flex min-h-0 min-w-0 flex-1 flex-row overflow-hidden"
         >
-        <div data-ile-canvas-stage className="relative z-0 min-h-0 min-w-0 flex-1 overflow-hidden">
-          <div className="absolute inset-0 min-h-0">{workCanvas}</div>
-        </div>
         <SessionSidebar
           mode="ile"
           elapsedStartedAt={sessionStartedAt}
@@ -297,13 +294,15 @@ export function SessionChrome({
           }
           actions={actions}
         />
-
-        {error && !showWelcomeModal ? (
-          <div className={`pointer-events-auto absolute left-2 top-2 ${ILE_SESSION_CHROME_ABOVE_WORK_Z_CLASS} flex items-center gap-2 rounded-none border border-red-500/30 bg-red-500/10 px-3 py-1.5`}>
-            <span className="text-xs text-red-400">{error}</span>
-            <button onClick={onDismissError} className="text-xs text-red-400/60 hover:text-red-400">✕</button>
-          </div>
-        ) : null}
+        <div data-ile-canvas-stage className="relative z-0 min-h-0 min-w-0 flex-1 overflow-hidden">
+          <div className="absolute inset-0 min-h-0">{workCanvas}</div>
+          {error && !showWelcomeModal ? (
+            <div className={`pointer-events-auto absolute left-2 top-2 ${ILE_SESSION_CHROME_ABOVE_WORK_Z_CLASS} flex items-center gap-2 rounded-none border border-red-500/30 bg-red-500/10 px-3 py-1.5`}>
+              <span className="text-xs text-red-400">{error}</span>
+              <button onClick={onDismissError} className="text-xs text-red-400/60 hover:text-red-400">✕</button>
+            </div>
+          ) : null}
+        </div>
 
         {modalTool && modalTool !== "help" ? (
           <DialogFrame

@@ -224,11 +224,11 @@ function sceneWith(id: string, text = id): IleWorkCanvasScene {
 }
 
 describe("TAP Learning Work canvas grid default (shipped)", () => {
-  it("starts with the grid off and zen mode on, and keeps an explicit choice", () => {
+  it("starts with the grid on and zen mode off, and keeps an explicit choice", () => {
     const empty = emptyIleWorkCanvasScene();
     expect(empty.appState.activeTool).toEqual({ type: "text" });
-    expect(empty.appState.gridModeEnabled).toBe(false);
-    expect(empty.appState.zenModeEnabled).toBe(true);
+    expect(empty.appState.gridModeEnabled).toBe(true);
+    expect(empty.appState.zenModeEnabled).toBe(false);
     expect(empty.appState.gridSize).toBe(ILE_WORK_CANVAS_DEFAULT_GRID_SIZE);
     expect(empty.appState.currentItemStrokeColor).toBe("#1e1e1e");
     expect(empty.appState.currentItemFontFamily).toBe(ILE_WORK_CANVAS_FONT_FAMILY);
@@ -239,18 +239,18 @@ describe("TAP Learning Work canvas grid default (shipped)", () => {
       appState: { zoom: { value: 1 } },
       files: {},
     });
-    expect(restored.appState.gridModeEnabled).toBe(false);
-    expect(restored.appState.zenModeEnabled).toBe(true);
+    expect(restored.appState.gridModeEnabled).toBe(true);
+    expect(restored.appState.zenModeEnabled).toBe(false);
     expect(restored.appState.gridSize).toBe(ILE_WORK_CANVAS_DEFAULT_GRID_SIZE);
 
     const keptOff = withIleWorkCanvasGridAppState({ gridModeEnabled: false, gridSize: 40 });
     expect(keptOff.gridModeEnabled).toBe(false);
-    expect(keptOff.zenModeEnabled).toBe(true);
+    expect(keptOff.zenModeEnabled).toBe(false);
     expect(keptOff.gridSize).toBe(40);
 
-    const keptOn = withIleWorkCanvasGridAppState({ gridModeEnabled: true, zenModeEnabled: false });
+    const keptOn = withIleWorkCanvasGridAppState({ gridModeEnabled: true, zenModeEnabled: true });
     expect(keptOn.gridModeEnabled).toBe(true);
-    expect(keptOn.zenModeEnabled).toBe(false);
+    expect(keptOn.zenModeEnabled).toBe(true);
 
     const canvas = read("components/ExcalidrawCanvas.tsx");
     expect(canvas).toContain("withIleWorkCanvasGridAppState");

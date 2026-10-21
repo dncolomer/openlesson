@@ -143,7 +143,7 @@ describe("TAP Learning map-first session chrome (shipped surface)", () => {
     expect(split).toContain("flex-row");
     expect(split).toContain("{workCanvas}");
     expect(split).toContain("<SessionSidebar");
-    expect(split.indexOf("{workCanvas}")).toBeLessThan(split.indexOf("<SessionSidebar"));
+    expect(split.indexOf("<SessionSidebar")).toBeLessThan(split.indexOf("{workCanvas}"));
     expect(split).not.toContain("ChapterMapPanel");
     expect(split).not.toContain("ILE_CHAPTER_MODAL_SIZE_CLASS");
     expect(split).not.toContain("w-[59%]");
@@ -459,7 +459,7 @@ describe("TAP Learning map-first session chrome (shipped surface)", () => {
         `heliosTop=${ILE_HELIOS_WIDGET_TOP_PX}`,
         "voice bar owns SlidingTranscript; Helios widget does not",
         `voiceBarClearance=${ILE_MAP_VOICE_BAR_CLEARANCE_CLASS}`,
-        "insights, chapters, signals, transcript, and clock share the right sidebar",
+        "insights, chapters, signals, transcript, and clock share the left sidebar",
         "pow counters tool/screen/video/eeg",
         "rounded-none overlay chrome",
         "tools widget = equal 4-col grid cells",

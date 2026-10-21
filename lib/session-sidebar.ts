@@ -20,9 +20,10 @@ export const SESSION_SIDEBAR_SECTIONS = [
 export type SessionSidebarSection = (typeof SESSION_SIDEBAR_SECTIONS)[number];
 
 /**
- * Expanded column. 20rem is under the 24rem cap. The rail does not collapse.
+ * Left rail. Matches the dashboard platform sidebar (`md:grid-cols-[16rem_…]`).
+ * The rail does not collapse.
  */
-export const SESSION_SIDEBAR_EXPANDED_REM = 20;
+export const SESSION_SIDEBAR_EXPANDED_REM = 16;
 
 /**
  * Retired collapsed width. Kept so older width checks still have a number.
@@ -31,16 +32,16 @@ export const SESSION_SIDEBAR_EXPANDED_REM = 20;
 export const SESSION_SIDEBAR_COLLAPSED_REM = 6.5;
 
 /**
- * Full-width topic card at the top of the sidebar.
+ * Topic card at the top of the sidebar.
  * Taller than the retired 6rem dock chip (`h-24`) and taller than the Data console.
  */
 export const SESSION_TOPIC_CARD_REM = 16;
 
 /**
- * Data console under the focus block. The extra room keeps the readout
- * labels off the traces and the stop control.
+ * Data console under the focus block (panel 03). Keep it shorter than the
+ * topic card so panel 02 (Commands / Help / Harness) keeps the remaining height.
  */
-export const SESSION_DATA_CARD_REM = 13;
+export const SESSION_DATA_CARD_REM = 9;
 
 /** Retired dock chip height, in rem. The topic card stays taller than this. */
 export const SESSION_TOPIC_DOCK_CHIP_REM = 6;

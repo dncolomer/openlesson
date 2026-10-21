@@ -14,7 +14,18 @@ export const ILE_CANVAS_COMMAND_RAIL_CLASS =
 
 /** Sidebar Commands tab: fill the row, then shrink type and marks with the tile. */
 export const ILE_CANVAS_COMMAND_SIDEBAR_CLASS =
-  "pointer-events-auto relative flex h-full min-h-0 w-full flex-col min-w-0 items-center justify-center gap-0.5 overflow-hidden whitespace-normal rounded-none border border-white/45 bg-black px-1 py-1 pt-2.5 text-center font-mono text-[clamp(8px,12cqh,11px)] leading-tight text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] hover:border-white hover:bg-neutral-950 disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-950 disabled:text-neutral-600 disabled:opacity-100 disabled:shadow-none disabled:hover:border-neutral-800 disabled:hover:bg-neutral-950 disabled:hover:text-neutral-600 [container-type:size]";
+  "pointer-events-auto relative flex h-full min-h-0 w-full flex-col min-w-0 items-center justify-center gap-0.5 overflow-hidden whitespace-normal rounded-none border border-white/35 bg-black px-1 py-0.5 pt-1.5 text-center font-mono text-[clamp(7px,10cqh,10px)] leading-tight text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.2)] hover:border-white hover:bg-neutral-950 disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-950 disabled:text-neutral-600 disabled:opacity-100 disabled:shadow-none disabled:hover:border-neutral-800 disabled:hover:bg-neutral-950 disabled:hover:text-neutral-600 [container-type:size]";
+
+/** Commit stays inverted so it reads as the primary command. */
+export const ILE_CANVAS_COMMAND_SIDEBAR_COMMIT_CLASS =
+  "pointer-events-auto relative flex h-full min-h-0 w-full flex-col min-w-0 items-center justify-center gap-0.5 overflow-hidden whitespace-normal rounded-none border border-white bg-white px-1 py-0.5 pt-1.5 text-center font-mono text-[clamp(7px,10cqh,10px)] leading-tight text-neutral-950 shadow-[inset_0_1px_0_rgba(0,0,0,0.12)] hover:bg-neutral-200 disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-950 disabled:text-neutral-600 disabled:opacity-100 disabled:shadow-none disabled:hover:border-neutral-800 disabled:hover:bg-neutral-950 disabled:hover:text-neutral-600 [container-type:size]";
+
+/** Full-width commit bar in the Commands bottom subsection. Twice a command tile. */
+export const ILE_CANVAS_COMMAND_SIDEBAR_COMMIT_BAR_CLASS =
+  "pointer-events-auto relative flex min-h-[2rem] w-full min-w-0 flex-row items-center justify-center gap-2 overflow-hidden whitespace-nowrap rounded-none border border-white bg-white px-2 py-1 text-center font-mono text-[10px] leading-tight text-neutral-950 shadow-[inset_0_1px_0_rgba(0,0,0,0.12)] hover:bg-neutral-200 disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-950 disabled:text-neutral-600 disabled:opacity-100 disabled:shadow-none disabled:hover:border-neutral-800 disabled:hover:bg-neutral-950 disabled:hover:text-neutral-600";
+
+export const ILE_CANVAS_COMMAND_SIDEBAR_MARK_CLASS =
+  "h-[clamp(0.6rem,22cqh,1rem)] w-[clamp(0.6rem,22cqh,1rem)] shrink-0";
 
 export function ileWorkCanvasCommandIndex(id: IleWorkCanvasCommandId): string {
   const at = ILE_WORK_CANVAS_COMMANDS.findIndex((command) => command.id === id);
@@ -23,7 +34,7 @@ export function ileWorkCanvasCommandIndex(id: IleWorkCanvasCommandId): string {
 
 /** Corner ticks, a stencil number, and a lamp. They follow the button color, including the dim disabled state. */
 export function CommandPlate({ index }: { index: string }) {
-  const tick = "pointer-events-none absolute h-1.5 w-1.5 border-current opacity-70";
+  const tick = "pointer-events-none absolute h-1 w-1 border-current opacity-40";
   return (
     <>
       <span aria-hidden className={`${tick} left-0.5 top-0.5 border-l border-t`} />

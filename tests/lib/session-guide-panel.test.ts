@@ -52,8 +52,15 @@ describe("session guide panel", () => {
     expect(learn).toContain("grid-cols-3");
     expect(learn).toContain(">help<");
     expect(learn).toContain("data-session-commands");
-    expect(learn).toContain("data-session-board-tools");
-    expect(learn).toContain(">board<");
+    expect(learn).not.toContain("data-session-board-tools");
+    expect(learn).not.toContain(">board<");
+    expect(learn).toContain('data-session-command="commit"');
+    expect(learn).toContain('data-session-command="dictate"');
+    expect(learn).toContain("data-ile-craft-insight");
+    expect(learn).toContain("data-ile-canvas-dictate");
+    expect(learn).toContain("data-session-commit");
+    expect(learn).toContain('data-ile-command-index="06"');
+    expect(learn).toContain('data-ile-command-index="07"');
     for (const command of ILE_WORK_CANVAS_COMMANDS) {
       expect(learn).toContain(`data-session-command="${command.id}"`);
       expect(learn).toContain(`>${command.label}<`);
@@ -106,12 +113,20 @@ describe("session guide panel", () => {
     expect(source).toContain("CommandPlate");
     expect(source).toContain("auto-rows-fr");
     expect(source).toContain("grid-rows-3");
-    expect(source).toContain('data-session-commands className="flex min-h-0 flex-1 flex-col overflow-hidden"');
+    expect(source).toContain("data-session-commit");
+    expect(source).not.toContain("grid-rows-4");
+    expect(source).not.toContain("grid-rows-[minmax(0,3fr)_minmax(0,1fr)_auto]");
+    expect(source).toContain("data-session-commands");
+    expect(source).toContain("overflow-hidden");
     expect(source).not.toMatch(/data-session-commands[^>]*overflow-y-auto/);
     expect(source).not.toMatch(/text-(red|green|amber|emerald|yellow|blue|orange|rose|lime)-/);
 
     const plates = readFileSync(join(ROOT, "components/excalidraw-canvas/command-plate.tsx"), "utf8");
     expect(plates).toContain("ILE_CANVAS_COMMAND_SIDEBAR_CLASS");
+    expect(plates).toContain("ILE_CANVAS_COMMAND_SIDEBAR_COMMIT_CLASS");
+    expect(plates).toContain("ILE_CANVAS_COMMAND_SIDEBAR_COMMIT_BAR_CLASS");
+    expect(plates).toContain("bg-white");
+    expect(plates).toContain("flex-row");
     expect(plates).toContain("h-full min-h-0");
     expect(plates).toContain("[container-type:size]");
     expect(plates).not.toContain("min-h-[4.75rem]");

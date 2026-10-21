@@ -20,7 +20,7 @@ function useNarrowViewport(enabled: boolean): boolean {
 /**
  * Canvas-first live surface for Calibrate, Drill, conversational TAP, and
  * verification TAP. The stage is the main column. Session chrome sits in the
- * same right sidebar Learn already mounts.
+ * same left sidebar Learn already mounts.
  */
 export function SessionWorkSurface({
   mode,
@@ -56,12 +56,6 @@ export function SessionWorkSurface({
       data-session-work-stacked={stacked ? "true" : "false"}
       className={`relative flex min-h-0 min-w-0 flex-1 overflow-hidden ${stacked ? "flex-col" : "flex-row"}`}
     >
-      <div
-        data-ile-canvas-stage
-        className={`relative z-0 min-h-0 min-w-0 overflow-hidden ${stacked ? "h-[58%] w-full flex-none" : "flex-1"}`}
-      >
-        <div className="absolute inset-0 flex h-full min-h-0 w-full flex-col">{stage}</div>
-      </div>
       <SessionSidebar
         mode={mode}
         clock={clock}
@@ -72,7 +66,14 @@ export function SessionWorkSurface({
         transcript={transcript}
         actions={actions}
         fillWidth={stacked}
+        className={stacked ? "order-2" : "order-1"}
       />
+      <div
+        data-ile-canvas-stage
+        className={`relative z-0 min-h-0 min-w-0 overflow-hidden ${stacked ? "order-1 h-[58%] w-full flex-none" : "order-2 flex-1"}`}
+      >
+        <div className="absolute inset-0 flex h-full min-h-0 w-full flex-col">{stage}</div>
+      </div>
     </div>
   );
 }

@@ -35,14 +35,15 @@ describe("shared live work surface", () => {
   const tap = read("components/tap-score/tap-score-phases.tsx");
   const verify = read("components/VerificationFlowRunner.tsx");
 
-  it("hosts the work stage beside the collapsible right sidebar", () => {
+  it("hosts the work stage beside the left sidebar", () => {
     expect(host).toContain("data-session-work-surface");
     expect(host).toContain("data-ile-canvas-sidebar-split");
     expect(host).toContain("data-ile-canvas-stage");
     const stageAt = host.indexOf("data-ile-canvas-stage");
     const sidebarAt = host.indexOf("<SessionSidebar");
     expect(stageAt).toBeGreaterThan(-1);
-    expect(sidebarAt).toBeGreaterThan(stageAt);
+    expect(sidebarAt).toBeGreaterThan(-1);
+    expect(sidebarAt).toBeLessThan(stageAt);
     expect(host).toContain("relative z-0 min-h-0 min-w-0 overflow-hidden");
     expect(host).toContain("absolute inset-0 flex h-full min-h-0 w-full flex-col");
   });
@@ -73,7 +74,9 @@ describe("shared live work surface", () => {
     expect(learn).toContain("data-ile-canvas-sidebar-split");
     expect(learn).toContain("<SessionSidebar");
     expect(learn).toContain('mode="ile"');
-    expect(learn.indexOf("data-ile-canvas-stage")).toBeLessThan(learn.indexOf("<SessionSidebar"));
+    const splitAt = learn.indexOf("data-ile-canvas-sidebar-split");
+    const split = learn.slice(splitAt);
+    expect(split.indexOf("<SessionSidebar")).toBeLessThan(split.indexOf("data-ile-canvas-stage"));
     expect(learn).not.toContain("IleWorkCanvasTimer");
     expect(learn).not.toContain('mode="tap"');
     for (const marker of OLD_LIVE_SPLITS) {

@@ -16,7 +16,7 @@ import { ileCanvasCraftInsightUsable } from "@/lib/ile-turn-insights";
 import { SESSION_INSTRUCTIONS, type SessionGuideId } from "@/lib/session-instructions";
 
 const TAB_CLASS =
-  "flex min-w-0 items-center justify-center rounded-none px-1 py-1.5 text-center font-mono text-[10px] font-semibold uppercase tracking-[0.12em]";
+  "flex min-w-0 items-center justify-center rounded-none px-1 py-1 text-center font-mono text-[10px] font-semibold uppercase tracking-[0.08em]";
 
 type GuideTab = "commands" | "harness" | "help";
 
@@ -42,7 +42,7 @@ export function SessionGuidePanel({
   return (
     <div data-session-guide={guide} className="flex h-full min-h-0 flex-col overflow-hidden bg-black text-white">
       <div className="flex shrink-0 border-b border-white/30 bg-black">
-        <span aria-hidden className="flex shrink-0 items-center pl-2 pr-1 font-mono text-[9px] tracking-[0.28em] text-white/45">
+        <span aria-hidden className="flex shrink-0 items-center pl-2 pr-1 font-mono text-[9px] tracking-[0.12em] text-white/35">
           02
         </span>
         <div
@@ -85,7 +85,7 @@ export function SessionGuidePanel({
       </div>
       {commandsOpen ? (
         <div data-session-commands className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <div className="grid min-h-0 flex-1 auto-rows-fr grid-cols-2 grid-rows-3 gap-1 px-2 pt-1">
+          <div className="grid min-h-0 flex-1 auto-rows-fr grid-cols-2 grid-rows-3 gap-0.5 px-1.5 pt-0.5">
             {ILE_WORK_CANVAS_COMMANDS.map((command) => {
               const ready = Boolean(bridge?.selectionActive);
               return (
@@ -106,40 +106,29 @@ export function SessionGuidePanel({
                   <CommandMark
                     id={command.id}
                     label={command.label}
-                    className="h-[clamp(0.75rem,28cqh,1.25rem)] w-[clamp(0.75rem,28cqh,1.25rem)] shrink-0"
+                    className="h-[clamp(0.6rem,22cqh,1rem)] w-[clamp(0.6rem,22cqh,1rem)] shrink-0"
                   />
                   <span className="min-w-0 truncate">{command.label}</span>
                 </button>
               );
             })}
+            <IleCanvasDictateButton
+              plate
+              index="06"
+              transcript={bridge?.dictate?.transcript ?? ""}
+              onLiveText={(text) => bridge?.dictate?.write(text, false)}
+              onCommit={(text) => bridge?.dictate?.write(text, true)}
+              onActiveChange={bridge?.dictate?.onActive}
+            />
           </div>
-          <div
-            data-session-board-tools
-            className="mt-1 flex shrink-0 flex-col gap-1 border-t border-white/30 px-2 py-1.5"
-          >
-            <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-white/45">board</p>
-            <div
-              className={
-                bridge?.craft && bridge?.dictate ? "grid grid-cols-2 gap-1" : "flex flex-col gap-1"
-              }
-            >
-              {bridge?.craft ? (
-                <IleCraftInsightButton
-                  wide
-                  usable={ileCanvasCraftInsightUsable()}
-                  onClick={() => bridge.craft?.open()}
-                />
-              ) : null}
-              {bridge?.dictate ? (
-                <IleCanvasDictateButton
-                  wide
-                  transcript={bridge.dictate.transcript}
-                  onLiveText={(text) => bridge.dictate?.write(text, false)}
-                  onCommit={(text) => bridge.dictate?.write(text, true)}
-                  onActiveChange={bridge.dictate.onActive}
-                />
-              ) : null}
-            </div>
+          <div data-session-commit className="shrink-0 px-1.5 pb-1 pt-1">
+            <IleCraftInsightButton
+              plate
+              bar
+              index="07"
+              usable={Boolean(bridge?.craft) && ileCanvasCraftInsightUsable()}
+              onClick={() => bridge?.craft?.open()}
+            />
           </div>
           {commandsHint ? (
             <p className="shrink-0 px-2 pb-1.5 pt-0.5 font-mono text-[9px] leading-snug text-white/45">

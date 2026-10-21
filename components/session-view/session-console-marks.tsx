@@ -1,6 +1,6 @@
 /** Corner ticks and scan lines shared by the session sidebar console. */
 
-const ARM = "pointer-events-none absolute z-[3] h-2.5 w-2.5 border-white/85";
+const ARM = "pointer-events-none absolute z-[3] h-1.5 w-1.5 border-white/40";
 
 export function SessionConsoleMarks() {
   return (
@@ -20,7 +20,7 @@ export function SessionConsoleScan() {
       className="pointer-events-none absolute inset-0 z-[1]"
       style={{
         backgroundImage:
-          "repeating-linear-gradient(to bottom, transparent 0, transparent 2px, rgba(255,255,255,0.05) 3px)",
+          "repeating-linear-gradient(to bottom, transparent 0, transparent 3px, rgba(255,255,255,0.025) 4px)",
       }}
     />
   );

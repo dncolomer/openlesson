@@ -269,13 +269,13 @@ export const ILE_WORK_CANVAS_FONT_FAMILY = 6;
 /** Excalidraw dark theme inverts the canvas: stored black renders as white. */
 export const ILE_WORK_CANVAS_STROKE_COLOR = "#1e1e1e";
 
-/** Grid off and zen mode on, unless this scene already stored a choice. */
+/** Grid on and zen mode off, unless this scene already stored a choice. */
 export function withIleWorkCanvasGridAppState(
   appState: IleWorkCanvasAppState | null | undefined,
 ): IleWorkCanvasAppState {
   const next = asRecord(appState);
-  if (typeof next.gridModeEnabled !== "boolean") next.gridModeEnabled = false;
-  if (typeof next.zenModeEnabled !== "boolean") next.zenModeEnabled = true;
+  if (typeof next.gridModeEnabled !== "boolean") next.gridModeEnabled = true;
+  if (typeof next.zenModeEnabled !== "boolean") next.zenModeEnabled = false;
   if (typeof next.gridSize !== "number" || next.gridSize <= 0) {
     next.gridSize = ILE_WORK_CANVAS_DEFAULT_GRID_SIZE;
   }

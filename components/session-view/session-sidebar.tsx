@@ -15,16 +15,17 @@ const SECTION_LABEL = {
 } as const;
 
 const FOCUS_TAB_CLASS =
-  "min-w-0 flex-1 rounded-none px-2 py-1 text-left font-mono font-semibold uppercase tracking-[0.18em]";
+  "min-w-0 flex-1 rounded-none px-2 py-1 text-left font-mono font-semibold uppercase tracking-[0.1em]";
 
 const RAIL_GRID = {
   backgroundImage:
-    "linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)",
-  backgroundSize: "16px 16px",
+    "linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px)",
+  backgroundSize: "24px 24px",
 } as const;
 
 /**
- * Shared right rail. The first block is one static topic card.
+ * Shared left rail. Matches the dashboard 16rem column.
+ * The first block is one static topic card.
  * The focus slot fills whatever height is left under that card and above Data.
  * Learn, Calibrate, and Verification pass their own commands, help, and harness
  * in that slot. Other modes keep session resources there when a resources
@@ -45,6 +46,7 @@ export function SessionSidebar({
   onResourcesOpenChange,
   elapsedStartedAt = null,
   fillWidth = false,
+  className = "",
 }: {
   mode: SessionSidebarMode;
   clock?: ReactNode;
@@ -62,8 +64,9 @@ export function SessionSidebar({
   resources?: ReactNode;
   resourcesOpen?: boolean;
   onResourcesOpenChange?: (open: boolean) => void;
-  /** Narrow Calibrate: the rail uses the width under the canvas instead of 20rem. */
+  /** Narrow Calibrate: the rail uses the width under the canvas instead of 16rem. */
   fillWidth?: boolean;
+  className?: string;
 }) {
   const [uncontrolledResources, setUncontrolledResources] = useState(false);
   const resourcesOpenNow = resourcesOpen ?? uncontrolledResources;
@@ -95,7 +98,7 @@ export function SessionSidebar({
             }
           : { ...sessionSidebarRailStyle(false), ...RAIL_GRID }
       }
-      className="relative box-border flex h-full min-h-0 flex-col overflow-hidden border-l border-white/40 bg-black"
+      className={`relative box-border flex h-full min-h-0 flex-col overflow-hidden border-r border-white/30 bg-black ${className}`.trim()}
     >
       {showTopic ? (
         <SessionTopicCardTimerProvider
@@ -147,7 +150,7 @@ export function SessionSidebar({
               <SessionConsoleMarks />
               {resourcesInFocus ? (
                 <div role="tablist" className="relative z-[2] flex shrink-0 border-b border-white/30 bg-black">
-                  <span aria-hidden className="flex items-center pl-3 pr-1 font-mono text-[9px] tracking-[0.28em] text-white/45">
+                  <span aria-hidden className="flex items-center pl-3 pr-1 font-mono text-[9px] tracking-[0.12em] text-white/35">
                     02
                   </span>
                   <button
@@ -181,16 +184,16 @@ export function SessionSidebar({
                 </div>
               ) : focusLabel ? (
                 <div className="relative z-[2] flex shrink-0 items-center gap-2 border-b border-white/30 bg-black px-2 py-1 pl-3">
-                  <span aria-hidden className="font-mono text-[9px] tracking-[0.28em] text-white/45">
+                  <span aria-hidden className="font-mono text-[9px] tracking-[0.12em] text-white/35">
                     02
                   </span>
                   <p
                     data-session-sidebar-focus-label
-                    className="min-w-0 font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-white"
+                    className="min-w-0 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-white"
                   >
                     {focusLabel}
                   </p>
-                  <span aria-hidden className="ml-auto font-mono text-[8px] tracking-[0.35em] text-white/35">
+                  <span aria-hidden className="ml-auto font-mono text-[8px] tracking-[0.2em] text-white/20">
                     ////
                   </span>
                 </div>
@@ -207,16 +210,16 @@ export function SessionSidebar({
         {showSignals ? (
           <div data-session-sidebar-section="signals" className="shrink-0 bg-black">
             <div className="flex items-center gap-2 border-b border-white/30 px-2 py-1 pl-3">
-              <span aria-hidden className="font-mono text-[9px] tracking-[0.28em] text-white/45">
+              <span aria-hidden className="font-mono text-[9px] tracking-[0.12em] text-white/35">
                 03
               </span>
               <p
                 data-session-sidebar-signals-label
-                className="font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-white"
+                className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-white"
               >
                 {SECTION_LABEL.signals}
               </p>
-              <span aria-hidden className="ml-auto font-mono text-[8px] tracking-[0.35em] text-white/35">
+              <span aria-hidden className="ml-auto font-mono text-[8px] tracking-[0.2em] text-white/20">
                 ////
               </span>
             </div>

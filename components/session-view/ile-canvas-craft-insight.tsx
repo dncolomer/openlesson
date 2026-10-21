@@ -17,6 +17,12 @@ import {
   typedInsightRecordFromVerdict,
 } from "@/lib/ile-turn-insights";
 import type { IlePowCounterArtifact } from "@/lib/ile-pow-counters";
+import {
+  CommandPlate,
+  ILE_CANVAS_COMMAND_SIDEBAR_COMMIT_BAR_CLASS,
+  ILE_CANVAS_COMMAND_SIDEBAR_COMMIT_CLASS,
+  ILE_CANVAS_COMMAND_SIDEBAR_MARK_CLASS,
+} from "@/components/excalidraw-canvas/command-plate";
 import { textToBase64, uploadIleProofOfWork } from "@/lib/ile-proof-of-work-client";
 import type { InsightSummary } from "@/lib/insights";
 import type { IleWorkCanvasElement } from "@/lib/ile-work-canvas";
@@ -257,6 +263,9 @@ export function IleCraftInsightButton({
   onClick,
   square = false,
   wide = false,
+  plate = false,
+  bar = false,
+  index = "06",
 }: {
   usable: boolean;
   onClick: () => void;
@@ -264,25 +273,43 @@ export function IleCraftInsightButton({
   square?: boolean;
   /** Sidebar board row: full width, apart from the command grid. */
   wide?: boolean;
+  /** Commands grid tile. White fill so commit stays highlighted. */
+  plate?: boolean;
+  /** Bottom subsection: full-width bar, twice a command tile. */
+  bar?: boolean;
+  index?: string;
 }) {
   return (
     <button
       type="button"
       data-ile-craft-insight
+      data-session-command="commit"
       disabled={!usable}
       onClick={onClick}
       aria-label={ILE_CRAFT_INSIGHT_LABEL}
       title={ILE_CRAFT_INSIGHT_LABEL}
       className={
-        square
+        bar
+          ? ILE_CANVAS_COMMAND_SIDEBAR_COMMIT_BAR_CLASS
+          : plate
+          ? ILE_CANVAS_COMMAND_SIDEBAR_COMMIT_CLASS
+          : square
           ? "pointer-events-auto flex min-h-9 w-full min-w-0 items-center justify-start gap-1.5 whitespace-nowrap rounded-none border border-white bg-white px-1.5 py-2 text-left font-mono text-[11px] font-semibold text-neutral-950 hover:bg-neutral-200 disabled:cursor-not-allowed disabled:border-white/30 disabled:bg-neutral-800 disabled:text-white/40"
           : wide
-            ? "pointer-events-auto flex min-h-0 w-full items-center justify-center gap-1 rounded-none border border-white bg-white px-2 py-1.5 text-[11px] text-center font-semibold uppercase tracking-wider text-neutral-950 hover:bg-neutral-200 disabled:cursor-not-allowed disabled:border-white/30 disabled:bg-neutral-800 disabled:text-white/40"
+            ? "pointer-events-auto flex h-full min-h-0 w-full items-center justify-center gap-1 rounded-none border border-white bg-white px-2 py-1.5 text-[11px] text-center font-semibold uppercase tracking-wider text-neutral-950 hover:bg-neutral-200 disabled:cursor-not-allowed disabled:border-white/30 disabled:bg-neutral-800 disabled:text-white/40"
           : "pointer-events-auto inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-none border border-white bg-white px-4 py-2.5 text-sm text-center font-semibold uppercase tracking-wider text-neutral-950 shadow-[0_12px_40px_rgba(0,0,0,0.55)] hover:bg-neutral-200 disabled:cursor-not-allowed disabled:border-white/30 disabled:bg-neutral-800 disabled:text-white/40"
       }
     >
-      <AccelerandoMark text={ILE_CRAFT_INSIGHT_LABEL} className="h-3.5 w-3.5" />
-      {ILE_CRAFT_INSIGHT_LABEL}
+      {plate || bar ? <CommandPlate index={index} /> : null}
+      <AccelerandoMark
+        text={ILE_CRAFT_INSIGHT_LABEL}
+        className={plate && !bar ? ILE_CANVAS_COMMAND_SIDEBAR_MARK_CLASS : "h-3.5 w-3.5"}
+      />
+      {plate || bar ? (
+        <span className="min-w-0 truncate">{ILE_CRAFT_INSIGHT_LABEL}</span>
+      ) : (
+        ILE_CRAFT_INSIGHT_LABEL
+      )}
     </button>
   );
 }

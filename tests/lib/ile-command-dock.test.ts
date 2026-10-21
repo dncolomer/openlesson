@@ -14,7 +14,7 @@ import {
 const host = { hostWidth: 800, hostHeight: 600, boxWidth: 480, boxHeight: 200 };
 
 describe("command dock", () => {
-  it("stays off the canvas when the right sidebar already lists the commands", () => {
+  it("stays off the canvas when the sidebar already lists the commands", () => {
     expect(ileCanvasCommandDockVisible("learn")).toBe(false);
     expect(ileCanvasCommandDockVisible("calibrate")).toBe(false);
     expect(ileCanvasCommandDockVisible("verification")).toBe(false);

@@ -73,6 +73,7 @@ import {
   ileWorkCanvasAddedElementIds,
   ileWorkCanvasAskFromSessionChat,
   ileWorkCanvasLayoutReply,
+  layoutIleWorkCanvasBoard,
   runIleWorkCanvasClearOverlaps,
   ILE_COMPRESS_WORK_CUSTOM_DATA_KEY,
   ILE_COMPRESS_WORK_LABEL,
@@ -105,6 +106,7 @@ import {
   ileLearnMoreVisiblePlacement,
   ileWorkCanvasCenterScroll,
   ileWorkCanvasFitScroll,
+  ileWorkCanvasRevealScroll,
   ileWorkCanvasZoomAtPoint,
   ileWorkCanvasContentBounds,
   ileWorkCanvasClusteredOrigin,
@@ -409,6 +411,112 @@ describe("TAP Learning Work canvas center on open (shipped)", () => {
     expect(canvas).toContain("scrollToContent");
     expect(canvas).toContain("ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS");
     expect(canvas).toContain("api.scrollToContent(elements, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS)");
+    expect(canvas).toContain("ileWorkCanvasRevealScroll");
+  });
+
+  it("nudges just enough to reveal off-screen command marks and leaves in-view marks still", () => {
+    const mark = { x: 900, y: 40, width: 80, height: 40 };
+    const view = { width: 800, height: 600, zoom: { value: 1 }, scrollX: 0, scrollY: 0, offsetLeft: 0, offsetTop: 0 };
+    expect(ileWorkCanvasRevealScroll([{ ...mark, x: 40 }], view)).toBeNull();
+    const nudged = ileWorkCanvasRevealScroll([mark], view);
+    expect(nudged).toBeTruthy();
+    expect(nudged!.scrollX).toBeCloseTo(800 - 40 - 980);
+    expect(nudged!.scrollY).toBe(0);
+    const centered = ileWorkCanvasCenterScroll(
+      { minX: 900, minY: 40, maxX: 980, maxY: 80 },
+      view,
+    );
+    expect(Math.abs(nudged!.scrollX - (centered?.scrollX ?? 0))).toBeGreaterThan(8);
+  });
+});
+
+describe("work-canvas auto layout keeps drawings and schemas whole", () => {
+  it("still spaces two overlapping loose notes", () => {
+    const notes = convertToExcalidrawElements([
+      { type: "text", text: "First loose note on the board.", x: 40, y: 40 },
+      { type: "text", text: "Second loose note stacked on it.", x: 48, y: 48 },
+    ]);
+    const laid = layoutIleWorkCanvasBoard({ elements: notes, appState: {}, files: {} });
+    const [a, b] = laid.elements.filter((el) => el.type === "text" && !el.isDeleted);
+    expect(a && b).toBeTruthy();
+    const overlap = ileWorkCanvasRectsOverlap(
+      { minX: a!.x, minY: a!.y, maxX: a!.x + a!.width, maxY: a!.y + a!.height },
+      { minX: b!.x, minY: b!.y, maxX: b!.x + b!.width, maxY: b!.y + b!.height },
+      8,
+    );
+    expect(overlap).toBe(false);
+  });
+
+  it("moves nearby freedraw strokes together", () => {
+    const strokes = convertToExcalidrawElements([
+      { type: "freedraw", x: 20, y: 20, width: 60, height: 40, points: [[0, 0], [60, 40]] },
+      { type: "freedraw", x: 40, y: 30, width: 50, height: 30, points: [[0, 0], [50, 30]] },
+    ]);
+    const note = convertToExcalidrawElements([
+      { type: "text", text: "A caption that overlaps the sketch.", x: 24, y: 22 },
+    ]);
+    const beforeDx = strokes[1]!.x - strokes[0]!.x;
+    const beforeDy = strokes[1]!.y - strokes[0]!.y;
+    const laid = layoutIleWorkCanvasBoard({
+      elements: [...strokes, ...note],
+      appState: {},
+      files: {},
+    });
+    const next = laid.elements.filter((el) => el.type === "freedraw");
+    expect(next).toHaveLength(2);
+    expect(next[1]!.x - next[0]!.x).toBeCloseTo(beforeDx);
+    expect(next[1]!.y - next[0]!.y).toBeCloseTo(beforeDy);
+  });
+
+  it("keeps an arrow-linked schema in one piece", () => {
+    const boxes = convertToExcalidrawElements([
+      { type: "rectangle", x: 0, y: 0, width: 80, height: 40, label: { text: "Cause" } },
+      { type: "rectangle", x: 220, y: 0, width: 80, height: 40, label: { text: "Effect" } },
+    ]);
+    const left = boxes.find((el) => el.type === "rectangle" && el.x === 0)!;
+    const right = boxes.find((el) => el.type === "rectangle" && el.x === 220)!;
+    const [arrow] = convertToExcalidrawElements([
+      { type: "arrow", x: 80, y: 20, width: 140, height: 0, points: [[0, 0], [140, 0]] },
+    ]);
+    arrow.startBinding = { elementId: left.id, focus: 0, gap: 4 };
+    arrow.endBinding = { elementId: right.id, focus: 0, gap: 4 };
+    left.boundElements = [...(Array.isArray(left.boundElements) ? left.boundElements : []), { id: arrow.id, type: "arrow" }];
+    right.boundElements = [...(Array.isArray(right.boundElements) ? right.boundElements : []), { id: arrow.id, type: "arrow" }];
+    const note = convertToExcalidrawElements([
+      { type: "text", text: "A loose note sitting on the schema.", x: 8, y: 8 },
+    ]);
+    const before = right.x - left.x;
+    const laid = layoutIleWorkCanvasBoard({
+      elements: [...boxes, arrow, ...note],
+      appState: {},
+      files: {},
+    });
+    const nextLeft = laid.elements.find((el) => el.id === left.id)!;
+    const nextRight = laid.elements.find((el) => el.id === right.id)!;
+    const nextArrow = laid.elements.find((el) => el.id === arrow.id)!;
+    expect(nextRight.x - nextLeft.x).toBeCloseTo(before);
+    expect(nextArrow.x - nextLeft.x).toBeCloseTo(arrow.x - left.x);
+    expect(nextArrow.y - nextLeft.y).toBeCloseTo(arrow.y - left.y);
+  });
+
+  it("keeps grouped marks together", () => {
+    const parts = convertToExcalidrawElements([
+      { type: "ellipse", x: 10, y: 10, width: 40, height: 40 },
+      { type: "diamond", x: 70, y: 16, width: 36, height: 36 },
+    ]);
+    parts[0]!.groupIds = ["schema-group"];
+    parts[1]!.groupIds = ["schema-group"];
+    const before = parts[1]!.x - parts[0]!.x;
+    const note = convertToExcalidrawElements([{ type: "text", text: "Aside", x: 12, y: 12 }]);
+    const laid = layoutIleWorkCanvasBoard({
+      elements: [...parts, ...note],
+      appState: {},
+      files: {},
+    });
+    const next = laid.elements.filter((el) => el.type === "ellipse" || el.type === "diamond");
+    const ellipse = next.find((el) => el.type === "ellipse")!;
+    const diamond = next.find((el) => el.type === "diamond")!;
+    expect(diamond.x - ellipse.x).toBeCloseTo(before);
   });
 });
 
@@ -2622,6 +2730,7 @@ describe("TAP Learning Work canvas selection commands (shipped)", () => {
       canvas.indexOf("const reply = await ask"),
     );
     expect(applyBody).toContain("ileWorkCanvasAddedElementIds");
+    expect(applyBody).toContain("ileWorkCanvasRevealScroll");
     expect(applyBody).not.toContain("scrollToContent");
     expect(applyBody).not.toContain("ileWorkCanvasNoteNewMarks");
     const changeStart = canvas.indexOf("const handleChange = useCallback");
@@ -2659,7 +2768,7 @@ describe("TAP Learning Work canvas selection commands (shipped)", () => {
         `clearAskCalls=${ask.calls.length}`,
         `gappedAskCalls=${gappedAsk.calls.length}`,
         `modelAsk=${modelAsk.calls.length}`,
-        "commands=Focus Simplify Split Answer Draw Refactor",
+        "commands=Focus Simplify Split Breakdown Answer Draw Refactor",
       ].join("\n") + "\n",
     );
   });

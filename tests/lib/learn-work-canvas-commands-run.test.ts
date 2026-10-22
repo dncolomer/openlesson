@@ -7,6 +7,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   applyIleWorkCanvasAskReply,
+  buildIleWorkCanvasDefineUserMessage,
   convertToExcalidrawElements,
   expandIleWorkCanvasCommandSelection,
   ILE_WORK_CANVAS_COMMANDS,
@@ -38,6 +39,9 @@ describe("work-canvas command buttons actually mutate the board", () => {
       "focus",
       "simplify",
       "split",
+      "breakdown",
+      "concepts",
+      "define",
       "answer",
       "draw",
       "refactor",
@@ -47,6 +51,17 @@ describe("work-canvas command buttons actually mutate the board", () => {
     expect(canvas).toContain("applyIleWorkCanvasAskReply");
     expect(canvas).toContain("outcome.notice");
     expect(canvas).toContain("outcome.ask.kind");
+    expect(canvas.indexOf("if (outcome.ask)")).toBeGreaterThan(canvas.indexOf("if (outcome.changed)"));
+    expect(canvas).toContain("applyLocalCanvasEdit(outcome.scene, outcome.parts, !outcome.ask)");
+    expect(canvas).toContain("ileWorkCanvasRevealScroll");
+    expect(canvas).toContain("ileWorkCanvasCommandShortcutKeyFromEvent");
+    expect(canvas).toContain('input.kind !== "concepts"');
+    const applyLocal = canvas.slice(
+      canvas.indexOf("const applyLocalCanvasEdit"),
+      canvas.indexOf("if (outcome.changed)"),
+    );
+    expect(applyLocal).toContain("ileWorkCanvasRevealScroll");
+    expect(applyLocal).not.toContain("scrollToContent");
     const guide = readFileSync(join(ROOT, "components/session-view/session-guide-panel.tsx"), "utf8");
     expect(guide).toContain("bridge.run(command.id)");
     for (const command of ILE_WORK_CANVAS_COMMANDS) {
@@ -142,6 +157,61 @@ describe("work-canvas command buttons actually mutate the board", () => {
     expect(unlabeled.notice).toBe("Select text, or a labeled shape, to split.");
   });
 
+  it("Breakdown keeps the original mark and fans parts out with arrows", () => {
+    const source =
+      "First clause names the last-resort test. Second clause names discrimination.";
+    const free = convertToExcalidrawElements([{ type: "text", text: source, x: 40, y: 80 }]);
+    const originalId = free[0]!.id;
+    const run = runIleWorkCanvasCommand({
+      action: "breakdown",
+      scene: sceneOf(free),
+      selectedElements: free,
+    });
+    expect(run.changed).toBe(true);
+    expect(run.scene.elements.some((el) => el.id === originalId && !el.isDeleted)).toBe(true);
+    expect(run.scene.elements.some((el) => el.type === "arrow" && !el.isDeleted)).toBe(true);
+    expect(run.scene.elements.filter((el) => el.customData?.ileBreakdown && el.type === "rectangle").length).toBeGreaterThanOrEqual(
+      2,
+    );
+    expect(run.parts.every((el) => !el.customData?.ileBreakdown)).toBe(true);
+    expect(run.parts.some((el) => el.id === originalId)).toBe(true);
+    const selectedIds = run.scene.appState.selectedElementIds as Record<string, boolean>;
+    expect(selectedIds[originalId]).toBe(true);
+    for (const el of run.scene.elements) {
+      if (el.customData?.ileBreakdown) expect(selectedIds[el.id]).toBeFalsy();
+    }
+    expect(liveText(run.scene).some((line) => line.includes("First clause"))).toBe(true);
+    expect(liveText(run.scene).some((line) => line.includes("Second clause"))).toBe(true);
+  });
+
+  it("Concepts asks XAI and fans named concepts without selecting them", () => {
+    const source = "Last resort requires every peaceful option before force.";
+    const free = convertToExcalidrawElements([{ type: "text", text: source, x: 40, y: 80 }]);
+    const originalId = free[0]!.id;
+    const asked = runIleWorkCanvasCommand({
+      action: "concepts",
+      scene: sceneOf(free),
+      selectedElements: free,
+    });
+    expect(asked.changed).toBe(false);
+    expect(asked.ask).toEqual({ kind: "concepts", prompt: "Concepts" });
+    const fanned = applyIleWorkCanvasAskReply({
+      kind: "concepts",
+      live: asked.scene,
+      selectedElements: asked.selected,
+      payload: { text: "Last resort\nPeaceful options\nForce" },
+    });
+    expect(fanned.elements.some((el) => el.id === originalId && !el.isDeleted)).toBe(true);
+    expect(fanned.elements.filter((el) => el.customData?.ileConcepts && el.type === "rectangle").length).toBe(3);
+    expect(fanned.elements.some((el) => el.type === "arrow" && el.customData?.ileConcepts)).toBe(true);
+    expect(liveText(fanned).some((line) => line.includes("Peaceful options"))).toBe(true);
+    const selectedIds = fanned.appState.selectedElementIds as Record<string, boolean>;
+    expect(selectedIds[originalId]).toBe(true);
+    for (const el of fanned.elements) {
+      if (el.customData?.ileConcepts) expect(selectedIds[el.id]).toBeFalsy();
+    }
+  });
+
   it("Focus places the harness line on the board without a selection", () => {
     const board = sceneOf([]);
     const empty = runIleWorkCanvasCommand({
@@ -163,6 +233,36 @@ describe("work-canvas command buttons actually mutate the board", () => {
     expect(placed.parts.some((el) => el.strokeStyle === "dashed")).toBe(true);
   });
 
+  it("Define asks XAI and places a definition beside the original", () => {
+    const source = "Last resort";
+    const free = convertToExcalidrawElements([{ type: "text", text: source, x: 40, y: 80 }]);
+    const originalId = free[0]!.id;
+    const asked = runIleWorkCanvasCommand({
+      action: "define",
+      scene: sceneOf(free),
+      selectedElements: free,
+    });
+    expect(asked.changed).toBe(false);
+    expect(asked.ask).toEqual({ kind: "define", prompt: "Define" });
+    expect(asked.scene.elements.some((el) => el.id === originalId && !el.isDeleted)).toBe(true);
+    const placed = applyIleWorkCanvasAskReply({
+      kind: "define",
+      live: asked.scene,
+      selectedElements: asked.selected,
+      payload: {
+        text: "Last resort is using force only after every peaceful option is exhausted.",
+      },
+    });
+    expect(placed.elements.some((el) => el.id === originalId && !el.isDeleted)).toBe(true);
+    expect(
+      liveText(placed).some((line) => line.includes("every peaceful option")),
+    ).toBe(true);
+    const prompt = buildIleWorkCanvasDefineUserMessage({ selectedElements: free });
+    expect(prompt).toMatch(/one clean, simple definition/i);
+    expect(prompt).toMatch(/Keep the original marks in place/i);
+    expect(prompt).toContain("Last resort");
+  });
+
   it("Simplify, Answer, Draw, and Refactor ask XAI, and replies always land on the board", () => {
     const text = convertToExcalidrawElements([
       {
@@ -179,15 +279,16 @@ describe("work-canvas command buttons actually mutate the board", () => {
       scene: board,
       selectedElements: text,
     });
-    expect(simplify.changed).toBe(false);
+    expect(simplify.changed).toBe(true);
+    expect(simplify.scene.elements.some((el) => el.id === text[0]!.id)).toBe(false);
     expect(simplify.ask).toEqual({ kind: "simplify", prompt: "Simplify" });
     const simplified = applyIleWorkCanvasAskReply({
       kind: "simplify",
-      live: board,
-      selectedElements: text,
+      live: simplify.scene,
+      selectedElements: simplify.selected,
       payload: { text: "Gravity gets weaker as distance grows." },
     });
-    expect(ileWorkCanvasSceneVisiblyChanged(board, simplified)).toBe(true);
+    expect(ileWorkCanvasSceneVisiblyChanged(simplify.scene, simplified)).toBe(true);
     expect(liveText(simplified).some((line) => line.includes("weaker"))).toBe(true);
     expect(simplified.elements.some((el) => el.id === text[0]!.id)).toBe(false);
 
@@ -210,12 +311,23 @@ describe("work-canvas command buttons actually mutate the board", () => {
       scene: board,
       selectedElements: text,
     });
+    expect(draw.changed).toBe(false);
     expect(draw.ask?.kind).toBe("draw");
+    expect(draw.scene.elements.some((el) => el.id === text[0]!.id)).toBe(true);
+
+    const refactor = runIleWorkCanvasCommand({
+      action: "refactor",
+      scene: board,
+      selectedElements: text,
+    });
+    expect(refactor.changed).toBe(true);
+    expect(refactor.scene.elements.some((el) => el.id === text[0]!.id)).toBe(false);
+    expect(refactor.ask).toEqual({ kind: "refactor", prompt: "Refactor" });
 
     const refactored = applyIleWorkCanvasAskReply({
       kind: "refactor",
-      live: board,
-      selectedElements: text,
+      live: refactor.scene,
+      selectedElements: refactor.selected,
       payload: {
         text: "Gravity falls with distance squared.",
       },
@@ -225,8 +337,8 @@ describe("work-canvas command buttons actually mutate the board", () => {
 
     const refactorProse = applyIleWorkCanvasAskReply({
       kind: "refactor",
-      live: board,
-      selectedElements: text,
+      live: refactor.scene,
+      selectedElements: refactor.selected,
       payload: { text: "Keep the inverse-square relation, then name the two bodies." },
     });
     expect(liveText(refactorProse).some((line) => line.includes("two bodies"))).toBe(true);
@@ -234,8 +346,8 @@ describe("work-canvas command buttons actually mutate the board", () => {
 
     const failed = applyIleWorkCanvasAskReply({
       kind: "refactor",
-      live: board,
-      selectedElements: text,
+      live: refactor.scene,
+      selectedElements: refactor.selected,
       payload: { text: "" },
     });
     expect(liveText(failed).some((line) => line.includes(ileWorkCanvasAskFallback("refactor")))).toBe(
@@ -263,5 +375,7 @@ describe("work-canvas command buttons actually mutate the board", () => {
       selectedElements: [container],
     });
     expect(simplify.selected.some((el) => el.type === "text")).toBe(true);
+    expect(simplify.changed).toBe(true);
+    expect(simplify.scene.elements.some((el) => el.id === container.id)).toBe(false);
   });
 });

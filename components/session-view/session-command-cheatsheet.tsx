@@ -6,7 +6,9 @@ import {
   ILE_WORK_CANVAS_AUTO_LAYOUT_SHORTCUT,
   ILE_WORK_CANVAS_AUTO_LAYOUT_TOOLTIP,
   ILE_WORK_CANVAS_CHEATSHEET_LABEL,
-  ileWorkCanvasCommandShortcutLabel,
+  ILE_WORK_CANVAS_SHORTCUT_MOD_HINT,
+  ileWorkCanvasCommandShortcutAltLabel,
+  ileWorkCanvasCommandShortcutAppleLabel,
   ileWorkCanvasCommandsFor,
   type IleWorkCanvasCommandId,
 } from "@/lib/learn-work-canvas-commands";
@@ -49,6 +51,12 @@ export function SessionCommandCheatsheet({
             Close
           </button>
         </div>
+        <p
+          data-session-command-cheatsheet-mac
+          className="mb-3 font-mono text-[11px] leading-snug text-white/70"
+        >
+          {ILE_WORK_CANVAS_SHORTCUT_MOD_HINT}
+        </p>
         <ul className="flex flex-col gap-2">
           {commands.map((command) => (
             <li
@@ -64,9 +72,14 @@ export function SessionCommandCheatsheet({
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline justify-between gap-2">
                   <span className="font-mono text-[12px] font-semibold">{command.label}</span>
-                  <kbd className="shrink-0 font-mono text-[10px] text-white/55">
-                    {ileWorkCanvasCommandShortcutLabel(command.shortcut)}
-                  </kbd>
+                  <span className="flex shrink-0 items-baseline gap-1.5 font-mono text-[10px] text-white/55">
+                    <kbd data-shortcut-apple={command.shortcut}>
+                      {ileWorkCanvasCommandShortcutAppleLabel(command.shortcut)}
+                    </kbd>
+                    <kbd data-shortcut-alt={command.shortcut} className="text-white/40">
+                      {ileWorkCanvasCommandShortcutAltLabel(command.shortcut)}
+                    </kbd>
+                  </span>
                 </div>
                 <p className="mt-1 font-mono text-[11px] leading-snug text-white/70">{command.tooltip}</p>
               </div>
@@ -80,12 +93,17 @@ export function SessionCommandCheatsheet({
             <div className="min-w-0 flex-1">
               <div className="flex items-baseline justify-between gap-2">
                 <span className="font-mono text-[12px] font-semibold">{ILE_WORK_CANVAS_AUTO_LAYOUT_LABEL}</span>
-                <kbd className="shrink-0 font-mono text-[10px] text-white/55">
-                  {ileWorkCanvasCommandShortcutLabel(ILE_WORK_CANVAS_AUTO_LAYOUT_SHORTCUT)}
-                </kbd>
+                <span className="flex shrink-0 items-baseline gap-1.5 font-mono text-[10px] text-white/55">
+                  <kbd data-shortcut-apple="l">
+                    {ileWorkCanvasCommandShortcutAppleLabel(ILE_WORK_CANVAS_AUTO_LAYOUT_SHORTCUT)}
+                  </kbd>
+                  <kbd data-shortcut-alt="l" className="text-white/40">
+                    {ileWorkCanvasCommandShortcutAltLabel(ILE_WORK_CANVAS_AUTO_LAYOUT_SHORTCUT)}
+                  </kbd>
+                </span>
               </div>
               <p className="mt-1 font-mono text-[11px] leading-snug text-white/70">
-                {ILE_WORK_CANVAS_AUTO_LAYOUT_TOOLTIP}
+                Toggle. {ILE_WORK_CANVAS_AUTO_LAYOUT_TOOLTIP}
               </p>
             </div>
           </li>

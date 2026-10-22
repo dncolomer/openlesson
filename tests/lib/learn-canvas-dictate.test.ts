@@ -259,7 +259,7 @@ describe("canvas dictate button", () => {
     expect(html).toContain("data-ile-craft-insight");
     expect(html).toContain("data-ile-canvas-dictate");
     expect(html).toContain("data-ile-learn-more-actions");
-    for (const label of ["Simplify", "Split", "Answer", "Draw", "Refactor"]) {
+    for (const label of ["Simplify", "Split", "Breakdown", "Concepts", "Define", "Answer", "Draw", "Refactor"]) {
       expect(html).toContain(`>${label}<`);
     }
     for (const label of ["Focus", "Check/ask", "Declutter", "Rephrase", "Join", "Elaborate", "Compress", "Clear overlaps"]) {
@@ -268,10 +268,14 @@ describe("canvas dictate button", () => {
     expect(html).toContain('data-ile-command-mark="simplify"');
     expect(html).toContain('data-ile-command-mark="answer"');
     expect(html).toContain('data-ile-command-mark="draw"');
-    expect(html).toContain('data-ile-command-mark="auto-layout"');
+    expect(html).toContain('data-ile-command-mark="breakdown"');
+    expect(html).toContain('data-ile-command-mark="concepts"');
+    expect(html).toContain('data-ile-command-mark="define"');
+    expect(html).toContain('role="switch"');
+    expect(html).toContain("data-session-auto-layout-track");
     expect(html).toContain('data-ile-command-index="01"');
-    expect(html).toContain('data-ile-command-index="05"');
-    expect(html).not.toContain('data-ile-command-index="08"');
+    expect(html).toContain('data-ile-command-index="08"');
+    expect(html).not.toContain('data-ile-command-index="09"');
     expect(read("components/excalidraw-canvas/command-plate.tsx")).toContain("min-h-9");
     for (const file of [
       "components/session-view/session-chapter-canvas.tsx",

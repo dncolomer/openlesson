@@ -26,6 +26,7 @@ import {
   freezeIleTurnInsightUnusedPow,
   formatIleEndTurnBlockedMissingInsights,
   ileActiveChapterInsightQuota,
+  ileCanvasCraftInsightEndsLearnSession,
   ileCanvasCraftInsightUsable,
   ileCanvasShowsCraftInsight,
   ileChapterInsightCounts,
@@ -34,6 +35,7 @@ import {
   ileInsightsForChapter,
   ileTurnInsightSlotCount,
   ileTurnInsightSlotsFromUnusedPow,
+  ILE_CRAFT_INSIGHT_END_SESSION_HINT,
   ILE_CRAFT_INSIGHT_LABEL,
   ILE_END_TURN_BLOCKED_NO_ACTIVE,
   ILE_INSIGHT_CRAFT_META_TYPE,
@@ -149,6 +151,9 @@ describe("allowIleTypedInsightCreate (shipped verdict)", () => {
       summary: "Keep SI units consistent across the derivation.",
     });
     expect(allowIleTypedInsightCreate(goodEnoughOnly)).toBe(true);
+    expect(ileCanvasCraftInsightEndsLearnSession(goodEnoughOnly)).toBe(false);
+    expect(ileCanvasCraftInsightEndsLearnSession(accepted)).toBe(true);
+    expect(ileCanvasCraftInsightEndsLearnSession(refused)).toBe(false);
 
     const acceptedWithoutQuality = parseIleTypedInsightVerdict({
       accepted: true,
@@ -450,6 +455,19 @@ describe("canvas craft insight (evaluate + persist)", () => {
       summary: "Mass curves spacetime.",
     });
     expect(allowIleTypedInsightCreate(accepted)).toBe(true);
+    expect(ileCanvasCraftInsightEndsLearnSession(accepted)).toBe(true);
+    expect(ileCanvasCraftInsightEndsLearnSession(refused)).toBe(false);
+    expect(
+      ileCanvasCraftInsightEndsLearnSession(
+        parseIleTypedInsightVerdict({
+          accepted: true,
+          correct: false,
+          goodEnough: true,
+          title: "Use units",
+          summary: "Keep SI units consistent.",
+        }),
+      ),
+    ).toBe(false);
     const record = typedInsightRecordFromVerdict({
       draft: evaluateBody.text,
       verdict: accepted,
@@ -478,28 +496,31 @@ describe("canvas craft insight (evaluate + persist)", () => {
     expect(canvas).toContain("ileCanvasShowsCraftInsight");
     expect(canvas).toContain("IleCraftInsightButton");
     expect(canvas).toContain("ileCanvasCraftInsightUsable");
-    const stage = readFileSync(
-      join(__dirname, "../../components/session-view/session-live-stage.tsx"),
-      "utf8",
-    );
-    const kept = stage.slice(stage.indexOf("<IleInsightKeptScreen"));
-    expect(kept).toContain("handleConfirmEnd");
-    expect(readFileSync(
-      join(__dirname, "../../components/session-view/session-chapter-canvas.tsx"),
-      "utf8",
-    )).toContain("onInsightKept?.(insight)");
     expect(canvas).not.toContain("data-ile-compress-work");
     expect(canvas).toContain("<IleCraftInsightButton");
     expect(form).toContain("ILE_CRAFT_INSIGHT_LABEL");
     expect(form).toContain("data-ile-craft-insight");
     expect(form).toContain("data-ile-canvas-craft-insight-submit");
     expect(form).toContain("data-ile-canvas-craft-insight-close");
+    expect(form).toContain("data-ile-canvas-craft-insight-modal");
+    expect(form).toContain("data-ile-canvas-craft-insight-end-hint");
+    expect(form).toContain("ILE_CRAFT_INSIGHT_END_SESSION_HINT");
+    expect(form).toContain("fixed inset-0");
+    expect(form).toContain("z-[200]");
+    expect(form).toContain("createPortal");
+    expect(form).toContain("bg-black/70");
+    expect(form).toContain("max-w-2xl");
     expect(form).toContain("bg-neutral-950");
     expect(form).toContain("bg-neutral-900");
     expect(form).not.toContain("bg-black/55");
     expect(form).not.toContain("bg-amber-300/10");
     expect(form).toContain("buildIleCanvasCraftInsightEvaluateRequest");
     expect(form).toContain("allowIleTypedInsightCreate");
+    expect(form).toContain("ileCanvasCraftInsightEndsLearnSession");
+    expect(form).toContain("endsLearnSession: ileCanvasCraftInsightEndsLearnSession(verdict)");
+    expect(form).toContain("role=\"dialog\"");
+    expect(form).toContain("aria-modal=\"true\"");
+    expect(form).toContain("items-center justify-center");
     expect(form).toContain("chapterId: config.chapterId");
     expect(form).toContain("ILE_TURN_INSIGHT_CREATE_PATH");
 
@@ -516,6 +537,67 @@ describe("canvas craft insight (evaluate + persist)", () => {
         "close=data-ile-canvas-craft-insight-close",
       ].join("\n") + "\n",
     );
+  });
+
+  it("ends the Learn session when a committed canvas insight is correct", () => {
+    const correct = parseIleTypedInsightVerdict({
+      accepted: true,
+      correct: true,
+      goodEnough: true,
+      title: "Gravity is geometry",
+      summary: "Mass curves spacetime.",
+    });
+    const goodEnoughOnly = parseIleTypedInsightVerdict({
+      accepted: true,
+      correct: false,
+      goodEnough: true,
+      title: "Use units",
+      summary: "Keep SI units consistent.",
+    });
+    const refused = parseIleTypedInsightVerdict({
+      accepted: false,
+      correct: false,
+      goodEnough: false,
+    });
+    expect(ileCanvasCraftInsightEndsLearnSession(correct)).toBe(true);
+    expect(ileCanvasCraftInsightEndsLearnSession(goodEnoughOnly)).toBe(false);
+    expect(ileCanvasCraftInsightEndsLearnSession(refused)).toBe(false);
+    expect(ileCanvasCraftInsightEndsLearnSession(null)).toBe(false);
+    expect(ILE_CRAFT_INSIGHT_END_SESSION_HINT).toMatch(/ends this session/i);
+
+    const form = readFileSync(
+      join(__dirname, "../../components/session-view/learn-canvas-craft-insight.tsx"),
+      "utf8",
+    );
+    expect(form).toContain("data-ile-canvas-craft-insight-modal");
+    expect(form).toContain("fixed inset-0");
+    expect(form).toContain("z-[200]");
+    expect(form).toContain("bg-black/70");
+    expect(form).toContain("max-w-2xl");
+    expect(form).toContain("createPortal");
+    expect(form).toContain("document.body");
+    expect(form).toContain("ileCanvasCraftInsightEndsLearnSession(verdict)");
+    expect(form).toContain("endsLearnSession: Boolean(input.endsLearnSession)");
+
+    const chapter = readFileSync(
+      join(__dirname, "../../components/session-view/session-chapter-canvas.tsx"),
+      "utf8",
+    );
+    expect(chapter).toContain("if (meta?.endsLearnSession) onInsightKept?.(insight)");
+
+    const stage = readFileSync(
+      join(__dirname, "../../components/session-view/session-live-stage.tsx"),
+      "utf8",
+    );
+    const kept = stage.slice(stage.indexOf("<IleInsightKeptScreen"));
+    expect(kept).toContain("void handleConfirmEnd()");
+
+    const keptScreen = readFileSync(
+      join(__dirname, "../../components/session-view/learn-insight-kept-screen.tsx"),
+      "utf8",
+    );
+    expect(keptScreen).toContain("Leaving this screen ends the session");
+    expect(keptScreen).toContain("data-ile-insight-kept-leave");
   });
 });
 

@@ -31,6 +31,8 @@ export const ILE_MIN_INSIGHTS_PER_CHAPTER_MIN = 1;
 export const ILE_MIN_INSIGHTS_PER_CHAPTER_CEILING = 5;
 
 export const ILE_CRAFT_INSIGHT_LABEL = "commit (insight)";
+export const ILE_CRAFT_INSIGHT_END_SESSION_HINT =
+  "A correct takeaway ends this session.";
 
 export const ILE_END_TURN_BLOCKED_NO_ACTIVE =
   "Open a chapter and craft insights on its Work canvas before you can End turn.";
@@ -411,6 +413,13 @@ export function allowIleTypedInsightCreate(
   if (!verdict) return false;
   if (verdict.accepted === false) return false;
   return Boolean(verdict.correct) || Boolean(verdict.goodEnough);
+}
+
+/** A correct accepted canvas insight is persisted, then Learn ends the session. */
+export function ileCanvasCraftInsightEndsLearnSession(
+  verdict: IleTypedInsightVerdict | null | undefined,
+): boolean {
+  return Boolean(verdict?.correct) && allowIleTypedInsightCreate(verdict);
 }
 
 export function buildIleTypedInsightEvaluateRequest(input: {

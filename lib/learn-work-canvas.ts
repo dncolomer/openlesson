@@ -60,11 +60,16 @@ export {
   ILE_WORK_CANVAS_AUTO_LAYOUT_SHORTCUT,
   ILE_WORK_CANVAS_AUTO_LAYOUT_TOOLTIP,
   ILE_WORK_CANVAS_CHEATSHEET_LABEL,
+  ILE_WORK_CANVAS_SHORTCUT_MOD_HINT,
   ILE_WORK_CANVAS_COMMANDS,
   filterIleWorkCanvasCommands,
   ileCanvasCommandDraft,
   ileWorkCanvasCommandByShortcut,
   ileWorkCanvasCommandNeedsSelection,
+  ileWorkCanvasCommandReplacesSelection,
+  ileWorkCanvasCommandShortcutAltLabel,
+  ileWorkCanvasCommandShortcutAppleLabel,
+  ileWorkCanvasCommandShortcutKeyFromEvent,
   ileWorkCanvasCommandShortcutLabel,
   ileWorkCanvasCommandsFor,
 } from "@/lib/learn-work-canvas-commands";
@@ -82,6 +87,8 @@ export {
   buildIleWorkCanvasCommandUserMessage,
   buildIleWorkCanvasRefactorUserMessage,
   buildIleWorkCanvasSelectiveCompressUserMessage,
+  buildIleWorkCanvasConceptsUserMessage,
+  buildIleWorkCanvasDefineUserMessage,
   buildIleWorkCanvasSimplifyUserMessage,
   buildIleWorkCanvasSuggestInsightUserMessage,
   ileWorkCanvasDomainContextBlock,
@@ -793,36 +800,173 @@ type IleLayoutUnit = {
   height: number;
 };
 
+const ILE_LAYOUT_DRAWING_GAP = 32;
+const ILE_LAYOUT_SCHEMA_SNAP = 28;
+
+function ileWorkCanvasBindingTargetId(raw: unknown): string | null {
+  if (!raw || typeof raw !== "object") return null;
+  const id = (raw as { elementId?: unknown }).elementId;
+  return typeof id === "string" && id.trim() ? id : null;
+}
+
+function ileWorkCanvasBoundEntryId(raw: unknown): string | null {
+  if (!raw || typeof raw !== "object") return null;
+  const id = (raw as { id?: unknown }).id;
+  return typeof id === "string" && id.trim() ? id : null;
+}
+
+function ileWorkCanvasLayoutRect(el: IleWorkCanvasElement): {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+} {
+  const rect = ileWorkCanvasNormalizedRect(el);
+  if (rect) return rect;
+  const x = Number(el.x) || 0;
+  const y = Number(el.y) || 0;
+  const w = Math.max(1, Math.abs(Number(el.width) || 0));
+  const h = Math.max(1, Math.abs(Number(el.height) || 0));
+  return { minX: x, minY: y, maxX: x + w, maxY: y + h };
+}
+
+function ileWorkCanvasConnectorEnds(el: IleWorkCanvasElement): { x: number; y: number }[] {
+  const x = Number(el.x) || 0;
+  const y = Number(el.y) || 0;
+  const pts = Array.isArray(el.points)
+    ? el.points.filter((point) => Array.isArray(point) && point.length >= 2)
+    : [];
+  if (pts.length >= 2) {
+    const first = pts[0]!;
+    const last = pts[pts.length - 1]!;
+    return [
+      { x: x + (Number(first[0]) || 0), y: y + (Number(first[1]) || 0) },
+      { x: x + (Number(last[0]) || 0), y: y + (Number(last[1]) || 0) },
+    ];
+  }
+  return [
+    { x, y },
+    { x: x + (Number(el.width) || 0), y: y + (Number(el.height) || 0) },
+  ];
+}
+
+function ileWorkCanvasPointInRect(
+  point: { x: number; y: number },
+  box: { minX: number; minY: number; maxX: number; maxY: number },
+  pad: number,
+): boolean {
+  return (
+    point.x >= box.minX - pad &&
+    point.x <= box.maxX + pad &&
+    point.y >= box.minY - pad &&
+    point.y <= box.maxY + pad
+  );
+}
+
+/**
+ * One layout unit is a whole composition: a labeled note, a group, a frame,
+ * an arrow-linked schema, or a nearby freedraw. Loose notes stay separate so
+ * masonry can un-overlap them without tearing drawings apart.
+ */
 function ileWorkCanvasLayoutUnits(elements: readonly IleWorkCanvasElement[]): IleLayoutUnit[] {
   const live = elements.filter((el) => !el.isDeleted);
-  const byId = new Map(live.map((el) => [el.id, el]));
-  const boundTextIds = new Set(
-    live
-      .filter((el) => el.type === "text" && typeof el.containerId === "string" && el.containerId)
-      .map((el) => el.id),
-  );
-  const used = new Set<string>();
+  if (!live.length) return [];
+  const parent = new Map<string, string>();
+  for (const el of live) parent.set(el.id, el.id);
+  const find = (id: string): string => {
+    const next = parent.get(id) ?? id;
+    if (next === id) return id;
+    const root = find(next);
+    parent.set(id, root);
+    return root;
+  };
+  const union = (a: string | null | undefined, b: string | null | undefined) => {
+    const left = String(a || "");
+    const right = String(b || "");
+    if (!parent.has(left) || !parent.has(right)) return;
+    const pa = find(left);
+    const pb = find(right);
+    if (pa !== pb) parent.set(pa, pb);
+  };
+
+  for (const el of live) {
+    if (typeof el.containerId === "string" && el.containerId) union(el.id, el.containerId);
+    if (typeof el.frameId === "string" && el.frameId) union(el.id, el.frameId);
+    union(el.id, ileWorkCanvasBindingTargetId(el.startBinding));
+    union(el.id, ileWorkCanvasBindingTargetId(el.endBinding));
+    const bound = Array.isArray(el.boundElements) ? el.boundElements : [];
+    for (const entry of bound) union(el.id, ileWorkCanvasBoundEntryId(entry));
+  }
+
+  const byGroup = new Map<string, string[]>();
+  for (const el of live) {
+    for (const groupId of el.groupIds ?? []) {
+      const key = String(groupId || "").trim();
+      if (!key) continue;
+      const list = byGroup.get(key) ?? [];
+      list.push(el.id);
+      byGroup.set(key, list);
+    }
+  }
+  for (const ids of byGroup.values()) {
+    for (let i = 1; i < ids.length; i += 1) union(ids[0], ids[i]);
+  }
+
+  const strokes = live.filter((el) => el.type === "freedraw");
+  for (let i = 0; i < strokes.length; i += 1) {
+    const a = ileWorkCanvasLayoutRect(strokes[i]!);
+    for (let j = i + 1; j < strokes.length; j += 1) {
+      if (ileWorkCanvasRectsOverlap(a, ileWorkCanvasLayoutRect(strokes[j]!), ILE_LAYOUT_DRAWING_GAP)) {
+        union(strokes[i]!.id, strokes[j]!.id);
+      }
+    }
+    for (const other of live) {
+      if (other.id === strokes[i]!.id || other.type === "text" || other.type === "freedraw") continue;
+      const b = ileWorkCanvasNormalizedRect(other);
+      if (!b) continue;
+      if (
+        ileWorkCanvasPositiveAreaOverlap(a, b) ||
+        ileWorkCanvasRectsOverlap(a, b, 8)
+      ) {
+        union(strokes[i]!.id, other.id);
+      }
+    }
+  }
+
+  for (const el of live) {
+    if (el.type !== "arrow" && el.type !== "line") continue;
+    const ends = ileWorkCanvasConnectorEnds(el);
+    for (const other of live) {
+      if (other.id === el.id) continue;
+      if (other.type === "text" && typeof other.containerId === "string" && other.containerId) continue;
+      const box = ileWorkCanvasLayoutRect(other);
+      if (ends.some((point) => ileWorkCanvasPointInRect(point, box, ILE_LAYOUT_SCHEMA_SNAP))) {
+        union(el.id, other.id);
+      }
+    }
+  }
+
+  const clusters = new Map<string, IleWorkCanvasElement[]>();
+  for (const el of live) {
+    const root = find(el.id);
+    const members = clusters.get(root) ?? [];
+    members.push(el);
+    clusters.set(root, members);
+  }
   const units: IleLayoutUnit[] = [];
-  const pushUnit = (members: IleWorkCanvasElement[]) => {
+  for (const members of clusters.values()) {
     let minX = Infinity;
     let minY = Infinity;
     let maxX = -Infinity;
     let maxY = -Infinity;
     for (const el of members) {
-      const rect = ileWorkCanvasNormalizedRect(el);
-      if (!rect) {
-        minX = Math.min(minX, Number(el.x) || 0);
-        minY = Math.min(minY, Number(el.y) || 0);
-        maxX = Math.max(maxX, (Number(el.x) || 0) + Math.max(1, Number(el.width) || 0));
-        maxY = Math.max(maxY, (Number(el.y) || 0) + Math.max(1, Number(el.height) || 0));
-        continue;
-      }
+      const rect = ileWorkCanvasLayoutRect(el);
       minX = Math.min(minX, rect.minX);
       minY = Math.min(minY, rect.minY);
       maxX = Math.max(maxX, rect.maxX);
       maxY = Math.max(maxY, rect.maxY);
     }
-    if (!Number.isFinite(minX)) return;
+    if (!Number.isFinite(minX)) continue;
     units.push({
       members,
       minX,
@@ -830,32 +974,14 @@ function ileWorkCanvasLayoutUnits(elements: readonly IleWorkCanvasElement[]): Il
       width: Math.max(1, maxX - minX),
       height: Math.max(1, maxY - minY),
     });
-  };
-  for (const el of live) {
-    if (used.has(el.id) || boundTextIds.has(el.id)) continue;
-    const members = [el];
-    used.add(el.id);
-    const bound = Array.isArray(el.boundElements) ? el.boundElements : [];
-    for (const entry of bound) {
-      if (!entry || typeof entry !== "object") continue;
-      const id = (entry as { id?: unknown }).id;
-      if (typeof id !== "string" || used.has(id) || !byId.has(id)) continue;
-      members.push(byId.get(id)!);
-      used.add(id);
-    }
-    pushUnit(members);
-  }
-  for (const el of live) {
-    if (used.has(el.id)) continue;
-    used.add(el.id);
-    pushUnit([el]);
   }
   return units;
 }
 
 /**
- * Masonry pack: reading order into columns of even height, then snap back
- * to the original origin so the board does not jump.
+ * Masonry pack of whole compositions (notes, drawings, linked schemas).
+ * Members of a unit keep their relative geometry. Origin stays put so the
+ * board does not jump.
  */
 export function layoutIleWorkCanvasBoard(
   scene: IleWorkCanvasScene | null | undefined,
@@ -2161,6 +2287,55 @@ export function ileWorkCanvasSceneToViewport(
 }
 
 /**
+ * Minimal pan that brings `elements` into view. Null when they already sit
+ * inside the viewport (with padding) so a command does not yank the camera.
+ * Never changes zoom. If the box is larger than the view, snap the near edge.
+ */
+export function ileWorkCanvasRevealScroll(
+  elements: readonly Pick<IleWorkCanvasElement, "x" | "y" | "width" | "height" | "isDeleted">[],
+  appState: IleWorkCanvasViewportAppState | null | undefined,
+  pad = 40,
+): { scrollX: number; scrollY: number } | null {
+  const live = elements.filter((el) => !el.isDeleted);
+  const bounds = ileWorkCanvasContentBounds(live);
+  const width = Number(appState?.width) || 0;
+  const height = Number(appState?.height) || 0;
+  if (!bounds || width <= 0 || height <= 0) return null;
+  const zoom = ileWorkCanvasZoomValue(appState);
+  const inset = Math.max(0, pad);
+  const viewLeft = inset;
+  const viewTop = inset;
+  const viewRight = Math.max(inset + 1, width - inset);
+  const viewBottom = Math.max(inset + 1, height - inset);
+  let scrollX = Number(appState?.scrollX) || 0;
+  let scrollY = Number(appState?.scrollY) || 0;
+  const offsetLeft = Number(appState?.offsetLeft) || 0;
+  const offsetTop = Number(appState?.offsetTop) || 0;
+  const projectX = (sceneX: number, nextScrollX: number) =>
+    (sceneX + nextScrollX) * zoom + offsetLeft;
+  const projectY = (sceneY: number, nextScrollY: number) =>
+    (sceneY + nextScrollY) * zoom + offsetTop;
+  const left = projectX(bounds.minX, scrollX);
+  const right = projectX(bounds.maxX, scrollX);
+  const top = projectY(bounds.minY, scrollY);
+  const bottom = projectY(bounds.maxY, scrollY);
+  if (left >= viewLeft && right <= viewRight && top >= viewTop && bottom <= viewBottom) {
+    return null;
+  }
+  if (left < viewLeft) scrollX += (viewLeft - left) / zoom;
+  else if (right > viewRight) scrollX -= (right - viewRight) / zoom;
+  if (top < viewTop) scrollY += (viewTop - top) / zoom;
+  else if (bottom > viewBottom) scrollY -= (bottom - viewBottom) / zoom;
+  if (
+    Math.abs(scrollX - (Number(appState?.scrollX) || 0)) < 0.5 &&
+    Math.abs(scrollY - (Number(appState?.scrollY) || 0)) < 0.5
+  ) {
+    return null;
+  }
+  return { scrollX, scrollY };
+}
+
+/**
  * True when a new mark sits outside the current view. Replies that land
  * inside the thinking plate should not pan the board.
  */
@@ -2909,6 +3084,9 @@ const CANVAS_POW_ACTIONS = new Set([
   "board_prompt",
   "rephrase",
   "split",
+  "breakdown",
+  "concepts",
+  "define",
   "elaborate",
   "selective-compression",
   "refactor",
@@ -3219,6 +3397,216 @@ export function splitIleWorkCanvasSelectedText(
   return splitIleWorkCanvasTextElement(current, live);
 }
 
+function ileWorkCanvasFanHost(
+  scene: IleWorkCanvasScene,
+  selectedElements: readonly IleWorkCanvasElement[] | null | undefined,
+): { host: IleWorkCanvasElement; expanded: IleWorkCanvasElement[] } | null {
+  const expanded = expandIleWorkCanvasCommandSelection(scene, selectedElements);
+  const target = ileWorkCanvasSplitTextTarget(scene, expanded);
+  const host =
+    (target && typeof target.containerId === "string" && target.containerId
+      ? scene.elements.find((el) => el.id === target.containerId && !el.isDeleted)
+      : null) ??
+    (target ? scene.elements.find((el) => el.id === target.id && !el.isDeleted) ?? target : null) ??
+    ileWorkCanvasSelectedLive(scene, expanded)[0] ??
+    null;
+  if (!host) return null;
+  return { host, expanded };
+}
+
+/**
+ * Keep the original mark and fan labeled nodes to the right, each linked back
+ * with an arrow. The new nodes stay unselected.
+ */
+export function fanIleWorkCanvasLabeledNodes(
+  scene: IleWorkCanvasScene | null | undefined,
+  selectedElements: readonly IleWorkCanvasElement[] | null | undefined,
+  chunks: readonly string[],
+  mark: "ileBreakdown" | "ileConcepts",
+): { scene: IleWorkCanvasScene; split: boolean; parts: IleWorkCanvasElement[] } {
+  const current = serializeIleWorkCanvasScene(scene);
+  const labels = chunks.map((chunk) => String(chunk || "").replace(/\s+/g, " ").trim()).filter(Boolean);
+  if (!labels.length) return { scene: current, split: false, parts: [] };
+  const found = ileWorkCanvasFanHost(current, selectedElements);
+  if (!found) return { scene: current, split: false, parts: [] };
+  const { host, expanded } = found;
+  const hostRect = ileWorkCanvasNormalizedRect(host) ?? {
+    minX: Number(host.x) || 0,
+    minY: Number(host.y) || 0,
+    maxX: (Number(host.x) || 0) + Math.max(1, Number(host.width) || 0),
+    maxY: (Number(host.y) || 0) + Math.max(1, Number(host.height) || 0),
+  };
+  const innerWidth = Math.min(
+    ILE_WORK_CANVAS_TEXT_BOX_WIDTH,
+    Math.max(140, hostRect.maxX - hostRect.minX),
+  );
+  const gapX = ILE_WORK_CANVAS_OVERLAP_GAP + 28;
+  const gapY = 12;
+  const nodeSkeletons: IleWorkCanvasSkeleton[] = [];
+  let cursorY = hostRect.minY;
+  for (const chunk of labels) {
+    const wrapped = wrapIleWorkCanvasText(chunk, innerWidth);
+    const height = wrapped.height + ILE_XAI_NOTE_PAD_Y * 2;
+    nodeSkeletons.push({
+      type: "rectangle",
+      x: hostRect.maxX + gapX,
+      y: cursorY,
+      width: wrapped.width + ILE_XAI_NOTE_PAD_X * 2,
+      height,
+      label: { text: chunk },
+      customData: { [mark]: true },
+    });
+    cursorY += height + gapY;
+  }
+  const stackHeight = cursorY - gapY - hostRect.minY;
+  const hostHeight = hostRect.maxY - hostRect.minY;
+  const shiftY = stackHeight < hostHeight ? (hostHeight - stackHeight) / 2 : 0;
+  if (shiftY) {
+    for (const skeleton of nodeSkeletons) {
+      skeleton.y = Number(skeleton.y) + shiftY;
+    }
+  }
+  const created = convertToExcalidrawElements(nodeSkeletons);
+  if (!created.length) return { scene: current, split: false, parts: [] };
+  const settledNodes = settleIleWorkCanvasIncoming(
+    created,
+    current.elements.filter((el) => !el.isDeleted),
+  );
+  const nodeHosts = settledNodes.filter((el) => el.type === "rectangle");
+  const hostMidY = (hostRect.minY + hostRect.maxY) / 2;
+  const arrows: IleWorkCanvasElement[] = [];
+  const hostBounds = Array.isArray(host.boundElements) ? [...host.boundElements] : [];
+  for (const node of nodeHosts) {
+    const rect = ileWorkCanvasNormalizedRect(node);
+    if (!rect) continue;
+    const endX = rect.minX;
+    const endY = (rect.minY + rect.maxY) / 2;
+    const dx = endX - hostRect.maxX;
+    const dy = endY - hostMidY;
+    const [arrow] = convertToExcalidrawElements([
+      {
+        type: "arrow",
+        x: hostRect.maxX,
+        y: hostMidY,
+        width: dx,
+        height: dy,
+        points: [
+          [0, 0],
+          [dx, dy],
+        ],
+        customData: { [mark]: true },
+      },
+    ]);
+    if (!arrow) continue;
+    arrow.endArrowhead = "arrow";
+    arrow.startArrowhead = null;
+    arrow.startBinding = { elementId: host.id, focus: 0, gap: 4 };
+    arrow.endBinding = { elementId: node.id, focus: 0, gap: 4 };
+    hostBounds.push({ id: arrow.id, type: "arrow" });
+    node.boundElements = [
+      ...(Array.isArray(node.boundElements) ? node.boundElements : []),
+      { id: arrow.id, type: "arrow" },
+    ];
+    arrows.push(arrow);
+  }
+  const hostNext = {
+    ...host,
+    boundElements: hostBounds,
+    version: (Number(host.version) || 1) + 1,
+  };
+  const parts = [...settledNodes, ...arrows];
+  return {
+    scene: {
+      ...current,
+      elements: [
+        ...current.elements.map((el) => (el.id === host.id ? hostNext : el)),
+        ...parts,
+      ],
+      appState: {
+        ...current.appState,
+        selectedElementIds: Object.fromEntries(
+          expanded.filter((el) => el.id && !el.isDeleted).map((el) => [el.id, true]),
+        ),
+      },
+    },
+    split: true,
+    parts,
+  };
+}
+
+export function breakdownIleWorkCanvasSelection(
+  scene: IleWorkCanvasScene | null | undefined,
+  selectedElements: readonly IleWorkCanvasElement[] | null | undefined,
+): { scene: IleWorkCanvasScene; split: boolean; parts: IleWorkCanvasElement[] } {
+  const current = serializeIleWorkCanvasScene(scene);
+  const expanded = expandIleWorkCanvasCommandSelection(current, selectedElements);
+  const target = ileWorkCanvasSplitTextTarget(current, expanded);
+  if (!target) return { scene: current, split: false, parts: [] };
+  const source = String(target.originalText || target.text || "");
+  const chunks = ileWorkCanvasSplitTextChunks(source);
+  if (chunks.length < 2) return { scene: current, split: false, parts: [] };
+  return fanIleWorkCanvasLabeledNodes(current, selectedElements, chunks, "ileBreakdown");
+}
+
+const ILE_CONCEPT_LABEL_MAX = 8;
+const ILE_CONCEPT_LABEL_MAX_CHARS = 72;
+
+function ileWorkCanvasCleanConceptLabel(raw: string): string {
+  return String(raw || "")
+    .replace(/^\s*(?:[-*•]+|\d+[.)])\s+/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function ileWorkCanvasTakeConceptLabels(items: readonly string[]): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const item of items) {
+    const label = ileWorkCanvasCleanConceptLabel(item);
+    if (label.length < 2 || label.length > ILE_CONCEPT_LABEL_MAX_CHARS) continue;
+    const key = label.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(label);
+    if (out.length >= ILE_CONCEPT_LABEL_MAX) break;
+  }
+  return out;
+}
+
+/** Concept names from an XAI Concepts reply: JSON list, labeled shapes, or one name per line. */
+export function ileWorkCanvasConceptLabels(
+  raw: string | null | undefined,
+  payload?: {
+    text?: string | null;
+    elements?: IleWorkCanvasSkeleton[] | null;
+  },
+): string[] {
+  const source = String(raw || "").trim();
+  const parsed = extractJsonObject(source);
+  const fromJson = parsed?.concepts ?? parsed?.labels;
+  if (Array.isArray(fromJson)) {
+    const labels = ileWorkCanvasTakeConceptLabels(fromJson.map((item) => String(item ?? "")));
+    if (labels.length) return labels;
+  }
+  const fromElements = ileWorkCanvasTakeConceptLabels(
+    (payload?.elements ?? []).map((el) => String(el?.label?.text || el?.text || "")),
+  );
+  if (fromElements.length) return fromElements;
+  const prose = stripLearnerFacingWrappers(String(payload?.text || parsed?.text || source).trim());
+  const lines = prose
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const fromLines = ileWorkCanvasTakeConceptLabels(lines);
+  if (fromLines.length >= 2) return fromLines;
+  if (fromLines.length === 1 && lines.length === 1) {
+    const parts = fromLines[0]!.split(/\s*(?:,|;|•)\s+|\s+and\s+/i);
+    const fromParts = ileWorkCanvasTakeConceptLabels(parts);
+    if (fromParts.length >= 2) return fromParts;
+  }
+  return fromLines;
+}
+
 export type IleWorkCanvasCommandAsk = {
   kind: IleWorkCanvasAskKind;
   prompt: string;
@@ -3241,6 +3629,9 @@ function ileWorkCanvasCommandPrompt(action: IleWorkCanvasCommandId): string {
   if (action === "draw") return "Draw";
   if (action === "focus") return "Focus";
   if (action === "split") return "Split";
+  if (action === "breakdown") return "Breakdown";
+  if (action === "concepts") return "Concepts";
+  if (action === "define") return "Define";
   return action;
 }
 
@@ -3284,6 +3675,32 @@ export function appendIleWorkCanvasFocusNote(
   };
 }
 
+export function removeIleWorkCanvasSelection(
+  scene: IleWorkCanvasScene | null | undefined,
+  selectedElements: readonly IleWorkCanvasElement[] | null | undefined,
+): { scene: IleWorkCanvasScene; removed: IleWorkCanvasElement[] } {
+  const current = serializeIleWorkCanvasScene(scene);
+  const liveSelected = ileWorkCanvasSelectedLive(current, selectedElements);
+  if (!liveSelected.length) return { scene: current, removed: [] };
+  const remove = new Set(liveSelected.map((el) => el.id));
+  for (const el of current.elements) {
+    if (typeof el.containerId === "string" && el.containerId && remove.has(el.containerId)) {
+      remove.add(el.id);
+    }
+  }
+  return {
+    scene: {
+      ...current,
+      elements: current.elements.filter((el) => !remove.has(el.id)),
+      appState: {
+        ...current.appState,
+        selectedElementIds: {},
+      },
+    },
+    removed: current.elements.filter((el) => remove.has(el.id)),
+  };
+}
+
 export function replaceIleWorkCanvasSelection(
   scene: IleWorkCanvasScene | null | undefined,
   selectedElements: readonly IleWorkCanvasElement[] | null | undefined,
@@ -3295,11 +3712,14 @@ export function replaceIleWorkCanvasSelection(
 ): IleWorkCanvasScene {
   const current = serializeIleWorkCanvasScene(scene);
   const liveSelected = ileWorkCanvasSelectedLive(current, selectedElements);
-  if (!liveSelected.length) return current;
+  const originElements = liveSelected.length
+    ? liveSelected
+    : (selectedElements ?? []).filter((el) => el && !el.isDeleted);
   const text = stripLearnerFacingWrappers(String(payload.text || "").trim());
   const extra = normalizeExtraSkeletons(payload.elements);
   if (!text && extra.length === 0) return current;
-  const bounds = ileWorkCanvasContentBounds(liveSelected);
+  if (!originElements.length && !liveSelected.length) return current;
+  const bounds = ileWorkCanvasContentBounds(originElements);
   const origin = {
     x: bounds?.minX ?? TEXT_ORIGIN_X,
     y: bounds?.minY ?? TEXT_ORIGIN_Y,
@@ -3332,22 +3752,16 @@ export function replaceIleWorkCanvasSelection(
   }
   const created = convertToExcalidrawElements(skeletons);
   if (!created.length) return current;
-  const remove = new Set(liveSelected.map((el) => el.id));
-  for (const el of current.elements) {
-    if (typeof el.containerId === "string" && el.containerId && remove.has(el.containerId)) {
-      remove.add(el.id);
-    }
-  }
-  const kept = current.elements.filter((el) => !remove.has(el.id));
+  const stripped = removeIleWorkCanvasSelection(current, originElements);
   const settled = settleIleWorkCanvasIncoming(
     created,
-    kept.filter((el) => !el.isDeleted),
+    stripped.scene.elements.filter((el) => !el.isDeleted),
   );
   return withIleWorkCanvasAutoLayout({
-    ...current,
-    elements: [...kept, ...settled],
+    ...stripped.scene,
+    elements: [...stripped.scene.elements, ...settled],
     appState: {
-      ...current.appState,
+      ...stripped.scene.appState,
       selectedElementIds: {},
     },
   });
@@ -3355,8 +3769,9 @@ export function replaceIleWorkCanvasSelection(
 
 /**
  * Local result of a sidebar/dock command click.
- * Split and Focus mutate now. Simplify, Answer, Draw, and Refactor ask XAI.
- * A click that cannot run returns a short board notice instead of going silent.
+ * Split, Breakdown, and Focus mutate now. Simplify and Refactor drop the
+ * original marks immediately, then ask XAI. Answer, Draw, Concepts, and Define
+ * keep the original and ask. A click that cannot run returns a short board notice instead of going silent.
  */
 export function runIleWorkCanvasCommand(input: {
   action: IleWorkCanvasCommandId;
@@ -3414,17 +3829,50 @@ export function runIleWorkCanvasCommand(input: {
         : "Select text, or a labeled shape, to split.",
     );
   }
-  if (input.action === "simplify") {
-    return idle(null, { kind: "simplify", prompt });
+  if (input.action === "breakdown") {
+    const result = breakdownIleWorkCanvasSelection(current, selected);
+    if (result.split) {
+      const keep = ileWorkCanvasSelectedLive(result.scene, selected);
+      return {
+        scene: withIleWorkCanvasAutoLayout(result.scene),
+        changed: true,
+        parts: keep,
+        selected,
+        prompt,
+        ask: null,
+        notice: null,
+      };
+    }
+    const target = ileWorkCanvasSplitTextTarget(current, selected);
+    return idle(
+      target
+        ? "Need at least two words to break down."
+        : "Select text, or a labeled shape, to break down.",
+    );
+  }
+  if (input.action === "simplify" || input.action === "refactor") {
+    const stripped = removeIleWorkCanvasSelection(current, selected);
+    return {
+      scene: withIleWorkCanvasAutoLayout(stripped.scene),
+      changed: stripped.removed.length > 0,
+      parts: [],
+      selected,
+      prompt,
+      ask: { kind: input.action, prompt },
+      notice: null,
+    };
+  }
+  if (input.action === "concepts") {
+    return idle(null, { kind: "concepts", prompt });
+  }
+  if (input.action === "define") {
+    return idle(null, { kind: "define", prompt });
   }
   if (input.action === "answer") {
     return idle(null, { kind: "answer", prompt });
   }
   if (input.action === "draw") {
     return idle(null, { kind: "draw", prompt });
-  }
-  if (input.action === "refactor") {
-    return idle(null, { kind: "refactor", prompt });
   }
   return idle(null);
 }
@@ -3794,6 +4242,12 @@ export function applyIleWorkCanvasAskReply(input: {
       elements: input.payload.elements,
       turnId: input.payload.turnId,
     });
+  } else if (kind === "concepts") {
+    const labels = ileWorkCanvasConceptLabels(source, {
+      text: input.payload.text,
+      elements: input.payload.elements,
+    });
+    next = fanIleWorkCanvasLabeledNodes(live, selected, labels, "ileConcepts").scene;
   } else if (kind === "suggest-insight") {
     next = applyIleWorkCanvasSuggestInsight(live, selected, source);
   } else if (kind === "declutter" || kind === "clear-overlaps") {

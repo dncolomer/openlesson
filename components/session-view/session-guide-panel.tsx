@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import {
+  AutoLayoutToggle,
   CommandMark,
   CommandPlate,
   ILE_CANVAS_COMMAND_SIDEBAR_CLASS,
+  ILE_CANVAS_COMMAND_SIDEBAR_MARK_CLASS,
   ileWorkCanvasCommandIndex,
 } from "@/components/excalidraw-canvas/command-plate";
 import { IleCraftInsightButton } from "@/components/session-view/learn-canvas-craft-insight";
@@ -13,8 +15,6 @@ import { SessionCommandCheatsheet } from "@/components/session-view/session-comm
 import { SessionHarnessPanel } from "@/components/session-view/session-harness-panel";
 import { useSessionCanvasCommands } from "@/components/session-view/session-command-bridge";
 import {
-  ILE_WORK_CANVAS_AUTO_LAYOUT_LABEL,
-  ILE_WORK_CANVAS_AUTO_LAYOUT_TOOLTIP,
   ILE_WORK_CANVAS_CHEATSHEET_LABEL,
   ileWorkCanvasCommandNeedsSelection,
   ileWorkCanvasCommandShortcutLabel,
@@ -50,8 +50,7 @@ export function SessionGuidePanel({
   const commandsHint = !bridge ? "The board is still opening." : null;
   const catalog = ileWorkCanvasCommandsFor(guide);
   const dictateIndex = String(catalog.length + 1).padStart(2, "0");
-  const autoLayoutIndex = String(catalog.length + 2).padStart(2, "0");
-  const commitIndex = String(catalog.length + 3).padStart(2, "0");
+  const commitIndex = String(catalog.length + 2).padStart(2, "0");
   return (
     <div data-session-guide={guide} className="flex h-full min-h-0 flex-col overflow-hidden bg-black text-white">
       <div className="flex shrink-0 border-b border-white/30 bg-black">
@@ -120,7 +119,7 @@ export function SessionGuidePanel({
                   <CommandMark
                     id={command.id}
                     label={command.label}
-                    className="h-[clamp(0.6rem,22cqh,1rem)] w-[clamp(0.6rem,22cqh,1rem)] shrink-0"
+                    className={ILE_CANVAS_COMMAND_SIDEBAR_MARK_CLASS}
                   />
                   <span className="min-w-0 truncate">{command.label}</span>
                 </button>
@@ -134,26 +133,15 @@ export function SessionGuidePanel({
               onCommit={(text) => bridge?.dictate?.write(text, true)}
               onActiveChange={bridge?.dictate?.onActive}
             />
-            <button
-              type="button"
-              data-session-command="auto-layout"
-              data-session-auto-layout=""
-              title={ILE_WORK_CANVAS_AUTO_LAYOUT_TOOLTIP}
-              aria-pressed={Boolean(bridge?.autoLayout?.enabled)}
-              disabled={!bridge?.autoLayout}
-              onClick={() => bridge?.autoLayout?.toggle()}
-              className={ILE_CANVAS_COMMAND_SIDEBAR_CLASS}
-            >
-              <CommandPlate index={autoLayoutIndex} />
-              <CommandMark
-                id="auto-layout"
-                label={ILE_WORK_CANVAS_AUTO_LAYOUT_LABEL}
-                className="h-[clamp(0.6rem,22cqh,1rem)] w-[clamp(0.6rem,22cqh,1rem)] shrink-0"
-              />
-              <span className="min-w-0 truncate">{ILE_WORK_CANVAS_AUTO_LAYOUT_LABEL}</span>
-            </button>
           </div>
-          <div data-session-commit className="shrink-0 px-1.5 pb-1 pt-1">
+          <div className="shrink-0 px-1.5 pt-1">
+            <AutoLayoutToggle
+              enabled={Boolean(bridge?.autoLayout?.enabled)}
+              disabled={!bridge?.autoLayout}
+              onToggle={() => bridge?.autoLayout?.toggle()}
+            />
+          </div>
+          <div data-session-commit className="shrink-0 px-1.5 pb-1.5 pt-1">
             <IleCraftInsightButton
               plate
               bar

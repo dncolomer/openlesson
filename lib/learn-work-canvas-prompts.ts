@@ -301,6 +301,39 @@ export function buildIleWorkCanvasCheckUserMessage(input: {
   return ileWorkCanvasWithDomainPrefix(body, input.workspace);
 }
 
+export function buildIleWorkCanvasConceptsUserMessage(input: {
+  selectedElements?: readonly IleWorkCanvasElement[] | null;
+  workspace?: PromptWorkspaceContextInput | PromptWorkspaceContext | null;
+}): string {
+  const live = (input.selectedElements ?? []).filter((el) => el && !el.isDeleted);
+  const body = [
+    "List the distinct concepts in the selected marks.",
+    "Keep the original marks in place. The reply is a list of concept names only.",
+    "Three to seven short names, one per line. A few words each. No numbering, no commentary, no commands.",
+    "",
+    "Selected elements:",
+    ileWorkCanvasCommandSelectionListing(live),
+  ].join("\n");
+  return ileWorkCanvasWithDomainPrefix(body, input.workspace);
+}
+
+export function buildIleWorkCanvasDefineUserMessage(input: {
+  selectedElements?: readonly IleWorkCanvasElement[] | null;
+  workspace?: PromptWorkspaceContextInput | PromptWorkspaceContext | null;
+}): string {
+  const live = (input.selectedElements ?? []).filter((el) => el && !el.isDeleted);
+  const body = [
+    "Define the selected term or idea.",
+    "Write one clean, simple definition a learner can keep. Plain language. One or two short sentences.",
+    "Keep the original marks in place. The reply is the definition only, placed as a note.",
+    "Do not lecture, list examples, or mention commands or placement.",
+    "",
+    "Selected elements:",
+    ileWorkCanvasCommandSelectionListing(live),
+  ].join("\n");
+  return ileWorkCanvasWithDomainPrefix(body, input.workspace);
+}
+
 export function buildIleWorkCanvasSimplifyUserMessage(input: {
   selectedElements?: readonly IleWorkCanvasElement[] | null;
   workspace?: PromptWorkspaceContextInput | PromptWorkspaceContext | null;
@@ -352,6 +385,8 @@ export function buildIleWorkCanvasCommandUserMessage(input: {
   if (kind === "answer") return buildIleWorkCanvasAnswerUserMessage(input);
   if (kind === "draw") return buildIleWorkCanvasDrawUserMessage(input);
   if (kind === "simplify") return buildIleWorkCanvasSimplifyUserMessage(input);
+  if (kind === "concepts") return buildIleWorkCanvasConceptsUserMessage(input);
+  if (kind === "define") return buildIleWorkCanvasDefineUserMessage(input);
   if (kind === "check") return buildIleWorkCanvasCheckUserMessage(input);
   return buildIleWorkCanvasAskUserMessage({
     prompt: String(input.prompt || ""),

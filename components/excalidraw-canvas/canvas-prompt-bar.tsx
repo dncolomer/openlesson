@@ -16,8 +16,6 @@ import {
 } from "@/lib/learn-command-dock";
 import {
   filterIleWorkCanvasCommands,
-  ILE_WORK_CANVAS_AUTO_LAYOUT_LABEL,
-  ILE_WORK_CANVAS_AUTO_LAYOUT_TOOLTIP,
   ileCanvasCommandDraft,
   ileWorkCanvasCommandNeedsSelection,
   ileWorkCanvasCommandsFor,
@@ -35,6 +33,7 @@ import { usePublishSessionCanvasCommands } from "@/components/session-view/sessi
 import { usePublishSessionMarkDraft } from "@/components/session-view/session-policy-context";
 import type { SessionMarkMode } from "@/lib/session-marks";
 import {
+  AutoLayoutToggle,
   CommandMark,
   CommandPlate,
   ILE_CANVAS_COMMAND_BUTTON_CLASS,
@@ -374,22 +373,16 @@ export function CanvasPromptBar({
                       </button>
                     );
                   })}
-                  {onToggleAutoLayout ? (
-                    <button
-                      type="button"
-                      data-ile-learn-more-quick="auto-layout"
-                      aria-label={ILE_WORK_CANVAS_AUTO_LAYOUT_LABEL}
-                      aria-pressed={autoLayoutEnabled}
-                      title={ILE_WORK_CANVAS_AUTO_LAYOUT_TOOLTIP}
-                      onClick={() => onToggleAutoLayout()}
-                      className={rail ? ILE_CANVAS_COMMAND_RAIL_CLASS : ILE_CANVAS_COMMAND_BUTTON_CLASS}
-                    >
-                      <CommandPlate index={String(catalog.length + 1).padStart(2, "0")} />
-                      <CommandMark id="auto-layout" label={ILE_WORK_CANVAS_AUTO_LAYOUT_LABEL} />
-                      <span>{ILE_WORK_CANVAS_AUTO_LAYOUT_LABEL}</span>
-                    </button>
-                  ) : null}
                 </div>
+                {onToggleAutoLayout ? (
+                  <div className="mt-1">
+                    <AutoLayoutToggle
+                      compact
+                      enabled={autoLayoutEnabled}
+                      onToggle={onToggleAutoLayout}
+                    />
+                  </div>
+                ) : null}
                 {ileCanvasSlashBarOpen({
                   selectionActive: canvasSelectionActive,
                   slashIntent: slashBarOpen,
@@ -447,30 +440,23 @@ export function CanvasPromptBar({
                 ) : null}
               </div>
               {showCraftInsight && craftInsight ? (
-                <div className={rail ? `absolute top-0 z-20 w-72 ${frame.mode === "right" ? "right-full mr-1" : "left-full ml-1"}` : undefined}>
-                  <IleCanvasCraftInsightForm
-                    open={craftInsightOpen}
-                    enabled={ileCanvasCraftInsightUsable()}
-                    selectedElements={selectedCanvasElements()}
-                    config={craftInsight}
-                    onClose={() => setCraftInsightOpen(false)}
-                  />
-                </div>
+                <IleCanvasCraftInsightForm
+                  open={craftInsightOpen}
+                  enabled={ileCanvasCraftInsightUsable()}
+                  selectedElements={selectedCanvasElements()}
+                  config={craftInsight}
+                  onClose={() => setCraftInsightOpen(false)}
+                />
               ) : null}
             </div>
           </form>
   ) : showCraftInsight && craftInsight && craftInsightOpen ? (
-    <div
-      data-ile-canvas-side-note
-      className="pointer-events-none absolute bottom-3 left-3 z-[58] flex w-[min(22rem,calc(100%-1.5rem))] flex-col gap-1"
-    >
-      <IleCanvasCraftInsightForm
-        open={craftInsightOpen}
-        enabled={ileCanvasCraftInsightUsable()}
-        selectedElements={selectedCanvasElements()}
-        config={craftInsight}
-        onClose={() => setCraftInsightOpen(false)}
-      />
-    </div>
+    <IleCanvasCraftInsightForm
+      open={craftInsightOpen}
+      enabled={ileCanvasCraftInsightUsable()}
+      selectedElements={selectedCanvasElements()}
+      config={craftInsight}
+      onClose={() => setCraftInsightOpen(false)}
+    />
   ) : null;
 }

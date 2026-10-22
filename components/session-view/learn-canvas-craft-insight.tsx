@@ -1,12 +1,15 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   allowIleTypedInsightCreate,
   buildIleCanvasCraftInsightEvaluateRequest,
   buildIleTurnInsightPersistPayload,
+  ileCanvasCraftInsightEndsLearnSession,
   ileInsightCraftPowFromAcceptedPersist,
   ileInsightWorkThoughtsSinceMark,
+  ILE_CRAFT_INSIGHT_END_SESSION_HINT,
   ILE_CRAFT_INSIGHT_LABEL,
   ILE_INSIGHT_CRAFT_POW_FILE,
   ILE_INSIGHT_CRAFT_TOOL_ACTION,
@@ -54,7 +57,10 @@ export type IleCanvasCraftInsightConfig = {
     tool_name?: string | null;
   }[] | null;
   workSinceIndex?: number;
-  onCrafted: (insight: InsightSummary) => void;
+  onCrafted: (
+    insight: InsightSummary,
+    meta?: { endsLearnSession?: boolean },
+  ) => void;
   recordSessionPowArtifact?: (artifact: IlePowCounterArtifact) => void;
 };
 
@@ -77,7 +83,12 @@ export function IleCanvasCraftInsightForm({
   const [refusedReason, setRefusedReason] = useState<string | null>(null);
 
   const persistInsight = useCallback(
-    async (input: { title: string; summary: string; draftText: string }) => {
+    async (input: {
+      title: string;
+      summary: string;
+      draftText: string;
+      endsLearnSession?: boolean;
+    }) => {
       const payload = buildIleTurnInsightPersistPayload({
         title: input.title,
         summary: input.summary,
@@ -135,7 +146,9 @@ export function IleCanvasCraftInsightForm({
             });
           }
         }
-        config.onCrafted(insight);
+        config.onCrafted(insight, {
+          endsLearnSession: Boolean(input.endsLearnSession),
+        });
         setDraft("");
         setRefusedReason(null);
         onClose();
@@ -190,6 +203,7 @@ export function IleCanvasCraftInsightForm({
         title: record.title,
         summary: record.summary,
         draftText: body.text,
+        endsLearnSession: ileCanvasCraftInsightEndsLearnSession(verdict),
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to evaluate insight");
@@ -198,64 +212,100 @@ export function IleCanvasCraftInsightForm({
     }
   }, [busy, config.chapterLabel, draft, enabled, persistInsight, selectedElements]);
 
+  const closeForm = useCallback(() => {
+    if (busy !== null) return;
+    setDraft("");
+    setError(null);
+    setRefusedReason(null);
+    onClose();
+  }, [busy, onClose]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      closeForm();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [open, closeForm]);
+
   if (!open) return null;
 
-  return (
+  const dialog = (
     <div
       data-ile-canvas-craft-insight
-      className="pointer-events-auto flex flex-col gap-1.5 rounded-none border border-white bg-neutral-950 p-2 shadow-[0_12px_40px_rgba(0,0,0,0.55)]"
+      data-ile-canvas-craft-insight-modal
+      className="pointer-events-auto fixed inset-0 z-[200] flex items-center justify-center bg-black/70 p-4"
+      onClick={closeForm}
     >
-      <textarea
-        data-ile-canvas-craft-insight-draft
-        value={draft}
-        onChange={(event) => setDraft(event.target.value)}
-        disabled={!enabled || busy !== null}
-        placeholder="Write the takeaway in your own words."
-        className="min-h-[4.5rem] w-full resize-y rounded-none border border-neutral-600 bg-neutral-900 px-2 py-1.5 text-sm text-white placeholder:text-neutral-500 focus:border-white focus:outline-none disabled:cursor-not-allowed disabled:bg-neutral-800 disabled:text-white/40"
-      />
-      {refusedReason ? (
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={ILE_CRAFT_INSIGHT_LABEL}
+        className="flex w-full max-w-2xl flex-col gap-3 border border-white bg-neutral-950 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.8)]"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <h2 className="font-mono text-[13px] font-semibold uppercase tracking-[0.16em] text-white">
+          {ILE_CRAFT_INSIGHT_LABEL}
+        </h2>
         <p
-          data-ile-canvas-craft-insight-refused
-          className="border border-amber-300 bg-amber-300 px-2 py-1 text-[11px] text-neutral-950"
+          data-ile-canvas-craft-insight-end-hint
+          className="font-mono text-[12px] leading-snug text-white/70"
         >
-          {refusedReason}
+          {ILE_CRAFT_INSIGHT_END_SESSION_HINT}
         </p>
-      ) : null}
-      {error ? (
-        <p
-          data-ile-canvas-craft-insight-error
-          className="border border-red-400 bg-red-300 px-2 py-1 text-[11px] text-neutral-950"
-        >
-          {error}
-        </p>
-      ) : null}
-      <div className="flex items-stretch gap-1.5">
-        <button
-          type="button"
-          data-ile-canvas-craft-insight-close
-          onClick={() => {
-            setDraft("");
-            setError(null);
-            setRefusedReason(null);
-            onClose();
-          }}
-          disabled={busy !== null}
-          className="border border-neutral-500 bg-neutral-900 px-2 py-1.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-white hover:border-white hover:bg-neutral-800 disabled:cursor-not-allowed disabled:border-neutral-700 disabled:bg-neutral-800 disabled:text-neutral-500"
-        >
-          Close
-        </button>
-        <button
-          type="button"
-          data-ile-canvas-craft-insight-submit
-          onClick={() => void handleEvaluate()}
-          disabled={!enabled || busy !== null || !draft.trim()}
-          className="flex-1 border border-white bg-white px-2 py-1.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-neutral-950 hover:bg-neutral-100 disabled:cursor-not-allowed disabled:border-neutral-500 disabled:bg-neutral-200 disabled:text-neutral-500"
-        >
-          {busy ? "Evaluating…" : "Submit for evaluation"}
-        </button>
+        <textarea
+          data-ile-canvas-craft-insight-draft
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          disabled={!enabled || busy !== null}
+          placeholder="Write the takeaway in your own words."
+          className="min-h-[12rem] w-full resize-y rounded-none border border-neutral-600 bg-neutral-900 px-3 py-2.5 text-base text-white placeholder:text-neutral-500 focus:border-white focus:outline-none disabled:cursor-not-allowed disabled:bg-neutral-800 disabled:text-white/40"
+        />
+        {refusedReason ? (
+          <p
+            data-ile-canvas-craft-insight-refused
+            className="border border-amber-300 bg-amber-300 px-2 py-1.5 text-[12px] text-neutral-950"
+          >
+            {refusedReason}
+          </p>
+        ) : null}
+        {error ? (
+          <p
+            data-ile-canvas-craft-insight-error
+            className="border border-red-400 bg-red-300 px-2 py-1.5 text-[12px] text-neutral-950"
+          >
+            {error}
+          </p>
+        ) : null}
+        <div className="flex items-stretch gap-2">
+          <button
+            type="button"
+            data-ile-canvas-craft-insight-close
+            onClick={closeForm}
+            disabled={busy !== null}
+            className="border border-neutral-500 bg-neutral-900 px-4 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-wider text-white hover:border-white hover:bg-neutral-800 disabled:cursor-not-allowed disabled:border-neutral-700 disabled:bg-neutral-800 disabled:text-neutral-500"
+          >
+            Close
+          </button>
+          <button
+            type="button"
+            data-ile-canvas-craft-insight-submit
+            onClick={() => void handleEvaluate()}
+            disabled={!enabled || busy !== null || !draft.trim()}
+            className="flex-1 border border-white bg-white px-4 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-wider text-neutral-950 hover:bg-neutral-100 disabled:cursor-not-allowed disabled:border-neutral-500 disabled:bg-neutral-200 disabled:text-neutral-500"
+          >
+            {busy ? "Evaluating…" : "Submit for evaluation"}
+          </button>
+        </div>
       </div>
     </div>
   );
+
+  if (typeof document === "undefined") return dialog;
+  return createPortal(dialog, document.body);
 }
 
 export function IleCraftInsightButton({

@@ -183,12 +183,12 @@ describe("learn suggestion toast", () => {
 
     const prompt = read("components/excalidraw-canvas/canvas-prompt-bar.tsx");
     expect(prompt).toContain("ileCanvasCommandDockVisible");
-    expect(prompt).toContain("data-ile-canvas-side-note");
+    expect(prompt).toContain("IleCanvasCraftInsightForm");
+    expect(prompt).not.toContain("data-ile-canvas-side-note");
     expect(prompt).not.toContain("learnSuggestionToastText");
     expect(prompt).not.toContain("LearnSuggestionToast");
     expect(prompt).not.toContain("[data-learn-suggestion]");
     expect(prompt).not.toContain("placeSuggestionText");
-    expect(prompt).toContain("bottom-3 left-3");
     expect(prompt).not.toContain("right-3 top-3");
 
     const canvas = read("components/ExcalidrawCanvas.tsx");

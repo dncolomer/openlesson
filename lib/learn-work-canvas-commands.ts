@@ -12,6 +12,7 @@ export const ILE_WORK_CANVAS_COMMANDS = [
     shortcut: "f",
     needsSelection: false,
     learnOnly: true,
+    replacesSelection: false,
   },
   {
     id: "simplify",
@@ -20,6 +21,7 @@ export const ILE_WORK_CANVAS_COMMANDS = [
     shortcut: "s",
     needsSelection: true,
     learnOnly: false,
+    replacesSelection: true,
   },
   {
     id: "split",
@@ -28,6 +30,34 @@ export const ILE_WORK_CANVAS_COMMANDS = [
     shortcut: "x",
     needsSelection: true,
     learnOnly: false,
+    replacesSelection: false,
+  },
+  {
+    id: "breakdown",
+    label: "Breakdown",
+    tooltip: "Keep the original mark and fan its parts into smaller nodes, linked with arrows.",
+    shortcut: "b",
+    needsSelection: true,
+    learnOnly: false,
+    replacesSelection: false,
+  },
+  {
+    id: "concepts",
+    label: "Concepts",
+    tooltip: "Keep the original and fan its named concepts into linked nodes.",
+    shortcut: "c",
+    needsSelection: true,
+    learnOnly: false,
+    replacesSelection: false,
+  },
+  {
+    id: "define",
+    label: "Define",
+    tooltip: "Keep the original and place a clean, simple definition beside it.",
+    shortcut: "e",
+    needsSelection: true,
+    learnOnly: false,
+    replacesSelection: false,
   },
   {
     id: "answer",
@@ -36,6 +66,7 @@ export const ILE_WORK_CANVAS_COMMANDS = [
     shortcut: "a",
     needsSelection: true,
     learnOnly: false,
+    replacesSelection: false,
   },
   {
     id: "draw",
@@ -44,6 +75,7 @@ export const ILE_WORK_CANVAS_COMMANDS = [
     shortcut: "d",
     needsSelection: true,
     learnOnly: false,
+    replacesSelection: false,
   },
   {
     id: "refactor",
@@ -52,6 +84,7 @@ export const ILE_WORK_CANVAS_COMMANDS = [
     shortcut: "r",
     needsSelection: true,
     learnOnly: false,
+    replacesSelection: true,
   },
 ] as const;
 
@@ -62,6 +95,8 @@ export type IleWorkCanvasAskKind =
   | "answer"
   | "draw"
   | "simplify"
+  | "concepts"
+  | "define"
   | "check"
   | "selective-compress"
   | "refactor"
@@ -72,7 +107,7 @@ export type IleWorkCanvasAskKind =
 export const ILE_WORK_CANVAS_AUTO_LAYOUT_SHORTCUT = "l";
 export const ILE_WORK_CANVAS_AUTO_LAYOUT_LABEL = "Auto layout";
 export const ILE_WORK_CANVAS_AUTO_LAYOUT_TOOLTIP =
-  "After each command or reply, rearrange the whole board so marks do not overlap.";
+  "Toggle: after each command or reply, space loose notes so they do not overlap. Drawings, groups, and linked diagrams stay together.";
 export const ILE_WORK_CANVAS_CHEATSHEET_LABEL = "Command cheat sheet";
 
 export type IleWorkCanvasCommandDef = (typeof ILE_WORK_CANVAS_COMMANDS)[number];
@@ -85,10 +120,43 @@ export function ileWorkCanvasCommandsFor(
   return ILE_WORK_CANVAS_COMMANDS.filter((command) => !command.learnOnly);
 }
 
+export const ILE_WORK_CANVAS_SHORTCUT_MOD_HINT =
+  "On a MacBook, hold Option (⌥) and the letter. The same modifier is Alt on other keyboards.";
+
+export function ileWorkCanvasCommandShortcutKey(shortcut: string | null | undefined): string {
+  return String(shortcut || "").trim().toUpperCase();
+}
+
+export function ileWorkCanvasCommandShortcutAppleLabel(shortcut: string | null | undefined): string {
+  const key = ileWorkCanvasCommandShortcutKey(shortcut);
+  return key ? `⌥${key}` : "";
+}
+
+export function ileWorkCanvasCommandShortcutAltLabel(shortcut: string | null | undefined): string {
+  const key = ileWorkCanvasCommandShortcutKey(shortcut);
+  return key ? `Alt+${key}` : "";
+}
+
 export function ileWorkCanvasCommandShortcutLabel(shortcut: string | null | undefined): string {
-  const key = String(shortcut || "").trim();
-  if (!key) return "";
-  return `Alt+${key.toUpperCase()}`;
+  const apple = ileWorkCanvasCommandShortcutAppleLabel(shortcut);
+  const alt = ileWorkCanvasCommandShortcutAltLabel(shortcut);
+  if (!apple) return "";
+  return `${apple} / ${alt}`;
+}
+
+/** Option/Alt letter from a keydown. Prefer `code` so Mac Option does not send å/ƒ/ß. */
+export function ileWorkCanvasCommandShortcutKeyFromEvent(event: {
+  altKey?: boolean;
+  metaKey?: boolean;
+  ctrlKey?: boolean;
+  code?: string;
+  key?: string;
+}): string | null {
+  if (!event.altKey || event.metaKey || event.ctrlKey) return null;
+  const fromCode = /^Key([A-Z])$/i.exec(String(event.code || ""));
+  if (fromCode) return fromCode[1]!.toLowerCase();
+  const key = String(event.key || "").toLowerCase();
+  return /^[a-z]$/.test(key) ? key : null;
 }
 
 export function ileWorkCanvasCommandByShortcut(
@@ -105,6 +173,11 @@ export function ileWorkCanvasCommandByShortcut(
 export function ileWorkCanvasCommandNeedsSelection(id: string | null | undefined): boolean {
   const command = ILE_WORK_CANVAS_COMMANDS.find((row) => row.id === id);
   return command ? command.needsSelection : Boolean(String(id || "").trim());
+}
+
+/** True when the command drops the original marks before the model reply lands. */
+export function ileWorkCanvasCommandReplacesSelection(id: string | null | undefined): boolean {
+  return Boolean(ILE_WORK_CANVAS_COMMANDS.find((row) => row.id === id)?.replacesSelection);
 }
 
 export function filterIleWorkCanvasCommands(

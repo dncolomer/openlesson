@@ -176,7 +176,7 @@ export function SessionChapterWorkCanvas({
               recordSessionPowArtifact,
               workArtifacts: sessionPowArtifactsRef.current,
               workSinceIndex: insightWorkMarkRef.current,
-              onCrafted: (insight) => {
+              onCrafted: (insight, meta) => {
                 insightWorkMarkRef.current = ilePowNextIndex(
                   sessionPowArtifactsRef.current,
                 );
@@ -184,7 +184,7 @@ export function SessionChapterWorkCanvas({
                   if (current.some((row) => row.id === insight.id)) return current;
                   return [insight, ...current];
                 });
-                onInsightKept?.(insight);
+                if (meta?.endsLearnSession) onInsightKept?.(insight);
               },
             }
           : null

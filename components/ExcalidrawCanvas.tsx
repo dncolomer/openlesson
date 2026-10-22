@@ -5,6 +5,7 @@ import {
   useCallback,
   useState,
   useEffect,
+  type PointerEvent as ReactPointerEvent,
 } from "react";
 import { useI18n } from "@/lib/i18n";
 import { bindIleSurfaceEditorEvents, bindIleSurfaceWheelZoom } from "@/lib/learn-compact-window";
@@ -61,6 +62,7 @@ import {
   ileWorkCanvasEmptyNearbyOriginWithReserved,
   ileWorkCanvasFiniteOrigin,
   ileWorkCanvasAddedElementIds,
+  ileWorkCanvasDragThinkingOrigin,
   ileWorkCanvasCenterScroll,
   ileWorkCanvasContentBounds,
   ileWorkCanvasHasLiveElements,
@@ -264,6 +266,14 @@ export function ExcalidrawCanvas({
   const applyChainRef = useRef(Promise.resolve());
   const thinkingChipsRef = useRef(thinkingChips);
   const thinkingHostByIdRef = useRef(new Map<string, HTMLDivElement>());
+  const thinkingDragRef = useRef<{
+    turnId: string;
+    originX: number;
+    originY: number;
+    startClientX: number;
+    startClientY: number;
+    zoom: number;
+  } | null>(null);
   
   // Store the latest scene data for PNG export
    
@@ -582,10 +592,76 @@ export function ExcalidrawCanvas({
   }, []);
 
   const removeThinkingChip = useCallback((turnId: string) => {
+    if (thinkingDragRef.current?.turnId === turnId) thinkingDragRef.current = null;
     thinkingChipsRef.current = thinkingChipsRef.current.filter((chip) => chip.turnId !== turnId);
     thinkingHostByIdRef.current.delete(turnId);
     setThinkingChips(thinkingChipsRef.current);
   }, []);
+
+  const handleThinkingChipPointerDown = useCallback(
+    (turnId: string, event: ReactPointerEvent<HTMLDivElement>) => {
+      if (event.button !== 0) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const chip = thinkingChipsRef.current.find((row) => row.turnId === turnId);
+      if (!chip) return;
+      const appState = excalidrawAPIRef.current?.getAppState?.() ?? sceneDataRef.current?.appState ?? {};
+      thinkingDragRef.current = {
+        turnId,
+        originX: chip.x,
+        originY: chip.y,
+        startClientX: event.clientX,
+        startClientY: event.clientY,
+        zoom: ileWorkCanvasZoomValue(appState),
+      };
+      event.currentTarget.setPointerCapture(event.pointerId);
+    },
+    [],
+  );
+
+  const handleThinkingChipPointerMove = useCallback(
+    (turnId: string, event: ReactPointerEvent<HTMLDivElement>) => {
+      const drag = thinkingDragRef.current;
+      if (!drag || drag.turnId !== turnId) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const origin = ileWorkCanvasDragThinkingOrigin({
+        origin: { x: drag.originX, y: drag.originY },
+        startClientX: drag.startClientX,
+        startClientY: drag.startClientY,
+        clientX: event.clientX,
+        clientY: event.clientY,
+        zoom: drag.zoom,
+      });
+      const appState = excalidrawAPIRef.current?.getAppState?.() ?? sceneDataRef.current?.appState ?? {};
+      const next = projectThinkingChip(turnId, origin, appState);
+      thinkingChipsRef.current = [
+        ...thinkingChipsRef.current.filter((row) => row.turnId !== turnId),
+        next,
+      ];
+      setThinkingChips(thinkingChipsRef.current);
+      const node = thinkingHostByIdRef.current.get(turnId);
+      if (node) {
+        node.style.left = `${next.left}px`;
+        node.style.top = `${next.top}px`;
+      }
+    },
+    [projectThinkingChip],
+  );
+
+  const handleThinkingChipPointerUp = useCallback(
+    (turnId: string, event: ReactPointerEvent<HTMLDivElement>) => {
+      if (thinkingDragRef.current?.turnId !== turnId) return;
+      event.preventDefault();
+      event.stopPropagation();
+      thinkingDragRef.current = null;
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+      setThinkingChips(thinkingChipsRef.current);
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!showHeliosThinking) {
@@ -742,6 +818,8 @@ export function ExcalidrawCanvas({
           appState: api.getAppState?.() ?? {},
           files: api.getFiles?.() ?? {},
         });
+        const liveChip = thinkingChipsRef.current.find((chip) => chip.turnId === turnId);
+        const placeAt = liveChip ? { x: liveChip.x, y: liveChip.y } : origin;
         const next = applyIleWorkCanvasAskReply({
           kind: input.kind,
           live,
@@ -750,10 +828,10 @@ export function ExcalidrawCanvas({
             text: payload.text,
             raw: payload.raw,
             elements: payload.elements,
-            origin: payload.origin,
+            origin: liveChip ? placeAt : payload.origin,
             turnId,
           },
-          fallbackOrigin: origin,
+          fallbackOrigin: placeAt,
           reserved: reservedThinkingOrigins(turnId),
         });
         const addedIds = new Set(ileWorkCanvasAddedElementIds(live, next));
@@ -1480,6 +1558,9 @@ export function ExcalidrawCanvas({
           thinkingHostByIdRef={thinkingHostByIdRef}
           thinkingOverlayBox={thinkingOverlayBox}
           thinkingTick={thinkingTick}
+          onChipPointerDown={handleThinkingChipPointerDown}
+          onChipPointerMove={handleThinkingChipPointerMove}
+          onChipPointerUp={handleThinkingChipPointerUp}
         />
         {onAskSelected ? (
           <CanvasPromptBar

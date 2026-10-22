@@ -14,6 +14,7 @@ import {
   convertToExcalidrawElements,
   createIleWorkCanvasChapterStore,
   ileWorkCanvasFiniteOrigin,
+  ileWorkCanvasDragThinkingOrigin,
   ileWorkCanvasThinkingOverlayStyle,
   ileWorkCanvasTurnContextMessage,
   ileWorkCanvasXaiShapeType,
@@ -93,6 +94,8 @@ import {
   ILE_LEARN_MORE_VIEWPORT_PAD,
   ILE_XAI_LOADING_BOX_HEIGHT,
   ILE_XAI_LOADING_BOX_WIDTH,
+  ILE_XAI_THINKING_OVERLAY_HEIGHT,
+  ILE_XAI_THINKING_OVERLAY_WIDTH,
   ILE_XAI_LOADING_CLEARANCE,
   ILE_XAI_LOADING_GAP,
   clampIleLearnMorePosition,
@@ -1288,11 +1291,14 @@ describe("TAP Learning Work canvas XAI suggested origin (shipped parse+apply)", 
 });
 
 describe("TAP Learning Work canvas thinking overlay box (shipped occupancy+style)", () => {
-  it("uses a fixed text-column plate that rotating copy cannot resize", () => {
+  it("uses a fixed portrait plate that rotating copy cannot resize", () => {
     expect(ILE_XAI_LOADING_BOX_WIDTH).toBe(ILE_XAI_LOADING_BOX_HEIGHT);
     expect(ILE_XAI_LOADING_BOX_WIDTH).toBeGreaterThan(52);
     const style = ileWorkCanvasThinkingOverlayStyle();
-    expect(style.width).toBe(ILE_WORK_CANVAS_TEXT_BOX_WIDTH);
+    expect(style.width).toBe(ILE_XAI_THINKING_OVERLAY_WIDTH);
+    expect(style.height).toBe(ILE_XAI_THINKING_OVERLAY_HEIGHT);
+    expect(style.height).toBeGreaterThan(style.width);
+    expect(style.width).toBeLessThan(ILE_WORK_CANVAS_TEXT_BOX_WIDTH);
     expect(style.width).toBeGreaterThan(ILE_XAI_LOADING_BOX_WIDTH);
     expect(style.height).toBeGreaterThan(52);
     expect(style.minWidth).toBe(style.width);
@@ -1330,6 +1336,30 @@ describe("TAP Learning Work canvas thinking overlay box (shipped occupancy+style
     expect(canvas).toContain("minHeight");
     expect(canvas).toContain("data-ile-canvas-thinking-chip");
     expect(canvas).toContain("overflow-hidden");
+    expect(canvas).toContain("flex-col items-center justify-center gap-5");
+    expect(canvas).toContain("flex-col items-center gap-1.5");
+    expect(canvas).toContain("h-10 w-10");
+    expect(ileWorkCanvasDragThinkingOrigin({
+      origin: { x: 40, y: 80 },
+      startClientX: 100,
+      startClientY: 120,
+      clientX: 160,
+      clientY: 80,
+      zoom: 2,
+    })).toEqual({ x: 70, y: 60 });
+    expect(ileWorkCanvasDragThinkingOrigin({
+      origin: { x: 10, y: 10 },
+      startClientX: 0,
+      startClientY: 0,
+      clientX: 30,
+      clientY: 40,
+    })).toEqual({ x: 40, y: 50 });
+    expect(canvas).toContain("ileWorkCanvasDragThinkingOrigin");
+    expect(canvas).toContain("data-ile-canvas-thinking-drag");
+    expect(canvas).toContain("cursor-grab");
+    expect(canvas).toContain("handleThinkingChipPointerDown");
+    expect(canvas).toContain("const liveChip = thinkingChipsRef.current.find((chip) => chip.turnId === turnId)");
+    expect(canvas).toContain("fallbackOrigin: placeAt");
 
     writeScratch(
       "thinking-overlay-box.log",

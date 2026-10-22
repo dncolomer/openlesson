@@ -309,7 +309,7 @@ video.console-copy {
 }
 
 .animate-ile-canvas-thinking {
-  animation: ile-canvas-thinking-pulse 1.5s ease-in-out infinite;
+  animation: ile-canvas-thinking-pulse 2s ease-in-out infinite;
 }
 
 @keyframes ile-canvas-thinking-orbit {

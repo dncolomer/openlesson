@@ -1,5 +1,6 @@
 "use client";
 
+import type { PointerEvent as ReactPointerEvent } from "react";
 import { ileHeliosThinkingLine } from "@/lib/learn-dialogue-turn";
 
 export function CanvasThinkingChips({
@@ -7,6 +8,9 @@ export function CanvasThinkingChips({
   thinkingHostByIdRef,
   thinkingOverlayBox,
   thinkingTick,
+  onChipPointerDown,
+  onChipPointerMove,
+  onChipPointerUp,
 }: {
   thinkingChips: Array<{ turnId: string; left: number; top: number; zoom: number }>;
   thinkingHostByIdRef: { current: Map<string, HTMLDivElement> };
@@ -19,6 +23,9 @@ export function CanvasThinkingChips({
     maxHeight: number;
   };
   thinkingTick: number;
+  onChipPointerDown?: (turnId: string, event: ReactPointerEvent<HTMLDivElement>) => void;
+  onChipPointerMove?: (turnId: string, event: ReactPointerEvent<HTMLDivElement>) => void;
+  onChipPointerUp?: (turnId: string, event: ReactPointerEvent<HTMLDivElement>) => void;
 }) {
   return (
     <>
@@ -31,16 +38,21 @@ export function CanvasThinkingChips({
             }}
             data-ile-canvas-thinking
             data-ile-canvas-thinking-id={chip.turnId}
-            className="pointer-events-none absolute z-[55] origin-top-left"
+            data-ile-canvas-thinking-drag=""
+            className="pointer-events-auto absolute z-[55] origin-top-left cursor-grab touch-none select-none active:cursor-grabbing"
             style={{
               left: chip.left,
               top: chip.top,
               transform: `scale(${chip.zoom})`,
             }}
+            onPointerDown={(event) => onChipPointerDown?.(chip.turnId, event)}
+            onPointerMove={(event) => onChipPointerMove?.(chip.turnId, event)}
+            onPointerUp={(event) => onChipPointerUp?.(chip.turnId, event)}
+            onPointerCancel={(event) => onChipPointerUp?.(chip.turnId, event)}
           >
             <div
               data-ile-canvas-thinking-chip
-              className="animate-ile-canvas-thinking box-border flex flex-col items-center justify-center gap-2 overflow-hidden rounded-none border border-white bg-neutral-950/92 px-3 py-3 shadow-[0_10px_32px_rgba(0,0,0,0.55)]"
+              className="animate-ile-canvas-thinking relative box-border flex flex-col overflow-hidden rounded-none border border-white/85 bg-neutral-950/94 shadow-[0_18px_48px_rgba(0,0,0,0.58)]"
               style={{
                 width: thinkingOverlayBox.width,
                 height: thinkingOverlayBox.height,
@@ -50,21 +62,29 @@ export function CanvasThinkingChips({
                 maxHeight: thinkingOverlayBox.maxHeight,
               }}
             >
-              <span className="relative flex h-6 w-6 shrink-0 items-center justify-center" aria-hidden>
-                <span className="animate-ile-canvas-thinking-orbit absolute inset-0 rounded-full border border-white/30 border-t-white" />
-                <span className="h-1.5 w-1.5 rounded-full bg-white" />
-              </span>
-              <span
-                data-ile-canvas-thinking-copy
-                className="min-w-0 w-full overflow-hidden text-center font-mono text-[10px] uppercase leading-tight tracking-wider text-white"
-              >
-                {ileHeliosThinkingLine(thinkingTick)}
-              </span>
-              <span className="flex shrink-0 items-center gap-1" aria-hidden>
-                <span className="size-1 animate-bounce rounded-full bg-white" style={{ animationDelay: "0ms" }} />
-                <span className="size-1 animate-bounce rounded-full bg-white" style={{ animationDelay: "150ms" }} />
-                <span className="size-1 animate-bounce rounded-full bg-white" style={{ animationDelay: "300ms" }} />
-              </span>
+              <span aria-hidden className="pointer-events-none absolute left-1 top-1 h-2 w-2 border-l border-t border-white/50" />
+              <span aria-hidden className="pointer-events-none absolute right-1 top-1 h-2 w-2 border-r border-t border-white/50" />
+              <span aria-hidden className="pointer-events-none absolute bottom-1 left-1 h-2 w-2 border-b border-l border-white/50" />
+              <span aria-hidden className="pointer-events-none absolute bottom-1 right-1 h-2 w-2 border-b border-r border-white/50" />
+              <span aria-hidden className="pointer-events-none absolute right-1.5 top-1.5 h-1 w-1 bg-white/70" />
+              <span aria-hidden className="pointer-events-none absolute inset-y-3 left-0 w-px bg-white/20" />
+              <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-5 px-4 py-6">
+                <span className="relative flex h-10 w-10 shrink-0 items-center justify-center" aria-hidden>
+                  <span className="animate-ile-canvas-thinking-orbit absolute inset-0 rounded-full border border-white/25 border-t-white" />
+                  <span className="h-2 w-2 rounded-full bg-white" />
+                </span>
+                <span
+                  data-ile-canvas-thinking-copy
+                  className="min-w-0 w-full text-center font-mono text-[11px] uppercase leading-snug tracking-[0.16em] text-white/90"
+                >
+                  {ileHeliosThinkingLine(thinkingTick)}
+                </span>
+                <span className="flex shrink-0 flex-col items-center gap-1.5" aria-hidden>
+                  <span className="size-1 animate-bounce rounded-full bg-white" style={{ animationDelay: "0ms" }} />
+                  <span className="size-1 animate-bounce rounded-full bg-white" style={{ animationDelay: "150ms" }} />
+                  <span className="size-1 animate-bounce rounded-full bg-white" style={{ animationDelay: "300ms" }} />
+                </span>
+              </div>
             </div>
           </div>
         ))}

@@ -400,6 +400,7 @@ describe("TAP Work canvas XAI origin + board ask (shipped)", () => {
 
     const box = ileWorkCanvasThinkingOverlayStyle();
     expect(box.width).toBeGreaterThan(ILE_XAI_LOADING_BOX_WIDTH);
+    expect(box.height).toBeGreaterThan(box.width);
     expect(box.minWidth).toBe(box.width);
     expect(box.maxWidth).toBe(box.width);
     expect(box.height).toBeGreaterThan(52);

@@ -1477,16 +1477,35 @@ export function isIleXaiLoadingElement(el: IleWorkCanvasElement | null | undefin
 }
 
 /**
- * Fixed thinking plate. It matches the text column so the reply can replace
- * it in place. Rotating copy cannot resize it.
+ * Portrait thinking plate. Occupancy matches the overlay so rotating copy
+ * cannot resize it. Legacy square fixtures still use ILE_XAI_LOADING_BOX_*.
  */
-export const ILE_XAI_REPLY_RESERVE_HEIGHT = 160;
-/** Legacy square used by placement fixtures. Live replies reserve the text column. */
+export const ILE_XAI_THINKING_OVERLAY_WIDTH = 156;
+export const ILE_XAI_THINKING_OVERLAY_HEIGHT = 220;
+export const ILE_XAI_REPLY_RESERVE_HEIGHT = ILE_XAI_THINKING_OVERLAY_HEIGHT;
+/** Legacy square used by placement fixtures. */
 export const ILE_XAI_LOADING_BOX_SIZE = 128;
 export const ILE_XAI_LOADING_BOX_WIDTH = ILE_XAI_LOADING_BOX_SIZE;
 export const ILE_XAI_LOADING_BOX_HEIGHT = ILE_XAI_LOADING_BOX_SIZE;
 export const ILE_XAI_LOADING_GAP = 28;
 export const ILE_XAI_LOADING_CLEARANCE = 16;
+
+/** Scene origin after dragging the thinking plate. Screen pixels divide by zoom. */
+export function ileWorkCanvasDragThinkingOrigin(input: {
+  origin: { x: number; y: number };
+  startClientX: number;
+  startClientY: number;
+  clientX: number;
+  clientY: number;
+  zoom?: number;
+}): { x: number; y: number } {
+  const zoom = Number(input.zoom);
+  const scale = Number.isFinite(zoom) && zoom > 0 ? zoom : 1;
+  return {
+    x: input.origin.x + (input.clientX - input.startClientX) / scale,
+    y: input.origin.y + (input.clientY - input.startClientY) / scale,
+  };
+}
 
 /** Same box occupancy and overlay markup share so rotating copy cannot resize it. */
 export function ileWorkCanvasThinkingOverlayStyle(): {
@@ -1498,12 +1517,12 @@ export function ileWorkCanvasThinkingOverlayStyle(): {
   maxHeight: number;
 } {
   return {
-    width: ILE_WORK_CANVAS_TEXT_BOX_WIDTH,
-    height: ILE_XAI_REPLY_RESERVE_HEIGHT,
-    minWidth: ILE_WORK_CANVAS_TEXT_BOX_WIDTH,
-    minHeight: ILE_XAI_REPLY_RESERVE_HEIGHT,
-    maxWidth: ILE_WORK_CANVAS_TEXT_BOX_WIDTH,
-    maxHeight: ILE_XAI_REPLY_RESERVE_HEIGHT,
+    width: ILE_XAI_THINKING_OVERLAY_WIDTH,
+    height: ILE_XAI_THINKING_OVERLAY_HEIGHT,
+    minWidth: ILE_XAI_THINKING_OVERLAY_WIDTH,
+    minHeight: ILE_XAI_THINKING_OVERLAY_HEIGHT,
+    maxWidth: ILE_XAI_THINKING_OVERLAY_WIDTH,
+    maxHeight: ILE_XAI_THINKING_OVERLAY_HEIGHT,
   };
 }
 

@@ -11,7 +11,9 @@ import { bindIleSurfaceEditorEvents, bindIleSurfaceWheelZoom } from "@/lib/learn
 import { ILE_HELIOS_THINKING_ROTATE_MS } from "@/lib/learn-dialogue-turn";
 import { ILE_CANVAS_TIMER_RESET_LOADING_MS } from "@/lib/learn-work-canvas-timer";
 import {
+  ILE_WORK_CANVAS_AUTO_LAYOUT_SHORTCUT,
   ileCanvasCommandDraft,
+  ileWorkCanvasCommandByShortcut,
   ileWorkCanvasCommandNeedsSelection,
   type IleWorkCanvasCommandId,
 } from "@/lib/learn-work-canvas-commands";
@@ -21,6 +23,8 @@ import {
   usePublishSessionProof,
   useSessionBranchSlot,
   useSessionMarkCanvasEffects,
+  useSessionPolicyInferences,
+  useSessionPolicySuggestion,
 } from "@/components/session-view/session-policy-context";
 import {
   graftSessionBranchModel,
@@ -40,7 +44,10 @@ import {
 } from "@/components/excalidraw-canvas/learn-excalidraw-mount";
 import { sanitizeSceneData } from "@/components/excalidraw-canvas/sanitize-scene";
 import {
+  acknowledgeIleWorkCanvasXaiNotes,
   applyIleWorkCanvasAskReply,
+  ileWorkCanvasAutoLayoutEnabled,
+  ILE_AUTO_LAYOUT_APP_STATE_KEY,
   ILE_CANVAS_PROMPT_BAR_FALLBACK_WIDTH,
   ILE_CANVAS_PROMPT_BAR_TOOLBAR_SELECTOR,
   ileCanvasPromptBarWidth,
@@ -49,7 +56,6 @@ import {
   ileCanvasSlashBarOpen,
   ileCanvasSlashKeyOpensBar,
   ileWorkCanvasAskFallback,
-  ileWorkCanvasMarksNeedScroll,
   ileWorkCanvasThinkingOccupancy,
   ileWorkCanvasEmptyNearbyOriginWithReserved,
   ileWorkCanvasFiniteOrigin,
@@ -68,6 +74,7 @@ import {
   pasteIleWorkCanvasElements,
   serializeIleWorkCanvasScene,
   runIleWorkCanvasCommand,
+  layoutIleWorkCanvasBoard,
   ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS,
   type IleWorkCanvasAskKind,
   type IleWorkCanvasElement,
@@ -75,7 +82,7 @@ import {
   type IleWorkCanvasSkeleton,
 } from "@/lib/learn-work-canvas";
 import { syncIleDictatedTextOnWorkCanvas } from "@/lib/learn-canvas-dictate";
-import { appendLearnSuggestionText } from "@/lib/learn-suggestion";
+import { sessionHarnessFocusLine } from "@/lib/session-harness";
 import { type IleCanvasCraftInsightConfig } from "@/components/session-view/learn-canvas-craft-insight";
 import {
   IleWorkCanvasPowCollector,
@@ -222,6 +229,17 @@ export function ExcalidrawCanvas({
   const [craftInsightOpen, setCraftInsightOpen] = useState(false);
   const lastReplaceNonceRef = useRef<string | number | null>(null);
   const [canvasSelectionActive, setCanvasSelectionActive] = useState(false);
+  const [autoLayoutEnabled, setAutoLayoutEnabled] = useState(false);
+  const harnessSuggestion = useSessionPolicySuggestion();
+  const harnessInferences = useSessionPolicyInferences();
+  const harnessSuggestionRef = useRef(harnessSuggestion);
+  const harnessInferencesRef = useRef(harnessInferences);
+  harnessSuggestionRef.current = harnessSuggestion;
+  harnessInferencesRef.current = harnessInferences;
+  const sessionMarkModeRef = useRef(sessionMarkMode);
+  sessionMarkModeRef.current = sessionMarkMode;
+  const handleQuickActionRef = useRef<(id: IleWorkCanvasCommandId) => void>(() => {});
+  const toggleAutoLayoutRef = useRef<() => void>(() => {});
   const sessionMarkCanvasEffects = useSessionMarkCanvasEffects();
   const sessionBranchSlot = useSessionBranchSlot();
   const publishSessionBranch = usePublishSessionBranchSlot();
@@ -640,6 +658,21 @@ export function ExcalidrawCanvas({
         target?.tagName === "INPUT" ||
         target?.tagName === "TEXTAREA" ||
         Boolean(target?.isContentEditable);
+      if (typingInField) return;
+      if (event.altKey && !event.metaKey && !event.ctrlKey) {
+        const letter = String(event.key || "").toLowerCase();
+        if (letter === ILE_WORK_CANVAS_AUTO_LAYOUT_SHORTCUT) {
+          event.preventDefault();
+          toggleAutoLayoutRef.current();
+          return;
+        }
+        const command = ileWorkCanvasCommandByShortcut(letter, sessionMarkModeRef.current);
+        if (command) {
+          event.preventDefault();
+          handleQuickActionRef.current(command.id);
+          return;
+        }
+      }
       if (
         !ileCanvasSlashKeyOpensBar({
           key: event.key,
@@ -734,13 +767,6 @@ export function ExcalidrawCanvas({
           });
         } finally {
           applyingRemoteRef.current = false;
-        }
-        if (
-          added.length &&
-          typeof api.scrollToContent === "function" &&
-          ileWorkCanvasMarksNeedScroll(added, api.getAppState?.() ?? {})
-        ) {
-          api.scrollToContent(added, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS);
         }
         canvasPowCollectorRef.current.syncWithoutEmit({
           elements: next.elements,
@@ -874,16 +900,23 @@ export function ExcalidrawCanvas({
     (action: IleWorkCanvasCommandId) => {
       const api = excalidrawAPIRef.current;
       const selected = selectedCanvasElements();
-      if (!api || !selected.length) return;
+      if (!api) return;
+      if (ileWorkCanvasCommandNeedsSelection(action) && !selected.length) return;
       const live = serializeIleWorkCanvasScene({
         elements: api.getSceneElements?.() ?? [],
         appState: api.getAppState?.() ?? {},
         files: api.getFiles?.() ?? {},
       });
+      const mode = sessionMarkModeRef.current;
       const outcome = runIleWorkCanvasCommand({
         action,
         scene: live,
         selectedElements: selected,
+        focusText: sessionHarnessFocusLine({
+          guide: mode === "verification" ? "verification" : mode === "calibrate" ? "calibrate" : "learn",
+          suggestion: harnessSuggestionRef.current,
+          inferenceLabel: harnessInferencesRef.current.at(-1)?.label ?? null,
+        }),
       });
       const emitCommand = (commandId: IleWorkCanvasCommandId, prompt: string) => {
         const powEvents = canvasPowCollectorRef.current.command(commandId, {
@@ -955,6 +988,36 @@ export function ExcalidrawCanvas({
     },
     [runCanvasAsk, selectedCanvasElements],
   );
+  handleQuickActionRef.current = handleQuickAction;
+
+  const toggleAutoLayout = useCallback(() => {
+    const api = excalidrawAPIRef.current;
+    if (!api) return;
+    const live = serializeIleWorkCanvasScene({
+      elements: api.getSceneElements?.() ?? [],
+      appState: api.getAppState?.() ?? {},
+      files: api.getFiles?.() ?? {},
+    });
+    const nextEnabled = !ileWorkCanvasAutoLayoutEnabled(live.appState);
+    const laid = nextEnabled ? layoutIleWorkCanvasBoard(live) : live;
+    applyingRemoteRef.current = true;
+    try {
+      api.updateScene({
+        elements: laid.elements,
+        appState: { ...laid.appState, [ILE_AUTO_LAYOUT_APP_STATE_KEY]: nextEnabled },
+        ...(laid.files ? { files: laid.files } : {}),
+      });
+    } finally {
+      applyingRemoteRef.current = false;
+    }
+    setAutoLayoutEnabled(nextEnabled);
+    canvasPowCollectorRef.current.syncWithoutEmit({
+      elements: laid.elements,
+      appState: { ...(api.getAppState?.() ?? {}), [ILE_AUTO_LAYOUT_APP_STATE_KEY]: nextEnabled },
+      files: api.getFiles?.() ?? {},
+    });
+  }, []);
+  toggleAutoLayoutRef.current = toggleAutoLayout;
 
   const writeDictatedText = useCallback(
     (text: string, emitPow: boolean) => {
@@ -1009,43 +1072,6 @@ export function ExcalidrawCanvas({
     },
     [],
   );
-
-  const placeSuggestionText = useCallback((text: string) => {
-    const api = excalidrawAPIRef.current;
-    if (!api) return;
-    const clean = text.trim();
-    if (!clean) return;
-    const rawElements = (
-      typeof api.getSceneElementsIncludingDeleted === "function"
-        ? api.getSceneElementsIncludingDeleted()
-        : (api.getSceneElements?.() ?? [])
-    ) as IleWorkCanvasElement[];
-    const live = serializeIleWorkCanvasScene({
-      elements: rawElements,
-      appState: api.getAppState?.() ?? {},
-      files: api.getFiles?.() ?? {},
-    });
-    const result = appendLearnSuggestionText(live, clean);
-    if (!result.appended.length) return;
-    applyingRemoteRef.current = true;
-    try {
-      api.updateScene({
-        elements: result.scene.elements,
-        appState: { selectedElementIds: {} },
-      });
-    } finally {
-      applyingRemoteRef.current = false;
-    }
-    const mark = result.appended[0];
-    if (mark && typeof api.scrollToContent === "function") {
-      api.scrollToContent([mark], ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS);
-    }
-    canvasPowCollectorRef.current.syncWithoutEmit({
-      elements: result.scene.elements,
-      appState: api.getAppState?.() ?? {},
-      files: api.getFiles?.() ?? {},
-    });
-  }, []);
 
   const submitCommand = useCallback(() => {
     const draft = ileCanvasCommandDraft(commandText);
@@ -1223,6 +1249,22 @@ export function ExcalidrawCanvas({
         userClearedRef.current = false;
       }
       sceneDataRef.current = sceneData ?? null;
+      if (!applyingRemoteRef.current) {
+        const acked = acknowledgeIleWorkCanvasXaiNotes(
+          sceneData.elements as IleWorkCanvasElement[],
+          appState?.selectedElementIds ?? {},
+        );
+        if (acked.changed) {
+          applyingRemoteRef.current = true;
+          try {
+            excalidrawAPIRef.current?.updateScene?.({ elements: acked.elements });
+          } finally {
+            applyingRemoteRef.current = false;
+          }
+          sceneData.elements = acked.elements;
+          sceneDataRef.current = sceneData;
+        }
+      }
       if (applyingRemoteRef.current) {
         canvasPowCollectorRef.current.syncWithoutEmit(sceneData);
       } else {
@@ -1444,7 +1486,8 @@ export function ExcalidrawCanvas({
             dictateTranscript={dictateTranscript}
             viewModeEnabled={viewModeEnabled}
             writeDictatedText={writeDictatedText}
-            placeSuggestionText={placeSuggestionText}
+            autoLayoutEnabled={autoLayoutEnabled}
+            onToggleAutoLayout={toggleAutoLayout}
             onDictateActive={onDictateActive}
             craftInsightOpen={craftInsightOpen}
             selectedCanvasElements={selectedCanvasElements}

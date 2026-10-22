@@ -396,11 +396,12 @@ describe("Work-canvas scene-diff PoW (shipped classifier)", () => {
     expect(JSON.parse(ileSelection.payload).metadata.prompt).toBe(longPrompt);
 
     const commandPrompts: Record<(typeof ILE_WORK_CANVAS_COMMAND_POW_IDS)[number], string> = {
+      focus: "Focus",
       simplify: "Simplify",
       split: "split",
-      check: ileWorkCanvasQuickActionPrompt("check"),
+      answer: "Answer",
+      draw: "Draw",
       refactor: "Refactor",
-      declutter: "Declutter",
     };
 
     const catalogRows: string[] = [
@@ -531,7 +532,7 @@ describe("Work-canvas scene-diff PoW (shipped classifier)", () => {
       );
     }
 
-    const longCommand = buildIleWorkCanvasCommandPowEvent("check", {
+    const longCommand = buildIleWorkCanvasCommandPowEvent("answer", {
       prompt: longPrompt,
       selectedIds: ["sel-1", "sel-2"],
     });
@@ -545,17 +546,19 @@ describe("Work-canvas scene-diff PoW (shipped classifier)", () => {
       prompt: "Check",
       selectedIds: ["sel-1"],
     });
-    const check = buildIleWorkCanvasCommandPowEvent("check", {
-      prompt: "Check",
+    const answer = buildIleWorkCanvasCommandPowEvent("answer", {
+      prompt: "Answer",
       selectedIds: ["sel-1"],
     });
     expect(freeAsk?.toolAction).toBe("expand_more");
-    expect(check?.toolAction).toBe("check");
-    expect(check?.toolAction).not.toBe(freeAsk?.toolAction);
-    expect(check?.metadata.command_id).toBe("check");
+    expect(answer?.toolAction).toBe("answer");
+    expect(answer?.toolAction).not.toBe(freeAsk?.toolAction);
+    expect(answer?.metadata.command_id).toBe("answer");
     expect(freeAsk?.metadata.command_id).toBeUndefined();
     expect(buildIleWorkCanvasCommandPowEvent("not-a-command", { prompt: "x" })).toBeNull();
     expect(buildIleWorkCanvasCommandPowEvent("ask", { prompt: "x" })).toBeNull();
+    expect(buildIleWorkCanvasCommandPowEvent("check", { prompt: "x" })).toBeNull();
+    expect(buildIleWorkCanvasCommandPowEvent("declutter", { prompt: "x" })).toBeNull();
     expect(buildIleWorkCanvasCommandPowEvent("rephrase", { prompt: "x" })).toBeNull();
     expect(buildIleWorkCanvasCommandPowEvent("join", { prompt: "x" })).toBeNull();
     expect(buildIleWorkCanvasCommandPowEvent("elaborate", { prompt: "x" })).toBeNull();
@@ -620,14 +623,13 @@ describe("Work-canvas PoW host wiring (shipped)", () => {
     expect(canvas).not.toContain("lastEl && typeof lastEl.type");
 
     const quick = canvas.slice(
-      canvas.indexOf("const handleQuickAction"),
+      canvas.indexOf("const handleQuickAction ="),
       canvas.indexOf("const writeDictatedText"),
     );
     expect(quick).toContain(".command(");
     expect(quick).toContain("runIleWorkCanvasCommand");
     expect(quick).not.toContain("expandMore");
     expect(quick).not.toContain('"ask"');
-    expect(quick).not.toContain('"answer"');
     expect(quick).not.toContain('"suggest-insight"');
     const commandLib = read("lib/learn-work-canvas.ts");
     for (const commandId of ILE_WORK_CANVAS_COMMAND_POW_IDS) {

@@ -38,17 +38,19 @@ export const ILE_WORK_CANVAS_USE_AND_PROMPT_ACTIONS = [
 
 /** Canvas command buttons. Each id is its own `tool_action`, not `expand_more`. */
 export const ILE_WORK_CANVAS_COMMAND_POW_IDS = [
+  "focus",
   "simplify",
   "split",
-  "check",
+  "answer",
+  "draw",
   "refactor",
-  "declutter",
 ] as const;
 
 /** Retired canvas commands. Stored rows may still use these ids. They are not on the canvas. */
 export const ILE_WORK_CANVAS_RETIRED_COMMAND_POW_IDS = [
-  "answer",
   "ask",
+  "check",
+  "declutter",
   "suggest-insight",
   "rephrase",
   "join",

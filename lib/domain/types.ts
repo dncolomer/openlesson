@@ -40,6 +40,8 @@ export type ToolAction =
   | "check"
   | "declutter"
   | "answer"
+  | "draw"
+  | "focus"
   | "simplify"
   | "ask"
   | "notebook_edit"

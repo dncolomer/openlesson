@@ -172,7 +172,7 @@ describe("learn suggestion toast", () => {
     ).toBe(false);
   });
 
-  it("mounts the note only for a Learn suggestion, under the command card", () => {
+  it("does not mount a harness toast; Focus places the line on the board", () => {
     expect(promptBar("learn")).not.toContain("data-learn-suggestion=");
     expect(promptBar("learn")).not.toContain("data-ile-command-dock");
     expect(promptBar("learn")).not.toContain(">Simplify<");
@@ -182,27 +182,21 @@ describe("learn suggestion toast", () => {
     expect(promptBar("verification")).not.toContain("data-ile-command-dock");
 
     const prompt = read("components/excalidraw-canvas/canvas-prompt-bar.tsx");
-    expect(prompt).toContain("useSessionPolicySuggestion");
-    expect(prompt).toContain("learnSuggestionToastText");
     expect(prompt).toContain("ileCanvasCommandDockVisible");
     expect(prompt).toContain("data-ile-canvas-side-note");
-    expect(prompt).toContain("key={learnSuggestion}");
-    expect(prompt).toContain("[data-learn-suggestion]");
-    expect(prompt).toContain('placement={commandDockVisible ? "under" : "notification"}');
+    expect(prompt).not.toContain("learnSuggestionToastText");
+    expect(prompt).not.toContain("LearnSuggestionToast");
+    expect(prompt).not.toContain("[data-learn-suggestion]");
+    expect(prompt).not.toContain("placeSuggestionText");
     expect(prompt).toContain("bottom-3 left-3");
     expect(prompt).not.toContain("right-3 top-3");
-    const dockAt = prompt.indexOf("data-ile-learn-more-actions");
-    const noteAt = prompt.indexOf("data-ile-canvas-side-note");
-    expect(noteAt).toBeGreaterThan(dockAt);
 
     const canvas = read("components/ExcalidrawCanvas.tsx");
-    const place = canvas.slice(canvas.indexOf("const placeSuggestionText"), canvas.indexOf("const submitCommand"));
-    expect(place).toContain("appendLearnSuggestionText");
-    expect(place).toContain("selectedElementIds: {}");
-    expect(place).toContain("syncWithoutEmit");
-    expect(place).not.toContain(".dictate(");
-    expect(place).not.toContain(".command(");
-    expect(place).not.toContain("suggest-insight");
-    expect(canvas).toContain("placeSuggestionText={placeSuggestionText}");
+    expect(canvas).not.toContain("placeSuggestionText");
+    expect(canvas).not.toContain("appendLearnSuggestionText");
+    expect(canvas).toContain("runIleWorkCanvasCommand");
+    expect(canvas).toContain("focusText: sessionHarnessFocusLine");
+    expect(canvas).toContain("sessionHarnessFocusLine");
+    expect(canvas).toContain("acknowledgeIleWorkCanvasXaiNotes");
   });
 });

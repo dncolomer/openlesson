@@ -10,8 +10,8 @@ import {
   startIleDictateCapture,
   type IleDictateCapture,
 } from "@/lib/learn-canvas-dictate";
-import { AccelerandoMark } from "@/components/AccelerandoGlyphs";
 import {
+  CommandMark,
   CommandPlate,
   ILE_CANVAS_COMMAND_SIDEBAR_CLASS,
   ILE_CANVAS_COMMAND_SIDEBAR_MARK_CLASS,
@@ -100,7 +100,7 @@ export function IleCanvasDictateButton({
           className={dictateButtonClass("stop", square, wide, plate)}
         >
           {plate ? <CommandPlate index={index} /> : null}
-          <AccelerandoMark text={ILE_CANVAS_DICTATE_LABEL} className={markClass} />
+          <CommandMark id="dictate" label={ILE_CANVAS_DICTATE_LABEL} className={markClass} />
           {plate ? (
             <span className="min-w-0 truncate">{ILE_CANVAS_DICTATE_STOP_LABEL}</span>
           ) : (
@@ -120,7 +120,7 @@ export function IleCanvasDictateButton({
           className={dictateButtonClass("idle", square, wide, plate)}
         >
           {plate ? <CommandPlate index={index} /> : null}
-          <AccelerandoMark text={ILE_CANVAS_DICTATE_LABEL} className={markClass} />
+          <CommandMark id="dictate" label={ILE_CANVAS_DICTATE_LABEL} className={markClass} />
           {plate ? (
             <span className="min-w-0 truncate">{ILE_CANVAS_DICTATE_LABEL}</span>
           ) : (

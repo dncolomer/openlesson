@@ -18,6 +18,7 @@ import {
 } from "@/lib/learn-turn-insights";
 import type { IlePowCounterArtifact } from "@/lib/learn-pow-counters";
 import {
+  CommandMark,
   CommandPlate,
   ILE_CANVAS_COMMAND_SIDEBAR_COMMIT_BAR_CLASS,
   ILE_CANVAS_COMMAND_SIDEBAR_COMMIT_CLASS,
@@ -26,7 +27,6 @@ import {
 import { textToBase64, uploadIleProofOfWork } from "@/lib/learn-proof-of-work-client";
 import type { InsightSummary } from "@/lib/insights";
 import type { IleWorkCanvasElement } from "@/lib/learn-work-canvas";
-import { AccelerandoMark } from "@/components/AccelerandoGlyphs";
 
 function messageFromBody(data: unknown, fallback: string): string {
   if (!data || typeof data !== "object") return fallback;
@@ -301,8 +301,9 @@ export function IleCraftInsightButton({
       }
     >
       {plate || bar ? <CommandPlate index={index} /> : null}
-      <AccelerandoMark
-        text={ILE_CRAFT_INSIGHT_LABEL}
+      <CommandMark
+        id="commit"
+        label={ILE_CRAFT_INSIGHT_LABEL}
         className={plate && !bar ? ILE_CANVAS_COMMAND_SIDEBAR_MARK_CLASS : "h-3.5 w-3.5"}
       />
       {plate || bar ? (

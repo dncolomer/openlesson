@@ -15,6 +15,7 @@ export type SessionCanvasCommands = {
   dictate: SessionCanvasDictate | null;
   /** Learn opens the insight form. Other modes leave this empty. */
   craft: { open: () => void } | null;
+  autoLayout: { enabled: boolean; toggle: () => void } | null;
 };
 
 const CommandContext = createContext<SessionCanvasCommands | null>(null);

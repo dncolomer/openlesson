@@ -259,15 +259,16 @@ describe("canvas dictate button", () => {
     expect(html).toContain("data-ile-craft-insight");
     expect(html).toContain("data-ile-canvas-dictate");
     expect(html).toContain("data-ile-learn-more-actions");
-    for (const label of ["Simplify", "Split", "Check/ask", "Refactor", "Declutter"]) {
+    for (const label of ["Simplify", "Split", "Answer", "Draw", "Refactor"]) {
       expect(html).toContain(`>${label}<`);
     }
-    for (const label of ["Rephrase", "Join", "Elaborate", "Compress", "Clear overlaps"]) {
+    for (const label of ["Focus", "Check/ask", "Declutter", "Rephrase", "Join", "Elaborate", "Compress", "Clear overlaps"]) {
       expect(html).not.toContain(`>${label}<`);
     }
     expect(html).toContain('data-ile-command-mark="simplify"');
-    expect(html).toContain('data-ile-command-mark="check"');
-    expect(html).toContain('data-ile-command-mark="declutter"');
+    expect(html).toContain('data-ile-command-mark="answer"');
+    expect(html).toContain('data-ile-command-mark="draw"');
+    expect(html).toContain('data-ile-command-mark="auto-layout"');
     expect(html).toContain('data-ile-command-index="01"');
     expect(html).toContain('data-ile-command-index="05"');
     expect(html).not.toContain('data-ile-command-index="08"');
@@ -283,9 +284,9 @@ describe("canvas dictate button", () => {
     expect(html).toContain("min-w-0 items-center justify-center");
     expect(html).toContain("flex-col");
     expect(html).toContain("border-l border-t");
-    expect(html).not.toContain(">Answer<");
+    expect(html).toContain(">Answer<");
     expect(html).not.toContain(">Suggest Insight<");
-    expect(html).not.toContain('data-ile-learn-more-quick="answer"');
+    expect(html).toContain('data-ile-learn-more-quick="answer"');
     expect(html).not.toContain('data-ile-learn-more-quick="ask"');
     expect(html).not.toContain('data-ile-learn-more-quick="suggest-insight"');
     expect(html).toContain(">commit (insight)<");

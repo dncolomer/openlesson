@@ -9,9 +9,17 @@ import {
 } from "@/components/excalidraw-canvas/command-plate";
 import { IleCraftInsightButton } from "@/components/session-view/learn-canvas-craft-insight";
 import { IleCanvasDictateButton } from "@/components/session-view/learn-canvas-dictate-button";
+import { SessionCommandCheatsheet } from "@/components/session-view/session-command-cheatsheet";
 import { SessionHarnessPanel } from "@/components/session-view/session-harness-panel";
 import { useSessionCanvasCommands } from "@/components/session-view/session-command-bridge";
-import { ILE_WORK_CANVAS_COMMANDS } from "@/lib/learn-work-canvas-commands";
+import {
+  ILE_WORK_CANVAS_AUTO_LAYOUT_LABEL,
+  ILE_WORK_CANVAS_AUTO_LAYOUT_TOOLTIP,
+  ILE_WORK_CANVAS_CHEATSHEET_LABEL,
+  ileWorkCanvasCommandNeedsSelection,
+  ileWorkCanvasCommandShortcutLabel,
+  ileWorkCanvasCommandsFor,
+} from "@/lib/learn-work-canvas-commands";
 import { ileCanvasCraftInsightUsable } from "@/lib/learn-turn-insights";
 import { SESSION_INSTRUCTIONS, type SessionGuideId } from "@/lib/session-instructions";
 
@@ -34,11 +42,16 @@ export function SessionGuidePanel({
 }) {
   const canvasCommands = guide !== "calibrate";
   const [tab, setTab] = useState<GuideTab>(canvasCommands ? "commands" : "help");
+  const [cheatsheetOpen, setCheatsheetOpen] = useState(false);
   const bridge = useSessionCanvasCommands();
   const commandsOpen = canvasCommands && tab === "commands";
   const harnessOpen = tab === "harness";
   const text = SESSION_INSTRUCTIONS[guide];
   const commandsHint = !bridge ? "The board is still opening." : null;
+  const catalog = ileWorkCanvasCommandsFor(guide);
+  const dictateIndex = String(catalog.length + 1).padStart(2, "0");
+  const autoLayoutIndex = String(catalog.length + 2).padStart(2, "0");
+  const commitIndex = String(catalog.length + 3).padStart(2, "0");
   return (
     <div data-session-guide={guide} className="flex h-full min-h-0 flex-col overflow-hidden bg-black text-white">
       <div className="flex shrink-0 border-b border-white/30 bg-black">
@@ -85,15 +98,16 @@ export function SessionGuidePanel({
       </div>
       {commandsOpen ? (
         <div data-session-commands className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <div className="grid min-h-0 flex-1 auto-rows-fr grid-cols-2 grid-rows-3 gap-0.5 px-1.5 pt-0.5">
-            {ILE_WORK_CANVAS_COMMANDS.map((command) => {
-              const ready = Boolean(bridge?.selectionActive);
+          <div className="grid min-h-0 flex-1 auto-rows-fr grid-cols-2 gap-0.5 px-1.5 pt-0.5">
+            {catalog.map((command) => {
+              const needsSelection = ileWorkCanvasCommandNeedsSelection(command.id);
+              const ready = Boolean(bridge) && (!needsSelection || bridge?.selectionActive);
               return (
                 <button
                   key={command.id}
                   type="button"
                   data-session-command={command.id}
-                  title={command.tooltip}
+                  title={`${command.tooltip} ${ileWorkCanvasCommandShortcutLabel(command.shortcut)}`}
                   aria-label={command.label}
                   disabled={!ready}
                   onClick={() => {
@@ -102,7 +116,7 @@ export function SessionGuidePanel({
                   }}
                   className={ILE_CANVAS_COMMAND_SIDEBAR_CLASS}
                 >
-                  <CommandPlate index={ileWorkCanvasCommandIndex(command.id)} />
+                  <CommandPlate index={ileWorkCanvasCommandIndex(command.id, catalog)} />
                   <CommandMark
                     id={command.id}
                     label={command.label}
@@ -114,18 +128,36 @@ export function SessionGuidePanel({
             })}
             <IleCanvasDictateButton
               plate
-              index="06"
+              index={dictateIndex}
               transcript={bridge?.dictate?.transcript ?? ""}
               onLiveText={(text) => bridge?.dictate?.write(text, false)}
               onCommit={(text) => bridge?.dictate?.write(text, true)}
               onActiveChange={bridge?.dictate?.onActive}
             />
+            <button
+              type="button"
+              data-session-command="auto-layout"
+              data-session-auto-layout=""
+              title={ILE_WORK_CANVAS_AUTO_LAYOUT_TOOLTIP}
+              aria-pressed={Boolean(bridge?.autoLayout?.enabled)}
+              disabled={!bridge?.autoLayout}
+              onClick={() => bridge?.autoLayout?.toggle()}
+              className={ILE_CANVAS_COMMAND_SIDEBAR_CLASS}
+            >
+              <CommandPlate index={autoLayoutIndex} />
+              <CommandMark
+                id="auto-layout"
+                label={ILE_WORK_CANVAS_AUTO_LAYOUT_LABEL}
+                className="h-[clamp(0.6rem,22cqh,1rem)] w-[clamp(0.6rem,22cqh,1rem)] shrink-0"
+              />
+              <span className="min-w-0 truncate">{ILE_WORK_CANVAS_AUTO_LAYOUT_LABEL}</span>
+            </button>
           </div>
           <div data-session-commit className="shrink-0 px-1.5 pb-1 pt-1">
             <IleCraftInsightButton
               plate
               bar
-              index="07"
+              index={commitIndex}
               usable={Boolean(bridge?.craft) && ileCanvasCraftInsightUsable()}
               onClick={() => bridge?.craft?.open()}
             />
@@ -145,8 +177,23 @@ export function SessionGuidePanel({
               {paragraph}
             </p>
           ))}
+          {canvasCommands ? (
+            <button
+              type="button"
+              data-session-command-cheatsheet-open
+              onClick={() => setCheatsheetOpen(true)}
+              className="mt-4 w-full border border-white/45 px-2 py-2 font-mono text-[11px] uppercase tracking-[0.14em] text-white hover:border-white"
+            >
+              {ILE_WORK_CANVAS_CHEATSHEET_LABEL}
+            </button>
+          ) : null}
         </div>
       )}
+      <SessionCommandCheatsheet
+        guide={guide}
+        open={cheatsheetOpen}
+        onClose={() => setCheatsheetOpen(false)}
+      />
     </div>
   );
 }

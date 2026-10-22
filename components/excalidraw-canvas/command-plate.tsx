@@ -1,6 +1,5 @@
 "use client";
 
-import { AccelerandoMark } from "@/components/AccelerandoGlyphs";
 import {
   ILE_WORK_CANVAS_COMMANDS,
   type IleWorkCanvasCommandId,
@@ -27,10 +26,25 @@ export const ILE_CANVAS_COMMAND_SIDEBAR_COMMIT_BAR_CLASS =
 export const ILE_CANVAS_COMMAND_SIDEBAR_MARK_CLASS =
   "h-[clamp(0.6rem,22cqh,1rem)] w-[clamp(0.6rem,22cqh,1rem)] shrink-0";
 
-export function ileWorkCanvasCommandIndex(id: IleWorkCanvasCommandId): string {
-  const at = ILE_WORK_CANVAS_COMMANDS.findIndex((command) => command.id === id);
-  return String(at + 1).padStart(2, "0");
+export function ileWorkCanvasCommandIndex(
+  id: string,
+  catalog: readonly { id: string }[] = ILE_WORK_CANVAS_COMMANDS,
+): string {
+  const at = catalog.findIndex((command) => command.id === id);
+  return String(Math.max(0, at) + 1).padStart(2, "0");
 }
+
+const ICON_PATHS: Record<string, string> = {
+  focus: "M8 2v2.5M8 11.5V14M2 8h2.5M11.5 8H14M8 5.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5z",
+  simplify: "M3 4h10M3 8h7M3 12h4",
+  split: "M3 3h4v10H3zM9 3h4v4H9zM9 9h4v4H9z",
+  answer: "M3 3h10v7H8l-3 3v-3H3z",
+  draw: "M10.5 2.5l3 3-8 8H2.5v-3zM9 4l3 3",
+  refactor: "M4 3h5v2H6.5A4.5 4.5 0 1 1 3 10M12 13H7v-2h2.5A4.5 4.5 0 1 1 13 6",
+  dictate: "M8 2.5a2 2 0 0 1 2 2V8a2 2 0 1 1-4 0V4.5a2 2 0 0 1 2-2zM5 8.5a3 3 0 0 0 6 0M8 11.5V14",
+  commit: "M3 8h10M10 5l3 3-3 3",
+  "auto-layout": "M3 3h4v4H3zM9 3h4v4H9zM3 9h4v4H3zM9 9h4v4H9z",
+};
 
 /** Corner ticks, a stencil number, and a lamp. They follow the button color, including the dim disabled state. */
 export function CommandPlate({ index }: { index: string }) {
@@ -58,9 +72,26 @@ export function CommandMark({
   label,
   className = "h-3.5 w-3.5",
 }: {
-  id: IleWorkCanvasCommandId;
-  label: string;
+  id: IleWorkCanvasCommandId | "dictate" | "commit" | "auto-layout";
+  label?: string;
   className?: string;
 }) {
-  return <AccelerandoMark text={label} mark={id} className={className} />;
+  const d = ICON_PATHS[id] ?? ICON_PATHS.simplify;
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.4}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      data-ile-command-mark={id}
+      data-command-icon={id}
+    >
+      <title>{label || id}</title>
+      <path d={d} />
+    </svg>
+  );
 }

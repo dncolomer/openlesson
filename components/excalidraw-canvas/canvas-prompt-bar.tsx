@@ -16,9 +16,11 @@ import {
 } from "@/lib/learn-command-dock";
 import {
   filterIleWorkCanvasCommands,
-  ILE_WORK_CANVAS_COMMANDS,
+  ILE_WORK_CANVAS_AUTO_LAYOUT_LABEL,
+  ILE_WORK_CANVAS_AUTO_LAYOUT_TOOLTIP,
   ileCanvasCommandDraft,
   ileWorkCanvasCommandNeedsSelection,
+  ileWorkCanvasCommandsFor,
   type IleWorkCanvasCommandId,
 } from "@/lib/learn-work-canvas-commands";
 import type { IleWorkCanvasElement } from "@/lib/learn-work-canvas";
@@ -30,12 +32,7 @@ import {
   type IleCanvasCraftInsightConfig,
 } from "@/components/session-view/learn-canvas-craft-insight";
 import { usePublishSessionCanvasCommands } from "@/components/session-view/session-command-bridge";
-import { LearnSuggestionToast } from "@/components/session-view/learn-suggestion-toast";
-import { learnSuggestionToastText } from "@/lib/learn-suggestion";
-import {
-  usePublishSessionMarkDraft,
-  useSessionPolicySuggestion,
-} from "@/components/session-view/session-policy-context";
+import { usePublishSessionMarkDraft } from "@/components/session-view/session-policy-context";
 import type { SessionMarkMode } from "@/lib/session-marks";
 import {
   CommandMark,
@@ -86,10 +83,11 @@ export function CanvasPromptBar({
   dictateTranscript,
   viewModeEnabled,
   writeDictatedText,
-  placeSuggestionText,
   onDictateActive,
   craftInsightOpen,
   selectedCanvasElements,
+  autoLayoutEnabled = false,
+  onToggleAutoLayout,
   sessionMarkMode,
   sessionMarkQuestions,
   sessionMarkListKey,
@@ -112,10 +110,11 @@ export function CanvasPromptBar({
   dictateTranscript?: string;
   viewModeEnabled?: boolean;
   writeDictatedText: (text: string, commit: boolean) => void;
-  placeSuggestionText?: (text: string) => void;
   onDictateActive?: (active: boolean) => void;
   craftInsightOpen: boolean;
   selectedCanvasElements: () => IleWorkCanvasElement[];
+  autoLayoutEnabled?: boolean;
+  onToggleAutoLayout?: () => void;
   sessionMarkMode?: SessionMarkMode | null;
   sessionMarkQuestions?: readonly { id?: string | null; text?: string | null }[];
   sessionMarkListKey?: string | null;
@@ -128,18 +127,14 @@ export function CanvasPromptBar({
   const stopDragRef = useRef<(() => void) | null>(null);
   const publishDraft = usePublishSessionMarkDraft();
   const publishCommands = usePublishSessionCanvasCommands();
-  const suggestion = useSessionPolicySuggestion();
-  const [dismissedSuggestion, setDismissedSuggestion] = useState<string | null>(null);
   const runCommandRef = useRef(handleQuickAction);
   const clearCommandRef = useRef(setCommandText);
   const writeDictatedRef = useRef(writeDictatedText);
-  const placeSuggestionRef = useRef(placeSuggestionText);
   const dictateActiveRef = useRef(onDictateActive);
   const openCraftRef = useRef(setCraftInsightOpen);
   runCommandRef.current = handleQuickAction;
   clearCommandRef.current = setCommandText;
   writeDictatedRef.current = writeDictatedText;
-  placeSuggestionRef.current = placeSuggestionText;
   dictateActiveRef.current = onDictateActive;
   openCraftRef.current = setCraftInsightOpen;
   const questionKey = (sessionMarkQuestions ?? [])
@@ -177,9 +172,15 @@ export function CanvasPromptBar({
     return () => stopDragRef.current?.();
   }, []);
   const commandDraft = ileCanvasCommandDraft(commandText);
-  const commands = filterIleWorkCanvasCommands(commandDraft.slash ? commandDraft.query : "");
+  const commands = filterIleWorkCanvasCommands(
+    commandDraft.slash ? commandDraft.query : "",
+    sessionMarkMode,
+  );
+  const catalog = ileWorkCanvasCommandsFor(sessionMarkMode);
   const showCraftInsight = Boolean(craftInsight) && ileCanvasShowsCraftInsight(sessionMarkMode);
   const dictateOn = dictateTranscript !== undefined && !viewModeEnabled;
+  const toggleAutoLayoutRef = useRef(onToggleAutoLayout);
+  toggleAutoLayoutRef.current = onToggleAutoLayout;
   useEffect(() => {
     publishCommands({
       selectionActive: canvasSelectionActive,
@@ -195,8 +196,21 @@ export function CanvasPromptBar({
           }
         : null,
       craft: showCraftInsight ? { open: () => openCraftRef.current(true) } : null,
+      autoLayout: toggleAutoLayoutRef.current
+        ? {
+            enabled: autoLayoutEnabled,
+            toggle: () => toggleAutoLayoutRef.current?.(),
+          }
+        : null,
     });
-  }, [canvasSelectionActive, dictateOn, dictateTranscript, publishCommands, showCraftInsight]);
+  }, [
+    autoLayoutEnabled,
+    canvasSelectionActive,
+    dictateOn,
+    dictateTranscript,
+    publishCommands,
+    showCraftInsight,
+  ]);
   useEffect(() => () => publishCommands(null), [publishCommands]);
   const floatWidth = ileCommandDockFloatWidth(
     Math.max(promptBarWidth, ILE_CANVAS_PROMPT_BAR_FALLBACK_WIDTH),
@@ -209,11 +223,6 @@ export function CanvasPromptBar({
     floatWidth,
   });
   const rail = frame.mode === "left" || frame.mode === "right";
-  const learnSuggestion = learnSuggestionToastText({
-    mode: sessionMarkMode,
-    suggestion,
-    dismissed: dismissedSuggestion,
-  });
   const commandDockVisible = ileCanvasCommandDockVisible(sessionMarkMode);
   const rememberDock = (next: IleCommandDockState) => {
     setDockState(next);
@@ -226,7 +235,7 @@ export function CanvasPromptBar({
   const beginDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) return;
     const target = event.target;
-    if (target instanceof Element && target.closest("input, textarea, [data-learn-suggestion]")) return;
+    if (target instanceof Element && target.closest("input, textarea")) return;
     const form = formRef.current;
     const host = form?.offsetParent instanceof HTMLElement ? form.offsetParent : null;
     if (!form || !host) return;
@@ -278,15 +287,6 @@ export function CanvasPromptBar({
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
   };
-  const suggestionNote = learnSuggestion ? (
-    <LearnSuggestionToast
-      key={learnSuggestion}
-      text={learnSuggestion}
-      placement={commandDockVisible ? "under" : "notification"}
-      onDone={(text) => setDismissedSuggestion(text)}
-      onAdd={(text) => placeSuggestionRef.current?.(text)}
-    />
-  ) : null;
   return commandDockVisible ? (
           <form
             ref={formRef}
@@ -368,12 +368,27 @@ export function CanvasPromptBar({
                         }}
                         className={rail ? ILE_CANVAS_COMMAND_RAIL_CLASS : ILE_CANVAS_COMMAND_BUTTON_CLASS}
                       >
-                        <CommandPlate index={ileWorkCanvasCommandIndex(command.id)} />
+                        <CommandPlate index={ileWorkCanvasCommandIndex(command.id, catalog)} />
                         <CommandMark id={command.id} label={command.label} />
                         <span>{command.label}</span>
                       </button>
                     );
                   })}
+                  {onToggleAutoLayout ? (
+                    <button
+                      type="button"
+                      data-ile-learn-more-quick="auto-layout"
+                      aria-label={ILE_WORK_CANVAS_AUTO_LAYOUT_LABEL}
+                      aria-pressed={autoLayoutEnabled}
+                      title={ILE_WORK_CANVAS_AUTO_LAYOUT_TOOLTIP}
+                      onClick={() => onToggleAutoLayout()}
+                      className={rail ? ILE_CANVAS_COMMAND_RAIL_CLASS : ILE_CANVAS_COMMAND_BUTTON_CLASS}
+                    >
+                      <CommandPlate index={String(catalog.length + 1).padStart(2, "0")} />
+                      <CommandMark id="auto-layout" label={ILE_WORK_CANVAS_AUTO_LAYOUT_LABEL} />
+                      <span>{ILE_WORK_CANVAS_AUTO_LAYOUT_LABEL}</span>
+                    </button>
+                  ) : null}
                 </div>
                 {ileCanvasSlashBarOpen({
                   selectionActive: canvasSelectionActive,
@@ -444,21 +459,18 @@ export function CanvasPromptBar({
               ) : null}
             </div>
           </form>
-  ) : suggestionNote || (showCraftInsight && craftInsight && craftInsightOpen) ? (
+  ) : showCraftInsight && craftInsight && craftInsightOpen ? (
     <div
       data-ile-canvas-side-note
       className="pointer-events-none absolute bottom-3 left-3 z-[58] flex w-[min(22rem,calc(100%-1.5rem))] flex-col gap-1"
     >
-      {showCraftInsight && craftInsight ? (
-        <IleCanvasCraftInsightForm
-          open={craftInsightOpen}
-          enabled={ileCanvasCraftInsightUsable()}
-          selectedElements={selectedCanvasElements()}
-          config={craftInsight}
-          onClose={() => setCraftInsightOpen(false)}
-        />
-      ) : null}
-      {suggestionNote}
+      <IleCanvasCraftInsightForm
+        open={craftInsightOpen}
+        enabled={ileCanvasCraftInsightUsable()}
+        selectedElements={selectedCanvasElements()}
+        config={craftInsight}
+        onClose={() => setCraftInsightOpen(false)}
+      />
     </div>
   ) : null;
 }

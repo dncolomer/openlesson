@@ -6,30 +6,52 @@ export const ILE_WORK_CANVAS_OVERLAP_GAP = 16;
 
 export const ILE_WORK_CANVAS_COMMANDS = [
   {
+    id: "focus",
+    label: "Focus",
+    tooltip: "Place the harness next step onto the canvas as a note.",
+    shortcut: "f",
+    needsSelection: false,
+    learnOnly: true,
+  },
+  {
     id: "simplify",
     label: "Simplify",
-    tooltip: "Rewrite the selected text in shorter, plainer sentences.",
+    tooltip: "Replace the selected marks with a shorter, plainer rewrite.",
+    shortcut: "s",
+    needsSelection: true,
+    learnOnly: false,
   },
   {
     id: "split",
     label: "Split",
     tooltip: "Break the selected text into two or three separate blocks on the canvas.",
+    shortcut: "x",
+    needsSelection: true,
+    learnOnly: false,
   },
   {
-    id: "check",
-    label: "Check/ask",
-    tooltip: "Ask for a check of the selected work: what holds, and what to fix.",
+    id: "answer",
+    label: "Answer",
+    tooltip: "Answer the highlighted question and place the reply beside it.",
+    shortcut: "a",
+    needsSelection: true,
+    learnOnly: false,
+  },
+  {
+    id: "draw",
+    label: "Draw",
+    tooltip: "Give a visual answer: a diagram of the highlighted question.",
+    shortcut: "d",
+    needsSelection: true,
+    learnOnly: false,
   },
   {
     id: "refactor",
     label: "Refactor",
-    tooltip:
-      "Ask XAI to rephrase the selected marks and rearrange those marks into a clearer layout.",
-  },
-  {
-    id: "declutter",
-    label: "Declutter",
-    tooltip: "Move the selected marks so their boxes no longer touch. Layout only.",
+    tooltip: "Delete the selected marks and replace them with a clearer rewrite.",
+    shortcut: "r",
+    needsSelection: true,
+    learnOnly: false,
   },
 ] as const;
 
@@ -38,6 +60,7 @@ export type IleWorkCanvasCommandId = (typeof ILE_WORK_CANVAS_COMMANDS)[number]["
 export type IleWorkCanvasAskKind =
   | "ask"
   | "answer"
+  | "draw"
   | "simplify"
   | "check"
   | "selective-compress"
@@ -46,15 +69,54 @@ export type IleWorkCanvasAskKind =
   | "clear-overlaps"
   | "declutter";
 
-/** Every canvas command uses the selected marks. */
-export function ileWorkCanvasCommandNeedsSelection(id: string | null | undefined): boolean {
-  return Boolean(String(id || "").trim());
+export const ILE_WORK_CANVAS_AUTO_LAYOUT_SHORTCUT = "l";
+export const ILE_WORK_CANVAS_AUTO_LAYOUT_LABEL = "Auto layout";
+export const ILE_WORK_CANVAS_AUTO_LAYOUT_TOOLTIP =
+  "After each command or reply, rearrange the whole board so marks do not overlap.";
+export const ILE_WORK_CANVAS_CHEATSHEET_LABEL = "Command cheat sheet";
+
+export type IleWorkCanvasCommandDef = (typeof ILE_WORK_CANVAS_COMMANDS)[number];
+
+/** Learn includes Focus. Verify and the leftover TAP dock do not. */
+export function ileWorkCanvasCommandsFor(
+  guide: string | null | undefined,
+): IleWorkCanvasCommandDef[] {
+  if (guide === "learn") return [...ILE_WORK_CANVAS_COMMANDS];
+  return ILE_WORK_CANVAS_COMMANDS.filter((command) => !command.learnOnly);
 }
 
-export function filterIleWorkCanvasCommands(query: string | null | undefined) {
-  const q = String(query || "").trim().toLowerCase();
-  if (!q) return [...ILE_WORK_CANVAS_COMMANDS];
-  return ILE_WORK_CANVAS_COMMANDS.filter((command) => {
+export function ileWorkCanvasCommandShortcutLabel(shortcut: string | null | undefined): string {
+  const key = String(shortcut || "").trim();
+  if (!key) return "";
+  return `Alt+${key.toUpperCase()}`;
+}
+
+export function ileWorkCanvasCommandByShortcut(
+  key: string | null | undefined,
+  guide?: string | null,
+): IleWorkCanvasCommandDef | null {
+  const letter = String(key || "")
+    .trim()
+    .toLowerCase();
+  if (!letter) return null;
+  return ileWorkCanvasCommandsFor(guide).find((command) => command.shortcut === letter) ?? null;
+}
+
+export function ileWorkCanvasCommandNeedsSelection(id: string | null | undefined): boolean {
+  const command = ILE_WORK_CANVAS_COMMANDS.find((row) => row.id === id);
+  return command ? command.needsSelection : Boolean(String(id || "").trim());
+}
+
+export function filterIleWorkCanvasCommands(
+  query: string | null | undefined,
+  guide?: string | null,
+) {
+  const catalog = ileWorkCanvasCommandsFor(guide);
+  const q = String(query || "")
+    .trim()
+    .toLowerCase();
+  if (!q) return catalog;
+  return catalog.filter((command) => {
     const label = command.label.toLowerCase();
     const compact = label.replace(/[\s/]+/g, "");
     const dashed = label.replace(/[\s/]+/g, "-");

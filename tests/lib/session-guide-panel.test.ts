@@ -59,18 +59,28 @@ describe("session guide panel", () => {
     expect(learn).toContain("data-ile-craft-insight");
     expect(learn).toContain("data-ile-canvas-dictate");
     expect(learn).toContain("data-session-commit");
-    expect(learn).toContain('data-ile-command-index="06"');
     expect(learn).toContain('data-ile-command-index="07"');
+    expect(learn).toContain('data-ile-command-index="09"');
     for (const command of ILE_WORK_CANVAS_COMMANDS) {
       expect(learn).toContain(`data-session-command="${command.id}"`);
       expect(learn).toContain(`>${command.label}<`);
-      expect(learn).toContain(`data-accelerando-mark="${command.label}"`);
       expect(learn).toContain(`data-ile-command-mark="${command.id}"`);
       expect(learn).toContain("disabled");
     }
+    expect(learn).not.toContain("data-accelerando-mark");
     expect(learn).toContain('data-ile-command-index="01"');
-    expect(learn).toContain('data-ile-command-index="05"');
-    expect(ILE_WORK_CANVAS_COMMANDS.find((command) => command.id === "check")?.label).toBe("Check/ask");
+    expect(learn).toContain('data-ile-command-index="06"');
+    expect(learn).toContain('data-session-command="auto-layout"');
+    expect(ILE_WORK_CANVAS_COMMANDS.find((command) => command.id === "focus")?.label).toBe("Focus");
+    expect(ILE_WORK_CANVAS_COMMANDS.find((command) => command.id === "answer")?.label).toBe("Answer");
+    expect(ILE_WORK_CANVAS_COMMANDS.find((command) => command.id === "draw")?.label).toBe("Draw");
+    expect(ILE_WORK_CANVAS_COMMANDS.some((command) => command.id === "check")).toBe(false);
+
+    const verify = renderToStaticMarkup(createElement(SessionGuidePanel, { guide: "verification" }));
+    expect(verify).not.toContain('data-session-command="focus"');
+    expect(verify).toContain('data-session-command="answer"');
+    expect(verify).toContain('data-session-command="draw"');
+    expect(verify).toContain('data-session-command="auto-layout"');
 
     const en = JSON.parse(readFileSync(join(ROOT, "messages/en.json"), "utf8")) as {
       onboardingGuide: { scout: { step3: { body: string } } };
@@ -112,7 +122,8 @@ describe("session guide panel", () => {
     expect(learn).not.toContain("Select marks on the canvas first.");
     expect(source).toContain("CommandPlate");
     expect(source).toContain("auto-rows-fr");
-    expect(source).toContain("grid-rows-3");
+    expect(source).toContain("SessionCommandCheatsheet");
+    expect(source).toContain("ILE_WORK_CANVAS_CHEATSHEET_LABEL");
     expect(source).toContain("data-session-commit");
     expect(source).not.toContain("grid-rows-4");
     expect(source).not.toContain("grid-rows-[minmax(0,3fr)_minmax(0,1fr)_auto]");
@@ -136,12 +147,13 @@ describe("session guide panel", () => {
     expect(provider).toContain("<SessionPolicyInferLoop");
   });
 
-  it("keeps /ask as Ask and Check/ask as the check command", () => {
+  it("keeps slash drafts on the live catalog and leaves /ask as free text", () => {
     expect(ileCanvasCommandDraft("/ask what holds").exactId).toBeNull();
     expect(ileCanvasCommandDraft("/ask what holds").rest).toBe("what holds");
-    expect(ileCanvasCommandDraft("/check").exactId).toBe("check");
-    expect(ileCanvasCommandDraft("/check/ask").exactId).toBe("check");
-    expect(ileCanvasCommandDraft("/check-ask").exactId).toBe("check");
+    expect(ileCanvasCommandDraft("/answer").exactId).toBe("answer");
+    expect(ileCanvasCommandDraft("/focus").exactId).toBe("focus");
+    expect(ileCanvasCommandDraft("/draw").exactId).toBe("draw");
+    expect(ileCanvasCommandDraft("/check").exactId).toBeNull();
   });
 
   it("writes a contextual Harness next line without action labels", () => {

@@ -7,8 +7,8 @@ const SESSION_FORMAT_WRAPPER =
 
 const COMMAND_META_WRAPPERS = [
   /^your (question|reply|answer|prompt) sits in the right place(?:\s*\([^)]+\))?[.!]?\s*/i,
-  /^\(after\s+(?:check\/?\s*ask|simplify|split|refactor|declutter)\)[.!]?\s*/i,
-  /^after\s+(?:check\/?\s*ask|simplify|split|refactor|declutter)[,:.]?\s*/i,
+  /^\(after\s+(?:check\/?\s*ask|simplify|split|refactor|declutter|answer|draw|focus)\)[.!]?\s*/i,
+  /^after\s+(?:check\/?\s*ask|simplify|split|refactor|declutter|answer|draw|focus)[,:.]?\s*/i,
 ];
 
 export function isSessionFormatWrapper(text: string | null | undefined): boolean {

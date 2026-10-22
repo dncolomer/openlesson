@@ -33,13 +33,14 @@ function liveText(scene: IleWorkCanvasScene): string[] {
 }
 
 describe("work-canvas command buttons actually mutate the board", () => {
-  it("lists the five live commands and wires sidebar clicks through the runner", () => {
+  it("lists the live commands and wires sidebar clicks through the runner", () => {
     expect(ILE_WORK_CANVAS_COMMANDS.map((command) => command.id)).toEqual([
+      "focus",
       "simplify",
       "split",
-      "check",
+      "answer",
+      "draw",
       "refactor",
-      "declutter",
     ]);
     const canvas = readExcalidrawSurface();
     expect(canvas).toContain("runIleWorkCanvasCommand");
@@ -141,31 +142,28 @@ describe("work-canvas command buttons actually mutate the board", () => {
     expect(unlabeled.notice).toBe("Select text, or a labeled shape, to split.");
   });
 
-  it("declutter separates overlapping boxes and asks when a single mark is selected", () => {
-    const overlapping = convertToExcalidrawElements([
-      { type: "rectangle", x: 0, y: 0, width: 80, height: 40 },
-      { type: "rectangle", x: 10, y: 8, width: 80, height: 40 },
-    ]);
-    const moved = runIleWorkCanvasCommand({
-      action: "declutter",
-      scene: sceneOf(overlapping),
-      selectedElements: overlapping,
+  it("Focus places the harness line on the board without a selection", () => {
+    const board = sceneOf([]);
+    const empty = runIleWorkCanvasCommand({
+      action: "focus",
+      scene: board,
+      selectedElements: [],
     });
-    expect(moved.changed).toBe(true);
-    expect(moved.ask).toBeNull();
-    expect(ileWorkCanvasSceneVisiblyChanged(sceneOf(overlapping), moved.scene)).toBe(true);
+    expect(empty.changed).toBe(false);
+    expect(empty.notice).toBe("The harness has nothing to place yet.");
 
-    const one = overlapping.slice(0, 1);
-    const notice = runIleWorkCanvasCommand({
-      action: "declutter",
-      scene: sceneOf(overlapping),
-      selectedElements: one,
+    const placed = runIleWorkCanvasCommand({
+      action: "focus",
+      scene: board,
+      selectedElements: [],
+      focusText: "Stay with the ray and mark the open end.",
     });
-    expect(notice.changed).toBe(false);
-    expect(notice.notice).toBe("Select two or more overlapping marks to declutter.");
+    expect(placed.changed).toBe(true);
+    expect(liveText(placed.scene).some((line) => line.includes("Stay with the ray"))).toBe(true);
+    expect(placed.parts.some((el) => el.strokeStyle === "dashed")).toBe(true);
   });
 
-  it("Simplify, Check, and Refactor ask XAI, and replies always land on the board", () => {
+  it("Simplify, Answer, Draw, and Refactor ask XAI, and replies always land on the board", () => {
     const text = convertToExcalidrawElements([
       {
         type: "text",
@@ -191,36 +189,39 @@ describe("work-canvas command buttons actually mutate the board", () => {
     });
     expect(ileWorkCanvasSceneVisiblyChanged(board, simplified)).toBe(true);
     expect(liveText(simplified).some((line) => line.includes("weaker"))).toBe(true);
+    expect(simplified.elements.some((el) => el.id === text[0]!.id)).toBe(false);
 
-    const check = runIleWorkCanvasCommand({
-      action: "check",
+    const answer = runIleWorkCanvasCommand({
+      action: "answer",
       scene: board,
       selectedElements: text,
     });
-    expect(check.ask?.kind).toBe("check");
-    expect(check.ask?.prompt.toLowerCase()).toMatch(/what holds and what to fix/);
-    const checked = applyIleWorkCanvasAskReply({
-      kind: "check",
+    expect(answer.ask?.kind).toBe("answer");
+    const answered = applyIleWorkCanvasAskReply({
+      kind: "answer",
       live: board,
       selectedElements: text,
       payload: { text: "The inverse-square claim holds. Name the bodies next." },
     });
-    expect(liveText(checked).some((line) => line.includes("inverse-square"))).toBe(true);
+    expect(liveText(answered).some((line) => line.includes("inverse-square"))).toBe(true);
+
+    const draw = runIleWorkCanvasCommand({
+      action: "draw",
+      scene: board,
+      selectedElements: text,
+    });
+    expect(draw.ask?.kind).toBe("draw");
 
     const refactored = applyIleWorkCanvasAskReply({
       kind: "refactor",
       live: board,
       selectedElements: text,
       payload: {
-        text: "",
-        raw: JSON.stringify({
-          elements: [{ id: text[0]!.id, text: "Gravity falls with distance squared.", x: 40, y: 90 }],
-        }),
+        text: "Gravity falls with distance squared.",
       },
     });
-    const rewritten = refactored.elements.find((el) => el.id === text[0]!.id);
-    expect(String(rewritten?.originalText || rewritten?.text || "")).toContain("falls with distance");
-    expect(rewritten?.x).toBe(40);
+    expect(refactored.elements.some((el) => el.id === text[0]!.id)).toBe(false);
+    expect(liveText(refactored).some((line) => line.includes("falls with distance"))).toBe(true);
 
     const refactorProse = applyIleWorkCanvasAskReply({
       kind: "refactor",
@@ -229,6 +230,7 @@ describe("work-canvas command buttons actually mutate the board", () => {
       payload: { text: "Keep the inverse-square relation, then name the two bodies." },
     });
     expect(liveText(refactorProse).some((line) => line.includes("two bodies"))).toBe(true);
+    expect(refactorProse.elements.some((el) => el.id === text[0]!.id)).toBe(false);
 
     const failed = applyIleWorkCanvasAskReply({
       kind: "refactor",

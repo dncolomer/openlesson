@@ -10,6 +10,7 @@ import {
   applyIleXaiReplyToWorkCanvas,
   applyIleXaiTurnAtCommit,
   applyIleXaiTurnToWorkCanvas,
+  applyIleWorkCanvasAskReply,
   convertToExcalidrawElements,
   createIleWorkCanvasChapterStore,
   ileWorkCanvasFiniteOrigin,
@@ -50,6 +51,11 @@ import {
   ILE_WORK_CANVAS_OVERLAP_GAP,
   ILE_WORK_CANVAS_TEXT_BOX_WIDTH,
   wrapIleWorkCanvasText,
+  ileWorkCanvasHostForCaption,
+  isIleXaiNoteElement,
+  acknowledgeIleWorkCanvasXaiNotes,
+  ILE_XAI_NOTE_PAD_X,
+  ILE_XAI_NOTE_PAD_Y,
   ILE_XAI_LOADING_CUSTOM_DATA_KEY,
   ILE_XAI_LOADING_TEXT,
   applyIleWorkCanvasPositionEdits,
@@ -224,11 +230,11 @@ function sceneWith(id: string, text = id): IleWorkCanvasScene {
 }
 
 describe("TAP Learning Work canvas grid default (shipped)", () => {
-  it("starts with the grid on and zen mode off, and keeps an explicit choice", () => {
+  it("starts with the grid on and zen mode on, and keeps an explicit choice", () => {
     const empty = emptyIleWorkCanvasScene();
     expect(empty.appState.activeTool).toEqual({ type: "text" });
     expect(empty.appState.gridModeEnabled).toBe(true);
-    expect(empty.appState.zenModeEnabled).toBe(false);
+    expect(empty.appState.zenModeEnabled).toBe(true);
     expect(empty.appState.gridSize).toBe(ILE_WORK_CANVAS_DEFAULT_GRID_SIZE);
     expect(empty.appState.currentItemStrokeColor).toBe("#1e1e1e");
     expect(empty.appState.currentItemFontFamily).toBe(ILE_WORK_CANVAS_FONT_FAMILY);
@@ -240,12 +246,12 @@ describe("TAP Learning Work canvas grid default (shipped)", () => {
       files: {},
     });
     expect(restored.appState.gridModeEnabled).toBe(true);
-    expect(restored.appState.zenModeEnabled).toBe(false);
+    expect(restored.appState.zenModeEnabled).toBe(true);
     expect(restored.appState.gridSize).toBe(ILE_WORK_CANVAS_DEFAULT_GRID_SIZE);
 
     const keptOff = withIleWorkCanvasGridAppState({ gridModeEnabled: false, gridSize: 40 });
     expect(keptOff.gridModeEnabled).toBe(false);
-    expect(keptOff.zenModeEnabled).toBe(false);
+    expect(keptOff.zenModeEnabled).toBe(true);
     expect(keptOff.gridSize).toBe(40);
 
     const keptOn = withIleWorkCanvasGridAppState({ gridModeEnabled: true, zenModeEnabled: true });
@@ -731,8 +737,10 @@ describe("TAP Learning Work canvas text wrap (shipped)", () => {
 
     const applied = applyIleXaiTurnToWorkCanvas(null, { text: long, turnId: "t-wrap" });
     const reply = applied.elements.find((el) => el.originalText === long);
+    const replyHost = ileWorkCanvasHostForCaption(applied.elements, long);
     expect(reply?.autoResize).toBe(false);
     expect(reply?.width).toBe(ILE_WORK_CANVAS_TEXT_BOX_WIDTH);
+    expect(replyHost?.strokeStyle).toBe("dashed");
     expect(String(reply?.text || "").split("\n").length).toBeGreaterThan(1);
 
     const narrow = applyIleXaiReplyToWorkCanvas(
@@ -745,6 +753,7 @@ describe("TAP Learning Work canvas text wrap (shipped)", () => {
     );
     const narrowText = narrow.elements.find((el) => el.originalText === "Short note beside the mark.");
     expect(narrowText?.width).toBe(180);
+    expect(ileWorkCanvasHostForCaption(narrow.elements, "Short note beside the mark.")?.x).toBe(80);
     const wide = applyIleXaiReplyToWorkCanvas(
       null,
       JSON.stringify({
@@ -762,6 +771,14 @@ describe("TAP Learning Work canvas text wrap (shipped)", () => {
     });
     expect(shaped.elements.find((el) => el.originalText === "Caption")?.width).toBe(140);
     expect(ileWorkCanvasXaiToolsInstruction()).toContain("textWidth");
+
+    const dashed = applyIleXaiTurnToWorkCanvas(null, { text: "Coach note.", turnId: "dash-1" });
+    const host = ileWorkCanvasHostForCaption(dashed.elements, "Coach note.")!;
+    expect(host.strokeStyle).toBe("dashed");
+    const caption = dashed.elements.find((el) => el.originalText === "Coach note.")!;
+    const viaCaption = acknowledgeIleWorkCanvasXaiNotes(dashed.elements, { [caption.id]: true });
+    expect(viaCaption.changed).toBe(true);
+    expect(viaCaption.elements.find((el) => el.id === host.id)?.strokeStyle).toBe("solid");
   });
 });
 
@@ -1064,10 +1081,11 @@ describe("TAP Learning Work canvas XAI suggested origin (shipped parse+apply)", 
     expect(parsed.text).toBe("Park this beside the heap.");
     expect(parsed.origin).toEqual({ x: 420, y: 180 });
     const placed = applyIleXaiTurnToWorkCanvas(existing, parsed);
-    const reply = placed.elements.find((el) => el.originalText === "Park this beside the heap.");
+    const reply = ileWorkCanvasHostForCaption(placed.elements, "Park this beside the heap.");
     expect(reply?.x).toBe(420);
     expect(reply?.y).toBe(180);
-    const extra = placed.elements.find((el) => el.type === "rectangle");
+    expect(reply?.strokeStyle).toBe("dashed");
+    const extra = placed.elements.find((el) => el.type === "rectangle" && !isIleXaiNoteElement(el));
     expect(extra?.x).toBe(40);
     expect(extra?.y).toBe(200);
 
@@ -1243,8 +1261,8 @@ describe("TAP Learning Work canvas parallel asks (shipped live merge)", () => {
     });
     expect(live.elements.some((el) => (el.originalText || el.text) === "first reply")).toBe(true);
     expect(live.elements.some((el) => (el.originalText || el.text) === "second reply")).toBe(true);
-    expect(live.elements.find((el) => (el.originalText || el.text) === "first reply")?.x).toBe(20);
-    expect(live.elements.find((el) => (el.originalText || el.text) === "second reply")?.x).toBe(640);
+    expect(ileWorkCanvasHostForCaption(live.elements, "first reply")?.x).toBe(20);
+    expect(ileWorkCanvasHostForCaption(live.elements, "second reply")?.x).toBe(640);
 
     const block = { id: "block", x: 0, y: 0, width: 100, height: 40, isDeleted: false };
     const slotA = ileWorkCanvasEmptyNearbyOriginWithReserved({ elements: [block] });
@@ -1873,7 +1891,7 @@ describe("TAP Learning Work canvas live geometry and non-overlapping drops (ship
       files: {},
     };
     const replaced = replaceIleXaiLoadingPlaceholder(scene, "load-wide", { text: long });
-    const reply = replaced.elements.find((el) => el.originalText === long);
+    const reply = ileWorkCanvasHostForCaption(replaced.elements, long);
     expect(reply).toBeTruthy();
     expect(reply!.x !== origin.x || reply!.y !== origin.y).toBe(true);
     expect(replaced.elements.some((el) => el.id === loading.id)).toBe(false);
@@ -1891,7 +1909,7 @@ describe("TAP Learning Work canvas live geometry and non-overlapping drops (ship
       { elements: [obstacle], appState: {}, files: {} },
       { text: "sits in the open", origin: { x: 4000, y: 4200 }, turnId: "free-origin" },
     );
-    const freeEl = free.elements.find((el) => el.originalText === "sits in the open")!;
+    const freeEl = ileWorkCanvasHostForCaption(free.elements, "sits in the open")!;
     expect(freeEl.x).toBe(4000);
     expect(freeEl.y).toBe(4200);
     expect(free.elements.find((el) => el.id === obstacle.id)?.x).toBe(obstacle.x);
@@ -1905,8 +1923,10 @@ describe("TAP Learning Work canvas live geometry and non-overlapping drops (ship
         turnId: "hit-origin",
       },
     );
-    const hitText = colliding.elements.find((el) => el.originalText === "lands on the mark")!;
-    const hitRect = colliding.elements.find((el) => el.type === "rectangle" && el.id !== obstacle.id)!;
+    const hitText = ileWorkCanvasHostForCaption(colliding.elements, "lands on the mark")!;
+    const hitRect = colliding.elements.find(
+      (el) => el.type === "rectangle" && el.id !== obstacle.id && !isIleXaiNoteElement(el),
+    )!;
     expect(hitText.x - hitRect.x).toBe(obstacle.x - obstacle.x);
     expect(hitRect.y - hitText.y).toBe(140);
     expect(colliding.elements.find((el) => el.id === obstacle.id)?.x).toBe(obstacle.x);
@@ -2016,7 +2036,7 @@ describe("TAP Learning Work canvas live geometry and non-overlapping drops (ship
     const origin = { x: 900, y: 700 };
     const payload = { text: "reply after the draw", origin, turnId: "inflight" };
     const naive = applyIleXaiTurnToWorkCanvas(snapshot, payload);
-    const naiveReply = naive.elements.find((el) => el.originalText === "reply after the draw")!;
+    const naiveReply = ileWorkCanvasHostForCaption(naive.elements, "reply after the draw")!;
     expect(naiveReply.x).toBe(origin.x);
     expect(naiveReply.y).toBe(origin.y);
     const blocker = convertToExcalidrawElements([
@@ -2070,7 +2090,7 @@ describe("TAP Learning Work canvas live geometry and non-overlapping drops (ship
       payload,
     });
     expect(cold.scene.elements.some((el) => el.id === blocker.id)).toBe(false);
-    expect(cold.scene.elements.find((el) => el.originalText === "reply after the draw")?.x).toBe(origin.x);
+    expect(ileWorkCanvasHostForCaption(cold.scene.elements, "reply after the draw")?.x).toBe(origin.x);
   });
 
   it("tucks a wide reply under the cluster without selecting the new marks", () => {
@@ -2099,7 +2119,7 @@ describe("TAP Learning Work canvas live geometry and non-overlapping drops (ship
       text: "Stay with the cluster.",
       origin: { x: obstacle.x, y: obstacle.y },
     });
-    const reply = settled.elements.find((el) => el.originalText === "Stay with the cluster.")!;
+    const reply = ileWorkCanvasHostForCaption(settled.elements, "Stay with the cluster.")!;
     expect(reply.x).toBeLessThan(obstacle.x + obstacle.width + ILE_XAI_LOADING_GAP);
     expect(newMarksOverlapExisting([reply], [obstacle])).toBe(false);
     expect(ileWorkCanvasSelectionIds(settled.elements.filter((el) => el.id === reply.id))).toEqual({
@@ -2111,7 +2131,7 @@ describe("TAP Learning Work canvas live geometry and non-overlapping drops (ship
     const canvas = read("components/ExcalidrawCanvas.tsx");
     expect(canvas).not.toContain("ileWorkCanvasSelectionIds");
     expect(canvas).toContain("selectedElementIds: {}");
-    expect(canvas).toContain("scrollToContent(added, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS)");
+    expect(canvas).toContain("acknowledgeIleWorkCanvasXaiNotes");
     expect(ILE_WORK_CANVAS_TURN_ORIGIN_INSTRUCTION).toMatch(/under nearby marks/i);
   });
 
@@ -2164,8 +2184,10 @@ describe("TAP Learning Work canvas live geometry and non-overlapping drops (ship
     expect(Math.max(...tops) - Math.min(...tops)).toBeGreaterThan(0);
     for (const label of added.filter(bound)) {
       const host = added.find((el) => el.id === label.containerId)!;
-      expect(label.x - host.x).toBe(8);
-      expect(label.y - host.y).toBe(8);
+      const padX = isIleXaiNoteElement(host) ? ILE_XAI_NOTE_PAD_X : 8;
+      const padY = isIleXaiNoteElement(host) ? ILE_XAI_NOTE_PAD_Y : 8;
+      expect(label.x - host.x).toBe(padX);
+      expect(label.y - host.y).toBe(padY);
       expect(positiveAreaHit(canvasRect(label)!, canvasRect(host)!)).toBe(true);
       for (const other of solids) {
         if (other.id === host.id) continue;
@@ -2330,18 +2352,18 @@ describe("TAP Learning Work canvas selection commands (shipped)", () => {
     expect(keptAfterCompress.y).toBe(kept.y);
     expect(elementWords(keptAfterCompress)).toBe("keep this note");
 
-    const refactored = applyIleWorkCanvasRefactor(
-      current,
-      [alpha],
-      JSON.stringify({
-        elements: [{ id: alpha.id, text: "Restated last-resort claim", x: alpha.x + 48, y: alpha.y + 36 }],
-      }),
+    const refactored = applyIleWorkCanvasAskReply({
+      kind: "refactor",
+      live: current,
+      selectedElements: [alpha],
+      payload: { text: "Restated last-resort claim" },
+    });
+    expect(refactored.elements.some((el) => el.id === alpha.id)).toBe(false);
+    const movedAlpha = ileWorkCanvasHostForCaption(refactored.elements, "Restated last-resort claim")!;
+    expect(elementWords(refactored.elements.find((el) => el.originalText === "Restated last-resort claim"))).toBe(
+      "Restated last-resort claim",
     );
-    const movedAlpha = refactored.elements.find((el) => el.id === alpha.id)!;
-    expect(elementWords(movedAlpha)).toBe("Restated last-resort claim");
-    expect(movedAlpha.x).toBe(alpha.x + 48);
-    expect(movedAlpha.y).toBe(alpha.y + 36);
-    expect(movedAlpha.type).toBe(alpha.type);
+    expect(movedAlpha.strokeStyle).toBe("dashed");
     const untouchedBeta = refactored.elements.find((el) => el.id === beta.id)!;
     const untouchedKeep = refactored.elements.find((el) => el.id === kept.id)!;
     expect(untouchedBeta.x).toBe(beta.x);
@@ -2375,15 +2397,20 @@ describe("TAP Learning Work canvas selection commands (shipped)", () => {
     expect(layoutAsked.raw).toBe(layoutAssistant);
     expect(layoutAsked.text).not.toMatch(/could not answer/i);
     expect(layoutAsked.raw).not.toMatch(/could not answer/i);
-    const fromSessionChat = applyIleWorkCanvasRefactor(
-      current,
-      [alpha],
-      ileWorkCanvasLayoutReply(layoutAsked.raw, layoutAsked.elements),
+    const fromSessionChat = applyIleWorkCanvasAskReply({
+      kind: "refactor",
+      live: current,
+      selectedElements: [alpha],
+      payload: {
+        text: "Restated from the session-chat body",
+        raw: layoutAsked.raw,
+        elements: layoutAsked.elements,
+      },
+    });
+    expect(fromSessionChat.elements.some((el) => el.id === alpha.id)).toBe(false);
+    expect(elementWords(fromSessionChat.elements.find((el) => el.originalText === "Restated from the session-chat body"))).toBe(
+      "Restated from the session-chat body",
     );
-    const sessionAlpha = fromSessionChat.elements.find((el) => el.id === alpha.id)!;
-    expect(elementWords(sessionAlpha)).toBe("Restated from the session-chat body");
-    expect(sessionAlpha.x).toBe(alpha.x + 64);
-    expect(sessionAlpha.y).toBe(alpha.y + 28);
     expect(fromSessionChat.elements.find((el) => el.id === kept.id)?.x).toBe(kept.x);
     expect(elementWords(fromSessionChat.elements.find((el) => el.id === beta.id))).toBe(
       elementWords(beta),
@@ -2577,7 +2604,7 @@ describe("TAP Learning Work canvas selection commands (shipped)", () => {
     expect(read("lib/learn-work-canvas.ts")).toContain('kind === "selective-compress"');
     expect(read("lib/learn-work-canvas.ts")).toContain('kind === "declutter" || kind === "clear-overlaps"');
     expect(read("lib/learn-work-canvas.ts")).toContain("runIleWorkCanvasClearOverlaps");
-    expect(read("lib/learn-work-canvas.ts")).toContain("if (!cleared.needsModel && cleared.moved)");
+    expect(read("lib/learn-work-canvas.ts")).toContain("if (result.needsModel && input.ask)");
     expect(read("lib/learn-work-canvas.ts")).toContain("applyIleWorkCanvasSuggestInsight");
     expect(canvas).not.toContain("buildIleCanvasCraftInsightEvaluateRequest");
     expect(canvas).not.toContain("ILE_TURN_INSIGHT_CREATE_PATH");
@@ -2595,7 +2622,7 @@ describe("TAP Learning Work canvas selection commands (shipped)", () => {
       canvas.indexOf("const reply = await ask"),
     );
     expect(applyBody).toContain("ileWorkCanvasAddedElementIds");
-    expect(applyBody).toContain("scrollToContent");
+    expect(applyBody).not.toContain("scrollToContent");
     expect(applyBody).not.toContain("ileWorkCanvasNoteNewMarks");
     const changeStart = canvas.indexOf("const handleChange = useCallback");
     const changeBody = canvas.slice(changeStart, canvas.indexOf("debouncedExportPNG();", changeStart));
@@ -2632,7 +2659,7 @@ describe("TAP Learning Work canvas selection commands (shipped)", () => {
         `clearAskCalls=${ask.calls.length}`,
         `gappedAskCalls=${gappedAsk.calls.length}`,
         `modelAsk=${modelAsk.calls.length}`,
-        "commands=Simplify Split Check/ask Refactor Declutter",
+        "commands=Focus Simplify Split Answer Draw Refactor",
       ].join("\n") + "\n",
     );
   });

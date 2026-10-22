@@ -26,6 +26,8 @@ import {
 } from "@/lib/tap-work-canvas";
 import {
   convertToExcalidrawElements,
+  ileWorkCanvasHostForCaption,
+  isIleXaiNoteElement,
   ILE_WORK_CANVAS_TURN_ORIGIN_INSTRUCTION,
   ILE_XAI_LOADING_BOX_HEIGHT,
   ILE_XAI_LOADING_BOX_WIDTH,
@@ -119,7 +121,7 @@ describe("TAP Work canvas apply / pull (shipped)", () => {
     const empty = emptyTapWorkCanvasScene();
     expect(empty.elements).toHaveLength(0);
     expect(empty.appState.gridModeEnabled).toBe(true);
-    expect(empty.appState.zenModeEnabled).toBe(false);
+    expect(empty.appState.zenModeEnabled).toBe(true);
 
     const applied = applyTapHeliosReplyToWorkCanvas(
       empty,
@@ -374,9 +376,10 @@ describe("TAP Work canvas XAI origin + board ask (shipped)", () => {
         elements: [{ type: "ellipse", x: 12, y: 40, width: 60, height: 40 }],
       }),
     );
-    const reply = placed.elements.find((el) => (el.originalText || el.text) === "Name the parent index.");
+    const reply = ileWorkCanvasHostForCaption(placed.elements, "Name the parent index.");
     expect(reply?.x).toBe(310);
     expect(reply?.y).toBe(90);
+    expect(reply?.strokeStyle).toBe("dashed");
     const extra = placed.elements.find((el) => el.type === "ellipse");
     expect(extra?.x).toBe(12);
     expect(extra?.y).toBe(40);
@@ -481,10 +484,11 @@ describe("TAP Work canvas non-overlap and session geometry (shipped)", () => {
     expect(kept.height).toBe(existing.height);
     const added = placed.replaced.elements.filter((el) => el.id !== existing.id);
     expect(newMarksOverlapExisting(added, [existing])).toBe(false);
-    const addedText = added.find((el) => (el.originalText || el.text) === "Name the parent index.")!;
-    const addedRect = added.find((el) => el.type === "rectangle")!;
-    expect(addedText.x - addedRect.x).toBe(placed.loading.x - 30);
-    expect(addedText.y - addedRect.y).toBe(placed.loading.y - 30);
+    const addedText = ileWorkCanvasHostForCaption(added, "Name the parent index.")!;
+    const addedRect = added.find((el) => el.type === "rectangle" && !isIleXaiNoteElement(el))!;
+    expect(addedText.strokeStyle).toBe("dashed");
+    expect(addedRect.width).toBe(140);
+    expect(addedRect.height).toBe(90);
 
     const blocker = convertToExcalidrawElements([
       { type: "rectangle", x: 120, y: 80, width: 80, height: 50 },
@@ -498,7 +502,7 @@ describe("TAP Work canvas non-overlap and session geometry (shipped)", () => {
       null,
       "tap-hit",
     );
-    const moved = collided.elements.find((el) => el.originalText === "Walk the sift.")!;
+    const moved = ileWorkCanvasHostForCaption(collided.elements, "Walk the sift.")!;
     expect(moved.x !== blocker.x || moved.y !== blocker.y).toBe(true);
     expect(collided.elements.find((el) => el.id === blocker.id)?.x).toBe(blocker.x);
     expect(newMarksOverlapExisting([moved], [blocker])).toBe(false);
@@ -537,7 +541,7 @@ describe("TAP Work canvas non-overlap and session geometry (shipped)", () => {
       null,
       "tap-free",
     );
-    const stayed = open.elements.find((el) => el.originalText === "Free corner.")!;
+    const stayed = ileWorkCanvasHostForCaption(open.elements, "Free corner.")!;
     expect(stayed.x).toBe(3600);
     expect(stayed.y).toBe(2800);
 
@@ -567,7 +571,7 @@ describe("TAP Work canvas non-overlap and session geometry (shipped)", () => {
       "tap-tall",
       { text: tall, origin: { x: 80, y: 40 } },
     );
-    const tallReply = tallPlaced.replaced.elements.find((el) => el.originalText === tall)!;
+    const tallReply = ileWorkCanvasHostForCaption(tallPlaced.replaced.elements, tall)!;
     expect(tallPlaced.replaced.elements.some((el) => el.customData?.[ILE_XAI_LOADING_CUSTOM_DATA_KEY])).toBe(
       false,
     );

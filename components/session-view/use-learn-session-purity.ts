@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { practiceVoiceChallengeLocalSkipAllowed } from "@/lib/practice-voice-challenge";
 import {
   TAP_SESSION_PURITY_MAX,
   TAP_SILENCE_AUTO_STASH_MS,
@@ -11,6 +12,14 @@ import {
   shouldEvaluateSessionPurity,
   shouldPenalizeEmptyBarSilence,
 } from "@/lib/tap-session-purity";
+
+function learnPurityDisabledOnLocalhost(): boolean {
+  if (typeof window === "undefined") return false;
+  return practiceVoiceChallengeLocalSkipAllowed({
+    nodeEnv: process.env.NODE_ENV,
+    hostname: window.location.hostname,
+  });
+}
 
 export function useIleSessionPurity(input: {
   armed: boolean;
@@ -23,6 +32,7 @@ export function useIleSessionPurity(input: {
 }) {
   const [sessionPurity, setSessionPurity] = useState(TAP_SESSION_PURITY_MAX);
   const [sessionEndedImpure, setSessionEndedImpure] = useState(false);
+  const [localSkip] = useState(learnPurityDisabledOnLocalhost);
   const lastSpeechActivityAtRef = useRef(Date.now());
   const autoStashInFlightRef = useRef(false);
   const isSendingRef = useRef(false);
@@ -71,7 +81,7 @@ export function useIleSessionPurity(input: {
   }, [input.formingText]);
 
   useEffect(() => {
-    if (!input.armed || sessionEndedImpure) {
+    if (!input.armed || sessionEndedImpure || localSkip) {
       autoStashInFlightRef.current = false;
       return;
     }
@@ -123,7 +133,14 @@ export function useIleSessionPurity(input: {
     }, 100);
 
     return () => window.clearInterval(tick);
-  }, [applyPurityHit, canvasLoadingRef, input.armed, sessionEndedImpure, xaiReplyWaitRef]);
+  }, [
+    applyPurityHit,
+    canvasLoadingRef,
+    input.armed,
+    localSkip,
+    sessionEndedImpure,
+    xaiReplyWaitRef,
+  ]);
 
   return { sessionPurity, sessionEndedImpure, applyPurityHit };
 }

@@ -240,6 +240,27 @@ describe("TAP client wires purity UX", () => {
     expect(impureRoute).toContain("flagIleSessionProofOfWorkImpure");
     expect(impureRoute).toContain("requireSessionWorkspaceProofOfWorkAccess");
   });
+
+  it("Learn purity is off on a development loopback host and stays on in production and Verify", () => {
+    const hook = fs.readFileSync(
+      path.join(ROOT, "components/session-view/use-learn-session-purity.ts"),
+      "utf8",
+    );
+    expect(hook).toContain("practiceVoiceChallengeLocalSkipAllowed");
+    expect(hook).toContain("process.env.NODE_ENV");
+    expect(hook).toContain("window.location.hostname");
+    expect(hook).toContain("localSkip");
+    const tickGuard = hook.indexOf("if (!input.armed || sessionEndedImpure || localSkip)");
+    const tickEval = hook.indexOf("shouldEvaluateSessionPurity({");
+    expect(tickGuard).toBeGreaterThan(-1);
+    expect(tickEval).toBeGreaterThan(tickGuard);
+    const tap = fs.readFileSync(
+      path.join(ROOT, "components/TapScoreClient.tsx"),
+      "utf8",
+    );
+    expect(tap).not.toContain("practiceVoiceChallengeLocalSkipAllowed");
+    expect(tap).not.toContain("learnPurityDisabledOnLocalhost");
+  });
 });
 
 describe("TAP live clock", () => {

@@ -115,7 +115,7 @@ async function deleteWorkspaceCascade(
   await client.query(`DELETE FROM public.custom_verification_models WHERE workspace_id = $1`, [
     workspaceId,
   ]);
-  await client.query(`DELETE FROM public.knowledge_config_snapshots WHERE workspace_id = $1`, [
+  await client.query(`DELETE FROM public.workspace_flow_embeddings WHERE workspace_id = $1`, [
     workspaceId,
   ]);
   await client.query(`DELETE FROM public.workspace_proof_of_work WHERE workspace_id = $1`, [

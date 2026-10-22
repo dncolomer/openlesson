@@ -1,7 +1,7 @@
 import { readWorkspaceViewSurface } from "@/tests/helpers/surface-source";
 /**
  * UX grounding: Explore/Drill flavors → dialogue/exercise builders;
- * Simulation shares the same pure builders; LWM Snapshot is conscious-trigger only;
+ * Simulation shares the same pure builders; scores are never auto-run on session end;
  * scores stay PoW-only / non-fluff.
  */
 import { describe, expect, it } from "vitest";
@@ -535,32 +535,28 @@ describe("Simulation shares live practice builders", () => {
   });
 });
 
-describe("LWM Snapshot conscious trigger only", () => {
-  it("full ontology matches compact: no auto snapshot on TAP/TAP Learning end", () => {
-    expect(WORKSPACE_ONTOLOGY).toMatch(/conscious trigger|not auto-run|never auto-run/i);
+describe("session complete does not auto-score", () => {
+  it("full ontology matches compact: scores never auto-run on session end", () => {
+    expect(WORKSPACE_ONTOLOGY).toMatch(/never auto-run/i);
     expect(WORKSPACE_ONTOLOGY).not.toMatch(
       /Closing\/ending TAP or TAP Learning always generates a snapshot/i,
     );
-    expect(WORKSPACE_ONTOLOGY_COMPACT).toMatch(/not auto-run when a session ends/i);
+    expect(WORKSPACE_ONTOLOGY_COMPACT).toMatch(/never auto-run when a session ends/i);
 
-    // Session complete must not invoke score builders
     const tapComplete = read("app/api/workspace-tap-score/complete/route.ts");
     expect(tapComplete).not.toContain("buildVerticalScoreInstructions");
     expect(tapComplete).not.toContain("runVerticalScore");
     expect(tapComplete).toContain("uploadWorkspaceProofOfWork");
 
-    const tapPerf = read("app/api/workspace-tap-score/performance/route.ts");
-    expect(tapPerf).toMatch(/not invoked automatically|not auto/i);
-    expect(tapPerf).toContain("runVerticalScore");
-
-    const ilePerf = read("app/api/workspace-learn/performance/route.ts");
-    expect(ilePerf).toMatch(/not invoked automatically|not auto/i);
+    expect(existsSync(join(ROOT, "app/api/workspace-tap-score/performance/route.ts"))).toBe(
+      false,
+    );
+    expect(existsSync(join(ROOT, "app/api/workspace-learn/performance/route.ts"))).toBe(false);
 
     writeEvidence(
       "snapshot-trigger-contract.txt",
       [
-        "ontologyConscious=" +
-          /conscious trigger|never auto-run/i.test(WORKSPACE_ONTOLOGY),
+        "ontologyNeverAuto=" + /never auto-run/i.test(WORKSPACE_ONTOLOGY),
         "noAlwaysOnEnd=" +
           String(
             !/Closing\/ending TAP or TAP Learning always generates a snapshot/i.test(
@@ -569,13 +565,13 @@ describe("LWM Snapshot conscious trigger only", () => {
           ),
         "completeNoScore=" +
           String(!tapComplete.includes("runVerticalScore")),
-        "perfOptional=" + /not invoked automatically|not auto/i.test(tapPerf),
+        "perfRoutesGone=true",
       ].join("\n"),
     );
   });
 });
 
-describe("LWM PoW-only scoring (no fluff)", () => {
+describe("PoW-only scoring (no fluff)", () => {
   it("score stack requires PoW evidence including text/traces; remediation guardrails", () => {
     const instructions = buildVerticalScoreInstructions(
       "verification",

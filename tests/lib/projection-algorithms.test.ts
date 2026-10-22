@@ -21,7 +21,6 @@ import {
   projectionFrameId3d,
   type ProjectionAlgorithmId,
 } from "@/lib/knowledge-config";
-import { projectTrajectory2D } from "@/lib/pow-api/knowledge-config-store";
 import type { KnowledgeConfigTrajectoryPoint } from "@/lib/knowledge-config";
 
 /** Build a dim-d vector with a few non-zero entries. */
@@ -292,13 +291,13 @@ describe("projectTrajectoryAndRegions joint layout", () => {
   });
 });
 
-describe("projectTrajectory2D store entry (algorithm-aware)", () => {
+describe("projectTrajectoryPoints2D (algorithm-aware)", () => {
   it("accepts algorithm id and returns finite coords for all algos", () => {
     const points: KnowledgeConfigTrajectoryPoint[] = [
       {
         t: "t0",
         as_of_ms: 0,
-        vector: vec(64, { 0: 0.1, 3: -0.2 }),
+        vector: vec(96, { 0: 0.1, 3: -0.2 }),
         confidence: 0.4,
         trigger: "score",
         pow_event_count: 2,
@@ -306,7 +305,7 @@ describe("projectTrajectory2D store entry (algorithm-aware)", () => {
       {
         t: "t1",
         as_of_ms: 1000,
-        vector: vec(64, { 0: 0.5, 3: 0.1, 10: 0.3 }),
+        vector: vec(96, { 0: 0.5, 3: 0.1, 10: 0.3 }),
         confidence: 0.6,
         trigger: "score",
         pow_event_count: 4,
@@ -314,7 +313,7 @@ describe("projectTrajectory2D store entry (algorithm-aware)", () => {
       {
         t: "t2",
         as_of_ms: 2000,
-        vector: vec(64, { 1: 0.8, 5: -0.4 }),
+        vector: vec(96, { 1: 0.8, 5: -0.4 }),
         confidence: 0.8,
         trigger: "score",
         pow_event_count: 6,
@@ -322,7 +321,7 @@ describe("projectTrajectory2D store entry (algorithm-aware)", () => {
     ];
 
     for (const algorithm of PROJECTION_ALGORITHM_IDS) {
-      const coords = projectTrajectory2D(points, algorithm);
+      const coords = projectTrajectoryPoints2D(points, algorithm);
       expect(coords).toHaveLength(3);
       for (const c of coords) {
         expect(Number.isFinite(c.x)).toBe(true);

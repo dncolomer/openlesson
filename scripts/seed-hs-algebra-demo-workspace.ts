@@ -2,7 +2,7 @@
  * Seed the Highschool Algebra demo workspace with:
  *  - authentic HS algebra copy + blocks
  *  - multi-guest PoW rows (tool + screen, algebra tools)
- *  - knowledge_config_snapshots (real encoder vectors)
+ *  - workspace_flow_embeddings (flowcfg-v1-d96 vectors)
  *  - exactly 2 synthetic knowledge regions (foundations + advanced procedures)
  *
  * SAFETY: default target is staging. Production only when explicitly requested:
@@ -35,9 +35,9 @@ import {
   type AlgebraGuestSubject,
 } from "../lib/demo/hs-algebra-demo-workspace";
 import {
-  KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
-  KNOWLEDGE_CONFIG_DIM,
-} from "../lib/knowledge-config";
+  FLOW_EMBEDDING_DIM,
+  FLOW_EMBEDDING_MODEL_ID,
+} from "../lib/flow-embedding";
 import {
   parseSaasTechDemoSeedTarget,
   type SaasTechDemoTarget,
@@ -110,7 +110,7 @@ async function deleteWorkspaceCascade(
   await client.query(`DELETE FROM public.custom_verification_models WHERE workspace_id = $1`, [
     workspaceId,
   ]);
-  await client.query(`DELETE FROM public.knowledge_config_snapshots WHERE workspace_id = $1`, [
+  await client.query(`DELETE FROM public.workspace_flow_embeddings WHERE workspace_id = $1`, [
     workspaceId,
   ]);
   await client.query(`DELETE FROM public.workspace_proof_of_work WHERE workspace_id = $1`, [
@@ -368,29 +368,36 @@ async function main() {
     for (const enc of encodedGuests) {
       const guestId = guestByKey.get(enc.subject.key)!;
       await client.query(
-        `INSERT INTO public.knowledge_config_snapshots (
-           workspace_id, subject_guest_user_id, subject_user_id,
-           embedding_model_id, dim, vector, as_of_ms, pow_event_count,
-           confidence, trigger
+        `INSERT INTO public.workspace_flow_embeddings (
+           id, workspace_id, flow_kind, flow_id, run_id, identity, source,
+           embedding_model_id, dim, vector, raw, created_at
          ) VALUES (
-           $1, $2, NULL,
-           $3, $4, $5::jsonb, $6, $7,
-           $8, 'recompute'
+           $1, $2, 'verify', NULL, NULL, $3, 'demo',
+           $4, $5, $6::jsonb, $7::jsonb, to_timestamp($8 / 1000.0)
          )`,
         [
+          randomUUID(),
           workspaceId,
           guestId,
-          KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
-          KNOWLEDGE_CONFIG_DIM,
+          FLOW_EMBEDDING_MODEL_ID,
+          FLOW_EMBEDDING_DIM,
           JSON.stringify(enc.vector),
+          JSON.stringify({
+            flowKind: "verify",
+            genModel: {
+              chapterTitle: enc.subject.displayName,
+              rootId: "root",
+              branches: [],
+            },
+            projectedPolicy: null,
+            pow: [],
+          }),
           enc.embedding.as_of_ms,
-          enc.embedding.pow_event_count,
-          enc.embedding.confidence,
         ],
       );
       snapCount += 1;
     }
-    console.log(`[seed-hs-algebra-demo] knowledge_config_snapshots=${snapCount}`);
+    console.log(`[seed-hs-algebra-demo] workspace_flow_embeddings=${snapCount}`);
 
     const regionRows = HS_ALGEBRA_REGIONS.map((def) => ({
       def,
@@ -451,7 +458,7 @@ async function main() {
           snapshots: snapCount,
           region_count: regionRows.length,
           regions: regionRows.map((r) => r.model.name),
-          embedding_model_id: KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
+          embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
           pin_hint:
             "Dashboard pin is client localStorage (openlesson.dashboard.pinnedWorkspaces.v1:<userId>); use workspace_id above.",
         },

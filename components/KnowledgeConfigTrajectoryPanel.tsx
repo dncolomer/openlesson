@@ -16,7 +16,7 @@ interface KnowledgeConfigTrajectoryPanelProps {
   isOwner?: boolean;
   ayclToken?: string;
   /**
-   * Self-view mode: force LWM + Embeddings to the logged-in user only —
+   * Self-view mode: force Embeddings to the logged-in user only —
    * no interactive subject picker even when isOwner is true.
    */
   lockSubjectToSelf?: boolean;

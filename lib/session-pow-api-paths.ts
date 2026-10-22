@@ -6,7 +6,6 @@ export const TAP_POW_API_PATHS = {
 export const ILE_POW_API_PATHS = {
   idle: "/api/workspace-learn/idle",
   speech: "/api/workspace-learn/speech",
-  performance: "/api/workspace-learn/performance",
 } as const;
 
 export interface SessionPowContext {

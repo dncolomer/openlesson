@@ -13,7 +13,6 @@ const SURFACES = [
   "lib/knowledge-config/custom-verification-model.ts",
   "lib/pow-api/custom-verification-model-store.ts",
   "app/api/workspace/custom-knowledge-regions/route.ts",
-  "app/api/v3/snapshot/workspaces/[id]/custom-knowledge-regions/route.ts",
   "components/CustomVerificationModelsPanel.tsx",
   "components/KnowledgeConfigTrajectoryPanel.tsx",
   "lib/sales/privacy-data-slide.ts",
@@ -81,7 +80,7 @@ describe("custom verification model surfaces", () => {
     expect(brain).toContain("projectTrajectoryAndRegions");
     expect(brain).toContain("regionOverlays");
     expect(brain).toContain("data-projection-algorithm-select");
-    expect(brain).toContain('action: "knowledge_distance"');
+    expect(brain).toContain("flowEmbeddingDistanceToRegion");
     expect(brain).toContain("data-knowledge-distance");
     expect(brain).toContain("data-region-overlay-distances");
     expect(brain).toContain("showModels");
@@ -129,13 +128,12 @@ describe("custom verification model surfaces", () => {
     expect(store).toContain("fileIds");
     expect(store).toContain("callXaiResponsesWithFiles");
 
-    const evalApi = read("app/api/v3/snapshot/workspaces/[id]/custom-knowledge-regions/route.ts");
-    expect(evalApi).toContain("createCustomVerificationModelFromSubjects");
-    expect(evalApi).toContain("evalSubjectAgainstCustomVerificationModel");
-
-    const kdApi = read("app/api/v3/snapshot/workspaces/[id]/knowledge-distance/route.ts");
-    expect(kdApi).toContain("computeKnowledgeDistanceForSubject");
-    expect(kdApi).not.toMatch(/from ["']@\/lib\/pow-api\/run-vertical-score["']/);
+    expect(existsSync(join(ROOT, "app/api/v3/snapshot/workspaces/[id]/custom-knowledge-regions/route.ts"))).toBe(
+      false,
+    );
+    expect(existsSync(join(ROOT, "app/api/v3/snapshot/workspaces/[id]/knowledge-distance/route.ts"))).toBe(
+      false,
+    );
   });
 
   it("privacy slide uses custom verification model language", () => {

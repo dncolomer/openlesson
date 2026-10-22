@@ -4,10 +4,6 @@ import {
   type InterruptionInterventionType,
   type ProofOfWorkApiEndpoint,
 } from "./predictive-interruption-types";
-import {
-  learningWorldModelForTim,
-  type LearningWorldModelV0,
-} from "@/lib/prompt-kernel/world-model";
 
 /** Minimal context shape for TIM features (avoids circular imports with predictive-interruption). */
 export interface TimFeatureSource {
@@ -23,7 +19,6 @@ export interface TimFeatureSource {
   recent_pow_manifest?: string | null;
   idle_duration_ms?: number | null;
   speech_transcript?: string | null;
-  learning_world_model?: LearningWorldModelV0 | null;
 }
 
 export const TIM_FEATURE_SCHEMA_VERSION = 1 as const;
@@ -46,17 +41,6 @@ export interface TimFeatureEnvelopeV1 {
     recent_manifest?: string | null;
     idle_duration_ms?: number | null;
     speech_transcript?: string | null;
-  };
-  learning_world_model?: {
-    inferred_goal?: string | null;
-    evidence_appetite?: { want_more: string[]; saturated: string[] };
-    scores_snapshot?: {
-      verification_score?: number | null;
-      augmentation_score?: number | null;
-      optimization_score?: number | null;
-      ghc_score?: number | null;
-    };
-    temporal_patterns?: Record<string, unknown> | null;
   };
   performance_summary?: {
     vertical?: string;
@@ -99,17 +83,11 @@ function summarizeReportForTim(
 }
 
 /**
- * Build a versioned TIM feature envelope from interruption context + optional learning world model.
- * This is the only input a TimProvider needs — portable to a future external TIM service.
+ * Build a versioned TIM feature envelope from interruption context.
  */
 export function buildTimFeatureEnvelope(
   context: TimFeatureSource,
-  worldModel?: LearningWorldModelV0 | null,
 ): TimFeatureEnvelopeV1 {
-  const fromContextModel = context.learning_world_model ?? null;
-  const model = worldModel ?? fromContextModel;
-  const wm = learningWorldModelForTim(model);
-
   const metadata = context.artifact_metadata;
   const tapSessionId =
     metadata && typeof metadata.tap_session_id === "string" ? metadata.tap_session_id : null;
@@ -139,7 +117,6 @@ export function buildTimFeatureEnvelope(
       idle_duration_ms: context.idle_duration_ms ?? null,
       speech_transcript: context.speech_transcript ?? null,
     },
-    learning_world_model: wm,
     performance_summary: summarizeReportForTim(context.report),
     policy: {
       allowed_intervention_types: DEFAULT_TIM_INTERVENTION_TYPES,

@@ -63,11 +63,8 @@ describe("API subject unique IDs (no subject=me)", () => {
 
   it("eval routes and docs do not prescribe subject=me self addressing", () => {
     const routes = [
-      "app/api/v3/snapshot/workspaces/[id]/knowledge-distance/route.ts",
-      "app/api/v3/snapshot/workspaces/[id]/knowledge-config/route.ts",
-      "app/api/v3/snapshot/workspaces/[id]/world-model/route.ts",
-      "app/api/v3/snapshot/workspaces/[id]/snapshot-history/route.ts",
-      "app/api/workspace/snapshot-history/route.ts",
+      "app/api/workspace/custom-knowledge-regions/route.ts",
+      "app/api/workspace/flow-embeddings/route.ts",
       "components/WorkspacePerformancePanel.tsx",
     ];
     for (const rel of routes) {
@@ -84,9 +81,8 @@ describe("API subject unique IDs (no subject=me)", () => {
     expect(docs).not.toMatch(/\?subject=me/);
     expect(docs).toContain("start_session");
 
-    // Snapshot subject addressing lives in LWM panel (Eval tab removed).
     const lwm = readKnowledgePanelSurface();
-    expect(lwm).toMatch(/params\.set\("user_id"/);
     expect(lwm).not.toMatch(/params\.set\("subject", "me"\)/);
+    expect(lwm).not.toMatch(/subject:\s*["']me["']/);
   });
 });

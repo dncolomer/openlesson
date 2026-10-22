@@ -186,9 +186,7 @@ describe("workspace access policy", () => {
     expect(productAuth).toContain("assertWorkspacePolicy");
     expect(productAuth).toContain("workspaceOwnerId");
 
-    const perf = read("app/api/workspace-learn/performance/route.ts");
-    expect(perf).toContain("requireSessionWorkspaceProofOfWorkAccess");
-    expect(perf).not.toMatch(/createClient\(\)[\s\S]*getUser\(\)[\s\S]*from\("workspaces"\)/);
+    expect(existsSync(join(ROOT, "app/api/workspace-learn/performance/route.ts"))).toBe(false);
   });
 
   it("AYCL token is aycl:{purchaseId} and never scores or lists as the owner User", () => {
@@ -261,25 +259,9 @@ describe("workspace access policy", () => {
     expect(policySrc).not.toMatch(/if\s*\(\s*input\.ayclAccess\s*\)\s*return\s*true/);
     expect(policySrc).not.toContain("ayclAccess?:");
 
-    const report = read("app/api/workspace/performance-report/route.ts");
-    expect(report).toContain("requireProductWorkspaceEvalAuth");
-    expect(report).not.toContain("resolveAyclAccess");
-    expect(report).not.toContain("actingUser");
-    expect(report).not.toMatch(/isWorkspaceOwner\s*=\s*[^;]*ayclAccess/);
-    expect(report).toContain("const isWorkspaceOwner = accessIsOwner");
-    expect(report).toContain("user_id: subjectId");
-    expect(report).not.toContain("persistableOwnerUserId");
-    expect(report).not.toMatch(/user_id:\s*ownerUserId/);
+    expect(existsSync(join(ROOT, "app/api/workspace/performance-report/route.ts"))).toBe(false);
+    expect(existsSync(join(ROOT, "app/api/workspace-learn/performance/route.ts"))).toBe(false);
 
-    const ilePerf = read("app/api/workspace-learn/performance/route.ts");
-    expect(ilePerf).toContain("requireSessionWorkspaceProofOfWorkAccess");
-    expect(ilePerf).toContain("ayclToken");
-    expect(ilePerf).not.toContain("guardWorkspaceRoute");
-    expect(ilePerf).not.toContain("resolveAyclAccess");
-    expect(ilePerf).not.toContain("else if (ayclToken)");
-    expect(ilePerf).not.toContain("actingUser");
-    expect(ilePerf).not.toMatch(/participantUserId\s*=\s*aycl\.actingUser/);
-    expect(ilePerf).not.toMatch(/user_id:\s*aycl\.actingUser/);
     const powAccess = read("lib/pow-api/workspace-session-access.ts");
     expect(powAccess).toContain("ayclToken");
     expect(powAccess).toContain("principal.subjectId");
@@ -293,11 +275,7 @@ describe("workspace access policy", () => {
     expect(goals).not.toMatch(/isOwner\s*\|\|\s*auth\.principal\.kind\s*===\s*"aycl"/);
     expect(goals).not.toMatch(/isOwner:\s*true/);
 
-    const history = read("app/api/workspace/snapshot-history/route.ts");
-    expect(history).toContain("requireProductWorkspaceEvalAuth");
-    expect(history).toContain("const isWorkspaceOwner = opts.isOwner");
-    expect(history).not.toMatch(/isOwner\s*\|\|\s*Boolean\(opts\.ayclAccess\)/);
-    expect(history).not.toMatch(/isOwner:\s*auth\.isOwner,\s*ayclAccess/);
+    expect(existsSync(join(ROOT, "app/api/workspace/snapshot-history/route.ts"))).toBe(false);
 
     const launch = read("app/api/workspace/learner-launch/route.ts");
     expect(launch).toContain("auth.persistUserId");

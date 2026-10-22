@@ -76,7 +76,12 @@ const nextConfig: NextConfig = {
         destination: "/workspace/:id/verify",
         permanent: true,
       },
+      { source: "/_pitch", destination: "/pitch", permanent: false },
+      { source: "/_pitch.pdf", destination: "/pitch.pdf", permanent: false },
     ];
+  },
+  async rewrites() {
+    return [{ source: "/pitch", destination: "/pitch.pdf" }];
   },
   images: {
     remotePatterns: [

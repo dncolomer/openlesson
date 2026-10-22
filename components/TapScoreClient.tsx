@@ -28,7 +28,6 @@ import { VERIFICATION_PRACTICE_OPENING } from "@/lib/verification-flow";
 import type { SessionSidebarMode } from "@/lib/session-sidebar";
 import type { TapPostSessionMode } from "@/lib/pow-api/tap-link-config";
 import { TAP_LINK_MAX_MINUTES, TAP_LINK_MIN_MINUTES } from "@/lib/pow-api/tap-link-config";
-import type { PerformanceReport } from "@/lib/pow-api/performance-report";
 import {
   restartLiveSpeechRecognition,
   stopLiveSpeechRecognition,
@@ -229,7 +228,6 @@ export function TapScoreClient({
   const postSession = (initialSession?.post_session as TapPostSessionMode) || "redirect_workspace";
   const configuredRedirectUrl =
     typeof initialSession?.redirect_url === "string" ? initialSession.redirect_url : null;
-  const [performanceReport, setPerformanceReport] = useState<PerformanceReport | null>(null);
   const [resultsError, setResultsError] = useState("");
   const [workspaceTitle] = useState(initialSession?.workspaceTitle || "Workspace");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -961,7 +959,6 @@ export function TapScoreClient({
     if (patch.startedAt !== undefined) setStartedAt(patch.startedAt);
     if (patch.remainingSeconds !== undefined) setRemainingSeconds(patch.remainingSeconds);
     if (patch.phase !== undefined) setPhase(patch.phase);
-    if (patch.performanceReport !== undefined) setPerformanceReport(patch.performanceReport);
     if (patch.resultsError !== undefined) setResultsError(patch.resultsError);
     if (patch.interimText !== undefined) setInterimText(patch.interimText);
     if (patch.crystallizableText !== undefined) setCrystallizableText(patch.crystallizableText);
@@ -1148,7 +1145,6 @@ export function TapScoreClient({
       blockId={blockId}
       sessionId={sessionId}
       resultsError={resultsError}
-      performanceReport={performanceReport}
       sessionEndedImpure={sessionEndedImpure}
       restartBriefingFlow={restartBriefingFlow}
       setPhase={setPhase}

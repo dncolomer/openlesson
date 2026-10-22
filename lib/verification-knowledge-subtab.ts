@@ -3,11 +3,24 @@
  * A selected flow replaces the workspace roster with that flow's proof rows.
  * No selection returns the workspace rows unchanged.
  */
-import type { KnowledgeRankingCard } from "@/lib/pow-api/knowledge-ranking";
 import {
   filterKnowledgeRowsByVerificationFlow,
   type VerificationKnowledgeRow,
 } from "@/lib/verification-flow";
+
+export type KnowledgeRankingCard = {
+  rank: number;
+  subjectKey: string;
+  userId: string | null;
+  guestUserId: string | null;
+  label: string;
+  snapshotScore: number | null;
+  ghcScore: number | null;
+  ranAt: string | null;
+  runId: string | null;
+  hasSnapshot: boolean;
+  report: unknown | null;
+};
 
 export type VerificationSubjectRow = {
   user_id: string | null;

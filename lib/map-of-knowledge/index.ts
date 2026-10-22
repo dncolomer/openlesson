@@ -4,36 +4,29 @@
  */
 
 import {
-  KNOWLEDGE_CONFIG_CONTENT_D256_DIM,
-  KNOWLEDGE_CONFIG_CONTENT_D256_MODEL_ID,
-  KNOWLEDGE_CONFIG_CONTENT_D256_SEM_DIM,
-  KNOWLEDGE_CONFIG_CONTENT_D256_STRUCT_DIM,
-  KNOWLEDGE_CONFIG_DIM,
-  KNOWLEDGE_CONFIG_DUAL_D256_DIM,
-  KNOWLEDGE_CONFIG_DUAL_D256_MODEL_ID,
-  KNOWLEDGE_CONFIG_DUAL_D256_STRUCT_DIM,
-  KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
-  KNOWLEDGE_CONFIG_HYBRID_D192_DIM,
-  KNOWLEDGE_CONFIG_HYBRID_D192_MODEL_ID,
-  KNOWLEDGE_CONFIG_HYBRID_D192_SEM_DIM,
-  KNOWLEDGE_CONFIG_HYBRID_D192_STRUCT_DIM,
-  KNOWLEDGE_CONFIG_SEM_DIM,
-  KNOWLEDGE_CONFIG_STRUCT_DIM,
   parseProjectionAlgorithmId,
   projectVectors3D as projectVectors3DMulti,
   type ProjectionAlgorithmId,
 } from "@/lib/knowledge-config";
+import {
+  FLOW_EMBEDDING_DIM,
+  FLOW_EMBEDDING_MODEL_ID,
+  FLOW_EMBEDDING_SEM_DIM,
+  FLOW_EMBEDDING_STRUCT_DIM,
+} from "@/lib/flow-embedding";
 
 export type { ProjectionAlgorithmId } from "@/lib/knowledge-config";
 export {
   PROJECTION_ALGORITHM_IDS,
   PROJECTION_ALGORITHM_OPTIONS,
   parseProjectionAlgorithmId,
-  KNOWLEDGE_CONFIG_DIM,
-  KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
-  KNOWLEDGE_CONFIG_SEM_DIM,
-  KNOWLEDGE_CONFIG_STRUCT_DIM,
 } from "@/lib/knowledge-config";
+export {
+  FLOW_EMBEDDING_DIM,
+  FLOW_EMBEDDING_MODEL_ID,
+  FLOW_EMBEDDING_SEM_DIM,
+  FLOW_EMBEDDING_STRUCT_DIM,
+} from "@/lib/flow-embedding";
 
 export type {
   StemMiniAvatar,
@@ -141,7 +134,7 @@ export interface EmbeddingModelInfo {
   id: string;
   label: string;
   dim: number;
-  /** Structural feature dims when hybrid (e.g. knowledgecfg). */
+  /** Structural feature dims when hybrid (e.g. flowcfg). */
   struct_dim?: number | null;
   /** Semantic feature dims when hybrid. */
   sem_dim?: number | null;
@@ -159,57 +152,16 @@ export interface EmbeddingModelInfo {
  */
 export const EMBEDDING_MODEL_CATALOG: readonly EmbeddingModelInfo[] = [
   {
-    id: KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
-    label: "Knowledge config v1 (D=64)",
-    dim: KNOWLEDGE_CONFIG_DIM,
-    struct_dim: KNOWLEDGE_CONFIG_STRUCT_DIM,
-    sem_dim: KNOWLEDGE_CONFIG_SEM_DIM,
+    id: FLOW_EMBEDDING_MODEL_ID,
+    label: "Flow config v1 (D=96)",
+    dim: FLOW_EMBEDDING_DIM,
+    struct_dim: FLOW_EMBEDDING_STRUCT_DIM,
+    sem_dim: FLOW_EMBEDDING_SEM_DIM,
     description:
-      "Hybrid learner-state geometry: 48 structural + 16 semantic dimensions, L2-normalized into a fixed 64-D space comparable across public workspaces.",
+      "Completed Calibrate, Learn, and Verify embeddings: tree + priced edges + policy Distance + proof of work, L2-normalized in a fixed 96-D space.",
     notes: [
-      "Axes are shared globally for this model id — distance ≈ knowledge proximity.",
-      "Structural block encodes coverage, PoW patterns, and tool traces.",
-      "Semantic block encodes topic / language features from the hybrid encoder.",
+      "Axes are shared globally for this model id.",
       "Regions (custom verification models) live in the same frame when built from this model.",
-      "Product UI and LWM knowledge_config pointer default to this model.",
-    ],
-  },
-  {
-    id: KNOWLEDGE_CONFIG_HYBRID_D192_MODEL_ID,
-    label: "Knowledge config hybrid v2 (D=192)",
-    dim: KNOWLEDGE_CONFIG_HYBRID_D192_DIM,
-    struct_dim: KNOWLEDGE_CONFIG_HYBRID_D192_STRUCT_DIM,
-    sem_dim: KNOWLEDGE_CONFIG_HYBRID_D192_SEM_DIM,
-    description:
-      "Experimental higher-D hybrid sibling of v1 (96 structural + 96 semantic). Dual-written on score for offline comparison; not product UI default.",
-    notes: [
-      "Not comparable to knowledgecfg-v1-d64 or other model ids.",
-      "Same structure-weighted hybrid recipe as v1 with expanded dimensions.",
-    ],
-  },
-  {
-    id: KNOWLEDGE_CONFIG_CONTENT_D256_MODEL_ID,
-    label: "Knowledge config content v2 (D=256)",
-    dim: KNOWLEDGE_CONFIG_CONTENT_D256_DIM,
-    struct_dim: KNOWLEDGE_CONFIG_CONTENT_D256_STRUCT_DIM,
-    sem_dim: KNOWLEDGE_CONFIG_CONTENT_D256_SEM_DIM,
-    description:
-      "Experimental content-rich residual from thought/transcript/LWM free text. Dual-written on score; not product UI default.",
-    notes: [
-      "Not comparable to other embedding_model_id values.",
-      "Uses free-text already present on PoW metadata — no xAI file backfill required.",
-    ],
-  },
-  {
-    id: KNOWLEDGE_CONFIG_DUAL_D256_MODEL_ID,
-    label: "Knowledge config dual-stream v2 (D=256)",
-    dim: KNOWLEDGE_CONFIG_DUAL_D256_DIM,
-    struct_dim: KNOWLEDGE_CONFIG_DUAL_D256_STRUCT_DIM,
-    description:
-      "Experimental dual-stream observation / action text channels with temporal fusion. Dual-written on score; not product UI default.",
-    notes: [
-      "Not comparable to other embedding_model_id values.",
-      "Separates stash/explore (observations) from submit (actions) free-text channels.",
     ],
   },
 ] as const;
@@ -218,7 +170,7 @@ export function describeEmbeddingModel(
   modelId: string | null | undefined,
   dimHint?: number | null,
 ): EmbeddingModelInfo {
-  const id = (modelId || "").trim() || KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID;
+  const id = (modelId || "").trim() || FLOW_EMBEDDING_MODEL_ID;
   const known = EMBEDDING_MODEL_CATALOG.find((m) => m.id === id);
   if (known) return { ...known };
   const dim =
@@ -281,10 +233,10 @@ export function resolveSelectedEmbeddingModelId(
 ): string {
   const req = (requested || "").trim();
   if (req && available.some((m) => m.id === req)) return req;
-  if (available.some((m) => m.id === KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID)) {
-    return KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID;
+  if (available.some((m) => m.id === FLOW_EMBEDDING_MODEL_ID)) {
+    return FLOW_EMBEDDING_MODEL_ID;
   }
-  return available[0]?.id || KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID;
+  return available[0]?.id || FLOW_EMBEDDING_MODEL_ID;
 }
 
 export interface MapPoint3D {
@@ -726,7 +678,7 @@ export function buildMapOfKnowledgePayload(input: {
   userPoints: PublicUserPointRaw[];
   powStats: PublicPowWorkspaceStatsRaw[];
   generatedAt?: string;
-  /** Preferred embedding model; falls back to primary knowledgecfg when missing. */
+  /** Preferred embedding model; falls back to primary flowcfg when missing. */
   embeddingModelId?: string | null;
   /** Pre-built catalog from loader (optional). */
   embeddingModels?: EmbeddingModelInfo[];
@@ -749,7 +701,7 @@ export function buildMapOfKnowledgePayload(input: {
     dim: number | null | undefined,
     kind: "point" | "region",
   ) => {
-    const id = (modelId || "").trim() || KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID;
+    const id = (modelId || "").trim() || FLOW_EMBEDDING_MODEL_ID;
     const cur = discoveredCounts.get(id) || { dim: 0, point_count: 0, region_count: 0 };
     if (typeof dim === "number" && dim > 0) cur.dim = dim;
     if (kind === "point") cur.point_count += 1;
@@ -794,7 +746,7 @@ export function buildMapOfKnowledgePayload(input: {
     describeEmbeddingModel(embedding_model_id);
 
   const matchesModel = (modelId: string | null | undefined) => {
-    const id = (modelId || "").trim() || KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID;
+    const id = (modelId || "").trim() || FLOW_EMBEDDING_MODEL_ID;
     return id === embedding_model_id;
   };
 

@@ -18,7 +18,7 @@ import {
   HS_ALGEBRA_GUESTS,
   HS_ALGEBRA_REGIONS,
 } from "../lib/demo/hs-algebra-demo-workspace";
-import { KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID } from "../lib/knowledge-config";
+import { FLOW_EMBEDDING_DIM, FLOW_EMBEDDING_MODEL_ID } from "../lib/flow-embedding";
 import { parseSaasTechDemoSeedTarget } from "./saas-tech-demo-target";
 
 async function main() {
@@ -160,11 +160,11 @@ async function main() {
     expectMatch(modelNames, /Foundation/i, "region names should include Foundations");
     expectMatch(modelNames, /Advanced|Procedure/i, "region names should include Advanced Procedures");
     for (const row of models.rows) {
-      if (String(row.embedding_model_id) !== KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID) {
+      if (String(row.embedding_model_id) !== FLOW_EMBEDDING_MODEL_ID) {
         throw new Error(`bad embedding_model_id on ${row.name}`);
       }
-      if (Number(row.dim) !== 64) {
-        throw new Error(`expected dim=64 on ${row.name}, got ${row.dim}`);
+      if (Number(row.dim) !== FLOW_EMBEDDING_DIM) {
+        throw new Error(`expected dim=${FLOW_EMBEDDING_DIM} on ${row.name}, got ${row.dim}`);
       }
       const subjects = row.subjects as Array<{ label?: string }> | string;
       const labelBlob =
@@ -176,11 +176,11 @@ async function main() {
 
     const snaps = await client.query(
       `SELECT count(*)::int AS n,
-              count(DISTINCT subject_guest_user_id)::int AS guest_subjects
-       FROM public.knowledge_config_snapshots
+              count(DISTINCT identity)::int AS guest_subjects
+       FROM public.workspace_flow_embeddings
        WHERE workspace_id = $1
          AND embedding_model_id = $2`,
-      [workspaceId, KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID],
+      [workspaceId, FLOW_EMBEDDING_MODEL_ID],
     );
     const snapCount = snaps.rows[0].n as number;
     const snapGuests = snaps.rows[0].guest_subjects as number;

@@ -632,7 +632,7 @@ export function WorkspaceView({
 
   /**
    * AYCL clones are not isOwner, but Learner mode still needs Knowledge
-   * (LWM/embeddings). Always resolve sections through the mode-aware helper —
+   * (embeddings). Always resolve sections through the mode-aware helper —
    * never owner-only resolveActiveSection alone (that snaps Knowledge → Workspace).
    */
   const workspaceKind = parseWorkspaceKind(plan?.workspace_kind);

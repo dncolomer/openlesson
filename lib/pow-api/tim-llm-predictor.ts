@@ -58,7 +58,7 @@ const TIM_LLM_SCHEMA = {
       consumer_action: {
         type: "string",
         description:
-          "Machine hint for the consumer (e.g. present_reflection_prompt, call_lwm_snapshot, present_verbal_probe).",
+          "Machine hint for the consumer (e.g. present_reflection_prompt, present_verbal_probe).",
       },
     },
     required: ["should_interrupt"],
@@ -96,7 +96,7 @@ ${TIM_SYSTEM_ROLE}`),
 Feature envelope (schema_version ${features.schema_version}):
 ${JSON.stringify(compact, null, 2)}
 
-Return should_interrupt: false unless a specific, contextual intervention would improve LWM Snapshot (lwm_snapshot), GHC signal quality, fill evidence_appetite.want_more, or (for TAP Learning chapter-complete events) grow the chapter map with chapter_map_expand.`),
+Return should_interrupt: false unless a specific, contextual intervention would improve Distance vs the prepared tree, GHC signal quality, fill evidence_appetite.want_more, or (for Learn chapter-complete events) grow the chapter map with chapter_map_expand.`),
   ];
 }
 

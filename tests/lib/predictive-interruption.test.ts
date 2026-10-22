@@ -8,7 +8,6 @@ import {
 } from "@/lib/pow-api/predictive-interruption";
 import { setTimProviderForTests, type TimProvider } from "@/lib/pow-api/tim-provider";
 import { buildTimFeatureEnvelope } from "@/lib/pow-api/tim-feature-envelope";
-import { emptyLearningWorldModel } from "@/lib/prompt-kernel/world-model";
 import { enrichProofOfWorkSpecResult } from "@/lib/pow-api/proof-of-work-integration";
 import type { TimFeatureEnvelopeV1 } from "@/lib/pow-api/tim-feature-envelope";
 import type { ProofOfWorkApiInterruption } from "@/lib/pow-api/predictive-interruption";
@@ -67,11 +66,11 @@ describe("predictive-interruption", () => {
             intervention: {
               type: "performance_review",
               message: "Run a performance report to see updated marker scores and gaps.",
-              consumer_action: "call_lwm_snapshot",
+              consumer_action: "present_performance_review",
             },
           };
         }
-        if (endpoint === "lwm_snapshot" && features.performance_summary) {
+        if (endpoint === "generate_integration_skill" && features.performance_summary) {
           return {
             interruption_id: "int_perf",
             delay_ms: 45_000,
@@ -151,13 +150,12 @@ describe("predictive-interruption", () => {
 
   it("predicts coaching nudge from performance report context", async () => {
     const interruption = await predictInterruption({
-      endpoint: "lwm_snapshot",
+      endpoint: "generate_integration_skill",
       workspace_id: "ws-1",
       mode: "score",
       report: {
         vertical: "verification",
         score: 55,
-        lwm_snapshot_score: 55,
         workspace_goal: "Activation",
         ghc_score: 20,
         ghc_confidence: "low",
@@ -214,24 +212,15 @@ describe("predictive-interruption", () => {
     expect(interruption?.delay_ms).toBe(42_000);
   });
 
-  it("includes evidence appetite in TIM feature envelope when world model supplied", () => {
-    const model = emptyLearningWorldModel("ws-1");
-    model.evidence_appetite = {
-      want_more: ["decision_rationale", "tap_system1"],
-      saturated: ["tool_crud_events"],
-    };
-    const features = buildTimFeatureEnvelope(
-      {
-        endpoint: "upload_proof_of_work",
-        workspace_id: "ws-1",
-        proof_of_work_artifacts: 3,
-        learning_world_model: model,
-      },
-      model,
-    );
+  it("builds a TIM feature envelope from the interruption context", () => {
+    const features = buildTimFeatureEnvelope({
+      endpoint: "upload_proof_of_work",
+      workspace_id: "ws-1",
+      proof_of_work_artifacts: 3,
+    });
     expect(features.schema_version).toBe(1);
-    expect(features.learning_world_model?.evidence_appetite?.want_more).toContain("decision_rationale");
-    expect(features.learning_world_model?.evidence_appetite?.saturated).toContain("tool_crud_events");
+    expect(features.event.endpoint).toBe("upload_proof_of_work");
+    expect(features.proof_of_work.artifacts_count).toBe(3);
   });
 
   it("returns null when provider declines interruption", async () => {

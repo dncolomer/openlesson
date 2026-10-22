@@ -1,5 +1,5 @@
 /**
- * Multi-algorithm 2D and 3D projection for knowledge-config embeddings.
+ * Multi-algorithm 2D and 3D projection for flowcfg embeddings.
  *
  * Algorithms (shared ids for Local 2D, Local 3D, and Global Map layout):
  * - random: fixed seeded JL-style linear map (stable global frame)
@@ -11,9 +11,7 @@
  */
 
 import { FLOW_EMBEDDING_DIM, FLOW_EMBEDDING_MODEL_ID } from "@/lib/flow-embedding";
-import { projectKnowledgeConfigTo2D } from "./encoder";
 import { hashUnit, l2Distance, projectWithMatrix, seededRandomProjection } from "./math";
-import { KNOWLEDGE_CONFIG_DIM, KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID } from "./types";
 
 export type ProjectionAlgorithmId = "random" | "pca" | "classical_mds" | "smacof";
 
@@ -75,7 +73,7 @@ export function parseProjectionAlgorithmId(
 }
 
 export function projectionFrameId(algorithm: ProjectionAlgorithmId): string {
-  return `${KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID}:ui2d:${algorithm}`;
+  return `${FLOW_EMBEDDING_MODEL_ID}:ui2d:${algorithm}`;
 }
 
 export interface Point2D {
@@ -91,7 +89,7 @@ export interface Point3D {
 
 /** Stable frame id for 3D / Global Map layouts under a named algorithm. */
 export function projectionFrameId3d(algorithm: ProjectionAlgorithmId): string {
-  return `${KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID}:ui3d:${algorithm}`;
+  return `${FLOW_EMBEDDING_MODEL_ID}:ui3d:${algorithm}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -220,13 +218,6 @@ function randomUi2dMatrix(dim: number): number[][] {
 
 function projectRandomTo2D(vector: number[]): Point2D {
   if (!vector.length || !vector.every((x) => Number.isFinite(x))) return { x: 0, y: 0 };
-  if (vector.length === KNOWLEDGE_CONFIG_DIM) {
-    try {
-      return projectKnowledgeConfigTo2D(vector);
-    } catch {
-      return { x: 0, y: 0 };
-    }
-  }
   try {
     const projected = projectWithMatrix(vector, randomUi2dMatrix(vector.length));
     return { x: projected[0] ?? 0, y: projected[1] ?? 0 };
@@ -514,7 +505,7 @@ export function projectRandom3D(vectors: number[][]): Point3D[] {
       const zSeed =
         v.length === FLOW_EMBEDDING_DIM
           ? FLOW_EMBEDDING_MODEL_ID
-          : KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID;
+          : `openlesson:ui3d:d${v.length}`;
       let z = 0;
       for (let i = 0; i < v.length; i++) {
         const u = hashUnit(`${zSeed}:ui3d:z:${i}`);

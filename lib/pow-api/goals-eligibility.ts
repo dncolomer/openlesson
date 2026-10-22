@@ -1,6 +1,6 @@
 /**
- * Resolve goals fingerprint for LWM Snapshot re-run eligibility (web UI gate).
- * Mirrors runVerticalScore goal resolution so UI and server share the same identity.
+ * Resolve goals fingerprint for TAP scorecard re-run eligibility (web UI gate).
+ * Matches TAP scorecard goal resolution so UI and server share the same identity.
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -79,7 +79,7 @@ export async function loadPowRelatedBlockIds(
 
 /**
  * Resolve evaluated goals + fingerprint for an eligibility check, matching
- * runVerticalScore defaults (including legacy workspace_goal fallback).
+ * TAP scorecard defaults (including legacy workspace_goal fallback).
  */
 export async function resolveGoalsForEligibility(
   supabase: SupabaseClient,

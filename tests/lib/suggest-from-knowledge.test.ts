@@ -306,12 +306,11 @@ describe("structural: xAI route + UI control", () => {
     expect(helper).toContain("callXaiJSON");
     expect(helper).toContain("systemMessage");
     expect(helper).toContain("userMessage");
-    expect(route).toContain("listEvalRunHistory");
+    expect(route).not.toContain("listEvalRunHistory");
     expect(route).toContain('from("blocks")');
     expect(route).toContain("assembleSuggestFromKnowledgeXaiMessages");
     expect(route).toContain("normalizeSuggestFromKnowledgeResponse");
-    expect(route).toContain("mapEvalRunHistoryRowToSuggestInput");
-    expect(route).toContain("report: r.report");
+    expect(route).toContain("KnowledgeSnapshotSuggestInput[] = []");
     expect(route).toContain("suggestions");
     expect(route).not.toContain("buildSuggestFromKnowledge(");
     expect(route).not.toContain("callXaiJSON");
@@ -331,12 +330,11 @@ describe("structural: xAI route + UI control", () => {
       "suggest-knowledge-xai-route.log",
       [
         "runSuggestFromKnowledgeModel=true",
-        "listEvalRunHistory=true",
+        "listEvalRunHistory=false",
         "blocks_select=true",
         "assemble=true",
         "normalize=true",
-        "mapEvalRunHistoryRowToSuggestInput=true",
-        "report_r_report=true",
+        "empty_snapshots=true",
         "no_offline_builder=true",
         "ui_accept_prompt=true",
       ].join("\n") + "\n",

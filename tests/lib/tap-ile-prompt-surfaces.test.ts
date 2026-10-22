@@ -341,7 +341,6 @@ const TAP_SCORE_ROUTES = [
   "speech",
   "start",
   "topics",
-  "performance",
   "trace",
 ] as const;
 

@@ -87,7 +87,7 @@ export function clearPowMetadataInvalidated(metadata: unknown): Record<string, u
   return base;
 }
 
-/** Rows that must not enter LWM Snapshot / performance context. */
+/** Rows that must not enter TAP scorecard / performance context. */
 export function isExcludedFromSnapshotPoW(metadata: unknown): boolean {
   return (
     isImpurePoWMetadata(metadata) ||

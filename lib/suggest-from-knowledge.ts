@@ -49,7 +49,7 @@ export type EvalReportThemeExtract = {
 
 /**
  * Pure mapper: VerticalScoreReport-shaped (or sparse) report → theme lists for context.
- * Drives the route history→context path so real eval_run_history.report substance is kept.
+ * Drives the route history→context path so report substance is kept.
  */
 export function extractThemesFromEvalReport(
   report: unknown,

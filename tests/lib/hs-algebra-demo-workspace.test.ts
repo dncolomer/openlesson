@@ -5,12 +5,12 @@
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { scoreAgainstCustomVerificationModel } from "@/lib/knowledge-config";
 import {
-  KNOWLEDGE_CONFIG_DIM,
-  KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
-  isKnowledgeConfigVector,
-  scoreAgainstCustomVerificationModel,
-} from "@/lib/knowledge-config";
+  FLOW_EMBEDDING_DIM,
+  FLOW_EMBEDDING_MODEL_ID,
+  isFlowEmbeddingVector,
+} from "@/lib/flow-embedding";
 import {
   HS_ALGEBRA_BLOCKS,
   HS_ALGEBRA_DEMO_MARKER,
@@ -49,14 +49,14 @@ describe("hs-algebra demo workspace (pure helpers)", () => {
     expect(shape.guestNames.length).toBe(shape.guestCount);
   });
 
-  it("exactly two region builders produce valid knowledgecfg-v1-d64 centroids with synthetic label", () => {
+  it("exactly two region builders produce valid flowcfg-v1-d96 centroids with synthetic label", () => {
     const regions = buildAllAlgebraRegions("unit-hs-algebra");
     expect(regions).toHaveLength(2);
 
     for (const region of regions) {
-      expect(region.embedding_model_id).toBe(KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID);
-      expect(region.dim).toBe(KNOWLEDGE_CONFIG_DIM);
-      expect(isKnowledgeConfigVector(region.centroid, KNOWLEDGE_CONFIG_DIM)).toBe(true);
+      expect(region.embedding_model_id).toBe(FLOW_EMBEDDING_MODEL_ID);
+      expect(region.dim).toBe(FLOW_EMBEDDING_DIM);
+      expect(isFlowEmbeddingVector(region.centroid)).toBe(true);
       expect(region.subjects.some((s) => s.label === "synthetic:grok-4.5")).toBe(true);
       const self = scoreAgainstCustomVerificationModel(region.centroid, region);
       expect(self.in_region).toBe(true);
@@ -117,12 +117,12 @@ describe("hs-algebra demo workspace (pure helpers)", () => {
     );
   });
 
-  it("encodeAlgebraGuest uses real encodeKnowledgeConfig path (knowledgecfg-v1-d64)", () => {
+  it("encodeAlgebraGuest uses real flowcfg path (flowcfg-v1-d96)", () => {
     const guest = HS_ALGEBRA_GUESTS[0];
     const encoded = encodeAlgebraGuest(guest, { workspaceId: "unit-ws" });
-    expect(encoded.embedding.embedding_model_id).toBe(KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID);
-    expect(encoded.embedding.dim).toBe(KNOWLEDGE_CONFIG_DIM);
-    expect(isKnowledgeConfigVector(encoded.vector, KNOWLEDGE_CONFIG_DIM)).toBe(true);
+    expect(encoded.embedding.embedding_model_id).toBe(FLOW_EMBEDDING_MODEL_ID);
+    expect(encoded.embedding.dim).toBe(FLOW_EMBEDDING_DIM);
+    expect(isFlowEmbeddingVector(encoded.vector)).toBe(true);
     expect(encoded.embedding.pow_event_count).toBe(guest.powEvents.length);
     expect(encoded.powRows.length).toBe(guest.powEvents.length);
     expect(encoded.powRows[0].metadata).toMatchObject({

@@ -1,7 +1,7 @@
 /**
  * Verification-workspace region create:
  * from one flow's proof-of-work embeddings, or from synthetic-agent proof of work.
- * Snapshot math is the existing knowledgecfg centroid builder.
+ * Region math is the existing flowcfg centroid builder.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";

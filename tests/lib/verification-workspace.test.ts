@@ -43,7 +43,7 @@ import {
   applyTapAssistantTurnsToWorkCanvas,
   emptyTapWorkCanvasScene,
 } from "@/lib/tap-work-canvas";
-import type { KnowledgeRankingCard } from "@/lib/pow-api/knowledge-ranking";
+import type { KnowledgeRankingCard } from "@/lib/verification-knowledge-subtab";
 
 const ROOT = join(__dirname, "../..");
 
@@ -802,14 +802,14 @@ describe("verification workspace shell gates", () => {
     expect(modelsFilter).toContain("VerificationFlowSubtabFilter");
     expect(modelsFilter).toContain('subtab="embeddings"');
     const modelsView = read("components/knowledge-panel/models-view.tsx");
-    expect(modelsView).toContain('embeddingSource: flowFilter?.enabled ? "flowcfg" : "knowledgecfg"');
+    expect(modelsView).toContain('embeddingSource: "flowcfg"');
     expect(modelsView).toContain("Embeddings in");
     expect(modelsView).toContain("FLOW_EMBEDDING_MODEL_ID");
     expect(modelsView).toContain("data-embeddings-model");
     expect(modelsView).toContain("data-embeddings-model-copy");
     expect(modelsView).toContain("data-embeddings-regions-rail");
-    expect(modelsView).toContain("Trajectory in");
-    expect(modelsView).toContain("knowledgecfg-v1-d64");
+    expect(modelsView).toContain("Embeddings in");
+    expect(modelsView).toContain("FLOW_EMBEDDING_MODEL_ID");
     const trajectory = read("components/KnowledgeConfigTrajectoryPanel.tsx");
     expect(trajectory).toContain("/api/workspace/calibration-flows");
     expect(trajectory).toContain("/api/workspace/verification-flows");
@@ -818,7 +818,7 @@ describe("verification workspace shell gates", () => {
     expect(embeddingsHook).toContain("listWorkspaceFlowEmbeddings");
     expect(embeddingsHook).toContain("knowledgeConfigFromFlowEmbeddings");
     expect(embeddingsHook).toContain("regionMatchesFlowEmbeddingSpace");
-    expect(embeddingsHook).toContain('embeddingSource?: "knowledgecfg" | "flowcfg"');
+    expect(embeddingsHook).toContain('embeddingSource?: "flowcfg" | string');
     expect(settings).toContain("Regions in flowcfg-v1-d96.");
     expect(read("lib/verification-knowledge-subtab.ts")).toContain(
       'embedding_model_id: "flowcfg-v1-d96"',

@@ -10,8 +10,6 @@ import {
 } from "react";
 import type { KnowledgeRegionListItem } from "@/components/CustomVerificationModelsPanel";
 import type { ModelsTabSubjectRef } from "@/lib/pow-api/models-tab-scope";
-import type { LwmHistoryRunLike } from "@/lib/pow-api/lwm-snapshot-history-ui";
-import type { PerformanceReport } from "@/lib/pow-api/performance-report";
 import {
   projectTrajectoryAndRegions,
   parseProjectionAlgorithmId,
@@ -34,16 +32,6 @@ import {
   mapInfiniteGridPatternAttrs,
   mapInfiniteGridPatternFill,
 } from "@/lib/map-of-knowledge";
-
-export interface LwmSnapshotHistoryRun extends LwmHistoryRunLike {
-  id: string;
-  ran_at: string;
-  score: number;
-  ghc_score: number | null;
-  report?: PerformanceReport | null;
-  source?: string;
-  vertical?: string;
-}
 
 export interface ProjectionCoord {
   t: string;
@@ -93,32 +81,6 @@ export interface KnowledgeConfigResponse {
     pow_event_count: number;
     as_of?: string;
     empty?: boolean;
-  };
-  learning_world_model?: {
-    updated_at?: string;
-    exploration?: {
-      blind_spots?: string[];
-      pathways_touched?: string[];
-    };
-    evidence_appetite?: {
-      want_more?: string[];
-      saturated?: string[];
-    };
-    learning_profile?: {
-      strengths?: string[];
-      friction_patterns?: string[];
-    };
-    scores_snapshot?: {
-      /** History wire key for LWM Snapshot primary score (not a product score type name). */
-      verification_score?: number | null;
-      augmentation_score?: number | null;
-      optimization_score?: number | null;
-      ghc_score?: number | null;
-    };
-    inferred_goal?: {
-      text?: string;
-      confidence?: number;
-    };
   };
   scope?: {
     mode: string;
@@ -283,8 +245,8 @@ export function ProjectionSpaceWidget({
         data-projection-widget
         data-projection-empty
       >
-        No knowledge config samples yet for this user. Generate an LWM Snapshot when new
-        proof of work exists — or overlay a knowledge region.
+        No embeddings yet for this user. Finish a Calibrate, Learn, or Verify session
+        so a flow embedding exists — or overlay a knowledge region.
       </div>
     );
   }
@@ -494,7 +456,7 @@ export function ProjectionSpaceWidget({
           }}
         >
           <defs>
-            <linearGradient id="knowledgecfg-path" x1="0%" y1="0%" x2="100%" y2="0%">
+            <linearGradient id="flowcfg-path" x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="0%" stopColor="#6366f1" stopOpacity="0.4" />
               <stop offset="100%" stopColor="#e5e5e5" stopOpacity="0.95" />
             </linearGradient>
@@ -567,7 +529,7 @@ export function ProjectionSpaceWidget({
                 stroke={
                   multiSubject
                     ? subjectColorForKey(sp.key === "all" ? undefined : sp.key, subjectKeyOrder)
-                    : "url(#knowledgecfg-path)"
+                    : "url(#flowcfg-path)"
                 }
                 strokeWidth="2.25"
                 strokeLinejoin="round"
@@ -752,7 +714,7 @@ export function UserPicker({
   onChange,
   "data-picker": dataPicker,
   ariaLabel,
-  /** Compact LWM toolbar: no visible “User” label, tighter select. */
+  /** Compact embeddings toolbar: no visible “User” label, tighter select. */
   compact = false,
 }: {
   valueUserId: string;

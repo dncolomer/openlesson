@@ -31,7 +31,7 @@ export interface InterruptionIntervention {
   message: string;
   /** Why this intervention is predicted at this moment. */
   rationale?: string;
-  /** Machine-oriented hint for the consumer system (e.g. call_lwm_snapshot, expand_chapter_map). */
+  /** Machine-oriented hint for the consumer system (e.g. present_reflection_prompt, expand_chapter_map). */
   consumer_action?: string;
   block_id?: string | null;
   /** When type is chapter_map_expand: first chapter to place (compat with a 1-item list). */
@@ -83,20 +83,11 @@ export type ProofOfWorkApiEndpoint =
   | "upload_ile_idle"
   | "upload_ile_speech"
   | "upload_ile_chapter_done"
-  | "lwm_snapshot"
   | "list_flow_embeddings"
   | "get_flow_embedding"
   | "list_tap_links"
   | "create_tap_link"
   | "get_workspace_detail"
-  | "get_world_model"
-  | "get_knowledge_config"
-  | "get_knowledge_config_trajectory"
-  | "knowledge_distance"
-  | "list_snapshot_history"
-  | "list_custom_knowledge_regions"
-  | "create_custom_knowledge_region"
-  | "eval_custom_knowledge_region"
   | "buffer_proof_of_work"
   | "stash_proof_of_work"
   | "submit_stashed_proof_of_work";

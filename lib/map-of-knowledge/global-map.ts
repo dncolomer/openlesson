@@ -1,7 +1,7 @@
 /**
  * Global Map of Knowledge — pure geometry for region-dot graph + dual orbits.
  *
- * Membership uses high-D knowledgecfg vectors when available (same L2 / radius
+ * Membership uses high-D flowcfg vectors when available (same L2 / radius
  * geometry as custom verification mean_radius). Projected x/y are only used for
  * layout of region dots on the Global Map canvas.
  *
@@ -94,7 +94,7 @@ export function workspaceKnowledgeToGlobalMapInputs(input: {
     centroid: number[];
     mean_radius?: number;
   }>;
-  /** Latest (or all) knowledgecfg vectors for subjects in this workspace. */
+  /** Latest (or all) flowcfg vectors for subjects in this workspace. */
   subjectVectors: Array<{
     id: string;
     vector: number[];

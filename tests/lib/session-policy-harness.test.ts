@@ -41,13 +41,12 @@ import {
   sessionFieldLoadProgress,
 } from "@/lib/session-field-gate";
 import {
-  embedPolicyScore,
   policyScoreFromSnapshot,
   policyScoreFromUnknown,
-  policyScoreProofEvent,
   scorePolicySequence,
   sessionPolicySnapshot,
 } from "@/lib/session-policy-score";
+
 import type { SessionMarkCanvasEffect } from "@/lib/session-mark-canvas";
 import { buildRegionFromFlowEmbeddings, verificationProofEmbedding } from "@/lib/verification-flow";
 
@@ -276,7 +275,8 @@ describe("policy score against the prepared tree", () => {
     expect(thankYou).toContain("sidebarMode === \"verification-tap\"");
     const results = tap.slice(tap.indexOf("tap.postSession.resultsTitle"));
     expect(results).toContain("<SessionPolicyScoreResult");
-    expect(results).toContain("policyScore || performanceReport");
+    expect(results).toContain("policyScore");
+    expect(results).not.toContain("PerformanceReportCard");
 
     const scout = read("components/scout-tap/scout-tap-phases.tsx");
     const scoutThanks = scout.slice(scout.indexOf("data-scout-thank-you"));
@@ -300,39 +300,28 @@ describe("policy score against the prepared tree", () => {
   });
 
   it("changes the embedding when the sequence or the captured proof changes", () => {
-    const speech = embedPolicyScore({
-      model,
-      sequence: lowest,
+    const prompt = "The person spoke the observation.";
+    const speech = verificationProofEmbedding({
+      prompt,
+      source: "runner",
       workspaceId: "ws-policy",
-      note: "The person spoke the observation.",
-      proofRows: [{ proof_of_work_type: "speech", timestamp_ms: 40, tool_name: "speech" }],
+      policy: { model, sequence: lowest },
     });
-    const otherSequence = embedPolicyScore({
-      model,
-      sequence: higher,
+    const otherSequence = verificationProofEmbedding({
+      prompt,
+      source: "runner",
       workspaceId: "ws-policy",
-      note: "The person spoke the observation.",
-      proofRows: [{ proof_of_work_type: "speech", timestamp_ms: 40, tool_name: "speech" }],
+      policy: { model, sequence: higher },
     });
-    const canvas = embedPolicyScore({
-      model,
-      sequence: lowest,
+    const canvas = verificationProofEmbedding({
+      prompt,
+      source: "skill",
       workspaceId: "ws-policy",
-      note: "The person spoke the observation.",
-      proofRows: [
-        {
-          proof_of_work_type: "tool",
-          timestamp_ms: 40,
-          tool_name: "canvas",
-          tool_action: "draw",
-        },
-      ],
+      policy: { model, sequence: lowest },
     });
-    expect(speech.embedding).not.toEqual(otherSequence.embedding);
-    expect(speech.embedding).not.toEqual(canvas.embedding);
-    expect(speech.embedding.length).toBeGreaterThan(0);
-    expect(speech.text).toContain("policy distance");
-    expect(canvas.text).toContain(speech.score.sequence.join(" "));
+    expect(speech).not.toEqual(otherSequence);
+    expect(speech).not.toEqual(canvas);
+    expect(speech).toHaveLength(96);
   });
 
   it("builds a verification region from the policy-score embeddings", () => {
@@ -355,15 +344,6 @@ describe("policy score against the prepared tree", () => {
       workspaceId: "flow-policy",
     });
     expect(low).toHaveLength(96);
-    expect(low).not.toEqual(
-      embedPolicyScore({
-        model,
-        sequence: lowest,
-        workspaceId: "flow-policy",
-        note: prompt,
-        proofRows: [{ proof_of_work_type: "speech", timestamp_ms: 1, tool_name: "runner" }],
-      }).embedding,
-    );
     expect(low).not.toEqual(high);
     expect(low).not.toEqual(promptOnly);
     expect(policyScoreFromUnknown(null)).toBeNull();
@@ -391,13 +371,13 @@ describe("policy score against the prepared tree", () => {
   });
 
   it("stores a policy-only calibration proof and still writes the existing proof of work", () => {
-    const scored = embedPolicyScore({
-      model,
-      sequence: lowest,
-      workspaceId: "ws-cal",
-      note: "Spoken while the field was open.",
-    });
-    const event = policyScoreProofEvent(scored);
+    const scored = scorePolicySequence(model, lowest);
+    const event = {
+      type: "policy_score" as const,
+      questionId: "policy",
+      text: `policy distance ${scored.distance}`,
+      source: "typed" as const,
+    };
     const created = applyCalibrationCommand(emptyCalibrationState(), {
       type: "create",
       workspaceId: "ws-cal",
@@ -482,7 +462,7 @@ describe("policy score against the prepared tree", () => {
 });
 
 function scorePair(model: SessionBranchModel, sequence: readonly string[]) {
-  return embedPolicyScore({ model, sequence, workspaceId: "ws-policy" }).score;
+  return scorePolicySequence(model, sequence);
 }
 
 function pricedActions(title: string, close: number, keep: number) {
@@ -551,13 +531,7 @@ describe("policy score starts from the prepared tree", () => {
     expect(fromPrepared).toEqual(scorePolicySequence(birth, ["r1"]));
     expect(fromAdvanced.sequence).toEqual(["r1"]);
 
-    const embedded = embedPolicyScore({
-      model: replayed.snapshot.model!,
-      sequence: replayed.snapshot.sequence,
-      workspaceId: "ws-policy",
-    });
-    expect(embedded.score).toEqual(fromPrepared);
-    expect(embedded.score.distance).toBe(fromPrepared.distance);
+    expect(fromPrepared.distance).toBe(scorePolicySequence(birth, ["r1"]).distance);
 
     const cleared = sessionPolicySnapshot(birth, { status: "preparing", model: null }, []);
     expect(cleared.snapshot.model).toBeNull();

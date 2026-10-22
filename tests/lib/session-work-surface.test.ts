@@ -192,15 +192,6 @@ describe("shared live work surface", () => {
     expect(wideHtml).toContain("min-h-0");
     expect(wideHtml).toContain("flex-1");
     expect(wideHtml).not.toContain("my-auto");
-    const reportAt = tap.indexOf("<PerformanceReportCard");
-    const reportWrapper = tap.slice(Math.max(0, reportAt - 350), reportAt);
-    expect(reportWrapper).toContain("min-h-0");
-    expect(reportWrapper).toContain("flex-1");
-    expect(reportWrapper).toContain("flex-col");
-    expect(reportWrapper).toContain("overflow-hidden");
-    expect(read("components/PerformanceReportCard.tsx")).toMatch(
-      /fillHeight \? "min-h-0 flex-1 overflow-hidden"/,
-    );
 
     const finished = [
       prepare,
@@ -219,7 +210,8 @@ describe("shared live work surface", () => {
     expect(tap).toContain("data-tap-session-impure");
     expect(tap).toContain("data-tap-practice-done");
     expect(tap).toContain("Could not end Verify session");
-    expect(tap).toContain("<PerformanceReportCard");
+    expect(tap).not.toContain("<PerformanceReportCard");
+    expect(existsSync(join(ROOT, "components/PerformanceReportCard.tsx"))).toBe(false);
     expect(existsSync(join(ROOT, "components/exercise-tap/exercise-tap-phases.tsx"))).toBe(false);
 
     const silence = read("components/session-view/learn-silence-lock-screen.tsx");

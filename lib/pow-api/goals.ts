@@ -1,7 +1,7 @@
 /**
  * Standalone multi-goals: workspace-scoped + block-scoped natural-language goals,
- * pure resolution for LWM Snapshot (default / adhoc / selected), and fingerprints
- * for PoW∪goals snapshot uniqueness.
+ * pure resolution for TAP scorecard scoring (default / adhoc / selected), and fingerprints
+ * for PoW∪goals uniqueness.
  */
 
 export const GOAL_TEXT_MAX_LENGTH = 500;
@@ -303,7 +303,7 @@ export function formatGoalsForScoringPrompt(goals: readonly EvaluatedGoal[]): st
     return "";
   }
   if (goals.length === 1) {
-    return `\nAuthoritative goal (use for workspace_goal summary; score the LWM Snapshot primary against this):\n"${goals[0].text}"\n`;
+    return `\nAuthoritative goal (use for workspace_goal summary; score the primary score against this):\n"${goals[0].text}"\n`;
   }
   const lines = goals.map((g, i) => {
     const tag =
@@ -314,15 +314,5 @@ export function formatGoalsForScoringPrompt(goals: readonly EvaluatedGoal[]): st
           : "adhoc";
     return `${i + 1}. [${tag}] ${g.text}`;
   });
-  return `\nAuthoritative goals for this snapshot (score the LWM Snapshot primary against this set; set workspace_goal to a concise summary of them):\n${lines.join("\n")}\n`;
-}
-
-/**
- * Text for knowledge-config embedding bag-of-tokens (evaluated goals).
- */
-export function goalsEmbeddingText(goals: readonly EvaluatedGoal[]): string {
-  return goals
-    .map((g) => normalizeGoalText(g.text))
-    .filter((t): t is string => Boolean(t))
-    .join(" ");
+  return `\nAuthoritative goals for this report (score the primary score against this set; set workspace_goal to a concise summary of them):\n${lines.join("\n")}\n`;
 }

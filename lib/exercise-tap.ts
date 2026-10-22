@@ -62,8 +62,8 @@ export function resolveTapShellFromSession(input: {
     input.interaction_kind ??
     input.interactionKind;
   const kind = normalizeTapInteractionKind(fromSession, TAP_INTERACTION_KIND_DEFAULT);
-  if (kind === "scout" || fromSession === "calibrate") return "scout";
-  if (kind !== "scout" && entryHistoryRequestsScout(input.entry_query_params)) {
+  if (fromSession === "calibrate" || fromSession === "scout" || kind === "scout") return "scout";
+  if (entryHistoryRequestsScout(input.entry_query_params)) {
     return "scout";
   }
   const shell = String(

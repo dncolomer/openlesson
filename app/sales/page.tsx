@@ -65,6 +65,7 @@ export default function SalesIndexPage() {
           ))}
         </section>
 
+        {PITCH_INDEX.length > 0 ? (
         <section className="mt-14">
           <h2 className="font-mono text-[11px] uppercase tracking-[1.8px] text-zinc-500">
             Pitch decks
@@ -127,6 +128,7 @@ export default function SalesIndexPage() {
             })}
           </ul>
         </section>
+        ) : null}
 
         <p className="mt-10 font-mono text-[11px] uppercase tracking-[1.6px] text-zinc-600">
           Product cards · Pitch decks · Noindex · Subscription-exempt

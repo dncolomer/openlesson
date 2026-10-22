@@ -2,7 +2,7 @@ import type { AuthContext } from "./types";
 import {
   subjectFromAuthAndParticipants,
   type SubjectRef,
-} from "./learning-world-model-store";
+} from "./subject-ref";
 
 /** Org admins and workspace owners may inspect / score other subjects. */
 export function canInspectOtherSubjects(options: {
@@ -33,16 +33,8 @@ export function canAccessWorkspaceEval(options: {
 }
 
 /**
- * After `canAccessWorkspaceEval`, web score/history routes must persist and list
- * learner rows with a privileged (service-role) client — same pattern as TAP/TAP Learning
- * link routes. Cookie JWT alone cannot:
- * - INSERT eval_run_history / knowledge_config_snapshots for group members
- *   until subject self-write RLS is applied
- * - INSERT guest-subject rows (owner targets guest) without owner-only FOR ALL
- *   covering every edge (service role is the authoritative post-authz write path)
- *
- * Authz is always checked first with the user session; this only selects the
- * DB client for the trusted write/list phase.
+ * After `canAccessWorkspaceEval`, cookie JWT is checked first; privileged
+ * writes use the service-role client.
  */
 export function resolveEvalPersistenceClientMode(access: {
   allowed: boolean;
@@ -50,15 +42,8 @@ export function resolveEvalPersistenceClientMode(access: {
   return access.allowed ? "privileged" : "deny";
 }
 
-/** Tables that require subject self-write RLS for cookie JWT group self-eval. */
-export const EVAL_SUBJECT_SELF_WRITE_TABLES = [
-  "eval_run_history",
-  "learning_world_models",
-  "knowledge_config_snapshots",
-] as const;
-
 /**
- * Resolve subject for Snapshot API from query/body + auth.
+ * Resolve subject from query/body + auth.
  *
  * Always address subjects by unique IDs (`user_id` / `guest_user_id`).
  * There is no `subject=me` / `subject=self` token — omit IDs to default to the

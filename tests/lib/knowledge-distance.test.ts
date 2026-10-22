@@ -2,15 +2,16 @@ import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  KNOWLEDGE_CONFIG_DIM,
-  KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
   computeKnowledgeDistance,
   createCustomVerificationModelFromVectors,
   createSyntheticKnowledgeRegionFromProfile,
-  encodeKnowledgeConfig,
   scoreAgainstCustomVerificationModel,
 } from "@/lib/knowledge-config";
-import { emptyLearningWorldModel, mergeLearningWorldModelDelta } from "@/lib/prompt-kernel/world-model";
+import {
+  embedTextsToFlowVector,
+  FLOW_EMBEDDING_DIM,
+  FLOW_EMBEDDING_MODEL_ID,
+} from "@/lib/flow-embedding";
 import { readKnowledgePanelSurface } from "../helpers/surface-source";
 
 const ROOT = join(__dirname, "../..");
@@ -20,38 +21,14 @@ function read(rel: string) {
 }
 
 function userVector(score: number, seed: number): number[] {
-  return encodeKnowledgeConfig({
-    workspaceId: "ws-kd",
-    powRows: [
-      {
-        proof_of_work_type: "tool",
-        timestamp_ms: 2_000_000 + seed * 1000,
-        tool_name: "console",
-        metadata: { system: 2, selective_thought: true },
-      },
-      {
-        proof_of_work_type: "speech",
-        timestamp_ms: 2_000_000 + seed * 1000 + 20_000,
-        tool_name: "voice",
-        metadata: { system: 1 },
-      },
-    ],
-    worldModel: mergeLearningWorldModelDelta(emptyLearningWorldModel("ws-kd"), {
-      scores_snapshot: {
-        verification_score: score,
-        augmentation_score: score - 5,
-        optimization_score: score - 8,
-        ghc_score: 40,
-      },
-      learning_profile: {
-        strengths: score > 50 ? ["depth"] : [],
-        friction_patterns: score < 50 ? ["shallow"] : [],
-        preferred_modalities: ["tool"],
-        temporal_patterns: { avg_dwell_ms: 3000, idle_bursts: 1 },
-      },
-    }),
-    totalBlocks: 4,
-  }).vector;
+  return embedTextsToFlowVector([
+    "ws-kd",
+    `score ${score}`,
+    `seed ${seed}`,
+    score > 50 ? "depth" : "shallow",
+    "tool console",
+    "speech voice",
+  ]);
 }
 
 describe("computeKnowledgeDistance (shipped geometry)", () => {
@@ -69,9 +46,9 @@ describe("computeKnowledgeDistance (shipped geometry)", () => {
     expect(kd.cosine_similarity).toBeCloseTo(1, 5);
     expect(kd.cosine_distance).toBeLessThan(1e-6);
     expect(kd.in_region).toBe(true);
-    expect(kd.embedding_model_id).toBe(KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID);
+    expect(kd.embedding_model_id).toBe(FLOW_EMBEDDING_MODEL_ID);
     expect(kd.region_name).toBe("Self region");
-    expect(region.centroid).toHaveLength(KNOWLEDGE_CONFIG_DIM);
+    expect(region.centroid).toHaveLength(FLOW_EMBEDDING_DIM);
   });
 
   it("farther user from region yields larger Knowledge distance", () => {
@@ -104,18 +81,10 @@ describe("computeKnowledgeDistance (shipped geometry)", () => {
 });
 
 describe("Knowledge distance surfaces", () => {
-  it("ships Snapshot API knowledge-distance route without vertical eval pipeline", () => {
-    const rel = "app/api/v3/snapshot/workspaces/[id]/knowledge-distance/route.ts";
-    expect(existsSync(join(ROOT, rel))).toBe(true);
-    const src = read(rel);
-    expect(src).toContain("computeKnowledgeDistanceForSubject");
-    expect(src).toContain('computation: "knowledge_distance"');
-    expect(src).toContain("knowledge_distance");
-    // No vertical-score imports or history writers on this route.
-    expect(src).not.toMatch(/from ["']@\/lib\/pow-api\/run-vertical-score["']/);
-    expect(src).not.toMatch(/from ["']@\/lib\/pow-api\/eval-run-history-store["']/);
-    expect(src).not.toContain("insertEvalRunHistory");
-    expect(src).toContain("workspaces:read");
+  it("retired Snapshot API knowledge-distance route is gone", () => {
+    expect(
+      existsSync(join(ROOT, "app/api/v3/snapshot/workspaces/[id]/knowledge-distance/route.ts")),
+    ).toBe(false);
   });
 
   it("workspace cookie route exposes knowledge_distance action", () => {
@@ -131,7 +100,7 @@ describe("Knowledge distance surfaces", () => {
     expect(embeddings).toContain("data-knowledge-distance");
     expect(embeddings).toContain("data-knowledge-distance-list");
     expect(embeddings).toContain("data-region-overlay-distances");
-    expect(embeddings).toContain('action: "knowledge_distance"');
+    expect(embeddings).toContain("flowEmbeddingDistanceToRegion");
     expect(embeddings).toContain("overlayDistances");
 
     const settings = read("components/CustomVerificationModelsPanel.tsx");
@@ -146,8 +115,8 @@ describe("Knowledge distance surfaces", () => {
     const docs = read("docs/PROOF_OF_WORK_API.md");
     expect(docs).not.toContain("knowledge-distance");
     expect(docs).toContain("start_session");
-    expect(existsSync(join(ROOT, "app/api/v3/snapshot/workspaces/[id]/knowledge-distance/route.ts"))).toBe(
-      true,
-    );
+    expect(
+      existsSync(join(ROOT, "app/api/v3/snapshot/workspaces/[id]/knowledge-distance/route.ts")),
+    ).toBe(false);
   });
 });

@@ -15,7 +15,7 @@ import {
   mapDotIsGolden,
   mapDotKindFromParticipant,
   describeEmbeddingModel,
-  KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
+  FLOW_EMBEDDING_MODEL_ID,
   mergeEmbeddingModelCatalog,
   pickDefaultEnabledRegionsFromOneWorkspace,
   pickRandomEnabledRegionIds,
@@ -348,7 +348,7 @@ describe("map-of-knowledge pure logic", () => {
           name: "Expert",
           centroid: unitVector(8, 0),
           mean_radius: 0.4,
-          embedding_model_id: KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
+          embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
           dim: 8,
         },
         {
@@ -356,7 +356,7 @@ describe("map-of-knowledge pure logic", () => {
           workspace_id: "priv",
           name: "No leak",
           centroid: unitVector(8, 1),
-          embedding_model_id: KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
+          embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
           dim: 8,
         },
       ],
@@ -368,7 +368,7 @@ describe("map-of-knowledge pure logic", () => {
           vector: unitVector(8, 1),
           kind: "ile",
           confidence: 0.9,
-          embedding_model_id: KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
+          embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
           dim: 8,
         },
         {
@@ -377,7 +377,7 @@ describe("map-of-knowledge pure logic", () => {
           subject_guest_user_id: "guest-tap-1",
           vector: unitVector(8, 2),
           kind: "tap",
-          embedding_model_id: KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
+          embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
           dim: 8,
         },
         {
@@ -385,7 +385,7 @@ describe("map-of-knowledge pure logic", () => {
           workspace_id: "priv",
           vector: unitVector(8, 3),
           kind: "tap",
-          embedding_model_id: KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
+          embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
           dim: 8,
         },
         {
@@ -422,7 +422,7 @@ describe("map-of-knowledge pure logic", () => {
     expect(payload.workspaces.map((w) => w.id)).toEqual(["pub"]);
     expect(payload.blocks.map((b) => b.id)).toEqual(["b1"]);
     expect(payload.regions.map((r) => r.id)).toEqual(["reg1"]);
-    // other-model-v1 point excluded when default knowledgecfg model selected
+    // other-model-v1 point excluded when default flowcfg model selected
     expect(payload.user_locations).toHaveLength(2);
     expect(payload.user_locations.find((u) => u.kind === "ile")).toBeTruthy();
     expect(payload.user_locations.find((u) => u.kind === "tap")).toBeTruthy();
@@ -435,7 +435,7 @@ describe("map-of-knowledge pure logic", () => {
     }
     expect(payload.pow_stats.total_artifacts).toBe(7);
     expect(payload.pow_stats.workspace_count).toBe(1);
-    expect(payload.embedding_model_id).toBe(KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID);
+    expect(payload.embedding_model_id).toBe(FLOW_EMBEDDING_MODEL_ID);
     expect(payload.embedding_info.dim).toBeGreaterThan(0);
     expect(payload.embedding_models.some((m) => m.id === "other-model-v1")).toBe(true);
     for (const u of payload.user_locations) {
@@ -474,20 +474,20 @@ describe("map-of-knowledge pure logic", () => {
   });
 
   it("describes and resolves embedding models", () => {
-    const primary = describeEmbeddingModel(KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID);
-    expect(primary.dim).toBe(64);
-    expect(primary.struct_dim).toBe(48);
-    expect(primary.sem_dim).toBe(16);
-    expect(primary.description.toLowerCase()).toMatch(/hybrid|64|dimension/);
+    const primary = describeEmbeddingModel(FLOW_EMBEDDING_MODEL_ID);
+    expect(primary.dim).toBe(96);
+    expect(primary.struct_dim).toBe(64);
+    expect(primary.sem_dim).toBe(32);
+    expect(primary.description.toLowerCase()).toMatch(/96|dimension|flow/);
 
     const catalog = mergeEmbeddingModelCatalog([
       { id: "custom-x", dim: 32, point_count: 2, region_count: 1 },
     ]);
-    expect(catalog.some((m) => m.id === KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID)).toBe(true);
+    expect(catalog.some((m) => m.id === FLOW_EMBEDDING_MODEL_ID)).toBe(true);
     expect(catalog.find((m) => m.id === "custom-x")?.dim).toBe(32);
     expect(resolveSelectedEmbeddingModelId("custom-x", catalog)).toBe("custom-x");
     expect(resolveSelectedEmbeddingModelId("missing", catalog)).toBe(
-      KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
+      FLOW_EMBEDDING_MODEL_ID,
     );
   });
 });

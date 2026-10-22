@@ -5,7 +5,7 @@ Two families:
 - **Workspace management (`/api/v3/workspaces`, `/api/v3/account`)** — create and edit Learning and Verification workspaces, map/contents, workspace settings, account settings.
 - **Headless proof-of-work (`/api/v3/pow`)** — start, run, and end Calibrate, Learn, and Verify sessions. Submit proof of work; the server prepares the answers-model tree, infers the path (catalogs 4 / 8 / 16), and enforces the session clock.
 
-Snapshot (`/api/v3/snapshot`) and Stash (`/api/v3/stash`) are product-UI routes, not public agent APIs.
+Snapshot (`/api/v3/snapshot`) and Stash (`/api/v3/stash`) are retired. They are not public agent APIs.
 
 **MCP (`POST /api/mcp`)** exposes the same two APIs with 100% tool ↔ REST parity. Key CRUD remains browser-session (`/api/v3/pow/keys`).
 

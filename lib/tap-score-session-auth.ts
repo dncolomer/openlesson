@@ -174,8 +174,9 @@ export async function resolveTapSessionAccess(input: {
       TAP_SESSION_SELECT,
     );
     const session = found?.session ?? null;
+    const sessionTable = found?.table;
 
-    if (!session) return { error: "Session not found", status: 404 };
+    if (!session || !sessionTable) return { error: "Session not found", status: 404 };
     if (isGuestLinkRevoked(session.status as string | null | undefined)) {
       return { error: TAP_LINK_REVOKED_MESSAGE, status: 403 };
     }
@@ -239,7 +240,7 @@ export async function resolveTapSessionAccess(input: {
         });
         guestUserId = created.id;
         await supabase
-          .from(found.table)
+          .from(sessionTable)
           .update({ guest_user_id: guestUserId })
           .eq("id", sessionRow.id);
         sessionRow.guest_user_id = guestUserId;
@@ -265,7 +266,7 @@ export async function resolveTapSessionAccess(input: {
       blockId: sessionRow.block_id || null,
       focusSessionId: sessionRow.session_id || null,
       tapSessionId: sessionRow.id,
-      sessionTable: found.table,
+      sessionTable,
       postSession: (sessionRow.post_session as TapPostSessionMode) || "redirect_workspace",
       redirectUrl: sessionRow.redirect_url || null,
       completionWebhookUrl: sessionRow.completion_webhook_url || null,

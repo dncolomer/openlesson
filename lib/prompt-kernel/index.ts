@@ -6,19 +6,6 @@ export {
   type GhcConfidence,
 } from "./scores";
 export { TIM_SYSTEM_ROLE, TIM_CONTRACT_NARRATIVE } from "./tim";
-export {
-  emptyLearningWorldModel,
-  formatEvidenceAppetiteGuidance,
-  learningWorldModelForTim,
-  mergeLearningWorldModelDelta,
-  parseLearningWorldModel,
-  serializeLearningWorldModel,
-  WORLD_MODEL_DELTA_INSTRUCTIONS,
-  type BlockCoverageDepth,
-  type LearningWorldModelDelta,
-  type LearningWorldModelV0,
-} from "./world-model";
-// Knowledge config geometry lives in @/lib/knowledge-config (knowledgecfg-v1-d64).
 export { composePrompt, type ComposePromptOptions, type OntologyDensity } from "./compose";
 export { TUTOR_CANVAS_VOICE } from "./tutor-voice";
 export {

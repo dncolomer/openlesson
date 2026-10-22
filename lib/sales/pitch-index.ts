@@ -1,5 +1,4 @@
 import type { SolutionSlideDeck } from "@/lib/sales/solution-slide-decks";
-import { PLATFORM_PITCH_DECK } from "@/lib/sales/platform-pitch-deck";
 
 export type PitchIndexEntry = {
   path: string;
@@ -12,17 +11,8 @@ export type PitchIndexEntry = {
   deck?: SolutionSlideDeck;
 };
 
-/** Canonical list of pitch routes linked from /sales. */
-export const PITCH_INDEX: PitchIndexEntry[] = [
-  {
-    path: "/pitch",
-    title: "Verification Pitch",
-    description:
-      "Founder story first, then problem, thesis, and method: measurement beyond quiz scores, Think Aloud Protocol — one interface for Calibrate, Learn, and Verify — and use cases across PoW · session · Stash API.",
-    vertical: "verification",
-    deck: PLATFORM_PITCH_DECK,
-  },
-];
+/** Canonical list of pitch routes linked from /sales. Live PDF is `/pitch`. */
+export const PITCH_INDEX: PitchIndexEntry[] = [];
 
 export const PITCH_PATHS = PITCH_INDEX.map((entry) => entry.path);
 

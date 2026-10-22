@@ -37,7 +37,8 @@ import {
   resolveSettingsSubview,
   settingsSubviewLabel,
 } from "@/lib/workspace-settings-tabs";
-import { encodeKnowledgeConfig, l2Norm } from "@/lib/knowledge-config";
+import { l2Norm } from "@/lib/knowledge-config";
+import { embedTextsToFlowVector, FLOW_EMBEDDING_DIM } from "@/lib/flow-embedding";
 import { projectTrajectoryAndRegions } from "@/lib/knowledge-config";
 import {
   assembleSelectedRegionOverlayInputs,
@@ -374,26 +375,15 @@ describe("Knowledge Region zero-block PoW surfaces", () => {
     expect(createFn).not.toContain("block_id");
     expect(createFn).not.toMatch(/tap|ile|tapbench/i);
 
-    const encoded = encodeKnowledgeConfig({
-      workspaceId: "kr-ws",
-      totalBlocks: 0,
-      powRows: [
-        {
-          proof_of_work_type: "tool",
-          timestamp_ms: 1_700_000_000_000,
-          tool_name: "cli",
-          metadata: { note: "external pow" },
-        },
-        {
-          proof_of_work_type: "screen",
-          timestamp_ms: 1_700_000_001_000,
-          metadata: {},
-        },
-      ],
-    });
-    expect(encoded.vector.every((x) => Number.isFinite(x))).toBe(true);
-    expect(Math.abs(l2Norm(encoded.vector) - 1)).toBeLessThan(1e-6);
-    expect(encoded.pow_event_count).toBe(2);
+    const encoded = embedTextsToFlowVector([
+      "kr-ws",
+      "tool cli",
+      "screen",
+      "external pow",
+    ]);
+    expect(encoded.every((x) => Number.isFinite(x))).toBe(true);
+    expect(Math.abs(l2Norm(encoded) - 1)).toBeLessThan(1e-6);
+    expect(encoded).toHaveLength(FLOW_EMBEDDING_DIM);
 
     const regionsPanel = read("components/CustomVerificationModelsPanel.tsx");
     expect(regionsPanel).toContain("/api/workspace/custom-knowledge-regions");
@@ -415,10 +405,10 @@ describe("Knowledge Region zero-block PoW surfaces", () => {
       [
         `goal_text=${normalizeGoalText("  Ship PoW  ")}`,
         `create_workspace_goal_has_block_id=${createFn.includes("block_id")}`,
-        `encoder_dim=${encoded.dim}`,
-        `encoder_finite=${encoded.vector.every((x) => Number.isFinite(x))}`,
-        `encoder_norm=${l2Norm(encoded.vector)}`,
-        `encoder_pow_count=${encoded.pow_event_count}`,
+        `encoder_dim=${encoded.length}`,
+        `encoder_finite=${encoded.every((x: number) => Number.isFinite(x))}`,
+        `encoder_norm=${l2Norm(encoded)}`,
+        `encoder_pow_count=2`,
         `encoder_total_blocks=0`,
         `data_studio_pow_route=${dataStudio.includes("/api/workspace/data-studio/pow")}`,
         `regions_no_block_required=${!regionsPanel.match(/blockId is required/i)}`,

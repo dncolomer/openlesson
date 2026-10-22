@@ -439,14 +439,16 @@ describe("pitch deck content (platform only)", () => {
     ).toMatch(/thesis/);
   });
 
-  it("pitch index: Verification Pitch on /pitch; /sales index lists it; no extra vertical routes", () => {
-    expect(PITCH_PATHS).toEqual(["/pitch"]);
-    expect(PITCH_INDEX).toHaveLength(1);
-    expect(LIVE_PITCH_PATHS).toEqual(["/pitch"]);
-    expect(PITCH_INDEX[0]?.comingSoon).toBeFalsy();
-    expect(PITCH_INDEX[0]?.deck).toBe(PLATFORM_PITCH_DECK);
-    expect(PITCH_INDEX[0]?.title).toBe("Verification Pitch");
-    expect(PITCH_INDEX.map((e) => e.vertical)).toEqual(["verification"]);
+  it("pitch index: /pitch page is gone; /sales still lists decks when any exist; no extra vertical routes", () => {
+    expect(PITCH_PATHS).toEqual([]);
+    expect(PITCH_INDEX).toHaveLength(0);
+    expect(LIVE_PITCH_PATHS).toEqual([]);
+    expect(fs.existsSync(path.join(REPO_ROOT, "app/pitch/page.tsx"))).toBe(false);
+    expect(fs.existsSync(path.join(REPO_ROOT, "public/pitch.pdf"))).toBe(true);
+    expect(fs.existsSync(path.join(REPO_ROOT, "public/_pitch.pdf"))).toBe(false);
+    const nextConfig = fs.readFileSync(path.join(REPO_ROOT, "next.config.ts"), "utf8");
+    expect(nextConfig).toContain('source: "/pitch"');
+    expect(nextConfig).toContain('destination: "/pitch.pdf"');
     expect(PITCH_PATHS).not.toContain("/pitch-product");
     expect(PITCH_PATHS).not.toContain("/pitch-verification");
     expect(PITCH_PATHS).not.toContain("/pitch-optimization");
@@ -460,15 +462,6 @@ describe("pitch deck content (platform only)", () => {
     const salesSource = fs.readFileSync(path.join(REPO_ROOT, "app/sales/page.tsx"), "utf8");
     expect(salesSource).toContain("PITCH_INDEX");
     expect(salesSource).toContain("data-sales-index");
-    expect(salesSource).toContain("data-pitch-links");
-  });
-
-  it("route page module: verification pitch on /pitch", () => {
-    const source = fs.readFileSync(path.join(REPO_ROOT, "app/pitch/page.tsx"), "utf8");
-    expect(source).toContain("PLATFORM_PITCH_DECK");
-    expect(source).toContain("SalesSlideDeck");
-    expect(source).toContain("Verification Pitch");
-    expect(source).toMatch(/robots:\s*\{[\s\S]*index:\s*false/);
   });
 
   it("SalesSlideDeck uses marketing aesthetics (zinc + aesthetics backgrounds, not emerald-only)", () => {

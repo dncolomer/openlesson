@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   applySessionPress,
   buildSessionBundle,
-  embedSessionPress,
   emptySessionMarkState,
   foldWorkspacePolicy,
   freezeMistakeList,
@@ -11,7 +10,6 @@ import {
   rankByButtonGap,
   selectionSlice,
   setCalibrateSure,
-  SESSION_PRESS_EMBEDDING_MODEL_ID,
   startedTooSureIds,
   verificationGap,
 } from "@/lib/session-marks";
@@ -167,28 +165,4 @@ describe("session marks", () => {
     expect(replaced.mistakes.map((row) => row.id)).toEqual(["other"]);
   });
 
-  it("embeds the button line and the slice, not a judge paragraph", () => {
-    const pressed = applySessionPress(started(), {
-      button: "try",
-      aimedMistakeId: "m1",
-      slice: "a sketch of the two sides",
-      at: 10,
-    });
-    expect(pressed.ok).toBe(true);
-    if (!pressed.ok) return;
-    const embedding = embedSessionPress({
-      workspaceId: "ws",
-      press: pressed.press,
-      mistakeText: "Treats a limit as a value.",
-    });
-    expect(embedding.embedding_model_id).toBe(SESSION_PRESS_EMBEDDING_MODEL_ID);
-    expect(embedding.vector.length).toBe(embedding.dim);
-    expect(embedding.vector.some((value) => value !== 0)).toBe(true);
-    const other = embedSessionPress({
-      workspaceId: "ws",
-      press: { ...pressed.press, slice: "a different sketch" },
-      mistakeText: "Treats a limit as a value.",
-    });
-    expect(other.vector).not.toEqual(embedding.vector);
-  });
 });

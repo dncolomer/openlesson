@@ -1,5 +1,4 @@
 import type { PerformanceReport } from "./performance-report";
-import type { LearningWorldModelV0 } from "@/lib/prompt-kernel/world-model";
 import { TIM_CONTRACT_NARRATIVE } from "@/lib/prompt-kernel/tim";
 import { buildTimFeatureEnvelope } from "./tim-feature-envelope";
 import { predictWithTimProvider } from "./tim-provider";
@@ -65,8 +64,6 @@ export interface InterruptionContext {
   idle_duration_ms?: number | null;
   /** Speech transcript snapshot when available */
   speech_transcript?: string | null;
-  /** Optional learning world model snapshot for TIM features. */
-  learning_world_model?: LearningWorldModelV0 | null;
 }
 
 const NO_INTERRUPTION_ENDPOINTS = new Set<ProofOfWorkApiEndpoint>([
@@ -88,12 +85,6 @@ const NO_INTERRUPTION_ENDPOINTS = new Set<ProofOfWorkApiEndpoint>([
   "end_session",
   "upload_proof_of_work",
   "list_tap_links",
-  "get_world_model",
-  "get_knowledge_config",
-  "get_knowledge_config_trajectory",
-  "knowledge_distance",
-  "list_snapshot_history",
-  "list_custom_knowledge_regions",
   "list_flow_embeddings",
   "get_flow_embedding",
 ]);
@@ -148,7 +139,7 @@ export async function predictInterruption(context: InterruptionContext): Promise
     return null;
   }
 
-  const features = buildTimFeatureEnvelope(context, context.learning_world_model);
+  const features = buildTimFeatureEnvelope(context);
   return predictWithTimProvider(features);
 }
 

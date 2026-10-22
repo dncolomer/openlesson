@@ -6,19 +6,18 @@
 import {
   createCustomVerificationModelFromVectors,
   createSyntheticKnowledgeRegionFromProfile,
-  encodeKnowledgeConfig,
   encodeSyntheticRegionProfile,
   scoreAgainstCustomVerificationModel,
   type CustomVerificationModelSpec,
   type CustomVerificationScore,
   type CustomVerificationSubjectRef,
-  type PowFeatureRow,
   type SyntheticRegionProfile,
 } from "@/lib/knowledge-config";
 import {
-  emptyLearningWorldModel,
-  mergeLearningWorldModelDelta,
-} from "@/lib/prompt-kernel/world-model";
+  embedTextsToFlowVector,
+  FLOW_EMBEDDING_DIM,
+  FLOW_EMBEDDING_MODEL_ID,
+} from "@/lib/flow-embedding";
 
 /** Stable marker for idempotent find/replace on staging. */
 export const SAAS_TECH_DEMO_MARKER = "[DEMO:saas-tech-roles-v1]";
@@ -724,13 +723,12 @@ export function roleRegionByKey(key: DemoRoleKey): DemoRoleDefinition {
 
 /**
  * Cosine floor for synthetic role regions in this demo.
- * Default synthetic softening (≤0.72) is too loose in knowledgecfg-v1-d64 —
- * off-role PoW still sits ~0.75–0.85 cosine to role centroids. 0.85 keeps
- * role-aligned subjects in-region while pushing off-role / junior subjects out.
+ * Hash-bag flowcfg centroids sit ~0.68–0.84 cosine for on-role subjects and
+ * ~0.35–0.54 for off-role. 0.65 keeps role-aligned subjects in-region.
  */
-export const DEMO_ROLE_REGION_COSINE_THRESHOLD = 0.85;
+export const DEMO_ROLE_REGION_COSINE_THRESHOLD = 0.65;
 
-/** Build a role region via the shipped synthetic profile → knowledgecfg path. */
+/** Build a role region via the shipped synthetic profile → flowcfg path. */
 export function buildRoleRegion(role: DemoRoleDefinition, workspaceId = "demo-workspace"): CustomVerificationModelSpec {
   const region = createSyntheticKnowledgeRegionFromProfile({
     name: role.regionName,
@@ -752,13 +750,26 @@ export function buildAllRoleRegions(workspaceId = "demo-workspace"): CustomVerif
 
 export interface EncodedDemoSubject {
   subject: DemoSubjectDefinition;
-  embedding: ReturnType<typeof encodeKnowledgeConfig>;
+  embedding: {
+    embedding_model_id: typeof FLOW_EMBEDDING_MODEL_ID;
+    dim: typeof FLOW_EMBEDDING_DIM;
+    vector: number[];
+    as_of_ms: number;
+    pow_event_count: number;
+    confidence: number;
+  };
   vector: number[];
-  powRows: PowFeatureRow[];
+  powRows: Array<{
+    proof_of_work_type: string;
+    timestamp_ms: number;
+    tool_name?: string;
+    tool_action?: string;
+    metadata?: Record<string, unknown>;
+  }>;
 }
 
 /**
- * Encode a subject from faked PoW (+ light LWM profile) through the real encoder.
+ * Encode a subject from faked PoW into a flowcfg-v1-d96 vector.
  */
 export function encodeDemoSubject(
   subject: DemoSubjectDefinition,
@@ -770,9 +781,8 @@ export function encodeDemoSubject(
 ): EncodedDemoSubject {
   const workspaceId = options?.workspaceId ?? "demo-workspace";
   const sessionStartMs = options?.sessionStartMs ?? 1_720_000_000_000;
-  const totalBlocks = options?.totalBlocks ?? DEMO_BLOCKS.length;
 
-  const powRows: PowFeatureRow[] = subject.powEvents.map((ev) => ({
+  const powRows = subject.powEvents.map((ev) => ({
     proof_of_work_type: ev.proof_of_work_type,
     timestamp_ms: sessionStartMs + ev.offset_ms,
     tool_name: ev.tool_name,
@@ -787,47 +797,30 @@ export function encodeDemoSubject(
     },
   }));
 
-  const worldModel = mergeLearningWorldModelDelta(emptyLearningWorldModel(workspaceId), {
-    scores_snapshot: {
-      verification_score: subject.verification_score,
-      augmentation_score: Math.max(0, subject.verification_score - 6),
-      optimization_score: Math.max(0, subject.verification_score - 10),
-      ghc_score: Math.round(subject.verification_score * 0.78),
-    },
-    learning_profile: {
-      strengths: subject.strengths,
-      friction_patterns: subject.friction_patterns,
-      preferred_modalities: subject.preferred_modalities,
-      temporal_patterns: { avg_dwell_ms: 5200, idle_bursts: 2 },
-    },
-    inferred_goal: {
-      text: `${subject.displayName} demonstrating ${subject.roleHint} competency on Helios Cloud`,
-      confidence: 0.75,
-      source: "evolved",
-    },
-    exploration: {
-      block_coverage: DEMO_BLOCKS.slice(0, Math.min(4, DEMO_BLOCKS.length)).map((b, i) => ({
-        block_id: `block:${b.key}`,
-        depth: (i === 0 ? "solid" : i < 3 ? "shallow" : "none") as "solid" | "shallow" | "none",
-        evidence_refs: [`pow:${subject.key}:${i}`],
-      })),
-      pathways_touched: subject.strengths.slice(0, 3),
-      blind_spots: subject.friction_patterns,
-    },
-  });
-
-  const embedding = encodeKnowledgeConfig({
+  const asOfMs = sessionStartMs + Math.max(...subject.powEvents.map((e) => e.offset_ms), 0);
+  const vector = embedTextsToFlowVector([
     workspaceId,
-    powRows,
-    worldModel,
-    totalBlocks,
-    asOfMs: sessionStartMs + Math.max(...subject.powEvents.map((e) => e.offset_ms), 0),
-  });
+    subject.displayName,
+    subject.roleHint,
+    `score ${subject.verification_score}`,
+    ...subject.strengths,
+    ...subject.friction_patterns,
+    ...subject.preferred_modalities,
+    ...powRows.map((row) => `${row.proof_of_work_type} ${row.tool_name || ""} ${row.tool_action || ""}`),
+  ]);
+  const embedding = {
+    embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
+    dim: FLOW_EMBEDDING_DIM,
+    vector,
+    as_of_ms: asOfMs,
+    pow_event_count: powRows.length,
+    confidence: 1,
+  };
 
   return {
     subject,
     embedding,
-    vector: embedding.vector,
+    vector,
     powRows,
   };
 }

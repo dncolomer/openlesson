@@ -3,20 +3,18 @@ import { jsonError } from "@/lib/api-error-envelope";
 import { ayclTokenFromBody, guardWorkspaceRoute } from "@/lib/api/require-auth";
 import {
   assembleSuggestFromKnowledgeXaiMessages,
-  mapEvalRunHistoryRowToSuggestInput,
   normalizeSuggestFromKnowledgeResponse,
   type KnowledgeMapBlockRef,
   type KnowledgeSnapshotSuggestInput,
 } from "@/lib/suggest-from-knowledge";
 import { runSuggestFromKnowledgeModel } from "@/lib/run-suggest-from-knowledge-model";
-import { listEvalRunHistory } from "@/lib/pow-api/eval-run-history-store";
 
 /**
  * POST — Suggest from Knowledge: xAI-backed author prompts grounded in
- * snapshot/eval history + current map block inventory.
+ * current map block inventory.
  *
- * Snapshots are **context**, not the selectable product. Output is one or more
- * `prompt` strings for expand / bridge / add-block / map-spot guidance fields.
+ * Output is one or more `prompt` strings for expand / bridge / add-block /
+ * map-spot guidance fields.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -43,32 +41,7 @@ export async function POST(req: NextRequest) {
       .eq("id", workspaceId)
       .maybeSingle();
 
-    // --- Snapshots / reports (context) ---
-    let snapshots: KnowledgeSnapshotSuggestInput[] = [];
-    try {
-      const rows = await listEvalRunHistory(supabase, {
-        workspaceId,
-        limit: 80,
-      });
-      snapshots = (rows || []).map((r) =>
-        mapEvalRunHistoryRowToSuggestInput({
-          id: r.id,
-          ran_at: r.ran_at,
-          score: r.score,
-          workspace_goal: r.workspace_goal,
-          block_id: r.block_id,
-          vertical: r.vertical,
-          source: r.source,
-          subject_user_id: r.subject_user_id,
-          subject_guest_user_id: r.subject_guest_user_id,
-          // Real VerticalScoreReport: gap_analysis.gaps[].title, strengths, growth_areas
-          report: r.report,
-        }),
-      );
-    } catch (err) {
-      console.warn("suggest-from-knowledge: history load failed", err);
-      snapshots = [];
-    }
+    const snapshots: KnowledgeSnapshotSuggestInput[] = [];
 
     // --- Map / block inventory (context) ---
     let blocks: KnowledgeMapBlockRef[] = [];

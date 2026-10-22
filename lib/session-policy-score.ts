@@ -1,12 +1,8 @@
 /**
  * Distance of a person's hidden-state path from the prepared tree's prices.
  * The cheapest outgoing edge at each step is the prepared policy. xAI writes those prices.
- * The embedding is the knowledgecfg vector of that distance plus the proof already captured.
  */
 
-import type { IleProofOfWorkUploadItem } from "@/lib/learn-evidence-buffer";
-import { encodeKnowledgeConfig, type PowFeatureRow } from "@/lib/knowledge-config/encoder";
-import { KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID } from "@/lib/knowledge-config/types";
 import {
   advanceSessionBranchModel,
   recommendSessionBranchAction,
@@ -24,18 +20,6 @@ export type PolicyScore = {
   distance: number;
   sequence: string[];
 };
-
-export type PolicyScoreEmbedding = {
-  score: PolicyScore;
-  embedding: number[];
-  embedding_model_id: typeof KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID;
-  text: string;
-  toolName: typeof SESSION_POLICY_TOOL_NAME;
-  toolAction: typeof SESSION_POLICY_TOOL_ACTION;
-  metadata: Record<string, unknown>;
-};
-
-
 
 /**
  * The first ready model is the tree the session was prepared with.
@@ -130,82 +114,6 @@ export function scorePolicySequence(
     excess,
     distance: excess / Math.max(1, steps),
     sequence: taken,
-  };
-}
-
-export function embedPolicyScore(input: {
-  model: SessionBranchModel;
-  sequence: readonly string[];
-  workspaceId?: string | null;
-  proofRows?: readonly PowFeatureRow[];
-  note?: string | null;
-}): PolicyScoreEmbedding {
-  const score = scorePolicySequence(input.model, input.sequence);
-  const text = [
-    `policy distance ${score.distance}`,
-    `policy excess ${score.excess}`,
-    `policy steps ${score.steps}`,
-    `policy sequence ${score.sequence.join(" ")}`,
-    input.note?.trim() || "",
-  ]
-    .filter(Boolean)
-    .join("\n");
-  const actionRows: PowFeatureRow[] = score.sequence.map((action, index) => ({
-    proof_of_work_type: "tool",
-    timestamp_ms: index + 1,
-    tool_name: SESSION_POLICY_TOOL_NAME,
-    tool_action: action,
-  }));
-  const encoded = encodeKnowledgeConfig({
-    workspaceId: input.workspaceId?.trim() || "session-policy",
-    totalBlocks: 0,
-    evaluatedGoalsText: text,
-    asOfMs: 1,
-    powRows: [...actionRows, ...(input.proofRows ?? [])],
-  });
-  return {
-    score,
-    embedding: encoded.vector,
-    embedding_model_id: KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
-    text,
-    toolName: SESSION_POLICY_TOOL_NAME,
-    toolAction: SESSION_POLICY_TOOL_ACTION,
-    metadata: {
-      policy_distance: score.distance,
-      policy_excess: score.excess,
-      policy_steps: score.steps,
-      policy_sequence: score.sequence,
-      embedding: encoded.vector,
-      embedding_model_id: KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
-    },
-  };
-}
-
-export function policyScoreUploadItem(scored: PolicyScoreEmbedding): IleProofOfWorkUploadItem {
-  return {
-    kind: "tool",
-    mimeType: "application/json",
-    fileName: "session-policy-score.json",
-    payload: scored.text,
-    timestampMs: 1,
-    toolName: scored.toolName,
-    toolAction: scored.toolAction,
-    metadata: scored.metadata,
-  };
-}
-
-/** A policy-only calibration proof. The embedding rides in the stored events. */
-export function policyScoreProofEvent(scored: PolicyScoreEmbedding): {
-  type: "policy_score";
-  questionId: "policy";
-  text: string;
-  source: "typed";
-} {
-  return {
-    type: "policy_score",
-    questionId: "policy",
-    text: scored.text,
-    source: "typed",
   };
 }
 

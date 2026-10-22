@@ -37,7 +37,6 @@ export type WorkspaceFeature =
   | "data_studio"
   | "integrations"
   | "proof_of_work"
-  | "snapshots"
   | "knowledge_portal"
   | "knowledge_links";
 
@@ -63,7 +62,6 @@ const VERIFICATION_FEATURES: readonly WorkspaceFeature[] = [
   "data_studio",
   "integrations",
   "proof_of_work",
-  "snapshots",
 ];
 
 const CALIBRATION_FEATURES: readonly WorkspaceFeature[] = [
@@ -77,7 +75,6 @@ const CALIBRATION_FEATURES: readonly WorkspaceFeature[] = [
   "data_studio",
   "integrations",
   "proof_of_work",
-  "snapshots",
 ];
 
 const LEARNING = new Set<WorkspaceFeature>(LEARNING_FEATURES);
@@ -142,8 +139,6 @@ function featurePhrase(feature: WorkspaceFeature): string {
       return "integrations";
     case "proof_of_work":
       return "proof of work";
-    case "snapshots":
-      return "snapshots";
     case "knowledge_portal":
       return "Knowledge Portal";
     case "knowledge_links":
@@ -202,18 +197,6 @@ export function agentToolFeature(name: string): WorkspaceFeature | null {
     case "stash_proof_of_work":
     case "submit_stashed_proof_of_work":
       return "proof_of_work";
-    case "lwm_snapshot":
-    case "get_world_model":
-    case "list_snapshot_history":
-      return "snapshots";
-    case "get_knowledge_config":
-    case "get_knowledge_config_trajectory":
-    case "knowledge_distance":
-      return "knowledge";
-    case "list_custom_knowledge_regions":
-    case "create_custom_knowledge_region":
-    case "eval_custom_knowledge_region":
-      return "knowledge_regions";
     case "list_tap_links":
     case "create_tap_link":
       return "knowledge_links";

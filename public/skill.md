@@ -11,7 +11,7 @@ There are **two** public agent APIs:
 **Base URL:** `https://uncertain.systems` (or your self-hosted origin)
 **MCP:** `POST /api/mcp` with `Authorization: Bearer <api_key>`
 
-Snapshot (`/api/v3/snapshot`) and Stash (`/api/v3/stash`) are **not** public agent APIs.
+Snapshot (`/api/v3/snapshot`) and Stash (`/api/v3/stash`) are retired. They are **not** public agent APIs.
 
 **Teams tier required.** Plan-gate failures return **`403` with `error.code = "api_plan_required"`**.
 

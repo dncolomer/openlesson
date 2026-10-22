@@ -17,11 +17,7 @@ import {
   assertStemCatalogComplete,
   stemFieldNotesMarker,
 } from "../lib/demo/stem-public-workspaces";
-import {
-  KNOWLEDGE_CONFIG_DIM,
-  KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
-  isKnowledgeConfigVector,
-} from "../lib/knowledge-config";
+import { isFlowEmbeddingVector, FLOW_EMBEDDING_DIM, FLOW_EMBEDDING_MODEL_ID } from "../lib/flow-embedding";
 import { parseSaasTechDemoSeedTarget } from "./saas-tech-demo-target";
 
 async function main() {
@@ -129,17 +125,17 @@ async function main() {
             continue;
           }
         }
-        if (modelId !== KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID) {
+        if (modelId !== FLOW_EMBEDDING_MODEL_ID) {
           failures.push(
             `field ${field.key} region ${r.name}: embedding_model_id ${modelId}`,
           );
         }
-        if (dim !== KNOWLEDGE_CONFIG_DIM) {
+        if (dim !== FLOW_EMBEDDING_DIM) {
           failures.push(`field ${field.key} region ${r.name}: dim ${dim}`);
         }
-        if (!isKnowledgeConfigVector(centroid as number[], KNOWLEDGE_CONFIG_DIM)) {
+        if (!isFlowEmbeddingVector(centroid as number[])) {
           failures.push(
-            `field ${field.key} region ${r.name}: centroid not valid knowledgecfg vector`,
+            `field ${field.key} region ${r.name}: centroid not valid flowcfg vector`,
           );
         }
         if (Number(r.subject_count) < 1) {

@@ -249,7 +249,6 @@ describe("P1–P10 shipped helpers", () => {
 
     const tapClient = read("components/TapScoreClient.tsx");
     const sessionView = readSessionViewSurface();
-    const stash = read("app/api/v3/stash/workspaces/[id]/stash/route.ts");
     const tapLinks = read("app/api/workspace/tap-links/route.ts");
     const domain = read("lib/domain/types.ts");
 
@@ -285,7 +284,6 @@ describe("P1–P10 shipped helpers", () => {
     expect(sessionView).toContain("sendThought");
     expect(sessionView).toContain("IleReviewWorkPanel");
     expect(sessionView).not.toContain('from "./HeliosChat"');
-    expect(stash).toContain("authenticateStashRequest");
     expect(tapLinks).toContain("requireProductWorkspaceLinkAuth");
     const productAuth = read("lib/product-workspace-auth.ts");
     expect(productAuth).toContain("assertWorkspacePolicy");
@@ -316,7 +314,7 @@ describe("P1–P10 shipped helpers", () => {
         "TAP shells: TAP_SESSION_RUNTIME_PATHS start/complete + tapTracePayload",
         "TAP LLM miss uses resolveTap*FromLlm fallbacks",
         "TAP Learning: postIleSessionChat + ThoughtMemoryPanel onSendThought",
-        "product-auth allowProductWorkspaceLinkAccess/EvalAccess; stash authenticateStashRequest",
+        "product-auth allowProductWorkspaceLinkAccess/EvalAccess",
       ].join("\n"),
     );
   });

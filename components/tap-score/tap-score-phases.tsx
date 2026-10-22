@@ -32,7 +32,6 @@ import { verificationFieldPrepareInput } from "@/lib/session-branch-prepare";
 import { policyScoreFromSnapshot } from "@/lib/session-policy-score";
 import { SESSION_SIDEBAR_PRIMARY_BUTTON_CLASS } from "@/lib/session-sidebar";
 import { TapPracticePill } from "@/components/tap-score/tap-practice-pill";
-import { PerformanceReportCard } from "@/components/PerformanceReportCard";
 import { TapLiveClock } from "@/components/tap-score/tap-live-clock";
 import { TapThoughtButton } from "@/components/tap-score/tap-thought-button";
 import { TapAestheticSection } from "@/components/tap-score/tap-aesthetic-section";
@@ -46,7 +45,6 @@ import { FLOW_END_KICKERS } from "@/lib/session-stage-progress";
 import type { SessionSidebarMode } from "@/lib/session-sidebar";
 import { coerceSpokenLocale, type SpokenLocale } from "@/lib/tutoring-languages";
 import type { TapStartingTopic } from "@/lib/tap-score";
-import type { PerformanceReport } from "@/lib/pow-api/performance-report";
 import type { PowParticipantIdentity } from "@/lib/session-participant-identity";
 import {
   type Phase,
@@ -137,7 +135,6 @@ export function TapScorePhases(props: {
   blockId?: string;
   sessionId?: string;
   resultsError: string;
-  performanceReport: PerformanceReport | null;
   sessionEndedImpure: boolean;
   restartBriefingFlow: () => void;
   setPhase: (phase: Phase) => void;
@@ -222,7 +219,6 @@ export function TapScorePhases(props: {
     blockId,
     sessionId,
     resultsError,
-    performanceReport,
     sessionEndedImpure,
     restartBriefingFlow,
     setPhase,
@@ -868,21 +864,7 @@ export function TapScorePhases(props: {
               title={t("tap.postSession.resultsTitle")}
               body={t("tap.postSession.resultsHint")}
             >
-              {policyScore || performanceReport ? (
-                <>
-                  <SessionPolicyScoreResult score={policyScore} />
-                  {performanceReport ? (
-                    <div className="mt-6 flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-none border border-neutral-800 bg-neutral-950/50 p-4 md:p-5">
-                      <PerformanceReportCard
-                        report={performanceReport}
-                        layout="spacious"
-                        fillHeight
-                        label={t("tap.postSession.verificationResultsTitle")}
-                      />
-                    </div>
-                  ) : null}
-                </>
-              ) : null}
+              {policyScore ? <SessionPolicyScoreResult score={policyScore} /> : null}
             </SessionFinishedScreen>
           )
         ) : null}

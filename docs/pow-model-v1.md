@@ -488,7 +488,6 @@ None. Appetite vocabulary, TAPBench identity, TAP opaque policy, and pin-vs-requ
 - `lib/pow-api/upload-workspace-proof-of-work.ts` — canonical persist
 - `lib/pow-api/proof-of-work-schema.ts` / `proof-of-work-integration.ts` — `spec_version` `1.3`
 - `lib/pow-api/opaque-evaluation.ts` — `spec_version` `1.5-opaque`
-- `lib/pow-api/stash-api.ts` — buffer then flush via helper
 - `lib/pow-api/mcp-tools/helpers.ts` + `dispatch.ts` — MCP upload
 - `lib/admin/proof-of-work.ts` / `lib/pow-api/studio-pow-mutate.ts` — admin select / PATCH
 - `lib/tap-score-session-auth.ts` — `authContextFromTapAccess`
@@ -539,7 +538,7 @@ Each PR is independently reviewable and mergeable. Versioning scaffolding is mix
 
 - **Title:** `pow: workspace/request pow_model_id negotiation`
 - **Depends on:** PR 1; ideally 2–3a so every surface speaks the field
-- **Files:** migration `workspaces.pow_model_id`; `upload-workspace-proof-of-work.ts`; `stash-api.ts` (ingest vs bound spec); MCP dispatch + REST v3 + session PoW routes; `app/api/v3/pow/workspaces/[id]/route.ts` (PATCH pin); learning-progress / schema catalog JSON; encoder branch on `row.pow_model_id` (dim 28, same slot); `lib/pow-api/studio-pow-mutate.ts` + data-studio tests (denylist); `lib/admin/proof-of-work.ts` if select not already updated
+- **Files:** migration `workspaces.pow_model_id`; `upload-workspace-proof-of-work.ts`; MCP dispatch + REST v3 + session PoW routes; `app/api/v3/pow/workspaces/[id]/route.ts` (PATCH pin); learning-progress / schema catalog JSON; encoder branch on `row.pow_model_id` (dim 28, same slot); `lib/pow-api/studio-pow-mutate.ts` + data-studio tests (denylist); `lib/admin/proof-of-work.ts` if select not already updated
 - **Changes:** Resolution order (request must match pin → pin → default v1). Catalog JSON as specified; only v1 `writable: true`. Unknown id or type-not-in-spec → 400. Stash validates at ingest, stamps at flush. PATCH keeps `canAccessAgentWorkspace` + `workspaces:write`; accepts `pow_model_id` as a partial update (do not touch omitted `workspace_goal`); unknown / non-writable id → 400; require a non-empty body. Data Studio cannot retcon. Default write path unchanged.
 
 ### PR 5 — (Later, out of scope) Introduce `pow-model-v2`

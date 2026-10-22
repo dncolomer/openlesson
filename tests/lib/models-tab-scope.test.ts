@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  aggregateLearningWorldModels,
   dedupeSubjectRefs,
   parseIdList,
   parseSubjectOptionKey,
@@ -13,7 +12,6 @@ import {
   shouldLockModelsTabSubjectToSelf,
   subjectOptionKeyFromRef,
 } from "@/lib/pow-api/models-tab-scope";
-import { emptyLearningWorldModel } from "@/lib/prompt-kernel/world-model";
 import { readKnowledgePanelSurface } from "../helpers/surface-source";
 import { readWorkspaceViewSurface } from "@/tests/helpers/surface-source";
 
@@ -149,9 +147,7 @@ describe("learner self-lock for LWM + Embeddings", () => {
     expect(panel).toMatch(
       /canInspectOthers\s*=\s*resolveModelsTabCanInspectOthers/,
     );
-    // Force LWM + emb to self when locked
-    expect(panel).toContain("setLwmUserId(currentUserId)");
-    expect(panel).toContain("setLwmGuestUserId(\"\")");
+    expect(panel).toContain("lockSubjectToSelf");
 
     // Performance panel threads lock for LWM + Embeddings (not ranking)
     expect(perf).toContain("lockSubjectToSelf={lwmEmbeddingsOnly}");
@@ -381,37 +377,4 @@ describe("parseIdList / dedupeSubjectRefs", () => {
   });
 });
 
-describe("aggregateLearningWorldModels", () => {
-  it("unions strengths and appetite; averages scores", () => {
-    const a = emptyLearningWorldModel("ws");
-    a.learning_profile.strengths = ["algebra", "proofs"];
-    a.evidence_appetite.want_more = ["reflection"];
-    a.scores_snapshot.verification_score = 80;
-    a.scores_snapshot.ghc_score = 40;
 
-    const b = emptyLearningWorldModel("ws");
-    b.learning_profile.strengths = ["algebra", "debugging"];
-    b.evidence_appetite.want_more = ["decision_rationale"];
-    b.evidence_appetite.saturated = ["tool_crud_events"];
-    b.scores_snapshot.verification_score = 60;
-    b.scores_snapshot.ghc_score = 50;
-
-    const agg = aggregateLearningWorldModels({ workspaceId: "ws", models: [a, b] });
-    expect(agg.learning_profile.strengths.sort()).toEqual(
-      ["algebra", "debugging", "proofs"].sort(),
-    );
-    expect(agg.evidence_appetite.want_more.sort()).toEqual(
-      ["decision_rationale", "reflection"].sort(),
-    );
-    expect(agg.evidence_appetite.saturated).toEqual(["tool_crud_events"]);
-    expect(agg.scores_snapshot.verification_score).toBe(70);
-    expect(agg.scores_snapshot.ghc_score).toBe(45);
-  });
-
-  it("returns empty model when no inputs", () => {
-    const agg = aggregateLearningWorldModels({ workspaceId: "ws", models: [] });
-    expect(agg.workspace_id).toBe("ws");
-    expect(agg.learning_profile.strengths).toEqual([]);
-    expect(agg.scores_snapshot.verification_score).toBeNull();
-  });
-});

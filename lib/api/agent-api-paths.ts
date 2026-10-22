@@ -3,16 +3,15 @@
  *   - Workspace management  `/api/v3/workspaces` (+ `/api/v3/account`)
  *   - Headless proof-of-work `/api/v3/pow`
  *
- * Snapshot and Stash route trees may still exist for the product UI.
- * They are not public agent API families.
+ * Snapshot and Stash families are retired. They are not public agent APIs.
  */
 
 export const WORKSPACE_API_BASE = "/api/v3/workspaces" as const;
 export const ACCOUNT_API_BASE = "/api/v3/account" as const;
 export const POW_API_BASE = "/api/v3/pow" as const;
-/** Cookie-auth / internal Knowledge UI. Not a public agent family. */
+/** Retired Snapshot API family. Kept so tests can assert the tree is gone. */
 export const SNAPSHOT_API_BASE = "/api/v3/snapshot" as const;
-/** Cookie-auth TAP buffer. Not a public agent family. */
+/** Retired Stash API family. Kept so tests can assert the tree is gone. */
 export const STASH_API_BASE = "/api/v3/stash" as const;
 
 /** Public agent REST families. Snapshot / Stash are excluded. */

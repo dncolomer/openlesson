@@ -1,6 +1,6 @@
 /**
  * Map stored Calibrate / Learn / Verify embeddings (flowcfg-v1-d96) onto the
- * Knowledge projection payload. Distinct from knowledgecfg-v1-d64 snapshots.
+ * Knowledge projection payload.
  */
 
 import { l2Distance } from "@/lib/knowledge-config/math";

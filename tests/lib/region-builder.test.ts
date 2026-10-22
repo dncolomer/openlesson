@@ -12,7 +12,6 @@ import {
   selectSubjectsForRegion,
   type RegionBuilderSubject,
 } from "@/lib/pow-api/region-builder";
-import { buildStashDecisionMetadata } from "@/lib/pow-api/stash-api";
 import { classifyPowSource, isTapbenchPowMetadata } from "@/lib/pow-api/tapbench";
 
 const ROOT = join(__dirname, "../..");
@@ -99,7 +98,7 @@ describe("region builder filters (shipped helpers)", () => {
     });
     expect(byFull).toHaveLength(1);
     expect(byFull[0].source_link_url).toBe(fullUrl);
-    const humanMeta = buildStashDecisionMetadata("submit", { source_link_id: "tap-link-1" });
+    const humanMeta = { source_link_id: "tap-link-1" };
     const enriched = enrichSubjectWithPowProvenance(
       { user_id: "u-url" },
       [humanMeta],
@@ -127,7 +126,7 @@ describe("region builder filters (shipped helpers)", () => {
       tapbench_link_id: "tb-link-aaa",
       source_link_id: "tb-link-aaa",
     };
-    const humanMeta = buildStashDecisionMetadata("stash", { source: "stash_api" });
+    const humanMeta = { source: "human" };
     expect(isTapbenchPowMetadata(tbMeta)).toBe(true);
     expect(classifyPowSource(humanMeta)).toBe("human");
 

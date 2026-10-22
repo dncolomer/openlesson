@@ -743,7 +743,7 @@ describe("suggest from knowledge + simulation", () => {
     expect(route).toContain("runSuggestFromKnowledgeModel");
     expect(route).toContain("assembleSuggestFromKnowledgeXaiMessages");
     expect(route).toContain("normalizeSuggestFromKnowledgeResponse");
-    expect(route).toContain("listEvalRunHistory");
+    expect(route).not.toContain("listEvalRunHistory");
     expect(route).toContain("from(\"blocks\")");
     expect(route).not.toContain("buildSuggestFromKnowledge(");
 

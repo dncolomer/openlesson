@@ -2,7 +2,7 @@
  * TAP Learning expected-free-energy × chapter map — chapter-complete path.
  *
  * Completing a chapter is Proof of Work (`session_plan` / `chapter_done`).
- * The interruption policy reads that event plus LWM evidence appetite and schedules a
+ * The interruption policy reads that event and schedules a
  * `chapter_map_expand` interruption. TAP Learning applies it on a dedicated map
  * timer (not the Helios dialogue scheduler, so idle/speech PoW cannot
  * supersede it). The new tile uses a forage-explore icon until the learner
@@ -455,16 +455,14 @@ export function predictChapterCompleteMapExpansion(
   const suggestions = buildChapterCompleteExpansionSuggestions({
     completedDescription,
     completedStepId,
-    appetite: features.learning_world_model?.evidence_appetite ?? null,
+    appetite: null,
   });
   const suggestion = suggestions[0];
   if (!suggestion) {
     throw new Error("chapter-complete TIM expansion produced no suggestions");
   }
 
-  const appetiteHint = appetiteExpansionHint(
-    features.learning_world_model?.evidence_appetite ?? null,
-  );
+  const appetiteHint = appetiteExpansionHint(null);
   const confidence = appetiteHint ? "high" : "medium";
   const delay_ms = ILE_CHAPTER_COMPLETE_TIM_DELAY_MS;
   const message =

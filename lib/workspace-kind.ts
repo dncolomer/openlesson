@@ -61,7 +61,7 @@ export function workspaceProductShell(value: unknown): WorkspaceProductShell {
   return "learning";
 }
 
-/** Flow embeddings Knowledge projects for this product. Learning uses knowledgecfg. */
+/** Flow embeddings Knowledge projects for this product. */
 export function workspaceKnowledgeFlowKind(
   value: unknown,
 ): WorkspaceKnowledgeFlowKind | null {

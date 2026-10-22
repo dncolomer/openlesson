@@ -198,7 +198,7 @@ function mapVideo(clip: MappedVideoClip, context: IleSoloImportContext): IleSolo
 
 /**
  * Map TAP Learning Solo timeline events to `uploadWorkspaceProofOfWork` inputs.
- * Does not persist, does not trigger LWM Snapshot.
+ * Does not persist, does not trigger scoring.
  */
 export function mapIleSoloEventsToUploadInputs(
   events: IleSoloTimelineEvent[],

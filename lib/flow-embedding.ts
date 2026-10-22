@@ -5,7 +5,6 @@
  * stored with the vector so it can be recovered and re-embedded.
  *
  * Calibrate sounding omits projected policy. Learn and Verify include it.
- * This is not knowledgecfg-v1-d64 and not an LWM snapshot.
  */
 
 import {
@@ -126,6 +125,11 @@ function hashBag(texts: readonly string[]): number[] {
   }
   const max = Math.max(1, ...bag);
   return bag.map((n) => n / max);
+}
+
+/** Hash free text into a unit flowcfg-v1-d96 vector (synthetic regions, demo seeds). */
+export function embedTextsToFlowVector(texts: readonly string[]): number[] {
+  return l2Normalize(hashBag(texts));
 }
 
 function compactEdges(rawEdges: unknown, rawActions?: unknown): Array<{ toId: string; price: number }> {

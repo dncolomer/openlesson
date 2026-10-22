@@ -49,7 +49,6 @@ import {
 import { buildTimFeatureEnvelope } from "@/lib/pow-api/tim-feature-envelope";
 import { setTimProviderForTests, predictWithTimProvider } from "@/lib/pow-api/tim-provider";
 import { TIM_INTERVENTION_TYPE_CATALOG } from "@/lib/pow-api/predictive-interruption-types";
-import { emptyLearningWorldModel } from "@/lib/prompt-kernel/world-model";
 import { buildIleChapterDonePowToolData } from "@/lib/learn-mode";
 import { CHAPTER_DONE_MAP_ICON, TIM_EXPLORE_MAP_ICON, parseBlockMapIconName } from "@/lib/block-map-glyph";
 import { sessionStepsToSkillGridNodes } from "@/lib/chapter-skill-grid";
@@ -160,8 +159,7 @@ describe("chapter-complete PoW is a TIM event (shipped)", () => {
 
 describe("predictChapterCompleteMapExpansion (shipped TIM)", () => {
   it("always expands after chapter complete and biases the topic from appetite.want_more", async () => {
-    const model = emptyLearningWorldModel("ws-1");
-    model.evidence_appetite = {
+    const appetite = {
       want_more: ["causal_reasoning", "tool_crud_events"],
       saturated: ["idle_heartbeat"],
     };
@@ -177,10 +175,8 @@ describe("predictChapterCompleteMapExpansion (shipped TIM)", () => {
         stepId: "ch-done",
         stepDescription: "Dijkstra shortest path",
       },
-      learning_world_model: model,
     });
-    expect(features.learning_world_model?.evidence_appetite?.want_more).toContain("causal_reasoning");
-    expect(appetiteExpansionHint(model.evidence_appetite)).toBe("causal reasoning");
+    expect(appetiteExpansionHint(appetite)).toBe("causal reasoning");
 
     const interruption = predictChapterCompleteMapExpansion(features);
     expect(interruption.intervention.type).toBe("chapter_map_expand");
@@ -188,12 +184,12 @@ describe("predictChapterCompleteMapExpansion (shipped TIM)", () => {
     expect(interruption.delay_ms).toBe(ILE_CHAPTER_COMPLETE_TIM_DELAY_MS);
     expect(interruption.delay_ms).toBeGreaterThanOrEqual(2_000);
     expect(interruption.intervention.chapter_suggestion?.source_step_id).toBe("ch-done");
-    expect(interruption.intervention.message.toLowerCase()).toMatch(/causal/);
+    expect(interruption.intervention.message.toLowerCase()).toMatch(/dijkstra/);
     expect(isChapterMapExpandInterruption(interruption)).toBe(true);
     const suggested = chapterSuggestionsFromInterruption(interruption);
     expect(suggested.length).toBeGreaterThanOrEqual(ILE_CHAPTER_COMPLETE_DEFAULT_EXPANSIONS);
     expect(suggested.length).toBeLessThanOrEqual(ILE_CHAPTER_COMPLETE_MAX_EXPANSIONS);
-    expect(suggested.map((item) => item.description.toLowerCase()).join(" ")).toMatch(/causal/);
+    expect(suggested.map((item) => item.description.toLowerCase()).join(" ")).toMatch(/dijkstra/);
 
     const withoutLlm = await predictIleChapterCompleteInterruption(features);
     expect(withoutLlm?.intervention.type).toBe("chapter_map_expand");
@@ -252,8 +248,6 @@ describe("predictChapterCompleteMapExpansion (shipped TIM)", () => {
       },
     });
     try {
-      const model = emptyLearningWorldModel("ws-1");
-      model.evidence_appetite = { want_more: ["worked_examples"], saturated: [] };
       const wrapped = await withProofOfWorkApiResponse(
         { proof_of_work: { id: "pow-1" } },
         {
@@ -265,7 +259,6 @@ describe("predictChapterCompleteMapExpansion (shipped TIM)", () => {
             stepId: "ch-done",
             stepDescription: "Dijkstra shortest path",
           },
-          learning_world_model: model,
         },
       );
       expect(wrapped.interruption?.intervention.type).toBe("chapter_map_expand");
@@ -427,11 +420,6 @@ describe("applyChapterCompleteTimExpansionToPlan + TIM explore icon (shipped)", 
     });
     expect(again).toBeNull();
 
-    const threeAppetite = emptyLearningWorldModel("ws-1");
-    threeAppetite.evidence_appetite = {
-      want_more: ["causal_reasoning", "worked_examples", "oral_walkthrough"],
-      saturated: [],
-    };
     const predicted = predictChapterCompleteMapExpansion(
       buildTimFeatureEnvelope({
         endpoint: "upload_ile_chapter_done",
@@ -440,10 +428,11 @@ describe("applyChapterCompleteTimExpansionToPlan + TIM explore icon (shipped)", 
           stepId: "ch-done",
           stepDescription: "Dijkstra shortest path",
         },
-        learning_world_model: threeAppetite,
       }),
     );
-    expect(chapterSuggestionsFromInterruption(predicted)).toHaveLength(3);
+    expect(chapterSuggestionsFromInterruption(predicted).length).toBeGreaterThanOrEqual(
+      ILE_CHAPTER_COMPLETE_DEFAULT_EXPANSIONS,
+    );
 
     writeScratch(
       "ile-tim-multi-expand.txt",
@@ -609,8 +598,8 @@ describe("TAP Learning TIM map interactions catalog + wiring", () => {
     expect(provider).toContain("predictIleChapterCompleteInterruption");
 
     const route = read("app/api/workspace/proof-of-work/route.ts");
-    expect(route).toContain("loadLearningWorldModel");
-    expect(route).toContain("isIleChapterDonePow");
+    expect(route).toContain("resolvePowInterruptionContext");
+    expect(route).toContain("withProofOfWorkApiResponse");
 
     const glyph = read("components/block-skill-grid/map-block-glyph-icon.tsx");
     expect(glyph).toContain("data-tim-explore-icon");

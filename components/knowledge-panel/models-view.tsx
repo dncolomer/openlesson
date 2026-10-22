@@ -13,10 +13,6 @@ import {
 import { useKnowledgeEmbeddings } from "@/components/knowledge-panel/use-knowledge-embeddings";
 import type { KnowledgeModelsViewProps } from "@/components/knowledge-panel/types";
 import { VerificationFlowSubtabFilter } from "@/components/VerificationFlowSubtabFilter";
-import {
-  knowledgeCoordsForVerificationFlow,
-  knowledgeSubjectsForVerificationFlow,
-} from "@/lib/verification-knowledge-subtab";
 
 export function KnowledgeModelsView({
   workspaceId,
@@ -78,22 +74,14 @@ export function KnowledgeModelsView({
     ayclToken,
     canInspectOthers,
     lockSubjectToSelf,
-    embeddingSource: flowFilter?.enabled ? "flowcfg" : "knowledgecfg",
+    embeddingSource: "flowcfg",
     flowId: flowFilter?.enabled ? flowFilter.flowId : null,
     flowKind: flowFilter?.enabled ? flowFilter.flowKind ?? null : null,
   });
   const flowId = flowFilter?.enabled ? flowFilter.flowId : null;
-  const useFlowEmbeddings = Boolean(flowFilter?.enabled);
-  const subjects = useFlowEmbeddings
-    ? availableSubjects
-    : knowledgeSubjectsForVerificationFlow(
-        availableSubjects,
-        flowFilter?.rows ?? [],
-        flowId,
-      );
-  const visibleCoords = useFlowEmbeddings
-    ? coords
-    : knowledgeCoordsForVerificationFlow(coords, subjects, flowId);
+  const useFlowEmbeddings = true;
+  const subjects = availableSubjects;
+  const visibleCoords = coords;
 
   return (
         <div
@@ -101,9 +89,7 @@ export function KnowledgeModelsView({
           data-section="embeddings-projections"
           data-models-section="embeddings-projections"
           data-embeddings-layout="left-canvas-right-regions"
-          data-embeddings-model={
-            useFlowEmbeddings ? FLOW_EMBEDDING_MODEL_ID : "knowledgecfg-v1-d64"
-          }
+          data-embeddings-model={FLOW_EMBEDDING_MODEL_ID}
           data-embeddings-fullscreen={embeddingsFullscreen ? "true" : "false"}
           className={
             embeddingsFullscreen
@@ -129,19 +115,9 @@ export function KnowledgeModelsView({
                   className="text-[11px] leading-relaxed text-neutral-500"
                   data-embeddings-model-copy
                 >
-                  {useFlowEmbeddings ? (
-                    <>
-                      Embeddings in{" "}
-                      <span className="font-mono text-neutral-400">{FLOW_EMBEDDING_MODEL_ID}</span>.
-                      Overlay regions on the right.
-                    </>
-                  ) : (
-                    <>
-                      Trajectory in{" "}
-                      <span className="font-mono text-neutral-400">knowledgecfg-v1-d64</span>. Overlay
-                      regions on the right.
-                    </>
-                  )}
+                  Embeddings in{" "}
+                  <span className="font-mono text-neutral-400">{FLOW_EMBEDDING_MODEL_ID}</span>.
+                  Overlay regions on the right.
                 </p>
 
                 <div className="w-full" data-projection-algorithm-picker data-map-projection-picker>

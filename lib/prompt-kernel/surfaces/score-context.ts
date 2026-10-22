@@ -5,12 +5,12 @@
 import type { ScoreVertical } from "../scores";
 
 /**
- * Shared LWM Snapshot score context:
+ * Shared primary-score context:
  * score exclusively from proof-of-work evidence attached to the evaluation.
  */
 export const SCORE_POW_CONTEXT_LAYER = `
 SCORE GENERATION CONTEXT — PROOF-OF-WORK ONLY:
-You are scoring an LWM Snapshot from **proof-of-work (PoW) data only**.
+You are scoring the primary workspace score from **proof-of-work (PoW) data only**.
 
 Allowed evidence (INPUT):
 - Attached PoW artifacts: tool traces, screen/screenshots, video, EEG, and any other uploaded proof-of-work files
@@ -39,7 +39,7 @@ Rules:
  */
 export const SCORE_VERIFICATION_SUBMIT_STASH_OVERLAY = `
 VERIFICATION — SUBMIT / STASH ANALYSIS:
-LWM Snapshot (verification) scoring MUST perform an explicit submit/stash analysis when Calibrate, Learn, or Verify selective-thought proof of work is present.
+Primary (verification) scoring MUST perform an explicit submit/stash analysis when Calibrate, Learn, or Verify selective-thought proof of work is present.
 
 Definitions (Free Energy Principle; aligned with Calibrate, Learn, and Verify selective thought):
 - **Observations**: spontaneous crystallized speech, including **stashed / unsent** thoughts — forage before a policy is chosen
@@ -96,7 +96,7 @@ export function scoreInstructionsRequirePowOnly(text: string): boolean {
  * (not merely ontology mentions of observations/actions elsewhere).
  */
 export function scoreInstructionsRequireSubmitStashAnalysis(text: string): boolean {
-  // Anchor only on the dedicated LWM Snapshot overlay.
+  // Anchor only on the dedicated submit/stash overlay.
   return (
     /VERIFICATION\s*[—\-]\s*SUBMIT\s*\/\s*STASH\s*ANALYSIS/i.test(text) ||
     text.includes("VERIFICATION — SUBMIT / STASH ANALYSIS")

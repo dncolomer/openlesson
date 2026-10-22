@@ -1,6 +1,6 @@
 /**
  * Pure view-transform helpers for the Embeddings projection widget.
- * Maps knowledgecfg 2D frame coordinates ↔ SVG screen space with zoom/pan.
+ * Maps flowcfg 2D frame coordinates ↔ SVG screen space with zoom/pan.
  */
 
 export interface DataBounds {

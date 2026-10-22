@@ -22,7 +22,7 @@ export const FEP_FOUNDATION = {
   summary:
     "The shared influence behind every product. Learning is reducing uncertainty: the harness forages for information that shrinks what is unknown, rather than waiting for the next chat reply.",
   bullets: [
-    "Same epistemic foraging policy across Proof-of-Work API, Stash API, and session (Calibrate, Learn, and Verify)",
+    "Same epistemic foraging policy across Proof-of-Work API and session (Calibrate, Learn, and Verify)",
     "Grounded in your workflow, skills, and conversion goals",
   ],
 };
@@ -57,19 +57,6 @@ export const PRODUCTS: ProductDefinition[] = [
       bullets: [
         "Scores agent runs from real tool use",
         "Fits CI, eval harnesses, and deploy gates",
-      ],
-    },
-  },
-  {
-    id: "stash-api",
-    eyebrow: "Agentic API · agent Stash",
-    title: "Stash API",
-    forAgent: {
-      summary:
-        "Evaluate agents the same way we evaluate humans with session. Buffer proof of work, then Stash (observation) or Submit (action) into the regular PoW stack.",
-      bullets: [
-        "Same PoW types as Proof-of-Work API — tool, screen, video, EEG",
-        "Temporary memory until Stash or Submit; intent is first-class evidence",
       ],
     },
   },

@@ -15,6 +15,7 @@ export default function robots(): MetadataRoute.Robots {
           "/plans",
           "/workspaces",
           "/api/",
+          "/pitch",
         ],
       },
     ],

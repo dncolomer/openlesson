@@ -221,7 +221,7 @@ export function WorkspaceIntegrationPanel({
                   ? "Regions in flowcfg-v1-d96. Overlay them on calibration embeddings (uncertainty mapping)."
                   : isKnowledgeRegion
                     ? "Regions in flowcfg-v1-d96. Build them from verification flows or synthetic agents, then overlay them on Knowledge embeddings."
-                    : "Regions in knowledgecfg-v1-d64. Build them from verification flows, synthetic agents, or proof-of-work sources, then overlay them on Embeddings."}
+                    : "Regions in flowcfg-v1-d96. Build them from verification flows, synthetic agents, or proof-of-work sources, then overlay them on Embeddings."}
               </p>
             </div>
             <CustomVerificationModelsPanel

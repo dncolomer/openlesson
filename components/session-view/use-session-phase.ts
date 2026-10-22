@@ -418,8 +418,7 @@ const stopRecording = async (options?: { stayOnScreen?: boolean }) => {
 
   await persistIleSessionRow(() => sessionRef.current, { ayclToken, ileToken });
 
-  // LWM Snapshot is manual (Knowledge UI) or Snapshot API POST .../lwm-snapshot —
-  // not auto-run on TAP Learning end. PoW is already flushed above.
+  // PoW is already flushed above. Flow embedding is posted before endSession.
 
   handleDisconnectMuse();
   if (options?.stayOnScreen) return;

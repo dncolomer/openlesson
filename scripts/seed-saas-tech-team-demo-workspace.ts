@@ -2,7 +2,7 @@
  * Seed the Helios Cloud (SaaS tech-team) demo workspace with:
  *  - authentic multi-role SaaS tech-team copy + blocks
  *  - faked PoW rows for multiple subjects
- *  - knowledge_config_snapshots (real encoder vectors)
+ *  - workspace_flow_embeddings (flowcfg-v1-d96 vectors)
  *  - role regions (synthetic:grok-4.5 style)
  *  - one cohort region built from user PoW (no synthetic tag)
  *
@@ -41,9 +41,9 @@ import {
   type DemoSubjectDefinition,
 } from "../lib/demo/saas-tech-team-demo-workspace";
 import {
-  KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
-  KNOWLEDGE_CONFIG_DIM,
-} from "../lib/knowledge-config";
+  FLOW_EMBEDDING_DIM,
+  FLOW_EMBEDDING_MODEL_ID,
+} from "../lib/flow-embedding";
 import {
   parseSaasTechDemoSeedTarget,
   type SaasTechDemoTarget,
@@ -123,7 +123,7 @@ async function deleteWorkspaceCascade(
   await client.query(`DELETE FROM public.custom_verification_models WHERE workspace_id = $1`, [
     workspaceId,
   ]);
-  await client.query(`DELETE FROM public.knowledge_config_snapshots WHERE workspace_id = $1`, [
+  await client.query(`DELETE FROM public.workspace_flow_embeddings WHERE workspace_id = $1`, [
     workspaceId,
   ]);
   await client.query(`DELETE FROM public.workspace_proof_of_work WHERE workspace_id = $1`, [
@@ -440,61 +440,62 @@ async function main() {
       `[seed-saas-tech-demo] pow_rows=${powCount} owner_pow_rows=${ownerPowCount} guest_pow_rows=${powCount - ownerPowCount}`,
     );
 
-    // Knowledge config snapshots (guests)
     let snapCount = 0;
     let ownerSnapCount = 0;
+    const flowRaw = (title: string) =>
+      JSON.stringify({
+        flowKind: "verify",
+        genModel: { chapterTitle: title, rootId: "root", branches: [] },
+        projectedPolicy: null,
+        pow: [],
+      });
     for (const enc of encodedGuests) {
       const guestId = guestByKey.get(enc.subject.key)!;
       await client.query(
-        `INSERT INTO public.knowledge_config_snapshots (
-           workspace_id, subject_guest_user_id, subject_user_id,
-           embedding_model_id, dim, vector, as_of_ms, pow_event_count,
-           confidence, trigger
+        `INSERT INTO public.workspace_flow_embeddings (
+           id, workspace_id, flow_kind, flow_id, run_id, identity, source,
+           embedding_model_id, dim, vector, raw, created_at
          ) VALUES (
-           $1, $2, NULL,
-           $3, $4, $5::jsonb, $6, $7,
-           $8, 'recompute'
+           $1, $2, 'verify', NULL, NULL, $3, 'demo',
+           $4, $5, $6::jsonb, $7::jsonb, to_timestamp($8 / 1000.0)
          )`,
         [
+          randomUUID(),
           workspaceId,
           guestId,
-          KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
-          KNOWLEDGE_CONFIG_DIM,
+          FLOW_EMBEDDING_MODEL_ID,
+          FLOW_EMBEDDING_DIM,
           JSON.stringify(enc.vector),
+          flowRaw(enc.subject.displayName),
           enc.embedding.as_of_ms,
-          enc.embedding.pow_event_count,
-          enc.embedding.confidence,
         ],
       );
       snapCount += 1;
     }
 
-    // Owner snapshot: subject_user_id = owner, guest null
     await client.query(
-      `INSERT INTO public.knowledge_config_snapshots (
-         workspace_id, subject_guest_user_id, subject_user_id,
-         embedding_model_id, dim, vector, as_of_ms, pow_event_count,
-         confidence, trigger
+      `INSERT INTO public.workspace_flow_embeddings (
+         id, workspace_id, flow_kind, flow_id, run_id, identity, source,
+         embedding_model_id, dim, vector, raw, created_at
        ) VALUES (
-         $1, NULL, $2,
-         $3, $4, $5::jsonb, $6, $7,
-         $8, 'recompute'
+         $1, $2, 'verify', NULL, NULL, $3, 'demo',
+         $4, $5, $6::jsonb, $7::jsonb, to_timestamp($8 / 1000.0)
        )`,
       [
+        randomUUID(),
         workspaceId,
         owner.userId,
-        KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
-        KNOWLEDGE_CONFIG_DIM,
+        FLOW_EMBEDDING_MODEL_ID,
+        FLOW_EMBEDDING_DIM,
         JSON.stringify(encodedOwner.vector),
+        flowRaw(encodedOwner.subject.displayName),
         encodedOwner.embedding.as_of_ms,
-        encodedOwner.embedding.pow_event_count,
-        encodedOwner.embedding.confidence,
       ],
     );
     snapCount += 1;
     ownerSnapCount = 1;
     console.log(
-      `[seed-saas-tech-demo] knowledge_config_snapshots=${snapCount} owner_snapshots=${ownerSnapCount}`,
+      `[seed-saas-tech-demo] workspace_flow_embeddings=${snapCount} owner_embeddings=${ownerSnapCount}`,
     );
 
     // Role regions (synthetic tag)
@@ -614,7 +615,7 @@ async function main() {
           cohort_region: cohort.name,
           in_region_pairs: mixed.inRegion.length,
           out_of_region_pairs: mixed.outOfRegion.length,
-          embedding_model_id: KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
+          embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
         },
         null,
         2,

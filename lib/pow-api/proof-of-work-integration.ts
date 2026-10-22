@@ -375,21 +375,7 @@ export async function generateWorkspaceProofOfWorkSpec(
     blockId,
   });
 
-  // Bias collection guidance from durable learning world model evidence appetite when present.
-  let worldModelAppetiteGuidance: string | null = null;
-  try {
-    const { loadLearningWorldModel } = await import("./learning-world-model-store");
-    const { formatEvidenceAppetiteGuidance } = await import("@/lib/prompt-kernel/world-model");
-    const { subjectFromAuthAndParticipants } = await import("./learning-world-model-store");
-    const subject = subjectFromAuthAndParticipants({
-      authUserId: auth.user_id,
-      authGuestUserId: auth.guest_user_id,
-    });
-    const { model } = await loadLearningWorldModel(supabase, workspaceId, subject);
-    worldModelAppetiteGuidance = formatEvidenceAppetiteGuidance(model) || null;
-  } catch {
-    worldModelAppetiteGuidance = null;
-  }
+  const worldModelAppetiteGuidance: string | null = null;
 
   const schemaResult = await callXaiResponsesWithFiles<ProofOfWorkEvalSchemaResult>(
     buildProofOfWorkSchemaPrompt(workspaceTitle),

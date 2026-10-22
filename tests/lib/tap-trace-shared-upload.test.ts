@@ -65,6 +65,7 @@ describe("TAP thought traces use the shared Files uploader", () => {
       blockId: null,
       focusSessionId: null,
       tapSessionId: "tap-1",
+      sessionTable: "workspace_verify_sessions",
       postSession: "redirect_workspace",
       redirectUrl: null,
       completionWebhookUrl: null,

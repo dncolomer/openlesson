@@ -33,7 +33,7 @@ function collectRouteTs(dir: string, acc: string[] = []): string[] {
 }
 
 describe("Proof-of-Work API v3 path contract", () => {
-  it("exports two public agent families; Snapshot/Stash remain internal bases", () => {
+  it("exports two public agent families; Snapshot/Stash bases are retired", () => {
     expect(WORKSPACE_API_BASE).toBe("/api/v3/workspaces");
     expect(ACCOUNT_API_BASE).toBe("/api/v3/account");
     expect(POW_API_BASE).toBe("/api/v3/pow");
@@ -83,10 +83,7 @@ describe("Proof-of-Work API v3 path contract", () => {
 
     for (const vertical of ["verification", "augmentation", "optimization"] as const) {
       const contract = buildVerticalScoreReportContract(vertical, base);
-      expect(contract.endpoint_pattern).toContain("/api/v3/snapshot/");
-      expect(contract.endpoint_pattern).not.toContain("/api/v3/pow/");
       expect(contract.endpoint_pattern).not.toContain("/api/v2/");
-      expect(contract.endpoint_pattern).toContain("lwm-snapshot");
     }
 
     const surfaces = buildIntegrationSurfaces(base);
@@ -100,13 +97,13 @@ describe("Proof-of-Work API v3 path contract", () => {
     const evalRoutes = collectRouteTs(join(ROOT, "app/api/v3/snapshot"));
     const stashRoutes = collectRouteTs(join(ROOT, "app/api/v3/stash"));
     expect(powRoutes.length).toBeGreaterThan(5);
-    expect(evalRoutes.length).toBeGreaterThanOrEqual(6);
-    expect(stashRoutes.length).toBeGreaterThanOrEqual(3);
+    expect(evalRoutes.length).toBe(0);
+    expect(stashRoutes.length).toBe(0);
     expect(
       existsSync(join(ROOT, "app/api/v3/stash/workspaces/[id]/proof-of-work/route.ts")),
-    ).toBe(true);
-    expect(existsSync(join(ROOT, "app/api/v3/stash/workspaces/[id]/stash/route.ts"))).toBe(true);
-    expect(existsSync(join(ROOT, "app/api/v3/stash/workspaces/[id]/submit/route.ts"))).toBe(true);
+    ).toBe(false);
+    expect(existsSync(join(ROOT, "app/api/v3/stash/workspaces/[id]/stash/route.ts"))).toBe(false);
+    expect(existsSync(join(ROOT, "app/api/v3/stash/workspaces/[id]/submit/route.ts"))).toBe(false);
 
     expect(existsSync(join(ROOT, "app/api/v3/pow/workspaces/route.ts"))).toBe(false);
     expect(
@@ -120,13 +117,13 @@ describe("Proof-of-Work API v3 path contract", () => {
     expect(existsSync(join(ROOT, "app/api/v3/workspaces/route.ts"))).toBe(true);
     expect(
       existsSync(join(ROOT, "app/api/v3/snapshot/workspaces/[id]/lwm-snapshot/route.ts")),
-    ).toBe(true);
+    ).toBe(false);
     expect(
       existsSync(join(ROOT, "app/api/v3/snapshot/workspaces/[id]/world-model/route.ts")),
-    ).toBe(true);
+    ).toBe(false);
     expect(
       existsSync(join(ROOT, "app/api/v3/snapshot/workspaces/[id]/knowledge-config/route.ts")),
-    ).toBe(true);
+    ).toBe(false);
 
     // Legacy score routes removed
     for (const name of ["verification-score", "augmentation-score", "optimization-score"] as const) {

@@ -445,10 +445,10 @@ export function buildOpaqueVerticalScoreInstructions(
     : "";
 
   const verticalHint =
-    "score — structural LWM Snapshot primary (0-100) as lwm_snapshot_score from phase coverage / protocol compliance";
+    "score — structural primary (0-100) from phase coverage / protocol compliance";
 
-  const task = `You produce a **structural-only** LWM Snapshot score for ${scope} in opaque evaluation mode.
-This call produces the sole LWM Snapshot strategy (primary score + GHC).
+  const task = `You produce a **structural-only** primary score for ${scope} in opaque evaluation mode.
+This call produces the sole primary-score strategy (primary score + GHC).
 ${goalLine}
 ${OPAQUE_INFERENCE_GUARDRAILS}
 

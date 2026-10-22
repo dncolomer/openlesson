@@ -86,9 +86,9 @@ export interface ProofOfWorkEvalSchemaResult {
   uncertain_systems_scope?: Record<string, unknown>;
   integration_surfaces?: IntegrationSurfaceRef[];
   recommended_next_actions?: RecommendedIntegrationAction[];
-  /** Primary LWM Snapshot (verification) score contract (TAP/TAP Learning / default). */
+  /** Primary TAP scorecard (verification wire key) contract. */
   performance_report_contract?: PerformanceReportContract;
-  /** Snapshot score contracts — sole product strategy is LWM Snapshot (verification wire key). */
+  /** TAP scorecard contracts — sole product strategy is the primary score (verification wire key). */
   vertical_score_contracts?: {
     verification: PerformanceReportContract;
   };

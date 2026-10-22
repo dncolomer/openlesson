@@ -1,4 +1,4 @@
-/** Vector helpers for knowledge config space. */
+/** Vector helpers for flowcfg overlay / projection space. */
 
 export function l2Norm(v: number[]): number {
   let sum = 0;
@@ -59,7 +59,7 @@ export function hashUnit(s: string): number {
 
 /**
  * Fixed pseudo-random projection matrix for semantic residual (JL-style).
- * Seeded so knowledgecfg-v1-d64 is stable across processes.
+ * Seeded so a given (rows, cols, seed) matrix is stable across processes.
  */
 export function seededRandomProjection(rows: number, cols: number, seed: string): number[][] {
   const matrix: number[][] = [];

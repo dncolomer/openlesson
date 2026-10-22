@@ -1,6 +1,6 @@
 /**
  * Pure helpers + authentic copy for the Highschool Algebra demo workspace.
- * No DB I/O — regions use the shipped synthetic profile → knowledgecfg encoder.
+ * No DB I/O — regions use the shipped synthetic profile → flowcfg encoder.
  *
  * Scope (intentionally smaller than Helios SaaS demo):
  *  - 1 workspace about high-school algebra
@@ -10,15 +10,14 @@
 
 import {
   createSyntheticKnowledgeRegionFromProfile,
-  encodeKnowledgeConfig,
   type CustomVerificationModelSpec,
-  type PowFeatureRow,
   type SyntheticRegionProfile,
 } from "@/lib/knowledge-config";
 import {
-  emptyLearningWorldModel,
-  mergeLearningWorldModelDelta,
-} from "@/lib/prompt-kernel/world-model";
+  embedTextsToFlowVector,
+  FLOW_EMBEDDING_DIM,
+  FLOW_EMBEDDING_MODEL_ID,
+} from "@/lib/flow-embedding";
 
 /** Stable marker for idempotent find/replace on staging. */
 export const HS_ALGEBRA_DEMO_MARKER = "[DEMO:hs-algebra-v1]";
@@ -376,7 +375,7 @@ export function algebraRegionByKey(key: AlgebraRegionKey): AlgebraRegionDefiniti
   return found;
 }
 
-/** Build one synthetic region via the shipped knowledgecfg encoder path. */
+/** Build one synthetic region via the shipped flowcfg encoder path. */
 export function buildAlgebraRegion(
   region: AlgebraRegionDefinition,
   workspaceId = "hs-algebra-demo",
@@ -402,13 +401,26 @@ export function buildAllAlgebraRegions(
 
 export interface EncodedAlgebraGuest {
   subject: AlgebraGuestSubject;
-  embedding: ReturnType<typeof encodeKnowledgeConfig>;
+  embedding: {
+    embedding_model_id: typeof FLOW_EMBEDDING_MODEL_ID;
+    dim: typeof FLOW_EMBEDDING_DIM;
+    vector: number[];
+    as_of_ms: number;
+    pow_event_count: number;
+    confidence: number;
+  };
   vector: number[];
-  powRows: PowFeatureRow[];
+  powRows: Array<{
+    proof_of_work_type: string;
+    timestamp_ms: number;
+    tool_name?: string;
+    tool_action?: string;
+    metadata?: Record<string, unknown>;
+  }>;
 }
 
 /**
- * Encode a guest from faked PoW (+ light LWM profile) through the real encoder.
+ * Encode a guest from faked PoW into a flowcfg-v1-d96 vector.
  */
 export function encodeAlgebraGuest(
   subject: AlgebraGuestSubject,
@@ -420,9 +432,8 @@ export function encodeAlgebraGuest(
 ): EncodedAlgebraGuest {
   const workspaceId = options?.workspaceId ?? "hs-algebra-demo";
   const sessionStartMs = options?.sessionStartMs ?? 1_720_500_000_000;
-  const totalBlocks = options?.totalBlocks ?? HS_ALGEBRA_BLOCKS.length;
 
-  const powRows: PowFeatureRow[] = subject.powEvents.map((ev) => ({
+  const powRows = subject.powEvents.map((ev) => ({
     proof_of_work_type: ev.proof_of_work_type,
     timestamp_ms: sessionStartMs + ev.offset_ms,
     tool_name: ev.tool_name,
@@ -436,38 +447,30 @@ export function encodeAlgebraGuest(
     },
   }));
 
-  const worldModel = mergeLearningWorldModelDelta(emptyLearningWorldModel(workspaceId), {
-    scores_snapshot: {
-      verification_score: subject.verification_score,
-      augmentation_score: Math.max(0, subject.verification_score - 6),
-      optimization_score: Math.max(0, subject.verification_score - 10),
-      ghc_score: Math.round(subject.verification_score * 0.78),
-    },
-    learning_profile: {
-      strengths: subject.strengths,
-      friction_patterns: subject.friction_patterns,
-      preferred_modalities: subject.preferred_modalities,
-      temporal_patterns: { avg_dwell_ms: 4800, idle_bursts: 2 },
-    },
-    inferred_goal: {
-      text: `High school algebra practice — ${subject.displayName} (${subject.regionHint})`,
-      confidence: 0.75,
-      source: "evolved",
-    },
-  });
-
-  const embedding = encodeKnowledgeConfig({
+  const asOfMs = sessionStartMs + Math.max(...subject.powEvents.map((e) => e.offset_ms), 0);
+  const vector = embedTextsToFlowVector([
     workspaceId,
-    powRows,
-    worldModel,
-    totalBlocks,
-    asOfMs: sessionStartMs + Math.max(...subject.powEvents.map((e) => e.offset_ms), 0),
-  });
+    subject.displayName,
+    subject.regionHint,
+    `score ${subject.verification_score}`,
+    ...subject.strengths,
+    ...subject.friction_patterns,
+    ...subject.preferred_modalities,
+    ...powRows.map((row) => `${row.proof_of_work_type} ${row.tool_name || ""} ${row.tool_action || ""}`),
+  ]);
+  const embedding = {
+    embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
+    dim: FLOW_EMBEDDING_DIM,
+    vector,
+    as_of_ms: asOfMs,
+    pow_event_count: powRows.length,
+    confidence: 1,
+  };
 
   return {
     subject,
     embedding,
-    vector: embedding.vector,
+    vector,
     powRows,
   };
 }

@@ -4,9 +4,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
-  KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
   createSyntheticKnowledgeRegionFromProfile,
-  type KnowledgeConfigSubject,
   type SyntheticRegionProfile,
 } from "@/lib/knowledge-config";
 import {
@@ -20,13 +18,18 @@ import {
   CustomVerificationModelError,
 } from "@/lib/knowledge-config/custom-verification-model";
 import {
+  FLOW_EMBEDDING_DIM,
+  FLOW_EMBEDDING_MODEL_ID,
+  isFlowEmbeddingVector,
+} from "@/lib/flow-embedding";
+import {
   callXaiJSON,
   callXaiResponsesWithFiles,
   DEFAULT_MODEL,
   systemMessage,
   userMessage,
 } from "@/lib/xai-client";
-import { loadLatestKnowledgeConfig } from "./knowledge-config-store";
+import { subjectIdentityKey } from "./subject-ref";
 import {
   filterImportableKnowledgeRegions,
   type ImportableKnowledgeRegion,
@@ -74,8 +77,8 @@ function parseRow(raw: Record<string, unknown>): CustomVerificationModelRow {
     workspace_id: String(raw.workspace_id),
     name: String(raw.name),
     description: (raw.description as string | null) ?? null,
-    embedding_model_id: String(raw.embedding_model_id || KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID),
-    dim: Number(raw.dim) || 64,
+    embedding_model_id: String(raw.embedding_model_id || FLOW_EMBEDDING_MODEL_ID),
+    dim: Number(raw.dim) || FLOW_EMBEDDING_DIM,
     centroid,
     cohort_cohesion: Number(raw.cohort_cohesion) || 0,
     mean_radius: Number(raw.mean_radius) || 0,
@@ -212,8 +215,50 @@ export async function deleteCustomVerificationModel(
   return existing;
 }
 
+type LatestFlowVector = {
+  vector: number[];
+  as_of_ms: number;
+  embedding_model_id: string;
+};
+
+async function loadLatestFlowVectorForSubject(
+  supabase: SupabaseClient,
+  workspaceId: string,
+  subject: CustomVerificationSubjectRef,
+): Promise<LatestFlowVector | null> {
+  const identity = subjectIdentityKey(subject);
+  if (!identity) return null;
+
+  const { data, error } = await supabase
+    .from("workspace_flow_embeddings")
+    .select("vector, identity, created_at, embedding_model_id, dim")
+    .eq("workspace_id", workspaceId)
+    .eq("embedding_model_id", FLOW_EMBEDDING_MODEL_ID)
+    .order("created_at", { ascending: false })
+    .limit(200);
+
+  if (error || !data) return null;
+
+  for (const row of data) {
+    const rowIdentity = String((row as { identity?: string | null }).identity || "").trim();
+    if (rowIdentity !== identity) continue;
+    const vector = Array.isArray((row as { vector?: unknown }).vector)
+      ? ((row as { vector: unknown[] }).vector.filter(
+          (n): n is number => typeof n === "number" && Number.isFinite(n),
+        ) as number[])
+      : [];
+    if (!isFlowEmbeddingVector(vector)) continue;
+    return {
+      vector,
+      as_of_ms: Date.parse(String((row as { created_at?: string }).created_at || "")) || 0,
+      embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
+    };
+  }
+  return null;
+}
+
 /**
- * Load latest knowledge configs for each subject, build model, persist.
+ * Load latest flow embeddings for each subject, build model, persist.
  */
 export async function createCustomVerificationModelFromSubjects(
   supabase: SupabaseClient,
@@ -233,14 +278,10 @@ export async function createCustomVerificationModelFromSubjects(
   const resolvedSubjects: CustomVerificationSubjectRef[] = [];
 
   for (const subject of options.subjects) {
-    const ref: KnowledgeConfigSubject = {
-      user_id: subject.user_id,
-      guest_user_id: subject.guest_user_id,
-    };
-    const latest = await loadLatestKnowledgeConfig(supabase, options.workspaceId, ref);
+    const latest = await loadLatestFlowVectorForSubject(supabase, options.workspaceId, subject);
     if (!latest?.vector?.length) {
       throw new CustomVerificationModelError(
-        `no knowledge config embedding for subject ${subject.label || subject.user_id || subject.guest_user_id || "unknown"}`,
+        `no flow embedding for subject ${subject.label || subject.user_id || subject.guest_user_id || "unknown"}`,
       );
     }
     vectors.push(latest.vector);
@@ -255,6 +296,7 @@ export async function createCustomVerificationModelFromSubjects(
     name: options.name,
     vectors,
     subjects: resolvedSubjects,
+    embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
   });
 
   const payload = {
@@ -304,7 +346,7 @@ const TEXT_FILE_MIME = new Set([
   "text/csv",
 ]);
 
-const SYNTHETIC_REGION_PROFILE_SYSTEM = `You design synthetic knowledge regions for a fixed knowledge configuration embedding space (knowledgecfg-v1-d64).
+const SYNTHETIC_REGION_PROFILE_SYSTEM = `You design synthetic knowledge regions for the flowcfg-v1-d96 embedding space used by Calibrate, Learn, and Verify.
 Return JSON only describing an idealized competency region. Scores are 0-100.
 pow_types should be a subset of: tool, screen, speech, video, eeg.
 preferred_modalities examples: tool, speech, canvas, notebook.
@@ -463,7 +505,7 @@ function mapProfileFromLlmData(
 }
 
 /**
- * Ask Grok 4.5 for a synthetic competency profile, then encode into knowledgecfg-v1-d64
+ * Ask Grok 4.5 for a synthetic competency profile, then encode into flowcfg-v1-d96
  * and persist as a custom knowledge region (same table/shape as cohort regions).
  * When fileIds are present, uses Responses API with input_file attachments.
  */
@@ -704,12 +746,9 @@ export async function evalSubjectAgainstCustomVerificationModel(
     throw new CustomVerificationModelError("custom verification model not found");
   }
 
-  const latest = await loadLatestKnowledgeConfig(supabase, options.workspaceId, {
-    user_id: options.subject.user_id,
-    guest_user_id: options.subject.guest_user_id,
-  });
+  const latest = await loadLatestFlowVectorForSubject(supabase, options.workspaceId, options.subject);
   if (!latest?.vector?.length) {
-    throw new CustomVerificationModelError("subject has no knowledge config embedding to evaluate");
+    throw new CustomVerificationModelError("subject has no flow embedding to evaluate");
   }
 
   const score = scoreAgainstCustomVerificationModel(latest.vector, rowToSpec(model));
@@ -718,7 +757,7 @@ export async function evalSubjectAgainstCustomVerificationModel(
 
 /**
  * Knowledge distance for a subject vs a saved region.
- * Pure geometry load+compute — does not run vertical scores or write eval_run_history.
+ * Pure geometry load+compute from the latest flow embedding.
  */
 export async function computeKnowledgeDistanceForSubject(
   supabase: SupabaseClient,
@@ -742,14 +781,9 @@ export async function computeKnowledgeDistanceForSubject(
     throw new CustomVerificationModelError("knowledge region not found");
   }
 
-  const latest = await loadLatestKnowledgeConfig(supabase, options.workspaceId, {
-    user_id: options.subject.user_id,
-    guest_user_id: options.subject.guest_user_id,
-  });
+  const latest = await loadLatestFlowVectorForSubject(supabase, options.workspaceId, options.subject);
   if (!latest?.vector?.length) {
-    throw new CustomVerificationModelError(
-      "subject has no knowledge config embedding for Knowledge distance",
-    );
+    throw new CustomVerificationModelError("subject has no flow embedding for Knowledge distance");
   }
 
   const knowledge_distance = computeKnowledgeDistance(latest.vector, rowToSpec(region));
@@ -760,7 +794,7 @@ export async function computeKnowledgeDistanceForSubject(
       user_id: options.subject.user_id ?? null,
       guest_user_id: options.subject.guest_user_id ?? null,
       as_of_ms: latest.as_of_ms ?? null,
-      embedding_model_id: latest.embedding_model_id || KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
+      embedding_model_id: latest.embedding_model_id || FLOW_EMBEDDING_MODEL_ID,
     },
   };
 }
@@ -815,7 +849,7 @@ export async function buildWorkspaceLinkUrlMap(
   return map;
 }
 
-/** Distinct subjects that have at least one knowledge config snapshot in the workspace. */
+/** Distinct subjects that have at least one flow embedding in the workspace. */
 export async function listSubjectsWithKnowledgeConfig(
   supabase: SupabaseClient,
   workspaceId: string,
@@ -835,11 +869,11 @@ export async function listSubjectsWithKnowledgeConfig(
   }>
 > {
   const { data, error } = await supabase
-    .from("knowledge_config_snapshots")
-    .select("subject_user_id, subject_guest_user_id, embedding_model_id, as_of_ms, confidence")
+    .from("workspace_flow_embeddings")
+    .select("identity, embedding_model_id, created_at")
     .eq("workspace_id", workspaceId)
-    .eq("embedding_model_id", KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID)
-    .order("as_of_ms", { ascending: false })
+    .eq("embedding_model_id", FLOW_EMBEDDING_MODEL_ID)
+    .order("created_at", { ascending: false })
     .limit(500);
 
   if (error || !data) {
@@ -912,19 +946,22 @@ export async function listSubjectsWithKnowledgeConfig(
   }> = [];
 
   for (const row of data) {
-    const uid = (row.subject_user_id as string | null) ?? null;
-    const gid = (row.subject_guest_user_id as string | null) ?? null;
-    const key = `${uid ?? ""}|${gid ?? ""}`;
+    const identity = String((row as { identity?: string | null }).identity || "").trim();
+    if (!identity) continue;
+    const key = identity;
     if (seen.has(key)) continue;
     seen.add(key);
-    const prov = provenanceBySubject.get(key);
+    const prov =
+      provenanceBySubject.get(`|${identity}`) ||
+      provenanceBySubject.get(`${identity}|`) ||
+      provenanceBySubject.get(`${identity}|${identity}`);
     const source_link_id = prov?.source_link_id ?? null;
     out.push({
-      user_id: uid,
-      guest_user_id: gid,
-      embedding_model_id: String(row.embedding_model_id),
-      as_of_ms: Number(row.as_of_ms),
-      confidence: Number(row.confidence) || 0,
+      user_id: null,
+      guest_user_id: identity,
+      embedding_model_id: String((row as { embedding_model_id?: string }).embedding_model_id || FLOW_EMBEDDING_MODEL_ID),
+      as_of_ms: Date.parse(String((row as { created_at?: string }).created_at || "")) || 0,
+      confidence: 1,
       pow_source: prov?.pow_source ?? "human",
       source_link_id,
       source_link_url: source_link_id ? linkUrlById.get(source_link_id) ?? null : null,

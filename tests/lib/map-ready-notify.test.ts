@@ -103,8 +103,6 @@ describe("map newsletter UI + API surfaces (no send path)", () => {
     );
     const sendMod = join(root, "lib/map-of-knowledge/send-map-ready-email.ts");
     const store = join(root, "lib/map-of-knowledge/map-ready-notify-store.ts");
-    const knowledgeStore = join(root, "lib/pow-api/knowledge-config-store.ts");
-
     expect(existsSync(client)).toBe(false);
     expect(existsSync(notifyApi)).toBe(false);
     expect(existsSync(processApi)).toBe(false);
@@ -115,8 +113,5 @@ describe("map newsletter UI + API surfaces (no send path)", () => {
     expect(storeSrc).toContain('audience: "newsletter"');
     expect(storeSrc).not.toContain("processPendingMapReadyNotifications");
     expect(storeSrc).not.toContain("sendMapReadyEmail");
-
-    const ks = readFileSync(knowledgeStore, "utf8");
-    expect(ks).not.toContain("processPendingMapReadyNotifications");
   });
 });

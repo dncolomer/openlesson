@@ -288,8 +288,7 @@ For product LWM Snapshot (`buildVerticalScoreInstructions("verification", …)`)
 
 | Field | How instructed today |
 |---|---|
-| **Primary `score` (0–100)** | “How well the learner has explored the workspace and demonstrated knowledge (block/pathway coverage + depth). Synthesize from all proof of work (not a naive average of markers).” Schema: same idea via `lwm_snapshot_score` description. |
-| **`lwm_snapshot_score`** | Set equal to `score` when schema allows (product named field). |
+| **Primary `score` (0–100)** | “How well the learner has explored the workspace and demonstrated knowledge (block/pathway coverage + depth). Synthesize from all proof of work (not a naive average of markers).” |
 | **Markers** | 4–8 competency axes; each 0–100 + one-sentence rationale grounded in specific PoW; optional block_id. No fixed global marker set at LWM level (TAP live markers are separate fixed six). |
 | **GHC `ghc_score` / `ghc_confidence`** | 0–100 authenticity of human cognition; weight observations vs actions and natural temporal pacing; tool-only dumps → low score + none/low confidence. Submit/stash overlay requires citing sent vs unsent when selective thought present. |
 | **`temporal_summary`** | Optional one sentence when timestamps inform scores. |
@@ -328,7 +327,7 @@ These are the main places where different model runs can legitimately disagree:
 
 ### 4.4 Recommended additional score-derivation guidance (placeable; not implemented)
 
-#### A. Primary score band anchors — place in `LWM_SNAPSHOT_INSTRUCTIONS` (after item 1) or `SCORE_FIELD_DESCRIPTIONS.lwm_snapshot_score`
+#### A. Primary score band anchors — place in `LWM_SNAPSHOT_INSTRUCTIONS` (after item 1) or `SCORE_FIELD_DESCRIPTIONS.score`
 
 ```text
 PRIMARY SCORE BANDS (coverage × demonstrated depth of knowledge in PoW):

@@ -1,22 +1,19 @@
 /**
- * Synthetic knowledge regions in knowledgecfg-v1-d64 space.
- * Profiles are encoded via the real knowledge-config encoder so vectors stay
- * compatible with cohort-created custom verification models / regions.
+ * Synthetic knowledge regions in flowcfg-v1-d96 space.
  */
 
-import { emptyLearningWorldModel, mergeLearningWorldModelDelta } from "@/lib/prompt-kernel/world-model";
+import {
+  embedTextsToFlowVector,
+  FLOW_EMBEDDING_MODEL_ID,
+  isFlowEmbeddingVector,
+} from "@/lib/flow-embedding";
 import {
   createCustomVerificationModelFromVectors,
   type CustomVerificationModelSpec,
   CustomVerificationModelError,
 } from "./custom-verification-model";
-import { encodeKnowledgeConfig, projectKnowledgeConfigTo2D } from "./encoder";
 import { l2Normalize } from "./math";
-import {
-  KNOWLEDGE_CONFIG_DIM,
-  KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
-  isKnowledgeConfigVector,
-} from "./types";
+import { projectVectors2D } from "./project-2d";
 
 export interface SyntheticRegionProfile {
   /** Short label for the ideal user / competency region. */
@@ -53,8 +50,7 @@ function clampScore(n: unknown, fallback: number): number {
 }
 
 /**
- * Encode a synthetic competency profile into a knowledgecfg-v1-d64 unit vector
- * using the real hybrid encoder (not a parallel embedding space).
+ * Encode a synthetic competency profile into a flowcfg-v1-d96 unit vector.
  */
 export function encodeSyntheticRegionProfile(
   profile: SyntheticRegionProfile,
@@ -77,79 +73,30 @@ export function encodeSyntheticRegionProfile(
         : ["synthetic"]
   ).filter(Boolean);
 
-  const baseMs = 1_700_000_000_000;
-  const powRows = powTypes.flatMap((type, i) => {
-    const tool = tools[i % Math.max(1, tools.length)] || "synthetic";
-    return [
-      {
-        proof_of_work_type: type,
-        timestamp_ms: baseMs + i * 45_000,
-        tool_name: tool,
-        tool_action: "practice",
-        metadata: {
-          selective_thought: type === "speech" || type === "tool",
-          system: 2,
-          synthetic_region: true,
-        },
-      },
-      {
-        proof_of_work_type: type,
-        timestamp_ms: baseMs + i * 45_000 + 15_000,
-        tool_name: tool,
-        metadata: { synthetic_region: true },
-      },
-    ];
-  });
-
-  const worldModel = mergeLearningWorldModelDelta(emptyLearningWorldModel(workspaceId), {
-    scores_snapshot: {
-      verification_score: verification,
-      augmentation_score: augmentation,
-      optimization_score: optimization,
-      ghc_score: ghc,
-    },
-    learning_profile: {
-      strengths: strengths.length ? strengths : ["synthetic-competency"],
-      friction_patterns: friction,
-      preferred_modalities: modalities,
-      temporal_patterns: { avg_dwell_ms: 4000, idle_bursts: 1 },
-    },
-    inferred_goal: {
-      text: profile.description || profile.name || "synthetic knowledge region",
-      confidence: 0.7,
-      source: "evolved",
-    },
-  });
-
-  const embedding = encodeKnowledgeConfig({
+  const texts = [
     workspaceId,
-    powRows: powRows.length
-      ? powRows
-      : [
-          {
-            proof_of_work_type: "tool",
-            timestamp_ms: baseMs,
-            tool_name: "synthetic",
-            metadata: { synthetic_region: true, system: 2 },
-          },
-        ],
-    worldModel,
-    totalBlocks: Math.max(3, strengths.length + 2),
-    asOfMs: baseMs + powRows.length * 45_000,
-  });
+    profile.name || "",
+    profile.description || "",
+    `verification ${verification}`,
+    `augmentation ${augmentation}`,
+    `optimization ${optimization}`,
+    `ghc ${ghc}`,
+    ...strengths,
+    ...friction,
+    ...modalities,
+    ...powTypes,
+    ...tools,
+  ];
 
-  if (!isKnowledgeConfigVector(embedding.vector, KNOWLEDGE_CONFIG_DIM)) {
-    throw new CustomVerificationModelError("synthetic encoder produced invalid knowledgecfg vector");
+  const vector = embedTextsToFlowVector(texts);
+  if (!isFlowEmbeddingVector(vector)) {
+    throw new CustomVerificationModelError("synthetic encoder produced invalid flowcfg vector");
   }
-  if (embedding.embedding_model_id !== KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID) {
-    throw new CustomVerificationModelError("synthetic encoder embedding_model_id mismatch");
-  }
-  return l2Normalize(embedding.vector);
+  return l2Normalize(vector);
 }
 
 /**
  * Build a custom knowledge region spec from a synthetic profile.
- * Geometry matches cohort-created regions (same centroid/threshold contract).
  */
 export function createSyntheticKnowledgeRegionFromProfile(options: {
   name: string;
@@ -160,14 +107,17 @@ export function createSyntheticKnowledgeRegionFromProfile(options: {
   const name = options.name.trim();
   if (!name) throw new CustomVerificationModelError("name is required");
 
-  const vector = encodeSyntheticRegionProfile(options.profile, options.workspaceId || "synthetic-region");
+  const vector = encodeSyntheticRegionProfile(
+    options.profile,
+    options.workspaceId || "synthetic-region",
+  );
   const model = createCustomVerificationModelFromVectors({
     name,
     vectors: [vector],
-    subjects: [{ label: "synthetic:knowledgecfg-v1-d64" }],
+    subjects: [{ label: `synthetic:${FLOW_EMBEDDING_MODEL_ID}` }],
+    embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
   });
 
-  // Synthetic regions get a slightly softer default radius for overlay readability.
   return {
     ...model,
     mean_radius: Math.max(model.mean_radius, 0.35),
@@ -177,8 +127,7 @@ export function createSyntheticKnowledgeRegionFromProfile(options: {
 }
 
 /**
- * Project a saved region centroid into the fixed knowledgecfg UI 2D frame
- * used by trajectory projections (same projectKnowledgeConfigTo2D matrix).
+ * Project a saved region centroid into the flowcfg UI 2D frame.
  */
 export function projectKnowledgeRegionToOverlay(input: {
   id: string;
@@ -188,24 +137,24 @@ export function projectKnowledgeRegionToOverlay(input: {
   cosine_threshold?: number;
   source?: string | null;
 }): KnowledgeRegionOverlay2D {
-  if (!isKnowledgeConfigVector(input.centroid, KNOWLEDGE_CONFIG_DIM)) {
-    throw new CustomVerificationModelError("region centroid must be knowledgecfg-v1-d64");
+  if (!isFlowEmbeddingVector(input.centroid)) {
+    throw new CustomVerificationModelError("region centroid must be flowcfg-v1-d96");
   }
-  const { x, y } = projectKnowledgeConfigTo2D(input.centroid);
-  const meanRadius = typeof input.mean_radius === "number" && Number.isFinite(input.mean_radius)
-    ? Math.max(0, input.mean_radius)
-    : 0.4;
+  const [xy] = projectVectors2D([input.centroid], "random");
+  const meanRadius =
+    typeof input.mean_radius === "number" && Number.isFinite(input.mean_radius)
+      ? Math.max(0, input.mean_radius)
+      : 0.4;
   const threshold =
     typeof input.cosine_threshold === "number" && Number.isFinite(input.cosine_threshold)
       ? input.cosine_threshold
       : 0.5;
-  // Map high-D radius + threshold into a readable 2D disc in projection units.
   const radius = Math.max(0.04, Math.min(0.55, meanRadius * 0.42 + (1 - threshold) * 0.12));
   return {
     id: input.id,
     name: input.name,
-    x,
-    y,
+    x: xy?.x ?? 0,
+    y: xy?.y ?? 0,
     radius,
     cosine_threshold: threshold,
     source: input.source ?? null,

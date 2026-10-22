@@ -5,17 +5,12 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { readKnowledgePanelSurface } from "../helpers/surface-source";
 import {
   fingerprintGoals,
   resolveEvaluatedGoals,
   parseGoalSelectionFromBody,
   type GoalCatalogEntry,
 } from "@/lib/pow-api/goals";
-import {
-  decideEvalPowGateWithGoals,
-  NO_NEW_POW_CODE,
-} from "@/lib/pow-api/eval-pow-gate";
 import {
   canAccessWorkspaceEval,
   resolveEvalPersistenceClientMode,
@@ -49,23 +44,6 @@ describe("eligibility gate is goals-set identity (product criterion 3)", () => {
     const adhocFp = fingerprintGoals(adhoc);
     const defaultFp = fingerprintGoals(defaults);
     expect(adhocFp).not.toBe(defaultFp);
-
-    // Prior run only for adhoc → default has no lastEvalAt for its fingerprint
-    const defaultGate = decideEvalPowGateWithGoals({
-      lastEvalAtForGoals: null,
-      newPowCountSinceLastForGoals: 0,
-      goalsFingerprint: defaultFp,
-    });
-    expect(defaultGate.allowed).toBe(true);
-
-    // Same adhoc again without new PoW → blocked
-    const adhocAgain = decideEvalPowGateWithGoals({
-      lastEvalAtForGoals: "2026-08-07T12:00:00.000Z",
-      newPowCountSinceLastForGoals: 0,
-      goalsFingerprint: adhocFp,
-    });
-    expect(adhocAgain.allowed).toBe(false);
-    expect(adhocAgain.code).toBe(NO_NEW_POW_CODE);
   });
 
   it("custom selection vs default are distinct identities", () => {
@@ -135,30 +113,7 @@ describe("goals GET access control (no open admin list)", () => {
   });
 });
 
-describe("LWM UI + snapshot-history goals-aware eligibility wiring", () => {
-  it("snapshot-history passes goalsFingerprint into getAllEvalPowGateStatuses", () => {
-    const src = readFileSync(
-      join(ROOT, "app/api/workspace/snapshot-history/route.ts"),
-      "utf8",
-    );
-    expect(src).toContain("resolveGoalsForEligibility");
-    expect(src).toContain("goalsFingerprint");
-    expect(src).toContain("goal_mode");
-    expect(src).toContain("adhoc_goal");
-    expect(src).toContain("goal_ids");
-  });
-
-  it("snapshot modal gates generate on eligibility for all goal modes", () => {
-    const src = readKnowledgePanelSurface();
-    expect(src).toContain("data-lwm-goal-mode");
-    expect(src).toContain("adhocGoal");
-    expect(src).toContain("selectedGoalIds");
-    expect(src).toContain("snapshotEligibility?.allowed === false");
-    expect(src).not.toContain(
-      'goalMode === "default" && snapshotEligibility?.allowed === false',
-    );
-  });
-
+describe("goals eligibility helper", () => {
   it("goals-eligibility helper ships for default PoW-related resolution", () => {
     const src = readFileSync(
       join(ROOT, "lib/pow-api/goals-eligibility.ts"),

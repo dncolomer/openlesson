@@ -83,19 +83,11 @@ describe("Goals tab + block goals drawer", () => {
   });
 });
 
-describe("LWM UI goal selection", () => {
-  it("KnowledgeConfigTrajectoryPanel exposes default/adhoc/custom controls in generate modal", () => {
+describe("Knowledge embeddings surface", () => {
+  it("Knowledge panel ships embeddings projection without LWM snapshot modal", () => {
     const src = readKnowledgePanelSurface();
-    expect(src).toContain("data-lwm-snapshot-modal");
-    expect(src).toContain("data-lwm-goal-selection");
-    expect(src).toContain("data-lwm-goal-mode");
-    expect(src).toContain("data-lwm-adhoc-goal");
-    expect(src).toContain("data-lwm-goal-picker");
-    expect(src).toContain('id: "default"');
-    expect(src).toContain('id: "adhoc"');
-    expect(src).toContain('id: "selected"');
-    expect(src).toContain("data-lwm-snapshot-progress");
-    expect(src).toContain("generateSnapshot");
-    expect(src).toContain("generateSnapshotAll");
+    expect(src).not.toContain("data-lwm-snapshot-modal");
+    expect(src).not.toContain("generateSnapshot");
+    expect(src).toContain("KnowledgeModelsView");
   });
 });

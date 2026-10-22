@@ -23,7 +23,6 @@ import {
 } from "@/lib/tap-score-client-helpers";
 import type { TapStartingTopic } from "@/lib/tap-score";
 import type { TapPostSessionMode } from "@/lib/pow-api/tap-link-config";
-import type { PerformanceReport } from "@/lib/pow-api/performance-report";
 import type { HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
 import { stopLiveSpeechRecognition, type LiveSpeechRecognitionBindings } from "@/lib/useSessionThoughtInterface";
 import type { ProofOfWorkApiInterruption } from "@/lib/pow-api/predictive-interruption";
@@ -135,7 +134,6 @@ export type TapScoreSessionPatch = {
   startedAt?: number | null;
   remainingSeconds?: number;
   phase?: Phase;
-  performanceReport?: PerformanceReport | null;
   resultsError?: string;
   interimText?: string;
   crystallizableText?: string;
@@ -446,7 +444,6 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
     s.apply({ isPracticeMode: false });
     s.isPracticeModeRef.current = false;
     s.apply({ sessionEndedImpure: false });
-    s.apply({ performanceReport: null });
     s.apply({ resultsError: "" });
     s.apply({ error: "" });
     s.apply({ messages: [] });
@@ -532,8 +529,7 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
           policy,
         });
         releaseSessionLocalMemory(s.sessionId);
-        s.apply({ performanceReport: null });
-        s.apply({ phase: practice ? "practice_done" : "results" });
+            s.apply({ phase: practice ? "practice_done" : "results" });
       } catch (err) {
         s.isEndingRef.current = false;
         const message = err instanceof Error ? err.message : "Could not store proof of work";
@@ -568,26 +564,22 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
       releaseSessionLocalMemory(s.sessionId);
 
       if (practice) {
-        s.apply({ performanceReport: null });
-        s.apply({ phase: "practice_done" });
+            s.apply({ phase: "practice_done" });
         return;
       }
       if (impure) {
-        s.apply({ performanceReport: null });
-        s.apply({ phase: "results" });
+            s.apply({ phase: "results" });
         return;
       }
       // Verify End session and time-up score in place. TAP may still leave the page.
       if (s.sidebarMode === "verification-tap") {
-        s.apply({ performanceReport: null });
-        s.apply({ phase: "results" });
+            s.apply({ phase: "results" });
         return;
       }
       // Private session links: thank-you only (no redirect / results scorecard).
-      // LWM Snapshot remains manual (Knowledge UI / Snapshot API) — not auto-run on TAP end.
+      // Scores are never auto-run on session end.
       if (s.privateToken) {
-        s.apply({ performanceReport: null });
-        s.apply({ phase: "results" });
+            s.apply({ phase: "results" });
         return;
       }
 
@@ -596,8 +588,7 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
         typeof payload.redirectUrl === "string" ? payload.redirectUrl : s.configuredRedirectUrl;
 
       if (resolvedPostSession === "show_results") {
-        s.apply({ performanceReport: null });
-        s.apply({ phase: "results" });
+            s.apply({ phase: "results" });
         return;
       }
       if (resolvedPostSession === "redirect_url" && resolvedRedirectUrl) {

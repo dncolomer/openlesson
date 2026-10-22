@@ -4,10 +4,7 @@
  * The mistake list is frozen from the topic's questions before the canvas.
  */
 
-import { encodeKnowledgeConfig } from "@/lib/knowledge-config/encoder";
 import { LEARNING_MODEL_CATALOG_4 } from "@/lib/learning-model/action-catalog";
-
-export const SESSION_PRESS_EMBEDDING_MODEL_ID = "knowledgecfg-press-v1" as const;
 
 export const SESSION_MARK_BUTTONS = [
   { id: "try" as const, label: LEARNING_MODEL_CATALOG_4.find((row) => row.storedId === "try")!.label },
@@ -325,33 +322,6 @@ export function strengthMistakeIds(bundle: SessionBundle): string[] {
 
 export function gapMistakeIds(bundle: SessionBundle): string[] {
   return bundle.openAtInsightIds;
-}
-
-export function embedSessionPress(input: {
-  workspaceId: string;
-  press: SessionPress;
-  mistakeText?: string | null;
-}): { embedding_model_id: typeof SESSION_PRESS_EMBEDDING_MODEL_ID; dim: number; vector: number[] } {
-  const line = sessionPressLine(input.press, input.mistakeText);
-  const text = [line, input.press.slice].filter((part) => part.trim()).join("\n");
-  const encoded = encodeKnowledgeConfig({
-    workspaceId: input.workspaceId || "session-marks",
-    totalBlocks: 0,
-    evaluatedGoalsText: text,
-    asOfMs: input.press.at,
-    powRows: [
-      {
-        proof_of_work_type: "tool",
-        timestamp_ms: input.press.at,
-        tool_action: input.press.button,
-      },
-    ],
-  });
-  return {
-    embedding_model_id: SESSION_PRESS_EMBEDDING_MODEL_ID,
-    dim: encoded.dim,
-    vector: encoded.vector,
-  };
 }
 
 export function meanPressVectors(vectors: readonly (readonly number[])[]): number[] {

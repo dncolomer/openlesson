@@ -24,8 +24,6 @@ export const MCP_PROOF_OF_WORK_SERVER_INSTRUCTIONS = `Uncertain Systems public a
 
 Authorize with Authorization: Bearer <api_key or OAuth token> on POST /api/mcp. ChatGPT, Claude, and other agents use these tools to run flows for the user.
 
-Snapshot (/api/v3/snapshot) and Stash (/api/v3/stash) are not public agent APIs.
-
 Scopes: workspaces:read, workspaces:write, sessions:read, sessions:write. Teams tier (error code api_plan_required).`;
 
 export { MCP_EVIDENCE_TOOLS } from "./evidence-tools";

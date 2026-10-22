@@ -5,12 +5,12 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { scoreAgainstCustomVerificationModel } from "@/lib/knowledge-config";
 import {
-  KNOWLEDGE_CONFIG_DIM,
-  KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
-  isKnowledgeConfigVector,
-  scoreAgainstCustomVerificationModel,
-} from "@/lib/knowledge-config";
+  FLOW_EMBEDDING_DIM,
+  FLOW_EMBEDDING_MODEL_ID,
+  isFlowEmbeddingVector,
+} from "@/lib/flow-embedding";
 import {
   DEMO_BLOCKS,
   DEMO_COHORT_REGION,
@@ -51,11 +51,11 @@ describe("saas tech-team demo workspace (pure helpers)", () => {
     expect(DEMO_SUBJECTS.some((s) => s.expectedInRegion === "backend")).toBe(true);
   });
 
-  it("encodeDemoSubject uses real encodeKnowledgeConfig path (knowledgecfg-v1-d64)", () => {
+  it("encodeDemoSubject uses real flowcfg path (flowcfg-v1-d96)", () => {
     const encoded = encodeDemoSubject(DEMO_SUBJECTS[0], { workspaceId: "unit-ws" });
-    expect(encoded.embedding.embedding_model_id).toBe(KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID);
-    expect(encoded.embedding.dim).toBe(KNOWLEDGE_CONFIG_DIM);
-    expect(isKnowledgeConfigVector(encoded.vector, KNOWLEDGE_CONFIG_DIM)).toBe(true);
+    expect(encoded.embedding.embedding_model_id).toBe(FLOW_EMBEDDING_MODEL_ID);
+    expect(encoded.embedding.dim).toBe(FLOW_EMBEDDING_DIM);
+    expect(isFlowEmbeddingVector(encoded.vector)).toBe(true);
     expect(encoded.embedding.pow_event_count).toBe(DEMO_SUBJECTS[0].powEvents.length);
     expect(encoded.powRows.length).toBe(DEMO_SUBJECTS[0].powEvents.length);
     // PoW metadata carries demo marker for auditability
@@ -76,13 +76,13 @@ describe("saas tech-team demo workspace (pure helpers)", () => {
     expect(cos).toBeGreaterThan(-1);
   });
 
-  it("buildRoleRegion yields synthetic-tagged role region in knowledgecfg space", () => {
+  it("buildRoleRegion yields synthetic-tagged role region in flowcfg space", () => {
     const backend = roleRegionByKey("backend");
     const region = buildRoleRegion(backend, "unit-ws");
     expect(region.name).toBe("Backend Engineering");
-    expect(region.embedding_model_id).toBe(KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID);
-    expect(region.dim).toBe(KNOWLEDGE_CONFIG_DIM);
-    expect(isKnowledgeConfigVector(region.centroid, KNOWLEDGE_CONFIG_DIM)).toBe(true);
+    expect(region.embedding_model_id).toBe(FLOW_EMBEDDING_MODEL_ID);
+    expect(region.dim).toBe(FLOW_EMBEDDING_DIM);
+    expect(isFlowEmbeddingVector(region.centroid)).toBe(true);
     expect(region.cosine_threshold).toBe(DEMO_ROLE_REGION_COSINE_THRESHOLD);
     expect(region.subjects.some((s) => s.label === "synthetic:grok-4.5")).toBe(true);
     // Centroid self-scores in-region
@@ -111,7 +111,7 @@ describe("saas tech-team demo workspace (pure helpers)", () => {
     });
 
     expect(cohort.name).toBe(DEMO_COHORT_REGION.name);
-    expect(cohort.embedding_model_id).toBe(KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID);
+    expect(cohort.embedding_model_id).toBe(FLOW_EMBEDDING_MODEL_ID);
     expect(cohort.subject_count).toBe(DEMO_COHORT_REGION.subjectKeys.length);
     expect(cohort.subjects.length).toBe(DEMO_COHORT_REGION.subjectKeys.length);
     // Subject refs point at demo subjects (not synthetic)
@@ -187,8 +187,8 @@ describe("saas tech-team demo workspace (pure helpers)", () => {
 
     const owner = encodeDemoOwnerSubject("unit-ws");
     expect(owner.subject.isOwnerUser).toBe(true);
-    expect(owner.embedding.embedding_model_id).toBe(KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID);
-    expect(isKnowledgeConfigVector(owner.vector, KNOWLEDGE_CONFIG_DIM)).toBe(true);
+    expect(owner.embedding.embedding_model_id).toBe(FLOW_EMBEDDING_MODEL_ID);
+    expect(isFlowEmbeddingVector(owner.vector)).toBe(true);
     expect(owner.embedding.pow_event_count).toBe(DEMO_OWNER_SUBJECT.powEvents.length);
     expect(owner.powRows[0].metadata).toMatchObject({
       demo_marker: SAAS_TECH_DEMO_MARKER,

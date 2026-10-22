@@ -1,12 +1,9 @@
 /**
- * Custom verification models: high-validation regions in knowledgecfg space
+ * Custom verification models: high-validation regions in flowcfg-v1-d96 space
  * distilled from a cohort of subject embeddings (e.g. internal experts).
  */
 
-import {
-  KNOWLEDGE_CONFIG_DIM,
-  KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
-} from "./types";
+import { FLOW_EMBEDDING_DIM, FLOW_EMBEDDING_MODEL_ID } from "@/lib/flow-embedding";
 import { cosineSimilarity, l2Distance, l2Normalize } from "./math";
 
 export interface CustomVerificationSubjectRef {
@@ -41,8 +38,8 @@ export interface CustomVerificationScore {
   embedding_model_id: string;
   model_name: string;
   /**
-   * L2 distance in knowledgecfg embedding space between user vector and region centroid.
-   * Same units as `l2_distance` — product name for geometry (not a vertical Eval score).
+   * L2 distance in flowcfg embedding space between user vector and region centroid.
+   * Same units as `l2_distance` — product name for geometry (not a session Distance score).
    */
   knowledge_distance: number;
   /** 1 − cosine_similarity (0 = identical direction, up to 2). */
@@ -50,11 +47,10 @@ export interface CustomVerificationScore {
 }
 
 /**
- * Pure knowledgecfg geometry: distance between a user embedding and a region centroid.
- * Not a vertical Eval (verification/augmentation/optimization) and does not call LLMs.
+ * Pure flowcfg geometry: distance between a user embedding and a region centroid.
  */
 export interface KnowledgeDistance {
-  /** Primary product metric: L2 distance in knowledgecfg-v1-d64 space. */
+  /** Primary product metric: L2 distance in flowcfg-v1-d96 space. */
   knowledge_distance: number;
   l2_distance: number;
   cosine_similarity: number;
@@ -86,7 +82,7 @@ function assertCompatibleVector(vector: number[], embeddingModelId: string, dim:
 
 /**
  * Build a custom verification model (high-validation region) from cohort embeddings.
- * Pure: no I/O. Callers supply already-loaded knowledge config vectors.
+ * Pure: no I/O. Callers supply already-loaded flow embedding vectors.
  */
 export function createCustomVerificationModelFromVectors(options: {
   name: string;
@@ -98,22 +94,21 @@ export function createCustomVerificationModelFromVectors(options: {
   if (!name) {
     throw new CustomVerificationModelError("name is required");
   }
-  const embedding_model_id = options.embedding_model_id ?? KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID;
+  const embedding_model_id = options.embedding_model_id ?? FLOW_EMBEDDING_MODEL_ID;
   const vectors = options.vectors;
   if (!vectors.length) {
     throw new CustomVerificationModelError("at least one subject embedding is required");
   }
   const dim = vectors[0]?.length ?? 0;
-  if (embedding_model_id === KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID && dim !== KNOWLEDGE_CONFIG_DIM) {
+  if (embedding_model_id === FLOW_EMBEDDING_MODEL_ID && dim !== FLOW_EMBEDDING_DIM) {
     throw new CustomVerificationModelError(
-      `vector must be finite length ${KNOWLEDGE_CONFIG_DIM} for ${KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID}`,
+      `vector must be finite length ${FLOW_EMBEDDING_DIM} for ${FLOW_EMBEDDING_MODEL_ID}`,
     );
   }
   for (const v of vectors) {
     assertCompatibleVector(v, embedding_model_id, dim);
   }
 
-  // Mean then re-normalize → geometric centroid on the sphere
   const acc = new Array(dim).fill(0);
   for (const v of vectors) {
     for (let i = 0; i < dim; i++) acc[i] += v[i];
@@ -139,7 +134,6 @@ export function createCustomVerificationModelFromVectors(options: {
   }
   const mean_radius = radiusSum / vectors.length;
 
-  // Threshold: slightly below weakest cohort member's cosine to centroid (floor 0.35)
   const cosine_threshold = Math.max(0.35, Math.min(0.99, minCosineToCentroid * 0.92));
 
   const subjects = (options.subjects ?? []).slice(0, vectors.length);
@@ -158,8 +152,7 @@ export function createCustomVerificationModelFromVectors(options: {
 }
 
 /**
- * Compute Knowledge distance between a user knowledgecfg embedding and a region.
- * Pure embedding-space geometry — not a vertical Eval and not LLM-backed.
+ * Compute Knowledge distance between a user flow embedding and a region.
  */
 export function computeKnowledgeDistance(
   userVector: number[],
@@ -191,8 +184,6 @@ export function computeKnowledgeDistance(
 
 /**
  * Score a subject embedding against a custom verification model (0–100 validation).
- * Pure geometry — does not call LLM or vertical score endpoints.
- * Includes Knowledge distance fields for the same user↔region pair.
  */
 export function scoreAgainstCustomVerificationModel(
   vector: number[],
@@ -210,10 +201,8 @@ export function scoreAgainstCustomVerificationModel(
   const cos = kd.cosine_similarity;
   const dist = kd.l2_distance;
 
-  // Map cosine [-1,1] → [0,100], boost when inside region
   const base = ((cos + 1) / 2) * 100;
   const in_region = kd.in_region;
-  // Soft penalty by L2 distance relative to cohort mean radius
   const radius = Math.max(1e-6, model.mean_radius || 0.5);
   const radiusFactor = Math.max(0.7, Math.min(1, 1 - (dist - radius) / (radius * 3)));
   let validation_score = base * radiusFactor;

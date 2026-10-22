@@ -14,8 +14,7 @@ import {
   summarizeGoalsText,
   type GoalCatalogEntry,
 } from "@/lib/pow-api/goals";
-import { encodeKnowledgeConfig } from "@/lib/knowledge-config/encoder";
-import type { LearningWorldModelV0 } from "@/lib/prompt-kernel/world-model";
+import { embedTextsToFlowVector } from "@/lib/flow-embedding";
 
 const wsGoals: GoalCatalogEntry[] = [
   { id: "wg-1", text: "Ship API", scope: "workspace" },
@@ -187,45 +186,13 @@ describe("parseGoalSelectionFromBody + helpers", () => {
   });
 });
 
-describe("knowledge-config encode includes evaluated goals", () => {
-  it("two snapshots that differ only by goals produce different embedding inputs", () => {
-    const wm = {
-      schema_version: "lwm-v0",
-      inferred_goal: { text: "base", confidence: 0.5, source: "workspace" },
-      exploration: { block_coverage: [], blind_spots: [], pathways_touched: [] },
-      learning_profile: {
-        strengths: [],
-        friction_patterns: [],
-        preferred_modalities: [],
-        temporal_patterns: {},
-      },
-      evidence_appetite: { want_more: [], saturated: [] },
-      scores_snapshot: { verification_score: 50 },
-    } as unknown as LearningWorldModelV0;
-
-    const base = {
-      workspaceId: "ws-1",
-      totalBlocks: 3,
-      powRows: [
-        { type: "tool", block_id: "b1", timestamp_ms: 1, tool_name: "git" },
-      ],
-      worldModel: wm,
-    };
-
-    const embA = encodeKnowledgeConfig({
-      ...base,
-      evaluatedGoalsText: "Ship the API",
-    });
-    const embB = encodeKnowledgeConfig({
-      ...base,
-      evaluatedGoalsText: "Pass the certification exam",
-    });
-    expect(embA.vector).not.toEqual(embB.vector);
-    // Same goals → same vector
-    const embA2 = encodeKnowledgeConfig({
-      ...base,
-      evaluatedGoalsText: "Ship the API",
-    });
-    expect(embA.vector).toEqual(embA2.vector);
+describe("flowcfg encode includes evaluated goals", () => {
+  it("two embeddings that differ only by goals produce different vectors", () => {
+    const base = ["ws-1", "tool git"];
+    const embA = embedTextsToFlowVector([...base, "Ship the API"]);
+    const embB = embedTextsToFlowVector([...base, "Pass the certification exam"]);
+    expect(embA).not.toEqual(embB);
+    const embA2 = embedTextsToFlowVector([...base, "Ship the API"]);
+    expect(embA).toEqual(embA2);
   });
 });

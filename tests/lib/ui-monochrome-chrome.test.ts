@@ -27,7 +27,6 @@ const SHELL_PANELS = [
   "components/KnowledgeConfigTrajectoryPanel.tsx",
   "components/ui/ConfirmDialog.tsx",
   "components/ui/DialogFrame.tsx",
-  "components/StrengthsGapsPanel.tsx",
   "components/WorkspacePerformancePanel.tsx",
 ];
 
@@ -37,6 +36,7 @@ const REMOVED_SHELL_PANELS = [
   "components/ProbesPanel.tsx",
   "components/MobileProbesTab.tsx",
   "components/ModelLoadingModal.tsx",
+  "components/StrengthsGapsPanel.tsx",
 ];
 
 describe("UI monochrome chrome (white outline aesthetic)", () => {
@@ -62,9 +62,9 @@ describe("UI monochrome chrome (white outline aesthetic)", () => {
     expect(existsSync(join(ROOT, "components/TapbenchLanding.tsx"))).toBe(false);
   });
 
-  it("Knowledge embeddings + snapshot modal chrome stays neutral-white outline", () => {
+  it("Knowledge embeddings chrome stays neutral-white outline", () => {
     const lwm = readKnowledgePanelSurface();
-    expect(lwm).toContain("data-lwm-snapshot-modal");
+    expect(lwm).not.toContain("data-lwm-snapshot-modal");
     expect(lwm).toMatch(/bg-white/);
     expect(lwm).not.toMatch(/bg-cyan-|text-blue-400|border-amber-/);
     expect(lwm).not.toContain("#22d3ee");

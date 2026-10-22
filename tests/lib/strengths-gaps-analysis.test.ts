@@ -331,30 +331,11 @@ describe("Knowledge Strengths & Gaps tab wiring", () => {
 
   it("Knowledge panel does not mount strengths_gaps view", () => {
     const kctp = readKnowledgePanelSurface();
-    const sgp = readFileSync(join(ROOT, "components/StrengthsGapsPanel.tsx"), "utf8");
 
     expect(kctp).not.toMatch(/KnowledgePanelView[\s\S]*strengths_gaps/);
     expect(kctp).not.toMatch(/panelView === "strengths_gaps"|showStrengthsGaps/);
     expect(kctp).not.toContain("<KnowledgeStrengthsGapsView");
     expect(existsSync(join(ROOT, "components/knowledge-panel/strengths-gaps-view.tsx"))).toBe(false);
-    expect(sgp).toContain('data-section="strengths-gaps"');
-    expect(sgp).toContain("data-strengths-gaps-analysis");
-    expect(sgp).toContain("data-strengths-gaps-list");
-    expect(sgp).toContain("data-gaps-list");
-    expect(sgp).toContain("data-gap-pow-links");
-    expect(sgp).toContain("buildStrengthsGapsBrowseModel");
-    // Cohort overlap UI (shared gaps + shared strengths)
-    expect(sgp).toContain("data-shared-gaps-section");
-    expect(sgp).toContain("data-shared-strengths-section");
-    expect(sgp).toContain("data-shared-gap-themes");
-    expect(sgp).toContain("data-shared-strength-themes");
-    expect(sgp).toContain("data-cohort-overlap-analysis");
-    expect(sgp).toContain("sharedGapThemes");
-    expect(sgp).toContain("sharedStrengthThemes");
-    expect(sgp).toContain("data-cohort-coverage-chart");
-    expect(sgp).toContain("data-cohort-venn-grid");
-    expect(sgp).toContain("data-theme-venn");
-    expect(sgp).toContain("CohortVennGrid");
-    expect(sgp).toContain("data-severity-stack");
+    expect(existsSync(join(ROOT, "components/StrengthsGapsPanel.tsx"))).toBe(false);
   });
 });

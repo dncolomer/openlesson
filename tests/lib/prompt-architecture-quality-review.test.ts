@@ -36,7 +36,6 @@ import {
   buildVerticalScoreInstructions,
   PERFORMANCE_REMEDIATION_GUARDRAILS,
 } from "@/lib/pow-api/performance-report";
-import { WORLD_MODEL_DELTA_INSTRUCTIONS } from "@/lib/prompt-kernel/world-model";
 import {
   DEFAULT_PROMPTS,
   getPrompt,
@@ -335,7 +334,6 @@ describe("LWM Snapshot scoring stack (shipped composition)", () => {
     expect(scoreInstructionsRequireSubmitStashAnalysis(instructions)).toBe(true);
     expect(instructions).toContain(LWM_SNAPSHOT_INSTRUCTIONS.slice(0, 40));
     expect(instructions).toContain(PERFORMANCE_REMEDIATION_GUARDRAILS.slice(0, 40));
-    expect(instructions).toContain(WORLD_MODEL_DELTA_INSTRUCTIONS.slice(0, 30));
     expect(instructions).toContain("Explain and apply matrix multiplication");
     expect(instructions).toMatch(/marker_scores/);
     expect(instructions).toMatch(/gap_analysis\.next_steps/);
@@ -352,8 +350,8 @@ describe("LWM Snapshot scoring stack (shipped composition)", () => {
   });
 
   it("field descriptions define primary score + GHC but lack numeric band anchors (documented gap)", () => {
-    expect(SCORE_FIELD_DESCRIPTIONS.lwm_snapshot_score).toMatch(/0–100|0-100/);
-    expect(SCORE_FIELD_DESCRIPTIONS.lwm_snapshot_score).toMatch(
+    expect(SCORE_FIELD_DESCRIPTIONS.score).toMatch(/0–100|0-100/);
+    expect(SCORE_FIELD_DESCRIPTIONS.score).toMatch(
       /coverage|depth|demonstrated knowledge/i,
     );
     expect(SCORE_FIELD_DESCRIPTIONS.ghc_score).toMatch(/Genuine Human Cognition|observation|action/i);
@@ -375,10 +373,11 @@ describe("LWM Snapshot scoring stack (shipped composition)", () => {
     expect(text).toMatch(/ghc_score|GHC/);
   });
 
-  it("ontology states single snapshot strategy and remediation rule", () => {
-    expect(WORKSPACE_ONTOLOGY).toMatch(/LWM Snapshot/);
+  it("ontology states single primary-score strategy and remediation rule", () => {
+    expect(WORKSPACE_ONTOLOGY).toMatch(/primary score/i);
     expect(WORKSPACE_ONTOLOGY).toMatch(/ghc_score|GHC/);
     expect(WORKSPACE_ONTOLOGY).toMatch(/Never recommend Uncertain Systems platform mechanics/i);
+    expect(WORKSPACE_ONTOLOGY).not.toMatch(/Cookie-auth Snapshot API/);
     expect(LWM_SNAPSHOT_INSTRUCTIONS).toMatch(/sole primary score strategy/i);
     expect(LWM_SNAPSHOT_INSTRUCTIONS).toMatch(
       /Do NOT invent separate augmentation or optimization primary/i,

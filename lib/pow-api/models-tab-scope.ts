@@ -1,13 +1,10 @@
 /**
  * Models tab subject scope: user | user_group | all.
- * Pure helpers for resolving selection → subjects / query params and
- * aggregating multi-subject LWM + trajectory payloads for the UI.
+ * Pure helpers for resolving selection → subjects / query params.
  */
 
-import type { LearningWorldModelV0 } from "@/lib/prompt-kernel/world-model";
-import { emptyLearningWorldModel } from "@/lib/prompt-kernel/world-model";
-import type { SubjectRef } from "./learning-world-model-store";
-import { normalizeSubject } from "./learning-world-model-store";
+import type { SubjectRef } from "./subject-ref";
+import { normalizeSubject } from "./subject-ref";
 
 export type ModelsTabScopeMode = "user" | "user_group" | "all";
 
@@ -17,17 +14,17 @@ export interface ModelsTabSubjectRef {
 }
 
 /**
- * Whether Knowledge LWM/Embeddings may pick subjects other than the logged-in user.
+ * Whether Knowledge Embeddings may pick subjects other than the logged-in user.
  * Learner mode always locks to self — even when the viewer is the workspace owner.
  */
 export function resolveModelsTabCanInspectOthers(input: {
   isOwner?: boolean;
   /**
-   * Learner Knowledge (LWM + Embeddings only): force self subject.
+   * Learner Knowledge: force self subject.
    * Also set when interaction mode is learner.
    */
   lockSubjectToSelf?: boolean;
-  /** Alias for lockSubjectToSelf (shell flag knowledgeLwmEmbeddingsOnly). */
+  /** Alias for lockSubjectToSelf. */
   lwmEmbeddingsOnly?: boolean;
   interactionMode?: "creator" | "learner" | string | null;
 }): boolean {
@@ -79,7 +76,7 @@ export interface ResolvedModelsTabScope {
   /** single = one subject; multi = explicit group members; all = workspace-wide (no subject filter). */
   kind: "single" | "multi" | "all";
   subjects: SubjectRef[];
-  /** Request body / query fields for /api/workspace/knowledge-config */
+  /** Request body / query fields for Knowledge subject filters */
   query: {
     scope: ModelsTabScopeMode;
     /** Unique registered user id (never a me/self token). */
@@ -361,93 +358,6 @@ export function resolveModelsTabScopeFromRequest(options: {
     targetUserId: options.user_id || options.currentUserId,
     targetGuestUserId: options.guest_user_id,
   });
-}
-
-export interface AggregateLwmInput {
-  workspaceId: string;
-  models: LearningWorldModelV0[];
-}
-
-/**
- * Aggregate multiple LWMs for group/all display.
- * Unions strengths / appetite / blind spots; averages available score verticals.
- */
-export function aggregateLearningWorldModels(input: AggregateLwmInput): LearningWorldModelV0 {
-  const base = emptyLearningWorldModel(input.workspaceId);
-  if (!input.models.length) return base;
-
-  const strengths = new Set<string>();
-  const friction = new Set<string>();
-  const wantMore = new Set<string>();
-  const saturated = new Set<string>();
-  const blindSpots = new Set<string>();
-  const pathways = new Set<string>();
-
-  const scoreAcc = {
-    verification_score: [] as number[],
-    augmentation_score: [] as number[],
-    optimization_score: [] as number[],
-    ghc_score: [] as number[],
-  };
-
-  let latestUpdated = base.updated_at;
-  let goalText = "";
-  let goalConf = 0;
-
-  for (const m of input.models) {
-    for (const s of m.learning_profile?.strengths || []) strengths.add(s);
-    for (const s of m.learning_profile?.friction_patterns || []) friction.add(s);
-    for (const s of m.evidence_appetite?.want_more || []) wantMore.add(s);
-    for (const s of m.evidence_appetite?.saturated || []) saturated.add(s);
-    for (const s of m.exploration?.blind_spots || []) blindSpots.add(s);
-    for (const s of m.exploration?.pathways_touched || []) pathways.add(s);
-
-    const snap = m.scores_snapshot;
-    if (snap?.verification_score != null) scoreAcc.verification_score.push(snap.verification_score);
-    if (snap?.augmentation_score != null) scoreAcc.augmentation_score.push(snap.augmentation_score);
-    if (snap?.optimization_score != null) scoreAcc.optimization_score.push(snap.optimization_score);
-    if (snap?.ghc_score != null) scoreAcc.ghc_score.push(snap.ghc_score);
-
-    if (m.updated_at && m.updated_at > latestUpdated) latestUpdated = m.updated_at;
-    if ((m.inferred_goal?.confidence ?? 0) > goalConf && m.inferred_goal?.text) {
-      goalText = m.inferred_goal.text;
-      goalConf = m.inferred_goal.confidence;
-    }
-  }
-
-  const avg = (arr: number[]) =>
-    arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
-
-  return {
-    ...base,
-    updated_at: latestUpdated,
-    inferred_goal: {
-      text: goalText,
-      confidence: goalConf,
-      source: "evolved",
-    },
-    exploration: {
-      block_coverage: [],
-      pathways_touched: Array.from(pathways),
-      blind_spots: Array.from(blindSpots),
-    },
-    learning_profile: {
-      strengths: Array.from(strengths),
-      friction_patterns: Array.from(friction),
-      preferred_modalities: [],
-      temporal_patterns: { avg_dwell_ms: null, idle_bursts: null },
-    },
-    evidence_appetite: {
-      want_more: Array.from(wantMore),
-      saturated: Array.from(saturated),
-    },
-    scores_snapshot: {
-      verification_score: avg(scoreAcc.verification_score),
-      augmentation_score: avg(scoreAcc.augmentation_score),
-      optimization_score: avg(scoreAcc.optimization_score),
-      ghc_score: avg(scoreAcc.ghc_score),
-    },
-  };
 }
 
 /** Stable subject key for trajectory point tagging. */

@@ -50,9 +50,7 @@ describe("session extras + product workspace auth shape", () => {
       false,
     );
 
-    const stashAuth = read("lib/pow-api/authenticate-stash-request.ts");
-    expect(stashAuth).not.toContain("resolveStashTapbenchFromRequest");
-    expect(stashAuth).not.toContain("tapbench_key");
+    expect(existsSync(join(ROOT, "lib/pow-api/authenticate-stash-request.ts"))).toBe(false);
 
     const linkRoutes = [
       "app/api/workspace/tap-links/route.ts",
@@ -65,15 +63,11 @@ describe("session extras + product workspace auth shape", () => {
       expect(src).toMatch(/if \(!access\.ok\) return access\.response/);
     }
 
-    const evalRoutes = [
+    for (const rel of [
       "app/api/workspace/knowledge-config/route.ts",
       "app/api/workspace/snapshot-history/route.ts",
-    ];
-    for (const rel of evalRoutes) {
-      const src = read(rel);
-      expect(src).not.toContain("async function resolveWebAuth");
-      expect(src).toContain("requireProductWorkspaceEvalAuth");
-      expect(src).toMatch(/if \(!auth\.ok\) return auth\.response/);
+    ]) {
+      expect(existsSync(join(ROOT, rel))).toBe(false);
     }
 
     const linkAuth = read("lib/product-workspace-auth.ts");

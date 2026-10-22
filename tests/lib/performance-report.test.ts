@@ -44,7 +44,7 @@ describe("buildVerticalScoreReportSchema", () => {
       const schema = buildVerticalScoreReportSchema(vertical);
       expect(schema.vertical).toBe(vertical);
       if (vertical === "verification") {
-        expect(schema.primary_field).toBe("lwm_snapshot_score");
+        expect(schema.primary_field).toBe("score");
       } else {
         expect(schema.primary_field).toBe(VERTICAL_SCORE_FIELD[vertical]);
       }
@@ -75,8 +75,7 @@ describe("buildVerticalScoreInstructions", () => {
     expect(instructions).toContain("gap_analysis.next_steps");
     expect(instructions).toContain("spider/radar");
     expect(instructions).toContain(PERFORMANCE_REMEDIATION_GUARDRAILS);
-    expect(instructions).toMatch(/System\s*1/i);
-    expect(instructions).toMatch(/System\s*2/i);
+    expect(instructions).toMatch(/observation|action|stash|submit/i);
     expect(instructions).not.toContain("conversion_score");
     expect(instructions).not.toContain("conversion_goal");
   });
@@ -100,7 +99,7 @@ describe("buildVerticalScoreReportContract", () => {
     for (const contract of contracts) {
       expect(contract.endpoint_pattern).toContain(`/${VERTICAL_REST_PATH[contract.vertical]}`);
       expect(contract.mcp_tool).toBe(VERTICAL_MCP_TOOL[contract.vertical]);
-      expect(contract.primary_score_field).toBe("lwm_snapshot_score");
+      expect(contract.primary_score_field).toBe("score");
       expect(contract.response_mode).toBe("score");
       expect(contract.marker_scores.visualization).toBe("spider_radar");
       expect(contract.gap_analysis.next_steps_required).toBe(true);
@@ -121,7 +120,7 @@ describe("buildVerticalScoreReportContract", () => {
     const contract = buildVerticalScoreReportContract("verification", "https://uncertain.systems");
     expect(contract.endpoint_pattern).toContain("lwm-snapshot");
     expect(contract.mcp_tool).toBe("lwm_snapshot");
-    expect(contract.primary_score_field).toBe("lwm_snapshot_score");
+    expect(contract.primary_score_field).toBe("score");
     expect(contract.example_report.vertical).toBe("verification");
     expect(EXAMPLE_VERIFICATION_SCORE_REPORT.vertical).toBe("verification");
     expect(EXAMPLE_AUGMENTATION_SCORE_REPORT.vertical).toBe("augmentation");

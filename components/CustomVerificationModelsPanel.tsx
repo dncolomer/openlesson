@@ -487,8 +487,8 @@ export function CustomVerificationModelsPanel({
                 <p className="text-xs text-neutral-500">Loading subjects with embeddings…</p>
               ) : filteredSubjects.length === 0 ? (
                 <p className="text-xs text-neutral-500">
-                  No subjects match this filter. Generate an LWM Snapshot after human Calibrate,
-                  Learn, or Verify sessions so embeddings exist.
+                  No subjects match this filter. Finish Calibrate, Learn, or Verify sessions
+                  so embeddings exist.
                 </p>
               ) : (
                 <ul className="max-h-48 space-y-1 overflow-y-auto rounded-none border border-neutral-800 p-2">

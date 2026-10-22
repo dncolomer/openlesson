@@ -14,7 +14,6 @@ import {
   WORKSPACE_PROOF_OF_WORK_WIRE_TYPES,
 } from "@/lib/pow-api/workspace-proof-of-work";
 import { uploadWorkspaceProofOfWork } from "@/lib/pow-api/upload-workspace-proof-of-work";
-import { parseStashIngestInput } from "@/lib/pow-api/stash-api";
 import { MCP_EVIDENCE_TOOLS } from "@/lib/pow-api/mcp-tools/helpers";
 import type { IleProofOfWorkCaptureType } from "@/lib/learn-proof-of-work-client";
 
@@ -135,29 +134,6 @@ describe("uploadWorkspaceProofOfWork uses the shared schema", () => {
         pow_model_version: "pow-model-v9",
       }),
     ).rejects.toThrow(/pow_model_version must be pow-model-v1/);
-  });
-});
-
-describe("stash ingest uses the shared schema", () => {
-  it("rejects speech and accepts screenshot", () => {
-    expect(
-      parseStashIngestInput({
-        type: "speech",
-        mime_type: "application/json",
-        data: jsonData,
-      }).ok,
-    ).toBe(false);
-
-    const screen = parseStashIngestInput({
-      type: "screenshot",
-      mime_type: "image/png",
-      data: pngData,
-    });
-    expect(screen.ok).toBe(true);
-    if (screen.ok) {
-      expect(screen.unit.type).toBe("screen");
-      expect(screen.unit.pow_model_version).toBe("pow-model-v1");
-    }
   });
 });
 

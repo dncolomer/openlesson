@@ -18,10 +18,6 @@ import {
   type ScoreVertical,
 } from "@/lib/prompt-kernel/scores";
 import { buildScoreContextSurface } from "@/lib/prompt-kernel/surfaces/score-context";
-import {
-  WORLD_MODEL_DELTA_INSTRUCTIONS,
-  type LearningWorldModelDelta,
-} from "@/lib/prompt-kernel/world-model";
 import { evalScoreEndpointPattern } from "@/lib/api/agent-api-paths";
 
 export type { GhcConfidence, ScoreVertical };
@@ -89,20 +85,16 @@ export interface PerformanceGapAnalysis {
 }
 
 /**
- * LWM Snapshot report: a single primary 0–100 score plus spider breakdown,
+ * TAP scorecard report: a single primary 0–100 score plus spider breakdown,
  * analysis (summary/strengths/growth/gaps), and next actions (gap_analysis.next_steps).
  * GHC is a secondary signal on the same report.
  */
 export interface VerticalScoreReport {
   vertical: ScoreVertical;
-  /** Primary 0–100 LWM Snapshot score. */
+  /** Primary 0–100 score. */
   score: number;
   /**
-   * Product named primary field for LWM Snapshot (equals `score`).
-   */
-  lwm_snapshot_score?: number;
-  /**
-   * History-compatible mirror of the primary score (LWM scores_snapshot key).
+   * History-compatible mirror of the primary score.
    * Not a product-facing score type name.
    */
   verification_score?: number;
@@ -114,7 +106,7 @@ export interface VerticalScoreReport {
    */
   workspace_goal: string;
   /**
-   * Goals this snapshot was scored against (ids + text + scope), frozen at run time.
+   * Goals this report was scored against (ids + text + scope), frozen at run time.
    */
   evaluated_goals?: Array<{
     id: string | null;
@@ -126,7 +118,7 @@ export interface VerticalScoreReport {
   ghc_score: number;
   ghc_confidence: GhcConfidence;
   temporal_summary?: string;
-  world_model_delta?: LearningWorldModelDelta;
+  world_model_delta?: Record<string, unknown>;
   /** Spider/radar competency breakdown. */
   marker_scores: PerformanceMarkerScore[];
   /** Narrative analysis of the score. */
@@ -236,20 +228,18 @@ export const PERFORMANCE_GAP_ITEM_SCHEMA = {
 } as const;
 
 function primaryScoreDescription(vertical: ScoreVertical): string {
-  // Product strategy is always LWM Snapshot.
-  if (vertical === "verification") return SCORE_FIELD_DESCRIPTIONS.lwm_snapshot_score;
+  if (vertical === "verification") return SCORE_FIELD_DESCRIPTIONS.score;
   if (vertical === "augmentation") return SCORE_FIELD_DESCRIPTIONS.augmentation_score;
   return SCORE_FIELD_DESCRIPTIONS.optimization_score;
 }
 
 export function buildVerticalScoreReportSchema(vertical: ScoreVertical) {
-  // Product primary named field is always lwm_snapshot_score for the snapshot strategy.
   const primaryField =
     vertical === SNAPSHOT_VERTICAL ? SNAPSHOT_SCORE_FIELD : VERTICAL_SCORE_FIELD[vertical];
   return {
     name:
       vertical === SNAPSHOT_VERTICAL
-        ? "workspace_lwm_snapshot_score_report"
+        ? "workspace_score_report"
         : `workspace_${vertical}_score_report`,
     schema: {
       type: "object",
@@ -277,7 +267,7 @@ export function buildVerticalScoreReportSchema(vertical: ScoreVertical) {
         },
         world_model_delta: {
           type: "object",
-          description: "Partial learning world model update from this evaluation",
+          description: "Optional extra structured notes from this evaluation",
           additionalProperties: true,
         },
         marker_scores: {
@@ -431,15 +421,12 @@ export function applyNamedScoreField(report: VerticalScoreReport): VerticalScore
       vertical: SNAPSHOT_VERTICAL,
       augmentation_score: undefined,
       optimization_score: undefined,
-      // Product named field + history-compatible mirror for LWM scores_snapshot.
-      lwm_snapshot_score: report.score,
       verification_score: report.score,
     };
   }
   const field = VERTICAL_SCORE_FIELD[report.vertical];
   return {
     ...report,
-    lwm_snapshot_score: undefined,
     verification_score: undefined,
     augmentation_score: undefined,
     optimization_score: undefined,
@@ -470,7 +457,7 @@ export function buildVerticalScoreReportContract(
     response_mode: "score",
     required_fields: [
       "score",
-      primaryField,
+      ...(primaryField === "score" ? [] : [primaryField]),
       "vertical",
       "workspace_goal",
       "ghc_score",
@@ -524,7 +511,7 @@ export function buildVerticalScoreReportContract(
   };
 }
 
-/** Build contracts for the single LWM Snapshot endpoint. */
+/** Build contracts for the single TAP scorecard endpoint. */
 export function buildAllVerticalScoreContracts(baseUrl?: string): VerticalScoreReportContract[] {
   return SCORE_VERTICALS.map((v) => buildVerticalScoreReportContract(v, baseUrl));
 }
@@ -596,18 +583,18 @@ export function buildVerticalScoreInstructions(
 ): string {
   const scope = blockId ? "a single workspace block" : "the full workspace";
   const goalLine = workspaceGoal?.trim()
-    ? `\nAuthoritative workspace goal (use exactly for workspace_goal; score the LWM Snapshot primary against this):\n"${workspaceGoal.trim()}"\n`
+    ? `\nAuthoritative workspace goal (use exactly for workspace_goal; score the primary score against this):\n"${workspaceGoal.trim()}"\n`
     : "";
 
   const verticalLabel =
     vertical === "verification"
-      ? LWM_SNAPSHOT_FULL_LABEL
+      ? "primary score"
       : vertical === "augmentation"
-        ? "legacy augmentation (maps to LWM Snapshot)"
-        : "legacy optimization (maps to LWM Snapshot)";
+        ? "legacy augmentation (maps to the primary score)"
+        : "legacy optimization (maps to the primary score)";
 
   const task = `You produce a structured **${verticalLabel}** score report for ${scope} in Uncertain Systems.
-This call produces the single LWM Snapshot strategy (primary score + GHC). Return one primary score field ("score") plus spider breakdown, analysis, and next actions.
+This call produces the single primary-score strategy (primary score + GHC). Return one primary score field ("score") plus spider breakdown, analysis, and next actions.
 ${goalLine}
 
 Use the attached workspace performance JSON and artifact files **as PoW context catalogs and file refs** — score only from the proof-of-work they reference (see SCORE GENERATION CONTEXT). Return only JSON matching the schema.
@@ -626,7 +613,6 @@ Additional required outputs:
    - directions: 2-5 high-level outcomes or intermediate goals in domain/product language
    - events: 3-8 granular, observable product/tool actions or event verbs from the learner's real workflow
 9. suggestions — short product/workflow follow-ups; same remediation rules as gaps and next_steps.
-10. ${WORLD_MODEL_DELTA_INSTRUCTIONS}
 
 ${PERFORMANCE_REMEDIATION_GUARDRAILS}
 
@@ -724,15 +710,12 @@ export function normalizeVerticalScoreReport(
   const raw = report as Record<string, unknown>;
   const namedField = VERTICAL_SCORE_FIELD[resolvedVertical];
   const namedValue = raw[namedField];
-  const productNamed = raw.lwm_snapshot_score;
   const score = clampPerformanceScore(
     typeof report.score === "number"
       ? report.score
-      : typeof productNamed === "number"
-        ? productNamed
-        : typeof namedValue === "number"
-          ? namedValue
-          : 0
+      : typeof namedValue === "number"
+        ? namedValue
+        : 0
   );
   const ghc_score = clampPerformanceScore(report.ghc_score);
   const ghc_confidence = normalizeGhcConfidence(report.ghc_confidence);
@@ -874,7 +857,7 @@ export function recoverVerticalScoreReportFromModelText(
       ? { temporal_summary: raw.temporal_summary.trim() }
       : {}),
     ...(raw.world_model_delta && typeof raw.world_model_delta === "object"
-      ? { world_model_delta: raw.world_model_delta as LearningWorldModelDelta }
+      ? { world_model_delta: raw.world_model_delta as Record<string, unknown> }
       : {}),
     marker_scores,
     summary:
@@ -903,8 +886,7 @@ export function recoverPerformanceReportFromModelText(
 }
 
 /**
- * Wire key for session-adjacent snapshot helpers (same strategy as Snapshot API lwm-snapshot).
- * Snapshots are manual (Knowledge UI) or explicit API/MCP — not auto-run on TAP/TAP Learning end.
+ * Wire key for TAP score-card helpers. TAP reports still use this vertical key.
  */
 export const TAP_AUTO_SCORE_VERTICAL: ScoreVertical = SNAPSHOT_VERTICAL;
 /** @alias TAP_AUTO_SCORE_VERTICAL */

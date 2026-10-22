@@ -1,6 +1,6 @@
 # Uncertain Systems Proof-of-Work API
 
-The two public agent APIs are **workspace management** (`/api/v3/workspaces`) and **headless proof-of-work** (`/api/v3/pow`). Create Learning or Verification workspaces, then start, run, and end Calibrate, Learn, and Verify sessions. Snapshot and Stash are product-UI routes.
+The two public agent APIs are **workspace management** (`/api/v3/workspaces`) and **headless proof-of-work** (`/api/v3/pow`). Create Learning or Verification workspaces, then start, run, and end Calibrate, Learn, and Verify sessions. Snapshot and Stash are retired.
 
 Authenticate with `Authorization: Bearer <api_key>`.
 

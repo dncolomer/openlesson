@@ -6,37 +6,27 @@ import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  buildBulkSnapshotJobs,
   buildStudioProjectionView,
-  consumePlatformBulkNdjson,
   evaluateStudioRegionGeometry,
-  formatPlatformBulkSnapshotProgress,
-  initialPlatformBulkSnapshotProgress,
   matchesStudioPowFilter,
   matchesStudioPowToSessionLink,
   paginateSlice,
   parseDataStudioTab,
-  parsePlatformBulkProgressLine,
   parsePositiveInt,
   parseStudioSessionLinkInput,
   parseStudioSortDirection,
-  reducePlatformBulkSnapshotProgress,
-  selectWorkspacesForBulkSnapshot,
   sortStudioRows,
   summarizeXaiOrgRows,
   toggleStudioSort,
-  workspaceBulkLabel,
 } from "@/lib/admin/data-studio";
-import {
-  createCustomVerificationModelFromVectors,
-  KNOWLEDGE_CONFIG_DIM,
-} from "@/lib/knowledge-config";
+import { createCustomVerificationModelFromVectors } from "@/lib/knowledge-config";
+import { FLOW_EMBEDDING_DIM } from "@/lib/flow-embedding";
 import { l2Normalize } from "@/lib/knowledge-config/math";
 
 const ROOT = join(__dirname, "../..");
 
 function unitVector(seed: number): number[] {
-  const v = Array.from({ length: KNOWLEDGE_CONFIG_DIM }, (_, i) =>
+  const v = Array.from({ length: FLOW_EMBEDDING_DIM }, (_, i) =>
     Math.sin(seed * 17 + i * 0.31) + 0.05,
   );
   return l2Normalize(v);
@@ -72,7 +62,7 @@ describe("data studio browse helpers (pure)", () => {
     expect(parsePositiveInt("12", 1, 50)).toBe(12);
     expect(parsePositiveInt("nope", 5)).toBe(5);
     expect(parsePositiveInt("999", 1, 100)).toBe(100);
-    expect(parseDataStudioTab("bulk")).toBe("bulk");
+    expect(parseDataStudioTab("bulk")).toBe("overview");
     expect(parseDataStudioTab("nope")).toBe("overview");
   });
 
@@ -213,165 +203,6 @@ describe("sortStudioRows (pure)", () => {
     expect(
       toggleStudioSort({ column: "name", direction: "desc" }, "created_at", "desc"),
     ).toEqual({ column: "created_at", direction: "desc" });
-  });
-});
-
-describe("platform bulk snapshot progress (pure)", () => {
-  it("selects workspaces by ids or all eligible", () => {
-    const workspaces = [
-      { id: "a", title: "Alpha", status: "active" },
-      { id: "b", title: "Beta", status: "archived" },
-      { id: "c", root_topic: "Gamma", status: "active" },
-    ];
-    expect(selectWorkspacesForBulkSnapshot(workspaces, { all: true }).map((w) => w.id)).toEqual([
-      "a",
-      "c",
-    ]);
-    expect(
-      selectWorkspacesForBulkSnapshot(workspaces, {
-        all: true,
-        includeArchived: true,
-      }).map((w) => w.id),
-    ).toEqual(["a", "b", "c"]);
-    expect(
-      selectWorkspacesForBulkSnapshot(workspaces, { workspaceIds: ["b", "c"] }).map((w) => w.id),
-    ).toEqual(["c"]);
-    expect(selectWorkspacesForBulkSnapshot(workspaces, {})).toEqual([]);
-    expect(workspaceBulkLabel({ id: "xyzxyzxyz", title: null, root_topic: null })).toBe("xyzxyzxy");
-  });
-
-  it("builds multi-workspace jobs from subject maps", () => {
-    const jobs = buildBulkSnapshotJobs({
-      workspaces: [
-        { id: "w1", title: "One" },
-        { id: "w2", title: "Two" },
-      ],
-      subjectsByWorkspace: {
-        w1: [{ user_id: "u1" }, { guest_user_id: "g1" }],
-        w2: [{ user_id: "u2" }],
-      },
-      currentUserId: "u1",
-    });
-    expect(jobs).toHaveLength(3);
-    expect(jobs[0].workspace_label).toBe("One");
-    expect(jobs[0].subject_label).toBe("You");
-    expect(jobs[1].subject.guest_user_id).toBe("g1");
-    expect(jobs[2].workspace_id).toBe("w2");
-  });
-
-  it("reduces start → jobs → complete with correct summary counts", () => {
-    let state = initialPlatformBulkSnapshotProgress();
-    expect(formatPlatformBulkSnapshotProgress(state)).toBe("");
-
-    state = reducePlatformBulkSnapshotProgress(state, {
-      type: "start",
-      total_workspaces: 2,
-      total_jobs: 3,
-    });
-    expect(state.phase).toBe("running");
-    expect(state.total_jobs).toBe(3);
-
-    state = reducePlatformBulkSnapshotProgress(state, {
-      type: "workspace_start",
-      workspace_id: "w1",
-      workspace_label: "One",
-      workspace_index: 1,
-      total_workspaces: 2,
-      subject_count: 2,
-    });
-    expect(state.currentWorkspaceLabel).toBe("One");
-
-    state = reducePlatformBulkSnapshotProgress(state, {
-      type: "job_start",
-      index: 1,
-      total: 3,
-      workspace_id: "w1",
-      user_id: "u1",
-      guest_user_id: null,
-      label: "You",
-    });
-    expect(state.currentLabel).toBe("You");
-
-    state = reducePlatformBulkSnapshotProgress(state, {
-      type: "job",
-      index: 1,
-      total: 3,
-      workspace_id: "w1",
-      user_id: "u1",
-      guest_user_id: null,
-      status: "ok",
-    });
-    expect(state.succeeded).toBe(1);
-    expect(state.completed).toBe(1);
-
-    state = reducePlatformBulkSnapshotProgress(state, {
-      type: "job",
-      index: 2,
-      total: 3,
-      workspace_id: "w1",
-      user_id: null,
-      guest_user_id: "g1",
-      status: "skipped",
-      code: "no_new_pow",
-    });
-    expect(state.skipped).toBe(1);
-
-    state = reducePlatformBulkSnapshotProgress(state, {
-      type: "workspace_complete",
-      workspace_id: "w1",
-      workspace_label: "One",
-      succeeded: 1,
-      skipped: 1,
-      failed: 0,
-      total: 2,
-    });
-    expect(state.workspaceSummaries).toHaveLength(1);
-
-    state = reducePlatformBulkSnapshotProgress(state, {
-      type: "job",
-      index: 3,
-      total: 3,
-      workspace_id: "w2",
-      user_id: "u2",
-      guest_user_id: null,
-      status: "failed",
-      error: "boom",
-    });
-    expect(state.failed).toBe(1);
-
-    state = reducePlatformBulkSnapshotProgress(state, {
-      type: "complete",
-      total_workspaces: 2,
-      total_jobs: 3,
-      succeeded: 1,
-      skipped: 1,
-      failed: 1,
-    });
-    expect(state.phase).toBe("complete");
-    expect(state.succeeded).toBe(1);
-    expect(state.skipped).toBe(1);
-    expect(state.failed).toBe(1);
-    expect(state.summary).toMatch(/1 ok/);
-    expect(formatPlatformBulkSnapshotProgress(state)).toMatch(/Bulk complete/i);
-  });
-
-  it("parses and consumes platform bulk NDJSON lines", () => {
-    const line = JSON.stringify({
-      type: "job",
-      index: 1,
-      total: 2,
-      workspace_id: "w1",
-      user_id: "u1",
-      guest_user_id: null,
-      status: "ok",
-    });
-    const ev = parsePlatformBulkProgressLine(line);
-    expect(ev?.type).toBe("job");
-    if (ev?.type === "job") expect(ev.status).toBe("ok");
-
-    const { events, rest } = consumePlatformBulkNdjson("", `${line}\n{"type":"comp`);
-    expect(events).toHaveLength(1);
-    expect(rest).toContain('"type":"comp');
   });
 });
 

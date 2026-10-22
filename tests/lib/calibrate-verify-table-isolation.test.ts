@@ -40,7 +40,7 @@ function fakeClient() {
           error: null,
         }),
         single: async () => ({
-          data: rows[table] ?? { id: "row-1", ...rows[table] },
+          data: rows[table] ?? { id: "row-1" },
           error: null,
         }),
       };

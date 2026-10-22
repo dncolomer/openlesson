@@ -24,10 +24,8 @@ import {
   scoreSubjectsAgainstRoleRegions,
   assertMixedRoleMembership,
 } from "../lib/demo/saas-tech-team-demo-workspace";
-import {
-  KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
-  scoreAgainstCustomVerificationModel,
-} from "../lib/knowledge-config";
+import { scoreAgainstCustomVerificationModel } from "../lib/knowledge-config";
+import { FLOW_EMBEDDING_DIM, FLOW_EMBEDDING_MODEL_ID } from "../lib/flow-embedding";
 import { parseSaasTechDemoSeedTarget } from "./saas-tech-demo-target";
 
 async function main() {
@@ -125,12 +123,12 @@ async function main() {
 
     const snaps = await client.query(
       `SELECT count(*)::int AS n,
-              count(DISTINCT subject_guest_user_id)::int AS guest_subjects,
-              count(*) FILTER (WHERE subject_user_id = $3 AND subject_guest_user_id IS NULL)::int AS owner_snaps
-       FROM public.knowledge_config_snapshots
+              count(DISTINCT identity)::int AS guest_subjects,
+              count(*) FILTER (WHERE identity = $3)::int AS owner_snaps
+       FROM public.workspace_flow_embeddings
        WHERE workspace_id = $1
          AND embedding_model_id = $2`,
-      [workspaceId, KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID, ownerUserId],
+      [workspaceId, FLOW_EMBEDDING_MODEL_ID, ownerUserId],
     );
     const snapCount = snaps.rows[0].n as number;
     const snapGuestSubjects = snaps.rows[0].guest_subjects as number;
@@ -145,7 +143,7 @@ async function main() {
     }
     if (ownerSnaps < 1) {
       throw new Error(
-        `expected ≥1 knowledge_config snapshot for subject_user_id=owner, got ${ownerSnaps}`,
+        `expected ≥1 flow embedding for identity=owner, got ${ownerSnaps}`,
       );
     }
 
@@ -193,20 +191,20 @@ async function main() {
     if (!backendRow) throw new Error("missing Backend Engineering region");
 
     const subjectSnaps = await client.query(
-      `SELECT s.subject_guest_user_id, s.subject_user_id, s.vector, g.metadata, u.email AS user_email
-       FROM public.knowledge_config_snapshots s
-       LEFT JOIN public.organization_guest_users g ON g.id = s.subject_guest_user_id
-       LEFT JOIN auth.users u ON u.id = s.subject_user_id
+      `SELECT s.identity AS subject_guest_user_id, NULL::uuid AS subject_user_id, s.vector, g.metadata, u.email AS user_email
+       FROM public.workspace_flow_embeddings s
+       LEFT JOIN public.organization_guest_users g ON g.id::text = s.identity
+       LEFT JOIN auth.users u ON u.id::text = s.identity
        WHERE s.workspace_id = $1
          AND s.embedding_model_id = $2
-       ORDER BY s.as_of_ms DESC`,
-      [workspaceId, KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID],
+       ORDER BY s.created_at DESC`,
+      [workspaceId, FLOW_EMBEDDING_MODEL_ID],
     );
 
     const model = {
       name: String(backendRow.name),
-      embedding_model_id: KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
-      dim: 64,
+      embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
+      dim: FLOW_EMBEDDING_DIM,
       centroid: backendRow.centroid as number[],
       cosine_threshold: Number(backendRow.cosine_threshold),
       mean_radius: 0.4,

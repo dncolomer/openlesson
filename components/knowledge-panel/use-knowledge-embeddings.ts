@@ -21,10 +21,6 @@ import {
   type AvailableSubject,
   type KnowledgeConfigResponse,
 } from "@/components/knowledge-panel/widgets";
-import {
-  fetchKnowledgeConfig,
-  mergeAvailableSubjects,
-} from "@/components/knowledge-panel/knowledge-config-client";
 import type { OverlayDistance } from "@/components/knowledge-panel/types";
 import { assembleSelectedRegionOverlayInputs } from "@/lib/knowledge-region-import";
 import { listWorkspaceFlowEmbeddings } from "@/lib/flow-embedding-client";
@@ -47,9 +43,9 @@ export function useKnowledgeEmbeddings(input: {
   ayclToken?: string;
   canInspectOthers: boolean;
   lockSubjectToSelf: boolean;
-  /** knowledgecfg snapshots (learning) or flowcfg Calibrate/Learn/Verify embeddings. */
-  embeddingSource?: "knowledgecfg" | "flowcfg";
-  /** Verification or calibration flow filter; only used with flowcfg. */
+  /** Ignored. Knowledge is always flowcfg-v1-d96. */
+  embeddingSource?: "flowcfg" | string;
+  /** Verification or calibration flow filter. */
   flowId?: string | null;
   /** Restrict flowcfg rows to calibrate or verify. */
   flowKind?: string | null;
@@ -60,11 +56,10 @@ export function useKnowledgeEmbeddings(input: {
     ayclToken,
     canInspectOthers,
     lockSubjectToSelf,
-    embeddingSource = "knowledgecfg",
     flowId = null,
     flowKind = null,
   } = input;
-  const useFlowEmbeddings = embeddingSource === "flowcfg";
+  const useFlowEmbeddings = true;
 
   const [embSelectedKeys, setEmbSelectedKeys] = useState<string[]>([]);
   const [availableSubjects, setAvailableSubjects] = useState<AvailableSubject[]>([]);
@@ -138,21 +133,6 @@ export function useKnowledgeEmbeddings(input: {
     };
   }, [embeddingsFullscreen, exitEmbeddingsFullscreen]);
 
-  useEffect(() => {
-    if (useFlowEmbeddings) return;
-    if (!currentUserId) return;
-    setEmbSelectedKeys((prev) => (prev.length === 0 ? [`u:${currentUserId}`] : prev));
-  }, [currentUserId, useFlowEmbeddings]);
-
-  useEffect(() => {
-    if (useFlowEmbeddings) return;
-    if (canInspectOthers || !currentUserId) return;
-    const selfKey = `u:${currentUserId}`;
-    setEmbSelectedKeys((prev) =>
-      prev.length === 1 && prev[0] === selfKey ? prev : [selfKey],
-    );
-  }, [canInspectOthers, currentUserId, useFlowEmbeddings]);
-
   const embScope = useMemo(
     () =>
       resolveEmbeddingsSubjectSelection({
@@ -167,50 +147,27 @@ export function useKnowledgeEmbeddings(input: {
   const embUserId = embScope.subjects[0]?.user_id ?? "";
   const embGuestUserId = embScope.subjects[0]?.guest_user_id ?? "";
 
-  const knowledgeQueryKey = useMemo(() => {
-    if (useFlowEmbeddings) return "flowcfg";
-    const query = embScope.query;
-    return [
-      "knowledgecfg",
-      query.scope,
-      query.user_id ?? "",
-      query.guest_user_id ?? "",
-      query.user_ids ?? "",
-      query.guest_user_ids ?? "",
-    ].join("|");
-  }, [embScope.query, useFlowEmbeddings]);
-  const knowledgeQueryRef = useRef(embScope.query);
-  knowledgeQueryRef.current = embScope.query;
+  const knowledgeQueryKey = "flowcfg";
 
   const loadEmbeddings = useCallback(async () => {
     setEmbLoading(true);
     setEmbError(null);
     try {
-      if (useFlowEmbeddings) {
-        const listed = await listWorkspaceFlowEmbeddings({
-          workspaceId,
-          ayclToken,
-          flowId,
-          flowKind,
-        });
-        const rows = filterFlowEmbeddingRows(listed, { flowId, flowKind });
-        setFlowRows((prev) => (sameFlowEmbeddingList(prev, rows) ? prev : rows));
-        setAvailableSubjects(subjectsFromFlowEmbeddings(rows));
-        return;
-      }
-      const payload = await fetchKnowledgeConfig(
+      const listed = await listWorkspaceFlowEmbeddings({
         workspaceId,
         ayclToken,
-        knowledgeQueryRef.current,
-      );
-      setEmbData(payload);
-      setAvailableSubjects((prev) => mergeAvailableSubjects(prev, payload));
+        flowId,
+        flowKind,
+      });
+      const rows = filterFlowEmbeddingRows(listed, { flowId, flowKind });
+      setFlowRows((prev) => (sameFlowEmbeddingList(prev, rows) ? prev : rows));
+      setAvailableSubjects(subjectsFromFlowEmbeddings(rows));
     } catch (err) {
       setEmbError(err instanceof Error ? err.message : "Failed to load embeddings");
     } finally {
       setEmbLoading(false);
     }
-  }, [ayclToken, flowId, flowKind, knowledgeQueryKey, useFlowEmbeddings, workspaceId]);
+  }, [ayclToken, flowId, flowKind, knowledgeQueryKey, workspaceId]);
 
   const loadRegionsForOverlay = useCallback(async () => {
     setRegionsLoading(true);
@@ -251,12 +208,8 @@ export function useKnowledgeEmbeddings(input: {
       const mappedImportable = (
         Array.isArray(data.importable_models) ? data.importable_models : []
       ).map((m: Record<string, unknown>) => mapModel(m, { imported: true }));
-      const nextModels = useFlowEmbeddings
-        ? mappedModels.filter(regionMatchesFlowEmbeddingSpace)
-        : mappedModels;
-      const nextImportable = useFlowEmbeddings
-        ? mappedImportable.filter(regionMatchesFlowEmbeddingSpace)
-        : mappedImportable;
+      const nextModels = mappedModels.filter(regionMatchesFlowEmbeddingSpace);
+      const nextImportable = mappedImportable.filter(regionMatchesFlowEmbeddingSpace);
       setKnowledgeRegions(nextModels);
       setImportableRegions(nextImportable);
       const importableIds = new Set(
@@ -286,7 +239,7 @@ export function useKnowledgeEmbeddings(input: {
     } finally {
       setRegionsLoading(false);
     }
-  }, [useFlowEmbeddings, workspaceId]);
+  }, [workspaceId]);
 
   useEffect(() => {
     void loadEmbeddings();
@@ -333,137 +286,55 @@ export function useKnowledgeEmbeddings(input: {
       return;
     }
 
-    let cancelled = false;
     setOverlayDistancesLoading(true);
 
-    if (useFlowEmbeddings) {
-      const points = embData?.trajectory.points ?? [];
-      const vector = latestFlowVectorForSubject(points, {
-        guestUserId: embGuestUserId,
-        userId: embUserId,
-      });
-      const next: Record<string, OverlayDistance> = {};
-      for (const regionId of ids) {
-        const catalogHit = overlayRegionCatalog.find((r) => r.id === regionId);
-        if (!vector || !catalogHit || !regionMatchesFlowEmbeddingSpace(catalogHit)) {
-          next[regionId] = {
-            knowledge_distance: NaN,
-            cosine_similarity: NaN,
-            cosine_distance: NaN,
-            in_region: false,
-            region_name: catalogHit?.name ?? regionId,
-            error: vector ? "Region is not a flow embedding" : "No embedding for this person",
-          };
-          continue;
-        }
-        try {
-          const kd = flowEmbeddingDistanceToRegion(vector, catalogHit);
-          next[regionId] = {
-            knowledge_distance: kd.knowledge_distance,
-            cosine_similarity: kd.cosine_similarity,
-            cosine_distance: kd.cosine_distance,
-            in_region: kd.in_region,
-            region_name: kd.region_name || catalogHit.name,
-          };
-        } catch (err) {
-          next[regionId] = {
-            knowledge_distance: NaN,
-            cosine_similarity: NaN,
-            cosine_distance: NaN,
-            in_region: false,
-            region_name: catalogHit.name,
-            error: err instanceof Error ? err.message : "Distance unavailable",
-          };
-        }
+    const points = embData?.trajectory.points ?? [];
+    const vector = latestFlowVectorForSubject(points, {
+      guestUserId: embGuestUserId,
+      userId: embUserId,
+    });
+    const next: Record<string, OverlayDistance> = {};
+    for (const regionId of ids) {
+      const catalogHit = overlayRegionCatalog.find((r) => r.id === regionId);
+      if (!vector || !catalogHit || !regionMatchesFlowEmbeddingSpace(catalogHit)) {
+        next[regionId] = {
+          knowledge_distance: NaN,
+          cosine_similarity: NaN,
+          cosine_distance: NaN,
+          in_region: false,
+          region_name: catalogHit?.name ?? regionId,
+          error: vector ? "Region is not a flow embedding" : "No embedding for this person",
+        };
+        continue;
       }
-      setOverlayDistances(next);
-      setOverlayDistancesLoading(false);
-      return;
+      try {
+        const kd = flowEmbeddingDistanceToRegion(vector, catalogHit);
+        next[regionId] = {
+          knowledge_distance: kd.knowledge_distance,
+          cosine_similarity: kd.cosine_similarity,
+          cosine_distance: kd.cosine_distance,
+          in_region: kd.in_region,
+          region_name: kd.region_name || catalogHit.name,
+        };
+      } catch (err) {
+        next[regionId] = {
+          knowledge_distance: NaN,
+          cosine_similarity: NaN,
+          cosine_distance: NaN,
+          in_region: false,
+          region_name: catalogHit.name,
+          error: err instanceof Error ? err.message : "Distance unavailable",
+        };
+      }
     }
-
-    void (async () => {
-      const next: Record<string, OverlayDistance> = {};
-      await Promise.all(
-        ids.map(async (regionId) => {
-          const catalogHit = overlayRegionCatalog.find((r) => r.id === regionId);
-          const targetWorkspaceId = catalogHit?.workspace_id || workspaceId;
-          try {
-            const res = await fetch("/api/workspace/custom-knowledge-regions", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                action: "knowledge_distance",
-                workspaceId: targetWorkspaceId,
-                regionId,
-                ...(embUserId ? { user_id: embUserId } : {}),
-                ...(embGuestUserId ? { guest_user_id: embGuestUserId } : {}),
-                ...(ayclToken ? { ayclToken } : {}),
-              }),
-            });
-            const data = await res.json().catch(() => ({}));
-            if (cancelled) return;
-            if (!res.ok) {
-              next[regionId] = {
-                knowledge_distance: NaN,
-                cosine_similarity: NaN,
-                cosine_distance: NaN,
-                in_region: false,
-                region_name:
-                  overlayRegionCatalog.find((r) => r.id === regionId)?.name ?? regionId,
-                error:
-                  typeof data.error === "string" ? data.error : "Distance unavailable",
-              };
-              return;
-            }
-            const kd = data.knowledge_distance as {
-              knowledge_distance: number;
-              cosine_similarity: number;
-              cosine_distance: number;
-              in_region: boolean;
-              region_name?: string;
-            };
-            next[regionId] = {
-              knowledge_distance: Number(kd.knowledge_distance),
-              cosine_similarity: Number(kd.cosine_similarity),
-              cosine_distance: Number(kd.cosine_distance),
-              in_region: Boolean(kd.in_region),
-              region_name:
-                kd.region_name ||
-                overlayRegionCatalog.find((r) => r.id === regionId)?.name ||
-                regionId,
-            };
-          } catch (err) {
-            if (cancelled) return;
-            next[regionId] = {
-              knowledge_distance: NaN,
-              cosine_similarity: NaN,
-              cosine_distance: NaN,
-              in_region: false,
-              region_name:
-                overlayRegionCatalog.find((r) => r.id === regionId)?.name ?? regionId,
-              error: err instanceof Error ? err.message : "Distance unavailable",
-            };
-          }
-        }),
-      );
-      if (!cancelled) {
-        setOverlayDistances(next);
-        setOverlayDistancesLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
+    setOverlayDistances(next);
+    setOverlayDistancesLoading(false);
   }, [
-    ayclToken,
     embData?.trajectory.points,
     embGuestUserId,
     embUserId,
     overlayRegionCatalog,
     selectedRegionIds,
-    useFlowEmbeddings,
-    workspaceId,
   ]);
 
   const projectedLayout = useMemo(() => {

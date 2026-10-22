@@ -440,8 +440,9 @@ export async function reissueWorkspaceTapLink(
     "id, workspace_id, block_id, status, requested_duration_seconds, focus_block_ids, created_at, participant_type, post_session, redirect_url, guest_user_id, assigned_user_id, private_token_hash, access_mode, public_token, entry_query_params, workspaces(id, user_id, organization_id, guest_user_id)",
   );
   const existing = found?.session ?? null;
+  const sessionTable = found?.table;
 
-  if (!existing || existing.workspace_id !== workspaceId) {
+  if (!existing || !sessionTable || existing.workspace_id !== workspaceId) {
     throw new CreateTapLinkError("Session link not found", 404, "not_found");
   }
   if (!existing.private_token_hash && !existing.public_token) {
@@ -467,7 +468,7 @@ export async function reissueWorkspaceTapLink(
   }
 
   const { data: link, error } = await supabase
-    .from(found.table)
+    .from(sessionTable)
     .update({
       private_token_hash: hashPrivateToken(sessionToken),
       public_token: durableGuestLinkPublicToken(sessionToken),

@@ -14,10 +14,10 @@ import {
   stemWorkspaceNotes,
 } from "@/lib/demo/stem-public-workspaces";
 import {
-  KNOWLEDGE_CONFIG_DIM,
-  KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
-  isKnowledgeConfigVector,
-} from "@/lib/knowledge-config";
+  FLOW_EMBEDDING_DIM,
+  FLOW_EMBEDDING_MODEL_ID,
+  isFlowEmbeddingVector,
+} from "@/lib/flow-embedding";
 
 const root = join(__dirname, "../..");
 
@@ -71,7 +71,7 @@ describe("STEM public workspace catalog", () => {
     }
   });
 
-  it("builds real knowledgecfg region vectors via synthetic encoder path", () => {
+  it("builds real flowcfg region vectors via synthetic encoder path", () => {
     const math = getStemField("mathematics");
     expect(math).toBeTruthy();
     const regions = buildAllStemRegionsForField(math!, "ws-stem-math-test");
@@ -82,9 +82,9 @@ describe("STEM public workspace catalog", () => {
     expect(names.size).toBe(regions.length);
 
     for (const region of regions) {
-      expect(region.embedding_model_id).toBe(KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID);
-      expect(region.dim).toBe(KNOWLEDGE_CONFIG_DIM);
-      expect(isKnowledgeConfigVector(region.centroid, KNOWLEDGE_CONFIG_DIM)).toBe(true);
+      expect(region.embedding_model_id).toBe(FLOW_EMBEDDING_MODEL_ID);
+      expect(region.dim).toBe(FLOW_EMBEDDING_DIM);
+      expect(isFlowEmbeddingVector(region.centroid)).toBe(true);
       expect(region.subject_count).toBeGreaterThanOrEqual(1);
       expect(region.mean_radius).toBeGreaterThan(0);
       // Unit vector-ish: L2 norm ~1
@@ -119,7 +119,7 @@ describe("STEM public workspace catalog", () => {
     expect(verifySrc).toContain("is_public");
     expect(verifySrc).toContain("is_admin");
     expect(verifySrc).toContain("custom_verification_models");
-    expect(verifySrc).toContain("isKnowledgeConfigVector");
+    expect(verifySrc).toContain("isFlowEmbeddingVector");
 
     const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
     expect(pkg.scripts["db:seed-stem-public:staging"]).toBeTruthy();

@@ -210,11 +210,11 @@ describe("completion paths persist flow embeddings instead of snapshots", () => 
     expect(client).toContain("listWorkspaceFlowEmbeddings");
     expect(client).toContain("/api/workspace/flow-embeddings?");
     const models = read("components/knowledge-panel/models-view.tsx");
-    expect(models).toContain('embeddingSource: flowFilter?.enabled ? "flowcfg" : "knowledgecfg"');
+    expect(models).toContain('embeddingSource: "flowcfg"');
     expect(models).toContain("Embeddings in");
     expect(models).toContain("Overlay regions on the right.");
     const hook = read("components/knowledge-panel/use-knowledge-embeddings.ts");
-    expect(hook).toContain('if (useFlowEmbeddings) return "flowcfg"');
+    expect(hook).toContain("const useFlowEmbeddings = true");
     expect(hook).toContain("reconcileSelectedSubjectKeys");
     expect(hook).toContain("sameFlowEmbeddingList");
   });

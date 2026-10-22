@@ -1,6 +1,6 @@
 /**
  * Persist Calibrate / Learn / Verify embeddings with recoverable raw.
- * Completing those runs writes here — not knowledge_config_snapshots.
+ * Completing those runs writes here.
  */
 
 import { createAdminClient } from "@/lib/supabase/admin";

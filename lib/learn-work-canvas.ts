@@ -1191,7 +1191,7 @@ export const BOARD_INSTRUCTION_NOTE_LABEL = "Work";
  */
 export const BOARD_INSTRUCTION_NOTE_BODY_FILL = "#f4f4f5";
 export const BOARD_INSTRUCTION_NOTE_HEADER_FILL = "#ffffff";
-const BOARD_NOTE_HEADER_HEIGHT = 28;
+const BOARD_NOTE_HEADER_HEIGHT = 32;
 const BOARD_NOTE_PAD_X = 14;
 const BOARD_NOTE_PAD_Y = 12;
 const BOARD_NOTE_HEADER_FONT = 14;
@@ -1199,6 +1199,8 @@ const BOARD_NOTE_HEADER_FONT = 14;
 /**
  * Instruction on the board is a work card: a filled card, a Work header, and the words.
  * Not a transparent rectangle with text bound inside it.
+ * Body copy is not bound to the full card. Binding it there makes Excalidraw
+ * pin the note to the top of the card, on top of Work.
  */
 export function boardInstructionNoteElements(input: {
   text: string;
@@ -1230,6 +1232,7 @@ export function boardInstructionNoteElements(input: {
     [BOARD_INSTRUCTION_NOTE_KEY]: part,
   });
   const headerSource = input.headerCustomData ?? input.bodyCustomData;
+  const groupId = nextElementId("grp");
   const converted = convertToExcalidrawElements(
     [
       {
@@ -1244,6 +1247,7 @@ export function boardInstructionNoteElements(input: {
         strokeWidth: 2,
         roughness: 0,
         locked,
+        groupIds: [groupId],
         customData: kind(input.bodyCustomData, "body"),
       },
       {
@@ -1258,6 +1262,7 @@ export function boardInstructionNoteElements(input: {
         strokeWidth: 1,
         roughness: 0,
         locked,
+        groupIds: [groupId],
         customData: kind(headerSource, "header"),
       },
       {
@@ -1268,21 +1273,27 @@ export function boardInstructionNoteElements(input: {
         y: y + BOARD_NOTE_HEADER_HEIGHT + BOARD_NOTE_PAD_Y,
         width: wrapped.width,
         fontSize,
+        textAlign: "left",
+        verticalAlign: "top",
         strokeColor: ILE_WORK_CANVAS_STROKE_COLOR,
         autoResize: false,
         locked,
+        groupIds: [groupId],
         customData: kind(input.textCustomData ?? input.bodyCustomData, "text"),
       },
       {
         type: "text",
         text: BOARD_INSTRUCTION_NOTE_LABEL,
         x: x + BOARD_NOTE_PAD_X,
-        y: y + 6,
+        y: y + 8,
         width: wrapped.width,
         fontSize: BOARD_NOTE_HEADER_FONT,
+        textAlign: "left",
+        verticalAlign: "middle",
         strokeColor: ILE_WORK_CANVAS_STROKE_COLOR,
         autoResize: false,
         locked,
+        groupIds: [groupId],
         customData: kind(headerSource, "label"),
       },
     ],
@@ -1292,12 +1303,16 @@ export function boardInstructionNoteElements(input: {
   const header = converted.find((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "header");
   const bodyText = converted.find((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "text");
   const label = converted.find((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "label");
-  if (body && bodyText) {
-    bodyText.containerId = body.id;
-    body.boundElements = [{ type: "text", id: bodyText.id }];
+  if (bodyText) {
+    bodyText.containerId = null;
+    bodyText.verticalAlign = "top";
+    bodyText.textAlign = "left";
   }
+  if (body) body.boundElements = null;
   if (header && label) {
     label.containerId = header.id;
+    label.verticalAlign = "middle";
+    label.textAlign = "left";
     header.boundElements = [{ type: "text", id: label.id }];
   }
   return { elements: converted, width, height };

@@ -27,6 +27,8 @@ const GRID_FINE = 16;
 const GRID_COARSE = 80;
 const ZOOM_MIN = 0.12;
 const ZOOM_MAX = 4;
+const VISITED_COLOR = "#ffe14a";
+const HERE_COLOR = "#ff1f1f";
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
@@ -49,12 +51,23 @@ export function WorkspaceUnsysSeedGraph({
   model,
   focusId,
   disabled = false,
+  draggableNodes = true,
+  pulseHere = false,
+  visitedIds = null,
+  loadedIds = null,
   onSelect,
 }: {
   model: SessionBranchModel | null;
   focusId: string;
   disabled?: boolean;
-  onSelect: (id: string) => void;
+  draggableNodes?: boolean;
+  /** Learn: the occupied hidden state blinks red. */
+  pulseHere?: boolean;
+  /** Learn: hidden states already occupied. Yellow diamond stroke. */
+  visitedIds?: ReadonlySet<string> | null;
+  /** Learn: the loaded focus path. Yellow edges. */
+  loadedIds?: ReadonlySet<string> | null;
+  onSelect?: (id: string) => void;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 720, height: 480 });
@@ -131,6 +144,8 @@ export function WorkspaceUnsysSeedGraph({
     ) {
       return;
     }
+    event.preventDefault();
+    event.currentTarget.setPointerCapture?.(event.pointerId);
     dragRef.current = {
       kind: "pan",
       pointerId: event.pointerId,
@@ -143,7 +158,21 @@ export function WorkspaceUnsysSeedGraph({
 
   function onNodePointerDown(event: PointerEvent<HTMLDivElement>, id: string) {
     if (event.button !== 0 || disabled) return;
+    event.preventDefault();
     event.stopPropagation();
+    onSelect?.(id);
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    if (!draggableNodes) {
+      dragRef.current = {
+        kind: "pan",
+        pointerId: event.pointerId,
+        originX: event.clientX,
+        originY: event.clientY,
+        start: { ...panRef.current },
+        moved: false,
+      };
+      return;
+    }
     const current = positionsRef.current[id] ?? restRoot;
     dragRef.current = {
       kind: "node",
@@ -154,7 +183,6 @@ export function WorkspaceUnsysSeedGraph({
       start: current,
       moved: false,
     };
-    onSelect(id);
   }
 
   useEffect(() => {
@@ -221,7 +249,7 @@ export function WorkspaceUnsysSeedGraph({
   return (
     <div
       ref={hostRef}
-      className="absolute inset-0 cursor-grab overflow-hidden select-none"
+      className="absolute inset-0 cursor-grab touch-none overflow-hidden select-none"
       data-author-unsys-graph
       data-author-unsys-graph-infinite=""
       data-learning-model-canvas="2d"
@@ -278,9 +306,11 @@ export function WorkspaceUnsysSeedGraph({
             const segment = graphDiamondEdge(from, to, fromRadius, toRadius);
             const fromFocus = edge.from === focusId;
             const recommended = fromFocus && edge.to === recommendedToId;
+            const onLoaded = Boolean(loadedIds?.has(edge.from) && loadedIds?.has(edge.to));
             return (
               <line
                 key={`${edge.from}-${edge.to}`}
+                data-session-unsys-edge-loaded={onLoaded ? "true" : undefined}
                 x1={segment.x1}
                 y1={segment.y1}
                 x2={segment.x2}
@@ -288,12 +318,14 @@ export function WorkspaceUnsysSeedGraph({
                 stroke={
                   recommended
                     ? "#fff"
-                    : model
-                      ? authorUnsysRegionColor(model, edge.to)
-                      : AUTHOR_UNSYS_ROOT_COLOR
+                    : onLoaded
+                      ? VISITED_COLOR
+                      : model
+                        ? authorUnsysRegionColor(model, edge.to)
+                        : AUTHOR_UNSYS_ROOT_COLOR
                 }
-                strokeOpacity={fromFocus || recommended ? 1 : 0.55}
-                strokeWidth={recommended ? 2.25 : fromFocus ? 1.75 : 1.2}
+                strokeOpacity={fromFocus || recommended || onLoaded ? 1 : 0.55}
+                strokeWidth={recommended ? 2.25 : onLoaded ? 2 : fromFocus ? 1.75 : 1.2}
                 strokeLinecap="round"
               />
             );
@@ -302,6 +334,8 @@ export function WorkspaceUnsysSeedGraph({
             const point = positions[branch.id] ?? restRoot;
             const active = branch.id === focusId;
             const recommended = branch.id === recommendedToId;
+            const visited = Boolean(visitedIds?.has(branch.id));
+            const loaded = Boolean(loadedIds?.has(branch.id));
             const color =
               branch.id === model?.rootId
                 ? AUTHOR_UNSYS_ROOT_COLOR
@@ -309,23 +343,36 @@ export function WorkspaceUnsysSeedGraph({
                   ? authorUnsysRegionColor(model, branch.id)
                   : AUTHOR_UNSYS_ROOT_COLOR;
             const radius = graphDiamondRadius(branch.id === model?.rootId);
-            const lit = active || recommended;
+            const here = pulseHere && active;
+            const lit = (active && !pulseHere) || recommended;
+            const stroke = here ? HERE_COLOR : lit ? "#fff" : visited ? VISITED_COLOR : color;
             return (
               <g key={`mark-${branch.id}`}>
                 <polygon
+                  className={here ? "learn-hidden-state-here" : undefined}
                   points={graphDiamondPointsAttr(point, radius + 3.5)}
                   fill="none"
-                  stroke={lit ? "#fff" : color}
-                  strokeOpacity={lit ? 0.35 : 0.18}
-                  strokeWidth={1}
+                  stroke={stroke}
+                  strokeOpacity={lit || visited || here ? 0.35 : 0.18}
+                  strokeWidth={here ? 2 : 1}
                 />
                 <polygon
+                  className={here ? "learn-hidden-state-here" : undefined}
                   data-author-unsys-diamond={branch.id}
+                  {...(visitedIds || loadedIds || pulseHere
+                    ? {
+                        "data-learn-hidden-states-node": branch.id,
+                        "data-learn-hidden-states-visited": visited ? "true" : undefined,
+                        "data-learn-hidden-states-loaded": loaded ? "true" : undefined,
+                        "data-learn-hidden-states-focus": active ? "true" : undefined,
+                        "data-learn-hidden-states-here": here ? "true" : undefined,
+                      }
+                    : {})}
                   points={graphDiamondPointsAttr(point, radius)}
-                  fill="#050505"
-                  stroke={lit ? "#fff" : color}
-                  strokeWidth={lit ? 2 : 1.35}
-                  filter={active ? "url(#author-unsys-diamond-glow)" : undefined}
+                  fill={here ? "#4a0000" : "#050505"}
+                  stroke={stroke}
+                  strokeWidth={here || lit ? 2 : visited ? 1.8 : 1.35}
+                  filter={active && !pulseHere ? "url(#author-unsys-diamond-glow)" : undefined}
                 />
               </g>
             );
@@ -358,7 +405,7 @@ export function WorkspaceUnsysSeedGraph({
               onPointerDown={(event) => event.stopPropagation()}
               onClick={(event) => {
                 event.stopPropagation();
-                onSelect(edge.to);
+                onSelect?.(edge.to);
               }}
             >
               {edge.price}
@@ -370,6 +417,8 @@ export function WorkspaceUnsysSeedGraph({
           const point = positions[branch.id] ?? restRoot;
           const parentPoint = branch.parentId ? (positions[branch.parentId] ?? restRoot) : null;
           const active = branch.id === focusId;
+          const visited = Boolean(visitedIds?.has(branch.id));
+          const here = pulseHere && active;
           const color =
             branch.id === model?.rootId
               ? AUTHOR_UNSYS_ROOT_COLOR
@@ -411,7 +460,7 @@ export function WorkspaceUnsysSeedGraph({
                 style={{
                   left: "50%",
                   top: "50%",
-                  color: active ? "#fff" : color,
+                  color: here ? HERE_COLOR : active ? "#fff" : visited ? VISITED_COLOR : color,
                   transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
                   textShadow: "0 0 8px #050505, 0 1px 0 #050505",
                 }}

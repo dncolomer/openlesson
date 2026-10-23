@@ -272,6 +272,35 @@ export function recommendSessionBranchAction(
   };
 }
 
+/** Cheapest parent→child step from a hidden state, named with both node titles. */
+export type SessionBranchCheapestTransition = {
+  fromId: string;
+  fromTitle: string;
+  toId: string;
+  toTitle: string;
+  price: number;
+};
+
+export function sessionBranchCheapestTransition(
+  model: SessionBranchModel | null | undefined,
+  branchId?: string | null,
+): SessionBranchCheapestTransition | null {
+  if (!model) return null;
+  const from = sessionBranchById(model, branchId || model.focusId);
+  if (!from) return null;
+  const recommended = recommendSessionBranchAction(model, from.id);
+  if (!recommended) return null;
+  const to = sessionBranchById(model, recommended.toId);
+  if (!to) return null;
+  return {
+    fromId: from.id,
+    fromTitle: from.title,
+    toId: to.id,
+    toTitle: to.title,
+    price: recommended.price,
+  };
+}
+
 /** Nearby hidden states the live classifier may pick. */
 export function sessionBranchInferCandidates(
   model: SessionBranchModel,

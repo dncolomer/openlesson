@@ -54,5 +54,16 @@ describe("graph diamond marks", () => {
     expect(graph).toContain("graphDiamondEdge");
     expect(graph).toContain("data-author-unsys-diamond");
     expect(graph).not.toContain("rotate-45");
+    const modal = read("components/session-view/learn-hidden-states-modal.tsx");
+    expect(modal).toContain("WorkspaceUnsysSeedGraph");
+    expect(modal).not.toContain("SessionBranchFieldMap");
+    expect(modal).toContain("visitedIds={visitedIds}");
+    expect(modal).toContain("pulseHere");
+    expect(modal).not.toContain("draggableNodes={false}");
+    expect(graph).toContain("learn-hidden-state-here");
+    expect(graph).toContain("touch-none");
+    expect(graph).toContain("setPointerCapture");
+    const css = read("app/globals.css");
+    expect(css).toContain("@keyframes learn-hidden-state-here");
   });
 });

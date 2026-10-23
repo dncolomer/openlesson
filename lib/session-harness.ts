@@ -5,6 +5,10 @@
 import { policySuggestionIsRawLabel } from "@/lib/session-policy-infer";
 import type { SessionGuideId } from "@/lib/session-instructions";
 
+export const LEARN_HIDDEN_STATES_BUTTON_LABEL = "Hidden states";
+export const LEARN_HIDDEN_STATES_MODAL_TITLE = "Hidden states";
+export const LEARN_HIDDEN_STATES_SUGGESTION_LABEL = "Suggested";
+
 export const SESSION_HARNESS_FALLBACK: Record<SessionGuideId, string> = {
   learn:
     "Stay with the work on the board. The next step will show here once there is enough of your work to read.",

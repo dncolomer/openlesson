@@ -113,6 +113,32 @@ export function sessionBranchPathFromRoot(
   return path;
 }
 
+/**
+ * Hidden states the Learn session has already occupied: the focus path,
+ * closed nodes, and every inferred from/to id.
+ */
+export function learnVisitedHiddenStateIds(
+  model: SessionBranchModel | null | undefined,
+  inferences: readonly { hiddenStateId?: string | null; fromId?: string | null }[] | null | undefined,
+): Set<string> {
+  const visited = new Set<string>();
+  if (!model) return visited;
+  visited.add(model.rootId);
+  for (const step of sessionBranchPathFromRoot(model, model.focusId)) {
+    visited.add(step);
+  }
+  for (const branch of model.branches) {
+    if (branch.status === "closed") visited.add(branch.id);
+  }
+  for (const inference of inferences ?? []) {
+    const hiddenStateId = String(inference.hiddenStateId || "").trim();
+    const fromId = String(inference.fromId || "").trim();
+    if (hiddenStateId) visited.add(hiddenStateId);
+    if (fromId) visited.add(fromId);
+  }
+  return visited;
+}
+
 /** Current stills plus every ancestor from the root. Everything else is fog. */
 export function soundingRevealedIds(
   model: SessionBranchModel,

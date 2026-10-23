@@ -365,6 +365,34 @@ describe("TAP Learning Work canvas chapter seed (shipped)", () => {
     expect(seeded.scene.appState).not.toHaveProperty("scrollY");
     expect(seeded.scene).not.toHaveProperty("scrollToContent");
   });
+
+  it("keeps the Work header off the instruction note body", () => {
+    const seeded = seedIleChapterWorkCanvas(null, {
+      text: "Walk a case through just-war criteria",
+      chapterId: "chapter-overlap",
+    });
+    const header = seeded.scene.elements.find((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "header");
+    const body = seeded.scene.elements.find((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "body");
+    const textEl = seeded.scene.elements.find((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "text");
+    const label = seeded.scene.elements.find((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "label");
+    expect(header).toBeTruthy();
+    expect(textEl).toBeTruthy();
+    expect(label).toBeTruthy();
+    if (!header || !textEl || !label || !body) return;
+    expect(label.originalText).toBe(BOARD_INSTRUCTION_NOTE_LABEL);
+    expect(label.containerId).toBe(header.id);
+    expect(textEl.containerId).toBeFalsy();
+    expect(textEl.y).toBeGreaterThanOrEqual(header.y + header.height);
+    expect(textEl.y).toBeGreaterThanOrEqual((label.y ?? 0) + (label.height ?? 0));
+    expect(textEl.verticalAlign).toBe("top");
+    expect(label.verticalAlign).toBe("middle");
+    expect(body.boundElements).toBeNull();
+    const groupId = body.groupIds[0];
+    expect(groupId).toBeTruthy();
+    expect(header.groupIds).toContain(groupId);
+    expect(textEl.groupIds).toContain(groupId);
+    expect(label.groupIds).toContain(groupId);
+  });
 });
 
 describe("TAP Learning Work canvas center on open (shipped)", () => {

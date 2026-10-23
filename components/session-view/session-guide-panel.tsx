@@ -159,21 +159,25 @@ export function SessionGuidePanel({
       ) : harnessOpen ? (
         <SessionHarnessPanel guide={guide} remainingSeconds={remainingSeconds} />
       ) : (
-        <div data-session-instructions className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
-          {text.split("\n\n").map((paragraph) => (
-            <p key={paragraph.slice(0, 24)} className="mb-3 font-mono text-[12px] leading-snug text-white/85 last:mb-0">
-              {paragraph}
-            </p>
-          ))}
+        <div data-session-instructions className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
+            {text.split("\n\n").map((paragraph) => (
+              <p key={paragraph.slice(0, 24)} className="mb-3 font-mono text-[12px] leading-snug text-white/85 last:mb-0">
+                {paragraph}
+              </p>
+            ))}
+          </div>
           {canvasCommands ? (
-            <button
-              type="button"
-              data-session-command-cheatsheet-open
-              onClick={() => setCheatsheetOpen(true)}
-              className="mt-4 w-full border border-white/45 px-2 py-2 font-mono text-[11px] uppercase tracking-[0.14em] text-white hover:border-white"
-            >
-              {ILE_WORK_CANVAS_CHEATSHEET_LABEL}
-            </button>
+            <div className="shrink-0 border-t border-white/20 px-3 py-2">
+              <button
+                type="button"
+                data-session-command-cheatsheet-open
+                onClick={() => setCheatsheetOpen(true)}
+                className="w-full border border-white/40 bg-black px-2 py-2 font-mono text-[11px] font-semibold uppercase tracking-wider text-white hover:border-white hover:bg-neutral-950"
+              >
+                {ILE_WORK_CANVAS_CHEATSHEET_LABEL}
+              </button>
+            </div>
           ) : null}
         </div>
       )}

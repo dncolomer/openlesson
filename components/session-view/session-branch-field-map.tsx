@@ -23,12 +23,18 @@ export function SessionBranchFieldMap({
   variant = "hud",
   revealedIds = null,
   currentIds = [],
+  visitedIds = null,
+  loadedIds = null,
 }: {
   model: SessionBranchModel | null | undefined;
   variant?: "hud" | "underlay" | "panel";
   /** When set, every other node is fog. Calibrate passes the path + stills. */
   revealedIds?: ReadonlySet<string> | null;
   currentIds?: readonly string[];
+  /** Learn: nodes already occupied. Drawn with a yellow ring. */
+  visitedIds?: ReadonlySet<string> | null;
+  /** Learn: the loaded focus path. Edges along it stay bright. */
+  loadedIds?: ReadonlySet<string> | null;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 640, height: 420 });
@@ -56,6 +62,8 @@ export function SessionBranchFieldMap({
   if (!model) return null;
 
   const current = new Set(currentIds);
+  const visited = visitedIds ?? new Set<string>();
+  const loaded = loadedIds ?? new Set<string>();
   const focusId = model.focusId;
   const byId = new Map(model.branches.map((branch) => [branch.id, branch]));
 
@@ -83,16 +91,18 @@ export function SessionBranchFieldMap({
           if (!from || !to) return null;
           const fogged =
             revealedIds != null && !revealedIds.has(edge.to) && !revealedIds.has(edge.from);
+          const onLoaded = loaded.has(edge.from) && loaded.has(edge.to);
           return (
             <line
               key={`${edge.from}:${edge.to}`}
+              data-session-branch-edge-loaded={onLoaded ? "true" : undefined}
               x1={from.x}
               y1={from.y}
               x2={to.x}
               y2={to.y}
-              stroke="white"
-              strokeWidth={fogged ? 0.6 : 1}
-              opacity={fogged ? 0.06 : variant === "hud" ? 0.18 : 0.28}
+              stroke={onLoaded ? "#ffe14a" : "white"}
+              strokeWidth={fogged ? 0.6 : onLoaded ? 2 : 1}
+              opacity={fogged ? 0.06 : onLoaded ? 0.9 : variant === "hud" ? 0.18 : 0.28}
             />
           );
         })}
@@ -101,29 +111,37 @@ export function SessionBranchFieldMap({
           const fogged = revealedIds != null && !revealedIds.has(point.id);
           const focused = point.id === focusId;
           const currentStill = current.has(point.id);
+          const wasVisited = visited.has(point.id);
+          const onLoaded = loaded.has(point.id);
           const open = branch?.status === "open";
-          const radius = focused || currentStill ? 4.5 : open ? 3 : 2;
+          const radius = focused || currentStill ? 5 : wasVisited ? 4 : open ? 3 : 2;
           const opacity = fogged
             ? 0.07
-            : focused || currentStill
+            : focused || currentStill || wasVisited
               ? 0.95
-              : open
-                ? variant === "hud"
-                  ? 0.45
-                  : 0.7
-                : variant === "hud"
-                  ? 0.18
-                  : 0.28;
+              : onLoaded
+                ? 0.8
+                : open
+                  ? variant === "hud"
+                    ? 0.45
+                    : 0.7
+                  : variant === "hud"
+                    ? 0.18
+                    : 0.28;
           return (
             <circle
               key={point.id}
               data-session-branch-node={point.id}
               data-session-branch-node-fog={fogged ? "true" : undefined}
               data-session-branch-node-focus={focused ? "true" : undefined}
+              data-session-branch-node-visited={wasVisited ? "true" : undefined}
+              data-session-branch-node-loaded={onLoaded ? "true" : undefined}
               cx={point.x}
               cy={point.y}
               r={radius}
-              fill="white"
+              fill={wasVisited || focused ? "#ffe14a" : "white"}
+              stroke={focused ? "white" : wasVisited ? "#ffe14a" : undefined}
+              strokeWidth={focused ? 2 : wasVisited ? 1.5 : undefined}
               opacity={opacity}
             />
           );

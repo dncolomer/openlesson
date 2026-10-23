@@ -1,5 +1,10 @@
 "use client";
 
+import { useState } from "react";
+import {
+  LearnHiddenStatesButton,
+  LearnHiddenStatesModal,
+} from "@/components/session-view/learn-hidden-states-modal";
 import {
   useSessionFieldReveal,
   useSessionPolicyInferences,
@@ -45,6 +50,8 @@ export function SessionHarnessPanel({
     suggestion,
     inferenceLabel: inferences.at(-1)?.label ?? null,
   });
+  const [hiddenStatesOpen, setHiddenStatesOpen] = useState(false);
+  const showHiddenStates = guide === "learn";
   return (
     <div data-session-harness={guide} className="flex h-full min-h-0 flex-col overflow-hidden bg-black text-white">
       <div className="relative shrink-0 px-3 pt-2">
@@ -56,6 +63,15 @@ export function SessionHarnessPanel({
       >
         {nextLine}
       </p>
+      {showHiddenStates ? (
+        <div className="shrink-0 border-t border-white/20 px-3 py-2">
+          <LearnHiddenStatesButton onClick={() => setHiddenStatesOpen(true)} />
+          <LearnHiddenStatesModal
+            open={hiddenStatesOpen}
+            onClose={() => setHiddenStatesOpen(false)}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

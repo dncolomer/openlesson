@@ -312,6 +312,24 @@ video.console-copy {
   animation: ile-canvas-thinking-pulse 2s ease-in-out infinite;
 }
 
+@keyframes learn-hidden-state-here {
+  0%,
+  100% {
+    stroke: #ff1f1f;
+    fill: #4a0000;
+    stroke-opacity: 1;
+  }
+  50% {
+    stroke: #ff7a7a;
+    fill: #1a0000;
+    stroke-opacity: 0.28;
+  }
+}
+
+polygon.learn-hidden-state-here {
+  animation: learn-hidden-state-here 0.9s ease-in-out infinite;
+}
+
 @keyframes ile-canvas-thinking-orbit {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }

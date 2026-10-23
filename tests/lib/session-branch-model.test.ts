@@ -18,6 +18,7 @@ import {
   normalizeSessionBranchModel,
   withoutSessionBranchNotes,
   recommendSessionBranchAction,
+  sessionBranchCheapestTransition,
   SESSION_BRANCH_ACCEPT_COUNT,
   SESSION_BRANCH_TARGET_COUNT,
   sessionBranchById,
@@ -148,6 +149,11 @@ describe("session branch model", () => {
     if (!model) return;
     expect(recommendSessionBranchAction(model, "root")?.toId).toBe("r1");
     expect(recommendSessionBranchAction(model, "root")?.price).toBe(12);
+    const cheapest = sessionBranchCheapestTransition(model, "root");
+    expect(cheapest?.fromId).toBe("root");
+    expect(cheapest?.toId).toBe("r1");
+    expect(cheapest?.fromTitle).toBe(sessionBranchById(model, "root")?.title);
+    expect(cheapest?.toTitle).toBe(sessionBranchById(model, "r1")?.title);
     expect(sessionBranchChildQuota(0)).toBe(0);
     expect(sessionBranchChildQuota(1)).toBe(4);
     expect(sessionBranchChildQuota(2)).toBe(3);

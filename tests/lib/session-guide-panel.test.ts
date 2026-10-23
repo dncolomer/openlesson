@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { SessionGuidePanel } from "@/components/session-view/session-guide-panel";
+import { SessionHarnessPanel } from "@/components/session-view/session-harness-panel";
 import { SessionCommandCheatsheet } from "@/components/session-view/session-command-cheatsheet";
 import {
   ILE_WORK_CANVAS_COMMANDS,
@@ -15,6 +16,7 @@ import {
 } from "@/lib/learn-work-canvas-commands";
 import { SESSION_BRIEFING_INTRO, SESSION_INSTRUCTIONS } from "@/lib/session-instructions";
 import {
+  LEARN_HIDDEN_STATES_BUTTON_LABEL,
   sessionHarnessFocusLine,
   sessionHarnessNextLine,
   SESSION_HARNESS_FALLBACK,
@@ -140,6 +142,9 @@ describe("session guide panel", () => {
     expect(source).toContain("auto-rows-fr");
     expect(source).toContain("SessionCommandCheatsheet");
     expect(source).toContain("ILE_WORK_CANVAS_CHEATSHEET_LABEL");
+    expect(source).toContain("data-session-command-cheatsheet-open");
+    expect(source).toContain("shrink-0 border-t border-white/20 px-3 py-2");
+    expect(source).not.toContain("mt-4 w-full border border-white/45");
     const sheet = renderToStaticMarkup(
       createElement(SessionCommandCheatsheet, { guide: "learn", open: true, onClose: () => {} }),
     );
@@ -255,5 +260,31 @@ describe("session guide panel", () => {
     expect(harness).not.toContain("SessionBranchFieldMap");
     expect(harness).not.toContain("data-session-branch-field-map");
     expect(harness).not.toContain("SESSION_HARNESS_FALLBACK[guide]");
+    expect(harness).toContain("LearnHiddenStatesModal");
+    expect(harness).toContain('guide === "learn"');
+    const learnHarness = renderToStaticMarkup(createElement(SessionHarnessPanel, { guide: "learn" }));
+    expect(learnHarness).toContain("data-session-harness-hidden-states");
+    expect(learnHarness).toContain(LEARN_HIDDEN_STATES_BUTTON_LABEL);
+    expect(
+      renderToStaticMarkup(createElement(SessionHarnessPanel, { guide: "calibrate" })),
+    ).not.toContain("data-session-harness-hidden-states");
+    expect(
+      renderToStaticMarkup(createElement(SessionHarnessPanel, { guide: "verification" })),
+    ).not.toContain("data-session-harness-hidden-states");
+    const modal = readFileSync(
+      join(ROOT, "components/session-view/learn-hidden-states-modal.tsx"),
+      "utf8",
+    );
+    expect(modal).toContain("DialogFrame");
+    expect(modal).toContain('testId="learn-hidden-states"');
+    expect(modal).toContain("learnVisitedHiddenStateIds");
+    expect(modal).toContain("WorkspaceUnsysSeedGraph");
+    expect(modal).not.toContain("SessionBranchFieldMap");
+    expect(modal).toContain("visitedIds={visitedIds}");
+    expect(modal).toContain("loadedIds={loadedIds}");
+    expect(modal).toContain("LearnHiddenStatesTree");
+    expect(modal).toContain("sessionBranchCheapestTransition");
+    expect(modal).toContain("data-learn-hidden-states-transition");
+    expect(modal).toContain("LEARN_HIDDEN_STATES_SUGGESTION_LABEL");
   });
 });

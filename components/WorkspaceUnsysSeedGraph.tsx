@@ -452,7 +452,7 @@ export function WorkspaceUnsysSeedGraph({
                   ignoreClickRef.current = false;
                   return;
                 }
-                onSelect(branch.id);
+                onSelect?.(branch.id);
               }}
             >
               <span

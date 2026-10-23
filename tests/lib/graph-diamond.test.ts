@@ -63,6 +63,8 @@ describe("graph diamond marks", () => {
     expect(graph).toContain("learn-hidden-state-here");
     expect(graph).toContain("touch-none");
     expect(graph).toContain("setPointerCapture");
+    expect(graph).toContain("onSelect?.(branch.id)");
+    expect(graph).not.toMatch(/onSelect\(branch\.id\)/);
     const css = read("app/globals.css");
     expect(css).toContain("@keyframes learn-hidden-state-here");
   });

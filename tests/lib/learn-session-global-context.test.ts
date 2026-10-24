@@ -384,7 +384,8 @@ describe("TAP Learning single-canvas context store", () => {
     expect(hook).not.toContain("`step-${activeChapterIndex}`");
     expect(hook).not.toContain("planInitializedRef");
     expect(hook).not.toContain("useState(0)");
-    expect(view).toContain("if (!heliosWidgetOpen || !blockFrame) return");
+    expect(view).toContain("if (!blockFrame) return");
+    expect(view).not.toContain("heliosWidgetOpen");
     expect(view).toContain("seedChapterWorkCanvas(blockFrame.id, text)");
   });
 

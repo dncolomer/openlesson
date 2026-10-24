@@ -192,8 +192,12 @@ describe("circular menu source wiring", () => {
     const world = read("components/block-skill-grid/map-world-layer.tsx");
     const ring = read("components/block-skill-grid/block-circular-menu.tsx");
     const authoring = read("components/block-skill-grid/use-map-authoring.ts");
-    const actions = read("components/session-view/learn-chapter-helios-actions.tsx");
-    const helios = read("components/SessionHeliosPanel.tsx");
+    expect(existsSync(join(ROOT, "components/session-view/learn-chapter-helios-actions.tsx"))).toBe(
+      false,
+    );
+    expect(existsSync(join(ROOT, "components/SessionHeliosPanel.tsx"))).toBe(false);
+    const actions = read("components/session-view/session-guide-panel.tsx");
+    const helios = read("lib/useSessionThoughtInterface.ts");
     const view = read("components/SessionView.tsx");
     const sessionList = read("components/SessionList.tsx");
     const learner = read("components/WorkspaceLearnerBlockPane.tsx");
@@ -355,20 +359,17 @@ describe("circular menu source wiring", () => {
     expect(read("components/SessionView.tsx")).not.toContain("onWorkChapter");
     expect(read("components/SessionView.tsx")).not.toContain("<ChapterMapPanel");
     expect(read("components/SessionView.tsx")).not.toContain('circularMenuSurface="ile"');
-    expect(view).toContain("setHeliosWidgetOpen(true)");
+    expect(view).not.toContain("setHeliosWidgetOpen");
     expect(view).toContain("void handleLoadChapter(idx)");
     expect(view).toContain("await handleMarkChapterDone(opts)");
 
-    expect(actions).toContain("data-ile-chapter-helios-actions");
-    expect(actions).toContain("doneAnswering");
+    expect(actions).not.toContain("data-ile-chapter-helios-actions");
     expect(actions).not.toContain('t("chapterMap.edit")');
     expect(actions).not.toContain('t("chapterMap.complete")');
     expect(actions).not.toContain('t("chapterMap.gatherResources")');
     expect(actions).not.toContain("data-ile-gather-resources");
-    expect(actions).not.toContain("<Pencil");
-    expect(actions).not.toContain("<Pickaxe");
     expect(helios).not.toContain("ImDoneAnsweringControl");
-    expect(helios).toContain("IleChapterHeliosActions");
+    expect(helios).not.toContain("IleChapterHeliosActions");
 
     expect(sessionList).not.toContain("resolveBlockCircularMenuSurface");
     expect(sessionList).not.toContain("practiceMenu");

@@ -21,7 +21,7 @@ import {
   textToBase64,
 } from "@/lib/learn-proof-of-work-client";
 import { ILE_POW_API_PATHS } from "@/lib/session-pow-api-paths";
-import type { Session, SessionPlanStep, ToolAction, ToolName } from "@/lib/storage";
+import type { Session, SessionPlanStep } from "@/lib/storage";
 import { toSpeechBcp47, type SpokenLocale } from "@/lib/tutoring-languages";
 import {
   useSessionThoughtInterface,
@@ -31,7 +31,6 @@ import { useTapSpeechProofOfWork } from "@/lib/useTapSpeechProofOfWork";
 import { useTapIdleProofOfWork } from "@/lib/useTapIdleProofOfWork";
 import type { ProofOfWorkApiInterruption } from "@/lib/pow-api/predictive-interruption";
 import type { IlePowInterruptionHandler } from "@/components/session-view/use-session-idle";
-import type { HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
 import type { TransferHealth } from "@/components/session/sessionViewHelpers";
 import type { IlePowCounterArtifact } from "@/lib/learn-pow-counters";
 
@@ -62,27 +61,9 @@ export type SessionSpeechInput = {
   setProjectThoughtsByChapter: (
     next: Record<string, ExerciseDualLists> | ((prev: Record<string, ExerciseDualLists>) => Record<string, ExerciseDualLists>),
   ) => void;
-  setHeliosTurnMode: (mode: HeliosTurnMode) => void;
   flushRemainingIlePow: (options?: { force?: boolean }) => Promise<void>;
-  submitHeliosChatMessageNow: (
-    message: string,
-    imageDataUrl?: string,
-    chapterId?: string | null,
-  ) => Promise<void>;
   bumpUserActivityRef: { current: () => void };
   clearPendingInterruption: () => void;
-  chapterWorkspaces: Record<string, {
-    notebookContent: string;
-    whiteboardData: string | null;
-  }>;
-  activeWorkspace: {
-    notebookContent: string;
-    whiteboardData: string | null;
-  };
-  updateChapterWorkspace: (key: string, update: Record<string, unknown>) => void;
-  whiteboardDataRef: { current: string | null };
-  notebookContentRef: { current: string };
-  logTool: (toolName: ToolName, action: ToolAction, metadata?: Record<string, unknown>) => Promise<void> | void;
 };
 
 export function useSessionSpeech(input: SessionSpeechInput) {
@@ -105,17 +86,9 @@ export function useSessionSpeech(input: SessionSpeechInput) {
     activeChapterKey,
     projectThoughtsByChapterRef,
     setProjectThoughtsByChapter,
-    setHeliosTurnMode,
     flushRemainingIlePow,
-    submitHeliosChatMessageNow,
     bumpUserActivityRef,
     clearPendingInterruption,
-    chapterWorkspaces,
-    activeWorkspace,
-    updateChapterWorkspace,
-    whiteboardDataRef,
-    notebookContentRef,
-    logTool,
   } = input;
 
   const notifySpeechResultRef = useRef<(text: string) => void>(() => {});
@@ -283,10 +256,8 @@ const sessionThoughtInterface = useSessionThoughtInterface({
   },
   onSpeechTranscript: (text) => notifySpeechResultRef.current(text),
   onUserActivity: () => bumpUserActivityRef.current(),
-  onSendToProbe: async (text, _thoughtIds, chapterId) => {
-    setHeliosTurnMode("idle");
+  onSendToProbe: async () => {
     await flushRemainingIlePow();
-    await submitHeliosChatMessageNow(text, undefined, chapterId);
   },
 });
 
@@ -413,7 +384,6 @@ const handleProjectDemote = useCallback(
       flushSpeechSegment();
       resetIdleTracking();
       resetSpeechTracking();
-      setHeliosTurnMode("idle");
     }
   }, [
     powSessionEnabled,
@@ -421,109 +391,11 @@ const handleProjectDemote = useCallback(
     flushSpeechSegment,
     resetIdleTracking,
     resetSpeechTracking,
-    setHeliosTurnMode,
   ]);
 
 const sessionThoughtHistory = useMemo(
   () => sessionThoughtInterface.thoughts.slice().reverse(),
   [sessionThoughtInterface.thoughts],
-);
-
-const handleSubmitToHelios = useCallback(
-  async (toolName: "canvas" | "notebook", canvasDataUrl?: string | null) => {
-    const targetChapterKey = activeChapterKey;
-    const targetWorkspace = chapterWorkspaces[targetChapterKey] ?? activeWorkspace;
-    const targetNotebookContent = targetWorkspace.notebookContent;
-    const targetCanvasData = canvasDataUrl || targetWorkspace.whiteboardData || null;
-    if (toolName === "canvas" && canvasDataUrl) {
-      whiteboardDataRef.current = canvasDataUrl;
-      updateChapterWorkspace(targetChapterKey, { whiteboardData: canvasDataUrl });
-    } else if (toolName === "canvas") {
-      whiteboardDataRef.current = targetCanvasData;
-    } else {
-      notebookContentRef.current = targetNotebookContent;
-    }
-
-    // Project Mode: no Helios chat — notebook/canvas submit becomes a Solution stack card.
-    if (isProjectMode) {
-      if (chapterThoughtsLocked) return;
-
-      let solutionText = "";
-      if (toolName === "notebook") {
-        const content = targetNotebookContent.trim();
-        if (!content) return;
-        solutionText =
-          content.length > 1800
-            ? `Notebook notes:\n${content.slice(0, 1800)}…`
-            : `Notebook notes:\n${content}`;
-        updateChapterWorkspace(targetChapterKey, { notebookDirtyForHelios: false });
-      } else {
-        if (!targetCanvasData) return;
-        // Keep a compact marker (full PNG lives in chapter workspace / PoW).
-        solutionText = `Canvas diagram submitted (${new Date().toLocaleString()})`;
-        updateChapterWorkspace(targetChapterKey, { canvasDirtyForHelios: false });
-      }
-
-      void logTool(toolName, "submit_to_solution", {
-        ...(toolName === "notebook"
-          ? { contentLength: targetNotebookContent.length }
-          : { hasCanvas: true }),
-        session_mode: "project",
-      });
-
-      mutateActiveProjectThoughts({ type: "submit_direct", text: solutionText });
-
-      try {
-        await flushRemainingIlePow();
-      } catch (err) {
-        console.warn("[SubmitToSolution] pow flush failed:", err);
-      }
-      return;
-    }
-
-    const metadata: Record<string, unknown> = {};
-    if (toolName === "notebook") {
-      metadata.contentLength = targetNotebookContent.length;
-    } else {
-      metadata.hasCanvas = !!targetCanvasData;
-    }
-    void logTool(toolName, "submit_to_helios", metadata);
-
-    try {
-      await flushRemainingIlePow();
-    } catch (err) {
-      console.warn("[SubmitToHelios] pow flush failed:", err);
-    }
-
-    if (toolName === "canvas") {
-      updateChapterWorkspace(targetChapterKey, { canvasDirtyForHelios: false });
-      const imageDataUrl = targetCanvasData || undefined;
-      void submitHeliosChatMessageNow(
-        "Here is my current canvas. Help me reason through what I have drawn without just giving me the answer.",
-        imageDataUrl,
-      );
-    } else {
-      updateChapterWorkspace(targetChapterKey, { notebookDirtyForHelios: false });
-      const content = targetNotebookContent.trim();
-      if (content) {
-        void submitHeliosChatMessageNow(
-          `Here are my notebook notes. Help me reason through them without just giving me the answer:\n\n${content}`,
-        );
-      }
-    }
-  },
-  [
-    isProjectMode,
-    chapterThoughtsLocked,
-    activeChapterKey,
-    activeWorkspace,
-    chapterWorkspaces,
-    logTool,
-    flushRemainingIlePow,
-    submitHeliosChatMessageNow,
-    updateChapterWorkspace,
-    mutateActiveProjectThoughts,
-  ],
 );
 
   return {
@@ -540,6 +412,5 @@ const handleSubmitToHelios = useCallback(
     handleProjectDemote,
     mutateActiveProjectThoughts,
     logSessionThoughtTrace,
-    handleSubmitToHelios,
   };
 }

@@ -205,13 +205,13 @@ describe("See Older Thoughts wiring (shipped)", () => {
     expect(tools).toEqual([ILE_THOUGHT_HISTORY_TOOL]);
     expect(ILE_THOUGHT_HISTORY_TOOL).toBe("thought-history");
 
-    const helios = read("components/SessionHeliosPanel.tsx");
+    expect(existsSync(join(ROOT, "components/SessionHeliosPanel.tsx"))).toBe(false);
+    const helios = read("lib/useSessionThoughtInterface.ts");
     expect(helios).not.toContain(ILE_SEE_YOUR_THOUGHTS_LABEL);
     expect(helios).not.toContain("onOpenThoughts");
     expect(helios).not.toContain("data-ile-see-older-thoughts");
 
-    const pane = read("components/session-view/session-thought-pane.tsx");
-    expect(pane).not.toContain("onOpenThoughts");
+    expect(existsSync(join(ROOT, "components/session-view/session-thought-pane.tsx"))).toBe(false);
 
     const view = readSessionViewSurface();
     expect(view).not.toContain("openIleThoughtHistoryTool");
@@ -222,7 +222,8 @@ describe("See Older Thoughts wiring (shipped)", () => {
 
 describe("TAP Learning Helios last-stash surface (shipped source)", () => {
   it("has no last thought or Submit last Thought on Helios", () => {
-    const helios = read("components/SessionHeliosPanel.tsx");
+    expect(existsSync(join(ROOT, "components/SessionHeliosPanel.tsx"))).toBe(false);
+    const helios = read("lib/useSessionThoughtInterface.ts");
     expect(helios).not.toContain(ILE_SUBMIT_LAST_THOUGHT_LABEL);
     expect(helios).not.toContain(ILE_SEE_YOUR_THOUGHTS_LABEL);
     expect(helios).not.toContain("Submit last Thought");
@@ -233,7 +234,7 @@ describe("TAP Learning Helios last-stash surface (shipped source)", () => {
     expect(helios).not.toContain("data-ile-last-stash-text");
     expect(helios).not.toContain("selectLastStashedThought");
     expect(helios).not.toContain("submitLastStashedThought");
-    expect(helios).toContain("thought.isSending");
+    expect(helios).toContain("isSending");
     expect(helios).not.toContain("ActiveThoughtSlots");
     expect(helios).not.toContain("ACTIVE_THOUGHT_SLOT_COUNT");
     expect(helios).not.toContain("thought.latestThoughts");

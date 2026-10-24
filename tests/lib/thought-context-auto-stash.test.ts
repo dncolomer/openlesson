@@ -74,7 +74,8 @@ describe("TAP + TAP Learning hide Auto-stash context bar HUD", () => {
     expect(tap).toContain("data-tap-end-session");
     expect(tap).not.toContain("data-tap-session-purity");
 
-    const ile = fs.readFileSync(path.join(ROOT, "components/SessionHeliosPanel.tsx"), "utf8");
+    expect(fs.existsSync(path.join(ROOT, "components/SessionHeliosPanel.tsx"))).toBe(false);
+    const ile = fs.readFileSync(path.join(ROOT, "lib/useSessionThoughtInterface.ts"), "utf8");
     expect(ile).not.toContain("AutoStashContextBar");
     expect(ile).not.toContain('data-surface="ile"');
     expect(ile).toContain("shouldAutoStashOnContextFull");

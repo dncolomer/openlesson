@@ -24,7 +24,8 @@ function writeScratch(name: string, body: string) {
 
 describe("TAP Learning hunt-for-answers pill (removed)", () => {
   it("is not mounted on TAP Learning Helios or TAP identity rows", () => {
-    const helios = read("components/SessionHeliosPanel.tsx");
+    expect(existsSync(join(ROOT, "components/SessionHeliosPanel.tsx"))).toBe(false);
+    const helios = read("lib/useSessionThoughtInterface.ts");
     expect(helios).not.toContain("IleHuntAnswersPill");
     expect(helios).not.toContain("data-ile-hunt-answers-pill");
     expect(helios).not.toContain("Hunt for answers");

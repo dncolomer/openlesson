@@ -1,6 +1,6 @@
 /**
  * TAP Learning context-capacity auto-stash apply path.
- * SessionHeliosPanel calls this when the forming-thought bar is full.
+ * useSessionThoughtInterface calls this when the forming-thought bar is full.
  * Distinct from TAP silence auto-stash (purity unchanged).
  */
 import {

@@ -30,7 +30,8 @@ function writeScratch(name: string, body: string) {
 }
 
 const ILE_SURFACES = [
-  "components/SessionHeliosPanel.tsx",
+  "lib/useSessionThoughtInterface.ts",
+  "components/session-view/session-guide-panel.tsx",
   "components/thought-ui/ThoughtUi.tsx",
   "components/session-view/use-session-idle.ts",
   "components/session-view/use-session-speech.ts",
@@ -174,7 +175,7 @@ describe("TAP Learning idle/speech apply uses the shipped classifier", () => {
       "ile-helios-paths.txt",
       [
         "auto-fire origins: idle heartbeat (useTapIdleProofOfWork + origin idle), speech segment (useTapSpeechProofOfWork + origin speech), other PoW (screenshots/traces → interruption)",
-        "user send: submitHeliosChatMessageNow / sendThought — classifyIleHeliosTrigger user_send showOnDialogue true",
+        "user send: sendThought — classifyIleHeliosTrigger user_send showOnDialogue true",
         "TAP Learning apply: use-session-idle onIntervention → applyIleHeliosAutoFire; suppressed auto-fires do not append chat or set interruption mode",
         "TAP TapScoreClient still appends interruption messages (unchanged)",
       ].join("\n"),

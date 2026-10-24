@@ -68,15 +68,12 @@ describe("resolveIleDockChipStatus", () => {
 });
 
 describe("docked chapter loading / attention chrome (shipped source)", () => {
-  it("Submit work marks dock chips loading then attention until opened", () => {
+  it("Learn host no longer drives Helios dock loading from submit-turn", () => {
     const view = read("components/SessionView.tsx");
-    expect(view).toContain("setDockLoadingIds");
-    expect(view).toContain("setDockAttentionIds");
-    expect(view).toContain("const awaitingIds = openWorkIds.slice(0, 1)");
-    expect(view).toContain("ILE_SUBMIT_WORK_CONTINUE_TEXT");
-    expect(view).toContain("chapterHasPendingHeliosReply");
-    expect(view).toContain("dockPendingSeenRef");
-    expect(view).toContain("replyLanded");
+    expect(view).not.toContain("handleSubmitTurn");
+    expect(view).not.toContain("setDockLoadingIds");
+    expect(view).not.toContain("ILE_SUBMIT_WORK_CONTINUE_TEXT");
+    expect(view).not.toContain("chapterHasPendingHeliosReply");
     expect(view).toContain("resolveIleDockChipStatus");
     expect(view).toContain("status:");
 
@@ -87,13 +84,6 @@ describe("docked chapter loading / attention chrome (shipped source)", () => {
     const craft = read("components/session-view/learn-turn-insight-craft.tsx");
     expect(craft).toContain("IleWorkDockChip");
     expect(craft).toContain('status: missing ? "attention"');
-    expect(view).toContain("setCraftingInsightsOpen(true)");
-    const submitStart = view.indexOf("const handleSubmitTurn");
-    const submitTurn = view.slice(submitStart, view.indexOf("setSubmitTurnBusy(false)", submitStart));
-    expect(submitTurn.indexOf("setCraftingInsightsOpen(true)")).toBeGreaterThan(-1);
-    expect(submitTurn.indexOf("setCraftingInsightsOpen(true)")).toBeLessThan(
-      submitTurn.indexOf("closeIleOpenWorkTurn"),
-    );
     expect(dock).toContain("data-ile-chapter-chip-attention");
     expect(dock).toContain("AlertTriangle");
     expect(dock).toContain("animate-ile-dock-indeterminate");
@@ -103,7 +93,7 @@ describe("docked chapter loading / attention chrome (shipped source)", () => {
 
     writeScratch(
       "ile-work-dock-status.txt",
-      "loading bar while Helios pending; warning icon until opened",
+      "dock chips stay; Learn no longer waits on Helios replies",
     );
   });
 });

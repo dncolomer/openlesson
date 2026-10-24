@@ -1,6 +1,6 @@
 /**
  * TAP Learning chapter Done chrome + context-full auto-stash + chapter-load timing.
- * Drives the shipped mappers/appliers BlockSkillGrid / SessionHeliosPanel call.
+ * Drives the shipped mappers/appliers BlockSkillGrid / useSessionThoughtInterface call.
  */
 import { describe, expect, it } from "vitest";
 import { readSessionViewSurface } from "@/tests/helpers/surface-source";
@@ -178,10 +178,11 @@ describe("TAP Learning slowness + wiring (shipped source)", () => {
     expect(hook).toContain("getFormingText");
     expect(hook).toContain("buildIleThoughtMemoryRecord");
 
-    const helios = read("components/SessionHeliosPanel.tsx");
+    const helios = read("lib/useSessionThoughtInterface.ts");
     expect(helios).toContain("applyIleContextFullAutoStash");
     expect(helios).toContain("getFormingText");
     expect(helios).toContain("ingestStashedThought");
+    expect(existsSync(join(ROOT, "components/SessionHeliosPanel.tsx"))).toBe(false);
 
     const grid = readMapGridSurface() + read("components/block-skill-grid/map-tile-badges.tsx");
     expect(grid).not.toContain("ileChapterCellChrome");

@@ -46,7 +46,6 @@ import {
   type ExerciseDualLists,
   type IleSessionMode,
 } from "@/lib/learn-mode";
-import { postIleSessionChat } from "@/lib/session-chat-client";
 import { playSessionCompleteSound, playStepCompleteSound } from "@/lib/sounds";
 import {
   updateSessionPlan,
@@ -57,8 +56,6 @@ import {
 } from "@/lib/storage";
 import type { IlePromptMaterials } from "@/components/session-view/types";
 import { collectScoutArtifactsFromPowRows } from "@/lib/scout-session";
-import type { HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
-import type { ChatMessage } from "@/lib/session-chat-client";
 
 export type SessionMutateInput = {
   session: Session | null;
@@ -76,13 +73,6 @@ export type SessionMutateInput = {
   chapterLoading: boolean;
   setChapterLoading: (v: boolean) => void;
   setChapterLoadingIndex: (v: number | null) => void;
-  chapterWorkspaces: Record<string, { chatMessages: ChatMessage[] }>;
-  updateChapterWorkspace: (
-    key: string,
-    update:
-      | Partial<{ chatMessages: ChatMessage[] }>
-      | ((workspace: { chatMessages: ChatMessage[] }) => Partial<{ chatMessages: ChatMessage[] }>),
-  ) => void;
   guestAccessBody: Record<string, unknown>;
   logToolRef: {
     current: ((
@@ -91,10 +81,7 @@ export type SessionMutateInput = {
       metadata?: Record<string, unknown>,
     ) => Promise<void> | void) | null;
   };
-  t: (key: string) => string;
-  tutoringLanguage: string;
   locale: string;
-  setHeliosTurnMode: (mode: HeliosTurnMode) => void;
   isRecording: boolean;
   isPaused: boolean;
   setIsPaused: (v: boolean) => void;
@@ -125,14 +112,9 @@ export function useSessionMutate(input: SessionMutateInput) {
     chapterLoading,
     setChapterLoading,
     setChapterLoadingIndex,
-    chapterWorkspaces,
-    updateChapterWorkspace,
     guestAccessBody,
     logToolRef,
-    t,
-    tutoringLanguage,
     locale,
-    setHeliosTurnMode,
     isRecording,
     isPaused,
     setIsPaused,
@@ -630,60 +612,6 @@ const handleLoadChapter = useCallback(async (index: number) => {
 
     if (isReload) {
       setChapterReloadNonce((n) => n + 1);
-      if (!isProjectMode && session) {
-        setHeliosTurnMode("responding");
-        const chapterKey = step.id;
-        const placeholderId = `chapter-reload-${Date.now()}`;
-        const existingMessages = chapterWorkspaces[chapterKey]?.chatMessages ?? [];
-        updateChapterWorkspace(chapterKey, (workspace) => ({
-          chatMessages: [
-            ...workspace.chatMessages,
-            { id: placeholderId, role: "assistant", content: "", pending: true },
-          ],
-        }));
-        try {
-          const { ok, data, errorMessage } = await postIleSessionChat({
-              problem: session.problem,
-              activeStepIndex: index,
-              activeStepId: step.id,
-              activeStepDescription: step.description,
-              sessionPlan: updatedPlan,
-              sessionId: session.id,
-              tutoringLanguage,
-              ...guestAccessBody,
-              messages: [
-                ...existingMessages.map((m) => ({
-                  role: m.role,
-                  content: m.content,
-                  imageDataUrl: m.imageDataUrl,
-                })),
-                {
-                  role: "user",
-                  content: `Reload this chapter and continue coaching from here: ${step.description}`,
-                },
-              ],
-            });
-          const content =
-            ok && typeof data?.message === "string" && data.message.trim()
-              ? data.message.trim()
-              : errorMessage || t("heliosChat.errorMessage");
-          updateChapterWorkspace(chapterKey, (workspace) => ({
-            chatMessages: workspace.chatMessages.map((message) =>
-              message.id === placeholderId ? { ...message, content, pending: false } : message,
-            ),
-          }));
-        } catch {
-          updateChapterWorkspace(chapterKey, (workspace) => ({
-            chatMessages: workspace.chatMessages.map((message) =>
-              message.id === placeholderId
-                ? { ...message, content: t("heliosChat.errorMessage"), pending: false }
-                : message,
-            ),
-          }));
-        } finally {
-          setHeliosTurnMode("idle");
-        }
-      }
     } else if (CHAPTER_LOAD_DURATION_MS > 0) {
       await new Promise((resolve) => {
         window.setTimeout(resolve, CHAPTER_LOAD_DURATION_MS);
@@ -697,16 +625,9 @@ const handleLoadChapter = useCallback(async (index: number) => {
     }
   }
 }, [
-  chapterWorkspaces,
-  guestAccessBody,
   handleActiveChapterIndexChange,
-  isProjectMode,
   persistPlanSteps,
   resolvedSessionMode,
-  session,
-  t,
-  tutoringLanguage,
-  updateChapterWorkspace,
 ]);
 
 const handleAddChapter = useCallback(async (

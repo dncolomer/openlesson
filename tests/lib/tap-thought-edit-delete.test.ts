@@ -149,7 +149,8 @@ describe("TAP convo + exercise chrome for local thought memory", () => {
     expect(TAP_IM_DONE_CONFIRM_CONFIRM).toBe("I'm done answering");
     expect(TAP_IM_DONE_CONFIRM_CANCEL.toLowerCase()).toContain("thinking");
 
-    const helios = read("components/SessionHeliosPanel.tsx");
+    expect(existsSync(join(ROOT, "components/SessionHeliosPanel.tsx"))).toBe(false);
+    const helios = read("lib/useSessionThoughtInterface.ts");
     expect(convo).not.toContain("isTapExerciseThoughtMemoryLocked");
 
     expect(helios).not.toContain("confirmClose");

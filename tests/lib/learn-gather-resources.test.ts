@@ -384,8 +384,12 @@ describe("TAP Learning gather resources", () => {
 
   it("circular menu hosts Gather/Edit/Complete; chapter widget keeps I'm done answering; resources stay scoped", () => {
     const surface = readSessionViewSurface();
-    const actions = read("components/session-view/learn-chapter-helios-actions.tsx");
-    const helios = read("components/SessionHeliosPanel.tsx");
+    expect(existsSync(join(ROOT, "components/session-view/learn-chapter-helios-actions.tsx"))).toBe(
+      false,
+    );
+    expect(existsSync(join(ROOT, "components/SessionHeliosPanel.tsx"))).toBe(false);
+    const actions = read("components/session-view/session-guide-panel.tsx");
+    const helios = read("lib/useSessionThoughtInterface.ts");
     expect(existsSync(join(ROOT, "components/ChapterMapPanel.tsx"))).toBe(false);
     const grid = read("components/BlockSkillGrid.tsx");
     const jobs = read("components/block-skill-grid/map-job-indicators.tsx");
@@ -399,10 +403,9 @@ describe("TAP Learning gather resources", () => {
     expect(actions).not.toContain('t("chapterMap.edit")');
     expect(actions).not.toContain('t("chapterMap.complete")');
     expect(actions).not.toContain('t("chapterMap.gatherResources")');
-    expect(actions).toContain("doneAnswering");
     expect(helios).not.toContain("ImDoneAnsweringControl");
-    expect(helios).toContain("IleChapterHeliosActions");
-    expect(surface).toContain("chapterActions");
+    expect(helios).not.toContain("IleChapterHeliosActions");
+    expect(surface).not.toContain("chapterActions");
     expect(surface).toContain("gatherJobs");
     expect(surface).toContain("onGatherResources");
     expect(surface).toContain("decideIleGatherResources");

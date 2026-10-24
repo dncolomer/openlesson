@@ -108,7 +108,8 @@ describe("guest-link + map attribution wiring", () => {
     expect(fs.existsSync(path.join(ROOT, "components/exercise-tap/exercise-tap-phases.tsx"))).toBe(
       false,
     );
-    const helios = fs.readFileSync(path.join(ROOT, "components/SessionHeliosPanel.tsx"), "utf8");
+    expect(fs.existsSync(path.join(ROOT, "components/SessionHeliosPanel.tsx"))).toBe(false);
+    const helios = fs.readFileSync(path.join(ROOT, "lib/useSessionThoughtInterface.ts"), "utf8");
     expect(helios).not.toContain("SessionIdentityBadge");
   });
 });

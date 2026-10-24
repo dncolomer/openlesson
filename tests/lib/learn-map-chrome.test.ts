@@ -53,7 +53,8 @@ describe("TAP Learning map-first session chrome (shipped surface)", () => {
     const view = readSessionViewSurface();
     const chrome = read("components/session-view/session-chrome.tsx");
     const tools = read("components/ToolsPanel.tsx");
-    const helios = read("components/SessionHeliosPanel.tsx");
+    const helios = read("lib/useSessionThoughtInterface.ts");
+    const guide = read("components/session-view/session-guide-panel.tsx");
     const voice = read("components/session-view/learn-voice-bar.tsx");
     const mini = read("components/block-skill-grid/map-minimap-chrome.tsx");
 
@@ -89,8 +90,11 @@ describe("TAP Learning map-first session chrome (shipped surface)", () => {
     expect(
       existsSync(join(ROOT, "components/session-view/learn-collapsible-overlay.tsx")),
     ).toBe(false);
-    expect(chrome).toContain("heliosOpen");
-    expect(view).toContain("heliosOpen={heliosWidgetOpen}");
+    expect(chrome).not.toContain("heliosWidget");
+    expect(chrome).not.toContain("heliosOpen");
+    expect(view).not.toContain("heliosOpen={heliosWidgetOpen}");
+    expect(view).not.toContain("submitHeliosChatMessageNow");
+    expect(view).not.toContain("handleSubmitTurn");
     expect(view).toContain("introOpen={showWelcomePanel}");
     expect(view).not.toContain("introOpen={showWelcomePanel || activeTool === \"help\"}");
     expect(chrome).toContain("data-ile-intro-widget");
@@ -114,7 +118,8 @@ describe("TAP Learning map-first session chrome (shipped surface)", () => {
     expect(chrome).not.toContain('modalTool === "logs"');
     expect(view).toContain("<SessionOnboardingGuide");
     expect(helios).not.toContain("SessionOnboardingGuide");
-    expect(helios).not.toContain("data-ile-intro-widget");
+    expect(guide).not.toContain("data-ile-intro-widget");
+    expect(existsSync(join(ROOT, "components/SessionHeliosPanel.tsx"))).toBe(false);
     const helpChrome = read("components/session-view/use-session-chrome.ts");
     expect(helpChrome).toContain('if (tool === "help")');
     expect(helpChrome).toContain("setShowWelcomePanel(true)");
@@ -386,22 +391,17 @@ describe("TAP Learning map-first session chrome (shipped surface)", () => {
     expect(voice).toContain("<SlidingTranscript");
     expect(helios).not.toContain("<SlidingTranscript");
     expect(helios).not.toContain("data-ile-voice-bar");
+    expect(guide).toContain("SessionGuidePanel");
 
     expect(existsSync(join(ROOT, "components/ChapterMapPanel.tsx"))).toBe(false);
+    expect(existsSync(join(ROOT, "components/session-view/learn-chapter-helios-actions.tsx"))).toBe(
+      false,
+    );
     expect(chrome).not.toContain("ILE_MAP_VOICE_BAR_CLEARANCE_CLASS");
     expect(ILE_MAP_VOICE_BAR_CLEARANCE_CLASS).toBe("bottom-12");
-    const heliosActions = read("components/session-view/learn-chapter-helios-actions.tsx");
-    expect(heliosActions).toContain("data-ile-chapter-helios-actions");
-    expect(heliosActions).toContain("data-ile-chapter-actions");
-    expect(heliosActions).toContain("doneAnswering");
-    expect(heliosActions).not.toContain('t("chapterMap.complete")');
-    expect(heliosActions).not.toContain('t("chapterMap.edit")');
-    expect(heliosActions).not.toContain('t("chapterMap.gatherResources")');
-    expect(heliosActions).not.toContain('t("chapterMap.reloadChapter")');
-    expect(heliosActions).not.toContain('t("chapterMap.loadChapter")');
-    expect(heliosActions).not.toContain("data-ile-close-override");
-    expect(helios).toContain("IleChapterHeliosActions");
-    expect(view).toContain("chapterActions");
+    expect(view).not.toContain("chapterActions");
+    expect(view).toContain("handleAskCanvasSelection");
+    expect(view).toContain("postIleSessionChat");
 
     for (const src of [chrome, tools, voice]) {
       expect(src).toContain("rounded-none");

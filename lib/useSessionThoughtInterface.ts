@@ -2,11 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
 import {
+  applyIleContextFullAutoStash,
   buildIleThoughtMemoryRecord,
   normalizeIleFormingText,
   type IleThoughtMemoryRecord,
 } from "@/lib/learn-context-auto-stash";
 import { decideSpokenCaptureKeyAction } from "@/lib/spoken-thought-shortcut";
+import {
+  THOUGHT_CONTEXT_AUTO_STASH_MAX_CHARS,
+  shouldAutoStashOnContextFull,
+  thoughtContextFillRatio,
+} from "@/lib/thought-context-auto-stash";
 
 
 export interface SessionThought {
@@ -606,6 +612,41 @@ export function useSessionThoughtInterface({
     clearTranscriptionDisplay();
     restartSpeechRecognitionSession();
   }, [restartSpeechRecognitionSession]);
+
+  const contextStashInFlightRef = useRef(false);
+  useEffect(() => {
+    if (!enabled) {
+      contextStashInFlightRef.current = false;
+      return;
+    }
+    const live = getFormingText();
+    const ratio = thoughtContextFillRatio(live, THOUGHT_CONTEXT_AUTO_STASH_MAX_CHARS);
+    if (
+      !shouldAutoStashOnContextFull(ratio) ||
+      contextStashInFlightRef.current ||
+      !live.trim()
+    ) {
+      return;
+    }
+    const result = applyIleContextFullAutoStash({
+      formingText: live,
+      thoughtMemory: thoughts,
+    });
+    if (!result.didStash || !result.thought) return;
+    contextStashInFlightRef.current = true;
+    ingestStashedThought(result.thought);
+    clearCurrentTranscription();
+    window.setTimeout(() => {
+      contextStashInFlightRef.current = false;
+    }, 300);
+  }, [
+    enabled,
+    crystallizableText,
+    thoughts,
+    getFormingText,
+    ingestStashedThought,
+    clearCurrentTranscription,
+  ]);
 
   useEffect(() => {
     if (!enabled) {

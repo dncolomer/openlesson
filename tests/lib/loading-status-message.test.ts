@@ -30,7 +30,6 @@ const GATE_FILES = [
   "components/workspace-view/workspace-chrome.tsx",
   "components/InsightsDashboardTab.tsx",
   "components/InsightDetailClient.tsx",
-  "components/SessionHeliosPanel.tsx",
 ] as const;
 
 describe("LoadingStatusMessage (CREATING WORKSPACE treatment)", () => {

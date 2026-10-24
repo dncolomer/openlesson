@@ -101,7 +101,8 @@ describe("Thought Memory is always on TAP solo chrome", () => {
 
 describe("universal Stash Submit labels across TAP Learning + TAP", () => {
   it("all four surfaces contain the same English labels", () => {
-    const ileHelios = read("components/SessionHeliosPanel.tsx");
+    expect(existsSync(join(ROOT, "components/SessionHeliosPanel.tsx"))).toBe(false);
+    const ileHelios = read("lib/useSessionThoughtInterface.ts");
     const ileMemory = read("components/thought-ui/ThoughtMemoryPanel.tsx");
     const ilePanes = read("components/session-view/session-tool-panes.tsx");
     const tapConvo = readTapScoreSurface();

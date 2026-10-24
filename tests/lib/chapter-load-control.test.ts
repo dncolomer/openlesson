@@ -94,19 +94,17 @@ describe("resolveChapterLoadControl (shipped helper)", () => {
 });
 
 describe("chapter-map load control wiring (shipped source)", () => {
-  it("Helios actions omit load/reload; SessionView still loads from the map", () => {
-    const panel = read("components/session-view/learn-chapter-helios-actions.tsx");
+  it("Helios actions are gone; SessionView still loads from the map; canvas commands still chat", () => {
+    expect(existsSync(join(ROOT, "components/session-view/learn-chapter-helios-actions.tsx"))).toBe(
+      false,
+    );
     const view = readSessionViewSurface();
 
-    expect(panel).not.toContain("resolveChapterLoadControl");
-    expect(panel).not.toContain('t("chapterMap.reloadChapter")');
-    expect(panel).not.toContain('t("chapterMap.loadChapter")');
-    expect(panel).not.toContain("onLoadChapter");
     expect(view).toContain("handleLoadChapter");
     expect(view).toContain("shouldAllowChapterLoadClick");
     expect(view).toContain("activeChapterKey={activeChapterKey}");
     expect(view).not.toContain("activeChapterKey={session.id}");
-    expect(view).toContain("chapterWidgetAssistantTurn");
+    expect(view).not.toContain("chapterWidgetAssistantTurn");
     expect(shouldShowHeliosReplyForChapter({ activeChapterId: "ch-2", replyChapterId: "ch-1" })).toBe(
       false,
     );
@@ -119,6 +117,8 @@ describe("chapter-map load control wiring (shipped source)", () => {
     expect(view).toContain("persistPlanSteps(updatedPlan, { toolAction, toolData })");
     expect(view).toContain("setChapterReloadNonce");
     expect(view).toContain("postIleSessionChat");
+    expect(view).toContain("handleAskCanvasSelection");
+    expect(view).not.toContain("Reload this chapter and continue coaching");
 
     writeScratch(
       "reload-chapter-excerpts.txt",
@@ -126,8 +126,8 @@ describe("chapter-map load control wiring (shipped source)", () => {
         `activeLabel=${CHAPTER_RELOAD_LABEL}`,
         `otherLabel=${CHAPTER_LOAD_LABEL}`,
         "disabled=in-flight only (active chapter stays enabled)",
-        "IleChapterHeliosActions: no load/reload button",
-        "SessionView: map still calls handleLoadChapter",
+        "IleChapterHeliosActions deleted",
+        "SessionView: map still calls handleLoadChapter; canvas commands still postIleSessionChat",
       ].join("\n"),
     );
   });

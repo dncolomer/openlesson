@@ -56,7 +56,6 @@ export type SessionLiveStageProps = {
   handleStartScreenCapture: () => Promise<boolean>;
   handleStopScreenCapture: () => void;
   handleWelcomePlay: () => Promise<void>;
-  heliosWidgetOpen: boolean;
   ileToken: string | undefined;
   isMuted: boolean;
   isProjectMode: boolean;
@@ -70,7 +69,6 @@ export type SessionLiveStageProps = {
   openWorkDockLabels: { id: string; label: string; keyword: string | undefined; description: string | undefined; focused: boolean; status: "idle" | "loading" | "attention"; image: string; }[];
   openWorkCount: number;
   pauseAndGoToDashboard: (sessionName?: string | null, options?: { persistSession?: boolean; }) => Promise<void>;
-  renderChapterThoughtPane: (replica: boolean) => JSX.Element | null;
   renderSessionToolPanes: () => JSX.Element | null;
   renderWorkCanvas: () => JSX.Element;
   resourceScopeChapterId: string | null;
@@ -88,7 +86,6 @@ export type SessionLiveStageProps = {
   setChapterCloseReview: Dispatch<SetStateAction<{ canClose: boolean; reason: string; } | null>>;
   setCraftingInsightsOpen: Dispatch<SetStateAction<boolean>>;
   setError: Dispatch<SetStateAction<string | null>>;
-  setHeliosWidgetOpen: Dispatch<SetStateAction<boolean>>;
   setIsMuted: Dispatch<SetStateAction<boolean>>;
   setIsWebcamEnabled: Dispatch<SetStateAction<boolean>>;
   setMuteRemaining: Dispatch<SetStateAction<number>>;
@@ -134,7 +131,6 @@ export function SessionLiveStage({
     handleStartScreenCapture,
     handleStopScreenCapture,
     handleWelcomePlay,
-    heliosWidgetOpen,
     ileToken,
     isMuted,
     isProjectMode,
@@ -148,7 +144,6 @@ export function SessionLiveStage({
     openWorkDockLabels,
     openWorkCount,
     pauseAndGoToDashboard,
-    renderChapterThoughtPane,
     renderSessionToolPanes,
     renderWorkCanvas,
     resourceScopeChapterId,
@@ -166,7 +161,6 @@ export function SessionLiveStage({
     setChapterCloseReview,
     setCraftingInsightsOpen,
     setError,
-    setHeliosWidgetOpen,
     setIsMuted,
     setIsWebcamEnabled,
     setMuteRemaining,
@@ -259,9 +253,6 @@ export function SessionLiveStage({
         resourcesOpen={sessionResourcesOpen}
         onResourcesOpenChange={setSessionResourcesOpen}
         onCloseToolOverlay={() => setActiveTool("chapters")}
-        heliosOpen={heliosWidgetOpen}
-        onCloseHelios={() => setHeliosWidgetOpen(false)}
-        onMinimizeHelios={() => setHeliosWidgetOpen(false)}
         insightCraftOpen={craftingInsightsOpen}
         onMinimizeInsightCraft={() => setCraftingInsightsOpen(false)}
         workCanvasHeaderLeading={workCanvasInsightSlots}
@@ -318,7 +309,6 @@ export function SessionLiveStage({
         map={null}
         toolOverlay={renderSessionToolPanes()}
         workCanvas={renderWorkCanvas()}
-        heliosWidget={renderChapterThoughtPane(false)}
         voiceBar={<IleVoiceBar thought={sessionThoughtInterface} />}
         actions={
           <IleVoiceBarActions

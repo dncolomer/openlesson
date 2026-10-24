@@ -229,14 +229,14 @@ describe("self-progress persist helper", () => {
 describe("workspace Mark as Done + tile glyphs", () => {
   it("workspace pane marks Done; both maps render tick/gear from the chrome mapper", () => {
     const pane = read("components/WorkspaceLearnerBlockPane.tsx");
-    const chapter = read("components/session-view/learn-chapter-helios-actions.tsx");
+    const chapter = read("components/session-view/session-chrome.tsx");
     const grid = readMapGridSurface();
     const view = readWorkspaceViewSurface();
 
     expect(pane).not.toContain("data-learner-mark-done");
     expect(pane).not.toContain("Mark as Done");
     expect(pane).not.toContain("onMarkDone");
-    expect(chapter).toContain("onChapterDone");
+    expect(chapter).toContain("onChapterDoneOverride");
     expect(chapter).not.toContain('t("chapterMap.complete")');
     expect(existsSync(join(ROOT, "components/ChapterMapPanel.tsx"))).toBe(false);
 
@@ -262,7 +262,7 @@ describe("workspace Mark as Done + tile glyphs", () => {
       "map-done-progress-excerpts.txt",
       [
         "WorkspaceLearnerBlockPane: Progress drawer removed",
-        "IleChapterHeliosActions: onChapterDone + chapterMap.complete",
+        "Learn chapter Helios actions deleted; chapter close lives on session chrome",
         "BlockSkillGrid: resolveOccupiedMapTileChrome + tick/gear glyphs, no chapter cell chrome",
         "WorkspaceView: recordMapItemWorkedOn on launch",
       ].join("\n"),

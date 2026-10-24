@@ -187,7 +187,8 @@ describe("TAP Learning tab unfocus PoW (shipped)", () => {
 
 describe("TAP Learning Work / PoW chrome (shipped source)", () => {
   it("chapter widget and PiP omit I'm done answering; TAP keeps it; slider and Work bar ship", () => {
-    const helios = read("components/SessionHeliosPanel.tsx");
+    const helios = read("lib/useSessionThoughtInterface.ts");
+    expect(existsSync(join(ROOT, "components/SessionHeliosPanel.tsx"))).toBe(false);
     const chrome = read("components/session-view/session-chrome.tsx");
     const welcome = read("components/session-view/session-welcome-modal.tsx");
     expect(welcome).toContain("data-ile-session-settings");
@@ -238,11 +239,14 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     expect(view).toContain("maxPerSession: gatherMaxPerSession");
     expect(view).toContain("tryStartWork");
     expect(view).toContain("handleWorkChapter");
-    expect(view).toContain("closeIleOpenWorkTurn");
-    expect(view).toContain("resolveIleWorkChatTarget");
+    expect(view).not.toContain("closeIleOpenWorkTurn");
+    expect(view).not.toContain("resolveIleWorkChatTarget");
+    expect(read("lib/learn-session-turn-close.ts")).toContain("closeIleOpenWorkTurn");
     expect(view).toContain("chapterId");
     expect(view).toContain("spentUnits");
-    expect(speech).toContain("submitHeliosChatMessageNow(text, undefined, chapterId)");
+    expect(speech).not.toContain("submitHeliosChatMessageNow");
+    expect(speech).toContain("onSendToProbe");
+    expect(speech).toContain("flushRemainingIlePow");
 
     expect(chrome).not.toContain("data-ile-pow-resource-bar");
     expect(chrome).not.toContain("data-ile-pow-submitted");
@@ -302,12 +306,10 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     expect(view).toContain("stepIds: sessionPlan?.steps?.map((step) => step.id)");
     expect(view).toContain("selectedId: mapSelectedChapterId");
     expect(view).toContain("workAestheticById");
-    expect(view).toContain("workAestheticImage={workAestheticById[activeChapterKey]}");
-    const thoughtPane = read("components/session-view/session-thought-pane.tsx");
-    expect(thoughtPane).toContain("workId={activeChapterKey}");
-    expect(thoughtPane).toContain("workAestheticImage={workAestheticImage}");
-    expect(helios).toContain("resolveIleWorkAestheticImage");
-    expect(helios).toContain("assigned: workAestheticImage");
+    expect(view).toContain("workAestheticById[id]");
+    expect(existsSync(join(ROOT, "components/session-view/session-thought-pane.tsx"))).toBe(false);
+    expect(helios).toContain("applyIleContextFullAutoStash");
+    expect(helios).toContain("getFormingText");
     expect(helios).not.toContain("Math.random");
     expect(helios).not.toContain("THOUGHT_BACKGROUND_IMAGES");
     expect(dockBar).toContain("FALLBACK_AESTHETIC_IMAGES");
@@ -315,7 +317,8 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     expect(view).toContain("resolveBlockMapGlyph");
     expect(view).toContain("map_keyword");
     expect(view).toContain("countIleUnsubmittedPowDisplay");
-    expect(view).toContain("handleSubmitToHelios");
+    expect(view).not.toContain("handleSubmitToHelios");
+    expect(view).toContain("handleAskCanvasSelection");
     expect(view).toContain("canvasDirtyForHelios");
     const panes = read("components/session-view/session-tool-panes.tsx");
     expect(panes).not.toContain("onSubmitToHelios");
@@ -430,7 +433,7 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     expect(chrome).not.toContain("data-ile-work-dock-covered");
     expect(chrome).not.toContain("End turn");
     expect(chrome).not.toContain("{insightCraft}");
-    expect(view).toContain("onMinimizeHelios");
+    expect(view).not.toContain("onMinimizeHelios");
     expect(view).toContain("aestheticImages={selectedAesthetic?.images}");
     expect(read("components/SessionView.tsx")).not.toContain("openWorkIds={openWorkIds}");
     expect(existsSync(join(ROOT, "components/ChapterMapPanel.tsx"))).toBe(false);
@@ -645,7 +648,8 @@ describe("one current chapter", () => {
     const view = readFileSync(join(ROOT, "components/SessionView.tsx"), "utf8");
     const hook = readFileSync(join(ROOT, "lib/useSessionChapterWorkspaces.ts"), "utf8");
     expect(view).toContain("ileBlockSessionFrame(sessionPlan)");
-    expect(view).toContain("if (!heliosWidgetOpen || !blockFrame) return");
+    expect(view).toContain("if (!blockFrame) return");
+    expect(view).not.toContain("heliosWidgetOpen");
     expect(view).toContain("seedChapterWorkCanvas(blockFrame.id, text)");
     expect(view).not.toContain("ileBlockSessionChapter(sessionPlan?.steps, activeChapterIndex)");
     expect(hook).toContain("const frame = ileBlockSessionFrame(sessionPlan)");

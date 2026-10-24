@@ -246,7 +246,8 @@ describe("session intro visuals", () => {
 
     expect(existsSync(join(ROOT, "components/ProbesPanel.tsx"))).toBe(false);
     expect(existsSync(join(ROOT, "components/MobileProbesTab.tsx"))).toBe(false);
-    const ileHelios = read("components/SessionHeliosPanel.tsx");
+    expect(existsSync(join(ROOT, "components/SessionHeliosPanel.tsx"))).toBe(false);
+    const ileHelios = read("lib/useSessionThoughtInterface.ts");
     const ileChrome = read("components/session-view/session-chrome.tsx");
     const ileView = readSessionStageSurface();
     expect(ileHelios).not.toContain("SessionOnboardingGuide");

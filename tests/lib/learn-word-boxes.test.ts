@@ -262,7 +262,8 @@ describe("ile word-box helpers (shipped)", () => {
 
 describe("TAP Learning word-box surfaces (shipped source)", () => {
   it("Learning and Project paint word boxes without Open Grok/Dantes; TAP overlay does not; concept highlighter is gone", () => {
-    const helios = read("components/SessionHeliosPanel.tsx");
+    expect(existsSync(join(ROOT, "components/SessionHeliosPanel.tsx"))).toBe(false);
+    const helios = read("components/thought-ui/ThoughtUi.tsx");
     const ui = read("components/thought-ui/ThoughtUi.tsx");
     const boxes = read("components/thought-ui/LearnWordBoxText.tsx");
     const markdown = read("components/thought-ui/HeliosMarkdown.tsx");
@@ -324,7 +325,7 @@ describe("TAP Learning word-box surfaces (shipped source)", () => {
     expect(ileFn).toContain("<HeliosMarkdown");
     expect(ileFn).not.toContain("onConceptClick");
     expect(helios).toContain("HeliosMarkdown");
-    expect(helios).toContain("onOpenWordBoxTool={onOpenWordBoxTool}");
+    expect(helios).toContain("onOpenWordBoxTool");
     expect(helios).not.toContain("IleConceptMarkedText");
     expect(helios).not.toContain("data-ile-concept-mark");
     expect(helios).not.toContain("onConceptClick");
@@ -337,7 +338,6 @@ describe("TAP Learning word-box surfaces (shipped source)", () => {
     expect(markdown).toContain("processHeliosMarkdown");
     expect(markdown).toContain("data-helios-markdown");
 
-    expect(view).toContain("onOpenWordBoxTool");
     expect(view).not.toContain("openIleGrokipediaWithConcept");
     expect(view).not.toContain("onOpenConcept");
     expect(panes).not.toContain("DantesTool");

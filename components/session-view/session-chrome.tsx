@@ -53,10 +53,6 @@ export type SessionChromeProps = {
   map: ReactNode;
   toolOverlay: ReactNode;
   workCanvas: ReactNode;
-  heliosWidget: ReactNode;
-  heliosOpen: boolean;
-  onCloseHelios: () => void;
-  onMinimizeHelios?: () => void;
   insightCraftOpen?: boolean;
   onMinimizeInsightCraft?: () => void;
   workCanvasHeaderLeading?: ReactNode;
@@ -85,9 +81,6 @@ export type SessionChromeProps = {
   resources?: ReactNode;
   resourcesOpen?: boolean;
   onResourcesOpenChange?: (open: boolean) => void;
-  onSubmitTurn?: () => void;
-  submitTurnLabel?: string;
-  submitTurnBusy?: boolean;
   onCloseToolOverlay: () => void;
   allowEndSession: boolean;
   showEndDialog: boolean;
@@ -131,12 +124,8 @@ export function SessionChrome({
   map,
   toolOverlay,
   workCanvas,
-  heliosWidget: _heliosWidget,
-  heliosOpen: _heliosOpen,
-  onCloseHelios,
-  onMinimizeHelios,
-  insightCraftOpen = false,
-  onMinimizeInsightCraft,
+  insightCraftOpen: _insightCraftOpen = false,
+  onMinimizeInsightCraft: _onMinimizeInsightCraft,
   workCanvasHeaderLeading = null,
   mapInsightsWidget: _mapInsightsWidget = null,
   introOpen,
@@ -154,9 +143,6 @@ export function SessionChrome({
   resources = null,
   resourcesOpen,
   onResourcesOpenChange,
-  onSubmitTurn: _onSubmitTurn,
-  submitTurnLabel: _submitTurnLabel,
-  submitTurnBusy: _submitTurnBusy = false,
   onCloseToolOverlay,
   allowEndSession,
   showEndDialog,

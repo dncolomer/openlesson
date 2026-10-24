@@ -281,7 +281,8 @@ describe("P1–P10 shipped helpers", () => {
     expect(tapScore).not.toContain("Failed to generate practice content");
     expect(tapClient).toContain("tapTracePayload");
     expect(sessionView).toContain("postIleSessionChat");
-    expect(sessionView).toContain("sendThought");
+    expect(sessionView).toContain("handleAskCanvasSelection");
+    expect(read("lib/useSessionThoughtInterface.ts")).toContain("sendThought");
     expect(sessionView).toContain("IleReviewWorkPanel");
     expect(sessionView).not.toContain('from "./HeliosChat"');
     expect(tapLinks).toContain("requireProductWorkspaceLinkAuth");

@@ -53,7 +53,8 @@ const OLDEST_TO_NEWEST = [
 
 describe("TAP Learning Helios thought chrome is shared (solo + conversation)", () => {
   it("Send/Stash/Edit and last-stash labels are not gated off for project/solo", () => {
-    const helios = read("components/SessionHeliosPanel.tsx");
+    expect(existsSync(join(ROOT, "components/SessionHeliosPanel.tsx"))).toBe(false);
+    const helios = read("lib/useSessionThoughtInterface.ts");
     expect(helios).not.toContain('label="Send"');
     expect(helios).not.toContain('label="Stash"');
     expect(helios).not.toContain("ThoughtCompactAction");
@@ -66,7 +67,7 @@ describe("TAP Learning Helios thought chrome is shared (solo + conversation)", (
     expect(helios).not.toContain(ILE_SEE_YOUR_THOUGHTS_LABEL);
     expect(helios).not.toContain("data-ile-last-stash");
     expect(helios).not.toContain("ImDoneAnsweringControl");
-    expect(helios).toContain("thought.isSending");
+    expect(helios).toContain("isSending");
     expect(helios).not.toContain("{!projectMode ? (");
     expect(helios).not.toContain("data-ile-see-older-thoughts");
 
@@ -127,7 +128,8 @@ describe("See Older Thoughts reachable in both modes", () => {
     });
     expect(tools).toEqual([ILE_THOUGHT_HISTORY_TOOL]);
 
-    const helios = read("components/SessionHeliosPanel.tsx");
+    expect(existsSync(join(ROOT, "components/SessionHeliosPanel.tsx"))).toBe(false);
+    const helios = read("lib/useSessionThoughtInterface.ts");
     expect(helios).not.toContain("data-ile-see-older-thoughts");
     expect(helios).not.toContain("onOpenThoughts");
     expect(helios).not.toContain(ILE_SEE_YOUR_THOUGHTS_LABEL);

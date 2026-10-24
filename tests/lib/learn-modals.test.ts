@@ -57,7 +57,8 @@ describe("TAP Learning modals share DialogFrame / ConfirmDialog", () => {
     const thought = read("components/thought-ui/ThoughtEditPanel.tsx");
     const ring = read("components/block-skill-grid/block-circular-menu.tsx");
     const chrome = read("components/session-view/session-chrome.tsx");
-    const helios = read("components/SessionHeliosPanel.tsx");
+    expect(existsSync(join(ROOT, "components/SessionHeliosPanel.tsx"))).toBe(false);
+    const helios = read("components/thought-ui/ThoughtEditPanel.tsx");
     const view = readSessionViewSurface();
 
     expect(welcome).not.toContain('from "@/components/ui/DialogFrame"');

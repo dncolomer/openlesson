@@ -17,7 +17,6 @@ import {
   isChapterMapExpandInterruption,
   type IleMapSchedulerPending,
 } from "@/lib/learn-tim-chapter-complete";
-import type { HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
 import type { ChatMessage } from "@/lib/session-chat-client";
 
 export type IlePowInterruptionHandler = (
@@ -33,7 +32,6 @@ export type SessionIdleInput = {
       | Partial<{ chatMessages: ChatMessage[] }>
       | ((workspace: { chatMessages: ChatMessage[] }) => Partial<{ chatMessages: ChatMessage[] }>),
   ) => void;
-  setHeliosTurnMode: (mode: HeliosTurnMode) => void;
   handlePowInterruptionRef: {
     current: IlePowInterruptionHandler;
   };
@@ -44,7 +42,6 @@ export function useSessionIdle(input: SessionIdleInput) {
   const {
     activeChapterKey,
     updateChapterWorkspace,
-    setHeliosTurnMode,
     handlePowInterruptionRef,
     onChapterMapExpand,
   } = input;
@@ -81,9 +78,8 @@ const { applyInterruption, clearPendingInterruption } = useTapPredictiveInterrup
           { id: `int_${Date.now()}`, role: "assistant", content: message },
         ],
       }));
-      setHeliosTurnMode("interruption");
     },
-    [activeChapterKey, updateChapterWorkspace, setHeliosTurnMode],
+    [activeChapterKey, updateChapterWorkspace],
   ),
 );
 

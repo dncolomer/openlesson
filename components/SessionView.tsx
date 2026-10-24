@@ -12,23 +12,15 @@ import { useSessionMutate } from "@/components/session-view/use-session-mutate";
 import { useSessionSpeech } from "@/components/session-view/use-session-speech";
 import { useSessionIdle, type IlePowInterruptionHandler } from "@/components/session-view/use-session-idle";
 import { useSessionPhase } from "@/components/session-view/use-session-phase";
-import { useSessionHeliosPrep } from "@/components/session-view/use-session-helios-prep";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { SessionPageLoading } from "@/components/session-view/session-page-loading";
 import {
   buildPowParticipantIdentity,
   type PowParticipantIdentity,
 } from "@/lib/session-participant-identity";
-import { type ChatMessage, type PendingChatMessage, postIleSessionChat } from "@/lib/session-chat-client";
+import { type ChatMessage, postIleSessionChat } from "@/lib/session-chat-client";
 import type { Tool } from "@/components/ToolsPanel";
 
-import {
-  closeIleOpenWorkTurn,
-  ILE_END_TURN_LABEL,
-  ILE_SUBMIT_WORK_CONTINUE_TEXT,
-  partitionIleThoughtsByOpenWork,
-  resolveIleWorkChatTarget,
-} from "@/lib/learn-session-turn-close";
 import {
   clampIlePowExpense,
   ILE_POW_EXPENSE_DEFAULT,
@@ -40,7 +32,6 @@ import {
   clampIleMinInsightsPerChapter,
   evaluateIleEndTurnInsightGate,
   ileChapterInsightCounts,
-  ileEndTurnChaptersToMarkDone,
   ileInsightsForChapter,
   ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT,
   ILE_TURN_INSIGHT_SLOT_MAX,
@@ -65,7 +56,6 @@ import {
 import { insightsSessionListUrl, type InsightSummary } from "@/lib/insights";
 import { IleTurnInsightCraft } from "@/components/session-view/learn-turn-insight-craft";
 import { useHeliosVoicePlaybackActive } from "@/lib/useHeliosVoicePlayback";
-import type { HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
 import { translateWithLocale, useI18n } from "@/lib/i18n";
 import { coerceSpokenLocale, type SpokenLocale } from "@/lib/tutoring-languages";
 import {
@@ -81,7 +71,6 @@ import { DEFAULT_INITIAL_CHAPTERS } from "@/lib/initial-chapters";
 import type { MapTypePickerItem } from "@/lib/workspace-map-types";
 import { SessionWelcomeModal } from "@/components/session-view/session-welcome-modal";
 import { SessionToolPanes } from "@/components/session-view/session-tool-panes";
-import { SessionThoughtPane } from "@/components/session-view/session-thought-pane";
 import { SessionChapterWorkCanvas } from "@/components/session-view/session-chapter-canvas";
 import { emptySessionPolicySnapshot } from "@/components/session-view/session-policy-context";
 import { learnSessionFieldInput } from "@/lib/session-branch-prepare";
@@ -106,12 +95,7 @@ import {
   parseIleWorkAestheticStored,
 } from "@/lib/aesthetics";
 
-import {
-  chapterHasPendingHeliosReply,
-  latestSettledAssistantId,
-  resolveIleDockChipStatus,
-  sameIleIdList,
-} from "@/lib/learn-work-dock-status";
+import { resolveIleDockChipStatus } from "@/lib/learn-work-dock-status";
 import { resolveBlockMapGlyph } from "@/lib/block-map-glyph";
 
 import { ileTimProgressByTileId } from "@/lib/learn-tim-chapter-complete";
@@ -121,21 +105,17 @@ import {
   resolveIleDurableSessionMode,
   type IleSessionMode,
 } from "@/lib/learn-mode";
-import { shouldShowHeliosReplyForChapter } from "@/lib/chapter-load-control";
 import { useSessionChapterWorkspaces } from "@/lib/useSessionChapterWorkspaces";
 import { buildIleWorkCanvasCommandUserMessage } from "@/lib/learn-work-canvas-prompts";
 import {
-  applyIleXaiTurnAtCommit,
   ileWorkCanvasAskFromSessionChat,
   ileWorkCanvasScenesFromWorkspaces,
-  parseIleXaiCanvasTurn,
   pickIleWorkCanvasTurnScene,
   seedIleChapterWorkCanvas,
   serializeIleWorkCanvasScene,
   type IleWorkCanvasAskKind,
   type IleWorkCanvasElement,
   type IleWorkCanvasScene,
-  type IleWorkCanvasSkeleton,
   type IleWorkCanvasWorkspaceInput,
 } from "@/lib/learn-work-canvas";
 import { useIleSessionPurity } from "@/components/session-view/use-learn-session-purity";
@@ -276,7 +256,6 @@ export function SessionView({
     activeChapterIndexRef,
     chapterLoading,
     setChapterLoading,
-    chapterLoadingIndex,
     setChapterLoadingIndex,
     chapterFocusSinceRef,
     chapterWorkspaces,
@@ -286,7 +265,6 @@ export function SessionView({
     activeChapterKey: framedChapterId,
     activeWorkspace,
     chatMessages,
-    pendingChatMessage,
     whiteboardData,
     whiteboardSceneData,
     notebookContent,
@@ -294,8 +272,6 @@ export function SessionView({
     notebookDirtyForHelios,
     updateChapterWorkspace,
     updateActiveChapterWorkspace,
-    setChatMessages,
-    setPendingChatMessage,
     setWhiteboardData,
     setNotebookContent,
     setCanvasDirtyForHelios,
@@ -324,7 +300,6 @@ export function SessionView({
     () => !isIleSessionSettingsConfirmed(sessionId),
   );
   const mapEntryTailDoneRef = useRef(false);
-  const [heliosWidgetOpen, setHeliosWidgetOpen] = useState(true);
   const [powExpense, setPowExpense] = useState(ILE_POW_EXPENSE_DEFAULT);
   const [insightSlotMax, setInsightSlotMax] = useState(ILE_TURN_INSIGHT_SLOT_MAX);
   const [gatherMaxPerSession, setGatherMaxPerSession] = useState(
@@ -348,17 +323,12 @@ export function SessionView({
     {},
   );
   const openWorkIdsRef = useRef<string[]>([]);
-  const [submitTurnBusy, setSubmitTurnBusy] = useState(false);
   const [craftingInsightsOpen, setCraftingInsightsOpen] = useState(false);
   const [endTurnGate, setEndTurnGate] = useState<IleEndTurnInsightGate>(() =>
     evaluateIleEndTurnInsightGate({ activeChapterIds: [], insights: [] }),
   );
   const [sessionInsights, setSessionInsights] = useState<InsightSummary[]>([]);
   const [keptInsight, setKeptInsight] = useState<InsightSummary | null>(null);
-  const [dockLoadingIds, setDockLoadingIds] = useState<string[]>([]);
-  const [dockAttentionIds, setDockAttentionIds] = useState<string[]>([]);
-  const dockSeenAssistantIdRef = useRef<Record<string, string | null>>({});
-  const dockPendingSeenRef = useRef<Record<string, boolean>>({});
   const [chapterCloseReview, setChapterCloseReview] = useState<{
     canClose: boolean;
     reason: string;
@@ -447,42 +417,6 @@ export function SessionView({
     };
   }, [session?.id, guestAccessBody]);
 
-  const lastDialogueUserTurn = useMemo(() => {
-    for (let index = chatMessages.length - 1; index >= 0; index -= 1) {
-      const message = chatMessages[index];
-      if (message.role === "user" && message.content.trim()) {
-        return { id: message.id, content: message.content };
-      }
-    }
-    return null;
-  }, [chatMessages]);
-
-  const lastDialogueAssistantTurn = useMemo(() => {
-    for (let index = chatMessages.length - 1; index >= 0; index -= 1) {
-      const message = chatMessages[index];
-      if (message.role === "assistant" && !message.pending && message.content.trim()) {
-        return { id: message.id, content: message.content };
-      }
-    }
-    return null;
-  }, [chatMessages]);
-
-  const [heliosReplyChapterId, setHeliosReplyChapterId] = useState<string | null>(null);
-  const lastAssistantTurnIdRef = useRef<string | null>(null);
-  useEffect(() => {
-    const id = lastDialogueAssistantTurn?.id ?? null;
-    if (id && id !== lastAssistantTurnIdRef.current) {
-      lastAssistantTurnIdRef.current = id;
-      setHeliosReplyChapterId(activeChapterKey);
-    }
-  }, [activeChapterKey, lastDialogueAssistantTurn?.id]);
-  const chapterWidgetAssistantTurn = shouldShowHeliosReplyForChapter({
-    activeChapterId: activeChapterKey,
-    replyChapterId: heliosReplyChapterId,
-  })
-    ? lastDialogueAssistantTurn
-    : null;
-
   const isHeliosAssistantPending = useMemo(() => {
     for (let index = chatMessages.length - 1; index >= 0; index -= 1) {
       const message = chatMessages[index];
@@ -506,10 +440,6 @@ export function SessionView({
   const isProjectMode = isIleProjectMode(resolvedSessionMode);
   const chapterThoughtsLocked =
     isProjectMode && isIleChapterThoughtsLocked(activeStep?.status);
-
-  // (Prep material state used to live here for the now-removed
-  // Practice/Theory side panels. That content has been merged into
-  // the Helios chat surface — see fetchAndInjectPrepIntoChat below.)
 
   // Track tool open/close events + auto-expand tool panel if collapsed
   useEffect(() => {
@@ -537,21 +467,6 @@ export function SessionView({
   const handlePowInterruptionRef = useRef<IlePowInterruptionHandler>(() => {});
 
   const sessionRef = useRef<Session | null>(null);
-  useSessionHeliosPrep({
-    session,
-    sessionRef,
-    sessionPlanRef,
-    activeChapterKey,
-    activeChapterIndexRef,
-    ensureVisible,
-    setActiveTool,
-    updateChapterWorkspace,
-    setChatMessages,
-    tutoringLanguage,
-    isPaused,
-    isRecording,
-    setIsPaused,
-  });
   const {
     museStatus,
     museError,
@@ -673,7 +588,6 @@ export function SessionView({
     [gatherReadyCountByBlock, gatherSeenIds],
   );
 
-  const [heliosTurnMode, setHeliosTurnMode] = useState<HeliosTurnMode>("idle");
   const {
     persistPlanSteps,
     handleActiveChapterIndexChange,
@@ -683,22 +597,13 @@ export function SessionView({
     handleRejectTimChapter,
     handleAddChapter,
     handleUpdateChapter,
-    chapterReloadNonce,
-    fetchChapterFollowUps,
-    handleSelectChapterFollowUp,
     handleMarkChapterDone,
     handleMarkChapterUndone,
     handleTimChapterMapExpansion,
-    chapterFollowUpsById,
-    chapterFollowUpsLoadingId,
-    chapterFollowUpsErrorById,
     ilePromptMaterials,
     displayProjectChapterExercise,
-    projectThoughtsByChapter,
     setProjectThoughtsByChapter,
     projectThoughtsByChapterRef,
-    activeProjectChapterId,
-    activeProjectLists,
   } = useSessionMutate({
     session,
     sessionRef,
@@ -715,14 +620,9 @@ export function SessionView({
     chapterLoading,
     setChapterLoading,
     setChapterLoadingIndex,
-    chapterWorkspaces,
-    updateChapterWorkspace,
     guestAccessBody,
     logToolRef,
-    t,
-    tutoringLanguage,
     locale,
-    setHeliosTurnMode,
     isRecording,
     isPaused,
     setIsPaused,
@@ -732,10 +632,6 @@ export function SessionView({
     sessionPowTypedRef,
     setChapterCloseReview,
   });
-  const activeChapterFollowUps = chapterFollowUpsById[activeProjectChapterId] ?? [];
-  const activeChapterFollowUpsLoading = chapterFollowUpsLoadingId === activeProjectChapterId;
-  const activeChapterFollowUpsError = chapterFollowUpsErrorById[activeProjectChapterId] ?? null;
-
   const canvasWorkspaceContext = useMemo((): IleWorkCanvasWorkspaceInput => {
     return {
       workspaceTitle: ilePromptMaterials?.workspaceTitle || session?.problem || null,
@@ -759,7 +655,6 @@ export function SessionView({
   const { handlePowInterruption, clearPendingInterruption, mapDelay, mapDelayList, beginMapDelay, clearMapDelay } = useSessionIdle({
     activeChapterKey,
     updateChapterWorkspace,
-    setHeliosTurnMode,
     handlePowInterruptionRef,
     onChapterMapExpand: handleTimChapterMapExpansion,
   });
@@ -775,131 +670,8 @@ export function SessionView({
     [mapDelay, mapDelayList, timDelayNow],
   );
 
-  const submitHeliosChatMessageNow = useCallback(async (
-    message: string,
-    imageDataUrl?: string,
-    chapterId?: string | null,
-  ) => {
-    const text = message.trim();
-    if (!text || !session) return;
-
-    const target = resolveIleWorkChatTarget({
-      chapterId,
-      steps: sessionPlan?.steps,
-      fallbackIndex: activeChapterIndex,
-      fallbackId: activeStep?.id ?? activeChapterKey,
-      fallbackDescription: activeStep?.description,
-    });
-    const chapterKey = target.chapterId || activeChapterKey;
-    const userMsg: ChatMessage = {
-      id: `${Date.now()}-u`,
-      role: "user",
-      content: text,
-      imageDataUrl,
-    };
-    const placeholderId = `${Date.now()}-pending`;
-    updateChapterWorkspace(chapterKey, workspace => ({
-      chatMessages: [
-        ...workspace.chatMessages,
-        userMsg,
-        { id: placeholderId, role: "assistant", content: "", pending: true },
-      ],
-    }));
-
-    try {
-      const existingMessages = chapterWorkspaces[chapterKey]?.chatMessages ?? [];
-      const picked = pickIleWorkCanvasTurnScene({
-        targetChapterId: chapterKey,
-        focusedChapterId: activeChapterKey,
-        liveSceneByChapter: ileWorkCanvasScenesFromWorkspaces(sessionContext),
-        coldSceneByChapter: ileWorkCanvasScenesFromWorkspaces(coldContextRef.current),
-        focusedSceneRef: whiteboardSceneDataRef,
-      });
-      const currentScene = picked.sceneToSend;
-      const { ok, data, errorMessage } = await postIleSessionChat({
-          problem: session.problem,
-          activeStepIndex: target.stepIndex,
-          activeStepId: target.chapterId || activeStep?.id,
-          activeStepDescription: target.description || activeStep?.description,
-          sessionPlan,
-          sessionId: session.id,
-          tutoringLanguage,
-          ...guestAccessBody,
-          workCanvasScene: currentScene,
-          workspaceContext: canvasWorkspaceContext,
-          messages: [...existingMessages, userMsg].map(m => ({ role: m.role, content: m.content, imageDataUrl: m.imageDataUrl })),
-        });
-      const content = ok && typeof data?.message === "string" && data.message.trim()
-        ? data.message.trim()
-        : errorMessage || t('heliosChat.errorMessage');
-      const parsedTurn = parseIleXaiCanvasTurn(content);
-      const extraSkeletons = Array.isArray(data?.canvasElements)
-        ? (data.canvasElements as IleWorkCanvasSkeleton[])
-        : parsedTurn.elements;
-      const visibleReply = (parsedTurn.text || "").trim();
-      const committed = applyIleXaiTurnAtCommit({
-        snapshot: currentScene,
-        live: whiteboardSceneDataRef.current,
-        applyLive: picked.applyLive,
-        payload: {
-          text: visibleReply,
-          elements: extraSkeletons,
-          turnId: placeholderId,
-          origin: parsedTurn.origin,
-        },
-      });
-      const nextScene = committed.scene;
-      const appended = committed.appended;
-      updateChapterWorkspace(chapterKey, workspace => ({
-        chatMessages: workspace.chatMessages.map(message =>
-          message.id === placeholderId
-            ? { ...message, content: visibleReply, pending: false }
-            : message
-        ),
-        whiteboardSceneData: nextScene,
-      }));
-      if (picked.applyLive) {
-        whiteboardSceneDataRef.current = nextScene;
-        if (appended.length) {
-          setCanvasApplyElements(appended);
-          setCanvasApplyNonce((n) => n + 1);
-        }
-      }
-    } catch (error) {
-      console.error("Helios direct chat error:", error);
-      updateChapterWorkspace(chapterKey, workspace => ({
-        chatMessages: workspace.chatMessages.map(message =>
-          message.id === placeholderId
-            ? { ...message, content: t('heliosChat.errorMessage'), pending: false }
-            : message
-        ),
-      }));
-    }
-  }, [activeChapterIndex, activeChapterKey, activeStep, canvasWorkspaceContext, chapterWorkspaces, coldContextRef, session, sessionContext, sessionPlan, t, tutoringLanguage, updateChapterWorkspace, resolvedSessionMode, guestAccessBody]);
-
-  useEffect(() => {
-    if (!pendingChatMessage) return;
-    const text = typeof pendingChatMessage === "string"
-      ? pendingChatMessage
-      : pendingChatMessage.text;
-    if (!text?.trim()) {
-      setPendingChatMessage(null);
-      return;
-    }
-    const imageDataUrl = typeof pendingChatMessage === "string"
-      ? undefined
-      : pendingChatMessage.imageDataUrl;
-    void submitHeliosChatMessageNow(text, imageDataUrl).finally(() => setPendingChatMessage(null));
-  }, [pendingChatMessage, setPendingChatMessage, submitHeliosChatMessageNow]);
-
   const {
     sessionThoughtInterface,
-    handleProjectStash,
-    handleProjectSubmitToSolution,
-    handleProjectPromote,
-    handleProjectDemote,
-    mutateActiveProjectThoughts,
-    handleSubmitToHelios,
   } = useSessionSpeech({
     powSessionEnabled,
     micMuted: isMuted,
@@ -919,17 +691,9 @@ export function SessionView({
     activeChapterKey,
     projectThoughtsByChapterRef,
     setProjectThoughtsByChapter,
-    setHeliosTurnMode,
     flushRemainingIlePow,
-    submitHeliosChatMessageNow,
     bumpUserActivityRef,
     clearPendingInterruption,
-    chapterWorkspaces,
-    activeWorkspace,
-    updateChapterWorkspace,
-    whiteboardDataRef,
-    notebookContentRef,
-    logTool,
   });
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -1055,10 +819,6 @@ export function SessionView({
     if (savedCount <= 0) return;
     setChapterCount(clampIleSessionChapterCount(savedCount));
   }, [sessionPlan?.steps]);
-  useEffect(() => {
-    if (showWelcomeModal) return;
-    setHeliosWidgetOpen(true);
-  }, [showWelcomeModal]);
   useEffect(() => { activeChapterIndexRef.current = activeChapterIndex; }, [activeChapterIndex]);
   useEffect(() => { elapsedSecondsRef.current = elapsedSeconds; }, [elapsedSeconds]);
   useEffect(() => {
@@ -1177,9 +937,23 @@ export function SessionView({
     await handleWelcomeReadyStartPhase();
   }, [handleWelcomeReadyStartPhase]);
 
-  const loadingChapterLabel = chapterLoadingIndex != null
-    ? sessionPlan?.steps?.[chapterLoadingIndex]?.description ?? null
-    : null;
+  const handleChapterDone = useCallback(
+    (opts?: { closeOverride?: boolean; stepId?: string | null }) => {
+      if (!activeStep) return Promise.resolve(false);
+      beginMapDelay(activeStep.id);
+      return (async () => {
+        try {
+          await flushRemainingIlePow();
+        } catch {
+          /* Review still runs on whatever was already recorded. */
+        }
+        const closed = await handleMarkChapterDone(opts);
+        if (!closed) clearMapDelay();
+        return closed;
+      })();
+    },
+    [activeStep, beginMapDelay, clearMapDelay, flushRemainingIlePow, handleMarkChapterDone],
+  );
 
   const seedChapterWorkCanvas = useCallback(
     (chapterId: string, text: string | null | undefined) => {
@@ -1199,24 +973,23 @@ export function SessionView({
       if (picked.applyLive || chapterId === activeChapterKey) {
         whiteboardSceneDataRef.current = scene;
         const appended = scene.elements.slice(picked.sceneToSend.elements.length);
-        if (heliosWidgetOpen && appended.length) {
+        if (appended.length) {
           setCanvasApplyElements(appended);
           setCanvasApplyNonce((n) => n + 1);
         }
       }
     },
-    [activeChapterKey, coldContextRef, heliosWidgetOpen, sessionContext, updateChapterWorkspace],
+    [activeChapterKey, coldContextRef, sessionContext, updateChapterWorkspace],
   );
 
   useEffect(() => {
-    if (!heliosWidgetOpen || !blockFrame) return;
+    if (!blockFrame) return;
     const text = isProjectMode ? displayProjectChapterExercise : blockFrame.prompt || chapterDialoguePrompt;
     seedChapterWorkCanvas(blockFrame.id, text);
   }, [
     blockFrame,
     chapterDialoguePrompt,
     displayProjectChapterExercise,
-    heliosWidgetOpen,
     isProjectMode,
     seedChapterWorkCanvas,
   ]);
@@ -1233,7 +1006,6 @@ export function SessionView({
         void handleLoadChapter(idx);
       }
       setActiveTool("chapters");
-      setHeliosWidgetOpen(true);
     },
     [openWorkIds, seedChapterWorkCanvas, sessionPlan?.steps, tryStartWork],
   );
@@ -1340,147 +1112,6 @@ export function SessionView({
     startRecording,
   ]);
 
-  const handleSubmitTurn = useCallback(async () => {
-    if (submitTurnBusy) return;
-    setHeliosWidgetOpen(false);
-    const gate = evaluateIleEndTurnInsightGate({
-      activeChapterIds: openWorkIds,
-      insights: sessionInsights,
-      minPerChapter: minInsightsPerChapter,
-    });
-    setEndTurnGate(gate);
-    setCraftingInsightsOpen(true);
-    if (!gate.canComplete) return;
-    setSubmitTurnBusy(true);
-    const formingText =
-      sessionThoughtInterface.getFormingText?.() ||
-      sessionThoughtInterface.crystallizableText;
-    const awaitingIds = openWorkIds.slice(0, 1);
-    const works = partitionIleThoughtsByOpenWork({
-      thoughts: sessionThoughtInterface.stashedThoughts,
-      openWorkIds,
-      focusedChapterId: activeStep?.id ?? null,
-    }).map((work) => ({
-      ...work,
-      formingText:
-        work.chapterId === (activeStep?.id ?? "") ? formingText : work.formingText,
-    }));
-    for (const id of awaitingIds) {
-      dockSeenAssistantIdRef.current[id] = latestSettledAssistantId(
-        chapterWorkspaces[id]?.chatMessages,
-      );
-      dockPendingSeenRef.current[id] = false;
-    }
-    setDockLoadingIds(awaitingIds);
-    setDockAttentionIds((current) => current.filter((id) => !awaitingIds.includes(id)));
-    try {
-      if (canvasDirtyForHelios) {
-        await handleSubmitToHelios("canvas");
-      }
-      const thoughtChapterIds = new Set(
-        works
-          .filter((work) => {
-            const forming =
-              work.chapterId === (activeStep?.id ?? "")
-                ? formingText
-                : work.formingText;
-            const hasThoughts = (work.thoughts ?? []).some((thought) =>
-              Boolean(String(thought?.text || "").trim()),
-            );
-            return hasThoughts || Boolean(String(forming || "").trim());
-          })
-          .map((work) => work.chapterId),
-      );
-      const remaining = awaitingIds.filter((id) => !thoughtChapterIds.has(id));
-      await Promise.all([
-        closeIleOpenWorkTurn({
-          works,
-          formingText,
-          focusedChapterId: activeStep?.id ?? null,
-          sendThought: (text, ids, chapterId) =>
-            sessionThoughtInterface.sendThought(text, ids, {
-              skipTrace: true,
-              chapterId,
-            }),
-          logEndOfChainOfThought: (event) => sessionThoughtInterface.logTrace(event),
-          onClearForming: () => sessionThoughtInterface.clearCurrentTranscription(),
-        }),
-        ...remaining.map((chapterId) =>
-          submitHeliosChatMessageNow(
-            ILE_SUBMIT_WORK_CONTINUE_TEXT,
-            undefined,
-            chapterId,
-          ),
-        ),
-      ]);
-      const toComplete = ileEndTurnChaptersToMarkDone(gate);
-      for (const stepId of toComplete) {
-        await handleMarkChapterDone({ stepId, closeOverride: true });
-      }
-    } finally {
-      setSubmitTurnBusy(false);
-    }
-  }, [
-    activeStep?.id,
-    canvasDirtyForHelios,
-    handleMarkChapterDone,
-    handleSubmitToHelios,
-    chapterWorkspaces,
-    minInsightsPerChapter,
-    openWorkIds,
-    sessionInsights,
-    sessionThoughtInterface,
-    submitHeliosChatMessageNow,
-    submitTurnBusy,
-  ]);
-
-  useEffect(() => {
-    if (dockLoadingIds.length === 0) return;
-    const stillLoading: string[] = [];
-    const newlyReady: string[] = [];
-    for (const id of dockLoadingIds) {
-      const messages = chapterWorkspaces[id]?.chatMessages;
-      if (chapterHasPendingHeliosReply(messages)) {
-        dockPendingSeenRef.current[id] = true;
-        stillLoading.push(id);
-        continue;
-      }
-      const assistantId = latestSettledAssistantId(messages);
-      const replyLanded =
-        Boolean(dockPendingSeenRef.current[id]) &&
-        Boolean(assistantId) &&
-        assistantId !== dockSeenAssistantIdRef.current[id];
-      if (replyLanded) {
-        dockSeenAssistantIdRef.current[id] = assistantId;
-        newlyReady.push(id);
-        continue;
-      }
-      stillLoading.push(id);
-    }
-    if (!sameIleIdList(stillLoading, dockLoadingIds)) {
-      setDockLoadingIds(stillLoading);
-    }
-    if (newlyReady.length === 0) return;
-    const openId = heliosWidgetOpen ? activeStep?.id ?? null : null;
-    setDockAttentionIds((current) => {
-      const next = new Set(current);
-      for (const id of newlyReady) {
-        if (id !== openId) next.add(id);
-      }
-      return [...next];
-    });
-  }, [activeStep?.id, chapterWorkspaces, dockLoadingIds, heliosWidgetOpen]);
-
-  useEffect(() => {
-    if (!heliosWidgetOpen || !activeStep?.id) return;
-    const openId = activeStep.id;
-    setDockAttentionIds((current) =>
-      current.some((id) => id === openId)
-        ? current.filter((id) => id !== openId)
-        : current,
-    );
-  }, [activeStep?.id, heliosWidgetOpen]);
-
   const mapSelectedStep = useMemo(
     () => sessionPlan?.steps?.find((row) => row.id === mapSelectedChapterId) ?? null,
     [mapSelectedChapterId, sessionPlan?.steps],
@@ -1504,95 +1135,17 @@ export function SessionView({
           focused: id === activeStep?.id,
           status: resolveIleDockChipStatus({
             chapterId: id,
-            loadingIds: dockLoadingIds,
-            attentionIds: dockAttentionIds,
           }),
           image: workAestheticById[id],
         };
       }),
     [
       activeStep?.id,
-      dockAttentionIds,
-      dockLoadingIds,
       openWorkIds,
       sessionPlan?.steps,
       workAestheticById,
     ],
   );
-
-  const renderChapterThoughtPane = (replica: boolean) => {
-    if (!session) return null;
-    return (
-    <SessionThoughtPane
-      replica={replica}
-      activeChapterKey={activeChapterKey}
-      chapterReloadNonce={chapterReloadNonce}
-      isProjectMode={isProjectMode}
-      participantIdentity={participantIdentity}
-      lastUserTurn={lastDialogueUserTurn}
-      lastAssistantTurn={isProjectMode ? null : chapterWidgetAssistantTurn}
-      isAssistantPending={isHeliosAssistantPending}
-      heliosTurnMode={heliosTurnMode}
-      chapterPrompt={isProjectMode ? displayProjectChapterExercise : chapterDialoguePrompt}
-      userInitial={userInitial}
-      isSessionActive={isRecording && !isPaused}
-      isInitializing={planLoading}
-      isChapterLoading={chapterLoading}
-      loadingChapterLabel={loadingChapterLabel}
-      hasPlanSteps={(sessionPlan?.steps?.length ?? 0) > 0}
-      sessionId={session.id}
-      ttsLanguage={tutoringLanguage}
-      selectedAesthetic={chromeSelectedAesthetic}
-      workAestheticImage={workAestheticById[activeChapterKey]}
-      thought={sessionThoughtInterface}
-      chapterThoughtsLocked={chapterThoughtsLocked}
-      projectStash={activeProjectLists.stash}
-      projectSolution={activeProjectLists.submitted}
-      chapterFollowUps={activeChapterFollowUps}
-      chapterFollowUpsLoading={activeChapterFollowUpsLoading}
-      chapterFollowUpsError={activeChapterFollowUpsError}
-      onSelectChapterFollowUp={(s) => void handleSelectChapterFollowUp(s)}
-      onProjectStash={handleProjectStash}
-      onProjectSubmitToSolution={handleProjectSubmitToSolution}
-      onOpenWordBoxTool={undefined}
-      chapterActions={
-        activeStep
-          ? {
-              sessionId: session.id,
-              ayclToken,
-              ileToken,
-              locale,
-              chapterId: activeStep.id,
-              chapterIndex: activeChapterIndex,
-              chapterDescription: activeStep.description || "",
-              chapterCompleted:
-                activeStep.status === "completed" || activeStep.status === "skipped",
-              activeChapterIndex,
-              onChapterDone: (opts) => {
-                beginMapDelay(activeStep.id);
-                void (async () => {
-                  try {
-                    await flushRemainingIlePow();
-                  } catch {
-                    /* Review still runs on whatever was already recorded. */
-                  }
-                  const closed = await handleMarkChapterDone(opts);
-                  if (!closed) clearMapDelay();
-                })();
-              },
-              onUpdateChapter: handleUpdateChapter,
-              closeReviewBlocked: Boolean(chapterCloseReview && !chapterCloseReview.canClose),
-              closeReviewReason: chapterCloseReview?.reason ?? null,
-              onGatherResources,
-              gatherBusy,
-              gatherWarning,
-              onDismissGatherWarning: dismissGatherWarning,
-            }
-          : null
-      }
-    />
-    );
-  };
 
   const handleCanvasPowActions = useCallback(
     (events: IleWorkCanvasPowEvent[]) => {
@@ -1954,11 +1507,10 @@ export function SessionView({
       handleConnectMuse={handleConnectMuse}
       handleDisconnectMuse={handleDisconnectMuse}
       handleIleSessionToolChange={handleIleSessionToolChange}
-      handleMarkChapterDone={handleMarkChapterDone}
+      handleMarkChapterDone={handleChapterDone}
       handleStartScreenCapture={handleStartScreenCapture}
       handleStopScreenCapture={handleStopScreenCapture}
       handleWelcomePlay={handleWelcomePlay}
-      heliosWidgetOpen={heliosWidgetOpen}
       ileToken={ileToken}
       isMuted={isMuted}
       isProjectMode={isProjectMode}
@@ -1972,7 +1524,6 @@ export function SessionView({
       openWorkDockLabels={openWorkDockLabels}
       openWorkCount={openWorkIds.length}
       pauseAndGoToDashboard={pauseAndGoToDashboard}
-      renderChapterThoughtPane={renderChapterThoughtPane}
       renderSessionToolPanes={renderSessionToolPanes}
       renderWorkCanvas={renderWorkCanvas}
       resourceScopeChapterId={resourceScopeChapterId}
@@ -1990,7 +1541,6 @@ export function SessionView({
       setChapterCloseReview={setChapterCloseReview}
       setCraftingInsightsOpen={setCraftingInsightsOpen}
       setError={setError}
-      setHeliosWidgetOpen={setHeliosWidgetOpen}
       setIsMuted={setIsMuted}
       setIsWebcamEnabled={setIsWebcamEnabled}
       setMuteRemaining={setMuteRemaining}

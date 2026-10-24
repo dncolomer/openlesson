@@ -721,8 +721,8 @@ describe("accepted insight craft emits snapshot-eligible tool PoW", () => {
       persistSlice.indexOf('if (!insight?.id) throw new Error("Failed to save insight")'),
     );
     expect(viewSrc).toContain("evaluateIleEndTurnInsightGate");
-    expect(viewSrc).toContain("ileEndTurnChaptersToMarkDone");
-    expect(viewSrc).toContain("handleMarkChapterDone({ stepId, closeOverride: true })");
+    expect(viewSrc).toContain("handleMarkChapterDone");
+    expect(viewSrc).toContain("closeOverride: true");
     expect(viewSrc).toContain("craftInsight=");
     expect(viewSrc).toContain("recordSessionPowArtifact");
     expect(ILE_INSIGHT_CRAFT_POW_FILE).toBe("ile-insight-crafting.json");

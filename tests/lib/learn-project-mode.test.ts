@@ -304,12 +304,12 @@ describe("structural Project Mode wiring (static source checks)", () => {
     expect(view).toContain("projectMode={isProjectMode}");
     expect(view).toContain("chapterThoughtsLocked");
     expect(view).toContain("IleReviewWorkPanel");
-    expect(view).toContain("sendThought");
+    expect(read("lib/useSessionThoughtInterface.ts")).toContain("sendThought");
     expect(view).toContain("buildIleChapterDonePowToolData");
     expect(view).toContain("frameIleProjectChapterDescription");
     expect(view).toContain("buildIleChapterDonePowToolData");
 
-    const helios = read("components/SessionHeliosPanel.tsx");
+    expect(existsSync(join(ROOT, "components/SessionHeliosPanel.tsx"))).toBe(false);
 
     const panes = read("components/session-view/session-tool-panes.tsx");
     expect(panes).toContain("IleReviewWorkPanel");

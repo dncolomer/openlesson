@@ -257,7 +257,8 @@ describe("TAP solo I'm-done leftover (shipped sendThought path)", () => {
 
 describe("TAP Learning Helios I'm done answering chrome (shipped source)", () => {
   it("is a standard white overlay outside the transcription box; TAP uses the same close", () => {
-    const helios = read("components/SessionHeliosPanel.tsx");
+    expect(existsSync(join(ROOT, "components/SessionHeliosPanel.tsx"))).toBe(false);
+    const helios = read("lib/useSessionThoughtInterface.ts");
     const button = read("components/thought-ui/ImDoneAnsweringButton.tsx");
     const close = read("lib/learn-im-done-answering.ts");
 
@@ -353,26 +354,19 @@ describe("TAP Learning Helios I'm done answering chrome (shipped source)", () =>
 
 describe("I'm done answering vs chapter Complete (shipped split)", () => {
   it("turn close sends speech; Complete marks the chapter and never sends thoughts", () => {
-    const actions = read("components/session-view/learn-chapter-helios-actions.tsx");
-    const helios = read("components/SessionHeliosPanel.tsx");
+    expect(existsSync(join(ROOT, "components/session-view/learn-chapter-helios-actions.tsx"))).toBe(
+      false,
+    );
+    expect(existsSync(join(ROOT, "components/SessionHeliosPanel.tsx"))).toBe(false);
+    const helios = read("lib/useSessionThoughtInterface.ts");
     const mutate = read("components/session-view/use-session-mutate.ts");
     const close = read("lib/learn-im-done-answering.ts");
     const doneFn = mutate.slice(mutate.indexOf("const handleMarkChapterDone"));
 
-    expect(actions).not.toContain('t("chapterMap.complete")');
-    expect(actions).not.toContain("onChapterDone()");
-    expect(actions).not.toContain("closeIleImDoneAnswering");
-    expect(actions).not.toContain("sendThought");
-    expect(actions).not.toContain("I'm done answering");
-    expect(actions).not.toContain("ImDoneAnswering");
-
     expect(helios).not.toContain("ImDoneAnsweringControl");
-    expect(helios).toContain("IleChapterHeliosActions");
-    const chrome = read("components/session-view/session-chrome.tsx");
+    expect(helios).not.toContain("IleChapterHeliosActions");
     expect(read("components/session-view/learn-work-dock-bar.tsx")).not.toContain("data-ile-submit-turn");
     expect(read("components/session-view/learn-voice-bar.tsx")).toContain("data-ile-bar-save");
-    const actionsIdx = helios.indexOf("<IleChapterHeliosActions");
-    expect(actionsIdx).toBeGreaterThan(-1);
 
     expect(doneFn).toContain('toolAction: "chapter_done"');
     expect(doneFn).toContain("planIleChapterClose");

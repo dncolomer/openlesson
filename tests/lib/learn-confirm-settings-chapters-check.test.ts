@@ -1,13 +1,11 @@
 /**
- * TAP Learning welcome Confirm Settings stays blocked until the cheap
- * existing-chapters check finishes (chapterPlanStatus leaves "unknown").
- * Hydrate / objectives / planLoading must not keep it blocked.
+ * TAP Learning welcome Confirm Settings stays blocked only while start
+ * is preparing the field. Chapter existence does not gate it.
  */
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { isIleConfirmSettingsBlocked } from "@/components/session-view/learn-confirm-settings";
-import type { ChapterPlanStatus } from "@/components/session-view/types";
 
 const ROOT = join(__dirname, "../..");
 
@@ -18,21 +16,12 @@ function read(rel: string): string {
 }
 
 describe("isIleConfirmSettingsBlocked", () => {
-  it("blocks confirm while the chapters check is still unknown", () => {
-    expect(isIleConfirmSettingsBlocked("unknown", false)).toBe(true);
-  });
-
-  it("allows confirm once chapter status is known, even if planLoading would still be true", () => {
-    const known: ChapterPlanStatus[] = ["empty", "exists", "failed"];
-    for (const status of known) {
-      expect(isIleConfirmSettingsBlocked(status, false)).toBe(false);
-    }
+  it("allows confirm while idle", () => {
+    expect(isIleConfirmSettingsBlocked(false)).toBe(false);
   });
 
   it("still blocks while confirm prep is running", () => {
-    expect(isIleConfirmSettingsBlocked("exists", true)).toBe(true);
-    expect(isIleConfirmSettingsBlocked("empty", true)).toBe(true);
-    expect(isIleConfirmSettingsBlocked("failed", true)).toBe(true);
+    expect(isIleConfirmSettingsBlocked(true)).toBe(true);
   });
 });
 
@@ -60,7 +49,7 @@ describe("TAP Learning welcome modal wires Confirm Settings to the chapters chec
     expect(src).toContain("chapterPlanStatus === \"failed\"");
 
     const clickAt = src.indexOf("onClick={() => {", confirmAt);
-    const guardAt = src.indexOf("isIleConfirmSettingsBlocked(chapterPlanStatus", clickAt);
+    const guardAt = src.indexOf("isIleConfirmSettingsBlocked(isPreparing)", clickAt);
     const confirmHandlerAt = src.indexOf("onConfirmSettings()", clickAt);
     expect(confirmAt).toBeGreaterThan(-1);
     expect(clickAt).toBeGreaterThan(confirmAt);

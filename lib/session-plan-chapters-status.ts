@@ -10,10 +10,6 @@ export const SESSION_PLAN_HAS_CHAPTERS_PATH = "/api/session-plan/has-chapters";
 
 export type { SessionPlanChaptersStatus };
 
-export type CreateForceDecision =
-  | { action: "create"; force: boolean }
-  | { action: "abort"; reason: "failed" | "unknown" };
-
 export type WelcomeChapterSnapshot = {
   status: SessionPlanChaptersStatus;
   plan: SessionPlan | null;
@@ -69,31 +65,6 @@ export async function fetchWelcomeChapterSnapshot(
   } catch {
     return { status: "failed", plan: null };
   }
-}
-
-export async function fetchSessionPlanChaptersStatus(
-  sessionId: string,
-  guestAccessBody: Record<string, unknown> = {},
-): Promise<SessionPlanChaptersStatus> {
-  const snapshot = await fetchWelcomeChapterSnapshot(sessionId, guestAccessBody);
-  return snapshot.status;
-}
-
-/**
- * Confirm create `force`: empty → replace; exists → only if user opted in;
- * failed/unknown → do not create.
- */
-export function createForceFromChapterStatus(
-  status: ChapterPlanStatus | SessionPlanChaptersStatus,
-  regenerateChapters: boolean,
-): CreateForceDecision {
-  if (status === "failed" || status === "unknown") {
-    return { action: "abort", reason: status };
-  }
-  if (status === "exists") {
-    return { action: "create", force: regenerateChapters };
-  }
-  return { action: "create", force: true };
 }
 
 /** Hydrate miss must not paint “no chapters” after a successful exists/failed check. */

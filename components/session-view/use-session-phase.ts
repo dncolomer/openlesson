@@ -44,8 +44,6 @@ import { persistIleSessionRow } from "@/lib/learn-session-persist";
 import { learnFieldFromStoredPolicy } from "@/lib/session-policy-store";
 import { discardUnsavedIleSession } from "@/lib/learn-unsaved-exit";
 import type { GuestAccessKind, ChapterPlanStatus, HelpPreviousLayout } from "@/components/session-view/types";
-import type { InitialChaptersLevel } from "@/lib/initial-chapters";
-import type { IleSessionMode } from "@/lib/learn-mode";
 
 
 export type SessionPhaseInput = {
@@ -79,16 +77,11 @@ export type SessionPhaseInput = {
   setPlanLoading: (v: boolean) => void;
   setPlanError: (e: string | null) => void;
   setChapterPlanStatus: (s: ChapterPlanStatus) => void;
-  setRegenerateChapters: (v: boolean) => void;
-  regenerateChapters: boolean;
   objectives: string[];
   setObjectives: (o: string[]) => void;
   setObjectiveStatuses: (s: Array<"red" | "yellow" | "green" | "blue">) => void;
   isPreparing: boolean;
   setIsPreparing: (v: boolean) => void;
-  initialChapters: InitialChaptersLevel | string;
-  chapterCount?: number;
-  resolvedSessionMode: IleSessionMode;
   setShowWelcomeModal: (v: boolean) => void;
   setShowWelcomePanel: (v: boolean) => void;
   setIsStartingSession: (v: boolean) => void;
@@ -133,7 +126,7 @@ export function useSessionPhase(input: SessionPhaseInput) {
     guestAccessBody, entryQueryParams, entryParamsKey, router, t, isRecording, setIsRecording, isPaused,
     setIsPaused, elapsedSeconds, setElapsedSeconds, elapsedSecondsRef, stream, setStream,
     setError, tutoringLanguage, setTutoringLanguage, setLanguageConfirmed, setSessionPlan,
-    sessionPlanRef, setPlanLoading, setPlanError, setChapterPlanStatus, setRegenerateChapters,
+    sessionPlanRef, setPlanLoading, setPlanError, setChapterPlanStatus,
     objectives, setObjectives, setObjectiveStatuses, isPreparing, setIsPreparing,
     setShowWelcomeModal, setShowWelcomePanel, setIsStartingSession, applyIleChapterGridStartup,
     helpPreviousLayoutRef, setPaneVisibility, timerRef, muteTimerRef,
@@ -244,7 +237,6 @@ useEffect(() => {
       }
       
       setPlanError(null);
-      setRegenerateChapters(false);
 
       const objectivesPromise = (async () => {
         let loadedObjectives: string[] = [];
@@ -833,7 +825,6 @@ const fieldInput = learnSessionFieldInput({
   problem: session.problem,
   ileToken,
   ayclToken,
-  fallbackTitle: t("session.chapterPromptFallback"),
   metadata: session.metadata,
 });
 const storedField = learnFieldFromStoredPolicy(session.metadata, fieldInput);
@@ -872,7 +863,6 @@ setIsPreparing(false);
   ayclToken,
   ileToken,
   tutoringLanguage,
-  t,
 ]);
 
 const handleWelcomeReadyStart = useCallback(async () => {
@@ -885,7 +875,6 @@ const handleWelcomeReadyStart = useCallback(async () => {
       problem: session.problem,
       ileToken,
       ayclToken,
-      fallbackTitle: t("session.chapterPromptFallback"),
       metadata: session.metadata,
     });
     const storedField = learnFieldFromStoredPolicy(session.metadata, fieldInput);
@@ -912,7 +901,7 @@ const handleWelcomeReadyStart = useCallback(async () => {
   } finally {
     setIsPreparing(false);
   }
-}, [session, isPreparing, ileToken, ayclToken, t]);
+}, [session, isPreparing, ileToken, ayclToken]);
 
   return {
     checkMicrophone,

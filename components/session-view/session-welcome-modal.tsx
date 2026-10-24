@@ -82,7 +82,7 @@ export function SessionWelcomeModal({
   }
 
   const isButtonDisabled = isPreparing;
-  const confirmBlocked = isIleConfirmSettingsBlocked(chapterPlanStatus, isPreparing);
+  const confirmBlocked = isIleConfirmSettingsBlocked(isPreparing);
   const welcomeExtras = {
     resume: resumeSession,
     stepCount: sessionPlan?.steps?.length ?? 0,
@@ -190,13 +190,13 @@ export function SessionWelcomeModal({
                   type="button"
                   data-ile-confirm-settings
                   onClick={() => {
-                    if (isIleConfirmSettingsBlocked(chapterPlanStatus, isPreparing)) {
+                    if (isIleConfirmSettingsBlocked(isPreparing)) {
                       return;
                     }
                     void onConfirmSettings();
                   }}
                   disabled={confirmBlocked}
-                  aria-busy={chapterPlanStatus === "unknown" || isButtonDisabled}
+                  aria-busy={isButtonDisabled}
                   className="inline-flex w-full items-center justify-center gap-2 rounded-none bg-neutral-100 px-3 py-3 text-[11px] font-semibold uppercase tracking-wider text-neutral-900 transition-colors hover:bg-white disabled:cursor-not-allowed disabled:bg-neutral-800 disabled:text-neutral-500"
                 >
                   {isButtonDisabled ? (

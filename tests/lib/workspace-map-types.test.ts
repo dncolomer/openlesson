@@ -427,7 +427,6 @@ describe("Map Types tab UI / API structural", () => {
     const picker = read("components/InitialChaptersPicker.tsx");
     const welcome = read("components/session-view/session-welcome-modal.tsx");
     const sessionView = readSessionViewSurface();
-    const createRoute = read("app/api/session-plan/create/route.ts");
     const workspaceApi = read("app/api/workspace/map-types/route.ts");
     const sessionApi = read("app/api/session-plan/map-types/route.ts");
 
@@ -513,8 +512,8 @@ describe("Map Types tab UI / API structural", () => {
     expect(picker).toContain("defaultMapTypePickerCatalog");
     expect(welcome).toContain("mapTypeCatalog");
     expect(sessionView).toContain("/api/session-plan/map-types");
-    expect(createRoute).toContain("resolveMapTypeIdFromBody");
-    expect(createRoute).toContain("resolveMapTypeRecord");
+    expect(mod).toContain("export function resolveMapTypeIdFromBody");
+    expect(mod).toContain("export function resolveMapTypeRecord");
 
     mkdirSync(SCRATCH, { recursive: true });
     writeFileSync(
@@ -580,8 +579,8 @@ describe("Map Types tab UI / API structural", () => {
         "picker_catalog_prop=" + picker.includes("catalog"),
         "welcome_catalog=" + welcome.includes("mapTypeCatalog"),
         "session_fetch=" + sessionView.includes("/api/session-plan/map-types"),
-        "create_resolver=" + createRoute.includes("resolveMapTypeIdFromBody"),
-        "create_formatter_path=" + createRoute.includes("resolveMapTypeRecord"),
+        "create_resolver=" + mod.includes("export function resolveMapTypeIdFromBody"),
+        "create_formatter_path=" + mod.includes("export function resolveMapTypeRecord"),
         "custom_id_accepted=" +
           String(
             resolveMapTypeIdFromBody(

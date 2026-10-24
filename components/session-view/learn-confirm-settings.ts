@@ -1,12 +1,8 @@
-import type { ChapterPlanStatus } from "@/components/session-view/types";
-
 /**
- * Confirm Settings stays inert until the cheap existence check resolves.
- * Objectives generation and full-plan hydrate must not keep it blocked.
+ * Confirm Settings stays inert only while start is preparing the field.
+ * Chapter existence does not gate Learn start.
  */
-export function isIleConfirmSettingsBlocked(
-  chapterPlanStatus: ChapterPlanStatus,
-  isPreparing: boolean,
-): boolean {
-  return chapterPlanStatus === "unknown" || isPreparing;
+export function isIleConfirmSettingsBlocked(isPreparing: boolean): boolean {
+  return isPreparing;
 }
+

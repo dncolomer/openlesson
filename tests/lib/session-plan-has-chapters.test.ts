@@ -18,8 +18,7 @@ import {
 import {
   SESSION_PLAN_HAS_CHAPTERS_PATH,
   chapterStatusAfterHydrate,
-  createForceFromChapterStatus,
-  fetchSessionPlanChaptersStatus,
+  fetchWelcomeChapterSnapshot,
   welcomePlanFromPayload,
 } from "@/lib/session-plan-chapters-status";
 import { lookupSessionPlanChaptersForRequest } from "@/lib/session-plan-has-chapters-request";
@@ -259,12 +258,12 @@ describe("lookupSessionPlanChaptersForRequest (guard / privileged client)", () =
   });
 });
 
-describe("fetchSessionPlanChaptersStatus (welcome load/confirm entry)", () => {
+describe("fetchWelcomeChapterSnapshot (welcome load entry)", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
 
-  it("POSTs sessionId plus TAP Learning/AYCL tokens create/translate use", async () => {
+  it("POSTs sessionId plus TAP Learning/AYCL tokens", async () => {
     const posts: Array<{ url: string; body: Record<string, unknown> }> = [];
     vi.stubGlobal(
       "fetch",
@@ -276,10 +275,10 @@ describe("fetchSessionPlanChaptersStatus (welcome load/confirm entry)", () => {
     );
 
     expect(
-      await fetchSessionPlanChaptersStatus("sess-1", { ileToken: "ile-guest-token" }),
+      (await fetchWelcomeChapterSnapshot("sess-1", { ileToken: "ile-guest-token" })).status,
     ).toBe("exists");
     expect(
-      await fetchSessionPlanChaptersStatus("sess-2", { ayclToken: "aycl-purchase-token" }),
+      (await fetchWelcomeChapterSnapshot("sess-2", { ayclToken: "aycl-purchase-token" })).status,
     ).toBe("exists");
 
     expect(posts[0].url).toBe(SESSION_PLAN_HAS_CHAPTERS_PATH);
@@ -298,48 +297,25 @@ describe("fetchSessionPlanChaptersStatus (welcome load/confirm entry)", () => {
       "fetch",
       async () => new Response(JSON.stringify({ error: "nope" }), { status: 500 }),
     );
-    expect(await fetchSessionPlanChaptersStatus("sess-1", { ileToken: "t" })).toBe(
-      "failed",
-    );
+    expect(
+      (await fetchWelcomeChapterSnapshot("sess-1", { ileToken: "t" })).status,
+    ).toBe("failed");
 
     vi.stubGlobal("fetch", async () => {
       throw new Error("network");
     });
-    expect(await fetchSessionPlanChaptersStatus("sess-1")).toBe("failed");
+    expect((await fetchWelcomeChapterSnapshot("sess-1")).status).toBe("failed");
 
     vi.stubGlobal(
       "fetch",
       async () =>
         new Response(JSON.stringify({ status: "empty" }), { status: 200 }),
     );
-    expect(await fetchSessionPlanChaptersStatus("sess-1")).toBe("empty");
+    expect((await fetchWelcomeChapterSnapshot("sess-1")).status).toBe("empty");
   });
 });
 
-describe("createForceFromChapterStatus + hydrate", () => {
-  it("does not force-replace when the existence check failed", () => {
-    expect(createForceFromChapterStatus("failed", false)).toEqual({
-      action: "abort",
-      reason: "failed",
-    });
-    expect(createForceFromChapterStatus("unknown", true)).toEqual({
-      action: "abort",
-      reason: "unknown",
-    });
-    expect(createForceFromChapterStatus("empty", false)).toEqual({
-      action: "create",
-      force: true,
-    });
-    expect(createForceFromChapterStatus("exists", false)).toEqual({
-      action: "create",
-      force: false,
-    });
-    expect(createForceFromChapterStatus("exists", true)).toEqual({
-      action: "create",
-      force: true,
-    });
-  });
-
+describe("welcome hydrate", () => {
   it("does not paint empty when hydrate misses after exists/failed", () => {
     expect(welcomePlanFromPayload(null)).toBeNull();
     expect(welcomePlanFromPayload({ sessionId: "s" })).toBeNull();
@@ -389,10 +365,8 @@ describe("SessionView load/confirm wiring", () => {
     expect(lookup).toContain("ayclTokenFromBody");
     expect(lookup).toContain("sessionPlanChaptersStatus(sessionId, auth.supabase)");
 
-    const create = read("app/api/session-plan/create/route.ts");
-    expect(create).toContain("getSessionPlan");
-    const translate = read("app/api/session-plan/translate/route.ts");
-    expect(translate).toContain("getSessionPlan");
+    expect(existsSync(join(ROOT, "app/api/session-plan/create/route.ts"))).toBe(false);
+    expect(existsSync(join(ROOT, "app/api/session-plan/translate/route.ts"))).toBe(false);
 
     writeScratch(
       "chapter-exists-excerpts.txt",
@@ -406,17 +380,14 @@ describe("SessionView load/confirm wiring", () => {
   });
 });
 
-describe("Confirm is blocked only until the cheap existence result", () => {
-  it("is not held by planLoading / objectives / hydrate once status is known", () => {
-    expect(isIleConfirmSettingsBlocked("unknown", false)).toBe(true);
-    expect(isIleConfirmSettingsBlocked("exists", false)).toBe(false);
-    expect(isIleConfirmSettingsBlocked("empty", false)).toBe(false);
-    expect(isIleConfirmSettingsBlocked("failed", false)).toBe(false);
-    expect(isIleConfirmSettingsBlocked("exists", true)).toBe(true);
+describe("Confirm is blocked only while start is preparing", () => {
+  it("is not held by chapter existence", () => {
+    expect(isIleConfirmSettingsBlocked(false)).toBe(false);
+    expect(isIleConfirmSettingsBlocked(true)).toBe(true);
 
     const blockerSrc = read("components/session-view/learn-confirm-settings.ts");
     expect(blockerSrc).not.toMatch(/planLoading/);
-    expect(blockerSrc).toContain('chapterPlanStatus === "unknown"');
+    expect(blockerSrc).not.toContain("chapterPlanStatus");
 
     const load = read("components/session-view/use-session-phase.ts");
     expect(read("lib/session-plan-chapters-status.ts")).toContain(

@@ -29,16 +29,6 @@ export function ileWelcomeShowsSizePicker(
   return ileWelcomeChapterMode(status, extras) === "new";
 }
 
-/** Continue never regenerates; new sessions have nothing to replace. */
-export function ileWelcomeShowsRegenerate(
-  status: ChapterPlanStatus,
-  extras: IleWelcomeChapterExtras = {},
-): boolean {
-  void status;
-  void extras;
-  return false;
-}
-
 export function ileWelcomeShowsContinuePreview(
   status: ChapterPlanStatus,
   extras: IleWelcomeChapterExtras = {},

@@ -181,8 +181,9 @@ export function sessionPolicyMatchesChapter(
 }
 
 /**
- * The opening Learn call may skip xAI when this chapter was already stored.
- * Remembering the snapshot lets a later save put it back if another write dropped it.
+ * The opening Learn call may skip xAI when this session already stored a field.
+ * Session-scoped Learn matches on session id so an old chapter description does
+ * not force a regenerate. A later chapter-scoped field still matches on title.
  */
 export function learnFieldFromStoredPolicy(
   metadata: unknown,
@@ -194,10 +195,14 @@ export function learnFieldFromStoredPolicy(
 ): { ok: true; model: SessionBranchModel; key: string } | null {
   if (!fieldInput) return null;
   const record = readSessionPolicyRecord(metadata);
-  if (!sessionPolicyMatchesChapter(record, fieldInput.chapterTitle)) return null;
+  if (!record) return null;
   const sessionId = typeof fieldInput.sessionId === "string" ? fieldInput.sessionId.trim() : "";
-  if (sessionId) rememberSessionPolicy(sessionId, record);
   const scope = typeof fieldInput.scope === "string" ? fieldInput.scope.trim() : "";
+  const sessionScoped = Boolean(sessionId) && (!scope || scope === sessionId);
+  if (!sessionScoped && !sessionPolicyMatchesChapter(record, fieldInput.chapterTitle)) {
+    return null;
+  }
+  if (sessionId) rememberSessionPolicy(sessionId, record);
   return { ok: true, model: record.model, key: scope || record.model.chapterTitle };
 }
 

@@ -339,10 +339,10 @@ describe("shipped TAP Learning planner / Helios text names the user's anti-patte
   });
 
   it("wires mode into plan-create, session-chat, and SessionView persist paths", () => {
-    const createRoute = read("app/api/session-plan/create/route.ts");
-    expect(createRoute).toContain("sessionMode");
-    expect(createRoute).toContain("createSessionPlanLLM");
-    expect(createRoute).toContain("resolveIleSessionModeFromBody");
+    expect(read("app/api/workspace/preview-session/route.ts")).toContain(
+      "createSessionPlanLLM",
+    );
+    expect(read("lib/xai.ts")).toContain("createSessionPlanLLM");
 
     const chatRoute = read("app/api/session-chat/route.ts");
     expect(chatRoute).toContain("buildIleHeliosChatSystemPrompt(sessionMode)");

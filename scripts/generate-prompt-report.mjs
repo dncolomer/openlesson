@@ -79,7 +79,7 @@ const CALLERS = {
   follow_up_sessions: "`generateFollowUpSessions` → `POST /api/generate-follow-ups`",
   generate_objectives: "`generateObjectives` → `POST /api/generate-objectives`",
   session_plan_create:
-    "`createSessionPlanLLM` → `POST /api/session-plan/create`, `regenerate`, `POST /api/workspace/preview-session`",
+    "`createSessionPlanLLM` → `POST /api/workspace/preview-session`",
   session_plan_update:
     "`updateSessionPlanLLM` → `POST /api/session-plan/update`, `advance-step`",
   session_end_check: "No runtime caller (legacy)",
@@ -105,7 +105,7 @@ const FILE_MAP = {
   "app/api/session-chat/welcome/route.ts": "Session welcome system prompt",
 
   "app/api/session/performance-chat/route.ts": "buildSystemInstructions (single-session performance chat)",
-  "app/api/session-plan/translate/route.ts": "Inline translation user prompt",
+  "app/api/workspace/preview-session/route.ts": "Session plan preview (createSessionPlanLLM)",
   "app/api/suggest-grokipedia-terms/route.ts": "Grokipedia term suggester user prompt",
   "app/api/suggest-plan-topic/route.ts": "Post-session learning plan topic suggester user prompt",
   "app/api/workspace/suggest-blocks/route.ts": "suggest-blocks system + user prompts",
@@ -193,7 +193,7 @@ Scope: \`\` production TypeScript
 | \`report_generation\` | \`lib/prompts.ts\` → \`generateReport\` | \`POST /api/generate-report\` | Yes |
 | \`follow_up_sessions\` | \`lib/prompts.ts\` → \`generateFollowUpSessions\` | \`POST /api/generate-follow-ups\` | Yes |
 | \`generate_objectives\` | \`lib/prompts.ts\` → \`generateObjectives\` | \`POST /api/generate-objectives\` | Yes |
-| \`session_plan_create\` | \`lib/prompts.ts\` → \`createSessionPlanLLM\` | \`session-plan/create\`, \`regenerate\`, \`workspace/preview-session\` | Yes |
+| \`session_plan_create\` | \`lib/prompts.ts\` → \`createSessionPlanLLM\` | \`workspace/preview-session\` | Yes |
 | \`session_plan_update\` | \`lib/prompts.ts\` → \`updateSessionPlanLLM\` | \`session-plan/update\`, \`advance-step\` | Yes |
 | \`BASE_SYSTEM_PROMPT\` | \`session-chat/route.ts\` | \`POST /api/session-chat\` | No |
 | Rabbit Hole continue | \`rabbit-hole/continue/route.ts\` | \`POST /api/rabbit-hole/continue\` | No |
@@ -321,45 +321,8 @@ parts.push(
   ),
 );
 
-// Domain 3: session plan translate
-parts.push("---\n\n## Domain 3: Session Plan Heartbeat & Translation\n\n");
-parts.push(
-  block(
-    "session-plan/translate inline prompt",
-    {
-      File: "`app/api/session-plan/translate/route.ts`",
-      "Call chain": "`POST /api/session-plan/translate`",
-      Purpose: "Translate plan text fields to tutoring language",
-      "User-overridable": "No",
-      Variables: "`{languageName}`, `{goal}`, `{strategy}`, `{description}`, `{stepsJson}`",
-    },
-    extractFunctionReturnTemplate(read("app/api/session-plan/translate/route.ts"), "POST") ||
-      `You are a translator. Translate the following learning session plan to {languageName}.
-
-IMPORTANT: 
-- Translate ONLY the text content, NOT the structure
-- Keep all step IDs, types, statuses, and orders EXACTLY the same
-- Preserve the status of each step (e.g., if a step is "completed" or "in_progress", keep it that way)
-- Only translate: goal, strategy, description, and each step's description field
-
-Original Plan:
-- Goal: {goal}
-- Strategy: {strategy}
-- Description: {description}
-- Steps: {stepsJson}
-
-Return ONLY valid JSON (no markdown, no explanation):
-{
-  "goal": "translated goal",
-  "strategy": "translated strategy", 
-  "description": "translated description",
-  "steps": [
-    {"id": "same-id", "type": "same-type", "description": "translated description", "status": "same-status", "order": same-order},
-    ...
-  ]
-}`,
-  ),
-);
+// Domain 3: session plan heartbeat (Learn no longer translates a chapter plan)
+parts.push("---\n\n## Domain 3: Session Plan Heartbeat\n\n");
 
 // Domain 4: Workspace / learning plan
 parts.push("---\n\n## Domain 4: Workspace / Learning Plan\n\n");

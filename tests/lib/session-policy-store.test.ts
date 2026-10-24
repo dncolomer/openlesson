@@ -117,6 +117,20 @@ describe("session policy store", () => {
     });
     expect(opened).toEqual({ ok: true, model: restored?.model, key: "chapter-1" });
     expect(learnFieldFromStoredPolicy(named, { chapterTitle: "Sound", scope: "other" })).toBeNull();
+    expect(
+      learnFieldFromStoredPolicy(named, {
+        sessionId: "sess-1",
+        chapterTitle: "A cause can fail.",
+        scope: "sess-1",
+      }),
+    ).toEqual({ ok: true, model: restored?.model, key: "sess-1" });
+    expect(
+      learnFieldFromStoredPolicy(named, {
+        sessionId: "sess-1",
+        chapterTitle: "A cause can fail.",
+        scope: "chapter-1",
+      }),
+    ).toBeNull();
     const merged = mergeRememberedSessionPolicy(
       { session_name: "Afternoon" } as Record<string, unknown>,
       "sess-1",

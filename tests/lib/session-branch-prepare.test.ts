@@ -152,7 +152,17 @@ describe("session branch prepare", () => {
       scope: "session-1",
     });
     expect(learnSessionFieldInput({ sessionId: "session-1" })).toBeNull();
+    expect(
+      learnSessionFieldInput({
+        sessionId: "session-1",
+        fallbackTitle: "Fallback",
+      }),
+    ).toMatchObject({ chapterTitle: "Fallback" });
     expect(learnSessionFieldInput({ problem: "A cause" })).toBeNull();
+    expect(read("components/session-view/use-session-phase.ts")).not.toContain(
+      "fallbackTitle",
+    );
+    expect(read("components/SessionView.tsx")).not.toContain("fallbackTitle");
     expect(
       sessionSidebarTopic([
         {

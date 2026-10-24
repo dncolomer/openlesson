@@ -41,7 +41,6 @@ import {
 } from "@/lib/learn-chapter-mini-map";
 import {
   ileWelcomeShowsContinuePreview,
-  ileWelcomeShowsRegenerate,
   ileWelcomeShowsSizePicker,
 } from "@/lib/learn-welcome-chapters";
 import type { SessionPlanStep } from "@/lib/domain/types";
@@ -258,9 +257,6 @@ describe("welcome branch continue vs new", () => {
     expect(ileWelcomeShowsContinuePreview("unknown", { stepCount: 2 })).toBe(
       true,
     );
-    expect(ileWelcomeShowsRegenerate("exists")).toBe(false);
-    expect(ileWelcomeShowsRegenerate("empty")).toBe(false);
-
     const page = read("app/session/page.tsx");
     expect(page).toContain("isIleResumeQuery");
     expect(page).toContain("resumeSession");

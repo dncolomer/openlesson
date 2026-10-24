@@ -521,23 +521,19 @@ describe("chapter-map position honor path", () => {
 });
 
 describe("create surface wiring (structural)", () => {
-  it("TAP Learning create API accepts initialChapters and preserves positions", () => {
-    const routeSrc = readFileSync(
-      path.join(process.cwd(), "app/api/session-plan/create/route.ts"),
+  it("authoring still generates session plans without the Learn create route", () => {
+    expect(existsSync(path.join(process.cwd(), "app/api/session-plan/create/route.ts"))).toBe(
+      false,
+    );
+    const previewSrc = readFileSync(
+      path.join(process.cwd(), "app/api/workspace/preview-session/route.ts"),
       "utf8",
     );
-    expect(routeSrc).toContain("initialChapters");
-    expect(routeSrc).toContain("resolveInitialChaptersFromBody");
-    expect(routeSrc).toContain("resolveMapTypeIdFromBody");
-    expect(routeSrc).toContain("resolveMapTypeRecord");
-    expect(routeSrc).toContain("toPersistedCreatePlanSteps");
-    expect(routeSrc).toContain("sessionMode");
-    expect(routeSrc).toContain("createSessionPlanLLM");
-    expect(routeSrc).toMatch(/maxDuration\s*=\s*12[0-9]/);
-    expect(routeSrc).toContain("unusable_cells");
+    expect(previewSrc).toContain("createSessionPlanLLM");
     const xaiSrc = readFileSync(path.join(process.cwd(), "lib/xai.ts"), "utf8");
     expect(xaiSrc).toContain("SESSION_PLAN_CREATE_JSON_SCHEMA");
     expect(xaiSrc).toContain("callXaiWithSchema");
+    expect(xaiSrc).toContain("createSessionPlanLLM");
   });
 
   it("welcome UI labels initial chapters and sends initialChapters", () => {
@@ -555,21 +551,6 @@ describe("create surface wiring (structural)", () => {
     expect(viewSrc).toContain("loadSessionBranchField");
     expect(viewSrc).not.toContain("shouldReuseExisting");
     expect(viewSrc).not.toContain("session-plan/create");
-  });
-
-  it("force create generates before deleting so regenerate failure keeps chapters", () => {
-    const routeSrc = readFileSync(
-      path.join(process.cwd(), "app/api/session-plan/create/route.ts"),
-      "utf8",
-    );
-    const llmIdx = routeSrc.indexOf("createSessionPlanLLM");
-    const deleteIdx = routeSrc.indexOf(".delete()");
-    expect(llmIdx).toBeGreaterThan(-1);
-    expect(deleteIdx).toBeGreaterThan(-1);
-    expect(llmIdx).toBeLessThan(deleteIdx);
-    // Race-safe replace: delete by session_id and upsert-friendly create.
-    expect(routeSrc).toContain('.eq("session_id", sessionId)');
-    expect(routeSrc).toContain("planAfterGenerate");
   });
 
   it("createSessionPlan upserts on session_id to avoid duplicate key races", () => {

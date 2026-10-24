@@ -247,6 +247,42 @@ function vectorForRegionModel(
     : latest.vector;
 }
 
+function subjectFieldsFromIdentityKey(identity: string): {
+  user_id: string | null;
+  guest_user_id: string | null;
+} {
+  const raw = identity.trim();
+  if (!raw) return { user_id: null, guest_user_id: null };
+  const pipe = raw.indexOf("|");
+  if (pipe < 0) {
+    return { user_id: null, guest_user_id: raw };
+  }
+  const user_id = raw.slice(0, pipe).trim() || null;
+  const guest_user_id = raw.slice(pipe + 1).trim() || null;
+  if (guest_user_id) return { user_id: null, guest_user_id };
+  if (user_id) return { user_id, guest_user_id: null };
+  return { user_id: null, guest_user_id: null };
+}
+
+function subjectFieldsFromEmbeddingIdentity(
+  identity: string,
+  provenanceBySubject: { has(key: string): boolean },
+): { user_id: string | null; guest_user_id: string | null } {
+  const raw = identity.trim();
+  if (!raw) return { user_id: null, guest_user_id: null };
+  if (raw.includes("|")) return subjectFieldsFromIdentityKey(raw);
+  if (provenanceBySubject.has(`|${raw}`)) {
+    return { user_id: null, guest_user_id: raw };
+  }
+  if (provenanceBySubject.has(`${raw}|`)) {
+    return { user_id: raw, guest_user_id: null };
+  }
+  if (provenanceBySubject.has(`${raw}|${raw}`)) {
+    return { user_id: raw, guest_user_id: null };
+  }
+  return subjectFieldsFromIdentityKey(raw);
+}
+
 async function loadLatestFlowVectorForSubject(
   supabase: SupabaseClient,
   workspaceId: string,
@@ -259,31 +295,31 @@ async function loadLatestFlowVectorForSubject(
     .from("workspace_flow_embeddings")
     .select("vector, identity, created_at, embedding_model_id, dim, raw")
     .eq("workspace_id", workspaceId)
+    .eq("identity", identity)
     .eq("embedding_model_id", FLOW_EMBEDDING_MODEL_ID)
     .order("created_at", { ascending: false })
-    .limit(200);
+    .limit(1);
 
-  if (error || !data) return null;
+  if (error || !data?.length) return null;
 
-  for (const row of data) {
-    const rowIdentity = String((row as { identity?: string | null }).identity || "").trim();
-    if (rowIdentity !== identity) continue;
-    const vector = Array.isArray((row as { vector?: unknown }).vector)
-      ? ((row as { vector: unknown[] }).vector.filter(
-          (n): n is number => typeof n === "number" && Number.isFinite(n),
-        ) as number[])
-      : [];
-    if (!isFlowEmbeddingVector(vector)) continue;
-    const recovered = recoverFlowEmbeddingRaw((row as { raw?: unknown }).raw);
-    const embedded = recovered ? embedFlowOutput(recovered) : null;
-    return {
-      vector: embedded?.vector ?? vector,
-      vector_path_text: embedded?.vector_path_text ?? vector,
-      as_of_ms: Date.parse(String((row as { created_at?: string }).created_at || "")) || 0,
-      embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
-    };
-  }
-  return null;
+  const row = data[0] as {
+    vector?: unknown;
+    identity?: string | null;
+    created_at?: string;
+    raw?: unknown;
+  };
+  const vector = Array.isArray(row.vector)
+    ? row.vector.filter((n): n is number => typeof n === "number" && Number.isFinite(n))
+    : [];
+  if (!isFlowEmbeddingVector(vector)) return null;
+  const recovered = recoverFlowEmbeddingRaw(row.raw);
+  const embedded = recovered ? embedFlowOutput(recovered) : null;
+  return {
+    vector: embedded?.vector ?? vector,
+    vector_path_text: embedded?.vector_path_text ?? vector,
+    as_of_ms: Date.parse(String(row.created_at || "")) || 0,
+    embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
+  };
 }
 
 async function insertCustomVerificationSpec(
@@ -777,37 +813,14 @@ export async function createSyntheticCustomVerificationModel(
     ? `[synthetic:grok-4.5] ${description}`
     : "[synthetic:grok-4.5]";
 
-  const payload = {
-    workspace_id: options.workspaceId,
-    name: spec.name,
+  const model = await insertCustomVerificationSpec(supabase, {
+    workspaceId: options.workspaceId,
+    spec: { ...spec, subject_count: Math.max(1, spec.subject_count) },
     description: taggedDescription,
-    embedding_model_id: spec.embedding_model_id,
-    dim: spec.dim,
-    centroid: spec.centroid,
-    cohort_cohesion: spec.cohort_cohesion,
-    mean_radius: spec.mean_radius,
-    cosine_threshold: spec.cosine_threshold,
-    subject_count: Math.max(1, spec.subject_count),
+    createdBy: options.createdBy,
     subjects: spec.subjects,
-    created_by: options.createdBy ?? null,
-    updated_at: new Date().toISOString(),
-  };
-
-  const { data, error } = await supabase
-    .from("custom_verification_models")
-    .insert(payload)
-    .select(
-      "id, workspace_id, name, description, embedding_model_id, dim, centroid, cohort_cohesion, mean_radius, cosine_threshold, subject_count, subjects, created_by, created_at, updated_at",
-    )
-    .maybeSingle();
-
-  if (error || !data) {
-    throw new CustomVerificationModelError(
-      error?.message || "failed to save synthetic knowledge region",
-    );
-  }
-
-  return { model: parseRow(data as Record<string, unknown>), spec };
+  });
+  return { model, spec };
 }
 
 export async function evalSubjectAgainstCustomVerificationModel(
@@ -1034,14 +1047,16 @@ export async function listSubjectsWithKnowledgeConfig(
     const key = identity;
     if (seen.has(key)) continue;
     seen.add(key);
+    const fields = subjectFieldsFromEmbeddingIdentity(identity, provenanceBySubject);
     const prov =
+      provenanceBySubject.get(`${fields.user_id ?? ""}|${fields.guest_user_id ?? ""}`) ||
       provenanceBySubject.get(`|${identity}`) ||
       provenanceBySubject.get(`${identity}|`) ||
       provenanceBySubject.get(`${identity}|${identity}`);
     const source_link_id = prov?.source_link_id ?? null;
     out.push({
-      user_id: null,
-      guest_user_id: identity,
+      user_id: fields.user_id,
+      guest_user_id: fields.guest_user_id,
       embedding_model_id: String((row as { embedding_model_id?: string }).embedding_model_id || FLOW_EMBEDDING_MODEL_ID),
       as_of_ms: Date.parse(String((row as { created_at?: string }).created_at || "")) || 0,
       confidence: 1,

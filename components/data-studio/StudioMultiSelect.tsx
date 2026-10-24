@@ -19,6 +19,7 @@ export function StudioMultiSelect({
   plural,
   searchPlaceholder = "Search",
   marker,
+  compact = false,
 }: {
   label: string;
   options: readonly StudioSelectOption[];
@@ -28,6 +29,7 @@ export function StudioMultiSelect({
   plural: string;
   searchPlaceholder?: string;
   marker: string;
+  compact?: boolean;
 }) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const searchRef = useRef<HTMLInputElement | null>(null);
@@ -74,11 +76,20 @@ export function StudioMultiSelect({
   }
 
   return (
-    <div ref={rootRef} className="relative">
-      <p className="mb-0.5 text-[11px] text-neutral-400">{label}</p>
+    <div
+      ref={rootRef}
+      className={compact ? "relative flex items-center gap-1.5" : "relative"}
+    >
+      <p className={compact ? "mb-0 text-[11px] text-neutral-400" : "mb-0.5 text-[11px] text-neutral-400"}>
+        {label}
+      </p>
       <button
         type="button"
-        className="flex min-w-[11rem] max-w-[18rem] items-center justify-between gap-2 rounded-none border border-white/20 bg-black px-2 py-1 text-left font-mono text-[11px] text-white outline-none hover:border-white/50 focus:border-white/60"
+        className={
+          compact
+            ? "flex min-w-[8.5rem] max-w-[14rem] items-center justify-between gap-2 rounded-none border border-white/20 bg-black px-2 py-1 text-left font-mono text-[11px] text-white outline-none hover:border-white/50 focus:border-white/60"
+            : "flex min-w-[11rem] max-w-[18rem] items-center justify-between gap-2 rounded-none border border-white/20 bg-black px-2 py-1 text-left font-mono text-[11px] text-white outline-none hover:border-white/50 focus:border-white/60"
+        }
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={label}

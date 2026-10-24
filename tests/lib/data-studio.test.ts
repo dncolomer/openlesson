@@ -475,6 +475,10 @@ describe("product Data Studio chrome", () => {
     expect(visual).toContain("data-workspace-data-studio");
     expect(visual).toContain("data-data-studio-visual");
     expect(visual).toContain("data-data-studio-product");
+    expect(visual).toContain("data-data-studio-plot");
+    expect(visual).toContain("data-data-studio-hud");
+    expect(visual).toContain("data-data-studio-toolbar");
+    expect(visual).toContain("data-data-studio-status");
     expect(visual).toContain("data-data-studio-flow-filter");
     expect(visual).toContain("data-data-studio-run-filter");
     expect(visual).toContain("StudioMultiSelect");
@@ -482,6 +486,7 @@ describe("product Data Studio chrome", () => {
     expect(select).toContain("data-data-studio-select-search");
     expect(select).toContain("data-data-studio-select-option");
     expect(select).toContain("aria-multiselectable");
+    expect(visual).toContain("compact");
     expect(visual).toContain("data-data-studio-inspect");
     expect(visual).toContain("data-data-studio-speech");
     expect(visual).toContain("data-data-studio-resize");

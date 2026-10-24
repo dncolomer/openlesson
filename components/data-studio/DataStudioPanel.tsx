@@ -465,160 +465,11 @@ export function DataStudioPanel({
       data-data-studio-membership={colorMembership ? "true" : "false"}
       data-data-studio-focus-region={focusRegionId || undefined}
     >
-      <header
-        className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-white/15 bg-black/60 px-3 py-2"
-        data-data-studio-toolbar
-      >
-        <div className="mr-1 flex items-baseline gap-2">
-          <p className="text-xs font-medium uppercase tracking-[0.16em] text-white">
-            Data Studio
-          </p>
-          <span className="text-[11px] text-neutral-500">{productLabel}</span>
-        </div>
-        <label className="flex items-center gap-1.5 text-[11px] text-neutral-400">
-          Space
-          <select
-            className={SELECT_CLASS}
-            value={space}
-            onChange={(event) => setSpace(parseDataStudioSpace(event.target.value))}
-            data-data-studio-space-select
-          >
-            {DATA_STUDIO_SPACE_OPTIONS.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex items-center gap-1.5 text-[11px] text-neutral-400">
-          Projection
-          <select
-            className={SELECT_CLASS}
-            value={algorithm}
-            onChange={(event) =>
-              setAlgorithm(parseProjectionAlgorithmId(event.target.value, "pca"))
-            }
-            data-data-studio-algorithm
-            data-projection-algorithm-select
-          >
-            {PROJECTION_ALGORITHM_OPTIONS.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.shortLabel}
-              </option>
-            ))}
-          </select>
-        </label>
-        {showFlowFilters ? (
-          <>
-            <StudioMultiSelect
-              label="Flow"
-              options={flowOptions}
-              selected={flowIds}
-              onChange={setFlowIds}
-              emptyLabel="All together"
-              plural="flows"
-              searchPlaceholder="Search flows"
-              marker="data-data-studio-flow-filter"
-            />
-            <StudioMultiSelect
-              label="Run"
-              options={runOptions}
-              selected={runIds}
-              onChange={setRunIds}
-              emptyLabel="All runs"
-              plural="runs"
-              searchPlaceholder="Search runs"
-              marker="data-data-studio-run-filter"
-            />
-          </>
-        ) : (
-          <label className="flex items-center gap-1.5 text-[11px] text-neutral-400">
-            Map
-            <select
-              className={SELECT_CLASS}
-              value={mapId}
-              onChange={(event) => setMapId(event.target.value)}
-              data-data-studio-map-filter
-            >
-              <option value="">All play sessions</option>
-              {maps.map((map) => (
-                <option key={map.id} value={map.id}>
-                  {map.title}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        <div className="ml-auto flex items-center gap-3 text-[10px] text-neutral-500">
-          <span data-data-studio-count className="text-white/80">
-            {filtered.length} embeddings
-          </span>
-          <span data-data-studio-camera>
-            ×{camera.scale.toFixed(2)}
-          </span>
-          <span>
-            {cursor
-              ? `${cursor.x.toFixed(0)},${cursor.y.toFixed(0)}`
-              : "—,—"}
-          </span>
-          <button
-            type="button"
-            className="border border-white/25 px-2 py-0.5 text-[10px] text-white/80 hover:border-white/60 hover:text-white"
-            onClick={() => setCamera(IDENTITY_STUDIO_CAMERA)}
-            data-data-studio-reset-camera
-          >
-            Reset
-          </button>
-          {spaceRegions.length > 0 ? (
-            <>
-              <button
-                type="button"
-                className={
-                  showDistances
-                    ? "border border-white/80 bg-white px-2 py-0.5 text-[10px] text-black"
-                    : "border border-white/25 px-2 py-0.5 text-[10px] text-white/80 hover:border-white/60 hover:text-white"
-                }
-                aria-pressed={showDistances}
-                onClick={() => setShowDistances((current) => !current)}
-                data-data-studio-distances-toggle
-              >
-                ‖x−c‖
-              </button>
-              <button
-                type="button"
-                className={
-                  colorMembership
-                    ? "border border-white/80 bg-white px-2 py-0.5 text-[10px] text-black"
-                    : "border border-white/25 px-2 py-0.5 text-[10px] text-white/80 hover:border-white/60 hover:text-white"
-                }
-                aria-pressed={colorMembership}
-                onClick={() => setColorMembership((current) => !current)}
-                data-data-studio-membership-toggle
-              >
-                In region
-              </button>
-            </>
-          ) : null}
-          <button
-            type="button"
-            className={
-              view === "help"
-                ? "border border-white/80 bg-white px-2 py-0.5 text-[10px] text-black"
-                : "border border-white/25 px-2 py-0.5 text-[10px] text-white/80 hover:border-white/60 hover:text-white"
-            }
-            aria-pressed={view === "help"}
-            onClick={() => setView((current) => (current === "help" ? "map" : "help"))}
-            data-data-studio-help
-          >
-            Help
-          </button>
-        </div>
-      </header>
-
-      <div ref={shellRef} className="flex min-h-0 flex-1">
-        <div
+      <div ref={shellRef} className="relative flex min-h-0 flex-1">
+        <div className="relative min-h-0 min-w-0 flex-1" data-data-studio-plot>
+          <div
           ref={hostRef}
-          className="relative min-h-0 min-w-0 flex-1 overflow-hidden bg-[#070708] outline-none"
+          className="absolute inset-0 overflow-hidden bg-[#070708] outline-none"
           tabIndex={0}
           data-data-studio-canvas-host
           onKeyDown={(event) => {
@@ -1000,7 +851,7 @@ export function DataStudioPanel({
             </div>
           ) : null}
           {view === "map" ? (
-            <p className="pointer-events-none absolute bottom-3 left-3 z-[3] text-[10px] text-neutral-500">
+            <p className="pointer-events-none absolute bottom-3 left-3 z-[3] max-w-[min(36rem,calc(100%-14rem))] text-[10px] text-neutral-500">
               {colorMembership
                 ? "Spread = mean builder distance to centroid · dashed ring = cosine ≥ τ · rays = ‖x−c‖ in 96-D"
                 : showDistances
@@ -1008,6 +859,163 @@ export function DataStudioPanel({
                   : "Drag to pan · Scroll to zoom · Click a point to inspect"}
             </p>
           ) : null}
+        </div>
+
+        <div
+          className="pointer-events-none absolute inset-0 z-[5]"
+          data-data-studio-hud
+        >
+          <header
+            className="pointer-events-auto absolute left-3 top-3 flex max-w-[calc(100%-15rem)] flex-wrap items-center gap-x-3 gap-y-2 border border-white/15 bg-black/75 px-2 py-1.5"
+            data-data-studio-toolbar
+          >
+            <div className="mr-1 flex items-baseline gap-2">
+              <p className="text-xs font-medium uppercase tracking-[0.16em] text-white">
+                Data Studio
+              </p>
+              <span className="text-[11px] text-neutral-500">{productLabel}</span>
+            </div>
+            <label className="flex items-center gap-1.5 text-[11px] text-neutral-400">
+              Space
+              <select
+                className={SELECT_CLASS}
+                value={space}
+                onChange={(event) => setSpace(parseDataStudioSpace(event.target.value))}
+                data-data-studio-space-select
+              >
+                {DATA_STUDIO_SPACE_OPTIONS.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex items-center gap-1.5 text-[11px] text-neutral-400">
+              Projection
+              <select
+                className={SELECT_CLASS}
+                value={algorithm}
+                onChange={(event) =>
+                  setAlgorithm(parseProjectionAlgorithmId(event.target.value, "pca"))
+                }
+                data-data-studio-algorithm
+                data-projection-algorithm-select
+              >
+                {PROJECTION_ALGORITHM_OPTIONS.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.shortLabel}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {showFlowFilters ? (
+              <>
+                <StudioMultiSelect
+                  label="Flow"
+                  options={flowOptions}
+                  selected={flowIds}
+                  onChange={setFlowIds}
+                  emptyLabel="All together"
+                  plural="flows"
+                  searchPlaceholder="Search flows"
+                  marker="data-data-studio-flow-filter"
+                  compact
+                />
+                <StudioMultiSelect
+                  label="Run"
+                  options={runOptions}
+                  selected={runIds}
+                  onChange={setRunIds}
+                  emptyLabel="All runs"
+                  plural="runs"
+                  searchPlaceholder="Search runs"
+                  marker="data-data-studio-run-filter"
+                  compact
+                />
+              </>
+            ) : (
+              <label className="flex items-center gap-1.5 text-[11px] text-neutral-400">
+                Map
+                <select
+                  className={SELECT_CLASS}
+                  value={mapId}
+                  onChange={(event) => setMapId(event.target.value)}
+                  data-data-studio-map-filter
+                >
+                  <option value="">All play sessions</option>
+                  {maps.map((map) => (
+                    <option key={map.id} value={map.id}>
+                      {map.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+          </header>
+          <div
+            className="pointer-events-auto absolute bottom-3 right-3 flex max-w-[calc(100%-1.5rem)] flex-wrap items-center justify-end gap-2 border border-white/15 bg-black/75 px-2 py-1.5 text-[10px] text-neutral-500"
+            data-data-studio-status
+          >
+            <span data-data-studio-count className="text-white/80">
+              {filtered.length} embeddings
+            </span>
+            <span data-data-studio-camera>×{camera.scale.toFixed(2)}</span>
+            <span>
+              {cursor ? `${cursor.x.toFixed(0)},${cursor.y.toFixed(0)}` : "—,—"}
+            </span>
+            <button
+              type="button"
+              className="border border-white/25 px-2 py-0.5 text-[10px] text-white/80 hover:border-white/60 hover:text-white"
+              onClick={() => setCamera(IDENTITY_STUDIO_CAMERA)}
+              data-data-studio-reset-camera
+            >
+              Reset
+            </button>
+            {spaceRegions.length > 0 ? (
+              <>
+                <button
+                  type="button"
+                  className={
+                    showDistances
+                      ? "border border-white/80 bg-white px-2 py-0.5 text-[10px] text-black"
+                      : "border border-white/25 px-2 py-0.5 text-[10px] text-white/80 hover:border-white/60 hover:text-white"
+                  }
+                  aria-pressed={showDistances}
+                  onClick={() => setShowDistances((current) => !current)}
+                  data-data-studio-distances-toggle
+                >
+                  ‖x−c‖
+                </button>
+                <button
+                  type="button"
+                  className={
+                    colorMembership
+                      ? "border border-white/80 bg-white px-2 py-0.5 text-[10px] text-black"
+                      : "border border-white/25 px-2 py-0.5 text-[10px] text-white/80 hover:border-white/60 hover:text-white"
+                  }
+                  aria-pressed={colorMembership}
+                  onClick={() => setColorMembership((current) => !current)}
+                  data-data-studio-membership-toggle
+                >
+                  In region
+                </button>
+              </>
+            ) : null}
+            <button
+              type="button"
+              className={
+                view === "help"
+                  ? "border border-white/80 bg-white px-2 py-0.5 text-[10px] text-black"
+                  : "border border-white/25 px-2 py-0.5 text-[10px] text-white/80 hover:border-white/60 hover:text-white"
+              }
+              aria-pressed={view === "help"}
+              onClick={() => setView((current) => (current === "help" ? "map" : "help"))}
+              data-data-studio-help
+            >
+              Help
+            </button>
+          </div>
+        </div>
         </div>
 
         {inspect && view === "map" ? (

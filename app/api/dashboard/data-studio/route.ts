@@ -91,39 +91,37 @@ export async function GET(req: NextRequest) {
           "id, name, centroid, mean_radius, cosine_threshold, embedding_model_id, workspace_id",
         )
         .in("workspace_id", ids);
-      regions = (regionRows || [])
-        .map((row) => {
-          const centroid = Array.isArray(row.centroid)
-            ? row.centroid.filter((n): n is number => typeof n === "number" && Number.isFinite(n))
-            : [];
-          if (
-            !regionMatchesFlowEmbeddingChannel(
-              {
-                embedding_model_id: String(row.embedding_model_id || ""),
-                centroid,
-              },
-              "any",
-            )
-          ) {
-            return null;
-          }
-          return {
-            id: String(row.id),
-            name: String(row.name || "Region"),
-            centroid,
-            mean_radius:
-              typeof row.mean_radius === "number" && Number.isFinite(row.mean_radius)
-                ? row.mean_radius
-                : undefined,
-            cosine_threshold:
-              typeof row.cosine_threshold === "number" && Number.isFinite(row.cosine_threshold)
-                ? row.cosine_threshold
-                : undefined,
-            source: String(row.workspace_id || "") || null,
-            embedding_model_id: String(row.embedding_model_id || ""),
-          } satisfies RegionCentroidInput;
-        })
-        .filter((row): row is RegionCentroidInput => !!row);
+      for (const row of regionRows || []) {
+        const centroid = Array.isArray(row.centroid)
+          ? row.centroid.filter((n): n is number => typeof n === "number" && Number.isFinite(n))
+          : [];
+        if (
+          !regionMatchesFlowEmbeddingChannel(
+            {
+              embedding_model_id: String(row.embedding_model_id || ""),
+              centroid,
+            },
+            "any",
+          )
+        ) {
+          continue;
+        }
+        regions.push({
+          id: String(row.id),
+          name: String(row.name || "Region"),
+          centroid,
+          mean_radius:
+            typeof row.mean_radius === "number" && Number.isFinite(row.mean_radius)
+              ? row.mean_radius
+              : undefined,
+          cosine_threshold:
+            typeof row.cosine_threshold === "number" && Number.isFinite(row.cosine_threshold)
+              ? row.cosine_threshold
+              : undefined,
+          source: String(row.workspace_id || "") || null,
+          embedding_model_id: String(row.embedding_model_id || ""),
+        });
+      }
     }
 
     return NextResponse.json(

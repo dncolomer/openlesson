@@ -446,7 +446,7 @@ describe("TAP Learning Work canvas center on open (shipped)", () => {
   });
 
   it("nudges just enough to reveal off-screen command marks and leaves in-view marks still", () => {
-    const mark = { x: 900, y: 40, width: 80, height: 40 };
+    const mark = { x: 900, y: 40, width: 80, height: 40, isDeleted: false };
     const view = { width: 800, height: 600, zoom: { value: 1 }, scrollX: 0, scrollY: 0, offsetLeft: 0, offsetTop: 0 };
     expect(ileWorkCanvasRevealScroll([{ ...mark, x: 40 }], view)).toBeNull();
     const nudged = ileWorkCanvasRevealScroll([mark], view);

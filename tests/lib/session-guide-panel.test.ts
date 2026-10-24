@@ -88,7 +88,7 @@ describe("session guide panel", () => {
     expect(ILE_WORK_CANVAS_COMMANDS.find((command) => command.id === "focus")?.label).toBe("Focus");
     expect(ILE_WORK_CANVAS_COMMANDS.find((command) => command.id === "answer")?.label).toBe("Answer");
     expect(ILE_WORK_CANVAS_COMMANDS.find((command) => command.id === "draw")?.label).toBe("Draw");
-    expect(ILE_WORK_CANVAS_COMMANDS.some((command) => command.id === "check")).toBe(false);
+    expect(ILE_WORK_CANVAS_COMMANDS.map((command) => command.id as string)).not.toContain("check");
 
     const verify = renderToStaticMarkup(createElement(SessionGuidePanel, { guide: "verification" }));
     expect(verify).not.toContain('data-session-command="focus"');

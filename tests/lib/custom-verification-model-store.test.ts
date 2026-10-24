@@ -74,9 +74,15 @@ function makeStoreClient(opts: {
           let rows = embeddings.slice();
           for (const f of filters) {
             if (f.method === "eq") rows = applyEq(rows, f.args[0], f.args[1]);
-            if (f.method === "in" && f.args[0] === "identity") {
-              const ids = new Set((f.args[1] as string[]) || []);
-              rows = rows.filter((row) => ids.has(String(row.identity)));
+            if (f.method === "order") {
+              const column = String(f.args[0]);
+              const ascending =
+                (f.args[1] as { ascending?: boolean } | undefined)?.ascending !== false;
+              rows = rows.slice().sort((a, b) => {
+                const av = String(a[column] ?? "");
+                const bv = String(b[column] ?? "");
+                return ascending ? av.localeCompare(bv) : bv.localeCompare(av);
+              });
             }
             if (f.method === "limit") rows = rows.slice(0, Number(f.args[0]));
           }
@@ -106,7 +112,6 @@ function makeStoreClient(opts: {
       const chain: {
         select: (...args: unknown[]) => typeof chain;
         eq: (...args: unknown[]) => typeof chain;
-        in: (...args: unknown[]) => typeof chain;
         order: (...args: unknown[]) => typeof chain;
         limit: (...args: unknown[]) => typeof chain;
         insert: (payload: Record<string, unknown>) => typeof chain;
@@ -122,10 +127,6 @@ function makeStoreClient(opts: {
         },
         eq: (...args: unknown[]) => {
           record("eq", args);
-          return chain;
-        },
-        in: (...args: unknown[]) => {
-          record("in", args);
           return chain;
         },
         order: (...args: unknown[]) => {
@@ -175,6 +176,20 @@ function embeddingLimitCalls(calls: FilterCall[]) {
   );
 }
 
+function embeddingOrderCalls(calls: FilterCall[]) {
+  return calls.filter(
+    (call) => call.table === "workspace_flow_embeddings" && call.method === "order",
+  );
+}
+
+function expectLatestIdentityQuery(calls: FilterCall[], identity: string) {
+  expect(embeddingEqIdentityCalls(calls).map((c) => c.args[1])).toEqual([identity]);
+  expect(embeddingOrderCalls(calls).map((c) => c.args)).toEqual([
+    ["created_at", { ascending: false }],
+  ]);
+  expect(embeddingLimitCalls(calls).map((c) => c.args[0])).toEqual([1]);
+}
+
 describe("custom verification model store (identity queries)", () => {
   it("evalSubjectAgainstCustomVerificationModel filters embeddings by subject identity", async () => {
     const vector = flowVector("expert");
@@ -212,10 +227,7 @@ describe("custom verification model store (identity queries)", () => {
 
     expect(result.model.id).toBe("region-1");
     expect(result.score.model_name).toBe("SRE bar");
-    expect(embeddingEqIdentityCalls(calls).map((c) => c.args[1])).toEqual([
-      subjectIdentityKey(subject),
-    ]);
-    expect(embeddingLimitCalls(calls).map((c) => c.args[0])).toEqual([1]);
+    expectLatestIdentityQuery(calls, subjectIdentityKey(subject) as string);
   });
 
   it("eval uses guest identity key, not a signed-in user_id", async () => {
@@ -245,8 +257,8 @@ describe("custom verification model store (identity queries)", () => {
       subject,
     });
 
-    expect(embeddingEqIdentityCalls(calls).map((c) => c.args[1])).toEqual(["guest-1"]);
     expect(subjectIdentityKey(subject)).toBe("guest-1");
+    expectLatestIdentityQuery(calls, "guest-1");
   });
 
   it("createCustomVerificationModelFromSubjects loads each subject by identity", async () => {
@@ -272,15 +284,15 @@ describe("custom verification model store (identity queries)", () => {
 
     expect(created.model.name).toBe("Cohort");
     expect(inserts.length).toBeGreaterThanOrEqual(1);
-    expect(embeddingEqIdentityCalls(calls).map((c) => c.args[1])).toEqual(["user-1"]);
-    expect(embeddingLimitCalls(calls).map((c) => c.args[0])).toEqual([1]);
+    expectLatestIdentityQuery(calls, "user-1");
   });
 
-  it("computeKnowledgeDistanceForSubject queries the latest embedding by identity", async () => {
-    const vector = flowVector("distance");
+  it("computeKnowledgeDistanceForSubject uses the newest embedding for an identity", async () => {
+    const older = flowVector("older-run");
+    const newer = flowVector("newer-run");
     const spec = createCustomVerificationModelFromVectors({
       name: "Distance bar",
-      vectors: [vector],
+      vectors: [newer],
     });
     const { client, calls } = makeStoreClient({
       models: [modelRow("region-d", spec)],
@@ -289,7 +301,14 @@ describe("custom verification model store (identity queries)", () => {
           workspace_id: "ws-1",
           identity: "user-9",
           embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
-          vector,
+          vector: older,
+          created_at: "2026-01-01T00:00:00.000Z",
+        },
+        {
+          workspace_id: "ws-1",
+          identity: "user-9",
+          embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
+          vector: newer,
           created_at: "2026-03-01T00:00:00.000Z",
         },
       ],
@@ -302,11 +321,12 @@ describe("custom verification model store (identity queries)", () => {
     });
     expect(result.knowledge_distance.region_name).toBe("Distance bar");
     expect(result.subject.user_id).toBe("user-9");
-    expect(embeddingEqIdentityCalls(calls).map((c) => c.args[1])).toEqual(["user-9"]);
-    expect(embeddingLimitCalls(calls).map((c) => c.args[0])).toEqual([1]);
+    expect(result.subject.as_of_ms).toBe(Date.parse("2026-03-01T00:00:00.000Z"));
+    expect(result.knowledge_distance.knowledge_distance).toBeLessThan(1e-6);
+    expectLatestIdentityQuery(calls, "user-9");
   });
 
-  it("listSubjectsWithKnowledgeConfig emits user_id vs guest_user_id from uid|gid identity", async () => {
+  it("listSubjectsWithKnowledgeConfig emits user_id vs guest_user_id from PoW provenance", async () => {
     const { client } = makeStoreClient({
       embeddings: [
         {
@@ -323,15 +343,9 @@ describe("custom verification model store (identity queries)", () => {
         },
         {
           workspace_id: "ws-1",
-          identity: "signed-pipe|",
+          identity: "unknown-1",
           embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
           created_at: "2026-02-01T00:00:00.000Z",
-        },
-        {
-          workspace_id: "ws-1",
-          identity: "|anon-pipe",
-          embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
-          created_at: "2026-01-01T00:00:00.000Z",
         },
       ],
       pow: [
@@ -345,8 +359,7 @@ describe("custom verification model store (identity queries)", () => {
       expect.arrayContaining([
         expect.objectContaining({ user_id: "user-1", guest_user_id: null }),
         expect.objectContaining({ user_id: null, guest_user_id: "guest-1" }),
-        expect.objectContaining({ user_id: "signed-pipe", guest_user_id: null }),
-        expect.objectContaining({ user_id: null, guest_user_id: "anon-pipe" }),
+        expect.objectContaining({ user_id: null, guest_user_id: "unknown-1" }),
       ]),
     );
     expect(subjects.find((s) => s.user_id === "user-1")?.guest_user_id).toBeNull();

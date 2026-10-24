@@ -34,7 +34,7 @@ import {
   systemMessage,
   userMessage,
 } from "@/lib/xai-client";
-import { subjectIdentityKey } from "./subject-ref";
+import { normalizeSubject, subjectIdentityKey } from "./subject-ref";
 import {
   filterImportableKnowledgeRegions,
   type ImportableKnowledgeRegion,
@@ -247,40 +247,36 @@ function vectorForRegionModel(
     : latest.vector;
 }
 
-function subjectFieldsFromIdentityKey(identity: string): {
+type SubjectPowProvenance = {
   user_id: string | null;
   guest_user_id: string | null;
+  pow_source: "human" | "tapbench";
+  source_link_id: string | null;
+};
+
+function subjectFromEmbeddingIdentity(
+  identity: string,
+  provenanceByIdentity: Map<string, SubjectPowProvenance>,
+): {
+  user_id: string | null;
+  guest_user_id: string | null;
+  prov: SubjectPowProvenance | undefined;
 } {
   const raw = identity.trim();
-  if (!raw) return { user_id: null, guest_user_id: null };
-  const pipe = raw.indexOf("|");
-  if (pipe < 0) {
-    return { user_id: null, guest_user_id: raw };
-  }
-  const user_id = raw.slice(0, pipe).trim() || null;
-  const guest_user_id = raw.slice(pipe + 1).trim() || null;
-  if (guest_user_id) return { user_id: null, guest_user_id };
-  if (user_id) return { user_id, guest_user_id: null };
-  return { user_id: null, guest_user_id: null };
-}
-
-function subjectFieldsFromEmbeddingIdentity(
-  identity: string,
-  provenanceBySubject: { has(key: string): boolean },
-): { user_id: string | null; guest_user_id: string | null } {
-  const raw = identity.trim();
-  if (!raw) return { user_id: null, guest_user_id: null };
-  if (raw.includes("|")) return subjectFieldsFromIdentityKey(raw);
-  if (provenanceBySubject.has(`|${raw}`)) {
-    return { user_id: null, guest_user_id: raw };
-  }
-  if (provenanceBySubject.has(`${raw}|`)) {
-    return { user_id: raw, guest_user_id: null };
-  }
-  if (provenanceBySubject.has(`${raw}|${raw}`)) {
-    return { user_id: raw, guest_user_id: null };
-  }
-  return subjectFieldsFromIdentityKey(raw);
+  if (!raw) return { user_id: null, guest_user_id: null, prov: undefined };
+  const prov = provenanceByIdentity.get(raw);
+  // Unknown-bare default is guest so listed subjects still round-trip through
+  // subjectIdentityKey to the stored embedding identity.
+  const normalized = normalizeSubject(
+    prov
+      ? { user_id: prov.user_id, guest_user_id: prov.guest_user_id }
+      : { guest_user_id: raw },
+  );
+  return {
+    user_id: normalized.subject_user_id,
+    guest_user_id: normalized.subject_guest_user_id,
+    prov,
+  };
 }
 
 async function loadLatestFlowVectorForSubject(
@@ -985,14 +981,13 @@ export async function listSubjectsWithKnowledgeConfig(
     .order("created_at", { ascending: false })
     .limit(1000);
 
-  const provenanceBySubject = new Map<
-    string,
-    { pow_source: "human" | "tapbench"; source_link_id: string | null }
-  >();
+  const provenanceByIdentity = new Map<string, SubjectPowProvenance>();
   for (const row of powRows || []) {
     const uid = (row.user_id as string | null) ?? null;
     const gid = (row.guest_user_id as string | null) ?? null;
-    const key = `${uid ?? ""}|${gid ?? ""}`;
+    const normalized = normalizeSubject({ user_id: uid, guest_user_id: gid });
+    const key = subjectIdentityKey(normalized.subject);
+    if (!key) continue;
     const meta =
       row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
         ? (row.metadata as Record<string, unknown>)
@@ -1006,20 +1001,22 @@ export async function listSubjectsWithKnowledgeConfig(
       (typeof meta.source_link_id === "string" && meta.source_link_id.trim()) ||
       (typeof meta.tapbench_link_id === "string" && meta.tapbench_link_id.trim()) ||
       null;
-    const existing = provenanceBySubject.get(key);
+    const existing = provenanceByIdentity.get(key);
     if (!existing) {
-      provenanceBySubject.set(key, {
+      provenanceByIdentity.set(key, {
+        user_id: normalized.subject_user_id,
+        guest_user_id: normalized.subject_guest_user_id,
         pow_source: isTapbench ? "tapbench" : "human",
         source_link_id: linkId,
       });
     } else if (isTapbench) {
-      // tapbench wins if any PoW row is tapbench
-      provenanceBySubject.set(key, {
+      provenanceByIdentity.set(key, {
+        ...existing,
         pow_source: "tapbench",
         source_link_id: existing.source_link_id || linkId,
       });
     } else if (!existing.source_link_id && linkId) {
-      provenanceBySubject.set(key, { ...existing, source_link_id: linkId });
+      provenanceByIdentity.set(key, { ...existing, source_link_id: linkId });
     }
   }
 
@@ -1047,16 +1044,14 @@ export async function listSubjectsWithKnowledgeConfig(
     const key = identity;
     if (seen.has(key)) continue;
     seen.add(key);
-    const fields = subjectFieldsFromEmbeddingIdentity(identity, provenanceBySubject);
-    const prov =
-      provenanceBySubject.get(`${fields.user_id ?? ""}|${fields.guest_user_id ?? ""}`) ||
-      provenanceBySubject.get(`|${identity}`) ||
-      provenanceBySubject.get(`${identity}|`) ||
-      provenanceBySubject.get(`${identity}|${identity}`);
+    const { user_id, guest_user_id, prov } = subjectFromEmbeddingIdentity(
+      identity,
+      provenanceByIdentity,
+    );
     const source_link_id = prov?.source_link_id ?? null;
     out.push({
-      user_id: fields.user_id,
-      guest_user_id: fields.guest_user_id,
+      user_id,
+      guest_user_id,
       embedding_model_id: String((row as { embedding_model_id?: string }).embedding_model_id || FLOW_EMBEDDING_MODEL_ID),
       as_of_ms: Date.parse(String((row as { created_at?: string }).created_at || "")) || 0,
       confidence: 1,

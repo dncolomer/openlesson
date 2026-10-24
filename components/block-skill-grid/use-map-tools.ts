@@ -12,7 +12,6 @@ import {
   nextLassoShape,
   resolveActiveLassoShape,
   resolveUnusableFromSelection,
-  visibleBlockMapTools,
   type BlockMapModeTool,
   type BlockMapToolEnablementInput,
   type BlockMapToolId,
@@ -153,7 +152,6 @@ export function useMapTools(input: {
     selectedBlocksContiguous,
     selectedEmptyCellsSolidRectangle: shapeFreeformOk,
   };
-  const stripTools = visibleBlockMapTools(toolEnablement);
 
   const previewTargetId =
     !prereqEdit.active && selectedBlockIds.length === 1 ? selectedBlockIds[0] : null;
@@ -303,12 +301,9 @@ export function useMapTools(input: {
     }
   };
 
-  const isViewportTool = (t?: BlockMapToolId) =>
-    t === "zoom_in" || t === "zoom_out" || t === "recenter";
-  const isModeTool = (t?: BlockMapToolId) => t === "select" || t === "lasso";
-  const modeTools = stripTools.filter((t) => isModeTool(t));
-  const actionTools = stripTools.filter((t) => !isModeTool(t) && !isViewportTool(t));
-  const viewportTools = stripTools.filter((t) => isViewportTool(t));
+  const modeTools: BlockMapToolId[] = [];
+  const actionTools: BlockMapToolId[] = [];
+  const viewportTools: BlockMapToolId[] = [];
   const activeLassoShape = resolveActiveLassoShape({
     activeTool,
     lassoShape,
@@ -325,7 +320,6 @@ export function useMapTools(input: {
 
   return {
     toolEnablement,
-    stripTools,
     previewTargetId,
     previewPrereqIds,
     handleToolClick,

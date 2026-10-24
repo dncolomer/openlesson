@@ -1,7 +1,6 @@
 import { readMapGridSurface } from "../helpers/surface-source";
 import { describe, expect, it } from "vitest";
 import {
-  BLOCK_MAP_TOOL_STRIP,
   DEFAULT_BLOCK_MAP_MODE,
   DEFAULT_LASSO_SHAPE,
   LASSO_SHAPE_ORDER,
@@ -26,7 +25,6 @@ import {
   enterPrereqEditMode,
   isBlockMapManipulationMode,
   isBlockMapToolEnabled,
-  isCloneMapToolEnabled,
   isBlockMultiSelectGesture,
   isEmptyCellMultiSelectGesture,
   isLassoModeTool,
@@ -53,7 +51,6 @@ import {
   toggleOrReplaceBlockSelection,
   toggleOrReplaceEmptyCellSelection,
   toggleStagedPrereq,
-  visibleBlockMapTools,
   type BlockMapToolEnablementInput,
 } from "@/lib/block-map-tools";
 import {
@@ -88,7 +85,7 @@ function state(
 }
 
 describe("block-map-tools", () => {
-  it("defaults to Select; strip is Select + one Lasso (move demoted; shapes in submenu)", () => {
+  it("defaults to Select; lasso shapes cycle; pan is a gesture", () => {
     expect(DEFAULT_BLOCK_MAP_MODE).toBe("select");
     expect(DEFAULT_LASSO_SHAPE).toBe("rect");
     expect(blockMapToolKind("select")).toBe("mode");
@@ -98,14 +95,9 @@ describe("block-map-tools", () => {
     expect(blockMapToolKind("lock_until")).toBe("action");
     expect(blockMapToolKind("mark_unusable")).toBe("action");
     expect(blockMapToolKind("zoom_in")).toBe("viewport");
-    expect(BLOCK_MAP_TOOL_STRIP).toEqual([]);
-    expect(BLOCK_MAP_TOOL_STRIP).not.toContain("select");
-    expect(BLOCK_MAP_TOOL_STRIP).not.toContain("lasso");
-    expect(BLOCK_MAP_TOOL_STRIP).not.toContain("mark_unusable");
-    expect(BLOCK_MAP_TOOL_STRIP).not.toContain("move");
-    expect(BLOCK_MAP_TOOL_STRIP).not.toContain("lasso_circle");
-    expect(BLOCK_MAP_TOOL_STRIP).not.toContain("lasso_freehand");
-    expect(BLOCK_MAP_TOOL_STRIP).not.toContain("pan" as never);
+    expect(isBlockMapToolEnabled("select", state())).toBe(true);
+    expect(isBlockMapToolEnabled("lasso", state())).toBe(true);
+    expect(isBlockMapToolEnabled("move", state())).toBe(true);
     expect(isLassoModeTool("lasso")).toBe(true);
     expect(isLassoModeTool("lasso_circle")).toBe(true);
     expect(isLassoModeTool("select")).toBe(false);
@@ -143,9 +135,10 @@ describe("block-map-tools", () => {
   });
 
   it("enables clone only with exactly one filled block selected", () => {
-    expect(BLOCK_MAP_TOOL_STRIP).not.toContain("clone");
     expect(blockMapToolKind("clone")).toBe("action");
-    expect(isCloneMapToolEnabled(state({ selectedBlockCount: 1 }))).toBe(true);
+    expect(isBlockMapToolEnabled("clone", state({ selectedBlockCount: 1 }))).toBe(
+      true,
+    );
     expect(isBlockMapToolEnabled("clone", state({ selectedBlockCount: 0 }))).toBe(
       false,
     );
@@ -161,9 +154,6 @@ describe("block-map-tools", () => {
         state({ selectedBlockCount: 1, hasGridOps: false }),
       ),
     ).toBe(false);
-    expect(
-      visibleBlockMapTools({ canEdit: true, hasGridOps: true }),
-    ).not.toContain("clone");
   });
 
   it("enables merge only with 2+ contiguous selected blocks", () => {
@@ -224,9 +214,6 @@ describe("block-map-tools", () => {
         state({ selectedBlockCount: 3, selectedMultiCellBlockCount: 1 }),
       ),
     ).toBe(true);
-
-    // edit/pen tool removed from strip — update/delete live on block-detail Edit drawer
-    expect(BLOCK_MAP_TOOL_STRIP).not.toContain("edit" as never);
   });
 
   it("enables generate_shape when any empty cells are selected (solid check on submit)", () => {
@@ -268,28 +255,19 @@ describe("block-map-tools", () => {
     expect(isBlockMapToolEnabled("zoom_in", noOps)).toBe(true);
   });
 
-  it("lists strip without Select, Lasso, or Unusable ground", () => {
-    const tools = visibleBlockMapTools({ canEdit: true, hasGridOps: true });
-    expect(tools).toEqual([...BLOCK_MAP_TOOL_STRIP]);
-    expect(tools).not.toContain("pan" as never);
-    expect(tools).not.toContain("select");
-    expect(tools).not.toContain("move");
-    expect(tools).not.toContain("lasso");
-    expect(tools).not.toContain("mark_unusable");
-    expect(tools).not.toContain("lasso_circle");
-    expect(tools).not.toContain("lasso_freehand");
-    expect(tools).not.toContain("merge");
-    expect(tools).not.toContain("split");
-    expect(tools).not.toContain("clone");
-    expect(tools).not.toContain("lock_until");
-    expect(tools).not.toContain("edit" as never);
-    expect(BLOCK_MAP_TOOL_STRIP).not.toContain("edit" as never);
-    expect(tools).not.toContain("generate_shape");
-    expect(BLOCK_MAP_TOOL_STRIP).not.toContain("generate_shape");
-    expect(tools).not.toContain("zoom_in");
-    expect(tools).not.toContain("zoom_out");
-    expect(tools).not.toContain("recenter");
-    expect(tools).toEqual([]);
+  it("unusable ground and generate-in-area live in drawers; enablement is selection-driven", () => {
+    expect(
+      isBlockMapToolEnabled("mark_unusable", state({ selectedEmptyCellCount: 2 })),
+    ).toBe(true);
+    expect(
+      isBlockMapToolEnabled("generate_shape", state({ selectedEmptyCellCount: 2 })),
+    ).toBe(true);
+    expect(
+      isBlockMapToolEnabled("merge", state({ selectedBlockCount: 2, selectedBlocksContiguous: true })),
+    ).toBe(true);
+    expect(isBlockMapToolEnabled("clone", state({ selectedBlockCount: 1 }))).toBe(
+      true,
+    );
     const add = readFileSync(
       join(process.cwd(), "components/WorkspaceAddBlockPane.tsx"),
       "utf8",
@@ -313,19 +291,20 @@ describe("block-map-tools", () => {
       "utf8",
     );
     expect(view).toContain('op: "set_unusable_cells"');
-    for (let i = 1; i < tools.length; i++) {
-      expect(BLOCK_MAP_TOOL_STRIP.indexOf(tools[i])).toBeGreaterThan(
-        BLOCK_MAP_TOOL_STRIP.indexOf(tools[i - 1]),
-      );
-    }
+    const detail = readFileSync(
+      join(process.cwd(), "components/WorkspaceBlockDetailPane.tsx"),
+      "utf8",
+    );
+    expect(detail).toContain('drawerId="clone"');
+    expect(detail).toContain('drawerId="split"');
   });
 
-  it("hides grid-op tools when map is not editable", () => {
-    const tools = visibleBlockMapTools({ canEdit: false, hasGridOps: false });
-    expect(tools).toEqual([]);
-    expect(tools).not.toContain("select");
-    expect(tools).not.toContain("lasso");
-    expect(tools).not.toContain("merge");
+  it("disables map tools when the map is not editable", () => {
+    const noEdit = state({ canEdit: false, hasGridOps: false });
+    expect(isBlockMapToolEnabled("select", noEdit)).toBe(false);
+    expect(isBlockMapToolEnabled("lasso", noEdit)).toBe(false);
+    expect(isBlockMapToolEnabled("merge", noEdit)).toBe(false);
+    expect(isBlockMapToolEnabled("clone", noEdit)).toBe(false);
   });
 
   it("Select plain-click single-selects; re-click sole clears; only Shift multi-toggles", () => {
@@ -589,19 +568,13 @@ describe("block-map-tools", () => {
     ).toBe(false);
   });
 
-  it("select is default; allows click selection; lasso does not; pan via gesture not strip", () => {
+  it("select is default; allows click selection; lasso does not; pan via gesture", () => {
     expect(DEFAULT_BLOCK_MAP_MODE).toBe("select");
     expect(allowsMapClickSelection("select")).toBe(true);
     expect(allowsMapClickSelection("move")).toBe(true);
     expect(allowsMapClickSelection("lasso")).toBe(false);
-    expect(BLOCK_MAP_TOOL_STRIP).not.toContain("pan" as never);
-    expect(BLOCK_MAP_TOOL_STRIP).not.toContain("lasso");
-    expect(BLOCK_MAP_TOOL_STRIP).not.toContain("select");
-    expect(BLOCK_MAP_TOOL_STRIP).not.toContain("mark_unusable");
-    expect(BLOCK_MAP_TOOL_STRIP).not.toContain("move");
-    expect(BLOCK_MAP_TOOL_STRIP).not.toContain("lasso_circle");
     expect(isBlockMapToolEnabled("lasso", state())).toBe(true);
-    expect(visibleBlockMapTools({ canEdit: true, hasGridOps: true })).toEqual([]);
+    expect(isMapPanGesture({ spaceHeld: true })).toBe(true);
   });
 
   it("converts client drag points into grid move deltas", () => {
@@ -1251,8 +1224,9 @@ describe("block-map-tools", () => {
           "emptyCellsHelper=" + src.includes("emptyCellsIntersectingGridRect"),
           "resolveLasso=" + src.includes("resolveLassoSelection"),
           "emitEmpty=" + src.includes("commitSelectionRef"),
-          "oneLassoStrip=" + String(!BLOCK_MAP_TOOL_STRIP.includes("lasso_circle")),
-          "noMoveStrip=" + String(!BLOCK_MAP_TOOL_STRIP.includes("move")),
+          "lassoCircleEnabled=" +
+            String(isBlockMapToolEnabled("lasso_circle", state())),
+          "moveEnabled=" + String(isBlockMapToolEnabled("move", state())),
           "submenu=" + String(!src.includes("data-lasso-shape-submenu")),
           "spacePan=" + src.includes("isMapPanGesture"),
           "selectDrag=" + src.includes("allowsBlockDragInMode"),
@@ -1409,6 +1383,22 @@ describe("selection-driven ground authoring (left toolbar)", () => {
         previewPrereqIds: ["p"],
       }),
     ).toBe("prereq");
+    expect(
+      resolveMapBlockHighlightRole({
+        blockId: "t",
+        selected: true,
+        previewTargetId: "t",
+        previewPrereqIds: ["p"],
+      }),
+    ).toBe("target");
+    expect(
+      resolveMapBlockHighlightRole({
+        blockId: "t",
+        selected: false,
+        previewTargetId: "t",
+        previewPrereqIds: ["p"],
+      }),
+    ).toBe("neutral");
 
     // Deprecated multi-select helpers still clear / set for tests
     expect(resolveLockUntilFromSelection([])).toBeNull();
@@ -1555,7 +1545,41 @@ describe("selection-driven ground authoring (left toolbar)", () => {
     }
   });
 
-  it("structural: select default; click-and-drag + space pan; move not on strip", () => {
+  it("preview highlight: selected focused target is target; unselected focused is neutral", () => {
+    expect(
+      resolveMapBlockHighlightRole({
+        blockId: "t",
+        selected: true,
+        previewTargetId: "t",
+        previewPrereqIds: ["p"],
+      }),
+    ).toBe("target");
+    expect(
+      resolveMapBlockHighlightRole({
+        blockId: "t",
+        selected: false,
+        previewTargetId: "t",
+        previewPrereqIds: ["p"],
+      }),
+    ).toBe("neutral");
+    expect(
+      resolveMapBlockHighlightRole({
+        blockId: "p",
+        selected: false,
+        previewTargetId: "t",
+        previewPrereqIds: ["p"],
+      }),
+    ).toBe("prereq");
+    expect(
+      resolveMapBlockHighlightRole({
+        blockId: "other",
+        selected: true,
+        previewTargetId: "t",
+      }),
+    ).toBe("selected");
+  });
+
+  it("structural: select default; click-and-drag + space pan; move is a gesture", () => {
     const grid = readMapGridSurface();
     const tools = readFileSync(
       join(process.cwd(), "lib/block-map-tools.ts"),
@@ -1565,8 +1589,8 @@ describe("selection-driven ground authoring (left toolbar)", () => {
     expect(tools).toContain("allowsBlockDragInMode");
     expect(tools).toContain("isMapPanGesture");
     expect(tools).toContain("allowsMapClickSelection");
-    expect(BLOCK_MAP_TOOL_STRIP).not.toContain("move");
-    expect(BLOCK_MAP_TOOL_STRIP).not.toContain("pan" as never);
+    expect(isBlockMapToolEnabled("move", state())).toBe(true);
+    expect(allowsBlockDragInMode("select", true)).toBe(true);
     expect(grid).toContain("DEFAULT_BLOCK_MAP_MODE");
     expect(grid).not.toContain('data-tool-icon="pan"');
     expect(grid).toContain("allowsBlockDragInMode");

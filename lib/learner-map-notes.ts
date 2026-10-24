@@ -891,33 +891,11 @@ export function creatorMapNotesStoreOps(input: {
 }
 
 /**
- * Notes chrome mounts whenever a workspace map is shown (creator + learner).
- * Prefer passing workspaceId; `learnerMode` alone is accepted for older callers
- * and still mounts (both modes support notes).
+ * Notes chrome mounts when overlay persist has a real key:
+ * chapter maps need a session id; workspace maps need workspaceId.
  */
-export function shouldMountMapNotes(input: MapOverlayPersistInput & {
-  workspaceId?: string | null;
-  learnerMode?: boolean;
-}): boolean {
-  if (resolveMapOverlayPersistScope(input)) return true;
-  // Chapter maps must have a session key — never invent a workspace store.
-  if (input.mapKind === "chapter") return false;
-  if (input.workspaceId !== undefined && input.workspaceId !== null) {
-    return Boolean(String(input.workspaceId).trim());
-  }
-  // Both modes support notes when host wires workspaceId; without it, mount
-  // whenever the map is in a known mode context (true for both flags).
-  return input.learnerMode === true || input.learnerMode === false
-    ? true
-    : true;
-}
-
-/** @deprecated use shouldMountMapNotes — notes mount in creator and learner. */
-export function shouldMountLearnerMapNotes(input: {
-  learnerMode?: boolean;
-  workspaceId?: string | null;
-}): boolean {
-  return shouldMountMapNotes(input);
+export function shouldMountMapNotes(input: MapOverlayPersistInput): boolean {
+  return Boolean(resolveMapOverlayPersistScope(input));
 }
 
 /**

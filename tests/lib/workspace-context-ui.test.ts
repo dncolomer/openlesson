@@ -19,7 +19,6 @@ import {
 } from "@/lib/workspace-right-pane";
 import {
   isBlockMapToolEnabled,
-  visibleBlockMapTools,
   blockMapToolLabel,
 } from "@/lib/block-map-tools";
 import { mapCellChromeClasses, MAP_CELL_UNUSABLE_CLASS } from "@/lib/map-cell-chrome";
@@ -78,9 +77,6 @@ describe("map-first right pane", () => {
 
 describe("map-ground tools enablement", () => {
   it("does not mount lock_until or mark_unusable on the map bar; enablement stays selection-driven", () => {
-    const tools = visibleBlockMapTools({ canEdit: true, hasGridOps: true });
-    expect(tools).not.toContain("lock_until");
-    expect(tools).not.toContain("mark_unusable");
     expect(blockMapToolLabel("lock_until")).toMatch(/lock/i);
     expect(blockMapToolLabel("mark_unusable")).toMatch(/unusable/i);
     expect(

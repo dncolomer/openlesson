@@ -24,7 +24,7 @@ import {
   resolveWorkspaceRightPane,
   splitTargetCellCount,
 } from "@/lib/workspace-right-pane";
-import { BLOCK_MAP_TOOL_STRIP, visibleBlockMapTools } from "@/lib/block-map-tools";
+import { isBlockMapToolEnabled } from "@/lib/block-map-tools";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
@@ -284,7 +284,14 @@ describe("resolveEmptySelectionSurface + resolveEmptyAddTarget", () => {
             resolveEmptySelectionSurface({ selectedEmptyCells: [a, b] }),
           ),
         "paneMap=" + resolveWorkspaceRightPane(null, null),
-        "stripHasGenerateShape=" + BLOCK_MAP_TOOL_STRIP.includes("generate_shape"),
+        "generateShapeEnabled=" +
+          isBlockMapToolEnabled("generate_shape", {
+            canEdit: true,
+            busy: false,
+            hasGridOps: true,
+            selectedBlockCount: 0,
+            selectedEmptyCellCount: 2,
+          }),
       ].join("\n"),
     );
   });
@@ -731,14 +738,25 @@ describe("structural: right pane not map modal", () => {
     expect(shapePane).toContain("data-generate-shape-submit");
     expect(shapePane).toContain("onSubmit");
     expect(shapePane).toContain("data-shape-context-picker");
-    // Strip no longer lists generate_shape as a required opener
-    expect(BLOCK_MAP_TOOL_STRIP).not.toContain("generate_shape");
-    expect(tools).toMatch(/generate_shape is omitted/);
-    const stripVisible = visibleBlockMapTools({
-      canEdit: true,
-      hasGridOps: true,
-    });
-    expect(stripVisible).not.toContain("generate_shape");
+    expect(tools).toContain("generate_shape");
+    expect(
+      isBlockMapToolEnabled("generate_shape", {
+        canEdit: true,
+        busy: false,
+        hasGridOps: true,
+        selectedBlockCount: 0,
+        selectedEmptyCellCount: 2,
+      }),
+    ).toBe(true);
+    expect(
+      isBlockMapToolEnabled("generate_shape", {
+        canEdit: true,
+        busy: false,
+        hasGridOps: true,
+        selectedBlockCount: 0,
+        selectedEmptyCellCount: 0,
+      }),
+    ).toBe(false);
 
     expect(list).toContain("onMapSelectionChange");
     expect(list).toContain("mapSelection={mapSelection}");
@@ -753,8 +771,14 @@ describe("structural: right pane not map modal", () => {
         "gridOnEmptySelection=" + grid.includes("onMapSelectionChange"),
         "shapePane=" + shapePane.includes("data-workspace-generate-shape-pane"),
         "shapeSubmit=" + shapePane.includes("data-generate-shape-submit"),
-        "stripHasGenerateShape=" + BLOCK_MAP_TOOL_STRIP.includes("generate_shape"),
-        "visibleHasGenerateShape=" + stripVisible.includes("generate_shape"),
+        "generateShapeEnabled=" +
+          isBlockMapToolEnabled("generate_shape", {
+            canEdit: true,
+            busy: false,
+            hasGridOps: true,
+            selectedBlockCount: 0,
+            selectedEmptyCellCount: 2,
+          }),
         "viewShapePane=" +
           readWorkspaceViewSurface().includes("WorkspaceGenerateShapePane"),
         "viewOpGenerateShape=" +

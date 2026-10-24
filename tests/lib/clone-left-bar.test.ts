@@ -8,12 +8,9 @@ import { readMapGridSurface } from "../helpers/surface-source";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  BLOCK_MAP_TOOL_STRIP,
   blockMapToolKind,
   blockMapToolLabel,
   isBlockMapToolEnabled,
-  isCloneMapToolEnabled,
-  visibleBlockMapTools,
   type BlockMapToolEnablementInput,
 } from "@/lib/block-map-tools";
 import {
@@ -60,42 +57,36 @@ function state(
 
 describe("clone left-bar enablement", () => {
   it("enabled only for creator canEdit + sole filled block; disabled otherwise", () => {
-    expect(BLOCK_MAP_TOOL_STRIP).not.toContain("clone");
     expect(blockMapToolKind("clone")).toBe("action");
     expect(blockMapToolLabel("clone").toLowerCase()).toMatch(/clone/);
 
     // Sole filled selection
     expect(
-      isCloneMapToolEnabled(state({ selectedBlockCount: 1 })),
-    ).toBe(true);
-    expect(
       isBlockMapToolEnabled("clone", state({ selectedBlockCount: 1 })),
     ).toBe(true);
 
     // Zero / multi / empty-only / no edit / no ops / busy
-    expect(isCloneMapToolEnabled(state({ selectedBlockCount: 0 }))).toBe(false);
-    expect(isCloneMapToolEnabled(state({ selectedBlockCount: 2 }))).toBe(false);
+    expect(isBlockMapToolEnabled("clone", state({ selectedBlockCount: 0 }))).toBe(
+      false,
+    );
+    expect(isBlockMapToolEnabled("clone", state({ selectedBlockCount: 2 }))).toBe(
+      false,
+    );
     expect(
-      isCloneMapToolEnabled(
+      isBlockMapToolEnabled(
+        "clone",
         state({ selectedBlockCount: 0, selectedEmptyCellCount: 3 }),
       ),
     ).toBe(false);
     expect(
-      isCloneMapToolEnabled(state({ canEdit: false, selectedBlockCount: 1 })),
+      isBlockMapToolEnabled("clone", state({ canEdit: false, selectedBlockCount: 1 })),
     ).toBe(false);
     expect(
-      isCloneMapToolEnabled(state({ hasGridOps: false, selectedBlockCount: 1 })),
+      isBlockMapToolEnabled("clone", state({ hasGridOps: false, selectedBlockCount: 1 })),
     ).toBe(false);
     expect(
-      isCloneMapToolEnabled(state({ busy: true, selectedBlockCount: 1 })),
+      isBlockMapToolEnabled("clone", state({ busy: true, selectedBlockCount: 1 })),
     ).toBe(false);
-
-    // Visible on strip when canEdit + grid ops
-    const tools = visibleBlockMapTools({ canEdit: true, hasGridOps: true });
-    expect(tools).not.toContain("clone");
-    expect(
-      visibleBlockMapTools({ canEdit: false, hasGridOps: true }),
-    ).not.toContain("clone");
 
     // Arm still requires a source id (empty multi cannot arm as source)
     expect(armClone("")).toEqual(createDisarmedCloneState());
@@ -111,13 +102,14 @@ describe("clone left-bar enablement", () => {
     writeEvidence(
       "clone-left-bar-enable.log",
       [
-        "strip_has_clone=" + String(BLOCK_MAP_TOOL_STRIP.includes("clone")),
-        "sole_enabled=" + isCloneMapToolEnabled(state({ selectedBlockCount: 1 })),
-        "zero_enabled=" + isCloneMapToolEnabled(state({ selectedBlockCount: 0 })),
-        "multi_enabled=" + isCloneMapToolEnabled(state({ selectedBlockCount: 2 })),
+        "sole_enabled=" +
+          isBlockMapToolEnabled("clone", state({ selectedBlockCount: 1 })),
+        "zero_enabled=" +
+          isBlockMapToolEnabled("clone", state({ selectedBlockCount: 0 })),
+        "multi_enabled=" +
+          isBlockMapToolEnabled("clone", state({ selectedBlockCount: 2 })),
         "no_edit=" +
-          isCloneMapToolEnabled(state({ canEdit: false, selectedBlockCount: 1 })),
-        "visible=" + tools.includes("clone"),
+          isBlockMapToolEnabled("clone", state({ canEdit: false, selectedBlockCount: 1 })),
         "arm=" + JSON.stringify(armClone("sole-1")),
       ].join("\n"),
     );
@@ -133,7 +125,7 @@ describe("clone left-bar UI wiring", () => {
     const sessions = read("components/SessionList.tsx");
 
     expect(tools).toContain('"clone"');
-    expect(tools).toContain("isCloneMapToolEnabled");
+    expect(tools).toContain("isBlockMapToolEnabled");
     expect(tools).toMatch(/case "clone"/);
 
     // Left strip (icon lives on the extracted button)

@@ -565,16 +565,25 @@ describe("store + UI structural", () => {
       /v2/,
     );
 
-    // Notes mount in both creator and learner when workspaceId is set
-    expect(shouldMountMapNotes({ workspaceId: "ws", learnerMode: true })).toBe(
+    // Workspace maps need workspaceId; chapter maps need a session key.
+    expect(shouldMountMapNotes({ workspaceId: "ws" })).toBe(true);
+    expect(shouldMountMapNotes({ workspaceId: "ws", mapKind: "workspace" })).toBe(
       true,
     );
-    expect(shouldMountMapNotes({ workspaceId: "ws", learnerMode: false })).toBe(
-      true,
-    );
-    expect(shouldMountMapNotes({ workspaceId: "", learnerMode: true })).toBe(
-      false,
-    );
+    expect(shouldMountMapNotes({ workspaceId: "" })).toBe(false);
+    expect(shouldMountMapNotes({ workspaceId: "   " })).toBe(false);
+    expect(shouldMountMapNotes({})).toBe(false);
+    expect(
+      shouldMountMapNotes({ sessionId: "sess-1", mapKind: "chapter" }),
+    ).toBe(true);
+    expect(shouldMountMapNotes({ mapKind: "chapter" })).toBe(false);
+    expect(
+      shouldMountMapNotes({
+        mapKind: "chapter",
+        sessionId: "",
+        workspaceId: "ws",
+      }),
+    ).toBe(false);
 
     const grid = readMapGridSurface();
     const postIt = read("components/LearnerMapNotePostIt.tsx");
@@ -692,10 +701,10 @@ describe("store + UI structural", () => {
             w: reloaded[0].width,
             h: reloaded[0].height,
           }),
-        "mount_learner=" +
-          shouldMountMapNotes({ workspaceId: "ws", learnerMode: true }),
-        "mount_creator=" +
-          shouldMountMapNotes({ workspaceId: "ws", learnerMode: false }),
+        "mount_workspace=" + shouldMountMapNotes({ workspaceId: "ws" }),
+        "mount_empty_workspace=" + shouldMountMapNotes({ workspaceId: "" }),
+        "mount_chapter=" +
+          shouldMountMapNotes({ sessionId: "sess-1", mapKind: "chapter" }),
       ].join("\n"),
     );
   });

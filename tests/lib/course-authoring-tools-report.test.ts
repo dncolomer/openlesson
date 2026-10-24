@@ -5,11 +5,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import {
-  BLOCK_MAP_TOOL_STRIP,
-  blockMapToolLabel,
-  type BlockMapToolId,
-} from "@/lib/block-map-tools";
+import { blockMapToolLabel } from "@/lib/block-map-tools";
 import {
   WORKSPACE_SECTION_KEYS,
   availableWorkspaceSections,
@@ -50,16 +46,12 @@ describe("course authoring tools report", () => {
     expect(report).toMatch(/lasso/i);
   });
 
-  it("lists every BLOCK_MAP_TOOL_STRIP id and section key from shipped registries", () => {
+  it("lists every section key from shipped registries and drawer labels", () => {
     const report = readReport();
 
-    for (const id of BLOCK_MAP_TOOL_STRIP) {
-      // Strip tools appear as `id` in backticks or bold code style
-      expect(report).toContain(`\`${id}\``);
-      // Labels should also be findable for human scan
-      const label = blockMapToolLabel(id as BlockMapToolId);
-      expect(label.length).toBeGreaterThan(0);
-    }
+    expect(blockMapToolLabel("merge").length).toBeGreaterThan(0);
+    expect(blockMapToolLabel("split").length).toBeGreaterThan(0);
+    expect(blockMapToolLabel("clone").length).toBeGreaterThan(0);
 
     for (const key of WORKSPACE_SECTION_KEYS) {
       expect(report).toContain(`\`${key}\``);
@@ -84,7 +76,6 @@ describe("course authoring tools report", () => {
   it("writes verification evidence to scratch", () => {
     mkdirSync(SCRATCH, { recursive: true });
     const report = readReport();
-    const stripOk = BLOCK_MAP_TOOL_STRIP.every((id) => report.includes(`\`${id}\``));
     const sectionsOk = WORKSPACE_SECTION_KEYS.every((k) =>
       report.includes(`\`${k}\``),
     );
@@ -114,13 +105,8 @@ describe("course authoring tools report", () => {
       join(SCRATCH, "course-authoring-tools-source-crosscheck.log"),
       [
         "course-authoring-tools-source-crosscheck",
-        `strip_ids=${BLOCK_MAP_TOOL_STRIP.join(",")}`,
-        `strip_all_in_report=${stripOk}`,
         `section_keys=${WORKSPACE_SECTION_KEYS.join(",")}`,
         `sections_all_in_report=${sectionsOk}`,
-        ...BLOCK_MAP_TOOL_STRIP.map(
-          (id) => `strip_${id}=${report.includes(`\`${id}\``)}`,
-        ),
         ...WORKSPACE_SECTION_KEYS.map(
           (k) => `section_${k}=${report.includes(`\`${k}\``)}`,
         ),
@@ -129,7 +115,6 @@ describe("course authoring tools report", () => {
       ].join("\n") + "\n",
     );
 
-    expect(stripOk).toBe(true);
     expect(sectionsOk).toBe(true);
     expect(headingsOk).toBe(true);
   });

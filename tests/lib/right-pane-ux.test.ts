@@ -156,8 +156,8 @@ describe("desktop layout + block detail chrome", () => {
     expect(dangerPanel).toContain("data-block-edit-delete");
     expect(dangerPanel).toContain("data-block-danger-pane");
     const tools = read("lib/block-map-tools.ts");
-    expect(tools).not.toMatch(/BLOCK_MAP_TOOL_STRIP[\s\S]*"edit"/);
-    expect(tools).toContain("BLOCK_MAP_TOOL_STRIP: readonly BlockMapToolId[] = []");
+    expect(tools).toContain("isBlockMapToolEnabled");
+    expect(tools).not.toContain('"edit"');
     expect(detail).not.toContain('prompt: "Prompt"');
     expect(detail).not.toContain("WorkspacePromptImpactPanel");
     expect(detail).not.toContain("WorkspaceBlockSimulationPanel");

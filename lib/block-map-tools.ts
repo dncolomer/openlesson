@@ -100,14 +100,6 @@ export const DEFAULT_BLOCK_MAP_MODE: BlockMapModeTool = "select";
 /** Default lasso geometry when entering lasso mode. */
 export const DEFAULT_LASSO_SHAPE: LassoShapeKind = "rect";
 
-/**
- * The floating map action bar is not mounted. Merge, split, clone, lock-until,
- * and unusable ground live in right-pane drawers. Zoom is the scroll wheel.
- * generate_shape is omitted — multi empty selection opens the right pane.
- * Select stays the click mode so empty cells and blocks still open those panes.
- */
-export const BLOCK_MAP_TOOL_STRIP: readonly BlockMapToolId[] = [] as const;
-
 /** True for any region-select lasso mode (rect, circle, freehand legacy ids). */
 export function isLassoModeTool(
   tool: BlockMapModeTool | BlockMapToolId | string | null | undefined,
@@ -346,9 +338,10 @@ export function resolveMapBlockHighlightRole(input: {
     return "neutral";
   }
 
-  // Preview: single target focused with saved prereqs
+  // Selected focused target uses full select language. Unselected focused
+  // target stays neutral so chrome uses the existing single-focus ring.
   if (input.previewTargetId && id === input.previewTargetId) {
-    return input.selected || true ? "target" : "target";
+    return input.selected ? "target" : "neutral";
   }
   if (
     input.previewTargetId &&
@@ -1322,49 +1315,7 @@ export function isBlockMapToolEnabled(
   }
 }
 
-/**
- * Tools for the floating map bar. The bar is empty: those actions are drawers.
- */
-export function visibleBlockMapTools(
-  state: Pick<
-    BlockMapToolEnablementInput,
-    "canEdit" | "hasGridOps" | "hasMapGroundOps"
-  >,
-): BlockMapToolId[] {
-  return BLOCK_MAP_TOOL_STRIP.filter((tool) => {
-    const kind = blockMapToolKind(tool);
-    if (kind === "viewport") return true;
-    if (!state.canEdit) return false;
-    // Demoted: not on strip (gesture drag + lasso submenu instead)
-    if (tool === "move" || tool === "lasso_circle" || tool === "lasso_freehand") {
-      return false;
-    }
-    if (
-      tool === "select" ||
-      tool === "lasso" ||
-      tool === "clear_selection"
-    ) {
-      return true;
-    }
-    if (tool === "lock_until" || tool === "mark_unusable") {
-      return Boolean(state.hasMapGroundOps ?? state.hasGridOps);
-    }
-    // merge/split/clone need grid-ops wiring
-    return state.hasGridOps;
-  });
-}
-
-/**
- * Pure: whether Clone left-strip tool is enabled for the current selection.
- * Creator + grid ops + exactly one filled block (source for paste).
- */
-export function isCloneMapToolEnabled(
-  state: BlockMapToolEnablementInput,
-): boolean {
-  return isBlockMapToolEnabled("clone", state);
-}
-
-/** Human labels for map-ground tools (shared by strip + authoring pane). */
+/** Human labels for map-ground tools (shared by drawers + authoring pane). */
 export function blockMapToolLabel(tool: BlockMapToolId): string {
   switch (tool) {
     case "select":

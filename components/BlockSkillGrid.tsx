@@ -211,7 +211,6 @@ export function BlockSkillGrid({
       workspaceId,
       sessionId,
       mapKind: "workspace",
-      learnerMode,
     }) && Boolean(overlayPersist);
   const resolvedLearnerScope =
     String(learnerScopeId || ayclToken || "local").trim() || "local";
@@ -984,7 +983,6 @@ export function BlockSkillGrid({
 
   const {
     toolEnablement,
-    stripTools,
     previewTargetId,
     previewPrereqIds,
     handleToolClick,

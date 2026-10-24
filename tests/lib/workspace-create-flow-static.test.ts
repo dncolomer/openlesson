@@ -221,22 +221,9 @@ describe("workspace create + builder static wiring", () => {
     expect(tools).toContain("blockDragMoveDelta");
     expect(tools).toContain("isBlockMapManipulationMode");
     expect(tools).toContain("allowsBlockDragInMode");
-    // Strip contents: select + lasso only as modes (parse the array literal)
-    const stripMatch = tools.match(
-      /export const BLOCK_MAP_TOOL_STRIP[^=]*=\s*\[([\s\S]*?)\]\s*as const/,
-    );
-    expect(stripMatch).toBeTruthy();
-    const stripBody = stripMatch![1];
-    expect(stripBody).not.toContain('"select"');
-    expect(stripBody).not.toContain('"lasso"');
-    expect(stripBody).not.toContain('"mark_unusable"');
-    expect(stripBody).not.toContain('"merge"');
-    expect(stripBody).not.toContain('"clone"');
-    expect(stripBody).not.toContain('"split"');
-    expect(stripBody).not.toContain('"zoom_in"');
-    expect(stripBody).not.toContain('"move"');
-    expect(stripBody).not.toContain('"lasso_circle"');
-    expect(stripBody).not.toContain('"lasso_freehand"');
+    expect(tools).toContain("isBlockMapToolEnabled");
+    expect(tools).not.toContain("BLOCK_MAP_TOOL_STRIP");
+    expect(tools).not.toContain("visibleBlockMapTools");
   });
 
   it("programmatic API/MCP create is enabled; UI generate remains", () => {

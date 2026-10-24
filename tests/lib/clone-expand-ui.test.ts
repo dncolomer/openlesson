@@ -21,10 +21,7 @@ import {
   buildExpandFromSourceSlotPrompt,
   resolveExpandFromSourceSelection,
 } from "@/lib/expand-block-from-source";
-import {
-  BLOCK_MAP_TOOL_STRIP,
-  isCloneMapToolEnabled,
-} from "@/lib/block-map-tools";
+import { isBlockMapToolEnabled } from "@/lib/block-map-tools";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
@@ -55,7 +52,15 @@ describe("Clone left-bar + Expand block UI wiring", () => {
     const grid = readMapGridSurface();
     const gridOps = readGridOpsSurface();
 
-    expect(BLOCK_MAP_TOOL_STRIP).not.toContain("clone");
+    expect(
+      isBlockMapToolEnabled("clone", {
+        canEdit: true,
+        busy: false,
+        hasGridOps: true,
+        selectedBlockCount: 1,
+        selectedEmptyCellCount: 0,
+      }),
+    ).toBe(true);
     expect(grid).toContain('case "clone"');
     expect(grid).toContain("onCloneArm");
     expect(detail).toContain('drawerId="clone"');
@@ -171,7 +176,7 @@ describe("Clone left-bar + Expand block UI wiring", () => {
         "after_paste=" + JSON.stringify(afterClonePaste()),
         "intercept=" + shouldInterceptEmptyClickForClone(armClone("b1")),
         "clone_sole_enabled=" +
-          isCloneMapToolEnabled({
+          isBlockMapToolEnabled("clone", {
             canEdit: true,
             busy: false,
             hasGridOps: true,

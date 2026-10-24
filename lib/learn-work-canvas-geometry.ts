@@ -49,34 +49,33 @@ export function ileWorkCanvasNormalizedRect(
   return { minX, minY, maxX, maxY };
 }
 
-/**
- * Axis-aligned mark, including stroke points. A zero-area line still reserves a
- * thin strip. `pad` grows the box; `points: false` ignores stroke points.
- */
+/** Axis-aligned mark, including stroke points. A zero-area line still reserves a thin strip. */
 export function ileWorkCanvasMarkRect(
   el: IleWorkCanvasRectSource | null | undefined,
-  options?: { pad?: number; points?: boolean } | null,
 ): IleWorkCanvasRect | null {
   if (!el || el.isDeleted) return null;
-  const base = ileWorkCanvasNormalizedRect(el);
-  let minX = base?.minX ?? Infinity;
-  let minY = base?.minY ?? Infinity;
-  let maxX = base?.maxX ?? -Infinity;
-  let maxY = base?.maxY ?? -Infinity;
-  if (options?.points !== false) {
-    const points = Array.isArray(el.points) ? el.points : [];
-    for (const point of points) {
-      if (!Array.isArray(point)) continue;
-      const px = (Number(el.x) || 0) + (Number(point[0]) || 0);
-      const py = (Number(el.y) || 0) + (Number(point[1]) || 0);
-      if (!Number.isFinite(px) || !Number.isFinite(py)) continue;
-      minX = Math.min(minX, px);
-      minY = Math.min(minY, py);
-      maxX = Math.max(maxX, px);
-      maxY = Math.max(maxY, py);
-    }
+  const x = Number(el.x) || 0;
+  const y = Number(el.y) || 0;
+  const w = Number(el.width) || 0;
+  const h = Number(el.height) || 0;
+  let minX = Math.min(x, x + w);
+  let maxX = Math.max(x, x + w);
+  let minY = Math.min(y, y + h);
+  let maxY = Math.max(y, y + h);
+  const points = Array.isArray(el.points) ? el.points : [];
+  for (const point of points) {
+    if (!Array.isArray(point)) continue;
+    const px = x + (Number(point[0]) || 0);
+    const py = y + (Number(point[1]) || 0);
+    if (!Number.isFinite(px) || !Number.isFinite(py)) continue;
+    minX = Math.min(minX, px);
+    minY = Math.min(minY, py);
+    maxX = Math.max(maxX, px);
+    maxY = Math.max(maxY, py);
   }
-  if (!Number.isFinite(minX) || !Number.isFinite(minY)) return null;
+  if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {
+    return null;
+  }
   const thickness = 8;
   if (!(maxX > minX)) {
     minX -= thickness / 2;
@@ -85,13 +84,6 @@ export function ileWorkCanvasMarkRect(
   if (!(maxY > minY)) {
     minY -= thickness / 2;
     maxY += thickness / 2;
-  }
-  const pad = Number(options?.pad) || 0;
-  if (pad) {
-    minX -= pad;
-    minY -= pad;
-    maxX += pad;
-    maxY += pad;
   }
   return { minX, minY, maxX, maxY };
 }

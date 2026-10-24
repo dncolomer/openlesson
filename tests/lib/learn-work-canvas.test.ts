@@ -53,6 +53,7 @@ import {
   ILE_WORK_CANVAS_TEXT_BOX_WIDTH,
   wrapIleWorkCanvasText,
   ileWorkCanvasHostForCaption,
+  ileWorkCanvasMarkRect,
   isIleXaiNoteElement,
   acknowledgeIleWorkCanvasXaiNotes,
   ILE_XAI_NOTE_PAD_X,
@@ -128,6 +129,7 @@ import {
   ileWorkCanvasWithScrollToContent,
   mergeIleXaiTurnOntoLiveWorkCanvas,
   pasteIleWorkCanvasElements,
+  replaceIleWorkCanvasSelection,
   placeIleLearnMorePrompt,
   joinIleWorkCanvasSelection,
   splitIleWorkCanvasSelectedText,
@@ -2305,6 +2307,38 @@ describe("TAP Learning Work canvas live geometry and non-overlapping drops (ship
       x: 4000,
       y: 4200,
     });
+  });
+
+  it("thickens a zero-width line and a zero-area mark with no stroke points", () => {
+    const line = ileWorkCanvasMarkRect({ x: 40, y: 10, width: 0, height: 20 });
+    expect(line).toEqual({ minX: 36, minY: 10, maxX: 44, maxY: 30 });
+    const point = ileWorkCanvasMarkRect({ x: 8, y: 12, width: 0, height: 0 });
+    expect(point).toEqual({ minX: 4, minY: 8, maxX: 12, maxY: 16 });
+    expect(ileWorkCanvasMarkRect({ x: 0, y: 0, width: 10, height: 10, isDeleted: true })).toBeNull();
+  });
+
+  it("does not delete the selection for empty JSON, and replaces at the old origin", () => {
+    const selected = convertToExcalidrawElements([
+      { type: "rectangle", x: 120, y: 80, width: 60, height: 40 },
+    ]);
+    const host = selected[0]!;
+    const board = {
+      elements: selected,
+      appState: {},
+      files: {},
+    };
+    const empty = replaceIleWorkCanvasSelection(board, selected, { text: '{"text":""}' });
+    expect(empty.elements.some((el) => el.id === host.id)).toBe(true);
+    expect(empty.elements).toHaveLength(selected.length);
+
+    const replaced = replaceIleWorkCanvasSelection(board, selected, {
+      text: "Shorter claim.",
+      turnId: "replace-eq",
+    });
+    expect(replaced.elements.some((el) => el.id === host.id)).toBe(false);
+    const note = ileWorkCanvasHostForCaption(replaced.elements, "Shorter claim.");
+    expect(note?.x).toBe(host.x);
+    expect(note?.y).toBe(host.y);
   });
 
   it("tucks a wide reply under the cluster without selecting the new marks", () => {

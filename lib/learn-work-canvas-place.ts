@@ -172,16 +172,13 @@ function stripIleWorkCanvasReplaceIds(
   };
 }
 
-/** Skeleton → customData → settle. Wrappers choose origin and replaceIds. */
+/** Skeleton → customData → settle. Wrappers only choose placement options. */
 export function placeTurn(
   scene: IleWorkCanvasScene | null | undefined,
   payload: IleXaiCanvasTurnPayload,
   options?: IleWorkCanvasPlaceTurnOptions | null,
 ): IleWorkCanvasScene {
-  const current = stripIleWorkCanvasReplaceIds(
-    serializeIleWorkCanvasScene(scene),
-    options?.replaceIds,
-  );
+  const original = serializeIleWorkCanvasScene(scene);
   let text = stripLearnerFacingWrappers(String(payload.text || "").trim());
   let extra = normalizeExtraSkeletons(payload.elements);
   let originInput = payload.origin;
@@ -191,7 +188,8 @@ export function placeTurn(
     if (extra.length === 0) extra = normalizeExtraSkeletons(parsed.elements);
     if (!ileWorkCanvasFiniteOrigin(originInput)) originInput = parsed.origin ?? originInput;
   }
-  if (!text && extra.length === 0) return current;
+  if (!text && extra.length === 0) return original;
+  const current = stripIleWorkCanvasReplaceIds(original, options?.replaceIds);
 
   const modelOrigin = ileWorkCanvasFiniteOrigin(originInput);
   const fallbackOrigin = ileWorkCanvasFiniteOrigin(options?.origin);

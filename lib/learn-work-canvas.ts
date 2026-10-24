@@ -20,7 +20,7 @@ export {
   ileWorkCanvasPositiveAreaOverlap,
   ileWorkCanvasRectsOverlap,
 } from "@/lib/learn-work-canvas-geometry";
-export type { IleWorkCanvasRect, IleWorkCanvasRectSource } from "@/lib/learn-work-canvas-geometry";
+export type { IleWorkCanvasRect } from "@/lib/learn-work-canvas-geometry";
 export {
   ILE_SELECTIVE_COMPRESSION_LABEL,
   ILE_WORK_CANVAS_AUTO_LAYOUT_LABEL,
@@ -156,10 +156,7 @@ export {
   ileWorkCanvasXaiNoteSkeletons,
   acknowledgeIleWorkCanvasXaiNotes,
 } from "@/lib/learn-work-canvas-place";
-export type {
-  IleWorkCanvasPlacementOptions,
-  IleWorkCanvasPlaceTurnOptions,
-} from "@/lib/learn-work-canvas-place";
+export type { IleWorkCanvasPlacementOptions } from "@/lib/learn-work-canvas-place";
 
 export {
   ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS,

@@ -73,13 +73,13 @@ function overlayFigure(product: DataStudioProduct): DataStudioExplainerFigure {
     return {
       id: "overlay",
       title: "Sounding field",
-      body: "Calibrate stores the tree without a projected policy, so Path is the field they sounded. Region disks overlay only when the region was built in the space you have selected. Hide disks from the legend. Distances draws dashed rays labeled with ‖x−c‖ in embedding space, not the 2D layout. In region colors dots by cosine membership in 96-D. The solid disk is cohort spread; the dashed ring is the cosine ball flattened to 2D. PCA distorts distances, so a bright dot can sit outside the white disk and still be in.",
+      body: "Calibrate stores the tree without a projected policy, so Path is the field they sounded. Region disks overlay only when the region was built in the space you have selected. Hide disks from the legend. Distances draws dashed rays labeled with ‖x−c‖ in embedding space, not the 2D layout. In region colors dots by cosine membership in 96-D. The solid spread disk is the mean L2 of the builders to the centroid, flattened to 2D — how tight that cohort was. The dashed ring is the cosine ball flattened to 2D. PCA distorts distances, so a bright dot can sit outside the white disk and still be in.",
     };
   }
   return {
     id: "overlay",
     title: "Knowledge regions",
-    body: "White disks are regions built from Path or Path + text centroids. A disk appears only when its model matches the selected space. Hide a disk from the legend. Distances draws dashed rays labeled with ‖x−c‖ in embedding space, not the 2D layout. In region colors dots by cosine ≥ τ in 96-D, not the projected circle. The solid disk is cohort mean_radius flattened to 2D; the dashed ring is the cosine ball flattened the same way. PCA does not preserve distances, so a bright dot can sit outside the white disk and still be in. Filter by flow and run to compare people.",
+    body: "White disks are regions built from Path or Path + text centroids. A disk appears only when its model matches the selected space. Hide a disk from the legend. Distances draws dashed rays labeled with ‖x−c‖ in embedding space, not the 2D layout. In region colors dots by cosine ≥ τ in 96-D, not the projected circle. The solid spread disk is the mean L2 of the builders to the centroid (mean_radius), flattened to 2D — how tightly those people clustered. The dashed ring is the cosine ball flattened the same way. PCA does not preserve distances, so a bright dot can sit outside the white disk and still be in. Filter by flow and run to compare people.",
   };
 }
 
@@ -97,7 +97,7 @@ function controlsFor(product: DataStudioProduct): string {
   if (product === "learning") {
     return "Choose Path or Path + text, pick a projection, and filter by map. Drag to pan. Scroll to zoom. Press Help again to return to the map.";
   }
-  return "Choose Path or Path + text, pick a projection, and filter by flow or run. Toggle Distances for high-dimensional L2 to region centers. Toggle In region to color dots by cosine membership and show the dashed cosine-ball ring. Drag to pan. Scroll to zoom. Press Help again to return to the map.";
+  return "Choose Path or Path + text, pick a projection, and filter by flow or run with search and multi-select. Toggle Distances for high-dimensional L2 to region centers. Toggle In region to color dots by cosine membership and show the dashed cosine-ball ring. Drag to pan. Scroll to zoom. Press Help again to return to the map.";
 }
 
 export function dataStudioExplainer(product: DataStudioProduct): DataStudioExplainerCopy {

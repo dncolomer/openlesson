@@ -61,6 +61,10 @@ import {
   studioGridLines,
   studioNiceGridStep,
   STUDIO_IN_REGION_FILL,
+  studioMultiSelectSummary,
+  studioOptionMatchesQuery,
+  pruneStudioSelectedIds,
+  toggleStudioSelectedId,
   studioRunOptions,
   studioScreenToWorld,
   toggleStudioHiddenId,
@@ -473,6 +477,11 @@ describe("product Data Studio chrome", () => {
     expect(visual).toContain("data-data-studio-product");
     expect(visual).toContain("data-data-studio-flow-filter");
     expect(visual).toContain("data-data-studio-run-filter");
+    expect(visual).toContain("StudioMultiSelect");
+    const select = readFileSync(join(ROOT, "components/data-studio/StudioMultiSelect.tsx"), "utf8");
+    expect(select).toContain("data-data-studio-select-search");
+    expect(select).toContain("data-data-studio-select-option");
+    expect(select).toContain("aria-multiselectable");
     expect(visual).toContain("data-data-studio-inspect");
     expect(visual).toContain("data-data-studio-speech");
     expect(visual).toContain("data-data-studio-resize");
@@ -486,6 +495,10 @@ describe("product Data Studio chrome", () => {
     expect(visual).toContain("data-data-studio-view");
     expect(visual).toContain("data-data-studio-distances-toggle");
     expect(visual).toContain("data-data-studio-membership-toggle");
+    expect(visual).toContain("const [showDistances, setShowDistances] = useState(true)");
+    expect(visual).toContain("const [colorMembership, setColorMembership] = useState(true)");
+    expect(visual).toContain("data-data-studio-spread-disk");
+    expect(visual).toContain("data-data-studio-spread-label");
     expect(visual).toContain("data-data-studio-membership-ring");
     expect(visual).toContain("studioHighDimRegionMembership");
     expect(visual).toContain("STUDIO_IN_REGION_FILL");
@@ -575,6 +588,17 @@ describe("studio flow/run filters, inspect, projection, learning scope", () => {
         (row) => row.id,
       ),
     ).toEqual(["e2"]);
+    expect(
+      filterStudioEmbeddings([ada, bea, other], { flowIds: ["flow-a", "flow-b"] }).map(
+        (row) => row.id,
+      ),
+    ).toEqual(["e1", "e2", "e3"]);
+    expect(
+      filterStudioEmbeddings([ada, bea, other], {
+        flowIds: ["flow-a"],
+        runIds: ["run-1", "run-2"],
+      }).map((row) => row.id),
+    ).toEqual(["e1", "e2"]);
     expect(studioFlowOptions([ada, bea, other]).map((flow) => flow.flowId)).toEqual([
       "flow-a",
       "flow-b",
@@ -583,7 +607,23 @@ describe("studio flow/run filters, inspect, projection, learning scope", () => {
       "run-1",
       "run-2",
     ]);
+    expect(studioRunOptions([ada, bea, other], ["flow-a", "flow-b"]).map((run) => run.runId)).toEqual(
+      ["run-1", "run-2", "run-9"],
+    );
     expect(studioRunOptions([ada, bea, other], "flow-a")[0]?.identity).toBe("ada");
+    expect(studioOptionMatchesQuery({ id: "flow-a", label: "Limits (2)", keywords: "ada bea" }, "ada")).toBe(
+      true,
+    );
+    expect(studioOptionMatchesQuery({ id: "flow-a", label: "Limits (2)" }, "bayes")).toBe(false);
+    expect(studioMultiSelectSummary(["flow-a"], [{ id: "flow-a", label: "Limits (2)" }], "All together", "flows")).toBe(
+      "Limits (2)",
+    );
+    expect(studioMultiSelectSummary(["a", "b"], [], "All together", "flows")).toBe("2 flows");
+    expect(toggleStudioSelectedId(["flow-a"], "flow-b")).toEqual(["flow-a", "flow-b"]);
+    expect(toggleStudioSelectedId(["flow-a", "flow-b"], "flow-a")).toEqual(["flow-b"]);
+    expect(pruneStudioSelectedIds(["run-1", "run-9"], ["run-1", "run-2"])).toEqual(["run-1"]);
+    const kept = ["run-1", "run-2"];
+    expect(pruneStudioSelectedIds(kept, ["run-1", "run-2"])).toBe(kept);
   });
 
   it("inspects vector, raw, proof of work, and transcripts from a stored embedding", () => {

@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BrandLogo } from "@/components/BrandLogo";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import {
   isDashboardNavTabItem,
   isDashboardProductTab,
@@ -99,21 +98,16 @@ export function DashboardSidebar({
               );
             })}
             {group.id === "account" ? (
-              <>
-                <li>
-                  <LanguageSwitcher variant="sidebar" />
-                </li>
-                <li>
-                  <button
-                    type="button"
-                    data-dashboard-sign-out
-                    onClick={() => void handleSignOut()}
-                    className={`${itemClass} ${idleClass}`}
-                  >
-                    {t("nav.signOut")}
-                  </button>
-                </li>
-              </>
+              <li>
+                <button
+                  type="button"
+                  data-dashboard-sign-out
+                  onClick={() => void handleSignOut()}
+                  className={`${itemClass} ${idleClass}`}
+                >
+                  {t("nav.signOut")}
+                </button>
+              </li>
             ) : null}
           </ul>
         </nav>

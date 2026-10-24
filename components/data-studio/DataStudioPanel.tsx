@@ -31,6 +31,7 @@ import {
   inspectStudioEmbedding,
   mergeStudioInspectPow,
   panStudioCamera,
+  pruneStudioSelectedIds,
   parseDataStudioSpace,
   parseStudioFocusRegionId,
   studioCameraTransform,
@@ -48,6 +49,7 @@ import {
   type StudioCamera,
 } from "@/lib/data-studio-view";
 import { DataStudioExplainer } from "@/components/data-studio/DataStudioExplainer";
+import { StudioMultiSelect } from "@/components/data-studio/StudioMultiSelect";
 import type { DataStudioView } from "@/lib/data-studio-explainer";
 import type { FlowPowRow } from "@/lib/flow-embedding";
 import {
@@ -94,16 +96,16 @@ export function DataStudioPanel({
   const [algorithm, setAlgorithm] = useState<ProjectionAlgorithmId>("pca");
   const [space, setSpace] = useState<DataStudioSpace>("path");
   const [view, setView] = useState<DataStudioView>("map");
-  const [flowId, setFlowId] = useState("");
-  const [runId, setRunId] = useState("");
+  const [flowIds, setFlowIds] = useState<string[]>([]);
+  const [runIds, setRunIds] = useState<string[]>([]);
   const [mapId, setMapId] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [screen, setScreen] = useState({ width: 960, height: 640, margin: 36 });
   const [camera, setCamera] = useState<StudioCamera>(IDENTITY_STUDIO_CAMERA);
   const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
   const [dragging, setDragging] = useState(false);
-  const [showDistances, setShowDistances] = useState(false);
-  const [colorMembership, setColorMembership] = useState(false);
+  const [showDistances, setShowDistances] = useState(true);
+  const [colorMembership, setColorMembership] = useState(true);
   const [hiddenRegionIds, setHiddenRegionIds] = useState<string[]>([]);
   const [inspectWidth, setInspectWidth] = useState(() => {
     if (typeof window === "undefined") return STUDIO_INSPECT_WIDTH_DEFAULT;
@@ -199,15 +201,33 @@ export function DataStudioPanel({
   const filtered = useMemo(
     () =>
       filterStudioEmbeddings(rows, {
-        flowId: showFlowFilters ? flowId : null,
-        runId: showFlowFilters ? runId : null,
+        flowIds: showFlowFilters ? flowIds : [],
+        runIds: showFlowFilters ? runIds : [],
         workspaceId: product === "learning" ? mapId : workspaceId,
       }),
-    [flowId, mapId, product, rows, runId, showFlowFilters, workspaceId],
+    [flowIds, mapId, product, rows, runIds, showFlowFilters, workspaceId],
   );
 
   const flows = useMemo(() => studioFlowOptions(rows), [rows]);
-  const runs = useMemo(() => studioRunOptions(rows, flowId || null), [flowId, rows]);
+  const runs = useMemo(() => studioRunOptions(rows, flowIds), [flowIds, rows]);
+  const flowOptions = useMemo(
+    () =>
+      flows.map((flow) => ({
+        id: flow.flowId,
+        label: `${flow.flowId} (${flow.runCount})`,
+        keywords: flow.identities.join(" "),
+      })),
+    [flows],
+  );
+  const runOptions = useMemo(
+    () =>
+      runs.map((run) => ({
+        id: run.runId,
+        label: run.identity ? `${run.identity} · ${run.runId}` : run.runId,
+        keywords: run.flowId ?? "",
+      })),
+    [runs],
+  );
   const maps = payload?.workspaces ?? [];
 
   const spaceRegions = useMemo(
@@ -274,8 +294,26 @@ export function DataStudioPanel({
   );
 
   useEffect(() => {
+    setFlowIds((current) =>
+      pruneStudioSelectedIds(
+        current,
+        flows.map((flow) => flow.flowId),
+      ),
+    );
+  }, [flows]);
+
+  useEffect(() => {
+    setRunIds((current) =>
+      pruneStudioSelectedIds(
+        current,
+        runs.map((run) => run.runId),
+      ),
+    );
+  }, [runs]);
+
+  useEffect(() => {
     setCamera(IDENTITY_STUDIO_CAMERA);
-  }, [algorithm, flowId, runId, mapId, screen.width, screen.height, space]);
+  }, [algorithm, flowIds, runIds, mapId, screen.width, screen.height, space]);
 
   const selected = useMemo(
     () => filtered.find((row) => row.id === selectedId) ?? null,
@@ -472,41 +510,26 @@ export function DataStudioPanel({
         </label>
         {showFlowFilters ? (
           <>
-            <label className="flex items-center gap-1.5 text-[11px] text-neutral-400">
-              Flow
-              <select
-                className={SELECT_CLASS}
-                value={flowId}
-                onChange={(event) => {
-                  setFlowId(event.target.value);
-                  setRunId("");
-                }}
-                data-data-studio-flow-filter
-              >
-                <option value="">All together</option>
-                {flows.map((flow) => (
-                  <option key={flow.flowId} value={flow.flowId}>
-                    {flow.flowId} ({flow.runCount})
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex items-center gap-1.5 text-[11px] text-neutral-400">
-              Run
-              <select
-                className={SELECT_CLASS}
-                value={runId}
-                onChange={(event) => setRunId(event.target.value)}
-                data-data-studio-run-filter
-              >
-                <option value="">All runs</option>
-                {runs.map((run) => (
-                  <option key={run.runId} value={run.runId}>
-                    {run.identity ? `${run.identity} · ${run.runId}` : run.runId}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <StudioMultiSelect
+              label="Flow"
+              options={flowOptions}
+              selected={flowIds}
+              onChange={setFlowIds}
+              emptyLabel="All together"
+              plural="flows"
+              searchPlaceholder="Search flows"
+              marker="data-data-studio-flow-filter"
+            />
+            <StudioMultiSelect
+              label="Run"
+              options={runOptions}
+              selected={runIds}
+              onChange={setRunIds}
+              emptyLabel="All runs"
+              plural="runs"
+              searchPlaceholder="Search runs"
+              marker="data-data-studio-run-filter"
+            />
           </>
         ) : (
           <label className="flex items-center gap-1.5 text-[11px] text-neutral-400">
@@ -747,6 +770,7 @@ export function DataStudioPanel({
                       stroke="rgba(255, 255, 255, 0.35)"
                       strokeWidth={1}
                       vectorEffect="non-scaling-stroke"
+                      data-data-studio-spread-disk=""
                     />
                     {colorMembership && region.membershipScreenRadius > 0 ? (
                       <circle
@@ -761,6 +785,33 @@ export function DataStudioPanel({
                         vectorEffect="non-scaling-stroke"
                         data-data-studio-membership-ring=""
                       />
+                    ) : null}
+                    <g
+                      transform={`translate(${region.screenX + region.screenRadius + 6 / camera.scale} ${region.screenY}) scale(${1 / camera.scale})`}
+                    >
+                      <text
+                        fill="rgba(255,255,255,0.45)"
+                        fontSize="9"
+                        fontFamily="ui-monospace, monospace"
+                        data-data-studio-spread-label=""
+                      >
+                        spread
+                      </text>
+                    </g>
+                    {colorMembership && region.membershipScreenRadius > 0 ? (
+                      <g
+                        transform={`translate(${region.screenX + region.membershipScreenRadius + 6 / camera.scale} ${region.screenY + 12 / camera.scale}) scale(${1 / camera.scale})`}
+                      >
+                        <text
+                          fill={STUDIO_IN_REGION_FILL}
+                          fillOpacity={0.75}
+                          fontSize="9"
+                          fontFamily="ui-monospace, monospace"
+                          data-data-studio-membership-label=""
+                        >
+                          in (τ)
+                        </text>
+                      </g>
                     ) : null}
                     <circle
                       cx={region.screenX}
@@ -914,8 +965,10 @@ export function DataStudioPanel({
                     <span className="text-neutral-600">cosine ≥ τ</span>
                   </p>
                   <p className="text-[9px] leading-snug text-neutral-500">
-                    Solid disk = cohort spread. Dashed ring = cosine ball flattened to 2D.
-                    A bright dot outside the white disk is still in 96-D.
+                    Spread disk = mean ‖builder − centroid‖ of the people who defined
+                    the region, flattened to 2D. It is how tight that cohort was. Dashed
+                    ring = cosine ≥ τ ball. A bright dot outside the white disk is still
+                    in 96-D.
                   </p>
                 </div>
               ) : null}
@@ -949,7 +1002,7 @@ export function DataStudioPanel({
           {view === "map" ? (
             <p className="pointer-events-none absolute bottom-3 left-3 z-[3] text-[10px] text-neutral-500">
               {colorMembership
-                ? "Bright = cosine ≥ τ in 96-D · solid disk = cohort spread · dashed ring = cosine ball flattened (PCA distorts)"
+                ? "Spread = mean builder distance to centroid · dashed ring = cosine ≥ τ · rays = ‖x−c‖ in 96-D"
                 : showDistances
                   ? "Dashed ‖x−c‖ is L2 in embedding space · Drag to pan · Scroll to zoom"
                   : "Drag to pan · Scroll to zoom · Click a point to inspect"}

@@ -1715,6 +1715,7 @@
   },
   "language": {
     "select": "Idioma",
+    "interface": "Idioma de la interfaz",
     "en": "English",
     "vi": "Tiếng Việt",
     "zh": "中文",

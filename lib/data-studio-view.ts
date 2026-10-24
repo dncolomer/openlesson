@@ -86,9 +86,19 @@ export type DataStudioEmbeddingRow = {
 export type DataStudioFilter = {
   /** Empty / null = all flows together. */
   flowId?: string | null;
+  /** Multi-select. Empty = all flows. Combined with `flowId` when both are set. */
+  flowIds?: readonly string[] | null;
   /** Empty / null = all runs of the selected flow (or all runs). */
   runId?: string | null;
+  /** Multi-select. Empty = all runs. Combined with `runId` when both are set. */
+  runIds?: readonly string[] | null;
   workspaceId?: string | null;
+};
+
+export type StudioSelectOption = {
+  id: string;
+  label: string;
+  keywords?: string;
 };
 
 export type StudioTranscriptKind = "speech" | "dictate" | "thought" | "other";
@@ -156,16 +166,86 @@ export function dataStudioProductLabel(product: DataStudioProduct): string {
   return "Learning";
 }
 
+export function uniqueStudioIds(values: readonly unknown[]): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const value of values) {
+    const id = text(value);
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    out.push(id);
+  }
+  return out;
+}
+
+export function studioFilterFlowIds(filter: DataStudioFilter = {}): string[] {
+  return uniqueStudioIds([...(filter.flowIds ?? []), filter.flowId]);
+}
+
+export function studioFilterRunIds(filter: DataStudioFilter = {}): string[] {
+  return uniqueStudioIds([...(filter.runIds ?? []), filter.runId]);
+}
+
+export function studioOptionMatchesQuery(
+  option: Pick<StudioSelectOption, "id" | "label" | "keywords">,
+  query: string,
+): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  const hay = `${option.id} ${option.label} ${option.keywords ?? ""}`.toLowerCase();
+  return hay.includes(q);
+}
+
+export function pruneStudioSelectedIds(
+  selected: readonly string[],
+  available: readonly string[],
+): string[] {
+  const allow = new Set(available);
+  const next = selected.filter((id) => allow.has(id));
+  if (
+    next.length === selected.length &&
+    next.every((id, index) => id === selected[index])
+  ) {
+    return selected as string[];
+  }
+  return next;
+}
+
+export function studioMultiSelectSummary(
+  selected: readonly string[],
+  options: readonly StudioSelectOption[],
+  emptyLabel: string,
+  plural: string,
+): string {
+  if (selected.length === 0) return emptyLabel;
+  if (selected.length === 1) {
+    return options.find((option) => option.id === selected[0])?.label ?? selected[0];
+  }
+  return `${selected.length} ${plural}`;
+}
+
+export function toggleStudioSelectedId(
+  selected: readonly string[],
+  id: string,
+): string[] {
+  const next = text(id);
+  if (!next) return uniqueStudioIds(selected);
+  if (selected.includes(next)) return selected.filter((item) => item !== next);
+  return uniqueStudioIds([...selected, next]);
+}
+
 export function filterStudioEmbeddings(
   rows: readonly DataStudioEmbeddingRow[],
   filter: DataStudioFilter = {},
 ): DataStudioEmbeddingRow[] {
-  const flowId = text(filter.flowId);
-  const runId = text(filter.runId);
+  const flowIds = studioFilterFlowIds(filter);
+  const runIds = studioFilterRunIds(filter);
   const workspaceId = text(filter.workspaceId);
+  const flowSet = flowIds.length ? new Set(flowIds) : null;
+  const runSet = runIds.length ? new Set(runIds) : null;
   return rows.filter((row) => {
-    if (flowId && text(row.flow_id) !== flowId) return false;
-    if (runId && text(row.run_id) !== runId) return false;
+    if (flowSet && !flowSet.has(text(row.flow_id))) return false;
+    if (runSet && !runSet.has(text(row.run_id))) return false;
     if (workspaceId && text(row.workspace_id) !== workspaceId) return false;
     return true;
   });
@@ -200,20 +280,26 @@ export function studioFlowOptions(
 
 export function studioRunOptions(
   rows: readonly DataStudioEmbeddingRow[],
-  flowId?: string | null,
-): Array<{ runId: string; identity: string | null }> {
-  const wantFlow = text(flowId);
-  const scoped = wantFlow
-    ? rows.filter((row) => text(row.flow_id) === wantFlow)
+  flowId?: string | readonly string[] | null,
+): Array<{ runId: string; identity: string | null; flowId: string | null }> {
+  const wantFlows = uniqueStudioIds(Array.isArray(flowId) ? flowId : [flowId]);
+  const flowSet = wantFlows.length ? new Set(wantFlows) : null;
+  const scoped = flowSet
+    ? rows.filter((row) => flowSet.has(text(row.flow_id)))
     : rows.slice();
-  const byRun = new Map<string, string | null>();
+  const byRun = new Map<string, { identity: string | null; flowId: string | null }>();
   for (const row of scoped) {
     const runId = text(row.run_id);
     if (!runId) continue;
-    if (!byRun.has(runId)) byRun.set(runId, text(row.identity) || null);
+    if (!byRun.has(runId)) {
+      byRun.set(runId, {
+        identity: text(row.identity) || null,
+        flowId: text(row.flow_id) || null,
+      });
+    }
   }
   return Array.from(byRun.entries())
-    .map(([runId, identity]) => ({ runId, identity }))
+    .map(([runId, meta]) => ({ runId, identity: meta.identity, flowId: meta.flowId }))
     .sort((a, b) => a.runId.localeCompare(b.runId));
 }
 
@@ -687,7 +773,8 @@ export function hiddenStudioRegionIdSet(
   hiddenIds: ReadonlySet<string> | readonly string[] | null | undefined,
 ): Set<string> {
   if (hiddenIds instanceof Set) return hiddenIds;
-  return new Set((hiddenIds ?? []).filter((id) => Boolean(text(id))));
+  const list: readonly string[] = Array.isArray(hiddenIds) ? hiddenIds : [];
+  return new Set(list.filter((id) => Boolean(text(id))));
 }
 
 export function visibleStudioRegions<T extends { id: string }>(

@@ -1614,6 +1614,7 @@
   },
   "language": {
     "select": "Language",
+    "interface": "Interface language",
     "en": "English",
     "vi": "Tiếng Việt",
     "zh": "中文",

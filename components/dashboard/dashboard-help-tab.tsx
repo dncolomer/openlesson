@@ -1,5 +1,7 @@
 "use client";
 
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+
 export function DashboardHelpTab() {
   return (
     <section className="console-copy px-6 py-14 sm:px-10 sm:py-16" data-dashboard-help>
@@ -16,6 +18,12 @@ export function DashboardHelpTab() {
       >
         Coming soon
       </p>
+      <div className="mt-10 max-w-xl border-t border-white/15 pt-8">
+        <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-neutral-500">
+          Interface
+        </p>
+        <LanguageSwitcher variant="support" />
+      </div>
       <p className="mt-8 text-sm text-neutral-400">
         Contact:{" "}
         <a

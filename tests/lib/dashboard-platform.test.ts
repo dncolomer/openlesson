@@ -267,7 +267,9 @@ describe("dashboard platform surface", () => {
     expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain("BrandLogo");
     expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain("size={28}");
     expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain("px-3.5 py-4");
-    expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain("LanguageSwitcher");
+    expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).not.toContain("LanguageSwitcher");
+    expect(readRepo("components/dashboard/dashboard-help-tab.tsx")).toContain("LanguageSwitcher");
+    expect(readRepo("components/dashboard/dashboard-help-tab.tsx")).toContain('variant="support"');
     expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain("data-dashboard-sign-out");
     expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain("py-1");
     expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain("md:sticky");

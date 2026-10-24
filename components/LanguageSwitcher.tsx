@@ -7,7 +7,7 @@ import { useState, useRef, useEffect } from 'react';
 export function LanguageSwitcher({
   variant = "default",
 }: {
-  variant?: "default" | "sidebar";
+  variant?: "default" | "sidebar" | "support";
 }) {
   const { locale, setLocale, supportedLocales, t } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
@@ -23,20 +23,32 @@ export function LanguageSwitcher({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  if (variant === "sidebar") {
+  if (variant === "sidebar" || variant === "support") {
+    const labeled = variant === "support";
     return (
       <label
         data-dashboard-language
-        className="block w-full whitespace-nowrap px-2 py-1 text-[13px] leading-tight text-neutral-400"
+        data-dashboard-support-language={labeled ? "" : undefined}
+        className={
+          labeled
+            ? "mt-2 block max-w-xs text-sm text-neutral-300"
+            : "block w-full whitespace-nowrap px-2 py-1 text-[13px] leading-tight text-neutral-400"
+        }
       >
-        <span className="sr-only">{t("language.select")}</span>
+        <span className={labeled ? "mb-1.5 block text-[13px] text-neutral-400" : "sr-only"}>
+          {labeled ? t("language.interface") : t("language.select")}
+        </span>
         <select
           value={locale}
           onChange={(event) => {
             const next = supportedLocales.find((item) => item === event.target.value);
             if (next) setLocale(next);
           }}
-          className="w-full cursor-pointer rounded-none border-0 bg-transparent py-0 text-[13px] text-neutral-400 focus:outline-none"
+          className={
+            labeled
+              ? "w-full cursor-pointer rounded-none border border-white/25 bg-black px-2 py-1.5 text-[13px] text-white focus:border-white/60 focus:outline-none"
+              : "w-full cursor-pointer rounded-none border-0 bg-transparent py-0 text-[13px] text-neutral-400 focus:outline-none"
+          }
         >
           {supportedLocales.map((loc) => (
             <option key={loc} value={loc}>

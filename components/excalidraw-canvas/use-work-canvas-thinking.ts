@@ -236,7 +236,6 @@ export function useWorkCanvasThinking(input: {
     thinkingHostByIdRef,
     thinkingOverlayBox,
     thinkingTick,
-    showHeliosThinking,
     projectThinkingChip,
     reservedThinkingOrigins,
     upsertThinkingChip,

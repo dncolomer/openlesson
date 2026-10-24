@@ -23,7 +23,7 @@ export type LiveExcalidrawAppState = IleWorkCanvasAppState & {
   editingElement?: unknown;
 };
 
-/** Methods the live board actually calls. One assertion at the Excalidraw mount. */
+/** Methods this board calls on the live instance. */
 export type LiveExcalidrawAPI = {
   updateScene: (scene: {
     elements?: readonly IleWorkCanvasElement[];
@@ -48,7 +48,7 @@ export type CommitSceneInput = {
 };
 
 export type CommitSceneOptions = {
-  /** Programmatic write: suppress PoW observe. Camera/zoom pass false. */
+  /** When true (default), suppress PoW observe for programmatic writes. */
   remote?: boolean;
   applyingRemote?: { current: boolean };
   scrollTo?: readonly IleWorkCanvasElement[] | null;

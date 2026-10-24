@@ -55,7 +55,7 @@ describe("work-canvas command buttons actually mutate the board", () => {
     expect(canvas).toContain("applyLocalCanvasEdit(outcome.scene, outcome.parts, !outcome.ask)");
     expect(canvas).toContain("ileWorkCanvasRevealScroll");
     expect(canvas).toContain("ileWorkCanvasCommandShortcutKeyFromEvent");
-    expect(canvas).toContain('input.kind !== "concepts"');
+    expect(canvas).toContain('askInput.kind !== "concepts"');
     const applyLocal = canvas.slice(
       canvas.indexOf("const applyLocalCanvasEdit"),
       canvas.indexOf("if (outcome.changed)"),

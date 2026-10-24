@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { readExcalidrawSurface } from "../helpers/surface-source";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
@@ -351,7 +352,7 @@ describe("session branch model", () => {
   });
 
   it("does not paint prepared-field observations when a session opens", () => {
-    const canvas = readFileSync(join(process.cwd(), "components/ExcalidrawCanvas.tsx"), "utf8");
+    const canvas = readExcalidrawSurface();
     expect(canvas).not.toContain("appendSessionBranchNotes");
     expect(canvas).toContain("withoutSessionBranchNotes");
   });

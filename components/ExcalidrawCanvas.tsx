@@ -5,51 +5,36 @@ import {
   useCallback,
   useState,
   useEffect,
-  type PointerEvent as ReactPointerEvent,
 } from "react";
 import { useI18n } from "@/lib/i18n";
 import { bindIleSurfaceEditorEvents, bindIleSurfaceWheelZoom } from "@/lib/learn-compact-window";
-import { ILE_HELIOS_THINKING_ROTATE_MS } from "@/lib/learn-dialogue-turn";
 import { ILE_CANVAS_TIMER_RESET_LOADING_MS } from "@/lib/learn-work-canvas-timer";
 import {
   ILE_WORK_CANVAS_AUTO_LAYOUT_SHORTCUT,
-  ileCanvasCommandDraft,
   ileWorkCanvasCommandByShortcut,
-  ileWorkCanvasCommandNeedsSelection,
   ileWorkCanvasCommandShortcutKeyFromEvent,
-  type IleWorkCanvasCommandId,
 } from "@/lib/learn-work-canvas-commands";
 import { CanvasPromptBar } from "@/components/excalidraw-canvas/canvas-prompt-bar";
 import {
-  usePublishSessionBranchSlot,
   usePublishSessionProof,
   useSessionBranchSlot,
-  useSessionMarkCanvasEffects,
   useSessionPolicyInferences,
   useSessionPolicySuggestion,
 } from "@/components/session-view/session-policy-context";
 import {
-  graftSessionBranchModel,
   openSessionBranchQuestions,
-  withoutSessionBranchNotes,
   type SessionBranchModel,
 } from "@/lib/session-branch-model";
-import {
-  commitSessionAction,
-  type SessionMarkCanvasEffect,
-} from "@/lib/session-mark-canvas";
 import { CanvasSubmitBar } from "@/components/excalidraw-canvas/canvas-submit-bar";
 import { CanvasThinkingChips } from "@/components/excalidraw-canvas/canvas-thinking-chips";
 import {
   IleExcalidrawErrorBoundary,
   IleExcalidrawMount,
 } from "@/components/excalidraw-canvas/learn-excalidraw-mount";
-import { sanitizeSceneData } from "@/components/excalidraw-canvas/sanitize-scene";
+import { openCanvasScene, sanitizeSceneData } from "@/components/excalidraw-canvas/sanitize-scene";
+import { exportWorkCanvasPng } from "@/components/excalidraw-canvas/work-canvas-png";
 import {
   acknowledgeIleWorkCanvasXaiNotes,
-  applyIleWorkCanvasAskReply,
-  ileWorkCanvasAutoLayoutEnabled,
-  ILE_AUTO_LAYOUT_APP_STATE_KEY,
   ILE_CANVAS_PROMPT_BAR_FALLBACK_WIDTH,
   ILE_CANVAS_PROMPT_BAR_TOOLBAR_SELECTOR,
   ileCanvasPromptBarWidth,
@@ -57,61 +42,50 @@ import {
   ileCanvasPromptMode,
   ileCanvasSlashBarOpen,
   ileCanvasSlashKeyOpensBar,
-  ileWorkCanvasAskFallback,
-  ileWorkCanvasThinkingOccupancy,
   ileWorkCanvasEmptyNearbyOriginWithReserved,
-  ileWorkCanvasFiniteOrigin,
-  ileWorkCanvasAddedElementIds,
-  ileWorkCanvasDragThinkingOrigin,
   ileWorkCanvasCenterScroll,
   ileWorkCanvasContentBounds,
   ileWorkCanvasHasLiveElements,
-  ileWorkCanvasRevealScroll,
   ileWorkCanvasShouldRestoreEmptyBoard,
-  ileWorkCanvasSceneToViewport,
   ileWorkCanvasThinkingOverlayStyle,
-  ileWorkCanvasViewportToHost,
-  ileWorkCanvasWithScrollToContent,
   ileWorkCanvasZoomAtPoint,
   ileWorkCanvasZoomValue,
-  mergeIleXaiTurnOntoLiveWorkCanvas,
   pasteIleWorkCanvasElements,
-  serializeIleWorkCanvasScene,
-  runIleWorkCanvasCommand,
-  layoutIleWorkCanvasBoard,
   ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS,
   type IleWorkCanvasAskKind,
   type IleWorkCanvasElement,
+  type IleWorkCanvasFiles,
   type IleWorkCanvasScene,
   type IleWorkCanvasSkeleton,
 } from "@/lib/learn-work-canvas";
-import { syncIleDictatedTextOnWorkCanvas } from "@/lib/learn-canvas-dictate";
-import { sessionHarnessFocusLine } from "@/lib/session-harness";
 import { type IleCanvasCraftInsightConfig } from "@/components/session-view/learn-canvas-craft-insight";
 import {
   IleWorkCanvasPowCollector,
   ileWorkCanvasGestureBusy,
   type IleWorkCanvasPowEvent,
 } from "@/lib/learn-work-canvas-pow";
-// Excalidraw CSS - required for proper rendering
+import {
+  commitScene,
+  liveSceneElements,
+  type LiveExcalidrawAPI,
+  type LiveExcalidrawAppState,
+} from "@/components/excalidraw-canvas/excalidraw-api";
+import { useSessionMarkCanvas } from "@/components/excalidraw-canvas/use-session-mark-canvas";
+import { useWorkCanvasThinking } from "@/components/excalidraw-canvas/use-work-canvas-thinking";
+import { useWorkCanvasCommands } from "@/components/excalidraw-canvas/use-work-canvas-commands";
 import "@excalidraw/excalidraw/index.css";
 import "@/app/learn-excalidraw-theme.css";
 
-// Dynamic import for Next.js SSR compatibility
-type ExcalidrawAPIRef = any;
-
 export interface ExcalidrawCanvasProps {
   initialData?: string;
-   
-  initialSceneData?: { elements: any[]; appState: any; files: any } | null;
+  initialSceneData?: IleWorkCanvasScene | null;
   onCanvasChange?: (data: string) => void;
-   
-  onSceneChange?: (data: { elements: any[]; appState: any; files: any }) => void;
+  onSceneChange?: (data: IleWorkCanvasScene) => void;
   onSubmitToHelios?: (dataUrl?: string | null) => Promise<void> | void;
   canSubmitToHelios?: boolean;
   /** Override default "I'm Done Drawing" label (e.g. Project Mode "To solution"). */
   submitLabel?: string;
-  /** When nonce changes, merge these elements onto the live board via updateScene. */
+  /** When nonce changes, merge these elements onto the live board via commitScene. */
   applyElements?: readonly unknown[] | null;
   applyElementsNonce?: string | number | null;
   /** Ids to drop before merging applyElements (loading-placeholder replace). */
@@ -135,14 +109,14 @@ export interface ExcalidrawCanvasProps {
   }>;
   /** Resets the proof-of-work collector when the board changes. */
   boardId?: string | null;
-  /** Helios/XAI in-flight (TAP wait, TAP Learning send) — same overlay chip as ask-about-selection. */
+  /** Helios/XAI in-flight (Verify wait, Learn send) — same overlay chip as ask-about-selection. */
   heliosBusy?: boolean;
   /**
-   * TAP purity clock. Canvas chunk load and an in-flight XAI reply are waits,
+   * Purity clock. Canvas chunk load and an in-flight XAI reply are waits,
    * not learner silence. Omitted on surfaces that do not score silence.
    */
   onLearnerWaitChange?: (wait: { canvasLoading: boolean; waitingForXaiReply: boolean }) => void;
-  /** TAP Learning: craft an insight linked to this chapter. */
+  /** Learn: craft an insight linked to this chapter. */
   craftInsight?: IleCanvasCraftInsightConfig | null;
   /**
    * Live speech-bar text. Pass it (even when empty) to show Dictate.
@@ -161,7 +135,7 @@ export interface ExcalidrawCanvasProps {
   /** Read-only board (Scout thank-you / frozen canvas). */
   viewModeEnabled?: boolean;
   /**
-   * Calibrate, Learning, or Verification. The four buttons are the work.
+   * Calibrate, Learn, or Verify. The four buttons are the work.
    * Omit on boards that are not one of those sessions.
    */
   sessionMarkMode?: "calibrate" | "learn" | "verification" | null;
@@ -170,22 +144,8 @@ export interface ExcalidrawCanvasProps {
   sessionMarkListKey?: string | null;
 }
 
-
-
-function openCanvasScene(
-  scene: { elements: any[]; appState: any; files: any } | null | undefined,
-  scrollToContent: boolean,
-) {
-  const clean = sanitizeSceneData(scene);
-  const next = {
-    ...clean,
-    elements: withoutSessionBranchNotes(clean.elements ?? []),
-  };
-  return scrollToContent ? ileWorkCanvasWithScrollToContent(next) : next;
-}
-
 /**
- * Shared TAP Learning + TAP Work board. Hosts must not fork this — both surfaces
+ * Shared Learn/Verify work board. Hosts must not fork this — both surfaces
  * mount `WorkCanvas` so Commands, the board prompt, thinking overlay,
  * XAI apply, and center-on-open stay one implementation.
  */
@@ -219,7 +179,7 @@ export function ExcalidrawCanvas({
 }: ExcalidrawCanvasProps) {
   const { t } = useI18n();
   const submitButtonLabel = submitLabel || t("whiteboard.submitToHelios");
-  const excalidrawAPIRef = useRef<ExcalidrawAPIRef>(null);
+  const excalidrawAPIRef = useRef<LiveExcalidrawAPI | null>(null);
   const canvasHostRef = useRef<HTMLDivElement>(null);
   const [isSubmittingToHelios, setIsSubmittingToHelios] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -242,42 +202,19 @@ export function ExcalidrawCanvas({
   harnessInferencesRef.current = harnessInferences;
   const sessionMarkModeRef = useRef(sessionMarkMode);
   sessionMarkModeRef.current = sessionMarkMode;
-  const handleQuickActionRef = useRef<(id: IleWorkCanvasCommandId) => void>(() => {});
-  const toggleAutoLayoutRef = useRef<() => void>(() => {});
-  const sessionMarkCanvasEffects = useSessionMarkCanvasEffects();
   const sessionBranchSlot = useSessionBranchSlot();
-  const publishSessionBranch = usePublishSessionBranchSlot();
   const sessionBranchRef = useRef<SessionBranchModel | null>(null);
   sessionBranchRef.current = sessionBranchSlot?.status === "ready" ? sessionBranchSlot.model : null;
   const openBranchQuestions = openSessionBranchQuestions(sessionBranchRef.current);
   const sessionMarkQuestionsForBar =
     openBranchQuestions.length > 0 ? openBranchQuestions : sessionMarkQuestions;
-  const publishSessionBranchRef = useRef(publishSessionBranch);
-  publishSessionBranchRef.current = publishSessionBranch;
   const [promptBarWidth, setPromptBarWidth] = useState(ILE_CANVAS_PROMPT_BAR_FALLBACK_WIDTH);
   const [promptHost, setPromptHost] = useState({ width: 0, height: 0 });
-  const [thinkingTick, setThinkingTick] = useState(0);
-  const [thinkingChips, setThinkingChips] = useState<
-    Array<{ turnId: string; x: number; y: number; left: number; top: number; zoom: number }>
-  >([]);
   const onAskSelectedRef = useRef(onAskSelected);
   const askInFlightRef = useRef(0);
-  const askSeqRef = useRef(0);
-  const applyChainRef = useRef(Promise.resolve());
-  const thinkingChipsRef = useRef(thinkingChips);
-  const thinkingHostByIdRef = useRef(new Map<string, HTMLDivElement>());
-  const thinkingDragRef = useRef<{
-    turnId: string;
-    originX: number;
-    originY: number;
-    startClientX: number;
-    startClientY: number;
-    zoom: number;
-  } | null>(null);
-  
-  // Store the latest scene data for PNG export
-   
-  const sceneDataRef = useRef<{ elements: any[]; appState: any; files: any } | null>(null);
+  const applyingRemoteRef = useRef(false);
+
+  const sceneDataRef = useRef<IleWorkCanvasScene | null>(null);
   const initialSceneDataRef = useRef(openCanvasScene(initialSceneData, !openFocusRole));
   const onSceneChangeRef = useRef(onSceneChange);
   const onCanvasPowActionsRef = useRef(onCanvasPowActions);
@@ -291,7 +228,6 @@ export function ExcalidrawCanvas({
     publishSessionProofRef.current(powEvents);
   };
   const canvasPowCollectorRef = useRef(new IleWorkCanvasPowCollector());
-  const dictateElementIdRef = useRef<string | null>(null);
   const lastApplyNonceRef = useRef<string | number | null>(null);
   const pendingApplyRef = useRef<{
     nonce: string | number;
@@ -302,7 +238,6 @@ export function ExcalidrawCanvas({
   const scenePersistTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isExportingRef = useRef(false);
   const lastPersistedSceneJsonRef = useRef("");
-  const applyingRemoteRef = useRef(false);
   const userClearedRef = useRef(false);
   const centeredOnOpenRef = useRef(false);
   const openFocusRoleRef = useRef(openFocusRole);
@@ -320,11 +255,9 @@ export function ExcalidrawCanvas({
     const run = () => {
       centerRafRef.current = 0;
       const api = excalidrawAPIRef.current;
-      if (!api || typeof api.scrollToContent !== "function") return;
-      const elements = (api.getSceneElements?.() ?? []).filter(
-        (el: { isDeleted?: boolean }) => !el.isDeleted,
-      );
-      const appState = api.getAppState?.() ?? {};
+      if (!api) return;
+      const elements = (api.getSceneElements() ?? []).filter((el) => !el.isDeleted);
+      const appState = api.getAppState() ?? {};
       const width = Number(appState.width);
       const height = Number(appState.height);
       const viewportReady =
@@ -349,9 +282,7 @@ export function ExcalidrawCanvas({
       }
       const role = openFocusRoleRef.current;
       const focused = role
-        ? elements.filter(
-            (el: { customData?: { calibrateRole?: string } }) => el.customData?.calibrateRole === role,
-          )
+        ? elements.filter((el) => el.customData?.calibrateRole === role)
         : [];
       if (role && !focused.length) {
         if (centerTriesRef.current < 40) {
@@ -360,20 +291,24 @@ export function ExcalidrawCanvas({
         }
         return;
       }
-      if (focused.length && typeof api.updateScene === "function") {
+      if (focused.length) {
         const bounds = ileWorkCanvasContentBounds(focused);
         const scroll = ileWorkCanvasCenterScroll(bounds, { width, height, zoom: { value: 1 } });
         if (scroll) {
           const offsetLeft = Number(appState.offsetLeft) || 0;
           const offsetTop = Number(appState.offsetTop) || 0;
           try {
-            api.updateScene({
-              appState: {
-                zoom: { value: 1 },
-                scrollX: scroll.scrollX - offsetLeft,
-                scrollY: scroll.scrollY - offsetTop,
+            commitScene(
+              api,
+              {
+                appState: {
+                  zoom: { value: 1 },
+                  scrollX: scroll.scrollX - offsetLeft,
+                  scrollY: scroll.scrollY - offsetTop,
+                },
               },
-            });
+              { remote: false },
+            );
           } catch {
             api.scrollToContent(focused, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS);
           }
@@ -412,25 +347,16 @@ export function ExcalidrawCanvas({
     const pending = pendingApplyRef.current;
     if (!api) return;
     const initial = initialSceneDataRef.current;
-    const live = (
-      typeof api.getSceneElementsIncludingDeleted === "function"
-        ? api.getSceneElementsIncludingDeleted()
-        : (api.getSceneElements?.() ?? [])
-    ) as { id?: string; isDeleted?: boolean }[];
+    const live = liveSceneElements(api);
     const liveCount = live.filter((el) => !el.isDeleted).length;
     if (
       ileWorkCanvasShouldRestoreEmptyBoard({
         liveNonDeletedCount: liveCount,
-        initialHasLive: ileWorkCanvasHasLiveElements(initial as IleWorkCanvasScene),
+        initialHasLive: ileWorkCanvasHasLiveElements(initial),
         userCleared: userClearedRef.current || live.some((el) => el.isDeleted),
       })
     ) {
-      applyingRemoteRef.current = true;
-      try {
-        api.updateScene({ elements: initial.elements });
-      } finally {
-        applyingRemoteRef.current = false;
-      }
+      commitScene(api, { elements: initial.elements }, { applyingRemote: applyingRemoteRef });
     }
     if (!pending || pending.nonce === lastApplyNonceRef.current) {
       pendingApplyRef.current = null;
@@ -439,35 +365,33 @@ export function ExcalidrawCanvas({
     }
     lastApplyNonceRef.current = pending.nonce;
     pendingApplyRef.current = null;
-    const incoming = (pending.elements ?? []) as any[];
-    const removeIds = new Set(pending.removeIds ?? []);
-    const existing = (api.getSceneElements?.() ?? []).filter(
-      (el: { id?: string }) => !el?.id || !removeIds.has(el.id),
+    const incoming = (pending.elements ?? []).filter(
+      (el): el is IleWorkCanvasElement => Boolean(el && typeof el === "object"),
     );
-    const existingIds = new Set(existing.map((el: { id?: string }) => el.id));
+    const removeIds = new Set(pending.removeIds ?? []);
+    const existing = (api.getSceneElements() ?? []).filter((el) => !el?.id || !removeIds.has(el.id));
+    const existingIds = new Set(existing.map((el) => el.id));
     const toAdd = incoming.filter((el) => el && typeof el === "object" && !existingIds.has(el.id));
     if (!toAdd.length && !removeIds.size) {
       scheduleCenterOnOpen();
       return;
     }
     const merged = pasteIleWorkCanvasElements({
-      existing: existing as IleWorkCanvasElement[],
-      incoming: toAdd as IleWorkCanvasElement[],
+      existing,
+      incoming: toAdd,
     });
-    const addedIds = new Set(
-      (toAdd as IleWorkCanvasElement[]).map((el) => el.id).filter(Boolean),
-    );
+    const addedIds = new Set(toAdd.map((el) => el.id).filter(Boolean));
     const added = merged.filter((el) => addedIds.has(el.id) && !el.isDeleted);
-    applyingRemoteRef.current = true;
-    try {
-      api.updateScene({
+    const shouldScroll = Boolean(added.length && scrollAppliedElementsRef.current);
+    commitScene(
+      api,
+      {
         elements: merged,
         appState: { selectedElementIds: {} },
-      });
-    } finally {
-      applyingRemoteRef.current = false;
-    }
-    if (added.length && scrollAppliedElementsRef.current && typeof api.scrollToContent === "function") {
+      },
+      { applyingRemote: applyingRemoteRef },
+    );
+    if (shouldScroll) {
       api.scrollToContent(added, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS);
     } else {
       scheduleCenterOnOpen();
@@ -491,7 +415,7 @@ export function ExcalidrawCanvas({
     );
   }, []);
 
-  const setExcalidrawAPI = useCallback((api: ExcalidrawAPIRef) => {
+  const setExcalidrawAPI = useCallback((api: LiveExcalidrawAPI) => {
     excalidrawAPIRef.current = api;
     setCanvasApiReady(true);
     flushPendingApply();
@@ -533,10 +457,6 @@ export function ExcalidrawCanvas({
   }, [askInFlight]);
 
   useEffect(() => {
-    thinkingChipsRef.current = thinkingChips;
-  }, [thinkingChips]);
-
-  useEffect(() => {
     return () => {
       onLearnerWaitChangeRef.current?.({
         canvasLoading: true,
@@ -545,173 +465,30 @@ export function ExcalidrawCanvas({
     };
   }, []);
 
-  const thinkingOverlayBox = ileWorkCanvasThinkingOverlayStyle();
-  const showHeliosThinking = thinkingChips.length > 0;
+  const {
+    thinkingChips,
+    thinkingChipsRef,
+    thinkingHostByIdRef,
+    thinkingOverlayBox,
+    thinkingTick,
+    projectThinkingChip,
+    reservedThinkingOrigins,
+    upsertThinkingChip,
+    removeThinkingChip,
+    handleThinkingChipPointerDown,
+    handleThinkingChipPointerMove,
+    handleThinkingChipPointerUp,
+    syncThinkingOverlay,
+  } = useWorkCanvasThinking({
+    apiRef: excalidrawAPIRef,
+    sceneDataRef,
+    canvasHostOrigin,
+    heliosBusy,
+    askInFlight,
+    isLoaded,
+  });
 
-  const projectThinkingChip = useCallback(
-    (
-      turnId: string,
-      origin: { x: number; y: number },
-      appState: any,
-    ): { turnId: string; x: number; y: number; left: number; top: number; zoom: number } => {
-      const vp = ileWorkCanvasViewportToHost(
-        ileWorkCanvasSceneToViewport(origin, appState),
-        canvasHostOrigin(),
-      );
-      return {
-        turnId,
-        x: origin.x,
-        y: origin.y,
-        left: Math.round(vp.x),
-        top: Math.round(vp.y),
-        zoom: ileWorkCanvasZoomValue(appState),
-      };
-    },
-    [canvasHostOrigin],
-  );
-
-  const reservedThinkingOrigins = useCallback((exceptTurnId?: string) => {
-    return thinkingChipsRef.current
-      .filter((chip) => chip.turnId !== exceptTurnId)
-      .map((chip) => ({ x: chip.x, y: chip.y }));
-  }, []);
-
-  const upsertThinkingChip = useCallback((chip: {
-    turnId: string;
-    x: number;
-    y: number;
-    left: number;
-    top: number;
-    zoom: number;
-  }) => {
-    thinkingChipsRef.current = [
-      ...thinkingChipsRef.current.filter((item) => item.turnId !== chip.turnId),
-      chip,
-    ];
-    setThinkingChips(thinkingChipsRef.current);
-  }, []);
-
-  const removeThinkingChip = useCallback((turnId: string) => {
-    if (thinkingDragRef.current?.turnId === turnId) thinkingDragRef.current = null;
-    thinkingChipsRef.current = thinkingChipsRef.current.filter((chip) => chip.turnId !== turnId);
-    thinkingHostByIdRef.current.delete(turnId);
-    setThinkingChips(thinkingChipsRef.current);
-  }, []);
-
-  const handleThinkingChipPointerDown = useCallback(
-    (turnId: string, event: ReactPointerEvent<HTMLDivElement>) => {
-      if (event.button !== 0) return;
-      event.preventDefault();
-      event.stopPropagation();
-      const chip = thinkingChipsRef.current.find((row) => row.turnId === turnId);
-      if (!chip) return;
-      const appState = excalidrawAPIRef.current?.getAppState?.() ?? sceneDataRef.current?.appState ?? {};
-      thinkingDragRef.current = {
-        turnId,
-        originX: chip.x,
-        originY: chip.y,
-        startClientX: event.clientX,
-        startClientY: event.clientY,
-        zoom: ileWorkCanvasZoomValue(appState),
-      };
-      event.currentTarget.setPointerCapture(event.pointerId);
-    },
-    [],
-  );
-
-  const handleThinkingChipPointerMove = useCallback(
-    (turnId: string, event: ReactPointerEvent<HTMLDivElement>) => {
-      const drag = thinkingDragRef.current;
-      if (!drag || drag.turnId !== turnId) return;
-      event.preventDefault();
-      event.stopPropagation();
-      const origin = ileWorkCanvasDragThinkingOrigin({
-        origin: { x: drag.originX, y: drag.originY },
-        startClientX: drag.startClientX,
-        startClientY: drag.startClientY,
-        clientX: event.clientX,
-        clientY: event.clientY,
-        zoom: drag.zoom,
-      });
-      const appState = excalidrawAPIRef.current?.getAppState?.() ?? sceneDataRef.current?.appState ?? {};
-      const next = projectThinkingChip(turnId, origin, appState);
-      thinkingChipsRef.current = [
-        ...thinkingChipsRef.current.filter((row) => row.turnId !== turnId),
-        next,
-      ];
-      setThinkingChips(thinkingChipsRef.current);
-      const node = thinkingHostByIdRef.current.get(turnId);
-      if (node) {
-        node.style.left = `${next.left}px`;
-        node.style.top = `${next.top}px`;
-      }
-    },
-    [projectThinkingChip],
-  );
-
-  const handleThinkingChipPointerUp = useCallback(
-    (turnId: string, event: ReactPointerEvent<HTMLDivElement>) => {
-      if (thinkingDragRef.current?.turnId !== turnId) return;
-      event.preventDefault();
-      event.stopPropagation();
-      thinkingDragRef.current = null;
-      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-        event.currentTarget.releasePointerCapture(event.pointerId);
-      }
-      setThinkingChips(thinkingChipsRef.current);
-    },
-    [],
-  );
-
-  useEffect(() => {
-    if (!showHeliosThinking) {
-      setThinkingTick(0);
-      return;
-    }
-    const id = window.setInterval(() => {
-      setThinkingTick((n) => n + 1);
-    }, ILE_HELIOS_THINKING_ROTATE_MS);
-    return () => window.clearInterval(id);
-  }, [showHeliosThinking]);
-
-  useEffect(() => {
-    const askIds = thinkingChipsRef.current
-      .filter((chip) => chip.turnId !== "helios")
-      .map((chip) => chip.turnId);
-    const occupancy = ileWorkCanvasThinkingOccupancy({
-      heliosBusy,
-      canvasAskTurnIds: askIds,
-    });
-    if (!occupancy.includes("helios")) {
-      removeThinkingChip("helios");
-      return;
-    }
-    if (thinkingChipsRef.current.some((chip) => chip.turnId === "helios")) return;
-    const api = excalidrawAPIRef.current;
-    const elements = (api?.getSceneElements?.() ?? sceneDataRef.current?.elements ?? []) as IleWorkCanvasElement[];
-    const origin = ileWorkCanvasEmptyNearbyOriginWithReserved({
-      elements,
-      reserved: reservedThinkingOrigins("helios"),
-      box: ileWorkCanvasThinkingOverlayStyle(),
-    });
-    const appState = api?.getAppState?.() ?? sceneDataRef.current?.appState ?? {};
-    upsertThinkingChip(projectThinkingChip("helios", origin, appState));
-  }, [askInFlight, heliosBusy, isLoaded, projectThinkingChip, removeThinkingChip, reservedThinkingOrigins, upsertThinkingChip]);
-
-  const syncThinkingOverlay = useCallback((appState: any) => {
-    const host = canvasHostOrigin();
-    for (const chip of thinkingChipsRef.current) {
-      const node = thinkingHostByIdRef.current.get(chip.turnId);
-      if (!node) continue;
-      const vp = ileWorkCanvasViewportToHost(ileWorkCanvasSceneToViewport(chip, appState), host);
-      const zoom = ileWorkCanvasZoomValue(appState);
-      node.style.left = `${Math.round(vp.x)}px`;
-      node.style.top = `${Math.round(vp.y)}px`;
-      node.style.transform = `scale(${zoom})`;
-    }
-  }, [canvasHostOrigin]);
-
-  const syncCanvasSelection = useCallback((appState: any) => {
+  const syncCanvasSelection = useCallback((appState: LiveExcalidrawAppState) => {
     const active =
       Boolean(onAskSelectedRef.current) &&
       ileCanvasPromptMode(appState?.selectedElementIds ?? {}) === "commands";
@@ -728,6 +505,45 @@ export function ExcalidrawCanvas({
       }),
     );
   }, []);
+
+  const commands = useWorkCanvasCommands({
+    apiRef: excalidrawAPIRef,
+    applyingRemoteRef,
+    canvasPowCollectorRef,
+    emitCanvasPow: (events) => emitCanvasPowRef.current(events),
+    onAskSelectedRef,
+    thinkingChipsRef,
+    reservedThinkingOrigins,
+    projectThinkingChip,
+    upsertThinkingChip,
+    removeThinkingChip,
+    sessionMarkModeRef,
+    harnessSuggestionRef,
+    harnessInferencesRef,
+    commandText,
+    setCommandText,
+    setAutoLayoutEnabled,
+    setAskInFlight,
+    askInFlightRef,
+  });
+  const {
+    selectedCanvasElements,
+    handleQuickAction,
+    handleQuickActionRef,
+    toggleAutoLayout,
+    toggleAutoLayoutRef,
+    writeDictatedText,
+    submitCommand,
+  } = commands;
+
+  useSessionMarkCanvas({
+    apiRef: excalidrawAPIRef,
+    canvasApiReady,
+    applyingRemoteRef,
+    canvasPowCollectorRef,
+    sessionBranchRef,
+    selectedCanvasElements,
+  });
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -766,7 +582,7 @@ export function ExcalidrawCanvas({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [canvasSelectionActive]);
+  }, [canvasSelectionActive, handleQuickActionRef, toggleAutoLayoutRef]);
 
   useEffect(() => {
     if (!ileCanvasSlashBarOpen({
@@ -777,402 +593,6 @@ export function ExcalidrawCanvas({
     }
     commandInputRef.current?.focus();
   }, [canvasSelectionActive, slashBarOpen]);
-
-  const enqueueCanvasAskApply = useCallback((task: () => void) => {
-    const run = applyChainRef.current.then(task, task);
-    applyChainRef.current = run.catch(() => {});
-    return run;
-  }, []);
-
-  const runCanvasAsk = useCallback(
-    async (input: {
-      prompt: string;
-      selectedElements: IleWorkCanvasElement[];
-      kind?: IleWorkCanvasAskKind;
-    }) => {
-      const ask = onAskSelectedRef.current;
-      const api = excalidrawAPIRef.current;
-      const prompt = input.prompt.trim();
-      if (!ask || !api || !prompt) return false;
-      const turnId = `ask-${Date.now()}-${++askSeqRef.current}`;
-      const liveElements = (api.getSceneElements?.() ?? []) as IleWorkCanvasElement[];
-      const origin = ileWorkCanvasEmptyNearbyOriginWithReserved({
-        elements: liveElements,
-        reserved: reservedThinkingOrigins(),
-        near: input.selectedElements.length ? input.selectedElements : liveElements,
-        box: ileWorkCanvasThinkingOverlayStyle(),
-      });
-      const liveAppState = api.getAppState?.() ?? {};
-      removeThinkingChip("helios");
-      upsertThinkingChip(projectThinkingChip(turnId, origin, liveAppState));
-      askInFlightRef.current += 1;
-      setAskInFlight(askInFlightRef.current);
-      const applyReply = (payload: {
-        text: string;
-        raw?: string | null;
-        elements?: IleWorkCanvasSkeleton[] | null;
-        origin?: { x?: number; y?: number } | null;
-      }) => {
-        const live = serializeIleWorkCanvasScene({
-          elements: api.getSceneElements?.() ?? [],
-          appState: api.getAppState?.() ?? {},
-          files: api.getFiles?.() ?? {},
-        });
-        const liveChip = thinkingChipsRef.current.find((chip) => chip.turnId === turnId);
-        const placeAt = liveChip ? { x: liveChip.x, y: liveChip.y } : origin;
-        const next = applyIleWorkCanvasAskReply({
-          kind: input.kind,
-          live,
-          selectedElements: input.selectedElements,
-          payload: {
-            text: payload.text,
-            raw: payload.raw,
-            elements: payload.elements,
-            origin: liveChip ? placeAt : payload.origin,
-            turnId,
-          },
-          fallbackOrigin: placeAt,
-          reserved: reservedThinkingOrigins(turnId),
-        });
-        const addedIds = new Set(ileWorkCanvasAddedElementIds(live, next));
-        const added = next.elements.filter((el) => addedIds.has(el.id) && !el.isDeleted);
-        const selectAdded = input.kind !== "concepts";
-        const selectedElementIds = selectAdded
-          ? Object.fromEntries(added.map((el) => [el.id, true]))
-          : Object.fromEntries(
-              input.selectedElements
-                .filter((el) => el.id && !el.isDeleted)
-                .map((el) => [el.id, true]),
-            );
-        const reveal = ileWorkCanvasRevealScroll(added, api.getAppState?.() ?? live.appState);
-        applyingRemoteRef.current = true;
-        try {
-          api.updateScene({
-            elements: next.elements,
-            appState: {
-              selectedElementIds,
-              ...(reveal ?? {}),
-            },
-            ...(next.files ? { files: next.files } : {}),
-          });
-        } finally {
-          applyingRemoteRef.current = false;
-        }
-        canvasPowCollectorRef.current.syncWithoutEmit({
-          elements: next.elements,
-          appState: api.getAppState?.() ?? {},
-          files: api.getFiles?.() ?? {},
-        });
-      };
-      try {
-        const scene = serializeIleWorkCanvasScene({
-          elements: api.getSceneElements?.() ?? [],
-          appState: api.getAppState?.() ?? {},
-          files: api.getFiles?.() ?? {},
-        });
-        const reply = await ask({
-          prompt,
-          selectedElements: input.selectedElements,
-          scene,
-          kind: input.kind,
-        });
-        await enqueueCanvasAskApply(() => {
-          applyReply({
-            text: reply?.text || (input.kind && input.kind !== "ask" ? "" : "No reply"),
-            raw: reply?.raw,
-            elements: reply?.elements,
-            origin: ileWorkCanvasFiniteOrigin(reply?.origin),
-          });
-        });
-        return true;
-      } catch (err) {
-        console.error("[ExcalidrawCanvas] Ask XAI failed:", err);
-        const fallback = ileWorkCanvasAskFallback(input.kind);
-        await enqueueCanvasAskApply(() => {
-          applyReply({ text: fallback });
-        });
-        return false;
-      } finally {
-        removeThinkingChip(turnId);
-        askInFlightRef.current = Math.max(0, askInFlightRef.current - 1);
-        setAskInFlight(askInFlightRef.current);
-      }
-    },
-    [
-      enqueueCanvasAskApply,
-      projectThinkingChip,
-      removeThinkingChip,
-      reservedThinkingOrigins,
-      upsertThinkingChip,
-    ],
-  );
-
-  const selectedCanvasElements = useCallback((): IleWorkCanvasElement[] => {
-    const api = excalidrawAPIRef.current;
-    const appState = api?.getAppState?.() ?? {};
-    const selectedIds = appState.selectedElementIds ?? {};
-    return ((api?.getSceneElements?.() ?? []) as IleWorkCanvasElement[]).filter(
-      (el) => el?.id && selectedIds[el.id] && !el.isDeleted,
-    );
-  }, []);
-
-  const applySessionMarkCanvasEffect = useCallback((effect: SessionMarkCanvasEffect) => {
-    const api = excalidrawAPIRef.current;
-    if (!api) return;
-    const selected = selectedCanvasElements();
-    const raw = (
-      typeof api.getSceneElementsIncludingDeleted === "function"
-        ? api.getSceneElementsIncludingDeleted()
-        : (api.getSceneElements?.() ?? [])
-    ) as IleWorkCanvasElement[];
-    const live = serializeIleWorkCanvasScene({
-      elements: raw,
-      appState: api.getAppState?.() ?? {},
-      files: api.getFiles?.() ?? {},
-    });
-    const committed = commitSessionAction({
-      elements: live.elements,
-      selectedIds: selected.map((element) => element.id),
-      model: sessionBranchRef.current,
-      action: effect.kind,
-      branchId: effect.branchId,
-    });
-    if (!committed.changed) return;
-    if (committed.added.length > 0 || committed.selectedElementIds) {
-      applyingRemoteRef.current = true;
-      try {
-        api.updateScene(
-          committed.selectedElementIds
-            ? { elements: committed.elements, appState: { selectedElementIds: committed.selectedElementIds } }
-            : { elements: committed.elements },
-        );
-      } finally {
-        applyingRemoteRef.current = false;
-      }
-      canvasPowCollectorRef.current.syncWithoutEmit({
-        elements: committed.elements,
-        appState: {
-          ...(api.getAppState?.() ?? {}),
-          ...(committed.selectedElementIds ? { selectedElementIds: committed.selectedElementIds } : {}),
-        },
-        files: api.getFiles?.() ?? {},
-      });
-      const scrollTarget = committed.anchor ? [committed.anchor] : committed.added;
-      if (scrollTarget.length > 0 && typeof api.scrollToContent === "function") {
-        api.scrollToContent(scrollTarget, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS);
-      }
-    }
-    if (committed.model && committed.model !== sessionBranchRef.current) {
-      const advanced = committed.model;
-      publishSessionBranchRef.current((current) => ({
-        status: "ready",
-        model: current.birth ? graftSessionBranchModel(advanced, current.birth) : advanced,
-        birth: current.birth ?? null,
-        error: null,
-      }));
-    }
-  }, [selectedCanvasElements]);
-
-  const applySessionMarkCanvasEffectRef = useRef(applySessionMarkCanvasEffect);
-  applySessionMarkCanvasEffectRef.current = applySessionMarkCanvasEffect;
-  useEffect(() => {
-    if (!sessionMarkCanvasEffects) return;
-    if (!canvasApiReady || !excalidrawAPIRef.current) {
-      sessionMarkCanvasEffects.register(null);
-      return;
-    }
-    const apply = (effect: SessionMarkCanvasEffect) => applySessionMarkCanvasEffectRef.current(effect);
-    sessionMarkCanvasEffects.register(apply);
-    return () => sessionMarkCanvasEffects.register(null);
-  }, [canvasApiReady, sessionMarkCanvasEffects]);
-
-  const handleQuickAction = useCallback(
-    (action: IleWorkCanvasCommandId) => {
-      const api = excalidrawAPIRef.current;
-      const selected = selectedCanvasElements();
-      if (!api) return;
-      if (ileWorkCanvasCommandNeedsSelection(action) && !selected.length) return;
-      const live = serializeIleWorkCanvasScene({
-        elements: api.getSceneElements?.() ?? [],
-        appState: api.getAppState?.() ?? {},
-        files: api.getFiles?.() ?? {},
-      });
-      const mode = sessionMarkModeRef.current;
-      const outcome = runIleWorkCanvasCommand({
-        action,
-        scene: live,
-        selectedElements: selected,
-        focusText: sessionHarnessFocusLine({
-          guide: mode === "verification" ? "verification" : mode === "calibrate" ? "calibrate" : "learn",
-          suggestion: harnessSuggestionRef.current,
-          inferenceLabel: harnessInferencesRef.current.at(-1)?.label ?? null,
-        }),
-      });
-      const emitCommand = (commandId: IleWorkCanvasCommandId, prompt: string) => {
-        const powEvents = canvasPowCollectorRef.current.command(commandId, {
-          prompt,
-          selectedElements: outcome.selected,
-        });
-        emitCanvasPowRef.current(powEvents);
-      };
-      const applyLocalCanvasEdit = (
-        scene: IleWorkCanvasScene,
-        parts: IleWorkCanvasElement[],
-        emit: boolean,
-      ) => {
-        const selectedElementIds = Object.fromEntries(parts.map((part) => [part.id, true]));
-        const reveal = ileWorkCanvasRevealScroll(parts, api.getAppState?.() ?? {});
-        applyingRemoteRef.current = true;
-        try {
-          api.updateScene({
-            elements: scene.elements,
-            appState: {
-              selectedElementIds,
-              ...(reveal ?? {}),
-            },
-            ...(scene.files ? { files: scene.files } : {}),
-          });
-        } finally {
-          applyingRemoteRef.current = false;
-        }
-        canvasPowCollectorRef.current.syncWithoutEmit({
-          elements: scene.elements,
-          appState: {
-            ...(api.getAppState?.() ?? {}),
-            selectedElementIds,
-          },
-          files: api.getFiles?.() ?? {},
-        });
-        if (emit) emitCommand(action, outcome.prompt);
-      };
-      if (outcome.changed) {
-        applyLocalCanvasEdit(outcome.scene, outcome.parts, !outcome.ask);
-      }
-      if (outcome.ask) {
-        emitCommand(action, outcome.ask.prompt);
-        void runCanvasAsk({
-          prompt: outcome.ask.prompt,
-          selectedElements: outcome.selected,
-          kind: outcome.ask.kind,
-        });
-        return;
-      }
-      if (outcome.changed) return;
-      if (outcome.notice) {
-        const notice = mergeIleXaiTurnOntoLiveWorkCanvas(
-          live,
-          { text: outcome.notice },
-          {
-            fallbackOrigin: ileWorkCanvasEmptyNearbyOriginWithReserved({
-              elements: live.elements,
-              near: outcome.selected.length ? outcome.selected : selected,
-            }),
-          },
-        );
-        const addedIds = new Set(ileWorkCanvasAddedElementIds(live, notice));
-        applyLocalCanvasEdit(
-          notice,
-          notice.elements.filter((el) => addedIds.has(el.id) && !el.isDeleted),
-          false,
-        );
-      }
-    },
-    [runCanvasAsk, selectedCanvasElements],
-  );
-  handleQuickActionRef.current = handleQuickAction;
-
-  const toggleAutoLayout = useCallback(() => {
-    const api = excalidrawAPIRef.current;
-    if (!api) return;
-    const live = serializeIleWorkCanvasScene({
-      elements: api.getSceneElements?.() ?? [],
-      appState: api.getAppState?.() ?? {},
-      files: api.getFiles?.() ?? {},
-    });
-    const nextEnabled = !ileWorkCanvasAutoLayoutEnabled(live.appState);
-    const laid = nextEnabled ? layoutIleWorkCanvasBoard(live) : live;
-    applyingRemoteRef.current = true;
-    try {
-      api.updateScene({
-        elements: laid.elements,
-        appState: { ...laid.appState, [ILE_AUTO_LAYOUT_APP_STATE_KEY]: nextEnabled },
-        ...(laid.files ? { files: laid.files } : {}),
-      });
-    } finally {
-      applyingRemoteRef.current = false;
-    }
-    setAutoLayoutEnabled(nextEnabled);
-    canvasPowCollectorRef.current.syncWithoutEmit({
-      elements: laid.elements,
-      appState: { ...(api.getAppState?.() ?? {}), [ILE_AUTO_LAYOUT_APP_STATE_KEY]: nextEnabled },
-      files: api.getFiles?.() ?? {},
-    });
-  }, []);
-  toggleAutoLayoutRef.current = toggleAutoLayout;
-
-  const writeDictatedText = useCallback(
-    (text: string, emitPow: boolean) => {
-      const api = excalidrawAPIRef.current;
-      if (!api) return;
-      const clean = text.trim();
-      const rawElements = (
-        typeof api.getSceneElementsIncludingDeleted === "function"
-          ? api.getSceneElementsIncludingDeleted()
-          : (api.getSceneElements?.() ?? [])
-      ) as IleWorkCanvasElement[];
-      const live = serializeIleWorkCanvasScene({
-        elements: rawElements,
-        appState: api.getAppState?.() ?? {},
-        files: api.getFiles?.() ?? {},
-      });
-      const previousId = dictateElementIdRef.current;
-      const result = syncIleDictatedTextOnWorkCanvas(live, clean, previousId);
-      dictateElementIdRef.current = emitPow ? null : result.elementId;
-      if (!result.changed && !emitPow) return;
-      const selectedElementIds =
-        emitPow && result.elementId ? { [result.elementId]: true } : {};
-      if (result.changed || emitPow) {
-        applyingRemoteRef.current = true;
-        try {
-          api.updateScene({
-            elements: result.scene.elements,
-            appState: { selectedElementIds },
-          });
-        } finally {
-          applyingRemoteRef.current = false;
-        }
-        const created = Boolean(result.elementId && result.elementId !== previousId);
-        if (created) {
-          const mark = result.scene.elements.find((el) => el.id === result.elementId);
-          if (mark && typeof api.scrollToContent === "function") {
-            api.scrollToContent([mark], ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS);
-          }
-        }
-        canvasPowCollectorRef.current.syncWithoutEmit({
-          elements: result.scene.elements,
-          appState: api.getAppState?.() ?? {},
-          files: api.getFiles?.() ?? {},
-        });
-      }
-      if (!emitPow || !clean) return;
-      const powEvents = canvasPowCollectorRef.current.dictate({
-        text: clean,
-        elementId: result.elementId,
-      });
-      emitCanvasPowRef.current(powEvents);
-    },
-    [],
-  );
-
-  const submitCommand = useCallback(() => {
-    const draft = ileCanvasCommandDraft(commandText);
-    if (!draft.slash || !draft.exactId) return;
-    if (ileWorkCanvasCommandNeedsSelection(draft.exactId) && selectedCanvasElements().length === 0) {
-      return;
-    }
-    setCommandText("");
-    handleQuickAction(draft.exactId);
-  }, [commandText, handleQuickAction, selectedCanvasElements]);
 
   useEffect(() => {
     if (applyElementsNonce == null || applyElementsNonce === lastApplyNonceRef.current) return;
@@ -1192,26 +612,25 @@ export function ExcalidrawCanvas({
     const api = excalidrawAPIRef.current;
     if (!api) return;
     const turnId = `timer-reset-${String(replaceSceneNonce)}`;
-    const liveElements = (api.getSceneElements?.() ?? []) as IleWorkCanvasElement[];
+    const liveElements = [...(api.getSceneElements() ?? [])];
     const origin = ileWorkCanvasEmptyNearbyOriginWithReserved({
       elements: liveElements,
       reserved: reservedThinkingOrigins(),
       box: ileWorkCanvasThinkingOverlayStyle(),
     });
-    const liveAppState = api.getAppState?.() ?? {};
+    const liveAppState = api.getAppState() ?? {};
     upsertThinkingChip(projectThinkingChip(turnId, origin, liveAppState));
     const timer = window.setTimeout(() => {
       const next = sanitizeSceneData(replaceScene ?? { elements: [], appState: {}, files: {} });
-      applyingRemoteRef.current = true;
-      try {
-        api.updateScene({ elements: next.elements, appState: next.appState });
-      } finally {
-        applyingRemoteRef.current = false;
-      }
+      commitScene(
+        api,
+        { elements: next.elements, appState: next.appState },
+        { applyingRemote: applyingRemoteRef },
+      );
       canvasPowCollectorRef.current.syncWithoutEmit({
         elements: next.elements,
-        appState: api.getAppState?.() ?? next.appState,
-        files: api.getFiles?.() ?? next.files,
+        appState: api.getAppState() ?? next.appState,
+        files: api.getFiles() ?? next.files,
       });
       onSceneChangeRef.current?.(next);
       removeThinkingChip(turnId);
@@ -1232,76 +651,24 @@ export function ExcalidrawCanvas({
   useEffect(() => {
     const next = openCanvasScene(initialSceneData, true);
     initialSceneDataRef.current = next;
-    if (ileWorkCanvasHasLiveElements(initialSceneData as IleWorkCanvasScene)) {
+    if (ileWorkCanvasHasLiveElements(initialSceneData)) {
       userClearedRef.current = false;
       flushPendingApply();
     }
   }, [initialSceneData, flushPendingApply]);
 
-  /**
-   * Export current scene to PNG data URL
-   */
   const exportToPNG = useCallback(async (): Promise<string | null> => {
-    const api = excalidrawAPIRef.current;
-    if (!api) return null;
-
-    try {
-      const { exportToBlob } = await import("@excalidraw/excalidraw");
-      
-      const elements = api.getSceneElements();
-      const appState = api.getAppState();
-      const files = api.getFiles();
-
-      // Skip if no elements
-      if (!elements || elements.length === 0) {
-        return null;
-      }
-
-      const blob = await exportToBlob({
-        elements,
-        appState: {
-          ...appState,
-          exportWithDarkMode: true,
-          exportBackground: true,
-          viewBackgroundColor: "#0a0a0a",
-        },
-        files,
-        mimeType: "image/png",
-      });
-
-      // Convert blob to data URL
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          resolve(reader.result as string);
-        };
-        reader.onerror = () => {
-          resolve(null);
-        };
-        reader.readAsDataURL(blob);
-      });
-    } catch (err) {
-      console.error("[ExcalidrawCanvas] PNG export failed:", err);
-      return null;
-    }
+    return exportWorkCanvasPng(excalidrawAPIRef.current);
   }, []);
 
-  /**
-   * Debounced PNG export - called on scene changes
-   */
   const debouncedExportPNG = useCallback(() => {
     if (!onCanvasChange) return;
-
-    // Clear any pending export
     if (exportTimeoutRef.current) {
       clearTimeout(exportTimeoutRef.current);
     }
-
-    // Debounce: wait 500ms after last change before exporting
     exportTimeoutRef.current = setTimeout(async () => {
       if (isExportingRef.current) return;
       isExportingRef.current = true;
-
       try {
         const dataUrl = await exportToPNG();
         if (dataUrl) {
@@ -1313,26 +680,17 @@ export function ExcalidrawCanvas({
     }, 500);
   }, [onCanvasChange, exportToPNG]);
 
-  /**
-   * Handle changes from Excalidraw
-   */
   const handleChange = useCallback(
     (
-       
-      elements: readonly any[],
-       
-      appState: any,
-       
-      files: any
+      elements: readonly IleWorkCanvasElement[],
+      appState: LiveExcalidrawAppState,
+      files: IleWorkCanvasFiles,
     ) => {
-      // Store scene data for potential immediate export
       const previous = sceneDataRef.current;
       const sceneData = sanitizeSceneData({ elements: [...elements], appState, files });
-      const prevLive = ileWorkCanvasHasLiveElements(previous as IleWorkCanvasScene);
+      const prevLive = ileWorkCanvasHasLiveElements(previous);
       const nextLive = ileWorkCanvasHasLiveElements(sceneData);
-      const deletedSnapshot = (sceneData.elements ?? []).some(
-        (el: { isDeleted?: boolean }) => el.isDeleted,
-      );
+      const deletedSnapshot = (sceneData.elements ?? []).some((el) => el.isDeleted);
       if (!applyingRemoteRef.current && prevLive && !nextLive && deletedSnapshot) {
         userClearedRef.current = true;
         initialSceneDataRef.current = sceneData;
@@ -1342,16 +700,15 @@ export function ExcalidrawCanvas({
       sceneDataRef.current = sceneData ?? null;
       if (!applyingRemoteRef.current) {
         const acked = acknowledgeIleWorkCanvasXaiNotes(
-          sceneData.elements as IleWorkCanvasElement[],
+          sceneData.elements,
           appState?.selectedElementIds ?? {},
         );
         if (acked.changed) {
-          applyingRemoteRef.current = true;
-          try {
-            excalidrawAPIRef.current?.updateScene?.({ elements: acked.elements });
-          } finally {
-            applyingRemoteRef.current = false;
-          }
+          commitScene(
+            excalidrawAPIRef.current,
+            { elements: acked.elements },
+            { applyingRemote: applyingRemoteRef },
+          );
           sceneData.elements = acked.elements;
           sceneDataRef.current = sceneData;
         }
@@ -1372,13 +729,11 @@ export function ExcalidrawCanvas({
         lastPersistedSceneJsonRef.current = json;
         onSceneChangeRef.current?.(sceneData);
       }, 250);
-      
-      // Trigger debounced PNG export
       debouncedExportPNG();
       syncCanvasSelection(appState);
       syncThinkingOverlay(appState);
     },
-    [debouncedExportPNG, syncCanvasSelection, syncThinkingOverlay]
+    [debouncedExportPNG, syncCanvasSelection, syncThinkingOverlay],
   );
 
   const handlePointerUpdate = useCallback(
@@ -1392,9 +747,9 @@ export function ExcalidrawCanvas({
         canvasPowCollectorRef.current.markGestureBusy(true);
       } else if (payload.button === "up") {
         const scene = sanitizeSceneData({
-          elements: [...(api?.getSceneElements?.() ?? [])],
-          appState: api?.getAppState?.() ?? {},
-          files: api?.getFiles?.() ?? {},
+          elements: [...(api?.getSceneElements() ?? [])],
+          appState: api?.getAppState() ?? {},
+          files: api?.getFiles() ?? {},
         });
         const powEvents = canvasPowCollectorRef.current.observeScene(scene, {
           gestureBusy: false,
@@ -1405,16 +760,10 @@ export function ExcalidrawCanvas({
     [syncCanvasSelection],
   );
 
-  /**
-   * Handle "Submit to Helios" click.
-   * Forces an immediate PNG export before calling the parent handler.
-   */
   const handleSubmitToHelios = useCallback(async () => {
     if (!onSubmitToHelios || isSubmittingToHelios || !canSubmitToHelios) return;
-
     setIsSubmittingToHelios(true);
     try {
-      // Force immediate PNG export before submitting
       let dataUrl: string | null = null;
       if (onCanvasChange) {
         dataUrl = await exportToPNG();
@@ -1428,7 +777,6 @@ export function ExcalidrawCanvas({
     }
   }, [onSubmitToHelios, isSubmittingToHelios, canSubmitToHelios, onCanvasChange, exportToPNG]);
 
-  // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
       if (exportTimeoutRef.current) {
@@ -1444,7 +792,6 @@ export function ExcalidrawCanvas({
     };
   }, []);
 
-  // Mark as loaded after mount
   useEffect(() => {
     setIsLoaded(true);
   }, []);
@@ -1483,7 +830,7 @@ export function ExcalidrawCanvas({
       }
       syncPromptBarPlacement();
       if (api) {
-        const appState = api.getAppState?.() ?? {};
+        const appState = api.getAppState() ?? {};
         syncCanvasSelection(appState);
         syncThinkingOverlay(appState);
       }
@@ -1491,8 +838,8 @@ export function ExcalidrawCanvas({
     const unbind = bindIleSurfaceEditorEvents(host, refreshSurface);
     const unbindZoom = bindIleSurfaceWheelZoom(host, (input) => {
       const api = excalidrawAPIRef.current;
-      if (!api || typeof api.updateScene !== "function") return;
-      const appState = api.getAppState?.() ?? {};
+      if (!api) return;
+      const appState = api.getAppState() ?? {};
       const next = ileWorkCanvasZoomAtPoint({
         zoom: ileWorkCanvasZoomValue(appState),
         scrollX: Number(appState.scrollX) || 0,
@@ -1504,13 +851,17 @@ export function ExcalidrawCanvas({
         deltaY: input.deltaY,
       });
       try {
-        api.updateScene({
-          appState: {
-            zoom: { value: next.zoom },
-            scrollX: next.scrollX,
-            scrollY: next.scrollY,
+        commitScene(
+          api,
+          {
+            appState: {
+              zoom: { value: next.zoom },
+              scrollX: next.scrollX,
+              scrollY: next.scrollY,
+            },
           },
-        });
+          { remote: false },
+        );
       } catch (err) {
         console.error("[ExcalidrawCanvas] zoom failed:", err);
       }
@@ -1524,7 +875,7 @@ export function ExcalidrawCanvas({
 
   if (
     !excalidrawAPIRef.current &&
-    ileWorkCanvasHasLiveElements(initialSceneData as IleWorkCanvasScene)
+    ileWorkCanvasHasLiveElements(initialSceneData)
   ) {
     initialSceneDataRef.current = openCanvasScene(initialSceneData, !openFocusRole);
   }
@@ -1592,7 +943,6 @@ export function ExcalidrawCanvas({
               .map((element) => element.text || "")
               .filter((text) => text.trim())}
             markSpeech={dictateTranscript || ""}
-
           />
         ) : null}
       </div>
@@ -1601,7 +951,7 @@ export function ExcalidrawCanvas({
 }
 
 /**
- * TAP Learning and TAP Work board — same component, same features. Required props
+ * Learn/Verify work board — same component, same features. Required props
  * keep Commands, the board prompt, Helios thinking, and XAI apply on.
  */
 export type WorkCanvasProps = ExcalidrawCanvasProps & {

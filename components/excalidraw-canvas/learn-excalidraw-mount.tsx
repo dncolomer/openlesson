@@ -4,13 +4,14 @@ import dynamic from "next/dynamic";
 import { Component, memo, useLayoutEffect, type ReactNode } from "react";
 import "@excalidraw/excalidraw/index.css";
 import { commitOpenExcalidrawTextEditor } from "@/lib/excalidraw-text-editor";
+import type { IleWorkCanvasElement, IleWorkCanvasFiles, IleWorkCanvasScene } from "@/lib/learn-work-canvas";
+import type { LiveExcalidrawAPI, LiveExcalidrawAppState } from "@/components/excalidraw-canvas/excalidraw-api";
 
 const Excalidraw = dynamic(
   async () => (await import("@excalidraw/excalidraw")).Excalidraw,
   { ssr: false }
 );
 
-type ExcalidrawAPIRef = any;
 const ILE_EXCALIDRAW_UI_OPTIONS = {
   canvasActions: {
     loadScene: false,
@@ -28,18 +29,18 @@ const IleExcalidrawMount = memo(function IleExcalidrawMount({
   initialData,
   viewModeEnabled = false,
 }: {
-  onApi: (api: ExcalidrawAPIRef) => void;
+  onApi: (api: LiveExcalidrawAPI) => void;
   onChange: (
-    elements: readonly any[],
-    appState: any,
-    files: any,
+    elements: readonly IleWorkCanvasElement[],
+    appState: LiveExcalidrawAppState,
+    files: IleWorkCanvasFiles,
   ) => void;
   onPointerUpdate?: (payload: {
     pointer: { x: number; y: number; tool: "pointer" | "laser" };
     button: "up" | "down";
     pointersMap: Map<number, unknown>;
   }) => void;
-  initialData: { elements: any[]; appState: any; files: any; scrollToContent?: boolean };
+  initialData: IleWorkCanvasScene & { scrollToContent?: boolean };
   viewModeEnabled?: boolean;
 }) {
   useLayoutEffect(() => {
@@ -49,10 +50,16 @@ const IleExcalidrawMount = memo(function IleExcalidrawMount({
   }, []);
   return (
     <Excalidraw
-      excalidrawAPI={onApi}
-      onChange={onChange}
+      excalidrawAPI={(api) => onApi(api as unknown as LiveExcalidrawAPI)}
+      onChange={(elements, appState, files) =>
+        onChange(
+          elements as unknown as readonly IleWorkCanvasElement[],
+          appState as unknown as LiveExcalidrawAppState,
+          files as unknown as IleWorkCanvasFiles,
+        )
+      }
       onPointerUpdate={onPointerUpdate}
-      initialData={initialData}
+      initialData={initialData as never}
       theme="dark"
       viewModeEnabled={viewModeEnabled}
       UIOptions={ILE_EXCALIDRAW_UI_OPTIONS}

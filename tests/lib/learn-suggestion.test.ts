@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { readExcalidrawSurface } from "../helpers/surface-source";
 import { CanvasPromptBar } from "@/components/excalidraw-canvas/canvas-prompt-bar";
 import { LearnSuggestionToast } from "@/components/session-view/learn-suggestion-toast";
 import {
@@ -27,6 +28,7 @@ const ROOT = join(__dirname, "../..");
 const SENTENCE = "Write one example.";
 
 function read(rel: string) {
+  if (rel === "components/ExcalidrawCanvas.tsx") return readExcalidrawSurface();
   return readFileSync(join(ROOT, rel), "utf8");
 }
 

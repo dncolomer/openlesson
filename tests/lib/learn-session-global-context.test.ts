@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { readSessionStageSurface } from "../helpers/surface-source";
+import { readExcalidrawSurface, readSessionStageSurface } from "../helpers/surface-source";
 import type { SessionPlan } from "@/lib/domain/types";
 import { ileBlockSessionFrame } from "@/lib/learn-canvas-session";
 import { useSessionChapterWorkspaces } from "@/lib/useSessionChapterWorkspaces";
@@ -226,7 +226,7 @@ describe("TAP Learning single-canvas context store", () => {
     expect(viewCanvas).not.toMatch(/<ExcalidrawCanvas[\s\S]{0,80}key=\{session\.id\}/);
     expect(viewCanvas).toContain("initialSceneData={whiteboardSceneData}");
 
-    const canvas = readFileSync(join(ROOT, "components/ExcalidrawCanvas.tsx"), "utf8");
+    const canvas = readExcalidrawSurface();
     expect(canvas).toContain("initialSceneDataRef = useRef(");
     expect(canvas).toContain("ileWorkCanvasWithScrollToContent(next)");
     expect(canvas).toContain("sanitizeSceneData(scene)");

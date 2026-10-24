@@ -445,6 +445,9 @@ describe("TAP Learning Work canvas center on open (shipped)", () => {
     expect(canvas).toContain("ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS");
     expect(canvas).toContain("api.scrollToContent(elements, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS)");
     expect(canvas).toContain("ileWorkCanvasRevealScroll");
+    expect(canvas).toContain("commitScene");
+    expect(canvas).toContain("export function commitScene");
+    expect(canvas).toContain("type LiveExcalidrawAPI");
   });
 
   it("nudges just enough to reveal off-screen command marks and leaves in-view marks still", () => {
@@ -1052,8 +1055,9 @@ describe("TAP Learning session-chat board context (shipped builder)", () => {
     expect(client).toContain("workCanvasScene");
     expect(client).toContain("serializeIleWorkCanvasScene");
     const view = read("components/SessionView.tsx");
-    expect(view).toContain("workCanvasScene: currentScene");
-    expect(view).toContain("applyIleXaiTurnAtCommit");
+    const canvas = read("components/ExcalidrawCanvas.tsx");
+    expect(view).toContain("workCanvasScene: serializeIleWorkCanvasScene(input.scene)");
+    expect(canvas).toContain("applyIleWorkCanvasAskReply");
     expect(view).toContain("pickIleWorkCanvasTurnScene");
     expect(view).toContain("picked.applyLive");
   });
@@ -1185,6 +1189,7 @@ describe("TAP Learning Work chrome is canvas-only (shipped source)", () => {
     const panes = read("components/session-view/session-tool-panes.tsx");
     const chrome = read("components/session-view/session-chrome.tsx");
     const view = read("components/SessionView.tsx");
+    const canvas = read("components/ExcalidrawCanvas.tsx");
     expect(panes).not.toContain("DantesTool");
     expect(panes).not.toContain("GrokGrokipediaTool");
     expect(panes).not.toContain("session.notebookPlaceholder");
@@ -1196,7 +1201,7 @@ describe("TAP Learning Work chrome is canvas-only (shipped source)", () => {
     expect(view).toContain("<WorkCanvas");
     expect(view).toContain('import { WorkCanvas } from "@/components/ExcalidrawCanvas"');
     expect(view).toContain("heliosBusy={isHeliosAssistantPending}");
-    expect(view).toContain("applyIleXaiTurnAtCommit");
+    expect(canvas).toContain("applyIleWorkCanvasAskReply");
     writeScratch(
       "ile-work-canvas-structure.txt",
       [
@@ -2181,8 +2186,8 @@ describe("TAP Learning Work canvas live geometry and non-overlapping drops (ship
     const view = read("components/SessionView.tsx");
     const canvas = read("components/ExcalidrawCanvas.tsx");
     expect(chat).toContain("ileWorkCanvasTurnContextMessage");
-    expect(view).toContain("applyIleXaiTurnAtCommit");
-    expect(view).toContain("live: whiteboardSceneDataRef.current");
+    expect(view).toContain("workCanvasScene: serializeIleWorkCanvasScene(input.scene)");
+    expect(canvas).toContain("applyIleWorkCanvasAskReply");
     expect(canvas).toContain("mergeIleXaiTurnOntoLiveWorkCanvas");
     expect(canvas).toContain("pasteIleWorkCanvasElements");
 

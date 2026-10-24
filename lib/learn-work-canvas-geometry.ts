@@ -1,13 +1,20 @@
 /**
- * Axis-aligned work-canvas rectangles. Collision layout stays in the place module.
+ * Axis-aligned work-canvas rectangles, including stroke points.
  */
 import type { IleWorkCanvasElement } from "@/lib/learn-work-canvas-scene";
 
 export const ILE_WORK_CANVAS_OVERLAP_GAP = 16;
 
+export type IleWorkCanvasRect = { minX: number; minY: number; maxX: number; maxY: number };
+
+export type IleWorkCanvasRectSource = Pick<IleWorkCanvasElement, "x" | "y" | "width" | "height"> & {
+  isDeleted?: boolean;
+  points?: readonly (readonly number[])[] | null;
+};
+
 export function ileWorkCanvasElementRect(
   el: Pick<IleWorkCanvasElement, "x" | "y" | "width" | "height">,
-): { minX: number; minY: number; maxX: number; maxY: number } {
+): IleWorkCanvasRect {
   return {
     minX: el.x,
     minY: el.y,
@@ -16,11 +23,7 @@ export function ileWorkCanvasElementRect(
   };
 }
 
-export function ileWorkCanvasRectsOverlap(
-  a: { minX: number; minY: number; maxX: number; maxY: number },
-  b: { minX: number; minY: number; maxX: number; maxY: number },
-  pad = 0,
-): boolean {
+export function ileWorkCanvasRectsOverlap(a: IleWorkCanvasRect, b: IleWorkCanvasRect, pad = 0): boolean {
   return !(
     a.maxX + pad <= b.minX ||
     b.maxX + pad <= a.minX ||
@@ -32,7 +35,7 @@ export function ileWorkCanvasRectsOverlap(
 /** Axis-aligned bounds. Zero-area marks (a line with no thickness) are null. */
 export function ileWorkCanvasNormalizedRect(
   el: Pick<IleWorkCanvasElement, "x" | "y" | "width" | "height"> | null | undefined,
-): { minX: number; minY: number; maxX: number; maxY: number } | null {
+): IleWorkCanvasRect | null {
   if (!el) return null;
   const x = Number(el.x) || 0;
   const y = Number(el.y) || 0;
@@ -46,11 +49,55 @@ export function ileWorkCanvasNormalizedRect(
   return { minX, minY, maxX, maxY };
 }
 
+/**
+ * Axis-aligned mark, including stroke points. A zero-area line still reserves a
+ * thin strip. `pad` grows the box; `points: false` ignores stroke points.
+ */
+export function ileWorkCanvasMarkRect(
+  el: IleWorkCanvasRectSource | null | undefined,
+  options?: { pad?: number; points?: boolean } | null,
+): IleWorkCanvasRect | null {
+  if (!el || el.isDeleted) return null;
+  const base = ileWorkCanvasNormalizedRect(el);
+  let minX = base?.minX ?? Infinity;
+  let minY = base?.minY ?? Infinity;
+  let maxX = base?.maxX ?? -Infinity;
+  let maxY = base?.maxY ?? -Infinity;
+  if (options?.points !== false) {
+    const points = Array.isArray(el.points) ? el.points : [];
+    for (const point of points) {
+      if (!Array.isArray(point)) continue;
+      const px = (Number(el.x) || 0) + (Number(point[0]) || 0);
+      const py = (Number(el.y) || 0) + (Number(point[1]) || 0);
+      if (!Number.isFinite(px) || !Number.isFinite(py)) continue;
+      minX = Math.min(minX, px);
+      minY = Math.min(minY, py);
+      maxX = Math.max(maxX, px);
+      maxY = Math.max(maxY, py);
+    }
+  }
+  if (!Number.isFinite(minX) || !Number.isFinite(minY)) return null;
+  const thickness = 8;
+  if (!(maxX > minX)) {
+    minX -= thickness / 2;
+    maxX += thickness / 2;
+  }
+  if (!(maxY > minY)) {
+    minY -= thickness / 2;
+    maxY += thickness / 2;
+  }
+  const pad = Number(options?.pad) || 0;
+  if (pad) {
+    minX -= pad;
+    minY -= pad;
+    maxX += pad;
+    maxY += pad;
+  }
+  return { minX, minY, maxX, maxY };
+}
+
 /** Positive-area intersection. Shared edges do not count. */
-export function ileWorkCanvasPositiveAreaOverlap(
-  a: { minX: number; minY: number; maxX: number; maxY: number },
-  b: { minX: number; minY: number; maxX: number; maxY: number },
-): boolean {
+export function ileWorkCanvasPositiveAreaOverlap(a: IleWorkCanvasRect, b: IleWorkCanvasRect): boolean {
   return (
     Math.min(a.maxX, b.maxX) - Math.max(a.minX, b.minX) > 0 &&
     Math.min(a.maxY, b.maxY) - Math.max(a.minY, b.minY) > 0

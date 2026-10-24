@@ -4,9 +4,11 @@
 import { stripLearnerFacingWrappers } from "@/lib/session-format-wrapper";
 import {
   ILE_WORK_CANVAS_OVERLAP_GAP,
-  ileWorkCanvasNormalizedRect,
+  ileWorkCanvasMarkRect,
   ileWorkCanvasPositiveAreaOverlap,
   ileWorkCanvasRectsOverlap,
+  type IleWorkCanvasRect,
+  type IleWorkCanvasRectSource,
 } from "@/lib/learn-work-canvas-geometry";
 import {
   DEFAULT_DIMENSION,
@@ -135,19 +137,51 @@ export function acknowledgeIleWorkCanvasXaiNotes(
   return { elements: next, changed };
 }
 
-export type IleWorkCanvasPlacementOptions = {
+export type IleWorkCanvasPlaceTurnOptions = {
   /** Tried when the model origin is missing or its real footprint overlaps. */
-  fallbackOrigin?: { x?: number; y?: number } | null;
+  origin?: { x?: number; y?: number } | null;
   /** In-flight drops that are not scene elements yet (loading-square slots). */
+  reserved?: readonly { x: number; y: number }[] | null;
+  /** Delete these ids (and bound captions) before placing. */
+  replaceIds?: readonly string[] | null;
+};
+
+export type IleWorkCanvasPlacementOptions = {
+  fallbackOrigin?: { x?: number; y?: number } | null;
   reserved?: readonly { x: number; y: number }[] | null;
 };
 
-export function applyIleXaiTurnToWorkCanvas(
+function stripIleWorkCanvasReplaceIds(
+  current: IleWorkCanvasScene,
+  replaceIds?: readonly string[] | null,
+): IleWorkCanvasScene {
+  const remove = new Set((replaceIds ?? []).map((id) => String(id || "")).filter(Boolean));
+  if (!remove.size) return current;
+  for (const el of current.elements) {
+    if (typeof el.containerId === "string" && el.containerId && remove.has(el.containerId)) {
+      remove.add(el.id);
+    }
+  }
+  return {
+    ...current,
+    elements: current.elements.filter((el) => !remove.has(el.id)),
+    appState: {
+      ...current.appState,
+      selectedElementIds: {},
+    },
+  };
+}
+
+/** Skeleton → customData → settle. Wrappers choose origin and replaceIds. */
+export function placeTurn(
   scene: IleWorkCanvasScene | null | undefined,
   payload: IleXaiCanvasTurnPayload,
-  options?: IleWorkCanvasPlacementOptions | null,
+  options?: IleWorkCanvasPlaceTurnOptions | null,
 ): IleWorkCanvasScene {
-  const current = serializeIleWorkCanvasScene(scene);
+  const current = stripIleWorkCanvasReplaceIds(
+    serializeIleWorkCanvasScene(scene),
+    options?.replaceIds,
+  );
   let text = stripLearnerFacingWrappers(String(payload.text || "").trim());
   let extra = normalizeExtraSkeletons(payload.elements);
   let originInput = payload.origin;
@@ -160,7 +194,7 @@ export function applyIleXaiTurnToWorkCanvas(
   if (!text && extra.length === 0) return current;
 
   const modelOrigin = ileWorkCanvasFiniteOrigin(originInput);
-  const fallbackOrigin = ileWorkCanvasFiniteOrigin(options?.fallbackOrigin);
+  const fallbackOrigin = ileWorkCanvasFiniteOrigin(options?.origin);
   const candidates: { x: number; y: number }[] = [];
   if (modelOrigin) candidates.push(modelOrigin);
   if (
@@ -224,6 +258,17 @@ export function applyIleXaiTurnToWorkCanvas(
   });
 }
 
+export function applyIleXaiTurnToWorkCanvas(
+  scene: IleWorkCanvasScene | null | undefined,
+  payload: IleXaiCanvasTurnPayload,
+  options?: IleWorkCanvasPlacementOptions | null,
+): IleWorkCanvasScene {
+  return placeTurn(scene, payload, {
+    origin: options?.fallbackOrigin,
+    reserved: options?.reserved,
+  });
+}
+
 /**
  * Chat commit. The snapshot is what the model saw. When the reply lands on
  * the focused board, place it on the live scene so marks drawn during the
@@ -238,7 +283,7 @@ export function applyIleXaiTurnAtCommit(input: {
   const base = serializeIleWorkCanvasScene(
     input.applyLive ? (input.live ?? input.snapshot) : input.snapshot,
   );
-  const scene = applyIleXaiTurnToWorkCanvas(base, input.payload);
+  const scene = placeTurn(base, input.payload);
   const baseIds = new Set(base.elements.map((el) => el.id));
   return {
     scene,
@@ -252,48 +297,9 @@ function ileWorkCanvasCollisionMembers(
   return incoming.filter((el) => !el.isDeleted);
 }
 
-type IleWorkCanvasMark = Pick<IleWorkCanvasElement, "x" | "y" | "width" | "height"> & {
-  isDeleted?: boolean;
-  points?: readonly (readonly number[])[] | null;
-};
-
-/** Axis-aligned mark, including stroke points. A zero-area line still reserves a thin strip. */
-function ileWorkCanvasMarkRect(
-  el: IleWorkCanvasMark | null | undefined,
-): { minX: number; minY: number; maxX: number; maxY: number } | null {
-  if (!el || el.isDeleted) return null;
-  const base = ileWorkCanvasNormalizedRect(el);
-  let minX = base?.minX ?? Infinity;
-  let minY = base?.minY ?? Infinity;
-  let maxX = base?.maxX ?? -Infinity;
-  let maxY = base?.maxY ?? -Infinity;
-  const points = Array.isArray(el.points) ? el.points : [];
-  for (const point of points) {
-    if (!Array.isArray(point)) continue;
-    const px = (Number(el.x) || 0) + (Number(point[0]) || 0);
-    const py = (Number(el.y) || 0) + (Number(point[1]) || 0);
-    if (!Number.isFinite(px) || !Number.isFinite(py)) continue;
-    minX = Math.min(minX, px);
-    minY = Math.min(minY, py);
-    maxX = Math.max(maxX, px);
-    maxY = Math.max(maxY, py);
-  }
-  if (!Number.isFinite(minX) || !Number.isFinite(minY)) return null;
-  const thickness = 8;
-  if (!(maxX > minX)) {
-    minX -= thickness / 2;
-    maxX += thickness / 2;
-  }
-  if (!(maxY > minY)) {
-    minY -= thickness / 2;
-    maxY += thickness / 2;
-  }
-  return { minX, minY, maxX, maxY };
-}
-
 function ileWorkCanvasObstacleRects(
-  elements: readonly IleWorkCanvasMark[],
-): { minX: number; minY: number; maxX: number; maxY: number }[] {
+  elements: readonly IleWorkCanvasRectSource[],
+): IleWorkCanvasRect[] {
   const rects: { minX: number; minY: number; maxX: number; maxY: number }[] = [];
   for (const el of elements) {
     if (el?.isDeleted) continue;
@@ -305,7 +311,7 @@ function ileWorkCanvasObstacleRects(
 
 function ileWorkCanvasCollisionFootprint(
   incoming: readonly IleWorkCanvasElement[],
-): { minX: number; minY: number; maxX: number; maxY: number } | null {
+): IleWorkCanvasRect | null {
   let footprint: { minX: number; minY: number; maxX: number; maxY: number } | null = null;
   for (const el of ileWorkCanvasCollisionMembers(incoming)) {
     const rect = ileWorkCanvasMarkRect(el);
@@ -324,7 +330,7 @@ function ileWorkCanvasCollisionFootprint(
 
 export function ileWorkCanvasIncomingOverlapsObstacles(
   incoming: readonly IleWorkCanvasElement[],
-  obstacles: readonly IleWorkCanvasMark[],
+  obstacles: readonly IleWorkCanvasRectSource[],
 ): boolean {
   const obstacleRects = ileWorkCanvasObstacleRects(obstacles);
   if (!obstacleRects.length) return false;
@@ -340,8 +346,6 @@ export function ileWorkCanvasIncomingOverlapsObstacles(
 }
 
 const ILE_WORK_CANVAS_CONNECTOR_TYPES = new Set(["arrow", "line", "freedraw"]);
-
-type IleWorkCanvasRect = { minX: number; minY: number; maxX: number; maxY: number };
 
 function ileWorkCanvasUnionRects(
   rects: readonly (IleWorkCanvasRect | null | undefined)[],
@@ -543,9 +547,7 @@ type IleWorkCanvasBox = { x: number; y: number; width: number; height: number; i
 const ILE_WORK_CANVAS_PLACEMENT_RINGS = 28;
 const ILE_WORK_CANVAS_PLACEMENT_STEPS = 64;
 
-function ileWorkCanvasUnionRect(
-  rects: readonly { minX: number; minY: number; maxX: number; maxY: number }[],
-): { minX: number; minY: number; maxX: number; maxY: number } | null {
+function ileWorkCanvasUnionRect(rects: readonly IleWorkCanvasRect[]): IleWorkCanvasRect | null {
   let bounds: { minX: number; minY: number; maxX: number; maxY: number } | null = null;
   for (const rect of rects) {
     if (!bounds) {
@@ -564,7 +566,7 @@ function ileWorkCanvasBoxMisses(
   slot: { x: number; y: number },
   boxW: number,
   boxH: number,
-  obstacles: readonly { minX: number; minY: number; maxX: number; maxY: number }[],
+  obstacles: readonly IleWorkCanvasRect[],
 ): boolean {
   const box = {
     minX: slot.x,
@@ -580,7 +582,7 @@ function ileWorkCanvasBoxMisses(
  * Walks below, then to the right, then left, then above the obstacle union.
  */
 function ileWorkCanvasFirstClearSlot(input: {
-  obstacles: readonly { minX: number; minY: number; maxX: number; maxY: number }[];
+  obstacles: readonly IleWorkCanvasRect[];
   boxW: number;
   boxH: number;
   gap: number;
@@ -693,7 +695,7 @@ export function ileWorkCanvasSelectionIds(
  */
 export function settleIleWorkCanvasIncoming(
   incoming: readonly IleWorkCanvasElement[],
-  obstacles: readonly IleWorkCanvasMark[],
+  obstacles: readonly IleWorkCanvasRectSource[],
 ): IleWorkCanvasElement[] {
   const list = separateIleWorkCanvasGroupOverlaps(incoming);
   if (!list.length) return list;
@@ -863,14 +865,14 @@ export function mergeIleXaiTurnOntoLiveWorkCanvas(
   },
 ): IleWorkCanvasScene {
   const current = serializeIleWorkCanvasScene(liveScene);
-  const fallbackOrigin =
+  const origin =
     ileWorkCanvasFiniteOrigin(input?.fallbackOrigin) ??
     ileWorkCanvasEmptyNearbyOriginWithReserved({
       elements: current.elements,
       reserved: input?.reserved,
     });
-  return applyIleXaiTurnToWorkCanvas(current, payload, {
-    fallbackOrigin,
+  return placeTurn(current, payload, {
+    origin,
     reserved: input?.reserved,
   });
 }
@@ -922,9 +924,9 @@ export function replaceIleXaiLoadingPlaceholder(
   const rest = loading
     ? current.elements.filter((el) => el.id !== loading.id)
     : current.elements;
-  return applyIleXaiTurnToWorkCanvas(
+  return placeTurn(
     { ...current, elements: rest },
     { ...payload, turnId },
-    { fallbackOrigin: loading ? { x: loading.x, y: loading.y } : null },
+    { origin: loading ? { x: loading.x, y: loading.y } : null },
   );
 }

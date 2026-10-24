@@ -10,10 +10,13 @@ import {
   boardInstructionNoteElements,
   convertToExcalidrawElements,
   emptyIleWorkCanvasScene,
+  ileWorkCanvasMarkRect,
+  ileWorkCanvasRectsOverlap,
   ILE_WORK_CANVAS_STROKE_COLOR,
   serializeIleWorkCanvasScene,
   wrapIleWorkCanvasText,
   type IleWorkCanvasElement,
+  type IleWorkCanvasRect,
   type IleWorkCanvasScene,
 } from "@/lib/learn-work-canvas";
 import { clearCalibrateResponseOverlap, ILE_CANVAS_DICTATE_AUTHOR } from "@/lib/learn-canvas-dictate";
@@ -143,26 +146,6 @@ const LOCKED_CHROME_ROLES = new Set([
   "well",
   "well-label",
 ]);
-
-type Box = { x: number; y: number; width: number; height: number };
-
-function boxesOverlap(a: Box, b: Box, pad = 4): boolean {
-  return (
-    a.x - pad < b.x + b.width &&
-    a.x + a.width + pad > b.x &&
-    a.y - pad < b.y + b.height &&
-    a.y + a.height + pad > b.y
-  );
-}
-
-function boxOf(el: Pick<IleWorkCanvasElement, "x" | "y" | "width" | "height">): Box {
-  return {
-    x: el.x,
-    y: el.y,
-    width: Math.max(1, el.width || 0),
-    height: Math.max(1, el.height || 0),
-  };
-}
 
 function trimText(value: unknown): string {
   return String(value ?? "").replace(/\s+/g, " ").trim();
@@ -809,9 +792,13 @@ export function calibrateTextCollides(elements: readonly IleWorkCanvasElement[])
   const texts = live.filter((el) => el.type === "text");
   for (let i = 0; i < texts.length; i += 1) {
     const text = texts[i]!;
+    const textRect = ileWorkCanvasMarkRect(text);
     for (let j = i + 1; j < texts.length; j += 1) {
       const otherText = texts[j]!;
-      if (!boxesOverlap(boxOf(text), boxOf(otherText), 2)) continue;
+      const otherTextRect = ileWorkCanvasMarkRect(otherText);
+      if (!textRect || !otherTextRect || !ileWorkCanvasRectsOverlap(textRect, otherTextRect, 2)) {
+        continue;
+      }
       if (stackedQuestionLabels(text, otherText, live)) continue;
       return true;
     }
@@ -824,28 +811,24 @@ export function calibrateTextCollides(elements: readonly IleWorkCanvasElement[])
         if (own && sameQuestionStack(own, other, live)) continue;
       }
       if (text.containerId === other.id) {
-        const glyphs = boxOf(text);
-        const card = boxOf(other);
-        const inside =
-          glyphs.x >= card.x - 1 &&
-          glyphs.y >= card.y - 1 &&
-          glyphs.x + glyphs.width <= card.x + card.width + 1 &&
-          glyphs.y + glyphs.height <= card.y + card.height + 1;
-        if (!inside) return true;
+        const glyphs = ileWorkCanvasMarkRect(text);
+        const card = ileWorkCanvasMarkRect(other);
+        if (!glyphs || !card || !fullyInside(glyphs, card)) return true;
         continue;
       }
-      if (boxesOverlap(boxOf(text), boxOf(other), 2)) return true;
+      const otherRect = ileWorkCanvasMarkRect(other);
+      if (textRect && otherRect && ileWorkCanvasRectsOverlap(textRect, otherRect, 2)) return true;
     }
   }
   return false;
 }
 
-function fullyInside(inner: Box, outer: Box): boolean {
+function fullyInside(inner: IleWorkCanvasRect, outer: IleWorkCanvasRect): boolean {
   return (
-    inner.x >= outer.x - 1 &&
-    inner.y >= outer.y - 1 &&
-    inner.x + inner.width <= outer.x + outer.width + 1 &&
-    inner.y + inner.height <= outer.y + outer.height + 1
+    inner.minX >= outer.minX - 1 &&
+    inner.minY >= outer.minY - 1 &&
+    inner.maxX <= outer.maxX + 1 &&
+    inner.maxY <= outer.maxY + 1
   );
 }
 
@@ -854,8 +837,11 @@ function chromeInsideFrame(a: IleWorkCanvasElement, b: IleWorkCanvasElement): bo
   const roleA = roleOf(a);
   const roleB = roleOf(b);
   const frames = new Set(["region", "instruction", "well"]);
-  if (frames.has(roleA) && LOCKED_CHROME_ROLES.has(roleB) && fullyInside(boxOf(b), boxOf(a))) return true;
-  if (frames.has(roleB) && LOCKED_CHROME_ROLES.has(roleA) && fullyInside(boxOf(a), boxOf(b))) return true;
+  const rectA = ileWorkCanvasMarkRect(a);
+  const rectB = ileWorkCanvasMarkRect(b);
+  if (!rectA || !rectB) return false;
+  if (frames.has(roleA) && LOCKED_CHROME_ROLES.has(roleB) && fullyInside(rectB, rectA)) return true;
+  if (frames.has(roleB) && LOCKED_CHROME_ROLES.has(roleA) && fullyInside(rectA, rectB)) return true;
   return false;
 }
 
@@ -868,7 +854,9 @@ export function calibrateBoardHasOverlap(elements: readonly IleWorkCanvasElement
       const b = live[j]!;
       if (a.containerId === b.id || b.containerId === a.id) continue;
       if (chromeInsideFrame(a, b)) continue;
-      if (!boxesOverlap(boxOf(a), boxOf(b))) continue;
+      const rectA = ileWorkCanvasMarkRect(a);
+      const rectB = ileWorkCanvasMarkRect(b);
+      if (!rectA || !rectB || !ileWorkCanvasRectsOverlap(rectA, rectB, 4)) continue;
       return true;
     }
   }
@@ -891,19 +879,6 @@ function containsPoint(
     point.x <= el.x + el.width &&
     point.y >= el.y &&
     point.y <= el.y + el.height
-  );
-}
-
-function intersects(
-  a: Pick<IleWorkCanvasElement, "x" | "y" | "width" | "height">,
-  b: Pick<IleWorkCanvasElement, "x" | "y" | "width" | "height">,
-  pad = 28,
-): boolean {
-  return (
-    a.x - pad < b.x + b.width &&
-    a.x + a.width + pad > b.x &&
-    a.y - pad < b.y + b.height &&
-    a.y + a.height + pad > b.y
   );
 }
 
@@ -956,7 +931,11 @@ function nearestQuestion(
 ): string {
   const explicit = questionIdOf(text);
   if (explicit) return explicit;
-  const hits = cards.filter((card) => intersects(text, card));
+  const textRect = ileWorkCanvasMarkRect(text);
+  const hits = cards.filter((card) => {
+    const cardRect = ileWorkCanvasMarkRect(card);
+    return Boolean(textRect && cardRect && ileWorkCanvasRectsOverlap(textRect, cardRect, 28));
+  });
   if (hits.length === 1) return questionIdOf(hits[0]!);
   if (hits.length > 1) {
     const point = centerOf(text);

@@ -15,10 +15,12 @@ export {
 } from "@/lib/learn-work-canvas-timer";
 export { ileWorkCanvasElementRect } from "@/lib/learn-work-canvas-geometry";
 export {
+  ileWorkCanvasMarkRect,
   ileWorkCanvasNormalizedRect,
   ileWorkCanvasPositiveAreaOverlap,
   ileWorkCanvasRectsOverlap,
 } from "@/lib/learn-work-canvas-geometry";
+export type { IleWorkCanvasRect, IleWorkCanvasRectSource } from "@/lib/learn-work-canvas-geometry";
 export {
   ILE_SELECTIVE_COMPRESSION_LABEL,
   ILE_WORK_CANVAS_AUTO_LAYOUT_LABEL,
@@ -133,6 +135,7 @@ export type {
 } from "@/lib/learn-work-canvas-scene";
 
 export {
+  placeTurn,
   applyIleXaiTurnToWorkCanvas,
   applyIleXaiTurnAtCommit,
   ileWorkCanvasIncomingOverlapsObstacles,
@@ -153,7 +156,10 @@ export {
   ileWorkCanvasXaiNoteSkeletons,
   acknowledgeIleWorkCanvasXaiNotes,
 } from "@/lib/learn-work-canvas-place";
-export type { IleWorkCanvasPlacementOptions } from "@/lib/learn-work-canvas-place";
+export type {
+  IleWorkCanvasPlacementOptions,
+  IleWorkCanvasPlaceTurnOptions,
+} from "@/lib/learn-work-canvas-place";
 
 export {
   ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS,

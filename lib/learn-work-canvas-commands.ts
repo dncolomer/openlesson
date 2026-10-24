@@ -8,13 +8,10 @@ import {
   ileWorkCanvasNormalizedRect,
 } from "@/lib/learn-work-canvas-geometry";
 import {
-  DEFAULT_DIMENSION,
   DEFAULT_FONT_SIZE,
   ILE_WORK_CANVAS_FONT_FAMILY,
   ILE_WORK_CANVAS_STROKE_COLOR,
   ILE_WORK_CANVAS_TEXT_BOX_WIDTH,
-  ILE_XAI_CANVAS_CUSTOM_DATA_KEY,
-  ILE_XAI_NOTE_CUSTOM_DATA_KEY,
   ILE_XAI_NOTE_PAD_X,
   ILE_XAI_NOTE_PAD_Y,
   TEXT_ORIGIN_X,
@@ -33,6 +30,7 @@ import { withIleWorkCanvasAutoLayout } from "@/lib/learn-work-canvas-chrome";
 import {
   ileWorkCanvasEmptyNearbyOriginWithReserved,
   ileWorkCanvasXaiNoteSkeletons,
+  placeTurn,
   settleIleWorkCanvasIncoming,
 } from "@/lib/learn-work-canvas-place";
 
@@ -730,51 +728,17 @@ export function replaceIleWorkCanvasSelection(
   if (!text && extra.length === 0) return current;
   if (!originElements.length && !liveSelected.length) return current;
   const bounds = ileWorkCanvasContentBounds(originElements);
-  const origin = {
-    x: bounds?.minX ?? TEXT_ORIGIN_X,
-    y: bounds?.minY ?? TEXT_ORIGIN_Y,
-  };
-  const customData = {
-    [ILE_XAI_CANVAS_CUSTOM_DATA_KEY]: true,
-    [ILE_XAI_NOTE_CUSTOM_DATA_KEY]: true,
-    turnId: String(payload.turnId || `turn-${Date.now()}`),
-    author: "xai",
-  };
-  const skeletons: IleWorkCanvasSkeleton[] = [
-    ...ileWorkCanvasXaiNoteSkeletons({
-      text,
-      x: origin.x,
-      y: origin.y,
-      customData,
-    }),
-  ];
-  let extraY = origin.y + (Number(skeletons[0]?.height) || 0) + 16;
-  for (const item of extra) {
-    const x = item.x == null ? origin.x : Number(item.x);
-    const y = item.y == null ? extraY : Number(item.y);
-    extraY = y + (Number(item.height) || DEFAULT_DIMENSION) + 16;
-    skeletons.push({
-      ...item,
-      x,
-      y,
-      customData: { ...customData, ...(item.customData ?? {}) },
-    });
-  }
-  const created = convertToExcalidrawElements(skeletons);
-  if (!created.length) return current;
-  const stripped = removeIleWorkCanvasSelection(current, originElements);
-  const settled = settleIleWorkCanvasIncoming(
-    created,
-    stripped.scene.elements.filter((el) => !el.isDeleted),
-  );
-  return withIleWorkCanvasAutoLayout({
-    ...stripped.scene,
-    elements: [...stripped.scene.elements, ...settled],
-    appState: {
-      ...stripped.scene.appState,
-      selectedElementIds: {},
+  return placeTurn(
+    current,
+    { text, elements: extra, turnId: payload.turnId },
+    {
+      origin: {
+        x: bounds?.minX ?? TEXT_ORIGIN_X,
+        y: bounds?.minY ?? TEXT_ORIGIN_Y,
+      },
+      replaceIds: originElements.map((el) => el.id),
     },
-  });
+  );
 }
 
 /**

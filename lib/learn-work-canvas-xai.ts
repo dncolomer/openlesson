@@ -43,9 +43,9 @@ import {
 } from "@/lib/learn-work-canvas-scene";
 import { withIleWorkCanvasAutoLayout } from "@/lib/learn-work-canvas-chrome";
 import {
-  applyIleXaiTurnToWorkCanvas,
   ileWorkCanvasEmptyNearbyOrigin,
   mergeIleXaiTurnOntoLiveWorkCanvas,
+  placeTurn,
   settleIleWorkCanvasIncoming,
 } from "@/lib/learn-work-canvas-place";
 import {
@@ -128,7 +128,7 @@ export function applyIleXaiReplyToWorkCanvas(
 ): IleWorkCanvasScene {
   const parsed = parseIleXaiCanvasTurn(rawReply);
   const extra = [...(parsed.elements ?? []), ...normalizeExtraSkeletons(extras)];
-  return applyIleXaiTurnToWorkCanvas(scene, { ...parsed, elements: extra });
+  return placeTurn(scene, { ...parsed, elements: extra });
 }
 
 /** Instruct XAI to suggest a scene origin alongside the restorable board. */

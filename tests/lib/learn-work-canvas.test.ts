@@ -2259,6 +2259,54 @@ describe("TAP Learning Work canvas live geometry and non-overlapping drops (ship
     expect(ileWorkCanvasHostForCaption(cold.scene.elements, "reply after the draw")?.x).toBe(origin.x);
   });
 
+  it("commit, live-merge, and reply wrappers place the same payload at the same origin", () => {
+    const seed = sceneWith("seed-wrap", "seed");
+    const seedEl = seed.elements[0]!;
+    const payload = {
+      text: "wrapper parity",
+      origin: { x: 4000, y: 4200 },
+      turnId: "wrap-eq",
+    };
+    const committed = applyIleXaiTurnAtCommit({
+      snapshot: seed,
+      live: seed,
+      applyLive: true,
+      payload,
+    }).scene;
+    const merged = mergeIleXaiTurnOntoLiveWorkCanvas(seed, payload);
+    const replied = applyIleXaiReplyToWorkCanvas(seed, JSON.stringify(payload));
+    const asked = applyIleXaiTurnToWorkCanvas(seed, payload);
+    const placed = (scene: IleWorkCanvasScene) => {
+      const host = ileWorkCanvasHostForCaption(scene.elements, "wrapper parity");
+      const caption = scene.elements.find((el) => el.originalText === "wrapper parity");
+      const kept = scene.elements.find((el) => el.id === seedEl.id);
+      return {
+        seedId: kept?.id,
+        seedX: kept?.x,
+        seedY: kept?.y,
+        x: host?.x,
+        y: host?.y,
+        width: host?.width,
+        height: host?.height,
+        captionX: caption?.x,
+        captionY: caption?.y,
+        captionWidth: caption?.width,
+        captionHeight: caption?.height,
+        count: scene.elements.length,
+      };
+    };
+    expect(placed(committed)).toEqual(placed(merged));
+    expect(placed(replied)).toEqual(placed(merged));
+    expect(placed(asked)).toEqual(placed(merged));
+    expect(placed(merged)).toMatchObject({
+      seedId: seedEl.id,
+      seedX: seedEl.x,
+      seedY: seedEl.y,
+      x: 4000,
+      y: 4200,
+    });
+  });
+
   it("tucks a wide reply under the cluster without selecting the new marks", () => {
     const mark = { x: 40, y: 20, width: 100, height: 50, isDeleted: false };
     const slot = ileWorkCanvasClusteredOrigin({

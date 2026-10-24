@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/client";
 import { getSessions, deleteSession, restartSession, getWorkspaces, getIlePostSessionPath, type Session, type Workspace } from "@/lib/storage";
-import { DEFAULT_PROMPTS, PROMPT_META, type PromptKey, type UserPrompts } from "@/lib/prompts";
 import { useI18n } from "@/lib/i18n";
 import { formatPlanMonthlyPrice, hasAgentApiKeyPlan, planDisplayName as formatPlanName, type PlanId } from "@/lib/plans";
 import { dashboardUsesAgenticKeys } from "@/lib/dashboard-agent-access";
@@ -25,7 +24,6 @@ import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DashboardUsageTab } from "@/components/dashboard/dashboard-usage-tab";
 import { fetchAestheticPackages } from "@/lib/aesthetics";
 import { buildMcpClientConfig } from "@/lib/pow-api/mcp-proof-of-work-catalog";
-import { DEFAULT_MODEL } from "@/lib/xai-models";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import {
   isDashboardWorkspaceListFilter,
@@ -47,12 +45,6 @@ import {
   type DashboardTab,
 } from "@/lib/dashboard-nav";
 import { clampDashboardTabForAccess } from "@/lib/free-tier";
-
-interface AvailableModel {
-  id: string;
-  label: string;
-  description: string;
-}
 
 interface AgentApiKey {
   id: string;
@@ -193,25 +185,11 @@ export default function DashboardPage() {
   const [keyCopied, setKeyCopied] = useState(false);
   const [mcpCopiedField, setMcpCopiedField] = useState<string | null>(null);
 
-  // Config tab
-  const [availableModels, setAvailableModels] = useState<AvailableModel[]>([]);
-  const [tutorModel, setTutorModel] = useState<string>(DEFAULT_MODEL);
-  const [askModel, setAskModel] = useState<string>(DEFAULT_MODEL);
-  const [plannerModel, setPlannerModel] = useState<string>(DEFAULT_MODEL);
-  const [coderModel, setCoderModel] = useState<string>(DEFAULT_MODEL);
-  const [modelsLoading, setModelsLoading] = useState(true);
-  const [modelSaving, setModelSaving] = useState(false);
-  const [modelSaved, setModelSaved] = useState(false);
-
   // AI Provider info
   const [providerInfo, setProviderInfo] = useState<{
     defaultModel: string;
     hasXAIKey: boolean;
   } | null>(null);
-
-  const [userPrompts, setUserPrompts] = useState<UserPrompts>({});
-  const [promptsSaving, setPromptsSaving] = useState(false);
-  const [promptsSaved, setPromptsSaved] = useState(false);
 
   const supabase = createClient();
 
@@ -256,7 +234,7 @@ export default function DashboardPage() {
       // Fetch profile
       const { data: profile } = await supabase
         .from("profiles")
-        .select("metadata, plan, is_admin, subscription_status, current_period_end")
+        .select("plan, is_admin, subscription_status, current_period_end")
         .eq("id", authUser.id)
         .single();
 
@@ -267,22 +245,6 @@ export default function DashboardPage() {
           plan: profile.plan || "inactive",
           isAdmin: profile.is_admin || false,
         });
-
-        if (profile.metadata?.prompts) {
-          setUserPrompts(profile.metadata.prompts as UserPrompts);
-        }
-        if (profile.metadata?.tutor_model) {
-          setTutorModel(profile.metadata.tutor_model as string);
-        }
-        if (profile.metadata?.ask_model) {
-          setAskModel(profile.metadata.ask_model as string);
-        }
-        if (profile.metadata?.planner_model) {
-          setPlannerModel(profile.metadata.planner_model as string);
-        }
-        if (profile.metadata?.coder_model) {
-          setCoderModel(profile.metadata.coder_model as string);
-        }
       }
 
       // Load AI provider info (for admin config tab)
@@ -383,25 +345,6 @@ export default function DashboardPage() {
       } catch (err) {
         console.error("Failed to load API keys:", err);
       }
-
-      // Load available models
-      try {
-        const modelsRes = await fetch("/api/models");
-        const modelsData = await modelsRes.json();
-        if (modelsData.models) {
-          setAvailableModels(modelsData.models);
-          setModelsLoading(false);
-          if (!profile?.metadata?.tutor_model && modelsData.models.length > 0) {
-            setTutorModel(modelsData.models[0].id);
-          }
-          if (!profile?.metadata?.ask_model && modelsData.models.length > 0) {
-            setAskModel(modelsData.models[0].id);
-          }
-        }
-      } catch (e) {
-        console.error("Failed to load models:", e);
-        setModelsLoading(false);
-      }
     } catch (err) {
       console.error("Dashboard load error:", err);
     } finally {
@@ -424,87 +367,6 @@ export default function DashboardPage() {
       console.error("Failed to restart session:", err);
       alert(t('dashboard.startOverError'));
     }
-  };
-
-  const handleSaveModels = async () => {
-    setModelSaving(true);
-    try {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (!authUser) return;
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("metadata")
-        .eq("id", authUser.id)
-        .single();
-
-      const currentMetadata = profile?.metadata || {};
-
-      await supabase
-        .from("profiles")
-        .update({
-          metadata: {
-            ...currentMetadata,
-            tutor_model: tutorModel,
-            ask_model: askModel,
-            planner_model: plannerModel,
-            coder_model: coderModel,
-          },
-        })
-        .eq("id", authUser.id);
-
-      setModelSaved(true);
-      setTimeout(() => setModelSaved(false), 2000);
-    } catch (err) {
-      console.error("Failed to save models:", err);
-    } finally {
-      setModelSaving(false);
-    }
-  };
-
-  const handleSavePrompts = async () => {
-    setPromptsSaving(true);
-    try {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (!authUser) return;
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("metadata")
-        .eq("id", authUser.id)
-        .single();
-
-      const currentMetadata = profile?.metadata || {};
-
-      await supabase
-        .from("profiles")
-        .update({
-          metadata: {
-            ...currentMetadata,
-            prompts: userPrompts,
-          },
-        })
-        .eq("id", authUser.id);
-
-      setPromptsSaved(true);
-      setTimeout(() => setPromptsSaved(false), 2000);
-    } catch (err) {
-      console.error("Failed to save prompts:", err);
-    } finally {
-      setPromptsSaving(false);
-    }
-  };
-
-  const handleResetPrompt = (key: PromptKey) => {
-    setUserPrompts((prev) => {
-      const next = { ...prev };
-      delete next[key];
-      return next;
-    });
-  };
-
-  const handleResetAllPrompts = () => {
-    setUserPrompts({});
   };
 
   // Prefer org-resolved plan from /api/check-usage (usageData), not demoted profiles.plan

@@ -39,10 +39,7 @@ import {
   ILE_CONTINUE_MAP_PREVIEW_FRAME_CLASS,
   miniMapInteractive,
 } from "@/lib/learn-chapter-mini-map";
-import {
-  ileWelcomeShowsContinuePreview,
-  ileWelcomeShowsSizePicker,
-} from "@/lib/learn-welcome-chapters";
+import { ileWelcomeShowsContinuePreview } from "@/lib/learn-welcome-chapters";
 import type { SessionPlanStep } from "@/lib/domain/types";
 
 const ROOT = join(__dirname, "../..");
@@ -245,12 +242,7 @@ describe("continue uses chosen session id and does not insert", () => {
 });
 
 describe("welcome branch continue vs new", () => {
-  it("continue hides regenerate + size picker; new shows three density buttons", () => {
-    expect(ileWelcomeShowsSizePicker("empty")).toBe(true);
-    expect(ileWelcomeShowsSizePicker("exists")).toBe(false);
-    expect(ileWelcomeShowsSizePicker("empty", { resume: true })).toBe(false);
-    expect(ileWelcomeShowsSizePicker("unknown", { resume: true })).toBe(false);
-    expect(ileWelcomeShowsSizePicker("empty", { stepCount: 13 })).toBe(false);
+  it("continue preview uses stored plan; Learn start has no size picker", () => {
     expect(ileWelcomeShowsContinuePreview("exists")).toBe(true);
     expect(ileWelcomeShowsContinuePreview("empty")).toBe(false);
     expect(ileWelcomeShowsContinuePreview("empty", { resume: true })).toBe(true);
@@ -535,8 +527,8 @@ describe("Practice drawer labels and previous-sessions UI", () => {
         `continueHref=${continueIleSessionHref("sess-1")}`,
         `insertContinue=${ileLaunchInsertsNewSession("continue")}`,
         `insertNew=${ileLaunchInsertsNewSession("new")}`,
-        `sizePickerExists=${ileWelcomeShowsSizePicker("exists")}`,
-        `sizePickerEmpty=${ileWelcomeShowsSizePicker("empty")}`,
+        `continueExists=${ileWelcomeShowsContinuePreview("exists")}`,
+        `continueEmpty=${ileWelcomeShowsContinuePreview("empty")}`,
         `dummySparse=${dummyDensityOccupiedCount("random_sparse")}`,
         `dummyDense=${dummyDensityOccupiedCount("random_dense")}`,
         `dummyIslands=${dummyDensityOccupiedCount("islands")}`,

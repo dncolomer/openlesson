@@ -4,7 +4,6 @@ import { AestheticPicker } from "@/components/AestheticPicker";
 import { TapBriefingConfig } from "@/components/TapBriefingConfig";
 import { IleStartLoading } from "@/components/session-view/learn-start-loading";
 import { SessionPageLoading } from "@/components/session-view/session-page-loading";
-import { isIleConfirmSettingsBlocked } from "@/components/session-view/learn-confirm-settings";
 import { SessionStartBackButton } from "@/components/session-view/session-start-back-button";
 import { SessionStartShell } from "@/components/session-view/session-start-shell";
 import type { SessionWelcomeModalProps } from "@/components/session-view/types";
@@ -33,13 +32,6 @@ export function SessionWelcomeModal({
   onSelectAesthetic,
   aestheticsLoading,
   chapterPlanStatus,
-  regenerateChapters: _regenerateChapters,
-  onRegenerateChaptersChange: _onRegenerateChaptersChange,
-  initialChapters: _initialChapters,
-  onInitialChaptersChange: _onInitialChaptersChange,
-  chapterCount = ILE_SESSION_CHAPTER_COUNT_DEFAULT,
-  onChapterCountChange: _onChapterCountChange,
-  mapTypeCatalog: _mapTypeCatalog,
   powExpense: _powExpense = ILE_POW_EXPENSE_DEFAULT,
   onPowExpenseChange: _onPowExpenseChange,
   insightSlotMax: _insightSlotMax,
@@ -82,7 +74,6 @@ export function SessionWelcomeModal({
   }
 
   const isButtonDisabled = isPreparing;
-  const confirmBlocked = isIleConfirmSettingsBlocked(isPreparing);
   const welcomeExtras = {
     resume: resumeSession,
     stepCount: sessionPlan?.steps?.length ?? 0,
@@ -91,7 +82,10 @@ export function SessionWelcomeModal({
   const statusUnknown = chapterPlanStatus === "unknown";
   const statusFailed = chapterPlanStatus === "failed";
   const completedCount = (sessionPlan?.steps || []).filter((step) => step.status === "completed").length;
-  const visibleChapters = capIleSessionChapters(sessionPlan?.steps ?? [], chapterCount);
+  const visibleChapters = capIleSessionChapters(
+    sessionPlan?.steps ?? [],
+    ILE_SESSION_CHAPTER_COUNT_DEFAULT,
+  );
 
   return (
     <SessionStartShell
@@ -190,12 +184,12 @@ export function SessionWelcomeModal({
                   type="button"
                   data-ile-confirm-settings
                   onClick={() => {
-                    if (isIleConfirmSettingsBlocked(isPreparing)) {
+                    if (isPreparing) {
                       return;
                     }
                     void onConfirmSettings();
                   }}
-                  disabled={confirmBlocked}
+                  disabled={isPreparing}
                   aria-busy={isButtonDisabled}
                   className="inline-flex w-full items-center justify-center gap-2 rounded-none bg-neutral-100 px-3 py-3 text-[11px] font-semibold uppercase tracking-wider text-neutral-900 transition-colors hover:bg-white disabled:cursor-not-allowed disabled:bg-neutral-800 disabled:text-neutral-500"
                 >

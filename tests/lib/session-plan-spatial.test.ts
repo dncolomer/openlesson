@@ -536,17 +536,16 @@ describe("create surface wiring (structural)", () => {
     expect(xaiSrc).toContain("createSessionPlanLLM");
   });
 
-  it("welcome UI labels initial chapters and sends initialChapters", () => {
+  it("welcome UI does not allocate chapter-plan start knobs", () => {
     const viewSrc = readSessionViewSurface();
     expect(viewSrc).not.toContain("InitialChaptersPicker");
     expect(viewSrc).not.toContain("data-ile-session-chapter-count");
     expect(viewSrc).not.toContain("data-ile-session-insight-goal");
     expect(viewSrc).not.toContain("data-ile-silence-lock-minutes");
-    expect(viewSrc).toContain("session.initialChapters");
-    expect(viewSrc).toMatch(/initialChapters,/);
-    // Existing chapter maps stay grayed until the user opts into regeneration.
-    // chapterPlanStatus keeps the checkbox stable across load/confirm races.
-    expect(viewSrc).toContain("regenerateChapters");
+    expect(viewSrc).not.toMatch(/\bregenerateChapters\b/);
+    expect(viewSrc).not.toMatch(/\binitialChapters\b/);
+    expect(viewSrc).not.toContain("mapTypeCatalog");
+    expect(viewSrc).not.toContain("/api/session-plan/map-types");
     expect(viewSrc).toContain("chapterPlanStatus");
     expect(viewSrc).toContain("loadSessionBranchField");
     expect(viewSrc).not.toContain("shouldReuseExisting");

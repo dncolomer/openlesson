@@ -22,7 +22,6 @@ import {
   welcomePlanFromPayload,
 } from "@/lib/session-plan-chapters-status";
 import { lookupSessionPlanChaptersForRequest } from "@/lib/session-plan-has-chapters-request";
-import { isIleConfirmSettingsBlocked } from "@/components/session-view/learn-confirm-settings";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
@@ -382,12 +381,13 @@ describe("SessionView load/confirm wiring", () => {
 
 describe("Confirm is blocked only while start is preparing", () => {
   it("is not held by chapter existence", () => {
-    expect(isIleConfirmSettingsBlocked(false)).toBe(false);
-    expect(isIleConfirmSettingsBlocked(true)).toBe(true);
-
-    const blockerSrc = read("components/session-view/learn-confirm-settings.ts");
-    expect(blockerSrc).not.toMatch(/planLoading/);
-    expect(blockerSrc).not.toContain("chapterPlanStatus");
+    expect(existsSync(join(ROOT, "components/session-view/learn-confirm-settings.ts"))).toBe(
+      false,
+    );
+    const welcome = read("components/session-view/session-welcome-modal.tsx");
+    expect(welcome).toContain("disabled={isPreparing}");
+    expect(welcome).toContain("if (isPreparing)");
+    expect(welcome).not.toContain("isIleConfirmSettingsBlocked");
 
     const load = read("components/session-view/use-session-phase.ts");
     expect(read("lib/session-plan-chapters-status.ts")).toContain(

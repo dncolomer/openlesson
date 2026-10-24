@@ -55,7 +55,6 @@ import { useHeliosVoicePlaybackActive } from "@/lib/useHeliosVoicePlayback";
 import { translateWithLocale, useI18n } from "@/lib/i18n";
 import { coerceSpokenLocale, type SpokenLocale } from "@/lib/tutoring-languages";
 import {
-  clampIleSessionChapterCount,
   ileBlockSessionChapter,
   ileBlockSessionFrame,
   ileBlockSessionOpenWorkIds,
@@ -63,8 +62,6 @@ import {
   readIleCanvasSessionConfig,
   writeIleCanvasSessionConfig,
 } from "@/lib/learn-canvas-session";
-import { DEFAULT_INITIAL_CHAPTERS } from "@/lib/initial-chapters";
-import type { MapTypePickerItem } from "@/lib/workspace-map-types";
 import { SessionWelcomeModal } from "@/components/session-view/session-welcome-modal";
 import { SessionToolPanes } from "@/components/session-view/session-tool-panes";
 import { SessionChapterWorkCanvas } from "@/components/session-view/session-chapter-canvas";
@@ -306,8 +303,6 @@ export function SessionView({
   const [minInsightsPerChapter, setMinInsightsPerChapter] = useState(
     ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT,
   );
-  const [chapterCount, setChapterCount] = useState(ILE_SESSION_CHAPTER_COUNT_DEFAULT);
-  const chapterCountTouchedRef = useRef(false);
   const [openWorkIds, setOpenWorkIds] = useState<string[]>([]);
   const [mapSelectedChapterId, setMapSelectedChapterId] = useState<string | null>(null);
   const [mapSelectedEmpty, setMapSelectedEmpty] = useState(false);
@@ -361,52 +356,12 @@ export function SessionView({
 
   const [isPreparing, setIsPreparing] = useState(false);
   const [toolPrefillQuery, setToolPrefillQuery] = useState("");
-  const [initialChapters, setInitialChapters] = useState<string>(DEFAULT_INITIAL_CHAPTERS);
-  const [mapTypeCatalog, setMapTypeCatalog] = useState<MapTypePickerItem[] | null>(null);
   /**
    * Whether a persisted chapter map already exists for this session.
-   * Tracked separately from `sessionPlan` so the regenerate UI stays stable
+   * Tracked separately from `sessionPlan` so continue-welcome stays stable
    * even while plan state is loading / briefly cleared.
-   * - unknown: still loading from DB
-   * - empty: no chapters yet → size picker is interactive
-   * - exists: chapters present → size picker grayed + regenerate checkbox
    */
   const [chapterPlanStatus, setChapterPlanStatus] = useState<"unknown" | "empty" | "exists" | "failed">("unknown");
-  /** When a chapter set already exists, keep size controls grayed until user opts in. */
-  const [regenerateChapters, setRegenerateChapters] = useState(false);
-
-  useEffect(() => {
-    if (!session?.id) return;
-    let cancelled = false;
-    void (async () => {
-      try {
-        const res = await fetch("/api/session-plan/map-types", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sessionId: session.id,
-            ...guestAccessBody,
-          }),
-        });
-        if (!res.ok) return;
-        const data = await res.json().catch(() => ({}));
-        if (cancelled) return;
-        const catalog = Array.isArray(data.catalog) ? data.catalog : [];
-        if (catalog.length === 0) return;
-        setMapTypeCatalog(catalog);
-        setInitialChapters((prev) =>
-          catalog.some((item: { id?: string }) => item.id === prev)
-            ? prev
-            : String(catalog[0].id || DEFAULT_INITIAL_CHAPTERS),
-        );
-      } catch {
-        /* default built-in catalog */
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [session?.id, guestAccessBody]);
 
   const isHeliosAssistantPending = useMemo(() => {
     for (let index = chatMessages.length - 1; index >= 0; index -= 1) {
@@ -804,16 +759,8 @@ export function SessionView({
     if (!session?.id) return;
     const saved = readIleCanvasSessionConfig(session.id);
     if (!saved) return;
-    chapterCountTouchedRef.current = true;
-    setChapterCount(saved.chapterCount);
     setMinInsightsPerChapter(saved.insightGoal);
   }, [session?.id]);
-  useEffect(() => {
-    if (chapterCountTouchedRef.current) return;
-    const savedCount = sessionPlan?.steps?.length ?? 0;
-    if (savedCount <= 0) return;
-    setChapterCount(clampIleSessionChapterCount(savedCount));
-  }, [sessionPlan?.steps]);
   useEffect(() => { activeChapterIndexRef.current = activeChapterIndex; }, [activeChapterIndex]);
   useEffect(() => { elapsedSecondsRef.current = elapsedSeconds; }, [elapsedSeconds]);
   useEffect(() => {
@@ -915,12 +862,12 @@ export function SessionView({
     mapEntryTailDoneRef.current = true;
     if (session?.id) {
       writeIleCanvasSessionConfig(session.id, {
-        chapterCount,
+        chapterCount: ILE_SESSION_CHAPTER_COUNT_DEFAULT,
         insightGoal: minInsightsPerChapter,
       });
     }
     await handleConfirmSettingsPhase();
-  }, [chapterCount, handleConfirmSettingsPhase, minInsightsPerChapter, session?.id]);
+  }, [handleConfirmSettingsPhase, minInsightsPerChapter, session?.id]);
 
   const handleWelcomeReadyStart = useCallback(async () => {
     mapEntryTailDoneRef.current = true;
@@ -1406,16 +1353,6 @@ export function SessionView({
         onSelectAesthetic={setSelectedAestheticId}
         aestheticsLoading={aestheticsLoading}
         chapterPlanStatus={chapterPlanStatus}
-        regenerateChapters={regenerateChapters}
-        onRegenerateChaptersChange={setRegenerateChapters}
-        initialChapters={initialChapters}
-        onInitialChaptersChange={setInitialChapters}
-        chapterCount={chapterCount}
-        onChapterCountChange={(value) => {
-          chapterCountTouchedRef.current = true;
-          setChapterCount(clampIleSessionChapterCount(value));
-        }}
-        mapTypeCatalog={mapTypeCatalog}
         powExpense={powExpense}
         onPowExpenseChange={(value) => setPowExpense(clampIlePowExpense(value))}
         insightSlotMax={insightSlotMax}

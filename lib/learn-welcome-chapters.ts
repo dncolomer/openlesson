@@ -22,13 +22,6 @@ export function ileWelcomeChapterMode(
   return "new";
 }
 
-export function ileWelcomeShowsSizePicker(
-  status: ChapterPlanStatus,
-  extras: IleWelcomeChapterExtras = {},
-): boolean {
-  return ileWelcomeChapterMode(status, extras) === "new";
-}
-
 export function ileWelcomeShowsContinuePreview(
   status: ChapterPlanStatus,
   extras: IleWelcomeChapterExtras = {},

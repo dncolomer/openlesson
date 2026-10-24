@@ -510,8 +510,8 @@ describe("Map Types tab UI / API structural", () => {
 
     expect(picker).toContain("catalog");
     expect(picker).toContain("defaultMapTypePickerCatalog");
-    expect(welcome).toContain("mapTypeCatalog");
-    expect(sessionView).toContain("/api/session-plan/map-types");
+    expect(welcome).not.toContain("mapTypeCatalog");
+    expect(sessionView).not.toContain("/api/session-plan/map-types");
     expect(mod).toContain("export function resolveMapTypeIdFromBody");
     expect(mod).toContain("export function resolveMapTypeRecord");
 

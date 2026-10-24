@@ -1,7 +1,5 @@
 import type { AestheticPackage } from "@/lib/aesthetics";
 import type { IleSessionMode } from "@/lib/learn-mode";
-import type { InitialChaptersLevel } from "@/lib/initial-chapters";
-import type { MapTypePickerItem } from "@/lib/workspace-map-types";
 import type { SessionPlan } from "@/lib/domain/types";
 import type { SpokenLocale } from "@/lib/tutoring-languages";
 import type { PowParticipantIdentity } from "@/lib/session-participant-identity";
@@ -73,13 +71,6 @@ export type SessionWelcomeModalProps = {
   onSelectAesthetic: (id: string) => void;
   aestheticsLoading: boolean;
   chapterPlanStatus: ChapterPlanStatus;
-  regenerateChapters: boolean;
-  onRegenerateChaptersChange: (next: boolean) => void;
-  initialChapters: InitialChaptersLevel | string;
-  onInitialChaptersChange: (level: InitialChaptersLevel | string) => void;
-  chapterCount?: number;
-  onChapterCountChange?: (count: number) => void;
-  mapTypeCatalog?: MapTypePickerItem[] | null;
   powExpense?: number;
   onPowExpenseChange?: (value: number) => void;
   insightSlotMax?: number;

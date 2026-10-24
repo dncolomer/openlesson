@@ -34,9 +34,6 @@ export function MapToolRail({
   annotationStrokeThickness: AnnotationStrokeThickness;
   setAnnotationStrokeThickness: (w: AnnotationStrokeThickness) => void;
   setActiveAnnotationLayerId: (id: string | null) => void;
-  modeTools: BlockMapToolId[];
-  actionTools: BlockMapToolId[];
-  viewportTools: BlockMapToolId[];
   activeTool: BlockMapToolId;
   lassoShape: LassoShapeKind;
   setLassoShape: (shape: LassoShapeKind) => void;

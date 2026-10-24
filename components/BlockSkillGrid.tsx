@@ -18,7 +18,6 @@ import { createMapFogLookup } from "@/lib/map-fog-of-war";
 import {
   createLearnerMapNote,
   createLearnerMapNoteAtViewportCenter,
-  shouldMountMapNotes,
   shouldRenderMapNotesOnPlane,
   upsertLearnerMapNote,
 } from "@/lib/learner-map-notes";
@@ -206,12 +205,7 @@ export function BlockSkillGrid({
       }),
     [workspaceId, sessionId],
   );
-  const mountMapNotes =
-    shouldMountMapNotes({
-      workspaceId,
-      sessionId,
-      mapKind: "workspace",
-    }) && Boolean(overlayPersist);
+  const mountMapNotes = Boolean(overlayPersist);
   const resolvedLearnerScope =
     String(learnerScopeId || ayclToken || "local").trim() || "local";
   const { workedOnIds } = useMapSelfProgress({
@@ -986,9 +980,6 @@ export function BlockSkillGrid({
     previewTargetId,
     previewPrereqIds,
     handleToolClick,
-    modeTools,
-    actionTools,
-    viewportTools,
     activeLassoShape,
     canDragBlocks,
     soleStretchBlockId,
@@ -1052,9 +1043,6 @@ export function BlockSkillGrid({
         annotationStrokeThickness,
         setAnnotationStrokeThickness,
         setActiveAnnotationLayerId,
-        modeTools,
-        actionTools,
-        viewportTools,
         activeTool,
         lassoShape,
         setLassoShape,

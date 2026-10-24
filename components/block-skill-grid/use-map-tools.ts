@@ -301,9 +301,6 @@ export function useMapTools(input: {
     }
   };
 
-  const modeTools: BlockMapToolId[] = [];
-  const actionTools: BlockMapToolId[] = [];
-  const viewportTools: BlockMapToolId[] = [];
   const activeLassoShape = resolveActiveLassoShape({
     activeTool,
     lassoShape,
@@ -323,9 +320,6 @@ export function useMapTools(input: {
     previewTargetId,
     previewPrereqIds,
     handleToolClick,
-    modeTools,
-    actionTools,
-    viewportTools,
     activeLassoShape,
     canDragBlocks,
     soleStretchBlockId,

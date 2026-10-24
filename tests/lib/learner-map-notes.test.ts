@@ -601,8 +601,8 @@ describe("store + UI structural", () => {
     expect(grid).not.toContain("learnerNotePlaceArmed");
     expect(grid).not.toContain("handleLearnerNoteCreateAtCell");
     expect(grid).not.toContain("data-learner-note-place-toggle");
-    expect(grid).toContain("shouldMountMapNotes");
-    // Creator strip still gated for authoring tools (not notes)
+    expect(grid).toContain("overlayPersist");
+    expect(grid).toContain("mountMapNotes");
     expect(grid).toMatch(/!learnerMode\s*\?\s*\(/);
 
     // Post-it: grey/black, full-chrome move, in-place text, corner resize

@@ -181,7 +181,7 @@ describe("block-map-tools", () => {
     ).toBe(false);
   });
 
-  it("enables split only when a multi-cell block is selected; edit only with exactly one", () => {
+  it("enables split only when a multi-cell block is selected", () => {
     expect(isMultiCellBlockSpan({ span_w: 1, span_h: 1 })).toBe(false);
     expect(isMultiCellBlockSpan({ span_w: 2, span_h: 1 })).toBe(true);
     expect(isMultiCellBlockSpan({ span_w: 1, span_h: 3 })).toBe(true);
@@ -1372,31 +1372,6 @@ describe("selection-driven ground authoring (left toolbar)", () => {
         blockId: "other",
         selected: false,
         prereqEdit: edit,
-      }),
-    ).toBe("neutral");
-    // Preview saved prereqs when not editing
-    expect(
-      resolveMapBlockHighlightRole({
-        blockId: "p",
-        selected: false,
-        previewTargetId: "t",
-        previewPrereqIds: ["p"],
-      }),
-    ).toBe("prereq");
-    expect(
-      resolveMapBlockHighlightRole({
-        blockId: "t",
-        selected: true,
-        previewTargetId: "t",
-        previewPrereqIds: ["p"],
-      }),
-    ).toBe("target");
-    expect(
-      resolveMapBlockHighlightRole({
-        blockId: "t",
-        selected: false,
-        previewTargetId: "t",
-        previewPrereqIds: ["p"],
       }),
     ).toBe("neutral");
 

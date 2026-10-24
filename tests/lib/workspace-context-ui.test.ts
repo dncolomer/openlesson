@@ -76,7 +76,7 @@ describe("map-first right pane", () => {
 });
 
 describe("map-ground tools enablement", () => {
-  it("does not mount lock_until or mark_unusable on the map bar; enablement stays selection-driven", () => {
+  it("lock_until and mark_unusable enablement stays selection-driven", () => {
     expect(blockMapToolLabel("lock_until")).toMatch(/lock/i);
     expect(blockMapToolLabel("mark_unusable")).toMatch(/unusable/i);
     expect(

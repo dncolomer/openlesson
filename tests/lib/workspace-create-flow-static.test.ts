@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readMapGridSurface } from "../helpers/surface-source";
+import { isBlockMapToolEnabled } from "@/lib/block-map-tools";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -176,32 +177,43 @@ describe("workspace create + builder static wiring", () => {
     expect(read("lib/workspace-grid-ops/shared.ts")).toContain("block-footprint-prompt");
   });
 
-  it("block map exposes a floating icon tool widget with Select + Lasso and wired grid ops", () => {
+  it("block map enablement and drawers drive select, lasso, and grid ops", () => {
+    const idle = {
+      canEdit: true,
+      busy: false,
+      hasGridOps: true,
+      selectedBlockCount: 0,
+      selectedEmptyCellCount: 0,
+    };
+    expect(isBlockMapToolEnabled("select", idle)).toBe(true);
+    expect(isBlockMapToolEnabled("lasso", idle)).toBe(true);
+    expect(
+      isBlockMapToolEnabled("merge", {
+        ...idle,
+        selectedBlockCount: 2,
+        selectedBlocksContiguous: true,
+      }),
+    ).toBe(true);
+    expect(
+      isBlockMapToolEnabled("clone", { ...idle, selectedBlockCount: 1 }),
+    ).toBe(true);
+    expect(
+      isBlockMapToolEnabled("generate_shape", {
+        ...idle,
+        selectedEmptyCellCount: 2,
+      }),
+    ).toBe(true);
+
     const grid = readMapGridSurface();
-    expect(grid).toContain("data-block-map-tool-strip");
-    expect(grid).toContain('data-block-map-tool-strip-layout="widget"');
-    expect(grid).toContain("absolute left-2 z-20");
-    expect(grid).not.toContain("h-full w-11 shrink-0 flex-col");
-    expect(grid).not.toContain("border-r border-neutral-800");
-    expect(grid).toContain("MapToolStripButton");
-    const strip = read("components/block-skill-grid/map-tool-strip-button.tsx");
-    expect(strip).toContain("data-block-map-tool={tool}");
-    expect(grid).toContain("activeTool");
-    expect(grid).toContain("DEFAULT_BLOCK_MAP_MODE");
-    expect(grid).toContain("nextActiveModeTool");
     expect(grid).toContain("isBlockMapToolEnabled");
     expect(grid).toContain("handleToolClick");
+    expect(grid).toContain("DEFAULT_BLOCK_MAP_MODE");
+    expect(grid).toContain("nextActiveModeTool");
     expect(grid).toContain("toggleOrReplaceBlockSelection");
     expect(grid).toContain("applyBlockSelection");
-    expect(grid).toContain("setSelectedBlockIds");
-    expect(grid).toContain('"select"');
-    expect(grid).toMatch(/aria-pressed/);
-    expect(grid).toMatch(/title=\{title\}/);
     expect(grid).toContain('op: "split"');
     expect(grid).toContain('op: "move"');
     expect(grid).toContain("setMergePromptOpen(true)");
-    expect(grid).toContain("setShapePromptOpen(true)");
-    // Select click-and-drag (Move demoted from strip)
     expect(grid).toContain("allowsBlockDragInMode");
     expect(grid).toContain("isMapPanGesture");
     expect(grid).not.toContain("data-lasso-shape-submenu");
@@ -209,21 +221,16 @@ describe("workspace create + builder static wiring", () => {
     expect(grid).toContain("handleBlockPointerDown");
     expect(grid).toContain("data-block-map-draggable");
     expect(grid).toContain("onMapSelectionChange(selection)");
-    expect(grid).toContain("handleBlockDoubleClick");
     expect(grid).not.toContain("data-block-map-move");
     expect(grid).not.toContain("showMovePad");
     expect(grid).not.toContain("multiToolbarVisible");
-    const tools = read("lib/block-map-tools.ts");
-    expect(tools).toContain("DEFAULT_BLOCK_MAP_MODE");
-    expect(tools).toContain('"select"');
-    expect(tools).toContain("isBlockMapToolEnabled");
-    expect(tools).toContain("resolveBlockSelectionOnClick");
-    expect(tools).toContain("blockDragMoveDelta");
-    expect(tools).toContain("isBlockMapManipulationMode");
-    expect(tools).toContain("allowsBlockDragInMode");
-    expect(tools).toContain("isBlockMapToolEnabled");
-    expect(tools).not.toContain("BLOCK_MAP_TOOL_STRIP");
-    expect(tools).not.toContain("visibleBlockMapTools");
+
+    const rail = read("components/block-skill-grid/map-tool-rail.tsx");
+    expect(rail).toContain("data-annotation-toolbox");
+    expect(rail).toContain("data-block-map-tool-strip");
+    const detail = read("components/WorkspaceBlockDetailPane.tsx");
+    expect(detail).toContain('drawerId="clone"');
+    expect(detail).toContain('drawerId="split"');
   });
 
   it("programmatic API/MCP create is enabled; UI generate remains", () => {

@@ -1,6 +1,6 @@
 /**
- * Structural inventory: report must list every strip tool id and section key
- * from shipped registries (no invented names; no silent drift).
+ * Structural inventory: report must list every section key from shipped
+ * registries and the drawer labels (no invented names; no silent drift).
  */
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -28,7 +28,6 @@ describe("course authoring tools report", () => {
 
     const requiredHeadings = [
       "Top-level workspace sections",
-      "Workspace map — tool strip",
       "Right-pane surfaces",
       "Context section",
       "Simulation section",
@@ -67,7 +66,6 @@ describe("course authoring tools report", () => {
       "settings",
     ]);
 
-    // Demoted tools noted (not on strip but author-relevant)
     expect(report).toContain("`move`");
     expect(report).toMatch(/lasso_circle|lasso_freehand/);
     expect(report).toContain("generate_shape");
@@ -81,7 +79,6 @@ describe("course authoring tools report", () => {
     );
     const headings = [
       "Top-level workspace sections",
-      "Workspace map — tool strip",
       "Right-pane surfaces",
       "Context section",
       "Simulation section",

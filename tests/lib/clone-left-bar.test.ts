@@ -1,7 +1,6 @@
 import { readWorkspaceViewSurface } from "@/tests/helpers/surface-source";
 /**
- * Clone as left map tool-strip control (not block-detail drawer).
- * Pure enablement + structural wiring for strip → arm → paste path.
+ * Clone drawer enablement + arm → paste wiring.
  */
 import { describe, expect, it } from "vitest";
 import { readMapGridSurface } from "../helpers/surface-source";
@@ -55,7 +54,7 @@ function state(
   };
 }
 
-describe("clone left-bar enablement", () => {
+describe("clone drawer enablement", () => {
   it("enabled only for creator canEdit + sole filled block; disabled otherwise", () => {
     expect(blockMapToolKind("clone")).toBe("action");
     expect(blockMapToolLabel("clone").toLowerCase()).toMatch(/clone/);
@@ -116,8 +115,8 @@ describe("clone left-bar enablement", () => {
   });
 });
 
-describe("clone left-bar UI wiring", () => {
-  it("map bar does not mount Clone; detail drawer arms paste; host keeps paste path", () => {
+describe("clone drawer UI wiring", () => {
+  it("detail clone drawer arms paste; host keeps paste path", () => {
     const tools = read("lib/block-map-tools.ts");
     const grid = readMapGridSurface();
     const detail = read("components/WorkspaceBlockDetailPane.tsx");
@@ -127,29 +126,19 @@ describe("clone left-bar UI wiring", () => {
     expect(tools).toContain('"clone"');
     expect(tools).toContain("isBlockMapToolEnabled");
     expect(tools).toMatch(/case "clone"/);
-
-    // Left strip (icon lives on the extracted button)
     expect(grid).toContain('case "clone"');
-    const icons = read("components/block-skill-grid/map-tool-icons.tsx");
-    expect(icons).toContain("data-tool-icon=\"clone\"");
     expect(grid).toContain("onCloneArm");
     expect(grid).toContain("cloneArmed");
     expect(grid).toContain("data-clone-armed");
-    expect(grid).toContain("MapToolStripButton");
-    const strip = read("components/block-skill-grid/map-tool-strip-button.tsx");
-    expect(strip).toContain("ToolIcon");
-    expect(strip).toContain("data-block-map-tool={tool}");
-    // Activate arms sole selection
     expect(grid).toMatch(/case "clone"[\s\S]*?onCloneArm/);
+    expect(
+      isBlockMapToolEnabled("clone", state({ selectedBlockCount: 1 })),
+    ).toBe(true);
 
-    const rail = read("components/block-skill-grid/map-tool-rail.tsx");
-    expect(rail).not.toContain("MapToolStripButton");
-    expect(rail).not.toContain("data-lasso-shape-submenu");
     expect(detail).toContain('drawerId="clone"');
     expect(detail).toContain("WorkspaceCloneBlockPane");
     expect(detail).toContain("onCloneArm");
 
-    // Host: strip props + paste
     expect(view).toContain("onCloneArm=");
     expect(view).toContain("handleCloneArm");
     expect(view).toContain("handleClonePaste");
@@ -160,10 +149,11 @@ describe("clone left-bar UI wiring", () => {
     writeEvidence(
       "clone-left-bar-ui.log",
       [
-        "strip_clone=true",
-        "detail_no_clone_drawer=true",
+        "detail_clone_drawer=true",
         "view_arm_paste=true",
         "sessions_props=true",
+        "clone_sole_enabled=" +
+          isBlockMapToolEnabled("clone", state({ selectedBlockCount: 1 })),
       ].join("\n"),
     );
   });

@@ -11,7 +11,10 @@ import {
 import {
   FLOW_EMBEDDING_DIM,
   FLOW_EMBEDDING_MODEL_ID,
+  FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
   isFlowEmbeddingVector,
+  parseFlowEmbeddingChannel,
+  type FlowEmbeddingChannel,
   type FlowKind,
 } from "@/lib/flow-embedding";
 import type {
@@ -180,14 +183,32 @@ export function knowledgeConfigFromFlowEmbeddings(
   };
 }
 
+export function regionMatchesFlowEmbeddingChannel(
+  region: {
+    embedding_model_id?: string | null;
+    centroid?: number[] | null;
+  },
+  channel: FlowEmbeddingChannel | "any" = "path",
+): boolean {
+  if (!Array.isArray(region.centroid) || region.centroid.length !== FLOW_EMBEDDING_DIM) {
+    return false;
+  }
+  const model = String(region.embedding_model_id || "");
+  if (channel === "any") {
+    return model === FLOW_EMBEDDING_MODEL_ID || model === FLOW_EMBEDDING_PATH_TEXT_MODEL_ID;
+  }
+  if (parseFlowEmbeddingChannel(channel) === "path_text") {
+    return model === FLOW_EMBEDDING_PATH_TEXT_MODEL_ID;
+  }
+  return model === FLOW_EMBEDDING_MODEL_ID;
+}
+
+/** Knowledge tab overlay: path space only (`flowcfg-v1-d96`). */
 export function regionMatchesFlowEmbeddingSpace(region: {
   embedding_model_id?: string | null;
   centroid?: number[] | null;
 }): boolean {
-  if (String(region.embedding_model_id || "") !== FLOW_EMBEDDING_MODEL_ID) {
-    return false;
-  }
-  return Array.isArray(region.centroid) && region.centroid.length === FLOW_EMBEDDING_DIM;
+  return regionMatchesFlowEmbeddingChannel(region, "path");
 }
 
 export function latestFlowVectorForSubject(

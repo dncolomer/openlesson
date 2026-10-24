@@ -88,6 +88,7 @@ export function parseSectionParam(value: string | null): WorkspaceSectionKey | n
     value === "verification_flows" ||
     value === "calibration_flows" ||
     value === "knowledge" ||
+    value === "data_studio" ||
     value === "insights" ||
     value === "kpis" ||
     value === "settings"

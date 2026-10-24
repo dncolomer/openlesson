@@ -10,7 +10,7 @@
 ## 1. Top-level workspace sections
 
 Registry: `WORKSPACE_SECTION_KEYS` / `availableWorkspaceSections` in `lib/workspace-sections.ts`.  
-Nav labels (EN): Workspace · DAGs · Map Types · Unsys models · Goals · Context · Simulation · Knowledge · Settings.
+Nav labels (EN): Workspace · DAGs · Map Types · Unsys models · Goals · Context · Simulation · Knowledge · Data Studio · Settings.
 
 | Section key | Who sees it | Purpose for authors |
 |---|---|---|
@@ -24,6 +24,7 @@ Nav labels (EN): Workspace · DAGs · Map Types · Unsys models · Goals · Cont
 | **`verification_flows`** | Verification Workspace owners only (stored kind `knowledge_region`) | Create and manage verification flows (`mountsVerificationFlowsPanel`). Standard map workspaces do not list this section. |
 | **`calibration_flows`** | Verification Workspace owners only (stored kind `knowledge_region`) | Create and manage calibration flows (`mountsCalibrationFlowsPanel`). A calibration flow sorts a question pool on the canvas. It is not a verification run. Standard map workspaces do not list this section. |
 | **`knowledge`** | Owner / org admin only | Performance / knowledge analytics surface (`mountsPerformancePanel`); LWM Snapshot goal selection (default / adhoc / custom) |
+| **`data_studio`** | Verification and Calibration owners / org admins | Visual embeddings navigator (`mountsDataStudioPanel`): 2D projections, flow/run filters, region overlay, inspect stored raw |
 | **`insights`** | Play (learner) mode only — not in Build/creator nav | Workspace-related Insights list (`mountsInsightsPanel`); generated from Work/PoW. Not a Knowledge subview. |
 | **`kpis`** | Signed-in viewers on a standard workspace (Play and Build, including non-owners). Hidden when logged out. Not on Knowledge Region. | That viewer's average time-to-insight for sessions on the workspace (`mountsKpisPanel`). |
 | **`settings`** | Owner / org admin only | Identity (title/description — not goals), access, guest links, data studio, knowledge portal, integrations |

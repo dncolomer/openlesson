@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useConfirm } from "@/lib/useConfirm";
 import { productFlowNewPath } from "@/lib/product-flow";
+import { workspaceStudioHrefForRegion } from "@/lib/data-studio-view";
 import { WorkspaceSectionSubTabs } from "@/components/WorkspaceSectionSubTabs";
 import type { RegionBuilderSourceFilter } from "@/lib/pow-api/region-builder";
 import {
@@ -582,38 +583,56 @@ export function CustomVerificationModelsPanel({
                   Create tab.
                 </p>
               ) : (
-                <ul className="space-y-2" data-knowledge-regions-list>
-                  {models.map((m) => {
-                    const synthetic = isSyntheticRegion(m);
-                    const isDeleting = deletingId === m.id;
-                    return (
-                      <li
-                        key={m.id}
-                        className="flex items-start gap-3 rounded-none border border-neutral-800 bg-neutral-900/50 p-3"
-                        data-knowledge-region-id={m.id}
-                      >
-                        <div className="min-w-0 flex-1">
-                          <div className="text-sm font-medium text-white">{m.name}</div>
-                          <div className="mt-0.5 text-[10px] text-neutral-500">
-                            {synthetic ? "Custom" : `${m.subject_count} users · cohort`} · cohesion{" "}
-                            {(m.cohort_cohesion * 100).toFixed(0)}% · threshold{" "}
-                            {m.cosine_threshold.toFixed(2)}
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          disabled={isDeleting || deletingId !== null}
-                          onClick={() => void removeRegion(m)}
-                          className="shrink-0 rounded-none border border-neutral-700 px-2.5 py-1.5 text-[11px] font-medium text-neutral-400 transition hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-40"
-                          data-remove-knowledge-region={m.id}
-                          title={`Remove ${m.name}`}
-                        >
-                          {isDeleting ? "Removing…" : "Remove"}
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
+                <div className="overflow-x-auto" data-knowledge-regions-list>
+                  <table className="w-full min-w-[32rem] border-collapse text-left text-sm">
+                    <thead>
+                      <tr className="border-b border-white/15 font-mono text-[10px] uppercase tracking-[0.14em] text-neutral-500">
+                        <th className="px-2 py-2 font-medium">Name</th>
+                        <th className="px-2 py-2 font-medium">Subjects</th>
+                        <th className="px-2 py-2 font-medium">Data Studio</th>
+                        <th className="px-2 py-2 font-medium"> </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {models.map((m) => {
+                        const isDeleting = deletingId === m.id;
+                        return (
+                          <tr
+                            key={m.id}
+                            className="border-b border-white/10 last:border-b-0"
+                            data-knowledge-region-id={m.id}
+                          >
+                            <td className="px-2 py-2 font-medium text-white">{m.name}</td>
+                            <td className="px-2 py-2 tabular-nums text-neutral-400">
+                              {isSyntheticRegion(m) ? "Custom" : m.subject_count}
+                            </td>
+                            <td className="px-2 py-2">
+                              <Link
+                                href={workspaceStudioHrefForRegion(workspaceId, m.id)}
+                                className="inline-flex h-8 items-center border border-white/25 px-2.5 text-[11px] text-white transition hover:border-white hover:bg-white hover:text-black"
+                                data-open-region-data-studio={m.id}
+                              >
+                                Open in Data Studio
+                              </Link>
+                            </td>
+                            <td className="px-2 py-2 text-right">
+                              <button
+                                type="button"
+                                disabled={isDeleting || deletingId !== null}
+                                onClick={() => void removeRegion(m)}
+                                className="shrink-0 rounded-none border border-neutral-700 px-2.5 py-1.5 text-[11px] font-medium text-neutral-400 transition hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-40"
+                                data-remove-knowledge-region={m.id}
+                                title={`Remove ${m.name}`}
+                              >
+                                {isDeleting ? "Removing…" : "Remove"}
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </section>
           </div>

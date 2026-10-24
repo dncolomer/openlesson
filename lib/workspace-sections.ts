@@ -4,9 +4,10 @@
  * Unsys models, Context, and Settings for designers; Workspace for play-only
  * viewers.
  * Verification workspaces (stored kind
- * `knowledge_region`): Goals, Verification Flows, Context, Knowledge, and
- * Settings. Calibration workspaces (stored kind `calibration`): Goals,
- * Calibration Flows, Context, Knowledge, and Settings.
+ * `knowledge_region`): Goals, Verification Flows, Context, Knowledge,
+ * Data Studio, and Settings. Calibration workspaces (stored kind
+ * `calibration`): Goals, Calibration Flows, Context, Knowledge, Data Studio,
+ * and Settings. Learning Data Studio lives on dashboard chrome (play sessions).
  */
 
 import {
@@ -26,6 +27,7 @@ export type WorkspaceSectionKey =
   | "verification_flows"
   | "calibration_flows"
   | "knowledge"
+  | "data_studio"
   | "insights"
   | "kpis"
   | "settings";
@@ -44,6 +46,7 @@ export type WorkspaceMainSurface =
   | "verification_flows"
   | "calibration_flows"
   | "knowledge"
+  | "data_studio"
   | "insights"
   | "kpis"
   | "settings";
@@ -59,6 +62,7 @@ export const WORKSPACE_SECTION_KEYS: readonly WorkspaceSectionKey[] = [
   "context",
   "simulation",
   "knowledge",
+  "data_studio",
   "insights",
   "kpis",
   "settings",
@@ -89,6 +93,8 @@ export type WorkspaceSectionLayout = {
   mountsVerificationFlowsPanel?: boolean;
   /** Calibration Flows tab — only on a Calibration Workspace. */
   mountsCalibrationFlowsPanel?: boolean;
+  /** Visual Data Studio — embeddings projection + inspect. */
+  mountsDataStudioPanel?: boolean;
   /** Always empty — local tab bar removed from Workspace section. */
   localTabs: readonly WorkspaceLocalTabKey[];
   mountsPerformancePanel: boolean;
@@ -263,6 +269,24 @@ export function resolveWorkspaceSectionLayout(
         mountsInsightsPanel: false,
         mountsKpisPanel: false,
       };
+    case "data_studio":
+      return {
+        section: "data_studio",
+        mainSurface: "data_studio",
+        showBlockMapChrome: false,
+        showSessionsColumn: false,
+        mountsContextPanel: false,
+        mountsSimulationPanel: false,
+        mountsDagsPanel: false,
+        mountsMapTypesPanel: false,
+        mountsGoalsPanel: false,
+        localTabs: [],
+        mountsPerformancePanel: false,
+        mountsIntegrationPanel: false,
+        mountsInsightsPanel: false,
+        mountsKpisPanel: false,
+        mountsDataStudioPanel: true,
+      };
     case "insights":
       return {
         section: "insights",
@@ -391,13 +415,13 @@ export function resolveActiveSection(
 export function availableWorkspaceSections(options: WorkspaceSectionAuth): WorkspaceSectionKey[] {
   if (isCalibrationWorkspace(options.workspaceKind)) {
     if (canAccessPrivilegedWorkspaceSections(options)) {
-      return ["goals", "calibration_flows", "context", "knowledge", "settings"];
+      return ["goals", "calibration_flows", "context", "knowledge", "data_studio", "settings"];
     }
     return [];
   }
   if (isKnowledgeRegionWorkspace(options.workspaceKind)) {
     if (canAccessPrivilegedWorkspaceSections(options)) {
-      return ["goals", "verification_flows", "context", "knowledge", "settings"];
+      return ["goals", "verification_flows", "context", "knowledge", "data_studio", "settings"];
     }
     return [];
   }

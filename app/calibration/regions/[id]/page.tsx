@@ -1,4 +1,5 @@
-import { KnowledgeRegionPage } from "@/components/product-flow/knowledge-region-page";
+import { redirect } from "next/navigation";
+import { productRegionPagePath } from "@/lib/product-flow";
 
 export default async function CalibrationRegionPage({
   params,
@@ -6,5 +7,5 @@ export default async function CalibrationRegionPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return <KnowledgeRegionPage kind="calibration" regionId={id} />;
+  redirect(productRegionPagePath("calibration", id));
 }

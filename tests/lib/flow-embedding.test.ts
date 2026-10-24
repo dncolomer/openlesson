@@ -5,10 +5,13 @@ import {
   completeFlowEmbedding,
   FLOW_EMBEDDING_DIM,
   FLOW_EMBEDDING_MODEL_ID,
+  FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
+  flowEmbeddingModelIdForChannel,
   recoverFlowEmbeddingRaw,
   reembedFlowRaw,
   vectorsMatch,
 } from "@/lib/flow-embedding";
+import { cosineSimilarity } from "@/lib/knowledge-config/math";
 import {
   persistCompletedFlowEmbedding,
   resetFlowEmbeddingStore,
@@ -23,29 +26,23 @@ function read(path: string): string {
   return readFileSync(join(ROOT, path), "utf8");
 }
 
-function fixtureModel(regionTitle = "Region") {
+function fixtureModel(
+  regionTitle = "Region",
+  prices: readonly number[] = [10, 80],
+) {
   const model = normalizeSessionBranchModel(
     {
       premise: "A priced field.",
       question: "What is still open?",
       territory: "A priced field.",
       observation: "The field is open.",
-      regions: [
-        {
-          title: regionTitle,
-          question: `What is ${regionTitle}?`,
-          territory: `${regionTitle} of the field.`,
-          observation: `${regionTitle} is open.`,
-          edgePrice: 10,
-        },
-        {
-          title: `${regionTitle} dear`,
-          question: `What is dear in ${regionTitle}?`,
-          territory: `Dear ${regionTitle}.`,
-          observation: `${regionTitle} dear is open.`,
-          edgePrice: 80,
-        },
-      ],
+      regions: prices.map((edgePrice, index) => ({
+        title: index === 0 ? regionTitle : `${regionTitle} ${index}`,
+        question: `What is ${regionTitle} ${index}?`,
+        territory: `${regionTitle} of the field.`,
+        observation: `${regionTitle} is open.`,
+        edgePrice,
+      })),
     },
     "Priced",
   );
@@ -55,7 +52,7 @@ function fixtureModel(regionTitle = "Region") {
 
 describe("flowcfg-v1-d96 embeddings", () => {
   const model = fixtureModel("Region");
-  const eight = fixtureModel("Other region");
+  const eight = fixtureModel("Other region", [4, 40, 90]);
 
   it("embeds Calibrate without a projected policy and Learn/Verify with one", () => {
     const calibrate = completeFlowEmbedding({
@@ -89,37 +86,52 @@ describe("flowcfg-v1-d96 embeddings", () => {
     expect(verify.raw.pow[0]?.payload).toBe("proof");
   });
 
-  it("changes the vector when gen model, policy, or PoW changes, and re-embeds recovered raw", () => {
+  it("changes the path vector when the tree or walk changes; speech only moves path+text", () => {
     const base = completeFlowEmbedding({
       flowKind: "verify",
       model,
       sequence: ["r1"],
-      pow: [{ type: "speech", tool_name: "runner", timestamp_ms: 1, payload: "a" }],
+      pow: [{ type: "speech", tool_name: "runner", timestamp_ms: 1, payload: "alpha spoken proof" }],
     });
     const otherModel = completeFlowEmbedding({
       flowKind: "verify",
       model: eight,
       sequence: ["r1"],
-      pow: [{ type: "speech", tool_name: "runner", timestamp_ms: 1, payload: "a" }],
+      pow: [{ type: "speech", tool_name: "runner", timestamp_ms: 1, payload: "alpha spoken proof" }],
     });
     const otherPolicy = completeFlowEmbedding({
       flowKind: "verify",
       model,
       sequence: ["r2"],
-      pow: [{ type: "speech", tool_name: "runner", timestamp_ms: 1, payload: "a" }],
+      pow: [{ type: "speech", tool_name: "runner", timestamp_ms: 1, payload: "alpha spoken proof" }],
     });
     const otherPow = completeFlowEmbedding({
       flowKind: "verify",
       model,
       sequence: ["r1"],
-      pow: [{ type: "speech", tool_name: "runner", timestamp_ms: 1, payload: "b" }],
+      pow: [{ type: "speech", tool_name: "runner", timestamp_ms: 1, payload: "beta spoken proof" }],
+    });
+    const silent = completeFlowEmbedding({
+      flowKind: "verify",
+      model,
+      sequence: ["r1"],
+      pow: [{ type: "tool", tool_name: "session_policy", tool_action: "r1", timestamp_ms: 1 }],
     });
     expect(base.vector).not.toEqual(otherModel.vector);
     expect(base.vector).not.toEqual(otherPolicy.vector);
-    expect(base.vector).not.toEqual(otherPow.vector);
+    expect(base.vector).toEqual(otherPow.vector);
+    expect(base.vector).toEqual(silent.vector);
+    expect(base.vector_path_text).not.toEqual(otherPow.vector_path_text);
+    expect(base.vector_path_text).not.toEqual(base.vector);
+    expect(silent.vector_path_text).toEqual(silent.vector);
+    expect(cosineSimilarity(base.vector, otherPolicy.vector)).toBeLessThan(0.999);
+    expect(cosineSimilarity(base.vector, otherPow.vector)).toBeGreaterThan(0.999);
+    expect(flowEmbeddingModelIdForChannel("path")).toBe(FLOW_EMBEDDING_MODEL_ID);
+    expect(flowEmbeddingModelIdForChannel("path_text")).toBe(FLOW_EMBEDDING_PATH_TEXT_MODEL_ID);
     const recovered = recoverFlowEmbeddingRaw(base);
     expect(recovered).toEqual(base.raw);
     expect(vectorsMatch(reembedFlowRaw(recovered!), base.vector)).toBe(true);
+    expect(vectorsMatch(reembedFlowRaw(recovered!, "path_text"), base.vector_path_text)).toBe(true);
     expect(
       otherModel.raw.genModel.branches.find((branch) => branch.id === "root")?.edges.length,
     ).toBeGreaterThan(0);

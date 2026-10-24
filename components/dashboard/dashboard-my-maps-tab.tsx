@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { WorkspaceCardHero } from "@/components/WorkspaceCardHero";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
-import { isAuthoredLearningMap } from "@/lib/dashboard-workspace-filters";
 import type { Workspace } from "@/lib/storage";
 import {
   DASHBOARD_MAPS_REMOVE_PATH,
@@ -15,12 +14,10 @@ import {
 
 export function DashboardMyMapsTab({
   maps,
-  authoredMaps = [],
   formatDate,
   coverImagePool = null,
 }: {
   maps: Workspace[];
-  authoredMaps?: Workspace[];
   formatDate: (dateStr: string) => string;
   coverImagePool?: readonly string[] | null;
 }) {
@@ -31,10 +28,6 @@ export function DashboardMyMapsTab({
   const playMaps = useMemo(
     () => maps.filter((map) => !removedIds.includes(map.id)),
     [maps, removedIds],
-  );
-  const authored = useMemo(
-    () => authoredMaps.filter((map) => isAuthoredLearningMap(map)),
-    [authoredMaps],
   );
 
   async function removeMap(map: Workspace) {
@@ -69,43 +62,12 @@ export function DashboardMyMapsTab({
           My Maps
         </h2>
         <p className="mt-3 max-w-xl text-sm leading-relaxed text-neutral-400">
-          Maps you authored, including private ones, and play copies from Home.
+          Play copies you added from Home or bought as All You Can Learn. Maps you author live on
+          Build.
         </p>
       </section>
 
       {error ? <p className="text-sm text-red-300">{error}</p> : null}
-
-      <section className="space-y-3" data-dashboard-my-maps-authored>
-        <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
-          Authored
-        </p>
-        {authored.length === 0 ? (
-          <div className="console-copy px-6 py-8 sm:px-8">
-            <p className="text-sm text-neutral-400">No maps authored yet.</p>
-            <Link
-              href="/workspace/new"
-              className="mt-4 inline-flex h-10 items-center justify-center rounded-none border border-white/40 px-5 text-sm text-white hover:border-white/80"
-            >
-              Create a map
-            </Link>
-          </div>
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {authored.map((map) => (
-              <MyMapsCard
-                key={map.id}
-                map={map}
-                href={`/workspace/${map.id}`}
-                imagePool={coverImagePool}
-                marker="data-dashboard-my-maps-authored-card"
-                meta={`${map.is_public ? "Public" : "Private"}${
-                  map.created_at ? ` · ${formatDate(map.created_at)}` : ""
-                }`}
-              />
-            ))}
-          </div>
-        )}
-      </section>
 
       <section className="space-y-3" data-dashboard-my-maps-play>
         <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
@@ -131,7 +93,6 @@ export function DashboardMyMapsTab({
                 map={map}
                 href={playCopyWorkspaceHref(map.id)}
                 imagePool={coverImagePool}
-                marker="data-dashboard-my-maps-card"
                 meta={`${map.aycl_category || "Map"}${
                   map.created_at ? ` · ${formatDate(map.created_at)}` : ""
                 }`}
@@ -160,24 +121,18 @@ function MyMapsCard({
   map,
   href,
   imagePool,
-  marker,
   meta,
   action = null,
 }: {
   map: Workspace;
   href: string;
   imagePool: readonly string[] | null;
-  marker: "data-dashboard-my-maps-card" | "data-dashboard-my-maps-authored-card";
   meta: string;
   action?: ReactNode;
 }) {
-  const attrs =
-    marker === "data-dashboard-my-maps-authored-card"
-      ? { "data-dashboard-my-maps-authored-card": "" }
-      : { "data-dashboard-my-maps-card": "" };
   return (
     <article
-      {...attrs}
+      data-dashboard-my-maps-card=""
       className="group relative min-h-[16rem] overflow-hidden rounded-none border border-white/20 text-left transition hover:border-white/60"
     >
       <Link href={href} className="absolute inset-0">

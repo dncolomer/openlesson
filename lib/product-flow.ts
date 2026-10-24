@@ -75,7 +75,12 @@ export function productRegionNewPath(kind: ProductFlowKind): string {
 export function productRegionPagePath(kind: ProductFlowKind, regionId: string): string {
   const id = String(regionId || "").trim();
   if (!id) return productRegionNewPath(kind);
-  return kind === "calibration" ? `/calibration/regions/${id}` : `/verification/regions/${id}`;
+  const tab = kind === "calibration" ? "calibration_studio" : "verification_studio";
+  return `/dashboard?tab=${tab}&region=${encodeURIComponent(id)}`;
+}
+
+export function productRegionStudioPath(kind: ProductFlowKind, regionId: string): string {
+  return productRegionPagePath(kind, regionId);
 }
 
 export function productFlowOwnerWorkspaceKind(kind: ProductFlowKind): WorkspaceKind {

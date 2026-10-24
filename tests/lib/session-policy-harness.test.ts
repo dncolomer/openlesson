@@ -299,7 +299,7 @@ describe("policy score against the prepared tree", () => {
     expect(existsSync(join(ROOT, "components/exercise-tap/exercise-tap-phases.tsx"))).toBe(false);
   });
 
-  it("changes the embedding when the sequence or the captured proof changes", () => {
+  it("changes the path embedding when the sequence changes; speech only moves path+text", () => {
     const prompt = "The person spoke the observation.";
     const speech = verificationProofEmbedding({
       prompt,
@@ -319,8 +319,23 @@ describe("policy score against the prepared tree", () => {
       workspaceId: "ws-policy",
       policy: { model, sequence: lowest },
     });
+    const speechText = verificationProofEmbedding({
+      prompt,
+      source: "runner",
+      workspaceId: "ws-policy",
+      policy: { model, sequence: lowest },
+      channel: "path_text",
+    });
+    const canvasText = verificationProofEmbedding({
+      prompt,
+      source: "skill",
+      workspaceId: "ws-policy",
+      policy: { model, sequence: lowest },
+      channel: "path_text",
+    });
     expect(speech).not.toEqual(otherSequence);
-    expect(speech).not.toEqual(canvas);
+    expect(speech).toEqual(canvas);
+    expect(speechText).not.toEqual(canvasText);
     expect(speech).toHaveLength(96);
   });
 

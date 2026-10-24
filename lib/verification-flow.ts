@@ -7,7 +7,12 @@
 
 import { normalizeFlowName } from "@/lib/product-flow";
 import { TUTOR_CANVAS_VOICE } from "@/lib/prompt-kernel/tutor-voice";
-import { completeFlowEmbedding, FLOW_EMBEDDING_MODEL_ID } from "@/lib/flow-embedding";
+import {
+  completeFlowEmbedding,
+  FLOW_EMBEDDING_MODEL_ID,
+  FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
+  type FlowEmbeddingChannel,
+} from "@/lib/flow-embedding";
 import type { SessionBranchModel } from "@/lib/session-branch-model";
 import {
   createCustomVerificationModelFromVectors,
@@ -276,26 +281,28 @@ export function parseSyntheticPowModelOutput(raw: unknown): SyntheticPowItem[] {
 }
 
 /**
- * flowcfg-v1-d96 vector for one verification proof.
- * Encodes the gen model, projected policy when the run produced one, and the PoW.
+ * Flowcfg vector for one verification proof.
+ * Default `path` is the hidden-state tree and walk. `path_text` mixes spoken
+ * transcripts. Synthetic text-only items have no walk, so they use path_text.
  */
 export function verificationProofEmbedding(input: {
   prompt: string;
   source?: "runner" | "skill" | "synthetic";
   workspaceId?: string;
+  channel?: FlowEmbeddingChannel;
   /** Ignored. Catalog size is no longer part of the gen model. */
   catalogSize?: unknown;
   /** Prepared tree and the hidden-state path. The embedding then includes the policy distance. */
   policy?: { model: SessionBranchModel; sequence: readonly string[] } | null;
 }): number[] {
   const source = input.source ?? "runner";
-  return completeFlowEmbedding({
+  const record = completeFlowEmbedding({
     flowKind: "verify",
     model: input.policy?.model ?? null,
     sequence: input.policy?.sequence ?? null,
     pow: [
       {
-        type: source === "runner" ? "speech" : "tool",
+        type: source === "skill" ? "tool" : "speech",
         tool_name: source,
         timestamp_ms: 1,
         payload: input.prompt,
@@ -307,7 +314,8 @@ export function verificationProofEmbedding(input: {
         timestamp_ms: index + 2,
       })),
     ],
-  }).vector;
+  });
+  return input.channel === "path_text" ? record.vector_path_text : record.vector;
 }
 
 /** Opening line the TAP canvas shows for this run. Empty when the pool refused a question. */
@@ -334,6 +342,7 @@ export function regionEmbeddingsFromSyntheticItems(
         prompt: text,
         source: "synthetic",
         workspaceId: "synthetic-agents",
+        channel: "path_text",
       }),
     );
 }
@@ -365,7 +374,7 @@ export function buildRegionFromSyntheticItems(input: {
     name: input.name,
     vectors: regionEmbeddingsFromSyntheticItems(input.items),
     subjects: input.items.map((item) => ({ label: item.text.slice(0, 80) })),
-    embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
+    embedding_model_id: FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
   });
 }
 

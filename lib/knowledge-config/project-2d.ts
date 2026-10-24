@@ -11,7 +11,13 @@
  */
 
 import { FLOW_EMBEDDING_DIM, FLOW_EMBEDDING_MODEL_ID } from "@/lib/flow-embedding";
-import { hashUnit, l2Distance, projectWithMatrix, seededRandomProjection } from "./math";
+import {
+  cosineThresholdToL2,
+  hashUnit,
+  l2Distance,
+  projectWithMatrix,
+  seededRandomProjection,
+} from "./math";
 
 export type ProjectionAlgorithmId = "random" | "pca" | "classical_mds" | "smacof";
 
@@ -776,6 +782,7 @@ export interface RegionCentroidInput {
   mean_radius?: number;
   cosine_threshold?: number;
   source?: string | null;
+  embedding_model_id?: string | null;
 }
 
 export interface RegionOverlayProjected {
@@ -784,6 +791,8 @@ export interface RegionOverlayProjected {
   x: number;
   y: number;
   radius: number;
+  /** 2D flattening of the cosine-threshold L2 ball (unit embeddings). */
+  membershipRadius: number;
   cosine_threshold: number;
   source?: string | null;
 }
@@ -799,6 +808,18 @@ export interface JointProjectionResult {
     confidence: number;
   }>;
   regionOverlays: RegionOverlayProjected[];
+}
+
+function mapHighDRadiusTo2D(
+  highD: number,
+  algorithm: ProjectionAlgorithmId,
+  scale: number,
+): number {
+  if (algorithm === "random") {
+    return Math.max(0, Math.max(0, highD) * 0.42);
+  }
+  const r = Math.max(0, highD) * Math.max(scale, 1e-6) * 0.85;
+  return Number.isFinite(r) ? Math.max(0, r) : 0;
 }
 
 function regionRadius2D(
@@ -896,6 +917,11 @@ export function projectTrajectoryAndRegions(input: {
       x: coords2d[idx]?.x ?? 0,
       y: coords2d[idx]?.y ?? 0,
       radius: regionRadius2D(meanRadius, threshold, algorithm, scale),
+      membershipRadius: mapHighDRadiusTo2D(
+        cosineThresholdToL2(threshold),
+        algorithm,
+        scale,
+      ),
       cosine_threshold: threshold,
       source: r.source ?? null,
     };

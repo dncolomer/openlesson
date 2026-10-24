@@ -55,7 +55,12 @@ export const SECTION_TAB_CONTENT_CLASS =
 export const SETTING_INNER_LAYOUT_CLASS =
   "w-full max-w-none space-y-4";
 
-export type SectionSurfaceKind = "knowledge" | "settings" | "insights" | "kpis";
+export type SectionSurfaceKind =
+  | "knowledge"
+  | "data_studio"
+  | "settings"
+  | "insights"
+  | "kpis";
 
 export type WorkspaceSectionIdentity = {
   title: string;
@@ -95,11 +100,13 @@ export function resolveSectionIdentityDisplay(
     eyebrow:
       kind === "knowledge"
         ? "Knowledge"
-        : kind === "insights"
-          ? "Insights"
-          : kind === "kpis"
-            ? "KPIs"
-            : "Settings",
+        : kind === "data_studio"
+          ? "Data Studio"
+          : kind === "insights"
+            ? "Insights"
+            : kind === "kpis"
+              ? "KPIs"
+              : "Settings",
     title,
     subtitle: description,
     showOwnerBadge: identity.isOwner === true,

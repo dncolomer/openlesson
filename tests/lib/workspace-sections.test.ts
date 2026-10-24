@@ -70,6 +70,22 @@ describe("resolveWorkspaceSectionLayout", () => {
     expect(layout.mountsIntegrationPanel).toBe(false);
   });
 
+  it("maps Data Studio section to the visual embeddings surface", () => {
+    const layout = resolveWorkspaceSectionLayout("data_studio");
+
+    expect(layout.mainSurface).toBe("data_studio");
+    expect(layout.showBlockMapChrome).toBe(false);
+    expect(layout.mountsDataStudioPanel).toBe(true);
+    expect(layout.mountsPerformancePanel).toBe(false);
+    expect(
+      availableWorkspaceSections({ isOwner: true, workspaceKind: "knowledge_region" }),
+    ).toContain("data_studio");
+    expect(
+      availableWorkspaceSections({ isOwner: true, workspaceKind: "calibration" }),
+    ).toContain("data_studio");
+    expect(availableWorkspaceSections({ isOwner: true })).not.toContain("data_studio");
+  });
+
   it("maps Setting section to the integrations surface without block-map chrome", () => {
     const layout = resolveWorkspaceSectionLayout("settings");
 
@@ -174,13 +190,13 @@ describe("availableWorkspaceSections", () => {
         isOwner: true,
         workspaceKind: "knowledge_region",
       }),
-    ).toEqual(["goals", "verification_flows", "context", "knowledge", "settings"]);
+    ).toEqual(["goals", "verification_flows", "context", "knowledge", "data_studio", "settings"]);
     expect(
       availableWorkspaceSections({
         isOrgAdmin: true,
         workspaceKind: "knowledge_region",
       }),
-    ).toEqual(["goals", "verification_flows", "context", "knowledge", "settings"]);
+    ).toEqual(["goals", "verification_flows", "context", "knowledge", "data_studio", "settings"]);
     expect(
       availableWorkspaceSections({
         isOwner: false,
@@ -219,7 +235,7 @@ describe("availableWorkspaceSections", () => {
         isOwner: true,
         workspaceKind: "calibration",
       }),
-    ).toEqual(["goals", "calibration_flows", "context", "knowledge", "settings"]);
+    ).toEqual(["goals", "calibration_flows", "context", "knowledge", "data_studio", "settings"]);
     expect(
       availableWorkspaceSections({
         isOwner: true,
@@ -298,7 +314,9 @@ describe("WorkspaceView section shell wiring", () => {
 
   it("gates Knowledge and Settings nav + panel mounts to owners or org admins", () => {
     expect(viewSource).toContain('visibleSections.includes("knowledge")');
+    expect(viewSource).toContain('visibleSections.includes("data_studio")');
     expect(viewSource).toContain('visibleSections.includes("settings")');
+    expect(viewSource).toContain("<DataStudioPanel");
     // Knowledge also opens for Learner mode (LWM); Settings stay privileged-only.
     expect(viewSource).toContain("canAccessPrivilegedSections || isLearnerMode");
     expect(viewSource).toContain("sectionLayout.mountsPerformancePanel");
@@ -477,6 +495,7 @@ describe("WorkspaceView section shell wiring", () => {
     expect(viewSource).toContain('t("planView.sectionWorkspace")');
     expect(viewSource).toContain('t("planView.sectionContext")');
     expect(viewSource).toContain('t("planView.sectionKnowledge")');
+    expect(viewSource).toContain('t("planView.sectionDataStudio")');
     expect(viewSource).toContain('t("planView.sectionSetting")');
   });
 });

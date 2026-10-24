@@ -129,7 +129,7 @@ describe("context generation pool", () => {
     expect(availableWorkspaceSections({ isOwner: true })).not.toContain("calibration_flows");
     expect(
       availableWorkspaceSections({ isOwner: true, workspaceKind: "calibration" }),
-    ).toEqual(["goals", "calibration_flows", "context", "knowledge", "settings"]);
+    ).toEqual(["goals", "calibration_flows", "context", "knowledge", "data_studio", "settings"]);
     expect(
       availableWorkspaceSections({ isOwner: true, workspaceKind: "calibration" }),
     ).not.toContain("verification_flows");

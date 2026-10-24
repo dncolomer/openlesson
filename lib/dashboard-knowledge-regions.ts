@@ -34,9 +34,14 @@ export function dashboardKnowledgeRegionHref(
   kind: DashboardKnowledgeRegionKind,
   regionId: string,
 ): string {
-  const id = String(regionId || "").trim();
-  if (!id) return productRegionNewPath(kind);
-  return productRegionPagePath(kind, id);
+  return productRegionPagePath(kind, regionId);
+}
+
+export function dashboardKnowledgeRegionStudioHref(
+  kind: DashboardKnowledgeRegionKind,
+  regionId: string,
+): string {
+  return productRegionPagePath(kind, regionId);
 }
 
 export function dashboardKnowledgeRegionCreateHref(kind: DashboardKnowledgeRegionKind): string {

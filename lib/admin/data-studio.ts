@@ -370,6 +370,8 @@ export type StudioRegionOverlayView = {
   screenX: number;
   screenY: number;
   screenRadius: number;
+  membershipRadius: number;
+  membershipScreenRadius: number;
   cosine_threshold?: number;
 };
 
@@ -428,6 +430,10 @@ export function buildStudioProjectionView(input: {
   const regionOverlays: StudioRegionOverlayView[] = joint.regionOverlays.map((r) => {
     const scr = view ? dataToScreen(r.x, r.y, view, screen) : { x: 0, y: 0 };
     const screenRadius = view ? mapRadiusToScreen(r.radius, view, screen) : 0;
+    const membershipRadius =
+      typeof r.membershipRadius === "number" && Number.isFinite(r.membershipRadius)
+        ? Math.max(0, r.membershipRadius)
+        : 0;
     return {
       id: r.id,
       name: r.name,
@@ -437,6 +443,8 @@ export function buildStudioProjectionView(input: {
       screenX: scr.x,
       screenY: scr.y,
       screenRadius,
+      membershipRadius,
+      membershipScreenRadius: view ? mapRadiusToScreen(membershipRadius, view, screen) : 0,
       cosine_threshold: r.cosine_threshold,
     };
   });

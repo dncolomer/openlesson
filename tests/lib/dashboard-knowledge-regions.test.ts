@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { readDashboardSurface, readRepo } from "../helpers/surface-source";
 import {
   dashboardKnowledgeRegionCreateHref,
@@ -54,10 +56,13 @@ describe("dashboard knowledge regions", () => {
     expect(parseDashboardKnowledgeRegionKind("verification")).toBe("verification");
     expect(parseDashboardKnowledgeRegionKind("learning")).toBeNull();
     expect(dashboardKnowledgeRegionHref("verification", "r-1")).toBe(
-      "/verification/regions/r-1",
+      "/dashboard?tab=verification_studio&region=r-1",
     );
     expect(dashboardKnowledgeRegionHref("calibration", "r-c")).toBe(
       productRegionPagePath("calibration", "r-c"),
+    );
+    expect(productRegionPagePath("calibration", "r-c")).toBe(
+      "/dashboard?tab=calibration_studio&region=r-c",
     );
     expect(dashboardKnowledgeRegionCreateHref("verification")).toBe(
       productRegionNewPath("verification"),
@@ -85,23 +90,31 @@ describe("dashboard knowledge regions", () => {
     expect(readRepo("components/product-flow/knowledge-region-create.tsx")).toContain(
       "data-create-flow-first",
     );
-    expect(readRepo("components/product-flow/knowledge-region-page.tsx")).toContain(
-      "WorkspacePerformancePanel",
-    );
-    expect(readRepo("components/product-flow/knowledge-region-page.tsx")).toContain(
-      "data-knowledge-overlay",
-    );
     expect(readRepo("components/knowledge-panel/models-view.tsx")).toContain(
       "Overlay regions on the right.",
     );
     expect(readRepo("app/verification/regions/new/page.tsx")).toContain('kind="verification"');
-    expect(readRepo("app/calibration/regions/[id]/page.tsx")).toContain("KnowledgeRegionPage");
+    expect(readRepo("app/calibration/regions/[id]/page.tsx")).toContain("redirect");
+    expect(readRepo("app/calibration/regions/[id]/page.tsx")).toContain("productRegionPagePath");
+    expect(readRepo("app/verification/regions/[id]/page.tsx")).toContain("redirect");
     expect(readRepo("components/dashboard/dashboard-knowledge-regions-tab.tsx")).toContain(
-      "dashboardKnowledgeRegionHref(kind, region.id)",
+      "dashboardKnowledgeRegionStudioHref(kind, region.id)",
+    );
+    expect(readRepo("components/dashboard/dashboard-knowledge-regions-tab.tsx")).toContain(
+      "Open in Data Studio",
+    );
+    expect(readRepo("components/dashboard/dashboard-knowledge-regions-tab.tsx")).toContain(
+      "data-dashboard-knowledge-region-table",
+    );
+    expect(readRepo("components/dashboard/dashboard-knowledge-regions-tab.tsx")).not.toContain(
+      "data-dashboard-knowledge-region-grid",
     );
     expect(readRepo("components/dashboard/dashboard-knowledge-regions-tab.tsx")).not.toContain(
       "?section=knowledge",
     );
+    expect(
+      existsSync(join(__dirname, "../../components/product-flow/knowledge-region-page.tsx")),
+    ).toBe(false);
     expect(productFlowNewPath("verification")).toBe("/verification/flows/new");
   });
 });

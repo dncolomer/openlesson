@@ -6,7 +6,11 @@
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { FLOW_EMBEDDING_DIM, FLOW_EMBEDDING_MODEL_ID } from "@/lib/flow-embedding";
+import {
+  FLOW_EMBEDDING_DIM,
+  FLOW_EMBEDDING_MODEL_ID,
+  FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
+} from "@/lib/flow-embedding";
 import { resolveTapStartingTopicsFromLlm } from "@/lib/tap-score";
 import { availableWorkspaceSections } from "@/lib/workspace-sections";
 import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
@@ -286,6 +290,7 @@ describe("region embeddings from a verification flow and synthetic agents", () =
       name: "Synthetic limits",
       items: generated.items,
     });
+    expect(spec.embedding_model_id).toBe(FLOW_EMBEDDING_PATH_TEXT_MODEL_ID);
     expect(spec.subject_count).toBe(generated.items.length);
     expect(spec.dim).toBe(FLOW_EMBEDDING_DIM);
     expect(spec.centroid).toHaveLength(FLOW_EMBEDDING_DIM);
@@ -315,7 +320,7 @@ describe("region embeddings from a verification flow and synthetic agents", () =
     expect(bare.asksForProofOfWork).toBe(true);
   });
 
-  it("encodes runner and skill proof text into distinct flowcfg vectors", () => {
+  it("keeps runner and skill on the same path without a walk; path+text follows spoken proof", () => {
     const runnerA = verificationProofEmbedding({
       prompt: "epsilon delta limit proof",
       source: "runner",
@@ -332,8 +337,28 @@ describe("region embeddings from a verification flow and synthetic agents", () =
       workspaceId: "flow-token",
     });
     expect(runnerA).toHaveLength(FLOW_EMBEDDING_DIM);
-    expect(runnerA).not.toEqual(runnerB);
-    expect(runnerA).not.toEqual(skill);
+    expect(runnerA).toEqual(runnerB);
+    expect(runnerA).toEqual(skill);
+    const runnerAText = verificationProofEmbedding({
+      prompt: "epsilon delta limit proof",
+      source: "runner",
+      workspaceId: "flow-token",
+      channel: "path_text",
+    });
+    const runnerBText = verificationProofEmbedding({
+      prompt: "photosynthesis calvin cycle",
+      source: "runner",
+      workspaceId: "flow-token",
+      channel: "path_text",
+    });
+    const skillText = verificationProofEmbedding({
+      prompt: "epsilon delta limit proof",
+      source: "skill",
+      workspaceId: "flow-token",
+      channel: "path_text",
+    });
+    expect(runnerAText).not.toEqual(runnerBText);
+    expect(runnerAText).not.toEqual(skillText);
     expect(
       verificationProofEmbedding({
         prompt: "epsilon delta limit proof",
@@ -704,11 +729,11 @@ describe("verification workspace shell gates", () => {
       workspaceKind: "knowledge_region",
     });
     expect(owner).toContain("verification_flows");
-    expect(owner).toEqual(["goals", "verification_flows", "context", "knowledge", "settings"]);
+    expect(owner).toEqual(["goals", "verification_flows", "context", "knowledge", "data_studio", "settings"]);
     expect(owner).not.toContain("calibration_flows");
     expect(
       availableWorkspaceSections({ isOwner: true, workspaceKind: "calibration" }),
-    ).toEqual(["goals", "calibration_flows", "context", "knowledge", "settings"]);
+    ).toEqual(["goals", "calibration_flows", "context", "knowledge", "data_studio", "settings"]);
     const standard = availableWorkspaceSections({ isOwner: true });
     expect(standard).not.toContain("verification_flows");
     expect(standard[0]).toBe("workspace");

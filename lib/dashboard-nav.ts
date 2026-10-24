@@ -18,11 +18,14 @@ export const DASHBOARD_TABS = [
   "home",
   "my_maps",
   "learning",
+  "learning_studio",
   "shop",
   "verification",
   "verification_regions",
+  "verification_studio",
   "calibration",
   "calibration_regions",
+  "calibration_studio",
   "usage",
   "organization",
   "integrations",
@@ -36,6 +39,11 @@ export type DashboardTab = (typeof DASHBOARD_TABS)[number];
 export type DashboardProductTab = "learning" | "verification" | "calibration";
 
 export type DashboardRegionsTab = "verification_regions" | "calibration_regions";
+
+export type DashboardStudioTab =
+  | "learning_studio"
+  | "verification_studio"
+  | "calibration_studio";
 
 export type DashboardNavItem = {
   id: string;
@@ -71,6 +79,7 @@ export const DASHBOARD_NAV_GROUPS: readonly DashboardNavGroup[] = [
       { id: "my_maps", label: "My Maps" },
       { id: "learning", label: "Build" },
       { id: "shop", label: "Your Shop" },
+      { id: "learning_studio", label: "Data Studio" },
     ],
   },
   {
@@ -79,6 +88,7 @@ export const DASHBOARD_NAV_GROUPS: readonly DashboardNavGroup[] = [
     items: [
       { id: "verification", label: "Flows" },
       { id: "verification_regions", label: "Knowledge regions" },
+      { id: "verification_studio", label: "Data Studio" },
     ],
   },
   {
@@ -87,6 +97,7 @@ export const DASHBOARD_NAV_GROUPS: readonly DashboardNavGroup[] = [
     items: [
       { id: "calibration", label: "Flows" },
       { id: "calibration_regions", label: "Knowledge regions" },
+      { id: "calibration_studio", label: "Data Studio" },
     ],
   },
   {
@@ -127,6 +138,23 @@ export function isDashboardRegionsTab(value: unknown): value is DashboardRegions
   return value === "verification_regions" || value === "calibration_regions";
 }
 
+export function isDashboardStudioTab(value: unknown): value is DashboardStudioTab {
+  return (
+    value === "learning_studio" ||
+    value === "verification_studio" ||
+    value === "calibration_studio"
+  );
+}
+
+export function dashboardStudioProduct(
+  tab: DashboardTab,
+): DashboardProductTab | null {
+  if (tab === "learning_studio") return "learning";
+  if (tab === "verification_studio") return "verification";
+  if (tab === "calibration_studio") return "calibration";
+  return null;
+}
+
 export function dashboardRegionsProduct(
   tab: DashboardTab,
 ): DashboardProductTab | null {
@@ -152,9 +180,15 @@ export function parseDashboardTab(value: unknown): DashboardTab {
 export function dashboardTypeFilterForTab(
   tab: DashboardTab,
 ): DashboardWorkspaceTypeFilter | null {
-  if (tab === "learning" || tab === "shop" || tab === "my_maps") return "learning";
-  if (tab === "verification" || tab === "verification_regions") return "verification";
-  if (tab === "calibration" || tab === "calibration_regions") return "calibration";
+  if (tab === "learning" || tab === "shop" || tab === "my_maps" || tab === "learning_studio") {
+    return "learning";
+  }
+  if (tab === "verification" || tab === "verification_regions" || tab === "verification_studio") {
+    return "verification";
+  }
+  if (tab === "calibration" || tab === "calibration_regions" || tab === "calibration_studio") {
+    return "calibration";
+  }
   return null;
 }
 
@@ -217,6 +251,7 @@ export function dashboardFrameLabel(tab: DashboardTab): string {
   if (tab === "my_maps") return "My Maps";
   if (tab === "shop") return "Your Shop";
   if (isDashboardRegionsTab(tab)) return "Knowledge regions";
+  if (isDashboardStudioTab(tab)) return "Data Studio";
   if (isDashboardProductTab(tab)) return dashboardProductLabel(tab);
   if (tab === "help") return "How it works";
   if (tab === "organization") return "Organization";

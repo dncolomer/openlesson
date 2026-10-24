@@ -126,11 +126,20 @@ function mapRow(row: Record<string, unknown>): StoredFlowEmbedding | null {
 }
 
 export function presentFlowEmbedding(row: StoredFlowEmbedding): StoredFlowEmbedding {
+  const recovered = recoverFlowEmbeddingRaw(row.raw);
+  if (!recovered) {
+    return {
+      ...row,
+      embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
+      dim: FLOW_EMBEDDING_DIM,
+    };
+  }
   return {
     ...row,
     embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
     dim: FLOW_EMBEDDING_DIM,
-    raw: recoverFlowEmbeddingRaw(row.raw) ?? row.raw,
+    vector: embedFlowOutput(recovered).vector,
+    raw: recovered,
   };
 }
 
@@ -190,14 +199,27 @@ export async function listFlowEmbeddings(input: {
   flowKind?: FlowKind | string | null;
   flowId?: string | null;
 }): Promise<StoredFlowEmbedding[]> {
-  const workspaceId = text(input.workspaceId);
-  if (!workspaceId) return [];
+  return listFlowEmbeddingsForWorkspaces({
+    workspaceIds: [input.workspaceId],
+    flowKind: input.flowKind,
+    flowId: input.flowId,
+  });
+}
+
+export async function listFlowEmbeddingsForWorkspaces(input: {
+  workspaceIds: readonly string[];
+  flowKind?: FlowKind | string | null;
+  flowId?: string | null;
+}): Promise<StoredFlowEmbedding[]> {
+  const workspaceIds = input.workspaceIds.map((id) => text(id)).filter(Boolean);
+  if (workspaceIds.length === 0) return [];
   const flowKind = text(input.flowKind);
   const flowId = text(input.flowId);
+  const allow = new Set(workspaceIds);
   if ((await resolveBackend()) === "memory") {
     return storeGlobal()
       .memory.filter((row) => {
-        if (row.workspace_id !== workspaceId) return false;
+        if (!allow.has(row.workspace_id)) return false;
         if (flowKind && row.flow_kind !== flowKind) return false;
         if (flowId && row.flow_id !== flowId) return false;
         return true;
@@ -208,7 +230,7 @@ export async function listFlowEmbeddings(input: {
   let query = supabase
     .from("workspace_flow_embeddings")
     .select("*")
-    .eq("workspace_id", workspaceId)
+    .in("workspace_id", workspaceIds)
     .order("created_at", { ascending: false });
   if (flowKind) query = query.eq("flow_kind", flowKind);
   if (flowId) query = query.eq("flow_id", flowId);

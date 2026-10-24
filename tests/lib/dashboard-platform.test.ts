@@ -10,11 +10,13 @@ import {
   dashboardListFilterForTab,
   dashboardProductLabel,
   dashboardRegionsProduct,
+  dashboardStudioProduct,
   dashboardTypeFilterForTab,
   isDashboardNavTabItem,
   isDashboardProductTab,
   isDashboardRegionsTab,
   isDashboardShopTab,
+  isDashboardStudioTab,
   parseDashboardTab,
 } from "@/lib/dashboard-nav";
 import {
@@ -46,6 +48,9 @@ describe("dashboard nav", () => {
     expect(parseDashboardTab("shop")).toBe("shop");
     expect(parseDashboardTab("verification_regions")).toBe("verification_regions");
     expect(parseDashboardTab("calibration_regions")).toBe("calibration_regions");
+    expect(parseDashboardTab("learning_studio")).toBe("learning_studio");
+    expect(parseDashboardTab("verification_studio")).toBe("verification_studio");
+    expect(parseDashboardTab("calibration_studio")).toBe("calibration_studio");
     expect(parseDashboardTab("help")).toBe("help");
     expect(parseDashboardTab("plans")).toBe("learning");
     expect(parseDashboardTab("unknown")).toBe("home");
@@ -69,6 +74,10 @@ describe("dashboard nav", () => {
     expect(dashboardRegionsProduct("calibration_regions")).toBe("calibration");
     expect(dashboardFrameLabel("shop")).toBe("Your Shop");
     expect(dashboardFrameLabel("verification_regions")).toBe("Knowledge regions");
+    expect(isDashboardStudioTab("learning_studio")).toBe(true);
+    expect(dashboardStudioProduct("verification_studio")).toBe("verification");
+    expect(dashboardTypeFilterForTab("learning_studio")).toBe("learning");
+    expect(dashboardFrameLabel("calibration_studio")).toBe("Data Studio");
     expect(dashboardCreateHref("learning")).toBe("/workspace/new");
     expect(dashboardCreateHref("verification")).toBe("/verification/flows/new");
     expect(dashboardCreateHref("calibration")).toBe("/calibration/flows/new");
@@ -90,19 +99,39 @@ describe("dashboard nav", () => {
     const learning = DASHBOARD_NAV_GROUPS.find((group) => group.id === "learning");
     const verification = DASHBOARD_NAV_GROUPS.find((group) => group.id === "verification");
     const calibration = DASHBOARD_NAV_GROUPS.find((group) => group.id === "calibration");
-    expect(learning?.items.map((item) => item.id)).toEqual(["my_maps", "learning", "shop"]);
-    expect(learning?.items.map((item) => item.label)).toEqual(["My Maps", "Build", "Your Shop"]);
-    expect(verification?.items.map((item) => item.label)).toEqual(["Flows", "Knowledge regions"]);
-    expect(calibration?.items.map((item) => item.label)).toEqual(["Flows", "Knowledge regions"]);
+    expect(learning?.items.map((item) => item.id)).toEqual([
+      "my_maps",
+      "learning",
+      "shop",
+      "learning_studio",
+    ]);
+    expect(learning?.items.map((item) => item.label)).toEqual([
+      "My Maps",
+      "Build",
+      "Your Shop",
+      "Data Studio",
+    ]);
+    expect(verification?.items.map((item) => item.label)).toEqual([
+      "Flows",
+      "Knowledge regions",
+      "Data Studio",
+    ]);
+    expect(calibration?.items.map((item) => item.label)).toEqual([
+      "Flows",
+      "Knowledge regions",
+      "Data Studio",
+    ]);
     expect(verification?.items.map((item) => item.label)).not.toContain("Workspaces");
     expect(calibration?.items.map((item) => item.label)).not.toContain("Workspaces");
     expect(verification?.items.map((item) => item.id)).toEqual([
       "verification",
       "verification_regions",
+      "verification_studio",
     ]);
     expect(calibration?.items.map((item) => item.id)).toEqual([
       "calibration",
       "calibration_regions",
+      "calibration_studio",
     ]);
     expect(DASHBOARD_NAV_GROUPS.map((group) => group.id)).not.toContain("products");
   });
@@ -227,6 +256,9 @@ describe("dashboard platform surface", () => {
     expect(dashSrc).toContain("md:h-dvh");
     expect(dashSrc).toContain("md:overflow-hidden");
     expect(dashSrc).toContain("md:overflow-y-auto");
+    expect(dashSrc).toContain("DashboardDataStudioTab");
+    expect(dashSrc).toContain("isDashboardStudioTab");
+    expect(dashSrc).toContain('data-dashboard-data-studio');
     expect(dashSrc).not.toContain("md:row-span-2");
     expect(platform).toContain("DashboardSidebar");
     expect(platform).not.toContain("data-console-frame-label");

@@ -3,7 +3,11 @@
  * distilled from a cohort of subject embeddings (e.g. internal experts).
  */
 
-import { FLOW_EMBEDDING_DIM, FLOW_EMBEDDING_MODEL_ID } from "@/lib/flow-embedding";
+import {
+  FLOW_EMBEDDING_DIM,
+  FLOW_EMBEDDING_MODEL_ID,
+  FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
+} from "@/lib/flow-embedding";
 import { cosineSimilarity, l2Distance, l2Normalize } from "./math";
 
 export interface CustomVerificationSubjectRef {
@@ -100,9 +104,13 @@ export function createCustomVerificationModelFromVectors(options: {
     throw new CustomVerificationModelError("at least one subject embedding is required");
   }
   const dim = vectors[0]?.length ?? 0;
-  if (embedding_model_id === FLOW_EMBEDDING_MODEL_ID && dim !== FLOW_EMBEDDING_DIM) {
+  if (
+    (embedding_model_id === FLOW_EMBEDDING_MODEL_ID ||
+      embedding_model_id === FLOW_EMBEDDING_PATH_TEXT_MODEL_ID) &&
+    dim !== FLOW_EMBEDDING_DIM
+  ) {
     throw new CustomVerificationModelError(
-      `vector must be finite length ${FLOW_EMBEDDING_DIM} for ${FLOW_EMBEDDING_MODEL_ID}`,
+      `vector must be finite length ${FLOW_EMBEDDING_DIM} for ${embedding_model_id}`,
     );
   }
   for (const v of vectors) {

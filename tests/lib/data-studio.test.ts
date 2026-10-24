@@ -20,8 +20,58 @@ import {
   toggleStudioSort,
 } from "@/lib/admin/data-studio";
 import { createCustomVerificationModelFromVectors } from "@/lib/knowledge-config";
-import { FLOW_EMBEDDING_DIM } from "@/lib/flow-embedding";
-import { l2Normalize } from "@/lib/knowledge-config/math";
+import {
+  completeFlowEmbedding,
+  FLOW_EMBEDDING_DIM,
+  FLOW_EMBEDDING_MODEL_ID,
+  FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
+} from "@/lib/flow-embedding";
+import { cosineThresholdToL2, l2Distance, l2Normalize } from "@/lib/knowledge-config/math";
+import {
+  availableWorkspaceSections,
+  resolveWorkspaceSectionLayout,
+} from "@/lib/workspace-sections";
+import {
+  DASHBOARD_NAV_GROUPS,
+  dashboardStudioProduct,
+  isDashboardStudioTab,
+} from "@/lib/dashboard-nav";
+import {
+  buildDataStudioProjectionView,
+  buildStudioRegionDistanceRays,
+  clampStudioInspectWidth,
+  formatStudioHighDimDistance,
+  IDENTITY_STUDIO_CAMERA,
+  hiddenStudioRegionIdsForFocus,
+  filterStudioEmbeddings,
+  studioHighDimRegionMembership,
+  studioPointInsideHighDimRegion,
+  hitTestStudioPoint,
+  includeLearningStudioEmbedding,
+  inspectStudioEmbedding,
+  panStudioCamera,
+  parseDataStudioSpace,
+  presentDashboardDataStudio,
+  projectStudioEmbeddings2D,
+  scopeLearningStudioEmbeddings,
+  studioEmbeddingVector,
+  studioRegionsForSpace,
+  studioCameraTransform,
+  studioFlowOptions,
+  studioGridLines,
+  studioNiceGridStep,
+  STUDIO_IN_REGION_FILL,
+  studioRunOptions,
+  studioScreenToWorld,
+  toggleStudioHiddenId,
+  visibleStudioRegions,
+  zoomStudioCamera,
+  type DataStudioEmbeddingRow,
+} from "@/lib/data-studio-view";
+import {
+  dataStudioExplainer,
+  parseDataStudioView,
+} from "@/lib/data-studio-explainer";
 
 const ROOT = join(__dirname, "../..");
 
@@ -251,6 +301,8 @@ describe("studio projection + region geometry (shipped)", () => {
     const overlay = layout.regionOverlays[0];
     expect(overlay.screenRadius).toBeGreaterThan(0);
     expect(Number.isFinite(overlay.screenRadius)).toBe(true);
+    expect(Number.isFinite(overlay.membershipScreenRadius)).toBe(true);
+    expect(overlay.membershipScreenRadius).toBeGreaterThan(0);
 
     const latest = buildStudioProjectionView({
       points: [
@@ -309,3 +361,682 @@ describe("data studio structural wiring", () => {
     expect(src).not.toContain("requireAdmin");
   });
 });
+
+function studioRow(input: {
+  id: string;
+  flowKind?: string;
+  flowId?: string | null;
+  runId?: string | null;
+  identity?: string | null;
+  prompt: string;
+  workspaceId?: string;
+  userId?: string | null;
+  isPlayCopy?: boolean;
+  ownerUserId?: string;
+}): DataStudioEmbeddingRow {
+  const record = completeFlowEmbedding({
+    flowKind: (input.flowKind as "verify" | "calibrate" | "learn") || "verify",
+    pow: [
+      {
+        type: "tool",
+        tool_name: "tap-speech-segment",
+        tool_action: "speech_stop",
+        timestamp_ms: 1,
+        payload: input.prompt,
+        metadata: { transcript: input.prompt, text: input.prompt },
+      },
+    ],
+  });
+  return {
+    id: input.id,
+    workspace_id: input.workspaceId ?? "ws-1",
+    flow_kind: input.flowKind ?? "verify",
+    flow_id: input.flowId ?? "flow-a",
+    run_id: input.runId ?? "run-1",
+    identity: input.identity ?? "ada",
+    vector: record.vector,
+    raw: record.raw,
+    embedding_model_id: record.embedding_model_id,
+    created_at: "2026-10-01T00:00:00.000Z",
+    user_id: input.userId ?? null,
+    is_play_copy: input.isPlayCopy ?? false,
+    owner_user_id: input.ownerUserId ?? "me",
+  };
+}
+
+/** Matches `app/api/dashboard/data-studio/route.ts` mapping of StoredFlowEmbedding. */
+function dashboardApiEmbedding(input: {
+  id: string;
+  flowKind?: string;
+  flowId?: string | null;
+  runId?: string | null;
+  identity?: string | null;
+  prompt: string;
+  workspaceId?: string;
+}): DataStudioEmbeddingRow {
+  const record = completeFlowEmbedding({
+    flowKind: (input.flowKind as "verify" | "calibrate" | "learn") || "verify",
+    pow: [
+      {
+        type: "tool",
+        tool_name: "tap-speech-segment",
+        tool_action: "speech_stop",
+        timestamp_ms: 1,
+        payload: input.prompt,
+        metadata: { transcript: input.prompt, text: input.prompt },
+      },
+    ],
+  });
+  return {
+    id: input.id,
+    workspace_id: input.workspaceId ?? "ws-1",
+    flow_kind: input.flowKind ?? "verify",
+    flow_id: input.flowId ?? "flow-a",
+    run_id: input.runId ?? "run-1",
+    identity: input.identity ?? "ada",
+    vector: record.vector,
+    raw: record.raw,
+    embedding_model_id: record.embedding_model_id,
+    created_at: "2026-10-01T00:00:00.000Z",
+    source: null,
+  };
+}
+
+describe("product Data Studio chrome", () => {
+  it("lists Data Studio on verification, calibration, and learning product chrome", () => {
+    expect(
+      availableWorkspaceSections({ isOwner: true, workspaceKind: "knowledge_region" }),
+    ).toContain("data_studio");
+    expect(
+      availableWorkspaceSections({ isOwner: true, workspaceKind: "calibration" }),
+    ).toContain("data_studio");
+    expect(availableWorkspaceSections({ isOwner: true })).not.toContain("data_studio");
+    expect(resolveWorkspaceSectionLayout("data_studio").mountsDataStudioPanel).toBe(true);
+
+    const learning = DASHBOARD_NAV_GROUPS.find((group) => group.id === "learning");
+    const verification = DASHBOARD_NAV_GROUPS.find((group) => group.id === "verification");
+    const calibration = DASHBOARD_NAV_GROUPS.find((group) => group.id === "calibration");
+    expect(learning?.items.some((item) => item.label === "Data Studio")).toBe(true);
+    expect(verification?.items.some((item) => item.label === "Data Studio")).toBe(true);
+    expect(calibration?.items.some((item) => item.label === "Data Studio")).toBe(true);
+    expect(isDashboardStudioTab("learning_studio")).toBe(true);
+    expect(dashboardStudioProduct("calibration_studio")).toBe("calibration");
+
+    const hosts = readFileSync(join(ROOT, "components/workspace-view/workspace-section-hosts.tsx"), "utf8");
+    expect(hosts).toContain("DataStudioPanel");
+    expect(hosts).toContain("data-workspace-data-studio-host");
+    expect(hosts).toContain('visibleSections.includes("data_studio")');
+
+    const visual = readFileSync(join(ROOT, "components/data-studio/DataStudioPanel.tsx"), "utf8");
+    expect(visual).toContain("data-workspace-data-studio");
+    expect(visual).toContain("data-data-studio-visual");
+    expect(visual).toContain("data-data-studio-product");
+    expect(visual).toContain("data-data-studio-flow-filter");
+    expect(visual).toContain("data-data-studio-run-filter");
+    expect(visual).toContain("data-data-studio-inspect");
+    expect(visual).toContain("data-data-studio-speech");
+    expect(visual).toContain("data-data-studio-resize");
+    expect(visual).toContain("data-data-studio-grid");
+    expect(visual).toContain("data-data-studio-reset-camera");
+    expect(visual).toContain("data-data-studio-camera");
+    expect(visual).toContain("data-data-studio-space-select");
+    expect(visual).toContain("Path + text");
+    expect(visual).toContain("All together");
+    expect(visual).toContain("data-data-studio-help");
+    expect(visual).toContain("data-data-studio-view");
+    expect(visual).toContain("data-data-studio-distances-toggle");
+    expect(visual).toContain("data-data-studio-membership-toggle");
+    expect(visual).toContain("data-data-studio-membership-ring");
+    expect(visual).toContain("studioHighDimRegionMembership");
+    expect(visual).toContain("STUDIO_IN_REGION_FILL");
+    expect(visual).toContain("membershipScreenRadius");
+    expect(visual).toContain("data-data-studio-region-legend");
+    expect(visual).toContain("data-data-studio-region-toggle");
+    expect(visual).toContain("data-data-studio-distance-ray");
+    expect(visual).toContain("strokeDasharray");
+    expect(visual).toContain("data-data-studio-inspect-distances");
+    expect(visual).toContain("data-data-studio-focus-region");
+    expect(visual).toContain("DATA_STUDIO_REGION_QUERY");
+    expect(visual).toContain("hiddenStudioRegionIdsForFocus");
+    expect(visual).toContain("DataStudioExplainer");
+    const explainer = readFileSync(
+      join(ROOT, "components/data-studio/DataStudioExplainer.tsx"),
+      "utf8",
+    );
+    expect(explainer).toContain("data-data-studio-explainer");
+    expect(explainer).toContain("data-data-studio-explainer-figure");
+    expect(explainer).toContain("Back to map");
+
+    const dash = readFileSync(join(ROOT, "app/dashboard/page.tsx"), "utf8");
+    expect(dash).toContain("DashboardDataStudioTab");
+    expect(existsSync(join(ROOT, "app/api/dashboard/data-studio/route.ts"))).toBe(true);
+    expect(existsSync(join(ROOT, "components/dashboard/dashboard-data-studio-tab.tsx"))).toBe(true);
+    const api = readFileSync(join(ROOT, "app/api/dashboard/data-studio/route.ts"), "utf8");
+    expect(api).toContain("presentDashboardDataStudio");
+    expect(api).toContain("listFlowEmbeddingsForWorkspaces");
+    expect(api).not.toContain("denyWorkspaceFeatureById");
+  });
+});
+
+describe("Data Studio help explainer", () => {
+  it("swaps the map for a product explainer with walk, spaces, overlay, and inspect", () => {
+    expect(parseDataStudioView("help")).toBe("help");
+    expect(parseDataStudioView("map")).toBe("map");
+    expect(parseDataStudioView("nope")).toBe("map");
+    const verification = dataStudioExplainer("verification");
+    const calibration = dataStudioExplainer("calibration");
+    const learning = dataStudioExplainer("learning");
+    expect(verification.figures.map((figure) => figure.id)).toEqual([
+      "walk",
+      "spaces",
+      "overlay",
+      "inspect",
+    ]);
+    expect(verification.lede).toContain("Verify");
+    expect(verification.figures[2]?.body).toContain("flow");
+    expect(verification.figures[2]?.body).toContain("dashed ring");
+    expect(verification.figures[2]?.body).toContain("white disk");
+    expect(calibration.figures[2]?.body).toContain("dashed ring");
+    expect(calibration.lede).toContain("Calibrate");
+    expect(calibration.figures[2]?.title).toContain("Sounding");
+    expect(learning.lede).toContain("Learn");
+    expect(learning.figures[2]?.body).toContain("play");
+    expect(learning.controls).toContain("map");
+    expect(verification.figures[1]?.body).toContain("Path + text");
+  });
+});
+
+describe("studio flow/run filters, inspect, projection, learning scope", () => {
+  it("keeps all-together, drops other flows and runs, and retains identity", () => {
+    const ada = studioRow({ id: "e1", flowId: "flow-a", runId: "run-1", identity: "ada", prompt: "a" });
+    const bea = studioRow({
+      id: "e2",
+      flowId: "flow-a",
+      runId: "run-2",
+      identity: "bea",
+      prompt: "b",
+    });
+    const other = studioRow({
+      id: "e3",
+      flowId: "flow-b",
+      runId: "run-9",
+      identity: "cam",
+      prompt: "c",
+    });
+    const together = filterStudioEmbeddings([ada, bea, other], {});
+    expect(together.map((row) => row.id)).toEqual(["e1", "e2", "e3"]);
+    expect(together.every((row) => row.identity)).toBe(true);
+    expect(filterStudioEmbeddings([ada, bea, other], { flowId: "flow-a" }).map((row) => row.id)).toEqual([
+      "e1",
+      "e2",
+    ]);
+    expect(
+      filterStudioEmbeddings([ada, bea, other], { flowId: "flow-a", runId: "run-2" }).map(
+        (row) => row.id,
+      ),
+    ).toEqual(["e2"]);
+    expect(studioFlowOptions([ada, bea, other]).map((flow) => flow.flowId)).toEqual([
+      "flow-a",
+      "flow-b",
+    ]);
+    expect(studioRunOptions([ada, bea, other], "flow-a").map((run) => run.runId)).toEqual([
+      "run-1",
+      "run-2",
+    ]);
+    expect(studioRunOptions([ada, bea, other], "flow-a")[0]?.identity).toBe("ada");
+  });
+
+  it("inspects vector, raw, proof of work, and transcripts from a stored embedding", () => {
+    const row = studioRow({
+      id: "inspect-1",
+      identity: "ada",
+      flowId: "flow-a",
+      runId: "run-1",
+      prompt: "spoken proof of limits",
+    });
+    const inspect = inspectStudioEmbedding(row);
+    expect(inspect?.identity).toBe("ada");
+    expect(inspect?.flow_id).toBe("flow-a");
+    expect(inspect?.run_id).toBe("run-1");
+    expect(inspect?.space).toBe("path");
+    expect(inspect?.embedding_model_id).toBe(FLOW_EMBEDDING_MODEL_ID);
+    expect(inspect?.vector).toEqual(row.vector);
+    expect(inspect?.vector.length).toBe(FLOW_EMBEDDING_DIM);
+    const pathText = inspectStudioEmbedding(row, "path_text");
+    expect(pathText?.space).toBe("path_text");
+    expect(pathText?.embedding_model_id).toBe(FLOW_EMBEDDING_PATH_TEXT_MODEL_ID);
+    expect(pathText?.vector).not.toEqual(row.vector);
+    expect(pathText?.speech).toContain("spoken proof of limits");
+    expect(inspect?.raw).toEqual(row.raw);
+    expect(inspect?.pow.length).toBeGreaterThan(0);
+    expect(inspect?.transcripts).toContain("spoken proof of limits");
+    expect(inspect?.speech).toContain("spoken proof of limits");
+  });
+
+  it("pulls voice transcripts from transcript_snapshot and session transcript payloads", () => {
+    const snapshot = studioRow({
+      id: "snap-1",
+      prompt: "ignored payload json",
+    });
+    snapshot.raw = completeFlowEmbedding({
+      flowKind: "verify",
+      pow: [
+        {
+          type: "tool",
+          tool_name: "speech-segment",
+          tool_action: "speech_stop",
+          timestamp_ms: 2,
+          payload: JSON.stringify({ type: "uncertain_systems_tap_speech_segment" }),
+          metadata: { transcript_snapshot: "I am thinking about limits out loud" },
+        },
+        {
+          type: "tool",
+          tool_name: "transcript",
+          tool_action: "complete",
+          timestamp_ms: 3,
+          payload: JSON.stringify({
+            type: "uncertain_systems_tap_transcript",
+            transcript: [{ role: "learner", text: "the derivative is the slope" }],
+          }),
+          metadata: { message_count: 1 },
+        },
+      ],
+    }).raw;
+    const inspect = inspectStudioEmbedding(snapshot);
+    expect(inspect?.speech).toEqual([
+      "I am thinking about limits out loud",
+      "the derivative is the slope",
+    ]);
+    expect(clampStudioInspectWidth(120)).toBe(280);
+    expect(clampStudioInspectWidth(2000)).toBe(960);
+    expect(clampStudioInspectWidth(500)).toBe(500);
+  });
+
+  it("projects two algorithms to finite 2D and overlays region disks in the same frame", () => {
+    const a = studioRow({ id: "p1", prompt: "alpha", identity: "ada" });
+    const b = studioRow({ id: "p2", prompt: "beta", identity: "bea", runId: "run-2" });
+    const pca = projectStudioEmbeddings2D([a, b], "pca");
+    const random = projectStudioEmbeddings2D([a, b], "random");
+    expect(pca).toHaveLength(2);
+    expect(random).toHaveLength(2);
+    expect(pca.every((p) => Number.isFinite(p.x) && Number.isFinite(p.y))).toBe(true);
+    expect(random.every((p) => Number.isFinite(p.x) && Number.isFinite(p.y))).toBe(true);
+    const view = buildDataStudioProjectionView({
+      embeddings: [a, b],
+      regions: [
+        {
+          id: "region-1",
+          name: "Limits",
+          centroid: a.vector,
+          mean_radius: 0.25,
+          cosine_threshold: 0.5,
+        },
+      ],
+      algorithm: "pca",
+      screen: { width: 800, height: 500, margin: 32 },
+    });
+    expect(view.coords).toHaveLength(2);
+    expect(view.regionOverlays).toHaveLength(1);
+    expect(view.regionOverlays[0].screenRadius).toBeGreaterThan(0);
+    expect(Number.isFinite(view.regionOverlays[0].screenX)).toBe(true);
+    expect(view.coords[0].identity).toBe("ada");
+  });
+
+  it("maps the cosine ball wider than a tight cohort disk so 2D overlay can disagree with membership", () => {
+    expect(cosineThresholdToL2(1)).toBe(0);
+    expect(cosineThresholdToL2(0)).toBeCloseTo(Math.SQRT2, 10);
+    expect(cosineThresholdToL2(0.98)).toBeCloseTo(Math.sqrt(2 * (1 - 0.98)), 10);
+    expect(STUDIO_IN_REGION_FILL).toBe("#00ffc2");
+    const tau = 0.98;
+    const view = buildStudioProjectionView({
+      points: [
+        { t: "a", as_of_ms: 1, vector: unitVector(1), confidence: 1 },
+        { t: "b", as_of_ms: 2, vector: unitVector(1.02), confidence: 1 },
+      ],
+      regions: [
+        {
+          id: "tight",
+          name: "tight",
+          centroid: unitVector(1),
+          mean_radius: 0.008,
+          cosine_threshold: tau,
+        },
+      ],
+      algorithm: "random",
+      screen: { width: 800, height: 500, margin: 32 },
+    });
+    const overlay = view.regionOverlays[0];
+    expect(overlay.membershipRadius).toBeGreaterThan(overlay.radius);
+    expect(overlay.membershipScreenRadius).toBeGreaterThan(overlay.screenRadius);
+  });
+
+  it("switches Path and Path + text spaces and overlays only matching regions", () => {
+    expect(parseDataStudioSpace("path_text")).toBe("path_text");
+    expect(parseDataStudioSpace("nope")).toBe("path");
+    const a = studioRow({ id: "p1", prompt: "alpha spoken", identity: "ada" });
+    const b = studioRow({ id: "p2", prompt: "beta spoken", identity: "bea", runId: "run-2" });
+    expect(studioEmbeddingVector(a, "path")).toEqual(studioEmbeddingVector(b, "path"));
+    expect(studioEmbeddingVector(a, "path_text")).not.toEqual(studioEmbeddingVector(b, "path_text"));
+    const pathRegions = [
+      {
+        id: "path-region",
+        name: "Walk",
+        centroid: studioEmbeddingVector(a, "path"),
+        mean_radius: 0.25,
+        cosine_threshold: 0.5,
+        embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
+      },
+      {
+        id: "text-region",
+        name: "Speech",
+        centroid: studioEmbeddingVector(a, "path_text"),
+        mean_radius: 0.25,
+        cosine_threshold: 0.5,
+        embedding_model_id: FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
+      },
+    ];
+    expect(studioRegionsForSpace(pathRegions, "path").map((region) => region.id)).toEqual([
+      "path-region",
+    ]);
+    expect(studioRegionsForSpace(pathRegions, "path_text").map((region) => region.id)).toEqual([
+      "text-region",
+    ]);
+    const pathView = buildDataStudioProjectionView({
+      embeddings: [a, b],
+      regions: pathRegions,
+      algorithm: "pca",
+      space: "path",
+      screen: { width: 800, height: 500, margin: 32 },
+    });
+    const textView = buildDataStudioProjectionView({
+      embeddings: [a, b],
+      regions: pathRegions,
+      algorithm: "pca",
+      space: "path_text",
+      screen: { width: 800, height: 500, margin: 32 },
+    });
+    expect(pathView.regionOverlays.map((region) => region.id)).toEqual(["path-region"]);
+    expect(textView.regionOverlays.map((region) => region.id)).toEqual(["text-region"]);
+    expect(pathView.coords[0].screenX).toBe(pathView.coords[1].screenX);
+    expect(textView.coords[0].screenX).not.toBe(textView.coords[1].screenX);
+  });
+
+  it("labels dashed rays with high-dim L2 and hides selected regions", () => {
+    const a = {
+      ...studioRow({ id: "p1", prompt: "alpha", identity: "ada" }),
+      vector: unitVector(1),
+      raw: undefined,
+    };
+    const b = {
+      ...studioRow({ id: "p2", prompt: "beta", identity: "bea", runId: "run-2" }),
+      vector: unitVector(99),
+      raw: undefined,
+    };
+    const regions = [
+      {
+        id: "region-1",
+        name: "Limits",
+        centroid: a.vector,
+        mean_radius: 0.25,
+        cosine_threshold: 0.99,
+      },
+      {
+        id: "region-2",
+        name: "Other",
+        centroid: b.vector,
+        mean_radius: 0.25,
+        cosine_threshold: 0.99,
+      },
+    ];
+    const view = buildDataStudioProjectionView({
+      embeddings: [a, b],
+      regions,
+      algorithm: "pca",
+      screen: { width: 800, height: 500, margin: 32 },
+    });
+    expect(visibleStudioRegions(view.regionOverlays, ["region-2"]).map((region) => region.id)).toEqual([
+      "region-1",
+    ]);
+    expect(toggleStudioHiddenId([], "region-1")).toEqual(["region-1"]);
+    expect(toggleStudioHiddenId(["region-1"], "region-1")).toEqual([]);
+    const rays = buildStudioRegionDistanceRays({
+      embeddings: [a, b],
+      coords: view.coords,
+      regionOverlays: view.regionOverlays,
+      regions,
+      hiddenRegionIds: ["region-2"],
+      selectedPointId: "p1",
+    });
+    expect(rays).toHaveLength(2);
+    expect(rays.every((ray) => ray.regionId === "region-1")).toBe(true);
+    const ada = rays.find((ray) => ray.pointId === "p1")!;
+    const bea = rays.find((ray) => ray.pointId === "p2")!;
+    expect(ada.highDimL2).toBe(0);
+    expect(bea.highDimL2).toBeCloseTo(l2Distance(b.vector, a.vector), 6);
+    const projected = Math.hypot(bea.x2 - bea.x1, bea.y2 - bea.y1);
+    expect(bea.highDimL2).not.toBeCloseTo(projected, 5);
+    expect(ada.selected).toBe(true);
+    expect(bea.selected).toBe(false);
+    expect(formatStudioHighDimDistance(0.28416)).toBe("0.2842");
+    expect(hiddenStudioRegionIdsForFocus(["region-1", "region-2"], "region-1")).toEqual([
+      "region-2",
+    ]);
+    expect(hiddenStudioRegionIdsForFocus(["region-1", "region-2"], "")).toEqual([]);
+    expect(ada.inRegion).toBe(true);
+    expect(bea.inRegion).toBe(false);
+    expect(
+      studioPointInsideHighDimRegion(a.vector, {
+        centroid: a.vector,
+        cosine_threshold: 0.99,
+      }),
+    ).toBe(true);
+    expect(
+      studioPointInsideHighDimRegion(b.vector, {
+        centroid: a.vector,
+        cosine_threshold: 0.99,
+      }),
+    ).toBe(false);
+    const members = studioHighDimRegionMembership({
+      embeddings: [a, b],
+      regions,
+      hiddenRegionIds: ["region-2"],
+    });
+    expect(members.get("p1")?.inRegion).toBe(true);
+    expect(members.get("p2")?.inRegion).toBe(false);
+  });
+
+  it("includes play-copy Learn rows and drops authored maps", () => {
+    const play = studioRow({
+      id: "play-1",
+      flowKind: "learn",
+      prompt: "played copy",
+      workspaceId: "copy-1",
+      isPlayCopy: true,
+      ownerUserId: "me",
+      userId: "me",
+    });
+    const ownAuthored = studioRow({
+      id: "own-1",
+      flowKind: "learn",
+      prompt: "I played my map",
+      workspaceId: "authored-1",
+      isPlayCopy: false,
+      ownerUserId: "me",
+      userId: "me",
+    });
+    const buyer = studioRow({
+      id: "buyer-1",
+      flowKind: "learn",
+      prompt: "buyer session",
+      workspaceId: "authored-1",
+      isPlayCopy: false,
+      ownerUserId: "me",
+      userId: "buyer",
+    });
+    const scoped = scopeLearningStudioEmbeddings([play, ownAuthored, buyer], {
+      viewerUserId: "me",
+      workspaces: [
+        { id: "copy-1", owner_user_id: "me", is_play_copy: true },
+        { id: "authored-1", owner_user_id: "me", is_play_copy: false },
+      ],
+    });
+    expect(scoped.map((row) => row.id)).toEqual(["play-1"]);
+    const presented = presentDashboardDataStudio({
+      product: "learning",
+      viewerUserId: "me",
+      workspaces: [
+        {
+          id: "copy-1",
+          title: "Copy",
+          user_id: "me",
+          workspace_kind: "standard",
+          is_play_copy: true,
+        },
+        {
+          id: "authored-1",
+          title: "Sold map",
+          user_id: "me",
+          workspace_kind: "standard",
+          is_play_copy: false,
+        },
+      ],
+      embeddings: [play, ownAuthored, buyer],
+    });
+    expect(presented.embeddings.map((row) => row.id)).toEqual(["play-1"]);
+    expect(presented.workspaces.map((row) => row.id)).toEqual(["copy-1"]);
+    expect(presented.regions).toEqual([]);
+  });
+
+  it("excludes API-shaped authored Learn rows that have no user_id", () => {
+    const playCopyWorkspace = {
+      id: "copy-1",
+      owner_user_id: "me",
+      user_id: "me",
+      is_play_copy: true,
+    };
+    const authoredWorkspace = {
+      id: "authored-1",
+      owner_user_id: "me",
+      user_id: "me",
+      is_play_copy: false,
+    };
+    const play = dashboardApiEmbedding({
+      id: "play-api",
+      flowKind: "learn",
+      prompt: "played copy",
+      workspaceId: "copy-1",
+    });
+    const authoredAnonymous = dashboardApiEmbedding({
+      id: "authored-api",
+      flowKind: "learn",
+      prompt: "org play on sold map",
+      workspaceId: "authored-1",
+    });
+    expect("user_id" in play).toBe(false);
+    expect("user_id" in authoredAnonymous).toBe(false);
+    expect(
+      includeLearningStudioEmbedding({
+        viewerUserId: "me",
+        workspace: playCopyWorkspace,
+        embedding: play,
+      }),
+    ).toBe(true);
+    expect(
+      includeLearningStudioEmbedding({
+        viewerUserId: "me",
+        workspace: authoredWorkspace,
+        embedding: authoredAnonymous,
+      }),
+    ).toBe(false);
+    const presented = presentDashboardDataStudio({
+      product: "learning",
+      viewerUserId: "me",
+      workspaces: [
+        {
+          id: "copy-1",
+          title: "Copy",
+          user_id: "me",
+          workspace_kind: "standard",
+          is_play_copy: true,
+        },
+        {
+          id: "authored-1",
+          title: "Sold map",
+          user_id: "me",
+          workspace_kind: "standard",
+          is_play_copy: false,
+        },
+      ],
+      embeddings: [play, authoredAnonymous],
+    });
+    expect(presented.embeddings.map((row) => row.id)).toEqual(["play-api"]);
+  });
+
+  it("pans, zooms around a cursor, and hit-tests through the camera", () => {
+    const panned = panStudioCamera(IDENTITY_STUDIO_CAMERA, 40, -12);
+    expect(panned).toEqual({ x: 40, y: -12, scale: 1 });
+    expect(studioCameraTransform(panned)).toBe("translate(40 -12) scale(1)");
+
+    const zoomed = zoomStudioCamera(IDENTITY_STUDIO_CAMERA, {
+      factor: 2,
+      originX: 100,
+      originY: 50,
+    });
+    expect(zoomed.scale).toBe(2);
+    const world = studioScreenToWorld(IDENTITY_STUDIO_CAMERA, 100, 50);
+    const worldAfter = studioScreenToWorld(zoomed, 100, 50);
+    expect(worldAfter.x).toBeCloseTo(world.x);
+    expect(worldAfter.y).toBeCloseTo(world.y);
+
+    const clamped = zoomStudioCamera(IDENTITY_STUDIO_CAMERA, {
+      factor: 1000,
+      originX: 0,
+      originY: 0,
+    });
+    expect(clamped.scale).toBe(16);
+
+    expect(studioNiceGridStep(1)).toBeGreaterThan(0);
+    expect(studioNiceGridStep(4)).toBeLessThan(studioNiceGridStep(1));
+    const grid = studioGridLines({
+      width: 400,
+      height: 300,
+      camera: zoomed,
+    });
+    expect(grid.step).toBeGreaterThan(0);
+    expect(grid.lines.some((line) => line.axis === "x" && line.major)).toBe(true);
+    expect(grid.lines.some((line) => line.axis === "y")).toBe(true);
+
+    const points = [
+      { id: "near", screenX: 80, screenY: 40 },
+      { id: "far", screenX: 300, screenY: 200 },
+    ];
+    expect(
+      hitTestStudioPoint(points, {
+        screenX: 80,
+        screenY: 40,
+        camera: IDENTITY_STUDIO_CAMERA,
+      }),
+    ).toBe("near");
+    const zoomedHit = zoomStudioCamera(IDENTITY_STUDIO_CAMERA, {
+      factor: 2,
+      originX: 80,
+      originY: 40,
+    });
+    expect(
+      hitTestStudioPoint(points, {
+        screenX: 80,
+        screenY: 40,
+        camera: zoomedHit,
+      }),
+    ).toBe("near");
+    expect(
+      hitTestStudioPoint(points, {
+        screenX: 0,
+        screenY: 0,
+        camera: IDENTITY_STUDIO_CAMERA,
+        pixelRadius: 8,
+      }),
+    ).toBeNull();
+  });
+});
+

@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { WorkspaceCardHero } from "@/components/WorkspaceCardHero";
 import {
   DASHBOARD_KNOWLEDGE_REGIONS_PATH,
-  dashboardKnowledgeRegionHref,
+  dashboardKnowledgeRegionStudioHref,
   type DashboardKnowledgeRegion,
   type DashboardKnowledgeRegionKind,
 } from "@/lib/dashboard-knowledge-regions";
@@ -14,18 +13,13 @@ import {
   dashboardRegionCreateHref,
 } from "@/lib/dashboard-nav";
 import { productFlowNewPath } from "@/lib/product-flow";
-import type { Workspace } from "@/lib/storage";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 
 export function DashboardKnowledgeRegionsTab({
   kind,
-  workspaces,
-  workspaceCoverPool,
   formatDate,
 }: {
   kind: DashboardKnowledgeRegionKind;
-  workspaces: Workspace[];
-  workspaceCoverPool?: readonly string[] | null;
   formatDate: (value: string) => string;
 }) {
   const [regions, setRegions] = useState<DashboardKnowledgeRegion[]>([]);
@@ -34,11 +28,6 @@ export function DashboardKnowledgeRegionsTab({
   const productLabel = dashboardProductLabel(kind);
   const createHref = dashboardRegionCreateHref(kind);
   const createFlowHref = productFlowNewPath(kind);
-  const workspaceById = useMemo(() => {
-    const map = new Map<string, Workspace>();
-    for (const workspace of workspaces) map.set(workspace.id, workspace);
-    return map;
-  }, [workspaces]);
 
   useEffect(() => {
     let cancelled = false;
@@ -76,7 +65,8 @@ export function DashboardKnowledgeRegionsTab({
               Knowledge regions
             </h2>
             <p className="mt-3 max-w-xl text-sm leading-relaxed text-neutral-400">
-              Overlay regions from your {productLabel.toLowerCase()} flows.
+              Overlay regions from your {productLabel.toLowerCase()} flows. Open a region in Data
+              Studio to see it against the runs.
             </p>
           </div>
           <Link
@@ -119,39 +109,45 @@ export function DashboardKnowledgeRegionsTab({
           </div>
         </section>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2" data-dashboard-knowledge-region-grid>
-          {regions.map((region) => {
-            const workspace = workspaceById.get(region.workspaceId);
-            return (
-              <Link
-                key={region.id}
-                href={dashboardKnowledgeRegionHref(kind, region.id)}
-                className="console-copy group block overflow-hidden transition hover:border-white/80"
-                data-dashboard-knowledge-region
-              >
-                <WorkspaceCardHero
-                  workspaceId={region.workspaceId}
-                  coverImageUrl={workspace?.cover_image_url}
-                  imagePool={workspaceCoverPool}
-                  fallback="aesthetic"
-                  heightClassName="h-40 sm:h-44"
-                  badges={
-                    <span className="console-chip px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300">
-                      {productLabel}
-                    </span>
-                  }
-                />
-                <div className="p-5">
-                  <h3 className="line-clamp-2 text-lg font-medium text-white">{region.name}</h3>
-                  <p className="mt-1 text-sm text-neutral-400">{region.workspaceTitle}</p>
-                  <p className="mt-2 text-xs text-neutral-500">
-                    {region.subjectCount} subjects
-                    {region.createdAt ? ` · ${formatDate(region.createdAt)}` : ""}
-                  </p>
-                </div>
-              </Link>
-            );
-          })}
+        <div className="console-copy overflow-x-auto" data-dashboard-knowledge-region-table>
+          <table className="w-full min-w-[40rem] border-collapse text-left text-sm">
+            <thead>
+              <tr className="border-b border-white/20 font-mono text-[10px] uppercase tracking-[0.18em] text-neutral-500">
+                <th className="px-4 py-3 font-medium">Name</th>
+                <th className="px-4 py-3 font-medium">Workspace</th>
+                <th className="px-4 py-3 font-medium">Subjects</th>
+                <th className="px-4 py-3 font-medium">Created</th>
+                <th className="px-4 py-3 font-medium">Data Studio</th>
+              </tr>
+            </thead>
+            <tbody>
+              {regions.map((region) => (
+                <tr
+                  key={region.id}
+                  className="border-b border-white/10 last:border-b-0"
+                  data-dashboard-knowledge-region
+                >
+                  <td className="px-4 py-3 font-medium text-white">{region.name}</td>
+                  <td className="px-4 py-3 text-neutral-400">{region.workspaceTitle}</td>
+                  <td className="px-4 py-3 tabular-nums text-neutral-400">
+                    {region.subjectCount}
+                  </td>
+                  <td className="px-4 py-3 text-neutral-400">
+                    {region.createdAt ? formatDate(region.createdAt) : "—"}
+                  </td>
+                  <td className="px-4 py-3">
+                    <Link
+                      href={dashboardKnowledgeRegionStudioHref(kind, region.id)}
+                      className="inline-flex h-9 items-center justify-center border border-white/25 px-3 text-[11px] text-white transition hover:border-white hover:bg-white hover:text-black"
+                      data-open-region-data-studio={region.id}
+                    >
+                      Open in Data Studio
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

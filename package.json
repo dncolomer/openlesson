@@ -29,6 +29,8 @@
     "db:seed-stem-public:staging": "vite-node --config vitest.config.ts scripts/seed-stem-public-workspaces.ts",
     "db:verify-stem-public:staging": "vite-node --config vitest.config.ts scripts/verify-stem-public-workspaces.ts",
     "db:seed-stem-public:prod": "vite-node --config vitest.config.ts scripts/seed-stem-public-workspaces.ts --target=prod",
+    "db:seed-localhost-verification-studio": "vite-node --config vitest.config.ts scripts/seed-localhost-verification-studio.ts",
+    "db:seed-production-studio-demos": "vite-node --config vitest.config.ts scripts/seed-production-studio-demo-sets.ts",
     "db:verify-stem-public:prod": "vite-node --config vitest.config.ts scripts/verify-stem-public-workspaces.ts --target=prod"
   },
   "dependencies": {

@@ -149,6 +149,22 @@ export function buildWorkspaceSectionNavItems(input: {
           },
         ]
       : []),
+    ...(visibleSections.includes("data_studio")
+      ? [
+          {
+            key: "data_studio" as const,
+            label: t("planView.sectionDataStudio") || "Data Studio",
+            icon: (
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 14.25L2.25 9 7.5 3.75M16.5 3.75L21.75 9 16.5 14.25" />
+                <circle cx="9" cy="17.25" r="1.25" />
+                <circle cx="14.5" cy="19" r="1.25" />
+                <circle cx="12" cy="15" r="1.25" />
+              </svg>
+            ),
+          },
+        ]
+      : []),
     ...(visibleSections.includes("kpis")
       ? [
           {

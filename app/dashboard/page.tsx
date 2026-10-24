@@ -18,6 +18,7 @@ import { DashboardMyMapsTab } from "@/components/dashboard/dashboard-my-maps-tab
 import { DashboardIntegrationsTab } from "@/components/dashboard/dashboard-integrations-tab";
 import { DashboardFlowsTab } from "@/components/dashboard/dashboard-flows-tab";
 import { DashboardKnowledgeRegionsTab } from "@/components/dashboard/dashboard-knowledge-regions-tab";
+import { DashboardDataStudioTab } from "@/components/dashboard/dashboard-data-studio-tab";
 import { DashboardPlansTab } from "@/components/dashboard/dashboard-plans-tab";
 import { DashboardSessionsTab } from "@/components/dashboard/dashboard-sessions-tab";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
@@ -36,10 +37,12 @@ import {
 import {
   dashboardListFilterForTab,
   dashboardTypeFilterForTab,
+  dashboardStudioProduct,
   isDashboardMyMapsTab,
   isDashboardProductTab,
   isDashboardRegionsTab,
   isDashboardShopTab,
+  isDashboardStudioTab,
   parseDashboardTab,
   type DashboardTab,
 } from "@/lib/dashboard-nav";
@@ -81,6 +84,11 @@ export default function DashboardPage() {
   const searchParams = useSearchParams();
   const initialTab = parseDashboardTab(searchParams.get("tab"));
   const [activeTab, setActiveTab] = useState<DashboardTab>(initialTab);
+
+  useEffect(() => {
+    const fromUrl = parseDashboardTab(searchParams.get("tab"));
+    setActiveTab(fromUrl);
+  }, [searchParams]);
   // User state
   const [user, setUser] = useState<{
     id?: string;
@@ -699,6 +707,7 @@ export default function DashboardPage() {
       !isDashboardProductTab(activeTab) &&
       !isDashboardShopTab(activeTab) &&
       !isDashboardRegionsTab(activeTab) &&
+      !isDashboardStudioTab(activeTab) &&
       activeTab !== "home"
     ) {
       return;
@@ -856,8 +865,20 @@ export default function DashboardPage() {
         hasPaidAccess={hasPaidAccess}
       />
 
-      <div className="min-w-0 md:min-h-0 md:overflow-y-auto">
-      <main className="overflow-x-hidden p-4 py-8 sm:px-6 lg:px-8">
+      <div
+        className={
+          isDashboardStudioTab(activeTab)
+            ? "flex min-h-0 min-w-0 flex-col md:h-full md:overflow-hidden"
+            : "min-w-0 md:min-h-0 md:overflow-y-auto"
+        }
+      >
+      <main
+        className={
+          isDashboardStudioTab(activeTab)
+            ? "flex h-full min-h-[70vh] flex-1 flex-col overflow-hidden p-0 md:min-h-0"
+            : "overflow-x-hidden p-4 py-8 sm:px-6 lg:px-8"
+        }
+      >
         {/* Sessions Tab */}
         {activeTab === "sessions" && (
           <DashboardSessionsTab
@@ -897,7 +918,6 @@ export default function DashboardPage() {
         {isDashboardMyMapsTab(activeTab) && (
           <DashboardMyMapsTab
             maps={myMaps}
-            authoredMaps={learningWorkspaces}
             formatDate={formatDate}
             coverImagePool={workspaceCoverPool}
           />
@@ -936,10 +956,12 @@ export default function DashboardPage() {
         {isDashboardRegionsTab(activeTab) ? (
           <DashboardKnowledgeRegionsTab
             kind={activeTab === "calibration_regions" ? "calibration" : "verification"}
-            workspaces={workspaces}
-            workspaceCoverPool={workspaceCoverPool}
             formatDate={formatDate}
           />
+        ) : null}
+
+        {isDashboardStudioTab(activeTab) && dashboardStudioProduct(activeTab) ? (
+          <DashboardDataStudioTab product={dashboardStudioProduct(activeTab)!} />
         ) : null}
 
         {activeTab === "help" && <DashboardHelpTab />}

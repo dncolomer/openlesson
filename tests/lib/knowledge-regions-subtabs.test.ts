@@ -67,6 +67,9 @@ describe("Knowledge Regions inner sub-tabs (shipped UI)", () => {
     expect(browseSlice).toContain("data-region-saved-list");
     expect(browseSlice).toContain("data-knowledge-regions-list");
     expect(browseSlice).toContain("data-remove-knowledge-region");
+    expect(browseSlice).toContain("Open in Data Studio");
+    expect(browseSlice).toContain("data-open-region-data-studio");
+    expect(browseSlice).toContain("<table");
     expect(ui).toContain('action: "delete"');
     expect(browseSlice).not.toContain("data-region-builder");
   });

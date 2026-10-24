@@ -143,7 +143,7 @@ describe("Knowledge Region shell", () => {
       isOwner: true,
       workspaceKind: "knowledge_region",
     });
-    expect(owner).toEqual(["goals", "verification_flows", "context", "knowledge", "settings"]);
+    expect(owner).toEqual(["goals", "verification_flows", "context", "knowledge", "data_studio", "settings"]);
     const t = (key: string) => key;
     const krNav = buildWorkspaceSectionNavItems({
       t,
@@ -156,6 +156,7 @@ describe("Knowledge Region shell", () => {
       "verification_flows",
       "context",
       "knowledge",
+      "data_studio",
       "settings",
     ]);
     // Play drops Settings, and the Build toggle is on the map KR does not have.
@@ -174,7 +175,7 @@ describe("Knowledge Region shell", () => {
         isOwner: true,
         visibleSections: learnerKr,
       }).map((item) => item.key),
-    ).toEqual(["goals", "verification_flows", "context", "knowledge", "settings"]);
+    ).toEqual(["goals", "verification_flows", "context", "knowledge", "data_studio", "settings"]);
     const viewSource = readFileSync(
       join(ROOT, "components/WorkspaceView.tsx"),
       "utf8",
@@ -227,7 +228,7 @@ describe("Knowledge Region shell", () => {
         isLoggedIn: true,
         workspaceKind: "knowledge_region",
       }),
-    ).toEqual(["goals", "verification_flows", "context", "knowledge", "settings"]);
+    ).toEqual(["goals", "verification_flows", "context", "knowledge", "data_studio", "settings"]);
     expect(
       availableSectionsForMode({
         mode: "learner",

@@ -12,6 +12,13 @@ export function l2Normalize(v: number[], eps = 1e-12): number[] {
   return v.map((x) => x / n);
 }
 
+/** L2 radius of the cosine ball {x : cos(x, c) ≥ τ} for unit vectors: √(2(1−τ)). */
+export function cosineThresholdToL2(threshold: number): number {
+  if (!Number.isFinite(threshold)) return Math.SQRT2;
+  const t = Math.max(-1, Math.min(1, threshold));
+  return Math.sqrt(Math.max(0, 2 * (1 - t)));
+}
+
 export function cosineSimilarity(a: number[], b: number[]): number {
   if (a.length !== b.length || a.length === 0) return 0;
   let dot = 0;

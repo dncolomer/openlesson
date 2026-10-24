@@ -1,17 +1,25 @@
 import { describe, expect, it } from "vitest";
-import { completeFlowEmbedding, FLOW_EMBEDDING_DIM, FLOW_EMBEDDING_MODEL_ID } from "@/lib/flow-embedding";
+import {
+  completeFlowEmbedding,
+  FLOW_EMBEDDING_DIM,
+  FLOW_EMBEDDING_MODEL_ID,
+  FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
+} from "@/lib/flow-embedding";
 import {
   filterFlowEmbeddingRows,
   flowEmbeddingDistanceToRegion,
   flowEmbeddingSubjectKey,
   knowledgeConfigFromFlowEmbeddings,
   reconcileSelectedSubjectKeys,
+  regionMatchesFlowEmbeddingChannel,
   regionMatchesFlowEmbeddingSpace,
   sameFlowEmbeddingList,
   subjectsFromFlowEmbeddings,
   type FlowEmbeddingViewRow,
 } from "@/lib/flow-embedding-view";
+import { normalizeSessionBranchModel } from "@/lib/session-branch-model";
 import { projectTrajectoryAndRegions } from "@/lib/knowledge-config";
+import { projectStudioEmbeddings } from "@/lib/data-studio-view";
 
 function row(input: {
   id: string;
@@ -133,6 +141,24 @@ describe("flow embedding knowledge view", () => {
         centroid: new Array(64).fill(0.2),
       }),
     ).toBe(false);
+    expect(
+      regionMatchesFlowEmbeddingSpace({
+        embedding_model_id: FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
+        centroid,
+      }),
+    ).toBe(false);
+    expect(
+      regionMatchesFlowEmbeddingChannel(
+        { embedding_model_id: FLOW_EMBEDDING_PATH_TEXT_MODEL_ID, centroid },
+        "path_text",
+      ),
+    ).toBe(true);
+    expect(
+      regionMatchesFlowEmbeddingChannel(
+        { embedding_model_id: FLOW_EMBEDDING_PATH_TEXT_MODEL_ID, centroid },
+        "any",
+      ),
+    ).toBe(true);
     const distance = flowEmbeddingDistanceToRegion(centroid, {
       name: "Limits",
       centroid,
@@ -161,12 +187,27 @@ describe("flow embedding knowledge view", () => {
   });
 
   it("projects flowcfg points and overlay regions in ℝ⁹⁶", () => {
+    const model = normalizeSessionBranchModel(
+      {
+        premise: "A priced field.",
+        regions: [
+          { title: "Region", observation: "Open.", edgePrice: 10 },
+          { title: "Region dear", observation: "Dear is open.", edgePrice: 80 },
+        ],
+      },
+      "Priced",
+    );
+    if (!model) throw new Error("projection tree was refused");
     const a = completeFlowEmbedding({
       flowKind: "verify",
+      model,
+      sequence: ["r1"],
       pow: [{ type: "speech", tool_name: "runner", timestamp_ms: 1, payload: "a" }],
     }).vector;
     const b = completeFlowEmbedding({
       flowKind: "verify",
+      model,
+      sequence: ["r2"],
       pow: [{ type: "speech", tool_name: "runner", timestamp_ms: 1, payload: "b" }],
     }).vector;
     const layout = projectTrajectoryAndRegions({
@@ -190,5 +231,35 @@ describe("flow embedding knowledge view", () => {
     expect(Number.isFinite(layout.coords[0].x)).toBe(true);
     expect(Number.isFinite(layout.regionOverlays[0].x)).toBe(true);
     expect(layout.coords[0].x).not.toBe(layout.coords[1].x);
+
+    const pca = projectStudioEmbeddings({
+      embeddings: [
+        { id: "e1", vector: a, created_at: "2026-10-01T00:00:00.000Z" },
+        { id: "e2", vector: b, created_at: "2026-10-02T00:00:00.000Z" },
+      ],
+      regions: [
+        { id: "r1", name: "Limits", centroid: a, mean_radius: 0.2, cosine_threshold: 0.5 },
+      ],
+      algorithm: "pca",
+    });
+    const mds = projectStudioEmbeddings({
+      embeddings: [
+        { id: "e1", vector: a, created_at: "2026-10-01T00:00:00.000Z" },
+        { id: "e2", vector: b, created_at: "2026-10-02T00:00:00.000Z" },
+      ],
+      regions: [
+        { id: "r1", name: "Limits", centroid: a, mean_radius: 0.2, cosine_threshold: 0.5 },
+      ],
+      algorithm: "classical_mds",
+    });
+    expect(pca.coords).toHaveLength(2);
+    expect(mds.coords).toHaveLength(2);
+    expect(pca.regionOverlays).toHaveLength(1);
+    expect(mds.regionOverlays).toHaveLength(1);
+    expect(pca.coords.every((p) => Number.isFinite(p.x) && Number.isFinite(p.y))).toBe(true);
+    expect(mds.coords.every((p) => Number.isFinite(p.x) && Number.isFinite(p.y))).toBe(true);
+    expect(pca.regionOverlays.every((r) => Number.isFinite(r.x) && Number.isFinite(r.radius))).toBe(
+      true,
+    );
   });
 });

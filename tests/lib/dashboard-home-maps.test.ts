@@ -306,11 +306,17 @@ describe("add to my maps and play copies", () => {
 describe("dashboard home and my maps surface", () => {
   it("wires Home cinematic catalog, floating prompt bar, My Maps, and play View", () => {
     const learning = DASHBOARD_NAV_GROUPS.find((group) => group.id === "learning");
-    expect(learning?.items.map((item) => item.id)).toEqual(["my_maps", "learning", "shop"]);
+    expect(learning?.items.map((item) => item.id)).toEqual([
+      "my_maps",
+      "learning",
+      "shop",
+      "learning_studio",
+    ]);
     expect(learning?.items.map((item) => item.label)).toEqual([
       "My Maps",
       "Build",
       "Your Shop",
+      "Data Studio",
     ]);
     expect(isDashboardMyMapsTab("my_maps")).toBe(true);
     expect(parseDashboardTab("my_maps")).toBe("my_maps");
@@ -362,11 +368,13 @@ describe("dashboard home and my maps surface", () => {
     expect(dash).toContain("Try Now");
     expect(dash).toContain("data-dashboard-my-maps");
     expect(dash).toContain("data-dashboard-my-maps-card");
-    expect(dash).toContain("data-dashboard-my-maps-authored");
-    expect(dash).toContain("data-dashboard-my-maps-authored-card");
+    expect(dash).not.toContain("data-dashboard-my-maps-authored");
+    expect(dash).not.toContain("data-dashboard-my-maps-authored-card");
     expect(dash).toContain("data-dashboard-my-maps-play");
-    expect(dash).toContain("authoredMaps={learningWorkspaces}");
-    expect(dash).toContain("isAuthoredLearningMap");
+    expect(dash).not.toContain("authoredMaps={learningWorkspaces}");
+    expect(readRepo("components/dashboard/dashboard-my-maps-tab.tsx")).not.toContain(
+      "isAuthoredLearningMap",
+    );
     expect(readRepo("components/dashboard/dashboard-my-maps-tab.tsx")).toContain(
       "WorkspaceCardHero",
     );

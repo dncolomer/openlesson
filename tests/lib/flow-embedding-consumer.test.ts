@@ -39,12 +39,14 @@ describe("shipped flow embedding consumer", () => {
     const verify = completeFlowEmbedding({
       flowKind: "verify",
       model,
-      sequence: ["try"],
+      sequence: ["r1"],
       pow: [{ type: "speech", tool_name: "runner", timestamp_ms: 1, payload: "spoken proof" }],
     });
     expect(calibrate.vector.length).toBeGreaterThan(0);
     expect(verify.vector.length).toBeGreaterThan(0);
     expect(calibrate.vector).not.toEqual(verify.vector);
+    expect(calibrate.vector).toEqual(calibrate.vector_path_text);
+    expect(verify.vector).not.toEqual(verify.vector_path_text);
     expect(calibrate.embedding_model_id).toBe(FLOW_EMBEDDING_MODEL_ID);
     expect(calibrate.raw.projectedPolicy).toBeNull();
     expect(verify.raw.projectedPolicy).not.toBeNull();

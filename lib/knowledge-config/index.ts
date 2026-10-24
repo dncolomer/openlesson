@@ -8,6 +8,7 @@ export {
 
 export {
   cosineSimilarity,
+  cosineThresholdToL2,
   l2Distance,
   l2Norm,
   l2Normalize,

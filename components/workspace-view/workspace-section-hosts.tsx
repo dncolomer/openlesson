@@ -11,14 +11,15 @@ import { VerificationFlowsPanel } from "@/components/VerificationFlowsPanel";
 import { WorkspaceIntegrationPanel } from "@/components/WorkspaceIntegrationPanel";
 import { WorkspaceKpisPanel } from "@/components/WorkspaceKpisPanel";
 import { WorkspacePerformancePanel } from "@/components/WorkspacePerformancePanel";
+import { DataStudioPanel } from "@/components/data-studio/DataStudioPanel";
 import { WorkspaceSectionSurface } from "@/components/WorkspaceSectionSurface";
+import { isNoMapWorkspace, workspaceProductShell } from "@/lib/workspace-kind";
 import type { Block, Workspace } from "@/components/workspace-view/types";
 import type { AuthorUnsysModelSeed } from "@/lib/author-unsys-model";
 import type { WorkspaceDagRecord } from "@/lib/workspace-dags";
 import type { WorkspaceMapTypesState } from "@/lib/workspace-map-types";
 import type { WorkspaceSectionLayout } from "@/lib/workspace-sections";
 import type { WorkspaceSectionKey } from "@/lib/workspace-sections";
-import { isNoMapWorkspace } from "@/lib/workspace-kind";
 
 export function WorkspaceSectionHosts({
   isLearnerMode,
@@ -264,6 +265,31 @@ export function WorkspaceSectionHosts({
             className="flex h-full min-h-0 flex-col overflow-hidden p-3 sm:p-4"
           >
             <CalibrationFlowsPanel workspaceId={workspaceId} ayclToken={ayclToken} />
+          </div>
+        </WorkspaceSectionSurface>
+      )}
+
+      {!isLearnerMode &&
+        canAccessPrivilegedSections &&
+        sectionLayout.mountsDataStudioPanel &&
+        visibleSections.includes("data_studio") && (
+        <WorkspaceSectionSurface
+          kind="data_studio"
+          imageSrc={workspaceImage}
+          identity={identity}
+        >
+          <div
+            className="flex h-full min-h-0 flex-col overflow-hidden"
+            data-workspace-data-studio-host
+          >
+            <DataStudioPanel
+              product={
+                workspaceProductShell(plan.workspace_kind) === "calibration"
+                  ? "calibration"
+                  : "verification"
+              }
+              workspaceId={workspaceId}
+            />
           </div>
         </WorkspaceSectionSurface>
       )}

@@ -2767,11 +2767,11 @@ describe("TAP Learning Work canvas selection commands (shipped)", () => {
     expect(canvas).toContain("applyIleWorkCanvasAskReply");
     expect(canvas).toContain("runIleWorkCanvasCommand");
     expect(canvas).not.toContain('kind: "suggest-insight"');
-    expect(read("lib/learn-work-canvas.ts")).toContain('kind === "selective-compress"');
-    expect(read("lib/learn-work-canvas.ts")).toContain('kind === "declutter" || kind === "clear-overlaps"');
-    expect(read("lib/learn-work-canvas.ts")).toContain("runIleWorkCanvasClearOverlaps");
-    expect(read("lib/learn-work-canvas.ts")).toContain("if (result.needsModel && input.ask)");
-    expect(read("lib/learn-work-canvas.ts")).toContain("applyIleWorkCanvasSuggestInsight");
+    expect(read("lib/learn-work-canvas-xai.ts")).toContain('kind === "selective-compress"');
+    expect(read("lib/learn-work-canvas-xai.ts")).toContain('kind === "declutter" || kind === "clear-overlaps"');
+    expect(read("lib/learn-work-canvas-xai.ts")).toContain("runIleWorkCanvasClearOverlaps");
+    expect(read("lib/learn-work-canvas-xai.ts")).toContain("if (result.needsModel && input.ask)");
+    expect(read("lib/learn-work-canvas-xai.ts")).toContain("applyIleWorkCanvasSuggestInsight");
     expect(canvas).not.toContain("buildIleCanvasCraftInsightEvaluateRequest");
     expect(canvas).not.toContain("ILE_TURN_INSIGHT_CREATE_PATH");
     expect(canvas).not.toContain("data-ile-canvas-new-mark");
@@ -2803,11 +2803,11 @@ describe("TAP Learning Work canvas selection commands (shipped)", () => {
     const route = read("app/api/session-chat/route.ts");
     expect(route).toContain("ileSessionChatCanvasReply");
     expect(route).toContain("raw: canvasReply.raw");
-    expect(read("lib/learn-work-canvas.ts")).toContain("ileWorkCanvasLayoutReply(input.payload.raw, input.payload.elements)");
+    expect(read("lib/learn-work-canvas-xai.ts")).toContain("ileWorkCanvasLayoutReply(input.payload.raw, input.payload.elements)");
     expect(phases).toContain("buildIleWorkCanvasCommandUserMessage");
     expect(phases).not.toContain("buildIleWorkCanvasCompressUserMessage");
     expect(phases).not.toContain('kind === "compress"');
-    const suggestSource = read("lib/learn-work-canvas.ts");
+    const suggestSource = read("lib/learn-work-canvas-xai.ts");
     const suggestStart = suggestSource.indexOf("export function applyIleWorkCanvasSuggestInsight");
     const suggestBody = suggestSource.slice(
       suggestStart,
@@ -2829,6 +2829,17 @@ describe("TAP Learning Work canvas selection commands (shipped)", () => {
         "commands=Focus Simplify Split Breakdown Answer Draw Refactor",
       ].join("\n") + "\n",
     );
+  });
+});
+
+describe("TAP Learning Work canvas barrel (shipped)", () => {
+  it("is re-exports only, with no applyIle function body", () => {
+    const barrel = read("lib/learn-work-canvas.ts");
+    expect(barrel).not.toMatch(/function applyIle/);
+    expect(barrel).toContain('from "@/lib/learn-work-canvas-scene"');
+    expect(barrel).toContain('from "@/lib/learn-work-canvas-place"');
+    expect(barrel).toContain('from "@/lib/learn-work-canvas-chrome"');
+    expect(barrel).toContain('from "@/lib/learn-work-canvas-xai"');
   });
 });
 

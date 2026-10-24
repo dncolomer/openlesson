@@ -1,7 +1,7 @@
 /**
  * Axis-aligned work-canvas rectangles. Collision layout stays in the scene module.
  */
-import type { IleWorkCanvasElement } from "@/lib/learn-work-canvas";
+import type { IleWorkCanvasElement } from "@/lib/learn-work-canvas-scene";
 
 export function ileWorkCanvasElementRect(
   el: Pick<IleWorkCanvasElement, "x" | "y" | "width" | "height">,

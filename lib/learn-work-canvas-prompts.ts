@@ -7,7 +7,7 @@ import {
   type PromptWorkspaceContext,
   type PromptWorkspaceContextInput,
 } from "@/lib/prompt-workspace-context";
-import type { IleWorkCanvasElement, IleWorkCanvasScene } from "@/lib/learn-work-canvas";
+import type { IleWorkCanvasElement, IleWorkCanvasScene } from "@/lib/learn-work-canvas-scene";
 import type { IleWorkCanvasAskKind } from "@/lib/learn-work-canvas-commands";
 
 function asRecord(value: unknown): Record<string, unknown> {

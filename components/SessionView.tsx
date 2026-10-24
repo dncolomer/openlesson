@@ -64,7 +64,6 @@ import {
 } from "@/lib/welcomeState";
 import { insightsSessionListUrl, type InsightSummary } from "@/lib/insights";
 import { IleTurnInsightCraft } from "@/components/session-view/learn-turn-insight-craft";
-import { useThinkAloudTranscript, type SpeechTranscriptEntry } from "@/lib/useThinkAloudTranscript";
 import { useHeliosVoicePlaybackActive } from "@/lib/useHeliosVoicePlayback";
 import type { HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
 import { translateWithLocale, useI18n } from "@/lib/i18n";
@@ -936,12 +935,9 @@ export function SessionView({
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const elapsedSecondsRef = useRef(0);
   const muteTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const consumeSpeechTranscriptEntriesRef = useRef<() => SpeechTranscriptEntry[]>(() => []);
-  const requeueSpeechTranscriptEntriesRef = useRef<(entries: SpeechTranscriptEntry[]) => void>(() => {});
   const activeToolRef = useRef(activeTool);
   const objectivesRef = useRef(objectives);
   const isRecordingRef = useRef(isRecording);
-  const autoAdvanceRef = useRef(autoAdvance);
 
   const wasRecordingRef = useRef(false);
   const wasScreenCapturingRef = useRef(false);
@@ -954,7 +950,6 @@ export function SessionView({
   useEffect(() => { activeToolRef.current = activeTool; }, [activeTool]);
   useEffect(() => { objectivesRef.current = objectives; }, [objectives]);
   useEffect(() => { isRecordingRef.current = isRecording; }, [isRecording]);
-  useEffect(() => { autoAdvanceRef.current = autoAdvance; }, [autoAdvance]);
   useEffect(() => { sessionPlanRef.current = sessionPlan; }, [sessionPlan]);
   useEffect(() => { openWorkIdsRef.current = openWorkIds; }, [openWorkIds]);
   useEffect(() => {
@@ -1849,13 +1844,6 @@ export function SessionView({
     },
   });
   const isHeliosVoicePlaying = useHeliosVoicePlaybackActive();
-
-  const thinkAloudTranscript = useThinkAloudTranscript({
-    enabled: false,
-    tutoringLanguage,
-  });
-  consumeSpeechTranscriptEntriesRef.current = thinkAloudTranscript.consumePendingTranscriptEntries;
-  requeueSpeechTranscriptEntriesRef.current = thinkAloudTranscript.requeueTranscriptEntries;
 
   if (isMobile) {
     return (

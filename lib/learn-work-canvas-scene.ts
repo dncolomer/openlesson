@@ -56,8 +56,6 @@ export function ileWorkCanvasXaiShapeType(raw: unknown): IleXaiCanvasShapeType |
   return ILE_XAI_CANVAS_SHAPE_SET.has(key) ? (key as IleXaiCanvasShapeType) : null;
 }
 
-const RETIRED_ILE_WORK_TOOLS = new Set(["notebook", "grokipedia", "dantes"]);
-
 export type IleWorkCanvasAppState = Record<string, unknown>;
 export type IleWorkCanvasFiles = Record<string, unknown>;
 
@@ -608,96 +606,6 @@ export const convertToExcalidrawElements = convertIleWorkCanvasSkeletons;
 export const ILE_XAI_NOTE_PAD_X = 16;
 export const ILE_XAI_NOTE_PAD_Y = 12;
 
-/** Rectangle host for an XAI/harness caption, or the caption itself when unbound. */
-export function ileWorkCanvasHostForCaption(
-  elements: readonly IleWorkCanvasElement[] | null | undefined,
-  caption: string,
-): IleWorkCanvasElement | undefined {
-  const live = elements ?? [];
-  const text = live.find((el) => (el.originalText || el.text) === caption);
-  if (!text) return undefined;
-  if (typeof text.containerId === "string" && text.containerId) {
-    return live.find((el) => el.id === text.containerId) ?? text;
-  }
-  return text;
-}
-
-export function isIleXaiNoteElement(el: IleWorkCanvasElement | null | undefined): boolean {
-  return Boolean(el?.customData?.[ILE_XAI_NOTE_CUSTOM_DATA_KEY]);
-}
-
-/** Dashed rectangle plus bound caption. Clicking later drops the dash. */
-export function ileWorkCanvasXaiNoteSkeletons(input: {
-  text: string;
-  x: number;
-  y: number;
-  width?: number | null;
-  customData?: Record<string, unknown> | null;
-}): IleWorkCanvasSkeleton[] {
-  const text = String(input.text || "").trim();
-  if (!text) return [];
-  const inner = ileWorkCanvasXaiTextWidth(input.width) ?? ILE_WORK_CANVAS_TEXT_BOX_WIDTH;
-  const wrapped = wrapIleWorkCanvasText(text, inner);
-  return [
-    {
-      type: "rectangle",
-      x: input.x,
-      y: input.y,
-      width: wrapped.width + ILE_XAI_NOTE_PAD_X * 2,
-      height: wrapped.height + ILE_XAI_NOTE_PAD_Y * 2,
-      strokeStyle: "dashed",
-      strokeWidth: 2,
-      backgroundColor: "transparent",
-      roundness: { type: 3 },
-      customData: {
-        [ILE_XAI_NOTE_CUSTOM_DATA_KEY]: true,
-        ...(input.customData ?? {}),
-      },
-      label: { text },
-    },
-  ];
-}
-
-export function acknowledgeIleWorkCanvasXaiNotes(
-  elements: readonly IleWorkCanvasElement[] | null | undefined,
-  selectedIds: Record<string, boolean> | null | undefined,
-): { elements: IleWorkCanvasElement[]; changed: boolean } {
-  const live = [...(elements ?? [])];
-  const selected = new Set(
-    Object.entries(selectedIds ?? {})
-      .filter(([, on]) => on)
-      .map(([id]) => id),
-  );
-  if (!selected.size) return { elements: live, changed: false };
-  const byId = new Map(live.map((el) => [el.id, el]));
-  const noteIds = new Set<string>();
-  for (const id of selected) {
-    const el = byId.get(id);
-    if (!el) continue;
-    if (isIleXaiNoteElement(el) && el.type !== "text") {
-      noteIds.add(el.id);
-      continue;
-    }
-    if (typeof el.containerId === "string" && el.containerId) {
-      const host = byId.get(el.containerId);
-      if (host && isIleXaiNoteElement(host)) noteIds.add(host.id);
-    }
-  }
-  if (!noteIds.size) return { elements: live, changed: false };
-  let changed = false;
-  const next = live.map((el) => {
-    if (!noteIds.has(el.id) || el.strokeStyle === "solid") return el;
-    changed = true;
-    return {
-      ...el,
-      strokeStyle: "solid",
-      version: (Number(el.version) || 1) + 1,
-      customData: { ...(el.customData ?? {}), ileXaiNoteAcknowledged: true },
-    };
-  });
-  return { elements: next, changed };
-}
-
 export function ileWorkCanvasContentBounds(
   elements: readonly (Pick<IleWorkCanvasElement, "x" | "y" | "width" | "height"> & {
     isDeleted?: boolean;
@@ -1060,99 +968,23 @@ export function ileWorkCanvasScenesFromWorkspaces(
   return out;
 }
 
-function normalizeExcalidrawToolName(value: string | null | undefined): string {
-  return String(value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/^tool_/, "")
-    .replace(/\s+/g, "_");
-}
-
-const ELEMENT_TYPE_TO_CANVAS_ACTION: Record<string, string> = {
-  text: "draw_text",
-  freedraw: "draw_freedraw",
-  rectangle: "draw_rectangle",
-  diamond: "draw_diamond",
-  ellipse: "draw_ellipse",
-  arrow: "draw_arrow",
-  line: "draw_line",
-  image: "draw_image",
-  frame: "draw_frame",
-  eraser: "erase",
-};
-
-const CANVAS_POW_ACTIONS = new Set([
-  "draw_text",
-  "draw_freedraw",
-  "draw_rectangle",
-  "draw_diamond",
-  "draw_ellipse",
-  "draw_arrow",
-  "draw_line",
-  "draw_image",
-  "draw_frame",
-  "erase",
-  "delete",
-  "move",
-  "rotate",
-  "multi_select",
-  "expand_more",
-  "board_prompt",
-  "rephrase",
-  "split",
-  "breakdown",
-  "concepts",
-  "define",
-  "elaborate",
-  "selective-compression",
-  "refactor",
-  "suggest-insight",
-  "clear-overlaps",
-  "join",
-  "check",
-  "declutter",
-  "dictate",
-  "answer",
-  "draw",
-  "focus",
-  "simplify",
-  "ask",
-]);
-
-/**
- * Map Excalidraw's internal active tool / element kind onto shared canvas PoW
- * `tool_name` / `tool_action` (`canvas` + draw_text / move / …). Never emits
- * retired TAP Learning tools. Selecting the selection tool is not work.
- */
-export function mapExcalidrawToolToIlePow(input: {
-  activeTool?: string | null;
-  elementType?: string | null;
-  action?: string | null;
-}): { toolName: "canvas"; toolAction: string } | null {
-  const toolRaw = normalizeExcalidrawToolName(input.activeTool);
-  const elementRaw = normalizeExcalidrawToolName(input.elementType);
-  const actionRaw = normalizeExcalidrawToolName(input.action);
-  if (
-    RETIRED_ILE_WORK_TOOLS.has(toolRaw) ||
-    RETIRED_ILE_WORK_TOOLS.has(elementRaw) ||
-    RETIRED_ILE_WORK_TOOLS.has(actionRaw)
-  ) {
-    return null;
-  }
-  if (actionRaw && CANVAS_POW_ACTIONS.has(actionRaw)) {
-    return { toolName: "canvas", toolAction: actionRaw };
-  }
-  const mapped = ELEMENT_TYPE_TO_CANVAS_ACTION[toolRaw] ?? ELEMENT_TYPE_TO_CANVAS_ACTION[elementRaw];
-  if (!mapped) return null;
-  return { toolName: "canvas", toolAction: mapped };
-}
-
-export function isRetiredIleWorkToolName(name: string | null | undefined): boolean {
-  return RETIRED_ILE_WORK_TOOLS.has(normalizeExcalidrawToolName(name));
-}
-
 export function ileWorkCanvasSceneForTurn(
   scene: IleWorkCanvasScene | null | undefined,
 ): IleWorkCanvasScene {
   return serializeIleWorkCanvasScene(scene);
+}
+
+/** Live (non-deleted) elements whose ids are in the selection list. */
+export function ileWorkCanvasSelectedLive(
+  scene: IleWorkCanvasScene,
+  selected: readonly { id?: string | null; isDeleted?: boolean }[] | null | undefined,
+): IleWorkCanvasElement[] {
+  const ids = new Set<string>();
+  for (const el of selected ?? []) {
+    if (!el || el.isDeleted) continue;
+    const id = String(el.id || "").trim();
+    if (id) ids.add(id);
+  }
+  if (!ids.size) return [];
+  return scene.elements.filter((el) => ids.has(el.id) && !el.isDeleted);
 }

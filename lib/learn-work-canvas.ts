@@ -1,6 +1,6 @@
 /**
  * TAP Learning Work canvas: per-chapter Excalidraw scene serialize / apply / PoW.
- * Public re-export barrel. Implementations live in scene / place / chrome / xai.
+ * Public re-export barrel. Implementations live in scene / place / chrome / xai / xai-parse.
  */
 export {
   ILE_CANVAS_TIMER_RESET_LOADING_MS,
@@ -98,10 +98,6 @@ export {
   convertToExcalidrawElements,
   ILE_XAI_NOTE_PAD_X,
   ILE_XAI_NOTE_PAD_Y,
-  ileWorkCanvasHostForCaption,
-  isIleXaiNoteElement,
-  ileWorkCanvasXaiNoteSkeletons,
-  acknowledgeIleWorkCanvasXaiNotes,
   ileWorkCanvasContentBounds,
   ileWorkCanvasHasLiveElements,
   ileWorkCanvasShouldRestoreEmptyBoard,
@@ -118,10 +114,12 @@ export {
   createIleWorkCanvasChapterStore,
   pickIleWorkCanvasTurnScene,
   ileWorkCanvasScenesFromWorkspaces,
-  mapExcalidrawToolToIlePow,
-  isRetiredIleWorkToolName,
   ileWorkCanvasSceneForTurn,
 } from "@/lib/learn-work-canvas-scene";
+export {
+  mapExcalidrawToolToIlePow,
+  isRetiredIleWorkToolName,
+} from "@/lib/learn-work-canvas-pow";
 export type {
   IleWorkCanvasAppState,
   IleWorkCanvasFiles,
@@ -135,23 +133,8 @@ export type {
 } from "@/lib/learn-work-canvas-scene";
 
 export {
-  ileWorkCanvasAutoLayoutEnabled,
-  layoutIleWorkCanvasBoard,
-  withIleWorkCanvasAutoLayout,
   applyIleXaiTurnToWorkCanvas,
   applyIleXaiTurnAtCommit,
-  isIleXaiLoadingElement,
-  ILE_XAI_THINKING_OVERLAY_WIDTH,
-  ILE_XAI_THINKING_OVERLAY_HEIGHT,
-  ILE_XAI_REPLY_RESERVE_HEIGHT,
-  ILE_XAI_LOADING_BOX_SIZE,
-  ILE_XAI_LOADING_BOX_WIDTH,
-  ILE_XAI_LOADING_BOX_HEIGHT,
-  ILE_XAI_LOADING_GAP,
-  ILE_XAI_LOADING_CLEARANCE,
-  ileWorkCanvasDragThinkingOrigin,
-  ileWorkCanvasThinkingOverlayStyle,
-  ileWorkCanvasThinkingOccupancy,
   ileWorkCanvasIncomingOverlapsObstacles,
   separateIleWorkCanvasGroupOverlaps,
   ileWorkCanvasClusteredOrigin,
@@ -165,6 +148,10 @@ export {
   ileWorkCanvasReplyOriginFromSelection,
   createIleXaiLoadingPlaceholder,
   replaceIleXaiLoadingPlaceholder,
+  ileWorkCanvasHostForCaption,
+  isIleXaiNoteElement,
+  ileWorkCanvasXaiNoteSkeletons,
+  acknowledgeIleWorkCanvasXaiNotes,
 } from "@/lib/learn-work-canvas-place";
 export type { IleWorkCanvasPlacementOptions } from "@/lib/learn-work-canvas-place";
 
@@ -207,6 +194,21 @@ export {
   ileLearnMoreFollowPosition,
   ileWorkCanvasPointerBusy,
   clampIleLearnMorePosition,
+  ileWorkCanvasAutoLayoutEnabled,
+  layoutIleWorkCanvasBoard,
+  withIleWorkCanvasAutoLayout,
+  isIleXaiLoadingElement,
+  ILE_XAI_THINKING_OVERLAY_WIDTH,
+  ILE_XAI_THINKING_OVERLAY_HEIGHT,
+  ILE_XAI_REPLY_RESERVE_HEIGHT,
+  ILE_XAI_LOADING_BOX_SIZE,
+  ILE_XAI_LOADING_BOX_WIDTH,
+  ILE_XAI_LOADING_BOX_HEIGHT,
+  ILE_XAI_LOADING_GAP,
+  ILE_XAI_LOADING_CLEARANCE,
+  ileWorkCanvasDragThinkingOrigin,
+  ileWorkCanvasThinkingOverlayStyle,
+  ileWorkCanvasThinkingOccupancy,
 } from "@/lib/learn-work-canvas-chrome";
 export type {
   IleWorkCanvasViewportAppState,
@@ -215,36 +217,27 @@ export type {
 } from "@/lib/learn-work-canvas-chrome";
 
 export {
+  ileXaiReplyIsCanvasJson,
+  parseIleXaiCanvasTurn,
+  ileSessionChatCanvasReply,
+  ileWorkCanvasAskFromSessionChat,
+  ileWorkCanvasCommandProse,
+} from "@/lib/learn-work-canvas-xai-parse";
+export {
   ILE_COMPRESS_WORK_LABEL,
   ILE_COMPRESS_WORK_LOADING_LABEL,
   ileWorkCanvasLiveElements,
   ileWorkCanvasCanCompress,
   buildIleWorkCanvasCompressUserMessage,
   compressIleWorkCanvasScene,
-  ileXaiReplyIsCanvasJson,
-  parseIleXaiCanvasTurn,
-  ileSessionChatCanvasReply,
-  ileWorkCanvasAskFromSessionChat,
   applyIleXaiReplyToWorkCanvas,
   ILE_WORK_CANVAS_TURN_ORIGIN_INSTRUCTION,
   ileWorkCanvasLiveGeometryListing,
   ileWorkCanvasTurnContextMessage,
   ILE_WORK_CANVAS_QUICK_ACTION_CHECK,
   ileWorkCanvasQuickActionPrompt,
-  ileWorkCanvasSplitTextChunks,
-  ileWorkCanvasSplitTextTarget,
-  expandIleWorkCanvasCommandSelection,
-  splitIleWorkCanvasTextElement,
-  splitIleWorkCanvasSelectedText,
-  fanIleWorkCanvasLabeledNodes,
-  breakdownIleWorkCanvasSelection,
   ileWorkCanvasConceptLabels,
-  appendIleWorkCanvasFocusNote,
-  removeIleWorkCanvasSelection,
-  replaceIleWorkCanvasSelection,
-  runIleWorkCanvasCommand,
   joinIleWorkCanvasSelection,
-  ileWorkCanvasCommandProse,
   compressIleWorkCanvasSelection,
   ileWorkCanvasLayoutReply,
   applyIleWorkCanvasRefactor,
@@ -259,7 +252,22 @@ export {
 } from "@/lib/learn-work-canvas-xai";
 export type {
   IleWorkCanvasQuickActionId,
-  IleWorkCanvasCommandAsk,
-  IleWorkCanvasCommandRun,
   IleWorkCanvasClearOverlapsResult,
 } from "@/lib/learn-work-canvas-xai";
+export {
+  ileWorkCanvasSplitTextChunks,
+  ileWorkCanvasSplitTextTarget,
+  expandIleWorkCanvasCommandSelection,
+  splitIleWorkCanvasTextElement,
+  splitIleWorkCanvasSelectedText,
+  fanIleWorkCanvasLabeledNodes,
+  breakdownIleWorkCanvasSelection,
+  appendIleWorkCanvasFocusNote,
+  removeIleWorkCanvasSelection,
+  replaceIleWorkCanvasSelection,
+  runIleWorkCanvasCommand,
+} from "@/lib/learn-work-canvas-commands";
+export type {
+  IleWorkCanvasCommandAsk,
+  IleWorkCanvasCommandRun,
+} from "@/lib/learn-work-canvas-commands";

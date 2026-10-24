@@ -1,7 +1,9 @@
 /**
- * Axis-aligned work-canvas rectangles. Collision layout stays in the scene module.
+ * Axis-aligned work-canvas rectangles. Collision layout stays in the place module.
  */
 import type { IleWorkCanvasElement } from "@/lib/learn-work-canvas-scene";
+
+export const ILE_WORK_CANVAS_OVERLAP_GAP = 16;
 
 export function ileWorkCanvasElementRect(
   el: Pick<IleWorkCanvasElement, "x" | "y" | "width" | "height">,

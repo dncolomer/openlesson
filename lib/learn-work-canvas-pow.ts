@@ -6,12 +6,11 @@
 import { ILE_EXCALIDRAW_POW_TOOLS } from "@/lib/learn-work-canvas-prompts";
 import {
   ileWorkCanvasHasLiveElements,
-  ileWorkCanvasPointerBusy,
-  isRetiredIleWorkToolName,
   serializeIleWorkCanvasScene,
   type IleWorkCanvasElement,
   type IleWorkCanvasScene,
-} from "@/lib/learn-work-canvas";
+} from "@/lib/learn-work-canvas-scene";
+import { ileWorkCanvasPointerBusy } from "@/lib/learn-work-canvas-chrome";
 import type { IleProofOfWorkUploadItem } from "@/lib/learn-evidence-buffer";
 
 export const ILE_WORK_CANVAS_POW_TOOL_NAME = "canvas" as const;
@@ -251,6 +250,22 @@ function isViewportOnlyAppStateChange(prev: IleWorkCanvasScene, next: IleWorkCan
   const nextSelected = ileWorkCanvasSelectedIds(next.appState).sort().join(",");
   if (prevSelected !== nextSelected) return false;
   return true;
+}
+
+const RETIRED_ILE_WORK_TOOLS = new Set(["notebook", "grokipedia", "dantes"]);
+
+export function isRetiredIleWorkToolName(name: string | null | undefined): boolean {
+  return RETIRED_ILE_WORK_TOOLS.has(normalizeToolToken(name));
+}
+
+export function mapExcalidrawToolToIlePow(input: {
+  activeTool?: string | null;
+  elementType?: string | null;
+  action?: string | null;
+}): { toolName: "canvas"; toolAction: string } | null {
+  const mapped = mapExcalidrawToolToCanvasPow(input);
+  if (!mapped) return null;
+  return { toolName: "canvas", toolAction: mapped.toolAction };
 }
 
 /**

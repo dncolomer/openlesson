@@ -634,7 +634,7 @@ describe("Work-canvas PoW host wiring (shipped)", () => {
     expect(quick).not.toContain("expandMore");
     expect(quick).not.toContain('"ask"');
     expect(quick).not.toContain('"suggest-insight"');
-    const commandLib = read("lib/learn-work-canvas-xai.ts");
+    const commandLib = read("lib/learn-work-canvas-commands.ts");
     for (const commandId of ILE_WORK_CANVAS_COMMAND_POW_IDS) {
       expect(commandLib).toContain(`"${commandId}"`);
     }

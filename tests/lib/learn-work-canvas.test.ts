@@ -2836,10 +2836,26 @@ describe("TAP Learning Work canvas barrel (shipped)", () => {
   it("is re-exports only, with no applyIle function body", () => {
     const barrel = read("lib/learn-work-canvas.ts");
     expect(barrel).not.toMatch(/function applyIle/);
+    expect(barrel).not.toMatch(/^export function /m);
+    expect(barrel).not.toMatch(/^function /m);
+    expect(barrel).not.toMatch(/^export const \w+\s*=/);
     expect(barrel).toContain('from "@/lib/learn-work-canvas-scene"');
     expect(barrel).toContain('from "@/lib/learn-work-canvas-place"');
     expect(barrel).toContain('from "@/lib/learn-work-canvas-chrome"');
     expect(barrel).toContain('from "@/lib/learn-work-canvas-xai"');
+    expect(barrel).toContain('from "@/lib/learn-work-canvas-xai-parse"');
+    const exported = [
+      ...barrel.matchAll(/\bexport\s+(?:type\s+)?\{([\s\S]*?)\}\s+from/g),
+    ]
+      .flatMap((match) =>
+        [...match[1].matchAll(/\b([A-Za-z_][A-Za-z0-9_]*)\b/g)].map((item) => item[1]),
+      )
+      .filter((name) => name !== "type");
+    expect(new Set(exported).size).toBe(exported.length);
+    expect(exported).toContain("parseIleXaiCanvasTurn");
+    expect(exported).toContain("runIleWorkCanvasCommand");
+    expect(exported).toContain("applyIleXaiTurnToWorkCanvas");
+    expect(exported).toContain("mapExcalidrawToolToIlePow");
   });
 });
 

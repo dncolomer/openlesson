@@ -35,6 +35,7 @@ import {
 } from "@/lib/workspace-map-selection";
 import {
   isTapLiveThoughtSpeechEnabled,
+  resolveTapProductKind,
   tapHookFormingText,
   tapLiveSpeechFlushText,
 } from "@/lib/tap-session-runtime";
@@ -203,6 +204,9 @@ describe("quality-next shipped helpers", () => {
       }),
     ).toBe("hook first");
     expect(isTapLiveThoughtSpeechEnabled("live")).toBe(true);
+    expect(resolveTapProductKind({ sidebarMode: "verification-tap" })).toBe("verify");
+    expect(resolveTapProductKind({ localOpening: true })).toBe("verify");
+    expect(resolveTapProductKind({ sidebarMode: "tap" })).toBe("scored");
     expect(existsSync(join(ROOT, "lib/learn-blur-screenshare.ts"))).toBe(false);
     expect(simulationCollectionToSuggestSnapshots(emptySimulationCollection())).toEqual([]);
     const sessionChat = read("app/api/session-chat/route.ts");

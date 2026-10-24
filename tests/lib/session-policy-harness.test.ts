@@ -129,13 +129,13 @@ describe("session field gate", () => {
     expect(calibrate).not.toContain("I'm done classifying");
     expect(workspaceCalibrate).toContain("<CalibrateSoundingSurface");
     expect(publicCalibrate).toContain("<CalibrateSoundingSurface");
-    expect(verification).toContain('enabled={sidebarMode === "verification-tap"}');
+    expect(verification).toContain('enabled={kind === "verify"}');
     expect(verification).toContain(
-      'sidebarMode === "verification-tap" ? (\n                  <SessionGuidePanel guide="verification" remainingSeconds={remainingSeconds} />',
+      'kind === "verify" ? (\n                  <SessionGuidePanel guide="verification" remainingSeconds={remainingSeconds} />',
     );
     expect(verification).toContain("data-tap-older-thoughts");
     const verificationFocus = verification.slice(
-      verification.indexOf('sidebarMode === "verification-tap" ? ('),
+      verification.indexOf('kind === "verify" ? ('),
       verification.indexOf("data-tap-older-thoughts"),
     );
     expect(verificationFocus).toContain(
@@ -272,7 +272,7 @@ describe("policy score against the prepared tree", () => {
     expect(thankYou).toContain("thankYouBody");
     expect(thankYou).toContain("data-tap-explore-uncertain-systems");
     expect(thankYou).toContain("data-tap-back-workspace");
-    expect(thankYou).toContain("sidebarMode === \"verification-tap\"");
+    expect(thankYou).toContain('kind === "verify"');
     const results = tap.slice(tap.indexOf("tap.postSession.resultsTitle"));
     expect(results).toContain("<SessionPolicyScoreResult");
     expect(results).toContain("policyScore");
@@ -451,8 +451,8 @@ describe("policy score against the prepared tree", () => {
       verificationFinish.indexOf("postTutoringSessionComplete"),
     );
     expect(verificationFinish).toContain('flowKind: "verify"');
-    expect(verificationFinish).toContain('if (s.sidebarMode === "verification-tap") {');
-    expect(verificationFinish.indexOf('if (s.sidebarMode === "verification-tap") {')).toBeLessThan(
+    expect(verificationFinish).toContain('if (s.kind === "verify") {');
+    expect(verificationFinish.indexOf('if (s.kind === "verify") {')).toBeLessThan(
       verificationFinish.indexOf("getIlePostSessionPath"),
     );
     expect(verificationCanvas).toContain("handleCanvasPowActions");
@@ -721,7 +721,7 @@ describe("sidebar actions wait until the canvas can place an observation", () =>
     expect(tap.lastIndexOf("loadSessionBranchField", firstClock)).toBeGreaterThan(-1);
     expect(tap.lastIndexOf("sessionClockMayStart", firstClock)).toBeGreaterThan(-1);
     expect(tap.lastIndexOf("loadSessionBranchField", secondClock)).toBeGreaterThan(firstClock);
-    expect(tap.lastIndexOf('sidebarMode === "verification-tap"', secondClock)).toBeGreaterThan(firstClock);
+    expect(tap.lastIndexOf('kind === "verify"', secondClock)).toBeGreaterThan(firstClock);
 
     const calibrate = sliceBetween(
       read("components/CalibrationFlowRunner.tsx"),
@@ -735,7 +735,7 @@ describe("sidebar actions wait until the canvas can place an observation", () =>
     expect(read("components/scout-tap/scout-tap-phases.tsx")).toContain("<IleStartLoading");
     expect(read("components/tap-score/tap-score-phases.tsx")).toContain("<IleStartLoading");
     expect(read("components/tap-score/tap-score-phases.tsx")).toContain(
-      'sidebarMode === "verification-tap"',
+      'kind === "verify"',
     );
     expect(read("components/session-view/session-page-loading.tsx")).toContain("<IleStartLoading");
     expect(existsSync(join(ROOT, "components/exercise-tap/exercise-tap-phases.tsx"))).toBe(false);

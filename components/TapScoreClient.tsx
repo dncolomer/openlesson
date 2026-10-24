@@ -26,16 +26,9 @@ import { useI18n } from "@/lib/i18n";
 import type { TapStartingTopic } from "@/lib/tap-score";
 import { VERIFICATION_PRACTICE_OPENING } from "@/lib/verification-flow";
 import type { SessionSidebarMode } from "@/lib/session-sidebar";
-import type { TapPostSessionMode } from "@/lib/pow-api/tap-link-config";
-import { TAP_LINK_MAX_MINUTES, TAP_LINK_MIN_MINUTES } from "@/lib/pow-api/tap-link-config";
 import {
-  restartLiveSpeechRecognition,
-  stopLiveSpeechRecognition,
   useSessionThoughtInterface,
   useSpeechSupported,
-  type LiveSpeechRecognitionBindings,
-  type SpeechRecognitionEventLike,
-  type SpeechRecognitionLike,
 } from "@/lib/useSessionThoughtInterface";
 import { decideSpokenCaptureKeyAction } from "@/lib/spoken-thought-shortcut";
 import {
@@ -46,6 +39,7 @@ import {
 import {
   type Phase,
   type Thought,
+  type TapInitialSession,
   type TapTraceType,
   type TapSystem1Action,
   type TapSystem2Action,
@@ -62,9 +56,8 @@ import {
 import {
   tapTracePayload,
   isTapLiveThoughtSpeechEnabled,
-  shouldRestartLocalTapSpeechBindings,
-  tapLiveSpeechFlushText,
   tapHookFormingText,
+  resolveTapProductKind,
 } from "@/lib/tap-session-runtime";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import { TapScorePhases } from "@/components/tap-score/tap-score-phases";
@@ -95,31 +88,13 @@ interface TapScoreClientProps {
   blockId?: string;
   sessionId?: string;
   privateToken?: string;
-  initialSession?: any;
-  /** When false, hide End Session control. Default true. */
+  initialSession?: TapInitialSession;
   showEndSession?: boolean;
-  /**
-   * Query params from the share URL. Same names+values (any order) map PoW to the
-   * same guest subject; different params → different guests.
-   */
   entryQueryParams?: Record<string, string | string[]>;
-  /** Server-resolved participant for guest links; map UI resolves signed-in user client-side. */
   participantIdentity?: PowParticipantIdentity | null;
-  /**
-   * Pre-selected duration from workspace launch (minutes).
-   * Wins over session requested_duration when set.
-   */
   initialMinutes?: number;
-  /**
-   * When true, hide the briefing duration picker (duration already chosen upstream).
-   */
   lockDuration?: boolean;
-  /**
-   * Verification flow: these topics replace the generated three.
-   * An empty list does not fetch topics.
-   */
   presetStartingTopics?: TapStartingTopic[];
-  /** Skip the tutoring start API and open the canvas from the topic question. */
   localOpening?: boolean;
   localPracticePrompt?: string;
   onLocalProof?: (input: {
@@ -131,16 +106,14 @@ interface TapScoreClientProps {
       sequence: SessionPolicySnapshot["sequence"];
     } | null;
   }) => Promise<void> | void;
-  /** Verification entry uses verification-tap. Other callers stay on tap. */
   sidebarMode?: Extract<SessionSidebarMode, "tap" | "verification-tap">;
-  /** Public verification flow. Workspace verification uses the session instead. */
   verificationToken?: string | null;
 }
 
 /** Resolve whether End Session UI should show (default yes). */
 export function resolveTapShowEndSession(input: {
   showEndSession?: boolean;
-  initialSession?: { show_end_session?: boolean | null } | null;
+  initialSession?: Pick<TapInitialSession, "show_end_session"> | null;
 }): boolean {
   if (typeof input.showEndSession === "boolean") return input.showEndSession;
   if (input.initialSession && input.initialSession.show_end_session === false) return false;
@@ -169,6 +142,7 @@ export function TapScoreClient({
     showEndSession: showEndSessionProp,
     initialSession,
   });
+  const kind = resolveTapProductKind({ sidebarMode, localOpening });
   const entryQueryParamsRef = useRef(entryQueryParams);
   const policyRef = useRef(emptySessionPolicySnapshot());
   useEffect(() => {
@@ -176,7 +150,6 @@ export function TapScoreClient({
   }, [entryQueryParams]);
   const router = useRouter();
   const { t } = useI18n();
-  // Smartphone → desktop-only gate (same product rule as TAP Learning SessionView)
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     const check = () => setIsMobile(isSmartphoneClient());
@@ -202,7 +175,6 @@ export function TapScoreClient({
       setParticipantIdentity(participantIdentityProp);
       return;
     }
-    // Map UI (no private token): attribute to signed-in user.
     if (privateToken) return;
     let cancelled = false;
     const supabase = createClient();
@@ -225,7 +197,7 @@ export function TapScoreClient({
   const [minutes, setMinutes] = useState(resolvedLaunchMinutes);
   const [conversationLanguage, setConversationLanguage] = useState<SpokenLocale>("en");
   const speechLang = toSpeechBcp47(conversationLanguage);
-  const postSession = (initialSession?.post_session as TapPostSessionMode) || "redirect_workspace";
+  const postSession = initialSession?.post_session || "redirect_workspace";
   const configuredRedirectUrl =
     typeof initialSession?.redirect_url === "string" ? initialSession.redirect_url : null;
   const [resultsError, setResultsError] = useState("");
@@ -234,7 +206,6 @@ export function TapScoreClient({
   const [thoughts, setThoughts] = useState<Thought[]>([]);
   const [interimText, setInterimText] = useState("");
   const [crystallizableText, setCrystallizableText] = useState("");
-  const [isListening, setIsListening] = useState(false);
   const [speechError, setSpeechError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const durationLocked = lockDuration || typeof initialMinutes === "number";
@@ -250,11 +221,11 @@ export function TapScoreClient({
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const [bgImage, setBgImage] = useState("");
-  const [userInitial, setUserInitial] = useState("Y");
+  const userInitial = "Y";
   const [tapSessionId, setTapSessionId] = useState<string | null>(initialSession?.id ?? null);
   const tapSessionIdRef = useRef<string | null>(initialSession?.id ?? null);
   const workCanvasSceneRef = useRef<IleWorkCanvasScene | null>(null);
-  const resolvedWorkspaceId = workspaceId || initialSession?.workspace_id;
+  const resolvedWorkspaceId = workspaceId || initialSession?.workspace_id || undefined;
   const [sessionPurity, setSessionPurity] = useState(TAP_SESSION_PURITY_MAX);
   const [transcriptSilenceMs, setTranscriptSilenceMs] = useState(0);
   const [sessionEndedImpure, setSessionEndedImpure] = useState(false);
@@ -277,23 +248,14 @@ export function TapScoreClient({
   startedAtRef.current = startedAt;
   liveMinutesRef.current = liveMinutes;
   isSendingRef.current = isSending;
-  /** True until Excalidraw reports its API. Live entry starts paused. */
   const canvasLoadingRef = useRef(true);
   const xaiReplyWaitRef = useRef(false);
-  /** Confirm dialog open, or the I'm done answering send has not finished. */
   const imDoneBusyRef = useRef(false);
   const endAndScoreRef = useRef<(options?: { impure?: boolean }) => void>(() => {});
   const autoStashInFlightRef = useRef(false);
-  /** Guard context-capacity auto-stash (no purity). */
   const contextStashInFlightRef = useRef(false);
-  /** Last non-empty speech OR intentional clear (stash/send) — drives silence clock. */
   const lastSpeechActivityAtRef = useRef(Date.now());
   const crystallizableTextRef = useRef("");
-  /**
-   * After intentional clear, empty recognition results may keep the bar empty.
-   * Otherwise empty onResult (recognition restart) must not wipe text mid-fade.
-   */
-  const acceptEmptyTranscriptRef = useRef(true);
 
   useEffect(() => {
     tapSessionIdRef.current = tapSessionId;
@@ -463,38 +425,18 @@ export function TapScoreClient({
     onSendToProbe: async () => {},
     onSpeechTranscript: (text) => {
       lastSpeechActivityAtRef.current = Date.now();
+      setTranscriptSilenceMs(0);
       crystallizableTextRef.current = text;
       setCrystallizableText(text);
       setInterimText(text);
+      notifySpeechResultRef.current(text);
     },
   });
-
-  useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data }: { data: { user: { email?: string | null; user_metadata?: Record<string, unknown> } | null } }) => {
-      const user = data.user;
-      if (!user) return;
-      const name =
-        (typeof user.user_metadata?.full_name === "string" && user.user_metadata.full_name.trim()) ||
-        (typeof user.user_metadata?.name === "string" && user.user_metadata.name.trim()) ||
-        user.email?.split("@")[0] ||
-        "";
-      const initial = name.charAt(0).toUpperCase();
-      if (initial) setUserInitial(initial);
-    });
-  }, []);
 
   const dialogueStorageKey = useMemo(
     () => getDialogueStorageKey({ workspaceId, sessionId, blockId, privateToken }),
     [workspaceId, sessionId, blockId, privateToken],
   );
-
-  const lastUserTurn = useMemo(() => {
-    for (let index = messages.length - 1; index >= 0; index -= 1) {
-      if (messages[index].role === "user") return messages[index];
-    }
-    return null;
-  }, [messages]);
 
   const lastAssistantTurn = useMemo(() => {
     for (let index = messages.length - 1; index >= 0; index -= 1) {
@@ -505,18 +447,6 @@ export function TapScoreClient({
   }, [messages]);
 
   const speechSupported = useSpeechSupported();
-  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
-  const shouldListenRef = useRef(false);
-  const restartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const langRef = useRef(speechLang);
-  const finalBufferRef = useRef<string[]>([]);
-  const finalizeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const speechResultsLengthRef = useRef(0);
-  const consumedResultsIndexRef = useRef(0);
-
-  useEffect(() => {
-    langRef.current = speechLang;
-  }, [speechLang]);
 
   useEffect(() => {
     clearDialogueMessages(dialogueStorageKey);
@@ -545,9 +475,6 @@ export function TapScoreClient({
     setSessionEndedImpure(false);
     setIsPracticeMode(false);
     autoStashInFlightRef.current = false;
-    speechResultsLengthRef.current = 0;
-    consumedResultsIndexRef.current = 0;
-    finalBufferRef.current = [];
   }, [dialogueStorageKey, clearPendingInterruption, resetIdleTracking, resetSpeechTracking]);
 
   useEffect(() => {
@@ -636,7 +563,6 @@ export function TapScoreClient({
   }
 
   function addThought(text: string, system1Action: TapSystem1Action = "pause_finalize") {
-    // Auto-stash is silence-driven; do not treat it as positive user activity for idle PoW.
     if (system1Action !== "auto_stash") {
       bumpUserActivity();
     }
@@ -655,38 +581,10 @@ export function TapScoreClient({
     });
   }
 
-  function markSpeechConsumed() {
-    consumedResultsIndexRef.current = speechResultsLengthRef.current;
-  }
-
-  function resetSpeechResultCursor() {
-    consumedResultsIndexRef.current = 0;
-    speechResultsLengthRef.current = 0;
-  }
-
-  function speechResultStartIndex(event: SpeechRecognitionEventLike) {
-    const consumed = consumedResultsIndexRef.current;
-    const { resultIndex, results } = event;
-    const sessionReset =
-      consumed > 0 &&
-      (results.length === 0 || consumed > results.length || (resultIndex === 0 && results.length < consumed));
-    if (sessionReset) {
-      resetSpeechResultCursor();
-    }
-    return Math.max(resultIndex, consumedResultsIndexRef.current);
-  }
-
   function clearTranscriptionDisplay() {
-    if (finalizeTimerRef.current) {
-      clearTimeout(finalizeTimerRef.current);
-      finalizeTimerRef.current = null;
-    }
-    finalBufferRef.current = [];
     setInterimText("");
     setCrystallizableText("");
     crystallizableTextRef.current = "";
-    // Intentional clear: allow empty bar + start silence clock for post-stash purity.
-    acceptEmptyTranscriptRef.current = true;
     lastSpeechActivityAtRef.current = Date.now();
     setTranscriptSilenceMs(0);
     tapThoughtSpeech.clearCurrentTranscription();
@@ -704,67 +602,15 @@ export function TapScoreClient({
     });
   }, []);
 
-  const speechBindings = useMemo<LiveSpeechRecognitionBindings>(
-    () => ({
-      recognitionRef,
-      shouldListenRef,
-      restartTimerRef,
-      langRef,
-      onResult: (event: SpeechRecognitionEventLike) => {
-        speechResultsLengthRef.current = event.results.length;
-        const finals: string[] = [];
-        let interim = "";
-        for (let i = 0; i < event.results.length; i += 1) {
-          const result = event.results[i];
-          const transcript = normalize(result[0]?.transcript || "");
-          if (!transcript) continue;
-          if (result.isFinal) finals.push(transcript);
-          else if (i >= event.resultIndex) interim = normalize(`${interim} ${transcript}`);
-        }
-        finalBufferRef.current = finals;
-        const displayText = normalize(`${finals.join(" ")} ${interim}`.trim());
-
-        // Empty recognition frames (common on Chrome restart) must not wipe a held
-        // live transcript mid-silence-fade — unless we intentionally cleared.
-        if (!displayText) {
-          if (!acceptEmptyTranscriptRef.current && crystallizableTextRef.current) {
-            return;
-          }
-          setInterimText("");
-          setCrystallizableText("");
-          crystallizableTextRef.current = "";
-          return;
-        }
-
-        acceptEmptyTranscriptRef.current = false;
-        lastSpeechActivityAtRef.current = Date.now();
-        setTranscriptSilenceMs(0);
-        setInterimText(interim);
-        setCrystallizableText(displayText);
-        crystallizableTextRef.current = displayText;
-        notifySpeechResultRef.current(displayText);
-      },
-      onListeningChange: setIsListening,
-      onError: setSpeechError,
-    }),
-    [],
-  );
-
   const restartSpeechRecognitionSession = useCallback(() => {
-    consumedResultsIndexRef.current = 0;
-    speechResultsLengthRef.current = 0;
-    if (!shouldRestartLocalTapSpeechBindings(phase)) return;
-    restartLiveSpeechRecognition(speechBindings);
-  }, [phase, speechBindings]);
-
-  function clearTranscriptionBuffers() {
-    clearTranscriptionDisplay();
-    restartSpeechRecognitionSession();
-  }
+    if (isTapLiveThoughtSpeechEnabled(phase)) return;
+    tapThoughtSpeech.pauseLiveSpeech();
+  }, [phase, tapThoughtSpeech]);
 
   function flushFinalBuffer() {
     const text = tapHookFormingText(tapThoughtSpeech);
-    clearTranscriptionBuffers();
+    clearTranscriptionDisplay();
+    restartSpeechRecognitionSession();
     if (text) addThought(text);
   }
 
@@ -778,7 +624,6 @@ export function TapScoreClient({
         contextStashInFlightRef.current = false;
         return;
       }
-      // Context-full auto-stash: same stash outcome as deliberate, no purity hit.
       if (options?.fromContext) {
         addThought(text, "pause_finalize");
         contextStashInFlightRef.current = false;
@@ -819,7 +664,6 @@ export function TapScoreClient({
     );
   }, []);
 
-  // Keep purity interval off the stale isSending closure; reset silence when Helios starts.
   useEffect(() => {
     isSendingRef.current = isSending;
     if (isSending) {
@@ -830,10 +674,6 @@ export function TapScoreClient({
     syncLiveClock(isSending || xaiReplyWaitRef.current);
   }, [isSending, syncLiveClock]);
 
-  // TAP-only: silence clock while live — with text → fade + auto-stash;
-  // empty bar after stash/submit → fade Listening… + purity hit if still silent.
-  // Disabled entirely while waiting for Helios so wait latency is not a purity hit.
-  // Grace after live entry avoids burning purity on briefing time / UI settle.
   useEffect(() => {
     if (phase !== "live") {
       setTranscriptSilenceMs(0);
@@ -848,13 +688,11 @@ export function TapScoreClient({
 
     const tick = window.setInterval(() => {
       if (isEndingRef.current) return;
-      // Post-entry grace: keep silence clock frozen until UI/mic settle.
       if (isWithinTapPurityGrace(liveEnteredAt)) {
         lastSpeechActivityAtRef.current = Date.now();
         setTranscriptSilenceMs(0);
         return;
       }
-      // Canvas load, XAI reply, or I'm done answering: waiting is not silence.
       if (!shouldEvaluateSessionPurity({
         waitingForHelios: isSendingRef.current,
         canvasLoading: canvasLoadingRef.current,
@@ -883,7 +721,6 @@ export function TapScoreClient({
         shouldPenalizeEmptyBarSilence(silenceMs, hasTranscript, TAP_SILENCE_AUTO_STASH_MS) &&
         !autoStashInFlightRef.current
       ) {
-        // Empty-bar silence after stash/submit (Listening… with no new speech).
         autoStashInFlightRef.current = true;
         applyPurityHit();
         lastSpeechActivityAtRef.current = Date.now();
@@ -895,7 +732,6 @@ export function TapScoreClient({
     return () => window.clearInterval(tick);
   }, [phase, stashCurrentTranscription, applyPurityHit]);
 
-  // Thought context capacity: auto-stash at max chars — does NOT affect purity.
   useEffect(() => {
     if (phase !== "live") {
       contextStashInFlightRef.current = false;
@@ -918,26 +754,9 @@ export function TapScoreClient({
   }, [phase, crystallizableText, stashCurrentTranscription]);
 
   useEffect(() => {
-    if (phase !== "live") {
-      if (
-        phase === "briefing" ||
-        phase === "saving" ||
-        phase === "results" ||
-        phase === "practice_done" ||
-        phase === "error"
-      ) {
-        stopLiveSpeechRecognition(speechBindings);
-      }
-      return;
-    }
-    // The thought hook owns the single SpeechRecognition while live.
-    // These local bindings stay stopped so they cannot steal it or
-    // force the sidebar listening flag off.
-    if (isTapLiveThoughtSpeechEnabled(phase)) {
-      stopLiveSpeechRecognition(speechBindings);
-      return;
-    }
-  }, [phase, speechBindings, speechLang]);
+    if (isTapLiveThoughtSpeechEnabled(phase)) return;
+    tapThoughtSpeech.pauseLiveSpeech();
+  }, [phase, tapThoughtSpeech]);
 
   const applyTapSession = useCallback((patch: import("@/components/tap-score/use-tap-score-flow").TapScoreSessionPatch) => {
     if (patch.isSending !== undefined) setIsSending(patch.isSending);
@@ -970,13 +789,13 @@ export function TapScoreClient({
     isSending, sentThoughtIds, messages, workspaceId, blockId, sessionId, privateToken,
     conversationLanguage, liveMinutes, minutes, startedAt, postSession, configuredRedirectUrl,
     resolvedWorkspaceId, dialogueStorageKey, phase, router, entryQueryParamsRef, tapSessionIdRef,
-    isPracticeModeRef, isEndingRef, speechResultsLengthRef, consumedResultsIndexRef, finalBufferRef,
-    autoStashInFlightRef, speechBindings, tapThoughtSpeech, logTapTrace, bumpUserActivity,
+    isPracticeModeRef, isEndingRef,
+    autoStashInFlightRef, tapThoughtSpeech, logTapTrace, bumpUserActivity,
     handlePowInterruption, clearPendingInterruption, resetIdleTracking, resetSpeechTracking,
     flushSpeechSegment, flushFinalBuffer, clearTranscriptionDisplay, restartSpeechRecognitionSession,
     workCanvasSceneRef,
     apply: applyTapSession,
-    sidebarMode,
+    kind,
     workspaceTitle,
     verificationToken,
     startingTopics,
@@ -1100,8 +919,7 @@ export function TapScoreClient({
       conversationLanguage={conversationLanguage}
       setConversationLanguage={setConversationLanguage}
       privateToken={privateToken}
-      localOpening={localOpening}
-      sidebarMode={sidebarMode}
+      kind={kind}
       verificationToken={verificationToken}
       policyRef={policyRef}
       durationLocked={durationLocked}
@@ -1113,7 +931,7 @@ export function TapScoreClient({
       startSession={startSession}
       participantIdentity={participantIdentity}
       isPracticeMode={isPracticeMode}
-      lastUserTurn={lastUserTurn}
+      lastUserTurn={null}
       lastAssistantTurn={lastAssistantTurn}
       messages={messages}
       isSending={isSending}
@@ -1127,7 +945,7 @@ export function TapScoreClient({
       endSession={endSession}
       speechError={tapThoughtSpeech.speechError ?? speechError}
       speechSupported={speechSupported}
-      isListening={tapThoughtSpeech.isListening || isListening}
+      isListening={tapThoughtSpeech.isListening}
       transcriptSilenceMs={transcriptSilenceMs}
       retryMicrophone={retryMicrophone}
       sendCurrentTranscription={sendCurrentTranscription}

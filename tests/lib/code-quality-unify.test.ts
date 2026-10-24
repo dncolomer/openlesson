@@ -412,7 +412,7 @@ describe("exclusive map selection + product intent", () => {
     expect(tapClient).not.toContain("createTapScoreFlow");
     expect(existsSync(join(ROOT, "components/ExerciseTapClient.tsx"))).toBe(false);
 
-    expect(tapClient.split("\n").length).toBeLessThan(1300);
+    expect(tapClient.split("\n").length).toBeLessThan(1000);
     expect(read("lib/useTapSpeechProofOfWork.ts")).toContain("postTutoringSpeech");
     expect(read("lib/useTapIdleProofOfWork.ts")).toContain("postTutoringIdle");
     expect(read("components/tap-score/use-tap-score-flow.ts")).toContain("postTutoringSessionStart");

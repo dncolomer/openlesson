@@ -24,15 +24,14 @@ import {
 import type { TapStartingTopic } from "@/lib/tap-score";
 import type { TapPostSessionMode } from "@/lib/pow-api/tap-link-config";
 import type { HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
-import { stopLiveSpeechRecognition, type LiveSpeechRecognitionBindings } from "@/lib/useSessionThoughtInterface";
 import type { ProofOfWorkApiInterruption } from "@/lib/pow-api/predictive-interruption";
 import { parseTapXaiCanvasTurn, serializeTapWorkCanvasScene } from "@/lib/tap-work-canvas";
 import { postWorkspaceFlowEmbedding } from "@/lib/flow-embedding-client";
 import type { SessionPolicySnapshot } from "@/components/session-view/session-policy-context";
 import { loadSessionBranchField, sessionClockMayStart } from "@/lib/session-branch-field-load";
 import { verificationFieldPrepareInput } from "@/lib/session-branch-prepare";
-import type { SessionSidebarMode } from "@/lib/session-sidebar";
 import { localVerificationOpening } from "@/lib/verification-flow";
+import type { TapProductKind } from "@/lib/tap-session-runtime";
 import type {
   IleWorkCanvasElement,
   IleWorkCanvasScene as TapWorkCanvasScene,
@@ -62,14 +61,14 @@ export type TapScoreSession = {
   tapSessionIdRef: MutableRefObject<string | null>;
   isPracticeModeRef: MutableRefObject<boolean>;
   isEndingRef: MutableRefObject<boolean>;
-  speechResultsLengthRef: MutableRefObject<number>;
-  consumedResultsIndexRef: MutableRefObject<number>;
-  finalBufferRef: MutableRefObject<string[]>;
   autoStashInFlightRef: MutableRefObject<boolean>;
-  speechBindings: LiveSpeechRecognitionBindings;
-  tapThoughtSpeech: { retryMicrophone: () => void; getFormingText?: () => string };
+  tapThoughtSpeech: {
+    retryMicrophone: () => void;
+    getFormingText?: () => string;
+    pauseLiveSpeech: () => void;
+  };
   workCanvasSceneRef: MutableRefObject<TapWorkCanvasScene | null>;
-  /** Verification flow: open the TAP canvas locally from the pooled question. */
+  /** Skip tutoring start/chat/complete and open the canvas from the pooled question. */
   localOpening?: boolean;
   localPracticePrompt?: string;
   localQuestionIdRef?: MutableRefObject<string | null>;
@@ -83,8 +82,8 @@ export type TapScoreSession = {
     } | null;
   }) => Promise<void> | void;
   policyRef?: MutableRefObject<SessionPolicySnapshot>;
-  /** Verification waits for the field. Conversational TAP does not. */
-  sidebarMode?: Extract<SessionSidebarMode, "tap" | "verification-tap">;
+  /** Verify waits for the field. Scored TAP does not. */
+  kind: TapProductKind;
   workspaceTitle?: string;
   verificationToken?: string | null;
   startingTopics?: readonly TapStartingTopic[];
@@ -303,9 +302,6 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
     s.apply({ liveMinutes: sessionMinutes });
     s.apply({ error: "" });
     s.apply({ speechError: null });
-    s.speechResultsLengthRef.current = 0;
-    s.consumedResultsIndexRef.current = 0;
-    s.finalBufferRef.current = [];
     s.apply({ thoughts: [] });
     s.apply({ memoryThoughtIds: new Set() });
     s.apply({ sentThoughtIds: new Set() });
@@ -330,7 +326,7 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
           s.localQuestionIdRef.current = practice ? null : topic?.id ?? null;
         }
         s.apply({ tapSessionId: localId });
-        if (s.sidebarMode === "verification-tap") {
+        if (s.kind === "verify") {
           const field = await loadSessionBranchField(
             verificationFieldPrepareInput({
               workspaceTitle: s.workspaceTitle,
@@ -390,7 +386,7 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
       const openingQuestion = String(payload.openingQuestion || "").trim();
       if (!openingQuestion) throw new Error("Could not generate opening question");
 
-      if (s.sidebarMode === "verification-tap") {
+      if (s.kind === "verify") {
         const field = await loadSessionBranchField(
           verificationFieldPrepareInput({
             workspaceTitle: s.workspaceTitle,
@@ -428,7 +424,7 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
       started = true;
       }
     } catch (err) {
-      stopLiveSpeechRecognition(s.speechBindings);
+      s.tapThoughtSpeech.pauseLiveSpeech();
       s.apply({ isPracticeMode: false });
       s.isPracticeModeRef.current = false;
       s.apply({ error: err instanceof Error ? err.message : "Could not start Verify session" });
@@ -486,10 +482,10 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
       s.clearTranscriptionDisplay();
     }
     s.apply({ phase: "saving" });
-    stopLiveSpeechRecognition(s.speechBindings);
+    s.tapThoughtSpeech.pauseLiveSpeech();
     const snapshot = s.policyRef?.current;
     const policy = snapshot?.model ? { model: snapshot.model, sequence: snapshot.sequence } : null;
-    if (s.sidebarMode === "verification-tap" && policy && s.workspaceId && !s.localOpening) {
+    if (s.kind === "verify" && policy && s.workspaceId && !s.localOpening) {
       const prompt = s.messages
         .map((message) => String(message.content || "").trim())
         .filter(Boolean)
@@ -572,7 +568,7 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
         return;
       }
       // Verify End session and time-up score in place. TAP may still leave the page.
-      if (s.sidebarMode === "verification-tap") {
+      if (s.kind === "verify") {
             s.apply({ phase: "results" });
         return;
       }

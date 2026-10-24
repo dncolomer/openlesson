@@ -3,10 +3,27 @@ import {
   decideActiveAestheticPool,
   ORG_CUSTOM_AESTHETIC_PACKAGE_ID,
 } from "@/lib/aesthetics";
-import { TAP_LINK_MAX_MINUTES, TAP_LINK_MIN_MINUTES } from "@/lib/pow-api/tap-link-config";
+import {
+  TAP_LINK_MAX_MINUTES,
+  TAP_LINK_MIN_MINUTES,
+  type TapPostSessionMode,
+} from "@/lib/pow-api/tap-link-config";
 import { cn } from "@/lib/utils";
 
 export type Phase = "briefing" | "live" | "saving" | "results" | "practice_done" | "error";
+
+/** Launch row fields TapScoreClient actually reads. */
+export type TapInitialSession = {
+  id?: string | null;
+  guest_user_id?: string | null;
+  assigned_user_id?: string | null;
+  workspace_id?: string | null;
+  requested_duration_seconds?: number | null;
+  post_session?: TapPostSessionMode | null;
+  redirect_url?: string | null;
+  workspaceTitle?: string | null;
+  show_end_session?: boolean | null;
+};
 
 export interface Thought {
   id: string;

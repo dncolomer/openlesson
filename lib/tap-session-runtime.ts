@@ -6,6 +6,16 @@ import { TAP_POW_API_PATHS } from "@/lib/session-pow-api-paths";
 
 export type TapRuntimePhase = "briefing" | "live" | "complete";
 
+/** Product at the TAP client boundary. Stored sidebar id stays verification-tap. */
+export type TapProductKind = "verify" | "scored";
+
+export function resolveTapProductKind(input: {
+  sidebarMode?: string | null;
+  localOpening?: boolean;
+}): TapProductKind {
+  return input.sidebarMode === "verification-tap" || input.localOpening ? "verify" : "scored";
+}
+
 /** TAP shells arm the live thought/speech hook only while the session is live. */
 export function isTapLiveThoughtSpeechEnabled(phase: string): boolean {
   return phase === "live";

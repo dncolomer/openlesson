@@ -319,12 +319,13 @@ describe("TAP Learning + TAP speech wiring (structural)", () => {
     );
     expect(tapSrc).toContain("isTapLiveThoughtSpeechEnabled");
     expect(tapSrc).toContain("tapHookFormingText");
-    expect(tapSrc).toContain("stopLiveSpeechRecognition");
+    expect(tapSrc).toContain("pauseLiveSpeech");
     expect(tapSrc).toContain('phase === "live"');
     expect(tapSrc).toContain("isTapLiveThoughtSpeechEnabled(phase)");
     expect(tapSrc).toContain("retryMicrophone");
     expect(tapSrc).toContain("tapThoughtSpeech.isListening");
     expect(tapSrc).toContain("tapThoughtSpeech.speechError");
+    expect(tapSrc).not.toContain("const speechBindings");
     expect(existsSync(path.join(process.cwd(), "components/ExerciseTapClient.tsx"))).toBe(false);
     expect(existsSync(path.join(process.cwd(), "components/exercise-tap/exercise-tap-phases.tsx"))).toBe(
       false,

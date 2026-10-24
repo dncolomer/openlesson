@@ -263,7 +263,7 @@ describe("session branch prepare", () => {
     expect(calibrate).toContain("loadSessionBranchField");
     expect(publicCalibrate).toContain("calibrateFieldPrepareInput");
     expect(publicCalibrate).toContain("calibrationToken");
-    expect(verification).toContain('enabled={sidebarMode === "verification-tap"}');
+    expect(verification).toContain('enabled={kind === "verify"}');
     expect(verification).toContain('<SessionGuidePanel guide="verification" remainingSeconds={remainingSeconds} />');
     expect(verification).not.toContain("policyTab");
     expect(verification).toContain("verificationToken");

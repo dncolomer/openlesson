@@ -586,7 +586,7 @@ describe("session sidebar mode configuration", () => {
     expect(host).toContain("<SessionSidebar");
     expect(host).toContain("data-session-work-surface");
     expect(host).toContain("data-ile-canvas-stage");
-    expect(client).toContain("sidebarMode={sidebarMode}");
+    expect(client).toContain("kind={kind}");
     expect(verify).toContain('sidebarMode="verification-tap"');
     expect(prepare).toContain("<CalibrateSoundingSurface");
     expect(prepare).toContain("<SessionWorkSurface");

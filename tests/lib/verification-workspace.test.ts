@@ -887,14 +887,15 @@ describe("verification workspace shell gates", () => {
     expect(tapStart).toContain("TapStartingTopicCards");
     expect(tapStart).not.toContain("data-verification-flow-filter");
     expect(tapStart).not.toContain("VerificationFlowSubtabFilter");
-    expect(tapStart).toContain("privateToken || localOpening || sidebarMode === \"verification-tap\"");
+    expect(tapStart).toContain("privateToken || kind === \"verify\"");
     expect(tapStart).toContain("data-tap-session-thank-you");
     expect(tapStart).toContain("data-tap-explore-uncertain-systems");
     expect(tapStart).toContain("data-tap-back-workspace");
     expect(tapStart).toContain("thankYouTitle");
     expect(tapStart).toContain("thankYouBody");
     const tapClient = read("components/TapScoreClient.tsx");
-    expect(tapClient).toContain("localOpening={localOpening}");
+    expect(tapClient).toContain("kind={kind}");
+    expect(tapClient).toContain("resolveTapProductKind");
     const runner = read("components/VerificationFlowRunner.tsx");
     expect(read("components/VerificationFlowsPanel.tsx")).not.toContain("data-verification-flow-minutes");
     expect(read("components/VerificationFlowsPanel.tsx")).not.toContain("Countdown");

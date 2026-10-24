@@ -156,8 +156,9 @@ describe("P10 leftovers shipped helpers", () => {
 
     expect(tap).toContain("useSessionThoughtInterface(");
     expect(tap).toContain("isTapLiveThoughtSpeechEnabled");
-    expect(tap).toContain("shouldRestartLocalTapSpeechBindings");
-    expect(tap).toContain("tapLiveSpeechFlushText");
+    expect(tap).not.toContain("const speechBindings");
+    expect(tap).toContain("pauseLiveSpeech");
+    expect(tap).toContain("resolveTapProductKind");
     expect(hook).toContain("captureKeys");
 
     expect(sessionChat).toContain("uploadWorkspaceProofOfWork");

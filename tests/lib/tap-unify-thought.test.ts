@@ -57,7 +57,7 @@ describe("TAP conversation live stash chrome (shipped source)", () => {
     expect(phases).not.toContain("data-tap-last-stash");
     expect(phases).not.toContain("data-tap-see-older-thoughts");
     expect(phases).not.toContain('label="Send"');
-    expect(phases).toContain('focusLabel={sidebarMode === "verification-tap" ? null : "Stash"}');
+    expect(phases).toContain('focusLabel={kind === "verify" ? null : "Stash"}');
     expect(phases).not.toContain('label="Edit"');
     expect(phases).not.toContain("selectLastStashedThought");
     expect(phases).not.toContain("submitLastStashedThought");

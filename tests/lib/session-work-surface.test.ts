@@ -90,7 +90,7 @@ describe("shared live work surface", () => {
 
   it("conversational TAP and Verify live play use the sidebar and keep stash, I'm done, and thought memory", () => {
     expect(tap).toContain("<SessionWorkSurface");
-    expect(tap).toContain("mode={sidebarMode}");
+    expect(tap).toContain('mode={kind === "verify" ? "verification-tap" : "tap"}');
     expect(tap).toContain("data-tap-convo-work-canvas-pane");
     expect(tap).toContain("<WorkCanvas");
     expect(tap).not.toContain("data-tap-transcript-container");

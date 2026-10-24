@@ -42,7 +42,7 @@ import { SESSION_BRIEFING_INTRO } from "@/lib/session-instructions";
 import { SessionStartBackButton } from "@/components/session-view/session-start-back-button";
 import { SessionStartShell } from "@/components/session-view/session-start-shell";
 import { FLOW_END_KICKERS } from "@/lib/session-stage-progress";
-import type { SessionSidebarMode } from "@/lib/session-sidebar";
+import type { TapProductKind } from "@/lib/tap-session-runtime";
 import { coerceSpokenLocale, type SpokenLocale } from "@/lib/tutoring-languages";
 import type { TapStartingTopic } from "@/lib/tap-score";
 import type { PowParticipantIdentity } from "@/lib/session-participant-identity";
@@ -88,10 +88,7 @@ export function TapScorePhases(props: {
   conversationLanguage: SpokenLocale;
   setConversationLanguage: (locale: SpokenLocale) => void;
   privateToken?: string;
-  /** Verification runs end on the same thank-you screen as a guest TAP link. */
-  localOpening?: boolean;
-  /** Verification uses the verification-tap sidebar. Scored TAP uses tap. */
-  sidebarMode?: Extract<SessionSidebarMode, "tap" | "verification-tap">;
+  kind?: TapProductKind;
   /** Public verification flow. Workspace verification uses the session instead. */
   verificationToken?: string | null;
   policyRef?: MutableRefObject<SessionPolicySnapshot>;
@@ -184,8 +181,7 @@ export function TapScorePhases(props: {
     conversationLanguage,
     setConversationLanguage,
     privateToken,
-    localOpening = false,
-    sidebarMode = "tap",
+    kind = "scored",
     verificationToken = null,
     durationLocked,
     isStartingSession,
@@ -468,7 +464,7 @@ export function TapScorePhases(props: {
     <main className="relative flex h-screen min-h-0 flex-col overflow-hidden bg-[#0b0b0b] text-white selection:bg-zinc-700">
       <div className="relative z-10 flex min-h-0 w-full flex-1 flex-col overflow-hidden">
         {phase === "briefing" && isStartingSession ? (
-          sidebarMode === "verification-tap" ? (
+          kind === "verify" ? (
             <SessionPageLoading>
               <IleStartLoading t={t} fieldStatus="preparing" />
             </SessionPageLoading>
@@ -497,7 +493,7 @@ export function TapScorePhases(props: {
         ) : null}
 
         {phase === "briefing" && !isStartingSession && briefingStep === "pick" && (
-          sidebarMode === "verification-tap" ? (
+          kind === "verify" ? (
           <SessionStartShell data-tap-briefing-layout="sections" data-tap-briefing-step="pick">
             <div className="grid h-full min-h-0 w-full flex-1 lg:grid-cols-2">
                   <div className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-[#0b0b0b] lg:border-r lg:border-neutral-800/60">
@@ -617,15 +613,15 @@ export function TapScorePhases(props: {
         {phase === "live" && (
           <section className="flex min-h-0 flex-1 flex-col overflow-hidden" data-tap-convo-live>
             <SessionBranchFieldBoundary
-              enabled={sidebarMode === "verification-tap"}
+              enabled={kind === "verify"}
               input={{
                 ...verificationField,
-                enabled: sidebarMode === "verification-tap",
+                enabled: kind === "verify",
               }}
             >
             {props.policyRef ? <SessionPolicyBridge target={props.policyRef} /> : null}
             <SessionWorkSurface
-              mode={sidebarMode}
+              mode={kind === "verify" ? "verification-tap" : "tap"}
               stage={
                 <div
                   data-tap-convo-work-canvas-pane
@@ -643,14 +639,14 @@ export function TapScorePhases(props: {
                     onCanvasPowActions={handleCanvasPowActions}
                     onAskSelected={handleAskSelected}
                     dictateTranscript={crystallizableText}
-                    sessionMarkMode={sidebarMode === "verification-tap" ? "verification" : undefined}
+                    sessionMarkMode={kind === "verify" ? "verification" : undefined}
                     sessionMarkListKey={
-                      sidebarMode === "verification-tap"
+                      kind === "verify"
                         ? `verification:${verificationFieldKey}:${startingTopicId || "topic"}`
                         : undefined
                     }
                     sessionMarkQuestions={
-                      sidebarMode === "verification-tap"
+                      kind === "verify"
                         ? [
                             {
                               id: startingTopicId || "topic",
@@ -714,9 +710,9 @@ export function TapScorePhases(props: {
                 />
               }
               signals={<TapSessionSignals captureAudio />}
-              focusLabel={sidebarMode === "verification-tap" ? null : "Stash"}
+              focusLabel={kind === "verify" ? null : "Stash"}
               focus={
-                sidebarMode === "verification-tap" ? (
+                kind === "verify" ? (
                   <SessionGuidePanel guide="verification" remainingSeconds={remainingSeconds} />
                 ) : (
                 <div className="flex h-full min-h-0 flex-col overflow-hidden">
@@ -785,7 +781,7 @@ export function TapScorePhases(props: {
             message={
               isPracticeMode
                 ? t("tap.practice.saving")
-                : sidebarMode === "verification-tap"
+                : kind === "verify"
                   ? t("tap.postSession.scoring")
                   : t("tap.postSession.savingAndReturning")
             }
@@ -830,14 +826,14 @@ export function TapScorePhases(props: {
             }
           />
         ) : phase === "results" ? (
-          privateToken || localOpening || sidebarMode === "verification-tap" ? (
+          privateToken || kind === "verify" ? (
             <SessionFinishedScreen
               data-tap-session-thank-you=""
-              kicker={sidebarMode === "verification-tap" ? FLOW_END_KICKERS.verify : undefined}
+              kicker={kind === "verify" ? FLOW_END_KICKERS.verify : undefined}
               title={t("tap.postSession.thankYouTitle")}
               body={t("tap.postSession.thankYouBody")}
               actions={
-                sidebarMode === "verification-tap" && workspaceId && !privateToken && !localOpening ? (
+                kind === "verify" && onBackToWorkspace && workspaceId ? (
                   <a
                     href={`/workspace/${workspaceId}`}
                     data-tap-back-workspace

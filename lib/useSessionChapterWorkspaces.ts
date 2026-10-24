@@ -28,7 +28,7 @@ export function useSessionChapterWorkspaces(
 ) {
   const frame = ileBlockSessionFrame(sessionPlan);
   const activeChapterIndex = frame?.index ?? 0;
-  const activeChapterKey = frame?.id ?? null;
+  const activeChapterKey = frame?.id ?? sessionId ?? null;
   const activeChapterIndexRef = useRef(activeChapterIndex);
   activeChapterIndexRef.current = activeChapterIndex;
   const setActiveChapterIndex = useCallback((_index: number) => {

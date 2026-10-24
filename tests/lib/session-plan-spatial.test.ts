@@ -552,9 +552,9 @@ describe("create surface wiring (structural)", () => {
     // chapterPlanStatus keeps the checkbox stable across load/confirm races.
     expect(viewSrc).toContain("regenerateChapters");
     expect(viewSrc).toContain("chapterPlanStatus");
-    expect(viewSrc).toContain("hasExistingChapters");
-    expect(viewSrc).toContain("shouldReuseExisting");
-    expect(viewSrc).toContain("fetchSessionPlanChaptersStatus");
+    expect(viewSrc).toContain("loadSessionBranchField");
+    expect(viewSrc).not.toContain("shouldReuseExisting");
+    expect(viewSrc).not.toContain("session-plan/create");
   });
 
   it("force create generates before deleting so regenerate failure keeps chapters", () => {

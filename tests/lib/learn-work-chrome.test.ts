@@ -651,12 +651,12 @@ describe("one current chapter", () => {
     const view = readFileSync(join(ROOT, "components/SessionView.tsx"), "utf8");
     const hook = readFileSync(join(ROOT, "lib/useSessionChapterWorkspaces.ts"), "utf8");
     expect(view).toContain("ileBlockSessionFrame(sessionPlan)");
-    expect(view).toContain("if (!blockFrame) return");
+    expect(view).toContain("seedChapterWorkCanvas(boardId, text)");
     expect(view).not.toContain("heliosWidgetOpen");
-    expect(view).toContain("seedChapterWorkCanvas(blockFrame.id, text)");
+    expect(view).not.toContain("seedChapterWorkCanvas(blockFrame.id, text)");
     expect(view).not.toContain("ileBlockSessionChapter(sessionPlan?.steps, activeChapterIndex)");
     expect(hook).toContain("const frame = ileBlockSessionFrame(sessionPlan)");
-    expect(hook).toContain("const activeChapterKey = frame?.id ?? null");
+    expect(hook).toContain("const activeChapterKey = frame?.id ?? sessionId ?? null");
     expect(hook).not.toContain("setActiveChapterIndex(");
     expect(hook).not.toContain("`step-${activeChapterIndex}`");
     expect(hook).not.toContain("planInitializedRef");

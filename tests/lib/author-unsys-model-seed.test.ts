@@ -91,10 +91,6 @@ describe("author unsys model seed", () => {
     const learnInput = learnSessionFieldInput({
       sessionId: "learn-session-1",
       problem: "A cause can fail.",
-      plan: {
-        steps: [{ id: "chapter-1", description: "Just war" }],
-        currentStepIndex: 0,
-      },
       ileToken: "ile",
       metadata,
     });

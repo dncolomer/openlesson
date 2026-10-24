@@ -23,14 +23,10 @@ import {
 } from "@/lib/welcomeState";
 import { coerceSpokenLocale, type SpokenLocale } from "@/lib/tutoring-languages";
 import { releaseSessionLocalMemory } from "@/lib/session-local-memory";
-import { readErrorResponse } from "@/components/session/sessionViewHelpers";
 import {
   chapterStatusAfterHydrate,
-  createForceFromChapterStatus,
-  fetchSessionPlanChaptersStatus,
   fetchWelcomeChapterSnapshot,
 } from "@/lib/session-plan-chapters-status";
-import { ileWelcomeShowsRegenerate } from "@/lib/learn-welcome-chapters";
 import { applyIleSessionNameToMetadata } from "@/lib/learn-session-name";
 import { applyIleOpenWorkIdsToMetadata } from "@/lib/learn-pow-spend";
 import {
@@ -138,8 +134,7 @@ export function useSessionPhase(input: SessionPhaseInput) {
     setIsPaused, elapsedSeconds, setElapsedSeconds, elapsedSecondsRef, stream, setStream,
     setError, tutoringLanguage, setTutoringLanguage, setLanguageConfirmed, setSessionPlan,
     sessionPlanRef, setPlanLoading, setPlanError, setChapterPlanStatus, setRegenerateChapters,
-    regenerateChapters, objectives, setObjectives, setObjectiveStatuses, isPreparing, setIsPreparing,
-    initialChapters, chapterCount, resolvedSessionMode,
+    objectives, setObjectives, setObjectiveStatuses, isPreparing, setIsPreparing,
     setShowWelcomeModal, setShowWelcomePanel, setIsStartingSession, applyIleChapterGridStartup,
     helpPreviousLayoutRef, setPaneVisibility, timerRef, muteTimerRef,
     micStreamRef, setMicStatus, setIsMuted, setMuteRemaining, setIsSaving, setShowEndDialog,
@@ -824,103 +819,6 @@ if (guestAccessKind === "aycl" && ayclToken) {
   }
 }
 
-const chapterStatus = await fetchSessionPlanChaptersStatus(
-  session.id,
-  guestAccessBody,
-);
-setChapterPlanStatus(chapterStatus);
-const forceDecision = createForceFromChapterStatus(
-  chapterStatus,
-  ileWelcomeShowsRegenerate(chapterStatus) ? regenerateChapters : false,
-);
-if (forceDecision.action === "abort") {
-  setPlanError(
-    "Could not check for existing chapters. Existing chapters were not replaced.",
-  );
-  return;
-}
-const hasExistingChapters = chapterStatus === "exists";
-let newPlan: SessionPlan | null = null;
-const shouldReuseExisting = hasExistingChapters && !regenerateChapters;
-if (shouldReuseExisting) {
-  if (tutoringLanguage === "en") {
-    if (!guestAccessKind) {
-      const existingPlan = await getSessionPlan(session.id);
-      if (existingPlan && (existingPlan.steps?.length ?? 0) > 0) {
-        newPlan = existingPlan;
-      }
-    }
-    // TAP Learning/AYCL: skip browser SELECT; create with force:false returns the stored plan.
-  } else {
-    const translateRes = await fetch("/api/session-plan/translate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        sessionId: session.id,
-        tutoringLanguage,
-        objectives,
-        ...guestAccessBody,
-      }),
-    });
-    if (translateRes.ok) {
-      const { plan } = await translateRes.json();
-      newPlan = plan;
-    } else {
-      const err = await translateRes.json().catch(() => ({}));
-      console.error("[SessionView] Translation failed:", err);
-      // Do not force-recreate on translate failure when the user
-      // did not opt into regeneration — keep existing chapters.
-      setPlanError(
-        typeof err?.error === "string"
-          ? err.error
-          : "Failed to translate the board. Try again or regenerate chapters.",
-      );
-      return;
-    }
-  }
-}
-if (!newPlan) {
-  const planRes = await fetch("/api/session-plan/create", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      sessionId: session.id,
-      problem: session.problem,
-      objectives,
-      planningPrompt: session.planningPrompt,
-      // Only force-replace when user opted in or no chapters exist.
-      force: forceDecision.force,
-      tutoringLanguage,
-      initialChapters,
-      chapterCount,
-      sessionMode: resolvedSessionMode,
-      session_mode: resolvedSessionMode,
-      ...guestAccessBody,
-    }),
-  });
-  if (planRes.ok) {
-    const { plan } = await planRes.json();
-    newPlan = plan;
-    setRegenerateChapters(false);
-  } else {
-    const errorMessage = await readErrorResponse(planRes, "Failed to create block plan");
-    console.error("[SessionView] Create plan failed:", errorMessage);
-    setPlanError(errorMessage);
-    return;
-  }
-}
-if (!newPlan) {
-  setPlanError("Failed to prepare the board. Please try again.");
-  return;
-}
-setSessionPlan(newPlan);
-sessionPlanRef.current = newPlan;
-setChapterPlanStatus(
-  (newPlan.steps?.length ?? 0) > 0 ? "exists" : "empty",
-);
-
-// Archive existing probes; the chapter question is
-// enough to start the discussion.
 if (session.probes.length > 0) {
   for (const probe of session.probes) {
     await archiveProbe(probe.id);
@@ -929,12 +827,10 @@ if (session.probes.length > 0) {
 const clearedSession = { ...session, probes: [] };
 setSession(clearedSession);
 sessionRef.current = clearedSession;
-// Plan prep done
 setPlanLoading(false);
 const fieldInput = learnSessionFieldInput({
   sessionId: session.id,
   problem: session.problem,
-  plan: newPlan,
   ileToken,
   ayclToken,
   fallbackTitle: t("session.chapterPromptFallback"),
@@ -950,8 +846,7 @@ if (!sessionClockMayStart({ mode: "learn", fieldReady: field.ok })) {
   setPlanError(field.ok ? "The field could not be prepared." : field.error);
   return;
 }
-// All done - leave settings route and enter the map session
-setIsPaused(false); // Reset paused state from previous session load
+setIsPaused(false);
 setLanguageConfirmed(true);
 markIleSessionSettingsConfirmed(session.id);
 setShowWelcomeModal(false);
@@ -977,12 +872,6 @@ setIsPreparing(false);
   ayclToken,
   ileToken,
   tutoringLanguage,
-  guestAccessBody,
-  regenerateChapters,
-  objectives,
-  initialChapters,
-  chapterCount,
-  resolvedSessionMode,
   t,
 ]);
 
@@ -994,7 +883,6 @@ const handleWelcomeReadyStart = useCallback(async () => {
     const fieldInput = learnSessionFieldInput({
       sessionId: session.id,
       problem: session.problem,
-      plan: sessionPlanRef.current,
       ileToken,
       ayclToken,
       fallbackTitle: t("session.chapterPromptFallback"),
@@ -1024,7 +912,7 @@ const handleWelcomeReadyStart = useCallback(async () => {
   } finally {
     setIsPreparing(false);
   }
-}, [session, isPreparing, ileToken, ayclToken, t, sessionPlanRef]);
+}, [session, isPreparing, ileToken, ayclToken, t]);
 
   return {
     checkMicrophone,

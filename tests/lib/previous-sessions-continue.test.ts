@@ -511,7 +511,7 @@ describe("Practice drawer labels and previous-sessions UI", () => {
     expect(read("components/session-view/session-welcome-modal.tsx")).not.toContain(
       "ileWelcomeShowsRegenerate",
     );
-    expect(read("components/session-view/use-session-phase.ts")).toContain(
+    expect(read("components/session-view/use-session-phase.ts")).not.toContain(
       "ileWelcomeShowsRegenerate",
     );
     expect(view).not.toContain("data-ile-session-chapter-count");

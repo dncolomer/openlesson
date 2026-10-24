@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { SessionSidebar } from "@/components/session-view/session-sidebar";
 import { openSessionBranchQuestions, type SessionBranchModel } from "@/lib/session-branch-model";
+import { sessionSidebarTopic } from "@/components/session-view/learn-work-dock-bar";
 import {
   calibrateFieldPrepareInput,
   learnSessionFieldInput,
@@ -40,10 +41,6 @@ describe("session branch prepare", () => {
     const learn = learnSessionFieldInput({
       sessionId: "session-1",
       problem: "A cause",
-      plan: {
-        steps: [{ id: "chapter-1", description: "Just war" }],
-        currentStepIndex: 0,
-      },
       ileToken: "ile",
       metadata: { workspace_id: "ws-1", block_id: "block-1" },
     });
@@ -133,21 +130,39 @@ describe("session branch prepare", () => {
     const learn = learnSessionFieldInput({
       sessionId: "session-1",
       problem: "A cause",
-      plan: {
-        steps: [{ id: "chapter-1", description: "Just war" }],
-        currentStepIndex: 0,
-      },
       ileToken: "ile",
       fallbackTitle: "Fallback",
     });
-    expect(learn?.chapterTitle).toBe("Just war");
-    expect(learn?.chapterBrief).toBe("A cause\n\nJust war");
-    expect(learn?.scope).toBe("chapter-1");
+    expect(learn?.chapterTitle).toBe("A cause");
+    expect(learn?.chapterBrief).toBe("A cause");
+    expect(learn?.scope).toBe("session-1");
     expect(sessionBranchPrepareRequest(planSessionBranchPrepare(learn))).toMatchObject({
       sessionId: "session-1",
       ileToken: "ile",
-      chapterTitle: "Just war",
+      chapterTitle: "A cause",
     });
+    expect(
+      learnSessionFieldInput({
+        sessionId: "session-1",
+        problem: "A cause",
+      }),
+    ).toMatchObject({
+      chapterTitle: "A cause",
+      chapterBrief: "A cause",
+      scope: "session-1",
+    });
+    expect(learnSessionFieldInput({ sessionId: "session-1" })).toBeNull();
+    expect(learnSessionFieldInput({ problem: "A cause" })).toBeNull();
+    expect(
+      sessionSidebarTopic([
+        {
+          id: "chapter-1",
+          keyword: "Just war",
+          description: "A cause can fail.",
+          focused: true,
+        },
+      ]).title,
+    ).toBe("A cause can fail.");
 
     const calibrate = calibrateFieldPrepareInput({
       topicText: "Seed",
@@ -211,12 +226,17 @@ describe("session branch prepare", () => {
       learnSessionFieldInput({
         sessionId: "s",
         problem: "P",
-        plan: { steps: [{ id: "chapter-1", description: "C" }], currentStepIndex: 0 },
       }),
     ).not.toHaveProperty("catalogSize");
     const route = read("app/api/learn/session-branch-model/route.ts");
     expect(route).not.toContain("resolveCatalogSize");
     expect(route).toContain("generateSessionBranchOpening");
+    expect(read("components/session-view/use-session-phase.ts")).not.toContain(
+      "session-plan/create",
+    );
+    expect(read("components/session-view/use-session-phase.ts")).not.toContain(
+      "session-plan/translate",
+    );
     expect(read("lib/session-branch-model-generate.ts")).not.toContain("catalogSize");
     expect(read("lib/session-branch-model-generate.ts")).toContain("SESSION_BRANCH_CHILD_MIN");
     expect(read("lib/session-branch-model-generate.ts")).toContain("SESSION_BRANCH_CHILD_MAX");

@@ -369,9 +369,9 @@ describe("SessionView load/confirm wiring", () => {
   it("load + confirm use the token-aware fetch; no default-client sessionPlanHasChapters", () => {
     const view = readSessionViewSurface();
     expect(view).toContain("fetchWelcomeChapterSnapshot");
-    expect(view).toContain("fetchSessionPlanChaptersStatus");
-    expect(view).toContain("createForceFromChapterStatus");
     expect(view).toContain("guestAccessBody");
+    expect(view).toContain("loadSessionBranchField");
+    expect(view).not.toContain("session-plan/create");
     expect(view).not.toMatch(
       /sessionPlanHasChapters\(\s*(s|session)\.id\s*\)/,
     );
@@ -380,13 +380,6 @@ describe("SessionView load/confirm wiring", () => {
     const objectives = view.indexOf("/api/generate-objectives");
     expect(loadFetch).toBeGreaterThan(-1);
     expect(objectives).toBeGreaterThan(loadFetch);
-
-    const confirmFetch = view.lastIndexOf("fetchSessionPlanChaptersStatus");
-    const forceAbort = view.indexOf("forceDecision.action === \"abort\"");
-    const createForce = view.indexOf("force: forceDecision.force");
-    expect(confirmFetch).toBeGreaterThan(loadFetch);
-    expect(forceAbort).toBeGreaterThan(confirmFetch);
-    expect(createForce).toBeGreaterThan(forceAbort);
 
     const route = read("app/api/session-plan/has-chapters/route.ts");
     expect(route).toContain("lookupSessionPlanChaptersForRequest");
@@ -404,8 +397,8 @@ describe("SessionView load/confirm wiring", () => {
     writeScratch(
       "chapter-exists-excerpts.txt",
       [
-        "load: fetchSessionPlanChaptersStatus then optional getSessionPlan hydrate",
-        "confirm: fetchSessionPlanChaptersStatus + createForceFromChapterStatus (abort on failed)",
+        "load: fetchWelcomeChapterSnapshot then optional getSessionPlan hydrate",
+        "confirm: language metadata then loadSessionBranchField from session.problem",
         "has-chapters route: lookupSessionPlanChaptersForRequest → guardSessionRoute",
         `SESSION_PLAN_HAS_CHAPTERS_SELECT=${SESSION_PLAN_HAS_CHAPTERS_SELECT}`,
       ].join("\n"),

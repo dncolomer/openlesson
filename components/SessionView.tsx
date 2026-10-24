@@ -274,7 +274,7 @@ export function SessionView({
     sessionContext,
     coldContextRef,
   } = useSessionChapterWorkspaces(sessionId, sessionPlan);
-  const activeChapterKey = framedChapterId ?? "";
+  const activeChapterKey = framedChapterId || sessionId;
 
   const whiteboardSceneDataRef = useRef(whiteboardSceneData);
   useEffect(() => {
@@ -765,21 +765,26 @@ export function SessionView({
     setOpenWorkIds(
       opened
         ? ileBlockSessionOpenWorkIds(sessionPlanRef.current?.steps, opened.index)
-        : [],
+        : sessionId
+          ? [sessionId]
+          : [],
     );
     // Restore docked Work once per session load, not on later metadata writes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.id]);
   useEffect(() => {
-    if (!blockFrame) return;
-    const ids = ileBlockSessionOpenWorkIds(sessionPlan?.steps, blockFrame.index);
+    const ids = blockFrame
+      ? ileBlockSessionOpenWorkIds(sessionPlan?.steps, blockFrame.index)
+      : session?.id
+        ? [session.id]
+        : [];
     setOpenWorkIds((current) => {
       if (current.length === ids.length && current.every((id, index) => id === ids[index])) {
         return current;
       }
       return ids;
     });
-  }, [blockFrame, sessionPlan?.steps]);
+  }, [blockFrame, session?.id, sessionPlan?.steps]);
   const clampedActiveChapterRef = useRef<string | null>(null);
   useEffect(() => {
     const steps = sessionPlan?.steps ?? [];
@@ -973,15 +978,20 @@ export function SessionView({
   );
 
   useEffect(() => {
-    if (!blockFrame) return;
-    const text = isProjectMode ? displayProjectChapterExercise : blockFrame.prompt || chapterDialoguePrompt;
-    seedChapterWorkCanvas(blockFrame.id, text);
+    const boardId = session?.id;
+    if (!boardId) return;
+    const text =
+      (session.problem || "").trim() ||
+      (isProjectMode ? displayProjectChapterExercise : blockFrame?.prompt || chapterDialoguePrompt);
+    seedChapterWorkCanvas(boardId, text);
   }, [
-    blockFrame,
+    blockFrame?.prompt,
     chapterDialoguePrompt,
     displayProjectChapterExercise,
     isProjectMode,
     seedChapterWorkCanvas,
+    session?.id,
+    session?.problem,
   ]);
 
   const handleWorkChapter = useCallback(
@@ -1108,27 +1118,32 @@ export function SessionView({
   );
 
   const openWorkDockLabels = useMemo(
-    () =>
-      openWorkIds.map((id) => {
+    () => {
+      const topic = (session?.problem || "").trim();
+      const ids = openWorkIds.length > 0 ? openWorkIds : session?.id ? [session.id] : [];
+      return ids.map((id) => {
         const idx = sessionPlan?.steps?.findIndex((row) => row.id === id) ?? -1;
         const step = idx >= 0 ? sessionPlan?.steps?.[idx] : undefined;
         return {
           id,
-          label: idx >= 0 ? `Ch ${idx + 1}` : "Chapter",
+          label: idx >= 0 ? `Ch ${idx + 1}` : "Topic",
           keyword: step
             ? resolveBlockMapGlyph({
                 map_keyword: step.map_keyword,
                 title: step.description,
               }).keyword
             : undefined,
-          description: String(step?.description || "").trim() || undefined,
-          focused: id === activeStep?.id,
+          description: topic || String(step?.description || "").trim() || undefined,
+          focused: id === activeStep?.id || ids.length === 1,
           image: workAestheticById[id],
         };
-      }),
+      });
+    },
     [
       activeStep?.id,
       openWorkIds,
+      session?.id,
+      session?.problem,
       sessionPlan?.steps,
       workAestheticById,
     ],
@@ -1249,7 +1264,6 @@ export function SessionView({
   const learnField = learnSessionFieldInput({
     sessionId: session?.id,
     problem: session?.problem,
-    plan: sessionPlan,
     ileToken,
     ayclToken,
     fallbackTitle: t("session.chapterPromptFallback"),

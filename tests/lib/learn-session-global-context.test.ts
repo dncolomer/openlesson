@@ -344,7 +344,7 @@ describe("TAP Learning single-canvas context store", () => {
     const beforePlan = renderToStaticMarkup(
       createElement(FirstRenderProbe, { sessionPlan: null }),
     );
-    expect(beforePlan).toContain('data-active-chapter-key="none"');
+    expect(beforePlan).toContain('data-active-chapter-key="sess-frame"');
 
     const stored = {
       "ch-1": {
@@ -378,15 +378,15 @@ describe("TAP Learning single-canvas context store", () => {
     const hook = readFileSync(join(ROOT, "lib/useSessionChapterWorkspaces.ts"), "utf8");
     const view = readFileSync(join(ROOT, "components/SessionView.tsx"), "utf8");
     expect(hook).toContain("const frame = ileBlockSessionFrame(sessionPlan)");
-    expect(hook).toContain("const activeChapterKey = frame?.id ?? null");
+    expect(hook).toContain("const activeChapterKey = frame?.id ?? sessionId ?? null");
     expect(hook).toContain("if (!chapterWorkspacesLoaded || !activeChapterKey) return");
     expect(hook).not.toContain("setActiveChapterIndex(");
     expect(hook).not.toContain("`step-${activeChapterIndex}`");
     expect(hook).not.toContain("planInitializedRef");
     expect(hook).not.toContain("useState(0)");
-    expect(view).toContain("if (!blockFrame) return");
+    expect(view).toContain("seedChapterWorkCanvas(boardId, text)");
     expect(view).not.toContain("heliosWidgetOpen");
-    expect(view).toContain("seedChapterWorkCanvas(blockFrame.id, text)");
+    expect(view).not.toContain("seedChapterWorkCanvas(blockFrame.id, text)");
   });
 
   it("refuses unbounded live growth: chat and PoW buffers stay at the cap", () => {

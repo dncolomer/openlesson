@@ -4,8 +4,6 @@
  * TAP session. A public flow token is enough when there is no session row.
  */
 
-import { ileBlockSessionFrame } from "@/lib/learn-canvas-session";
-
 export type SessionBranchPrepareInput = {
   enabled?: boolean;
   chapterTitle?: string | null;
@@ -235,16 +233,13 @@ function uniqueLines(parts: readonly (string | null | undefined)[]): string[] {
 }
 
 /**
- * The first Learn chapter, in the same words the live canvas sends.
- * A missing frame waits. It does not invent a different title.
+ * Learn opens one session-scoped field from `session.problem`.
+ * A missing problem waits unless a fallback title is given. It does not
+ * invent a chapter-plan title.
  */
 export function learnSessionFieldInput(input: {
   sessionId?: string | null;
   problem?: string | null;
-  plan?: {
-    steps?: readonly { id?: string | null; description?: string | null }[] | null;
-    currentStepIndex?: number | null;
-  } | null;
   ileToken?: string | null;
   ayclToken?: string | null;
   fallbackTitle?: string | null;
@@ -253,22 +248,17 @@ export function learnSessionFieldInput(input: {
   metadata?: unknown;
 }): SessionBranchPrepareInput | null {
   const sessionId = text(input.sessionId);
-  const frame = ileBlockSessionFrame(input.plan);
-  if (!sessionId || !frame) return null;
-  const step = input.plan?.steps?.[frame.index];
-  const description = text(step?.description);
   const problem = text(input.problem);
-  const prompt = text(frame.prompt);
-  const chapterTitle = description || problem || prompt || text(input.fallbackTitle);
-  if (!chapterTitle) return null;
+  const chapterTitle = problem || text(input.fallbackTitle);
+  if (!sessionId || !chapterTitle) return null;
   return {
     enabled: true,
     sessionId,
     chapterTitle,
-    chapterBrief: uniqueLines([problem, description, prompt]).join("\n\n"),
+    chapterBrief: problem || chapterTitle,
     ileToken: text(input.ileToken),
     ayclToken: text(input.ayclToken),
-    scope: text(step?.id) || frame.id,
+    scope: sessionId,
     blockId:
       sessionPrepareBlockId(input.blockId) || sessionPrepareBlockId(input.metadata),
     workspaceId:

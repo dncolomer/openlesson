@@ -26,7 +26,11 @@ export function sessionSidebarTopic(
 ): { id: string; title: string; image?: string } {
   const row = (labels ?? []).find((item) => item.focused) ?? (labels ?? [])[0];
   if (!row) return { id: "topic", title: "Topic" };
-  const title = String(row.keyword || "").trim() || String(row.label || "").trim() || "Topic";
+  const title =
+    String(row.description || "").trim() ||
+    String(row.keyword || "").trim() ||
+    String(row.label || "").trim() ||
+    "Topic";
   const id = String(row.id || "").trim() || "topic";
   const image = String(row.image || "").trim();
   const description = String(row.description || "").trim();

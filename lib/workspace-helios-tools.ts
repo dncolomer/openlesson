@@ -49,6 +49,7 @@ import {
 } from "@/lib/learner-map-notes";
 import {
   buildMultiBlockDagApplyUpdates,
+  draftMultiBlockDag,
   type MultiBlockDagDraft,
   type MultiBlockDagEdge,
 } from "@/lib/multi-block-dag";
@@ -982,15 +983,25 @@ function dispatchCluster(
   );
 }
 
+function heliosDagBlockIds(
+  snapshot: HeliosMapSnapshot,
+  args: Record<string, unknown>,
+): string[] {
+  const draftRaw =
+    (args.dagDraft as Record<string, unknown> | undefined) || args;
+  let blockIds = idList(draftRaw.blockIds ?? args.blockIds ?? args.ids);
+  if (blockIds.length < 2) {
+    blockIds = snapshot.blocks.map((block) => block.id);
+  }
+  return blockIds;
+}
+
 function dispatchDag(
   snapshot: HeliosMapSnapshot,
   args: Record<string, unknown>,
 ): HeliosMapToolResult {
   const draftRaw = (args.dagDraft as Record<string, unknown> | undefined) || args;
-  let blockIds = idList(draftRaw.blockIds ?? args.blockIds ?? args.ids);
-  if (blockIds.length < 2) {
-    blockIds = snapshot.blocks.map((block) => block.id);
-  }
+  const blockIds = heliosDagBlockIds(snapshot, args);
   if (blockIds.length < 2) return fail(snapshot, "need_two_blocks");
   const edgesRaw = Array.isArray(draftRaw.edges) ? draftRaw.edges : [];
   const edges: MultiBlockDagEdge[] = [];
@@ -1442,15 +1453,7 @@ export type HeliosMapToolHost = {
    * Manual persist APIs finish. This is how Helios work shows up atomically.
    */
   applySnapshot?: (snapshot: HeliosMapSnapshot) => void;
-  /**
-   * Persist creator notes from the dispatched snapshot. Overlay tools still
-   * paint via applySnapshot when this is omitted (paint-only).
-   */
   saveNotes?: (notes: LearnerMapNote[]) => void | Promise<void>;
-  /**
-   * Persist drawing layers from the dispatched snapshot. Overlay tools still
-   * paint via applySnapshot when this is omitted (paint-only).
-   */
   saveAnnotationLayers?: (
     layers: AnnotationLayer[],
   ) => void | Promise<void>;
@@ -1596,33 +1599,6 @@ function addedCellsFromPreview(
     .map((b) => ({ row: b.position_y, col: b.position_x }));
 }
 
-function dagDraftFromPreviewSnapshot(
-  snapshot: HeliosMapSnapshot,
-): MultiBlockDagDraft {
-  const blockIds = snapshot.blocks.map((b) => b.id);
-  const edges: MultiBlockDagEdge[] = [];
-  const seen = new Set<string>();
-  for (const block of snapshot.blocks) {
-    for (const raw of block.next_block_ids || []) {
-      const to = String(raw || "").trim();
-      if (!to) continue;
-      const key = `next:${block.id}->${to}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      edges.push({ from: block.id, to, kind: "next" });
-    }
-    for (const raw of block.lock_until_block_ids || []) {
-      const from = String(raw || "").trim();
-      if (!from) continue;
-      const key = `lock:${from}->${block.id}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      edges.push({ from, to: block.id, kind: "lock" });
-    }
-  }
-  return { blockIds, edges };
-}
-
 /**
  * Validate via dispatch, paint the map immediately, then persist through
  * the same Manual drawer APIs from the dispatched snapshot.
@@ -1725,7 +1701,8 @@ export async function executeHeliosMapToolCall(input: {
         prompt: stringArg(args, "prompt") || undefined,
       });
     } else if (name === "apply_dag" && host.applyDag) {
-      const dagDraft = dagDraftFromPreviewSnapshot(preview.snapshot);
+      const blockIds = heliosDagBlockIds(input.snapshot, args);
+      const dagDraft = draftMultiBlockDag(blockIds, preview.snapshot.blocks);
       await host.applyDag({
         blockIds: dagDraft.blockIds,
         dagDraft,

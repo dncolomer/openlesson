@@ -473,6 +473,7 @@ describe("Helios map tool catalog + dispatch", () => {
     });
     expect(result.ok).toBe(true);
     expect(dagDrafts).toHaveLength(1);
+    expect(dagDrafts[0].blockIds).toEqual(["a", "b"]);
     expect(dagDrafts[0].edges).toEqual(
       expect.arrayContaining([{ from: "a", to: "b", kind: "next" }]),
     );
@@ -481,6 +482,52 @@ describe("Helios map tool catalog + dispatch", () => {
       .map((e) => e.to);
     expect(persistedNext).toEqual(
       preview.snapshot.blocks.find((b) => b.id === "a")?.next_block_ids,
+    );
+  });
+
+  it("executeHeliosMapToolCall apply_dag persist keeps the dispatch subset, not the full map", async () => {
+    const snap = heliosMapSnapshotFromBlocks({
+      blocks: [
+        block("a", 0, 0),
+        block("b", 1, 0),
+        block("out", 5, 5, { lock_until_block_ids: ["a"] }),
+      ],
+    });
+    const call = {
+      name: "apply_dag" as const,
+      args: { blockIds: ["a", "b"] },
+    };
+    const preview = dispatchHeliosMapTool(snap, call);
+    expect(preview.ok).toBe(true);
+    if (!preview.ok) return;
+    expect(preview.snapshot.blocks.find((b) => b.id === "a")?.next_block_ids).toEqual(
+      ["b"],
+    );
+    expect(
+      preview.snapshot.blocks.find((b) => b.id === "out")?.lock_until_block_ids,
+    ).toEqual(["a"]);
+
+    const dagDrafts: Array<{
+      blockIds: string[];
+      edges: Array<{ from: string; to: string; kind: "next" | "lock" }>;
+    }> = [];
+    const result = await executeHeliosMapToolCall({
+      snapshot: snap,
+      call,
+      host: {
+        applySnapshot: () => {},
+        applyDag: async ({ dagDraft }) => {
+          dagDrafts.push(dagDraft);
+        },
+      },
+    });
+    expect(result.ok).toBe(true);
+    expect(dagDrafts).toHaveLength(1);
+    expect(dagDrafts[0].blockIds).toEqual(["a", "b"]);
+    expect(dagDrafts[0].blockIds).not.toContain("out");
+    expect(dagDrafts[0].edges.every((e) => e.kind === "next")).toBe(true);
+    expect(dagDrafts[0].edges).toEqual(
+      expect.arrayContaining([{ from: "a", to: "b", kind: "next" }]),
     );
   });
 

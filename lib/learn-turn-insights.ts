@@ -293,13 +293,6 @@ export function evaluateIleEndTurnInsightGate(input: {
   };
 }
 
-export function ileEndTurnChaptersToMarkDone(
-  gate: IleEndTurnInsightGate | null | undefined,
-): string[] {
-  if (!gate?.canComplete) return [];
-  return [...gate.chaptersToComplete];
-}
-
 /**
  * @deprecated Unused-PoW slot-cap complete is replaced by
  * `evaluateIleEndTurnInsightGate`. Kept as a thin wrapper so leftover

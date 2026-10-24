@@ -30,7 +30,6 @@ import {
   ileCanvasCraftInsightUsable,
   ileCanvasShowsCraftInsight,
   ileChapterInsightCounts,
-  ileEndTurnChaptersToMarkDone,
   ileInsightCraftPowFromAcceptedPersist,
   ileInsightsForChapter,
   ileTurnInsightSlotCount,
@@ -348,7 +347,7 @@ describe("evaluateIleEndTurnInsightGate (per-chapter quota)", () => {
     expect(missing.canComplete).toBe(false);
     expect(missing.unmetChapterIds).toEqual(["ch-b"]);
     expect(missing.reason).toBe(formatIleEndTurnBlockedMissingInsights(1));
-    expect(ileEndTurnChaptersToMarkDone(missing)).toEqual([]);
+    expect(missing.chaptersToComplete).toEqual([]);
     expect(
       canCompleteIleTurnInsightCraft({
         activeChapterIds: ["ch-a", "ch-b"],
@@ -389,7 +388,7 @@ describe("evaluateIleEndTurnInsightGate (per-chapter quota)", () => {
     });
     expect(met.canComplete).toBe(true);
     expect(met.reason).toBeNull();
-    expect(ileEndTurnChaptersToMarkDone(met)).toEqual(["ch-a", "ch-b"]);
+    expect(met.chaptersToComplete).toEqual(["ch-a", "ch-b"]);
     expect(ileActiveChapterInsightQuota({
       activeChapterIds: ["ch-a", "ch-b"],
       insights,
@@ -413,7 +412,7 @@ describe("evaluateIleEndTurnInsightGate (per-chapter quota)", () => {
         `zeroCraft=${zeroCraft.canComplete}`,
         `missing=${missing.canComplete} unmet=${missing.unmetChapterIds.join(",")}`,
         `n2=${n2.canComplete} unmet=${n2.unmetChapterIds.join(",")}`,
-        `met=${met.canComplete} done=${ileEndTurnChaptersToMarkDone(met).join(",")}`,
+        `met=${met.canComplete} done=${met.chaptersToComplete.join(",")}`,
         `noActive=${noActive.canComplete}`,
         `legacyZero=${canCompleteIleTurnInsightCraft({ craftedCount: 0, unusedPow: 3 })}`,
       ].join("\n") + "\n",

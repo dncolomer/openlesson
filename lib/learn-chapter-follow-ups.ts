@@ -1,16 +1,8 @@
 /**
- * Project Mode: after Mark as Done, suggest 3 adjacent follow-up exercise chapters
- * and place a chosen one next to the completed chapter on the grid.
+ * Closest empty chapter-grid slot for TIM expansion.
  */
 import type { SessionPlan, SessionPlanStep } from "@/lib/storage";
 import { isChapterSlotBlocked } from "@/lib/learn-chapter-blocked";
-
-export type ChapterFollowUpSuggestion = {
-  title: string;
-  description: string;
-  /** 1–2 word map-tile label generated with title/description. */
-  keyword?: string;
-};
 
 /** Chebyshev distance on the chapter grid. */
 function chebyshev(dr: number, dc: number): number {
@@ -118,98 +110,4 @@ export function findClosestEmptyChapterSlot(
     fallbackCol += 1;
   }
   return { row, col: fallbackCol };
-}
-
-/**
- * @deprecated Prefer findClosestEmptyChapterSlot — always places on nearest free square.
- * Kept as a named alias for older call sites.
- */
-export function findAdjacentFreeChapterSlot(
-  plan: SessionPlan,
-  anchor: Pick<SessionPlanStep, "position_x" | "position_y"> | null | undefined,
-): { row: number; col: number } {
-  return findClosestEmptyChapterSlot(plan, anchor);
-}
-
-/** Compact context for the follow-up model (chapter + solution/stash PoW). */
-export function buildChapterFollowUpContext(input: {
-  chapterDescription: string;
-  solutionTexts: string[];
-  stashTexts: string[];
-  existingChapterDescriptions?: string[];
-}): {
-  chapter: string;
-  solutionSummary: string;
-  stashSummary: string;
-  existingChapters: string;
-} {
-  const chapter = String(input.chapterDescription || "").trim() || "Untitled chapter";
-  const solutionSummary =
-    input.solutionTexts
-      .map((t) => t.trim())
-      .filter(Boolean)
-      .slice(0, 12)
-      .map((t, i) => `${i + 1}. ${t.slice(0, 280)}`)
-      .join("\n") || "(no solution thoughts)";
-  const stashSummary =
-    input.stashTexts
-      .map((t) => t.trim())
-      .filter(Boolean)
-      .slice(0, 12)
-      .map((t, i) => `${i + 1}. ${t.slice(0, 280)}`)
-      .join("\n") || "(no stashed thoughts)";
-  const existingChapters =
-    (input.existingChapterDescriptions || [])
-      .map((t) => t.trim())
-      .filter(Boolean)
-      .slice(0, 24)
-      .map((t) => `- ${t.slice(0, 160)}`)
-      .join("\n") || "(none)";
-
-  return { chapter, solutionSummary, stashSummary, existingChapters };
-}
-
-export function normalizeChapterFollowUpSuggestions(
-  raw: unknown,
-  limit = 3,
-): ChapterFollowUpSuggestion[] {
-  if (!raw || typeof raw !== "object") return [];
-  const list = Array.isArray(raw)
-    ? raw
-    : Array.isArray((raw as { suggestions?: unknown }).suggestions)
-      ? (raw as { suggestions: unknown[] }).suggestions
-      : [];
-
-  const out: ChapterFollowUpSuggestion[] = [];
-  for (const item of list) {
-    if (typeof item === "string") {
-      const title = item.trim();
-      if (!title) continue;
-      out.push({ title: title.slice(0, 120), description: title.slice(0, 280) });
-    } else if (item && typeof item === "object") {
-      const rec = item as Record<string, unknown>;
-      const title = String(rec.title || rec.topic || rec.name || "").trim();
-      const description = String(rec.description || rec.body || rec.summary || title).trim();
-      const keyword = String(rec.keyword || rec.map_keyword || rec.mapKeyword || "").trim();
-      if (!title && !description) continue;
-      out.push({
-        title: (title || description).slice(0, 120),
-        description: (description || title).slice(0, 400),
-        ...(keyword ? { keyword: keyword.slice(0, 28) } : {}),
-      });
-    }
-    if (out.length >= limit) break;
-  }
-  return out.slice(0, limit);
-}
-
-/** Description used when adding a follow-up as a new Project Mode chapter. */
-export function buildFollowUpChapterDescription(suggestion: ChapterFollowUpSuggestion): string {
-  const title = suggestion.title.trim();
-  const desc = suggestion.description.trim();
-  if (!title) return desc;
-  if (!desc || desc === title) return title;
-  // Prefer a single exercise-style sentence the map can show.
-  if (desc.toLowerCase().startsWith(title.toLowerCase())) return desc;
-  return `${title}. ${desc}`;
 }

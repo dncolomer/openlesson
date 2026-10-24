@@ -1,12 +1,10 @@
 import { describe, expect, it } from "vitest";
-import {
-  buildChapterFollowUpContext,
-  buildFollowUpChapterDescription,
-  findAdjacentFreeChapterSlot,
-  findClosestEmptyChapterSlot,
-  normalizeChapterFollowUpSuggestions,
-} from "@/lib/learn-chapter-follow-ups";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { findClosestEmptyChapterSlot } from "@/lib/learn-chapter-follow-ups";
 import type { SessionPlan } from "@/lib/storage";
+
+const ROOT = join(__dirname, "../..");
 
 function planWithSteps(
   steps: Array<{ id: string; description: string; position_x: number; position_y: number }>,
@@ -31,10 +29,6 @@ describe("findClosestEmptyChapterSlot", () => {
       { id: "a", description: "Done chapter", position_x: 0, position_y: 0 },
     ]);
     expect(findClosestEmptyChapterSlot(plan, { position_x: 0, position_y: 0 })).toEqual({
-      row: 0,
-      col: 1,
-    });
-    expect(findAdjacentFreeChapterSlot(plan, { position_x: 0, position_y: 0 })).toEqual({
       row: 0,
       col: 1,
     });
@@ -92,53 +86,15 @@ describe("findClosestEmptyChapterSlot", () => {
   });
 });
 
-describe("normalizeChapterFollowUpSuggestions", () => {
-  it("accepts object and string shapes and caps at 3", () => {
-    const list = normalizeChapterFollowUpSuggestions({
-      suggestions: [
-        { title: "Hash tables", description: "Practice open addressing." },
-        "Graphs BFS",
-        { title: "Heaps", description: "Build a priority queue." },
-        { title: "Extra", description: "Should drop" },
-      ],
-    });
-    expect(list).toHaveLength(3);
-    expect(list[0].title).toBe("Hash tables");
-    expect(list[1].title).toBe("Graphs BFS");
-  });
-
-  it("keeps a generated 1–2 word keyword instead of truncating the title", () => {
-    const list = normalizeChapterFollowUpSuggestions({
-      suggestions: [
-        {
-          title: "Open addressing collision drills",
-          description: "Practice open addressing.",
-          keyword: "Open Address",
-        },
-      ],
-    });
-    expect(list[0].keyword).toBe("Open Address");
-  });
-});
-
-describe("buildChapterFollowUpContext / description", () => {
-  it("builds summaries and chapter description", () => {
-    const ctx = buildChapterFollowUpContext({
-      chapterDescription: "Binary search",
-      solutionTexts: ["mid = lo + (hi-lo)/2"],
-      stashTexts: ["maybe off-by-one"],
-      existingChapterDescriptions: ["Sorting"],
-    });
-    expect(ctx.chapter).toContain("Binary search");
-    expect(ctx.solutionSummary).toContain("mid");
-    expect(ctx.stashSummary).toContain("off-by-one");
-    expect(ctx.existingChapters).toContain("Sorting");
-
+describe("chapter follow-up route is gone", () => {
+  it("does not ship suggest-chapter-follow-ups", () => {
     expect(
-      buildFollowUpChapterDescription({
-        title: "Two pointers",
-        description: "Apply two pointers on sorted arrays.",
-      }),
-    ).toMatch(/Two pointers/);
+      existsSync(join(ROOT, "app/api/workspace/suggest-chapter-follow-ups/route.ts")),
+    ).toBe(false);
+    const src = readFileSync(join(ROOT, "lib/learn-chapter-follow-ups.ts"), "utf8");
+    expect(src).toContain("export function findClosestEmptyChapterSlot");
+    expect(src).not.toContain("normalizeChapterFollowUpSuggestions");
+    expect(src).not.toContain("buildFollowUpChapterDescription");
+    expect(src).not.toContain("findAdjacentFreeChapterSlot");
   });
 });

@@ -11,6 +11,8 @@ import {
   computeKnowledgeDistance,
   createCustomVerificationModelFromVectors,
   scoreAgainstCustomVerificationModel,
+  pathTextRegionCompanionNames,
+  voiceRegionName,
   type CustomVerificationModelSpec,
   type CustomVerificationScore,
   type CustomVerificationSubjectRef,
@@ -20,7 +22,10 @@ import {
 import {
   FLOW_EMBEDDING_DIM,
   FLOW_EMBEDDING_MODEL_ID,
+  FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
+  embedFlowOutput,
   isFlowEmbeddingVector,
+  recoverFlowEmbeddingRaw,
 } from "@/lib/flow-embedding";
 import {
   callXaiJSON,
@@ -200,6 +205,17 @@ export async function deleteCustomVerificationModel(
     throw new CustomVerificationModelError("knowledge region not found");
   }
 
+  if (existing.embedding_model_id === FLOW_EMBEDDING_MODEL_ID) {
+    for (const companionName of pathTextRegionCompanionNames(existing.name)) {
+      await supabase
+        .from("custom_verification_models")
+        .delete()
+        .eq("workspace_id", options.workspaceId)
+        .eq("embedding_model_id", FLOW_EMBEDDING_PATH_TEXT_MODEL_ID)
+        .ilike("name", companionName);
+    }
+  }
+
   const { error } = await supabase
     .from("custom_verification_models")
     .delete()
@@ -217,9 +233,19 @@ export async function deleteCustomVerificationModel(
 
 type LatestFlowVector = {
   vector: number[];
+  vector_path_text: number[];
   as_of_ms: number;
   embedding_model_id: string;
 };
+
+function vectorForRegionModel(
+  latest: LatestFlowVector,
+  embeddingModelId: string,
+): number[] {
+  return embeddingModelId === FLOW_EMBEDDING_PATH_TEXT_MODEL_ID
+    ? latest.vector_path_text
+    : latest.vector;
+}
 
 async function loadLatestFlowVectorForSubject(
   supabase: SupabaseClient,
@@ -231,7 +257,7 @@ async function loadLatestFlowVectorForSubject(
 
   const { data, error } = await supabase
     .from("workspace_flow_embeddings")
-    .select("vector, identity, created_at, embedding_model_id, dim")
+    .select("vector, identity, created_at, embedding_model_id, dim, raw")
     .eq("workspace_id", workspaceId)
     .eq("embedding_model_id", FLOW_EMBEDDING_MODEL_ID)
     .order("created_at", { ascending: false })
@@ -248,13 +274,54 @@ async function loadLatestFlowVectorForSubject(
         ) as number[])
       : [];
     if (!isFlowEmbeddingVector(vector)) continue;
+    const recovered = recoverFlowEmbeddingRaw((row as { raw?: unknown }).raw);
+    const embedded = recovered ? embedFlowOutput(recovered) : null;
     return {
-      vector,
+      vector: embedded?.vector ?? vector,
+      vector_path_text: embedded?.vector_path_text ?? vector,
       as_of_ms: Date.parse(String((row as { created_at?: string }).created_at || "")) || 0,
       embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
     };
   }
   return null;
+}
+
+async function insertCustomVerificationSpec(
+  supabase: SupabaseClient,
+  options: {
+    workspaceId: string;
+    spec: CustomVerificationModelSpec;
+    description?: string | null;
+    createdBy?: string | null;
+    subjects: CustomVerificationSubjectRef[];
+  },
+): Promise<CustomVerificationModelRow> {
+  const payload = {
+    workspace_id: options.workspaceId,
+    name: options.spec.name,
+    description: options.description?.trim() || null,
+    embedding_model_id: options.spec.embedding_model_id,
+    dim: options.spec.dim,
+    centroid: options.spec.centroid,
+    cohort_cohesion: options.spec.cohort_cohesion,
+    mean_radius: options.spec.mean_radius,
+    cosine_threshold: options.spec.cosine_threshold,
+    subject_count: options.spec.subject_count,
+    subjects: options.subjects,
+    created_by: options.createdBy ?? null,
+    updated_at: new Date().toISOString(),
+  };
+  const { data, error } = await supabase
+    .from("custom_verification_models")
+    .insert(payload)
+    .select(CUSTOM_MODEL_SELECT)
+    .maybeSingle();
+  if (error || !data) {
+    throw new CustomVerificationModelError(
+      error?.message || "failed to save custom verification model",
+    );
+  }
+  return parseRow(data as Record<string, unknown>);
 }
 
 /**
@@ -269,12 +336,18 @@ export async function createCustomVerificationModelFromSubjects(
     subjects: CustomVerificationSubjectRef[];
     createdBy?: string | null;
   },
-): Promise<{ model: CustomVerificationModelRow; spec: CustomVerificationModelSpec }> {
+): Promise<{
+  model: CustomVerificationModelRow;
+  spec: CustomVerificationModelSpec;
+  voiceModel: CustomVerificationModelRow | null;
+  voiceSpec: CustomVerificationModelSpec | null;
+}> {
   if (!options.subjects.length) {
     throw new CustomVerificationModelError("select at least one subject");
   }
 
-  const vectors: number[][] = [];
+  const pathVectors: number[][] = [];
+  const voiceVectors: number[][] = [];
   const resolvedSubjects: CustomVerificationSubjectRef[] = [];
 
   for (const subject of options.subjects) {
@@ -284,7 +357,8 @@ export async function createCustomVerificationModelFromSubjects(
         `no flow embedding for subject ${subject.label || subject.user_id || subject.guest_user_id || "unknown"}`,
       );
     }
-    vectors.push(latest.vector);
+    pathVectors.push(latest.vector);
+    voiceVectors.push(latest.vector_path_text);
     resolvedSubjects.push({
       user_id: subject.user_id ?? null,
       guest_user_id: subject.guest_user_id ?? null,
@@ -294,40 +368,43 @@ export async function createCustomVerificationModelFromSubjects(
 
   const spec = createCustomVerificationModelFromVectors({
     name: options.name,
-    vectors,
+    vectors: pathVectors,
     subjects: resolvedSubjects,
     embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
   });
-
-  const payload = {
-    workspace_id: options.workspaceId,
-    name: spec.name,
-    description: options.description?.trim() || null,
-    embedding_model_id: spec.embedding_model_id,
-    dim: spec.dim,
-    centroid: spec.centroid,
-    cohort_cohesion: spec.cohort_cohesion,
-    mean_radius: spec.mean_radius,
-    cosine_threshold: spec.cosine_threshold,
-    subject_count: spec.subject_count,
+  const description = options.description?.trim() || null;
+  const model = await insertCustomVerificationSpec(supabase, {
+    workspaceId: options.workspaceId,
+    spec,
+    description,
+    createdBy: options.createdBy,
     subjects: resolvedSubjects,
-    created_by: options.createdBy ?? null,
-    updated_at: new Date().toISOString(),
-  };
+  });
 
-  const { data, error } = await supabase
-    .from("custom_verification_models")
-    .insert(payload)
-    .select(
-      "id, workspace_id, name, description, embedding_model_id, dim, centroid, cohort_cohesion, mean_radius, cosine_threshold, subject_count, subjects, created_by, created_at, updated_at",
-    )
-    .maybeSingle();
-
-  if (error || !data) {
-    throw new CustomVerificationModelError(error?.message || "failed to save custom verification model");
+  const voiceName = voiceRegionName(spec.name);
+  let voiceSpec: CustomVerificationModelSpec | null = null;
+  let voiceModel: CustomVerificationModelRow | null = null;
+  if (
+    voiceName !== spec.name &&
+    voiceVectors.length === pathVectors.length &&
+    voiceVectors.every((vector) => isFlowEmbeddingVector(vector))
+  ) {
+    voiceSpec = createCustomVerificationModelFromVectors({
+      name: voiceName,
+      vectors: voiceVectors,
+      subjects: resolvedSubjects,
+      embedding_model_id: FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
+    });
+    voiceModel = await insertCustomVerificationSpec(supabase, {
+      workspaceId: options.workspaceId,
+      spec: voiceSpec,
+      description,
+      createdBy: options.createdBy,
+      subjects: resolvedSubjects,
+    });
   }
 
-  return { model: parseRow(data as Record<string, unknown>), spec };
+  return { model, spec, voiceModel, voiceSpec };
 }
 
 /** Attached file payload for synthetic knowledge region creation (UI base64 upload). */
@@ -751,7 +828,10 @@ export async function evalSubjectAgainstCustomVerificationModel(
     throw new CustomVerificationModelError("subject has no flow embedding to evaluate");
   }
 
-  const score = scoreAgainstCustomVerificationModel(latest.vector, rowToSpec(model));
+  const score = scoreAgainstCustomVerificationModel(
+    vectorForRegionModel(latest, model.embedding_model_id),
+    rowToSpec(model),
+  );
   return { score, model };
 }
 
@@ -786,7 +866,10 @@ export async function computeKnowledgeDistanceForSubject(
     throw new CustomVerificationModelError("subject has no flow embedding for Knowledge distance");
   }
 
-  const knowledge_distance = computeKnowledgeDistance(latest.vector, rowToSpec(region));
+  const knowledge_distance = computeKnowledgeDistance(
+    vectorForRegionModel(latest, region.embedding_model_id),
+    rowToSpec(region),
+  );
   return {
     knowledge_distance,
     region,

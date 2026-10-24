@@ -1,8 +1,8 @@
 /**
  * Deterministic embeddings for a completed Calibrate, Learn, or Verify run.
  * Path space (`flowcfg-v1-d96`, stored default) is the hidden-state tree and
- * priced walk. Path+text (`flowcfg-pathtext-v1-d96`) mixes that walk with
- * spoken/written transcripts. Identity, event logs, and UI tool counts stay
+ * priced walk. Path + Text (`flowcfg-pathtext-v1-d96`, stored channel `path_text`)
+ * mixes that walk with spoken and written transcripts. Identity, event logs, and UI tool counts stay
  * off-vector in recoverable raw. Calibrate sounding omits projected policy.
  */
 
@@ -22,6 +22,10 @@ export const FLOW_EMBEDDING_STRUCT_DIM = 64 as const;
 export const FLOW_EMBEDDING_SEM_DIM = 32 as const;
 export const FLOW_EMBEDDING_CHANNELS = ["path", "path_text"] as const;
 export type FlowEmbeddingChannel = (typeof FLOW_EMBEDDING_CHANNELS)[number];
+export const FLOW_EMBEDDING_CHANNEL_LABELS: Record<FlowEmbeddingChannel, string> = {
+  path: "Path",
+  path_text: "Path + Text",
+};
 export const FLOW_EMBEDDING_PATH_TEXT_PATH_WEIGHT = 0.75;
 export const FLOW_EMBEDDING_PATH_TEXT_TEXT_WEIGHT = 0.25;
 
@@ -72,7 +76,7 @@ export type FlowEmbeddingRecord = {
   dim: typeof FLOW_EMBEDDING_DIM;
   /** Path space: hidden-state tree + walk. Default stored vector. */
   vector: number[];
-  /** Path + transcript space. */
+  /** Path + Text space: walk mixed with spoken and written transcripts. */
   vector_path_text: number[];
   raw: FlowEmbeddingRaw;
 };
@@ -274,6 +278,10 @@ export function recoverFlowEmbeddingRaw(value: unknown): FlowEmbeddingRaw | null
 
 export function parseFlowEmbeddingChannel(value: unknown): FlowEmbeddingChannel {
   return value === "path_text" ? "path_text" : "path";
+}
+
+export function flowEmbeddingChannelLabel(channel: FlowEmbeddingChannel | string): string {
+  return FLOW_EMBEDDING_CHANNEL_LABELS[parseFlowEmbeddingChannel(channel)];
 }
 
 export function flowEmbeddingModelIdForChannel(

@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { computeKnowledgeDistance } from "@/lib/knowledge-config";
-import { FLOW_EMBEDDING_MODEL_ID, vectorsMatch } from "@/lib/flow-embedding";
+import {
+  FLOW_EMBEDDING_MODEL_ID,
+  FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
+  vectorsMatch,
+} from "@/lib/flow-embedding";
 import {
   PRODUCTION_STUDIO_DEMO_MARKER,
   PRODUCTION_STUDIO_DEMO_SETS,
@@ -43,6 +47,12 @@ describe("production Data Studio demo sets", () => {
       expect(region.subject_count).toBe(3);
       expect(computeKnowledgeDistance(ada.embedding.vector, region).in_region).toBe(true);
       expect(computeKnowledgeDistance(eve.embedding.vector, region).in_region).toBe(false);
+      const voice = buildStudioDemoRegion(set, encoded, "path_text");
+      expect(voice.embedding_model_id).toBe(FLOW_EMBEDDING_PATH_TEXT_MODEL_ID);
+      expect(voice.name).toContain("Path + Text");
+      expect(voice.name).not.toBe(region.name);
+      expect(computeKnowledgeDistance(ada.embedding.vector_path_text, voice).in_region).toBe(true);
+      expect(computeKnowledgeDistance(eve.embedding.vector_path_text, voice).in_region).toBe(false);
     }
     const [a, b] = PRODUCTION_STUDIO_DEMO_SETS;
     expect(encodeStudioDemoRuns(a)[0]?.embedding.vector).not.toEqual(
@@ -60,6 +70,8 @@ describe("production Data Studio demo sets", () => {
     expect(seed).toContain("workspace_flow_embeddings");
     expect(seed).toContain("tap_session_id");
     expect(seed).toContain("custom_verification_models");
+    expect(seed).toContain("buildStudioDemoRegions");
+    expect(seed).toContain("regions.voice");
     expect(existsSync(join(ROOT, "scripts/seed-production-studio-demo-sets.ts"))).toBe(true);
     const pkg = readFileSync(join(ROOT, "package.json"), "utf8");
     expect(pkg).toContain("db:seed-production-studio-demos");

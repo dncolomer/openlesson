@@ -13,7 +13,7 @@ import {
   LOCALHOST_VERIFICATION_STUDIO_FLOW,
   LOCALHOST_VERIFICATION_STUDIO_MARKER,
   LOCALHOST_VERIFICATION_STUDIO_WORKSPACE,
-  buildLocalhostVerificationStudioRegion,
+  buildLocalhostVerificationStudioRegions,
   encodeLocalhostVerificationStudioRuns,
   localhostVerificationStudioTree,
 } from "../lib/demo/localhost-verification-studio-sample";
@@ -174,7 +174,7 @@ async function main() {
 
     const model = localhostVerificationStudioTree();
     const encoded = encodeLocalhostVerificationStudioRuns(model);
-    const region = buildLocalhostVerificationStudioRegion(encoded);
+    const regions = buildLocalhostVerificationStudioRegions(encoded);
     const now = Date.now();
 
     for (const [index, run] of encoded.entries()) {
@@ -249,41 +249,47 @@ async function main() {
       );
     }
 
-    await client.query(
-      `INSERT INTO public.custom_verification_models (
-         workspace_id, name, description, embedding_model_id, dim,
-         centroid, cohort_cohesion, mean_radius, cosine_threshold,
-         subject_count, subjects, created_by
-       ) VALUES (
-         $1, $2, $3, $4, $5,
-         $6::jsonb, $7, $8, $9,
-         $10, $11::jsonb, $12
-       )`,
-      [
-        workspaceId,
-        region.name,
-        "Path-space region of the cheapest ε-δ walks (ada, bea, cam).",
-        region.embedding_model_id,
-        region.dim,
-        JSON.stringify(region.centroid),
-        region.cohort_cohesion,
-        region.mean_radius,
-        region.cosine_threshold,
-        region.subject_count,
-        JSON.stringify(region.subjects),
-        owner.userId,
-      ],
-    );
+    for (const region of [regions.path, regions.voice]) {
+      await client.query(
+        `INSERT INTO public.custom_verification_models (
+           workspace_id, name, description, embedding_model_id, dim,
+           centroid, cohort_cohesion, mean_radius, cosine_threshold,
+           subject_count, subjects, created_by
+         ) VALUES (
+           $1, $2, $3, $4, $5,
+           $6::jsonb, $7, $8, $9,
+           $10, $11::jsonb, $12
+         )`,
+        [
+          workspaceId,
+          region.name,
+          region.embedding_model_id === FLOW_EMBEDDING_MODEL_ID
+            ? "Path-space region of the cheapest ε-δ walks (ada, bea, cam)."
+            : "Path + Text region of the cheapest ε-δ walks (ada, bea, cam).",
+          region.embedding_model_id,
+          region.dim,
+          JSON.stringify(region.centroid),
+          region.cohort_cohesion,
+          region.mean_radius,
+          region.cosine_threshold,
+          region.subject_count,
+          JSON.stringify(region.subjects),
+          owner.userId,
+        ],
+      );
+    }
 
     await client.query("COMMIT");
     console.log(`[seed-local-studio] workspace_id=${workspaceId}`);
     console.log(`[seed-local-studio] flow_id=${flowId} token=${publicToken}`);
-    console.log(`[seed-local-studio] runs=${encoded.length} region=${region.name}`);
+    console.log(
+      `[seed-local-studio] runs=${encoded.length} regions=${regions.path.name}, ${regions.voice.name}`,
+    );
     console.log(`[seed-local-studio] Data Studio ${appUrl}/dashboard?tab=verification_studio`);
     console.log(`[seed-local-studio] Workspace ${appUrl}/workspace/${workspaceId}?section=data_studio`);
     console.log(`[seed-local-studio] Public flow ${appUrl}/v/${publicToken}`);
     console.log(
-      "[seed-local-studio] Path: ada=bea (same walk), cam nearby in-region, eve outside. Path+text splits ada/bea speech.",
+      "[seed-local-studio] Path: ada=bea (same walk), cam nearby in-region, eve outside. Path + Text splits ada/bea speech.",
     );
     console.log("[seed-local-studio] SUCCESS");
   } catch (error) {

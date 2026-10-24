@@ -26,6 +26,14 @@ describe("dashboard knowledge regions", () => {
       [
         { id: "r-learn", name: "Skip", workspace_id: "learn", subject_count: 2, created_at: "2026-01-01" },
         { id: "r-v", name: "Limits", workspace_id: "v1", subject_count: 4, created_at: "2026-05-02" },
+        {
+          id: "r-voice",
+          name: "Limits · Path + Text",
+          workspace_id: "v1",
+          subject_count: 4,
+          created_at: "2026-05-03",
+          embedding_model_id: "flowcfg-pathtext-v1-d96",
+        },
         { id: "r-c", name: "Priors", workspace_id: "c1", description: "thin", subject_count: 1, created_at: "2026-05-01" },
         { id: "orphan", name: "Gone", workspace_id: "missing", subject_count: 1 },
       ],
@@ -79,6 +87,7 @@ describe("dashboard knowledge regions", () => {
     expect(route).toContain("requireAuthenticatedUser");
     expect(route).toContain("custom_verification_models");
     expect(route).toContain("presentDashboardKnowledgeRegions");
+    expect(route).toContain("buildVoiceRegionFromFlowRaws");
     const dash = readDashboardSurface();
     expect(dash).toContain("data-dashboard-knowledge-regions");
     expect(dash).toContain("DASHBOARD_KNOWLEDGE_REGIONS_PATH");

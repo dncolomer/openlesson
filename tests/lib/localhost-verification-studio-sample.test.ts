@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { computeKnowledgeDistance } from "@/lib/knowledge-config";
 import {
   FLOW_EMBEDDING_MODEL_ID,
+  FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
   vectorsMatch,
 } from "@/lib/flow-embedding";
 import {
@@ -37,6 +38,11 @@ describe("localhost verification Data Studio sample", () => {
     expect(region.subject_count).toBe(3);
     expect(computeKnowledgeDistance(ada.embedding.vector, region).in_region).toBe(true);
     expect(computeKnowledgeDistance(eve.embedding.vector, region).in_region).toBe(false);
+    const voice = buildLocalhostVerificationStudioRegion(encoded, "path_text");
+    expect(voice.embedding_model_id).toBe(FLOW_EMBEDDING_PATH_TEXT_MODEL_ID);
+    expect(voice.name).toBe("ε-δ walkers · Path + Text");
+    expect(computeKnowledgeDistance(ada.embedding.vector_path_text, voice).in_region).toBe(true);
+    expect(computeKnowledgeDistance(eve.embedding.vector_path_text, voice).in_region).toBe(false);
     expect(LOCALHOST_VERIFICATION_STUDIO_WORKSPACE.workspace_kind).toBe("knowledge_region");
     expect(LOCALHOST_VERIFICATION_STUDIO_WORKSPACE.notes).toContain(
       LOCALHOST_VERIFICATION_STUDIO_MARKER,
@@ -57,6 +63,7 @@ describe("localhost verification Data Studio sample", () => {
     expect(seed).toContain("workspace_flow_embeddings");
     expect(seed).toContain("transcript_snapshot");
     expect(seed).toContain("custom_verification_models");
+    expect(seed).toContain("regions.voice");
     expect(existsSync(join(ROOT, "scripts/seed-localhost-verification-studio.ts"))).toBe(true);
   });
 });

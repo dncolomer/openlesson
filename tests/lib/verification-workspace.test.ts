@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  completeFlowEmbedding,
   FLOW_EMBEDDING_DIM,
   FLOW_EMBEDDING_MODEL_ID,
   FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
@@ -19,6 +20,7 @@ import {
   applyVerificationCommand,
   buildRegionFromFlowEmbeddings,
   buildRegionFromSyntheticItems,
+  buildVoiceRegionFromFlowRaws,
   buildSyntheticAgentPowRequest,
   buildVerificationFlowSkillMarkdown,
   emptyVerificationState,
@@ -263,6 +265,23 @@ describe("region embeddings from a verification flow and synthetic agents", () =
     expect(spec.centroid[0]).toBeGreaterThan(0.99);
     expect(Math.abs(spec.centroid[1] || 0)).toBeLessThan(1e-6);
     expect(spec.embedding_model_id).toBe(FLOW_EMBEDDING_MODEL_ID);
+    const voice = buildVoiceRegionFromFlowRaws({
+      name: "Limits region",
+      embeddings: [
+        completeFlowEmbedding({
+          flowKind: "verify",
+          pow: [{ type: "speech", timestamp_ms: 1, payload: "epsilon delta" }],
+        }),
+        completeFlowEmbedding({
+          flowKind: "verify",
+          pow: [{ type: "speech", timestamp_ms: 1, payload: "same walk different words" }],
+        }),
+      ],
+    });
+    expect(voice?.name).toBe("Limits region · Path + Text");
+    expect(voice?.embedding_model_id).toBe(FLOW_EMBEDDING_PATH_TEXT_MODEL_ID);
+    expect(voice?.subject_count).toBe(2);
+    expect(buildVoiceRegionFromFlowRaws({ name: "Limits region", embeddings: [] })).toBeNull();
   });
 
   it("asks xAI for proof of work with the optional modifier and builds from the returned items", async () => {

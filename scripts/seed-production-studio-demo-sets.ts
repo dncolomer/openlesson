@@ -12,7 +12,7 @@ import { connectTarget, loadEnvFile, projectRefFromUrl } from "./db-connection.m
 import {
   PRODUCTION_STUDIO_DEMO_MARKER,
   PRODUCTION_STUDIO_DEMO_SETS,
-  buildStudioDemoRegion,
+  buildStudioDemoRegions,
   encodeStudioDemoRuns,
   studioDemoCalibrationEvents,
   type StudioDemoSetDef,
@@ -179,7 +179,7 @@ async function seedSet(
   }
 
   const encoded = encodeStudioDemoRuns(set);
-  const region = buildStudioDemoRegion(set, encoded);
+  const regions = buildStudioDemoRegions(set, encoded);
   const now = Date.now();
   const flowKind = set.flowKind;
 
@@ -277,31 +277,33 @@ async function seedSet(
     );
   }
 
-  await client.query(
-    `INSERT INTO public.custom_verification_models (
-       workspace_id, name, description, embedding_model_id, dim,
-       centroid, cohort_cohesion, mean_radius, cosine_threshold,
-       subject_count, subjects, created_by
-     ) VALUES (
-       $1, $2, $3, $4, $5,
-       $6::jsonb, $7, $8, $9,
-       $10, $11::jsonb, $12
-     )`,
-    [
-      workspaceId,
-      region.name,
-      set.regionDescription,
-      region.embedding_model_id,
-      region.dim,
-      JSON.stringify(region.centroid),
-      region.cohort_cohesion,
-      region.mean_radius,
-      region.cosine_threshold,
-      region.subject_count,
-      JSON.stringify(region.subjects),
-      owner.userId,
-    ],
-  );
+  for (const region of [regions.path, regions.voice]) {
+    await client.query(
+      `INSERT INTO public.custom_verification_models (
+         workspace_id, name, description, embedding_model_id, dim,
+         centroid, cohort_cohesion, mean_radius, cosine_threshold,
+         subject_count, subjects, created_by
+       ) VALUES (
+         $1, $2, $3, $4, $5,
+         $6::jsonb, $7, $8, $9,
+         $10, $11::jsonb, $12
+       )`,
+      [
+        workspaceId,
+        region.name,
+        set.regionDescription,
+        region.embedding_model_id,
+        region.dim,
+        JSON.stringify(region.centroid),
+        region.cohort_cohesion,
+        region.mean_radius,
+        region.cosine_threshold,
+        region.subject_count,
+        JSON.stringify(region.subjects),
+        owner.userId,
+      ],
+    );
+  }
 
   return { workspaceId, flowId, publicToken, runCount: encoded.length };
 }

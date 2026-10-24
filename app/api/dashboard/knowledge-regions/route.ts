@@ -11,7 +11,11 @@ import {
 import { parseProductFlowKind, productRegionPagePath } from "@/lib/product-flow";
 import { listProductFlowWorkspaceIds } from "@/lib/product-flow-owner";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { buildRegionFromFlowEmbeddings } from "@/lib/verification-flow";
+import {
+  buildRegionFromFlowEmbeddings,
+  buildVoiceRegionFromFlowRaws,
+} from "@/lib/verification-flow";
+import { listFlowEmbeddings } from "@/lib/flow-embedding-store";
 import { getCalibrationFlowById } from "@/lib/calibration-flow-repository";
 import {
   getVerificationFlowById,
@@ -48,7 +52,7 @@ export async function GET(req: NextRequest) {
 
     const { data: rows, error } = await auth.supabase
       .from("custom_verification_models")
-      .select("id, workspace_id, name, description, subject_count, created_at")
+      .select("id, workspace_id, name, description, subject_count, created_at, embedding_model_id")
       .in("workspace_id", ids)
       .order("created_at", { ascending: false });
 
@@ -126,6 +130,32 @@ export async function POST(req: NextRequest) {
       return jsonError(500, error?.message || "Failed to create knowledge region");
     }
     const id = String(data.id);
+    try {
+      const stored = await listFlowEmbeddings({
+        workspaceId: flow.workspaceId,
+        flowId,
+      });
+      const voiceSpec = buildVoiceRegionFromFlowRaws({ name, embeddings: stored });
+      if (voiceSpec) {
+        await supabase.from("custom_verification_models").insert({
+          workspace_id: flow.workspaceId,
+          name: voiceSpec.name,
+          description: `${kind}-flow:${flowId}`,
+          embedding_model_id: voiceSpec.embedding_model_id,
+          dim: voiceSpec.dim,
+          centroid: voiceSpec.centroid,
+          cohort_cohesion: voiceSpec.cohort_cohesion,
+          mean_radius: voiceSpec.mean_radius,
+          cosine_threshold: voiceSpec.cosine_threshold,
+          subject_count: voiceSpec.subject_count,
+          subjects: voiceSpec.subjects,
+          created_by: auth.user.id,
+          updated_at: new Date().toISOString(),
+        });
+      }
+    } catch {
+      /* Path region is already saved. */
+    }
     return NextResponse.json({
       kind,
       persisted: true,

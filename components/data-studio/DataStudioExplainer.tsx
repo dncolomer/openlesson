@@ -49,7 +49,7 @@ function SpacesFigure() {
         Path
       </text>
       <text x="158" y="20" fill="rgba(255,255,255,0.55)" fontSize="9" fontFamily="ui-monospace, monospace">
-        Path + text
+        Path + Text
       </text>
       <circle cx="70" cy="80" r="5" fill="#fff" />
       <circle cx="74" cy="84" r="5" fill="none" stroke="#fff" />

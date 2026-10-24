@@ -51,8 +51,8 @@ const WALK_FIGURE: DataStudioExplainerFigure = {
 
 const SPACES_FIGURE: DataStudioExplainerFigure = {
   id: "spaces",
-  title: "Path and Path + text",
-  body: "Path ignores how someone spoke. Two people on the same walk sit together. Path + text mixes that walk with spoken and written transcripts, so the same walk can split when the words differ.",
+  title: "Path and Path + Text",
+  body: "Path ignores how someone spoke. Two people on the same walk sit together. Path + Text mixes that walk with spoken and written transcripts, so the same walk can split when the words differ.",
 };
 
 const INSPECT_FIGURE: DataStudioExplainerFigure = {
@@ -79,7 +79,7 @@ function overlayFigure(product: DataStudioProduct): DataStudioExplainerFigure {
   return {
     id: "overlay",
     title: "Knowledge regions",
-    body: "White disks are regions built from Path or Path + text centroids. A disk appears only when its model matches the selected space. Hide a disk from the legend. Distances draws dashed rays labeled with ‖x−c‖ in embedding space, not the 2D layout. In region colors dots by cosine ≥ τ in 96-D, not the projected circle. The solid spread disk is the mean L2 of the builders to the centroid (mean_radius), flattened to 2D — how tightly those people clustered. The dashed ring is the cosine ball flattened the same way. PCA does not preserve distances, so a bright dot can sit outside the white disk and still be in. Filter by flow and run to compare people.",
+    body: "White disks are regions built from Path or Path + Text centroids. A disk appears only when its model matches the selected space. Hide a disk from the legend. Distances draws dashed rays labeled with ‖x−c‖ in embedding space, not the 2D layout. In region colors dots by cosine ≥ τ in 96-D, not the projected circle. The solid spread disk is the mean L2 of the builders to the centroid (mean_radius), flattened to 2D — how tightly those people clustered. The dashed ring is the cosine ball flattened the same way. PCA does not preserve distances, so a bright dot can sit outside the white disk and still be in. Filter by flow and run to compare people.",
   };
 }
 
@@ -95,9 +95,9 @@ function ledeFor(product: DataStudioProduct): string {
 
 function controlsFor(product: DataStudioProduct): string {
   if (product === "learning") {
-    return "Choose Path or Path + text, pick a projection, and filter by map. Drag to pan. Scroll to zoom. Press Help again to return to the map.";
+    return "Choose Path or Path + Text, pick a projection, and filter by map. Drag to pan. Scroll to zoom. Press Help again to return to the map.";
   }
-  return "Choose Path or Path + text, pick a projection, and filter by flow or run with search and multi-select. Toggle Distances for high-dimensional L2 to region centers. Toggle In region to color dots by cosine membership and show the dashed cosine-ball ring. Drag to pan. Scroll to zoom. Press Help again to return to the map.";
+  return "Choose Path or Path + Text, pick a projection, and filter by flow or run with search and multi-select. Toggle Distances for high-dimensional L2 to region centers. Toggle In region to color dots by cosine membership and show the dashed cosine-ball ring. Drag to pan. Scroll to zoom. Press Help again to return to the map.";
 }
 
 export function dataStudioExplainer(product: DataStudioProduct): DataStudioExplainerCopy {

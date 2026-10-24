@@ -20,6 +20,7 @@ import {
   buildStudioRegionDistanceRays,
   clampStudioInspectWidth,
   dataStudioProductLabel,
+  dataStudioSpaceLabel,
   filterStudioEmbeddings,
   formatStudioHighDimDistance,
   hiddenStudioRegionIdsForFocus,
@@ -36,9 +37,11 @@ import {
   parseStudioFocusRegionId,
   studioCameraTransform,
   studioGridLines,
+  studioHiddenRegionIdsFromVisible,
   studioRegionsForSpace,
   studioRunOptions,
   studioFlowOptions,
+  studioVisibleRegionIds,
   toggleStudioHiddenId,
   visibleStudioRegions,
   zoomStudioCamera,
@@ -67,7 +70,7 @@ type StudioPayload = {
 };
 
 const SELECT_CLASS =
-  "rounded-none border border-white/20 bg-black px-2 py-1 font-mono text-[11px] text-white outline-none focus:border-white/60";
+  "w-full min-w-0 max-w-full rounded-none border border-white/20 bg-black px-2 py-1 font-mono text-[11px] text-white outline-none focus:border-white/60";
 
 const INSPECT_WIDTH_KEY = "openlesson.data-studio.inspect-width";
 
@@ -237,6 +240,25 @@ export function DataStudioPanel({
         : studioRegionsForSpace(payload?.regions ?? [], space),
     [payload?.regions, product, space],
   );
+  const regionIds = useMemo(
+    () => spaceRegions.map((region) => region.id).filter(Boolean),
+    [spaceRegions],
+  );
+  const visibleRegionIds = useMemo(
+    () => studioVisibleRegionIds(regionIds, hiddenRegionIds),
+    [hiddenRegionIds, regionIds],
+  );
+  const regionOptions = useMemo(
+    () =>
+      spaceRegions.map((region) => ({
+        id: region.id,
+        label: region.name || region.id,
+        keywords: [region.id, region.embedding_model_id, region.source]
+          .filter(Boolean)
+          .join(" "),
+      })),
+    [spaceRegions],
+  );
 
   const projection = useMemo(
     () =>
@@ -310,6 +332,10 @@ export function DataStudioPanel({
       ),
     );
   }, [runs]);
+
+  useEffect(() => {
+    setHiddenRegionIds((current) => pruneStudioSelectedIds(current, regionIds));
+  }, [regionIds]);
 
   useEffect(() => {
     setCamera(IDENTITY_STUDIO_CAMERA);
@@ -785,71 +811,6 @@ export function DataStudioPanel({
               </g>
             </svg>
           )}
-          {view === "map" && spaceRegions.length > 0 ? (
-            <div
-              className="absolute right-3 top-3 z-[3] max-w-[220px] border border-white/15 bg-black/75 px-2 py-1.5"
-              data-data-studio-region-legend
-            >
-              <p className="mb-1 text-[9px] uppercase tracking-[0.14em] text-neutral-500">
-                Regions
-              </p>
-              {colorMembership ? (
-                <div
-                  className="mb-1.5 space-y-1 text-[10px] text-neutral-400"
-                  data-data-studio-membership-legend
-                >
-                  <p className="flex items-center gap-2">
-                    <span className="inline-flex items-center gap-1">
-                      <span
-                        className="inline-block h-2 w-2 rounded-full"
-                        style={{ background: STUDIO_IN_REGION_FILL }}
-                      />
-                      in
-                    </span>
-                    <span className="inline-flex items-center gap-1">
-                      <span
-                        className="inline-block h-2 w-2 rounded-full"
-                        style={{ background: STUDIO_OUT_REGION_FILL }}
-                      />
-                      out
-                    </span>
-                    <span className="text-neutral-600">cosine ≥ τ</span>
-                  </p>
-                  <p className="text-[9px] leading-snug text-neutral-500">
-                    Spread disk = mean ‖builder − centroid‖ of the people who defined
-                    the region, flattened to 2D. It is how tight that cohort was. Dashed
-                    ring = cosine ≥ τ ball. A bright dot outside the white disk is still
-                    in 96-D.
-                  </p>
-                </div>
-              ) : null}
-              <ul className="space-y-1">
-                {spaceRegions.map((region) => {
-                  const visible = !hiddenRegionIds.includes(region.id);
-                  return (
-                    <li key={region.id}>
-                      <label className="flex cursor-pointer items-center gap-1.5 text-[10px] text-white/80">
-                        <input
-                          type="checkbox"
-                          className="accent-white"
-                          checked={visible}
-                          onChange={() =>
-                            setHiddenRegionIds((current) =>
-                              toggleStudioHiddenId(current, region.id),
-                            )
-                          }
-                          data-data-studio-region-toggle={region.id}
-                        />
-                        <span className={visible ? "text-white" : "text-neutral-500"}>
-                          {region.name}
-                        </span>
-                      </label>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          ) : null}
           {view === "map" ? (
             <p className="pointer-events-none absolute bottom-3 left-3 z-[3] max-w-[min(36rem,calc(100%-14rem))] text-[10px] text-neutral-500">
               {colorMembership
@@ -862,20 +823,25 @@ export function DataStudioPanel({
         </div>
 
         <div
-          className="pointer-events-none absolute inset-0 z-[5]"
+          className="pointer-events-none absolute inset-0 z-[5] flex flex-col justify-between gap-2 p-3"
           data-data-studio-hud
         >
+          <div className="flex min-w-0 flex-wrap items-start gap-2">
           <header
-            className="pointer-events-auto absolute left-3 top-3 flex max-w-[calc(100%-15rem)] flex-wrap items-center gap-x-3 gap-y-2 border border-white/15 bg-black/75 px-2 py-1.5"
+            className="pointer-events-auto min-w-0 flex-1 basis-[16rem] border border-white/15 bg-black/75 px-2 py-1.5"
             data-data-studio-toolbar
           >
-            <div className="mr-1 flex items-baseline gap-2">
-              <p className="text-xs font-medium uppercase tracking-[0.16em] text-white">
+            <div className="mb-1.5 flex min-w-0 items-baseline gap-2">
+              <p className="truncate text-xs font-medium uppercase tracking-[0.16em] text-white">
                 Data Studio
               </p>
-              <span className="text-[11px] text-neutral-500">{productLabel}</span>
+              <span className="truncate text-[11px] text-neutral-500">{productLabel}</span>
             </div>
-            <label className="flex items-center gap-1.5 text-[11px] text-neutral-400">
+            <div
+              className="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(7.5rem,1fr))] gap-x-2 gap-y-1.5"
+              data-data-studio-toolbar-grid
+            >
+            <label className="flex min-w-0 flex-col gap-0.5 text-[10px] uppercase tracking-wide text-neutral-500">
               Space
               <select
                 className={SELECT_CLASS}
@@ -890,7 +856,7 @@ export function DataStudioPanel({
                 ))}
               </select>
             </label>
-            <label className="flex items-center gap-1.5 text-[11px] text-neutral-400">
+            <label className="flex min-w-0 flex-col gap-0.5 text-[10px] uppercase tracking-wide text-neutral-500">
               Projection
               <select
                 className={SELECT_CLASS}
@@ -934,7 +900,7 @@ export function DataStudioPanel({
                 />
               </>
             ) : (
-              <label className="flex items-center gap-1.5 text-[11px] text-neutral-400">
+              <label className="flex min-w-0 flex-col gap-0.5 text-[10px] uppercase tracking-wide text-neutral-500">
                 Map
                 <select
                   className={SELECT_CLASS}
@@ -951,9 +917,92 @@ export function DataStudioPanel({
                 </select>
               </label>
             )}
+            {spaceRegions.length > 0 ? (
+              <StudioMultiSelect
+                label="Region"
+                options={regionOptions}
+                selected={visibleRegionIds}
+                onChange={(ids) =>
+                  setHiddenRegionIds(studioHiddenRegionIdsFromVisible(regionIds, ids))
+                }
+                emptyLabel="None"
+                allLabel="All regions"
+                plural="regions"
+                searchPlaceholder="Search regions"
+                marker="data-data-studio-region-filter"
+                compact
+              />
+            ) : null}
+            </div>
           </header>
+          {view === "map" && spaceRegions.length > 0 ? (
+            <div
+              className="pointer-events-auto min-w-0 max-w-full shrink-0 basis-[13.5rem] border border-white/15 bg-black/75 px-2 py-1.5"
+              data-data-studio-region-legend
+            >
+              <p className="mb-1 text-[9px] uppercase tracking-[0.14em] text-neutral-500">
+                Regions
+              </p>
+              {colorMembership ? (
+                <div
+                  className="mb-1.5 space-y-1 text-[10px] text-neutral-400"
+                  data-data-studio-membership-legend
+                >
+                  <p className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-1">
+                      <span
+                        className="inline-block h-2 w-2 rounded-full"
+                        style={{ background: STUDIO_IN_REGION_FILL }}
+                      />
+                      in
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <span
+                        className="inline-block h-2 w-2 rounded-full"
+                        style={{ background: STUDIO_OUT_REGION_FILL }}
+                      />
+                      out
+                    </span>
+                    <span className="text-neutral-600">cosine ≥ τ</span>
+                  </p>
+                  <p className="text-[9px] leading-snug text-neutral-500">
+                    Spread disk = mean ‖builder − centroid‖ of the people who defined
+                    the region, flattened to 2D. It is how tight that cohort was. Dashed
+                    ring = cosine ≥ τ ball. A bright dot outside the white disk is still
+                    in 96-D.
+                  </p>
+                </div>
+              ) : null}
+              <ul className="max-h-40 space-y-1 overflow-y-auto">
+                {spaceRegions.map((region) => {
+                  const visible = !hiddenRegionIds.includes(region.id);
+                  return (
+                    <li key={region.id} className="min-w-0">
+                      <label className="flex min-w-0 cursor-pointer items-center gap-1.5 text-[10px] text-white/80">
+                        <input
+                          type="checkbox"
+                          className="accent-white"
+                          checked={visible}
+                          onChange={() =>
+                            setHiddenRegionIds((current) =>
+                              toggleStudioHiddenId(current, region.id),
+                            )
+                          }
+                          data-data-studio-region-toggle={region.id}
+                        />
+                        <span className={`min-w-0 truncate ${visible ? "text-white" : "text-neutral-500"}`}>
+                          {region.name}
+                        </span>
+                      </label>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ) : null}
+          </div>
           <div
-            className="pointer-events-auto absolute bottom-3 right-3 flex max-w-[calc(100%-1.5rem)] flex-wrap items-center justify-end gap-2 border border-white/15 bg-black/75 px-2 py-1.5 text-[10px] text-neutral-500"
+            className="pointer-events-auto ml-auto flex max-w-full min-w-0 flex-wrap items-center justify-end gap-2 border border-white/15 bg-black/75 px-2 py-1.5 text-[10px] text-neutral-500"
             data-data-studio-status
           >
             <span data-data-studio-count className="text-white/80">
@@ -1080,7 +1129,7 @@ export function DataStudioPanel({
                 <dd>{inspect.workspace_title || inspect.workspace_id || "—"}</dd>
                 <dt className="text-neutral-500">space</dt>
                 <dd data-data-studio-inspect-space>
-                  {inspect.space === "path_text" ? "Path + text" : "Path"}
+                  {dataStudioSpaceLabel(inspect.space)}
                 </dd>
                 <dt className="text-neutral-500">model</dt>
                 <dd className="break-all">{inspect.embedding_model_id}</dd>
@@ -1195,7 +1244,7 @@ export function DataStudioPanel({
 
               <details className="mt-4">
                 <summary className="cursor-pointer text-[10px] uppercase tracking-wide text-neutral-500">
-                  Vector · {inspect.space === "path_text" ? "Path + text" : "Path"} (
+                  Vector · {dataStudioSpaceLabel(inspect.space)} (
                   {inspect.vector.length})
                 </summary>
                 <pre className="mt-1 overflow-x-auto text-[10px] text-neutral-400" data-data-studio-vector>

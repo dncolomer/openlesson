@@ -36,7 +36,7 @@ export async function GET(
 
     const { data: row, error } = await auth.supabase
       .from("custom_verification_models")
-      .select("id, workspace_id, name, description, subject_count, created_at")
+      .select("id, workspace_id, name, description, subject_count, created_at, embedding_model_id")
       .eq("id", id)
       .maybeSingle();
     if (error || !row) return jsonError(404, "Region not found");

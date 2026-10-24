@@ -3,6 +3,8 @@ import {
   createCustomVerificationModelFromVectors,
   scoreAgainstCustomVerificationModel,
   CustomVerificationModelError,
+  pathTextRegionCompanionNames,
+  voiceRegionName,
 } from "@/lib/knowledge-config";
 import {
   embedTextsToFlowVector,
@@ -37,6 +39,12 @@ describe("custom verification model (shipped geometry)", () => {
 
     expect(model.name).toBe("Production SRE bar");
     expect(model.embedding_model_id).toBe(FLOW_EMBEDDING_MODEL_ID);
+    expect(voiceRegionName(model.name)).toBe("Production SRE bar · Path + Text");
+    expect(voiceRegionName("Production SRE bar · Voice")).toBe("Production SRE bar · Voice");
+    expect(pathTextRegionCompanionNames(model.name)).toEqual([
+      "Production SRE bar · Path + Text",
+      "Production SRE bar · Voice",
+    ]);
     expect(model.dim).toBe(FLOW_EMBEDDING_DIM);
     expect(model.centroid).toHaveLength(FLOW_EMBEDDING_DIM);
     expect(model.subject_count).toBe(3);

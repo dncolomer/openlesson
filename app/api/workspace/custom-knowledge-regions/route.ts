@@ -254,7 +254,7 @@ export async function POST(req: NextRequest) {
       return jsonError(400, "subjects array is required");
     }
 
-    const { model, spec } = await createCustomVerificationModelFromSubjects(auth.supabase, {
+    const { model, spec, voiceModel, voiceSpec } = await createCustomVerificationModelFromSubjects(auth.supabase, {
       workspaceId,
       name,
       description: typeof body.description === "string" ? body.description : null,
@@ -269,6 +269,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       workspace_id: workspaceId,
       model,
+      voice_model: voiceModel,
       source: "cohort",
       spec: {
         name: spec.name,
@@ -278,6 +279,16 @@ export async function POST(req: NextRequest) {
         embedding_model_id: spec.embedding_model_id,
         dim: spec.dim,
       },
+      voice_spec: voiceSpec
+        ? {
+            name: voiceSpec.name,
+            subject_count: voiceSpec.subject_count,
+            cosine_threshold: voiceSpec.cosine_threshold,
+            cohort_cohesion: voiceSpec.cohort_cohesion,
+            embedding_model_id: voiceSpec.embedding_model_id,
+            dim: voiceSpec.dim,
+          }
+        : null,
     });
   } catch (error) {
     if (error instanceof CustomVerificationModelError) {

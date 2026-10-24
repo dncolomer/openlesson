@@ -6,6 +6,7 @@ import {
   FLOW_EMBEDDING_DIM,
   FLOW_EMBEDDING_MODEL_ID,
   FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
+  flowEmbeddingChannelLabel,
   flowEmbeddingModelIdForChannel,
   recoverFlowEmbeddingRaw,
   reembedFlowRaw,
@@ -128,6 +129,8 @@ describe("flowcfg-v1-d96 embeddings", () => {
     expect(cosineSimilarity(base.vector, otherPow.vector)).toBeGreaterThan(0.999);
     expect(flowEmbeddingModelIdForChannel("path")).toBe(FLOW_EMBEDDING_MODEL_ID);
     expect(flowEmbeddingModelIdForChannel("path_text")).toBe(FLOW_EMBEDDING_PATH_TEXT_MODEL_ID);
+    expect(flowEmbeddingChannelLabel("path")).toBe("Path");
+    expect(flowEmbeddingChannelLabel("path_text")).toBe("Path + Text");
     const recovered = recoverFlowEmbeddingRaw(base);
     expect(recovered).toEqual(base.raw);
     expect(vectorsMatch(reembedFlowRaw(recovered!), base.vector)).toBe(true);

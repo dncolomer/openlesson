@@ -103,6 +103,8 @@ describe("custom verification model surfaces", () => {
   it("API routes expose cohort create, synthetic create with files, delete, eval, knowledge distance, and listing", () => {
     const cookie = read("app/api/workspace/custom-knowledge-regions/route.ts");
     expect(cookie).toContain("createCustomVerificationModelFromSubjects");
+    expect(cookie).toContain("voice_model");
+    expect(cookie).toContain("voice_spec");
     expect(cookie).toContain("createSyntheticCustomVerificationModel");
     expect(cookie).toContain("deleteCustomVerificationModel");
     expect(cookie).toContain("create_synthetic");
@@ -122,6 +124,10 @@ describe("custom verification model surfaces", () => {
     expect(store).toContain("createSyntheticKnowledgeRegionFromProfile");
     expect(store).toContain("computeKnowledgeDistance");
     expect(store).toContain("deleteCustomVerificationModel");
+    expect(store).toContain("voiceRegionName");
+    expect(store).toContain("pathTextRegionCompanionNames");
+    expect(store).toContain("FLOW_EMBEDDING_PATH_TEXT_MODEL_ID");
+    expect(store).toContain("vector_path_text");
     expect(store).toContain("buildSyntheticRegionGenerationPrompt");
     expect(store).toContain("decodeSyntheticRegionFileText");
     expect(store).toContain("files");

@@ -1,17 +1,20 @@
 /**
  * Production Data Studio demo catalog: two Verification sets and two
  * Calibration sets. Each has a priced hidden-state tree, six walks,
- * spoken traces, and a Path-space region. No DB I/O.
+ * spoken traces, and Path plus Path + Text regions. No DB I/O.
  */
 
 import {
   completeFlowEmbedding,
-  FLOW_EMBEDDING_MODEL_ID,
+  flowEmbeddingModelIdForChannel,
+  parseFlowEmbeddingChannel,
+  type FlowEmbeddingChannel,
   type FlowEmbeddingRecord,
   type FlowKind,
 } from "@/lib/flow-embedding";
 import {
   createCustomVerificationModelFromVectors,
+  voiceRegionName,
   type CustomVerificationModelSpec,
 } from "@/lib/knowledge-config/custom-verification-model";
 import { cosineSimilarity } from "@/lib/knowledge-config/math";
@@ -617,24 +620,40 @@ export function buildStudioDemoRegion(
   encoded: readonly (StudioDemoRunDef & { embedding: FlowEmbeddingRecord })[] = encodeStudioDemoRuns(
     set,
   ),
+  channel: FlowEmbeddingChannel | string = "path",
 ): CustomVerificationModelSpec {
+  const space = parseFlowEmbeddingChannel(channel);
   const inRegion = encoded.filter((run) => run.inRegion);
+  const vectorOf = (run: StudioDemoRunDef & { embedding: FlowEmbeddingRecord }) =>
+    space === "path_text" ? run.embedding.vector_path_text : run.embedding.vector;
   const model = createCustomVerificationModelFromVectors({
-    name: set.regionName,
-    vectors: inRegion.map((run) => run.embedding.vector),
+    name: space === "path_text" ? voiceRegionName(set.regionName) : set.regionName,
+    vectors: inRegion.map(vectorOf),
     subjects: inRegion.map((run) => ({ label: run.identity })),
-    embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
+    embedding_model_id: flowEmbeddingModelIdForChannel(space),
   });
   const outsider = encoded.find((run) => run.key === "eve");
   if (!outsider) return model;
   const inMin = Math.min(
-    ...inRegion.map((run) => cosineSimilarity(run.embedding.vector, model.centroid)),
+    ...inRegion.map((run) => cosineSimilarity(vectorOf(run), model.centroid)),
   );
-  const outCos = cosineSimilarity(outsider.embedding.vector, model.centroid);
+  const outCos = cosineSimilarity(vectorOf(outsider), model.centroid);
   if (!(inMin > outCos)) return model;
   return {
     ...model,
     cosine_threshold: (inMin + outCos) / 2,
+  };
+}
+
+export function buildStudioDemoRegions(
+  set: StudioDemoSetDef,
+  encoded: readonly (StudioDemoRunDef & { embedding: FlowEmbeddingRecord })[] = encodeStudioDemoRuns(
+    set,
+  ),
+): { path: CustomVerificationModelSpec; voice: CustomVerificationModelSpec } {
+  return {
+    path: buildStudioDemoRegion(set, encoded, "path"),
+    voice: buildStudioDemoRegion(set, encoded, "path_text"),
   };
 }
 

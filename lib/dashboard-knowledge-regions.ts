@@ -3,6 +3,7 @@
  * and Calibration flows, listed without a workspace type.
  */
 
+import { FLOW_EMBEDDING_PATH_TEXT_MODEL_ID } from "@/lib/flow-embedding";
 import { productRegionNewPath, productRegionPagePath } from "@/lib/product-flow";
 import {
   workspaceProductShell,
@@ -62,6 +63,7 @@ export function presentDashboardKnowledgeRegions(
     workspace_id?: unknown;
     subject_count?: unknown;
     created_at?: unknown;
+    embedding_model_id?: unknown;
   }[],
   kind: DashboardKnowledgeRegionKind,
 ): DashboardKnowledgeRegion[] {
@@ -83,6 +85,7 @@ export function presentDashboardKnowledgeRegions(
     const workspaceId = String(region.workspace_id || "").trim();
     const name = String(region.name || "").trim();
     if (!id || !workspaceId || !name) continue;
+    if (String(region.embedding_model_id || "") === FLOW_EMBEDDING_PATH_TEXT_MODEL_ID) continue;
     const workspaceTitle = titleById.get(workspaceId);
     if (!workspaceTitle) continue;
     const subjectCount = Number(region.subject_count);

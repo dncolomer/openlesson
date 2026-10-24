@@ -76,6 +76,28 @@ function isFiniteVector(vector: unknown, dim: number): vector is number[] {
   return Array.isArray(vector) && vector.length === dim && vector.every((n) => Number.isFinite(n));
 }
 
+export const FLOW_REGION_PATH_TEXT_NAME_SUFFIX = " · Path + Text";
+/** @deprecated HUD used to say Voice; kept as an alias of Path + Text. */
+export const FLOW_REGION_VOICE_NAME_SUFFIX = FLOW_REGION_PATH_TEXT_NAME_SUFFIX;
+const FLOW_REGION_PATH_TEXT_NAME_SUFFIXES = [" · Path + Text", " · Voice"] as const;
+
+export function voiceRegionName(pathName: string): string {
+  const base = pathName.trim();
+  if (!base) return "Path + Text";
+  if (FLOW_REGION_PATH_TEXT_NAME_SUFFIXES.some((suffix) => base.endsWith(suffix))) {
+    return base.slice(0, 120);
+  }
+  return `${base}${FLOW_REGION_PATH_TEXT_NAME_SUFFIX}`.slice(0, 120);
+}
+
+export function pathTextRegionCompanionNames(pathName: string): string[] {
+  const base = pathName.trim();
+  if (!base) return [];
+  return [...new Set(FLOW_REGION_PATH_TEXT_NAME_SUFFIXES.map((suffix) => `${base}${suffix}`.slice(0, 120)))].filter(
+    (name) => name !== base,
+  );
+}
+
 function assertCompatibleVector(vector: number[], embeddingModelId: string, dim: number) {
   if (!isFiniteVector(vector, dim)) {
     throw new CustomVerificationModelError(

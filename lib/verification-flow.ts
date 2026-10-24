@@ -11,11 +11,15 @@ import {
   completeFlowEmbedding,
   FLOW_EMBEDDING_MODEL_ID,
   FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
+  isFlowEmbeddingVector,
+  recoverFlowEmbeddingRaw,
+  reembedFlowRaw,
   type FlowEmbeddingChannel,
 } from "@/lib/flow-embedding";
 import type { SessionBranchModel } from "@/lib/session-branch-model";
 import {
   createCustomVerificationModelFromVectors,
+  voiceRegionName,
   type CustomVerificationModelSpec,
 } from "@/lib/knowledge-config/custom-verification-model";
 import { flowCountdownMinutes } from "@/lib/flow-countdown";
@@ -229,6 +233,29 @@ export function buildRegionFromFlowEmbeddings(input: {
     vectors,
     subjects: vectors.map(() => ({ label: input.flowId })),
     embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
+  });
+}
+
+/** Path + Text companion from recoverable flow raws for the same cohort. */
+export function buildVoiceRegionFromFlowRaws(input: {
+  name: string;
+  embeddings: readonly { raw?: unknown }[];
+}): CustomVerificationModelSpec | null {
+  const pathName = input.name.trim();
+  const name = voiceRegionName(pathName);
+  if (!pathName || name === pathName) return null;
+  const vectors = input.embeddings
+    .map((row) => {
+      const recovered = recoverFlowEmbeddingRaw(row.raw);
+      return recovered ? reembedFlowRaw(recovered, "path_text") : null;
+    })
+    .filter(isFlowEmbeddingVector);
+  if (!vectors.length) return null;
+  return createCustomVerificationModelFromVectors({
+    name,
+    vectors,
+    subjects: vectors.map(() => ({ label: pathName })),
+    embedding_model_id: FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
   });
 }
 

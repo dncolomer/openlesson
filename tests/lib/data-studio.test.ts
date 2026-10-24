@@ -51,6 +51,8 @@ import {
   inspectStudioEmbedding,
   panStudioCamera,
   parseDataStudioSpace,
+  DATA_STUDIO_SPACE_OPTIONS,
+  dataStudioSpaceLabel,
   presentDashboardDataStudio,
   projectStudioEmbeddings2D,
   scopeLearningStudioEmbeddings,
@@ -61,9 +63,12 @@ import {
   studioGridLines,
   studioNiceGridStep,
   STUDIO_IN_REGION_FILL,
+  studioCountPhrase,
   studioMultiSelectSummary,
   studioOptionMatchesQuery,
   pruneStudioSelectedIds,
+  studioHiddenRegionIdsFromVisible,
+  studioVisibleRegionIds,
   toggleStudioSelectedId,
   studioRunOptions,
   studioScreenToWorld,
@@ -478,9 +483,12 @@ describe("product Data Studio chrome", () => {
     expect(visual).toContain("data-data-studio-plot");
     expect(visual).toContain("data-data-studio-hud");
     expect(visual).toContain("data-data-studio-toolbar");
+    expect(visual).toContain("data-data-studio-toolbar-grid");
+    expect(visual).toContain("minmax(7.5rem,1fr)");
     expect(visual).toContain("data-data-studio-status");
     expect(visual).toContain("data-data-studio-flow-filter");
     expect(visual).toContain("data-data-studio-run-filter");
+    expect(visual).toContain("data-data-studio-region-filter");
     expect(visual).toContain("StudioMultiSelect");
     const select = readFileSync(join(ROOT, "components/data-studio/StudioMultiSelect.tsx"), "utf8");
     expect(select).toContain("data-data-studio-select-search");
@@ -494,7 +502,7 @@ describe("product Data Studio chrome", () => {
     expect(visual).toContain("data-data-studio-reset-camera");
     expect(visual).toContain("data-data-studio-camera");
     expect(visual).toContain("data-data-studio-space-select");
-    expect(visual).toContain("Path + text");
+    expect(visual).toContain("dataStudioSpaceLabel");
     expect(visual).toContain("All together");
     expect(visual).toContain("data-data-studio-help");
     expect(visual).toContain("data-data-studio-view");
@@ -560,7 +568,7 @@ describe("Data Studio help explainer", () => {
     expect(learning.lede).toContain("Learn");
     expect(learning.figures[2]?.body).toContain("play");
     expect(learning.controls).toContain("map");
-    expect(verification.figures[1]?.body).toContain("Path + text");
+    expect(verification.figures[1]?.body).toContain("Path + Text");
   });
 });
 
@@ -624,6 +632,33 @@ describe("studio flow/run filters, inspect, projection, learning scope", () => {
       "Limits (2)",
     );
     expect(studioMultiSelectSummary(["a", "b"], [], "All together", "flows")).toBe("2 flows");
+    expect(studioCountPhrase(1, "flows")).toBe("1 flow");
+    expect(studioCountPhrase(2, "regions")).toBe("2 regions");
+    expect(
+      studioMultiSelectSummary(
+        ["flow-a"],
+        [{ id: "flow-a", label: "7d676f16-aaaa-bbbb-cccc-1234567890ab (6)" }],
+        "All together",
+        "flows",
+        undefined,
+        true,
+      ),
+    ).toBe("1 flow");
+    expect(
+      studioMultiSelectSummary(
+        ["r1", "r2"],
+        [
+          { id: "r1", label: "ε-δ walkers" },
+          { id: "r2", label: "Bayes" },
+        ],
+        "None",
+        "regions",
+        "All regions",
+      ),
+    ).toBe("All regions");
+    expect(studioVisibleRegionIds(["r1", "r2"], ["r2"])).toEqual(["r1"]);
+    expect(studioHiddenRegionIdsFromVisible(["r1", "r2"], ["r1"])).toEqual(["r2"]);
+    expect(studioHiddenRegionIdsFromVisible(["r1", "r2"], [])).toEqual(["r1", "r2"]);
     expect(toggleStudioSelectedId(["flow-a"], "flow-b")).toEqual(["flow-a", "flow-b"]);
     expect(toggleStudioSelectedId(["flow-a", "flow-b"], "flow-a")).toEqual(["flow-b"]);
     expect(pruneStudioSelectedIds(["run-1", "run-9"], ["run-1", "run-2"])).toEqual(["run-1"]);
@@ -755,7 +790,13 @@ describe("studio flow/run filters, inspect, projection, learning scope", () => {
     expect(overlay.membershipScreenRadius).toBeGreaterThan(overlay.screenRadius);
   });
 
-  it("switches Path and Path + text spaces and overlays only matching regions", () => {
+  it("switches Path and Path + Text spaces and overlays only matching regions", () => {
+    expect(DATA_STUDIO_SPACE_OPTIONS).toEqual([
+      { id: "path", label: "Path" },
+      { id: "path_text", label: "Path + Text" },
+    ]);
+    expect(dataStudioSpaceLabel("path")).toBe("Path");
+    expect(dataStudioSpaceLabel("path_text")).toBe("Path + Text");
     expect(parseDataStudioSpace("path_text")).toBe("path_text");
     expect(parseDataStudioSpace("nope")).toBe("path");
     const a = studioRow({ id: "p1", prompt: "alpha spoken", identity: "ada" });

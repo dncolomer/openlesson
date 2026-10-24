@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   pruneStudioSelectedIds,
   studioMultiSelectSummary,
@@ -17,6 +17,7 @@ export function StudioMultiSelect({
   onChange,
   emptyLabel,
   plural,
+  allLabel,
   searchPlaceholder = "Search",
   marker,
   compact = false,
@@ -27,6 +28,7 @@ export function StudioMultiSelect({
   onChange: (ids: string[]) => void;
   emptyLabel: string;
   plural: string;
+  allLabel?: string;
   searchPlaceholder?: string;
   marker: string;
   compact?: boolean;
@@ -35,6 +37,7 @@ export function StudioMultiSelect({
   const searchRef = useRef<HTMLInputElement | null>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [menuAlign, setMenuAlign] = useState<"left" | "right">("left");
 
   const availableIds = useMemo(() => options.map((option) => option.id), [options]);
   const chosen = useMemo(
@@ -45,7 +48,20 @@ export function StudioMultiSelect({
     () => options.filter((option) => studioOptionMatchesQuery(option, query)),
     [options, query],
   );
-  const summary = studioMultiSelectSummary(chosen, options, emptyLabel, plural);
+  const summary = studioMultiSelectSummary(
+    chosen,
+    options,
+    emptyLabel,
+    plural,
+    allLabel,
+    compact,
+  );
+
+  useLayoutEffect(() => {
+    if (!open || !rootRef.current) return;
+    const rect = rootRef.current.getBoundingClientRect();
+    setMenuAlign(rect.left + 288 > window.innerWidth - 12 ? "right" : "left");
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -78,17 +94,27 @@ export function StudioMultiSelect({
   return (
     <div
       ref={rootRef}
-      className={compact ? "relative flex items-center gap-1.5" : "relative"}
+      className={
+        compact
+          ? "relative flex min-w-0 w-full flex-col gap-0.5"
+          : "relative"
+      }
     >
-      <p className={compact ? "mb-0 text-[11px] text-neutral-400" : "mb-0.5 text-[11px] text-neutral-400"}>
+      <p
+        className={
+          compact
+            ? "text-[10px] uppercase tracking-wide text-neutral-500"
+            : "mb-0.5 text-[11px] text-neutral-400"
+        }
+      >
         {label}
       </p>
       <button
         type="button"
         className={
           compact
-            ? "flex min-w-[8.5rem] max-w-[14rem] items-center justify-between gap-2 rounded-none border border-white/20 bg-black px-2 py-1 text-left font-mono text-[11px] text-white outline-none hover:border-white/50 focus:border-white/60"
-            : "flex min-w-[11rem] max-w-[18rem] items-center justify-between gap-2 rounded-none border border-white/20 bg-black px-2 py-1 text-left font-mono text-[11px] text-white outline-none hover:border-white/50 focus:border-white/60"
+            ? "flex w-full min-w-0 items-center justify-between gap-2 overflow-hidden rounded-none border border-white/20 bg-black px-2 py-1 text-left font-mono text-[11px] text-white outline-none hover:border-white/50 focus:border-white/60"
+            : "flex min-w-[11rem] max-w-[18rem] items-center justify-between gap-2 overflow-hidden rounded-none border border-white/20 bg-black px-2 py-1 text-left font-mono text-[11px] text-white outline-none hover:border-white/50 focus:border-white/60"
         }
         aria-haspopup="listbox"
         aria-expanded={open}
@@ -97,13 +123,18 @@ export function StudioMultiSelect({
         {...{ [marker]: chosen.join(",") }}
         onClick={() => setOpen((current) => !current)}
       >
-        <span className="truncate">{summary}</span>
-        <span className="text-neutral-500">{open ? "▴" : "▾"}</span>
+        <span className="min-w-0 flex-1 truncate">{summary}</span>
+        <span className="shrink-0 text-neutral-500">{open ? "▴" : "▾"}</span>
       </button>
       {open ? (
         <div
-          className="absolute left-0 z-20 mt-1 w-[18rem] border border-white/20 bg-black shadow-[0_12px_32px_rgba(0,0,0,0.55)]"
+          className={
+            menuAlign === "right"
+              ? "absolute right-0 z-30 mt-1 w-[min(18rem,calc(100vw-1.5rem))] border border-white/20 bg-black shadow-[0_12px_32px_rgba(0,0,0,0.55)]"
+              : "absolute left-0 z-30 mt-1 w-[min(18rem,calc(100vw-1.5rem))] border border-white/20 bg-black shadow-[0_12px_32px_rgba(0,0,0,0.55)]"
+          }
           data-data-studio-select-menu={marker}
+          data-data-studio-select-align={menuAlign}
         >
           <div className="border-b border-white/15 p-1.5">
             <input
@@ -112,7 +143,7 @@ export function StudioMultiSelect({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={searchPlaceholder}
-              className="w-full rounded-none border border-white/20 bg-black px-2 py-1 font-mono text-[11px] text-white outline-none placeholder:text-neutral-600 focus:border-white/60"
+              className="w-full min-w-0 rounded-none border border-white/20 bg-black px-2 py-1 font-mono text-[11px] text-white outline-none placeholder:text-neutral-600 focus:border-white/60"
               data-data-studio-select-search={marker}
             />
           </div>

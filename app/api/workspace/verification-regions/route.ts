@@ -12,9 +12,11 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import {
   buildRegionFromFlowEmbeddings,
   buildRegionFromSyntheticItems,
+  buildVoiceRegionFromFlowRaws,
   generateSyntheticPowItems,
   type SyntheticPowRequest,
 } from "@/lib/verification-flow";
+import { listFlowEmbeddings } from "@/lib/flow-embedding-store";
 import { listVerificationResults } from "@/lib/verification-flow-repository";
 import { denyWorkspaceFeatureById } from "@/lib/workspace-feature-gate";
 
@@ -101,6 +103,21 @@ export async function POST(req: NextRequest) {
         spec,
         createdBy: auth.subjectId,
       });
+      try {
+        const stored = await listFlowEmbeddings({ workspaceId, flowId });
+        const voiceSpec = buildVoiceRegionFromFlowRaws({ name, embeddings: stored });
+        if (voiceSpec) {
+          await persistSpec({
+            workspaceId,
+            name: voiceSpec.name,
+            description: `verification-flow:${flowId}`,
+            spec: voiceSpec,
+            createdBy: auth.subjectId,
+          });
+        }
+      } catch {
+        /* Path region is already saved. */
+      }
       return NextResponse.json({
         action,
         flowId,

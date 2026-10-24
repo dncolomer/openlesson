@@ -8,6 +8,7 @@ import {
   FLOW_EMBEDDING_CHANNELS,
   FLOW_EMBEDDING_MODEL_ID,
   FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
+  flowEmbeddingChannelLabel,
   flowEmbeddingModelIdForChannel,
   parseFlowEmbeddingChannel,
   recoverFlowEmbeddingRaw,
@@ -52,15 +53,19 @@ export const DATA_STUDIO_SPACES = FLOW_EMBEDDING_CHANNELS;
 export const DATA_STUDIO_SPACE_OPTIONS: ReadonlyArray<{
   id: FlowEmbeddingChannel;
   label: string;
-}> = [
-  { id: "path", label: "Path" },
-  { id: "path_text", label: "Path + text" },
-];
+}> = FLOW_EMBEDDING_CHANNELS.map((id) => ({
+  id,
+  label: flowEmbeddingChannelLabel(id),
+}));
 
 export type DataStudioSpace = FlowEmbeddingChannel;
 
 export function parseDataStudioSpace(value: unknown): DataStudioSpace {
   return parseFlowEmbeddingChannel(value);
+}
+
+export function dataStudioSpaceLabel(space: DataStudioSpace | string): string {
+  return flowEmbeddingChannelLabel(space);
 }
 
 export type DataStudioEmbeddingRow = {
@@ -211,17 +216,51 @@ export function pruneStudioSelectedIds(
   return next;
 }
 
+export function studioCountPhrase(count: number, plural: string): string {
+  if (count === 1 && plural.endsWith("s") && !plural.endsWith("ss")) {
+    return `1 ${plural.slice(0, -1)}`;
+  }
+  return `${count} ${plural}`;
+}
+
 export function studioMultiSelectSummary(
   selected: readonly string[],
   options: readonly StudioSelectOption[],
   emptyLabel: string,
   plural: string,
+  allLabel?: string,
+  compact = false,
 ): string {
   if (selected.length === 0) return emptyLabel;
+  if (
+    allLabel &&
+    options.length > 0 &&
+    selected.length === options.length &&
+    options.every((option) => selected.includes(option.id))
+  ) {
+    return allLabel;
+  }
+  if (compact) return studioCountPhrase(selected.length, plural);
   if (selected.length === 1) {
     return options.find((option) => option.id === selected[0])?.label ?? selected[0];
   }
-  return `${selected.length} ${plural}`;
+  return studioCountPhrase(selected.length, plural);
+}
+
+export function studioVisibleRegionIds(
+  available: readonly string[],
+  hidden: readonly string[],
+): string[] {
+  const hide = new Set(uniqueStudioIds(hidden));
+  return uniqueStudioIds(available).filter((id) => !hide.has(id));
+}
+
+export function studioHiddenRegionIdsFromVisible(
+  available: readonly string[],
+  visible: readonly string[],
+): string[] {
+  const show = new Set(uniqueStudioIds(visible));
+  return uniqueStudioIds(available).filter((id) => !show.has(id));
 }
 
 export function toggleStudioSelectedId(

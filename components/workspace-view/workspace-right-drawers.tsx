@@ -36,6 +36,8 @@ import {
   resolveWorkspaceHeliosColumnSurface,
   type WorkspaceHeliosColumnMode,
 } from "@/lib/workspace-helios-mode";
+import { saveCreatorMapNotes } from "@/lib/learner-map-notes";
+import { saveAnnotationLayers as writeAnnotationLayers } from "@/lib/map-annotation-layers";
 import {
   heliosMapSnapshotFromBlocks,
   heliosMapSnapshotToAuthoringNodes,
@@ -279,6 +281,20 @@ export function WorkspaceRightDrawers({
           annotationLayers: snap.annotationLayers || [],
         });
       },
+      saveNotes: async (notes) => {
+        saveCreatorMapNotes({
+          workspaceId,
+          mapKind: "workspace",
+          notes,
+        });
+      },
+      saveAnnotationLayers: async (layers) => {
+        writeAnnotationLayers({
+          workspaceId,
+          mapKind: "workspace",
+          layers,
+        });
+      },
       addBlock: async ({ prompt, cell }) => {
         await onSubmitAddBlock(prompt, cell);
       },
@@ -344,6 +360,7 @@ export function WorkspaceRightDrawers({
       onSubmitAddBlock,
       onSubmitGenerateShape,
       onUpdateBlock,
+      workspaceId,
     ],
   );
   return (

@@ -17,6 +17,7 @@ import {
   parseHeliosMapToolCall,
   heliosBridgeWidthFromArgs,
   type HeliosMapSnapshot,
+  type HeliosMapToolHost,
 } from "@/lib/workspace-helios-tools";
 import { isUnusableCell } from "@/lib/map-ground-rules";
 import { SKILL_GRID_PITCH } from "@/lib/block-skill-grid";
@@ -431,6 +432,194 @@ describe("Helios map tool catalog + dispatch", () => {
     });
     expect(parsed.reply).toBe("Placed it.");
     expect(parsed.toolCalls[0]?.name).toBe("mark_unusable");
+  });
+
+  it("executeHeliosMapToolCall persists apply_dag from the dispatch preview chain", async () => {
+    const first = dispatchHeliosMapTool(emptySnap(), {
+      name: "add_block",
+      args: { title: "Start", id: "a" },
+    });
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+    const second = dispatchHeliosMapTool(first.snapshot, {
+      name: "add_block",
+      args: { title: "Next", id: "b" },
+    });
+    expect(second.ok).toBe(true);
+    if (!second.ok) return;
+    const preview = dispatchHeliosMapTool(second.snapshot, {
+      name: "apply_dag",
+      args: {},
+    });
+    expect(preview.ok).toBe(true);
+    if (!preview.ok) return;
+    expect(preview.snapshot.blocks.find((b) => b.id === "a")?.next_block_ids).toEqual(
+      ["b"],
+    );
+
+    const dagDrafts: Array<{
+      blockIds: string[];
+      edges: Array<{ from: string; to: string; kind: "next" | "lock" }>;
+    }> = [];
+    const result = await executeHeliosMapToolCall({
+      snapshot: second.snapshot,
+      call: { name: "apply_dag", args: {} },
+      host: {
+        applySnapshot: () => {},
+        applyDag: async ({ dagDraft }) => {
+          dagDrafts.push(dagDraft);
+        },
+      },
+    });
+    expect(result.ok).toBe(true);
+    expect(dagDrafts).toHaveLength(1);
+    expect(dagDrafts[0].edges).toEqual(
+      expect.arrayContaining([{ from: "a", to: "b", kind: "next" }]),
+    );
+    const persistedNext = dagDrafts[0].edges
+      .filter((e) => e.kind === "next" && e.from === "a")
+      .map((e) => e.to);
+    expect(persistedNext).toEqual(
+      preview.snapshot.blocks.find((b) => b.id === "a")?.next_block_ids,
+    );
+  });
+
+  it("executeHeliosMapToolCall repaints the pre-call snapshot when host persist throws", async () => {
+    const snap = emptySnap();
+    const paints: HeliosMapSnapshot[] = [];
+    const result = await executeHeliosMapToolCall({
+      snapshot: snap,
+      call: { name: "add_block", args: { row: 2, col: 2, title: "Hosted" } },
+      host: {
+        applySnapshot: (painted) => {
+          paints.push(painted);
+        },
+        addBlock: async () => {
+          throw new Error("persist_failed");
+        },
+      },
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toBe("persist_failed");
+    expect(result.snapshot).toBe(snap);
+    expect(paints).toHaveLength(2);
+    expect(paints[0].blocks).toHaveLength(1);
+    expect(paints[1]).toBe(snap);
+  });
+
+  it("executeHeliosMapToolCall expand/bridge frozen slots match the dispatch preview", async () => {
+    const expandSource = heliosMapSnapshotFromBlocks({
+      blocks: [block("src", 10, 10)],
+    });
+    const expandCall = {
+      name: "expand_block" as const,
+      args: { blockId: "src", range: 1, density: 100, seed: 1 },
+    };
+    const expandPreview = dispatchHeliosMapTool(expandSource, expandCall);
+    expect(expandPreview.ok).toBe(true);
+    if (!expandPreview.ok) return;
+    const expandSlots: Array<Array<{ row: number; col: number }>> = [];
+    const expanded = await executeHeliosMapToolCall({
+      snapshot: expandSource,
+      call: expandCall,
+      host: {
+        applySnapshot: () => {},
+        expandBlock: async ({ frozenSlots }) => {
+          expandSlots.push(frozenSlots);
+        },
+      },
+    });
+    expect(expanded.ok).toBe(true);
+    const expandPrevIds = new Set(expandSource.blocks.map((b) => b.id));
+    expect(expandSlots[0]).toEqual(
+      expandPreview.snapshot.blocks
+        .filter((b) => !expandPrevIds.has(b.id))
+        .map((b) => ({ row: b.position_y, col: b.position_x })),
+    );
+
+    const pair = heliosMapSnapshotFromBlocks({
+      blocks: [block("left", 0, 0), block("right", 0, 4)],
+    });
+    const bridgeCall = {
+      name: "bridge_blocks" as const,
+      args: { blockIds: ["left", "right"], density: 100 },
+    };
+    const bridgePreview = dispatchHeliosMapTool(pair, bridgeCall);
+    expect(bridgePreview.ok).toBe(true);
+    if (!bridgePreview.ok) return;
+    const bridgeSlots: Array<Array<{ row: number; col: number }>> = [];
+    const bridged = await executeHeliosMapToolCall({
+      snapshot: pair,
+      call: bridgeCall,
+      host: {
+        applySnapshot: () => {},
+        generateBridge: async ({ frozenSlots }) => {
+          bridgeSlots.push(frozenSlots);
+        },
+      },
+    });
+    expect(bridged.ok).toBe(true);
+    const bridgePrevIds = new Set(pair.blocks.map((b) => b.id));
+    expect(bridgeSlots[0]).toEqual(
+      bridgePreview.snapshot.blocks
+        .filter((b) => !bridgePrevIds.has(b.id))
+        .map((b) => ({ row: b.position_y, col: b.position_x })),
+    );
+  });
+
+  it("overlay persist uses host save methods when present and stays paint-only otherwise", async () => {
+    const savedNotes: HeliosMapSnapshot["notes"][] = [];
+    const savedLayers: HeliosMapSnapshot["annotationLayers"][] = [];
+    const paints: number[] = [];
+    const withSave = await executeHeliosMapToolCall({
+      snapshot: emptySnap(),
+      call: { name: "add_note", args: { body: "Remember the fork", row: 1, col: 2, id: "fork" } },
+      host: {
+        applySnapshot: (snap) => {
+          paints.push(snap.notes.length);
+        },
+        saveNotes: (notes) => {
+          savedNotes.push(notes);
+        },
+      },
+    });
+    expect(withSave.ok).toBe(true);
+    expect(savedNotes).toHaveLength(1);
+    expect(savedNotes[0][0]?.body).toBe("Remember the fork");
+    expect(paints).toEqual([1]);
+
+    const layerPaints: number[] = [];
+    const withLayerSave = await executeHeliosMapToolCall({
+      snapshot: emptySnap(),
+      call: { name: "add_drawing_layer", args: { name: "Routes", id: "routes" } },
+      host: {
+        applySnapshot: (snap) => {
+          layerPaints.push(snap.annotationLayers.length);
+        },
+        saveAnnotationLayers: (layers) => {
+          savedLayers.push(layers);
+        },
+      },
+    });
+    expect(withLayerSave.ok).toBe(true);
+    expect(savedLayers).toHaveLength(1);
+    expect(savedLayers[0][0]?.name).toBe("Routes");
+    expect(layerPaints).toEqual([1]);
+
+    const paintOnly: string[] = [];
+    const omitted = await executeHeliosMapToolCall({
+      snapshot: emptySnap(),
+      call: { name: "add_note", args: { body: "Local only", row: 0, col: 0, id: "local" } },
+      host: {
+        applySnapshot: () => {
+          paintOnly.push("paint");
+        },
+      } satisfies HeliosMapToolHost,
+    });
+    expect(omitted.ok).toBe(true);
+    expect(paintOnly).toEqual(["paint"]);
+    expect(savedNotes).toHaveLength(1);
   });
 
   it("applyHeliosMapToolsAtomically paints each tool on the map before the next", async () => {

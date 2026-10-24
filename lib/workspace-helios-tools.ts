@@ -1442,6 +1442,18 @@ export type HeliosMapToolHost = {
    * Manual persist APIs finish. This is how Helios work shows up atomically.
    */
   applySnapshot?: (snapshot: HeliosMapSnapshot) => void;
+  /**
+   * Persist creator notes from the dispatched snapshot. Overlay tools still
+   * paint via applySnapshot when this is omitted (paint-only).
+   */
+  saveNotes?: (notes: LearnerMapNote[]) => void | Promise<void>;
+  /**
+   * Persist drawing layers from the dispatched snapshot. Overlay tools still
+   * paint via applySnapshot when this is omitted (paint-only).
+   */
+  saveAnnotationLayers?: (
+    layers: AnnotationLayer[],
+  ) => void | Promise<void>;
   addBlock?: (input: {
     prompt: string;
     cell: { row: number; col: number };
@@ -1574,9 +1586,46 @@ export async function applyHeliosMapToolsAtomically(input: {
   return { snapshot: next, steps };
 }
 
+function addedCellsFromPreview(
+  before: HeliosMapSnapshot,
+  after: HeliosMapSnapshot,
+): Array<{ row: number; col: number }> {
+  const prevIds = new Set(before.blocks.map((b) => b.id));
+  return after.blocks
+    .filter((b) => !prevIds.has(b.id))
+    .map((b) => ({ row: b.position_y, col: b.position_x }));
+}
+
+function dagDraftFromPreviewSnapshot(
+  snapshot: HeliosMapSnapshot,
+): MultiBlockDagDraft {
+  const blockIds = snapshot.blocks.map((b) => b.id);
+  const edges: MultiBlockDagEdge[] = [];
+  const seen = new Set<string>();
+  for (const block of snapshot.blocks) {
+    for (const raw of block.next_block_ids || []) {
+      const to = String(raw || "").trim();
+      if (!to) continue;
+      const key = `next:${block.id}->${to}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      edges.push({ from: block.id, to, kind: "next" });
+    }
+    for (const raw of block.lock_until_block_ids || []) {
+      const from = String(raw || "").trim();
+      if (!from) continue;
+      const key = `lock:${from}->${block.id}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      edges.push({ from, to: block.id, kind: "lock" });
+    }
+  }
+  return { blockIds, edges };
+}
+
 /**
  * Validate via dispatch, paint the map immediately, then persist through
- * the same Manual drawer APIs.
+ * the same Manual drawer APIs from the dispatched snapshot.
  */
 export async function executeHeliosMapToolCall(input: {
   snapshot: HeliosMapSnapshot;
@@ -1626,36 +1675,19 @@ export async function executeHeliosMapToolCall(input: {
             : prev?.description || "",
       });
     } else if (name === "expand_block" && host.expandBlock) {
-      const blockId = stringArg(args, "blockId", "id");
-      const source = input.snapshot.blocks.find((b) => b.id === blockId);
-      if (source) {
-        const range = Number.isFinite(Number(args.range))
-          ? Number(args.range)
-          : 2;
-        const density = Number.isFinite(Number(args.density))
-          ? Number(args.density)
-          : 50;
-        const seed = Number.isFinite(Number(args.seed)) ? Number(args.seed) : 1;
-        const resolved = resolveExpandFromSourceSelection({
-          sourceBlock: toPlaced(source),
-          range,
-          density,
-          seed,
-          occupiedKeys: heliosMapOccupiedKeys(input.snapshot),
-          unusableKeys: new Set(
-            input.snapshot.unusableCells.map((c) =>
-              getCellKey(c.row, c.col),
-            ),
-          ),
-        });
-        await host.expandBlock({
-          blockId,
-          prompt: stringArg(args, "prompt") || undefined,
-          range,
-          density,
-          frozenSlots: resolved.frozenSlots,
-        });
-      }
+      const range = Number.isFinite(Number(args.range))
+        ? Number(args.range)
+        : 2;
+      const density = Number.isFinite(Number(args.density))
+        ? Number(args.density)
+        : 50;
+      await host.expandBlock({
+        blockId: stringArg(args, "blockId", "id"),
+        prompt: stringArg(args, "prompt") || undefined,
+        range,
+        density,
+        frozenSlots: addedCellsFromPreview(input.snapshot, preview.snapshot),
+      });
     } else if (name === "combine_blocks" && host.combineBlocks) {
       await host.combineBlocks({
         blockIds: idList(args.blockIds ?? args.ids),
@@ -1668,21 +1700,12 @@ export async function executeHeliosMapToolCall(input: {
         ? Number(args.density)
         : 100;
       const width = heliosBridgeWidthFromArgs(args);
-      const resolved = resolveBridgeSelection({
-        anchors: bridgeAnchorsFromPlacedBlocks(targets.map(toPlaced)),
-        density,
-        width,
-        occupiedKeys: heliosMapOccupiedKeys(input.snapshot),
-        unusableKeys: input.snapshot.unusableCells.map((c) =>
-          getCellKey(c.row, c.col),
-        ),
-      });
       await host.generateBridge({
         blockIds: ids,
         density,
         width,
         userPrompt: stringArg(args, "prompt") || undefined,
-        frozenSlots: resolved.selected,
+        frozenSlots: addedCellsFromPreview(input.snapshot, preview.snapshot),
         blockTitles: targets.map((b) => String(b.title || b.id)),
       });
     } else if (name === "cluster_blocks" && host.clusterBlocks) {
@@ -1702,22 +1725,10 @@ export async function executeHeliosMapToolCall(input: {
         prompt: stringArg(args, "prompt") || undefined,
       });
     } else if (name === "apply_dag" && host.applyDag) {
-      const draftRaw =
-        (args.dagDraft as Record<string, unknown> | undefined) || args;
-      const blockIds = idList(draftRaw.blockIds ?? args.blockIds);
-      const edgesRaw = Array.isArray(draftRaw.edges) ? draftRaw.edges : [];
-      const edges: MultiBlockDagEdge[] = [];
-      for (const item of edgesRaw) {
-        if (!item || typeof item !== "object") continue;
-        const e = item as Record<string, unknown>;
-        const from = String(e.from ?? "").trim();
-        const to = String(e.to ?? "").trim();
-        if (!from || !to) continue;
-        edges.push({ from, to, kind: e.kind === "lock" ? "lock" : "next" });
-      }
+      const dagDraft = dagDraftFromPreviewSnapshot(preview.snapshot);
       await host.applyDag({
-        blockIds,
-        dagDraft: { blockIds, edges },
+        blockIds: dagDraft.blockIds,
+        dagDraft,
       });
     } else if (name === "mark_unusable" && host.setUnusableCells) {
       await host.setUnusableCells(preview.snapshot.unusableCells);
@@ -1737,8 +1748,23 @@ export async function executeHeliosMapToolCall(input: {
       }
     } else if (name === "delete_block" && host.deleteBlock) {
       await host.deleteBlock(stringArg(args, "blockId", "id"));
+    } else if (
+      (name === "add_note" ||
+        name === "edit_note" ||
+        name === "delete_note") &&
+      host.saveNotes
+    ) {
+      await host.saveNotes(preview.snapshot.notes);
+    } else if (
+      (name === "add_drawing_layer" ||
+        name === "draw_on_layer" ||
+        name === "delete_drawing_layer") &&
+      host.saveAnnotationLayers
+    ) {
+      await host.saveAnnotationLayers(preview.snapshot.annotationLayers);
     }
   } catch (err) {
+    host.applySnapshot?.(input.snapshot);
     return fail(
       input.snapshot,
       err instanceof Error ? err.message : "host_failed",

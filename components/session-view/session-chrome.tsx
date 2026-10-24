@@ -53,8 +53,6 @@ export type SessionChromeProps = {
   map: ReactNode;
   toolOverlay: ReactNode;
   workCanvas: ReactNode;
-  insightCraftOpen?: boolean;
-  onMinimizeInsightCraft?: () => void;
   workCanvasHeaderLeading?: ReactNode;
   mapInsightsWidget?: ReactNode;
   introOpen: boolean;
@@ -124,8 +122,6 @@ export function SessionChrome({
   map,
   toolOverlay,
   workCanvas,
-  insightCraftOpen: _insightCraftOpen = false,
-  onMinimizeInsightCraft: _onMinimizeInsightCraft,
   workCanvasHeaderLeading = null,
   mapInsightsWidget: _mapInsightsWidget = null,
   introOpen,

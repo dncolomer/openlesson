@@ -720,7 +720,9 @@ describe("accepted insight craft emits snapshot-eligible tool PoW", () => {
     expect(persistSlice.indexOf("ileInsightCraftPowFromAcceptedPersist")).toBeGreaterThan(
       persistSlice.indexOf('if (!insight?.id) throw new Error("Failed to save insight")'),
     );
-    expect(viewSrc).toContain("evaluateIleEndTurnInsightGate");
+    expect(readFileSync(join(__dirname, "../../lib/learn-turn-insights.ts"), "utf8")).toContain(
+      "evaluateIleEndTurnInsightGate",
+    );
     expect(viewSrc).toContain("handleMarkChapterDone");
     expect(viewSrc).toContain("closeOverride: true");
     expect(viewSrc).toContain("craftInsight=");

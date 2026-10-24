@@ -1,6 +1,6 @@
 /**
  * TAP Learning context-capacity auto-stash apply path.
- * useSessionThoughtInterface calls this when the forming-thought bar is full.
+ * Learn opts in via useSessionThoughtInterface({ contextAutoStash: true }).
  * Distinct from TAP silence auto-stash (purity unchanged).
  */
 import {

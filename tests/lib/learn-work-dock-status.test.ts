@@ -1,12 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import {
-  chapterHasPendingHeliosReply,
-  latestSettledAssistantId,
-  resolveIleDockChipStatus,
-  sameIleIdList,
-} from "@/lib/learn-work-dock-status";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
@@ -23,59 +17,15 @@ function writeScratch(name: string, body: string) {
   writeFileSync(join(SCRATCH, name), body, "utf8");
 }
 
-describe("resolveIleDockChipStatus", () => {
-  it("prefers loading over attention; idle otherwise", () => {
-    expect(resolveIleDockChipStatus({ chapterId: "ch-a" })).toBe("idle");
-    expect(
-      resolveIleDockChipStatus({
-        chapterId: "ch-a",
-        loadingIds: ["ch-a"],
-        attentionIds: ["ch-a"],
-      }),
-    ).toBe("loading");
-    expect(
-      resolveIleDockChipStatus({
-        chapterId: "ch-a",
-        loadingIds: ["ch-b"],
-        attentionIds: ["ch-a"],
-      }),
-    ).toBe("attention");
-  });
-
-  it("reads pending vs settled assistant messages", () => {
-    expect(chapterHasPendingHeliosReply([])).toBe(false);
-    expect(
-      chapterHasPendingHeliosReply([
-        { role: "user", pending: false },
-        { role: "assistant", pending: true },
-      ]),
-    ).toBe(true);
-    expect(
-      chapterHasPendingHeliosReply([
-        { role: "assistant", pending: true },
-        { role: "assistant", pending: false },
-      ]),
-    ).toBe(false);
-    expect(
-      latestSettledAssistantId([
-        { role: "assistant", id: "a1", pending: false },
-        { role: "assistant", id: "a2", pending: true },
-      ]),
-    ).toBe("a1");
-    expect(sameIleIdList(["a"], ["a"])).toBe(true);
-    expect(sameIleIdList(["a"], ["b"])).toBe(false);
-  });
-});
-
 describe("docked chapter loading / attention chrome (shipped source)", () => {
-  it("Learn host no longer drives Helios dock loading from submit-turn", () => {
+  it("Learn host chips stay idle; Helios reply helpers are gone", () => {
+    expect(existsSync(join(ROOT, "lib/learn-work-dock-status.ts"))).toBe(false);
     const view = read("components/SessionView.tsx");
     expect(view).not.toContain("handleSubmitTurn");
     expect(view).not.toContain("setDockLoadingIds");
     expect(view).not.toContain("ILE_SUBMIT_WORK_CONTINUE_TEXT");
     expect(view).not.toContain("chapterHasPendingHeliosReply");
-    expect(view).toContain("resolveIleDockChipStatus");
-    expect(view).toContain("status:");
+    expect(view).not.toContain("resolveIleDockChipStatus");
 
     const dock = read("components/session-view/learn-work-dock-bar.tsx");
     expect(dock).toContain("data-ile-chapter-chip-status");
@@ -93,7 +43,7 @@ describe("docked chapter loading / attention chrome (shipped source)", () => {
 
     writeScratch(
       "ile-work-dock-status.txt",
-      "dock chips stay; Learn no longer waits on Helios replies",
+      "dock chips stay idle; Learn no longer waits on Helios replies",
     );
   });
 });

@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { AlertTriangle } from "lucide-react";
-import type { IleDockChipStatus } from "@/lib/learn-work-dock-status";
 import {
   FALLBACK_AESTHETIC_IMAGES,
   resolveIleWorkAestheticImage,
@@ -206,7 +205,7 @@ export type IleWorkDockLabel = {
   label: string;
   keyword?: string;
   focused?: boolean;
-  status?: IleDockChipStatus;
+  status?: "idle" | "loading" | "attention";
   image?: string;
 };
 

@@ -81,7 +81,15 @@ describe("TAP + TAP Learning hide Auto-stash context bar HUD", () => {
     expect(ile).toContain("shouldAutoStashOnContextFull");
     expect(ile).toContain("stashCurrentTranscription");
     expect(ile).toContain("applyIleContextFullAutoStash");
+    expect(ile).toContain("contextAutoStash = false");
+    expect(ile).toContain("if (!contextAutoStash || !enabled)");
     expect(ile).toContain("getFormingText");
+    const speech = fs.readFileSync(
+      path.join(ROOT, "components/session-view/use-session-speech.ts"),
+      "utf8",
+    );
+    expect(speech).toContain("contextAutoStash: true");
+    expect(tap).not.toContain("contextAutoStash: true");
     expect(ile).not.toContain("<SlidingTranscript");
     const voice = fs.readFileSync(path.join(ROOT, "components/session-view/learn-voice-bar.tsx"), "utf8");
     expect(voice).toContain("<SlidingTranscript");

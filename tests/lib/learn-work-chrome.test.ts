@@ -23,7 +23,7 @@ import {
 import { resolveBlockMapGlyph } from "@/lib/block-map-glyph";
 import type { InsightSummary } from "@/lib/insights";
 import { readSessionViewSurface } from "@/tests/helpers/surface-source";
-import { ILE_END_TURN_LABEL, ILE_SUBMIT_TURN_LABEL } from "@/lib/learn-session-turn-close";
+import { ILE_END_TURN_LABEL, ILE_SUBMIT_TURN_LABEL } from "@/lib/learn-pow-spend";
 import {
   aestheticImageForId,
   assignIleWorkAestheticImages,
@@ -241,7 +241,7 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     expect(view).toContain("handleWorkChapter");
     expect(view).not.toContain("closeIleOpenWorkTurn");
     expect(view).not.toContain("resolveIleWorkChatTarget");
-    expect(read("lib/learn-session-turn-close.ts")).toContain("closeIleOpenWorkTurn");
+    expect(existsSync(join(ROOT, "lib/learn-session-turn-close.ts"))).toBe(false);
     expect(view).toContain("chapterId");
     expect(view).toContain("spentUnits");
     expect(speech).not.toContain("submitHeliosChatMessageNow");
@@ -309,6 +309,8 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     expect(view).toContain("workAestheticById[id]");
     expect(existsSync(join(ROOT, "components/session-view/session-thought-pane.tsx"))).toBe(false);
     expect(helios).toContain("applyIleContextFullAutoStash");
+    expect(helios).toContain("contextAutoStash = false");
+    expect(speech).toContain("contextAutoStash: true");
     expect(helios).toContain("getFormingText");
     expect(helios).not.toContain("Math.random");
     expect(helios).not.toContain("THOUGHT_BACKGROUND_IMAGES");
@@ -422,7 +424,8 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     expect(craft).not.toContain("data-ile-turn-insight-evaluate");
     expect(craft).not.toContain("Thoughts pool");
     expect(craft).not.toContain("Link to an active chapter");
-    expect(view).toContain("dockedChapters={openWorkDockLabels}");
+    expect(craft).toContain("dockedChapters");
+    expect(read("components/SessionView.tsx")).not.toContain("turnInsightCraft");
     expect(craft).toContain("Continue with the next turn");
     expect(craft).toContain("Save and go out of the workspace");
     expect(craft).toContain("Back to work");

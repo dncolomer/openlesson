@@ -31,11 +31,6 @@ import {
 import type { IlePowCounterArtifact, IlePowTypeCounts } from "@/lib/learn-pow-counters";
 import { buildIleChapterAddPowToolData, buildIleChapterLoadPowToolData } from "@/lib/learn-chapter-depth";
 import {
-  buildFollowUpChapterDescription,
-  findAdjacentFreeChapterSlot,
-  type ChapterFollowUpSuggestion,
-} from "@/lib/learn-chapter-follow-ups";
-import {
   buildIleChapterDonePowToolData,
   buildIleProjectChapterExercisePrompt,
   emptyIleProjectDualLists,
@@ -64,7 +59,6 @@ export type SessionMutateInput = {
   setSessionPlan: (plan: SessionPlan | null) => void;
   resolvedSessionMode: IleSessionMode;
   isProjectMode: boolean;
-  chapterThoughtsLocked: boolean;
   activeStep: SessionPlanStep | undefined;
   activeChapterKey: string;
   activeChapterIndexRef: { current: number };
@@ -103,7 +97,6 @@ export function useSessionMutate(input: SessionMutateInput) {
     setSessionPlan,
     resolvedSessionMode,
     isProjectMode,
-    chapterThoughtsLocked,
     activeStep,
     activeChapterKey,
     activeChapterIndexRef,
@@ -124,15 +117,6 @@ export function useSessionMutate(input: SessionMutateInput) {
     sessionPowTypedRef,
     setChapterCloseReview,
   } = input;
-
-  const [chapterFollowUpsById, setChapterFollowUpsById] = useState<
-    Record<string, ChapterFollowUpSuggestion[]>
-  >({});
-  const [chapterFollowUpsLoadingId, setChapterFollowUpsLoadingId] = useState<string | null>(null);
-  const [chapterFollowUpsErrorById, setChapterFollowUpsErrorById] = useState<
-    Record<string, string>
-  >({});
-  const followUpsFetchedRef = useRef<Set<string>>(new Set());
 
 /** Workspace materials for TAP Learning Project framer + generate-exercise. */
 const [ilePromptMaterials, setIlePromptMaterials] = useState<IlePromptMaterials | null>(null);
@@ -575,8 +559,6 @@ const handleEnsureChapterPositions = useCallback((plan: SessionPlan) => {
   }).catch(() => {});
 }, [persistPlanSteps]);
 
-const [chapterReloadNonce, setChapterReloadNonce] = useState(0);
-
 const handleLoadChapter = useCallback(async (index: number) => {
   if (!shouldAllowChapterLoadClick({ chapterLoading: chapterLoadingRef.current })) return;
   const currentPlan = sessionPlanRef.current;
@@ -610,9 +592,7 @@ const handleLoadChapter = useCallback(async (index: number) => {
   try {
     await persistPlanSteps(updatedPlan, { toolAction, toolData });
 
-    if (isReload) {
-      setChapterReloadNonce((n) => n + 1);
-    } else if (CHAPTER_LOAD_DURATION_MS > 0) {
+    if (!isReload && CHAPTER_LOAD_DURATION_MS > 0) {
       await new Promise((resolve) => {
         window.setTimeout(resolve, CHAPTER_LOAD_DURATION_MS);
       });
@@ -765,119 +745,6 @@ const handleUpdateChapter = useCallback(async (stepId: string, description: stri
   });
 }, [persistPlanSteps]);
 
-const fetchChapterFollowUps = useCallback(
-  async (
-    step: SessionPlanStep,
-    lists: ExerciseDualLists,
-    options?: { force?: boolean },
-  ) => {
-    if (!session?.id || !isProjectMode) return;
-    if (!options?.force && followUpsFetchedRef.current.has(step.id)) return;
-    followUpsFetchedRef.current.add(step.id);
-    setChapterFollowUpsLoadingId(step.id);
-    setChapterFollowUpsErrorById((prev) => {
-      const next = { ...prev };
-      delete next[step.id];
-      return next;
-    });
-    try {
-      const response = await fetch("/api/workspace/suggest-chapter-follow-ups", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId: session.id,
-          stepId: step.id,
-          chapterDescription: step.description,
-          solutionTexts: lists.submitted.map((t) => t.text),
-          stashTexts: lists.stash.map((t) => t.text),
-          locale,
-          ...guestAccessBody,
-        }),
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(
-          typeof data?.error === "string" ? data.error : "Failed to generate follow-ups",
-        );
-      }
-      const suggestions = Array.isArray(data.suggestions)
-        ? (data.suggestions as ChapterFollowUpSuggestion[]).slice(0, 3)
-        : [];
-      setChapterFollowUpsById((prev) => ({ ...prev, [step.id]: suggestions }));
-      if (suggestions.length === 0) {
-        setChapterFollowUpsErrorById((prev) => ({
-          ...prev,
-          [step.id]: "No follow-up topics returned.",
-        }));
-      }
-    } catch (err) {
-      followUpsFetchedRef.current.delete(step.id);
-      setChapterFollowUpsErrorById((prev) => ({
-        ...prev,
-        [step.id]: err instanceof Error ? err.message : "Failed to generate follow-ups",
-      }));
-    } finally {
-      setChapterFollowUpsLoadingId((current) => (current === step.id ? null : current));
-    }
-  },
-  [session?.id, isProjectMode, locale, guestAccessBody],
-);
-
-const handleSelectChapterFollowUp = useCallback(
-  async (suggestion: ChapterFollowUpSuggestion) => {
-    const plan = sessionPlanRef.current;
-    if (!plan || !isProjectMode) return;
-    const step = plan.steps[activeChapterIndexRef.current];
-    if (!step) return;
-    // Always place on the closest empty chapter square to the finished chapter.
-    const slot = findAdjacentFreeChapterSlot(plan, step);
-    // Seed from follow-up; handleAddChapter LLM-authors a real exercise.
-    const description = buildFollowUpChapterDescription(suggestion);
-    try {
-      await handleAddChapter(description, slot, { keyword: suggestion.keyword });
-      // Keep section visible: drop the chosen topic, then refresh so finished
-      // chapters always have optional follow-ups available.
-      setChapterFollowUpsById((prev) => ({
-        ...prev,
-        [step.id]: (prev[step.id] || []).filter(
-          (s) =>
-            !(s.title === suggestion.title && s.description === suggestion.description),
-        ),
-      }));
-      const lists =
-        projectThoughtsByChapterRef.current[step.id] ?? emptyIleProjectDualLists();
-      void fetchChapterFollowUps(step, lists, { force: true });
-    } catch (err) {
-      setChapterFollowUpsErrorById((prev) => ({
-        ...prev,
-        [step.id]: err instanceof Error ? err.message : "Could not add chapter",
-      }));
-    }
-  },
-  [handleAddChapter, isProjectMode, fetchChapterFollowUps],
-);
-
-// Finished Project chapters always show Next adjacent topics — fetch if missing.
-useEffect(() => {
-  if (!isProjectMode || !activeStep || !chapterThoughtsLocked) return;
-  if (chapterFollowUpsLoadingId === activeStep.id) return;
-  if ((chapterFollowUpsById[activeStep.id]?.length ?? 0) > 0) return;
-  if (chapterFollowUpsErrorById[activeStep.id]) return;
-  const lists =
-    projectThoughtsByChapterRef.current[activeStep.id] ?? emptyIleProjectDualLists();
-  void fetchChapterFollowUps(activeStep, lists, {
-    force: !followUpsFetchedRef.current.has(activeStep.id),
-  });
-}, [
-  isProjectMode,
-  activeStep,
-  chapterThoughtsLocked,
-  chapterFollowUpsById,
-  chapterFollowUpsErrorById,
-  chapterFollowUpsLoadingId,
-  fetchChapterFollowUps,
-]);
-
 const handleMarkChapterDone = useCallback(async (opts?: { closeOverride?: boolean; stepId?: string | null }) => {
   const currentPlan = sessionPlanRef.current;
   if (!currentPlan?.steps?.length) return false;
@@ -932,12 +799,6 @@ const handleMarkChapterDone = useCallback(async (opts?: { closeOverride?: boolea
 
   playStepCompleteSound();
 
-  if (isProjectMode) {
-    const lists =
-      projectThoughtsByChapterRef.current[step.id] ?? emptyIleProjectDualLists();
-    void fetchChapterFollowUps(step, lists);
-  }
-
   if (updatedSteps.every((s) => s.status === "completed" || s.status === "skipped")) {
     playSessionCompleteSound();
     setTimeout(() => {
@@ -950,9 +811,7 @@ const handleMarkChapterDone = useCallback(async (opts?: { closeOverride?: boolea
   isPaused,
   isRecording,
   persistPlanSteps,
-  isProjectMode,
   resolvedSessionMode,
-  fetchChapterFollowUps,
   sessionPowArtifactsRef,
   sessionPowTypedRef,
   setChapterCloseReview,
@@ -977,15 +836,9 @@ const handleMarkChapterUndone = useCallback(async (stepId: string) => {
     handleRejectTimChapter,
     handleAddChapter,
     handleUpdateChapter,
-    chapterReloadNonce,
-    fetchChapterFollowUps,
-    handleSelectChapterFollowUp,
     handleMarkChapterDone,
     handleMarkChapterUndone,
     handleTimChapterMapExpansion,
-    chapterFollowUpsById,
-    chapterFollowUpsLoadingId,
-    chapterFollowUpsErrorById,
     ilePromptMaterials,
     displayProjectChapterExercise,
     projectThoughtsByChapter,

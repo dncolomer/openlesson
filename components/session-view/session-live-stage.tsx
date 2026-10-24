@@ -41,7 +41,6 @@ export type SessionLiveStageProps = {
   canvasDirtyForHelios: boolean;
   chapterCloseReview: { canClose: boolean; reason: string; } | null;
   completeTargetStepIdRef: RefObject<string | null>;
-  craftingInsightsOpen: boolean;
   dismissGatherWarning: () => void;
   eegChannelData: Map<string, number[]>;
   endReason: string;
@@ -66,7 +65,7 @@ export type SessionLiveStageProps = {
   museDeviceStatus: DeviceStatus | null;
   museStatus: "disconnected" | "connecting" | "connected" | "streaming";
   muteTimerRef: RefObject<NodeJS.Timeout | null>;
-  openWorkDockLabels: { id: string; label: string; keyword: string | undefined; description: string | undefined; focused: boolean; status: "idle" | "loading" | "attention"; image: string; }[];
+  openWorkDockLabels: { id: string; label: string; keyword: string | undefined; description: string | undefined; focused: boolean; image: string; }[];
   openWorkCount: number;
   pauseAndGoToDashboard: (sessionName?: string | null, options?: { persistSession?: boolean; }) => Promise<void>;
   renderSessionToolPanes: () => JSX.Element | null;
@@ -84,7 +83,6 @@ export type SessionLiveStageProps = {
   sessionThoughtInterface: SessionThoughtInterface;
   setActiveTool: Dispatch<SetStateAction<Tool>>;
   setChapterCloseReview: Dispatch<SetStateAction<{ canClose: boolean; reason: string; } | null>>;
-  setCraftingInsightsOpen: Dispatch<SetStateAction<boolean>>;
   setError: Dispatch<SetStateAction<string | null>>;
   setIsMuted: Dispatch<SetStateAction<boolean>>;
   setIsWebcamEnabled: Dispatch<SetStateAction<boolean>>;
@@ -116,7 +114,6 @@ export function SessionLiveStage({
     canvasDirtyForHelios,
     chapterCloseReview,
     completeTargetStepIdRef,
-    craftingInsightsOpen,
     dismissGatherWarning,
     eegChannelData,
     endReason,
@@ -159,7 +156,6 @@ export function SessionLiveStage({
     sessionThoughtInterface,
     setActiveTool,
     setChapterCloseReview,
-    setCraftingInsightsOpen,
     setError,
     setIsMuted,
     setIsWebcamEnabled,
@@ -253,8 +249,6 @@ export function SessionLiveStage({
         resourcesOpen={sessionResourcesOpen}
         onResourcesOpenChange={setSessionResourcesOpen}
         onCloseToolOverlay={() => setActiveTool("chapters")}
-        insightCraftOpen={craftingInsightsOpen}
-        onMinimizeInsightCraft={() => setCraftingInsightsOpen(false)}
         workCanvasHeaderLeading={workCanvasInsightSlots}
         mapInsightsWidget={
           <IleMapInsightsWidget

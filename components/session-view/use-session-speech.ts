@@ -250,6 +250,7 @@ const sessionThoughtInterface = useSessionThoughtInterface({
   enabled: powSessionEnabled && !micMuted && !(isProjectMode && chapterThoughtsLocked),
   speechLang: sessionSpeechLang,
   sessionId,
+  contextAutoStash: true,
   getActiveChapterId: () => activeStep?.id ?? activeChapterKey ?? null,
   onLogTrace: (payload) => {
     logSessionThoughtTrace(payload);

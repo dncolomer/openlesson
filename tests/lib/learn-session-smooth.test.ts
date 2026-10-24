@@ -180,6 +180,7 @@ describe("TAP Learning slowness + wiring (shipped source)", () => {
 
     const helios = read("lib/useSessionThoughtInterface.ts");
     expect(helios).toContain("applyIleContextFullAutoStash");
+    expect(helios).toContain("contextAutoStash = false");
     expect(helios).toContain("getFormingText");
     expect(helios).toContain("ingestStashedThought");
     expect(existsSync(join(ROOT, "components/SessionHeliosPanel.tsx"))).toBe(false);

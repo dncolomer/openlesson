@@ -13,7 +13,6 @@ import {
   chapterLoadControlEnglishLabel,
   resolveChapterLoadControl,
   shouldAllowChapterLoadClick,
-  shouldShowHeliosReplyForChapter,
 } from "@/lib/chapter-load-control";
 
 const ROOT = join(__dirname, "../..");
@@ -105,17 +104,12 @@ describe("chapter-map load control wiring (shipped source)", () => {
     expect(view).toContain("activeChapterKey={activeChapterKey}");
     expect(view).not.toContain("activeChapterKey={session.id}");
     expect(view).not.toContain("chapterWidgetAssistantTurn");
-    expect(shouldShowHeliosReplyForChapter({ activeChapterId: "ch-2", replyChapterId: "ch-1" })).toBe(
-      false,
-    );
-    expect(shouldShowHeliosReplyForChapter({ activeChapterId: "ch-2", replyChapterId: "ch-2" })).toBe(
-      true,
-    );
+    expect(view).not.toContain("shouldShowHeliosReplyForChapter");
     expect(view).not.toContain("if (index === activeChapterIndex) return");
     expect(view).toContain("buildIleChapterLoadPowToolData");
     expect(view).toContain('toolAction = isReload ? "chapter_reload" : "chapter_load"');
     expect(view).toContain("persistPlanSteps(updatedPlan, { toolAction, toolData })");
-    expect(view).toContain("setChapterReloadNonce");
+    expect(view).not.toContain("setChapterReloadNonce");
     expect(view).toContain("postIleSessionChat");
     expect(view).toContain("handleAskCanvasSelection");
     expect(view).not.toContain("Reload this chapter and continue coaching");

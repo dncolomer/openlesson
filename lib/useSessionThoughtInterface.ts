@@ -369,6 +369,8 @@ interface UseSessionThoughtInterfaceOptions {
   /** TAP Learning default: capture Enter/Del. TAP shells keep their own keys. */
   captureKeys?: boolean;
   getActiveChapterId?: () => string | null;
+  /** Learn-only. TAP/Verify already stash on the host. */
+  contextAutoStash?: boolean;
 }
 
 export function useSessionThoughtInterface({
@@ -381,6 +383,7 @@ export function useSessionThoughtInterface({
   onUserActivity,
   captureKeys = true,
   getActiveChapterId,
+  contextAutoStash = false,
 }: UseSessionThoughtInterfaceOptions) {
   const onSpeechTranscriptRef = useRef(onSpeechTranscript);
   const onUserActivityRef = useRef(onUserActivity);
@@ -615,7 +618,7 @@ export function useSessionThoughtInterface({
 
   const contextStashInFlightRef = useRef(false);
   useEffect(() => {
-    if (!enabled) {
+    if (!contextAutoStash || !enabled) {
       contextStashInFlightRef.current = false;
       return;
     }
@@ -640,6 +643,7 @@ export function useSessionThoughtInterface({
       contextStashInFlightRef.current = false;
     }, 300);
   }, [
+    contextAutoStash,
     enabled,
     crystallizableText,
     thoughts,

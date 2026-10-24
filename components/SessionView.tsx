@@ -25,18 +25,15 @@ import {
   clampIlePowExpense,
   ILE_POW_EXPENSE_DEFAULT,
   parseIleOpenWorkIdsFromMetadata,
-  removeIleOpenWork,
   restoreIleOpenWorkIds,
 } from "@/lib/learn-pow-spend";
 import {
   clampIleMinInsightsPerChapter,
-  evaluateIleEndTurnInsightGate,
   ileChapterInsightCounts,
   ileInsightsForChapter,
   ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT,
   ILE_TURN_INSIGHT_SLOT_MAX,
   clampIleTurnInsightSlotMax,
-  type IleEndTurnInsightGate,
 } from "@/lib/learn-turn-insights";
 import {
   ILE_GATHER_MAX_PER_SESSION,
@@ -54,7 +51,6 @@ import {
   isSessionWelcomeSeen,
 } from "@/lib/welcomeState";
 import { insightsSessionListUrl, type InsightSummary } from "@/lib/insights";
-import { IleTurnInsightCraft } from "@/components/session-view/learn-turn-insight-craft";
 import { useHeliosVoicePlaybackActive } from "@/lib/useHeliosVoicePlayback";
 import { translateWithLocale, useI18n } from "@/lib/i18n";
 import { coerceSpokenLocale, type SpokenLocale } from "@/lib/tutoring-languages";
@@ -95,7 +91,6 @@ import {
   parseIleWorkAestheticStored,
 } from "@/lib/aesthetics";
 
-import { resolveIleDockChipStatus } from "@/lib/learn-work-dock-status";
 import { resolveBlockMapGlyph } from "@/lib/block-map-glyph";
 
 import { ileTimProgressByTileId } from "@/lib/learn-tim-chapter-complete";
@@ -323,10 +318,6 @@ export function SessionView({
     {},
   );
   const openWorkIdsRef = useRef<string[]>([]);
-  const [craftingInsightsOpen, setCraftingInsightsOpen] = useState(false);
-  const [endTurnGate, setEndTurnGate] = useState<IleEndTurnInsightGate>(() =>
-    evaluateIleEndTurnInsightGate({ activeChapterIds: [], insights: [] }),
-  );
   const [sessionInsights, setSessionInsights] = useState<InsightSummary[]>([]);
   const [keptInsight, setKeptInsight] = useState<InsightSummary | null>(null);
   const [chapterCloseReview, setChapterCloseReview] = useState<{
@@ -611,7 +602,6 @@ export function SessionView({
     setSessionPlan,
     resolvedSessionMode,
     isProjectMode,
-    chapterThoughtsLocked,
     activeStep,
     activeChapterKey,
     activeChapterIndexRef,
@@ -1133,9 +1123,6 @@ export function SessionView({
             : undefined,
           description: String(step?.description || "").trim() || undefined,
           focused: id === activeStep?.id,
-          status: resolveIleDockChipStatus({
-            chapterId: id,
-          }),
           image: workAestheticById[id],
         };
       }),
@@ -1347,33 +1334,6 @@ export function SessionView({
     );
   };
 
-  const turnInsightCraft = () =>
-    session ? (
-      <IleTurnInsightCraft
-        open={craftingInsightsOpen}
-        dockedChapters={openWorkDockLabels}
-        gate={endTurnGate}
-        onBack={() => setCraftingInsightsOpen(false)}
-        onContinue={() => {
-          if (endTurnGate.canComplete) {
-            for (const stepId of endTurnGate.chaptersToComplete) {
-              setOpenWorkIds((ids) => removeIleOpenWork(ids, stepId));
-            }
-          }
-          setCraftingInsightsOpen(false);
-        }}
-        onSaveAndExit={() => {
-          if (endTurnGate.canComplete) {
-            for (const stepId of endTurnGate.chaptersToComplete) {
-              setOpenWorkIds((ids) => removeIleOpenWork(ids, stepId));
-            }
-          }
-          setCraftingInsightsOpen(false);
-          void pauseAndGoToDashboard();
-        }}
-      />
-    ) : null;
-
   const canvasLoadingRef = useRef(true);
   const xaiReplyWaitRef = useRef(false);
   const onLearnerWaitChange = useCallback((wait: {
@@ -1496,7 +1456,6 @@ export function SessionView({
       canvasDirtyForHelios={canvasDirtyForHelios}
       chapterCloseReview={chapterCloseReview}
       completeTargetStepIdRef={completeTargetStepIdRef}
-      craftingInsightsOpen={craftingInsightsOpen}
       dismissGatherWarning={dismissGatherWarning}
       eegChannelData={eegChannelData}
       endReason={endReason}
@@ -1539,7 +1498,6 @@ export function SessionView({
       sessionThoughtInterface={sessionThoughtInterface}
       setActiveTool={setActiveTool}
       setChapterCloseReview={setChapterCloseReview}
-      setCraftingInsightsOpen={setCraftingInsightsOpen}
       setError={setError}
       setIsMuted={setIsMuted}
       setIsWebcamEnabled={setIsWebcamEnabled}

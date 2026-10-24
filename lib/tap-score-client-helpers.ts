@@ -12,7 +12,6 @@ import { cn } from "@/lib/utils";
 
 export type Phase = "briefing" | "live" | "saving" | "results" | "practice_done" | "error";
 
-/** Launch row fields TapScoreClient actually reads. */
 export type TapInitialSession = {
   id?: string | null;
   guest_user_id?: string | null;

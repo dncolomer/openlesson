@@ -16,8 +16,7 @@ import {
 } from "@/lib/workspace-map-selection";
 import {
   isTapLiveThoughtSpeechEnabled,
-  shouldRestartLocalTapSpeechBindings,
-  tapLiveSpeechFlushText,
+  tapHookFormingText,
 } from "@/lib/tap-session-runtime";
 import {
   buildIleSessionChatPowFile,
@@ -82,29 +81,8 @@ describe("P10 leftovers shipped helpers", () => {
 
     expect(isTapLiveThoughtSpeechEnabled("live")).toBe(true);
     expect(isTapLiveThoughtSpeechEnabled("briefing")).toBe(false);
-    expect(shouldRestartLocalTapSpeechBindings("live")).toBe(false);
-    expect(shouldRestartLocalTapSpeechBindings("briefing")).toBe(true);
-    expect(
-      tapLiveSpeechFlushText({
-        hookFormingText: "  hook live  ",
-        crystallizableText: "local",
-        localFinalBuffer: ["dead"],
-      }),
-    ).toBe("hook live");
-    expect(
-      tapLiveSpeechFlushText({
-        hookFormingText: "",
-        crystallizableText: "from bar",
-        localFinalBuffer: ["ignored"],
-      }),
-    ).toBe("from bar");
-    expect(
-      tapLiveSpeechFlushText({
-        hookFormingText: "",
-        crystallizableText: "",
-        localFinalBuffer: ["only", "if", "nothing", "else"],
-      }),
-    ).toBe("only if nothing else");
+    expect(tapHookFormingText({ getFormingText: () => "  hook live  " })).toBe("hook live");
+    expect(tapHookFormingText({ getFormingText: () => "" })).toBe("");
 
     const skipPow = resolveIleSessionChatPowUpload({ sessionId: "s", workspaceId: "" });
     expect(skipPow.persist).toBe(false);
@@ -158,7 +136,11 @@ describe("P10 leftovers shipped helpers", () => {
     expect(tap).toContain("isTapLiveThoughtSpeechEnabled");
     expect(tap).not.toContain("const speechBindings");
     expect(tap).toContain("pauseLiveSpeech");
-    expect(tap).toContain("resolveTapProductKind");
+    expect(tap).toContain('sidebarMode === "verification-tap" || localOpening ? "verify" : "scored"');
+    expect(tap).not.toContain("resolveTapProductKind");
+    expect(tap).not.toContain("shouldRestartLocalTapSpeechBindings");
+    expect(tap).not.toContain("tapLiveSpeechFlushText");
+    expect(tap).not.toContain("restartSpeechRecognitionSession");
     expect(hook).toContain("captureKeys");
 
     expect(sessionChat).toContain("uploadWorkspaceProofOfWork");
@@ -174,8 +156,7 @@ describe("P10 leftovers shipped helpers", () => {
         `selectionClear=${JSON.stringify(cleared)}`,
         `tapLiveHook=${isTapLiveThoughtSpeechEnabled("live")}`,
         `searchOneBlock=${search.kind === "block" ? search.id : ""}`,
-        `localRestartLive=${shouldRestartLocalTapSpeechBindings("live")}`,
-        `flushPrefersHook=${tapLiveSpeechFlushText({ hookFormingText: "hook", crystallizableText: "bar" })}`,
+        `flushPrefersHook=${tapHookFormingText({ getFormingText: () => "hook" })}`,
         `powPersist=${persistPow.persist}`,
         `projectKey=${ileProjectThoughtsStorageKey("sess", "ch")}`,
         "one nextWorkspaceMapSelection path: WorkspaceView + SessionList + BlockSkillGrid",

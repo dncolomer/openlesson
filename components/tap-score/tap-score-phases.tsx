@@ -101,7 +101,6 @@ export function TapScorePhases(props: {
   startSession: (topicOrOptions?: TapStartingTopic | { practice: true; topic?: TapStartingTopic }) => void;
   participantIdentity: PowParticipantIdentity | null;
   isPracticeMode: boolean;
-  lastUserTurn: ChatMessage | null;
   lastAssistantTurn: ChatMessage | null;
   messages: ChatMessage[];
   isSending: boolean;
@@ -155,7 +154,6 @@ export function TapScorePhases(props: {
     combined?: boolean;
   }) => void;
   clearTranscriptionDisplay: () => void;
-  restartSpeechRecognitionSession: () => void;
   tapSessionId?: string | null;
   entryQueryParams?: Record<string, string | string[]>;
   workCanvasSceneRef: MutableRefObject<IleWorkCanvasScene | null>;
@@ -222,7 +220,6 @@ export function TapScorePhases(props: {
     setEditingTranscription,
     logTapTrace,
     clearTranscriptionDisplay,
-    restartSpeechRecognitionSession,
     tapSessionId,
     entryQueryParams,
     workCanvasSceneRef,
@@ -737,7 +734,6 @@ export function TapScorePhases(props: {
                       }
                       onClearForming={() => {
                         clearTranscriptionDisplay();
-                        restartSpeechRecognitionSession();
                       }}
                       disabled={isSending}
                       onBusyChange={onImDoneBusyChange}
@@ -893,7 +889,6 @@ export function TapScorePhases(props: {
             });
             setEditingTranscription(null);
             clearTranscriptionDisplay();
-            restartSpeechRecognitionSession();
             void sendThought(draft, []);
           }}
           isSending={isSending}

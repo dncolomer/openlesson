@@ -895,7 +895,7 @@ describe("verification workspace shell gates", () => {
     expect(tapStart).toContain("thankYouBody");
     const tapClient = read("components/TapScoreClient.tsx");
     expect(tapClient).toContain("kind={kind}");
-    expect(tapClient).toContain("resolveTapProductKind");
+    expect(tapClient).toContain('sidebarMode === "verification-tap" || localOpening ? "verify" : "scored"');
     const runner = read("components/VerificationFlowRunner.tsx");
     expect(read("components/VerificationFlowsPanel.tsx")).not.toContain("data-verification-flow-minutes");
     expect(read("components/VerificationFlowsPanel.tsx")).not.toContain("Countdown");

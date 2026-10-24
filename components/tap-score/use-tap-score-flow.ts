@@ -109,7 +109,6 @@ export type TapScoreSession = {
   flushSpeechSegment: () => void;
   flushFinalBuffer: () => void;
   clearTranscriptionDisplay: () => void;
-  restartSpeechRecognitionSession: () => void;
   apply: (patch: TapScoreSessionPatch) => void;
 };
 
@@ -267,7 +266,6 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
     const text = tapHookFormingText(s.tapThoughtSpeech);
     if (!text) return;
     s.clearTranscriptionDisplay();
-    s.restartSpeechRecognitionSession();
     await sendThought(text, []);
   }
 

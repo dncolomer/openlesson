@@ -57,7 +57,7 @@ import {
   tapTracePayload,
   isTapLiveThoughtSpeechEnabled,
   tapHookFormingText,
-  resolveTapProductKind,
+  type TapProductKind,
 } from "@/lib/tap-session-runtime";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import { TapScorePhases } from "@/components/tap-score/tap-score-phases";
@@ -142,7 +142,8 @@ export function TapScoreClient({
     showEndSession: showEndSessionProp,
     initialSession,
   });
-  const kind = resolveTapProductKind({ sidebarMode, localOpening });
+  const kind: TapProductKind =
+    sidebarMode === "verification-tap" || localOpening ? "verify" : "scored";
   const entryQueryParamsRef = useRef(entryQueryParams);
   const policyRef = useRef(emptySessionPolicySnapshot());
   useEffect(() => {
@@ -602,15 +603,9 @@ export function TapScoreClient({
     });
   }, []);
 
-  const restartSpeechRecognitionSession = useCallback(() => {
-    if (isTapLiveThoughtSpeechEnabled(phase)) return;
-    tapThoughtSpeech.pauseLiveSpeech();
-  }, [phase, tapThoughtSpeech]);
-
   function flushFinalBuffer() {
     const text = tapHookFormingText(tapThoughtSpeech);
     clearTranscriptionDisplay();
-    restartSpeechRecognitionSession();
     if (text) addThought(text);
   }
 
@@ -618,7 +613,6 @@ export function TapScoreClient({
     (options?: { auto?: boolean; fromContext?: boolean }) => {
       const text = tapHookFormingText(tapThoughtSpeech);
       clearTranscriptionDisplay();
-      restartSpeechRecognitionSession();
       if (!text) {
         autoStashInFlightRef.current = false;
         contextStashInFlightRef.current = false;
@@ -635,7 +629,7 @@ export function TapScoreClient({
       }
       autoStashInFlightRef.current = false;
     },
-    [crystallizableText, restartSpeechRecognitionSession, applyPurityHit],
+    [applyPurityHit],
   );
 
   const syncLiveClock = useCallback((waiting: boolean, now = Date.now()) => {
@@ -792,7 +786,7 @@ export function TapScoreClient({
     isPracticeModeRef, isEndingRef,
     autoStashInFlightRef, tapThoughtSpeech, logTapTrace, bumpUserActivity,
     handlePowInterruption, clearPendingInterruption, resetIdleTracking, resetSpeechTracking,
-    flushSpeechSegment, flushFinalBuffer, clearTranscriptionDisplay, restartSpeechRecognitionSession,
+    flushSpeechSegment, flushFinalBuffer, clearTranscriptionDisplay,
     workCanvasSceneRef,
     apply: applyTapSession,
     kind,
@@ -931,7 +925,6 @@ export function TapScoreClient({
       startSession={startSession}
       participantIdentity={participantIdentity}
       isPracticeMode={isPracticeMode}
-      lastUserTurn={null}
       lastAssistantTurn={lastAssistantTurn}
       messages={messages}
       isSending={isSending}
@@ -970,7 +963,6 @@ export function TapScoreClient({
       setEditingTranscription={setEditingTranscription}
       logTapTrace={logTapTrace}
       clearTranscriptionDisplay={clearTranscriptionDisplay}
-      restartSpeechRecognitionSession={restartSpeechRecognitionSession}
       tapSessionId={tapSessionId}
       entryQueryParams={entryQueryParamsRef.current}
       workCanvasSceneRef={workCanvasSceneRef}

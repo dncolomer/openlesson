@@ -66,5 +66,14 @@ describe("landing featured maps catalog", () => {
     expect(read("lib/dashboard-home-catalog.ts")).toContain("orderLandingFeaturedMaps");
     expect(read("lib/dashboard-home-catalog.ts")).toContain("landing-featured-ids");
     expect(read("lib/marketing/landing-featured-ids.ts")).not.toContain('from "node:crypto"');
+    expect(read("lib/marketing/landing-featured-maps.ts")).toContain("landing-featured-maps.json");
+    expect(read("lib/marketing/landing-featured-maps.ts")).toContain("landingFeaturedUuid");
+    expect(read("lib/marketing/landing-featured-maps.ts")).toContain("[LP:featured-v1]");
+    expect(read("lib/marketing/landing-featured-maps.ts")).toContain("assertLandingFeaturedCatalog");
+    expect(read("lib/marketing/landing-featured-maps.ts").split("\n").length).toBeLessThanOrEqual(1000);
+    expect(read("lib/marketing/landing-featured-maps.json")).toContain(
+      "surface-code-mwpm-neural-decoding",
+    );
+    expect(read("lib/marketing/landing-featured-maps.json")).not.toContain("node:crypto");
   });
 });

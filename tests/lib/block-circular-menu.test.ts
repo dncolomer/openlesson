@@ -214,9 +214,8 @@ describe("circular menu source wiring", () => {
     expect(ring).toContain("accept_chapter: <Check");
     expect(ring).toContain("reject_chapter: <X");
     expect(ring).toContain("timUnopened");
-    expect(view).toContain("handleAcceptTimChapter");
-    expect(view).toContain("handleRejectTimChapter");
-    expect(view).toContain("handleRejectTimChapter");
+    expect(read("components/session-view/use-session-mutate.ts")).toContain("handleAcceptTimChapter");
+    expect(read("components/session-view/use-session-mutate.ts")).toContain("handleRejectTimChapter");
     expect(ring).toContain("accept_chapter");
     expect(ring).toContain("reject_chapter");
     expect(ring).not.toContain("work: <MessageSquare");
@@ -351,7 +350,7 @@ describe("circular menu source wiring", () => {
     expect(applyIleChapterUndoDone(undone.steps, "ch-1").changed).toBe(false);
 
     expect(world).not.toContain("ileCircularMenuDisabledActionIds");
-    expect(view).toContain("handleMarkChapterUndone");
+    expect(read("components/session-view/use-session-mutate.ts")).toContain("handleMarkChapterUndone");
     expect(ring).toContain("disabled={disabled}");
 
     expect(view).not.toContain("onChapterDoubleClick");
@@ -360,7 +359,7 @@ describe("circular menu source wiring", () => {
     expect(read("components/SessionView.tsx")).not.toContain("<ChapterMapPanel");
     expect(read("components/SessionView.tsx")).not.toContain('circularMenuSurface="ile"');
     expect(view).not.toContain("setHeliosWidgetOpen");
-    expect(view).toContain("void handleLoadChapter(idx)");
+    expect(read("components/session-view/use-session-field.ts")).toContain("void handleLoadChapter(idx)");
     expect(view).toContain("await handleMarkChapterDone(opts)");
 
     expect(actions).not.toContain("data-ile-chapter-helios-actions");

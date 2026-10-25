@@ -3,24 +3,15 @@
 import { useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
-  archiveProbe,
   endSession,
   getIlePostSessionPath,
   getSession,
   getSessionPlan,
   pauseSession,
   resetSessionProbes,
-  resumeSession,
-  updateSessionStatus,
   type Session,
   type SessionPlan,
 } from "@/lib/storage";
-import { decideIleSettingsEnterMap } from "@/lib/learn-session-routes";
-import {
-  isSessionWelcomeSeen,
-  markIleSessionSettingsConfirmed,
-  markSessionWelcomeSeen,
-} from "@/lib/welcomeState";
 import { coerceSpokenLocale, type SpokenLocale } from "@/lib/tutoring-languages";
 import { releaseSessionLocalMemory } from "@/lib/session-local-memory";
 import {
@@ -38,13 +29,9 @@ import { withImpurePoWData } from "@/lib/tap-session-purity";
 import { postWorkspaceFlowEmbedding } from "@/lib/flow-embedding-client";
 import { FLOW_EMBEDDING_MODEL_ID } from "@/lib/flow-embedding";
 import type { SessionPolicySnapshot } from "@/components/session-view/session-policy-context";
-import { loadSessionBranchField, sessionClockMayStart } from "@/lib/session-branch-field-load";
-import { learnSessionFieldInput } from "@/lib/session-branch-prepare";
 import { persistIleSessionRow } from "@/lib/learn-session-persist";
-import { learnFieldFromStoredPolicy } from "@/lib/session-policy-store";
 import { discardUnsavedIleSession } from "@/lib/learn-unsaved-exit";
-import type { GuestAccessKind, ChapterPlanStatus, HelpPreviousLayout } from "@/components/session-view/types";
-
+import type { GuestAccessKind, ChapterPlanStatus } from "@/components/session-view/types";
 
 export type SessionPhaseInput = {
   session: Session | null;
@@ -58,18 +45,11 @@ export type SessionPhaseInput = {
   entryQueryParams?: Record<string, string | string[]>;
   entryParamsKey: string;
   router: ReturnType<typeof useRouter>;
-  t: (key: string) => string;
   isRecording: boolean;
-  setIsRecording: (v: boolean) => void;
   isPaused: boolean;
-  setIsPaused: (v: boolean) => void;
   elapsedSeconds: number;
   setElapsedSeconds: (v: number | ((n: number) => number)) => void;
-  elapsedSecondsRef: { current: number };
-  stream: MediaStream | null;
-  setStream: (s: MediaStream | null) => void;
-  setError: (e: string | null) => void;
-  tutoringLanguage: SpokenLocale;
+  setIsPaused: (v: boolean) => void;
   setTutoringLanguage: (l: SpokenLocale) => void;
   setLanguageConfirmed: (v: boolean) => void;
   setSessionPlan: (p: SessionPlan | null) => void;
@@ -77,845 +57,392 @@ export type SessionPhaseInput = {
   setPlanLoading: (v: boolean) => void;
   setPlanError: (e: string | null) => void;
   setChapterPlanStatus: (s: ChapterPlanStatus) => void;
-  objectives: string[];
   setObjectives: (o: string[]) => void;
   setObjectiveStatuses: (s: Array<"red" | "yellow" | "green" | "blue">) => void;
-  isPreparing: boolean;
-  setIsPreparing: (v: boolean) => void;
-  setShowWelcomeModal: (v: boolean) => void;
-  setShowWelcomePanel: (v: boolean) => void;
-  setIsStartingSession: (v: boolean) => void;
-  applyIleChapterGridStartup: () => void;
-  helpPreviousLayoutRef: { current: HelpPreviousLayout | null };
-  setPaneVisibility: (v: { tools: boolean; tutor: boolean; plan: boolean }) => void;
-  timerRef: { current: ReturnType<typeof setInterval> | null };
-  muteTimerRef: { current: ReturnType<typeof setTimeout> | null };
-  micStreamRef: { current: MediaStream | null };
-  setMicStatus: (s: "idle" | "checking" | "ready" | "denied") => void;
-  setIsMuted: (v: boolean) => void;
-  setMuteRemaining: (n: number) => void;
-  setIsSaving: (v: boolean) => void;
   setShowEndDialog: (v: boolean) => void;
-  whiteboardData: string | null;
-  notebookContent: string;
   handleDisconnectMuse: () => void;
-  handleConnectMuse: () => void;
   flushRemainingIlePow: (options?: { force?: boolean }) => Promise<void>;
-  isScreenCapturing: boolean;
-  isWebcamEnabled: boolean;
-  setIsWebcamEnabled: (v: boolean) => void;
-  setIsScreenCapturing: (v: boolean) => void;
-  museStatus: string;
-  screenCaptureRef: { current: { start: () => Promise<boolean>; stop: () => void; getStream: () => MediaStream | null } | null };
-  wasRecordingRef: { current: boolean };
-  wasScreenCapturingRef: { current: boolean };
-  wasWebcamEnabledRef: { current: boolean };
-  wasMuseStreamingRef: { current: boolean };
-  isRecordingRef: { current: boolean };
-  pausedAudioStreamRef: { current: MediaStream | null };
-  pausedScreenStreamRef: { current: MediaStream | null };
-  pausedWebcamStreamRef: { current: MediaStream | null };
-  handlePauseRef: { current: () => Promise<void> };
+  handlePause: () => Promise<void>;
+  stopRecording: (options?: { stayOnScreen?: boolean }) => Promise<void>;
   openWorkIdsRef: { current: string[] };
   policyRef?: { current: SessionPolicySnapshot };
 };
 
 export function useSessionPhase(input: SessionPhaseInput) {
   const {
-    session, setSession, sessionRef, sessionId, guestAccessKind, ayclToken, ileToken,
-    guestAccessBody, entryQueryParams, entryParamsKey, router, t, isRecording, setIsRecording, isPaused,
-    setIsPaused, elapsedSeconds, setElapsedSeconds, elapsedSecondsRef, stream, setStream,
-    setError, tutoringLanguage, setTutoringLanguage, setLanguageConfirmed, setSessionPlan,
-    sessionPlanRef, setPlanLoading, setPlanError, setChapterPlanStatus,
-    objectives, setObjectives, setObjectiveStatuses, isPreparing, setIsPreparing,
-    setShowWelcomeModal, setShowWelcomePanel, setIsStartingSession, applyIleChapterGridStartup,
-    helpPreviousLayoutRef, setPaneVisibility, timerRef, muteTimerRef,
-    micStreamRef, setMicStatus, setIsMuted, setMuteRemaining, setIsSaving, setShowEndDialog,
-    whiteboardData, notebookContent, handleDisconnectMuse, handleConnectMuse, flushRemainingIlePow,
-    isScreenCapturing, isWebcamEnabled, setIsWebcamEnabled, setIsScreenCapturing, museStatus,
-    screenCaptureRef, wasRecordingRef, wasScreenCapturingRef, wasWebcamEnabledRef,
-    wasMuseStreamingRef, isRecordingRef, pausedAudioStreamRef, pausedScreenStreamRef,
-    pausedWebcamStreamRef, handlePauseRef, openWorkIdsRef,
+    session,
+    setSession,
+    sessionRef,
+    sessionId,
+    guestAccessKind,
+    ayclToken,
+    ileToken,
+    guestAccessBody,
+    entryQueryParams,
+    entryParamsKey,
+    router,
+    isRecording,
+    isPaused,
+    elapsedSeconds,
+    setElapsedSeconds,
+    setIsPaused,
+    setTutoringLanguage,
+    setLanguageConfirmed,
+    setSessionPlan,
+    sessionPlanRef,
+    setPlanLoading,
+    setPlanError,
+    setChapterPlanStatus,
+    setObjectives,
+    setObjectiveStatuses,
+    setShowEndDialog,
+    handleDisconnectMuse,
+    flushRemainingIlePow,
+    handlePause,
+    stopRecording,
+    openWorkIdsRef,
   } = input;
 
-useEffect(() => {
-  if (!session || !isRecording || isPaused) return;
-  const interval = window.setInterval(() => {
-    void updateSessionStatus(session.id, "active", elapsedSecondsRef.current * 1000);
-  }, 15000);
-  return () => window.clearInterval(interval);
-}, [session?.id, isRecording, isPaused]);
-
-// Listen for probe-revealed custom events (e.g. from legacy probe UI)
-useEffect(() => {
-  const handleProbeRevealed = (e: Event) => {
-    const probeId = (e as CustomEvent).detail;
-    setSession((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        probes: prev.probes.map((p) =>
-          p.id === probeId ? { ...p, isRevealed: true } : p
-        ),
-      };
-    });
-    if (sessionRef.current) {
-      sessionRef.current = {
-        ...sessionRef.current,
-        probes: sessionRef.current.probes.map((p) =>
-          p.id === probeId ? { ...p, isRevealed: true } : p
-        ),
-      };
-    }
-  };
-
-  const handleProbeStarToggled = (e: Event) => {
-    const { probeId, starred } = (e as CustomEvent).detail;
-    setSession((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        probes: prev.probes.map((p) =>
-          p.id === probeId ? { ...p, starred } : p
-        ),
-      };
-    });
-  };
-
-  window.addEventListener("probe-revealed", handleProbeRevealed);
-  window.addEventListener("probe-star-toggled", handleProbeStarToggled);
-
-  return () => {
-    window.removeEventListener("probe-revealed", handleProbeRevealed);
-    window.removeEventListener("probe-star-toggled", handleProbeStarToggled);
-  };
-}, []);
-
-// Load session on mount from Supabase + fire opening probe early
-useEffect(() => {
-  let cancelled = false;
-  async function load() {
-    // Cheap existence check starts immediately — do not wait on session
-    // fetch, objectives generation, or full-plan hydrate to leave "unknown".
-    setPlanLoading(true);
-    const chapterStatusPromise = fetchWelcomeChapterSnapshot(
-      sessionId,
-      guestAccessBody,
-    );
-    void chapterStatusPromise.then((snapshot) => {
-      if (cancelled) return;
-      setChapterPlanStatus(snapshot.status);
-      if (snapshot.plan && (snapshot.plan.steps?.length ?? 0) > 0) {
-        setSessionPlan(snapshot.plan);
-        sessionPlanRef.current = snapshot.plan;
+  useEffect(() => {
+    const handleProbeRevealed = (e: Event) => {
+      const probeId = (e as CustomEvent).detail;
+      setSession((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          probes: prev.probes.map((p) =>
+            p.id === probeId ? { ...p, isRevealed: true } : p,
+          ),
+        };
+      });
+      if (sessionRef.current) {
+        sessionRef.current = {
+          ...sessionRef.current,
+          probes: sessionRef.current.probes.map((p) =>
+            p.id === probeId ? { ...p, isRevealed: true } : p,
+          ),
+        };
       }
-    });
+    };
 
-    const s =
-      guestAccessKind === "aycl" && ayclToken
-        ? await (await import("@/lib/aycl-storage")).getAyclSession(ayclToken, sessionId)
-        : guestAccessKind === "ile" && ileToken
-          ? await (await import("@/lib/learn-link-storage")).getIleLinkSession(ileToken, sessionId)
-          : await getSession(sessionId);
-    if (cancelled) return;
-    if (s) {
-      setSession(s);
-      sessionRef.current = s;
-      setElapsedSeconds(Math.floor((s.durationMs || 0) / 1000));
-      
-      // Reset language confirmation for new session
-      setLanguageConfirmed(false);
-      
-      // Load tutoring language from session metadata if set
-      if (s.metadata?.tutoringLanguage) {
-        setTutoringLanguage(coerceSpokenLocale(String(s.metadata.tutoringLanguage)));
-      }
-      
-      // Set paused state if session was paused
-      if (s.status === "paused") {
-        setIsPaused(true);
-      }
-      
-      setPlanError(null);
+    const handleProbeStarToggled = (e: Event) => {
+      const { probeId, starred } = (e as CustomEvent).detail;
+      setSession((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          probes: prev.probes.map((p) =>
+            p.id === probeId ? { ...p, starred } : p,
+          ),
+        };
+      });
+    };
 
-      const objectivesPromise = (async () => {
-        let loadedObjectives: string[] = [];
-        if (s.objectives && s.objectives.length > 0) {
-          loadedObjectives = s.objectives;
-        } else {
-          try {
-            const objRes = await fetch("/api/generate-objectives", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                problem: s.problem,
-                ...guestAccessBody,
-              }),
-            });
-            if (!cancelled && objRes.ok) {
-              const { objectives: generatedObjectives } = await objRes.json();
-              if (generatedObjectives && generatedObjectives.length > 0) {
-                loadedObjectives = generatedObjectives;
-              }
-            }
-          } catch { /* objectives are optional */ }
-        }
-        if (loadedObjectives.length > 0 && !cancelled) {
-          setObjectives(loadedObjectives);
-          setObjectiveStatuses(loadedObjectives.map(() => "blue"));
-        }
-      })();
+    window.addEventListener("probe-revealed", handleProbeRevealed);
+    window.addEventListener("probe-star-toggled", handleProbeStarToggled);
 
+    return () => {
+      window.removeEventListener("probe-revealed", handleProbeRevealed);
+      window.removeEventListener("probe-star-toggled", handleProbeStarToggled);
+    };
+  }, [sessionRef, setSession]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
       setPlanLoading(true);
-      try {
-        const snapshot = await chapterStatusPromise;
+      const chapterStatusPromise = fetchWelcomeChapterSnapshot(
+        sessionId,
+        guestAccessBody,
+      );
+      void chapterStatusPromise.then((snapshot) => {
         if (cancelled) return;
-        let status = snapshot.status;
-        let existingPlan = snapshot.plan;
+        setChapterPlanStatus(snapshot.status);
         if (snapshot.plan && (snapshot.plan.steps?.length ?? 0) > 0) {
           setSessionPlan(snapshot.plan);
           sessionPlanRef.current = snapshot.plan;
         }
-        // Browser hydrate is best-effort; API plan is preferred.
-        if (status === "exists" && !(existingPlan?.steps?.length)) {
-          try {
-            existingPlan = await getSessionPlan(s.id);
-            if (
-              !cancelled &&
-              existingPlan &&
-              (existingPlan.steps?.length ?? 0) > 0
-            ) {
-              setSessionPlan(existingPlan);
-              sessionPlanRef.current = existingPlan;
+      });
+
+      const s =
+        guestAccessKind === "aycl" && ayclToken
+          ? await (await import("@/lib/aycl-storage")).getAyclSession(ayclToken, sessionId)
+          : guestAccessKind === "ile" && ileToken
+            ? await (await import("@/lib/learn-link-storage")).getIleLinkSession(ileToken, sessionId)
+            : await getSession(sessionId);
+      if (cancelled) return;
+      if (s) {
+        setSession(s);
+        sessionRef.current = s;
+        setElapsedSeconds(Math.floor((s.durationMs || 0) / 1000));
+
+        setLanguageConfirmed(false);
+
+        if (s.metadata?.tutoringLanguage) {
+          setTutoringLanguage(coerceSpokenLocale(String(s.metadata.tutoringLanguage)));
+        }
+
+        if (s.status === "paused") {
+          setIsPaused(true);
+        }
+
+        setPlanError(null);
+
+        const objectivesPromise = (async () => {
+          let loadedObjectives: string[] = [];
+          if (s.objectives && s.objectives.length > 0) {
+            loadedObjectives = s.objectives;
+          } else {
+            try {
+              const objRes = await fetch("/api/generate-objectives", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  problem: s.problem,
+                  ...guestAccessBody,
+                }),
+              });
+              if (!cancelled && objRes.ok) {
+                const { objectives: generatedObjectives } = await objRes.json();
+                if (generatedObjectives && generatedObjectives.length > 0) {
+                  loadedObjectives = generatedObjectives;
+                }
+              }
+            } catch {
+              /* objectives are optional */
             }
-          } catch (err) {
-            console.warn("Session plan hydrate failed:", err);
           }
+          if (loadedObjectives.length > 0 && !cancelled) {
+            setObjectives(loadedObjectives);
+            setObjectiveStatuses(loadedObjectives.map(() => "blue"));
+          }
+        })();
+
+        setPlanLoading(true);
+        try {
+          const snapshot = await chapterStatusPromise;
+          if (cancelled) return;
+          let status = snapshot.status;
+          let existingPlan = snapshot.plan;
+          if (snapshot.plan && (snapshot.plan.steps?.length ?? 0) > 0) {
+            setSessionPlan(snapshot.plan);
+            sessionPlanRef.current = snapshot.plan;
+          }
+          if (status === "exists" && !(existingPlan?.steps?.length)) {
+            try {
+              existingPlan = await getSessionPlan(s.id);
+              if (
+                !cancelled &&
+                existingPlan &&
+                (existingPlan.steps?.length ?? 0) > 0
+              ) {
+                setSessionPlan(existingPlan);
+                sessionPlanRef.current = existingPlan;
+              }
+            } catch (err) {
+              console.warn("Session plan hydrate failed:", err);
+            }
+          }
+          if (!cancelled) {
+            setChapterPlanStatus(chapterStatusAfterHydrate(status, existingPlan));
+          }
+        } catch (err) {
+          console.warn("Session plan existence check failed:", err);
+          if (!cancelled) setChapterPlanStatus("failed");
+        } finally {
+          if (!cancelled) setPlanLoading(false);
         }
-        if (!cancelled) {
-          setChapterPlanStatus(chapterStatusAfterHydrate(status, existingPlan));
-        }
-      } catch (err) {
-        console.warn("Session plan existence check failed:", err);
-        if (!cancelled) setChapterPlanStatus("failed");
-      } finally {
+
+        await objectivesPromise;
+      } else {
         if (!cancelled) setPlanLoading(false);
+        router.push("/");
       }
-
-      await objectivesPromise;
-    } else {
-      if (!cancelled) setPlanLoading(false);
-      router.push("/");
     }
-  }
-  load();
-  return () => { cancelled = true; };
-  // guestAccessBody is derived from tokens + entryParamsKey; include key not object identity.
-}, [sessionId, router, guestAccessKind, ayclToken, ileToken, entryParamsKey, guestAccessBody]);
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    sessionId,
+    router,
+    guestAccessKind,
+    ayclToken,
+    ileToken,
+    entryParamsKey,
+    guestAccessBody,
+    sessionPlanRef,
+    sessionRef,
+    setChapterPlanStatus,
+    setElapsedSeconds,
+    setIsPaused,
+    setLanguageConfirmed,
+    setObjectives,
+    setObjectiveStatuses,
+    setPlanError,
+    setPlanLoading,
+    setSession,
+    setSessionPlan,
+    setTutoringLanguage,
+  ]);
 
-const checkMicrophone = async () => {
-  setMicStatus("checking");
-  setError(null);
-  try {
-    const mediaStream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        sampleRate: 48000,
-      },
-    });
-    micStreamRef.current = mediaStream;
-    setMicStatus("ready");
-  } catch (err) {
-    setMicStatus("denied");
-    setError(t('session.micDenied'));
-  }
-};
+  const handleReset = async () => {
+    if (!session) return;
 
-const startRecording = async () => {
-  try {
-    setError(null);
-
-    // Request mic for browser speech recognition (transcripts only — no audio storage).
-    let mediaStream: MediaStream | null = micStreamRef.current;
     try {
-      if (!mediaStream || mediaStream.getTracks().some(t => t.readyState === "ended")) {
-        mediaStream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            sampleRate: 48000,
-          },
-        });
-      }
-      micStreamRef.current = null;
-      setStream(mediaStream);
-    } catch (micErr) {
-      console.warn("[SessionView] Mic unavailable, starting session without live speech:", micErr);
-      setError(t('session.micNotFound'));
-      mediaStream = null;
-      micStreamRef.current = null;
-      setStream(null);
+      await resetSessionProbes(session.id);
+      const resetSession = { ...session, probes: [] };
+      setSession(resetSession);
+      sessionRef.current = resetSession;
+    } catch (err) {
+      console.error("Reset session error:", err);
     }
+  };
 
-    // Always start the session regardless of mic availability
-    setIsRecording(true);
-    setIsPaused(false);
-
-    // Sync DB status to active
-    if (session) {
-      updateSessionStatus(session.id, "active").catch(() => {});
-    }
-
-    const startTime = Date.now() - (elapsedSeconds * 1000);
-    timerRef.current = setInterval(() => {
-      setElapsedSeconds(Math.floor((Date.now() - startTime) / 1000));
-    }, 1000);
-
-  } catch (err) {
-    console.error("[SessionView] startRecording failed:", err);
-    setError(t('session.micError'));
-  }
-};
-
-const stopRecording = async (options?: { stayOnScreen?: boolean }) => {
-  if (timerRef.current) clearInterval(timerRef.current);
-
-  await flushRemainingIlePow({ force: true });
-
-  if (stream) { stream.getTracks().forEach((t) => t.stop()); setStream(null); }
-  setIsRecording(false);
-  if (!options?.stayOnScreen) setIsSaving(true);
-  if (!session) {
-    releaseSessionLocalMemory();
-    return;
-  }
-
-  const finalSession = endSession(sessionRef.current ?? session, elapsedSeconds * 1000);
-  finalSession.hasAudio = false;
-  finalSession.metadata = applyIleOpenWorkIdsToMetadata(
-    {
-      ...finalSession.metadata,
-      whiteboardData: whiteboardData || undefined,
-      notebookData: notebookContent || undefined,
-    } as Record<string, unknown>,
-    openWorkIdsRef.current,
-  ) as Session["metadata"];
-  sessionRef.current = finalSession;
-
-  await persistIleSessionRow(() => sessionRef.current, { ayclToken, ileToken });
-
-  // PoW is already flushed above. Flow embedding is posted before endSession.
-
-  handleDisconnectMuse();
-  if (options?.stayOnScreen) return;
-  releaseSessionLocalMemory(finalSession.id);
-
-  router.push(
-    guestAccessKind === "aycl" && ayclToken
-      ? `/learn/${ayclToken}`
-      : guestAccessKind === "ile"
-        ? `/learn/session/${ileToken}`
-        : getIlePostSessionPath(finalSession)
-  );
-};
-
-const handlePause = async () => {
-  if (timerRef.current) clearInterval(timerRef.current);
-
-  // Track what was active before pause (for auto-resume)
-  wasRecordingRef.current = isRecordingRef.current;
-  wasScreenCapturingRef.current = isScreenCapturing;
-  wasWebcamEnabledRef.current = isWebcamEnabled;
-  wasMuseStreamingRef.current = museStatus === "streaming";
-
-  // Store stream references for potential resume
-  pausedAudioStreamRef.current = stream;
-  pausedScreenStreamRef.current = screenCaptureRef.current?.getStream() || null;
-  pausedWebcamStreamRef.current = null;
-
-  // Stop all data flows
-  if (stream) { stream.getTracks().forEach((t) => t.stop()); setStream(null); }
-  
-  // Stop screen capture
-  if (screenCaptureRef.current) {
-    screenCaptureRef.current.stop();
-    setIsScreenCapturing(false);
-  }
-
-  // Stop EEG
-  handleDisconnectMuse();
-
-  // Stop webcam (FaceTracker manages its own stream internally)
-  setIsWebcamEnabled(false);
-  
-  setIsRecording(false);
-  setIsPaused(true);
-
-  if (session) {
-    const durationMs = elapsedSeconds * 1000;
-    const pausedSession = { ...session, durationMs, status: "paused" as const };
-    setSession(pausedSession);
-    sessionRef.current = pausedSession;
-    await pauseSession(session.id, durationMs);
-  }
-};
-handlePauseRef.current = handlePause;
-
-const handleResume = async () => {
-  if (!session) return;
-
-  try {
-    // Resume mic stream for speech recognition (no audio storage).
-    try {
-      let mediaStream = pausedAudioStreamRef.current;
-      const tracksStillActive = mediaStream?.getTracks().some(t => t.readyState === "live");
-      if (!mediaStream || !tracksStillActive) {
-        mediaStream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            sampleRate: 48000,
-          },
-        });
-      }
-      setStream(mediaStream);
-    } catch (micErr) {
-      console.warn("[SessionView] Mic unavailable on resume, continuing without live speech:", micErr);
-      setError(t('session.micNotFound'));
-      setStream(null);
-    }
-
-    setIsRecording(true);
-    setIsPaused(false);
-
-    await resumeSession(session.id);
-    const activeSession = { ...session, status: "active" as const };
-    setSession(activeSession);
-    sessionRef.current = activeSession;
-
-    const startTime = Date.now() - (elapsedSeconds * 1000);
-    timerRef.current = setInterval(() => {
-      setElapsedSeconds(Math.floor((Date.now() - startTime) / 1000));
-    }, 1000);
-
-    // Auto-resume data sources that were active before pause
-    // Screen capture
-    if (wasScreenCapturingRef.current) {
-      if (screenCaptureRef.current) {
-        const existingStream = pausedScreenStreamRef.current;
-        const streamStillActive = existingStream?.getVideoTracks().some(t => t.readyState === "live");
-        if (streamStillActive) {
-          try {
-            await screenCaptureRef.current.start();
-            setIsScreenCapturing(true);
-          } catch (e) {
-            console.warn("[Resume] Could not restart screen capture:", e);
-            wasScreenCapturingRef.current = false;
-          }
-        } else {
-          wasScreenCapturingRef.current = false;
+  const pauseAndGoToDashboard = useCallback(async (
+    sessionName?: string | null,
+    options?: { persistSession?: boolean },
+  ) => {
+    const persistSession = options?.persistSession !== false;
+    const current = sessionRef.current ?? session;
+    if (current) {
+      if (persistSession) {
+        const latest = sessionRef.current ?? current;
+        const metadata = applyIleOpenWorkIdsToMetadata(
+          applyIleSessionNameToMetadata(
+            latest.metadata as Record<string, unknown>,
+            sessionName,
+          ),
+          openWorkIdsRef.current,
+        ) as Session["metadata"];
+        const named = { ...latest, metadata };
+        setSession(named);
+        sessionRef.current = named;
+        try {
+          await persistIleSessionRow(() => sessionRef.current, { ayclToken, ileToken });
+        } catch {
+          /* Still pause and leave — name is best-effort. */
+        }
+      } else {
+        try {
+          await flushRemainingIlePow({ force: true });
+          await discardUnsavedIleSession({
+            sessionId: current.id,
+            guestAccessBody,
+          });
+        } catch {
+          /* Still pause and leave — discard is best-effort. */
         }
       }
     }
-
-    // Webcam (FaceTracker will auto-start when enabled)
-    if (wasWebcamEnabledRef.current) {
-      setIsWebcamEnabled(true);
+    if (session && isRecording && !isPaused) {
+      await handlePause();
+    } else if (session && isPaused) {
+      await pauseSession(session.id, elapsedSeconds * 1000);
     }
+    const next = sessionRef.current ?? session;
+    releaseSessionLocalMemory(next?.id ?? current?.id);
+    router.push(next ? getIlePostSessionPath(next) : "/dashboard");
+  }, [
+    session,
+    isRecording,
+    isPaused,
+    elapsedSeconds,
+    handlePause,
+    router,
+    ayclToken,
+    ileToken,
+    setSession,
+    guestAccessBody,
+    flushRemainingIlePow,
+    openWorkIdsRef,
+    sessionRef,
+  ]);
 
-    // EEG (auto-reconnect)
-    if (wasMuseStreamingRef.current) {
-      handleConnectMuse();
-    }
-
-  } catch (err) {
-    console.error("[SessionView] handleResume failed:", err);
-    setError(t('session.micError'));
-  }
-};
-
-const handleMute = (durationMs: number) => {
-  setIsMuted(true);
-  setMuteRemaining(durationMs);
-  if (muteTimerRef.current) clearTimeout(muteTimerRef.current);
-  muteTimerRef.current = setTimeout(() => { setIsMuted(false); setMuteRemaining(0); }, durationMs);
-};
-
-
-const handleReset = async () => {
-  if (!session) return;
-  
-  try {
-    // Clear probes from database
-    await resetSessionProbes(session.id);
-    
-    // Clear local probe state
-    const resetSession = { ...session, probes: [] };
-    setSession(resetSession);
-    sessionRef.current = resetSession;
-    
-  } catch (err) {
-    console.error("Reset session error:", err);
-  }
-};
-
-// Close session - return to workspace without ending
-const pauseAndGoToDashboard = useCallback(async (
-  sessionName?: string | null,
-  options?: { persistSession?: boolean },
-) => {
-  const persistSession = options?.persistSession !== false;
-  const current = sessionRef.current ?? session;
-  if (current) {
-    if (persistSession) {
-      const latest = sessionRef.current ?? current;
-      const metadata = applyIleOpenWorkIdsToMetadata(
-        applyIleSessionNameToMetadata(
-          latest.metadata as Record<string, unknown>,
-          sessionName,
-        ),
-        openWorkIdsRef.current,
-      ) as Session["metadata"];
-      const named = { ...latest, metadata };
-      setSession(named);
-      sessionRef.current = named;
-      try {
-        await persistIleSessionRow(() => sessionRef.current, { ayclToken, ileToken });
-      } catch {
-        /* Still pause and leave — name is best-effort. */
-      }
-    } else {
-      try {
-        await flushRemainingIlePow({ force: true });
-        await discardUnsavedIleSession({
-          sessionId: current.id,
-          guestAccessBody,
-        });
-      } catch {
-        /* Still pause and leave — discard is best-effort. */
-      }
-    }
-  }
-  if (session && isRecording && !isPaused) {
-    await handlePause();
-  } else if (session && isPaused) {
-    await pauseSession(session.id, elapsedSeconds * 1000);
-  }
-  const next = sessionRef.current ?? session;
-  releaseSessionLocalMemory(next?.id ?? current?.id);
-  router.push(next ? getIlePostSessionPath(next) : "/dashboard");
-}, [
-  session,
-  isRecording,
-  isPaused,
-  elapsedSeconds,
-  handlePause,
-  router,
-  guestAccessKind,
-  ayclToken,
-  ileToken,
-  setSession,
-  guestAccessBody,
-  flushRemainingIlePow,
-  openWorkIdsRef,
-]);
-
-const handleClose = () => {
-  void pauseAndGoToDashboard();
-};
-
-/**
- * The user clicked the Play button inside the tutor welcome panel. Mark the
- * welcome as "seen" so a page refresh doesn't re-play the welcome.
- */
-const handleWelcomePlay = useCallback(async () => {
-  const s = sessionRef.current;
-  if (!s) return;
-  setIsStartingSession(true);
-  let didRevealChat = false;
-  const revealChat = () => {
-    if (didRevealChat) return;
-    didRevealChat = true;
-    setShowWelcomePanel(false);
-    applyIleChapterGridStartup();
+  const handleClose = () => {
+    void pauseAndGoToDashboard();
   };
-  try {
-    // Bring the session back to an actively-recording state. Three cases:
-    //   1. Fresh session: `!isRecording` → startRecording (first mic req).
-    //   2. Paused session (e.g. Help was just clicked): `isPaused` →
-    //      handleResume restarts the recorder/streams.
-    //   3. Already active: no-op.
-    if (!isRecording) {
-      await startRecording();
-    } else if (isPaused) {
-      await handleResume();
-    }
-    revealChat();
-  } finally {
-    markSessionWelcomeSeen(s.id);
-    revealChat();
-    setIsStartingSession(false);
-    // If the welcome was opened via the Help button, restore the
-    // user's previous pane layout so tools/plan don't stay hidden.
-    const prev = helpPreviousLayoutRef.current;
-    if (prev) {
-      helpPreviousLayoutRef.current = null;
-      // Give the welcome-panel collapse effect a beat to finish before
-      // we overwrite it, otherwise its 80ms timer races us.
-      window.setTimeout(() => {
-        const innerLeft = prev.inner.collapsedSide === "left";
-        const innerRight = prev.inner.collapsedSide === "right";
-        setPaneVisibility({
-          tools: !innerLeft,
-          tutor: true,
-          plan: !innerRight,
-        });
-      }, 120);
-    }
-  }
-  // startRecording / handleResume are defined inline and reference many
-  // setters/refs; including them as deps would cause noise.
-}, [isRecording, isPaused]);
 
-const handleConfirmEnd = async (options?: { impure?: boolean }) => {
-  setShowEndDialog(false);
-  const impure = options?.impure === true;
-  const workspaceId =
-    session && typeof session.metadata?.workspace_id === "string"
-      ? session.metadata.workspace_id
-      : "";
-  if (session) {
-    const snapshot = input.policyRef?.current;
-    if (snapshot?.model) {
-      const sequence = snapshot.sequence ?? [];
-      if (workspaceId) {
-        void postWorkspaceFlowEmbedding({
-          workspaceId,
-          flowKind: "learn",
-          runId: session.id,
-          source: "learn",
-          model: snapshot.model,
-          sequence,
-          pow: sequence.map((action, index) => ({
+  const handleConfirmEnd = async (options?: { impure?: boolean }) => {
+    setShowEndDialog(false);
+    const impure = options?.impure === true;
+    const workspaceId =
+      session && typeof session.metadata?.workspace_id === "string"
+        ? session.metadata.workspace_id
+        : "";
+    if (session) {
+      const snapshot = input.policyRef?.current;
+      if (snapshot?.model) {
+        const sequence = snapshot.sequence ?? [];
+        if (workspaceId) {
+          void postWorkspaceFlowEmbedding({
+            workspaceId,
+            flowKind: "learn",
+            runId: session.id,
+            source: "learn",
+            model: snapshot.model,
+            sequence,
+            pow: sequence.map((action, index) => ({
+              type: "tool",
+              tool_name: "session_policy",
+              tool_action: action,
+              timestamp_ms: index + 1,
+            })),
+            sessionId: session.id,
+            ileToken,
+          });
+          const policyMetadata = {
+            flowKind: "learn",
+            embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
+            policy_sequence: sequence,
+          };
+          void uploadIleProofOfWork({
+            workspaceId,
+            sessionId: session.id,
+            ileToken,
             type: "tool",
+            mime_type: "application/json",
+            data: textToBase64(
+              JSON.stringify({
+                flowKind: "learn",
+                sequence,
+                ...(impure ? { quality: "impure", impure: true, session_quality: "impure" } : {}),
+              }),
+            ),
+            file_name: "session-policy.json",
             tool_name: "session_policy",
-            tool_action: action,
-            timestamp_ms: index + 1,
-          })),
-          sessionId: session.id,
-          ileToken,
-        });
-        const policyMetadata = {
-          flowKind: "learn",
-          embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
-          policy_sequence: sequence,
-        };
-        void uploadIleProofOfWork({
-          workspaceId,
-          sessionId: session.id,
-          ileToken,
-          type: "tool",
-          mime_type: "application/json",
-          data: textToBase64(
-            JSON.stringify({
-              flowKind: "learn",
-              sequence,
-              ...(impure ? { quality: "impure", impure: true, session_quality: "impure" } : {}),
-            }),
-          ),
-          file_name: "session-policy.json",
-          tool_name: "session_policy",
-          tool_action: impure ? "policy_score_impure" : "policy_score",
-          metadata: impure ? withImpurePoWData(policyMetadata) : policyMetadata,
-        });
+            tool_action: impure ? "policy_score_impure" : "policy_score",
+            metadata: impure ? withImpurePoWData(policyMetadata) : policyMetadata,
+          });
+        }
       }
+      const finalSession = endSession(session, elapsedSeconds * 1000, "completed");
+      setSession(finalSession);
+      sessionRef.current = finalSession;
     }
-    const finalSession = endSession(session, elapsedSeconds * 1000, "completed");
-    setSession(finalSession);
-    sessionRef.current = finalSession;
-  }
-  await stopRecording({ stayOnScreen: impure });
-  if (impure && workspaceId && session) {
-    void flagIleSessionProofOfWorkImpure({
-      workspaceId,
-      sessionId: session.id,
-      ileToken,
-      entryQueryParams,
-    });
-  }
-};
-
-// Auto-pause on browser close/refresh
-useEffect(() => {
-  const handleBeforeUnload = async (e: BeforeUnloadEvent) => {
-    if (isRecording && session) {
-      e.preventDefault();
-      await pauseSession(session.id, elapsedSecondsRef.current * 1000);
+    await stopRecording({ stayOnScreen: impure });
+    if (impure && workspaceId && session) {
+      void flagIleSessionProofOfWorkImpure({
+        workspaceId,
+        sessionId: session.id,
+        ileToken,
+        entryQueryParams,
+      });
     }
   };
 
-  window.addEventListener("beforeunload", handleBeforeUnload);
-  return () => {
-    window.removeEventListener("beforeunload", handleBeforeUnload);
-  };
-}, [isRecording, session]);
-
-// Cleanup on unmount
-useEffect(() => {
-  return () => {
-    if (timerRef.current) clearInterval(timerRef.current);
-
-    if (muteTimerRef.current) clearTimeout(muteTimerRef.current);
-    if (micStreamRef.current) {
-      micStreamRef.current.getTracks().forEach(t => t.stop());
-      micStreamRef.current = null;
-    }
-    handleDisconnectMuse();
-    releaseSessionLocalMemory(sessionRef.current?.id);
-  };
-// eslint-disable-next-line react-hooks/exhaustive-deps
-}, []);
-
-const handleConfirmSettings = useCallback(async () => {
-if (!session || isPreparing) return;
-
-setIsPreparing(true);
-setPlanLoading(true);
-setPlanError(null);
-
-try {
-if (guestAccessKind === "aycl" && ayclToken) {
-  const { saveAyclSession } = await import("@/lib/aycl-storage");
-  await saveAyclSession(ayclToken, {
-    ...session,
-    metadata: { ...(session.metadata || {}), tutoringLanguage },
-  });
-} else if (guestAccessKind === "ile" && ileToken) {
-  const { saveIleLinkSession } = await import("@/lib/learn-link-storage");
-  await saveIleLinkSession(ileToken, {
-    ...session,
-    metadata: { ...(session.metadata || {}), tutoringLanguage },
-  });
-} else {
-  const { data: sessionData } = await (await import("@/lib/supabase/client")).createClient()
-    .from("sessions")
-    .select("metadata")
-    .eq("id", session.id)
-    .single();
-  if (sessionData?.metadata) {
-    await (await import("@/lib/supabase/client")).createClient()
-      .from("sessions")
-      .update({ metadata: { ...sessionData.metadata, tutoringLanguage } })
-      .eq("id", session.id);
-  }
-}
-
-if (session.probes.length > 0) {
-  for (const probe of session.probes) {
-    await archiveProbe(probe.id);
-  }
-}
-const clearedSession = { ...session, probes: [] };
-setSession(clearedSession);
-sessionRef.current = clearedSession;
-setPlanLoading(false);
-const fieldInput = learnSessionFieldInput({
-  sessionId: session.id,
-  problem: session.problem,
-  ileToken,
-  ayclToken,
-  metadata: session.metadata,
-});
-const storedField = learnFieldFromStoredPolicy(session.metadata, fieldInput);
-const field = storedField
-  ? storedField
-  : fieldInput
-    ? await loadSessionBranchField(fieldInput)
-    : { ok: false as const, error: "The field could not be prepared.", key: null };
-if (!sessionClockMayStart({ mode: "learn", fieldReady: field.ok })) {
-  setPlanError(field.ok ? "The field could not be prepared." : field.error);
-  return;
-}
-setIsPaused(false);
-setLanguageConfirmed(true);
-markIleSessionSettingsConfirmed(session.id);
-setShowWelcomeModal(false);
-const enterMap = decideIleSettingsEnterMap({
-  settingsConfirmed: true,
-  onSettingsRoute: false,
-  welcomeSeen: isSessionWelcomeSeen(session.id),
-  recording: false,
-});
-if (enterMap === "help") setShowWelcomePanel(true);
-if (enterMap === "record") await startRecording();
-} catch (err) {
-console.error("Failed to prepare session:", err);
-setPlanError("Failed to prepare block");
-} finally {
-setPlanLoading(false);
-setIsPreparing(false);
-}
-}, [
-  session,
-  isPreparing,
-  guestAccessKind,
-  ayclToken,
-  ileToken,
-  tutoringLanguage,
-]);
-
-const handleWelcomeReadyStart = useCallback(async () => {
-  if (!session || isPreparing) return;
-  setIsPreparing(true);
-  setPlanError(null);
-  try {
-    const fieldInput = learnSessionFieldInput({
-      sessionId: session.id,
-      problem: session.problem,
-      ileToken,
-      ayclToken,
-      metadata: session.metadata,
-    });
-    const storedField = learnFieldFromStoredPolicy(session.metadata, fieldInput);
-    const field = storedField
-      ? storedField
-      : fieldInput
-        ? await loadSessionBranchField(fieldInput)
-        : { ok: false as const, error: "The field could not be prepared.", key: null };
-    if (!sessionClockMayStart({ mode: "learn", fieldReady: field.ok })) {
-      setPlanError(field.ok ? "The field could not be prepared." : field.error);
-      return;
-    }
-    setIsPaused(false);
-    const needsWelcome =
-      !isSessionWelcomeSeen(session.id) &&
-      session.probes.filter((p) => !p.archived).length === 0;
-    if (needsWelcome) {
-      setShowWelcomePanel(true);
-    } else {
-      await startRecording();
-    }
-    markIleSessionSettingsConfirmed(session.id);
-    setShowWelcomeModal(false);
-  } finally {
-    setIsPreparing(false);
-  }
-}, [session, isPreparing, ileToken, ayclToken]);
+  useEffect(() => {
+    return () => {
+      handleDisconnectMuse();
+      releaseSessionLocalMemory(sessionRef.current?.id);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return {
-    checkMicrophone,
-    startRecording,
-    stopRecording,
-    handlePause,
-    handleResume,
-    handleMute,
     handleReset,
     pauseAndGoToDashboard,
     handleClose,
-    handleWelcomePlay,
     handleConfirmEnd,
-    handleConfirmSettings,
-    handleWelcomeReadyStart,
   };
 }

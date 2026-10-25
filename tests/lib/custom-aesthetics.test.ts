@@ -442,7 +442,7 @@ describe("custom aesthetic surfaces", () => {
     const sessionChrome = read("components/session-view/use-session-chrome.ts");
     const workspace = read("components/WorkspaceView.tsx");
     const skillGrid = read("components/BlockSkillGrid.tsx");
-    const sessionView = read("components/SessionView.tsx");
+    const sessionView = read("components/session-view/use-session-field.ts");
     const aestheticsApi = read("app/api/aesthetics/route.ts");
     const covers = read("lib/workspace-image.ts");
 

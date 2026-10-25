@@ -94,10 +94,13 @@ describe("ile session settings vs map routes (shipped)", () => {
       }),
     ).toEqual({ kind: "router-replace", href: mapHref });
 
-    const view = readFileSync(join(__dirname, "../../components/SessionView.tsx"), "utf8");
-    expect(view).toContain("ileWelcomeRouteSync");
-    expect(view).toContain("window.history.replaceState(window.history.state, \"\", sync.href)");
-    expect(view).not.toContain("router.replace(ileSessionSettingsPath");
+    const welcome = readFileSync(
+      join(__dirname, "../../components/session-view/use-session-welcome.ts"),
+      "utf8",
+    );
+    expect(welcome).toContain("ileWelcomeRouteSync");
+    expect(welcome).toContain("window.history.replaceState(window.history.state, \"\", sync.href)");
+    expect(welcome).not.toContain("router.replace(ileSessionSettingsPath");
   });
 
   it("re-arms Help or recording when the map remounts after settings confirm", () => {
@@ -142,20 +145,20 @@ describe("ile session settings vs map routes (shipped)", () => {
       }),
     ).toBe("idle");
 
-    const view = readFileSync(
-      join(__dirname, "../../components/SessionView.tsx"),
+    const welcome = readFileSync(
+      join(__dirname, "../../components/session-view/use-session-welcome.ts"),
       "utf8",
     );
-    const phase = readFileSync(
-      join(__dirname, "../../components/session-view/use-session-phase.ts"),
+    const field = readFileSync(
+      join(__dirname, "../../components/session-view/use-session-field.ts"),
       "utf8",
     );
-    expect(view).toContain("decideIleSettingsEnterMap");
-    expect(view).toContain("mapEntryTailDoneRef");
-    expect(view).toContain('action === "help"');
-    expect(view).toContain("startRecording()");
-    expect(phase).toContain("decideIleSettingsEnterMap");
-    expect(phase).toContain('enterMap === "help"');
-    expect(phase).toContain('enterMap === "record"');
+    expect(welcome).toContain("decideIleSettingsEnterMap");
+    expect(welcome).toContain("mapEntryTailDoneRef");
+    expect(welcome).toContain('action === "help"');
+    expect(welcome).toContain("startRecording()");
+    expect(field).toContain("decideIleSettingsEnterMap");
+    expect(field).toContain('enterMap === "help"');
+    expect(field).toContain('enterMap === "record"');
   });
 });

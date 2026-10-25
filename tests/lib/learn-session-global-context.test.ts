@@ -376,7 +376,7 @@ describe("TAP Learning single-canvas context store", () => {
     expect(JSON.stringify(adopted)).not.toContain("empty chapter");
 
     const hook = readFileSync(join(ROOT, "lib/useSessionChapterWorkspaces.ts"), "utf8");
-    const view = readFileSync(join(ROOT, "components/SessionView.tsx"), "utf8");
+    const view = readFileSync(join(ROOT, "components/session-view/use-session-field.ts"), "utf8");
     expect(hook).toContain("const frame = ileBlockSessionFrame(sessionPlan)");
     expect(hook).toContain("const activeChapterKey = frame?.id ?? sessionId ?? null");
     expect(hook).toContain("if (!chapterWorkspacesLoaded || !activeChapterKey) return");

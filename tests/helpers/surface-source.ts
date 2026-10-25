@@ -62,6 +62,9 @@ export function readSessionStageSurface(): string {
     readRepo("components/SessionView.tsx"),
     readRepo("components/session-view/session-live-stage.tsx"),
     readRepo("components/session-view/session-chapter-canvas.tsx"),
+    readRepo("components/session-view/use-session-field.ts"),
+    readRepo("components/session-view/use-session-recording.ts"),
+    readRepo("components/session-view/use-session-welcome.ts"),
   ].join("\n");
 }
 

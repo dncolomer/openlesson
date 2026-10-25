@@ -431,7 +431,7 @@ describe("policy score against the prepared tree", () => {
     if (stored?.type === "policy_score") expect(stored.text).toContain("policy distance");
 
     const learnEnd = read("components/session-view/use-session-phase.ts");
-    const learnCanvas = read("components/SessionView.tsx");
+    const learnCanvas = read("components/session-view/use-session-field.ts");
     const verificationEnd = read("components/tap-score/use-tap-score-flow.ts");
     const verificationCanvas = read("components/tap-score/tap-score-phases.tsx");
     const calibrateEnd = read("components/scout-tap/ScoutTapClient.tsx");
@@ -692,7 +692,7 @@ describe("sidebar actions wait until the canvas can place an observation", () =>
     );
     expect(retried.ok).toBe(true);
 
-    const phase = read("components/session-view/use-session-phase.ts");
+    const phase = read("components/session-view/use-session-field.ts");
     const confirm = sliceBetween(phase, "const handleConfirmSettings", "const handleWelcomeReadyStart");
     const readyStart = sliceBetween(phase, "const handleWelcomeReadyStart", "return {");
     expect(confirm.indexOf("loadSessionBranchField")).toBeGreaterThan(-1);

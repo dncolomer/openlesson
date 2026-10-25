@@ -416,7 +416,7 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     expect(craft).toContain("ileTurnInsightTopic");
     expect(craft).not.toContain("dockedChapters.map");
     expect(craft).toContain("IleWorkDockChip");
-    expect(read("components/SessionView.tsx")).toContain("ileBlockSessionOpenWorkIds");
+    expect(read("components/session-view/use-session-field.ts")).toContain("ileBlockSessionOpenWorkIds");
     expect(craft).toContain("compact");
     expect(craft).not.toContain("bg-amber-300/10");
     expect(craft).not.toContain("text-amber-100");
@@ -522,9 +522,10 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     expect(trophies).toContain("IleInsightEmptySlots");
     const badges = read("components/block-skill-grid/map-tile-badges.tsx");
     expect(badges).toContain("hideIcon");
-    expect(view).toContain("parseIleOpenWorkIdsFromMetadata");
-    expect(view).toContain("restoreIleOpenWorkIds");
     expect(view).toContain("openWorkIdsRef");
+    expect(read("components/session-view/use-session-recording.ts")).toContain(
+      "applyIleOpenWorkIdsToMetadata",
+    );
     const phase = read("components/session-view/use-session-phase.ts");
     expect(phase).toContain("applyIleOpenWorkIdsToMetadata");
     expect(phase).toContain("openWorkIdsRef.current");
@@ -649,9 +650,10 @@ describe("one current chapter", () => {
     expect(frame?.prompt).toBe(step.description);
     expect(card.id).not.toBe(steps[0]?.id);
     const view = readFileSync(join(ROOT, "components/SessionView.tsx"), "utf8");
+    const field = readFileSync(join(ROOT, "components/session-view/use-session-field.ts"), "utf8");
     const hook = readFileSync(join(ROOT, "lib/useSessionChapterWorkspaces.ts"), "utf8");
     expect(view).toContain("ileBlockSessionFrame(sessionPlan)");
-    expect(view).toContain("seedChapterWorkCanvas(boardId, text)");
+    expect(field).toContain("seedChapterWorkCanvas(boardId, text)");
     expect(view).not.toContain("heliosWidgetOpen");
     expect(view).not.toContain("seedChapterWorkCanvas(blockFrame.id, text)");
     expect(view).not.toContain("ileBlockSessionChapter(sessionPlan?.steps, activeChapterIndex)");

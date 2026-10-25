@@ -160,13 +160,13 @@ describe("author unsys model Manual Mode wiring", () => {
     expect(route).toContain("authorSeedBlockIdFromPreparePlan");
     expect(route).toContain("sessionPrepareBlockId");
     expect(route).toContain("generateSessionBranchOpening");
-    const sessionView = read("components/SessionView.tsx");
+    const sessionView = read("components/session-view/use-session-field.ts");
     const canvas = read("components/session-view/session-chapter-canvas.tsx");
-    const phase = read("components/session-view/use-session-phase.ts");
+    const field = read("components/session-view/use-session-field.ts");
     expect(sessionView).toContain("learnSessionFieldInput");
     expect(sessionView).toContain("blockId: sessionBlockId");
     expect(canvas).toContain("sessionPrepareBlockId");
-    expect(phase).toContain("metadata: session.metadata");
+    expect(field).toContain("metadata: session.metadata");
     expect(update).toContain("answers_model_seed");
     expect(update).toContain("serializeAuthorUnsysModelSeed");
 

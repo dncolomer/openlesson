@@ -196,7 +196,8 @@ describe("session policy store", () => {
   it("keeps autosave on the session row and naming on the exit dialog", () => {
     const store = read("lib/session-policy-store.ts");
     const prepare = read("components/session-view/session-branch-prepare.tsx");
-    const phase = read("components/session-view/use-session-phase.ts");
+    const phase = read("components/session-view/use-session-field.ts");
+    const sessionPhase = read("components/session-view/use-session-phase.ts");
     const canvas = read("components/session-view/session-chapter-canvas.tsx");
     const autosave = read("components/session-view/session-policy-autosave.tsx");
     const persist = read("lib/learn-session-persist.ts");
@@ -221,8 +222,8 @@ describe("session policy store", () => {
     expect(confirm.indexOf("loadSessionBranchField")).toBeLessThan(confirm.indexOf("startRecording()"));
     expect(ready.indexOf("learnFieldFromStoredPolicy")).toBeLessThan(ready.indexOf("loadSessionBranchField"));
     expect(ready.indexOf("loadSessionBranchField")).toBeLessThan(ready.indexOf("startRecording()"));
-    expect(phase).toContain("persistIleSessionRow");
-    expect(phase).toContain("applyIleSessionNameToMetadata");
+    expect(sessionPhase).toContain("persistIleSessionRow");
+    expect(sessionPhase).toContain("applyIleSessionNameToMetadata");
     expect(canvas.indexOf("useSessionBranchField")).toBeLessThan(canvas.indexOf("sessionCanvasMayOpen"));
     expect(canvas).toContain("session?.metadata");
     expect(canvas).toContain("<SessionPolicyAutosave");

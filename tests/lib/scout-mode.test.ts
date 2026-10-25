@@ -506,7 +506,7 @@ describe("structural: Scout TAP shell, no think-aloud, Build toggle", () => {
     const scoutPage = read("app/workspace/[id]/scout/page.tsx");
     const start = read("app/api/workspace-tap-score/start/route.ts");
     const questionsApi = read("app/api/workspace-tap-score/scout-questions/route.ts");
-    const sessionView = read("components/SessionView.tsx");
+    const sessionView = read("components/session-view/use-session-field.ts");
     const mutate = read("components/session-view/use-session-mutate.ts");
     const onboarding = read("components/SessionOnboardingGuide.tsx");
 

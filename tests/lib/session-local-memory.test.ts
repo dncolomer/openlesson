@@ -106,7 +106,8 @@ describe("releaseSessionLocalMemory", () => {
 
   it("Learn, Calibrate, and Verify release after persist and on unmount", () => {
     const phase = read("components/session-view/use-session-phase.ts");
-    const stop = phase.slice(phase.indexOf("const stopRecording"));
+    const recording = read("components/session-view/use-session-recording.ts");
+    const stop = recording.slice(recording.indexOf("const stopRecording"));
     const persistAt = stop.indexOf("await persistIleSessionRow");
     const releaseAt = stop.indexOf("releaseSessionLocalMemory", persistAt);
     expect(persistAt).toBeGreaterThan(-1);

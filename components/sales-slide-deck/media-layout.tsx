@@ -10,8 +10,8 @@ import {
   SlideFrame,
   SUBTITLE,
   TITLE_H2,
+  type SlideRendererProps,
 } from "@/components/sales-slide-deck/slide-primitives";
-import type { SlideRendererProps } from "@/components/sales-slide-deck/types";
 
 /**
  * Pitch media video: full frame (no zoom/crop), muted autoplay.

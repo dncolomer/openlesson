@@ -1,6 +1,8 @@
 import { PitchCardGrid } from "@/components/sales-slide-deck/pitch-card-grid";
-import { SlideFrame } from "@/components/sales-slide-deck/slide-primitives";
-import type { SlideRendererProps } from "@/components/sales-slide-deck/types";
+import {
+  SlideFrame,
+  type SlideRendererProps,
+} from "@/components/sales-slide-deck/slide-primitives";
 
 export function TitleLayout({
   slide,

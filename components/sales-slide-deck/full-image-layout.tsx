@@ -1,6 +1,8 @@
 import type { SalesSlide } from "@/lib/sales/solution-slide-decks";
-import { SlideFrame } from "@/components/sales-slide-deck/slide-primitives";
-import type { SlideRendererProps } from "@/components/sales-slide-deck/types";
+import {
+  SlideFrame,
+  type SlideRendererProps,
+} from "@/components/sales-slide-deck/slide-primitives";
 
 /** Find the statement (or other) slide that owns a card thumbnail for this zoom asset. */
 function resolveBackSlideForFullImage(

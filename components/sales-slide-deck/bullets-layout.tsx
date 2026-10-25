@@ -7,8 +7,8 @@ import {
   HighlightCallouts,
   SlideFrame,
   TITLE_H2,
+  type SlideRendererProps,
 } from "@/components/sales-slide-deck/slide-primitives";
-import type { SlideRendererProps } from "@/components/sales-slide-deck/types";
 
 /** Resolve TOC (or any bullet) labels to slide indices by matching title slides. */
 function resolveBulletSlideTargets(

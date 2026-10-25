@@ -9,8 +9,8 @@ import {
   SUBTITLE_COMPACT,
   TITLE_H2,
   TITLE_H2_COMPACT,
+  type SlideRendererProps,
 } from "@/components/sales-slide-deck/slide-primitives";
-import type { SlideRendererProps } from "@/components/sales-slide-deck/types";
 
 export function StatementLayout({
   slide,

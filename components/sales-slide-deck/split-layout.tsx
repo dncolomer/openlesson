@@ -5,8 +5,8 @@ import {
   SECTION_LABEL,
   SlideFrame,
   TITLE_H2,
+  type SlideRendererProps,
 } from "@/components/sales-slide-deck/slide-primitives";
-import type { SlideRendererProps } from "@/components/sales-slide-deck/types";
 
 /**
  * Sequential single-column sections for former split left/right content.

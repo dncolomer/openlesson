@@ -11,7 +11,7 @@ import { MediaLayout } from "@/components/sales-slide-deck/media-layout";
 import { SplitLayout } from "@/components/sales-slide-deck/split-layout";
 import { StatementLayout } from "@/components/sales-slide-deck/statement-layout";
 import { TitleLayout } from "@/components/sales-slide-deck/title-layout";
-import type { SlideRendererProps } from "@/components/sales-slide-deck/types";
+import type { SlideRendererProps } from "@/components/sales-slide-deck/slide-primitives";
 
 export { PitchCardGrid } from "@/components/sales-slide-deck/pitch-card-grid";
 

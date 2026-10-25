@@ -169,6 +169,12 @@ instead of `block_sessions`.
 - **Dependencies:** PR 9
 - **Description:** Fold `workspace_verification_results` into `sessions.result`. Rename keep tables to `calibrate_flows`, `verify_flows`, `session_embeddings`, `knowledge_regions`, `proof_of_work`. Drop leftover ILE/TAP/product columns, flow `workspace_id`, retired 64-d regions, and `session-audio`. Unmount Goals, Context files, and Dantes. Leftover workspace-kind aliases parse as Learning.
 
+### PR 11: Delete leftover TAP Verify sessions and 64-d embeddings (shipped)
+
+- **Files/components affected:** `supabase/migrations/20261025270000_drop_tap_verify_sessions_and_64d_embeddings.sql`
+- **Dependencies:** PR 10
+- **Description:** Delete `sessions` with `kind=verify` and no `verify_flow_id` (TAP dual-write leftovers). Delete `session_embeddings` that are 64-d or `knowledgecfg-v1-d64`. Proof of work stays (`session_id` SET NULL). Real Verify identity sessions stay.
+
 ### PR 9: Rename knowledge regions and attach them to a model plus a map or a flow (shipped)
 
 - **Files/components affected:** `lib/knowledge-config/custom-verification-model.ts`, `lib/pow-api/custom-verification-model-crud.ts`, `supabase/migrations/20261025250000_knowledge_regions.sql`, Data Studio region loaders

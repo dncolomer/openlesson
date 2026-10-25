@@ -110,6 +110,14 @@ export {
   mapInfiniteGridPatternPath,
 } from "@/lib/map-of-knowledge/infinite-grid";
 
+export type { EmbeddingModelInfo } from "@/lib/map-of-knowledge/embedding-catalog";
+export {
+  EMBEDDING_MODEL_CATALOG,
+  describeEmbeddingModel,
+  mergeEmbeddingModelCatalog,
+  resolveSelectedEmbeddingModelId,
+} from "@/lib/map-of-knowledge/embedding-catalog";
+
 export type {
   DefaultRegionPickResult,
   MapAggregatedPowStats,
@@ -126,16 +134,7 @@ export type {
   PublicRegionRaw,
   PublicUserPointRaw,
   PublicWorkspaceRaw,
-} from "@/lib/map-of-knowledge/types";
-
-export type { EmbeddingModelInfo } from "@/lib/map-of-knowledge/embedding-catalog";
-export {
-  EMBEDDING_MODEL_CATALOG,
-  describeEmbeddingModel,
-  mergeEmbeddingModelCatalog,
-  resolveSelectedEmbeddingModelId,
-} from "@/lib/map-of-knowledge/embedding-catalog";
-
+} from "@/lib/map-of-knowledge/payload";
 export {
   aggregatePublicPowStats,
   buildMapOfKnowledgePayload,

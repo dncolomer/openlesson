@@ -4,8 +4,7 @@
  */
 
 import { pickStemMiniAvatar } from "@/lib/map-of-knowledge/stem-avatars";
-import { mapDotIsGolden } from "./payload";
-import type { MapDotKind } from "./types";
+import { mapDotIsGolden, type MapDotKind } from "./payload";
 
 /** Random anonymous guest display identity for Map placement UI (name + STEM mini avatar). */
 export function generateAnonymousGuestIdentity(seed?: number): {

@@ -2,7 +2,7 @@
  * Pure helpers for Map of Knowledge “Find yourself” from a saved placement link.
  */
 
-import type { MapRegion, MapUserLocation } from "./types";
+import type { MapRegion, MapUserLocation } from "./payload";
 import { MAP_NOT_ON_MAP_MESSAGE } from "./map-ready-notify";
 
 /** Extract session token from a full placement URL or bare token string. */

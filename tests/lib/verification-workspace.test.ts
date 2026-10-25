@@ -843,7 +843,7 @@ describe("verification workspace shell gates", () => {
     expect(settings).not.toContain("WorkspaceCopyToVerification");
     const copyRoute = read("app/api/workspace/copy-to-verification/route.ts");
     expect(copyRoute).toContain("410");
-    expect(copyRoute).toContain("COPY_LEARNING_TO_VERIFICATION_GONE_MESSAGE");
+    expect(copyRoute).toContain("AGENT_WORKSPACE_CREATE_REFUSED_MESSAGE");
     expect(read("lib/pow-api/workspace-management.ts")).not.toContain(
       "createVerificationWorkspaceFromPrompt",
     );

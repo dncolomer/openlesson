@@ -6,9 +6,7 @@ import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  calibrationWorkspaceCreateOutcome,
   isUiWorkspaceCreateMode,
-  knowledgeRegionWorkspaceCreateOutcome,
   parseWorkspaceCreateMode,
   UI_WORKSPACE_CREATE_MODES,
   workspaceKindForCreateMode,
@@ -85,14 +83,6 @@ describe("Knowledge Region create mode", () => {
     expect(workspaceKindForCreateMode("knowledge_region")).toBe("knowledge_region");
     expect(workspaceKindForCreateMode("calibration")).toBe("calibration");
     expect(workspaceKindForCreateMode("blank")).toBe("standard");
-    const outcome = knowledgeRegionWorkspaceCreateOutcome();
-    expect(outcome.blocks).toEqual([]);
-    expect(outcome.mode).toBe("knowledge_region");
-    expect(outcome.workspaceKind).toBe("knowledge_region");
-    const calOutcome = calibrationWorkspaceCreateOutcome();
-    expect(calOutcome.blocks).toEqual([]);
-    expect(calOutcome.mode).toBe("calibration");
-    expect(calOutcome.workspaceKind).toBe("calibration");
     expect(parseWorkspaceCreateMode("calibration")).toBe("calibration");
     expect(parseWorkspaceKind("calibration")).toBe("calibration");
     expect(isCalibrationWorkspace("calibration")).toBe(true);
@@ -131,7 +121,6 @@ describe("Knowledge Region create mode", () => {
         `parse_alias=${parseWorkspaceCreateMode("knowledge-region")}`,
         `parse_invalid=${parseWorkspaceCreateMode("legacy-blank")}`,
         `kind_for_kr=${workspaceKindForCreateMode("knowledge_region")}`,
-        `kr_blocks=${outcome.blocks.length}`,
       ].join("\n") + "\n",
     );
   });
@@ -557,7 +546,9 @@ describe("Knowledge Region wiring", () => {
     );
 
     const gen = read("app/api/workspace/generate/route.ts");
-    expect(gen).toContain("assertGenerateCreateMode");
+    expect(gen).toContain("AGENT_WORKSPACE_CREATE_REFUSED_MESSAGE");
+    expect(gen).toContain('createMode === "knowledge_region"');
+    expect(gen).toContain('createMode === "calibration"');
     expect(gen).not.toContain("knowledgeRegionWorkspaceCreateOutcome");
     expect(gen).not.toContain("calibrationWorkspaceCreateOutcome");
     expect(gen).not.toContain("workspace_kind: krOutcome.workspaceKind");

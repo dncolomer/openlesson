@@ -22,11 +22,11 @@ import { GET as GET_ONE, PATCH as PATCH_ONE } from "@/app/api/v3/workspaces/[id]
 import { PATCH as PATCH_SETTINGS } from "@/app/api/v3/workspaces/[id]/settings/route";
 import { GET as GET_ACCOUNT, PATCH as PATCH_ACCOUNT } from "@/app/api/v3/account/route";
 import { callMcpProofOfWorkTool } from "@/lib/pow-api/mcp-proof-of-work-server";
+import { parseAgentWorkspaceKind } from "@/lib/pow-api/workspace-management";
 import {
   AGENT_WORKSPACE_CREATE_REFUSED_MESSAGE,
-  parseAgentWorkspaceKind,
-} from "@/lib/pow-api/workspace-management";
-import { WORKSPACE_KIND_STANDARD } from "@/lib/workspace-kind";
+  WORKSPACE_KIND_STANDARD,
+} from "@/lib/workspace-kind";
 
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||

@@ -1458,34 +1458,6 @@ Turn learner thought traces into one insight bookmark. Return JSON: { "title": "
 
 ---
 
-## Domain 6b: Verification Workspace Generation
-
-
-### `createVerificationWorkspaceFromPrompt` userMessage
-
-- **File**: `lib/pow-api/create-verification-workspace.ts`
-- **Purpose**: Generate 3–6 assessable workspace blocks with conversion_goal from natural-language prompt (+ optional files)
-- **User-overridable**: No
-- **Variables**: `{initialPrompt}`, `{fileContext}`, appended `WORKSPACE_GENERATION_CONVERSION_GOAL_RULE`
-
-**Full prompt text:**
-
-```
-Create a performance learning workspace from this prompt. Break it into assessable blocks for learning verification and proof-of-work-based gap analysis.\n\nPrompt:\n${initialPrompt}${fileContext}\n\nReturn ONLY JSON:\n{\n  "title": "concise workspace title",\n  "workspace_goal": "concise success outcome for this workspace",\n  "blocks": [\n    { "id": "a", "title": "Block title", "description": "What the learner should demonstrate", "is_start": true, "next": ["b"] }\n  ]\n}\n\nRules:\n- Create 3 to 6 blocks.\n- Blocks are assessable learning/performance units.\n- Use short stable ids only for linking within this response.${WORKSPACE_GENERATION_GOAL_RULE}
-```
-
-### demo/workspace route (consumer)
-
-- **Purpose**: Demo admin: materialize verification workspace from demo definition prompt
-- **User-overridable**: No
-- **Delegates to**: `lib/pow-api/create-verification-workspace.ts` — see verbatim userMessage above
-
-**Full prompt text:**
-
-```
-This route has no inline prompt strings. Prompt text lives in createVerificationWorkspaceFromPrompt.
-```
-
 ### `generateTapOpeningQuestion-userMessage`
 
 - **File**: `lib/tap-score.ts`
@@ -1536,7 +1508,6 @@ Discovered via `scripts/discover-llm-prompts.mjs` at 2026-07-22T01:27:33.649Z: *
 | `lib/labs-ai.ts` | SYSTEM_PROMPT EEG probe generator |
 | `lib/local-inference.ts` | Gemma transcription + Socratic probe prompts (client) |
 | `lib/pow-api/create-agent-workspace.ts` | call-site |
-| `lib/pow-api/create-verification-workspace.ts` | createVerificationWorkspaceFromPrompt userMessage (3–6 blocks, proof-of-work wording) |
 | `lib/pow-api/custom-verification-model-store.ts` | call-site |
 | `lib/pow-api/integration-skill.ts` | buildIntegrationSkillInstructions, buildIntegrationSkillPrompt |
 | `lib/pow-api/performance-context.ts` | buildPerformanceChatInstructions |

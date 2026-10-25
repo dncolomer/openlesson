@@ -37,12 +37,12 @@ import {
   composeTemplateWorkspaceNotes,
   goalFieldsFromPrompt,
   templateDantesContextForPrompt,
-  assertGenerateCreateMode,
   parseWorkspaceCreateMode,
   templateWorkspaceGoalField,
   workspaceKindForCreateMode,
   type WorkspaceCreateMode,
 } from "@/lib/workspace-create-modes";
+import { AGENT_WORKSPACE_CREATE_REFUSED_MESSAGE } from "@/lib/workspace-kind";
 
 export const runtime = "nodejs";
 export const maxDuration = 180;
@@ -138,9 +138,8 @@ export async function POST(req: NextRequest) {
     let topic = typeof body.topic === "string" ? body.topic.trim() : "";
     const createMode: WorkspaceCreateMode =
       parseWorkspaceCreateMode(body.createMode ?? body.create_mode) || "files_goal";
-    const generateMode = assertGenerateCreateMode(createMode);
-    if (!generateMode.ok) {
-      return jsonError(400, generateMode.error);
+    if (createMode === "knowledge_region" || createMode === "calibration") {
+      return jsonError(400, AGENT_WORKSPACE_CREATE_REFUSED_MESSAGE);
     }
     const initialChapters = resolveInitialChaptersFromBody(body);
     const band = getInitialChaptersBand(initialChapters);

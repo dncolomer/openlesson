@@ -4,7 +4,7 @@ Use this skill when ChatGPT, Claude, or another agent should authorize against U
 
 There are **two** public agent APIs:
 
-1. **Workspace management** — `GET/POST /api/v3/workspaces`, `GET/PATCH /api/v3/workspaces/{id}`, map blocks, workspace settings, account settings (`/api/v3/account`). Create and edit **Learning** workspaces and **Verification Workspace** records.
+1. **Workspace management** — `GET/POST /api/v3/workspaces`, `GET/PATCH /api/v3/workspaces/{id}`, map blocks, workspace settings, account settings (`/api/v3/account`). Create and edit **Learning** workspaces (`kind: "learning"` / `standard`). Verification and Calibration flows use `POST /api/dashboard/flows`.
 2. **Headless proof-of-work** — `POST /api/v3/pow/workspaces/{id}/sessions` (`start_session` with `flow_kind` calibrate | learn | verify), submit proof of work, `end_session`. The server prepares the answers-model tree, infers the path from proof plus actions (catalogs **4 / 8 / 16**), and enforces the session clock.
 
 **Human-readable spec:** `/docs/proof-of-work-api`  
@@ -143,7 +143,7 @@ MCP resources: `uncertain-systems://integration-scope`, `uncertain-systems://pro
 
 ### `POST /api/v3/workspaces` — `workspaces:write` — create_workspace
 
-Create a **Learning** (`kind: "learning"`) or **Verification** (`kind: "verification"`) workspace. Optional `title`, `description`, `workspace_goal`, `learning_model_size` (4 | 8 | 16), `blocks` (map), or `initial_prompt` to generate. MCP: `create_workspace`.
+Create a **Learning** workspace only (`kind: "learning"` / `standard`). Verification and Calibration flows use `POST /api/dashboard/flows`. Optional `title`, `description`, `workspace_goal`, `learning_model_size` (4 | 8 | 16), `blocks` (map), or `initial_prompt` to generate. MCP: `create_workspace`.
 
 ---
 
@@ -426,7 +426,7 @@ Facilitation style: Socratic — one concise question at a time, follow-ups from
 ## Quick integration checklist
 
 1. Teams user creates org (`POST /api/organization`) and API key (`sk_` with default scopes).
-2. `create_workspace` / `POST /api/v3/workspaces` for a Learning or Verification workspace (or `get_workspace` if it already exists).
+2. `create_workspace` / `POST /api/v3/workspaces` for a Learning workspace (`kind: "learning"` / `standard`), or `get_workspace` if it already exists. Verification and Calibration flows use `POST /api/dashboard/flows`.
 3. `list_blocks` / `GET .../blocks` → map contents to your workflow steps. On Learning workspaces, `list_map_tools` / `GET .../map-tools` lists the Helios builder catalog; `apply_map_tool` / `POST .../map-tools` applies those tools atomically.
 4. *(Optional)* `POST .../integration-skill` for a custom `skill.md`.
 5. `start_session` with `flow_kind` calibrate | learn | verify.

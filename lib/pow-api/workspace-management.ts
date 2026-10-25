@@ -22,8 +22,6 @@ import { normalizeWorkspaceGoal } from "./conversion-goal";
 import type { AuthContext } from "./types";
 import { canAccessAgentWorkspace } from "./workspace-access";
 
-export { AGENT_WORKSPACE_CREATE_REFUSED_MESSAGE };
-
 export type AgentWorkspaceProduct = "learning" | "verification" | "calibration";
 
 export function agentWorkspaceProduct(kind: unknown): AgentWorkspaceProduct {

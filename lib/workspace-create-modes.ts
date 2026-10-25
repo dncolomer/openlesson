@@ -11,7 +11,6 @@ import {
 } from "@/lib/workspace-spatial-create";
 import type { InitialChaptersLevel } from "@/lib/initial-chapters";
 import {
-  AGENT_WORKSPACE_CREATE_REFUSED_MESSAGE,
   WORKSPACE_KIND_CALIBRATION,
   WORKSPACE_KIND_KNOWLEDGE_REGION,
   WORKSPACE_KIND_STANDARD,
@@ -96,19 +95,6 @@ export function assertApiCreateMode(mode: unknown): { ok: true } | { ok: false; 
       ok: false,
       error: "API workspace creation only supports Files + Goal Prompt (files_goal).",
     };
-  }
-  return { ok: true };
-}
-
-export const GENERATE_FLOW_CREATE_REFUSED_MESSAGE =
-  AGENT_WORKSPACE_CREATE_REFUSED_MESSAGE;
-
-/** `/api/workspace/generate` still serves blank / template / files_goal. */
-export function assertGenerateCreateMode(
-  mode: WorkspaceCreateMode,
-): { ok: true } | { ok: false; error: string } {
-  if (mode === "knowledge_region" || mode === "calibration") {
-    return { ok: false, error: GENERATE_FLOW_CREATE_REFUSED_MESSAGE };
   }
   return { ok: true };
 }
@@ -318,38 +304,6 @@ export function composeAgentFilesGoalPrompt(vars: {
 /** Blank create yields zero blocks — structural outcome for tests and API. */
 export function blankWorkspaceCreateOutcome(): { blocks: []; mode: "blank" } {
   return { blocks: [], mode: "blank" };
-}
-
-/**
- * Knowledge Region create yields zero blocks and a durable KR kind.
- * Does not mint a map, questions, exercises, or knowledge links.
- */
-export function knowledgeRegionWorkspaceCreateOutcome(): {
-  blocks: [];
-  mode: "knowledge_region";
-  workspaceKind: typeof WORKSPACE_KIND_KNOWLEDGE_REGION;
-} {
-  return {
-    blocks: [],
-    mode: "knowledge_region",
-    workspaceKind: WORKSPACE_KIND_KNOWLEDGE_REGION,
-  };
-}
-
-/**
- * Calibration create yields zero blocks and a durable calibration kind.
- * Same shell as Verification; flows and Knowledge are calibration-only.
- */
-export function calibrationWorkspaceCreateOutcome(): {
-  blocks: [];
-  mode: "calibration";
-  workspaceKind: typeof WORKSPACE_KIND_CALIBRATION;
-} {
-  return {
-    blocks: [],
-    mode: "calibration",
-    workspaceKind: WORKSPACE_KIND_CALIBRATION,
-  };
 }
 
 /**

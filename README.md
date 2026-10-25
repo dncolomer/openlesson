@@ -2,7 +2,7 @@
 
 **A Human Learning Harness — verify without a test.**
 
-Uncertain Systems is an open-source platform for knowledge acquisition and knowledge verification. Create a **Learning** or **Verification** workspace, then run Calibrate, Learn, or Verify headless. Agents integrate through two APIs — workspace management and headless proof-of-work — plus MCP.
+Uncertain Systems is an open-source platform for knowledge acquisition and knowledge verification. Create a **Learning** workspace via workspace management, or Verification and Calibration flows via `POST /api/dashboard/flows`, then run Calibrate, Learn, or Verify headless. Agents integrate through two APIs — workspace management and headless proof-of-work — plus MCP.
 
 Live at [uncertain.systems](https://uncertain.systems)
 
@@ -19,7 +19,7 @@ Workspaces come in two durable kinds:
 
 ## How It Works
 
-1. **Create a workspace** via workspace management (`POST /api/v3/workspaces` / MCP `create_workspace`) — Learning or Verification — or in the product UI (`/workspace/new`).
+1. **Create a workspace** via workspace management (`POST /api/v3/workspaces` / MCP `create_workspace`) — Learning only (`kind: "learning"` / `standard`). Verification and Calibration flows use `POST /api/dashboard/flows`. Or in the product UI (`/workspace/new`).
 2. **Run a flow headless** — `start_session` (calibrate | learn | verify) → `upload_proof_of_work` → `end_session`. The server prepares the answers-model tree, infers the path, and enforces the clock.
 3. **Repeat** — more proof of work improves the inferred path. Regenerate the workspace `skill.md` as context grows.
 

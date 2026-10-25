@@ -122,7 +122,6 @@ const FILE_MAP = {
   "app/api/workspace-tap-score/chat/route.ts": "buildTapScoreInstructions + TAP chat overlay",
   "app/api/workspace-tap-score/complete/route.ts": "TAP complete scoring system + user prompts",
   "lib/tap-score.ts": "buildTapScoreInstructions, generateTapOpeningQuestion system extension + userMessage",
-  "lib/pow-api/create-verification-workspace.ts": "createVerificationWorkspaceFromPrompt userMessage (3–6 blocks, proof-of-work wording)",
   "lib/tap-score-traces.ts": "buildTraceScoringInstructions",
   "lib/pow-api/performance-report.ts": "buildPerformanceReportInstructions, PERFORMANCE_REMEDIATION_GUARDRAILS",
   "lib/pow-api/performance-context.ts": "buildPerformanceChatInstructions",
@@ -766,26 +765,6 @@ parts.push(
       "Call chain": "`POST /api/insights/create`",
     },
     'Turn learner thought traces into one insight bookmark. Return JSON: { "title": "4-12 words", "summary": "2-4 sentences, rephrased synthesis — not a quote dump." }',
-  ),
-);
-
-// create-verification-workspace (used by PoW API workspace create)
-const cvwSrc = read("lib/pow-api/create-verification-workspace.ts");
-const cvwUsers = extractUserMessageTemplates(cvwSrc);
-parts.push("---\n\n## Domain 6b: Verification Workspace Generation\n\n");
-parts.push(
-  block(
-    "`createVerificationWorkspaceFromPrompt` userMessage",
-    {
-      File: "`lib/pow-api/create-verification-workspace.ts`",
-      "Call chain":
-        "`POST /api/v3/pow/workspaces` → `createVerificationWorkspaceFromPrompt`",
-      Purpose:
-        "Generate 3–6 assessable workspace blocks with conversion_goal from natural-language prompt (+ optional files)",
-      "User-overridable": "No",
-      Variables: "`{initialPrompt}`, `{fileContext}`, appended `WORKSPACE_GENERATION_CONVERSION_GOAL_RULE`",
-    },
-    cvwUsers[0] || "(not found)",
   ),
 );
 

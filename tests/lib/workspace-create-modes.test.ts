@@ -5,10 +5,7 @@ import {
   API_WORKSPACE_CREATE_MODES,
   BLANK_MAP_DEFAULT_TITLE,
   assertApiCreateMode,
-  assertGenerateCreateMode,
-  GENERATE_FLOW_CREATE_REFUSED_MESSAGE,
   blankWorkspaceCreateOutcome,
-  knowledgeRegionWorkspaceCreateOutcome,
   resolveBlankWorkspaceTitle,
   composeBlockGenerationContext,
   composeDantesResourceContext,
@@ -22,9 +19,9 @@ import {
   workspaceCreateModeFromQuery,
   resolveWorkspaceCreateOverlay,
   UI_WORKSPACE_CREATE_MODES,
-  calibrationWorkspaceCreateOutcome,
   workspaceKindForCreateMode,
 } from "@/lib/workspace-create-modes";
+import { AGENT_WORKSPACE_CREATE_REFUSED_MESSAGE } from "@/lib/workspace-kind";
 import { INITIAL_CHAPTERS_BANDS } from "@/lib/initial-chapters";
 
 describe("workspace create modes", () => {
@@ -70,15 +67,9 @@ describe("workspace create modes", () => {
     expect(parseWorkspaceCreateMode("knowledge_region")).toBe("knowledge_region");
     expect(parseWorkspaceCreateMode("knowledge-region")).toBe("knowledge_region");
     expect(parseWorkspaceCreateMode("knowledgeRegion")).toBe("knowledge_region");
-    const outcome = knowledgeRegionWorkspaceCreateOutcome();
-    expect(outcome.mode).toBe("knowledge_region");
-    expect(outcome.workspaceKind).toBe("knowledge_region");
-    expect(outcome.blocks).toEqual([]);
+    expect(workspaceKindForCreateMode("knowledge_region")).toBe("knowledge_region");
     expect(assertApiCreateMode("knowledge_region").ok).toBe(false);
-    expect(assertGenerateCreateMode("knowledge_region")).toEqual({
-      ok: false,
-      error: GENERATE_FLOW_CREATE_REFUSED_MESSAGE,
-    });
+    expect(AGENT_WORKSPACE_CREATE_REFUSED_MESSAGE).toContain("/api/dashboard/flows");
   });
 
   it("calibration create is a UI mode, yields zero blocks, and persists the calibration kind", () => {
@@ -87,19 +78,8 @@ describe("workspace create modes", () => {
     expect(parseWorkspaceCreateMode("calibration_workspace")).toBe("calibration");
     expect(workspaceKindForCreateMode("calibration")).toBe("calibration");
     expect(workspaceKindForCreateMode("knowledge_region")).toBe("knowledge_region");
-    const outcome = calibrationWorkspaceCreateOutcome();
-    expect(outcome.mode).toBe("calibration");
-    expect(outcome.workspaceKind).toBe("calibration");
-    expect(outcome.blocks).toEqual([]);
     expect(assertApiCreateMode("calibration").ok).toBe(false);
-    expect(assertGenerateCreateMode("calibration")).toEqual({
-      ok: false,
-      error: GENERATE_FLOW_CREATE_REFUSED_MESSAGE,
-    });
-    expect(assertGenerateCreateMode("blank")).toEqual({ ok: true });
-    expect(assertGenerateCreateMode("files_goal")).toEqual({ ok: true });
-    expect(assertGenerateCreateMode("template")).toEqual({ ok: true });
-    expect(GENERATE_FLOW_CREATE_REFUSED_MESSAGE).toContain("/api/dashboard/flows");
+    expect(AGENT_WORKSPACE_CREATE_REFUSED_MESSAGE).toContain("/api/dashboard/flows");
   });
 
   it("template path composes topic resources + starting size into generate input", () => {

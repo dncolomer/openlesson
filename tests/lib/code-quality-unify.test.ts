@@ -484,12 +484,14 @@ describe("agent workspace create is Learning-only", () => {
     const mgmt = read("lib/pow-api/workspace-management.ts");
     expect(mgmt).toContain("parseAgentWorkspaceKind");
     expect(mgmt).toContain("AGENT_WORKSPACE_CREATE_REFUSED_MESSAGE");
+    expect(mgmt).not.toContain("export { AGENT_WORKSPACE_CREATE_REFUSED_MESSAGE }");
     expect(mgmt).not.toContain("createVerificationWorkspaceFromPrompt");
     const generate = read("app/api/workspace/generate/route.ts");
-    expect(generate).toContain("assertGenerateCreateMode");
+    expect(generate).toContain("AGENT_WORKSPACE_CREATE_REFUSED_MESSAGE");
+    expect(generate).toContain('createMode === "knowledge_region"');
+    expect(generate).toContain('createMode === "calibration"');
     expect(generate).not.toContain("knowledgeRegionWorkspaceCreateOutcome");
-    const copy = read("lib/copy-learning-to-verification.ts");
-    expect(copy).not.toContain("custom_verification_models");
-    expect(copy).toContain("COPY_LEARNING_TO_VERIFICATION_GONE_MESSAGE");
+    expect(existsSync(join(ROOT, "lib/copy-learning-to-verification.ts"))).toBe(false);
+    expect(existsSync(join(ROOT, "lib/pow-api/create-verification-workspace.ts"))).toBe(false);
   });
 });

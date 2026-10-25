@@ -29,7 +29,6 @@ const SUPPLEMENTAL = [
   "lib/pow-api/performance-context.ts",
   "lib/pow-api/proof-of-work-schema.ts",
   "lib/pow-api/integration-skill.ts",
-  "lib/pow-api/create-verification-workspace.ts",
   "lib/pow-api/proof-of-work-integration.ts",
 ];
 

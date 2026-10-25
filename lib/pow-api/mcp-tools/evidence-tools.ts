@@ -67,8 +67,15 @@ const SCHEMAS: Record<string, Omit<McpTool, "name">> = {
           enum: ["learning", "standard"],
           description: "Learning only. verification, calibration, and knowledge_region are refused.",
         },
-        product: { type: "string", description: "Alias for kind." },
-        workspace_kind: { type: "string" },
+        product: {
+          type: "string",
+          enum: ["learning", "standard"],
+          description: "Alias for kind.",
+        },
+        workspace_kind: {
+          type: "string",
+          enum: ["learning", "standard"],
+        },
         title: { type: "string" },
         description: { type: "string" },
         notes: { type: "string" },

@@ -1,6 +1,6 @@
 # Uncertain Systems Proof-of-Work API
 
-The two public agent APIs are **workspace management** (`/api/v3/workspaces`) and **headless proof-of-work** (`/api/v3/pow`). Create Learning or Verification workspaces, then start, run, and end Calibrate, Learn, and Verify sessions. Snapshot and Stash are retired.
+The two public agent APIs are **workspace management** (`/api/v3/workspaces`) and **headless proof-of-work** (`/api/v3/pow`). Create Learning workspaces (`kind: "learning"` / `standard`); Verification and Calibration flows use `POST /api/dashboard/flows`. Then start, run, and end Calibrate, Learn, and Verify sessions. Snapshot and Stash are retired.
 
 Authenticate with `Authorization: Bearer <api_key>`.
 
@@ -17,7 +17,7 @@ Opaque mode stores partner references (`goal_ref`, `external_refs`) without sema
 
 | Method | Path | Scope | Purpose |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/api/v3/workspaces` | `workspaces:write` | Create a Learning or Verification workspace (map, settings optional). |
+| `POST` | `/api/v3/workspaces` | `workspaces:write` | Create a Learning workspace only (map, settings optional). Verification and Calibration use `POST /api/dashboard/flows`. |
 | `GET` / `PATCH` | `/api/v3/workspaces/{workspace_id}` | `workspaces:read` / `write` | Read or edit workspace, map, and settings. |
 | `GET` | `/api/v3/workspaces/{workspace_id}/blocks` | `workspaces:read` | List map blocks. |
 | `GET` / `PATCH` | `/api/v3/account` | `workspaces:read` / `write` | Account settings. |

@@ -14,7 +14,7 @@ import {
   resolveBridgeSelection,
 } from "@/lib/bridge-blocks";
 import { unusableCellKeySet } from "@/lib/map-ground-rules";
-import type { CombineBlockRef } from "@/components/workspace-combine/types";
+import type { CombineBlockRef } from "@/components/WorkspaceCombineBlocksPane";
 
 export function BridgeBlocksDrawer({
   selected,

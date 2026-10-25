@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { WorkspaceRightPaneDrawer } from "@/components/WorkspaceRightPaneDrawer";
-import type { CombineBlockRef } from "@/components/workspace-combine/types";
+import type { CombineBlockRef } from "@/components/WorkspaceCombineBlocksPane";
 
 export function CombineBlocksDrawer({
   selected,

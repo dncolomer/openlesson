@@ -6,7 +6,7 @@ import {
   WORKSPACE_EDITOR_DANGER_DRAWER_ID,
   WORKSPACE_EDITOR_DANGER_DRAWER_TITLE,
 } from "@/lib/workspace-right-pane";
-import type { CombineBlockRef } from "@/components/workspace-combine/types";
+import type { CombineBlockRef } from "@/components/WorkspaceCombineBlocksPane";
 
 export function DangerBlocksDrawer({
   selected,

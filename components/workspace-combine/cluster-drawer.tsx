@@ -15,7 +15,7 @@ import {
   resolveClusterSeparation,
   type ClusterCountSpec,
 } from "@/lib/cluster-blocks";
-import type { CombineBlockRef } from "@/components/workspace-combine/types";
+import type { CombineBlockRef } from "@/components/WorkspaceCombineBlocksPane";
 
 export function ClusterBlocksDrawer({
   selected,

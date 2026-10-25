@@ -14,7 +14,7 @@ import {
   setMultiBlockDagEdge,
   type MultiBlockDagDraft,
 } from "@/lib/multi-block-dag";
-import type { CombineBlockRef } from "@/components/workspace-combine/types";
+import type { CombineBlockRef } from "@/components/WorkspaceCombineBlocksPane";
 
 export function DagBlocksDrawer({
   selected,

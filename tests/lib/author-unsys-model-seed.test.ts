@@ -124,17 +124,13 @@ describe("author unsys model seed", () => {
     expect(route).toContain("sessionBranchContinuationFromSeed");
     expect(route).toContain("sessionBranchParentsNeedingGrowth");
     expect(route).not.toContain("continuation: null,\n              done: true");
-    const view = readFileSync(
-      join(__dirname, "../../components/SessionView.tsx"),
+    const field = readFileSync(
+      join(__dirname, "../../components/session-view/use-session-field.ts"),
       "utf8",
     );
-    expect(view).toContain("blockId: sessionBlockId");
-    expect(view).toContain("metadata: session?.metadata");
-    const phase = readFileSync(
-      join(__dirname, "../../components/session-view/use-session-phase.ts"),
-      "utf8",
-    );
-    expect(phase).toContain("metadata: session.metadata");
+    expect(field).toContain("blockId: sessionBlockId");
+    expect(field).toContain("metadata: session?.metadata");
+    expect(field).toContain("metadata: session.metadata");
     const canvas = readFileSync(
       join(__dirname, "../../components/session-view/session-chapter-canvas.tsx"),
       "utf8",

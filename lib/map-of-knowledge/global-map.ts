@@ -11,7 +11,7 @@
  */
 
 import { l2Distance } from "@/lib/knowledge-config/math";
-import type { MapRegion, MapUserLocation } from "./index";
+import type { MapRegion, MapUserLocation } from "./types";
 
 /** Outer orbit: close to region but outside hard membership radius. */
 export const GLOBAL_MAP_NEAR_RADIUS_FACTOR = 1.75;
@@ -102,7 +102,7 @@ export function workspaceKnowledgeToGlobalMapInputs(input: {
   }>;
   /** Optional 2D projectors; default uses region centroid layout helpers from callers. */
   project2d?: (vector: number[]) => { x: number; y: number };
-}): { regions: import("./index").MapRegion[]; users: import("./index").MapUserLocation[] } {
+}): { regions: import("./types").MapRegion[]; users: import("./types").MapUserLocation[] } {
   const title = (input.workspaceTitle || "Workspace").trim() || "Workspace";
   const project =
     input.project2d ||
@@ -115,7 +115,7 @@ export function workspaceKnowledgeToGlobalMapInputs(input: {
       };
     });
 
-  const regions: import("./index").MapRegion[] = input.regions
+  const regions: import("./types").MapRegion[] = input.regions
     .filter((r) => r.id && Array.isArray(r.centroid) && r.centroid.length > 0)
     .map((r) => {
       const p = project(r.centroid);
@@ -135,7 +135,7 @@ export function workspaceKnowledgeToGlobalMapInputs(input: {
       };
     });
 
-  const users: import("./index").MapUserLocation[] = input.subjectVectors
+  const users: import("./types").MapUserLocation[] = input.subjectVectors
     .filter((s) => s.id && Array.isArray(s.vector) && s.vector.length > 0)
     .map((s) => {
       const p = project(s.vector);

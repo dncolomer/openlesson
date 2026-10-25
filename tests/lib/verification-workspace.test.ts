@@ -747,12 +747,12 @@ describe("verification workspace shell gates", () => {
       isOwner: true,
       workspaceKind: "knowledge_region",
     });
-    expect(owner).toContain("verification_flows");
-    expect(owner).toEqual(["goals", "verification_flows", "context", "knowledge", "data_studio", "settings"]);
+    expect(owner).toEqual([]);
+    expect(owner).not.toContain("verification_flows");
     expect(owner).not.toContain("calibration_flows");
     expect(
       availableWorkspaceSections({ isOwner: true, workspaceKind: "calibration" }),
-    ).toEqual(["goals", "calibration_flows", "context", "knowledge", "data_studio", "settings"]);
+    ).toEqual([]);
     const standard = availableWorkspaceSections({ isOwner: true });
     expect(standard).not.toContain("verification_flows");
     expect(standard[0]).toBe("workspace");
@@ -804,9 +804,10 @@ describe("verification workspace shell gates", () => {
       "data-calibration-flow-add-question",
     );
     const shell = read("components/workspace-view/workspace-chrome.tsx");
-    expect(shell).toContain("data-verification-workspace-shell");
-    expect(shell).toContain("data-calibration-workspace-shell");
+    expect(shell).not.toContain("data-verification-workspace-shell");
+    expect(shell).not.toContain("data-calibration-workspace-shell");
     expect(shell).toContain("workspaceProductShell");
+    expect(shell).toContain('data-workspace-product-shell="learning"');
     expect(shell).not.toContain("Verification workspace");
     expect(shell).not.toContain("Calibration workspace");
     expect(shell).not.toContain("Learning workspace");
@@ -826,6 +827,7 @@ describe("verification workspace shell gates", () => {
     const hosts = read("components/workspace-view/workspace-section-hosts.tsx");
     expect(hosts).toContain("VerificationFlowsPanel");
     expect(hosts).toContain('visibleSections.includes("verification_flows")');
+    expect(hosts).toContain("if (noMap || visibleSections.length === 0) return null");
 
     const regions = read("components/CustomVerificationModelsPanel.tsx");
     expect(regions).toContain("data-region-create-from-flow");

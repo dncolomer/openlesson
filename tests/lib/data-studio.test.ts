@@ -457,10 +457,10 @@ describe("product Data Studio chrome", () => {
   it("lists Data Studio on verification, calibration, and learning product chrome", () => {
     expect(
       availableWorkspaceSections({ isOwner: true, workspaceKind: "knowledge_region" }),
-    ).toContain("data_studio");
+    ).not.toContain("data_studio");
     expect(
       availableWorkspaceSections({ isOwner: true, workspaceKind: "calibration" }),
-    ).toContain("data_studio");
+    ).not.toContain("data_studio");
     expect(availableWorkspaceSections({ isOwner: true })).not.toContain("data_studio");
     expect(resolveWorkspaceSectionLayout("data_studio").mountsDataStudioPanel).toBe(true);
 

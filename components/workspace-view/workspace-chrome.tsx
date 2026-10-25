@@ -140,9 +140,9 @@ export function WorkspaceViewChrome({
         </div>
       ) : null}
 
-      {playView ? (
+      {playView || productShell !== "learning" ? (
         <div
-          data-workspace-play-view=""
+          data-workspace-play-view={playView ? "" : undefined}
           className="flex shrink-0 items-center justify-between border-b border-neutral-800/60 bg-[#0b0b0b]"
         >
           <WorkspaceDashboardLink />
@@ -154,12 +154,8 @@ export function WorkspaceViewChrome({
         </div>
       ) : (
       <div
-        data-workspace-product-shell={productShell}
-        {...(productShell === "verification"
-          ? { "data-verification-workspace-shell": true }
-          : productShell === "calibration"
-            ? { "data-calibration-workspace-shell": true }
-            : { "data-learning-workspace-shell": true })}
+        data-workspace-product-shell="learning"
+        data-learning-workspace-shell=""
       >
         <WorkspaceSectionNav
           sections={sections}

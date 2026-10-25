@@ -23,21 +23,7 @@ const LEARNING_AUTHOR_SECTIONS = [
   "settings",
 ] as const;
 
-const VERIFICATION_SECTIONS = [
-  "goals",
-  "verification_flows",
-  "context",
-  "knowledge",
-  "settings",
-] as const;
 
-const CALIBRATION_SECTIONS = [
-  "goals",
-  "calibration_flows",
-  "context",
-  "knowledge",
-  "settings",
-] as const;
 
 describe("workspace shell policy", () => {
   it("gives a learning author authoring drawers and a practice drawer", () => {
@@ -72,7 +58,7 @@ describe("workspace shell policy", () => {
     expect(shell.knowledgeLwmEmbeddingsOnly).toBe(true);
   });
 
-  it("keeps verification on its own shell", () => {
+  it("unmounts the no-map verification WorkspaceView shell", () => {
     const shell = workspaceShell({
       kind: "knowledge_region",
       authoring: false,
@@ -80,15 +66,17 @@ describe("workspace shell policy", () => {
       isOwner: true,
       isLoggedIn: true,
     });
-    expect(shell.sections).toEqual([...VERIFICATION_SECTIONS]);
-    expect(shell.authoringDrawers).toBe(true);
+    expect(shell.sections).toEqual([]);
+    expect(shell.sections).not.toContain("goals");
+    expect(shell.sections).not.toContain("verification_flows");
+    expect(shell.authoringDrawers).toBe(false);
     expect(shell.practiceDrawer).toBe(false);
     expect(shell.learnerSurface).toBe(false);
     expect(shell.learnerActivity).toBe(false);
     expect(shell.knowledgeLwmEmbeddingsOnly).toBe(false);
   });
 
-  it("keeps calibration on its own shell", () => {
+  it("unmounts the no-map calibration WorkspaceView shell", () => {
     const shell = workspaceShell({
       kind: "calibration",
       authoring: false,
@@ -96,9 +84,10 @@ describe("workspace shell policy", () => {
       isOwner: true,
       isLoggedIn: true,
     });
-    expect(shell.sections).toEqual([...CALIBRATION_SECTIONS]);
+    expect(shell.sections).toEqual([]);
     expect(shell.sections).not.toContain("verification_flows");
-    expect(shell.authoringDrawers).toBe(true);
+    expect(shell.sections).not.toContain("calibration_flows");
+    expect(shell.authoringDrawers).toBe(false);
     expect(shell.practiceDrawer).toBe(false);
     expect(shell.learnerSurface).toBe(false);
     expect(shell.learnerActivity).toBe(false);
@@ -128,7 +117,7 @@ describe("workspace shell policy", () => {
       isOwner: true,
       isLoggedIn: true,
     });
-    expect(privileged.sections).toEqual([...VERIFICATION_SECTIONS]);
+    expect(privileged.sections).toEqual([]);
     expect(privileged.authoringDrawers).toBe(false);
     expect(privileged.practiceDrawer).toBe(true);
     expect(privileged.learnerSurface).toBe(true);

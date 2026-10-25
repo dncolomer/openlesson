@@ -159,6 +159,10 @@ describe("console theme shells", () => {
 
     const home = read("app/page.tsx");
     const workspace = read("components/WorkspaceView.tsx");
+    const chrome = read("components/workspace-view/workspace-chrome.tsx");
+    expect(chrome).not.toContain("data-verification-workspace-shell");
+    expect(chrome).not.toContain("data-calibration-workspace-shell");
+    expect(chrome).toContain('data-workspace-product-shell="learning"');
     expect(home).toContain("<PublicConsoleWash />");
     expect(home).toContain("border-white/40");
     expect(home).not.toContain("rounded-full");

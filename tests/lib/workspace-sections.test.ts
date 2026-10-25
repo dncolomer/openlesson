@@ -79,10 +79,10 @@ describe("resolveWorkspaceSectionLayout", () => {
     expect(layout.mountsPerformancePanel).toBe(false);
     expect(
       availableWorkspaceSections({ isOwner: true, workspaceKind: "knowledge_region" }),
-    ).toContain("data_studio");
+    ).not.toContain("data_studio");
     expect(
       availableWorkspaceSections({ isOwner: true, workspaceKind: "calibration" }),
-    ).toContain("data_studio");
+    ).not.toContain("data_studio");
     expect(availableWorkspaceSections({ isOwner: true })).not.toContain("data_studio");
   });
 
@@ -184,19 +184,19 @@ describe("availableWorkspaceSections", () => {
     ).toEqual(["workspace"]);
   });
 
-  it("Knowledge Region owner sections are Goals / Knowledge / Settings; hidden requests fall back to Goals", () => {
+  it("Knowledge Region and Calibration have no WorkspaceView sections", () => {
     expect(
       availableWorkspaceSections({
         isOwner: true,
         workspaceKind: "knowledge_region",
       }),
-    ).toEqual(["goals", "verification_flows", "context", "knowledge", "data_studio", "settings"]);
+    ).toEqual([]);
     expect(
       availableWorkspaceSections({
         isOrgAdmin: true,
         workspaceKind: "knowledge_region",
       }),
-    ).toEqual(["goals", "verification_flows", "context", "knowledge", "data_studio", "settings"]);
+    ).toEqual([]);
     expect(
       availableWorkspaceSections({
         isOwner: false,
@@ -208,34 +208,35 @@ describe("availableWorkspaceSections", () => {
         isOwner: true,
         workspaceKind: "knowledge_region",
       }),
-    ).toBe("goals");
+    ).toBe("workspace");
+    expect(
+      resolveActiveSection("goals", {
+        isOwner: true,
+        workspaceKind: "knowledge_region",
+      }),
+    ).toBe("workspace");
     expect(
       resolveActiveSection("settings", {
         isOwner: true,
         workspaceKind: "knowledge_region",
       }),
-    ).toBe("settings");
+    ).toBe("workspace");
     expect(
       resolveActiveSection("context", {
         isOwner: true,
         workspaceKind: "knowledge_region",
       }),
-    ).toBe("context");
-    expect(
-      availableWorkspaceSections({
-        isOwner: true,
-        workspaceKind: "knowledge_region",
-      }),
-    ).not.toContain("calibration_flows");
+    ).toBe("workspace");
+    expect(defaultWorkspaceSection("knowledge_region")).toBe("workspace");
   });
 
-  it("Calibration owner sections are Goals / Calibration Flows / Context / Knowledge / Settings", () => {
+  it("Calibration has no WorkspaceView sections and does not invent Goals", () => {
     expect(
       availableWorkspaceSections({
         isOwner: true,
         workspaceKind: "calibration",
       }),
-    ).toEqual(["goals", "calibration_flows", "context", "knowledge", "data_studio", "settings"]);
+    ).toEqual([]);
     expect(
       availableWorkspaceSections({
         isOwner: true,
@@ -253,8 +254,14 @@ describe("availableWorkspaceSections", () => {
         isOwner: true,
         workspaceKind: "calibration",
       }),
-    ).toBe("goals");
-    expect(defaultWorkspaceSection("calibration")).toBe("goals");
+    ).toBe("workspace");
+    expect(
+      resolveActiveSection("goals", {
+        isOwner: true,
+        workspaceKind: "calibration",
+      }),
+    ).toBe("workspace");
+    expect(defaultWorkspaceSection("calibration")).toBe("workspace");
   });
 });
 
@@ -382,6 +389,7 @@ describe("WorkspaceView section shell wiring", () => {
   it("hosts multi goals on Goals tab, not Settings identity or builder surface", () => {
     expect(viewSource).not.toContain("WorkspaceGoalPanel");
     expect(viewSource).toContain("WorkspaceGoalsPanel");
+    expect(viewSource).toContain("isNoMapWorkspace(plan.workspace_kind)");
     expect(viewSource).toContain("mountsGoalsPanel");
     expect(integrationSource).toContain("WorkspaceIdentitySettings");
     // Settings no longer exposes a single goal field

@@ -2,7 +2,7 @@
  * Workspace shell rules.
  * Learning workspaces use one surface: the map, authoring sections for people
  * who can design, and explore content on the idle pane. There is no Play /
- * Build / Explore choice. Verification workspaces keep their own shell.
+ * Build / Explore choice. No-map kinds have no WorkspaceView sections.
  */
 
 import type { WorkspaceSectionKey } from "@/lib/workspace-sections";
@@ -22,9 +22,8 @@ export const DEFAULT_WORKSPACE_INTERACTION_MODE: WorkspaceInteractionMode =
   "learner";
 
 /**
- * Verification workspaces have no map. They use the creator shell so Goals
- * and Settings stay reachable. Learning workspaces use the learner shell;
- * authoring is a separate capability, not a second mode.
+ * No-map kinds have no WorkspaceView product. Learning workspaces use the
+ * learner shell; authoring is a separate capability, not a second mode.
  */
 export function defaultInteractionModeForWorkspace(
   kind: unknown,
@@ -97,9 +96,9 @@ export function workspaceIdlePaneShowsExplore(input?: {
 /**
  * One shell decision from workspace kind, authoring capability, and
  * practice-only access. Learning authors keep authoring drawers and can
- * open the practice drawer. Play-only stays on the map. Verification keeps
- * its own sections. Practice-only access stays on the learner surface,
- * including a verification workspace.
+ * open the practice drawer. Play-only stays on the map. No-map kinds
+ * expose no WorkspaceView sections. Practice-only access stays on the
+ * learner surface.
  */
 export type WorkspaceShell = {
   sections: WorkspaceSectionKey[];
@@ -133,23 +132,33 @@ export function workspaceShell(input: {
     };
   }
   const noMap = isNoMapWorkspace(input.kind);
-  const learnerActivity = Boolean(input.practiceOnly) || !noMap;
-  const learnerSurface = learnerActivity && !input.authoring;
+  if (noMap) {
+    const practiceOnly = Boolean(input.practiceOnly);
+    return {
+      sections: [],
+      authoringDrawers: false,
+      practiceDrawer: practiceOnly,
+      learnerSurface: practiceOnly,
+      learnerActivity: practiceOnly,
+      knowledgeLwmEmbeddingsOnly: practiceOnly,
+      playView: false,
+    };
+  }
+  const learnerActivity = true;
+  const learnerSurface = !input.authoring;
   const auth = {
     isOwner: input.isOwner,
     isOrgAdmin: input.isOrgAdmin,
     isLoggedIn: input.isLoggedIn,
     workspaceKind: input.kind,
   };
-  const sections: WorkspaceSectionKey[] = noMap
-    ? availableWorkspaceSections(auth)
-    : withLearningInsightsSection(
-        input.authoring ? availableWorkspaceSections(auth) : ["workspace"],
-        auth,
-      );
+  const sections: WorkspaceSectionKey[] = withLearningInsightsSection(
+    input.authoring ? availableWorkspaceSections(auth) : ["workspace"],
+    auth,
+  );
   return {
     sections,
-    authoringDrawers: input.authoring || (noMap && !input.practiceOnly),
+    authoringDrawers: input.authoring,
     practiceDrawer: learnerActivity,
     learnerSurface,
     learnerActivity,
@@ -213,7 +222,7 @@ export type WorkspaceModeShell = {
  * Visible top-level sections on the one workspace surface.
  * Privileged learning users get the map and the authoring sections.
  * Play-only (`allowAuthoring: false`) stays on the map.
- * Verification: one shell, independent of the old Play/Build split.
+ * No-map kinds have no WorkspaceView sections.
  */
 export function availableSectionsForMode(input: {
   mode: WorkspaceInteractionMode;
@@ -242,8 +251,8 @@ export function availableSectionsForMode(input: {
 }
 
 /**
- * Resolve active section under mode constraints. Hidden sections on a
- * Verification workspace fall back to Goals, never the map.
+ * Resolve active section under mode constraints. An empty allowed list does
+ * not invent a Goals tab.
  */
 export function resolveActiveSectionForMode(input: {
   mode: WorkspaceInteractionMode;
@@ -267,6 +276,7 @@ export function resolveActiveSectionForMode(input: {
     }
     return input.requested;
   }
+  if (allowed.length === 0) return "workspace";
   return defaultWorkspaceSection(input.workspaceKind);
 }
 

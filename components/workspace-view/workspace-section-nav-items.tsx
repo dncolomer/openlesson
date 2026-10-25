@@ -10,8 +10,8 @@ export function buildWorkspaceSectionNavItems(input: {
   visibleSections: WorkspaceSectionKey[];
 }): WorkspaceSectionNavItem[] {
   const { t, isLearnerMode, isOwner, visibleSections } = input;
-  // One learning surface: Workspace, DAGs, Map Types, Unsys models, Context, Settings.
-  // when those sections are in the list. Verification keeps its own list.
+  // One learning surface: Workspace, DAGs, Map Types, Unsys models, Context, Settings
+  // when those sections are in the list. No-map kinds pass an empty list.
   return [
     ...(visibleSections.includes("workspace")
       ? [

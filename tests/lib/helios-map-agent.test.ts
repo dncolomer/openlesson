@@ -90,10 +90,10 @@ describe("Helios map tools on the public workspace API / MCP", () => {
     expect(agentToolFeature(HELIOS_MAP_AGENT_APPLY_TOOL)).toBe("map");
     expect(heliosMapAgentFeatureDenied("standard")).toBeNull();
     expect(heliosMapAgentFeatureDenied("knowledge_region")).toMatch(
-      /Verification workspaces/,
+      /Verification flows/,
     );
     expect(heliosMapAgentFeatureDenied("calibration")).toMatch(
-      /Calibration workspaces/,
+      /Calibration flows/,
     );
   });
 

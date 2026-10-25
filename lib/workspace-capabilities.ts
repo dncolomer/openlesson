@@ -1,12 +1,12 @@
 /**
- * Feature split for the three workspace products.
+ * Feature split for the three products.
  *
  * Learning workspace (stored kind `standard`): a designer builds a map and
  * people in the organisation play it. Selling is AYCL only.
- * Verification workspace (stored kind `knowledge_region`): goals, verification
+ * Verification flows (stored kind `knowledge_region`): goals, verification
  * flows, proof of work, knowledge regions, and analysis.
- * Calibration workspace (stored kind `calibration`): same shell as Verification
- * with calibration flows and uncertainty embeddings.
+ * Calibration flows (stored kind `calibration`): same capabilities as
+ * Verification with calibration flows and uncertainty embeddings.
  *
  * Knowledge Portal is not a feature of either product.
  */
@@ -147,9 +147,9 @@ function featurePhrase(feature: WorkspaceFeature): string {
 }
 
 export function workspaceProductLabel(kind: unknown): string {
-  if (isCalibrationWorkspace(kind)) return "Calibration workspace";
+  if (isCalibrationWorkspace(kind)) return "Calibration flow";
   return isKnowledgeRegionWorkspace(kind)
-    ? "Verification workspace"
+    ? "Verification flow"
     : "Learning workspace";
 }
 
@@ -158,9 +158,9 @@ export function workspaceFeatureDeniedMessage(
   feature: WorkspaceFeature,
 ): string {
   const product = isCalibrationWorkspace(kind)
-    ? "Calibration workspaces"
+    ? "Calibration flows"
     : isKnowledgeRegionWorkspace(kind)
-      ? "Verification workspaces"
+      ? "Verification flows"
       : "Learning workspaces";
   return `${product} do not support ${featurePhrase(feature)}.`;
 }

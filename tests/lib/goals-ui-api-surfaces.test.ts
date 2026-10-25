@@ -24,8 +24,8 @@ describe("Goals workspace section registry", () => {
       isOwner: true,
       workspaceKind: "knowledge_region",
     });
-    expect(verification).toContain("goals");
-    expect(verification.indexOf("goals")).toBeLessThan(verification.indexOf("knowledge"));
+    expect(verification).toEqual([]);
+    expect(verification).not.toContain("goals");
   });
 
   it("maps goals layout to mountsGoalsPanel", () => {

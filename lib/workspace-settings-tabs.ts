@@ -1,8 +1,7 @@
 /**
  * Settings subtabs by workspace product.
  * Learning workspace: General (includes Make Public for Home), AYCL, Integrations.
- * Verification workspace: General (includes Make Public), Knowledge Regions,
- * Data Studio, Integration.
+ * No-map kinds have no WorkspaceView Settings surface.
  * Knowledge Portal is not a settings section.
  */
 
@@ -37,9 +36,7 @@ export const KNOWLEDGE_REGION_SETTINGS_SUBVIEWS: readonly SettingsSubview[] =
   VERIFICATION_SETTINGS_SUBVIEWS;
 
 export function availableSettingsSubviews(kind: unknown): readonly SettingsSubview[] {
-  return isNoMapWorkspace(kind)
-    ? VERIFICATION_SETTINGS_SUBVIEWS
-    : LEARNING_SETTINGS_SUBVIEWS;
+  return isNoMapWorkspace(kind) ? [] : LEARNING_SETTINGS_SUBVIEWS;
 }
 
 export function defaultSettingsSubview(_kind?: unknown): SettingsSubview {

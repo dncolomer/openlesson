@@ -3,18 +3,11 @@
  * Learning workspaces (stored kind `standard`): Workspace, DAGs, Map Types,
  * Unsys models, Context, and Settings for designers; Workspace for play-only
  * viewers.
- * Verification workspaces (stored kind
- * `knowledge_region`): Goals, Verification Flows, Context, Knowledge,
- * Data Studio, and Settings. Calibration workspaces (stored kind
- * `calibration`): Goals, Calibration Flows, Context, Knowledge, Data Studio,
- * and Settings. Learning Data Studio lives on dashboard chrome (play sessions).
+ * Knowledge-region and calibration kinds have no WorkspaceView sections —
+ * Flows live on the dashboard. Learning Data Studio lives on dashboard chrome.
  */
 
-import {
-  isCalibrationWorkspace,
-  isKnowledgeRegionWorkspace,
-  isNoMapWorkspace,
-} from "@/lib/workspace-kind";
+import { isNoMapWorkspace } from "@/lib/workspace-kind";
 
 export type WorkspaceSectionKey =
   | "workspace"
@@ -360,9 +353,9 @@ export function resolveWorkspaceSectionLayout(
 }
 
 /**
- * Designers (owner or org admin) see Build on a Learning workspace and the
- * full Verification workspace shell. Everyone else who can open a Learning
- * workspace plays the map.
+ * Designers (owner or org admin) see Build on a Learning workspace.
+ * Everyone else who can open a Learning workspace plays the map.
+ * No-map kinds have no privileged WorkspaceView sections.
  */
 export function canAccessPrivilegedWorkspaceSections(options: {
   isOwner?: boolean;
@@ -390,13 +383,13 @@ export type WorkspaceSectionAuth = {
 };
 
 /** Default open tab when none is requested (or a hidden section is requested). */
-export function defaultWorkspaceSection(kind?: unknown): WorkspaceSectionKey {
-  return isNoMapWorkspace(kind) ? "goals" : "workspace";
+export function defaultWorkspaceSection(_kind?: unknown): WorkspaceSectionKey {
+  return "workspace";
 }
 
 /**
- * Hidden sections fall back to the kind default (Workspace, or Goals on a
- * Verification workspace).
+ * Hidden sections fall back to the kind default. An empty allowed list does
+ * not invent a Goals tab — no-map kinds have no WorkspaceView product.
  */
 export function resolveActiveSection(
   requested: WorkspaceSectionKey,
@@ -404,25 +397,17 @@ export function resolveActiveSection(
 ): WorkspaceSectionKey {
   const allowed = availableWorkspaceSections(options);
   if (allowed.includes(requested)) return requested;
+  if (allowed.length === 0) return "workspace";
   return defaultWorkspaceSection(options.workspaceKind);
 }
 
 /**
- * Build-mode sections for a designer, or the Verification workspace shell.
+ * Build-mode sections for a Learning designer.
  * Play mode on a Learning workspace is applied in `availableSectionsForMode`
- * and hides this list.
+ * and hides this list. Knowledge-region and calibration kinds are empty.
  */
 export function availableWorkspaceSections(options: WorkspaceSectionAuth): WorkspaceSectionKey[] {
-  if (isCalibrationWorkspace(options.workspaceKind)) {
-    if (canAccessPrivilegedWorkspaceSections(options)) {
-      return ["goals", "calibration_flows", "context", "knowledge", "data_studio", "settings"];
-    }
-    return [];
-  }
-  if (isKnowledgeRegionWorkspace(options.workspaceKind)) {
-    if (canAccessPrivilegedWorkspaceSections(options)) {
-      return ["goals", "verification_flows", "context", "knowledge", "data_studio", "settings"];
-    }
+  if (isNoMapWorkspace(options.workspaceKind)) {
     return [];
   }
   if (canAccessPrivilegedWorkspaceSections(options)) {

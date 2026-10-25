@@ -138,12 +138,12 @@ describe("Knowledge Region create mode", () => {
 });
 
 describe("Knowledge Region shell", () => {
-  it("owner sections are goals/knowledge/settings; default and hidden fall back to goals", () => {
+  it("has no WorkspaceView sections and does not invent a Goals tab", () => {
     const owner = availableWorkspaceSections({
       isOwner: true,
       workspaceKind: "knowledge_region",
     });
-    expect(owner).toEqual(["goals", "verification_flows", "context", "knowledge", "data_studio", "settings"]);
+    expect(owner).toEqual([]);
     const t = (key: string) => key;
     const krNav = buildWorkspaceSectionNavItems({
       t,
@@ -151,15 +151,9 @@ describe("Knowledge Region shell", () => {
       isOwner: true,
       visibleSections: owner,
     });
-    expect(krNav.map((item) => item.key)).toEqual([
-      "goals",
-      "verification_flows",
-      "context",
-      "knowledge",
-      "data_studio",
-      "settings",
-    ]);
-    // Play drops Settings, and the Build toggle is on the map KR does not have.
+    expect(krNav.map((item) => item.key)).toEqual([]);
+    expect(krNav.map((item) => item.key)).not.toContain("goals");
+    expect(krNav.map((item) => item.key)).not.toContain("verification_flows");
     expect(defaultInteractionModeForWorkspace("knowledge_region")).toBe("creator");
     expect(defaultInteractionModeForWorkspace("standard")).toBe("learner");
     const learnerKr = availableSectionsForMode({
@@ -175,12 +169,13 @@ describe("Knowledge Region shell", () => {
         isOwner: true,
         visibleSections: learnerKr,
       }).map((item) => item.key),
-    ).toEqual(["goals", "verification_flows", "context", "knowledge", "data_studio", "settings"]);
+    ).toEqual([]);
     const viewSource = readFileSync(
       join(ROOT, "components/WorkspaceView.tsx"),
       "utf8",
     );
     expect(viewSource).toContain("workspaceShell(");
+    expect(viewSource).toContain('visibleSections.includes("workspace")');
     expect(viewSource).not.toContain("resolveFixedWorkspaceInteractionMode");
     expect(viewSource).not.toContain("setInteractionMode");
     expect(krNav.map((item) => item.key)).not.toContain("workspace");
@@ -192,19 +187,25 @@ describe("Knowledge Region shell", () => {
     });
     expect(standardNav.map((item) => item.key)[0]).toBe("workspace");
     expect(standardNav.map((item) => item.key)).toContain("workspace");
-    expect(defaultWorkspaceSection("knowledge_region")).toBe("goals");
+    expect(defaultWorkspaceSection("knowledge_region")).toBe("workspace");
     expect(
       resolveActiveSection("workspace", {
         isOwner: true,
         workspaceKind: "knowledge_region",
       }),
-    ).toBe("goals");
+    ).toBe("workspace");
     expect(
       resolveActiveSection("dags", {
         isOwner: true,
         workspaceKind: "knowledge_region",
       }),
-    ).toBe("goals");
+    ).toBe("workspace");
+    expect(
+      resolveActiveSection("goals", {
+        isOwner: true,
+        workspaceKind: "knowledge_region",
+      }),
+    ).toBe("workspace");
     expect(
       resolveActiveSectionForMode({
         mode: "creator",
@@ -212,7 +213,7 @@ describe("Knowledge Region shell", () => {
         isOwner: true,
         workspaceKind: "knowledge_region",
       }),
-    ).toBe("goals");
+    ).toBe("workspace");
     expect(
       resolveActiveSectionForMode({
         mode: "creator",
@@ -220,7 +221,7 @@ describe("Knowledge Region shell", () => {
         isOwner: true,
         workspaceKind: "knowledge_region",
       }),
-    ).toBe("goals");
+    ).toBe("workspace");
     expect(
       availableSectionsForMode({
         mode: "learner",
@@ -228,7 +229,7 @@ describe("Knowledge Region shell", () => {
         isLoggedIn: true,
         workspaceKind: "knowledge_region",
       }),
-    ).toEqual(["goals", "verification_flows", "context", "knowledge", "data_studio", "settings"]);
+    ).toEqual([]);
     expect(
       availableSectionsForMode({
         mode: "learner",
@@ -247,7 +248,7 @@ describe("Knowledge Region shell", () => {
         isOwner: false,
         workspaceKind: "knowledge_region",
       }),
-    ).toBe("goals");
+    ).toBe("workspace");
 
     const normal = availableWorkspaceSections({ isOwner: true });
     expect(normal).toEqual([
@@ -262,7 +263,7 @@ describe("Knowledge Region shell", () => {
     expect(resolveActiveSection("settings", { isOwner: false })).toBe("workspace");
 
     const krTabs = availableSettingsSubviews("knowledge_region");
-    expect([...krTabs]).toEqual(["general", "regions", "data-studio", "integrations"]);
+    expect([...krTabs]).toEqual([]);
     expect(defaultSettingsSubview("knowledge_region")).toBe("general");
     expect(resolveSettingsSubview("general", "knowledge_region")).toBe("general");
     expect(resolveSettingsSubview("guest-links", "knowledge_region")).toBe("general");

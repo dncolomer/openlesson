@@ -120,16 +120,17 @@ describe("context generation pool", () => {
       isOwner: true,
       workspaceKind: "knowledge_region",
     });
-    expect(owner).toContain("context");
+    expect(owner).toEqual([]);
+    expect(owner).not.toContain("context");
     expect(
       resolveActiveSection("context", { isOwner: true, workspaceKind: "knowledge_region" }),
-    ).toBe("context");
+    ).toBe("workspace");
     expect(availableWorkspaceSections({ isOwner: true })).toContain("context");
     expect(availableWorkspaceSections({ isOwner: true })).not.toContain("verification_flows");
     expect(availableWorkspaceSections({ isOwner: true })).not.toContain("calibration_flows");
     expect(
       availableWorkspaceSections({ isOwner: true, workspaceKind: "calibration" }),
-    ).toEqual(["goals", "calibration_flows", "context", "knowledge", "data_studio", "settings"]);
+    ).toEqual([]);
     expect(
       availableWorkspaceSections({ isOwner: true, workspaceKind: "calibration" }),
     ).not.toContain("verification_flows");

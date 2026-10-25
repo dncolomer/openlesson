@@ -379,14 +379,18 @@ export function WorkspaceView({
 
   useEffect(() => {
     setActiveSection((current) =>
-      shell.sections.includes(current) ? current : defaultWorkspaceSection(workspaceKind),
+      shell.sections.includes(current)
+        ? current
+        : (shell.sections[0] ?? defaultWorkspaceSection(workspaceKind)),
     );
   }, [shell.sections, workspaceKind]);
 
   const selectSection = useCallback(
     (section: WorkspaceSectionKey) => {
       setActiveSection(
-        shell.sections.includes(section) ? section : defaultWorkspaceSection(workspaceKind),
+        shell.sections.includes(section)
+          ? section
+          : (shell.sections[0] ?? defaultWorkspaceSection(workspaceKind)),
       );
       if (section === "workspace") {
         setMobileColumn("workspace");
@@ -465,10 +469,10 @@ export function WorkspaceView({
 
   const resolvedSection = shell.sections.includes(activeSection)
     ? activeSection
-    : defaultWorkspaceSection(workspaceKind);
+    : (shell.sections[0] ?? defaultWorkspaceSection(workspaceKind));
   const sectionLayout = resolveWorkspaceSectionLayout(resolvedSection);
   // One surface: the map plus authoring sections for people who can design.
-  // Verification keeps its own list. Play-only stays on the map.
+  // No-map kinds have no WorkspaceView sections. Play-only stays on the map.
   const visibleSections = shell.sections;
   const idleExplore = workspaceIdlePaneShowsExplore({
     allowExplore:
@@ -579,7 +583,7 @@ export function WorkspaceView({
         t={t}
       />}
 
-      {sectionLayout.showBlockMapChrome && (
+      {sectionLayout.showBlockMapChrome && visibleSections.includes("workspace") && (
       <div className="flex-1 min-h-0 flex flex-col md:flex-row overflow-hidden">
         {shell.playView ? null : (
         <WorkspaceMobilePlanAside

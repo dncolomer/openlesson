@@ -59,6 +59,20 @@ describe("workspace mode pure resolvers", () => {
     expect(owner).not.toContain("simulation");
     expect(owner).not.toContain("knowledge");
     expect(owner).not.toContain("goals");
+    expect(
+      availableSectionsForMode({
+        mode: "creator",
+        isOwner: true,
+        workspaceKind: "knowledge_region",
+      }),
+    ).toEqual([]);
+    expect(
+      availableSectionsForMode({
+        mode: "creator",
+        isOwner: true,
+        workspaceKind: "calibration",
+      }),
+    ).toEqual([]);
   });
 
   it("Learner map chrome: no +, no strip, no multi, minimap on", () => {

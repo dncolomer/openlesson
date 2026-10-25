@@ -83,12 +83,12 @@ async function buildContext(
 ): Promise<SimulateInsightsContext> {
   const { data: workspace } = await supabase
     .from("workspaces")
-    .select("title, root_topic, notes, workspace_goal, description")
+    .select("title, root_topic, notes, description")
     .eq("id", workspaceId)
     .maybeSingle();
   const goal =
-    (workspace as { workspace_goal?: string | null } | null)?.workspace_goal ||
     workspace?.description ||
+    (workspace as { notes?: string | null } | null)?.notes ||
     null;
   const notes = (workspace as { notes?: string | null } | null)?.notes || null;
   const title = workspace?.title || workspace?.root_topic || null;

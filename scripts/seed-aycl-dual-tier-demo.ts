@@ -145,6 +145,7 @@ async function upsertCatalogWorkspace(
     AYCL_DUAL_TIER_DEMO_MARKER,
     fixture.catalogMarker,
     "Staging dual-tier AYCL demo catalog source.",
+    fixture.catalogGoal,
   ].join("\n");
 
   if (existing) {
@@ -154,20 +155,18 @@ async function upsertCatalogWorkspace(
         title = $2,
         root_topic = $2,
         description = $3,
-        workspace_goal = $4,
-        notes = $5,
+        notes = $4,
         is_all_you_can_learn = true,
         is_public = false,
         status = 'active',
-        user_id = $6,
-        author_id = $6
+        user_id = $5,
+        author_id = $5
       WHERE id = $1
       `,
       [
         existing,
         fixture.catalogTitle,
         fixture.catalogDescription,
-        fixture.catalogGoal,
         notes,
         ownerUserId,
       ],
@@ -183,10 +182,13 @@ async function upsertCatalogWorkspace(
   await client.query(
     `
     INSERT INTO public.workspaces (
-      id, user_id, author_id, title, root_topic, description, workspace_goal,
-      notes, status, is_public, is_all_you_can_learn
+      id, user_id, author_id, title, root_topic, status,
+      description, notes,
+      is_public, is_all_you_can_learn, workspace_kind
     ) VALUES (
-      $1, $2, $2, $3, $3, $4, $5, $6, 'active', false, true
+      $1, $2, $2, $3, $3, 'active',
+      $4, $5,
+      false, true, 'standard'
     )
     `,
     [
@@ -194,7 +196,6 @@ async function upsertCatalogWorkspace(
       ownerUserId,
       fixture.catalogTitle,
       fixture.catalogDescription,
-      fixture.catalogGoal,
       notes,
     ],
   );
@@ -247,6 +248,7 @@ async function upsertForkWorkspace(
     fixture.forkMarker,
     `Fork of ${sourceWorkspaceId}`,
     `access_tier=${fixture.accessTier}`,
+    fixture.catalogGoal,
   ].join("\n");
   const title = `${fixture.catalogTitle} (private fork)`;
 
@@ -257,21 +259,19 @@ async function upsertForkWorkspace(
         title = $2,
         root_topic = $2,
         description = $3,
-        workspace_goal = $4,
-        notes = $5,
+        notes = $4,
         is_all_you_can_learn = false,
         is_public = false,
         status = 'active',
-        user_id = $6,
-        author_id = $6,
-        original_workspace_id = $7
+        user_id = $5,
+        author_id = $5,
+        original_workspace_id = $6
       WHERE id = $1
       `,
       [
         existing,
         title,
         fixture.catalogDescription,
-        fixture.catalogGoal,
         notes,
         ownerUserId,
         sourceWorkspaceId,
@@ -289,10 +289,13 @@ async function upsertForkWorkspace(
   await client.query(
     `
     INSERT INTO public.workspaces (
-      id, user_id, author_id, title, root_topic, description, workspace_goal,
-      notes, status, is_public, is_all_you_can_learn, original_workspace_id
+      id, user_id, author_id, title, root_topic, status,
+      description, notes,
+      is_public, is_all_you_can_learn, original_workspace_id, workspace_kind
     ) VALUES (
-      $1, $2, $2, $3, $3, $4, $5, $6, 'active', false, false, $7
+      $1, $2, $2, $3, $3, 'active',
+      $4, $5,
+      false, false, $6, 'standard'
     )
     `,
     [
@@ -300,7 +303,6 @@ async function upsertForkWorkspace(
       ownerUserId,
       title,
       fixture.catalogDescription,
-      fixture.catalogGoal,
       notes,
       sourceWorkspaceId,
     ],

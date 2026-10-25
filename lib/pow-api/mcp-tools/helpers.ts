@@ -137,7 +137,7 @@ export async function loadWorkspace(
   const { data: workspace, error } = await supabase
     .from("workspaces")
     .select(
-      "id, user_id, organization_id, guest_user_id, title, root_topic, description, notes, workspace_goal, evaluation_mode, protocol_config, external_refs, status, created_at, updated_at, workspace_kind"
+      "id, user_id, organization_id, guest_user_id, title, root_topic, description, notes, evaluation_mode, protocol_config, external_refs, status, created_at, updated_at, workspace_kind"
     )
     .eq("id", workspaceId)
     .single();
@@ -147,7 +147,10 @@ export async function loadWorkspace(
     throw new Error("Workspace not found.");
   }
 
-  return row;
+  return {
+    ...row,
+    workspace_goal: row.description?.trim() || row.notes?.trim() || row.title || row.root_topic || null,
+  };
 }
 
 export async function assertBlockInWorkspace(

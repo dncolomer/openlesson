@@ -47,7 +47,7 @@ export async function loadWorkspacePromptContext(
   const { data: workspace, error: wsError } = await supabase
     .from("workspaces")
     .select(
-      "id, title, root_topic, workspace_goal, description, notes, unusable_cells",
+      "id, title, root_topic, description, notes, unusable_cells",
     )
     .eq("id", id)
     .maybeSingle();
@@ -88,56 +88,9 @@ export async function loadWorkspacePromptContext(
     ),
   }));
 
-  const fileLimit = options?.fileLimit ?? 12;
-  let files: WorkspaceFileContextItem[] = [];
-  try {
-    const { data: fileRows } = await supabase
-      .from("workspace_files")
-      .select("file_name, mime_type")
-      .eq("workspace_id", id)
-      .order("created_at", { ascending: false })
-      .limit(fileLimit);
-    files = (fileRows || [])
-      .map((f: { file_name?: string | null; mime_type?: string | null }) => ({
-        name: typeof f.file_name === "string" ? f.file_name.trim() : "",
-        mime_type: f.mime_type ?? null,
-      }))
-      .filter((f) => f.name);
-  } catch {
-    files = [];
-  }
-
-  let externalResources: PromptExternalResourceItem[] = [];
-  try {
-    const { data: extRows, error: extError } = await supabase
-      .from("workspace_external_resources")
-      .select("id, title, url, description")
-      .eq("workspace_id", id)
-      .order("sort_order", { ascending: true })
-      .limit(24);
-    if (extError) {
-      const msg = extError.message || "";
-      if (!/schema cache|does not exist|workspace_external_resources/i.test(msg)) {
-        console.error("[load-workspace-prompt-context] external resources:", extError);
-      }
-    } else {
-      externalResources = (extRows || []).map(
-        (r: {
-          id?: string;
-          title?: string | null;
-          url?: string | null;
-          description?: string | null;
-        }) => ({
-          id: r.id ?? null,
-          title: r.title ?? null,
-          url: r.url ?? null,
-          description: r.description ?? null,
-        }),
-      );
-    }
-  } catch {
-    externalResources = [];
-  }
+  const files: WorkspaceFileContextItem[] = [];
+  const externalResources: PromptExternalResourceItem[] = [];
+  void options?.fileLimit;
 
   const focused =
     (focusedBlockId && blocks.find((b) => b.id === focusedBlockId)) || null;
@@ -146,7 +99,15 @@ export async function loadWorkspacePromptContext(
     workspaceId: id,
     workspaceTitle: workspace.title ?? null,
     rootTopic: workspace.root_topic ?? null,
-    workspaceGoal: (workspace as { workspace_goal?: string | null }).workspace_goal ?? null,
+    workspaceGoal:
+      [
+        (workspace as { description?: string | null }).description,
+        (workspace as { notes?: string | null }).notes,
+        workspace.title,
+        workspace.root_topic,
+      ]
+        .map((value) => (typeof value === "string" ? value.trim() : ""))
+        .find((value) => value.length > 0) || null,
     workspaceDescription:
       (workspace as { description?: string | null }).description ?? null,
     notes: (workspace as { notes?: string | null }).notes ?? null,

@@ -1,12 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
-import { ayclTokenFromBody, guardWorkspaceRoute, requireAuthenticatedUser } from "@/lib/api/require-auth";
-import {
-  deleteOrgScopedXaiFile,
-  getOrgScopedFileContentResponse,
-  organizationIdFromWorkspace,
-  uploadOrgScopedXaiFile,
-} from "@/lib/organization/org-xai-files";
+import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 
 const ALLOWED_MIME_TYPES = new Set([
   "application/pdf",
@@ -38,58 +32,10 @@ export async function GET(req: NextRequest) {
     const fileId = url.searchParams.get("fileId");
     const download = url.searchParams.get("download") === "1";
 
-    // Stream file content (proxy from xAI through our server with auth check)
     if (fileId && download) {
-      const { data: file, error: fileErr } = await supabase
-        .from("workspace_files")
-        .select("xai_file_id, file_name, mime_type, user_id, workspace_id")
-        .eq("id", fileId)
-        .single();
-
-      if (fileErr || !file) {
-        console.error(`[plan-files GET download] file lookup failed for ${fileId}:`, fileErr);
-        return jsonError(404, "File not found");
-      }
-
-      // Access check: owner OR plan is public
-      let allowed = file.user_id === user.id;
-      if (!allowed) {
-        const { data: plan } = await supabase
-          .from("workspaces")
-          .select("is_public")
-          .eq("id", file.workspace_id)
-          .single();
-        allowed = !!plan?.is_public;
-      }
-      if (!allowed) return jsonError(403, "Forbidden");
-
-      if (!file.xai_file_id) {
-        console.error(`[plan-files GET download] file ${fileId} has no xai_file_id`);
-        return jsonError(410, "File has no xAI reference");
-      }
-
-      const organizationId = await organizationIdFromWorkspace(supabase, file.workspace_id);
-      const upstream = await getOrgScopedFileContentResponse(file.xai_file_id, organizationId);
-      if (!upstream.ok || !upstream.body) {
-        const errBody = await upstream.text().catch(() => "");
-        console.error(
-          `[plan-files GET download] xAI fetch failed for file_id=${file.xai_file_id} status=${upstream.status} body=${errBody.slice(0, 300)}`
-        );
-        return jsonError(502, `Failed to fetch from xAI: ${upstream.status}`);
-      }
-
-      // Stream xAI response back to client with proper headers
-      return new Response(upstream.body, {
-        status: 200,
-        headers: {
-          "Content-Type": file.mime_type,
-          "Content-Disposition": `attachment; filename="${encodeURIComponent(file.file_name)}"`,
-          "Cache-Control": "private, no-store",
-        },
-      });
+      return jsonError(404, "File not found");
     }
 
-    // List files for a plan
     if (workspaceId) {
       const { data: plan } = await supabase
         .from("workspaces")
@@ -102,17 +48,7 @@ export async function GET(req: NextRequest) {
         return jsonError(403, "Forbidden");
       }
 
-      const { data: files, error } = await supabase
-        .from("workspace_files")
-        .select("id, file_name, file_size, mime_type, created_at")
-        .eq("workspace_id", workspaceId)
-        .order("created_at", { ascending: true });
-
-      if (error) {
-        return jsonError(500, "Failed to load files");
-      }
-
-      return NextResponse.json({ files: files || [] });
+      return NextResponse.json({ files: [] });
     }
 
     return jsonError(400, "workspaceId or fileId required");
@@ -156,53 +92,9 @@ export async function POST(req: NextRequest) {
       return jsonError(400, "File exceeds 10 MB limit");
     }
 
-    const { count } = await supabase
-      .from("workspace_files")
-      .select("id", { count: "exact", head: true })
-      .eq("workspace_id", workspaceId);
-
-    if ((count ?? 0) >= MAX_FILES_PER_PLAN) {
-      return jsonError(400, "Maximum 5 files per plan");
-    }
-
-    let xaiFile;
-    try {
-      xaiFile = await uploadOrgScopedXaiFile(fileName, mimeType, base64Data, {
-        organizationId: typeof plan.organization_id === "string" ? plan.organization_id : null,
-        collectionFields: {
-          workspace_id: workspaceId,
-          user_id: user.id,
-        },
-      });
-    } catch (err) {
-      console.error("[plan-files POST] xAI upload failed:", err);
-      return jsonError(502, err instanceof Error ? err.message : "Failed to upload to xAI");
-    }
-
-    // Insert DB row
-    const { data: fileRecord, error: dbError } = await supabase
-      .from("workspace_files")
-      .insert({
-        workspace_id: workspaceId,
-        user_id: user.id,
-        file_name: fileName,
-        file_size: buffer.length,
-        mime_type: mimeType,
-        xai_file_id: xaiFile.file_id,
-      })
-      .select("id, file_name, file_size, mime_type, created_at")
-      .single();
-
-    if (dbError || !fileRecord) {
-      // Rollback xAI upload
-      await deleteOrgScopedXaiFile(
-        xaiFile.file_id,
-        typeof plan.organization_id === "string" ? plan.organization_id : null,
-      ).catch(() => {});
-      return jsonError(500, "Failed to save file record");
-    }
-
-    return NextResponse.json({ file: fileRecord });
+    void MAX_FILES_PER_PLAN;
+    void buffer;
+    return jsonError(410, "Context files were removed");
   } catch (err) {
     console.error("POST /api/workspace/files error:", err);
     return jsonError(500, "Internal server error");
@@ -219,25 +111,8 @@ export async function DELETE(req: NextRequest) {
     const fileId = url.searchParams.get("fileId");
     if (!fileId) return jsonError(400, "fileId required");
 
-    const { data: file } = await supabase
-      .from("workspace_files")
-      .select("id, user_id, xai_file_id, workspace_id")
-      .eq("id", fileId)
-      .single();
-
-    if (!file) return jsonError(404, "File not found");
-    if (file.user_id !== user.id) return jsonError(403, "Forbidden");
-
-    // Best-effort delete from xAI (don't block local delete on failure)
-    if (file.xai_file_id) {
-      const organizationId = await organizationIdFromWorkspace(supabase, file.workspace_id);
-      await deleteOrgScopedXaiFile(file.xai_file_id, organizationId).catch((err) =>
-        console.warn(`[plan-files DELETE] xAI delete failed for ${file.xai_file_id}:`, err)
-      );
-    }
-
-    await supabase.from("workspace_files").delete().eq("id", fileId);
-
+    void user;
+    void supabase;
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("DELETE /api/workspace/files error:", err);

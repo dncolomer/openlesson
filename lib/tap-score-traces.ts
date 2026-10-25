@@ -180,7 +180,7 @@ export async function fetchTapSessionTraces(
 ): Promise<TapTraceEvidenceRow[]> {
   const { data, error } = await queryWorkspaceProofOfWorkRows<TapTraceEvidenceRow>(
     supabase
-      .from("workspace_proof_of_work")
+      .from("proof_of_work")
       .select("xai_file_id, metadata, timestamp_ms, tool_action")
       .eq("workspace_id", workspaceId)
       .eq("tool_name", TAP_TRACE_TOOL_NAME)
@@ -233,7 +233,7 @@ async function patchTapSessionProofOfWorkMetadata(
     metadata: Record<string, unknown> | null;
   }>(
     supabase
-      .from("workspace_proof_of_work")
+      .from("proof_of_work")
       .select("id, metadata")
       .eq("workspace_id", workspaceId)
       .contains("metadata", { tap_session_id: tapSessionId }),
@@ -249,7 +249,7 @@ async function patchTapSessionProofOfWorkMetadata(
       ...patch,
     };
     const { error: updateError } = await supabase
-      .from("workspace_proof_of_work")
+      .from("proof_of_work")
       .update({ metadata: nextMetadata })
       .eq("id", row.id)
       .eq("workspace_id", workspaceId);

@@ -112,13 +112,13 @@ async function deleteWorkspaceCascade(
   client: { query: (sql: string, params?: unknown[]) => Promise<unknown> },
   workspaceId: string,
 ) {
-  await client.query(`DELETE FROM public.custom_verification_models WHERE workspace_id = $1`, [
+  await client.query(`DELETE FROM public.knowledge_regions WHERE workspace_id = $1`, [
     workspaceId,
   ]);
-  await client.query(`DELETE FROM public.workspace_flow_embeddings WHERE workspace_id = $1`, [
+  await client.query(`DELETE FROM public.session_embeddings WHERE workspace_id = $1`, [
     workspaceId,
   ]);
-  await client.query(`DELETE FROM public.workspace_proof_of_work WHERE workspace_id = $1`, [
+  await client.query(`DELETE FROM public.proof_of_work WHERE workspace_id = $1`, [
     workspaceId,
   ]);
   await client.query(`DELETE FROM public.blocks WHERE workspace_id = $1`, [workspaceId]);
@@ -147,13 +147,13 @@ async function seedField(
   const workspaceId = randomUUID();
   await client.query(
     `INSERT INTO public.workspaces (
-       id, user_id, title, root_topic, status, payment_status,
-       description, notes, workspace_goal, source_type,
-       organization_id, is_public, is_agent_workspace
+       id, user_id, author_id, title, root_topic, status,
+       description, notes,
+       organization_id, is_public, is_agent_workspace, workspace_kind
      ) VALUES (
-       $1, $2, $3, $4, 'active', 'paid',
-       $5, $6, $7, 'topic',
-       $8, true, false
+       $1, $2, $2, $3, $4, 'active',
+       $5, $6,
+       $7, true, false, 'standard'
      )`,
     [
       workspaceId,
@@ -162,7 +162,6 @@ async function seedField(
       field.root_topic,
       field.description,
       stemWorkspaceNotes(field),
-      field.workspace_goal,
       owner.organizationId,
     ],
   );
@@ -197,7 +196,7 @@ async function seedField(
     const model = regions[i];
     const sub = field.subdisciplines[i];
     await client.query(
-      `INSERT INTO public.custom_verification_models (
+      `INSERT INTO public.knowledge_regions (
          workspace_id, name, description, embedding_model_id, dim,
          centroid, cohort_cohesion, mean_radius, cosine_threshold,
          subject_count, subjects, created_by

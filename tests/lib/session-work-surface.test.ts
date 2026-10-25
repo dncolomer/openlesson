@@ -208,7 +208,7 @@ describe("shared live work surface", () => {
     expect(prepare).toContain("data-scout-jump-work");
     expect(tap).toContain("data-tap-session-thank-you");
     expect(tap).toContain("data-tap-session-impure");
-    expect(tap).toContain("data-tap-practice-done");
+    expect(tap).not.toContain("data-tap-practice-done");
     expect(tap).toContain("Could not end Verify session");
     expect(tap).not.toContain("<PerformanceReportCard");
     expect(existsSync(join(ROOT, "components/PerformanceReportCard.tsx"))).toBe(false);

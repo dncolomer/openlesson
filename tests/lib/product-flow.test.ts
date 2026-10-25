@@ -17,8 +17,8 @@ function read(rel: string): string {
 
 describe("product flow owner_user_id", () => {
   it("maps historical workspace kind aliases for reads", () => {
-    expect(parseWorkspaceKind("knowledge_region")).toBe("knowledge_region");
-    expect(parseWorkspaceKind("calibration")).toBe("calibration");
+    expect(parseWorkspaceKind("knowledge_region")).toBe("standard");
+    expect(parseWorkspaceKind("calibration")).toBe("standard");
     expect(productFlowOwnerTitle("verification")).toBe("Verification flows");
   });
 

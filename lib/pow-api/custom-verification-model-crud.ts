@@ -90,11 +90,13 @@ export async function listCustomVerificationModels(
   workspaceId: string,
 ): Promise<CustomVerificationModelRow[]> {
   const { data, error } = await supabase
-    .from("custom_verification_models")
+    .from("knowledge_regions")
     .select(
-      "id, workspace_id, owner_user_id, product, name, description, embedding_model_id, dim, centroid, cohort_cohesion, mean_radius, cosine_threshold, subject_count, subjects, created_by, created_at, updated_at",
+      "id, workspace_id, owner_user_id, product, name, description, embedding_model_id, family_embedding_model_id, dim, centroid, cohort_cohesion, mean_radius, cosine_threshold, subject_count, subjects, created_by, created_at, updated_at, calibrate_flow_id, verify_flow_id",
     )
     .eq("workspace_id", workspaceId)
+    .neq("dim", 64)
+    .neq("embedding_model_id", "knowledgecfg-v1-d64")
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -105,7 +107,7 @@ export async function listCustomVerificationModels(
 }
 
 const CUSTOM_MODEL_SELECT =
-  "id, workspace_id, owner_user_id, product, name, description, embedding_model_id, dim, centroid, cohort_cohesion, mean_radius, cosine_threshold, subject_count, subjects, created_by, created_at, updated_at";
+  "id, workspace_id, owner_user_id, product, name, description, embedding_model_id, family_embedding_model_id, dim, centroid, cohort_cohesion, mean_radius, cosine_threshold, subject_count, subjects, created_by, created_at, updated_at, calibrate_flow_id, verify_flow_id";
 
 /** Regions from other workspaces the caller owns — for embeddings import overlay. */
 export async function listImportableKnowledgeRegionsForOwner(
@@ -128,7 +130,7 @@ export async function listImportableKnowledgeRegionsForOwner(
   if (ids.length === 0) return [];
 
   const { data: rows, error } = await supabase
-    .from("custom_verification_models")
+    .from("knowledge_regions")
     .select(CUSTOM_MODEL_SELECT)
     .in("workspace_id", ids)
     .order("created_at", { ascending: false });
@@ -157,7 +159,7 @@ export async function getCustomVerificationModel(
   modelId: string,
 ): Promise<CustomVerificationModelRow | null> {
   const { data, error } = await supabase
-    .from("custom_verification_models")
+    .from("knowledge_regions")
     .select(
       "id, workspace_id, owner_user_id, product, name, description, embedding_model_id, dim, centroid, cohort_cohesion, mean_radius, cosine_threshold, subject_count, subjects, created_by, created_at, updated_at",
     )
@@ -197,7 +199,7 @@ export async function deleteCustomVerificationModel(
   if (existing.embedding_model_id === FLOW_EMBEDDING_MODEL_ID) {
     for (const companionName of pathTextRegionCompanionNames(existing.name)) {
       await supabase
-        .from("custom_verification_models")
+        .from("knowledge_regions")
         .delete()
         .eq("workspace_id", options.workspaceId)
         .eq("embedding_model_id", FLOW_EMBEDDING_PATH_TEXT_MODEL_ID)
@@ -206,7 +208,7 @@ export async function deleteCustomVerificationModel(
   }
 
   const { error } = await supabase
-    .from("custom_verification_models")
+    .from("knowledge_regions")
     .delete()
     .eq("workspace_id", options.workspaceId)
     .eq("id", modelId);
@@ -277,7 +279,7 @@ export async function loadLatestFlowVectorForSubject(
   if (!identity) return null;
 
   const { data, error } = await supabase
-    .from("workspace_flow_embeddings")
+    .from("session_embeddings")
     .select("vector, identity, created_at, embedding_model_id, dim, raw")
     .eq("workspace_id", workspaceId)
     .eq("identity", identity)
@@ -347,6 +349,10 @@ export async function insertCustomVerificationSpec(
     name: options.spec.name,
     description: options.description?.trim() || null,
     embedding_model_id: options.spec.embedding_model_id,
+    family_embedding_model_id:
+      options.spec.dim === 64 || options.spec.embedding_model_id === "knowledgecfg-v1-d64"
+        ? null
+        : "learn-flowcfg-v1-d96",
     dim: options.spec.dim,
     centroid: options.spec.centroid,
     cohort_cohesion: options.spec.cohort_cohesion,
@@ -358,7 +364,7 @@ export async function insertCustomVerificationSpec(
     updated_at: new Date().toISOString(),
   };
   const { data, error } = await supabase
-    .from("custom_verification_models")
+    .from("knowledge_regions")
     .insert(payload)
     .select(CUSTOM_MODEL_SELECT)
     .maybeSingle();
@@ -476,7 +482,7 @@ export async function listSubjectsWithKnowledgeConfig(
   }>
 > {
   const { data, error } = await supabase
-    .from("workspace_flow_embeddings")
+    .from("session_embeddings")
     .select("identity, embedding_model_id, created_at")
     .eq("workspace_id", workspaceId)
     .eq("embedding_model_id", FLOW_EMBEDDING_MODEL_ID)
@@ -490,7 +496,7 @@ export async function listSubjectsWithKnowledgeConfig(
 
   // Best-effort PoW provenance for region-builder human vs tapbench filter.
   const { data: powRows } = await supabase
-    .from("workspace_proof_of_work")
+    .from("proof_of_work")
     .select("user_id, guest_user_id, metadata")
     .eq("workspace_id", workspaceId)
     .order("created_at", { ascending: false })

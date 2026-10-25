@@ -305,16 +305,14 @@ export async function applyTutoringSessionMutate(
     if (error || !session) {
       return { ok: false, status: 404, message: "Session not found" };
     }
-    const { data: probes } = await db
-      .from("probes")
-      .select("*")
-      .eq("session_id", ctx.sessionId)
-      .order("timestamp_ms", { ascending: true });
+    const probes = Array.isArray((session as { probes?: unknown }).probes)
+      ? ((session as { probes: unknown[] }).probes)
+      : [];
     return {
       ok: true,
       action: "get",
       session,
-      probes: probes || [],
+      probes,
     };
   }
 
@@ -327,26 +325,23 @@ export async function applyTutoringSessionMutate(
     if (updateError) {
       return { ok: false, status: 500, message: updateError.message || "Failed to save session" };
     }
-    for (const probe of planned.probes) {
-      if (!probe.id) continue;
-      const row: Record<string, unknown> = {
-        id: probe.id,
-        session_id: ctx.sessionId,
-        text: probe.text,
-        timestamp_ms: probe.timestamp_ms,
-        gap_score: probe.gap_score ?? 0,
-        signals: probe.signals || [],
-        expanded_text: probe.expanded_text,
-        starred: probe.starred ?? false,
-        is_revealed: probe.is_revealed ?? false,
-        request_type: probe.request_type || "question",
-        plan_step_id: probe.plan_step_id,
-        archived: probe.archived ?? false,
-        focused: probe.focused ?? false,
-      };
-      if (probeUserId) row.user_id = probeUserId;
-      await db.from("probes").upsert(row);
-    }
+    const probes = planned.probes.map((probe) => ({
+      id: probe.id,
+      session_id: ctx.sessionId,
+      text: probe.text,
+      timestamp_ms: probe.timestamp_ms,
+      gap_score: probe.gap_score ?? 0,
+      signals: probe.signals || [],
+      expanded_text: probe.expanded_text,
+      starred: probe.starred ?? false,
+      is_revealed: probe.is_revealed ?? false,
+      request_type: probe.request_type || "question",
+      plan_step_id: probe.plan_step_id,
+      archived: probe.archived ?? false,
+      focused: probe.focused ?? false,
+      ...(probeUserId ? { user_id: probeUserId } : {}),
+    }));
+    await db.from("sessions").update({ probes }).eq("id", ctx.sessionId);
     return { ok: true, action: "save" };
   }
 
@@ -357,11 +352,21 @@ export async function applyTutoringSessionMutate(
         : crypto.randomUUID();
     const row: Record<string, unknown> = { ...planned.probeInsert, id };
     if (probeUserId) row.user_id = probeUserId;
-    const { data, error } = await db.from("probes").insert(row).select("*").single();
-    if (error || !data) {
-      return { ok: false, status: 500, message: error?.message || "Failed to add probe" };
+    const { data: sessionRow, error: loadError } = await db
+      .from("sessions")
+      .select("probes")
+      .eq("id", ctx.sessionId)
+      .single();
+    if (loadError) {
+      return { ok: false, status: 500, message: loadError.message || "Failed to add probe" };
     }
-    return { ok: true, action: "add_probe", probe: data };
+    const existing = Array.isArray(sessionRow?.probes) ? (sessionRow.probes as unknown[]) : [];
+    const probes = [...existing.filter((p) => (p as { id?: string }).id !== id), row];
+    const { error } = await db.from("sessions").update({ probes }).eq("id", ctx.sessionId);
+    if (error) {
+      return { ok: false, status: 500, message: error.message || "Failed to add probe" };
+    }
+    return { ok: true, action: "add_probe", probe: row };
   }
 
   return { ok: false, status: 400, message: "Unknown action" };

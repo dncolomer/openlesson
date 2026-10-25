@@ -25,7 +25,7 @@ export async function GET(
     );
 
     const { data: row, error } = await auth.supabase
-      .from("custom_verification_models")
+      .from("knowledge_regions")
       .select(
         "id, workspace_id, owner_user_id, product, name, description, subject_count, created_at, embedding_model_id",
       )

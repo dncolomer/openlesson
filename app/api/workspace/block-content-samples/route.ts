@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
 
     const { data: workspace } = await supabase
       .from("workspaces")
-      .select("title, root_topic, notes, workspace_goal, description")
+      .select("title, root_topic, notes, description")
       .eq("id", workspaceId)
       .single();
 
@@ -157,23 +157,7 @@ export async function POST(req: NextRequest) {
     }));
 
     // Workspace-global files (names) + block-local materials
-    let workspaceFiles: Array<{ name: string; excerpt?: string | null }> = [];
-    try {
-      const { data: fileRows } = await supabase
-        .from("workspace_files")
-        .select("file_name")
-        .eq("workspace_id", workspaceId)
-        .order("created_at", { ascending: false })
-        .limit(16);
-      workspaceFiles = (fileRows || [])
-        .map((f: { file_name?: string | null }) => ({
-          name: typeof f.file_name === "string" ? f.file_name.trim() : "",
-          excerpt: null as string | null,
-        }))
-        .filter((f) => f.name);
-    } catch {
-      workspaceFiles = [];
-    }
+    const workspaceFiles: Array<{ name: string; excerpt?: string | null }> = [];
 
     // External links — prefer those referenced on the block, include rest for grounding
     let externalLinks: Array<{
@@ -182,12 +166,13 @@ export async function POST(req: NextRequest) {
       description?: string | null;
     }> = [];
     try {
-      const { data: extRows, error: extError } = await supabase
-        .from("workspace_external_resources")
-        .select("id, title, url, description")
-        .eq("workspace_id", workspaceId)
-        .order("sort_order", { ascending: true })
-        .limit(24);
+      const extRows: Array<{
+        id: string;
+        title?: string | null;
+        url?: string | null;
+        description?: string | null;
+      }> = [];
+      const extError = null;
       if (!extError && extRows) {
         const byId = new Map(
           extRows.map((r: { id: string }) => [r.id, r] as const),
@@ -248,7 +233,7 @@ export async function POST(req: NextRequest) {
       workspaceTitle: workspace?.title || workspace?.root_topic || "Workspace",
       rootTopic: workspace?.root_topic,
       workspaceGoal:
-        workspace?.workspace_goal || workspace?.description || workspace?.root_topic || "",
+        workspace?.description || workspace?.notes || workspace?.root_topic || "",
       workspaceDescription: workspace?.description,
       notes: workspace?.notes,
       blockTitle: title,
@@ -305,7 +290,7 @@ export async function POST(req: NextRequest) {
         .map((l) => l.title || l.url || "")
         .filter(Boolean),
       workspaceGoal:
-        workspace?.workspace_goal || workspace?.description || workspace?.root_topic || null,
+        workspace?.description || workspace?.notes || workspace?.root_topic || null,
       workspaceTitle: workspace?.title || workspace?.root_topic || null,
       rootTopic: workspace?.root_topic || null,
       notes: workspace?.notes || null,

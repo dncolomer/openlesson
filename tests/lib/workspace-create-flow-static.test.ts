@@ -115,7 +115,7 @@ describe("workspace create + builder static wiring", () => {
     const add = read("app/api/workspace/add-block-at-slot/route.ts");
     expect(add).toContain("composeBlockGenerationContext");
     expect(add).toContain("notes");
-    expect(add).toContain("workspace_files");
+    expect(add).toContain("fileNames");
     const gridOps = read("lib/workspace-grid-ops/generate_shape.ts");
     expect(gridOps).toContain("composeBlockGenerationContext");
     expect(gridOps).toContain("fileNames");
@@ -123,20 +123,20 @@ describe("workspace create + builder static wiring", () => {
     // AI Builder chat + regenerate must include files/notes before LLM calls
     const chat = read("app/api/workspace/chat/route.ts");
     expect(chat).toContain("composeBlockGenerationContext");
-    expect(chat).toContain("workspace_files");
+    expect(chat).toContain("fileNames");
     expect(chat).toContain("notes: plan.notes");
     expect(chat).toContain("alwaysContext");
     // Prompt includes alwaysContext before await callXaiJSON
     expect(chat.indexOf("alwaysContext")).toBeLessThan(chat.indexOf("await callXaiJSON"));
     const regen = read("app/api/workspace/regenerate/route.ts");
     expect(regen).toContain("composeBlockGenerationContext");
-    expect(regen).toContain("workspace_files");
+    expect(regen).toContain("fileNames");
     expect(regen).toContain("notes: plan.notes");
     expect(regen).toContain("alwaysContext");
     expect(regen.indexOf("alwaysContext")).toBeLessThan(regen.indexOf("await callXaiJSON"));
     const expand = read("app/api/workspace/expand/route.ts");
     expect(expand).toContain("composeBlockGenerationContext");
-    expect(expand).toContain("workspace_files");
+    expect(expand).toContain("fileNames");
   });
 
   it("sequential appear animation is wired for AI-added blocks", () => {
@@ -289,9 +289,8 @@ describe("workspace create + builder static wiring", () => {
     expect(route).toContain("templateDantesContextForPrompt");
     expect(route).not.toContain("composeDantesResourceContext(");
     expect(route).toContain("templateWorkspaceGoalField(explicitGoal)");
-    expect(route).toContain("workspace_goal: goalFields.workspace_goal");
-    expect(route).toContain("workspace_external_resources");
-    expect(route).toContain('from("workspace_files")');
+    expect(route).toContain("description: goalFields.workspace_goal");
+    expect(route).toContain("fileStorageWarnings");
     expect(route).toContain("blockedCellsFromMapType");
     expect(route).toContain("unusable_cells: blockedSlots");
     expect(route).toContain("goal: explicitGoal");

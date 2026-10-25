@@ -44,7 +44,7 @@ export function ileSessionListDisplayName(input: {
 
 /**
  * Exit-without-saving: hide from Previous Sessions. Proof of Work is stored
- * independently (`workspace_proof_of_work`) and must not be deleted.
+ * independently (`proof_of_work`) and must not be deleted.
  */
 export const ILE_SESSION_UNSAVED_EXIT_META_KEY = "unsaved_exit" as const;
 

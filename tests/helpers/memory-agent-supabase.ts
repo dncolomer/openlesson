@@ -50,7 +50,7 @@ export function createMemoryAgentSupabase(seed: Partial<MemoryDb> = {}) {
         archived_at: null,
       },
     ],
-    workspace_proof_of_work: [],
+    proof_of_work: [],
     sessions: [],
   };
 

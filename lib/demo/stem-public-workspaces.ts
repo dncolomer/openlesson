@@ -30,7 +30,7 @@ export type StemFieldKey =
 export interface StemSubdisciplineDefinition {
   /** Stable key within the field */
   key: string;
-  /** Region display name (custom_verification_models.name) — also the block title */
+  /** Region display name (knowledge_regions.name) — also the block title */
   regionName: string;
   description: string;
   profile: SyntheticRegionProfile;
@@ -718,6 +718,7 @@ export function stemWorkspaceNotes(field: StemFieldDefinition): string {
   return (
     `${stemFieldNotesMarker(field.key)} Public STEM catalog workspace for ` +
     `${field.title}. First-layer custom knowledge regions = top-level subdisciplines. ` +
+    `${field.workspace_goal} ` +
     `Do not treat notes as learner content.`
   );
 }

@@ -215,11 +215,10 @@ function makeCountMock(opts: {
 
 describe("countTapSessions drives production TAP filters", () => {
   it("queries Calibrate and Verify tables with billable status filter (not pending/revoked)", async () => {
-    const mock = makeCountMock({ table: "workspace_verify_sessions", count: 2, extraTables: ["workspace_calibrate_sessions", "workspace_verify_sessions"] });
+    const mock = makeCountMock({ table: "sessions", count: 2 });
     const n = await countTapSessions(mock.client, "user-1", new Date("2026-06-01T00:00:00.000Z"));
-    expect(n).toBe(4);
-    expect(mock.from).toHaveBeenCalledWith("workspace_calibrate_sessions");
-    expect(mock.from).toHaveBeenCalledWith("workspace_verify_sessions");
+    expect(n).toBe(2);
+    expect(mock.from).toHaveBeenCalledWith("sessions");
     expect(mock.ops).toContainEqual({
       method: "eq",
       args: ["user_id", "user-1"],
@@ -265,10 +264,10 @@ describe("countIleSessions drives production TAP Learning filters", () => {
 
 describe("countPowApiSubmissions drives external PoW filter", () => {
   it("requires created_by_api_key_id IS NOT NULL (API-direct only)", async () => {
-    const mock = makeCountMock({ table: "workspace_proof_of_work", count: 7 });
+    const mock = makeCountMock({ table: "proof_of_work", count: 7 });
     const n = await countPowApiSubmissions(mock.client, "user-1", null);
     expect(n).toBe(7);
-    expect(mock.from).toHaveBeenCalledWith("workspace_proof_of_work");
+    expect(mock.from).toHaveBeenCalledWith("proof_of_work");
     expect(mock.ops).toContainEqual({
       method: "not",
       args: ["created_by_api_key_id", "is", null],

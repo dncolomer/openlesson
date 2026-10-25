@@ -168,7 +168,7 @@ export async function requireProductWorkspaceEvalAuth(
   const admin = createAdminClient();
   const { data: workspace } = await admin
     .from("workspaces")
-    .select("id, user_id, is_group")
+    .select("id, user_id")
     .eq("id", workspaceId)
     .single();
 
@@ -182,7 +182,7 @@ export async function requireProductWorkspaceEvalAuth(
   const access = canAccessWorkspaceEval({
     callerUserId: session.user.id,
     workspaceOwnerId: workspace.user_id,
-    isGroup: Boolean(workspace.is_group),
+    isGroup: false,
   });
   const evalAllowed = resolveEvalPersistenceClientMode(access) !== "deny";
   const principal = cookieUserPrincipal(session.user.id);

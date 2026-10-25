@@ -21,7 +21,7 @@ GOALS:
 
 HIDDEN-STATE TREE vs FLOW EMBEDDINGS:
 - The learner walks a hidden-state tree. Distance scores that walk against the prepared tree.
-- Flow embeddings (flowcfg-v1-d96) live on workspace_flow_embeddings. Overlay regions are centroids in the same space.
+- Flow embeddings (flowcfg-v1-d96) live on session_embeddings. Overlay regions are centroids in the same space.
 - Proof-of-work responses do not include an interruption.
 
 TEMPORAL PROOF OF WORK:

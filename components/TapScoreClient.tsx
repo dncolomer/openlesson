@@ -24,7 +24,7 @@ import { MobileBlockScreen } from "@/components/MobileBlockScreen";
 import { isSmartphoneClient } from "@/lib/is-smartphone";
 import { useI18n } from "@/lib/i18n";
 import type { TapStartingTopic } from "@/lib/tap-score";
-import { VERIFICATION_PRACTICE_OPENING } from "@/lib/verification-flow";
+
 import type { SessionSidebarMode } from "@/lib/session-sidebar";
 import {
   useSessionThoughtInterface,
@@ -96,7 +96,6 @@ interface TapScoreClientProps {
   lockDuration?: boolean;
   presetStartingTopics?: TapStartingTopic[];
   localOpening?: boolean;
-  localPracticePrompt?: string;
   onLocalProof?: (input: {
     prompt: string;
     practice: boolean;
@@ -133,7 +132,6 @@ export function TapScoreClient({
   lockDuration = false,
   presetStartingTopics,
   localOpening = false,
-  localPracticePrompt = VERIFICATION_PRACTICE_OPENING,
   onLocalProof,
   sidebarMode = "tap",
   verificationToken = null,
@@ -230,10 +228,8 @@ export function TapScoreClient({
   const [sessionPurity, setSessionPurity] = useState(TAP_SESSION_PURITY_MAX);
   const [transcriptSilenceMs, setTranscriptSilenceMs] = useState(0);
   const [sessionEndedImpure, setSessionEndedImpure] = useState(false);
-  const [isPracticeMode, setIsPracticeMode] = useState(false);
   const [liveMinutes, setLiveMinutes] = useState(resolvedLaunchMinutes);
   const [clockWaiting, setClockWaiting] = useState(false);
-  const isPracticeModeRef = useRef(false);
   const localQuestionIdRef = useRef<string | null>(null);
   const onLocalProofRef = useRef(onLocalProof);
   onLocalProofRef.current = onLocalProof;
@@ -261,10 +257,6 @@ export function TapScoreClient({
   useEffect(() => {
     tapSessionIdRef.current = tapSessionId;
   }, [tapSessionId]);
-
-  useEffect(() => {
-    isPracticeModeRef.current = isPracticeMode;
-  }, [isPracticeMode]);
 
   useEffect(() => {
     let cancelled = false;
@@ -341,9 +333,8 @@ export function TapScoreClient({
       privateToken,
       tapSessionId,
       entryQueryParams,
-      practice: isPracticeMode,
     }),
-    [workspaceId, blockId, sessionId, privateToken, tapSessionId, entryQueryParams, isPracticeMode],
+    [workspaceId, blockId, sessionId, privateToken, tapSessionId, entryQueryParams],
   );
 
   const {
@@ -403,7 +394,6 @@ export function TapScoreClient({
           privateToken,
           tapSessionId: activeTapSessionId,
           entryQueryParams: entryQueryParamsRef.current,
-          practice: isPracticeModeRef.current,
           ...input,
         })),
       })
@@ -474,7 +464,6 @@ export function TapScoreClient({
     setSessionPurity(TAP_SESSION_PURITY_MAX);
     setTranscriptSilenceMs(0);
     setSessionEndedImpure(false);
-    setIsPracticeMode(false);
     autoStashInFlightRef.current = false;
   }, [dialogueStorageKey, clearPendingInterruption, resetIdleTracking, resetSpeechTracking]);
 
@@ -761,7 +750,6 @@ export function TapScoreClient({
     if (patch.memoryThoughtIds !== undefined) setMemoryThoughtIds(patch.memoryThoughtIds);
     if (patch.isStartingSession !== undefined) setIsStartingSession(patch.isStartingSession);
     if (patch.startingTopicId !== undefined) setStartingTopicId(patch.startingTopicId);
-    if (patch.isPracticeMode !== undefined) setIsPracticeMode(patch.isPracticeMode);
     if (patch.liveMinutes !== undefined) setLiveMinutes(patch.liveMinutes);
     if (patch.speechError !== undefined) setSpeechError(patch.speechError);
     if (patch.thoughts !== undefined) setThoughts(patch.thoughts);
@@ -778,12 +766,12 @@ export function TapScoreClient({
     if (patch.editingTranscription !== undefined) setEditingTranscription(patch.editingTranscription);
   }, []);
   const {
-    sendThought, sendCanvasAsk, sendCurrentTranscription, retryMicrophone, startSession, restartBriefingFlow, endSession,
+    sendThought, sendCanvasAsk, sendCurrentTranscription, retryMicrophone, startSession, endSession,
   } = useTapScoreSession({
     isSending, sentThoughtIds, messages, workspaceId, blockId, sessionId, privateToken,
     conversationLanguage, liveMinutes, minutes, startedAt, postSession, configuredRedirectUrl,
     resolvedWorkspaceId, dialogueStorageKey, phase, router, entryQueryParamsRef, tapSessionIdRef,
-    isPracticeModeRef, isEndingRef,
+    isEndingRef,
     autoStashInFlightRef, tapThoughtSpeech, logTapTrace, bumpUserActivity,
     handlePowInterruption, clearPendingInterruption, resetIdleTracking, resetSpeechTracking,
     flushSpeechSegment, flushFinalBuffer, clearTranscriptionDisplay,
@@ -794,7 +782,6 @@ export function TapScoreClient({
     verificationToken,
     startingTopics,
     localOpening,
-    localPracticePrompt,
     localQuestionIdRef,
     policyRef,
     onLocalProof: (input) => onLocalProofRef.current?.(input),
@@ -924,7 +911,6 @@ export function TapScoreClient({
       error={error}
       startSession={startSession}
       participantIdentity={participantIdentity}
-      isPracticeMode={isPracticeMode}
       lastAssistantTurn={lastAssistantTurn}
       messages={messages}
       isSending={isSending}
@@ -957,7 +943,6 @@ export function TapScoreClient({
       sessionId={sessionId}
       resultsError={resultsError}
       sessionEndedImpure={sessionEndedImpure}
-      restartBriefingFlow={restartBriefingFlow}
       setPhase={setPhase}
       editingTranscription={editingTranscription}
       setEditingTranscription={setEditingTranscription}

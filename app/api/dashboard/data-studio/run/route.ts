@@ -1,6 +1,6 @@
 /**
  * Owner Data Studio: proof-of-work for one embedding run, including spoken
- * transcript_snapshot rows that live on workspace_proof_of_work rather than
+ * transcript_snapshot rows that live on proof_of_work rather than
  * the compact embedding payload.
  */
 import { NextRequest, NextResponse } from "next/server";
@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
 
     const admin = createAdminClient();
     let query = admin
-      .from("workspace_proof_of_work")
+      .from("proof_of_work")
       .select("proof_of_work_type, tool_name, tool_action, timestamp_ms, metadata, file_name, session_id")
       .eq("workspace_id", workspaceId)
       .order("timestamp_ms", { ascending: true })

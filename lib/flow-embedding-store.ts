@@ -85,7 +85,7 @@ async function resolveBackend(): Promise<"supabase" | "memory"> {
   }
   try {
     const supabase = createAdminClient();
-    const { error } = await supabase.from("workspace_flow_embeddings").select("id").limit(1);
+    const { error } = await supabase.from("session_embeddings").select("id").limit(1);
     store.backend = error ? "memory" : "supabase";
   } catch {
     store.backend = "memory";
@@ -205,12 +205,12 @@ export async function persistCompletedFlowEmbedding(
     raw: stored.raw,
     created_at: stored.created_at,
   };
-  const { error } = await supabase.from("workspace_flow_embeddings").insert(row);
+  const { error } = await supabase.from("session_embeddings").insert(row);
   if (error) {
     if (String(error.message).includes("owner_user_id") && "owner_user_id" in row) {
       const retry = { ...row };
       delete retry.owner_user_id;
-      const second = await supabase.from("workspace_flow_embeddings").insert(retry);
+      const second = await supabase.from("session_embeddings").insert(retry);
       if (second.error) throw new Error(second.error.message);
       return stored;
     }
@@ -252,7 +252,7 @@ export async function listFlowEmbeddingsForOwner(input: {
   }
   const supabase = createAdminClient();
   let query = supabase
-    .from("workspace_flow_embeddings")
+    .from("session_embeddings")
     .select("*")
     .eq("owner_user_id", ownerUserId)
     .order("created_at", { ascending: false });
@@ -288,7 +288,7 @@ export async function listFlowEmbeddingsForWorkspaces(input: {
   }
   const supabase = createAdminClient();
   let query = supabase
-    .from("workspace_flow_embeddings")
+    .from("session_embeddings")
     .select("*")
     .in("workspace_id", workspaceIds)
     .order("created_at", { ascending: false });
@@ -317,7 +317,7 @@ export async function getFlowEmbedding(input: {
   }
   const supabase = createAdminClient();
   const { data, error } = await supabase
-    .from("workspace_flow_embeddings")
+    .from("session_embeddings")
     .select("*")
     .eq("workspace_id", workspaceId)
     .eq("id", embeddingId)

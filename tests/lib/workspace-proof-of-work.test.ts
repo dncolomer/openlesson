@@ -182,7 +182,7 @@ describe("demo evidence constraints", () => {
 });
 
 describe("modern-only proof-of-work storage path", () => {
-  it("inserts only into workspace_proof_of_work (no legacy table fallback)", async () => {
+  it("inserts only into proof_of_work (no legacy table fallback)", async () => {
     const calls: string[] = [];
     const inserted: Record<string, unknown>[] = [];
     const supabase = {
@@ -231,7 +231,7 @@ describe("modern-only proof-of-work storage path", () => {
     expect(row?.proof_of_work_type).toBe("tool");
     expect(row?.pow_model_version).toBe("pow-model-v1");
     expect(inserted[0]?.pow_model_version).toBe("pow-model-v1");
-    expect(calls).toEqual(["workspace_proof_of_work"]);
+    expect(calls).toEqual(["proof_of_work"]);
     expect(calls).not.toContain("workspace_evidence");
   });
 
@@ -253,7 +253,7 @@ describe("modern-only proof-of-work storage path", () => {
     expect(data).toEqual([{ id: "1" }]);
   });
 
-  it("counts only workspace_proof_of_work", async () => {
+  it("counts only proof_of_work", async () => {
     const calls: string[] = [];
     const supabase = {
       from(table: string) {
@@ -270,7 +270,7 @@ describe("modern-only proof-of-work storage path", () => {
     };
     const count = await countWorkspaceProofOfWorkForPlan(supabase as never, "ws-1");
     expect(count).toBe(3);
-    expect(calls).toEqual(["workspace_proof_of_work"]);
+    expect(calls).toEqual(["proof_of_work"]);
   });
 });
 

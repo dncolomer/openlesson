@@ -362,8 +362,9 @@ describe("data studio structural wiring", () => {
     expect(src).toContain("parseStudioSessionLinkInput");
     expect(src).toContain("hashPrivateToken");
     expect(src).toContain("matchesStudioPowToSessionLink");
-    expect(src).toContain("workspace_calibrate_sessions");
-    expect(src).toContain("workspace_learn_links");
+    expect(src).toContain("sessions");
+    expect(src).toContain('.in("kind", ["calibrate", "verify"])');
+    expect(src).toContain('.eq("kind", "learn")');
     expect(src).not.toContain("workspace_tapbench_links");
     expect(src).toContain("private_token_hash");
     expect(src).toContain("sortStudioRows");
@@ -474,9 +475,8 @@ describe("product Data Studio chrome", () => {
     expect(dashboardStudioProduct("calibration_studio")).toBe("calibration");
 
     const hosts = readFileSync(join(ROOT, "components/workspace-view/workspace-section-hosts.tsx"), "utf8");
-    expect(hosts).toContain("DataStudioPanel");
-    expect(hosts).toContain("data-workspace-data-studio-host");
-    expect(hosts).toContain('visibleSections.includes("data_studio")');
+    expect(hosts).not.toContain("DataStudioPanel");
+    expect(hosts).not.toContain("data-workspace-data-studio-host");
 
     expect(existsSync(join(ROOT, "lib/data-studio-camera.ts"))).toBe(true);
     expect(readFileSync(join(ROOT, "lib/data-studio-view.ts"), "utf8")).not.toContain(

@@ -145,7 +145,7 @@ export async function POST(req: NextRequest) {
             root_topic: plan.root_topic,
             description: plan.description,
             notes: plan.notes,
-            workspace_goal: plan.workspace_goal ?? null,
+            workspace_goal: plan.description ?? plan.notes ?? null,
             workspace_kind: plan.workspace_kind,
           },
           blocks || [],

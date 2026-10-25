@@ -120,7 +120,7 @@ describe("session corpus re-embed", () => {
 
   it("backup script reads proof of work and xAI file ids, not stored vectors as the corpus", () => {
     const src = readFileSync(join(__dirname, "../../scripts/backup-session-corpus.ts"), "utf8");
-    expect(src).toContain("workspace_proof_of_work");
+    expect(src).toContain("proof_of_work");
     expect(src).toContain("xai_file_id");
     expect(src).toContain("--download-files");
     expect(src).toContain("getFileContentResponse");

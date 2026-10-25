@@ -3,10 +3,7 @@
 import { useMemo, useState } from "react";
 import { TapScoreClient } from "@/components/TapScoreClient";
 import type { TapStartingTopic } from "@/lib/tap-score";
-import {
-  VERIFICATION_PRACTICE_OPENING,
-  verificationQuestionStartingPrompt,
-} from "@/lib/verification-flow";
+import { verificationQuestionStartingPrompt } from "@/lib/verification-flow";
 
 type Phase = "identity" | "pick" | "empty";
 
@@ -95,7 +92,6 @@ export function VerificationFlowRunner({ token }: { token: string }) {
           localOpening
           sidebarMode="verification-tap"
           verificationToken={token}
-          localPracticePrompt={VERIFICATION_PRACTICE_OPENING}
           onLocalProof={storeProof}
           initialSession={{ workspaceTitle: topic || "Verification flow", post_session: "show_results" }}
           showEndSession

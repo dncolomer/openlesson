@@ -151,7 +151,7 @@ export async function getTapScoreBriefForUser(workspaceId: string, userId: strin
   const { data: plan, error: planError } = await supabase
     .from("workspaces")
     .select(
-      "id, user_id, organization_id, title, root_topic, description, notes, workspace_goal, is_public, is_group, unusable_cells",
+      "id, user_id, organization_id, title, root_topic, description, notes, is_public, unusable_cells",
     )
     .eq("id", workspaceId)
     .single();
@@ -193,35 +193,30 @@ export async function getTapScoreBriefForUser(workspaceId: string, userId: strin
   const { data: nodes } = await nodesQuery;
   const blockIds = (nodes || []).map((node) => node.id);
 
-  const { data: blockSessions } = blockIds.length > 0
+  const { data: learnSessions } = blockIds.length > 0
     ? await supabase
-      .from("block_sessions")
-      .select("session_id, block_id, blocks(title)")
+      .from("sessions")
+      .select("id, block_id, problem, status")
       .eq("workspace_id", workspaceId)
       .eq("user_id", userId)
+      .eq("kind", "learn")
       .in("block_id", blockIds)
     : { data: [] };
 
-  const sessionIds = Array.from(new Set((blockSessions || []).map((row: any) => row.session_id).filter(Boolean)));
-  const { data: sessions } = sessionIds.length > 0
-    ? await supabase
-      .from("sessions")
-      .select("id, problem, status, report")
-      .in("id", sessionIds)
-      .eq("user_id", userId)
-    : { data: [] };
+  const sessions = learnSessions || [];
 
+  const titleByBlockId = new Map((nodes || []).map((node) => [node.id, node.title]));
   const blockTitleBySessionId = new Map(
-    (blockSessions || []).map((row: any) => [row.session_id, row.blocks?.title || null])
+    (learnSessions || []).map((row: any) => [row.id, titleByBlockId.get(row.block_id) || null])
   );
 
   const focusSessionLink = focusSessionId
-    ? (blockSessions || []).find((row: any) => row.session_id === focusSessionId) || null
+    ? (learnSessions || []).find((row: any) => row.id === focusSessionId) || null
     : null;
   const { data: focusSession } = focusSessionId
     ? await supabase
       .from("sessions")
-      .select("id, problem, status, report")
+      .select("id, problem, status")
       .eq("id", focusSessionId)
       .eq("user_id", userId)
       .single()
@@ -229,12 +224,7 @@ export async function getTapScoreBriefForUser(workspaceId: string, userId: strin
 
   if (focusSessionId && !focusSession) throw new Error("Session not found");
 
-  const { data: workspaceFiles } = await supabase
-    .from("workspace_files")
-    .select("file_name, mime_type")
-    .eq("workspace_id", workspaceId)
-    .order("created_at", { ascending: false })
-    .limit(24);
+  const workspaceFiles: Array<{ file_name?: string | null; mime_type?: string | null }> = [];
 
   return {
     userId,
@@ -246,7 +236,9 @@ export async function getTapScoreBriefForUser(workspaceId: string, userId: strin
         description: plan.description,
         notes: plan.notes,
         workspace_goal:
-          (plan as { workspace_goal?: string | null }).workspace_goal ?? null,
+          [plan.description, plan.notes, plan.title, plan.root_topic]
+            .map((value) => (typeof value === "string" ? value.trim() : ""))
+            .find((value) => value.length > 0) || null,
       },
       nodes: (nodes || []).map((node) => ({
         id: node.id,
@@ -272,7 +264,7 @@ export async function getTapScoreBriefForUser(workspaceId: string, userId: strin
         block_title: blockTitleBySessionId.get(session.id) || null,
         problem: session.problem,
         status: session.status,
-        report: session.report,
+        report: null,
       })),
       focusSession: focusSession ? {
         id: focusSession.id,
@@ -280,7 +272,7 @@ export async function getTapScoreBriefForUser(workspaceId: string, userId: strin
         block_title: blockTitleBySessionId.get(focusSession.id) || null,
         problem: focusSession.problem,
         status: focusSession.status,
-        report: focusSession.report,
+        report: null,
       } : null,
       files: (workspaceFiles || [])
         .map((f) => ({

@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
 
     const { data: plan } = await supabase
       .from("workspaces")
-      .select("user_id, is_public, title, root_topic, notes, workspace_goal")
+      .select("user_id, is_public, title, root_topic, description, notes")
       .eq("id", node.workspace_id)
       .single();
 
@@ -51,15 +51,12 @@ export async function POST(req: NextRequest) {
       return jsonError(403, "Access denied");
     }
 
-    const { data: workspaceFiles } = await supabase
-      .from("workspace_files")
-      .select("file_name")
-      .eq("workspace_id", node.workspace_id);
+    const workspaceFiles: Array<{ file_name: string }> = [];
 
     const { composeBlockGenerationContext } = await import("@/lib/workspace-create-modes");
     const alwaysContext = composeBlockGenerationContext({
       workspaceTitle: plan.title || plan.root_topic || undefined,
-      goal: plan.workspace_goal || plan.root_topic,
+      goal: plan.description || plan.notes || plan.root_topic,
       notes: plan.notes,
       fileNames: (workspaceFiles || []).map((f: { file_name: string }) => f.file_name).filter(Boolean),
     });

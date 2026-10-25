@@ -9,7 +9,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { HeadlessSessionRecord } from "./headless-session";
 
 const STORE_KEY = "__openlessonHeadlessSessionStore";
-const TABLE = "workspace_headless_sessions";
+const TABLE = "sessions";
 
 export type HeadlessSessionDurableBackend = {
   get(id: string): Promise<HeadlessSessionRecord | null>;
@@ -85,26 +85,60 @@ async function resolveBackend(): Promise<"supabase" | "memory" | "injected"> {
   return store.backend;
 }
 
+function headlessRecordFromSessionRow(row: {
+  guest_link?: unknown;
+  kind?: unknown;
+  workspace_id?: unknown;
+  block_id?: unknown;
+  status?: unknown;
+  id?: unknown;
+} | null): HeadlessSessionRecord | null {
+  if (!row) return null;
+  const link =
+    row.guest_link && typeof row.guest_link === "object" && !Array.isArray(row.guest_link)
+      ? (row.guest_link as Record<string, unknown>)
+      : {};
+  if (link.headless !== true && !link.prepared) return null;
+  return parseRecord({
+    ...link,
+    id: row.id,
+    workspace_id: row.workspace_id,
+    block_id: row.block_id ?? link.block_id ?? null,
+    flow_kind: link.flow_kind || row.kind,
+    status: link.status || row.status,
+  });
+}
+
 const supabaseBackend: HeadlessSessionDurableBackend = {
   async get(id) {
     const supabase = createAdminClient();
-    const { data, error } = await supabase.from(TABLE).select("record").eq("id", id).maybeSingle();
+    const { data, error } = await supabase
+      .from(TABLE)
+      .select("id, workspace_id, block_id, kind, status, guest_link")
+      .eq("id", id)
+      .maybeSingle();
     if (error) throw new Error(error.message);
-    return parseRecord((data as { record?: unknown } | null)?.record);
+    return headlessRecordFromSessionRow(data as never);
   },
   async put(record) {
     const supabase = createAdminClient();
     const stored = cloneRecord(record);
+    const { data: workspace } = await supabase
+      .from("workspaces")
+      .select("user_id")
+      .eq("id", stored.workspace_id)
+      .maybeSingle();
+    const userId = (workspace as { user_id?: string | null } | null)?.user_id;
+    if (!userId) throw new Error("Headless session requires a Learning Map owner");
     const { error } = await supabase.from(TABLE).upsert({
       id: stored.id,
-      workspace_id: stored.workspace_id,
-      flow_kind: stored.flow_kind,
+      user_id: userId,
+      problem: stored.chapter_title || "Headless",
       status: stored.status,
-      catalog_size: stored.catalog_size,
-      started_at_ms: stored.started_at_ms,
-      expires_at_ms: stored.expires_at_ms,
-      record: stored,
-      updated_at: new Date().toISOString(),
+      kind: stored.flow_kind,
+      workspace_id: stored.workspace_id,
+      block_id: stored.block_id,
+      guest_link: { ...stored, headless: true },
     });
     if (error) throw new Error(error.message);
   },
@@ -112,12 +146,12 @@ const supabaseBackend: HeadlessSessionDurableBackend = {
     const supabase = createAdminClient();
     const { data, error } = await supabase
       .from(TABLE)
-      .select("record")
+      .select("id, workspace_id, block_id, kind, status, guest_link")
       .eq("workspace_id", workspaceId)
-      .order("started_at_ms", { ascending: false });
+      .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return (data || [])
-      .map((row) => parseRecord((row as { record?: unknown }).record))
+      .map((row) => headlessRecordFromSessionRow(row as never))
       .filter((row): row is HeadlessSessionRecord => !!row);
   },
 };

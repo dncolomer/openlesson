@@ -44,7 +44,7 @@ export async function loadPowRelatedBlockIds(
   }
 
   let query = supabase
-    .from("workspace_proof_of_work")
+    .from("proof_of_work")
     .select("block_id")
     .eq("workspace_id", options.workspaceId)
     .not("block_id", "is", null)
@@ -129,11 +129,13 @@ export async function resolveGoalsForEligibility(
     if (!legacy) {
       const { data } = await supabase
         .from("workspaces")
-        .select("workspace_goal")
+        .select("description, notes")
         .eq("id", options.workspaceId)
         .maybeSingle();
       legacy = normalizeGoalText(
-        (data as { workspace_goal?: string | null } | null)?.workspace_goal,
+        (data as { description?: string | null; notes?: string | null } | null)
+          ?.description ||
+          (data as { notes?: string | null } | null)?.notes,
       );
     }
     if (legacy) {

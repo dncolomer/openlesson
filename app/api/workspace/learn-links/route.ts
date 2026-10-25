@@ -35,45 +35,16 @@ export async function GET(req: NextRequest) {
   if (!access.ok) return access.response;
 
   const ILE_LIST_SELECT_WITH_MODE =
-    "id, workspace_id, block_id, status, participant_type, guest_user_id, assigned_user_id, session_id, created_at, started_at, completed_at, access_mode, public_token, entry_query_params, show_end_session, session_mode";
-  /** Fallback when session_mode migration not yet applied on the target DB. */
-  const ILE_LIST_SELECT_LEGACY =
-    "id, workspace_id, block_id, status, participant_type, guest_user_id, assigned_user_id, session_id, created_at, started_at, completed_at, access_mode, public_token, entry_query_params, show_end_session";
+    "id, workspace_id, block_id, status, guest_user_id, assigned_user_id, created_at, access_mode, public_token, guest_link, kind";
 
   let { data: links, error } = await access.supabase
-    .from("workspace_learn_links")
+    .from("sessions")
     .select(ILE_LIST_SELECT_WITH_MODE)
     .eq("workspace_id", workspaceId)
+    .eq("kind", "learn")
     .order("created_at", { ascending: false });
 
   // Missing column (migration not applied) → list without session_mode, default learning.
-  if (error) {
-    const msg = `${error.message || ""} ${error.details || ""} ${error.hint || ""}`.toLowerCase();
-    const missingSessionMode =
-      msg.includes("session_mode") ||
-      (msg.includes("column") && msg.includes("does not exist")) ||
-      error.code === "42703";
-    if (missingSessionMode) {
-      console.warn(
-        "[workspace/ile-links] session_mode missing — falling back to legacy select. Apply migration 20260728120000_ile_session_mode.",
-      );
-      const legacy = await access.supabase
-        .from("workspace_learn_links")
-        .select(ILE_LIST_SELECT_LEGACY)
-        .eq("workspace_id", workspaceId)
-        .order("created_at", { ascending: false });
-      if (legacy.error) {
-        console.error("[workspace/ile-links] List error:", legacy.error);
-        return jsonError(500, "Failed to list Learn links");
-      }
-      links = (legacy.data || []).map((row) => ({
-        ...row,
-        session_mode: "learning",
-      }));
-      error = null;
-    }
-  }
-
   if (error) {
     console.error("[workspace/ile-links] List error:", error);
     return jsonError(500, "Failed to list Learn links");
@@ -82,13 +53,22 @@ export async function GET(req: NextRequest) {
   const origin = baseUrl(req);
   // Always attach listable share URLs from durable public_token (not one-shot client memory).
   const ile_links = (links || []).map((link) => {
+    const row = (link && typeof link === "object" ? link : {}) as Record<string, unknown>;
+    const guestLink =
+      row.guest_link && typeof row.guest_link === "object" && !Array.isArray(row.guest_link)
+        ? (row.guest_link as Record<string, unknown>)
+        : {};
     const publicToken =
-      link && typeof link === "object" && "public_token" in link
-        ? (link as { public_token?: string | null }).public_token
-        : null;
+      typeof row.public_token === "string"
+        ? row.public_token
+        : typeof guestLink.public_token === "string"
+          ? guestLink.public_token
+          : null;
     const url = guestLinkUrlFromPublicToken(origin, "ile", publicToken);
     return {
-      ...link,
+      ...guestLink,
+      ...row,
+      show_end_session: guestLink.show_end_session !== false && row.show_end_session !== false,
       url: url ?? null,
       private_url: url ?? null,
     };

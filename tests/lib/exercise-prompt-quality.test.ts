@@ -201,11 +201,12 @@ describe("wiring: richer context on start + brief + prompt surfaces", () => {
     expect(start).toContain("generateTapOpeningQuestion");
   });
 
-  it("tap-score brief loads workspace_files and injects shared context block", () => {
+  it("tap-score brief loads notes/description and injects shared context block", () => {
     const tap = read("lib/tap-score.ts");
-    expect(tap).toContain("workspace_files");
+    expect(tap).not.toContain("workspace_files");
+    expect(tap).toContain("notes");
+    expect(tap).toContain("description");
     expect(tap).toContain("formatPromptWorkspaceContextBlock");
-    expect(tap).toContain("files:");
   });
 
   it("prompt-kernel opening/topics require context grounding + no stage directions", () => {

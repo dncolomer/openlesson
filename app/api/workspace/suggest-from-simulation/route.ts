@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
 
     const { data: workspace } = await supabase
       .from("workspaces")
-      .select("id, title, root_topic, workspace_goal, description, notes, simulation_collection")
+      .select("id, title, root_topic, description, notes, simulation_collection")
       .eq("id", workspaceId)
       .maybeSingle();
 
@@ -59,8 +59,8 @@ export async function POST(req: NextRequest) {
       draftPrompt: body.draftPrompt ?? body.topic ?? body.prompt,
       workspaceTitle: workspace.title || workspace.root_topic,
       workspaceGoal:
-        (workspace as { workspace_goal?: string | null }).workspace_goal ||
-        workspace.description,
+        workspace.description ||
+        (workspace as { notes?: string | null }).notes,
       workspaceNotes: (workspace as { notes?: string | null }).notes,
       limit,
     });

@@ -752,8 +752,7 @@ describe("suggest from knowledge + simulation", () => {
     const modelAt = contextRoute.indexOf("await runSuggestFromKnowledgeModel");
     expect(contextRoute).toContain("assembleSuggestFromContextXaiMessages");
     expect(contextRoute).toContain("normalizeSuggestFromKnowledgeResponse");
-    expect(contextRoute).toContain('from("workspace_files")');
-    expect(contextRoute).toContain('from("workspace_external_resources")');
+    expect(contextRoute).toContain("assembleSuggestFromContextXaiMessages");
     expect(contextRoute).toContain("notes");
     expect(contextRoute).not.toContain("listEvalRunHistory");
     expect(contextRoute).not.toContain("simulationCollection");

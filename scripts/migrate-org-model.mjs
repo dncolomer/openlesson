@@ -10,7 +10,7 @@
  *  - every profile gets an organization
  *  - personal paid plan/Stripe/volume → org
  *  - multi-member orgs take best member entitlement
- *  - stamp organization_id on workspaces + workspace_proof_of_work
+ *  - stamp organization_id on workspaces + proof_of_work
  *  - demote profiles.plan personal fields to inactive
  *  - optional: provision xAI keys/collections (when env present)
  */
@@ -113,7 +113,7 @@ async function ensureSchemaColumns(client, lines) {
       ADD COLUMN IF NOT EXISTS xai_collection_status text NOT NULL DEFAULT 'pending',
       ADD COLUMN IF NOT EXISTS xai_collection_error text;
 
-    ALTER TABLE public.workspace_proof_of_work
+    ALTER TABLE public.proof_of_work
       ADD COLUMN IF NOT EXISTS xai_collection_id text;
   `);
   // Record migration version if tracking exists
@@ -283,7 +283,7 @@ async function runDataMigrate(client, lines) {
 
   // 4) Stamp organization_id on PoW from user or workspace
   const powUser = await client.query(`
-    UPDATE public.workspace_proof_of_work pow
+    UPDATE public.proof_of_work pow
     SET organization_id = p.organization_id
     FROM public.profiles p
     WHERE pow.user_id = p.id
@@ -293,7 +293,7 @@ async function runDataMigrate(client, lines) {
   log(`Stamped organization_id on ${powUser.rowCount} PoW rows via user_id`, lines);
 
   const powWs = await client.query(`
-    UPDATE public.workspace_proof_of_work pow
+    UPDATE public.proof_of_work pow
     SET organization_id = w.organization_id
     FROM public.workspaces w
     WHERE pow.workspace_id = w.id
@@ -402,7 +402,7 @@ async function verify(client, lines, migrateMeta = {}) {
 
   const { rows: c3 } = await client.query(`
     SELECT count(*)::int AS n
-    FROM public.workspace_proof_of_work pow
+    FROM public.proof_of_work pow
     LEFT JOIN public.profiles p ON p.id = pow.user_id
     LEFT JOIN public.workspaces w ON w.id = pow.workspace_id
     WHERE pow.organization_id IS NULL

@@ -36,8 +36,10 @@ import {
 } from "@/lib/guest-link-access";
 import {
   findCalibrateOrVerifySessionById,
+  insertGuestSession,
   storedCalibrateVerifyWrite,
 } from "@/lib/guest-session-tables";
+import { UNIFIED_SESSIONS_TABLE } from "@/lib/unified-sessions";
 import {
   knowledgeLinkMintDeniedMessage,
   workspaceAllowsKnowledgeLinkMint,
@@ -92,7 +94,7 @@ export interface CreatedTapLink {
 }
 
 const TAP_LINK_SELECT =
-  "id, workspace_id, block_id, status, requested_duration_seconds, focus_block_ids, created_at, participant_type, post_session, redirect_url, guest_user_id, assigned_user_id, access_mode, public_token, entry_query_params, show_end_session, interaction_kind";
+  "id, workspace_id, block_id, status, created_at, guest_user_id, assigned_user_id, access_mode, public_token, kind, guest_link";
 
 function withTapLinkUrl(
   link: Omit<CreatedTapLink, "url" | "private_url" | "show_end_session" | "interaction_kind"> & {
@@ -232,7 +234,7 @@ async function resolveAssignedUserId(
   }
 
   const { data: groupSession } = await supabase
-    .from("block_sessions")
+    .from("sessions")
     .select("user_id")
     .eq("workspace_id", workspace.id)
     .eq("user_id", requestedUserId)
@@ -365,9 +367,10 @@ export async function createWorkspaceTapLink(options: CreateTapLinkOptions): Pro
 
   const insertLink = (interactionKind: TapInteractionKind) => {
     const write = storedCalibrateVerifyWrite(interactionKind);
-    return supabase
-      .from(write.table)
-      .insert({
+    return insertGuestSession(
+      supabase,
+      write.table,
+      {
         workspace_id: workspaceId,
         user_id: ownerUserId,
         guest_user_id: guestUserId,
@@ -391,9 +394,9 @@ export async function createWorkspaceTapLink(options: CreateTapLinkOptions): Pro
         post_session: postSession,
         redirect_url: postSession === "redirect_url" ? redirectUrl : null,
         completion_webhook_url: webhookUrl,
-      })
-      .select(TAP_LINK_SELECT)
-      .single();
+      },
+      TAP_LINK_SELECT,
+    );
   };
 
   let { data: link, error } = await insertLink(interactionKind);
@@ -467,20 +470,29 @@ export async function reissueWorkspaceTapLink(
     throw new CreateTapLinkError("Failed to mint session link token", 500, "internal_error");
   }
 
+  const nextHash = hashPrivateToken(sessionToken);
+  const nextPublic = durableGuestLinkPublicToken(sessionToken);
+  const guestLink = {
+    ...(((existing.guest_link as Record<string, unknown> | undefined) || {}) as Record<string, unknown>),
+    private_token_hash: nextHash,
+    public_token: nextPublic,
+    status: "pending",
+    started_at: null,
+    completed_at: null,
+    duration_seconds: 0,
+  };
   const { data: link, error } = await supabase
-    .from(sessionTable)
+    .from(UNIFIED_SESSIONS_TABLE)
     .update({
-      private_token_hash: hashPrivateToken(sessionToken),
-      public_token: durableGuestLinkPublicToken(sessionToken),
+      private_token_hash: nextHash,
+      public_token: nextPublic,
       status: "pending",
-      started_at: null,
-      completed_at: null,
-      session_id: null,
-      duration_seconds: 0,
+      guest_link: guestLink,
     })
     .eq("id", linkId)
     .eq("workspace_id", workspaceId)
-    .select(TAP_LINK_SELECT)
+    .eq("kind", sessionTable === "workspace_calibrate_sessions" ? "calibrate" : "verify")
+    .select("*")
     .single();
 
   if (error || !link) {

@@ -4,19 +4,10 @@
  * Learning workspace (stored kind `standard`): a designer builds a map and
  * people in the organisation play it. Selling is AYCL only.
  * Verification and Calibration are first-class flows (owner_user_id).
- * parseWorkspaceKind still maps historical knowledge_region / calibration
- * aliases when reading leftover payloads.
+ * Leftover knowledge_region / calibration payloads parse as Learning.
  *
  * Knowledge Portal is not a feature of either product.
  */
-
-import {
-  isCalibrationWorkspace,
-  isKnowledgeRegionWorkspace,
-  parseWorkspaceKind,
-  WORKSPACE_KIND_CALIBRATION,
-  WORKSPACE_KIND_KNOWLEDGE_REGION,
-} from "@/lib/workspace-kind";
 
 export type WorkspaceFeature =
   | "map"
@@ -93,12 +84,9 @@ export function calibrationWorkspaceFeatures(): readonly WorkspaceFeature[] {
 }
 
 export function workspaceSupportsFeature(
-  kind: unknown,
+  _kind: unknown,
   feature: WorkspaceFeature,
 ): boolean {
-  const parsed = parseWorkspaceKind(kind);
-  if (parsed === WORKSPACE_KIND_CALIBRATION) return CALIBRATION.has(feature);
-  if (parsed === WORKSPACE_KIND_KNOWLEDGE_REGION) return VERIFICATION.has(feature);
   return LEARNING.has(feature);
 }
 
@@ -145,22 +133,15 @@ function featurePhrase(feature: WorkspaceFeature): string {
   }
 }
 
-export function workspaceProductLabel(kind: unknown): string {
-  if (isCalibrationWorkspace(kind)) return "Calibration flow";
-  return isKnowledgeRegionWorkspace(kind)
-    ? "Verification flow"
-    : "Learning workspace";
+export function workspaceProductLabel(_kind?: unknown): string {
+  return "Learning workspace";
 }
 
 export function workspaceFeatureDeniedMessage(
   kind: unknown,
   feature: WorkspaceFeature,
 ): string {
-  const product = isCalibrationWorkspace(kind)
-    ? "Calibration flows"
-    : isKnowledgeRegionWorkspace(kind)
-      ? "Verification flows"
-      : "Learning workspaces";
+  const product = "Learning workspaces";
   return `${product} do not support ${featurePhrase(feature)}.`;
 }
 

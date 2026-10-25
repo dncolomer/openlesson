@@ -78,7 +78,7 @@ async function loadInsightSessionPowCount(
   const [siblings, work] = await Promise.all([
     admin.from("insights").select("id, created_at").eq("session_id", sessionId).limit(200),
     admin
-      .from("workspace_proof_of_work")
+      .from("proof_of_work")
       .select("created_at")
       .eq("session_id", sessionId)
       .eq("proof_of_work_type", "tool")

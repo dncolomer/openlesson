@@ -85,11 +85,6 @@ export {
   validateMapReadyNotifyRegistration,
 } from "@/lib/map-of-knowledge/map-ready-notify";
 
-export {
-  registerMapNewsletterLead,
-  registerMapReadyNotifyRequest,
-} from "@/lib/map-of-knowledge/map-ready-notify-store";
-
 export type { MapInfiniteGridTokens } from "@/lib/map-of-knowledge/infinite-grid";
 export {
   MAP_INFINITE_GRID,

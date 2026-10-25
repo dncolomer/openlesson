@@ -98,8 +98,8 @@ export function normalizeBlockPreviousSessions(
 }
 
 /**
- * Shipped list entry the block-sessions API uses. Joins `block_sessions` to
- * `sessions` for id + timestamp. Does not insert.
+ * Shipped list entry the block-sessions API uses. Lists Learn `sessions`
+ * for the block. Does not insert.
  */
 export async function listBlockPreviousSessions(
   supabase: { from: (table: string) => any },
@@ -110,10 +110,11 @@ export async function listBlockPreviousSessions(
   if (!workspaceId || !blockId) return [];
 
   const { data: joins, error: joinError } = await supabase
-    .from("block_sessions")
-    .select("session_id, created_at")
+    .from("sessions")
+    .select("id, created_at")
     .eq("workspace_id", workspaceId)
     .eq("block_id", blockId)
+    .eq("kind", "learn")
     .order("created_at", { ascending: false });
   if (joinError) {
     const message =
@@ -129,7 +130,7 @@ export async function listBlockPreviousSessions(
       joinRows
         .map((row) =>
           row && typeof row === "object"
-            ? String((row as { session_id?: unknown }).session_id || "").trim()
+            ? String((row as { id?: unknown; session_id?: unknown }).id || (row as { session_id?: unknown }).session_id || "").trim()
             : "",
         )
         .filter(Boolean),
@@ -174,8 +175,8 @@ export async function listBlockPreviousSessions(
   return normalizeBlockPreviousSessions(
     joinRows
       .map((row) => {
-        const rec = row as { session_id?: string; created_at?: string };
-        const id = String(rec.session_id || "").trim();
+        const rec = row as { session_id?: string; id?: string; created_at?: string };
+        const id = String(rec.id || rec.session_id || "").trim();
         const session = byId.get(id);
         return {
           sessionId: id,
@@ -210,9 +211,9 @@ export function blockIdsWithSavedPreviousSessions(
   const seen = new Set<string>();
   for (const raw of joins) {
     if (!raw || typeof raw !== "object") continue;
-    const rec = raw as { block_id?: unknown; session_id?: unknown };
+    const rec = raw as { block_id?: unknown; session_id?: unknown; id?: unknown };
     const blockId = String(rec.block_id || "").trim();
-    const sessionId = String(rec.session_id || "").trim();
+    const sessionId = String(rec.session_id || rec.id || "").trim();
     if (!blockId || seen.has(blockId)) continue;
     if (sessionId && byId.has(sessionId)) {
       if (isIleSessionUnsavedExit(byId.get(sessionId)?.metadata)) continue;
@@ -231,9 +232,11 @@ export async function listWorkspaceBlockIdsWithPreviousSessions(
   if (!workspaceId) return [];
 
   const { data: joins, error: joinError } = await supabase
-    .from("block_sessions")
-    .select("block_id, session_id")
-    .eq("workspace_id", workspaceId);
+    .from("sessions")
+    .select("block_id, id")
+    .eq("workspace_id", workspaceId)
+    .eq("kind", "learn")
+    .not("block_id", "is", null);
   if (joinError) {
     const message =
       joinError && typeof joinError === "object" && "message" in joinError
@@ -248,7 +251,7 @@ export async function listWorkspaceBlockIdsWithPreviousSessions(
       joinRows
         .map((row) =>
           row && typeof row === "object"
-            ? String((row as { session_id?: unknown }).session_id || "").trim()
+            ? String((row as { session_id?: unknown; id?: unknown }).id || (row as { session_id?: unknown }).session_id || "").trim()
             : "",
         )
         .filter(Boolean),

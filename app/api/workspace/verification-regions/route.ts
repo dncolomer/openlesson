@@ -50,7 +50,7 @@ async function persistSpec(input: {
   try {
     const supabase = createAdminClient();
     const { data, error } = await supabase
-      .from("custom_verification_models")
+      .from("knowledge_regions")
       .insert({
         workspace_id: input.workspaceId,
         owner_user_id: input.ownerUserId,

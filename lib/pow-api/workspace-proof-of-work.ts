@@ -204,7 +204,7 @@ export async function insertWorkspaceProofOfWorkRow(
   const stamped = { ...payload, pow_model_version };
 
   const { data, error } = await supabase
-    .from("workspace_proof_of_work")
+    .from("proof_of_work")
     .insert(stamped)
     .select(PROOF_OF_WORK_SELECT)
     .single();
@@ -234,7 +234,7 @@ export async function countWorkspaceProofOfWorkForPlan(
   workspaceId: string
 ): Promise<number> {
   const { count, error } = await supabase
-    .from("workspace_proof_of_work")
+    .from("proof_of_work")
     .select("id", { count: "exact", head: true })
     .eq("workspace_id", workspaceId);
 

@@ -79,7 +79,7 @@ describe("dashboard home public catalog", () => {
     expect(presentPublicMapCatalogItem(row({ is_play_copy: true }))).toBeNull();
     expect(
       presentPublicMapCatalogItem(row({ workspace_kind: "knowledge_region" })),
-    ).toBeNull();
+    ).toMatchObject({ id: "map-1", title: "Limits" });
     expect(workspaceSupportsFeature("standard", "make_public")).toBe(true);
     expect(settingsShowsMakePublic("standard")).toBe(true);
     expect(rejectPublishPlayCopy({ makingPublic: true, isPlayCopy: true })).toBe(
@@ -104,7 +104,7 @@ describe("dashboard home public catalog", () => {
           workspace_goal: "Prove the squeeze theorem.",
         }),
       )?.summary,
-    ).toBe("Prove the squeeze theorem.");
+    ).toBeNull();
     expect(truncatePublicMapSummary("Short blurb")).toBe("Short blurb");
     expect(truncatePublicMapSummary("word ".repeat(80)).endsWith("…")).toBe(true);
   });

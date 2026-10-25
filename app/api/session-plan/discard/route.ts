@@ -1,6 +1,6 @@
 /**
  * Exit without saving: drop the chapter map, keep Proof of Work.
- * `workspace_proof_of_work` is intentionally not read or written here.
+ * `proof_of_work` is intentionally not read or written here.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";

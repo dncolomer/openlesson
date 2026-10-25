@@ -60,9 +60,9 @@ describe("localhost verification Data Studio sample", () => {
     expect(seed).toContain("xzwjlkngxuxttvqbboea");
     expect(seed).toContain("tap_session_id");
     expect(seed).toContain("workspace_kind");
-    expect(seed).toContain("workspace_flow_embeddings");
+    expect(seed).toContain("session_embeddings");
     expect(seed).toContain("transcript_snapshot");
-    expect(seed).toContain("custom_verification_models");
+    expect(seed).toContain("knowledge_regions");
     expect(seed).toContain("regions.voice");
     expect(existsSync(join(ROOT, "scripts/seed-localhost-verification-studio.ts"))).toBe(true);
   });

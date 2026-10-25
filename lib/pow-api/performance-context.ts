@@ -128,7 +128,7 @@ export async function buildWorkspacePerformanceContext({
   const { data: workspace } = await supabase
     .from("workspaces")
     .select(
-      "id, title, root_topic, description, notes, workspace_goal, evaluation_mode, protocol_config, external_refs, user_id, organization_id, guest_user_id, workspace_kind"
+      "id, title, root_topic, description, notes, evaluation_mode, protocol_config, external_refs, user_id, organization_id, guest_user_id, workspace_kind"
     )
     .eq("id", workspaceId)
     .single();
@@ -143,13 +143,15 @@ export async function buildWorkspacePerformanceContext({
 
   if (blockId) blocksQuery = blocksQuery.eq("id", blockId);
 
-  const [{ data: blocks }, { data: workspaceFiles }] = await Promise.all([
+  const [{ data: blocks }, workspaceFiles] = await Promise.all([
     blocksQuery,
-    supabase
-      .from("workspace_files")
-      .select("id, file_name, mime_type, xai_file_id, created_at")
-      .eq("workspace_id", workspaceId)
-      .order("created_at", { ascending: false }),
+    Promise.resolve([] as Array<{
+      id: string;
+      file_name: string;
+      mime_type: string | null;
+      xai_file_id: string | null;
+      created_at: string;
+    }>),
   ]);
 
   const evidenceFilter =
@@ -162,7 +164,7 @@ export async function buildWorkspacePerformanceContext({
         }
       : proofOfWorkQueryForAuth(auth);
   let proofOfWorkQuery = supabase
-    .from("workspace_proof_of_work")
+    .from("proof_of_work")
     .select(
       "id, block_id, session_id, proof_of_work_type, file_name, mime_type, xai_file_id, timestamp_ms, chunk_index, metadata, tool_name, tool_action, device_name, sample_count, created_at"
     )
@@ -200,7 +202,7 @@ export async function buildWorkspacePerformanceContext({
   const { data: sessions } = sessionIds.length
     ? await supabase
         .from("sessions")
-        .select("id, problem, status, duration_ms, report, created_at, user_id")
+        .select("id, problem, status, duration_ms, result, created_at, user_id")
         .in("id", sessionIds)
         .order("created_at", { ascending: false })
     : { data: [] };
@@ -213,7 +215,7 @@ export async function buildWorkspacePerformanceContext({
       root_topic: workspace.root_topic,
       description: workspace.description,
       notes: workspace.notes,
-      workspace_goal: workspace.workspace_goal,
+      workspace_goal: workspace.description ?? workspace.notes ?? null,
       evaluation_mode: evalMeta.evaluation_mode,
       workspace_kind:
         typeof (workspace as { workspace_kind?: unknown }).workspace_kind === "string"
@@ -258,7 +260,7 @@ export async function buildWorkspacePerformanceContext({
       problem: session.problem,
       status: session.status,
       duration_minutes: Math.round((session.duration_ms || 0) / 60000),
-      report: session.report,
+      report: null,
       created_at: session.created_at,
     })),
     counts: {

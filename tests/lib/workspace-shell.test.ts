@@ -58,43 +58,35 @@ describe("workspace shell policy", () => {
     expect(shell.knowledgeLwmEmbeddingsOnly).toBe(true);
   });
 
-  it("unmounts the no-map verification WorkspaceView shell", () => {
+  it("treats leftover verification kind as a Learning workspace", () => {
     const shell = workspaceShell({
       kind: "knowledge_region",
-      authoring: false,
+      authoring: true,
       practiceOnly: false,
       isOwner: true,
       isLoggedIn: true,
     });
-    expect(shell.sections).toEqual([]);
+    expect(shell.sections).toEqual([...LEARNING_AUTHOR_SECTIONS]);
     expect(shell.sections).not.toContain("goals");
     expect(shell.sections).not.toContain("verification_flows");
-    expect(shell.authoringDrawers).toBe(false);
-    expect(shell.practiceDrawer).toBe(false);
-    expect(shell.learnerSurface).toBe(false);
-    expect(shell.learnerActivity).toBe(false);
-    expect(shell.knowledgeLwmEmbeddingsOnly).toBe(false);
+    expect(shell.authoringDrawers).toBe(true);
   });
 
-  it("unmounts the no-map calibration WorkspaceView shell", () => {
+  it("treats leftover calibration kind as a Learning workspace", () => {
     const shell = workspaceShell({
       kind: "calibration",
-      authoring: false,
+      authoring: true,
       practiceOnly: false,
       isOwner: true,
       isLoggedIn: true,
     });
-    expect(shell.sections).toEqual([]);
+    expect(shell.sections).toEqual([...LEARNING_AUTHOR_SECTIONS]);
     expect(shell.sections).not.toContain("verification_flows");
     expect(shell.sections).not.toContain("calibration_flows");
-    expect(shell.authoringDrawers).toBe(false);
-    expect(shell.practiceDrawer).toBe(false);
-    expect(shell.learnerSurface).toBe(false);
-    expect(shell.learnerActivity).toBe(false);
-    expect(shell.knowledgeLwmEmbeddingsOnly).toBe(false);
+    expect(shell.authoringDrawers).toBe(true);
   });
 
-  it("keeps practice-only All-you-can-learn on the learner shell, including verification", () => {
+  it("keeps practice-only All-you-can-learn on the learner shell", () => {
     const shell = workspaceShell({
       kind: "knowledge_region",
       authoring: false,
@@ -102,8 +94,7 @@ describe("workspace shell policy", () => {
       isOwner: false,
       isLoggedIn: true,
     });
-    expect(shell.sections).toEqual([]);
-    expect(shell.sections).not.toContain("workspace");
+    expect(shell.sections).toEqual(["workspace"]);
     expect(shell.authoringDrawers).toBe(false);
     expect(shell.practiceDrawer).toBe(true);
     expect(shell.learnerSurface).toBe(true);
@@ -117,13 +108,13 @@ describe("workspace shell policy", () => {
       isOwner: true,
       isLoggedIn: true,
     });
-    expect(privileged.sections).toEqual([]);
+    expect(privileged.sections).toEqual(["workspace"]);
     expect(privileged.authoringDrawers).toBe(false);
     expect(privileged.practiceDrawer).toBe(true);
     expect(privileged.learnerSurface).toBe(true);
   });
 
-  it("does not remount map chrome for a no-map play copy", () => {
+  it("play copies of leftover kinds still use the Learning shell", () => {
     const shell = workspaceShell({
       kind: "knowledge_region",
       authoring: false,
@@ -132,8 +123,7 @@ describe("workspace shell policy", () => {
       isLoggedIn: true,
       playCopy: true,
     });
-    expect(shell.sections).toEqual([]);
-    expect(shell.playView).toBe(false);
+    expect(shell.sections).toEqual(["workspace"]);
     expect(shell.authoringDrawers).toBe(false);
     const calibration = workspaceShell({
       kind: "calibration",
@@ -141,8 +131,7 @@ describe("workspace shell policy", () => {
       isOwner: true,
       playCopy: true,
     });
-    expect(calibration.sections).toEqual([]);
-    expect(calibration.playView).toBe(false);
+    expect(calibration.sections).toEqual(["workspace"]);
   });
 
   it("does not keep a second learner/creator label beside the policy", () => {

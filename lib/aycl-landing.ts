@@ -51,7 +51,7 @@ export type AyclLandingWorkspaceRow = AyclListingFields & {
   title?: string | null;
   root_topic?: string | null;
   description?: string | null;
-  workspace_goal?: string | null;
+
   notes?: string | null;
   cover_image_url?: string | null;
   is_all_you_can_learn?: boolean | null;
@@ -102,7 +102,7 @@ function clean(s: unknown): string {
  * Keep SSR page, OG image, and API routes in sync via this string.
  */
 export const AYCL_LANDING_WORKSPACE_SELECT =
-  "id, title, root_topic, description, workspace_goal, notes, cover_image_url, is_all_you_can_learn, aycl_category, aycl_summary, aycl_author_name, aycl_author_avatar_url, aycl_learner_price_cents, aycl_full_price_cents";
+  "id, title, root_topic, description, notes, cover_image_url, is_all_you_can_learn, aycl_category, aycl_summary, aycl_author_name, aycl_author_avatar_url, aycl_learner_price_cents, aycl_full_price_cents";
 
 export function ayclLandingPath(workspaceId: string): string {
   const id = String(workspaceId || "").trim();
@@ -129,7 +129,7 @@ export function assembleAyclLandingSummary(input: {
   const title =
     clean(ws.title) || clean(ws.root_topic) || "All-You-Can-Learn workspace";
   const description = clean(ws.description) || null;
-  const goal = clean(ws.workspace_goal) || null;
+  const goal = null;
   const notes = clean(ws.notes) || null;
   const rootTopic = clean(ws.root_topic) || null;
 

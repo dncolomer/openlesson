@@ -33,7 +33,7 @@ async function main() {
 
   try {
     const ws = await client.query(
-      `SELECT w.id, w.title, w.description, w.notes, w.workspace_goal, w.organization_id,
+      `SELECT w.id, w.title, w.description, w.notes, w.organization_id,
               w.user_id, u.email AS owner_email, p.is_admin, p.is_org_admin
        FROM public.workspaces w
        JOIN auth.users u ON u.id = w.user_id
@@ -97,7 +97,7 @@ async function main() {
     const powSimple = await client.query(
       `SELECT count(*)::int AS n,
               count(DISTINCT guest_user_id)::int AS guest_subjects
-       FROM public.workspace_proof_of_work
+       FROM public.proof_of_work
        WHERE workspace_id = $1
          AND guest_user_id IS NOT NULL`,
       [workspaceId],
@@ -117,7 +117,7 @@ async function main() {
     const perGuest = await client.query(
       `SELECT guest_user_id, count(*)::int AS n,
               count(DISTINCT tool_name)::int AS tools
-       FROM public.workspace_proof_of_work
+       FROM public.proof_of_work
        WHERE workspace_id = $1 AND guest_user_id IS NOT NULL
        GROUP BY guest_user_id`,
       [workspaceId],
@@ -145,15 +145,15 @@ async function main() {
 
     const models = await client.query(
       `SELECT id, name, embedding_model_id, dim, subjects, cosine_threshold
-       FROM public.custom_verification_models
+       FROM public.knowledge_regions
        WHERE workspace_id = $1
        ORDER BY name`,
       [workspaceId],
     );
-    console.log(`[verify] custom_verification_models=${models.rows.length}`);
+    console.log(`[verify] knowledge_regions=${models.rows.length}`);
     if (models.rows.length !== 2) {
       throw new Error(
-        `expected exactly 2 custom_verification_models, got ${models.rows.length}`,
+        `expected exactly 2 knowledge_regions, got ${models.rows.length}`,
       );
     }
     const modelNames = models.rows.map((r) => String(r.name)).join(" ");
@@ -177,7 +177,7 @@ async function main() {
     const snaps = await client.query(
       `SELECT count(*)::int AS n,
               count(DISTINCT identity)::int AS guest_subjects
-       FROM public.workspace_flow_embeddings
+       FROM public.session_embeddings
        WHERE workspace_id = $1
          AND embedding_model_id = $2`,
       [workspaceId, FLOW_EMBEDDING_MODEL_ID],
@@ -205,7 +205,7 @@ async function main() {
           pow_rows: powCount,
           guest_subjects: powGuestSubjects,
           organization_guest_users: guestCount,
-          custom_verification_models: models.rows.length,
+          knowledge_regions: models.rows.length,
           region_names: models.rows.map((r) => String(r.name)),
           catalog_regions: HS_ALGEBRA_REGIONS.map((r) => r.regionName),
           snapshots: snapCount,

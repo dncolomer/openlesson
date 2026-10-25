@@ -74,7 +74,7 @@ async function resolveBackend(): Promise<"supabase" | "memory"> {
   }
   try {
     const supabase = createAdminClient();
-    const { error } = await supabase.from("workspace_calibration_flows").select("id").limit(1);
+    const { error } = await supabase.from("calibrate_flows").select("id").limit(1);
     store.backend = error ? "memory" : "supabase";
   } catch {
     store.backend = "memory";
@@ -123,20 +123,37 @@ async function loadSupabaseState(filter: {
   publicToken?: string;
 }): Promise<CalibrationState> {
   const supabase = createAdminClient();
-  let flowQuery = supabase.from("workspace_calibration_flows").select("*");
+  let flowQuery = supabase.from("calibrate_flows").select("*");
   if (filter.flowId) flowQuery = flowQuery.eq("id", filter.flowId);
   else if (filter.publicToken) flowQuery = flowQuery.eq("public_token", filter.publicToken);
   else if (filter.ownerUserId) flowQuery = flowQuery.eq("owner_user_id", filter.ownerUserId);
-  else if (filter.workspaceId) flowQuery = flowQuery.eq("workspace_id", filter.workspaceId);
+  else if (filter.workspaceId) return emptyCalibrationState();
   const { data: flowRows, error } = await flowQuery;
   if (error) throw new Error(error.message);
   const flows = (flowRows || []).map((row) => mapFlow(row as Record<string, unknown>));
   const ids = flows.map((flow) => flow.id);
   if (ids.length === 0) return emptyCalibrationState();
-  const [{ data: identityRows }, { data: proofRows }] = await Promise.all([
-    supabase.from("workspace_calibration_identities").select("*").in("flow_id", ids),
-    supabase.from("workspace_calibration_proofs").select("*").in("flow_id", ids),
-  ]);
+  const { data: sessionRows } = await supabase
+    .from("sessions")
+    .select("id, calibrate_flow_id, identity, result, guest_link, created_at, workspace_id")
+    .eq("kind", "calibrate")
+    .in("calibrate_flow_id", ids);
+  const identityRows = (sessionRows || [])
+    .filter((row) => row.identity)
+    .map((row) => ({ flow_id: row.calibrate_flow_id, identity: row.identity }));
+  const proofRows = (sessionRows || [])
+    .filter((row) => row.guest_link || row.result)
+    .map((row) => ({
+      id: row.id,
+      flow_id: row.calibrate_flow_id,
+      workspace_id: row.workspace_id,
+      identity: row.identity,
+      events:
+        (row.guest_link as { events?: unknown } | null)?.events ||
+        (row.result as { legacyEvents?: unknown } | null)?.legacyEvents ||
+        [],
+      created_at: row.created_at,
+    }));
   return {
     flows,
     identities: (identityRows || []).map((row) => ({
@@ -153,9 +170,8 @@ async function persistCommand(
 ): Promise<void> {
   const supabase = createAdminClient();
   if (command.type === "create" && value.flow) {
-    const { error } = await insertFlowRow(supabase, "workspace_calibration_flows", {
+    const { error } = await insertFlowRow(supabase, "calibrate_flows", {
       id: value.flow.id,
-      workspace_id: nullableId(value.flow.workspaceId),
       owner_user_id: nullableId(value.flow.ownerUserId),
       name: value.flow.name,
       goal: value.flow.goal,
@@ -170,7 +186,7 @@ async function persistCommand(
     return;
   }
   if (command.type === "update" && value.flow) {
-    const { error } = await updateFlowRow(supabase, "workspace_calibration_flows", value.flow.id, {
+    const { error } = await updateFlowRow(supabase, "calibrate_flows", value.flow.id, {
       name: value.flow.name,
       goal: value.flow.goal,
       questions: value.flow.questions,
@@ -182,25 +198,43 @@ async function persistCommand(
     return;
   }
   if (command.type === "remove") {
-    const { error } = await supabase.from("workspace_calibration_flows").delete().eq("id", command.flowId);
+    const { error } = await supabase.from("calibrate_flows").delete().eq("id", command.flowId);
     if (error) throw new Error(error.message);
     return;
   }
   if (command.type === "claim" && value.identity) {
-    const { error } = await supabase.from("workspace_calibration_identities").insert({
-      flow_id: command.flowId,
+    const { data: flow } = await supabase
+      .from("calibrate_flows")
+      .select("owner_user_id")
+      .eq("id", command.flowId)
+      .maybeSingle();
+    const { error } = await supabase.from("sessions").insert({
+      kind: "calibrate",
+      problem: "Calibrate",
+      status: "pending",
+      user_id: flow?.owner_user_id,
+      calibrate_flow_id: command.flowId,
       identity: value.identity,
     });
     if (error) throw new Error(error.message);
     return;
   }
   if (command.type === "addProof" && value.proof) {
-    const { error } = await supabase.from("workspace_calibration_proofs").insert({
+    const { data: flow } = await supabase
+      .from("calibrate_flows")
+      .select("owner_user_id")
+      .eq("id", value.proof.flowId)
+      .maybeSingle();
+    const { error } = await supabase.from("sessions").insert({
       id: value.proof.id,
-      flow_id: value.proof.flowId,
-      workspace_id: nullableId(value.proof.workspaceId),
+      user_id: flow?.owner_user_id,
+      problem: "Calibrate",
+      status: "completed",
+      kind: "calibrate",
+      calibrate_flow_id: value.proof.flowId,
       identity: value.proof.identity,
-      events: value.proof.events,
+      result: { kind: "calibrate", legacyEvents: value.proof.events },
+      guest_link: { events: value.proof.events, source: "calibration_proof" },
       created_at: value.proof.createdAt,
     });
     if (error) throw new Error(error.message);
@@ -243,7 +277,7 @@ function presentFlow(flow: CalibrationFlow): CalibrationFlow {
 
 async function updateFlowRow(
   supabase: ReturnType<typeof createAdminClient>,
-  table: "workspace_calibration_flows",
+  table: "calibrate_flows",
   id: string,
   row: Record<string, unknown>,
 ): Promise<{ error: { message: string } | null }> {
@@ -252,7 +286,7 @@ async function updateFlowRow(
 
 async function insertFlowRow(
   supabase: ReturnType<typeof createAdminClient>,
-  table: "workspace_calibration_flows",
+  table: "calibrate_flows",
   row: Record<string, unknown>,
 ): Promise<{ error: { message: string } | null }> {
   return writeFlowRowWithOptionalColumns((body) => supabase.from(table).insert(body), row);
@@ -298,7 +332,7 @@ export async function listCalibrationFlowsForOwnerUserId(
   }
   const supabase = createAdminClient();
   const { data, error } = await supabase
-    .from("workspace_calibration_flows")
+    .from("calibrate_flows")
     .select("*")
     .eq("owner_user_id", userId)
     .order("created_at", { ascending: false });

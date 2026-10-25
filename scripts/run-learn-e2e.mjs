@@ -120,6 +120,9 @@ async function main() {
       problem: block.title || "E2E TAP Learning block",
       planning_prompt: "Explain your reasoning aloud.",
       status: "active",
+      kind: "learn",
+      workspace_id: workspaceId,
+      block_id: block.id,
       metadata: { workspace_id: workspaceId },
     })
     .select("id")
@@ -129,12 +132,6 @@ async function main() {
   if (!session?.id) process.exit(1);
 
   await admin.from("blocks").update({ session_id: session.id, status: "in_progress" }).eq("id", block.id);
-  await admin.from("block_sessions").insert({
-    block_id: block.id,
-    session_id: session.id,
-    user_id: userId,
-    workspace_id: workspaceId,
-  });
 
   const page = await fetch(`${baseUrl}/session?id=${session.id}`, {
     headers: { Cookie: cookieHeader(jar) },

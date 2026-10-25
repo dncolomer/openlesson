@@ -24,11 +24,11 @@ function mapDbSession(s: any, probes: Probe[] = []): Session {
     status: s.status || "completed",
     probes,
     objectives: Array.isArray(storedObjectives) ? storedObjectives : [],
-    hasAudio: !!s.audio_path,
-    audioPath: s.audio_path ?? undefined,
-    report: s.report ?? undefined,
-    reportGeneratedAt: s.report_generated_at ?? undefined,
-    transcript: s.transcript ?? undefined,
+    hasAudio: false,
+    audioPath: undefined,
+    report: undefined,
+    reportGeneratedAt: undefined,
+    transcript: undefined,
     workspaceTitle: metadata.title ?? undefined,
     planningPrompt: s.planning_prompt ?? undefined,
     metadata: metadata,
@@ -75,12 +75,15 @@ export async function createSession(
 
   const { data, error } = await supabase
     .from("sessions")
-    .insert({ 
-      user_id: user.id, 
-      problem, 
+    .insert({
+      user_id: user.id,
+      problem,
       status: "active",
+      kind: "learn",
+      workspace_id: workspaceId || null,
       planning_prompt: planningPrompt || null,
-      metadata: Object.keys(metadata).length > 0 ? metadata : undefined
+      metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
+      probes: [],
     })
     .select()
     .single();
@@ -104,13 +107,8 @@ export async function getSession(id: string): Promise<Session | null> {
 
   if (!sessionRow) return null;
 
-  const { data: probeRows } = await supabase
-    .from("probes")
-    .select("*")
-    .eq("session_id", id)
-    .order("timestamp_ms", { ascending: true });
-
-  return mapDbSession(sessionRow, (probeRows || []).map(mapDbProbe));
+  const probeRows = Array.isArray(sessionRow.probes) ? sessionRow.probes : [];
+  return mapDbSession(sessionRow, probeRows.map(mapDbProbe));
 }
 
 export async function getSessions(): Promise<Session[]> {
@@ -126,25 +124,27 @@ export async function getSessions(): Promise<Session[]> {
 
   if (!sessionRows) return [];
 
-  // Batch-load all probes for these sessions
-  const sessionIds = sessionRows.map((s: { id: string }) => s.id);
-  const { data: allProbes } = await supabase
-    .from("probes")
-    .select("*")
-    .in("session_id", sessionIds)
-    .order("timestamp_ms", { ascending: true });
-
-  const probesBySession = new Map<string, Probe[]>();
-  for (const p of allProbes || []) {
-    const mapped = mapDbProbe(p);
-    const existing = probesBySession.get(p.session_id) || [];
-    existing.push(mapped);
-    probesBySession.set(p.session_id, existing);
-  }
-
   return sessionRows
     .filter((s: { metadata?: unknown }) => !isIleSessionUnsavedExit(s.metadata))
-    .map((s: { id: string }) => mapDbSession(s, probesBySession.get(s.id) || []));
+    .map((s: { id: string; probes?: unknown }) =>
+      mapDbSession(s, (Array.isArray(s.probes) ? s.probes : []).map(mapDbProbe)),
+    );
+}
+
+async function readSessionProbeRows(
+  supabase: ReturnType<typeof createClient>,
+  sessionId: string,
+): Promise<any[]> {
+  const { data } = await supabase.from("sessions").select("probes").eq("id", sessionId).maybeSingle();
+  return Array.isArray(data?.probes) ? data.probes : [];
+}
+
+async function writeSessionProbeRows(
+  supabase: ReturnType<typeof createClient>,
+  sessionId: string,
+  probes: unknown[],
+): Promise<void> {
+  await supabase.from("sessions").update({ probes }).eq("id", sessionId);
 }
 
 export async function saveSession(session: Session): Promise<void> {
@@ -157,10 +157,6 @@ export async function saveSession(session: Session): Promise<void> {
       status: session.status,
       duration_ms: session.durationMs,
       ended_at: session.endedAt || null,
-      audio_path: session.audioPath || null,
-      report: session.report || null,
-      report_generated_at: session.reportGeneratedAt || null,
-      transcript: session.transcript || null,
       metadata: session.metadata,
     })
     .eq("id", session.id);
@@ -176,27 +172,8 @@ export async function deleteSession(id: string): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
 
-  // Delete audio from Supabase Storage (audio still lives there)
-  const { data: sessionRow } = await supabase
-    .from("sessions")
-    .select("audio_path")
-    .eq("id", id)
-    .single();
-
-  if (sessionRow?.audio_path) {
-    await supabase.storage.from("session-audio").remove([sessionRow.audio_path]);
-  }
-
-  // Delete xAI files (transcripts, eeg, tool, facial, screens) — done via API route
-  // since we can't expose XAI_API_KEY to the browser.
-  try {
-    await fetch(`/api/session-files/cleanup?sessionId=${id}`, { method: "POST" });
-  } catch (e) {
-    console.warn("[deleteSession] xAI cleanup failed (non-critical):", e);
-  }
-
-  // Cascade delete handles all DB rows
-  await supabase.from("sessions").delete().eq("id", id);
+  // Archive only. Proof of work and xAI files stay.
+  await supabase.from("sessions").update({ status: "archived" }).eq("id", id);
 }
 
 // ---- Probe CRUD ----
@@ -212,24 +189,23 @@ export async function addProbe(
   }
 
   const supabase = createClient();
-
-  const { data, error } = await supabase
-    .from("probes")
-    .insert({
-      session_id: sessionId,
-      timestamp_ms: probe.timestamp,
-      gap_score: probe.gapScore,
-      signals: probe.signals,
-      text: probeText,
-      expanded_text: probe.expandedText || null,
-      request_type: probe.requestType || "question",
-      plan_step_id: probe.planStepId || null,
-    })
-    .select()
-    .single();
-
-  if (error || !data) throw new Error(error?.message || "Failed to insert probe");
-  
+  const existing = await readSessionProbeRows(supabase, sessionId);
+  const data = {
+    id: crypto.randomUUID(),
+    session_id: sessionId,
+    timestamp_ms: probe.timestamp,
+    gap_score: probe.gapScore,
+    signals: probe.signals,
+    text: probeText,
+    expanded_text: probe.expandedText || null,
+    request_type: probe.requestType || "question",
+    plan_step_id: probe.planStepId || null,
+    starred: false,
+    is_revealed: false,
+    archived: false,
+    focused: false,
+  };
+  await writeSessionProbeRows(supabase, sessionId, [...existing, data]);
   const savedProbe = mapDbProbe(data);
   
   await logToolUsage(
@@ -253,28 +229,36 @@ export async function addProbe(
   return savedProbe;
 }
 
-export async function updateProbeExpanded(probeId: string, expandedText: string): Promise<void> {
+async function patchProbeById(
+  probeId: string,
+  patch: Record<string, unknown>,
+): Promise<any | null> {
   const supabase = createClient();
-  await supabase
-    .from("probes")
-    .update({ expanded_text: expandedText })
-    .eq("id", probeId);
+  const { data: sessions } = await supabase
+    .from("sessions")
+    .select("id, probes")
+    .contains("probes", [{ id: probeId }]);
+  const row = (sessions || []).find((session) =>
+    Array.isArray(session.probes) && session.probes.some((p: { id?: string }) => p.id === probeId),
+  );
+  if (!row) return null;
+  const probes = (Array.isArray(row.probes) ? row.probes : []).map((p: Record<string, unknown>) =>
+    p.id === probeId ? { ...p, ...patch } : p,
+  );
+  await writeSessionProbeRows(supabase, row.id, probes);
+  return probes.find((p: { id?: string }) => p.id === probeId) || null;
+}
+
+export async function updateProbeExpanded(probeId: string, expandedText: string): Promise<void> {
+  await patchProbeById(probeId, { expanded_text: expandedText });
 }
 
 export async function toggleProbeStarred(probeId: string, starred: boolean): Promise<void> {
-  const supabase = createClient();
-  await supabase
-    .from("probes")
-    .update({ starred })
-    .eq("id", probeId);
+  await patchProbeById(probeId, { starred });
 }
 
 export async function updateProbeRevealed(probeId: string, isRevealed: boolean): Promise<void> {
-  const supabase = createClient();
-  await supabase
-    .from("probes")
-    .update({ is_revealed: isRevealed })
-    .eq("id", probeId);
+  await patchProbeById(probeId, { is_revealed: isRevealed });
 }
 
 export async function archiveProbe(probeId: string): Promise<void> {
@@ -285,22 +269,9 @@ export async function archiveProbe(probeId: string): Promise<void> {
     return;
   }
 
-  const supabase = createClient();
-
-  const { data: probe } = await supabase
-    .from("probes")
-    .select("session_id, timestamp_ms, text, gap_score, signals, request_type, plan_step_id")
-    .eq("id", probeId)
-    .single();
-  
+  const probe = await patchProbeById(probeId, { archived: true });
   if (!probe) return;
-  
   const archivedAt = Date.now();
-  
-  await supabase
-    .from("probes")
-    .update({ archived: true })
-    .eq("id", probeId);
     
   await logToolUsage(
     probe.session_id,
@@ -323,83 +294,35 @@ export async function archiveProbe(probeId: string): Promise<void> {
 }
 
 export async function unarchiveProbe(probeId: string): Promise<void> {
-  const supabase = createClient();
-  await supabase
-    .from("probes")
-    .update({ archived: false })
-    .eq("id", probeId);
+  await patchProbeById(probeId, { archived: false });
 }
 
 export async function toggleProbeFocused(probeId: string, focused: boolean): Promise<void> {
-  const supabase = createClient();
-  await supabase
-    .from("probes")
-    .update({ focused })
-    .eq("id", probeId);
+  await patchProbeById(probeId, { focused });
 }
 
 export async function resetSessionProbes(sessionId: string): Promise<void> {
   const supabase = createClient();
-  // Delete all probes for this session (keeps audio/EEG data intact)
-  await supabase
-    .from("probes")
-    .delete()
-    .eq("session_id", sessionId);
+  await writeSessionProbeRows(supabase, sessionId, []);
 }
 
 /**
- * Destructively restart a session: wipes probes, transcripts, plans,
- * EEG recordings, audio, and resets the session row to `active` while
- * preserving the original `problem`, `metadata.workspaceTitle`, and ownership.
- *
- * This is irreversible — the report, transcript, probes, and recordings
- * are permanently deleted. Callers should confirm with the user first.
+ * Restart a session: clears probes and the chapter map, resets status.
+ * Proof of work and xAI files stay.
  */
 export async function restartSession(id: string): Promise<void> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
 
-  // Fetch audio path to remove from Storage
-  const { data: sessionRow } = await supabase
-    .from("sessions")
-    .select("audio_path")
-    .eq("id", id)
-    .single();
-
-  if (sessionRow?.audio_path) {
-    await supabase.storage.from("session-audio").remove([sessionRow.audio_path]);
-  }
-
-  // Cleanup xAI files for this session (transcripts, eeg, tool, facial, screens)
-  try {
-    await fetch(`/api/session-files/cleanup?sessionId=${id}`, { method: "POST" });
-  } catch (e) {
-    console.warn("[restartSession] xAI cleanup failed (non-critical):", e);
-  }
-
-  // Delete children explicitly (no ON DELETE CASCADE triggers on UPDATE)
-  await supabase.from("probes").delete().eq("session_id", id);
-  await supabase.from("session_eeg").delete().eq("session_id", id);
-  await supabase.from("session_transcript").delete().eq("session_id", id);
-  await supabase.from("session_facial").delete().eq("session_id", id);
-  await supabase.from("session_tool").delete().eq("session_id", id);
-  await supabase.from("session_screenshots").delete().eq("session_id", id);
-  await supabase.from("session_analysis").delete().eq("session_id", id);
-  await supabase.from("session_plans").delete().eq("session_id", id);
-
-  // Reset the session row to a fresh "active" state.
-  // We preserve: problem, user_id, plan linkage, created_at, metadata (minus any run-specific fields).
   await supabase
     .from("sessions")
     .update({
+      probes: [],
+      chapter_map: null,
       status: "active",
       duration_ms: 0,
       ended_at: null,
-      audio_path: null,
-      report: null,
-      report_generated_at: null,
-      transcript: null,
       session_started_at: null,
     })
     .eq("id", id);

@@ -50,9 +50,7 @@ export async function createSessionPlan(
     userId = user.id;
   }
 
-  // Upsert on session_id: TAP Learning/confirm can race (double-click, Strict Mode, or
-  // force:true while an empty shell already exists) and hit
-  // session_plans_session_id_key on a plain insert.
+  // Persist the chapter map on the session row (no session_plans table).
   const row = {
     session_id: sessionId,
     user_id: userId,
@@ -65,41 +63,21 @@ export async function createSessionPlan(
     updated_at: new Date().toISOString(),
   };
 
-  const { data, error } = await supabase
-    .from("session_plans")
-    .upsert(row, { onConflict: "session_id" })
-    .select()
+  const chapterMap = {
+    id: sessionId,
+    ...row,
+  };
+  const { data: sessionRow, error } = await supabase
+    .from("sessions")
+    .update({ chapter_map: chapterMap })
+    .eq("id", sessionId)
+    .select("id, user_id, chapter_map")
     .single();
+  const data = sessionRow
+    ? { ...(sessionRow.chapter_map as Record<string, unknown>), session_id: sessionRow.id, user_id: sessionRow.user_id }
+    : null;
 
   if (!error && data) return mapDbSessionPlan(data);
-
-  // Fallback: unique race / older clients — update existing row by session_id.
-  const isDuplicate =
-    error?.code === "23505" ||
-    (typeof error?.message === "string" &&
-      error.message.includes("session_plans_session_id_key"));
-  if (isDuplicate || error) {
-    const { data: updated, error: updateError } = await supabase
-      .from("session_plans")
-      .update({
-        user_id: userId,
-        goal: plan.goal,
-        strategy: plan.strategy,
-        description: plan.description || null,
-        steps: plan.steps,
-        current_step_index: 0,
-        unusable_cells: normalizeUnusableCells(plan.unusable_cells),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("session_id", sessionId)
-      .select()
-      .single();
-    if (!updateError && updated) return mapDbSessionPlan(updated);
-    throw new Error(
-      updateError?.message || error?.message || "Failed to create session plan",
-    );
-  }
-
   throw new Error(error?.message || "Failed to create session plan");
 }
 
@@ -111,13 +89,17 @@ export async function getSessionPlan(
   const supabase = supabaseClient || createClient();
 
   const { data, error } = await supabase
-    .from("session_plans")
-    .select("*")
-    .eq("session_id", sessionId)
+    .from("sessions")
+    .select("id, user_id, chapter_map")
+    .eq("id", sessionId)
     .maybeSingle();
 
-  if (error || !data) return null;
-  return mapDbSessionPlan(data);
+  if (error || !data?.chapter_map) return null;
+  return mapDbSessionPlan({
+    ...(data.chapter_map as Record<string, unknown>),
+    session_id: data.id,
+    user_id: data.user_id,
+  });
 }
 
 /** Existence-check projection: never `*` and never the `steps` JSON array. */
@@ -133,9 +115,14 @@ export const SESSION_PLAN_EMPTY_STEPS_JSON = "[]";
  */
 export function sessionPlanHasChaptersFromRow(row: unknown): boolean {
   if (!row || typeof row !== "object") return false;
-  const rec = row as { id?: unknown; steps?: unknown; step_count?: unknown };
-  if (Array.isArray(rec.steps)) return rec.steps.length > 0;
-  if (typeof rec.step_count === "number") return rec.step_count > 0;
+  const rec = row as { id?: unknown; steps?: unknown; step_count?: unknown; chapter_map?: unknown };
+  const map =
+    rec.chapter_map && typeof rec.chapter_map === "object"
+      ? (rec.chapter_map as { steps?: unknown; step_count?: unknown })
+      : rec;
+  if (Array.isArray(map.steps)) return map.steps.length > 0;
+  if (typeof map.step_count === "number") return map.step_count > 0;
+  if (rec.chapter_map && typeof rec.chapter_map === "object") return true;
   return typeof rec.id === "string" && rec.id.length > 0;
 }
 
@@ -146,10 +133,10 @@ export function sessionPlanHasChaptersFromRow(row: unknown): boolean {
  */
 export function sessionPlanHasChaptersQuery(supabaseClient: any, sessionId: string) {
   return supabaseClient
-    .from("session_plans")
-    .select(SESSION_PLAN_HAS_CHAPTERS_SELECT)
-    .eq("session_id", sessionId)
-    .not("steps", "eq", SESSION_PLAN_EMPTY_STEPS_JSON);
+    .from("sessions")
+    .select("id, chapter_map")
+    .eq("id", sessionId)
+    .not("chapter_map", "is", null);
 }
 
 /** Cheap existence outcome. Query `error` is `failed`, never “no chapters”. */
@@ -208,9 +195,9 @@ export async function deleteSessionPlanBySessionId(
   if (!id) return;
   const supabase = supabaseClient || createClient();
   const { error } = await supabase
-    .from("session_plans")
-    .delete()
-    .eq("session_id", id);
+    .from("sessions")
+    .update({ chapter_map: null })
+    .eq("id", id);
   if (error) throw new Error(error.message || "Failed to delete session plan");
 }
 
@@ -245,14 +232,26 @@ export async function updateSessionPlan(
     updateData.unusable_cells = normalizeUnusableCells(updates.unusable_cells);
   }
 
-  const { data, error } = await supabase
-    .from("session_plans")
-    .update(updateData)
+  const { data: sessionRow, error } = await supabase
+    .from("sessions")
+    .select("id, user_id, chapter_map")
     .eq("id", workspaceId)
-    .select()
+    .maybeSingle();
+  if (error || !sessionRow?.chapter_map) {
+    throw new Error(error?.message || "Failed to update session plan");
+  }
+  const next = { ...(sessionRow.chapter_map as Record<string, unknown>), ...updateData };
+  const { data: updated, error: updateError } = await supabase
+    .from("sessions")
+    .update({ chapter_map: next })
+    .eq("id", workspaceId)
+    .select("id, user_id, chapter_map")
     .single();
+  const data = updated
+    ? { ...(updated.chapter_map as Record<string, unknown>), session_id: updated.id, user_id: updated.user_id }
+    : null;
 
-  if (error || !data) throw new Error(error?.message || "Failed to update session plan");
+  if (updateError || !data) throw new Error(updateError?.message || "Failed to update session plan");
   return mapDbSessionPlan(data);
 }
 

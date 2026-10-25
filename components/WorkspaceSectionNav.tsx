@@ -57,7 +57,13 @@ export function WorkspaceSectionNav({
                     : "text-neutral-500 hover:bg-neutral-900/60 hover:text-neutral-300"
                 }`}
               >
-                <span className={isActive ? "text-neutral-200" : "text-neutral-500"}>{icon}</span>
+                <span
+                  className={`[&>svg]:h-6 [&>svg]:w-6 [&>svg]:shrink-0 ${
+                    isActive ? "text-neutral-200" : "text-neutral-500"
+                  }`}
+                >
+                  {icon}
+                </span>
                 <span className="truncate">{label}</span>
               </button>
             );
@@ -105,7 +111,7 @@ export function WorkspaceSectionNav({
               }`}
             >
               <span
-                className={`transition-colors ${
+                className={`transition-colors [&>svg]:h-6 [&>svg]:w-6 [&>svg]:shrink-0 ${
                   isActive ? "text-neutral-200" : "text-neutral-600 group-hover:text-neutral-400"
                 }`}
               >

@@ -181,7 +181,7 @@ describe("synthetic region file-aware create path (shipped store)", () => {
     let inserted: Record<string, unknown> | null = null;
     const supabase = {
       from(table: string) {
-        expect(table).toBe("custom_verification_models");
+        expect(table).toBe("knowledge_regions");
         return {
           insert(payload: Record<string, unknown>) {
             inserted = payload;

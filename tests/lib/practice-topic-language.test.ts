@@ -176,11 +176,11 @@ describe("Practice topic language structural wiring", () => {
     const tapPhases = read("components/tap-score/tap-score-phases.tsx");
     expect(existsSync(path.join(root, "components/exercise-tap/exercise-tap-phases.tsx"))).toBe(false);
 
-    expect(tapPhases).toContain("choosePractice");
+    expect(tapPhases).not.toContain("choosePractice");
     expect(tapPhases).toContain("scoredTapBriefingStep");
-    expect(tapPhases).not.toMatch(/onPracticeFirst=\{\(\) => void startSession\(\{ practice: true \}\)/);
-    expect(tapPhases).toContain("startSession({ practice: true })");
-    expect(tapFlow).toMatch(/practice[\s\S]*conversationLanguage/);
+    expect(tapPhases).not.toContain("onPracticeFirst");
+    expect(tapPhases).not.toContain("startSession({ practice: true })");
+    expect(tapFlow).toMatch(/conversationLanguage/);
   });
 
   it("topics + start API routes pass conversationLanguage into Practice generators", () => {

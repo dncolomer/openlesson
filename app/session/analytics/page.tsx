@@ -302,17 +302,10 @@ function AnalyticsContent() {
   useEffect(() => {
     if (audioChunks.length === 0) return;
     const load = async () => {
-      const supabase = (await import("@/lib/supabase/client")).createClient();
       const urls: Record<string, string> = {};
-      for (let i = 0; i < audioChunks.length; i += 10) {
-        const batch = audioChunks.slice(i, i + 10);
-        const results = await Promise.all(
-          batch.map(async (c) => {
-            const { data } = await supabase.storage.from("session-audio").createSignedUrl(c.storagePath, 3600);
-            return { id: c.id, url: data?.signedUrl || "" };
-          })
-        );
-        results.forEach((r) => { if (r.url) urls[r.id] = r.url; });
+      for (const c of audioChunks) {
+        if (!c.storagePath) continue;
+        urls[c.id] = `/api/session-files/download?sessionId=${encodeURIComponent(sessionId)}&fileId=${encodeURIComponent(c.storagePath)}`;
       }
       setAudioUrls(urls);
     };

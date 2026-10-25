@@ -65,14 +65,14 @@ describe("workspace mode pure resolvers", () => {
         isOwner: true,
         workspaceKind: "knowledge_region",
       }),
-    ).toEqual([]);
+    ).toEqual(["workspace", "dags", "map_types", "unsys_models", "context", "settings"]);
     expect(
       availableSectionsForMode({
         mode: "creator",
         isOwner: true,
         workspaceKind: "calibration",
       }),
-    ).toEqual([]);
+    ).toEqual(["workspace", "dags", "map_types", "unsys_models", "context", "settings"]);
   });
 
   it("Learner map chrome: no +, no strip, no multi, minimap on", () => {

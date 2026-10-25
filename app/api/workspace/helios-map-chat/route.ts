@@ -108,10 +108,7 @@ export async function POST(req: NextRequest) {
     const fileIds: string[] = [];
     const images: Array<{ mimeType: string; data: string }> = [];
     if (capped.workspace.length > 0) {
-      const { data: fileRows } = await supabase
-        .from("workspace_files")
-        .select("file_name, mime_type, xai_file_id")
-        .eq("workspace_id", workspaceId);
+      const fileRows: Array<{ file_name?: string | null; xai_file_id?: string | null }> = [];
       const wanted = new Set(capped.workspace);
       for (const row of fileRows || []) {
         const name = String(row.file_name || "").trim();

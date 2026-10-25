@@ -726,6 +726,12 @@ describe("accepted insight craft emits snapshot-eligible tool PoW", () => {
     expect(viewSrc).toContain("closeOverride: true");
     expect(viewSrc).toContain("craftInsight=");
     expect(viewSrc).toContain("recordSessionPowArtifact");
+    const chapterCanvas = readFileSync(
+      join(__dirname, "../../components/session-view/session-chapter-canvas.tsx"),
+      "utf8",
+    );
+    expect(chapterCanvas).toContain("craftInsight={{");
+    expect(chapterCanvas).not.toContain("activeStep?.id\n          ?");
     expect(ILE_INSIGHT_CRAFT_POW_FILE).toBe("ile-insight-crafting.json");
 
     writeScratch(

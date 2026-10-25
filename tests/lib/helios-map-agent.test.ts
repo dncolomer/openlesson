@@ -89,12 +89,8 @@ describe("Helios map tools on the public workspace API / MCP", () => {
     expect(agentToolFeature(HELIOS_MAP_AGENT_LIST_TOOL)).toBe("map");
     expect(agentToolFeature(HELIOS_MAP_AGENT_APPLY_TOOL)).toBe("map");
     expect(heliosMapAgentFeatureDenied("standard")).toBeNull();
-    expect(heliosMapAgentFeatureDenied("knowledge_region")).toMatch(
-      /Verification flows/,
-    );
-    expect(heliosMapAgentFeatureDenied("calibration")).toMatch(
-      /Calibration flows/,
-    );
+    expect(heliosMapAgentFeatureDenied("knowledge_region")).toBeNull();
+    expect(heliosMapAgentFeatureDenied("calibration")).toBeNull();
   });
 
   it("has REST + MCP twins on AGENT_TOOL_SURFACE", () => {

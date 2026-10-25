@@ -30,8 +30,6 @@ export const LOCALHOST_VERIFICATION_STUDIO_WORKSPACE = {
     "Localhost sample Verification workspace for Data Studio. Six Verify runs walk one hidden-state tree; a Path region covers the ε-δ walkers.",
   workspace_goal: "Visualize a knowledge region against other Verify runs in Data Studio.",
   notes: `${LOCALHOST_VERIFICATION_STUDIO_MARKER} Localhost Verification Data Studio sample.`,
-  source_type: "topic" as const,
-  payment_status: "paid" as const,
   status: "active" as const,
   workspace_kind: "knowledge_region" as const,
 };

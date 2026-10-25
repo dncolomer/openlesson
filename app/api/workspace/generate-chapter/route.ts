@@ -67,11 +67,12 @@ export async function POST(req: NextRequest) {
       return jsonError(404, "Session not found");
     }
 
-    const { data: planRow } = await supabase
-      .from("session_plans")
-      .select("steps, goal")
-      .eq("session_id", sessionId)
+    const { data: planSession } = await supabase
+      .from("sessions")
+      .select("chapter_map")
+      .eq("id", sessionId)
       .maybeSingle();
+    const planRow = (planSession?.chapter_map || {}) as { steps?: Array<{ description?: string }>; goal?: string };
 
     const steps = (planRow?.steps || []) as Array<{ description?: string }>;
     const existingChapters = steps

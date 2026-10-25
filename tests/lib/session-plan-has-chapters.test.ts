@@ -136,19 +136,14 @@ describe("sessionPlanChaptersStatus (shipped existence helper)", () => {
     expect(SESSION_PLAN_HAS_CHAPTERS_SELECT).toBe("id");
     expect(SESSION_PLAN_HAS_CHAPTERS_SELECT).not.toContain("*");
     expect(SESSION_PLAN_HAS_CHAPTERS_SELECT).not.toContain("steps");
-    expect(client.recorded.table).toBe("session_plans");
-    expect(client.recorded.select).toBe(SESSION_PLAN_HAS_CHAPTERS_SELECT);
-    expect(client.recorded.eq).toContainEqual(["session_id", "sess-q"]);
-    expect(client.recorded.not).toContainEqual([
-      "steps",
-      "eq",
-      SESSION_PLAN_EMPTY_STEPS_JSON,
-    ]);
+    expect(client.recorded.table).toBe("sessions");
+    expect(client.recorded.select).toContain("chapter_map");
+    expect(client.recorded.eq).toContainEqual(["id", "sess-q"]);
 
     const qClient = createRecordingClient({ data: null, error: null });
     sessionPlanHasChaptersQuery(qClient, "sess-q");
-    expect(qClient.recorded.select).toBe("id");
-    expect(qClient.recorded.select).not.toMatch(/\*|steps/);
+    expect(qClient.recorded.select).toContain("chapter_map");
+    expect(qClient.recorded.select).not.toMatch(/(^|\s)\*(,|\s|$)/);
   });
 });
 
@@ -178,7 +173,7 @@ describe("lookupSessionPlanChaptersForRequest (guard / privileged client)", () =
     expect(seenTokens.ileToken).toBe("ile-guest-token");
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.status).toBe("exists");
-    expect(privileged.recorded.table).toBe("session_plans");
+    expect(privileged.recorded.table).toBe("sessions");
     expect(browser.recorded.table).toBeNull();
   });
 
@@ -243,7 +238,7 @@ describe("lookupSessionPlanChaptersForRequest (guard / privileged client)", () =
     );
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.status).toBe("exists");
-    expect(ownerClient.recorded.eq).toContainEqual(["session_id", "sess-owner"]);
+    expect(ownerClient.recorded.eq).toContainEqual(["id", "sess-owner"]);
   });
 
   it("forwards guard auth failures instead of treating them as empty", async () => {

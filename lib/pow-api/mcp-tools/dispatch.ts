@@ -335,7 +335,11 @@ export async function callMcpProofOfWorkTool(
             root_topic: workspace.root_topic,
             description: workspace.description,
             notes: workspace.notes,
-            workspace_goal: workspace.workspace_goal ?? null,
+            workspace_goal:
+              workspace.workspace_goal ??
+              workspace.description ??
+              workspace.notes ??
+              null,
             workspace_kind: workspace.workspace_kind,
           },
           blocks || [],

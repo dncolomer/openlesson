@@ -31,7 +31,8 @@ function writeScratch(name: string, body: string) {
 
 describe("shipped editor drawer-id helpers", () => {
   it("1-block and 2+-block surfaces list a dedicated Danger zone drawer", () => {
-    const single = workspaceBlockDetailDrawerIds({ canEdit: true, hasGoals: true });
+    const single = workspaceBlockDetailDrawerIds({ canEdit: true });
+    expect(single).not.toContain("goals");
     const multi = workspaceMultiSelectDrawerIds();
 
     expect(WORKSPACE_EDITOR_DANGER_DRAWER_ID).toBe("danger");

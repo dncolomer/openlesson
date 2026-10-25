@@ -61,9 +61,6 @@ export async function forkWorkspaceExactCopy(
       description: sourcePlan.description ?? null,
       notes: sourcePlan.notes ?? null,
       cover_image_url: sourcePlan.cover_image_url ?? null,
-      source_type: sourcePlan.source_type ?? null,
-      source_url: sourcePlan.source_url ?? null,
-      source_summary: sourcePlan.source_summary ?? null,
       workspace_kind: parseWorkspaceKind(sourcePlan.workspace_kind),
       is_play_copy: params.isPlayCopy === true,
     })

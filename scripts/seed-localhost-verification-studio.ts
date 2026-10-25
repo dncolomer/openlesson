@@ -115,13 +115,13 @@ async function main() {
     const existingId = existing.rows[0]?.id ? String(existing.rows[0].id) : null;
     if (existingId) {
       console.log(`[seed-local-studio] replacing workspace ${existingId}`);
-      await client.query(`DELETE FROM public.custom_verification_models WHERE workspace_id = $1`, [
+      await client.query(`DELETE FROM public.knowledge_regions WHERE workspace_id = $1`, [
         existingId,
       ]);
-      await client.query(`DELETE FROM public.workspace_flow_embeddings WHERE workspace_id = $1`, [
+      await client.query(`DELETE FROM public.session_embeddings WHERE workspace_id = $1`, [
         existingId,
       ]);
-      await client.query(`DELETE FROM public.workspace_proof_of_work WHERE workspace_id = $1`, [
+      await client.query(`DELETE FROM public.proof_of_work WHERE workspace_id = $1`, [
         existingId,
       ]);
       await client.query(`DELETE FROM public.workspaces WHERE id = $1`, [existingId]);
@@ -130,13 +130,13 @@ async function main() {
     const workspaceId = randomUUID();
     await client.query(
       `INSERT INTO public.workspaces (
-         id, user_id, author_id, title, root_topic, status, payment_status,
-         description, notes, workspace_goal, source_type,
+         id, user_id, author_id, title, root_topic, status,
+         description, notes,
          organization_id, is_public, is_agent_workspace, workspace_kind
        ) VALUES (
-         $1, $2, $2, $3, $4, $5, $6,
-         $7, $8, $9, $10,
-         $11, false, false, $12
+         $1, $2, $2, $3, $4, $5,
+         $6, $7,
+         $8, false, false, 'standard'
        )`,
       [
         workspaceId,
@@ -144,31 +144,27 @@ async function main() {
         LOCALHOST_VERIFICATION_STUDIO_WORKSPACE.title,
         LOCALHOST_VERIFICATION_STUDIO_WORKSPACE.root_topic,
         LOCALHOST_VERIFICATION_STUDIO_WORKSPACE.status,
-        LOCALHOST_VERIFICATION_STUDIO_WORKSPACE.payment_status,
         LOCALHOST_VERIFICATION_STUDIO_WORKSPACE.description,
         LOCALHOST_VERIFICATION_STUDIO_WORKSPACE.notes,
-        LOCALHOST_VERIFICATION_STUDIO_WORKSPACE.workspace_goal,
-        LOCALHOST_VERIFICATION_STUDIO_WORKSPACE.source_type,
         owner.organizationId,
-        LOCALHOST_VERIFICATION_STUDIO_WORKSPACE.workspace_kind,
       ],
     );
 
     const flowId = randomUUID();
     const publicToken = `${LOCALHOST_VERIFICATION_STUDIO_FLOW.publicTokenPrefix}-${flowId.slice(0, 8)}`;
     await client.query(
-      `INSERT INTO public.workspace_verification_flows (
-         id, workspace_id, name, topic, questions, duration_minutes, action_catalog, public_token
-       ) VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8)`,
+      `INSERT INTO public.verify_flows (
+         id, name, topic, questions, duration_minutes, action_catalog, public_token, owner_user_id
+       ) VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7, $8)`,
       [
         flowId,
-        workspaceId,
         LOCALHOST_VERIFICATION_STUDIO_FLOW.name,
         LOCALHOST_VERIFICATION_STUDIO_FLOW.topic,
         JSON.stringify(LOCALHOST_VERIFICATION_STUDIO_FLOW.questions),
         LOCALHOST_VERIFICATION_STUDIO_FLOW.durationMinutes,
         LOCALHOST_VERIFICATION_STUDIO_FLOW.actionCatalog,
         publicToken,
+        owner.userId,
       ],
     );
 
@@ -181,31 +177,43 @@ async function main() {
       const runId = randomUUID();
       const createdAt = new Date(now - (encoded.length - index) * 60_000).toISOString();
       await client.query(
-        `INSERT INTO public.workspace_verification_identities (flow_id, identity) VALUES ($1, $2)`,
-        [flowId, run.identity],
-      );
-      await client.query(
-        `INSERT INTO public.workspace_verification_results (
-           id, flow_id, workspace_id, identity, source, question_id, prompt, embedding, created_at
-         ) VALUES ($1, $2, $3, $4, 'runner', $5, $6, $7::jsonb, $8)`,
+        `INSERT INTO public.sessions (
+           id, user_id, problem, status, kind, verify_flow_id, identity, workspace_id, result, created_at
+         ) VALUES (
+           $1, $2, 'Verify', 'completed', 'verify', $3, $4, $5,
+           $6::jsonb, $7
+         )`,
         [
           runId,
+          owner.userId,
           flowId,
-          workspaceId,
           run.identity,
-          LOCALHOST_VERIFICATION_STUDIO_FLOW.questions[0]?.id ?? null,
-          run.speech,
-          JSON.stringify(run.embedding.vector),
+          workspaceId,
+          JSON.stringify({
+            kind: "verify",
+            projectedPolicy: null,
+            knowledgeRegionId: null,
+            answers: [
+              {
+                id: runId,
+                identity: run.identity,
+                source: "runner",
+                questionId: LOCALHOST_VERIFICATION_STUDIO_FLOW.questions[0]?.id ?? null,
+                prompt: run.speech,
+                createdAt,
+              },
+            ],
+          }),
           createdAt,
         ],
       );
       await client.query(
-        `INSERT INTO public.workspace_flow_embeddings (
+        `INSERT INTO public.session_embeddings (
            id, workspace_id, flow_kind, flow_id, run_id, identity, source,
-           embedding_model_id, dim, vector, raw, created_at
+           embedding_model_id, dim, vector, raw, created_at, session_id, owner_user_id
          ) VALUES (
            $1, $2, 'verify', $3, $4, $5, 'runner',
-           $6, $7, $8::jsonb, $9::jsonb, $10
+           $6, $7, $8::jsonb, $9::jsonb, $10, $4::uuid, $11
          )`,
         [
           randomUUID(),
@@ -218,10 +226,11 @@ async function main() {
           JSON.stringify(run.embedding.vector),
           JSON.stringify(run.embedding.raw),
           createdAt,
+          owner.userId,
         ],
       );
       await client.query(
-        `INSERT INTO public.workspace_proof_of_work (
+        `INSERT INTO public.proof_of_work (
            workspace_id, proof_of_work_type, file_name, mime_type,
            file_size, xai_file_id, timestamp_ms, chunk_index, metadata,
            tool_name, tool_action, user_id, organization_id
@@ -251,7 +260,7 @@ async function main() {
 
     for (const region of [regions.path, regions.voice]) {
       await client.query(
-        `INSERT INTO public.custom_verification_models (
+        `INSERT INTO public.knowledge_regions (
            workspace_id, name, description, embedding_model_id, dim,
            centroid, cohort_cohesion, mean_radius, cosine_threshold,
            subject_count, subjects, created_by

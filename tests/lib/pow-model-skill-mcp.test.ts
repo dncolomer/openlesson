@@ -117,9 +117,10 @@ describe("pow-model-v1 agent contract on skill and MCP", () => {
 
     expect(standard).not.toContain(CANVAS_TAP_SIMULATION_HEADING);
     expect(standard).toContain("Learning workspace");
-    expect(knowledgeRegion).toContain(CANVAS_TAP_SIMULATION_HEADING);
+    expect(knowledgeRegion).not.toContain(CANVAS_TAP_SIMULATION_HEADING);
+    expect(knowledgeRegion).toContain("Learning workspace");
     expect(standard).not.toContain(POW_MODEL_VERSION);
-    expect(knowledgeRegion).toContain(POW_MODEL_VERSION);
+    expect(knowledgeRegion).not.toContain(POW_MODEL_VERSION);
     expect(copy.skillDescription).not.toContain(contract);
     expect(copy.skillDescription).not.toContain("draw_text");
     expect(copy.skillDescription).not.toContain(CANVAS_TAP_SIMULATION_HEADING);

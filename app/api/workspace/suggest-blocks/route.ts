@@ -101,11 +101,12 @@ export async function POST(req: NextRequest) {
         return jsonError(403, "Access denied");
       }
 
-      const { data: sessionPlan, error: planError } = await supabase
-        .from("session_plans")
-        .select("steps")
-        .eq("session_id", sessionId)
+      const { data: planSession, error: planError } = await supabase
+        .from("sessions")
+        .select("chapter_map")
+        .eq("id", sessionId)
         .single();
+      const sessionPlan = (planSession?.chapter_map || {}) as { steps?: Array<{ description: string; position_x?: number; position_y?: number }> };
 
       if (planError) {
         return jsonError(500, "Failed to fetch chapter plan");

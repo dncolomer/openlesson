@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     const { data: recentSessions } = workspaceId
       ? await supabase
         .from("sessions")
-        .select("problem, report, duration_ms, created_at, metadata")
+        .select("problem, result, duration_ms, created_at, metadata")
         .eq("user_id", persistUserId)
         .neq("id", sessionId)
         .filter("metadata->>workspace_id", "eq", workspaceId)
@@ -62,7 +62,10 @@ export async function POST(request: NextRequest) {
 
     const recentContext = (recentSessions || [])
       .map((session, index) => {
-        const report = typeof session.report === "string" ? session.report.slice(0, 400) : "";
+        const report =
+          session.result && typeof session.result === "object"
+            ? JSON.stringify(session.result).slice(0, 400)
+            : "";
         return `${index + 1}. ${session.problem}${report ? ` — ${report}` : ""}`;
       })
       .join("\n") || "No prior completed sessions available.";

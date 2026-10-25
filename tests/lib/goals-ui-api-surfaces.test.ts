@@ -1,7 +1,7 @@
 import { readWorkspaceViewSurface } from "@/tests/helpers/surface-source";
 /**
  * Static/structural checks for Goals tab, Settings without goal field,
- * block goals drawer, LWM goal selection UI.
+ * unmounted block goals drawer, LWM goal selection UI.
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync, existsSync } from "node:fs";
@@ -20,12 +20,12 @@ describe("Goals workspace section registry", () => {
     expect(WORKSPACE_SECTION_KEYS).toContain("goals");
     const learning = availableWorkspaceSections({ isOwner: true });
     expect(learning).not.toContain("goals");
-    const verification = availableWorkspaceSections({
+    const leftoverKind = availableWorkspaceSections({
       isOwner: true,
       workspaceKind: "knowledge_region",
     });
-    expect(verification).toEqual([]);
-    expect(verification).not.toContain("goals");
+    expect(leftoverKind).toEqual(learning);
+    expect(leftoverKind).not.toContain("goals");
   });
 
   it("maps goals layout to mountsGoalsPanel", () => {
@@ -57,23 +57,20 @@ describe("Goals tab + block goals drawer", () => {
     expect(src).toContain("/api/workspace/goals");
   });
 
-  it("WorkspaceView mounts Goals tab panel", () => {
+  it("WorkspaceView does not mount Goals tab panel", () => {
     const view = readWorkspaceViewSurface();
-    expect(view).toContain("WorkspaceGoalsPanel");
-    expect(view).toContain("mountsGoalsPanel");
-    expect(view).toContain('key: "goals"');
-    expect(view).toContain("data-workspace-goals-host");
+    expect(view).not.toContain("WorkspaceGoalsPanel");
+    expect(view).not.toContain("data-workspace-goals-host");
   });
 
-  it("block-detail drawer includes goals only post-creation (blockId present)", () => {
+  it("block-detail manual drawers do not mount a Goals drawer", () => {
     const pane = readFileSync(
       join(ROOT, "components/WorkspaceBlockDetailPane.tsx"),
       "utf8",
     );
-    expect(pane).toContain("BlockGoalsPanel");
-    expect(pane).toContain('drawerId="goals"');
-    expect(pane).toContain("data-block-goals-drawer");
-    // Not in add-block create flow
+    expect(pane).not.toContain("BlockGoalsPanel");
+    expect(pane).not.toContain('drawerId="goals"');
+    expect(pane).not.toContain("data-block-goals-drawer");
     const addPane = readFileSync(
       join(ROOT, "components/WorkspaceAddBlockPane.tsx"),
       "utf8",

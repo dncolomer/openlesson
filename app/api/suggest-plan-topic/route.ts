@@ -24,27 +24,14 @@ export async function POST(request: NextRequest) {
     let fileIds: string[] = [];
     if (sessionId) {
       
-      const { data: transcripts } = await supabase
-        .from("session_transcript")
+      const { data: powRows } = await supabase
+        .from("proof_of_work")
         .select("xai_file_id")
         .eq("session_id", sessionId);
 
-      const { data: analyses } = await supabase
-        .from("session_analysis")
-        .select("xai_file_id")
-        .eq("session_id", sessionId);
-
-      if (transcripts) {
-        for (const r of transcripts) {
-          if (r.xai_file_id && r.xai_file_id !== "_empty") {
-            fileIds.push(r.xai_file_id);
-          }
-        }
-      }
-      
-      if (analyses) {
-        for (const r of analyses as Array<{ xai_file_id: string | null }>) {
-          if (r.xai_file_id) {
+      if (powRows) {
+        for (const r of powRows) {
+          if (r.xai_file_id && r.xai_file_id !== "_empty" && !String(r.xai_file_id).startsWith("storage:")) {
             fileIds.push(r.xai_file_id);
           }
         }

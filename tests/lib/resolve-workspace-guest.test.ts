@@ -11,6 +11,7 @@ function chainableGuest(row: Record<string, unknown> | null) {
   const api = {
     select: vi.fn(() => api),
     eq: vi.fn(() => api),
+    in: vi.fn(() => api),
     maybeSingle: vi.fn(async () => ({ data: row, error: row ? null : { message: "missing" } })),
     limit: vi.fn(() => api),
     single: vi.fn(async () => ({ data: row, error: row ? null : { message: "missing" } })),
@@ -90,7 +91,7 @@ describe("assertReusableWorkspaceGuest", () => {
     const supabase = {
       from: vi.fn((table: string) => {
         if (table === "organization_guest_users") return guestApi;
-        if (table === "workspace_calibrate_sessions" || table === "workspace_verify_sessions") return tapApi;
+        if (table === "sessions") return tapApi;
         return chainableGuest(null);
       }),
     };

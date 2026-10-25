@@ -324,7 +324,7 @@ export async function generateOpaqueWorkspaceProofOfWorkSpec(
 
   const { data: workspace } = await supabase
     .from("workspaces")
-    .select("id, title, evaluation_mode, protocol_config, external_refs, workspace_goal, workspace_kind")
+    .select("id, title, evaluation_mode, protocol_config, external_refs, workspace_kind")
     .eq("id", workspaceId)
     .single();
 
@@ -350,7 +350,10 @@ export async function generateOpaqueWorkspaceProofOfWorkSpec(
     context.payload.counts,
     {
       title: workspace.title || meta.protocol_config.protocol_id,
-      workspace_goal: workspace.workspace_goal,
+      workspace_goal:
+        (workspace as { description?: string | null }).description ??
+        (workspace as { notes?: string | null }).notes ??
+        null,
       workspace_kind: (workspace as { workspace_kind?: unknown }).workspace_kind,
     }
   );

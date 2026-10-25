@@ -51,10 +51,11 @@ export async function POST(req: NextRequest) {
     }
 
     const { data: existing } = await supabase
-      .from("session_transcript")
+      .from("proof_of_work")
       .select("id, xai_file_id")
       .eq("session_id", body.sessionId)
       .eq("chunk_index", chunkIndex)
+      .eq("tool_name", "transcript")
       .limit(1);
 
     const existingRow = existing?.[0];
@@ -86,26 +87,37 @@ export async function POST(req: NextRequest) {
     }
 
     const ts = typeof body.timestampMs === "number" ? body.timestampMs : Date.now();
-    const transcriptRow = {
-      session_id: body.sessionId,
-      user_id: user.id,
-      timestamp_ms: ts,
-      xai_file_id: xaiFileId,
-      chunk_index: chunkIndex,
-      word_count: countWords(transcript),
+    const { workspaceIdForSession, sensorPowInsertPayload } = await import("@/lib/session-sensor-pow");
+    const { insertWorkspaceProofOfWorkRow } = await import("@/lib/pow-api/workspace-proof-of-work");
+    const workspaceId = await workspaceIdForSession(supabase, body.sessionId);
+    if (!workspaceId) {
+      await deleteOrgScopedXaiFile(xaiFileId, organizationId).catch(() => {});
+      return jsonError(400, "Session is missing a Learning Map");
+    }
+    const transcriptRow = sensorPowInsertPayload({
+      sessionId: body.sessionId,
+      userId: user.id,
+      workspaceId,
+      kind: "transcript",
+      xaiFileId,
+      fileName: fileName,
+      mimeType: "text/plain",
+      timestampMs: ts,
+      chunkIndex,
       metadata: {
         ...(body.metadata ?? {}),
         source: "browser-web-speech",
+        word_count: countWords(transcript),
       },
-    };
+    });
 
     const { error: writeError } = existingRow
       ? await supabase
-        .from("session_transcript")
+        .from("proof_of_work")
         .update(transcriptRow)
         .eq("id", existingRow.id)
         .eq("user_id", user.id)
-      : await supabase.from("session_transcript").insert(transcriptRow);
+      : (await insertWorkspaceProofOfWorkRow(supabase, transcriptRow)).error;
 
     if (writeError) {
       console.error("[session-transcripts/upload] DB write failed:", writeError.message);

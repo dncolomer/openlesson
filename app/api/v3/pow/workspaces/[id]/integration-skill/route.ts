@@ -34,7 +34,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
 
     const { data: workspace } = await supabase
       .from("workspaces")
-      .select("id, user_id, organization_id, guest_user_id, title, root_topic, description, notes, workspace_goal, workspace_kind")
+      .select("id, user_id, organization_id, guest_user_id, title, root_topic, description, notes, workspace_kind")
       .eq("id", workspaceId)
       .single();
 
@@ -134,7 +134,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
             root_topic: workspace.root_topic,
             description: workspace.description,
             notes: workspace.notes,
-            workspace_goal: workspace.workspace_goal ?? null,
+            workspace_goal: workspace.description ?? workspace.notes ?? null,
             workspace_kind: workspace.workspace_kind,
           },
           blocks || [],
@@ -178,7 +178,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
           block_id: blockId,
           proof_of_work_artifacts: contextCounts?.proof_of_work_artifacts,
           workspace_title: workspace.title || workspace.root_topic || null,
-          workspace_goal: workspace.workspace_goal,
+          workspace_goal: workspace.description ?? workspace.notes ?? null,
           artifact_summary: `Integration skill generated for ${request.integration_name}`,
         }
       )

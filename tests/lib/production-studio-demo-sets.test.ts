@@ -65,11 +65,11 @@ describe("production Data Studio demo sets", () => {
     expect(seed).toContain("--target=prod");
     expect(seed).toContain("xzwjlkngxuxttvqbboea");
     expect(seed).toContain("connectTarget(\"prod\")");
-    expect(seed).toContain("workspace_verification_flows");
-    expect(seed).toContain("workspace_calibration_flows");
-    expect(seed).toContain("workspace_flow_embeddings");
+    expect(seed).toContain("verify_flows");
+    expect(seed).toContain("calibrate_flows");
+    expect(seed).toContain("session_embeddings");
     expect(seed).toContain("tap_session_id");
-    expect(seed).toContain("custom_verification_models");
+    expect(seed).toContain("knowledge_regions");
     expect(seed).toContain("buildStudioDemoRegions");
     expect(seed).toContain("regions.voice");
     expect(existsSync(join(ROOT, "scripts/seed-production-studio-demo-sets.ts"))).toBe(true);

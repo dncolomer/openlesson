@@ -14,7 +14,6 @@
     "test:e2e:pow-api": "node scripts/run-pow-api-e2e.mjs",
     "check:locales": "node scripts/check-locale-parity.mjs",
     "check": "npm run lint && npm run typecheck && npm run test && npm run check:locales",
-    "import:rabbit-hole": "node scripts/import-rabbit-hole-questions.mjs",
     "import:think-aloud-pow": "vite-node --config vitest.config.ts utilities/import-think-aloud-pow/main.ts",
     "generate:prompt-inventory": "node scripts/discover-llm-prompts.mjs && node scripts/generate-prompt-inventory.mjs",
     "generate:prompt-report": "node scripts/discover-llm-prompts.mjs && node scripts/generate-prompt-report.mjs",

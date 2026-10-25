@@ -115,7 +115,7 @@ export function buildPowParticipantIdentity(input: {
   };
 }
 
-/** Columns for workspace_proof_of_work inserts — guest never dual-stamps owner user_id. */
+/** Columns for proof_of_work inserts — guest never dual-stamps owner user_id. */
 export function powAttributionColumns(identity: PowParticipantIdentity): {
   user_id: string | null;
   guest_user_id: string | null;

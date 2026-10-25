@@ -76,7 +76,7 @@ export interface CreatedIleLink {
 }
 
 const ILE_LINK_SELECT =
-  "id, workspace_id, block_id, status, created_at, participant_type, guest_user_id, assigned_user_id, access_mode, public_token, entry_query_params, show_end_session, session_mode";
+  "id, workspace_id, block_id, status, created_at, guest_user_id, assigned_user_id, access_mode, public_token, kind, guest_link";
 
 function withIleLinkUrl(
   link: Omit<CreatedIleLink, "url" | "private_url" | "show_end_session" | "session_mode"> & {
@@ -219,7 +219,7 @@ async function resolveAssignedUserId(
   }
 
   const { data: groupSession } = await supabase
-    .from("block_sessions")
+    .from("sessions")
     .select("user_id")
     .eq("workspace_id", workspace.id)
     .eq("user_id", requestedUserId)
@@ -307,27 +307,48 @@ export async function createWorkspaceIleLink(options: CreateIleLinkOptions): Pro
   const sessionToken = createPrivateToken();
   const publicToken = durableGuestLinkPublicToken(sessionToken);
 
-  const { data: link, error } = await supabase
-    .from("workspace_learn_links")
+  const guestLink = {
+    workspace_id: workspaceId,
+    block_id: blockId,
+    user_id: ownerUserId,
+    guest_user_id: guestUserId,
+    assigned_user_id: assignedUserId,
+    organization_id: auth.organization_id || workspace.organization_id,
+    created_by_api_key_id: createdByApiKeyId(auth),
+    private_token_hash: hashPrivateToken(sessionToken),
+    access_mode: accessMode,
+    public_token: publicToken,
+    entry_query_params: [],
+    show_end_session: showEndSession,
+    session_mode: storedLearnSessionMode(sessionMode),
+    status: "pending",
+    participant_type: participantType,
+  };
+  const { data: inserted, error } = await supabase
+    .from("sessions")
     .insert({
+      kind: "learn",
+      problem: "Learn",
+      status: "pending",
+      user_id: ownerUserId,
       workspace_id: workspaceId,
       block_id: blockId,
-      user_id: ownerUserId,
       guest_user_id: guestUserId,
       assigned_user_id: assignedUserId,
       organization_id: auth.organization_id || workspace.organization_id,
-      created_by_api_key_id: createdByApiKeyId(auth),
       private_token_hash: hashPrivateToken(sessionToken),
-      access_mode: accessMode,
       public_token: publicToken,
-      entry_query_params: [],
-      show_end_session: showEndSession,
-      session_mode: storedLearnSessionMode(sessionMode),
-      status: "pending",
-      participant_type: participantType,
+      access_mode: accessMode,
+      guest_link: guestLink,
     })
-    .select(ILE_LINK_SELECT)
+    .select("*")
     .single();
+  const link = inserted
+    ? {
+        ...((inserted.guest_link as Record<string, unknown>) || {}),
+        ...inserted,
+      }
+    : null;
 
   if (error || !link) {
     console.error("[create-learn-link] Insert error:", error);
@@ -360,12 +381,13 @@ export async function reissueWorkspaceIleLink(
   }
 
   const { data: existing, error: loadError } = await supabase
-    .from("workspace_learn_links")
+    .from("sessions")
     .select(
-      "id, workspace_id, block_id, status, created_at, participant_type, guest_user_id, assigned_user_id, private_token_hash, access_mode, public_token, entry_query_params, workspaces(id, user_id, organization_id, guest_user_id)"
+      "id, workspace_id, block_id, status, created_at, guest_user_id, assigned_user_id, private_token_hash, access_mode, public_token, guest_link, workspaces(id, user_id, organization_id, guest_user_id)"
     )
     .eq("id", linkId)
     .eq("workspace_id", workspaceId)
+    .eq("kind", "learn")
     .maybeSingle();
 
   if (loadError) {
@@ -394,20 +416,32 @@ export async function reissueWorkspaceIleLink(
     throw new CreateIleLinkError("Failed to mint Learn link token", 500, "internal_error");
   }
 
-  const { data: link, error } = await supabase
-    .from("workspace_learn_links")
+  const nextHash = hashPrivateToken(sessionToken);
+  const nextPublic = durableGuestLinkPublicToken(sessionToken);
+  const guestLink = {
+    ...(((existing as { guest_link?: Record<string, unknown> }).guest_link) || {}),
+    private_token_hash: nextHash,
+    public_token: nextPublic,
+    status: "pending",
+    started_at: null,
+    completed_at: null,
+  };
+  const { data: updated, error } = await supabase
+    .from("sessions")
     .update({
-      private_token_hash: hashPrivateToken(sessionToken),
-      public_token: durableGuestLinkPublicToken(sessionToken),
+      private_token_hash: nextHash,
+      public_token: nextPublic,
       status: "pending",
-      started_at: null,
-      completed_at: null,
-      session_id: null,
+      guest_link: guestLink,
     })
     .eq("id", linkId)
     .eq("workspace_id", workspaceId)
-    .select(ILE_LINK_SELECT)
+    .eq("kind", "learn")
+    .select("*")
     .single();
+  const link = updated
+    ? { ...((updated.guest_link as Record<string, unknown>) || {}), ...updated }
+    : null;
 
   if (error || !link) {
     console.error("[reissue-ile-link] Update error:", error);

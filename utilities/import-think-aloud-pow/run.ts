@@ -73,7 +73,7 @@ async function persistUploads(uploads: IleSoloUploadInput[], workspaceId: string
   const supabase = createAdminClient();
   const { data: workspace, error } = await supabase
     .from("workspaces")
-    .select("id, user_id, organization_id, evaluation_mode, protocol_config, external_refs, title, root_topic, workspace_goal")
+    .select("id, user_id, organization_id, evaluation_mode, protocol_config, external_refs, title, root_topic")
     .eq("id", workspaceId)
     .maybeSingle();
   if (error) throw new Error(error.message);

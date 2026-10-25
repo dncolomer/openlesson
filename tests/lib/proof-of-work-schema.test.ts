@@ -256,19 +256,13 @@ describe("buildIntegrationSkillInstructions", () => {
       null
     );
 
-    expect(instructions).toContain("/api/v3/pow/workspaces/ws-1/proof-of-work-schema");
+    expect(instructions).toContain("Learning workspace");
     expect(instructions).toContain("/api/v3/pow/workspaces/ws-1/integration-skill");
-    expect(instructions).toContain("Proof-of-work specification");
-    expect(instructions).toContain("Continuous evaluation and regeneration");
-    expect(instructions).toContain("Predictive interruptions");
-    expect(instructions).toContain("do not tell them to invent ad-hoc JSON");
-    expect(instructions).toContain("regenerate");
+    expect(instructions).toContain("list_map_tools");
     expect(instructions).toContain("start_session");
     expect(instructions).toContain("end_session");
+    expect(instructions).toContain("upload_proof_of_work");
     expect(instructions).not.toContain("lwm_snapshot");
-    expect(instructions).toContain("flow embedding");
-    expect(instructions).toContain("Predictive interruptions");
-    expect(instructions).toContain("interruption_contract");
     expect(instructions).toContain("current status");
   });
 

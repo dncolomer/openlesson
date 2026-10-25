@@ -204,8 +204,8 @@ describe("structural wiring in WorkspaceView + AYCL", () => {
     expect(mapAuth).not.toContain("data-lock-target-select");
 
     const context = read("components/WorkspaceContextPanel.tsx");
-    expect(context).toContain("WorkspaceDantesSearch");
-    expect(context).toContain("WorkspaceExternalAddLinkForm");
+    expect(context).not.toContain("WorkspaceDantesSearch");
+    expect(context).not.toContain("WorkspaceExternalAddLinkForm");
     expect(context).toContain("data-workspace-context-panel");
 
     // Map host wires selection → ground tools (prereq-edit mode)

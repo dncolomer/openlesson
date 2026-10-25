@@ -91,7 +91,7 @@ describe("appendEntryQueryCapture + recordGuestLinkEntryQueryParams", () => {
     const updates: unknown[] = [];
     const supabase = {
       from(table: string) {
-        expect(table).toBe("workspace_learn_links");
+        expect(table).toBe("sessions");
         return {
           select() {
             return {
@@ -99,17 +99,19 @@ describe("appendEntryQueryCapture + recordGuestLinkEntryQueryParams", () => {
                 return {
                   maybeSingle: async () => ({
                     data: {
-                      entry_query_params: [
-                        { at: "t0", params: { existing: "yes" } },
-                      ],
+                      guest_link: {
+                        entry_query_params: [
+                          { at: "t0", params: { existing: "yes" } },
+                        ],
+                      },
                     },
                   }),
                 };
               },
             };
           },
-          update(payload: { entry_query_params: unknown }) {
-            updates.push(payload.entry_query_params);
+          update(payload: { guest_link?: { entry_query_params?: unknown }; entry_query_params?: unknown }) {
+            updates.push(payload.guest_link?.entry_query_params ?? payload.entry_query_params);
             return {
               eq: async () => ({ error: null }),
             };

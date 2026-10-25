@@ -149,17 +149,6 @@ export async function POST(request: NextRequest) {
             stripeCustomerId,
             stripeSubscriptionId: null,
           });
-        } else if (priceType === "rabbit_hole_plays") {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("rabbit_hole_bonus_plays")
-            .eq("id", userId)
-            .single();
-
-          await supabase
-            .from("profiles")
-            .update({ rabbit_hole_bonus_plays: (profile?.rabbit_hole_bonus_plays ?? 0) + 3 })
-            .eq("id", userId);
         }
         break;
       }

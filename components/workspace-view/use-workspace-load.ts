@@ -339,20 +339,7 @@ export function useWorkspaceLoad(input: {
       }
 
       // File names for prompt-impact + block local refs (excerpts loaded when available).
-      const { data: fileRows } = await supabase
-        .from("workspace_files")
-        .select("file_name, mime_type")
-        .eq("workspace_id", workspaceId)
-        .order("created_at", { ascending: false })
-        .limit(24);
-      setWorkspaceFileItems(
-        (fileRows || [])
-          .map((f: { file_name?: string; mime_type?: string | null }) => ({
-            name: String(f.file_name || "").trim(),
-            mime_type: f.mime_type ?? null,
-          }))
-          .filter((f: WorkspaceFileContextItem) => f.name),
-      );
+      setWorkspaceFileItems([]);
 
       setLoading(false);
     }

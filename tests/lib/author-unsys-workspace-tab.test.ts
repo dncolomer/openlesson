@@ -63,6 +63,8 @@ describe("workspace unsys models tab", () => {
     expect(hosts).toContain("data-workspace-unsys-models-host");
     expect(nav).toContain('key: "unsys_models"');
     expect(nav).toContain("sectionUnsysModels");
+    expect(nav).toContain('className="h-6 w-6 shrink-0"');
+    expect(nav).not.toContain('className="w-4 h-4"');
     expect(view).toContain("onOpenUnsysStudio");
     expect(view).not.toContain("initialCatalogSize");
     expect(sections).toContain('"unsys_models"');

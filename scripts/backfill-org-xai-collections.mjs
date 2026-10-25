@@ -1,6 +1,6 @@
 /**
  * Prod (or staging) backfill: ensure each org with PoW xAI files has a Collection,
- * attach historical workspace_proof_of_work.xai_file_id documents, stamp xai_collection_id.
+ * attach historical proof_of_work.xai_file_id documents, stamp xai_collection_id.
  *
  * Uses the same Management API surface as lib/xai-management.ts (create collection + add document).
  *
@@ -131,7 +131,7 @@ async function main() {
 
   // Orgs that have PoW rows with xAI files
   const { data: orgIdRows, error: orgIdErr } = await admin
-    .from("workspace_proof_of_work")
+    .from("proof_of_work")
     .select("organization_id")
     .not("xai_file_id", "is", null)
     .not("organization_id", "is", null);
@@ -218,7 +218,7 @@ async function main() {
 
     // PoW rows with file id for this org
     const { data: powRows, error: powErr } = await admin
-      .from("workspace_proof_of_work")
+      .from("proof_of_work")
       .select("id, xai_file_id, xai_collection_id, workspace_id, proof_of_work_type")
       .eq("organization_id", orgId)
       .not("xai_file_id", "is", null);
@@ -244,10 +244,10 @@ async function main() {
           organization_id: orgId,
           workspace_id: row.workspace_id || "",
           proof_of_work_type: row.proof_of_work_type || "",
-          workspace_proof_of_work_id: row.id,
+          proof_of_work_id: row.id,
         });
         await admin
-          .from("workspace_proof_of_work")
+          .from("proof_of_work")
           .update({ xai_collection_id: collectionId })
           .eq("id", row.id);
         if (result.already) {
@@ -290,11 +290,11 @@ async function main() {
   try {
     const { rows } = await client.query(`
       SELECT
-        (SELECT count(*)::int FROM workspace_proof_of_work
+        (SELECT count(*)::int FROM proof_of_work
           WHERE xai_file_id IS NOT NULL) AS pow_with_file,
-        (SELECT count(*)::int FROM workspace_proof_of_work
+        (SELECT count(*)::int FROM proof_of_work
           WHERE xai_file_id IS NOT NULL AND xai_collection_id IS NOT NULL) AS pow_with_file_and_collection,
-        (SELECT count(*)::int FROM workspace_proof_of_work
+        (SELECT count(*)::int FROM proof_of_work
           WHERE xai_file_id IS NOT NULL AND xai_collection_id IS NULL) AS pow_with_file_missing_collection,
         (SELECT count(*)::int FROM organizations
           WHERE xai_collection_status = 'ready' AND xai_collection_id IS NOT NULL) AS orgs_collection_ready

@@ -6,7 +6,7 @@
  * appropriate session_* table. xAI API key never leaves the server.
  */
 
-export type SessionDataKind = "facial" | "tool" | "eeg" | "screen";
+export type SessionDataKind = "facial" | "tool" | "eeg" | "screen" | "audio";
 
 export interface UploadSessionFileOptions {
   sessionId: string;

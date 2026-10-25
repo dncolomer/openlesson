@@ -74,22 +74,21 @@ async function seedMap(
   await client.query(
     `
     INSERT INTO public.workspaces (
-      id, user_id, author_id, title, root_topic, status, payment_status,
-      description, notes, workspace_goal, source_type,
+      id, user_id, author_id, title, root_topic, status,
+      description, notes,
       organization_id, is_public, is_agent_workspace, is_all_you_can_learn,
       is_play_copy, workspace_kind, aycl_category, aycl_summary
     ) VALUES (
-      $1, $2, $2, $3, $3, 'active', 'paid',
-      $4, $5, $6, 'topic',
-      $7, true, false, false,
-      false, 'standard', $8, $9
+      $1, $2, $2, $3, $3, 'active',
+      $4, $5,
+      $6, true, false, false,
+      false, 'standard', $7, $8
     )
     ON CONFLICT (id) DO UPDATE SET
       title = EXCLUDED.title,
       root_topic = EXCLUDED.root_topic,
       description = EXCLUDED.description,
       notes = EXCLUDED.notes,
-      workspace_goal = EXCLUDED.workspace_goal,
       is_public = true,
       is_play_copy = false,
       is_all_you_can_learn = false,
@@ -102,8 +101,7 @@ async function seedMap(
       owner.userId,
       map.title,
       map.description,
-      map.notesMarker,
-      map.goal,
+      `${map.notesMarker} ${map.goal}`,
       owner.organizationId,
       map.category,
       map.summary,

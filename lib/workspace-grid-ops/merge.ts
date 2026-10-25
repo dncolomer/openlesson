@@ -114,7 +114,7 @@ export async function handle_merge(ctx: GridOpContext): Promise<Response | null>
     const { plan, fileNames } = await loadWorkspaceContext(supabase, workspaceId);
     const context = composeBlockGenerationContext({
       workspaceTitle: plan?.title || plan?.root_topic || undefined,
-      goal: plan?.workspace_goal || plan?.root_topic,
+      goal: plan?.root_topic,
       notes: plan?.notes,
       fileNames,
     });

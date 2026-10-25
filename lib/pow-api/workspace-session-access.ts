@@ -14,6 +14,19 @@ import {
   ayclPrincipal,
 } from "@/lib/workspace-access-policy";
 import type { AuthContext } from "./types";
+import { derivedWorkspaceGoal } from "./conversion-goal";
+
+function withDerivedWorkspaceGoal<T extends {
+  title?: string | null;
+  description?: string | null;
+  notes?: string | null;
+  root_topic?: string | null;
+}>(row: T): T & { workspace_goal: string | null } {
+  return {
+    ...row,
+    workspace_goal: derivedWorkspaceGoal(row),
+  };
+}
 
 async function profileHasApiAccess(profile: {
   plan: string | null;
@@ -149,7 +162,7 @@ export async function requireWorkspaceOwnerSession(
       .single(),
     supabase
       .from("workspaces")
-      .select("id, title, root_topic, description, notes, workspace_goal, user_id, organization_id, workspace_kind")
+      .select("id, title, root_topic, description, notes, user_id, organization_id, workspace_kind")
       .eq("id", workspaceId)
       .single(),
   ]);
@@ -184,7 +197,7 @@ export async function requireWorkspaceOwnerSession(
 
   return {
     userId: user.id,
-    plan,
+    plan: withDerivedWorkspaceGoal(plan),
     auth,
     supabase: createAdminClient(),
     hasTeams: hasApiAccess,
@@ -247,7 +260,7 @@ export async function requireSessionWorkspaceProofOfWorkAccess(
     const { data: workspace } = await aycl.supabase
       .from("workspaces")
       .select(
-        "id, title, root_topic, description, notes, workspace_goal, user_id, organization_id, evaluation_mode, protocol_config, external_refs",
+        "id, title, root_topic, description, notes, user_id, organization_id, evaluation_mode, protocol_config, external_refs",
       )
       .eq("id", normalizedWorkspaceId)
       .single();
@@ -264,7 +277,7 @@ export async function requireSessionWorkspaceProofOfWorkAccess(
     };
     return {
       userId: principal.subjectId,
-      workspace,
+      workspace: withDerivedWorkspaceGoal(workspace),
       auth,
       supabase: aycl.supabase,
     };
@@ -286,7 +299,7 @@ export async function requireSessionWorkspaceProofOfWorkAccess(
     const { data: workspace } = await ile.supabase
       .from("workspaces")
       .select(
-        "id, title, root_topic, description, notes, workspace_goal, user_id, organization_id, evaluation_mode, protocol_config, external_refs",
+        "id, title, root_topic, description, notes, user_id, organization_id, evaluation_mode, protocol_config, external_refs",
       )
       .eq("id", normalizedWorkspaceId)
       .single();
@@ -314,7 +327,7 @@ export async function requireSessionWorkspaceProofOfWorkAccess(
     return {
       // Prefer participant user id; fall back to owner only as a non-attribution carrier.
       userId: participantUserId || ile.ownerUserId,
-      workspace,
+      workspace: withDerivedWorkspaceGoal(workspace),
       auth,
       supabase: ile.supabase,
       ileLinkId: ile.linkId,
@@ -339,7 +352,7 @@ export async function requireSessionWorkspaceProofOfWorkAccess(
     supabase
       .from("workspaces")
       .select(
-        "id, title, root_topic, description, notes, workspace_goal, user_id, organization_id, is_group, evaluation_mode, protocol_config, external_refs",
+        "id, title, root_topic, description, notes, user_id, organization_id, evaluation_mode, protocol_config, external_refs",
       )
       .eq("id", normalizedWorkspaceId)
       .single(),
@@ -350,10 +363,7 @@ export async function requireSessionWorkspaceProofOfWorkAccess(
   }
 
   const isOwner = workspace.user_id === user.id;
-  const isOrgMemberOfGroup =
-    workspace.is_group === true &&
-    !!workspace.organization_id &&
-    profile?.organization_id === workspace.organization_id;
+  const isOrgMemberOfGroup = false;
 
   let sessionRow: { id: string; user_id: string | null; metadata: unknown } | null = null;
   if (sessionId) {
@@ -401,7 +411,7 @@ export async function requireSessionWorkspaceProofOfWorkAccess(
 
   return {
     userId: user.id,
-    workspace,
+    workspace: withDerivedWorkspaceGoal(workspace),
     auth,
     supabase: createAdminClient(),
   };

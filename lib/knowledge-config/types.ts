@@ -1,6 +1,6 @@
 /**
  * Trajectory payload used by Knowledge projection widgets.
- * Live embeddings are flowcfg-v1-d96 (`workspace_flow_embeddings`).
+ * Live embeddings are flowcfg-v1-d96 (`session_embeddings`).
  */
 
 export type KnowledgeConfigSnapshotTrigger =

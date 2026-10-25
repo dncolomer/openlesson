@@ -25,6 +25,7 @@ import { isTapPracticeRequest, stampPoWPracticeFlag } from "@/lib/tap-practice";
 import { withConversationLanguageInstruction } from "@/lib/tutoring-languages";
 import { tapWorkCanvasTurnContextMessage } from "@/lib/tap-work-canvas";
 import { assemblePromptWorkspaceContext } from "@/lib/prompt-workspace-context";
+import { ileSessionChatCanvasReply } from "@/lib/learn-work-canvas";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -118,6 +119,7 @@ export async function POST(req: NextRequest) {
       conversationLanguage,
     );
 
+    const canvasAsk = body.canvasAsk === true;
     const canvasContext = body.workCanvasScene
       ? `\n\n${tapWorkCanvasTurnContextMessage(body.workCanvasScene, {
           workspace: assemblePromptWorkspaceContext(
@@ -131,10 +133,10 @@ export async function POST(req: NextRequest) {
     const response = await callXai([
       systemMessage(systemPrompt),
       userMessage(
-        `Conversation so far:\n${history || "None"}\n\nLatest submitted thought:\n${latestThought}${canvasContext}`,
+        `Conversation so far:\n${history || "None"}\n\nLatest submitted ${canvasAsk ? "canvas command" : "thought"}:\n${latestThought}${canvasContext}`,
       ),
     ], {
-      maxTokens: practice ? 280 : 500,
+      maxTokens: practice ? 280 : canvasAsk ? 800 : 500,
       temperature: practice ? 0.4 : 0.55,
       fetchTimeout: 60000,
     });
@@ -144,6 +146,7 @@ export async function POST(req: NextRequest) {
     }
 
     const heliosReply = response.data;
+    const canvasReply = canvasAsk ? ileSessionChatCanvasReply(String(heliosReply)) : null;
     let proofOfWorkCount = 0;
 
     // Fail closed: when a TAP session is in play, PoW must be recorded or we error.
@@ -216,7 +219,13 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(
       await withProofOfWorkApiResponse(
-        { message: heliosReply },
+        canvasReply
+          ? {
+              message: canvasReply.message || heliosReply,
+              canvasElements: canvasReply.canvasElements,
+              raw: canvasReply.raw,
+            }
+          : { message: heliosReply },
         {
           endpoint: "upload_tap_chat",
           workspace_id: workspaceId,

@@ -39,15 +39,17 @@ export async function GET(req: NextRequest) {
     "id, workspace_id, block_id, status, requested_duration_seconds, duration_seconds, participant_type, post_session, redirect_url, guest_user_id, assigned_user_id, created_at, started_at, completed_at, access_mode, public_token, entry_query_params, show_end_session, interaction_kind, session_shell";
   const [calibrate, verify] = await Promise.all([
     access.supabase
-      .from("workspace_calibrate_sessions")
-      .select(select)
+      .from("sessions")
+      .select("id, workspace_id, block_id, status, guest_user_id, assigned_user_id, created_at, access_mode, public_token, kind, guest_link")
       .eq("workspace_id", workspaceId)
+      .eq("kind", "calibrate")
       .not("private_token_hash", "is", null)
       .order("created_at", { ascending: false }),
     access.supabase
-      .from("workspace_verify_sessions")
-      .select(select)
+      .from("sessions")
+      .select("id, workspace_id, block_id, status, guest_user_id, assigned_user_id, created_at, access_mode, public_token, kind, guest_link")
       .eq("workspace_id", workspaceId)
+      .eq("kind", "verify")
       .not("private_token_hash", "is", null)
       .order("created_at", { ascending: false }),
   ]);
@@ -62,12 +64,16 @@ export async function GET(req: NextRequest) {
   }
 
   const origin = baseUrl(req);
-  const links = [...(calibrate.data || []), ...(verify.data || [])];
+  const links = [...(calibrate.data || []), ...(verify.data || [])].map((row) => ({
+    ...((row.guest_link as Record<string, unknown>) || {}),
+    ...row,
+    interaction_kind: row.kind === "calibrate" ? "calibrate" : "verify",
+  }));
   const tap_links = links.map((link) => {
     const url = guestLinkUrlFromPublicToken(
       origin,
       "tap",
-      link.public_token,
+      link.public_token as string | null,
       String(link.interaction_kind || ""),
     );
     return {

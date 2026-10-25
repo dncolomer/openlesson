@@ -7,14 +7,14 @@ import {
 } from "@/lib/workspace-kind";
 
 describe("parseWorkspaceKind", () => {
-  it("maps stored ids and aliases onto the three durable kinds", () => {
+  it("maps leftover aliases onto Learning", () => {
     expect(parseWorkspaceKind("standard")).toBe("standard");
-    expect(parseWorkspaceKind("knowledge_region")).toBe("knowledge_region");
-    expect(parseWorkspaceKind("knowledge-region")).toBe("knowledge_region");
-    expect(parseWorkspaceKind("knowledgeRegion")).toBe("knowledge_region");
-    expect(parseWorkspaceKind("calibration")).toBe("calibration");
-    expect(parseWorkspaceKind("calibrate")).toBe("calibration");
-    expect(parseWorkspaceKind("calibration_workspace")).toBe("calibration");
+    expect(parseWorkspaceKind("knowledge_region")).toBe("standard");
+    expect(parseWorkspaceKind("knowledge-region")).toBe("standard");
+    expect(parseWorkspaceKind("knowledgeRegion")).toBe("standard");
+    expect(parseWorkspaceKind("calibration")).toBe("standard");
+    expect(parseWorkspaceKind("calibrate")).toBe("standard");
+    expect(parseWorkspaceKind("calibration_workspace")).toBe("standard");
     expect(parseWorkspaceKind(undefined)).toBe("standard");
     expect(parseWorkspaceKind("learning")).toBe("standard");
   });
@@ -40,19 +40,11 @@ describe("parseWorkspaceKind", () => {
 });
 
 describe("noMapWorkspaceDashboardHref", () => {
-  it("sends knowledge_region and calibration to dashboard Flows", () => {
-    expect(noMapWorkspaceDashboardHref("knowledge_region")).toBe(
-      "/dashboard?tab=verification",
-    );
-    expect(noMapWorkspaceDashboardHref("knowledge-region")).toBe(
-      "/dashboard?tab=verification",
-    );
-    expect(noMapWorkspaceDashboardHref("calibration")).toBe(
-      "/dashboard?tab=calibration",
-    );
-    expect(noMapWorkspaceDashboardHref("calibrate")).toBe(
-      "/dashboard?tab=calibration",
-    );
+  it("does not treat leftover kinds as no-map workspaces", () => {
+    expect(noMapWorkspaceDashboardHref("knowledge_region")).toBeNull();
+    expect(noMapWorkspaceDashboardHref("knowledge-region")).toBeNull();
+    expect(noMapWorkspaceDashboardHref("calibration")).toBeNull();
+    expect(noMapWorkspaceDashboardHref("calibrate")).toBeNull();
     expect(noMapWorkspaceDashboardHref("standard")).toBeNull();
     expect(noMapWorkspaceDashboardHref(undefined)).toBeNull();
   });

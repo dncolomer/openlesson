@@ -133,37 +133,43 @@ instead of `block_sessions`.
 - **Dependencies:** PR 2
 - **Description:** Create `embedding_models` with three v1 rows (learn/calibrate/verify, algorithm `flowcfg-v1-d96`). Add `sessions.kind`, `sessions.result`, `sessions.field_model`, `sessions.block_id`, flow ids, `workspace_flow_embeddings.session_id`. Drop empty leftover tables with no remaining writers: partners, Solana proofs, map type library, agent assistant conversations. Do not drop tables that still have `.from()` writers.
 
-### PR 4: Delete Rabbit Hole, leads, and Map of Knowledge notify
+### PR 4: Delete Rabbit Hole, leads, and Map of Knowledge notify (shipped)
 
 - **Files/components affected:** `app/rabbit-hole/**`, `app/api/rabbit-hole/**`, `lib/rabbit-hole.ts`, `lib/map-of-knowledge/map-ready-notify-store.ts`, `scripts/import-rabbit-hole-questions.mjs`, `supabase/migrations/20261025210000_drop_rabbit_hole_leads_notify.sql`, related tests, `package.json` import script, `profiles` bonus columns
 - **Dependencies:** PR 3
-- **Description:** Remove the Rabbit Hole product, marketing leads, and map-ready notify. Drop those tables. Leave sounding “rabbit-hole” tap rules in Calibrate (different concept).
+- **Description:** Remove the Rabbit Hole product, marketing leads, and map-ready notify. Drop those tables. Leave sounding “rabbit-hole” tap rules in Calibrate (different concept). Shipped.
 
-### PR 5: Point leftover media writers at proof of work and drop sensor tables
+### PR 5: Point leftover media writers at proof of work and drop sensor tables (shipped)
 
 - **Files/components affected:** `lib/storage/media.ts`, `app/api/session-files/upload/route.ts`, `lib/storage/sessions.ts`, `scripts/verify-rls-policies.mjs`, `supabase/migrations/20261025220000_drop_session_sensor_tables.sql`
 - **Dependencies:** PR 3
 - **Description:** Session audio, transcript, screenshots, tool, EEG, facial, and analysis writes go to `workspace_proof_of_work` with an xAI file id. Then drop the per-sensor tables. Probes go with this PR if nothing else writes them.
 
-### PR 6: Remove Context files, Dantes resources, goals, and session plans
+### PR 6: Remove Context files, Dantes resources, goals, and session plans (shipped)
 
 - **Files/components affected:** `app/api/workspace/files/route.ts`, `app/api/workspace/external-resources/route.ts`, `lib/storage/session-plans.ts`, workspace Context UI, Goals panels, `supabase/migrations/20261025230000_drop_context_goals_session_plans.sql`
 - **Dependencies:** PR 3
 - **Description:** Unhook writers and screens for workspace files, Dantes links, workspace/block goals, and session plans. Drop those tables. Context notes on `workspaces.notes` stay. Map types stay on `workspaces.workspace_map_types`.
 
-### PR 7: Dual-write unified sessions and typed results
+### PR 7: Dual-write unified sessions and typed results (shipped)
 
 - **Files/components affected:** `lib/storage/sessions.ts`, `lib/guest-session-tables.ts`, `lib/calibration-flow-repository.ts`, `lib/verification-flow-repository.ts`, `lib/flow-embedding-store.ts`, `lib/pow-api/headless-session.ts`, Calibrate/Verify complete routes
 - **Dependencies:** PR 3
 - **Description:** Every new Learn, Calibrate, Verify, and headless run writes `sessions` with `kind`, parent ids, `result`, and `field_model`. Proof of work sets `session_id`. Embeddings set `session_id`. Guest tokens live on the session. Keep TAP/ILE tables readable until the next PR.
 
-### PR 8: Drop TAP/ILE session tables, identity tables, block_sessions, and headless cache
+### PR 8: Drop TAP/ILE session tables, identity tables, block_sessions, and headless cache (shipped)
 
 - **Files/components affected:** `supabase/migrations/20261025240000_drop_legacy_session_tables.sql`, `lib/guest-session-tables.ts`, TAP/ILE link mint routes, `lib/block-previous-sessions.ts`
 - **Dependencies:** PR 7
 - **Description:** After dual-read is gone, drop `workspace_calibrate_sessions`, `workspace_verify_sessions`, `workspace_learn_links`, identity tables, `workspace_calibration_proofs` (moved to `sessions.result`), `block_sessions`, `workspace_headless_sessions`. Guest URLs keep working via `sessions.private_token_hash`.
 
-### PR 9: Rename knowledge regions and attach them to a model plus a map or a flow
+### PR 10: Fold Verify results, rename keep tables, drop leftover columns and dead UI (shipped)
+
+- **Files/components affected:** `supabase/migrations/20261025260000_core_data_model_complete.sql`, `lib/core-tables.ts`, flow repositories, Context/Goals hosts, session audio, catalog selects
+- **Dependencies:** PR 9
+- **Description:** Fold `workspace_verification_results` into `sessions.result`. Rename keep tables to `calibrate_flows`, `verify_flows`, `session_embeddings`, `knowledge_regions`, `proof_of_work`. Drop leftover ILE/TAP/product columns, flow `workspace_id`, retired 64-d regions, and `session-audio`. Unmount Goals, Context files, and Dantes. Leftover workspace-kind aliases parse as Learning.
+
+### PR 9: Rename knowledge regions and attach them to a model plus a map or a flow (shipped)
 
 - **Files/components affected:** `lib/knowledge-config/custom-verification-model.ts`, `lib/pow-api/custom-verification-model-crud.ts`, `supabase/migrations/20261025250000_knowledge_regions.sql`, Data Studio region loaders
 - **Dependencies:** PR 3

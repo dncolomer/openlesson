@@ -90,13 +90,13 @@ async function resolveOwner(
 }
 
 async function deleteWorkspaceCascade(client: PgClient, workspaceId: string) {
-  await client.query(`DELETE FROM public.custom_verification_models WHERE workspace_id = $1`, [
+  await client.query(`DELETE FROM public.knowledge_regions WHERE workspace_id = $1`, [
     workspaceId,
   ]);
-  await client.query(`DELETE FROM public.workspace_flow_embeddings WHERE workspace_id = $1`, [
+  await client.query(`DELETE FROM public.session_embeddings WHERE workspace_id = $1`, [
     workspaceId,
   ]);
-  await client.query(`DELETE FROM public.workspace_proof_of_work WHERE workspace_id = $1`, [
+  await client.query(`DELETE FROM public.proof_of_work WHERE workspace_id = $1`, [
     workspaceId,
   ]);
   await client.query(`DELETE FROM public.workspaces WHERE id = $1`, [workspaceId]);
@@ -118,16 +118,15 @@ async function seedSet(
   }
 
   const workspaceId = randomUUID();
-  const workspaceKind = set.product === "calibration" ? "calibration" : "knowledge_region";
   await client.query(
     `INSERT INTO public.workspaces (
-       id, user_id, author_id, title, root_topic, status, payment_status,
-       description, notes, workspace_goal, source_type,
+       id, user_id, author_id, title, root_topic, status,
+       description, notes,
        organization_id, is_public, is_agent_workspace, workspace_kind
      ) VALUES (
-       $1, $2, $2, $3, $4, 'active', 'paid',
-       $5, $6, $7, 'topic',
-       $8, false, false, $9
+       $1, $2, $2, $3, $4, 'active',
+       $5, $6,
+       $7, false, false, 'standard'
      )`,
     [
       workspaceId,
@@ -136,9 +135,7 @@ async function seedSet(
       set.topic,
       set.description,
       `${set.marker} ${PRODUCTION_STUDIO_DEMO_MARKER} Production Data Studio sample.`,
-      set.goal,
       owner.organizationId,
-      workspaceKind,
     ],
   );
 
@@ -146,34 +143,34 @@ async function seedSet(
   const publicToken = `${set.publicTokenPrefix}-${flowId.slice(0, 8)}`;
   if (set.product === "verification") {
     await client.query(
-      `INSERT INTO public.workspace_verification_flows (
-         id, workspace_id, name, topic, questions, duration_minutes, action_catalog, public_token
-       ) VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8)`,
+      `INSERT INTO public.verify_flows (
+         id, name, topic, questions, duration_minutes, action_catalog, public_token, owner_user_id
+       ) VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7, $8)`,
       [
         flowId,
-        workspaceId,
         set.flowName,
         set.topic,
         JSON.stringify(set.questions),
         set.durationMinutes,
         set.actionCatalog,
         publicToken,
+        owner.userId,
       ],
     );
   } else {
     await client.query(
-      `INSERT INTO public.workspace_calibration_flows (
-         id, workspace_id, name, goal, questions, duration_minutes, action_catalog, public_token
-       ) VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8)`,
+      `INSERT INTO public.calibrate_flows (
+         id, name, goal, questions, duration_minutes, action_catalog, public_token, owner_user_id
+       ) VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7, $8)`,
       [
         flowId,
-        workspaceId,
         set.flowName,
         set.goal,
         JSON.stringify(set.questions),
         set.durationMinutes,
         set.actionCatalog,
         publicToken,
+        owner.userId,
       ],
     );
   }
@@ -188,46 +185,57 @@ async function seedSet(
     const createdAt = new Date(now - (encoded.length - index) * 60_000).toISOString();
     if (set.product === "verification") {
       await client.query(
-        `INSERT INTO public.workspace_verification_identities (flow_id, identity) VALUES ($1, $2)`,
-        [flowId, run.identity],
-      );
-      await client.query(
-        `INSERT INTO public.workspace_verification_results (
-           id, flow_id, workspace_id, identity, source, question_id, prompt, embedding, created_at
-         ) VALUES ($1, $2, $3, $4, 'runner', $5, $6, $7::jsonb, $8)`,
+        `INSERT INTO public.sessions (
+           id, user_id, problem, status, kind, verify_flow_id, identity, workspace_id, result, created_at
+         ) VALUES (
+           $1, $2, 'Verify', 'completed', 'verify', $3, $4, $5, $6::jsonb, $7
+         )`,
         [
           runId,
+          owner.userId,
           flowId,
-          workspaceId,
           run.identity,
-          set.questions[0]?.id ?? null,
-          run.speech,
-          JSON.stringify(run.embedding.vector),
+          workspaceId,
+          JSON.stringify({
+            kind: "verify",
+            projectedPolicy: null,
+            knowledgeRegionId: null,
+            answers: [
+              {
+                id: runId,
+                identity: run.identity,
+                source: "runner",
+                questionId: set.questions[0]?.id ?? null,
+                prompt: run.speech,
+                createdAt,
+              },
+            ],
+          }),
           createdAt,
         ],
       );
     } else {
       await client.query(
-        `INSERT INTO public.workspace_calibration_identities (flow_id, identity) VALUES ($1, $2)`,
-        [flowId, run.identity],
-      );
-      await client.query(
-        `INSERT INTO public.workspace_calibration_proofs (
-           id, flow_id, workspace_id, identity, events, created_at
-         ) VALUES ($1, $2, $3, $4, $5::jsonb, $6)`,
+        `INSERT INTO public.sessions (
+           id, user_id, problem, status, kind, calibrate_flow_id, identity, workspace_id, result, guest_link, created_at
+         ) VALUES (
+           $1, $2, 'Calibrate', 'completed', 'calibrate', $3, $4, $5, $6::jsonb, $7::jsonb, $8
+         )`,
         [
           runId,
+          owner.userId,
           flowId,
-          workspaceId,
           run.identity,
-          JSON.stringify(studioDemoCalibrationEvents(run)),
+          workspaceId,
+          JSON.stringify({ kind: "calibrate", legacyEvents: studioDemoCalibrationEvents(run) }),
+          JSON.stringify({ events: studioDemoCalibrationEvents(run), source: "calibration_proof" }),
           createdAt,
         ],
       );
     }
 
     await client.query(
-      `INSERT INTO public.workspace_flow_embeddings (
+      `INSERT INTO public.session_embeddings (
          id, workspace_id, flow_kind, flow_id, run_id, identity, source,
          embedding_model_id, dim, vector, raw, created_at
        ) VALUES (
@@ -249,7 +257,7 @@ async function seedSet(
       ],
     );
     await client.query(
-      `INSERT INTO public.workspace_proof_of_work (
+      `INSERT INTO public.proof_of_work (
          workspace_id, proof_of_work_type, file_name, mime_type,
          file_size, xai_file_id, timestamp_ms, chunk_index, metadata,
          tool_name, tool_action, user_id, organization_id
@@ -279,7 +287,7 @@ async function seedSet(
 
   for (const region of [regions.path, regions.voice]) {
     await client.query(
-      `INSERT INTO public.custom_verification_models (
+      `INSERT INTO public.knowledge_regions (
          workspace_id, name, description, embedding_model_id, dim,
          centroid, cohort_cohesion, mean_radius, cosine_threshold,
          subject_count, subjects, created_by

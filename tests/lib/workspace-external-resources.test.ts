@@ -194,12 +194,8 @@ describe("pure CRUD field shapes", () => {
 });
 
 describe("structural: Context Dantes + no map prompt-impact", () => {
-  it("Context hosts Dantes + add-link; map drops How context shapes practice", () => {
-    expect(existsSync(join(ROOT, "lib/workspace-external-resources.ts"))).toBe(true);
+  it("Context is notes-only; map drops How context shapes practice", () => {
     expect(existsSync(join(ROOT, "components/WorkspaceContextPanel.tsx"))).toBe(true);
-    expect(existsSync(join(ROOT, "components/WorkspaceDantesSearch.tsx"))).toBe(true);
-    expect(existsSync(join(ROOT, "components/WorkspaceExternalAddLinkForm.tsx"))).toBe(true);
-    expect(existsSync(join(ROOT, "app/api/workspace/external-resources/route.ts"))).toBe(true);
     expect(
       existsSync(
         join(ROOT, "supabase/migrations/20260731200000_workspace_external_resources.sql"),
@@ -218,10 +214,10 @@ describe("structural: Context Dantes + no map prompt-impact", () => {
     expect(mapAuth).toContain("data-workspace-map-authoring-pane");
 
     const context = read("components/WorkspaceContextPanel.tsx");
-    expect(context).toContain("WorkspaceDantesSearch");
-    expect(context).toContain("WorkspaceExternalAddLinkForm");
-    expect(context).toContain("externalResources");
-    expect(context).toContain("/api/workspace/external-resources");
+    expect(context).not.toContain("WorkspaceDantesSearch");
+    expect(context).not.toContain("WorkspaceExternalAddLinkForm");
+    expect(context).not.toContain("/api/workspace/external-resources");
+    expect(context).toContain("showFiles={false}");
 
     const notes = read("components/WorkspaceNotesFilesPanel.tsx");
     expect(notes).toContain('data-resource-kind="external"');
@@ -231,11 +227,7 @@ describe("structural: Context Dantes + no map prompt-impact", () => {
     expect(notes).toContain("externalResources");
 
     const gen = read("app/api/workspace/generate/route.ts");
-    expect(gen).toContain("workspace_external_resources");
-    expect(gen).toContain("templateExternalCreates");
-    expect(gen).toContain("source: \"create\"");
-    // Dual-write notes still receive selected resourceItems (not empty []).
-    expect(gen).toMatch(/composeTemplateWorkspaceNotes\(\s*topicName,\s*resourceItems/);
+    expect(gen).not.toMatch(/\.from\(\s*["']workspace_external_resources["']\s*\)/);
 
     const api = read("app/api/workspace/external-resources/route.ts");
     // Public workspace viewers can list (owner OR is_public), like files GET.

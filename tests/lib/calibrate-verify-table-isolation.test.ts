@@ -17,30 +17,34 @@ import { tapSessionInsertRetryKind } from "@/lib/pow-api/tap-link-config";
 import { tapStartInteractionKind } from "@/lib/exercise-tap";
 
 function fakeClient() {
-  const calls: { table: string; op: "select" | "insert" }[] = [];
+  const calls: { table: string; op: "select" | "insert"; kind?: string; row?: Record<string, unknown> }[] = [];
   const rows: Record<string, Record<string, unknown>> = {};
   return {
     calls,
     from(table: string) {
+      let kind: string | undefined;
       const chain = {
         select() {
-          calls.push({ table, op: "select" });
           return chain;
         },
         insert(row: Record<string, unknown>) {
-          calls.push({ table, op: "insert" });
-          rows[table] = row;
+          calls.push({ table, op: "insert", kind: String(row.kind || ""), row });
+          rows[String(row.kind || table)] = row;
           return chain;
         },
-        eq() {
+        eq(column: string, value: unknown) {
+          if (column === "kind") kind = String(value);
           return chain;
         },
-        maybeSingle: async () => ({
-          data: rows[table] ?? null,
-          error: null,
-        }),
+        maybeSingle: async () => {
+          calls.push({ table, op: "select", kind });
+          return {
+            data: kind ? rows[kind] ?? null : null,
+            error: null,
+          };
+        },
         single: async () => ({
-          data: rows[table] ?? { id: "row-1" },
+          data: kind ? rows[kind] ?? { id: "row-1" } : { id: "row-1" },
           error: null,
         }),
       };
@@ -57,13 +61,15 @@ describe("Calibrate vs Verify table isolation", () => {
     expect(write.interaction_kind).toBe("calibrate");
 
     await insertGuestSession(client, write.table, {
+      user_id: "u1",
       interaction_kind: write.interaction_kind,
       private_token_hash: "cal-hash",
     });
     const found = await findCalibrateSessionByToken(client, "cal-hash");
     expect(found).toBeTruthy();
-    expect(client.calls.every((c) => c.table === CALIBRATE_SESSIONS_TABLE)).toBe(true);
-    expect(client.calls.some((c) => c.table === VERIFY_SESSIONS_TABLE)).toBe(false);
+    expect(client.calls.every((c) => c.table === "sessions")).toBe(true);
+    expect(client.calls.filter((c) => c.op === "insert").every((c) => c.kind === "calibrate")).toBe(true);
+    expect(client.calls.some((c) => c.kind === "verify")).toBe(false);
   });
 
   it("inserting and opening Verify never reads or writes Calibrate", async () => {
@@ -74,14 +80,16 @@ describe("Calibrate vs Verify table isolation", () => {
     expect(write.session_shell).toBe("dialog");
 
     await insertGuestSession(client, write.table, {
+      user_id: "u1",
       interaction_kind: write.interaction_kind,
       session_shell: write.session_shell,
       private_token_hash: "ver-hash",
     });
     const found = await findVerifySessionByToken(client, "ver-hash");
     expect(found).toBeTruthy();
-    expect(client.calls.every((c) => c.table === VERIFY_SESSIONS_TABLE)).toBe(true);
-    expect(client.calls.some((c) => c.table === CALIBRATE_SESSIONS_TABLE)).toBe(false);
+    expect(client.calls.every((c) => c.table === "sessions")).toBe(true);
+    expect(client.calls.filter((c) => c.op === "insert").every((c) => c.kind === "verify")).toBe(true);
+    expect(client.calls.some((c) => c.kind === "calibrate")).toBe(false);
   });
 
   it("exercise Verify writes session_shell solo on the Verify table", () => {

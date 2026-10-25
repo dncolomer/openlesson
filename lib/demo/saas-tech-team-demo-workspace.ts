@@ -35,8 +35,6 @@ export const SAAS_TECH_DEMO_WORKSPACE = {
   // Marker stays in notes only (internal idempotency); title stays human/workspace-like.
   notes:
     `${SAAS_TECH_DEMO_MARKER} Internal mobility cohort for Helios eng role mapping — multi-subject PoW, role regions, and core-backend cohort region.`,
-  source_type: "topic" as const,
-  payment_status: "paid" as const,
   status: "active" as const,
 };
 

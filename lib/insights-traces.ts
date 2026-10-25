@@ -77,7 +77,7 @@ export async function fetchWorkspaceInsightThoughts(
   blockId?: string | null,
 ): Promise<WorkspaceInsightThought[]> {
   let query = supabase
-    .from("workspace_proof_of_work")
+    .from("proof_of_work")
     .select("id, session_id, block_id, timestamp_ms, created_at, metadata, tool_action")
     .eq("workspace_id", workspaceId)
     .eq("tool_name", ILE_TRACE_TOOL_NAME)

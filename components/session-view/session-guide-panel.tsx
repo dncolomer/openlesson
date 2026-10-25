@@ -146,7 +146,7 @@ export function SessionGuidePanel({
               plate
               bar
               index={commitIndex}
-              usable={Boolean(bridge?.craft) && ileCanvasCraftInsightUsable()}
+              usable={ileCanvasCraftInsightUsable()}
               onClick={() => bridge?.craft?.open()}
             />
           </div>

@@ -178,9 +178,8 @@ describe("TAP client wires purity UX", () => {
     expect(client).toContain("sessionEndedImpure");
     expect(client).toContain("data-tap-session-impure");
     expect(client).toContain("data-tap-impure-retry");
-    // Practice purity-close uses the same invalidated copy, not practice-done.
-    expect(client).toContain('phase === "practice_done" && !sessionEndedImpure');
-    expect(client).toContain('(phase === "results" || phase === "practice_done") && sessionEndedImpure');
+    expect(client).toContain("phase === \"results\" && sessionEndedImpure");
+    expect(client).not.toContain("practice_done");
   });
 
   it("Exercise TAP shows the same Session Invalidated screen on purity close", () => {

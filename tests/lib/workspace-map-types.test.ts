@@ -151,7 +151,7 @@ describe("workspace map types helpers", () => {
         isOwner: true,
         workspaceKind: "knowledge_region",
       }),
-    ).not.toContain("map_types");
+    ).toContain("map_types");
 
     const t = (key: string) => key;
     const enCopy = JSON.parse(read("messages/en.json")) as {

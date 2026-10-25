@@ -59,7 +59,7 @@ function writeScratch(name: string, body: string) {
 }
 
 function createListClient(input: {
-  joins: Array<{ session_id: string; created_at: string }>;
+  joins: Array<{ session_id?: string; id?: string; created_at: string }>;
   sessions: Array<{
     id: string;
     created_at: string;
@@ -99,8 +99,8 @@ describe("listBlockPreviousSessions (shipped list entry)", () => {
   it("exposes session id + timestamp from block_sessions + sessions", async () => {
     const client = createListClient({
       joins: [
-        { session_id: "sess-b", created_at: "2026-08-28T05:42:58Z" },
-        { session_id: "sess-a", created_at: "2026-08-28T05:41:57Z" },
+        { id: "sess-b", created_at: "2026-08-28T05:42:58Z" },
+        { id: "sess-a", created_at: "2026-08-28T05:41:57Z" },
       ],
       sessions: [
         { id: "sess-a", created_at: "2026-08-28T05:41:57.000Z", status: "active" },
@@ -123,7 +123,7 @@ describe("listBlockPreviousSessions (shipped list entry)", () => {
         status: "active",
       },
     ]);
-    expect(client.recorded.tables[0]).toBe("block_sessions");
+    expect(client.recorded.tables[0]).toBe("sessions");
     expect(client.recorded.tables).toContain("sessions");
     expect(list[0].sessionId).toBeTruthy();
     expect(list[0].startedAt).toBeTruthy();
@@ -210,8 +210,8 @@ describe("listBlockPreviousSessions (shipped list entry)", () => {
     expect(discardRoute).toContain("deleteSessionPlanBySessionId");
     expect(discardRoute).toContain("ileUnsavedExitSessionPatch");
     expect(discardRoute).toContain("guardSessionRoute");
-    expect(discardRoute).not.toMatch(/\.from\(\s*["']workspace_proof_of_work["']\s*\)/);
-    expect(discardRoute).toContain("workspace_proof_of_work");
+    expect(discardRoute).not.toMatch(/\.from\(\s*["']proof_of_work["']\s*\)/);
+    expect(discardRoute).toContain("proof_of_work");
   });
 
   it("normalize keeps id + timestamp and drops empties", () => {
@@ -425,27 +425,22 @@ describe("Practice drawer labels and previous-sessions UI", () => {
     ).toBe(false);
 
     const mapClient = {
-      from(table: string) {
-        if (table === "block_sessions") {
-          const q = {
-            select() {
-              return q;
-            },
-            eq() {
-              return Promise.resolve({
-                data: [
-                  { block_id: "b-saved", session_id: "s-saved" },
-                  { block_id: "b-discard", session_id: "s-discard" },
-                ],
-                error: null,
-              });
-            },
-          };
-          return q;
-        }
+      from(_table: string) {
         const q = {
           select() {
             return q;
+          },
+          eq() {
+            return q;
+          },
+          not() {
+            return Promise.resolve({
+              data: [
+                { block_id: "b-saved", id: "s-saved" },
+                { block_id: "b-discard", id: "s-discard" },
+              ],
+              error: null,
+            });
           },
           in() {
             return Promise.resolve({

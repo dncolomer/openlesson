@@ -99,34 +99,17 @@ export interface AiSplitPayload {
 export async function loadWorkspaceContext(supabase: SupabaseClient, workspaceId: string) {
   const { data: plan } = await supabase
     .from("workspaces")
-    .select("id, title, root_topic, description, notes, workspace_goal, unusable_cells")
+    .select("id, title, root_topic, description, notes, unusable_cells")
     .eq("id", workspaceId)
     .single();
 
-  const { data: files } = await supabase
-    .from("workspace_files")
-    .select("id, file_name")
-    .eq("workspace_id", workspaceId);
-
-  // External resources table may not be migrated yet — degrade gracefully.
-  let externalRows: Array<{
+  const files: Array<{ id: string; file_name?: string | null }> = [];
+  const externalRows: Array<{
     id: string;
     title?: string | null;
     url?: string | null;
     description?: string | null;
   }> = [];
-  const externalQuery = await supabase
-    .from("workspace_external_resources")
-    .select("id, title, url, description")
-    .eq("workspace_id", workspaceId)
-    .order("sort_order", { ascending: true });
-  if (externalQuery.error) {
-    const msg = externalQuery.error.message || "";
-    if (!/schema cache|does not exist|workspace_external_resources/i.test(msg)) {
-      console.error("[grid-ops] external resources load:", externalQuery.error);
-    }
-  } else {
-    externalRows = (externalQuery.data || []) as typeof externalRows;
   }
 
   const fileRows = (files || []) as Array<{ id?: string; file_name?: string }>;

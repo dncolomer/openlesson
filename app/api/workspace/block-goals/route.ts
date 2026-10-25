@@ -55,7 +55,7 @@ async function resolveGoalsAccess(
   const admin = createAdminClient();
   const { data: plan } = await admin
     .from("workspaces")
-    .select("id, user_id, is_group")
+    .select("id, user_id")
     .eq("id", workspaceId)
     .single();
 
@@ -69,7 +69,7 @@ async function resolveGoalsAccess(
   const access = canAccessWorkspaceEval({
     callerUserId: session.user.id,
     workspaceOwnerId: plan.user_id,
-    isGroup: Boolean(plan.is_group),
+    isGroup: false,
   });
 
   if (mode === "write") {

@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
 
     const { data: plan, error: planError } = await supabase
       .from("workspaces")
-      .select("id, title, root_topic, notes, workspace_goal, unusable_cells")
+      .select("id, title, root_topic, description, notes, unusable_cells")
       .eq("id", workspaceId)
       .single();
     if (planError || !plan) return jsonError(404, "Workspace not found");
@@ -73,17 +73,14 @@ export async function POST(req: NextRequest) {
       return jsonError(409, "Select an empty cell");
     }
 
-    const { data: files } = await supabase
-      .from("workspace_files")
-      .select("file_name")
-      .eq("workspace_id", workspaceId);
+    const files: Array<{ file_name?: string | null }> = [];
 
     const planResult = buildGenerateMap({
       anchor: { row: anchorRow, col: anchorCol },
       modifier,
       mapTypeId,
       occupied,
-      goal: plan.workspace_goal || plan.root_topic,
+      goal: plan.description || plan.notes || plan.root_topic,
       notes: plan.notes,
       fileNames: (files || [])
         .map((file) => (typeof file.file_name === "string" ? file.file_name : ""))

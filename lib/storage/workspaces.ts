@@ -32,13 +32,9 @@ export async function getWorkspaces(options?: { includeArchived?: boolean }): Pr
     author_id: p.author_id,
     remix_count: p.remix_count || 0,
     original_workspace_id: p.original_workspace_id,
-    source_type: p.source_type,
-    source_url: p.source_url,
-    source_summary: p.source_summary,
     notes: p.notes,
     cover_image_url: p.cover_image_url,
     workspace_kind: parseWorkspaceKind(p.workspace_kind),
-    is_group: p.is_group || false,
     learning_model_size:
       p.learning_model_size === 8 || p.learning_model_size === 16 ? p.learning_model_size : 4,
     is_all_you_can_learn: Boolean(p.is_all_you_can_learn),
@@ -109,7 +105,7 @@ export async function getWorkspaceById(workspaceId: string): Promise<Workspace |
   const { data } = await supabase
     .from("workspaces")
     .select(
-      "id, root_topic, status, created_at, is_public, author_id, user_id, remix_count, original_workspace_id, source_type, source_url, source_summary, notes, workspace_kind, learning_model_size"
+      "id, root_topic, status, created_at, is_public, author_id, user_id, remix_count, original_workspace_id, notes, workspace_kind, learning_model_size"
     )
     .eq("id", workspaceId)
     .single();
@@ -126,9 +122,6 @@ export async function getWorkspaceById(workspaceId: string): Promise<Workspace |
     author_id: data.author_id,
     remix_count: data.remix_count || 0,
     original_workspace_id: data.original_workspace_id,
-    source_type: data.source_type || "topic",
-    source_url: data.source_url,
-    source_summary: data.source_summary,
     notes: data.notes || undefined,
     workspace_kind: parseWorkspaceKind(data.workspace_kind),
     learning_model_size:

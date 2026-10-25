@@ -29,7 +29,7 @@ export async function listAgentWorkspaces(
   let query = supabase
     .from("workspaces")
     .select(
-      "id, title, root_topic, description, notes, workspace_goal, status, workspace_kind, learning_model_size, is_public, created_at, updated_at",
+      "id, title, root_topic, description, notes, status, workspace_kind, learning_model_size, is_public, created_at, updated_at",
       {
         count: "exact",
       },

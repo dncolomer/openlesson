@@ -27,14 +27,10 @@ export async function GET(request: NextRequest) {
     return jsonError(404, "Session not found");
   }
 
-  const { data: probeRows } = await ctx.supabase
-    .from("probes")
-    .select("*")
-    .eq("session_id", sessionId)
-    .order("timestamp_ms", { ascending: true });
+  const probeRows = Array.isArray(sessionRow.probes) ? sessionRow.probes : [];
 
   return NextResponse.json({
     session: sessionRow,
-    probes: probeRows || [],
+    probes: probeRows,
   });
 }

@@ -28,7 +28,7 @@ export const DASHBOARD_HOME_HERO_COUNT = 5;
 export const DASHBOARD_HOME_SECONDARY_COUNT = 8;
 export const PUBLIC_MAP_CARD_SUMMARY_MAX = 160;
 export const PUBLIC_MAP_CATALOG_SELECT =
-  "id, title, root_topic, description, workspace_goal, cover_image_url, created_at, is_public, is_all_you_can_learn, is_play_copy, workspace_kind, aycl_category, aycl_summary, aycl_full_price_cents";
+  "id, title, root_topic, description, cover_image_url, created_at, is_public, is_all_you_can_learn, is_play_copy, workspace_kind, aycl_category, aycl_summary, aycl_full_price_cents";
 
 export const PUBLISH_PLAY_COPY_MESSAGE =
   "Play copies cannot be listed on Home";
@@ -38,7 +38,7 @@ export type PublicMapCatalogRow = {
   title?: unknown;
   root_topic?: unknown;
   description?: unknown;
-  workspace_goal?: unknown;
+
   cover_image_url?: unknown;
   created_at?: unknown;
   is_public?: unknown;
@@ -133,7 +133,6 @@ export function presentPublicMapCatalogItem(
   const summary =
     clean(row.aycl_summary) ||
     clean(row.description) ||
-    clean(row.workspace_goal) ||
     null;
   const isAycl = Boolean(row.is_all_you_can_learn);
   const priceLabel = isAycl

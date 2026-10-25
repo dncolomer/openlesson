@@ -72,8 +72,8 @@ export async function PUT(
       updates.description = description.trim() || null;
     }
 
-    if ("workspace_goal" in body) {
-      updates.workspace_goal =
+    if ("workspace_goal" in body && updates.description === undefined) {
+      updates.description =
         workspace_goal === null ? null : normalizeWorkspaceGoal(workspace_goal);
     }
 
@@ -116,7 +116,7 @@ export async function PUT(
     // Verify the update
     const { data: verifyPlan } = await supabase
       .from("workspaces")
-      .select("is_public, title, description, workspace_goal")
+      .select("is_public, title, description")
       .eq("id", workspaceId)
       .single();
 
@@ -145,7 +145,7 @@ export async function PUT(
     }
 
     if ("workspace_goal" in body) {
-      response.workspace_goal = verifyPlan?.workspace_goal;
+      response.workspace_goal = verifyPlan?.description ?? null;
     }
 
     if ("learning_model_size" in body) {

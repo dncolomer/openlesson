@@ -102,50 +102,34 @@ describe("tap-practice pure helpers", () => {
 });
 
 describe("TAP client practice surface (not TAP Learning)", () => {
-  it("exposes Practice First as first 2×2 card, practice banner, done+restart, and live mechanics", () => {
+  it("does not expose Practice First on Verify briefing, live, or done screens", () => {
     const client = readTapScoreSurface();
     const cards = fs.readFileSync(path.join(ROOT, "components/TapStartingTopicCards.tsx"), "utf8");
-    expect(cards).toContain("data-tap-practice-first");
-    expect(cards).toContain('data-tap-topic-grid={showPractice ? "2x2-practice"');
-    expect(cards).toContain("PracticeFirstCard");
-    expect(client).toContain("onPracticeFirst");
-    expect(client).toContain("data-tap-practice-pill");
-    expect(client).toContain("data-tap-practice-done");
-    expect(client).toContain("data-tap-practice-restart");
-    expect(client).toContain("practice: true");
-    expect(client).toContain("TAP_PRACTICE_DURATION");
-    expect(client).toContain("restartBriefingFlow");
-    // No separate full-width practice button above the grid
-    expect(client).not.toContain("data-tap-practice-first");
-    // Full live mechanics still present on the shared live phase
+    expect(cards).not.toContain("data-tap-practice-first");
+    expect(cards).not.toContain("PracticeFirstCard");
+    expect(cards).not.toContain("onPracticeFirst");
+    expect(cards).toContain('data-tap-topic-grid="topics"');
+    expect(client).not.toContain("onPracticeFirst");
+    expect(client).not.toContain("choosePractice");
+    expect(client).not.toContain("data-tap-practice-pill");
+    expect(client).not.toContain("data-tap-practice-done");
+    expect(client).not.toContain("data-tap-practice-restart");
+    expect(client).not.toContain("TapPracticePill");
+    expect(client).not.toMatch(/phase:\s*"practice_done"|setPhase\("practice_done"\)/);
     expect(client).toContain("TAP_SILENCE_AUTO_STASH_MS");
     expect(client).not.toContain("data-tap-session-purity");
     expect(client).not.toContain("data-tap-transcript-fade");
     expect(client).toMatch(/phase:\s*"live"|setPhase\("live"\)/);
-    expect(client).toMatch(/phase:\s*"practice_done"|setPhase\("practice_done"\)/);
-
-    const en = JSON.parse(fs.readFileSync(path.join(ROOT, "messages/en.json"), "utf8")) as {
-      tap: { practice: Record<string, string> };
-    };
-    expect(en.tap.practice.practiceFirst.toLowerCase()).toContain("practice first");
-    expect(en.tap.practice.practiceFirstHint.toLowerCase()).toContain("5 minute");
-    expect(en.tap.practice.bannerTitle.toLowerCase()).toContain("5-minute");
-    expect(en.tap.practice.doneTitle.toLowerCase()).toContain("practice session is done");
-    // Early stop / impure still practice
-    expect(client).toContain("practice: isPracticeModeRef.current");
     expect(client).toContain("sessionQuality: impure ? \"impure\" : \"pure\"");
-    expect(client).toMatch(/phase:\s*"practice_done"|setPhase\("practice_done"\)/);
   });
 
-  it("keeps Practice start label width stable while loading (no card reflow)", () => {
+  it("keeps Start label width stable while loading (no card reflow)", () => {
     const cards = fs.readFileSync(path.join(ROOT, "components/TapStartingTopicCards.tsx"), "utf8");
-    // Dual-label grid reserves space for both idle and busy text
     expect(cards).toContain("data-stable-start-label");
     expect(cards).toContain("StableStartButtonLabel");
     expect(cards).toMatch(/inline-grid place-items-center/);
-    // Must not swap a single span's text (that grew the button and shifted the card)
     expect(cards).not.toMatch(
-      /data-tap-practice-first[\s\S]*?<span>\{\s*isThisStarting\s*\?\s*startingLabel\s*:\s*startLabel\s*\}<\/span>/,
+      /<span>\{\s*isThisStarting\s*\?\s*startingLabel\s*:\s*startLabel\s*\}<\/span>/,
     );
   });
 
@@ -173,12 +157,12 @@ describe("TAP client practice surface (not TAP Learning)", () => {
     expect(ile).not.toContain("tap-practice");
   });
 
-  it("keeps practice cue as a pill next to signed-as — stash/submit box stays neutral", () => {
+  it("keeps the live control strip without a practice pill — stash/submit box stays neutral", () => {
     const client = readTapScoreSurface();
-    expect(client).toContain("data-tap-practice-pill");
+    expect(client).not.toContain("data-tap-practice-pill");
     expect(client).not.toContain("data-tap-practice-banner");
     expect(client).not.toContain("SessionIdentityBadge");
-    expect(client).toContain("TapPracticePill");
+    expect(client).not.toContain("TapPracticePill");
     expect(client).toContain('data-tap-live-control-strip');
     expect(client).not.toMatch(/isPracticeMode\s*\?\s*[\s\S]*border-cyan-400\/30 bg-cyan-950\/40/);
     expect(client).toContain('data-tap-aesthetic-section={kind}');

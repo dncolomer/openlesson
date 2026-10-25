@@ -40,7 +40,7 @@ async function main() {
 
   try {
     const ws = await client.query(
-      `SELECT w.id, w.title, w.description, w.notes, w.workspace_goal, w.organization_id,
+      `SELECT w.id, w.title, w.description, w.notes, w.organization_id,
               w.user_id, u.email AS owner_email, p.is_admin, p.is_org_admin
        FROM public.workspaces w
        JOIN auth.users u ON u.id = w.user_id
@@ -94,7 +94,7 @@ async function main() {
       `SELECT count(*)::int AS n,
               count(DISTINCT guest_user_id)::int AS guest_subjects,
               count(*) FILTER (WHERE user_id = $2 AND guest_user_id IS NULL)::int AS owner_rows
-       FROM public.workspace_proof_of_work
+       FROM public.proof_of_work
        WHERE workspace_id = $1`,
       [workspaceId, ownerUserId],
     );
@@ -125,7 +125,7 @@ async function main() {
       `SELECT count(*)::int AS n,
               count(DISTINCT identity)::int AS guest_subjects,
               count(*) FILTER (WHERE identity = $3)::int AS owner_snaps
-       FROM public.workspace_flow_embeddings
+       FROM public.session_embeddings
        WHERE workspace_id = $1
          AND embedding_model_id = $2`,
       [workspaceId, FLOW_EMBEDDING_MODEL_ID, ownerUserId],
@@ -149,12 +149,12 @@ async function main() {
 
     const regions = await client.query(
       `SELECT id, name, description, subjects, cosine_threshold, subject_count, centroid
-       FROM public.custom_verification_models
+       FROM public.knowledge_regions
        WHERE workspace_id = $1
        ORDER BY name`,
       [workspaceId],
     );
-    console.log(`[verify] custom_verification_models=${regions.rows.length}`);
+    console.log(`[verify] knowledge_regions=${regions.rows.length}`);
     for (const r of regions.rows) {
       console.log(
         `  - ${r.name} subjects=${r.subject_count} thr=${r.cosine_threshold}`,
@@ -192,7 +192,7 @@ async function main() {
 
     const subjectSnaps = await client.query(
       `SELECT s.identity AS subject_guest_user_id, NULL::uuid AS subject_user_id, s.vector, g.metadata, u.email AS user_email
-       FROM public.workspace_flow_embeddings s
+       FROM public.session_embeddings s
        LEFT JOIN public.organization_guest_users g ON g.id::text = s.identity
        LEFT JOIN auth.users u ON u.id::text = s.identity
        WHERE s.workspace_id = $1

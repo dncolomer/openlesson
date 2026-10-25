@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
 
     const { data: workspace } = await supabase
       .from("workspaces")
-      .select("title, root_topic, workspace_goal")
+      .select("title, root_topic, description, notes")
       .eq("id", workspaceId)
       .maybeSingle();
 
@@ -110,7 +110,8 @@ export async function POST(req: NextRequest) {
         (workspace as { root_topic?: string | null } | null)?.root_topic ||
         null,
       workspaceGoal:
-        (workspace as { workspace_goal?: string | null } | null)?.workspace_goal ||
+        (workspace as { description?: string | null } | null)?.description ||
+        (workspace as { notes?: string | null } | null)?.notes ||
         null,
       blocks,
       currentEdges,

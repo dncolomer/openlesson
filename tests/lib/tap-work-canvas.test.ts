@@ -455,6 +455,14 @@ describe("TAP Work canvas workspace+block domain context (shipped)", () => {
     expect(route).toContain("tapScoreBriefToPromptWorkspaceInput");
     expect(route).toContain("assemblePromptWorkspaceContext");
     expect(route).toContain("focusedBlockId: blockId || access.blockId");
+    expect(route).toContain("body.canvasAsk === true");
+    expect(route).toContain("ileSessionChatCanvasReply");
+    const flow = read("components/tap-score/use-tap-score-flow.ts");
+    expect(flow).toContain("postVerificationCanvasAsk");
+    expect(flow).toContain("/api/verification-flow/public/");
+    expect(flow).toContain("postIleSessionChat");
+    expect(flow).toContain("ileWorkCanvasAskFromSessionChat");
+    expect(flow).not.toContain("return { text: input.prompt, elements: null, origin: null, raw: input.prompt }");
     const phases = read("components/tap-score/tap-score-phases.tsx");
     expect(phases).toContain("workspace: { workspaceTitle }");
     expect(phases).toContain("onAskSelected={handleAskSelected}");

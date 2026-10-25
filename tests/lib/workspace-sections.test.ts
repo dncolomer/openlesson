@@ -184,25 +184,19 @@ describe("availableWorkspaceSections", () => {
     ).toEqual(["workspace"]);
   });
 
-  it("Knowledge Region and Calibration have no WorkspaceView sections", () => {
+  it("leftover Knowledge Region kind uses the Learning workspace sections", () => {
     expect(
       availableWorkspaceSections({
         isOwner: true,
         workspaceKind: "knowledge_region",
       }),
-    ).toEqual([]);
-    expect(
-      availableWorkspaceSections({
-        isOrgAdmin: true,
-        workspaceKind: "knowledge_region",
-      }),
-    ).toEqual([]);
+    ).toEqual(["workspace", "dags", "map_types", "unsys_models", "context", "settings"]);
     expect(
       availableWorkspaceSections({
         isOwner: false,
         workspaceKind: "knowledge_region",
       }),
-    ).toEqual([]);
+    ).toEqual(["workspace"]);
     expect(
       resolveActiveSection("workspace", {
         isOwner: true,
@@ -220,23 +214,17 @@ describe("availableWorkspaceSections", () => {
         isOwner: true,
         workspaceKind: "knowledge_region",
       }),
-    ).toBe("workspace");
-    expect(
-      resolveActiveSection("context", {
-        isOwner: true,
-        workspaceKind: "knowledge_region",
-      }),
-    ).toBe("workspace");
+    ).toBe("settings");
     expect(defaultWorkspaceSection("knowledge_region")).toBe("workspace");
   });
 
-  it("Calibration has no WorkspaceView sections and does not invent Goals", () => {
+  it("leftover Calibration kind uses the Learning workspace sections", () => {
     expect(
       availableWorkspaceSections({
         isOwner: true,
         workspaceKind: "calibration",
       }),
-    ).toEqual([]);
+    ).toEqual(["workspace", "dags", "map_types", "unsys_models", "context", "settings"]);
     expect(
       availableWorkspaceSections({
         isOwner: true,
@@ -248,7 +236,7 @@ describe("availableWorkspaceSections", () => {
         isOwner: false,
         workspaceKind: "calibration",
       }),
-    ).toEqual([]);
+    ).toEqual(["workspace"]);
     expect(
       resolveActiveSection("workspace", {
         isOwner: true,
@@ -323,7 +311,7 @@ describe("WorkspaceView section shell wiring", () => {
     expect(viewSource).toContain('visibleSections.includes("knowledge")');
     expect(viewSource).toContain('visibleSections.includes("data_studio")');
     expect(viewSource).toContain('visibleSections.includes("settings")');
-    expect(viewSource).toContain("<DataStudioPanel");
+    expect(viewSource).not.toContain("<DataStudioPanel");
     // Knowledge also opens for Learner mode (LWM); Settings stay privileged-only.
     expect(viewSource).toContain("canAccessPrivilegedSections || isLearnerMode");
     expect(viewSource).toContain("sectionLayout.mountsPerformancePanel");
@@ -392,9 +380,8 @@ describe("WorkspaceView section shell wiring", () => {
 
   it("hosts multi goals on Goals tab, not Settings identity or builder surface", () => {
     expect(viewSource).not.toContain("WorkspaceGoalPanel");
-    expect(viewSource).toContain("WorkspaceGoalsPanel");
-    expect(viewSource).toContain("isNoMapWorkspace(plan.workspace_kind)");
-    expect(viewSource).toContain("mountsGoalsPanel");
+    expect(viewSource).not.toContain("WorkspaceGoalsPanel");
+    expect(viewSource).not.toContain("data-workspace-goals-host");
     expect(integrationSource).toContain("WorkspaceIdentitySettings");
     // Settings no longer exposes a single goal field
     expect(identitySettingsSource).not.toContain("data-workspace-goal-settings");

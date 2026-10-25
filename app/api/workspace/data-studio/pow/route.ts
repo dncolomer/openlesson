@@ -49,34 +49,34 @@ async function resolveSessionLinkFromToken(
 
   for (const kind of tryKinds) {
     if (kind === "tap") {
-      for (const table of ["workspace_calibrate_sessions", "workspace_verify_sessions"] as const) {
-        const { data } = await supabase
-          .from(table)
-          .select("id, workspace_id, status")
-          .eq("private_token_hash", tokenHash)
-          .eq("workspace_id", workspaceId)
-          .maybeSingle();
-        if (data?.id) {
-          return {
-            kind: "tap",
-            linkId: data.id as string,
-            sessionId: data.id as string,
-            workspaceId: (data.workspace_id as string | null) ?? workspaceId,
-          };
-        }
+      const { data } = await supabase
+        .from("sessions")
+        .select("id, workspace_id, status, kind")
+        .eq("private_token_hash", tokenHash)
+        .eq("workspace_id", workspaceId)
+        .in("kind", ["calibrate", "verify"])
+        .maybeSingle();
+      if (data?.id) {
+        return {
+          kind: "tap",
+          linkId: data.id as string,
+          sessionId: data.id as string,
+          workspaceId: (data.workspace_id as string | null) ?? workspaceId,
+        };
       }
     } else if (kind === "ile") {
       const { data } = await supabase
-        .from("workspace_learn_links")
-        .select("id, workspace_id, session_id, status")
+        .from("sessions")
+        .select("id, workspace_id, status, kind")
         .eq("private_token_hash", tokenHash)
         .eq("workspace_id", workspaceId)
+        .eq("kind", "learn")
         .maybeSingle();
       if (data?.id) {
         return {
           kind: "ile",
           linkId: data.id as string,
-          sessionId: (data.session_id as string | null) ?? null,
+          sessionId: data.id as string,
           workspaceId: (data.workspace_id as string | null) ?? workspaceId,
         };
       }
@@ -162,7 +162,7 @@ export async function GET(req: NextRequest) {
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
       let query = auth.supabase
-        .from("workspace_proof_of_work")
+        .from("proof_of_work")
         .select(ADMIN_POW_SELECT, { count: "exact" })
         .eq("workspace_id", workspaceId)
         .order(sortColumn === "timestamp_ms" ? "timestamp_ms" : "created_at", {
@@ -211,7 +211,7 @@ export async function GET(req: NextRequest) {
 
     // Candidate scan path (link / search / invalidated): load up to 500 recent rows.
     let query = auth.supabase
-      .from("workspace_proof_of_work")
+      .from("proof_of_work")
       .select(ADMIN_POW_SELECT)
       .eq("workspace_id", workspaceId)
       .order("created_at", { ascending: false })
@@ -314,11 +314,11 @@ export async function PATCH(req: NextRequest) {
     const auth = await guardWorkspaceRoute(workspaceId, { feature: "data_studio" });
     if (!auth.ok) return auth.response;
 
-    // Writes use service role: RLS only has owner SELECT+INSERT on workspace_proof_of_work.
+    // Writes use service role: RLS only has owner SELECT+INSERT on proof_of_work.
     const admin = createAdminClient();
 
     const { data: existing, error: loadErr } = await admin
-      .from("workspace_proof_of_work")
+      .from("proof_of_work")
       .select(ADMIN_POW_SELECT)
       .eq("id", id)
       .eq("workspace_id", workspaceId)
@@ -342,7 +342,7 @@ export async function PATCH(req: NextRequest) {
     });
 
     const { data: updated, error: upErr } = await admin
-      .from("workspace_proof_of_work")
+      .from("proof_of_work")
       .update(patch.fields)
       .eq("id", id)
       .eq("workspace_id", workspaceId)
@@ -390,12 +390,12 @@ export async function POST(req: NextRequest) {
     const auth = await guardWorkspaceRoute(workspaceId, { feature: "data_studio" });
     if (!auth.ok) return auth.response;
 
-    // Writes use service role: RLS only has owner SELECT+INSERT on workspace_proof_of_work.
+    // Writes use service role: RLS only has owner SELECT+INSERT on proof_of_work.
     const admin = createAdminClient();
 
     const action = body.action === "clear" ? "clear" : "invalidate";
     const { data: rows, error } = await admin
-      .from("workspace_proof_of_work")
+      .from("proof_of_work")
       .select(ADMIN_POW_SELECT)
       .eq("workspace_id", workspaceId)
       .in("id", ids);
@@ -418,7 +418,7 @@ export async function POST(req: NextRequest) {
         },
       });
       const { error: upErr } = await admin
-        .from("workspace_proof_of_work")
+        .from("proof_of_work")
         .update({ metadata: patch.metadata })
         .eq("id", row.id)
         .eq("workspace_id", workspaceId);

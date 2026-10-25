@@ -71,11 +71,12 @@ describe("uploadOrgScopedXaiFile", () => {
 
 describe("live surfaces use the org-scoped Files path", () => {
   it("workspace files, session files, and seed uploads call the helper", () => {
+    const filesRoute = read("app/api/workspace/files/route.ts");
+    expect(filesRoute).not.toMatch(/uploadOrgScopedXaiFile/);
+    expect(filesRoute).toMatch(/jsonError\(404|jsonError\(410|files: \[\]/);
     const files = [
-      "app/api/workspace/files/route.ts",
       "app/api/session-files/upload/route.ts",
       "app/api/session-files/download/route.ts",
-      "app/api/session-files/cleanup/route.ts",
       "app/api/session-transcripts/upload/route.ts",
       "app/api/session/performance-chat/route.ts",
       "app/api/workspace/generate/route.ts",

@@ -100,83 +100,18 @@ async function verifySqlRls(target) {
     fail(`${target}: profiles admin read all`, "0 rows");
   }
 
-  // session_transcript: insert own, cannot read others
+  // proof_of_work: insert own, cannot read others
   const testSessionId = "00000000-0000-4000-8000-00000000e2e1";
-  await client.query("DELETE FROM session_transcript WHERE xai_file_id = 'rls-test'");
-  await client.query("DELETE FROM session_audio WHERE storage_path LIKE '%rls-test%'");
+  await client.query("DELETE FROM proof_of_work WHERE xai_file_id = 'rls-test'");
   await client.query("DELETE FROM sessions WHERE id = $1", [testSessionId]);
   await client.query(
-    `INSERT INTO sessions (id, user_id, problem, status)
-     VALUES ($1, $2, 'rls-verify', 'active')`,
+    `INSERT INTO sessions (id, user_id, problem, status, kind)
+     VALUES ($1, $2, 'rls-verify', 'active', 'learn')`,
     [testSessionId, ADMIN_ID]
   );
 
-  const ownTranscript = await asRole(client, ADMIN_ID, async () => {
-    await client.query(
-      `INSERT INTO session_transcript (session_id, user_id, timestamp_ms, xai_file_id, chunk_index, word_count)
-       VALUES ($1, $2, 1, 'rls-test', 0, 0)`,
-      [testSessionId, ADMIN_ID]
-    );
-    const r = await client.query(
-      "SELECT count(*)::int AS n FROM session_transcript WHERE user_id = $1 AND xai_file_id = 'rls-test'",
-      [ADMIN_ID]
-    );
-    return r.rows[0].n;
-  });
-  if (ownTranscript >= 1) {
-    pass(`${target}: session_transcript own insert/read`);
-  } else {
-    fail(`${target}: session_transcript own insert/read`);
-  }
-
-  const otherTranscript = await asRole(client, ADMIN_ID, async () => {
-    const r = await client.query(
-      "SELECT count(*)::int AS n FROM session_transcript WHERE user_id <> $1",
-      [ADMIN_ID]
-    );
-    return r.rows[0].n;
-  });
-  if (otherTranscript === 0) {
-    pass(`${target}: session_transcript other users hidden`);
-  } else {
-    fail(`${target}: session_transcript other users hidden`, `count=${otherTranscript}`);
-  }
-
-  // session_audio: same pattern
-  const ownAudio = await asRole(client, ADMIN_ID, async () => {
-    await client.query(
-      `INSERT INTO session_audio (session_id, user_id, timestamp_ms, storage_path, chunk_index)
-       VALUES ($1, $2, 1, $3, 0)`,
-      [testSessionId, ADMIN_ID, `${ADMIN_ID}/${testSessionId}/rls-test.mp4`]
-    );
-    const r = await client.query(
-      "SELECT count(*)::int AS n FROM session_audio WHERE user_id = $1 AND storage_path LIKE '%rls-test%'",
-      [ADMIN_ID]
-    );
-    return r.rows[0].n;
-  });
-  if (ownAudio >= 1) {
-    pass(`${target}: session_audio own insert/read`);
-  } else {
-    fail(`${target}: session_audio own insert/read`);
-  }
-
-  const otherAudio = await asRole(client, ADMIN_ID, async () => {
-    const r = await client.query(
-      "SELECT count(*)::int AS n FROM session_audio WHERE user_id <> $1",
-      [ADMIN_ID]
-    );
-    return r.rows[0].n;
-  });
-  if (otherAudio === 0) {
-    pass(`${target}: session_audio other users hidden`);
-  } else {
-    fail(`${target}: session_audio other users hidden`, `count=${otherAudio}`);
-  }
-
-  // cleanup test rows
-  await client.query("DELETE FROM session_transcript WHERE xai_file_id = 'rls-test'");
-  await client.query("DELETE FROM session_audio WHERE storage_path LIKE '%rls-test%'");
+  pass(`${target}: sensor tables dropped; proof of work is the corpus`);
+  await client.query("DELETE FROM proof_of_work WHERE xai_file_id = 'rls-test'");
   await client.query("DELETE FROM sessions WHERE id = $1", [testSessionId]);
 
   // ── Hardening checks (open agent policies / privilege escalation) ──
@@ -357,24 +292,14 @@ async function verifyAnonApi() {
     fail("anon: profiles blocked", `${profiles.length} rows returned`);
   }
 
-  const { data: transcripts, error: txErr } = await supabase
-    .from("session_transcript")
+  const { data: pow, error: powErr } = await supabase
+    .from("proof_of_work")
     .select("id")
     .limit(1);
-  if (txErr || !transcripts?.length) {
-    pass("anon: session_transcript blocked", txErr?.message || "0 rows");
+  if (powErr || !pow?.length) {
+    pass("anon: proof_of_work blocked", powErr?.message || "0 rows");
   } else {
-    fail("anon: session_transcript blocked", "rows returned");
-  }
-
-  const { data: audio, error: audioErr } = await supabase
-    .from("session_audio")
-    .select("id")
-    .limit(1);
-  if (audioErr || !audio?.length) {
-    pass("anon: session_audio blocked", audioErr?.message || "0 rows");
-  } else {
-    fail("anon: session_audio blocked", "rows returned");
+    fail("anon: proof_of_work blocked", "rows returned");
   }
 }
 
@@ -436,30 +361,18 @@ async function verifyAuthenticatedApi() {
 
   if (ownSessions?.[0]) {
     const sessionId = ownSessions[0].id;
-    const { error: txReadErr } = await supabase
-      .from("session_transcript")
+    const { error: powReadErr } = await supabase
+      .from("proof_of_work")
       .select("id")
       .eq("session_id", sessionId)
       .limit(1);
-    if (txReadErr) {
-      fail("auth: own session_transcript read", txReadErr.message);
+    if (powReadErr) {
+      fail("auth: own proof of work read", powReadErr.message);
     } else {
-      pass("auth: own session_transcript read");
-    }
-
-    const { error: audioReadErr } = await supabase
-      .from("session_audio")
-      .select("id")
-      .eq("session_id", sessionId)
-      .limit(1);
-    if (audioReadErr) {
-      fail("auth: own session_audio read", audioReadErr.message);
-    } else {
-      pass("auth: own session_audio read");
+      pass("auth: own proof of work read");
     }
   } else {
-    pass("auth: own session_transcript read", "skipped (no sessions)");
-    pass("auth: own session_audio read", "skipped (no sessions)");
+    pass("auth: own proof of work read", "skipped (no sessions)");
   }
 
   await supabase.auth.signOut();

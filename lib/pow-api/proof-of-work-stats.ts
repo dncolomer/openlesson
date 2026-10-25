@@ -350,12 +350,12 @@ export async function loadWorkspaceProofOfWorkStats(
       : null;
 
   let countQuery = supabase
-    .from("workspace_proof_of_work")
+    .from("proof_of_work")
     .select("id", { count: "exact", head: true })
     .eq("workspace_id", workspaceId);
 
   let rowsQuery = supabase
-    .from("workspace_proof_of_work")
+    .from("proof_of_work")
     .select(
       "proof_of_work_type, tool_name, tool_action, block_id, session_id, file_size, mime_type, device_name, timestamp_ms, created_at, metadata, user_id, guest_user_id",
     )

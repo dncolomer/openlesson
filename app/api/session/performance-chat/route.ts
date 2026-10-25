@@ -61,11 +61,7 @@ export async function POST(req: NextRequest) {
 
     if (activeFileIds.length === 0) {
       // Fetch probes for this session
-      const { data: probes } = await supabase
-        .from("probes")
-        .select("id, text, gap_score, timestamp_ms")
-        .eq("session_id", sessionId)
-        .order("timestamp_ms", { ascending: true });
+      const probes = Array.isArray(session.probes) ? session.probes : [];
 
       // Build session performance data
       const performanceData: SessionPerformanceData = {
@@ -76,7 +72,7 @@ export async function POST(req: NextRequest) {
         started_at: session.created_at,
         ended_at: session.ended_at,
         report: session.report,
-        probes: (probes || []).map(p => ({
+        probes: probes.map((p: { id?: string; text?: string; gap_score?: number; timestamp_ms?: number }) => ({
           id: p.id,
           text: p.text,
           gap_score: p.gap_score,

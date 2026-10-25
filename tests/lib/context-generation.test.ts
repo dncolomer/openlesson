@@ -120,17 +120,31 @@ describe("context generation pool", () => {
       isOwner: true,
       workspaceKind: "knowledge_region",
     });
-    expect(owner).toEqual([]);
-    expect(owner).not.toContain("context");
+    expect(owner).toEqual([
+      "workspace",
+      "dags",
+      "map_types",
+      "unsys_models",
+      "context",
+      "settings",
+    ]);
+    expect(owner).toContain("context");
     expect(
       resolveActiveSection("context", { isOwner: true, workspaceKind: "knowledge_region" }),
-    ).toBe("workspace");
+    ).toBe("context");
     expect(availableWorkspaceSections({ isOwner: true })).toContain("context");
     expect(availableWorkspaceSections({ isOwner: true })).not.toContain("verification_flows");
     expect(availableWorkspaceSections({ isOwner: true })).not.toContain("calibration_flows");
     expect(
       availableWorkspaceSections({ isOwner: true, workspaceKind: "calibration" }),
-    ).toEqual([]);
+    ).toEqual([
+      "workspace",
+      "dags",
+      "map_types",
+      "unsys_models",
+      "context",
+      "settings",
+    ]);
     expect(
       availableWorkspaceSections({ isOwner: true, workspaceKind: "calibration" }),
     ).not.toContain("verification_flows");
@@ -138,10 +152,14 @@ describe("context generation pool", () => {
     const hosts = read("components/workspace-view/workspace-section-hosts.tsx");
     expect(hosts).toContain("WorkspaceContextPanel");
     expect(hosts).toContain('visibleSections.includes("context")');
-    expect(hosts).toContain("contextGeneration={isNoMapWorkspace(plan.workspace_kind)}");
+    expect(hosts).not.toContain("contextGeneration={isNoMapWorkspace(plan.workspace_kind)}");
+    expect(hosts).not.toContain("VerificationFlowsPanel");
+    expect(hosts).not.toContain("CalibrationFlowsPanel");
+    expect(hosts).not.toContain("WorkspaceGoalsPanel");
+    expect(hosts).not.toContain("WorkspaceDataStudioPanel");
     const context = read("components/WorkspaceContextPanel.tsx");
-    expect(context).toContain("WorkspaceDantesSearch");
-    expect(context).toContain("WorkspaceExternalAddLinkForm");
+    expect(context).not.toContain("WorkspaceDantesSearch");
+    expect(context).not.toContain("WorkspaceExternalAddLinkForm");
     expect(context).toContain("WorkspaceNotesFilesPanel");
 
     const goals = read("components/WorkspaceGoalsPanel.tsx");

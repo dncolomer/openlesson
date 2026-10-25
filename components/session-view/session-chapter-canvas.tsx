@@ -165,30 +165,26 @@ export function SessionChapterWorkCanvas({
       sessionMarkMode="learn"
       sessionMarkListKey={`${session.id}:${chapterId}`}
       sessionMarkQuestions={sessionMarkQuestions}
-      craftInsight={
-        activeStep?.id
-          ? {
-              chapterId: activeStep.id,
-              chapterLabel: activeChapterLabel,
-              sessionId: session.id,
-              workspaceId,
-              ileToken,
-              recordSessionPowArtifact,
-              workArtifacts: sessionPowArtifactsRef.current,
-              workSinceIndex: insightWorkMarkRef.current,
-              onCrafted: (insight, meta) => {
-                insightWorkMarkRef.current = ilePowNextIndex(
-                  sessionPowArtifactsRef.current,
-                );
-                setSessionInsights((current) => {
-                  if (current.some((row) => row.id === insight.id)) return current;
-                  return [insight, ...current];
-                });
-                if (meta?.endsLearnSession) onInsightKept?.(insight);
-              },
-            }
-          : null
-      }
+      craftInsight={{
+        chapterId,
+        chapterLabel: activeChapterLabel,
+        sessionId: session.id,
+        workspaceId,
+        ileToken,
+        recordSessionPowArtifact,
+        workArtifacts: sessionPowArtifactsRef.current,
+        workSinceIndex: insightWorkMarkRef.current,
+        onCrafted: (insight, meta) => {
+          insightWorkMarkRef.current = ilePowNextIndex(
+            sessionPowArtifactsRef.current,
+          );
+          setSessionInsights((current) => {
+            if (current.some((row) => row.id === insight.id)) return current;
+            return [insight, ...current];
+          });
+          if (meta?.endsLearnSession) onInsightKept?.(insight);
+        },
+      }}
     />
     </>
   );

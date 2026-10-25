@@ -440,23 +440,15 @@ export async function sessionBelongsToAyclFork(
 ): Promise<boolean> {
   const { data: session } = await supabase
     .from("sessions")
-    .select("id, metadata")
+    .select("id, workspace_id, metadata")
     .eq("id", sessionId)
     .maybeSingle();
 
   if (!session) return false;
 
+  if ((session as { workspace_id?: string | null }).workspace_id === forkedWorkspaceId) return true;
   const metadata = (session.metadata || {}) as { workspace_id?: string; aycl_fork_workspace_id?: string };
   if (metadata.aycl_fork_workspace_id === forkedWorkspaceId) return true;
   if (metadata.workspace_id === forkedWorkspaceId) return true;
-
-  const { data: blockSession } = await supabase
-    .from("block_sessions")
-    .select("workspace_id")
-    .eq("session_id", sessionId)
-    .eq("workspace_id", forkedWorkspaceId)
-    .limit(1)
-    .maybeSingle();
-
-  return Boolean(blockSession);
+  return false;
 }

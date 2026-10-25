@@ -62,8 +62,8 @@ describe("TAP session auth brief vs participant", () => {
   });
 
   it("TAP_SESSION_SELECT loads focus_block_ids and started_at for private-token restore", () => {
-    expect(TAP_SESSION_SELECT).toContain("focus_block_ids");
-    expect(TAP_SESSION_SELECT).toContain("started_at");
+    expect(TAP_SESSION_SELECT).toContain("guest_link");
+    expect(TAP_SESSION_SELECT).toContain("kind");
   });
 
   it("workspaceOwnerFromSession prefers session.user_id then nested workspace owner", () => {
@@ -189,7 +189,7 @@ describe("TAP session auth brief vs participant", () => {
     });
 
     // Lookup used hashed token path
-    expect(from).toHaveBeenCalledWith("workspace_calibrate_sessions");
+    expect(from).toHaveBeenCalledWith("sessions");
     expect(hashPrivateToken("secret-guest-token")).toBe("hash:secret-guest-token");
   });
 

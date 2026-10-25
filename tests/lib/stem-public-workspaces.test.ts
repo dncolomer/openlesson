@@ -113,12 +113,12 @@ describe("STEM public workspace catalog", () => {
     expect(seedSrc).toContain("parseSaasTechDemoSeedTarget");
     expect(seedSrc).toContain("is_public");
     expect(seedSrc).toContain("true");
-    expect(seedSrc).toContain("custom_verification_models");
+    expect(seedSrc).toContain("knowledge_regions");
     expect(seedSrc).toContain("STEM_PUBLIC_FIELDS");
     expect(seedSrc).toContain("is_admin");
     expect(verifySrc).toContain("is_public");
     expect(verifySrc).toContain("is_admin");
-    expect(verifySrc).toContain("custom_verification_models");
+    expect(verifySrc).toContain("knowledge_regions");
     expect(verifySrc).toContain("isFlowEmbeddingVector");
 
     const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));

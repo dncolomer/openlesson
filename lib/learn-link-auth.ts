@@ -42,7 +42,7 @@ export interface ResolvedIleLinkContext {
 }
 
 const LINK_SELECT =
-  "id, workspace_id, block_id, user_id, guest_user_id, assigned_user_id, organization_id, session_id, status, participant_type, private_token_hash, access_mode, public_token, entry_query_params, show_end_session, session_mode";
+  "id, workspace_id, block_id, user_id, guest_user_id, assigned_user_id, organization_id, status, private_token_hash, access_mode, public_token, guest_link, kind";
 
 export async function resolveIleLinkAccess(
   accessToken: string,
@@ -57,20 +57,26 @@ export async function resolveIleLinkAccess(
   // Private bearer hash; legacy public_token still resolves existing rows.
   let link: Record<string, unknown> | null = null;
   const { data: byHash } = await supabase
-    .from("workspace_learn_links")
+    .from("sessions")
     .select(LINK_SELECT)
     .eq("private_token_hash", tokenHash)
+    .eq("kind", "learn")
     .maybeSingle();
-  link = byHash;
+  link = byHash
+    ? { ...((byHash.guest_link as Record<string, unknown>) || {}), ...byHash }
+    : null;
 
   if (!link) {
     const { data: byPublic } = await supabase
-      .from("workspace_learn_links")
+      .from("sessions")
       .select(LINK_SELECT)
       .eq("public_token", token)
       .eq("access_mode", "public")
+      .eq("kind", "learn")
       .maybeSingle();
-    link = byPublic;
+    link = byPublic
+      ? { ...((byPublic.guest_link as Record<string, unknown>) || {}), ...byPublic }
+      : null;
   }
 
   if (!link) {
@@ -119,9 +125,10 @@ export async function resolveIleLinkAccess(
       });
       guestUserId = created.id;
       await supabase
-        .from("workspace_learn_links")
+        .from("sessions")
         .update({ guest_user_id: guestUserId })
-        .eq("id", String(link.id));
+        .eq("id", String(link.id))
+        .eq("kind", "learn");
     }
   }
 
@@ -188,11 +195,12 @@ export async function resolveIleLinkSessionAccess(
 
   if (metadata.workspace_id === base.workspaceId) {
     const { data: blockSession } = await base.supabase
-      .from("block_sessions")
-      .select("session_id")
-      .eq("session_id", sessionId)
+      .from("sessions")
+      .select("id")
+      .eq("id", sessionId)
       .eq("workspace_id", base.workspaceId)
       .eq("block_id", base.blockId)
+      .eq("kind", "learn")
       .limit(1)
       .maybeSingle();
     if (blockSession) return base;
@@ -279,6 +287,10 @@ export async function ensureIleLinkSession(
       user_id: ownerUserId,
       problem: blockTitle,
       status: "active",
+      kind: "learn",
+      workspace_id: workspaceId,
+      block_id: blockId,
+      guest_user_id: guestUserId,
       planning_prompt: planningPrompt,
       metadata: stampSourceLinkMetadata(
         {
@@ -310,23 +322,20 @@ export async function ensureIleLinkSession(
     })
     .eq("id", blockId);
 
-  await supabase.from("block_sessions").insert({
-    block_id: blockId,
-    session_id: session.id,
-    user_id: ownerUserId,
-    workspace_id: workspaceId,
-  });
-
   const now = new Date().toISOString();
   await supabase
-    .from("workspace_learn_links")
+    .from("sessions")
     .update({
-      session_id: session.id,
       status: "active",
-      started_at: now,
-      completed_at: null,
+      guest_link: {
+        session_id: session.id,
+        status: "active",
+        started_at: now,
+        completed_at: null,
+      },
     })
-    .eq("id", linkId);
+    .eq("id", linkId)
+    .eq("kind", "learn");
 
   return { sessionId: session.id, resumed: false, blockTitle, sessionMode };
 }

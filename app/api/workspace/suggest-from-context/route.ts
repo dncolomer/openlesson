@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
 
     const { data: workspace } = await supabase
       .from("workspaces")
-      .select("id, title, root_topic, workspace_goal, description, notes")
+      .select("id, title, root_topic, description, notes")
       .eq("id", workspaceId)
       .maybeSingle();
 
@@ -33,65 +33,14 @@ export async function POST(req: NextRequest) {
       return jsonError(404, "Workspace not found");
     }
 
-    let files: Array<{ name: string; mime_type: string | null; excerpt: string | null }> =
+    const files: Array<{ name: string; mime_type: string | null; excerpt: string | null }> =
       [];
-    try {
-      const { data: fileRows, error: fileError } = await supabase
-        .from("workspace_files")
-        .select("file_name, mime_type")
-        .eq("workspace_id", workspaceId)
-        .order("created_at", { ascending: false })
-        .limit(24);
-      if (fileError) {
-        console.warn("suggest-from-context: files load failed", fileError);
-      } else {
-        files = (fileRows || []).map(
-          (file: { file_name?: string | null; mime_type?: string | null }) => ({
-            name: typeof file.file_name === "string" ? file.file_name : "",
-            mime_type: file.mime_type ?? null,
-            excerpt: null,
-          }),
-        );
-      }
-    } catch (err) {
-      console.warn("suggest-from-context: files load failed", err);
-      files = [];
-    }
 
-    let externalResources: Array<{
+    const externalResources: Array<{
       title: string | null;
       url: string | null;
       description: string | null;
     }> = [];
-    try {
-      const { data: extRows, error: extError } = await supabase
-        .from("workspace_external_resources")
-        .select("title, url, description")
-        .eq("workspace_id", workspaceId)
-        .order("sort_order", { ascending: true })
-        .limit(24);
-      if (extError) {
-        const msg = extError.message || "";
-        if (!/schema cache|does not exist|workspace_external_resources/i.test(msg)) {
-          console.warn("suggest-from-context: external resources load failed", extError);
-        }
-      } else {
-        externalResources = (extRows || []).map(
-          (row: {
-            title?: string | null;
-            url?: string | null;
-            description?: string | null;
-          }) => ({
-            title: row.title ?? null,
-            url: row.url ?? null,
-            description: row.description ?? null,
-          }),
-        );
-      }
-    } catch (err) {
-      console.warn("suggest-from-context: external resources load failed", err);
-      externalResources = [];
-    }
 
     const limit =
       typeof body.limit === "number" && Number.isFinite(body.limit)
@@ -109,8 +58,8 @@ export async function POST(req: NextRequest) {
         draftPrompt: body.draftPrompt ?? body.topic ?? body.prompt,
         workspaceTitle: workspace.title || workspace.root_topic,
         workspaceGoal:
-          (workspace as { workspace_goal?: string | null }).workspace_goal ||
-          workspace.description,
+          workspace.description ||
+          (workspace as { notes?: string | null }).notes,
         limit,
       },
     );

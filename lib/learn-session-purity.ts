@@ -16,7 +16,7 @@ export async function flagIleSessionProofOfWorkImpure(
     metadata: Record<string, unknown> | null;
   }>(
     supabase
-      .from("workspace_proof_of_work")
+      .from("proof_of_work")
       .select("id, metadata")
       .eq("workspace_id", workspaceId)
       .eq("session_id", sessionId),
@@ -31,7 +31,7 @@ export async function flagIleSessionProofOfWorkImpure(
       ...(row.metadata && typeof row.metadata === "object" ? row.metadata : {}),
     });
     const { error: updateError } = await supabase
-      .from("workspace_proof_of_work")
+      .from("proof_of_work")
       .update({ metadata: nextMetadata })
       .eq("id", row.id)
       .eq("workspace_id", workspaceId);

@@ -10,6 +10,7 @@ export {
   normalizeWorkspaceGoal,
   normalizeConversionGoal,
   fallbackWorkspaceGoal,
+  derivedWorkspaceGoal,
   fallbackConversionGoal,
   finalizeVerticalScoreReport,
   finalizePerformanceReport,

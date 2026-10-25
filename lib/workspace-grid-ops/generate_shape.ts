@@ -145,7 +145,7 @@ export async function handle_generate_shape(ctx: GridOpContext): Promise<Respons
 
     const baseContext = composeBlockGenerationContext({
       workspaceTitle: plan?.title || plan?.root_topic || undefined,
-      goal: plan?.workspace_goal || plan?.root_topic,
+      goal: plan?.root_topic,
       // When user selected a subset, do not force full workspace notes into
       // the "always" block — selected materials are primary.
       notes: selectedKeys.length > 0 ? undefined : plan?.notes,

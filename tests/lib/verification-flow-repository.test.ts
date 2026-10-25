@@ -59,6 +59,7 @@ describe("verification flow memory shared by public routes", () => {
     );
     expect(localEnd).toContain('phase: "error"');
     expect(localEnd).not.toContain('phase: "live"');
-    expect(localEnd).toContain('phase: practice ? "practice_done" : "results"');
+    expect(localEnd).toContain('phase: "results"');
+    expect(localEnd).not.toContain("practice_done");
   });
 });

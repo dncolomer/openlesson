@@ -72,7 +72,7 @@ function makeStoreClient(opts: {
       ) => rows.filter((row) => row[String(column)] === value);
 
       const resolveList = () => {
-        if (table === "workspace_flow_embeddings") {
+        if (table === "session_embeddings") {
           let rows = embeddings.slice();
           for (const f of filters) {
             if (f.method === "eq") rows = applyEq(rows, f.args[0], f.args[1]);
@@ -90,17 +90,13 @@ function makeStoreClient(opts: {
           }
           return { data: rows, error: null };
         }
-        if (table === "workspace_proof_of_work") {
+        if (table === "proof_of_work") {
           return { data: pow, error: null };
         }
-        if (
-          table === "workspace_calibrate_sessions" ||
-          table === "workspace_verify_sessions" ||
-          table === "workspace_learn_links"
-        ) {
+        if (table === "sessions") {
           return { data: [], error: null };
         }
-        if (table === "custom_verification_models") {
+        if (table === "knowledge_regions") {
           if (lastInserted) return { data: [lastInserted], error: null };
           let rows = models.slice();
           for (const f of filters) {
@@ -173,7 +169,7 @@ function makeStoreClient(opts: {
 function embeddingEqIdentityCalls(calls: FilterCall[]) {
   return calls.filter(
     (call) =>
-      call.table === "workspace_flow_embeddings" &&
+      call.table === "session_embeddings" &&
       call.method === "eq" &&
       call.args[0] === "identity",
   );
@@ -181,13 +177,13 @@ function embeddingEqIdentityCalls(calls: FilterCall[]) {
 
 function embeddingLimitCalls(calls: FilterCall[]) {
   return calls.filter(
-    (call) => call.table === "workspace_flow_embeddings" && call.method === "limit",
+    (call) => call.table === "session_embeddings" && call.method === "limit",
   );
 }
 
 function embeddingOrderCalls(calls: FilterCall[]) {
   return calls.filter(
-    (call) => call.table === "workspace_flow_embeddings" && call.method === "order",
+    (call) => call.table === "session_embeddings" && call.method === "order",
   );
 }
 

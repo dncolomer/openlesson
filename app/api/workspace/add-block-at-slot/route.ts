@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
 
     const { data: plan, error: planError } = await supabase
       .from("workspaces")
-      .select("id, user_id, root_topic, title, description, notes, workspace_goal, unusable_cells")
+      .select("id, user_id, root_topic, title, description, notes, unusable_cells")
       .eq("id", workspaceId)
       .single();
 
@@ -94,31 +94,13 @@ export async function POST(req: NextRequest) {
       return jsonError(500, "Failed to fetch blocks");
     }
 
-    const { data: workspaceFiles } = await supabase
-      .from("workspace_files")
-      .select("id, file_name")
-      .eq("workspace_id", workspaceId);
-
-    // External resources table may not be migrated yet — degrade gracefully.
-    let externalRows: Array<{
+    const workspaceFiles: Array<{ id: string; file_name?: string | null }> = [];
+    const externalRows: Array<{
       id: string;
       title?: string | null;
       url?: string | null;
       description?: string | null;
     }> = [];
-    const externalQuery = await supabase
-      .from("workspace_external_resources")
-      .select("id, title, url, description")
-      .eq("workspace_id", workspaceId)
-      .order("sort_order", { ascending: true });
-    if (externalQuery.error) {
-      const msg = externalQuery.error.message || "";
-      if (!/schema cache|does not exist|workspace_external_resources/i.test(msg)) {
-        console.error("[add-block-at-slot] external resources load:", externalQuery.error);
-      }
-    } else {
-      externalRows = (externalQuery.data || []) as typeof externalRows;
-    }
 
     const skillNodes = toSkillGridNodes(nodes);
     const { occupancy } = buildSkillGridLayout(skillNodes);
@@ -194,7 +176,7 @@ export async function POST(req: NextRequest) {
 
     const alwaysContext = composeBlockGenerationContext({
       workspaceTitle,
-      goal: plan.workspace_goal || plan.root_topic,
+      goal: plan.description || plan.notes || plan.root_topic,
       // When user selected a subset, do not force full workspace notes into
       // the "always" block — selected materials are primary.
       notes: selectedKeys.length > 0 ? undefined : plan.notes,

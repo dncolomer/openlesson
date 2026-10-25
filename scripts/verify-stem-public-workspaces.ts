@@ -82,7 +82,7 @@ async function main() {
 
       const regions = await client.query(
         `SELECT id, name, embedding_model_id, dim, centroid, subject_count, mean_radius
-         FROM public.custom_verification_models
+         FROM public.knowledge_regions
          WHERE workspace_id = $1
          ORDER BY name`,
         [workspaceId],

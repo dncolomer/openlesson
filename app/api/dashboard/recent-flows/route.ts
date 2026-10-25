@@ -24,13 +24,13 @@ export async function GET() {
 
     const [verificationRes, calibrationRes] = await Promise.all([
       auth.supabase
-        .from("workspace_verification_flows")
+        .from("verify_flows")
         .select("id, workspace_id, owner_user_id, name, topic, questions, public_token, created_at")
         .eq("owner_user_id", auth.user.id)
         .order("created_at", { ascending: false })
         .limit(FLOW_LIMIT),
       auth.supabase
-        .from("workspace_calibration_flows")
+        .from("calibrate_flows")
         .select("id, workspace_id, owner_user_id, name, goal, questions, public_token, created_at")
         .eq("owner_user_id", auth.user.id)
         .order("created_at", { ascending: false })

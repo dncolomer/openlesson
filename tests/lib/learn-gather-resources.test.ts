@@ -366,7 +366,8 @@ describe("TAP Learning gather resources", () => {
     expect(api).toContain(".select(ILE_GATHER_SESSION_PERSIST_SELECT)");
     expect(api).not.toContain('.select("id, workspace_id")');
     expect(api).not.toMatch(/session\?\.workspace_id/);
-    expect(api).toContain("workspace_external_resources");
+    expect(api).not.toMatch(/\.from\(\s*["']workspace_external_resources["']\s*\)/);
+    expect(api).toContain('.from("sessions")');
     const hook = read("components/session-view/use-learn-gather-resources.ts");
     expect(hook).toContain("workspaceId: input.workspaceId");
 
@@ -457,7 +458,7 @@ describe("TAP Learning gather resources", () => {
     expect(api).toContain("callXaiJSON");
     expect(api).toContain("buildIleGatherForageInput");
     expect(api).toContain("ileGatherForageSystemPrompt");
-    expect(api).toContain("workspace_external_resources");
+    expect(api).not.toMatch(/\.from\(\s*["']workspace_external_resources["']\s*\)/);
     expect(api).toContain("ileGatherResourceMeta");
 
     expect(panes).not.toContain("WorkspaceResourcesPanel");

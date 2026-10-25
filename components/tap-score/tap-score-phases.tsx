@@ -31,7 +31,7 @@ import { SessionPageLoading } from "@/components/session-view/session-page-loadi
 import { verificationFieldPrepareInput } from "@/lib/session-branch-prepare";
 import { policyScoreFromSnapshot } from "@/lib/session-policy-score";
 import { SESSION_SIDEBAR_PRIMARY_BUTTON_CLASS } from "@/lib/session-sidebar";
-import { TapPracticePill } from "@/components/tap-score/tap-practice-pill";
+
 import { TapLiveClock } from "@/components/tap-score/tap-live-clock";
 import { TapThoughtButton } from "@/components/tap-score/tap-thought-button";
 import { TapAestheticSection } from "@/components/tap-score/tap-aesthetic-section";
@@ -98,9 +98,8 @@ export function TapScorePhases(props: {
   startingTopicId: string | null;
   topicsError: string;
   error: string;
-  startSession: (topicOrOptions?: TapStartingTopic | { practice: true; topic?: TapStartingTopic }) => void;
+  startSession: (topic?: TapStartingTopic) => void;
   participantIdentity: PowParticipantIdentity | null;
-  isPracticeMode: boolean;
   lastAssistantTurn: ChatMessage | null;
   messages: ChatMessage[];
   isSending: boolean;
@@ -132,7 +131,6 @@ export function TapScorePhases(props: {
   sessionId?: string;
   resultsError: string;
   sessionEndedImpure: boolean;
-  restartBriefingFlow: () => void;
   setPhase: (phase: Phase) => void;
   editingTranscription: { draft: string; originalText: string } | null;
   setEditingTranscription: (
@@ -189,7 +187,6 @@ export function TapScorePhases(props: {
     error,
     startSession,
     participantIdentity: _participantIdentity,
-    isPracticeMode,
     lastAssistantTurn,
     messages,
     isSending,
@@ -214,7 +211,6 @@ export function TapScorePhases(props: {
     sessionId,
     resultsError,
     sessionEndedImpure,
-    restartBriefingFlow,
     setPhase,
     editingTranscription,
     setEditingTranscription,
@@ -228,11 +224,7 @@ export function TapScorePhases(props: {
     onImDoneBusyChange,
   } = props;
 
-  const [pendingStart, setPendingStart] = useState<
-    | { kind: "topic"; topic: TapStartingTopic }
-    | { kind: "practice" }
-    | null
-  >(null);
+  const [pendingStart, setPendingStart] = useState<{ topic: TapStartingTopic } | null>(null);
   const passGuard = useRef(false);
   const [challengeAttempt, setChallengeAttempt] = useState(0);
   const [workCanvasScene, setWorkCanvasScene] = useState<IleWorkCanvasScene>(() =>
@@ -268,26 +260,18 @@ export function TapScorePhases(props: {
 
   function chooseTopic(topic: TapStartingTopic) {
     const step = scoredTapBriefingStep({ choice: "topic", challengePassed: false });
-    if (step === "challenge") setPendingStart({ kind: "topic", topic });
-  }
-
-  function choosePractice() {
-    const step = scoredTapBriefingStep({ choice: "practice", challengePassed: false });
-    if (step === "challenge") setPendingStart({ kind: "practice" });
+    if (step === "challenge") setPendingStart({ topic });
   }
 
   function passTapChallenge() {
     if (!pendingStart || passGuard.current) return;
     const step = scoredTapBriefingStep({
-      choice: pendingStart.kind,
+      choice: "topic",
       challengePassed: true,
     });
     if (step !== "live") return;
     passGuard.current = true;
-    const run =
-      pendingStart.kind === "practice"
-        ? startSession({ practice: true })
-        : startSession(pendingStart.topic);
+    const run = startSession(pendingStart.topic);
     void Promise.resolve(run).then((result) => {
       const release = releaseVoiceChallengeStartLatch({
         startSucceeded: voiceChallengeStartSucceeded(result),
@@ -299,7 +283,7 @@ export function TapScorePhases(props: {
   }
 
   const briefingStep = scoredTapBriefingStep({
-    choice: pendingStart?.kind ?? null,
+    choice: pendingStart ? "topic" : null,
     challengePassed: false,
   });
 
@@ -362,7 +346,7 @@ export function TapScorePhases(props: {
           privateToken,
           tapSessionId,
           entryQueryParams,
-          practice: isPracticeMode,
+          practice: false,
           item,
         });
       }
@@ -370,7 +354,6 @@ export function TapScorePhases(props: {
     [
       blockId,
       entryQueryParams,
-      isPracticeMode,
       privateToken,
       sessionId,
       tapSessionId,
@@ -400,7 +383,7 @@ export function TapScorePhases(props: {
           privateToken,
           tapSessionId,
           entryQueryParams,
-          practice: isPracticeMode,
+          practice: false,
           item,
         });
       }, ILE_POW_DEBOUNCE_MS);
@@ -408,7 +391,6 @@ export function TapScorePhases(props: {
     [
       blockId,
       entryQueryParams,
-      isPracticeMode,
       privateToken,
       sessionId,
       tapSessionId,
@@ -466,11 +448,7 @@ export function TapScorePhases(props: {
               <IleStartLoading t={t} fieldStatus="preparing" />
             </SessionPageLoading>
           ) : (
-            <SessionPageLoading
-              message={
-                isPracticeMode ? t("tap.practice.starting") : t("session.startLoading")
-              }
-            />
+            <SessionPageLoading message={t("session.startLoading")} />
           )
         ) : null}
 
@@ -516,11 +494,6 @@ export function TapScorePhases(props: {
                         isStarting={isStartingSession}
                         startingTopicId={startingTopicId}
                         onStartTopic={chooseTopic}
-                        onPracticeFirst={choosePractice}
-                        practiceTitle={t("tap.practice.practiceFirst")}
-                        practiceSubtitle={t("tap.practice.practiceFirstHint")}
-                        practiceStartLabel={t("tap.practice.cardStart")}
-                        practiceStartingLabel={t("tap.practice.starting")}
                         loadingLabel={t("tap.briefing.topicsLoading")}
                         startLabel={t("onboardingGuide.tap.step3.start")}
                         startingLabel={t("onboardingGuide.tap.step3.starting")}
@@ -561,11 +534,6 @@ export function TapScorePhases(props: {
                             isStarting={isStartingSession}
                             startingTopicId={startingTopicId}
                             onStartTopic={chooseTopic}
-                            onPracticeFirst={choosePractice}
-                            practiceTitle={t("tap.practice.practiceFirst")}
-                            practiceSubtitle={t("tap.practice.practiceFirstHint")}
-                            practiceStartLabel={t("tap.practice.cardStart")}
-                            practiceStartingLabel={t("tap.practice.starting")}
                             loadingLabel={t("tap.briefing.topicsLoading")}
                             startLabel={t("onboardingGuide.tap.step3.start")}
                             startingLabel={t("onboardingGuide.tap.step3.starting")}
@@ -676,11 +644,6 @@ export function TapScorePhases(props: {
                     listening={isListening}
                     placement="card"
                   />
-                  {isPracticeMode ? (
-                    <div className="flex shrink-0 items-center gap-2">
-                      <TapPracticePill label={t("tap.practice.bannerKicker")} />
-                    </div>
-                  ) : null}
                 </div>
               }
               actions={
@@ -775,33 +738,13 @@ export function TapScorePhases(props: {
         {phase === "saving" && (
           <SessionPageLoading
             message={
-              isPracticeMode
-                ? t("tap.practice.saving")
-                : kind === "verify"
-                  ? t("tap.postSession.scoring")
-                  : t("tap.postSession.savingAndReturning")
+              kind === "verify"
+                ? t("tap.postSession.scoring")
+                : t("tap.postSession.savingAndReturning")
             }
           />
         )}
-        {phase === "practice_done" && !sessionEndedImpure ? (
-          <SessionFinishedScreen
-            data-tap-practice-done=""
-            kicker={t("tap.practice.doneKicker")}
-            title={t("tap.practice.doneTitle")}
-            body={t("tap.practice.doneBody")}
-            actions={
-              <TapThoughtButton
-                size="md"
-                variant="primary"
-                data-tap-practice-restart
-                onClick={restartBriefingFlow}
-              >
-                {t("tap.practice.restart")}
-              </TapThoughtButton>
-            }
-          />
-        ) : null}
-        {(phase === "results" || phase === "practice_done") && sessionEndedImpure ? (
+        {phase === "results" && sessionEndedImpure ? (
           <SessionFinishedScreen
             data-tap-session-impure=""
             title={t("tap.postSession.impureTitle")}
@@ -811,11 +754,7 @@ export function TapScorePhases(props: {
                 size="md"
                 variant="primary"
                 data-tap-impure-retry
-                onClick={
-                  phase === "practice_done"
-                    ? restartBriefingFlow
-                    : () => window.location.reload()
-                }
+                onClick={() => window.location.reload()}
               >
                 {t("tap.postSession.impureTryAgain")}
               </TapThoughtButton>

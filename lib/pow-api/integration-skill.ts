@@ -168,7 +168,7 @@ export function formatSkillWorkspaceStatus(
       .filter(Boolean);
 
     return `Current workspace status (snapshot — skill.md must reflect this state):
-- workspace_goal: ${status.workspace.workspace_goal || "not set"}
+- workspace_goal: ${status.workspace.workspace_goal || status.workspace.description || status.workspace.notes || "not set"}
 - evaluation_mode: ${status.workspace.evaluation_mode || "semantic"}
 - notes: ${status.workspace.notes || "n/a"}
 - generated_at: ${status.generated_at}
@@ -278,7 +278,11 @@ export function buildIntegrationSkillInstructions(
     workspace.notes?.trim() ||
     workspace.description?.trim() ||
     status?.workspace.workspace_goal?.trim() ||
+    status?.workspace.description?.trim() ||
+    status?.workspace.notes?.trim() ||
     workspace.workspace_goal?.trim() ||
+    workspace.description?.trim() ||
+    workspace.notes?.trim() ||
     "Verify learning for this workspace with proof-of-work-backed gap analysis.";
 
   const statusSection = formatSkillWorkspaceStatus(status, blocks);
@@ -360,7 +364,7 @@ Workspace:
 - title: ${workspace.title || workspace.root_topic || "Untitled"}
 - root_topic: ${workspace.root_topic || "n/a"}
 - description: ${workspace.description || status?.workspace.description || "n/a"}
-- workspace_goal: ${workspace.workspace_goal || status?.workspace.workspace_goal || "n/a"}
+- workspace_goal: ${workspace.workspace_goal || status?.workspace.workspace_goal || workspace.description || status?.workspace.description || workspace.notes || status?.workspace.notes || "n/a"}
 
 Partner description from API caller:
 ${request.partner_description || "Not provided: infer reasonable integration goals from the current workspace status."}

@@ -45,6 +45,9 @@ export async function POST(request: NextRequest) {
         user_id: ctx.ownerUserId,
         problem: blockTitle,
         status: "active",
+        kind: "learn",
+        workspace_id: ctx.workspaceId,
+        block_id: blockId,
         planning_prompt: effectivePrompt,
         metadata: {
           workspace_id: ctx.workspaceId,
@@ -64,13 +67,6 @@ export async function POST(request: NextRequest) {
       session_id: session.id,
       ...(effectivePrompt ? { planning_prompt: effectivePrompt } : {}),
     }).eq("id", blockId);
-
-    await ctx.supabase.from("block_sessions").insert({
-      block_id: blockId,
-      session_id: session.id,
-      user_id: ctx.ownerUserId,
-      workspace_id: ctx.workspaceId,
-    });
 
     return NextResponse.json({ session });
   } catch (error) {

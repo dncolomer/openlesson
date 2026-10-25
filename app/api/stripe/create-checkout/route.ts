@@ -48,7 +48,6 @@ const CHECKOUT_PRICE_TYPES: CheckoutPriceType[] = [
   ...PUBLIC_MODULE_CHECKOUT_PRICE_TYPES,
   "api_metered",
   "all_you_can_learn",
-  "rabbit_hole_plays",
 ];
 
 export async function POST(request: NextRequest) {
@@ -98,10 +97,6 @@ export async function POST(request: NextRequest) {
     }
 
     const isGuestCheckout = GUEST_CHECKOUT_TYPES.has(priceTypeResolved) && !user;
-
-    if (priceTypeResolved === "rabbit_hole_plays" && !user) {
-      return jsonError(401, "Not authenticated");
-    }
 
     let priceId = "";
     const mode = checkoutModeForPriceType(priceTypeResolved);
@@ -247,11 +242,9 @@ export async function POST(request: NextRequest) {
         };
         (body as { __ayclAccessTier?: AyclAccessTier }).__ayclAccessTier = tier;
       }
-    } else {
-      priceId = process.env.STRIPE_PRICE_RABBIT_HOLE || "";
     }
 
-    if (!priceId && !lineItem && priceTypeResolved !== "rabbit_hole_plays") {
+    if (!priceId && !lineItem) {
       return jsonError(500, `Stripe price not configured for ${priceTypeResolved}`);
     }
 
@@ -325,34 +318,20 @@ export async function POST(request: NextRequest) {
           : `${origin}/all-you-can-learn/success?session_id={CHECKOUT_SESSION_ID}`
         : isGuestCheckout
           ? `${origin}/register?session_id={CHECKOUT_SESSION_ID}`
-          : priceTypeResolved === "rabbit_hole_plays"
-            ? `${origin}/rabbit-hole?unlocked=1`
-            : user
-              ? `${origin}/dashboard?tab=upgrade&session_id={CHECKOUT_SESSION_ID}`
-              : `${origin}/pricing/success?session_id={CHECKOUT_SESSION_ID}`;
+          : user
+            ? `${origin}/dashboard?tab=upgrade&session_id={CHECKOUT_SESSION_ID}`
+            : `${origin}/pricing/success?session_id={CHECKOUT_SESSION_ID}`;
 
     const cancelUrl =
       priceTypeResolved === "all_you_can_learn"
         ? `${origin}/all-you-can-learn`
-        : priceTypeResolved === "rabbit_hole_plays"
-          ? `${origin}/rabbit-hole`
-          : `${origin}/pricing`;
+        : `${origin}/pricing`;
 
     const session = await stripe.checkout.sessions.create({
       ...(customerId ? { customer: customerId } : {}),
       mode,
       line_items: [
-        lineItem ??
-          (priceTypeResolved === "rabbit_hole_plays" && !priceId
-            ? {
-                price_data: {
-                  currency: "usd",
-                  unit_amount: 199,
-                  product_data: { name: "3 Rabbit Hole plays" },
-                },
-                quantity: 1,
-              }
-            : { price: priceId, quantity: 1 }),
+        lineItem ?? { price: priceId, quantity: 1 },
       ],
       success_url: successUrl,
       cancel_url: cancelUrl,

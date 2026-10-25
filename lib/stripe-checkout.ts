@@ -13,8 +13,7 @@ import { PUBLIC_MODULE_CHECKOUT_PRICE_TYPES } from "@/lib/pricing/harness-checko
 export type CheckoutPriceType =
   | "api_metered"
   | ModuleSkuId
-  | "all_you_can_learn"
-  | "rabbit_hole_plays";
+  | "all_you_can_learn";
 
 export function isGuestCheckoutPriceType(priceType: string): boolean {
   return (PUBLIC_MODULE_CHECKOUT_PRICE_TYPES as readonly string[]).includes(priceType);
@@ -28,11 +27,7 @@ export function planIdFromPriceType(priceType: string): PlanId {
 }
 
 export function checkoutModeForPriceType(priceType: CheckoutPriceType): "subscription" | "payment" {
-  if (
-    priceType === "trial_3day" ||
-    priceType === "all_you_can_learn" ||
-    priceType === "rabbit_hole_plays"
-  ) {
+  if (priceType === "trial_3day" || priceType === "all_you_can_learn") {
     return "payment";
   }
   return "subscription";

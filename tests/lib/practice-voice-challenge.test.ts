@@ -237,15 +237,13 @@ describe("practice voice challenge script and transcript", () => {
 });
 
 describe("a pass is required before TAP Learning, TAP, Prepare, and rest unlock", () => {
-  it("TAP Learning workspace start, TAP topic and practice, Prepare live, and TAP Learning rest unlock require a pass", () => {
+  it("TAP Learning workspace start, TAP topic, Prepare live, and TAP Learning rest unlock require a pass", () => {
     expect(ileWorkspaceStartAllowed(false)).toBe(false);
     expect(ileWorkspaceStartAllowed(true)).toBe(true);
 
     expect(scoredTapBriefingStep({ choice: null, challengePassed: false })).toBe("pick");
     expect(scoredTapBriefingStep({ choice: "topic", challengePassed: false })).toBe("challenge");
-    expect(scoredTapBriefingStep({ choice: "practice", challengePassed: false })).toBe("challenge");
     expect(scoredTapBriefingStep({ choice: "topic", challengePassed: true })).toBe("live");
-    expect(scoredTapBriefingStep({ choice: "practice", challengePassed: true })).toBe("live");
 
     expect(prepareBriefingStep({ startConfirmed: false, challengePassed: false })).toBe("confirm");
     expect(prepareBriefingStep({ startConfirmed: true, challengePassed: false })).toBe("challenge");
@@ -258,9 +256,8 @@ describe("a pass is required before TAP Learning, TAP, Prepare, and rest unlock"
     expect(ileRestUnlock({ challengePassed: true, lockCount: 3 }).locked).toBe(true);
   });
 
-  it("TAP order is topic-or-practice choice then challenge", () => {
+  it("TAP order is topic choice then challenge", () => {
     expect(scoredTapBriefingStep({ choice: null, challengePassed: true })).toBe("pick");
-    expect(scoredTapBriefingStep({ choice: "practice", challengePassed: false })).toBe("challenge");
     expect(scoredTapBriefingStep({ choice: "topic", challengePassed: false })).toBe("challenge");
   });
 });
@@ -529,7 +526,7 @@ describe("shipped voice-challenge UI wiring", () => {
     expect(read("components/SessionOnboardingGuide.tsx")).toContain("max-w-xl");
   });
 
-  it("TAP briefing renders topic or practice pick before the challenge and does not start from the pick", () => {
+  it("TAP briefing renders topic pick before the challenge and does not start from the pick", () => {
     const phases = read("components/tap-score/tap-score-phases.tsx");
     const pickAt = phases.indexOf('data-tap-briefing-step="pick"');
     const challengeAt = phases.indexOf('data-tap-briefing-step="challenge"');
@@ -537,13 +534,14 @@ describe("shipped voice-challenge UI wiring", () => {
     expect(challengeAt).toBeGreaterThan(-1);
     expect(phases).toContain("omitIntroSlide");
     expect(phases).toContain("onStartTopic={chooseTopic}");
-    expect(phases).toContain("onPracticeFirst={choosePractice}");
-    expect(phases).not.toMatch(/onPracticeFirst=\{\(\) => void startSession/);
+    expect(phases).not.toContain("onPracticeFirst");
+    expect(phases).not.toContain("choosePractice");
     expect(phases).not.toMatch(/onStartTopic=\{\(selectedTopic\) => void startSession/);
-    const choose = phases.slice(phases.indexOf("function choosePractice"), phases.indexOf("function passTapChallenge"));
+    const choose = phases.slice(phases.indexOf("function chooseTopic"), phases.indexOf("function passTapChallenge"));
     expect(choose).not.toContain("startSession");
     const pass = phases.slice(phases.indexOf("function passTapChallenge"), phases.indexOf("const briefingStep"));
-    expect(pass).toContain('startSession({ practice: true })');
+    expect(pass).toContain("startSession(pendingStart.topic)");
+    expect(pass).not.toContain("practice: true");
     expect(pass).toContain("scoredTapBriefingStep");
     expect(pass).toContain('step !== "live"');
   });

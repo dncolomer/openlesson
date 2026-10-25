@@ -249,9 +249,9 @@ describe("shipped Knowledge / Setting aesthetic wiring", () => {
     expect(resolveSettingsSubview("data-studio", "standard")).toBe("general");
 
     const region = availableSettingsSubviews("knowledge_region");
-    expect([...region]).toEqual([]);
-    expect([...region]).not.toContain("aycl");
-    expect(resolveSettingsSubview("aycl", "knowledge_region")).toBe("general");
+    expect([...region]).toEqual(["general", "aycl", "integrations"]);
+    expect([...region]).toContain("aycl");
+    expect(resolveSettingsSubview("aycl", "knowledge_region")).toBe("aycl");
     expect(resolveSettingsSubview("knowledge-portal", "knowledge_region")).toBe("general");
 
     const tabs = settingsSubTabsForKind("standard", (key) =>

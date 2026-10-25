@@ -96,8 +96,9 @@ describe("KR vs standard skill/MCP surface (shipped builders)", () => {
     }
     expect(standardNames).toContain("list_map_tools");
     expect(standardNames).toContain("apply_map_tool");
-    expect(krNames).not.toContain("list_map_tools");
-    expect(krNames).not.toContain("apply_map_tool");
+    expect(krNames).toContain("list_map_tools");
+    expect(krNames).toContain("apply_map_tool");
+    expect(krNames).toEqual(standardNames);
     expect(krNames).not.toContain("lwm_snapshot");
     expect(standardNames).not.toContain("lwm_snapshot");
     expect(krNames).not.toContain("buffer_proof_of_work");
@@ -189,8 +190,12 @@ describe("KR vs standard skill/MCP surface (shipped builders)", () => {
     expect(copy.skillDescription).toContain("/api/v3/workspaces");
     expect(copy.skillDescription).not.toContain("lwm_snapshot");
     expect(copy.mcpNote).toContain("/api/mcp");
-    expect(workspaceSettingsIntegrationCopy("knowledge_region")).toEqual(copy);
-    expect(workspaceSettingsIntegrationCopy("calibration")).toEqual(copy);
+    expect(workspaceSettingsIntegrationCopy("knowledge_region")).toEqual(
+      learningWorkspaceIntegrationCopy(),
+    );
+    expect(workspaceSettingsIntegrationCopy("calibration")).toEqual(
+      learningWorkspaceIntegrationCopy(),
+    );
     expect(workspaceSettingsIntegrationCopy("standard")).toEqual(
       learningWorkspaceIntegrationCopy(),
     );
@@ -231,9 +236,9 @@ describe("KR vs standard skill/MCP surface (shipped builders)", () => {
     expect(agentSkill).toContain("workspace_kind: workspace.workspace_kind");
     expect(mcpDispatch).toContain("workspace_kind: workspace.workspace_kind");
 
-    expect(workspaceAllowsKnowledgeLinkMint("knowledge_region")).toBe(false);
+    expect(workspaceAllowsKnowledgeLinkMint("knowledge_region")).toBe(true);
     expect(workspaceAllowsKnowledgeLinkMint("standard")).toBe(true);
-    expect(assertWorkspaceAllowsKnowledgeLinkMint("knowledge_region").ok).toBe(false);
+    expect(assertWorkspaceAllowsKnowledgeLinkMint("knowledge_region").ok).toBe(true);
     expect(read("lib/pow-api/create-tap-link.ts")).toContain("workspaceAllowsKnowledgeLinkMint");
     expect(read("lib/pow-api/create-learn-link.ts")).toContain("workspaceAllowsKnowledgeLinkMint");
     expect(existsSync(join(ROOT, "lib/pow-api/create-tapbench-link.ts"))).toBe(false);

@@ -11,20 +11,22 @@ export async function GET(req: NextRequest) {
   if (!workspaceId) return jsonError(400, "workspaceId is required");
 
   const select =
-    "id, block_id, session_id, duration_seconds, requested_duration_seconds, status, created_at, completed_at";
+    "id, block_id, status, created_at, kind, guest_link";
   const [calibrate, verify] = await Promise.all([
     supabase
-      .from("workspace_calibrate_sessions")
+      .from("sessions")
       .select(select)
       .eq("workspace_id", workspaceId)
       .eq("user_id", user.id)
+      .eq("kind", "calibrate")
       .order("created_at", { ascending: false })
       .limit(10),
     supabase
-      .from("workspace_verify_sessions")
+      .from("sessions")
       .select(select)
       .eq("workspace_id", workspaceId)
       .eq("user_id", user.id)
+      .eq("kind", "verify")
       .order("created_at", { ascending: false })
       .limit(10),
   ]);

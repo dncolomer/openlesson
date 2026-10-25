@@ -5,15 +5,10 @@ import { WorkspaceContextPanel } from "@/components/WorkspaceContextPanel";
 import { WorkspaceDagsPanel } from "@/components/WorkspaceDagsPanel";
 import { WorkspaceMapTypesPanel } from "@/components/WorkspaceMapTypesPanel";
 import { WorkspaceUnsysModelsPanel } from "@/components/WorkspaceUnsysModelsPanel";
-import { WorkspaceGoalsPanel } from "@/components/WorkspaceGoalsPanel";
-import { CalibrationFlowsPanel } from "@/components/CalibrationFlowsPanel";
-import { VerificationFlowsPanel } from "@/components/VerificationFlowsPanel";
 import { WorkspaceIntegrationPanel } from "@/components/WorkspaceIntegrationPanel";
 import { WorkspaceKpisPanel } from "@/components/WorkspaceKpisPanel";
 import { WorkspacePerformancePanel } from "@/components/WorkspacePerformancePanel";
-import { DataStudioPanel } from "@/components/data-studio/DataStudioPanel";
 import { WorkspaceSectionSurface } from "@/components/WorkspaceSectionSurface";
-import { isNoMapWorkspace, workspaceProductShell } from "@/lib/workspace-kind";
 import type { Block, Workspace } from "@/components/workspace-view/types";
 import type { AuthorUnsysModelSeed } from "@/lib/author-unsys-model";
 import type { WorkspaceDagRecord } from "@/lib/workspace-dags";
@@ -129,9 +124,6 @@ export function WorkspaceSectionHosts({
               savingNotes={savingNotes}
               onSaveNotes={onSaveNotes}
               onCancelNotes={onCancelNotes}
-              showFiles={!isAycl}
-              seedQuery={plan.root_topic || plan.title}
-              ayclToken={ayclToken}
             />
           </div>
         </WorkspaceSectionSurface>
@@ -210,87 +202,6 @@ export function WorkspaceSectionHosts({
               initialState={workspaceMapTypes}
               workspaceDags={workspaceDags}
               t={t}
-            />
-          </div>
-        </WorkspaceSectionSurface>
-      )}
-
-      {!isLearnerMode &&
-        sectionLayout.mountsGoalsPanel &&
-        visibleSections.includes("goals") && (
-        <WorkspaceSectionSurface
-          kind="settings"
-          imageSrc={workspaceImage}
-          identity={identity}
-        >
-          <div
-            data-workspace-goals-host
-            className="flex h-full min-h-0 flex-col overflow-hidden p-3 sm:p-4"
-          >
-            <WorkspaceGoalsPanel
-              workspaceId={workspaceId}
-              isOwner={isOwner}
-              ayclToken={ayclToken}
-              contextGeneration={isNoMapWorkspace(plan.workspace_kind)}
-            />
-          </div>
-        </WorkspaceSectionSurface>
-      )}
-
-      {!isLearnerMode &&
-        sectionLayout.mountsVerificationFlowsPanel &&
-        visibleSections.includes("verification_flows") && (
-        <WorkspaceSectionSurface
-          kind="settings"
-          imageSrc={workspaceImage}
-          identity={identity}
-        >
-          <div
-            data-workspace-verification-flows-host
-            className="flex h-full min-h-0 flex-col overflow-hidden p-3 sm:p-4"
-          >
-            <VerificationFlowsPanel workspaceId={workspaceId} ayclToken={ayclToken} />
-          </div>
-        </WorkspaceSectionSurface>
-      )}
-
-      {!isLearnerMode &&
-        sectionLayout.mountsCalibrationFlowsPanel &&
-        visibleSections.includes("calibration_flows") && (
-        <WorkspaceSectionSurface
-          kind="settings"
-          imageSrc={workspaceImage}
-          identity={identity}
-        >
-          <div
-            data-workspace-calibration-flows-host
-            className="flex h-full min-h-0 flex-col overflow-hidden p-3 sm:p-4"
-          >
-            <CalibrationFlowsPanel workspaceId={workspaceId} ayclToken={ayclToken} />
-          </div>
-        </WorkspaceSectionSurface>
-      )}
-
-      {!isLearnerMode &&
-        canAccessPrivilegedSections &&
-        sectionLayout.mountsDataStudioPanel &&
-        visibleSections.includes("data_studio") && (
-        <WorkspaceSectionSurface
-          kind="data_studio"
-          imageSrc={workspaceImage}
-          identity={identity}
-        >
-          <div
-            className="flex h-full min-h-0 flex-col overflow-hidden"
-            data-workspace-data-studio-host
-          >
-            <DataStudioPanel
-              product={
-                workspaceProductShell(plan.workspace_kind) === "calibration"
-                  ? "calibration"
-                  : "verification"
-              }
-              workspaceId={workspaceId}
             />
           </div>
         </WorkspaceSectionSurface>

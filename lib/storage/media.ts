@@ -13,6 +13,29 @@ import type {
   ToolAction,
   UserCalibration,
 } from "@/lib/domain/types";
+import {
+  powRowsForSensorKind,
+  type SessionSensorKind,
+} from "@/lib/session-sensor-pow";
+
+async function loadSessionPowRows(sessionId: string, sinceMs?: number) {
+  const supabase = createClient();
+  let query = supabase
+    .from("proof_of_work")
+    .select("*")
+    .eq("session_id", sessionId)
+    .order("timestamp_ms", { ascending: true });
+  if (typeof sinceMs === "number") {
+    query = query.gte("timestamp_ms", sinceMs);
+  }
+  const { data, error } = await query;
+  if (error || !data) return [];
+  return data as Array<Record<string, unknown>>;
+}
+
+function powKindRows(rows: Array<Record<string, unknown>>, kind: SessionSensorKind) {
+  return powRowsForSensorKind(rows, kind);
+}
 
 function mimeToExtension(mime: string): string {
   const base = mime.split(";")[0].trim().toLowerCase();
@@ -39,45 +62,24 @@ export async function saveSessionAudio(
   sessionId: string,
   audioBlob: Blob
 ): Promise<string> {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not authenticated");
-
-  const timestamp = Date.now();
+  const { uploadSessionFile } = await import("@/lib/session-files-client");
   const contentType = audioBlob.type || "audio/mp4";
   const ext = mimeToExtension(contentType);
-  const path = `${user.id}/${sessionId}_${timestamp}.${ext}`;
-
-  console.log("[saveSessionAudio] Saving audio:", { sessionId, path, contentType, size: audioBlob.size });
-
-  const { error } = await supabase.storage
-    .from("session-audio")
-    .upload(path, audioBlob, {
-      contentType,
-      upsert: true,
-    });
-
-  if (error) {
-    console.error("[saveSessionAudio] Upload error:", error);
-    throw new Error(error.message);
+  const timestamp = Date.now();
+  const fileName = `${sessionId}_${timestamp}.${ext}`;
+  const result = await uploadSessionFile({
+    sessionId,
+    kind: "audio",
+    fileName,
+    mimeType: contentType,
+    data: audioBlob,
+    timestampMs: timestamp,
+    metadata: { sensor_kind: "audio" },
+  });
+  if (!result.success || !result.xai_file_id) {
+    throw new Error(result.error || "Audio upload failed");
   }
-
-  console.log("[saveSessionAudio] Upload success, updating session...");
-
-  // Update session with audio path
-  const { error: updateError } = await supabase
-    .from("sessions")
-    .update({ audio_path: path })
-    .eq("id", sessionId);
-
-  if (updateError) {
-    console.error("[saveSessionAudio] Update session error:", updateError);
-    throw new Error(updateError.message);
-  }
-
-  console.log("[saveSessionAudio] Done!");
-
-  return path;
+  return result.xai_file_id;
 }
 
 const MIN_AUDIO_SIZE_BYTES = 10240; // 10KB - minimum size for meaningful audio
@@ -93,53 +95,25 @@ export async function saveAudioChunk(
     return null;
   }
 
-  const supabase = createClient();
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError) {
-    console.error("[saveAudioChunk] Auth error:", authError);
-    throw new Error("Not authenticated");
-  }
-  if (!user) throw new Error("Not authenticated");
-
   const ts = Date.now();
   const contentType = chunkBlob.type || "audio/mp4";
   const ext = mimeToExtension(contentType);
-  const path = `${user.id}/${sessionId}/chunk_${chunkIndex}_${ts}.${ext}`;
-
-  console.log("[saveAudioChunk] Saving:", { sessionId, chunkIndex, path, size: chunkBlob.size, contentType });
-
-  const { error } = await supabase.storage
-    .from("session-audio")
-    .upload(path, chunkBlob, {
-      contentType,
-      upsert: false,
-    });
-
-  if (error) {
-    console.error("[saveAudioChunk] Upload error:", error);
-    throw error;
+  const fileName = `chunk_${chunkIndex}_${ts}.${ext}`;
+  const { uploadSessionFile } = await import("@/lib/session-files-client");
+  const result = await uploadSessionFile({
+    sessionId,
+    kind: "audio",
+    fileName,
+    mimeType: contentType,
+    data: chunkBlob,
+    timestampMs: timestamp,
+    chunkIndex,
+    metadata: { sensor_kind: "audio" },
+  });
+  if (!result.success || !result.xai_file_id) {
+    throw new Error(result.error || "Audio chunk upload failed");
   }
-
-  // Insert record to session_audio so the chunk remains linked to the session.
-  const { error: insertError } = await supabase
-    .from("session_audio")
-    .insert({
-      session_id: sessionId,
-      user_id: user.id,
-      storage_path: path,
-      chunk_index: chunkIndex,
-      timestamp_ms: timestamp,
-    });
-
-  if (insertError) {
-    console.error("[saveAudioChunk] Failed to insert session_audio record:", insertError);
-    // Best-effort cleanup of orphan blob so storage and DB stay consistent.
-    await supabase.storage.from("session-audio").remove([path]).catch(() => {});
-    throw insertError;
-  }
-
-  console.log("[saveAudioChunk] Success:", path);
-  return path;
+  return result.xai_file_id;
 }
 
 export async function saveBrowserTranscript(
@@ -175,22 +149,13 @@ export async function saveBrowserTranscript(
 }
 
 export async function getSessionAudio(sessionId: string): Promise<Blob | null> {
-  const supabase = createClient();
-
-  const { data: sessionRow } = await supabase
-    .from("sessions")
-    .select("audio_path")
-    .eq("id", sessionId)
-    .single();
-
-  if (!sessionRow?.audio_path) return null;
-
-  const { data, error } = await supabase.storage
-    .from("session-audio")
-    .download(sessionRow.audio_path);
-
-  if (error || !data) return null;
-  return data;
+  const rows = await loadSessionPowRows(sessionId);
+  const audio = powKindRows(rows, "audio").at(-1);
+  const fileId = typeof audio?.xai_file_id === "string" ? audio.xai_file_id : "";
+  if (!fileId) return null;
+  const res = await fetch(`/api/session-files/download?sessionId=${encodeURIComponent(sessionId)}&fileId=${encodeURIComponent(fileId)}`);
+  if (!res.ok) return null;
+  return res.blob();
 }
 
 export async function saveFacialData(
@@ -393,27 +358,14 @@ export async function saveScreenshot(
 }
 
 export async function getSessionScreenshots(sessionId: string): Promise<SessionScreenshot[]> {
-  const supabase = createClient();
-  
-  const { data, error } = await supabase
-    .from("session_screenshots")
-    .select("*")
-    .eq("session_id", sessionId)
-    .order("timestamp_ms", { ascending: true });
-
-  if (error || !data) {
-    console.error("[getSessionScreenshots] Error:", error);
-    return [];
-  }
-
-   
-  return data.map((row: any) => ({
-    id: row.id,
-    sessionId: row.session_id,
-    userId: row.user_id,
-    timestamp: row.timestamp_ms,
-    xaiFileId: row.xai_file_id,
-    createdAt: row.created_at,
+  const rows = powKindRows(await loadSessionPowRows(sessionId), "screen");
+  return rows.map((row) => ({
+    id: String(row.id || ""),
+    sessionId: String(row.session_id || sessionId),
+    userId: String(row.user_id || ""),
+    timestamp: Number(row.timestamp_ms || 0),
+    xaiFileId: String(row.xai_file_id || ""),
+    createdAt: String(row.created_at || ""),
   }));
 }
 
@@ -430,158 +382,85 @@ export async function getScreenshotUrl(xaiFileId: string): Promise<string | null
 // ---- Recent Data Fetching for Analysis ----
 
 export async function getRecentAudioChunks(sessionId: string, ms: number): Promise<RecentAudioChunk[]> {
-  const supabase = createClient();
   const cutoffTime = Date.now() - ms;
-  
-  const { data, error } = await supabase
-    .from("session_audio")
-    .select("*")
-    .eq("session_id", sessionId)
-    .gte("timestamp_ms", cutoffTime)
-    .order("timestamp_ms", { ascending: true });
-
-  if (error || !data) {
-    console.error("[getRecentAudioChunks] Error:", error);
-    return [];
-  }
-
-   
-  return data.map((row: any) => ({
-    id: row.id,
-    sessionId: row.session_id,
-    timestamp: row.timestamp_ms,
-    storagePath: row.storage_path,
-    chunkIndex: row.chunk_index,
-  }));
+  const rows = powKindRows(await loadSessionPowRows(sessionId, cutoffTime), "audio");
+  return rows.map((row) => {
+    const meta = (row.metadata && typeof row.metadata === "object" ? row.metadata : {}) as Record<string, unknown>;
+    return {
+      id: String(row.id || ""),
+      sessionId: String(row.session_id || sessionId),
+      timestamp: Number(row.timestamp_ms || 0),
+      storagePath: String(row.xai_file_id || meta.storage_path || ""),
+      chunkIndex: Number(row.chunk_index || 0),
+    };
+  });
 }
 
 export async function getRecentTranscripts(sessionId: string, ms: number): Promise<RecentTranscript[]> {
-  const supabase = createClient();
   const cutoffTime = Date.now() - ms;
-
-  const { data, error } = await supabase
-    .from("session_transcript")
-    .select("id, session_id, xai_file_id, word_count, timestamp_ms")
-    .eq("session_id", sessionId)
-    .gte("timestamp_ms", cutoffTime)
-    .order("timestamp_ms", { ascending: true });
-
-  if (error || !data) {
-    return [];
-  }
-
-  return data.map((row: { id: string; session_id: string; xai_file_id: string; word_count: number; timestamp_ms: number }) => ({
-    id: row.id,
-    sessionId: row.session_id,
-    xaiFileId: row.xai_file_id,
-    wordCount: row.word_count,
-    timestamp: row.timestamp_ms,
-  }));
+  const rows = powKindRows(await loadSessionPowRows(sessionId, cutoffTime), "transcript");
+  return rows.map((row) => {
+    const meta = (row.metadata && typeof row.metadata === "object" ? row.metadata : {}) as Record<string, unknown>;
+    return {
+      id: String(row.id || ""),
+      sessionId: String(row.session_id || sessionId),
+      xaiFileId: String(row.xai_file_id || ""),
+      wordCount: Number(meta.word_count || 0),
+      timestamp: Number(row.timestamp_ms || 0),
+    };
+  });
 }
 
 export async function getRecentToolEvents(sessionId: string, ms: number): Promise<RecentToolEvent[]> {
-  const supabase = createClient();
   const cutoffTime = Date.now() - ms;
-
-  const { data, error } = await supabase
-    .from("session_tool")
-    .select("*")
-    .eq("session_id", sessionId)
-    .gte("timestamp_ms", cutoffTime)
-    .order("timestamp_ms", { ascending: true });
-
-  if (error || !data) {
-    console.error("[getRecentToolEvents] Error:", error);
-    return [];
-  }
-
-   
-  return data.map((row: any) => ({
-    id: row.id,
-    sessionId: row.session_id,
-    timestamp: row.timestamp_ms,
-    toolName: row.tool_name,
-    toolAction: row.tool_action,
-    xaiFileId: row.xai_file_id,
+  const rows = powKindRows(await loadSessionPowRows(sessionId, cutoffTime), "tool");
+  return rows.map((row) => ({
+    id: String(row.id || ""),
+    sessionId: String(row.session_id || sessionId),
+    timestamp: Number(row.timestamp_ms || 0),
+    toolName: String(row.tool_name || "tool"),
+    toolAction: String(row.tool_action || ""),
+    xaiFileId: String(row.xai_file_id || ""),
   }));
 }
 
 export async function getRecentFacialData(sessionId: string, ms: number): Promise<RecentFacialData[]> {
-  const supabase = createClient();
   const cutoffTime = Date.now() - ms;
-
-  const { data, error } = await supabase
-    .from("session_facial")
-    .select("*")
-    .eq("session_id", sessionId)
-    .gte("timestamp_ms", cutoffTime)
-    .order("timestamp_ms", { ascending: true });
-
-  if (error || !data) {
-    console.error("[getRecentFacialData] Error:", error);
-    return [];
-  }
-
-   
-  return data.map((row: any) => ({
-    id: row.id,
-    sessionId: row.session_id,
-    timestamp: row.timestamp_ms,
-    xaiFileId: row.xai_file_id,
+  const rows = powKindRows(await loadSessionPowRows(sessionId, cutoffTime), "facial");
+  return rows.map((row) => ({
+    id: String(row.id || ""),
+    sessionId: String(row.session_id || sessionId),
+    timestamp: Number(row.timestamp_ms || 0),
+    xaiFileId: String(row.xai_file_id || ""),
   }));
 }
 
 export async function getRecentEEGData(sessionId: string, ms: number): Promise<RecentEEGData[]> {
-  const supabase = createClient();
   const cutoffTime = Date.now() - ms;
-
-  const { data, error } = await supabase
-    .from("session_eeg")
-    .select("*")
-    .eq("session_id", sessionId)
-    .gte("timestamp_ms", cutoffTime)
-    .order("timestamp_ms", { ascending: true });
-
-  if (error || !data) {
-    console.error("[getRecentEEGData] Error:", error);
-    return [];
-  }
-
-   
-  return data.map((row: any) => ({
-    id: row.id,
-    sessionId: row.session_id,
-    timestamp: row.timestamp_ms,
-    xaiFileId: row.xai_file_id,
-    chunkIndex: row.chunk_index,
-    bandPowers: row.band_powers,
-  }));
+  const rows = powKindRows(await loadSessionPowRows(sessionId, cutoffTime), "eeg");
+  return rows.map((row) => {
+    const meta = (row.metadata && typeof row.metadata === "object" ? row.metadata : {}) as Record<string, unknown>;
+    return {
+      id: String(row.id || ""),
+      sessionId: String(row.session_id || sessionId),
+      timestamp: Number(row.timestamp_ms || 0),
+      xaiFileId: String(row.xai_file_id || ""),
+      chunkIndex: Number(row.chunk_index || 0),
+      bandPowers: (meta.band_powers || row.band_powers || null) as RecentEEGData["bandPowers"],
+    };
+  });
 }
 
 export async function getRecentScreenshots(sessionId: string, ms: number): Promise<SessionScreenshot[]> {
-  const supabase = createClient();
   const cutoffTime = Date.now() - ms;
-
-  const { data, error } = await supabase
-    .from("session_screenshots")
-    .select("*")
-    .eq("session_id", sessionId)
-    .gte("timestamp_ms", cutoffTime)
-    .order("timestamp_ms", { ascending: true });
-
-  if (error || !data) {
-    console.error("[getRecentScreenshots] Error:", error);
-    return [];
-  }
-
-   
-  return data.map((row: any) => ({
-    id: row.id,
-    sessionId: row.session_id,
-    userId: row.user_id,
-    timestamp: row.timestamp_ms,
-    xaiFileId: row.xai_file_id,
-    createdAt: row.created_at,
+  const rows = powKindRows(await loadSessionPowRows(sessionId, cutoffTime), "screen");
+  return rows.map((row) => ({
+    id: String(row.id || ""),
+    sessionId: String(row.session_id || sessionId),
+    userId: String(row.user_id || ""),
+    timestamp: Number(row.timestamp_ms || 0),
+    xaiFileId: String(row.xai_file_id || ""),
+    createdAt: String(row.created_at || ""),
   }));
 }
 
@@ -598,110 +477,29 @@ export async function deleteSessionScreenshots(sessionId: string): Promise<void>
     console.warn("[deleteSessionScreenshots] cleanup failed (non-critical):", e);
   }
 
-  // Remove the screenshot DB rows for this session
-  await supabase
-    .from("session_screenshots")
-    .delete()
-    .eq("session_id", sessionId);
-
-  console.log("[deleteSessionScreenshots] Deleted screenshots for session:", sessionId);
+  console.log("[deleteSessionScreenshots] Proof of work for session is preserved:", sessionId);
 }
 
 // ---- Full Session Data Fetching (for Analytics) ----
 
 export async function getAllTranscripts(sessionId: string): Promise<RecentTranscript[]> {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from("session_transcript")
-    .select("id, session_id, xai_file_id, word_count, timestamp_ms")
-    .eq("session_id", sessionId)
-    .order("timestamp_ms", { ascending: true });
-
-  if (error || !data) return [];
-  return data.map((row: { id: string; session_id: string; xai_file_id: string; word_count: number; timestamp_ms: number }) => ({
-    id: row.id,
-    sessionId: row.session_id,
-    xaiFileId: row.xai_file_id,
-    wordCount: row.word_count,
-    timestamp: row.timestamp_ms,
-  }));
+  return getRecentTranscripts(sessionId, Date.now());
 }
 
 export async function getAllEEGData(sessionId: string): Promise<RecentEEGData[]> {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from("session_eeg")
-    .select("*")
-    .eq("session_id", sessionId)
-    .order("timestamp_ms", { ascending: true });
-
-  if (error || !data) return [];
-   
-  return data.map((row: any) => ({
-    id: row.id,
-    sessionId: row.session_id,
-    timestamp: row.timestamp_ms,
-    xaiFileId: row.xai_file_id,
-    chunkIndex: row.chunk_index,
-    bandPowers: row.band_powers,
-  }));
+  return getRecentEEGData(sessionId, Date.now());
 }
 
 export async function getAllFacialData(sessionId: string): Promise<RecentFacialData[]> {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from("session_facial")
-    .select("*")
-    .eq("session_id", sessionId)
-    .order("timestamp_ms", { ascending: true });
-
-  if (error || !data) return [];
-   
-  return data.map((row: any) => ({
-    id: row.id,
-    sessionId: row.session_id,
-    timestamp: row.timestamp_ms,
-    xaiFileId: row.xai_file_id,
-  }));
+  return getRecentFacialData(sessionId, Date.now());
 }
 
 export async function getAllToolEvents(sessionId: string): Promise<RecentToolEvent[]> {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from("session_tool")
-    .select("*")
-    .eq("session_id", sessionId)
-    .order("timestamp_ms", { ascending: true });
-
-  if (error || !data) return [];
-   
-  return data.map((row: any) => ({
-    id: row.id,
-    sessionId: row.session_id,
-    timestamp: row.timestamp_ms,
-    toolName: row.tool_name,
-    toolAction: row.tool_action,
-    xaiFileId: row.xai_file_id,
-  }));
+  return getRecentToolEvents(sessionId, Date.now());
 }
 
 export async function getAllAudioChunks(sessionId: string): Promise<RecentAudioChunk[]> {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from("session_audio")
-    .select("*")
-    .eq("session_id", sessionId)
-    .order("timestamp_ms", { ascending: true });
-
-  if (error || !data) return [];
-   
-  return data.map((row: any) => ({
-    id: row.id,
-    sessionId: row.session_id,
-    timestamp: row.timestamp_ms,
-    storagePath: row.storage_path,
-    chunkIndex: row.chunk_index,
-  }));
+  return getRecentAudioChunks(sessionId, Date.now());
 }
 
 // ---- User Calibration (session statistics from past probes) ----
@@ -721,7 +519,7 @@ export async function getUserCalibration(
       id,
       problem,
       created_at,
-      probes (gap_score, signals)
+      probes
     `)
     .eq("user_id", userId)
     .eq("status", "completed")

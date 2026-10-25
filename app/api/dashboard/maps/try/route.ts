@@ -80,6 +80,9 @@ export async function POST(req: NextRequest) {
         user_id: auth.persistUserId,
         problem: block.title || source?.title || "Map",
         status: "active",
+        kind: "learn",
+        workspace_id: copyId,
+        block_id: block.id,
         planning_prompt: block.planning_prompt || null,
         metadata: {
           session_mode: "learning",
@@ -101,24 +104,11 @@ export async function POST(req: NextRequest) {
       .eq("id", block.id)
       .eq("workspace_id", copyId);
     if (blockUpdateError) {
-      await auth.supabase.from("sessions").delete().eq("id", session.id);
-      return jsonError(500, blockUpdateError.message || "Failed to update block");
-    }
-
-    const { error: joinError } = await auth.supabase.from("block_sessions").insert({
-      block_id: block.id,
-      session_id: session.id,
-      user_id: auth.persistUserId,
-      workspace_id: copyId,
-    });
-    if (joinError) {
       await auth.supabase
-        .from("blocks")
-        .update({ status: block.status ?? "not_started", session_id: null })
-        .eq("id", block.id)
-        .eq("workspace_id", copyId);
-      await auth.supabase.from("sessions").delete().eq("id", session.id);
-      return jsonError(500, joinError.message || "Failed to link session");
+        .from("sessions")
+        .update({ status: "archived" })
+        .eq("id", session.id);
+      return jsonError(500, blockUpdateError.message || "Failed to update block");
     }
 
     return NextResponse.json({

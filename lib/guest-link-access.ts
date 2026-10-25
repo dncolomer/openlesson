@@ -287,13 +287,18 @@ export async function recordGuestLinkEntryQueryParams(
   }
 
   const { data: row } = await supabase
-    .from(table)
-    .select("entry_query_params")
+    .from("sessions")
+    .select("guest_link")
     .eq("id", linkId)
     .maybeSingle();
 
-  const next = appendEntryQueryCapture(row?.entry_query_params, params);
-  await supabase.from(table).update({ entry_query_params: next }).eq("id", linkId);
+  const guestLink =
+    row?.guest_link && typeof row.guest_link === "object" ? (row.guest_link as Record<string, unknown>) : {};
+  const next = appendEntryQueryCapture(guestLink.entry_query_params, params);
+  await supabase
+    .from("sessions")
+    .update({ guest_link: { ...guestLink, entry_query_params: next } })
+    .eq("id", linkId);
   return next;
 }
 

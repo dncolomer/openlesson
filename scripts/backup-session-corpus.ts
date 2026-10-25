@@ -48,7 +48,7 @@ async function main() {
     const sessionColNames = new Set(sessionCols.rows.map((row: { column_name: string }) => row.column_name));
     const embeddingCols = await client.query(`
       SELECT column_name FROM information_schema.columns
-      WHERE table_schema = 'public' AND table_name = 'workspace_flow_embeddings'
+      WHERE table_schema = 'public' AND table_name = 'session_embeddings'
     `);
     const embeddingColNames = new Set(
       embeddingCols.rows.map((row: { column_name: string }) => row.column_name),
@@ -75,13 +75,13 @@ async function main() {
     const pow = await client.query(`
       SELECT id, session_id, proof_of_work_type, tool_name, tool_action,
              mime_type, file_name, xai_file_id, timestamp_ms, metadata
-      FROM public.workspace_proof_of_work
+      FROM public.proof_of_work
       ORDER BY timestamp_ms ASC
     `);
 
     const embeddings = await client.query(`
       SELECT id, run_id, flow_kind, embedding_model_id, dim, created_at, raw, ${sessionIdOnEmb}
-      FROM public.workspace_flow_embeddings
+      FROM public.session_embeddings
       ORDER BY created_at ASC
     `);
 

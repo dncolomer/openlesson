@@ -165,7 +165,7 @@ useEffect(() => {
     try {
       const { data: workspace } = await supabase
         .from("workspaces")
-        .select("id, title, root_topic, workspace_goal, description, notes, unusable_cells")
+        .select("id, title, root_topic, description, notes, unusable_cells")
         .eq("id", workspaceId)
         .maybeSingle();
       if (cancelled || !workspace) return;
@@ -198,29 +198,13 @@ useEffect(() => {
       }));
       const focused =
         (focusedBlockId && blocks.find((b) => b.id === focusedBlockId)) || null;
-      let files: WorkspaceFileContextItem[] = [];
-      try {
-        const { data: fileRows } = await supabase
-          .from("workspace_files")
-          .select("file_name, mime_type")
-          .eq("workspace_id", workspaceId)
-          .order("created_at", { ascending: false })
-          .limit(12);
-        files = (fileRows || [])
-          .map((f: { file_name?: string | null; mime_type?: string | null }) => ({
-            name: typeof f.file_name === "string" ? f.file_name.trim() : "",
-            mime_type: f.mime_type ?? null,
-          }))
-          .filter((f) => f.name);
-      } catch {
-        files = [];
-      }
+      const files: WorkspaceFileContextItem[] = [];
       let scoutArtifacts: IlePromptMaterials["scoutArtifacts"] = null;
       const powBlockId = focused?.id ?? focusedBlockId;
       if (powBlockId) {
         try {
           const { data: powRows } = await supabase
-            .from("workspace_proof_of_work")
+            .from("proof_of_work")
             .select("metadata")
             .eq("workspace_id", workspaceId)
             .eq("block_id", powBlockId)
@@ -236,7 +220,13 @@ useEffect(() => {
         workspaceId,
         workspaceTitle: workspace.title ?? session.problem ?? null,
         workspaceGoal:
-          (workspace as { workspace_goal?: string | null }).workspace_goal ?? null,
+          (typeof (workspace as { description?: string | null }).description === "string" &&
+            (workspace as { description: string }).description.trim()) ||
+          (typeof (workspace as { notes?: string | null }).notes === "string" &&
+            (workspace as { notes: string }).notes.trim()) ||
+          workspace.title ||
+          workspace.root_topic ||
+          null,
         rootTopic: workspace.root_topic ?? null,
         notes: (workspace as { notes?: string | null }).notes ?? null,
         files,

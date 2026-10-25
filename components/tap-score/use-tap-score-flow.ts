@@ -8,7 +8,7 @@ import {
   postTutoringSessionStart,
 } from "@/lib/tutoring-client";
 import { tapHookFormingText } from "@/lib/tap-session-runtime";
-import { TAP_PRACTICE_DURATION_SECONDS, resolveTapLiveMinutes } from "@/lib/tap-practice";
+import { resolveTapLiveMinutes } from "@/lib/tap-practice";
 import { TAP_SESSION_PURITY_MAX } from "@/lib/tap-session-purity";
 import {
   OPENING_MESSAGE_ID,
@@ -25,6 +25,13 @@ import type { TapStartingTopic } from "@/lib/tap-score";
 import type { TapPostSessionMode } from "@/lib/pow-api/tap-link-config";
 import type { HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
 import type { ProofOfWorkApiInterruption } from "@/lib/pow-api/predictive-interruption";
+import { postIleSessionChat } from "@/lib/session-chat-client";
+import {
+  ileWorkCanvasAskFromSessionChat,
+  type IleWorkCanvasElement,
+  type IleWorkCanvasScene as TapWorkCanvasScene,
+  type IleWorkCanvasSkeleton,
+} from "@/lib/learn-work-canvas";
 import { parseTapXaiCanvasTurn, serializeTapWorkCanvasScene } from "@/lib/tap-work-canvas";
 import { postWorkspaceFlowEmbedding } from "@/lib/flow-embedding-client";
 import type { SessionPolicySnapshot } from "@/components/session-view/session-policy-context";
@@ -32,11 +39,6 @@ import { loadSessionBranchField, sessionClockMayStart } from "@/lib/session-bran
 import { verificationFieldPrepareInput } from "@/lib/session-branch-prepare";
 import { localVerificationOpening } from "@/lib/verification-flow";
 import type { TapProductKind } from "@/lib/tap-session-runtime";
-import type {
-  IleWorkCanvasElement,
-  IleWorkCanvasScene as TapWorkCanvasScene,
-  IleWorkCanvasSkeleton,
-} from "@/lib/learn-work-canvas";
 
 /** Live TAP dialog session — data + one apply, not a setter-host bag. */
 export type TapScoreSession = {
@@ -59,7 +61,6 @@ export type TapScoreSession = {
   router: AppRouterInstance;
   entryQueryParamsRef: MutableRefObject<Record<string, string | string[]>>;
   tapSessionIdRef: MutableRefObject<string | null>;
-  isPracticeModeRef: MutableRefObject<boolean>;
   isEndingRef: MutableRefObject<boolean>;
   autoStashInFlightRef: MutableRefObject<boolean>;
   tapThoughtSpeech: {
@@ -68,9 +69,8 @@ export type TapScoreSession = {
     pauseLiveSpeech: () => void;
   };
   workCanvasSceneRef: MutableRefObject<TapWorkCanvasScene | null>;
-  /** Skip tutoring start/chat/complete and open the canvas from the pooled question. */
+  /** Skip tutoring start/complete and open the canvas from the pooled question. Canvas asks still call xAI. */
   localOpening?: boolean;
-  localPracticePrompt?: string;
   localQuestionIdRef?: MutableRefObject<string | null>;
   onLocalProof?: (input: {
     prompt: string;
@@ -121,7 +121,6 @@ export type TapScoreSessionPatch = {
   memoryThoughtIds?: Set<string> | ((current: Set<string>) => Set<string>);
   isStartingSession?: boolean;
   startingTopicId?: string | null;
-  isPracticeMode?: boolean;
   liveMinutes?: number;
   speechError?: string | null;
   thoughts?: Thought[];
@@ -137,6 +136,83 @@ export type TapScoreSessionPatch = {
   crystallizableText?: string;
   editingTranscription?: { draft: string; originalText: string } | null;
 };
+
+async function postVerificationCanvasAsk(
+  s: TapScoreSession,
+  input: {
+    prompt: string;
+    workCanvasScene: ReturnType<typeof serializeTapWorkCanvasScene>;
+    scene: TapWorkCanvasScene;
+  },
+): Promise<{
+  ok: boolean;
+  data: Record<string, unknown>;
+  errorMessage: string;
+}> {
+  if (s.verificationToken) {
+    const response = await fetch(
+      `/api/verification-flow/public/${encodeURIComponent(s.verificationToken)}/chat`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          thought: input.prompt,
+          messages: s.messages,
+          conversationLanguage: s.conversationLanguage,
+          workCanvasScene: input.workCanvasScene,
+          canvasAsk: true,
+        }),
+      },
+    );
+    const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+    return {
+      ok: response.ok,
+      data,
+      errorMessage: errorMessageFromBody(data, "Could not get Verify response"),
+    };
+  }
+  if (s.localOpening) {
+    const problem =
+      String(s.workspaceTitle || "").trim() ||
+      String(s.messages.find((message) => message.role === "assistant")?.content || "").trim() ||
+      "Verification";
+    return postIleSessionChat({
+      problem,
+      sessionId: s.sessionId,
+      tutoringLanguage: s.conversationLanguage || null,
+      workCanvasScene: input.scene,
+      workspaceContext: s.workspaceTitle ? { workspaceTitle: s.workspaceTitle } : null,
+      messages: [
+        ...s.messages.map((message) => ({ role: message.role, content: message.content })),
+        { role: "user", content: input.prompt },
+      ],
+    });
+  }
+  const response = await fetch("/api/workspace-tap-score/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      workspaceId: s.workspaceId,
+      blockId: s.blockId,
+      sessionId: s.sessionId,
+      privateToken: s.privateToken,
+      entryQueryParams: s.entryQueryParamsRef.current,
+      tapSessionId: s.tapSessionIdRef.current,
+      minutes: s.liveMinutes,
+      thought: input.prompt,
+      messages: s.messages,
+      conversationLanguage: s.conversationLanguage,
+      workCanvasScene: input.workCanvasScene,
+      canvasAsk: true,
+    }),
+  });
+  const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  return {
+    ok: response.ok,
+    data,
+    errorMessage: errorMessageFromBody(data, "Could not get Verify response"),
+  };
+}
 
 export function useTapScoreSession(session: TapScoreSession) {
   const sessionRef = useRef(session);
@@ -195,7 +271,6 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
           entryQueryParams: s.entryQueryParamsRef.current,
           tapSessionId: s.tapSessionIdRef.current,
           minutes: s.liveMinutes,
-          practice: s.isPracticeModeRef.current,
           thought: clean,
           messages: nextMessages,
           conversationLanguage: s.conversationLanguage,
@@ -225,39 +300,28 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
     raw?: string | null;
   }> {
     const s = current();
-    if (s.localOpening) {
-      return { text: input.prompt, elements: null, origin: null, raw: input.prompt };
-    }
     const workCanvasScene = serializeTapWorkCanvasScene(input.scene);
-    const response = await fetch("/api/workspace-tap-score/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        workspaceId: s.workspaceId,
-        blockId: s.blockId,
-        sessionId: s.sessionId,
-        privateToken: s.privateToken,
-        entryQueryParams: s.entryQueryParamsRef.current,
-        tapSessionId: s.tapSessionIdRef.current,
-        minutes: s.liveMinutes,
-        practice: s.isPracticeModeRef.current,
-        thought: input.prompt,
-        messages: s.messages,
-        conversationLanguage: s.conversationLanguage,
-        workCanvasScene,
-        canvasAsk: true,
-      }),
+    const chat = await postVerificationCanvasAsk(s, {
+      prompt: input.prompt,
+      workCanvasScene,
+      scene: input.scene,
     });
-    const payload = await response.json();
-    if (!response.ok) throw new Error(errorMessageFromBody(payload, "Could not get Verify response"));
-    const content = String(payload.message || "").trim() || "No reply";
-    const parsed = parseTapXaiCanvasTurn(content);
-    s.handlePowInterruption(payload.interruption ?? null);
+    const asked = ileWorkCanvasAskFromSessionChat({
+      ok: chat.ok,
+      message: chat.data.message,
+      canvasElements: chat.data.canvasElements,
+      raw: chat.data.raw,
+      errorMessage: chat.errorMessage,
+    });
+    if (!chat.ok) throw new Error(asked.text || chat.errorMessage || "Could not get Verify response");
+    s.handlePowInterruption((chat.data.interruption as ProofOfWorkApiInterruption | undefined) ?? null);
+    const content = asked.text.trim() || String(chat.data.message || "").trim() || "No reply";
+    const parsed = parseTapXaiCanvasTurn(asked.raw || content);
     return {
       text: parsed.text || content,
-      elements: parsed.elements,
-      origin: parsed.origin,
-      raw: content,
+      elements: asked.elements ?? parsed.elements,
+      origin: asked.origin ?? parsed.origin,
+      raw: asked.raw || content,
     };
   }
 
@@ -276,16 +340,8 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
     s.tapThoughtSpeech.retryMicrophone();
   }
 
-  async function startSession(topicOrOptions?: TapStartingTopic | { practice?: boolean; topic?: TapStartingTopic }) {
+  async function startSession(topic?: TapStartingTopic) {
     const s = current();
-    const practice =
-      !!topicOrOptions &&
-      "practice" in topicOrOptions &&
-      topicOrOptions.practice === true;
-    const topic =
-      topicOrOptions && "practice" in topicOrOptions
-        ? topicOrOptions.topic
-        : (topicOrOptions as TapStartingTopic | undefined);
 
     s.isEndingRef.current = false;
     s.clearPendingInterruption();
@@ -293,10 +349,8 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
     s.resetSpeechTracking();
     s.apply({ heliosTurnMode: "idle" });
     s.apply({ isStartingSession: true });
-    s.apply({ startingTopicId: practice ? "practice" : topic?.id ?? null });
-    s.apply({ isPracticeMode: practice });
-    s.isPracticeModeRef.current = practice;
-    const sessionMinutes = resolveTapLiveMinutes({ practice, minutes: s.minutes });
+    s.apply({ startingTopicId: topic?.id ?? null });
+    const sessionMinutes = resolveTapLiveMinutes({ minutes: s.minutes });
     s.apply({ liveMinutes: sessionMinutes });
     s.apply({ error: "" });
     s.apply({ speechError: null });
@@ -313,15 +367,13 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
     try {
       if (s.localOpening) {
         const opening = localVerificationOpening({
-          practice,
           openingQuestion: topic?.openingQuestion,
-          practicePrompt: s.localPracticePrompt,
         });
         if (!opening) throw new Error("Could not generate opening question");
-        const localId = `verification-${practice ? "practice" : topic?.id || "question"}`;
+        const localId = `verification-${topic?.id || "question"}`;
         s.tapSessionIdRef.current = localId;
         if (s.localQuestionIdRef) {
-          s.localQuestionIdRef.current = practice ? null : topic?.id ?? null;
+          s.localQuestionIdRef.current = topic?.id ?? null;
         }
         s.apply({ tapSessionId: localId });
         if (s.kind === "verify") {
@@ -329,7 +381,7 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
             verificationFieldPrepareInput({
               workspaceTitle: s.workspaceTitle,
               topics: s.startingTopics,
-              topicId: practice ? "practice" : topic?.id ?? null,
+              topicId: topic?.id ?? null,
               sessionId: s.sessionId,
               tapSessionId: s.tapSessionIdRef.current,
               workspaceId: s.workspaceId,
@@ -368,7 +420,6 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
         privateToken: s.privateToken,
         entryQueryParams: s.entryQueryParamsRef.current,
         minutes: sessionMinutes,
-        practice,
         tapSessionId: s.tapSessionIdRef.current,
         openingQuestion: topic?.openingQuestion,
         topicId: topic?.id,
@@ -389,7 +440,7 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
           verificationFieldPrepareInput({
             workspaceTitle: s.workspaceTitle,
             topics: s.startingTopics,
-            topicId: practice ? "practice" : topic?.id ?? null,
+            topicId: topic?.id ?? null,
             sessionId: s.sessionId,
             tapSessionId: s.tapSessionIdRef.current,
             workspaceId: s.workspaceId,
@@ -423,8 +474,6 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
       }
     } catch (err) {
       s.tapThoughtSpeech.pauseLiveSpeech();
-      s.apply({ isPracticeMode: false });
-      s.isPracticeModeRef.current = false;
       s.apply({ error: err instanceof Error ? err.message : "Could not start Verify session" });
     } finally {
       s.apply({ isStartingSession: false });
@@ -435,8 +484,6 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
   function restartBriefingFlow() {
     const s = current();
     s.isEndingRef.current = false;
-    s.apply({ isPracticeMode: false });
-    s.isPracticeModeRef.current = false;
     s.apply({ sessionEndedImpure: false });
     s.apply({ resultsError: "" });
     s.apply({ error: "" });
@@ -467,7 +514,6 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
     if (s.isEndingRef.current) return;
     s.isEndingRef.current = true;
     const impure = options?.impure === true;
-    const practice = s.isPracticeModeRef.current;
     s.apply({ sessionEndedImpure: impure });
     s.clearPendingInterruption();
     s.flushSpeechSegment();
@@ -518,12 +564,12 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
           .join("\n\n");
         await s.onLocalProof?.({
           prompt,
-          practice,
+          practice: false,
           questionId: s.localQuestionIdRef?.current ?? null,
           policy,
         });
         releaseSessionLocalMemory(s.sessionId);
-            s.apply({ phase: practice ? "practice_done" : "results" });
+            s.apply({ phase: "results" });
       } catch (err) {
         s.isEndingRef.current = false;
         const message = err instanceof Error ? err.message : "Could not store proof of work";
@@ -539,7 +585,7 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
       const safeTranscript =
         transcript.length > 0
           ? transcript
-          : [{ role: "assistant", text: "Practice session", at: new Date().toISOString() }];
+          : [{ role: "assistant", text: "Verify session", at: new Date().toISOString() }];
       const { ok, payload } = await postTutoringSessionComplete({
         workspaceId: s.workspaceId,
         blockId: s.blockId,
@@ -549,18 +595,13 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
         tapSessionId: s.tapSessionIdRef.current,
         transcript: safeTranscript,
         durationSeconds,
-        requestedDurationSeconds: practice ? TAP_PRACTICE_DURATION_SECONDS : s.liveMinutes * 60,
+        requestedDurationSeconds: s.liveMinutes * 60,
         sessionQuality: impure ? "impure" : "pure",
         impure,
-        practice,
       });
       if (!ok) throw new Error(errorMessageFromBody(payload, "Could not save Verify session"));
       releaseSessionLocalMemory(s.sessionId);
 
-      if (practice) {
-            s.apply({ phase: "practice_done" });
-        return;
-      }
       if (impure) {
             s.apply({ phase: "results" });
         return;

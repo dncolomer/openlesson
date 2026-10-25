@@ -1,81 +1,52 @@
 /**
  * Durable workspace kind.
- * Live rows are `standard` (Learning map). parseWorkspaceKind still maps
- * knowledge_region / calibration aliases for reads.
- * Agent/MCP create is Learning only; flows use POST /api/dashboard/flows.
+ * Live rows are `standard` (Learning map). Leftover knowledge_region /
+ * calibration payloads parse as Learning. Flows use POST /api/dashboard/flows.
  */
 
 export const WORKSPACE_KIND_STANDARD = "standard";
+/** @deprecated Leftover payloads parse as Learning. */
 export const WORKSPACE_KIND_KNOWLEDGE_REGION = "knowledge_region";
+/** @deprecated Leftover payloads parse as Learning. */
 export const WORKSPACE_KIND_CALIBRATION = "calibration";
 
 export const AGENT_WORKSPACE_CREATE_REFUSED_MESSAGE =
   "Workspace create is Learning only. Use POST /api/dashboard/flows for verification or calibration.";
 
-export type WorkspaceKind =
-  | typeof WORKSPACE_KIND_STANDARD
-  | typeof WORKSPACE_KIND_KNOWLEDGE_REGION
-  | typeof WORKSPACE_KIND_CALIBRATION;
+export type WorkspaceKind = typeof WORKSPACE_KIND_STANDARD;
 
-export type WorkspaceProductShell = "learning" | "verification" | "calibration";
+export type WorkspaceProductShell = "learning";
 
 export type WorkspaceKnowledgeFlowKind = "calibrate" | "verify";
 
-export function parseWorkspaceKind(value: unknown): WorkspaceKind {
-  if (value === WORKSPACE_KIND_KNOWLEDGE_REGION) return WORKSPACE_KIND_KNOWLEDGE_REGION;
-  if (value === "knowledge-region" || value === "knowledgeRegion") {
-    return WORKSPACE_KIND_KNOWLEDGE_REGION;
-  }
-  if (
-    value === WORKSPACE_KIND_CALIBRATION ||
-    value === "calibrate" ||
-    value === "calibration_workspace"
-  ) {
-    return WORKSPACE_KIND_CALIBRATION;
-  }
+export function parseWorkspaceKind(_value?: unknown): WorkspaceKind {
   return WORKSPACE_KIND_STANDARD;
 }
 
-export function isKnowledgeRegionWorkspace(value: unknown): boolean {
-  return parseWorkspaceKind(value) === WORKSPACE_KIND_KNOWLEDGE_REGION;
+export function isKnowledgeRegionWorkspace(_value?: unknown): boolean {
+  return false;
 }
 
-export function isCalibrationWorkspace(value: unknown): boolean {
-  return parseWorkspaceKind(value) === WORKSPACE_KIND_CALIBRATION;
+export function isCalibrationWorkspace(_value?: unknown): boolean {
+  return false;
 }
 
-/**
- * Verification and Calibration share the Goals / Context / Knowledge /
- * Settings shell and have no map designer.
- */
-export function isNoMapWorkspace(value: unknown): boolean {
-  const kind = parseWorkspaceKind(value);
-  return (
-    kind === WORKSPACE_KIND_KNOWLEDGE_REGION || kind === WORKSPACE_KIND_CALIBRATION
-  );
+export function isNoMapWorkspace(_value?: unknown): boolean {
+  return false;
 }
 
-export function noMapWorkspaceDashboardHref(kind: unknown): string | null {
-  const parsed = parseWorkspaceKind(kind);
-  if (parsed === WORKSPACE_KIND_KNOWLEDGE_REGION) return "/dashboard?tab=verification";
-  if (parsed === WORKSPACE_KIND_CALIBRATION) return "/dashboard?tab=calibration";
+export function noMapWorkspaceDashboardHref(_kind?: unknown): string | null {
   return null;
 }
 
-export function workspaceProductShell(value: unknown): WorkspaceProductShell {
-  const kind = parseWorkspaceKind(value);
-  if (kind === WORKSPACE_KIND_CALIBRATION) return "calibration";
-  if (kind === WORKSPACE_KIND_KNOWLEDGE_REGION) return "verification";
+export function workspaceProductShell(_value?: unknown): WorkspaceProductShell {
   return "learning";
 }
 
-/** Flow embeddings Knowledge projects for this product. */
+/** Learning maps do not project Calibrate/Verify embeddings on the map shell. */
 export function workspaceKnowledgeFlowKind(
-  value: unknown,
+  _value?: unknown,
 ): WorkspaceKnowledgeFlowKind | null {
-  const kind = parseWorkspaceKind(value);
-  if (kind === WORKSPACE_KIND_CALIBRATION) return "calibrate";
-  if (kind === WORKSPACE_KIND_KNOWLEDGE_REGION) return "verify";
   return null;
 }
 

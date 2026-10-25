@@ -48,7 +48,6 @@ export function workspaceBlockDetailDrawerIds(input: {
   canEdit?: boolean;
   showSplit?: boolean;
   showExpand?: boolean;
-  hasGoals?: boolean;
   showEffects?: boolean;
 } = {}): string[] {
   const ids: string[] = [];
@@ -58,7 +57,6 @@ export function workspaceBlockDetailDrawerIds(input: {
   if (input.canEdit) {
     ids.push("clone", "edit");
   }
-  if (input.hasGoals) ids.push("goals");
   if (input.showEffects ?? Boolean(input.canEdit)) {
     ids.push("effect_dynamic", "effect_generator");
   }

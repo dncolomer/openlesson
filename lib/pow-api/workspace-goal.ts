@@ -45,6 +45,16 @@ export function fallbackWorkspaceGoal(context: WorkspaceGoalContext): string {
   return "Achieve the workspace outcome defined by proof of work and block completion";
 }
 
+/** In-memory workspace_goal from description / notes / title — not a DB column. */
+export function derivedWorkspaceGoal(context: WorkspaceGoalContext): string | null {
+  return (
+    normalizeWorkspaceGoal(context.description) ||
+    normalizeWorkspaceGoal(context.notes) ||
+    normalizeWorkspaceGoal(context.title) ||
+    normalizeWorkspaceGoal(context.root_topic)
+  );
+}
+
 export function finalizeVerticalScoreReport(
   report: VerticalScoreReport,
   storedWorkspaceGoal: string | null | undefined,

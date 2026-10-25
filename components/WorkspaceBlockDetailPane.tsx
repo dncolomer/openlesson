@@ -24,7 +24,6 @@ import {
   WorkspaceBlockGeneratorEffectPanel,
   type WorkspaceBlockEffectsSaveInput,
 } from "@/components/WorkspaceBlockEffectsPanels";
-import { BlockGoalsPanel } from "@/components/BlockGoalsPanel";
 import {
   blockOffersSplitDrawer,
   type SplitCandidateBlock,
@@ -36,8 +35,8 @@ import type { BlockCreatorEffects } from "@/lib/block-creator-effects";
 
 /**
  * Block-detail right column (creator mode): peer top-level drawers —
- * Unsys model, Split (multi-cell), Expand, Edit, Goals (post-creation),
- * Dynamic / Generator effects.
+ * Unsys model, Split (multi-cell), Expand, Edit,
+ * Dynamic / Generator effects. The Goals drawer is unmounted.
  * Title/description live in Edit; delete lives in the Danger zone drawer
  * at the bottom of the authoring column.
  * Clone is a drawer on this stack (arm, then click an empty cell).
@@ -315,27 +314,6 @@ export function WorkspaceBlockDetailPane({
               canEdit={canEdit}
               busy={editBusy}
               onUpdate={onUpdateBlock}
-            />
-          </div>
-        </WorkspaceRightPaneDrawer>
-      ) : null}
-
-      {/* Goals drawer only for existing (persisted) blocks — not add-block/create flow. */}
-      {blockId && workspaceId ? (
-        <WorkspaceRightPaneDrawer
-          variant="section"
-          drawerId="goals"
-          title="Goals"
-          defaultExpanded={false}
-          bodyClassName="space-y-2"
-          surfaceDataAttr="data-block-goals-drawer"
-        >
-          <div data-block-detail-tab-content="goals" data-block-goals-drawer>
-            <BlockGoalsPanel
-              workspaceId={workspaceId}
-              blockId={blockId}
-              canEdit={canEdit}
-              ayclToken={ayclToken}
             />
           </div>
         </WorkspaceRightPaneDrawer>

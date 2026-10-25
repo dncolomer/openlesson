@@ -95,14 +95,11 @@ export async function POST(req: NextRequest) {
       return jsonError(500, "Failed to fetch nodes");
     }
 
-    const { data: workspaceFiles } = await supabase
-      .from("workspace_files")
-      .select("file_name")
-      .eq("workspace_id", workspaceId);
+    const workspaceFiles: Array<{ file_name: string }> = [];
 
     const alwaysContext = composeBlockGenerationContext({
       workspaceTitle: plan.title || plan.root_topic || undefined,
-      goal: plan.workspace_goal || plan.root_topic,
+      goal: plan.description || plan.notes || plan.root_topic,
       notes: plan.notes,
       fileNames: (workspaceFiles || []).map((f: { file_name: string }) => f.file_name).filter(Boolean),
     });

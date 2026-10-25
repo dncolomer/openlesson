@@ -425,20 +425,15 @@ export interface Workspace {
   status: WorkspaceLifecycleStatus;
   created_at?: string;
   user_id?: string;
-  /** Durable shell kind: Learning map, Verification, or Calibration. */
-  workspace_kind?: "standard" | "knowledge_region" | "calibration";
+  /** Durable shell kind. Live rows are Learning (`standard`). */
+  workspace_kind?: "standard";
   description?: string;
   is_public?: boolean;
-  is_group?: boolean;
   organization_id?: string | null;
   author_id?: string;
   remix_count?: number;
   original_workspace_id?: string;
-  source_type?: "topic" | "youtube";
-  source_url?: string;
-  source_summary?: string;
   notes?: string;
-  workspace_goal?: string | null;
   cover_image_url?: string;
   /** Unused optional. Legacy catalog size (4, 8, or 16). Learning workspaces only. */
   learning_model_size?: 4 | 8 | 16;

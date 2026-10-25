@@ -160,9 +160,9 @@ describe("dashboard home summaries", () => {
       { workspace_kind: "calibration" },
     ]);
     expect(counts).toEqual({
-      learning: 2,
-      verification: 1,
-      calibration: 1,
+      learning: 4,
+      verification: 0,
+      calibration: 0,
       total: 4,
     });
   });
@@ -440,8 +440,8 @@ describe("dashboard platform surface", () => {
   it("loads owner-wide recent flows from verification and calibration tables", () => {
     const route = readRepo("app/api/dashboard/recent-flows/route.ts");
     expect(route).toContain("requireAuthenticatedUser");
-    expect(route).toContain("workspace_verification_flows");
-    expect(route).toContain("workspace_calibration_flows");
+    expect(route).toContain("verify_flows");
+    expect(route).toContain("calibrate_flows");
     expect(route).toContain("presentDashboardRecentFlow");
   });
 });

@@ -69,22 +69,22 @@ describe("workspaceMatchesDashboardTypeFilter", () => {
     expect(workspaceMatchesDashboardTypeFilter(unset, "all")).toBe(true);
   });
 
-  it("learning keeps standard workspaces and a missing kind", () => {
+  it("learning keeps standard workspaces and leftover kinds", () => {
     expect(workspaceMatchesDashboardTypeFilter(learning, "learning")).toBe(true);
     expect(workspaceMatchesDashboardTypeFilter(unset, "learning")).toBe(true);
-    expect(workspaceMatchesDashboardTypeFilter(verification, "learning")).toBe(false);
-    expect(workspaceMatchesDashboardTypeFilter(calibration, "learning")).toBe(false);
+    expect(workspaceMatchesDashboardTypeFilter(verification, "learning")).toBe(true);
+    expect(workspaceMatchesDashboardTypeFilter(calibration, "learning")).toBe(true);
   });
 
-  it("verification keeps knowledge-region workspaces", () => {
-    expect(workspaceMatchesDashboardTypeFilter(verification, "verification")).toBe(true);
+  it("verification filter is empty because leftover kinds parse as Learning", () => {
+    expect(workspaceMatchesDashboardTypeFilter(verification, "verification")).toBe(false);
     expect(workspaceMatchesDashboardTypeFilter(learning, "verification")).toBe(false);
     expect(workspaceMatchesDashboardTypeFilter(calibration, "verification")).toBe(false);
     expect(workspaceMatchesDashboardTypeFilter(unset, "verification")).toBe(false);
   });
 
-  it("calibration keeps calibration workspaces", () => {
-    expect(workspaceMatchesDashboardTypeFilter(calibration, "calibration")).toBe(true);
+  it("calibration filter is empty because leftover kinds parse as Learning", () => {
+    expect(workspaceMatchesDashboardTypeFilter(calibration, "calibration")).toBe(false);
     expect(workspaceMatchesDashboardTypeFilter(learning, "calibration")).toBe(false);
     expect(workspaceMatchesDashboardTypeFilter(verification, "calibration")).toBe(false);
     expect(workspaceMatchesDashboardTypeFilter(unset, "calibration")).toBe(false);
@@ -98,8 +98,8 @@ describe("workspaceMatchesDashboardTypeFilter", () => {
     expect(
       isAuthoredLearningMap({ workspace_kind: "standard", is_play_copy: true }),
     ).toBe(false);
-    expect(isAuthoredLearningMap({ workspace_kind: "knowledge_region" })).toBe(false);
-    expect(isAuthoredLearningMap({ workspace_kind: "calibration" })).toBe(false);
+    expect(isAuthoredLearningMap({ workspace_kind: "knowledge_region" })).toBe(true);
+    expect(isAuthoredLearningMap({ workspace_kind: "calibration" })).toBe(true);
   });
 });
 
@@ -135,8 +135,8 @@ describe("dashboard empty workspace CTA", () => {
     expect(dashboardHasNoWorkspaces([])).toBe(true);
     expect(dashboardHasNoWorkspaces(null)).toBe(true);
     expect(dashboardHasNoWorkspaces([{ workspace_kind: null }])).toBe(false);
-    expect(dashboardHasNoWorkspaces([{ workspace_kind: "knowledge_region" }])).toBe(true);
-    expect(dashboardHasNoWorkspaces([{ workspace_kind: "calibration" }])).toBe(true);
+    expect(dashboardHasNoWorkspaces([{ workspace_kind: "knowledge_region" }])).toBe(false);
+    expect(dashboardHasNoWorkspaces([{ workspace_kind: "calibration" }])).toBe(false);
     expect(
       dashboardHasNoWorkspaces([
         { workspace_kind: "knowledge_region" },

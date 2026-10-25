@@ -171,7 +171,6 @@ export async function POST(req: NextRequest) {
           title: blankTitle,
           root_topic: blankTitle,
           status: "active",
-          source_type: "topic",
           notes: "",
           workspace_kind: workspaceKindForCreateMode("blank"),
         })
@@ -544,9 +543,8 @@ export async function POST(req: NextRequest) {
         title: catchyTitle,
         root_topic: goalFields.root_topic || topic,
         status: "active",
-        source_type: createMode === "template" ? "topic" : "topic",
         notes: goalFields.notes,
-        workspace_goal: goalFields.workspace_goal,
+        description: goalFields.workspace_goal,
         workspace_kind: workspaceKindForCreateMode(createMode),
         unusable_cells: blockedSlots,
       })
@@ -573,49 +571,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Persist external Context sources from Dantes template selection (same store as Context CRUD).
-    if (templateExternalCreates.length > 0) {
-      const rows = templateExternalCreates.map((r) => ({
-        workspace_id: plan.id,
-        user_id: user.id,
-        title: r.title,
-        url: r.url,
-        resource_type: r.resource_type ?? null,
-        description: r.description ?? null,
-        source: r.source,
-        dantes_topic_slug: r.dantes_topic_slug ?? null,
-        meta: r.meta ?? {},
-        sort_order: r.sort_order,
-      }));
-      const { error: extError } = await supabase
-        .from("workspace_external_resources")
-        .insert(rows);
-      if (extError) {
-        console.error("[generate] workspace_external_resources insert:", extError.message);
-      }
-    }
-
-    // Persist workspace_files records (already uploaded to xAI above)
     const fileStorageWarnings: string[] = [];
-    for (const pf of processedFiles) {
-      if (!pf.xaiFileId) {
-        fileStorageWarnings.push(`${pf.name}: xAI upload failed`);
-        continue;
-      }
-      const { error: insertError } = await supabase.from("workspace_files").insert({
-        workspace_id: plan.id,
-        user_id: user.id,
-        file_name: pf.name,
-        file_size: pf.size,
-        mime_type: pf.mimeType,
-        xai_file_id: pf.xaiFileId,
-      });
-      if (insertError) {
-        console.error(`[generate] workspace_files insert error for "${pf.name}":`, insertError.message);
-        fileStorageWarnings.push(`${pf.name}: ${insertError.message}`);
-        await deleteOrgScopedXaiFile(pf.xaiFileId, organizationId).catch(() => {});
-      }
-    }
+    void templateExternalCreates;
 
     if (fileStorageWarnings.length > 0) {
       console.warn(`[generate] File storage warnings:`, fileStorageWarnings);

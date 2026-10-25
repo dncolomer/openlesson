@@ -41,7 +41,6 @@ const SKIP_REL_PREFIXES = ["components/MapOfKnowledge"];
 
 const MUST_INCLUDE = [
   "components/RabbitHoleExpandModal.tsx",
-  "components/BlockGoalsPanel.tsx",
   "components/IntegrationQuickAccess.tsx",
   "components/MultiBlockDagCanvas.tsx",
   "components/MultiBlockDagPreview.tsx",

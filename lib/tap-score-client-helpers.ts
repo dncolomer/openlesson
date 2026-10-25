@@ -10,7 +10,7 @@ import {
 } from "@/lib/pow-api/tap-link-config";
 import { cn } from "@/lib/utils";
 
-export type Phase = "briefing" | "live" | "saving" | "results" | "practice_done" | "error";
+export type Phase = "briefing" | "live" | "saving" | "results" | "error";
 
 export type TapInitialSession = {
   id?: string | null;

@@ -28,9 +28,6 @@ import type { TapStartingTopic } from "@/lib/tap-score";
 
 export const VERIFICATION_WORKSPACE_LABEL = "Verification Workspace";
 
-/** Practice card opening. The question path uses the pooled question text instead. */
-export const VERIFICATION_PRACTICE_OPENING = "Practice first. Talk through what you know.";
-
 export type VerificationQuestion = {
   id: string;
   text: string;
@@ -348,13 +345,8 @@ export function verificationProofEmbedding(input: {
 
 /** Opening line the TAP canvas shows for this run. Empty when the pool refused a question. */
 export function localVerificationOpening(input: {
-  practice: boolean;
   openingQuestion?: string | null;
-  practicePrompt?: string | null;
 }): string {
-  if (input.practice) {
-    return String(input.practicePrompt || VERIFICATION_PRACTICE_OPENING).trim();
-  }
   return String(input.openingQuestion || "").trim();
 }
 

@@ -41,7 +41,7 @@ export async function GET(
     const { data: workspace, error } = await supabase
       .from("workspaces")
       .select(
-        "id, title, root_topic, description, workspace_goal, notes, cover_image_url, is_all_you_can_learn",
+        "id, title, root_topic, description, notes, cover_image_url, is_all_you_can_learn",
       )
       .eq("id", workspaceId)
       .eq("is_all_you_can_learn", true)

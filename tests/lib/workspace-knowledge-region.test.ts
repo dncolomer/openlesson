@@ -84,11 +84,11 @@ describe("Knowledge Region create mode", () => {
     expect(workspaceKindForCreateMode("calibration")).toBe("calibration");
     expect(workspaceKindForCreateMode("blank")).toBe("standard");
     expect(parseWorkspaceCreateMode("calibration")).toBe("calibration");
-    expect(parseWorkspaceKind("calibration")).toBe("calibration");
-    expect(isCalibrationWorkspace("calibration")).toBe(true);
+    expect(parseWorkspaceKind("calibration")).toBe("standard");
+    expect(isCalibrationWorkspace("calibration")).toBe(false);
     expect(isCalibrationWorkspace("knowledge_region")).toBe(false);
-    expect(workspaceKnowledgeFlowKind("calibration")).toBe("calibrate");
-    expect(workspaceKnowledgeFlowKind("knowledge_region")).toBe("verify");
+    expect(workspaceKnowledgeFlowKind("calibration")).toBeNull();
+    expect(workspaceKnowledgeFlowKind("knowledge_region")).toBeNull();
     expect(workspaceKnowledgeFlowKind("standard")).toBeNull();
 
     const nested = errorMessageFromBody(
@@ -105,9 +105,11 @@ describe("Knowledge Region create mode", () => {
     expect(calibrationWorkspaceFeatures()).not.toContain("verification_flows");
     expect(workspaceSupportsFeature("knowledge_region", "calibration_flows")).toBe(false);
     expect(workspaceSupportsFeature("calibration", "verification_flows")).toBe(false);
-    expect(workspaceSupportsFeature("calibration", "calibration_flows")).toBe(true);
+    expect(workspaceSupportsFeature("calibration", "calibration_flows")).toBe(false);
     expect(workspaceSupportsFeature("standard", "calibration_flows")).toBe(false);
     expect(workspaceSupportsFeature("standard", "make_public")).toBe(true);
+    expect(workspaceSupportsFeature("knowledge_region", "make_public")).toBe(true);
+    expect(workspaceSupportsFeature("knowledge_region", "map")).toBe(true);
 
     writeScratch(
       "knowledge-region-create-mode.log",
@@ -127,12 +129,19 @@ describe("Knowledge Region create mode", () => {
 });
 
 describe("Knowledge Region shell", () => {
-  it("has no WorkspaceView sections and does not invent a Goals tab", () => {
+  it("leftover kinds parse as Learning sections and do not invent a Goals tab", () => {
     const owner = availableWorkspaceSections({
       isOwner: true,
       workspaceKind: "knowledge_region",
     });
-    expect(owner).toEqual([]);
+    expect(owner).toEqual([
+      "workspace",
+      "dags",
+      "map_types",
+      "unsys_models",
+      "context",
+      "settings",
+    ]);
     const t = (key: string) => key;
     const krNav = buildWorkspaceSectionNavItems({
       t,
@@ -140,7 +149,7 @@ describe("Knowledge Region shell", () => {
       isOwner: true,
       visibleSections: owner,
     });
-    expect(krNav.map((item) => item.key)).toEqual([]);
+    expect(krNav.map((item) => item.key)).toContain("workspace");
     expect(krNav.map((item) => item.key)).not.toContain("goals");
     expect(krNav.map((item) => item.key)).not.toContain("verification_flows");
     expect(defaultInteractionModeForWorkspace("knowledge_region")).toBe("learner");
@@ -158,7 +167,7 @@ describe("Knowledge Region shell", () => {
         isOwner: true,
         visibleSections: learnerKr,
       }).map((item) => item.key),
-    ).toEqual([]);
+    ).toContain("workspace");
     const viewSource = readFileSync(
       join(ROOT, "components/WorkspaceView.tsx"),
       "utf8",
@@ -167,7 +176,7 @@ describe("Knowledge Region shell", () => {
     expect(viewSource).toContain('visibleSections.includes("workspace")');
     expect(viewSource).not.toContain("resolveFixedWorkspaceInteractionMode");
     expect(viewSource).not.toContain("setInteractionMode");
-    expect(krNav.map((item) => item.key)).not.toContain("workspace");
+    expect(krNav.map((item) => item.key)).toContain("workspace");
     const standardNav = buildWorkspaceSectionNavItems({
       t,
       isLearnerMode: false,
@@ -188,7 +197,7 @@ describe("Knowledge Region shell", () => {
         isOwner: true,
         workspaceKind: "knowledge_region",
       }),
-    ).toBe("workspace");
+    ).toBe("dags");
     expect(
       resolveActiveSection("goals", {
         isOwner: true,
@@ -218,20 +227,27 @@ describe("Knowledge Region shell", () => {
         isLoggedIn: true,
         workspaceKind: "knowledge_region",
       }),
-    ).toEqual([]);
+    ).toEqual(
+      availableSectionsForMode({
+        mode: "learner",
+        isOwner: true,
+        isLoggedIn: true,
+        workspaceKind: "standard",
+      }),
+    );
     expect(
       availableSectionsForMode({
         mode: "learner",
         isLoggedIn: true,
         workspaceKind: "knowledge_region",
       }).includes("workspace"),
-    ).toBe(false);
+    ).toBe(true);
 
     const nonOwner = availableWorkspaceSections({
       isOwner: false,
       workspaceKind: "knowledge_region",
     });
-    expect(nonOwner).toEqual([]);
+    expect(nonOwner).toEqual(["workspace"]);
     expect(
       resolveActiveSection("settings", {
         isOwner: false,
@@ -252,7 +268,7 @@ describe("Knowledge Region shell", () => {
     expect(resolveActiveSection("settings", { isOwner: false })).toBe("workspace");
 
     const krTabs = availableSettingsSubviews("knowledge_region");
-    expect([...krTabs]).toEqual([]);
+    expect([...krTabs]).toEqual(["general", "aycl", "integrations"]);
     expect(defaultSettingsSubview("knowledge_region")).toBe("general");
     expect(resolveSettingsSubview("general", "knowledge_region")).toBe("general");
     expect(resolveSettingsSubview("guest-links", "knowledge_region")).toBe("general");
@@ -306,19 +322,17 @@ describe("Knowledge Region shell", () => {
 });
 
 describe("Knowledge Region knowledge-link deny", () => {
-  it("denies mint on KR and allows it on standard; mint routes consult the helper", () => {
-    expect(workspaceAllowsKnowledgeLinkMint("knowledge_region")).toBe(false);
-    expect(workspaceAllowsKnowledgeLinkMint("calibration")).toBe(false);
+  it("allows mint on leftover kinds the same as Learning; mint routes consult the helper", () => {
+    expect(workspaceAllowsKnowledgeLinkMint("knowledge_region")).toBe(true);
+    expect(workspaceAllowsKnowledgeLinkMint("calibration")).toBe(true);
     expect(workspaceAllowsKnowledgeLinkMint("standard")).toBe(true);
     expect(workspaceAllowsKnowledgeLinkMint(undefined)).toBe(true);
     expect(assertWorkspaceAllowsKnowledgeLinkMint("knowledge_region")).toEqual({
-      ok: false,
-      error: expect.stringMatching(/Verification workspaces do not support knowledge links/i) as unknown as string,
-      code: "forbidden",
+      ok: true,
     });
     expect(assertWorkspaceAllowsKnowledgeLinkMint("standard")).toEqual({ ok: true });
     expect(isKnowledgeRegionWorkspace(parseWorkspaceKind("knowledge_region"))).toBe(
-      true,
+      false,
     );
 
     const tap = read("app/api/workspace/tap-links/route.ts");
@@ -361,8 +375,8 @@ describe("Knowledge Region zero-block PoW surfaces", () => {
       goalsStore.indexOf("export async function createWorkspaceGoal"),
       goalsStore.indexOf("export async function updateWorkspaceGoal"),
     );
-    expect(createFn).toContain("workspace_id");
-    expect(createFn).toContain("text");
+    expect(createFn).toContain("Goals were removed");
+    expect(createFn).not.toContain(".from(");
     expect(createFn).not.toContain("block_id");
     expect(createFn).not.toMatch(/tap|ile|tapbench/i);
 

@@ -62,9 +62,10 @@ export async function POST(request: NextRequest) {
 
     if (body.session?.status === "completed") {
       await ctx.supabase
-        .from("workspace_learn_links")
-        .update({ status: "completed", completed_at: new Date().toISOString() })
-        .eq("id", ctx.linkId);
+        .from("sessions")
+        .update({ status: "completed" })
+        .eq("id", ctx.linkId)
+        .eq("kind", "learn");
     }
     return Response.json({ success: true });
   } catch (error) {

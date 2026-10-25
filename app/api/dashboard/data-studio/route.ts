@@ -96,7 +96,7 @@ export async function GET(req: NextRequest) {
     if (product !== "learning") {
       const admin = createAdminClient();
       const { data: regionRows } = await admin
-        .from("custom_verification_models")
+        .from("knowledge_regions")
         .select(
           "id, name, centroid, mean_radius, cosine_threshold, embedding_model_id, workspace_id, owner_user_id, product",
         )

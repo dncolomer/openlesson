@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
     if (!kind) return jsonError(400, "kind must be verification or calibration");
 
     const { data: rows, error } = await auth.supabase
-      .from("custom_verification_models")
+      .from("knowledge_regions")
       .select(
         "id, workspace_id, owner_user_id, product, name, description, subject_count, created_at, embedding_model_id",
       )
@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
     }
     const supabase = createAdminClient();
     const { data, error } = await supabase
-      .from("custom_verification_models")
+      .from("knowledge_regions")
       .insert({
         workspace_id: flow.workspaceId || null,
         owner_user_id: auth.user.id,
@@ -140,7 +140,7 @@ export async function POST(req: NextRequest) {
     try {
       const voiceSpec = buildVoiceRegionFromFlowRaws({ name, embeddings: stored });
       if (voiceSpec) {
-        await supabase.from("custom_verification_models").insert({
+        await supabase.from("knowledge_regions").insert({
           workspace_id: flow.workspaceId || null,
           owner_user_id: auth.user.id,
           product: kind,

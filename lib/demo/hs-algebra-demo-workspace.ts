@@ -35,8 +35,6 @@ export const HS_ALGEBRA_DEMO_WORKSPACE = {
     "Show multi-student proof-of-work clustered into algebra foundations vs advanced procedures regions.",
   notes:
     `${HS_ALGEBRA_DEMO_MARKER} High school algebra demo — two synthetic regions, multi-guest PoW.`,
-  source_type: "topic" as const,
-  payment_status: "paid" as const,
   status: "active" as const,
 };
 

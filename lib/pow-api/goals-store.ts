@@ -28,68 +28,18 @@ export type BlockGoalRow = {
   updated_at: string;
 };
 
-function mapWorkspaceRow(data: Record<string, unknown>): WorkspaceGoalRow {
-  return {
-    id: data.id as string,
-    workspace_id: data.workspace_id as string,
-    text: String(data.text || ""),
-    sort_order: Number(data.sort_order) || 0,
-    created_at: data.created_at as string,
-    updated_at: data.updated_at as string,
-  };
-}
-
-function mapBlockRow(data: Record<string, unknown>): BlockGoalRow {
-  return {
-    id: data.id as string,
-    workspace_id: data.workspace_id as string,
-    block_id: data.block_id as string,
-    text: String(data.text || ""),
-    sort_order: Number(data.sort_order) || 0,
-    created_at: data.created_at as string,
-    updated_at: data.updated_at as string,
-  };
-}
-
 export async function listWorkspaceGoals(
-  supabase: SupabaseClient,
-  workspaceId: string,
+  _supabase: SupabaseClient,
+  _workspaceId: string,
 ): Promise<WorkspaceGoalRow[]> {
-  const { data, error } = await supabase
-    .from("workspace_goals")
-    .select("id, workspace_id, text, sort_order, created_at, updated_at")
-    .eq("workspace_id", workspaceId)
-    .order("sort_order", { ascending: true })
-    .order("created_at", { ascending: true });
-
-  if (error) {
-    console.warn("[goals-store] listWorkspaceGoals failed:", error.message);
-    return [];
-  }
-  return (data || []).map((row) => mapWorkspaceRow(row as Record<string, unknown>));
+  return [];
 }
 
 export async function listBlockGoals(
-  supabase: SupabaseClient,
-  options: { workspaceId: string; blockId?: string | null },
+  _supabase: SupabaseClient,
+  _options: { workspaceId: string; blockId?: string | null },
 ): Promise<BlockGoalRow[]> {
-  let query = supabase
-    .from("block_goals")
-    .select("id, workspace_id, block_id, text, sort_order, created_at, updated_at")
-    .eq("workspace_id", options.workspaceId)
-    .order("sort_order", { ascending: true })
-    .order("created_at", { ascending: true });
-
-  if (options.blockId) {
-    query = query.eq("block_id", options.blockId);
-  }
-
-  const { data, error } = await query;
-  if (error) {
-    console.warn("[goals-store] listBlockGoals failed:", error.message);
-    return [];
-  }
-  return (data || []).map((row) => mapBlockRow(row as Record<string, unknown>));
+  return [];
 }
 
 /** Load full catalogs for snapshot resolution. */
@@ -124,71 +74,33 @@ export async function loadGoalCatalogs(
 }
 
 export async function createWorkspaceGoal(
-  supabase: SupabaseClient,
+  _supabase: SupabaseClient,
   options: { workspaceId: string; text: string; sortOrder?: number },
 ): Promise<{ row: WorkspaceGoalRow | null; error?: string }> {
   const text = normalizeGoalText(options.text);
   if (!text) return { row: null, error: "Goal text is required" };
-
-  const { data, error } = await supabase
-    .from("workspace_goals")
-    .insert({
-      workspace_id: options.workspaceId,
-      text,
-      sort_order: options.sortOrder ?? 0,
-      updated_at: new Date().toISOString(),
-    })
-    .select("id, workspace_id, text, sort_order, created_at, updated_at")
-    .maybeSingle();
-
-  if (error) return { row: null, error: error.message };
-  if (!data) return { row: null, error: "Insert returned no row" };
-  return { row: mapWorkspaceRow(data as Record<string, unknown>) };
+  return { row: null, error: "Goals were removed" };
 }
 
 export async function updateWorkspaceGoal(
-  supabase: SupabaseClient,
+  _supabase: SupabaseClient,
   options: { workspaceId: string; goalId: string; text?: string; sortOrder?: number },
 ): Promise<{ row: WorkspaceGoalRow | null; error?: string }> {
-  const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
-  if (options.text !== undefined) {
-    const text = normalizeGoalText(options.text);
-    if (!text) return { row: null, error: "Goal text is required" };
-    updates.text = text;
+  if (options.text !== undefined && !normalizeGoalText(options.text)) {
+    return { row: null, error: "Goal text is required" };
   }
-  if (options.sortOrder !== undefined) {
-    updates.sort_order = options.sortOrder;
-  }
-
-  const { data, error } = await supabase
-    .from("workspace_goals")
-    .update(updates)
-    .eq("id", options.goalId)
-    .eq("workspace_id", options.workspaceId)
-    .select("id, workspace_id, text, sort_order, created_at, updated_at")
-    .maybeSingle();
-
-  if (error) return { row: null, error: error.message };
-  if (!data) return { row: null, error: "Goal not found" };
-  return { row: mapWorkspaceRow(data as Record<string, unknown>) };
+  return { row: null, error: "Goals were removed" };
 }
 
 export async function deleteWorkspaceGoal(
-  supabase: SupabaseClient,
-  options: { workspaceId: string; goalId: string },
+  _supabase: SupabaseClient,
+  _options: { workspaceId: string; goalId: string },
 ): Promise<{ ok: boolean; error?: string }> {
-  const { error } = await supabase
-    .from("workspace_goals")
-    .delete()
-    .eq("id", options.goalId)
-    .eq("workspace_id", options.workspaceId);
-
-  if (error) return { ok: false, error: error.message };
   return { ok: true };
 }
 
 export async function createBlockGoal(
-  supabase: SupabaseClient,
+  _supabase: SupabaseClient,
   options: {
     workspaceId: string;
     blockId: string;
@@ -198,26 +110,11 @@ export async function createBlockGoal(
 ): Promise<{ row: BlockGoalRow | null; error?: string }> {
   const text = normalizeGoalText(options.text);
   if (!text) return { row: null, error: "Goal text is required" };
-
-  const { data, error } = await supabase
-    .from("block_goals")
-    .insert({
-      workspace_id: options.workspaceId,
-      block_id: options.blockId,
-      text,
-      sort_order: options.sortOrder ?? 0,
-      updated_at: new Date().toISOString(),
-    })
-    .select("id, workspace_id, block_id, text, sort_order, created_at, updated_at")
-    .maybeSingle();
-
-  if (error) return { row: null, error: error.message };
-  if (!data) return { row: null, error: "Insert returned no row" };
-  return { row: mapBlockRow(data as Record<string, unknown>) };
+  return { row: null, error: "Goals were removed" };
 }
 
 export async function updateBlockGoal(
-  supabase: SupabaseClient,
+  _supabase: SupabaseClient,
   options: {
     workspaceId: string;
     goalId: string;
@@ -225,40 +122,16 @@ export async function updateBlockGoal(
     sortOrder?: number;
   },
 ): Promise<{ row: BlockGoalRow | null; error?: string }> {
-  const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
-  if (options.text !== undefined) {
-    const text = normalizeGoalText(options.text);
-    if (!text) return { row: null, error: "Goal text is required" };
-    updates.text = text;
+  if (options.text !== undefined && !normalizeGoalText(options.text)) {
+    return { row: null, error: "Goal text is required" };
   }
-  if (options.sortOrder !== undefined) {
-    updates.sort_order = options.sortOrder;
-  }
-
-  const { data, error } = await supabase
-    .from("block_goals")
-    .update(updates)
-    .eq("id", options.goalId)
-    .eq("workspace_id", options.workspaceId)
-    .select("id, workspace_id, block_id, text, sort_order, created_at, updated_at")
-    .maybeSingle();
-
-  if (error) return { row: null, error: error.message };
-  if (!data) return { row: null, error: "Goal not found" };
-  return { row: mapBlockRow(data as Record<string, unknown>) };
+  return { row: null, error: "Goals were removed" };
 }
 
 export async function deleteBlockGoal(
-  supabase: SupabaseClient,
-  options: { workspaceId: string; goalId: string },
+  _supabase: SupabaseClient,
+  _options: { workspaceId: string; goalId: string },
 ): Promise<{ ok: boolean; error?: string }> {
-  const { error } = await supabase
-    .from("block_goals")
-    .delete()
-    .eq("id", options.goalId)
-    .eq("workspace_id", options.workspaceId);
-
-  if (error) return { ok: false, error: error.message };
   return { ok: true };
 }
 

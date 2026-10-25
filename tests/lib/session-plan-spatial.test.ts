@@ -552,14 +552,15 @@ describe("create surface wiring (structural)", () => {
     expect(viewSrc).not.toContain("session-plan/create");
   });
 
-  it("createSessionPlan upserts on session_id to avoid duplicate key races", () => {
+  it("createSessionPlan writes sessions.chapter_map", () => {
     const src = readFileSync(
       path.join(process.cwd(), "lib/storage/session-plans.ts"),
       "utf8",
     );
-    expect(src).toContain('onConflict: "session_id"');
-    expect(src).toContain("upsert");
-    expect(src).toContain("session_plans_session_id_key");
+    expect(src).toContain('.from("sessions")');
+    expect(src).toContain("chapter_map");
+    expect(src).toContain(".update({ chapter_map: chapterMap })");
+    expect(src).not.toContain('.from("session_plans")');
   });
 
   it("workspace generate + UI document initial_chapters (programmatic create stays available)", () => {

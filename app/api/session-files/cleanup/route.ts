@@ -1,24 +1,14 @@
 /**
- * Server-side cleanup of all xAI files associated with a session.
- * Called when a session is deleted or restarted.
+ * Session restart used to delete xAI files. Proof of work is the corpus:
+ * this endpoint no longer deletes files or rows.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
-import { deleteOrgScopedXaiFile, organizationIdFromSession } from "@/lib/organization/org-xai-files";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
-
-const TABLES_WITH_XAI_FILES = [
-  "session_transcript",
-  "session_eeg",
-  "session_tool",
-  "session_facial",
-  "session_screenshots",
-  "session_analysis",
-] as const;
 
 export async function POST(req: NextRequest) {
   try {
@@ -31,7 +21,6 @@ export async function POST(req: NextRequest) {
       return jsonError(400, "sessionId required");
     }
 
-    // Ownership check
     const { data: session } = await supabase
       .from("sessions")
       .select("user_id")
@@ -42,27 +31,7 @@ export async function POST(req: NextRequest) {
       return jsonError(403, "Forbidden");
     }
 
-    // Collect all xAI file IDs across the per-session tables
-    const allFileIds: string[] = [];
-    for (const table of TABLES_WITH_XAI_FILES) {
-      const { data: rows } = await supabase
-        .from(table)
-        .select("xai_file_id")
-        .eq("session_id", sessionId);
-
-      if (rows) {
-        for (const r of rows as Array<{ xai_file_id: string | null }>) {
-          if (r.xai_file_id && r.xai_file_id !== "_empty") allFileIds.push(r.xai_file_id);
-        }
-      }
-    }
-
-    const organizationId = await organizationIdFromSession(supabase, sessionId);
-    await Promise.all(
-      allFileIds.map((id) => deleteOrgScopedXaiFile(id, organizationId).catch(() => {}))
-    );
-
-    return NextResponse.json({ success: true, deleted: allFileIds.length });
+    return NextResponse.json({ success: true, deleted: 0, preserved: true });
   } catch (err) {
     console.error("[session-files/cleanup] Error:", err);
     return jsonError(500, "Internal server error");

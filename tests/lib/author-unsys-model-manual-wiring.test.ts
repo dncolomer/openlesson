@@ -143,6 +143,7 @@ describe("author unsys model Manual Mode wiring", () => {
     expect(ids).toContain("unsys_model");
     expect(ids).not.toContain("simulation");
     expect(ids).not.toContain("local");
+    expect(ids).not.toContain("goals");
     expect(ids.indexOf("unsys_model")).toBeLessThan(ids.indexOf("edit"));
     expect(workspaceBlockDetailDrawerIds({ canEdit: false })).not.toContain(
       "unsys_model",

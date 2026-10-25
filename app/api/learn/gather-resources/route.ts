@@ -149,15 +149,8 @@ export async function POST(req: NextRequest) {
         ...normalized,
         sort_order: normalized.sort_order || i,
       }));
-      const { data, error } = await auth.supabase
-        .from("workspace_external_resources")
-        .insert(rows)
-        .select("*");
-      if (error) {
-        console.error("[ile-gather-resources] persist", error);
-      } else {
-        persisted = normalizeExternalResourceList(data || []);
-      }
+      persisted = [];
+      void rows;
     }
 
     return NextResponse.json({

@@ -2,7 +2,7 @@
  * Seed the Helios Cloud (SaaS tech-team) demo workspace with:
  *  - authentic multi-role SaaS tech-team copy + blocks
  *  - faked PoW rows for multiple subjects
- *  - workspace_flow_embeddings (flowcfg-v1-d96 vectors)
+ *  - session_embeddings (flowcfg-v1-d96 vectors)
  *  - role regions (synthetic:grok-4.5 style)
  *  - one cohort region built from user PoW (no synthetic tag)
  *
@@ -120,13 +120,13 @@ async function deleteWorkspaceCascade(
 ) {
   // Children mostly CASCADE from workspaces; guests may reference workspace_id.
   // PoW / snapshots / models / blocks / guests deleted via FK cascade where possible.
-  await client.query(`DELETE FROM public.custom_verification_models WHERE workspace_id = $1`, [
+  await client.query(`DELETE FROM public.knowledge_regions WHERE workspace_id = $1`, [
     workspaceId,
   ]);
-  await client.query(`DELETE FROM public.workspace_flow_embeddings WHERE workspace_id = $1`, [
+  await client.query(`DELETE FROM public.session_embeddings WHERE workspace_id = $1`, [
     workspaceId,
   ]);
-  await client.query(`DELETE FROM public.workspace_proof_of_work WHERE workspace_id = $1`, [
+  await client.query(`DELETE FROM public.proof_of_work WHERE workspace_id = $1`, [
     workspaceId,
   ]);
   await client.query(`DELETE FROM public.blocks WHERE workspace_id = $1`, [workspaceId]);
@@ -263,16 +263,15 @@ async function main() {
     }
 
     const workspaceId = randomUUID();
-    // workspace_goal holds the success objective text (conversion_goal in pure demo def).
     await client.query(
       `INSERT INTO public.workspaces (
-         id, user_id, title, root_topic, status, payment_status,
-         description, notes, workspace_goal, source_type,
-         organization_id, is_public, is_agent_workspace
+         id, user_id, author_id, title, root_topic, status,
+         description, notes,
+         organization_id, is_public, is_agent_workspace, workspace_kind
        ) VALUES (
-         $1, $2, $3, $4, $5, $6,
-         $7, $8, $9, $10,
-         $11, false, false
+         $1, $2, $2, $3, $4, $5,
+         $6, $7,
+         $8, false, false, 'standard'
        )`,
       [
         workspaceId,
@@ -280,11 +279,8 @@ async function main() {
         SAAS_TECH_DEMO_WORKSPACE.title,
         SAAS_TECH_DEMO_WORKSPACE.root_topic,
         SAAS_TECH_DEMO_WORKSPACE.status,
-        SAAS_TECH_DEMO_WORKSPACE.payment_status,
         SAAS_TECH_DEMO_WORKSPACE.description,
         SAAS_TECH_DEMO_WORKSPACE.notes,
-        SAAS_TECH_DEMO_WORKSPACE.conversion_goal,
-        SAAS_TECH_DEMO_WORKSPACE.source_type,
         owner.organizationId,
       ],
     );
@@ -347,7 +343,7 @@ async function main() {
         const blockId = blockIds.get(blockKey) ?? blockUuidList[0];
         const xaiFileId = `file-demo-${SAAS_TECH_DEMO_MARKER.replace(/[^a-z0-9]+/gi, "-")}-${enc.subject.key}-${i}`;
         await client.query(
-          `INSERT INTO public.workspace_proof_of_work (
+          `INSERT INTO public.proof_of_work (
              workspace_id, block_id, proof_of_work_type, file_name, mime_type,
              file_size, xai_file_id, timestamp_ms, chunk_index, metadata,
              tool_name, tool_action, guest_user_id, user_id, organization_id
@@ -397,7 +393,7 @@ async function main() {
         const blockId = blockIds.get(blockKey) ?? blockUuidList[0];
         const xaiFileId = `file-demo-${SAAS_TECH_DEMO_MARKER.replace(/[^a-z0-9]+/gi, "-")}-owner-${i}`;
         await client.query(
-          `INSERT INTO public.workspace_proof_of_work (
+          `INSERT INTO public.proof_of_work (
              workspace_id, block_id, proof_of_work_type, file_name, mime_type,
              file_size, xai_file_id, timestamp_ms, chunk_index, metadata,
              tool_name, tool_action, guest_user_id, user_id, organization_id
@@ -452,7 +448,7 @@ async function main() {
     for (const enc of encodedGuests) {
       const guestId = guestByKey.get(enc.subject.key)!;
       await client.query(
-        `INSERT INTO public.workspace_flow_embeddings (
+        `INSERT INTO public.session_embeddings (
            id, workspace_id, flow_kind, flow_id, run_id, identity, source,
            embedding_model_id, dim, vector, raw, created_at
          ) VALUES (
@@ -474,7 +470,7 @@ async function main() {
     }
 
     await client.query(
-      `INSERT INTO public.workspace_flow_embeddings (
+      `INSERT INTO public.session_embeddings (
          id, workspace_id, flow_kind, flow_id, run_id, identity, source,
          embedding_model_id, dim, vector, raw, created_at
        ) VALUES (
@@ -495,7 +491,7 @@ async function main() {
     snapCount += 1;
     ownerSnapCount = 1;
     console.log(
-      `[seed-saas-tech-demo] workspace_flow_embeddings=${snapCount} owner_embeddings=${ownerSnapCount}`,
+      `[seed-saas-tech-demo] session_embeddings=${snapCount} owner_embeddings=${ownerSnapCount}`,
     );
 
     // Role regions (synthetic tag)
@@ -506,7 +502,7 @@ async function main() {
     }));
     for (const { model, description } of roleRegions) {
       await client.query(
-        `INSERT INTO public.custom_verification_models (
+        `INSERT INTO public.knowledge_regions (
            workspace_id, name, description, embedding_model_id, dim,
            centroid, cohort_cohesion, mean_radius, cosine_threshold,
            subject_count, subjects, created_by
@@ -543,7 +539,7 @@ async function main() {
       };
     });
     await client.query(
-      `INSERT INTO public.custom_verification_models (
+      `INSERT INTO public.knowledge_regions (
          workspace_id, name, description, embedding_model_id, dim,
          centroid, cohort_cohesion, mean_radius, cosine_threshold,
          subject_count, subjects, created_by

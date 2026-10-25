@@ -66,6 +66,8 @@ describe("session guide panel", () => {
     expect(learn).toContain('data-session-command="commit"');
     expect(learn).toContain('data-session-command="dictate"');
     expect(learn).toContain("data-ile-craft-insight");
+    const commitTag = learn.slice(learn.indexOf('data-session-command="commit"'));
+    expect(commitTag.slice(0, commitTag.indexOf(">"))).not.toContain(" disabled=");
     expect(learn).toContain("data-ile-canvas-dictate");
     expect(learn).toContain("data-session-commit");
     expect(learn).toContain('data-ile-command-index="10"');
@@ -129,6 +131,8 @@ describe("session guide panel", () => {
     expect(source).toContain("IleCanvasDictateButton");
     expect(source).not.toContain("onAsk=");
     expect(source).toContain("IleCraftInsightButton");
+    expect(source).toContain("usable={ileCanvasCraftInsightUsable()}");
+    expect(source).not.toContain("Boolean(bridge?.craft)");
     expect(source).toContain("SessionHarnessPanel");
     expect(source).toContain("data-session-instructions");
     expect(source).toContain('data-session-guide-tab="help"');

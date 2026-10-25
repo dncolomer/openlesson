@@ -137,20 +137,13 @@ async function uploadWorkspaceSeedFiles(
           user_id: ownerUserId,
         },
       });
-      const { data: fileRecord, error: fileError } = await supabase
-        .from("workspace_files")
-        .insert({
-          workspace_id: workspaceId,
-          user_id: ownerUserId,
-          file_name: file.name,
-          file_size: Buffer.from(file.data, "base64").length,
-          mime_type: file.mime_type,
-          xai_file_id: xaiFile.file_id,
-        })
-        .select("id, file_name, file_size, mime_type, created_at")
-        .single();
-
-      if (!fileError && fileRecord) uploadedFiles.push(fileRecord);
+      uploadedFiles.push({
+        id: xaiFile.file_id,
+        file_name: file.name,
+        file_size: Buffer.from(file.data, "base64").length,
+        mime_type: file.mime_type,
+        created_at: new Date().toISOString(),
+      });
     } catch (error) {
       console.error("[create-agent-workspace] Initial file upload failed:", error);
     }
@@ -225,16 +218,15 @@ async function createSemanticAgentWorkspace(
       title: workspaceTitle,
       root_topic: goalFields.root_topic,
       status: "active",
-      source_type: "topic",
       notes: goalFields.notes,
-      workspace_goal: workspaceGoal,
+      description: workspaceGoal,
       workspace_kind: "standard",
       is_agent_workspace: true,
       evaluation_mode: "semantic",
       unusable_cells: blockedSlots,
     })
     .select(
-      "id, title, root_topic, status, notes, workspace_goal, evaluation_mode, protocol_config, external_refs, created_at, updated_at"
+      "id, title, root_topic, status, notes, description, evaluation_mode, protocol_config, external_refs, created_at, updated_at"
     )
     .single();
 
@@ -297,17 +289,15 @@ async function createOpaqueAgentWorkspace(
       title: workspaceTitle,
       root_topic: buildOpaqueRootTopic(protocol),
       status: "active",
-      source_type: "topic",
-      description: "Opaque protocol evaluation workspace",
+      description: workspaceGoal || "Opaque protocol evaluation workspace",
       notes: buildOpaqueWorkspaceNotes(protocol),
-      workspace_goal: workspaceGoal,
       is_agent_workspace: true,
       evaluation_mode: "opaque",
       protocol_config: protocol,
       external_refs: request.external_refs || null,
     })
     .select(
-      "id, title, root_topic, status, notes, workspace_goal, evaluation_mode, protocol_config, external_refs, created_at, updated_at"
+      "id, title, root_topic, status, notes, description, evaluation_mode, protocol_config, external_refs, created_at, updated_at"
     )
     .single();
 

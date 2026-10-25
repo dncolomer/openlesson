@@ -414,14 +414,14 @@ export function ileWorkspaceStartAllowed(challengePassed: boolean): boolean {
   return challengePassed === true;
 }
 
-export type ScoredTapBriefingChoice = "topic" | "practice" | null;
+export type ScoredTapBriefingChoice = "topic" | null;
 
-/** Topic or practice is chosen first. The voice challenge is second. Live is third. */
+/** A topic is chosen first. The voice challenge is second. Live is third. */
 export function scoredTapBriefingStep(input: {
   choice: ScoredTapBriefingChoice;
   challengePassed: boolean;
 }): "pick" | "challenge" | "live" {
-  if (input.choice !== "topic" && input.choice !== "practice") return "pick";
+  if (input.choice !== "topic") return "pick";
   if (!input.challengePassed) return "challenge";
   return "live";
 }

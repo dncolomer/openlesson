@@ -116,7 +116,7 @@ describe("dashboard knowledge regions", () => {
   it("wires the owner dashboard regions API and tab", () => {
     const route = readRepo("app/api/dashboard/knowledge-regions/route.ts");
     expect(route).toContain("requireAuthenticatedUser");
-    expect(route).toContain("custom_verification_models");
+    expect(route).toContain("knowledge_regions");
     expect(route).toContain("presentDashboardKnowledgeRegions");
     expect(route).toContain("owner_user_id");
     expect(route).toContain("flowOwnedByUser");

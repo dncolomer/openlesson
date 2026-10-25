@@ -18,7 +18,7 @@ import {
 import { normalizeGeneratedWorkspaceBlocks } from "@/lib/workspace-spatial-create";
 import { listAgentWorkspaces } from "./agent-workspace-ops";
 import { createAgentWorkspace } from "./create-agent-workspace";
-import { normalizeWorkspaceGoal } from "./conversion-goal";
+import { derivedWorkspaceGoal, normalizeWorkspaceGoal } from "./conversion-goal";
 import type { AuthContext } from "./types";
 import { canAccessAgentWorkspace } from "./workspace-access";
 
@@ -53,7 +53,7 @@ export function parseAgentWorkspaceKind(value: unknown): WorkspaceKind {
 }
 
 const WORKSPACE_SELECT =
-  "id, title, root_topic, description, notes, workspace_goal, status, workspace_kind, learning_model_size, is_public, created_at, updated_at, user_id, organization_id, guest_user_id";
+  "id, title, root_topic, description, notes, status, workspace_kind, learning_model_size, is_public, created_at, updated_at, user_id, organization_id, guest_user_id";
 
 export type WorkspaceSettingsPatch = {
   title?: string | null;
@@ -125,7 +125,12 @@ export function presentManagedWorkspace(row: Record<string, unknown>) {
     root_topic: row.root_topic ?? null,
     description: row.description ?? null,
     notes: row.notes ?? null,
-    workspace_goal: row.workspace_goal ?? null,
+    workspace_goal: derivedWorkspaceGoal({
+      title: typeof row.title === "string" ? row.title : null,
+      description: typeof row.description === "string" ? row.description : null,
+      notes: typeof row.notes === "string" ? row.notes : null,
+      root_topic: typeof row.root_topic === "string" ? row.root_topic : null,
+    }),
     status: row.status ?? null,
     workspace_kind: kind,
     product: agentWorkspaceProduct(kind),
@@ -137,7 +142,12 @@ export function presentManagedWorkspace(row: Record<string, unknown>) {
       title: row.title ?? null,
       description: row.description ?? null,
       notes: row.notes ?? null,
-      workspace_goal: row.workspace_goal ?? null,
+      workspace_goal: derivedWorkspaceGoal({
+        title: typeof row.title === "string" ? row.title : null,
+        description: typeof row.description === "string" ? row.description : null,
+        notes: typeof row.notes === "string" ? row.notes : null,
+        root_topic: typeof row.root_topic === "string" ? row.root_topic : null,
+      }),
       root_topic: row.root_topic ?? null,
       learning_model_size: parseLearningModelSize(row.learning_model_size),
       is_public: Boolean(row.is_public),
@@ -223,8 +233,9 @@ export async function createManagedWorkspace(
           workspace_kind: kind,
           ...(catalogSize ? { learning_model_size: catalogSize } : {}),
           ...(title ? { title } : {}),
-          ...(description ? { description } : {}),
-          ...(workspaceGoal !== undefined ? { workspace_goal: workspaceGoal } : {}),
+          ...(description || workspaceGoal
+            ? { description: description || workspaceGoal }
+            : {}),
         })
         .eq("id", workspaceId);
     }
@@ -256,10 +267,8 @@ export async function createManagedWorkspace(
     title: workspaceTitle,
     root_topic: text(body.root_topic) || initialPrompt.slice(0, 160) || workspaceTitle,
     status: "active",
-    source_type: "topic",
     notes: notes || initialPrompt || null,
-    description: description || null,
-    workspace_goal: workspaceGoal ?? null,
+    description: description || workspaceGoal || null,
     workspace_kind: kind,
     is_agent_workspace: true,
     evaluation_mode: "semantic",
@@ -322,8 +331,8 @@ function settingsPatchFromBody(body: Record<string, unknown>): Record<string, un
   if (notes !== undefined) patch.notes = notes;
   const rootTopic = optionalText(body.root_topic);
   if (rootTopic !== undefined) patch.root_topic = rootTopic;
-  if ("workspace_goal" in body) {
-    patch.workspace_goal =
+  if ("workspace_goal" in body && patch.description === undefined) {
+    patch.description =
       body.workspace_goal === null ? null : normalizeWorkspaceGoal(body.workspace_goal);
   }
   if ("learning_model_size" in body) {

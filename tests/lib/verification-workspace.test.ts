@@ -742,17 +742,31 @@ describe("knowledge subtab verification-flow filter", () => {
 
 describe("verification workspace shell gates", () => {
   it("exposes Verification Flows only on this workspace kind", () => {
-    expect(isKnowledgeRegionWorkspace("knowledge_region")).toBe(true);
+    expect(isKnowledgeRegionWorkspace("knowledge_region")).toBe(false);
     const owner = availableWorkspaceSections({
       isOwner: true,
       workspaceKind: "knowledge_region",
     });
-    expect(owner).toEqual([]);
+    expect(owner).toEqual([
+      "workspace",
+      "dags",
+      "map_types",
+      "unsys_models",
+      "context",
+      "settings",
+    ]);
     expect(owner).not.toContain("verification_flows");
     expect(owner).not.toContain("calibration_flows");
     expect(
       availableWorkspaceSections({ isOwner: true, workspaceKind: "calibration" }),
-    ).toEqual([]);
+    ).toEqual([
+      "workspace",
+      "dags",
+      "map_types",
+      "unsys_models",
+      "context",
+      "settings",
+    ]);
     const standard = availableWorkspaceSections({ isOwner: true });
     expect(standard).not.toContain("verification_flows");
     expect(standard[0]).toBe("workspace");
@@ -825,8 +839,11 @@ describe("verification workspace shell gates", () => {
     expect(flows).toContain("anchor.download = filename");
     expect(flows).not.toContain("<pre");
     const hosts = read("components/workspace-view/workspace-section-hosts.tsx");
-    expect(hosts).toContain("VerificationFlowsPanel");
-    expect(hosts).toContain('visibleSections.includes("verification_flows")');
+    expect(hosts).not.toContain("VerificationFlowsPanel");
+    expect(hosts).not.toContain("CalibrationFlowsPanel");
+    expect(hosts).not.toContain("WorkspaceGoalsPanel");
+    expect(hosts).not.toContain("WorkspaceDataStudioPanel");
+    expect(hosts).not.toContain('visibleSections.includes("verification_flows")');
     expect(hosts).toContain("if (noMap || visibleSections.length === 0) return null");
 
     const regions = read("components/CustomVerificationModelsPanel.tsx");
@@ -921,8 +938,20 @@ describe("verification workspace shell gates", () => {
     expect(runner).toContain("verificationQuestionStartingPrompt");
     expect(runner).not.toContain("resolveTapStartingTopicsFromLlm");
     expect(runner).not.toContain("/api/workspace-tap-score/topics");
+    const canvasAsk = read("components/tap-score/use-tap-score-flow.ts");
+    expect(canvasAsk).toContain("postVerificationCanvasAsk");
+    expect(canvasAsk).toContain("/api/verification-flow/public/");
+    expect(canvasAsk).toContain("postIleSessionChat");
+    expect(canvasAsk).not.toContain(
+      "return { text: input.prompt, elements: null, origin: null, raw: input.prompt }",
+    );
+    const publicChat = join(ROOT, "app/api/verification-flow/public/[token]/chat/route.ts");
+    expect(existsSync(publicChat)).toBe(true);
+    expect(read("app/api/verification-flow/public/[token]/chat/route.ts")).toContain("callXai");
+    expect(read("app/api/verification-flow/public/[token]/chat/route.ts")).toContain(
+      "buildVerificationFlowChatSystemPrompt",
+    );
     const opening = localVerificationOpening({
-      practice: false,
       openingQuestion: verificationQuestionStartingPrompt({ text: "What is a limit?" }),
     });
     expect(opening).toBe("What is a limit?");
@@ -930,8 +959,7 @@ describe("verification workspace shell gates", () => {
       { id: "opening", role: "assistant", content: opening },
     ]);
     expect(JSON.stringify(scene)).toContain("What is a limit?");
-    expect(localVerificationOpening({ practice: true })).not.toContain("What is a limit?");
-    expect(localVerificationOpening({ practice: false, openingQuestion: "" })).toBe("");
+    expect(localVerificationOpening({ openingQuestion: "" })).toBe("");
   });
 
   it("refuses to update or remove a flow from another workspace", () => {

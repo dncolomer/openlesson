@@ -306,10 +306,12 @@ describe("simulation API structural wiring", () => {
     expect(route).toContain("local_context");
   });
 
-  it("block-content-samples loads workspace_files and external_resources", () => {
+  it("block-content-samples loads notes/description and local_context", () => {
     const route = read("app/api/workspace/block-content-samples/route.ts");
-    expect(route).toContain("workspace_files");
-    expect(route).toContain("workspace_external_resources");
+    expect(route).not.toContain("workspace_files");
+    expect(route).not.toContain("workspace_external_resources");
+    expect(route).toContain("notes");
+    expect(route).toContain("description");
     expect(route).toContain("externalLinks");
     expect(route).toContain("buildSimulationSamplesUserPrompt");
     expect(route).toContain("local_context");
@@ -335,10 +337,12 @@ describe("simulation API structural wiring", () => {
     expect(notesIdx).toBeGreaterThan(descIdx);
   });
 
-  it("loadWorkspacePromptContext loads files and external resources", () => {
+  it("loadWorkspacePromptContext loads notes and description, not dropped file tables", () => {
     const src = read("lib/pow-api/load-workspace-prompt-context.ts");
-    expect(src).toContain("workspace_files");
-    expect(src).toContain("workspace_external_resources");
+    expect(src).not.toContain('.from("workspace_files")');
+    expect(src).not.toContain('.from("workspace_external_resources")');
+    expect(src).toContain("notes");
+    expect(src).toContain("description");
     expect(src).toContain("externalResources");
   });
 

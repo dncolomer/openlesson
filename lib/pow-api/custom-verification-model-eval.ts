@@ -107,19 +107,22 @@ export async function buildWorkspaceLinkUrlMap(
 
   const [calibrateRes, verifyRes, ileRes] = await Promise.all([
     supabase
-      .from("workspace_calibrate_sessions")
+      .from("sessions")
       .select("id, public_token")
       .eq("workspace_id", workspaceId)
+      .eq("kind", "calibrate")
       .limit(500),
     supabase
-      .from("workspace_verify_sessions")
+      .from("sessions")
       .select("id, public_token")
       .eq("workspace_id", workspaceId)
+      .eq("kind", "verify")
       .limit(500),
     supabase
-      .from("workspace_learn_links")
+      .from("sessions")
       .select("id, public_token")
       .eq("workspace_id", workspaceId)
+      .eq("kind", "learn")
       .limit(500),
   ]);
 

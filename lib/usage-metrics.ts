@@ -1,9 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { demoteExpiredTrialProfile, type PlanId } from "@/lib/plans";
-import {
-  CALIBRATE_SESSIONS_TABLE,
-  VERIFY_SESSIONS_TABLE,
-} from "@/lib/guest-session-tables";
 
 export type UsageProfileRow = {
   plan: PlanId | string;
@@ -186,7 +182,7 @@ export async function loadUsageProfile(
 
 async function countTableRows(
   supabase: SupabaseClient,
-  table: "workspace_proof_of_work",
+  table: "proof_of_work",
   userId: string,
   periodStart?: Date | null
 ): Promise<number> {
@@ -220,7 +216,8 @@ export async function countIleSessions(
   let query = supabase
     .from("sessions")
     .select("id", { count: "exact", head: true })
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    .eq("kind", "learn");
 
   query = applyBillableIleSessionFilters(query);
 
@@ -266,25 +263,21 @@ export async function countTapSessions(
   userId: string,
   periodStart?: Date | null
 ): Promise<number> {
-  const counts = await Promise.all(
-    [CALIBRATE_SESSIONS_TABLE, VERIFY_SESSIONS_TABLE].map(async (table) => {
-      let query = supabase
-        .from(table)
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", userId);
-      query = applyBillableTapSessionFilters(query);
-      if (periodStart) {
-        query = query.gte("created_at", periodStart.toISOString());
-      }
-      const { count, error } = await query;
-      if (error) {
-        console.error("[usage-metrics] session count failed:", error);
-        return 0;
-      }
-      return count ?? 0;
-    }),
-  );
-  return counts.reduce((a, b) => a + b, 0);
+  let query = supabase
+    .from("sessions")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .in("kind", ["calibrate", "verify"]);
+  query = applyBillableTapSessionFilters(query);
+  if (periodStart) {
+    query = query.gte("created_at", periodStart.toISOString());
+  }
+  const { count, error } = await query;
+  if (error) {
+    console.error("[usage-metrics] session count failed:", error);
+    return 0;
+  }
+  return count ?? 0;
 }
 
 /**
@@ -308,7 +301,7 @@ export async function countProofOfWorkSubmissions(
   userId: string,
   periodStart?: Date | null
 ): Promise<number> {
-  return countTableRows(supabase, "workspace_proof_of_work", userId, periodStart);
+  return countTableRows(supabase, "proof_of_work", userId, periodStart);
 }
 
 /** Proof-of-Work rows created via the Proof-of-Work API (Bearer key or OAuth), for metered billing. */
@@ -318,7 +311,7 @@ export async function countPowApiSubmissions(
   periodStart?: Date | null
 ): Promise<number> {
   let query = supabase
-    .from("workspace_proof_of_work")
+    .from("proof_of_work")
     .select("id", { count: "exact", head: true })
     .eq("user_id", userId);
 
@@ -348,6 +341,7 @@ export async function countOrgIleSessions(
     .from("sessions")
     .select("id", { count: "exact", head: true })
     .in("user_id", memberIds)
+    .eq("kind", "learn")
     .gte("created_at", periodStart.toISOString());
 
   query = applyBillableIleSessionFilters(query);
@@ -367,23 +361,19 @@ export async function countOrgTapSessions(
 ): Promise<number> {
   if (memberIds.length === 0) return 0;
 
-  const counts = await Promise.all(
-    [CALIBRATE_SESSIONS_TABLE, VERIFY_SESSIONS_TABLE].map(async (table) => {
-      let query = supabase
-        .from(table)
-        .select("id", { count: "exact", head: true })
-        .in("user_id", memberIds)
-        .gte("created_at", periodStart.toISOString());
-      query = applyBillableTapSessionFilters(query);
-      const { count, error } = await query;
-      if (error) {
-        console.error("[usage-metrics] org session count failed:", error);
-        return 0;
-      }
-      return count ?? 0;
-    }),
-  );
-  return counts.reduce((a, b) => a + b, 0);
+  let query = supabase
+    .from("sessions")
+    .select("id", { count: "exact", head: true })
+    .in("user_id", memberIds)
+    .in("kind", ["calibrate", "verify"])
+    .gte("created_at", periodStart.toISOString());
+  query = applyBillableTapSessionFilters(query);
+  const { count, error } = await query;
+  if (error) {
+    console.error("[usage-metrics] org session count failed:", error);
+    return 0;
+  }
+  return count ?? 0;
 }
 
 export async function countOrgTapIleSessions(
@@ -409,7 +399,7 @@ export async function countOrgProofOfWorkSubmissions(
   if (memberIds.length === 0) return 0;
 
   const { count, error } = await supabase
-    .from("workspace_proof_of_work")
+    .from("proof_of_work")
     .select("id", { count: "exact", head: true })
     .in("user_id", memberIds)
     .gte("created_at", periodStart.toISOString());

@@ -90,8 +90,8 @@ const DOMAINS = [
   },
   {
     id: "insights-rabbit-hole",
-    label: "Insights & Rabbit Hole",
-    description: "Insight creation and rabbit-hole interview/continue flows.",
+    label: "Insights",
+    description: "Insight creation flows.",
     order: 7,
   },
   {
@@ -148,7 +148,7 @@ function classifyDomain(relPath, symbol, kind) {
   ) {
     return "pow-api";
   }
-  if (relPath.includes("rabbit-hole") || relPath.includes("insights")) {
+  if (relPath.includes("insights")) {
     return "insights-rabbit-hole";
   }
   if (relPath === "lib/local-inference.ts" || relPath === "lib/labs-ai.ts") {

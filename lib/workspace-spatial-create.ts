@@ -118,7 +118,7 @@ ${mapInfo.spatialInstruction}
 Return ONLY JSON:
 {
   "title": "concise workspace title",
-  "workspace_goal": "concise success outcome for this workspace",
+  "workspace_goal": "concise success outcome (workspace description/notes, not a separate column)",
   "blocks": [
     {
       "id": "a",

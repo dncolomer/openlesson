@@ -97,25 +97,18 @@ export async function invalidateTapLinkOne(options: {
     throw new InvalidateGuestLinkError("linkId must be a UUID", 400, "validation_error");
   }
 
-  let existing: Record<string, unknown> | null = null;
-  let table: CalibrateVerifyTable = VERIFY_SESSIONS_TABLE;
-  for (const candidate of CALIBRATE_VERIFY_TABLES) {
-    const { data, error: loadError } = await supabase
-      .from(candidate)
-      .select("id, workspace_id, status, private_token_hash, public_token")
-      .eq("id", linkId)
-      .eq("workspace_id", workspaceId)
-      .maybeSingle();
-    if (loadError) {
-      console.error("[invalidate-tap-link] Load error:", loadError);
-      throw new InvalidateGuestLinkError("Failed to load session link", 500, "internal_error");
-    }
-    if (data) {
-      existing = data as Record<string, unknown>;
-      table = candidate;
-      break;
-    }
+  const { data, error: loadError } = await supabase
+    .from("sessions")
+    .select("id, workspace_id, status, private_token_hash, public_token, kind")
+    .eq("id", linkId)
+    .eq("workspace_id", workspaceId)
+    .in("kind", ["calibrate", "verify"])
+    .maybeSingle();
+  if (loadError) {
+    console.error("[invalidate-tap-link] Load error:", loadError);
+    throw new InvalidateGuestLinkError("Failed to load session link", 500, "internal_error");
   }
+  const existing = (data as Record<string, unknown> | null) ?? null;
 
   if (!existing || (!existing.private_token_hash && !existing.public_token)) {
     throw new InvalidateGuestLinkError("Session link not found", 404, "not_found");
@@ -130,10 +123,11 @@ export async function invalidateTapLinkOne(options: {
   }
 
   const { data: updated, error } = await supabase
-    .from(table)
+    .from("sessions")
     .update({ status: GUEST_LINK_REVOKED_STATUS })
     .eq("id", linkId)
     .eq("workspace_id", workspaceId)
+    .in("kind", ["calibrate", "verify"])
     .select("id, workspace_id, status")
     .single();
 
@@ -160,40 +154,39 @@ export async function invalidateTapLinksAll(options: {
   const { supabase, auth, workspaceId } = options;
   await loadWorkspaceForAuth(supabase, workspaceId, auth);
 
-  const ids: string[] = [];
-  for (const table of CALIBRATE_VERIFY_TABLES) {
-    const { data: withPrivate, error: errPrivate } = await supabase
-      .from(table)
-      .update({ status: GUEST_LINK_REVOKED_STATUS })
-      .eq("workspace_id", workspaceId)
-      .neq("status", GUEST_LINK_REVOKED_STATUS)
-      .not("private_token_hash", "is", null)
-      .select("id");
+  const { data: withPrivate, error: errPrivate } = await supabase
+    .from("sessions")
+    .update({ status: GUEST_LINK_REVOKED_STATUS })
+    .eq("workspace_id", workspaceId)
+    .in("kind", ["calibrate", "verify"])
+    .neq("status", GUEST_LINK_REVOKED_STATUS)
+    .not("private_token_hash", "is", null)
+    .select("id");
 
-    if (errPrivate) {
-      console.error("[invalidate-tap-links-all] private update error:", errPrivate);
-      throw new InvalidateGuestLinkError("Failed to invalidate session links", 500, "internal_error");
-    }
-
-    const { data: withPublic, error: errPublic } = await supabase
-      .from(table)
-      .update({ status: GUEST_LINK_REVOKED_STATUS })
-      .eq("workspace_id", workspaceId)
-      .neq("status", GUEST_LINK_REVOKED_STATUS)
-      .is("private_token_hash", null)
-      .not("public_token", "is", null)
-      .select("id");
-
-    if (errPublic) {
-      console.error("[invalidate-tap-links-all] public update error:", errPublic);
-      throw new InvalidateGuestLinkError("Failed to invalidate session links", 500, "internal_error");
-    }
-
-    ids.push(
-      ...((withPrivate || []) as { id: string }[]).map((r) => r.id),
-      ...((withPublic || []) as { id: string }[]).map((r) => r.id),
-    );
+  if (errPrivate) {
+    console.error("[invalidate-tap-links-all] private update error:", errPrivate);
+    throw new InvalidateGuestLinkError("Failed to invalidate session links", 500, "internal_error");
   }
+
+  const { data: withPublic, error: errPublic } = await supabase
+    .from("sessions")
+    .update({ status: GUEST_LINK_REVOKED_STATUS })
+    .eq("workspace_id", workspaceId)
+    .in("kind", ["calibrate", "verify"])
+    .neq("status", GUEST_LINK_REVOKED_STATUS)
+    .is("private_token_hash", null)
+    .not("public_token", "is", null)
+    .select("id");
+
+  if (errPublic) {
+    console.error("[invalidate-tap-links-all] public update error:", errPublic);
+    throw new InvalidateGuestLinkError("Failed to invalidate session links", 500, "internal_error");
+  }
+
+  const ids = [
+    ...((withPrivate || []) as { id: string }[]).map((r) => r.id),
+    ...((withPublic || []) as { id: string }[]).map((r) => r.id),
+  ];
   const uniqueIds = [...new Set(ids)];
   return {
     workspace_id: workspaceId,
@@ -219,10 +212,11 @@ export async function invalidateIleLinkOne(options: {
   }
 
   const { data: existing, error: loadError } = await supabase
-    .from("workspace_learn_links")
+    .from("sessions")
     .select("id, workspace_id, status, private_token_hash, public_token")
     .eq("id", linkId)
     .eq("workspace_id", workspaceId)
+    .eq("kind", "learn")
     .maybeSingle();
 
   if (loadError) {
@@ -242,10 +236,11 @@ export async function invalidateIleLinkOne(options: {
   }
 
   const { data: updated, error } = await supabase
-    .from("workspace_learn_links")
+    .from("sessions")
     .update({ status: GUEST_LINK_REVOKED_STATUS })
     .eq("id", linkId)
     .eq("workspace_id", workspaceId)
+    .eq("kind", "learn")
     .select("id, workspace_id, status")
     .single();
 
@@ -273,9 +268,10 @@ export async function invalidateIleLinksAll(options: {
   await loadWorkspaceForAuth(supabase, workspaceId, auth);
 
   const { data: rows, error } = await supabase
-    .from("workspace_learn_links")
+    .from("sessions")
     .update({ status: GUEST_LINK_REVOKED_STATUS })
     .eq("workspace_id", workspaceId)
+    .eq("kind", "learn")
     .neq("status", GUEST_LINK_REVOKED_STATUS)
     .select("id");
 

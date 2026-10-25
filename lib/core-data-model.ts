@@ -81,10 +81,20 @@ export type CalibrateResult = {
   expertProof: CalibrateExpertProof | null;
 };
 
+export type VerifyAnswer = {
+  id: string;
+  identity: string;
+  source: "runner" | "skill";
+  questionId: string | null;
+  prompt: string;
+  createdAt: string;
+};
+
 export type VerifyResult = {
   kind: "verify";
-  projectedPolicy: ProjectedPolicy;
+  projectedPolicy: ProjectedPolicy | null;
   knowledgeRegionId: string | null;
+  answers: VerifyAnswer[];
 };
 
 export type SessionResult = LearnResult | CalibrateResult | VerifyResult;
@@ -192,15 +202,37 @@ export function parseSessionResult(value: unknown): SessionResult | null {
     };
   }
   if (kind === "verify") {
-    const projectedPolicy = parseProjectedPolicy(record.projectedPolicy);
-    if (!projectedPolicy) return null;
+    const answers = Array.isArray(record.answers)
+      ? record.answers.flatMap((item): VerifyAnswer[] => {
+          if (!item || typeof item !== "object" || Array.isArray(item)) return [];
+          const answer = item as Record<string, unknown>;
+          const id = typeof answer.id === "string" ? answer.id.trim() : "";
+          const identity = typeof answer.identity === "string" ? answer.identity.trim() : "";
+          const prompt = typeof answer.prompt === "string" ? answer.prompt : "";
+          if (!id || !identity) return [];
+          return [
+            {
+              id,
+              identity,
+              source: answer.source === "skill" ? "skill" : "runner",
+              questionId:
+                typeof answer.questionId === "string" && answer.questionId.trim()
+                  ? answer.questionId
+                  : null,
+              prompt,
+              createdAt: typeof answer.createdAt === "string" ? answer.createdAt : "",
+            },
+          ];
+        })
+      : [];
     return {
       kind: "verify",
-      projectedPolicy,
+      projectedPolicy: parseProjectedPolicy(record.projectedPolicy),
       knowledgeRegionId:
         typeof record.knowledgeRegionId === "string" && record.knowledgeRegionId.trim()
           ? record.knowledgeRegionId
           : null,
+      answers,
     };
   }
   if (kind === "calibrate") {

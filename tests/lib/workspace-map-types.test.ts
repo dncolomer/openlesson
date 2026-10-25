@@ -420,7 +420,9 @@ describe("Map Types tab UI / API structural", () => {
     const panel = read("components/WorkspaceMapTypesPanel.tsx");
     const sections = read("lib/workspace-sections.ts");
     const en = read("messages/en.json");
-    const mod = read("lib/workspace-map-types.ts");
+    const barrel = read("lib/workspace-map-types.ts");
+    const persist = read("lib/workspace-map-types-persist.ts");
+    const prompt = read("lib/workspace-map-types-prompt.ts");
     const migration = read(
       "supabase/migrations/20260903140000_workspace_map_types.sql",
     );
@@ -501,9 +503,17 @@ describe("Map Types tab UI / API structural", () => {
     expect(read("lib/map-type-library.ts")).toContain("MAP_TYPE_LIBRARY_CORE");
     expect(read("app/api/map-types/library/route.ts")).toContain("MAP_TYPE_LIBRARY");
 
-    expect(mod).toContain("export function formatMapTypeGeneratorContext");
-    expect(mod).toContain("export function resolveWorkspaceMapTypeCatalog");
-    expect(mod).toContain("export function normalizeWorkspaceMapTypes");
+    expect(barrel).not.toMatch(/^export function /m);
+    expect(barrel).toContain('from "@/lib/workspace-map-types-persist"');
+    expect(barrel).toContain('from "@/lib/workspace-map-types-prompt"');
+    expect(barrel).toContain("formatMapTypeGeneratorContext");
+    expect(barrel).toContain("normalizeWorkspaceMapTypes");
+    expect(barrel).toContain("serializeWorkspaceMapTypes");
+    expect(prompt).toContain("export function formatMapTypeGeneratorContext");
+    expect(prompt).toContain("export const MAP_TYPE_SHAPED_SPATIAL_RULES");
+    expect(persist).toContain("export function resolveWorkspaceMapTypeCatalog");
+    expect(persist).toContain("export function normalizeWorkspaceMapTypes");
+    expect(persist).toContain("export function serializeWorkspaceMapTypes");
     expect(migration).toContain("workspace_map_types");
     expect(workspaceApi).toContain("workspace_map_types");
     expect(sessionApi).toContain("mapTypePickerCatalog");
@@ -512,8 +522,10 @@ describe("Map Types tab UI / API structural", () => {
     expect(picker).toContain("defaultMapTypePickerCatalog");
     expect(welcome).not.toContain("mapTypeCatalog");
     expect(sessionView).not.toContain("/api/session-plan/map-types");
-    expect(mod).toContain("export function resolveMapTypeIdFromBody");
-    expect(mod).toContain("export function resolveMapTypeRecord");
+    expect(persist).toContain("export function resolveMapTypeIdFromBody");
+    expect(persist).toContain("export function resolveMapTypeRecord");
+    expect(barrel).toContain("resolveMapTypeIdFromBody");
+    expect(barrel).toContain("resolveMapTypeRecord");
 
     mkdirSync(SCRATCH, { recursive: true });
     writeFileSync(
@@ -579,8 +591,8 @@ describe("Map Types tab UI / API structural", () => {
         "picker_catalog_prop=" + picker.includes("catalog"),
         "welcome_catalog=" + welcome.includes("mapTypeCatalog"),
         "session_fetch=" + sessionView.includes("/api/session-plan/map-types"),
-        "create_resolver=" + mod.includes("export function resolveMapTypeIdFromBody"),
-        "create_formatter_path=" + mod.includes("export function resolveMapTypeRecord"),
+        "create_resolver=" + persist.includes("export function resolveMapTypeIdFromBody"),
+        "create_formatter_path=" + persist.includes("export function resolveMapTypeRecord"),
         "custom_id_accepted=" +
           String(
             resolveMapTypeIdFromBody(

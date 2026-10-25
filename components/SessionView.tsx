@@ -642,7 +642,6 @@ export function SessionView({
     router,
     settingsRoute,
     showWelcomeModal,
-    setShowWelcomeModal,
     setShowWelcomePanel,
     setIsStartingSession,
     applyIleChapterGridStartup,

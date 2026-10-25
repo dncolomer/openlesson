@@ -304,7 +304,7 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     expect(view).toContain("assignIleWorkAestheticImages");
     expect(view).toContain("ileChapterAestheticIds");
     expect(view).toContain("stepIds: sessionPlan?.steps?.map((step) => step.id)");
-    expect(view).toContain("selectedId: mapSelectedChapterId");
+    expect(view).toContain("selectedId: null");
     expect(view).toContain("workAestheticById");
     expect(view).toContain("workAestheticById[id]");
     expect(existsSync(join(ROOT, "components/session-view/session-thought-pane.tsx"))).toBe(false);

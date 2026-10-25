@@ -102,7 +102,6 @@ export type SessionWelcomeInput = {
   router: ReturnType<typeof useRouter>;
   settingsRoute: boolean;
   showWelcomeModal: boolean;
-  setShowWelcomeModal: (v: boolean) => void;
   setShowWelcomePanel: (v: boolean) => void;
   setIsStartingSession: (v: boolean) => void;
   applyIleChapterGridStartup: () => void;
@@ -271,6 +270,5 @@ export function useSessionWelcome(input: SessionWelcomeInput) {
     handleConfirmSettings,
     handleWelcomeReadyStart,
     handleWelcomePlay,
-    mapEntryTailDoneRef,
   };
 }

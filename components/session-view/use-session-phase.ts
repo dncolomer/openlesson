@@ -8,7 +8,6 @@ import {
   getSession,
   getSessionPlan,
   pauseSession,
-  resetSessionProbes,
   type Session,
   type SessionPlan,
 } from "@/lib/storage";
@@ -286,19 +285,6 @@ export function useSessionPhase(input: SessionPhaseInput) {
     setTutoringLanguage,
   ]);
 
-  const handleReset = async () => {
-    if (!session) return;
-
-    try {
-      await resetSessionProbes(session.id);
-      const resetSession = { ...session, probes: [] };
-      setSession(resetSession);
-      sessionRef.current = resetSession;
-    } catch (err) {
-      console.error("Reset session error:", err);
-    }
-  };
-
   const pauseAndGoToDashboard = useCallback(async (
     sessionName?: string | null,
     options?: { persistSession?: boolean },
@@ -358,10 +344,6 @@ export function useSessionPhase(input: SessionPhaseInput) {
     openWorkIdsRef,
     sessionRef,
   ]);
-
-  const handleClose = () => {
-    void pauseAndGoToDashboard();
-  };
 
   const handleConfirmEnd = async (options?: { impure?: boolean }) => {
     setShowEndDialog(false);
@@ -440,9 +422,7 @@ export function useSessionPhase(input: SessionPhaseInput) {
   }, []);
 
   return {
-    handleReset,
     pauseAndGoToDashboard,
-    handleClose,
     handleConfirmEnd,
   };
 }

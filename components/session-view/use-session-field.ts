@@ -151,7 +151,6 @@ export function useSessionField(input: SessionFieldInput) {
   const [canvasApplyElements, setCanvasApplyElements] = useState<IleWorkCanvasElement[]>([]);
   const [openWorkIds, setOpenWorkIds] = useState<string[]>([]);
   const [workAestheticById, setWorkAestheticById] = useState<Record<string, string>>({});
-  const [mapSelectedChapterId, setMapSelectedChapterId] = useState<string | null>(null);
   const [sessionInsights, setSessionInsights] = useState<InsightSummary[]>([]);
   const [keptInsight, setKeptInsight] = useState<InsightSummary | null>(null);
 
@@ -163,7 +162,7 @@ export function useSessionField(input: SessionFieldInput) {
     const ids = ileChapterAestheticIds({
       stepIds: sessionPlan?.steps?.map((step) => step.id),
       openWorkIds,
-      selectedId: mapSelectedChapterId,
+      selectedId: null,
     });
     setWorkAestheticById((current) => {
       const next = assignIleWorkAestheticImages({
@@ -183,7 +182,6 @@ export function useSessionField(input: SessionFieldInput) {
     });
   }, [
     chromeSelectedAesthetic?.images,
-    mapSelectedChapterId,
     openWorkIds,
     sessionPlan?.steps,
   ]);
@@ -662,8 +660,6 @@ export function useSessionField(input: SessionFieldInput) {
     canvasApplyNonce,
     canvasApplyElements,
     openWorkIds,
-    mapSelectedChapterId,
-    setMapSelectedChapterId,
     sessionInsights,
     setSessionInsights,
     keptInsight,
@@ -671,8 +667,6 @@ export function useSessionField(input: SessionFieldInput) {
     learnField,
     workspaceId,
     sessionBlockId,
-    seedChapterWorkCanvas,
-    handleWorkChapter,
     handleCanvasPowActions,
     handleAskCanvasSelection,
     openWorkDockLabels,

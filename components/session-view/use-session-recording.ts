@@ -15,24 +15,6 @@ import { persistIleSessionRow } from "@/lib/learn-session-persist";
 import { releaseSessionLocalMemory } from "@/lib/session-local-memory";
 import type { GuestAccessKind } from "@/components/session-view/types";
 
-export type SessionRecordingRuntime = {
-  flushRemainingIlePow: (options?: { force?: boolean }) => Promise<void>;
-  handleDisconnectMuse: () => void;
-  handleConnectMuse: () => void;
-  isScreenCapturing: boolean;
-  isWebcamEnabled: boolean;
-  setIsWebcamEnabled: (v: boolean) => void;
-  setIsScreenCapturing: (v: boolean) => void;
-  museStatus: string;
-  screenCaptureRef: {
-    current: {
-      start: () => Promise<boolean>;
-      stop: () => void;
-      getStream: () => MediaStream | null;
-    } | null;
-  };
-};
-
 export type SessionRecordingState = {
   isRecording: boolean;
   setIsRecording: (v: boolean) => void;
@@ -43,8 +25,6 @@ export type SessionRecordingState = {
   elapsedSecondsRef: { current: number };
   stream: MediaStream | null;
   setStream: (s: MediaStream | null) => void;
-  micStatus: "idle" | "checking" | "ready" | "denied";
-  setMicStatus: (s: "idle" | "checking" | "ready" | "denied") => void;
   micStreamRef: { current: MediaStream | null };
   isMuted: boolean;
   setIsMuted: Dispatch<SetStateAction<boolean>>;
@@ -67,7 +47,6 @@ export function useSessionRecordingState(): SessionRecordingState {
   const [isPaused, setIsPaused] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [stream, setStream] = useState<MediaStream | null>(null);
-  const [micStatus, setMicStatus] = useState<"idle" | "checking" | "ready" | "denied">("idle");
   const micStreamRef = useRef<MediaStream | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [muteRemaining, setMuteRemaining] = useState(0);
@@ -105,8 +84,6 @@ export function useSessionRecordingState(): SessionRecordingState {
     elapsedSecondsRef,
     stream,
     setStream,
-    micStatus,
-    setMicStatus,
     micStreamRef,
     isMuted,
     setIsMuted,
@@ -125,23 +102,37 @@ export function useSessionRecordingState(): SessionRecordingState {
   };
 }
 
-export type SessionRecordingInput = SessionRecordingState &
-  SessionRecordingRuntime & {
-    session: Session | null;
-    setSession: (s: Session | null | ((prev: Session | null) => Session | null)) => void;
-    sessionRef: { current: Session | null };
-    guestAccessKind: GuestAccessKind;
-    ayclToken?: string;
-    ileToken?: string;
-    router: ReturnType<typeof useRouter>;
-    t: (key: string) => string;
-    setError: (e: string | null) => void;
-    setIsSaving: (v: boolean) => void;
-    whiteboardData: string | null;
-    notebookContent: string;
-    handlePauseRef: { current: () => Promise<void> };
-    openWorkIdsRef: { current: string[] };
+export type SessionRecordingInput = SessionRecordingState & {
+  session: Session | null;
+  setSession: (s: Session | null | ((prev: Session | null) => Session | null)) => void;
+  sessionRef: { current: Session | null };
+  guestAccessKind: GuestAccessKind;
+  ayclToken?: string;
+  ileToken?: string;
+  router: ReturnType<typeof useRouter>;
+  t: (key: string) => string;
+  setError: (e: string | null) => void;
+  setIsSaving: (v: boolean) => void;
+  whiteboardData: string | null;
+  notebookContent: string;
+  handlePauseRef: { current: () => Promise<void> };
+  openWorkIdsRef: { current: string[] };
+  flushRemainingIlePow: (options?: { force?: boolean }) => Promise<void>;
+  handleDisconnectMuse: () => void;
+  handleConnectMuse: () => void;
+  isScreenCapturing: boolean;
+  isWebcamEnabled: boolean;
+  setIsWebcamEnabled: (v: boolean) => void;
+  setIsScreenCapturing: (v: boolean) => void;
+  museStatus: string;
+  screenCaptureRef: {
+    current: {
+      start: () => Promise<boolean>;
+      stop: () => void;
+      getStream: () => MediaStream | null;
+    } | null;
   };
+};
 
 export function useSessionRecording(input: SessionRecordingInput) {
   const {
@@ -168,10 +159,7 @@ export function useSessionRecording(input: SessionRecordingInput) {
     elapsedSecondsRef,
     stream,
     setStream,
-    setMicStatus,
     micStreamRef,
-    setIsMuted,
-    setMuteRemaining,
     muteTimerRef,
     timerRef,
     isRecordingRef,
@@ -200,25 +188,6 @@ export function useSessionRecording(input: SessionRecordingInput) {
     }, 15000);
     return () => window.clearInterval(interval);
   }, [elapsedSecondsRef, isPaused, isRecording, session]);
-
-  const checkMicrophone = async () => {
-    setMicStatus("checking");
-    setError(null);
-    try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          sampleRate: 48000,
-        },
-      });
-      micStreamRef.current = mediaStream;
-      setMicStatus("ready");
-    } catch {
-      setMicStatus("denied");
-      setError(t("session.micDenied"));
-    }
-  };
 
   const startRecording = async () => {
     try {
@@ -410,16 +379,6 @@ export function useSessionRecording(input: SessionRecordingInput) {
     }
   };
 
-  const handleMute = (durationMs: number) => {
-    setIsMuted(true);
-    setMuteRemaining(durationMs);
-    if (muteTimerRef.current) clearTimeout(muteTimerRef.current);
-    muteTimerRef.current = setTimeout(() => {
-      setIsMuted(false);
-      setMuteRemaining(0);
-    }, durationMs);
-  };
-
   useEffect(() => {
     const handleBeforeUnload = async (e: BeforeUnloadEvent) => {
       if (isRecording && session) {
@@ -447,11 +406,9 @@ export function useSessionRecording(input: SessionRecordingInput) {
   }, []);
 
   return {
-    checkMicrophone,
     startRecording,
     stopRecording,
     handlePause,
     handleResume,
-    handleMute,
   };
 }

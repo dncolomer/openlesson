@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   applyLearnerNoteResize,
   canDeleteMapNote,
   canEditMapNoteContent,
   canMutateMapNoteGeometry,
+  createLearnerMapNote,
   defaultMapNotesPlaneVisible,
   deleteLearnerMapNote,
   loadCreatorMapNotes,
@@ -28,6 +29,13 @@ export function useMapNotes(input: {
   learnerMode: boolean;
   viewOnly: boolean;
   resolvedLearnerScope: string;
+  injectMapNote?: {
+    token: number;
+    body: string;
+    x: number;
+    y: number;
+    source?: "creator" | "learner";
+  } | null;
 }) {
   const {
     mountMapNotes,
@@ -35,6 +43,7 @@ export function useMapNotes(input: {
     learnerMode,
     viewOnly,
     resolvedLearnerScope,
+    injectMapNote,
   } = input;
 
   const [creatorNotes, setCreatorNotes] = useState<LearnerMapNote[]>([]);
@@ -113,6 +122,41 @@ export function useMapNotes(input: {
     },
     [overlayPersist, resolvedLearnerScope, viewOnly],
   );
+
+  const injectMapNoteTokenRef = useRef(0);
+  useEffect(() => {
+    if (!injectMapNote || !injectMapNote.token) return;
+    if (injectMapNote.token === injectMapNoteTokenRef.current) return;
+    injectMapNoteTokenRef.current = injectMapNote.token;
+    if (!mountMapNotes || !overlayPersist) return;
+    const body = String(injectMapNote.body || "").trim();
+    const source =
+      injectMapNote.source === "learner" || injectMapNote.source === "creator"
+        ? injectMapNote.source
+        : learnerMode
+          ? "learner"
+          : "creator";
+    const note = createLearnerMapNote({
+      body,
+      x: Number(injectMapNote.x) || 0,
+      y: Number(injectMapNote.y) || 0,
+      source,
+    });
+    if (source === "learner" || learnerMode) {
+      persistLearnerNotes(upsertLearnerMapNote(learnerNotes, note));
+    } else {
+      persistCreatorNotes(upsertLearnerMapNote(creatorNotes, note));
+    }
+  }, [
+    creatorNotes,
+    injectMapNote,
+    learnerMode,
+    learnerNotes,
+    mountMapNotes,
+    persistCreatorNotes,
+    persistLearnerNotes,
+    overlayPersist,
+  ]);
 
   const findMapNote = useCallback(
     (noteId: string): LearnerMapNote | undefined =>

@@ -138,8 +138,12 @@ describe("one workspace surface", () => {
       resolveBlockCircularMenuSurface({ learnerMode: false }),
     ).toBe("none");
 
-    const world = read("components/block-skill-grid/map-world-layer.tsx");
-    const grid = read("components/BlockSkillGrid.tsx");
+    const world =
+      read("components/block-skill-grid/map-world-layer.tsx") +
+      read("components/block-skill-grid/occupied-map-tile.tsx");
+    const grid =
+      read("components/BlockSkillGrid.tsx") +
+      read("components/block-skill-grid/use-map-circular-menu.ts");
     expect(world).not.toContain("mapExploreOpen");
     expect(world).not.toContain("data-empty-cell-search");
     expect(grid).toContain("blockCircularMenuOpensOnSelect(circularMenuSurface)");

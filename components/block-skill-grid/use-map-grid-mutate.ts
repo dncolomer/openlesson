@@ -14,6 +14,7 @@ import {
   parseShapeCells,
   stretchBlockFromHandle,
   translateBlocksPreservingShape,
+  type OptimisticPlacement,
   type PlacedBlockRef,
 } from "@/lib/skill-grid-ops";
 import type { BlockSkillGridProps } from "@/components/block-skill-grid/types";
@@ -55,11 +56,9 @@ export function useMapGridMutate(input: {
   onGridOp?: BlockSkillGridProps["onGridOp"];
   placedBlocksForStretch: PlacedBlockRef[];
   stretchOccupancy: Map<string, string>;
-  setOptimisticPlacements: (
-    next:
-      | Record<string, unknown>
-      | ((prev: Record<string, unknown>) => Record<string, unknown>),
-  ) => void;
+  setOptimisticPlacements: Dispatch<
+    SetStateAction<Record<string, OptimisticPlacement>>
+  >;
   setMapSaveJobs: Dispatch<SetStateAction<Array<{
     id: string;
     label: string;

@@ -626,7 +626,7 @@ describe("TAP Learning TIM map interactions catalog + wiring", () => {
     expect(mutate).toContain("handleMarkChapterUndone");
     expect(mutate).toContain("applyIleChapterUndoDone");
 
-    const world = read("components/block-skill-grid/map-world-layer.tsx");
+    const world = read("components/block-skill-grid/occupied-map-tile.tsx");
     expect(world).toContain("data-tim-unopened");
     expect(world).toContain("MAP_CELL_TIM_UNOPENED_CLASS");
 

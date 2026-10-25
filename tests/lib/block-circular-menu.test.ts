@@ -188,8 +188,12 @@ describe("in-block progress, unseen gather dot, resource scope", () => {
 describe("circular menu source wiring", () => {
   it("workspace maps do not mount the circular menu; TAP Learning double-click peeks; widget keeps I'm done answering; workspace drawers open", () => {
     expect(existsSync(join(ROOT, "components/ChapterMapPanel.tsx"))).toBe(false);
-    const grid = read("components/BlockSkillGrid.tsx");
-    const world = read("components/block-skill-grid/map-world-layer.tsx");
+    const grid =
+      read("components/BlockSkillGrid.tsx") +
+      read("components/block-skill-grid/use-map-circular-menu.ts");
+    const world =
+      read("components/block-skill-grid/map-world-layer.tsx") +
+      read("components/block-skill-grid/occupied-map-tile.tsx");
     const ring = read("components/block-skill-grid/block-circular-menu.tsx");
     const authoring = read("components/block-skill-grid/use-map-authoring.ts");
     expect(existsSync(join(ROOT, "components/session-view/learn-chapter-helios-actions.tsx"))).toBe(

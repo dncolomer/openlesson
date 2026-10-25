@@ -1,6 +1,12 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import {
   buildSkillGridLayout,
   skillNodeOccupiedCells,
@@ -20,23 +26,20 @@ import {
 } from "@/lib/block-creator-effects";
 import { learnerMapDependencyHighlightIds } from "@/lib/learner-local-dag";
 import {
+  applyOptimisticPlacements,
   buildOccupancyFromPlaced,
+  dropCaughtUpOptimisticPlacements,
   normalizeSpan,
   parseShapeCells,
+  type OptimisticPlacement,
   type PlacedBlockRef,
 } from "@/lib/skill-grid-ops";
 
 export function useMapDerived(input: {
   nodes: SkillGridNode[];
-  optimisticPlacements: Record<
-    string,
-    {
-      position_x: number;
-      position_y: number;
-      span_w: number;
-      span_h: number;
-      shape_cells?: SkillGridNode["shape_cells"] | null;
-    }
+  optimisticPlacements: Record<string, OptimisticPlacement>;
+  setOptimisticPlacements: Dispatch<
+    SetStateAction<Record<string, OptimisticPlacement>>
   >;
   learnerMode: boolean;
   selectedNodeId: string | null;
@@ -53,6 +56,7 @@ export function useMapDerived(input: {
   const {
     nodes,
     optimisticPlacements,
+    setOptimisticPlacements,
     learnerMode,
     selectedNodeId,
     selectedBlockIds,
@@ -66,25 +70,14 @@ export function useMapDerived(input: {
     localBusy,
   } = input;
 
-  const displayNodes = useMemo((): SkillGridNode[] => {
-    const keys = Object.keys(optimisticPlacements);
-    if (keys.length === 0) return nodes;
-    return nodes.map((n) => {
-      const o = optimisticPlacements[n.id];
-      if (!o) return n;
-      return {
-        ...n,
-        position_x: o.position_x,
-        position_y: o.position_y,
-        span_w: o.span_w,
-        span_h: o.span_h,
-        shape_cells:
-          o.shape_cells === undefined
-            ? n.shape_cells
-            : (o.shape_cells as SkillGridNode["shape_cells"]),
-      };
-    });
-  }, [nodes, optimisticPlacements]);
+  const displayNodes = useMemo(
+    (): SkillGridNode[] => applyOptimisticPlacements(nodes, optimisticPlacements),
+    [nodes, optimisticPlacements],
+  );
+
+  useEffect(() => {
+    setOptimisticPlacements((prev) => dropCaughtUpOptimisticPlacements(prev, nodes));
+  }, [nodes, setOptimisticPlacements]);
 
   const nodesById = useMemo(
     () => new Map(displayNodes.map((node) => [node.id, node])),

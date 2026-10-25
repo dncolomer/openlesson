@@ -45,7 +45,9 @@ describe("map double-click peek overlay", () => {
   it("creator and TAP Learning occupied-block double-click peek; Workspace learner stays a no-op", () => {
     const grid = readMapGridSurface();
     const authoring = read("components/block-skill-grid/use-map-authoring.ts");
-    const host = read("components/BlockSkillGrid.tsx");
+    const host =
+      read("components/BlockSkillGrid.tsx") +
+      read("components/block-skill-grid/use-map-circular-menu.ts");
     const menu = read("lib/block-circular-menu.ts");
     expect(authoring).toContain("onPeekBlock");
     expect(authoring).toContain("handleBlockDoubleClick");

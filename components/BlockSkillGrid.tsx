@@ -1,36 +1,13 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type MouseEvent as ReactMouseEvent,
-  type PointerEvent as ReactPointerEvent,
-} from "react";
-import {
-  skillGridMetrics,
-  type GridCell,
-  type SkillGridNode,
-} from "@/lib/block-skill-grid";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { skillGridMetrics } from "@/lib/block-skill-grid";
 import { createMapFogLookup } from "@/lib/map-fog-of-war";
 import {
-  createLearnerMapNote,
   createLearnerMapNoteAtViewportCenter,
-  shouldRenderMapNotesOnPlane,
   upsertLearnerMapNote,
 } from "@/lib/learner-map-notes";
 import { resolveMapOverlayPersistScope } from "@/lib/map-overlay-persist";
-import {
-  DEFAULT_BLOCK_MAP_MODE,
-  DEFAULT_LASSO_SHAPE,
-  EMPTY_PREREQ_EDIT,
-  type BlockMapModeTool,
-  type LassoShapeKind,
-  type PrereqEditState,
-} from "@/lib/block-map-tools";
-import { DEFAULT_MODEL } from "@/lib/xai-models";
 import {
   EMPTY_APPEARING_NODE_IDS,
   type BlockSkillGridProps,
@@ -47,34 +24,13 @@ import { useMapAuthoring } from "@/components/block-skill-grid/use-map-authoring
 import { useMapGridMutate } from "@/components/block-skill-grid/use-map-grid-mutate";
 import { useMapPanLasso } from "@/components/block-skill-grid/use-map-pan-lasso";
 import { useMapSettleGestures } from "@/components/block-skill-grid/use-map-settle-gestures";
-import { MapToolRail } from "@/components/block-skill-grid/map-tool-rail";
-import { MapAuthoringForms } from "@/components/block-skill-grid/map-authoring-forms";
-import { MapStatusBar } from "@/components/block-skill-grid/map-status-bar";
+import { useMapCircularMenu } from "@/components/block-skill-grid/use-map-circular-menu";
 import { MapStretchHandles } from "@/components/block-skill-grid/map-stretch-handles";
-import { MapRightStack } from "@/components/block-skill-grid/map-right-stack";
-import { MapJobIndicators } from "@/components/block-skill-grid/map-job-indicators";
-import { MapGestureOverlays } from "@/components/block-skill-grid/map-gesture-overlays";
 import { MapGridShell } from "@/components/block-skill-grid/map-grid-shell";
 import { fetchAestheticPackages } from "@/lib/aesthetics";
 import { type WorkspaceMapSelection } from "@/lib/workspace-map-selection";
 import { resolveMapBlockPeek } from "@/lib/block-map-peek";
-import {
-  blockCircularMenuDoubleClickIsNoop,
-  blockCircularMenuOpensOnEmpty,
-  blockCircularMenuOpensOnSelect,
-  nextCircularMenuBlockIdOnClick,
-  nextCircularMenuEmptyCellOnClick,
-  type BlockCircularMenuActionId,
-} from "@/lib/block-circular-menu";
 import { unusableCellKeySet } from "@/lib/map-ground-rules";
-import { normalizeSpan, parseShapeCells, type PlacedBlockRef, type StretchHandle } from "@/lib/skill-grid-ops";
-import {
-  buildShapeContextSourceOptions,
-  type ShapeContextSourceOption,
-} from "@/lib/shape-context-select";
-
-const DEFAULT_PLANNER_MODEL = DEFAULT_MODEL;
-
 
 export function BlockSkillGrid({
   nodes,
@@ -167,23 +123,6 @@ export function BlockSkillGrid({
       ? aestheticImages
       : fetchedAestheticImages;
   const [peekBlockId, setPeekBlockId] = useState<string | null>(null);
-  const [circularMenuBlockId, setCircularMenuBlockId] = useState<string | null>(null);
-  const [circularMenuEmptyCell, setCircularMenuEmptyCell] = useState<GridCell | null>(
-    null,
-  );
-  const [blockedCellKey, setBlockedCellKey] = useState<string | null>(null);
-  useEffect(() => {
-    onEmptyCellSelect?.(circularMenuEmptyCell != null);
-  }, [circularMenuEmptyCell, onEmptyCellSelect]);
-  useEffect(() => {
-    onBlockedCellSelect?.(blockedCellKey != null);
-  }, [blockedCellKey, onBlockedCellSelect]);
-  useEffect(() => {
-    if (circularMenuEmptyCell || circularMenuBlockId) setBlockedCellKey(null);
-  }, [circularMenuBlockId, circularMenuEmptyCell]);
-  const circularMenuSurface: "ile" | "workspace-learner" | "none" = viewOnly
-    ? "none"
-    : circularMenuSurfaceProp ?? "none";
   const unusableKeys = useMemo(
     () => unusableCellKeySet(unusableCells || []),
     [unusableCells],
@@ -229,8 +168,6 @@ export function BlockSkillGrid({
     mapNotesOnPlane,
     persistCreatorNotes,
     persistLearnerNotes,
-    findMapNote,
-    patchMapNote,
     handleLearnerNoteToggle,
     handleLearnerNoteSaveBody,
     handleLearnerNoteDelete,
@@ -242,11 +179,11 @@ export function BlockSkillGrid({
     learnerMode,
     viewOnly,
     resolvedLearnerScope,
+    injectMapNote,
   });
 
   const {
     annotationLayers,
-    setAnnotationLayers,
     activeAnnotationLayerId,
     setActiveAnnotationLayerId,
     annotationDrawTool,
@@ -273,6 +210,8 @@ export function BlockSkillGrid({
     learnerMode,
     viewOnly,
     mountMapNotes,
+    injectHeliosOverlay,
+    persistCreatorNotes,
   });
 
   const {
@@ -307,7 +246,6 @@ export function BlockSkillGrid({
     setSelectedBlockIds,
     selectedBlockIdsRef,
     selectedEmptyCellsRef,
-    learnerModeRef,
     activeToolRef,
     activeTool,
     setActiveTool,
@@ -347,91 +285,12 @@ export function BlockSkillGrid({
     selectiveExplanationActive,
   });
 
-  // Inject map Note from Selective Explanation → Note.
-  const injectMapNoteTokenRef = useRef(0);
-  useEffect(() => {
-    if (!injectMapNote || !injectMapNote.token) return;
-    if (injectMapNote.token === injectMapNoteTokenRef.current) return;
-    injectMapNoteTokenRef.current = injectMapNote.token;
-    if (!mountMapNotes || !overlayPersist) return;
-    const body = String(injectMapNote.body || "").trim();
-    const source =
-      injectMapNote.source === "learner" || injectMapNote.source === "creator"
-        ? injectMapNote.source
-        : learnerMode
-          ? "learner"
-          : "creator";
-    const note = createLearnerMapNote({
-      body,
-      x: Number(injectMapNote.x) || 0,
-      y: Number(injectMapNote.y) || 0,
-      source,
-    });
-    if (source === "learner" || learnerMode) {
-      persistLearnerNotes(upsertLearnerMapNote(learnerNotes, note));
-    } else {
-      persistCreatorNotes(upsertLearnerMapNote(creatorNotes, note));
-    }
-  }, [
-    creatorNotes,
-    injectMapNote,
-    learnerMode,
-    learnerNotes,
-    mountMapNotes,
-    persistCreatorNotes,
-    persistLearnerNotes,
-    overlayPersist,
-  ]);
-
-  const injectHeliosOverlayTokenRef = useRef(0);
-  useEffect(() => {
-    if (!injectHeliosOverlay || !injectHeliosOverlay.token) return;
-    if (injectHeliosOverlay.token === injectHeliosOverlayTokenRef.current) return;
-    injectHeliosOverlayTokenRef.current = injectHeliosOverlay.token;
-    if (!mountMapNotes || !overlayPersist || learnerMode || viewOnly) return;
-    persistCreatorNotes(injectHeliosOverlay.notes || []);
-    persistAnnotationLayers(injectHeliosOverlay.annotationLayers || []);
-  }, [
-    injectHeliosOverlay,
-    learnerMode,
-    mountMapNotes,
-    overlayPersist,
-    persistAnnotationLayers,
-    persistCreatorNotes,
-    viewOnly,
-  ]);
-
   useEffect(() => {
     onMapOverlayChange?.({
       notes: creatorNotes,
       annotationLayers,
     });
   }, [annotationLayers, creatorNotes, onMapOverlayChange]);
-
-  // Drop optimistic rows once parent nodes catch up from the server.
-  useEffect(() => {
-    setOptimisticPlacements((prev) => {
-      const ids = Object.keys(prev);
-      if (ids.length === 0) return prev;
-      let changed = false;
-      const next = { ...prev };
-      for (const id of ids) {
-        const o = next[id];
-        const n = nodes.find((x) => x.id === id);
-        if (!n || n.position_x == null || n.position_y == null) continue;
-        if (
-          n.position_x === o.position_x &&
-          n.position_y === o.position_y &&
-          normalizeSpan(n.span_w) === o.span_w &&
-          normalizeSpan(n.span_h) === o.span_h
-        ) {
-          delete next[id];
-          changed = true;
-        }
-      }
-      return changed ? next : prev;
-    });
-  }, [nodes]);
 
   /** Nodes with optimistic move/resize applied for live map chrome. */
   const {
@@ -444,10 +303,8 @@ export function BlockSkillGrid({
     occupancy,
     placements,
     spans,
-    startCell,
     placedBlocksForStretch,
     stretchOccupancy,
-    generationLockedCellKeys,
     generationLockedBlockIds,
     generationLockedBlockIdsRef,
     generationPendingCellKeys,
@@ -459,6 +316,7 @@ export function BlockSkillGrid({
   } = useMapDerived({
     nodes,
     optimisticPlacements,
+    setOptimisticPlacements,
     learnerMode,
     selectedNodeId,
     selectedBlockIds,
@@ -506,21 +364,15 @@ export function BlockSkillGrid({
 
   const {
     viewportRef,
-    hasInitialCenterRef,
     panMovedRef,
     viewportSize,
-    setViewportSize,
     pan,
     setPan,
     zoom,
-    setZoom,
     spaceHeldRef,
     spaceHeld,
-    setSpaceHeld,
     visibleAppearing,
-    setVisibleAppearing,
     visibleCells,
-    minimapPlacements,
     minimapGraph,
     minimapTileView,
     minimapViewportRect,
@@ -586,58 +438,6 @@ export function BlockSkillGrid({
     viewOnly,
     zoom,
   ]);
-  const handleLearnerNoteAddAtCenter = handleMapNoteAddAtCenter;
-
-  useEffect(() => {
-    if (!shapePromptOpen || !workspaceId || !canEdit) return;
-    let cancelled = false;
-    setShapeContextLoading(true);
-    void (async () => {
-      try {
-        const qs = new URLSearchParams({ workspaceId });
-        if (ayclToken) qs.set("ayclToken", ayclToken);
-        const [filesRes, extRes] = await Promise.all([
-          fetch(`/api/workspace/files?workspaceId=${encodeURIComponent(workspaceId)}`),
-          fetch(`/api/workspace/external-resources?${qs}`),
-        ]);
-        const filesData = (await filesRes.json().catch(() => ({}))) as {
-          files?: Array<{ id?: string; file_name?: string }>;
-        };
-        const extData = (await extRes.json().catch(() => ({}))) as {
-          resources?: Array<{
-            id: string;
-            title?: string | null;
-            url?: string | null;
-            description?: string | null;
-          }>;
-        };
-        if (cancelled) return;
-        setShapeContextOptions(
-          buildShapeContextSourceOptions({
-            notes: workspaceNotes ?? "",
-            files: filesData.files || [],
-            externalResources: extData.resources || [],
-          }),
-        );
-      } catch {
-        if (!cancelled) {
-          setShapeContextOptions(
-            buildShapeContextSourceOptions({
-              notes: workspaceNotes ?? "",
-              files: [],
-              externalResources: [],
-            }),
-          );
-        }
-      } finally {
-        if (!cancelled) setShapeContextLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [shapePromptOpen, workspaceId, canEdit, ayclToken, workspaceNotes]);
-
   const {
     beginViewportPan,
     handlePointerDown,
@@ -690,18 +490,14 @@ export function BlockSkillGrid({
   });
 
   const {
-    applyStandaloneEmptyChrome,
-    paintMapSelection,
     commitSelection,
     clearSelection,
-    applyBlockSelection,
     manipulationMode,
     handleCellSelect,
     handleBlockDoubleClick,
     resolveCellFromClient,
     handleBlockPointerDown,
     handleBlockPointerMove,
-    applyEmptyCellSelection,
     handleEmptyCellClick: handleEmptyCellClickRaw,
     shapeFootprint,
     shapeFreeform,
@@ -752,7 +548,7 @@ export function BlockSkillGrid({
     setAddError,
     setIsSuggesting,
     isSuggesting,
-    setOptimisticPlacements: setOptimisticPlacements as (next: any) => void,
+    setOptimisticPlacements,
     setMapSaveJobs,
     geometrySaveChainRef,
     localPendingCell,
@@ -786,111 +582,30 @@ export function BlockSkillGrid({
     pan,
     zoom,
     prompt,
+    shapePromptOpen,
+    setShapeContextLoading,
+    setShapeContextOptions,
+    workspaceNotes,
   });
 
-  const handleCellSelectWithMenu = useCallback(
-    (blockId: string, event: ReactMouseEvent) => {
-      if (viewOnly) {
-        handleCellSelect(blockId, event);
-        return;
-      }
-      if (blockCircularMenuOpensOnSelect(circularMenuSurface)) {
-        const nextMenuId = nextCircularMenuBlockIdOnClick({
-          surface: circularMenuSurface,
-          clickedId: blockId,
-          currentMenuId: circularMenuBlockId,
-        });
-        setPeekBlockId(null);
-        setCircularMenuEmptyCell(null);
-        setCircularMenuBlockId(nextMenuId);
-        if (nextMenuId == null) {
-          event.stopPropagation();
-          clearSelection();
-          return;
-        }
-      }
-      handleCellSelect(blockId, event);
-    },
-    [
-      circularMenuBlockId,
-      circularMenuSurface,
-      clearSelection,
-      handleCellSelect,
-      viewOnly,
-    ],
-  );
-
-  const handleBlockDoubleClickGuarded = useCallback(
-    (blockId: string) => {
-      if (blockCircularMenuDoubleClickIsNoop(circularMenuSurface)) return;
-      handleBlockDoubleClick(blockId);
-    },
-    [circularMenuSurface, handleBlockDoubleClick],
-  );
-
-  const handleEmptyCellClick = useCallback(
-    (cell: GridCell, event: ReactMouseEvent | ReactPointerEvent) => {
-      const cellKey = `${cell.row}:${cell.col}`;
-      if (unusableKeys.has(cellKey)) {
-        setCircularMenuBlockId(null);
-        setPeekBlockId(null);
-        setCircularMenuEmptyCell(null);
-        setBlockedCellKey((current) => (current === cellKey ? null : cellKey));
-        handleEmptyCellClickRaw(cell, event);
-        return;
-      }
-      if (blockCircularMenuOpensOnEmpty(circularMenuSurface, { unusable: false })) {
-        const next = nextCircularMenuEmptyCellOnClick({
-          surface: circularMenuSurface,
-          clicked: cell,
-          current: circularMenuEmptyCell,
-        });
-        setCircularMenuBlockId(null);
-        setPeekBlockId(null);
-        setCircularMenuEmptyCell(next);
-        setBlockedCellKey(null);
-        if (next == null) {
-          event.stopPropagation();
-          clearSelection();
-          return;
-        }
-      } else {
-        setCircularMenuBlockId(null);
-      }
-      handleEmptyCellClickRaw(cell, event);
-    },
-    [
-      circularMenuEmptyCell,
-      circularMenuSurface,
-      clearSelection,
-      handleEmptyCellClickRaw,
-      unusableKeys,
-    ],
-  );
-
-  const handleEmptyCircularMenuAction = useCallback(
-    (action: BlockCircularMenuActionId) => {
-      if (action !== "add_chapter" || !circularMenuEmptyCell) return;
-      if (
-        unusableKeys.has(
-          `${circularMenuEmptyCell.row}:${circularMenuEmptyCell.col}`,
-        )
-      ) {
-        return;
-      }
-      setLocalPendingCell(circularMenuEmptyCell);
-      setCircularMenuEmptyCell(null);
-    },
-    [circularMenuEmptyCell, setLocalPendingCell, unusableKeys],
-  );
-
-  const emptyAddSeenRef = useRef(0);
-  useEffect(() => {
-    const n = emptyAddNonce || 0;
-    if (n <= 0 || n === emptyAddSeenRef.current) return;
-    emptyAddSeenRef.current = n;
-    handleEmptyCircularMenuAction("add_chapter");
-  }, [emptyAddNonce, handleEmptyCircularMenuAction]);
+  const {
+    handleCellSelectWithMenu,
+    handleBlockDoubleClickGuarded,
+    handleEmptyCellClick,
+  } = useMapCircularMenu({
+    viewOnly,
+    circularMenuSurfaceProp,
+    onEmptyCellSelect,
+    onBlockedCellSelect,
+    emptyAddNonce,
+    unusableKeys,
+    handleCellSelect,
+    handleBlockDoubleClick,
+    handleEmptyCellClickRaw,
+    clearSelection,
+    setLocalPendingCell,
+    setPeekBlockId,
+  });
 
   const { submitLocalAdd, runGridOp } = useMapGridMutate({
     canSuggest,
@@ -921,7 +636,7 @@ export function BlockSkillGrid({
     onGridOp,
     placedBlocksForStretch,
     stretchOccupancy,
-    setOptimisticPlacements: setOptimisticPlacements as (next: any) => void,
+    setOptimisticPlacements,
     setMapSaveJobs,
     geometrySaveChainRef,
     setLocalBusy,
@@ -937,7 +652,6 @@ export function BlockSkillGrid({
 
   const {
     handleBlockPointerUp,
-    endStretchDrag,
     handleStretchPointerDown,
     handleEmptyCellPointerDown,
     handleEmptyCellPointerMove,

@@ -467,7 +467,9 @@ describe("Practice drawer labels and previous-sessions UI", () => {
     ).resolves.toEqual(["b-saved"]);
 
     const grid = read("components/BlockSkillGrid.tsx");
-    const world = read("components/block-skill-grid/map-world-layer.tsx");
+    const world =
+      read("components/block-skill-grid/map-world-layer.tsx") +
+      read("components/block-skill-grid/occupied-map-tile.tsx");
     const glyph = read("components/block-skill-grid/map-block-glyph-icon.tsx");
     const badges = read("components/block-skill-grid/map-tile-badges.tsx");
     const mapRoute = read("app/api/workspace/blocks-with-sessions/route.ts");

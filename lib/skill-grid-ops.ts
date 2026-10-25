@@ -39,6 +39,72 @@ export interface PlacedBlockRef {
   shape_cells?: ShapeOffset[] | null;
 }
 
+/** Instant map geometry while a move/resize save is in flight. */
+export type OptimisticPlacement = {
+  position_x: number;
+  position_y: number;
+  span_w: number;
+  span_h: number;
+  shape_cells?: ShapeOffset[] | null;
+};
+
+export function applyOptimisticPlacements<
+  T extends {
+    id: string;
+    position_x?: number | null;
+    position_y?: number | null;
+    span_w?: number | null;
+    span_h?: number | null;
+    shape_cells?: ShapeOffset[] | null;
+  },
+>(nodes: T[], placements: Record<string, OptimisticPlacement>): T[] {
+  if (Object.keys(placements).length === 0) return nodes;
+  return nodes.map((n) => {
+    const o = placements[n.id];
+    if (!o) return n;
+    return {
+      ...n,
+      position_x: o.position_x,
+      position_y: o.position_y,
+      span_w: o.span_w,
+      span_h: o.span_h,
+      shape_cells: o.shape_cells === undefined ? n.shape_cells : o.shape_cells,
+    };
+  });
+}
+
+/** Drop rows once parent nodes catch up from the server. */
+export function dropCaughtUpOptimisticPlacements(
+  prev: Record<string, OptimisticPlacement>,
+  nodes: ReadonlyArray<{
+    id: string;
+    position_x?: number | null;
+    position_y?: number | null;
+    span_w?: unknown;
+    span_h?: unknown;
+  }>,
+): Record<string, OptimisticPlacement> {
+  const ids = Object.keys(prev);
+  if (ids.length === 0) return prev;
+  let changed = false;
+  const next = { ...prev };
+  for (const id of ids) {
+    const o = next[id];
+    const n = nodes.find((x) => x.id === id);
+    if (!n || n.position_x == null || n.position_y == null) continue;
+    if (
+      n.position_x === o.position_x &&
+      n.position_y === o.position_y &&
+      normalizeSpan(n.span_w) === o.span_w &&
+      normalizeSpan(n.span_h) === o.span_h
+    ) {
+      delete next[id];
+      changed = true;
+    }
+  }
+  return changed ? next : prev;
+}
+
 export function normalizeSpan(value: unknown, fallback = 1): number {
   if (typeof value === "number" && Number.isInteger(value) && value >= 1) {
     return Math.min(value, 24);

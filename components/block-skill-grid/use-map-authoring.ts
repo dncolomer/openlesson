@@ -55,9 +55,14 @@ import {
   selectionIsFreeformLectureShape,
   stretchBlockFromHandle,
   translateBlocksPreservingShape,
+  type OptimisticPlacement,
   type PlacedBlockRef,
 } from "@/lib/skill-grid-ops";
 import type { BlockSkillGridProps } from "@/components/block-skill-grid/types";
+import {
+  buildShapeContextSourceOptions,
+  type ShapeContextSourceOption,
+} from "@/lib/shape-context-select";
 
 const DEFAULT_PLANNER_MODEL = DEFAULT_MODEL;
 
@@ -107,40 +112,9 @@ export function useMapAuthoring(input: {
   setAddError: (err: string | null) => void;
   setIsSuggesting: (v: boolean) => void;
   isSuggesting: boolean;
-  setOptimisticPlacements: (
-    next:
-      | Record<
-          string,
-          {
-            position_x: number;
-            position_y: number;
-            span_w: number;
-            span_h: number;
-            shape_cells?: unknown;
-          }
-        >
-      | ((
-          prev: Record<
-            string,
-            {
-              position_x: number;
-              position_y: number;
-              span_w: number;
-              span_h: number;
-              shape_cells?: unknown;
-            }
-          >,
-        ) => Record<
-          string,
-          {
-            position_x: number;
-            position_y: number;
-            span_w: number;
-            span_h: number;
-            shape_cells?: unknown;
-          }
-        >),
-  ) => void;
+  setOptimisticPlacements: Dispatch<
+    SetStateAction<Record<string, OptimisticPlacement>>
+  >;
   setMapSaveJobs: Dispatch<SetStateAction<Array<{
     id: string;
     label: string;
@@ -187,6 +161,10 @@ export function useMapAuthoring(input: {
   pan: { x: number; y: number };
   zoom: number;
   prompt: string;
+  shapePromptOpen: boolean;
+  setShapeContextLoading: (loading: boolean) => void;
+  setShapeContextOptions: (next: ShapeContextSourceOption[]) => void;
+  workspaceNotes?: string | null;
 }) {
   const {
     selectedEmptyCells,
@@ -267,8 +245,70 @@ export function useMapAuthoring(input: {
     viewportRef,
     pan,
     zoom,
+    shapePromptOpen,
+    setShapeContextLoading,
+    setShapeContextOptions,
+    workspaceNotes,
     prompt,
   } = input;
+
+  useEffect(() => {
+    if (!shapePromptOpen || !workspaceId || !canEdit) return;
+    let cancelled = false;
+    setShapeContextLoading(true);
+    void (async () => {
+      try {
+        const qs = new URLSearchParams({ workspaceId });
+        if (ayclToken) qs.set("ayclToken", ayclToken);
+        const [filesRes, extRes] = await Promise.all([
+          fetch(`/api/workspace/files?workspaceId=${encodeURIComponent(workspaceId)}`),
+          fetch(`/api/workspace/external-resources?${qs}`),
+        ]);
+        const filesData = (await filesRes.json().catch(() => ({}))) as {
+          files?: Array<{ id?: string; file_name?: string }>;
+        };
+        const extData = (await extRes.json().catch(() => ({}))) as {
+          resources?: Array<{
+            id: string;
+            title?: string | null;
+            url?: string | null;
+            description?: string | null;
+          }>;
+        };
+        if (cancelled) return;
+        setShapeContextOptions(
+          buildShapeContextSourceOptions({
+            notes: workspaceNotes ?? "",
+            files: filesData.files || [],
+            externalResources: extData.resources || [],
+          }),
+        );
+      } catch {
+        if (!cancelled) {
+          setShapeContextOptions(
+            buildShapeContextSourceOptions({
+              notes: workspaceNotes ?? "",
+              files: [],
+              externalResources: [],
+            }),
+          );
+        }
+      } finally {
+        if (!cancelled) setShapeContextLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    ayclToken,
+    canEdit,
+    setShapeContextLoading,
+    setShapeContextOptions,
+    shapePromptOpen,
+    workspaceId,
+    workspaceNotes,
+  ]);
 
   const applyStandaloneEmptyChrome = useCallback(
     (cells: readonly GridCell[]) => {

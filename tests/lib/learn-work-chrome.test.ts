@@ -443,7 +443,9 @@ describe("TAP Learning Work / PoW chrome (shipped source)", () => {
     const gridHost = read("components/BlockSkillGrid.tsx");
     expect(gridHost).not.toContain("boardInterior");
     expect(gridHost).not.toContain("suggestMode");
-    const world = read("components/block-skill-grid/map-world-layer.tsx");
+    const world =
+      read("components/block-skill-grid/map-world-layer.tsx") +
+      read("components/block-skill-grid/occupied-map-tile.tsx");
     expect(world).not.toContain("data-ile-end-turn-board");
     expect(world).toContain("data-ile-open-work-tile-image");
     expect(world).not.toContain("workAestheticById");

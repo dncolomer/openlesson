@@ -23,8 +23,23 @@ export function useMapAnnotations(input: {
   learnerMode: boolean;
   viewOnly: boolean;
   mountMapNotes: boolean;
+  injectHeliosOverlay?: {
+    token: number;
+    notes: import("@/lib/learner-map-notes").LearnerMapNote[];
+    annotationLayers: AnnotationLayer[];
+  } | null;
+  persistCreatorNotes?: (
+    notes: import("@/lib/learner-map-notes").LearnerMapNote[],
+  ) => void;
 }) {
-  const { overlayPersist, learnerMode, viewOnly, mountMapNotes } = input;
+  const {
+    overlayPersist,
+    learnerMode,
+    viewOnly,
+    mountMapNotes,
+    injectHeliosOverlay,
+    persistCreatorNotes,
+  } = input;
 
   const [annotationLayers, setAnnotationLayers] = useState<AnnotationLayer[]>(
     [],
@@ -109,6 +124,24 @@ export function useMapAnnotations(input: {
     },
     [overlayPersist, viewOnly],
   );
+
+  const injectHeliosOverlayTokenRef = useRef(0);
+  useEffect(() => {
+    if (!injectHeliosOverlay || !injectHeliosOverlay.token) return;
+    if (injectHeliosOverlay.token === injectHeliosOverlayTokenRef.current) return;
+    injectHeliosOverlayTokenRef.current = injectHeliosOverlay.token;
+    if (!mountMapNotes || !overlayPersist || learnerMode || viewOnly) return;
+    persistCreatorNotes?.(injectHeliosOverlay.notes || []);
+    persistAnnotationLayers(injectHeliosOverlay.annotationLayers || []);
+  }, [
+    injectHeliosOverlay,
+    learnerMode,
+    mountMapNotes,
+    overlayPersist,
+    persistAnnotationLayers,
+    persistCreatorNotes,
+    viewOnly,
+  ]);
 
   const annotationDrawingActive =
     !viewOnly &&

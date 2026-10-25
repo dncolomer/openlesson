@@ -10,7 +10,11 @@ import {
   type LassoShapeKind,
   type PrereqEditState,
 } from "@/lib/block-map-tools";
-import { parseShapeCells, type PlacedBlockRef, type StretchHandle } from "@/lib/skill-grid-ops";
+import {
+  type OptimisticPlacement,
+  type PlacedBlockRef,
+  type StretchHandle,
+} from "@/lib/skill-grid-ops";
 import type { WorkspaceMapSelection } from "@/lib/workspace-map-selection";
 import type { ShapeContextSourceOption } from "@/lib/shape-context-select";
 import type { LassoOverlay } from "@/components/block-skill-grid/map-gesture-overlays";
@@ -138,13 +142,6 @@ export function useMapInteractionState(input: {
    * Optimistic geometry after move/resize so the map settles instantly
    * while the server save runs (no full-map freeze).
    */
-  type OptimisticPlacement = {
-    position_x: number;
-    position_y: number;
-    span_w: number;
-    span_h: number;
-    shape_cells?: ReturnType<typeof parseShapeCells>;
-  };
   const [optimisticPlacements, setOptimisticPlacements] = useState<
     Record<string, OptimisticPlacement>
   >({});

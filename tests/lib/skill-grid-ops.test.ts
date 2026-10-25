@@ -21,6 +21,8 @@ import {
   splitBlocksToSingles,
   splitFootprintToSingles,
   translateBlocksPreservingShape,
+  applyOptimisticPlacements,
+  dropCaughtUpOptimisticPlacements,
   type PlacedBlockRef,
 } from "@/lib/skill-grid-ops";
 import { getCellKey } from "@/lib/block-skill-grid";
@@ -232,5 +234,42 @@ describe("skill-grid multi-select geometry", () => {
     expect(
       canPlaceFootprint({ position_x: 2, position_y: 0, span_w: 2, span_h: 2 }, occupancy),
     ).toBe(true);
+  });
+});
+
+describe("optimistic placements", () => {
+  it("overlays geometry until the server node catches up", () => {
+    const nodes = [
+      {
+        id: "a",
+        position_x: 0,
+        position_y: 0,
+        span_w: 1,
+        span_h: 1,
+        shape_cells: [{ dr: 0, dc: 0 }],
+      },
+    ];
+    const applied = applyOptimisticPlacements(nodes, {
+      a: { position_x: 2, position_y: 3, span_w: 2, span_h: 1, shape_cells: null },
+    });
+    expect(applied[0]).toMatchObject({
+      id: "a",
+      position_x: 2,
+      position_y: 3,
+      span_w: 2,
+      span_h: 1,
+      shape_cells: null,
+    });
+    expect(applyOptimisticPlacements(nodes, {})).toBe(nodes);
+
+    const prev = {
+      a: { position_x: 2, position_y: 3, span_w: 2, span_h: 1, shape_cells: null },
+    };
+    expect(dropCaughtUpOptimisticPlacements(prev, nodes)).toBe(prev);
+    expect(
+      dropCaughtUpOptimisticPlacements(prev, [
+        { id: "a", position_x: 2, position_y: 3, span_w: 2, span_h: 1 },
+      ]),
+    ).toEqual({});
   });
 });

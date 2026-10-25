@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -58,6 +58,46 @@ function block(
 }
 
 describe("Helios map tool catalog + dispatch", () => {
+  it("splits catalog, snapshot, dispatch, and persist under the barrel", () => {
+    const root = join(__dirname, "../..");
+    const barrel = readFileSync(join(root, "lib/workspace-helios-tools.ts"), "utf8");
+    const catalog = readFileSync(
+      join(root, "lib/workspace-helios-tools/catalog.ts"),
+      "utf8",
+    );
+    const snapshot = readFileSync(
+      join(root, "lib/workspace-helios-tools/snapshot.ts"),
+      "utf8",
+    );
+    const dispatch = readFileSync(
+      join(root, "lib/workspace-helios-tools/dispatch.ts"),
+      "utf8",
+    );
+    const persist = readFileSync(
+      join(root, "lib/workspace-helios-tools/persist.ts"),
+      "utf8",
+    );
+    for (const src of [barrel, catalog, snapshot, dispatch, persist]) {
+      expect(src.split("\n").length).toBeLessThanOrEqual(1000);
+    }
+    expect(barrel).toContain('from "./workspace-helios-tools/catalog"');
+    expect(barrel).toContain('from "./workspace-helios-tools/snapshot"');
+    expect(barrel).toContain('from "./workspace-helios-tools/dispatch"');
+    expect(barrel).toContain('from "./workspace-helios-tools/persist"');
+    expect(catalog).toContain("export const HELIOS_MAP_TOOL_CATALOG");
+    expect(snapshot).toContain("export function heliosMapSnapshotFromUnknown");
+    expect(dispatch).toContain("export function dispatchHeliosMapTool");
+    expect(dispatch).not.toContain("export async function executeHeliosMapToolCall");
+    expect(persist).toContain("export async function executeHeliosMapToolCall");
+    expect(persist).toContain("export async function applyHeliosMapToolsAtomically");
+    expect(persist).toContain(
+      "const preview = dispatchHeliosMapTool(input.snapshot, input.call)",
+    );
+    expect(persist).toContain("host.applySnapshot?.(preview.snapshot)");
+    expect(persist).toContain("preview.snapshot");
+    expect(persist).not.toContain("export function dispatchHeliosMapTool");
+  });
+
   it("catalog covers Manual authoring families and every id dispatches", () => {
     const families = new Set(HELIOS_MAP_TOOL_CATALOG.map((t) => t.family));
     expect(families.has("topologies")).toBe(true);

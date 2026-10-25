@@ -22,6 +22,11 @@ import { GET as GET_ONE, PATCH as PATCH_ONE } from "@/app/api/v3/workspaces/[id]
 import { PATCH as PATCH_SETTINGS } from "@/app/api/v3/workspaces/[id]/settings/route";
 import { GET as GET_ACCOUNT, PATCH as PATCH_ACCOUNT } from "@/app/api/v3/account/route";
 import { callMcpProofOfWorkTool } from "@/lib/pow-api/mcp-proof-of-work-server";
+import {
+  AGENT_WORKSPACE_CREATE_REFUSED_MESSAGE,
+  parseAgentWorkspaceKind,
+} from "@/lib/pow-api/workspace-management";
+import { WORKSPACE_KIND_STANDARD } from "@/lib/workspace-kind";
 
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
@@ -66,7 +71,23 @@ describe("workspace management REST + MCP", () => {
     vi.mocked(authenticateRequest).mockReset();
   });
 
-  it("creates Learning and Verification workspaces, patches settings, edits the map, and patches account settings", async () => {
+  it("parseAgentWorkspaceKind accepts Learning only and refuses flow kinds", () => {
+    expect(parseAgentWorkspaceKind("learning")).toBe(WORKSPACE_KIND_STANDARD);
+    expect(parseAgentWorkspaceKind("standard")).toBe(WORKSPACE_KIND_STANDARD);
+    expect(parseAgentWorkspaceKind(undefined)).toBe(WORKSPACE_KIND_STANDARD);
+    expect(parseAgentWorkspaceKind("")).toBe(WORKSPACE_KIND_STANDARD);
+    for (const kind of [
+      "verification",
+      "knowledge_region",
+      "knowledge-region",
+      "calibration",
+      "calibrate",
+    ]) {
+      expect(() => parseAgentWorkspaceKind(kind)).toThrow(AGENT_WORKSPACE_CREATE_REFUSED_MESSAGE);
+    }
+  });
+
+  it("creates Learning workspaces, patches settings, edits the map, and patches account settings", async () => {
     const learningRes = await POST_COLLECTION(
       jsonRequest("http://localhost/api/v3/workspaces", "POST", {
         kind: "learning",
@@ -96,12 +117,24 @@ describe("workspace management REST + MCP", () => {
         workspace_goal: "Distance 0 on the prepared tree",
       }),
     );
-    expect(verifyRes.status).toBe(201);
-    const verifyJson = (await verifyRes.json()) as {
-      workspace: { id: string; product: string; workspace_kind: string };
-    };
-    expect(verifyJson.workspace.product).toBe("verification");
-    expect(verifyJson.workspace.workspace_kind).toBe("knowledge_region");
+    expect(verifyRes.status).toBe(400);
+    const verifyJson = (await verifyRes.json()) as { error: { message: string } };
+    expect(verifyJson.error.message).toContain("/api/dashboard/flows");
+
+    const calRes = await POST_COLLECTION(
+      jsonRequest("http://localhost/api/v3/workspaces", "POST", {
+        kind: "calibration",
+        title: "Calibrate algebra",
+      }),
+    );
+    expect(calRes.status).toBe(400);
+    const krRes = await POST_COLLECTION(
+      jsonRequest("http://localhost/api/v3/workspaces", "POST", {
+        kind: "knowledge_region",
+        title: "KR container",
+      }),
+    );
+    expect(krRes.status).toBe(400);
 
     const patched = await PATCH_ONE(
       jsonRequest(`http://localhost/api/v3/workspaces/${learningJson.workspace.id}`, "PATCH", {
@@ -145,7 +178,7 @@ describe("workspace management REST + MCP", () => {
     expect(listed.status).toBe(200);
     const listedJson = (await listed.json()) as { workspaces: Array<{ product: string }> };
     const products = listedJson.workspaces.map((w) => w.product).sort();
-    expect(products).toEqual(["learning", "verification"]);
+    expect(products).toEqual(["learning"]);
 
     const accountGet = await GET_ACCOUNT(jsonRequest("http://localhost/api/v3/account", "GET"));
     expect(accountGet.status).toBe(200);
@@ -156,12 +189,13 @@ describe("workspace management REST + MCP", () => {
     const accountJson = (await accountPatch.json()) as { username: string };
     expect(accountJson.username).toBe("agent-owner");
 
-    const got = await GET_ONE(jsonRequest(`http://localhost/api/v3/workspaces/${verifyJson.workspace.id}`, "GET"), {
-      params: Promise.resolve({ id: verifyJson.workspace.id }),
-    });
+    const got = await GET_ONE(
+      jsonRequest(`http://localhost/api/v3/workspaces/${learningJson.workspace.id}`, "GET"),
+      { params: Promise.resolve({ id: learningJson.workspace.id }) },
+    );
     expect(got.status).toBe(200);
     const gotJson = (await got.json()) as { workspace: { product: string } };
-    expect(gotJson.workspace.product).toBe("verification");
+    expect(gotJson.workspace.product).toBe("learning");
 
     mkdirSync(SCRATCH, { recursive: true });
     writeFileSync(
@@ -169,7 +203,7 @@ describe("workspace management REST + MCP", () => {
       JSON.stringify(
         {
           learning: learningJson.workspace,
-          verification: verifyJson.workspace,
+          verificationRefused: verifyJson.error.message,
           patched: patchedJson.workspace.settings,
           account: accountJson,
         },
@@ -179,7 +213,7 @@ describe("workspace management REST + MCP", () => {
     );
   });
 
-  it("MCP create_workspace and update_workspace persist both kinds", async () => {
+  it("MCP create_workspace is Learning only and refuses flow kinds", async () => {
     const created = parseTool(
       (await callMcpProofOfWorkTool(
         "create_workspace",
@@ -194,14 +228,20 @@ describe("workspace management REST + MCP", () => {
     const workspace = created.workspace as { id: string; product: string };
     expect(workspace.product).toBe("learning");
 
-    const verification = parseTool(
-      (await callMcpProofOfWorkTool(
+    await expect(
+      callMcpProofOfWorkTool(
         "create_workspace",
         { kind: "verification", title: "MCP verification" },
         { auth, supabase: supabase as never, origin: "https://uncertain.systems" },
-      )) as { content: Array<{ text: string }> },
-    );
-    expect((verification.workspace as { product: string }).product).toBe("verification");
+      ),
+    ).rejects.toThrow(AGENT_WORKSPACE_CREATE_REFUSED_MESSAGE);
+    await expect(
+      callMcpProofOfWorkTool(
+        "create_workspace",
+        { kind: "calibration", title: "MCP calibration" },
+        { auth, supabase: supabase as never, origin: "https://uncertain.systems" },
+      ),
+    ).rejects.toThrow("/api/dashboard/flows");
 
     const updated = parseTool(
       (await callMcpProofOfWorkTool(

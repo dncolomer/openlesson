@@ -478,3 +478,18 @@ describe("closed error envelope", () => {
     expect(offenders, `string error writers: ${offenders.join(", ")}`).toEqual([]);
   });
 });
+
+describe("agent workspace create is Learning-only", () => {
+  it("createManagedWorkspace does not mint verification or calibration workspaces", () => {
+    const mgmt = read("lib/pow-api/workspace-management.ts");
+    expect(mgmt).toContain("parseAgentWorkspaceKind");
+    expect(mgmt).toContain("AGENT_WORKSPACE_CREATE_REFUSED_MESSAGE");
+    expect(mgmt).not.toContain("createVerificationWorkspaceFromPrompt");
+    const generate = read("app/api/workspace/generate/route.ts");
+    expect(generate).toContain("assertGenerateCreateMode");
+    expect(generate).not.toContain("knowledgeRegionWorkspaceCreateOutcome");
+    const copy = read("lib/copy-learning-to-verification.ts");
+    expect(copy).not.toContain("custom_verification_models");
+    expect(copy).toContain("COPY_LEARNING_TO_VERIFICATION_GONE_MESSAGE");
+  });
+});

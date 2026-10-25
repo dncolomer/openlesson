@@ -255,14 +255,11 @@ describe("workspace create + builder static wiring", () => {
     expect(gen).toContain("parseWorkspaceCreateMode");
     expect(gen).toContain("blankWorkspaceCreateOutcome");
     expect(gen).toContain('createMode === "blank"');
-    expect(gen).toContain('createMode === "knowledge_region"');
-    expect(gen).toContain('createMode === "calibration"');
+    expect(gen).toContain("assertGenerateCreateMode");
+    expect(gen).not.toContain("knowledgeRegionWorkspaceCreateOutcome");
+    expect(gen).not.toContain("calibrationWorkspaceCreateOutcome");
     expect(gen).toContain('createMode === "template"');
     expect(gen).toContain('createMode === "files_goal"');
-    expect(gen).toContain("knowledgeRegionWorkspaceCreateOutcome");
-    expect(gen).toContain("calibrationWorkspaceCreateOutcome");
-    expect(gen).toContain('workspace_kind: krOutcome.workspaceKind');
-    expect(gen).toContain("workspace_kind: calOutcome.workspaceKind");
     expect(gen).toContain("composeTemplateCreatePrompt");
     expect(gen).toContain("composeFilesGoalCreatePrompt");
     expect(gen).toContain("composeTemplateWorkspaceNotes");

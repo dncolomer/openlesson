@@ -1,12 +1,14 @@
 /**
- * Workspace management core — create/edit Learning and Verification workspaces,
- * map/contents, workspace settings, and account settings. Shared by REST and MCP.
+ * Workspace management core — create/edit Learning workspaces, map/contents,
+ * workspace settings, and account settings. Shared by REST and MCP.
+ * Agent create is Learning (`standard`) only.
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { insertGeneratedWorkspaceBlocks } from "@/lib/insert-workspace-blocks";
 import { parseLearningModelSize, type LearningModelSize } from "@/lib/learning-model";
 import {
+  AGENT_WORKSPACE_CREATE_REFUSED_MESSAGE,
   parseWorkspaceKind,
   WORKSPACE_KIND_CALIBRATION,
   WORKSPACE_KIND_KNOWLEDGE_REGION,
@@ -16,10 +18,11 @@ import {
 import { normalizeGeneratedWorkspaceBlocks } from "@/lib/workspace-spatial-create";
 import { listAgentWorkspaces } from "./agent-workspace-ops";
 import { createAgentWorkspace } from "./create-agent-workspace";
-import { createVerificationWorkspaceFromPrompt } from "./create-verification-workspace";
 import { normalizeWorkspaceGoal } from "./conversion-goal";
 import type { AuthContext } from "./types";
 import { canAccessAgentWorkspace } from "./workspace-access";
+
+export { AGENT_WORKSPACE_CREATE_REFUSED_MESSAGE };
 
 export type AgentWorkspaceProduct = "learning" | "verification" | "calibration";
 
@@ -30,30 +33,25 @@ export function agentWorkspaceProduct(kind: unknown): AgentWorkspaceProduct {
   return "learning";
 }
 
-/** Accepts product names (learning/verification/calibration) and stored kinds. */
+const AGENT_REFUSED_CREATE_KIND_ALIASES = new Set([
+  "verification",
+  "knowledge_region",
+  "knowledge-region",
+  "knowledgeregion",
+  "calibration",
+  "calibrate",
+  "calibration_workspace",
+]);
+
+/** Agent create accepts Learning only (`learning` / `standard`). Flow kinds throw. */
 export function parseAgentWorkspaceKind(value: unknown): WorkspaceKind {
   if (typeof value === "string") {
     const trimmed = value.trim().toLowerCase();
-    if (
-      trimmed === "verification" ||
-      trimmed === "knowledge_region" ||
-      trimmed === "knowledge-region" ||
-      trimmed === "knowledgeregion"
-    ) {
-      return WORKSPACE_KIND_KNOWLEDGE_REGION;
-    }
-    if (
-      trimmed === "calibration" ||
-      trimmed === "calibrate" ||
-      trimmed === "calibration_workspace"
-    ) {
-      return WORKSPACE_KIND_CALIBRATION;
-    }
-    if (trimmed === "learning" || trimmed === "standard") {
-      return WORKSPACE_KIND_STANDARD;
+    if (trimmed && AGENT_REFUSED_CREATE_KIND_ALIASES.has(trimmed)) {
+      throw new Error(AGENT_WORKSPACE_CREATE_REFUSED_MESSAGE);
     }
   }
-  return parseWorkspaceKind(value);
+  return WORKSPACE_KIND_STANDARD;
 }
 
 const WORKSPACE_SELECT =
@@ -213,20 +211,10 @@ export async function createManagedWorkspace(
       ? undefined
       : parseLearningModelSize(body.learning_model_size);
 
-  const wantsGeneration =
-    Boolean(initialPrompt) &&
-    !title &&
-    blocks.length === 0 &&
-    kind !== WORKSPACE_KIND_CALIBRATION;
+  const wantsGeneration = Boolean(initialPrompt) && !title && blocks.length === 0;
 
   if (wantsGeneration) {
-    const generated =
-      kind === WORKSPACE_KIND_KNOWLEDGE_REGION
-        ? await createVerificationWorkspaceFromPrompt(supabase, auth, initialPrompt, {
-            description: description || undefined,
-            isAgentSession: true,
-          })
-        : await createAgentWorkspace(supabase, auth, body);
+    const generated = await createAgentWorkspace(supabase, auth, body);
     const workspaceId = String(
       (generated as { workspace?: { id?: string } }).workspace?.id || "",
     );
@@ -262,13 +250,7 @@ export async function createManagedWorkspace(
     throw new Error("No user available to own this workspace");
   }
 
-  const workspaceTitle =
-    title ||
-    (kind === WORKSPACE_KIND_KNOWLEDGE_REGION
-      ? "Verification workspace"
-      : kind === WORKSPACE_KIND_CALIBRATION
-        ? "Calibration workspace"
-        : "Learning workspace");
+  const workspaceTitle = title || "Learning workspace";
   const insertRow: Record<string, unknown> = {
     user_id: ownerUserId,
     organization_id: auth.organization_id,

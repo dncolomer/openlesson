@@ -557,12 +557,11 @@ describe("Knowledge Region wiring", () => {
     );
 
     const gen = read("app/api/workspace/generate/route.ts");
-    expect(gen).toContain('createMode === "knowledge_region"');
-    expect(gen).toContain("workspace_kind: krOutcome.workspaceKind");
-    expect(gen).toContain("knowledgeRegionWorkspaceCreateOutcome");
-    expect(gen).toContain('createMode === "calibration"');
-    expect(gen).toContain("workspace_kind: calOutcome.workspaceKind");
-    expect(gen).toContain("calibrationWorkspaceCreateOutcome");
+    expect(gen).toContain("assertGenerateCreateMode");
+    expect(gen).not.toContain("knowledgeRegionWorkspaceCreateOutcome");
+    expect(gen).not.toContain("calibrationWorkspaceCreateOutcome");
+    expect(gen).not.toContain("workspace_kind: krOutcome.workspaceKind");
+    expect(gen).not.toContain("workspace_kind: calOutcome.workspaceKind");
 
     const view = read("components/WorkspaceView.tsx");
     expect(view).toContain("parseWorkspaceKind");

@@ -54,7 +54,7 @@ Supported `type` values: `tool`, `screen` (alias `screenshot`), `video`, `eeg`. 
 
 ## Create Workspace
 
-`POST /api/v3/workspaces` and MCP `create_workspace` create a Learning or Verification workspace. Then run Calibrate, Learn, or Verify through the headless proof-of-work API (`start_session` → `upload_proof_of_work` → `end_session`).
+`POST /api/v3/workspaces` and MCP `create_workspace` create a Learning workspace only. Verification and Calibration flows use `POST /api/dashboard/flows`. Then run Calibrate, Learn, or Verify through the headless proof-of-work API (`start_session` → `upload_proof_of_work` → `end_session`).
 
 ## Guests
 

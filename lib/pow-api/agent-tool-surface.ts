@@ -47,7 +47,7 @@ export const AGENT_TOOL_SURFACE = [
     family: "workspace",
     scope: "workspaces:write",
     summary:
-      "Create a Learning workspace (kind/product), including an optional map and settings.",
+      "Create a Learning workspace only, including an optional map and settings. Verification and Calibration use POST /api/dashboard/flows.",
     rest: { method: "POST", path: WORKSPACE_API_BASE },
   },
   {

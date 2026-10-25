@@ -39,7 +39,7 @@ Canonical protocol `agent-trace-v3` phases: `enumerate` → `fingerprint` → `a
 | Method | Path | Scope | MCP tool | Description |
 | :--- | :--- | :--- | :--- | :--- |
 | `GET` | `/` | `workspaces:read` | `list_workspaces` | List accessible Learning and Verification workspaces. |
-| `POST` | `/` | `workspaces:write` | `create_workspace` | Create a Learning (`kind: "learning"`) or Verification (`kind: "verification"`) workspace. Optional map `blocks`, settings, `initial_prompt`. |
+| `POST` | `/` | `workspaces:write` | `create_workspace` | Create a Learning workspace (`kind: "learning"` / `standard`) only. Verification and Calibration use `POST /api/dashboard/flows`. Optional map `blocks`, settings, `initial_prompt`. |
 | `GET` | `/{workspace_id}` | `workspaces:read` | `get_workspace` | Metadata, kind, map summary, settings, `workspace_goal`. |
 | `PATCH` | `/{workspace_id}` | `workspaces:write` | `update_workspace` | Edit settings, contents, and map. |
 | `GET` | `/{workspace_id}/blocks` | `workspaces:read` | `list_blocks` | Map blocks / contents. |
@@ -104,7 +104,7 @@ Types: `tool`, `screen` (`screenshot` alias), `video`, `eeg`. Simulated canvas w
 
 ## Create Workspace
 
-`POST /api/v3/workspaces` and MCP `create_workspace` create a Learning (`kind: "learning"`) or Verification (`kind: "verification"`) workspace. Optional map `blocks`, settings, and `initial_prompt`. The product UI at `/workspace/new` uses the same core.
+`POST /api/v3/workspaces` and MCP `create_workspace` create a Learning workspace only (`kind: "learning"` / `standard`). Verification and Calibration flows are created with `POST /api/dashboard/flows`. Optional map `blocks`, settings, and `initial_prompt`. The product UI at `/workspace/new` uses the same core.
 
 ## Organizations And Guests
 

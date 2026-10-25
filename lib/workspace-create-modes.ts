@@ -11,6 +11,7 @@ import {
 } from "@/lib/workspace-spatial-create";
 import type { InitialChaptersLevel } from "@/lib/initial-chapters";
 import {
+  AGENT_WORKSPACE_CREATE_REFUSED_MESSAGE,
   WORKSPACE_KIND_CALIBRATION,
   WORKSPACE_KIND_KNOWLEDGE_REGION,
   WORKSPACE_KIND_STANDARD,
@@ -95,6 +96,19 @@ export function assertApiCreateMode(mode: unknown): { ok: true } | { ok: false; 
       ok: false,
       error: "API workspace creation only supports Files + Goal Prompt (files_goal).",
     };
+  }
+  return { ok: true };
+}
+
+export const GENERATE_FLOW_CREATE_REFUSED_MESSAGE =
+  AGENT_WORKSPACE_CREATE_REFUSED_MESSAGE;
+
+/** `/api/workspace/generate` still serves blank / template / files_goal. */
+export function assertGenerateCreateMode(
+  mode: WorkspaceCreateMode,
+): { ok: true } | { ok: false; error: string } {
+  if (mode === "knowledge_region" || mode === "calibration") {
+    return { ok: false, error: GENERATE_FLOW_CREATE_REFUSED_MESSAGE };
   }
   return { ok: true };
 }

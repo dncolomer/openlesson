@@ -6,7 +6,7 @@ Add to the Customer Agent system prompt. All Uncertain Systems access is **direc
 
 When the Customer Agent opens a new chat with a user, run this setup **before** the first coaching reply:
 
-1. `list_workspaces` or `create_workspace` — resolve or create a Learning or Verification workspace.
+1. `list_workspaces` or `create_workspace` — resolve or create a Learning workspace. Verification and Calibration flows use `POST /api/dashboard/flows`.
 2. `get_workspace` — read `workspace_goal`, kind, and settings.
 3. `start_session` — Calibrate, Learn, or Verify (same headless proof-of-work API).
 

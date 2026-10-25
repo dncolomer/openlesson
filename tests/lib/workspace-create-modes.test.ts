@@ -5,6 +5,8 @@ import {
   API_WORKSPACE_CREATE_MODES,
   BLANK_MAP_DEFAULT_TITLE,
   assertApiCreateMode,
+  assertGenerateCreateMode,
+  GENERATE_FLOW_CREATE_REFUSED_MESSAGE,
   blankWorkspaceCreateOutcome,
   knowledgeRegionWorkspaceCreateOutcome,
   resolveBlankWorkspaceTitle,
@@ -73,6 +75,10 @@ describe("workspace create modes", () => {
     expect(outcome.workspaceKind).toBe("knowledge_region");
     expect(outcome.blocks).toEqual([]);
     expect(assertApiCreateMode("knowledge_region").ok).toBe(false);
+    expect(assertGenerateCreateMode("knowledge_region")).toEqual({
+      ok: false,
+      error: GENERATE_FLOW_CREATE_REFUSED_MESSAGE,
+    });
   });
 
   it("calibration create is a UI mode, yields zero blocks, and persists the calibration kind", () => {
@@ -86,6 +92,14 @@ describe("workspace create modes", () => {
     expect(outcome.workspaceKind).toBe("calibration");
     expect(outcome.blocks).toEqual([]);
     expect(assertApiCreateMode("calibration").ok).toBe(false);
+    expect(assertGenerateCreateMode("calibration")).toEqual({
+      ok: false,
+      error: GENERATE_FLOW_CREATE_REFUSED_MESSAGE,
+    });
+    expect(assertGenerateCreateMode("blank")).toEqual({ ok: true });
+    expect(assertGenerateCreateMode("files_goal")).toEqual({ ok: true });
+    expect(assertGenerateCreateMode("template")).toEqual({ ok: true });
+    expect(GENERATE_FLOW_CREATE_REFUSED_MESSAGE).toContain("/api/dashboard/flows");
   });
 
   it("template path composes topic resources + starting size into generate input", () => {

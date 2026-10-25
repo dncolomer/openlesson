@@ -841,6 +841,12 @@ describe("verification workspace shell gates", () => {
     expect(settings).toContain("verificationWorkspace={isNoMap}");
     expect(settings).not.toContain("workspaceAllowsCopyToVerification");
     expect(settings).not.toContain("WorkspaceCopyToVerification");
+    const copyRoute = read("app/api/workspace/copy-to-verification/route.ts");
+    expect(copyRoute).toContain("410");
+    expect(copyRoute).toContain("COPY_LEARNING_TO_VERIFICATION_GONE_MESSAGE");
+    expect(read("lib/pow-api/workspace-management.ts")).not.toContain(
+      "createVerificationWorkspaceFromPrompt",
+    );
     expect(settings).toContain("workspaceSettingsIntegrationCopy(workspaceKind)");
     expect(settings).toContain("integration-skill");
     expect(settings).toContain('activeSubview === "integrations"');

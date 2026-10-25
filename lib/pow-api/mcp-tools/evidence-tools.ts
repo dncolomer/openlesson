@@ -58,14 +58,14 @@ const SCHEMAS: Record<string, Omit<McpTool, "name">> = {
   },
   create_workspace: {
     description:
-      "Create a Learning workspace. Pass kind=learning|verification, optional title, settings, map blocks, or initial_prompt. REST: POST /api/v3/workspaces.",
+      "Create a Learning workspace only (kind=learning|standard). Verification and Calibration are dashboard flows — POST /api/dashboard/flows. Optional title, settings, map blocks, or initial_prompt. REST: POST /api/v3/workspaces.",
     inputSchema: {
       type: "object",
       properties: {
         kind: {
           type: "string",
-          enum: ["learning", "verification", "standard", "knowledge_region"],
-          description: "Workspace product. learning (standard) or verification (knowledge_region).",
+          enum: ["learning", "standard"],
+          description: "Learning only. verification, calibration, and knowledge_region are refused.",
         },
         product: { type: "string", description: "Alias for kind." },
         workspace_kind: { type: "string" },

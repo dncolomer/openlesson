@@ -37,8 +37,7 @@ import {
   composeTemplateWorkspaceNotes,
   goalFieldsFromPrompt,
   templateDantesContextForPrompt,
-  knowledgeRegionWorkspaceCreateOutcome,
-  calibrationWorkspaceCreateOutcome,
+  assertGenerateCreateMode,
   parseWorkspaceCreateMode,
   templateWorkspaceGoalField,
   workspaceKindForCreateMode,
@@ -139,6 +138,10 @@ export async function POST(req: NextRequest) {
     let topic = typeof body.topic === "string" ? body.topic.trim() : "";
     const createMode: WorkspaceCreateMode =
       parseWorkspaceCreateMode(body.createMode ?? body.create_mode) || "files_goal";
+    const generateMode = assertGenerateCreateMode(createMode);
+    if (!generateMode.ok) {
+      return jsonError(400, generateMode.error);
+    }
     const initialChapters = resolveInitialChaptersFromBody(body);
     const band = getInitialChaptersBand(initialChapters);
 
@@ -189,116 +192,6 @@ export async function POST(req: NextRequest) {
         title: plan.title,
         createMode: blankOutcome.mode,
         blockCount: blankOutcome.blocks.length,
-      });
-    }
-
-    // ── Knowledge Region: zero-block Goals/Knowledge/Settings shell ──
-    if (createMode === "knowledge_region") {
-      const krOutcome = knowledgeRegionWorkspaceCreateOutcome();
-      const billing = await resolveUserBilling(supabase, user.id);
-      if ("error" in billing) {
-        return jsonError(500, billing.error);
-      }
-      const workspaceCheck = await checkWorkspaceCreation(
-        supabase,
-        user.id,
-        billing.userProfile,
-      );
-      if (!workspaceCheck.allowed) {
-        return NextResponse.json(workspaceLimitErrorResponse(workspaceCheck), { status: 403 });
-      }
-
-      const verificationTitle = (typeof body.title === "string" ? body.title : topic).trim();
-      if (!verificationTitle) {
-        return jsonError(400, "Name is required");
-      }
-      if (verificationTitle.length > 120) {
-        return jsonError(400, "Name is too long");
-      }
-
-      const { data: plan, error: planError } = await supabase
-        .from("workspaces")
-        .insert({
-          user_id: user.id,
-          title: verificationTitle,
-          root_topic: verificationTitle,
-          status: "active",
-          source_type: "topic",
-          notes: "",
-          workspace_kind: krOutcome.workspaceKind,
-        })
-        .select()
-        .single();
-
-      if (planError || !plan) {
-        console.error("[workspace/generate] knowledge region insert failed:", planError);
-        return jsonError(
-          500,
-          planError?.message || "Failed to create verification workspace",
-        );
-      }
-
-      return NextResponse.json({
-        workspaceId: plan.id,
-        title: plan.title,
-        createMode: krOutcome.mode,
-        workspaceKind: krOutcome.workspaceKind,
-        blockCount: krOutcome.blocks.length,
-      });
-    }
-
-    // ── Calibration: zero-block Goals/Calibration Flows/Knowledge/Settings shell ──
-    if (createMode === "calibration") {
-      const calOutcome = calibrationWorkspaceCreateOutcome();
-      const billing = await resolveUserBilling(supabase, user.id);
-      if ("error" in billing) {
-        return jsonError(500, billing.error);
-      }
-      const workspaceCheck = await checkWorkspaceCreation(
-        supabase,
-        user.id,
-        billing.userProfile,
-      );
-      if (!workspaceCheck.allowed) {
-        return NextResponse.json(workspaceLimitErrorResponse(workspaceCheck), { status: 403 });
-      }
-
-      const calibrationTitle = (typeof body.title === "string" ? body.title : topic).trim();
-      if (!calibrationTitle) {
-        return jsonError(400, "Name is required");
-      }
-      if (calibrationTitle.length > 120) {
-        return jsonError(400, "Name is too long");
-      }
-
-      const { data: plan, error: planError } = await supabase
-        .from("workspaces")
-        .insert({
-          user_id: user.id,
-          title: calibrationTitle,
-          root_topic: calibrationTitle,
-          status: "active",
-          source_type: "topic",
-          notes: "",
-          workspace_kind: calOutcome.workspaceKind,
-        })
-        .select()
-        .single();
-
-      if (planError || !plan) {
-        console.error("[workspace/generate] calibration insert failed:", planError);
-        return jsonError(
-          500,
-          planError?.message || "Failed to create calibration workspace",
-        );
-      }
-
-      return NextResponse.json({
-        workspaceId: plan.id,
-        title: plan.title,
-        createMode: calOutcome.mode,
-        workspaceKind: calOutcome.workspaceKind,
-        blockCount: calOutcome.blocks.length,
       });
     }
 

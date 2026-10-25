@@ -42,7 +42,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       "Create a Learning workspace, including an optional map and settings. MCP: create_workspace.",
     status: "201 Created",
     requestBody: [
-      { name: "kind", type: "string", description: "learning | verification" },
+      { name: "kind", type: "string", description: "learning | standard. verification, calibration, and knowledge_region are refused; use POST /api/dashboard/flows." },
       { name: "title", type: "string", description: "Workspace title." },
       { name: "workspace_goal", type: "string", description: "What success looks like." },
       { name: "learning_model_size", type: "number", description: "Unused stored field. Live inference does not switch a 4/8/16 catalog." },

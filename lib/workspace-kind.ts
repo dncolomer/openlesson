@@ -1,8 +1,9 @@
 /**
  * Durable workspace kind.
  * `standard` is a Learning workspace (map designer).
- * `knowledge_region` is a Verification workspace.
- * `calibration` is a Calibration workspace.
+ * `knowledge_region` and `calibration` are leftover owner containers for
+ * Verification and Calibration flows. Agent/MCP create is Learning only;
+ * flows are created via POST /api/dashboard/flows.
  * Verification and Calibration share the no-map shell and differ on flows
  * and which flow embeddings Knowledge projects.
  */
@@ -10,6 +11,11 @@
 export const WORKSPACE_KIND_STANDARD = "standard";
 export const WORKSPACE_KIND_KNOWLEDGE_REGION = "knowledge_region";
 export const WORKSPACE_KIND_CALIBRATION = "calibration";
+
+export const DASHBOARD_FLOWS_API_PATH = "/api/dashboard/flows";
+
+export const AGENT_WORKSPACE_CREATE_REFUSED_MESSAGE =
+  `Workspace create is Learning only. Use POST ${DASHBOARD_FLOWS_API_PATH} for verification or calibration.`;
 
 export type WorkspaceKind =
   | typeof WORKSPACE_KIND_STANDARD

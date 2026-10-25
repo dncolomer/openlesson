@@ -20,7 +20,11 @@ import {
   learningWorkspaceIntegrationCopy,
   workspaceSettingsIntegrationCopy,
 } from "@/lib/pow-api/integration-skill";
-import { workspaceAllowsCopyToVerification } from "@/lib/copy-learning-to-verification";
+import {
+  COPY_LEARNING_TO_VERIFICATION_GONE_MESSAGE,
+  copyLearningWorkspaceToVerification,
+  workspaceAllowsCopyToVerification,
+} from "@/lib/copy-learning-to-verification";
 import {
   assertWorkspaceAllowsKnowledgeLinkMint,
   workspaceAllowsKnowledgeLinkMint,
@@ -180,7 +184,7 @@ describe("KR vs standard skill/MCP surface (shipped builders)", () => {
     expect(omittedKind.some((a) => a.mcp_tool === "list_blocks")).toBe(true);
   });
 
-  it("KR Integration copy and generate-skill paths use workspace kind; mint deny still holds", () => {
+  it("KR Integration copy and generate-skill paths use workspace kind; mint deny still holds", async () => {
     const copy = knowledgeRegionIntegrationCopy();
     assertNoLinkMint("KR integration skillDescription", copy.skillDescription);
     assertNoLinkMint("KR integration mcpNote", copy.mcpNote);
@@ -194,9 +198,21 @@ describe("KR vs standard skill/MCP surface (shipped builders)", () => {
     expect(workspaceSettingsIntegrationCopy("standard")).toEqual(
       learningWorkspaceIntegrationCopy(),
     );
-    expect(workspaceAllowsCopyToVerification("standard")).toBe(true);
+    expect(workspaceAllowsCopyToVerification("standard")).toBe(false);
     expect(workspaceAllowsCopyToVerification("knowledge_region")).toBe(false);
     expect(workspaceAllowsCopyToVerification("calibration")).toBe(false);
+    await expect(
+      copyLearningWorkspaceToVerification({} as never, {
+        sourceWorkspaceId: "ws-1",
+        ownerUserId: "user-1",
+        title: "Copy",
+      }),
+    ).rejects.toThrow(COPY_LEARNING_TO_VERIFICATION_GONE_MESSAGE);
+    expect(COPY_LEARNING_TO_VERIFICATION_GONE_MESSAGE).toContain("/api/dashboard/flows");
+    const createTool = read("lib/pow-api/mcp-tools/evidence-tools.ts");
+    expect(createTool).toContain("Create a Learning workspace only");
+    expect(createTool).toContain("/api/dashboard/flows");
+    expect(createTool).not.toContain("kind=learning|verification");
 
     const panel = read("components/WorkspaceIntegrationPanel.tsx");
     expect(panel).toContain("workspaceSettingsIntegrationCopy");

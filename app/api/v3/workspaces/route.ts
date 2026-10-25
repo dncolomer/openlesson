@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-/** POST /api/v3/workspaces — create a Learning or Verification workspace. */
+/** POST /api/v3/workspaces — create a Learning workspace. */
 export async function POST(req: NextRequest) {
   const result = await authenticateRequest(req, "workspaces:write");
   if (result instanceof NextResponse) return result;

@@ -75,77 +75,6 @@ type LandingFeaturedCatalogEntry = {
   capstone: LandingFeaturedNode;
 };
 
-const CATEGORIES = new Set<LandingFeaturedCategory>([
-  "Engineering",
-  "AI & ML",
-  "Science",
-  "Math",
-  "Health",
-]);
-
-function requireNode(value: unknown, label: string): LandingFeaturedNode {
-  if (!value || typeof value !== "object") {
-    throw new Error(`Featured catalog ${label} must be an object`);
-  }
-  const rec = value as Record<string, unknown>;
-  const key = rec.key;
-  const title = rec.title;
-  const description = rec.description;
-  if (typeof key !== "string" || !key) throw new Error(`Featured catalog ${label}.key missing`);
-  if (typeof title !== "string" || !title) throw new Error(`Featured catalog ${label}.title missing`);
-  if (typeof description !== "string" || !description) {
-    throw new Error(`Featured catalog ${label}.description missing`);
-  }
-  return { key, title, description };
-}
-
-function requireTriple(value: unknown, label: string): LandingFeaturedCatalogEntry["left"] {
-  if (!Array.isArray(value) || value.length !== 3) {
-    throw new Error(`Featured catalog ${label} must have 3 nodes`);
-  }
-  return [
-    requireNode(value[0], `${label}[0]`),
-    requireNode(value[1], `${label}[1]`),
-    requireNode(value[2], `${label}[2]`),
-  ];
-}
-
-function parseLandingFeaturedCatalog(raw: unknown): LandingFeaturedCatalogEntry[] {
-  if (!Array.isArray(raw)) throw new Error("Featured catalog JSON must be an array");
-  return raw.map((entry, index) => {
-    if (!entry || typeof entry !== "object") {
-      throw new Error(`Featured catalog entry ${index} must be an object`);
-    }
-    const rec = entry as Record<string, unknown>;
-    const slug = rec.slug;
-    const title = rec.title;
-    const category = rec.category;
-    const summary = rec.summary;
-    const description = rec.description;
-    const goal = rec.goal;
-    if (typeof slug !== "string" || !slug) throw new Error(`Featured catalog entry ${index} slug missing`);
-    if (typeof title !== "string" || !title) throw new Error(`${slug} title missing`);
-    if (typeof category !== "string" || !CATEGORIES.has(category as LandingFeaturedCategory)) {
-      throw new Error(`${slug} category invalid`);
-    }
-    if (typeof summary !== "string" || !summary) throw new Error(`${slug} summary missing`);
-    if (typeof description !== "string" || !description) throw new Error(`${slug} description missing`);
-    if (typeof goal !== "string" || !goal) throw new Error(`${slug} goal missing`);
-    return {
-      slug,
-      title,
-      category: category as LandingFeaturedCategory,
-      summary,
-      description,
-      goal,
-      start: requireNode(rec.start, `${slug}.start`),
-      left: requireTriple(rec.left, `${slug}.left`),
-      right: requireTriple(rec.right, `${slug}.right`),
-      capstone: requireNode(rec.capstone, `${slug}.capstone`),
-    };
-  });
-}
-
 function eightBlockGraph(
   start: LandingFeaturedNode,
   left: LandingFeaturedCatalogEntry["left"],
@@ -166,8 +95,8 @@ function eightBlockGraph(
   ];
 }
 
-const DEFS: readonly LandingFeaturedMapDef[] = parseLandingFeaturedCatalog(
-  landingFeaturedCatalogJson,
+const DEFS: readonly LandingFeaturedMapDef[] = (
+  landingFeaturedCatalogJson as unknown as LandingFeaturedCatalogEntry[]
 ).map((entry) => ({
   slug: entry.slug,
   title: entry.title,

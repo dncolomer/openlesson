@@ -32,7 +32,7 @@ export const AGENT_TOOL_SURFACE = [
     name: "list_workspaces",
     family: "workspace",
     scope: "workspaces:read",
-    summary: "List Learning and Verification workspaces accessible to this key.",
+    summary: "List Learning workspaces accessible to this key.",
     rest: { method: "GET", path: WORKSPACE_API_BASE },
   },
   {

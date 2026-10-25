@@ -34,7 +34,7 @@ type McpTool = {
 
 const SCHEMAS: Record<string, Omit<McpTool, "name">> = {
   list_workspaces: {
-    description: `List Learning and Verification workspaces. REST: GET ${WORKSPACE_API_BASE}.`,
+    description: `List Learning workspaces. REST: GET ${WORKSPACE_API_BASE}.`,
     inputSchema: {
       type: "object",
       properties: {
@@ -58,7 +58,7 @@ const SCHEMAS: Record<string, Omit<McpTool, "name">> = {
   },
   create_workspace: {
     description:
-      "Create a Learning workspace. Pass kind=learning, optional title, settings, map blocks, or initial_prompt. REST: POST /api/v3/workspaces.",
+      "Create a Learning workspace. Pass kind=learning|verification, optional title, settings, map blocks, or initial_prompt. REST: POST /api/v3/workspaces.",
     inputSchema: {
       type: "object",
       properties: {

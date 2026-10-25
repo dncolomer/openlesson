@@ -6,7 +6,12 @@ import {
   paginateDashboardFlows,
   type DashboardRecentFlow,
 } from "@/lib/dashboard-home";
-import { dashboardCreateHref, dashboardProductLabel, type DashboardProductTab } from "@/lib/dashboard-nav";
+import {
+  dashboardCreateHref,
+  dashboardCreateLabel,
+  dashboardProductLabel,
+  type DashboardProductTab,
+} from "@/lib/dashboard-nav";
 import { DASHBOARD_FLOWS_PATH } from "@/lib/product-flow";
 import { CopyFlowUrlButton } from "@/components/product-flow/copy-flow-url-button";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
@@ -72,7 +77,7 @@ export function DashboardFlowsTab({
             data-dashboard-product-create
             className="inline-flex h-12 items-center justify-center rounded-none bg-white px-6 text-sm font-medium text-black transition hover:bg-neutral-200"
           >
-            Create {productLabel} flow →
+            {dashboardCreateLabel(productTab)}
           </Link>
         </div>
       </div>
@@ -93,7 +98,7 @@ export function DashboardFlowsTab({
               data-dashboard-empty-create
               className="mt-8 inline-flex h-12 min-w-[220px] items-center justify-center rounded-none bg-white px-8 text-sm font-medium text-black"
             >
-              Create {productLabel} flow →
+              {dashboardCreateLabel(productTab)}
             </Link>
           </div>
         </section>

@@ -10,7 +10,6 @@ import {
 import {
   dashboardCreateHref,
   dashboardCreateLabel,
-  dashboardProductLabel,
   type DashboardProductTab,
 } from "@/lib/dashboard-nav";
 import type { Workspace } from "@/lib/storage";
@@ -63,28 +62,17 @@ export function DashboardPlansTab({
     surface = "workspaces",
 }: DashboardPlansTabProps) {
   const isShop = surface === "shop";
-  const productLabel = dashboardProductLabel(productTab);
   const createHref = dashboardCreateHref(productTab);
   const [visibilityError, setVisibilityError] = useState("");
   const heading = isShop
     ? "Workspaces you listed."
-    : productTab === "learning"
-      ? "Maps you practice on."
-      : productTab === "verification"
-        ? "Flows that map knowledge."
-        : "Flows that map uncertainty.";
+    : "Maps you practice on.";
   const body = isShop
     ? "Learning maps you listed as All You Can Learn."
-    : productTab === "learning"
-      ? "Browse Learning workspaces and start a new map."
-      : productTab === "verification"
-        ? "Browse Verification flows."
-        : "Browse Calibration flows.";
+    : "Browse Learning workspaces and start a new map.";
   const emptyTitle = isShop
     ? "No listings yet"
-    : productTab === "learning"
-      ? "No learning workspaces yet"
-      : `No ${productLabel.toLowerCase()} flows yet`;
+    : "No learning workspaces yet";
   const createLabel = dashboardCreateLabel(productTab);
   return (
           <div

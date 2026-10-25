@@ -366,10 +366,14 @@ describe("dashboard platform surface", () => {
     const plansTab = readRepo("components/dashboard/dashboard-plans-tab.tsx");
     expect(plansTab).not.toContain("Verification workspace");
     expect(plansTab).not.toContain("Calibration workspace");
-    expect(plansTab).toContain("Browse Verification flows.");
-    expect(plansTab).toContain("Browse Calibration flows.");
+    expect(plansTab).not.toContain("Browse Verification flows.");
+    expect(plansTab).not.toContain("Browse Calibration flows.");
     expect(plansTab).toContain("No learning workspaces yet");
-    expect(plansTab).toContain("No ${productLabel.toLowerCase()} flows yet");
+    expect(plansTab).toContain("Browse Learning workspaces and start a new map.");
+    expect(plansTab).toContain("dashboardCreateLabel");
+    expect(readRepo("components/dashboard/dashboard-flows-tab.tsx")).toContain(
+      "dashboardCreateLabel(productTab)",
+    );
     expect(readRepo("app/workspace/new/page.tsx")).not.toContain("mode=knowledge_region");
     expect(readRepo("app/workspace/new/page.tsx")).not.toContain('data-create-mode="knowledge_region"');
     expect(readRepo("app/workspace/new/page.tsx")).not.toContain('data-create-mode="calibration"');

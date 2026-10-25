@@ -50,7 +50,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       { name: "initial_prompt", type: "string", description: "Optional generation prompt." },
     ],
     requestExample: `{
-  "kind": "verification",
+  "kind": "learning",
   "title": "Discovery mastery",
   "blocks": [{ "title": "Chapter", "description": "Priced field", "is_start": true }]
 }`,

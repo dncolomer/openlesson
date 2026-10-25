@@ -206,7 +206,7 @@ export function recommendIntegrationActions(options: {
       priority: 2,
       mcp_tool: "list_blocks",
       rest_equivalent: `GET ${WORKSPACE_API_BASE}/{id}/blocks`,
-      reason: "Read the map / contents. Learning workspaces share this API.",
+      reason: "Read the map / contents on a Learning workspace.",
     });
   }
 

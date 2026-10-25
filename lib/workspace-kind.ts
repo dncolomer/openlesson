@@ -54,7 +54,6 @@ export function isNoMapWorkspace(value: unknown): boolean {
   );
 }
 
-/** Owner containers without a map: send `/workspace/{id}` to dashboard Flows. */
 export function noMapWorkspaceDashboardHref(kind: unknown): string | null {
   const parsed = parseWorkspaceKind(kind);
   if (parsed === WORKSPACE_KIND_KNOWLEDGE_REGION) return "/dashboard?tab=verification";

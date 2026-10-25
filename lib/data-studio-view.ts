@@ -969,20 +969,3 @@ export function buildStudioRegionDistanceRays(input: {
 }
 
 export const DASHBOARD_DATA_STUDIO_PATH = "/api/dashboard/data-studio";
-
-export {
-  STUDIO_CAMERA_MIN_SCALE,
-  STUDIO_CAMERA_MAX_SCALE,
-  IDENTITY_STUDIO_CAMERA,
-  clampStudioCameraScale,
-  panStudioCamera,
-  studioScreenToWorld,
-  studioWorldToScreen,
-  zoomStudioCamera,
-  studioCameraTransform,
-  studioNiceGridStep,
-  studioGridLines,
-  hitTestStudioPoint,
-  type StudioCamera,
-  type StudioGridLine,
-} from "@/lib/data-studio-camera";

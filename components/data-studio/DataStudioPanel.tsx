@@ -13,10 +13,17 @@ import { DataStudioHud } from "@/components/data-studio/DataStudioHud";
 import { DataStudioInspect } from "@/components/data-studio/DataStudioInspect";
 import { DataStudioPlot } from "@/components/data-studio/DataStudioPlot";
 import {
+  IDENTITY_STUDIO_CAMERA,
+  hitTestStudioPoint,
+  panStudioCamera,
+  studioGridLines,
+  zoomStudioCamera,
+  type StudioCamera,
+} from "@/lib/data-studio-camera";
+import {
   DASHBOARD_DATA_STUDIO_PATH,
   DASHBOARD_DATA_STUDIO_RUN_PATH,
   DATA_STUDIO_REGION_QUERY,
-  IDENTITY_STUDIO_CAMERA,
   STUDIO_INSPECT_WIDTH_DEFAULT,
   buildDataStudioProjectionView,
   buildStudioRegionDistanceRays,
@@ -24,26 +31,21 @@ import {
   dataStudioProductLabel,
   filterStudioEmbeddings,
   hiddenStudioRegionIdsForFocus,
-  hitTestStudioPoint,
   studioHighDimRegionMembership,
   inspectStudioEmbedding,
   mergeStudioInspectPow,
-  panStudioCamera,
   pruneStudioSelectedIds,
   parseStudioFocusRegionId,
-  studioGridLines,
   studioRegionsForSpace,
   studioRunOptions,
   studioFlowOptions,
   studioVisibleRegionIds,
   toggleStudioHiddenId,
   visibleStudioRegions,
-  zoomStudioCamera,
   type DataStudioEmbeddingRow,
   type DataStudioInspectPayload,
   type DataStudioProduct,
   type DataStudioSpace,
-  type StudioCamera,
 } from "@/lib/data-studio-view";
 import type { DataStudioView } from "@/lib/data-studio-explainer";
 import type { FlowPowRow } from "@/lib/flow-embedding";

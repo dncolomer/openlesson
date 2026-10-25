@@ -479,7 +479,10 @@ describe("product Data Studio chrome", () => {
     expect(hosts).toContain('visibleSections.includes("data_studio")');
 
     expect(existsSync(join(ROOT, "lib/data-studio-camera.ts"))).toBe(true);
-    expect(readFileSync(join(ROOT, "lib/data-studio-view.ts"), "utf8")).toContain(
+    expect(readFileSync(join(ROOT, "lib/data-studio-view.ts"), "utf8")).not.toContain(
+      'from "@/lib/data-studio-camera"',
+    );
+    expect(readFileSync(join(ROOT, "components/data-studio/DataStudioPanel.tsx"), "utf8")).toContain(
       'from "@/lib/data-studio-camera"',
     );
     expect(existsSync(join(ROOT, "components/data-studio/DataStudioPlot.tsx"))).toBe(true);

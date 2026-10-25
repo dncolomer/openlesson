@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { readCombineBlocksSurface } from "@/tests/helpers/surface-source";
 import {
   assembleSuggestDagXaiMessages,
   normalizeSuggestDagBlockIds,
@@ -96,7 +97,7 @@ describe("normalizeSuggestDagResponse", () => {
 
 describe("suggest DAG UI + API structural", () => {
   it("drawer button updates canvas draft; route uses xAI; Apply stays separate", () => {
-    const pane = read("components/WorkspaceCombineBlocksPane.tsx");
+    const pane = readCombineBlocksSurface();
     const route = read("app/api/workspace/suggest-dag/route.ts");
     const helper = read("lib/suggest-dag.ts");
 

@@ -4,6 +4,7 @@
 import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { readCombineBlocksSurface } from "@/tests/helpers/surface-source";
 import {
   WORKSPACE_EDITOR_DANGER_DRAWER_ID,
   WORKSPACE_EDITOR_DANGER_DRAWER_TITLE,
@@ -83,7 +84,7 @@ describe("single and multi editor panes", () => {
     const host = read("components/workspace-view/workspace-right-drawers.tsx");
     const edit = read("components/WorkspaceBlockEditPanel.tsx");
     const danger = read("components/WorkspaceBlockDangerPanel.tsx");
-    const combine = read("components/WorkspaceCombineBlocksPane.tsx");
+    const combine = readCombineBlocksSurface();
 
     expect(detail).not.toContain("WORKSPACE_EDITOR_DANGER_DRAWER_ID");
     expect(detail).not.toContain("WorkspaceBlockDangerPanel");

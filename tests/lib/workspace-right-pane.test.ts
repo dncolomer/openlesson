@@ -1,4 +1,7 @@
-import { readWorkspaceViewSurface } from "@/tests/helpers/surface-source";
+import {
+  readCombineBlocksSurface,
+  readWorkspaceViewSurface,
+} from "@/tests/helpers/surface-source";
 /**
  * Workspace right pane: block detail, single-empty Add, multi-empty generate shape.
  * Drives shipped pure helpers + structural wiring in WorkspaceView / AYCL / SessionList.
@@ -496,7 +499,7 @@ describe("structural: right pane not map modal", () => {
   });
 
   it("combine blocks pane: A+B visual, broader copy, combination prompt, merge op", () => {
-    const pane = read("components/WorkspaceCombineBlocksPane.tsx");
+    const pane = readCombineBlocksSurface();
     expect(pane).toContain("data-workspace-combine-blocks-pane");
     expect(pane).toContain("data-combine-visual");
     expect(pane).toContain('data-combine-layout="stack"');

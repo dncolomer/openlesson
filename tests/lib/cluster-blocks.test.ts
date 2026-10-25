@@ -1,4 +1,5 @@
 import {
+  readCombineBlocksSurface,
   readGridOpsSurface,
   readMapGridSurface,
   readWorkspaceViewSurface,
@@ -413,10 +414,7 @@ describe("placeClusterAssignments isolation helper", () => {
 
 describe("Cluster blocks structural wiring", () => {
   it("multi-select pane exposes Cluster blocks drawer with count/auto/prompt/apply", () => {
-    const pane = fs.readFileSync(
-      path.join(REPO_ROOT, "components/WorkspaceCombineBlocksPane.tsx"),
-      "utf8",
-    );
+    const pane = readCombineBlocksSurface();
     expect(pane).toContain("Cluster blocks");
     expect(pane).toContain('drawerId="cluster"');
     expect(pane).toContain("data-cluster-blocks-drawer");

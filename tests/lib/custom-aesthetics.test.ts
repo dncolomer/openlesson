@@ -408,7 +408,7 @@ describe("custom aesthetic surfaces", () => {
   });
 
   it("WorkspaceView selects its image with selectSurfaceAestheticImages from the org-aware listing", () => {
-    const workspace = read("components/WorkspaceView.tsx");
+    const workspace = read("components/workspace-view/use-workspace-load.ts");
     expect(workspace).toContain("fetchAestheticPackages");
     expect(workspace).toContain("selectSurfaceAestheticImages");
     expect(workspace).toContain("aestheticImageForId(workspaceId, selection.images)");
@@ -440,7 +440,7 @@ describe("custom aesthetic surfaces", () => {
 
   it("takes session, workspace, and skill-grid images from the org-aware aesthetics source", () => {
     const sessionChrome = read("components/session-view/use-session-chrome.ts");
-    const workspace = read("components/WorkspaceView.tsx");
+    const workspace = read("components/workspace-view/use-workspace-load.ts");
     const skillGrid = read("components/BlockSkillGrid.tsx");
     const sessionView = read("components/session-view/use-session-field.ts");
     const aestheticsApi = read("app/api/aesthetics/route.ts");

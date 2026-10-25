@@ -1,4 +1,7 @@
-import { readWorkspaceViewSurface } from "@/tests/helpers/surface-source";
+import {
+  readCombineBlocksSurface,
+  readWorkspaceViewSurface,
+} from "@/tests/helpers/surface-source";
 /**
  * Pure Bridge Blocks corridor geometry + knowledge prompt framing.
  * Structural checks wire multi-select UI into expand-job create path.
@@ -242,7 +245,7 @@ describe("structural: Bridge Blocks multi-select UI + job wire", () => {
   });
 
   it("Combine pane mounts Bridge drawer; hosts enqueue expand jobs", () => {
-    const pane = read("components/WorkspaceCombineBlocksPane.tsx");
+    const pane = readCombineBlocksSurface();
     expect(pane).toContain("Bridge Blocks");
     expect(pane).toContain("data-bridge-blocks-pane");
     expect(pane).toContain("data-bridge-density");

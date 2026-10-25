@@ -1,6 +1,7 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { readCombineBlocksSurface } from "@/tests/helpers/surface-source";
 import {
   BRIDGE_WIDTH_MAX,
   BRIDGE_WIDTH_MIN,
@@ -12,10 +13,6 @@ import {
 const SCRATCH =
   process.env.GROK_SCRATCH ||
   "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-d5c6027932ea/implementer";
-
-function read(rel: string) {
-  return readFileSync(join(process.cwd(), rel), "utf8");
-}
 
 describe("bridge independent width + density", () => {
   it("width changes corridor candidates; density changes selected subset", () => {
@@ -83,7 +80,7 @@ describe("bridge independent width + density", () => {
   });
 
   it("UI exposes two range inputs (width + density)", () => {
-    const pane = read("components/WorkspaceCombineBlocksPane.tsx");
+    const pane = readCombineBlocksSurface();
     expect(pane).toContain("data-bridge-width-input");
     expect(pane).toContain("data-bridge-density-input");
     expect(pane).toContain("setBridgeWidth");

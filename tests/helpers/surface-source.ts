@@ -98,6 +98,21 @@ export function readWorkspaceViewSurface(): string {
   return parts.join("\n");
 }
 
+export function readCombineBlocksSurface(): string {
+  const dir = join(ROOT, "components/workspace-combine");
+  const parts = [readRepo("components/WorkspaceCombineBlocksPane.tsx")];
+  try {
+    for (const name of readdirSync(dir).sort()) {
+      if (name.endsWith(".ts") || name.endsWith(".tsx")) {
+        parts.push(readFileSync(join(dir, name), "utf8"));
+      }
+    }
+  } catch {
+    // Directory is created as Combine drawers land.
+  }
+  return parts.join("\n");
+}
+
 export function readMcpSurface(): string {
   const dir = join(ROOT, "lib/pow-api/mcp-tools");
   const parts = [readRepo("lib/pow-api/mcp-proof-of-work-server.ts")];

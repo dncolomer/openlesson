@@ -9,7 +9,10 @@ import {
   availableWorkspaceSections,
   resolveWorkspaceSectionLayout,
 } from "@/lib/workspace-sections";
-import { readWorkspaceViewSurface } from "@/tests/helpers/surface-source";
+import {
+  readCombineBlocksSurface,
+  readWorkspaceViewSurface,
+} from "@/tests/helpers/surface-source";
 
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
@@ -143,7 +146,7 @@ describe("workspace Simulation section helpers + UI structure", () => {
         "workspace_host=" + view.includes("data-workspace-simulation-host"),
         "workspace_panel=" + view.includes("WorkspaceSimulationPanel"),
         "multi_block_drawer=" +
-          read("components/WorkspaceCombineBlocksPane.tsx").includes(
+          readCombineBlocksSurface().includes(
             "WorkspaceMultiBlockSimulationPanel",
           ),
       ].join("\n") + "\n",
@@ -154,7 +157,7 @@ describe("workspace Simulation section helpers + UI structure", () => {
   it("workspace section, block drawer, and multi-block drawer are Simulate Insights", () => {
     const surface = read("components/SimulateInsightsSurface.tsx");
     const detail = read("components/WorkspaceBlockDetailPane.tsx");
-    const combine = read("components/WorkspaceCombineBlocksPane.tsx");
+    const combine = readCombineBlocksSurface();
     const route = read("app/api/workspace/simulate-insights/route.ts");
     const hosts = read("components/workspace-view/workspace-section-hosts.tsx");
 

@@ -3,7 +3,7 @@
  * simulation generate/CRUD, suggest helpers, Expand Map labels.
  */
 import { describe, expect, it } from "vitest";
-import { readMapGridSurface } from "../helpers/surface-source";
+import { readCombineBlocksSurface, readMapGridSurface } from "../helpers/surface-source";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -527,7 +527,7 @@ describe("simulation collection CRUD + modifier", () => {
     expect(multi).toContain("SimulateInsightsSurface");
     expect(multi).toContain("multi_block");
 
-    const combine = read("components/WorkspaceCombineBlocksPane.tsx");
+    const combine = readCombineBlocksSurface();
     expect(combine).not.toContain("WorkspaceMultiBlockSimulationPanel");
     expect(combine).not.toContain('drawerId="simulation"');
     expect(combine).not.toContain("data-multi-block-simulation-drawer");
@@ -700,7 +700,7 @@ describe("suggest from knowledge + simulation", () => {
       "components/WorkspaceAddBlockPane.tsx",
       "components/WorkspaceGenerateShapePane.tsx",
       "components/WorkspaceExpandBlockPane.tsx",
-      "components/WorkspaceCombineBlocksPane.tsx",
+      "components/workspace-combine/bridge-drawer.tsx",
       "components/WorkspaceEmptyMapPane.tsx",
     ];
     const fieldHooks = [
@@ -794,7 +794,7 @@ describe("suggest from knowledge + simulation", () => {
         hook: "data-generate-shape-prompt",
       },
       {
-        file: "components/WorkspaceCombineBlocksPane.tsx",
+        file: "components/workspace-combine/bridge-drawer.tsx",
         hook: "data-bridge-prompt",
       },
       {

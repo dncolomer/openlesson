@@ -18,6 +18,26 @@ import { buildPrivacyDataSlides } from "@/lib/sales/privacy-data-slide";
 
 const REPO_ROOT = path.resolve(__dirname, "../..");
 
+function readPitchDeckUi(): string {
+  const deckFile = path.join(REPO_ROOT, "components/SalesSlideDeck.tsx");
+  const layoutDir = path.join(REPO_ROOT, "components/sales-slide-deck");
+  const layoutFiles = fs
+    .readdirSync(layoutDir)
+    .filter((name) => name.endsWith(".ts") || name.endsWith(".tsx"))
+    .sort()
+    .map((name) => path.join(layoutDir, name));
+  return [deckFile, ...layoutFiles]
+    .map((file) => fs.readFileSync(file, "utf8"))
+    .join("\n");
+}
+
+function readPitchLayoutUi(fileName: string): string {
+  return fs.readFileSync(
+    path.join(REPO_ROOT, "components/sales-slide-deck", fileName),
+    "utf8",
+  );
+}
+
 const ALL_DECKS: SolutionSlideDeck[] = [PLATFORM_PITCH_DECK];
 
 function slideCorpus(deck: SolutionSlideDeck): string {
@@ -120,7 +140,7 @@ describe("pitch deck content (platform only)", () => {
       );
       expect(targetIdx, `TOC missing title slide for: ${item}`).toBeGreaterThanOrEqual(0);
     }
-    const deckUi = fs.readFileSync(path.join(REPO_ROOT, "components/SalesSlideDeck.tsx"), "utf8");
+    const deckUi = readPitchDeckUi();
     expect(deckUi).toContain("data-pitch-toc-link");
     expect(deckUi).toContain("resolveBulletSlideTargets");
     expect(deckUi).toContain("onGoToSlide");
@@ -345,15 +365,12 @@ describe("pitch deck content (platform only)", () => {
       ),
     ).toBe(false);
 
-    const deckUiProducts = fs.readFileSync(
-      path.join(REPO_ROOT, "components/SalesSlideDeck.tsx"),
-      "utf8",
-    );
+    const deckUiProducts = readPitchDeckUi();
     expect(deckUiProducts).toContain("data-pitch-card-grid-product-stack");
     expect(deckUiProducts).toMatch(/grid-cols-2/);
     expect(deckUiProducts).toMatch(/productStack|isProductLayerStack/);
 
-    const deckUi = fs.readFileSync(path.join(REPO_ROOT, "components/SalesSlideDeck.tsx"), "utf8");
+    const deckUi = readPitchDeckUi();
     expect(deckUi).toContain("data-pitch-idea");
     expect(deckUi).toContain("data-pitch-idea-icon");
     expect(deckUi).toContain("data-pitch-media-video");
@@ -365,7 +382,7 @@ describe("pitch deck content (platform only)", () => {
     expect(deckUi).toMatch(/muted/);
     expect(deckUi).toContain("data-pitch-image-placeholder");
     expect(deckUi).toContain("data-pitch-card-grid");
-    expect(deckUi).toContain("CardGrid");
+    expect(deckUi).toContain("PitchCardGrid");
   });
 
   it("platform deck includes founder facts and required public image paths", () => {
@@ -465,7 +482,7 @@ describe("pitch deck content (platform only)", () => {
   });
 
   it("SalesSlideDeck uses marketing aesthetics (zinc + aesthetics backgrounds, not emerald-only)", () => {
-    const deckUi = fs.readFileSync(path.join(REPO_ROOT, "components/SalesSlideDeck.tsx"), "utf8");
+    const deckUi = readPitchDeckUi();
     expect(deckUi).toContain("bg-[#0a0a0a]");
     expect(deckUi).toContain("zinc");
     expect(deckUi).toContain("backgroundImage");
@@ -475,7 +492,7 @@ describe("pitch deck content (platform only)", () => {
   });
 
   it("SalesSlideDeck wraps main copy in dark content panels while keeping aesthetic full-bleed BGs", () => {
-    const deckUi = fs.readFileSync(path.join(REPO_ROOT, "components/SalesSlideDeck.tsx"), "utf8");
+    const deckUi = readPitchDeckUi();
 
     expect(deckUi).toContain("data-pitch-content-panel");
     expect(deckUi).toContain("ContentPanel");
@@ -519,7 +536,7 @@ describe("pitch deck content (platform only)", () => {
   });
 
   it("SalesSlideDeck uses single-column text layout with larger type (no multi-col bullets)", () => {
-    const deckUi = fs.readFileSync(path.join(REPO_ROOT, "components/SalesSlideDeck.tsx"), "utf8");
+    const deckUi = readPitchDeckUi();
 
     expect(deckUi).toContain('data-pitch-layout="single-column"');
     expect(deckUi).toContain("data-pitch-single-column");
@@ -607,8 +624,8 @@ describe("pitch deck content (platform only)", () => {
   });
 
   it("platform Our thesis slide: three concept cards with small images, no supporting bullets", () => {
-    const deckUi = fs.readFileSync(path.join(REPO_ROOT, "components/SalesSlideDeck.tsx"), "utf8");
-    expect(deckUi).toContain("CardGrid");
+    const deckUi = readPitchDeckUi();
+    expect(deckUi).toContain("PitchCardGrid");
     expect(deckUi).toContain("data-pitch-card-grid");
     expect(deckUi).toContain("data-pitch-card-image");
     expect(deckUi).toMatch(/card\.image/);
@@ -678,10 +695,10 @@ describe("pitch deck content (platform only)", () => {
     expect(publicAssetExists("/flywire.png")).toBe(true);
     expect(deckUi).toContain("data-pitch-highlight-image");
     expect(deckUi).toContain("data-pitch-highlight-source");
-    // Statement layout renders highlights before CardGrid (above the boxes)
-    const statementBranch = deckUi.slice(deckUi.indexOf('slide.layout === "statement"'));
-    const highlightsAt = statementBranch.indexOf("HighlightCallouts");
-    const cardGridAt = statementBranch.indexOf("<CardGrid");
+    // Statement layout renders highlights before PitchCardGrid (above the boxes)
+    const statementUi = readPitchLayoutUi("statement-layout.tsx");
+    const highlightsAt = statementUi.indexOf("HighlightCallouts");
+    const cardGridAt = statementUi.indexOf("<PitchCardGrid");
     expect(highlightsAt).toBeGreaterThan(-1);
     expect(cardGridAt).toBeGreaterThan(-1);
     expect(highlightsAt).toBeLessThan(cardGridAt);
@@ -776,7 +793,7 @@ describe("pitch deck content (platform only)", () => {
   });
 
   it("labeled highlight callouts appear on platform deck method/product slides", () => {
-    const deckUi = fs.readFileSync(path.join(REPO_ROOT, "components/SalesSlideDeck.tsx"), "utf8");
+    const deckUi = readPitchDeckUi();
     expect(deckUi).toContain("data-pitch-highlight");
     expect(deckUi).toContain("HighlightCallouts");
 
@@ -793,8 +810,8 @@ describe("pitch deck content (platform only)", () => {
   });
 
   it("media layout is side-by-side grid; Karpathy media + TAP video media on platform", () => {
-    const deckUi = fs.readFileSync(path.join(REPO_ROOT, "components/SalesSlideDeck.tsx"), "utf8");
-    const mediaBranch = deckUi.slice(deckUi.indexOf('slide.layout === "media"'));
+    const deckUi = readPitchDeckUi();
+    const mediaBranch = readPitchLayoutUi("media-layout.tsx");
     expect(mediaBranch).toContain("data-pitch-media-stage");
     expect(mediaBranch).toMatch(/grid-cols-1/);
     expect(mediaBranch).toMatch(/md:grid-cols-/);

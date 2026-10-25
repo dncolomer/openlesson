@@ -121,6 +121,8 @@ describe("dashboard knowledge regions", () => {
     expect(route).toContain("owner_user_id");
     expect(route).toContain("flowOwnedByUser");
     expect(route).not.toContain("listProductFlowWorkspaceIds");
+    expect(route).toContain("listFlowEmbeddingsForOwner");
+    expect(route).toContain('flowKind: kind === "calibration" ? "calibrate" : "verify"');
     expect(route).toContain("buildVoiceRegionFromFlowRaws");
     const dash = readDashboardSurface();
     expect(dash).toContain("data-dashboard-knowledge-regions");

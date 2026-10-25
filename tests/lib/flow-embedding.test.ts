@@ -171,6 +171,16 @@ describe("flow embedding store", () => {
     expect(got?.raw).toEqual(stored.raw);
     expect(vectorsMatch(reembedFlowRaw(got!.raw), stored.vector)).toBe(true);
   });
+
+  it("allows a workspace-only persist in memory", async () => {
+    const stored = await persistCompletedFlowEmbedding({
+      workspaceId: "ws-learn",
+      flowKind: "learn",
+      sequence: ["try"],
+    });
+    expect(stored.workspace_id).toBe("ws-learn");
+    expect(stored.owner_user_id).toBe("");
+  });
 });
 
 describe("completion paths persist flow embeddings instead of snapshots", () => {

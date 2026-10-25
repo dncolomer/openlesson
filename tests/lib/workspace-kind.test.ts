@@ -28,6 +28,13 @@ describe("parseWorkspaceKind", () => {
     expect(migration).toContain("check (workspace_kind = 'standard'::text)");
     expect(migration).toContain("workspace_verification_flows");
     expect(migration).toContain("workspace_calibration_flows");
+    expect(migration).toContain("coalesce(product, '')");
+    expect(migration).not.toContain(
+      "delete from public.workspace_flow_embeddings where owner_user_id is null",
+    );
+    expect(migration).not.toMatch(
+      /workspace_flow_embeddings[\s\S]{0,80}owner_user_id set not null/,
+    );
   });
 });
 

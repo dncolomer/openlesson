@@ -1,6 +1,6 @@
 /**
  * Owner Home dashboard: recent verification and calibration flows
- * across the caller's workspaces (the flows themselves, not the workspaces).
+ * owned by the caller (owner_user_id).
  */
 import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";

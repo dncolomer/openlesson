@@ -285,26 +285,6 @@ export async function getVerificationFlowById(flowId: string): Promise<Verificat
   return flow ? presentFlow(flow) : null;
 }
 
-export async function listVerificationFlowsForWorkspaceIds(
-  workspaceIds: readonly string[],
-): Promise<VerificationFlow[]> {
-  const ids = [...new Set(workspaceIds.map((id) => String(id || "").trim()).filter(Boolean))];
-  if (ids.length === 0) return [];
-  if ((await resolveBackend()) === "memory") {
-    return verificationRepositoryGlobal()
-      .memory.flows.filter((flow) => ids.includes(flow.workspaceId))
-      .map(presentFlow);
-  }
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("workspace_verification_flows")
-    .select("*")
-    .in("workspace_id", ids)
-    .order("created_at", { ascending: false });
-  if (error || !Array.isArray(data)) return [];
-  return data.map((row) => presentFlow(mapFlow(row as Record<string, unknown>)));
-}
-
 export async function listVerificationFlowsForOwnerUserId(
   ownerUserId: string,
 ): Promise<VerificationFlow[]> {

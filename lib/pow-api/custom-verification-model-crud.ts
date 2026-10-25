@@ -307,19 +307,43 @@ export async function loadLatestFlowVectorForSubject(
   };
 }
 
+async function resolveOwnerUserId(
+  supabase: SupabaseClient,
+  options: { workspaceId: string; ownerUserId?: string | null },
+): Promise<string> {
+  const provided = String(options.ownerUserId || "").trim();
+  if (provided) return provided;
+  const workspaceId = String(options.workspaceId || "").trim();
+  if (!workspaceId) {
+    throw new CustomVerificationModelError("owner_user_id is required");
+  }
+  const { data, error } = await supabase
+    .from("workspaces")
+    .select("user_id")
+    .eq("id", workspaceId)
+    .maybeSingle();
+  const owner = String((data as { user_id?: string } | null)?.user_id || "").trim();
+  if (!owner) {
+    throw new CustomVerificationModelError(error?.message || "owner_user_id is required");
+  }
+  return owner;
+}
+
 export async function insertCustomVerificationSpec(
   supabase: SupabaseClient,
   options: {
     workspaceId: string;
     spec: CustomVerificationModelSpec;
     description?: string | null;
+    ownerUserId?: string | null;
     createdBy?: string | null;
     subjects: CustomVerificationSubjectRef[];
   },
 ): Promise<CustomVerificationModelRow> {
+  const ownerUserId = await resolveOwnerUserId(supabase, options);
   const payload = {
     workspace_id: options.workspaceId || null,
-    owner_user_id: options.createdBy ?? null,
+    owner_user_id: ownerUserId,
     name: options.spec.name,
     description: options.description?.trim() || null,
     embedding_model_id: options.spec.embedding_model_id,
@@ -356,6 +380,7 @@ export async function createCustomVerificationModelFromSubjects(
     name: string;
     description?: string | null;
     subjects: CustomVerificationSubjectRef[];
+    ownerUserId?: string | null;
     createdBy?: string | null;
   },
 ): Promise<{
@@ -399,6 +424,7 @@ export async function createCustomVerificationModelFromSubjects(
     workspaceId: options.workspaceId,
     spec,
     description,
+    ownerUserId: options.ownerUserId,
     createdBy: options.createdBy,
     subjects: resolvedSubjects,
   });
@@ -421,6 +447,7 @@ export async function createCustomVerificationModelFromSubjects(
       workspaceId: options.workspaceId,
       spec: voiceSpec,
       description,
+      ownerUserId: options.ownerUserId,
       createdBy: options.createdBy,
       subjects: resolvedSubjects,
     });

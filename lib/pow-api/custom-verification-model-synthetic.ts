@@ -273,6 +273,7 @@ export async function createSyntheticCustomVerificationModel(
     name: string;
     prompt?: string | null;
     description?: string | null;
+    ownerUserId?: string | null;
     createdBy?: string | null;
     /** Base64 file attachments — uploaded to xAI when generating (unless profile injected). */
     files?: SyntheticRegionFileInput[] | null;
@@ -397,6 +398,7 @@ export async function createSyntheticCustomVerificationModel(
     workspaceId: options.workspaceId,
     spec: { ...spec, subject_count: Math.max(1, spec.subject_count) },
     description: taggedDescription,
+    ownerUserId: options.ownerUserId,
     createdBy: options.createdBy,
     subjects: spec.subjects,
   });

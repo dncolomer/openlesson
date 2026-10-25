@@ -286,26 +286,6 @@ export async function getCalibrationFlowById(flowId: string): Promise<Calibratio
   return flow ? presentFlow(flow) : null;
 }
 
-export async function listCalibrationFlowsForWorkspaceIds(
-  workspaceIds: readonly string[],
-): Promise<CalibrationFlow[]> {
-  const ids = [...new Set(workspaceIds.map((id) => String(id || "").trim()).filter(Boolean))];
-  if (ids.length === 0) return [];
-  if ((await resolveBackend()) === "memory") {
-    return memoryState()
-      .flows.filter((flow) => ids.includes(flow.workspaceId))
-      .map(presentFlow);
-  }
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("workspace_calibration_flows")
-    .select("*")
-    .in("workspace_id", ids)
-    .order("created_at", { ascending: false });
-  if (error || !Array.isArray(data)) return [];
-  return data.map((row) => presentFlow(mapFlow(row as Record<string, unknown>)));
-}
-
 export async function listCalibrationFlowsForOwnerUserId(
   ownerUserId: string,
 ): Promise<CalibrationFlow[]> {

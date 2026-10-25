@@ -244,6 +244,7 @@ describe("synthetic region file-aware create path (shipped store)", () => {
         pow_types: ["tool", "screen", "speech"],
         tool_names: ["pager", "console"],
       },
+      ownerUserId: "user-1",
       createdBy: "user-1",
     });
 

@@ -4,8 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
-import { parseProductFlowKind, productFlowPagePath } from "@/lib/product-flow";
-import { flowOwnedByUser } from "@/lib/product-flow-owner";
+import { flowOwnedByUser, parseProductFlowKind, productFlowPagePath } from "@/lib/product-flow";
 import { calibrationFlowPublicPath } from "@/lib/calibration-flow";
 import { verificationFlowPublicPath } from "@/lib/verification-flow";
 import {

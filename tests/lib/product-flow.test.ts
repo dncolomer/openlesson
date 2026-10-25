@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   acceptProductFlowPublish,
   emptyProductFlowDraft,
+  flowOwnedByUser,
   productFlowOwnerTitle,
-  productFlowOwnerWorkspaceKind,
 } from "@/lib/product-flow";
-import { flowOwnedByUser } from "@/lib/product-flow-owner";
+import { parseWorkspaceKind } from "@/lib/workspace-kind";
 
 const root = join(__dirname, "../..");
 
@@ -17,8 +17,8 @@ function read(rel: string): string {
 
 describe("product flow owner_user_id", () => {
   it("maps historical workspace kind aliases for reads", () => {
-    expect(productFlowOwnerWorkspaceKind("verification")).toBe("knowledge_region");
-    expect(productFlowOwnerWorkspaceKind("calibration")).toBe("calibration");
+    expect(parseWorkspaceKind("knowledge_region")).toBe("knowledge_region");
+    expect(parseWorkspaceKind("calibration")).toBe("calibration");
     expect(productFlowOwnerTitle("verification")).toBe("Verification flows");
   });
 
@@ -49,11 +49,11 @@ describe("product flow owner_user_id", () => {
     expect(route).not.toContain("listProductFlowWorkspaceIds");
     expect(route).not.toMatch(/from\("workspaces"\)[\s\S]{0,200}\.insert\(/);
 
-    const owner = read("lib/product-flow-owner.ts");
-    expect(owner).toContain("flowOwnedByUser");
-    expect(owner).not.toContain("ensureProductFlowOwnerWorkspace");
-    expect(owner).not.toContain("workspace_kind");
-    expect(owner).not.toMatch(/from\("workspaces"\)/);
+    const productFlow = read("lib/product-flow.ts");
+    expect(productFlow).toContain("flowOwnedByUser");
+    expect(productFlow).not.toContain("productFlowOwnerWorkspaceKind");
+    expect(productFlow).not.toContain("ensureProductFlowOwnerWorkspace");
+    expect(existsSync(join(root, "lib/product-flow-owner.ts"))).toBe(false);
 
     const one = read("app/api/dashboard/flows/[id]/route.ts");
     expect(one).toContain("flowOwnedByUser");

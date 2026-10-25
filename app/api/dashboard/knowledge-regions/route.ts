@@ -8,8 +8,7 @@ import {
   parseDashboardKnowledgeRegionKind,
   presentDashboardKnowledgeRegions,
 } from "@/lib/dashboard-knowledge-regions";
-import { parseProductFlowKind, productRegionPagePath } from "@/lib/product-flow";
-import { flowOwnedByUser } from "@/lib/product-flow-owner";
+import { flowOwnedByUser, parseProductFlowKind, productRegionPagePath } from "@/lib/product-flow";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   buildRegionFromFlowEmbeddings,
@@ -77,12 +76,33 @@ export async function POST(req: NextRequest) {
       return jsonError(404, "Flow not found");
     }
 
-    const results = await listVerificationResultsForFlowId(flow.id);
-    const spec = buildRegionFromFlowEmbeddings({
-      name,
+    const stored = await listFlowEmbeddingsForOwner({
+      ownerUserId: auth.user.id,
       flowId,
-      items: results,
+      flowKind: kind === "calibration" ? "calibrate" : "verify",
     });
+    let items: { flowId: string; embedding?: number[] | null; id?: string }[] = stored.map(
+      (row) => ({
+        flowId: row.flow_id || flowId,
+        embedding: row.vector,
+        id: row.id,
+      }),
+    );
+    if (kind === "verification" && items.length === 0) {
+      items = await listVerificationResultsForFlowId(flow.id);
+    }
+    let spec: ReturnType<typeof buildRegionFromFlowEmbeddings>;
+    try {
+      spec = buildRegionFromFlowEmbeddings({
+        name,
+        flowId,
+        items,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to create knowledge region";
+      return jsonError(400, message);
+    }
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
       return NextResponse.json({
         kind,
@@ -118,10 +138,6 @@ export async function POST(req: NextRequest) {
     }
     const id = String(data.id);
     try {
-      const stored = await listFlowEmbeddingsForOwner({
-        ownerUserId: auth.user.id,
-        flowId,
-      });
       const voiceSpec = buildVoiceRegionFromFlowRaws({ name, embeddings: stored });
       if (voiceSpec) {
         await supabase.from("custom_verification_models").insert({

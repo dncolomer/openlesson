@@ -6,11 +6,6 @@
 
 import { parseLearningModelSize } from "@/lib/learning-model";
 import { flowCountdownMinutes } from "@/lib/flow-countdown";
-import {
-  WORKSPACE_KIND_CALIBRATION,
-  WORKSPACE_KIND_KNOWLEDGE_REGION,
-  type WorkspaceKind,
-} from "@/lib/workspace-kind";
 
 export type ProductFlowKind = "verification" | "calibration";
 
@@ -83,13 +78,17 @@ export function productRegionStudioPath(kind: ProductFlowKind, regionId: string)
   return productRegionPagePath(kind, regionId);
 }
 
-/** Historical workspace_kind aliases. Live workspace rows are standard. */
-export function productFlowOwnerWorkspaceKind(kind: ProductFlowKind): WorkspaceKind {
-  return kind === "calibration" ? WORKSPACE_KIND_CALIBRATION : WORKSPACE_KIND_KNOWLEDGE_REGION;
-}
-
 export function productFlowOwnerTitle(kind: ProductFlowKind): string {
   return kind === "calibration" ? "Calibration flows" : "Verification flows";
+}
+
+export function flowOwnedByUser(
+  flow: { ownerUserId?: string | null },
+  userId: string,
+): boolean {
+  const owner = String(flow.ownerUserId || "").trim();
+  const user = String(userId || "").trim();
+  return Boolean(owner && user && owner === user);
 }
 
 export function emptyProductFlowDraft(kind: ProductFlowKind): ProductFlowDraft {

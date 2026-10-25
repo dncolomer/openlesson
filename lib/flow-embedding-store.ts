@@ -150,7 +150,7 @@ export async function persistCompletedFlowEmbedding(
   input: PersistFlowEmbeddingInput,
 ): Promise<StoredFlowEmbedding> {
   const workspaceId = text(input.workspaceId);
-  const ownerUserId = text(input.ownerUserId);
+  let ownerUserId = text(input.ownerUserId);
   if (!workspaceId && !ownerUserId) throw new Error("owner_user_id is required");
   const recovered = recoverFlowEmbeddingRaw(input.raw);
   const record = recovered
@@ -181,7 +181,16 @@ export async function persistCompletedFlowEmbedding(
     return stored;
   }
   const supabase = createAdminClient();
-  const { error } = await supabase.from("workspace_flow_embeddings").insert({
+  if (!ownerUserId && workspaceId) {
+    const { data } = await supabase
+      .from("workspaces")
+      .select("user_id")
+      .eq("id", workspaceId)
+      .maybeSingle();
+    ownerUserId = text((data as { user_id?: string } | null)?.user_id);
+    stored.owner_user_id = ownerUserId;
+  }
+  const row: Record<string, unknown> = {
     id: stored.id,
     workspace_id: stored.workspace_id || null,
     owner_user_id: stored.owner_user_id || null,
@@ -195,8 +204,18 @@ export async function persistCompletedFlowEmbedding(
     vector: stored.vector,
     raw: stored.raw,
     created_at: stored.created_at,
-  });
-  if (error) throw new Error(error.message);
+  };
+  const { error } = await supabase.from("workspace_flow_embeddings").insert(row);
+  if (error) {
+    if (String(error.message).includes("owner_user_id") && "owner_user_id" in row) {
+      const retry = { ...row };
+      delete retry.owner_user_id;
+      const second = await supabase.from("workspace_flow_embeddings").insert(retry);
+      if (second.error) throw new Error(second.error.message);
+      return stored;
+    }
+    throw new Error(error.message);
+  }
   return stored;
 }
 

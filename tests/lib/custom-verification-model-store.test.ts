@@ -47,11 +47,13 @@ function makeStoreClient(opts: {
   embeddings?: Array<Record<string, unknown>>;
   models?: Array<Record<string, unknown>>;
   pow?: Array<Record<string, unknown>>;
+  workspaces?: Array<Record<string, unknown>>;
 }) {
   const calls: FilterCall[] = [];
   const embeddings = (opts.embeddings ?? []).slice();
   const models = (opts.models ?? []).slice();
   const pow = opts.pow ?? [];
+  const workspaces = (opts.workspaces ?? []).slice();
   const inserts: Record<string, unknown>[] = [];
 
   const client = {
@@ -101,6 +103,13 @@ function makeStoreClient(opts: {
         if (table === "custom_verification_models") {
           if (lastInserted) return { data: [lastInserted], error: null };
           let rows = models.slice();
+          for (const f of filters) {
+            if (f.method === "eq") rows = applyEq(rows, f.args[0], f.args[1]);
+          }
+          return { data: rows, error: null };
+        }
+        if (table === "workspaces") {
+          let rows = workspaces.slice();
           for (const f of filters) {
             if (f.method === "eq") rows = applyEq(rows, f.args[0], f.args[1]);
           }
@@ -279,12 +288,41 @@ describe("custom verification model store (identity queries)", () => {
       workspaceId: "ws-1",
       name: "Cohort",
       subjects: [{ user_id: "user-1" }],
-      createdBy: "owner",
+      ownerUserId: "workspace-owner",
+      createdBy: "aycl:purchase-1",
     });
 
     expect(created.model.name).toBe("Cohort");
     expect(inserts.length).toBeGreaterThanOrEqual(1);
+    expect(inserts[0]?.owner_user_id).toBe("workspace-owner");
+    expect(inserts[0]?.created_by).toBe("aycl:purchase-1");
     expectLatestIdentityQuery(calls, "user-1");
+  });
+
+  it("looks up workspaces.user_id when ownerUserId is missing", async () => {
+    const vector = flowVector("cohort");
+    const { client, inserts } = makeStoreClient({
+      embeddings: [
+        {
+          workspace_id: "ws-1",
+          identity: "user-1",
+          embedding_model_id: FLOW_EMBEDDING_MODEL_ID,
+          vector,
+          created_at: "2026-03-01T00:00:00.000Z",
+        },
+      ],
+      workspaces: [{ id: "ws-1", user_id: "workspace-owner" }],
+    });
+
+    await createCustomVerificationModelFromSubjects(client, {
+      workspaceId: "ws-1",
+      name: "Cohort",
+      subjects: [{ user_id: "user-1" }],
+      createdBy: "aycl:purchase-1",
+    });
+
+    expect(inserts[0]?.owner_user_id).toBe("workspace-owner");
+    expect(inserts[0]?.created_by).toBe("aycl:purchase-1");
   });
 
   it("computeKnowledgeDistanceForSubject uses the newest embedding for an identity", async () => {

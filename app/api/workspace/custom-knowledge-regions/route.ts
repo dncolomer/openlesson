@@ -195,6 +195,7 @@ export async function POST(req: NextRequest) {
         files,
         fileIds,
         description: typeof body.description === "string" ? body.description : null,
+        ownerUserId: auth.persistUserId,
         createdBy: auth.persistUserId,
       });
 
@@ -263,6 +264,7 @@ export async function POST(req: NextRequest) {
         guest_user_id: typeof s.guest_user_id === "string" ? s.guest_user_id : null,
         label: typeof s.label === "string" ? s.label : null,
       })),
+      ownerUserId: auth.persistUserId,
       createdBy: auth.subjectId,
     });
 

@@ -41,6 +41,7 @@ async function persistSpec(input: {
   name: string;
   description: string;
   spec: ReturnType<typeof buildRegionFromSyntheticItems>;
+  ownerUserId: string | null;
   createdBy: string | null;
 }) {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -52,6 +53,7 @@ async function persistSpec(input: {
       .from("custom_verification_models")
       .insert({
         workspace_id: input.workspaceId,
+        owner_user_id: input.ownerUserId,
         name: input.spec.name,
         description: input.description,
         embedding_model_id: input.spec.embedding_model_id,
@@ -101,6 +103,7 @@ export async function POST(req: NextRequest) {
         name,
         description: `verification-flow:${flowId}`,
         spec,
+        ownerUserId: auth.workspaceOwnerId || auth.persistUserId,
         createdBy: auth.subjectId,
       });
       try {
@@ -112,6 +115,7 @@ export async function POST(req: NextRequest) {
             name: voiceSpec.name,
             description: `verification-flow:${flowId}`,
             spec: voiceSpec,
+            ownerUserId: auth.workspaceOwnerId || auth.persistUserId,
             createdBy: auth.subjectId,
           });
         }
@@ -153,6 +157,7 @@ export async function POST(req: NextRequest) {
         name,
         description: `[synthetic-agents] ${generated.request.modifier || topic}`,
         spec,
+        ownerUserId: auth.workspaceOwnerId || auth.persistUserId,
         createdBy: auth.subjectId,
       });
       return NextResponse.json({

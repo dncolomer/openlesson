@@ -69,15 +69,15 @@ export function presentDashboardRecentFlow(input: {
   kind: DashboardRecentFlowKind;
   name?: unknown;
   title?: unknown;
-  workspaceId: unknown;
+  workspaceId?: unknown;
   workspaceTitle?: unknown;
   createdAt?: unknown;
   publicToken?: unknown;
   questionCount?: unknown;
 }): DashboardRecentFlow | null {
   const id = String(input.id || "").trim();
+  if (!id) return null;
   const workspaceId = String(input.workspaceId || "").trim();
-  if (!id || !workspaceId) return null;
   const token = String(input.publicToken || "").trim();
   const publicPath =
     input.kind === "calibrate"

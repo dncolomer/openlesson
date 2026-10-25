@@ -28,6 +28,8 @@ import {
 export interface CustomVerificationModelRow {
   id: string;
   workspace_id: string;
+  owner_user_id?: string;
+  product?: string | null;
   name: string;
   description: string | null;
   embedding_model_id: string;
@@ -64,7 +66,9 @@ function parseRow(raw: Record<string, unknown>): CustomVerificationModelRow {
     : [];
   return {
     id: String(raw.id),
-    workspace_id: String(raw.workspace_id),
+    workspace_id: String(raw.workspace_id || ""),
+    owner_user_id: raw.owner_user_id ? String(raw.owner_user_id) : undefined,
+    product: raw.product ? String(raw.product) : null,
     name: String(raw.name),
     description: (raw.description as string | null) ?? null,
     embedding_model_id: String(raw.embedding_model_id || FLOW_EMBEDDING_MODEL_ID),
@@ -88,7 +92,7 @@ export async function listCustomVerificationModels(
   const { data, error } = await supabase
     .from("custom_verification_models")
     .select(
-      "id, workspace_id, name, description, embedding_model_id, dim, centroid, cohort_cohesion, mean_radius, cosine_threshold, subject_count, subjects, created_by, created_at, updated_at",
+      "id, workspace_id, owner_user_id, product, name, description, embedding_model_id, dim, centroid, cohort_cohesion, mean_radius, cosine_threshold, subject_count, subjects, created_by, created_at, updated_at",
     )
     .eq("workspace_id", workspaceId)
     .order("created_at", { ascending: false });
@@ -101,7 +105,7 @@ export async function listCustomVerificationModels(
 }
 
 const CUSTOM_MODEL_SELECT =
-  "id, workspace_id, name, description, embedding_model_id, dim, centroid, cohort_cohesion, mean_radius, cosine_threshold, subject_count, subjects, created_by, created_at, updated_at";
+  "id, workspace_id, owner_user_id, product, name, description, embedding_model_id, dim, centroid, cohort_cohesion, mean_radius, cosine_threshold, subject_count, subjects, created_by, created_at, updated_at";
 
 /** Regions from other workspaces the caller owns — for embeddings import overlay. */
 export async function listImportableKnowledgeRegionsForOwner(
@@ -155,7 +159,7 @@ export async function getCustomVerificationModel(
   const { data, error } = await supabase
     .from("custom_verification_models")
     .select(
-      "id, workspace_id, name, description, embedding_model_id, dim, centroid, cohort_cohesion, mean_radius, cosine_threshold, subject_count, subjects, created_by, created_at, updated_at",
+      "id, workspace_id, owner_user_id, product, name, description, embedding_model_id, dim, centroid, cohort_cohesion, mean_radius, cosine_threshold, subject_count, subjects, created_by, created_at, updated_at",
     )
     .eq("workspace_id", workspaceId)
     .eq("id", modelId)
@@ -314,7 +318,8 @@ export async function insertCustomVerificationSpec(
   },
 ): Promise<CustomVerificationModelRow> {
   const payload = {
-    workspace_id: options.workspaceId,
+    workspace_id: options.workspaceId || null,
+    owner_user_id: options.createdBy ?? null,
     name: options.spec.name,
     description: options.description?.trim() || null,
     embedding_model_id: options.spec.embedding_model_id,

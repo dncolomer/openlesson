@@ -16,50 +16,81 @@ import {
 } from "@/lib/product-flow";
 
 describe("dashboard knowledge regions", () => {
-  it("keeps verification and calibration regions on their own workspaces", () => {
+  it("lists verification and calibration regions by owner_user_id", () => {
     const regions = presentDashboardKnowledgeRegions(
       [
-        { id: "learn", title: "Maps", workspace_kind: "standard" },
-        { id: "v1", title: "Verify A", workspace_kind: "knowledge_region" },
-        { id: "c1", root_topic: "Calibrate A", workspace_kind: "calibration" },
-      ],
-      [
-        { id: "r-learn", name: "Skip", workspace_id: "learn", subject_count: 2, created_at: "2026-01-01" },
-        { id: "r-v", name: "Limits", workspace_id: "v1", subject_count: 4, created_at: "2026-05-02" },
+        {
+          id: "r-learn",
+          name: "Skip",
+          owner_user_id: "me",
+          product: null,
+          subject_count: 2,
+          created_at: "2026-01-01",
+        },
+        {
+          id: "r-v",
+          name: "Limits",
+          owner_user_id: "me",
+          product: "verification",
+          subject_count: 4,
+          created_at: "2026-05-02",
+        },
         {
           id: "r-voice",
           name: "Limits · Path + Text",
-          workspace_id: "v1",
+          owner_user_id: "me",
+          product: "verification",
           subject_count: 4,
           created_at: "2026-05-03",
           embedding_model_id: "flowcfg-pathtext-v1-d96",
         },
-        { id: "r-c", name: "Priors", workspace_id: "c1", description: "thin", subject_count: 1, created_at: "2026-05-01" },
-        { id: "orphan", name: "Gone", workspace_id: "missing", subject_count: 1 },
+        {
+          id: "r-c",
+          name: "Priors",
+          owner_user_id: "me",
+          product: "calibration",
+          description: "thin",
+          subject_count: 1,
+          created_at: "2026-05-01",
+        },
+        {
+          id: "other",
+          name: "Gone",
+          owner_user_id: "them",
+          product: "verification",
+          subject_count: 1,
+        },
       ],
       "verification",
+      "me",
     );
     expect(regions).toEqual([
       {
         id: "r-v",
         name: "Limits",
         description: null,
-        workspaceId: "v1",
-        workspaceTitle: "Verify A",
+        workspaceId: "",
+        workspaceTitle: "Verification flows",
         subjectCount: 4,
         createdAt: "2026-05-02",
       },
     ]);
     const calibrate = presentDashboardKnowledgeRegions(
       [
-        { id: "c1", root_topic: "Calibrate A", workspace_kind: "calibration" },
-      ],
-      [
-        { id: "r-c", name: "Priors", workspace_id: "c1", description: "thin", subject_count: 1, created_at: "2026-05-01" },
+        {
+          id: "r-c",
+          name: "Priors",
+          owner_user_id: "me",
+          product: "calibration",
+          description: "thin",
+          subject_count: 1,
+          created_at: "2026-05-01",
+        },
       ],
       "calibration",
+      "me",
     );
-    expect(calibrate[0]?.workspaceTitle).toBe("Calibrate A");
+    expect(calibrate[0]?.workspaceTitle).toBe("Calibration flows");
     expect(calibrate[0]?.description).toBe("thin");
     expect(parseDashboardKnowledgeRegionKind("verification")).toBe("verification");
     expect(parseDashboardKnowledgeRegionKind("learning")).toBeNull();
@@ -87,6 +118,9 @@ describe("dashboard knowledge regions", () => {
     expect(route).toContain("requireAuthenticatedUser");
     expect(route).toContain("custom_verification_models");
     expect(route).toContain("presentDashboardKnowledgeRegions");
+    expect(route).toContain("owner_user_id");
+    expect(route).toContain("flowOwnedByUser");
+    expect(route).not.toContain("listProductFlowWorkspaceIds");
     expect(route).toContain("buildVoiceRegionFromFlowRaws");
     const dash = readDashboardSurface();
     expect(dash).toContain("data-dashboard-knowledge-regions");

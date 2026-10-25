@@ -9,17 +9,17 @@ import {
   presentDashboardKnowledgeRegions,
 } from "@/lib/dashboard-knowledge-regions";
 import { parseProductFlowKind, productRegionPagePath } from "@/lib/product-flow";
-import { listProductFlowWorkspaceIds } from "@/lib/product-flow-owner";
+import { flowOwnedByUser } from "@/lib/product-flow-owner";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   buildRegionFromFlowEmbeddings,
   buildVoiceRegionFromFlowRaws,
 } from "@/lib/verification-flow";
-import { listFlowEmbeddings } from "@/lib/flow-embedding-store";
+import { listFlowEmbeddingsForOwner } from "@/lib/flow-embedding-store";
 import { getCalibrationFlowById } from "@/lib/calibration-flow-repository";
 import {
   getVerificationFlowById,
-  listVerificationResults,
+  listVerificationResultsForFlowId,
 } from "@/lib/verification-flow-repository";
 
 export const runtime = "nodejs";
@@ -34,26 +34,12 @@ export async function GET(req: NextRequest) {
     );
     if (!kind) return jsonError(400, "kind must be verification or calibration");
 
-    const { data: workspaces, error: workspaceError } = await auth.supabase
-      .from("workspaces")
-      .select("id, title, root_topic, workspace_kind")
-      .eq("user_id", auth.user.id)
-      .neq("status", "archived");
-
-    if (workspaceError) {
-      return NextResponse.json({ kind, regions: [] });
-    }
-
-    const listed = Array.isArray(workspaces) ? workspaces : [];
-    const ids = listed.map((row) => String(row.id || "")).filter(Boolean);
-    if (ids.length === 0) {
-      return NextResponse.json({ kind, regions: [] });
-    }
-
     const { data: rows, error } = await auth.supabase
       .from("custom_verification_models")
-      .select("id, workspace_id, name, description, subject_count, created_at, embedding_model_id")
-      .in("workspace_id", ids)
+      .select(
+        "id, workspace_id, owner_user_id, product, name, description, subject_count, created_at, embedding_model_id",
+      )
+      .eq("owner_user_id", auth.user.id)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -62,7 +48,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       kind,
-      regions: presentDashboardKnowledgeRegions(listed, rows || [], kind),
+      regions: presentDashboardKnowledgeRegions(rows || [], kind, auth.user.id),
     });
   } catch (error) {
     const message =
@@ -83,16 +69,15 @@ export async function POST(req: NextRequest) {
     const flowId = String(body.flowId || "").trim();
     if (!flowId) return jsonError(400, "flowId is required");
 
-    const workspaceIds = await listProductFlowWorkspaceIds(auth.supabase, auth.user.id, kind);
     const flow =
       kind === "calibration"
         ? await getCalibrationFlowById(flowId)
         : await getVerificationFlowById(flowId);
-    if (!flow || !workspaceIds.includes(flow.workspaceId)) {
+    if (!flow || !flowOwnedByUser(flow, auth.user.id)) {
       return jsonError(404, "Flow not found");
     }
 
-    const results = await listVerificationResults(flow.workspaceId);
+    const results = await listVerificationResultsForFlowId(flow.id);
     const spec = buildRegionFromFlowEmbeddings({
       name,
       flowId,
@@ -110,7 +95,9 @@ export async function POST(req: NextRequest) {
     const { data, error } = await supabase
       .from("custom_verification_models")
       .insert({
-        workspace_id: flow.workspaceId,
+        workspace_id: flow.workspaceId || null,
+        owner_user_id: auth.user.id,
+        product: kind,
         name: spec.name,
         description: `${kind}-flow:${flowId}`,
         embedding_model_id: spec.embedding_model_id,
@@ -131,14 +118,16 @@ export async function POST(req: NextRequest) {
     }
     const id = String(data.id);
     try {
-      const stored = await listFlowEmbeddings({
-        workspaceId: flow.workspaceId,
+      const stored = await listFlowEmbeddingsForOwner({
+        ownerUserId: auth.user.id,
         flowId,
       });
       const voiceSpec = buildVoiceRegionFromFlowRaws({ name, embeddings: stored });
       if (voiceSpec) {
         await supabase.from("custom_verification_models").insert({
-          workspace_id: flow.workspaceId,
+          workspace_id: flow.workspaceId || null,
+          owner_user_id: auth.user.id,
+          product: kind,
           name: voiceSpec.name,
           description: `${kind}-flow:${flowId}`,
           embedding_model_id: voiceSpec.embedding_model_id,

@@ -11,6 +11,7 @@ import {
   sortDashboardRecentFlows,
   type DashboardRecentFlow,
 } from "@/lib/dashboard-home";
+import { productFlowOwnerTitle } from "@/lib/product-flow";
 
 export const runtime = "nodejs";
 
@@ -21,39 +22,17 @@ export async function GET() {
     const auth = await requireAuthenticatedUser();
     if (!auth.ok) return auth.response;
 
-    const { data: workspaces, error: workspaceError } = await auth.supabase
-      .from("workspaces")
-      .select("id, title, root_topic")
-      .eq("user_id", auth.user.id)
-      .neq("status", "archived");
-
-    if (workspaceError) {
-      return NextResponse.json({ verification: [], calibration: [] });
-    }
-
-    const listed = Array.isArray(workspaces) ? workspaces : [];
-    const ids = listed.map((row) => String(row.id || "")).filter(Boolean);
-    const titles = new Map(
-      listed.map((row) => [
-        String(row.id),
-        String(row.title || row.root_topic || "Workspace"),
-      ]),
-    );
-    if (ids.length === 0) {
-      return NextResponse.json({ verification: [], calibration: [] });
-    }
-
     const [verificationRes, calibrationRes] = await Promise.all([
       auth.supabase
         .from("workspace_verification_flows")
-        .select("id, workspace_id, name, topic, questions, public_token, created_at")
-        .in("workspace_id", ids)
+        .select("id, workspace_id, owner_user_id, name, topic, questions, public_token, created_at")
+        .eq("owner_user_id", auth.user.id)
         .order("created_at", { ascending: false })
         .limit(FLOW_LIMIT),
       auth.supabase
         .from("workspace_calibration_flows")
-        .select("id, workspace_id, name, goal, questions, public_token, created_at")
-        .in("workspace_id", ids)
+        .select("id, workspace_id, owner_user_id, name, goal, questions, public_token, created_at")
+        .eq("owner_user_id", auth.user.id)
         .order("created_at", { ascending: false })
         .limit(FLOW_LIMIT),
     ]);
@@ -67,7 +46,7 @@ export async function GET() {
             name: (row as { name?: unknown }).name,
             title: row.topic,
             workspaceId: row.workspace_id,
-            workspaceTitle: titles.get(String(row.workspace_id)),
+            workspaceTitle: productFlowOwnerTitle("verification"),
             createdAt: row.created_at,
             publicToken: row.public_token,
             questionCount: questionCountFromUnknown(row.questions),
@@ -86,7 +65,7 @@ export async function GET() {
             name: (row as { name?: unknown }).name,
             title: row.goal,
             workspaceId: row.workspace_id,
-            workspaceTitle: titles.get(String(row.workspace_id)),
+            workspaceTitle: productFlowOwnerTitle("calibration"),
             createdAt: row.created_at,
             publicToken: row.public_token,
             questionCount: questionCountFromUnknown(row.questions),

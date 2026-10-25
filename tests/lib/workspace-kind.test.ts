@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   noMapWorkspaceDashboardHref,
   parseWorkspaceKind,
@@ -15,6 +17,17 @@ describe("parseWorkspaceKind", () => {
     expect(parseWorkspaceKind("calibration_workspace")).toBe("calibration");
     expect(parseWorkspaceKind(undefined)).toBe("standard");
     expect(parseWorkspaceKind("learning")).toBe("standard");
+  });
+
+  it("ships a migration that keeps only standard on live workspace rows", () => {
+    const migration = readFileSync(
+      join(__dirname, "../../supabase/migrations/20261025180000_flow_owner_user.sql"),
+      "utf8",
+    );
+    expect(migration).toContain("owner_user_id");
+    expect(migration).toContain("check (workspace_kind = 'standard'::text)");
+    expect(migration).toContain("workspace_verification_flows");
+    expect(migration).toContain("workspace_calibration_flows");
   });
 });
 

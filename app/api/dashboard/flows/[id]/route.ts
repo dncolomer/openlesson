@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { parseProductFlowKind, productFlowPagePath } from "@/lib/product-flow";
-import { listProductFlowWorkspaceIds } from "@/lib/product-flow-owner";
+import { flowOwnedByUser } from "@/lib/product-flow-owner";
 import { calibrationFlowPublicPath } from "@/lib/calibration-flow";
 import { verificationFlowPublicPath } from "@/lib/verification-flow";
 import {
@@ -27,6 +27,7 @@ async function loadOwnedFlow(
   | {
       ok: true;
       kind: "verification" | "calibration";
+      ownerUserId: string;
       workspaceId: string;
       flow: Record<string, unknown>;
       origin: string;
@@ -37,17 +38,30 @@ async function loadOwnedFlow(
   const requested = parseProductFlowKind(req.nextUrl.searchParams.get("kind"));
   const kinds = requested ? [requested] : (["verification", "calibration"] as const);
   for (const kind of kinds) {
-    const workspaceIds = await listProductFlowWorkspaceIds(auth.supabase, auth.user.id, kind);
     if (kind === "calibration") {
       const flow = await getCalibrationFlowById(id);
-      if (flow && workspaceIds.includes(flow.workspaceId)) {
-        return { ok: true, kind, workspaceId: flow.workspaceId, flow, origin: req.nextUrl.origin };
+      if (flow && flowOwnedByUser(flow, auth.user.id)) {
+        return {
+          ok: true,
+          kind,
+          ownerUserId: auth.user.id,
+          workspaceId: flow.workspaceId,
+          flow,
+          origin: req.nextUrl.origin,
+        };
       }
       continue;
     }
     const flow = await getVerificationFlowById(id);
-    if (flow && workspaceIds.includes(flow.workspaceId)) {
-      return { ok: true, kind, workspaceId: flow.workspaceId, flow, origin: req.nextUrl.origin };
+    if (flow && flowOwnedByUser(flow, auth.user.id)) {
+      return {
+        ok: true,
+        kind,
+        ownerUserId: auth.user.id,
+        workspaceId: flow.workspaceId,
+        flow,
+        origin: req.nextUrl.origin,
+      };
     }
   }
   return { ok: false, response: jsonError(404, "Flow not found") };
@@ -93,6 +107,7 @@ export async function POST(
       if (loaded.kind === "calibration") {
         const removed = await runCalibrationCommand({
           type: "remove",
+          ownerUserId: loaded.ownerUserId,
           workspaceId: loaded.workspaceId,
           flowId: id,
         });
@@ -101,6 +116,7 @@ export async function POST(
       }
       const removed = await runVerificationCommand({
         type: "remove",
+        ownerUserId: loaded.ownerUserId,
         workspaceId: loaded.workspaceId,
         flowId: id,
       });
@@ -111,6 +127,7 @@ export async function POST(
     if (loaded.kind === "calibration") {
       const updated = await runCalibrationCommand({
         type: "update",
+        ownerUserId: loaded.ownerUserId,
         workspaceId: loaded.workspaceId,
         flowId: id,
         name: typeof body.name === "string" ? body.name : undefined,
@@ -124,6 +141,7 @@ export async function POST(
     }
     const updated = await runVerificationCommand({
       type: "update",
+      ownerUserId: loaded.ownerUserId,
       workspaceId: loaded.workspaceId,
       flowId: id,
       name: typeof body.name === "string" ? body.name : undefined,

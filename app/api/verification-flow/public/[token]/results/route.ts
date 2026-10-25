@@ -56,6 +56,7 @@ export async function POST(
   if (saved.result) {
     await persistCompletedFlowEmbedding({
       workspaceId: saved.result.workspaceId,
+      ownerUserId: flow?.ownerUserId,
       flowKind: "verify",
       flowId: saved.result.flowId,
       runId: saved.result.id,

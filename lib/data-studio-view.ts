@@ -631,12 +631,9 @@ export function presentDashboardDataStudio(input: {
       const id = text(workspace.id);
       if (!id) return null;
       const shell = workspaceProductShell(workspace.workspace_kind);
-      if (input.product === "learning") {
-        if (shell !== "learning") return null;
-        if (!Boolean(workspace.is_play_copy)) return null;
-      } else if (shell !== input.product) {
-        return null;
-      }
+      if (input.product !== "learning") return null;
+      if (shell !== "learning") return null;
+      if (!Boolean(workspace.is_play_copy)) return null;
       if (text(workspace.user_id) && text(workspace.user_id) !== text(input.viewerUserId)) {
         return null;
       }
@@ -654,6 +651,11 @@ export function presentDashboardDataStudio(input: {
   const titleById = new Map(workspaces.map((row) => [row.id, row.title]));
   let embeddings = input.embeddings.filter((row) => {
     if (text(row.flow_kind) && text(row.flow_kind) !== flowKind) return false;
+    if (input.product !== "learning") {
+      const owner = text(row.owner_user_id);
+      if (owner && owner !== text(input.viewerUserId)) return false;
+      return true;
+    }
     const workspaceId = text(row.workspace_id);
     if (workspaceId && !workspaceIds.has(workspaceId)) return false;
     return true;

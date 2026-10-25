@@ -1,10 +1,8 @@
 /**
  * Durable workspace kind.
- * `standard` is a Learning workspace (map designer).
- * `knowledge_region` and `calibration` own Verification and Calibration flows.
+ * Live rows are `standard` (Learning map). parseWorkspaceKind still maps
+ * knowledge_region / calibration aliases for reads.
  * Agent/MCP create is Learning only; flows use POST /api/dashboard/flows.
- * Verification and Calibration share the no-map shell and differ on flows
- * and which flow embeddings Knowledge projects.
  */
 
 export const WORKSPACE_KIND_STANDARD = "standard";

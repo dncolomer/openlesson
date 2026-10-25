@@ -81,11 +81,17 @@ async function resolveBackend(): Promise<"supabase" | "memory"> {
   return store.backend;
 }
 
+function nullableId(value: unknown): string | null {
+  const id = String(value || "").trim();
+  return id || null;
+}
+
 function mapFlow(row: Record<string, unknown>): VerificationFlow {
   const topic = String(row.topic || "");
   return {
     id: String(row.id),
-    workspaceId: String(row.workspace_id),
+    workspaceId: String(row.workspace_id || ""),
+    ownerUserId: String(row.owner_user_id || ""),
     name: String(row.name || "").trim() || topic,
     topic,
     questions: normalizeQuestionPool(row.questions),
@@ -105,7 +111,7 @@ function mapResult(row: Record<string, unknown>): VerificationFlowResult {
   return {
     id: String(row.id),
     flowId: String(row.flow_id),
-    workspaceId: String(row.workspace_id),
+    workspaceId: String(row.workspace_id || ""),
     identity: String(row.identity || ""),
     source,
     questionId: row.question_id ? String(row.question_id) : null,
@@ -117,6 +123,7 @@ function mapResult(row: Record<string, unknown>): VerificationFlowResult {
 
 async function loadSupabaseState(filter: {
   workspaceId?: string;
+  ownerUserId?: string;
   flowId?: string;
   publicToken?: string;
 }): Promise<VerificationState> {
@@ -124,6 +131,7 @@ async function loadSupabaseState(filter: {
   let flowQuery = supabase.from("workspace_verification_flows").select("*");
   if (filter.flowId) flowQuery = flowQuery.eq("id", filter.flowId);
   else if (filter.publicToken) flowQuery = flowQuery.eq("public_token", filter.publicToken);
+  else if (filter.ownerUserId) flowQuery = flowQuery.eq("owner_user_id", filter.ownerUserId);
   else if (filter.workspaceId) flowQuery = flowQuery.eq("workspace_id", filter.workspaceId);
   const { data: flowRows, error } = await flowQuery;
   if (error) throw new Error(error.message);
@@ -152,7 +160,8 @@ async function persistCommand(
   if (command.type === "create" && value.flow) {
     const { error } = await writeVerificationFlow(supabase, "insert", value.flow.id, {
       id: value.flow.id,
-      workspace_id: value.flow.workspaceId,
+      workspace_id: nullableId(value.flow.workspaceId),
+      owner_user_id: nullableId(value.flow.ownerUserId),
       name: value.flow.name,
       topic: value.flow.topic,
       questions: value.flow.questions,
@@ -197,7 +206,7 @@ async function persistCommand(
     const { error } = await supabase.from("workspace_verification_results").insert({
       id: value.result.id,
       flow_id: value.result.flowId,
-      workspace_id: value.result.workspaceId,
+      workspace_id: nullableId(value.result.workspaceId),
       identity: value.result.identity,
       source: value.result.source,
       question_id: value.result.questionId,
@@ -211,7 +220,12 @@ async function persistCommand(
 
 async function stateFor(command: VerificationCommand): Promise<VerificationState> {
   if ((await resolveBackend()) === "memory") return verificationRepositoryGlobal().memory;
-  if (command.type === "create") return loadSupabaseState({ workspaceId: command.workspaceId });
+  if (command.type === "create") {
+    return loadSupabaseState({
+      ownerUserId: command.ownerUserId,
+      workspaceId: command.workspaceId,
+    });
+  }
   return loadSupabaseState({ flowId: command.flowId });
 }
 
@@ -248,7 +262,7 @@ async function writeVerificationFlow(
       ? supabase.from("workspace_verification_flows").insert(body)
       : supabase.from("workspace_verification_flows").update(body).eq("id", id);
   let current = row;
-  for (const optional of ["name", "action_catalog", "duration_minutes"] as const) {
+  for (const optional of ["name", "action_catalog", "duration_minutes", "owner_user_id"] as const) {
     const result = await run(current);
     if (!result.error) return result;
     if (!String(result.error.message).includes(optional) || !(optional in current)) return result;
@@ -291,6 +305,26 @@ export async function listVerificationFlowsForWorkspaceIds(
   return data.map((row) => presentFlow(mapFlow(row as Record<string, unknown>)));
 }
 
+export async function listVerificationFlowsForOwnerUserId(
+  ownerUserId: string,
+): Promise<VerificationFlow[]> {
+  const userId = String(ownerUserId || "").trim();
+  if (!userId) return [];
+  if ((await resolveBackend()) === "memory") {
+    return verificationRepositoryGlobal()
+      .memory.flows.filter((flow) => flow.ownerUserId === userId)
+      .map(presentFlow);
+  }
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("workspace_verification_flows")
+    .select("*")
+    .eq("owner_user_id", userId)
+    .order("created_at", { ascending: false });
+  if (error || !Array.isArray(data)) return [];
+  return data.map((row) => presentFlow(mapFlow(row as Record<string, unknown>)));
+}
+
 export async function listVerificationFlows(workspaceId: string): Promise<VerificationFlow[]> {
   if ((await resolveBackend()) === "memory") {
     return verificationRepositoryGlobal().memory.flows
@@ -308,6 +342,18 @@ export async function listVerificationResults(workspaceId: string): Promise<Veri
     );
   }
   const state = await loadSupabaseState({ workspaceId });
+  return state.results;
+}
+
+export async function listVerificationResultsForFlowId(
+  flowId: string,
+): Promise<VerificationFlowResult[]> {
+  const id = String(flowId || "").trim();
+  if (!id) return [];
+  if ((await resolveBackend()) === "memory") {
+    return verificationRepositoryGlobal().memory.results.filter((result) => result.flowId === id);
+  }
+  const state = await loadSupabaseState({ flowId: id });
   return state.results;
 }
 

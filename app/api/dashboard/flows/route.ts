@@ -14,70 +14,60 @@ import {
   acceptProductFlowPublish,
   emptyProductFlowDraft,
   parseProductFlowKind,
+  productFlowOwnerTitle,
   productFlowPagePath,
-  type ProductFlowKind,
 } from "@/lib/product-flow";
-import {
-  ensureProductFlowOwnerWorkspace,
-  listProductFlowWorkspaceIds,
-} from "@/lib/product-flow-owner";
 import { calibrationFlowPublicPath } from "@/lib/calibration-flow";
 import { verificationFlowPublicPath } from "@/lib/verification-flow";
 import {
-  listCalibrationFlowsForWorkspaceIds,
+  listCalibrationFlowsForOwnerUserId,
   runCalibrationCommand,
 } from "@/lib/calibration-flow-repository";
 import {
-  listVerificationFlowsForWorkspaceIds,
+  listVerificationFlowsForOwnerUserId,
   runVerificationCommand,
 } from "@/lib/verification-flow-repository";
 
 export const runtime = "nodejs";
 
-function presentVerification(
-  row: {
-    id: string;
-    name: string;
-    topic: string;
-    workspaceId: string;
-    createdAt: string;
-    publicToken: string;
-    questions: unknown;
-  },
-  workspaceTitle: string,
-): DashboardRecentFlow | null {
+function presentVerification(row: {
+  id: string;
+  name: string;
+  topic: string;
+  workspaceId: string;
+  createdAt: string;
+  publicToken: string;
+  questions: unknown;
+}): DashboardRecentFlow | null {
   return presentDashboardRecentFlow({
     id: row.id,
     kind: "verify",
     name: row.name,
     title: row.topic,
     workspaceId: row.workspaceId,
-    workspaceTitle,
+    workspaceTitle: productFlowOwnerTitle("verification"),
     createdAt: row.createdAt,
     publicToken: row.publicToken,
     questionCount: questionCountFromUnknown(row.questions),
   });
 }
 
-function presentCalibration(
-  row: {
-    id: string;
-    name: string;
-    goal: string;
-    workspaceId: string;
-    createdAt: string;
-    publicToken: string;
-    questions: unknown;
-  },
-  workspaceTitle: string,
-): DashboardRecentFlow | null {
+function presentCalibration(row: {
+  id: string;
+  name: string;
+  goal: string;
+  workspaceId: string;
+  createdAt: string;
+  publicToken: string;
+  questions: unknown;
+}): DashboardRecentFlow | null {
   return presentDashboardRecentFlow({
     id: row.id,
     kind: "calibrate",
     name: row.name,
     title: row.goal,
     workspaceId: row.workspaceId,
-    workspaceTitle,
+    workspaceTitle: productFlowOwnerTitle("calibration"),
     createdAt: row.createdAt,
     publicToken: row.publicToken,
     questionCount: questionCountFromUnknown(row.questions),
@@ -91,33 +81,21 @@ export async function GET(req: NextRequest) {
     const kind = parseProductFlowKind(new URL(req.url).searchParams.get("kind"));
     if (!kind) return jsonError(400, "kind must be verification or calibration");
 
-    const workspaceIds = await listProductFlowWorkspaceIds(auth.supabase, auth.user.id, kind);
-    const { data: workspaces } = await auth.supabase
-      .from("workspaces")
-      .select("id, title, root_topic")
-      .in("id", workspaceIds.length ? workspaceIds : ["__none__"]);
-    const titles = new Map(
-      (workspaces || []).map((row) => [
-        String(row.id),
-        String(row.title || row.root_topic || "Workspace"),
-      ]),
-    );
-
     if (kind === "calibration") {
-      const flows = await listCalibrationFlowsForWorkspaceIds(workspaceIds);
+      const flows = await listCalibrationFlowsForOwnerUserId(auth.user.id);
       const listed = sortDashboardRecentFlows(
         flows
-          .map((flow) => presentCalibration(flow, titles.get(flow.workspaceId) || "Workspace"))
+          .map((flow) => presentCalibration(flow))
           .filter((row): row is DashboardRecentFlow => Boolean(row)),
         100,
       );
       return NextResponse.json({ kind, flows: listed });
     }
 
-    const flows = await listVerificationFlowsForWorkspaceIds(workspaceIds);
+    const flows = await listVerificationFlowsForOwnerUserId(auth.user.id);
     const listed = sortDashboardRecentFlows(
       flows
-        .map((flow) => presentVerification(flow, titles.get(flow.workspaceId) || "Workspace"))
+        .map((flow) => presentVerification(flow))
         .filter((row): row is DashboardRecentFlow => Boolean(row)),
       100,
     );
@@ -147,13 +125,10 @@ export async function POST(req: NextRequest) {
     const accepted = acceptProductFlowPublish(draft);
     if (!accepted.ok) return jsonError(400, accepted.reason);
 
-    const owner = await ensureProductFlowOwnerWorkspace(auth.supabase, auth.user.id, kind);
-    if ("error" in owner) return jsonError(500, owner.error);
-
     if (kind === "calibration") {
       const created = await runCalibrationCommand({
         type: "create",
-        workspaceId: owner.id,
+        ownerUserId: auth.user.id,
         name: accepted.name,
         goal: accepted.goal,
         questions: accepted.questions,
@@ -176,7 +151,7 @@ export async function POST(req: NextRequest) {
 
     const created = await runVerificationCommand({
       type: "create",
-      workspaceId: owner.id,
+      ownerUserId: auth.user.id,
       name: accepted.name,
       topic: accepted.topic,
       questions: accepted.questions,

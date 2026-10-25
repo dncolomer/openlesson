@@ -1,14 +1,10 @@
 /**
  * Owner dashboard Knowledge regions: overlay models for Verification
- * and Calibration flows, listed without a workspace type.
+ * and Calibration flows, listed by owner_user_id.
  */
 
 import { FLOW_EMBEDDING_PATH_TEXT_MODEL_ID } from "@/lib/flow-embedding";
-import { productRegionNewPath, productRegionPagePath } from "@/lib/product-flow";
-import {
-  workspaceProductShell,
-  type WorkspaceProductShell,
-} from "@/lib/workspace-kind";
+import { productFlowOwnerTitle, productRegionNewPath, productRegionPagePath } from "@/lib/product-flow";
 
 export const DASHBOARD_KNOWLEDGE_REGIONS_PATH = "/api/dashboard/knowledge-regions";
 
@@ -50,44 +46,31 @@ export function dashboardKnowledgeRegionCreateHref(kind: DashboardKnowledgeRegio
 }
 
 export function presentDashboardKnowledgeRegions(
-  workspaces: readonly {
-    id?: unknown;
-    title?: unknown;
-    root_topic?: unknown;
-    workspace_kind?: unknown;
-  }[],
   regions: readonly {
     id?: unknown;
     name?: unknown;
     description?: unknown;
     workspace_id?: unknown;
+    owner_user_id?: unknown;
+    product?: unknown;
     subject_count?: unknown;
     created_at?: unknown;
     embedding_model_id?: unknown;
   }[],
   kind: DashboardKnowledgeRegionKind,
+  ownerUserId: string,
 ): DashboardKnowledgeRegion[] {
-  const shell: WorkspaceProductShell = kind;
-  const titleById = new Map<string, string>();
-  for (const workspace of workspaces) {
-    const id = String(workspace.id || "").trim();
-    if (!id) continue;
-    if (workspaceProductShell(workspace.workspace_kind) !== shell) continue;
-    titleById.set(
-      id,
-      String(workspace.title || workspace.root_topic || "Workspace").trim() || "Workspace",
-    );
-  }
-
+  const owner = String(ownerUserId || "").trim();
+  if (!owner) return [];
+  const title = productFlowOwnerTitle(kind);
   const out: DashboardKnowledgeRegion[] = [];
   for (const region of regions) {
     const id = String(region.id || "").trim();
-    const workspaceId = String(region.workspace_id || "").trim();
     const name = String(region.name || "").trim();
-    if (!id || !workspaceId || !name) continue;
+    if (!id || !name) continue;
+    if (String(region.owner_user_id || "").trim() !== owner) continue;
+    if (String(region.product || "") !== kind) continue;
     if (String(region.embedding_model_id || "") === FLOW_EMBEDDING_PATH_TEXT_MODEL_ID) continue;
-    const workspaceTitle = titleById.get(workspaceId);
-    if (!workspaceTitle) continue;
     const subjectCount = Number(region.subject_count);
     out.push({
       id,
@@ -96,8 +79,8 @@ export function presentDashboardKnowledgeRegions(
         typeof region.description === "string" && region.description.trim()
           ? region.description.trim()
           : null,
-      workspaceId,
-      workspaceTitle,
+      workspaceId: String(region.workspace_id || "").trim(),
+      workspaceTitle: title,
       subjectCount: Number.isFinite(subjectCount) ? subjectCount : 0,
       createdAt: String(region.created_at || ""),
     });

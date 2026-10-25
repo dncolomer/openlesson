@@ -39,6 +39,7 @@ export type VerificationQuestion = {
 export type VerificationFlow = {
   id: string;
   workspaceId: string;
+  ownerUserId?: string;
   name: string;
   topic: string;
   questions: VerificationQuestion[];
@@ -489,10 +490,21 @@ export function createVerificationPublicToken(): string {
   return Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("");
 }
 
+function commandOwnsFlow(
+  flow: { workspaceId: string; ownerUserId?: string },
+  command: { workspaceId?: string | null; ownerUserId?: string | null },
+): boolean {
+  const owner = String(command.ownerUserId || "").trim();
+  if (owner) return String(flow.ownerUserId || "").trim() === owner;
+  const workspaceId = String(command.workspaceId || "").trim();
+  return Boolean(workspaceId) && flow.workspaceId === workspaceId;
+}
+
 export type VerificationCommand =
   | {
       type: "create";
-      workspaceId: string;
+      workspaceId?: string;
+      ownerUserId?: string;
       name?: string;
       topic: string;
       questions: unknown;
@@ -503,7 +515,8 @@ export type VerificationCommand =
     }
   | {
       type: "update";
-      workspaceId: string;
+      workspaceId?: string;
+      ownerUserId?: string;
       flowId: string;
       name?: string;
       topic?: string;
@@ -511,7 +524,7 @@ export type VerificationCommand =
       durationMinutes?: number;
       actionCatalog?: number;
     }
-  | { type: "remove"; workspaceId: string; flowId: string }
+  | { type: "remove"; workspaceId?: string; ownerUserId?: string; flowId: string }
   | { type: "claim"; flowId: string; identity: string }
   | {
       type: "addResult";
@@ -550,7 +563,8 @@ export function applyVerificationCommand(
     const stamp = nowIso();
     const flow: VerificationFlow = {
       id: command.id || makeId("vf"),
-      workspaceId: command.workspaceId,
+      workspaceId: String(command.workspaceId || "").trim(),
+      ownerUserId: String(command.ownerUserId || "").trim(),
       name: normalizeFlowName(command.name, topic),
       topic,
       questions: normalizeQuestionPool(command.questions),
@@ -566,7 +580,7 @@ export function applyVerificationCommand(
   if (command.type === "update") {
     const current = state.flows.find((flow) => flow.id === command.flowId);
     if (!current) return { ok: false, reason: "not_found", state };
-    if (!command.workspaceId || current.workspaceId !== command.workspaceId) {
+    if (!commandOwnsFlow(current, command)) {
       return { ok: false, reason: "wrong_workspace", state };
     }
     const topic = command.topic === undefined ? current.topic : command.topic.trim();
@@ -605,7 +619,7 @@ export function applyVerificationCommand(
   if (command.type === "remove") {
     const current = state.flows.find((flow) => flow.id === command.flowId);
     if (!current) return { ok: false, reason: "not_found", state };
-    if (!command.workspaceId || current.workspaceId !== command.workspaceId) {
+    if (!commandOwnsFlow(current, command)) {
       return { ok: false, reason: "wrong_workspace", state };
     }
     return {

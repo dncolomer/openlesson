@@ -562,6 +562,7 @@ describe("product Data Studio chrome", () => {
     const api = readFileSync(join(ROOT, "app/api/dashboard/data-studio/route.ts"), "utf8");
     expect(api).toContain("presentDashboardDataStudio");
     expect(api).toContain("listFlowEmbeddingsForWorkspaces");
+    expect(api).toContain("listFlowEmbeddingsForOwner");
     expect(api).not.toContain("denyWorkspaceFeatureById");
   });
 });

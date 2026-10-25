@@ -1,7 +1,7 @@
 /**
  * First-class Verification and Calibration Flows and Knowledge regions.
  * Dashboard lists these objects; a workspace is Learning only.
- * Internal owner containers may still store workspace_id.
+ * Flow rows store owner_user_id. workspace_id is optional.
  */
 
 import { parseLearningModelSize } from "@/lib/learning-model";
@@ -83,6 +83,7 @@ export function productRegionStudioPath(kind: ProductFlowKind, regionId: string)
   return productRegionPagePath(kind, regionId);
 }
 
+/** Historical workspace_kind aliases. Live workspace rows are standard. */
 export function productFlowOwnerWorkspaceKind(kind: ProductFlowKind): WorkspaceKind {
   return kind === "calibration" ? WORKSPACE_KIND_CALIBRATION : WORKSPACE_KIND_KNOWLEDGE_REGION;
 }

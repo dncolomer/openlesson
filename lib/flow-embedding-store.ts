@@ -21,6 +21,7 @@ const FLOW_EMBEDDING_GLOBAL = "__openlessonFlowEmbeddingStore";
 export type StoredFlowEmbedding = {
   id: string;
   workspace_id: string;
+  owner_user_id?: string;
   flow_kind: FlowKind;
   flow_id: string | null;
   run_id: string | null;
@@ -34,7 +35,8 @@ export type StoredFlowEmbedding = {
 };
 
 export type PersistFlowEmbeddingInput = {
-  workspaceId: string;
+  workspaceId?: string;
+  ownerUserId?: string;
   flowKind: FlowKind | string;
   flowId?: string | null;
   runId?: string | null;
@@ -111,7 +113,8 @@ function mapRow(row: Record<string, unknown>): StoredFlowEmbedding | null {
   const kind = raw.flowKind;
   return {
     id: String(row.id),
-    workspace_id: String(row.workspace_id),
+    workspace_id: String(row.workspace_id || ""),
+    owner_user_id: row.owner_user_id ? String(row.owner_user_id) : "",
     flow_kind: kind,
     flow_id: row.flow_id ? String(row.flow_id) : null,
     run_id: row.run_id ? String(row.run_id) : null,
@@ -147,7 +150,8 @@ export async function persistCompletedFlowEmbedding(
   input: PersistFlowEmbeddingInput,
 ): Promise<StoredFlowEmbedding> {
   const workspaceId = text(input.workspaceId);
-  if (!workspaceId) throw new Error("workspace_id is required");
+  const ownerUserId = text(input.ownerUserId);
+  if (!workspaceId && !ownerUserId) throw new Error("owner_user_id is required");
   const recovered = recoverFlowEmbeddingRaw(input.raw);
   const record = recovered
     ? embedFlowOutput(recovered)
@@ -160,6 +164,7 @@ export async function persistCompletedFlowEmbedding(
   const stored: StoredFlowEmbedding = {
     id: text(input.id) || makeId(),
     workspace_id: workspaceId,
+    owner_user_id: ownerUserId,
     flow_kind: record.raw.flowKind,
     flow_id: text(input.flowId) || null,
     run_id: text(input.runId) || null,
@@ -178,7 +183,8 @@ export async function persistCompletedFlowEmbedding(
   const supabase = createAdminClient();
   const { error } = await supabase.from("workspace_flow_embeddings").insert({
     id: stored.id,
-    workspace_id: stored.workspace_id,
+    workspace_id: stored.workspace_id || null,
+    owner_user_id: stored.owner_user_id || null,
     flow_kind: stored.flow_kind,
     flow_id: stored.flow_id,
     run_id: stored.run_id,
@@ -204,6 +210,41 @@ export async function listFlowEmbeddings(input: {
     flowKind: input.flowKind,
     flowId: input.flowId,
   });
+}
+
+export async function listFlowEmbeddingsForOwner(input: {
+  ownerUserId: string;
+  flowKind?: FlowKind | string | null;
+  flowId?: string | null;
+}): Promise<StoredFlowEmbedding[]> {
+  const ownerUserId = text(input.ownerUserId);
+  if (!ownerUserId) return [];
+  const flowKind = text(input.flowKind);
+  const flowId = text(input.flowId);
+  if ((await resolveBackend()) === "memory") {
+    return storeGlobal()
+      .memory.filter((row) => {
+        if (text(row.owner_user_id) !== ownerUserId) return false;
+        if (flowKind && row.flow_kind !== flowKind) return false;
+        if (flowId && row.flow_id !== flowId) return false;
+        return true;
+      })
+      .map(presentFlowEmbedding);
+  }
+  const supabase = createAdminClient();
+  let query = supabase
+    .from("workspace_flow_embeddings")
+    .select("*")
+    .eq("owner_user_id", ownerUserId)
+    .order("created_at", { ascending: false });
+  if (flowKind) query = query.eq("flow_kind", flowKind);
+  if (flowId) query = query.eq("flow_id", flowId);
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  return (data || [])
+    .map((row) => mapRow(row as Record<string, unknown>))
+    .filter((row): row is StoredFlowEmbedding => !!row)
+    .map(presentFlowEmbedding);
 }
 
 export async function listFlowEmbeddingsForWorkspaces(input: {

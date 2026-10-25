@@ -10,7 +10,10 @@ import {
   presentDashboardDataStudio,
   type DataStudioEmbeddingRow,
 } from "@/lib/data-studio-view";
-import { listFlowEmbeddingsForWorkspaces } from "@/lib/flow-embedding-store";
+import {
+  listFlowEmbeddingsForOwner,
+  listFlowEmbeddingsForWorkspaces,
+} from "@/lib/flow-embedding-store";
 import type { RegionCentroidInput } from "@/lib/knowledge-config";
 import { regionMatchesFlowEmbeddingChannel } from "@/lib/flow-embedding-view";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -60,17 +63,24 @@ export async function GET(req: NextRequest) {
       regions: [],
     });
     const ids = presentedEmpty.workspaces.map((row) => row.id);
-    if (ids.length === 0) {
+    if (product === "learning" && ids.length === 0) {
       return NextResponse.json(presentedEmpty);
     }
 
-    const stored = await listFlowEmbeddingsForWorkspaces({
-      workspaceIds: ids,
-      flowKind: presentedEmpty.flowKind,
-    });
+    const stored =
+      product === "learning"
+        ? await listFlowEmbeddingsForWorkspaces({
+            workspaceIds: ids,
+            flowKind: presentedEmpty.flowKind,
+          })
+        : await listFlowEmbeddingsForOwner({
+            ownerUserId: auth.user.id,
+            flowKind: presentedEmpty.flowKind,
+          });
     const embeddings: DataStudioEmbeddingRow[] = stored.map((row) => ({
       id: row.id,
       workspace_id: row.workspace_id,
+      owner_user_id: row.owner_user_id,
       flow_kind: row.flow_kind,
       flow_id: row.flow_id,
       run_id: row.run_id,
@@ -88,9 +98,10 @@ export async function GET(req: NextRequest) {
       const { data: regionRows } = await admin
         .from("custom_verification_models")
         .select(
-          "id, name, centroid, mean_radius, cosine_threshold, embedding_model_id, workspace_id",
+          "id, name, centroid, mean_radius, cosine_threshold, embedding_model_id, workspace_id, owner_user_id, product",
         )
-        .in("workspace_id", ids);
+        .eq("owner_user_id", auth.user.id)
+        .eq("product", product);
       for (const row of regionRows || []) {
         const centroid = Array.isArray(row.centroid)
           ? row.centroid.filter((n): n is number => typeof n === "number" && Number.isFinite(n))

@@ -21,6 +21,7 @@ import { acceptParticipantIdentity } from "@/lib/verification-flow";
 export type CalibrationFlow = {
   id: string;
   workspaceId: string;
+  ownerUserId?: string;
   name: string;
   goal: string;
   questions: CalibrateQuestion[];
@@ -102,10 +103,21 @@ export function acceptCalibrationDraft(input: {
   return { ok: true, goal, questions };
 }
 
+function commandOwnsFlow(
+  flow: { workspaceId: string; ownerUserId?: string },
+  command: { workspaceId?: string | null; ownerUserId?: string | null },
+): boolean {
+  const owner = String(command.ownerUserId || "").trim();
+  if (owner) return String(flow.ownerUserId || "").trim() === owner;
+  const workspaceId = String(command.workspaceId || "").trim();
+  return Boolean(workspaceId) && flow.workspaceId === workspaceId;
+}
+
 export type CalibrationCommand =
   | {
       type: "create";
-      workspaceId: string;
+      workspaceId?: string;
+      ownerUserId?: string;
       name?: string;
       goal: string;
       questions: unknown;
@@ -116,7 +128,8 @@ export type CalibrationCommand =
     }
   | {
       type: "update";
-      workspaceId: string;
+      workspaceId?: string;
+      ownerUserId?: string;
       flowId: string;
       name?: string;
       goal?: string;
@@ -124,7 +137,7 @@ export type CalibrationCommand =
       durationMinutes?: number;
       actionCatalog?: number;
     }
-  | { type: "remove"; workspaceId: string; flowId: string }
+  | { type: "remove"; workspaceId?: string; ownerUserId?: string; flowId: string }
   | { type: "claim"; flowId: string; identity: string }
   | {
       type: "addProof";
@@ -196,7 +209,8 @@ export function applyCalibrationCommand(
     const stamp = nowIso();
     const flow: CalibrationFlow = {
       id: command.id || makeId(),
-      workspaceId: command.workspaceId,
+      workspaceId: String(command.workspaceId || "").trim(),
+      ownerUserId: String(command.ownerUserId || "").trim(),
       name: normalizeFlowName(command.name, draft.goal),
       goal: draft.goal,
       questions: draft.questions,
@@ -212,7 +226,7 @@ export function applyCalibrationCommand(
   if (command.type === "update") {
     const current = state.flows.find((flow) => flow.id === command.flowId);
     if (!current) return { ok: false, reason: "not_found", state };
-    if (!command.workspaceId || current.workspaceId !== command.workspaceId) {
+    if (!commandOwnsFlow(current, command)) {
       return { ok: false, reason: "wrong_workspace", state };
     }
     const goal = command.goal === undefined ? current.goal : command.goal.trim();
@@ -251,7 +265,7 @@ export function applyCalibrationCommand(
   if (command.type === "remove") {
     const current = state.flows.find((flow) => flow.id === command.flowId);
     if (!current) return { ok: false, reason: "not_found", state };
-    if (!command.workspaceId || current.workspaceId !== command.workspaceId) {
+    if (!commandOwnsFlow(current, command)) {
       return { ok: false, reason: "wrong_workspace", state };
     }
     return {

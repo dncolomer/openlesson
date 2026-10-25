@@ -9,7 +9,6 @@ import {
   parseDashboardKnowledgeRegionKind,
   presentDashboardKnowledgeRegions,
 } from "@/lib/dashboard-knowledge-regions";
-import { workspaceProductShell } from "@/lib/workspace-kind";
 
 export const runtime = "nodejs";
 
@@ -25,30 +24,22 @@ export async function GET(
       req.nextUrl.searchParams.get("kind"),
     );
 
-    const { data: workspaces } = await auth.supabase
-      .from("workspaces")
-      .select("id, title, root_topic, workspace_kind")
-      .eq("user_id", auth.user.id)
-      .neq("status", "archived");
-    const listed = Array.isArray(workspaces) ? workspaces : [];
-    const ids = listed.map((row) => String(row.id || "")).filter(Boolean);
-    if (ids.length === 0) return jsonError(404, "Region not found");
-
     const { data: row, error } = await auth.supabase
       .from("custom_verification_models")
-      .select("id, workspace_id, name, description, subject_count, created_at, embedding_model_id")
+      .select(
+        "id, workspace_id, owner_user_id, product, name, description, subject_count, created_at, embedding_model_id",
+      )
       .eq("id", id)
+      .eq("owner_user_id", auth.user.id)
       .maybeSingle();
     if (error || !row) return jsonError(404, "Region not found");
 
-    const workspace = listed.find((item) => String(item.id) === String(row.workspace_id));
-    if (!workspace) return jsonError(404, "Region not found");
     const kind =
       requested ||
-      (workspaceProductShell(workspace.workspace_kind) === "calibration"
-        ? "calibration"
+      (row.product === "calibration" || row.product === "verification"
+        ? row.product
         : "verification");
-    const presented = presentDashboardKnowledgeRegions(listed, [row], kind)[0];
+    const presented = presentDashboardKnowledgeRegions([row], kind, auth.user.id)[0];
     if (!presented) return jsonError(404, "Region not found");
     return NextResponse.json({
       kind,

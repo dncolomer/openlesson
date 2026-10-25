@@ -203,6 +203,15 @@ describe("dashboard home summaries", () => {
     expect(calibrate?.workspacePath).toBe("/calibration/flows/cf1");
     expect(calibrate?.flowPath).toBe(productFlowPagePath("calibration", "cf1"));
     expect(presentDashboardRecentFlow({ id: "", kind: "verify", workspaceId: "ws" })).toBeNull();
+    const ownerScoped = presentDashboardRecentFlow({
+      id: "vf-owner",
+      kind: "verify",
+      title: "Owned",
+      publicToken: "otok",
+    });
+    expect(ownerScoped?.id).toBe("vf-owner");
+    expect(ownerScoped?.publicPath).toBe("/v/otok");
+    expect(ownerScoped?.workspaceId).toBe("");
   });
 
   it("sorts flows by recency and counts questions from arrays or JSON", () => {

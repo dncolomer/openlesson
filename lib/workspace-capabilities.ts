@@ -3,10 +3,9 @@
  *
  * Learning workspace (stored kind `standard`): a designer builds a map and
  * people in the organisation play it. Selling is AYCL only.
- * Verification flows (stored kind `knowledge_region`): goals, verification
- * flows, proof of work, knowledge regions, and analysis.
- * Calibration flows (stored kind `calibration`): same capabilities as
- * Verification with calibration flows and uncertainty embeddings.
+ * Verification and Calibration are first-class flows (owner_user_id).
+ * parseWorkspaceKind still maps historical knowledge_region / calibration
+ * aliases when reading leftover payloads.
  *
  * Knowledge Portal is not a feature of either product.
  */

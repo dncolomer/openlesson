@@ -35,6 +35,7 @@ export async function POST(
   if (stored.proof && flow) {
     await persistCompletedFlowEmbedding({
       workspaceId: stored.proof.workspaceId,
+      ownerUserId: flow.ownerUserId,
       flowKind: "calibrate",
       flowId: stored.proof.flowId,
       runId: stored.proof.id,

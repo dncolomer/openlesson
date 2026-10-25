@@ -1,6 +1,7 @@
 /**
  * Server gate for workspace-scoped routes. UI hiding is not the check.
  * A missing workspace returns null so the route can 404 on its own.
+ * Live workspace rows are standard; aliases still parse for reads.
  */
 
 import { NextResponse } from "next/server";

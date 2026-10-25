@@ -13,7 +13,7 @@ export const UNCERTAIN_SYSTEMS_SCOPE = {
   mission:
     "Verify learning and measure readiness-to-perform using real product proof of work — not quizzes in isolation.",
   pillars: [
-    "Workspace management — create and edit Learning and Verification workspaces, the map, workspace settings, and account settings",
+    "Workspace management — create and edit a Learning workspace, the map, workspace settings, and account settings",
     "Headless proof of work — start_session → upload_proof_of_work → end_session. The server prepares the answers-model tree, infers the path, and enforces the clock",
     "Predictive interruptions (expected free energy) — every response includes interruption (object or null) with delay_ms and intervention hints",
   ],
@@ -206,7 +206,7 @@ export function recommendIntegrationActions(options: {
       priority: 2,
       mcp_tool: "list_blocks",
       rest_equivalent: `GET ${WORKSPACE_API_BASE}/{id}/blocks`,
-      reason: "Read the map / contents. Both Learning and Verification workspaces share this API.",
+      reason: "Read the map / contents. Learning workspaces share this API.",
     });
   }
 
@@ -337,7 +337,7 @@ Docs: ${base}${UNCERTAIN_SYSTEMS_SCOPE.docs.api_reference} · ${base}${UNCERTAIN
 Progress is **continuous**, not one-time setup. ChatGPT, Claude, or any MCP client authorizes with a Bearer key and runs Calibrate, Learn, or Verify headless.
 
 ## Recommended loop
-1. **create_workspace** or **get_workspace** — Learning or Verification workspace, map, settings
+1. **create_workspace** or **get_workspace** — Learning workspace, map, settings
 2. **start_session** / POST ${POW_API_BASE}/workspaces/{workspace_id}/sessions — \`flow_kind\` calibrate | learn | verify. The server prepares the answers-model tree and starts the clock.
 3. **upload_proof_of_work** / POST ${POW_API_BASE}/workspaces/{workspace_id}/sessions/{session_id}/proof-of-work — after each meaningful action (repeat). The server infers the path on the prepared tree (catalogs 4 / 8 / 16). Expired sessions reject further work.
 4. **end_session** / POST ${POW_API_BASE}/workspaces/{workspace_id}/sessions/{session_id}/end — score the inferred path and persist the flow embedding

@@ -765,6 +765,10 @@ describe("verification workspace shell gates", () => {
     expect(page).not.toContain('data-create-mode="knowledge_region"');
     expect(page).not.toContain('data-create-mode="calibration"');
     expect(page).not.toContain("Calibration workspace");
+    const workspacePage = read("app/workspace/[id]/page.tsx");
+    expect(workspacePage).toContain("noMapWorkspaceDashboardHref");
+    expect(workspacePage).toContain("workspace_kind");
+    expect(workspacePage).toContain("redirect(href)");
     expect(read("app/verification/flows/new/page.tsx")).toContain("ProductFlowWizard");
     expect(read("components/product-flow/product-surface.tsx")).toContain("DashboardSidebar");
     expect(read("components/product-flow/product-surface.tsx")).not.toContain("Navbar");

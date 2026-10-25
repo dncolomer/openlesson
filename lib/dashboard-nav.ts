@@ -244,7 +244,7 @@ export function dashboardProductLabel(tab: DashboardProductTab): string {
 
 export function dashboardCreateLabel(tab: DashboardProductTab): string {
   if (tab === "learning") return "Create a Learning Map →";
-  return `Create ${dashboardProductLabel(tab)} workspace →`;
+  return `Create ${dashboardProductLabel(tab)} flow →`;
 }
 
 export function dashboardFrameLabel(tab: DashboardTab): string {

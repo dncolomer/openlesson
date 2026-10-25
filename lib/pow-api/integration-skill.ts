@@ -196,14 +196,14 @@ ${blockLines || "  none"}`;
 ${blockTable || "  No blocks yet."}`;
 }
 
-/** Integration UI copy for a Verification workspace. */
+/** Integration UI copy for a Verification flow. */
 export function knowledgeRegionIntegrationCopy(): {
   skillDescription: string;
   mcpNote: string;
 } {
   return {
     skillDescription:
-      "Download a skill.md for this Verification workspace. Agents use workspace management (/api/v3/workspaces) and the headless proof-of-work API (/api/v3/pow) to create, edit, and run Calibrate, Learn, and Verify sessions.",
+      "Download a skill.md for this Verification flow. Agents use workspace management (/api/v3/workspaces) and the headless proof-of-work API (/api/v3/pow) to create, edit, and run Calibrate, Learn, and Verify sessions.",
     mcpNote:
       "MCP JSON-RPC at POST /api/mcp with Bearer auth. Two APIs: workspace management and headless proof-of-work. ChatGPT or Claude authorizes and runs flows for the user.",
   };
@@ -340,7 +340,7 @@ Return ONLY the markdown document. No JSON wrapper. No code fences around the en
     ? "create or get workspace → start_session → upload_proof_of_work through the clock → end_session → regenerate skill."
     : "create or get workspace → edit map/settings → start_session → upload_proof_of_work → end_session → regenerate skill.";
   const purposeLine = knowledgeRegion
-    ? "1. Purpose — what this partner agent verifies **given the current Verification workspace status** and how workspace management + headless Calibrate/Learn/Verify fit the workflow."
+    ? "1. Purpose — what this partner agent verifies **given the current Verification flow status** and how workspace management + headless Calibrate/Learn/Verify fit the workflow."
     : "1. Purpose — what this partner agent verifies **given the current Learning workspace status** and how workspace management + headless Calibrate/Learn/Verify fit the workflow.";
 
   return `Generate a custom integration skill.md document for "${request.integration_name}" integrating with Uncertain Systems Proof-of-Work API.

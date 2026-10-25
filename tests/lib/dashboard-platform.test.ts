@@ -85,7 +85,8 @@ describe("dashboard nav", () => {
     expect(dashboardCreateHref("calibration")).toBe(productFlowNewPath("calibration"));
     expect(dashboardProductLabel("verification")).toBe("Verification");
     expect(dashboardCreateLabel("learning")).toBe("Create a Learning Map →");
-    expect(dashboardCreateLabel("verification")).toBe("Create Verification workspace →");
+    expect(dashboardCreateLabel("verification")).toBe("Create Verification flow →");
+    expect(dashboardCreateLabel("calibration")).toBe("Create Calibration flow →");
     expect(dashboardFrameLabel("help")).toBe("How it works");
     expect(dashboardFrameLabel("calibration")).toBe("Calibration");
     expect(dashboardFrameLabel("home")).toBe("Home");
@@ -362,6 +363,13 @@ describe("dashboard platform surface", () => {
     expect(readRepo("app/calibration/flows/[id]/page.tsx")).toContain("ProductFlowPage");
     expect(readRepo("app/workspace/new/page.tsx")).not.toContain("Verification workspace");
     expect(readRepo("app/workspace/new/page.tsx")).not.toContain("Calibration workspace");
+    const plansTab = readRepo("components/dashboard/dashboard-plans-tab.tsx");
+    expect(plansTab).not.toContain("Verification workspace");
+    expect(plansTab).not.toContain("Calibration workspace");
+    expect(plansTab).toContain("Browse Verification flows.");
+    expect(plansTab).toContain("Browse Calibration flows.");
+    expect(plansTab).toContain("No learning workspaces yet");
+    expect(plansTab).toContain("No ${productLabel.toLowerCase()} flows yet");
     expect(readRepo("app/workspace/new/page.tsx")).not.toContain("mode=knowledge_region");
     expect(readRepo("app/workspace/new/page.tsx")).not.toContain('data-create-mode="knowledge_region"');
     expect(readRepo("app/workspace/new/page.tsx")).not.toContain('data-create-mode="calibration"');

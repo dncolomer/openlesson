@@ -58,7 +58,7 @@ const SCHEMAS: Record<string, Omit<McpTool, "name">> = {
   },
   create_workspace: {
     description:
-      "Create a Learning or Verification workspace. Pass kind=learning|verification, optional title, settings, map blocks, or initial_prompt. REST: POST /api/v3/workspaces.",
+      "Create a Learning workspace. Pass kind=learning, optional title, settings, map blocks, or initial_prompt. REST: POST /api/v3/workspaces.",
     inputSchema: {
       type: "object",
       properties: {

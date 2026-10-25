@@ -39,7 +39,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     path: "/api/v3/workspaces",
     scope: "workspaces:write",
     summary:
-      "Create a Learning or Verification workspace, including an optional map and settings. MCP: create_workspace.",
+      "Create a Learning workspace, including an optional map and settings. MCP: create_workspace.",
     status: "201 Created",
     requestBody: [
       { name: "kind", type: "string", description: "learning | verification" },
@@ -414,8 +414,8 @@ export default function AgenticV2DocsPage() {
           </h1>
           <p className="mt-4 max-w-3xl text-sm leading-relaxed text-neutral-400 sm:text-base">
             Two public agent APIs: workspace management (<code className="text-neutral-300">/api/v3/workspaces</code>) and
-            headless proof-of-work (<code className="text-neutral-300">/api/v3/pow</code>). Create Learning or Verification
-            workspaces, then start, run, and end Calibrate, Learn, and Verify sessions headless. Snapshot and Stash are
+            headless proof-of-work (<code className="text-neutral-300">/api/v3/pow</code>). Create a Learning
+            workspace, then start, run, and end Calibrate, Learn, and Verify sessions headless. Snapshot and Stash are
             product-UI routes. Bearer endpoints require active{" "}
             <code className="text-neutral-300">api_metered</code>.
           </p>

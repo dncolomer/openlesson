@@ -78,11 +78,13 @@ export function DashboardPlansTab({
     : productTab === "learning"
       ? "Browse Learning workspaces and start a new map."
       : productTab === "verification"
-        ? "Browse Verification workspaces and the verification flows they host."
-        : "Browse Calibration workspaces and the calibration flows they host.";
+        ? "Browse Verification flows."
+        : "Browse Calibration flows.";
   const emptyTitle = isShop
     ? "No listings yet"
-    : `No ${productLabel.toLowerCase()} workspaces yet`;
+    : productTab === "learning"
+      ? "No learning workspaces yet"
+      : `No ${productLabel.toLowerCase()} flows yet`;
   const createLabel = dashboardCreateLabel(productTab);
   return (
           <div

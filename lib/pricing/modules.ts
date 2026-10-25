@@ -270,8 +270,8 @@ export function planFeatureList(plan: string | null | undefined): string[] {
   const features: string[] = [];
   if (modules.includes("learn")) features.push("Learning workspaces and Learn sessions");
   if (modules.includes("author")) features.push("Course authoring and Your Shop (All You Can Learn listings)");
-  if (modules.includes("verify")) features.push("Verification workspaces and knowledge regions");
-  if (modules.includes("calibrate")) features.push("Calibration workspaces and knowledge regions");
+  if (modules.includes("verify")) features.push("Verification flows and knowledge regions");
+  if (modules.includes("calibrate")) features.push("Calibration flows and knowledge regions");
   if (plan === "trial") features.unshift("All modules for 3 days");
   if (plan === "api_metered") {
     features.push("Proof-of-Work API keys + MCP");
@@ -347,9 +347,9 @@ export const PUBLIC_SKU_CARDS: readonly PublicSkuCard[] = [
     name: "Verification",
     priceLabel: formatUsdFromCents(VERIFY_MONTHLY_PRICE_CENTS),
     cadence: "/ month",
-    body: "Verification workspaces and knowledge regions. Measure held knowledge.",
+    body: "Verification flows and knowledge regions. Measure held knowledge.",
     features: [
-      "Verification workspaces",
+      "Verification flows",
       "Knowledge regions",
       "Deep Project and live runs on this module",
     ],
@@ -361,9 +361,9 @@ export const PUBLIC_SKU_CARDS: readonly PublicSkuCard[] = [
     name: "Calibration",
     priceLabel: formatUsdFromCents(CALIBRATE_MONTHLY_PRICE_CENTS),
     cadence: "/ month",
-    body: "Calibration workspaces and knowledge regions. Write the opening picture of a domain.",
+    body: "Calibration flows and knowledge regions. Write the opening picture of a domain.",
     features: [
-      "Calibration workspaces",
+      "Calibration flows",
       "Knowledge regions",
       "Calibrate sessions",
     ],
@@ -377,8 +377,8 @@ export const PUBLIC_SKU_CARDS: readonly PublicSkuCard[] = [
     cadence: "/ month",
     body: "Both measurement modules together.",
     features: [
-      "Verification workspaces and regions",
-      "Calibration workspaces and regions",
+      "Verification flows and regions",
+      "Calibration flows and regions",
       "Bundle price for both modules",
     ],
     cta: "Get the bundle",

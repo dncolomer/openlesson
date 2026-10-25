@@ -47,7 +47,7 @@ export const AGENT_TOOL_SURFACE = [
     family: "workspace",
     scope: "workspaces:write",
     summary:
-      "Create a Learning or Verification workspace (kind/product), including an optional map and settings.",
+      "Create a Learning workspace (kind/product), including an optional map and settings.",
     rest: { method: "POST", path: WORKSPACE_API_BASE },
   },
   {
@@ -55,7 +55,7 @@ export const AGENT_TOOL_SURFACE = [
     family: "workspace",
     scope: "workspaces:write",
     summary:
-      "Edit workspace settings, contents, and map blocks for a Learning or Verification workspace.",
+      "Edit workspace settings, contents, and map blocks for a Learning workspace.",
     rest: { method: "PATCH", path: `${WORKSPACE_API_BASE}/{workspace_id}` },
   },
   {

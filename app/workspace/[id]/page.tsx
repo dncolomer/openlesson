@@ -1,8 +1,10 @@
 import { Metadata } from "next";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { WorkspaceView } from "@/components/WorkspaceView";
 import { standardShareSocialMetadata } from "@/lib/og/standard";
+import { noMapWorkspaceDashboardHref } from "@/lib/workspace-kind";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -20,7 +22,7 @@ async function getWorkspaceMeta(workspaceId: string) {
 
   const { data } = await supabase
     .from("workspaces")
-    .select("title, root_topic, cover_image_url, description")
+    .select("title, root_topic, cover_image_url, description, workspace_kind")
     .eq("id", workspaceId)
     .single();
 
@@ -48,6 +50,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-export default function WorkspacePage() {
+export default async function WorkspacePage({ params }: PageProps) {
+  const { id } = await params;
+  const row = await getWorkspaceMeta(id);
+  const href = noMapWorkspaceDashboardHref(row?.workspace_kind);
+  if (href) redirect(href);
   return <WorkspaceView />;
 }

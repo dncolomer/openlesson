@@ -54,6 +54,14 @@ export function isNoMapWorkspace(value: unknown): boolean {
   );
 }
 
+/** Owner containers without a map: send `/workspace/{id}` to dashboard Flows. */
+export function noMapWorkspaceDashboardHref(kind: unknown): string | null {
+  const parsed = parseWorkspaceKind(kind);
+  if (parsed === WORKSPACE_KIND_KNOWLEDGE_REGION) return "/dashboard?tab=verification";
+  if (parsed === WORKSPACE_KIND_CALIBRATION) return "/dashboard?tab=calibration";
+  return null;
+}
+
 export function workspaceProductShell(value: unknown): WorkspaceProductShell {
   const kind = parseWorkspaceKind(value);
   if (kind === WORKSPACE_KIND_CALIBRATION) return "calibration";

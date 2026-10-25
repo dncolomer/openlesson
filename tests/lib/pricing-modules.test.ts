@@ -3,8 +3,10 @@ import {
   canonicalPlanFromModules,
   mergePlanIds,
   modulesForPlan,
+  planFeatureList,
   planHasModule,
   priceCentsForPlan,
+  PUBLIC_SKU_CARDS,
   resolveModuleCheckout,
   skuAlreadyCovered,
   TRY_EVERYTHING_PRICE_CENTS,
@@ -71,5 +73,21 @@ describe("module combination plans", () => {
     expect(skuAlreadyCovered("author", "module_author")).toBe(true);
     expect(skuAlreadyCovered("learn", "module_author")).toBe(false);
     expect(resolveModuleCheckout("author", "module_learn").alreadyEntitled).toBe(true);
+  });
+
+  it("names Verification and Calibration as flows in plan and SKU copy", () => {
+    expect(planFeatureList("verify")).toContain("Verification flows and knowledge regions");
+    expect(planFeatureList("calibrate")).toContain("Calibration flows and knowledge regions");
+    expect(planFeatureList("verify")).not.toContain("Verification workspaces");
+    expect(planFeatureList("calibrate")).not.toContain("Calibration workspaces");
+    const verify = PUBLIC_SKU_CARDS.find((card) => card.id === "module_verify");
+    const calibrate = PUBLIC_SKU_CARDS.find((card) => card.id === "module_calibrate");
+    const bundle = PUBLIC_SKU_CARDS.find((card) => card.id === "bundle_verify_calibrate");
+    expect(verify?.body).toContain("Verification flows and knowledge regions");
+    expect(verify?.features).toContain("Verification flows");
+    expect(calibrate?.body).toContain("Calibration flows and knowledge regions");
+    expect(calibrate?.features).toContain("Calibration flows");
+    expect(bundle?.features).toContain("Verification flows and regions");
+    expect(bundle?.features).toContain("Calibration flows and regions");
   });
 });

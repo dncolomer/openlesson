@@ -388,8 +388,8 @@ export function defaultWorkspaceSection(_kind?: unknown): WorkspaceSectionKey {
 }
 
 /**
- * Hidden sections fall back to the kind default. An empty allowed list does
- * not invent a Goals tab — no-map kinds have no WorkspaceView product.
+ * Hidden sections fall back to the kind default. No-map kinds have an empty
+ * allowed list, so this never invents a Goals tab.
  */
 export function resolveActiveSection(
   requested: WorkspaceSectionKey,
@@ -397,7 +397,6 @@ export function resolveActiveSection(
 ): WorkspaceSectionKey {
   const allowed = availableWorkspaceSections(options);
   if (allowed.includes(requested)) return requested;
-  if (allowed.length === 0) return "workspace";
   return defaultWorkspaceSection(options.workspaceKind);
 }
 

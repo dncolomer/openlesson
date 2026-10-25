@@ -319,7 +319,7 @@ describe("fixed interaction mode", () => {
     expect(resolveFixedWorkspaceInteractionMode({})).toBe("learner");
     expect(
       resolveFixedWorkspaceInteractionMode({ workspaceKind: "knowledge_region" }),
-    ).toBe("creator");
+    ).toBe("learner");
 
     // Wire ids still drive authoring vs practice shell (labels only changed)
     expect(mountsCreatorAuthoringDrawers("creator")).toBe(true);

@@ -362,7 +362,11 @@ describe("WorkspaceView section shell wiring", () => {
     expect(viewSource).not.toContain("WorkspaceTabBar");
     expect(viewSource).not.toContain("activeTab");
     const chromeBlocks = viewSource.split("sectionLayout.showBlockMapChrome");
-    expect(chromeBlocks.length).toBeGreaterThanOrEqual(2);
+    expect(chromeBlocks.length).toBeGreaterThanOrEqual(3);
+    expect(viewSource).toContain("WorkspaceMobileTabBar");
+    expect(viewSource).toMatch(
+      /showBlockMapChrome &&\s*visibleSections\.includes\("workspace"\) &&\s*!shell\.playView &&\s*!unsysStudioBlock/,
+    );
   });
 
   it("hosts notes, files, and external sources under Context section", () => {

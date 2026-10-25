@@ -806,7 +806,10 @@ export function WorkspaceView({
       </>
       )}
 
-      {sectionLayout.showBlockMapChrome && !shell.playView && !unsysStudioBlock ? (
+      {sectionLayout.showBlockMapChrome &&
+      visibleSections.includes("workspace") &&
+      !shell.playView &&
+      !unsysStudioBlock ? (
         <WorkspaceMobileTabBar
           mobileColumn={mobileColumn}
           onChange={setMobileColumn}

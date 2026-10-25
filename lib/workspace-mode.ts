@@ -17,7 +17,7 @@ import { isNoMapWorkspace } from "@/lib/workspace-kind";
 
 export type WorkspaceInteractionMode = "creator" | "learner";
 
-/** Map workspaces open in the learner shell. Verification opens in the creator shell. */
+/** Map workspaces open in the learner shell. No-map kinds have no WorkspaceView product. */
 export const DEFAULT_WORKSPACE_INTERACTION_MODE: WorkspaceInteractionMode =
   "learner";
 
@@ -26,16 +26,13 @@ export const DEFAULT_WORKSPACE_INTERACTION_MODE: WorkspaceInteractionMode =
  * learner shell; authoring is a separate capability, not a second mode.
  */
 export function defaultInteractionModeForWorkspace(
-  kind: unknown,
+  _kind?: unknown,
 ): WorkspaceInteractionMode {
-  return isNoMapWorkspace(kind)
-    ? "creator"
-    : DEFAULT_WORKSPACE_INTERACTION_MODE;
+  return DEFAULT_WORKSPACE_INTERACTION_MODE;
 }
 
 /**
- * The shell is fixed. Practice-only access stays on the learner shell,
- * including verification workspaces.
+ * The shell is fixed. Practice-only access stays on the learner shell.
  */
 export function resolveFixedWorkspaceInteractionMode(input: {
   workspaceKind?: unknown;
@@ -120,19 +117,7 @@ export function workspaceShell(input: {
   isLoggedIn?: boolean;
   playCopy?: boolean;
 }): WorkspaceShell {
-  if (input.playCopy) {
-    return {
-      sections: ["workspace"],
-      authoringDrawers: false,
-      practiceDrawer: false,
-      learnerSurface: true,
-      learnerActivity: true,
-      knowledgeLwmEmbeddingsOnly: true,
-      playView: true,
-    };
-  }
-  const noMap = isNoMapWorkspace(input.kind);
-  if (noMap) {
+  if (isNoMapWorkspace(input.kind)) {
     const practiceOnly = Boolean(input.practiceOnly);
     return {
       sections: [],
@@ -142,6 +127,17 @@ export function workspaceShell(input: {
       learnerActivity: practiceOnly,
       knowledgeLwmEmbeddingsOnly: practiceOnly,
       playView: false,
+    };
+  }
+  if (input.playCopy) {
+    return {
+      sections: ["workspace"],
+      authoringDrawers: false,
+      practiceDrawer: false,
+      learnerSurface: true,
+      learnerActivity: true,
+      knowledgeLwmEmbeddingsOnly: true,
+      playView: true,
     };
   }
   const learnerActivity = true;
@@ -251,8 +247,8 @@ export function availableSectionsForMode(input: {
 }
 
 /**
- * Resolve active section under mode constraints. An empty allowed list does
- * not invent a Goals tab.
+ * Resolve active section under mode constraints. Hidden sections fall back
+ * to the kind default (Workspace). Empty allowed lists do not invent Goals.
  */
 export function resolveActiveSectionForMode(input: {
   mode: WorkspaceInteractionMode;
@@ -276,7 +272,6 @@ export function resolveActiveSectionForMode(input: {
     }
     return input.requested;
   }
-  if (allowed.length === 0) return "workspace";
   return defaultWorkspaceSection(input.workspaceKind);
 }
 

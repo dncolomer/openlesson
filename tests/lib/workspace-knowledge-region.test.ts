@@ -154,7 +154,7 @@ describe("Knowledge Region shell", () => {
     expect(krNav.map((item) => item.key)).toEqual([]);
     expect(krNav.map((item) => item.key)).not.toContain("goals");
     expect(krNav.map((item) => item.key)).not.toContain("verification_flows");
-    expect(defaultInteractionModeForWorkspace("knowledge_region")).toBe("creator");
+    expect(defaultInteractionModeForWorkspace("knowledge_region")).toBe("learner");
     expect(defaultInteractionModeForWorkspace("standard")).toBe("learner");
     const learnerKr = availableSectionsForMode({
       mode: "learner",
@@ -282,7 +282,7 @@ describe("Knowledge Region shell", () => {
     expect(identitySettings).toContain("workspace-settings-description");
     expect(integrationPanel).toContain("WorkspaceIdentitySettings");
     expect(integrationPanel).toContain('activeSubview === "general"');
-    expect(settingsSubviewLabel("integrations", "knowledge_region")).toBe("Integration");
+    expect(settingsSubviewLabel("integrations", "knowledge_region")).toBe("Integrations");
     expect(settingsSubviewLabel("regions", "knowledge_region")).toBe("Knowledge Regions");
     expect(settingsSubviewLabel("data-studio", "knowledge_region")).toBe("Data Studio");
 

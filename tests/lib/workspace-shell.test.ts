@@ -123,6 +123,28 @@ describe("workspace shell policy", () => {
     expect(privileged.learnerSurface).toBe(true);
   });
 
+  it("does not remount map chrome for a no-map play copy", () => {
+    const shell = workspaceShell({
+      kind: "knowledge_region",
+      authoring: false,
+      practiceOnly: false,
+      isOwner: true,
+      isLoggedIn: true,
+      playCopy: true,
+    });
+    expect(shell.sections).toEqual([]);
+    expect(shell.playView).toBe(false);
+    expect(shell.authoringDrawers).toBe(false);
+    const calibration = workspaceShell({
+      kind: "calibration",
+      authoring: false,
+      isOwner: true,
+      playCopy: true,
+    });
+    expect(calibration.sections).toEqual([]);
+    expect(calibration.playView).toBe(false);
+  });
+
   it("does not keep a second learner/creator label beside the policy", () => {
     const view = readWorkspaceViewSurface();
     const nav = read("components/WorkspaceSectionNav.tsx");

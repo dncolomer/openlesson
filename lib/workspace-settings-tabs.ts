@@ -21,19 +21,8 @@ export const LEARNING_SETTINGS_SUBVIEWS: readonly SettingsSubview[] = [
   "integrations",
 ];
 
-export const VERIFICATION_SETTINGS_SUBVIEWS: readonly SettingsSubview[] = [
-  "general",
-  "regions",
-  "data-studio",
-  "integrations",
-];
-
 /** @deprecated Use LEARNING_SETTINGS_SUBVIEWS. Portal and verification tabs are gone. */
 export const ALL_SETTINGS_SUBVIEWS: readonly SettingsSubview[] = LEARNING_SETTINGS_SUBVIEWS;
-
-/** @deprecated Use VERIFICATION_SETTINGS_SUBVIEWS. */
-export const KNOWLEDGE_REGION_SETTINGS_SUBVIEWS: readonly SettingsSubview[] =
-  VERIFICATION_SETTINGS_SUBVIEWS;
 
 export function availableSettingsSubviews(kind: unknown): readonly SettingsSubview[] {
   return isNoMapWorkspace(kind) ? [] : LEARNING_SETTINGS_SUBVIEWS;
@@ -56,7 +45,7 @@ export function resolveSettingsSubview(
 
 export function settingsSubviewLabel(
   id: SettingsSubview,
-  kind: unknown,
+  _kind: unknown,
   _t?: (key: string) => string,
 ): string {
   switch (id) {
@@ -69,7 +58,7 @@ export function settingsSubviewLabel(
     case "data-studio":
       return "Data Studio";
     case "integrations":
-      return isNoMapWorkspace(kind) ? "Integration" : "Integrations";
+      return "Integrations";
   }
 }
 

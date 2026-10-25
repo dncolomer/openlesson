@@ -37,19 +37,26 @@ import {
   isDashboardStudioTab,
 } from "@/lib/dashboard-nav";
 import {
+  IDENTITY_STUDIO_CAMERA,
+  hitTestStudioPoint,
+  panStudioCamera,
+  studioCameraTransform,
+  studioGridLines,
+  studioNiceGridStep,
+  studioScreenToWorld,
+  zoomStudioCamera,
+} from "@/lib/data-studio-camera";
+import {
   buildDataStudioProjectionView,
   buildStudioRegionDistanceRays,
   clampStudioInspectWidth,
   formatStudioHighDimDistance,
-  IDENTITY_STUDIO_CAMERA,
   hiddenStudioRegionIdsForFocus,
   filterStudioEmbeddings,
   studioHighDimRegionMembership,
   studioPointInsideHighDimRegion,
-  hitTestStudioPoint,
   includeLearningStudioEmbedding,
   inspectStudioEmbedding,
-  panStudioCamera,
   parseDataStudioSpace,
   DATA_STUDIO_SPACE_OPTIONS,
   dataStudioSpaceLabel,
@@ -58,10 +65,7 @@ import {
   scopeLearningStudioEmbeddings,
   studioEmbeddingVector,
   studioRegionsForSpace,
-  studioCameraTransform,
   studioFlowOptions,
-  studioGridLines,
-  studioNiceGridStep,
   STUDIO_IN_REGION_FILL,
   studioCountPhrase,
   studioMultiSelectSummary,
@@ -71,10 +75,8 @@ import {
   studioVisibleRegionIds,
   toggleStudioSelectedId,
   studioRunOptions,
-  studioScreenToWorld,
   toggleStudioHiddenId,
   visibleStudioRegions,
-  zoomStudioCamera,
   type DataStudioEmbeddingRow,
 } from "@/lib/data-studio-view";
 import {
@@ -476,7 +478,24 @@ describe("product Data Studio chrome", () => {
     expect(hosts).toContain("data-workspace-data-studio-host");
     expect(hosts).toContain('visibleSections.includes("data_studio")');
 
-    const visual = readFileSync(join(ROOT, "components/data-studio/DataStudioPanel.tsx"), "utf8");
+    expect(existsSync(join(ROOT, "lib/data-studio-camera.ts"))).toBe(true);
+    expect(readFileSync(join(ROOT, "lib/data-studio-view.ts"), "utf8")).toContain(
+      'from "@/lib/data-studio-camera"',
+    );
+    expect(existsSync(join(ROOT, "components/data-studio/DataStudioPlot.tsx"))).toBe(true);
+    expect(existsSync(join(ROOT, "components/data-studio/DataStudioHud.tsx"))).toBe(true);
+    expect(existsSync(join(ROOT, "components/data-studio/DataStudioInspect.tsx"))).toBe(true);
+    const visual = [
+      "components/data-studio/DataStudioPanel.tsx",
+      "components/data-studio/DataStudioPlot.tsx",
+      "components/data-studio/DataStudioHud.tsx",
+      "components/data-studio/DataStudioInspect.tsx",
+    ]
+      .map((rel) => readFileSync(join(ROOT, rel), "utf8"))
+      .join("\n");
+    expect(visual).toContain("<DataStudioPlot");
+    expect(visual).toContain("<DataStudioHud");
+    expect(visual).toContain("<DataStudioInspect");
     expect(visual).toContain("data-workspace-data-studio");
     expect(visual).toContain("data-data-studio-visual");
     expect(visual).toContain("data-data-studio-product");

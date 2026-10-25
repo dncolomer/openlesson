@@ -12,6 +12,9 @@ function read(rel: string) {
 const SURFACES = [
   "lib/knowledge-config/custom-verification-model.ts",
   "lib/pow-api/custom-verification-model-store.ts",
+  "lib/pow-api/custom-verification-model-crud.ts",
+  "lib/pow-api/custom-verification-model-synthetic.ts",
+  "lib/pow-api/custom-verification-model-eval.ts",
   "app/api/workspace/custom-knowledge-regions/route.ts",
   "components/CustomVerificationModelsPanel.tsx",
   "components/KnowledgeConfigTrajectoryPanel.tsx",
@@ -118,7 +121,22 @@ describe("custom verification model surfaces", () => {
     expect(cookie).toContain("mimeType");
     expect(cookie).toContain("prompt or files are required");
 
-    const store = read("lib/pow-api/custom-verification-model-store.ts");
+    const barrel = read("lib/pow-api/custom-verification-model-store.ts");
+    expect(barrel).toContain("generateSyntheticRegionProfileWithGrok");
+    expect(barrel).toContain("deleteCustomVerificationModel");
+    expect(barrel).toContain("buildSyntheticRegionGenerationPrompt");
+    expect(barrel).toContain("decodeSyntheticRegionFileText");
+    expect(barrel).toContain("computeKnowledgeDistanceForSubject");
+    expect(barrel).not.toMatch(/^export (async )?function /m);
+    expect(barrel).toContain('from "@/lib/pow-api/custom-verification-model-crud"');
+    expect(barrel).toContain('from "@/lib/pow-api/custom-verification-model-synthetic"');
+    expect(barrel).toContain('from "@/lib/pow-api/custom-verification-model-eval"');
+
+    const store = [
+      read("lib/pow-api/custom-verification-model-crud.ts"),
+      read("lib/pow-api/custom-verification-model-synthetic.ts"),
+      read("lib/pow-api/custom-verification-model-eval.ts"),
+    ].join("\n");
     expect(store).toContain("generateSyntheticRegionProfileWithGrok");
     expect(store).toContain("DEFAULT_MODEL");
     expect(store).toContain("createSyntheticKnowledgeRegionFromProfile");
@@ -133,6 +151,7 @@ describe("custom verification model surfaces", () => {
     expect(store).toContain("files");
     expect(store).toContain("fileIds");
     expect(store).toContain("callXaiResponsesWithFiles");
+    expect(store).toContain('.eq("identity", identity)');
 
     expect(existsSync(join(ROOT, "app/api/v3/snapshot/workspaces/[id]/custom-knowledge-regions/route.ts"))).toBe(
       false,

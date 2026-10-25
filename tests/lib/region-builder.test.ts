@@ -167,10 +167,11 @@ describe("region builder UI + API surface", () => {
   });
 
   it("listSubjectsWithKnowledgeConfig returns source_link_url and buildWorkspaceLinkUrlMap exists", () => {
-    const store = readFileSync(
-      join(ROOT, "lib/pow-api/custom-verification-model-store.ts"),
-      "utf8",
-    );
+    const store = [
+      readFileSync(join(ROOT, "lib/pow-api/custom-verification-model-store.ts"), "utf8"),
+      readFileSync(join(ROOT, "lib/pow-api/custom-verification-model-crud.ts"), "utf8"),
+      readFileSync(join(ROOT, "lib/pow-api/custom-verification-model-eval.ts"), "utf8"),
+    ].join("\n");
     expect(store).toContain("source_link_url");
     expect(store).toContain("buildWorkspaceLinkUrlMap");
     expect(store).not.toContain("buildTapbenchShareUrl");

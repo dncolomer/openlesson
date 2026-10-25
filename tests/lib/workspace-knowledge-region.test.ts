@@ -389,7 +389,10 @@ describe("Knowledge Region zero-block PoW surfaces", () => {
     const regionsPanel = read("components/CustomVerificationModelsPanel.tsx");
     expect(regionsPanel).toContain("/api/workspace/custom-knowledge-regions");
     expect(regionsPanel).not.toMatch(/required.*blockId|blockId is required/i);
-    const regionsStore = read("lib/pow-api/custom-verification-model-store.ts");
+    const regionsStore = [
+      read("lib/pow-api/custom-verification-model-store.ts"),
+      read("lib/pow-api/custom-verification-model-crud.ts"),
+    ].join("\n");
     expect(regionsStore).toContain("listCustomVerificationModels");
     expect(regionsStore).toContain("listSubjectsWithKnowledgeConfig");
     expect(regionsStore).not.toMatch(/block_id.*required/);

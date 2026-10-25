@@ -49,7 +49,7 @@ describe("one workspace surface", () => {
     expect(resolveFixedWorkspaceInteractionMode({})).toBe("learner");
     expect(
       resolveFixedWorkspaceInteractionMode({ workspaceKind: "knowledge_region" }),
-    ).toBe("creator");
+    ).toBe("learner");
     expect(
       resolveFixedWorkspaceInteractionMode({
         workspaceKind: "knowledge_region",

@@ -274,7 +274,7 @@ ranked as (
   from candidates
 )
 update public.custom_verification_models m
-set name = left(trim(m.name), 140) || ' (' || substr(replace(m.id::text, '-', ''), 1, 8) || ')'
+set name = left(trim(m.name), 109) || ' (' || substr(replace(m.id::text, '-', ''), 1, 8) || ')'
 from ranked r
 where m.id = r.id
   and r.rn > 1;

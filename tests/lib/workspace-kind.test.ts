@@ -29,6 +29,7 @@ describe("parseWorkspaceKind", () => {
     expect(migration).toContain("workspace_verification_flows");
     expect(migration).toContain("workspace_calibration_flows");
     expect(migration).toContain("coalesce(product, '')");
+    expect(migration).toContain("left(trim(m.name), 109)");
     expect(migration).not.toContain(
       "delete from public.workspace_flow_embeddings where owner_user_id is null",
     );

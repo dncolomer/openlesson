@@ -25,12 +25,12 @@ export function WorkspaceGoalPanel({
 }: WorkspaceGoalPanelProps) {
   const { t } = useI18n();
   const [isEditing, setIsEditing] = useState(false);
-  const [editGoal, setEditGoal] = useState(plan.workspace_goal || "");
+  const [editGoal, setEditGoal] = useState(plan.description || "");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    setEditGoal(plan.workspace_goal || "");
-  }, [plan.workspace_goal]);
+    setEditGoal(plan.description || "");
+  }, [plan.description]);
 
   const saveGoal = async () => {
     setSaving(true);
@@ -42,7 +42,10 @@ export function WorkspaceGoalPanel({
       });
       const data = await res.json();
       if (data.success) {
-        onPlanUpdate({ ...plan, workspace_goal: data.workspace_goal || undefined });
+        onPlanUpdate({
+          ...plan,
+          description: data.workspace_goal || data.description || undefined,
+        });
         setIsEditing(false);
       }
     } catch (err) {
@@ -52,7 +55,7 @@ export function WorkspaceGoalPanel({
     }
   };
 
-  if (!plan.workspace_goal && !isOwner && !isEditing) {
+  if (!plan.description && !isOwner && !isEditing) {
     return null;
   }
 
@@ -71,7 +74,7 @@ export function WorkspaceGoalPanel({
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-400">
               {t("planView.workspaceGoal")}
             </p>
-            {isOwner && !isEditing && plan.workspace_goal ? (
+            {isOwner && !isEditing && plan.description ? (
               <button
                 type="button"
                 onClick={() => setIsEditing(true)}
@@ -105,7 +108,7 @@ export function WorkspaceGoalPanel({
                 <button
                   type="button"
                   onClick={() => {
-                    setEditGoal(plan.workspace_goal || "");
+                    setEditGoal(plan.description || "");
                     setIsEditing(false);
                   }}
                   className="text-neutral-500 hover:text-neutral-300"
@@ -114,9 +117,9 @@ export function WorkspaceGoalPanel({
                 </button>
               </div>
             </div>
-          ) : plan.workspace_goal ? (
+          ) : plan.description ? (
             <p className="mt-1.5 text-base font-medium leading-snug text-white sm:text-lg">
-              {plan.workspace_goal}
+              {plan.description}
             </p>
           ) : isOwner ? (
             <button

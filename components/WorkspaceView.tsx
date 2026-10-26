@@ -475,12 +475,9 @@ export function WorkspaceView({
   // No-map kinds have no WorkspaceView sections. Play-only stays on the map.
   const visibleSections = shell.sections;
   const idleExplore = workspaceIdlePaneShowsExplore({
-    allowExplore:
-      workspaceKind === "knowledge_region"
-        ? false
-        : ayclCapabilities
-          ? ayclCapabilities.allowExplore
-          : isOwner || isOrgAdmin,
+    allowExplore: ayclCapabilities
+      ? ayclCapabilities.allowExplore
+      : isOwner || isOrgAdmin,
   });
   const isLearnerMode = shell.learnerSurface;
   const unsysStudioBlock =

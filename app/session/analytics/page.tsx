@@ -304,7 +304,7 @@ function AnalyticsContent() {
     const load = async () => {
       const urls: Record<string, string> = {};
       for (const c of audioChunks) {
-        if (!c.storagePath) continue;
+        if (!sessionId || !c.storagePath) continue;
         urls[c.id] = `/api/session-files/download?sessionId=${encodeURIComponent(sessionId)}&fileId=${encodeURIComponent(c.storagePath)}`;
       }
       setAudioUrls(urls);

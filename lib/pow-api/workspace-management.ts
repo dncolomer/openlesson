@@ -10,8 +10,6 @@ import { parseLearningModelSize, type LearningModelSize } from "@/lib/learning-m
 import {
   AGENT_WORKSPACE_CREATE_REFUSED_MESSAGE,
   parseWorkspaceKind,
-  WORKSPACE_KIND_CALIBRATION,
-  WORKSPACE_KIND_KNOWLEDGE_REGION,
   WORKSPACE_KIND_STANDARD,
   type WorkspaceKind,
 } from "@/lib/workspace-kind";
@@ -24,10 +22,7 @@ import { canAccessAgentWorkspace } from "./workspace-access";
 
 export type AgentWorkspaceProduct = "learning" | "verification" | "calibration";
 
-export function agentWorkspaceProduct(kind: unknown): AgentWorkspaceProduct {
-  const parsed = parseWorkspaceKind(kind);
-  if (parsed === WORKSPACE_KIND_KNOWLEDGE_REGION) return "verification";
-  if (parsed === WORKSPACE_KIND_CALIBRATION) return "calibration";
+export function agentWorkspaceProduct(_kind: unknown): AgentWorkspaceProduct {
   return "learning";
 }
 

@@ -150,9 +150,9 @@ export async function POST(req: NextRequest) {
       : [];
     const baseShapeOptions = buildShapeContextSourceOptions({
       notes: plan.notes ?? "",
-      files: (workspaceFiles || []).map((f: { id?: string; file_name?: string }) => ({
+      files: (workspaceFiles || []).map((f) => ({
         id: f.id,
-        file_name: f.file_name,
+        file_name: f.file_name ?? undefined,
       })),
       externalResources: externalRows,
     });
@@ -171,8 +171,8 @@ export async function POST(req: NextRequest) {
       : null;
 
     const fileNames = (workspaceFiles || [])
-      .map((f: { file_name?: string }) => f.file_name)
-      .filter(Boolean) as string[];
+      .map((f) => f.file_name)
+      .filter((name): name is string => Boolean(name));
 
     const alwaysContext = composeBlockGenerationContext({
       workspaceTitle,

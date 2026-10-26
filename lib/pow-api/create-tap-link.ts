@@ -400,7 +400,12 @@ export async function createWorkspaceTapLink(options: CreateTapLinkOptions): Pro
   };
 
   let { data: link, error } = await insertLink(interactionKind);
-  const retryKind = tapSessionInsertRetryKind(interactionKind, error?.message);
+  const retryKind = tapSessionInsertRetryKind(
+    interactionKind,
+    error && typeof error === "object" && "message" in error
+      ? String((error as { message?: unknown }).message || "")
+      : undefined,
+  );
   if ((!link || error) && retryKind) {
     const retried = await insertLink(retryKind);
     link = retried.data;
@@ -412,7 +417,11 @@ export async function createWorkspaceTapLink(options: CreateTapLinkOptions): Pro
     throw new CreateTapLinkError("Failed to create session link", 500, "internal_error");
   }
 
-  return withTapLinkUrl(link, baseUrl, sessionToken);
+  return withTapLinkUrl(
+    link as Parameters<typeof withTapLinkUrl>[0],
+    baseUrl,
+    sessionToken,
+  );
 }
 
 export interface ReissueTapLinkOptions {

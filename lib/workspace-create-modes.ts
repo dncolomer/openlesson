@@ -11,8 +11,6 @@ import {
 } from "@/lib/workspace-spatial-create";
 import type { InitialChaptersLevel } from "@/lib/initial-chapters";
 import {
-  WORKSPACE_KIND_CALIBRATION,
-  WORKSPACE_KIND_KNOWLEDGE_REGION,
   WORKSPACE_KIND_STANDARD,
   type WorkspaceKind,
 } from "@/lib/workspace-kind";
@@ -74,9 +72,7 @@ export function parseWorkspaceCreateMode(value: unknown): WorkspaceCreateMode | 
 }
 
 /** Durable kind persisted on the workspace row for this create mode. */
-export function workspaceKindForCreateMode(mode: WorkspaceCreateMode): WorkspaceKind {
-  if (mode === "knowledge_region") return WORKSPACE_KIND_KNOWLEDGE_REGION;
-  if (mode === "calibration") return WORKSPACE_KIND_CALIBRATION;
+export function workspaceKindForCreateMode(_mode: WorkspaceCreateMode): WorkspaceKind {
   return WORKSPACE_KIND_STANDARD;
 }
 

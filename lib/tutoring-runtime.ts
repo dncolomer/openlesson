@@ -306,7 +306,10 @@ export async function applyTutoringSessionMutate(
       return { ok: false, status: 404, message: "Session not found" };
     }
     const probes = Array.isArray((session as { probes?: unknown }).probes)
-      ? ((session as { probes: unknown[] }).probes)
+      ? ((session as { probes: unknown[] }).probes).filter(
+          (probe): probe is Record<string, unknown> =>
+            Boolean(probe) && typeof probe === "object" && !Array.isArray(probe),
+        )
       : [];
     return {
       ok: true,

@@ -95,8 +95,8 @@ export interface PerformanceContextPayload {
   workspace_files: Array<{
     id: string;
     file_name: string;
-    mime_type: string;
-    xai_file_id: string;
+    mime_type: string | null;
+    xai_file_id: string | null;
     created_at: string;
   }>;
   linked_sessions: Array<Record<string, unknown>>;

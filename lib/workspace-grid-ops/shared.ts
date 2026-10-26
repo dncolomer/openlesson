@@ -110,7 +110,6 @@ export async function loadWorkspaceContext(supabase: SupabaseClient, workspaceId
     url?: string | null;
     description?: string | null;
   }> = [];
-  }
 
   const fileRows = (files || []) as Array<{ id?: string; file_name?: string }>;
   return {

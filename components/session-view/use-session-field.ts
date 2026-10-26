@@ -572,7 +572,9 @@ export function useSessionField(input: SessionFieldInput) {
         seedOpeningWorkCanvas(
           session.id,
           field.model,
-          "openingWork" in field ? field.openingWork : null,
+          "openingWork" in field && typeof field.openingWork === "string"
+            ? field.openingWork
+            : null,
         );
       }
       setIsPaused(false);
@@ -640,7 +642,9 @@ export function useSessionField(input: SessionFieldInput) {
         seedOpeningWorkCanvas(
           session.id,
           field.model,
-          "openingWork" in field ? field.openingWork : null,
+          "openingWork" in field && typeof field.openingWork === "string"
+            ? field.openingWork
+            : null,
         );
       }
       setIsPaused(false);

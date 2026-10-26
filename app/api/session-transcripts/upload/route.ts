@@ -111,18 +111,20 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    const { error: writeError } = existingRow
-      ? await supabase
-        .from("proof_of_work")
-        .update(transcriptRow)
-        .eq("id", existingRow.id)
-        .eq("user_id", user.id)
+    const writeError = existingRow
+      ? (
+          await supabase
+            .from("proof_of_work")
+            .update(transcriptRow)
+            .eq("id", existingRow.id)
+            .eq("user_id", user.id)
+        ).error
       : (await insertWorkspaceProofOfWorkRow(supabase, transcriptRow)).error;
 
     if (writeError) {
       console.error("[session-transcripts/upload] DB write failed:", writeError.message);
       await deleteOrgScopedXaiFile(xaiFileId, organizationId).catch(() => {});
-      return jsonError(500, writeError.message);
+      return jsonError(500, writeError.message || "Failed to save transcript");
     }
 
     return NextResponse.json({ success: true, xai_file_id: xaiFileId });

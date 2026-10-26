@@ -6,7 +6,6 @@ import {
   workspaceMatchesDashboardTypeFilter,
   type DashboardWorkspaceTypeFilter,
 } from "@/lib/dashboard-workspace-filters";
-import { workspaceProductShell } from "@/lib/workspace-kind";
 import { calibrationFlowPublicPath } from "@/lib/calibration-flow";
 import { verificationFlowPublicPath } from "@/lib/verification-flow";
 import {
@@ -144,10 +143,7 @@ export function paginateDashboardFlows<T>(
   };
 }
 
-export function dashboardWorkspaceKindLabel(kind: unknown): string {
-  const shell = workspaceProductShell(kind);
-  if (shell === "verification") return "Verification";
-  if (shell === "calibration") return "Calibration";
+export function dashboardWorkspaceKindLabel(_kind: unknown): string {
   return "Learning";
 }
 

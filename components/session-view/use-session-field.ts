@@ -23,8 +23,10 @@ import {
   isSessionWelcomeSeen,
   markIleSessionSettingsConfirmed,
 } from "@/lib/welcomeState";
+import { resolveLearnOpeningWork } from "@/lib/learn-opening-work";
 import { loadSessionBranchField, sessionClockMayStart } from "@/lib/session-branch-field-load";
 import { learnSessionFieldInput } from "@/lib/session-branch-prepare";
+import type { SessionBranchModel } from "@/lib/session-branch-model";
 import { learnFieldFromStoredPolicy } from "@/lib/session-policy-store";
 import { type ChatMessage, postIleSessionChat } from "@/lib/session-chat-client";
 import { buildIleWorkCanvasCommandUserMessage } from "@/lib/learn-work-canvas-prompts";
@@ -319,22 +321,20 @@ export function useSessionField(input: SessionFieldInput) {
     [activeChapterKey, coldContextRef, sessionContext, updateChapterWorkspace],
   );
 
+  const seedOpeningWorkCanvas = useCallback(
+    (boardId: string, model: SessionBranchModel, generated?: string | null) => {
+      const text = resolveLearnOpeningWork(model, generated, boardId);
+      if (!text) return;
+      seedChapterWorkCanvas(boardId, text);
+    },
+    [seedChapterWorkCanvas],
+  );
+
   useEffect(() => {
     const boardId = session?.id;
-    if (!boardId) return;
-    const text =
-      (session.problem || "").trim() ||
-      (isProjectMode ? displayProjectChapterExercise : blockFrame?.prompt || chapterDialoguePrompt);
-    seedChapterWorkCanvas(boardId, text);
-  }, [
-    blockFrame?.prompt,
-    chapterDialoguePrompt,
-    displayProjectChapterExercise,
-    isProjectMode,
-    seedChapterWorkCanvas,
-    session?.id,
-    session?.problem,
-  ]);
+    if (!boardId || !isProjectMode) return;
+    seedChapterWorkCanvas(boardId, displayProjectChapterExercise);
+  }, [displayProjectChapterExercise, isProjectMode, seedChapterWorkCanvas, session?.id]);
 
   const handleWorkChapter = useCallback(
     (stepId: string) => {
@@ -568,6 +568,13 @@ export function useSessionField(input: SessionFieldInput) {
         setPlanError(field.ok ? "The field could not be prepared." : field.error);
         return;
       }
+      if (field.ok) {
+        seedOpeningWorkCanvas(
+          session.id,
+          field.model,
+          "openingWork" in field ? field.openingWork : null,
+        );
+      }
       setIsPaused(false);
       setLanguageConfirmed(true);
       markIleSessionSettingsConfirmed(session.id);
@@ -602,6 +609,7 @@ export function useSessionField(input: SessionFieldInput) {
     setSession,
     setShowWelcomeModal,
     setShowWelcomePanel,
+    seedOpeningWorkCanvas,
     startRecording,
     tutoringLanguage,
   ]);
@@ -628,6 +636,13 @@ export function useSessionField(input: SessionFieldInput) {
         setPlanError(field.ok ? "The field could not be prepared." : field.error);
         return;
       }
+      if (field.ok) {
+        seedOpeningWorkCanvas(
+          session.id,
+          field.model,
+          "openingWork" in field ? field.openingWork : null,
+        );
+      }
       setIsPaused(false);
       const needsWelcome =
         !isSessionWelcomeSeen(session.id) &&
@@ -650,6 +665,7 @@ export function useSessionField(input: SessionFieldInput) {
     setIsPaused,
     setIsPreparing,
     setPlanError,
+    seedOpeningWorkCanvas,
     setShowWelcomeModal,
     setShowWelcomePanel,
     startRecording,

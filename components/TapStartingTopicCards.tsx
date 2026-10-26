@@ -124,7 +124,7 @@ export function TapStartingTopicCards({
   startLabel = "Start",
   startingLabel = "Starting…",
 }: TapStartingTopicCardsProps) {
-  const topicImages = aestheticImagesForSlots(3);
+  const topicImages = aestheticImagesForSlots(Math.max(topics.length, 3));
 
   if (topics.length === 0) {
     return (
@@ -141,43 +141,20 @@ export function TapStartingTopicCards({
     );
   }
 
-  const [first, second, third] = topics;
-
   return (
     <div className="mt-4 grid grid-cols-2 gap-3" data-tap-topic-grid="topics">
-      {first ? (
+      {topics.map((topic, index) => (
         <TopicCard
-          topic={first}
-          imageSrc={topicImages[0]}
+          key={topic.id || `topic-${index}`}
+          topic={topic}
+          imageSrc={topicImages[index] ?? topicImages[0] ?? ""}
           isStarting={isStarting}
-          isThisStarting={isStarting && startingTopicId === first.id}
+          isThisStarting={isStarting && startingTopicId === topic.id}
           onStartTopic={onStartTopic}
           startLabel={startLabel}
           startingLabel={startingLabel}
         />
-      ) : null}
-      {second ? (
-        <TopicCard
-          topic={second}
-          imageSrc={topicImages[1]}
-          isStarting={isStarting}
-          isThisStarting={isStarting && startingTopicId === second.id}
-          onStartTopic={onStartTopic}
-          startLabel={startLabel}
-          startingLabel={startingLabel}
-        />
-      ) : null}
-      {third ? (
-        <TopicCard
-          topic={third}
-          imageSrc={topicImages[2]}
-          isStarting={isStarting}
-          isThisStarting={isStarting && startingTopicId === third.id}
-          onStartTopic={onStartTopic}
-          startLabel={startLabel}
-          startingLabel={startingLabel}
-        />
-      ) : null}
+      ))}
     </div>
   );
 }

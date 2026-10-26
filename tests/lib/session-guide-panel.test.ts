@@ -31,15 +31,14 @@ describe("session guide panel", () => {
     expect(html).not.toContain('data-session-guide-tab="commands"');
     expect(html).not.toContain("data-session-commands");
     expect(html).toContain('data-session-guide-tab="help"');
-    expect(html).toContain('data-session-guide-tab="harness"');
-    expect(html.indexOf('data-session-guide-tab="harness"')).toBeLessThan(
-      html.indexOf('data-session-guide-tab="help"'),
-    );
+    expect(html).not.toContain('data-session-guide-tab="harness"');
     expect(html).toContain("data-session-instructions");
     expect(html).toContain(">help<");
-    expect(html).toContain(">harness<");
+    expect(html).not.toContain(">harness<");
     expect(html).not.toContain(">instructions<");
-    expect(html).toContain("grid-cols-2");
+    expect(html).toContain("grid-cols-1");
+    expect(html).not.toContain("grid-cols-2");
+    expect(html).not.toContain("grid-cols-3");
     expect(html).not.toContain("The board is still opening.");
     expect(html).not.toContain("data-ile-canvas-dictate");
     expect(html).not.toContain("data-ile-craft-insight");
@@ -93,6 +92,11 @@ describe("session guide panel", () => {
     expect(ILE_WORK_CANVAS_COMMANDS.map((command) => command.id as string)).not.toContain("check");
 
     const verify = renderToStaticMarkup(createElement(SessionGuidePanel, { guide: "verification" }));
+    expect(verify).toContain('data-session-guide-tab="commands"');
+    expect(verify).toContain('data-session-guide-tab="help"');
+    expect(verify).not.toContain('data-session-guide-tab="harness"');
+    expect(verify).toContain("grid-cols-2");
+    expect(verify).not.toContain("grid-cols-3");
     expect(verify).not.toContain('data-session-command="focus"');
     expect(verify).toContain('data-session-command="answer"');
     expect(verify).toContain('data-session-command="draw"');
@@ -107,12 +111,15 @@ describe("session guide panel", () => {
     };
     expect(SESSION_INSTRUCTIONS.calibrate).not.toBe(en.onboardingGuide.scout.step3.body);
     expect(SESSION_INSTRUCTIONS.calibrate).toMatch(/tap every question/i);
+    expect(SESSION_INSTRUCTIONS.calibrate).toMatch(/screens get finer or stop on their own/i);
+    expect(SESSION_INSTRUCTIONS.calibrate).toMatch(/additional question to work through at the end/i);
     expect(SESSION_INSTRUCTIONS.calibrate).not.toMatch(/hidden state/i);
+    expect(SESSION_INSTRUCTIONS.calibrate).not.toMatch(/out loud|later Learn/i);
     expect(SESSION_INSTRUCTIONS.learn).toContain("commit (insight)");
     expect(SESSION_INSTRUCTIONS.learn).toContain("takeaway");
     expect(SESSION_INSTRUCTIONS.learn).not.toMatch(/hidden state|posterior/i);
     expect(SESSION_INSTRUCTIONS.learn).not.toMatch(/hidden cause/);
-    expect(SESSION_INSTRUCTIONS.verification).toContain("Distance");
+    expect(SESSION_INSTRUCTIONS.verification).not.toContain("Distance");
     expect(SESSION_INSTRUCTIONS.verification).toContain("End session");
     expect(SESSION_INSTRUCTIONS.verification).toMatch(/stored/i);
     expect(SESSION_INSTRUCTIONS.verification).not.toMatch(/generative model|cheapest policy/i);
@@ -121,7 +128,7 @@ describe("session guide panel", () => {
     }
     expect(SESSION_BRIEFING_INTRO.calibrate).toMatch(/tap every question/i);
     expect(SESSION_BRIEFING_INTRO.calibrate).not.toMatch(/hidden state|What would you need to settle about/i);
-    expect(SESSION_BRIEFING_INTRO.verification).toMatch(/Distance/);
+    expect(SESSION_BRIEFING_INTRO.verification).not.toMatch(/Distance/);
     expect(SESSION_BRIEFING_INTRO.verification).not.toMatch(/hidden state|What would you need to settle about/i);
     for (const text of Object.values(SESSION_BRIEFING_INTRO)) {
       expect(text).not.toMatch(/\$\{|What would you need to settle about|in This region/i);
@@ -152,6 +159,8 @@ describe("session guide panel", () => {
     const sheet = renderToStaticMarkup(
       createElement(SessionCommandCheatsheet, { guide: "learn", open: true, onClose: () => {} }),
     );
+    expect(sheet).toContain("max-w-xl");
+    expect(sheet).toContain("max-h-[min(42rem,calc(100vh-2rem))]");
     expect(sheet).toContain("data-session-command-cheatsheet-mac");
     expect(sheet).toContain(ILE_WORK_CANVAS_SHORTCUT_MOD_HINT);
     expect(sheet).toContain("⌥F");

@@ -4,6 +4,7 @@
  * on the same cache entry while the session is already on.
  */
 
+import { resolveLearnOpeningWork } from "@/lib/learn-opening-work";
 import type { SessionBranchModel } from "@/lib/session-branch-model";
 import {
   planSessionBranchPrepare,
@@ -23,7 +24,7 @@ export type SessionBranchContinuation = {
 };
 
 export type SessionBranchFieldLoadResult =
-  | { ok: true; model: SessionBranchModel; key: string }
+  | { ok: true; model: SessionBranchModel; key: string; openingWork: string }
   | { ok: false; error: string; key: string | null };
 
 export type SessionBranchFieldCacheStatus = "preparing" | "ready" | "failed";
@@ -35,6 +36,7 @@ type CacheEntry = {
   status: SessionBranchFieldCacheStatus;
   model: SessionBranchModel | null;
   birth: SessionBranchModel | null;
+  openingWork: string;
   error: string | null;
   promise: Promise<SessionBranchModel>;
   listeners: Set<(entry: CacheEntry) => void>;
@@ -102,15 +104,25 @@ function isContinuation(value: unknown): value is SessionBranchContinuation {
   return Array.isArray(record.regions) && record.regions.length > 0;
 }
 
-async function readPayload(response: Response): Promise<{
+function openingWorkOf(model: SessionBranchModel, value: unknown, salt: string): string {
+  const generated = typeof value === "string" ? value : "";
+  return resolveLearnOpeningWork(model, generated, salt);
+}
+
+async function readPayload(
+  response: Response,
+  salt: string,
+): Promise<{
   model: SessionBranchModel;
   continuation: SessionBranchContinuation | null;
   done: boolean;
+  openingWork: string;
 }> {
   const payload = (await response.json().catch(() => null)) as {
     model?: unknown;
     continuation?: unknown;
     done?: unknown;
+    openingWork?: unknown;
     error?: { message?: unknown };
   } | null;
   if (!response.ok) {
@@ -122,6 +134,7 @@ async function readPayload(response: Response): Promise<{
     model: payload.model,
     continuation: isContinuation(payload.continuation) ? payload.continuation : null,
     done: payload.done === true,
+    openingWork: openingWorkOf(payload.model, payload.openingWork, salt),
   };
 }
 
@@ -152,7 +165,7 @@ async function finishSessionBranchField(
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...body, phase: "continue", continuation: next }),
       });
-      const payload = await readPayload(response);
+      const payload = await readPayload(response, key);
       publishGrowth(key, token, payload.model);
       if (payload.done || !payload.continuation) return;
       next = payload.continuation;
@@ -170,10 +183,26 @@ export async function loadSessionBranchField(
   if (!key) return { ok: false, error: FIELD_ERROR, key: null };
   const existing = cache.get(key);
   const decision = sessionBranchFieldLoadDecision(existing);
-  if (decision === "reuse" && existing?.model) return { ok: true, model: existing.model, key };
+  if (decision === "reuse" && existing?.model) {
+    return {
+      ok: true,
+      model: existing.model,
+      key,
+      openingWork:
+        existing.openingWork || openingWorkOf(existing.model, existing.openingWork, key),
+    };
+  }
   if (decision === "join" && existing) {
     try {
-      return { ok: true, model: await existing.promise, key };
+      const model = await existing.promise;
+      const ready = cache.get(key);
+      return {
+        ok: true,
+        model,
+        key,
+        openingWork:
+          ready?.openingWork || openingWorkOf(model, ready?.openingWork, key),
+      };
     } catch (error) {
       return { ok: false, error: messageOf(error), key };
     }
@@ -191,12 +220,13 @@ export async function loadSessionBranchField(
     headers: { "Content-Type": "application/json" },
     signal: controller.signal,
     body: JSON.stringify({ ...body, phase: "opening" }),
-  }).then(readPayload);
+  }).then((response) => readPayload(response, key));
   const entry: CacheEntry = {
     token,
     status: "preparing",
     model: null,
     birth: null,
+    openingWork: "",
     error: null,
     promise: promise.then((payload) => payload.model),
     listeners: pendingListeners.get(key) ?? new Set(),
@@ -210,13 +240,14 @@ export async function loadSessionBranchField(
       entry.status = "ready";
       entry.model = payload.model;
       entry.birth = payload.model;
+      entry.openingWork = payload.openingWork;
       entry.error = null;
       for (const listener of entry.listeners) listener(entry);
     }
     if (payload.continuation && !payload.done && cache.get(key)?.token === token) {
       void finishSessionBranchField(key, token, body, payload.continuation, fetchImpl);
     }
-    return { ok: true, model: payload.model, key };
+    return { ok: true, model: payload.model, key, openingWork: payload.openingWork };
   } catch (error) {
     if (cache.get(key)?.token === token) cache.delete(key);
     return { ok: false, error: messageOf(error), key };

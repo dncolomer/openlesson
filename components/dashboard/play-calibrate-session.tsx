@@ -1,12 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
 import { PracticeVoiceChallenge } from "@/components/PracticeVoiceChallenge";
 import { CalibrateSoundingSurface } from "@/components/calibrate/calibrate-sounding-surface";
 import { SessionFinishedScreen } from "@/components/session-view/session-finished-screen";
 import { SessionGuidePanel } from "@/components/session-view/session-guide-panel";
-import { SessionSoundingResult } from "@/components/session-view/session-sounding-result";
 import { SessionWorkSurface } from "@/components/session-view/session-work-surface";
 import { SessionTopicChapter } from "@/components/session-view/learn-work-dock-bar";
 import { TapSessionSignals } from "@/components/session-view/session-signals";
@@ -25,10 +23,8 @@ import {
   createSoundingState,
   createSoundingTree,
   finishSounding,
-  soundingResultPresentation,
   soundingStillsFromBranchModel,
   submitSoundingProof,
-  type SoundingClassification,
   type SoundingState,
 } from "@/lib/calibrate-sounding";
 import { inferSoundingVoiceStep } from "@/lib/calibrate-sounding-voice-client";
@@ -60,42 +56,32 @@ function Viewport({ children }: { children: ReactNode }) {
   );
 }
 
-function Finished({
-  marker,
-  classification,
-  title,
-  body,
-  onDone,
-}: {
-  marker: string;
-  classification: SoundingClassification | null;
-  title: string;
-  body: string;
-  onDone: () => void;
-}) {
-  const presentation = soundingResultPresentation(classification);
+function Finished({ marker }: { marker: string }) {
   return (
     <section className="flex min-h-0 flex-1 flex-col overflow-hidden" data-play-calibrate-done={marker}>
       <SessionFinishedScreen
-        kicker={presentation?.kicker ?? FLOW_END_KICKERS.calibrate}
-        title={presentation?.title ?? title}
-        body={presentation?.body ?? body}
+        kicker={FLOW_END_KICKERS.calibrate}
+        title="Thank you"
         frameLabel={null}
         actions={
-          <TapThoughtButton size="md" variant="primary" onClick={onDone}>
-            Back to dashboard
+          <TapThoughtButton
+            size="md"
+            variant="primary"
+            data-tap-explore-uncertain-systems
+            onClick={() => {
+              window.location.href = "/";
+            }}
+          >
+            Explore Uncertain Systems
           </TapThoughtButton>
         }
-      >
-        <SessionSoundingResult classification={classification} />
-      </SessionFinishedScreen>
+      />
     </section>
   );
 }
 
 export function PlayCalibrateSession({ sessionId }: { sessionId: string }) {
   const { t } = useI18n();
-  const router = useRouter();
   const [prompt, setPrompt] = useState("");
   const [error, setError] = useState("");
   const [voiceReady, setVoiceReady] = useState(false);
@@ -244,8 +230,6 @@ export function PlayCalibrateSession({ sessionId }: { sessionId: string }) {
     setDone(true);
   }, [done, sounding]);
 
-  const goHome = () => router.push("/dashboard");
-
   if (error && !prompt) {
     return (
       <Viewport>
@@ -299,13 +283,7 @@ export function PlayCalibrateSession({ sessionId }: { sessionId: string }) {
   if (done) {
     return (
       <Viewport>
-        <Finished
-          marker={timeUp ? "time-up" : "thank-you"}
-          classification={sounding?.classification ?? null}
-          title={timeUp ? "Time is up" : "Thank you"}
-          body="Play sessions are not stored on a workspace."
-          onDone={goHome}
-        />
+        <Finished marker={timeUp ? "time-up" : "thank-you"} />
       </Viewport>
     );
   }

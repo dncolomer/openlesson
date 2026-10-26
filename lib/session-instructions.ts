@@ -11,9 +11,9 @@ export const SESSION_INSTRUCTIONS: Record<SessionGuideId, string> = {
   learn:
     "Speak, write, and draw on the work canvas. That is your work.\n\nPress commit (insight), write the takeaway in your own words, and submit it for evaluation. A kept takeaway stays with this chapter.",
   calibrate:
-    "Read the opening lines out loud to start. Then tap every question you would not trust yourself to answer. The screens get finer or stop on their own. No speaking is required after the opening.\n\nThis records which questions felt uncertain, for later Learn sessions.",
+    "Tap every question you would not trust yourself to answer. The screens get finer or stop on their own.\n\nYou might get an additional question to work through at the end, or the session may stop there.",
   verification:
-    "Work the question on the canvas before the clock ends.\n\nEnd session, or wait for the clock, to see a Distance score. Distance 0 means every step matched. The score is stored.",
+    "Work the question on the canvas before the clock ends.\n\nEnd session, or wait for the clock, to finish. Your work is stored.",
 };
 
 /** Start-screen intros. Short complete sentences. Do not stitch titles into them. */
@@ -22,5 +22,5 @@ export const SESSION_BRIEFING_INTRO: Record<SessionGuideId, string> = {
   calibrate:
     "Read the opening lines out loud to start. Then tap every question you would not trust yourself to answer. No speaking is required after the opening.",
   verification:
-    "Work the question on the canvas before the clock ends. End session, or wait for the clock, to see Distance.",
+    "Work the question on the canvas before the clock ends. End session, or wait for the clock, to finish.",
 };

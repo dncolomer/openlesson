@@ -148,24 +148,25 @@ export type VerificationFlowStartChoices = {
   emptyPool: boolean;
   practice: boolean;
   question: VerificationQuestion | null;
-  /** Tap-shaped card for the single pooled question. Empty when the pool is empty. */
+  /** One TAP card per pooled question. Empty when the pool is empty. Never padded. */
   topics: TapStartingTopic[];
 };
 
-/** Practice, or the one picked question. Never three cards and never a generated topic. */
+/** Every pooled question as a starting card. Never three generated TAP topics. */
 export function verificationFlowStartChoices(
   pool: unknown,
   random: () => number = Math.random,
 ): VerificationFlowStartChoices {
-  const picked = pickVerificationFlowQuestion(pool, random);
-  if (!picked.ok) {
+  const questions = normalizeQuestionPool(pool);
+  if (questions.length === 0) {
     return { emptyPool: true, practice: false, question: null, topics: [] };
   }
+  const picked = pickVerificationFlowQuestion(questions, random);
   return {
     emptyPool: false,
     practice: true,
-    question: picked.question,
-    topics: [verificationQuestionAsTapTopic(picked.question)],
+    question: picked.ok ? picked.question : questions[0]!,
+    topics: questions.map(verificationQuestionAsTapTopic),
   };
 }
 

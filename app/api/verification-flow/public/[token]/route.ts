@@ -1,6 +1,6 @@
 /**
- * Public verification-flow entry: identity claim and the single pooled question.
- * Does not list the question pool and does not mint a knowledge link.
+ * Public verification-flow entry: identity claim and every pooled question as a
+ * starting topic. Does not mint a knowledge link.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";

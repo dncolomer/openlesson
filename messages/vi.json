@@ -2753,8 +2753,10 @@
       "resultsHint": "Distance on this screen is stored. Scores are not generated automatically when a session ends.",
       "thankYouTitle": "Thank you",
       "thankYouBody": "The Distance on this screen has been stored.",
+      "thankYouVerifyBody": "Công việc của bạn đã được lưu. Cảm ơn.",
       "exploreUncertainSystems": "Explore Uncertain Systems",
       "backToWorkspace": "Back to workspace",
+      "backToDashboard": "Quay lại Bảng điều khiển",
       "impureTitle": "Session Invalidated",
       "impureBody": "This session was invalidated because you remained silent for too long.\n\nYou can start again. Remember to think out loud the whole time — including while reading the question(s).",
       "impureTryAgain": "Try again"

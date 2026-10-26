@@ -203,9 +203,10 @@ describe("shared live work surface", () => {
     }
     expect(prepare).toContain("data-scout-thank-you");
     expect(prepare).toContain("data-tap-session-thank-you");
-    expect(prepare).toContain("data-scout-restart");
-    expect(prepare).toContain("data-scout-workspace");
-    expect(prepare).toContain("data-scout-jump-work");
+    expect(prepare).toContain("data-tap-explore-uncertain-systems");
+    expect(prepare).not.toContain("data-scout-restart");
+    expect(prepare).not.toContain("data-scout-workspace");
+    expect(prepare).not.toContain("data-scout-jump-work");
     expect(tap).toContain("data-tap-session-thank-you");
     expect(tap).toContain("data-tap-session-impure");
     expect(tap).not.toContain("data-tap-practice-done");

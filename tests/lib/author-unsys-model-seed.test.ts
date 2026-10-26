@@ -123,6 +123,7 @@ describe("author unsys model seed", () => {
     expect(route).toContain("answers_model_seed");
     expect(route).toContain("sessionBranchContinuationFromSeed");
     expect(route).toContain("sessionBranchParentsNeedingGrowth");
+    expect(route).toContain("openingWorkForSessionField");
     expect(route).not.toContain("continuation: null,\n              done: true");
     const field = readFileSync(
       join(__dirname, "../../components/session-view/use-session-field.ts"),

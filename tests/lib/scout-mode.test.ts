@@ -523,7 +523,8 @@ describe("structural: Scout TAP shell, no think-aloud, Build toggle", () => {
     expect(client).toContain("questionsAbortRef");
     expect(surface).toContain("data-sounding-still");
     expect(phases).toContain("data-scout-thank-you");
-    expect(phases).toContain("<SessionSoundingResult");
+    expect(phases).not.toContain("<SessionSoundingResult");
+    expect(phases).toContain("data-tap-explore-uncertain-systems");
     expect(phases).toContain("data-calibrate-start");
     expect(phases).not.toContain('variant="scout"');
     expect(phases).not.toContain("useSessionThoughtInterface");

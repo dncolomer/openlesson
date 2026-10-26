@@ -42,8 +42,12 @@ describe("TAP session link post-session thank-you", () => {
     expect(post.thankYouTitle?.toLowerCase()).toMatch(/thank you/);
     expect(post.thankYouBody?.toLowerCase()).toMatch(/distance/);
     expect(post.thankYouBody?.toLowerCase()).toMatch(/stored/);
+    expect(post.thankYouVerifyBody?.toLowerCase()).toMatch(/thank you/);
+    expect(post.thankYouVerifyBody?.toLowerCase()).toMatch(/stored/);
+    expect(post.thankYouVerifyBody?.toLowerCase()).not.toMatch(/distance/);
     expect(post.exploreUncertainSystems).toMatch(/Uncertain Systems/i);
     expect(post.backToWorkspace).toMatch(/workspace/i);
+    expect(post.backToDashboard).toMatch(/dashboard/i);
     expect(post.scoring).toMatch(/scor/i);
   });
 });

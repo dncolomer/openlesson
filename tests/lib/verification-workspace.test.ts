@@ -46,7 +46,7 @@ import {
   lwmLoadedSubjectForVerificationFlow,
 } from "@/lib/verification-knowledge-subtab";
 import {
-  applyTapAssistantTurnsToWorkCanvas,
+  applyTapVerificationOpeningToWorkCanvas,
   emptyTapWorkCanvasScene,
 } from "@/lib/tap-work-canvas";
 import type { KnowledgeRankingCard } from "@/lib/verification-knowledge-subtab";
@@ -95,7 +95,7 @@ describe("verification flow question selection", () => {
     expect(start.topics[0]?.openingQuestion).toBe(pool[0].text);
   });
 
-  it("picks exactly one member from a pool of two", () => {
+  it("offers every pooled question as a starting topic", () => {
     const pool = [
       { id: "a", text: "Question A" },
       { id: "b", text: "Question B" },
@@ -104,10 +104,15 @@ describe("verification flow question selection", () => {
     const second = pickVerificationFlowQuestion(pool, () => 0.99);
     expect(first).toEqual({ ok: true, question: pool[0] });
     expect(second).toEqual({ ok: true, question: pool[1] });
-    expect(verificationFlowStartChoices(pool, () => 0).topics).toHaveLength(1);
+    const start = verificationFlowStartChoices(pool, () => 0);
+    expect(start.topics).toHaveLength(2);
+    expect(start.topics.map((topic) => topic.openingQuestion)).toEqual([
+      "Question A",
+      "Question B",
+    ]);
   });
 
-  it("picks exactly one member from a pool larger than three and never invents a topic", () => {
+  it("lists the whole pool on start and never invents a topic", () => {
     const pool = ["One", "Two", "Three", "Four", "Five"].map((text, index) => ({
       id: `q-${index}`,
       text,
@@ -119,7 +124,11 @@ describe("verification flow question selection", () => {
       if (!picked.ok) return;
       expect(pool.map((question) => question.text)).toContain(picked.question.text);
       seen.add(picked.question.id);
-      expect(verificationFlowStartChoices(pool, () => step / pool.length).topics).toHaveLength(1);
+      const start = verificationFlowStartChoices(pool, () => step / pool.length);
+      expect(start.topics).toHaveLength(pool.length);
+      expect(start.topics.map((topic) => topic.openingQuestion)).toEqual(
+        pool.map((question) => question.text),
+      );
     }
     expect(seen.size).toBeGreaterThan(1);
   });
@@ -844,7 +853,8 @@ describe("verification workspace shell gates", () => {
     expect(hosts).not.toContain("WorkspaceGoalsPanel");
     expect(hosts).not.toContain("WorkspaceDataStudioPanel");
     expect(hosts).not.toContain('visibleSections.includes("verification_flows")');
-    expect(hosts).toContain("if (noMap || visibleSections.length === 0) return null");
+    expect(hosts).not.toContain("isNoMapWorkspace");
+    expect(hosts).toContain("if (visibleSections.length === 0) return null");
 
     const regions = read("components/CustomVerificationModelsPanel.tsx");
     expect(regions).toContain("data-region-create-from-flow");
@@ -916,12 +926,14 @@ describe("verification workspace shell gates", () => {
     expect(tapStart).toContain("TapStartingTopicCards");
     expect(tapStart).not.toContain("data-verification-flow-filter");
     expect(tapStart).not.toContain("VerificationFlowSubtabFilter");
-    expect(tapStart).toContain("privateToken || kind === \"verify\"");
+    expect(tapStart).toContain("kind === \"verify\" ? (");
     expect(tapStart).toContain("data-tap-session-thank-you");
     expect(tapStart).toContain("data-tap-explore-uncertain-systems");
-    expect(tapStart).toContain("data-tap-back-workspace");
+    expect(tapStart).toContain("data-tap-back-dashboard");
+    expect(tapStart).toContain('href="/dashboard"');
+    expect(tapStart).not.toContain("data-tap-back-workspace");
     expect(tapStart).toContain("thankYouTitle");
-    expect(tapStart).toContain("thankYouBody");
+    expect(tapStart).toContain("thankYouVerifyBody");
     const tapClient = read("components/TapScoreClient.tsx");
     expect(tapClient).toContain("kind={kind}");
     expect(tapClient).toContain('sidebarMode === "verification-tap" || localOpening ? "verify" : "scored"');
@@ -934,6 +946,10 @@ describe("verification workspace shell gates", () => {
     expect(runner).toContain("data-verification-empty-pool");
     expect(runner).toContain("TapScoreClient");
     expect(runner).toContain("presetStartingTopics={presetTopics}");
+    expect(runner).toContain("setPresetTopics(cards)");
+    expect(runner).toContain("payload.topics");
+    expect(read("components/TapStartingTopicCards.tsx")).toContain("topics.map");
+    expect(read("components/TapStartingTopicCards.tsx")).not.toContain("const [first, second, third]");
     expect(runner).toContain("localOpening");
     expect(runner).toContain("verificationQuestionStartingPrompt");
     expect(runner).not.toContain("resolveTapStartingTopicsFromLlm");
@@ -955,10 +971,11 @@ describe("verification workspace shell gates", () => {
       openingQuestion: verificationQuestionStartingPrompt({ text: "What is a limit?" }),
     });
     expect(opening).toBe("What is a limit?");
-    const scene = applyTapAssistantTurnsToWorkCanvas(emptyTapWorkCanvasScene(), [
+    const scene = applyTapVerificationOpeningToWorkCanvas(emptyTapWorkCanvasScene(), [
       { id: "opening", role: "assistant", content: opening },
     ]);
     expect(JSON.stringify(scene)).toContain("What is a limit?");
+    expect(JSON.stringify(scene)).toContain("Work");
     expect(localVerificationOpening({ openingQuestion: "" })).toBe("");
   });
 

@@ -2875,8 +2875,10 @@
       "verificationResultsTitle": "Score",
       "thankYouTitle": "Thank you",
       "thankYouBody": "The Distance on this screen has been stored.",
+      "thankYouVerifyBody": "Your work has been stored. Thank you.",
       "exploreUncertainSystems": "Explore Uncertain Systems",
       "backToWorkspace": "Back to workspace",
+      "backToDashboard": "Back to Dashboard",
       "impureTitle": "Session Invalidated",
       "impureBody": "This session was invalidated because you remained silent for too long.\n\nYou can start again. Remember to think out loud the whole time — including while reading the question(s).",
       "impureTryAgain": "Try again"

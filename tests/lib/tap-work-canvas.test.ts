@@ -8,8 +8,13 @@ import { join } from "node:path";
 import { readExcalidrawSurface } from "../helpers/surface-source";
 import ts from "typescript";
 import {
+  BOARD_INSTRUCTION_NOTE_KEY,
+  BOARD_INSTRUCTION_NOTE_LABEL,
+} from "@/lib/learn-work-canvas";
+import {
   applyTapAssistantTurnsToWorkCanvas,
   applyTapHeliosReplyToWorkCanvas,
+  applyTapVerificationOpeningToWorkCanvas,
   buildTapCanvasSnapshotUploadItem,
   buildTapExcalidrawToolUploadItem,
   buildTapWorkCanvasAskUserMessage,
@@ -151,6 +156,20 @@ describe("TAP Work canvas apply / pull (shipped)", () => {
     expect(fromTurns.elements.some((el) => String(el.originalText || el.text || "").includes("heap insert"))).toBe(
       true,
     );
+    const verifyOpening = applyTapVerificationOpeningToWorkCanvas(empty, [
+      { id: "open-1", role: "assistant", content: "Walk the heap insert from this array." },
+    ]);
+    const workLabel = verifyOpening.elements.find(
+      (el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "label",
+    );
+    const workText = verifyOpening.elements.find(
+      (el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "text",
+    );
+    expect(workLabel?.originalText || workLabel?.text).toBe(BOARD_INSTRUCTION_NOTE_LABEL);
+    expect(String(workText?.originalText || workText?.text || "")).toContain("heap insert");
+    expect(verifyOpening.elements.some((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "body")).toBe(
+      true,
+    );
     expect(
       fromTurns.elements.some(
         (el) => String(el.text || el.originalText || "") === ILE_XAI_LOADING_TEXT,
@@ -234,6 +253,8 @@ describe("TAP Work canvas live surface (shipped)", () => {
     expect(phases).toContain("onAskSelected={handleAskSelected}");
     expect(phases).toContain("applyTapHeliosReplyToWorkCanvas");
     expect(phases).toContain("applyTapAssistantTurnsToWorkCanvas");
+    expect(phases).toContain("applyTapVerificationOpeningToWorkCanvas");
+    expect(phases).toContain('kind === "verify"');
     expect(phases).toContain("if (!missing.length) return");
     expect(phases).not.toContain("if (!missing.length && !boardEmpty) return");
     expect(phases).toContain("tapWorkCanvasShouldAcceptSceneUpdate");

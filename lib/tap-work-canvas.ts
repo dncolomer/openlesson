@@ -19,6 +19,7 @@ import {
   ILE_XAI_LOADING_TEXT,
   parseIleXaiCanvasTurn,
   replaceIleXaiLoadingPlaceholder,
+  seedIleChapterWorkCanvas,
   serializeIleWorkCanvasScene,
   type IleWorkCanvasElement,
   type IleWorkCanvasScene,
@@ -104,20 +105,47 @@ export type TapAssistantCanvasTurn = {
   content?: string | null;
 };
 
+function assistantCanvasTurns(
+  turns: readonly TapAssistantCanvasTurn[] | null | undefined,
+): Array<{ id?: string | null; content: string }> {
+  const next: Array<{ id?: string | null; content: string }> = [];
+  for (const turn of turns ?? []) {
+    const role = String(turn.role || "assistant").toLowerCase();
+    if (role && role !== "assistant") continue;
+    const content = String(turn.content || "").trim();
+    if (!content) continue;
+    next.push({ id: turn.id, content });
+  }
+  return next;
+}
+
 /** Apply Helios assistant turns in order onto a TAP session board. */
 export function applyTapAssistantTurnsToWorkCanvas(
   scene: IleWorkCanvasScene | null | undefined,
   turns: readonly TapAssistantCanvasTurn[] | null | undefined,
 ): IleWorkCanvasScene {
   let next = serializeIleWorkCanvasScene(scene);
-  for (const turn of turns ?? []) {
-    const role = String(turn.role || "assistant").toLowerCase();
-    if (role && role !== "assistant") continue;
-    const content = String(turn.content || "").trim();
-    if (!content) continue;
-    next = applyTapHeliosReplyToWorkCanvas(next, content, null, turn.id);
+  for (const turn of assistantCanvasTurns(turns)) {
+    next = applyTapHeliosReplyToWorkCanvas(next, turn.content, null, turn.id);
   }
   return next;
+}
+
+/**
+ * Verification opening is the Learn Work note, not a Helios reply.
+ * Later assistant turns still land as XAI notes.
+ */
+export function applyTapVerificationOpeningToWorkCanvas(
+  scene: IleWorkCanvasScene | null | undefined,
+  turns: readonly TapAssistantCanvasTurn[] | null | undefined,
+): IleWorkCanvasScene {
+  const assistant = assistantCanvasTurns(turns);
+  const [first, ...rest] = assistant;
+  const seeded = seedIleChapterWorkCanvas(scene, {
+    text: first?.content,
+    chapterId: "session",
+  });
+  return applyTapAssistantTurnsToWorkCanvas(seeded.scene, rest);
 }
 
 /**

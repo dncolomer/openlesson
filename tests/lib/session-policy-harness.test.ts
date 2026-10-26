@@ -266,13 +266,22 @@ describe("policy score against the prepared tree", () => {
     const tap = read("components/tap-score/tap-score-phases.tsx");
     const impure = sliceBetween(tap, "data-tap-session-impure", "data-tap-session-thank-you");
     expect(impure).not.toContain("SessionPolicyScoreResult");
-    const thankYou = tap.slice(tap.indexOf("data-tap-session-thank-you"));
-    expect(thankYou).toContain("<SessionPolicyScoreResult");
-    expect(thankYou).toContain("thankYouTitle");
-    expect(thankYou).toContain("thankYouBody");
-    expect(thankYou).toContain("data-tap-explore-uncertain-systems");
-    expect(thankYou).toContain("data-tap-back-workspace");
-    expect(thankYou).toContain('kind === "verify"');
+    const resultsPhase = tap.slice(tap.indexOf('phase === "results" && sessionEndedImpure'));
+    const verifyThankYou = sliceBetween(resultsPhase, 'kind === "verify" ? (', "privateToken ? (");
+    expect(verifyThankYou).toContain("data-tap-session-thank-you");
+    expect(verifyThankYou).toContain("thankYouTitle");
+    expect(verifyThankYou).toContain("thankYouVerifyBody");
+    expect(verifyThankYou).toContain("data-tap-back-dashboard");
+    expect(verifyThankYou).toContain('href="/dashboard"');
+    expect(verifyThankYou).not.toContain("SessionPolicyScoreResult");
+    expect(verifyThankYou).not.toContain("data-tap-back-workspace");
+    expect(verifyThankYou).not.toContain("data-tap-explore-uncertain-systems");
+    const guestThankYou = sliceBetween(resultsPhase, "privateToken ? (", "tap.postSession.resultsTitle");
+    expect(guestThankYou).toContain("data-tap-session-thank-you");
+    expect(guestThankYou).toContain("<SessionPolicyScoreResult");
+    expect(guestThankYou).toContain("thankYouTitle");
+    expect(guestThankYou).toContain("thankYouBody");
+    expect(guestThankYou).toContain("data-tap-explore-uncertain-systems");
     const results = tap.slice(tap.indexOf("tap.postSession.resultsTitle"));
     expect(results).toContain("<SessionPolicyScoreResult");
     expect(results).toContain("policyScore");
@@ -281,17 +290,30 @@ describe("policy score against the prepared tree", () => {
     const scout = read("components/scout-tap/scout-tap-phases.tsx");
     const scoutThanks = scout.slice(scout.indexOf("data-scout-thank-you"));
     expect(scoutThanks).toContain("data-tap-session-thank-you");
-    expect(scoutThanks).toContain("<SessionSoundingResult");
+    expect(scoutThanks).toContain("data-tap-explore-uncertain-systems");
+    expect(scoutThanks).toContain("thankYou.title");
+    expect(scoutThanks).not.toContain("<SessionSoundingResult");
     expect(scoutThanks).not.toContain("SoundingFinishedStage");
+    expect(scoutThanks).not.toContain("data-scout-restart");
+    expect(scoutThanks).not.toContain("data-scout-workspace");
+    expect(scoutThanks).not.toContain("data-scout-jump-work");
 
     const calibrate = read("components/CalibrationFlowRunner.tsx");
     expect(calibrate).toContain("data-calibration-time-up");
-    expect(calibrate).toContain("Time is up");
     expect(calibrate).toContain("data-calibration-thank-you");
-    expect(calibrate).toContain("Your taps have been stored for later Learn sessions.");
-    expect(calibrate).toContain("<SessionSoundingResult");
+    expect(calibrate).toContain("Thank you");
+    expect(calibrate).toContain("Explore Uncertain Systems");
+    expect(calibrate).toContain("data-tap-explore-uncertain-systems");
+    expect(calibrate).not.toContain("later Learn sessions");
+    expect(calibrate).not.toContain("<SessionSoundingResult");
     expect(calibrate).not.toContain("SoundingFinishedStage");
-    expect(calibrate).toContain("soundingResultPresentation");
+    expect(calibrate).not.toContain("soundingResultPresentation");
+
+    const playCalibrate = read("components/dashboard/play-calibrate-session.tsx");
+    expect(playCalibrate).toContain("data-play-calibrate-done");
+    expect(playCalibrate).toContain("Explore Uncertain Systems");
+    expect(playCalibrate).not.toContain("<SessionSoundingResult");
+    expect(playCalibrate).not.toContain("soundingResultPresentation");
 
     expect(read("components/session-view/learn-insight-kept-screen.tsx")).not.toContain(
       "SessionPolicyScoreResult",

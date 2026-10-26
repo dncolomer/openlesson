@@ -15,6 +15,7 @@ import {
   sessionBranchContinuationFromSeed,
   type SessionBranchContinuation,
 } from "@/lib/session-branch-model-generate";
+import { openingWorkForSessionField } from "@/lib/learn-opening-work-generate";
 import { sessionBranchParentsNeedingGrowth } from "@/lib/session-branch-model";
 import {
   authorSeedBlockIdFromPreparePlan,
@@ -98,11 +99,16 @@ export async function POST(request: NextRequest) {
           if (seeded) {
             const continuation = sessionBranchContinuationFromSeed(seeded);
             const done = sessionBranchParentsNeedingGrowth(seeded).length === 0;
+            const openingWork =
+              plan.kind === "learn"
+                ? await openingWorkForSessionField(seeded, plan.sessionId)
+                : "";
             return NextResponse.json({
               model: seeded,
               continuation: done ? null : continuation,
               done,
               seeded: true,
+              openingWork,
             });
           }
         }
@@ -128,7 +134,16 @@ export async function POST(request: NextRequest) {
     }
     const prepared = await generateSessionBranchOpening(material);
     if (!prepared.ok) return jsonError(502, prepared.error);
-    return NextResponse.json({ model: prepared.model, continuation: prepared.continuation, done: false });
+    const openingWork =
+      plan.kind === "learn"
+        ? await openingWorkForSessionField(prepared.model, plan.sessionId)
+        : "";
+    return NextResponse.json({
+      model: prepared.model,
+      continuation: prepared.continuation,
+      done: false,
+      openingWork,
+    });
   } catch (error) {
     console.error("[session-branch-model]", error);
     return jsonError(500, "The field could not be prepared.");

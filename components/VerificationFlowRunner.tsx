@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { TapScoreClient } from "@/components/TapScoreClient";
 import type { TapStartingTopic } from "@/lib/tap-score";
 import { verificationQuestionStartingPrompt } from "@/lib/verification-flow";
@@ -12,10 +12,9 @@ export function VerificationFlowRunner({ token }: { token: string }) {
   const [identity, setIdentity] = useState("");
   const [claimedIdentity, setClaimedIdentity] = useState("");
   const [topic, setTopic] = useState("");
-  const [question, setQuestion] = useState<TapStartingTopic | null>(null);
+  const [presetTopics, setPresetTopics] = useState<TapStartingTopic[]>([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const presetTopics = useMemo(() => (question ? [question] : []), [question]);
 
   async function claim(event: React.FormEvent) {
     event.preventDefault();
@@ -37,20 +36,27 @@ export function VerificationFlowRunner({ token }: { token: string }) {
         return;
       }
       setClaimedIdentity(String(payload.identity || identity.trim()));
-      const picked = payload.question;
-      if (payload.emptyPool || !picked) {
+      const rawTopics = Array.isArray(payload.topics) ? payload.topics : [];
+      const fallback = payload.question ? [payload.question] : [];
+      const cards = (rawTopics.length ? rawTopics : fallback)
+        .map((item: { id?: unknown; title?: unknown; openingQuestion?: unknown }) => {
+          const opening = verificationQuestionStartingPrompt({
+            text: String(item?.openingQuestion || item?.title || ""),
+          });
+          if (!opening) return null;
+          return {
+            id: String(item?.id || opening),
+            title: String(item?.title || opening),
+            subtitle: "Starting prompt",
+            openingQuestion: opening,
+          } satisfies TapStartingTopic;
+        })
+        .filter((card: TapStartingTopic | null): card is TapStartingTopic => Boolean(card));
+      if (payload.emptyPool || cards.length === 0) {
         setPhase("empty");
         return;
       }
-      const opening = verificationQuestionStartingPrompt({
-        text: String(picked.openingQuestion || picked.title || ""),
-      });
-      setQuestion({
-        id: String(picked.id),
-        title: String(picked.title || opening),
-        subtitle: "Starting prompt",
-        openingQuestion: opening,
-      });
+      setPresetTopics(cards);
       setTopic(String(payload.topic || ""));
       setPhase("pick");
     } finally {
@@ -73,7 +79,7 @@ export function VerificationFlowRunner({ token }: { token: string }) {
           identity: claimedIdentity,
           source: "runner",
           prompt: input.prompt,
-          questionId: input.practice ? null : input.questionId || question?.id || null,
+          questionId: input.practice ? null : input.questionId || null,
           policy: input.policy ?? null,
         }),
       },
@@ -84,7 +90,7 @@ export function VerificationFlowRunner({ token }: { token: string }) {
     }
   }
 
-  if (phase === "pick" && question) {
+  if (phase === "pick" && presetTopics.length > 0) {
     return (
       <div className="h-screen min-h-0" data-verification-public-entry data-verification-tap-session>
         <TapScoreClient

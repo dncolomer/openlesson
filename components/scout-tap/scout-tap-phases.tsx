@@ -6,7 +6,6 @@ import { CalibrateSoundingSurface } from "@/components/calibrate/calibrate-sound
 import { TapBriefingConfig } from "@/components/TapBriefingConfig";
 import { SessionFinishedScreen } from "@/components/session-view/session-finished-screen";
 import { SessionGuidePanel } from "@/components/session-view/session-guide-panel";
-import { SessionSoundingResult } from "@/components/session-view/session-sounding-result";
 import { SessionWorkSurface } from "@/components/session-view/session-work-surface";
 import { SessionTopicChapter } from "@/components/session-view/learn-work-dock-bar";
 import { TapSessionSignals } from "@/components/session-view/session-signals";
@@ -25,7 +24,6 @@ import { type Phase } from "@/lib/tap-score-client-helpers";
 import { prepareBriefingStep } from "@/lib/practice-voice-challenge";
 import { scoutThinkAloudEnabled, type ScoutThankYouActions } from "@/lib/scout-session";
 import {
-  soundingResultPresentation,
   type SoundingClassification,
   type SoundingState,
 } from "@/lib/calibrate-sounding";
@@ -88,16 +86,11 @@ export function ScoutTapPhases(props: {
     showEndSession,
     endSession,
     resultsError,
-    restartBriefingFlow,
     setPhase,
     sounding,
     onCommitTaps,
     onSubmitProof,
     proofBusy = false,
-    classification,
-    thankYouActions,
-    onJumpWork,
-    onBackWorkspace,
     onSettingsBackToWorkspace,
   } = props;
 
@@ -236,32 +229,15 @@ export function ScoutTapPhases(props: {
             data-tap-session-thank-you=""
           >
             <ScoutSoundingFinished
-              classification={classification}
-              fallbackTitle={t("scout.thankYou.title")}
-              fallbackBody={t("scout.thankYou.body")}
+              title={t("scout.thankYou.title")}
               actions={
-                <>
-                  <TapThoughtButton
-                    size="md"
-                    variant="primary"
-                    data-scout-restart
-                    onClick={restartBriefingFlow}
-                  >
-                    {t("scout.thankYou.restart")}
-                  </TapThoughtButton>
-                  <TapThoughtButton
-                    size="md"
-                    data-scout-workspace
-                    onClick={onBackWorkspace}
-                  >
-                    {t("scout.thankYou.workspace")}
-                  </TapThoughtButton>
-                  {thankYouActions.work ? (
-                    <TapThoughtButton size="md" data-scout-jump-work onClick={onJumpWork}>
-                      {t("scout.thankYou.work")}
-                    </TapThoughtButton>
-                  ) : null}
-                </>
+                <a
+                  href="/"
+                  data-tap-explore-uncertain-systems
+                  className="inline-flex items-center justify-center rounded-none bg-white px-5 py-2.5 text-sm font-medium text-black transition hover:bg-neutral-200"
+                >
+                  {t("tap.postSession.exploreUncertainSystems")}
+                </a>
               }
             />
           </section>
@@ -284,26 +260,18 @@ export function ScoutTapPhases(props: {
 }
 
 function ScoutSoundingFinished({
-  classification,
-  fallbackTitle,
-  fallbackBody,
+  title,
   actions,
 }: {
-  classification: SoundingClassification | null;
-  fallbackTitle: string;
-  fallbackBody: string;
+  title: string;
   actions: ReactNode;
 }) {
-  const presentation = soundingResultPresentation(classification);
   return (
     <SessionFinishedScreen
-      kicker={presentation?.kicker ?? FLOW_END_KICKERS.calibrate}
-      title={presentation?.title ?? fallbackTitle}
-      body={presentation?.body ?? fallbackBody}
+      kicker={FLOW_END_KICKERS.calibrate}
+      title={title}
       frameLabel={null}
       actions={actions}
-    >
-      <SessionSoundingResult classification={classification} />
-    </SessionFinishedScreen>
+    />
   );
 }

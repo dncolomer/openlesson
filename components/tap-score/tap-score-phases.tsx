@@ -55,6 +55,7 @@ import {
 import {
   applyTapAssistantTurnsToWorkCanvas,
   applyTapHeliosReplyToWorkCanvas,
+  applyTapVerificationOpeningToWorkCanvas,
   buildTapCanvasSnapshotUploadItem,
   buildTapWorkCanvasActionUploadItem,
   emptyTapWorkCanvasScene,
@@ -314,7 +315,9 @@ export function TapScorePhases(props: {
     const prevIds = new Set(sceneRef.current.elements.map((el) => el.id));
     const next =
       boardEmpty && missing.length === assistantTurns.length
-        ? applyTapAssistantTurnsToWorkCanvas(emptyTapWorkCanvasScene(), assistantTurns)
+        ? kind === "verify"
+          ? applyTapVerificationOpeningToWorkCanvas(emptyTapWorkCanvasScene(), assistantTurns)
+          : applyTapAssistantTurnsToWorkCanvas(emptyTapWorkCanvasScene(), assistantTurns)
         : applyTapHeliosReplyToWorkCanvas(
             sceneRef.current,
             lastAssistantTurn?.content,
@@ -327,7 +330,7 @@ export function TapScorePhases(props: {
     syncScene(next);
     setCanvasApplyElements(added.length ? added : next.elements);
     setCanvasApplyNonce((n) => n + 1);
-  }, [lastAssistantTurn?.id, lastAssistantTurn?.content, messages, phase, syncScene]);
+  }, [kind, lastAssistantTurn?.id, lastAssistantTurn?.content, messages, phase, syncScene]);
 
   const handleCanvasPowActions = useCallback(
     (events: IleWorkCanvasPowEvent[]) => {
@@ -736,13 +739,7 @@ export function TapScorePhases(props: {
         )}
 
         {phase === "saving" && (
-          <SessionPageLoading
-            message={
-              kind === "verify"
-                ? t("tap.postSession.scoring")
-                : t("tap.postSession.savingAndReturning")
-            }
-          />
+          <SessionPageLoading message={t("tap.postSession.savingAndReturning")} />
         )}
         {phase === "results" && sessionEndedImpure ? (
           <SessionFinishedScreen
@@ -761,30 +758,35 @@ export function TapScorePhases(props: {
             }
           />
         ) : phase === "results" ? (
-          privateToken || kind === "verify" ? (
+          kind === "verify" ? (
             <SessionFinishedScreen
               data-tap-session-thank-you=""
-              kicker={kind === "verify" ? FLOW_END_KICKERS.verify : undefined}
+              kicker={FLOW_END_KICKERS.verify}
+              title={t("tap.postSession.thankYouTitle")}
+              body={t("tap.postSession.thankYouVerifyBody")}
+              actions={
+                <a
+                  href="/dashboard"
+                  data-tap-back-dashboard
+                  className="inline-flex items-center justify-center rounded-none bg-white px-5 py-2.5 text-sm font-medium text-black transition hover:bg-neutral-200"
+                >
+                  {t("tap.postSession.backToDashboard")}
+                </a>
+              }
+            />
+          ) : privateToken ? (
+            <SessionFinishedScreen
+              data-tap-session-thank-you=""
               title={t("tap.postSession.thankYouTitle")}
               body={t("tap.postSession.thankYouBody")}
               actions={
-                kind === "verify" && onBackToWorkspace && workspaceId ? (
-                  <a
-                    href={`/workspace/${workspaceId}`}
-                    data-tap-back-workspace
-                    className="inline-flex items-center justify-center rounded-none bg-white px-5 py-2.5 text-sm font-medium text-black transition hover:bg-neutral-200"
-                  >
-                    {t("tap.postSession.backToWorkspace")}
-                  </a>
-                ) : (
-                  <a
-                    href="/"
-                    data-tap-explore-uncertain-systems
-                    className="inline-flex items-center justify-center rounded-none bg-white px-5 py-2.5 text-sm font-medium text-black transition hover:bg-neutral-200"
-                  >
-                    {t("tap.postSession.exploreUncertainSystems")}
-                  </a>
-                )
+                <a
+                  href="/"
+                  data-tap-explore-uncertain-systems
+                  className="inline-flex items-center justify-center rounded-none bg-white px-5 py-2.5 text-sm font-medium text-black transition hover:bg-neutral-200"
+                >
+                  {t("tap.postSession.exploreUncertainSystems")}
+                </a>
               }
             >
               <SessionPolicyScoreResult score={policyScore} />

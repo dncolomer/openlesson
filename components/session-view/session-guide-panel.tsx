@@ -31,7 +31,8 @@ type GuideTab = "commands" | "harness" | "help";
 /**
  * Sidebar focus for Learn, Calibrate, and Verification.
  * Learn and Verification run canvas commands from this rail.
- * Calibrate has no canvas, so this panel is Harness and Help.
+ * Calibrate has no canvas, so this panel is Help only.
+ * Calibrate and Verification have no Harness tab.
  */
 export function SessionGuidePanel({
   guide,
@@ -41,11 +42,12 @@ export function SessionGuidePanel({
   remainingSeconds?: number;
 }) {
   const canvasCommands = guide !== "calibrate";
+  const showHarness = guide === "learn";
   const [tab, setTab] = useState<GuideTab>(canvasCommands ? "commands" : "help");
   const [cheatsheetOpen, setCheatsheetOpen] = useState(false);
   const bridge = useSessionCanvasCommands();
   const commandsOpen = canvasCommands && tab === "commands";
-  const harnessOpen = tab === "harness";
+  const harnessOpen = showHarness && tab === "harness";
   const text = SESSION_INSTRUCTIONS[guide];
   const commandsHint = !bridge ? "The board is still opening." : null;
   const catalog = ileWorkCanvasCommandsFor(guide);
@@ -59,7 +61,7 @@ export function SessionGuidePanel({
         </span>
         <div
           role="tablist"
-          className={`grid min-w-0 flex-1 ${canvasCommands ? "grid-cols-3" : "grid-cols-2"}`}
+          className={`grid min-w-0 flex-1 ${canvasCommands && showHarness ? "grid-cols-3" : canvasCommands || showHarness ? "grid-cols-2" : "grid-cols-1"}`}
         >
           {canvasCommands ? (
             <button
@@ -73,6 +75,7 @@ export function SessionGuidePanel({
               commands
             </button>
           ) : null}
+          {showHarness ? (
           <button
             type="button"
             role="tab"
@@ -83,6 +86,7 @@ export function SessionGuidePanel({
           >
             harness
           </button>
+          ) : null}
           <button
             type="button"
             role="tab"

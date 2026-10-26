@@ -97,8 +97,7 @@ export function WorkspaceSectionHosts({
     workspaceId,
     isOwner,
   };
-  const noMap = isNoMapWorkspace(plan.workspace_kind);
-  if (noMap || visibleSections.length === 0) return null;
+  if (visibleSections.length === 0) return null;
 
   return (
     <>

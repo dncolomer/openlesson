@@ -1,6 +1,6 @@
 /**
  * Calibration authoring stays beside verification flows.
- * Context and goal generation are injected. Verification start still returns one question.
+ * Context and goal generation are injected. Verification start lists every pooled question.
  */
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -239,7 +239,7 @@ describe("calibration authoring", () => {
     expect(read("lib/calibrate-session.ts")).toContain("CALIBRATE_OPENING_INSTRUCTION");
   });
 
-  it("still starts a verification flow with one pooled question", () => {
+  it("starts a verification flow with every pooled question as a topic", () => {
     const flow: VerificationFlow = {
       id: "verify-1",
       workspaceId: "ws-cal",
@@ -254,9 +254,9 @@ describe("calibration authoring", () => {
     };
     const choices = startChoicesForFlow(flow, () => 0);
     expect(choices.emptyPool).toBe(false);
-    expect(choices.topics).toHaveLength(1);
+    expect(choices.topics).toHaveLength(MANUAL_QUESTIONS.length);
     expect(choices.question?.text).toBe(MANUAL_QUESTIONS[0]);
-    expect(choices.topics[0]?.openingQuestion).toBe(MANUAL_QUESTIONS[0]);
+    expect(choices.topics.map((topic) => topic.openingQuestion)).toEqual(MANUAL_QUESTIONS);
     expect(JSON.stringify(choices)).not.toContain("requiresClassification");
   });
 });

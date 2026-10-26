@@ -7,7 +7,6 @@ import { flowCountdownMinutes } from "@/lib/flow-countdown";
 import { CalibrateSoundingSurface } from "@/components/calibrate/calibrate-sounding-surface";
 import { SessionFinishedScreen } from "@/components/session-view/session-finished-screen";
 import { SessionGuidePanel } from "@/components/session-view/session-guide-panel";
-import { SessionSoundingResult } from "@/components/session-view/session-sounding-result";
 import { SessionWorkSurface } from "@/components/session-view/session-work-surface";
 import { SessionTopicChapter } from "@/components/session-view/learn-work-dock-bar";
 import { TapSessionSignals } from "@/components/session-view/session-signals";
@@ -36,10 +35,8 @@ import {
   finishSounding,
   soundingProofEvent,
   soundingProofMetadata,
-  soundingResultPresentation,
   soundingStillsFromBranchModel,
   submitSoundingProof,
-  type SoundingClassification,
   type SoundingState,
 } from "@/lib/calibrate-sounding";
 import { inferSoundingVoiceStep } from "@/lib/calibrate-sounding-voice-client";
@@ -364,24 +361,14 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
   if (timeUp && !stored) {
     return (
       <CalibrationViewport>
-        <CalibrationSoundingFinished
-          marker="data-calibration-time-up"
-          classification={sounding.classification}
-          fallbackTitle="Time is up"
-          fallbackBody="The countdown for this calibration flow has ended."
-        />
+        <CalibrationSoundingFinished marker="data-calibration-time-up" />
       </CalibrationViewport>
     );
   }
   if (stored) {
     return (
       <CalibrationViewport>
-        <CalibrationSoundingFinished
-          marker="data-calibration-thank-you"
-          classification={sounding.classification}
-          fallbackTitle="Thank you"
-          fallbackBody="Your taps have been stored for later Learn sessions."
-        />
+        <CalibrationSoundingFinished marker="data-calibration-thank-you" />
       </CalibrationViewport>
     );
   }
@@ -492,31 +479,28 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
 
 function CalibrationSoundingFinished({
   marker,
-  classification,
-  fallbackTitle,
-  fallbackBody,
 }: {
   marker: "data-calibration-time-up" | "data-calibration-thank-you";
-  classification: SoundingClassification | null;
-  fallbackTitle: string;
-  fallbackBody: string;
 }) {
-  const presentation = soundingResultPresentation(classification);
   return (
     <section className="flex min-h-0 flex-1 flex-col overflow-hidden" {...{ [marker]: "" }}>
       <SessionFinishedScreen
-        kicker={presentation?.kicker ?? FLOW_END_KICKERS.calibrate}
-        title={presentation?.title ?? fallbackTitle}
-        body={presentation?.body ?? fallbackBody}
+        kicker={FLOW_END_KICKERS.calibrate}
+        title="Thank you"
         frameLabel={null}
         actions={
-          <TapThoughtButton size="md" variant="primary" onClick={() => { window.location.href = "/"; }}>
+          <TapThoughtButton
+            size="md"
+            variant="primary"
+            data-tap-explore-uncertain-systems
+            onClick={() => {
+              window.location.href = "/";
+            }}
+          >
             Explore Uncertain Systems
           </TapThoughtButton>
         }
-      >
-        <SessionSoundingResult classification={classification} />
-      </SessionFinishedScreen>
+      />
     </section>
   );
 }

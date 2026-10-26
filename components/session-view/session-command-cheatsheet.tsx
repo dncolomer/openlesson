@@ -35,7 +35,7 @@ export function SessionCommandCheatsheet({
         role="dialog"
         aria-modal="true"
         aria-label={ILE_WORK_CANVAS_CHEATSHEET_LABEL}
-        className="max-h-[min(32rem,calc(100vh-2rem))] w-full max-w-md overflow-y-auto border border-white bg-black p-4 text-white"
+        className="max-h-[min(42rem,calc(100vh-2rem))] w-full max-w-xl overflow-y-auto border border-white bg-black p-5 text-white"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="mb-3 flex items-center justify-between gap-3">

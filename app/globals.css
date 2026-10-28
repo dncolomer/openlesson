@@ -656,6 +656,10 @@ polygon.learn-hidden-state-here {
   animation: salesSlideEnter 0.35s ease-out;
 }
 
+[data-pitch-web-stage] {
+  font-family: Bahnschrift, "DIN Alternate", "Arial Narrow", "Trebuchet MS", system-ui, sans-serif;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sales-slide-enter {
     animation: none;

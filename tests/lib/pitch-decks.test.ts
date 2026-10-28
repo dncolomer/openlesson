@@ -461,6 +461,7 @@ describe("pitch deck content (platform only)", () => {
     expect(PITCH_INDEX).toHaveLength(0);
     expect(LIVE_PITCH_PATHS).toEqual([]);
     expect(fs.existsSync(path.join(REPO_ROOT, "app/pitch/page.tsx"))).toBe(false);
+    expect(fs.existsSync(path.join(REPO_ROOT, "app/pitch-web/page.tsx"))).toBe(true);
     expect(fs.existsSync(path.join(REPO_ROOT, "public/pitch.pdf"))).toBe(true);
     expect(fs.existsSync(path.join(REPO_ROOT, "public/_pitch.pdf"))).toBe(false);
     const nextConfig = fs.readFileSync(path.join(REPO_ROOT, "next.config.ts"), "utf8");

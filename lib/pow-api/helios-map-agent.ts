@@ -123,7 +123,7 @@ export async function loadHeliosMapSnapshotForAgent(
         "id,title,description,is_start,next_block_ids,lock_until_block_ids,status,position_x,position_y,span_w,span_h,shape_cells,creator_effects,planning_prompt",
       )
       .eq("workspace_id", workspaceId);
-    nodes = retry.data;
+    nodes = retry.data as typeof nodes;
   }
 
   const plan = await loadWorkspaceMapGround(supabase, workspaceId);

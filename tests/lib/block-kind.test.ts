@@ -302,6 +302,9 @@ describe("map block kinds", () => {
     expect(prompt).toContain("content");
     expect(prompt).toContain("flowId");
     expect(persist).toContain("mapBlock: mapBlockFromHeliosArgs(args)");
+    expect(read("components/workspace-view/workspace-right-drawers.tsx")).toContain(
+      "map_block: parseMapBlock(n.map_block)",
+    );
     expect(slot).toContain("map_block");
     expect(slot).toContain("serializeMapBlock");
     expect(slot).toContain("MAP_BLOCK_STORE_UNAVAILABLE");

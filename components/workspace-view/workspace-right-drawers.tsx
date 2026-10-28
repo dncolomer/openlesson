@@ -21,7 +21,7 @@ import type { AuthorUnsysModelSeed } from "@/lib/author-unsys-model";
 import type { BlockCreatorEffects, GeneratorTargetCell } from "@/lib/block-creator-effects";
 import { parseBlockCreatorEffects } from "@/lib/block-creator-effects";
 import type { BlockPracticeOptions } from "@/lib/block-practice-options";
-import type { MapBlock } from "@/lib/block-kind";
+import { parseMapBlock, type MapBlock } from "@/lib/block-kind";
 import type { ExpandSourceIdentity } from "@/lib/expand-block-from-source";
 import type { UnusableCell } from "@/lib/map-ground-rules";
 import type { WorkspaceFileContextItem } from "@/lib/prompt-workspace-context";
@@ -266,7 +266,7 @@ export function WorkspaceRightDrawers({
           lock_until_block_ids: n.lock_until_block_ids,
           creator_effects: n.creator_effects,
           planning_prompt: n.planning_prompt,
-          map_block: n.map_block,
+          map_block: parseMapBlock(n.map_block),
         })),
         unusableCells,
         notes: mapOverlay?.notes,

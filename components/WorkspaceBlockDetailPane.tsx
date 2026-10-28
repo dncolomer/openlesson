@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   WorkspaceRightPaneDrawer,
   WorkspaceRightPaneDrawerGroup,
@@ -32,6 +32,17 @@ import type { ExpandSourceIdentity } from "@/lib/expand-block-from-source";
 import type { SkillGridNode } from "@/lib/block-skill-grid";
 import type { PlacedBlockRef } from "@/lib/skill-grid-ops";
 import type { BlockCreatorEffects } from "@/lib/block-creator-effects";
+import {
+  isTypedMapBlock,
+  normalizeMapBlock,
+  type MapBlock,
+} from "@/lib/block-kind";
+import {
+  WorkspaceContentAttachmentsEditor,
+  WorkspaceMapBlockLaunchCard,
+  WorkspaceOwnerFlowPicker,
+} from "@/components/WorkspaceMapBlockFields";
+import type { DashboardRecentFlow } from "@/lib/dashboard-home";
 
 /**
  * Block-detail right column (creator mode): peer top-level drawers —
@@ -51,6 +62,7 @@ export function WorkspaceBlockDetailPane({
   isStart,
   creatorEffects = null,
   answersModelSeed = null,
+  mapBlock = null,
   spanW,
   spanH,
   shapeCells,
@@ -89,6 +101,7 @@ export function WorkspaceBlockDetailPane({
   creatorEffects?: BlockCreatorEffects | null;
   /** Saved unsys answers-model seed for this block. */
   answersModelSeed?: unknown;
+  mapBlock?: unknown;
   spanW?: number | null;
   spanH?: number | null;
   shapeCells?: SplitCandidateBlock["shape_cells"];
@@ -105,6 +118,7 @@ export function WorkspaceBlockDetailPane({
     title: string;
     description: string;
     isStart?: boolean;
+    mapBlock?: MapBlock;
   }) => Promise<void> | void;
   onSaveCreatorEffects?: (
     input: WorkspaceBlockEffectsSaveInput,
@@ -161,10 +175,18 @@ export function WorkspaceBlockDetailPane({
     span_h: spanH,
     shape_cells: shapeCells ?? null,
   };
+  const parsedMapBlock = normalizeMapBlock(mapBlock);
+  const typedBlock = isTypedMapBlock(parsedMapBlock);
   const showSplitDrawer =
-    canEdit && Boolean(onSplitBlock) && blockOffersSplitDrawer(splitCandidate);
+    canEdit &&
+    !typedBlock &&
+    Boolean(onSplitBlock) &&
+    blockOffersSplitDrawer(splitCandidate);
   const showExpandDrawer =
-    canEdit && Boolean(onExpandBlock) && Array.isArray(expandNodes);
+    canEdit &&
+    !typedBlock &&
+    Boolean(onExpandBlock) &&
+    Array.isArray(expandNodes);
 
   // Memoize so Expand pane does not see a new object every parent render
   // (that retriggers selection + map preview setState loops).
@@ -186,10 +208,14 @@ export function WorkspaceBlockDetailPane({
     [blockId, positionX, positionY, shapeCells, spanH, spanW],
   );
 
-  const defaultOpenId = resolveDetailDrawerDefaultOpenId({
-    showSplit: showSplitDrawer,
-    canEdit,
-  });
+  const defaultOpenId = typedBlock
+    ? parsedMapBlock.kind === "content"
+      ? "content"
+      : "open_flow"
+    : resolveDetailDrawerDefaultOpenId({
+        showSplit: showSplitDrawer,
+        canEdit,
+      });
 
   return (
     <WorkspaceRightPaneDrawerGroup
@@ -198,9 +224,52 @@ export function WorkspaceBlockDetailPane({
       data-workspace-block-detail-pane
       data-block-detail-drawers
       data-block-detail-mini-tabs
+      data-map-block-kind={parsedMapBlock.kind}
       className="flex h-full w-full min-h-0 flex-col overflow-hidden bg-neutral-950/95"
     >
-      {canEdit ? (
+      {typedBlock && parsedMapBlock.kind !== "content" ? (
+        <WorkspaceRightPaneDrawer
+          variant="section"
+          drawerId="open_flow"
+          title={
+            parsedMapBlock.kind === "calibration"
+              ? "Calibration"
+              : "Verification"
+          }
+          defaultExpanded
+          bodyClassName="space-y-3"
+        >
+          <WorkspaceMapBlockLaunchCard
+            mapBlock={parsedMapBlock}
+            workspaceId={workspaceId}
+            ayclToken={ayclToken}
+            onOpen={(href) => {
+              window.location.assign(href);
+            }}
+          />
+        </WorkspaceRightPaneDrawer>
+      ) : null}
+
+      {typedBlock && parsedMapBlock.kind === "content" ? (
+        <WorkspaceRightPaneDrawer
+          variant="section"
+          drawerId="content"
+          title="Content"
+          defaultExpanded
+          bodyClassName="space-y-3"
+        >
+          <WorkspaceMapBlockLaunchCard
+            mapBlock={parsedMapBlock}
+            workspaceId={workspaceId}
+            ayclToken={ayclToken}
+            onOpen={(href) => {
+              window.open(href, "_blank", "noopener,noreferrer");
+            }}
+          />
+        </WorkspaceRightPaneDrawer>
+      ) : null}
+
+      {canEdit && !typedBlock ? (
         <WorkspaceRightPaneDrawer
           variant="section"
           drawerId={AUTHOR_UNSYS_MODEL_DRAWER_ID}
@@ -315,12 +384,24 @@ export function WorkspaceBlockDetailPane({
               busy={editBusy}
               onUpdate={onUpdateBlock}
             />
+            {typedBlock ? (
+              <TypedBlockTargetEditor
+                blockId={blockId}
+                mapBlock={parsedMapBlock}
+                busy={editBusy}
+                onSave={onUpdateBlock}
+                title={blockTitle}
+                description={blockDescription || ""}
+                workspaceId={workspaceId}
+                ayclToken={ayclToken}
+              />
+            ) : null}
           </div>
         </WorkspaceRightPaneDrawer>
       ) : null}
 
       {/* Combinable creator effects — not separate block types. */}
-      {canEdit || creatorEffects ? (
+      {!typedBlock && (canEdit || creatorEffects) ? (
         <>
           <WorkspaceRightPaneDrawer
             variant="section"
@@ -366,5 +447,86 @@ export function WorkspaceBlockDetailPane({
         </>
       ) : null}
     </WorkspaceRightPaneDrawerGroup>
+  );
+}
+
+function TypedBlockTargetEditor({
+  blockId,
+  mapBlock,
+  busy,
+  title,
+  description,
+  workspaceId,
+  ayclToken,
+  onSave,
+}: {
+  blockId: string;
+  mapBlock: MapBlock;
+  busy?: boolean;
+  title: string;
+  description: string;
+  workspaceId?: string;
+  ayclToken?: string | null;
+  onSave?: (input: {
+    blockId: string;
+    title: string;
+    description: string;
+    mapBlock?: MapBlock;
+  }) => Promise<void> | void;
+}) {
+  const [attachments, setAttachments] = useState(mapBlock.attachments);
+  const [saving, setSaving] = useState(false);
+
+  const persist = async (next: MapBlock) => {
+    if (!onSave) return;
+    setSaving(true);
+    try {
+      await onSave({
+        blockId,
+        title,
+        description,
+        mapBlock: next,
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (mapBlock.kind === "content") {
+    return (
+      <div className="pt-3" data-typed-block-content-edit>
+        <WorkspaceContentAttachmentsEditor
+          attachments={attachments}
+          disabled={busy || saving}
+          workspaceId={workspaceId}
+          ayclToken={ayclToken}
+          onChange={(next) => {
+            setAttachments(next);
+            void persist({ ...mapBlock, attachments: next });
+          }}
+        />
+      </div>
+    );
+  }
+  if (mapBlock.kind !== "calibration" && mapBlock.kind !== "verification") {
+    return null;
+  }
+  return (
+    <div className="pt-3" data-typed-block-flow-edit>
+      <WorkspaceOwnerFlowPicker
+        kind={mapBlock.kind}
+        selectedId={mapBlock.flowId}
+        disabled={busy || saving}
+        onChange={(flow: DashboardRecentFlow | null) => {
+          void persist(
+            normalizeMapBlock({
+              kind: mapBlock.kind,
+              flowId: flow?.id,
+              flowHref: flow?.publicPath,
+            }),
+          );
+        }}
+      />
+    </div>
   );
 }

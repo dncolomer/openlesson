@@ -75,6 +75,16 @@ import {
   normalizeAuthorUnsysModelSeed,
   serializeAuthorUnsysModelSeed,
 } from "@/lib/author-unsys-model";
+import {
+  MAP_BLOCK_COLUMN,
+  MAP_BLOCK_STORE_UNAVAILABLE,
+  droppedRequiredMapBlock,
+  mapBlockPlaceError,
+  normalizeMapBlock,
+  restoreRequiredMapBlock,
+  serializeMapBlock,
+} from "@/lib/block-kind";
+import { mapBlockKindIconName } from "@/lib/block-map-glyph";
 
 export async function handle_update_block(ctx: GridOpContext): Promise<Response | null> {
   const {
@@ -158,6 +168,20 @@ export async function handle_update_block(ctx: GridOpContext): Promise<Response 
         : null;
     }
 
+    const mapBlockRaw =
+      (body as { map_block?: unknown; mapBlock?: unknown }).map_block ??
+      (body as { mapBlock?: unknown }).mapBlock;
+    if (mapBlockRaw !== undefined) {
+      const mapBlock = normalizeMapBlock(mapBlockRaw);
+      const placeError = mapBlockPlaceError(mapBlock);
+      if (placeError) {
+        return jsonError(400, "A linked calibration or verification flow is required.");
+      }
+      updateFields[MAP_BLOCK_COLUMN] = serializeMapBlock(mapBlock);
+      const typedIcon = mapBlockKindIconName(mapBlock.kind);
+      if (typedIcon) updateFields.map_icon = typedIcon;
+    }
+
     let { error: updateError } = await supabase
       .from("blocks")
       .update(updateFields)
@@ -166,39 +190,54 @@ export async function handle_update_block(ctx: GridOpContext): Promise<Response 
     // Graceful if optional jsonb columns are not migrated yet.
     if (
       updateError &&
-      /practice_options|creator_effects|answers_model_seed|schema cache/i.test(
+      /practice_options|creator_effects|answers_model_seed|map_block|schema cache/i.test(
         updateError.message || "",
       )
     ) {
+      const updateMsg = updateError.message || "";
+      if (updateFields[MAP_BLOCK_COLUMN] != null && /map_block/i.test(updateMsg)) {
+        return jsonError(500, MAP_BLOCK_STORE_UNAVAILABLE);
+      }
       const {
         practice_options: _po,
         creator_effects: _ce,
         answers_model_seed: _seed,
+        map_block: _mb,
         ...withoutOptional
       } = updateFields;
       // Retry without missing columns one at a time.
       let retryFields = { ...updateFields };
-      if (/creator_effects/i.test(updateError.message || "")) {
+      if (/creator_effects/i.test(updateMsg)) {
         const { creator_effects: __ce, ...rest } = retryFields;
         retryFields = rest;
       }
-      if (/practice_options/i.test(updateError.message || "")) {
+      if (/practice_options/i.test(updateMsg)) {
         const { practice_options: __po, ...rest } = retryFields;
         retryFields = rest;
       }
-      if (/answers_model_seed/i.test(updateError.message || "")) {
+      if (/answers_model_seed/i.test(updateMsg)) {
         const { answers_model_seed: __seed, ...rest } = retryFields;
         retryFields = rest;
       }
-      // If message is generic schema cache, drop optional fields.
-      if (/schema cache/i.test(updateError.message || "")) {
-        retryFields = withoutOptional;
+      // If message is generic schema cache, drop optional fields except typed map_block.
+      if (/schema cache/i.test(updateMsg)) {
+        retryFields = restoreRequiredMapBlock(updateFields, withoutOptional);
+      }
+      if (droppedRequiredMapBlock(updateFields, retryFields)) {
+        return jsonError(500, MAP_BLOCK_STORE_UNAVAILABLE);
       }
       const retry = await supabase
         .from("blocks")
         .update(retryFields)
         .eq("id", blockId);
       updateError = retry.error;
+      if (
+        updateError &&
+        updateFields[MAP_BLOCK_COLUMN] != null &&
+        /map_block/i.test(updateError.message || "")
+      ) {
+        return jsonError(500, MAP_BLOCK_STORE_UNAVAILABLE);
+      }
     }
 
     if (updateError) {

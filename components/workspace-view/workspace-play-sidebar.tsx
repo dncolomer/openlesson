@@ -7,6 +7,8 @@ export function WorkspacePlaySidebar({
   busy,
   onStart,
   onClose,
+  showStart = true,
+  attachments = [],
 }: {
   title: string;
   description: string;
@@ -14,6 +16,8 @@ export function WorkspacePlaySidebar({
   busy?: boolean;
   onStart: () => void;
   onClose: () => void;
+  showStart?: boolean;
+  attachments?: Array<{ name: string; url?: string }>;
 }) {
   return (
     <aside
@@ -34,7 +38,28 @@ export function WorkspacePlaySidebar({
         <p className="whitespace-pre-wrap text-sm leading-relaxed text-neutral-300">
           {description || "No description yet."}
         </p>
+        {attachments.length > 0 ? (
+          <ul className="mt-4 space-y-1" data-workspace-play-content-list>
+            {attachments.map((item, index) => (
+              <li key={`${item.name}:${index}`}>
+                {item.url ? (
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="truncate text-sm text-white underline decoration-white/30 underline-offset-2"
+                  >
+                    {item.name}
+                  </a>
+                ) : (
+                  <span className="text-sm text-neutral-200">{item.name}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </div>
+      {showStart ? (
       <div className="border-t border-white/15 p-4">
         <button
           type="button"
@@ -46,6 +71,7 @@ export function WorkspacePlaySidebar({
           {busy ? "Starting…" : startLabel}
         </button>
       </div>
+      ) : null}
     </aside>
   );
 }

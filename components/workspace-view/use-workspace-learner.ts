@@ -23,6 +23,7 @@ import {
   WORKSPACE_LEARNER_LAUNCH_PATH,
   WORKSPACE_LEARNER_PROMPT_PATH,
 } from "@/lib/workspace-learner-writes";
+import { mapBlockLaunch } from "@/lib/block-kind";
 export function useWorkspaceLearner(input: {
   workspaceId: string;
   ayclToken?: string;
@@ -196,6 +197,12 @@ export function useWorkspaceLearner(input: {
       });
       if (progressScope) {
         recordMapItemWorkedOn(progressScope, block.id);
+      }
+      const linked = mapBlockLaunch(block.map_block);
+      if (linked.action === "none") return;
+      if (linked.action === "calibrate" || linked.action === "verify") {
+        router.push(linked.href);
+        return;
       }
       if (options?.verification) {
         const params = new URLSearchParams({

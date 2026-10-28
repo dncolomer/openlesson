@@ -54,6 +54,8 @@ import {
   playCopyStartSessionLabel,
   playCopyStartSessionTarget,
 } from "@/lib/workspace-play-copy";
+import { mapBlockLaunch, normalizeMapBlock } from "@/lib/block-kind";
+import { mapBlockAttachmentHref } from "@/lib/map-block-files";
 import { WorkspacePlaySidebar } from "@/components/workspace-view/workspace-play-sidebar";
 
 export type { Block, Workspace, WorkspaceViewProps };
@@ -693,7 +695,20 @@ export function WorkspaceView({
             <WorkspacePlaySidebar
               title={playCopyBlockSidebar(detailBlock)!.title}
               description={playCopyBlockSidebar(detailBlock)!.description}
-              startLabel={playCopyStartSessionLabel()}
+              startLabel={
+                mapBlockLaunch(detailBlock?.map_block).action === "calibrate"
+                  ? "Open calibration flow"
+                  : mapBlockLaunch(detailBlock?.map_block).action === "verify"
+                    ? "Open verification flow"
+                    : playCopyStartSessionLabel()
+              }
+              showStart={mapBlockLaunch(detailBlock?.map_block).action !== "none"}
+              attachments={normalizeMapBlock(detailBlock?.map_block).attachments.map(
+                (item) => ({
+                  name: item.name,
+                  url: mapBlockAttachmentHref(item, { workspaceId, ayclToken }) ?? undefined,
+                }),
+              )}
               busy={playStartBusy}
               onClose={handleCloseBlockDetail}
               onStart={() => {

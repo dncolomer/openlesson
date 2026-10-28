@@ -30,8 +30,17 @@ import {
   composeAddBlockAtSlotSystemMessage,
   composeJourneyGraphPromptSnippet,
 } from "@/lib/workspace-authoring-prompt-context";
-import { blockMapGlyphDbFields } from "@/lib/block-map-glyph";
+import { blockMapGlyphDbFields, mapBlockKindIconName } from "@/lib/block-map-glyph";
 import { canPlaceOnMapGround, normalizeUnusableCells } from "@/lib/map-ground-rules";
+import {
+  MAP_BLOCK_COLUMN,
+  MAP_BLOCK_STORE_UNAVAILABLE,
+  droppedRequiredMapBlock,
+  mapBlockPlaceError,
+  normalizeMapBlock,
+  restoreRequiredMapBlock,
+  serializeMapBlock,
+} from "@/lib/block-kind";
 
 interface AddBlockResponse {
   title: string;
@@ -59,10 +68,30 @@ export async function POST(req: NextRequest) {
       creatorEffects: creatorEffectsCamel,
       /** "bridge" → knowledge-bridge system framing (suggestion 7). */
       intent,
+      map_block: mapBlockSnake,
+      mapBlock: mapBlockCamel,
+      title: titleBody,
+      description: descriptionBody,
     } = body;
 
-    if (!workspaceId || typeof row !== "number" || typeof col !== "number" || !prompt?.trim()) {
+    const mapBlock = normalizeMapBlock(mapBlockSnake ?? mapBlockCamel);
+    const typedBlock = mapBlock.kind !== "learn";
+    const authorTitle =
+      typeof titleBody === "string" ? titleBody.trim() : "";
+    const authorDescription =
+      typeof descriptionBody === "string" ? descriptionBody.trim() : "";
+    const promptText = typeof prompt === "string" ? prompt.trim() : "";
+    if (
+      !workspaceId ||
+      typeof row !== "number" ||
+      typeof col !== "number" ||
+      (!promptText && !typedBlock)
+    ) {
       return jsonError(400, "Plan ID, grid position, and prompt are required");
+    }
+    const placeError = mapBlockPlaceError(mapBlock);
+    if (placeError) {
+      return jsonError(400, "A linked calibration or verification flow is required.");
     }
 
     const auth = await guardWorkspaceRoute(workspaceId, {
@@ -207,7 +236,14 @@ export async function POST(req: NextRequest) {
       },
     );
 
-    const aiPrompt = `${withSelected}
+    let generated: AddBlockResponse;
+    if (typedBlock) {
+      generated = {
+        title: authorTitle || promptText || "Untitled",
+        description: authorDescription,
+      };
+    } else {
+      const aiPrompt = `${withSelected}
 ${plan.description ? `Description: ${plan.description}\n` : ""}Existing blocks:
 ${blockList || "(none yet)"}
 
@@ -215,28 +251,30 @@ Target grid slot: row ${row}, column ${col}
 Nearby blocks (distance-weighted influence — closer blocks matter more):
 ${neighborSummary}
 ${journeySnippet ? `\n${journeySnippet}\n` : ""}
-User request for the new block: "${prompt.trim()}"
+User request for the new block: "${promptText}"
 
 Create exactly one learning block that belongs at this grid slot. The topic should fit the spatial context: complement nearby blocks, avoid duplicates, and respect distance-weighted influence and any journey/DAG edges above.${selectedKeys.length > 0 ? " Prioritize the creator-selected materials above." : " Always honor workspace files and notes as context."}${languageNote ? `\n\n${languageNote}` : ""}`;
 
-    const aiResponse = await callXaiJSON<AddBlockResponse>(
-      [
-        systemMessage(
-          composeAddBlockAtSlotSystemMessage(
-            typeof intent === "string" ? intent : null,
+      const aiResponse = await callXaiJSON<AddBlockResponse>(
+        [
+          systemMessage(
+            composeAddBlockAtSlotSystemMessage(
+              typeof intent === "string" ? intent : null,
+            ),
           ),
-        ),
-        userMessage(aiPrompt),
-      ],
-      {
-        model: userModel || DEFAULT_MODEL,
-        maxTokens: 600,
-        temperature: 0.5,
-      },
-    );
+          userMessage(aiPrompt),
+        ],
+        {
+          model: userModel || DEFAULT_MODEL,
+          maxTokens: 600,
+          temperature: 0.5,
+        },
+      );
 
-    if (!aiResponse.success || !aiResponse.data?.title?.trim()) {
-      return jsonError(502, aiResponse.error || "Failed to generate block");
+      if (!aiResponse.success || !aiResponse.data?.title?.trim()) {
+        return jsonError(502, aiResponse.error || "Failed to generate block");
+      }
+      generated = aiResponse.data;
     }
 
     const local_context =
@@ -287,13 +325,16 @@ Create exactly one learning block that belongs at this grid slot. The topic shou
     }
 
     const glyph = blockMapGlyphDbFields(
-      aiResponse.data,
-      aiResponse.data.title.trim(),
+      generated,
+      generated.title.trim(),
     );
+    const typedMapIcon = mapBlockKindIconName(mapBlock.kind);
+    if (typedMapIcon) glyph.map_icon = typedMapIcon;
+    const mapBlockWire = serializeMapBlock(mapBlock);
     const insertPayload: Record<string, unknown> = {
       workspace_id: workspaceId,
-      title: aiResponse.data.title.trim(),
-      description: aiResponse.data.description?.trim() || "",
+      title: generated.title.trim(),
+      description: generated.description?.trim() || "",
       is_start: resolveCreateBlockIsStart({
         authorStarter,
         existingBlockCount: nodes.length,
@@ -306,6 +347,7 @@ Create exactly one learning block that belongs at this grid slot. The topic shou
       map_icon: glyph.map_icon,
       ...(local_context ? { local_context } : {}),
       ...(creatorEffectsWire ? { creator_effects: creatorEffectsWire } : {}),
+      ...(mapBlockWire ? { [MAP_BLOCK_COLUMN]: mapBlockWire } : {}),
     };
 
     let { data: newNode, error: insertError } = await supabase
@@ -314,37 +356,55 @@ Create exactly one learning block that belongs at this grid slot. The topic shou
       .select()
       .single();
 
-    // Graceful fallback if optional columns not migrated yet
+    // Graceful fallback if optional columns not migrated yet.
+    // Typed map_block must persist; never insert a silent Learn tile.
     if (
       insertError &&
-      /local_context|creator_effects|map_keyword|map_icon|schema cache/i.test(insertError.message || "")
+      /local_context|creator_effects|map_keyword|map_icon|map_block|schema cache/i.test(insertError.message || "")
     ) {
+      const insertMsg = insertError.message || "";
+      if (mapBlockWire && /map_block/i.test(insertMsg)) {
+        return jsonError(500, MAP_BLOCK_STORE_UNAVAILABLE);
+      }
       let retryPayload = { ...insertPayload };
-      if (/creator_effects/i.test(insertError.message || "")) {
+      if (/creator_effects/i.test(insertMsg)) {
         const { creator_effects: _ce, ...rest } = retryPayload;
         retryPayload = rest;
       }
-      if (/local_context/i.test(insertError.message || "")) {
+      if (/local_context/i.test(insertMsg)) {
         const { local_context: _lc, ...rest } = retryPayload;
         retryPayload = rest;
       }
-      if (/map_keyword|map_icon/i.test(insertError.message || "")) {
+      if (/map_keyword|map_icon/i.test(insertMsg)) {
         const { map_keyword: _mk, map_icon: _mi, ...rest } = retryPayload;
-        retryPayload = rest;
+        retryPayload = typedMapIcon
+          ? { ...rest, map_icon: typedMapIcon }
+          : rest;
       }
-      if (/schema cache/i.test(insertError.message || "")) {
+      if (/schema cache/i.test(insertMsg)) {
         const {
           local_context: _lc,
           creator_effects: _ce,
           map_keyword: _mk,
           map_icon: _mi,
+          map_block: _mb,
           ...rest
         } = insertPayload;
-        retryPayload = rest;
+        retryPayload = restoreRequiredMapBlock(insertPayload, rest);
+      }
+      if (droppedRequiredMapBlock(insertPayload, retryPayload)) {
+        return jsonError(500, MAP_BLOCK_STORE_UNAVAILABLE);
       }
       const retry = await supabase.from("blocks").insert(retryPayload).select().single();
       newNode = retry.data;
       insertError = retry.error;
+      if (
+        insertError &&
+        mapBlockWire &&
+        /map_block/i.test(insertError.message || "")
+      ) {
+        return jsonError(500, MAP_BLOCK_STORE_UNAVAILABLE);
+      }
     }
 
     if (insertError || !newNode) {

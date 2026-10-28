@@ -132,7 +132,12 @@ export function AyclLandingClient({
     [complimentaryTier, complimentaryToken, landing.workspaceId],
   );
 
-  const nodes = landing.map.nodes as SkillGridNode[];
+  const nodes = (landing.map.nodes as SkillGridNode[]).map((node) => ({
+    ...node,
+    map_icon: node.map_icon,
+    map_keyword: node.map_keyword,
+    map_block: node.map_block,
+  }));
   const fullBusy = checkoutKey === `${landing.workspaceId}:full`;
   const anyBusy = fullBusy;
   const mapIsFullscreen = ayclMapPreviewFullscreenActive(mapFullscreen);

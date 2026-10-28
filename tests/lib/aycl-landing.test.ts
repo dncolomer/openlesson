@@ -15,6 +15,7 @@ import {
   ayclLandingPath,
   ayclLandingPracticeContext,
   assembleAyclLandingSummary,
+  fetchAyclLandingBlocks,
   AYCL_HACKATHONS,
   buildAyclExploreLearnSystemPrompt,
   buildAyclExploreLearnUserPrompt,
@@ -102,6 +103,7 @@ describe("aycl landing model", () => {
     expect(landing.map.learnerMode).toBe(true);
     expect(landing.map.nodes).toHaveLength(2);
     expect(landing.map.nodes[0].title).toMatch(/Positive predictive/i);
+    expect(landing.map.nodes[0].map_icon).toBeUndefined();
     expect(landing.offers.learner.tier).toBe("learner");
     expect(landing.offers.full.tier).toBe("full");
     expect(landing.offers.learner.priceLabel).toMatch(/\$/);
@@ -125,6 +127,28 @@ describe("aycl landing model", () => {
       "full",
     );
 
+    const typed = assembleAyclLandingSummary({
+      workspace: fixtureWorkspace,
+      blocks: [
+        {
+          ...fixtureBlocks[0],
+          map_icon: "calibration",
+          map_keyword: "Priors",
+          map_block: { kind: "calibration", flow_id: "flow-1" },
+        },
+        {
+          ...fixtureBlocks[1],
+          map_icon: "g27",
+        },
+      ],
+    });
+    expect(typed.map.nodes[0]).toMatchObject({
+      map_icon: "calibration",
+      map_keyword: "Priors",
+      map_block: { kind: "calibration", flowId: "flow-1" },
+    });
+    expect(typed.map.nodes[1].map_icon).toBe("g27");
+
     writeEvidence(
       "aycl-landing-model.log",
       [
@@ -137,6 +161,51 @@ describe("aycl landing model", () => {
         "checkout=" + JSON.stringify(body),
       ].join("\n"),
     );
+  });
+
+  it("retries preview block select without map_block when the column is missing", async () => {
+    const selects: string[] = [];
+    const supabase = {
+      from: (table: string) => {
+        expect(table).toBe("blocks");
+        return {
+          select: (columns: string) => {
+            selects.push(columns);
+            return {
+              eq: () => ({
+                limit: async () => {
+                  if (columns.includes("map_block")) {
+                    return {
+                      data: null,
+                      error: {
+                        message:
+                          "Could not find the 'map_block' column of 'blocks' in the schema cache",
+                      },
+                    };
+                  }
+                  return {
+                    data: [
+                      {
+                        id: "b1",
+                        title: "Priors",
+                        map_icon: "calibration",
+                      },
+                    ],
+                    error: null,
+                  };
+                },
+              }),
+            };
+          },
+        };
+      },
+    };
+    const result = await fetchAyclLandingBlocks(supabase, "ws-1");
+    expect(selects[0]).toContain("map_block");
+    expect(selects[1]).toContain("map_icon");
+    expect(selects[1]).not.toContain("map_block");
+    expect(result.error).toBeNull();
+    expect(result.data[0].map_icon).toBe("calibration");
   });
 
   it("complimentary play token: the one workspace offer is Free", () => {
@@ -322,6 +391,8 @@ describe("aycl landing + hackathons structural", () => {
     expect(landingClient).toContain("Things you");
     expect(landingClient).toContain("viewOnly");
     expect(landingClient).toContain("canEdit={false}");
+    expect(landingClient).toContain("map_block: node.map_block");
+    expect(landingClient).toContain("map_icon: node.map_icon");
     expect(landingClient).toContain("explore-samples");
     expect(landingClient).toContain("ayclLandingCheckoutBody");
     expect(landingClient).toContain("ayclLandingOffersForComplimentary");
@@ -349,6 +420,14 @@ describe("aycl landing + hackathons structural", () => {
     // APIs
     expect(apiLanding).toContain("is_all_you_can_learn");
     expect(apiLanding).toContain("assembleAyclLandingSummary");
+    expect(apiLanding).toContain("fetchAyclLandingBlocks");
+    expect(landingPage).toContain("fetchAyclLandingBlocks");
+    expect(lib).toContain("AYCL_LANDING_BLOCK_SELECT");
+    expect(lib).toContain("map_icon");
+    expect(lib).toContain("map_block");
+    expect(read("app/api/dashboard/catalog/[id]/route.ts")).toContain(
+      "fetchAyclLandingBlocks",
+    );
     expect(apiSamples).toContain("callXaiJSON");
     expect(apiSamples).toContain("parseAyclExploreLearnSamples");
     expect(apiSamples).not.toContain("buildAyclExploreLearnFallback");

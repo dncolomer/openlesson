@@ -19,6 +19,7 @@ import {
   normalizeUnusableCells,
   type UnusableCell,
 } from "@/lib/map-ground-rules";
+import { parseMapBlock } from "@/lib/block-kind";
 import {
   parseBlockLocalContext,
   type WorkspaceFileContextItem,
@@ -303,9 +304,10 @@ export function useWorkspaceLoad(input: {
         setError("Failed to load nodes");
       } else {
         let finalNodes: Block[] = (nodesData || []).map(
-          (n: Block & { local_context?: unknown }) => ({
+          (n: Block & { local_context?: unknown; map_block?: unknown }) => ({
             ...n,
             local_context: parseBlockLocalContext(n.local_context),
+            map_block: parseMapBlock(n.map_block),
           }),
         );
 

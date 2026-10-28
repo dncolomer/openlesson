@@ -478,6 +478,11 @@ export interface Block {
   creator_effects?: unknown;
   /** Author seed + Calibrate result for the block unsys answers-model. */
   answers_model_seed?: unknown;
+  /**
+   * Learning Map block kind payload (Learn default when null).
+   * Calibration/verification link an existing owner flow; content stores files/links.
+   */
+  map_block?: unknown;
   map_keyword?: string | null;
   map_icon?: string | null;
 }

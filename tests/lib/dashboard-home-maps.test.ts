@@ -362,6 +362,12 @@ describe("dashboard home and my maps surface", () => {
     expect(readRepo("components/dashboard/dashboard-home-map-detail.tsx")).not.toContain(
       'aria-modal="true"',
     );
+    expect(readRepo("app/api/dashboard/catalog/[id]/route.ts")).toContain(
+      "fetchAyclLandingBlocks",
+    );
+    expect(
+      readRepo("components/dashboard/dashboard-home-map-detail.tsx"),
+    ).toContain("map_block: node.map_block");
     expect(dash).toContain("data-dashboard-add-to-my-maps");
     expect(dash).toContain("data-dashboard-map-buy");
     expect(dash).toContain("data-dashboard-map-try-now");

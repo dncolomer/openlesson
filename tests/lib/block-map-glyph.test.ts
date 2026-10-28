@@ -17,6 +17,9 @@ import {
   parseBlockMapIconName,
   pickRandomBlockMapIcon,
   resolveBlockMapGlyph,
+  mapBlockKindIconName,
+  isTypedMapBlockKindIcon,
+  isLucideStrokeMapIcon,
 } from "@/lib/block-map-glyph";
 import { composeGenerateShapeBlockSystemMessage } from "@/lib/block-footprint-prompt";
 import { composeAddBlockAtSlotSystemMessage } from "@/lib/workspace-authoring-prompt-context";
@@ -50,6 +53,9 @@ describe("block map glyph (keyword + random 3×3 squares)", () => {
     expect(parseBlockMapIconName("chapter-done")).toBe("chapter-done");
     expect(parseBlockMapIconName("gather-resources")).toBeNull();
     expect(parseBlockMapIconName("pickaxe")).toBeNull();
+    expect(parseBlockMapIconName("calibration")).toBe("calibration");
+    expect(parseBlockMapIconName("verification")).toBe("verification");
+    expect(parseBlockMapIconName("content")).toBe("content");
     expect(parseBlockMapIconName("Square")).toBeNull();
     expect(parseBlockMapIconName("Cube")).toBeNull();
     expect(parseBlockMapIconName("g0")).toBeNull();
@@ -65,7 +71,13 @@ describe("block map glyph (keyword + random 3×3 squares)", () => {
     expect(icons).not.toMatch(/\brx=/);
     expect(icons).toContain('from "lucide-react"');
     expect(icons).toContain("Pickaxe");
+    expect(icons).toContain("Crosshair");
+    expect(icons).toContain("BadgeCheck");
+    expect(icons).toContain("FileText");
     expect(icons).toContain("isPreviousSessionsMapIcon");
+    expect(icons).toContain("isCalibrationMapIcon");
+    expect(icons).toContain("isVerificationMapIcon");
+    expect(icons).toContain("isContentMapIcon");
     expect(icons).not.toContain("data-ile-gather-running-icon");
     expect(icons).not.toContain("Cube");
   });
@@ -151,6 +163,35 @@ describe("block map glyph (keyword + random 3×3 squares)", () => {
     expect(grid).toContain("line-clamp-2");
     expect(grid).toContain("BlockMapGlyphIcon");
     expect(grid).toContain("resolveBlockMapGlyph");
+    expect(grid).toContain("mapBlockKindIconName");
+    expect(grid).toContain("map_block: node.map_block");
+    expect(grid).toContain("parseMapBlock(node.map_block)");
     expect(grid).toContain('data-block-map-grid="3x3"');
+  });
+
+  it("typed map blocks use distinct display icons (not the 3×3)", () => {
+    expect(mapBlockKindIconName("learn")).toBeNull();
+    expect(mapBlockKindIconName("calibration")).toBe("calibration");
+    expect(mapBlockKindIconName("verification")).toBe("verification");
+    expect(mapBlockKindIconName("content")).toBe("content");
+    expect(isTypedMapBlockKindIcon("calibration")).toBe(true);
+    expect(isLucideStrokeMapIcon("content")).toBe(true);
+    expect(isLucideStrokeMapIcon("g27")).toBe(false);
+    expect(
+      resolveBlockMapGlyph({
+        title: "Priors",
+        map_icon: "g27",
+        map_block: { kind: "calibration", flowId: "c1" },
+      }).icon,
+    ).toBe("calibration");
+    expect(
+      resolveBlockMapGlyph({
+        title: "Notes",
+        map_icon: "content",
+      }).icon,
+    ).toBe("content");
+    expect(read("app/api/workspace/add-block-at-slot/route.ts")).toContain(
+      "mapBlockKindIconName(mapBlock.kind)",
+    );
   });
 });

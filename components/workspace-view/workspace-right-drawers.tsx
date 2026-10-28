@@ -21,6 +21,7 @@ import type { AuthorUnsysModelSeed } from "@/lib/author-unsys-model";
 import type { BlockCreatorEffects, GeneratorTargetCell } from "@/lib/block-creator-effects";
 import { parseBlockCreatorEffects } from "@/lib/block-creator-effects";
 import type { BlockPracticeOptions } from "@/lib/block-practice-options";
+import type { MapBlock } from "@/lib/block-kind";
 import type { ExpandSourceIdentity } from "@/lib/expand-block-from-source";
 import type { UnusableCell } from "@/lib/map-ground-rules";
 import type { WorkspaceFileContextItem } from "@/lib/prompt-workspace-context";
@@ -182,6 +183,7 @@ export function WorkspaceRightDrawers({
     description: string;
     isStart?: boolean;
     practiceOptions?: BlockPracticeOptions;
+    mapBlock?: MapBlock;
   }) => Promise<void>;
   onDeleteBlock: (blockId: string) => Promise<void>;
   onSaveCreatorEffects?: (input: {
@@ -264,6 +266,7 @@ export function WorkspaceRightDrawers({
           lock_until_block_ids: n.lock_until_block_ids,
           creator_effects: n.creator_effects,
           planning_prompt: n.planning_prompt,
+          map_block: n.map_block,
         })),
         unusableCells,
         notes: mapOverlay?.notes,
@@ -295,8 +298,8 @@ export function WorkspaceRightDrawers({
           layers,
         });
       },
-      addBlock: async ({ prompt, cell }) => {
-        await onSubmitAddBlock(prompt, cell);
+      addBlock: async ({ prompt, cell, mapBlock }) => {
+        await onSubmitAddBlock(prompt, cell, mapBlock ? { mapBlock, title: prompt } : undefined);
       },
       generateShape: async ({ prompt, cells }) => {
         await onSubmitGenerateShape({ prompt, cells });
@@ -538,6 +541,7 @@ export function WorkspaceRightDrawers({
                   onSaveAnswersModelSeed={onSaveAnswersModelSeed}
                   onOpenUnsysStudio={onOpenUnsysStudio}
                   answersModelSeed={detailBlock.answers_model_seed}
+                  mapBlock={detailBlock.map_block}
                   onSplitBlock={onSplitBlock}
                   cloneArmed={cloneArmed}
                   onCloneArm={onCloneArm}

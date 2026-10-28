@@ -43,6 +43,8 @@ export interface SkillGridNode {
   map_keyword?: string | null;
   /** Lucide icon name from the workspace map catalog. */
   map_icon?: string | null;
+  /** Typed Learning Map payload (calibration / verification / content). */
+  map_block?: unknown;
 }
 
 /**

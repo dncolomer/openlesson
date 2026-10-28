@@ -6,7 +6,7 @@ import {
 } from "@/lib/map-cell-chrome";
 import type { BlockCreatorEffectKey } from "@/lib/block-creator-effects";
 import { BlockMapGlyphIcon } from "@/components/block-skill-grid/map-block-glyph-icon";
-import { isPreviousSessionsMapIcon } from "@/lib/block-map-glyph";
+import { isLucideStrokeMapIcon } from "@/lib/block-map-glyph";
 
 /** Occupied tiles: keyword + 3×3 square mark (solid on workspace, outline on learner maps). */
 export function MapCellStatusGlyph({
@@ -50,7 +50,7 @@ export function MapCellStatusGlyph({
           {hideIcon ? null : (
             <BlockMapGlyphIcon
               name={icon}
-              className={isPreviousSessionsMapIcon(icon) ? "h-6 w-6 shrink-0" : "h-8 w-8 shrink-0"}
+              className={isLucideStrokeMapIcon(icon) ? "h-6 w-6 shrink-0" : "h-8 w-8 shrink-0"}
               variant={glyphVariant}
             />
           )}
@@ -78,7 +78,7 @@ export function MapCellStatusGlyph({
           <BlockMapGlyphIcon
             name={icon}
             className={
-              isPreviousSessionsMapIcon(icon) ? "h-12 w-12 shrink-0" : "h-16 w-16 shrink-0"
+              isLucideStrokeMapIcon(icon) ? "h-12 w-12 shrink-0" : "h-16 w-16 shrink-0"
             }
             variant={glyphVariant}
           />

@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import {
   AYCL_LANDING_WORKSPACE_SELECT,
   assembleAyclLandingSummary,
+  fetchAyclLandingBlocks,
 } from "@/lib/aycl-landing";
 
 export const runtime = "nodejs";
@@ -38,16 +39,13 @@ export async function GET(
       return jsonError(404, "Workspace not found");
     }
 
-    const { data: blocks, error: blocksError } = await supabase
-      .from("blocks")
-      .select(
-        "id, title, description, status, is_start, next_block_ids, position_x, position_y, span_w, span_h, shape_cells",
-      )
-      .eq("workspace_id", workspaceId)
-      .limit(200);
+    const { data: blocks, error: blocksError } = await fetchAyclLandingBlocks(
+      supabase,
+      workspaceId,
+    );
 
     if (blocksError) {
-      return jsonError(500, blocksError.message);
+      return jsonError(500, blocksError.message || "Failed to load workspace landing");
     }
 
     const landing = assembleAyclLandingSummary({

@@ -74,7 +74,12 @@ export function DashboardHomeMapDetail({
   const [samplesLoading, setSamplesLoading] = useState(false);
   const mapIsFullscreen = ayclMapPreviewFullscreenActive(mapFullscreen);
   const landing = detail.landing;
-  const nodes = (landing?.map.nodes ?? []) as SkillGridNode[];
+  const nodes = ((landing?.map.nodes ?? []) as SkillGridNode[]).map((node) => ({
+    ...node,
+    map_icon: node.map_icon,
+    map_keyword: node.map_keyword,
+    map_block: node.map_block,
+  }));
   const title = landing?.title || detail.map.title;
   const summary = landing?.summary || detail.map.summary;
   const category = landing?.category || detail.map.category;

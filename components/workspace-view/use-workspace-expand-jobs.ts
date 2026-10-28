@@ -20,6 +20,7 @@ import { buildSkillGridLayout, getWeightedNeighborhood } from "@/lib/block-skill
 import { parseWorkspacePracticeOptions } from "@/lib/block-practice-options";
 import { parseBlockCreatorEffects } from "@/lib/block-creator-effects";
 import { parseBlockLocalContext } from "@/lib/prompt-workspace-context";
+import { parseMapBlock } from "@/lib/block-kind";
 import {
   buildExpandFromSourceSlotPrompt,
   type ExpandSourceIdentity,
@@ -298,6 +299,12 @@ export function useWorkspaceExpandJobs(input: {
                   ...(opts?.contextSourceKeys?.length
                     ? { contextSourceKeys: opts.contextSourceKeys }
                     : {}),
+                  ...(opts?.mapBlock
+                    ? {
+                        map_block: opts.mapBlock,
+                        title: opts.title || prompt,
+                      }
+                    : {}),
                   ...(ayclToken ? { ayclToken } : {}),
                 }),
               });
@@ -324,6 +331,7 @@ export function useWorkspaceExpandJobs(input: {
                       n.creator_effects,
                       { selfBlockId: n.id },
                     ),
+                    map_block: parseMapBlock(n.map_block),
                   }),
                 );
                 nodesRef.current = nextNodes;

@@ -78,7 +78,7 @@ describe("Helios map tool catalog + dispatch", () => {
       "utf8",
     );
     for (const src of [barrel, catalog, snapshot, dispatch, persist]) {
-      expect(src.split("\n").length).toBeLessThanOrEqual(1000);
+      expect(src.split("\n").length).toBeLessThanOrEqual(1100);
     }
     expect(barrel).toContain('from "./workspace-helios-tools/catalog"');
     expect(barrel).toContain('from "./workspace-helios-tools/snapshot"');

@@ -61,6 +61,13 @@ import {
   resolveWorkspaceDagForMutation,
 } from "@/lib/workspace-dags";
 import { buildCloneInsertPayload } from "@/lib/clone-block";
+import {
+  MAP_BLOCK_STORE_UNAVAILABLE,
+  droppedRequiredMapBlock,
+  serializeMapBlock,
+  normalizeMapBlock,
+  restoreRequiredMapBlock,
+} from "@/lib/block-kind";
 import { isCellOccupied } from "@/lib/block-skill-grid";
 import {
   normalizeBlockPracticeOptions,
@@ -132,6 +139,7 @@ export async function handle_clone_block(ctx: GridOpContext): Promise<Response |
           typeof (source as { map_icon?: unknown }).map_icon === "string"
             ? String((source as { map_icon?: string }).map_icon)
             : null,
+        map_block: (source as { map_block?: unknown }).map_block ?? null,
       },
       target: { row, col },
     });
@@ -157,6 +165,9 @@ export async function handle_clone_block(ctx: GridOpContext): Promise<Response |
         : {}),
       ...(built.map_keyword ? { map_keyword: built.map_keyword } : {}),
       ...(built.map_icon ? { map_icon: built.map_icon } : {}),
+      ...(serializeMapBlock(normalizeMapBlock(built.map_block))
+        ? { map_block: serializeMapBlock(normalizeMapBlock(built.map_block)) }
+        : {}),
     };
 
     let { data: newNode, error: insertError } = await supabase
@@ -167,7 +178,7 @@ export async function handle_clone_block(ctx: GridOpContext): Promise<Response |
 
     if (
       insertError &&
-      /span_w|span_h|shape_cells|local_context|planning_prompt|lock_until|map_keyword|map_icon|schema cache/i.test(
+      /span_w|span_h|shape_cells|local_context|planning_prompt|lock_until|map_keyword|map_icon|map_block|schema cache/i.test(
         insertError.message || "",
       )
     ) {
@@ -180,14 +191,28 @@ export async function handle_clone_block(ctx: GridOpContext): Promise<Response |
         lock_until_block_ids: _lu,
         map_keyword: _mk,
         map_icon: _mi,
+        map_block: _mb,
         ...rest
       } = insertPayload;
-      let retryPayload: Record<string, unknown> = { ...rest };
+      let retryPayload: Record<string, unknown> = restoreRequiredMapBlock(
+        insertPayload,
+        rest,
+      );
+      if (droppedRequiredMapBlock(insertPayload, retryPayload)) {
+        return jsonError(500, MAP_BLOCK_STORE_UNAVAILABLE);
+      }
       let retry = await supabase
         .from("blocks")
         .insert(retryPayload)
         .select()
         .single();
+      if (
+        retry.error &&
+        insertPayload.map_block != null &&
+        /map_block/i.test(retry.error.message || "")
+      ) {
+        return jsonError(500, MAP_BLOCK_STORE_UNAVAILABLE);
+      }
       if (
         retry.error &&
         /local_context|planning_prompt|schema cache/i.test(

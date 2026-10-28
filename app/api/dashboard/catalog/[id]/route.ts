@@ -4,6 +4,7 @@ import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import {
   AYCL_LANDING_WORKSPACE_SELECT,
   assembleAyclLandingSummary,
+  fetchAyclLandingBlocks,
 } from "@/lib/aycl-landing";
 import { presentPublicMapCatalogItem } from "@/lib/dashboard-home-catalog";
 
@@ -30,14 +31,11 @@ export async function GET(
     const card = presentPublicMapCatalogItem(workspace);
     if (!workspace || !card) return jsonError(404, "Map not found");
 
-    const { data: blocks, error: blocksError } = await auth.supabase
-      .from("blocks")
-      .select(
-        "id, title, description, status, is_start, next_block_ids, position_x, position_y, span_w, span_h, shape_cells",
-      )
-      .eq("workspace_id", workspaceId)
-      .limit(200);
-    if (blocksError) return jsonError(500, blocksError.message);
+    const { data: blocks, error: blocksError } = await fetchAyclLandingBlocks(
+      auth.supabase,
+      workspaceId,
+    );
+    if (blocksError) return jsonError(500, blocksError.message || "Failed to load map");
 
     const landing = assembleAyclLandingSummary({
       workspace,

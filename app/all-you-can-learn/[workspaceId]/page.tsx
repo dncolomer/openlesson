@@ -10,6 +10,7 @@ import {
   AYCL_LANDING_WORKSPACE_SELECT,
   ayclLandingPath,
   assembleAyclLandingSummary,
+  fetchAyclLandingBlocks,
 } from "@/lib/aycl-landing";
 import { normalizeAyclAccessTier, type AyclAccessTier } from "@/lib/aycl-shared";
 import { aestheticImageForId } from "@/lib/aesthetics";
@@ -39,13 +40,7 @@ async function loadLanding(workspaceId: string) {
     .maybeSingle();
   if (!workspace) return null;
 
-  const { data: blocks } = await supabase
-    .from("blocks")
-    .select(
-      "id, title, description, status, is_start, next_block_ids, position_x, position_y, span_w, span_h, shape_cells",
-    )
-    .eq("workspace_id", id)
-    .limit(200);
+  const { data: blocks } = await fetchAyclLandingBlocks(supabase, id);
 
   return assembleAyclLandingSummary({
     workspace,

@@ -33,6 +33,7 @@ interface DbBlock {
   span_h?: number | null;
   map_keyword?: string | null;
   map_icon?: string | null;
+  map_block?: unknown;
 }
 
 /** Grid column/row for every node using the same rules as the skill grid UI. */
@@ -60,6 +61,7 @@ export function toSkillGridNodes(nodes: DbBlock[]): SkillGridNode[] {
       shape_cells?: unknown;
       map_keyword?: string | null;
       map_icon?: string | null;
+      map_block?: unknown;
     };
     let shape_cells: Array<{ dr: number; dc: number }> | null | undefined;
     if (Array.isArray(raw.shape_cells)) {
@@ -89,6 +91,7 @@ export function toSkillGridNodes(nodes: DbBlock[]): SkillGridNode[] {
       shape_cells: shape_cells ?? undefined,
       map_keyword: raw.map_keyword ?? node.map_keyword ?? undefined,
       map_icon: raw.map_icon ?? node.map_icon ?? undefined,
+      map_block: raw.map_block ?? node.map_block,
     };
   });
 }

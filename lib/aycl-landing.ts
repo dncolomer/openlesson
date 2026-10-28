@@ -30,6 +30,7 @@ import {
   isLowQualityTapbenchExercise,
 } from "@/lib/pow-api/tapbench-exercise-quality";
 import { buildTapOpeningQuestionTask } from "@/lib/prompt-kernel/surfaces/tap";
+import { parseMapBlock } from "@/lib/block-kind";
 import { toSkillGridNodes } from "@/lib/skill-grid-positions";
 
 export type AyclLandingBlockRow = {
@@ -44,6 +45,9 @@ export type AyclLandingBlockRow = {
   span_w?: number | null;
   span_h?: number | null;
   shape_cells?: unknown;
+  map_keyword?: string | null;
+  map_icon?: string | null;
+  map_block?: unknown;
 };
 
 export type AyclLandingWorkspaceRow = AyclListingFields & {
@@ -104,6 +108,35 @@ function clean(s: unknown): string {
 export const AYCL_LANDING_WORKSPACE_SELECT =
   "id, title, root_topic, description, notes, cover_image_url, is_all_you_can_learn, aycl_category, aycl_summary, aycl_author_name, aycl_author_avatar_url, aycl_learner_price_cents, aycl_full_price_cents";
 
+/** Tile geometry + glyphs for the view-only map preview (Home catalog / AYCL landing). */
+export const AYCL_LANDING_BLOCK_SELECT_CORE =
+  "id, title, description, status, is_start, next_block_ids, position_x, position_y, span_w, span_h, shape_cells, map_keyword, map_icon";
+
+export const AYCL_LANDING_BLOCK_SELECT = `${AYCL_LANDING_BLOCK_SELECT_CORE}, map_block`;
+
+/** Load preview blocks; drop `map_block` if that column is not on the database yet. */
+export async function fetchAyclLandingBlocks(
+  supabase: { from: (table: string) => any },
+  workspaceId: string,
+  limit = 200,
+): Promise<{
+  data: AyclLandingBlockRow[];
+  error: { message?: string } | null;
+}> {
+  const run = (columns: string) =>
+    supabase
+      .from("blocks")
+      .select(columns)
+      .eq("workspace_id", workspaceId)
+      .limit(limit);
+  const first = await run(AYCL_LANDING_BLOCK_SELECT);
+  if (first.error && /map_block|schema cache/i.test(first.error.message || "")) {
+    const retry = await run(AYCL_LANDING_BLOCK_SELECT_CORE);
+    return { data: retry.data || [], error: retry.error };
+  }
+  return { data: first.data || [], error: first.error };
+}
+
 export function ayclLandingPath(workspaceId: string): string {
   const id = String(workspaceId || "").trim();
   return id ? `/all-you-can-learn/${id}` : "/all-you-can-learn";
@@ -156,6 +189,9 @@ export function assembleAyclLandingSummary(input: {
       span_w: b.span_w ?? null,
       span_h: b.span_h ?? null,
       shape_cells: b.shape_cells,
+      map_keyword: b.map_keyword ?? null,
+      map_icon: b.map_icon ?? null,
+      map_block: parseMapBlock(b.map_block),
     })),
   );
 

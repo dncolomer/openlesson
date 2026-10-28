@@ -17,6 +17,10 @@ import {
   placedBlockCells,
   type PlacedBlockRef,
 } from "@/lib/skill-grid-ops";
+import {
+  normalizeMapBlock,
+  type MapBlock,
+} from "@/lib/block-kind";
 import { isHeliosMapToolId, type HeliosMapToolId } from "./catalog";
 
 export type HeliosMapBlock = {
@@ -32,6 +36,7 @@ export type HeliosMapBlock = {
   lock_until_block_ids?: string[] | null;
   creator_effects?: unknown;
   planning_prompt?: string | null;
+  map_block?: MapBlock | null;
 };
 
 export type HeliosMapSnapshot = {
@@ -89,6 +94,7 @@ function asHeliosMapBlock(raw: unknown): HeliosMapBlock | null {
     creator_effects: rec.creator_effects,
     planning_prompt:
       typeof rec.planning_prompt === "string" ? rec.planning_prompt : null,
+    map_block: normalizeMapBlock(rec.map_block ?? rec.mapBlock),
   };
 }
 
@@ -298,6 +304,7 @@ export function heliosMapSnapshotToAuthoringNodes(
       lock_until_block_ids: block.lock_until_block_ids || [],
       creator_effects: block.creator_effects ?? prev.creator_effects,
       planning_prompt: block.planning_prompt ?? prev.planning_prompt,
+      map_block: block.map_block ?? prev.map_block ?? null,
       is_start: prev.is_start ?? false,
       status: prev.status ?? "pending",
     };
@@ -328,7 +335,14 @@ export function formatHeliosMapSnapshotForPrompt(
           .join(",") || "-";
       const next = (b.next_block_ids || []).join(",") || "-";
       const lock = (b.lock_until_block_ids || []).join(",") || "-";
-      return `${b.id} "${b.title || ""}" origin=(${b.position_y},${b.position_x}) span=${b.span_w || 1}x${b.span_h || 1} cells=${cellText || "-"} shape=${shape} next:${next} lock:${lock}`;
+      const kind = b.map_block?.kind || "learn";
+      const kindExtra =
+        kind === "calibration" || kind === "verification"
+          ? ` flow:${b.map_block?.flowId || "-"}`
+          : kind === "content"
+            ? ` attachments:${(b.map_block?.attachments || []).length}`
+            : "";
+      return `${b.id} "${b.title || ""}" kind=${kind}${kindExtra} origin=(${b.position_y},${b.position_x}) span=${b.span_w || 1}x${b.span_h || 1} cells=${cellText || "-"} shape=${shape} next:${next} lock:${lock}`;
     })
     .join("\n");
   const nextOpen = nextOpenHeliosCell(snapshot);

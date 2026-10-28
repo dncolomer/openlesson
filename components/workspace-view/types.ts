@@ -7,6 +7,7 @@ import type { LearnerMapNote } from "@/lib/learner-map-notes";
 import { normalizeAuthorUnsysModelSeed } from "@/lib/author-unsys-model";
 import { parseBlockCreatorEffects } from "@/lib/block-creator-effects";
 import { parseWorkspacePracticeOptions } from "@/lib/block-practice-options";
+import { parseMapBlock } from "@/lib/block-kind";
 import { parseBlockLocalContext } from "@/lib/prompt-workspace-context";
 import type { WorkspaceSectionKey } from "@/lib/workspace-sections";
 
@@ -44,6 +45,7 @@ export type WorkspaceBlockApiNode = Block & {
   practice_options?: unknown;
   creator_effects?: unknown;
   answers_model_seed?: unknown;
+  map_block?: unknown;
 };
 
 export interface WorkspaceViewProps {
@@ -112,6 +114,7 @@ export function mapWorkspaceNodes(
       selfBlockId: n.id,
     }),
     answers_model_seed: normalizeAuthorUnsysModelSeed(n.answers_model_seed),
+    map_block: parseMapBlock(n.map_block),
   }));
 }
 

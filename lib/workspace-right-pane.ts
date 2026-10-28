@@ -49,8 +49,18 @@ export function workspaceBlockDetailDrawerIds(input: {
   showSplit?: boolean;
   showExpand?: boolean;
   showEffects?: boolean;
+  /** Learn (default) keeps Unsys/expand/effects. Typed kinds keep launch/content + edit. */
+  blockKind?: string | null;
 } = {}): string[] {
   const ids: string[] = [];
+  const kind = String(input.blockKind || "learn").trim() || "learn";
+  const typed = kind === "calibration" || kind === "verification" || kind === "content";
+  if (typed) {
+    if (kind === "content") ids.push("content");
+    else ids.push("open_flow");
+    if (input.canEdit) ids.push("clone", "edit", WORKSPACE_EDITOR_DANGER_DRAWER_ID);
+    return ids;
+  }
   if (input.canEdit) ids.push("unsys_model");
   if (input.showSplit) ids.push("split");
   if (input.showExpand) ids.push("expand_block");

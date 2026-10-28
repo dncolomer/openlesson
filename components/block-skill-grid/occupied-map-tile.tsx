@@ -51,10 +51,13 @@ import {
 } from "@/lib/map-ground-rules";
 import { MapCellStatusGlyph } from "@/components/block-skill-grid/map-tile-badges";
 import { workspaceTileShowsPreviousSessionsPickaxe } from "@/lib/block-previous-sessions";
+import { parseMapBlock } from "@/lib/block-kind";
 import {
   DEFAULT_BLOCK_MAP_ICON,
   PREVIOUS_SESSIONS_MAP_ICON,
   isTimExploreMapIcon,
+  isTypedMapBlockKindIcon,
+  mapBlockKindIconName,
   resolveBlockMapGlyph,
 } from "@/lib/block-map-glyph";
 import { aestheticImageForId } from "@/lib/aesthetics";
@@ -364,15 +367,21 @@ export function OccupiedMapTile({
     const mapGlyph = resolveBlockMapGlyph({
       map_keyword: node.map_keyword,
       map_icon: node.map_icon,
+      map_block: node.map_block,
       title: node.title,
     });
     const glyphKeyword = mapTitle === "?" ? "?" : mapGlyph.keyword;
+    const typedKindIcon = mapBlockKindIconName(
+      parseMapBlock(node.map_block).kind,
+    );
     const glyphIcon =
-      mapTitle === "?"
+      typedKindIcon ||
+      (isTypedMapBlockKindIcon(mapGlyph.icon) ? mapGlyph.icon : null) ||
+      (mapTitle === "?"
         ? DEFAULT_BLOCK_MAP_ICON
         : hasPreviousSessions
           ? PREVIOUS_SESSIONS_MAP_ICON
-          : mapGlyph.icon;
+          : mapGlyph.icon);
     const statusGlyph = (
       <MapCellStatusGlyph
         status={node.status}

@@ -41,6 +41,9 @@ import {
 } from "@/lib/organization/org-xai-files";
 import { parseLearnerMapNotes } from "@/lib/learner-map-notes";
 import { parseAnnotationLayers } from "@/lib/map-annotation-layers";
+import { formatOwnerFlowsForHeliosPrompt } from "@/lib/block-kind";
+import { listCalibrationFlowsForOwnerUserId } from "@/lib/calibration-flow-repository";
+import { listVerificationFlowsForOwnerUserId } from "@/lib/verification-flow-repository";
 
 type HeliosMapChatBody = {
   reply: string;
@@ -68,7 +71,7 @@ export async function POST(req: NextRequest) {
     const { data: nodes } = await supabase
       .from("blocks")
       .select(
-        "id,title,description,position_x,position_y,span_w,span_h,shape_cells,next_block_ids,lock_until_block_ids,creator_effects,planning_prompt",
+        "id,title,description,position_x,position_y,span_w,span_h,shape_cells,next_block_ids,lock_until_block_ids,creator_effects,planning_prompt,map_block",
       )
       .eq("workspace_id", workspaceId);
 
@@ -144,12 +147,21 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const [calibrationFlows, verificationFlows] = await Promise.all([
+      listCalibrationFlowsForOwnerUserId(auth.persistUserId).catch(() => []),
+      listVerificationFlowsForOwnerUserId(auth.persistUserId).catch(() => []),
+    ]);
+
     const user = [
       `Workspace: ${String(plan?.title || plan?.root_topic || workspaceId)}`,
       formatHeliosMapSelectionForPrompt(
         heliosMapSelectionFromUnknown(body.selection),
         snapshot,
       ),
+      formatOwnerFlowsForHeliosPrompt({
+        calibration: calibrationFlows,
+        verification: verificationFlows,
+      }),
       formatHeliosWorkspaceMapTypesForPrompt(
         heliosWorkspaceMapTypesFromUnknown(body.mapTypes ?? body.map_types),
       ),

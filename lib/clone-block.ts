@@ -156,6 +156,8 @@ export type CloneSourceFields = {
   map_icon?: string | null;
   /** Copied only when explicitly requested; default false on clone. */
   is_start?: boolean | null;
+  /** Typed block kind + flow/content payload. */
+  map_block?: unknown;
 };
 
 export type CloneInsertPayload = {
@@ -174,6 +176,7 @@ export type CloneInsertPayload = {
   shape_cells: null;
   map_keyword: string | null;
   map_icon: string | null;
+  map_block: unknown | null;
 };
 
 /**
@@ -229,6 +232,7 @@ export function buildCloneInsertPayload(input: {
     shape_cells: null,
     map_keyword: mapKeyword,
     map_icon: mapIcon,
+    map_block: input.source.map_block != null ? input.source.map_block : null,
   };
 }
 

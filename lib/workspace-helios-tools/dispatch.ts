@@ -52,6 +52,11 @@ import {
   selectionIsFreeformLectureShape,
   splitBlocksToSingles,
 } from "@/lib/skill-grid-ops";
+import {
+  mapBlockFromHeliosArgs,
+  mapBlockPlaceError,
+  type MapBlock,
+} from "@/lib/block-kind";
 import { isHeliosMapToolId } from "./catalog";
 import {
   heliosMapOccupiedKeys,
@@ -196,6 +201,7 @@ function placeBlock(
     span_w?: number;
     span_h?: number;
     shape_cells?: Array<{ dr: number; dc: number }> | null;
+    map_block?: MapBlock | null;
   },
 ): HeliosMapToolResult {
   const cells = placedBlockCells({
@@ -226,6 +232,7 @@ function placeBlock(
     shape_cells: input.shape_cells ?? null,
     next_block_ids: [],
     lock_until_block_ids: [],
+    map_block: input.map_block ?? null,
   };
   return ok(
     { ...snapshot, blocks: [...snapshot.blocks, block] },
@@ -238,12 +245,16 @@ function dispatchAdd(
   args: Record<string, unknown>,
 ): HeliosMapToolResult {
   const cell = resolveAddCell(snapshot, args);
+  const mapBlock = mapBlockFromHeliosArgs(args);
+  const placeError = mapBlockPlaceError(mapBlock);
+  if (placeError) return fail(snapshot, placeError);
   return placeBlock(snapshot, {
     id: stringArg(args, "id"),
     title: stringArg(args, "title", "prompt") || "Untitled",
     description: stringArg(args, "description"),
     row: cell.row,
     col: cell.col,
+    map_block: mapBlock.kind === "learn" ? null : mapBlock,
   });
 }
 
@@ -334,6 +345,7 @@ function dispatchClone(
     span_w: payload.span_w,
     span_h: payload.span_h,
     shape_cells: payload.shape_cells,
+    map_block: source.map_block ?? null,
   });
 }
 

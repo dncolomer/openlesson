@@ -10,6 +10,7 @@ import {
 import type { AnnotationLayer } from "@/lib/map-annotation-layers";
 import type { LearnerMapNote } from "@/lib/learner-map-notes";
 import { draftMultiBlockDag, type MultiBlockDagDraft } from "@/lib/multi-block-dag";
+import { mapBlockFromHeliosArgs, type MapBlock } from "@/lib/block-kind";
 import {
   cellFromArgs,
   cellsFromArgs,
@@ -40,6 +41,7 @@ export type HeliosMapToolHost = {
   addBlock?: (input: {
     prompt: string;
     cell: { row: number; col: number };
+    mapBlock?: MapBlock;
   }) => Promise<void>;
   generateShape?: (input: {
     prompt: string;
@@ -168,6 +170,7 @@ export async function executeHeliosMapToolCall(input: {
       await host.addBlock({
         prompt: stringArg(args, "prompt", "title") || "Untitled",
         cell,
+        mapBlock: mapBlockFromHeliosArgs(args),
       });
     } else if (name === "generate_shape" && host.generateShape) {
       await host.generateShape({

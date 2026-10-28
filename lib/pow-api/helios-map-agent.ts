@@ -21,6 +21,12 @@ import {
 import { parseLearnerMapNotes } from "@/lib/learner-map-notes";
 import { parseAnnotationLayers } from "@/lib/map-annotation-layers";
 import {
+  MAP_BLOCK_STORE_UNAVAILABLE,
+  serializeMapBlock,
+  normalizeMapBlock,
+} from "@/lib/block-kind";
+import { mapBlockKindIconName } from "@/lib/block-map-glyph";
+import {
   workspaceFeatureDeniedMessage,
   workspaceSupportsFeature,
 } from "@/lib/workspace-capabilities";
@@ -29,7 +35,7 @@ export const HELIOS_MAP_AGENT_APPLY_TOOL = "apply_map_tool" as const;
 export const HELIOS_MAP_AGENT_LIST_TOOL = "list_map_tools" as const;
 
 const BLOCK_SELECT =
-  "id,title,description,is_start,next_block_ids,lock_until_block_ids,status,position_x,position_y,span_w,span_h,shape_cells,creator_effects,planning_prompt";
+  "id,title,description,is_start,next_block_ids,lock_until_block_ids,status,position_x,position_y,span_w,span_h,shape_cells,creator_effects,planning_prompt,map_block";
 
 function isUuid(id: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
@@ -106,10 +112,19 @@ export async function loadHeliosMapSnapshotForAgent(
   supabase: SupabaseClient,
   workspaceId: string,
 ): Promise<HeliosMapSnapshot> {
-  const { data: nodes } = await supabase
+  let { data: nodes, error: nodesError } = await supabase
     .from("blocks")
     .select(BLOCK_SELECT)
     .eq("workspace_id", workspaceId);
+  if (nodesError && /map_block/i.test(nodesError.message || "")) {
+    const retry = await supabase
+      .from("blocks")
+      .select(
+        "id,title,description,is_start,next_block_ids,lock_until_block_ids,status,position_x,position_y,span_w,span_h,shape_cells,creator_effects,planning_prompt",
+      )
+      .eq("workspace_id", workspaceId);
+    nodes = retry.data;
+  }
 
   const plan = await loadWorkspaceMapGround(supabase, workspaceId);
 
@@ -174,6 +189,16 @@ async function insertAgentBlock(
     lock_until_block_ids: [],
     creator_effects: block.creator_effects ?? null,
     planning_prompt: block.planning_prompt ?? null,
+    ...(serializeMapBlock(normalizeMapBlock(block.map_block))
+      ? { map_block: serializeMapBlock(normalizeMapBlock(block.map_block)) }
+      : {}),
+    ...(mapBlockKindIconName(normalizeMapBlock(block.map_block).kind)
+      ? {
+          map_icon: mapBlockKindIconName(
+            normalizeMapBlock(block.map_block).kind,
+          ),
+        }
+      : {}),
   };
   const optional = [
     "shape_cells",
@@ -182,6 +207,8 @@ async function insertAgentBlock(
     "creator_effects",
     "planning_prompt",
     "lock_until_block_ids",
+    "map_block",
+    "map_icon",
   ];
   let current = { ...payload };
   for (let i = 0; i < optional.length + 1; i += 1) {
@@ -195,6 +222,9 @@ async function insertAgentBlock(
     const drop = optional.find((col) => msg.toLowerCase().includes(col));
     if (!drop) {
       throw new Error(msg || "Failed to insert map block");
+    }
+    if (drop === "map_block" && current.map_block != null) {
+      throw new Error(MAP_BLOCK_STORE_UNAVAILABLE);
     }
     const next = { ...current };
     delete next[drop];
@@ -238,6 +268,13 @@ export async function persistHeliosMapSnapshotForAgent(
           lock_until_block_ids: block.lock_until_block_ids || [],
           creator_effects: block.creator_effects ?? null,
           planning_prompt: block.planning_prompt ?? null,
+          ...(serializeMapBlock(normalizeMapBlock(block.map_block))
+            ? {
+                map_block: serializeMapBlock(
+                  normalizeMapBlock(block.map_block),
+                ),
+              }
+            : {}),
         })
         .eq("id", block.id)
         .eq("workspace_id", workspaceId);

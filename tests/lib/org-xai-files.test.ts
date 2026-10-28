@@ -80,6 +80,7 @@ describe("live surfaces use the org-scoped Files path", () => {
       "app/api/session-transcripts/upload/route.ts",
       "app/api/session/performance-chat/route.ts",
       "app/api/workspace/generate/route.ts",
+      "app/api/workspace/map-block-files/route.ts",
       "lib/pow-api/create-agent-workspace.ts",
       "lib/pow-api/upload-workspace-proof-of-work.ts",
       "lib/pow-api/performance-context.ts",

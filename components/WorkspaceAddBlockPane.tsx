@@ -28,6 +28,14 @@ import {
 import { WorkspaceGenerateMapPane } from "@/components/WorkspaceGenerateMapPane";
 import { UnusableGroundDrawer } from "@/components/UnusableGroundDrawer";
 import { canPlaceOnMapGround } from "@/lib/map-ground-rules";
+import {
+  WorkspaceContentAttachmentsEditor,
+  WorkspaceMapBlockKindPicker,
+  WorkspaceOwnerFlowPicker,
+  mapBlockFromPickerState,
+} from "@/components/WorkspaceMapBlockFields";
+import type { MapBlock, MapBlockAttachment, MapBlockKind } from "@/lib/block-kind";
+import type { DashboardRecentFlow } from "@/lib/dashboard-home";
 
 /**
  * Options for multi-slot expand create.
@@ -52,6 +60,9 @@ export type WorkspaceAddBlockSubmitOpts = {
    * API maps these into generation prompt + saved local_context.
    */
   contextSourceKeys?: string[];
+  /** Learn / calibration / verification / content payload. */
+  mapBlock?: MapBlock;
+  title?: string;
 };
 
 /**
@@ -122,6 +133,13 @@ export function WorkspaceAddBlockPane({
   );
   const [contextSelected, setContextSelected] = useState<string[]>([]);
   const [contextLoading, setContextLoading] = useState(false);
+  const [blockKind, setBlockKind] = useState<MapBlockKind>("learn");
+  const [selectedFlow, setSelectedFlow] = useState<DashboardRecentFlow | null>(
+    null,
+  );
+  const [contentAttachments, setContentAttachments] = useState<
+    MapBlockAttachment[]
+  >([]);
 
   // Reset draft when the target cell changes.
   useEffect(() => {
@@ -131,6 +149,9 @@ export function WorkspaceAddBlockPane({
     setDensity(ADD_DENSITY_MAX);
     setSampleSeed(1);
     setContextSelected([]);
+    setBlockKind("learn");
+    setSelectedFlow(null);
+    setContentAttachments([]);
   }, [cell.row, cell.col]);
 
   // Load workspace Context inventory for attach picker (same as generate-in-shape).
@@ -264,27 +285,41 @@ export function WorkspaceAddBlockPane({
       unusableCells || [],
     ).reason === "unusable";
 
+  const typedKind = blockKind !== "learn";
+  const mapBlock = mapBlockFromPickerState({
+    kind: blockKind,
+    flow: selectedFlow,
+    attachments: contentAttachments,
+  });
+  const titleForTyped = prompt.trim() || selectedFlow?.name || selectedFlow?.title || "Untitled";
+  const canSubmitTyped =
+    blockKind === "content"
+      ? Boolean(prompt.trim() || contentAttachments.length > 0)
+      : Boolean(selectedFlow?.id);
+  const canSubmit = typedKind ? canSubmitTyped : Boolean(prompt.trim());
+
   const handleSubmit = async () => {
-    if (!prompt.trim() || busy || submitting || submitBlockedByUnusable) return;
+    if (!canSubmit || busy || submitting || submitBlockedByUnusable) return;
     setSubmitting(true);
     setAddError(null);
     // Snapshot membership at submit — host freezes into a background job.
     const slots = snapshotAddExpandSlots({
       center: { row: cell.row, col: cell.col },
-      selected: cellsToCreate,
+      selected: typedKind ? [{ row: cell.row, col: cell.col }] : cellsToCreate,
     });
     try {
       const expandCells =
-        slots.length > 1
+        !typedKind && slots.length > 1
           ? slots.filter((c) => !(c.row === cell.row && c.col === cell.col))
           : undefined;
       // Host enqueues async job and returns quickly — map stays interactive.
-      await onSubmit(prompt.trim(), cell, {
+      await onSubmit(typedKind ? titleForTyped : prompt.trim(), cell, {
         expandCells,
         frozenSlots: slots,
-        ...(contextSelected.length > 0
+        ...(contextSelected.length > 0 && !typedKind
           ? { contextSourceKeys: [...contextSelected] }
           : {}),
+        ...(typedKind ? { mapBlock, title: titleForTyped } : {}),
       });
       setPrompt("");
       setRange(0);
@@ -321,13 +356,44 @@ export function WorkspaceAddBlockPane({
           </p>
         )}
 
+        <WorkspaceMapBlockKindPicker
+          value={blockKind}
+          onChange={(kind) => {
+            setBlockKind(kind);
+            setSelectedFlow(null);
+            setAddError(null);
+          }}
+          disabled={busy || submitting}
+        />
+
+        {blockKind === "calibration" || blockKind === "verification" ? (
+          <WorkspaceOwnerFlowPicker
+            kind={blockKind}
+            selectedId={selectedFlow?.id || null}
+            onChange={setSelectedFlow}
+            disabled={busy || submitting}
+          />
+        ) : null}
+
+        {blockKind === "content" ? (
+          <WorkspaceContentAttachmentsEditor
+            attachments={contentAttachments}
+            onChange={setContentAttachments}
+            disabled={busy || submitting}
+            workspaceId={workspaceId}
+            ayclToken={ayclToken}
+          />
+        ) : null}
+
         <div data-add-block-context-alternatives data-generative-context-alternatives>
           <WorkspacePromptContextAlternatives
             adhocValue={prompt}
             onAdhocChange={setPrompt}
             disabled={busy || submitting}
-            adhocPlaceholder={labels.addPlaceholder}
-            adhocLabel="Block prompt"
+            adhocPlaceholder={
+              typedKind ? "Optional title" : labels.addPlaceholder
+            }
+            adhocLabel={typedKind ? "Title" : "Block prompt"}
             adhocInputDataAttr="data-add-block-prompt"
             adhocAutoFocus
           />
@@ -335,7 +401,7 @@ export function WorkspaceAddBlockPane({
 
         {/* Attach context → generation prompt + saved local_context (like generate-in-shape). */}
         <div
-          className="space-y-1.5 rounded-none border border-neutral-800 bg-neutral-950/80 p-2.5"
+          className={`space-y-1.5 rounded-none border border-neutral-800 bg-neutral-950/80 p-2.5 ${typedKind ? "hidden" : ""}`}
           data-shape-context-picker
           data-add-block-context-picker
         >
@@ -409,7 +475,7 @@ export function WorkspaceAddBlockPane({
 
         {/* Cold-start multi 1×1: Range = circle radius; Density = how many cells */}
         <div
-          className="space-y-2.5 rounded-none border border-neutral-800 bg-neutral-950/60 p-2.5"
+          className={`space-y-2.5 rounded-none border border-neutral-800 bg-neutral-950/60 p-2.5 ${typedKind ? "hidden" : ""}`}
           data-add-expand-controls
         >
           <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
@@ -487,7 +553,7 @@ export function WorkspaceAddBlockPane({
           <button
             type="button"
             data-add-block-submit
-            disabled={!prompt.trim() || busy || submitting || submitBlockedByUnusable}
+            disabled={!canSubmit || busy || submitting || submitBlockedByUnusable}
             onClick={() => void handleSubmit()}
             className="rounded-none bg-white px-3 py-1.5 text-xs font-medium text-black transition hover:bg-neutral-200 disabled:opacity-40"
           >

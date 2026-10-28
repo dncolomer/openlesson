@@ -2,7 +2,10 @@
  * Workspace map-tile glyph: two keywords + a 3×3 rearrangement of solid squares.
  * Keywords are generated with the block; the mark is a random occupancy of a
  * 3×3 grid (not topic-matched). Displayed instead of the truncated title.
+ * Calibration / verification / content tiles use a kind mark instead of the 3×3.
  */
+
+import { parseMapBlock } from "@/lib/block-kind";
 
 export const BLOCK_MAP_GRID_SIZE = 3;
 export const BLOCK_MAP_CELL_COUNT = BLOCK_MAP_GRID_SIZE * BLOCK_MAP_GRID_SIZE;
@@ -21,12 +24,59 @@ export type ChapterDoneMapIcon = typeof CHAPTER_DONE_MAP_ICON;
 export const PREVIOUS_SESSIONS_MAP_ICON = "pickaxe" as const;
 export type PreviousSessionsMapIcon = typeof PREVIOUS_SESSIONS_MAP_ICON;
 
+/** Display-only: typed Learning Map blocks (not the 3×3 Learn glyph). */
+export const CALIBRATION_MAP_ICON = "calibration" as const;
+export const VERIFICATION_MAP_ICON = "verification" as const;
+export const CONTENT_MAP_ICON = "content" as const;
+export type TypedMapBlockKindIcon =
+  | typeof CALIBRATION_MAP_ICON
+  | typeof VERIFICATION_MAP_ICON
+  | typeof CONTENT_MAP_ICON;
+
 export function isPreviousSessionsMapIcon(value: unknown): value is PreviousSessionsMapIcon {
   return value === PREVIOUS_SESSIONS_MAP_ICON;
 }
 
+export function isCalibrationMapIcon(value: unknown): value is typeof CALIBRATION_MAP_ICON {
+  return value === CALIBRATION_MAP_ICON;
+}
+
+export function isVerificationMapIcon(value: unknown): value is typeof VERIFICATION_MAP_ICON {
+  return value === VERIFICATION_MAP_ICON;
+}
+
+export function isContentMapIcon(value: unknown): value is typeof CONTENT_MAP_ICON {
+  return value === CONTENT_MAP_ICON;
+}
+
+export function isTypedMapBlockKindIcon(value: unknown): value is TypedMapBlockKindIcon {
+  return (
+    isCalibrationMapIcon(value) ||
+    isVerificationMapIcon(value) ||
+    isContentMapIcon(value)
+  );
+}
+
+/** Lucide stroke marks (pickaxe + typed kinds) sit smaller than the 3×3 grid. */
+export function isLucideStrokeMapIcon(value: unknown): boolean {
+  return isPreviousSessionsMapIcon(value) || isTypedMapBlockKindIcon(value);
+}
+
+export function mapBlockKindIconName(
+  kind: string | null | undefined,
+): TypedMapBlockKindIcon | null {
+  if (kind === "calibration") return CALIBRATION_MAP_ICON;
+  if (kind === "verification") return VERIFICATION_MAP_ICON;
+  if (kind === "content") return CONTENT_MAP_ICON;
+  return null;
+}
+
 /** `g{bits}` — bits is a 9-bit occupancy mask (1 = filled cell). */
-export type BlockMapIconName = `g${number}` | TimExploreMapIcon | ChapterDoneMapIcon;
+export type BlockMapIconName =
+  | `g${number}`
+  | TimExploreMapIcon
+  | ChapterDoneMapIcon
+  | TypedMapBlockKindIcon;
 
 export function isTimExploreMapIcon(value: unknown): value is TimExploreMapIcon {
   return value === TIM_EXPLORE_MAP_ICON;
@@ -86,7 +136,13 @@ export function encodeBlockMapPattern(bits: number): BlockMapIconName | null {
 }
 
 export function blockMapPatternBits(name: BlockMapIconName): number {
-  if (isTimExploreMapIcon(name) || isChapterDoneMapIcon(name)) return 0;
+  if (
+    isTimExploreMapIcon(name) ||
+    isChapterDoneMapIcon(name) ||
+    isTypedMapBlockKindIcon(name)
+  ) {
+    return 0;
+  }
   return Number(name.slice(1));
 }
 
@@ -159,6 +215,7 @@ export function parseBlockMapIconName(raw: unknown): BlockMapIconName | null {
   const s = clean(raw);
   if (s === TIM_EXPLORE_MAP_ICON) return TIM_EXPLORE_MAP_ICON;
   if (s === CHAPTER_DONE_MAP_ICON) return CHAPTER_DONE_MAP_ICON;
+  if (isTypedMapBlockKindIcon(s)) return s;
   const m = PATTERN_RE.exec(s);
   if (!m) return null;
   return encodeBlockMapPattern(Number(m[1]));
@@ -225,14 +282,19 @@ export function resolveBlockMapGlyph(input: {
   keyword?: string | null;
   icon?: string | null;
   title?: string | null;
+  map_block?: unknown;
 }): BlockMapGlyph {
   const title = clean(input.title);
+  const fromKind = mapBlockKindIconName(parseMapBlock(input.map_block).kind);
+  const fromIcon = parseBlockMapIconName(input.map_icon ?? input.icon);
+  const typedIcon =
+    fromKind || (isTypedMapBlockKindIcon(fromIcon) ? fromIcon : null);
   return {
     keyword: normalizeBlockMapKeyword(
       input.map_keyword ?? input.keyword,
       title,
     ),
-    icon: normalizeBlockMapIcon(input.map_icon ?? input.icon, title),
+    icon: typedIcon ?? normalizeBlockMapIcon(input.map_icon ?? input.icon, title),
   };
 }
 

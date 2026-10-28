@@ -20,6 +20,7 @@ import {
   type BlockCreatorEffects,
 } from "@/lib/block-creator-effects";
 import { parseBlockLocalContext, type BlockLocalContextInput } from "@/lib/prompt-workspace-context";
+import { parseMapBlock, serializeMapBlock, type MapBlock } from "@/lib/block-kind";
 import {
   normalizeUnusableCells,
   type UnusableCell,
@@ -371,6 +372,7 @@ export function useWorkspaceAuthoring(input: {
       description: string;
       isStart?: boolean;
       practiceOptions?: BlockPracticeOptions;
+      mapBlock?: MapBlock;
     }) => {
       if (!workspaceId || !isOwner) return;
       setIsAddingBlock(true);
@@ -397,6 +399,9 @@ export function useWorkspaceAuthoring(input: {
                   ),
                 }
               : {}),
+            ...(input.mapBlock
+              ? { map_block: serializeMapBlock(input.mapBlock) }
+              : {}),
           }),
         });
         const data = await response.json().catch(() => ({}));
@@ -420,6 +425,7 @@ export function useWorkspaceAuthoring(input: {
                 creator_effects: parseBlockCreatorEffects(n.creator_effects, {
                   selfBlockId: n.id,
                 }),
+                map_block: parseMapBlock(n.map_block),
               }),
             ),
           );
@@ -475,6 +481,7 @@ export function useWorkspaceAuthoring(input: {
                 creator_effects: parseBlockCreatorEffects(n.creator_effects, {
                   selfBlockId: n.id,
                 }),
+                map_block: parseMapBlock(n.map_block),
               }),
             ),
           );

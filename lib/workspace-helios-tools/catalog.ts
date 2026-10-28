@@ -49,7 +49,7 @@ export const HELIOS_MAP_TOOL_CATALOG: readonly HeliosMapToolSpec[] = [
     family: "topologies",
     title: "Add block",
     description:
-      "Place a new 1×1 block. Arguments: title, optional row and col (next open cell if omitted).",
+      "Place a new 1×1 block. Arguments: title, optional row and col (next open cell if omitted), optional kind (learn default, calibration, verification, content). Calibration/verification require flowId of an existing owner flow. Content takes files/links attachments and has no Learn mode.",
   },
   {
     id: "generate_shape",
@@ -198,7 +198,7 @@ export function heliosMapToolAwarenessText(
     "topologies (add/place, generate-in-shape, split, clone, expand, combine, bridge, cluster),",
     "unusable ground, generative blocks (dynamic and generator), DAGs, remaining edit/delete ops,",
     "and overlay (map notes and drawing layers).",
-    "add_block arguments: { \"title\": \"...\", \"row\": 0, \"col\": 0 }. Default origin is row 0, col 0. Omit row/col only when that default (or the next open cell) is correct. Read CURRENT MAP occupied cells before placing.",
+    "add_block arguments: { \"title\": \"...\", \"row\": 0, \"col\": 0, \"kind\": \"learn\" }. kind is learn (default), calibration, verification, or content. Calibration and verification blocks link an existing owner flow via flowId (see OWNER FLOWS). Content blocks attach files/links and have no Learn mode. Default origin is row 0, col 0. Omit row/col only when that default (or the next open cell) is correct. Read CURRENT MAP occupied cells before placing.",
     "bridge_blocks arguments: { \"blockIds\": [\"id1\",\"id2\"], \"width\": 0 }. Default thickness is 1 cell (width 0). Omit width unless the author asks for a thicker corridor.",
     "apply_dag arguments: { \"blockIds\": [\"id1\",\"id2\"], \"edges\": [{ \"from\": \"id1\", \"to\": \"id2\", \"kind\": \"next\" }] }.",
     "If blockIds/edges are omitted, apply_dag uses current blocks in reading order.",

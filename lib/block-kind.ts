@@ -397,7 +397,7 @@ export function formatOwnerFlowsForHeliosPrompt(input: {
     })
     .filter(Boolean);
   return [
-    "OWNER FLOWS (link these existing ids — do not invent a flow id)",
+    "OWNER FLOWS (prefer these existing ids). To create a new flow, omit flowId on add_block and pass flowName plus goal (calibration) or topic (verification) and questions. Do not invent a UUID.",
     "Calibration flows (kind: calibration, argument flowId):",
     cal.join("\n") || "(none)",
     "Verification flows (kind: verification, argument flowId):",

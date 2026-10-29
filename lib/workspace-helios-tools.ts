@@ -6,8 +6,10 @@
 export {
   HELIOS_MAP_TOOL_CATALOG,
   HELIOS_MAP_TOOL_IDS,
+  HELIOS_RESEARCH_TOOL_IDS,
   heliosMapToolAwarenessText,
   isHeliosMapToolId,
+  isHeliosResearchToolId,
   type HeliosMapToolFamily,
   type HeliosMapToolId,
   type HeliosMapToolSpec,

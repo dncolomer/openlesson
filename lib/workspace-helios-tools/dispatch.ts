@@ -53,10 +53,17 @@ import {
   splitBlocksToSingles,
 } from "@/lib/skill-grid-ops";
 import {
-  mapBlockFromHeliosArgs,
   mapBlockPlaceError,
+  normalizeMapBlock,
+  parseMapBlockKind,
+  isFlowMapBlockKind,
+  parseMapBlockAttachments,
   type MapBlock,
 } from "@/lib/block-kind";
+import {
+  heliosMapBlockAttachmentsFromArgs,
+  heliosResolvedMapBlock,
+} from "@/lib/workspace-helios-flow";
 import { isHeliosMapToolId } from "./catalog";
 import {
   heliosMapOccupiedKeys,
@@ -245,7 +252,7 @@ function dispatchAdd(
   args: Record<string, unknown>,
 ): HeliosMapToolResult {
   const cell = resolveAddCell(snapshot, args);
-  const mapBlock = mapBlockFromHeliosArgs(args);
+  const mapBlock = heliosResolvedMapBlock(args);
   const placeError = mapBlockPlaceError(mapBlock);
   if (placeError) return fail(snapshot, placeError);
   return placeBlock(snapshot, {
@@ -349,6 +356,39 @@ function dispatchClone(
   });
 }
 
+function mapBlockPatchFromArgs(
+  block: HeliosMapBlock,
+  args: Record<string, unknown>,
+): MapBlock | undefined {
+  const incoming = heliosMapBlockAttachmentsFromArgs(args);
+  const hasKind = args.kind != null || args.blockKind != null;
+  const hasFlow = args.flowId != null || args.flow_id != null;
+  if (!hasKind && !hasFlow && incoming.length === 0) return undefined;
+  const prev = normalizeMapBlock(block.map_block);
+  const kind = hasKind
+    ? parseMapBlockKind(args.kind ?? args.blockKind)
+    : prev.kind;
+  if (kind === "content") {
+    return normalizeMapBlock({
+      kind: "content",
+      attachments:
+        incoming.length > 0
+          ? parseMapBlockAttachments([...prev.attachments, ...incoming])
+          : prev.attachments,
+    });
+  }
+  if (isFlowMapBlockKind(kind)) {
+    return normalizeMapBlock({
+      kind,
+      flowId: args.flowId ?? args.flow_id ?? prev.flowId,
+      flowPublicToken:
+        args.flowPublicToken ?? args.flow_public_token ?? prev.flowPublicToken,
+      flowHref: args.flowHref ?? args.flow_href ?? prev.flowHref,
+    });
+  }
+  return normalizeMapBlock({ kind: "learn" });
+}
+
 function dispatchEdit(
   snapshot: HeliosMapSnapshot,
   args: Record<string, unknown>,
@@ -361,14 +401,69 @@ function dispatchEdit(
     typeof args.description === "string"
       ? args.description
       : block.description || "";
+  const mapBlock = mapBlockPatchFromArgs(block, args);
+  const placeError = mapBlock ? mapBlockPlaceError(mapBlock) : null;
+  if (placeError) return fail(snapshot, placeError);
   return ok(
     {
       ...snapshot,
       blocks: snapshot.blocks.map((b) =>
-        b.id === blockId ? { ...b, title, description } : b,
+        b.id === blockId
+          ? {
+              ...b,
+              title,
+              description,
+              ...(mapBlock ? { map_block: mapBlock } : {}),
+            }
+          : b,
       ),
     },
     `edited:${blockId}`,
+  );
+}
+
+function dispatchCreateFlow(
+  snapshot: HeliosMapSnapshot,
+  args: Record<string, unknown>,
+): HeliosMapToolResult {
+  const kind = parseMapBlockKind(args.kind ?? args.blockKind);
+  if (!isFlowMapBlockKind(kind)) {
+    return fail(snapshot, "kind must be calibration or verification");
+  }
+  return ok(snapshot, `create-flow:${kind}`);
+}
+
+function dispatchSearchWeb(
+  snapshot: HeliosMapSnapshot,
+  args: Record<string, unknown>,
+): HeliosMapToolResult {
+  const query = stringArg(args, "query", "q", "prompt");
+  if (!query) return fail(snapshot, "query_required");
+  return ok(snapshot, `search:${query}`);
+}
+
+function dispatchAttachContent(
+  snapshot: HeliosMapSnapshot,
+  args: Record<string, unknown>,
+): HeliosMapToolResult {
+  const blockId = stringArg(args, "blockId", "id");
+  const block = snapshot.blocks.find((b) => b.id === blockId);
+  if (!block) return fail(snapshot, "block_not_found");
+  const incoming = heliosMapBlockAttachmentsFromArgs(args);
+  if (incoming.length === 0) return fail(snapshot, "attachments_required");
+  const prev = normalizeMapBlock(block.map_block);
+  const map_block = normalizeMapBlock({
+    kind: "content",
+    attachments: parseMapBlockAttachments([...prev.attachments, ...incoming]),
+  });
+  return ok(
+    {
+      ...snapshot,
+      blocks: snapshot.blocks.map((b) =>
+        b.id === blockId ? { ...b, map_block } : b,
+      ),
+    },
+    `attached:${blockId}`,
   );
 }
 
@@ -971,6 +1066,12 @@ export function dispatchHeliosMapTool(
       return dispatchClone(snapshot, args);
     case "edit_block":
       return dispatchEdit(snapshot, args);
+    case "create_flow":
+      return dispatchCreateFlow(snapshot, args);
+    case "search_web":
+      return dispatchSearchWeb(snapshot, args);
+    case "attach_content":
+      return dispatchAttachContent(snapshot, args);
     case "expand_block":
       return dispatchExpand(snapshot, args);
     case "combine_blocks":

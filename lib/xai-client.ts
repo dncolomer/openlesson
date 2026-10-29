@@ -652,6 +652,8 @@ export interface CallResponsesOptions {
   store?: boolean;
   /** When provided, forces structured JSON output via text.format. */
   jsonSchema?: { name: string; schema: Record<string, unknown> };
+  /** Server-side tools (e.g. `{ type: "web_search" }`). */
+  tools?: unknown[];
   /** Per-request timeout in milliseconds */
   fetchTimeout?: number;
   retries?: number;
@@ -729,6 +731,9 @@ export async function callXaiResponses<T = unknown>(
         strict: true,
       },
     };
+  }
+  if (options.tools && options.tools.length > 0) {
+    body.tools = options.tools;
   }
 
   let lastError: string | undefined;

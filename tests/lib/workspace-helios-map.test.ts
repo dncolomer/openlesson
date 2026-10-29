@@ -263,6 +263,9 @@ describe("Helios map right-column chrome", () => {
     expect(api).toContain("callXaiResponses");
     expect(api).toContain("input_file");
     expect(api).toContain("input_image");
+    expect(api).toContain("searchXaiWeb");
+    expect(api).toContain("isHeliosResearchToolId");
+    expect(api).toContain("formatHeliosSearchResultsForPrompt");
 
     writeEvidence(
       "helios-map-chrome.log",

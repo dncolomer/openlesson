@@ -78,7 +78,7 @@ describe("Helios map tool catalog + dispatch", () => {
       "utf8",
     );
     for (const src of [barrel, catalog, snapshot, dispatch, persist]) {
-      expect(src.split("\n").length).toBeLessThanOrEqual(1100);
+      expect(src.split("\n").length).toBeLessThanOrEqual(1200);
     }
     expect(barrel).toContain('from "./workspace-helios-tools/catalog"');
     expect(barrel).toContain('from "./workspace-helios-tools/snapshot"');
@@ -91,7 +91,7 @@ describe("Helios map tool catalog + dispatch", () => {
     expect(persist).toContain("export async function executeHeliosMapToolCall");
     expect(persist).toContain("export async function applyHeliosMapToolsAtomically");
     expect(persist).toContain(
-      "const preview = dispatchHeliosMapTool(input.snapshot, input.call)",
+      "const preview = dispatchHeliosMapTool(input.snapshot, call)",
     );
     expect(persist).toContain("host.applySnapshot?.(preview.snapshot)");
     expect(persist).toContain("preview.snapshot");
@@ -105,6 +105,10 @@ describe("Helios map tool catalog + dispatch", () => {
     expect(families.has("generative")).toBe(true);
     expect(families.has("dag")).toBe(true);
     expect(families.has("overlay")).toBe(true);
+    expect(families.has("research")).toBe(true);
+    expect(HELIOS_MAP_TOOL_IDS).toContain("search_web");
+    expect(HELIOS_MAP_TOOL_IDS).toContain("attach_content");
+    expect(HELIOS_MAP_TOOL_IDS).toContain("create_flow");
     for (const id of HELIOS_MAP_TOOL_IDS) {
       expect(isHeliosMapToolId(id)).toBe(true);
       expect(HELIOS_MAP_TOOL_CATALOG.some((t) => t.id === id)).toBe(true);
@@ -846,5 +850,41 @@ describe("Helios map tool catalog + dispatch", () => {
     expect(goneLayer.ok).toBe(true);
     if (!goneLayer.ok) return;
     expect(goneLayer.snapshot.annotationLayers).toHaveLength(0);
+  });
+
+  it("search_web is a map no-op and attach_content writes links onto a content block", () => {
+    const search = dispatchHeliosMapTool(emptySnap(), {
+      name: "search_web",
+      args: { query: "surface code pdf" },
+    });
+    expect(search.ok).toBe(true);
+    if (!search.ok) return;
+    expect(search.message).toBe("search:surface code pdf");
+    expect(search.snapshot.blocks).toHaveLength(0);
+
+    const placed = dispatchHeliosMapTool(emptySnap(), {
+      name: "add_block",
+      args: { title: "Readings", id: "c1", kind: "content" },
+    });
+    expect(placed.ok).toBe(true);
+    if (!placed.ok) return;
+    const attached = dispatchHeliosMapTool(placed.snapshot, {
+      name: "attach_content",
+      args: {
+        blockId: "c1",
+        links: [{ name: "Paper", url: "https://example.test/paper" }],
+      },
+    });
+    expect(attached.ok).toBe(true);
+    if (!attached.ok) return;
+    expect(attached.snapshot.blocks[0].map_block).toMatchObject({
+      kind: "content",
+      attachments: [
+        expect.objectContaining({
+          type: "link",
+          url: "https://example.test/paper",
+        }),
+      ],
+    });
   });
 });

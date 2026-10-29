@@ -44,6 +44,11 @@ import { parseAnnotationLayers } from "@/lib/map-annotation-layers";
 import { formatOwnerFlowsForHeliosPrompt } from "@/lib/block-kind";
 import { listCalibrationFlowsForOwnerUserId } from "@/lib/calibration-flow-repository";
 import { listVerificationFlowsForOwnerUserId } from "@/lib/verification-flow-repository";
+import { isHeliosResearchToolId } from "@/lib/workspace-helios-tools";
+import {
+  formatHeliosSearchResultsForPrompt,
+  searchXaiWeb,
+} from "@/lib/xai-web-search";
 
 type HeliosMapChatBody = {
   reply: string;
@@ -180,38 +185,39 @@ export async function POST(req: NextRequest) {
 
     const system = buildHeliosMapBuilderSystemPrompt();
     const model = String(body.model || DEFAULT_MODEL);
-    let parsedSource: unknown = null;
-    if (fileIds.length > 0 || images.length > 0) {
-      if (!organizationId) {
-        organizationId = await organizationIdFromWorkspace(supabase, workspaceId);
-      }
-      const orgApiKey = await resolveOrgXaiApiKey(organizationId);
-      const content: ResponsesInputContent[] = [{ type: "input_text", text: user }];
-      for (const fileId of capXaiFileAttachments(fileIds)) {
-        content.push({ type: "input_file", file_id: fileId });
-      }
-      for (const image of images) {
-        content.push({
-          type: "input_image",
-          image_url: `data:${image.mimeType};base64,${image.data}`,
+
+    const runModel = async (userText: string): Promise<HeliosMapChatBody | { error: string }> => {
+      if (fileIds.length > 0 || images.length > 0) {
+        if (!organizationId) {
+          organizationId = await organizationIdFromWorkspace(supabase, workspaceId);
+        }
+        const orgApiKey = await resolveOrgXaiApiKey(organizationId);
+        const content: ResponsesInputContent[] = [{ type: "input_text", text: userText }];
+        for (const fileId of capXaiFileAttachments(fileIds)) {
+          content.push({ type: "input_file", file_id: fileId });
+        }
+        for (const image of images) {
+          content.push({
+            type: "input_image",
+            image_url: `data:${image.mimeType};base64,${image.data}`,
+          });
+        }
+        const ai = await callXaiResponses<HeliosMapChatBody>({
+          model,
+          instructions: system,
+          input: [{ role: "user", content }],
+          maxOutputTokens: 4000,
+          temperature: 0.3,
+          ...(orgApiKey ? { apiKey: orgApiKey } : {}),
         });
+        if (!ai.success) {
+          return { error: ai.error || "Helios map chat failed" };
+        }
+        const loose = parseJsonLoose<HeliosMapChatBody>(ai.text || "");
+        return loose.ok ? loose.data : { reply: ai.text || "" };
       }
-      const ai = await callXaiResponses<HeliosMapChatBody>({
-        model,
-        instructions: system,
-        input: [{ role: "user", content }],
-        maxOutputTokens: 4000,
-        temperature: 0.3,
-        ...(orgApiKey ? { apiKey: orgApiKey } : {}),
-      });
-      if (!ai.success) {
-        return jsonError(502, ai.error || "Helios map chat failed");
-      }
-      const loose = parseJsonLoose<HeliosMapChatBody>(ai.text || "");
-      parsedSource = loose.ok ? loose.data : { reply: ai.text || "" };
-    } else {
       const ai = await callXaiJSON<HeliosMapChatBody>(
-        [systemMessage(system), userMessage(user)],
+        [systemMessage(system), userMessage(userText)],
         {
           model,
           maxTokens: 4000,
@@ -219,15 +225,43 @@ export async function POST(req: NextRequest) {
         },
       );
       if (!ai.success || !ai.data) {
-        return jsonError(502, ai.error || "Helios map chat failed");
+        return { error: ai.error || "Helios map chat failed" };
       }
-      parsedSource = ai.data;
+      return ai.data;
+    };
+
+    let parsedSource = await runModel(user);
+    if ("error" in parsedSource && !("reply" in parsedSource)) {
+      return jsonError(502, parsedSource.error);
     }
 
-    const parsed = parseHeliosMapChatModelTurn(parsedSource);
+    let parsed = parseHeliosMapChatModelTurn(parsedSource);
+    let followUp = user;
+    for (let round = 0; round < 2; round += 1) {
+      const research = parsed.toolCalls.filter((call) =>
+        isHeliosResearchToolId(call.name),
+      );
+      if (research.length === 0) break;
+      const searches = await Promise.all(
+        research.map((call) =>
+          searchXaiWeb(String(call.args.query ?? call.args.q ?? call.args.prompt ?? "")),
+        ),
+      );
+      followUp = [followUp, formatHeliosSearchResultsForPrompt(searches)].join(
+        "\n\n",
+      );
+      parsedSource = await runModel(followUp);
+      if ("error" in parsedSource && !("reply" in parsedSource)) {
+        return jsonError(502, parsedSource.error);
+      }
+      parsed = parseHeliosMapChatModelTurn(parsedSource);
+    }
+
     return NextResponse.json({
       reply: parsed.reply || "Done.",
-      toolCalls: parsed.toolCalls,
+      toolCalls: parsed.toolCalls.filter(
+        (call) => !isHeliosResearchToolId(call.name),
+      ),
     });
   } catch (err) {
     return jsonError(

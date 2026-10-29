@@ -16,6 +16,7 @@ import {
   MAP_BLOCK_MAX_FILE_BYTES,
   mapBlockFileDownloadPath,
 } from "@/lib/map-block-files";
+import { fetchPublicFileAsBase64 } from "@/lib/map-block-remote-file";
 import {
   isHeliosAllowedMimeType,
   normalizeHeliosFileMime,
@@ -32,14 +33,33 @@ export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as Record<string, unknown>;
     const workspaceId = String(body.workspaceId ?? body.workspace_id ?? "").trim();
-    const fileName = String(body.fileName ?? body.file_name ?? body.name ?? "").trim();
-    const mimeType = normalizeHeliosFileMime(
+    const sourceUrl = String(body.url ?? body.sourceUrl ?? body.source_url ?? "").trim();
+    let fileName = String(body.fileName ?? body.file_name ?? body.name ?? "").trim();
+    let mimeType = normalizeHeliosFileMime(
       fileName,
       String(body.mimeType ?? body.mime_type ?? ""),
     );
-    const data = String(body.data ?? body.base64 ?? "").replace(/\s+/g, "");
+    let data = String(body.data ?? body.base64 ?? "").replace(/\s+/g, "");
 
-    if (!workspaceId || !fileName || !data) {
+    if (!workspaceId) {
+      return jsonError(400, "workspaceId is required");
+    }
+    if (!data && sourceUrl) {
+      try {
+        const fetched = await fetchPublicFileAsBase64(sourceUrl, {
+          name: fileName,
+        });
+        fileName = fetched.name;
+        mimeType = fetched.mimeType;
+        data = fetched.data;
+      } catch (err) {
+        return jsonError(
+          400,
+          err instanceof Error ? err.message : "Could not download file",
+        );
+      }
+    }
+    if (!fileName || !data) {
       return jsonError(400, "workspaceId, fileName, and data are required");
     }
     if (!isHeliosAllowedMimeType(mimeType)) {

@@ -209,9 +209,11 @@ export function WorkspaceBlockDetailPane({
   );
 
   const defaultOpenId = typedBlock
-    ? parsedMapBlock.kind === "content"
-      ? "content"
-      : "open_flow"
+    ? canEdit
+      ? "edit"
+      : parsedMapBlock.kind === "content"
+        ? "content"
+        : "open_flow"
     : resolveDetailDrawerDefaultOpenId({
         showSplit: showSplitDrawer,
         canEdit,
@@ -227,7 +229,7 @@ export function WorkspaceBlockDetailPane({
       data-map-block-kind={parsedMapBlock.kind}
       className="flex h-full w-full min-h-0 flex-col overflow-hidden bg-neutral-950/95"
     >
-      {typedBlock && parsedMapBlock.kind !== "content" ? (
+      {typedBlock && !canEdit && parsedMapBlock.kind !== "content" ? (
         <WorkspaceRightPaneDrawer
           variant="section"
           drawerId="open_flow"
@@ -250,7 +252,7 @@ export function WorkspaceBlockDetailPane({
         </WorkspaceRightPaneDrawer>
       ) : null}
 
-      {typedBlock && parsedMapBlock.kind === "content" ? (
+      {typedBlock && !canEdit && parsedMapBlock.kind === "content" ? (
         <WorkspaceRightPaneDrawer
           variant="section"
           drawerId="content"
@@ -371,7 +373,7 @@ export function WorkspaceBlockDetailPane({
           variant="section"
           drawerId="edit"
           title="Edit"
-          defaultExpanded={false}
+          defaultExpanded={typedBlock}
           bodyClassName="space-y-2"
         >
           <div data-block-detail-tab-content="edit">

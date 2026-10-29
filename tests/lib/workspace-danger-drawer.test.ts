@@ -61,6 +61,22 @@ describe("shipped editor drawer-id helpers", () => {
     expect(noEdit).not.toContain(WORKSPACE_EDITOR_DANGER_DRAWER_ID);
     expect(noEdit).not.toContain("edit");
 
+    const typed = workspaceBlockDetailDrawerIds({
+      canEdit: true,
+      blockKind: "calibration",
+    });
+    expect(typed).toEqual(["clone", "edit", WORKSPACE_EDITOR_DANGER_DRAWER_ID]);
+    expect(typed).not.toContain("open_flow");
+    expect(
+      workspaceBlockDetailDrawerIds({
+        canEdit: false,
+        blockKind: "verification",
+      }),
+    ).toEqual(["open_flow"]);
+    expect(
+      workspaceBlockDetailDrawerIds({ canEdit: true, blockKind: "content" }),
+    ).not.toContain("content");
+
     writeScratch(
       "workspace-danger-drawer.txt",
       [

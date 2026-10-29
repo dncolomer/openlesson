@@ -10,7 +10,18 @@ import {
 import type { AnnotationLayer } from "@/lib/map-annotation-layers";
 import type { LearnerMapNote } from "@/lib/learner-map-notes";
 import { draftMultiBlockDag, type MultiBlockDagDraft } from "@/lib/multi-block-dag";
-import { mapBlockFromHeliosArgs, type MapBlock } from "@/lib/block-kind";
+import {
+  parseMapBlockAttachment,
+  type MapBlock,
+  type MapBlockAttachment,
+} from "@/lib/block-kind";
+import {
+  heliosFlowCreateInput,
+  heliosResolvedMapBlock,
+  heliosWillCreateFlow,
+  type HeliosCreatedFlow,
+  type HeliosFlowCreateInput,
+} from "@/lib/workspace-helios-flow";
 import {
   cellFromArgs,
   cellsFromArgs,
@@ -56,7 +67,15 @@ export type HeliosMapToolHost = {
     blockId: string;
     title: string;
     description: string;
+    mapBlock?: MapBlock;
   }) => Promise<void>;
+  createFlow?: (input: HeliosFlowCreateInput) => Promise<HeliosCreatedFlow>;
+  ingestRemoteFile?: (input: {
+    url: string;
+    name?: string;
+    mimeType?: string;
+  }) => Promise<MapBlockAttachment>;
+  searchWeb?: (query: string) => Promise<string>;
   expandBlock?: (input: {
     blockId: string;
     prompt?: string;
@@ -149,6 +168,39 @@ function addedCellsFromPreview(
     .map((b) => ({ row: b.position_y, col: b.position_x }));
 }
 
+async function ingestMapBlockAttachments(
+  mapBlock: MapBlock | undefined,
+  host: HeliosMapToolHost,
+): Promise<MapBlock | undefined> {
+  if (!mapBlock || mapBlock.kind !== "content") return mapBlock;
+  if (!host.ingestRemoteFile) return mapBlock;
+  const attachments: MapBlockAttachment[] = [];
+  for (const item of mapBlock.attachments) {
+    if (item.type === "file" && item.url && !item.xaiFileId) {
+      try {
+        attachments.push(
+          await host.ingestRemoteFile({
+            url: item.url,
+            name: item.name,
+            mimeType: item.mimeType,
+          }),
+        );
+        continue;
+      } catch {
+        const asLink = parseMapBlockAttachment({
+          type: "link",
+          name: item.name,
+          url: item.url,
+        });
+        if (asLink) attachments.push(asLink);
+        continue;
+      }
+    }
+    attachments.push(item);
+  }
+  return { ...mapBlock, attachments };
+}
+
 /**
  * Validate via dispatch, paint the map immediately, then persist through
  * the same Manual drawer APIs from the dispatched snapshot.
@@ -158,19 +210,67 @@ export async function executeHeliosMapToolCall(input: {
   call: HeliosMapToolCall;
   host?: HeliosMapToolHost | null;
 }): Promise<HeliosMapToolResult> {
-  const preview = dispatchHeliosMapTool(input.snapshot, input.call);
-  if (!preview.ok) return preview;
   const host = input.host;
+  let call = input.call;
+  const args = { ...(call.args || {}) };
+  if (call.name === "add_block" && heliosWillCreateFlow(args)) {
+    if (!host?.createFlow) {
+      return fail(input.snapshot, "flow_id_required");
+    }
+    try {
+      const created = await host.createFlow(heliosFlowCreateInput(args));
+      args.flowId = created.id;
+      if (created.publicToken) args.flowPublicToken = created.publicToken;
+      if (created.publicPath) args.flowHref = created.publicPath;
+      call = { ...call, args };
+    } catch (err) {
+      return fail(
+        input.snapshot,
+        err instanceof Error ? err.message : "create_flow_failed",
+      );
+    }
+  }
+  const preview = dispatchHeliosMapTool(input.snapshot, call);
+  if (!preview.ok) return preview;
   if (!host) return preview;
   host.applySnapshot?.(preview.snapshot);
-  const { name, args } = input.call;
+  const { name } = call;
   try {
     if (name === "add_block" && host.addBlock) {
       const cell = resolveAddCell(input.snapshot, args);
+      const mapBlock = await ingestMapBlockAttachments(
+        heliosResolvedMapBlock(args),
+        host,
+      );
       await host.addBlock({
         prompt: stringArg(args, "prompt", "title") || "Untitled",
         cell,
-        mapBlock: mapBlockFromHeliosArgs(args),
+        mapBlock,
+      });
+    } else if (name === "create_flow" && host.createFlow) {
+      const created = await host.createFlow(heliosFlowCreateInput(args));
+      return {
+        ok: true,
+        snapshot: preview.snapshot,
+        message: `created-flow:${created.id}`,
+      };
+    } else if (name === "search_web" && host.searchWeb) {
+      const query = stringArg(args, "query", "q", "prompt");
+      const message = await host.searchWeb(query);
+      return { ok: true, snapshot: preview.snapshot, message };
+    } else if (name === "attach_content" && host.editBlock) {
+      const blockId = stringArg(args, "blockId", "id");
+      const next = preview.snapshot.blocks.find((b) => b.id === blockId);
+      const prev = input.snapshot.blocks.find((b) => b.id === blockId);
+      const mapBlock = await ingestMapBlockAttachments(
+        next?.map_block ?? undefined,
+        host,
+      );
+      await host.editBlock({
+        blockId,
+        title: prev?.title || next?.title || "Untitled",
+        description: prev?.description || next?.description || "",
+        mapBlock,
       });
     } else if (name === "generate_shape" && host.generateShape) {
       await host.generateShape({
@@ -193,6 +293,11 @@ export async function executeHeliosMapToolCall(input: {
     } else if (name === "edit_block" && host.editBlock) {
       const blockId = stringArg(args, "blockId", "id");
       const prev = input.snapshot.blocks.find((b) => b.id === blockId);
+      const next = preview.snapshot.blocks.find((b) => b.id === blockId);
+      const mapBlock = await ingestMapBlockAttachments(
+        next?.map_block ?? undefined,
+        host,
+      );
       await host.editBlock({
         blockId,
         title: stringArg(args, "title") || prev?.title || "Untitled",
@@ -200,6 +305,7 @@ export async function executeHeliosMapToolCall(input: {
           typeof args.description === "string"
             ? args.description
             : prev?.description || "",
+        mapBlock,
       });
     } else if (name === "expand_block" && host.expandBlock) {
       const range = Number.isFinite(Number(args.range))

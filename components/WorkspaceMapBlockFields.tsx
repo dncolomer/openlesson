@@ -19,7 +19,7 @@ import {
 } from "@/lib/map-block-files";
 import { BlockMapGlyphIcon } from "@/components/block-skill-grid/map-block-glyph-icon";
 import { mapBlockKindIconName } from "@/lib/block-map-glyph";
-import { DASHBOARD_FLOWS_PATH } from "@/lib/product-flow";
+import { DASHBOARD_FLOWS_PATH, productFlowNewPath } from "@/lib/product-flow";
 import type { DashboardRecentFlow } from "@/lib/dashboard-home";
 
 export function WorkspaceMapBlockKindPicker({
@@ -129,7 +129,7 @@ export function WorkspaceOwnerFlowPicker({
         </p>
       ) : flows.length === 0 ? (
         <p className="text-[11px] text-neutral-500" data-map-block-flow-empty>
-          No existing {kind} flows yet. Create one from the dashboard, then link it here.
+          No existing {kind} flows yet. Create one, then link it here.
         </p>
       ) : (
         <select
@@ -150,6 +150,16 @@ export function WorkspaceOwnerFlowPicker({
           ))}
         </select>
       )}
+      <a
+        href={productFlowNewPath(kind)}
+        target="_blank"
+        rel="noopener noreferrer"
+        data-map-block-create-flow
+        data-create-flow-new-tab
+        className="inline-flex text-[11px] text-white/80 underline decoration-white/30 underline-offset-2 hover:text-white hover:decoration-white"
+      >
+        Create Flow
+      </a>
     </div>
   );
 }

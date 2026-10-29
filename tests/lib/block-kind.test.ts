@@ -196,6 +196,39 @@ describe("map block kinds", () => {
     if (missing.ok) return;
     expect(missing.error).toBe("flow_id_required");
 
+    const created: Array<{ id: string; kind: string }> = [];
+    const placed: Array<{ kind?: string; flowId?: string | null }> = [];
+    const createdFlow = await executeHeliosMapToolCall({
+      snapshot: emptySnap(),
+      call: {
+        name: "add_block",
+        args: {
+          title: "Priors",
+          kind: "calibration",
+          goal: "State the prior",
+          questions: ["What is the prior?"],
+        },
+      },
+      host: {
+        createFlow: async (input) => {
+          created.push({ id: "new-cal", kind: input.kind });
+          return {
+            id: "new-cal",
+            kind: input.kind,
+            name: input.name,
+            publicToken: "tok",
+            publicPath: "/c/tok",
+          };
+        },
+        addBlock: async ({ mapBlock }) => {
+          placed.push({ kind: mapBlock?.kind, flowId: mapBlock?.flowId });
+        },
+      },
+    });
+    expect(createdFlow.ok).toBe(true);
+    expect(created).toEqual([{ id: "new-cal", kind: "calibration" }]);
+    expect(placed).toEqual([{ kind: "calibration", flowId: "new-cal" }]);
+
     const ver = dispatchHeliosMapTool(emptySnap(), {
       name: "add_block",
       args: {
@@ -301,7 +334,24 @@ describe("map block kinds", () => {
     expect(prompt).toContain("verification");
     expect(prompt).toContain("content");
     expect(prompt).toContain("flowId");
-    expect(persist).toContain("mapBlock: mapBlockFromHeliosArgs(args)");
+    expect(persist).toContain("heliosResolvedMapBlock(args)");
+    expect(persist).toContain("createFlow");
+    expect(persist).toContain("heliosWillCreateFlow");
+    expect(persist).toContain("attach_content");
+    expect(fields).toContain("data-map-block-create-flow");
+    expect(fields).toContain('target="_blank"');
+    expect(fields).toContain("productFlowNewPath");
+    expect(read("lib/workspace-right-pane.ts")).toContain(
+      'ids.push("clone", "edit", WORKSPACE_EDITOR_DANGER_DRAWER_ID)',
+    );
+    expect(read("components/WorkspaceBlockDetailPane.tsx")).toContain(
+      '? "edit"',
+    );
+    expect(prompt).toContain("search_web");
+    expect(prompt).toContain("attach_content");
+    expect(prompt).toContain("create_flow");
+    expect(catalog).toContain("search_web");
+    expect(catalog).toContain("omit flowId");
     expect(read("components/workspace-view/workspace-right-drawers.tsx")).toContain(
       "map_block: parseMapBlock(n.map_block)",
     );
@@ -323,10 +373,13 @@ describe("map block kinds", () => {
     expect(read("lib/workspace-grid-ops/update_block.ts")).toContain(
       "MAP_BLOCK_STORE_UNAVAILABLE",
     );
-    expect(formatOwnerFlowsForHeliosPrompt({
+    const ownerFlows = formatOwnerFlowsForHeliosPrompt({
       calibration: [{ id: "c1", name: "Priors" }],
       verification: [{ id: "v1", name: "Distance" }],
-    })).toContain("c1");
+    });
+    expect(ownerFlows).toContain("c1");
+    expect(ownerFlows).toContain("omit flowId");
+    expect(ownerFlows).not.toContain("do not invent a flow id");
   });
 
   it("content drawer uploads file bytes via org-scoped xAI Files", () => {
@@ -370,6 +423,8 @@ describe("map block kinds", () => {
     expect(fields).toContain("data-map-block-content-file");
     expect(add).toContain("workspaceId={workspaceId}");
     expect(route).toContain("uploadOrgScopedXaiFile");
+    expect(route).toContain("fetchPublicFileAsBase64");
+    expect(read("lib/map-block-files.ts")).toContain("uploadMapBlockFileFromUrl");
     expect(route).toContain("getOrgScopedFileContentResponse");
     expect(route).not.toContain("uploadFileToXAI(");
     expect(read("lib/map-block-files.ts")).toContain(MAP_BLOCK_FILES_PATH);

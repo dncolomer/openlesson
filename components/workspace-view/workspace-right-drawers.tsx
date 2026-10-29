@@ -22,6 +22,9 @@ import type { BlockCreatorEffects, GeneratorTargetCell } from "@/lib/block-creat
 import { parseBlockCreatorEffects } from "@/lib/block-creator-effects";
 import type { BlockPracticeOptions } from "@/lib/block-practice-options";
 import { parseMapBlock, type MapBlock } from "@/lib/block-kind";
+import { DASHBOARD_FLOWS_PATH } from "@/lib/product-flow";
+import { uploadMapBlockFileFromUrl } from "@/lib/map-block-files";
+import { heliosCreatedFlowFromUnknown } from "@/lib/workspace-helios-flow";
 import type { ExpandSourceIdentity } from "@/lib/expand-block-from-source";
 import type { UnusableCell } from "@/lib/map-ground-rules";
 import type { WorkspaceFileContextItem } from "@/lib/prompt-workspace-context";
@@ -301,6 +304,43 @@ export function WorkspaceRightDrawers({
       addBlock: async ({ prompt, cell, mapBlock }) => {
         await onSubmitAddBlock(prompt, cell, mapBlock ? { mapBlock, title: prompt } : undefined);
       },
+      createFlow: async (input) => {
+        const res = await fetch(DASHBOARD_FLOWS_PATH, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            kind: input.kind,
+            name: input.name,
+            goal: input.goal,
+            topic: input.topic,
+            questions: input.questions,
+            actionCatalog: input.actionCatalog,
+            durationMinutes: input.durationMinutes,
+          }),
+        });
+        const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+        if (!res.ok) {
+          const err = data.error;
+          const message =
+            typeof err === "string"
+              ? err
+              : err && typeof err === "object" && typeof (err as { message?: unknown }).message === "string"
+                ? String((err as { message: string }).message)
+                : "Could not create flow";
+          throw new Error(message);
+        }
+        const created = heliosCreatedFlowFromUnknown(data, input.kind);
+        if (!created) throw new Error("Create flow did not return an id");
+        return created;
+      },
+      ingestRemoteFile: async ({ url, name }) => {
+        return uploadMapBlockFileFromUrl({
+          workspaceId,
+          ayclToken,
+          url,
+          name,
+        });
+      },
       generateShape: async ({ prompt, cells }) => {
         await onSubmitGenerateShape({ prompt, cells });
       },
@@ -314,8 +354,8 @@ export function WorkspaceRightDrawers({
             await onClonePaste(blockId, cell);
           }
         : undefined,
-      editBlock: async ({ blockId, title, description }) => {
-        await onUpdateBlock({ blockId, title, description });
+      editBlock: async ({ blockId, title, description, mapBlock }) => {
+        await onUpdateBlock({ blockId, title, description, mapBlock });
       },
       expandBlock: onExpandBlock
         ? async ({ blockId, prompt, range, density, frozenSlots }) => {
@@ -363,6 +403,7 @@ export function WorkspaceRightDrawers({
       onSubmitAddBlock,
       onSubmitGenerateShape,
       onUpdateBlock,
+      ayclToken,
       workspaceId,
     ],
   );

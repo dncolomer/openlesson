@@ -85,6 +85,57 @@ async function fileToBase64(file: File): Promise<string> {
   return btoa(binary);
 }
 
+export async function uploadMapBlockFileFromUrl(input: {
+  workspaceId: string;
+  ayclToken?: string | null;
+  url: string;
+  name?: string;
+}): Promise<MapBlockAttachment> {
+  const workspaceId = String(input.workspaceId || "").trim();
+  const url = String(input.url || "").trim();
+  if (!workspaceId) throw new Error("Workspace is required");
+  if (!url) throw new Error("A file URL is required");
+  const res = await fetch(MAP_BLOCK_FILES_PATH, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      workspaceId,
+      ...(input.ayclToken ? { ayclToken: input.ayclToken } : {}),
+      url,
+      ...(input.name ? { fileName: input.name, name: input.name } : {}),
+    }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = body && typeof body === "object" ? (body as { error?: unknown }).error : null;
+    const message =
+      typeof err === "string"
+        ? err
+        : err && typeof err === "object" && typeof (err as { message?: unknown }).message === "string"
+          ? String((err as { message: string }).message)
+          : "Could not upload file";
+    throw new Error(message);
+  }
+  const xaiFileId = String(
+    (body as { xaiFileId?: unknown; xai_file_id?: unknown }).xaiFileId ??
+      (body as { xai_file_id?: unknown }).xai_file_id ??
+      "",
+  ).trim();
+  if (!xaiFileId) throw new Error("Upload did not return a file id");
+  const name =
+    String((body as { name?: unknown }).name || input.name || "file").trim() ||
+    "file";
+  const mimeType = String(
+    (body as { mimeType?: unknown }).mimeType || "",
+  ).trim();
+  return mapBlockFileFromUpload({
+    name,
+    mimeType,
+    xaiFileId,
+    workspaceId,
+  });
+}
+
 export async function uploadMapBlockFile(input: {
   workspaceId: string;
   ayclToken?: string | null;

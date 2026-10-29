@@ -18,6 +18,9 @@ export const HELIOS_MAP_TOOL_IDS = [
   "set_dynamic_effect",
   "set_generator_effect",
   "delete_block",
+  "create_flow",
+  "search_web",
+  "attach_content",
   "add_note",
   "edit_note",
   "delete_note",
@@ -34,6 +37,7 @@ export type HeliosMapToolFamily =
   | "generative"
   | "dag"
   | "edit"
+  | "research"
   | "overlay";
 
 export type HeliosMapToolSpec = {
@@ -49,7 +53,7 @@ export const HELIOS_MAP_TOOL_CATALOG: readonly HeliosMapToolSpec[] = [
     family: "topologies",
     title: "Add block",
     description:
-      "Place a new 1×1 block. Arguments: title, optional row and col (next open cell if omitted), optional kind (learn default, calibration, verification, content). Calibration/verification require flowId of an existing owner flow. Content takes files/links attachments and has no Learn mode.",
+      "Place a new 1×1 block. Arguments: title, optional row and col (next open cell if omitted), optional kind (learn default, calibration, verification, content). Calibration/verification: pass flowId of an OWNER FLOW, or omit flowId and pass flowName plus goal (calibration) or topic (verification) and questions to create a flow then link it. Content takes files/links attachments and has no Learn mode.",
   },
   {
     id: "generate_shape",
@@ -130,13 +134,35 @@ export const HELIOS_MAP_TOOL_CATALOG: readonly HeliosMapToolSpec[] = [
     id: "edit_block",
     family: "edit",
     title: "Edit block",
-    description: "Update a block title and description (Edit drawer).",
+    description:
+      "Update a block title, description, kind, linked flow, or content attachments (Edit drawer).",
   },
   {
     id: "delete_block",
     family: "edit",
     title: "Delete block",
     description: "Remove a block (Danger zone drawer).",
+  },
+  {
+    id: "create_flow",
+    family: "edit",
+    title: "Create flow",
+    description:
+      "Create an owner calibration or verification flow without placing a block. Arguments: kind (calibration|verification), name, goal (calibration) or topic (verification), questions[]. Prefer add_block with omitted flowId when you also need to place a tile.",
+  },
+  {
+    id: "search_web",
+    family: "research",
+    title: "Search the web",
+    description:
+      "Find online resources for this map. Arguments: query. Summarize hits in reply and ask the author which to attach. Do not attach until they confirm unless they already named the resource.",
+  },
+  {
+    id: "attach_content",
+    family: "research",
+    title: "Attach content",
+    description:
+      "Attach a link or file URL onto an existing content block (creates content kind if needed). Arguments: blockId, links (name+url), files (name+url downloaded into org xAI Files). Use after the author confirms a search hit.",
   },
   {
     id: "add_note",
@@ -186,6 +212,12 @@ export function isHeliosMapToolId(value: unknown): value is HeliosMapToolId {
   );
 }
 
+export const HELIOS_RESEARCH_TOOL_IDS = ["search_web"] as const;
+
+export function isHeliosResearchToolId(value: unknown): boolean {
+  return value === "search_web";
+}
+
 export function heliosMapToolAwarenessText(
   catalog: readonly HeliosMapToolSpec[] = HELIOS_MAP_TOOL_CATALOG,
 ): string {
@@ -197,8 +229,10 @@ export function heliosMapToolAwarenessText(
     "Helios is the Learning Map builder helper. These tools match Manual Mode drawers:",
     "topologies (add/place, generate-in-shape, split, clone, expand, combine, bridge, cluster),",
     "unusable ground, generative blocks (dynamic and generator), DAGs, remaining edit/delete ops,",
-    "and overlay (map notes and drawing layers).",
-    "add_block arguments: { \"title\": \"...\", \"row\": 0, \"col\": 0, \"kind\": \"learn\" }. kind is learn (default), calibration, verification, or content. Calibration and verification blocks link an existing owner flow via flowId (see OWNER FLOWS). Content blocks attach files/links and have no Learn mode. Default origin is row 0, col 0. Omit row/col only when that default (or the next open cell) is correct. Read CURRENT MAP occupied cells before placing.",
+    "research (search_web then attach_content), and overlay (map notes and drawing layers).",
+    "add_block arguments: { \"title\": \"...\", \"row\": 0, \"col\": 0, \"kind\": \"learn\" }. kind is learn (default), calibration, verification, or content. Calibration and verification: link an existing owner flow via flowId (see OWNER FLOWS) or omit flowId and pass flowName, goal or topic, and questions to create then link. Content blocks attach files/links and have no Learn mode. Default origin is row 0, col 0. Omit row/col only when that default (or the next open cell) is correct. Read CURRENT MAP occupied cells before placing.",
+    "search_web arguments: { \"query\": \"...\" }. Ask the author which hits to keep, then attach_content or add_block kind content.",
+    "attach_content arguments: { \"blockId\": \"...\", \"links\": [{ \"name\": \"...\", \"url\": \"https://...\" }], \"files\": [{ \"name\": \"notes.pdf\", \"url\": \"https://.../notes.pdf\" }] }.",
     "bridge_blocks arguments: { \"blockIds\": [\"id1\",\"id2\"], \"width\": 0 }. Default thickness is 1 cell (width 0). Omit width unless the author asks for a thicker corridor.",
     "apply_dag arguments: { \"blockIds\": [\"id1\",\"id2\"], \"edges\": [{ \"from\": \"id1\", \"to\": \"id2\", \"kind\": \"next\" }] }.",
     "If blockIds/edges are omitted, apply_dag uses current blocks in reading order.",

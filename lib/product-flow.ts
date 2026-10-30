@@ -1,5 +1,5 @@
 /**
- * First-class Verification and Calibration Flows and Knowledge regions.
+ * First-class Verification, Calibration, and Solve Flows and Knowledge regions.
  * Dashboard lists these objects; a workspace is Learning only.
  * Flow rows store owner_user_id. workspace_id is optional.
  */
@@ -7,7 +7,7 @@
 import { parseLearningModelSize } from "@/lib/learning-model";
 import { flowCountdownMinutes } from "@/lib/flow-countdown";
 
-export type ProductFlowKind = "verification" | "calibration";
+export type ProductFlowKind = "verification" | "calibration" | "solve";
 
 export const DASHBOARD_FLOWS_PATH = "/api/dashboard/flows";
 export const DASHBOARD_FLOWS_GENERATE_PATH = "/api/dashboard/flows/generate-questions";
@@ -29,18 +29,22 @@ export type ProductFlowDraft = {
 export function parseProductFlowKind(value: unknown): ProductFlowKind | null {
   if (value === "verification" || value === "verify") return "verification";
   if (value === "calibration" || value === "calibrate") return "calibration";
+  if (value === "solve") return "solve";
   return null;
 }
 
 export function productFlowKindFromDashboardKind(
-  kind: "verify" | "calibrate" | ProductFlowKind,
+  kind: "verify" | "calibrate" | "solve" | ProductFlowKind,
 ): ProductFlowKind {
   if (kind === "calibrate" || kind === "calibration") return "calibration";
+  if (kind === "solve") return "solve";
   return "verification";
 }
 
 export function productFlowNewPath(kind: ProductFlowKind): string {
-  return kind === "calibration" ? "/calibration/flows/new" : "/verification/flows/new";
+  if (kind === "calibration") return "/calibration/flows/new";
+  if (kind === "solve") return "/solve/flows/new";
+  return "/verification/flows/new";
 }
 
 export function productFlowDashboardPath(kind: ProductFlowKind): string {
@@ -60,17 +64,26 @@ export function absoluteFlowPublicUrl(pathOrUrl: string, origin: string): string
 export function productFlowPagePath(kind: ProductFlowKind, flowId: string): string {
   const id = String(flowId || "").trim();
   if (!id) return productFlowNewPath(kind);
-  return kind === "calibration" ? `/calibration/flows/${id}` : `/verification/flows/${id}`;
+  if (kind === "calibration") return `/calibration/flows/${id}`;
+  if (kind === "solve") return `/solve/flows/${id}`;
+  return `/verification/flows/${id}`;
 }
 
 export function productRegionNewPath(kind: ProductFlowKind): string {
-  return kind === "calibration" ? "/calibration/regions/new" : "/verification/regions/new";
+  if (kind === "calibration") return "/calibration/regions/new";
+  if (kind === "solve") return "/solve/regions/new";
+  return "/verification/regions/new";
 }
 
 export function productRegionPagePath(kind: ProductFlowKind, regionId: string): string {
   const id = String(regionId || "").trim();
   if (!id) return productRegionNewPath(kind);
-  const tab = kind === "calibration" ? "calibration_studio" : "verification_studio";
+  const tab =
+    kind === "calibration"
+      ? "calibration_studio"
+      : kind === "solve"
+        ? "solve_studio"
+        : "verification_studio";
   return `/dashboard?tab=${tab}&region=${encodeURIComponent(id)}`;
 }
 
@@ -79,7 +92,9 @@ export function productRegionStudioPath(kind: ProductFlowKind, regionId: string)
 }
 
 export function productFlowOwnerTitle(kind: ProductFlowKind): string {
-  return kind === "calibration" ? "Calibration flows" : "Verification flows";
+  if (kind === "calibration") return "Calibration flows";
+  if (kind === "solve") return "Solve flows";
+  return "Verification flows";
 }
 
 export function flowOwnedByUser(
@@ -139,6 +154,9 @@ export function productFlowWizardCanAdvance(
     if (draft.kind === "calibration") {
       return Boolean(String(draft.goal || "").trim()) && productFlowQuestionsFromDraft(draft.questions).length > 0;
     }
+    if (draft.kind === "solve") {
+      return Boolean(String(draft.topic || "").trim());
+    }
     return Boolean(String(draft.topic || "").trim());
   }
   return Boolean(normalizeFlowName(draft.name));
@@ -194,6 +212,18 @@ export function acceptProductFlowPublish(draft: ProductFlowDraft): AcceptedProdu
   }
   const topic = String(draft.topic || "").trim();
   if (!topic) return { ok: false, reason: "topic_required" };
+  if (draft.kind === "solve") {
+    return {
+      ok: true,
+      kind: "solve",
+      name,
+      topic,
+      goal: "",
+      questions: [],
+      actionCatalog,
+      durationMinutes,
+    };
+  }
   return {
     ok: true,
     kind: "verification",

@@ -76,7 +76,7 @@ export function WorkspaceOwnerFlowPicker({
   onChange,
   disabled = false,
 }: {
-  kind: "calibration" | "verification";
+  kind: "calibration" | "verification" | "solve";
   selectedId: string | null;
   onChange: (flow: DashboardRecentFlow | null) => void;
   disabled?: boolean;
@@ -119,7 +119,13 @@ export function WorkspaceOwnerFlowPicker({
   return (
     <div className="space-y-1.5" data-map-block-flow-picker data-flow-kind={kind}>
       <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
-        Existing {kind === "calibration" ? "calibration" : "verification"} flow
+        Existing{" "}
+        {kind === "calibration"
+          ? "calibration"
+          : kind === "solve"
+            ? "solve"
+            : "verification"}{" "}
+        flow
       </p>
       {loading ? (
         <p className="text-[11px] text-neutral-600">Loading flows…</p>
@@ -375,7 +381,12 @@ export function WorkspaceMapBlockLaunchCard({
   return (
     <div className="space-y-2" data-map-block-launch>
       <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
-        {block.kind === "calibration" ? "Calibration" : "Verification"} flow
+        {block.kind === "calibration"
+          ? "Calibration"
+          : block.kind === "solve"
+            ? "Solve"
+            : "Verification"}{" "}
+        flow
       </p>
       {href ? (
         <button
@@ -386,7 +397,9 @@ export function WorkspaceMapBlockLaunchCard({
         >
           {block.kind === "calibration"
             ? "Open calibration flow"
-            : "Open verification flow"}
+            : block.kind === "solve"
+              ? "Open solve flow"
+              : "Open verification flow"}
         </button>
       ) : (
         <p className="text-[11px] text-neutral-500">

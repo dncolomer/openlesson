@@ -7,6 +7,7 @@ import {
   type DashboardWorkspaceTypeFilter,
 } from "@/lib/dashboard-workspace-filters";
 import { calibrationFlowPublicPath } from "@/lib/calibration-flow";
+import { solveFlowPublicPath } from "@/lib/solve-flow";
 import { verificationFlowPublicPath } from "@/lib/verification-flow";
 import {
   flowDisplayName,
@@ -43,7 +44,7 @@ export function dashboardWorkspaceCounts(
   };
 }
 
-export type DashboardRecentFlowKind = "verify" | "calibrate";
+export type DashboardRecentFlowKind = "verify" | "calibrate" | "solve";
 
 export type DashboardRecentFlow = {
   id: string;
@@ -81,7 +82,9 @@ export function presentDashboardRecentFlow(input: {
   const publicPath =
     input.kind === "calibrate"
       ? calibrationFlowPublicPath(token)
-      : verificationFlowPublicPath(token);
+      : input.kind === "solve"
+        ? solveFlowPublicPath(token)
+        : verificationFlowPublicPath(token);
   const name = flowDisplayName({
     name: input.name,
     title: input.title,

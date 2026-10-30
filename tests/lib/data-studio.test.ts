@@ -468,11 +468,15 @@ describe("product Data Studio chrome", () => {
     const learning = DASHBOARD_NAV_GROUPS.find((group) => group.id === "learning");
     const verification = DASHBOARD_NAV_GROUPS.find((group) => group.id === "verification");
     const calibration = DASHBOARD_NAV_GROUPS.find((group) => group.id === "calibration");
+    const solve = DASHBOARD_NAV_GROUPS.find((group) => group.id === "solve");
     expect(learning?.items.some((item) => item.label === "Data Studio")).toBe(true);
     expect(verification?.items.some((item) => item.label === "Data Studio")).toBe(true);
     expect(calibration?.items.some((item) => item.label === "Data Studio")).toBe(true);
+    expect(solve?.items.some((item) => item.label === "Data Studio")).toBe(true);
     expect(isDashboardStudioTab("learning_studio")).toBe(true);
+    expect(isDashboardStudioTab("solve_studio")).toBe(true);
     expect(dashboardStudioProduct("calibration_studio")).toBe("calibration");
+    expect(dashboardStudioProduct("solve_studio")).toBe("solve");
 
     const hosts = readFileSync(join(ROOT, "components/workspace-view/workspace-section-hosts.tsx"), "utf8");
     expect(hosts).not.toContain("DataStudioPanel");

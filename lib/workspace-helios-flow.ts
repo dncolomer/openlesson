@@ -66,10 +66,18 @@ export function heliosFlowCreateInput(
 ): HeliosFlowCreateInput {
   const parsed = parseMapBlockKind(args.kind ?? args.blockKind);
   const kind: ProductFlowKind =
-    parsed === "calibration" ? "calibration" : "verification";
+    parsed === "calibration"
+      ? "calibration"
+      : parsed === "solve"
+        ? "solve"
+        : "verification";
   const name =
     text(args, "flowName", "flow_name", "name", "title", "prompt") ||
-    (kind === "calibration" ? "Calibration flow" : "Verification flow");
+    (kind === "calibration"
+      ? "Calibration flow"
+      : kind === "solve"
+        ? "Solve flow"
+        : "Verification flow");
   const goal = text(args, "goal") || name;
   const topic = text(args, "topic") || name;
   let questions = heliosFlowQuestionsFromArgs(args);
@@ -110,7 +118,9 @@ export function heliosCreatedFlowFromUnknown(
   const kind: ProductFlowKind =
     kindRaw === "calibration" || kindRaw === "calibrate"
       ? "calibration"
-      : "verification";
+      : kindRaw === "solve"
+        ? "solve"
+        : "verification";
   return {
     id,
     kind,

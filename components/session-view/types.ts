@@ -14,7 +14,7 @@ export type SessionViewTranslate = (
   params?: Record<string, string | number>,
 ) => string;
 
-export type GuestAccessKind = "aycl" | "ile" | null;
+export type GuestAccessKind = "aycl" | "ile" | "solve" | null;
 
 export type ChapterPlanStatus = "unknown" | "empty" | "exists" | "failed";
 

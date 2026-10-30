@@ -1,6 +1,6 @@
 /**
- * Owner dashboard Knowledge regions: overlay models for Verification
- * and Calibration flows, listed by owner_user_id.
+ * Owner dashboard Knowledge regions: overlay models for Verification,
+ * Calibration, and Solve flows, listed by owner_user_id.
  */
 
 import { FLOW_EMBEDDING_PATH_TEXT_MODEL_ID } from "@/lib/flow-embedding";
@@ -8,7 +8,7 @@ import { productFlowOwnerTitle, productRegionNewPath, productRegionPagePath } fr
 
 export const DASHBOARD_KNOWLEDGE_REGIONS_PATH = "/api/dashboard/knowledge-regions";
 
-export type DashboardKnowledgeRegionKind = "verification" | "calibration";
+export type DashboardKnowledgeRegionKind = "verification" | "calibration" | "solve";
 
 export type DashboardKnowledgeRegion = {
   id: string;
@@ -23,7 +23,9 @@ export type DashboardKnowledgeRegion = {
 export function parseDashboardKnowledgeRegionKind(
   value: unknown,
 ): DashboardKnowledgeRegionKind | null {
-  if (value === "verification" || value === "calibration") return value;
+  if (value === "verification" || value === "calibration" || value === "solve") {
+    return value;
+  }
   return null;
 }
 

@@ -366,7 +366,9 @@ export function WorkspaceAddBlockPane({
           disabled={busy || submitting}
         />
 
-        {blockKind === "calibration" || blockKind === "verification" ? (
+        {blockKind === "calibration" ||
+        blockKind === "verification" ||
+        blockKind === "solve" ? (
           <WorkspaceOwnerFlowPicker
             kind={blockKind}
             selectedId={selectedFlow?.id || null}

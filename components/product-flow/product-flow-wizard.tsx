@@ -28,7 +28,8 @@ export function ProductFlowWizard({ kind }: { kind: ProductFlowKind }) {
   const [draft, setDraft] = useState<ProductFlowDraft>(() => emptyProductFlowDraft(kind));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const productLabel = kind === "calibration" ? "Calibration" : "Verification";
+  const productLabel =
+    kind === "calibration" ? "Calibration" : kind === "solve" ? "Solve" : "Verification";
   const canAdvance = productFlowWizardCanAdvance(step, draft);
 
   const stepIndex = PRODUCT_FLOW_WIZARD_STEPS.indexOf(step);
@@ -142,6 +143,18 @@ export function ProductFlowWizard({ kind }: { kind: ProductFlowKind }) {
           />
         ) : null}
 
+        {step === "author" && kind === "solve" ? (
+          <section className="space-y-3 border border-neutral-800 p-4" data-solve-flow-editor>
+            <input
+              value={draft.topic}
+              onChange={(event) => patch({ topic: event.target.value })}
+              placeholder="Topic"
+              data-solve-flow-topic
+              className="w-full border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
+            />
+          </section>
+        ) : null}
+
         {step === "author" && kind === "verification" ? (
           <section className="space-y-3 border border-neutral-800 p-4" data-verification-flow-editor>
             <input
@@ -251,9 +264,11 @@ export function ProductFlowWizard({ kind }: { kind: ProductFlowKind }) {
             <p className="text-xs text-neutral-400">
               {kind === "calibration" ? draft.goal : draft.topic}
             </p>
-            <p className="text-xs text-neutral-500">
-              {draft.questions.filter((item) => item.trim()).length} questions
-            </p>
+            {kind === "solve" ? null : (
+              <p className="text-xs text-neutral-500">
+                {draft.questions.filter((item) => item.trim()).length} questions
+              </p>
+            )}
           </section>
         ) : null}
 

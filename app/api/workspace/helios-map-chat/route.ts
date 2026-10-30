@@ -43,6 +43,7 @@ import { parseLearnerMapNotes } from "@/lib/learner-map-notes";
 import { parseAnnotationLayers } from "@/lib/map-annotation-layers";
 import { formatOwnerFlowsForHeliosPrompt } from "@/lib/block-kind";
 import { listCalibrationFlowsForOwnerUserId } from "@/lib/calibration-flow-repository";
+import { listSolveFlowsForOwnerUserId } from "@/lib/solve-flow-repository";
 import { listVerificationFlowsForOwnerUserId } from "@/lib/verification-flow-repository";
 import { isHeliosResearchToolId } from "@/lib/workspace-helios-tools";
 import {
@@ -152,9 +153,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const [calibrationFlows, verificationFlows] = await Promise.all([
+    const [calibrationFlows, verificationFlows, solveFlows] = await Promise.all([
       listCalibrationFlowsForOwnerUserId(auth.persistUserId).catch(() => []),
       listVerificationFlowsForOwnerUserId(auth.persistUserId).catch(() => []),
+      listSolveFlowsForOwnerUserId(auth.persistUserId).catch(() => []),
     ]);
 
     const user = [
@@ -166,6 +168,7 @@ export async function POST(req: NextRequest) {
       formatOwnerFlowsForHeliosPrompt({
         calibration: calibrationFlows,
         verification: verificationFlows,
+        solve: solveFlows,
       }),
       formatHeliosWorkspaceMapTypesForPrompt(
         heliosWorkspaceMapTypesFromUnknown(body.mapTypes ?? body.map_types),

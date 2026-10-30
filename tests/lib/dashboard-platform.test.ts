@@ -45,6 +45,9 @@ describe("dashboard nav", () => {
     expect(parseDashboardTab("insights")).toBe("home");
     expect(parseDashboardTab("verification")).toBe("verification");
     expect(parseDashboardTab("calibration")).toBe("calibration");
+    expect(parseDashboardTab("solve")).toBe("solve");
+    expect(parseDashboardTab("solve_regions")).toBe("solve_regions");
+    expect(parseDashboardTab("solve_studio")).toBe("solve_studio");
     expect(parseDashboardTab("shop")).toBe("shop");
     expect(parseDashboardTab("verification_regions")).toBe("verification_regions");
     expect(parseDashboardTab("calibration_regions")).toBe("calibration_regions");
@@ -63,6 +66,10 @@ describe("dashboard nav", () => {
     expect(dashboardTypeFilterForTab("learning")).toBe("learning");
     expect(dashboardTypeFilterForTab("verification")).toBe("verification");
     expect(dashboardTypeFilterForTab("calibration")).toBe("calibration");
+    expect(isDashboardProductTab("solve")).toBe(true);
+    expect(dashboardTypeFilterForTab("solve")).toBe("solve");
+    expect(dashboardTypeFilterForTab("solve_regions")).toBe("solve");
+    expect(dashboardTypeFilterForTab("solve_studio")).toBe("solve");
     expect(dashboardTypeFilterForTab("shop")).toBe("learning");
     expect(dashboardTypeFilterForTab("verification_regions")).toBe("verification");
     expect(dashboardTypeFilterForTab("calibration_regions")).toBe("calibration");
@@ -81,12 +88,22 @@ describe("dashboard nav", () => {
     expect(dashboardCreateHref("learning")).toBe("/workspace/new");
     expect(dashboardCreateHref("verification")).toBe("/verification/flows/new");
     expect(dashboardCreateHref("calibration")).toBe("/calibration/flows/new");
+    expect(dashboardCreateHref("solve")).toBe("/solve/flows/new");
+    expect(dashboardCreateHref("solve")).toBe(productFlowNewPath("solve"));
     expect(dashboardCreateHref("verification")).toBe(productFlowNewPath("verification"));
     expect(dashboardCreateHref("calibration")).toBe(productFlowNewPath("calibration"));
     expect(dashboardProductLabel("verification")).toBe("Verification");
     expect(dashboardCreateLabel("learning")).toBe("Create a Learning Map →");
     expect(dashboardCreateLabel("verification")).toBe("Create Verification flow →");
     expect(dashboardCreateLabel("calibration")).toBe("Create Calibration flow →");
+    expect(dashboardProductLabel("solve")).toBe("Solve");
+    expect(dashboardCreateLabel("solve")).toBe("Create Solve flow →");
+    expect(dashboardFrameLabel("solve")).toBe("Solve");
+    expect(dashboardFrameLabel("solve_regions")).toBe("Knowledge regions");
+    expect(dashboardStudioProduct("solve_studio")).toBe("solve");
+    expect(dashboardRegionsProduct("solve_regions")).toBe("solve");
+    expect(dashboardTabForProductSurface("solve")).toBe("solve");
+    expect(dashboardTabForProductSurface("solve", "region")).toBe("solve_regions");
     expect(dashboardFrameLabel("help")).toBe("How it works");
     expect(dashboardFrameLabel("calibration")).toBe("Calibration");
     expect(dashboardFrameLabel("home")).toBe("Home");
@@ -96,10 +113,11 @@ describe("dashboard nav", () => {
     expect(dashboardTabForProductSurface("calibration", "region")).toBe("calibration_regions");
   });
 
-  it("subdivides the sidebar into Learning, Verification, and Calibration", () => {
+  it("subdivides the sidebar into Learning, Verification, Calibration, and Solve", () => {
     const learning = DASHBOARD_NAV_GROUPS.find((group) => group.id === "learning");
     const verification = DASHBOARD_NAV_GROUPS.find((group) => group.id === "verification");
     const calibration = DASHBOARD_NAV_GROUPS.find((group) => group.id === "calibration");
+    const solve = DASHBOARD_NAV_GROUPS.find((group) => group.id === "solve");
     expect(learning?.items.map((item) => item.id)).toEqual([
       "my_maps",
       "learning",
@@ -134,6 +152,17 @@ describe("dashboard nav", () => {
       "calibration_regions",
       "calibration_studio",
     ]);
+    expect(solve?.items.map((item) => item.label)).toEqual([
+      "Flows",
+      "Knowledge regions",
+      "Data Studio",
+    ]);
+    expect(solve?.items.map((item) => item.id)).toEqual([
+      "solve",
+      "solve_regions",
+      "solve_studio",
+    ]);
+    expect(DASHBOARD_NAV_GROUPS.map((group) => group.id)).toContain("solve");
     expect(DASHBOARD_NAV_GROUPS.map((group) => group.id)).not.toContain("products");
   });
 
@@ -202,6 +231,16 @@ describe("dashboard home summaries", () => {
     expect(calibrate?.name).toBe("Priors");
     expect(calibrate?.workspacePath).toBe("/calibration/flows/cf1");
     expect(calibrate?.flowPath).toBe(productFlowPagePath("calibration", "cf1"));
+    const solve = presentDashboardRecentFlow({
+      id: "sf1",
+      kind: "solve",
+      name: "Limits",
+      title: "epsilon-delta",
+      publicToken: "stok",
+    });
+    expect(solve?.publicPath).toBe("/s/stok");
+    expect(solve?.flowPath).toBe(productFlowPagePath("solve", "sf1"));
+    expect(solve?.workspacePath).toBe("/solve/flows/sf1");
     expect(presentDashboardRecentFlow({ id: "", kind: "verify", workspaceId: "ws" })).toBeNull();
     const ownerScoped = presentDashboardRecentFlow({
       id: "vf-owner",
@@ -343,6 +382,8 @@ describe("dashboard platform surface", () => {
     );
     expect(productFlowDashboardPath("verification")).toBe("/dashboard?tab=verification");
     expect(productFlowDashboardPath("calibration")).toBe("/dashboard?tab=calibration");
+    expect(productFlowDashboardPath("solve")).toBe("/dashboard?tab=solve");
+    expect(absoluteFlowPublicUrl("/s/tok", "https://app.example")).toBe("https://app.example/s/tok");
     expect(absoluteFlowPublicUrl("/v/tok", "https://app.example")).toBe("https://app.example/v/tok");
     expect(absoluteFlowPublicUrl("https://app.example/c/tok", "https://other")).toBe(
       "https://app.example/c/tok",
@@ -368,6 +409,14 @@ describe("dashboard platform surface", () => {
     expect(dashSrc).toContain("workspaces={learningWorkspaces}");
     expect(readRepo("app/verification/flows/new/page.tsx")).toContain('kind="verification"');
     expect(readRepo("app/calibration/flows/new/page.tsx")).toContain('kind="calibration"');
+    expect(readRepo("app/solve/flows/new/page.tsx")).toContain('kind="solve"');
+    expect(readRepo("app/solve/flows/[id]/page.tsx")).toContain("ProductFlowPage");
+    expect(readRepo("components/product-flow/product-flow-wizard.tsx")).toContain(
+      "data-solve-flow-editor",
+    );
+    expect(readRepo("components/product-flow/product-flow-page.tsx")).toContain(
+      "data-solve-flow-editor",
+    );
     expect(readRepo("app/verification/flows/[id]/page.tsx")).toContain("ProductFlowPage");
     expect(readRepo("app/calibration/flows/[id]/page.tsx")).toContain("ProductFlowPage");
     expect(readRepo("app/workspace/new/page.tsx")).not.toContain("Verification workspace");

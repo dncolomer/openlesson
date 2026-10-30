@@ -8,6 +8,7 @@ import type { DataStudioProduct } from "@/lib/data-studio-view";
 function explainerProductLabel(product: DataStudioProduct): string {
   if (product === "verification") return "Verification";
   if (product === "calibration") return "Calibration";
+  if (product === "solve") return "Solve";
   return "Learning";
 }
 
@@ -89,6 +90,9 @@ function ledeFor(product: DataStudioProduct): string {
   }
   if (product === "calibration") {
     return "This map is Calibrate soundings. Nearby points sounded similar hidden-state trees.";
+  }
+  if (product === "solve") {
+    return "This map is Solve runs. Nearby points walked similar hidden-state paths on this Solve flow.";
   }
   return "This map is Verify runs. Nearby points walked the hidden-state tree in similar ways.";
 }

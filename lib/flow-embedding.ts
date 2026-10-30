@@ -29,7 +29,7 @@ export const FLOW_EMBEDDING_CHANNEL_LABELS: Record<FlowEmbeddingChannel, string>
 export const FLOW_EMBEDDING_PATH_TEXT_PATH_WEIGHT = 0.75;
 export const FLOW_EMBEDDING_PATH_TEXT_TEXT_WEIGHT = 0.25;
 
-export type FlowKind = "calibrate" | "learn" | "verify";
+export type FlowKind = "calibrate" | "learn" | "verify" | "solve";
 
 export type FlowPowRow = {
   type?: string | null;
@@ -85,7 +85,7 @@ const SEM_BAG_DIM = 96;
 const WALK_PROJECTION = seededRandomProjection(32, 10, `${FLOW_EMBEDDING_MODEL_ID}:hidden-walk`);
 const TREE_BAG_PROJECTION = seededRandomProjection(32, 8, `${FLOW_EMBEDDING_MODEL_ID}:hidden-tree`);
 
-const FLOW_KINDS = new Set<FlowKind>(["calibrate", "learn", "verify"]);
+const FLOW_KINDS = new Set<FlowKind>(["calibrate", "learn", "verify", "solve"]);
 
 function textOf(value: unknown): string {
   return typeof value === "string" ? value.replace(/\s+/g, " ").trim() : "";

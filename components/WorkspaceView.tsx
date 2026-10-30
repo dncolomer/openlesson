@@ -700,7 +700,9 @@ export function WorkspaceView({
                   ? "Open calibration flow"
                   : mapBlockLaunch(detailBlock?.map_block).action === "verify"
                     ? "Open verification flow"
-                    : playCopyStartSessionLabel()
+                    : mapBlockLaunch(detailBlock?.map_block).action === "solve"
+                      ? "Open solve flow"
+                      : playCopyStartSessionLabel()
               }
               showStart={mapBlockLaunch(detailBlock?.map_block).action !== "none"}
               attachments={normalizeMapBlock(detailBlock?.map_block).attachments.map(

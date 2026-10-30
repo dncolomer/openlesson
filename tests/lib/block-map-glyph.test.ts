@@ -55,6 +55,7 @@ describe("block map glyph (keyword + random 3×3 squares)", () => {
     expect(parseBlockMapIconName("pickaxe")).toBeNull();
     expect(parseBlockMapIconName("calibration")).toBe("calibration");
     expect(parseBlockMapIconName("verification")).toBe("verification");
+    expect(parseBlockMapIconName("solve")).toBe("solve");
     expect(parseBlockMapIconName("content")).toBe("content");
     expect(parseBlockMapIconName("Square")).toBeNull();
     expect(parseBlockMapIconName("Cube")).toBeNull();
@@ -73,7 +74,9 @@ describe("block map glyph (keyword + random 3×3 squares)", () => {
     expect(icons).toContain("Pickaxe");
     expect(icons).toContain("Crosshair");
     expect(icons).toContain("BadgeCheck");
+    expect(icons).toContain("Puzzle");
     expect(icons).toContain("FileText");
+    expect(icons).toContain("isSolveMapIcon");
     expect(icons).toContain("isPreviousSessionsMapIcon");
     expect(icons).toContain("isCalibrationMapIcon");
     expect(icons).toContain("isVerificationMapIcon");

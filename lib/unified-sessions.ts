@@ -19,6 +19,7 @@ export type UnifiedSessionInsert = {
   block_id?: string | null;
   calibrate_flow_id?: string | null;
   verify_flow_id?: string | null;
+  solve_flow_id?: string | null;
   guest_user_id?: string | null;
   assigned_user_id?: string | null;
   organization_id?: string | null;
@@ -80,7 +81,9 @@ export function unifiedSessionInsertPayload(input: UnifiedSessionInsert): Record
         ? "Calibrate"
         : kind === "verify"
           ? "Verify"
-          : "Learn";
+          : kind === "solve"
+            ? "Solve"
+            : "Learn";
   return {
     ...(input.id ? { id: input.id } : {}),
     kind,
@@ -91,6 +94,7 @@ export function unifiedSessionInsertPayload(input: UnifiedSessionInsert): Record
     block_id: input.block_id ?? null,
     calibrate_flow_id: input.calibrate_flow_id ?? null,
     verify_flow_id: input.verify_flow_id ?? null,
+    solve_flow_id: input.solve_flow_id ?? null,
     guest_user_id: input.guest_user_id ?? null,
     assigned_user_id: input.assigned_user_id ?? null,
     organization_id: input.organization_id ?? null,

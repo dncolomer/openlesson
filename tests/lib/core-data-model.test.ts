@@ -7,26 +7,39 @@ import {
   EMBEDDING_MODELS_V1,
   embeddingModelIdForFamily,
   FLOW_EMBEDDING_ALGORITHM_V1,
+  isMapLearnSession,
+  isSolveSession,
   LEARN_EMBEDDING_MODEL_ID,
+  parseSessionKind,
   parseSessionResult,
   parseSoundingClassification,
+  SESSION_KINDS,
+  SOLVE_EMBEDDING_MODEL_ID,
+  solveFlowIdFromSession,
   VERIFY_EMBEDDING_MODEL_ID,
 } from "@/lib/core-data-model";
 
 const ROOT = join(__dirname, "../..");
 
 describe("core data model contract", () => {
-  it("registers three v1 embedding families on the shared algorithm", () => {
-    expect(EMBEDDING_MODELS_V1.map((row) => row.family)).toEqual(["learn", "calibrate", "verify"]);
+  it("registers four v1 embedding families on the shared algorithm", () => {
+    expect(EMBEDDING_MODELS_V1.map((row) => row.family)).toEqual([
+      "learn",
+      "calibrate",
+      "verify",
+      "solve",
+    ]);
     expect(EMBEDDING_MODELS_V1.every((row) => row.algorithmId === FLOW_EMBEDDING_ALGORITHM_V1)).toBe(
       true,
     );
     expect(embeddingModelIdForFamily("learn")).toBe(LEARN_EMBEDDING_MODEL_ID);
     expect(embeddingModelIdForFamily("calibrate")).toBe(CALIBRATE_EMBEDDING_MODEL_ID);
     expect(embeddingModelIdForFamily("verify")).toBe(VERIFY_EMBEDDING_MODEL_ID);
+    expect(embeddingModelIdForFamily("solve")).toBe(SOLVE_EMBEDDING_MODEL_ID);
+    expect(SESSION_KINDS).toEqual(["learn", "calibrate", "verify", "solve"]);
   });
 
-  it("parses Learn, Verify, and Calibrate session results", () => {
+  it("parses Learn, Verify, Calibrate, and Solve session results", () => {
     expect(
       parseSessionResult({
         kind: "learn",
@@ -66,6 +79,24 @@ describe("core data model contract", () => {
       expect(calibrate.classification.band).toBe("localized");
       expect(calibrate.expertProof?.choice).toBe("hit");
     }
+    expect(
+      parseSessionResult({
+        kind: "solve",
+        projectedPolicy: { sequence: ["r1", "root"], steps: 2, excess: 0, distance: 0 },
+      }),
+    ).toEqual({
+      kind: "solve",
+      projectedPolicy: { sequence: ["r1", "root"], steps: 2, excess: 0, distance: 0 },
+    });
+    expect(parseSessionKind("solve")).toBe("solve");
+    expect(
+      isSolveSession({ kind: "solve", solve_flow_id: "sf1" }),
+    ).toBe(true);
+    expect(isMapLearnSession({ kind: "learn" })).toBe(true);
+    expect(isMapLearnSession({ kind: "solve", solve_flow_id: "sf1" })).toBe(false);
+    expect(isSolveSession({ kind: "learn" })).toBe(false);
+    expect(solveFlowIdFromSession({ solve_flow_id: "sf1" })).toBe("sf1");
+    expect(solveFlowIdFromSession({ kind: "learn" })).toBeNull();
   });
 
   it("promotes staging sounding JSON strings into a Calibrate result", () => {
@@ -124,5 +155,19 @@ describe("core data model contract", () => {
     expect(sql).toContain("drop table if exists public.user_solana_wallets cascade");
     expect(sql).not.toContain("drop table if exists public.workspace_proof_of_work");
     expect(sql).not.toContain("drop table if exists public.sessions");
+  });
+
+  it("adds owner-scoped Solve flows and session/region foreign keys", () => {
+    const sql = readFileSync(
+      join(ROOT, "supabase/migrations/20261030200000_solve_flows.sql"),
+      "utf8",
+    );
+    expect(sql).toContain("create table if not exists public.solve_flows");
+    expect(sql).toContain("owner_user_id uuid not null references auth.users(id)");
+    expect(sql).toContain("add column if not exists solve_flow_id uuid");
+    expect(sql).toContain("sessions_solve_flow_id_fkey");
+    expect(sql).toContain("knowledge_regions_solve_flow_id_fkey");
+    expect(sql).toContain("'solve'::text");
+    expect(sql).toContain("solve-flowcfg-v1-d96");
   });
 });

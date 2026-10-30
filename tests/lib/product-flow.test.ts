@@ -5,7 +5,11 @@ import {
   acceptProductFlowPublish,
   emptyProductFlowDraft,
   flowOwnedByUser,
+  parseProductFlowKind,
+  productFlowNewPath,
   productFlowOwnerTitle,
+  productFlowPagePath,
+  productFlowWizardCanAdvance,
 } from "@/lib/product-flow";
 import { parseWorkspaceKind } from "@/lib/workspace-kind";
 
@@ -20,6 +24,11 @@ describe("product flow owner_user_id", () => {
     expect(parseWorkspaceKind("knowledge_region")).toBe("standard");
     expect(parseWorkspaceKind("calibration")).toBe("standard");
     expect(productFlowOwnerTitle("verification")).toBe("Verification flows");
+    expect(productFlowOwnerTitle("solve")).toBe("Solve flows");
+    expect(parseProductFlowKind("solve")).toBe("solve");
+    expect(parseProductFlowKind("practice")).toBeNull();
+    expect(productFlowNewPath("solve")).toBe("/solve/flows/new");
+    expect(productFlowPagePath("solve", "sf1")).toBe("/solve/flows/sf1");
   });
 
   it("accepts a publish draft without a workspace", () => {
@@ -34,6 +43,34 @@ describe("product flow owner_user_id", () => {
     expect(accepted.name).toBe("Limits");
   });
 
+  it("accepts a Solve publish with name and topic only", () => {
+    const missingTopic = {
+      ...emptyProductFlowDraft("solve"),
+      name: "Limits practice",
+    };
+    expect(acceptProductFlowPublish(missingTopic)).toEqual({
+      ok: false,
+      reason: "topic_required",
+    });
+    expect(productFlowWizardCanAdvance("author", missingTopic)).toBe(false);
+    const draft = {
+      ...emptyProductFlowDraft("solve"),
+      name: "Limits practice",
+      topic: "epsilon-delta limits",
+      questions: ["this question is ignored"],
+    };
+    expect(productFlowWizardCanAdvance("name", draft)).toBe(true);
+    expect(productFlowWizardCanAdvance("author", draft)).toBe(true);
+    const accepted = acceptProductFlowPublish(draft);
+    expect(accepted.ok).toBe(true);
+    if (!accepted.ok) return;
+    expect(accepted.kind).toBe("solve");
+    expect(accepted.name).toBe("Limits practice");
+    expect(accepted.topic).toBe("epsilon-delta limits");
+    expect(accepted.questions).toEqual([]);
+    expect(accepted.goal).toBe("");
+  });
+
   it("treats owner_user_id as the ownership check", () => {
     expect(flowOwnedByUser({ ownerUserId: "user-1" }, "user-1")).toBe(true);
     expect(flowOwnedByUser({ ownerUserId: "user-1" }, "user-2")).toBe(false);
@@ -45,6 +82,7 @@ describe("product flow owner_user_id", () => {
     expect(route).toContain("ownerUserId: auth.user.id");
     expect(route).toContain("listVerificationFlowsForOwnerUserId");
     expect(route).toContain("listCalibrationFlowsForOwnerUserId");
+    expect(route).toContain("listSolveFlowsForOwnerUserId");
     expect(route).not.toContain("ensureProductFlowOwnerWorkspace");
     expect(route).not.toContain("listProductFlowWorkspaceIds");
     expect(route).not.toMatch(/from\("workspaces"\)[\s\S]{0,200}\.insert\(/);

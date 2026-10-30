@@ -90,6 +90,13 @@ describe("workspaceMatchesDashboardTypeFilter", () => {
     expect(workspaceMatchesDashboardTypeFilter(unset, "calibration")).toBe(false);
   });
 
+  it("solve is not a workspace kind, so the type filter matches no maps", () => {
+    expect(workspaceMatchesDashboardTypeFilter(learning, "solve")).toBe(false);
+    expect(workspaceMatchesDashboardTypeFilter(verification, "solve")).toBe(false);
+    expect(workspaceMatchesDashboardTypeFilter(calibration, "solve")).toBe(false);
+    expect(workspaceMatchesDashboardTypeFilter(unset, "solve")).toBe(false);
+  });
+
   it("authored learning maps include private owner maps and drop play copies", () => {
     expect(
       isAuthoredLearningMap({ workspace_kind: "standard", is_play_copy: false }),
@@ -110,9 +117,11 @@ describe("isDashboardWorkspaceTypeFilter", () => {
       "learning",
       "verification",
       "calibration",
+      "solve",
     ]);
     expect(isDashboardWorkspaceTypeFilter("verification")).toBe(true);
     expect(isDashboardWorkspaceTypeFilter("calibration")).toBe(true);
+    expect(isDashboardWorkspaceTypeFilter("solve")).toBe(true);
     expect(isDashboardWorkspaceTypeFilter("standard")).toBe(false);
   });
 });

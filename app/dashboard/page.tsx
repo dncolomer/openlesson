@@ -785,7 +785,9 @@ export default function DashboardPage() {
           />
         )}
 
-        {(activeTab === "verification" || activeTab === "calibration") && (
+        {(activeTab === "verification" ||
+          activeTab === "calibration" ||
+          activeTab === "solve") && (
           <DashboardFlowsTab productTab={activeTab} formatDate={formatDate} />
         )}
 
@@ -817,7 +819,13 @@ export default function DashboardPage() {
 
         {isDashboardRegionsTab(activeTab) ? (
           <DashboardKnowledgeRegionsTab
-            kind={activeTab === "calibration_regions" ? "calibration" : "verification"}
+            kind={
+              activeTab === "calibration_regions"
+                ? "calibration"
+                : activeTab === "solve_regions"
+                  ? "solve"
+                  : "verification"
+            }
             formatDate={formatDate}
           />
         ) : null}

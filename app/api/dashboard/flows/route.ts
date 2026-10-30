@@ -1,5 +1,5 @@
 /**
- * Owner dashboard: list and publish first-class Verification/Calibration flows.
+ * Owner dashboard: list and publish first-class Verification/Calibration/Solve flows.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
@@ -18,11 +18,16 @@ import {
   productFlowPagePath,
 } from "@/lib/product-flow";
 import { calibrationFlowPublicPath } from "@/lib/calibration-flow";
+import { solveFlowPublicPath } from "@/lib/solve-flow";
 import { verificationFlowPublicPath } from "@/lib/verification-flow";
 import {
   listCalibrationFlowsForOwnerUserId,
   runCalibrationCommand,
 } from "@/lib/calibration-flow-repository";
+import {
+  listSolveFlowsForOwnerUserId,
+  runSolveCommand,
+} from "@/lib/solve-flow-repository";
 import {
   listVerificationFlowsForOwnerUserId,
   runVerificationCommand,
@@ -49,6 +54,27 @@ function presentVerification(row: {
     createdAt: row.createdAt,
     publicToken: row.publicToken,
     questionCount: questionCountFromUnknown(row.questions),
+  });
+}
+
+function presentSolve(row: {
+  id: string;
+  name: string;
+  topic: string;
+  workspaceId: string;
+  createdAt: string;
+  publicToken: string;
+}): DashboardRecentFlow | null {
+  return presentDashboardRecentFlow({
+    id: row.id,
+    kind: "solve",
+    name: row.name,
+    title: row.topic,
+    workspaceId: row.workspaceId,
+    workspaceTitle: productFlowOwnerTitle("solve"),
+    createdAt: row.createdAt,
+    publicToken: row.publicToken,
+    questionCount: 0,
   });
 }
 
@@ -79,13 +105,24 @@ export async function GET(req: NextRequest) {
     const auth = await requireAuthenticatedUser();
     if (!auth.ok) return auth.response;
     const kind = parseProductFlowKind(new URL(req.url).searchParams.get("kind"));
-    if (!kind) return jsonError(400, "kind must be verification or calibration");
+    if (!kind) return jsonError(400, "kind must be verification, calibration, or solve");
 
     if (kind === "calibration") {
       const flows = await listCalibrationFlowsForOwnerUserId(auth.user.id);
       const listed = sortDashboardRecentFlows(
         flows
           .map((flow) => presentCalibration(flow))
+          .filter((row): row is DashboardRecentFlow => Boolean(row)),
+        100,
+      );
+      return NextResponse.json({ kind, flows: listed });
+    }
+
+    if (kind === "solve") {
+      const flows = await listSolveFlowsForOwnerUserId(auth.user.id);
+      const listed = sortDashboardRecentFlows(
+        flows
+          .map((flow) => presentSolve(flow))
           .filter((row): row is DashboardRecentFlow => Boolean(row)),
         100,
       );
@@ -112,7 +149,7 @@ export async function POST(req: NextRequest) {
     if (!auth.ok) return auth.response;
     const body = (await req.json()) as Record<string, unknown>;
     const kind = parseProductFlowKind(body.kind);
-    if (!kind) return jsonError(400, "kind must be verification or calibration");
+    if (!kind) return jsonError(400, "kind must be verification, calibration, or solve");
     const draft = {
       ...emptyProductFlowDraft(kind),
       name: String(body.name || ""),
@@ -124,6 +161,29 @@ export async function POST(req: NextRequest) {
     };
     const accepted = acceptProductFlowPublish(draft);
     if (!accepted.ok) return jsonError(400, accepted.reason);
+
+    if (kind === "solve") {
+      const created = await runSolveCommand({
+        type: "create",
+        ownerUserId: auth.user.id,
+        name: accepted.name,
+        topic: accepted.topic,
+        durationMinutes: accepted.durationMinutes,
+        actionCatalog: accepted.actionCatalog,
+      });
+      if (!created.ok || !created.flow) {
+        return jsonError(400, created.ok ? "create_failed" : created.reason);
+      }
+      const origin = req.nextUrl.origin;
+      return NextResponse.json({
+        kind,
+        flow: created.flow,
+        name: created.flow.name,
+        flowPath: productFlowPagePath("solve", created.flow.id),
+        publicPath: solveFlowPublicPath(created.flow.publicToken),
+        publicUrl: `${origin}${solveFlowPublicPath(created.flow.publicToken)}`,
+      });
+    }
 
     if (kind === "calibration") {
       const created = await runCalibrationCommand({

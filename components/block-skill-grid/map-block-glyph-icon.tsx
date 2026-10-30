@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgeCheck, Crosshair, FileText, Pickaxe } from "lucide-react";
+import { BadgeCheck, Crosshair, FileText, Pickaxe, Puzzle } from "lucide-react";
 import {
   BLOCK_MAP_GRID_SIZE,
   CALIBRATION_MAP_ICON,
@@ -8,6 +8,7 @@ import {
   CONTENT_MAP_ICON,
   DEFAULT_BLOCK_MAP_ICON,
   PREVIOUS_SESSIONS_MAP_ICON,
+  SOLVE_MAP_ICON,
   TIM_EXPLORE_MAP_ICON,
   VERIFICATION_MAP_ICON,
   blockMapPatternBits,
@@ -16,6 +17,7 @@ import {
   isChapterDoneMapIcon,
   isContentMapIcon,
   isPreviousSessionsMapIcon,
+  isSolveMapIcon,
   isTimExploreMapIcon,
   isVerificationMapIcon,
   parseBlockMapIconName,
@@ -70,6 +72,19 @@ export function BlockMapGlyphIcon({
         aria-hidden
         data-block-map-icon={VERIFICATION_MAP_ICON}
         data-map-block-kind-icon="verification"
+        data-block-map-variant={variant}
+      />
+    );
+  }
+
+  if (isSolveMapIcon(name)) {
+    return (
+      <Puzzle
+        className={className ?? "h-8 w-8"}
+        strokeWidth={2.4}
+        aria-hidden
+        data-block-map-icon={SOLVE_MAP_ICON}
+        data-map-block-kind-icon="solve"
         data-block-map-variant={variant}
       />
     );

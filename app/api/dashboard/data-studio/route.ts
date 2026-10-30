@@ -1,6 +1,6 @@
 /**
  * Owner Data Studio: embeddings + overlay regions for a product
- * (verification, calibration, or learning play copies).
+ * (verification, calibration, solve, or learning play copies).
  */
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
@@ -28,7 +28,10 @@ export async function GET(req: NextRequest) {
     const url = new URL(req.url);
     const product = parseDataStudioProduct(url.searchParams.get("product"));
     if (!product) {
-      return jsonError(400, "product must be verification, calibration, or learning");
+      return jsonError(
+        400,
+        "product must be verification, calibration, solve, or learning",
+      );
     }
     const workspaceId = (url.searchParams.get("workspaceId") || "").trim();
 

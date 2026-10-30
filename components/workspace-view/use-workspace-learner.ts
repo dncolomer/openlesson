@@ -200,7 +200,11 @@ export function useWorkspaceLearner(input: {
       }
       const linked = mapBlockLaunch(block.map_block);
       if (linked.action === "none") return;
-      if (linked.action === "calibrate" || linked.action === "verify") {
+      if (
+        linked.action === "calibrate" ||
+        linked.action === "verify" ||
+        linked.action === "solve"
+      ) {
         router.push(linked.href);
         return;
       }

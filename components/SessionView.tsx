@@ -70,6 +70,7 @@ export function SessionView({
   resumeSession = false,
   ayclToken,
   ileToken,
+  solveToken,
   showEndSession = true,
   entryQueryParams,
   participantIdentity: participantIdentityProp = null,
@@ -81,6 +82,8 @@ export function SessionView({
   ayclToken?: string;
   /** Private token for guest TAP Learning practice links (`/ile/session/{token}`). */
   ileToken?: string;
+  /** Public Solve flow token. Loads the claimed Learn-canvas session. */
+  solveToken?: string;
   /**
    * When false, hide End Session / stop-end chrome for this session
    * (guest TAP Learning links can configure this; default true).
@@ -96,7 +99,13 @@ export function SessionView({
    */
   sessionMode?: IleSessionMode | string;
 }) {
-  const guestAccessKind: "aycl" | "ile" | null = ayclToken ? "aycl" : ileToken ? "ile" : null;
+  const guestAccessKind: "aycl" | "ile" | "solve" | null = ayclToken
+    ? "aycl"
+    : ileToken
+      ? "ile"
+      : solveToken
+        ? "solve"
+        : null;
   const allowEndSession = showEndSession !== false;
   const entryParamsKey = JSON.stringify(entryQueryParams ?? EMPTY_ENTRY_QUERY_PARAMS);
   const stableEntryQueryParams = useMemo((): Record<string, string | string[]> => {
@@ -142,8 +151,10 @@ export function SessionView({
                 ? { entryQueryParams: stableEntryQueryParams }
                 : {}),
             }
-          : EMPTY_ENTRY_QUERY_PARAMS,
-    [guestAccessKind, ayclToken, ileToken, stableEntryQueryParams],
+          : guestAccessKind === "solve" && solveToken
+            ? { solveToken }
+            : EMPTY_ENTRY_QUERY_PARAMS,
+    [guestAccessKind, ayclToken, ileToken, solveToken, stableEntryQueryParams],
   );
   const router = useRouter();
   const pathname = usePathname();
@@ -525,6 +536,7 @@ export function SessionView({
     guestAccessKind,
     ayclToken,
     ileToken,
+    solveToken,
     guestAccessBody,
     entryQueryParams: stableEntryQueryParams,
     entryParamsKey,

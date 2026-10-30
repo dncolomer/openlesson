@@ -1,10 +1,10 @@
 /**
- * Canonical types for Learning Maps, Calibrate/Verify flows, sessions,
+ * Canonical types for Learning Maps, Calibrate/Verify/Solve flows, sessions,
  * proof of work, embeddings, and knowledge regions.
  * Storage adapters and UI may use older names; this module is the contract.
  */
 
-export const SESSION_KINDS = ["learn", "calibrate", "verify"] as const;
+export const SESSION_KINDS = ["learn", "calibrate", "verify", "solve"] as const;
 export type SessionKind = (typeof SESSION_KINDS)[number];
 
 export const SESSION_STATUSES = ["pending", "in_progress", "completed", "revoked"] as const;
@@ -13,7 +13,7 @@ export type SessionStatus = (typeof SESSION_STATUSES)[number];
 export const PROOF_OF_WORK_TYPES = ["tool", "screen", "video", "eeg"] as const;
 export type ProofOfWorkType = (typeof PROOF_OF_WORK_TYPES)[number];
 
-export const EMBEDDING_FAMILIES = ["learn", "calibrate", "verify"] as const;
+export const EMBEDDING_FAMILIES = ["learn", "calibrate", "verify", "solve"] as const;
 export type EmbeddingFamily = (typeof EMBEDDING_FAMILIES)[number];
 
 export const SOUNDING_BANDS = ["unranked", "lost", "localized", "coverage"] as const;
@@ -31,11 +31,13 @@ export const FLOW_EMBEDDING_DIM_V1 = 96 as const;
 export const LEARN_EMBEDDING_MODEL_ID = "learn-flowcfg-v1-d96" as const;
 export const CALIBRATE_EMBEDDING_MODEL_ID = "calibrate-flowcfg-v1-d96" as const;
 export const VERIFY_EMBEDDING_MODEL_ID = "verify-flowcfg-v1-d96" as const;
+export const SOLVE_EMBEDDING_MODEL_ID = "solve-flowcfg-v1-d96" as const;
 
 export const EMBEDDING_MODEL_IDS = [
   LEARN_EMBEDDING_MODEL_ID,
   CALIBRATE_EMBEDDING_MODEL_ID,
   VERIFY_EMBEDDING_MODEL_ID,
+  SOLVE_EMBEDDING_MODEL_ID,
 ] as const;
 export type EmbeddingModelId = (typeof EMBEDDING_MODEL_IDS)[number];
 
@@ -97,7 +99,12 @@ export type VerifyResult = {
   answers: VerifyAnswer[];
 };
 
-export type SessionResult = LearnResult | CalibrateResult | VerifyResult;
+export type SolveResult = {
+  kind: "solve";
+  projectedPolicy: ProjectedPolicy | null;
+};
+
+export type SessionResult = LearnResult | CalibrateResult | VerifyResult | SolveResult;
 
 export type EmbeddingModel = {
   id: EmbeddingModelId;
@@ -129,12 +136,47 @@ export const EMBEDDING_MODELS_V1: readonly EmbeddingModel[] = [
     algorithmId: FLOW_EMBEDDING_ALGORITHM_V1,
     dim: FLOW_EMBEDDING_DIM_V1,
   },
+  {
+    id: SOLVE_EMBEDDING_MODEL_ID,
+    family: "solve",
+    version: "v1",
+    algorithmId: FLOW_EMBEDDING_ALGORITHM_V1,
+    dim: FLOW_EMBEDDING_DIM_V1,
+  },
 ];
 
 export function embeddingModelIdForFamily(family: EmbeddingFamily): EmbeddingModelId {
   if (family === "calibrate") return CALIBRATE_EMBEDDING_MODEL_ID;
   if (family === "verify") return VERIFY_EMBEDDING_MODEL_ID;
+  if (family === "solve") return SOLVE_EMBEDDING_MODEL_ID;
   return LEARN_EMBEDDING_MODEL_ID;
+}
+
+/** True when this session belongs to a Solve flow, not a map Learn tile. */
+export function isSolveSession(row: {
+  kind?: unknown;
+  solve_flow_id?: unknown;
+  solveFlowId?: unknown;
+}): boolean {
+  if (parseSessionKind(row.kind) === "solve") return true;
+  return Boolean(String(row.solve_flow_id ?? row.solveFlowId ?? "").trim());
+}
+
+/** Map Learn session: kind learn and no Solve parent. */
+export function isMapLearnSession(row: {
+  kind?: unknown;
+  solve_flow_id?: unknown;
+  solveFlowId?: unknown;
+}): boolean {
+  return parseSessionKind(row.kind) === "learn" && !isSolveSession(row);
+}
+
+export function solveFlowIdFromSession(row: {
+  solve_flow_id?: unknown;
+  solveFlowId?: unknown;
+}): string | null {
+  const id = String(row.solve_flow_id ?? row.solveFlowId ?? "").trim();
+  return id || null;
 }
 
 export function parseSessionKind(value: unknown): SessionKind | null {
@@ -198,6 +240,12 @@ export function parseSessionResult(value: unknown): SessionResult | null {
   if (kind === "learn") {
     return {
       kind: "learn",
+      projectedPolicy: parseProjectedPolicy(record.projectedPolicy),
+    };
+  }
+  if (kind === "solve") {
+    return {
+      kind: "solve",
       projectedPolicy: parseProjectedPolicy(record.projectedPolicy),
     };
   }

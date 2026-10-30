@@ -40,6 +40,7 @@ export type SessionPhaseInput = {
   guestAccessKind: GuestAccessKind;
   ayclToken?: string;
   ileToken?: string;
+  solveToken?: string;
   guestAccessBody: Record<string, unknown>;
   entryQueryParams?: Record<string, string | string[]>;
   entryParamsKey: string;
@@ -76,6 +77,7 @@ export function useSessionPhase(input: SessionPhaseInput) {
     guestAccessKind,
     ayclToken,
     ileToken,
+    solveToken,
     guestAccessBody,
     entryQueryParams,
     entryParamsKey,
@@ -168,7 +170,12 @@ export function useSessionPhase(input: SessionPhaseInput) {
           ? await (await import("@/lib/aycl-storage")).getAyclSession(ayclToken, sessionId)
           : guestAccessKind === "ile" && ileToken
             ? await (await import("@/lib/learn-link-storage")).getIleLinkSession(ileToken, sessionId)
-            : await getSession(sessionId);
+            : guestAccessKind === "solve" && solveToken
+              ? await (await import("@/lib/solve-session-storage")).getSolveLinkSession(
+                  solveToken,
+                  sessionId,
+                )
+              : await getSession(sessionId);
       if (cancelled) return;
       if (s) {
         setSession(s);

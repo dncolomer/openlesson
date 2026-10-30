@@ -23,7 +23,8 @@ export function KnowledgeRegionCreate({ kind }: { kind: ProductFlowKind }) {
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const productLabel = kind === "calibration" ? "Calibration" : "Verification";
+  const productLabel =
+    kind === "calibration" ? "Calibration" : kind === "solve" ? "Solve" : "Verification";
   const offer = knowledgeRegionCreateOffersFlowSelect(flows.length);
 
   useEffect(() => {

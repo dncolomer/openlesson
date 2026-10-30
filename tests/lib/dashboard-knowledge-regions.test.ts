@@ -93,7 +93,44 @@ describe("dashboard knowledge regions", () => {
     expect(calibrate[0]?.workspaceTitle).toBe("Calibration flows");
     expect(calibrate[0]?.description).toBe("thin");
     expect(parseDashboardKnowledgeRegionKind("verification")).toBe("verification");
+    expect(parseDashboardKnowledgeRegionKind("solve")).toBe("solve");
     expect(parseDashboardKnowledgeRegionKind("learning")).toBeNull();
+    const solveRegions = presentDashboardKnowledgeRegions(
+      [
+        {
+          id: "r-s",
+          name: "Limits cohort",
+          owner_user_id: "me",
+          product: "solve",
+          subject_count: 3,
+          created_at: "2026-06-01",
+        },
+        {
+          id: "r-v",
+          name: "Limits",
+          owner_user_id: "me",
+          product: "verification",
+          subject_count: 4,
+          created_at: "2026-05-02",
+        },
+      ],
+      "solve",
+      "me",
+    );
+    expect(solveRegions).toEqual([
+      {
+        id: "r-s",
+        name: "Limits cohort",
+        description: null,
+        workspaceId: "",
+        workspaceTitle: "Solve flows",
+        subjectCount: 3,
+        createdAt: "2026-06-01",
+      },
+    ]);
+    expect(dashboardKnowledgeRegionHref("solve", "r-s")).toBe(
+      productRegionPagePath("solve", "r-s"),
+    );
     expect(dashboardKnowledgeRegionHref("verification", "r-1")).toBe(
       "/dashboard?tab=verification_studio&region=r-1",
     );
@@ -122,7 +159,11 @@ describe("dashboard knowledge regions", () => {
     expect(route).toContain("flowOwnedByUser");
     expect(route).not.toContain("listProductFlowWorkspaceIds");
     expect(route).toContain("listFlowEmbeddingsForOwner");
-    expect(route).toContain('flowKind: kind === "calibration" ? "calibrate" : "verify"');
+    expect(route).toContain(
+      'kind === "calibration" ? "calibrate" : kind === "solve" ? "solve" : "verify"',
+    );
+    expect(route).toContain("getSolveFlowById");
+    expect(route).toContain("solve_flow_id");
     expect(route).toContain("buildVoiceRegionFromFlowRaws");
     const dash = readDashboardSurface();
     expect(dash).toContain("data-dashboard-knowledge-regions");
@@ -139,6 +180,7 @@ describe("dashboard knowledge regions", () => {
       "Overlay regions on the right.",
     );
     expect(readRepo("app/verification/regions/new/page.tsx")).toContain('kind="verification"');
+    expect(readRepo("app/solve/regions/new/page.tsx")).toContain('kind="solve"');
     expect(readRepo("app/calibration/regions/[id]/page.tsx")).toContain("redirect");
     expect(readRepo("app/calibration/regions/[id]/page.tsx")).toContain("productRegionPagePath");
     expect(readRepo("app/verification/regions/[id]/page.tsx")).toContain("redirect");

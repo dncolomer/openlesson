@@ -13,13 +13,15 @@ export type DashboardWorkspaceTypeFilter =
   | "all"
   | "learning"
   | "verification"
-  | "calibration";
+  | "calibration"
+  | "solve";
 
 export const DASHBOARD_WORKSPACE_TYPE_FILTERS: DashboardWorkspaceTypeFilter[] = [
   "all",
   "learning",
   "verification",
   "calibration",
+  "solve",
 ];
 
 export const DASHBOARD_WORKSPACE_LIST_FILTERS: DashboardWorkspaceListFilter[] = [
@@ -82,6 +84,9 @@ export function workspaceMatchesDashboardTypeFilter(
   }
   if (filter === "calibration") {
     return isCalibrationWorkspace(workspace.workspace_kind);
+  }
+  if (filter === "solve") {
+    return false;
   }
   return (
     !isKnowledgeRegionWorkspace(workspace.workspace_kind) &&

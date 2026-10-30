@@ -41,6 +41,7 @@ export const DATA_STUDIO_PRODUCTS = [
   "verification",
   "calibration",
   "learning",
+  "solve",
 ] as const;
 
 export type DataStudioProduct = (typeof DATA_STUDIO_PRODUCTS)[number];
@@ -153,7 +154,12 @@ function text(value: unknown): string {
 }
 
 export function parseDataStudioProduct(value: unknown): DataStudioProduct | null {
-  if (value === "verification" || value === "calibration" || value === "learning") {
+  if (
+    value === "verification" ||
+    value === "calibration" ||
+    value === "learning" ||
+    value === "solve"
+  ) {
     return value;
   }
   return null;
@@ -162,12 +168,14 @@ export function parseDataStudioProduct(value: unknown): DataStudioProduct | null
 export function dataStudioFlowKind(product: DataStudioProduct): FlowKind {
   if (product === "verification") return "verify";
   if (product === "calibration") return "calibrate";
+  if (product === "solve") return "solve";
   return "learn";
 }
 
 export function dataStudioProductLabel(product: DataStudioProduct): string {
   if (product === "verification") return "Verification";
   if (product === "calibration") return "Calibration";
+  if (product === "solve") return "Solve";
   return "Learning";
 }
 

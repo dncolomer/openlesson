@@ -6,11 +6,16 @@ import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { flowOwnedByUser, parseProductFlowKind, productFlowPagePath } from "@/lib/product-flow";
 import { calibrationFlowPublicPath } from "@/lib/calibration-flow";
+import { solveFlowPublicPath } from "@/lib/solve-flow";
 import { verificationFlowPublicPath } from "@/lib/verification-flow";
 import {
   getCalibrationFlowById,
   runCalibrationCommand,
 } from "@/lib/calibration-flow-repository";
+import {
+  getSolveFlowById,
+  runSolveCommand,
+} from "@/lib/solve-flow-repository";
 import {
   getVerificationFlowById,
   runVerificationCommand,
@@ -25,7 +30,7 @@ async function loadOwnedFlow(
   | { ok: false; response: NextResponse }
   | {
       ok: true;
-      kind: "verification" | "calibration";
+      kind: "verification" | "calibration" | "solve";
       ownerUserId: string;
       workspaceId: string;
       flow: Record<string, unknown>;
@@ -35,8 +40,24 @@ async function loadOwnedFlow(
   const auth = await requireAuthenticatedUser();
   if (!auth.ok) return auth;
   const requested = parseProductFlowKind(req.nextUrl.searchParams.get("kind"));
-  const kinds = requested ? [requested] : (["verification", "calibration"] as const);
+  const kinds = requested
+    ? [requested]
+    : (["verification", "calibration", "solve"] as const);
   for (const kind of kinds) {
+    if (kind === "solve") {
+      const flow = await getSolveFlowById(id);
+      if (flow && flowOwnedByUser(flow, auth.user.id)) {
+        return {
+          ok: true,
+          kind,
+          ownerUserId: auth.user.id,
+          workspaceId: flow.workspaceId,
+          flow,
+          origin: req.nextUrl.origin,
+        };
+      }
+      continue;
+    }
     if (kind === "calibration") {
       const flow = await getCalibrationFlowById(id);
       if (flow && flowOwnedByUser(flow, auth.user.id)) {
@@ -77,7 +98,9 @@ export async function GET(
     const publicPath =
       loaded.kind === "calibration"
         ? calibrationFlowPublicPath(String(loaded.flow.publicToken || ""))
-        : verificationFlowPublicPath(String(loaded.flow.publicToken || ""));
+        : loaded.kind === "solve"
+          ? solveFlowPublicPath(String(loaded.flow.publicToken || ""))
+          : verificationFlowPublicPath(String(loaded.flow.publicToken || ""));
     return NextResponse.json({
       kind: loaded.kind,
       flow: loaded.flow,
@@ -103,6 +126,16 @@ export async function POST(
     const body = (await req.json()) as Record<string, unknown>;
     const action = typeof body.action === "string" ? body.action : "update";
     if (action === "remove") {
+      if (loaded.kind === "solve") {
+        const removed = await runSolveCommand({
+          type: "remove",
+          ownerUserId: loaded.ownerUserId,
+          workspaceId: loaded.workspaceId,
+          flowId: id,
+        });
+        if (!removed.ok) return jsonError(400, removed.reason);
+        return NextResponse.json({ ok: true });
+      }
       if (loaded.kind === "calibration") {
         const removed = await runCalibrationCommand({
           type: "remove",
@@ -121,6 +154,21 @@ export async function POST(
       });
       if (!removed.ok) return jsonError(400, removed.reason);
       return NextResponse.json({ ok: true });
+    }
+
+    if (loaded.kind === "solve") {
+      const updated = await runSolveCommand({
+        type: "update",
+        ownerUserId: loaded.ownerUserId,
+        workspaceId: loaded.workspaceId,
+        flowId: id,
+        name: typeof body.name === "string" ? body.name : undefined,
+        topic: typeof body.topic === "string" ? body.topic : undefined,
+        durationMinutes: body.durationMinutes as number | undefined,
+        actionCatalog: body.actionCatalog as number | undefined,
+      });
+      if (!updated.ok) return jsonError(400, updated.reason);
+      return NextResponse.json({ flow: updated.flow, name: updated.flow?.name });
     }
 
     if (loaded.kind === "calibration") {

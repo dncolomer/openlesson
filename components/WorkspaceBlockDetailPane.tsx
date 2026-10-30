@@ -510,7 +510,11 @@ function TypedBlockTargetEditor({
       </div>
     );
   }
-  if (mapBlock.kind !== "calibration" && mapBlock.kind !== "verification") {
+  if (
+    mapBlock.kind !== "calibration" &&
+    mapBlock.kind !== "verification" &&
+    mapBlock.kind !== "solve"
+  ) {
     return null;
   }
   return (

@@ -52,7 +52,8 @@ export function ProductFlowPage({
   const [publicUrl, setPublicUrl] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const productLabel = kind === "calibration" ? "Calibration" : "Verification";
+  const productLabel =
+    kind === "calibration" ? "Calibration" : kind === "solve" ? "Solve" : "Verification";
 
   const load = useCallback(async () => {
     const response = await fetch(`${DASHBOARD_FLOWS_PATH}/${encodeURIComponent(flowId)}?kind=${kind}`);
@@ -87,14 +88,18 @@ export function ProductFlowPage({
       const response = await fetch(`${DASHBOARD_FLOWS_PATH}/${encodeURIComponent(flow.id)}?kind=${kind}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "update",
-          name,
-          topic,
-          goal,
-          questions: draftQuestions.map((text, index) => ({ id: `q-${index + 1}`, text })),
-          durationMinutes: minutes,
-        }),
+        body: JSON.stringify(
+          kind === "solve"
+            ? { action: "update", name, topic, durationMinutes: minutes }
+            : {
+                action: "update",
+                name,
+                topic,
+                goal,
+                questions: draftQuestions.map((text, index) => ({ id: `q-${index + 1}`, text })),
+                durationMinutes: minutes,
+              },
+        ),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -139,6 +144,7 @@ export function ProductFlowPage({
         data-product-flow-page={kind}
         data-verification-flows-panel={kind === "verification" ? "" : undefined}
         data-calibration-flows-panel={kind === "calibration" ? "" : undefined}
+        data-solve-flows-panel={kind === "solve" ? "" : undefined}
       >
         <Link href={`/dashboard?tab=${kind}`} className="text-xs text-neutral-400 underline">
           Back to flows
@@ -187,6 +193,16 @@ export function ProductFlowPage({
                 Add question
               </button>
             </div>
+          </section>
+        ) : kind === "solve" ? (
+          <section className="space-y-3 border border-neutral-800 p-4" data-solve-flow-editor>
+            <input
+              value={topic}
+              onChange={(event) => setTopic(event.target.value)}
+              placeholder="Topic"
+              data-solve-flow-topic
+              className="w-full border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
+            />
           </section>
         ) : (
           <section className="space-y-3 border border-neutral-800 p-4" data-calibration-flow-editor>
@@ -247,6 +263,7 @@ export function ProductFlowPage({
               className="min-w-0 flex-1 break-all font-mono text-[11px] text-neutral-300"
               data-verification-flow-public-link={kind === "verification" ? "" : undefined}
               data-calibration-flow-public-link={kind === "calibration" ? "" : undefined}
+              data-solve-flow-public-link={kind === "solve" ? "" : undefined}
             >
               {publicUrl}
             </p>
@@ -294,6 +311,7 @@ export function ProductFlowPage({
             type="button"
             data-verification-flow-remove={kind === "verification" ? "" : undefined}
             data-calibration-flow-remove={kind === "calibration" ? "" : undefined}
+            data-solve-flow-remove={kind === "solve" ? "" : undefined}
             className="text-[11px] text-red-300 underline"
             onClick={() => void remove()}
           >

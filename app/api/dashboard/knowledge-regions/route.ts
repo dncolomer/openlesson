@@ -1,5 +1,5 @@
 /**
- * Owner dashboard: Knowledge regions for Verification or Calibration flows.
+ * Owner dashboard: Knowledge regions for Verification, Calibration, or Solve flows.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
@@ -16,6 +16,7 @@ import {
 } from "@/lib/verification-flow";
 import { listFlowEmbeddingsForOwner } from "@/lib/flow-embedding-store";
 import { getCalibrationFlowById } from "@/lib/calibration-flow-repository";
+import { getSolveFlowById } from "@/lib/solve-flow-repository";
 import {
   getVerificationFlowById,
   listVerificationResultsForFlowId,
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest) {
     const kind = parseDashboardKnowledgeRegionKind(
       new URL(req.url).searchParams.get("kind"),
     );
-    if (!kind) return jsonError(400, "kind must be verification or calibration");
+    if (!kind) return jsonError(400, "kind must be verification, calibration, or solve");
 
     const { data: rows, error } = await auth.supabase
       .from("knowledge_regions")
@@ -62,7 +63,7 @@ export async function POST(req: NextRequest) {
     if (!auth.ok) return auth.response;
     const body = (await req.json()) as Record<string, unknown>;
     const kind = parseProductFlowKind(body.kind) || parseDashboardKnowledgeRegionKind(body.kind);
-    if (!kind) return jsonError(400, "kind must be verification or calibration");
+    if (!kind) return jsonError(400, "kind must be verification, calibration, or solve");
     const name = String(body.name || "").trim();
     if (!name) return jsonError(400, "name is required");
     const flowId = String(body.flowId || "").trim();
@@ -71,7 +72,9 @@ export async function POST(req: NextRequest) {
     const flow =
       kind === "calibration"
         ? await getCalibrationFlowById(flowId)
-        : await getVerificationFlowById(flowId);
+        : kind === "solve"
+          ? await getSolveFlowById(flowId)
+          : await getVerificationFlowById(flowId);
     if (!flow || !flowOwnedByUser(flow, auth.user.id)) {
       return jsonError(404, "Flow not found");
     }
@@ -79,7 +82,8 @@ export async function POST(req: NextRequest) {
     const stored = await listFlowEmbeddingsForOwner({
       ownerUserId: auth.user.id,
       flowId,
-      flowKind: kind === "calibration" ? "calibrate" : "verify",
+      flowKind:
+        kind === "calibration" ? "calibrate" : kind === "solve" ? "solve" : "verify",
     });
     let items: { flowId: string; embedding?: number[] | null; id?: string }[] = stored.map(
       (row) => ({
@@ -130,6 +134,9 @@ export async function POST(req: NextRequest) {
         subjects: spec.subjects,
         created_by: auth.user.id,
         updated_at: new Date().toISOString(),
+        ...(kind === "solve" ? { solve_flow_id: flowId } : {}),
+        ...(kind === "calibration" ? { calibrate_flow_id: flowId } : {}),
+        ...(kind === "verification" ? { verify_flow_id: flowId } : {}),
       })
       .select("id")
       .maybeSingle();
@@ -156,6 +163,9 @@ export async function POST(req: NextRequest) {
           subjects: voiceSpec.subjects,
           created_by: auth.user.id,
           updated_at: new Date().toISOString(),
+          ...(kind === "solve" ? { solve_flow_id: flowId } : {}),
+          ...(kind === "calibration" ? { calibrate_flow_id: flowId } : {}),
+          ...(kind === "verification" ? { verify_flow_id: flowId } : {}),
         });
       }
     } catch {

@@ -27,10 +27,12 @@ export type PreviousSessionsMapIcon = typeof PREVIOUS_SESSIONS_MAP_ICON;
 /** Display-only: typed Learning Map blocks (not the 3×3 Learn glyph). */
 export const CALIBRATION_MAP_ICON = "calibration" as const;
 export const VERIFICATION_MAP_ICON = "verification" as const;
+export const SOLVE_MAP_ICON = "solve" as const;
 export const CONTENT_MAP_ICON = "content" as const;
 export type TypedMapBlockKindIcon =
   | typeof CALIBRATION_MAP_ICON
   | typeof VERIFICATION_MAP_ICON
+  | typeof SOLVE_MAP_ICON
   | typeof CONTENT_MAP_ICON;
 
 export function isPreviousSessionsMapIcon(value: unknown): value is PreviousSessionsMapIcon {
@@ -45,6 +47,10 @@ export function isVerificationMapIcon(value: unknown): value is typeof VERIFICAT
   return value === VERIFICATION_MAP_ICON;
 }
 
+export function isSolveMapIcon(value: unknown): value is typeof SOLVE_MAP_ICON {
+  return value === SOLVE_MAP_ICON;
+}
+
 export function isContentMapIcon(value: unknown): value is typeof CONTENT_MAP_ICON {
   return value === CONTENT_MAP_ICON;
 }
@@ -53,6 +59,7 @@ export function isTypedMapBlockKindIcon(value: unknown): value is TypedMapBlockK
   return (
     isCalibrationMapIcon(value) ||
     isVerificationMapIcon(value) ||
+    isSolveMapIcon(value) ||
     isContentMapIcon(value)
   );
 }
@@ -67,6 +74,7 @@ export function mapBlockKindIconName(
 ): TypedMapBlockKindIcon | null {
   if (kind === "calibration") return CALIBRATION_MAP_ICON;
   if (kind === "verification") return VERIFICATION_MAP_ICON;
+  if (kind === "solve") return SOLVE_MAP_ICON;
   if (kind === "content") return CONTENT_MAP_ICON;
   return null;
 }

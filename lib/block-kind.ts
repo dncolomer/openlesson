@@ -1,16 +1,18 @@
 /**
- * Learning Map block kinds: Learn (default), calibration, verification, content.
+ * Learning Map block kinds: Learn (default), calibration, verification, solve, content.
  * Helios dispatch, Manual add/edit, clone, and launch gating share this parser.
  */
 
 import { calibrationFlowPublicPath } from "@/lib/calibration-flow";
 import { productFlowPagePath } from "@/lib/product-flow";
+import { solveFlowPublicPath } from "@/lib/solve-flow";
 import { verificationFlowPublicPath } from "@/lib/verification-flow";
 
 export const MAP_BLOCK_KINDS = [
   "learn",
   "calibration",
   "verification",
+  "solve",
   "content",
 ] as const;
 
@@ -19,7 +21,7 @@ export type MapBlockKind = (typeof MAP_BLOCK_KINDS)[number];
 export const MAP_BLOCK_COLUMN = "map_block";
 
 export const MAP_BLOCK_STORE_UNAVAILABLE =
-  "This map cannot store calibration, verification, or content blocks yet.";
+  "This map cannot store calibration, verification, solve, or content blocks yet.";
 
 export const DEFAULT_MAP_BLOCK_KIND: MapBlockKind = "learn";
 
@@ -41,12 +43,13 @@ export type MapBlock = {
   attachments: MapBlockAttachment[];
 };
 
-export type MapBlockLaunchAction = "learn" | "calibrate" | "verify" | "none";
+export type MapBlockLaunchAction = "learn" | "calibrate" | "verify" | "solve" | "none";
 
 export type MapBlockLaunch =
   | { action: "learn" }
   | { action: "calibrate"; flowId: string; href: string }
   | { action: "verify"; flowId: string; href: string }
+  | { action: "solve"; flowId: string; href: string }
   | { action: "none" };
 
 const KIND_ALIASES: Record<string, MapBlockKind> = {
@@ -58,6 +61,7 @@ const KIND_ALIASES: Record<string, MapBlockKind> = {
   scout: "calibration",
   verification: "verification",
   verify: "verification",
+  solve: "solve",
   content: "content",
   file: "content",
   files: "content",
@@ -93,7 +97,7 @@ function cleanUrl(value: unknown): string | null {
 
 export function flowTokenFromPublicPath(path: unknown): string | null {
   const raw = String(path ?? "").trim();
-  const match = raw.match(/^\/[cv]\/([^/?#]+)/i);
+  const match = raw.match(/^\/[cvs]\/([^/?#]+)/i);
   if (!match) return null;
   try {
     return decodeURIComponent(match[1] || "").trim() || null;
@@ -186,8 +190,8 @@ export function isTypedMapBlock(block: MapBlock | null | undefined): boolean {
 
 export function isFlowMapBlockKind(
   kind: MapBlockKind,
-): kind is "calibration" | "verification" {
-  return kind === "calibration" || kind === "verification";
+): kind is "calibration" | "verification" | "solve" {
+  return kind === "calibration" || kind === "verification" || kind === "solve";
 }
 
 function recordFromUnknown(raw: unknown): Record<string, unknown> | null {
@@ -217,7 +221,9 @@ export function normalizeMapBlock(raw?: unknown): MapBlock {
       rec.calibrationFlowId ??
       rec.calibration_flow_id ??
       rec.verificationFlowId ??
-      rec.verification_flow_id,
+      rec.verification_flow_id ??
+      rec.solveFlowId ??
+      rec.solve_flow_id,
   );
   const flowPublicToken =
     cleanId(rec.flowPublicToken ?? rec.flow_public_token ?? rec.token ?? rec.publicToken) ||
@@ -229,7 +235,9 @@ export function normalizeMapBlock(raw?: unknown): MapBlock {
         ? calibrationFlowPublicPath(flowPublicToken)
         : kind === "verification"
           ? verificationFlowPublicPath(flowPublicToken)
-          : null
+          : kind === "solve"
+            ? solveFlowPublicPath(flowPublicToken)
+            : null
       : null);
   const attachments = parseMapBlockAttachments(rec);
   if (kind === "learn") return defaultMapBlock();
@@ -329,12 +337,16 @@ export function mapBlockFlowHref(block: MapBlock): string | null {
   if (!isFlowMapBlockKind(block.kind) || !block.flowId) return null;
   if (block.flowHref) return block.flowHref;
   if (block.flowPublicToken) {
-    return block.kind === "calibration"
-      ? calibrationFlowPublicPath(block.flowPublicToken)
-      : verificationFlowPublicPath(block.flowPublicToken);
+    if (block.kind === "calibration") return calibrationFlowPublicPath(block.flowPublicToken);
+    if (block.kind === "solve") return solveFlowPublicPath(block.flowPublicToken);
+    return verificationFlowPublicPath(block.flowPublicToken);
   }
   return productFlowPagePath(
-    block.kind === "calibration" ? "calibration" : "verification",
+    block.kind === "calibration"
+      ? "calibration"
+      : block.kind === "solve"
+        ? "solve"
+        : "verification",
     block.flowId,
   );
 }
@@ -348,6 +360,9 @@ export function mapBlockLaunch(raw: unknown): MapBlockLaunch {
   if (!href) return { action: "none" };
   if (block.kind === "calibration") {
     return { action: "calibrate", flowId: block.flowId, href };
+  }
+  if (block.kind === "solve") {
+    return { action: "solve", flowId: block.flowId, href };
   }
   return { action: "verify", flowId: block.flowId, href };
 }
@@ -364,14 +379,24 @@ export function mapBlockAllowsVerify(raw: unknown): boolean {
   return mapBlockLaunch(raw).action === "verify";
 }
 
+export function mapBlockAllowsSolve(raw: unknown): boolean {
+  return mapBlockLaunch(raw).action === "solve";
+}
+
 export function mapBlockHasSessionLaunch(raw: unknown): boolean {
   const action = mapBlockLaunch(raw).action;
-  return action === "learn" || action === "calibrate" || action === "verify";
+  return (
+    action === "learn" ||
+    action === "calibrate" ||
+    action === "verify" ||
+    action === "solve"
+  );
 }
 
 export function mapBlockKindLabel(kind: MapBlockKind): string {
   if (kind === "calibration") return "Calibration";
   if (kind === "verification") return "Verification";
+  if (kind === "solve") return "Solve";
   if (kind === "content") return "Content";
   return "Learn";
 }
@@ -379,6 +404,7 @@ export function mapBlockKindLabel(kind: MapBlockKind): string {
 export function formatOwnerFlowsForHeliosPrompt(input: {
   calibration?: Array<{ id?: string; name?: string | null; goal?: string | null }>;
   verification?: Array<{ id?: string; name?: string | null; topic?: string | null }>;
+  solve?: Array<{ id?: string; name?: string | null; topic?: string | null }>;
 }): string {
   const cal = (input.calibration || [])
     .map((flow) => {
@@ -396,11 +422,21 @@ export function formatOwnerFlowsForHeliosPrompt(input: {
       return `- ${id} "${name}"`;
     })
     .filter(Boolean);
+  const sol = (input.solve || [])
+    .map((flow) => {
+      const id = String(flow.id || "").trim();
+      if (!id) return null;
+      const name = String(flow.name || flow.topic || id).trim();
+      return `- ${id} "${name}"`;
+    })
+    .filter(Boolean);
   return [
-    "OWNER FLOWS (prefer these existing ids). To create a new flow, omit flowId on add_block and pass flowName plus goal (calibration) or topic (verification) and questions. Do not invent a UUID.",
+    "OWNER FLOWS (prefer these existing ids). To create a new flow, omit flowId on add_block and pass flowName plus goal (calibration) or topic (verification or solve). Solve needs name + topic only. Do not invent a UUID.",
     "Calibration flows (kind: calibration, argument flowId):",
     cal.join("\n") || "(none)",
     "Verification flows (kind: verification, argument flowId):",
     ver.join("\n") || "(none)",
+    "Solve flows (kind: solve, argument flowId):",
+    sol.join("\n") || "(none)",
   ].join("\n");
 }

@@ -8,6 +8,7 @@ import {
   MAP_BLOCK_STORE_UNAVAILABLE,
   mapBlockAllowsCalibrate,
   mapBlockAllowsLearn,
+  mapBlockAllowsSolve,
   mapBlockAllowsVerify,
   mapBlockFlowHref,
   mapBlockFromHeliosArgs,
@@ -49,10 +50,11 @@ function emptySnap(): HeliosMapSnapshot {
 }
 
 describe("map block kinds", () => {
-  it("parses learn default, calibration, verification, and content payloads", () => {
+  it("parses learn default, calibration, verification, solve, and content payloads", () => {
     expect(parseMapBlockKind(undefined)).toBe("learn");
     expect(parseMapBlockKind("calibrate")).toBe("calibration");
     expect(parseMapBlockKind("verify")).toBe("verification");
+    expect(parseMapBlockKind("solve")).toBe("solve");
     expect(parseMapBlock(null)).toEqual(defaultMapBlock());
     expect(normalizeMapBlock({ kind: "calibration", flowId: "flow-cal" })).toMatchObject({
       kind: "calibration",
@@ -69,6 +71,18 @@ describe("map block kinds", () => {
       flowId: "flow-ver",
       flowPublicToken: "tok",
       flowHref: "/v/tok",
+    });
+    expect(
+      normalizeMapBlock({
+        kind: "solve",
+        solve_flow_id: "flow-sol",
+        flow_public_token: "stok",
+      }),
+    ).toMatchObject({
+      kind: "solve",
+      flowId: "flow-sol",
+      flowPublicToken: "stok",
+      flowHref: "/s/stok",
     });
     const content = normalizeMapBlock({
       kind: "content",
@@ -118,6 +132,16 @@ describe("map block kinds", () => {
     expect(mapBlockAllowsLearn(ver)).toBe(false);
     expect(mapBlockAllowsVerify(ver)).toBe(true);
 
+    const sol = { kind: "solve", flowId: "s1", flowPublicToken: "st" };
+    expect(mapBlockLaunch(sol)).toEqual({
+      action: "solve",
+      flowId: "s1",
+      href: "/s/st",
+    });
+    expect(mapBlockAllowsLearn(sol)).toBe(false);
+    expect(mapBlockAllowsSolve(sol)).toBe(true);
+    expect(mapBlockAllowsVerify(sol)).toBe(false);
+
     const content = { kind: "content", attachments: [{ type: "link", name: "A", url: "https://a.example" }] };
     expect(mapBlockLaunch(content)).toEqual({ action: "none" });
     expect(mapBlockAllowsLearn(content)).toBe(false);
@@ -155,6 +179,16 @@ describe("map block kinds", () => {
       action: "verify",
       flowId: "ver-1",
       href: productFlowPagePath("verification", "ver-1"),
+    });
+    const heliosSolve = normalizeMapBlock({
+      kind: "solve",
+      flowId: "sol-1",
+    });
+    expect(mapBlockFlowHref(heliosSolve)).toBe(productFlowPagePath("solve", "sol-1"));
+    expect(mapBlockLaunch(heliosSolve)).toEqual({
+      action: "solve",
+      flowId: "sol-1",
+      href: productFlowPagePath("solve", "sol-1"),
     });
   });
 
@@ -244,6 +278,26 @@ describe("map block kinds", () => {
     if (!ver.ok) return;
     expect(ver.snapshot.blocks[0].map_block?.kind).toBe("verification");
 
+    const sol = dispatchHeliosMapTool(emptySnap(), {
+      name: "add_block",
+      args: {
+        title: "Solve limits",
+        row: 1,
+        col: 1,
+        kind: "solve",
+        flowId: "sol-1",
+        id: "sol-block",
+      },
+    });
+    expect(sol.ok).toBe(true);
+    if (!sol.ok) return;
+    expect(sol.snapshot.blocks[0].map_block?.kind).toBe("solve");
+    expect(mapBlockLaunch(sol.snapshot.blocks[0].map_block)).toEqual({
+      action: "solve",
+      flowId: "sol-1",
+      href: productFlowPagePath("solve", "sol-1"),
+    });
+
     const content = dispatchHeliosMapTool(emptySnap(), {
       name: "add_block",
       args: {
@@ -304,7 +358,7 @@ describe("map block kinds", () => {
     );
   });
 
-  it("Manual add and Helios catalog name calibration, verification, and content", () => {
+  it("Manual add and Helios catalog name calibration, verification, solve, and content", () => {
     const add = read("components/WorkspaceAddBlockPane.tsx");
     const fields = read("components/WorkspaceMapBlockFields.tsx");
     const catalog = heliosMapToolAwarenessText();
@@ -316,10 +370,13 @@ describe("map block kinds", () => {
     expect(add).toContain("WorkspaceMapBlockKindPicker");
     expect(add).toContain("calibration");
     expect(add).toContain("verification");
+    expect(add).toContain("solve");
     expect(add).toContain("content");
     expect(fields).toContain("calibration");
     expect(fields).toContain("verification");
+    expect(fields).toContain("solve");
     expect(fields).toContain("content");
+    expect(fields).toContain("Open solve flow");
     expect(fields).toContain("mapBlockFlowHref(block)");
     expect(fields).toContain("mapBlockKindIconName");
     expect(fields).toContain("BlockMapGlyphIcon");
@@ -328,10 +385,12 @@ describe("map block kinds", () => {
     );
     expect(catalog).toContain("calibration");
     expect(catalog).toContain("verification");
+    expect(catalog).toContain("solve");
     expect(catalog).toContain("content");
     expect(catalog).toContain("flowId");
     expect(prompt).toContain("calibration");
     expect(prompt).toContain("verification");
+    expect(prompt).toContain("solve");
     expect(prompt).toContain("content");
     expect(prompt).toContain("flowId");
     expect(persist).toContain("heliosResolvedMapBlock(args)");

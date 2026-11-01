@@ -2,7 +2,6 @@
 
 import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { CONSOLE_LABEL_CLASS } from "@/components/ui/console-frame";
 import { DashboardAtmosphere } from "@/components/dashboard/dashboard-atmosphere";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import {
@@ -40,12 +39,7 @@ export function ProductSurface({
           }}
         />
         <div className="min-w-0 md:min-h-0 md:overflow-y-auto">
-          <p
-            data-console-frame-label=""
-            className={`pointer-events-none px-4 pt-2 sm:px-6 ${CONSOLE_LABEL_CLASS}`}
-          >
-            {label}
-          </p>
+          <h1 className="sr-only">{label}</h1>
           <main className="overflow-x-hidden p-4 py-8 sm:px-6 lg:px-8">{children}</main>
         </div>
       </div>

@@ -187,6 +187,8 @@ describe("completion paths persist flow embeddings instead of snapshots", () => 
   it("Learn, Verify, and Calibrate write embed+raw and never snapshot", () => {
     const learn = read("components/session-view/use-session-phase.ts");
     const confirmEnd = learn.slice(learn.indexOf("const handleConfirmEnd"));
+    expect(confirmEnd).toContain("sessionEndEmbeddingTarget");
+    expect(confirmEnd).toContain("postSolveFlowEmbedding");
     expect(confirmEnd).toContain("postWorkspaceFlowEmbedding");
     expect(confirmEnd).toContain('flowKind: "learn"');
     expect(confirmEnd).not.toContain("lwm_snapshot");

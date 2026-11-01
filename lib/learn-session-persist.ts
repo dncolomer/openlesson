@@ -8,10 +8,11 @@ import { mergeRememberedSessionPolicy } from "@/lib/session-policy-store";
  */
 export function persistIleSessionRow(
   read: () => Session | null,
-  tokens: { ayclToken?: string | null; ileToken?: string | null },
+  tokens: { ayclToken?: string | null; ileToken?: string | null; solveToken?: string | null },
 ): Promise<void> {
   const ayclToken = tokens.ayclToken || "";
   const ileToken = tokens.ileToken || "";
+  const solveToken = tokens.solveToken || "";
   return enqueueIleSessionSave(async () => {
     const session = read();
     if (!session) return;
@@ -28,6 +29,11 @@ export function persistIleSessionRow(
     if (ileToken) {
       const { saveIleLinkSession } = await import("@/lib/learn-link-storage");
       await saveIleLinkSession(ileToken, row);
+      return;
+    }
+    if (solveToken) {
+      const { saveSolveLinkSession } = await import("@/lib/solve-session-storage");
+      await saveSolveLinkSession(solveToken, row);
       return;
     }
     const { saveSession } = await import("@/lib/storage");

@@ -15,6 +15,11 @@ vi.mock("@/lib/aycl-session-auth", () => ({
   resolveAyclSessionAccess: vi.fn(),
 }));
 
+vi.mock("@/lib/solve-session-auth", () => ({
+  resolveSolveFlowAccess: vi.fn(),
+  resolveSolveSessionAccess: vi.fn(),
+}));
+
 import {
   classifyApiErrorEnvelope,
   errorMessageFromBody,
@@ -25,7 +30,10 @@ import {
   guardWorkspaceRoute,
   requireAuthenticatedUser,
   requireSessionOwnership,
+  sessionGuestTokensFromBody,
+  solveTokenFromBody,
 } from "@/lib/api/require-auth";
+import { resolveSolveSessionAccess } from "@/lib/solve-session-auth";
 
 describe("require-auth helpers", () => {
   beforeEach(() => {
@@ -37,6 +45,16 @@ describe("require-auth helpers", () => {
     expect(ayclTokenFromBody({ ayclToken: " abc " })).toBe("abc");
     expect(ayclTokenFromBody({ aycl_token: "xyz" })).toBe("xyz");
     expect(ayclTokenFromBody({})).toBeNull();
+  });
+
+  it("solveTokenFromBody and sessionGuestTokensFromBody read public Solve tokens", () => {
+    expect(solveTokenFromBody({ solveToken: " stok " })).toBe("stok");
+    expect(solveTokenFromBody({ solve_token: "snake" })).toBe("snake");
+    expect(sessionGuestTokensFromBody({ solveToken: "stok" })).toEqual({
+      ayclToken: null,
+      ileToken: null,
+      solveToken: "stok",
+    });
   });
 
   it("requireAuthenticatedUser returns 401 when no user", async () => {
@@ -138,6 +156,38 @@ describe("require-auth helpers", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.response.status).toBe(401);
+  });
+
+  it("guardSessionRoute accepts solveToken guests without cookie auth", async () => {
+    getUser.mockResolvedValue({ data: { user: null }, error: null });
+    vi.mocked(resolveSolveSessionAccess).mockResolvedValue({
+      supabase: { from } as never,
+      flow: { id: "sf1", ownerUserId: "owner-1" } as never,
+      session: {
+        id: "sess-1",
+        kind: "solve",
+        solve_flow_id: "sf1",
+        identity: "ada",
+      },
+      ownerUserId: "owner-1",
+      identity: "ada",
+    });
+    const result = await guardSessionRoute("sess-1", { solveToken: "stok" });
+    expect(resolveSolveSessionAccess).toHaveBeenCalledWith("stok", "sess-1");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.principal.kind).toBe("solve_guest");
+    expect(result.subjectId).toBe("ada");
+    expect(result.persistUserId).toBe("owner-1");
+    expect(getUser).not.toHaveBeenCalled();
+  });
+
+  it("guardSessionRoute requires sessionId when solveToken is set", async () => {
+    const result = await guardSessionRoute(undefined, { solveToken: "stok" });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.response.status).toBe(400);
+    expect(getUser).not.toHaveBeenCalled();
   });
 
   it("guardWorkspaceRoute skips product access when disabled", async () => {

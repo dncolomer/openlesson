@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { callXaiText, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
-import { ayclTokenFromBody,
-  ileTokenFromBody, guardSessionRoute } from "@/lib/api/require-auth";
+import { sessionGuestTokensFromBody, guardSessionRoute } from "@/lib/api/require-auth";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -16,7 +15,7 @@ export async function POST(request: NextRequest) {
       return jsonError(400, "Missing problem or report");
     }
 
-    const auth = await guardSessionRoute(sessionId, { ayclToken: ayclTokenFromBody(body), ileToken: ileTokenFromBody(body) });
+    const auth = await guardSessionRoute(sessionId, sessionGuestTokensFromBody(body));
     if (!auth.ok) return auth.response;
     const { supabase } = auth;
 

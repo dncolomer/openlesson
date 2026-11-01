@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
+  dashboardFlowListShowsTopic,
   paginateDashboardFlows,
   type DashboardRecentFlow,
 } from "@/lib/dashboard-home";
@@ -29,6 +30,7 @@ export function DashboardFlowsTab({
   const [page, setPage] = useState(1);
   const productLabel = dashboardProductLabel(productTab);
   const createHref = dashboardCreateHref(productTab);
+  const showTopic = dashboardFlowListShowsTopic(productTab);
   const paged = useMemo(() => paginateDashboardFlows(flows, page), [flows, page]);
 
   useEffect(() => {
@@ -108,7 +110,7 @@ export function DashboardFlowsTab({
             <thead>
               <tr className="border-b border-white/20 font-mono text-[10px] uppercase tracking-[0.18em] text-neutral-500">
                 <th className="px-4 py-3 font-medium">Name</th>
-                <th className="px-4 py-3 font-medium">Questions</th>
+                <th className="px-4 py-3 font-medium">{showTopic ? "Topic" : "Questions"}</th>
                 <th className="px-4 py-3 font-medium">Created</th>
                 <th className="px-4 py-3 font-medium">Public URL</th>
               </tr>
@@ -129,7 +131,13 @@ export function DashboardFlowsTab({
                       {flow.name}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 tabular-nums text-neutral-400">{flow.questionCount}</td>
+                  <td
+                    className={`px-4 py-3 ${showTopic ? "text-neutral-400" : "tabular-nums text-neutral-400"}`}
+                    data-dashboard-flow-topic={showTopic ? "" : undefined}
+                    data-dashboard-flow-questions={showTopic ? undefined : ""}
+                  >
+                    {showTopic ? flow.topic || "—" : flow.questionCount}
+                  </td>
                   <td className="px-4 py-3 text-neutral-400">
                     {flow.createdAt ? formatDate(flow.createdAt) : "—"}
                   </td>

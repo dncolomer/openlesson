@@ -34,6 +34,7 @@ export type IleSessionChatRequestInput = {
   tutoringLanguage?: string | null;
   ayclToken?: string | null;
   ileToken?: string | null;
+  solveToken?: string | null;
   sessionPlan?: unknown;
   activeStepIndex?: number;
   activeStepId?: string;
@@ -52,6 +53,7 @@ export function buildIleSessionChatBody(input: IleSessionChatRequestInput): Reco
   if (input.tutoringLanguage) body.tutoringLanguage = input.tutoringLanguage;
   if (input.ayclToken) body.ayclToken = input.ayclToken;
   if (input.ileToken) body.ileToken = input.ileToken;
+  if (input.solveToken) body.solveToken = input.solveToken;
   if (input.sessionPlan) body.sessionPlan = input.sessionPlan;
   if (input.activeStepIndex != null) body.activeStepIndex = input.activeStepIndex;
   if (input.activeStepId) body.activeStepId = input.activeStepId;

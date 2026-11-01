@@ -1,9 +1,8 @@
 import type { NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import {
-  ayclTokenFromBody,
-  ileTokenFromBody,
   guardSessionRoute,
+  sessionGuestTokensFromBody,
 } from "@/lib/api/require-auth";
 import {
   getSessionPlan,
@@ -30,10 +29,7 @@ export async function lookupSessionPlanChaptersForRequest(
     return { ok: false, response: jsonError(400, "Missing sessionId") };
   }
 
-  const auth = await guard(sessionId, {
-    ayclToken: ayclTokenFromBody(body),
-    ileToken: ileTokenFromBody(body),
-  });
+  const auth = await guard(sessionId, sessionGuestTokensFromBody(body));
   if (!auth.ok) return { ok: false, response: auth.response };
 
   const plan = await getSessionPlan(sessionId, auth.supabase);

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
-import { ayclTokenFromBody,
-  ileTokenFromBody, guardSessionRoute } from "@/lib/api/require-auth";
+import { sessionGuestTokensFromBody, guardSessionRoute } from "@/lib/api/require-auth";
 import { callXaiText, systemMessage, userMessage, DEFAULT_MODEL, RECOMMENDED_TEMPS } from "@/lib/xai-client";
 import { withConversationLanguageInstruction } from "@/lib/tutoring-languages";
 
@@ -29,7 +28,7 @@ export async function POST(request: NextRequest) {
     }
 
     const auth = await guardSessionRoute(sessionId, {
-      ayclToken: ayclTokenFromBody(body as Record<string, unknown>), ileToken: ileTokenFromBody(body as Record<string, unknown>),
+      ...sessionGuestTokensFromBody(body as Record<string, unknown>),
       requireSessionId: true,
     });
     if (!auth.ok) return auth.response;

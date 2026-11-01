@@ -8,6 +8,8 @@ import {
   claimSolveIdentity,
   getSolveFlowByToken,
   getSolveSessionById,
+  saveSolveSessionRow,
+  solveSessionBelongsToFlow,
 } from "@/lib/solve-flow-repository";
 
 export const runtime = "nodejs";
@@ -33,13 +35,28 @@ export async function POST(
   context: { params: Promise<{ token: string }> },
 ) {
   const { token } = await context.params;
+  const flow = await getSolveFlowByToken(token);
+  if (!flow) return jsonError(404, "Solve flow not found");
   const body = (await req.json().catch(() => ({}))) as {
     identity?: string;
     sessionId?: string;
+    session?: Record<string, unknown>;
   };
-  if (body.sessionId) {
-    const session = await getSolveSessionById(String(body.sessionId));
+  const sessionId = String(body.sessionId || "").trim();
+  if (sessionId && body.session && typeof body.session === "object") {
+    const existing = await getSolveSessionById(sessionId);
+    if (!existing || !solveSessionBelongsToFlow(existing as Record<string, unknown>, flow.id)) {
+      return jsonError(404, "Session not found");
+    }
+    const session = await saveSolveSessionRow(sessionId, body.session);
     if (!session) return jsonError(404, "Session not found");
+    return NextResponse.json({ session });
+  }
+  if (sessionId) {
+    const session = await getSolveSessionById(sessionId);
+    if (!session || !solveSessionBelongsToFlow(session as Record<string, unknown>, flow.id)) {
+      return jsonError(404, "Session not found");
+    }
     return NextResponse.json({ session });
   }
   const claimed = await claimSolveIdentity(token, String(body.identity || ""));

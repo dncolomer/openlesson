@@ -23,6 +23,7 @@ import {
   DASHBOARD_FLOWS_PAGE_SIZE,
   dashboardWorkspaceCounts,
   paginateDashboardFlows,
+  dashboardFlowListShowsTopic,
   presentDashboardRecentFlow,
   questionCountFromUnknown,
   sortDashboardRecentFlows,
@@ -113,23 +114,31 @@ describe("dashboard nav", () => {
     expect(dashboardTabForProductSurface("calibration", "region")).toBe("calibration_regions");
   });
 
-  it("subdivides the sidebar into Learning, Verification, Calibration, and Solve", () => {
+  it("subdivides the sidebar into Learning, Solve, Verification, and Calibration", () => {
     const learning = DASHBOARD_NAV_GROUPS.find((group) => group.id === "learning");
     const verification = DASHBOARD_NAV_GROUPS.find((group) => group.id === "verification");
     const calibration = DASHBOARD_NAV_GROUPS.find((group) => group.id === "calibration");
     const solve = DASHBOARD_NAV_GROUPS.find((group) => group.id === "solve");
+    expect(DASHBOARD_NAV_GROUPS.map((group) => group.id)).toEqual([
+      "platform",
+      "learning",
+      "solve",
+      "verification",
+      "calibration",
+      "account",
+      "support",
+    ]);
     expect(learning?.items.map((item) => item.id)).toEqual([
       "my_maps",
       "learning",
       "shop",
-      "learning_studio",
     ]);
     expect(learning?.items.map((item) => item.label)).toEqual([
       "My Maps",
       "Build",
       "Your Shop",
-      "Data Studio",
     ]);
+    expect(learning?.items.map((item) => item.label)).not.toContain("Data Studio");
     expect(verification?.items.map((item) => item.label)).toEqual([
       "Flows",
       "Knowledge regions",
@@ -236,11 +245,17 @@ describe("dashboard home summaries", () => {
       kind: "solve",
       name: "Limits",
       title: "epsilon-delta",
+      topic: "epsilon-delta",
       publicToken: "stok",
     });
     expect(solve?.publicPath).toBe("/s/stok");
     expect(solve?.flowPath).toBe(productFlowPagePath("solve", "sf1"));
     expect(solve?.workspacePath).toBe("/solve/flows/sf1");
+    expect(solve?.topic).toBe("epsilon-delta");
+    expect(solve?.questionCount).toBe(0);
+    expect(dashboardFlowListShowsTopic("solve")).toBe(true);
+    expect(dashboardFlowListShowsTopic("verification")).toBe(false);
+    expect(dashboardFlowListShowsTopic("calibration")).toBe(false);
     expect(presentDashboardRecentFlow({ id: "", kind: "verify", workspaceId: "ws" })).toBeNull();
     const ownerScoped = presentDashboardRecentFlow({
       id: "vf-owner",
@@ -267,6 +282,7 @@ describe("dashboard home summaries", () => {
           publicPath: "/v/a",
           workspacePath: "/verification/flows/a",
           flowPath: "/verification/flows/a",
+          topic: "",
           questionCount: 1,
         },
         {
@@ -280,6 +296,7 @@ describe("dashboard home summaries", () => {
           publicPath: "/c/b",
           workspacePath: "/calibration/flows/b",
           flowPath: "/calibration/flows/b",
+          topic: "",
           questionCount: 2,
         },
       ],
@@ -350,6 +367,9 @@ describe("dashboard platform surface", () => {
     expect(dashSrc).not.toContain("data-dashboard-insights");
     expect(dashSrc).toContain("data-dashboard-flows");
     expect(dashSrc).toContain("data-dashboard-flow-table");
+    expect(dashSrc).toContain("dashboardFlowListShowsTopic");
+    expect(dashSrc).toContain("data-dashboard-flow-topic");
+    expect(dashSrc).toContain("{showTopic ? \"Topic\" : \"Questions\"}");
     expect(dashSrc).not.toContain("data-dashboard-flow-grid");
     expect(dashSrc).toContain("data-dashboard-workspace-table");
     expect(dashSrc).not.toContain("data-workspace-cards-grid");
@@ -416,6 +436,25 @@ describe("dashboard platform surface", () => {
     );
     expect(readRepo("components/product-flow/product-flow-page.tsx")).toContain(
       "data-solve-flow-editor",
+    );
+    const flowForm = readRepo("components/product-flow/product-flow-form.tsx");
+    expect(flowForm).toContain("console-copy");
+    expect(flowForm).toContain("border-white/40 bg-black");
+    expect(flowForm).not.toContain("bg-neutral-900");
+    for (const rel of [
+      "components/product-flow/product-flow-wizard.tsx",
+      "components/product-flow/product-flow-page.tsx",
+      "components/product-flow/knowledge-region-create.tsx",
+    ]) {
+      const src = readRepo(rel);
+      expect(src, rel).toContain("product-flow-form");
+      expect(src, rel).toContain("FlowFormHeader");
+      expect(src, rel).toContain("FlowFormCard");
+      expect(src, rel).not.toContain("bg-neutral-900");
+      expect(src, rel).not.toContain("border-neutral-700");
+    }
+    expect(readRepo("components/product-flow/product-surface.tsx")).not.toContain(
+      "data-console-frame-label",
     );
     expect(readRepo("app/verification/flows/[id]/page.tsx")).toContain("ProductFlowPage");
     expect(readRepo("app/calibration/flows/[id]/page.tsx")).toContain("ProductFlowPage");

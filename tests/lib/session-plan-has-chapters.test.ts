@@ -177,6 +177,29 @@ describe("lookupSessionPlanChaptersForRequest (guard / privileged client)", () =
     expect(browser.recorded.table).toBeNull();
   });
 
+  it("passes Solve tokens to guardSessionRoute", async () => {
+    const privileged = createRecordingClient({
+      data: { id: "plan-solve" },
+      error: null,
+    });
+    const seenTokens: { solveToken?: string | null } = {};
+    const result = await lookupSessionPlanChaptersForRequest(
+      { sessionId: "sess-solve", solveToken: "stok" },
+      async (_sessionId, options) => {
+        seenTokens.solveToken = options?.solveToken ?? null;
+        return {
+          ok: true,
+          principal: { kind: "solve_guest", subjectId: "ada" },
+          subjectId: "ada",
+          persistUserId: "owner-1",
+          supabase: privileged as never,
+        };
+      },
+    );
+    expect(seenTokens.solveToken).toBe("stok");
+    expect(result.ok).toBe(true);
+  });
+
   it("passes AYCL tokens to guard and reports empty vs failed from that client", async () => {
     const emptyClient = createRecordingClient({ data: null, error: null });
     const failClient = createRecordingClient({
@@ -355,8 +378,7 @@ describe("SessionView load/confirm wiring", () => {
     expect(route).toContain("lookupSessionPlanChaptersForRequest");
     const lookup = read("lib/session-plan-has-chapters-request.ts");
     expect(lookup).toContain("guardSessionRoute");
-    expect(lookup).toContain("ileTokenFromBody");
-    expect(lookup).toContain("ayclTokenFromBody");
+    expect(lookup).toContain("sessionGuestTokensFromBody");
     expect(lookup).toContain("sessionPlanChaptersStatus(sessionId, auth.supabase)");
 
     expect(existsSync(join(ROOT, "app/api/session-plan/create/route.ts"))).toBe(false);

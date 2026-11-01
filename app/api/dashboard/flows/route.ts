@@ -74,6 +74,7 @@ function presentSolve(row: {
     workspaceTitle: productFlowOwnerTitle("solve"),
     createdAt: row.createdAt,
     publicToken: row.publicToken,
+    topic: row.topic,
     questionCount: 0,
   });
 }

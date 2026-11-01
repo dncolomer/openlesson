@@ -48,6 +48,7 @@ export function useIleGatherResources(input: {
   onOpenResources: () => void;
   ileToken?: string;
   ayclToken?: string;
+  solveToken?: string;
   expense?: unknown;
   maxPerSession?: unknown;
   allowGatherResources?: boolean;
@@ -188,6 +189,7 @@ export function useIleGatherResources(input: {
             allowGatherResources: input.allowGatherResources,
             ...(input.ayclToken ? { ayclToken: input.ayclToken } : {}),
             ...(input.ileToken ? { ileToken: input.ileToken } : {}),
+            ...(input.solveToken ? { solveToken: input.solveToken } : {}),
           }),
         });
         setGatherJobs((jobs) => patchIleGatherJob(jobs, jobId, { completed: 3 }));

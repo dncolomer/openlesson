@@ -87,7 +87,15 @@ export const DASHBOARD_NAV_GROUPS: readonly DashboardNavGroup[] = [
       { id: "my_maps", label: "My Maps" },
       { id: "learning", label: "Build" },
       { id: "shop", label: "Your Shop" },
-      { id: "learning_studio", label: "Data Studio" },
+    ],
+  },
+  {
+    id: "solve",
+    label: "Solve",
+    items: [
+      { id: "solve", label: "Flows" },
+      { id: "solve_regions", label: "Knowledge regions" },
+      { id: "solve_studio", label: "Data Studio" },
     ],
   },
   {
@@ -106,15 +114,6 @@ export const DASHBOARD_NAV_GROUPS: readonly DashboardNavGroup[] = [
       { id: "calibration", label: "Flows" },
       { id: "calibration_regions", label: "Knowledge regions" },
       { id: "calibration_studio", label: "Data Studio" },
-    ],
-  },
-  {
-    id: "solve",
-    label: "Solve",
-    items: [
-      { id: "solve", label: "Flows" },
-      { id: "solve_regions", label: "Knowledge regions" },
-      { id: "solve_studio", label: "Data Studio" },
     ],
   },
   {

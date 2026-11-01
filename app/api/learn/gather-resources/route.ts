@@ -5,9 +5,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import {
-  ayclTokenFromBody,
-  ileTokenFromBody,
   guardSessionRoute,
+  sessionGuestTokensFromBody,
 } from "@/lib/api/require-auth";
 import {
   callXaiJSON,
@@ -66,10 +65,7 @@ export async function POST(req: NextRequest) {
       return jsonError(400, "sessionId and chapterId are required");
     }
 
-    const auth = await guardSessionRoute(sessionId, {
-      ayclToken: ayclTokenFromBody(body),
-      ileToken: ileTokenFromBody(body),
-    });
+    const auth = await guardSessionRoute(sessionId, sessionGuestTokensFromBody(body));
     if (!auth.ok) return auth.response;
 
     const artifacts = asArtifacts(body.artifacts);

@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { buildImageContent, callXaiText, systemMessage, userMessage, DEFAULT_MODEL, RECOMMENDED_TEMPS } from "@/lib/xai-client";
 import { withConversationLanguageInstruction } from "@/lib/tutoring-languages";
-import { ayclTokenFromBody,
-  ileTokenFromBody, guardSessionRoute } from "@/lib/api/require-auth";
+import { sessionGuestTokensFromBody, guardSessionRoute } from "@/lib/api/require-auth";
 import { buildIleHeliosChatSystemPrompt } from "@/lib/prompt-kernel/surfaces/learn";
 import { ileChapterSuggestionPowFromCoachText } from "@/lib/learn-chapter-depth";
 import { ileWorkCanvasWorkspaceFromChatBody } from "@/lib/learn-work-canvas-prompts";
@@ -46,13 +45,11 @@ export async function POST(request: NextRequest) {
       return jsonError(400, "Missing problem");
     }
 
-    const ayclToken = ayclTokenFromBody(body);
-    const ileToken = ileTokenFromBody(body);
+    const tokens = sessionGuestTokensFromBody(body);
     const auth = await guardSessionRoute(sessionId, {
-      ayclToken,
-      ileToken,
+      ...tokens,
       // Cookie-auth chat is always session-bound in product UI.
-      requireSessionId: !ayclToken && !ileToken,
+      requireSessionId: !tokens.ayclToken && !tokens.ileToken && !tokens.solveToken,
     });
     if (!auth.ok) return auth.response;
     const { supabase } = auth;

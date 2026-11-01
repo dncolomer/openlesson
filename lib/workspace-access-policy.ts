@@ -7,6 +7,7 @@ export const WORKSPACE_PRINCIPAL_KINDS = [
   "aycl",
   "ile_guest",
   "tap_guest",
+  "solve_guest",
   "api_key",
 ] as const;
 
@@ -134,6 +135,19 @@ export function tapGuestPrincipal(input: {
   return {
     kind: "tap_guest",
     subjectId: String(input.subjectId || "").trim() || `tap:${input.tapSessionId}`,
+  };
+}
+
+export function solveGuestPrincipal(input: {
+  sessionId: string;
+  identity?: string | null;
+  ownerUserId: string;
+}): WorkspacePrincipal {
+  const identity = String(input.identity || "").trim();
+  return {
+    kind: "solve_guest",
+    subjectId: identity || `solve:${String(input.sessionId || "").trim()}`,
+    ownerUserId: String(input.ownerUserId || "").trim() || null,
   };
 }
 

@@ -3,12 +3,12 @@ import { jsonError } from "@/lib/api-error-envelope";
 import { generateObjectives } from "@/lib/xai";
 import { getUserPrompts } from "@/lib/user-prompts";
 import {
-  ayclTokenFromBody,
-  ileTokenFromBody,
   requireAuthenticatedProductUser,
+  sessionGuestTokensFromBody,
 } from "@/lib/api/require-auth";
 import { resolveAyclAccess } from "@/lib/aycl-session-auth";
 import { resolveIleLinkAccess } from "@/lib/learn-link-auth";
+import { resolveSolveFlowAccess } from "@/lib/solve-session-auth";
 
 export const runtime = "nodejs";
 export const maxDuration = 45;
@@ -16,8 +16,7 @@ export const maxDuration = 45;
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const ayclToken = ayclTokenFromBody(body);
-    const ileToken = ileTokenFromBody(body);
+    const { ayclToken, ileToken, solveToken } = sessionGuestTokensFromBody(body);
     if (ayclToken) {
       const aycl = await resolveAyclAccess(ayclToken);
       if ("error" in aycl) {
@@ -27,6 +26,11 @@ export async function POST(request: NextRequest) {
       const ile = await resolveIleLinkAccess(ileToken);
       if ("error" in ile) {
         return jsonError(ile.status, ile.error);
+      }
+    } else if (solveToken) {
+      const solve = await resolveSolveFlowAccess(solveToken);
+      if ("error" in solve) {
+        return jsonError(solve.status, solve.error);
       }
     } else {
       const auth = await requireAuthenticatedProductUser();

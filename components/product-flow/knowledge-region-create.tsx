@@ -12,6 +12,14 @@ import {
   type ProductFlowKind,
 } from "@/lib/product-flow";
 import { ProductSurface } from "@/components/product-flow/product-surface";
+import {
+  FLOW_FORM_INPUT,
+  FLOW_GHOST_BTN,
+  FLOW_PRIMARY_BTN,
+  FlowField,
+  FlowFormCard,
+  FlowFormHeader,
+} from "@/components/product-flow/product-flow-form";
 import { dashboardTabForProductSurface } from "@/lib/dashboard-nav";
 
 type FlowChoice = { id: string; name: string; title?: string };
@@ -80,65 +88,68 @@ export function KnowledgeRegionCreate({ kind }: { kind: ProductFlowKind }) {
       activeTab={dashboardTabForProductSurface(kind, "region")}
     >
       <div className="mx-auto w-full max-w-3xl space-y-6" data-knowledge-region-create={kind}>
-        <Link href={`/dashboard?tab=${kind}_regions`} className="text-xs text-neutral-400 underline">
-          Back to knowledge regions
-        </Link>
-        <h1 className="text-3xl font-medium tracking-[-1.2px] text-white">Create knowledge region</h1>
+        <FlowFormHeader
+          backHref={`/dashboard?tab=${kind}_regions`}
+          backLabel="Back to knowledge regions"
+          title="Create knowledge region"
+          description={`Attach a region to an existing ${productLabel.toLowerCase()} flow, or create a flow first.`}
+        />
         {error ? <p className="text-sm text-red-300">{error}</p> : null}
 
-        <section className="space-y-3" data-region-create-from-flow>
-          <p className="text-sm text-neutral-400">
-            Select existing {productLabel.toLowerCase()} flows, or create a flow first.
-          </p>
+        <FlowFormCard data-region-create-from-flow="">
           {offer.needsCreateFlowFirst ? (
             <Link
               href={productFlowNewPath(kind)}
               data-create-flow-first=""
-              className="inline-flex h-12 items-center justify-center bg-white px-6 text-sm font-medium text-black"
+              className={FLOW_PRIMARY_BTN}
             >
               Create a Flow
             </Link>
           ) : (
             <>
-              <select
-                value={selectedFlowId}
-                onChange={(event) => setSelectedFlowId(event.target.value)}
-                data-region-flow-select
-                className="w-full border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
-              >
-                <option value="">Select a flow</option>
-                {flows.map((flow) => (
-                  <option key={flow.id} value={flow.id}>
-                    {flow.name}
-                  </option>
-                ))}
-              </select>
+              <FlowField label="Flow">
+                <select
+                  value={selectedFlowId}
+                  onChange={(event) => setSelectedFlowId(event.target.value)}
+                  data-region-flow-select
+                  className={FLOW_FORM_INPUT}
+                >
+                  <option value="">Select a flow</option>
+                  {flows.map((flow) => (
+                    <option key={flow.id} value={flow.id}>
+                      {flow.name}
+                    </option>
+                  ))}
+                </select>
+              </FlowField>
               <Link
                 href={productFlowNewPath(kind)}
                 data-create-flow-first=""
-                className="text-xs text-neutral-300 underline"
+                className={`${FLOW_GHOST_BTN} w-fit`}
               >
                 Create a Flow
               </Link>
-              <input
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder="Region name"
-                data-region-name-input
-                className="w-full border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
-              />
+              <FlowField label="Region name">
+                <input
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  placeholder="Region name"
+                  data-region-name-input
+                  className={FLOW_FORM_INPUT}
+                />
+              </FlowField>
               <button
                 type="button"
                 disabled={busy || !name.trim() || !selectedFlowId}
                 onClick={() => void create()}
                 data-create-region-from-flow
-                className="bg-white px-3 py-2 text-xs font-medium text-black disabled:opacity-40"
+                className={FLOW_PRIMARY_BTN}
               >
                 Create from flow
               </button>
             </>
           )}
-        </section>
+        </FlowFormCard>
       </div>
     </ProductSurface>
   );

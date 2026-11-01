@@ -505,6 +505,7 @@ export function SessionView({
     guestAccessKind,
     ayclToken,
     ileToken,
+    solveToken,
     router,
     t,
     setError,
@@ -606,6 +607,7 @@ export function SessionView({
     sessionId,
     ileToken,
     ayclToken,
+    solveToken,
     guestAccessKind,
     guestAccessBody,
     tutoringLanguage,
@@ -737,6 +739,7 @@ export function SessionView({
       blockId={learnField?.blockId || sessionBlockId}
       ileToken={ileToken}
       ayclToken={ayclToken}
+      solveToken={solveToken}
       recordSessionPowArtifact={recordSessionPowArtifact}
       sessionPowArtifactsRef={sessionPowArtifactsRef}
       insightWorkMarkRef={insightWorkMarkRef}

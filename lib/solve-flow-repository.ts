@@ -21,6 +21,7 @@ const SOLVE_FLOW_GLOBAL = "__openlessonSolveFlowRepository";
 
 type SolveRepositoryGlobal = {
   memory: SolveState;
+  sessions: Record<string, Record<string, unknown>>;
   backend: "unknown" | "supabase" | "memory";
 };
 
@@ -31,8 +32,12 @@ function solveRepositoryGlobal(): SolveRepositoryGlobal {
   if (!scope[SOLVE_FLOW_GLOBAL]) {
     scope[SOLVE_FLOW_GLOBAL] = {
       memory: emptySolveState(),
+      sessions: {},
       backend: "unknown",
     };
+  }
+  if (!scope[SOLVE_FLOW_GLOBAL].sessions) {
+    scope[SOLVE_FLOW_GLOBAL].sessions = {};
   }
   return scope[SOLVE_FLOW_GLOBAL];
 }
@@ -40,7 +45,43 @@ function solveRepositoryGlobal(): SolveRepositoryGlobal {
 export function resetSolveFlowRepository(): void {
   const store = solveRepositoryGlobal();
   store.memory = emptySolveState();
+  store.sessions = {};
   store.backend = "unknown";
+}
+
+export function solveSessionBelongsToFlow(
+  session: Record<string, unknown> | null | undefined,
+  flowId: string,
+): boolean {
+  if (!session) return false;
+  const parent = String(session.solve_flow_id ?? session.solveFlowId ?? "").trim();
+  return parent === String(flowId || "").trim();
+}
+
+function memorySolveSessionRow(input: {
+  id: string;
+  flow: SolveFlow;
+  identity: string;
+}): Record<string, unknown> {
+  return {
+    id: input.id,
+    kind: "solve",
+    problem: input.flow.topic || input.flow.name || "Solve",
+    status: "pending",
+    user_id: input.flow.ownerUserId,
+    solve_flow_id: input.flow.id,
+    identity: input.identity,
+    duration_ms: 0,
+    ended_at: null,
+    planning_prompt: null,
+    probes: [],
+    metadata: {
+      title: input.flow.topic || input.flow.name,
+      solve_flow_id: input.flow.id,
+      identity: input.identity,
+    },
+    created_at: new Date().toISOString(),
+  };
 }
 
 function supabaseConfigured(): boolean {
@@ -287,6 +328,12 @@ export async function claimSolveIdentity(token: string, identity: string) {
     sessionId = data?.id ? String(data.id) : null;
   } else {
     sessionId = `mem_${flow.id}_${claimed.identity}`;
+    const store = solveRepositoryGlobal();
+    store.sessions[sessionId] = memorySolveSessionRow({
+      id: sessionId,
+      flow,
+      identity: claimed.identity,
+    });
   }
   return {
     ok: true as const,
@@ -299,8 +346,59 @@ export async function claimSolveIdentity(token: string, identity: string) {
 export async function getSolveSessionById(sessionId: string) {
   const id = String(sessionId || "").trim();
   if (!id) return null;
-  if ((await resolveBackend()) === "memory") return { id, kind: "solve" as const };
+  if ((await resolveBackend()) === "memory") {
+    return solveRepositoryGlobal().sessions[id] ?? null;
+  }
   const supabase = createAdminClient();
   const { data } = await supabase.from("sessions").select("*").eq("id", id).maybeSingle();
   return data;
+}
+
+export async function saveSolveSessionRow(
+  sessionId: string,
+  patch: Record<string, unknown>,
+): Promise<Record<string, unknown> | null> {
+  const id = String(sessionId || "").trim();
+  if (!id) return null;
+  const existing = await getSolveSessionById(id);
+  if (!existing || typeof existing !== "object") return null;
+  const current = existing as Record<string, unknown>;
+  const nextMeta =
+    patch.metadata && typeof patch.metadata === "object" && !Array.isArray(patch.metadata)
+      ? {
+          ...((current.metadata && typeof current.metadata === "object"
+            ? current.metadata
+            : {}) as Record<string, unknown>),
+          ...(patch.metadata as Record<string, unknown>),
+        }
+      : current.metadata;
+  const next: Record<string, unknown> = {
+    ...current,
+    ...patch,
+    id,
+    kind: "solve",
+    solve_flow_id: current.solve_flow_id,
+    identity: current.identity,
+    user_id: current.user_id,
+    metadata: nextMeta,
+  };
+  if ((await resolveBackend()) === "memory") {
+    solveRepositoryGlobal().sessions[id] = next;
+    return next;
+  }
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("sessions")
+    .update({
+      status: next.status ?? current.status,
+      duration_ms: next.duration_ms ?? current.duration_ms,
+      ended_at: next.ended_at ?? current.ended_at,
+      planning_prompt: next.planning_prompt ?? current.planning_prompt,
+      metadata: next.metadata,
+      problem: next.problem ?? current.problem,
+    })
+    .eq("id", id)
+    .eq("kind", "solve");
+  if (error) throw new Error(error.message);
+  return next;
 }

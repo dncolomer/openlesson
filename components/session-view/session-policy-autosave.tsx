@@ -20,10 +20,12 @@ export function SessionPolicyAutosave({
   sessionRef,
   ayclToken,
   ileToken,
+  solveToken,
 }: {
   sessionRef: { current: Session | null };
   ayclToken?: string | null;
   ileToken?: string | null;
+  solveToken?: string | null;
 }) {
   const slot = useSessionBranchSlot();
   const inferences = useSessionPolicyInferences();
@@ -54,10 +56,14 @@ export function SessionPolicyAutosave({
       ...current,
       metadata: metadata as Session["metadata"],
     };
-    void persistIleSessionRow(() => sessionRef.current, { ayclToken, ileToken }).catch(() => {
+    void persistIleSessionRow(() => sessionRef.current, {
+      ayclToken,
+      ileToken,
+      solveToken,
+    }).catch(() => {
       /* The next change, or leaving, writes again. */
     });
-  }, [ayclToken, ileToken, key, record, sessionRef]);
+  }, [ayclToken, ileToken, solveToken, key, record, sessionRef]);
 
   return null;
 }

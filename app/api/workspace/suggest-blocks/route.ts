@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { ayclTokenFromBody,
-  ileTokenFromBody, guardSessionRoute, guardWorkspaceRoute } from "@/lib/api/require-auth";
+  ileTokenFromBody, sessionGuestTokensFromBody, guardSessionRoute, guardWorkspaceRoute } from "@/lib/api/require-auth";
 import { callXaiJSON, systemMessage, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
 import { formatWeightedNeighborhoodSummary, type WeightedGridNeighbor } from "@/lib/block-skill-grid";
 import {
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
 
     const auth =
       mode === "chapter"
-        ? await guardSessionRoute(sessionId, { ayclToken, ileToken })
+        ? await guardSessionRoute(sessionId, sessionGuestTokensFromBody(body))
         : await guardWorkspaceRoute(workspaceId, {
       feature: "map", ayclToken, ileToken });
     if (!auth.ok) return auth.response;

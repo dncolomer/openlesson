@@ -109,6 +109,7 @@ export type SessionRecordingInput = SessionRecordingState & {
   guestAccessKind: GuestAccessKind;
   ayclToken?: string;
   ileToken?: string;
+  solveToken?: string;
   router: ReturnType<typeof useRouter>;
   t: (key: string) => string;
   setError: (e: string | null) => void;
@@ -142,6 +143,7 @@ export function useSessionRecording(input: SessionRecordingInput) {
     guestAccessKind,
     ayclToken,
     ileToken,
+    solveToken,
     router,
     t,
     setError,
@@ -258,7 +260,7 @@ export function useSessionRecording(input: SessionRecordingInput) {
     ) as Session["metadata"];
     sessionRef.current = finalSession;
 
-    await persistIleSessionRow(() => sessionRef.current, { ayclToken, ileToken });
+    await persistIleSessionRow(() => sessionRef.current, { ayclToken, ileToken, solveToken });
 
     handleDisconnectMuse();
     if (options?.stayOnScreen) return;

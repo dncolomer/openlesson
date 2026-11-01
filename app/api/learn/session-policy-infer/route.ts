@@ -72,7 +72,8 @@ export async function POST(request: NextRequest) {
       const auth = await guardSessionRoute(plan.sessionId, {
         ayclToken: plan.ayclToken || null,
         ileToken: plan.ileToken || null,
-        requireSessionId: !plan.ayclToken && !plan.ileToken,
+        solveToken: plan.solveToken || null,
+        requireSessionId: !plan.ayclToken && !plan.ileToken && !plan.solveToken,
       });
       if (!auth.ok) return auth.response;
     }

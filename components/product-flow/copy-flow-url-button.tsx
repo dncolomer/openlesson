@@ -5,7 +5,7 @@ import { absoluteFlowPublicUrl } from "@/lib/product-flow";
 
 export function CopyFlowUrlButton({
   url,
-  className = "shrink-0 border border-white/40 px-2 py-1 text-[11px] font-medium text-white hover:border-white/80",
+  className = "console-button shrink-0 px-3 py-1.5 text-[11px] font-medium text-neutral-200 transition hover:border-white/80 hover:text-white",
 }: {
   url: string;
   className?: string;

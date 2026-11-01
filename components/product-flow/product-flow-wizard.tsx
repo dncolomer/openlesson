@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { FLOW_COUNTDOWN_MINUTES, flowCountdownMinutes } from "@/lib/flow-countdown";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import {
@@ -20,7 +19,28 @@ import {
   type ProductFlowWizardStep,
 } from "@/lib/product-flow";
 import { ProductSurface } from "@/components/product-flow/product-surface";
+import {
+  FLOW_FORM_INPUT,
+  FLOW_FORM_TEXTAREA,
+  FLOW_GHOST_BTN,
+  FLOW_PRIMARY_BTN,
+  FLOW_SECONDARY_BTN,
+  FlowField,
+  FlowFormCard,
+  FlowFormHeader,
+  FlowWizardSteps,
+} from "@/components/product-flow/product-flow-form";
 import { dashboardTabForProductSurface } from "@/lib/dashboard-nav";
+
+function wizardDescription(kind: ProductFlowKind, step: ProductFlowWizardStep): string {
+  if (step === "name") return "A short name for the dashboard list and the public run.";
+  if (step === "publish") {
+    return "Review, then publish. The public run asks for identification first.";
+  }
+  if (kind === "calibration") return "Goal, countdown, and sounding questions.";
+  if (kind === "solve") return "The topic learners work on in the Solve canvas.";
+  return "Topic and starting questions. Generate a pool or write your own.";
+}
 
 export function ProductFlowWizard({ kind }: { kind: ProductFlowKind }) {
   const router = useRouter();
@@ -32,7 +52,6 @@ export function ProductFlowWizard({ kind }: { kind: ProductFlowKind }) {
     kind === "calibration" ? "Calibration" : kind === "solve" ? "Solve" : "Verification";
   const canAdvance = productFlowWizardCanAdvance(step, draft);
 
-  const stepIndex = PRODUCT_FLOW_WIZARD_STEPS.indexOf(step);
   const heading = useMemo(() => {
     if (step === "name") return `Name this ${productLabel.toLowerCase()} flow`;
     if (step === "author") return `Author the ${productLabel.toLowerCase()} flow`;
@@ -116,6 +135,48 @@ export function ProductFlowWizard({ kind }: { kind: ProductFlowKind }) {
     }
   }
 
+  const actions = (
+    <div className="flex flex-wrap gap-3 pt-2">
+      {step !== "name" ? (
+        <button
+          type="button"
+          className={FLOW_SECONDARY_BTN}
+          onClick={() => setStep(previousProductFlowWizardStep(step))}
+        >
+          Back
+        </button>
+      ) : (
+        <button
+          type="button"
+          className={FLOW_SECONDARY_BTN}
+          onClick={() => router.push(productFlowDashboardPath(kind))}
+        >
+          Cancel
+        </button>
+      )}
+      {step === "publish" ? (
+        <button
+          type="button"
+          disabled={busy || !canAdvance}
+          onClick={() => void publish()}
+          data-flow-publish=""
+          className={FLOW_PRIMARY_BTN}
+        >
+          Publish
+        </button>
+      ) : (
+        <button
+          type="button"
+          disabled={busy || !canAdvance}
+          onClick={() => setStep(nextProductFlowWizardStep(step))}
+          className={FLOW_PRIMARY_BTN}
+        >
+          Continue
+        </button>
+      )}
+    </div>
+  );
+
   return (
     <ProductSurface
       label={`${productLabel} flow`}
@@ -127,53 +188,68 @@ export function ProductFlowWizard({ kind }: { kind: ProductFlowKind }) {
         data-flow-wizard-kind={kind}
         data-flow-wizard-step={step}
       >
-        <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
-          Step {stepIndex + 1} of {PRODUCT_FLOW_WIZARD_STEPS.length} · {step}
-        </p>
-        <h1 className="text-3xl font-medium tracking-[-1.2px] text-white">{heading}</h1>
+        <FlowFormHeader
+          kicker={<FlowWizardSteps steps={PRODUCT_FLOW_WIZARD_STEPS} current={step} />}
+          title={heading}
+          description={wizardDescription(kind, step)}
+        />
+
         {error ? <p className="text-sm text-red-300">{error}</p> : null}
 
         {step === "name" ? (
-          <input
-            value={draft.name}
-            onChange={(event) => patch({ name: event.target.value })}
-            placeholder="Flow name"
-            data-flow-name=""
-            className="w-full border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white"
-          />
+          <FlowFormCard>
+            <FlowField label="Flow name">
+              <input
+                value={draft.name}
+                onChange={(event) => patch({ name: event.target.value })}
+                placeholder="Flow name"
+                data-flow-name=""
+                className={FLOW_FORM_INPUT}
+              />
+            </FlowField>
+            {actions}
+          </FlowFormCard>
         ) : null}
 
         {step === "author" && kind === "solve" ? (
-          <section className="space-y-3 border border-neutral-800 p-4" data-solve-flow-editor>
-            <input
-              value={draft.topic}
-              onChange={(event) => patch({ topic: event.target.value })}
-              placeholder="Topic"
-              data-solve-flow-topic
-              className="w-full border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
-            />
-          </section>
+          <FlowFormCard data-solve-flow-editor="">
+            <FlowField label="Topic">
+              <input
+                value={draft.topic}
+                onChange={(event) => patch({ topic: event.target.value })}
+                placeholder="Topic"
+                data-solve-flow-topic
+                className={FLOW_FORM_INPUT}
+              />
+            </FlowField>
+            {actions}
+          </FlowFormCard>
         ) : null}
 
         {step === "author" && kind === "verification" ? (
-          <section className="space-y-3 border border-neutral-800 p-4" data-verification-flow-editor>
-            <input
-              value={draft.topic}
-              onChange={(event) => patch({ topic: event.target.value })}
-              placeholder="Topic"
-              data-verification-flow-topic
-              className="w-full border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
-            />
+          <FlowFormCard data-verification-flow-editor="">
+            <FlowField label="Topic">
+              <input
+                value={draft.topic}
+                onChange={(event) => patch({ topic: event.target.value })}
+                placeholder="Topic"
+                data-verification-flow-topic
+                className={FLOW_FORM_INPUT}
+              />
+            </FlowField>
             <button
               type="button"
               disabled={busy || !draft.topic.trim()}
               onClick={() => void generateQuestions()}
               data-verification-generate-from-topic
-              className="border border-white/80 px-3 py-1.5 text-[11px] font-medium text-white disabled:opacity-40"
+              className={FLOW_GHOST_BTN}
             >
               {busy ? "Generating…" : "Generate questions from this topic"}
             </button>
-            <div className="space-y-2" data-verification-flow-pool>
+            <div className="space-y-3" data-verification-flow-pool>
+              <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
+                Starting questions
+              </p>
               {draft.questions.map((value, index) => (
                 <input
                   key={index}
@@ -181,49 +257,51 @@ export function ProductFlowWizard({ kind }: { kind: ProductFlowKind }) {
                   onChange={(event) => setQuestion(index, event.target.value)}
                   placeholder={`Starting question ${index + 1}`}
                   data-verification-flow-question
-                  className="w-full border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
+                  className={FLOW_FORM_INPUT}
                 />
               ))}
               <button
                 type="button"
                 data-verification-flow-add-question
-                className="text-[11px] text-neutral-300 underline"
+                className={FLOW_GHOST_BTN}
                 onClick={() => patch({ questions: [...draft.questions, ""] })}
               >
                 Add question
               </button>
             </div>
-          </section>
+            {actions}
+          </FlowFormCard>
         ) : null}
 
         {step === "author" && kind === "calibration" ? (
-          <section className="space-y-3 border border-neutral-800 p-4" data-calibration-flow-editor>
-            <textarea
-              value={draft.goal}
-              onChange={(event) => patch({ goal: event.target.value })}
-              placeholder="Goal"
-              data-calibration-flow-goal
-              rows={3}
-              className="w-full border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
-            />
+          <FlowFormCard data-calibration-flow-editor="">
+            <FlowField label="Goal">
+              <textarea
+                value={draft.goal}
+                onChange={(event) => patch({ goal: event.target.value })}
+                placeholder="Goal"
+                data-calibration-flow-goal
+                rows={3}
+                className={FLOW_FORM_TEXTAREA}
+              />
+            </FlowField>
             <button
               type="button"
               disabled={busy || !draft.goal.trim()}
               onClick={() => void generateQuestions()}
               data-calibration-generate-from-goal
-              className="border border-white/80 px-3 py-1.5 text-[11px] font-medium text-white disabled:opacity-40"
+              className={FLOW_GHOST_BTN}
             >
               {busy ? "Generating…" : "Generate questions from this goal"}
             </button>
-            <label className="flex items-center gap-3 text-xs text-neutral-300">
-              Countdown
+            <FlowField label="Countdown">
               <select
                 value={draft.durationMinutes}
                 data-calibration-flow-minutes
                 onChange={(event) =>
                   patch({ durationMinutes: flowCountdownMinutes(event.target.value) })
                 }
-                className="border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-xs text-white"
+                className={FLOW_FORM_INPUT}
               >
                 {FLOW_COUNTDOWN_MINUTES.map((value) => (
                   <option key={value} value={value}>
@@ -231,8 +309,11 @@ export function ProductFlowWizard({ kind }: { kind: ProductFlowKind }) {
                   </option>
                 ))}
               </select>
-            </label>
-            <div className="space-y-2" data-calibration-flow-pool>
+            </FlowField>
+            <div className="space-y-3" data-calibration-flow-pool>
+              <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
+                Questions
+              </p>
               {draft.questions.map((value, index) => (
                 <textarea
                   key={index}
@@ -241,72 +322,40 @@ export function ProductFlowWizard({ kind }: { kind: ProductFlowKind }) {
                   placeholder={`Question ${index + 1}`}
                   data-calibration-flow-question
                   rows={2}
-                  className="w-full border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
+                  className={FLOW_FORM_TEXTAREA}
                 />
               ))}
               <button
                 type="button"
                 data-calibration-flow-add-question
-                className="text-[11px] text-neutral-300 underline"
+                className={FLOW_GHOST_BTN}
                 onClick={() => patch({ questions: [...draft.questions, ""] })}
               >
                 Add question
               </button>
             </div>
-          </section>
+            {actions}
+          </FlowFormCard>
         ) : null}
 
         {step === "publish" ? (
-          <section className="space-y-3 border border-neutral-800 p-4" data-flow-publish-review>
-            <p className="text-sm text-white" data-flow-name>
-              {draft.name}
-            </p>
-            <p className="text-xs text-neutral-400">
-              {kind === "calibration" ? draft.goal : draft.topic}
-            </p>
-            {kind === "solve" ? null : (
-              <p className="text-xs text-neutral-500">
-                {draft.questions.filter((item) => item.trim()).length} questions
+          <FlowFormCard data-flow-publish-review="">
+            <div className="space-y-3">
+              <p className="text-lg font-medium tracking-[-0.4px] text-white" data-flow-name>
+                {draft.name}
               </p>
-            )}
-          </section>
+              <p className="text-sm leading-relaxed text-neutral-400">
+                {kind === "calibration" ? draft.goal : draft.topic}
+              </p>
+              {kind === "solve" ? null : (
+                <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
+                  {draft.questions.filter((item) => item.trim()).length} questions
+                </p>
+              )}
+            </div>
+            {actions}
+          </FlowFormCard>
         ) : null}
-
-        <div className="flex flex-wrap gap-3">
-          {step !== "name" ? (
-            <button
-              type="button"
-              className="border border-white/40 px-4 py-2 text-sm text-white"
-              onClick={() => setStep(previousProductFlowWizardStep(step))}
-            >
-              Back
-            </button>
-          ) : (
-            <Link href={productFlowDashboardPath(kind)} className="border border-white/40 px-4 py-2 text-sm text-white">
-              Cancel
-            </Link>
-          )}
-          {step === "publish" ? (
-            <button
-              type="button"
-              disabled={busy || !canAdvance}
-              onClick={() => void publish()}
-              data-flow-publish=""
-              className="bg-white px-4 py-2 text-sm font-medium text-black disabled:opacity-40"
-            >
-              Publish
-            </button>
-          ) : (
-            <button
-              type="button"
-              disabled={busy || !canAdvance}
-              onClick={() => setStep(nextProductFlowWizardStep(step))}
-              className="bg-white px-4 py-2 text-sm font-medium text-black disabled:opacity-40"
-            >
-              Continue
-            </button>
-          )}
-        </div>
       </div>
     </ProductSurface>
   );

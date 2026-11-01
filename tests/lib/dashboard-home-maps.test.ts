@@ -310,13 +310,11 @@ describe("dashboard home and my maps surface", () => {
       "my_maps",
       "learning",
       "shop",
-      "learning_studio",
     ]);
     expect(learning?.items.map((item) => item.label)).toEqual([
       "My Maps",
       "Build",
       "Your Shop",
-      "Data Studio",
     ]);
     expect(isDashboardMyMapsTab("my_maps")).toBe(true);
     expect(parseDashboardTab("my_maps")).toBe("my_maps");

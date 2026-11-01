@@ -25,8 +25,9 @@ import {
   uploadIleProofOfWork,
 } from "@/lib/learn-proof-of-work-client";
 import { withImpurePoWData } from "@/lib/tap-session-purity";
-import { postWorkspaceFlowEmbedding } from "@/lib/flow-embedding-client";
+import { postSolveFlowEmbedding, postWorkspaceFlowEmbedding } from "@/lib/flow-embedding-client";
 import { FLOW_EMBEDDING_MODEL_ID } from "@/lib/flow-embedding";
+import { sessionEndEmbeddingTarget } from "@/lib/session-end-embedding";
 import type { SessionPolicySnapshot } from "@/components/session-view/session-policy-context";
 import { persistIleSessionRow } from "@/lib/learn-session-persist";
 import { discardUnsavedIleSession } from "@/lib/learn-unsaved-exit";
@@ -312,7 +313,11 @@ export function useSessionPhase(input: SessionPhaseInput) {
         setSession(named);
         sessionRef.current = named;
         try {
-          await persistIleSessionRow(() => sessionRef.current, { ayclToken, ileToken });
+          await persistIleSessionRow(() => sessionRef.current, {
+            ayclToken,
+            ileToken,
+            solveToken,
+          });
         } catch {
           /* Still pause and leave — name is best-effort. */
         }
@@ -345,6 +350,7 @@ export function useSessionPhase(input: SessionPhaseInput) {
     router,
     ayclToken,
     ileToken,
+    solveToken,
     setSession,
     guestAccessBody,
     flushRemainingIlePow,
@@ -355,28 +361,37 @@ export function useSessionPhase(input: SessionPhaseInput) {
   const handleConfirmEnd = async (options?: { impure?: boolean }) => {
     setShowEndDialog(false);
     const impure = options?.impure === true;
-    const workspaceId =
-      session && typeof session.metadata?.workspace_id === "string"
-        ? session.metadata.workspace_id
-        : "";
+    const embeddingTarget = sessionEndEmbeddingTarget(session);
+    const workspaceId = embeddingTarget?.kind === "learn" ? embeddingTarget.workspaceId : "";
     if (session) {
       const snapshot = input.policyRef?.current;
       if (snapshot?.model) {
         const sequence = snapshot.sequence ?? [];
-        if (workspaceId) {
+        const pow = sequence.map((action, index) => ({
+          type: "tool" as const,
+          tool_name: "session_policy",
+          tool_action: action,
+          timestamp_ms: index + 1,
+        }));
+        if (embeddingTarget?.kind === "solve" && solveToken) {
+          void postSolveFlowEmbedding({
+            solveToken,
+            sessionId: session.id,
+            flowId: embeddingTarget.flowId,
+            identity: embeddingTarget.identity,
+            model: snapshot.model,
+            sequence,
+            pow,
+          });
+        } else if (embeddingTarget?.kind === "learn") {
           void postWorkspaceFlowEmbedding({
-            workspaceId,
+            workspaceId: embeddingTarget.workspaceId,
             flowKind: "learn",
             runId: session.id,
             source: "learn",
             model: snapshot.model,
             sequence,
-            pow: sequence.map((action, index) => ({
-              type: "tool",
-              tool_name: "session_policy",
-              tool_action: action,
-              timestamp_ms: index + 1,
-            })),
+            pow,
             sessionId: session.id,
             ileToken,
           });
@@ -386,7 +401,7 @@ export function useSessionPhase(input: SessionPhaseInput) {
             policy_sequence: sequence,
           };
           void uploadIleProofOfWork({
-            workspaceId,
+            workspaceId: embeddingTarget.workspaceId,
             sessionId: session.id,
             ileToken,
             type: "tool",

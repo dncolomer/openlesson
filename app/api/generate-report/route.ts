@@ -3,9 +3,8 @@ import { jsonError } from "@/lib/api-error-envelope";
 import { generateReport } from "@/lib/xai";
 import { getUserPrompts } from "@/lib/user-prompts";
 import {
-  ayclTokenFromBody,
-  ileTokenFromBody,
   guardSessionRoute,
+  sessionGuestTokensFromBody,
 } from "@/lib/api/require-auth";
 
 export const runtime = "nodejs";
@@ -30,7 +29,7 @@ export async function POST(request: NextRequest) {
     }
 
     const auth = await guardSessionRoute(sessionId, {
-      ayclToken: ayclTokenFromBody(body), ileToken: ileTokenFromBody(body),
+      ...sessionGuestTokensFromBody(body),
       requireSessionId: true,
     });
     if (!auth.ok) return auth.response;

@@ -15,6 +15,7 @@ export type SessionBranchPrepareInput = {
   privateToken?: string | null;
   ileToken?: string | null;
   ayclToken?: string | null;
+  solveToken?: string | null;
   calibrationToken?: string | null;
   verificationToken?: string | null;
   entryQueryParams?: Record<string, string | string[]> | null;
@@ -42,6 +43,7 @@ export type SessionBranchPreparePlan =
       sessionId: string;
       ileToken: string;
       ayclToken: string;
+      solveToken: string;
       blockId: string;
       workspaceId: string;
       chapterTitle: string;
@@ -157,6 +159,7 @@ export function planSessionBranchPrepare(
       sessionId,
       ileToken: text(input.ileToken),
       ayclToken: text(input.ayclToken),
+      solveToken: text(input.solveToken),
       blockId,
       workspaceId,
       ...material,
@@ -194,6 +197,7 @@ export function sessionBranchPrepareRequest(
     body.sessionId = plan.sessionId;
     if (plan.ileToken) body.ileToken = plan.ileToken;
     if (plan.ayclToken) body.ayclToken = plan.ayclToken;
+    if (plan.solveToken) body.solveToken = plan.solveToken;
     if (plan.blockId) body.blockId = plan.blockId;
     if (plan.workspaceId) body.workspaceId = plan.workspaceId;
   } else {
@@ -242,6 +246,7 @@ export function learnSessionFieldInput(input: {
   problem?: string | null;
   ileToken?: string | null;
   ayclToken?: string | null;
+  solveToken?: string | null;
   fallbackTitle?: string | null;
   blockId?: string | null;
   workspaceId?: string | null;
@@ -258,6 +263,7 @@ export function learnSessionFieldInput(input: {
     chapterBrief: problem || chapterTitle,
     ileToken: text(input.ileToken),
     ayclToken: text(input.ayclToken),
+    solveToken: text(input.solveToken),
     scope: sessionId,
     blockId:
       sessionPrepareBlockId(input.blockId) || sessionPrepareBlockId(input.metadata),

@@ -50,6 +50,7 @@ export function SessionChapterWorkCanvas({
   blockId,
   ileToken,
   ayclToken,
+  solveToken,
   recordSessionPowArtifact,
   sessionPowArtifactsRef,
   insightWorkMarkRef,
@@ -84,6 +85,7 @@ export function SessionChapterWorkCanvas({
   blockId?: string | null;
   ileToken?: string;
   ayclToken?: string;
+  solveToken?: string;
   recordSessionPowArtifact: IleCanvasCraftInsightConfig["recordSessionPowArtifact"];
   sessionPowArtifactsRef: { current: IlePowCounterArtifact[] };
   insightWorkMarkRef: { current: number };
@@ -102,6 +104,7 @@ export function SessionChapterWorkCanvas({
       chapterBrief,
       ileToken,
       ayclToken,
+      solveToken,
       scope: fieldScope || chapterId,
       workspaceId: workspaceId || undefined,
       blockId: blockId || sessionPrepareBlockId(session?.metadata) || undefined,
@@ -112,7 +115,12 @@ export function SessionChapterWorkCanvas({
 
   const bridge = policyRef ? <SessionPolicyBridge target={policyRef} /> : null;
   const autosave = session ? (
-    <SessionPolicyAutosave sessionRef={sessionRef} ayclToken={ayclToken} ileToken={ileToken} />
+    <SessionPolicyAutosave
+      sessionRef={sessionRef}
+      ayclToken={ayclToken}
+      ileToken={ileToken}
+      solveToken={solveToken}
+    />
   ) : null;
   if (!session) return bridge;
   if (!sessionCanvasMayOpen(fieldSlot)) {

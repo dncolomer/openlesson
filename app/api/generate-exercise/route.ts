@@ -9,10 +9,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import {
-  ayclTokenFromBody,
-  ileTokenFromBody,
   guardSessionRoute,
   requireAuthenticatedUser,
+  sessionGuestTokensFromBody,
 } from "@/lib/api/require-auth";
 import {
   generateDomainExercise,
@@ -80,10 +79,7 @@ export async function POST(req: NextRequest) {
 
     // Prefer session-scoped auth (TAP Learning guest/owner); fall back to cookie user for workspace-only.
     if (sessionId) {
-      const auth = await guardSessionRoute(sessionId, {
-        ayclToken: ayclTokenFromBody(body),
-        ileToken: ileTokenFromBody(body),
-      });
+      const auth = await guardSessionRoute(sessionId, sessionGuestTokensFromBody(body));
       if (!auth.ok) return auth.response;
       supabase = auth.supabase;
     } else {

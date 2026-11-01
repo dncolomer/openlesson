@@ -54,6 +54,7 @@ export type SessionFieldInput = {
   sessionId: string;
   ileToken?: string;
   ayclToken?: string;
+  solveToken?: string;
   guestAccessKind: GuestAccessKind;
   guestAccessBody: Record<string, unknown>;
   tutoringLanguage: string;
@@ -108,6 +109,7 @@ export function useSessionField(input: SessionFieldInput) {
     sessionId,
     ileToken,
     ayclToken,
+    solveToken,
     guestAccessKind,
     guestAccessBody,
     tutoringLanguage,
@@ -270,6 +272,7 @@ export function useSessionField(input: SessionFieldInput) {
     problem: session?.problem,
     ileToken,
     ayclToken,
+    solveToken,
     blockId: sessionBlockId,
     workspaceId,
     metadata: session?.metadata,
@@ -526,6 +529,12 @@ export function useSessionField(input: SessionFieldInput) {
           ...session,
           metadata: { ...(session.metadata || {}), tutoringLanguage },
         });
+      } else if (guestAccessKind === "solve" && solveToken) {
+        const { saveSolveLinkSession } = await import("@/lib/solve-session-storage");
+        await saveSolveLinkSession(solveToken, {
+          ...session,
+          metadata: { ...(session.metadata || {}), tutoringLanguage },
+        });
       } else {
         const { data: sessionData } = await (await import("@/lib/supabase/client"))
           .createClient()
@@ -556,6 +565,7 @@ export function useSessionField(input: SessionFieldInput) {
         problem: session.problem,
         ileToken,
         ayclToken,
+        solveToken,
         metadata: session.metadata,
       });
       const storedField = learnFieldFromStoredPolicy(session.metadata, fieldInput);
@@ -600,6 +610,7 @@ export function useSessionField(input: SessionFieldInput) {
     ayclToken,
     guestAccessKind,
     ileToken,
+    solveToken,
     isPreparing,
     session,
     sessionRef,
@@ -626,6 +637,7 @@ export function useSessionField(input: SessionFieldInput) {
         problem: session.problem,
         ileToken,
         ayclToken,
+        solveToken,
         metadata: session.metadata,
       });
       const storedField = learnFieldFromStoredPolicy(session.metadata, fieldInput);
@@ -664,6 +676,7 @@ export function useSessionField(input: SessionFieldInput) {
   }, [
     ayclToken,
     ileToken,
+    solveToken,
     isPreparing,
     session,
     setIsPaused,

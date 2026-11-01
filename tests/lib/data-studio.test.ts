@@ -455,7 +455,7 @@ function dashboardApiEmbedding(input: {
 }
 
 describe("product Data Studio chrome", () => {
-  it("lists Data Studio on verification, calibration, and learning product chrome", () => {
+  it("lists Data Studio on verification, calibration, and solve product chrome", () => {
     expect(
       availableWorkspaceSections({ isOwner: true, workspaceKind: "knowledge_region" }),
     ).not.toContain("data_studio");
@@ -469,7 +469,7 @@ describe("product Data Studio chrome", () => {
     const verification = DASHBOARD_NAV_GROUPS.find((group) => group.id === "verification");
     const calibration = DASHBOARD_NAV_GROUPS.find((group) => group.id === "calibration");
     const solve = DASHBOARD_NAV_GROUPS.find((group) => group.id === "solve");
-    expect(learning?.items.some((item) => item.label === "Data Studio")).toBe(true);
+    expect(learning?.items.some((item) => item.label === "Data Studio")).toBe(false);
     expect(verification?.items.some((item) => item.label === "Data Studio")).toBe(true);
     expect(calibration?.items.some((item) => item.label === "Data Studio")).toBe(true);
     expect(solve?.items.some((item) => item.label === "Data Studio")).toBe(true);

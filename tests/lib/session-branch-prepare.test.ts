@@ -37,6 +37,21 @@ describe("session branch prepare", () => {
     });
   });
 
+  it("sends Solve guest tokens on the Learn field request", () => {
+    const learn = learnSessionFieldInput({
+      sessionId: "sess-solve",
+      problem: "Limits",
+      solveToken: "stok",
+    });
+    const plan = planSessionBranchPrepare(learn);
+    expect(plan.kind).toBe("learn");
+    expect(sessionBranchPrepareRequest(plan)).toMatchObject({
+      sessionId: "sess-solve",
+      solveToken: "stok",
+      chapterTitle: "Limits",
+    });
+  });
+
   it("keeps Learn on the session route and sends the block seed id", () => {
     const learn = learnSessionFieldInput({
       sessionId: "session-1",

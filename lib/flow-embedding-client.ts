@@ -2,6 +2,42 @@ import type { FlowKind, FlowPowRow } from "@/lib/flow-embedding";
 import type { FlowEmbeddingViewRow } from "@/lib/flow-embedding-view";
 import type { SessionBranchModel } from "@/lib/session-branch-model";
 
+export async function postSolveFlowEmbedding(input: {
+  solveToken: string;
+  sessionId: string;
+  flowId?: string | null;
+  identity?: string | null;
+  model?: SessionBranchModel | null;
+  sequence?: readonly string[] | null;
+  pow?: readonly FlowPowRow[] | null;
+}): Promise<{ ok: boolean; id?: string | null }> {
+  const solveToken = input.solveToken.trim();
+  const sessionId = input.sessionId.trim();
+  if (!solveToken || !sessionId) return { ok: false };
+  try {
+    const response = await fetch(
+      `/api/solve-flow/public/${encodeURIComponent(solveToken)}/embed`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId,
+          flowId: input.flowId ?? null,
+          identity: input.identity ?? null,
+          model: input.model ?? null,
+          sequence: input.sequence ?? null,
+          pow: input.pow ?? [],
+        }),
+      },
+    );
+    if (!response.ok) return { ok: false };
+    const payload = (await response.json().catch(() => ({}))) as { id?: unknown };
+    return { ok: true, id: typeof payload.id === "string" ? payload.id : null };
+  } catch {
+    return { ok: false };
+  }
+}
+
 export async function postWorkspaceFlowEmbedding(input: {
   workspaceId: string;
   flowKind: FlowKind;

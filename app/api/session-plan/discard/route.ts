@@ -5,9 +5,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import {
-  ayclTokenFromBody,
-  ileTokenFromBody,
   guardSessionRoute,
+  sessionGuestTokensFromBody,
 } from "@/lib/api/require-auth";
 import { ileUnsavedExitSessionPatch } from "@/lib/learn-unsaved-exit";
 import { deleteSessionPlanBySessionId } from "@/lib/storage/session-plans";
@@ -23,10 +22,7 @@ export async function POST(request: NextRequest) {
       return jsonError(400, "Missing sessionId");
     }
 
-    const auth = await guardSessionRoute(sessionId, {
-      ayclToken: ayclTokenFromBody(body),
-      ileToken: ileTokenFromBody(body),
-    });
+    const auth = await guardSessionRoute(sessionId, sessionGuestTokensFromBody(body));
     if (!auth.ok) return auth.response;
 
     try {

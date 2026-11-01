@@ -28,6 +28,24 @@ function mapSession(row: Record<string, unknown>): Session {
   };
 }
 
+async function solvePublicPost<T>(
+  token: string,
+  payload: Record<string, unknown>,
+): Promise<T> {
+  const response = await fetch(`/api/solve-flow/public/${encodeURIComponent(token)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = (await response.json().catch(() => ({}))) as T & { error?: string };
+  if (!response.ok) {
+    throw new Error(
+      typeof data.error === "string" ? data.error : "Solve session request failed",
+    );
+  }
+  return data;
+}
+
 export async function getSolveLinkSession(
   token: string,
   sessionId: string,
@@ -35,13 +53,34 @@ export async function getSolveLinkSession(
   const flowToken = String(token || "").trim();
   const id = String(sessionId || "").trim();
   if (!flowToken || !id) return null;
-  const response = await fetch(`/api/solve-flow/public/${encodeURIComponent(flowToken)}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ sessionId: id }),
+  try {
+    const payload = await solvePublicPost<{ session?: unknown }>(flowToken, { sessionId: id });
+    if (!payload.session || typeof payload.session !== "object") return null;
+    return mapSession(payload.session as Record<string, unknown>);
+  } catch {
+    return null;
+  }
+}
+
+export async function saveSolveLinkSession(token: string, session: Session): Promise<void> {
+  const flowToken = String(token || "").trim();
+  if (!flowToken || !session.id) return;
+  const metadata: Session["metadata"] & { objectives?: string[] } = {
+    ...(session.metadata || {}),
+  };
+  if (session.objectives.length > 0) {
+    metadata.objectives = session.objectives;
+  }
+  await solvePublicPost(flowToken, {
+    sessionId: session.id,
+    session: {
+      status: session.status,
+      duration_ms: session.durationMs,
+      ended_at: session.endedAt ?? null,
+      metadata,
+      planning_prompt: session.planningPrompt ?? null,
+      probes: session.probes,
+      problem: session.problem,
+    },
   });
-  if (!response.ok) return null;
-  const payload = (await response.json().catch(() => ({}))) as { session?: unknown };
-  if (!payload.session || typeof payload.session !== "object") return null;
-  return mapSession(payload.session as Record<string, unknown>);
 }

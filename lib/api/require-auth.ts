@@ -5,6 +5,7 @@ import { jsonError } from "@/lib/api-error-envelope";
 import { createClient } from "@/lib/supabase/server";
 import { resolveAyclAccess, resolveAyclSessionAccess } from "@/lib/aycl-session-auth";
 import { resolveIleLinkAccess, resolveIleLinkSessionAccess } from "@/lib/learn-link-auth";
+import { resolveSolveSessionAccess } from "@/lib/solve-session-auth";
 import { requireProductAccess } from "@/lib/api/product-access";
 import type { AyclCapabilities } from "@/lib/aycl-shared";
 import {
@@ -12,6 +13,7 @@ import {
   cookieUserPrincipal,
   ileGuestPrincipal,
   persistableOwnerUserId,
+  solveGuestPrincipal,
   type WorkspacePrincipal,
 } from "@/lib/workspace-access-policy";
 import { denyWorkspaceFeatureById } from "@/lib/workspace-feature-gate";
@@ -45,6 +47,24 @@ export function ayclTokenFromBody(body: Record<string, unknown>): string | null 
 export function ileTokenFromBody(body: Record<string, unknown>): string | null {
   const raw = body.ileToken ?? body.ile_token;
   return typeof raw === "string" && raw.trim() ? raw.trim() : null;
+}
+
+export function solveTokenFromBody(body: Record<string, unknown>): string | null {
+  const raw = body.solveToken ?? body.solve_token;
+  return typeof raw === "string" && raw.trim() ? raw.trim() : null;
+}
+
+/** Tokens public Learn / Solve guests send on session APIs. */
+export function sessionGuestTokensFromBody(body: Record<string, unknown>): {
+  ayclToken: string | null;
+  ileToken: string | null;
+  solveToken: string | null;
+} {
+  return {
+    ayclToken: ayclTokenFromBody(body),
+    ileToken: ileTokenFromBody(body),
+    solveToken: solveTokenFromBody(body),
+  };
 }
 
 export type CookieAuthenticatedRequest =
@@ -271,6 +291,7 @@ export async function guardWorkspaceRoute(
 export type GuardSessionOptions = {
   ayclToken?: string | null;
   ileToken?: string | null;
+  solveToken?: string | null;
   /** When true, sessionId must be present for non-AYCL auth. Default false for back-compat. */
   requireSessionId?: boolean;
   /** Enforce product entitlement for cookie-auth users. Default false (Free sessions). */
@@ -284,6 +305,7 @@ export async function guardSessionRoute(
 ): Promise<AuthenticatedRequest> {
   const ayclToken = options?.ayclToken?.trim() || "";
   const ileToken = options?.ileToken?.trim() || "";
+  const solveToken = options?.solveToken?.trim() || "";
   // Default off so Free accounts can run a started Home / My Maps session.
   const requireProduct = options?.requireProductAccess === true;
 
@@ -344,6 +366,38 @@ export async function guardSessionRoute(
       persistUserId: ids.persistUserId,
       supabase: ile.supabase,
       guestUserId: principal.guestUserId ?? null,
+    };
+  }
+
+  if (solveToken) {
+    if (!sessionId) {
+      return {
+        ok: false,
+        response: jsonError(400, "sessionId is required"),
+      };
+    }
+    const solve = await resolveSolveSessionAccess(solveToken, sessionId);
+    if ("error" in solve) {
+      return {
+        ok: false,
+        response: jsonError(solve.status, solve.error),
+      };
+    }
+    const principal = solveGuestPrincipal({
+      sessionId,
+      identity: solve.identity,
+      ownerUserId: solve.ownerUserId,
+    });
+    const ids = persistIds(principal);
+    if ("error" in ids) {
+      return { ok: false, response: jsonError(500, "Workspace owner is missing") };
+    }
+    return {
+      ok: true,
+      principal,
+      subjectId: ids.subjectId,
+      persistUserId: ids.persistUserId,
+      supabase: solve.supabase,
     };
   }
 

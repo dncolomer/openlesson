@@ -57,8 +57,13 @@ export type DashboardRecentFlow = {
   publicPath: string;
   workspacePath: string;
   flowPath: string;
+  topic: string;
   questionCount: number;
 };
+
+export function dashboardFlowListShowsTopic(tab: string): boolean {
+  return tab === "solve";
+}
 
 export function dashboardFlowWorkspacePath(kind: DashboardRecentFlowKind, flowId: string): string {
   return productFlowPagePath(productFlowKindFromDashboardKind(kind), flowId);
@@ -73,6 +78,7 @@ export function presentDashboardRecentFlow(input: {
   workspaceTitle?: unknown;
   createdAt?: unknown;
   publicToken?: unknown;
+  topic?: unknown;
   questionCount?: unknown;
 }): DashboardRecentFlow | null {
   const id = String(input.id || "").trim();
@@ -101,6 +107,7 @@ export function presentDashboardRecentFlow(input: {
     publicPath: token ? publicPath : flowPath,
     workspacePath: flowPath,
     flowPath,
+    topic: String(input.topic ?? "").trim(),
     questionCount: questionCountFromUnknown(input.questionCount),
   };
 }

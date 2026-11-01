@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { applyStarterGrantIfNeeded, creditStoreFromClient } from "@/lib/credits/account";
 
 /**
  * Ensure a public.profiles row exists for an auth user.
@@ -22,6 +23,7 @@ export async function ensureUserProfile(
     throw new Error(existingError.message || "Failed to load profile");
   }
   if (existing?.id) {
+    await applyStarterGrantIfNeeded(creditStoreFromClient(admin), userId).catch(() => {});
     return { id: existing.id, created: false };
   }
 
@@ -42,6 +44,7 @@ export async function ensureUserProfile(
     .single();
 
   if (!insertError && inserted?.id) {
+    await applyStarterGrantIfNeeded(creditStoreFromClient(admin), inserted.id).catch(() => {});
     return { id: inserted.id, created: true };
   }
 
@@ -52,7 +55,10 @@ export async function ensureUserProfile(
       .select("id")
       .eq("id", userId)
       .maybeSingle();
-    if (again?.id) return { id: again.id, created: false };
+    if (again?.id) {
+      await applyStarterGrantIfNeeded(creditStoreFromClient(admin), again.id).catch(() => {});
+      return { id: again.id, created: false };
+    }
   }
 
   throw new Error(insertError?.message || "Failed to create profile");

@@ -518,7 +518,7 @@ export type VerificationCommand =
       actionCatalog?: number;
     }
   | { type: "remove"; workspaceId?: string; ownerUserId?: string; flowId: string }
-  | { type: "claim"; flowId: string; identity: string }
+  | { type: "claim"; flowId: string; identity: string; runnerUserId?: string | null }
   | {
       type: "addResult";
       flowId: string;

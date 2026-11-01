@@ -118,7 +118,7 @@ export type SolveCommand =
       actionCatalog?: number;
     }
   | { type: "remove"; workspaceId?: string; ownerUserId?: string; flowId: string }
-  | { type: "claim"; flowId: string; identity: string };
+  | { type: "claim"; flowId: string; identity: string; runnerUserId?: string | null };
 
 export type SolveCommandResult =
   | { ok: true; state: SolveState; flow?: SolveFlow; identity?: string }

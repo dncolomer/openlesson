@@ -34,7 +34,9 @@ export type UnifiedSessionInsert = {
   planning_prompt?: string | null;
 };
 
-export function kindFromGuestLogicalTable(table: string): SessionKind {
+export function kindFromGuestLogicalTable(
+  table: string,
+): "learn" | "calibrate" | "verify" {
   if (table === "workspace_verify_sessions") return "verify";
   if (table === "workspace_learn_links") return "learn";
   return "calibrate";

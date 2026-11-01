@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { hasProductAccess, type PlanId } from "@/lib/plans";
+import type { CreditPackSkuId } from "@/lib/credits/constants";
 import type { ModuleSkuId } from "@/lib/pricing/modules";
 
 export interface PricingUserState {
@@ -90,7 +91,7 @@ export function usePricingCheckout() {
     load();
   }, [searchParams]);
 
-  const handleCheckout = async (priceType: ModuleSkuId) => {
+  const handleCheckout = async (priceType: CreditPackSkuId | ModuleSkuId) => {
     setLoadingPlan(priceType);
     try {
       const res = await fetch("/api/stripe/create-checkout", {

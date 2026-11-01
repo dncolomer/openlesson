@@ -208,6 +208,12 @@ async function persistCommand(
       .select("owner_user_id")
       .eq("id", command.flowId)
       .maybeSingle();
+    const { debitClaimedFlowSession, refundClaimedFlowSession } = await import("@/lib/credits/claim-charge");
+    const charged = await debitClaimedFlowSession({
+      ownerUserId: flow?.owner_user_id,
+      runnerUserId: command.runnerUserId,
+      flowKind: "calibrate",
+    });
     const { error } = await supabase.from("sessions").insert({
       kind: "calibrate",
       problem: "Calibrate",
@@ -216,7 +222,10 @@ async function persistCommand(
       calibrate_flow_id: command.flowId,
       identity: value.identity,
     });
-    if (error) throw new Error(error.message);
+    if (error) {
+      await refundClaimedFlowSession(charged?.billedUserId);
+      throw new Error(error.message);
+    }
     return;
   }
   if (command.type === "addProof" && value.proof) {
@@ -356,10 +365,19 @@ export async function getCalibrationFlowByToken(token: string): Promise<Calibrat
   return flow ? presentFlow(flow) : null;
 }
 
-export async function claimCalibrationIdentity(token: string, identity: string) {
+export async function claimCalibrationIdentity(
+  token: string,
+  identity: string,
+  opts?: { runnerUserId?: string | null },
+) {
   const flow = await getCalibrationFlowByToken(token);
   if (!flow) return { ok: false as const, reason: "not_found" };
-  const claimed = await runCalibrationCommand({ type: "claim", flowId: flow.id, identity });
+  const claimed = await runCalibrationCommand({
+    type: "claim",
+    flowId: flow.id,
+    identity,
+    runnerUserId: opts?.runnerUserId,
+  });
   if (!claimed.ok) return { ok: false as const, reason: claimed.reason };
   return { ok: true as const, flow, identity: claimed.identity };
 }

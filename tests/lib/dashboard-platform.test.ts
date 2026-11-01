@@ -521,8 +521,13 @@ describe("dashboard platform surface", () => {
     expect(dashSrc).toContain('activeTab === "usage"');
     expect(dashSrc).not.toContain('activeTab === "upgrade"');
     expect(readRepo("components/dashboard/dashboard-upgrade-tab.tsx")).toContain("data-dashboard-upgrade");
-    expect(readRepo("components/dashboard/dashboard-upgrade-tab.tsx")).toContain("data-dashboard-module");
+    expect(readRepo("components/dashboard/dashboard-upgrade-tab.tsx")).toContain("data-dashboard-buy-credits");
     expect(readRepo("components/dashboard/dashboard-usage-tab.tsx")).toContain("DashboardUpgradeTab");
+    expect(readRepo("components/dashboard/dashboard-usage-tab.tsx")).toContain("data-dashboard-credits");
+    expect(readRepo("components/dashboard/dashboard-usage-tab.tsx")).toContain("creditBalance");
+    expect(readRepo("components/dashboard/dashboard-usage-tab.tsx")).toContain("StripeConnectPanel");
+    expect(readRepo("app/dashboard/page.tsx")).toContain("StripeConnectPanel");
+    expect(readRepo("components/dashboard/stripe-connect-panel.tsx")).toContain("data-aycl-stripe-connect");
   });
 
   it("loads owner-wide recent flows from verification and calibration tables", () => {

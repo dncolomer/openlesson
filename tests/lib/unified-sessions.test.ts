@@ -17,6 +17,7 @@ describe("unified sessions", () => {
     expect(kindFromGuestLogicalTable("workspace_calibrate_sessions")).toBe("calibrate");
     expect(kindFromGuestLogicalTable("workspace_verify_sessions")).toBe("verify");
     expect(kindFromGuestLogicalTable("workspace_learn_links")).toBe("learn");
+    expect(kindFromGuestLogicalTable("workspace_calibrate_sessions")).not.toBe("solve");
   });
 
   it("hydrates guest_link fields onto the session row", () => {

@@ -8,20 +8,19 @@ import {
   ENTERPRISE_SETUP_EMAIL,
   ENTERPRISE_SETUP_MAILTO,
 } from "@/lib/marketing/paths";
-import { FREE_WEEKLY_SESSION_LIMIT } from "@/lib/free-tier";
-import { formatUsdFromCents, TRY_EVERYTHING_PRICE_CENTS } from "@/lib/pricing/modules";
+import { FLOW_SESSION_CREDIT_COST, STARTER_CREDIT_GRANT } from "@/lib/credits/constants";
 
 export const UNIFIED_PRICING_COPY = {
   eyebrow: "PRICING",
-  title: "Pick a module.",
-  lead: "Start free, or pick Learning, Verification, Calibration, or try everything for three days.",
-  needsPlan: `Choose a module to continue, or try everything for 3 days for ${formatUsdFromCents(TRY_EVERYTHING_PRICE_CENTS)}.`,
+  title: "Pay for usage.",
+  lead: "Sign up free, get starter credits, and buy more when you run Calibrate, Learn, Verify, and Solve sessions.",
+  needsPlan: "Buy a credit pack to keep running sessions.",
   free: {
     id: "free",
     name: "Free",
     priceLabel: "$0",
-    cadence: `${FREE_WEEKLY_SESSION_LIMIT} sessions a week`,
-    body: "Home, My Maps, and Quick Work Session.",
+    cadence: `${STARTER_CREDIT_GRANT} starter credits`,
+    body: `Create Learning Maps and Knowledge Regions for free. Each flow session costs ${FLOW_SESSION_CREDIT_COST} credits.`,
     cta: "Create Free account",
     href: "/register",
   },

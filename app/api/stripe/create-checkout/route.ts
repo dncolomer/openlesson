@@ -2,13 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import Stripe from "stripe";
 import { createClient } from "@/lib/supabase/server";
-import { PUBLIC_MODULE_CHECKOUT_PRICE_TYPES } from "@/lib/pricing/harness-checkout";
 import {
-  isModuleSkuId,
-  moduleSkuCheckoutPriceData,
-  resolveModuleCheckout,
-} from "@/lib/pricing/modules";
-import { API_METERED_PLATFORM_FEE_CENTS, normalizePlanId } from "@/lib/plans";
+  creditPackCheckoutPriceData,
+  PUBLIC_MODULE_CHECKOUT_PRICE_TYPES,
+} from "@/lib/pricing/harness-checkout";
+import { API_METERED_PLATFORM_FEE_CENTS } from "@/lib/plans";
+import { isCreditPackSkuId } from "@/lib/credits/constants";
+import {
+  attachAyclConnectPaymentIntent,
+  resolveAyclPayoutCheckout,
+} from "@/lib/credits/aycl-connect";
 import {
   ayclPurchaseEligibleForUpgrade,
   createPendingAyclPurchase,
@@ -103,34 +106,10 @@ export async function POST(request: NextRequest) {
     let lineItem: Stripe.Checkout.SessionCreateParams.LineItem | null = null;
 
     let targetPlan = "";
-    if (isModuleSkuId(priceTypeResolved)) {
-      let currentPlan = "inactive";
-      if (user) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("organization_id")
-          .eq("id", user.id)
-          .maybeSingle();
-        if (profile?.organization_id) {
-          const { data: org } = await supabase
-            .from("organizations")
-            .select("plan")
-            .eq("id", profile.organization_id)
-            .maybeSingle();
-          currentPlan = normalizePlanId(org?.plan);
-        }
-      }
-      const resolved = resolveModuleCheckout(currentPlan, priceTypeResolved);
-      if (resolved.alreadyEntitled) {
-        return jsonError(400, "This organization already has that module");
-      }
-      targetPlan = resolved.plan;
+    let ayclConnectPaymentIntent: Record<string, unknown> | null = null;
+    if (isCreditPackSkuId(priceTypeResolved)) {
       lineItem = {
-        price_data: moduleSkuCheckoutPriceData(
-          priceTypeResolved,
-          resolved.unitAmount,
-          resolved.plan,
-        ),
+        price_data: creditPackCheckoutPriceData(priceTypeResolved),
         quantity: 1,
       };
     } else if (priceTypeResolved === "api_metered") {
@@ -242,6 +221,42 @@ export async function POST(request: NextRequest) {
         };
         (body as { __ayclAccessTier?: AyclAccessTier }).__ayclAccessTier = tier;
       }
+
+      const listingWorkspaceId =
+        workspaceId ||
+        (body as { __ayclUpgradeSourceWorkspaceId?: string }).__ayclUpgradeSourceWorkspaceId ||
+        "";
+      if (listingWorkspaceId) {
+        const { data: listingOwner } = await createAdminClient()
+          .from("workspaces")
+          .select("user_id")
+          .eq("id", listingWorkspaceId)
+          .maybeSingle();
+        if (listingOwner?.user_id) {
+          const { data: authorProfile } = await createAdminClient()
+            .from("profiles")
+            .select("stripe_connect_account_id, stripe_connect_charges_enabled")
+            .eq("id", listingOwner.user_id)
+            .maybeSingle();
+          const author = {
+            accountId: (authorProfile?.stripe_connect_account_id as string | null) || null,
+            chargesEnabled: Boolean(authorProfile?.stripe_connect_charges_enabled),
+          };
+          const payout = resolveAyclPayoutCheckout({
+            author,
+            amountCents: lineItem?.price_data && "unit_amount" in (lineItem.price_data || {})
+              ? Number((lineItem.price_data as { unit_amount?: number }).unit_amount || 0)
+              : 0,
+            payoutRequired: Boolean(author.accountId),
+          });
+          if (!payout.ok) {
+            return jsonError(400, payout.reason, "connect_required");
+          }
+          if (payout.paymentIntentData) {
+            ayclConnectPaymentIntent = payout.paymentIntentData;
+          }
+        }
+      }
     }
 
     if (!priceId && !lineItem) {
@@ -319,7 +334,7 @@ export async function POST(request: NextRequest) {
         : isGuestCheckout
           ? `${origin}/register?session_id={CHECKOUT_SESSION_ID}`
           : user
-            ? `${origin}/dashboard?tab=upgrade&session_id={CHECKOUT_SESSION_ID}`
+            ? `${origin}/dashboard?tab=usage&session_id={CHECKOUT_SESSION_ID}`
             : `${origin}/pricing/success?session_id={CHECKOUT_SESSION_ID}`;
 
     const cancelUrl =
@@ -343,7 +358,15 @@ export async function POST(request: NextRequest) {
             },
           }
         : {
-            payment_intent_data: { metadata },
+            payment_intent_data: attachAyclConnectPaymentIntent({
+              existing: { metadata },
+              attachment: ayclConnectPaymentIntent as
+                | {
+                    application_fee_amount: number;
+                    transfer_data: { destination: string };
+                  }
+                | null,
+            }),
           }),
     });
 

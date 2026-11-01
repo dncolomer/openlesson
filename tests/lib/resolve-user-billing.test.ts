@@ -41,7 +41,7 @@ describe("org-resolved workspace and API gates (post-migrate)", () => {
     expect(check.allowed).toBe(true);
   });
 
-  it("denies workspace create when org inactive even if personal fields look paid", () => {
+  it("allows Learning Map create when org is inactive (credits, not subscription)", () => {
     const entity = resolveBillingEntity(
       {
         ...inactivePersonal,
@@ -60,7 +60,7 @@ describe("org-resolved workspace and API gates (post-migrate)", () => {
     const userProfile = billingEntityToUserProfile(entity);
     expect(userProfile.plan).toBe("inactive");
     const check = canCreateWorkspace(userProfile, 0);
-    expect(check.allowed).toBe(false);
+    expect(check.allowed).toBe(true);
   });
 
   it("grants API access from org api_metered not personal plan", () => {

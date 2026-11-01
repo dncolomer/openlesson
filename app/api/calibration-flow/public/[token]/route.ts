@@ -9,6 +9,10 @@ import {
   claimCalibrationIdentity,
   getCalibrationFlowByToken,
 } from "@/lib/calibration-flow-repository";
+import {
+  insufficientCreditsResponse,
+  runnerUserIdFromCookies,
+} from "@/lib/credits/request-runner";
 
 export const runtime = "nodejs";
 
@@ -36,7 +40,9 @@ export async function POST(
   try {
     const { token } = await context.params;
     const body = (await req.json().catch(() => ({}))) as { identity?: string };
-    const claimed = await claimCalibrationIdentity(token, String(body.identity || ""));
+    const claimed = await claimCalibrationIdentity(token, String(body.identity || ""), {
+      runnerUserId: await runnerUserIdFromCookies(),
+    });
     if (!claimed.ok) {
       const status = claimed.reason === "not_found" ? 404 : 400;
       return jsonError(status, claimed.reason);
@@ -54,6 +60,8 @@ export async function POST(
       questions: claimed.flow.questions,
     });
   } catch (error) {
+    const credits = insufficientCreditsResponse(error);
+    if (credits) return credits;
     console.error("calibration claim failed", error instanceof Error ? error.stack : error);
     return jsonError(500, "Could not start");
   }

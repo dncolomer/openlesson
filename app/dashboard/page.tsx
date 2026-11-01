@@ -22,6 +22,7 @@ import { DashboardPlansTab } from "@/components/dashboard/dashboard-plans-tab";
 import { DashboardSessionsTab } from "@/components/dashboard/dashboard-sessions-tab";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DashboardUsageTab } from "@/components/dashboard/dashboard-usage-tab";
+import { StripeConnectPanel } from "@/components/dashboard/stripe-connect-panel";
 import { fetchAestheticPackages } from "@/lib/aesthetics";
 import { buildMcpClientConfig } from "@/lib/pow-api/mcp-proof-of-work-catalog";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
@@ -139,6 +140,17 @@ export default function DashboardPage() {
     weeklySessionsLimit?: number | null;
     weeklySessionsResetAt?: string | null;
     weeklySessionsAllowed?: boolean;
+    creditBalance?: number;
+    sessionCreditCost?: number;
+    starterCreditGrant?: number;
+    creditGrants?: Array<{ id: string; reason: string; amount: number; createdAt: string }>;
+    creditDebits?: Array<{
+      id: string;
+      reason: string;
+      amount: number;
+      flowKind?: string | null;
+      createdAt: string;
+    }>;
   } | null>(null);
   const [loadingUsage, setLoadingUsage] = useState(false);
 
@@ -314,6 +326,11 @@ export default function DashboardPage() {
                 : usageResult.weeklySessionsLimit,
             weeklySessionsResetAt: usageResult.weeklySessionsResetAt ?? null,
             weeklySessionsAllowed: usageResult.weeklySessionsAllowed !== false,
+            creditBalance: usageResult.creditBalance ?? 0,
+            sessionCreditCost: usageResult.sessionCreditCost,
+            starterCreditGrant: usageResult.starterCreditGrant,
+            creditGrants: usageResult.creditGrants ?? [],
+            creditDebits: usageResult.creditDebits ?? [],
           });
           setXaiUsageOverride(null);
           setXaiPeriod("billing");
@@ -790,6 +807,12 @@ export default function DashboardPage() {
           activeTab === "solve") && (
           <DashboardFlowsTab productTab={activeTab} formatDate={formatDate} />
         )}
+
+        {isDashboardShopTab(activeTab) ? (
+          <div className="mb-6">
+            <StripeConnectPanel />
+          </div>
+        ) : null}
 
         {(activeTab === "learning" || isDashboardShopTab(activeTab)) && (
           <DashboardPlansTab

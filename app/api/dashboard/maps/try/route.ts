@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
-import { rejectIfFreeWeeklySessionLimit } from "@/lib/api/free-session-quota";
-import { loadProductAccessSnapshot } from "@/lib/api/product-access";
+import { rejectIfInsufficientSessionCredits } from "@/lib/credits/account";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { pickHomeMapTryBlock } from "@/lib/dashboard-home-catalog";
 import { dashboardPlayHref } from "@/lib/dashboard-play";
 import { forkWorkspaceExactCopy } from "@/lib/fork-workspace";
@@ -14,13 +14,6 @@ export async function POST(req: NextRequest) {
   try {
     const auth = await requireAuthenticatedUser();
     if (!auth.ok) return auth.response;
-
-    const access = await loadProductAccessSnapshot(auth.supabase, auth.user.id);
-    if (!access.ok) return access.response;
-    if (!access.hasPaidAccess) {
-      const denied = await rejectIfFreeWeeklySessionLimit(auth.supabase, auth.user.id);
-      if (denied) return denied;
-    }
 
     const body = (await req.json().catch(() => ({}))) as { workspaceId?: unknown };
     const workspaceId = String(body.workspaceId || "").trim();
@@ -74,6 +67,13 @@ export async function POST(req: NextRequest) {
       return jsonError(400, "This map has no blocks to try");
     }
 
+    const denied = await rejectIfInsufficientSessionCredits(createAdminClient(), {
+      runnerUserId: auth.user.id,
+      ownerUserId: auth.user.id,
+      flowKind: "learn",
+    });
+    if (denied) return denied;
+
     const { data: session, error: sessionError } = await auth.supabase
       .from("sessions")
       .insert({
@@ -95,6 +95,8 @@ export async function POST(req: NextRequest) {
       .select("id")
       .single();
     if (sessionError || !session) {
+      const { creditStoreFromClient, refundFlowSessionCredits } = await import("@/lib/credits/account");
+      await refundFlowSessionCredits(creditStoreFromClient(createAdminClient()), auth.user.id).catch(() => {});
       return jsonError(500, sessionError?.message || "Failed to start session");
     }
 

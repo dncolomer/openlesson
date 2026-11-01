@@ -59,7 +59,7 @@ describe("dashboard play sessions", () => {
     expect(dash).toContain("PlayCalibrateSession");
     expect(readRepo("app/api/play/start/route.ts")).toContain("dashboardPlaySessionMetadata");
     expect(readRepo("app/api/play/curious/route.ts")).toContain("parseCuriousPrompt");
-    expect(readRepo("app/api/play/curious/route.ts")).toContain("rejectIfFreeWeeklySessionLimit");
+    expect(readRepo("app/api/play/curious/route.ts")).toContain("rejectIfInsufficientSessionCredits");
     expect(readRepo("app/api/play/curious/route.ts")).toContain("callXaiText");
     expect(readRepo("app/play/verify/page.tsx")).toContain("localOpening");
     expect(readRepo("app/play/calibrate/page.tsx")).toContain("PlayCalibrateSession");

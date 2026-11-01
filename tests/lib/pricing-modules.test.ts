@@ -57,7 +57,7 @@ describe("module combination plans", () => {
     expect(priceCentsForPlan("verify_calibrate")).toBe(VERIFY_CALIBRATE_BUNDLE_PRICE_CENTS);
   });
 
-  it("resolves checkout onto the merged combo price", () => {
+  it("keeps internal combo checkout helpers for leftover org plans", () => {
     const addVerify = resolveModuleCheckout("learn", "module_verify");
     expect(addVerify.alreadyEntitled).toBe(false);
     expect(addVerify.plan).toBe("learn_verify");
@@ -80,14 +80,18 @@ describe("module combination plans", () => {
     expect(planFeatureList("calibrate")).toContain("Calibration flows and knowledge regions");
     expect(planFeatureList("verify")).not.toContain("Verification workspaces");
     expect(planFeatureList("calibrate")).not.toContain("Calibration workspaces");
-    const verify = PUBLIC_SKU_CARDS.find((card) => card.id === "module_verify");
-    const calibrate = PUBLIC_SKU_CARDS.find((card) => card.id === "module_calibrate");
-    const bundle = PUBLIC_SKU_CARDS.find((card) => card.id === "bundle_verify_calibrate");
-    expect(verify?.body).toContain("Verification flows and knowledge regions");
-    expect(verify?.features).toContain("Verification flows");
-    expect(calibrate?.body).toContain("Calibration flows and knowledge regions");
-    expect(calibrate?.features).toContain("Calibration flows");
-    expect(bundle?.features).toContain("Verification flows and regions");
-    expect(bundle?.features).toContain("Calibration flows and regions");
+    expect(planFeatureList("inactive").join(" ")).toMatch(/starter credits/i);
+  });
+});
+
+describe("public credit packs", () => {
+  it("exposes one-time credit packs as the sold public SKUs", async () => {
+    const { PRICING_PAGE_SKUS, CREDIT_PACK_CARDS } = await import("@/lib/pricing/modules");
+    expect(PRICING_PAGE_SKUS.map((card) => card.id)).toEqual([
+      "credits_100",
+      "credits_500",
+      "credits_2000",
+    ]);
+    expect(CREDIT_PACK_CARDS.every((card) => card.cadence === "one-time")).toBe(true);
   });
 });

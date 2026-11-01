@@ -8,11 +8,11 @@ const standardSocial = standardShareSocialMetadata({
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Buy Learning, Verification, or Calibration. Try everything for 3 days for $24.99. Course authoring and custom setup on request.",
+    "Sign up free, get starter credits, and buy one-time credit packs to run Calibrate, Learn, Verify, and Solve sessions.",
   keywords: [
     "AI tutor pricing",
     "learning platform cost",
-    "AI tutoring subscription",
+    "usage credits",
     "educational AI pricing",
     "open source AI tutor",
   ],

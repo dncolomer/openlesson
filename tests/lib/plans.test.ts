@@ -94,13 +94,13 @@ describe("plans workspace limits", () => {
     expect(getWorkspaceLimit({ ...baseProfile, plan: "trial" })).toBeNull();
   });
 
-  it("blocks inactive workspace creation", () => {
+  it("allows Learning Map create on a free account without a subscription", () => {
     const result = canCreateWorkspace(
       { ...baseProfile, plan: "inactive", subscription_status: "inactive" },
       0
     );
-    expect(result.allowed).toBe(false);
-    expect(result.limit).toBe(0);
+    expect(result.allowed).toBe(true);
+    expect(result.limit).toBeNull();
   });
 
   it("allows complimentary token-tier access with inactive personal plan", () => {

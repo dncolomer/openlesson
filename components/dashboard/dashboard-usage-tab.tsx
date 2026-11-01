@@ -2,8 +2,9 @@
 
 import type { OrgUsageSummary } from "@/lib/plans";
 import type { DashboardTab } from "@/lib/dashboard-nav";
-import { formatFreeWeekReset } from "@/lib/free-tier";
+import { FLOW_SESSION_CREDIT_COST, STARTER_CREDIT_GRANT } from "@/lib/credits/constants";
 import { DashboardUpgradeTab } from "@/components/dashboard/dashboard-upgrade-tab";
+import { StripeConnectPanel } from "@/components/dashboard/stripe-connect-panel";
 
 type XaiPeriodPreset = "7d" | "30d" | "90d" | "billing";
 
@@ -15,7 +16,7 @@ export type DashboardUsageTabProps = {
   setDashboardTab: (tab: DashboardTab) => void;
   t: (key: string, params?: Record<string, string | number>) => string;
   usageCardClass: "console-copy rounded-none p-5 sm:p-6";
-  usageData: { plan: string; used: number; personalUsed: number; limit: number | null; proofOfWorkUsed: number; proofOfWorkPersonalUsed: number; proofOfWorkLimit: number | null; workspacesUsed: number; workspacesLimit: number | null; periodEnd: string | null; subscriptionStatus: string; organization: OrgUsageSummary | null; isAdmin: boolean; billingMode?: "subscription" | "partner" | null; canUseAgentApi?: boolean; apiPowCallsUsed?: number; tapSessionsUsed?: number; ileSessionsUsed?: number; apiMeteredInvoice?: { platformCents: number; usageCents: number; usageCentsRounded?: number; totalCents: number; externalPowCount?: number; tapSessionCount?: number; ileSessionCount?: number; externalPowCents?: number; tapSessionCents?: number; ileSessionCents?: number; } | null; xaiUsage?: { available: boolean; apiKeyId: string; apiKeyName: string | null; periodStart: string; periodEnd: string; totalUsd: number; lines: Array<{ description: string; usd: number; }>; error?: string; } | null; hasPaidAccess?: boolean; freeTier?: boolean; weeklySessionsUsed?: number; weeklySessionsLimit?: number | null; weeklySessionsResetAt?: string | null; weeklySessionsAllowed?: boolean; } | null;
+  usageData: { plan: string; used: number; personalUsed: number; limit: number | null; proofOfWorkUsed: number; proofOfWorkPersonalUsed: number; proofOfWorkLimit: number | null; workspacesUsed: number; workspacesLimit: number | null; periodEnd: string | null; subscriptionStatus: string; organization: OrgUsageSummary | null; isAdmin: boolean; billingMode?: "subscription" | "partner" | null; canUseAgentApi?: boolean; apiPowCallsUsed?: number; tapSessionsUsed?: number; ileSessionsUsed?: number; apiMeteredInvoice?: { platformCents: number; usageCents: number; usageCentsRounded?: number; totalCents: number; externalPowCount?: number; tapSessionCount?: number; ileSessionCount?: number; externalPowCents?: number; tapSessionCents?: number; ileSessionCents?: number; } | null; xaiUsage?: { available: boolean; apiKeyId: string; apiKeyName: string | null; periodStart: string; periodEnd: string; totalUsd: number; lines: Array<{ description: string; usd: number; }>; error?: string; } | null; hasPaidAccess?: boolean; freeTier?: boolean; weeklySessionsUsed?: number; weeklySessionsLimit?: number | null; weeklySessionsResetAt?: string | null; weeklySessionsAllowed?: boolean; creditBalance?: number; sessionCreditCost?: number; starterCreditGrant?: number; creditGrants?: Array<{ id: string; reason: string; amount: number; createdAt: string }>; creditDebits?: Array<{ id: string; reason: string; amount: number; flowKind?: string | null; createdAt: string }>; } | null;
   usageLabelClass: "font-mono text-[10px] uppercase tracking-[2px] text-neutral-500";
   usageProgress: (used: number, limit: number | null) => number;
   xaiPeriod: "7d" | "30d" | "90d" | "billing";
@@ -113,12 +114,10 @@ export function DashboardUsageTab({
             <div className="console-copy flex flex-wrap items-center justify-between gap-3 px-6 py-5">
               <div>
                 <h2 className="text-2xl font-medium tracking-[-0.5px] text-white">
-                  {isBillingBypass ? "Usage" : t("dashboard.yourSubscription")}
+                  Usage
                 </h2>
                 <p className="mt-1 text-sm text-neutral-500">
-                  {isBillingBypass
-                    ? "Proof-of-Work and inference spend for your organization."
-                    : t("dashboard.usageSubtitle")}
+                  Credit balance, grants, and session costs.
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -140,14 +139,12 @@ export function DashboardUsageTab({
               <div className="text-center py-12 text-neutral-400">{t("common.loading")}</div>
             ) : usageData ? (
               <>
-                {/* 1 · Plan & access */}
-                <section>
+                {/* 1 · Credits */}
+                <section data-dashboard-credits>
                   {sectionTitle(
-                    "1 · Plan & access",
-                    isBillingBypass ? "What you have access to" : "Your plan",
-                    isBillingBypass
-                      ? "Product entitlement is complimentary (Stripe bypass)."
-                      : "Subscription tier and billing cycle."
+                    "1 · Credits",
+                    "Your balance",
+                    `Starter grant ${usageData.starterCreditGrant ?? STARTER_CREDIT_GRANT}. Each flow session costs ${usageData.sessionCreditCost ?? FLOW_SESSION_CREDIT_COST} credits.`
                   )}
                   <div className={`grid gap-4 ${isBillingBypass ? "md:grid-cols-1" : "md:grid-cols-2"}`}>
                     <div className={usageCardClass}>
@@ -158,7 +155,7 @@ export function DashboardUsageTab({
                         {planBadge}
                       </div>
                       <div className="mt-4 text-3xl font-medium tracking-[-1px] text-white">
-                        {planDisplayName(usageData.plan, usageData.isAdmin)}
+                        {usageData.creditBalance ?? 0} credits
                       </div>
                       {isBillingBypass ? (
                         <p className="mt-2 text-sm text-neutral-300">
@@ -181,23 +178,19 @@ export function DashboardUsageTab({
                           )}
                         </>
                       )}
-                      {(usageData.freeTier || usageData.hasPaidAccess === false) && (
-                        <div
-                          className="mt-6 border-t border-white/10 pt-4"
-                          data-dashboard-free-quota
-                        >
-                          <p className={usageLabelClass}>Weekly sessions</p>
-                          <p className="mt-1 text-sm text-white">
-                            {usageData.weeklySessionsUsed ?? 0} of{" "}
-                            {usageData.weeklySessionsLimit ?? 3} used
-                          </p>
-                          {usageData.weeklySessionsResetAt ? (
-                            <p className="mt-1 text-xs text-neutral-500">
-                              Resets {formatFreeWeekReset(usageData.weeklySessionsResetAt)} (UTC).
-                            </p>
-                          ) : null}
-                        </div>
-                      )}
+                      <div
+                        className="mt-6 border-t border-white/10 pt-4"
+                        data-dashboard-credits-quota
+                      >
+                        <p className={usageLabelClass}>Session cost</p>
+                        <p className="mt-1 text-sm text-white">
+                          {usageData.sessionCreditCost ?? FLOW_SESSION_CREDIT_COST} credits per
+                          Calibrate, Learn, Verify, or Solve session
+                        </p>
+                        <p className="mt-1 text-xs text-neutral-500">
+                          Creating a Learning Map or Knowledge Region does not spend credits.
+                        </p>
+                      </div>
                       {usageData.organization && (
                         <p className="mt-4 border-t border-neutral-800 pt-3 text-xs text-neutral-500">
                           Organization:{" "}
@@ -208,6 +201,25 @@ export function DashboardUsageTab({
                           {usageData.organization.memberCount} members
                         </p>
                       )}
+                    </div>
+                    <div className={usageCardClass} data-dashboard-credit-ledger>
+                      <p className={usageLabelClass}>Grants and session debits</p>
+                      <ul className="mt-4 space-y-2 text-sm text-neutral-400">
+                        {(usageData.creditGrants || []).slice(-8).reverse().map((entry) => (
+                          <li key={entry.id}>
+                            +{entry.amount} · {entry.reason}
+                          </li>
+                        ))}
+                        {(usageData.creditDebits || []).slice(-8).reverse().map((entry) => (
+                          <li key={entry.id}>
+                            {entry.amount} · {entry.flowKind || "session"} · {entry.reason}
+                          </li>
+                        ))}
+                        {(usageData.creditGrants || []).length === 0 &&
+                        (usageData.creditDebits || []).length === 0 ? (
+                          <li>No credit movements yet.</li>
+                        ) : null}
+                      </ul>
                     </div>
 
                     {!isBillingBypass && (
@@ -563,12 +575,15 @@ export function DashboardUsageTab({
               </div>
             )}
 
+            <StripeConnectPanel />
+
             <div id="dashboard-upgrade">
               <DashboardUpgradeTab
                 plan={usageData?.plan || "inactive"}
                 subscriptionStatus={usageData?.subscriptionStatus || "inactive"}
                 periodEnd={usageData?.periodEnd ?? null}
                 isAdmin={Boolean(usageData?.isAdmin)}
+                balance={usageData?.creditBalance}
               />
             </div>
           </div>

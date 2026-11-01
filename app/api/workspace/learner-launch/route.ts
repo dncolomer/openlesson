@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
-import { rejectIfFreeWeeklySessionLimit } from "@/lib/api/free-session-quota";
-import { loadProductAccessSnapshot } from "@/lib/api/product-access";
+import { rejectIfInsufficientSessionCredits } from "@/lib/credits/account";
+import { billedUserIdForSession } from "@/lib/credits/ledger";
 import { ayclTokenFromBody, ileTokenFromBody, guardWorkspaceRoute } from "@/lib/api/require-auth";
-import { isPaidOnlyWorkspaceKind } from "@/lib/free-tier";
+import { runnerUserIdFromCookies } from "@/lib/credits/request-runner";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { buildLearnerLaunchBody } from "@/lib/workspace-learner-writes";
 
 export const runtime = "nodejs";
@@ -36,30 +37,20 @@ export async function POST(request: NextRequest) {
     });
     if (!auth.ok) return auth.response;
 
-    if (auth.principal.kind === "cookie_user") {
-      const access = await loadProductAccessSnapshot(auth.supabase, auth.persistUserId);
-      if (!access.ok) return access.response;
-      if (!access.hasPaidAccess) {
-        const { data: workspaceKindRow } = await auth.supabase
-          .from("workspaces")
-          .select("workspace_kind")
-          .eq("id", workspaceId)
-          .maybeSingle();
-        if (isPaidOnlyWorkspaceKind(workspaceKindRow?.workspace_kind)) {
-          return jsonError(
-            403,
-            "Upgrade to run Verification or Calibration.",
-            "product_access_required",
-            { renew_url: "/pricing" },
-          );
-        }
-        const denied = await rejectIfFreeWeeklySessionLimit(
-          auth.supabase,
-          auth.persistUserId,
-        );
-        if (denied) return denied;
-      }
-    }
+    const { data: workspaceOwner } = await auth.supabase
+      .from("workspaces")
+      .select("user_id")
+      .eq("id", workspaceId)
+      .maybeSingle();
+    const cookieRunner =
+      auth.principal.kind === "cookie_user"
+        ? auth.persistUserId
+        : await runnerUserIdFromCookies();
+    const ownerUserId = String(workspaceOwner?.user_id || auth.persistUserId || "");
+    const billedUserId = billedUserIdForSession({
+      runnerUserId: cookieRunner,
+      ownerUserId,
+    });
 
     const { data: block, error: blockError } = await auth.supabase
       .from("blocks")
@@ -88,6 +79,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const denied = await rejectIfInsufficientSessionCredits(createAdminClient(), {
+      runnerUserId: cookieRunner,
+      ownerUserId,
+      flowKind: "learn",
+    });
+    if (denied) return denied;
+
     const { data: session, error: sessionError } = await auth.supabase
       .from("sessions")
       .insert({
@@ -114,6 +112,8 @@ export async function POST(request: NextRequest) {
       .select("id")
       .single();
     if (sessionError || !session) {
+      const { creditStoreFromClient, refundFlowSessionCredits } = await import("@/lib/credits/account");
+      await refundFlowSessionCredits(creditStoreFromClient(createAdminClient()), billedUserId).catch(() => {});
       return jsonError(500, sessionError?.message || "Failed to create session");
     }
 
@@ -123,6 +123,8 @@ export async function POST(request: NextRequest) {
       .eq("id", blockId)
       .eq("workspace_id", workspaceId);
     if (blockUpdateError) {
+      const { creditStoreFromClient, refundFlowSessionCredits } = await import("@/lib/credits/account");
+      await refundFlowSessionCredits(creditStoreFromClient(createAdminClient()), billedUserId).catch(() => {});
       await auth.supabase
         .from("sessions")
         .update({ status: "archived" })

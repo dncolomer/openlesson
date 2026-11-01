@@ -138,7 +138,7 @@ export type CalibrationCommand =
       actionCatalog?: number;
     }
   | { type: "remove"; workspaceId?: string; ownerUserId?: string; flowId: string }
-  | { type: "claim"; flowId: string; identity: string }
+  | { type: "claim"; flowId: string; identity: string; runnerUserId?: string | null }
   | {
       type: "addProof";
       flowId: string;

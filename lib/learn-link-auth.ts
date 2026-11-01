@@ -1,4 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isInsufficientCreditsError } from "@/lib/credits/account";
+import { billedUserIdForSession } from "@/lib/credits/ledger";
+import { runnerUserIdFromCookies } from "@/lib/credits/request-runner";
 import { hashPrivateToken } from "@/lib/learn-link";
 import {
   stampSourceLinkMetadata,
@@ -43,6 +46,20 @@ export interface ResolvedIleLinkContext {
 
 const LINK_SELECT =
   "id, workspace_id, block_id, user_id, guest_user_id, assigned_user_id, organization_id, status, private_token_hash, access_mode, public_token, guest_link, kind";
+
+/** Guest/shared Learn links: assigned or signed-in runner; otherwise the owner. */
+export function billedUserIdForIleLinkSession(input: {
+  assignedUserId?: string | null;
+  cookieRunnerUserId?: string | null;
+  ownerUserId: string;
+}): string {
+  const assigned = String(input.assignedUserId || "").trim();
+  const cookie = String(input.cookieRunnerUserId || "").trim();
+  return billedUserIdForSession({
+    runnerUserId: assigned || cookie || null,
+    ownerUserId: input.ownerUserId,
+  });
+}
 
 export async function resolveIleLinkAccess(
   accessToken: string,
@@ -223,7 +240,16 @@ export async function ensureIleLinkSession(
   | { sessionId: string; resumed: boolean; blockTitle: string; sessionMode: IleSessionMode }
   | { error: string; status: number }
 > {
-  const { supabase, workspaceId, blockId, ownerUserId, linkId, guestUserId, sessionMode } = ctx;
+  const {
+    supabase,
+    workspaceId,
+    blockId,
+    ownerUserId,
+    linkId,
+    guestUserId,
+    sessionMode,
+    assignedUserId,
+  } = ctx;
 
   // Resume only when the linked practice session is still live.
   // Completed / ended / missing sessions fall through to a new run (same guest).
@@ -281,61 +307,92 @@ export async function ensureIleLinkSession(
   const blockTitle = block.title || "Practice";
   const planningPrompt = block.planning_prompt || block.description || null;
 
-  const { data: session, error: sessionError } = await supabase
-    .from("sessions")
-    .insert({
-      user_id: ownerUserId,
-      problem: blockTitle,
-      status: "active",
-      kind: "learn",
-      workspace_id: workspaceId,
-      block_id: blockId,
-      guest_user_id: guestUserId,
-      planning_prompt: planningPrompt,
-      metadata: stampSourceLinkMetadata(
-        {
-          workspace_id: workspaceId,
-          block_id: blockId,
-          block_title: blockTitle,
-          guest_user_id: guestUserId,
-          ile_guest_access: true,
-          session_mode: sessionMode,
-          ile_session_mode: sessionMode,
-        },
-        { kind: "learn", linkId },
-      ),
-    })
-    .select("id")
-    .single();
+  const cookieRunnerUserId = await runnerUserIdFromCookies();
+  const runnerUserId =
+    String(assignedUserId || "").trim() || cookieRunnerUserId;
+  const billedUserId = billedUserIdForIleLinkSession({
+    assignedUserId,
+    cookieRunnerUserId,
+    ownerUserId,
+  });
+  let chargedUserId: string | null = null;
+  try {
+    const { debitClaimedFlowSession, refundClaimedFlowSession } = await import(
+      "@/lib/credits/claim-charge"
+    );
+    const charged = await debitClaimedFlowSession({
+      ownerUserId,
+      runnerUserId,
+      flowKind: "learn",
+    });
+    chargedUserId = charged?.billedUserId || billedUserId;
 
-  if (sessionError || !session) {
-    console.error("[ile-link] Session create error:", sessionError);
-    return { error: "Failed to create Learn session", status: 500 };
-  }
-
-  await supabase
-    .from("blocks")
-    .update({
-      status: "in_progress",
-      session_id: session.id,
-      ...(planningPrompt ? { planning_prompt: planningPrompt } : {}),
-    })
-    .eq("id", blockId);
-
-  const now = new Date().toISOString();
-  await supabase
-    .from("sessions")
-    .update({
-      status: "active",
-      guest_link: {
-        session_id: session.id,
+    const { data: session, error: sessionError } = await supabase
+      .from("sessions")
+      .insert({
+        user_id: ownerUserId,
+        problem: blockTitle,
         status: "active",
-        started_at: now,
-        completed_at: null,
-      },
-    })
-    .eq("id", linkId)
-    .eq("kind", "learn");
+        kind: "learn",
+        workspace_id: workspaceId,
+        block_id: blockId,
+        guest_user_id: guestUserId,
+        planning_prompt: planningPrompt,
+        metadata: stampSourceLinkMetadata(
+          {
+            workspace_id: workspaceId,
+            block_id: blockId,
+            block_title: blockTitle,
+            guest_user_id: guestUserId,
+            ile_guest_access: true,
+            session_mode: sessionMode,
+            ile_session_mode: sessionMode,
+          },
+          { kind: "learn", linkId },
+        ),
+      })
+      .select("id")
+      .single();
 
-  return { sessionId: session.id, resumed: false, blockTitle, sessionMode };
+    if (sessionError || !session) {
+      await refundClaimedFlowSession(chargedUserId);
+      console.error("[ile-link] Session create error:", sessionError);
+      return { error: "Failed to create Learn session", status: 500 };
+    }
+
+    await supabase
+      .from("blocks")
+      .update({
+        status: "in_progress",
+        session_id: session.id,
+        ...(planningPrompt ? { planning_prompt: planningPrompt } : {}),
+      })
+      .eq("id", blockId);
+
+    const now = new Date().toISOString();
+    await supabase
+      .from("sessions")
+      .update({
+        status: "active",
+        guest_link: {
+          session_id: session.id,
+          status: "active",
+          started_at: now,
+          completed_at: null,
+        },
+      })
+      .eq("id", linkId)
+      .eq("kind", "learn");
+
+    return { sessionId: session.id, resumed: false, blockTitle, sessionMode };
+  } catch (error) {
+    if (chargedUserId) {
+      const { refundClaimedFlowSession } = await import("@/lib/credits/claim-charge");
+      await refundClaimedFlowSession(chargedUserId);
+    }
+    if (isInsufficientCreditsError(error)) {
+      return { error: error.message, status: 402 };
+    }
+    throw error;
+  }
 }

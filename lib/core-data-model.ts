@@ -172,6 +172,7 @@ export function isMapLearnSession(row: {
 }
 
 export function solveFlowIdFromSession(row: {
+  kind?: unknown;
   solve_flow_id?: unknown;
   solveFlowId?: unknown;
 }): string | null {

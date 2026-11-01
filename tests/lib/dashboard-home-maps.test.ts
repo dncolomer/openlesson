@@ -420,7 +420,7 @@ describe("dashboard home and my maps surface", () => {
     expect(tryRoute).toContain('dashboardPlayHref("learn"');
     expect(tryRoute).toContain("session_mode: \"learning\"");
     expect(tryRoute).toContain("isPlayCopy: true");
-    expect(tryRoute).toContain("rejectIfFreeWeeklySessionLimit");
+    expect(tryRoute).toContain("rejectIfInsufficientSessionCredits");
 
     expect(readRepo("app/api/workspaces/[id]/visibility/route.ts")).not.toContain(
       "rejectPublishWithoutCategory",

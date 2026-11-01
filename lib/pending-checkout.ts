@@ -105,30 +105,41 @@ export async function claimPendingCheckout(
     return { ok: false, error: "Email does not match the checkout payment." };
   }
 
-  const update = profileUpdateFromCheckout({
-    priceType: pending.price_type,
-    monthlyVolume: pending.monthly_volume ?? 0,
-    stripeCustomerId: pending.stripe_customer_id,
-    stripeSubscriptionId: pending.stripe_subscription_id,
-    currentPeriodEnd: pending.current_period_end,
-  });
-
-  try {
-    const { applyBillingToUserOrganization } = await import(
-      "@/lib/organization/apply-org-billing"
-    );
-    await applyBillingToUserOrganization(supabase, {
+  const { isCreditPackSkuId } = await import("@/lib/credits/constants");
+  if (isCreditPackSkuId(pending.price_type)) {
+    const { grantCreditPack, creditStoreFromClient } = await import("@/lib/credits/account");
+    await grantCreditPack(
+      creditStoreFromClient(supabase),
       userId,
-      plan: update.plan,
-      subscriptionStatus: update.subscription_status,
-      currentPeriodEnd: update.current_period_end,
-      extraLessons: update.extra_lessons,
+      pending.price_type,
+      pending.stripe_session_id,
+    );
+  } else {
+    const update = profileUpdateFromCheckout({
+      priceType: pending.price_type,
+      monthlyVolume: pending.monthly_volume ?? 0,
       stripeCustomerId: pending.stripe_customer_id,
       stripeSubscriptionId: pending.stripe_subscription_id,
+      currentPeriodEnd: pending.current_period_end,
     });
-  } catch (err) {
-    console.error("claimPendingCheckout org billing error:", err);
-    return { ok: false, error: "Failed to activate subscription on organization." };
+
+    try {
+      const { applyBillingToUserOrganization } = await import(
+        "@/lib/organization/apply-org-billing"
+      );
+      await applyBillingToUserOrganization(supabase, {
+        userId,
+        plan: update.plan,
+        subscriptionStatus: update.subscription_status,
+        currentPeriodEnd: update.current_period_end,
+        extraLessons: update.extra_lessons,
+        stripeCustomerId: pending.stripe_customer_id,
+        stripeSubscriptionId: pending.stripe_subscription_id,
+      });
+    } catch (err) {
+      console.error("claimPendingCheckout org billing error:", err);
+      return { ok: false, error: "Failed to activate subscription on organization." };
+    }
   }
 
   const { error: claimError } = await supabase

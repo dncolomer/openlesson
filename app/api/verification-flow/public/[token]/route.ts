@@ -11,6 +11,10 @@ import {
   claimPublicIdentity,
   getVerificationFlowByToken,
 } from "@/lib/verification-flow-repository";
+import {
+  insufficientCreditsResponse,
+  runnerUserIdFromCookies,
+} from "@/lib/credits/request-runner";
 
 export const runtime = "nodejs";
 
@@ -36,7 +40,10 @@ export async function POST(
 ) {
   const { token } = await context.params;
   const body = (await req.json().catch(() => ({}))) as { identity?: string };
-  const claimed = await claimPublicIdentity(token, String(body.identity || ""));
+  try {
+  const claimed = await claimPublicIdentity(token, String(body.identity || ""), {
+    runnerUserId: await runnerUserIdFromCookies(),
+  });
   if (!claimed.ok) {
     const status = claimed.reason === "not_found" ? 404 : 400;
     return jsonError(status, claimed.reason);
@@ -57,4 +64,9 @@ export async function POST(
       : null,
     topics: claimed.choices.topics,
   });
+  } catch (error) {
+    const credits = insufficientCreditsResponse(error);
+    if (credits) return credits;
+    return jsonError(500, error instanceof Error ? error.message : "Could not start");
+  }
 }

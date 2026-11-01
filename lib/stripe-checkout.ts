@@ -9,10 +9,12 @@ import {
   type ModuleSkuId,
 } from "@/lib/pricing/modules";
 import { PUBLIC_MODULE_CHECKOUT_PRICE_TYPES } from "@/lib/pricing/harness-checkout";
+import { isCreditPackSkuId, type CreditPackSkuId } from "@/lib/credits/constants";
 
 export type CheckoutPriceType =
   | "api_metered"
   | ModuleSkuId
+  | CreditPackSkuId
   | "all_you_can_learn";
 
 export function isGuestCheckoutPriceType(priceType: string): boolean {
@@ -27,7 +29,11 @@ export function planIdFromPriceType(priceType: string): PlanId {
 }
 
 export function checkoutModeForPriceType(priceType: CheckoutPriceType): "subscription" | "payment" {
-  if (priceType === "trial_3day" || priceType === "all_you_can_learn") {
+  if (
+    priceType === "trial_3day" ||
+    priceType === "all_you_can_learn" ||
+    isCreditPackSkuId(priceType)
+  ) {
     return "payment";
   }
   return "subscription";

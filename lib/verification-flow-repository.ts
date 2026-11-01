@@ -223,6 +223,12 @@ async function persistCommand(
       .select("owner_user_id")
       .eq("id", command.flowId)
       .maybeSingle();
+    const { debitClaimedFlowSession, refundClaimedFlowSession } = await import("@/lib/credits/claim-charge");
+    const charged = await debitClaimedFlowSession({
+      ownerUserId: flow?.owner_user_id,
+      runnerUserId: command.runnerUserId,
+      flowKind: "verify",
+    });
     const { error } = await supabase.from("sessions").insert({
       kind: "verify",
       problem: "Verify",
@@ -237,7 +243,10 @@ async function persistCommand(
         answers: [],
       },
     });
-    if (error) throw new Error(error.message);
+    if (error) {
+      await refundClaimedFlowSession(charged?.billedUserId);
+      throw new Error(error.message);
+    }
     return;
   }
   if (command.type === "addResult" && value.result) {
@@ -434,10 +443,19 @@ export async function getVerificationFlowByToken(token: string): Promise<Verific
   return flow ? presentFlow(flow) : null;
 }
 
-export async function claimPublicIdentity(token: string, identity: string) {
+export async function claimPublicIdentity(
+  token: string,
+  identity: string,
+  opts?: { runnerUserId?: string | null },
+) {
   const flow = await getVerificationFlowByToken(token);
   if (!flow) return { ok: false as const, reason: "not_found" };
-  const claimed = await runVerificationCommand({ type: "claim", flowId: flow.id, identity });
+  const claimed = await runVerificationCommand({
+    type: "claim",
+    flowId: flow.id,
+    identity,
+    runnerUserId: opts?.runnerUserId,
+  });
   if (!claimed.ok) return { ok: false as const, reason: claimed.reason };
   const choices = startChoicesForFlow(flow);
   return { ok: true as const, flow, identity: claimed.identity, choices };

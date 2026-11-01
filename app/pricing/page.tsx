@@ -6,22 +6,17 @@ import { ArrowRight } from "lucide-react";
 import { LandingNav } from "@/components/LandingNav";
 import { Footer } from "@/components/Footer";
 import { UNIFIED_PRICING_COPY } from "@/lib/pricing/unified-copy";
-import {
-  PRICING_PAGE_SKUS,
-  skuAlreadyCovered,
-  type ModuleSkuId,
-} from "@/lib/pricing/modules";
+import { PRICING_PAGE_SKUS } from "@/lib/pricing/modules";
+import type { CreditPackSkuId } from "@/lib/credits/constants";
 import { PublicConsoleWash } from "@/components/ui/console-frame";
 import { usePricingCheckout } from "@/components/pricing/use-pricing-checkout";
 
 const BACKGROUND = "/aesthetics/Greco-futurism/HHnTrjJbQAAOz7K.jpeg";
 
-const SKU_SECTION_ID: Record<Exclude<ModuleSkuId, "module_author">, string> = {
-  trial_3day: "try-everything",
-  module_learn: "learning",
-  module_verify: "verification",
-  module_calibrate: "calibration",
-  bundle_verify_calibrate: "bundle",
+const SKU_SECTION_ID: Record<CreditPackSkuId, string> = {
+  credits_100: "credits-100",
+  credits_500: "credits-500",
+  credits_2000: "credits-2000",
 };
 
 function CheckoutButton({
@@ -32,12 +27,12 @@ function CheckoutButton({
   highlighted,
   onCheckout,
 }: {
-  sku: ModuleSkuId;
+  sku: CreditPackSkuId;
   cta: string;
   owned: boolean;
   loading: boolean;
   highlighted?: boolean;
-  onCheckout: (sku: ModuleSkuId) => void;
+  onCheckout: (sku: CreditPackSkuId) => void;
 }) {
   if (owned) {
     return <span className="text-sm text-neutral-500">Current</span>;
@@ -60,8 +55,7 @@ function CheckoutButton({
 }
 
 function PricingPageContent() {
-  const { user, needsPlan, loadingPlan, handleCheckout, currentPlan, isOnTrial } =
-    usePricingCheckout();
+  const { user, needsPlan, loadingPlan, handleCheckout, currentPlan } = usePricingCheckout();
 
   return (
     <main
@@ -146,15 +140,10 @@ function PricingPageContent() {
                 )}
               </div>
               {PRICING_PAGE_SKUS.map((card) => {
-                const owned =
-                  Boolean(user?.authenticated) &&
-                  card.id !== "trial_3day" &&
-                  skuAlreadyCovered(currentPlan, card.id);
-                const trialOwned = card.id === "trial_3day" && isOnTrial;
                 return (
                   <div
                     key={card.id}
-                    id={SKU_SECTION_ID[card.id as Exclude<ModuleSkuId, "module_author">]}
+                    id={SKU_SECTION_ID[card.id as CreditPackSkuId]}
                     data-testid={`pricing-sku-${card.id}`}
                     className="flex flex-col gap-3 py-5 sm:flex-row sm:items-center sm:justify-between"
                   >
@@ -163,11 +152,12 @@ function PricingPageContent() {
                       <p className="mt-1 text-sm text-neutral-500">
                         {card.priceLabel} {card.cadence}
                       </p>
+                      <p className="mt-1 text-sm text-neutral-500">{card.body}</p>
                     </div>
                     <CheckoutButton
-                      sku={card.id}
+                      sku={card.id as CreditPackSkuId}
                       cta={card.cta}
-                      owned={owned || trialOwned}
+                      owned={false}
                       loading={loadingPlan === card.id}
                       highlighted={card.highlighted}
                       onCheckout={handleCheckout}

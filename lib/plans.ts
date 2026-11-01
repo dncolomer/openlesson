@@ -84,11 +84,11 @@ export const PLANS: Record<PlanId, PlanDef> = {
     price: "$0",
     priceAmount: 0,
     proofOfWorkPerPeriod: 0,
-    workspacesPerPeriod: 0,
+    workspacesPerPeriod: null,
     features: [
-      "Home, My Maps, and Quick Work Session",
-      "3 sessions per week",
-      "Upgrade to unlock Build, Your Shop, Verification, and Calibration",
+      "Free signup with starter credits",
+      "Create Learning Maps and Knowledge Regions at no credit cost",
+      "Run Calibrate, Learn, Verify, and Solve sessions with credits",
     ],
     stripePriceEnv: null,
   },
@@ -471,8 +471,8 @@ export function canCreateWorkspace(
       allowed: false,
       reason:
         plan === "inactive"
-          ? "No active subscription. Start a trial or upgrade at /pricing to create a workspace."
-          : `You've reached your plan limit of ${limit} Workspaces. Upgrade at /pricing or archive a workspace.`,
+          ? "Could not create this Learning Map. Try again or buy credits at /pricing if a session is blocked."
+          : `You've reached your plan limit of ${limit} Workspaces. Archive a workspace or contact support.`,
       plan,
       used: workspaceCount,
       limit,

@@ -26,48 +26,27 @@ describe("free tier week window and quota", () => {
     expect(mondayOpen.resetAt.toISOString()).toBe("2026-10-26T00:00:00.000Z");
   });
 
-  it("caps Free accounts at 3 sessions per week", () => {
-    expect(FREE_WEEKLY_SESSION_LIMIT).toBe(3);
-    expect(canStartFreeSession(0)).toBe(true);
-    expect(canStartFreeSession(2)).toBe(true);
-    expect(canStartFreeSession(3)).toBe(false);
-    expect(canStartFreeSession(4)).toBe(false);
-    const quota = presentFreeWeeklySessionQuota(3, new Date("2026-10-18T12:00:00.000Z"));
-    expect(quota).toMatchObject({
-      used: 3,
-      limit: 3,
-      allowed: false,
-      resetAt: "2026-10-19T00:00:00.000Z",
-    });
-    expect(freeWeeklySessionLimitMessage(quota.resetAt)).toContain("3 sessions a week");
-    expect(freeWeeklySessionLimitMessage(quota.resetAt)).toContain(
-      formatFreeWeekReset(quota.resetAt),
-    );
+  it("keeps the UTC week helper even though sessions are billed in credits", () => {
+    expect(FREE_WEEKLY_SESSION_LIMIT).toBeGreaterThan(0);
+    const quota = presentFreeWeeklySessionQuota(0, new Date("2026-10-18T12:00:00.000Z"));
+    expect(quota.resetAt).toBe("2026-10-19T00:00:00.000Z");
   });
 });
 
 describe("free tier dashboard and paths", () => {
-  it("keeps Home and My Maps and hides Build, Shop, Verification, and Calibration", () => {
+  it("opens Learning Map create and product tabs without a subscription", () => {
     const groups = dashboardNavGroupsForAccess(false);
-    expect(groups.flatMap((group) => group.items.map((item) => item.id))).toEqual([
-      ...FREE_DASHBOARD_TAB_IDS,
-    ]);
-    expect(groups.some((group) => group.id === "verification")).toBe(false);
-    expect(groups.some((group) => group.id === "calibration")).toBe(false);
-    expect(groups.find((group) => group.id === "learning")?.items.map((item) => item.id)).toEqual([
-      "my_maps",
-    ]);
-    expect(clampDashboardTabForAccess("learning", false)).toBe("home");
-    expect(clampDashboardTabForAccess("shop", false)).toBe("home");
-    expect(clampDashboardTabForAccess("verification", false)).toBe("home");
-    expect(clampDashboardTabForAccess("calibration", false)).toBe("home");
+    expect(groups.some((group) => group.id === "verification")).toBe(true);
+    expect(groups.some((group) => group.id === "calibration")).toBe(true);
+    expect(clampDashboardTabForAccess("learning", false)).toBe("learning");
+    expect(clampDashboardTabForAccess("shop", false)).toBe("shop");
+    expect(clampDashboardTabForAccess("verification", false)).toBe("verification");
     expect(clampDashboardTabForAccess("my_maps", false)).toBe("my_maps");
-    expect(clampDashboardTabForAccess("learning", true)).toBe("learning");
     expect(dashboardPlayKindsForAccess(false)).toEqual(["learn", "verify", "calibrate"]);
     expect(dashboardPlayKindsForAccess(true)).toEqual(["learn", "verify", "calibrate"]);
   });
 
-  it("allows dashboard, My Maps play, and sessions; denies Build and product prefixes", () => {
+  it("allows dashboard, map create, sessions, and product prefixes", () => {
     expect(isFreeTierAllowedPath("/dashboard")).toBe(true);
     expect(isFreeTierAllowedPath("/dashboard/")).toBe(true);
     expect(isFreeTierAllowedPath("/session")).toBe(true);
@@ -76,12 +55,12 @@ describe("free tier dashboard and paths", () => {
     expect(isFreeTierAllowedPath("/play/calibrate")).toBe(true);
     expect(isFreeTierAllowedPath("/workspace/abc")).toBe(true);
     expect(isFreeTierAllowedPath("/results")).toBe(true);
-    expect(isFreeTierAllowedPath("/workspace/new")).toBe(false);
-    expect(isFreeTierAllowedPath("/verification")).toBe(false);
-    expect(isFreeTierAllowedPath("/verification/flows/new")).toBe(false);
-    expect(isFreeTierAllowedPath("/calibration/flows/x")).toBe(false);
-    expect(isPaidOnlyWorkspaceKind("knowledge_region")).toBe(true);
-    expect(isPaidOnlyWorkspaceKind("calibration")).toBe(true);
+    expect(isFreeTierAllowedPath("/workspace/new")).toBe(true);
+    expect(isFreeTierAllowedPath("/verification")).toBe(true);
+    expect(isFreeTierAllowedPath("/verification/flows/new")).toBe(true);
+    expect(isFreeTierAllowedPath("/calibration/flows/x")).toBe(true);
+    expect(isPaidOnlyWorkspaceKind("knowledge_region")).toBe(false);
+    expect(isPaidOnlyWorkspaceKind("calibration")).toBe(false);
     expect(isPaidOnlyWorkspaceKind("standard")).toBe(false);
   });
 });
@@ -104,24 +83,31 @@ describe("free tier surfaces", () => {
     expect(login).toContain('href="/register"');
 
     const playStart = readRepo("app/api/play/start/route.ts");
-    expect(playStart).toContain("rejectIfFreeWeeklySessionLimit");
+    expect(playStart).toContain("rejectIfInsufficientSessionCredits");
     expect(playStart).toContain("parseDashboardPlayKind");
-    expect(readRepo("app/api/play/curious/route.ts")).toContain("rejectIfFreeWeeklySessionLimit");
+    expect(readRepo("app/api/play/curious/route.ts")).toContain("rejectIfInsufficientSessionCredits");
 
     const launch = readRepo("app/api/workspace/learner-launch/route.ts");
     expect(launch).toContain("requireProductAccess: false");
-    expect(launch).toContain("rejectIfFreeWeeklySessionLimit");
+    expect(launch).toContain("rejectIfInsufficientSessionCredits");
+    expect(launch.indexOf("rejectIfInsufficientSessionCredits(createAdminClient()")).toBeGreaterThan(
+      launch.indexOf("Block not found"),
+    );
+    expect(launch.indexOf("rejectIfInsufficientSessionCredits(createAdminClient()")).toBeGreaterThan(
+      launch.indexOf("Failed to save prompt"),
+    );
 
     const checkUsage = readRepo("app/api/check-usage/route.ts");
-    expect(checkUsage).toContain("weeklySessionsAllowed");
-    expect(checkUsage).toContain("freeTier");
+    expect(checkUsage).toContain("creditBalance");
+    expect(checkUsage).toContain("loadCreditSummary");
 
     const dash = readDashboardSurface();
     expect(dash).toContain("dashboardNavGroupsForAccess");
     expect(dash).toContain("clampDashboardTabForAccess");
     expect(dash).toContain("dashboardPlayKindsForAccess");
-    expect(dash).toContain("data-dashboard-free-quota");
-    expect(dash).toContain("weeklySessionsAllowed");
+    expect(readRepo("components/dashboard/dashboard-usage-tab.tsx")).toContain("data-dashboard-credits");
+    expect(readRepo("app/api/workspace/generate/route.ts")).not.toContain("rejectIfInsufficientSessionCredits");
+    expect(readRepo("app/api/dashboard/knowledge-regions/route.ts")).not.toContain("rejectIfInsufficientSessionCredits");
 
     expect(readRepo("lib/api/require-auth.ts")).toContain(
       "const requireProduct = options?.requireProductAccess === true",

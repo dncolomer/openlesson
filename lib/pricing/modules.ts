@@ -1,7 +1,13 @@
 /**
  * Product modules and combination plan ids.
  * Organizations still store a single `plan` string; combos are the tiers.
+ * Public /pricing sells credit packs, not these monthly SKUs.
  */
+import {
+  CREDIT_PACKS,
+  FLOW_SESSION_CREDIT_COST,
+  type CreditPackSkuId,
+} from "@/lib/credits/constants";
 
 export const PRODUCT_MODULES = ["learn", "author", "verify", "calibrate"] as const;
 export type ProductModule = (typeof PRODUCT_MODULES)[number];
@@ -278,14 +284,15 @@ export function planFeatureList(plan: string | null | undefined): string[] {
     features.push("$99/mo platform + usage");
   }
   if (features.length === 0) {
-    features.push("Home, My Maps, and Quick Work Session");
-    features.push("3 sessions per week");
+    features.push("Free signup with starter credits");
+    features.push("Create Learning Maps and Knowledge Regions at no credit cost");
+    features.push("Pay credits to run Calibrate, Learn, Verify, and Solve sessions");
   }
   return features;
 }
 
 export type PublicSkuCard = {
-  id: ModuleSkuId;
+  id: ModuleSkuId | CreditPackSkuId;
   eyebrow: string;
   name: string;
   priceLabel: string;
@@ -385,13 +392,29 @@ export const PUBLIC_SKU_CARDS: readonly PublicSkuCard[] = [
   },
 ] as const;
 
-/** Public /pricing list. Course authoring lives on /pricing/authoring. */
-export const PRICING_PAGE_SKUS: readonly PublicSkuCard[] = PUBLIC_SKU_CARDS.filter(
-  (card) => card.id !== "module_author",
-);
+export const CREDIT_PACK_CARDS: readonly PublicSkuCard[] = CREDIT_PACKS.map((pack) => ({
+  id: pack.id,
+  eyebrow: pack.eyebrow,
+  name: pack.name,
+  priceLabel: formatUsdFromCents(pack.priceCents),
+  cadence: "one-time",
+  body: pack.body,
+  features: [
+    `${pack.credits} credits`,
+    `${FLOW_SESSION_CREDIT_COST} credits per flow session`,
+    "Calibrate, Learn, Verify, and Solve",
+  ],
+  cta: pack.cta,
+  highlighted: pack.highlighted,
+}));
+
+/** Public /pricing list: free signup plus one-time credit packs. */
+export const PRICING_PAGE_SKUS: readonly PublicSkuCard[] = CREDIT_PACK_CARDS;
+
+export type PricingPageSkuId = CreditPackSkuId;
 
 export const AUTHORING_SKU_CARD = PUBLIC_SKU_CARDS.find(
-  (card) => card.id === "module_author",
+  (card): card is PublicSkuCard & { id: "module_author" } => card.id === "module_author",
 )!;
 
 export function moduleSkuCheckoutPriceData(

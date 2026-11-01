@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
-import { rejectIfFreeWeeklySessionLimit } from "@/lib/api/free-session-quota";
-import { loadProductAccessSnapshot } from "@/lib/api/product-access";
+import { rejectIfInsufficientSessionCredits } from "@/lib/credits/account";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   dashboardPlayHref,
   dashboardPlaySessionMetadata,
@@ -23,12 +23,12 @@ export async function POST(req: NextRequest) {
     if (!kind) return jsonError(400, "kind must be learn, verify, or calibrate");
     if (!prompt) return jsonError(400, "prompt is required");
 
-    const access = await loadProductAccessSnapshot(auth.supabase, auth.user.id);
-    if (!access.ok) return access.response;
-    if (!access.hasPaidAccess) {
-      const denied = await rejectIfFreeWeeklySessionLimit(auth.supabase, auth.user.id);
-      if (denied) return denied;
-    }
+    const denied = await rejectIfInsufficientSessionCredits(createAdminClient(), {
+      runnerUserId: auth.user.id,
+      ownerUserId: auth.user.id,
+      flowKind: kind,
+    });
+    if (denied) return denied;
 
     const { data, error } = await auth.supabase
       .from("sessions")
@@ -41,6 +41,8 @@ export async function POST(req: NextRequest) {
       .select("id")
       .single();
     if (error || !data?.id) {
+      const { creditStoreFromClient, refundFlowSessionCredits } = await import("@/lib/credits/account");
+      await refundFlowSessionCredits(creditStoreFromClient(createAdminClient()), auth.user.id).catch(() => {});
       return jsonError(500, error?.message || "Failed to start play session");
     }
 

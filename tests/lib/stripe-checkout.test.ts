@@ -6,7 +6,7 @@ import {
   planIdFromPriceType,
   profileUpdateFromCheckout,
 } from "@/lib/stripe-checkout";
-import { HARNESS_MONTHLY_PRICE_CENTS, TRIAL_ACCESS_DAYS, TRIAL_PRICE_CENTS } from "@/lib/plans";
+import { TRIAL_ACCESS_DAYS } from "@/lib/plans";
 import {
   harnessMonthlyCheckoutPriceData,
   harnessTrialCheckoutPriceData,
@@ -27,32 +27,26 @@ describe("stripe checkout helpers", () => {
     expect(planIdFromPriceType("pro")).toBe("inactive");
   });
 
-  it("uses payment mode for trial and subscription for modules", () => {
-    expect(checkoutModeForPriceType("trial_3day")).toBe("payment");
+  it("uses payment mode for credit packs and AYCL", () => {
+    expect(checkoutModeForPriceType("credits_100")).toBe("payment");
+    expect(checkoutModeForPriceType("credits_500")).toBe("payment");
     expect(checkoutModeForPriceType("all_you_can_learn")).toBe("payment");
     expect(checkoutModeForPriceType("api_metered")).toBe("subscription");
-    expect(checkoutModeForPriceType("module_learn")).toBe("subscription");
-    expect(checkoutModeForPriceType("bundle_verify_calibrate")).toBe("subscription");
   });
 
-  it("allows guest checkout for public module SKUs", () => {
-    expect(isGuestCheckoutPriceType("trial_3day")).toBe(true);
-    expect(isGuestCheckoutPriceType("module_learn")).toBe(true);
-    expect(isGuestCheckoutPriceType("module_author")).toBe(true);
-    expect(isGuestCheckoutPriceType("module_verify")).toBe(true);
-    expect(isGuestCheckoutPriceType("module_calibrate")).toBe(true);
-    expect(isGuestCheckoutPriceType("bundle_verify_calibrate")).toBe(true);
+  it("allows guest checkout for public credit packs", () => {
+    expect(isGuestCheckoutPriceType("credits_100")).toBe(true);
+    expect(isGuestCheckoutPriceType("credits_500")).toBe(true);
+    expect(isGuestCheckoutPriceType("credits_2000")).toBe(true);
     expect(isGuestCheckoutPriceType("api_metered")).toBe(false);
     expect(isGuestCheckoutPriceType("regular_2026")).toBe(false);
     expect(isGuestCheckoutPriceType("pro_teams")).toBe(false);
   });
 
-  it("public checkout price_data is $24.99/mo Learning and $24.99 try-everything", () => {
-    expect(HARNESS_MONTHLY_PRICE_CENTS).toBe(2499);
-    expect(TRIAL_PRICE_CENTS).toBe(2499);
-    expect(harnessMonthlyCheckoutPriceData().unit_amount).toBe(2499);
-    expect(harnessMonthlyCheckoutPriceData().recurring).toEqual({ interval: "month" });
-    expect(harnessTrialCheckoutPriceData().unit_amount).toBe(2499);
+  it("public checkout price_data is one-time credit packs", () => {
+    expect(harnessMonthlyCheckoutPriceData().unit_amount).toBeGreaterThan(0);
+    expect(harnessMonthlyCheckoutPriceData()).not.toHaveProperty("recurring");
+    expect(harnessTrialCheckoutPriceData().unit_amount).toBeGreaterThan(0);
   });
 
   it("builds a trial profile patch with a 3-day window", () => {

@@ -14,3 +14,4 @@ export const WORKSPACES_TABLE = "workspaces" as const;
 export const BLOCKS_TABLE = "blocks" as const;
 export const INSIGHTS_TABLE = "insights" as const;
 export const EMBEDDING_MODELS_TABLE = "embedding_models" as const;
+export const CREDIT_LEDGER_TABLE = "credit_ledger" as const;

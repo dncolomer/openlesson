@@ -11,6 +11,10 @@ import {
   saveSolveSessionRow,
   solveSessionBelongsToFlow,
 } from "@/lib/solve-flow-repository";
+import {
+  insufficientCreditsResponse,
+  runnerUserIdFromCookies,
+} from "@/lib/credits/request-runner";
 
 export const runtime = "nodejs";
 
@@ -59,7 +63,16 @@ export async function POST(
     }
     return NextResponse.json({ session });
   }
-  const claimed = await claimSolveIdentity(token, String(body.identity || ""));
+  let claimed;
+  try {
+    claimed = await claimSolveIdentity(token, String(body.identity || ""), {
+      runnerUserId: await runnerUserIdFromCookies(),
+    });
+  } catch (error) {
+    const credits = insufficientCreditsResponse(error);
+    if (credits) return credits;
+    throw error;
+  }
   if (!claimed.ok) {
     const status = claimed.reason === "not_found" ? 404 : 400;
     return jsonError(status, claimed.reason);

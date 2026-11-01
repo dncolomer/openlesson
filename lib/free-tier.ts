@@ -26,12 +26,8 @@ export const FREE_DASHBOARD_TAB_IDS = [
 
 const FREE_TAB_SET = new Set<string>(FREE_DASHBOARD_TAB_IDS);
 
-/** Paid-only page prefixes. Checked before the Free allowlist. */
-const FREE_TIER_DENIED_PREFIXES = [
-  "/workspace/new",
-  "/verification",
-  "/calibration",
-] as const;
+/** Paid-only page prefixes. Credits gate session starts, not these paths. */
+const FREE_TIER_DENIED_PREFIXES = [] as const;
 
 const FREE_TIER_ALLOWED_PREFIXES = [
   "/dashboard",
@@ -39,6 +35,9 @@ const FREE_TIER_ALLOWED_PREFIXES = [
   "/play",
   "/workspace",
   "/results",
+  "/verification",
+  "/calibration",
+  "/solve",
 ] as const;
 
 export type UtcMondayWeekWindow = {
@@ -110,26 +109,19 @@ export function isFreeDashboardTab(value: unknown): boolean {
 
 export function clampDashboardTabForAccess(
   tab: DashboardTab,
-  hasPaidAccess: boolean,
+  _hasPaidAccess: boolean,
 ): DashboardTab {
-  if (hasPaidAccess) return tab;
-  if (isDashboardTab(tab) && isFreeDashboardTab(tab)) return tab;
+  if (isDashboardTab(tab)) return tab;
   return "home";
 }
 
 export function dashboardNavGroupsForAccess(
-  hasPaidAccess: boolean,
+  _hasPaidAccess: boolean,
 ): DashboardNavGroup[] {
-  if (hasPaidAccess) {
-    return DASHBOARD_NAV_GROUPS.map((group) => ({
-      ...group,
-      items: [...group.items],
-    }));
-  }
   return DASHBOARD_NAV_GROUPS.map((group) => ({
     ...group,
-    items: group.items.filter((item) => isFreeDashboardTab(item.id)),
-  })).filter((group) => group.items.length > 0);
+    items: [...group.items],
+  }));
 }
 
 /** Home Quick Work Session kinds. Free and paid both run Learn, Verify, and Calibrate. */
@@ -148,7 +140,7 @@ export function isFreeTierAllowedPath(pathname: string): boolean {
 }
 
 export function isPaidOnlyWorkspaceKind(
-  kind: string | null | undefined,
+  _kind: string | null | undefined,
 ): boolean {
-  return kind === "knowledge_region" || kind === "calibration";
+  return false;
 }

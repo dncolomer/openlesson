@@ -19,13 +19,12 @@ import {
   MAPPING_PRICING_PATH,
   VERIFICATION_PRICING_PATH,
 } from "@/lib/marketing/paths";
+import { PRICING_PAGE_SKUS, CREDIT_PACK_CARDS } from "@/lib/pricing/modules";
 import {
-  formatHarnessMonthlyPrice,
-  formatHarnessTrialPrice,
-  HARNESS_MONTHLY_PRICE_CENTS,
-  TRIAL_PRICE_CENTS,
-} from "@/lib/plans";
-import { PRICING_PAGE_SKUS, PUBLIC_SKU_CARDS } from "@/lib/pricing/modules";
+  CREDIT_PACKS,
+  FLOW_SESSION_CREDIT_COST,
+  STARTER_CREDIT_GRANT,
+} from "@/lib/credits/constants";
 
 const ROOT = join(__dirname, "../..");
 
@@ -34,19 +33,17 @@ function read(rel: string): string {
 }
 
 describe("unified pricing amounts", () => {
-  it("uses $24.99 Learning monthly and $24.99 3-day try-everything", () => {
-    expect(HARNESS_MONTHLY_PRICE_CENTS).toBe(2499);
-    expect(TRIAL_PRICE_CENTS).toBe(2499);
-    expect(formatHarnessMonthlyPrice()).toBe("$24.99");
-    expect(formatHarnessTrialPrice()).toBe("$24.99");
-    expect(HARNESS_PRICING_COPY.monthlyPrice).toBe("$24.99");
-    expect(HARNESS_PRICING_COPY.trialCta).toContain("$24.99");
-    expect(HARNESS_PRICING_COPY.trialCta.toLowerCase()).toMatch(/try everything for 3 days/);
+  it("sells one-time credit packs and a free signup grant", () => {
+    expect(STARTER_CREDIT_GRANT).toBeGreaterThan(0);
+    expect(FLOW_SESSION_CREDIT_COST).toBeGreaterThan(0);
+    expect(HARNESS_PRICING_COPY.trialCta.toLowerCase()).toMatch(/start free/);
+    expect(HARNESS_PRICING_COPY.monthlyCadence).toMatch(/one-time/);
+    expect(CREDIT_PACKS.every((pack) => pack.priceCents > 0 && pack.credits > 0)).toBe(true);
   });
 });
 
 describe("unified pricing page source", () => {
-  it("ships a sparse module list with try-everything and custom contact", () => {
+  it("ships free signup plus one-time credit packs", () => {
     const pagePath = join(ROOT, "app/pricing/page.tsx");
     expect(existsSync(pagePath)).toBe(true);
     const src = read("app/pricing/page.tsx");
@@ -55,34 +52,31 @@ describe("unified pricing page source", () => {
     expect(src).toContain("PRICING_PAGE_SKUS");
     expect(src).toContain("data-testid={`checkout-${sku}`}");
     expect(src).toContain("SKU_SECTION_ID");
-    expect(src).toContain('module_learn: "learning"');
-    expect(src).toContain('module_verify: "verification"');
-    expect(src).toContain('module_calibrate: "calibration"');
+    expect(src).not.toContain('module_learn: "learning"');
+    expect(src).toContain("credits_100");
+    expect(src).toContain("credits_500");
+    expect(src).toContain("credits_2000");
     expect(src).toContain('id="custom"');
     expect(src).toContain('data-testid="pricing-sku-free"');
     expect(src).toContain("UNIFIED_PRICING_COPY.free");
+    expect(src).toContain("currentPlan");
+    expect(src).toMatch(
+      /\{ user, needsPlan, loadingPlan, handleCheckout, currentPlan \} = usePricingCheckout/,
+    );
     expect(UNIFIED_PRICING_COPY.free.name).toBe("Free");
     expect(UNIFIED_PRICING_COPY.free.priceLabel).toBe("$0");
     expect(UNIFIED_PRICING_COPY.free.href).toBe("/register");
+    expect(UNIFIED_PRICING_COPY.free.cadence).toMatch(/starter credits/);
+    expect(UNIFIED_PRICING_COPY.lead.toLowerCase()).toMatch(/credit/);
     expect(src.match(/console-copy/g)?.length).toBe(1);
     expect(src).not.toContain("ThesisDirectory");
-    expect(PUBLIC_SKU_CARDS[0]?.priceLabel).toBe("$24.99");
-    expect(PUBLIC_SKU_CARDS.find((card) => card.id === "module_learn")?.priceLabel).toBe("$24.99");
-    expect(PUBLIC_SKU_CARDS.map((card) => card.id)).toEqual([
-      "trial_3day",
-      "module_learn",
-      "module_author",
-      "module_verify",
-      "module_calibrate",
-      "bundle_verify_calibrate",
-    ]);
+    expect(CREDIT_PACK_CARDS.every((card) => card.cadence === "one-time")).toBe(true);
     expect(PRICING_PAGE_SKUS.map((card) => card.id)).toEqual([
-      "trial_3day",
-      "module_learn",
-      "module_verify",
-      "module_calibrate",
-      "bundle_verify_calibrate",
+      "credits_100",
+      "credits_500",
+      "credits_2000",
     ]);
+    expect(src).not.toContain("$24.99/mo");
 
     expect(src).not.toContain("API Metered");
     expect(src).not.toContain('data-testid="pricing-scenarios"');

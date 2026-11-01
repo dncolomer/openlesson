@@ -6,7 +6,6 @@ import Link from "next/link";
 import {
   getSession,
   saveSession,
-  createSession,
   getIlePostSessionPath,
   type Session,
 } from "@/lib/storage";
@@ -189,24 +188,25 @@ function ResultsContent() {
   const handleStartFollowUp = async (suggestion: FollowUpSuggestion) => {
     setStartingSession(suggestion.title);
     try {
-      // Check usage first
-      const usageRes = await fetch("/api/check-usage");
-      if (usageRes.ok) {
-        const usage = await usageRes.json();
-        if (!usage.allowed) {
-          alert(t("problemInput.sessionLimitReached"));
-          return;
-        }
+      const res = await fetch("/api/play/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "learn", prompt: suggestion.title }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        href?: string;
+        sessionId?: string;
+        error?: { message?: string } | string;
+      };
+      if (!res.ok) {
+        const message =
+          typeof data.error === "string"
+            ? data.error
+            : data.error?.message || t("problemInput.sessionLimitReached");
+        alert(message);
+        return;
       }
-
-      // Create the new session with the suggested topic
-      const newSession = await createSession(suggestion.title);
-      
-      // Track usage
-      fetch("/api/check-usage", { method: "POST" }).catch(() => {});
-      
-      // Navigate to the new session
-      router.push(`/session?id=${newSession.id}`);
+      router.push(data.href || `/session?id=${data.sessionId}`);
     } catch (err) {
       console.error("Failed to start follow-up session:", err);
       alert("Failed to start block. Please try again.");

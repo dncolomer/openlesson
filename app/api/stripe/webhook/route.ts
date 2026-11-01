@@ -18,6 +18,7 @@ import {
   profileUpdateFromCheckout,
 } from "@/lib/stripe-checkout";
 import { isComboPlanId, mergePlanIds } from "@/lib/pricing/modules";
+import { isCreditPackSkuId } from "@/lib/credits/constants";
 import { fulfillAyclPurchase } from "@/lib/aycl";
 import {
   countIleSessions,
@@ -129,6 +130,17 @@ export async function POST(request: NextRequest) {
         }
 
         if (!userId) break;
+
+        if (isCreditPackSkuId(priceType)) {
+          const { grantCreditPack, creditStoreFromClient } = await import("@/lib/credits/account");
+          await grantCreditPack(
+            creditStoreFromClient(supabase),
+            userId,
+            priceType,
+            session.id,
+          );
+          break;
+        }
 
         if (priceType === "trial_3day") {
           const stripeCustomerId =

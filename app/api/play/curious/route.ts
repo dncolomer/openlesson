@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
-import { rejectIfFreeWeeklySessionLimit } from "@/lib/api/free-session-quota";
-import { loadProductAccessSnapshot } from "@/lib/api/product-access";
+import { rejectIfInsufficientSessionCredits } from "@/lib/credits/account";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   DASHBOARD_PLAY_CURIOUS_KIND,
   DASHBOARD_PLAY_CURIOUS_SYSTEM,
@@ -27,13 +27,6 @@ export async function POST(req: NextRequest) {
         ? body.seed.trim().slice(0, 64)
         : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
-    const access = await loadProductAccessSnapshot(auth.supabase, auth.user.id);
-    if (!access.ok) return access.response;
-    if (!access.hasPaidAccess) {
-      const denied = await rejectIfFreeWeeklySessionLimit(auth.supabase, auth.user.id);
-      if (denied) return denied;
-    }
-
     const ai = await callXaiText(
       [systemMessage(DASHBOARD_PLAY_CURIOUS_SYSTEM), userMessage(curiousPromptUserMessage(seed))],
       { model: DEFAULT_MODEL, maxTokens: 80, temperature: 1 },
@@ -42,6 +35,13 @@ export async function POST(req: NextRequest) {
     if (!prompt) {
       return jsonError(500, "Could not invent a topic");
     }
+
+    const denied = await rejectIfInsufficientSessionCredits(createAdminClient(), {
+      runnerUserId: auth.user.id,
+      ownerUserId: auth.user.id,
+      flowKind: "learn",
+    });
+    if (denied) return denied;
 
     const kind = DASHBOARD_PLAY_CURIOUS_KIND;
     const { data, error } = await auth.supabase
@@ -55,6 +55,8 @@ export async function POST(req: NextRequest) {
       .select("id")
       .single();
     if (error || !data?.id) {
+      const { creditStoreFromClient, refundFlowSessionCredits } = await import("@/lib/credits/account");
+      await refundFlowSessionCredits(creditStoreFromClient(createAdminClient()), auth.user.id).catch(() => {});
       return jsonError(500, error?.message || "Failed to start play session");
     }
 

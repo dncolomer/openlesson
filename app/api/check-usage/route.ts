@@ -14,6 +14,11 @@ import {
 } from "@/lib/plans";
 import { presentFreeWeeklySessionQuota, utcMondayWeekWindow } from "@/lib/free-tier";
 import {
+  FLOW_SESSION_CREDIT_COST,
+  STARTER_CREDIT_GRANT,
+} from "@/lib/credits/constants";
+import { creditStoreFromClient, loadCreditSummary } from "@/lib/credits/account";
+import {
   billingEntityToUserProfile,
   resolveBillingEntity,
   type OrgBillingRow,
@@ -77,6 +82,11 @@ export async function GET() {
         weeklySessionsLimit: 3,
         weeklySessionsResetAt: null,
         weeklySessionsAllowed: false,
+        creditBalance: 0,
+        sessionCreditCost: FLOW_SESSION_CREDIT_COST,
+        starterCreditGrant: STARTER_CREDIT_GRANT,
+        creditGrants: [],
+        creditDebits: [],
       });
     }
 
@@ -303,6 +313,14 @@ export async function GET() {
     const weekStart = utcMondayWeekWindow().start;
     const weeklyUsed = await countUserSessionsSince(admin, user.id, weekStart);
     const weekly = presentFreeWeeklySessionQuota(weeklyUsed);
+    const credits = await loadCreditSummary(creditStoreFromClient(admin), user.id).catch(() => ({
+      balance: 0,
+      starterGrant: STARTER_CREDIT_GRANT,
+      sessionCost: FLOW_SESSION_CREDIT_COST,
+      grants: [],
+      debits: [],
+      entries: [],
+    }));
 
     return NextResponse.json({
       allowed: result.allowed,
@@ -332,6 +350,22 @@ export async function GET() {
       weeklySessionsLimit: hasPaidAccess ? null : weekly.limit,
       weeklySessionsResetAt: weekly.resetAt,
       weeklySessionsAllowed: hasPaidAccess || weekly.allowed,
+      creditBalance: credits.balance,
+      sessionCreditCost: credits.sessionCost,
+      starterCreditGrant: credits.starterGrant,
+      creditGrants: credits.grants.map((entry) => ({
+        id: entry.id,
+        reason: entry.reason,
+        amount: entry.amount,
+        createdAt: entry.createdAt,
+      })),
+      creditDebits: credits.debits.map((entry) => ({
+        id: entry.id,
+        reason: entry.reason,
+        amount: entry.amount,
+        flowKind: entry.flowKind,
+        createdAt: entry.createdAt,
+      })),
       ...proofOfWorkPayload,
     });
   } catch (error) {

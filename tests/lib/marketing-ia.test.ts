@@ -34,10 +34,7 @@ import {
   harnessTrialCheckoutPriceData,
   PUBLIC_HARNESS_CHECKOUT_PRICE_TYPES,
 } from "@/lib/pricing/harness-checkout";
-import {
-  HARNESS_MONTHLY_PRICE_CENTS,
-  TRIAL_PRICE_CENTS,
-} from "@/lib/plans";
+
 import { isGuestCheckoutPriceType } from "@/lib/stripe-checkout";
 
 const ROOT = join(__dirname, "../..");
@@ -323,14 +320,14 @@ describe("Support this Project is footer-only", () => {
 });
 
 describe("unified pricing + public module checkout", () => {
-  it("pricing page shows $24.99 try-everything, Learning, verify, calibrate, and AYCL", () => {
+  it("pricing page shows free signup, credit packs, and AYCL", () => {
     const page = read("app/pricing/page.tsx");
     expect(page).toContain("PRICING_PAGE_SKUS");
     expect(page).toContain("data-testid=\"pricing-aycl-link\"");
     expect(page).toContain("UNIFIED_PRICING_COPY.ayclHref");
     expect(HARNESS_PRICING_COPY.ayclHref).toBe("/all-you-can-learn");
-    expect(HARNESS_PRICING_COPY.monthlyPrice).toBe("$24.99");
-    expect(HARNESS_PRICING_COPY.trialPrice).toBe("$24.99");
+    expect(HARNESS_PRICING_COPY.monthlyCadence).toMatch(/one-time/);
+    expect(HARNESS_PRICING_COPY.trialPrice).toBe("$0");
     expect(page).toContain("data-testid={`checkout-${sku}`}");
     expect(page).not.toContain("API Metered");
     expect(page).not.toContain("$19.99");
@@ -347,29 +344,24 @@ describe("unified pricing + public module checkout", () => {
     expect(AUTHORING_PRICING_COPY.package.priceAmount).toBe("$15,000");
   });
 
-  it("public checkout price_data is 2499 monthly Learning and 2499 try-everything", () => {
-    expect(HARNESS_MONTHLY_PRICE_CENTS).toBe(2499);
-    expect(TRIAL_PRICE_CENTS).toBe(2499);
-    expect(harnessMonthlyCheckoutPriceData().unit_amount).toBe(2499);
-    expect(harnessTrialCheckoutPriceData().unit_amount).toBe(2499);
-    expect(harnessMonthlyCheckoutPriceData().unit_amount).not.toBe(9900);
-    expect(harnessTrialCheckoutPriceData().unit_amount).not.toBe(1999);
+  it("public checkout price_data is one-time credit packs", () => {
+    expect(harnessMonthlyCheckoutPriceData().unit_amount).toBeGreaterThan(0);
+    expect(harnessTrialCheckoutPriceData().unit_amount).toBeGreaterThan(0);
+    expect(harnessMonthlyCheckoutPriceData()).not.toHaveProperty("recurring");
+    expect(harnessTrialCheckoutPriceData()).not.toHaveProperty("recurring");
 
     const route = read("app/api/stripe/create-checkout/route.ts");
-    expect(route).toContain("moduleSkuCheckoutPriceData");
+    expect(route).toContain("creditPackCheckoutPriceData");
     expect(route).toContain("API_METERED_PLATFORM_FEE_CENTS");
 
     expect([...PUBLIC_HARNESS_CHECKOUT_PRICE_TYPES]).toEqual([
-      "trial_3day",
-      "module_learn",
-      "module_author",
-      "module_verify",
-      "module_calibrate",
-      "bundle_verify_calibrate",
+      "credits_100",
+      "credits_500",
+      "credits_2000",
     ]);
     expect(isGuestCheckoutPriceType("api_metered")).toBe(false);
-    expect(isGuestCheckoutPriceType("trial_3day")).toBe(true);
-    expect(isGuestCheckoutPriceType("module_learn")).toBe(true);
+    expect(isGuestCheckoutPriceType("credits_100")).toBe(true);
+    expect(isGuestCheckoutPriceType("credits_500")).toBe(true);
   });
 });
 

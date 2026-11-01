@@ -46,6 +46,8 @@ export const KNOWN_ERROR_CODES = [
   "flow_embedding_not_found",
   "performance_report_generation_failed",
   "usage_limit_reached",
+  "insufficient_credits",
+  "connect_required",
 ] as const;
 
 export type KnownErrorCode = (typeof KNOWN_ERROR_CODES)[number];

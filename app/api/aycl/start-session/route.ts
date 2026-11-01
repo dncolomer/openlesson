@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { resolveAyclAccess } from "@/lib/aycl-session-auth";
+import { rejectIfInsufficientSessionCredits } from "@/lib/credits/account";
+import { billedUserIdForSession } from "@/lib/credits/ledger";
+import { runnerUserIdFromCookies } from "@/lib/credits/request-runner";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 
@@ -39,6 +43,18 @@ export async function POST(request: NextRequest) {
 
     const effectivePrompt = planningPrompt || block.planning_prompt || null;
 
+    const runnerUserId = await runnerUserIdFromCookies();
+    const billedUserId = billedUserIdForSession({
+      runnerUserId,
+      ownerUserId: ctx.ownerUserId,
+    });
+    const denied = await rejectIfInsufficientSessionCredits(createAdminClient(), {
+      runnerUserId,
+      ownerUserId: ctx.ownerUserId,
+      flowKind: "learn",
+    });
+    if (denied) return denied;
+
     const { data: session, error: sessionError } = await ctx.supabase
       .from("sessions")
       .insert({
@@ -59,6 +75,8 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (sessionError || !session) {
+      const { creditStoreFromClient, refundFlowSessionCredits } = await import("@/lib/credits/account");
+      await refundFlowSessionCredits(creditStoreFromClient(createAdminClient()), billedUserId).catch(() => {});
       return jsonError(500, sessionError?.message || "Failed to create session");
     }
 

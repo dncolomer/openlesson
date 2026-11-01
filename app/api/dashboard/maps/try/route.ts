@@ -5,6 +5,7 @@ import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { pickHomeMapTryBlock } from "@/lib/dashboard-home-catalog";
 import { dashboardPlayHref } from "@/lib/dashboard-play";
+import { mapBlockLaunch } from "@/lib/block-kind";
 import { forkWorkspaceExactCopy } from "@/lib/fork-workspace";
 import { decideAddToMyMaps } from "@/lib/workspace-play-copy";
 
@@ -59,12 +60,25 @@ export async function POST(req: NextRequest) {
 
     const { data: copyBlocks, error: blocksError } = await auth.supabase
       .from("blocks")
-      .select("id, title, planning_prompt, status, is_start, position_x, position_y")
+      .select("id, title, planning_prompt, status, is_start, position_x, position_y, map_block")
       .eq("workspace_id", copyId);
     if (blocksError) return jsonError(500, blocksError.message);
     const block = pickHomeMapTryBlock(copyBlocks || []);
     if (!block) {
       return jsonError(400, "This map has no blocks to try");
+    }
+
+    const linked = mapBlockLaunch(block.map_block);
+    if (
+      linked.action === "calibrate" ||
+      linked.action === "verify" ||
+      linked.action === "solve"
+    ) {
+      return NextResponse.json({
+        workspaceId: copyId,
+        blockId: block.id,
+        href: linked.href,
+      });
     }
 
     const denied = await rejectIfInsufficientSessionCredits(createAdminClient(), {

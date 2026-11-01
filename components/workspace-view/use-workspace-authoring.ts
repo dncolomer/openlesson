@@ -221,6 +221,7 @@ export function useWorkspaceAuthoring(input: {
       cells: WorkspaceAddTargetCell[];
       contextSourceKeys?: string[];
       isStart?: boolean;
+      mapBlock?: MapBlock;
     }) => {
       if (!workspaceId || !isOwner) return;
       const nodesById = new Map(nodes.map((node) => [node.id, node]));
@@ -254,6 +255,9 @@ export function useWorkspaceAuthoring(input: {
               ? { contextSourceKeys: payload.contextSourceKeys }
               : {}),
             is_start: Boolean(payload.isStart),
+            ...(payload.mapBlock
+              ? { map_block: serializeMapBlock(payload.mapBlock) }
+              : {}),
           }),
         });
         if (!response.ok) {

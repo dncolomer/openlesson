@@ -53,11 +53,13 @@ import {
   splitBlocksToSingles,
 } from "@/lib/skill-grid-ops";
 import {
+  mapBlockAuthoringPlaceError,
   mapBlockPlaceError,
   normalizeMapBlock,
-  parseMapBlockKind,
+  parseAuthoringMapBlockKind,
   isFlowMapBlockKind,
   parseMapBlockAttachments,
+  coerceAuthoringMapBlock,
   type MapBlock,
 } from "@/lib/block-kind";
 import {
@@ -253,7 +255,7 @@ function dispatchAdd(
 ): HeliosMapToolResult {
   const cell = resolveAddCell(snapshot, args);
   const mapBlock = heliosResolvedMapBlock(args);
-  const placeError = mapBlockPlaceError(mapBlock);
+  const placeError = mapBlockAuthoringPlaceError(mapBlock);
   if (placeError) return fail(snapshot, placeError);
   return placeBlock(snapshot, {
     id: stringArg(args, "id"),
@@ -261,7 +263,7 @@ function dispatchAdd(
     description: stringArg(args, "description"),
     row: cell.row,
     col: cell.col,
-    map_block: mapBlock.kind === "learn" ? null : mapBlock,
+    map_block: mapBlock,
   });
 }
 
@@ -281,6 +283,9 @@ function dispatchGenerateShape(
   );
   if (!ground.ok) return fail(snapshot, ground.reason);
   const fp = shape.footprint;
+  const mapBlock = heliosResolvedMapBlock(args);
+  const placeError = mapBlockAuthoringPlaceError(mapBlock);
+  if (placeError) return fail(snapshot, placeError);
   return placeBlock(snapshot, {
     id: stringArg(args, "id"),
     title: stringArg(args, "title", "prompt") || "Untitled",
@@ -290,6 +295,7 @@ function dispatchGenerateShape(
     span_w: fp.span_w,
     span_h: fp.span_h,
     shape_cells: shape.shape_cells,
+    map_block: mapBlock,
   });
 }
 
@@ -320,6 +326,7 @@ function dispatchSplit(
       description: block.description || "",
       row: part.position_y,
       col: part.position_x,
+      map_block: block.map_block ?? null,
     });
     if (!placed.ok) return placed;
     next = placed.snapshot;
@@ -366,7 +373,7 @@ function mapBlockPatchFromArgs(
   if (!hasKind && !hasFlow && incoming.length === 0) return undefined;
   const prev = normalizeMapBlock(block.map_block);
   const kind = hasKind
-    ? parseMapBlockKind(args.kind ?? args.blockKind)
+    ? parseAuthoringMapBlockKind(args.kind ?? args.blockKind)
     : prev.kind;
   if (kind === "content") {
     return normalizeMapBlock({
@@ -386,7 +393,7 @@ function mapBlockPatchFromArgs(
       flowHref: args.flowHref ?? args.flow_href ?? prev.flowHref,
     });
   }
-  return normalizeMapBlock({ kind: "learn" });
+  return coerceAuthoringMapBlock({ kind });
 }
 
 function dispatchEdit(
@@ -426,9 +433,9 @@ function dispatchCreateFlow(
   snapshot: HeliosMapSnapshot,
   args: Record<string, unknown>,
 ): HeliosMapToolResult {
-  const kind = parseMapBlockKind(args.kind ?? args.blockKind);
+  const kind = parseAuthoringMapBlockKind(args.kind ?? args.blockKind);
   if (!isFlowMapBlockKind(kind)) {
-    return fail(snapshot, "kind must be calibration or verification");
+    return fail(snapshot, "kind must be calibration, verification, or solve");
   }
   return ok(snapshot, `create-flow:${kind}`);
 }
@@ -500,6 +507,7 @@ function dispatchExpand(
       description: source.description || "",
       row: slot.row,
       col: slot.col,
+      map_block: source.map_block ?? null,
     });
     if (!placed.ok) return placed;
     next = placed.snapshot;
@@ -582,6 +590,7 @@ function dispatchBridge(
       title,
       row: cell.row,
       col: cell.col,
+      map_block: targets[0]?.map_block ?? null,
     });
     if (!placed.ok) return placed;
     next = placed.snapshot;

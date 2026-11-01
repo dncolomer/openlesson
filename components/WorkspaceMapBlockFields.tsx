@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
-  MAP_BLOCK_KINDS,
+  AUTHORING_MAP_BLOCK_KINDS,
   mapBlockFlowHref,
   mapBlockKindLabel,
   normalizeMapBlock,
@@ -37,7 +37,7 @@ export function WorkspaceMapBlockKindPicker({
         Block type
       </p>
       <div className="grid grid-cols-2 gap-1">
-        {MAP_BLOCK_KINDS.map((kind) => {
+        {AUTHORING_MAP_BLOCK_KINDS.map((kind) => {
           const selected = value === kind;
           const kindIcon = mapBlockKindIconName(kind);
           return (

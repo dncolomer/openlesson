@@ -36,11 +36,11 @@ import {
   MAP_BLOCK_COLUMN,
   MAP_BLOCK_STORE_UNAVAILABLE,
   droppedRequiredMapBlock,
-  mapBlockPlaceError,
-  normalizeMapBlock,
+  coerceAuthoringMapBlock,
   restoreRequiredMapBlock,
   serializeMapBlock,
 } from "@/lib/block-kind";
+import { ensureAuthoringMapBlock } from "@/lib/map-block-authoring";
 
 interface AddBlockResponse {
   title: string;
@@ -74,8 +74,7 @@ export async function POST(req: NextRequest) {
       description: descriptionBody,
     } = body;
 
-    const mapBlock = normalizeMapBlock(mapBlockSnake ?? mapBlockCamel);
-    const typedBlock = mapBlock.kind !== "learn";
+    let mapBlock = coerceAuthoringMapBlock(mapBlockSnake ?? mapBlockCamel);
     const authorTitle =
       typeof titleBody === "string" ? titleBody.trim() : "";
     const authorDescription =
@@ -85,13 +84,9 @@ export async function POST(req: NextRequest) {
       !workspaceId ||
       typeof row !== "number" ||
       typeof col !== "number" ||
-      (!promptText && !typedBlock)
+      (!promptText && !authorTitle && mapBlock.kind !== "content")
     ) {
       return jsonError(400, "Plan ID, grid position, and prompt are required");
-    }
-    const placeError = mapBlockPlaceError(mapBlock);
-    if (placeError) {
-      return jsonError(400, "A linked calibration or verification flow is required.");
     }
 
     const auth = await guardWorkspaceRoute(workspaceId, {
@@ -237,7 +232,7 @@ export async function POST(req: NextRequest) {
     );
 
     let generated: AddBlockResponse;
-    if (typedBlock) {
+    if (authorTitle) {
       generated = {
         title: authorTitle || promptText || "Untitled",
         description: authorDescription,
@@ -276,6 +271,18 @@ Create exactly one learning block that belongs at this grid slot. The topic shou
       }
       generated = aiResponse.data;
     }
+
+    const ensured = await ensureAuthoringMapBlock({
+      raw: mapBlock,
+      title: generated.title.trim() || authorTitle || promptText || "Untitled",
+      topic: generated.description?.trim() || generated.title.trim(),
+      ownerUserId: String(plan.user_id || auth.persistUserId || ""),
+      workspaceId,
+    });
+    if (!ensured.ok) {
+      return jsonError(400, "A linked Solve, Verification, or Calibration flow is required.");
+    }
+    mapBlock = ensured.mapBlock;
 
     const local_context =
       localContext && normalizedLocal?.hasLocalMaterials

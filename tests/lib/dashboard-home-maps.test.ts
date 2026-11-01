@@ -10,6 +10,7 @@ import {
   filterPublicMapCatalog,
   DASHBOARD_HOME_HERO_COUNT,
   DASHBOARD_HOME_SECONDARY_COUNT,
+  isHomeFeaturedMapId,
   partitionPublicMapCatalog,
   pickHomeMapTryBlock,
   presentPublicMapCatalog,
@@ -153,6 +154,8 @@ describe("dashboard home public catalog", () => {
       LANDING_FEATURED_MAP_IDS.slice(0, DASHBOARD_HOME_HERO_COUNT),
     );
     expect(parts.hero[0]?.id).toBe(LANDING_FEATURED_MAP_IDS[0]);
+    expect(isHomeFeaturedMapId(LANDING_FEATURED_MAP_IDS[0])).toBe(true);
+    expect(isHomeFeaturedMapId("newer-public")).toBe(false);
     expect(parts.secondary.map((item) => item.id)).toEqual(
       LANDING_FEATURED_MAP_IDS.slice(
         DASHBOARD_HOME_HERO_COUNT,
@@ -199,6 +202,22 @@ describe("dashboard home public catalog", () => {
         { id: "below", position_x: 0, position_y: 30 },
       ])?.id,
     ).toBe("left");
+    expect(
+      pickHomeMapTryBlock([
+        {
+          id: "content-start",
+          is_start: true,
+          map_block: { kind: "content", attachments: [] },
+        },
+        {
+          id: "solve-later",
+          is_start: false,
+          position_x: 40,
+          position_y: 80,
+          map_block: { kind: "solve", flowId: "sol-1", flowHref: "/s/tok" },
+        },
+      ])?.id,
+    ).toBe("solve-later");
   });
 
 });
@@ -334,6 +353,12 @@ describe("dashboard home and my maps surface", () => {
     expect(dash).toContain("data-dashboard-map-card-summary");
     expect(dash).toContain('fallback="aesthetic"');
     expect(dash).toContain("coverImagePool={workspaceCoverPool}");
+    expect(readRepo("components/dashboard/dashboard-home-tab.tsx")).toContain(
+      "filterFeaturedAestheticPool",
+    );
+    expect(readRepo("components/dashboard/dashboard-home-tab.tsx")).toContain(
+      "featuredCoverPool",
+    );
     expect(dash).toContain("truncatePublicMapSummary");
     expect(dash).toContain("data-dashboard-home-secondary");
     expect(dash).toContain("data-dashboard-home-maps-grid");
@@ -417,6 +442,7 @@ describe("dashboard home and my maps surface", () => {
 
     const tryRoute = readRepo("app/api/dashboard/maps/try/route.ts");
     expect(tryRoute).toContain("pickHomeMapTryBlock");
+    expect(tryRoute).toContain("mapBlockLaunch");
     expect(tryRoute).toContain('dashboardPlayHref("learn"');
     expect(tryRoute).toContain("session_mode: \"learning\"");
     expect(tryRoute).toContain("isPlayCopy: true");

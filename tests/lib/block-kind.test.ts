@@ -11,11 +11,14 @@ import {
   mapBlockAllowsSolve,
   mapBlockAllowsVerify,
   mapBlockFlowHref,
+  authoringMapBlockForReuse,
+  coerceAuthoringMapBlock,
   mapBlockFromHeliosArgs,
   mapBlockHasSessionLaunch,
   mapBlockLaunch,
   mapBlockPlaceError,
   normalizeMapBlock,
+  parseAuthoringMapBlockKind,
   parseMapBlock,
   parseMapBlockKind,
   restoreRequiredMapBlock,
@@ -315,16 +318,57 @@ describe("map block kinds", () => {
     expect(content.snapshot.blocks[0].map_block?.kind).toBe("content");
     expect(content.snapshot.blocks[0].map_block?.attachments.length).toBeGreaterThan(0);
 
-    const learn = dispatchHeliosMapTool(emptySnap(), {
+    expect(parseAuthoringMapBlockKind(undefined)).toBe("solve");
+    expect(parseAuthoringMapBlockKind("learn")).toBe("solve");
+    expect(coerceAuthoringMapBlock(null).kind).toBe("solve");
+    expect(authoringMapBlockForReuse(null)).toBeNull();
+    expect(
+      authoringMapBlockForReuse({ kind: "solve", flowId: "sol-1" })?.flowId,
+    ).toBe("sol-1");
+
+    const omitted = dispatchHeliosMapTool(emptySnap(), {
       name: "add_block",
       args: { title: "Learn tile", row: 3, col: 0, id: "learn-block" },
     });
-    expect(learn.ok).toBe(true);
-    if (!learn.ok) return;
-    expect(learn.snapshot.blocks[0].map_block == null || learn.snapshot.blocks[0].map_block.kind === "learn").toBe(
-      true,
-    );
-    expect(mapBlockAllowsLearn(learn.snapshot.blocks[0].map_block)).toBe(true);
+    expect(omitted.ok).toBe(false);
+    if (omitted.ok) return;
+    expect(omitted.error).toBe("flow_id_required");
+
+    const retired = dispatchHeliosMapTool(emptySnap(), {
+      name: "add_block",
+      args: { title: "Learn tile", row: 3, col: 0, kind: "learn", id: "learn-block" },
+    });
+    expect(retired.ok).toBe(false);
+    if (retired.ok) return;
+    expect(retired.error).toBe("flow_id_required");
+
+    const createdSolve: Array<{ id: string; kind: string }> = [];
+    const placedSolve: Array<{ kind?: string; flowId?: string | null }> = [];
+    const omittedHosted = await executeHeliosMapToolCall({
+      snapshot: emptySnap(),
+      call: {
+        name: "add_block",
+        args: { title: "Research challenge", row: 3, col: 0 },
+      },
+      host: {
+        createFlow: async (input) => {
+          createdSolve.push({ id: "new-sol", kind: input.kind });
+          return {
+            id: "new-sol",
+            kind: input.kind,
+            name: input.name,
+            publicToken: "stok",
+            publicPath: "/s/stok",
+          };
+        },
+        addBlock: async ({ mapBlock }) => {
+          placedSolve.push({ kind: mapBlock?.kind, flowId: mapBlock?.flowId });
+        },
+      },
+    });
+    expect(omittedHosted.ok).toBe(true);
+    expect(createdSolve).toEqual([{ id: "new-sol", kind: "solve" }]);
+    expect(placedSolve).toEqual([{ kind: "solve", flowId: "new-sol" }]);
 
     const persisted: Array<{ prompt: string; kind?: string; flowId?: string | null }> = [];
     const hosted = await executeHeliosMapToolCall({
@@ -414,10 +458,32 @@ describe("map block kinds", () => {
     expect(read("components/workspace-view/workspace-right-drawers.tsx")).toContain(
       "map_block: parseMapBlock(n.map_block)",
     );
+    expect(read("components/workspace-view/workspace-right-drawers.tsx")).toContain(
+      "workspaceId,",
+    );
+    expect(read("app/api/dashboard/flows/route.ts")).toContain(
+      "body.workspaceId || body.workspace_id",
+    );
+    expect(read("lib/pow-api/helios-map-agent.ts")).toContain(
+      "ensureAuthoringMapBlock",
+    );
     expect(slot).toContain("map_block");
     expect(slot).toContain("serializeMapBlock");
     expect(slot).toContain("MAP_BLOCK_STORE_UNAVAILABLE");
     expect(slot).toContain("restoreRequiredMapBlock");
+    expect(slot).toContain("ensureAuthoringMapBlock");
+    expect(add).toContain('useState<MapBlockKind>("solve")');
+    expect(read("lib/workspace-grid-ops/generate_shape.ts")).toContain(
+      "ensureAuthoringMapBlock",
+    );
+    expect(read("lib/workspace-helios-tools/catalog.ts")).not.toContain(
+      "learn (default)",
+    );
+    expect(prompt).toContain("never learn");
+    expect(catalog).toContain("never learn");
+    expect(catalog).toContain("You pick kind per cell");
+    expect(prompt).toContain("TILE KINDS");
+    expect(read("lib/workspace-helios-expertise.ts")).toContain("TILE KINDS");
     expect(migration).toContain("map_block");
     expect(migration).toContain("NOTIFY pgrst");
     expect(read("lib/pow-api/helios-map-agent.ts")).toContain(

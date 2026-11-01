@@ -24,12 +24,17 @@ import {
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import { WorkspaceCardHero } from "@/components/WorkspaceCardHero";
 import {
+  featuredStoredCoverUrl,
+  filterFeaturedAestheticPool,
+} from "@/lib/aesthetic-resolution";
+import {
   DASHBOARD_CATALOG_PATH,
   DASHBOARD_MAPS_ADD_PATH,
   DASHBOARD_MAPS_REMOVE_PATH,
   DASHBOARD_MAPS_TRY_PATH,
   collectPublicMapCategories,
   filterPublicMapCatalog,
+  isHomeFeaturedMapId,
   partitionPublicMapCatalog,
   truncatePublicMapSummary,
   type PublicMapCatalogItem,
@@ -69,6 +74,10 @@ export function DashboardHomeTab({
   const playKinds = useMemo(
     () => dashboardPlayKindsForAccess(hasPaidAccess),
     [hasPaidAccess],
+  );
+  const featuredCoverPool = useMemo(
+    () => filterFeaturedAestheticPool(coverImagePool),
+    [coverImagePool],
   );
   const [kind, setKind] = useState<DashboardPlayKind>("learn");
   const [busy, setBusy] = useState<"start" | "curious" | false>(false);
@@ -370,8 +379,8 @@ export function DashboardHomeTab({
             >
               <WorkspaceCardHero
                 workspaceId={hero.id}
-                coverImageUrl={hero.coverImageUrl}
-                imagePool={coverImagePool}
+                coverImageUrl={featuredStoredCoverUrl(hero.coverImageUrl)}
+                imagePool={featuredCoverPool}
                 fallback="aesthetic"
                 heightClassName="absolute inset-0 h-full min-h-[22rem] sm:min-h-[28rem] lg:min-h-[32rem]"
               />
@@ -546,6 +555,7 @@ export function DashboardHomeTab({
                     key={item.id}
                     item={item}
                     imagePool={coverImagePool}
+                    featuredImagePool={featuredCoverPool}
                     onOpen={() => void openDetail(item)}
                     className="w-[18rem] shrink-0 sm:w-[20rem]"
                   />
@@ -565,6 +575,7 @@ export function DashboardHomeTab({
                     key={item.id}
                     item={item}
                     imagePool={coverImagePool}
+                    featuredImagePool={featuredCoverPool}
                     onOpen={() => void openDetail(item)}
                   />
                 ))}
@@ -583,6 +594,7 @@ export function DashboardHomeTab({
                     key={item.id}
                     item={item}
                     imagePool={coverImagePool}
+                    featuredImagePool={featuredCoverPool}
                     onOpen={() => void openDetail(item)}
                   />
                 ))}
@@ -624,14 +636,17 @@ function CatalogCard({
   item,
   onOpen,
   imagePool = null,
+  featuredImagePool = null,
   className = "",
 }: {
   item: PublicMapCatalogItem;
   onOpen: () => void;
   imagePool?: readonly string[] | null;
+  featuredImagePool?: readonly string[] | null;
   className?: string;
 }) {
   const summary = truncatePublicMapSummary(item.summary);
+  const featured = isHomeFeaturedMapId(item.id);
   return (
     <button
       type="button"
@@ -640,8 +655,10 @@ function CatalogCard({
     >
       <WorkspaceCardHero
         workspaceId={item.id}
-        coverImageUrl={item.coverImageUrl}
-        imagePool={imagePool}
+        coverImageUrl={
+          featured ? featuredStoredCoverUrl(item.coverImageUrl) : item.coverImageUrl
+        }
+        imagePool={featured ? featuredImagePool : imagePool}
         fallback="aesthetic"
         heightClassName="absolute inset-0 h-full min-h-[16rem]"
       />

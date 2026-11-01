@@ -1,6 +1,8 @@
 /**
- * Learning Map block kinds: Learn (default), calibration, verification, solve, content.
- * Helios dispatch, Manual add/edit, clone, and launch gating share this parser.
+ * Learning Map tiles: Solve, Verification, Calibration, and Content.
+ * A map is an assembly of those pieces (flows + content). Legacy Learn
+ * tiles (missing `map_block`) still parse and launch Learn; authoring
+ * never creates them.
  */
 
 import { calibrationFlowPublicPath } from "@/lib/calibration-flow";
@@ -18,12 +20,26 @@ export const MAP_BLOCK_KINDS = [
 
 export type MapBlockKind = (typeof MAP_BLOCK_KINDS)[number];
 
+/** Kinds Helios and Manual may place. Learn is legacy stored data only. */
+export const AUTHORING_MAP_BLOCK_KINDS = [
+  "solve",
+  "verification",
+  "calibration",
+  "content",
+] as const;
+
+export type AuthoringMapBlockKind = (typeof AUTHORING_MAP_BLOCK_KINDS)[number];
+
 export const MAP_BLOCK_COLUMN = "map_block";
 
 export const MAP_BLOCK_STORE_UNAVAILABLE =
   "This map cannot store calibration, verification, solve, or content blocks yet.";
 
+/** Stored null / missing `map_block` is a legacy Learn tile. */
 export const DEFAULT_MAP_BLOCK_KIND: MapBlockKind = "learn";
+
+/** New tiles default to a Solve flow (the former implicit Learn session). */
+export const DEFAULT_AUTHORING_MAP_BLOCK_KIND: AuthoringMapBlockKind = "solve";
 
 export type MapBlockAttachmentType = "file" | "link";
 
@@ -81,6 +97,39 @@ export function parseMapBlockKind(value: unknown): MapBlockKind {
     .trim()
     .toLowerCase();
   return KIND_ALIASES[raw] ?? DEFAULT_MAP_BLOCK_KIND;
+}
+
+export function isAuthoringMapBlockKind(
+  value: unknown,
+): value is AuthoringMapBlockKind {
+  return (
+    typeof value === "string" &&
+    (AUTHORING_MAP_BLOCK_KINDS as readonly string[]).includes(value)
+  );
+}
+
+/** New placement: unknown / Learn become Solve. */
+export function parseAuthoringMapBlockKind(value: unknown): AuthoringMapBlockKind {
+  const raw = String(value ?? "")
+    .trim()
+    .toLowerCase();
+  if (!raw) return DEFAULT_AUTHORING_MAP_BLOCK_KIND;
+  const kind = KIND_ALIASES[raw] ?? DEFAULT_AUTHORING_MAP_BLOCK_KIND;
+  if (kind === "learn") return DEFAULT_AUTHORING_MAP_BLOCK_KIND;
+  return kind;
+}
+
+/** Turn a stored/Helios payload into a placeable authoring tile (never Learn). */
+export function coerceAuthoringMapBlock(raw?: unknown): MapBlock {
+  const n = normalizeMapBlock(raw);
+  if (n.kind !== "learn") return n;
+  return {
+    kind: DEFAULT_AUTHORING_MAP_BLOCK_KIND,
+    flowId: n.flowId,
+    flowPublicToken: n.flowPublicToken,
+    flowHref: n.flowHref,
+    attachments: [],
+  };
 }
 
 function cleanId(value: unknown): string | null {
@@ -202,7 +251,8 @@ function recordFromUnknown(raw: unknown): Record<string, unknown> | null {
 
 /**
  * Normalize DB/JSON/Helios/Manual payload into a MapBlock.
- * Missing/untyped values are Learn.
+ * Missing/untyped values are legacy Learn. Authoring uses
+ * `coerceAuthoringMapBlock` / `mapBlockFromHeliosArgs` instead.
  */
 export function normalizeMapBlock(raw?: unknown): MapBlock {
   if (raw == null) return defaultMapBlock();
@@ -263,9 +313,13 @@ export function parseMapBlock(raw: unknown): MapBlock {
   return normalizeMapBlock(raw);
 }
 
-/** Helios add_block args → MapBlock. */
+/** Helios add_block args → MapBlock. Omitted or Learn kind becomes Solve. */
 export function mapBlockFromHeliosArgs(args: Record<string, unknown>): MapBlock {
-  return normalizeMapBlock(args);
+  const hasKind = args.kind != null || args.blockKind != null;
+  const kind = hasKind
+    ? parseAuthoringMapBlockKind(args.kind ?? args.blockKind)
+    : DEFAULT_AUTHORING_MAP_BLOCK_KIND;
+  return coerceAuthoringMapBlock({ ...args, kind });
 }
 
 export function serializeMapBlock(block: MapBlock): Record<string, unknown> | null {
@@ -324,12 +378,31 @@ export function restoreRequiredMapBlock(
 }
 
 /**
- * Flow kinds require a flow id. Content and Learn always place.
+ * Flow kinds require a flow id. Content and legacy Learn always place.
+ * New authoring uses `mapBlockAuthoringPlaceError`.
  */
 export function mapBlockPlaceError(block: MapBlock): string | null {
   if (isFlowMapBlockKind(block.kind) && !block.flowId) {
     return "flow_id_required";
   }
+  return null;
+}
+
+/** New tiles cannot be Learn; flow tiles still need a flow id. */
+export function mapBlockAuthoringPlaceError(block: MapBlock): string | null {
+  if (block.kind === "learn") return "learn_block_retired";
+  return mapBlockPlaceError(block);
+}
+
+/**
+ * Expand / bridge / split neighbors reuse this tile's flow or content.
+ * Legacy Learn and unlinked flow kinds are not reusable — the first new
+ * tile creates a Solve flow, then later slots inherit that link.
+ */
+export function authoringMapBlockForReuse(raw: unknown): MapBlock | null {
+  const block = normalizeMapBlock(raw);
+  if (block.kind === "content") return block;
+  if (isFlowMapBlockKind(block.kind) && block.flowId) return block;
   return null;
 }
 
@@ -431,7 +504,7 @@ export function formatOwnerFlowsForHeliosPrompt(input: {
     })
     .filter(Boolean);
   return [
-    "OWNER FLOWS (prefer these existing ids). To create a new flow, omit flowId on add_block and pass flowName plus goal (calibration) or topic (verification or solve). Solve needs name + topic only. Do not invent a UUID.",
+    "OWNER FLOWS (prefer these existing ids, especially flows already on this map). A Learning Map is Solve, Verification, Calibration, and Content tiles — never a Learn session tile. You pick the kind per cell. Reuse a listed flow when it fits; to create a new flow that belongs to this map, omit flowId on add_block and pass flowName plus goal (calibration) or topic (verification or solve). Solve needs name + topic only. Do not invent a UUID.",
     "Calibration flows (kind: calibration, argument flowId):",
     cal.join("\n") || "(none)",
     "Verification flows (kind: verification, argument flowId):",

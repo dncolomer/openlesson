@@ -185,6 +185,7 @@ async function persistCommand(
     const { error } = await writeVerificationFlow(supabase, "insert", value.flow.id, {
       id: value.flow.id,
       owner_user_id: nullableId(value.flow.ownerUserId),
+      workspace_id: nullableId(value.flow.workspaceId),
       name: value.flow.name,
       topic: value.flow.topic,
       questions: value.flow.questions,
@@ -360,7 +361,7 @@ async function writeVerificationFlow(
       ? supabase.from("verify_flows").insert(body)
       : supabase.from("verify_flows").update(body).eq("id", id);
   let current = row;
-  for (const optional of ["name", "action_catalog", "duration_minutes", "owner_user_id"] as const) {
+  for (const optional of ["name", "action_catalog", "duration_minutes", "owner_user_id", "workspace_id"] as const) {
     const result = await run(current);
     if (!result.error) return result;
     if (!String(result.error.message).includes(optional) || !(optional in current)) return result;

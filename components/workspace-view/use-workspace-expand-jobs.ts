@@ -20,7 +20,11 @@ import { buildSkillGridLayout, getWeightedNeighborhood } from "@/lib/block-skill
 import { parseWorkspacePracticeOptions } from "@/lib/block-practice-options";
 import { parseBlockCreatorEffects } from "@/lib/block-creator-effects";
 import { parseBlockLocalContext } from "@/lib/prompt-workspace-context";
-import { parseMapBlock } from "@/lib/block-kind";
+import {
+  authoringMapBlockForReuse,
+  parseMapBlock,
+  type MapBlock,
+} from "@/lib/block-kind";
 import {
   buildExpandFromSourceSlotPrompt,
   type ExpandSourceIdentity,
@@ -32,6 +36,20 @@ import type { WorkspaceAddTargetCell } from "@/lib/workspace-right-pane";
 import { nextWorkspaceMapSelection, type WorkspaceMapSelection } from "@/lib/workspace-map-selection";
 import { createDisarmedCloneState } from "@/lib/clone-block";
 import { DEFAULT_MODEL } from "@/lib/xai-models";
+
+function mapBlockFromPlacedSlot(
+  nodes: Array<{
+    position_x?: number | null;
+    position_y?: number | null;
+    map_block?: unknown;
+  }>,
+  slot: { row: number; col: number },
+): MapBlock | null {
+  const placed = nodes.find(
+    (n) => n.position_y === slot.row && n.position_x === slot.col,
+  );
+  return authoringMapBlockForReuse(placed?.map_block);
+}
 
 export function useWorkspaceExpandJobs(input: {
   workspaceId: string;
@@ -103,6 +121,7 @@ export function useWorkspaceExpandJobs(input: {
       setCloneArm(createDisarmedCloneState());
 
       void (async () => {
+        let inheritedMapBlock = authoringMapBlockForReuse(source.map_block);
         try {
           const result = await runAddExpandCreateLoop({
             frozenSlots: slots,
@@ -154,6 +173,7 @@ export function useWorkspaceExpandJobs(input: {
                   weightedNeighbors,
                   model,
                   locale,
+                  ...(inheritedMapBlock ? { map_block: inheritedMapBlock } : {}),
                   ...(ayclToken ? { ayclToken } : {}),
                 }),
               });
@@ -165,13 +185,17 @@ export function useWorkspaceExpandJobs(input: {
               const data = await response.json();
               if (data.updatedNodes?.length > 0) {
                 const nextNodes = data.updatedNodes.map(
-                  (n: Block & { local_context?: unknown }) => ({
+                  (n: Block & { local_context?: unknown; map_block?: unknown }) => ({
                     ...n,
                     local_context: parseBlockLocalContext(n.local_context),
+                    map_block: parseMapBlock(n.map_block),
                   }),
                 );
                 nodesRef.current = nextNodes;
                 setNodes(nextNodes);
+                if (!inheritedMapBlock) {
+                  inheritedMapBlock = mapBlockFromPlacedSlot(nextNodes, slot);
+                }
               }
             },
           });
@@ -417,6 +441,10 @@ export function useWorkspaceExpandJobs(input: {
       applyMapSelectionResult(nextWorkspaceMapSelection({ type: "clear" }));
 
       void (async () => {
+        const anchor = nodesRef.current.find((n) =>
+          (input.blockIds || []).includes(n.id),
+        );
+        let inheritedMapBlock = authoringMapBlockForReuse(anchor?.map_block);
         try {
           const result = await runAddExpandCreateLoop({
             frozenSlots: slots,
@@ -457,6 +485,7 @@ export function useWorkspaceExpandJobs(input: {
                   model,
                   locale,
                   intent: "bridge",
+                  ...(inheritedMapBlock ? { map_block: inheritedMapBlock } : {}),
                   ...(ayclToken ? { ayclToken } : {}),
                 }),
               });
@@ -468,13 +497,17 @@ export function useWorkspaceExpandJobs(input: {
               const data = await response.json();
               if (data.updatedNodes?.length > 0) {
                 const nextNodes = data.updatedNodes.map(
-                  (n: Block & { local_context?: unknown }) => ({
+                  (n: Block & { local_context?: unknown; map_block?: unknown }) => ({
                     ...n,
                     local_context: parseBlockLocalContext(n.local_context),
+                    map_block: parseMapBlock(n.map_block),
                   }),
                 );
                 nodesRef.current = nextNodes;
                 setNodes(nextNodes);
+                if (!inheritedMapBlock) {
+                  inheritedMapBlock = mapBlockFromPlacedSlot(nextNodes, slot);
+                }
               }
             },
           });

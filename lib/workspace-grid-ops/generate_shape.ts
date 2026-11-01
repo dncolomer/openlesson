@@ -71,7 +71,15 @@ import {
   serializeBlockCreatorEffects,
   validateBlockCreatorEffects,
 } from "@/lib/block-creator-effects";
-import { blockMapGlyphDbFields } from "@/lib/block-map-glyph";
+import { blockMapGlyphDbFields, mapBlockKindIconName } from "@/lib/block-map-glyph";
+import {
+  MAP_BLOCK_COLUMN,
+  MAP_BLOCK_STORE_UNAVAILABLE,
+  droppedRequiredMapBlock,
+  restoreRequiredMapBlock,
+  serializeMapBlock,
+} from "@/lib/block-kind";
+import { ensureAuthoringMapBlock } from "@/lib/map-block-authoring";
 
 export async function handle_generate_shape(ctx: GridOpContext): Promise<Response | null> {
   const {
@@ -238,6 +246,26 @@ export async function handle_generate_shape(ctx: GridOpContext): Promise<Respons
       aiResponse.data,
       aiResponse.data.title.trim(),
     );
+    const ensured = await ensureAuthoringMapBlock({
+      raw:
+        (body as { map_block?: unknown; mapBlock?: unknown }).map_block ??
+        (body as { mapBlock?: unknown }).mapBlock,
+      title: aiResponse.data.title.trim(),
+      topic:
+        aiResponse.data.description?.trim() || aiResponse.data.title.trim(),
+      ownerUserId: String((plan as { user_id?: string } | null)?.user_id || ""),
+      workspaceId,
+    });
+    if (!ensured.ok) {
+      return jsonError(
+        400,
+        "A linked Solve, Verification, or Calibration flow is required.",
+      );
+    }
+    const mapBlock = ensured.mapBlock;
+    const typedMapIcon = mapBlockKindIconName(mapBlock.kind);
+    if (typedMapIcon) glyph.map_icon = typedMapIcon;
+    const mapBlockWire = serializeMapBlock(mapBlock);
     const insertPayload: Record<string, unknown> = {
       workspace_id: workspaceId,
       title: aiResponse.data.title.trim(),
@@ -256,6 +284,7 @@ export async function handle_generate_shape(ctx: GridOpContext): Promise<Respons
       map_keyword: glyph.map_keyword,
       map_icon: glyph.map_icon,
       ...(local_context ? { local_context } : {}),
+      ...(mapBlockWire ? { [MAP_BLOCK_COLUMN]: mapBlockWire } : {}),
     };
 
     let { data: newNode, error: insertError } = await supabase
@@ -264,11 +293,16 @@ export async function handle_generate_shape(ctx: GridOpContext): Promise<Respons
       .select()
       .single();
 
-    // Graceful fallback if span/shape/local_context/glyph columns not migrated yet
+    // Graceful fallback if span/shape/local_context/glyph columns not migrated yet.
+    // Typed map_block must persist; never insert a silent Learn tile.
     if (
       insertError &&
-      /span_w|span_h|shape_cells|local_context|map_keyword|map_icon|schema cache/i.test(insertError.message || "")
+      /span_w|span_h|shape_cells|local_context|map_keyword|map_icon|map_block|schema cache/i.test(insertError.message || "")
     ) {
+      const insertMsg = insertError.message || "";
+      if (mapBlockWire && /map_block/i.test(insertMsg)) {
+        return jsonError(500, MAP_BLOCK_STORE_UNAVAILABLE);
+      }
       const {
         span_w: _sw,
         span_h: _sh,
@@ -276,32 +310,42 @@ export async function handle_generate_shape(ctx: GridOpContext): Promise<Respons
         local_context: _lc,
         map_keyword: _mk,
         map_icon: _mi,
+        map_block: _mb,
         ...rest
       } =
         insertPayload;
-      const glyphMissing = /map_keyword|map_icon/i.test(insertError.message || "");
+      const glyphMissing = /map_keyword|map_icon/i.test(insertMsg);
       const glyphFields = glyphMissing
-        ? {}
+        ? typedMapIcon
+          ? { map_icon: typedMapIcon }
+          : {}
         : { map_keyword: glyph.map_keyword, map_icon: glyph.map_icon };
-      let retryPayload: Record<string, unknown> = {
-        ...rest,
-        span_w: footprint.span_w,
-        span_h: footprint.span_h,
-        ...(local_context ? { local_context } : {}),
-        ...glyphFields,
-      };
+      let retryPayload: Record<string, unknown> = restoreRequiredMapBlock(
+        insertPayload,
+        {
+          ...rest,
+          span_w: footprint.span_w,
+          span_h: footprint.span_h,
+          ...(local_context ? { local_context } : {}),
+          ...glyphFields,
+        },
+      );
+      if (droppedRequiredMapBlock(insertPayload, retryPayload)) {
+        return jsonError(500, MAP_BLOCK_STORE_UNAVAILABLE);
+      }
       let retry = await supabase.from("blocks").insert(retryPayload).select().single();
       if (retry.error && /span_w|span_h|schema cache/i.test(retry.error.message || "")) {
-        retryPayload = {
+        retryPayload = restoreRequiredMapBlock(insertPayload, {
           ...rest,
           ...(local_context ? { local_context } : {}),
           ...glyphFields,
-        };
+        });
         retry = await supabase.from("blocks").insert(retryPayload).select().single();
       }
       if (retry.error && /local_context|schema cache/i.test(retry.error.message || "")) {
         const { local_context: __lc, ...withoutLocal } = retryPayload;
-        retry = await supabase.from("blocks").insert(withoutLocal).select().single();
+        retryPayload = restoreRequiredMapBlock(insertPayload, withoutLocal);
+        retry = await supabase.from("blocks").insert(retryPayload).select().single();
       }
       if (retry.error && /map_keyword|map_icon|schema cache/i.test(retry.error.message || "")) {
         const {
@@ -309,7 +353,18 @@ export async function handle_generate_shape(ctx: GridOpContext): Promise<Respons
           map_icon: __mi,
           ...stripped
         } = retryPayload;
-        retry = await supabase.from("blocks").insert(stripped).select().single();
+        retryPayload = restoreRequiredMapBlock(
+          insertPayload,
+          typedMapIcon ? { ...stripped, map_icon: typedMapIcon } : stripped,
+        );
+        retry = await supabase.from("blocks").insert(retryPayload).select().single();
+      }
+      if (
+        retry.error &&
+        mapBlockWire &&
+        /map_block/i.test(retry.error.message || "")
+      ) {
+        return jsonError(500, MAP_BLOCK_STORE_UNAVAILABLE);
       }
       newNode = retry.data;
       insertError = retry.error;

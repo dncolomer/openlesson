@@ -145,6 +145,8 @@ export type ExpandSourceIdentity = {
   title?: string | null;
   description?: string | null;
   planning_prompt?: string | null;
+  /** Linked flow or content on the source tile; expand reuses it. */
+  map_block?: unknown;
 };
 
 /**

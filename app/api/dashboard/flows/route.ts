@@ -151,6 +151,8 @@ export async function POST(req: NextRequest) {
     const body = (await req.json()) as Record<string, unknown>;
     const kind = parseProductFlowKind(body.kind);
     if (!kind) return jsonError(400, "kind must be verification, calibration, or solve");
+    const workspaceId =
+      String(body.workspaceId || body.workspace_id || "").trim() || undefined;
     const draft = {
       ...emptyProductFlowDraft(kind),
       name: String(body.name || ""),
@@ -167,6 +169,7 @@ export async function POST(req: NextRequest) {
       const created = await runSolveCommand({
         type: "create",
         ownerUserId: auth.user.id,
+        workspaceId,
         name: accepted.name,
         topic: accepted.topic,
         durationMinutes: accepted.durationMinutes,
@@ -190,6 +193,7 @@ export async function POST(req: NextRequest) {
       const created = await runCalibrationCommand({
         type: "create",
         ownerUserId: auth.user.id,
+        workspaceId,
         name: accepted.name,
         goal: accepted.goal,
         questions: accepted.questions,
@@ -213,6 +217,7 @@ export async function POST(req: NextRequest) {
     const created = await runVerificationCommand({
       type: "create",
       ownerUserId: auth.user.id,
+      workspaceId,
       name: accepted.name,
       topic: accepted.topic,
       questions: accepted.questions,

@@ -337,7 +337,7 @@ export function formatHeliosMapSnapshotForPrompt(
       const lock = (b.lock_until_block_ids || []).join(",") || "-";
       const kind = b.map_block?.kind || "learn";
       const kindExtra =
-        kind === "calibration" || kind === "verification"
+        kind === "calibration" || kind === "verification" || kind === "solve"
           ? ` flow:${b.map_block?.flowId || "-"}`
           : kind === "content"
             ? ` attachments:${(b.map_block?.attachments || []).length}`

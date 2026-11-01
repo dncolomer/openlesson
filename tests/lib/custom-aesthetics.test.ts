@@ -480,7 +480,9 @@ describe("custom aesthetic surfaces", () => {
 
     const dashboard = readDashboardSurface();
     expect(dashboard).toContain("fetchAestheticPackages");
-    expect(dashboard).toContain("imagePool={workspaceCoverPool}");
+    expect(dashboard).toContain("coverImagePool={workspaceCoverPool}");
+    expect(dashboard).toContain("imagePool={coverImagePool}");
+    expect(dashboard).toContain("featuredCoverPool");
     expect(read("components/dashboard/dashboard-knowledge-regions-tab.tsx")).not.toContain("public/aesthetics");
     // No new control that chooses a named pack versus the custom set.
     expect(covers).not.toContain("Greco-futurism");

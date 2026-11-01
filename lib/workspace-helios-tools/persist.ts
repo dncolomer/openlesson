@@ -57,6 +57,7 @@ export type HeliosMapToolHost = {
   generateShape?: (input: {
     prompt: string;
     cells: Array<{ row: number; col: number }>;
+    mapBlock?: MapBlock;
   }) => Promise<void>;
   splitBlock?: (input: { blockId: string; prompt?: string }) => Promise<void>;
   cloneBlock?: (input: {
@@ -213,7 +214,10 @@ export async function executeHeliosMapToolCall(input: {
   const host = input.host;
   let call = input.call;
   const args = { ...(call.args || {}) };
-  if (call.name === "add_block" && heliosWillCreateFlow(args)) {
+  if (
+    (call.name === "add_block" || call.name === "generate_shape") &&
+    heliosWillCreateFlow(args)
+  ) {
     if (!host?.createFlow) {
       return fail(input.snapshot, "flow_id_required");
     }
@@ -273,9 +277,14 @@ export async function executeHeliosMapToolCall(input: {
         mapBlock,
       });
     } else if (name === "generate_shape" && host.generateShape) {
+      const mapBlock = await ingestMapBlockAttachments(
+        heliosResolvedMapBlock(args),
+        host,
+      );
       await host.generateShape({
         prompt: stringArg(args, "prompt", "title") || "Untitled",
         cells: cellsFromArgs(args),
+        mapBlock,
       });
     } else if (name === "split_block" && host.splitBlock) {
       await host.splitBlock({

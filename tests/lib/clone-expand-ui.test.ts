@@ -108,6 +108,7 @@ describe("Clone left-bar + Expand block UI wiring", () => {
     expect(expandFn).toContain("add-block-at-slot");
     expect(expandFn).toContain("runAddExpandCreateLoop");
     expect(expandFn).toContain("userGuidance");
+    expect(expandFn).toContain("inheritedMapBlock");
     expect(expandFn).toMatch(
       /buildExpandFromSourceSlotPrompt\(\{[\s\S]*?userGuidance/,
     );

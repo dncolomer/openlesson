@@ -131,5 +131,8 @@ describe("Helios map tools on the public workspace API / MCP", () => {
     expect(src).toMatch(/export async function POST/);
     expect(src).toContain("listHeliosMapToolsForAgent");
     expect(src).toContain("applyHeliosMapToolsForAgent");
+    expect(
+      readFileSync(join(ROOT, "lib/pow-api/helios-map-agent.ts"), "utf8"),
+    ).toContain("ensureAuthoringMapBlock");
   });
 });

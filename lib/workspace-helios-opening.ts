@@ -72,6 +72,6 @@ export function heliosMapOpeningAwarenessText(): string {
     ...HELIOS_MAP_OPENING_GUIDE_QUESTIONS.map((question) => `- ${question}`),
     "Example topics (the author may pick one):",
     examples,
-    "Once the author names a direction or picks a shape, choose a map type and build that topology immediately with tools. Do not spray an unprompted map or a linear row of blocks.",
+    "Once the author names a direction or picks a shape, choose a map type, decide which tile kinds the walk needs, and build that topology immediately with tools. Do not spray an unprompted map, a linear row of blocks, or a map of only Solve tiles.",
   ].join("\n");
 }

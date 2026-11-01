@@ -244,6 +244,7 @@ export function WorkspaceRightDrawers({
     cells: WorkspaceAddTargetCell[];
     contextSourceKeys?: string[];
     isStart?: boolean;
+    mapBlock?: MapBlock;
   }) => Promise<void>;
 }) {
   const { t } = useI18n();
@@ -316,6 +317,7 @@ export function WorkspaceRightDrawers({
             questions: input.questions,
             actionCatalog: input.actionCatalog,
             durationMinutes: input.durationMinutes,
+            workspaceId,
           }),
         });
         const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
@@ -341,8 +343,8 @@ export function WorkspaceRightDrawers({
           name,
         });
       },
-      generateShape: async ({ prompt, cells }) => {
-        await onSubmitGenerateShape({ prompt, cells });
+      generateShape: async ({ prompt, cells, mapBlock }) => {
+        await onSubmitGenerateShape({ prompt, cells, mapBlock });
       },
       splitBlock: onSplitBlock
         ? async ({ blockId, prompt }) => {
@@ -367,6 +369,7 @@ export function WorkspaceRightDrawers({
                 title: source.title,
                 description: source.description,
                 planning_prompt: source.planning_prompt,
+                map_block: source.map_block,
               },
               {
                 frozenSlots,

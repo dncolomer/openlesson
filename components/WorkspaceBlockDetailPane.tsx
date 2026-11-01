@@ -334,6 +334,7 @@ export function WorkspaceBlockDetailPane({
                 title: blockTitle,
                 description: blockDescription,
                 planning_prompt: planningPrompt,
+                map_block: parsedMapBlock,
               }}
               nodes={expandNodes!}
               unusableCells={unusableCells}

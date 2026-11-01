@@ -34,7 +34,9 @@ describe("Helios web search + create-flow args", () => {
     expect(
       heliosWillCreateFlow({ kind: "calibration", flowId: "cal-1" }),
     ).toBe(false);
-    expect(heliosWillCreateFlow({ kind: "learn" })).toBe(false);
+    expect(heliosWillCreateFlow({ kind: "learn" })).toBe(true);
+    expect(heliosWillCreateFlow({})).toBe(true);
+    expect(heliosWillCreateFlow({ kind: "content" })).toBe(false);
     const draft = heliosFlowCreateInput({
       kind: "verification",
       title: "Distance",
@@ -42,5 +44,9 @@ describe("Helios web search + create-flow args", () => {
     expect(draft.kind).toBe("verification");
     expect(draft.topic).toBe("Distance");
     expect(draft.questions.length).toBeGreaterThan(0);
+    expect(heliosFlowCreateInput({ title: "Research" }).kind).toBe("solve");
+    expect(heliosFlowCreateInput({ kind: "learn", title: "Old" }).kind).toBe(
+      "solve",
+    );
   });
 });

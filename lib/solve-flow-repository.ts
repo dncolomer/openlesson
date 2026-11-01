@@ -169,6 +169,7 @@ async function persistCommand(
     const { error } = await writeSolveFlow(supabase, "insert", value.flow.id, {
       id: value.flow.id,
       owner_user_id: nullableId(value.flow.ownerUserId),
+      workspace_id: nullableId(value.flow.workspaceId),
       name: value.flow.name,
       topic: value.flow.topic,
       duration_minutes: value.flow.durationMinutes,
@@ -240,7 +241,7 @@ async function writeSolveFlow(
       ? supabase.from(SOLVE_FLOWS_TABLE).insert(body)
       : supabase.from(SOLVE_FLOWS_TABLE).update(body).eq("id", id);
   let current = row;
-  for (const optional of ["action_catalog", "duration_minutes"] as const) {
+  for (const optional of ["action_catalog", "duration_minutes", "workspace_id"] as const) {
     const result = await run(current);
     if (!result.error) return result;
     if (!String(result.error.message).includes(optional) || !(optional in current)) return result;

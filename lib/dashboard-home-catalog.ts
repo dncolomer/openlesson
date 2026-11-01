@@ -9,11 +9,15 @@ import {
   normalizeAyclCategory,
   resolveAyclCheckoutCents,
 } from "@/lib/aycl-marketplace";
-import { orderLandingFeaturedMaps } from "@/lib/marketing/landing-featured-ids";
+import {
+  LANDING_FEATURED_MAP_IDS,
+  orderLandingFeaturedMaps,
+} from "@/lib/marketing/landing-featured-ids";
 import {
   WORKSPACE_KIND_STANDARD,
   parseWorkspaceKind,
 } from "@/lib/workspace-kind";
+import { mapBlockLaunch } from "@/lib/block-kind";
 
 export { AYCL_SUGGESTED_CATEGORIES };
 
@@ -27,6 +31,12 @@ export const LANDING_PUBLIC_MAPS_LIMIT = 16;
 export const DASHBOARD_HOME_HERO_COUNT = 5;
 export const DASHBOARD_HOME_SECONDARY_COUNT = 8;
 export const PUBLIC_MAP_CARD_SUMMARY_MAX = 160;
+
+const HOME_FEATURED_MAP_ID_SET = new Set<string>(LANDING_FEATURED_MAP_IDS);
+
+export function isHomeFeaturedMapId(id: string): boolean {
+  return HOME_FEATURED_MAP_ID_SET.has(id);
+}
 export const PUBLIC_MAP_CATALOG_SELECT =
   "id, title, root_topic, description, cover_image_url, created_at, is_public, is_all_you_can_learn, is_play_copy, workspace_kind, aycl_category, aycl_summary, aycl_full_price_cents";
 
@@ -83,9 +93,13 @@ export function pickHomeMapTryBlock<
     is_start?: unknown;
     position_x?: unknown;
     position_y?: unknown;
+    map_block?: unknown;
   },
 >(blocks: readonly T[] | null | undefined): T | null {
-  const rows = (blocks || []).filter((row) => String(row.id || "").trim());
+  const rows = (blocks || []).filter((row) => {
+    if (!String(row.id || "").trim()) return false;
+    return mapBlockLaunch(row.map_block).action !== "none";
+  });
   if (rows.length === 0) return null;
   const start = rows.find((row) => row.is_start === true);
   if (start) return start;

@@ -37,8 +37,14 @@ function lineFor(entry: MapTypeLibraryEntry): string {
 export function heliosMapExpertiseText(): string {
   return [
     "LEARNING MAP EXPERTISE",
-    "You are a Learning Map expert. A Learning Map is pedagogy on a 2D skill grid, not a linear syllabus.",
-    "When the author names a topic, decide how someone should learn it, then pick a map type and realize that type on the plane.",
+    "You are a Learning Map expert. A Learning Map is pedagogy on a 2D skill grid: an assembly of Solve, Verification, Calibration, and Content tiles (linked flows plus readings). It is not a linear syllabus and it does not start an implicit Learn session.",
+    "When the author names a topic, decide how someone should learn it, pick a map type, and decide which tile kinds the walk needs. You choose the kinds. Do not wait for the author to say solve / verification / calibration / content, and do not fill the map with only Solve tiles.",
+    "TILE KINDS (one kind per add_block, chosen by you):",
+    "- content: a reading, paper, dataset, or reference the walk needs. Title the source. Attach links/files when you have them. Place these as part of the first topology, not as an afterthought.",
+    "- calibration: a sounding of priors, assumptions, or where the learner stands before the next challenge. Pass goal plus 2–4 questions.",
+    "- solve: a research challenge, exercise, or whole task they must carry out. Pass topic (the challenge). Use this as the fallback for a single unspecified tile, not as the only kind on a map.",
+    "- verification: an investigation or check — can they show it. Pass topic plus 2–4 questions.",
+    "On a first map from a named topic, mix kinds in the same turn along the walk (typically content + calibration + solve + verification). Reuse OWNER FLOWS when one already fits this map; otherwise omit flowId so the runtime creates the flow and links it.",
     "Ask, internally: what must become automatic vs stay a whole task; whether cores should stay separate until later bridges, or the whole should be visible first; whether walks are prerequisite-heavy, recrossed, or parallel strands.",
     "Spatial structure is the teaching: adjacent cells are related; blocked/unusable cells are corridors and walls; DAG next/lock edges are prerequisites. Do not dump a row of blocks.",
     "Name the map type in the short reply, then build it with tools in the same turn: add_block / generate_shape for the skeleton, mark_unusable for blocked corridors, apply_dag along the walk, cluster_blocks for islands, 1-cell bridge_blocks only where the type wants a crossing.",

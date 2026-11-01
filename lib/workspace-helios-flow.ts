@@ -7,7 +7,7 @@ import {
   mapBlockFromHeliosArgs,
   parseMapBlockAttachment,
   parseMapBlockAttachments,
-  parseMapBlockKind,
+  parseAuthoringMapBlockKind,
   isFlowMapBlockKind,
   type MapBlock,
   type MapBlockAttachment,
@@ -25,6 +25,7 @@ export type HeliosFlowCreateInput = {
   questions: string[];
   actionCatalog: number;
   durationMinutes: number;
+  workspaceId?: string;
 };
 
 export type HeliosCreatedFlow = {
@@ -54,9 +55,9 @@ export function heliosFlowQuestionsFromArgs(
   return [];
 }
 
-/** True when Helios wants a new owner flow in the same add_block call. */
+/** True when Helios wants a new owner flow in the same add_block / generate_shape call. Omitted or Learn kind is Solve. */
 export function heliosWillCreateFlow(args: Record<string, unknown>): boolean {
-  const kind = parseMapBlockKind(args.kind ?? args.blockKind);
+  const kind = parseAuthoringMapBlockKind(args.kind ?? args.blockKind);
   if (!isFlowMapBlockKind(kind)) return false;
   return !String(args.flowId ?? args.flow_id ?? "").trim();
 }
@@ -64,7 +65,7 @@ export function heliosWillCreateFlow(args: Record<string, unknown>): boolean {
 export function heliosFlowCreateInput(
   args: Record<string, unknown>,
 ): HeliosFlowCreateInput {
-  const parsed = parseMapBlockKind(args.kind ?? args.blockKind);
+  const parsed = parseAuthoringMapBlockKind(args.kind ?? args.blockKind);
   const kind: ProductFlowKind =
     parsed === "calibration"
       ? "calibration"
@@ -87,6 +88,7 @@ export function heliosFlowCreateInput(
   const draft = emptyProductFlowDraft(kind);
   const actionCatalog = Number(args.actionCatalog);
   const durationMinutes = Number(args.durationMinutes);
+  const workspaceId = text(args, "workspaceId", "workspace_id");
   return {
     kind,
     name: name.slice(0, 160),
@@ -99,6 +101,7 @@ export function heliosFlowCreateInput(
     durationMinutes: Number.isFinite(durationMinutes)
       ? durationMinutes
       : draft.durationMinutes,
+    ...(workspaceId ? { workspaceId } : {}),
   };
 }
 

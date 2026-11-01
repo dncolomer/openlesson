@@ -53,14 +53,14 @@ export const HELIOS_MAP_TOOL_CATALOG: readonly HeliosMapToolSpec[] = [
     family: "topologies",
     title: "Add block",
     description:
-      "Place a new 1×1 block. Arguments: title, optional row and col (next open cell if omitted), optional kind (learn default, calibration, verification, solve, content). Calibration/verification/solve: pass flowId of an OWNER FLOW, or omit flowId and pass flowName plus goal (calibration) or topic (verification or solve) to create a flow then link it. Solve is name + topic only. Content takes files/links attachments and has no Learn mode.",
+      "Place a new 1×1 tile. You choose the kind for this cell from TILE KINDS. Arguments: title, optional row and col (next open cell if omitted), kind (solve, verification, calibration, content — never learn). On a whole-map build, mix kinds; omit kind only for a single unspecified tile (then solve). Solve/verification/calibration: pass flowId of an OWNER FLOW, or omit flowId and pass flowName plus goal (calibration) or topic (verification or solve) to create a flow that belongs to this map then link it. Calibration/verification also take questions. Solve is name + topic only. Content takes files/links attachments and has no session.",
   },
   {
     id: "generate_shape",
     family: "topologies",
     title: "Generate in shape",
     description:
-      "Create one freeform block covering a contiguous empty-cell selection (Generate-in-shape drawer).",
+      "Create one freeform tile covering a contiguous empty-cell selection (Generate-in-shape drawer). Same kind/flow rules as add_block (default solve, create-then-link).",
   },
   {
     id: "split_block",
@@ -79,7 +79,7 @@ export const HELIOS_MAP_TOOL_CATALOG: readonly HeliosMapToolSpec[] = [
     family: "topologies",
     title: "Expand block",
     description:
-      "Grow neighbor 1×1 blocks around a source block (Expand block drawer).",
+      "Grow neighbor 1×1 blocks around a source block (Expand block drawer). New tiles reuse the source flow or content — they do not start a Learn session.",
   },
   {
     id: "combine_blocks",
@@ -93,7 +93,7 @@ export const HELIOS_MAP_TOOL_CATALOG: readonly HeliosMapToolSpec[] = [
     family: "topologies",
     title: "Bridge blocks",
     description:
-      "Fill a 1-cell corridor of new blocks between selected anchors (Bridge drawer). Default thickness is 1 cell (width 0). width is half-width: 0 = 1 cell, 1 = 3 cells, 2 = 5 cells.",
+      "Fill a 1-cell corridor of new blocks between selected anchors (Bridge drawer). Default thickness is 1 cell (width 0). width is half-width: 0 = 1 cell, 1 = 3 cells, 2 = 5 cells. New tiles reuse the first anchor's flow or content.",
   },
   {
     id: "cluster_blocks",
@@ -230,8 +230,8 @@ export function heliosMapToolAwarenessText(
     "topologies (add/place, generate-in-shape, split, clone, expand, combine, bridge, cluster),",
     "unusable ground, generative blocks (dynamic and generator), DAGs, remaining edit/delete ops,",
     "research (search_web then attach_content), and overlay (map notes and drawing layers).",
-    "add_block arguments: { \"title\": \"...\", \"row\": 0, \"col\": 0, \"kind\": \"learn\" }. kind is learn (default), calibration, verification, solve, or content. Calibration, verification, and solve: link an existing owner flow via flowId (see OWNER FLOWS) or omit flowId and pass flowName plus goal or topic to create then link. Solve is name + topic only. Content blocks attach files/links and have no Learn mode. Default origin is row 0, col 0. Omit row/col only when that default (or the next open cell) is correct. Read CURRENT MAP occupied cells before placing.",
-    "search_web arguments: { \"query\": \"...\" }. Ask the author which hits to keep, then attach_content or add_block kind content.",
+    "add_block arguments: { \"title\": \"...\", \"row\": 0, \"col\": 0, \"kind\": \"solve\" | \"verification\" | \"calibration\" | \"content\" }. You pick kind per cell from TILE KINDS — never learn. On a whole-map build mix kinds in one turn. Solve, verification, and calibration: link an existing owner flow via flowId (see OWNER FLOWS) or omit flowId and pass flowName plus goal or topic to create then link. Calibration/verification take questions. Solve is name + topic only. Content blocks attach files/links and have no session. Default origin is row 0, col 0. Omit row/col only when that default (or the next open cell) is correct. Read CURRENT MAP occupied cells before placing.",
+    "search_web arguments: { \"query\": \"...\" }. On a map-build turn, place content tiles and attach a clearly canonical source. Ask the author before attaching uncertain hits.",
     "attach_content arguments: { \"blockId\": \"...\", \"links\": [{ \"name\": \"...\", \"url\": \"https://...\" }], \"files\": [{ \"name\": \"notes.pdf\", \"url\": \"https://.../notes.pdf\" }] }.",
     "bridge_blocks arguments: { \"blockIds\": [\"id1\",\"id2\"], \"width\": 0 }. Default thickness is 1 cell (width 0). Omit width unless the author asks for a thicker corridor.",
     "apply_dag arguments: { \"blockIds\": [\"id1\",\"id2\"], \"edges\": [{ \"from\": \"id1\", \"to\": \"id2\", \"kind\": \"next\" }] }.",

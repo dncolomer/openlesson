@@ -343,7 +343,9 @@ describe("Helios map opening", () => {
     const awareness = heliosMapOpeningAwarenessText();
     expect(awareness).toContain(HELIOS_MAP_OPENING_QUESTION);
     expect(awareness).toMatch(/Do not spray an unprompted map/);
-    expect(awareness).toMatch(/choose a map type and build that topology/);
+    expect(awareness).toMatch(
+      /choose a map type, decide which tile kinds the walk needs, and build that topology/,
+    );
   });
 });
 
@@ -567,6 +569,14 @@ describe("Helios map-builder prompt / tool-awareness", () => {
     expect(prompt).toMatch(/row 0, col 0/);
     expect(prompt).toMatch(/LEARNING MAP EXPERTISE/);
     expect(prompt).toMatch(/not a linear syllabus/);
+    expect(prompt).toContain("TILE KINDS");
+    expect(prompt).toMatch(/You choose the kinds/);
+    expect(prompt).toMatch(/do not fill the map with only Solve tiles/);
+    expect(prompt).toContain('"kind": "calibration"');
+    expect(prompt).toContain('"kind": "content"');
+    expect(prompt).toContain('"kind": "solve"');
+    expect(prompt).toContain('"kind": "verification"');
+    expect(prompt).toMatch(/mix those kinds in this turn/);
     expect(prompt).toMatch(/MAP TYPES \(official Learning Map topologies/);
     expect(prompt).toContain("- islands");
     expect(prompt).toContain("- spiral");

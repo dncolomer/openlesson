@@ -99,7 +99,7 @@ export interface AiSplitPayload {
 export async function loadWorkspaceContext(supabase: SupabaseClient, workspaceId: string) {
   const { data: plan } = await supabase
     .from("workspaces")
-    .select("id, title, root_topic, description, notes, unusable_cells")
+    .select("id, user_id, title, root_topic, description, notes, unusable_cells")
     .eq("id", workspaceId)
     .single();
 

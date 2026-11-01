@@ -60,7 +60,7 @@ export type WorkspaceAddBlockSubmitOpts = {
    * API maps these into generation prompt + saved local_context.
    */
   contextSourceKeys?: string[];
-  /** Learn / calibration / verification / content payload. */
+  /** Solve / verification / calibration / content payload. */
   mapBlock?: MapBlock;
   title?: string;
 };
@@ -133,7 +133,7 @@ export function WorkspaceAddBlockPane({
   );
   const [contextSelected, setContextSelected] = useState<string[]>([]);
   const [contextLoading, setContextLoading] = useState(false);
-  const [blockKind, setBlockKind] = useState<MapBlockKind>("learn");
+  const [blockKind, setBlockKind] = useState<MapBlockKind>("solve");
   const [selectedFlow, setSelectedFlow] = useState<DashboardRecentFlow | null>(
     null,
   );
@@ -149,7 +149,7 @@ export function WorkspaceAddBlockPane({
     setDensity(ADD_DENSITY_MAX);
     setSampleSeed(1);
     setContextSelected([]);
-    setBlockKind("learn");
+    setBlockKind("solve");
     setSelectedFlow(null);
     setContentAttachments([]);
   }, [cell.row, cell.col]);
@@ -285,7 +285,7 @@ export function WorkspaceAddBlockPane({
       unusableCells || [],
     ).reason === "unusable";
 
-  const typedKind = blockKind !== "learn";
+  const typedKind = true;
   const mapBlock = mapBlockFromPickerState({
     kind: blockKind,
     flow: selectedFlow,
@@ -295,8 +295,8 @@ export function WorkspaceAddBlockPane({
   const canSubmitTyped =
     blockKind === "content"
       ? Boolean(prompt.trim() || contentAttachments.length > 0)
-      : Boolean(selectedFlow?.id);
-  const canSubmit = typedKind ? canSubmitTyped : Boolean(prompt.trim());
+      : Boolean(selectedFlow?.id || prompt.trim());
+  const canSubmit = canSubmitTyped;
 
   const handleSubmit = async () => {
     if (!canSubmit || busy || submitting || submitBlockedByUnusable) return;
@@ -305,21 +305,16 @@ export function WorkspaceAddBlockPane({
     // Snapshot membership at submit — host freezes into a background job.
     const slots = snapshotAddExpandSlots({
       center: { row: cell.row, col: cell.col },
-      selected: typedKind ? [{ row: cell.row, col: cell.col }] : cellsToCreate,
+      selected: [{ row: cell.row, col: cell.col }],
     });
     try {
-      const expandCells =
-        !typedKind && slots.length > 1
-          ? slots.filter((c) => !(c.row === cell.row && c.col === cell.col))
-          : undefined;
+      const expandCells = undefined;
       // Host enqueues async job and returns quickly — map stays interactive.
-      await onSubmit(typedKind ? titleForTyped : prompt.trim(), cell, {
+      await onSubmit(titleForTyped, cell, {
         expandCells,
         frozenSlots: slots,
-        ...(contextSelected.length > 0 && !typedKind
-          ? { contextSourceKeys: [...contextSelected] }
-          : {}),
-        ...(typedKind ? { mapBlock, title: titleForTyped } : {}),
+        mapBlock,
+        title: titleForTyped,
       });
       setPrompt("");
       setRange(0);

@@ -26,6 +26,11 @@ import {
   normalizeMapBlock,
 } from "@/lib/block-kind";
 import { mapBlockKindIconName } from "@/lib/block-map-glyph";
+import { ensureAuthoringMapBlock } from "@/lib/map-block-authoring";
+import type {
+  HeliosCreatedFlow,
+  HeliosFlowCreateInput,
+} from "@/lib/workspace-helios-flow";
 import {
   workspaceFeatureDeniedMessage,
   workspaceSupportsFeature,
@@ -374,9 +379,40 @@ export async function applyHeliosMapToolsForAgent(input: {
     input.supabase,
     input.workspaceId,
   );
+  const { data: workspaceRow } = await input.supabase
+    .from("workspaces")
+    .select("user_id")
+    .eq("id", input.workspaceId)
+    .maybeSingle();
+  const ownerUserId = String(
+    (workspaceRow as { user_id?: string } | null)?.user_id || "",
+  );
   const applied = await applyHeliosMapToolsAtomically({
     snapshot: start,
     calls,
+    host: {
+      createFlow: async (flowInput: HeliosFlowCreateInput): Promise<HeliosCreatedFlow> => {
+        const ensured = await ensureAuthoringMapBlock({
+          raw: { kind: flowInput.kind },
+          title: flowInput.name,
+          topic: flowInput.topic,
+          goal: flowInput.goal,
+          questions: flowInput.questions,
+          ownerUserId,
+          workspaceId: input.workspaceId,
+        });
+        if (!ensured.ok || !ensured.mapBlock.flowId) {
+          throw new Error(ensured.ok ? "create_flow_failed" : ensured.error);
+        }
+        return {
+          id: ensured.mapBlock.flowId,
+          kind: flowInput.kind,
+          name: flowInput.name,
+          publicToken: ensured.mapBlock.flowPublicToken,
+          publicPath: ensured.mapBlock.flowHref,
+        };
+      },
+    },
   });
   const failed = applied.steps.find((step) => !step.result.ok);
   if (failed && !failed.result.ok) {

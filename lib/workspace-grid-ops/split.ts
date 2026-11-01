@@ -61,7 +61,8 @@ import {
   resolveWorkspaceDagForMutation,
 } from "@/lib/workspace-dags";
 import { buildCloneInsertPayload } from "@/lib/clone-block";
-import { blockMapGlyphDbFields } from "@/lib/block-map-glyph";
+import { blockMapGlyphDbFields, mapBlockKindIconName } from "@/lib/block-map-glyph";
+import { normalizeMapBlock, serializeMapBlock } from "@/lib/block-kind";
 import { isCellOccupied } from "@/lib/block-skill-grid";
 import {
   normalizeBlockPracticeOptions,
@@ -177,6 +178,12 @@ export async function handle_split(ctx: GridOpContext): Promise<Response | null>
             map_icon: firstName.map_icon,
           }
         : blockMapGlyphDbFields({}, target.title);
+      const sourceMapBlock = serializeMapBlock(
+        normalizeMapBlock((target as { map_block?: unknown }).map_block),
+      );
+      const typedMapIcon = mapBlockKindIconName(
+        normalizeMapBlock((target as { map_block?: unknown }).map_block).kind,
+      );
       await supabase
         .from("blocks")
         .update({
@@ -188,7 +195,7 @@ export async function handle_split(ctx: GridOpContext): Promise<Response | null>
           title: firstName?.title || target.title,
           description: firstName?.description || target.description || "",
           map_keyword: firstGlyph.map_keyword,
-          map_icon: firstGlyph.map_icon,
+          map_icon: typedMapIcon || firstGlyph.map_icon,
         })
         .eq("id", target.id);
 
@@ -212,7 +219,8 @@ export async function handle_split(ctx: GridOpContext): Promise<Response | null>
           span_w: 1,
           span_h: 1,
           map_keyword: partGlyph.map_keyword,
-          map_icon: partGlyph.map_icon,
+          map_icon: typedMapIcon || partGlyph.map_icon,
+          ...(sourceMapBlock ? { map_block: sourceMapBlock } : {}),
         });
       }
     }

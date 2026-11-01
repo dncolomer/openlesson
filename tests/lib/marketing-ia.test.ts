@@ -379,6 +379,7 @@ describe("sitemap lists new public pages", () => {
     expect(sitemap).toContain("/all-you-can-learn");
     expect(sitemap).toContain("/community-events");
     expect(sitemap).toContain("/community-events/ground-state");
+    expect(sitemap).toContain("/brain-priming");
     expect(sitemap).not.toContain("/use-cases");
     expect(sitemap).not.toContain("/products/");
   });
@@ -423,8 +424,10 @@ describe("nav and footer hrefs resolve to shipped pages", () => {
     expect(COMMUNITY_LINKS.map((l) => l.label)).toEqual([
       "Community Events",
       "Kardashev Research",
+      "Brain Priming Protocol",
       "Academy-k",
     ]);
+    expect(COMMUNITY_LINKS.map((l) => l.href)).toContain("/brain-priming");
     expect(COMMUNITY_LINKS.map((l) => l.href)).toContain("https://academy-k.com/");
     const navbar = read("components/Navbar.tsx");
     expect(navbar).toContain("COMMUNITY_LINKS");

@@ -1,6 +1,7 @@
 import {
   ACADEMY_K_HREF,
   AUTHORING_PRICING_PATH,
+  BRAIN_PRIMING_PATH,
   HARNESS_PRICING_PATH,
   KNOWLEDGE_MAPPING_PATH,
   KNOWLEDGE_VERIFICATION_PATH,
@@ -22,6 +23,7 @@ export const PRICING_NAV_LINKS = [
 export const COMMUNITY_LINKS = [
   { href: "/community-events", label: "Community Events" },
   { href: "/kardashev", label: "Kardashev Research" },
+  { href: BRAIN_PRIMING_PATH, label: "Brain Priming Protocol" },
   { href: ACADEMY_K_HREF, label: "Academy-k" },
 ] as const;
 

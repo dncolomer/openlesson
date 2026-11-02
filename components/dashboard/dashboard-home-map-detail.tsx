@@ -3,7 +3,10 @@
 import { useEffect, useState } from "react";
 import { BlockSkillGrid } from "@/components/BlockSkillGrid";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
+import { AyclExampleProblemGrid } from "@/components/AyclExampleProblemGrid";
 import {
+  AYCL_EXAMPLE_PROBLEMS_LEAD,
+  AYCL_EXAMPLE_PROBLEMS_TITLE,
   ayclMapPreviewFullscreenActive,
   toggleAyclMapPreviewFullscreen,
   type AyclLandingSummary,
@@ -26,8 +29,7 @@ export type DashboardHomeMapDetailState = {
 };
 
 type ExploreSamples = {
-  questions: string[];
-  exercises: string[];
+  problems: string[];
 };
 
 const MAP_PREVIEW_LABELS = {
@@ -123,10 +125,9 @@ export function DashboardHomeMapDetail({
       .then((res) => res.json())
       .then((data) => {
         if (cancelled) return;
-        if (data?.questions && data?.exercises) {
+        if (Array.isArray(data?.problems) && data.problems.length > 0) {
           setSamples({
-            questions: data.questions,
-            exercises: data.exercises,
+            problems: data.problems.filter((item: unknown) => typeof item === "string"),
           });
         } else {
           setSamples(null);
@@ -356,49 +357,17 @@ export function DashboardHomeMapDetail({
       {isAycl ? (
         <section data-dashboard-map-detail-explore>
           <h2 className="mb-2 text-lg font-medium text-white">
-            Things you&apos;ll Explore and Learn
+            {AYCL_EXAMPLE_PROBLEMS_TITLE}
           </h2>
           <p className="mb-6 max-w-2xl text-sm text-zinc-500">
-            Sample exploratory questions and exercises generated for this
-            environment — a taste of the practice you&apos;ll get inside.
+            {AYCL_EXAMPLE_PROBLEMS_LEAD}
           </p>
           {samplesLoading ? (
             <div className="flex justify-center py-10">
               <LoadingStatusMessage message="Generating samples" />
             </div>
           ) : samples ? (
-            <div className="grid gap-6 md:grid-cols-2">
-              <div>
-                <h3 className="mb-3 font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
-                  Exploratory questions
-                </h3>
-                <ul className="space-y-3">
-                  {samples.questions.map((question, index) => (
-                    <li
-                      key={`q-${index}`}
-                      className="console-copy rounded-none px-4 py-3 text-sm leading-relaxed text-zinc-300"
-                    >
-                      {question}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div>
-                <h3 className="mb-3 font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
-                  Example exercises
-                </h3>
-                <ul className="space-y-3">
-                  {samples.exercises.map((exercise, index) => (
-                    <li
-                      key={`ex-${index}`}
-                      className="console-copy rounded-none px-4 py-3 text-sm leading-relaxed text-zinc-300"
-                    >
-                      {exercise}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
+            <AyclExampleProblemGrid problems={samples.problems} />
           ) : (
             <p className="text-sm text-zinc-600">Samples could not be loaded.</p>
           )}

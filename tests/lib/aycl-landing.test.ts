@@ -2,7 +2,10 @@
  * AYCL public landing: summary payload, view-only map flags, explore samples
  * parse/fallback, checkout body, hackathons page + listing links.
  */
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { AyclExampleProblemGrid } from "@/components/AyclExampleProblemGrid";
 import { readMapGridSurface } from "../helpers/surface-source";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -313,40 +316,54 @@ describe("aycl explore/learn samples", () => {
     const system = buildAyclExploreLearnSystemPrompt();
     const user = buildAyclExploreLearnUserPrompt(landing, fixtureBlocks);
 
-    expect(system).toMatch(/Things you'll Explore and Learn|Explore and Learn/i);
+    expect(system).toMatch(/Example problems/i);
+    expect(system).toMatch(/problems.*4|Exactly 4/i);
     expect(system).toMatch(/core mechanism|FORBIDDEN|json/i);
     expect(user).toMatch(/Bayesian|PPV|clinical/i);
 
-    // Parse keeps raw model strings only (no pure pad)
     const parsed = parseAyclExploreLearnSamples(
       {
-        questions: [
-          "Good concrete question: compute PPV when prevalence is 2%.",
-          "Name one mistake that confuses sensitivity with PPV.",
-        ],
-        exercises: [
-          "Exercise: A test has sensitivity 0.9, specificity 0.95, prevalence 0.01. Compute PPV.",
+        problems: [
+          "Compute PPV when prevalence is 2%.",
+          "A test has sensitivity 0.9, specificity 0.95, prevalence 0.01. Compute PPV.",
+          "Name the mistake that confuses sensitivity with PPV on a rare disease.",
+          "Update odds for a 1% prevalence screen with likelihood ratio 9.",
         ],
       },
       ctx,
     );
-    expect(parsed.questions).toHaveLength(2);
-    expect(parsed.exercises).toHaveLength(1);
-    expect(
-      parsed.questions.some((q) => /PPV|prevalence|2%/i.test(q)),
-    ).toBe(true);
+    expect(parsed.problems).toHaveLength(4);
+    expect(parsed.problems.some((q) => /PPV|prevalence|2%/i.test(q))).toBe(true);
+
+    const leftover = parseAyclExploreLearnSamples(
+      {
+        questions: ["Compute PPV when prevalence is 2%."],
+        exercises: [
+          "A test has sensitivity 0.9, specificity 0.95, prevalence 0.01. Compute PPV.",
+          "Name the mistake that confuses sensitivity with PPV.",
+        ],
+      },
+      ctx,
+    );
+    expect(leftover.problems.length).toBeGreaterThanOrEqual(3);
 
     const empty = parseAyclExploreLearnSamples(null, ctx);
-    expect(empty.questions).toEqual([]);
-    expect(empty.exercises).toEqual([]);
+    expect(empty.problems).toEqual([]);
+
+    const cards = renderToStaticMarkup(
+      createElement(AyclExampleProblemGrid, { problems: parsed.problems }),
+    );
+    expect(cards).toContain("data-aycl-example-problems");
+    expect(cards).toContain("sm:grid-cols-2");
+    expect((cards.match(/data-aycl-landing-problem/g) || []).length).toBe(4);
 
     writeEvidence(
       "aycl-landing-explore-samples.log",
       [
         "system_has_forbidden=" + /FORBIDDEN|core mechanism/i.test(system),
-        "parsed_q_count=" + parsed.questions.length,
+        "parsed_problem_count=" + parsed.problems.length,
         "parsed_no_pad=true",
-        "empty_parse=" + String(empty.questions.length === 0),
+        "empty_parse=" + String(empty.problems.length === 0),
       ].join("\n"),
     );
   });
@@ -388,7 +405,12 @@ describe("aycl landing + hackathons structural", () => {
     expect(landingClient).toContain("data-aycl-landing-map");
     expect(landingClient).toContain("data-aycl-landing-explore-learn");
     expect(landingClient).toContain("data-aycl-landing-cta");
-    expect(landingClient).toContain("Things you");
+    expect(landingClient).toContain("AYCL_EXAMPLE_PROBLEMS_TITLE");
+    expect(landingClient).toContain("AyclExampleProblemGrid");
+    expect(read("components/AyclExampleProblemGrid.tsx")).toContain("sm:grid-cols-2");
+    expect(read("components/AyclExampleProblemGrid.tsx")).toContain("data-aycl-landing-problem");
+    expect(landingClient).not.toContain("data-aycl-landing-questions");
+    expect(landingClient).not.toContain("data-aycl-landing-exercises");
     expect(landingClient).toContain("viewOnly");
     expect(landingClient).toContain("canEdit={false}");
     expect(landingClient).toContain("map_block: node.map_block");

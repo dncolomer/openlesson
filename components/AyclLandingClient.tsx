@@ -4,7 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { BlockSkillGrid } from "@/components/BlockSkillGrid";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
+import { AyclExampleProblemGrid } from "@/components/AyclExampleProblemGrid";
 import {
+  AYCL_EXAMPLE_PROBLEMS_LEAD,
+  AYCL_EXAMPLE_PROBLEMS_TITLE,
   ayclLandingCheckoutBody,
   ayclLandingComplimentaryRedeemBody,
   ayclLandingCtaKind,
@@ -26,8 +29,7 @@ import {
 import type { SkillGridNode } from "@/lib/block-skill-grid";
 
 type ExploreSamples = {
-  questions: string[];
-  exercises: string[];
+  problems: string[];
   source?: string;
 };
 
@@ -53,10 +55,9 @@ export function AyclLandingClient({
       .then((res) => res.json())
       .then((data) => {
         if (cancelled) return;
-        if (data?.questions && data?.exercises) {
+        if (Array.isArray(data?.problems) && data.problems.length > 0) {
           setSamples({
-            questions: data.questions,
-            exercises: data.exercises,
+            problems: data.problems.filter((item: unknown) => typeof item === "string"),
             source: data.source,
           });
         }
@@ -374,55 +375,16 @@ export function AyclLandingClient({
         </div>
       </section>
 
-      {/* Things you'll Explore and Learn */}
       <section data-aycl-landing-explore-learn>
-        <h2 className="mb-2 text-lg font-medium text-white">
-          Things you&apos;ll Explore and Learn
-        </h2>
-        <p className="mb-6 max-w-2xl text-sm text-zinc-500">
-          Sample exploratory questions and exercises generated for this
-          environment — a taste of the practice you&apos;ll get inside.
-        </p>
+        <h2 className="mb-2 text-lg font-medium text-white">{AYCL_EXAMPLE_PROBLEMS_TITLE}</h2>
+        <p className="mb-6 max-w-2xl text-sm text-zinc-500">{AYCL_EXAMPLE_PROBLEMS_LEAD}</p>
 
         {samplesLoading ? (
           <div className="flex justify-center py-10">
             <LoadingStatusMessage message="Generating samples" />
           </div>
         ) : samples ? (
-          <div className="grid gap-6 md:grid-cols-2">
-            <div data-aycl-landing-questions>
-              <h3 className="mb-3 font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
-                Exploratory questions
-              </h3>
-              <ul className="space-y-3">
-                {samples.questions.map((q, i) => (
-                  <li
-                    key={`q-${i}`}
-                    className="console-copy rounded-none px-4 py-3 text-sm leading-relaxed text-zinc-300"
-                    data-aycl-landing-question
-                  >
-                    {q}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div data-aycl-landing-exercises>
-              <h3 className="mb-3 font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
-                Example exercises
-              </h3>
-              <ul className="space-y-3">
-                {samples.exercises.map((ex, i) => (
-                  <li
-                    key={`ex-${i}`}
-                    className="console-copy rounded-none px-4 py-3 text-sm leading-relaxed text-zinc-300"
-                    data-aycl-landing-exercise
-                  >
-                    {ex}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
+          <AyclExampleProblemGrid problems={samples.problems} />
         ) : (
           <p className="text-sm text-zinc-600">
             Samples could not be loaded. Open the catalog to purchase and explore

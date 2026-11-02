@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
+  AYCL_EXAMPLE_PROBLEMS_TITLE,
   ayclLandingPracticeContext,
   assembleAyclLandingSummary,
   buildAyclExploreLearnSystemPrompt,
@@ -18,13 +19,14 @@ import {
 export const runtime = "nodejs";
 
 type SamplesAi = {
+  problems?: string[];
   questions?: string[];
   exercises?: string[];
 };
 
 /**
- * GET — on-demand Explore/Learn samples for the public AYCL landing page.
- * Returns raw xAI questions/exercises only. No pure-template fallback.
+ * GET — on-demand example problems for the public AYCL landing page.
+ * Returns raw xAI problems only. No pure-template fallback.
  */
 export async function GET(
   _req: Request,
@@ -79,16 +81,15 @@ export async function GET(
       return jsonError(502, ai.error || "Failed to generate practice content");
     }
     const samples = parseAyclExploreLearnSamples(ai.data, practiceCtx);
-    if (samples.questions.length === 0 && samples.exercises.length === 0) {
+    if (samples.problems.length === 0) {
       return jsonError(502, "Failed to generate practice content");
     }
 
     return NextResponse.json({
       workspaceId,
       source: "xai" as const,
-      questions: samples.questions,
-      exercises: samples.exercises,
-      sectionTitle: "Things you'll Explore and Learn",
+      problems: samples.problems,
+      sectionTitle: AYCL_EXAMPLE_PROBLEMS_TITLE,
     });
   } catch (error) {
     console.error("[aycl/explore-samples]", error);

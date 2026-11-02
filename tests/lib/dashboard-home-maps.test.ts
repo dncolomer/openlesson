@@ -374,7 +374,8 @@ describe("dashboard home and my maps surface", () => {
     expect(dash).toContain("data-dashboard-map-detail-summary");
     expect(dash).toContain("data-dashboard-map-detail-cta");
     expect(dash).toContain("data-dashboard-map-detail-explore");
-    expect(dash).toContain("Explore and Learn");
+    expect(dash).toContain("AYCL_EXAMPLE_PROBLEMS_TITLE");
+    expect(dash).toContain("AyclExampleProblemGrid");
     expect(dash).toContain("Workspace map");
     expect(readRepo("components/dashboard/dashboard-home-tab.tsx")).not.toContain(
       'aria-modal="true"',

@@ -1,6 +1,6 @@
 /**
  * Pure helpers for public All-You-Can-Learn per-workspace landing pages:
- * catalog summary, view-only map nodes, checkout CTA inputs, Explore/Learn samples.
+ * catalog summary, view-only map nodes, checkout CTA inputs, example problems.
  */
 
 import {
@@ -19,7 +19,6 @@ import {
 } from "@/lib/aycl-marketplace";
 import type { SkillGridNode } from "@/lib/block-skill-grid";
 import {
-  buildGroundedDialogueQuestion,
   buildGroundedExerciseItem,
   isMetaLearningFluff,
   type PracticeItemContext,
@@ -27,9 +26,7 @@ import {
 import {
   buildDomainExerciseAuthorSystemPrompt,
   isInventYourOwnExerciseMeta,
-  isLowQualityTapbenchExercise,
 } from "@/lib/pow-api/tapbench-exercise-quality";
-import { buildTapOpeningQuestionTask } from "@/lib/prompt-kernel/surfaces/tap";
 import { parseMapBlock } from "@/lib/block-kind";
 import { toSkillGridNodes } from "@/lib/skill-grid-positions";
 
@@ -337,9 +334,15 @@ export function ayclLandingComplimentaryRedeemBody(token: string): {
   return { token: String(token || "").trim() };
 }
 
+export const AYCL_EXAMPLE_PROBLEM_COUNT = 4;
+
+export const AYCL_EXAMPLE_PROBLEMS_TITLE = "Example problems";
+
+export const AYCL_EXAMPLE_PROBLEMS_LEAD =
+  "Four problems you will tackle in this workspace.";
+
 export type AyclExploreLearnSamples = {
-  questions: string[];
-  exercises: string[];
+  problems: string[];
 };
 
 export function ayclLandingPracticeContext(
@@ -365,35 +368,31 @@ export function ayclLandingPracticeContext(
   };
 }
 
-/** Offline / failed-xAI fallback using shipped Explore/Drill builders. */
+/** Offline / failed-xAI fallback using shipped exercise builders. */
 export function buildAyclExploreLearnFallback(
   ctx: PracticeItemContext,
-  count = 3,
+  count = AYCL_EXAMPLE_PROBLEM_COUNT,
 ): AyclExploreLearnSamples {
-  const n = Math.max(1, Math.min(6, Math.floor(count) || 3));
-  const questions: string[] = [];
-  const exercises: string[] = [];
+  const n = Math.max(1, Math.min(AYCL_EXAMPLE_PROBLEM_COUNT, Math.floor(count) || AYCL_EXAMPLE_PROBLEM_COUNT));
+  const problems: string[] = [];
   for (let i = 0; i < n; i++) {
-    questions.push(buildGroundedDialogueQuestion(ctx, i));
-    exercises.push(buildGroundedExerciseItem(ctx, i));
+    problems.push(buildGroundedExerciseItem(ctx, i));
   }
-  return { questions, exercises };
+  return { problems };
 }
 
 export function buildAyclExploreLearnSystemPrompt(): string {
   return [
-    "You generate preview practice samples for a public All-You-Can-Learn landing page.",
-    "Section title for the learner: “Things you'll Explore and Learn”.",
+    "You generate preview problems for a public All-You-Can-Learn landing page.",
+    `Section title: “${AYCL_EXAMPLE_PROBLEMS_TITLE}”.`,
+    AYCL_EXAMPLE_PROBLEMS_LEAD,
     "",
-    "DIALOGUE / EXPLORATORY QUESTIONS — rules:",
-    buildTapOpeningQuestionTask(),
-    "",
-    "SOLO EXERCISES — rules:",
+    "Each item is one concrete problem the learner will tackle in this workspace.",
     buildDomainExerciseAuthorSystemPrompt("tap_exercise"),
     "",
     "OUTPUT: JSON only:",
-    '{ "questions": string[3], "exercises": string[3] }',
-    "Exactly 3 exploratory questions and 3 exercises.",
+    `{ "problems": string[${AYCL_EXAMPLE_PROBLEM_COUNT}] }`,
+    `Exactly ${AYCL_EXAMPLE_PROBLEM_COUNT} example problems.`,
     "Ground every item in the workspace goal and subject matter. No meta icebreakers, no core-mechanism wrappers, no invent-your-own exercises.",
   ].join("\n");
 }
@@ -414,7 +413,7 @@ export function buildAyclExploreLearnUserPrompt(
     summary.notes ? `Notes: ${summary.notes.slice(0, 400)}` : "",
     titles.length ? `Map blocks: ${titles.join(" · ")}` : "",
     "",
-    "Generate 3 exploratory questions and 3 concrete exercises for this lifetime learning environment.",
+    `Generate ${AYCL_EXAMPLE_PROBLEM_COUNT} example problems the learner will tackle in this workspace.`,
     "Return JSON only.",
   ]
     .filter(Boolean)
@@ -422,11 +421,9 @@ export function buildAyclExploreLearnUserPrompt(
 }
 
 /**
- * Parse xAI JSON into questions + exercises; drop meta fluff; pad with fallbacks.
- */
-/**
- * Parse xAI Explore/Learn samples. Returns model strings only — never pads with
+ * Parse xAI example problems. Returns model strings only — never pads with
  * pure grounded templates. Empty if payload is thin (caller should error).
+ * Accepts leftover `{ questions, exercises }` payloads by concatenating them.
  */
 export function parseAyclExploreLearnSamples(
   raw: unknown,
@@ -434,7 +431,7 @@ export function parseAyclExploreLearnSamples(
 ): AyclExploreLearnSamples {
   void _ctx;
   if (!raw || typeof raw !== "object") {
-    return { questions: [], exercises: [] };
+    return { problems: [] };
   }
   const rec = raw as Record<string, unknown>;
 
@@ -445,18 +442,25 @@ export function parseAyclExploreLearnSamples(
         if (typeof item === "string") return item.replace(/\s+/g, " ").trim();
         if (item && typeof item === "object") {
           const o = item as Record<string, unknown>;
-          const t = o.question || o.text || o.prompt;
+          const t = o.problem || o.question || o.text || o.prompt;
           return typeof t === "string" ? t.replace(/\s+/g, " ").trim() : "";
         }
         return "";
       })
-      .filter((s) => s.length >= 4);
+      .filter(
+        (s) =>
+          s.length >= 4 &&
+          !isMetaLearningFluff(s) &&
+          !isInventYourOwnExerciseMeta(s),
+      );
   };
 
-  return {
-    questions: takeStrings(rec.questions).slice(0, 3),
-    exercises: takeStrings(rec.exercises).slice(0, 3),
-  };
+  const fromProblems = takeStrings(rec.problems);
+  const combined =
+    fromProblems.length > 0
+      ? fromProblems
+      : [...takeStrings(rec.questions), ...takeStrings(rec.exercises)];
+  return { problems: combined.slice(0, AYCL_EXAMPLE_PROBLEM_COUNT) };
 }
 
 /** Shared community-events catalog (listing page + former AYCL tab). */

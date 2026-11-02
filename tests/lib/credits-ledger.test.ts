@@ -9,7 +9,9 @@ import {
   CREDIT_PACKS,
   FLOW_SESSION_CREDIT_COST,
   FLOW_SESSION_KINDS,
+  GUEST_CREDIT_GRANT,
   STARTER_CREDIT_GRANT,
+  applyGuestGrantIfNeeded,
   applyStarterGrantIfNeeded,
   billedUserIdForSession,
   creditCostForAction,
@@ -26,9 +28,26 @@ import { billedUserIdForIleLinkSession } from "@/lib/learn-link-auth";
 describe("credit constants", () => {
   it("ships a positive starter grant and a positive per-session cost", () => {
     expect(STARTER_CREDIT_GRANT).toBeGreaterThan(0);
+    expect(GUEST_CREDIT_GRANT).toBe(100);
     expect(FLOW_SESSION_CREDIT_COST).toBeGreaterThan(0);
     expect(STARTER_CREDIT_GRANT).toBeGreaterThanOrEqual(FLOW_SESSION_CREDIT_COST);
+    expect(GUEST_CREDIT_GRANT).toBeGreaterThanOrEqual(FLOW_SESSION_CREDIT_COST);
     expect(CREDIT_PACKS.every((pack) => pack.credits > 0 && pack.priceCents > 0)).toBe(true);
+  });
+});
+
+describe("guest grant on minted accounts", () => {
+  it("applies GUEST_CREDIT_GRANT once", async () => {
+    const store = createMemoryCreditStore();
+    const first = await applyGuestGrantIfNeeded(store, "guest-new");
+    expect(first.applied).toBe(true);
+    expect(first.balanceAfter).toBe(GUEST_CREDIT_GRANT);
+    const second = await applyGuestGrantIfNeeded(store, "guest-new");
+    expect(second.applied).toBe(false);
+    expect(second.balanceAfter).toBe(GUEST_CREDIT_GRANT);
+    const summary = await loadCreditSummary(store, "guest-new");
+    expect(summary.balance).toBe(GUEST_CREDIT_GRANT);
+    expect(summary.grants.some((entry) => entry.reason === "guest_starter")).toBe(true);
   });
 });
 

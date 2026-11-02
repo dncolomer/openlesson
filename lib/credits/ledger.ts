@@ -5,6 +5,7 @@
 
 import {
   FLOW_SESSION_CREDIT_COST,
+  GUEST_CREDIT_GRANT,
   STARTER_CREDIT_GRANT,
   type FlowSessionKind,
 } from "@/lib/credits/constants";
@@ -42,6 +43,10 @@ export function flowSessionCreditCost(_kind?: FlowSessionKind): number {
 
 export function starterGrantAmount(): number {
   return STARTER_CREDIT_GRANT;
+}
+
+export function guestGrantAmount(): number {
+  return GUEST_CREDIT_GRANT;
 }
 
 export function billedUserIdForSession(input: {

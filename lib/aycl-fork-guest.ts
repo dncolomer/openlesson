@@ -5,6 +5,8 @@
 
 import crypto from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { applyGuestGrantIfNeeded, creditStoreFromClient } from "@/lib/credits/account";
+import { ensureUserProfile } from "@/lib/organization/ensure-profile";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -76,5 +78,10 @@ export async function createAyclForkGuestUser(
   if (error || !data.user?.id) {
     throw new Error(error?.message || "Failed to create AYCL fork guest user");
   }
+  await ensureUserProfile(admin, data.user.id, {
+    email,
+    starterGrant: false,
+  });
+  await applyGuestGrantIfNeeded(creditStoreFromClient(admin), data.user.id);
   return { id: data.user.id, email };
 }

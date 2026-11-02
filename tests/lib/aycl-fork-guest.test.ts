@@ -99,5 +99,8 @@ describe("AYCL fork guest assignment surfaces", () => {
     expect(mint).toContain("auth.admin.createUser");
     expect(mint).toContain("aycl_fork_guest");
     expect(mint).toContain("aycl-guest.uncertain-systems");
+    expect(mint).toContain("applyGuestGrantIfNeeded");
+    expect(mint).toContain("starterGrant: false");
+    expect(mint).toContain("ensureUserProfile");
   });
 });

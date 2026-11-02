@@ -4,6 +4,7 @@ import {
   ensureIleLinkSession,
   resolveIleLinkAccess,
 } from "@/lib/learn-link-auth";
+import { InsufficientCreditsIceScreen } from "@/components/credits/InsufficientCreditsIceScreen";
 import { LearnGuestSessionClient } from "@/components/LearnGuestSessionClient";
 import {
   collectEntryQueryParams,
@@ -47,6 +48,9 @@ export default async function PrivateLearnSessionPage({ params, searchParams }: 
 
   const ensured = await ensureIleLinkSession(access);
   if ("error" in ensured) {
+    if (ensured.status === 402) {
+      return <InsufficientCreditsIceScreen guest={!access.assignedUserId} overlay />;
+    }
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a] px-4">
         <p className="text-sm text-red-400">{ensured.error}</p>

@@ -8,10 +8,14 @@ export type FlowSessionKind = (typeof FLOW_SESSION_KINDS)[number];
 /** Free-signup starter grant (credits). */
 export const STARTER_CREDIT_GRANT = 50;
 
+/** Minted guest accounts (AYCL fork guests) start with this balance. */
+export const GUEST_CREDIT_GRANT = 100;
+
 /** Credits deducted for each Calibrate / Learn / Verify / Solve session start. */
 export const FLOW_SESSION_CREDIT_COST = 10;
 
 export const STARTER_GRANT_REASON = "signup_starter" as const;
+export const GUEST_GRANT_REASON = "guest_starter" as const;
 export const PACK_GRANT_REASON = "credit_pack" as const;
 export const SESSION_DEBIT_REASON = "flow_session" as const;
 export const SESSION_REFUND_REASON = "session_start_failed" as const;

@@ -9,6 +9,7 @@ import { trackSignupCompleted } from "@/lib/analytics";
 import { useI18n } from "@/lib/i18n";
 import { tierLabel } from "@/lib/admin/tiers";
 import { ConsolePage } from "@/components/ui/console-frame";
+import { safeInternalReturnPath } from "@/lib/credits/insufficient";
 
 interface VerifiedCheckout {
   email: string;
@@ -217,7 +218,7 @@ function RegisterForm() {
       }
 
       trackSignupCompleted({ hasReferral: false });
-      router.push("/dashboard");
+      router.push(safeInternalReturnPath(searchParams.get("returnUrl")) || "/dashboard");
       router.refresh();
     } catch {
       setError(t("common.error"));

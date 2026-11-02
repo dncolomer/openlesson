@@ -8,6 +8,8 @@ import type { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { jsonError } from "@/lib/api-error-envelope";
 import {
+  GUEST_CREDIT_GRANT,
+  GUEST_GRANT_REASON,
   PACK_GRANT_REASON,
   SESSION_DEBIT_REASON,
   SESSION_REFUND_REASON,
@@ -61,6 +63,19 @@ export async function applyStarterGrantIfNeeded(
     reason: STARTER_GRANT_REASON,
     entryKind: "grant",
     idempotencyKey: STARTER_GRANT_REASON,
+  });
+}
+
+export async function applyGuestGrantIfNeeded(
+  store: CreditStore,
+  userId: string,
+): Promise<GrantCommitResult> {
+  return store.commitGrant({
+    userId,
+    amount: GUEST_CREDIT_GRANT,
+    reason: GUEST_GRANT_REASON,
+    entryKind: "grant",
+    idempotencyKey: GUEST_GRANT_REASON,
   });
 }
 

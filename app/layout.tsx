@@ -8,6 +8,7 @@ import {
   UNSYS_STANDARD_SHARE_DESCRIPTION,
   unsysRootHtmlMetadata,
 } from "@/lib/og/standard";
+import { InsufficientCreditsIceHost } from "@/components/credits/InsufficientCreditsIceHost";
 import "./globals.css";
 
 const standardSocial = standardShareSocialMetadata({
@@ -119,6 +120,7 @@ export default function RootLayout({
       <body className="antialiased min-h-screen">
         <I18nProvider>
           {children}
+          <InsufficientCreditsIceHost />
         </I18nProvider>
         <Analytics />
         <SpeedInsights />

@@ -3,6 +3,8 @@ export {
   CREDIT_PACK_SKU_IDS,
   FLOW_SESSION_CREDIT_COST,
   FLOW_SESSION_KINDS,
+  GUEST_CREDIT_GRANT,
+  GUEST_GRANT_REASON,
   STARTER_CREDIT_GRANT,
   STARTER_GRANT_REASON,
   creditPackById,
@@ -20,12 +22,14 @@ export {
   creditCostForAction,
   flowSessionCreditCost,
   isBillableAction,
+  guestGrantAmount,
   starterGrantAmount,
   type CreditAction,
 } from "@/lib/credits/ledger";
 
 export {
   InsufficientCreditsError,
+  applyGuestGrantIfNeeded,
   applyStarterGrantIfNeeded,
   chargeFlowSessionOrThrow,
   creditStoreFromClient,

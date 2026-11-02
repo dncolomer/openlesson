@@ -11,8 +11,9 @@ import { applyStarterGrantIfNeeded, creditStoreFromClient } from "@/lib/credits/
 export async function ensureUserProfile(
   admin: SupabaseClient,
   userId: string,
-  options?: { email?: string | null; username?: string | null }
+  options?: { email?: string | null; username?: string | null; starterGrant?: boolean }
 ): Promise<{ id: string; created: boolean }> {
+  const grantStarter = options?.starterGrant !== false;
   const { data: existing, error: existingError } = await admin
     .from("profiles")
     .select("id")
@@ -23,7 +24,9 @@ export async function ensureUserProfile(
     throw new Error(existingError.message || "Failed to load profile");
   }
   if (existing?.id) {
-    await applyStarterGrantIfNeeded(creditStoreFromClient(admin), userId).catch(() => {});
+    if (grantStarter) {
+      await applyStarterGrantIfNeeded(creditStoreFromClient(admin), userId).catch(() => {});
+    }
     return { id: existing.id, created: false };
   }
 
@@ -44,7 +47,9 @@ export async function ensureUserProfile(
     .single();
 
   if (!insertError && inserted?.id) {
-    await applyStarterGrantIfNeeded(creditStoreFromClient(admin), inserted.id).catch(() => {});
+    if (grantStarter) {
+      await applyStarterGrantIfNeeded(creditStoreFromClient(admin), inserted.id).catch(() => {});
+    }
     return { id: inserted.id, created: true };
   }
 
@@ -56,7 +61,9 @@ export async function ensureUserProfile(
       .eq("id", userId)
       .maybeSingle();
     if (again?.id) {
-      await applyStarterGrantIfNeeded(creditStoreFromClient(admin), again.id).catch(() => {});
+      if (grantStarter) {
+        await applyStarterGrantIfNeeded(creditStoreFromClient(admin), again.id).catch(() => {});
+      }
       return { id: again.id, created: false };
     }
   }

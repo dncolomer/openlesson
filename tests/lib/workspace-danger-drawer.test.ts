@@ -64,9 +64,29 @@ describe("shipped editor drawer-id helpers", () => {
     const typed = workspaceBlockDetailDrawerIds({
       canEdit: true,
       blockKind: "calibration",
+      showExpand: true,
+      showSplit: true,
     });
-    expect(typed).toEqual(["clone", "edit", WORKSPACE_EDITOR_DANGER_DRAWER_ID]);
+    expect(typed).toContain("clone");
+    expect(typed).toContain("edit");
+    expect(typed).toContain("expand_block");
+    expect(typed).toContain("split");
+    expect(typed).toContain("effect_dynamic");
+    expect(typed).toContain(WORKSPACE_EDITOR_DANGER_DRAWER_ID);
+    expect(typed).not.toContain("unsys_model");
     expect(typed).not.toContain("open_flow");
+    expect(
+      workspaceBlockDetailDrawerIds({
+        canEdit: true,
+        blockKind: "solve",
+      }),
+    ).toContain("unsys_model");
+    expect(
+      workspaceBlockDetailDrawerIds({
+        canEdit: true,
+        blockKind: "verification",
+      }),
+    ).toContain("unsys_model");
     expect(
       workspaceBlockDetailDrawerIds({
         canEdit: false,

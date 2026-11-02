@@ -66,20 +66,22 @@ export const HELIOS_MAP_TOOL_CATALOG: readonly HeliosMapToolSpec[] = [
     id: "split_block",
     family: "topologies",
     title: "Split block",
-    description: "Split a multi-cell block into 1×1 cells (Split drawer).",
+    description:
+      "Split a multi-cell block into 1×1 cells (Split drawer). The original keeps its flow; each new cell mints its own flow of the same kind.",
   },
   {
     id: "clone_block",
     family: "topologies",
     title: "Clone block",
-    description: "Copy a block onto an open cell (Clone drawer).",
+    description:
+      "Copy a block onto an open cell (Clone drawer). The clone mints a new flow of the same kind (content copies attachments) and a new 3×3 mark.",
   },
   {
     id: "expand_block",
     family: "topologies",
     title: "Expand block",
     description:
-      "Grow neighbor 1×1 blocks around a source block (Expand block drawer). New tiles reuse the source flow or content — they do not start a Learn session.",
+      "Grow neighbor 1×1 blocks around a source block (Expand block drawer). Each new tile mints its own flow of the source kind (or kinds[] / kind if you pass them). Content neighbors copy attachments. Never Learn.",
   },
   {
     id: "combine_blocks",
@@ -93,7 +95,7 @@ export const HELIOS_MAP_TOOL_CATALOG: readonly HeliosMapToolSpec[] = [
     family: "topologies",
     title: "Bridge blocks",
     description:
-      "Fill a 1-cell corridor of new blocks between selected anchors (Bridge drawer). Default thickness is 1 cell (width 0). width is half-width: 0 = 1 cell, 1 = 3 cells, 2 = 5 cells. New tiles reuse the first anchor's flow or content.",
+      "Fill a 1-cell corridor of new blocks between selected anchors (Bridge drawer). Default thickness is 1 cell (width 0). width is half-width: 0 = 1 cell, 1 = 3 cells, 2 = 5 cells. Each corridor tile mints its own flow. Pass kinds[] (solve | verification | calibration | content, one per cell in corridor order) when the walk should mix types; omit to inherit the first anchor's kind.",
   },
   {
     id: "cluster_blocks",
@@ -233,7 +235,7 @@ export function heliosMapToolAwarenessText(
     "add_block arguments: { \"title\": \"...\", \"row\": 0, \"col\": 0, \"kind\": \"solve\" | \"verification\" | \"calibration\" | \"content\" }. You pick kind per cell from TILE KINDS — never learn. On a whole-map build mix kinds in one turn. Solve, verification, and calibration: link an existing owner flow via flowId (see OWNER FLOWS) or omit flowId and pass flowName plus goal or topic to create then link. Calibration/verification take questions. Solve is name + topic only. Content blocks attach files/links and have no session. Default origin is row 0, col 0. Omit row/col only when that default (or the next open cell) is correct. Read CURRENT MAP occupied cells before placing.",
     "search_web arguments: { \"query\": \"...\" }. On a map-build turn, place content tiles and attach a clearly canonical source. Ask the author before attaching uncertain hits.",
     "attach_content arguments: { \"blockId\": \"...\", \"links\": [{ \"name\": \"...\", \"url\": \"https://...\" }], \"files\": [{ \"name\": \"notes.pdf\", \"url\": \"https://.../notes.pdf\" }] }.",
-    "bridge_blocks arguments: { \"blockIds\": [\"id1\",\"id2\"], \"width\": 0 }. Default thickness is 1 cell (width 0). Omit width unless the author asks for a thicker corridor.",
+    "bridge_blocks arguments: { \"blockIds\": [\"id1\",\"id2\"], \"width\": 0, \"kinds\": [\"solve\", \"verification\"] }. Default thickness is 1 cell (width 0). Omit width unless the author asks for a thicker corridor. kinds is optional, one per corridor cell; each cell mints its own flow. You may mix solve, verification, calibration, and content on a bridge.",
     "apply_dag arguments: { \"blockIds\": [\"id1\",\"id2\"], \"edges\": [{ \"from\": \"id1\", \"to\": \"id2\", \"kind\": \"next\" }] }.",
     "If blockIds/edges are omitted, apply_dag uses current blocks in reading order.",
     ...lines,

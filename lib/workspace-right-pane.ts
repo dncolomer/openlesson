@@ -43,37 +43,40 @@ export const WORKSPACE_EDITOR_DANGER_DRAWER_TITLE = "Danger zone";
 /**
  * Drawer ids on the 1-block editor surface (creator block detail).
  * Danger zone is a peer of Edit, hosted last.
+ * Every flow tile (Solve / Verification / Calibration) and leftover Learn
+ * gets the same Manual drawers as the old Learn session: expand, split,
+ * clone, Dynamic, Generator. Unsys is Solve + Verification only.
  */
 export function workspaceBlockDetailDrawerIds(input: {
   canEdit?: boolean;
   showSplit?: boolean;
   showExpand?: boolean;
   showEffects?: boolean;
-  /** Learn (default) keeps Unsys/expand/effects. Typed kinds keep launch/content + edit. */
   blockKind?: string | null;
 } = {}): string[] {
   const ids: string[] = [];
   const kind = String(input.blockKind || "learn").trim() || "learn";
-  const typed = kind === "calibration" || kind === "verification" || kind === "content";
-  if (typed) {
-    if (input.canEdit) {
-      ids.push("clone", "edit", WORKSPACE_EDITOR_DANGER_DRAWER_ID);
-      return ids;
-    }
-    if (kind === "content") ids.push("content");
-    else ids.push("open_flow");
+  const isContent = kind === "content";
+  const isFlow =
+    kind === "calibration" ||
+    kind === "verification" ||
+    kind === "solve" ||
+    kind === "learn";
+  if (!input.canEdit) {
+    if (isContent) ids.push("content");
+    else if (isFlow && kind !== "learn") ids.push("open_flow");
     return ids;
   }
-  if (input.canEdit) ids.push("unsys_model");
+  if (kind === "learn" || kind === "solve" || kind === "verification") {
+    ids.push("unsys_model");
+  }
   if (input.showSplit) ids.push("split");
   if (input.showExpand) ids.push("expand_block");
-  if (input.canEdit) {
-    ids.push("clone", "edit");
-  }
-  if (input.showEffects ?? Boolean(input.canEdit)) {
+  ids.push("clone", "edit");
+  if (input.showEffects ?? true) {
     ids.push("effect_dynamic", "effect_generator");
   }
-  if (input.canEdit) ids.push(WORKSPACE_EDITOR_DANGER_DRAWER_ID);
+  ids.push(WORKSPACE_EDITOR_DANGER_DRAWER_ID);
   return ids;
 }
 

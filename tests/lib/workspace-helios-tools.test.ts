@@ -420,6 +420,25 @@ describe("Helios map tool catalog + dispatch", () => {
     );
     expect(added.length).toBeGreaterThan(0);
     expect(added.every((b) => b.position_x === 0)).toBe(true);
+    expect(added.every((b) => b.map_block?.flowId == null)).toBe(true);
+
+    const mixed = dispatchHeliosMapTool(pair, {
+      name: "bridge_blocks",
+      args: {
+        blockIds: ["left", "right"],
+        density: 100,
+        kinds: ["verification", "calibration", "solve"],
+      },
+    });
+    expect(mixed.ok).toBe(true);
+    if (!mixed.ok) return;
+    const mixedAdded = mixed.snapshot.blocks.filter(
+      (b) => b.id !== "left" && b.id !== "right",
+    );
+    expect(mixedAdded[0]?.map_block?.kind).toBe("verification");
+    if (mixedAdded[1]) {
+      expect(mixedAdded[1].map_block?.kind).toBe("calibration");
+    }
 
     const thick = dispatchHeliosMapTool(pair, {
       name: "bridge_blocks",

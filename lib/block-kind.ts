@@ -395,15 +395,31 @@ export function mapBlockAuthoringPlaceError(block: MapBlock): string | null {
 }
 
 /**
- * Expand / bridge / split neighbors reuse this tile's flow or content.
- * Legacy Learn and unlinked flow kinds are not reusable — the first new
- * tile creates a Solve flow, then later slots inherit that link.
+ * Kind (and content attachments) for a newly generated neighbor.
+ * Flow tiles never copy the source flowId — each new tile mints its own
+ * Solve / Verification / Calibration flow via `ensureAuthoringMapBlock`.
+ * Content copies attachments. Legacy Learn becomes Solve.
  */
-export function authoringMapBlockForReuse(raw: unknown): MapBlock | null {
-  const block = normalizeMapBlock(raw);
+export function authoringMapBlockKindTemplate(raw?: unknown): MapBlock {
+  const block = coerceAuthoringMapBlock(raw);
   if (block.kind === "content") return block;
-  if (isFlowMapBlockKind(block.kind) && block.flowId) return block;
-  return null;
+  return emptyMapBlock(block.kind);
+}
+
+/**
+ * Same as `authoringMapBlockKindTemplate`. Kept as the expand / bridge /
+ * clone / generator payload helper.
+ */
+export function authoringMapBlockForReuse(raw: unknown): MapBlock {
+  return authoringMapBlockKindTemplate(raw);
+}
+
+/** Unsys seed studio is for Solve and Verification (and leftover Learn). */
+export function mapBlockOffersUnsysModel(
+  kind: string | null | undefined,
+): boolean {
+  const value = String(kind || "").trim();
+  return value === "learn" || value === "solve" || value === "verification";
 }
 
 export function mapBlockFlowHref(block: MapBlock): string | null {

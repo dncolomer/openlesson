@@ -65,9 +65,11 @@ import {
   MAP_BLOCK_STORE_UNAVAILABLE,
   droppedRequiredMapBlock,
   serializeMapBlock,
-  normalizeMapBlock,
   restoreRequiredMapBlock,
+  authoringMapBlockKindTemplate,
 } from "@/lib/block-kind";
+import { ensureAuthoringMapBlock } from "@/lib/map-block-authoring";
+import { pickRandomBlockMapIcon } from "@/lib/block-map-glyph";
 import { isCellOccupied } from "@/lib/block-skill-grid";
 import {
   normalizeBlockPracticeOptions,
@@ -111,10 +113,8 @@ export async function handle_clone_block(ctx: GridOpContext): Promise<Response |
     if (isCellOccupied(occupancy, row, col)) {
       return jsonError(409, "That grid slot is already occupied");
     }
-    const { unusableCells: cloneUnusable } = await loadWorkspaceContext(
-      supabase,
-      workspaceId,
-    );
+    const { unusableCells: cloneUnusable, plan: clonePlan } =
+      await loadWorkspaceContext(supabase, workspaceId);
     const ground = canPlaceOnMapGround([{ row, col }], cloneUnusable);
     if (!ground.ok && ground.reason === "unusable") {
       return jsonError(409, "Target cell is unusable ground", "unusable_ground");
@@ -135,14 +135,29 @@ export async function handle_clone_block(ctx: GridOpContext): Promise<Response |
           typeof (source as { map_keyword?: unknown }).map_keyword === "string"
             ? String((source as { map_keyword?: string }).map_keyword)
             : null,
-        map_icon:
-          typeof (source as { map_icon?: unknown }).map_icon === "string"
-            ? String((source as { map_icon?: string }).map_icon)
-            : null,
-        map_block: (source as { map_block?: unknown }).map_block ?? null,
+        map_icon: pickRandomBlockMapIcon(),
+        map_block: authoringMapBlockKindTemplate(
+          (source as { map_block?: unknown }).map_block,
+        ),
       },
       target: { row, col },
     });
+
+    const ensured = await ensureAuthoringMapBlock({
+      raw: built.map_block,
+      title: built.title,
+      topic: built.description || built.title,
+      ownerUserId: String(
+        (clonePlan as { user_id?: string } | null)?.user_id || "",
+      ),
+      workspaceId,
+    });
+    if (!ensured.ok) {
+      return jsonError(
+        400,
+        "A linked Solve, Verification, or Calibration flow is required.",
+      );
+    }
 
     const insertPayload: Record<string, unknown> = {
       workspace_id: workspaceId,
@@ -165,8 +180,8 @@ export async function handle_clone_block(ctx: GridOpContext): Promise<Response |
         : {}),
       ...(built.map_keyword ? { map_keyword: built.map_keyword } : {}),
       ...(built.map_icon ? { map_icon: built.map_icon } : {}),
-      ...(serializeMapBlock(normalizeMapBlock(built.map_block))
-        ? { map_block: serializeMapBlock(normalizeMapBlock(built.map_block)) }
+      ...(serializeMapBlock(ensured.mapBlock)
+        ? { map_block: serializeMapBlock(ensured.mapBlock) }
         : {}),
     };
 

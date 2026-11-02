@@ -84,7 +84,7 @@ import {
   restoreRequiredMapBlock,
   serializeMapBlock,
 } from "@/lib/block-kind";
-import { mapBlockKindIconName } from "@/lib/block-map-glyph";
+
 
 export async function handle_update_block(ctx: GridOpContext): Promise<Response | null> {
   const {
@@ -178,8 +178,6 @@ export async function handle_update_block(ctx: GridOpContext): Promise<Response 
         return jsonError(400, "A linked calibration or verification flow is required.");
       }
       updateFields[MAP_BLOCK_COLUMN] = serializeMapBlock(mapBlock);
-      const typedIcon = mapBlockKindIconName(mapBlock.kind);
-      if (typedIcon) updateFields.map_icon = typedIcon;
     }
 
     let { error: updateError } = await supabase

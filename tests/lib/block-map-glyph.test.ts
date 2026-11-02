@@ -20,6 +20,7 @@ import {
   mapBlockKindIconName,
   isTypedMapBlockKindIcon,
   isLucideStrokeMapIcon,
+  blockMapGridIcon,
 } from "@/lib/block-map-glyph";
 import { composeGenerateShapeBlockSystemMessage } from "@/lib/block-footprint-prompt";
 import { composeAddBlockAtSlotSystemMessage } from "@/lib/workspace-authoring-prompt-context";
@@ -166,19 +167,20 @@ describe("block map glyph (keyword + random 3×3 squares)", () => {
     expect(grid).toContain("line-clamp-2");
     expect(grid).toContain("BlockMapGlyphIcon");
     expect(grid).toContain("resolveBlockMapGlyph");
-    expect(grid).toContain("mapBlockKindIconName");
+    expect(grid).toContain("mapBlockKindLabel");
     expect(grid).toContain("map_block: node.map_block");
     expect(grid).toContain("parseMapBlock(node.map_block)");
     expect(grid).toContain('data-block-map-grid="3x3"');
   });
 
-  it("typed map blocks use distinct display icons (not the 3×3)", () => {
+  it("typed map blocks keep the 3×3 occupancy and a type-name caption", () => {
     expect(mapBlockKindIconName("learn")).toBeNull();
     expect(mapBlockKindIconName("calibration")).toBe("calibration");
     expect(mapBlockKindIconName("verification")).toBe("verification");
     expect(mapBlockKindIconName("content")).toBe("content");
     expect(isTypedMapBlockKindIcon("calibration")).toBe(true);
-    expect(isLucideStrokeMapIcon("content")).toBe(true);
+    expect(isLucideStrokeMapIcon("content")).toBe(false);
+    expect(isLucideStrokeMapIcon("pickaxe")).toBe(true);
     expect(isLucideStrokeMapIcon("g27")).toBe(false);
     expect(
       resolveBlockMapGlyph({
@@ -186,14 +188,15 @@ describe("block map glyph (keyword + random 3×3 squares)", () => {
         map_icon: "g27",
         map_block: { kind: "calibration", flowId: "c1" },
       }).icon,
-    ).toBe("calibration");
-    expect(
-      resolveBlockMapGlyph({
-        title: "Notes",
-        map_icon: "content",
-      }).icon,
-    ).toBe("content");
-    expect(read("app/api/workspace/add-block-at-slot/route.ts")).toContain(
+    ).toBe("g27");
+    expect(blockMapGridIcon("calibration", "Priors")).not.toBe("calibration");
+    expect(blockMapGridIcon("g18", "Priors")).toBe("g18");
+    const grid = readMapGridSurface();
+    expect(grid).toContain("MapBlockKindCaption");
+    expect(grid).toContain("data-map-block-kind-caption");
+    expect(grid).not.toContain("MapBlockKindDecorator");
+    expect(grid).not.toContain("data-map-block-kind-decorator");
+    expect(read("app/api/workspace/add-block-at-slot/route.ts")).not.toContain(
       "mapBlockKindIconName(mapBlock.kind)",
     );
   });

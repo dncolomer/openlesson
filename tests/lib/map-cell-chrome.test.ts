@@ -222,6 +222,22 @@ describe("structural: BlockSkillGrid title-only map tiles", () => {
     expect(plain).not.toContain("data-map-cell-keyword-plate");
     expect(plain).not.toContain("bg-black");
     expect(plain).toContain('data-block-map-grid="3x3"');
+    const typed = renderToStaticMarkup(
+      createElement(MapCellStatusGlyph, {
+        status: "pending",
+        showProgress: false,
+        title: "Priors",
+        keyword: "Priors",
+        icon: "g27",
+        kind: "calibration",
+        labelMode: "glyph",
+        glyphScale: "block",
+      }),
+    );
+    expect(typed).toContain("data-map-block-kind-caption");
+    expect(typed).toContain("Calibration");
+    expect(typed).not.toContain("data-map-block-kind-decorator");
+    expect(typed).not.toContain("data-map-block-kind-icon");
     expect(grid).not.toContain("data-map-cell-status=\"completed\"");
     expect(grid).not.toMatch(/border-emerald-500|bg-emerald-950|border-amber-400\/55 bg-amber-950/);
     expect(grid).not.toMatch(/border-cyan-400\/80 bg-cyan-500\/20 text-cyan-50 ring-2 ring-cyan-400\/70/);

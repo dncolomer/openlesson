@@ -7,6 +7,23 @@ import {
 import type { BlockCreatorEffectKey } from "@/lib/block-creator-effects";
 import { BlockMapGlyphIcon } from "@/components/block-skill-grid/map-block-glyph-icon";
 import { isLucideStrokeMapIcon } from "@/lib/block-map-glyph";
+import { mapBlockKindLabel, type MapBlockKind } from "@/lib/block-kind";
+
+/** Top caption: block type name in small type, not an icon decorator. */
+export function MapBlockKindCaption({ kind }: { kind?: string | null }) {
+  if (!kind) return null;
+  const label = mapBlockKindLabel(kind as MapBlockKind);
+  return (
+    <span
+      className="w-full min-w-0 shrink-0 border-b border-white/35 bg-black px-0.5 py-0.5"
+      data-map-block-kind-caption={kind}
+    >
+      <span className="block truncate text-center font-mono text-[8px] font-medium uppercase tracking-[0.14em] leading-none text-white/75">
+        {label}
+      </span>
+    </span>
+  );
+}
 
 /** Occupied tiles: keyword + 3×3 square mark (solid on workspace, outline on learner maps). */
 export function MapCellStatusGlyph({
@@ -16,6 +33,7 @@ export function MapCellStatusGlyph({
   statusIcon = null,
   keyword = null,
   icon = null,
+  kind = null,
   labelMode = "title",
   glyphVariant = "solid",
   glyphScale = "block",
@@ -28,6 +46,7 @@ export function MapCellStatusGlyph({
   statusIcon?: MapCellStatusIcon;
   keyword?: string | null;
   icon?: string | null;
+  kind?: string | null;
   labelMode?: "title" | "glyph";
   glyphVariant?: "solid" | "outline";
   /** Chapter tiles are larger than workspace tiles, so the mark fills more of the square. */
@@ -46,6 +65,7 @@ export function MapCellStatusGlyph({
         data-map-cell-keyword={keyword || undefined}
         data-map-cell-glyph-scale={glyphScale}
       >
+        <MapBlockKindCaption kind={kind} />
         <span className="flex min-h-0 flex-1 items-center justify-center">
           {hideIcon ? null : (
             <BlockMapGlyphIcon
@@ -74,6 +94,7 @@ export function MapCellStatusGlyph({
         data-map-cell-keyword={keyword || undefined}
         data-map-cell-glyph-scale={glyphScale}
       >
+        <MapBlockKindCaption kind={kind} />
         {hideIcon ? null : (
           <BlockMapGlyphIcon
             name={icon}

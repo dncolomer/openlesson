@@ -2,10 +2,9 @@
  * Workspace map-tile glyph: two keywords + a 3×3 rearrangement of solid squares.
  * Keywords are generated with the block; the mark is a random occupancy of a
  * 3×3 grid (not topic-matched). Displayed instead of the truncated title.
- * Calibration / verification / content tiles use a kind mark instead of the 3×3.
+ * Tile kind (solve / verification / calibration / content) is a small type-name
+ * caption on the tile, not a replacement for the 3×3.
  */
-
-import { parseMapBlock } from "@/lib/block-kind";
 
 export const BLOCK_MAP_GRID_SIZE = 3;
 export const BLOCK_MAP_CELL_COUNT = BLOCK_MAP_GRID_SIZE * BLOCK_MAP_GRID_SIZE;
@@ -24,7 +23,7 @@ export type ChapterDoneMapIcon = typeof CHAPTER_DONE_MAP_ICON;
 export const PREVIOUS_SESSIONS_MAP_ICON = "pickaxe" as const;
 export type PreviousSessionsMapIcon = typeof PREVIOUS_SESSIONS_MAP_ICON;
 
-/** Display-only: typed Learning Map blocks (not the 3×3 Learn glyph). */
+/** Leftover typed kind names on map_icon (never stored as the 3×3 occupancy). */
 export const CALIBRATION_MAP_ICON = "calibration" as const;
 export const VERIFICATION_MAP_ICON = "verification" as const;
 export const SOLVE_MAP_ICON = "solve" as const;
@@ -64,9 +63,19 @@ export function isTypedMapBlockKindIcon(value: unknown): value is TypedMapBlockK
   );
 }
 
-/** Lucide stroke marks (pickaxe + typed kinds) sit smaller than the 3×3 grid. */
+/** Lucide stroke marks (pickaxe) sit smaller than the 3×3 grid. */
 export function isLucideStrokeMapIcon(value: unknown): boolean {
-  return isPreviousSessionsMapIcon(value) || isTypedMapBlockKindIcon(value);
+  return isPreviousSessionsMapIcon(value);
+}
+
+/** Stored occupancy for display: ignore leftover typed kind names on map_icon. */
+export function blockMapGridIcon(
+  raw: unknown,
+  fallbackTitle?: string | null,
+): BlockMapIconName {
+  const parsed = parseBlockMapIconName(raw);
+  if (parsed && !isTypedMapBlockKindIcon(parsed)) return parsed;
+  return blockMapIconFromTitle(clean(fallbackTitle));
 }
 
 export function mapBlockKindIconName(
@@ -283,7 +292,7 @@ export function blockMapGlyphDbFields(
   };
 }
 
-/** Resolve display glyph from stored columns or title fallback. */
+/** Resolve display glyph from stored columns or title fallback. Always a 3×3. */
 export function resolveBlockMapGlyph(input: {
   map_keyword?: string | null;
   map_icon?: string | null;
@@ -293,16 +302,12 @@ export function resolveBlockMapGlyph(input: {
   map_block?: unknown;
 }): BlockMapGlyph {
   const title = clean(input.title);
-  const fromKind = mapBlockKindIconName(parseMapBlock(input.map_block).kind);
-  const fromIcon = parseBlockMapIconName(input.map_icon ?? input.icon);
-  const typedIcon =
-    fromKind || (isTypedMapBlockKindIcon(fromIcon) ? fromIcon : null);
   return {
     keyword: normalizeBlockMapKeyword(
       input.map_keyword ?? input.keyword,
       title,
     ),
-    icon: typedIcon ?? normalizeBlockMapIcon(input.map_icon ?? input.icon, title),
+    icon: blockMapGridIcon(input.map_icon ?? input.icon, title),
   };
 }
 

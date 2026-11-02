@@ -34,6 +34,7 @@ import type { PlacedBlockRef } from "@/lib/skill-grid-ops";
 import type { BlockCreatorEffects } from "@/lib/block-creator-effects";
 import {
   isTypedMapBlock,
+  mapBlockOffersUnsysModel,
   normalizeMapBlock,
   type MapBlock,
 } from "@/lib/block-kind";
@@ -177,14 +178,13 @@ export function WorkspaceBlockDetailPane({
   };
   const parsedMapBlock = normalizeMapBlock(mapBlock);
   const typedBlock = isTypedMapBlock(parsedMapBlock);
+  const showUnsysDrawer = canEdit && mapBlockOffersUnsysModel(parsedMapBlock.kind);
   const showSplitDrawer =
     canEdit &&
-    !typedBlock &&
     Boolean(onSplitBlock) &&
     blockOffersSplitDrawer(splitCandidate);
   const showExpandDrawer =
     canEdit &&
-    !typedBlock &&
     Boolean(onExpandBlock) &&
     Array.isArray(expandNodes);
 
@@ -208,16 +208,15 @@ export function WorkspaceBlockDetailPane({
     [blockId, positionX, positionY, shapeCells, spanH, spanW],
   );
 
-  const defaultOpenId = typedBlock
-    ? canEdit
-      ? "edit"
-      : parsedMapBlock.kind === "content"
+  const defaultOpenId =
+    typedBlock && !canEdit
+      ? parsedMapBlock.kind === "content"
         ? "content"
         : "open_flow"
-    : resolveDetailDrawerDefaultOpenId({
-        showSplit: showSplitDrawer,
-        canEdit,
-      });
+      : resolveDetailDrawerDefaultOpenId({
+          showSplit: showSplitDrawer,
+          canEdit,
+        });
 
   return (
     <WorkspaceRightPaneDrawerGroup
@@ -236,7 +235,9 @@ export function WorkspaceBlockDetailPane({
           title={
             parsedMapBlock.kind === "calibration"
               ? "Calibration"
-              : "Verification"
+              : parsedMapBlock.kind === "solve"
+                ? "Solve"
+                : "Verification"
           }
           defaultExpanded
           bodyClassName="space-y-3"
@@ -271,7 +272,7 @@ export function WorkspaceBlockDetailPane({
         </WorkspaceRightPaneDrawer>
       ) : null}
 
-      {canEdit && !typedBlock ? (
+      {showUnsysDrawer ? (
         <WorkspaceRightPaneDrawer
           variant="section"
           drawerId={AUTHOR_UNSYS_MODEL_DRAWER_ID}
@@ -403,8 +404,8 @@ export function WorkspaceBlockDetailPane({
         </WorkspaceRightPaneDrawer>
       ) : null}
 
-      {/* Combinable creator effects — not separate block types. */}
-      {!typedBlock && (canEdit || creatorEffects) ? (
+      {/* Combinable creator effects — available on every authoring tile. */}
+      {canEdit || creatorEffects ? (
         <>
           <WorkspaceRightPaneDrawer
             variant="section"

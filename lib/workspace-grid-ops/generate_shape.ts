@@ -71,7 +71,7 @@ import {
   serializeBlockCreatorEffects,
   validateBlockCreatorEffects,
 } from "@/lib/block-creator-effects";
-import { blockMapGlyphDbFields, mapBlockKindIconName } from "@/lib/block-map-glyph";
+import { blockMapGlyphDbFields } from "@/lib/block-map-glyph";
 import {
   MAP_BLOCK_COLUMN,
   MAP_BLOCK_STORE_UNAVAILABLE,
@@ -263,8 +263,6 @@ export async function handle_generate_shape(ctx: GridOpContext): Promise<Respons
       );
     }
     const mapBlock = ensured.mapBlock;
-    const typedMapIcon = mapBlockKindIconName(mapBlock.kind);
-    if (typedMapIcon) glyph.map_icon = typedMapIcon;
     const mapBlockWire = serializeMapBlock(mapBlock);
     const insertPayload: Record<string, unknown> = {
       workspace_id: workspaceId,
@@ -316,9 +314,7 @@ export async function handle_generate_shape(ctx: GridOpContext): Promise<Respons
         insertPayload;
       const glyphMissing = /map_keyword|map_icon/i.test(insertMsg);
       const glyphFields = glyphMissing
-        ? typedMapIcon
-          ? { map_icon: typedMapIcon }
-          : {}
+        ? {}
         : { map_keyword: glyph.map_keyword, map_icon: glyph.map_icon };
       let retryPayload: Record<string, unknown> = restoreRequiredMapBlock(
         insertPayload,
@@ -353,10 +349,7 @@ export async function handle_generate_shape(ctx: GridOpContext): Promise<Respons
           map_icon: __mi,
           ...stripped
         } = retryPayload;
-        retryPayload = restoreRequiredMapBlock(
-          insertPayload,
-          typedMapIcon ? { ...stripped, map_icon: typedMapIcon } : stripped,
-        );
+        retryPayload = restoreRequiredMapBlock(insertPayload, stripped);
         retry = await supabase.from("blocks").insert(retryPayload).select().single();
       }
       if (

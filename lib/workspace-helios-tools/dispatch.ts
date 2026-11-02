@@ -60,6 +60,7 @@ import {
   isFlowMapBlockKind,
   parseMapBlockAttachments,
   coerceAuthoringMapBlock,
+  authoringMapBlockKindTemplate,
   type MapBlock,
 } from "@/lib/block-kind";
 import {
@@ -326,7 +327,7 @@ function dispatchSplit(
       description: block.description || "",
       row: part.position_y,
       col: part.position_x,
-      map_block: block.map_block ?? null,
+      map_block: authoringMapBlockKindTemplate(block.map_block),
     });
     if (!placed.ok) return placed;
     next = placed.snapshot;
@@ -359,8 +360,25 @@ function dispatchClone(
     span_w: payload.span_w,
     span_h: payload.span_h,
     shape_cells: payload.shape_cells,
-    map_block: source.map_block ?? null,
+    map_block: authoringMapBlockKindTemplate(source.map_block),
   });
+}
+
+function heliosSlotKindTemplate(
+  args: Record<string, unknown>,
+  index: number,
+  fallback: unknown,
+): MapBlock {
+  const listed = Array.isArray(args.kinds) ? args.kinds : [];
+  if (listed[index] != null) {
+    return authoringMapBlockKindTemplate({ kind: listed[index] });
+  }
+  if (args.kind != null || args.blockKind != null) {
+    return authoringMapBlockKindTemplate({
+      kind: parseAuthoringMapBlockKind(args.kind ?? args.blockKind),
+    });
+  }
+  return authoringMapBlockKindTemplate(fallback);
 }
 
 function mapBlockPatchFromArgs(
@@ -501,13 +519,14 @@ function dispatchExpand(
   }
   let next = snapshot;
   const prompt = stringArg(args, "prompt", "title") || source.title || "Untitled";
-  for (const slot of resolved.frozenSlots) {
+  for (let i = 0; i < resolved.frozenSlots.length; i++) {
+    const slot = resolved.frozenSlots[i];
     const placed = placeBlock(next, {
       title: prompt,
       description: source.description || "",
       row: slot.row,
       col: slot.col,
-      map_block: source.map_block ?? null,
+      map_block: heliosSlotKindTemplate(args, i, source.map_block),
     });
     if (!placed.ok) return placed;
     next = placed.snapshot;
@@ -585,12 +604,13 @@ function dispatchBridge(
   if (resolved.selected.length === 0) return fail(snapshot, "no_bridge_cells");
   let next = snapshot;
   const title = stringArg(args, "title", "prompt") || "Bridge";
-  for (const cell of resolved.selected) {
+  for (let i = 0; i < resolved.selected.length; i++) {
+    const cell = resolved.selected[i];
     const placed = placeBlock(next, {
       title,
       row: cell.row,
       col: cell.col,
-      map_block: targets[0]?.map_block ?? null,
+      map_block: heliosSlotKindTemplate(args, i, targets[0]?.map_block),
     });
     if (!placed.ok) return placed;
     next = placed.snapshot;

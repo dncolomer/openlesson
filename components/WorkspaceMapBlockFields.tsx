@@ -17,8 +17,6 @@ import {
   mapBlockAttachmentHref,
   uploadMapBlockFile,
 } from "@/lib/map-block-files";
-import { BlockMapGlyphIcon } from "@/components/block-skill-grid/map-block-glyph-icon";
-import { mapBlockKindIconName } from "@/lib/block-map-glyph";
 import { DASHBOARD_FLOWS_PATH, productFlowNewPath } from "@/lib/product-flow";
 import type { DashboardRecentFlow } from "@/lib/dashboard-home";
 
@@ -39,7 +37,6 @@ export function WorkspaceMapBlockKindPicker({
       <div className="grid grid-cols-2 gap-1">
         {AUTHORING_MAP_BLOCK_KINDS.map((kind) => {
           const selected = value === kind;
-          const kindIcon = mapBlockKindIconName(kind);
           return (
             <button
               key={kind}
@@ -49,18 +46,12 @@ export function WorkspaceMapBlockKindPicker({
               aria-pressed={selected}
               disabled={disabled}
               onClick={() => onChange(kind)}
-              className={`inline-flex items-center justify-center gap-1.5 rounded-none border px-2 py-1.5 text-[11px] font-medium transition disabled:opacity-40 ${
+              className={`inline-flex items-center justify-center rounded-none border px-2 py-1.5 text-[11px] font-medium transition disabled:opacity-40 ${
                 selected
                   ? "border-white/40 bg-white/15 text-white"
                   : "border-neutral-800 bg-neutral-900/40 text-neutral-400 hover:border-neutral-600"
               }`}
             >
-              {kindIcon ? (
-                <BlockMapGlyphIcon
-                  name={kindIcon}
-                  className="h-3.5 w-3.5 shrink-0"
-                />
-              ) : null}
               {mapBlockKindLabel(kind)}
             </button>
           );

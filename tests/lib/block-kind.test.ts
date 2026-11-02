@@ -12,6 +12,8 @@ import {
   mapBlockAllowsVerify,
   mapBlockFlowHref,
   authoringMapBlockForReuse,
+  authoringMapBlockKindTemplate,
+  mapBlockOffersUnsysModel,
   coerceAuthoringMapBlock,
   mapBlockFromHeliosArgs,
   mapBlockHasSessionLaunch,
@@ -321,10 +323,22 @@ describe("map block kinds", () => {
     expect(parseAuthoringMapBlockKind(undefined)).toBe("solve");
     expect(parseAuthoringMapBlockKind("learn")).toBe("solve");
     expect(coerceAuthoringMapBlock(null).kind).toBe("solve");
-    expect(authoringMapBlockForReuse(null)).toBeNull();
+    expect(authoringMapBlockForReuse(null).kind).toBe("solve");
+    expect(authoringMapBlockForReuse(null).flowId).toBeNull();
     expect(
-      authoringMapBlockForReuse({ kind: "solve", flowId: "sol-1" })?.flowId,
-    ).toBe("sol-1");
+      authoringMapBlockForReuse({ kind: "solve", flowId: "sol-1" }).flowId,
+    ).toBeNull();
+    expect(
+      authoringMapBlockKindTemplate({ kind: "verification", flowId: "v1" }).kind,
+    ).toBe("verification");
+    expect(
+      authoringMapBlockKindTemplate({ kind: "verification", flowId: "v1" })
+        .flowId,
+    ).toBeNull();
+    expect(mapBlockOffersUnsysModel("solve")).toBe(true);
+    expect(mapBlockOffersUnsysModel("verification")).toBe(true);
+    expect(mapBlockOffersUnsysModel("calibration")).toBe(false);
+    expect(mapBlockOffersUnsysModel("content")).toBe(false);
 
     const omitted = dispatchHeliosMapTool(emptySnap(), {
       name: "add_block",
@@ -422,8 +436,9 @@ describe("map block kinds", () => {
     expect(fields).toContain("content");
     expect(fields).toContain("Open solve flow");
     expect(fields).toContain("mapBlockFlowHref(block)");
-    expect(fields).toContain("mapBlockKindIconName");
-    expect(fields).toContain("BlockMapGlyphIcon");
+    expect(fields).toContain("mapBlockKindLabel");
+    expect(fields).not.toContain("mapBlockKindIconName");
+    expect(fields).not.toContain("BlockMapGlyphIcon");
     expect(fields).not.toMatch(
       /block\.flowHref\s*\|\|[\s\S]*flowPublicToken/,
     );
@@ -445,10 +460,11 @@ describe("map block kinds", () => {
     expect(fields).toContain('target="_blank"');
     expect(fields).toContain("productFlowNewPath");
     expect(read("lib/workspace-right-pane.ts")).toContain(
-      'ids.push("clone", "edit", WORKSPACE_EDITOR_DANGER_DRAWER_ID)',
+      'ids.push("clone", "edit")',
     );
+    expect(read("lib/workspace-right-pane.ts")).toContain("unsys_model");
     expect(read("components/WorkspaceBlockDetailPane.tsx")).toContain(
-      '? "edit"',
+      "mapBlockOffersUnsysModel",
     );
     expect(prompt).toContain("search_web");
     expect(prompt).toContain("attach_content");

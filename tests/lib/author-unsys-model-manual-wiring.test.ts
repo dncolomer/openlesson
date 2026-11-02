@@ -67,7 +67,8 @@ describe("author unsys model Manual Mode wiring", () => {
     expect(detail).toContain("AUTHOR_UNSYS_MODEL_DRAWER_ID");
     expect(detail).toContain("data-author-unsys-model-drawer");
     expect(detail).toContain("onOpenUnsysStudio");
-    expect(detail).toContain("{canEdit ? (");
+    expect(detail).toContain("showUnsysDrawer");
+    expect(detail).toContain("mapBlockOffersUnsysModel");
     expect(panel).toContain("data-author-unsys-model");
     expect(panel).toContain("data-author-unsys-open");
     expect(panel).toContain("Open unsys model");

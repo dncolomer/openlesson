@@ -56,8 +56,6 @@ import {
   DEFAULT_BLOCK_MAP_ICON,
   PREVIOUS_SESSIONS_MAP_ICON,
   isTimExploreMapIcon,
-  isTypedMapBlockKindIcon,
-  mapBlockKindIconName,
   resolveBlockMapGlyph,
 } from "@/lib/block-map-glyph";
 import { aestheticImageForId } from "@/lib/aesthetics";
@@ -371,17 +369,13 @@ export function OccupiedMapTile({
       title: node.title,
     });
     const glyphKeyword = mapTitle === "?" ? "?" : mapGlyph.keyword;
-    const typedKindIcon = mapBlockKindIconName(
-      parseMapBlock(node.map_block).kind,
-    );
+    const tileKind = parseMapBlock(node.map_block).kind;
     const glyphIcon =
-      typedKindIcon ||
-      (isTypedMapBlockKindIcon(mapGlyph.icon) ? mapGlyph.icon : null) ||
-      (mapTitle === "?"
+      mapTitle === "?"
         ? DEFAULT_BLOCK_MAP_ICON
         : hasPreviousSessions
           ? PREVIOUS_SESSIONS_MAP_ICON
-          : mapGlyph.icon);
+          : mapGlyph.icon;
     const statusGlyph = (
       <MapCellStatusGlyph
         status={node.status}
@@ -390,6 +384,7 @@ export function OccupiedMapTile({
         statusIcon={chapterStatusIcon}
         keyword={glyphKeyword}
         icon={glyphIcon}
+        kind={tileKind}
         labelMode="glyph"
         glyphVariant="solid"
         glyphScale="block"

@@ -12,6 +12,7 @@ import type { LearnerMapNote } from "@/lib/learner-map-notes";
 import { draftMultiBlockDag, type MultiBlockDagDraft } from "@/lib/multi-block-dag";
 import {
   parseMapBlockAttachment,
+  authoringMapBlockKindTemplate,
   type MapBlock,
   type MapBlockAttachment,
 } from "@/lib/block-kind";
@@ -95,6 +96,7 @@ export type HeliosMapToolHost = {
     userPrompt?: string;
     frozenSlots: Array<{ row: number; col: number }>;
     blockTitles: string[];
+    slotMapBlocks?: MapBlock[];
   }) => Promise<void>;
   clusterBlocks?: (input: {
     blockIds: string[];
@@ -159,14 +161,22 @@ export async function applyHeliosMapToolsAtomically(input: {
   return { snapshot: next, steps };
 }
 
+function addedBlocksFromPreview(
+  before: HeliosMapSnapshot,
+  after: HeliosMapSnapshot,
+) {
+  const prevIds = new Set(before.blocks.map((b) => b.id));
+  return after.blocks.filter((b) => !prevIds.has(b.id));
+}
+
 function addedCellsFromPreview(
   before: HeliosMapSnapshot,
   after: HeliosMapSnapshot,
 ): Array<{ row: number; col: number }> {
-  const prevIds = new Set(before.blocks.map((b) => b.id));
-  return after.blocks
-    .filter((b) => !prevIds.has(b.id))
-    .map((b) => ({ row: b.position_y, col: b.position_x }));
+  return addedBlocksFromPreview(before, after).map((b) => ({
+    row: b.position_y,
+    col: b.position_x,
+  }));
 }
 
 async function ingestMapBlockAttachments(
@@ -349,6 +359,10 @@ export async function executeHeliosMapToolCall(input: {
         userPrompt: stringArg(args, "prompt") || undefined,
         frozenSlots: addedCellsFromPreview(input.snapshot, preview.snapshot),
         blockTitles: targets.map((b) => String(b.title || b.id)),
+        slotMapBlocks: addedBlocksFromPreview(
+          input.snapshot,
+          preview.snapshot,
+        ).map((b) => authoringMapBlockKindTemplate(b.map_block)),
       });
     } else if (name === "cluster_blocks" && host.clusterBlocks) {
       const ids = idList(args.blockIds ?? args.ids);

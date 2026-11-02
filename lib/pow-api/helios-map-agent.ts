@@ -25,7 +25,7 @@ import {
   serializeMapBlock,
   normalizeMapBlock,
 } from "@/lib/block-kind";
-import { mapBlockKindIconName } from "@/lib/block-map-glyph";
+import { pickRandomBlockMapIcon } from "@/lib/block-map-glyph";
 import { ensureAuthoringMapBlock } from "@/lib/map-block-authoring";
 import type {
   HeliosCreatedFlow,
@@ -197,13 +197,7 @@ async function insertAgentBlock(
     ...(serializeMapBlock(normalizeMapBlock(block.map_block))
       ? { map_block: serializeMapBlock(normalizeMapBlock(block.map_block)) }
       : {}),
-    ...(mapBlockKindIconName(normalizeMapBlock(block.map_block).kind)
-      ? {
-          map_icon: mapBlockKindIconName(
-            normalizeMapBlock(block.map_block).kind,
-          ),
-        }
-      : {}),
+    map_icon: pickRandomBlockMapIcon(),
   };
   const optional = [
     "shape_cells",

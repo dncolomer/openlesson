@@ -61,8 +61,9 @@ import {
   resolveWorkspaceDagForMutation,
 } from "@/lib/workspace-dags";
 import { buildCloneInsertPayload } from "@/lib/clone-block";
-import { blockMapGlyphDbFields, mapBlockKindIconName } from "@/lib/block-map-glyph";
-import { normalizeMapBlock, serializeMapBlock } from "@/lib/block-kind";
+import { blockMapGlyphDbFields } from "@/lib/block-map-glyph";
+import { authoringMapBlockKindTemplate, serializeMapBlock } from "@/lib/block-kind";
+import { ensureAuthoringMapBlock } from "@/lib/map-block-authoring";
 import { isCellOccupied } from "@/lib/block-skill-grid";
 import {
   normalizeBlockPracticeOptions,
@@ -178,12 +179,6 @@ export async function handle_split(ctx: GridOpContext): Promise<Response | null>
             map_icon: firstName.map_icon,
           }
         : blockMapGlyphDbFields({}, target.title);
-      const sourceMapBlock = serializeMapBlock(
-        normalizeMapBlock((target as { map_block?: unknown }).map_block),
-      );
-      const typedMapIcon = mapBlockKindIconName(
-        normalizeMapBlock((target as { map_block?: unknown }).map_block).kind,
-      );
       await supabase
         .from("blocks")
         .update({
@@ -195,7 +190,7 @@ export async function handle_split(ctx: GridOpContext): Promise<Response | null>
           title: firstName?.title || target.title,
           description: firstName?.description || target.description || "",
           map_keyword: firstGlyph.map_keyword,
-          map_icon: typedMapIcon || firstGlyph.map_icon,
+          map_icon: firstGlyph.map_icon,
         })
         .eq("id", target.id);
 
@@ -207,6 +202,23 @@ export async function handle_split(ctx: GridOpContext): Promise<Response | null>
         const partGlyph = name
           ? { map_keyword: name.map_keyword, map_icon: name.map_icon }
           : blockMapGlyphDbFields({}, partTitle);
+        const ensured = await ensureAuthoringMapBlock({
+          raw: authoringMapBlockKindTemplate(
+            (target as { map_block?: unknown }).map_block,
+          ),
+          title: partTitle,
+          topic: name?.description || partTitle,
+          ownerUserId: String(
+            (plan as { user_id?: string } | null)?.user_id || "",
+          ),
+          workspaceId,
+        });
+        if (!ensured.ok) {
+          return jsonError(
+            400,
+            "A linked Solve, Verification, or Calibration flow is required.",
+          );
+        }
         await supabase.from("blocks").insert({
           workspace_id: workspaceId,
           title: partTitle,
@@ -219,8 +231,10 @@ export async function handle_split(ctx: GridOpContext): Promise<Response | null>
           span_w: 1,
           span_h: 1,
           map_keyword: partGlyph.map_keyword,
-          map_icon: typedMapIcon || partGlyph.map_icon,
-          ...(sourceMapBlock ? { map_block: sourceMapBlock } : {}),
+          map_icon: partGlyph.map_icon,
+          ...(serializeMapBlock(ensured.mapBlock)
+            ? { map_block: serializeMapBlock(ensured.mapBlock) }
+            : {}),
         });
       }
     }

@@ -1,7 +1,9 @@
 /**
  * Server helper: every newly placed map tile is Solve, Verification,
  * Calibration, or Content. Missing Learn tiles become a Solve flow that
- * belongs to this map (owner-scoped, workspace_id stamped, reusable later).
+ * belongs to this map (owner-scoped, workspace_id stamped).
+ * Expand / bridge / clone / generator pass a kind template (no flowId)
+ * so each new tile mints its own flow instead of sharing a neighbor's.
  */
 
 import {

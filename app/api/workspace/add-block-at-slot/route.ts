@@ -30,7 +30,7 @@ import {
   composeAddBlockAtSlotSystemMessage,
   composeJourneyGraphPromptSnippet,
 } from "@/lib/workspace-authoring-prompt-context";
-import { blockMapGlyphDbFields, mapBlockKindIconName } from "@/lib/block-map-glyph";
+import { blockMapGlyphDbFields } from "@/lib/block-map-glyph";
 import { canPlaceOnMapGround, normalizeUnusableCells } from "@/lib/map-ground-rules";
 import {
   MAP_BLOCK_COLUMN,
@@ -335,8 +335,6 @@ Create exactly one learning block that belongs at this grid slot. The topic shou
       generated,
       generated.title.trim(),
     );
-    const typedMapIcon = mapBlockKindIconName(mapBlock.kind);
-    if (typedMapIcon) glyph.map_icon = typedMapIcon;
     const mapBlockWire = serializeMapBlock(mapBlock);
     const insertPayload: Record<string, unknown> = {
       workspace_id: workspaceId,
@@ -384,9 +382,7 @@ Create exactly one learning block that belongs at this grid slot. The topic shou
       }
       if (/map_keyword|map_icon/i.test(insertMsg)) {
         const { map_keyword: _mk, map_icon: _mi, ...rest } = retryPayload;
-        retryPayload = typedMapIcon
-          ? { ...rest, map_icon: typedMapIcon }
-          : rest;
+        retryPayload = rest;
       }
       if (/schema cache/i.test(insertMsg)) {
         const {

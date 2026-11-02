@@ -26,6 +26,12 @@ import { isBlockCompletedStatus } from "@/lib/map-ground-rules";
 import { buildSkillGridLayout, isCellOccupied } from "@/lib/block-skill-grid";
 import { toSkillGridNodes } from "@/lib/skill-grid-positions";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  authoringMapBlockKindTemplate,
+  serializeMapBlock,
+} from "@/lib/block-kind";
+import { ensureAuthoringMapBlock } from "@/lib/map-block-authoring";
+import { blockMapGlyphDbFields } from "@/lib/block-map-glyph";
 
 type EffectMode = EffectGenerationMode | "generator_cell";
 
@@ -86,7 +92,7 @@ export async function POST(req: NextRequest) {
 
     const { data: workspace } = await supabase
       .from("workspaces")
-      .select("id, title, root_topic, description, notes, unusable_cells")
+      .select("id, user_id, title, root_topic, description, notes, unusable_cells")
       .eq("id", workspaceId)
       .single();
 
@@ -210,6 +216,28 @@ export async function POST(req: NextRequest) {
         description: "",
       });
 
+      const glyph = blockMapGlyphDbFields(
+        { keyword: result.keyword },
+        result.title,
+      );
+      const ensured = await ensureAuthoringMapBlock({
+        raw: authoringMapBlockKindTemplate(generator.map_block),
+        title: result.title,
+        topic: result.description || result.title,
+        ownerUserId: String(
+          (workspace as { user_id?: string } | null)?.user_id ||
+            auth.persistUserId ||
+            "",
+        ),
+        workspaceId,
+      });
+      if (!ensured.ok) {
+        return jsonError(
+          400,
+          "A linked Solve, Verification, or Calibration flow is required.",
+        );
+      }
+
       const insertPayload: Record<string, unknown> = {
         workspace_id: workspaceId,
         title: result.title,
@@ -219,8 +247,11 @@ export async function POST(req: NextRequest) {
         status: "available",
         position_x: cell.col,
         position_y: cell.row,
-        map_keyword: result.keyword,
-        map_icon: result.icon,
+        map_keyword: glyph.map_keyword,
+        map_icon: glyph.map_icon,
+        ...(serializeMapBlock(ensured.mapBlock)
+          ? { map_block: serializeMapBlock(ensured.mapBlock) }
+          : {}),
       };
 
       const { data: newNode, error: insertError } = await supabase

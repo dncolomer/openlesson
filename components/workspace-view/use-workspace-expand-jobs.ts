@@ -21,7 +21,7 @@ import { parseWorkspacePracticeOptions } from "@/lib/block-practice-options";
 import { parseBlockCreatorEffects } from "@/lib/block-creator-effects";
 import { parseBlockLocalContext } from "@/lib/prompt-workspace-context";
 import {
-  authoringMapBlockForReuse,
+  authoringMapBlockKindTemplate,
   parseMapBlock,
   type MapBlock,
 } from "@/lib/block-kind";
@@ -37,18 +37,11 @@ import { nextWorkspaceMapSelection, type WorkspaceMapSelection } from "@/lib/wor
 import { createDisarmedCloneState } from "@/lib/clone-block";
 import { DEFAULT_MODEL } from "@/lib/xai-models";
 
-function mapBlockFromPlacedSlot(
-  nodes: Array<{
-    position_x?: number | null;
-    position_y?: number | null;
-    map_block?: unknown;
-  }>,
-  slot: { row: number; col: number },
-): MapBlock | null {
-  const placed = nodes.find(
-    (n) => n.position_y === slot.row && n.position_x === slot.col,
-  );
-  return authoringMapBlockForReuse(placed?.map_block);
+function slotMapBlockTemplate(
+  source: unknown,
+  override?: MapBlock | null,
+): MapBlock {
+  return authoringMapBlockKindTemplate(override ?? source);
 }
 
 export function useWorkspaceExpandJobs(input: {
@@ -121,7 +114,7 @@ export function useWorkspaceExpandJobs(input: {
       setCloneArm(createDisarmedCloneState());
 
       void (async () => {
-        let inheritedMapBlock = authoringMapBlockForReuse(source.map_block);
+        const inheritedMapBlock = slotMapBlockTemplate(source.map_block);
         try {
           const result = await runAddExpandCreateLoop({
             frozenSlots: slots,
@@ -193,9 +186,6 @@ export function useWorkspaceExpandJobs(input: {
                 );
                 nodesRef.current = nextNodes;
                 setNodes(nextNodes);
-                if (!inheritedMapBlock) {
-                  inheritedMapBlock = mapBlockFromPlacedSlot(nextNodes, slot);
-                }
               }
             },
           });
@@ -325,7 +315,10 @@ export function useWorkspaceExpandJobs(input: {
                     : {}),
                   ...(opts?.mapBlock
                     ? {
-                        map_block: opts.mapBlock,
+                        map_block:
+                          i === 0
+                            ? opts.mapBlock
+                            : slotMapBlockTemplate(opts.mapBlock),
                         title: opts.title || prompt,
                       }
                     : {}),
@@ -409,6 +402,7 @@ export function useWorkspaceExpandJobs(input: {
       userPrompt?: string;
       frozenSlots: Array<{ row: number; col: number }>;
       blockTitles: string[];
+      slotMapBlocks?: Array<MapBlock | null | undefined>;
     }) => {
       if (!workspaceId || !isOwner) return;
       const slots = (input.frozenSlots || []).map((c) => ({
@@ -444,7 +438,7 @@ export function useWorkspaceExpandJobs(input: {
         const anchor = nodesRef.current.find((n) =>
           (input.blockIds || []).includes(n.id),
         );
-        let inheritedMapBlock = authoringMapBlockForReuse(anchor?.map_block);
+        const defaultMapBlock = slotMapBlockTemplate(anchor?.map_block);
         try {
           const result = await runAddExpandCreateLoop({
             frozenSlots: slots,
@@ -485,7 +479,10 @@ export function useWorkspaceExpandJobs(input: {
                   model,
                   locale,
                   intent: "bridge",
-                  ...(inheritedMapBlock ? { map_block: inheritedMapBlock } : {}),
+                  map_block: slotMapBlockTemplate(
+                    defaultMapBlock,
+                    input.slotMapBlocks?.[i],
+                  ),
                   ...(ayclToken ? { ayclToken } : {}),
                 }),
               });
@@ -505,9 +502,6 @@ export function useWorkspaceExpandJobs(input: {
                 );
                 nodesRef.current = nextNodes;
                 setNodes(nextNodes);
-                if (!inheritedMapBlock) {
-                  inheritedMapBlock = mapBlockFromPlacedSlot(nextNodes, slot);
-                }
               }
             },
           });

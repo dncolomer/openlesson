@@ -7,6 +7,10 @@
 import { billedUserIdForSession } from "@/lib/credits/ledger";
 import { dashboardPlayHref, isDashboardPlaySession } from "@/lib/dashboard-play";
 import type { FlowPowRow } from "@/lib/flow-embedding";
+import {
+  sessionBranchModelFromUnknown,
+  type SessionBranchModel,
+} from "@/lib/session-branch-model";
 import { verificationQuestionStartingPrompt } from "@/lib/verification-flow";
 import { isPlayCopyWorkspace } from "@/lib/workspace-play-copy";
 
@@ -389,7 +393,7 @@ export function playCopyCompletedEmbeddingInput(input: {
   runId: string;
   identity: string | null;
   source: string;
-  model: unknown;
+  model: SessionBranchModel | null;
   sequence: readonly string[] | null;
   pow: FlowPowRow[];
   sessionId: string;
@@ -407,7 +411,7 @@ export function playCopyCompletedEmbeddingInput(input: {
     runId: String(input.sessionId || "").trim(),
     identity,
     source: String(input.source || "play_copy").trim() || "play_copy",
-    model: input.model ?? null,
+    model: sessionBranchModelFromUnknown(input.model),
     sequence: input.flowKind === "calibrate" ? null : input.sequence ?? null,
     pow: Array.isArray(input.pow) ? [...input.pow] : [],
     sessionId: String(input.sessionId || "").trim(),

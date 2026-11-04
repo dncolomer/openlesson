@@ -18,6 +18,10 @@ import {
   parseWorkspaceKind,
 } from "@/lib/workspace-kind";
 import { mapBlockLaunch } from "@/lib/block-kind";
+import {
+  presentMapPlayDataAccess,
+  type MapPlayDataAccessView,
+} from "@/lib/map-play-data-access";
 
 export { AYCL_SUGGESTED_CATEGORIES };
 
@@ -38,7 +42,7 @@ export function isHomeFeaturedMapId(id: string): boolean {
   return HOME_FEATURED_MAP_ID_SET.has(id);
 }
 export const PUBLIC_MAP_CATALOG_SELECT =
-  "id, title, root_topic, description, cover_image_url, created_at, is_public, is_all_you_can_learn, is_play_copy, workspace_kind, aycl_category, aycl_summary, aycl_full_price_cents";
+  "id, title, root_topic, description, cover_image_url, created_at, is_public, is_all_you_can_learn, is_play_copy, workspace_kind, aycl_category, aycl_summary, aycl_full_price_cents, play_share_path, play_share_pow, play_share_insights";
 
 export const PUBLISH_PLAY_COPY_MESSAGE =
   "Play copies cannot be listed on Home";
@@ -58,6 +62,9 @@ export type PublicMapCatalogRow = {
   aycl_category?: unknown;
   aycl_summary?: unknown;
   aycl_full_price_cents?: unknown;
+  play_share_path?: unknown;
+  play_share_pow?: unknown;
+  play_share_insights?: unknown;
 };
 
 export type PublicMapCatalogItem = {
@@ -69,6 +76,7 @@ export type PublicMapCatalogItem = {
   isAycl: boolean;
   priceLabel: string | null;
   createdAt: string | null;
+  dataAccess: MapPlayDataAccessView;
 };
 
 export type PublicMapCatalogFilter = {
@@ -167,6 +175,7 @@ export function presentPublicMapCatalogItem(
     isAycl,
     priceLabel,
     createdAt,
+    dataAccess: presentMapPlayDataAccess(row),
   };
 }
 

@@ -19,6 +19,11 @@ import {
   listFlowEmbeddings,
   getFlowEmbedding,
 } from "@/lib/flow-embedding-store";
+import {
+  playCopyCalibrateEmbeddingFromSounding,
+  playCopyFlowSessionInsert,
+  playCopyVerifyEmbeddingFromProof,
+} from "@/lib/map-play-data-access";
 import { normalizeSessionBranchModel } from "@/lib/session-branch-model";
 
 const ROOT = join(__dirname, "../..");
@@ -181,6 +186,85 @@ describe("flow embedding store", () => {
     expect(stored.workspace_id).toBe("ws-learn");
     expect(stored.owner_user_id).toBe("");
   });
+
+  it("persists a completed play-copy verify run as a player-owned copy embedding", async () => {
+    const started = playCopyFlowSessionInsert({
+      flowKind: "verify",
+      flowId: "vf-live",
+      runnerUserId: "player-1",
+      copyWorkspaceId: "copy-ws",
+      topic: "Series",
+      publicToken: "vtok",
+    });
+    const payload = playCopyVerifyEmbeddingFromProof({
+      session: { id: "sess-ver", metadata: started.metadata },
+      prompt: "the series converges",
+      policy: { model: fixtureModel(), sequence: ["r1"] },
+    });
+    expect(payload).not.toBeNull();
+    const stored = await persistCompletedFlowEmbedding({
+      workspaceId: payload!.workspaceId,
+      ownerUserId: payload!.ownerUserId,
+      flowKind: payload!.flowKind,
+      flowId: payload!.flowId,
+      runId: payload!.runId,
+      identity: payload!.identity,
+      source: payload!.source,
+      model: fixtureModel(),
+      sequence: payload!.sequence,
+      pow: payload!.pow,
+    });
+    expect(stored.owner_user_id).toBe("player-1");
+    expect(stored.workspace_id).toBe("copy-ws");
+    expect(stored.flow_kind).toBe("verify");
+    expect(stored.flow_id).toBe("vf-live");
+    expect(stored.run_id).toBe("sess-ver");
+    expect(stored.identity).toBe("play:player-1");
+    expect(stored.source).toBe("runner");
+    expect(stored.raw.pow[0]?.payload).toBe("the series converges");
+    const listed = await listFlowEmbeddings({ workspaceId: "copy-ws", flowKind: "verify" });
+    expect(listed).toHaveLength(1);
+    expect(listed[0]?.owner_user_id).toBe("player-1");
+  });
+
+  it("persists a completed play-copy calibrate run as a player-owned copy embedding", async () => {
+    const started = playCopyFlowSessionInsert({
+      flowKind: "calibrate",
+      flowId: "cf-live",
+      runnerUserId: "player-1",
+      copyWorkspaceId: "copy-ws",
+      topic: "Continuity",
+      publicToken: "ctok",
+    });
+    const payload = playCopyCalibrateEmbeddingFromSounding({
+      session: { id: "sess-cal", metadata: started.metadata },
+      model: fixtureModel(),
+      metadata: { sounding: true, sounding_band: "coarse" },
+    });
+    expect(payload).not.toBeNull();
+    expect(payload!.sequence).toBeNull();
+    const stored = await persistCompletedFlowEmbedding({
+      workspaceId: payload!.workspaceId,
+      ownerUserId: payload!.ownerUserId,
+      flowKind: payload!.flowKind,
+      flowId: payload!.flowId,
+      runId: payload!.runId,
+      identity: payload!.identity,
+      source: payload!.source,
+      model: fixtureModel(),
+      sequence: payload!.sequence,
+      pow: payload!.pow,
+    });
+    expect(stored.owner_user_id).toBe("player-1");
+    expect(stored.workspace_id).toBe("copy-ws");
+    expect(stored.flow_kind).toBe("calibrate");
+    expect(stored.flow_id).toBe("cf-live");
+    expect(stored.run_id).toBe("sess-cal");
+    expect(stored.identity).toBe("play:player-1");
+    expect(stored.source).toBe("sounding");
+    expect(stored.raw.projectedPolicy).toBeNull();
+    expect(stored.raw.pow[0]?.tool_action).toBe("sounding");
+  });
 });
 
 describe("completion paths persist flow embeddings instead of snapshots", () => {
@@ -227,6 +311,15 @@ describe("completion paths persist flow embeddings instead of snapshots", () => 
     const publicCalibrate = read("components/CalibrationFlowRunner.tsx");
     expect(publicCalibrate).toContain("model: closed.model");
     expect(publicCalibrate).toContain("soundingProofEvent");
+
+    const playVerify = read("app/play/verify/page.tsx");
+    expect(playVerify).toContain("playCopyVerifyEmbeddingFromProof");
+    expect(playVerify).toContain("postWorkspaceFlowEmbedding");
+    expect(playVerify).toContain("onLocalProof={storeProof}");
+    const playCalibrate = read("components/dashboard/play-calibrate-session.tsx");
+    expect(playCalibrate).toContain("playCopyCalibrateEmbeddingFromSounding");
+    expect(playCalibrate).toContain("postWorkspaceFlowEmbedding");
+    expect(playCalibrate).toContain("soundingProofMetadata");
 
     const listRoute = read("app/api/workspace/flow-embeddings/route.ts");
     expect(listRoute).toContain("export async function GET");

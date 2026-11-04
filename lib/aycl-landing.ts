@@ -28,6 +28,10 @@ import {
   isInventYourOwnExerciseMeta,
 } from "@/lib/pow-api/tapbench-exercise-quality";
 import { parseMapBlock } from "@/lib/block-kind";
+import {
+  presentMapPlayDataAccess,
+  type MapPlayDataAccessView,
+} from "@/lib/map-play-data-access";
 import { toSkillGridNodes } from "@/lib/skill-grid-positions";
 
 export type AyclLandingBlockRow = {
@@ -56,6 +60,9 @@ export type AyclLandingWorkspaceRow = AyclListingFields & {
   notes?: string | null;
   cover_image_url?: string | null;
   is_all_you_can_learn?: boolean | null;
+  play_share_path?: boolean | null;
+  play_share_pow?: boolean | null;
+  play_share_insights?: boolean | null;
 };
 
 export type AyclLandingOffer = {
@@ -79,6 +86,7 @@ export type AyclLandingSummary = {
   authorName: string | null;
   authorAvatarUrl: string | null;
   blockCount: number;
+  dataAccess: MapPlayDataAccessView;
   offers: { learner: AyclLandingOffer; full: AyclLandingOffer };
   /** View-only map props for BlockSkillGrid (preview fog, no authoring). */
   map: {
@@ -103,7 +111,7 @@ function clean(s: unknown): string {
  * Keep SSR page, OG image, and API routes in sync via this string.
  */
 export const AYCL_LANDING_WORKSPACE_SELECT =
-  "id, title, root_topic, description, notes, cover_image_url, is_all_you_can_learn, aycl_category, aycl_summary, aycl_author_name, aycl_author_avatar_url, aycl_learner_price_cents, aycl_full_price_cents";
+  "id, title, root_topic, description, notes, cover_image_url, is_all_you_can_learn, aycl_category, aycl_summary, aycl_author_name, aycl_author_avatar_url, aycl_learner_price_cents, aycl_full_price_cents, play_share_path, play_share_pow, play_share_insights";
 
 /** Tile geometry + glyphs for the view-only map preview (Home catalog / AYCL landing). */
 export const AYCL_LANDING_BLOCK_SELECT_CORE =
@@ -208,6 +216,7 @@ export function assembleAyclLandingSummary(input: {
     authorName: listing.authorName,
     authorAvatarUrl: listing.authorAvatarUrl,
     blockCount: nodes.length,
+    dataAccess: presentMapPlayDataAccess(ws),
     offers: {
       learner: {
         tier: "learner",

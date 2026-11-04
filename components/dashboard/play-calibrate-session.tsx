@@ -23,10 +23,12 @@ import {
   createSoundingState,
   createSoundingTree,
   finishSounding,
+  soundingProofMetadata,
   soundingStillsFromBranchModel,
   submitSoundingProof,
   type SoundingState,
 } from "@/lib/calibrate-sounding";
+import { postWorkspaceFlowEmbedding } from "@/lib/flow-embedding-client";
 import { inferSoundingVoiceStep } from "@/lib/calibrate-sounding-voice-client";
 import {
   loadSessionBranchField,
@@ -35,10 +37,12 @@ import {
 } from "@/lib/session-branch-field-load";
 import { calibrateFieldPrepareInput } from "@/lib/session-branch-prepare";
 import { releaseSessionLocalMemory } from "@/lib/session-local-memory";
+import { DASHBOARD_PLAY_CALIBRATE_QUESTIONS_PATH } from "@/lib/dashboard-play";
 import {
-  DASHBOARD_PLAY_CALIBRATE_QUESTIONS_PATH,
-  isDashboardPlaySession,
-} from "@/lib/dashboard-play";
+  playCopyCalibrateEmbeddingFromSounding,
+  playCopyIdRunnerAcceptsMetadata,
+  playCopySessionQuestions,
+} from "@/lib/map-play-data-access";
 import { getSession } from "@/lib/storage";
 import { useI18n } from "@/lib/i18n";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
@@ -97,6 +101,8 @@ export function PlayCalibrateSession({ sessionId }: { sessionId: string }) {
   const [done, setDone] = useState(false);
   const [bgImage, setBgImage] = useState("");
   const questionsRef = useRef<{ id: string; text: string }[]>([]);
+  const sessionMetaRef = useRef<unknown>(null);
+  const storedProofRef = useRef(false);
 
   useEffect(() => {
     soundingRef.current = sounding;
@@ -121,10 +127,13 @@ export function PlayCalibrateSession({ sessionId }: { sessionId: string }) {
     let cancelled = false;
     void getSession(sessionId).then((session) => {
       if (cancelled) return;
-      if (!session || !isDashboardPlaySession(session.metadata)) {
+      if (!session || !playCopyIdRunnerAcceptsMetadata(session.metadata)) {
         setError("This play session is not available.");
         return;
       }
+      const seeded = normalizeCalibrateQuestions(playCopySessionQuestions(session.metadata));
+      if (seeded.length) questionsRef.current = seeded;
+      sessionMetaRef.current = session.metadata;
       setPrompt(String(session.problem || "").trim() || "This topic");
     });
     return () => {
@@ -155,16 +164,19 @@ export function PlayCalibrateSession({ sessionId }: { sessionId: string }) {
     setFieldError("");
     setError("");
     try {
-      const response = await fetch(DASHBOARD_PLAY_CALIBRATE_QUESTIONS_PATH, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId, prompt: topic }),
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(errorMessageFromBody(payload, "Could not load questions"));
-      const questions = normalizeCalibrateQuestions(payload.questions);
-      if (questions.length === 0) throw new Error("Could not load questions");
-      questionsRef.current = questions;
+      let questions = questionsRef.current;
+      if (questions.length === 0) {
+        const response = await fetch(DASHBOARD_PLAY_CALIBRATE_QUESTIONS_PATH, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId, prompt: topic }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(errorMessageFromBody(payload, "Could not load questions"));
+        questions = normalizeCalibrateQuestions(payload.questions);
+        if (questions.length === 0) throw new Error("Could not load questions");
+        questionsRef.current = questions;
+      }
       const field = await loadSessionBranchField(
         calibrateFieldPrepareInput({
           topicText: topic,
@@ -215,20 +227,45 @@ export function PlayCalibrateSession({ sessionId }: { sessionId: string }) {
     return () => window.clearInterval(id);
   }, [done, startedAt, timeUp]);
 
+  const persistPlayCopyProof = useCallback(
+    async (state: SoundingState) => {
+      if (storedProofRef.current) return;
+      storedProofRef.current = true;
+      const closed = state.phase === "complete" ? state : finishSounding(state, false);
+      const payload = playCopyCalibrateEmbeddingFromSounding({
+        session: { id: sessionId, metadata: sessionMetaRef.current },
+        model: closed.model,
+        metadata: soundingProofMetadata(closed),
+      });
+      if (payload) {
+        const posted = await postWorkspaceFlowEmbedding(payload);
+        if (!posted.ok) {
+          storedProofRef.current = false;
+          throw new Error("Could not store calibration proof");
+        }
+      }
+      soundingRef.current = closed;
+      setSounding(closed);
+      setDone(true);
+    },
+    [sessionId],
+  );
+
   useEffect(() => {
     if (!timeUp || done) return;
     const live = soundingRef.current;
     if (!live) return;
-    const closed = finishSounding(live, false);
-    soundingRef.current = closed;
-    setSounding(closed);
-    setDone(true);
-  }, [done, timeUp]);
+    void persistPlayCopyProof(live).catch((err) => {
+      setError(err instanceof Error ? err.message : "Could not store calibration proof");
+    });
+  }, [done, persistPlayCopyProof, timeUp]);
 
   useEffect(() => {
     if (done || !sounding || sounding.phase !== "complete") return;
-    setDone(true);
-  }, [done, sounding]);
+    void persistPlayCopyProof(sounding).catch((err) => {
+      setError(err instanceof Error ? err.message : "Could not store calibration proof");
+    });
+  }, [done, persistPlayCopyProof, sounding]);
 
   if (error && !prompt) {
     return (
@@ -369,7 +406,9 @@ export function PlayCalibrateSession({ sessionId }: { sessionId: string }) {
               soundingRef.current = closed;
               setSounding(closed);
               if (closed.phase === "expert-proof") return;
-              setDone(true);
+              void persistPlayCopyProof(closed).catch((err) => {
+                setError(err instanceof Error ? err.message : "Could not store calibration proof");
+              });
             }}
             className={`${SESSION_SIDEBAR_PRIMARY_BUTTON_CLASS} w-full`}
           >

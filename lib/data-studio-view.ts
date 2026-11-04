@@ -36,6 +36,7 @@ import {
   type ScreenRect,
 } from "@/lib/knowledge-config";
 import { workspaceProductShell } from "@/lib/workspace-kind";
+import { includeAuthorStudioEmbedding } from "@/lib/map-play-data-access";
 
 export const DATA_STUDIO_PRODUCTS = [
   "verification",
@@ -660,9 +661,10 @@ export function presentDashboardDataStudio(input: {
   let embeddings = input.embeddings.filter((row) => {
     if (text(row.flow_kind) && text(row.flow_kind) !== flowKind) return false;
     if (input.product !== "learning") {
-      const owner = text(row.owner_user_id);
-      if (owner && owner !== text(input.viewerUserId)) return false;
-      return true;
+      return includeAuthorStudioEmbedding({
+        viewerUserId: input.viewerUserId,
+        embedding: row,
+      });
     }
     const workspaceId = text(row.workspace_id);
     if (workspaceId && !workspaceIds.has(workspaceId)) return false;

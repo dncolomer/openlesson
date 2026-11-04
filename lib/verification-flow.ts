@@ -25,6 +25,7 @@ import {
 import { flowCountdownMinutes } from "@/lib/flow-countdown";
 import { parseLearningModelSize, type LearningModelSize } from "@/lib/learning-model";
 import type { TapStartingTopic } from "@/lib/tap-score";
+import { archiveFlowStamp, publicInviteClaimReason } from "@/lib/flow-archive";
 
 export const VERIFICATION_WORKSPACE_LABEL = "Verification Workspace";
 
@@ -47,6 +48,7 @@ export type VerificationFlow = {
   publicToken: string;
   createdAt: string;
   updatedAt: string;
+  archivedAt?: string | null;
 };
 
 export type VerificationFlowResultSource = "runner" | "skill";
@@ -615,12 +617,17 @@ export function applyVerificationCommand(
     if (!commandOwnsFlow(current, command)) {
       return { ok: false, reason: "wrong_workspace", state };
     }
+    const flow: VerificationFlow = {
+      ...current,
+      ...archiveFlowStamp(),
+      updatedAt: nowIso(),
+    };
     return {
       ok: true,
+      flow,
       state: {
-        flows: state.flows.filter((flow) => flow.id !== command.flowId),
-        identities: state.identities.filter((item) => item.flowId !== command.flowId),
-        results: state.results.filter((item) => item.flowId !== command.flowId),
+        ...state,
+        flows: state.flows.map((item) => (item.id === flow.id ? flow : item)),
       },
     };
   }
@@ -628,6 +635,8 @@ export function applyVerificationCommand(
   if (command.type === "claim") {
     const flow = state.flows.find((item) => item.id === command.flowId);
     if (!flow) return { ok: false, reason: "not_found", state };
+    const archived = publicInviteClaimReason(flow);
+    if (archived) return { ok: false, reason: archived, state };
     const existing = state.identities
       .filter((item) => item.flowId === flow.id)
       .map((item) => item.identity);

@@ -6,6 +6,13 @@ import { useI18n } from "@/lib/i18n";
 import type { Workspace } from "@/components/WorkspaceView";
 import { AYCL_SUGGESTED_CATEGORIES } from "@/lib/dashboard-home-catalog";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
+import {
+  MAP_PLAY_INSIGHTS_SHARE_LABEL,
+  mapPlayDataAccessDetail,
+  mapPlayDataAccessLabel,
+  persistMapPlayDataAccessUpdates,
+  presentMapPlayDataAccess,
+} from "@/lib/map-play-data-access";
 
 interface WorkspaceAccessSettingsProps {
   plan: Workspace;
@@ -24,9 +31,10 @@ export function WorkspaceAccessSettings({
   onPlanUpdate,
 }: WorkspaceAccessSettingsProps) {
   const { t } = useI18n();
-  const [busy, setBusy] = useState<"public" | null>(null);
+  const [busy, setBusy] = useState<"public" | "access" | null>(null);
   const [category, setCategory] = useState(plan.aycl_category || "");
   const [error, setError] = useState("");
+  const dataAccess = presentMapPlayDataAccess(plan);
 
   if (!isOwner) return null;
 
@@ -42,6 +50,9 @@ export function WorkspaceAccessSettings({
         body: JSON.stringify({
           is_public: makingPublic,
           aycl_category: category.trim() || null,
+          playSharePath: plan.play_share_path,
+          playSharePow: plan.play_share_pow,
+          playShareInsights: plan.play_share_insights,
         }),
       });
       const data = await res.json();
@@ -56,6 +67,41 @@ export function WorkspaceAccessSettings({
     } catch (err) {
       console.error("Error toggling visibility:", err);
       setError(err instanceof Error ? err.message : "Could not update visibility");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const saveDataAccess = async (flags: {
+    playSharePath: boolean;
+    playSharePow: boolean;
+    playShareInsights: boolean;
+  }) => {
+    setBusy("access");
+    setError("");
+    const next = persistMapPlayDataAccessUpdates(flags);
+    try {
+      const res = await fetch(`/api/workspaces/${workspaceId}/visibility`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          playSharePath: next.play_share_path ?? flags.playSharePath,
+          playSharePow: next.play_share_pow ?? flags.playSharePow,
+          playShareInsights: next.play_share_insights ?? flags.playShareInsights,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(errorMessageFromBody(data, "Could not update data access"));
+      }
+      onPlanUpdate({
+        ...plan,
+        play_share_path: next.play_share_path ?? flags.playSharePath,
+        play_share_pow: next.play_share_pow ?? flags.playSharePow,
+        play_share_insights: next.play_share_insights ?? flags.playShareInsights,
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not update data access");
     } finally {
       setBusy(null);
     }
@@ -95,6 +141,62 @@ export function WorkspaceAccessSettings({
       </label>
 
       {error ? <p className="mt-3 text-sm text-red-400">{error}</p> : null}
+
+      <div className="mt-5 space-y-3" data-workspace-play-data-access>
+        <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-neutral-500">
+          Play copy data
+        </p>
+        <p className="text-sm text-neutral-400">{dataAccess.detail}</p>
+        <label className="flex items-start gap-2 text-sm text-neutral-300">
+          <input
+            type="checkbox"
+            data-workspace-play-share-path
+            checked={dataAccess.playSharePath}
+            disabled={busy !== null}
+            onChange={(event) => {
+              void saveDataAccess({
+                playSharePath: event.target.checked,
+                playSharePow: event.target.checked ? dataAccess.playSharePow : false,
+                playShareInsights: dataAccess.playShareInsights,
+              });
+            }}
+          />
+          <span>{mapPlayDataAccessLabel("path")}</span>
+        </label>
+        <label className="flex items-start gap-2 text-sm text-neutral-300">
+          <input
+            type="checkbox"
+            data-workspace-play-share-pow
+            checked={dataAccess.playSharePow}
+            disabled={busy !== null || !dataAccess.playSharePath}
+            onChange={(event) => {
+              void saveDataAccess({
+                playSharePath: true,
+                playSharePow: event.target.checked,
+                playShareInsights: dataAccess.playShareInsights,
+              });
+            }}
+          />
+          <span>{mapPlayDataAccessLabel("pow")}</span>
+        </label>
+        <label className="flex items-start gap-2 text-sm text-neutral-300">
+          <input
+            type="checkbox"
+            data-workspace-play-share-insights
+            checked={dataAccess.playShareInsights}
+            disabled={busy !== null}
+            onChange={(event) => {
+              void saveDataAccess({
+                playSharePath: dataAccess.playSharePath,
+                playSharePow: dataAccess.playSharePow,
+                playShareInsights: event.target.checked,
+              });
+            }}
+          />
+          <span>{MAP_PLAY_INSIGHTS_SHARE_LABEL}</span>
+        </label>
+        <p className="text-xs text-neutral-600">{mapPlayDataAccessDetail("private")}</p>
+      </div>
 
       <div className="mt-5 flex flex-col gap-2">
         <button

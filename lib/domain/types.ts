@@ -440,6 +440,9 @@ export interface Workspace {
   is_all_you_can_learn?: boolean;
   /** Permanent play-only copy from Home Add to my Maps or AYCL buy. */
   is_play_copy?: boolean;
+  play_share_path?: boolean;
+  play_share_pow?: boolean;
+  play_share_insights?: boolean;
   aycl_category?: string | null;
   aycl_summary?: string | null;
   aycl_author_name?: string | null;

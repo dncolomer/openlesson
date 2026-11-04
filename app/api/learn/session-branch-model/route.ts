@@ -10,6 +10,19 @@ import { entryQueryParamsFromBody } from "@/lib/guest-link-access";
 import { getCalibrationFlowByToken } from "@/lib/calibration-flow-repository";
 import { studentSessionModelFromAuthorSeed } from "@/lib/author-unsys-model";
 import {
+  definitionUnsysSeedFromBlocks,
+  studentModelFromDefinitionSeed,
+} from "@/lib/definition-unsys-seed";
+import { getSolveFlowByToken } from "@/lib/solve-flow-repository";
+import {
+  authorSeedBlockIdFromPreparePlan,
+  authorSeedSessionIdFromPreparePlan,
+  definitionFlowTokenFromPreparePlan,
+  planSessionBranchPrepare,
+  sessionPrepareBlockId,
+  type SessionBranchPrepareInput,
+} from "@/lib/session-branch-prepare";
+import {
   continueSessionBranchModel,
   generateSessionBranchOpening,
   sessionBranchContinuationFromSeed,
@@ -17,13 +30,6 @@ import {
 } from "@/lib/session-branch-model-generate";
 import { openingWorkForSessionField } from "@/lib/learn-opening-work-generate";
 import { sessionBranchParentsNeedingGrowth } from "@/lib/session-branch-model";
-import {
-  authorSeedBlockIdFromPreparePlan,
-  authorSeedSessionIdFromPreparePlan,
-  planSessionBranchPrepare,
-  sessionPrepareBlockId,
-  type SessionBranchPrepareInput,
-} from "@/lib/session-branch-prepare";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveTapSessionAccess } from "@/lib/tap-score-session-auth";
 import { getVerificationFlowByToken } from "@/lib/verification-flow-repository";
@@ -78,23 +84,104 @@ export async function POST(request: NextRequest) {
     if (body.phase !== "continue") {
       try {
         const supabase = createAdminClient();
-        let blockId = authorSeedBlockIdFromPreparePlan(plan);
-        if (!blockId) {
+        const copyBlockId = authorSeedBlockIdFromPreparePlan(plan);
+        let flowId = "";
+        let definitionWorkspaceId = "";
+        let flowSeed: unknown = null;
+        const tokened = definitionFlowTokenFromPreparePlan(plan);
+        if (tokened?.kind === "calibration") {
+          const flow = await getCalibrationFlowByToken(tokened.token);
+          flowId = String(flow?.id || "");
+          definitionWorkspaceId = String(flow?.workspaceId || "");
+        } else if (tokened?.kind === "verification") {
+          const flow = await getVerificationFlowByToken(tokened.token);
+          flowId = String(flow?.id || "");
+          definitionWorkspaceId = String(flow?.workspaceId || "");
+        } else if (tokened?.kind === "solve") {
+          const flow = await getSolveFlowByToken(tokened.token);
+          flowId = String(flow?.id || "");
+          definitionWorkspaceId = String(flow?.workspaceId || "");
+        }
+        if (!flowId) {
           const sessionId = authorSeedSessionIdFromPreparePlan(plan);
           if (sessionId) {
             const { data: sessionRow } = await supabase
               .from("sessions")
-              .select("metadata")
+              .select(
+                "metadata, solve_flow_id, calibrate_flow_id, verify_flow_id, workspace_id",
+              )
               .eq("id", sessionId)
               .maybeSingle();
-            blockId = sessionPrepareBlockId(sessionRow?.metadata);
+            flowId = String(
+              sessionRow?.solve_flow_id ||
+                sessionRow?.calibrate_flow_id ||
+                sessionRow?.verify_flow_id ||
+                "",
+            ).trim();
           }
         }
-        if (blockId) {
+        if (flowId) {
+          const { data: flowRow } = await supabase
+            .from("solve_flows")
+            .select("id, workspace_id")
+            .eq("id", flowId)
+            .maybeSingle();
+          if (flowRow) {
+            definitionWorkspaceId =
+              definitionWorkspaceId || String(flowRow.workspace_id || "");
+          } else {
+            const { data: calRow } = await supabase
+              .from("calibrate_flows")
+              .select("id, workspace_id")
+              .eq("id", flowId)
+              .maybeSingle();
+            if (calRow) {
+              definitionWorkspaceId =
+                definitionWorkspaceId || String(calRow.workspace_id || "");
+            } else {
+              const { data: verRow } = await supabase
+                .from("verify_flows")
+                .select("id, workspace_id")
+                .eq("id", flowId)
+                .maybeSingle();
+              definitionWorkspaceId =
+                definitionWorkspaceId || String(verRow?.workspace_id || "");
+            }
+          }
+          const { data: blocks } = definitionWorkspaceId
+            ? await supabase
+                .from("blocks")
+                .select("id, workspace_id, map_block, answers_model_seed")
+                .eq("workspace_id", definitionWorkspaceId)
+            : { data: [] };
+          const definitionSeed = definitionUnsysSeedFromBlocks({
+            flowId,
+            definitionWorkspaceId,
+            flowSeed,
+            blocks: blocks || [],
+            copyBlockId,
+          });
+          const seeded = studentModelFromDefinitionSeed(definitionSeed);
+          if (seeded) {
+            const continuation = sessionBranchContinuationFromSeed(seeded);
+            const done = sessionBranchParentsNeedingGrowth(seeded).length === 0;
+            const openingWork =
+              plan.kind === "learn"
+                ? await openingWorkForSessionField(seeded, plan.kind === "learn" ? plan.sessionId : "")
+                : "";
+            return NextResponse.json({
+              model: seeded,
+              continuation: done ? null : continuation,
+              done,
+              seeded: true,
+              openingWork,
+            });
+          }
+        } else if (copyBlockId) {
           const { data } = await supabase
             .from("blocks")
             .select("answers_model_seed")
-            .eq("id", blockId)
+            .eq("id", copyBlockId)
             .maybeSingle();
           const seeded = studentSessionModelFromAuthorSeed(data?.answers_model_seed);
           if (seeded) {

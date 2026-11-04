@@ -6,6 +6,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { AyclExampleProblemGrid } from "@/components/AyclExampleProblemGrid";
+import { AyclLandingClient } from "@/components/AyclLandingClient";
 import { readMapGridSurface } from "../helpers/surface-source";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -114,6 +115,8 @@ describe("aycl landing model", () => {
     expect(landing.offers.full.priceCents).toBeGreaterThan(0);
     expect(landing.category).toBe(null);
     expect(landing.authorName).toBe(null);
+    expect(landing.dataAccess.mode).toBe("private");
+    expect(landing.dataAccess.label).toMatch(/private/i);
     expect(landing.paths.landingPath).toBe("/all-you-can-learn/ws-aycl-1");
     // Share image is the unsys standard root card (not a per-workspace path).
     expect(landing.paths.ogImagePath).toBe("/opengraph-image");
@@ -294,6 +297,9 @@ describe("aycl landing model", () => {
       "aycl_author_avatar_url",
       "aycl_learner_price_cents",
       "aycl_full_price_cents",
+      "play_share_path",
+      "play_share_pow",
+      "play_share_insights",
     ]) {
       expect(AYCL_LANDING_WORKSPACE_SELECT).toContain(col);
     }
@@ -303,6 +309,35 @@ describe("aycl landing model", () => {
     // OG image is unsys standard — no per-workspace workspace select.
     expect(og).toContain("composeStandardOgImage");
     expect(og).not.toContain("AYCL_LANDING_WORKSPACE_SELECT");
+  });
+
+  it("shows the map data-access mode on the AYCL details landing", () => {
+    const landing = assembleAyclLandingSummary({
+      workspace: {
+        ...fixtureWorkspace,
+        play_share_path: true,
+        play_share_pow: true,
+      },
+      blocks: fixtureBlocks,
+    });
+    expect(landing.dataAccess.mode).toBe("pow");
+    expect(landing.dataAccess.label).toMatch(/proof of work/i);
+    const html = renderToStaticMarkup(createElement(AyclLandingClient, { landing }));
+    expect(html).toContain("data-map-play-data-access");
+    expect(html).toContain("data-aycl-play-data-access");
+    expect(html).toContain('data-map-play-data-access-mode="pow"');
+    expect(html).toContain('data-map-play-share-insights="false"');
+    expect(html).toContain(landing.dataAccess.label);
+    const withInsights = assembleAyclLandingSummary({
+      workspace: {
+        ...fixtureWorkspace,
+        play_share_insights: true,
+      },
+      blocks: fixtureBlocks,
+    });
+    expect(withInsights.dataAccess.playShareInsights).toBe(true);
+    expect(withInsights.dataAccess.label).toMatch(/crafted insights/i);
+    expect(read("components/AyclLandingClient.tsx")).toContain("data-map-play-data-access");
   });
 });
 

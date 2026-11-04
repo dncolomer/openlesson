@@ -16,6 +16,8 @@ import {
   type SolveFlow,
   type SolveState,
 } from "@/lib/solve-flow";
+import { flowArchivedAtFromRow, listedAuthorFlows } from "@/lib/flow-archive";
+import { inviteFlowSessionOwner } from "@/lib/map-play-data-access";
 
 const SOLVE_FLOW_GLOBAL = "__openlessonSolveFlowRepository";
 
@@ -125,6 +127,7 @@ function mapFlow(row: Record<string, unknown>): SolveFlow {
     publicToken: String(row.public_token || ""),
     createdAt: String(row.created_at || ""),
     updatedAt: String(row.updated_at || ""),
+    archivedAt: flowArchivedAtFromRow(row),
   };
 }
 
@@ -192,8 +195,11 @@ async function persistCommand(
     if (error) throw new Error(error.message);
     return;
   }
-  if (command.type === "remove") {
-    const { error } = await supabase.from(SOLVE_FLOWS_TABLE).delete().eq("id", command.flowId);
+  if (command.type === "remove" && value.flow) {
+    const { error } = await writeSolveFlow(supabase, "update", command.flowId, {
+      archived_at: value.flow.archivedAt,
+      updated_at: value.flow.updatedAt,
+    });
     if (error) throw new Error(error.message);
     return;
   }
@@ -203,6 +209,10 @@ async function persistCommand(
       .select("owner_user_id, topic, name")
       .eq("id", command.flowId)
       .maybeSingle();
+    const owner = inviteFlowSessionOwner({
+      flowOwnerUserId: String(flow?.owner_user_id || ""),
+      runnerUserId: command.runnerUserId,
+    });
     const { debitClaimedFlowSession, refundClaimedFlowSession } = await import("@/lib/credits/claim-charge");
     const charged = await debitClaimedFlowSession({
       ownerUserId: flow?.owner_user_id,
@@ -214,7 +224,7 @@ async function persistCommand(
       kind: "solve",
       problem: topic,
       status: "pending",
-      user_id: flow?.owner_user_id,
+      user_id: owner.user_id,
       solve_flow_id: command.flowId,
       identity: value.identity,
       result: {
@@ -241,7 +251,7 @@ async function writeSolveFlow(
       ? supabase.from(SOLVE_FLOWS_TABLE).insert(body)
       : supabase.from(SOLVE_FLOWS_TABLE).update(body).eq("id", id);
   let current = row;
-  for (const optional of ["action_catalog", "duration_minutes", "workspace_id"] as const) {
+  for (const optional of ["action_catalog", "duration_minutes", "workspace_id", "archived_at"] as const) {
     const result = await run(current);
     if (!result.error) return result;
     if (!String(result.error.message).includes(optional) || !(optional in current)) return result;
@@ -296,9 +306,9 @@ export async function listSolveFlowsForOwnerUserId(ownerUserId: string): Promise
   const userId = String(ownerUserId || "").trim();
   if (!userId) return [];
   if ((await resolveBackend()) === "memory") {
-    return solveRepositoryGlobal()
-      .memory.flows.filter((flow) => flow.ownerUserId === userId)
-      .map(presentFlow);
+    return listedAuthorFlows(
+      solveRepositoryGlobal().memory.flows.filter((flow) => flow.ownerUserId === userId),
+    ).map(presentFlow);
   }
   const supabase = createAdminClient();
   const { data, error } = await supabase
@@ -307,7 +317,9 @@ export async function listSolveFlowsForOwnerUserId(ownerUserId: string): Promise
     .eq("owner_user_id", userId)
     .order("created_at", { ascending: false });
   if (error || !Array.isArray(data)) return [];
-  return data.map((row) => presentFlow(mapFlow(row as Record<string, unknown>)));
+  return listedAuthorFlows(
+    data.map((row) => presentFlow(mapFlow(row as Record<string, unknown>))),
+  );
 }
 
 export async function getSolveFlowByToken(token: string): Promise<SolveFlow | null> {

@@ -11,6 +11,8 @@ export type ResolvedSolveSessionAccess = {
   flow: SolveFlow;
   session: Record<string, unknown>;
   ownerUserId: string;
+  runOwnerUserId: string;
+  workspaceId: string;
   identity: string | null;
 };
 
@@ -42,11 +44,19 @@ export async function resolveSolveSessionAccess(
   if (kind && kind !== "solve") return { error: "Session not found", status: 404 };
   const parent = String(row.solve_flow_id ?? row.solveFlowId ?? "").trim();
   if (parent !== base.flow.id) return { error: "Session not found", status: 404 };
+  const meta =
+    row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
+      ? (row.metadata as Record<string, unknown>)
+      : {};
+  const runOwnerUserId = String(row.user_id || "").trim() || base.ownerUserId;
+  const workspaceId = String(row.workspace_id || meta.workspace_id || "").trim();
   return {
     supabase: createAdminClient(),
     flow: base.flow,
     session: row,
     ownerUserId: base.ownerUserId,
+    runOwnerUserId,
+    workspaceId,
     identity: String(row.identity || "").trim() || null,
   };
 }

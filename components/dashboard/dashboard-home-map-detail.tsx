@@ -213,6 +213,21 @@ export function DashboardHomeMapDetail({
               {landing.workspaceGoal}
             </p>
           ) : null}
+          {(() => {
+            const access = landing?.dataAccess || detail.map.dataAccess;
+            if (!access) return null;
+            return (
+              <p
+                className="mt-4 max-w-2xl text-sm leading-relaxed text-zinc-400"
+                data-map-play-data-access
+                data-map-play-data-access-mode={access.mode}
+                data-map-play-share-insights={access.playShareInsights ? "true" : "false"}
+              >
+                <span className="font-medium text-zinc-300">Data access · </span>
+                {access.label}. {access.detail}
+              </p>
+            );
+          })()}
           {landing ? (
             <p className="mt-3 text-xs text-zinc-600">
               {landing.blockCount} map block

@@ -83,6 +83,12 @@ import {
   dataStudioExplainer,
   parseDataStudioView,
 } from "@/lib/data-studio-explainer";
+import {
+  includeAuthorStudioEmbedding,
+  parseMapPlayDataAccessFlags,
+  persistMapPlayDataAccessUpdates,
+  playCopyContributionEmbeddingInput,
+} from "@/lib/map-play-data-access";
 
 const ROOT = join(__dirname, "../..");
 
@@ -1150,6 +1156,95 @@ describe("studio flow/run filters, inspect, projection, learning scope", () => {
         pixelRadius: 8,
       }),
     ).toBeNull();
+  });
+
+  it("author studio keeps invite and contributed Path rows and hides private play-copy rows", () => {
+    expect(
+      persistMapPlayDataAccessUpdates({ playSharePow: true }),
+    ).toEqual({ play_share_path: true, play_share_pow: true });
+    const flags = parseMapPlayDataAccessFlags({
+      play_share_path: true,
+      play_share_pow: false,
+    });
+    expect(flags).toEqual({
+      playSharePath: true,
+      playSharePow: false,
+      playShareInsights: false,
+    });
+    const contribution = playCopyContributionEmbeddingInput({
+      flags,
+      playerUserId: "player-1",
+      authorUserId: "author-1",
+      flowKind: "solve",
+      flowId: "sf1",
+      runId: "run-play",
+      identity: "play:player-1",
+      raw: { flowKind: "solve", pow: [{ payload: "secret transcript" }] },
+    });
+    expect(contribution?.ownerUserId).toBe("author-1");
+    expect(contribution?.source).toBe("play_path");
+    expect((contribution?.raw as { pow?: unknown[] }).pow).toEqual([]);
+    expect(
+      playCopyContributionEmbeddingInput({
+        flags: parseMapPlayDataAccessFlags({}),
+        playerUserId: "player-1",
+        authorUserId: "author-1",
+        flowKind: "solve",
+        flowId: "sf1",
+        runId: "run-play",
+        raw: {},
+      }),
+    ).toBeNull();
+
+    const invite = studioRow({
+      id: "invite-1",
+      flowKind: "solve",
+      prompt: "invite run",
+      ownerUserId: "author-1",
+      userId: "author-1",
+    });
+    const privatePlay = studioRow({
+      id: "play-private",
+      flowKind: "solve",
+      prompt: "player only",
+      ownerUserId: "player-1",
+      userId: "player-1",
+    });
+    const contributed = studioRow({
+      id: "play-path",
+      flowKind: "solve",
+      prompt: "shared path",
+      ownerUserId: "author-1",
+      userId: "author-1",
+    });
+    expect(
+      includeAuthorStudioEmbedding({
+        viewerUserId: "author-1",
+        embedding: invite,
+      }),
+    ).toBe(true);
+    expect(
+      includeAuthorStudioEmbedding({
+        viewerUserId: "author-1",
+        embedding: privatePlay,
+      }),
+    ).toBe(false);
+    expect(
+      includeAuthorStudioEmbedding({
+        viewerUserId: "author-1",
+        embedding: contributed,
+      }),
+    ).toBe(true);
+    const presented = presentDashboardDataStudio({
+      product: "solve",
+      viewerUserId: "author-1",
+      workspaces: [],
+      embeddings: [invite, privatePlay, contributed],
+    });
+    expect(presented.embeddings.map((row) => row.id).sort()).toEqual([
+      "invite-1",
+      "play-path",
+    ]);
   });
 });
 

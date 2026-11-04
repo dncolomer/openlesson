@@ -11,6 +11,7 @@ function SessionContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("id");
   const resumeSession = isIleResumeQuery(searchParams.get("resume"));
+  const solveToken = searchParams.get("solve") || undefined;
   const { t } = useI18n();
 
   if (!sessionId) {
@@ -21,7 +22,13 @@ function SessionContent() {
     );
   }
 
-  return <SessionView sessionId={sessionId} resumeSession={resumeSession} />;
+  return (
+    <SessionView
+      sessionId={sessionId}
+      resumeSession={resumeSession}
+      solveToken={solveToken}
+    />
+  );
 }
 
 export default function SessionPage() {

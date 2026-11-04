@@ -23,6 +23,8 @@ import {
   type VerificationFlowResult,
   type VerificationState,
 } from "@/lib/verification-flow";
+import { flowArchivedAtFromRow, listedAuthorFlows } from "@/lib/flow-archive";
+import { inviteFlowSessionOwner } from "@/lib/map-play-data-access";
 
 const VERIFICATION_FLOW_GLOBAL = "__openlessonVerificationFlowRepository";
 
@@ -100,6 +102,7 @@ function mapFlow(row: Record<string, unknown>): VerificationFlow {
     publicToken: String(row.public_token || ""),
     createdAt: String(row.created_at || ""),
     updatedAt: String(row.updated_at || ""),
+    archivedAt: flowArchivedAtFromRow(row),
   };
 }
 
@@ -210,11 +213,11 @@ async function persistCommand(
     if (error) throw new Error(error.message);
     return;
   }
-  if (command.type === "remove") {
-    const { error } = await supabase
-      .from("verify_flows")
-      .delete()
-      .eq("id", command.flowId);
+  if (command.type === "remove" && value.flow) {
+    const { error } = await writeVerificationFlow(supabase, "update", command.flowId, {
+      archived_at: value.flow.archivedAt,
+      updated_at: value.flow.updatedAt,
+    });
     if (error) throw new Error(error.message);
     return;
   }
@@ -224,6 +227,10 @@ async function persistCommand(
       .select("owner_user_id")
       .eq("id", command.flowId)
       .maybeSingle();
+    const owner = inviteFlowSessionOwner({
+      flowOwnerUserId: String(flow?.owner_user_id || ""),
+      runnerUserId: command.runnerUserId,
+    });
     const { debitClaimedFlowSession, refundClaimedFlowSession } = await import("@/lib/credits/claim-charge");
     const charged = await debitClaimedFlowSession({
       ownerUserId: flow?.owner_user_id,
@@ -234,7 +241,7 @@ async function persistCommand(
       kind: "verify",
       problem: "Verify",
       status: "pending",
-      user_id: flow?.owner_user_id,
+      user_id: owner.user_id,
       verify_flow_id: command.flowId,
       identity: value.identity,
       result: {
@@ -361,7 +368,7 @@ async function writeVerificationFlow(
       ? supabase.from("verify_flows").insert(body)
       : supabase.from("verify_flows").update(body).eq("id", id);
   let current = row;
-  for (const optional of ["name", "action_catalog", "duration_minutes", "owner_user_id", "workspace_id"] as const) {
+  for (const optional of ["name", "action_catalog", "duration_minutes", "owner_user_id", "workspace_id", "archived_at"] as const) {
     const result = await run(current);
     if (!result.error) return result;
     if (!String(result.error.message).includes(optional) || !(optional in current)) return result;
@@ -390,9 +397,9 @@ export async function listVerificationFlowsForOwnerUserId(
   const userId = String(ownerUserId || "").trim();
   if (!userId) return [];
   if ((await resolveBackend()) === "memory") {
-    return verificationRepositoryGlobal()
-      .memory.flows.filter((flow) => flow.ownerUserId === userId)
-      .map(presentFlow);
+    return listedAuthorFlows(
+      verificationRepositoryGlobal().memory.flows.filter((flow) => flow.ownerUserId === userId),
+    ).map(presentFlow);
   }
   const supabase = createAdminClient();
   const { data, error } = await supabase
@@ -401,17 +408,21 @@ export async function listVerificationFlowsForOwnerUserId(
     .eq("owner_user_id", userId)
     .order("created_at", { ascending: false });
   if (error || !Array.isArray(data)) return [];
-  return data.map((row) => presentFlow(mapFlow(row as Record<string, unknown>)));
+  return listedAuthorFlows(
+    data.map((row) => presentFlow(mapFlow(row as Record<string, unknown>))),
+  );
 }
 
 export async function listVerificationFlows(workspaceId: string): Promise<VerificationFlow[]> {
   if ((await resolveBackend()) === "memory") {
-    return verificationRepositoryGlobal().memory.flows
-      .filter((flow) => flow.workspaceId === workspaceId)
-      .map(presentFlow);
+    return listedAuthorFlows(
+      verificationRepositoryGlobal().memory.flows.filter(
+        (flow) => flow.workspaceId === workspaceId,
+      ),
+    ).map(presentFlow);
   }
   const state = await loadSupabaseState({ workspaceId });
-  return state.flows.map(presentFlow);
+  return listedAuthorFlows(state.flows).map(presentFlow);
 }
 
 export async function listVerificationResults(workspaceId: string): Promise<VerificationFlowResult[]> {

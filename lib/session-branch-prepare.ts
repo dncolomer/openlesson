@@ -219,6 +219,18 @@ export function authorSeedBlockIdFromPreparePlan(
   return "";
 }
 
+/** Public flow token on the prepare plan, when the run is definition-backed. */
+export function definitionFlowTokenFromPreparePlan(
+  plan: SessionBranchPreparePlan,
+): { kind: "calibration" | "verification" | "solve"; token: string } | null {
+  if (plan.kind === "calibration") return { kind: "calibration", token: plan.token };
+  if (plan.kind === "verification") return { kind: "verification", token: plan.token };
+  if (plan.kind === "learn" && plan.solveToken) {
+    return { kind: "solve", token: plan.solveToken };
+  }
+  return null;
+}
+
 export function authorSeedSessionIdFromPreparePlan(
   plan: SessionBranchPreparePlan,
 ): string {

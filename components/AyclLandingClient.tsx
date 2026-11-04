@@ -214,6 +214,18 @@ export function AyclLandingClient({
           <p className="mt-5 max-w-2xl text-base leading-relaxed text-zinc-300">
             {landing.summary}
           </p>
+          {landing.dataAccess ? (
+            <p
+              className="mt-4 max-w-2xl text-sm leading-relaxed text-zinc-400"
+              data-aycl-play-data-access
+              data-map-play-data-access
+              data-map-play-data-access-mode={landing.dataAccess.mode}
+              data-map-play-share-insights={landing.dataAccess.playShareInsights ? "true" : "false"}
+            >
+              <span className="font-medium text-zinc-300">Data access · </span>
+              {landing.dataAccess.label}. {landing.dataAccess.detail}
+            </p>
+          ) : null}
           <p
             className="mt-4 max-w-2xl text-sm leading-relaxed text-zinc-300"
             data-aycl-lifetime-updates

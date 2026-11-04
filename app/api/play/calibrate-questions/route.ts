@@ -8,6 +8,12 @@ import {
 } from "@/lib/calibrate-session";
 import { SOUNDING_POOL_COUNT } from "@/lib/calibrate-sounding";
 import { isDashboardPlaySession, normalizeDashboardPlayPrompt } from "@/lib/dashboard-play";
+import { getCalibrationFlowById } from "@/lib/calibration-flow-repository";
+import {
+  isPlayCopyRunMetadata,
+  playCopyIdRunnerAcceptsMetadata,
+  playCopySessionQuestions,
+} from "@/lib/map-play-data-access";
 import { callXaiJSON, DEFAULT_MODEL, systemMessage, userMessage } from "@/lib/xai-client";
 
 export const runtime = "nodejs";
@@ -24,10 +30,24 @@ export async function POST(req: NextRequest) {
 
     const { data: session, error } = await auth.supabase
       .from("sessions")
-      .select("problem, metadata")
+      .select("problem, metadata, calibrate_flow_id")
       .eq("id", sessionId)
       .single();
     if (error || !session) return jsonError(404, "Session not found");
+    if (!playCopyIdRunnerAcceptsMetadata(session.metadata)) {
+      return jsonError(400, "Not a play session");
+    }
+
+    if (isPlayCopyRunMetadata(session.metadata)) {
+      const seeded = normalizeCalibrateQuestions(playCopySessionQuestions(session.metadata));
+      if (seeded.length) return NextResponse.json({ questions: seeded });
+      const flowId = String(session.calibrate_flow_id || "").trim();
+      if (flowId) {
+        const flow = await getCalibrationFlowById(flowId);
+        const live = normalizeCalibrateQuestions(flow?.questions);
+        if (live.length) return NextResponse.json({ questions: live });
+      }
+    }
     if (!isDashboardPlaySession(session.metadata)) {
       return jsonError(400, "Not a play session");
     }

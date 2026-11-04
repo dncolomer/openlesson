@@ -11,6 +11,8 @@ import {
 
 export { DASHBOARD_MAPS_ADD_PATH, DASHBOARD_MAPS_REMOVE_PATH };
 
+export const DASHBOARD_MAPS_START_FLOW_PATH = "/api/dashboard/maps/start-flow";
+
 export const ADD_TO_MY_MAPS_LABEL = "Add to my Maps";
 export const REMOVE_FROM_MY_MAPS_LABEL = "Remove from my Maps";
 

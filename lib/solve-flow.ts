@@ -14,6 +14,7 @@ import {
   parseSessionResult,
   type SessionResult,
 } from "@/lib/core-data-model";
+import { archiveFlowStamp, publicInviteClaimReason } from "@/lib/flow-archive";
 
 export type SolveFlow = {
   id: string;
@@ -26,6 +27,7 @@ export type SolveFlow = {
   publicToken: string;
   createdAt: string;
   updatedAt: string;
+  archivedAt?: string | null;
 };
 
 export type SolveIdentity = {
@@ -192,17 +194,25 @@ export function applySolveCommand(
     if (!commandOwnsFlow(current, command)) {
       return { ok: false, reason: "wrong_workspace", state };
     }
+    const flow: SolveFlow = {
+      ...current,
+      ...archiveFlowStamp(),
+      updatedAt: nowIso(),
+    };
     return {
       ok: true,
+      flow,
       state: {
-        flows: state.flows.filter((flow) => flow.id !== command.flowId),
-        identities: state.identities.filter((item) => item.flowId !== command.flowId),
+        ...state,
+        flows: state.flows.map((item) => (item.id === flow.id ? flow : item)),
       },
     };
   }
 
   const flow = state.flows.find((item) => item.id === command.flowId);
   if (!flow) return { ok: false, reason: "not_found", state };
+  const archived = publicInviteClaimReason(flow);
+  if (archived) return { ok: false, reason: archived, state };
   const existing = state.identities
     .filter((item) => item.flowId === flow.id)
     .map((item) => item.identity);

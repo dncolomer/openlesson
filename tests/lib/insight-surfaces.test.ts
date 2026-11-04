@@ -44,6 +44,16 @@ import {
   ILE_TURN_INSIGHT_EVALUATE_PATH,
 } from "@/lib/learn-turn-insights";
 import { availableSectionsForMode } from "@/lib/workspace-mode";
+import {
+  MAP_PLAY_INSIGHTS_SHARE_LABEL,
+  authorMayListPlayCopyInsights,
+  authorMayReadPlayCopyInsight,
+  includeAuthorPlayCopyInsight,
+  mergeInsightRowsById,
+  parseMapPlayDataAccessFlags,
+  persistMapPlayDataAccessUpdates,
+  presentMapPlayDataAccess,
+} from "@/lib/map-play-data-access";
 
 const REPO_ROOT = path.resolve(__dirname, "../..");
 
@@ -97,6 +107,86 @@ describe("insightsListUrl", () => {
     expect(insightsListUrl()).toBe("/api/insights");
     expect(insightsListUrl(null)).toBe("/api/insights");
     expect(insightsListUrl(undefined)).toBe("/api/insights");
+  });
+});
+
+describe("play-copy insight read access", () => {
+  it("defaults off and lets the author list copy insights only when opted in", () => {
+    expect(parseMapPlayDataAccessFlags({}).playShareInsights).toBe(false);
+    expect(persistMapPlayDataAccessUpdates({ playShareInsights: true })).toEqual({
+      play_share_insights: true,
+    });
+    expect(presentMapPlayDataAccess({ play_share_insights: true }).label).toBe(
+      MAP_PLAY_INSIGHTS_SHARE_LABEL,
+    );
+    expect(
+      presentMapPlayDataAccess({
+        play_share_path: true,
+        play_share_insights: true,
+      }).label,
+    ).toBe("Shares Path and crafted insights with the author");
+    expect(
+      authorMayListPlayCopyInsights({
+        viewerUserId: "author-1",
+        sourceOwnerUserId: "author-1",
+        flags: parseMapPlayDataAccessFlags({ play_share_insights: true }),
+      }),
+    ).toBe(true);
+    expect(
+      includeAuthorPlayCopyInsight({
+        viewerUserId: "author-1",
+        sourceOwnerUserId: "author-1",
+        flags: parseMapPlayDataAccessFlags({}),
+        insightWorkspaceId: "copy-ws",
+        copyWorkspaceIds: ["copy-ws"],
+      }),
+    ).toBe(false);
+    expect(
+      includeAuthorPlayCopyInsight({
+        viewerUserId: "author-1",
+        sourceOwnerUserId: "author-1",
+        flags: parseMapPlayDataAccessFlags({ play_share_insights: true }),
+        insightWorkspaceId: "copy-ws",
+        copyWorkspaceIds: ["copy-ws"],
+      }),
+    ).toBe(true);
+    expect(
+      mergeInsightRowsById(
+        [{ id: "own-1", title: "mine" }],
+        [
+          { id: "play-1", title: "player" },
+          { id: "own-1", title: "dup" },
+        ],
+      ).map((row) => row.id),
+    ).toEqual(["own-1", "play-1"]);
+    expect(
+      authorMayReadPlayCopyInsight({
+        viewerUserId: "author-1",
+        insight: { user_id: "player-1", workspace_id: "copy-ws" },
+        copyWorkspace: { is_play_copy: true, original_workspace_id: "src-ws" },
+        sourceWorkspace: { user_id: "author-1", play_share_insights: true },
+      }),
+    ).toBe(true);
+    expect(
+      authorMayReadPlayCopyInsight({
+        viewerUserId: "author-1",
+        insight: { user_id: "player-1", workspace_id: "copy-ws" },
+        copyWorkspace: { is_play_copy: true, original_workspace_id: "src-ws" },
+        sourceWorkspace: { user_id: "author-1", play_share_insights: false },
+      }),
+    ).toBe(false);
+    const list = fs.readFileSync(path.join(REPO_ROOT, "app/api/insights/route.ts"), "utf8");
+    expect(list).toContain("authorMayListPlayCopyInsights");
+    expect(list).toContain("includeAuthorPlayCopyInsight");
+    expect(list).toContain("mergeInsightRowsById");
+    const detail = fs.readFileSync(
+      path.join(REPO_ROOT, "app/api/insights/[id]/route.ts"),
+      "utf8",
+    );
+    expect(detail).toContain("loadPlayCopyAuthorInsightAccess");
+    expect(
+      fs.readFileSync(path.join(REPO_ROOT, "components/WorkspaceAccessSettings.tsx"), "utf8"),
+    ).toContain("data-workspace-play-share-insights");
   });
 });
 
@@ -508,6 +598,7 @@ describe("public insight OG title + page stats", () => {
     expect(api).toContain("workspace_title");
     expect(api).toContain("createAdminClient");
     expect(api).toContain("resolvePublicInsightWorkspaceTitle");
+    expect(api).toContain("loadPlayCopyAuthorInsightAccess");
     expect(api).not.toContain('.from("workspaces")');
 
     writeScratch(

@@ -5,6 +5,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { persistCompletedFlowEmbedding, listFlowEmbeddings } from "@/lib/flow-embedding-store";
+import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  parseMapPlayDataAccessFlags,
+  playCopyContributionEmbeddingInput,
+} from "@/lib/map-play-data-access";
+import { isPlayCopyWorkspace } from "@/lib/workspace-play-copy";
 import { requireProductWorkspaceEvalAuth } from "@/lib/product-workspace-auth";
 import { denyWorkspaceFeatureById } from "@/lib/workspace-feature-gate";
 import { entryQueryParamsFromBody } from "@/lib/guest-link-access";
@@ -100,6 +106,35 @@ export async function POST(req: NextRequest) {
       pow: parsePow(body.pow),
       raw: body.raw,
     });
+    const admin = createAdminClient();
+    const { data: copy } = await admin
+      .from("workspaces")
+      .select("is_play_copy, original_workspace_id, user_id")
+      .eq("id", workspaceId)
+      .maybeSingle();
+    if (isPlayCopyWorkspace(copy) && stored.flow_id && stored.run_id) {
+      const originalId = String(copy?.original_workspace_id || "").trim();
+      if (originalId) {
+        const { data: sourceMap } = await admin
+          .from("workspaces")
+          .select("play_share_path, play_share_pow, user_id")
+          .eq("id", originalId)
+          .maybeSingle();
+        const contribution = playCopyContributionEmbeddingInput({
+          flags: parseMapPlayDataAccessFlags(sourceMap),
+          playerUserId: String(copy?.user_id || stored.owner_user_id || ""),
+          authorUserId: String(sourceMap?.user_id || ""),
+          flowKind,
+          flowId: stored.flow_id,
+          runId: stored.run_id,
+          identity: stored.identity,
+          raw: stored.raw,
+        });
+        if (contribution) {
+          await persistCompletedFlowEmbedding(contribution);
+        }
+      }
+    }
     return NextResponse.json({
       id: stored.id,
       embedding_model_id: stored.embedding_model_id,

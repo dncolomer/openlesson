@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
-import { rejectIfInsufficientSessionCredits } from "@/lib/credits/account";
+import {
+  chargeFlowSessionOrThrow,
+  rejectIfInsufficientSessionCredits,
+} from "@/lib/credits/account";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { pickHomeMapTryBlock } from "@/lib/dashboard-home-catalog";
@@ -8,6 +11,11 @@ import { dashboardPlayHref } from "@/lib/dashboard-play";
 import { mapBlockLaunch } from "@/lib/block-kind";
 import { forkWorkspaceExactCopy } from "@/lib/fork-workspace";
 import { decideAddToMyMaps } from "@/lib/workspace-play-copy";
+import { insufficientCreditsResponse } from "@/lib/credits/request-runner";
+import { getCalibrationFlowById } from "@/lib/calibration-flow-repository";
+import { getSolveFlowById } from "@/lib/solve-flow-repository";
+import { getVerificationFlowById } from "@/lib/verification-flow-repository";
+import { playCopyFlowSessionInsert } from "@/lib/map-play-data-access";
 
 export const runtime = "nodejs";
 
@@ -74,10 +82,58 @@ export async function POST(req: NextRequest) {
       linked.action === "verify" ||
       linked.action === "solve"
     ) {
+      const flow =
+        linked.action === "solve"
+          ? await getSolveFlowById(linked.flowId)
+          : linked.action === "calibrate"
+            ? await getCalibrationFlowById(linked.flowId)
+            : await getVerificationFlowById(linked.flowId);
+      if (!flow) return jsonError(404, "Flow not found");
+      const topic =
+        linked.action === "calibrate"
+          ? String((flow as { goal?: string }).goal || flow.name || "Calibrate")
+          : String((flow as { topic?: string }).topic || flow.name || "Solve");
+      const started = playCopyFlowSessionInsert({
+        flowKind: linked.action,
+        flowId: flow.id,
+        runnerUserId: auth.user.id,
+        copyWorkspaceId: copyId,
+        blockId: block.id,
+        topic,
+        publicToken: flow.publicToken,
+        questions: (flow as { questions?: unknown }).questions,
+      });
+      try {
+        await chargeFlowSessionOrThrow(createAdminClient(), {
+          runnerUserId: auth.user.id,
+          ownerUserId: auth.user.id,
+          flowKind: linked.action,
+        });
+      } catch (error) {
+        const credits = insufficientCreditsResponse(error);
+        if (credits) return credits;
+        throw error;
+      }
+      const { data: session, error: startError } = await createAdminClient()
+        .from("sessions")
+        .insert(started.row)
+        .select("id")
+        .single();
+      if (startError || !session?.id) {
+        const { creditStoreFromClient, refundFlowSessionCredits } = await import(
+          "@/lib/credits/account"
+        );
+        await refundFlowSessionCredits(
+          creditStoreFromClient(createAdminClient()),
+          started.billedUserId,
+        ).catch(() => {});
+        return jsonError(500, startError?.message || "Failed to start session");
+      }
       return NextResponse.json({
         workspaceId: copyId,
         blockId: block.id,
-        href: linked.href,
+        sessionId: session.id,
+        href: started.hrefForSession(String(session.id)),
       });
     }
 

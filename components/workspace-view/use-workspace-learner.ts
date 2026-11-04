@@ -24,6 +24,7 @@ import {
   WORKSPACE_LEARNER_PROMPT_PATH,
 } from "@/lib/workspace-learner-writes";
 import { mapBlockLaunch } from "@/lib/block-kind";
+import { DASHBOARD_MAPS_START_FLOW_PATH } from "@/lib/workspace-play-copy";
 export function useWorkspaceLearner(input: {
   workspaceId: string;
   ayclToken?: string;
@@ -205,6 +206,25 @@ export function useWorkspaceLearner(input: {
         linked.action === "verify" ||
         linked.action === "solve"
       ) {
+        const startRes = await fetch(DASHBOARD_MAPS_START_FLOW_PATH, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(
+            buildLearnerLaunchBody({
+              workspaceId,
+              blockId: block.id,
+              ayclToken,
+            }),
+          ),
+        });
+        const startData = await startRes.json().catch(() => ({}));
+        if (startRes.ok && startData.href) {
+          router.push(String(startData.href));
+          return;
+        }
+        if (startRes.status !== 400) {
+          throw new Error(errorMessageFromBody(startData, "Failed to start flow"));
+        }
         router.push(linked.href);
         return;
       }

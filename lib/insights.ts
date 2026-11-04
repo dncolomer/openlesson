@@ -1,5 +1,6 @@
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import { isUuid } from "@/lib/domain/types";
+import { authorMayReadPlayCopyInsight } from "@/lib/map-play-data-access";
 
 /** Nested `{ error: { message } }` envelopes must not render as `[object Object]`. */
 export function insightApiErrorMessage(body: unknown, fallback: string): string {
@@ -145,6 +146,62 @@ export async function loadInsightSessionElapsedMs(
     });
   } catch {
     return null;
+  }
+}
+
+type PlayCopyInsightAccessClient = {
+  from: (table: string) => {
+    select: (columns: string) => {
+      eq: (column: string, id: string) => {
+        maybeSingle: () => Promise<{
+          data?: {
+            id?: string | null;
+            user_id?: string | null;
+            is_play_copy?: boolean | null;
+            original_workspace_id?: string | null;
+            play_share_insights?: unknown;
+          } | null;
+        }>;
+      };
+    };
+  };
+};
+
+/** Author read of a play-copy insight when the source map opted in. */
+export async function loadPlayCopyAuthorInsightAccess(input: {
+  admin: unknown;
+  viewerUserId?: string | null;
+  insight: {
+    user_id?: string | null;
+    workspace_id?: string | null;
+    archived_at?: string | null;
+  };
+}): Promise<boolean> {
+  const workspaceId = uuidOrNull(input.insight.workspace_id);
+  if (!workspaceId) return false;
+  try {
+    const admin = input.admin as PlayCopyInsightAccessClient;
+    const { data: copy } = await admin
+      .from("workspaces")
+      .select("id, user_id, is_play_copy, original_workspace_id")
+      .eq("id", workspaceId)
+      .maybeSingle();
+    const originalId = String(copy?.original_workspace_id || "").trim();
+    const { data: source } = originalId
+      ? await admin
+          .from("workspaces")
+          .select("id, user_id, play_share_insights")
+          .eq("id", originalId)
+          .maybeSingle()
+      : { data: null };
+    return authorMayReadPlayCopyInsight({
+      viewerUserId: input.viewerUserId,
+      insight: input.insight,
+      copyWorkspace: copy ?? null,
+      sourceWorkspace: source ?? null,
+    });
+  } catch {
+    return false;
   }
 }
 

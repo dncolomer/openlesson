@@ -18,11 +18,17 @@ import { sessionBranchById } from "@/lib/session-branch-model";
 import { readFileSync } from "node:fs";
 import {
   authorSeedBlockIdFromPreparePlan,
+  definitionFlowTokenFromPreparePlan,
   learnSessionFieldInput,
   planSessionBranchPrepare,
   sessionBranchPrepareRequest,
   sessionPrepareBlockId,
 } from "@/lib/session-branch-prepare";
+import {
+  definitionUnsysSeedFromBlocks,
+  shouldGenerateUnsysField,
+  studentModelFromDefinitionSeed,
+} from "@/lib/definition-unsys-seed";
 
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
@@ -124,6 +130,8 @@ describe("author unsys model seed", () => {
     expect(route).toContain("sessionBranchContinuationFromSeed");
     expect(route).toContain("sessionBranchParentsNeedingGrowth");
     expect(route).toContain("openingWorkForSessionField");
+    expect(route).toContain("definitionUnsysSeedFromBlocks");
+    expect(route).toContain("definitionFlowTokenFromPreparePlan");
     expect(route).not.toContain("continuation: null,\n              done: true");
     const field = readFileSync(
       join(__dirname, "../../components/session-view/use-session-field.ts"),
@@ -156,5 +164,61 @@ describe("author unsys model seed", () => {
       ].join("\n"),
     );
     expect(existsSync(join(SCRATCH, "author-model-seed.log"))).toBe(true);
+  });
+
+  it("loads the live definition Unsys seed by flow_id and skips the copy block", () => {
+    const seed = authorUnsysSeedForPersist(exampleAuthorUnsysModel("Limits"));
+    const copySeed = authorUnsysSeedForPersist(exampleAuthorUnsysModel("Copy default"));
+    const fromDefinition = definitionUnsysSeedFromBlocks({
+      flowId: "sf-live",
+      definitionWorkspaceId: "ws-author",
+      copyBlockId: "copy-block",
+      blocks: [
+        {
+          id: "copy-block",
+          workspace_id: "ws-copy",
+          map_block: { kind: "solve", flow_id: "sf-live" },
+          answers_model_seed: copySeed,
+        },
+        {
+          id: "author-block",
+          workspace_id: "ws-author",
+          map_block: { kind: "solve", flow_id: "sf-live" },
+          answers_model_seed: seed,
+        },
+      ],
+    });
+    const model = studentModelFromDefinitionSeed(fromDefinition);
+    expect(model?.rootId).toBe(seed.model.rootId);
+    expect(shouldGenerateUnsysField(fromDefinition)).toBe(false);
+
+    const missing = definitionUnsysSeedFromBlocks({
+      flowId: "sf-live",
+      definitionWorkspaceId: "ws-author",
+      copyBlockId: "copy-block",
+      blocks: [
+        {
+          id: "copy-block",
+          workspace_id: "ws-copy",
+          map_block: { kind: "solve", flow_id: "sf-live" },
+          answers_model_seed: copySeed,
+        },
+      ],
+    });
+    expect(missing).toBeNull();
+    expect(shouldGenerateUnsysField(missing)).toBe(true);
+    expect(
+      definitionFlowTokenFromPreparePlan({
+        kind: "learn",
+        sessionId: "s1",
+        ileToken: "",
+        ayclToken: "",
+        solveToken: "stok-live",
+        blockId: "copy-block",
+        workspaceId: "ws-copy",
+        chapterTitle: "Limits",
+        chapterBrief: "",
+      }),
+    ).toEqual({ kind: "solve", token: "stok-live" });
   });
 });

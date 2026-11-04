@@ -20,6 +20,8 @@ import {
 import { normalizeCalibrateQuestions } from "@/lib/calibrate-session";
 import { flowCountdownMinutes } from "@/lib/flow-countdown";
 import { parseLearningModelSize } from "@/lib/learning-model";
+import { flowArchivedAtFromRow, listedAuthorFlows } from "@/lib/flow-archive";
+import { inviteFlowSessionOwner } from "@/lib/map-play-data-access";
 
 const CALIBRATION_FLOW_GLOBAL = "__openlessonCalibrationFlowRepository";
 
@@ -101,6 +103,7 @@ function mapFlow(row: Record<string, unknown>): CalibrationFlow {
     publicToken: String(row.public_token || ""),
     createdAt: String(row.created_at || ""),
     updatedAt: String(row.updated_at || ""),
+    archivedAt: flowArchivedAtFromRow(row),
   };
 }
 
@@ -198,8 +201,11 @@ async function persistCommand(
     if (error) throw new Error(error.message);
     return;
   }
-  if (command.type === "remove") {
-    const { error } = await supabase.from("calibrate_flows").delete().eq("id", command.flowId);
+  if (command.type === "remove" && value.flow) {
+    const { error } = await updateFlowRow(supabase, "calibrate_flows", command.flowId, {
+      archived_at: value.flow.archivedAt,
+      updated_at: value.flow.updatedAt,
+    });
     if (error) throw new Error(error.message);
     return;
   }
@@ -209,6 +215,10 @@ async function persistCommand(
       .select("owner_user_id")
       .eq("id", command.flowId)
       .maybeSingle();
+    const owner = inviteFlowSessionOwner({
+      flowOwnerUserId: String(flow?.owner_user_id || ""),
+      runnerUserId: command.runnerUserId,
+    });
     const { debitClaimedFlowSession, refundClaimedFlowSession } = await import("@/lib/credits/claim-charge");
     const charged = await debitClaimedFlowSession({
       ownerUserId: flow?.owner_user_id,
@@ -219,7 +229,7 @@ async function persistCommand(
       kind: "calibrate",
       problem: "Calibrate",
       status: "pending",
-      user_id: flow?.owner_user_id,
+      user_id: owner.user_id,
       calibrate_flow_id: command.flowId,
       identity: value.identity,
     });
@@ -307,7 +317,7 @@ async function writeFlowRowWithOptionalColumns(
   row: Record<string, unknown>,
 ): Promise<{ error: { message: string } | null }> {
   let current = row;
-  for (const optional of ["name", "action_catalog", "duration_minutes", "owner_user_id", "workspace_id"] as const) {
+  for (const optional of ["name", "action_catalog", "duration_minutes", "owner_user_id", "workspace_id", "archived_at"] as const) {
     const result = await run(current);
     if (!result.error) return result;
     if (!String(result.error.message).includes(optional) || !(optional in current)) return result;
@@ -336,9 +346,9 @@ export async function listCalibrationFlowsForOwnerUserId(
   const userId = String(ownerUserId || "").trim();
   if (!userId) return [];
   if ((await resolveBackend()) === "memory") {
-    return memoryState()
-      .flows.filter((flow) => flow.ownerUserId === userId)
-      .map(presentFlow);
+    return listedAuthorFlows(
+      memoryState().flows.filter((flow) => flow.ownerUserId === userId),
+    ).map(presentFlow);
   }
   const supabase = createAdminClient();
   const { data, error } = await supabase
@@ -347,15 +357,19 @@ export async function listCalibrationFlowsForOwnerUserId(
     .eq("owner_user_id", userId)
     .order("created_at", { ascending: false });
   if (error || !Array.isArray(data)) return [];
-  return data.map((row) => presentFlow(mapFlow(row as Record<string, unknown>)));
+  return listedAuthorFlows(
+    data.map((row) => presentFlow(mapFlow(row as Record<string, unknown>))),
+  );
 }
 
 export async function listCalibrationFlows(workspaceId: string): Promise<CalibrationFlow[]> {
   if ((await resolveBackend()) === "memory") {
-    return memoryState().flows.filter((flow) => flow.workspaceId === workspaceId).map(presentFlow);
+    return listedAuthorFlows(
+      memoryState().flows.filter((flow) => flow.workspaceId === workspaceId),
+    ).map(presentFlow);
   }
   const state = await loadSupabaseState({ workspaceId });
-  return state.flows.map(presentFlow);
+  return listedAuthorFlows(state.flows).map(presentFlow);
 }
 
 export async function getCalibrationFlowByToken(token: string): Promise<CalibrationFlow | null> {

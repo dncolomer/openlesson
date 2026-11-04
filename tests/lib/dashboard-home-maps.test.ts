@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { readDashboardSurface, readRepo } from "../helpers/surface-source";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { DashboardHomeMapDetail } from "@/components/dashboard/dashboard-home-map-detail";
 import {
   DASHBOARD_CATALOG_PATH,
   DASHBOARD_MAPS_ADD_PATH,
   DASHBOARD_MAPS_REMOVE_PATH,
   DASHBOARD_MAPS_TRY_PATH,
+  PUBLIC_MAP_CATALOG_SELECT,
   PUBLISH_PLAY_COPY_MESSAGE,
   collectPublicMapCategories,
   filterPublicMapCatalog,
@@ -18,6 +22,7 @@ import {
   rejectPublishPlayCopy,
   truncatePublicMapSummary,
 } from "@/lib/dashboard-home-catalog";
+import { presentMapPlayDataAccess } from "@/lib/map-play-data-access";
 import {
   learningWorkspaceFeatures,
   workspaceSupportsFeature,
@@ -71,6 +76,7 @@ describe("dashboard home public catalog", () => {
       category: "Math",
       isAycl: false,
       priceLabel: null,
+      dataAccess: presentMapPlayDataAccess({}),
     });
     expect(presentPublicMapCatalogItem(row({ is_public: false }))).toBeNull();
     expect(presentPublicMapCatalogItem(row({ aycl_category: "  " }))).toMatchObject({
@@ -480,6 +486,57 @@ describe("dashboard home and my maps surface", () => {
     );
     expect(readRepo("components/workspace-view/workspace-play-sidebar.tsx")).toContain(
       "data-workspace-play-start-session",
+    );
+  });
+});
+
+describe("public map data access on Home details", () => {
+  it("presents Path/PoW flags on the catalog item and renders them on the details page", () => {
+    expect(PUBLIC_MAP_CATALOG_SELECT).toContain("play_share_path");
+    expect(PUBLIC_MAP_CATALOG_SELECT).toContain("play_share_pow");
+    expect(PUBLIC_MAP_CATALOG_SELECT).toContain("play_share_insights");
+    const privateMap = presentPublicMapCatalogItem(row())!;
+    expect(privateMap.dataAccess.mode).toBe("private");
+    const pathMap = presentPublicMapCatalogItem(row({ play_share_path: true }))!;
+    expect(pathMap.dataAccess.mode).toBe("path");
+    expect(pathMap.dataAccess.label).toBe("Shares Path with the author");
+    const powMap = presentPublicMapCatalogItem(
+      row({ play_share_path: true, play_share_pow: true }),
+    )!;
+    expect(powMap.dataAccess.mode).toBe("pow");
+    const html = renderToStaticMarkup(
+      createElement(DashboardHomeMapDetail, {
+        detail: { map: pathMap, landing: null },
+        busy: false,
+        error: "",
+        inMyMaps: false,
+        acquireBusy: false,
+        tryBusy: false,
+        onBack: () => {},
+        onAdd: () => {},
+        onRemove: () => {},
+        onBuy: () => {},
+        onTry: () => {},
+      }),
+    );
+    expect(html).toContain("data-map-play-data-access");
+    expect(html).toContain('data-map-play-data-access-mode="path"');
+    expect(html).toContain("Shares Path with the author");
+    expect(html).toContain('data-map-play-share-insights="false"');
+    const insightMap = presentPublicMapCatalogItem(row({ play_share_insights: true }))!;
+    expect(insightMap.dataAccess.playShareInsights).toBe(true);
+    expect(insightMap.dataAccess.label).toBe("Shares crafted insights with the author");
+    expect(readRepo("components/dashboard/dashboard-home-map-detail.tsx")).toContain(
+      "data-map-play-data-access",
+    );
+    expect(readRepo("components/dashboard/dashboard-home-map-detail.tsx")).toContain(
+      "data-map-play-share-insights",
+    );
+    expect(readRepo("components/WorkspaceAccessSettings.tsx")).toContain(
+      "data-workspace-play-share-insights",
+    );
+    expect(readRepo("app/api/workspaces/[id]/visibility/route.ts")).toContain(
+      "persistMapPlayDataAccessUpdates",
     );
   });
 });

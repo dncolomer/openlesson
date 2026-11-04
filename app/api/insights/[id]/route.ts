@@ -3,7 +3,11 @@ import { jsonError } from "@/lib/api-error-envelope";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { insightPowWindow, resolvePublicInsightWorkspaceTitle } from "@/lib/insight-share";
-import { loadInsightSessionElapsedMs, normalizeInsightSessionElapsedMs } from "@/lib/insights";
+import {
+  loadInsightSessionElapsedMs,
+  loadPlayCopyAuthorInsightAccess,
+  normalizeInsightSessionElapsedMs,
+} from "@/lib/insights";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -11,23 +15,43 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  const admin = createAdminClient();
 
-  const { data: insight, error } = await supabase
+  let { data: insight } = await supabase
     .from("insights")
     .select("*")
     .or(`id.eq.${id},share_token.eq.${id}`)
     .maybeSingle();
 
-  if (error || !insight || insight.archived_at) {
+  if (!insight) {
+    const adminHit = await admin
+      .from("insights")
+      .select("*")
+      .or(`id.eq.${id},share_token.eq.${id}`)
+      .maybeSingle();
+    insight = adminHit.data;
+    if (!insight || insight.archived_at) {
+      return jsonError(404, "Insight not found");
+    }
+    const allowed = await loadPlayCopyAuthorInsightAccess({
+      admin,
+      viewerUserId: user?.id,
+      insight,
+    });
+    if (!allowed) return jsonError(404, "Insight not found");
+  } else if (insight.archived_at) {
     return jsonError(404, "Insight not found");
   }
 
   const isOwner = user?.id === insight.user_id;
   if (!insight.is_public && !isOwner) {
-    return jsonError(404, "Insight not found");
+    const allowed = await loadPlayCopyAuthorInsightAccess({
+      admin,
+      viewerUserId: user?.id,
+      insight,
+    });
+    if (!allowed) return jsonError(404, "Insight not found");
   }
-
-  const admin = createAdminClient();
   const workspaceTitle = await resolvePublicInsightWorkspaceTitle({
     workspaceId: insight.workspace_id,
     userScoped: supabase,

@@ -5,6 +5,7 @@ import { normalizeAyclCategory } from "@/lib/aycl-marketplace";
 import { rejectPublishPlayCopy } from "@/lib/dashboard-home-catalog";
 import { normalizeWorkspaceGoal } from "@/lib/pow-api/conversion-goal";
 import { denyWorkspaceFeatureResponse } from "@/lib/workspace-feature-gate";
+import { persistMapPlayDataAccessUpdates } from "@/lib/map-play-data-access";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function PUT(
@@ -18,7 +19,20 @@ export async function PUT(
     const { user, supabase } = auth;
 
     const body = await req.json();
-    const { is_public, title, description, workspace_goal, learning_model_size, aycl_category } = body;
+    const {
+      is_public,
+      title,
+      description,
+      workspace_goal,
+      learning_model_size,
+      aycl_category,
+      play_share_path,
+      play_share_pow,
+      play_share_insights,
+      playSharePath,
+      playSharePow,
+      playShareInsights,
+    } = body;
 
     const admin = createAdminClient();
     const { data: kindRow } = await admin
@@ -82,6 +96,15 @@ export async function PUT(
       updates.learning_model_size = size === 8 || size === 16 ? size : 4;
     }
 
+    Object.assign(
+      updates,
+      persistMapPlayDataAccessUpdates({
+        playSharePath: playSharePath ?? play_share_path,
+        playSharePow: playSharePow ?? play_share_pow,
+        playShareInsights: playShareInsights ?? play_share_insights,
+      }),
+    );
+
     if (Object.keys(updates).length === 0) {
       return jsonError(400, "No valid fields to update");
     }
@@ -103,6 +126,26 @@ export async function PUT(
         await supabase
           .from("workspaces")
           .update({ ...withoutSize, author_id: user.id })
+          .eq("id", workspaceId)
+          .eq("user_id", user.id)
+      ).error;
+    }
+    if (
+      updateError &&
+      (String(updateError.message).includes("play_share_path") ||
+        String(updateError.message).includes("play_share_pow") ||
+        String(updateError.message).includes("play_share_insights"))
+    ) {
+      const {
+        play_share_path: _path,
+        play_share_pow: _pow,
+        play_share_insights: _insights,
+        ...withoutShare
+      } = updates;
+      updateError = (
+        await supabase
+          .from("workspaces")
+          .update({ ...withoutShare, author_id: user.id })
           .eq("id", workspaceId)
           .eq("user_id", user.id)
       ).error;

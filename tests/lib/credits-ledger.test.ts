@@ -24,6 +24,10 @@ import {
   unmeteredCreateLeavesBalance,
 } from "@/lib/credits";
 import { billedUserIdForIleLinkSession } from "@/lib/learn-link-auth";
+import {
+  inviteFlowSessionOwner,
+  playCopyFlowSessionInsert,
+} from "@/lib/map-play-data-access";
 
 describe("credit constants", () => {
   it("ships a positive starter grant and a positive per-session cost", () => {
@@ -211,6 +215,37 @@ describe("session-start routes debit shipped credits", () => {
     expect(debitAt).toBeGreaterThan(launch.indexOf("Block not found"));
     expect(debitAt).toBeGreaterThan(launch.indexOf("Failed to save prompt"));
     expect(launch).toContain("refundFlowSessionCredits");
+    const startFlow = readFileSync(
+      join(root, "app/api/dashboard/maps/start-flow/route.ts"),
+      "utf8",
+    );
+    expect(startFlow).toContain("chargeFlowSessionOrThrow");
+    expect(startFlow).toContain("ownerUserId: runnerUserId");
+  });
+
+  it("bills the signed-in player for a play-copy start and the invite runner otherwise", () => {
+    const play = playCopyFlowSessionInsert({
+      flowKind: "calibrate",
+      flowId: "cf1",
+      runnerUserId: "player-1",
+      copyWorkspaceId: "copy-1",
+      topic: "Continuity",
+      publicToken: "ctok",
+    });
+    expect(play.billedUserId).toBe("player-1");
+    expect(play.user_id).toBe("player-1");
+    expect(
+      inviteFlowSessionOwner({
+        flowOwnerUserId: "author-1",
+        runnerUserId: "player-1",
+      }).billedUserId,
+    ).toBe("player-1");
+    expect(
+      inviteFlowSessionOwner({
+        flowOwnerUserId: "author-1",
+        runnerUserId: null,
+      }).billedUserId,
+    ).toBe("author-1");
   });
 });
 

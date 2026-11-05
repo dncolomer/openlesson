@@ -274,6 +274,7 @@ describe("product pages: verification owns platform/approach/scale; harness owns
       "Uncertainty minimization",
     ]);
     expect(HARNESS_PRODUCT_COPY.points[0].href).toBe("/science#science-epistemic-foraging");
+    expect(HARNESS_PRODUCT_COPY.points[0].image).toBe("/lp-boxes/epistemic-foraging-blueprint.jpg");
     expect(HARNESS_PRODUCT_COPY.points[1].href).toBe("/science/learning-model");
     expect(HARNESS_PRODUCT_COPY.points[2].href).toBe("/science#science-free-energy");
     expect(page).toContain('marker="harness"');

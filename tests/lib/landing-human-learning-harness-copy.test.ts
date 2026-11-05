@@ -158,7 +158,7 @@ describe("landing knowledge acquisition, verification, and mapping copy", () => 
 
     expect(lp).toContain("PLATFORM_PROOF");
     expect(PLATFORM_PROOF.eyebrow).toMatch(/CASE STUDIES/i);
-    expect(PLATFORM_PROOF.title).toMatch(/Case Studies, Existing Projects & Clients/);
+    expect(PLATFORM_PROOF.title).toBe("They trust us");
     expect(PLATFORM_PROOF.title).not.toMatch(/Course authoring for WISER/);
     expect(copy).toMatch(/WISER/);
     expect(copy).toMatch(/thewiser\.org/);
@@ -169,6 +169,9 @@ describe("landing knowledge acquisition, verification, and mapping copy", () => 
     expect(copy).toMatch(/Run by us/);
     expect(lp).toContain("{item.image}");
     expect(lp).toContain("{item.imageAlt}");
+    expect(lp).toContain("flex flex-col gap-3");
+    expect(lp).toContain("flex-row");
+    expect(lp).not.toContain("mt-8 grid gap-4 md:grid-cols-2");
     expect(PLATFORM_PROOF.items.map((item) => item.image)).toEqual([
       "/lp-boxes/wiser-blueprint.jpg",
       "/lp-boxes/eth-hackathon-blueprint.jpg",

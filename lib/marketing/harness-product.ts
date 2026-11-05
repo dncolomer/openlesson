@@ -21,8 +21,8 @@ export const HARNESS_PRODUCT_COPY = {
       body: "An active search for information that shrinks what you do not know, instead of optimizing for tests and practice repetition. The harness forages for the next genuine gap.",
       href: SCIENCE_EPISTEMIC_FORAGING_PATH,
       linkLabel: "Read the policy",
-      image: "/lp-boxes/harness-books-blueprint.jpg",
-      imageAlt: "Blueprint sketch of an open gridded notebook, a compass, and a stack of volumes",
+      image: "/lp-boxes/epistemic-foraging-blueprint.jpg",
+      imageAlt: "Blueprint of a gold search path foraging through a scatter of unknown diamond marks",
     },
     {
       eyebrow: "UNSYS MODEL",

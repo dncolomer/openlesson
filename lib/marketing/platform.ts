@@ -91,7 +91,7 @@ export const PLATFORM_CORE = {
 
 export const PLATFORM_PROOF = {
   eyebrow: "CASE STUDIES",
-  title: "Case Studies, Existing Projects & Clients.",
+  title: "They trust us",
   items: [
     {
       eyebrow: "WISER",

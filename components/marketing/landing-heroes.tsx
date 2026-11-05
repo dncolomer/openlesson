@@ -156,40 +156,43 @@ export function LandingProofSection() {
   return (
     <section className="relative z-10 mx-auto max-w-7xl px-6 pb-16 pt-10 sm:pb-20 sm:pt-12" data-home-proof>
       <SectionHeading eyebrow={PLATFORM_PROOF.eyebrow} title={PLATFORM_PROOF.title} mark={false} />
-      <ul className="mt-8 grid gap-4 md:grid-cols-2">
+      <ul className="mt-8 flex flex-col gap-3">
         {PLATFORM_PROOF.items.map((item) => (
-          <li key={item.name} className="console-copy flex min-h-0 min-w-0 flex-col overflow-hidden">
-            <div className="relative aspect-[16/10] w-full">
+          <li
+            key={item.name}
+            className="console-copy flex min-h-[7rem] min-w-0 flex-row overflow-hidden"
+          >
+            <div className="relative w-28 shrink-0 self-stretch sm:w-36 lg:w-40">
               <Image
                 src={item.image}
                 alt={item.imageAlt}
                 fill
                 className="object-cover"
-                sizes="(max-width: 768px) 100vw, 576px"
+                sizes="160px"
               />
               {"logo" in item && item.logo ? (
-                <div className="absolute left-4 top-4 z-10 flex items-center gap-2.5 rounded-none border border-white/25 bg-black/70 px-2.5 py-2">
+                <div className="absolute left-2 top-2 z-10 flex items-center rounded-none border border-white/25 bg-black/70 px-1.5 py-1.5">
                   <Image
                     src={item.logo}
                     alt={item.logoAlt ?? item.eyebrow}
                     width={40}
                     height={37}
-                    className="h-8 w-auto invert"
+                    className="h-5 w-auto invert"
                   />
                 </div>
               ) : null}
             </div>
-            <div className="flex flex-1 flex-col p-5 sm:p-6">
+            <div className="flex min-w-0 flex-1 flex-col justify-center px-5 py-3.5 sm:px-6 sm:py-4">
               <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">{item.eyebrow}</p>
-              <h4 className="mt-3 text-xl font-medium tracking-[-0.6px] text-white">{item.name}</h4>
-              <p className="mt-3 flex-1 text-sm leading-relaxed text-zinc-400">{item.body}</p>
+              <h4 className="mt-1 text-base font-medium tracking-[-0.4px] text-white sm:text-lg">{item.name}</h4>
+              <p className="mt-1.5 text-sm leading-relaxed text-zinc-400">{item.body}</p>
               {item.href && item.hrefLabel ? (
                 <a
                   href={item.href}
                   {...(item.href.startsWith("http")
                     ? { target: "_blank", rel: "noopener noreferrer" }
                     : {})}
-                  className="mt-5 inline-flex items-center text-sm font-medium text-zinc-200 underline decoration-zinc-700 underline-offset-4 transition hover:text-white hover:decoration-zinc-500"
+                  className="mt-2 inline-flex items-center text-sm font-medium text-zinc-200 underline decoration-zinc-700 underline-offset-4 transition hover:text-white hover:decoration-zinc-500"
                 >
                   {item.hrefLabel}
                 </a>

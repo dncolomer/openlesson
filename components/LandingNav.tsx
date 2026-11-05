@@ -75,7 +75,7 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
           : "sticky top-0 border-b border-white/30 bg-black/85"
       }`}
     >
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
+      <div className="mx-auto flex w-full max-w-[96rem] items-center justify-between gap-4">
         <Link href="/" className="transition hover:opacity-90">
           <BrandLogo nameClassName="text-base font-semibold tracking-tight text-white" />
         </Link>
@@ -167,7 +167,7 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
       </div>
 
       {mobileOpen && (
-        <nav className="mx-auto mt-4 max-w-7xl border-t border-zinc-900 pt-4 md:hidden" aria-label="Mobile navigation">
+        <nav className="mx-auto mt-4 w-full max-w-[96rem] border-t border-zinc-900 pt-4 md:hidden" aria-label="Mobile navigation">
           <ul className="space-y-1 text-sm">
             {MAIN_NAV_PRODUCT_LINKS.map((link) => (
               <li key={link.href}>

@@ -58,7 +58,9 @@ describe("live landing hero", () => {
 
     const heroes = read("components/marketing/landing-heroes.tsx");
     expect(heroes).toContain("data-home-layers");
-    expect(heroes).toContain("lg:grid-cols-3");
+    expect(heroes).toContain("md:grid-cols-3");
+    expect(heroes).toContain("lg:grid-cols-12");
+    expect(heroes).toContain("xl:grid-cols-2");
     expect(heroes).toContain("data-home-hero-editorial");
     expect(heroes).not.toContain("data-home-hero-strip");
     expect(heroes).not.toContain("data-region-image-variants");

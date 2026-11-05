@@ -9,6 +9,7 @@ import {
 } from "@/lib/sales/product-cards";
 import { PITCH_ASSETS } from "@/lib/sales/solution-slide-decks";
 import { PublicConsoleWash, PublicPageField } from "@/components/ui/console-frame";
+import { MARKETING_SHELL } from "@/lib/marketing/shell";
 
 export const metadata: Metadata = {
   title: "Sales",
@@ -28,7 +29,7 @@ export default function SalesIndexPage() {
       <PublicPageField image={PITCH_ASSETS.aesthetics.title} />
       <PublicConsoleWash />
 
-      <div className="relative z-10 mx-auto w-full max-w-7xl px-6 pt-14 pb-16 sm:pt-16">
+      <div className={`${MARKETING_SHELL} pt-8 pb-12 sm:pt-10 sm:pb-14`}>
         <div className="console-chip mb-6 inline-block rounded-none px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
           SALES
         </div>

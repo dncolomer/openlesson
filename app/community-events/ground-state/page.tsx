@@ -5,6 +5,7 @@ import { LandingNav } from "@/components/LandingNav";
 import { AYCL_HACKATHONS } from "@/lib/aycl-landing";
 import { standardShareSocialMetadata } from "@/lib/og/standard";
 import { PublicConsoleWash, PublicPageField } from "@/components/ui/console-frame";
+import { MARKETING_SHELL } from "@/lib/marketing/shell";
 
 const EVENT = AYCL_HACKATHONS.find((event) => event.id === "ground-state");
 
@@ -33,7 +34,7 @@ export default function GroundStateEventPage() {
 
       <LandingNav />
 
-      <section className="relative z-10 mx-auto flex min-h-[70vh] w-full max-w-3xl flex-col items-center justify-center px-4 py-16 text-center sm:px-6">
+      <section className={`${MARKETING_SHELL} flex min-h-[70vh] flex-col items-center justify-center py-16 text-center`}>
         <nav aria-label="Breadcrumb" className="mb-10 text-xs text-zinc-500">
           <ol className="flex flex-wrap items-center justify-center gap-2">
             <li>

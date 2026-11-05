@@ -8,6 +8,7 @@ import {
   BRAIN_PRIMING_COPY,
   BRAIN_PRIMING_PATH,
 } from "@/lib/marketing/brain-priming";
+import { MARKETING_SHELL } from "@/lib/marketing/shell";
 import { standardShareSocialMetadata } from "@/lib/og/standard";
 
 const standardSocial = standardShareSocialMetadata({
@@ -28,7 +29,7 @@ export default function BrainPrimingPage() {
     <MarketingPageShell>
       <div data-brain-priming-page>
         <section
-          className="relative z-10 mx-auto w-full max-w-7xl px-6 pt-14 pb-10 sm:pt-16 sm:pb-12"
+          className={`${MARKETING_SHELL} pt-5 pb-3 sm:pt-6`}
           data-brain-priming-hero
         >
           <div className="mb-6 flex flex-wrap items-center gap-3">
@@ -65,14 +66,14 @@ export default function BrainPrimingPage() {
         </section>
 
         <section
-          className="relative z-10 mx-auto max-w-7xl px-6 py-10 sm:py-12"
+          className={`${MARKETING_SHELL} pt-3`}
           data-brain-priming-domains
         >
           <SectionHeading eyebrow={copy.domains.eyebrow} title={copy.domains.title} />
           <p className="mt-5 max-w-3xl text-base leading-relaxed text-zinc-400 sm:text-lg">
             {copy.domains.lead}
           </p>
-          <ul className="mt-8 grid gap-4 md:grid-cols-3">
+          <ul className="mt-5 grid gap-3 md:grid-cols-3">
             {copy.domains.items.map((item) => (
               <li key={item.id} className="console-copy p-5 sm:p-6">
                 <h3 className="text-xl font-medium tracking-[-0.6px] text-white">{item.name}</h3>
@@ -84,14 +85,14 @@ export default function BrainPrimingPage() {
 
         <section
           id="how"
-          className="relative z-10 mx-auto max-w-7xl px-6 py-10 sm:py-12"
+          className={`${MARKETING_SHELL} pt-3`}
           data-brain-priming-flows
         >
           <SectionHeading eyebrow={copy.loop.eyebrow} title={copy.loop.title} />
           <p className="mt-5 max-w-3xl text-base leading-relaxed text-zinc-400 sm:text-lg">
             {copy.thesis}
           </p>
-          <ul className="mt-8 grid gap-4 md:grid-cols-3">
+          <ul className="mt-5 grid gap-3 md:grid-cols-3">
             {copy.loop.items.map((item) => (
               <li key={item.eyebrow} className="console-copy p-5 sm:p-6">
                 <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
@@ -106,9 +107,9 @@ export default function BrainPrimingPage() {
           </ul>
         </section>
 
-        <section className="relative z-10 mx-auto max-w-7xl px-6 py-10 sm:py-12">
+        <section className={`${MARKETING_SHELL} pt-3`}>
           <SectionHeading eyebrow={copy.spine.eyebrow} title={copy.spine.title} />
-          <ul className="mt-8 grid gap-4 sm:grid-cols-2">
+          <ul className="mt-5 grid gap-3 sm:grid-cols-2">
             {copy.spine.items.map((item) => (
               <li key={item.eyebrow} className="console-copy p-5 sm:p-6">
                 <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
@@ -124,14 +125,14 @@ export default function BrainPrimingPage() {
         </section>
 
         <section
-          className="relative z-10 mx-auto max-w-7xl px-6 py-10 sm:py-12"
+          className={`${MARKETING_SHELL} pt-3`}
           data-brain-priming-plans
         >
           <SectionHeading eyebrow={copy.plans.eyebrow} title={copy.plans.title} />
           <p className="mt-5 max-w-3xl text-base leading-relaxed text-zinc-400 sm:text-lg">
             {copy.plans.lead}
           </p>
-          <ul className="mt-8 grid gap-4 md:grid-cols-2">
+          <ul className="mt-5 grid gap-3 md:grid-cols-2">
             {copy.plans.items.map((item) => (
               <li key={item.id} className="console-copy p-6 sm:p-8">
                 <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
@@ -146,7 +147,7 @@ export default function BrainPrimingPage() {
           </ul>
         </section>
 
-        <section className="relative z-10 mx-auto max-w-7xl px-6 py-10 sm:py-12">
+        <section className={`${MARKETING_SHELL} pt-3`}>
           <SectionHeading eyebrow={copy.layers.eyebrow} title={copy.layers.title} />
           <div className="mt-8 grid w-full gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5">
             {copy.layers.items.map((item) => (
@@ -181,7 +182,7 @@ export default function BrainPrimingPage() {
 
         <section
           id="formula"
-          className="relative z-10 mx-auto max-w-7xl px-6 py-10 sm:py-12"
+          className={`${MARKETING_SHELL} pt-3`}
           data-brain-priming-formula
         >
           <SectionHeading eyebrow="SUPPLEMENT" title={copy.ingredientsTitle} />
@@ -199,7 +200,7 @@ export default function BrainPrimingPage() {
         </section>
 
         <section
-          className="relative z-10 mx-auto max-w-7xl px-6 pb-10 pt-6 sm:pb-12"
+          className={`${MARKETING_SHELL} pt-3`}
           data-brain-priming-blood
         >
           <SectionHeading eyebrow="YOU BRING" title={copy.bloodTitle} />
@@ -210,7 +211,7 @@ export default function BrainPrimingPage() {
 
         <section
           id="join"
-          className="relative z-10 mx-auto max-w-7xl px-6 pb-16 pt-6 sm:pb-20"
+          className={`${MARKETING_SHELL} pb-12 pt-3 sm:pb-14`}
         >
           <div className="console-copy w-full px-6 py-10 sm:px-10 sm:py-12" data-brain-priming-cta>
             <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">

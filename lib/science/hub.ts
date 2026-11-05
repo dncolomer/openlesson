@@ -24,9 +24,9 @@ export const SCIENCE_HUB_COPY = {
     "We are building self-driving technology for learning: non-invasive systems that raise attention and understanding without asking humans to burn proportionally more energy. The science is a physical view of knowledge — configuration, proximity, and a shorter path through it.",
   workspaceCta: "Create your Workspace",
   workspaceHref: "/workspace/new",
-  directoryEyebrow: "START HERE",
-  directoryTitle: "Pick the part you care about.",
-  directoryLead: "Same page. Jump to the why, the policy, the generative model, or the papers.",
+  directoryEyebrow: "ON THIS PAGE",
+  directoryTitle: "Jump to a section.",
+  directoryLead: "Why we exist, the thesis, the policy, the generative model, or the papers.",
   whyEyebrow: "WHY",
   whyTitle: "Why we exist",
 } as const;

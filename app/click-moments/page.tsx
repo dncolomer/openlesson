@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PublicConsoleWash } from "@/components/ui/console-frame";
+import { MARKETING_SHELL } from "@/lib/marketing/shell";
 
 export const metadata: Metadata = {
   title: "Click Moments",
@@ -31,7 +32,7 @@ export default function ClickMomentsPage() {
     <main className="relative min-h-screen overflow-x-hidden border border-white/40 bg-black text-zinc-200">
       <PublicConsoleWash className="absolute inset-0" />
 
-      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col px-5 py-8 sm:px-8 lg:px-10">
+      <div className={`${MARKETING_SHELL} flex min-h-screen flex-col py-6 sm:py-8`}>
         <header className="flex items-center justify-between border-b border-zinc-800 pb-5">
           <Link href="/" className="text-lg font-semibold tracking-[-0.04em] text-white">
             Uncertain Systems

@@ -7,6 +7,7 @@ import { LandingNav } from "@/components/LandingNav";
 
 import { standardShareSocialMetadata } from "@/lib/og/standard";
 import { PublicConsoleWash, PublicPageField } from "@/components/ui/console-frame";
+import { MARKETING_SHELL } from "@/lib/marketing/shell";
 
 const standardSocial = standardShareSocialMetadata({
   url: "https://uncertain.systems/community-events/probabilistic-computing",
@@ -136,7 +137,7 @@ export default function ProbabilisticComputingHackathonPage() {
 
       <LandingNav />
 
-      <section className="relative z-10 mx-auto w-full max-w-7xl px-4 pt-10 pb-8 sm:px-6 sm:pt-14 sm:pb-10">
+      <section className={`${MARKETING_SHELL} pt-6 pb-4 sm:pt-8 sm:pb-6`}>
         <nav aria-label="Breadcrumb" className="mb-8 text-xs text-zinc-500">
           <ol className="flex flex-wrap items-center gap-2">
             <li>
@@ -214,7 +215,7 @@ export default function ProbabilisticComputingHackathonPage() {
       </section>
 
       {/* About */}
-      <section className="relative z-10 mx-auto w-full max-w-7xl px-4 py-8 sm:px-6">
+      <section className={`${MARKETING_SHELL} py-5`}
         <SectionLabel>About the event</SectionLabel>
         <h2 className="mt-3 text-2xl font-medium tracking-[-0.8px] text-white sm:text-3xl">
           Educational deep-dive plus real hackathon.
@@ -263,7 +264,7 @@ export default function ProbabilisticComputingHackathonPage() {
       </section>
 
       {/* Agenda */}
-      <section id="agenda" className="relative z-10 mx-auto w-full max-w-7xl px-4 py-8 sm:px-6">
+      <section id="agenda" className={`${MARKETING_SHELL} py-5`}>
         <SectionLabel>Agenda</SectionLabel>
         <h2 className="mt-3 text-2xl font-medium tracking-[-0.8px] text-white sm:text-3xl">
           Started at 12:30.
@@ -283,7 +284,7 @@ export default function ProbabilisticComputingHackathonPage() {
       </section>
 
       {/* Winners */}
-      <section id="winners" className="relative z-10 mx-auto w-full max-w-7xl px-4 py-8 sm:px-6">
+      <section id="winners" className={`${MARKETING_SHELL} py-5`}>
         <SectionLabel>Results</SectionLabel>
         <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
           <div>
@@ -328,7 +329,7 @@ export default function ProbabilisticComputingHackathonPage() {
       </section>
 
       {/* Lifetime packages for winners */}
-      <section id="lifetime" className="relative z-10 mx-auto w-full max-w-7xl px-4 py-8 sm:px-6">
+      <section id="lifetime" className={`${MARKETING_SHELL} py-5`}>
         <SectionLabel>Study the winners</SectionLabel>
         <h2 className="mt-3 text-2xl font-medium tracking-[-0.8px] text-white sm:text-3xl">
           Lifetime access packages
@@ -375,7 +376,7 @@ export default function ProbabilisticComputingHackathonPage() {
       </section>
 
       {/* Prep material */}
-      <section className="relative z-10 mx-auto w-full max-w-7xl px-4 py-8 sm:px-6">
+      <section className={`${MARKETING_SHELL} py-5`}
         <div className="console-copy overflow-hidden">
           <div className="grid md:grid-cols-2">
             <div
@@ -409,7 +410,7 @@ export default function ProbabilisticComputingHackathonPage() {
       </section>
 
       {/* Technology + education context */}
-      <section className="relative z-10 mx-auto w-full max-w-7xl px-4 py-8 sm:px-6">
+      <section className={`${MARKETING_SHELL} py-5`}
         <div className="grid gap-4 md:grid-cols-2">
           <div className="console-copy p-6">
             <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
@@ -484,7 +485,7 @@ export default function ProbabilisticComputingHackathonPage() {
       </section>
 
       {/* Sponsors */}
-      <section className="relative z-10 mx-auto w-full max-w-7xl px-4 py-8 sm:px-6">
+      <section className={`${MARKETING_SHELL} py-5`}
         <SectionLabel>Sponsors and partners</SectionLabel>
         <h2 className="mt-3 text-2xl font-medium tracking-[-0.8px] text-white">Supported by</h2>
         <div className="mt-6 grid gap-3 sm:grid-cols-3">
@@ -504,7 +505,7 @@ export default function ProbabilisticComputingHackathonPage() {
       </section>
 
       {/* Closed registration */}
-      <section className="relative z-10 mx-auto w-full max-w-7xl px-4 py-8 pb-16 sm:px-6">
+      <section className={`${MARKETING_SHELL} pb-12 pt-5 sm:pb-14`}>
         <div className="console-copy p-6 sm:p-8">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
             <div>

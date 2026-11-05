@@ -8,6 +8,7 @@ import { ThesisDirectory } from "@/components/science/ThesisDirectory";
 import { TrackedCtaLink } from "@/components/TrackedCtaLink";
 import { HARNESS_PRODUCT_COPY } from "@/lib/marketing/harness-product";
 import { LEARNING_HARNESS_PATH } from "@/lib/marketing/paths";
+import { MARKETING_SHELL } from "@/lib/marketing/shell";
 import { standardShareSocialMetadata } from "@/lib/og/standard";
 
 const standardSocial = standardShareSocialMetadata({
@@ -26,69 +27,79 @@ export default function AcquisitionPage() {
   return (
     <MarketingPageShell>
       <section
-        className="relative z-10 mx-auto w-full max-w-7xl px-6 pt-14 pb-10 sm:pt-16 sm:pb-12"
+        className={`${MARKETING_SHELL} pt-5 pb-3 sm:pt-6`}
         data-acquisition-hero
       >
-        <div className="mb-6 flex flex-wrap items-center gap-3">
-          <div className="console-chip inline-block rounded-none px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
-            {HARNESS_PRODUCT_COPY.eyebrow}
+        <div className="grid items-end gap-6 lg:grid-cols-12 lg:gap-8">
+          <div className="lg:col-span-7">
+            <div className="mb-4 flex flex-wrap items-center gap-3">
+              <div className="console-chip inline-block rounded-none px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
+                {HARNESS_PRODUCT_COPY.eyebrow}
+              </div>
+            </div>
+            <h1 className="max-w-4xl text-4xl font-medium leading-[1.03] tracking-[-2px] text-white sm:text-5xl lg:text-6xl">
+              {HARNESS_PRODUCT_COPY.title}
+            </h1>
+            <div className="mt-4 max-w-2xl space-y-3 text-base leading-relaxed text-zinc-400 sm:text-lg">
+              <p>{HARNESS_PRODUCT_COPY.lead}</p>
+              <p>{HARNESS_PRODUCT_COPY.body}</p>
+              <p data-harness-epistemic-foraging>
+                That policy is{" "}
+                <Link
+                  href={HARNESS_PRODUCT_COPY.foragingHref}
+                  className="text-zinc-200 underline decoration-zinc-700 underline-offset-4 transition hover:text-white hover:decoration-zinc-500"
+                >
+                  epistemic foraging
+                </Link>
+                : learning as reducing uncertainty, rather than optimizing for tests and practice repetition.
+              </p>
+            </div>
           </div>
-        </div>
-        <h1 className="max-w-4xl text-5xl font-medium leading-[1.03] tracking-[-2.8px] text-white sm:text-6xl lg:text-[68px]">
-          {HARNESS_PRODUCT_COPY.title}
-        </h1>
-        <div className="mt-7 max-w-3xl space-y-4 text-lg leading-relaxed text-zinc-400">
-          <p>{HARNESS_PRODUCT_COPY.lead}</p>
-          <p>{HARNESS_PRODUCT_COPY.body}</p>
-          <p data-harness-epistemic-foraging>
-            That policy is{" "}
-            <Link
-              href={HARNESS_PRODUCT_COPY.foragingHref}
-              className="text-zinc-200 underline decoration-zinc-700 underline-offset-4 transition hover:text-white hover:decoration-zinc-500"
-            >
-              epistemic foraging
-            </Link>
-            : learning as reducing uncertainty, rather than optimizing for tests and practice repetition.
-          </p>
-        </div>
-        <div className="mt-8 max-w-4xl">
-          <ThesisDirectory links={HARNESS_PRODUCT_COPY.thesisLinks} marker="harness" />
-        </div>
-        <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
-          <TrackedCtaLink
-            href={HARNESS_PRODUCT_COPY.workspaceHref}
-            label={HARNESS_PRODUCT_COPY.workspaceCta}
-            location="harness_hero"
-            page={LEARNING_HARNESS_PATH}
-            className="inline-flex min-h-12 items-center justify-center rounded-none bg-white px-5 py-3 text-sm font-medium text-black transition hover:bg-zinc-200"
-          >
-            {HARNESS_PRODUCT_COPY.workspaceCta}
-            <ArrowRight className="ml-2" size={16} />
-          </TrackedCtaLink>
-          <Link
-            href={HARNESS_PRODUCT_COPY.pricingHref}
-            className="inline-flex min-h-12 items-center justify-center rounded-none border border-zinc-800 bg-zinc-950/60 px-5 py-3 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-white"
-          >
-            {HARNESS_PRODUCT_COPY.pricingCta}
-          </Link>
+          <div className="lg:col-span-5">
+            <div className="console-copy p-5 sm:p-6">
+              <ThesisDirectory
+                links={HARNESS_PRODUCT_COPY.thesisLinks}
+                marker="harness"
+                columns="grid-cols-1"
+              />
+              <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <TrackedCtaLink
+                  href={HARNESS_PRODUCT_COPY.workspaceHref}
+                  label={HARNESS_PRODUCT_COPY.workspaceCta}
+                  location="harness_hero"
+                  page={LEARNING_HARNESS_PATH}
+                  className="inline-flex min-h-12 items-center justify-center rounded-none bg-white px-5 py-3 text-sm font-medium text-black transition hover:bg-zinc-200"
+                >
+                  {HARNESS_PRODUCT_COPY.workspaceCta}
+                  <ArrowRight className="ml-2" size={16} />
+                </TrackedCtaLink>
+                <Link
+                  href={HARNESS_PRODUCT_COPY.pricingHref}
+                  className="inline-flex min-h-12 items-center justify-center rounded-none border border-zinc-800 bg-zinc-950/60 px-5 py-3 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-white"
+                >
+                  {HARNESS_PRODUCT_COPY.pricingCta}
+                </Link>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
       <section
-        className="relative z-10 mx-auto max-w-7xl px-6 pb-8 pt-2 sm:pb-10"
+        className={`${MARKETING_SHELL} pt-3`}
         data-harness-screenshots
       >
         <HarnessScreenshotCarousel screenshots={HARNESS_PRODUCT_COPY.screenshots} />
       </section>
 
-      <section className="relative z-10 mx-auto max-w-7xl px-6 py-10 sm:py-12">
-        <ul className="grid gap-4 md:grid-cols-3" data-harness-points>
+      <section className={`${MARKETING_SHELL} pt-3`}>
+        <ul className="grid gap-3 md:grid-cols-3" data-harness-points>
           {HARNESS_PRODUCT_COPY.points.map((point) => (
             <li
               key={point.title}
               className="console-copy flex min-h-0 flex-col overflow-hidden"
             >
-              <div className="relative aspect-square w-full">
+              <div className="relative aspect-[16/10] w-full">
                 <Image
                   src={point.image}
                   alt={point.imageAlt}
@@ -132,25 +143,31 @@ export default function AcquisitionPage() {
 
       <section
         id="all-you-can-learn"
-        className="relative z-10 mx-auto max-w-7xl px-6 pb-16 sm:pb-20"
+        className={`${MARKETING_SHELL} pb-12 pt-3 sm:pb-14`}
         data-harness-aycl
       >
-        <SectionHeading
-          eyebrow={HARNESS_PRODUCT_COPY.ayclEyebrow}
-          title={HARNESS_PRODUCT_COPY.ayclTitle}
-        />
-        <p className="mt-6 max-w-3xl text-base leading-relaxed text-zinc-400 sm:text-lg">
-          {HARNESS_PRODUCT_COPY.ayclBody}
-        </p>
-        <Link
-          href={HARNESS_PRODUCT_COPY.ayclHref}
-          data-testid="harness-aycl-link"
-          className="mt-7 inline-flex min-h-12 items-center justify-center rounded-none bg-white px-5 py-3 text-sm font-medium text-black transition hover:bg-zinc-200"
-        >
-          {HARNESS_PRODUCT_COPY.ayclCta}
-          <span className="ml-2 font-normal text-zinc-600">All-You-Can-Learn</span>
-          <ArrowRight className="ml-2" size={16} />
-        </Link>
+        <div className="console-copy grid items-center gap-5 p-5 sm:p-6 lg:grid-cols-12 lg:gap-8 lg:p-7">
+          <div className="lg:col-span-8">
+            <SectionHeading
+              eyebrow={HARNESS_PRODUCT_COPY.ayclEyebrow}
+              title={HARNESS_PRODUCT_COPY.ayclTitle}
+            />
+            <p className="mt-4 max-w-3xl text-base leading-relaxed text-zinc-400">
+              {HARNESS_PRODUCT_COPY.ayclBody}
+            </p>
+          </div>
+          <div className="lg:col-span-4">
+            <Link
+              href={HARNESS_PRODUCT_COPY.ayclHref}
+              data-testid="harness-aycl-link"
+              className="inline-flex min-h-12 items-center justify-center rounded-none bg-white px-5 py-3 text-sm font-medium text-black transition hover:bg-zinc-200"
+            >
+              {HARNESS_PRODUCT_COPY.ayclCta}
+              <span className="ml-2 font-normal text-zinc-600">All-You-Can-Learn</span>
+              <ArrowRight className="ml-2" size={16} />
+            </Link>
+          </div>
+        </div>
       </section>
     </MarketingPageShell>
   );

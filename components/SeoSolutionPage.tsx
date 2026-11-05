@@ -8,6 +8,7 @@ import {
   DEFAULT_BACKGROUND,
   type SeoPlatformPageConfig,
 } from "@/lib/seo/platform-page";
+import { MARKETING_SHELL } from "@/lib/marketing/shell";
 
 export type BreadcrumbItem = {
   href: string;
@@ -83,7 +84,7 @@ export function SeoSolutionPage({ page, breadcrumbs }: SeoSolutionPageProps) {
 
       <LandingNav />
 
-      <main className="mx-auto max-w-3xl px-6 py-12 sm:py-16">
+      <main className={`${MARKETING_SHELL} py-8 sm:py-12`}>
         {breadcrumbs && breadcrumbs.length > 0 && (
           <nav aria-label="Breadcrumb" className="mb-6 text-xs text-neutral-500">
             <ol className="flex flex-wrap items-center gap-2">

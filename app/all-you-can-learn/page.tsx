@@ -17,6 +17,7 @@ import {
   ayclOfferTooltip,
 } from "@/lib/aycl-shared";
 import { PublicConsoleWash, PublicPageField } from "@/components/ui/console-frame";
+import { MARKETING_SHELL } from "@/lib/marketing/shell";
 import {
   collectAyclCatalogCategories,
   filterAyclCatalogCards,
@@ -97,7 +98,7 @@ export default function AllYouCanLearnPage() {
 
       <LandingNav />
 
-      <section className="relative z-10 mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
+      <section className={`${MARKETING_SHELL} py-5 sm:py-6`}>
         <header
           className="console-copy relative mb-6 overflow-hidden rounded-none"
           data-aycl-catalog-hero

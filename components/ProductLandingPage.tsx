@@ -7,6 +7,7 @@ import {
   DEMO_BOOKING_URL,
   type SeoProductPageConfig,
 } from "@/lib/seo/product-page";
+import { MARKETING_SHELL } from "@/lib/marketing/shell";
 
 const BASE_URL = "https://uncertain.systems";
 
@@ -94,7 +95,7 @@ export function ProductLandingPage({ page }: ProductLandingPageProps) {
         </>
       )}
 
-      <main className="mx-auto max-w-3xl px-6 py-12 sm:py-16">
+      <main className={`${MARKETING_SHELL} py-8 sm:py-12`}>
         <nav aria-label="Breadcrumb" className="mb-8 text-xs text-zinc-500">
           <ol className="flex flex-wrap items-center gap-2">
             <li>

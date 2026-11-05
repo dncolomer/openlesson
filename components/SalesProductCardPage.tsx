@@ -8,6 +8,7 @@ import {
 } from "@/lib/sales/product-cards";
 import { PITCH_ASSETS } from "@/lib/sales/solution-slide-decks";
 import { PublicConsoleWash, PublicPageField } from "@/components/ui/console-frame";
+import { MARKETING_SHELL } from "@/lib/marketing/shell";
 
 type SalesProductCardPageProps = {
   card: SalesProductCard;
@@ -120,7 +121,7 @@ export function SalesProductCardPage({ card }: SalesProductCardPageProps) {
       <PublicPageField image={PITCH_ASSETS.aesthetics.useCase} />
       <PublicConsoleWash />
 
-      <div className="relative z-10 mx-auto w-full max-w-7xl px-6 pt-10 pb-16 sm:pt-12">
+      <div className={`${MARKETING_SHELL} pt-8 pb-12 sm:pt-10 sm:pb-14`}>
         <Link
           href="/sales"
           className="inline-flex items-center gap-1.5 text-sm text-zinc-500 transition hover:text-zinc-300"

@@ -4,6 +4,7 @@ import { Footer } from "@/components/Footer";
 import { LandingNav } from "@/components/LandingNav";
 import { PublicConsoleWash, PublicPageField } from "@/components/ui/console-frame";
 import type { ScienceWhitepaper } from "@/lib/science/whitepaper-types";
+import { MARKETING_SHELL_INNER } from "@/lib/marketing/shell";
 
 type ScienceWhitepaperPageProps = {
   paper: ScienceWhitepaper;
@@ -26,7 +27,7 @@ export function ScienceWhitepaperPage({ paper }: ScienceWhitepaperPageProps) {
       <div className="relative z-10">
       <LandingNav />
 
-      <div className="mx-auto w-full max-w-7xl px-4 pt-8 pb-20 sm:px-6 sm:pt-10 lg:px-8 lg:pt-12">
+      <div className={`${MARKETING_SHELL_INNER} pt-6 pb-16 sm:pt-8 sm:pb-20`}>
         <Link
           href="/science"
           className="inline-flex items-center gap-1.5 text-sm text-zinc-500 transition hover:text-zinc-300"

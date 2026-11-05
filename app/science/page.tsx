@@ -39,6 +39,7 @@ import {
 import { standardShareSocialMetadata } from "@/lib/og/standard";
 
 import { PublicConsoleWash, PublicPageField } from "@/components/ui/console-frame";
+import { MARKETING_SHELL } from "@/lib/marketing/shell";
 
 const standardSocial = standardShareSocialMetadata({
   url: `https://uncertain.systems${SCIENCE_HUB_PATH}`,
@@ -94,79 +95,89 @@ export default function SciencePage() {
       <PublicConsoleWash />
       <LandingNav />
 
-      <section className="relative z-10 mx-auto w-full max-w-7xl px-6 pt-14 pb-10 sm:pt-16 sm:pb-12">
-        <div className="mb-6 flex flex-wrap items-center gap-3">
-          <div className="console-chip inline-block rounded-none px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
-            {SCIENCE_HUB_COPY.eyebrowVision}
+      <section className={`${MARKETING_SHELL} pt-5 pb-3 sm:pt-6`}>
+        <div className="grid items-start gap-4 lg:grid-cols-12 lg:gap-6">
+          <div className="lg:col-span-7">
+            <div className="mb-4 flex flex-wrap items-center gap-3">
+              <div className="console-chip inline-block rounded-none px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
+                {SCIENCE_HUB_COPY.eyebrowVision}
+              </div>
+              <div className="console-chip inline-block rounded-none px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
+                {SCIENCE_HUB_COPY.eyebrowScience}
+              </div>
+            </div>
+            <h1 className="max-w-4xl text-[1.75rem] font-medium leading-[1.08] tracking-[-1px] text-white sm:text-5xl sm:tracking-[-2px] lg:text-6xl">
+              {SCIENCE_HUB_COPY.title}
+            </h1>
+            <p className="mt-5 max-w-2xl text-base leading-relaxed text-zinc-400 sm:text-lg">
+              {SCIENCE_HUB_COPY.lead}
+            </p>
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <TrackedCtaLink
+                href={SCIENCE_HUB_COPY.workspaceHref}
+                label={SCIENCE_HUB_COPY.workspaceCta}
+                location="science_hub_hero"
+                page={SCIENCE_HUB_PATH}
+                className="inline-flex min-h-12 items-center justify-center rounded-none bg-white px-5 py-3 text-sm font-medium text-black transition hover:bg-zinc-200"
+              >
+                {SCIENCE_HUB_COPY.workspaceCta}
+                <ArrowRight className="ml-2" size={16} />
+              </TrackedCtaLink>
+            </div>
           </div>
-          <div className="console-chip inline-block rounded-none px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
-            {SCIENCE_HUB_COPY.eyebrowScience}
-          </div>
-        </div>
-        <h1 className="max-w-4xl text-5xl font-medium leading-[1.03] tracking-[-2.8px] text-white sm:text-6xl lg:text-[68px]">
-          {SCIENCE_HUB_COPY.title}
-        </h1>
-        <p className="mt-7 max-w-3xl text-lg leading-relaxed text-zinc-400">
-          {SCIENCE_HUB_COPY.lead}
-        </p>
-        <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
-          <TrackedCtaLink
-            href={SCIENCE_HUB_COPY.workspaceHref}
-            label={SCIENCE_HUB_COPY.workspaceCta}
-            location="science_hub_hero"
-            page={SCIENCE_HUB_PATH}
-            className="inline-flex min-h-12 items-center justify-center rounded-none bg-white px-5 py-3 text-sm font-medium text-black transition hover:bg-zinc-200"
+          <div
+            className="console-copy p-5 sm:p-6 lg:col-span-5"
+            aria-labelledby="science-directory-heading"
           >
-            {SCIENCE_HUB_COPY.workspaceCta}
-            <ArrowRight className="ml-2" size={16} />
-          </TrackedCtaLink>
-        </div>
-      </section>
-
-      <section
-        className="relative z-10 mx-auto max-w-7xl px-6 pb-10 sm:pb-12"
-        aria-labelledby="science-directory-heading"
-      >
-        <p className="mb-3 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
-          {SCIENCE_HUB_COPY.directoryEyebrow}
-        </p>
-        <h2
-          id="science-directory-heading"
-          className="max-w-3xl text-3xl font-medium leading-[1.08] tracking-[-1.4px] text-white sm:text-4xl"
-        >
-          {SCIENCE_HUB_COPY.directoryTitle}
-        </h2>
-        <p className="mt-4 max-w-2xl text-base leading-relaxed text-zinc-400">
-          {SCIENCE_HUB_COPY.directoryLead}
-        </p>
-        <div className="mt-6">
-          <ThesisDirectory links={SCIENCE_HUB_DIRECTORY} marker="science-hub" />
+            <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
+              {SCIENCE_HUB_COPY.directoryEyebrow}
+            </p>
+            <h2
+              id="science-directory-heading"
+              className="mt-2 text-lg font-medium tracking-[-0.4px] text-white"
+            >
+              {SCIENCE_HUB_COPY.directoryTitle}
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-500">
+              {SCIENCE_HUB_COPY.directoryLead}
+            </p>
+            <div className="mt-2">
+              <ThesisDirectory
+                links={SCIENCE_HUB_DIRECTORY}
+                marker="science-hub"
+                columns="grid-cols-1"
+                tone="index"
+              />
+            </div>
+          </div>
         </div>
       </section>
 
       <section
         id="why"
         data-science-why
-        className="relative z-10 mx-auto max-w-7xl px-6 pb-10 sm:pb-12"
+        className={`${MARKETING_SHELL} pt-3`}
         aria-labelledby="science-why-heading"
       >
-        <p className="mb-3 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
-          {SCIENCE_HUB_COPY.whyEyebrow}
-        </p>
-        <h2
-          id="science-why-heading"
-          className="max-w-3xl text-3xl font-medium leading-[1.08] tracking-[-1.4px] text-white sm:text-4xl"
-        >
-          {SCIENCE_HUB_COPY.whyTitle}
-        </h2>
-        <div className="mt-6 grid gap-6 md:grid-cols-3">
-          {SCIENCE_HUB_WHY.map((card) => (
-            <article key={card.title} className="console-copy p-5 sm:p-6">
-              <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">{card.eyebrow}</p>
-              <h3 className="mt-3 text-xl font-medium tracking-[-0.6px] text-white">{card.title}</h3>
-              <p className="mt-3 text-sm leading-relaxed text-zinc-400">{card.body}</p>
-            </article>
-          ))}
+        <div className="console-copy p-5 sm:p-6 lg:p-7">
+          <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
+            {SCIENCE_HUB_COPY.whyEyebrow}
+          </p>
+          <h2
+            id="science-why-heading"
+            className="mt-3 max-w-3xl text-2xl font-medium tracking-[-0.8px] text-white sm:text-3xl"
+          >
+            {SCIENCE_HUB_COPY.whyTitle}
+          </h2>
+          <div className="mt-6 grid gap-6 md:grid-cols-3 md:gap-8">
+            {SCIENCE_HUB_WHY.map((card) => (
+              <article key={card.title}>
+                <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">{card.eyebrow}</p>
+                <h3 className="mt-2 text-lg font-medium tracking-[-0.4px] text-white">{card.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-zinc-400">{card.body}</p>
+              </article>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -177,44 +188,42 @@ export default function SciencePage() {
           data-science-pitch-slide={PLATFORM_THESIS_SLIDE_INDEX}
           data-science-slide-kicker={thesisSlide.kicker ?? ""}
           aria-labelledby="science-thesis-heading"
-          className="relative z-10 mx-auto max-w-7xl px-6 pb-10 sm:pb-12"
+          className={`${MARKETING_SHELL} pt-3`}
         >
-          <article className="console-copy p-6 sm:p-8">
+          <div className="console-copy p-5 sm:p-6 lg:p-7">
             {thesisSlide.kicker ? (
-              <p className="mb-3 font-mono text-[10px] uppercase tracking-[2px] text-neutral-300/80">
+              <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
                 {thesisSlide.kicker}
               </p>
             ) : null}
             <h2
               id="science-thesis-heading"
-              className="max-w-4xl text-2xl font-medium tracking-[-0.8px] text-white sm:text-3xl lg:text-[34px] lg:leading-tight"
+              className="mt-3 max-w-4xl text-2xl font-medium tracking-[-0.8px] text-white sm:text-3xl"
             >
               {thesisSlide.title}
             </h2>
 
-            {(thesisSlide.highlights ?? []).map((item, index) => {
-              const label = thesisSlide.highlightLabels?.[index];
-              const image = thesisSlide.highlightImages?.[index];
-              const imageAlt = thesisSlide.highlightImageAlts?.[index];
-              const imageSource = thesisSlide.highlightImageSources?.[index];
-              return (
-                <div
-                  key={`hl-${index}`}
-                  data-science-pitch-highlight
-                  className="mt-6 rounded-none border border-white/20 bg-white/[0.05] p-4 sm:p-5"
-                >
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
+            <div className="mt-6 space-y-6">
+              {(thesisSlide.highlights ?? []).map((item, index) => {
+                const label = thesisSlide.highlightLabels?.[index];
+                const image = thesisSlide.highlightImages?.[index];
+                const imageAlt = thesisSlide.highlightImageAlts?.[index];
+                const imageSource = thesisSlide.highlightImageSources?.[index];
+                return (
+                  <div
+                    key={`hl-${index}`}
+                    data-science-pitch-highlight
+                    className="grid items-start gap-4 sm:grid-cols-12 sm:gap-6"
+                  >
                     {image ? (
-                      <figure className="w-full shrink-0 sm:w-48">
-                        <div className="console-copy overflow-hidden rounded-none">
-                          <Image
-                            src={image}
-                            alt={imageAlt || label || "Thesis illustration"}
-                            width={480}
-                            height={320}
-                            className="h-auto w-full object-contain"
-                          />
-                        </div>
+                      <figure className="sm:col-span-4">
+                        <Image
+                          src={image}
+                          alt={imageAlt || label || "Thesis illustration"}
+                          width={480}
+                          height={320}
+                          className="h-auto w-full object-contain"
+                        />
                         {imageSource ? (
                           <figcaption className="mt-1.5 font-mono text-[9px] uppercase tracking-[1.4px] text-zinc-500">
                             {imageSource}
@@ -222,33 +231,30 @@ export default function SciencePage() {
                         ) : null}
                       </figure>
                     ) : null}
-                    <div className="min-w-0 flex-1">
+                    <div className={image ? "sm:col-span-8" : "sm:col-span-12"}>
                       {label ? (
-                        <p className="mb-2 font-mono text-[10px] font-semibold uppercase tracking-[1.8px] text-neutral-300/90">
+                        <p className="mb-2 font-mono text-[10px] uppercase tracking-[1.8px] text-zinc-500">
                           {label}
                         </p>
                       ) : null}
-                      <p className="text-base font-medium leading-relaxed text-zinc-100 sm:text-lg">
+                      <p className="text-sm leading-relaxed text-zinc-300 sm:text-base">
                         {item}
                       </p>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
 
             {(thesisSlide.cards ?? []).length > 0 ? (
               <div
                 data-science-pitch-cards
-                className="mt-6 grid gap-3 sm:grid-cols-3"
+                className="mt-6 grid gap-5 border-t border-white/15 pt-6 sm:grid-cols-3"
               >
                 {(thesisSlide.cards ?? []).map((card) => (
-                  <div
-                    key={card.label}
-                    className="console-copy flex flex-col overflow-hidden"
-                  >
+                  <div key={card.label}>
                     {card.image ? (
-                      <div className="relative aspect-[16/10] w-full border-b border-white/30 bg-black">
+                      <div className="relative aspect-[16/10] w-full overflow-hidden bg-black">
                         <Image
                           src={card.image}
                           alt={card.imageAlt || card.label}
@@ -258,208 +264,209 @@ export default function SciencePage() {
                         />
                       </div>
                     ) : null}
-                    <div className="flex flex-1 flex-col p-4">
-                      <p className="text-sm font-medium text-white">{card.label}</p>
-                      {card.body ? (
-                        <p className="mt-1.5 text-xs leading-relaxed text-zinc-400">{card.body}</p>
-                      ) : null}
-                    </div>
+                    <p className="mt-3 text-sm font-medium text-white">{card.label}</p>
+                    {card.body ? (
+                      <p className="mt-1.5 text-sm leading-relaxed text-zinc-500">{card.body}</p>
+                    ) : null}
                   </div>
                 ))}
               </div>
             ) : null}
-          </article>
+          </div>
         </section>
       ) : null}
 
-      <section
-        id="science-free-energy"
-        data-science-free-energy
-        className="relative z-10 mx-auto max-w-7xl px-6 pb-10 sm:pb-12"
-        aria-labelledby="science-fep-heading"
-      >
-        <article className="console-copy p-6 sm:p-8">
-          <p className="mb-3 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
-            {SCIENCE_FEP_COPY.eyebrow}
-          </p>
-          <h2
-            id="science-fep-heading"
-            className="max-w-4xl text-2xl font-medium tracking-[-0.8px] text-white sm:text-3xl lg:text-[34px] lg:leading-tight"
+      <section className={`${MARKETING_SHELL} pt-3`}>
+        <div className="grid gap-3 lg:grid-cols-2">
+          <section
+            id="science-free-energy"
+            data-science-free-energy
+            className="console-copy p-5 sm:p-6"
+            aria-labelledby="science-fep-heading"
           >
-            {SCIENCE_FEP_COPY.title}
-          </h2>
-          <p className="mt-5 text-base leading-relaxed text-zinc-400 sm:text-lg">
-            {SCIENCE_FEP_COPY.influence}
-          </p>
-          <p className="mt-4 text-base leading-relaxed text-zinc-300 sm:text-lg">
-            {SCIENCE_FEP_COPY.name}
-          </p>
-          <p className="mt-4 text-sm leading-relaxed text-zinc-500 sm:text-base">
-            {SCIENCE_FEP_COPY.caveat}
-          </p>
-        </article>
-      </section>
-
-      <section
-        id="science-epistemic-foraging"
-        data-science-epistemic-foraging
-        className="relative z-10 mx-auto max-w-7xl px-6 pb-10 sm:pb-12"
-        aria-labelledby="science-epistemic-foraging-heading"
-      >
-        <article className="console-copy p-6 sm:p-8">
-          <p className="mb-3 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
-            {SCIENCE_EPISTEMIC_FORAGING_COPY.eyebrow}
-          </p>
-          <h2
-            id="science-epistemic-foraging-heading"
-            className="max-w-4xl text-2xl font-medium tracking-[-0.8px] text-white sm:text-3xl lg:text-[34px] lg:leading-tight"
-          >
-            {SCIENCE_EPISTEMIC_FORAGING_COPY.title}
-          </h2>
-          <p className="mt-5 text-base leading-relaxed text-zinc-400 sm:text-lg">
-            {SCIENCE_EPISTEMIC_FORAGING_COPY.definition}
-          </p>
-          <p className="mt-4 text-base leading-relaxed text-zinc-300 sm:text-lg">
-            {SCIENCE_EPISTEMIC_FORAGING_COPY.platform}
-          </p>
-          <p className="mt-4 text-sm leading-relaxed text-zinc-500 sm:text-base">
-            {SCIENCE_EPISTEMIC_FORAGING_COPY.caveat}
-          </p>
-          <Link
-            href={SCIENCE_LEARNING_MODEL_PATH}
-            data-science-learning-model-link
-            className="mt-6 inline-flex items-center gap-1.5 text-sm font-medium text-zinc-300 transition hover:text-white"
-          >
-            {SCIENCE_LEARNING_MODEL_COPY.title}
-            <ArrowRight size={14} />
-          </Link>
-
-          <div className="mt-8 border-t border-zinc-800 pt-6" data-science-epistemic-foraging-readings>
-            <p className="mb-4 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
-              Further reading
+            <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
+              {SCIENCE_FEP_COPY.eyebrow}
             </p>
-            <ul className="space-y-4">
-              {SCIENCE_EPISTEMIC_FORAGING_READINGS.map((reading) => (
-                <li key={reading.id} className="text-sm leading-relaxed text-zinc-400 sm:text-[15px]">
-                  <a
-                    href={reading.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group inline-flex max-w-full items-start gap-1.5 text-zinc-200 transition hover:text-white"
-                  >
-                    <span>
-                      {reading.authors} ({reading.year}).{" "}
-                      <span className="font-medium italic">{reading.title}</span>. {reading.venue}.
-                    </span>
-                    <ExternalLink
-                      size={12}
-                      className="mt-1 shrink-0 text-zinc-500 transition group-hover:text-zinc-300"
-                      aria-hidden
-                    />
-                  </a>
-                  <p className="mt-1 text-zinc-500">{reading.why}</p>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </article>
+            <h2
+              id="science-fep-heading"
+              className="mt-3 text-xl font-medium tracking-[-0.6px] text-white sm:text-2xl"
+            >
+              {SCIENCE_FEP_COPY.title}
+            </h2>
+            <div className="mt-4 space-y-3">
+              <p className="text-sm leading-relaxed text-zinc-400">
+                {SCIENCE_FEP_COPY.influence}
+              </p>
+              <p className="text-sm leading-relaxed text-zinc-300">
+                {SCIENCE_FEP_COPY.name}
+              </p>
+              <p className="text-sm leading-relaxed text-zinc-500">
+                {SCIENCE_FEP_COPY.caveat}
+              </p>
+            </div>
+          </section>
+
+          <section
+            id="science-epistemic-foraging"
+            data-science-epistemic-foraging
+            className="console-copy p-5 sm:p-6"
+            aria-labelledby="science-epistemic-foraging-heading"
+          >
+            <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
+              {SCIENCE_EPISTEMIC_FORAGING_COPY.eyebrow}
+            </p>
+            <h2
+              id="science-epistemic-foraging-heading"
+              className="mt-3 text-xl font-medium tracking-[-0.6px] text-white sm:text-2xl"
+            >
+              {SCIENCE_EPISTEMIC_FORAGING_COPY.title}
+            </h2>
+            <div className="mt-4 space-y-3">
+              <p className="text-sm leading-relaxed text-zinc-400">
+                {SCIENCE_EPISTEMIC_FORAGING_COPY.definition}
+              </p>
+              <p className="text-sm leading-relaxed text-zinc-300">
+                {SCIENCE_EPISTEMIC_FORAGING_COPY.platform}
+              </p>
+              <p className="text-sm leading-relaxed text-zinc-500">
+                {SCIENCE_EPISTEMIC_FORAGING_COPY.caveat}
+              </p>
+              <Link
+                href={SCIENCE_LEARNING_MODEL_PATH}
+                data-science-learning-model-link
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-300 transition hover:text-white"
+              >
+                {SCIENCE_LEARNING_MODEL_COPY.title}
+                <ArrowRight size={14} />
+              </Link>
+            </div>
+          </section>
+        </div>
+
+        <div className="console-copy mt-3 p-5 sm:p-6" data-science-epistemic-foraging-readings>
+          <p className="mb-4 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
+            Further reading
+          </p>
+          <ul className="grid gap-x-8 gap-y-3 lg:grid-cols-2">
+            {SCIENCE_EPISTEMIC_FORAGING_READINGS.map((reading) => (
+              <li key={reading.id} className="text-sm leading-relaxed text-zinc-400">
+                <a
+                  href={reading.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group inline-flex max-w-full items-start gap-1.5 text-zinc-200 transition hover:text-white"
+                >
+                  <span>
+                    {reading.authors} ({reading.year}).{" "}
+                    <span className="font-medium italic">{reading.title}</span>. {reading.venue}.
+                  </span>
+                  <ExternalLink
+                    size={12}
+                    className="mt-1 shrink-0 text-zinc-500 transition group-hover:text-zinc-300"
+                    aria-hidden
+                  />
+                </a>
+                <p className="mt-1 text-zinc-500">{reading.why}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
       </section>
 
       <section
         id="knowledge-tomography-induction"
         data-vision-tomography-induction
-        className="relative z-10 mx-auto max-w-7xl px-6 pb-10 sm:pb-12"
+        className={`${MARKETING_SHELL} pt-3`}
         aria-labelledby="vision-tomography-induction-heading"
       >
-        <p className="mb-3 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
-          {VISION_TOMOGRAPHY_INDUCTION_COPY.eyebrow}
-        </p>
-        <h2
-          id="vision-tomography-induction-heading"
-          className="max-w-3xl text-3xl font-medium leading-[1.08] tracking-[-1.4px] text-white sm:text-4xl"
-        >
-          {VISION_TOMOGRAPHY_INDUCTION_COPY.title}
-        </h2>
-        <p
-          className="mt-6 max-w-3xl text-base leading-relaxed text-zinc-400 sm:text-lg"
-          data-vision-tomography-induction-lead
-        >
-          {VISION_TOMOGRAPHY_INDUCTION_COPY.lead}
-        </p>
-        <article
-          className="console-copy mt-8 p-5 sm:p-6"
-          data-vision-epistemic-foraging
-        >
+        <div className="console-copy p-5 sm:p-6 lg:p-7">
           <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
-            {VISION_TOMOGRAPHY_INDUCTION_COPY.policy.eyebrow}
+            {VISION_TOMOGRAPHY_INDUCTION_COPY.eyebrow}
           </p>
-          <h3 className="mt-2 text-lg font-medium text-white">
-            {VISION_TOMOGRAPHY_INDUCTION_COPY.policy.title}
-          </h3>
-          <p className="mt-2 text-sm leading-relaxed text-zinc-400 sm:text-base">
-            {VISION_TOMOGRAPHY_INDUCTION_COPY.policy.body}
+          <h2
+            id="vision-tomography-induction-heading"
+            className="mt-3 max-w-3xl text-2xl font-medium tracking-[-0.8px] text-white sm:text-3xl"
+          >
+            {VISION_TOMOGRAPHY_INDUCTION_COPY.title}
+          </h2>
+          <p
+            className="mt-4 max-w-3xl text-sm leading-relaxed text-zinc-400 sm:text-base"
+            data-vision-tomography-induction-lead
+          >
+            {VISION_TOMOGRAPHY_INDUCTION_COPY.lead}
           </p>
-        </article>
-        <div className="mt-8 grid gap-4 md:grid-cols-2">
-          <article className="console-copy p-5 sm:p-6">
-            <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
-              {VISION_TOMOGRAPHY_INDUCTION_COPY.tomography.eyebrow}
-            </p>
-            <h3 className="mt-3 text-xl font-medium tracking-[-0.6px] text-white">
-              {VISION_TOMOGRAPHY_INDUCTION_COPY.tomography.title}
-            </h3>
-            <p className="mt-3 text-sm leading-relaxed text-zinc-400">
-              {VISION_TOMOGRAPHY_INDUCTION_COPY.tomography.body}
-            </p>
-          </article>
-          <article className="console-copy p-5 sm:p-6">
-            <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
-              {VISION_TOMOGRAPHY_INDUCTION_COPY.induction.eyebrow}
-            </p>
-            <h3 className="mt-3 text-xl font-medium tracking-[-0.6px] text-white">
-              {VISION_TOMOGRAPHY_INDUCTION_COPY.induction.title}
-            </h3>
-            <p className="mt-3 text-sm leading-relaxed text-zinc-400">
-              {VISION_TOMOGRAPHY_INDUCTION_COPY.induction.body}
-            </p>
-          </article>
-        </div>
-        <p
-          className="mt-6 max-w-3xl text-sm leading-relaxed text-zinc-500 sm:text-base"
-          data-vision-tomography-induction-distinction
-        >
-          {VISION_TOMOGRAPHY_INDUCTION_COPY.distinction}
-        </p>
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-          <Link
-            href={VISION_TOMOGRAPHY_INDUCTION_PATHS.epistemicForaging}
-            data-vision-epistemic-foraging-link
-            className="console-button inline-flex min-h-11 items-center justify-center gap-1.5 rounded-none px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:border-white/80 hover:text-white"
+          <div className="mt-6 grid gap-6 border-t border-white/15 pt-6 md:grid-cols-3">
+            <article data-vision-epistemic-foraging>
+              <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
+                {VISION_TOMOGRAPHY_INDUCTION_COPY.policy.eyebrow}
+              </p>
+              <h3 className="mt-2 text-lg font-medium text-white">
+                {VISION_TOMOGRAPHY_INDUCTION_COPY.policy.title}
+              </h3>
+              <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+                {VISION_TOMOGRAPHY_INDUCTION_COPY.policy.body}
+              </p>
+            </article>
+            <article>
+              <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
+                {VISION_TOMOGRAPHY_INDUCTION_COPY.tomography.eyebrow}
+              </p>
+              <h3 className="mt-2 text-lg font-medium tracking-[-0.4px] text-white">
+                {VISION_TOMOGRAPHY_INDUCTION_COPY.tomography.title}
+              </h3>
+              <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+                {VISION_TOMOGRAPHY_INDUCTION_COPY.tomography.body}
+              </p>
+            </article>
+            <article>
+              <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
+                {VISION_TOMOGRAPHY_INDUCTION_COPY.induction.eyebrow}
+              </p>
+              <h3 className="mt-2 text-lg font-medium tracking-[-0.4px] text-white">
+                {VISION_TOMOGRAPHY_INDUCTION_COPY.induction.title}
+              </h3>
+              <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+                {VISION_TOMOGRAPHY_INDUCTION_COPY.induction.body}
+              </p>
+            </article>
+          </div>
+          <p
+            className="mt-6 text-sm leading-relaxed text-zinc-500"
+            data-vision-tomography-induction-distinction
           >
-            {VISION_TOMOGRAPHY_INDUCTION_COPY.links.foragingLabel}
-            <ArrowRight size={14} />
-          </Link>
-          <Link
-            href={SCIENCE_LEARNING_MODEL_PATH}
-            data-vision-learning-model-link
-            className="console-button inline-flex min-h-11 items-center justify-center gap-1.5 rounded-none px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:border-white/80 hover:text-white"
-          >
-            {SCIENCE_LEARNING_MODEL_COPY.title}
-            <ArrowRight size={14} />
-          </Link>
-          <Link
-            href={VISION_TOMOGRAPHY_INDUCTION_PATHS.knowledgeTomographyPaper}
-            data-vision-knowledge-tomography-paper-link
-            className="console-button inline-flex min-h-11 items-center justify-center gap-1.5 rounded-none px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:border-white/80 hover:text-white"
-          >
-            {VISION_TOMOGRAPHY_INDUCTION_COPY.links.paperLabel}
-            <ArrowRight size={14} />
-          </Link>
+            {VISION_TOMOGRAPHY_INDUCTION_COPY.distinction}
+          </p>
+          <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm">
+            <Link
+              href={VISION_TOMOGRAPHY_INDUCTION_PATHS.epistemicForaging}
+              data-vision-epistemic-foraging-link
+              className="inline-flex items-center gap-1.5 text-zinc-300 underline decoration-zinc-700 underline-offset-4 transition hover:text-white hover:decoration-zinc-500"
+            >
+              {VISION_TOMOGRAPHY_INDUCTION_COPY.links.foragingLabel}
+              <ArrowRight size={13} />
+            </Link>
+            <Link
+              href={SCIENCE_LEARNING_MODEL_PATH}
+              data-vision-learning-model-link
+              className="inline-flex items-center gap-1.5 text-zinc-300 underline decoration-zinc-700 underline-offset-4 transition hover:text-white hover:decoration-zinc-500"
+            >
+              {SCIENCE_LEARNING_MODEL_COPY.title}
+              <ArrowRight size={13} />
+            </Link>
+            <Link
+              href={VISION_TOMOGRAPHY_INDUCTION_PATHS.knowledgeTomographyPaper}
+              data-vision-knowledge-tomography-paper-link
+              className="inline-flex items-center gap-1.5 text-zinc-300 underline decoration-zinc-700 underline-offset-4 transition hover:text-white hover:decoration-zinc-500"
+            >
+              {VISION_TOMOGRAPHY_INDUCTION_COPY.links.paperLabel}
+              <ArrowRight size={13} />
+            </Link>
+          </div>
         </div>
       </section>
 
-      <section className="relative z-10 mx-auto max-w-7xl px-6 py-10 sm:py-12" aria-label="Principles">
-        <div className="grid grid-cols-1 gap-x-12 gap-y-8 sm:grid-cols-2">
+      <section className={`${MARKETING_SHELL} pt-3`} aria-label="Principles">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {PRINCIPLES.map((principle) => (
             <div key={principle.number} className="console-copy p-5">
               <p className="font-mono text-[10px] tracking-[2px] text-zinc-500">{principle.number}</p>
@@ -474,61 +481,63 @@ export default function SciencePage() {
       <section
         id="research"
         data-science-research
-        className="relative z-10 mx-auto max-w-7xl px-6 pb-16 sm:pb-20"
+        className={`${MARKETING_SHELL} pb-12 pt-3 sm:pb-14`}
         aria-labelledby="science-research-heading"
       >
-        <div className="mb-3 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">Research</div>
-        <h2
-          id="science-research-heading"
-          className="max-w-3xl text-3xl font-medium leading-[1.08] tracking-[-1.4px] text-white sm:text-4xl"
-        >
-          Methods &amp; planned experiments
-        </h2>
-        <p className="mt-4 max-w-2xl text-base leading-relaxed text-zinc-400">
-          Academic working papers on knowledge tomography, how we externalize cognition as Proof of
-          Work, and how we plan to embed that data into a Map of Knowledge toward knowledge induction.
-        </p>
-        <div className="mt-6 space-y-4">
-          <Link
-            href={KNOWLEDGE_TOMOGRAPHY_WHITEPAPER_PATH}
-            data-science-research-link
-            data-science-research-link-knowledge-tomography
-            className="console-copy group block p-5 transition hover:border-white/80 sm:p-6"
+        <div className="console-copy p-5 sm:p-6 lg:p-7">
+          <div className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">Research</div>
+          <h2
+            id="science-research-heading"
+            className="mt-3 max-w-3xl text-2xl font-medium tracking-[-0.8px] text-white sm:text-3xl"
           >
-            <p className="font-mono text-[10px] uppercase tracking-[1.6px] text-zinc-500">
-              Working paper · {KNOWLEDGE_TOMOGRAPHY_WHITEPAPER.meta.date}
-            </p>
-            <h3 className="mt-2 text-xl font-medium tracking-[-0.5px] text-white sm:text-2xl">
-              {KNOWLEDGE_TOMOGRAPHY_WHITEPAPER.meta.shortTitle}
-            </h3>
-            <p className="mt-3 max-w-3xl text-sm leading-relaxed text-zinc-400 sm:text-base">
-              {KNOWLEDGE_TOMOGRAPHY_WHITEPAPER.meta.description}
-            </p>
-            <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-zinc-300 transition group-hover:text-white">
-              Read the white paper
-              <ArrowRight size={14} />
-            </span>
-          </Link>
-          <Link
-            href={TAP_WHITEPAPER_PATH}
-            data-science-research-link
-            data-science-research-link-tap
-            className="console-copy group block p-5 transition hover:border-white/80 sm:p-6"
-          >
-            <p className="font-mono text-[10px] uppercase tracking-[1.6px] text-zinc-500">
-              Working paper · {TAP_STASH_SUBMIT_WHITEPAPER.meta.date}
-            </p>
-            <h3 className="mt-2 text-xl font-medium tracking-[-0.5px] text-white sm:text-2xl">
-              {TAP_STASH_SUBMIT_WHITEPAPER.meta.shortTitle}
-            </h3>
-            <p className="mt-3 max-w-3xl text-sm leading-relaxed text-zinc-400 sm:text-base">
-              {TAP_STASH_SUBMIT_WHITEPAPER.meta.description}
-            </p>
-            <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-zinc-300 transition group-hover:text-white">
-              Read the white paper
-              <ArrowRight size={14} />
-            </span>
-          </Link>
+            Methods &amp; planned experiments
+          </h2>
+          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-400">
+            Academic working papers on knowledge tomography, how we externalize cognition as Proof of
+            Work, and how we plan to embed that data into a Map of Knowledge toward knowledge induction.
+          </p>
+          <div className="mt-6 grid gap-6 border-t border-white/15 pt-6 sm:grid-cols-2">
+            <Link
+              href={KNOWLEDGE_TOMOGRAPHY_WHITEPAPER_PATH}
+              data-science-research-link
+              data-science-research-link-knowledge-tomography
+              className="group block"
+            >
+              <p className="font-mono text-[10px] uppercase tracking-[1.6px] text-zinc-500">
+                Working paper · {KNOWLEDGE_TOMOGRAPHY_WHITEPAPER.meta.date}
+              </p>
+              <h3 className="mt-2 text-lg font-medium tracking-[-0.4px] text-white">
+                {KNOWLEDGE_TOMOGRAPHY_WHITEPAPER.meta.shortTitle}
+              </h3>
+              <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+                {KNOWLEDGE_TOMOGRAPHY_WHITEPAPER.meta.description}
+              </p>
+              <span className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-zinc-300 transition group-hover:text-white">
+                Read the white paper
+                <ArrowRight size={14} />
+              </span>
+            </Link>
+            <Link
+              href={TAP_WHITEPAPER_PATH}
+              data-science-research-link
+              data-science-research-link-tap
+              className="group block"
+            >
+              <p className="font-mono text-[10px] uppercase tracking-[1.6px] text-zinc-500">
+                Working paper · {TAP_STASH_SUBMIT_WHITEPAPER.meta.date}
+              </p>
+              <h3 className="mt-2 text-lg font-medium tracking-[-0.4px] text-white">
+                {TAP_STASH_SUBMIT_WHITEPAPER.meta.shortTitle}
+              </h3>
+              <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+                {TAP_STASH_SUBMIT_WHITEPAPER.meta.description}
+              </p>
+              <span className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-zinc-300 transition group-hover:text-white">
+                Read the white paper
+                <ArrowRight size={14} />
+              </span>
+            </Link>
+          </div>
         </div>
       </section>
 

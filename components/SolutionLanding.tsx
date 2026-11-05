@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import { Footer } from "@/components/Footer";
+import { MARKETING_SHELL } from "@/lib/marketing/shell";
 
 interface SolutionLandingProps {
   eyebrow: string;
@@ -55,7 +56,7 @@ export function SolutionLanding({
           ) : null}
         </div>
 
-        <section className="mx-auto flex w-full max-w-7xl flex-1 flex-col justify-center px-6 py-24">
+        <section className={`${MARKETING_SHELL} flex flex-1 flex-col justify-center py-16 sm:py-20`}>
           <div className="max-w-4xl">
             <div className="console-chip mb-6 inline-block px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
               {eyebrow}

@@ -9,6 +9,7 @@ import { PRICING_PAGE_SKUS } from "@/lib/pricing/modules";
 import type { CreditPackSkuId } from "@/lib/credits/constants";
 import { PublicConsoleWash, PublicPageField } from "@/components/ui/console-frame";
 import { usePricingCheckout } from "@/components/pricing/use-pricing-checkout";
+import { MARKETING_SHELL } from "@/lib/marketing/shell";
 
 const SKU_SECTION_ID: Record<CreditPackSkuId, string> = {
   credits_100: "credits-100",
@@ -63,7 +64,7 @@ function PricingPageContent() {
       <PublicConsoleWash />
       <div className="relative z-10 flex min-h-screen flex-col">
         <LandingNav />
-        <section className="mx-auto w-full max-w-7xl flex-1 px-6 py-16 sm:py-20">
+        <section className={`${MARKETING_SHELL} flex-1 py-8 sm:py-10`}>
           <div className="console-copy p-5 sm:p-8 lg:p-10">
           <div className="grid gap-10 lg:grid-cols-12 lg:items-start">
           <div className="lg:col-span-4">

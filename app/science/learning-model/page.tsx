@@ -8,6 +8,7 @@ import { LearningModelObjectGlyph } from "@/components/science/LearningModelMark
 import { LearningModelPipelines } from "@/components/science/LearningModelPipelines";
 import { LearningModelScene } from "@/components/science/LearningModelScene";
 import { PublicConsoleWash, PublicPageField } from "@/components/ui/console-frame";
+import { MARKETING_SHELL_INNER } from "@/lib/marketing/shell";
 import { LEARNING_MODEL_OBJECTS, LEARNING_MODEL_PUBLIC_LABEL } from "@/lib/learning-model";
 import { standardShareSocialMetadata } from "@/lib/og/standard";
 import {
@@ -39,7 +40,7 @@ export default function ScienceLearningModelPage() {
       <PublicConsoleWash />
       <div className="relative z-10">
         <LandingNav />
-        <div className="mx-auto w-full max-w-7xl px-4 pt-8 pb-20 sm:px-6 sm:pt-10 lg:px-8 lg:pt-12">
+        <div className={`${MARKETING_SHELL_INNER} pt-6 pb-16 sm:pt-8 sm:pb-20`}>
           <Link
             href="/science"
             className="inline-flex items-center gap-1.5 text-sm text-zinc-500 transition hover:text-zinc-300"

@@ -101,7 +101,8 @@ describe("unified pricing page source", () => {
     const modules = read("app/pricing/page.tsx");
     expect(modules).toContain('data-testid="pricing-academy-k-link"');
     expect(modules).toContain("UNIFIED_PRICING_COPY.academyHref");
-    expect(modules).toContain("max-w-7xl");
+    expect(modules).toContain("MARKETING_SHELL");
+    expect(read("lib/marketing/shell.ts")).toContain("max-w-[96rem]");
     expect(modules).not.toContain("UNIFIED_PRICING_COPY.authoringHref");
   });
 });

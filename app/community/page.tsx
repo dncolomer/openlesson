@@ -5,6 +5,7 @@ import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
 import { useI18n } from "@/lib/i18n";
 import { ConsolePage } from "@/components/ui/console-frame";
+import { MARKETING_SHELL_INNER } from "@/lib/marketing/shell";
 
 export default function CommunityPage() {
   const { t } = useI18n();
@@ -13,7 +14,7 @@ export default function CommunityPage() {
     <ConsolePage label="List">
       <Navbar />
 
-      <div className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-8 sm:py-12">
+      <div className={`flex-1 ${MARKETING_SHELL_INNER} py-8 sm:py-12`}>
         <div className="text-center mb-12">
           <h1 className="text-3xl sm:text-5xl font-bold text-white mb-4 tracking-tight">
             {t('communityPlans.title')}

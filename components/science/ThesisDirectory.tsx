@@ -6,16 +6,18 @@ export function ThesisDirectory({
   links,
   marker,
   columns = "sm:grid-cols-2 lg:grid-cols-3",
+  tone = "panel",
 }: {
   links: readonly ThesisDeepLink[];
   marker: string;
   columns?: string;
+  tone?: "panel" | "index";
 }) {
   return (
     <nav
       data-thesis-directory={marker}
       aria-label="Thesis"
-      className={`grid gap-3 ${columns}`}
+      className={`grid ${tone === "index" ? "gap-0 border-t border-white/15" : "gap-3"} ${columns}`}
     >
       {links.map((link) => {
         const inner = (
@@ -36,7 +38,9 @@ export function ThesisDirectory({
           </>
         );
         const className =
-          "console-copy group flex items-start justify-between gap-3 p-4 transition hover:border-white/80 sm:p-5";
+          tone === "index"
+            ? "group flex items-start justify-between gap-3 border-b border-white/15 py-3 transition hover:border-white/40"
+            : "console-copy group flex items-start justify-between gap-3 p-4 transition hover:border-white/80 sm:p-5";
         // Same-page hashes: native anchors jump. Next Link often no-ops.
         if (link.href.startsWith("#")) {
           return (

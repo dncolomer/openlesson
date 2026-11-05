@@ -5,6 +5,7 @@ import { LandingNav } from "@/components/LandingNav";
 import { TrackedCtaLink } from "@/components/TrackedCtaLink";
 import { aestheticImageForId } from "@/lib/aesthetics";
 import { PublicConsoleWash, PublicPageField } from "@/components/ui/console-frame";
+import { MARKETING_SHELL } from "@/lib/marketing/shell";
 import {
   DEMO_BOOKING_URL,
   type SeoUseCasePageConfig,
@@ -68,7 +69,7 @@ export function UseCaseLandingPage({ page }: UseCaseLandingPageProps) {
 
       <LandingNav />
 
-      <main className="relative z-10 mx-auto max-w-3xl px-6 py-12 sm:py-16">
+      <main className={`${MARKETING_SHELL} py-8 sm:py-12`}>
         <nav aria-label="Breadcrumb" className="mb-8 text-xs text-zinc-500">
           <ol className="flex flex-wrap items-center gap-2">
             <li>

@@ -487,12 +487,13 @@ describe("dashboard platform surface", () => {
     expect(dashSrc).toContain("data-dashboard-help-coming-soon");
     expect(dashSrc).not.toContain('activeTab === "plans"');
     expect(dashSrc).not.toContain("DASHBOARD_BACKGROUND");
-    expect(dashSrc).not.toContain("/aesthetics/Greco-futurism/");
     expect(dashSrc).toContain("data-dashboard-atmosphere");
     expect(dashSrc).not.toContain("data-dashboard-atmosphere-grid");
     expect(dashSrc).not.toContain("/aesthetics/piotr-binkowski/");
     expect(dashSrc).not.toContain("bg-black/82");
-    expect(readRepo("components/dashboard/dashboard-atmosphere.tsx")).toContain("#1a1a1a");
+    expect(readRepo("components/dashboard/dashboard-atmosphere.tsx")).toContain("#0e1c2c");
+    expect(readRepo("components/dashboard/dashboard-atmosphere.tsx")).toContain("PUBLIC_FIELD_STILLS");
+    expect(readRepo("components/dashboard/dashboard-atmosphere.tsx")).toContain("bg-[#0e1c2c]/78");
     expect(readRepo("components/dashboard/dashboard-atmosphere.tsx")).not.toContain("PublicConsoleWash");
     expect(readRepo("components/dashboard/dashboard-atmosphere.tsx")).not.toContain("PUBLIC_MAGI_GRID_CLASS");
     expect(readRepo("components/ui/console-frame.tsx")).not.toContain("PUBLIC_MAGI_GRID_CLASS");

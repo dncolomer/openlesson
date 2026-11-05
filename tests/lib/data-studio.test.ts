@@ -520,6 +520,7 @@ describe("product Data Studio chrome", () => {
     expect(visual).toContain("data-data-studio-status");
     expect(visual).toContain("data-data-studio-flow-filter");
     expect(visual).toContain("data-data-studio-run-filter");
+    expect(visual).toContain("data-data-studio-map-filter");
     expect(visual).toContain("data-data-studio-region-filter");
     expect(visual).toContain("StudioMultiSelect");
     const select = readFileSync(join(ROOT, "components/data-studio/StudioMultiSelect.tsx"), "utf8");

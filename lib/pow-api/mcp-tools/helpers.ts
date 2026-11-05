@@ -8,23 +8,21 @@ import {
   buildUncertainSystemsScopeForWorkspace,
   recommendIntegrationActions,
 } from "../integration-discovery";
-import {
-  type InterruptionContext,
-  withProofOfWorkApiResponse,
-} from "../predictive-interruption";
+import type { InterruptionContext } from "../predictive-interruption";
 
 export const MCP_PROOF_OF_WORK_PROTOCOL_VERSION = "2025-03-26";
-export const MCP_PROOF_OF_WORK_SERVER_NAME = "uncertain-systems-proof-of-work-api";
+export const MCP_PROOF_OF_WORK_SERVER_NAME = "uncertain-systems";
 export const MCP_PROOF_OF_WORK_SERVER_VERSION = "1.3.0";
 
-export const MCP_PROOF_OF_WORK_SERVER_INSTRUCTIONS = `Uncertain Systems public agent MCP — two APIs with REST parity:
+export const MCP_PROOF_OF_WORK_SERVER_INSTRUCTIONS = `Uncertain Systems public agent MCP — Learning Map and flow management with REST parity.
 
-1. Workspace management — create and edit a Learning workspace, the map, workspace settings, and account settings. Learning maps use list_map_tools / apply_map_tool (Helios catalog: topologies, unusable ground, generative effects, DAG, overlay notes and drawing layers). REST: /api/v3/workspaces (including /map-tools) and /api/v3/account.
-2. Headless proof-of-work — start, run, and end Calibrate, Learn, and Verify sessions. Submit proof of work; the server prepares the answers-model tree, infers the path, and enforces the session clock. REST: /api/v3/pow.
+Create and edit a Learning Map, apply Helios map tools (list_map_tools / apply_map_tool), and create, list, update, delete, and link Solve, Calibration, and Verification flows. Flows are independent. REST: /api/v3/workspaces (maps) and /api/v3/flows.
 
-Authorize with Authorization: Bearer <api_key or OAuth token> on POST /api/mcp. ChatGPT, Claude, and other agents use these tools to run flows for the user.
+Proof of work is recorded in the product UI. Headless start_session / upload_proof_of_work / end_session are not public agent tools.
 
-Scopes: workspaces:read, workspaces:write, sessions:read, sessions:write. Teams tier (error code api_plan_required).`;
+Authorize with Authorization: Bearer <api_key or OAuth token> on POST /api/mcp.
+
+API Metered plan required (error code api_plan_required).`;
 
 export { MCP_EVIDENCE_TOOLS } from "./evidence-tools";
 
@@ -43,12 +41,9 @@ export function textToolResult(value: unknown) {
 
 export async function evidenceToolResult(
   value: Record<string, unknown>,
-  interruptionContext?: InterruptionContext
+  _interruptionContext?: InterruptionContext,
 ) {
-  const payload = interruptionContext
-    ? await withProofOfWorkApiResponse(value, interruptionContext)
-    : { ...value, interruption: null };
-  return textToolResult(payload);
+  return textToolResult(value);
 }
 
 export function stringArg(args: Record<string, unknown>, name: string) {

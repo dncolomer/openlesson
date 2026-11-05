@@ -140,15 +140,9 @@ describe("uploadWorkspaceProofOfWork uses the shared schema", () => {
 describe("surfaces share the exported type list", () => {
   const ROOT = join(__dirname, "../..");
 
-  it("MCP upload enum is WORKSPACE_PROOF_OF_WORK_WIRE_TYPES", () => {
-    const upload = MCP_EVIDENCE_TOOLS.find((t) => t.name === "upload_proof_of_work");
-    const typeSchema = upload?.inputSchema?.properties?.type;
-    const typeEnum =
-      typeSchema && typeof typeSchema === "object" && "enum" in typeSchema
-        ? typeSchema.enum
-        : undefined;
-    expect(typeEnum).toEqual([...WORKSPACE_PROOF_OF_WORK_WIRE_TYPES]);
-    expect(typeEnum ?? []).not.toContain("speech");
+  it("public MCP catalog does not expose upload_proof_of_work", () => {
+    expect(MCP_EVIDENCE_TOOLS.map((t) => t.name)).not.toContain("upload_proof_of_work");
+    expect(WORKSPACE_PROOF_OF_WORK_WIRE_TYPES).not.toContain("speech");
   });
 
   it("TAP Learning capture types are a subset of stored types", () => {

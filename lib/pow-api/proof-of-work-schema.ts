@@ -184,7 +184,7 @@ export const EVIDENCE_EVAL_SCHEMA_OUTPUT = {
       performance_report_contract: {
         type: "object",
         description:
-          "Formal contract for POST .../sessions/{session_id}/end (MCP end_session): answers_model, inferred sequence, remaining_ms, and flow embedding. Cookie-auth Snapshot is not a public agent API.",
+          "Formal contract for Helios map tools (MCP apply_map_tool). Cookie-auth Snapshot is not a public agent API. Proof of work is recorded in the product UI.",
         properties: {
           endpoint_pattern: { type: "string" },
           mcp_tool: { type: "string" },
@@ -360,11 +360,11 @@ export function buildProofOfWorkSchemaInstructions(
 
   const task = `${scope}
 
-You are an Uncertain Systems proof-of-work architect. Produce a **formal proof-of-work specification** that tells integrators exactly how to submit tool usage into a **headless session**.
+You are an Uncertain Systems proof-of-work architect. Produce a **formal proof-of-work specification** for in-app session recording. Public agents manage Learning Maps and Solve, Calibration, and Verification flows; they do not run a headless proof-of-work loop.
 
-Uncertain Systems public agent surface is two APIs: workspace management and headless proof-of-work. Integrators **start_session** (calibrate | learn | verify), **upload_proof_of_work** into that session, then **end_session**. The server prepares the answers-model tree, infers the path (catalogs 4 / 8 / 16), enforces the clock, and persists a flow embedding. Snapshot and Stash are not public agent APIs.
+Uncertain Systems public agent surface is Learning Map and flow management (REST /api/v3/workspaces and MCP). Headless start_session / upload_proof_of_work / end_session are not public agent APIs. Snapshot and Stash are not public agent APIs.
 
-Integrators may use **REST** (Bearer API key: POST .../sessions, POST .../sessions/{session_id}/proof-of-work, POST .../sessions/{session_id}/end) or **MCP** (JSON-RPC tools start_session, upload_proof_of_work, end_session) with identical semantics. Document REST paths in contracts; the platform also attaches continuous_evaluation_mcp with those tool names after generation — your continuous_evaluation_summary must mention both surfaces.
+Document map and flow REST paths in contracts. The platform also attaches continuous_evaluation_mcp with create_flow, link_flow, and apply_map_tool after generation — your continuous_evaluation_summary must mention those surfaces.
 
 Use the full workspace context: attached JSON summary, block titles/descriptions, existing proof of work patterns, plan files, and Think Aloud Protocol (TAP) session signals when present. TAP and TAP Learning may inform scoring — but score report remediation (gaps, next_steps, suggestions) must stay product-independent: never recommend TAP sessions, block completion, TAP Learning, or other Uncertain Systems platform mechanics.
 
@@ -382,27 +382,24 @@ Output rules:
 1. "schema" is the primary/default JSON Schema (draft-07) for the main tool proof-of-work payload placed in the proof of work upload "data" field (base64-encoded JSON).
 2. "tool_submissions" must list one or more formal tool submission specs. Include separate entries when the workspace implies multiple tools, workflows, or block-specific payloads. Each entry needs tool_name, purpose, when_to_submit, schema, example_payload, and optional block_ids tying submissions to workspace blocks.
 3. Align every schema with workspace blocks, root topic, notes, and any tool names already present in proof-of-work history.
-4. "proof_of_work_upload_contract" must formally describe POST .../sessions/{session_id}/proof-of-work:
-   - endpoint_pattern: "POST /api/v3/pow/workspaces/{workspace_id}/sessions/{session_id}/proof-of-work"
+4. "proof_of_work_upload_contract" describes in-app session recording, not a public agent upload:
+   - endpoint_pattern: "in-app session UI"
    - encoding: "base64"
    - proof_of_work_types: tool (${PROOF_OF_WORK_MIME_BY_TYPE.tool.join(", ")}), screen (${PROOF_OF_WORK_MIME_BY_TYPE.screen.join(", ")}), video (${PROOF_OF_WORK_MIME_BY_TYPE.video.join(", ")}), eeg (${PROOF_OF_WORK_MIME_BY_TYPE.eeg.join(", ")}) with when_to_use guidance. Stored types are ${WORKSPACE_PROOF_OF_WORK_TYPES.join(" | ")}. Model version ${POW_MODEL_VERSION}.
    - common_fields: type, mime_type, data, file_name, block_id, session_id, timestamp_ms, tool_name, tool_action, metadata, pow_model_version
-5. Optimize payloads for path inference on the prepared answers-model tree: time-ordered events, tool_action, metadata.prompt, decision rationale. Catalog sizes 4 / 8 / 16. Expired sessions reject further work.
-6. "performance_report_contract" must formally describe POST .../sessions/{session_id}/end (MCP end_session):
-   - endpoint_pattern: "POST /api/v3/pow/workspaces/{workspace_id}/sessions/{session_id}/end"
+5. Optimize payloads for path inference on the prepared answers-model tree: time-ordered events, tool_action, metadata.prompt, decision rationale. In-app session outcomes still include answers_model, sequence, remaining_ms, and embedding. Catalog sizes 4 / 8 / 16. Expired sessions reject further work.
+6. "performance_report_contract" must formally describe Helios map tools (MCP apply_map_tool):
+   - endpoint_pattern: "POST /api/v3/workspaces/{workspace_id}/map-tools"
    - response_mode: "score"
-   - required_fields: session_id, flow_kind, remaining_ms, sequence, answers_model, embedding
-   - answers_model: prepared tree (catalog_size, focus_id, branch_count)
-   - sequence: inferred path from proof plus actions
-   - embedding: flowcfg-v1-d96 after end_session
-   Do not document Snapshot or Stash as public agent APIs.
-7. "collection_guidance" explains cadence: start_session → upload_proof_of_work (repeat until the clock expires) → end_session. More events during a live session improve the inferred path. When learning world model evidence appetite is provided above, bias collection_guidance and tool_submissions toward want_more types and de-emphasize saturated types.
+   - required_fields: workspace_id, tool, tool_calls
+   Do not document Snapshot, Stash, or headless sessions as public agent APIs.
+7. "collection_guidance" explains cadence: create_workspace or get_workspace → list_map_tools / apply_map_tool → create_flow → link_flow. Proof of work is recorded in the product UI. When learning world model evidence appetite is provided above, bias collection_guidance and tool_submissions toward want_more types and de-emphasize saturated types.
 8. "continuous_evaluation_summary" must state clearly that:
-   - This proof-of-work spec is derived from current workspace context and proof-of-work history
-   - Integrators run **start_session** (REST POST .../sessions / MCP start_session) then **upload_proof_of_work** then **end_session**
+   - This spec is derived from current workspace context
+   - Integrators run **create_flow** then **link_flow** then **apply_map_tool**
    - Integrators must **regenerate** POST .../integration-skill (REST) or generate_integration_skill (MCP) so skill.md stays aligned
-   - Progress tracking uses get_session / end_session — remaining_ms, sequence, answers_model, embedding
-   - get_workspace (MCP) orients agents before start_session
+   - Progress tracking uses get_workspace and list_flows
+   - get_workspace (MCP) orients agents before create_flow
    - Continuous evaluation is the intended operating model, not a one-time setup
 9. schema_name must be snake_case prefixed with "eval_input_".
 10. Keep required_fields practical; use optional_fields for enrichments.

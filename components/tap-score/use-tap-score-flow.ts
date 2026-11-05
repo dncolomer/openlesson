@@ -38,7 +38,7 @@ import type { SessionPolicySnapshot } from "@/components/session-view/session-po
 import { loadSessionBranchField, sessionClockMayStart } from "@/lib/session-branch-field-load";
 import { verificationFieldPrepareInput } from "@/lib/session-branch-prepare";
 import { localVerificationOpening } from "@/lib/verification-flow";
-import type { TapProductKind } from "@/lib/tap-session-runtime";
+import { tapSessionRuntimePaths, type TapProductKind } from "@/lib/tap-session-runtime";
 
 /** Live TAP dialog session — data + one apply, not a setter-host bag. */
 export type TapScoreSession = {
@@ -188,7 +188,7 @@ async function postVerificationCanvasAsk(
       ],
     });
   }
-  const response = await fetch("/api/workspace-tap-score/chat", {
+  const response = await fetch(tapSessionRuntimePaths(s.kind).chat, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -260,7 +260,7 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
     }
     try {
       const workCanvasScene = serializeTapWorkCanvasScene(s.workCanvasSceneRef.current);
-      const response = await fetch("/api/workspace-tap-score/chat", {
+      const response = await fetch(tapSessionRuntimePaths(s.kind).chat, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -425,7 +425,7 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
         topicId: topic?.id,
         topicTitle: topic?.title,
         conversationLanguage: s.conversationLanguage,
-      });
+      }, s.kind);
       if (!ok) throw new Error(errorMessageFromBody(payload, "Could not start Verify session"));
       if (payload.tapSessionId) {
         s.tapSessionIdRef.current = String(payload.tapSessionId);
@@ -598,7 +598,7 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
         requestedDurationSeconds: s.liveMinutes * 60,
         sessionQuality: impure ? "impure" : "pure",
         impure,
-      });
+      }, s.kind);
       if (!ok) throw new Error(errorMessageFromBody(payload, "Could not save Verify session"));
       releaseSessionLocalMemory(s.sessionId);
 

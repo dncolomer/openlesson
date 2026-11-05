@@ -2,10 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  buildVerificationFlowSkillMarkdown,
-  verificationFlowSkillFilename,
-} from "@/lib/verification-flow";
 import { FLOW_COUNTDOWN_MINUTES, flowCountdownMinutes } from "@/lib/flow-countdown";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import {
@@ -38,15 +34,6 @@ type LoadedFlow = {
   workspaceId: string;
 };
 
-function downloadText(filename: string, content: string, mimeType: string) {
-  const blob = new Blob([content], { type: mimeType });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.click();
-  URL.revokeObjectURL(url);
-}
 
 export function ProductFlowPage({
   kind,
@@ -317,33 +304,6 @@ export function ProductFlowPage({
             >
               Save flow
             </button>
-            {kind === "verification" && flow ? (
-              <button
-                type="button"
-                data-verification-flow-skill
-                className={FLOW_GHOST_BTN}
-                onClick={() => {
-                  const skill = buildVerificationFlowSkillMarkdown({
-                    workspaceId: flow.workspaceId,
-                    flowId: flow.id,
-                    topic: topic || name,
-                    questions: draftQuestions
-                      .map((text) => text.trim())
-                      .filter(Boolean)
-                      .map((text, index) => ({ id: `q-${index + 1}`, text })),
-                    publicToken: flow.publicToken,
-                    baseUrl: window.location.origin,
-                  });
-                  downloadText(
-                    verificationFlowSkillFilename(topic || name),
-                    skill,
-                    "text/markdown;charset=utf-8",
-                  );
-                }}
-              >
-                Generate skill
-              </button>
-            ) : null}
             <button
               type="button"
               data-verification-flow-remove={kind === "verification" ? "" : undefined}

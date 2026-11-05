@@ -13,7 +13,7 @@ describe("mcp oauth metadata", () => {
     const metadata = buildProtectedResourceMetadata("https://uncertain.systems");
     expect(metadata.resource).toBe("https://uncertain.systems/api/mcp");
     expect(metadata.authorization_servers).toEqual(["https://uncertain.systems"]);
-    expect(metadata.scopes_supported).toContain("workspaces:read");
+    expect(metadata.scopes_supported).toContain("*");
   });
 
   it("exposes authorization server metadata with OAuth endpoints", () => {
@@ -44,11 +44,6 @@ describe("mcp oauth helpers", () => {
   });
 
   it("defaults requested scopes when none are provided", () => {
-    expect(parseRequestedScopes(undefined)).toEqual([
-      "workspaces:read",
-      "workspaces:write",
-      "tap:read",
-      "tap:write",
-    ]);
+    expect(parseRequestedScopes(undefined)).toEqual(["*"]);
   });
 });

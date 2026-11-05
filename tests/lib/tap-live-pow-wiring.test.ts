@@ -52,7 +52,7 @@ describe("TAP live PoW after map/stash UI swap", () => {
 
     const client = read("components/TapScoreClient.tsx");
     expect(client).toContain("tapTracePayload");
-    expect(client).toContain('"/api/workspace-tap-score/trace"');
+    expect(client).toContain("tapSessionRuntimePaths(kind).trace");
     expect(client).toContain('traceType: "system1"');
     expect(client).toContain("addThought");
     expect(client).toContain("stashCurrentTranscription");

@@ -841,11 +841,11 @@ describe("verification workspace shell gates", () => {
     expect(flows).toContain("CopyFlowUrlButton");
     expect(read("components/CalibrationFlowsPanel.tsx")).toContain("CopyFlowUrlButton");
     expect(read("components/product-flow/copy-flow-url-button.tsx")).toContain("data-flow-copy-url");
-    expect(flows).toContain("data-verification-flow-skill");
-    expect(flows).toContain("Generate skill");
-    expect(flows).toContain("buildVerificationFlowSkillMarkdown");
-    expect(flows).toContain("verificationFlowSkillFilename");
-    expect(flows).toContain("anchor.download = filename");
+    expect(flows).not.toContain("data-verification-flow-skill");
+    expect(flows).not.toContain("Generate skill");
+    expect(flows).not.toContain("buildVerificationFlowSkillMarkdown");
+    expect(flows).not.toContain("verificationFlowSkillFilename");
+    expect(flows).not.toContain("anchor.download = filename");
     expect(flows).not.toContain("<pre");
     const hosts = read("components/workspace-view/workspace-section-hosts.tsx");
     expect(hosts).not.toContain("VerificationFlowsPanel");

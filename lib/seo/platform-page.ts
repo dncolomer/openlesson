@@ -133,7 +133,7 @@ export const PLATFORM_PAGE: SeoPlatformPageConfig = {
     },
   ],
   primaryCta: { label: "Create a Workspace", href: "/workspace/new" },
-  secondaryCta: { label: "Proof-of-Work API docs", href: "/docs/proof-of-work-api" },
+  secondaryCta: { label: "Learning Map API docs", href: "/docs/learning-map-api" },
   closingTitle: "Verify learning. Augment where it breaks.",
   closingBody:
     "Stop trusting outputs and completion rates. Use software tools in a knowledge workspace to verify learning with proof of work, and augment it until scores move.",

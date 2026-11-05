@@ -20,6 +20,7 @@ import {
 } from "@/lib/pow-api/pow-model-agent-contract";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { publicDocInstructsHeadlessPowLoop } from "@/tests/helpers/public-agent-docs";
 import { POW_MODEL_VERSION } from "@/lib/pow-api/workspace-proof-of-work";
 import { ILE_SPEECH_TOOL_NAME, ILE_TRACE_TOOL_NAME } from "@/lib/learn-thought-traces";
 import {
@@ -34,26 +35,6 @@ const SKILL_REQUEST = {
   base_url: "https://uncertain.systems",
   eval_definition: "Verify partner workflow",
 };
-
-type VersionedMcpTool = {
-  name: string;
-  description: string;
-  inputSchema: {
-    required: readonly string[];
-    properties: {
-      pow_model_version?: {
-        description?: string;
-        enum?: readonly string[];
-      };
-    };
-  };
-};
-
-function mcpTool(name: string): VersionedMcpTool {
-  const tool = MCP_EVIDENCE_TOOLS.find((entry) => entry.name === name);
-  expect(tool, name).toBeTruthy();
-  return tool as unknown as VersionedMcpTool;
-}
 
 describe("pow-model-v1 agent contract on skill and MCP", () => {
   const contract = powModelAgentSimulationContract();
@@ -116,9 +97,9 @@ describe("pow-model-v1 agent contract on skill and MCP", () => {
     const copy = knowledgeRegionIntegrationCopy();
 
     expect(standard).not.toContain(CANVAS_TAP_SIMULATION_HEADING);
-    expect(standard).toContain("Learning workspace");
+    expect(standard).toContain("Learning Map");
     expect(knowledgeRegion).not.toContain(CANVAS_TAP_SIMULATION_HEADING);
-    expect(knowledgeRegion).toContain("Learning workspace");
+    expect(knowledgeRegion).toContain("Learning Map");
     expect(standard).not.toContain(POW_MODEL_VERSION);
     expect(knowledgeRegion).not.toContain(POW_MODEL_VERSION);
     expect(copy.skillDescription).not.toContain(contract);
@@ -126,13 +107,13 @@ describe("pow-model-v1 agent contract on skill and MCP", () => {
     expect(copy.skillDescription).not.toContain(CANVAS_TAP_SIMULATION_HEADING);
     expect(textExposesKnowledgeLinkMint(knowledgeRegion)).toBe(false);
     expect(textExposesKnowledgeLinkMint(copy.skillDescription)).toBe(false);
-    expect(knowledgeRegion).toContain("upload_proof_of_work");
-    expect(knowledgeRegion).toContain("start_session");
+    expect(knowledgeRegion).toContain("create_flow");
+    expect(knowledgeRegion).toContain("link_flow");
     expect(knowledgeRegion).not.toContain("buffer_proof_of_work");
     expect(knowledgeRegion).not.toContain("create_tap_link");
     expect(standard).not.toContain("create_tap_link");
     expect(standard).toContain("list_blocks");
-    expect(standard).toContain("upload_proof_of_work");
+    expect(standard).toContain("create_flow");
   });
 
   it("appends the canvas tool catalog to the skill an agent downloads", () => {
@@ -158,26 +139,35 @@ describe("pow-model-v1 agent contract on skill and MCP", () => {
     const root = join(__dirname, "../..");
     for (const rel of [
       "app/api/workspace/integration-skill/route.ts",
-      "app/api/v3/pow/workspaces/[id]/integration-skill/route.ts",
-      "lib/pow-api/mcp-tools/dispatch.ts",
     ]) {
       const src = readFileSync(join(root, rel), "utf8");
       expect(existsSync(join(root, rel))).toBe(true);
-      expect(src).toContain("withCanvasTapSimulationSkill(skillResult.text)");
+      expect(src).not.toContain("withCanvasTapSimulationSkill(skillResult.text)");
+      expect(src).toContain("skillResult.text");
     }
   });
 
-  it("states the same contract on MCP upload_proof_of_work, including the version field", () => {
-    const tool = mcpTool("upload_proof_of_work");
-    const version = tool.inputSchema.properties.pow_model_version;
-    expect(tool.description).toContain(contract);
-    expect(tool.inputSchema.required).toContain("session_id");
-    expect(version?.enum).toEqual([POW_MODEL_VERSION]);
-    expect(version?.description).toContain(contract);
-    expect(version?.description).toContain(`Must be ${POW_MODEL_VERSION}`);
-    expect(version?.description?.toLowerCase()).not.toContain("optional");
-    const summary = AGENT_TOOL_SURFACE.find((entry) => entry.name === "upload_proof_of_work")?.summary;
-    expect(summary).toContain(contract);
+  it("does not expose headless upload_proof_of_work on the public MCP catalog", () => {
+    expect(MCP_EVIDENCE_TOOLS.map((entry) => entry.name)).not.toContain("upload_proof_of_work");
     expect(MCP_EVIDENCE_TOOLS.map((entry) => entry.name)).not.toContain("buffer_proof_of_work");
+    expect(MCP_EVIDENCE_TOOLS.map((entry) => entry.name)).toContain("create_flow");
+    expect(AGENT_TOOL_SURFACE.find((entry) => entry.name === "upload_proof_of_work")).toBeUndefined();
+  });
+
+  it("public skill.md, integrations guide, and linked policies do not instruct the headless PoW loop", () => {
+    const root = join(__dirname, "../..");
+    const files = [
+      "public/skill.md",
+      "docs/PROOF_OF_WORK_API.md",
+      "public/docs/proof-of-work-api-guide.md",
+      "app/docs/proof-of-work-api/page.tsx",
+      "public/customer-agent-uncertain-systems-policy.md",
+      "public/pumaclaw-mentor-uncertain-systems-policy.md",
+    ];
+    for (const rel of files) {
+      const src = readFileSync(join(root, rel), "utf8");
+      expect(src, rel).toContain("create_flow");
+      expect(publicDocInstructsHeadlessPowLoop(src), rel).toBe(false);
+    }
   });
 });

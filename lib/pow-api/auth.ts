@@ -111,7 +111,7 @@ export async function authenticateApiKey(
     return errorResponse(
       403,
       "api_plan_required",
-      "Proof-of-Work API organization and guest features require the Teams tier.",
+      "The Learning Map API requires an active API Metered plan.",
       { renew_url: "https://uncertain.systems/pricing" }
     );
   }

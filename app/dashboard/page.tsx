@@ -346,9 +346,9 @@ export default function DashboardPage() {
           console.error("Failed to load usage data:", err);
         }
 
-      // Load Proof-of-Work API keys (v2 Teams tier)
+      // Load Learning Map API keys (API Metered)
       try {
-        const keysRes = await fetch("/api/v3/pow/keys");
+        const keysRes = await fetch("/api/dashboard/api-keys");
         if (keysRes.ok) {
           const keysPayload = await keysRes.json();
           const keys = (keysPayload.keys || []).filter((key: AgentApiKey) => key.is_active !== false);
@@ -424,7 +424,7 @@ export default function DashboardPage() {
     if (!newKeyName.trim()) return;
     setCreatingKey(true);
     try {
-      const res = await fetch("/api/v3/pow/keys", {
+      const res = await fetch("/api/dashboard/api-keys", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ label: newKeyName.trim() }),
@@ -465,7 +465,7 @@ export default function DashboardPage() {
   const handleDeleteApiKey = async (id: string) => {
     if (!confirm(t('dashboard.deleteApiKeyConfirm'))) return;
     try {
-      await fetch(`/api/v3/pow/keys/${id}`, { method: "DELETE" });
+      await fetch(`/api/dashboard/api-keys/${id}`, { method: "DELETE" });
       setApiKeys((prev) => prev.filter((k) => k.id !== id));
     } catch (err) {
       console.error("Failed to delete key:", err);

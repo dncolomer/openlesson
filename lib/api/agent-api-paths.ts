@@ -1,12 +1,14 @@
 /**
- * Public agent REST families (v3):
- *   - Workspace management  `/api/v3/workspaces` (+ `/api/v3/account`)
- *   - Headless proof-of-work `/api/v3/pow`
+ * Public agent REST family (v3):
+ *   - Learning Map management `/api/v3/workspaces`
+ *   - Independent Solve / Calibration / Verification flows `/api/v3/flows`
  *
- * Snapshot and Stash families are retired. They are not public agent APIs.
+ * Headless proof-of-work (`/api/v3/pow` sessions), Snapshot, and Stash are
+ * not public agent APIs. API-key CRUD stays on `/api/dashboard/api-keys` (browser session).
  */
 
 export const WORKSPACE_API_BASE = "/api/v3/workspaces" as const;
+export const FLOW_API_BASE = "/api/v3/flows" as const;
 export const ACCOUNT_API_BASE = "/api/v3/account" as const;
 export const POW_API_BASE = "/api/v3/pow" as const;
 /** Retired Snapshot API family. Kept so tests can assert the tree is gone. */
@@ -14,8 +16,8 @@ export const SNAPSHOT_API_BASE = "/api/v3/snapshot" as const;
 /** Retired Stash API family. Kept so tests can assert the tree is gone. */
 export const STASH_API_BASE = "/api/v3/stash" as const;
 
-/** Public agent REST families. Snapshot / Stash are excluded. */
-export const PUBLIC_AGENT_API_FAMILIES = ["workspace", "pow"] as const;
+/** Public agent REST families. PoW sessions, Snapshot, and Stash are excluded. */
+export const PUBLIC_AGENT_API_FAMILIES = ["workspace"] as const;
 export type PublicAgentApiFamily = (typeof PUBLIC_AGENT_API_FAMILIES)[number];
 
 /** @deprecated Use SNAPSHOT_API_BASE — former Evaluation API base name. */

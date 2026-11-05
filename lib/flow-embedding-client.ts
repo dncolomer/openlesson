@@ -1,4 +1,5 @@
 import type { FlowKind, FlowPowRow } from "@/lib/flow-embedding";
+import { solvePublicApiPath } from "@/lib/session-pow-api-paths";
 import type { FlowEmbeddingViewRow } from "@/lib/flow-embedding-view";
 import type { SessionBranchModel } from "@/lib/session-branch-model";
 
@@ -16,7 +17,7 @@ export async function postSolveFlowEmbedding(input: {
   if (!solveToken || !sessionId) return { ok: false };
   try {
     const response = await fetch(
-      `/api/solve-flow/public/${encodeURIComponent(solveToken)}/embed`,
+      `${solvePublicApiPath(solveToken)}/embed`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

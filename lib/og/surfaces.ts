@@ -59,6 +59,10 @@ export const OG_SURFACES: Record<string, OgSurface> = {
     "docs-proof-of-work-api",
     "/docs/proof-of-work-api",
   ),
+  "docs-learning-map-api": standardSurface(
+    "docs-learning-map-api",
+    "/docs/learning-map-api",
+  ),
   insight: standardSurface("insight", "/insights/[id]"),
   "public-workspace": standardSurface("public-workspace", "/p/[id]/[slug]"),
 };
@@ -72,6 +76,7 @@ export const REQUIRED_SHARE_SURFACE_IDS = [
   "vision",
   "science",
   "docs-proof-of-work-api",
+  "docs-learning-map-api",
   "insight",
   "public-workspace",
 ] as const;

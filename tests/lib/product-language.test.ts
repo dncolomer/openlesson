@@ -271,7 +271,7 @@ describe("retired product language is gone from shipped prose", () => {
   it("prompt inventory and kernel scores drop TAP Learning", () => {
     expect(read("data/prompt-inventory.json")).not.toContain("TAP Learning");
     expect(read("lib/prompt-kernel/scores.ts")).not.toContain("TAP Learning");
-    expect(read("public/skill.md")).toContain("sessions:read");
+    expect(read("public/skill.md")).toContain("full-access");
     expect(read("public/skill.md")).not.toContain("tap:read");
   });
 

@@ -2,7 +2,10 @@
  * Shared TAP session runtime decisions for conversational + exercise shells.
  */
 
-import { TAP_POW_API_PATHS } from "@/lib/session-pow-api-paths";
+import {
+  CALIBRATE_POW_API_PATHS,
+  VERIFY_POW_API_PATHS,
+} from "@/lib/session-pow-api-paths";
 
 export type TapRuntimePhase = "briefing" | "live" | "complete";
 
@@ -20,15 +23,13 @@ export function tapHookFormingText(hook: { getFormingText?: () => string }): str
   return typeof text === "string" ? text.trim() : "";
 }
 
-/** Start / complete / speech / idle — both TAP shells POST these paths. */
-export const TAP_SESSION_RUNTIME_PATHS = {
-  start: "/api/workspace-tap-score/start",
-  complete: "/api/workspace-tap-score/complete",
-  speech: TAP_POW_API_PATHS.speech,
-  idle: TAP_POW_API_PATHS.idle,
-  canvas: "/api/workspace-tap-score/canvas",
-  scoutQuestions: "/api/workspace-tap-score/scout-questions",
-} as const;
+/** Start / complete / speech / idle — Calibrate vs Verify use matching prefixes. */
+export function tapSessionRuntimePaths(kind: TapProductKind = "scored") {
+  return kind === "verify" ? VERIFY_POW_API_PATHS : CALIBRATE_POW_API_PATHS;
+}
+
+/** Default TAP runtime paths (Calibrate / scored). Verify callers pass kind. */
+export const TAP_SESSION_RUNTIME_PATHS = tapSessionRuntimePaths("scored");
 
 export function shouldIncludePracticeOnTapTrace(input: {
   practice: boolean;

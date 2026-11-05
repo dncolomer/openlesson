@@ -8,11 +8,9 @@ import { describe, expect, it } from "vitest";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import {
-  ACCOUNT_API_BASE,
-  POW_API_BASE,
+  FLOW_API_BASE,
   PUBLIC_AGENT_API_FAMILIES,
   WORKSPACE_API_BASE,
-  powWorkspaceResource,
 } from "@/lib/api/agent-api-paths";
 import { MCP_EVIDENCE_TOOLS } from "@/lib/pow-api/mcp-proof-of-work-server";
 import { MCP_PROOF_OF_WORK_TOOL_CATALOG } from "@/lib/pow-api/mcp-proof-of-work-catalog";
@@ -41,7 +39,7 @@ describe("lib/pow-api package path (renamed from agent-v2)", () => {
   it("v3/MCP routes import from @/lib/pow-api not agent-v2", () => {
     const samples = [
       "app/api/mcp/route.ts",
-      "app/api/v3/pow/workspaces/[id]/sessions/route.ts",
+      "app/api/v3/flows/route.ts",
       "app/api/v3/workspaces/route.ts",
     ];
     for (const rel of samples) {
@@ -69,6 +67,7 @@ function restPathToRouteFile(path: string): string {
   const fsPath = withoutApi
     .replace(/\{workspace_id\}/g, "[id]")
     .replace(/\{session_id\}/g, "[sessionId]")
+    .replace(/\{flow_id\}/g, "[flowId]")
     .replace(/\{block_id\}/g, "[blockId]")
     .replace(/\{id\}/g, "[id]");
   // Collection GET /workspaces has no trailing resource
@@ -93,9 +92,10 @@ describe("API ↔ MCP surface contract (shipped code)", () => {
 
   it("every agent tool has a corresponding existing v3 REST route, including create", () => {
     expect(agentToolNames()).toContain("create_workspace");
-    expect([...PUBLIC_AGENT_API_FAMILIES]).toEqual(["workspace", "pow"]);
+    expect(agentToolNames()).toContain("create_flow");
+    expect([...PUBLIC_AGENT_API_FAMILIES]).toEqual(["workspace"]);
     for (const tool of AGENT_TOOL_SURFACE) {
-      expect(tool.family === "workspace" || tool.family === "pow").toBe(true);
+      expect(tool.family).toBe("workspace");
       const routeFile = restPathToRouteFile(tool.rest.path);
       expect(existsSync(routeFile), `${tool.name} → ${tool.rest.path} missing ${routeFile}`).toBe(
         true,
@@ -104,31 +104,20 @@ describe("API ↔ MCP surface contract (shipped code)", () => {
   });
 
   it("path builders resolve to existing public agent route handlers", () => {
-    const workspaceId = "ws-test";
     const cases: { built: string; routeRel: string }[] = [
       {
         built: WORKSPACE_API_BASE,
         routeRel: "app/api/v3/workspaces/route.ts",
       },
       {
-        built: ACCOUNT_API_BASE,
-        routeRel: "app/api/v3/account/route.ts",
-      },
-      {
-        built: powWorkspaceResource(workspaceId, "sessions"),
-        routeRel: "app/api/v3/pow/workspaces/[id]/sessions/route.ts",
-      },
-      {
-        built: powWorkspaceResource(workspaceId, "flow-embeddings"),
-        routeRel: "app/api/v3/pow/workspaces/[id]/flow-embeddings/route.ts",
+        built: FLOW_API_BASE,
+        routeRel: "app/api/v3/flows/route.ts",
       },
     ];
 
     for (const { built, routeRel } of cases) {
       expect(
-        built.startsWith(WORKSPACE_API_BASE) ||
-          built.startsWith(ACCOUNT_API_BASE) ||
-          built.startsWith(POW_API_BASE),
+        built.startsWith(WORKSPACE_API_BASE) || built.startsWith(FLOW_API_BASE),
       ).toBe(true);
       expect(existsSync(join(ROOT, routeRel))).toBe(true);
     }
@@ -173,7 +162,7 @@ describe("API ↔ MCP surface contract (shipped code)", () => {
     ).toBe(false);
   });
 
-  it("MCP public tools are workspace management + headless PoW only", () => {
+  it("MCP public tools are Learning Map and flow management only", () => {
     const mcpNames = new Set(MCP_EVIDENCE_TOOLS.map((t) => t.name));
     for (const name of [
       "create_workspace",
@@ -184,19 +173,24 @@ describe("API ↔ MCP surface contract (shipped code)", () => {
       "apply_map_tool",
       "get_workspace_settings",
       "update_workspace_settings",
-      "get_account_settings",
-      "update_account_settings",
+      "list_flows",
+      "create_flow",
+      "get_flow",
+      "update_flow",
+      "delete_flow",
+      "link_flow",
+    ] as const) {
+      expect(mcpNames.has(name)).toBe(true);
+    }
+    const mcpNameList = MCP_EVIDENCE_TOOLS.map((t) => t.name);
+    for (const name of [
       "start_session",
       "get_session",
       "upload_proof_of_work",
       "end_session",
       "list_flow_embeddings",
       "get_flow_embedding",
-    ] as const) {
-      expect(mcpNames.has(name)).toBe(true);
-    }
-    const mcpNameList = MCP_EVIDENCE_TOOLS.map((t) => t.name);
-    for (const name of [
+      "generate_proof_of_work_schema",
       "lwm_snapshot",
       "get_world_model",
       "buffer_proof_of_work",
@@ -220,19 +214,21 @@ describe("API ↔ MCP surface contract (shipped code)", () => {
     ).toBe(false);
   });
 
-  it("headless PoW upload uses the session ingest helper", () => {
-    const src = readFileSync(
-      join(ROOT, "app/api/v3/pow/workspaces/[id]/sessions/[sessionId]/proof-of-work/route.ts"),
-      "utf8",
-    );
-    expect(src).toMatch(/ingestHeadlessProofForWorkspace/);
-    expect(src).not.toMatch(/uploadFileToXAI/);
+  it("public PoW session upload routes are deleted", () => {
+    expect(
+      existsSync(
+        join(ROOT, "app/api/v3/pow/workspaces/[id]/sessions/[sessionId]/proof-of-work/route.ts"),
+      ),
+    ).toBe(false);
+    expect(existsSync(join(ROOT, "lib/pow-api/public-pow-retired.ts"))).toBe(false);
   });
 
-  it("MCP upload_proof_of_work uses the same headless ingest helper", () => {
+  it("MCP catalog does not expose headless proof ingest", () => {
     const src = readMcpSurface();
-    expect(src).toMatch(/ingestHeadlessProofForWorkspace/);
-    expect(src).not.toMatch(/uploadFileToXAI/);
+    expect(src).not.toMatch(/name === "upload_proof_of_work"/);
+    expect(src).not.toMatch(/name === "start_session"/);
+    expect(src).toContain("create_flow");
+    expect(src).toContain("link_flow");
   });
 
   it("MCP dispatch does not implement Snapshot, Stash, or TAP-link tools", () => {

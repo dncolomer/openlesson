@@ -114,7 +114,7 @@ describe("Knowledge distance surfaces", () => {
   it("public agent docs do not catalog knowledge-distance as an agent API", () => {
     const docs = read("docs/PROOF_OF_WORK_API.md");
     expect(docs).not.toContain("knowledge-distance");
-    expect(docs).toContain("start_session");
+    expect(docs).toContain("create_flow");
     expect(
       existsSync(join(ROOT, "app/api/v3/snapshot/workspaces/[id]/knowledge-distance/route.ts")),
     ).toBe(false);

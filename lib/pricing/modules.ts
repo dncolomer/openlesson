@@ -280,7 +280,7 @@ export function planFeatureList(plan: string | null | undefined): string[] {
   if (modules.includes("calibrate")) features.push("Calibration flows and knowledge regions");
   if (plan === "trial") features.unshift("All modules for 3 days");
   if (plan === "api_metered") {
-    features.push("Proof-of-Work API keys + MCP");
+    features.push("Learning Map API keys + MCP");
     features.push("$99/mo platform + usage");
   }
   if (features.length === 0) {

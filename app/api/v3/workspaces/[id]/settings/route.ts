@@ -5,7 +5,6 @@ import {
   presentManagedWorkspace,
   updateManagedWorkspace,
 } from "@/lib/pow-api/workspace-management";
-import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruption";
 
 export const runtime = "nodejs";
 
@@ -21,12 +20,7 @@ export async function GET(req: NextRequest, { params }: RouteProps) {
   const workspace = await loadManagedWorkspace(supabase, auth, workspaceId);
   if (!workspace) return errorResponse(404, "workspace_not_found", "Workspace not found");
   const presented = presentManagedWorkspace(workspace as Record<string, unknown>);
-  return NextResponse.json(
-    await withProofOfWorkApiResponse(
-      { workspace_id: workspaceId, settings: presented.settings },
-      { endpoint: "get_workspace_settings", workspace_id: workspaceId },
-    ),
-  );
+  return NextResponse.json({ workspace_id: workspaceId, settings: presented.settings });
 }
 
 export async function PATCH(req: NextRequest, { params }: RouteProps) {
@@ -42,10 +36,8 @@ export async function PATCH(req: NextRequest, { params }: RouteProps) {
   }
   const updated = await updateManagedWorkspace(supabase, auth, workspaceId, body);
   if (!updated) return errorResponse(404, "workspace_not_found", "Workspace not found");
-  return NextResponse.json(
-    await withProofOfWorkApiResponse(
-      { workspace_id: workspaceId, settings: updated.workspace.settings },
-      { endpoint: "update_workspace_settings", workspace_id: workspaceId },
-    ),
-  );
+  return NextResponse.json({
+    workspace_id: workspaceId,
+    settings: updated.workspace.settings,
+  });
 }

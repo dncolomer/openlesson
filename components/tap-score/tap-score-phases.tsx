@@ -350,6 +350,7 @@ export function TapScorePhases(props: {
           tapSessionId,
           entryQueryParams,
           practice: false,
+          kind,
           item,
         });
       }
@@ -357,6 +358,7 @@ export function TapScorePhases(props: {
     [
       blockId,
       entryQueryParams,
+      kind,
       privateToken,
       sessionId,
       tapSessionId,
@@ -387,6 +389,7 @@ export function TapScorePhases(props: {
           tapSessionId,
           entryQueryParams,
           practice: false,
+          kind,
           item,
         });
       }, ILE_POW_DEBOUNCE_MS);
@@ -394,6 +397,7 @@ export function TapScorePhases(props: {
     [
       blockId,
       entryQueryParams,
+      kind,
       privateToken,
       sessionId,
       tapSessionId,

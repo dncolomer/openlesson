@@ -94,12 +94,11 @@ describe("live surfaces use the org-scoped Files path", () => {
     }
   });
 
-  it("thought-trace and headless ingest still go through the shared PoW uploader", () => {
+  it("thought-trace still goes through the shared PoW uploader", () => {
     expect(read("app/api/workspace-tap-score/trace/route.ts")).toContain(
       "uploadWorkspaceProofOfWork",
     );
-    expect(read("lib/pow-api/headless-session.ts")).toContain("uploadWorkspaceProofOfWork");
-    expect(read("lib/pow-api/mcp-tools/dispatch.ts")).toContain(
+    expect(read("lib/pow-api/mcp-tools/dispatch.ts")).not.toContain(
       "ingestHeadlessProofForWorkspace",
     );
   });

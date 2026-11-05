@@ -419,8 +419,8 @@ describe("dashboard platform surface", () => {
     expect(readRepo("components/product-flow/product-flow-wizard.tsx")).toContain(
       "Generate questions from this topic",
     );
-    expect(readRepo("components/product-flow/product-flow-page.tsx")).toContain("data-verification-flow-skill");
-    expect(readRepo("components/product-flow/product-flow-page.tsx")).toContain("Generate skill");
+    expect(readRepo("components/product-flow/product-flow-page.tsx")).not.toContain("data-verification-flow-skill");
+    expect(readRepo("components/product-flow/product-flow-page.tsx")).not.toContain("Generate skill");
     expect(readRepo("components/product-flow/product-flow-page.tsx")).toContain(
       "data-calibration-flow-add-question",
     );

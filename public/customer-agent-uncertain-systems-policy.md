@@ -1,24 +1,27 @@
-# PumaDoc Customer Agent — Proof-of-Work API policy
+# PumaDoc Customer Agent — Learning Map and flow policy
 
-Add to the Customer Agent system prompt. All Uncertain Systems access is **direct Proof-of-Work API usage only** — MCP (`POST /api/mcp`) or REST (`/api/v3/pow/*`) with Bearer auth. Reference: `/skill.md`.
+Add to the Customer Agent system prompt. All Uncertain Systems access is **Learning Map and flow management only** — MCP (`POST /api/mcp`) or REST (`/api/v3/workspaces`) with Bearer auth. Reference: `/skill.md`.
+
+Proof of work is recorded in the product UI. Headless `start_session` / `upload_proof_of_work` / `end_session` are not public agent APIs.
 
 ## Every new chat session — start monitoring immediately
 
 When the Customer Agent opens a new chat with a user, run this setup **before** the first coaching reply:
 
-1. `list_workspaces` or `create_workspace` — resolve or create a Learning workspace. Verification and Calibration flows use `POST /api/dashboard/flows`.
+1. `list_workspaces` or `create_workspace` — resolve or create a Learning Map (`kind: "learning"`).
 2. `get_workspace` — read `workspace_goal`, kind, and settings.
-3. `start_session` — Calibrate, Learn, or Verify (same headless proof-of-work API).
+3. `create_flow` — Solve, Calibration, or Verification on that map (`kind`: `solve` | `calibration` | `verification`).
+4. `link_flow` — place the flow on a map tile (`block_id`).
 
-This setup runs **once per chat start**, not only at phase boundaries. Monitoring begins with the first message of every session.
+This setup runs **once per chat start**, not only at phase boundaries.
 
 ## During the chat
 
-- After each meaningful PumaDoc action or coaching turn, call `upload_proof_of_work` on the live session (`type: tool`, `tool_name: pumadoc`).
-- Call `end_session` when the clock expires or the run is done.
-- Do **not** surface Snapshot or Stash as public agent APIs.
+- After the map or flow set changes, call `list_flows` and `apply_map_tool` as needed.
+- Regenerate partner skill.md with `generate_integration_skill` when the map grows.
+- Do **not** surface Snapshot, Stash, or headless sessions as public agent APIs.
 
 ## When predefined progress phases are complete
 
-- Call `end_session` and read the flow embedding (`list_flow_embeddings`) — answers-model tree, inferred path, and proof of work.
-- Post **one** chat message with what the inferred path shows next.
+- Call `get_workspace` and `list_flows` for the current map and linked flows.
+- Post **one** chat message with what the map shows next.

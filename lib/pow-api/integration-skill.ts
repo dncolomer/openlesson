@@ -1,18 +1,10 @@
 import type { ProofOfWorkEvalSchemaResult, ProofOfWorkSchemaIntegrationHints } from "./proof-of-work-schema";
 import type { PerformanceContextPayload } from "./performance-context";
-import {
-  buildProofOfWorkSchemaApiPath,
-  buildProofOfWorkUploadApiPath,
-  buildIntegrationSkillApiPath,
-  buildPerformanceApiPath,
-  formatProofOfWorkSpecForSkillPrompt,
-} from "./proof-of-work-integration";
-import { POW_API_BASE, WORKSPACE_API_BASE } from "@/lib/api/agent-api-paths";
+import { buildIntegrationSkillApiPath } from "./proof-of-work-integration";
+import { FLOW_API_BASE, WORKSPACE_API_BASE } from "@/lib/api/agent-api-paths";
 import { isNoMapWorkspace } from "@/lib/workspace-kind";
 import { workspaceSupportsFeature } from "@/lib/workspace-capabilities";
 import { formatSkillMcpToolList } from "./agent-tool-surface";
-import { CANVAS_TAP_SIMULATION_HEADING } from "./pow-model-agent-contract";
-import { POW_MODEL_VERSION } from "./workspace-proof-of-work";
 
 export interface IntegrationSkillRequest {
   integration_name: string;
@@ -203,9 +195,9 @@ export function knowledgeRegionIntegrationCopy(): {
 } {
   return {
     skillDescription:
-      "Download a skill.md for this Verification flow. Agents use workspace management (/api/v3/workspaces) and the headless proof-of-work API (/api/v3/pow) to create, edit, and run Calibrate, Learn, and Verify sessions.",
+      "Download a skill.md for this Learning Map. Agents manage the map and Solve, Calibration, and Verification flows through workspace management (/api/v3/workspaces) and MCP.",
     mcpNote:
-      "MCP JSON-RPC at POST /api/mcp with Bearer auth. Two APIs: workspace management and headless proof-of-work. ChatGPT or Claude authorizes and runs flows for the user.",
+      "MCP JSON-RPC at POST /api/mcp with Bearer auth. Public tools manage Learning Maps and Solve, Calibration, and Verification flows. ChatGPT or Claude authorizes and edits the map for the user.",
   };
 }
 
@@ -215,9 +207,9 @@ export function learningWorkspaceIntegrationCopy(): {
 } {
   return {
     skillDescription:
-      "Download a skill.md for this Learning workspace. Agents create and edit the map through workspace management, then run Calibrate, Learn, or Verify headless through the proof-of-work API.",
+      "Download a skill.md for this Learning Map. Agents create and edit the map and place Solve, Calibration, and Verification flows through workspace management.",
     mcpNote:
-      "MCP JSON-RPC at POST /api/mcp with Bearer auth. Two APIs: workspace management and headless proof-of-work. ChatGPT or Claude authorizes and runs flows for the user.",
+      "MCP JSON-RPC at POST /api/mcp with Bearer auth. Public tools manage Learning Maps and Solve, Calibration, and Verification flows. ChatGPT or Claude authorizes and edits the map for the user.",
   };
 }
 
@@ -235,7 +227,7 @@ export function formatSkillRestEndpointsLine(kind: unknown): string {
   const mapTools = workspaceSupportsFeature(kind, "map")
     ? ", GET/POST .../map-tools"
     : "";
-  return `REST: workspace management GET/POST ${WORKSPACE_API_BASE}, GET/PATCH ${WORKSPACE_API_BASE}/{id}, GET/PATCH .../blocks${mapTools}, GET/PATCH .../settings, GET/PATCH /api/v3/account, POST .../integration-skill; headless proof-of-work POST ${POW_API_BASE}/workspaces/{id}/sessions, GET .../sessions/{session_id}, POST .../proof-of-work, POST .../end, GET .../flow-embeddings. Snapshot and Stash are not public agent APIs.`;
+  return `REST: Learning Map management GET/POST ${WORKSPACE_API_BASE}, GET/PATCH ${WORKSPACE_API_BASE}/{id}, GET/PATCH .../blocks${mapTools}, GET/POST ${FLOW_API_BASE}, GET/PATCH/DELETE ${FLOW_API_BASE}/{flow_id}, POST ${FLOW_API_BASE}/{flow_id}/link, GET/PATCH .../settings. Proof of work is recorded in the product UI.`;
 }
 
 export function buildIntegrationSkillInstructions(
@@ -257,55 +249,30 @@ export function buildIntegrationSkillInstructions(
     status?: string | null;
   }>,
   blockId?: string | null,
-  proofOfWorkSpec?: ProofOfWorkEvalSchemaResult | null,
+  _proofOfWorkSpec?: ProofOfWorkEvalSchemaResult | null,
   /** Live performance context so skill.md reflects current workspace status. */
   status?: PerformanceContextPayload | null
 ): string {
   const sections = request.include_sections?.length ? request.include_sections : [...DEFAULT_SECTIONS];
   const skillName = deriveSkillName(request.integration_name);
-  const sharePath = deriveSuggestedSharePath(request.integration_name);
-  const scope = blockId ? "Focus the skill on one workspace block." : "Cover the full workspace.";
+  const scope = blockId ? "Focus the skill on one map tile." : "Cover the full Learning Map.";
   const baseUrl = request.base_url || "https://uncertain.systems";
-  const proofOfWorkSchemaPath = buildProofOfWorkSchemaApiPath(workspace.id, baseUrl);
-  const evidenceUploadPath = buildProofOfWorkUploadApiPath(workspace.id, baseUrl);
   const integrationSkillPath = buildIntegrationSkillApiPath(workspace.id, baseUrl);
-  const performancePath = buildPerformanceApiPath(workspace.id, baseUrl);
-
-  const evalDefinition =
-    request.eval_definition?.trim() ||
-    request.partner_description?.trim() ||
-    status?.workspace.notes?.trim() ||
-    workspace.notes?.trim() ||
-    workspace.description?.trim() ||
-    status?.workspace.workspace_goal?.trim() ||
-    status?.workspace.description?.trim() ||
-    status?.workspace.notes?.trim() ||
-    workspace.workspace_goal?.trim() ||
-    workspace.description?.trim() ||
-    workspace.notes?.trim() ||
-    "Verify learning for this workspace with proof-of-work-backed gap analysis.";
-
   const statusSection = formatSkillWorkspaceStatus(status, blocks);
-
-  const proofOfWorkSpecSection = proofOfWorkSpec
-    ? `\n\nWorkspace proof-of-work specification (use as reference; skill.md must still point to the dynamic API):\n${formatProofOfWorkSpecForSkillPrompt(proofOfWorkSpec)}`
-    : "";
-
   const workspaceKind = workspace.workspace_kind ?? status?.workspace.workspace_kind;
-  const knowledgeRegion = isNoMapWorkspace(workspaceKind);
-  if (!knowledgeRegion) {
-    const mcpToolList = formatSkillMcpToolList(workspaceKind);
-    const restEndpointsLine = formatSkillRestEndpointsLine(workspaceKind);
-    return `Generate a custom integration skill.md document for "${request.integration_name}" integrating with a Learning workspace on Uncertain Systems.
+  const mcpToolList = formatSkillMcpToolList(workspaceKind);
+  const restEndpointsLine = formatSkillRestEndpointsLine(workspaceKind);
+
+  return `Generate a custom integration skill.md document for "${request.integration_name}" integrating with a Learning Map on Uncertain Systems.
 
 ${scope}
 
-This workspace is a Learning workspace: a map of blocks plus Learn. Agents manage the workspace and run that flow headless. Snapshot and Stash are not public agent APIs.
+This workspace is a Learning Map: tiles are Solve, Calibration, Verification, or Content. Agents manage the map and those three flow types. Proof of work is recorded in the product UI. Headless start_session / upload_proof_of_work / end_session are not public agent APIs.
 
 YAML frontmatter (required):
 ---
 name: ${skillName}
-description: ${request.integration_name} integration skill for managing a Learning workspace and running headless Calibrate, Learn, and Verify.
+description: ${request.integration_name} integration skill for managing a Learning Map and Solve, Calibration, and Verification flows.
 ---
 
 Workspace:
@@ -318,112 +285,19 @@ Base URL for examples: ${baseUrl}
 Integration skill regeneration API: POST ${integrationSkillPath}
 
 Required content:
-1. Purpose — manage this Learning workspace map and run Calibrate, Learn, or Verify through the headless proof-of-work API. ChatGPT or Claude authorizes with a Bearer key and runs the flow for the user.
-2. Authentication table (Bearer sk_ / gsk_, scopes workspaces:read and workspaces:write).
+1. Purpose — manage this Learning Map and create, list, update, and link Solve, Calibration, and Verification flows. ChatGPT or Claude authorizes with a Bearer key.
+2. Authentication table (Bearer sk_ keys, scopes workspaces:read and workspaces:write).
 3. Endpoints table:
    - ${restEndpointsLine}
    - MCP (JSON-RPC at POST /api/mcp with Bearer auth): ${mcpToolList}
 4. Workspace-specific block list from the current status.
-5. Quick checklist: create_workspace or get_workspace → list_map_tools / apply_map_tool (or update_blocks) → start_session → upload_proof_of_work → end_session.
+5. Quick checklist: create_workspace or get_workspace → list_map_tools / apply_map_tool (or update_blocks) → create_flow → link_flow.
 
 ${statusSection}
-
-Return ONLY the markdown document. No JSON wrapper. No code fences around the entire document.`;
-  }
-  const restEndpointsLine = formatSkillRestEndpointsLine(workspaceKind);
-  const mcpToolList = formatSkillMcpToolList(workspaceKind);
-  const krStashSection = knowledgeRegion
-    ? `
-   - Headless proof-of-work: start_session (calibrate | learn | verify) → upload_proof_of_work → end_session
-   - Do not document Snapshot or Stash as public agent APIs.`
-    : "";
-  const canonicalRefs = knowledgeRegion
-    ? `${request.base_url}/docs/proof-of-work-api`
-    : `${request.base_url}/skill.md and ${request.base_url}/docs/proof-of-work-api`;
-  const checklist = knowledgeRegion
-    ? "create or get workspace → start_session → upload_proof_of_work through the clock → end_session → regenerate skill."
-    : "create or get workspace → edit map/settings → start_session → upload_proof_of_work → end_session → regenerate skill.";
-  const purposeLine = knowledgeRegion
-    ? "1. Purpose — what this partner agent verifies **given the current Verification flow status** and how workspace management + headless Calibrate/Learn/Verify fit the workflow."
-    : "1. Purpose — what this partner agent verifies **given the current Learning workspace status** and how workspace management + headless Calibrate/Learn/Verify fit the workflow.";
-
-  return `Generate a custom integration skill.md document for "${request.integration_name}" integrating with Uncertain Systems Proof-of-Work API.
-
-${scope}
-
-This skill.md is a **snapshot tailored to the workspace's current status** (blocks, goal, notes, proof-of-work volume, known tools). It must treat the proof of work specification as a formal contract and **must be regenerated** as workspace proof of work grows. Integrators fetch the live schema dynamically; do not tell them to invent ad-hoc JSON. This document is not static.
-
-YAML frontmatter (required):
----
-name: ${skillName}
-description: ${request.integration_name} integration skill for Uncertain Systems workspace proof of work upload and performance analysis (current workspace snapshot).
----
-
-Workspace:
-- id: ${workspace.id}
-- title: ${workspace.title || workspace.root_topic || "Untitled"}
-- root_topic: ${workspace.root_topic || "n/a"}
-- description: ${workspace.description || status?.workspace.description || "n/a"}
-- workspace_goal: ${workspace.workspace_goal || status?.workspace.workspace_goal || workspace.description || status?.workspace.description || workspace.notes || status?.workspace.notes || "n/a"}
-
-Partner description from API caller:
-${request.partner_description || "Not provided: infer reasonable integration goals from the current workspace status."}
-
-Evaluation definition (derived from workspace notes/goal when not supplied):
-"""
-${evalDefinition}
-"""
-
-${statusSection}
-
-Base URL for examples: ${request.base_url}
-Suggested share path: ${sharePath}
-Workspace management API: ${WORKSPACE_API_BASE}
-Headless proof-of-work API: ${POW_API_BASE} (start_session, upload_proof_of_work, end_session)
-Integration skill regeneration API (self-update — MUST document prominently): POST ${integrationSkillPath}
-
-Sections to include: ${sections.join(", ")}
-${proofOfWorkSpecSection}
-
-Required content:
-The downloaded skill.md always ends with "${CANVAS_TAP_SIMULATION_HEADING}". That section is the tool_name and tool_action catalog for simulating a human session as ${POW_MODEL_VERSION}. Do not rename those values or fold them into one generic event.
-${purposeLine}
-2. Design principles — checkpoint-agnostic timing, block-scoped vs workspace-global analysis, tool usage as core signal, always fetch the live proof-of-work spec before uploading, **more proof of work improves evaluation quality**.
-3. **Continuous evaluation and regeneration (required section)** — this is a must-have operating model, not optional maintenance. Include:
-   - Principle: evaluation is continuous; the more data and proof of work submitted, the better Uncertain Systems can learn and snapshot
-   - This skill.md is a snapshot; partner agents must **regenerate** it via POST ${integrationSkillPath} as proof of work accumulates
-   - Re-fetch the proof of work spec via POST ${proofOfWorkSchemaPath} on a recurring basis (e.g. after every 5-10 new uploads, when blocks change, or when scores feel stale)
-   - Explicit warning: treating the initial skill.md as permanent will degrade quality over time
-   - Recommended loop: start_session → upload_proof_of_work → end_session → regenerate skill → repeat
-   - Reference the \`continuous_evaluation\` object returned by the proof of work spec API for machine-readable self-update triggers
-4. **Predictive interruptions (required section)** — expected-free-energy interruption on every Proof-of-Work API response:
-   - Every REST and MCP success response includes top-level \`interruption\` (object or null).
-   - When non-null: schedule \`intervention\` after \`delay_ms\` unless a later Proof-of-Work API response supersedes it.
-   - When null: no interruption predicted — do not schedule from that response.
-   - Document consumer obligations: read interruption every call, supersede pending timers, never stack duplicate timers.
-   - Reference \`interruption_contract\` from the proof of work spec API for the machine-readable interruption contract and intervention types.
-   - Include JSON examples for active interruption and null (empty).
-5. Authentication table (Bearer sk_ / gsk_, Teams tier, scopes).
-6. Endpoints table covering REST and MCP with **dual documentation** (never hide REST behind MCP):
-   - ${restEndpointsLine}
-   - MCP (JSON-RPC at POST /api/mcp with Bearer auth): ${mcpToolList}
-   - State that MCP tools have parity with REST for the two public APIs (workspace management and headless proof-of-work). Agents create and edit workspaces.
-   - Recommend create_workspace or get_workspace, then start_session${krStashSection}
-7. **Proof-of-work specification (required section)** — explain that payloads are defined by the formal proof-of-work spec returned from POST ${proofOfWorkSchemaPath}. Include:
-   - When to call the proof of work spec endpoint (before first upload, after proof-of-work milestones, when eval definition or blocks change)
-   - Example request body with definition, optional block_id, and integration_hints
-   - That the response includes tool_submissions, proof_of_work_upload_contract, interruption_contract, continuous_evaluation, schema_name, example_payload, collection_guidance, and top-level interruption
-   - Instruction to validate tool payloads against the fetched schema before upload
-   - Do NOT embed a static schema as the source of truth; reference the API path above
-8. Workspace-specific block mapping guidance and example tool JSON payloads that match the proof of work spec (illustrative only).
-9. **Headless session outcomes (required section)** — after end_session the observable is the answers-model tree, the inferred path, remaining time, and the flow embedding. Do not document Snapshot or Stash flush.
-10. Quick integration checklist: ${checklist}
-
-Canonical API reference links: ${canonicalRefs}
 
 Return ONLY the markdown document. No JSON wrapper. No code fences around the entire document.`;
 }
 
 export function buildIntegrationSkillPrompt(workspaceTitle: string, integrationName: string): string {
-  return `Write a complete skill.md integration guide for "${integrationName}" tailored to the **current status** of Uncertain Systems workspace "${workspaceTitle}" (blocks, goal, notes, existing proof of work). The guide must reference dynamic self-updating APIs for proof-of-work spec and skill regeneration, and treat continuous evaluation (more proof of work = better learning) as a must-have operating model.`;
+  return `Write a complete skill.md integration guide for "${integrationName}" tailored to the current Learning Map "${workspaceTitle}". Cover map tools and Solve, Calibration, and Verification flow create/list/update/link. Do not document a public proof-of-work session loop.`;
 }

@@ -4,14 +4,7 @@ import { DEFAULT_API_KEY_SCOPES } from "../scopes";
 
 export const MCP_OAUTH_RESOURCE_PATH = "/api/mcp";
 
-export const MCP_OAUTH_SCOPES: ApiKeyScope[] = [
-  "workspaces:read",
-  "workspaces:write",
-  "sessions:read",
-  "sessions:write",
-  "org:read",
-  "org:write",
-];
+export const MCP_OAUTH_SCOPES: ApiKeyScope[] = ["*"];
 
 export const MCP_OAUTH_DEFAULT_SCOPES: ApiKeyScope[] = DEFAULT_API_KEY_SCOPES;
 

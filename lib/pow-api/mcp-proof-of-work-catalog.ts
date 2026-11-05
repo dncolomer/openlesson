@@ -2,9 +2,9 @@
  * Client-safe catalog for workspace integration UI (no server imports).
  * Tool names/summaries come from AGENT_TOOL_SURFACE (single source of truth).
  *
- * Two public families: workspace management (/api/v3/workspaces, /api/v3/account)
- * and headless proof-of-work (/api/v3/pow). Snapshot and Stash are
- * not public agent APIs.
+ * Public family: Learning Map + Solve / Calibration / Verification flow
+ * management (/api/v3/workspaces, /api/v3/flows). Headless proof-of-work,
+ * Snapshot, and Stash are not public agent APIs.
  */
 
 import { AGENT_TOOL_SURFACE, agentToolSurfaceForWorkspace } from "./agent-tool-surface";

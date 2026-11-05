@@ -667,9 +667,9 @@ describe("Work-canvas PoW host wiring (shipped)", () => {
 
     const tapUploader = read("lib/tap-work-canvas.ts");
     const tapRuntime = read("lib/tap-session-runtime.ts");
-    expect(tapUploader).toContain("TAP_SESSION_RUNTIME_PATHS.canvas");
+    expect(tapUploader).toContain("tapSessionRuntimePaths");
     expect(tapUploader).toContain("buildTapWorkCanvasPowPostBody");
-    expect(tapRuntime).toContain('canvas: "/api/workspace-tap-score/canvas"');
+    expect(tapRuntime).toContain("VERIFY_POW_API_PATHS");
 
     const tapCanvasRoute = read("app/api/workspace-tap-score/canvas/route.ts");
     const ilePowRoute = read("app/api/workspace/proof-of-work/route.ts");

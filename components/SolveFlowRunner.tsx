@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { SessionView } from "@/components/SessionView";
+import { solvePublicApiPath } from "@/lib/session-pow-api-paths";
 
 type Phase = "identity" | "work";
 
@@ -17,7 +18,7 @@ export function SolveFlowRunner({ token }: { token: string }) {
     setBusy(true);
     setError("");
     try {
-      const response = await fetch(`/api/solve-flow/public/${encodeURIComponent(token)}`, {
+      const response = await fetch(solvePublicApiPath(token), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ identity }),

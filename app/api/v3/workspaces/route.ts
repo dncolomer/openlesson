@@ -4,12 +4,11 @@ import {
   createManagedWorkspace,
   listManagedWorkspaces,
 } from "@/lib/pow-api/workspace-management";
-import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruption";
 
 export const runtime = "nodejs";
 export const maxDuration = 180;
 
-/** GET /api/v3/workspaces — list Learning and Verification workspaces. */
+/** GET /api/v3/workspaces — list Learning Maps. */
 export async function GET(req: NextRequest) {
   const result = await authenticateRequest(req, "workspaces:read");
   if (result instanceof NextResponse) return result;
@@ -21,9 +20,7 @@ export async function GET(req: NextRequest) {
       limit: url.searchParams.get("limit"),
       offset: url.searchParams.get("offset"),
     });
-    return NextResponse.json(
-      await withProofOfWorkApiResponse(payload, { endpoint: "list_workspaces" }),
-    );
+    return NextResponse.json(payload);
   } catch (error) {
     return errorResponse(
       500,
@@ -46,10 +43,7 @@ export async function POST(req: NextRequest) {
   }
   try {
     const payload = await createManagedWorkspace(supabase, auth, body);
-    return NextResponse.json(
-      await withProofOfWorkApiResponse(payload, { endpoint: "create_workspace" }),
-      { status: 201 },
-    );
+    return NextResponse.json(payload, { status: 201 });
   } catch (error) {
     return errorResponse(
       400,

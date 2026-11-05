@@ -39,7 +39,7 @@ describe("Solve guest session persist", () => {
     await saveSolveLinkSession("stok", solveSession());
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("/api/solve-flow/public/stok");
+    expect(url).toBe("/api/solve/public/stok");
     expect(init.method).toBe("POST");
     const body = JSON.parse(String(init.body)) as {
       sessionId: string;
@@ -58,7 +58,7 @@ describe("Solve guest session persist", () => {
     await persistIleSessionRow(() => solveSession(), { solveToken: "stok" });
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("/api/solve-flow/public/stok");
+    expect(url).toBe("/api/solve/public/stok");
     const body = JSON.parse(String(init.body)) as { sessionId: string };
     expect(body.sessionId).toBe("sess-solve");
   });

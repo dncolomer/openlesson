@@ -4,20 +4,26 @@ import { PUBLIC_AGENT_API_FAMILIES } from "@/lib/api/agent-api-paths";
 import { AGENT_TOOL_SURFACE } from "@/lib/pow-api/agent-tool-surface";
 
 describe("MCP_PROOF_OF_WORK_TOOL_CATALOG", () => {
-  it("exposes exactly the two public families: workspace management and headless PoW", () => {
-    expect([...PUBLIC_AGENT_API_FAMILIES]).toEqual(["workspace", "pow"]);
+  it("exposes only the workspace family: Learning Map and flow management", () => {
+    expect([...PUBLIC_AGENT_API_FAMILIES]).toEqual(["workspace"]);
     const families = new Set(AGENT_TOOL_SURFACE.map((t) => t.family));
-    expect([...families].sort()).toEqual(["pow", "workspace"]);
+    expect([...families]).toEqual(["workspace"]);
     const names = MCP_PROOF_OF_WORK_TOOL_CATALOG.map((tool) => tool.name);
     expect(names).toContain("create_workspace");
     expect(names).toContain("update_workspace");
     expect(names).toContain("list_map_tools");
     expect(names).toContain("apply_map_tool");
-    expect(names).toContain("start_session");
-    expect(names).toContain("upload_proof_of_work");
-    expect(names).toContain("end_session");
-    expect(names).toContain("list_flow_embeddings");
-    expect(names).toContain("get_flow_embedding");
+    expect(names).toContain("list_flows");
+    expect(names).toContain("create_flow");
+    expect(names).toContain("get_flow");
+    expect(names).toContain("update_flow");
+    expect(names).toContain("link_flow");
+    expect(names).toContain("delete_flow");
+    expect(names).not.toContain("start_session");
+    expect(names).not.toContain("upload_proof_of_work");
+    expect(names).not.toContain("end_session");
+    expect(names).not.toContain("list_flow_embeddings");
+    expect(names).not.toContain("get_flow_embedding");
     expect(names).not.toContain("lwm_snapshot");
     expect(names).not.toContain("buffer_proof_of_work");
     expect(names).not.toContain("stash_proof_of_work");
@@ -28,14 +34,15 @@ describe("MCP_PROOF_OF_WORK_TOOL_CATALOG", () => {
     expect(names).not.toContain("optimization_score");
   });
 
-  it("documents REST twins for headless sessions, not Snapshot/Stash bases", () => {
-    const start = MCP_PROOF_OF_WORK_TOOL_CATALOG.find((t) => t.name === "start_session");
-    const upload = MCP_PROOF_OF_WORK_TOOL_CATALOG.find((t) => t.name === "upload_proof_of_work");
-    const end = MCP_PROOF_OF_WORK_TOOL_CATALOG.find((t) => t.name === "end_session");
-    expect(start?.rest.path).toContain("/sessions");
-    expect(upload?.rest.path).toContain("/sessions/{session_id}/proof-of-work");
-    expect(end?.rest.path).toContain("/sessions/{session_id}/end");
+  it("documents REST twins for map and flow management, not Snapshot/Stash or sessions", () => {
+    const createFlow = MCP_PROOF_OF_WORK_TOOL_CATALOG.find((t) => t.name === "create_flow");
+    const linkFlow = MCP_PROOF_OF_WORK_TOOL_CATALOG.find((t) => t.name === "link_flow");
+    const applyMap = MCP_PROOF_OF_WORK_TOOL_CATALOG.find((t) => t.name === "apply_map_tool");
+    expect(createFlow?.rest.path).toBe("/api/v3/flows");
+    expect(linkFlow?.rest.path).toBe("/api/v3/flows/{flow_id}/link");
+    expect(applyMap?.rest.path).toContain("/map-tools");
     const blob = JSON.stringify(MCP_PROOF_OF_WORK_TOOL_CATALOG);
+    expect(blob).not.toContain("/sessions");
     expect(blob).not.toContain("/api/v3/snapshot");
     expect(blob).not.toContain("/api/v3/stash");
     expect(blob).not.toContain("/api/v3/tapbench");

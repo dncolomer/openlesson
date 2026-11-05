@@ -2,11 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { ContextGenerationPool } from "@/components/ContextGenerationPool";
-import {
-  buildVerificationFlowSkillMarkdown,
-  verificationFlowSkillFilename,
-  type VerificationQuestion,
-} from "@/lib/verification-flow";
+import { type VerificationQuestion } from "@/lib/verification-flow";
 import { CopyFlowUrlButton } from "@/components/product-flow/copy-flow-url-button";
 
 type FlowRecord = {
@@ -19,15 +15,6 @@ type FlowRecord = {
   skillMd: string;
 };
 
-function downloadText(filename: string, content: string, mimeType: string) {
-  const blob = new Blob([content], { type: mimeType });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.click();
-  URL.revokeObjectURL(url);
-}
 
 export function VerificationFlowsPanel({
   workspaceId,
@@ -246,28 +233,6 @@ export function VerificationFlowsPanel({
               </p>
               <CopyFlowUrlButton url={flow.publicUrl} />
             </div>
-            <button
-              type="button"
-              data-verification-flow-skill
-              className="border border-white/80 px-3 py-1.5 text-[11px] font-medium text-white transition hover:bg-white/10"
-              onClick={() => {
-                const skill = buildVerificationFlowSkillMarkdown({
-                  workspaceId,
-                  flowId: flow.id,
-                  topic: flow.topic,
-                  questions: flow.questions,
-                  publicToken: flow.publicToken,
-                  baseUrl: window.location.origin,
-                });
-                downloadText(
-                  verificationFlowSkillFilename(flow.topic),
-                  skill,
-                  "text/markdown;charset=utf-8",
-                );
-              }}
-            >
-              Generate skill
-            </button>
           </li>
         ))}
       </ul>

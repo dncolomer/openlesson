@@ -48,6 +48,7 @@ export const KNOWN_ERROR_CODES = [
   "usage_limit_reached",
   "insufficient_credits",
   "connect_required",
+  "public_pow_retired",
 ] as const;
 
 export type KnownErrorCode = (typeof KNOWN_ERROR_CODES)[number];

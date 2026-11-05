@@ -15,7 +15,6 @@ import {
 } from "@/lib/pow-api/integration-skill";
 import { buildWorkspacePerformanceContext } from "@/lib/pow-api/performance-context";
 import { requireWorkspaceOwnerSession } from "@/lib/pow-api/workspace-session-access";
-import { withCanvasTapSimulationSkill } from "@/lib/pow-api/pow-model-agent-contract";
 import { callXaiResponsesWithFiles } from "@/lib/xai-client";
 
 export const runtime = "nodejs";
@@ -164,7 +163,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({
-      skill_md: withCanvasTapSimulationSkill(skillResult.text),
+      skill_md: skillResult.text,
       skill_name: deriveSkillName(request.integration_name),
       suggested_share_path: deriveSuggestedSharePath(request.integration_name),
       workspace_summary: {

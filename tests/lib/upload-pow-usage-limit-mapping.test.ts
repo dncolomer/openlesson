@@ -48,7 +48,7 @@ describe("upload PoW usage-limit → 402 mapping (REST catch path)", () => {
       existsSync(
         join(ROOT, "app/api/v3/pow/workspaces/[id]/sessions/[sessionId]/proof-of-work/route.ts"),
       ),
-    ).toBe(true);
+    ).toBe(false);
     const helper = readFileSync(
       join(ROOT, "lib/pow-api/upload-workspace-proof-of-work.ts"),
       "utf8",

@@ -6,7 +6,6 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { insertGeneratedWorkspaceBlocks } from "@/lib/insert-workspace-blocks";
-import { parseLearningModelSize, type LearningModelSize } from "@/lib/learning-model";
 import {
   AGENT_WORKSPACE_CREATE_REFUSED_MESSAGE,
   parseWorkspaceKind,
@@ -16,7 +15,7 @@ import {
 import { normalizeGeneratedWorkspaceBlocks } from "@/lib/workspace-spatial-create";
 import { listAgentWorkspaces } from "./agent-workspace-ops";
 import { createAgentWorkspace } from "./create-agent-workspace";
-import { derivedWorkspaceGoal, normalizeWorkspaceGoal } from "./conversion-goal";
+import { normalizeWorkspaceGoal } from "./conversion-goal";
 import type { AuthContext } from "./types";
 import { canAccessAgentWorkspace } from "./workspace-access";
 
@@ -48,15 +47,13 @@ export function parseAgentWorkspaceKind(value: unknown): WorkspaceKind {
 }
 
 const WORKSPACE_SELECT =
-  "id, title, root_topic, description, notes, status, workspace_kind, learning_model_size, is_public, created_at, updated_at, user_id, organization_id, guest_user_id";
+  "id, title, root_topic, description, notes, status, workspace_kind, is_public, created_at, updated_at, user_id, organization_id, guest_user_id";
 
 export type WorkspaceSettingsPatch = {
   title?: string | null;
   description?: string | null;
   notes?: string | null;
-  workspace_goal?: string | null;
   root_topic?: string | null;
-  learning_model_size?: LearningModelSize | number | null;
   is_public?: boolean | null;
 };
 
@@ -120,16 +117,9 @@ export function presentManagedWorkspace(row: Record<string, unknown>) {
     root_topic: row.root_topic ?? null,
     description: row.description ?? null,
     notes: row.notes ?? null,
-    workspace_goal: derivedWorkspaceGoal({
-      title: typeof row.title === "string" ? row.title : null,
-      description: typeof row.description === "string" ? row.description : null,
-      notes: typeof row.notes === "string" ? row.notes : null,
-      root_topic: typeof row.root_topic === "string" ? row.root_topic : null,
-    }),
     status: row.status ?? null,
     workspace_kind: kind,
     product: agentWorkspaceProduct(kind),
-    learning_model_size: parseLearningModelSize(row.learning_model_size),
     is_public: Boolean(row.is_public),
     created_at: row.created_at ?? null,
     updated_at: row.updated_at ?? null,
@@ -137,14 +127,7 @@ export function presentManagedWorkspace(row: Record<string, unknown>) {
       title: row.title ?? null,
       description: row.description ?? null,
       notes: row.notes ?? null,
-      workspace_goal: derivedWorkspaceGoal({
-        title: typeof row.title === "string" ? row.title : null,
-        description: typeof row.description === "string" ? row.description : null,
-        notes: typeof row.notes === "string" ? row.notes : null,
-        root_topic: typeof row.root_topic === "string" ? row.root_topic : null,
-      }),
       root_topic: row.root_topic ?? null,
-      learning_model_size: parseLearningModelSize(row.learning_model_size),
       is_public: Boolean(row.is_public),
     },
   };
@@ -199,20 +182,10 @@ export async function createManagedWorkspace(
 ) {
   const kind = parseAgentWorkspaceKind(body.kind ?? body.workspace_kind ?? body.product);
   const title = text(body.title);
-  const description = text(body.description);
+  const description = text(body.description) || text(body.workspace_goal);
   const notes = text(body.notes);
   const initialPrompt = text(body.initial_prompt ?? body.prompt);
   const blocks = parseBlocks(body.blocks ?? body.map);
-  const workspaceGoal =
-    body.workspace_goal === undefined
-      ? undefined
-      : body.workspace_goal === null
-        ? null
-        : normalizeWorkspaceGoal(body.workspace_goal);
-  const catalogSize =
-    body.learning_model_size === undefined
-      ? undefined
-      : parseLearningModelSize(body.learning_model_size);
 
   const wantsGeneration = Boolean(initialPrompt) && !title && blocks.length === 0;
 
@@ -226,11 +199,8 @@ export async function createManagedWorkspace(
         .from("workspaces")
         .update({
           workspace_kind: kind,
-          ...(catalogSize ? { learning_model_size: catalogSize } : {}),
           ...(title ? { title } : {}),
-          ...(description || workspaceGoal
-            ? { description: description || workspaceGoal }
-            : {}),
+          ...(description ? { description } : {}),
         })
         .eq("id", workspaceId);
     }
@@ -263,12 +233,11 @@ export async function createManagedWorkspace(
     root_topic: text(body.root_topic) || initialPrompt.slice(0, 160) || workspaceTitle,
     status: "active",
     notes: notes || initialPrompt || null,
-    description: description || workspaceGoal || null,
+    description: description || null,
     workspace_kind: kind,
     is_agent_workspace: true,
     evaluation_mode: "semantic",
   };
-  if (catalogSize) insertRow.learning_model_size = catalogSize;
   if (body.is_public === true) insertRow.is_public = true;
 
   const { data: workspace, error } = await supabase
@@ -308,7 +277,7 @@ export async function listWorkspaceBlocks(supabase: SupabaseClient, workspaceId:
   const { data: blocks, error } = await supabase
     .from("blocks")
     .select(
-      "id, title, description, is_start, next_block_ids, status, position_x, position_y, created_at",
+      "id, title, description, is_start, next_block_ids, status, position_x, position_y, map_block, created_at",
     )
     .eq("workspace_id", workspaceId)
     .order("created_at", { ascending: true });
@@ -329,9 +298,6 @@ function settingsPatchFromBody(body: Record<string, unknown>): Record<string, un
   if ("workspace_goal" in body && patch.description === undefined) {
     patch.description =
       body.workspace_goal === null ? null : normalizeWorkspaceGoal(body.workspace_goal);
-  }
-  if ("learning_model_size" in body) {
-    patch.learning_model_size = parseLearningModelSize(body.learning_model_size);
   }
   if (typeof body.is_public === "boolean") patch.is_public = body.is_public;
   const nested =

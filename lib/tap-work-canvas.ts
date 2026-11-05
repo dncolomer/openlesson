@@ -40,7 +40,10 @@ import {
   type IleWorkCanvasPowEvent,
 } from "@/lib/learn-work-canvas-pow";
 import { textToBase64 } from "@/lib/learn-proof-of-work-client";
-import { TAP_SESSION_RUNTIME_PATHS } from "@/lib/tap-session-runtime";
+import {
+  tapSessionRuntimePaths,
+  type TapProductKind,
+} from "@/lib/tap-session-runtime";
 import type { IleProofOfWorkUploadItem } from "@/lib/learn-evidence-buffer";
 
 export {
@@ -278,11 +281,13 @@ export async function uploadTapWorkCanvasPow(input: {
   tapSessionId?: string | null;
   entryQueryParams?: Record<string, string | string[]>;
   practice?: boolean;
+  kind?: TapProductKind;
   item: IleProofOfWorkUploadItem;
 }): Promise<void> {
   const sessionKey = String(input.tapSessionId || input.sessionId || "").trim();
   if (!sessionKey) return;
-  await fetch(TAP_SESSION_RUNTIME_PATHS.canvas, {
+  const canvasPath = tapSessionRuntimePaths(input.kind).canvas;
+  await fetch(canvasPath, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(buildTapWorkCanvasPowPostBody(input)),

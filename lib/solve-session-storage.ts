@@ -3,6 +3,7 @@
  */
 
 import type { Session } from "@/lib/domain/types";
+import { solvePublicApiPath } from "@/lib/session-pow-api-paths";
 
 function mapSession(row: Record<string, unknown>): Session {
   const metadata =
@@ -32,7 +33,7 @@ async function solvePublicPost<T>(
   token: string,
   payload: Record<string, unknown>,
 ): Promise<T> {
-  const response = await fetch(`/api/solve-flow/public/${encodeURIComponent(token)}`, {
+  const response = await fetch(solvePublicApiPath(token), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),

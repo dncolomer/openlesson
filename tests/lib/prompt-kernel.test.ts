@@ -11,7 +11,7 @@ import { buildProofOfWorkSchemaInstructions } from "@/lib/pow-api/proof-of-work-
 describe("prompt kernel", () => {
   it("exports a versioned kernel and ontology", () => {
     expect(PROMPT_SYSTEM_VERSION).toMatch(/^\d+\.\d+\.\d+$/);
-    expect(WORKSPACE_ONTOLOGY).toContain("Workspaces");
+    expect(WORKSPACE_ONTOLOGY).toContain("Learning Maps");
     expect(WORKSPACE_ONTOLOGY).toContain("do not include an interruption");
     expect(WORKSPACE_ONTOLOGY).not.toContain("Trace Interruption Model");
     expect(WORKSPACE_ONTOLOGY).toContain("ghc_score");

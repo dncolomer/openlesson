@@ -228,11 +228,11 @@ describe("conversation language instruction for Explore/Drill model replies", ()
       path.join(process.cwd(), "components/tap-score/use-tap-score-flow.ts"),
       "utf8",
     );
-    expect(tapFlow).toMatch(/workspace-tap-score\/chat[\s\S]*conversationLanguage/);
+    expect(tapFlow).toMatch(/tapSessionRuntimePaths\(s\.kind\)\.chat[\s\S]*conversationLanguage/);
     expect(tapFlow).toMatch(
       /(?:workspace-tap-score\/start|TAP_SESSION_RUNTIME_PATHS\.start|postTutoringSessionStart)[\s\S]*conversationLanguage/,
     );
-    expect(tapClient).toMatch(/workspace-tap-score\/topics[\s\S]*conversationLanguage/);
+    expect(tapClient).toMatch(/tapSessionRuntimePaths\(kind\)\.topics[\s\S]*conversationLanguage/);
   });
 
   it("TAP opening/topics generators accept conversationLanguage", () => {

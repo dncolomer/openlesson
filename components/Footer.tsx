@@ -11,7 +11,7 @@ const productLinks = [
   { labelKey: "footer.knowledgeMapping", href: "/knowledge-mapping" },
   { labelKey: "footer.pricing", href: "/pricing" },
   { labelKey: "footer.vision", href: "/science" },
-  { labelKey: "footer.agenticApi", href: "/docs/proof-of-work-api" },
+  { labelKey: "footer.agenticApi", href: "/docs/learning-map-api" },
 ];
 
 const workspaceLinks = [

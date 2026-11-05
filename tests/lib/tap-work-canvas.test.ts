@@ -363,8 +363,10 @@ describe("TAP Work canvas PoW (shipped TAP Learning builders)", () => {
     expect(prepareClient).toContain("uploadTapWorkCanvasPow");
     expect(prepareClient).toContain("soundingProofUploadItem");
     const runtime = read("lib/tap-session-runtime.ts");
-    expect(runtime).toContain('canvas: "/api/workspace-tap-score/canvas"');
+    expect(runtime).toContain("CALIBRATE_POW_API_PATHS");
+    expect(runtime).toContain("tapSessionRuntimePaths");
     expect(existsSync(join(ROOT, "app/api/workspace-tap-score/canvas/route.ts"))).toBe(true);
+    expect(existsSync(join(ROOT, "app/api/calibrate/session/canvas/route.ts"))).toBe(true);
 
     writeScratch(
       "tap-canvas-pow.log",
@@ -372,7 +374,7 @@ describe("TAP Work canvas PoW (shipped TAP Learning builders)", () => {
         `tool=${tool?.toolName}/${tool?.toolAction}`,
         `snap=${snap.toolName}/${snap.toolAction}`,
         "live wires buildTapWorkCanvasActionUploadItem + buildTapCanvasSnapshotUploadItem",
-        "path=/api/workspace-tap-score/canvas",
+        "path=/api/calibrate/session/canvas",
       ].join("\n") + "\n",
     );
   });

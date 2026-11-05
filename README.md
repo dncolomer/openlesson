@@ -2,7 +2,7 @@
 
 **A Human Learning Harness — verify without a test.**
 
-Uncertain Systems is an open-source platform for knowledge acquisition and knowledge verification. Create a **Learning** workspace via workspace management, or Verification and Calibration flows via `POST /api/dashboard/flows`, then run Calibrate, Learn, or Verify headless. Agents integrate through two APIs — workspace management and headless proof-of-work — plus MCP.
+Uncertain Systems is an open-source platform for knowledge acquisition and knowledge verification. Create a **Learning Map** via workspace management, then create Solve, Calibration, and Verification flows (`create_flow` or cookie `POST /api/dashboard/flows`). Agents integrate through workspace/map/flow management plus MCP. Proof of work is recorded in the product UI.
 
 Live at [uncertain.systems](https://uncertain.systems)
 
@@ -19,18 +19,17 @@ Workspaces come in two durable kinds:
 
 ## How It Works
 
-1. **Create a workspace** via workspace management (`POST /api/v3/workspaces` / MCP `create_workspace`) — Learning only (`kind: "learning"` / `standard`). Verification and Calibration flows use `POST /api/dashboard/flows`. Or in the product UI (`/workspace/new`).
-2. **Run a flow headless** — `start_session` (calibrate | learn | verify) → `upload_proof_of_work` → `end_session`. The server prepares the answers-model tree, infers the path, and enforces the clock.
-3. **Repeat** — more proof of work improves the inferred path. Regenerate the workspace `skill.md` as context grows.
+1. **Create a Learning Map** via workspace management (`POST /api/v3/workspaces` / MCP `create_workspace`) — Learning only (`kind: "learning"` / `standard`). Or in the product UI (`/workspace/new`).
+2. **Create flows** — MCP `create_flow` / REST `POST /api/v3/workspaces/{id}/flows` for Solve, Calibration, and Verification. Cookie dashboard remains `POST /api/dashboard/flows`.
+3. **Place flows on the map** — `link_flow` or Helios `apply_map_tool`. Learners run those flows in the product UI.
 
-Agents authorize with a Bearer key (ChatGPT, Claude, or any MCP client) and use only these two APIs. Snapshot and Stash are not public agent surfaces.
+Agents authorize with a Bearer key (ChatGPT, Claude, or any MCP client) and use Learning Map + flow management. Snapshot, Stash, and headless proof-of-work are not public agent surfaces.
 
 ## Key Features
 
 - **Verification workspaces** — assessable blocks, workspace goals, and continuous proof of work
 - **Verification Workspace** — Goals / Verification Flows / Context / Knowledge / Settings; flow-scoped proof of work; custom knowledge regions and Data Studio. Does not mint knowledge links.
-- **Headless proof-of-work** — `start_session` → `upload_proof_of_work` → `end_session` for Calibrate, Learn, and Verify (catalogs 4 / 8 / 16, session clock)
-- **Public agent APIs + MCP** — workspace management (`/api/v3/workspaces`) and headless proof-of-work (`/api/v3/pow`) with JSON-RPC at `/api/mcp` (Bearer or OAuth)
+- **Public agent APIs + MCP** — Learning Map and flow management (`/api/v3/workspaces`) with JSON-RPC at `/api/mcp` (Bearer or OAuth)
 - **Calibrate, Learn, and Verify** — practice sessions on standard workspaces (knowledge-link mint)
 - **Knowledge map** — React Flow block graph, simulation, DAGs, learner mode
 - **Muse EEG and face tracking** — optional biosignals on session proof of work
@@ -121,7 +120,7 @@ The app will be available at `http://localhost:3000`.
 │   ├── session/          # Learn tutoring session pages
 │   ├── tap/              # Legacy Calibrate/Verify session redirects
 │   ├── dashboard/        # User dashboard & API key management
-│   └── docs/             # Interactive Proof-of-Work API reference
+│   └── docs/             # Interactive Learning Map API reference
 ├── components/           # React components
 │   ├── SessionView.tsx   # Learn session UI
 │   ├── WorkspaceView.tsx # Workspace shell (map vs Verification Workspace)
@@ -158,14 +157,13 @@ Requires `XAI_API_KEY` (STT + action inference). Persist also needs Supabase ser
 
 ## Public agent APIs (v3)
 
-Uncertain Systems exposes **two** public agent APIs, with MCP parity at `POST /api/mcp`:
+Uncertain Systems exposes **one** public agent family, with MCP parity at `POST /api/mcp`:
 
-- **Workspace management** (`/api/v3/workspaces`, `/api/v3/account`) — create and edit Learning and Verification workspaces, the map, workspace settings, and account settings.
-- **Headless proof-of-work** (`/api/v3/pow`) — `start_session` (calibrate | learn | verify) → `upload_proof_of_work` → `end_session`.
+- **Learning Map and flow management** (`/api/v3/workspaces`, `/api/v3/flows`) — create and edit Learning Maps, Helios map tools, workspace settings, and Solve / Calibration / Verification flows.
 
-Snapshot and Stash are product-UI routes, not public agent families. Generate an API key from the dashboard (`/dashboard`).
+Headless proof-of-work, Snapshot, and Stash are not public agent families. Generate an API key from the dashboard (`/dashboard`).
 
-See [`public/skill.md`](public/skill.md) and [`docs/PROOF_OF_WORK_API.md`](docs/PROOF_OF_WORK_API.md). Interactive reference: [`/docs/proof-of-work-api`](/docs/proof-of-work-api). Download a **workspace-scoped** skill.md from Settings → Integration.
+See [`public/skill.md`](public/skill.md) and [`docs/LEARNING_MAP_API.md`](docs/LEARNING_MAP_API.md). Interactive reference: [`/docs/learning-map-api`](/docs/learning-map-api).
 
 ## Uncertain Systems
 

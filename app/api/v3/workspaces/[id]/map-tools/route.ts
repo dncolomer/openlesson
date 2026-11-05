@@ -6,7 +6,6 @@ import {
   heliosMapAgentFeatureDenied,
   listHeliosMapToolsForAgent,
 } from "@/lib/pow-api/helios-map-agent";
-import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruption";
 
 export const runtime = "nodejs";
 
@@ -26,12 +25,7 @@ export async function GET(req: NextRequest, { params }: RouteProps) {
   );
   if (denied) return errorResponse(403, "forbidden", denied);
   const payload = await listHeliosMapToolsForAgent(supabase, workspaceId);
-  return NextResponse.json(
-    await withProofOfWorkApiResponse(payload, {
-      endpoint: "list_map_tools",
-      workspace_id: workspaceId,
-    }),
-  );
+  return NextResponse.json(payload);
 }
 
 export async function POST(req: NextRequest, { params }: RouteProps) {
@@ -64,10 +58,5 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
       payload as unknown as Record<string, unknown>,
     );
   }
-  return NextResponse.json(
-    await withProofOfWorkApiResponse(payload, {
-      endpoint: "apply_map_tool",
-      workspace_id: workspaceId,
-    }),
-  );
+  return NextResponse.json(payload);
 }

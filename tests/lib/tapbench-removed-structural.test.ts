@@ -5,7 +5,7 @@
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { HEADLESS_FLOW_KINDS, parseHeadlessFlowKind } from "@/lib/pow-api/headless-session";
+
 import { COMMUNITY_LINKS } from "@/lib/marketing/nav";
 import { PLATFORM_PRODUCT_LIST, PLATFORM_PRODUCTS } from "@/lib/marketing/platform";
 import { VERIFICATION_PRODUCT_COPY, VERIFICATION_SCALE_COPY } from "@/lib/marketing/verification-product";
@@ -72,12 +72,7 @@ describe("TAPBench product surfaces removed", () => {
     expect(kv).not.toContain("TAPBench");
   });
 
-  it("headless parser accepts only calibrate, learn, verify", () => {
-    expect([...HEADLESS_FLOW_KINDS]).toEqual(["calibrate", "learn", "verify"]);
-    expect(parseHeadlessFlowKind("calibrate")).toBe("calibrate");
-    expect(parseHeadlessFlowKind("learn")).toBe("learn");
-    expect(parseHeadlessFlowKind("verify")).toBe("verify");
-    expect(parseHeadlessFlowKind("tapbench")).toBeNull();
-    expect(parseHeadlessFlowKind("scout")).toBe("calibrate");
+  it("headless session parser is deleted with the public PoW loop", () => {
+    expect(existsSync(join(ROOT, "lib/pow-api/headless-session.ts"))).toBe(false);
   });
 });

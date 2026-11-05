@@ -62,7 +62,7 @@ export function WorkspaceMobilePlanAside({
                 </button>
               ) : (
                 <Link
-                  href="/docs/proof-of-work-api"
+                  href="/docs/learning-map-api"
                   className="w-full rounded-none border border-white/10 bg-white/5 px-3 py-2 text-left transition-all hover:bg-white/10"
                 >
                   <span className="block text-xs font-medium text-white">{t("planView.productProofOfWorkApi")}</span>

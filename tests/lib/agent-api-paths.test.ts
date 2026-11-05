@@ -1,4 +1,5 @@
 import { readMcpSurface } from "@/tests/helpers/surface-source";
+import { publicDocInstructsHeadlessPowLoop } from "@/tests/helpers/public-agent-docs";
 import { describe, expect, it } from "vitest";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
@@ -33,41 +34,83 @@ function collectRouteTs(dir: string, acc: string[] = []): string[] {
 }
 
 describe("Proof-of-Work API v3 path contract", () => {
-  it("exports two public agent families; Snapshot/Stash bases are retired", () => {
+  it("exports one public agent family; Snapshot/Stash/PoW session bases are retired", () => {
     expect(WORKSPACE_API_BASE).toBe("/api/v3/workspaces");
     expect(ACCOUNT_API_BASE).toBe("/api/v3/account");
     expect(POW_API_BASE).toBe("/api/v3/pow");
-    expect([...PUBLIC_AGENT_API_FAMILIES]).toEqual(["workspace", "pow"]);
+    expect([...PUBLIC_AGENT_API_FAMILIES]).toEqual(["workspace"]);
     expect(SNAPSHOT_API_BASE).toBe("/api/v3/snapshot");
     expect(EVAL_API_BASE).toBe(SNAPSHOT_API_BASE);
     expect(STASH_API_BASE).toBe("/api/v3/stash");
     expect(SNAPSHOT_API_BASE).not.toBe("/api/v3/eval");
   });
 
-  it("e2e and agent surface docs advertise the two public APIs (not /api/v3/eval)", () => {
+  it("e2e and agent surface docs advertise Learning Map and flow management (not /api/v3/eval)", () => {
     const e2e = readFileSync(join(ROOT, "scripts/run-pow-api-e2e.mjs"), "utf8");
     expect(e2e).not.toMatch(/\/api\/v3\/eval\//);
 
     const skill = readFileSync(join(ROOT, "public/skill.md"), "utf8");
     expect(skill).toContain("/api/v3/workspaces");
-    expect(skill).toContain("/api/v3/pow");
+    expect(skill).toContain("create_flow");
+    expect(skill).toContain("/api/v3/flows");
     expect(skill).not.toContain("/api/v3/{pow,eval,stash}");
     expect(skill).not.toContain("/api/v3/{pow,snapshot,stash}");
 
     const mcp = readMcpSurface();
     expect(mcp).toContain("/api/v3/workspaces");
-    expect(mcp).toContain("/api/v3/pow");
+    expect(mcp).toContain("create_flow");
     expect(mcp).not.toContain("/api/v3/{pow,eval,stash}");
 
     const en = readFileSync(join(ROOT, "messages/en.json"), "utf8");
     expect(en).toContain("/api/v3/workspaces");
-    expect(en).toContain("/api/v3/pow");
+    expect(en).toContain("create_flow");
     expect(en).not.toContain("/api/v3/{pow,eval,stash}");
+    const enMessages = JSON.parse(en) as {
+      dashboard: Record<string, string>;
+      integrationAccess: Record<string, string>;
+      workspaceIntegration: Record<string, string>;
+    };
+    expect(enMessages.dashboard.proofOfWorkApi).toBe("Learning Map and flow API");
+    expect(enMessages.dashboard.mcpDocsLink).toBe("Map and flow API docs");
+    expect(enMessages.dashboard.proofOfWorkApi).not.toMatch(/Proof-of-Work API/i);
+    expect(enMessages.dashboard.mcpDocsLink).not.toMatch(/Proof-of-Work API/i);
+    expect(enMessages.dashboard.proofOfWorkApiDesc).not.toMatch(/Proof-of-Work API/i);
+    expect(enMessages.dashboard.apiExperimentalDesc).not.toMatch(/Proof-of-Work API/i);
+    expect(enMessages.integrationAccess.skillDescription).not.toMatch(/Proof-of-Work API/i);
+    expect(enMessages.workspaceIntegration.mcpWorkflowSteps).toContain("create_flow");
+    expect(publicDocInstructsHeadlessPowLoop(enMessages.workspaceIntegration.mcpWorkflowSteps)).toBe(
+      false,
+    );
+    expect(publicDocInstructsHeadlessPowLoop(enMessages.dashboard.mcpWorkflowSteps)).toBe(false);
+
+    const integrationsTab = readFileSync(
+      join(ROOT, "components/dashboard/dashboard-integrations-tab.tsx"),
+      "utf8",
+    );
+    expect(integrationsTab).not.toContain("Proof-of-Work API");
+    expect(integrationsTab).toContain('t("dashboard.proofOfWorkApi")');
+    expect(integrationsTab).toContain('t("dashboard.apiKeys")');
 
     const readme = readFileSync(join(ROOT, "README.md"), "utf8");
     expect(readme).toContain("/api/v3/workspaces");
-    expect(readme).toContain("/api/v3/pow");
+    expect(readme).toContain("create_flow");
     expect(readme).not.toContain("/api/v3/{pow,eval,stash}");
+
+    expect(
+      publicDocInstructsHeadlessPowLoop(
+        "Then run Calibrate through the headless proof-of-work API (`start_session` → `upload_proof_of_work` → `end_session`).",
+      ),
+    ).toBe(true);
+
+    const liveGuide = readFileSync(join(ROOT, "public/docs/proof-of-work-api-guide.md"), "utf8");
+    expect(liveGuide).toContain("create_flow");
+    expect(liveGuide).toContain("/api/v3/workspaces");
+    expect(publicDocInstructsHeadlessPowLoop(liveGuide)).toBe(false);
+
+    const docsPage = readFileSync(join(ROOT, "app/docs/proof-of-work-api/page.tsx"), "utf8");
+    expect(docsPage).toContain("create_flow");
+    expect(docsPage).toContain("link_flow");
+    expect(publicDocInstructsHeadlessPowLoop(docsPage)).toBe(false);
   });
 
   it("shipped path builders use pow sessions for capture and end_session for performance", () => {
@@ -76,7 +119,7 @@ describe("Proof-of-Work API v3 path contract", () => {
       "https://example.com/api/v3/pow/workspaces/ws-1/sessions/{session_id}/proof-of-work",
     );
     expect(buildProofOfWorkSchemaApiPath("ws-1", base)).toContain("/api/v3/pow/");
-    expect(buildIntegrationSkillApiPath("ws-1", base)).toContain("/api/v3/pow/");
+    expect(buildIntegrationSkillApiPath("ws-1", base)).toContain("/api/v3/workspaces/");
     expect(buildPerformanceApiPath("ws-1", base)).toBe(
       "https://example.com/api/v3/pow/workspaces/ws-1/sessions/{session_id}/end",
     );
@@ -88,7 +131,7 @@ describe("Proof-of-Work API v3 path contract", () => {
 
     const surfaces = buildIntegrationSurfaces(base);
     const rest = surfaces.find((s) => s.transport === "rest");
-    expect(rest?.entrypoint).toContain("/api/v3/pow/workspaces/");
+    expect(rest?.entrypoint).toContain("/api/v3/workspaces");
     expect(rest?.entrypoint).not.toContain("/api/v2/");
   });
 
@@ -96,7 +139,7 @@ describe("Proof-of-Work API v3 path contract", () => {
     const powRoutes = collectRouteTs(join(ROOT, "app/api/v3/pow"));
     const evalRoutes = collectRouteTs(join(ROOT, "app/api/v3/snapshot"));
     const stashRoutes = collectRouteTs(join(ROOT, "app/api/v3/stash"));
-    expect(powRoutes.length).toBeGreaterThan(5);
+    expect(powRoutes.length).toBeGreaterThan(0);
     expect(evalRoutes.length).toBe(0);
     expect(stashRoutes.length).toBe(0);
     expect(
@@ -113,7 +156,7 @@ describe("Proof-of-Work API v3 path contract", () => {
       existsSync(
         join(ROOT, "app/api/v3/pow/workspaces/[id]/sessions/[sessionId]/proof-of-work/route.ts"),
       ),
-    ).toBe(true);
+    ).toBe(false);
     expect(existsSync(join(ROOT, "app/api/v3/workspaces/route.ts"))).toBe(true);
     expect(
       existsSync(join(ROOT, "app/api/v3/snapshot/workspaces/[id]/lwm-snapshot/route.ts")),

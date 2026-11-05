@@ -21,12 +21,22 @@ const nextConfig: NextConfig = {
       },
       {
         source: "/docs/agentic-v2-draft",
-        destination: "/docs/proof-of-work-api",
+        destination: "/docs/learning-map-api",
         permanent: true,
       },
       {
         source: "/docs/agentic-v2",
-        destination: "/docs/proof-of-work-api",
+        destination: "/docs/learning-map-api",
+        permanent: true,
+      },
+      {
+        source: "/docs/proof-of-work-api",
+        destination: "/docs/learning-map-api",
+        permanent: true,
+      },
+      {
+        source: "/docs/proof-of-work-api/:path*",
+        destination: "/docs/learning-map-api/:path*",
         permanent: true,
       },
       // Former /platform marketing path must not redirect to deleted /use-cases.
@@ -61,7 +71,32 @@ const nextConfig: NextConfig = {
       { source: "/api/ile/:path*", destination: "/api/learn/:path*", permanent: true },
       {
         source: "/api/workspace-ile/:path*",
-        destination: "/api/workspace-learn/:path*",
+        destination: "/api/solve/session/:path*",
+        permanent: true,
+      },
+      {
+        source: "/api/workspace-learn/:path*",
+        destination: "/api/solve/session/:path*",
+        permanent: true,
+      },
+      {
+        source: "/api/solve-flow/public/:token",
+        destination: "/api/solve/public/:token",
+        permanent: true,
+      },
+      {
+        source: "/api/solve-flow/public/:token/:path*",
+        destination: "/api/solve/public/:token/:path*",
+        permanent: true,
+      },
+      {
+        source: "/api/v3/pow/keys",
+        destination: "/api/dashboard/api-keys",
+        permanent: true,
+      },
+      {
+        source: "/api/v3/pow/keys/:path*",
+        destination: "/api/dashboard/api-keys/:path*",
         permanent: true,
       },
       {

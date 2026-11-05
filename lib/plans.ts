@@ -116,7 +116,7 @@ export const PLANS: Record<PlanId, PlanDef> = {
       "$1 per timed session · $10 per Learning session",
       "$99/mo platform access",
       "Unlimited Workspaces",
-      "Proof-of-Work API keys + MCP",
+      "Learning Map API keys + MCP",
       "Internal practice-session PoW not billed as API PoW",
       "Priority support",
     ],
@@ -598,7 +598,7 @@ export function hasProofOfWorkApiAccess(
   return plan === "api_metered";
 }
 
-/** Plans that may create Proof-of-Work API keys (v2 /api/v3/pow/keys). */
+/** Plans that may create Learning Map API keys (dashboard /api/dashboard/api-keys). */
 export function hasAgentApiKeyPlan(plan: PlanId | string | null | undefined): boolean {
   return plan === "api_metered";
 }

@@ -162,12 +162,11 @@ export function agentToolFeature(name: string): WorkspaceFeature | null {
     case "get_account_settings":
     case "update_account_settings":
     case "generate_integration_skill":
-    case "start_session":
-    case "get_session":
-    case "upload_proof_of_work":
-    case "end_session":
-    case "list_flow_embeddings":
-    case "get_flow_embedding":
+    case "list_flows":
+    case "create_flow":
+    case "get_flow":
+    case "update_flow":
+    case "link_flow":
       return null;
     case "list_map_tools":
     case "apply_map_tool":

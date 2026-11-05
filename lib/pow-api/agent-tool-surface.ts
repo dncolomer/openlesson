@@ -1,12 +1,11 @@
 /**
  * Single inventory of public agent tools (MCP tools/list + REST twins).
- * Two families: workspace management and headless proof-of-work.
- * Snapshot and Stash are not public agent APIs.
+ * One family: Learning Map + Solve / Calibration / Verification flow management.
+ * Headless proof-of-work, Snapshot, and Stash are not public agent APIs.
  */
 
 import {
-  ACCOUNT_API_BASE,
-  POW_API_BASE,
+  FLOW_API_BASE,
   WORKSPACE_API_BASE,
   type PublicAgentApiFamily,
 } from "@/lib/api/agent-api-paths";
@@ -14,7 +13,6 @@ import {
   agentToolFeature,
   workspaceSupportsFeature,
 } from "@/lib/workspace-capabilities";
-import { powModelAgentSimulationContract } from "./pow-model-agent-contract";
 import type { ApiKeyScope } from "./types";
 
 export type AgentToolSurfaceEntry = {
@@ -23,7 +21,7 @@ export type AgentToolSurfaceEntry = {
   scope: ApiKeyScope;
   summary: string;
   /** REST twin — method + path pattern with {workspace_id} placeholder */
-  rest: { method: "GET" | "POST" | "PATCH"; path: string };
+  rest: { method: "GET" | "POST" | "PATCH" | "DELETE"; path: string };
 };
 
 /** Canonical agent workspace ops — every entry has REST + MCP parity. */
@@ -47,7 +45,7 @@ export const AGENT_TOOL_SURFACE = [
     family: "workspace",
     scope: "workspaces:write",
     summary:
-      "Create a Learning workspace only, including an optional map and settings. Verification and Calibration use POST /api/dashboard/flows.",
+      "Create a Learning Map only, including an optional map and settings. Solve, Calibration, and Verification use create_flow.",
     rest: { method: "POST", path: WORKSPACE_API_BASE },
   },
   {
@@ -104,7 +102,7 @@ export const AGENT_TOOL_SURFACE = [
     name: "get_workspace_settings",
     family: "workspace",
     scope: "workspaces:read",
-    summary: "Read workspace settings (title, goal, catalog size, visibility).",
+    summary: "Read Learning Map settings (title, visibility).",
     rest: {
       method: "GET",
       path: `${WORKSPACE_API_BASE}/{workspace_id}/settings`,
@@ -114,98 +112,73 @@ export const AGENT_TOOL_SURFACE = [
     name: "update_workspace_settings",
     family: "workspace",
     scope: "workspaces:write",
-    summary: "Patch workspace settings.",
+    summary: "Patch Learning Map settings.",
     rest: {
       method: "PATCH",
       path: `${WORKSPACE_API_BASE}/{workspace_id}/settings`,
     },
   },
   {
-    name: "get_account_settings",
-    family: "workspace",
-    scope: "workspaces:read",
-    summary: "Read account settings for this API key (identity, org, scopes).",
-    rest: { method: "GET", path: ACCOUNT_API_BASE },
-  },
-  {
-    name: "update_account_settings",
-    family: "workspace",
-    scope: "workspaces:write",
-    summary: "Patch account settings (username / display name).",
-    rest: { method: "PATCH", path: ACCOUNT_API_BASE },
-  },
-  {
-    name: "generate_integration_skill",
+    name: "list_flows",
     family: "workspace",
     scope: "workspaces:read",
     summary:
-      "Generate partner skill.md so ChatGPT, Claude, or another agent can authorize and run the two APIs.",
-    rest: {
-      method: "POST",
-      path: `${WORKSPACE_API_BASE}/{workspace_id}/integration-skill`,
-    },
-  },
-  {
-    name: "start_session",
-    family: "pow",
-    scope: "workspaces:write",
-    summary:
-      "Start a headless Calibrate, Learn, or Verify session: prepare the answers-model tree, start the clock.",
-    rest: {
-      method: "POST",
-      path: `${POW_API_BASE}/workspaces/{workspace_id}/sessions`,
-    },
-  },
-  {
-    name: "get_session",
-    family: "pow",
-    scope: "workspaces:read",
-    summary: "Read a headless session: remaining time, inferred path, current focus, answers model.",
+      "List Solve, Calibration, and Verification flows owned by this key. Optional workspace_id filters to one Learning Map.",
     rest: {
       method: "GET",
-      path: `${POW_API_BASE}/workspaces/{workspace_id}/sessions/{session_id}`,
+      path: FLOW_API_BASE,
     },
   },
   {
-    name: "upload_proof_of_work",
-    family: "pow",
-    scope: "workspaces:write",
-    summary: `Submit proof of work into a live headless session. Infers the path on the prepared tree. Expired sessions reject further work. ${powModelAgentSimulationContract()}`,
-    rest: {
-      method: "POST",
-      path: `${POW_API_BASE}/workspaces/{workspace_id}/sessions/{session_id}/proof-of-work`,
-    },
-  },
-  {
-    name: "end_session",
-    family: "pow",
+    name: "create_flow",
+    family: "workspace",
     scope: "workspaces:write",
     summary:
-      "End a headless session: score the inferred path against the prepared tree and persist the flow embedding.",
+      "Create a Solve, Calibration, or Verification flow. Independent unless workspace_id is set.",
     rest: {
       method: "POST",
-      path: `${POW_API_BASE}/workspaces/{workspace_id}/sessions/{session_id}/end`,
+      path: FLOW_API_BASE,
     },
   },
   {
-    name: "list_flow_embeddings",
-    family: "pow",
+    name: "get_flow",
+    family: "workspace",
     scope: "workspaces:read",
+    summary: "Read one Solve, Calibration, or Verification flow.",
+    rest: {
+      method: "GET",
+      path: `${FLOW_API_BASE}/{flow_id}`,
+    },
+  },
+  {
+    name: "update_flow",
+    family: "workspace",
+    scope: "workspaces:write",
+    summary: "Update a Solve, Calibration, or Verification flow.",
+    rest: {
+      method: "PATCH",
+      path: `${FLOW_API_BASE}/{flow_id}`,
+    },
+  },
+  {
+    name: "delete_flow",
+    family: "workspace",
+    scope: "workspaces:write",
+    summary: "Delete a Solve, Calibration, or Verification flow.",
+    rest: {
+      method: "DELETE",
+      path: `${FLOW_API_BASE}/{flow_id}`,
+    },
+  },
+  {
+    name: "link_flow",
+    family: "workspace",
+    scope: "workspaces:write",
     summary:
-      "List Calibrate, Learn, and Verify embeddings (flowcfg-v1-d96): answers model, projected policy, and proof of work.",
+      "Place or link a Solve, Calibration, or Verification flow onto a Learning Map tile.",
     rest: {
-      method: "GET",
-      path: `${POW_API_BASE}/workspaces/{workspace_id}/flow-embeddings`,
-    },
-  },
-  {
-    name: "get_flow_embedding",
-    family: "pow",
-    scope: "workspaces:read",
-    summary: "Recover one flow embedding by id, including the raw payload used to embed.",
-    rest: {
-      method: "GET",
-      path: `${POW_API_BASE}/workspaces/{workspace_id}/flow-embeddings`,
+      method: "POST",
+      path: `${FLOW_API_BASE}/{flow_id}/link`,
     },
   },
 ] as const satisfies readonly AgentToolSurfaceEntry[];

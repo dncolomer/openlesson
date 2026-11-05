@@ -25,11 +25,11 @@ describe("mcp-jsonrpc-handler", () => {
 
     expect(response?.result).toMatchObject({
       protocolVersion: "2025-03-26",
-      serverInfo: { name: "uncertain-systems-proof-of-work-api" },
+      serverInfo: { name: "uncertain-systems" },
     });
   });
 
-  it("lists MCP tools including workspace create and headless sessions", async () => {
+  it("lists MCP tools including workspace create and flow management", async () => {
     const response = await handleJsonRpc(
       { jsonrpc: "2.0", id: 2, method: "tools/list", params: {} },
       auth,
@@ -41,9 +41,12 @@ describe("mcp-jsonrpc-handler", () => {
     const names = tools.map((tool) => tool.name);
     expect(names).toContain("list_workspaces");
     expect(names).toContain("create_workspace");
-    expect(names).toContain("start_session");
-    expect(names).toContain("upload_proof_of_work");
-    expect(names).toContain("end_session");
+    expect(names).toContain("create_flow");
+    expect(names).toContain("link_flow");
+    expect(names).toContain("apply_map_tool");
+    expect(names).not.toContain("start_session");
+    expect(names).not.toContain("upload_proof_of_work");
+    expect(names).not.toContain("end_session");
     expect(names).not.toContain("lwm_snapshot");
     expect(names).not.toContain("buffer_proof_of_work");
   });

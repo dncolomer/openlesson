@@ -57,6 +57,7 @@ import {
   tapTracePayload,
   isTapLiveThoughtSpeechEnabled,
   tapHookFormingText,
+  tapSessionRuntimePaths,
   type TapProductKind,
 } from "@/lib/tap-session-runtime";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
@@ -384,7 +385,7 @@ export function TapScoreClient({
     }) => {
       const activeTapSessionId = tapSessionIdRef.current;
       if (!activeTapSessionId) return;
-      void fetch("/api/workspace-tap-score/trace", {
+      void fetch(tapSessionRuntimePaths(kind).trace, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(tapTracePayload({
@@ -404,7 +405,7 @@ export function TapScoreClient({
         })
         .catch(() => {});
     },
-    [workspaceId, blockId, sessionId, privateToken, handlePowInterruption],
+    [workspaceId, blockId, sessionId, privateToken, handlePowInterruption, kind],
   );
 
   const tapThoughtSpeech = useSessionThoughtInterface({
@@ -481,7 +482,7 @@ export function TapScoreClient({
 
     void (async () => {
       try {
-        const response = await fetch("/api/workspace-tap-score/topics", {
+        const response = await fetch(tapSessionRuntimePaths(kind).topics, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -508,7 +509,7 @@ export function TapScoreClient({
     return () => {
       cancelled = true;
     };
-  }, [phase, workspaceId, blockId, sessionId, privateToken, minutes, conversationLanguage, presetStartingTopics]);
+  }, [phase, workspaceId, blockId, sessionId, privateToken, minutes, conversationLanguage, presetStartingTopics, kind]);
 
   const stashedThoughts = useMemo(
     () => thoughts.filter((thought) => !memoryThoughtIds.has(thought.id) && !sentThoughtIds.has(thought.id)),

@@ -51,7 +51,7 @@ function walkOgRoutes(dir: string, acc: string[] = []): string[] {
 describe("OG share inventory (one unsys standard)", () => {
   it("lists all registry surfaces with identical unsys standard title, description, aesthetic", () => {
     const surfaces = listOgSurfaces();
-    expect(surfaces.length).toBe(7);
+    expect(surfaces.length).toBe(8);
     expect(Object.keys(OG_SURFACES).sort()).toEqual(
       [...REQUIRED_SHARE_SURFACE_IDS].sort(),
     );
@@ -116,6 +116,9 @@ describe("OG share inventory (one unsys standard)", () => {
     expect(openGraphImagePathForRoute("/docs/proof-of-work-api")).toBe(
       "/docs/proof-of-work-api/opengraph-image",
     );
+    expect(openGraphImagePathForRoute("/docs/learning-map-api")).toBe(
+      "/docs/learning-map-api/opengraph-image",
+    );
     expect(OG_SURFACES.insight.path).toContain("[id]");
     expect(OG_SURFACES["public-workspace"].path).toContain("[id]");
   });
@@ -124,6 +127,7 @@ describe("OG share inventory (one unsys standard)", () => {
     const routes = walkOgRoutes(join(ROOT, "app")).sort();
     const expected = [
       "all-you-can-learn/[workspaceId]/opengraph-image.tsx",
+      "docs/learning-map-api/opengraph-image.tsx",
       "docs/proof-of-work-api/opengraph-image.tsx",
       "insights/[id]/opengraph-image.tsx",
       "insights/[id]/twitter-image.tsx",

@@ -37,7 +37,7 @@ import {
   type ProofOfWorkApiInterruption,
 } from "./predictive-interruption";
 import { callXaiResponsesWithFiles } from "@/lib/xai-client";
-import { powWorkspaceResource } from "@/lib/api/agent-api-paths";
+import { workspaceResource, powWorkspaceResource } from "@/lib/api/agent-api-paths";
 
 export const EVIDENCE_SPEC_VERSION = "1.3";
 
@@ -54,7 +54,7 @@ export function buildHeadlessSessionStartApiPath(workspaceId: string, baseUrl: s
 }
 
 export function buildIntegrationSkillApiPath(workspaceId: string, baseUrl: string): string {
-  return powWorkspaceResource(workspaceId, "integration-skill", baseUrl);
+  return workspaceResource(workspaceId, "integration-skill", baseUrl);
 }
 
 /** Headless session end — public agent performance outcome. */
@@ -72,63 +72,60 @@ export function buildContinuousEvaluationPolicy(
   } | null
 ): ContinuousEvaluationPolicy {
   const proofOfWorkCount = contextCounts?.proof_of_work_artifacts ?? 0;
-  const startPath = buildHeadlessSessionStartApiPath(workspaceId, baseUrl);
+  const flowsPath = workspaceResource(workspaceId, "flows", baseUrl);
   const skillPath = buildIntegrationSkillApiPath(workspaceId, baseUrl);
-  const performancePath = buildPerformanceApiPath(workspaceId, baseUrl);
-  const uploadPath = buildProofOfWorkUploadApiPath(workspaceId, baseUrl);
+  const mapPath = workspaceResource(workspaceId, "map-tools", baseUrl);
 
   const evidenceTriggers = [
-    "Before the first proof-of-work upload for a new workflow or block",
-    "After every 5-10 new proof-of-work artifacts accumulate in the workspace",
-    "When block definitions, eval definition, or integration tooling changes",
-    "When performance reports feel stale or gaps no longer match observed behavior",
+    "When adding a Solve, Calibration, or Verification flow to the Learning Map",
+    "After Helios or Manual authoring needs a flow before placing a tile",
+    "When block definitions or workspace_goal change",
   ];
 
   if (proofOfWorkCount === 0) {
-    evidenceTriggers.unshift("Immediately now: workspace has little or no proof of work yet; spec will sharpen as uploads begin");
+    evidenceTriggers.unshift("Immediately now: workspace has little or no proof of work yet; spec will sharpen as the map and flows grow");
   } else if (proofOfWorkCount < 10) {
     evidenceTriggers.unshift(
-      `Now recommended: workspace has ${proofOfWorkCount} proof-of-work artifact(s); early spec will improve as more tool traces arrive`
+      `Now recommended: workspace has ${proofOfWorkCount} proof-of-work artifact(s) recorded in the product UI; keep the map and flows aligned`
     );
   } else {
     evidenceTriggers.unshift(
-      `Re-fetch recommended: workspace already has ${proofOfWorkCount} proof-of-work artifacts; spec should reflect learned patterns`
+      `Re-fetch recommended: workspace already has ${proofOfWorkCount} proof-of-work artifacts; spec should reflect the current map and flows`
     );
   }
 
   return {
     principle:
-      "Uncertain Systems verification is continuous. Start a headless session, stream proof of work, end the session, and regenerate the integration skill as the workspace grows.",
+      "Uncertain Systems public agents manage Learning Maps and Solve, Calibration, and Verification flows. Proof of work is recorded in the product UI.",
     more_evidence_improves:
-      "The more tool events you upload into a live session, the better the server can infer the path on the prepared answers-model tree.",
+      "More map tiles and linked Solve, Calibration, and Verification flows give the Learning Map a complete path.",
     regeneration_required: true,
     proof_of_work_spec: {
-      api_path: startPath,
+      api_path: flowsPath,
       method: "POST",
-      purpose: "Start a headless Calibrate, Learn, or Verify session (answers-model tree + clock)",
+      purpose: "Create a Solve, Calibration, or Verification flow on this Learning Map",
       when_to_call: evidenceTriggers,
     },
     integration_skill: {
       api_path: skillPath,
       method: "POST",
-      purpose: "Regenerate skill.md so partner agents stay aligned with the latest proof-of-work spec and workspace context",
+      purpose: "Regenerate skill.md so partner agents stay aligned with the latest map and flows",
       when_to_call: [
-        "After regenerating or materially updating the proof of work spec",
-        "When onboarding a new partner agent version or changing integration behavior",
-        "On a recurring cadence (e.g. weekly or after major proof-of-work milestones) during active evaluation",
+        "After the map or flow set changes",
+        "When onboarding a new partner agent version",
         "Never treat the initial skill.md as permanent; regeneration is part of the operating model",
       ],
     },
     performance: {
-      api_path: performancePath,
+      api_path: mapPath,
       method: "POST",
-      purpose: "End the headless session: score the inferred path and persist the flow embedding",
+      purpose: "Apply Helios Learning Map builder tools (same catalog as in-app Helios)",
       when_to_call: [
-        "When the session clock expires or the agent is done",
-        "After streaming proof of work into start_session via POST .../sessions/{session_id}/proof-of-work",
+        "When placing, shaping, or connecting map tiles",
+        "When a flow should be created with the tile",
       ],
     },
-    recommended_cadence: `Continuous loop: start_session (${startPath}) → upload proof of work (${uploadPath}) → end_session (${performancePath}) → regenerate skill (${skillPath}). Repeat as proof of work grows.`,
+    recommended_cadence: `Map + flow loop: create_workspace or get_workspace → list_map_tools / apply_map_tool (${mapPath}) → create_flow (${flowsPath}) → link_flow → regenerate skill (${skillPath}).`,
   };
 }
 
@@ -151,20 +148,13 @@ export function enrichProofOfWorkSpecResult(
   const proofOfWorkSpecPath = buildProofOfWorkSchemaApiPath(workspaceId, baseUrl);
   const skillPath = buildIntegrationSkillApiPath(workspaceId, baseUrl);
 
-  const sessionRequiredFields = [
-    "session_id",
-    "flow_kind",
-    "remaining_ms",
-    "sequence",
-    "answers_model",
-    "embedding",
-  ] as const;
+  const mapRequiredFields = ["workspace_id", "tool", "tool_calls"] as const;
   const performanceContract: PerformanceReportContract = {
     ...(result.performance_report_contract ??
       buildVerticalScoreReportContract("verification", baseUrl)),
-    endpoint_pattern: `POST ${buildPerformanceApiPath(workspaceId, baseUrl)}`,
-    mcp_tool: "end_session",
-    required_fields: [...sessionRequiredFields],
+    endpoint_pattern: `POST ${workspaceResource(workspaceId, "map-tools", baseUrl)}`,
+    mcp_tool: "apply_map_tool",
+    required_fields: [...mapRequiredFields],
   };
 
   const continuousEvaluation = buildContinuousEvaluationPolicy(workspaceId, baseUrl, contextCounts);
@@ -173,7 +163,7 @@ export function enrichProofOfWorkSpecResult(
   const blockCount = contextCounts?.blocks ?? 0;
   const llmInterruption = normalizePredictedInterruption(
     result.predicted_interruption,
-    "start_session",
+    "create_flow",
     workspaceId
   );
 
@@ -210,7 +200,7 @@ export function enrichProofOfWorkSpecResult(
       result.collection_guidance,
       result.continuous_evaluation_summary,
       formatDualSurfaceGuidance(continuousEvaluation, continuousEvaluationMcp),
-      `Self-update: start_session then upload_proof_of_work then end_session; regenerate skill at ${skillPath} or MCP generate_integration_skill.`,
+      `Self-update: create_flow then link_flow then apply_map_tool; regenerate skill at ${skillPath} or MCP generate_integration_skill.`,
     ]
       .filter(Boolean)
       .join(" "),
@@ -240,49 +230,29 @@ ${JSON.stringify(spec.example_payload, null, 2)}
 Tool submission specs:
 ${toolLines.length ? toolLines.join("\n") : "- single primary tool schema (see schema_name above)"}
 
-Dynamic proof-of-work spec API (MUST appear in skill.md):
-POST ${spec.proof_of_work_spec_api_path || "(workspace)/proof-of-work-schema"}
-Request body: { "definition": "<eval definition>", "block_id": "<optional>", "integration_hints": { "tool_name": "...", "partner_agent": "..." } }
+Dynamic integration skill API (MUST appear in skill.md):
+POST ${spec.continuous_evaluation?.integration_skill.api_path || spec.proof_of_work_spec_api_path || "(workspace)/integration-skill"}
 
 Continuous evaluation — REST (MUST appear in skill.md):
-${spec.continuous_evaluation?.principle || "Verification is continuous; regenerate spec and skill as proof of work grows."}
+${spec.continuous_evaluation?.principle || "Public agents manage Learning Maps and Solve, Calibration, and Verification flows."}
 ${spec.continuous_evaluation?.more_evidence_improves || ""}
-Regenerate proof-of-work spec: ${spec.continuous_evaluation?.proof_of_work_spec.api_path || spec.proof_of_work_spec_api_path}
+Create flow: ${spec.continuous_evaluation?.proof_of_work_spec.api_path || "(workspace)/flows"}
 Regenerate integration skill: ${spec.continuous_evaluation?.integration_skill.api_path || "(workspace)/integration-skill"}
-Upload proof of work: ${spec.continuous_evaluation?.proof_of_work_spec.api_path ? spec.proof_of_work_upload_api_path : "(workspace)/proof-of-work"}
-End session: ${spec.continuous_evaluation_mcp?.performance.rest_equivalent || "(workspace)/sessions/{session_id}/end"}
-REST cadence: ${spec.continuous_evaluation?.recommended_cadence || "start_session → upload_proof_of_work → end_session → regenerate skill"}
+Apply map tools: ${spec.continuous_evaluation?.performance.api_path || "(workspace)/map-tools"}
+REST cadence: ${spec.continuous_evaluation?.recommended_cadence || "create_workspace → apply_map_tool → create_flow → link_flow → regenerate skill"}
 
 Continuous evaluation — MCP (same loop, tool names):
 ${spec.continuous_evaluation_mcp?.principle || spec.continuous_evaluation?.principle || ""}
 MCP endpoint: ${spec.continuous_evaluation_mcp?.mcp_endpoint_pattern || "POST /api/mcp"} (Authorization: Bearer <api_key>)
-start_session ↔ REST POST .../sessions
-upload_proof_of_work ↔ ${spec.proof_of_work_upload_api_path || "REST proof of work"}
-end_session ↔ REST POST .../sessions/{session_id}/end
+create_flow ↔ REST POST .../flows
+link_flow ↔ REST POST .../flows/{flow_id}/link
+apply_map_tool ↔ REST POST .../map-tools
 get_workspace — workspace_goal, kind, map, and settings
-MCP cadence: ${spec.continuous_evaluation_mcp?.recommended_cadence || "create/get workspace → start_session → upload → end_session → repeat"}
+MCP cadence: ${spec.continuous_evaluation_mcp?.recommended_cadence || "create/get workspace → apply_map_tool → create_flow → link_flow → repeat"}
 
 Integration surfaces: REST Bearer auth + MCP JSON-RPC (full parity — document both, prefer live API paths over static copies).
 
-Headless session outcomes (MUST appear in skill.md — answers-model tree, inferred path, remaining time, flow embedding):
-Endpoint: POST .../sessions/{session_id}/end
-MCP tool: end_session
-Snapshot and Stash are not public agent APIs.
-Observable after end_session: answers_model (prepared tree), sequence (inferred path), remaining_ms, embedding.raw.pow
-Catalog sizes: 4 / 8 / 16. Clock: 1–120 minutes (default 15).
-Example end_session shape:
-${JSON.stringify(
-    {
-      session_id: "session-id",
-      flow_kind: "verify",
-      remaining_ms: 0,
-      sequence: ["close"],
-      answers_model: { catalog_size: 4, branch_count: 5 },
-      embedding: { flow_kind: "verify" },
-    },
-    null,
-    2
-  )}
+Proof of work is recorded in the product UI. Headless start_session / upload_proof_of_work / end_session are not public agent APIs. Snapshot and Stash are not public agent APIs.
 
 ${formatInterruptionContractForSkillPrompt()}`;
 }
@@ -293,7 +263,7 @@ export function resolveProofOfWorkSchemaInterruption(
 ): ProofOfWorkApiInterruption {
   return normalizePredictedInterruption(
     spec.predicted_interruption,
-    "start_session",
+    "create_flow",
     workspaceId,
   );
 }

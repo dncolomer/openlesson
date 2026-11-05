@@ -92,7 +92,7 @@ describe("Uncertain Systems brand", () => {
     expect(BRAND_SHORT).toBe("unsys");
     expect(BRAND_SLUG).toBe("uncertain-systems");
     expect(MCP_RESOURCE_SCHEME).toBe("uncertain-systems://");
-    expect(MCP_PROOF_OF_WORK_SERVER_NAME).toBe("uncertain-systems-proof-of-work-api");
+    expect(MCP_PROOF_OF_WORK_SERVER_NAME).toBe("uncertain-systems");
     expect(UNCERTAIN_SYSTEMS_SCOPE.mission.length).toBeGreaterThan(10);
   });
 

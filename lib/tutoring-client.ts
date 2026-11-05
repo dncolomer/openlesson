@@ -9,7 +9,11 @@ import {
   type TutoringIdleInput,
   type TutoringSpeechInput,
 } from "@/lib/tutoring-runtime";
-import { TAP_SESSION_RUNTIME_PATHS } from "@/lib/tap-session-runtime";
+import {
+  TAP_SESSION_RUNTIME_PATHS,
+  tapSessionRuntimePaths,
+  type TapProductKind,
+} from "@/lib/tap-session-runtime";
 import type { SessionPowContext } from "@/lib/session-pow-api-paths";
 
 export type TutoringClientAuth = {
@@ -136,12 +140,22 @@ export async function postTutoringIdle(
 
 export async function postTutoringSessionStart(
   body: Record<string, unknown>,
+  kind: TapProductKind = "scored",
 ): Promise<TutoringPostResult> {
-  return postTutoringJson(TAP_SESSION_RUNTIME_PATHS.start, body);
+  const startPath =
+    kind === "scored"
+      ? TAP_SESSION_RUNTIME_PATHS.start
+      : tapSessionRuntimePaths(kind).start;
+  return postTutoringJson(startPath, body);
 }
 
 export async function postTutoringSessionComplete(
   body: Record<string, unknown>,
+  kind: TapProductKind = "scored",
 ): Promise<TutoringPostResult> {
-  return postTutoringJson(TAP_SESSION_RUNTIME_PATHS.complete, body);
+  const completePath =
+    kind === "scored"
+      ? TAP_SESSION_RUNTIME_PATHS.complete
+      : tapSessionRuntimePaths(kind).complete;
+  return postTutoringJson(completePath, body);
 }

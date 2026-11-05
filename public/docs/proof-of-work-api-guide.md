@@ -1,61 +1,39 @@
-# Uncertain Systems Proof-of-Work API
+# Uncertain Systems Learning Map API
 
-The two public agent APIs are **workspace management** (`/api/v3/workspaces`) and **headless proof-of-work** (`/api/v3/pow`). Create Learning workspaces (`kind: "learning"` / `standard`); Verification and Calibration flows use `POST /api/dashboard/flows`. Then start, run, and end Calibrate, Learn, and Verify sessions. Snapshot and Stash are retired.
+One family:
 
-Authenticate with `Authorization: Bearer <api_key>`.
+- **Learning Map and flow management (`/api/v3/workspaces`, `/api/v3/flows`)** — create and edit Learning Maps, Helios map tools, workspace settings, and **Solve / Calibration / Verification** flows (create, list, update, delete, place/link on map tiles).
 
-## Evaluation modes
+Headless proof-of-work (`/api/v3/pow` sessions, upload, end, embeddings, schema), Snapshot, and Stash are not public agent APIs. Proof of work is recorded in the product UI (Calibrate, Learn, and Verify).
 
-| Mode | Create | Schema | Scoring |
+Authenticate with `Authorization: Bearer <api_key>`. MCP (`POST /api/mcp`) has 100% tool ↔ REST parity. Key CRUD remains browser-session (`/api/dashboard/api-keys`).
+
+## Workspace and map management
+
+| Method | Path | MCP tool | Purpose |
 | :--- | :--- | :--- | :--- |
-| `semantic` (default) | `POST /api/v3/workspaces` or `/workspace/new` | `definition` | Headless session (`start_session` → `end_session`) |
-| `opaque` | `POST /api/v3/workspaces` or `/workspace/new` | `definition_ref` + `contract.event_verbs` | `protocol_report` + structural scoring |
+| `POST` | `/api/v3/workspaces` | `create_workspace` | Create a Learning Map (`kind: "learning"` / `standard`) only. |
+| `GET` / `PATCH` | `/api/v3/workspaces/{workspace_id}` | `get_workspace` / `update_workspace` | Read or edit workspace, map, and settings. |
+| `GET` / `PATCH` | `/api/v3/workspaces/{workspace_id}/blocks` | `list_blocks` / `update_blocks` | Map tiles. |
+| `GET` / `POST` | `/api/v3/workspaces/{workspace_id}/map-tools` | `list_map_tools` / `apply_map_tool` | Helios Learning Map builder. |
 
-Opaque mode stores partner references (`goal_ref`, `external_refs`) without semantic inference. Upload metadata is allowlisted; tool payloads are plaintext-linted.
+## Flow management
 
-## Workspace management
-
-| Method | Path | Scope | Purpose |
+| Method | Path | MCP tool | Purpose |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/api/v3/workspaces` | `workspaces:write` | Create a Learning workspace only (map, settings optional). Verification and Calibration use `POST /api/dashboard/flows`. |
-| `GET` / `PATCH` | `/api/v3/workspaces/{workspace_id}` | `workspaces:read` / `write` | Read or edit workspace, map, and settings. |
-| `GET` | `/api/v3/workspaces/{workspace_id}/blocks` | `workspaces:read` | List map blocks. |
-| `GET` / `PATCH` | `/api/v3/account` | `workspaces:read` / `write` | Account settings. |
+| `GET` / `POST` | `/api/v3/flows` | `list_flows` / `create_flow` | List or create independent Solve, Calibration, or Verification (`kind`). |
+| `GET` / `PATCH` / `DELETE` | `/api/v3/flows/{flow_id}` | `get_flow` / `update_flow` / `delete_flow` | Read, update, or delete one flow. |
+| `POST` | `/api/v3/flows/{flow_id}/link` | `link_flow` | Place the flow on a map tile (`workspace_id`, `block_id`). |
 
-## Headless proof-of-work
+Cookie dashboard create remains `POST /api/dashboard/flows`.
 
-| Method | Path | Scope | Purpose |
-| :--- | :--- | :--- | :--- |
-| `POST` | `/api/v3/pow/workspaces/{workspace_id}/sessions` | `workspaces:write` | Start Calibrate, Learn, or Verify (`flow_kind`). Prepares the answers-model tree and starts the clock. |
-| `POST` | `/api/v3/pow/workspaces/{workspace_id}/sessions/{session_id}/proof-of-work` | `workspaces:write` | Upload proof events; infer the path (catalogs 4 / 8 / 16). Expired sessions reject further work. |
-| `GET` | `/api/v3/pow/workspaces/{workspace_id}/sessions/{session_id}` | `workspaces:read` | Remaining time, inferred path, answers model. |
-| `POST` | `/api/v3/pow/workspaces/{workspace_id}/sessions/{session_id}/end` | `workspaces:write` | Score the inferred path and persist the flow embedding. |
-| `POST` | `/api/v3/pow/org/guests` | `org:write` | Organization admins create guest users by email and issue guest API keys. |
+MCP tools: `create_workspace`, `list_map_tools`, `apply_map_tool`, `create_flow`, `link_flow`.
 
-MCP twins: `create_workspace`, `start_session`, `upload_proof_of_work`, `end_session`.
+## Checklist
 
-## Upload Proof of Work
+1. `create_workspace` (`kind: "learning"`) or `get_workspace`
+2. `list_map_tools` / `apply_map_tool` (or `update_blocks`) to shape the Learning Map
+3. `create_flow` with `kind` `solve` | `calibration` | `verification`
+4. `link_flow` with `workspace_id` and `block_id` to place the flow on a tile
 
-`POST /api/v3/pow/workspaces/{workspace_id}/sessions/{session_id}/proof-of-work`
-
-```json
-{
-  "events": [
-    {
-      "type": "tool",
-      "tool_action": "board_prompt",
-      "metadata": { "prompt": "I close this observation." }
-    }
-  ]
-}
-```
-
-Supported `type` values: `tool`, `screen` (alias `screenshot`), `video`, `eeg`. Simulated canvas work is stored type `tool`.
-
-## Create Workspace
-
-`POST /api/v3/workspaces` and MCP `create_workspace` create a Learning workspace only. Verification and Calibration flows use `POST /api/dashboard/flows`. Then run Calibrate, Learn, or Verify through the headless proof-of-work API (`start_session` → `upload_proof_of_work` → `end_session`).
-
-## Guests
-
-Org admins with `org:write` can call `POST /org/guests` to mint `gsk_` keys. Guests may create and edit workspaces they can access and run headless sessions (`start_session` → `upload_proof_of_work` → `end_session`).
+Do not call `start_session`, `upload_proof_of_work`, or `end_session`. Those tools are not on the public catalog.

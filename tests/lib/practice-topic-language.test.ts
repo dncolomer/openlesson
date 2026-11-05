@@ -162,9 +162,9 @@ describe("Practice topic language structural wiring", () => {
       "components/TapScoreClient.tsx",
     ]) {
       const src = read(rel);
-      expect(src).toMatch(/workspace-tap-score\/topics[\s\S]*conversationLanguage/);
+      expect(src).toMatch(/tapSessionRuntimePaths\(kind\)\.topics[\s\S]*conversationLanguage/);
       expect(src).toMatch(
-        /}, \[phase, workspaceId, blockId, sessionId, privateToken, minutes, conversationLanguage, presetStartingTopics\]/,
+        /}, \[phase, workspaceId, blockId, sessionId, privateToken, minutes, conversationLanguage, presetStartingTopics, kind\]/,
       );
     }
     const tapFlow = read("components/tap-score/use-tap-score-flow.ts");

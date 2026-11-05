@@ -179,7 +179,7 @@ export function SeoSolutionPage({ page, breadcrumbs }: SeoSolutionPageProps) {
                     <>
                       {paragraph.split("Proof-of-Work API")[0]}
                       <Link
-                        href="/docs/proof-of-work-api"
+                        href="/docs/learning-map-api"
                         className="text-neutral-200 underline decoration-neutral-600 underline-offset-4 hover:text-white"
                       >
                         Proof-of-Work API

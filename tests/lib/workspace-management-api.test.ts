@@ -20,17 +20,34 @@ import { authenticateRequest } from "@/lib/pow-api/auth";
 import { POST as POST_COLLECTION, GET as GET_COLLECTION } from "@/app/api/v3/workspaces/route";
 import { GET as GET_ONE, PATCH as PATCH_ONE } from "@/app/api/v3/workspaces/[id]/route";
 import { PATCH as PATCH_SETTINGS } from "@/app/api/v3/workspaces/[id]/settings/route";
-import { GET as GET_ACCOUNT, PATCH as PATCH_ACCOUNT } from "@/app/api/v3/account/route";
+import { GET as GET_FLOWS, POST as POST_FLOWS } from "@/app/api/v3/workspaces/[id]/flows/route";
+import {
+  GET as GET_FLOW,
+  PATCH as PATCH_FLOW,
+} from "@/app/api/v3/workspaces/[id]/flows/[flowId]/route";
+import { POST as POST_LINK } from "@/app/api/v3/workspaces/[id]/flows/[flowId]/link/route";
+import {
+  GET as GET_OWNER_FLOWS,
+  POST as POST_OWNER_FLOWS,
+} from "@/app/api/v3/flows/route";
+import {
+  DELETE as DELETE_OWNER_FLOW,
+  GET as GET_OWNER_FLOW,
+} from "@/app/api/v3/flows/[flowId]/route";
+import { POST as POST_OWNER_LINK } from "@/app/api/v3/flows/[flowId]/link/route";
 import { callMcpProofOfWorkTool } from "@/lib/pow-api/mcp-proof-of-work-server";
 import { parseAgentWorkspaceKind } from "@/lib/pow-api/workspace-management";
 import {
   AGENT_WORKSPACE_CREATE_REFUSED_MESSAGE,
   WORKSPACE_KIND_STANDARD,
 } from "@/lib/workspace-kind";
+import { resetSolveFlowRepository } from "@/lib/solve-flow-repository";
+import { resetCalibrationFlowRepository } from "@/lib/calibration-flow-repository";
+import { resetVerificationFlowRepository } from "@/lib/verification-flow-repository";
 
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-7ec135c42124/implementer";
+  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-1a2102ec4028/implementer";
 
 const auth: AuthContext = {
   key_id: "key-test",
@@ -61,6 +78,9 @@ describe("workspace management REST + MCP", () => {
 
   beforeEach(() => {
     supabase = createMemoryAgentSupabase();
+    resetSolveFlowRepository();
+    resetCalibrationFlowRepository();
+    resetVerificationFlowRepository();
     vi.mocked(authenticateRequest).mockImplementation(async () => ({
       auth,
       supabase: supabase as never,
@@ -87,14 +107,12 @@ describe("workspace management REST + MCP", () => {
     }
   });
 
-  it("creates Learning workspaces, patches settings, edits the map, and patches account settings", async () => {
+  it("creates Learning workspaces, patches settings, and edits the map", async () => {
     const learningRes = await POST_COLLECTION(
       jsonRequest("http://localhost/api/v3/workspaces", "POST", {
         kind: "learning",
         title: "Algebra map",
         description: "Learning workspace",
-        workspace_goal: "Solve linear equations",
-        learning_model_size: 8,
         blocks: [
           { id: "a", title: "Start", description: "Open the map", is_start: true, next: ["b"] },
           { id: "b", title: "Next", description: "Continue" },
@@ -139,7 +157,7 @@ describe("workspace management REST + MCP", () => {
     const patched = await PATCH_ONE(
       jsonRequest(`http://localhost/api/v3/workspaces/${learningJson.workspace.id}`, "PATCH", {
         title: "Algebra map v2",
-        workspace_goal: "Factor polynomials",
+        description: "Factor polynomials",
         blocks: [
           { title: "Foundations", description: "Linear", is_start: true },
           { title: "Quadratics", description: "Factor" },
@@ -149,11 +167,11 @@ describe("workspace management REST + MCP", () => {
     );
     expect(patched.status).toBe(200);
     const patchedJson = (await patched.json()) as {
-      workspace: { settings: { title: string; workspace_goal: string } };
+      workspace: { settings: { title: string; description: string } };
       blocks: Array<{ title: string }>;
     };
     expect(patchedJson.workspace.settings.title).toBe("Algebra map v2");
-    expect(patchedJson.workspace.settings.workspace_goal).toContain("Factor");
+    expect(patchedJson.workspace.settings.description).toContain("Factor");
     expect(patchedJson.blocks.map((b) => b.title)).toEqual(
       expect.arrayContaining(["Foundations", "Quadratics"]),
     );
@@ -162,15 +180,15 @@ describe("workspace management REST + MCP", () => {
       jsonRequest(
         `http://localhost/api/v3/workspaces/${learningJson.workspace.id}/settings`,
         "PATCH",
-        { learning_model_size: 16, description: "Catalog 16" },
+        { description: "Catalog 16" },
       ),
       { params: Promise.resolve({ id: learningJson.workspace.id }) },
     );
     expect(settingsRes.status).toBe(200);
     const settingsJson = (await settingsRes.json()) as {
-      settings: { learning_model_size: number; description: string };
+      settings: { description: string };
     };
-    expect(settingsJson.settings.learning_model_size).toBe(16);
+    expect(settingsJson.settings.description).toBe("Catalog 16");
 
     const listed = await GET_COLLECTION(
       jsonRequest("http://localhost/api/v3/workspaces", "GET"),
@@ -179,15 +197,6 @@ describe("workspace management REST + MCP", () => {
     const listedJson = (await listed.json()) as { workspaces: Array<{ product: string }> };
     const products = listedJson.workspaces.map((w) => w.product).sort();
     expect(products).toEqual(["learning"]);
-
-    const accountGet = await GET_ACCOUNT(jsonRequest("http://localhost/api/v3/account", "GET"));
-    expect(accountGet.status).toBe(200);
-    const accountPatch = await PATCH_ACCOUNT(
-      jsonRequest("http://localhost/api/v3/account", "PATCH", { username: "agent-owner" }),
-    );
-    expect(accountPatch.status).toBe(200);
-    const accountJson = (await accountPatch.json()) as { username: string };
-    expect(accountJson.username).toBe("agent-owner");
 
     const got = await GET_ONE(
       jsonRequest(`http://localhost/api/v3/workspaces/${learningJson.workspace.id}`, "GET"),
@@ -205,7 +214,6 @@ describe("workspace management REST + MCP", () => {
           learning: learningJson.workspace,
           verificationRefused: verifyJson.error.message,
           patched: patchedJson.workspace.settings,
-          account: accountJson,
         },
         null,
         2,
@@ -252,6 +260,199 @@ describe("workspace management REST + MCP", () => {
     );
     expect((updated.workspace as { settings: { title: string } }).settings.title).toBe(
       "MCP learning edited",
+    );
+  });
+
+  it("creates, lists, updates, and links Solve, Calibration, and Verification flows", async () => {
+    const created = await POST_COLLECTION(
+      jsonRequest("http://localhost/api/v3/workspaces", "POST", {
+        kind: "learning",
+        title: "Flow map",
+        blocks: [
+          { title: "Solve tile", description: "Solve", is_start: true },
+          { title: "Calibrate tile", description: "Calibrate" },
+          { title: "Verify tile", description: "Verify" },
+        ],
+      }),
+    );
+    expect(created.status).toBe(201);
+    const createdJson = (await created.json()) as {
+      workspace: { id: string };
+      blocks: Array<{ id: string; title: string }>;
+    };
+    const workspaceId = createdJson.workspace.id;
+    const solveBlock = createdJson.blocks.find((b) => b.title === "Solve tile");
+    expect(solveBlock?.id).toBeTruthy();
+
+    const solveRes = await POST_FLOWS(
+      jsonRequest(`http://localhost/api/v3/workspaces/${workspaceId}/flows`, "POST", {
+        kind: "solve",
+        name: "Linear solve",
+        topic: "Linear equations",
+      }),
+      { params: Promise.resolve({ id: workspaceId }) },
+    );
+    expect(solveRes.status).toBe(201);
+    const solveJson = (await solveRes.json()) as { flow: { id: string; kind: string; name: string } };
+    expect(solveJson.flow.kind).toBe("solve");
+
+    const calRes = await POST_FLOWS(
+      jsonRequest(`http://localhost/api/v3/workspaces/${workspaceId}/flows`, "POST", {
+        kind: "calibration",
+        name: "Calibrate algebra",
+        goal: "Ready for linear systems",
+        questions: ["What is a slope?"],
+      }),
+      { params: Promise.resolve({ id: workspaceId }) },
+    );
+    expect(calRes.status).toBe(201);
+    const calJson = (await calRes.json()) as { flow: { id: string; kind: string } };
+    expect(calJson.flow.kind).toBe("calibration");
+
+    const verRes = await POST_FLOWS(
+      jsonRequest(`http://localhost/api/v3/workspaces/${workspaceId}/flows`, "POST", {
+        kind: "verification",
+        name: "Verify algebra",
+        topic: "Factoring",
+        questions: ["Factor x^2 - 1"],
+      }),
+      { params: Promise.resolve({ id: workspaceId }) },
+    );
+    expect(verRes.status).toBe(201);
+    const verJson = (await verRes.json()) as { flow: { id: string; kind: string } };
+    expect(verJson.flow.kind).toBe("verification");
+
+    const listed = await GET_FLOWS(
+      jsonRequest(`http://localhost/api/v3/workspaces/${workspaceId}/flows`, "GET"),
+      { params: Promise.resolve({ id: workspaceId }) },
+    );
+    expect(listed.status).toBe(200);
+    const listedJson = (await listed.json()) as { flows: Array<{ kind: string }> };
+    expect(listedJson.flows.map((f) => f.kind).sort()).toEqual([
+      "calibration",
+      "solve",
+      "verification",
+    ]);
+
+    const patched = await PATCH_FLOW(
+      jsonRequest(
+        `http://localhost/api/v3/workspaces/${workspaceId}/flows/${solveJson.flow.id}`,
+        "PATCH",
+        { name: "Linear solve v2" },
+      ),
+      { params: Promise.resolve({ id: workspaceId, flowId: solveJson.flow.id }) },
+    );
+    expect(patched.status).toBe(200);
+    const patchedJson = (await patched.json()) as { flow: { name: string } };
+    expect(patchedJson.flow.name).toBe("Linear solve v2");
+
+    const got = await GET_FLOW(
+      jsonRequest(
+        `http://localhost/api/v3/workspaces/${workspaceId}/flows/${solveJson.flow.id}`,
+        "GET",
+      ),
+      { params: Promise.resolve({ id: workspaceId, flowId: solveJson.flow.id }) },
+    );
+    expect(got.status).toBe(200);
+
+    const linked = await POST_LINK(
+      jsonRequest(
+        `http://localhost/api/v3/workspaces/${workspaceId}/flows/${solveJson.flow.id}/link`,
+        "POST",
+        { block_id: solveBlock!.id },
+      ),
+      { params: Promise.resolve({ id: workspaceId, flowId: solveJson.flow.id }) },
+    );
+    expect(linked.status).toBe(200);
+    const linkedJson = (await linked.json()) as {
+      block_id: string;
+      map_block: { kind?: string; flow_id?: string };
+    };
+    expect(linkedJson.block_id).toBe(solveBlock!.id);
+    expect(linkedJson.map_block.kind).toBe("solve");
+    expect(linkedJson.map_block.flow_id).toBe(solveJson.flow.id);
+
+    const mcpSolve = parseTool(
+      (await callMcpProofOfWorkTool(
+        "create_flow",
+        {
+          workspace_id: workspaceId,
+          kind: "solve",
+          name: "MCP solve",
+          topic: "Quadratics",
+        },
+        { auth, supabase: supabase as never, origin: "https://uncertain.systems" },
+      )) as { content: Array<{ text: string }> },
+    );
+    expect((mcpSolve.flow as { kind: string }).kind).toBe("solve");
+
+    const independent = await POST_OWNER_FLOWS(
+      jsonRequest("http://localhost/api/v3/flows", "POST", {
+        kind: "solve",
+        name: "Independent solve",
+        topic: "Eigenvalues",
+      }),
+    );
+    expect(independent.status).toBe(201);
+    const independentJson = (await independent.json()) as {
+      flow: { id: string; workspace_id: string | null; kind: string };
+    };
+    expect(independentJson.flow.kind).toBe("solve");
+    expect(independentJson.flow.workspace_id).toBeNull();
+
+    const ownerListed = await GET_OWNER_FLOWS(
+      jsonRequest("http://localhost/api/v3/flows", "GET"),
+    );
+    expect(ownerListed.status).toBe(200);
+    const ownerListedJson = (await ownerListed.json()) as {
+      flows: Array<{ id: string }>;
+    };
+    expect(ownerListedJson.flows.some((f) => f.id === independentJson.flow.id)).toBe(true);
+
+    const ownerGot = await GET_OWNER_FLOW(
+      jsonRequest(`http://localhost/api/v3/flows/${independentJson.flow.id}`, "GET"),
+      { params: Promise.resolve({ flowId: independentJson.flow.id }) },
+    );
+    expect(ownerGot.status).toBe(200);
+
+    const ownerLinked = await POST_OWNER_LINK(
+      jsonRequest(
+        `http://localhost/api/v3/flows/${independentJson.flow.id}/link`,
+        "POST",
+        { workspace_id: workspaceId, block_id: solveBlock!.id },
+      ),
+      { params: Promise.resolve({ flowId: independentJson.flow.id }) },
+    );
+    expect(ownerLinked.status).toBe(200);
+
+    const mcpIndependent = parseTool(
+      (await callMcpProofOfWorkTool(
+        "create_flow",
+        { kind: "calibration", name: "Independent calibrate", goal: "Ready" },
+        { auth, supabase: supabase as never, origin: "https://uncertain.systems" },
+      )) as { content: Array<{ text: string }> },
+    );
+    expect((mcpIndependent.flow as { workspace_id: string | null }).workspace_id).toBeNull();
+
+    const deleted = await DELETE_OWNER_FLOW(
+      jsonRequest(`http://localhost/api/v3/flows/${independentJson.flow.id}`, "DELETE"),
+      { params: Promise.resolve({ flowId: independentJson.flow.id }) },
+    );
+    expect(deleted.status).toBe(200);
+
+    mkdirSync(SCRATCH, { recursive: true });
+    writeFileSync(
+      join(SCRATCH, "map-flow-api.log"),
+      JSON.stringify(
+        {
+          workspaceId,
+          kinds: listedJson.flows.map((f) => f.kind).sort(),
+          linked: linkedJson.map_block,
+          mcpSolve: mcpSolve.flow,
+        },
+        null,
+        2,
+      ),
     );
   });
 });

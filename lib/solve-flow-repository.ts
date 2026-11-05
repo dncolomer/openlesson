@@ -133,6 +133,7 @@ function mapFlow(row: Record<string, unknown>): SolveFlow {
 
 async function loadSupabaseState(filter: {
   ownerUserId?: string;
+  workspaceId?: string;
   flowId?: string;
   publicToken?: string;
 }): Promise<SolveState> {
@@ -140,6 +141,7 @@ async function loadSupabaseState(filter: {
   let flowQuery = supabase.from(SOLVE_FLOWS_TABLE).select("*");
   if (filter.flowId) flowQuery = flowQuery.eq("id", filter.flowId);
   else if (filter.publicToken) flowQuery = flowQuery.eq("public_token", filter.publicToken);
+  else if (filter.workspaceId) flowQuery = flowQuery.eq("workspace_id", filter.workspaceId);
   else if (filter.ownerUserId) flowQuery = flowQuery.eq("owner_user_id", filter.ownerUserId);
   const { data: flowRows, error } = await flowQuery;
   if (error) throw new Error(error.message);
@@ -300,6 +302,18 @@ export async function getSolveFlowById(flowId: string): Promise<SolveFlow | null
   const state = await loadSupabaseState({ flowId: id });
   const flow = state.flows.find((item) => item.id === id);
   return flow ? presentFlow(flow) : null;
+}
+
+export async function listSolveFlows(workspaceId: string): Promise<SolveFlow[]> {
+  const id = String(workspaceId || "").trim();
+  if (!id) return [];
+  if ((await resolveBackend()) === "memory") {
+    return listedAuthorFlows(
+      solveRepositoryGlobal().memory.flows.filter((flow) => flow.workspaceId === id),
+    ).map(presentFlow);
+  }
+  const state = await loadSupabaseState({ workspaceId: id });
+  return listedAuthorFlows(state.flows).map(presentFlow);
 }
 
 export async function listSolveFlowsForOwnerUserId(ownerUserId: string): Promise<SolveFlow[]> {

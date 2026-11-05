@@ -1,24 +1,13 @@
 /**
- * MCP tools/list catalog — 1:1 with AGENT_TOOL_SURFACE (workspace + headless PoW).
+ * MCP tools/list catalog — 1:1 with AGENT_TOOL_SURFACE (Learning Map + flow management).
  */
 
-import { POW_MODEL_VERSION, WORKSPACE_PROOF_OF_WORK_WIRE_TYPES } from "../workspace-proof-of-work";
-import {
-  powModelAgentSimulationContract,
-  powModelVersionFieldDescription,
-} from "../pow-model-agent-contract";
 import { AGENT_TOOL_SURFACE } from "../agent-tool-surface";
-import { WORKSPACE_API_BASE, POW_API_BASE, ACCOUNT_API_BASE } from "@/lib/api/agent-api-paths";
+import { WORKSPACE_API_BASE, FLOW_API_BASE } from "@/lib/api/agent-api-paths";
 import { HELIOS_MAP_TOOL_IDS } from "@/lib/workspace-helios-tools";
 
-const POW_MODEL_VERSION_FIELD = {
-  type: "string" as const,
-  enum: [POW_MODEL_VERSION],
-  description: powModelVersionFieldDescription(),
-};
-
-const FLOW_KIND_ENUM = ["calibrate", "learn", "verify"] as const;
 const CATALOG_SIZE_ENUM = [4, 8, 16] as const;
+const PRODUCT_FLOW_KIND_ENUM = ["solve", "calibration", "verification"] as const;
 
 type McpTool = {
   name: string;
@@ -47,7 +36,7 @@ const SCHEMAS: Record<string, Omit<McpTool, "name">> = {
     annotations: { readOnlyHint: true },
   },
   get_workspace: {
-    description: `Read workspace metadata, kind, settings, and goal. REST: GET ${WORKSPACE_API_BASE}/{workspace_id}.`,
+    description: `Read Learning Map metadata, kind, and settings. REST: GET ${WORKSPACE_API_BASE}/{workspace_id}.`,
     inputSchema: {
       type: "object",
       properties: { workspace_id: { type: "string", description: "Workspace UUID." } },
@@ -58,7 +47,7 @@ const SCHEMAS: Record<string, Omit<McpTool, "name">> = {
   },
   create_workspace: {
     description:
-      "Create a Learning workspace only (kind=learning|standard). Verification and Calibration are dashboard flows — POST /api/dashboard/flows. Optional title, settings, map blocks, or initial_prompt. REST: POST /api/v3/workspaces.",
+      "Create a Learning Map only (kind=learning|standard). Solve, Calibration, and Verification use create_flow. Optional title, settings, map blocks, or initial_prompt. REST: POST /api/v3/workspaces.",
     inputSchema: {
       type: "object",
       properties: {
@@ -79,9 +68,7 @@ const SCHEMAS: Record<string, Omit<McpTool, "name">> = {
         title: { type: "string" },
         description: { type: "string" },
         notes: { type: "string" },
-        workspace_goal: { type: "string" },
         initial_prompt: { type: "string" },
-        learning_model_size: { type: "number", enum: [...CATALOG_SIZE_ENUM] },
         is_public: { type: "boolean" },
         blocks: { type: "array", items: { type: "object" } },
         map: { type: "array", items: { type: "object" } },
@@ -100,8 +87,6 @@ const SCHEMAS: Record<string, Omit<McpTool, "name">> = {
         title: { type: "string" },
         description: { type: "string" },
         notes: { type: "string" },
-        workspace_goal: { type: "string" },
-        learning_model_size: { type: "number", enum: [...CATALOG_SIZE_ENUM] },
         is_public: { type: "boolean" },
         blocks: { type: "array", items: { type: "object" } },
         map: { type: "array", items: { type: "object" } },
@@ -182,8 +167,6 @@ const SCHEMAS: Record<string, Omit<McpTool, "name">> = {
         title: { type: "string" },
         description: { type: "string" },
         notes: { type: "string" },
-        workspace_goal: { type: "string" },
-        learning_model_size: { type: "number", enum: [...CATALOG_SIZE_ENUM] },
         is_public: { type: "boolean" },
         settings: { type: "object" },
       },
@@ -191,154 +174,95 @@ const SCHEMAS: Record<string, Omit<McpTool, "name">> = {
       additionalProperties: false,
     },
   },
-  get_account_settings: {
-    description: `Read account settings for this key. REST: GET ${ACCOUNT_API_BASE}.`,
+  list_flows: {
+    description: `List Solve, Calibration, and Verification flows owned by this key. Optional workspace_id filters to one Learning Map. REST: GET ${FLOW_API_BASE}.`,
     inputSchema: {
       type: "object",
-      properties: {},
+      properties: {
+        workspace_id: { type: "string" },
+        kind: {
+          type: "string",
+          enum: [...PRODUCT_FLOW_KIND_ENUM],
+        },
+      },
       additionalProperties: false,
     },
     annotations: { readOnlyHint: true },
   },
-  update_account_settings: {
-    description: `Patch account settings. REST: PATCH ${ACCOUNT_API_BASE}.`,
-    inputSchema: {
-      type: "object",
-      properties: {
-        username: { type: "string" },
-        display_name: { type: "string" },
-      },
-      additionalProperties: false,
-    },
-  },
-  generate_integration_skill: {
-    description:
-      "Generate partner skill.md so ChatGPT, Claude, or another agent can authorize against Uncertain Systems and run workspace management plus headless flows. REST: POST .../integration-skill.",
+  create_flow: {
+    description: `Create a Solve, Calibration, or Verification flow. Independent unless workspace_id is set. REST: POST ${FLOW_API_BASE}.`,
     inputSchema: {
       type: "object",
       properties: {
         workspace_id: { type: "string" },
-        integration_name: { type: "string" },
-        base_url: { type: "string" },
-        eval_definition: { type: "string" },
-        prefetch_proof_of_work_spec: { type: "boolean" },
-      },
-      required: ["workspace_id"],
-      additionalProperties: false,
-    },
-  },
-  start_session: {
-    description: `Start a headless Calibrate, Learn, or Verify session. Prepares the answers-model tree and starts the clock. REST: POST ${POW_API_BASE}/workspaces/{workspace_id}/sessions.`,
-    inputSchema: {
-      type: "object",
-      properties: {
-        workspace_id: { type: "string" },
-        block_id: { type: "string" },
-        flow_kind: {
+        kind: {
           type: "string",
-          enum: [...FLOW_KIND_ENUM],
-          description: "calibrate | learn | verify.",
+          enum: [...PRODUCT_FLOW_KIND_ENUM],
+          description: "solve | calibration | verification",
         },
-        catalog_size: {
-          type: "number",
-          enum: [...CATALOG_SIZE_ENUM],
-          description: "Action catalog 4, 8, or 16.",
-        },
-        duration_minutes: { type: "number", description: "Session length 1–120. Default 15." },
-        chapter_title: { type: "string" },
-        chapter_brief: { type: "string" },
+        name: { type: "string" },
+        topic: { type: "string" },
+        goal: { type: "string" },
+        questions: { type: "array", items: { type: "string" } },
+        duration_minutes: { type: "number" },
+        action_catalog: { type: "number", enum: [...CATALOG_SIZE_ENUM] },
       },
-      required: ["workspace_id", "flow_kind"],
+      required: ["kind"],
       additionalProperties: false,
     },
   },
-  get_session: {
-    description: `Read remaining time, inferred path, and answers model. REST: GET ${POW_API_BASE}/workspaces/{workspace_id}/sessions/{session_id}.`,
+  get_flow: {
+    description: `Read one flow. REST: GET ${FLOW_API_BASE}/{flow_id}.`,
     inputSchema: {
       type: "object",
       properties: {
-        workspace_id: { type: "string" },
-        session_id: { type: "string" },
-      },
-      required: ["workspace_id", "session_id"],
-      additionalProperties: false,
-    },
-    annotations: { readOnlyHint: true },
-  },
-  upload_proof_of_work: {
-    description: `Submit proof of work into a live headless session. The server infers the path on the prepared tree and rejects work after the clock expires. REST: POST ${POW_API_BASE}/workspaces/{workspace_id}/sessions/{session_id}/proof-of-work. ${powModelAgentSimulationContract()}`,
-    inputSchema: {
-      type: "object",
-      properties: {
-        workspace_id: { type: "string" },
-        session_id: { type: "string" },
-        events: {
-          type: "array",
-          items: { type: "object" },
-          description: "Canvas / tool proof events (tool_action + metadata).",
-        },
-        type: {
-          type: "string",
-          enum: [...WORKSPACE_PROOF_OF_WORK_WIRE_TYPES],
-        },
-        mime_type: { type: "string" },
-        data: { type: "string" },
-        block_id: { type: "string" },
-        file_name: { type: "string" },
-        tool_name: { type: "string" },
-        tool_action: { type: "string" },
-        metadata: { type: "object" },
-        timestamp_ms: { type: "number" },
-        pow_model_version: POW_MODEL_VERSION_FIELD,
-      },
-      required: ["workspace_id", "session_id"],
-      additionalProperties: false,
-    },
-  },
-  end_session: {
-    description: `End a headless session and persist the flow embedding (answers model + inferred path + proof). REST: POST ${POW_API_BASE}/workspaces/{workspace_id}/sessions/{session_id}/end.`,
-    inputSchema: {
-      type: "object",
-      properties: {
-        workspace_id: { type: "string" },
-        session_id: { type: "string" },
-      },
-      required: ["workspace_id", "session_id"],
-      additionalProperties: false,
-    },
-  },
-  list_flow_embeddings: {
-    description:
-      "List Calibrate, Learn, and Verify embeddings (flowcfg-v1-d96). REST: GET .../flow-embeddings.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        workspace_id: { type: "string" },
-        flow_kind: {
-          type: "string",
-          enum: ["calibrate", "learn", "verify"],
-        },
         flow_id: { type: "string" },
+        workspace_id: { type: "string" },
       },
-      required: ["workspace_id"],
+      required: ["flow_id"],
       additionalProperties: false,
     },
     annotations: { readOnlyHint: true },
   },
-  get_flow_embedding: {
-    description:
-      "Recover one flow embedding by id. REST: GET .../flow-embeddings?id=",
+  update_flow: {
+    description: `Update a Solve, Calibration, or Verification flow. REST: PATCH ${FLOW_API_BASE}/{flow_id}.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        flow_id: { type: "string" },
+        workspace_id: { type: "string" },
+        name: { type: "string" },
+        topic: { type: "string" },
+        goal: { type: "string" },
+        questions: { type: "array", items: { type: "string" } },
+        duration_minutes: { type: "number" },
+        action_catalog: { type: "number", enum: [...CATALOG_SIZE_ENUM] },
+      },
+      required: ["flow_id"],
+      additionalProperties: false,
+    },
+  },
+  delete_flow: {
+    description: `Delete a Solve, Calibration, or Verification flow. REST: DELETE ${FLOW_API_BASE}/{flow_id}.`,
+    inputSchema: {
+      type: "object",
+      properties: { flow_id: { type: "string" } },
+      required: ["flow_id"],
+      additionalProperties: false,
+    },
+  },
+  link_flow: {
+    description: `Place a flow on a Learning Map tile. REST: POST ${FLOW_API_BASE}/{flow_id}/link.`,
     inputSchema: {
       type: "object",
       properties: {
         workspace_id: { type: "string" },
-        embedding_id: { type: "string" },
-        id: { type: "string" },
+        flow_id: { type: "string" },
+        block_id: { type: "string" },
       },
-      required: ["workspace_id"],
+      required: ["workspace_id", "flow_id", "block_id"],
       additionalProperties: false,
     },
-    annotations: { readOnlyHint: true },
   },
 };
 

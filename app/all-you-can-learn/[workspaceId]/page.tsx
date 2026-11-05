@@ -15,7 +15,7 @@ import {
 import { normalizeAyclAccessTier, type AyclAccessTier } from "@/lib/aycl-shared";
 import { aestheticImageForId } from "@/lib/aesthetics";
 import { standardShareSocialMetadata } from "@/lib/og/standard";
-import { PublicConsoleWash } from "@/components/ui/console-frame";
+import { PublicConsoleWash, PublicPageField } from "@/components/ui/console-frame";
 
 const BACKGROUND_IMAGE = aestheticImageForId("all-you-can-learn-landing", [
   "/aesthetics/Greco-futurism/HHnTrjJbQAAOz7K.jpeg",
@@ -104,14 +104,8 @@ export default async function AyclWorkspaceLandingPage({
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#0a0a0a] text-zinc-200 selection:bg-zinc-700">
-      <div className="fixed inset-0 z-0 bg-[#0a0a0a]" />
-      <div
-        className="fixed inset-0 z-0 bg-cover bg-fixed bg-center"
-        style={{ backgroundImage: `url(${BACKGROUND_IMAGE})` }}
-        aria-hidden
-      />
-      <div className="fixed inset-0 z-0 bg-[#0a0a0a]/82" />
+    <main className="relative min-h-screen overflow-hidden bg-[#0e1c2c] text-zinc-200 selection:bg-zinc-700">
+      <PublicPageField image={BACKGROUND_IMAGE} />
       <PublicConsoleWash />
       <LandingNav />
 

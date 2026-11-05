@@ -5,7 +5,11 @@ import Image from "next/image";
 import { ArrowRight } from "lucide-react";
 import { SectionHeading } from "@/components/marketing/MarketingChrome";
 import { TrackedCtaLink } from "@/components/TrackedCtaLink";
-import { PublicConsoleWash } from "@/components/ui/console-frame";
+import {
+  PublicConsoleWash,
+  PublicPageField,
+  PUBLIC_FIELD_STILLS,
+} from "@/components/ui/console-frame";
 import {
   LANDING_HERO_COPY,
   LANDING_HERO_STILL,
@@ -14,27 +18,16 @@ import {
 } from "@/lib/marketing/landing-variants";
 import { PLATFORM_CORE, PLATFORM_PROOF } from "@/lib/marketing/platform";
 
-const BACKGROUND_IMAGES = [
-  "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg",
-  "/aesthetics/Greco-futurism/HHnTrf2acAA1Juo.jpeg",
-  "/aesthetics/Greco-futurism/HHnTrlMaAAAg_4I.jpeg",
-  "/aesthetics/Greco-futurism/HHnTrjJbQAAOz7K.jpeg",
-] as const;
-
 export function LandingWash() {
   const [bgImage, setBgImage] = useState("");
 
   useEffect(() => {
-    setBgImage(BACKGROUND_IMAGES[Math.floor(Math.random() * BACKGROUND_IMAGES.length)]);
+    setBgImage(PUBLIC_FIELD_STILLS[Math.floor(Math.random() * PUBLIC_FIELD_STILLS.length)]);
   }, []);
 
   return (
     <>
-      <div className="fixed inset-0 z-0 bg-[#0a0a0a]" />
-      {bgImage ? (
-        <div className="fixed inset-0 z-0 bg-cover bg-fixed bg-center" style={{ backgroundImage: `url(${bgImage})` }} />
-      ) : null}
-      <div className="fixed inset-0 z-0 bg-[#0a0a0a]/78" />
+      <PublicPageField image={bgImage} />
       <PublicConsoleWash />
     </>
   );

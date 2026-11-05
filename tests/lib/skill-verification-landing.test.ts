@@ -50,7 +50,9 @@ describe("skill-verification landing page route", () => {
     expect(exists("app/skill-verification/SkillVerificationLanding.tsx")).toBe(true);
     const src = read("app/skill-verification/SkillVerificationLanding.tsx");
     // Design system tokens from current LP
-    expect(src).toContain("bg-[#0a0a0a]");
+    expect(src).toContain("bg-[#0e1c2c]");
+    expect(src).toContain("PublicPageField");
+    expect(src).toContain("PUBLIC_FIELD_STILLS");
     expect(src).toContain("font-mono");
     expect(src).toContain("tracking-[2px]");
     expect(src).toContain("border-zinc-800");

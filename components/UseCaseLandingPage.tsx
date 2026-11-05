@@ -4,7 +4,7 @@ import { Footer } from "@/components/Footer";
 import { LandingNav } from "@/components/LandingNav";
 import { TrackedCtaLink } from "@/components/TrackedCtaLink";
 import { aestheticImageForId } from "@/lib/aesthetics";
-import { PublicConsoleWash } from "@/components/ui/console-frame";
+import { PublicConsoleWash, PublicPageField } from "@/components/ui/console-frame";
 import {
   DEMO_BOOKING_URL,
   type SeoUseCasePageConfig,
@@ -58,20 +58,13 @@ export function UseCaseLandingPage({ page }: UseCaseLandingPageProps) {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#0a0a0a] text-white selection:bg-zinc-700">
+    <div className="relative min-h-screen overflow-hidden bg-[#0e1c2c] text-white selection:bg-zinc-700">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
 
-      <div className="fixed inset-0 z-0 bg-[#0a0a0a]" />
-      <div
-        className="fixed inset-0 z-0 bg-cover bg-fixed bg-center"
-        style={{ backgroundImage: `url(${backgroundImage})` }}
-        aria-hidden
-      />
-      <div className="fixed inset-0 z-0 bg-[#0a0a0a]/78" />
+      <PublicPageField image={backgroundImage} />
       <PublicConsoleWash />
-      <div className="fixed inset-0 z-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:72px_72px] opacity-40" />
 
       <LandingNav />
 

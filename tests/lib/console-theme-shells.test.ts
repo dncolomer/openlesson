@@ -146,7 +146,8 @@ describe("console theme shells", () => {
       createElement(MarketingPageShell, null, createElement("h1", null, "Public title")),
     );
     expect(publicHtml).toContain("border-white/40");
-    expect(publicHtml).toContain("bg-black");
+    expect(publicHtml).toContain("bg-[#0e1c2c]");
+    expect(publicHtml).toContain("data-public-field");
     expect(publicHtml).toContain("Public title");
     expect(publicHtml).toContain("data-console-field");
     expect(publicHtml).toContain("data-console-frame-label");

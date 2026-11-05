@@ -8,7 +8,7 @@ import {
   type SalesProductCard,
 } from "@/lib/sales/product-cards";
 import { PITCH_ASSETS } from "@/lib/sales/solution-slide-decks";
-import { PublicConsoleWash } from "@/components/ui/console-frame";
+import { PublicConsoleWash, PublicPageField } from "@/components/ui/console-frame";
 
 export const metadata: Metadata = {
   title: "Sales",
@@ -19,23 +19,14 @@ export const metadata: Metadata = {
   },
 };
 
-const BACKGROUND_IMAGE = PITCH_ASSETS.aesthetics.title;
-
 export default function SalesIndexPage() {
   return (
     <main
-      className="relative min-h-screen overflow-hidden bg-[#0a0a0a] text-zinc-200 selection:bg-zinc-700"
+      className="relative min-h-screen overflow-hidden bg-[#0e1c2c] text-zinc-200 selection:bg-zinc-700"
       data-sales-index
     >
-      <div className="fixed inset-0 z-0 bg-[#0a0a0a]" />
-      <div
-        className="fixed inset-0 z-0 bg-cover bg-fixed bg-center"
-        style={{ backgroundImage: `url(${BACKGROUND_IMAGE})` }}
-        aria-hidden
-      />
-      <div className="fixed inset-0 z-0 bg-[#0a0a0a]/78" />
+      <PublicPageField image={PITCH_ASSETS.aesthetics.title} />
       <PublicConsoleWash />
-      <div className="fixed inset-0 z-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:72px_72px] opacity-40" />
 
       <div className="relative z-10 mx-auto w-full max-w-7xl px-6 pt-14 pb-16 sm:pt-16">
         <div className="console-chip mb-6 inline-block rounded-none px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">

@@ -7,18 +7,11 @@ import { Footer } from "@/components/Footer";
 import { LandingNav } from "@/components/LandingNav";
 import { TrackedCtaLink } from "@/components/TrackedCtaLink";
 import { DEMO_BOOKING_URL } from "@/lib/seo/product-page";
-import { PublicConsoleWash } from "@/components/ui/console-frame";
+import { PublicConsoleWash, PublicPageField, PUBLIC_FIELD_STILLS } from "@/components/ui/console-frame";
 
 const PAGE_PATH = "/skill-verification";
 const CTA_WORKSPACE = "Create your Workspace";
 const CTA_WORKSPACE_HREF = "/workspace/new";
-
-const BACKGROUND_IMAGES = [
-  "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg",
-  "/aesthetics/Greco-futurism/HHnTrf2acAA1Juo.jpeg",
-  "/aesthetics/Greco-futurism/HHnTrlMaAAAg_4I.jpeg",
-  "/aesthetics/Greco-futurism/HHnTrjJbQAAOz7K.jpeg",
-];
 
 const AUDIENCES = [
   {
@@ -88,24 +81,16 @@ export function SkillVerificationLanding() {
   const [bgImage, setBgImage] = useState("");
 
   useEffect(() => {
-    setBgImage(BACKGROUND_IMAGES[Math.floor(Math.random() * BACKGROUND_IMAGES.length)]);
+    setBgImage(PUBLIC_FIELD_STILLS[Math.floor(Math.random() * PUBLIC_FIELD_STILLS.length)]);
   }, []);
 
   return (
     <main
-      className="relative min-h-screen overflow-hidden bg-[#0a0a0a] text-zinc-200 selection:bg-zinc-700"
+      className="relative min-h-screen overflow-hidden bg-[#0e1c2c] text-zinc-200 selection:bg-zinc-700"
       data-page="skill-verification"
     >
-      <div className="fixed inset-0 z-0 bg-[#0a0a0a]" />
-      {bgImage ? (
-        <div
-          className="fixed inset-0 z-0 bg-cover bg-fixed bg-center"
-          style={{ backgroundImage: `url(${bgImage})` }}
-        />
-      ) : null}
-      <div className="fixed inset-0 z-0 bg-[#0a0a0a]/78" />
+      <PublicPageField image={bgImage} />
       <PublicConsoleWash />
-      <div className="fixed inset-0 z-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:72px_72px] opacity-40" />
 
       <LandingNav />
 

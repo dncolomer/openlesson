@@ -16,7 +16,7 @@ import {
   ayclOfferLabel,
   ayclOfferTooltip,
 } from "@/lib/aycl-shared";
-import { PublicConsoleWash } from "@/components/ui/console-frame";
+import { PublicConsoleWash, PublicPageField } from "@/components/ui/console-frame";
 import {
   collectAyclCatalogCategories,
   filterAyclCatalogCards,
@@ -91,16 +91,9 @@ export default function AllYouCanLearnPage() {
   };
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#0a0a0a] text-zinc-200 selection:bg-zinc-700">
-      <div className="fixed inset-0 z-0 bg-[#0a0a0a]" />
-      <div
-        className="fixed inset-0 z-0 bg-cover bg-fixed bg-center"
-        style={{ backgroundImage: `url(${BACKGROUND_IMAGE})` }}
-        aria-hidden
-      />
-      <div className="fixed inset-0 z-0 bg-[#0a0a0a]/78" />
+    <main className="relative min-h-screen overflow-hidden bg-[#0e1c2c] text-zinc-200 selection:bg-zinc-700">
+      <PublicPageField image={BACKGROUND_IMAGE} />
       <PublicConsoleWash />
-      <div className="fixed inset-0 z-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:72px_72px] opacity-40" />
 
       <LandingNav />
 

@@ -6,7 +6,7 @@ import { Footer } from "@/components/Footer";
 import { LandingNav } from "@/components/LandingNav";
 
 import { standardShareSocialMetadata } from "@/lib/og/standard";
-import { PublicConsoleWash } from "@/components/ui/console-frame";
+import { PublicConsoleWash, PublicPageField } from "@/components/ui/console-frame";
 
 const standardSocial = standardShareSocialMetadata({
   url: "https://uncertain.systems/community-events/probabilistic-computing",
@@ -22,8 +22,6 @@ export const metadata: Metadata = {
   openGraph: standardSocial.openGraph,
   twitter: standardSocial.twitter,
 };
-
-const BACKGROUND_IMAGE = "/aesthetics/Greco-futurism/HHnTrjJbQAAOz7K.jpeg";
 
 const LEARNING_PLAN_HREF =
   "/p/62479ef7-c142-407a-995f-a5bba429a20b/probabilistic-computing-and-extropic-ai-approach";
@@ -132,16 +130,9 @@ const SPONSORS = [
 
 export default function ProbabilisticComputingHackathonPage() {
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#0a0a0a] text-zinc-200 selection:bg-zinc-700">
-      <div className="fixed inset-0 z-0 bg-[#0a0a0a]" />
-      <div
-        className="fixed inset-0 z-0 bg-cover bg-fixed bg-center"
-        style={{ backgroundImage: `url(${BACKGROUND_IMAGE})` }}
-        aria-hidden
-      />
-      <div className="fixed inset-0 z-0 bg-[#0a0a0a]/78" />
+    <main className="relative min-h-screen overflow-hidden bg-[#0e1c2c] text-zinc-200 selection:bg-zinc-700">
+      <PublicPageField image="/aesthetics/Greco-futurism/HHnTrjJbQAAOz7K.jpeg" />
       <PublicConsoleWash />
-      <div className="fixed inset-0 z-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:72px_72px] opacity-40" />
 
       <LandingNav />
 

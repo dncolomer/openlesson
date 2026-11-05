@@ -8,6 +8,48 @@ export const CONSOLE_FRAME_CLASS = "relative border border-white/40 bg-black";
 export const CONSOLE_LABEL_CLASS =
   "pointer-events-none font-mono text-[9px] uppercase tracking-[0.28em] text-white/50";
 
+/** Ink navy between black console plates and the felt navy of the blueprint stills. */
+export const PUBLIC_FIELD_BG_CLASS = "bg-[#0e1c2c]";
+
+export const PUBLIC_FIELD_STILLS = [
+  "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg",
+  "/aesthetics/Greco-futurism/HHnTrf2acAA1Juo.jpeg",
+  "/aesthetics/Greco-futurism/HHnTrlMaAAAg_4I.jpeg",
+  "/aesthetics/Greco-futurism/HHnTrjJbQAAOz7K.jpeg",
+] as const;
+
+export const PUBLIC_FIELD_DEFAULT_STILL = PUBLIC_FIELD_STILLS[3];
+
+/**
+ * Public page field: Greco still under an ink-navy wash.
+ */
+export function PublicPageField({
+  image = PUBLIC_FIELD_DEFAULT_STILL,
+  className,
+}: {
+  image?: string;
+  className?: string;
+}) {
+  const still = image.trim();
+  return (
+    <>
+      <div
+        aria-hidden
+        data-public-field=""
+        className={cn("pointer-events-none fixed inset-0 z-0", PUBLIC_FIELD_BG_CLASS, className)}
+      />
+      {still ? (
+        <div
+          aria-hidden
+          className="pointer-events-none fixed inset-0 z-0 bg-cover bg-fixed bg-center"
+          style={{ backgroundImage: `url(${still})` }}
+        />
+      ) : null}
+      <div aria-hidden className="pointer-events-none fixed inset-0 z-0 bg-[#0e1c2c]/78" />
+    </>
+  );
+}
+
 /**
  * Background field for public and marketing pages. Sits under page copy.
  * Corner brackets and a short index match the session rail. No MAGI grid.

@@ -6,7 +6,7 @@ import { LandingNav } from "@/components/LandingNav";
 import { AYCL_HACKATHONS } from "@/lib/aycl-landing";
 import { aestheticImageForId } from "@/lib/aesthetics";
 import { standardShareSocialMetadata } from "@/lib/og/standard";
-import { PublicConsoleWash } from "@/components/ui/console-frame";
+import { PublicConsoleWash, PublicPageField } from "@/components/ui/console-frame";
 
 const standardSocial = standardShareSocialMetadata({
   url: "https://uncertain.systems/community-events",
@@ -31,16 +31,10 @@ const BACKGROUND_IMAGE = aestheticImageForId("hackathons", [
 export default function HackathonsPage() {
   return (
     <main
-      className="relative min-h-screen overflow-hidden border border-white/40 bg-black text-zinc-200 selection:bg-zinc-700"
+      className="relative min-h-screen overflow-hidden border border-white/40 bg-[#0e1c2c] text-zinc-200 selection:bg-zinc-700"
       data-hackathons-page
     >
-      <div className="fixed inset-0 z-0 bg-[#0a0a0a]" />
-      <div
-        className="fixed inset-0 z-0 bg-cover bg-fixed bg-center"
-        style={{ backgroundImage: `url(${BACKGROUND_IMAGE})` }}
-        aria-hidden
-      />
-      <div className="fixed inset-0 z-0 bg-[#0a0a0a]/80" />
+      <PublicPageField image={BACKGROUND_IMAGE} />
       <PublicConsoleWash />
 
       <LandingNav />

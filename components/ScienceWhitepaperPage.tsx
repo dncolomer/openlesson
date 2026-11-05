@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Footer } from "@/components/Footer";
 import { LandingNav } from "@/components/LandingNav";
-import { PublicConsoleWash } from "@/components/ui/console-frame";
+import { PublicConsoleWash, PublicPageField } from "@/components/ui/console-frame";
 import type { ScienceWhitepaper } from "@/lib/science/whitepaper-types";
 
 type ScienceWhitepaperPageProps = {
@@ -16,11 +16,12 @@ export function ScienceWhitepaperPage({ paper }: ScienceWhitepaperPageProps) {
 
   return (
     <main
-      className="relative min-h-screen border border-white/40 bg-black text-zinc-200 selection:bg-zinc-700 selection:text-white"
+      className="relative min-h-screen border border-white/40 bg-[#0e1c2c] text-zinc-200 selection:bg-zinc-700 selection:text-white"
       data-console-frame=""
       data-science-whitepaper
       data-whitepaper-path={paper.path}
     >
+      <PublicPageField />
       <PublicConsoleWash />
       <div className="relative z-10">
       <LandingNav />

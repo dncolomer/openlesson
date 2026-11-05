@@ -34,6 +34,8 @@ describe("live landing hero", () => {
     expect(heroes).not.toContain("LandingHeroStrip");
     expect(heroes).not.toContain("LandingRegionImageVariants");
     expect(heroes).toContain("<PublicConsoleWash />");
+    expect(heroes).toContain("PublicPageField");
+    expect(heroes).toContain("PUBLIC_FIELD_STILLS");
     expect(heroes).not.toContain("AccelerandoRun");
     expect(sitemap).not.toContain("/marketing/lp-variants");
     expect(nextConfig).toContain('source: "/marketing/lp-variants"');

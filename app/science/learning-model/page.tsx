@@ -7,7 +7,7 @@ import { LearningModelFactorCopy } from "@/components/science/LearningModelFacto
 import { LearningModelObjectGlyph } from "@/components/science/LearningModelMarks";
 import { LearningModelPipelines } from "@/components/science/LearningModelPipelines";
 import { LearningModelScene } from "@/components/science/LearningModelScene";
-import { PublicConsoleWash } from "@/components/ui/console-frame";
+import { PublicConsoleWash, PublicPageField } from "@/components/ui/console-frame";
 import { LEARNING_MODEL_OBJECTS, LEARNING_MODEL_PUBLIC_LABEL } from "@/lib/learning-model";
 import { standardShareSocialMetadata } from "@/lib/og/standard";
 import {
@@ -32,9 +32,10 @@ export default function ScienceLearningModelPage() {
   const copy = SCIENCE_LEARNING_MODEL_COPY;
   return (
     <main
-      className="relative min-h-screen overflow-hidden bg-[#0a0a0a] text-zinc-200 selection:bg-zinc-700"
+      className="relative min-h-screen overflow-hidden bg-[#0e1c2c] text-zinc-200 selection:bg-zinc-700"
       data-science-learning-model
     >
+      <PublicPageField />
       <PublicConsoleWash />
       <div className="relative z-10">
         <LandingNav />

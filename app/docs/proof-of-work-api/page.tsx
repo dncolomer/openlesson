@@ -1,9 +1,7 @@
 import Link from "next/link";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
-import { PublicConsoleWash } from "@/components/ui/console-frame";
-
-const DOCS_BACKGROUND = "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg";
+import { PublicConsoleWash, PublicPageField } from "@/components/ui/console-frame";
 
 const sectionClass = "console-copy p-5 sm:p-6";
 const labelClass = "font-mono text-[10px] uppercase tracking-[2px] text-neutral-500";
@@ -397,12 +395,8 @@ function EndpointDoc({ spec }: { spec: EndpointSpec }) {
 
 export default function AgenticV2DocsPage() {
   return (
-    <div
-      className="relative min-h-screen overflow-hidden border border-white/40 bg-black bg-cover bg-fixed bg-center text-white"
-      style={{
-        backgroundImage: `linear-gradient(rgba(10,10,10,0.88), rgba(10,10,10,0.92)), url(${DOCS_BACKGROUND})`,
-      }}
-    >
+    <div className="relative min-h-screen overflow-hidden border border-white/40 bg-[#0e1c2c] text-white">
+      <PublicPageField image="/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg" />
       <PublicConsoleWash />
       <div className="relative z-10">
       <Navbar />

@@ -7,10 +7,8 @@ import { Footer } from "@/components/Footer";
 import { UNIFIED_PRICING_COPY } from "@/lib/pricing/unified-copy";
 import { PRICING_PAGE_SKUS } from "@/lib/pricing/modules";
 import type { CreditPackSkuId } from "@/lib/credits/constants";
-import { PublicConsoleWash } from "@/components/ui/console-frame";
+import { PublicConsoleWash, PublicPageField } from "@/components/ui/console-frame";
 import { usePricingCheckout } from "@/components/pricing/use-pricing-checkout";
-
-const BACKGROUND = "/aesthetics/Greco-futurism/HHnTrjJbQAAOz7K.jpeg";
 
 const SKU_SECTION_ID: Record<CreditPackSkuId, string> = {
   credits_100: "credits-100",
@@ -59,10 +57,9 @@ function PricingPageContent() {
   return (
     <main
       data-console-frame=""
-      className="relative min-h-screen border border-white/40 bg-black bg-cover bg-fixed bg-center text-neutral-200"
-      style={{ backgroundImage: `url(${BACKGROUND})` }}
+      className="relative min-h-screen border border-white/40 bg-[#0e1c2c] text-zinc-200"
     >
-      <div className="fixed inset-0 z-0 bg-black/78" />
+      <PublicPageField image="/aesthetics/Greco-futurism/HHnTrjJbQAAOz7K.jpeg" />
       <PublicConsoleWash />
       <div className="relative z-10 flex min-h-screen flex-col">
         <LandingNav />

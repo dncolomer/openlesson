@@ -67,6 +67,8 @@ describe("landing knowledge acquisition, verification, and mapping copy", () => 
     expect(lp).not.toContain("AccelerandoRun");
     expect(lp).not.toContain("PUBLIC_MAGI_GRID_CLASS");
     expect(readRel("components/marketing/landing-heroes.tsx")).toContain("PublicConsoleWash");
+    expect(readRel("components/marketing/landing-heroes.tsx")).toContain("PublicPageField");
+    expect(readRel("components/marketing/MarketingChrome.tsx")).toContain("bg-[#0e1c2c]");
     expect(readRel("components/marketing/landing-heroes.tsx")).not.toContain("AccelerandoRun");
     expect(lp).not.toContain("A Human Knowledge Platform.");
     expect(lp).not.toContain("Uncertain Systems is a Human Knowledge Platform.");

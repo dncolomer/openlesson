@@ -1,25 +1,15 @@
 import { Footer } from "@/components/Footer";
 import { LandingNav } from "@/components/LandingNav";
-import { PublicConsoleWash } from "@/components/ui/console-frame";
-
-const DEFAULT_BACKGROUND = "/aesthetics/Greco-futurism/HHnTrjJbQAAOz7K.jpeg";
+import { PublicConsoleWash, PublicPageField } from "@/components/ui/console-frame";
 
 export function MarketingPageShell({
   children,
-  backgroundImage = DEFAULT_BACKGROUND,
 }: {
   children: React.ReactNode;
-  backgroundImage?: string;
 }) {
   return (
-    <main className="relative min-h-screen border border-white/40 bg-black text-zinc-200 selection:bg-zinc-700">
-      <div className="fixed inset-0 z-0 bg-[#0a0a0a]" />
-      <div
-        className="fixed inset-0 z-0 bg-cover bg-fixed bg-center"
-        style={{ backgroundImage: `url(${backgroundImage})` }}
-        aria-hidden
-      />
-      <div className="fixed inset-0 z-0 bg-[#0a0a0a]/78" />
+    <main className="relative min-h-screen border border-white/40 bg-[#0e1c2c] text-zinc-200 selection:bg-zinc-700">
+      <PublicPageField />
       <PublicConsoleWash />
       <LandingNav />
       {children}

@@ -11,7 +11,7 @@ import {
 
 export default function B2BLandingPage() {
   return (
-    <main className="relative min-h-screen border border-white/40 bg-black text-zinc-200 selection:bg-zinc-700">
+    <main className="relative min-h-screen border border-white/40 bg-[#0e1c2c] text-zinc-200 selection:bg-zinc-700">
       <LandingWash />
       <LandingNav />
       <LandingHeroEditorial />

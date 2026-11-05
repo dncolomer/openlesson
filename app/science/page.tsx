@@ -38,7 +38,7 @@ import {
 
 import { standardShareSocialMetadata } from "@/lib/og/standard";
 
-import { PublicConsoleWash } from "@/components/ui/console-frame";
+import { PublicConsoleWash, PublicPageField } from "@/components/ui/console-frame";
 
 const standardSocial = standardShareSocialMetadata({
   url: `https://uncertain.systems${SCIENCE_HUB_PATH}`,
@@ -52,8 +52,6 @@ export const metadata: Metadata = {
   openGraph: standardSocial.openGraph,
   twitter: standardSocial.twitter,
 };
-
-const BACKGROUND_IMAGE = "/aesthetics/Greco-futurism/HHnTrlMaAAAg_4I.jpeg";
 
 const PRINCIPLES = [
   {
@@ -88,17 +86,11 @@ const thesisSlide = getPlatformPitchSlide(PLATFORM_THESIS_SLIDE_INDEX);
 export default function SciencePage() {
   return (
     <main
-      className="relative min-h-screen overflow-hidden bg-[#0a0a0a] text-zinc-200 selection:bg-zinc-700 [&_section[id]]:scroll-mt-24"
+      className="relative min-h-screen overflow-hidden bg-[#0e1c2c] text-zinc-200 selection:bg-zinc-700 [&_section[id]]:scroll-mt-24"
       data-science-hub
     >
       <ScrollToHash />
-      <div className="fixed inset-0 z-0 bg-[#0a0a0a]" />
-      <div
-        className="fixed inset-0 z-0 bg-cover bg-fixed bg-center"
-        style={{ backgroundImage: `url(${BACKGROUND_IMAGE})` }}
-        aria-hidden
-      />
-      <div className="fixed inset-0 z-0 bg-[#0a0a0a]/78" />
+      <PublicPageField image="/aesthetics/Greco-futurism/HHnTrlMaAAAg_4I.jpeg" />
       <PublicConsoleWash />
       <LandingNav />
 

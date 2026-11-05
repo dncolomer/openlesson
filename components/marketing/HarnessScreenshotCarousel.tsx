@@ -36,11 +36,11 @@ export function HarnessScreenshotCarousel({
 
   return (
     <figure
-      className="overflow-hidden rounded-sm border border-zinc-800 bg-zinc-950/80 shadow-[0_0_0_1px_rgba(255,255,255,0.03)]"
+      className="console-copy overflow-hidden rounded-none"
       data-harness-screenshot-carousel
       role="region"
       aria-roledescription="carousel"
-      aria-label="Learning Harness screenshots"
+      aria-label="Problem Solving Harness screenshots"
     >
       <div className="relative aspect-[16/9] w-full">
         {screenshots.map((item, i) => (

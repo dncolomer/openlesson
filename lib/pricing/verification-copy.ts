@@ -22,7 +22,7 @@ export const VERIFICATION_PRICING_COPY = {
   contactMailto: ENTERPRISE_SETUP_MAILTO,
   contactCta: `Contact ${ENTERPRISE_SETUP_EMAIL} to get set-up`,
   contactBody:
-    "Public registration is for the Learning Harness only. For Knowledge Verification, contact daniel@uncertain.systems to get set-up.",
+    "Public registration is for the Problem Solving Harness only. For Knowledge Verification, contact daniel@uncertain.systems to get set-up.",
   deepProject: {
     eyebrow: "DEEP PROJECT",
     name: "Deep Project style assessment",

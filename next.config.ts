@@ -47,8 +47,11 @@ const nextConfig: NextConfig = {
       { source: "/plan/:id", destination: "/workspace/:id", permanent: true },
       { source: "/plans", destination: "/workspaces", permanent: true },
       { source: "/vision", destination: "/science", permanent: true },
+      { source: "/learning-harness", destination: "/acquisition", permanent: true },
+      { source: "/marketing/lp-variants", destination: "/", permanent: true },
       { source: "/pricing/verification", destination: "/pricing", permanent: true },
       { source: "/pricing/mapping", destination: "/pricing", permanent: true },
+      { source: "/pricing/authoring", destination: "https://academy-k.com/", permanent: true },
       { source: "/ile/session/:token", destination: "/learn/session/:token", permanent: true },
       {
         source: "/ile/session/:token/settings",

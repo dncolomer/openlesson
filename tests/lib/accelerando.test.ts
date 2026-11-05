@@ -88,10 +88,10 @@ describe("Accelerando-8192 overlay", () => {
     expect(field.split("<svg").length - 1).toBe(36);
   });
 
-  it("sits on the public wash and section eyebrows without replacing English", () => {
+  it("is unmounted from public chrome while encodings stay in lib", () => {
     const wash = renderToStaticMarkup(createElement(PublicConsoleWash));
-    expect(wash).toContain("data-accelerando-field");
-    expect(wash).toContain('data-accelerando-run="Uncertain Systems"');
+    expect(wash).not.toContain("data-accelerando-field");
+    expect(wash).not.toContain("data-accelerando-run");
     expect(wash).toContain("data-console-frame-label");
     expect(wash).toContain(">01<");
 
@@ -100,21 +100,28 @@ describe("Accelerando-8192 overlay", () => {
     );
     expect(heading).toContain(PLATFORM_SPINE.eyebrow);
     expect(heading).toContain(PLATFORM_SPINE.title);
-    expect(heading).toContain(`data-accelerando-run="${PLATFORM_SPINE.eyebrow}"`);
+    expect(heading).not.toContain("data-accelerando-run");
 
     const home = read("app/page.tsx");
-    expect(home).toContain("{PLATFORM_HERO.pill}");
-    expect(home).toContain("<AccelerandoRun text={PLATFORM_HERO.pill}");
-    expect(home).toContain("<PublicConsoleWash />");
+    expect(home).not.toContain("{PLATFORM_HERO.pill}");
+    expect(home).not.toContain("AccelerandoRun");
+
+    const heroes = read("components/marketing/landing-heroes.tsx");
+    expect(heroes).toContain("<PublicConsoleWash />");
+    expect(heroes).not.toContain("AccelerandoRun");
 
     const chrome = read("components/marketing/MarketingChrome.tsx");
-    expect(chrome).toContain("<AccelerandoRun text={eyebrow}");
+    expect(chrome).not.toContain("AccelerandoRun");
+    expect(chrome).toContain("<PublicConsoleWash />");
     expect(chrome).toContain("{title}");
 
     const footer = read("components/Footer.tsx");
-    expect(footer).toContain("ACCELERANDO_SOURCE");
-    expect(footer).toContain("Accelerando-8192");
+    expect(footer).not.toContain("ACCELERANDO_SOURCE");
+    expect(footer).not.toContain("Accelerando-8192");
     expect(ACCELERANDO_SOURCE).toBe("https://github.com/gillverd/accelerando-8192");
+
+    const acquisition = read("app/acquisition/page.tsx");
+    expect(acquisition).not.toContain("AccelerandoRun");
 
     expect(existsSync(join(ROOT, "public/data/alphabet.json"))).toBe(false);
     expect(existsSync(join(ROOT, "public/assets/accelerando-8192.ttf"))).toBe(false);

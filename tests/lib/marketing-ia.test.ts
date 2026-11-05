@@ -83,28 +83,33 @@ function expectNoDroppedLeadOrCostume(text: string) {
   expect(text).not.toMatch(/\u2014/);
 }
 
-describe("landing: hard-domain learning experiences with product layers", () => {
-  it("ships the new hero lead and keeps harness / verification as layers", () => {
-    const landing = read("app/page.tsx");
+describe("landing: knowledge acquisition, verification, and mapping", () => {
+  it("ships the new hero lead and keeps acquisition / verification / mapping as layers", () => {
+    const landing = `${read("app/page.tsx")}\n${read("components/marketing/landing-heroes.tsx")}`;
     const platform = read("lib/marketing/platform.ts");
     const corpus = `${landing}\n${platform}`;
 
-    expect(corpus).toMatch(/hard-domain learning experiences/);
-    expect(landing).toContain("{PLATFORM_HERO.h1}");
+    expect(corpus).toMatch(/From genuine work/);
+    expect(landing).toContain("LandingHeroEditorial");
+    expect(landing).toContain("{copy.h1}");
     expect(landing).not.toContain("A Human Knowledge Platform.");
     expect(landing).not.toContain("Two products. One to learn. One to verify.");
-    expect(landing).toContain("{PLATFORM_HERO.pill}");
+    expect(landing).not.toContain("{PLATFORM_HERO.pill}");
+    expect(landing).not.toContain("AccelerandoRun");
+    expect(landing).toContain("PublicConsoleWash");
+    expect(landing).not.toContain("PUBLIC_MAGI_GRID_CLASS");
     expect(PLATFORM_HERO.h1.toLowerCase()).toContain(PLATFORM_PHRASE.toLowerCase());
-    expect(PLATFORM_HERO.p1).toMatch(/won't build the course|will not build the course/);
-    expect(landing).toContain("PLATFORM_LAYER_LIST");
-    expect(landing).toContain("PLATFORM_LAYERS");
+    expect(PLATFORM_HERO.p1).toMatch(/Capture it as proof/);
+    expect("p2" in PLATFORM_HERO).toBe(false);
+    expect(landing).not.toMatch(/three uses share the geometry/);
+    expect(landing).toContain("LANDING_USES");
     expect(landing).toContain("{product.name}");
     expect(landing).not.toContain("The Unsys workspace is a course-seeded Learning Harness.");
     expect(corpus.toLowerCase()).toMatch(/cannot be cheated|cannot be faked/);
     expect(corpus.toLowerCase()).toMatch(/without traditional tests/);
     expect(landing).not.toContain("PLATFORM_PRODUCT_LIST");
-    expect(PLATFORM_PRODUCTS.harness.name).toBe("Learning Harness");
-    expect(PLATFORM_PRODUCTS.harness.body).toBe(HARNESS_PRODUCT_COPY.lead);
+    expect(PLATFORM_PRODUCTS.harness.name).toBe("Knowledge Acquisition");
+    expect(PLATFORM_PRODUCTS.harness.body).toMatch(/problem-solving harness/);
     expect(PLATFORM_PRODUCTS.verification.name).toBe("Knowledge Verification");
     expect(PLATFORM_PRODUCTS.mapping.name).toBe("Knowledge Mapping");
     expect(PLATFORM_PRODUCTS.harness.image).toBe("/lp-boxes/harness-books-blueprint.jpg");
@@ -114,7 +119,8 @@ describe("landing: hard-domain learning experiences with product layers", () => 
     expect(existsSync(join(ROOT, "public/lp-boxes/harness-books-blueprint.jpg"))).toBe(true);
     expect(existsSync(join(ROOT, "public/lp-boxes/verification-bottles-blueprint.jpg"))).toBe(true);
     expect(existsSync(join(ROOT, "public/lp-boxes/tapbench-maps-blueprint.jpg"))).toBe(true);
-    expect(landing).toContain("grayscale");
+    expect(existsSync(join(ROOT, "public/lp-boxes/knowledge-embedding-blueprint-v1.jpg"))).toBe(true);
+    expect(landing).not.toContain("grayscale");
   });
 
   it("does not ship TAPBench as a product, landing page, or homepage layer", () => {
@@ -125,7 +131,7 @@ describe("landing: hard-domain learning experiences with product layers", () => 
     expect("tapbench" in PLATFORM_PRODUCTS).toBe(false);
     expect(PLATFORM_LAYER_LIST).toHaveLength(3);
     expect(PLATFORM_LAYER_LIST.map((p) => p.name)).toEqual([
-      "Learning Harness",
+      "Knowledge Acquisition",
       "Knowledge Verification",
       "Knowledge Mapping",
     ]);
@@ -188,8 +194,10 @@ describe("product pages: verification owns platform/approach/scale; harness owns
     expect(page).not.toContain("TAPBench");
     expect("tapbenchHref" in VERIFICATION_PRODUCT_COPY).toBe(false);
     expect("tapbenchHref" in VERIFICATION_SCALE_COPY).toBe(false);
-    expect(page).toContain("/knowledgeg2.png");
-    expect(page).toContain("/ranking_app.png");
+    expect(page).toContain("VERIFICATION_PLATFORM_COPY.imageSrc");
+    expect(page).toContain("VERIFICATION_SCALE_COPY.imageSrc");
+    expect(VERIFICATION_PLATFORM_COPY.imageSrc).toBe("/knowledgeg2.png");
+    expect(VERIFICATION_SCALE_COPY.imageSrc).toBe("/ranking_app.png");
     expect(page).toContain("data-landing-knowledge-visual");
     expect(page).toContain("data-landing-ranking-visual");
     expect(page).toMatch(/cannot be cheated or faked/);
@@ -216,7 +224,8 @@ describe("product pages: verification owns platform/approach/scale; harness owns
     expect(page).not.toContain("TAP Learning");
     expect(page).not.toMatch(/\bTAP\b/);
     expect(page).not.toContain("TAPBench");
-    expect(page).toContain("/knowledgeg2.png");
+    expect(page).toContain("MAPPING_PLATFORM_COPY.imageSrc");
+    expect(MAPPING_PLATFORM_COPY.imageSrc).toBe("/knowledgeg2.png");
     expect(page).toContain("data-landing-knowledge-visual");
     expect(page).toContain('marker="mapping"');
     expect(MAPPING_PLATFORM_COPY.title).toMatch(/map of regions/i);
@@ -228,10 +237,16 @@ describe("product pages: verification owns platform/approach/scale; harness owns
   });
 
   it("harness product path includes All-You-Can-Learn", () => {
-    expect(existsSync(join(ROOT, "app/learning-harness/page.tsx"))).toBe(true);
-    const page = read("app/learning-harness/page.tsx");
+    expect(existsSync(join(ROOT, "app/acquisition/page.tsx"))).toBe(true);
+    expect(existsSync(join(ROOT, "app/learning-harness/page.tsx"))).toBe(false);
+    const page = read("app/acquisition/page.tsx");
     expect(page).toContain("{HARNESS_PRODUCT_COPY.title}");
-    expect(HARNESS_PRODUCT_COPY.title).toBe("A Learning Harness for Humans");
+    expect(HARNESS_PRODUCT_COPY.title).toBe("Problem Solving Harness");
+    expect(HARNESS_PRODUCT_COPY.eyebrow).toBe("PROBLEM SOLVING HARNESS");
+    expect(JSON.stringify(HARNESS_PRODUCT_COPY)).not.toMatch(/Learning Harness/);
+    expect(page).not.toContain("Learning Harness");
+    expect(page).not.toContain("heroImage");
+    expect(page).not.toContain("session-canvas-blueprint");
     expect(HARNESS_PRODUCT_COPY.lead.toLowerCase()).toMatch(/age of ai/);
     expect(HARNESS_PRODUCT_COPY.body.toLowerCase()).toMatch(/does not build content or a course/);
     expect(HARNESS_PRODUCT_COPY.foraging.toLowerCase()).toMatch(/epistemic foraging/);
@@ -244,6 +259,7 @@ describe("product pages: verification owns platform/approach/scale; harness owns
     const carousel = read("components/marketing/HarnessScreenshotCarousel.tsx");
     expect(carousel).toContain("data-harness-screenshot-carousel");
     expect(carousel).toContain('aria-roledescription="carousel"');
+    expect(carousel).toContain("Problem Solving Harness screenshots");
     expect(HARNESS_PRODUCT_COPY.screenshots.map((s) => s.src)).toEqual([
       "/harness.png",
       "/harness-2.png",
@@ -253,14 +269,15 @@ describe("product pages: verification owns platform/approach/scale; harness owns
     expect(page).toContain("All-You-Can-Learn");
     expect(page).toContain("data-harness-points");
     expect(HARNESS_PRODUCT_COPY.points.map((p) => p.title)).toEqual([
-      "Epistemic Foraging Policy",
-      "Easy to fool yourself",
-      "Open source by design",
+      "Epistemic foraging",
+      "Unsys model",
+      "Uncertainty minimization",
     ]);
     expect(HARNESS_PRODUCT_COPY.points[0].href).toBe("/science#science-epistemic-foraging");
+    expect(HARNESS_PRODUCT_COPY.points[1].href).toBe("/science/learning-model");
+    expect(HARNESS_PRODUCT_COPY.points[2].href).toBe("/science#science-free-energy");
     expect(page).toContain('marker="harness"');
     expect(page).not.toContain("grokipedia.com");
-    expect(HARNESS_PRODUCT_COPY.points[2].href).toBe("https://github.com/dncolomer/openlesson");
     expect(page).toContain("target=\"_blank\"");
     expect(page).not.toContain("point.external");
     for (const point of HARNESS_PRODUCT_COPY.points) {
@@ -334,11 +351,11 @@ describe("unified pricing + public module checkout", () => {
     expect(page).not.toContain("$14.99");
   });
 
-  it("legacy verification and mapping routes redirect onto the unified page; authoring stays a page", () => {
+  it("legacy verification and mapping routes redirect onto the unified page; authoring redirects to Academy-k", () => {
     expect(read("app/pricing/verification/page.tsx")).toContain("/pricing#verification");
     expect(read("app/pricing/mapping/page.tsx")).toContain("/pricing#mapping");
-    expect(read("app/pricing/authoring/page.tsx")).toContain("AUTHORING_PRICING_COPY");
-    expect(read("app/pricing/authoring/page.tsx")).not.toContain("redirect(");
+    expect(read("app/pricing/authoring/page.tsx")).toContain("redirect(");
+    expect(read("app/pricing/authoring/page.tsx")).toContain("ACADEMY_K_HREF");
     expect(VERIFICATION_PRICING_COPY.deepProject.price).toBe("$10 per assessment");
     expect(MAPPING_PRICING_COPY.quote.price).toBe("$1 per data point");
     expect(AUTHORING_PRICING_COPY.package.priceAmount).toBe("$15,000");
@@ -368,11 +385,12 @@ describe("unified pricing + public module checkout", () => {
 describe("sitemap lists new public pages", () => {
   it("includes product, support, unified pricing, and community events listing", () => {
     const sitemap = read("app/sitemap.ts");
-    expect(sitemap).toContain("/learning-harness");
+    expect(sitemap).toContain("/acquisition");
+    expect(sitemap).not.toContain("/learning-harness");
     expect(sitemap).toContain("/knowledge-verification");
     expect(sitemap).toContain("/knowledge-mapping");
     expect(sitemap).toContain("/pricing");
-    expect(sitemap).toContain("/pricing/authoring");
+    expect(sitemap).not.toContain("/pricing/authoring");
     expect(sitemap).not.toContain("/pricing/verification");
     expect(sitemap).not.toContain("/pricing/mapping");
     expect(sitemap).toContain("/support");

@@ -52,7 +52,7 @@ export const FEP_PAGE: SeoProductPageConfig = {
     "The Free Energy Principle is the influence behind every Uncertain Systems surface. Learning is reducing uncertainty: epistemic foraging searches for information that shrinks what is unknown, then steers the thinking process toward the next genuine gap. That is how we break the linearity of classic analytics and turn-based chat.",
   metaTitle: "Free Energy Principle | Epistemic Foraging",
   metaDescription:
-    "A Free Energy Principle approach based on epistemic foraging across session — Calibrate, Learn, and Verify — and Proof-of-Work API. The shared influence behind verification, mapping, and the Learning Harness.",
+    "A Free Energy Principle approach based on epistemic foraging across session — Calibrate, Learn, and Verify — and Proof-of-Work API. The shared influence behind verification, mapping, and the Problem Solving Harness.",
   keywords: [
     "free energy principle",
     "epistemic foraging",
@@ -126,7 +126,7 @@ export const FEP_PAGE: SeoProductPageConfig = {
   secondaryCta: { label: "See all products", href: "/#products" },
   closingTitle: "One policy. Every product.",
   closingBody:
-    "Book a demo to see how a Free Energy Principle approach based on epistemic foraging flows through verification, mapping, and the Learning Harness.",
+    "Book a demo to see how a Free Energy Principle approach based on epistemic foraging flows through verification, mapping, and the Problem Solving Harness.",
 };
 
 export const POW_API_PAGE: SeoProductPageConfig = {

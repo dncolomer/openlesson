@@ -95,29 +95,27 @@ describe("unified pricing page source", () => {
     expect(PRICING_AYCL_CTA.toLowerCase()).toMatch(/browse ready-made workspaces/);
   });
 
-  it("links Academy-k on modules and authoring pricing", () => {
+  it("links Academy-k on modules pricing", () => {
     expect(UNIFIED_PRICING_COPY.academyHref).toBe("https://academy-k.com/");
     expect(UNIFIED_PRICING_COPY.academyCta).toBe("Academy-k");
     const modules = read("app/pricing/page.tsx");
-    const authoring = read("app/pricing/authoring/page.tsx");
     expect(modules).toContain('data-testid="pricing-academy-k-link"');
     expect(modules).toContain("UNIFIED_PRICING_COPY.academyHref");
-    expect(authoring).toContain('data-testid="pricing-academy-k-link"');
-    expect(authoring).toContain("UNIFIED_PRICING_COPY.academyHref");
+    expect(modules).toContain("max-w-7xl");
+    expect(modules).not.toContain("UNIFIED_PRICING_COPY.authoringHref");
   });
 });
 
-describe("course authoring stays on its own page", () => {
-  it("keeps /pricing/authoring as a live page with the monthly SKU and 40h package", () => {
+describe("course authoring moves off the public pricing tree", () => {
+  it("redirects /pricing/authoring to Academy-k", () => {
     const src = read("app/pricing/authoring/page.tsx");
-    expect(src).not.toContain("redirect(");
-    expect(src).toContain("AUTHORING_PRICING_COPY");
-    expect(src).toContain("checkout-module_author");
-    expect(src).toContain("authoring-40h-package");
+    expect(src).toContain("redirect(");
+    expect(src).toContain("ACADEMY_K_HREF");
+    expect(src).not.toContain("AUTHORING_PRICING_COPY");
     expect(AUTHORING_PRICING_PATH).toBe("/pricing/authoring");
-    expect(UNIFIED_PRICING_COPY.authoringHref).toBe("/pricing/authoring");
-    expect(read("app/pricing/page.tsx")).toContain("UNIFIED_PRICING_COPY.authoringHref");
-    expect(read("next.config.ts")).not.toContain('source: "/pricing/authoring"');
+    expect(read("app/pricing/page.tsx")).not.toContain("authoringHref");
+    expect(read("next.config.ts")).toContain('source: "/pricing/authoring"');
+    expect(read("next.config.ts")).toContain("https://academy-k.com/");
   });
 
   it("folds verification and mapping routes onto /pricing hashes", () => {

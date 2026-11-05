@@ -2,7 +2,6 @@
 
 import { useEffect, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { Zap } from "lucide-react";
-import { CONSOLE_GRID_STYLE } from "@/components/ui/console-frame";
 import { cn } from "@/lib/utils";
 import {
   ILE_DIALOGUE_AVATAR_SIZE_CLASS,
@@ -527,12 +526,7 @@ export function ThoughtBackgroundLayers({
         data-ile-work-fade={fadeToRight ? "right" : undefined}
         style={{ position: "absolute", inset: 0, background: dimOverlay }}
       />
-      <div
-        data-console-field=""
-        aria-hidden
-        className="absolute inset-0"
-        style={{ position: "absolute", inset: 0, ...CONSOLE_GRID_STYLE }}
-      />
+
     </>
   );
 }

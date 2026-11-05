@@ -1,10 +1,9 @@
 /**
- * Public pricing copy — sparse module list. Course authoring is its own page.
+ * Public pricing copy — sparse module list. Course authoring lives on Academy-k.
  */
 import {
   ACADEMY_K_HREF,
   AYCL_PATH,
-  AUTHORING_PRICING_PATH,
   ENTERPRISE_SETUP_EMAIL,
   ENTERPRISE_SETUP_MAILTO,
 } from "@/lib/marketing/paths";
@@ -27,8 +26,6 @@ export const UNIFIED_PRICING_COPY = {
   ayclHref: AYCL_PATH,
   ayclCta: "Browse ready-made workspaces",
   ayclLabel: "All-You-Can-Learn",
-  authoringHref: AUTHORING_PRICING_PATH,
-  authoringCta: "Course authoring",
   academyHref: ACADEMY_K_HREF,
   academyCta: "Academy-k",
   custom: {
@@ -36,7 +33,7 @@ export const UNIFIED_PRICING_COPY = {
     eyebrow: "CUSTOM",
     name: "Custom setup",
     priceLabel: "Contact",
-    body: "Mix modules, embed a program, or ask for a scoped build.",
+    body: "Mix usage, science setups, or a scoped build.",
     cta: `Contact ${ENTERPRISE_SETUP_EMAIL}`,
     mailto: ENTERPRISE_SETUP_MAILTO,
   },

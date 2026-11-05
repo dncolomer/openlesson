@@ -2,7 +2,6 @@
 
 import { Suspense } from "react";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
 import { LandingNav } from "@/components/LandingNav";
 import { Footer } from "@/components/Footer";
 import { UNIFIED_PRICING_COPY } from "@/lib/pricing/unified-copy";
@@ -67,8 +66,10 @@ function PricingPageContent() {
       <PublicConsoleWash />
       <div className="relative z-10 flex min-h-screen flex-col">
         <LandingNav />
-        <section className="mx-auto w-full max-w-3xl flex-1 px-6 py-16 sm:py-20">
-          <div className="console-copy p-5 sm:p-8">
+        <section className="mx-auto w-full max-w-7xl flex-1 px-6 py-16 sm:py-20">
+          <div className="console-copy p-5 sm:p-8 lg:p-10">
+          <div className="grid gap-10 lg:grid-cols-12 lg:items-start">
+          <div className="lg:col-span-4">
           <div className="console-chip mb-8 inline-block rounded-none px-3 py-1 font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
             {UNIFIED_PRICING_COPY.eyebrow}
           </div>
@@ -87,14 +88,6 @@ function PricingPageContent() {
               {UNIFIED_PRICING_COPY.ayclCta}
               <span className="ml-1.5 text-neutral-500">{UNIFIED_PRICING_COPY.ayclLabel}</span>
             </Link>
-            <Link
-              href={UNIFIED_PRICING_COPY.authoringHref}
-              data-testid="pricing-authoring-link"
-              className="inline-flex items-center text-neutral-200 underline decoration-neutral-700 underline-offset-4 hover:text-white"
-            >
-              {UNIFIED_PRICING_COPY.authoringCta}
-              <ArrowRight className="ml-1.5" size={14} />
-            </Link>
             <a
               href={UNIFIED_PRICING_COPY.academyHref}
               data-testid="pricing-academy-k-link"
@@ -108,8 +101,9 @@ function PricingPageContent() {
           {needsPlan && (
             <p className="mt-6 text-sm text-neutral-300">{UNIFIED_PRICING_COPY.needsPlan}</p>
           )}
+          </div>
 
-          <div data-testid="pricing-layout" className="mt-12 w-full">
+          <div data-testid="pricing-layout" className="w-full lg:col-span-8">
             <div data-testid="pricing-plans" className="divide-y divide-neutral-800 border-y border-neutral-800">
               <div
                 id="free"
@@ -189,6 +183,7 @@ function PricingPageContent() {
               </div>
               </div>
             </div>
+          </div>
           </div>
           </div>
         </section>

@@ -9,7 +9,6 @@ import {
   MAPPING_PLATFORM_COPY,
   MAPPING_PRODUCT_COPY,
 } from "@/lib/marketing/mapping-product";
-import { AccelerandoRun } from "@/components/AccelerandoGlyphs";
 import { standardShareSocialMetadata } from "@/lib/og/standard";
 
 const standardSocial = standardShareSocialMetadata({
@@ -32,7 +31,6 @@ export default function KnowledgeMappingPage() {
           <div className="console-chip inline-block rounded-none px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
             {MAPPING_PRODUCT_COPY.eyebrow}
           </div>
-          <AccelerandoRun text={MAPPING_PRODUCT_COPY.eyebrow} className="text-[11px]" />
         </div>
         <h1 className="max-w-5xl text-5xl font-medium leading-[1.03] tracking-[-2.8px] text-white sm:text-6xl lg:text-[68px]">
           Map Human Knowledge.
@@ -85,8 +83,8 @@ export default function KnowledgeMappingPage() {
         >
           <div className="relative aspect-[16/9] w-full sm:aspect-[2918/1656]">
             <Image
-              src="/knowledgeg2.png"
-              alt="Uncertain Systems Knowledge embeddings: multi-user projection with knowledge regions as a map of the domain"
+              src={MAPPING_PLATFORM_COPY.imageSrc}
+              alt={MAPPING_PLATFORM_COPY.imageAlt}
               fill
               className="object-cover object-top"
               sizes="(max-width: 1152px) 100vw, 1152px"

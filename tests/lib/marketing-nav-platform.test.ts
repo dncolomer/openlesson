@@ -29,7 +29,7 @@ function collectPageTsx(dir: string): string[] {
 }
 
 describe("marketing nav and platform rename", () => {
-  it("LandingNav links Harness, Verification, and Mapping, not Platform /#platform or Use cases", () => {
+  it("LandingNav links Acquisition, Verification, and Mapping, not Platform /#platform or Use cases", () => {
     const nav = read("components/LandingNav.tsx");
     expect(nav).not.toMatch(/href=["']\/use-cases/);
     expect(nav).not.toMatch(/>\s*Use cases\s*</);
@@ -38,7 +38,7 @@ describe("marketing nav and platform rename", () => {
     expect(nav).not.toContain('href="/#platform"');
     expect(nav).toContain("MAIN_NAV_PRODUCT_LINKS");
     expect(MAIN_NAV_PRODUCT_LINKS.map((l) => l.href)).toEqual([
-      "/learning-harness",
+      "/acquisition",
       "/knowledge-verification",
       "/knowledge-mapping",
     ]);
@@ -46,15 +46,12 @@ describe("marketing nav and platform rename", () => {
     expect(nav).toContain('href="/dashboard"');
     expect(nav).toContain("Dashboard");
     expect(nav).toContain("getUser");
-    expect(PRICING_NAV_LINKS.map((l) => l.label)).toEqual(["Modules", "Authoring"]);
-    expect(PRICING_NAV_LINKS.map((l) => l.href)).toEqual([
-      "/pricing",
-      "/pricing/authoring",
-    ]);
+    expect(PRICING_NAV_LINKS.map((l) => l.label)).toEqual(["Pricing"]);
+    expect(PRICING_NAV_LINKS.map((l) => l.href)).toEqual(["/pricing"]);
     expect(nav).not.toContain("Create your Workspace");
     expect(nav).not.toContain("TrackedCtaLink");
     expect(MAIN_NAV_PRODUCT_LINKS.map((l) => l.label)).toEqual([
-      "Harness",
+      "Acquisition",
       "Verification",
       "Mapping",
     ]);
@@ -67,10 +64,11 @@ describe("marketing nav and platform rename", () => {
     expect(footer).toContain('href: "/support"');
   });
 
-  it("home leads with hard-domain learning experiences (no #platform suite, no optimization cards)", () => {
-    const page = read("app/page.tsx");
-    expect(page).toContain("{PLATFORM_HERO.h1}");
-    expect(page).toContain("PLATFORM_LAYER_LIST");
+  it("home leads with knowledge acquisition, verification, and mapping (no #platform suite, no optimization cards)", () => {
+    const page = `${read("app/page.tsx")}\n${read("components/marketing/landing-heroes.tsx")}`;
+    expect(page).toContain("LandingHeroEditorial");
+    expect(page).toContain("{copy.h1}");
+    expect(page).toContain("LANDING_USES");
     expect(page).not.toContain("A Human Knowledge Platform.");
     expect(page).not.toContain("PLATFORM_PRODUCT_LIST");
     expect(page).not.toContain('id="platform"');

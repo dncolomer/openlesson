@@ -241,7 +241,8 @@ describe("science learning model page", () => {
       "data-learning-model-step",
     );
     expect(read("components/science/LearningModelMarks.tsx")).toContain("LearningModelActionGlyph");
-    expect(read("components/science/LearningModelMarks.tsx")).toContain("AccelerandoMark");
+    expect(read("components/science/LearningModelMarks.tsx")).not.toContain("AccelerandoMark");
+    expect(read("components/science/LearningModelMarks.tsx")).toContain("SimpleMark");
     expect(read("components/excalidraw-canvas/command-plate.tsx")).toContain("CommandMark");
     expect(read("components/excalidraw-canvas/command-plate.tsx")).not.toContain("AccelerandoMark");
     expect(read("app/science/learning-model/page.tsx")).toContain("overflow-clip");

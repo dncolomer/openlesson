@@ -58,7 +58,7 @@ describe("OG share inventory (one unsys standard)", () => {
 
     expect(UNSYS_STANDARD_SHARE_TITLE).toBe(PLATFORM_HERO.h1);
     expect(UNSYS_STANDARD_SHARE_DESCRIPTION).not.toBe(PLATFORM_HERO.p1);
-    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toMatch(/hard-domain learning experiences/);
+    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toMatch(/Acquire, verify, and map knowledge/);
 
     for (const s of surfaces) {
       expect(s.title).toBe(UNSYS_STANDARD_SHARE_TITLE);
@@ -84,12 +84,12 @@ describe("OG share inventory (one unsys standard)", () => {
     const standard = read("lib/og/standard.ts");
     expect(standard).toContain("PLATFORM_HERO.h1");
     expect(UNSYS_STANDARD_SHARE_TITLE).toBe(PLATFORM_HERO.h1);
-    expect(UNSYS_STANDARD_SHARE_TITLE).toMatch(/hard-domain learning experiences/);
-    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toMatch(/hard-domain learning experiences/);
+    expect(UNSYS_STANDARD_SHARE_TITLE).toMatch(/From genuine work/);
+    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toMatch(/Acquire, verify, and map knowledge/);
     expect(UNSYS_STANDARD_SHARE_DESCRIPTION).not.toBe(PLATFORM_HERO.p1);
     expect(standard).not.toContain("Beyond benchmarks for AI. Beyond tests for humans.");
     expect(standard).not.toContain("three verticals for human and agentic learning");
-    expect(standard).toContain("hard-domain learning experiences");
+    expect(standard).toContain("Acquire, verify, and map knowledge");
     expect(standard).not.toContain("Human Knowledge Platform");
     expect(standard).not.toContain("Verification · Optimization · Augmentation");
     expect(standard).toContain("/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg");
@@ -186,7 +186,7 @@ describe("OG share inventory (one unsys standard)", () => {
     expect(layout).not.toContain("Learning Efficiency for Humans & Agents");
     expect(layout).not.toContain("Optimize learning efficiency for humans and agentic systems");
     expect(layout).not.toContain("learning efficiency platform");
-    expect(layout).toContain("hard-domain learning experiences");
+    expect(layout).toContain("knowledge acquisition");
     expect(layout).not.toContain("Human Knowledge Platform");
     expect(read("app/manifest.ts")).toContain("UNSYS_STANDARD_SHARE_DESCRIPTION");
     expect(read("app/manifest.ts")).not.toContain(
@@ -207,7 +207,7 @@ describe("OG share inventory (one unsys standard)", () => {
     expect(science).toContain("standardShareSocialMetadata");
     expect(science).not.toContain("/science/opengraph-image");
 
-    const harness = read("app/learning-harness/page.tsx");
+    const harness = read("app/acquisition/page.tsx");
     expect(harness).toContain("standardShareSocialMetadata");
     expect(harness).toMatch(/openGraph:\s*standardSocial\.openGraph/);
     expect(harness).toMatch(/twitter:\s*standardSocial\.twitter/);

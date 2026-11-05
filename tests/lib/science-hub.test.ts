@@ -88,7 +88,7 @@ describe("combined vision + science hub", () => {
     expect(
       HARNESS_THESIS_LINKS.find((row) => row.href === SCIENCE_LEARNING_MODEL_PATH)?.label,
     ).toBe("Unsys model");
-    expect(read("app/learning-harness/page.tsx")).toContain('marker="harness"');
+    expect(read("app/acquisition/page.tsx")).toContain('marker="harness"');
     expect(read("app/knowledge-verification/page.tsx")).toContain('marker="verification"');
     expect(read("app/knowledge-mapping/page.tsx")).toContain('marker="mapping"');
     expect(read("app/pricing/page.tsx")).not.toContain("ThesisDirectory");

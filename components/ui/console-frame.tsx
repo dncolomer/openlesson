@@ -1,5 +1,4 @@
 import type { HTMLAttributes, ReactNode } from "react";
-import { AccelerandoField, AccelerandoRun } from "@/components/AccelerandoGlyphs";
 import { SessionConsoleMarks, SessionConsoleScan } from "@/components/session-view/session-console-marks";
 import { cn } from "@/lib/utils";
 
@@ -9,20 +8,9 @@ export const CONSOLE_FRAME_CLASS = "relative border border-white/40 bg-black";
 export const CONSOLE_LABEL_CLASS =
   "pointer-events-none font-mono text-[9px] uppercase tracking-[0.28em] text-white/50";
 
-/** Faint field grid from the session rail. No color wash. */
-export const CONSOLE_GRID_STYLE = {
-  backgroundImage:
-    "linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)",
-  backgroundSize: "16px 16px",
-} as const;
-
-/** Coarse MAGI grid used on landing pages over PublicConsoleWash. */
-export const PUBLIC_MAGI_GRID_CLASS =
-  "bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:72px_72px] opacity-40";
-
 /**
  * Background field for public and marketing pages. Sits under page copy.
- * Corner brackets and a short index match the session rail.
+ * Corner brackets and a short index match the session rail. No MAGI grid.
  */
 export function PublicConsoleWash({
   className,
@@ -35,18 +23,13 @@ export function PublicConsoleWash({
       aria-hidden
       {...rest}
       className={cn("pointer-events-none fixed inset-0 z-[1] overflow-hidden", className)}
-      style={{ ...CONSOLE_GRID_STYLE, ...style }}
+      style={style}
     >
-      <AccelerandoField />
       <SessionConsoleScan />
       <SessionConsoleMarks />
       <p data-console-frame-label="" className={`absolute bottom-3 left-3 z-[3] ${CONSOLE_LABEL_CLASS}`}>
         01
       </p>
-      <AccelerandoRun
-        text="Uncertain Systems"
-        className="absolute bottom-3 right-3 z-[3] text-[11px] sm:text-xs"
-      />
     </div>
   );
 }
@@ -98,7 +81,6 @@ export function ConsolePage({
         data-console-field=""
         aria-hidden
         className="pointer-events-none absolute inset-0 overflow-hidden"
-        style={CONSOLE_GRID_STYLE}
       >
         <SessionConsoleScan />
         <SessionConsoleMarks />

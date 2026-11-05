@@ -1,6 +1,5 @@
 import {
   ACADEMY_K_HREF,
-  AUTHORING_PRICING_PATH,
   BRAIN_PRIMING_PATH,
   HARNESS_PRICING_PATH,
   KNOWLEDGE_MAPPING_PATH,
@@ -9,17 +8,16 @@ import {
 } from "@/lib/marketing/paths";
 
 export const MAIN_NAV_PRODUCT_LINKS = [
-  { href: LEARNING_HARNESS_PATH, label: "Harness" },
+  { href: LEARNING_HARNESS_PATH, label: "Acquisition" },
   { href: KNOWLEDGE_VERIFICATION_PATH, label: "Verification" },
   { href: KNOWLEDGE_MAPPING_PATH, label: "Mapping" },
 ] as const;
 
 export const PRICING_NAV_LINKS = [
-  { href: HARNESS_PRICING_PATH, label: "Modules" },
-  { href: AUTHORING_PRICING_PATH, label: "Authoring" },
+  { href: HARNESS_PRICING_PATH, label: "Pricing" },
 ] as const;
 
-/** Community dropdown — AYCL lives under the Learning Harness product, not here. */
+/** Community dropdown — AYCL lives under Knowledge Acquisition, not here. */
 export const COMMUNITY_LINKS = [
   { href: "/community-events", label: "Community Events" },
   { href: "/kardashev", label: "Kardashev Research" },

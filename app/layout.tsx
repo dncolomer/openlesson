@@ -20,9 +20,9 @@ export const metadata: Metadata = {
   title: rootHtml.title,
   description: rootHtml.description,
   keywords: [
-    "hard-domain learning experiences",
-    "Learning Harness",
-    "Knowledge Verification",
+    "knowledge acquisition",
+    "knowledge verification",
+    "knowledge mapping",
     "think aloud protocol",
     "uncheatable knowledge verification",
     "genuine human cognition",

@@ -17,11 +17,7 @@ const SECTION_LABEL = {
 const FOCUS_TAB_CLASS =
   "min-w-0 flex-1 rounded-none px-2 py-1 text-left font-mono font-semibold uppercase tracking-[0.1em]";
 
-const RAIL_GRID = {
-  backgroundImage:
-    "linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px)",
-  backgroundSize: "24px 24px",
-} as const;
+
 
 /**
  * Shared left rail. Matches the dashboard 16rem column.
@@ -94,9 +90,8 @@ export function SessionSidebar({
               height: "42%",
               flexShrink: 0,
               ["--session-topic-card-height" as string]: "7rem",
-              ...RAIL_GRID,
             }
-          : { ...sessionSidebarRailStyle(false), ...RAIL_GRID }
+          : sessionSidebarRailStyle(false)
       }
       className={`relative box-border flex h-full min-h-0 flex-col overflow-hidden border-r border-white/30 bg-black ${className}`.trim()}
     >

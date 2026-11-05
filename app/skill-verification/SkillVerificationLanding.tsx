@@ -242,7 +242,7 @@ export function SkillVerificationLanding() {
           <div className="min-w-0 w-full">
             <figure className="console-copy overflow-hidden">
               <Image
-                src="/ranking_app.png"
+                src="/lp-boxes/tapbench-maps-blueprint.jpg"
                 alt="Role ranking UI, candidates ordered by skill proximity with strengths and gaps"
                 width={2080}
                 height={1644}
@@ -294,7 +294,7 @@ export function SkillVerificationLanding() {
           <div className="min-w-0 w-full md:order-1">
             <figure className="console-copy overflow-hidden">
               <Image
-                src="/knowledgeg2.png"
+                src="/lp-boxes/knowledge-embedding-blueprint-v1.jpg"
                 alt="Knowledge embeddings with role regions, multi-block take-home signal projected into knowledge space"
                 width={2918}
                 height={1656}

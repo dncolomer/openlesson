@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { AccelerandoRun } from "@/components/AccelerandoGlyphs";
 import { BrainPrimingWaitlistForm } from "@/components/marketing/BrainPrimingWaitlistForm";
 import { MarketingPageShell, SectionHeading } from "@/components/marketing/MarketingChrome";
 import {
@@ -10,7 +9,6 @@ import {
   BRAIN_PRIMING_PATH,
 } from "@/lib/marketing/brain-priming";
 import { standardShareSocialMetadata } from "@/lib/og/standard";
-import { PUBLIC_MAGI_GRID_CLASS } from "@/components/ui/console-frame";
 
 const standardSocial = standardShareSocialMetadata({
   url: `https://uncertain.systems${BRAIN_PRIMING_PATH}`,
@@ -28,7 +26,6 @@ export default function BrainPrimingPage() {
   const copy = BRAIN_PRIMING_COPY;
   return (
     <MarketingPageShell>
-      <div className={`fixed inset-0 z-[1] ${PUBLIC_MAGI_GRID_CLASS}`} aria-hidden />
       <div data-brain-priming-page>
         <section
           className="relative z-10 mx-auto w-full max-w-7xl px-6 pt-14 pb-10 sm:pt-16 sm:pb-12"
@@ -38,7 +35,6 @@ export default function BrainPrimingPage() {
             <div className="console-chip inline-block rounded-none px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
               {copy.pill}
             </div>
-            <AccelerandoRun text={copy.pill} className="text-[11px]" />
           </div>
           <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
             {copy.title}

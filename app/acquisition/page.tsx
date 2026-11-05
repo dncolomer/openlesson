@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, ExternalLink } from "lucide-react";
-import { AccelerandoRun } from "@/components/AccelerandoGlyphs";
 import { MarketingPageShell, SectionHeading } from "@/components/marketing/MarketingChrome";
 import { HarnessScreenshotCarousel } from "@/components/marketing/HarnessScreenshotCarousel";
 import { ThesisDirectory } from "@/components/science/ThesisDirectory";
@@ -16,22 +15,24 @@ const standardSocial = standardShareSocialMetadata({
 });
 
 export const metadata: Metadata = {
-  title: "Learning Harness",
+  title: "Problem Solving Harness",
   description: HARNESS_PRODUCT_COPY.lead,
   alternates: { canonical: `https://uncertain.systems${LEARNING_HARNESS_PATH}` },
   openGraph: standardSocial.openGraph,
   twitter: standardSocial.twitter,
 };
 
-export default function LearningHarnessPage() {
+export default function AcquisitionPage() {
   return (
     <MarketingPageShell>
-      <section className="relative z-10 mx-auto w-full max-w-7xl px-6 pt-14 pb-10 sm:pt-16 sm:pb-12">
+      <section
+        className="relative z-10 mx-auto w-full max-w-7xl px-6 pt-14 pb-10 sm:pt-16 sm:pb-12"
+        data-acquisition-hero
+      >
         <div className="mb-6 flex flex-wrap items-center gap-3">
-          <div className="inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
+          <div className="console-chip inline-block rounded-none px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
             {HARNESS_PRODUCT_COPY.eyebrow}
           </div>
-          <AccelerandoRun text={HARNESS_PRODUCT_COPY.eyebrow} className="text-[11px]" />
         </div>
         <h1 className="max-w-4xl text-5xl font-medium leading-[1.03] tracking-[-2.8px] text-white sm:text-6xl lg:text-[68px]">
           {HARNESS_PRODUCT_COPY.title}
@@ -59,14 +60,14 @@ export default function LearningHarnessPage() {
             label={HARNESS_PRODUCT_COPY.workspaceCta}
             location="harness_hero"
             page={LEARNING_HARNESS_PATH}
-            className="inline-flex min-h-12 items-center justify-center rounded-sm bg-white px-5 py-3 text-sm font-medium text-black transition hover:bg-zinc-200"
+            className="inline-flex min-h-12 items-center justify-center rounded-none bg-white px-5 py-3 text-sm font-medium text-black transition hover:bg-zinc-200"
           >
             {HARNESS_PRODUCT_COPY.workspaceCta}
             <ArrowRight className="ml-2" size={16} />
           </TrackedCtaLink>
           <Link
             href={HARNESS_PRODUCT_COPY.pricingHref}
-            className="inline-flex min-h-12 items-center justify-center rounded-sm border border-zinc-800 bg-zinc-950/60 px-5 py-3 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-white"
+            className="inline-flex min-h-12 items-center justify-center rounded-none border border-zinc-800 bg-zinc-950/60 px-5 py-3 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-white"
           >
             {HARNESS_PRODUCT_COPY.pricingCta}
           </Link>
@@ -85,14 +86,14 @@ export default function LearningHarnessPage() {
           {HARNESS_PRODUCT_COPY.points.map((point) => (
             <li
               key={point.title}
-              className="flex min-h-0 flex-col overflow-hidden border border-zinc-800 bg-zinc-950/70"
+              className="console-copy flex min-h-0 flex-col overflow-hidden"
             >
               <div className="relative aspect-square w-full">
                 <Image
                   src={point.image}
                   alt={point.imageAlt}
                   fill
-                  className="object-cover grayscale"
+                  className="object-cover"
                   sizes="(max-width: 768px) 100vw, 384px"
                 />
               </div>
@@ -144,7 +145,7 @@ export default function LearningHarnessPage() {
         <Link
           href={HARNESS_PRODUCT_COPY.ayclHref}
           data-testid="harness-aycl-link"
-          className="mt-7 inline-flex min-h-12 items-center justify-center rounded-sm bg-white px-5 py-3 text-sm font-medium text-black transition hover:bg-zinc-200"
+          className="mt-7 inline-flex min-h-12 items-center justify-center rounded-none bg-white px-5 py-3 text-sm font-medium text-black transition hover:bg-zinc-200"
         >
           {HARNESS_PRODUCT_COPY.ayclCta}
           <span className="ml-2 font-normal text-zinc-600">All-You-Can-Learn</span>

@@ -37,7 +37,7 @@ import {
 } from "@/lib/vision/knowledge-tomography-induction-copy";
 
 import { standardShareSocialMetadata } from "@/lib/og/standard";
-import { AccelerandoRun } from "@/components/AccelerandoGlyphs";
+
 import { PublicConsoleWash } from "@/components/ui/console-frame";
 
 const standardSocial = standardShareSocialMetadata({
@@ -110,7 +110,6 @@ export default function SciencePage() {
           <div className="console-chip inline-block rounded-none px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
             {SCIENCE_HUB_COPY.eyebrowScience}
           </div>
-          <AccelerandoRun text="SCIENCE" className="text-[11px]" />
         </div>
         <h1 className="max-w-4xl text-5xl font-medium leading-[1.03] tracking-[-2.8px] text-white sm:text-6xl lg:text-[68px]">
           {SCIENCE_HUB_COPY.title}

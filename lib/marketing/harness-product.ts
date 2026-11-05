@@ -1,10 +1,12 @@
+import { LEARNING_MODEL_PUBLIC_LABEL } from "@/lib/learning-model";
 import { AYCL_PATH, HARNESS_PRICING_PATH } from "@/lib/marketing/paths";
 import { SCIENCE_EPISTEMIC_FORAGING_PATH } from "@/lib/science/epistemic-foraging-copy";
-import { HARNESS_THESIS_LINKS } from "@/lib/science/hub";
+import { HARNESS_THESIS_LINKS, SCIENCE_FEP_PATH } from "@/lib/science/hub";
+import { SCIENCE_LEARNING_MODEL_PATH } from "@/lib/science/learning-model-copy";
 
 export const HARNESS_PRODUCT_COPY = {
-  eyebrow: "LEARNING HARNESS",
-  title: "A Learning Harness for Humans",
+  eyebrow: "PROBLEM SOLVING HARNESS",
+  title: "Problem Solving Harness",
   lead: "A harness designed to help you learn in the age of AI. It steers your learning process so you can use tools like AI to outsource certain parts of the work without accidentally outsourcing the learning itself.",
   body: "Guardrails sit in the flow. You stay in the driver's seat when you pull data from different sources. The harness does not build content or a course for you — it steers you into the right learning actions and the internal model updates that make knowledge actually held.",
   foraging:
@@ -15,46 +17,46 @@ export const HARNESS_PRODUCT_COPY = {
   points: [
     {
       eyebrow: "POLICY",
-      title: "Epistemic Foraging Policy",
-      body: "Learning as reducing uncertainty: an active search for information that shrinks what you don't know, instead of optimizing for tests and practice repetition.",
+      title: "Epistemic foraging",
+      body: "An active search for information that shrinks what you do not know, instead of optimizing for tests and practice repetition. The harness forages for the next genuine gap.",
       href: SCIENCE_EPISTEMIC_FORAGING_PATH,
       linkLabel: "Read the policy",
-      image: "/harness-blocks/policy-cliff-villa.jpg",
-      imageAlt: "Greco-futurist cliffside villa over water at dusk",
+      image: "/lp-boxes/harness-books-blueprint.jpg",
+      imageAlt: "Blueprint sketch of an open gridded notebook, a compass, and a stack of volumes",
     },
     {
-      eyebrow: "THE TRAP",
-      title: "Easy to fool yourself",
-      body: "Everyone wants to learn, but it's easy to fool yourself into feeling like you are. This harness fixes that.",
-      href: null,
-      linkLabel: null,
-      image: "/harness-blocks/trap-domed-city.jpg",
-      imageAlt: "Greco-futurist city of marble and turquoise domes",
+      eyebrow: "UNSYS MODEL",
+      title: LEARNING_MODEL_PUBLIC_LABEL,
+      body: "A generative model of the concept you are trying to learn or verify: hidden states, observations, priced edges, and policies. Calibrate, Learn, and Verify freeze that model and act on it.",
+      href: SCIENCE_LEARNING_MODEL_PATH,
+      linkLabel: "Open the model",
+      image: "/lp-boxes/unsys-hidden-state-tree.jpg",
+      imageAlt: "Blueprint of a hidden-state tree: diamond nodes on priced edges",
     },
     {
-      eyebrow: "OPEN SOURCE",
-      title: "Open source by design",
-      body: "Set it up locally and bring your own key. Stay in control of how you learn. Don't leave yourself at the mercy of model providers.",
-      href: "https://github.com/dncolomer/openlesson",
-      linkLabel: "GitHub",
-      image: "/harness-blocks/opensource-water-palace.jpg",
-      imageAlt: "Greco-futurist palace terraces on water with statues and palms",
+      eyebrow: "FREE ENERGY PRINCIPLE",
+      title: "Uncertainty minimization",
+      body: "Learning is reducing uncertainty. The Free Energy Principle is the influence: persist by minimizing surprise, and treat work as shrinking what is still unknown rather than chasing a test score.",
+      href: SCIENCE_FEP_PATH,
+      linkLabel: "Read the science",
+      image: "/lp-boxes/uncertainty-minimization-blueprint.jpg",
+      imageAlt: "Blueprint of nested diamonds shrinking toward a focus, uncertainty collapsing",
     },
   ],
   ayclEyebrow: "ALL-YOU-CAN-LEARN",
   ayclTitle: "Lifetime workspace buys",
   ayclBody:
-    "All-You-Can-Learn is part of the Learning Harness. Browse ready-made workspaces and buy lifetime access as a one-time purchase.",
+    "All-You-Can-Learn is part of the Problem Solving Harness. Browse ready-made workspaces and buy lifetime access as a one-time purchase.",
   ayclCta: "Browse All-You-Can-Learn",
   ayclHref: AYCL_PATH,
-  pricingCta: "See Learning Harness pricing",
+  pricingCta: "See Problem Solving Harness pricing",
   pricingHref: HARNESS_PRICING_PATH,
   workspaceCta: "Create your Workspace",
   workspaceHref: "/workspace/new",
   screenshots: [
     {
       src: "/harness.png",
-      alt: "Learning Harness workspace map with knowledge blocks, simulation, and expansion tools",
+      alt: "Problem Solving Harness workspace map with knowledge blocks, simulation, and expansion tools",
       caption: "Workspace · Map · Blocks",
       body: "Build and navigate a living knowledge map. Expand, connect, and steer practice from the blocks you actually hold.",
       width: 2906,
@@ -62,7 +64,7 @@ export const HARNESS_PRODUCT_COPY = {
     },
     {
       src: "/harness-2.png",
-      alt: "Learning Harness practice session with chapter map, tools, and a guided project workspace",
+      alt: "Problem Solving Harness practice session with chapter map, tools, and a guided project workspace",
       caption: "Practice · Chapters · Tools",
       body: "Work a chapter with the map, notebook, and thought tools in one session — then mark the landscape as you go.",
       width: 2912,

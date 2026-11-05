@@ -145,9 +145,11 @@ describe("console theme shells", () => {
     const publicHtml = renderToStaticMarkup(
       createElement(MarketingPageShell, null, createElement("h1", null, "Public title")),
     );
-    expectConsoleChrome(publicHtml);
-    expect(publicHtml).toContain("data-console-field");
+    expect(publicHtml).toContain("border-white/40");
+    expect(publicHtml).toContain("bg-black");
     expect(publicHtml).toContain("Public title");
+    expect(publicHtml).toContain("data-console-field");
+    expect(publicHtml).toContain("data-console-frame-label");
     expect(publicHtml).not.toMatch(/rounded-full/);
 
     const workspaceHtml = renderToStaticMarkup(
@@ -163,7 +165,8 @@ describe("console theme shells", () => {
     expect(chrome).not.toContain("data-verification-workspace-shell");
     expect(chrome).not.toContain("data-calibration-workspace-shell");
     expect(chrome).toContain('data-workspace-product-shell="learning"');
-    expect(home).toContain("<PublicConsoleWash />");
+    expect(read("components/marketing/landing-heroes.tsx")).toContain("<PublicConsoleWash />");
+    expect(read("components/marketing/MarketingChrome.tsx")).toContain("<PublicConsoleWash />");
     expect(home).toContain("border-white/40");
     expect(home).not.toContain("rounded-full");
     expect(home).not.toContain("14,116,144");

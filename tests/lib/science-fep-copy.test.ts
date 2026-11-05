@@ -61,12 +61,12 @@ describe("science page renders FEP copy", () => {
 
     const thesisAt = src.indexOf("science-thesis-slide");
     const fepAt = src.indexOf("data-science-free-energy");
-    const principlesAt = src.indexOf("PRINCIPLES.map");
+    const researchAt = src.indexOf("data-science-research");
     expect(thesisAt).toBeGreaterThan(-1);
     expect(fepAt).toBeGreaterThan(-1);
-    expect(principlesAt).toBeGreaterThan(-1);
+    expect(researchAt).toBeGreaterThan(-1);
     expect(thesisAt).toBeLessThan(fepAt);
-    expect(fepAt).toBeLessThan(principlesAt);
+    expect(fepAt).toBeLessThan(researchAt);
   });
 
   it("keeps thesis slide and research white-paper links", () => {

@@ -42,12 +42,12 @@ describe("science page embeds platform pitch slide 10", () => {
     expect(src).toContain("data-science-pitch-slide");
     expect(src).toContain("science-thesis-slide");
 
-    // Thesis block appears before principles 01–04 body section
+    // Thesis block appears before research papers
     const thesisAt = src.indexOf("science-thesis-slide");
-    const principlesAt = src.indexOf("PRINCIPLES.map");
+    const researchAt = src.indexOf("data-science-research");
     expect(thesisAt).toBeGreaterThan(-1);
-    expect(principlesAt).toBeGreaterThan(-1);
-    expect(thesisAt).toBeLessThan(principlesAt);
+    expect(researchAt).toBeGreaterThan(-1);
+    expect(thesisAt).toBeLessThan(researchAt);
 
     // Drives real slide data — not a hard-coded reimplementation of title
     const slide = getPlatformPitchSlide(10)!;

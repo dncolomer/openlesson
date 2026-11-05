@@ -54,33 +54,6 @@ export const metadata: Metadata = {
   twitter: standardSocial.twitter,
 };
 
-const PRINCIPLES = [
-  {
-    number: "01",
-    title: "Knowledge Configuration",
-    subtitle: "The full physical state of a human brain at a specific point in time.",
-    body: "Every moment of thought, memory, and skill lives in a unique configuration of neural activity. Understanding learning means understanding how one configuration relates to another — not just what was answered on a test.",
-  },
-  {
-    number: "02",
-    title: "Knowledge = Proximity",
-    subtitle: "A useful configuration is close enough to retrieve, apply, and transform.",
-    body: "Knowledge is not a binary flag. It is how near your current brain state is to a configuration where you can reliably retrieve, apply, and transform what you need. Closeness — not completion percentage — is the meaningful signal.",
-  },
-  {
-    number: "03",
-    title: "Learning = Transformation",
-    subtitle: "Learning is movement through configuration space, ideally with less wasted effort.",
-    body: "To learn is to move from one configuration toward another useful one. The goal of educational technology should be to shorten that path — reducing wasted effort while preserving depth of understanding.",
-  },
-  {
-    number: "04",
-    title: "Non-Invasive Path",
-    subtitle: "Start with software attention loops, then add world models, stimulation, and biofeedback.",
-    body: "We begin with software: attention loops, Socratic questioning, and proof-of-work verification. Over time we layer world models, non-invasive stimulation, and biofeedback — building toward self-driving learning without asking humans to burn proportionally more energy.",
-  },
-];
-
 /** Platform pitch slide 10 (thesis) — rendered at the top of /science. */
 const thesisSlide = getPlatformPitchSlide(PLATFORM_THESIS_SLIDE_INDEX);
 
@@ -462,19 +435,6 @@ export default function SciencePage() {
               <ArrowRight size={13} />
             </Link>
           </div>
-        </div>
-      </section>
-
-      <section className={`${MARKETING_SHELL} pt-3`} aria-label="Principles">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {PRINCIPLES.map((principle) => (
-            <div key={principle.number} className="console-copy p-5">
-              <p className="font-mono text-[10px] tracking-[2px] text-zinc-500">{principle.number}</p>
-              <h2 className="mt-3 text-xl font-medium tracking-[-0.5px] text-white">{principle.title}</h2>
-              <p className="mt-2 text-sm font-medium leading-relaxed text-zinc-300">{principle.subtitle}</p>
-              <p className="mt-3 text-sm leading-relaxed text-zinc-400">{principle.body}</p>
-            </div>
-          ))}
         </div>
       </section>
 

@@ -117,14 +117,14 @@ describe("science page renders epistemic foraging copy", () => {
     const thesisAt = src.indexOf("science-thesis-slide");
     const fepAt = src.indexOf("data-science-free-energy");
     const foragingAt = src.indexOf("data-science-epistemic-foraging");
-    const principlesAt = src.indexOf("PRINCIPLES.map");
+    const researchAt = src.indexOf("data-science-research");
     expect(thesisAt).toBeGreaterThan(-1);
     expect(fepAt).toBeGreaterThan(-1);
     expect(foragingAt).toBeGreaterThan(-1);
-    expect(principlesAt).toBeGreaterThan(-1);
+    expect(researchAt).toBeGreaterThan(-1);
     expect(thesisAt).toBeLessThan(fepAt);
     expect(fepAt).toBeLessThan(foragingAt);
-    expect(foragingAt).toBeLessThan(principlesAt);
+    expect(foragingAt).toBeLessThan(researchAt);
 
     expect(src.toLowerCase()).toMatch(/epistemic foraging/);
     expect(SCIENCE_EPISTEMIC_FORAGING_PATH).toBe("/science#science-epistemic-foraging");

@@ -215,7 +215,7 @@ export default function ProbabilisticComputingHackathonPage() {
       </section>
 
       {/* About */}
-      <section className={`${MARKETING_SHELL} py-5`}
+      <section className={`${MARKETING_SHELL} py-5`}>
         <SectionLabel>About the event</SectionLabel>
         <h2 className="mt-3 text-2xl font-medium tracking-[-0.8px] text-white sm:text-3xl">
           Educational deep-dive plus real hackathon.
@@ -376,7 +376,7 @@ export default function ProbabilisticComputingHackathonPage() {
       </section>
 
       {/* Prep material */}
-      <section className={`${MARKETING_SHELL} py-5`}
+      <section className={`${MARKETING_SHELL} py-5`}>
         <div className="console-copy overflow-hidden">
           <div className="grid md:grid-cols-2">
             <div
@@ -410,7 +410,7 @@ export default function ProbabilisticComputingHackathonPage() {
       </section>
 
       {/* Technology + education context */}
-      <section className={`${MARKETING_SHELL} py-5`}
+      <section className={`${MARKETING_SHELL} py-5`}>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="console-copy p-6">
             <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
@@ -485,7 +485,7 @@ export default function ProbabilisticComputingHackathonPage() {
       </section>
 
       {/* Sponsors */}
-      <section className={`${MARKETING_SHELL} py-5`}
+      <section className={`${MARKETING_SHELL} py-5`}>
         <SectionLabel>Sponsors and partners</SectionLabel>
         <h2 className="mt-3 text-2xl font-medium tracking-[-0.8px] text-white">Supported by</h2>
         <div className="mt-6 grid gap-3 sm:grid-cols-3">

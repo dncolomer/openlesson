@@ -2,6 +2,7 @@ import {
   BRAIN_PRIMING_JOIN_PATH,
   BRAIN_PRIMING_PATH,
 } from "@/lib/marketing/paths";
+import type { ThesisDeepLink } from "@/lib/science/hub";
 
 export { BRAIN_PRIMING_JOIN_PATH, BRAIN_PRIMING_PATH };
 
@@ -184,7 +185,16 @@ export const BRAIN_PRIMING_COPY = {
   ctaStartHref: "#join",
   ctaSecondary: "How the week runs",
   ctaSecondaryHref: "#how",
+  directoryEyebrow: "ON THIS PAGE",
+  directoryTitle: "The protocol.",
+  directoryLead: "Subjects, the week, the bottle, or the waitlist.",
 } as const;
+
+export const BRAIN_PRIMING_DIRECTORY: readonly ThesisDeepLink[] = [
+  { href: "#how", label: "How it runs", hint: "Week and bottle" },
+  { href: "#formula", label: "In the bottle", hint: "The stack" },
+  { href: "#join", label: "Waitlist", hint: "Name a topic" },
+];
 
 export type BrainPrimingWaitlistInput = {
   email: string;

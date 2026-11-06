@@ -198,8 +198,10 @@ describe("console theme shells", () => {
       expect(src).not.toContain("bg-emerald-500");
     }
     const events = read("app/community-events/page.tsx");
-    expect(events).toContain("<PublicConsoleWash />");
-    expect(events).toContain("border-white/40");
+    expect(events).toContain("MarketingPageShell");
+    expect(events).toContain("MarketingDirectoryHero");
+    expect(read("components/marketing/MarketingChrome.tsx")).toContain("<PublicConsoleWash />");
+    expect(read("components/marketing/MarketingChrome.tsx")).toContain("border-white/40");
     expect(events).not.toContain("6,182,212");
     expect(events).not.toContain("rounded-xl");
   });

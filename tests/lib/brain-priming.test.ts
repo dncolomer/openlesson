@@ -32,6 +32,10 @@ describe("Brain Priming Protocol project", () => {
     const landing = read("app/brain-priming/page.tsx");
     expect(landing).toContain("BRAIN_PRIMING_COPY");
     expect(landing).toContain("MarketingPageShell");
+    expect(landing).toContain("MarketingDirectoryHero");
+    expect(landing).toContain("console-copy");
+    expect(landing).toContain("lg:grid-cols-12");
+    expect(landing).not.toContain("bg-zinc-900");
     expect(landing).toContain("data-brain-priming-page");
     expect(landing).toContain("{copy.title}");
     expect(landing).toContain("{copy.h1}");

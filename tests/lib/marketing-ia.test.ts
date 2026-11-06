@@ -471,5 +471,16 @@ describe("nav and footer hrefs resolve to shipped pages", () => {
     expect(kardashev).toContain("Coming soon");
     expect(kardashev).toContain("data-kardashev-coming-soon");
     expect(kardashev).not.toContain("KardashevBoard");
+    expect(kardashev).toContain("MarketingPageShell");
+    expect(kardashev).toContain("MarketingDirectoryHero");
+    expect(kardashev).toContain("PROJECTS_DIRECTORY");
+    const eventsPage = read("app/community-events/page.tsx");
+    expect(eventsPage).toContain("MarketingDirectoryHero");
+    expect(eventsPage).toContain("console-copy");
+    expect(read("app/community-events/ground-state/page.tsx")).toContain("MarketingDirectoryHero");
+    expect(read("app/community-events/probabilistic-computing/page.tsx")).toContain(
+      "MarketingDirectoryHero",
+    );
+    expect(read("app/brain-priming/page.tsx")).toContain("MarketingDirectoryHero");
   });
 });

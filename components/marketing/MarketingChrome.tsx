@@ -1,15 +1,19 @@
 import { Footer } from "@/components/Footer";
 import { LandingNav } from "@/components/LandingNav";
+import { ScrollToHash } from "@/components/science/ScrollToHash";
 import { PublicConsoleWash, PublicPageField } from "@/components/ui/console-frame";
 
 export function MarketingPageShell({
   children,
+  image,
 }: {
   children: React.ReactNode;
+  image?: string;
 }) {
   return (
-    <main className="relative min-h-screen border border-white/40 bg-[#0e1c2c] text-zinc-200 selection:bg-zinc-700">
-      <PublicPageField />
+    <main className="relative min-h-screen border border-white/40 bg-[#0e1c2c] text-zinc-200 selection:bg-zinc-700 [&_section[id]]:scroll-mt-24">
+      <ScrollToHash />
+      <PublicPageField image={image} />
       <PublicConsoleWash />
       <LandingNav />
       {children}

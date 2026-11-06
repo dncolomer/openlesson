@@ -418,6 +418,7 @@ describe("aycl landing + hackathons structural", () => {
     const nav = `${read("components/LandingNav.tsx")}\n${read("lib/marketing/nav.ts")}`;
     const navbar = read("components/Navbar.tsx");
     const hackathons = read("app/community-events/page.tsx");
+    const eventsCopy = read("lib/marketing/projects.ts");
     const lib = read("lib/aycl-landing.ts");
     const sitemap = read("app/sitemap.ts");
     const middleware = read("middleware.ts");
@@ -494,10 +495,15 @@ describe("aycl landing + hackathons structural", () => {
     // Community Events listing lives at /community-events
     expect(existsSync(join(ROOT, "app/hackathons/page.tsx"))).toBe(false);
     expect(hackathons).toContain("data-hackathons-page");
-    expect(hackathons).toContain("Projects & Community");
+    expect(hackathons).toContain("MarketingPageShell");
+    expect(hackathons).toContain("MarketingDirectoryHero");
+    expect(hackathons).toContain("console-copy");
+    expect(hackathons).toContain("lg:grid-cols-12");
     expect(hackathons).toContain("AYCL_HACKATHONS");
-    expect(hackathons).toMatch(/<h1[^>]*>\s*Community Events\s*<\/h1>/);
+    expect(hackathons).toContain("title={COMMUNITY_EVENTS_COPY.title}");
     expect(hackathons).not.toMatch(/<h1[^>]*>\s*Hackathons\s*<\/h1>/);
+    expect(eventsCopy).toContain('eyebrow: "Projects & Community"');
+    expect(eventsCopy).toContain('title: "Community Events"');
     expect(hackathons).toContain("{hackathon.kind}");
     expect(hackathons).not.toMatch(/>\s*Hackathon\s*</);
     expect(hackathons).toContain("{hackathon.image}");

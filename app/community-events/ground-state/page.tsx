@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
-import { Footer } from "@/components/Footer";
-import { LandingNav } from "@/components/LandingNav";
+import { MarketingPageShell } from "@/components/marketing/MarketingChrome";
+import { MarketingDirectoryHero } from "@/components/marketing/MarketingDirectoryHero";
 import { AYCL_HACKATHONS } from "@/lib/aycl-landing";
+import { COMMUNITY_EVENTS_DIRECTORY } from "@/lib/marketing/projects";
+import { MARKETING_MEDIA_FILL_CLASS, MARKETING_MEDIA_STAGE_CLASS, MARKETING_SHELL } from "@/lib/marketing/shell";
 import { standardShareSocialMetadata } from "@/lib/og/standard";
-import { PublicConsoleWash, PublicPageField } from "@/components/ui/console-frame";
-import { MARKETING_SHELL } from "@/lib/marketing/shell";
 
 const EVENT = AYCL_HACKATHONS.find((event) => event.id === "ground-state");
 
@@ -24,19 +25,12 @@ export const metadata: Metadata = {
 };
 
 export default function GroundStateEventPage() {
+  const image = EVENT?.image ?? "/hackathons/ground-state-hero.jpg";
   return (
-    <main
-      className="relative min-h-screen overflow-hidden border border-white/40 bg-[#0e1c2c] text-zinc-200 selection:bg-zinc-700"
-      data-ground-state-page
-    >
-      <PublicPageField image={EVENT?.image ?? "/hackathons/ground-state-hero.jpg"} />
-      <PublicConsoleWash />
-
-      <LandingNav />
-
-      <section className={`${MARKETING_SHELL} flex min-h-[70vh] flex-col items-center justify-center py-16 text-center`}>
-        <nav aria-label="Breadcrumb" className="mb-10 text-xs text-zinc-500">
-          <ol className="flex flex-wrap items-center justify-center gap-2">
+    <MarketingPageShell image={image}>
+      <div data-ground-state-page>
+        <nav aria-label="Breadcrumb" className={`${MARKETING_SHELL} pt-5 text-xs text-zinc-500 sm:pt-6`}>
+          <ol className="flex flex-wrap items-center gap-2">
             <li>
               <Link href="/" className="transition hover:text-white">
                 Home
@@ -44,10 +38,7 @@ export default function GroundStateEventPage() {
             </li>
             <li className="text-zinc-700">/</li>
             <li>
-              <Link
-                href="/community-events"
-                className="transition hover:text-white"
-              >
+              <Link href="/community-events" className="transition hover:text-white">
                 Community Events
               </Link>
             </li>
@@ -56,20 +47,32 @@ export default function GroundStateEventPage() {
           </ol>
         </nav>
 
-        <p className="mb-4 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
-          {EVENT?.kind ?? "3 Day Event"}
-        </p>
-        <h1 className="text-3xl font-medium tracking-[-1.6px] text-white sm:text-5xl">
-          {EVENT?.title ?? "Thermosynthesis"}
-        </h1>
-        <p className="mt-6 text-lg leading-relaxed text-zinc-300 sm:text-xl">
-          To be Announced soon
-        </p>
-      </section>
+        <MarketingDirectoryHero
+          eyebrows={[EVENT?.kind ?? "3 Day Event"]}
+          title={EVENT?.title ?? "Thermosynthesis"}
+          directoryEyebrow="EVENTS"
+          directoryTitle="In the lineup."
+          links={COMMUNITY_EVENTS_DIRECTORY}
+          marker="ground-state"
+        >
+          <p>To be Announced soon</p>
+        </MarketingDirectoryHero>
 
-      <div className="relative z-10">
-        <Footer />
+        <section className={`${MARKETING_SHELL} pb-12 pt-3 sm:pb-14`}>
+          <div className="console-copy overflow-hidden">
+            <div className={`relative ${MARKETING_MEDIA_STAGE_CLASS} ${MARKETING_MEDIA_FILL_CLASS}`}>
+              <Image
+                src={image}
+                alt=""
+                fill
+                unoptimized
+                className="object-cover object-center"
+                sizes="100vw"
+              />
+            </div>
+          </div>
+        </section>
       </div>
-    </main>
+    </MarketingPageShell>
   );
 }

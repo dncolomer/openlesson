@@ -1,13 +1,16 @@
 import type { Metadata } from "next";
-import type { ReactNode } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, ExternalLink, MapPin, Trophy, Users } from "lucide-react";
-import { Footer } from "@/components/Footer";
-import { LandingNav } from "@/components/LandingNav";
-
+import { MarketingPageShell } from "@/components/marketing/MarketingChrome";
+import {
+  MARKETING_HERO_PRIMARY_CTA_CLASS,
+  MARKETING_HERO_SECONDARY_CTA_CLASS,
+  MarketingDirectoryHero,
+} from "@/components/marketing/MarketingDirectoryHero";
+import { PROBABILISTIC_COMPUTING_DIRECTORY } from "@/lib/marketing/projects";
+import { MARKETING_MEDIA_FILL_CLASS, MARKETING_SHELL } from "@/lib/marketing/shell";
 import { standardShareSocialMetadata } from "@/lib/og/standard";
-import { PublicConsoleWash, PublicPageField } from "@/components/ui/console-frame";
-import { MARKETING_SHELL } from "@/lib/marketing/shell";
 
 const standardSocial = standardShareSocialMetadata({
   url: "https://uncertain.systems/community-events/probabilistic-computing",
@@ -26,6 +29,9 @@ export const metadata: Metadata = {
 
 const LEARNING_PLAN_HREF =
   "/p/62479ef7-c142-407a-995f-a5bba429a20b/probabilistic-computing-and-extropic-ai-approach";
+
+const PREP_IMAGE =
+  "https://cdn.sanity.io/images/otrk6k1t/production/7ef4d9c0fcf06719cb7ddd7ebdb20b02a2355793-1736x1284.webp?auto=format&fit=max&q=75&w=868";
 
 const AGENDA = [
   {
@@ -129,191 +135,170 @@ const SPONSORS = [
   },
 ] as const;
 
+const META = [
+  { label: "Date", value: "June 10, 2026" },
+  { label: "Start", value: "12:30 CEST" },
+  { label: "Location", value: "Andreasstrasse 5, Zurich · Room S15" },
+  { label: "Capacity", value: "Under 80 participants" },
+] as const;
+
 export default function ProbabilisticComputingHackathonPage() {
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#0e1c2c] text-zinc-200 selection:bg-zinc-700">
-      <PublicPageField image="/aesthetics/Greco-futurism/HHnTrjJbQAAOz7K.jpeg" />
-      <PublicConsoleWash />
+    <MarketingPageShell>
+      <nav aria-label="Breadcrumb" className={`${MARKETING_SHELL} pt-5 text-xs text-zinc-500 sm:pt-6`}>
+        <ol className="flex flex-wrap items-center gap-2">
+          <li>
+            <Link href="/" className="transition hover:text-white">
+              Home
+            </Link>
+          </li>
+          <li className="text-zinc-700">/</li>
+          <li>
+            <Link href="/community-events" className="transition hover:text-white">
+              Community Events
+            </Link>
+          </li>
+          <li className="text-zinc-700">/</li>
+          <li className="text-zinc-400">Probabilistic Computing</li>
+        </ol>
+      </nav>
 
-      <LandingNav />
-
-      <section className={`${MARKETING_SHELL} pt-6 pb-4 sm:pt-8 sm:pb-6`}>
-        <nav aria-label="Breadcrumb" className="mb-8 text-xs text-zinc-500">
-          <ol className="flex flex-wrap items-center gap-2">
-            <li>
-              <Link href="/" className="transition hover:text-white">
-                Home
-              </Link>
-            </li>
-            <li className="text-zinc-700">/</li>
-            <li>
-              <Link
-                href="/community-events"
-                className="transition hover:text-white"
-              >
-                Community Events
-              </Link>
-            </li>
-            <li className="text-zinc-700">/</li>
-            <li className="text-zinc-400">Probabilistic Computing</li>
-          </ol>
-        </nav>
-
-        <div className="mb-5 flex flex-wrap items-center gap-2">
-          <span className="console-chip px-2.5 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-400">
-            Past event
-          </span>
-          <span className="rounded-none border border-neutral-600/30 bg-neutral-800/10 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300/90">
-            Registration closed
-          </span>
-          <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
-            ETH Zurich · 1-day hackathon
-          </span>
-        </div>
-
-        <h1 className="max-w-4xl text-4xl font-medium leading-[1.05] tracking-[-2px] text-white sm:text-5xl lg:text-[56px]">
-          Probabilistic Computing Hackathon
-        </h1>
-        <p className="mt-5 max-w-2xl text-lg leading-relaxed text-zinc-300 sm:text-xl">
-          Build with probabilistic and thermodynamic computing.
-        </p>
-        <p className="mt-4 max-w-2xl text-base leading-relaxed text-zinc-500">
+      <MarketingDirectoryHero
+        eyebrows={["Past event", "Registration closed"]}
+        title="Probabilistic Computing Hackathon"
+        directoryEyebrow="ON THIS PAGE"
+        directoryTitle="The day at ETH Zurich."
+        directoryLead="ETH Zurich · 1-day hackathon"
+        links={PROBABILISTIC_COMPUTING_DIRECTORY}
+        marker="probabilistic-computing"
+        actions={
+          <>
+            <a href="#winners" className={`${MARKETING_HERO_PRIMARY_CTA_CLASS} gap-2`}>
+              <Trophy size={16} />
+              View winners
+            </a>
+            <a href="#lifetime" className={`${MARKETING_HERO_SECONDARY_CTA_CLASS} gap-1.5`}>
+              Lifetime access packages
+              <ArrowRight size={14} />
+            </a>
+            <Link href="/community-events" className={MARKETING_HERO_SECONDARY_CTA_CLASS}>
+              All community events
+            </Link>
+          </>
+        }
+      >
+        <p>Build with probabilistic and thermodynamic computing.</p>
+        <p>
           A hands-on day for learning Energy-Based Models, the THRML framework, and emerging computing
           paradigms designed for the next generation of AI systems — theory, guided practice, and a
           team-based hackathon.
         </p>
+      </MarketingDirectoryHero>
 
-        <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <MetaCard label="Date" value="June 10, 2026" />
-          <MetaCard label="Start" value="12:30 CEST" />
-          <MetaCard label="Location" value="Andreasstrasse 5, Zurich · Room S15" />
-          <MetaCard label="Capacity" value="Under 80 participants" />
-        </div>
-
-        <div className="mt-8 flex flex-wrap gap-3">
-          <a
-            href="#winners"
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-none bg-white px-5 text-sm font-medium text-black transition hover:bg-zinc-200"
-          >
-            <Trophy size={16} />
-            View winners
-          </a>
-          <a
-            href="#lifetime"
-            className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-none border border-zinc-700 px-5 text-sm text-zinc-200 transition hover:border-zinc-500 hover:text-white"
-          >
-            Lifetime access packages
-            <ArrowRight size={14} />
-          </a>
-          <Link
-            href="/community-events"
-            className="console-button inline-flex min-h-11 items-center justify-center rounded-none px-5 text-sm text-zinc-400 transition hover:border-white/80 hover:text-white"
-          >
-            All community events
-          </Link>
-        </div>
-      </section>
-
-      {/* About */}
-      <section className={`${MARKETING_SHELL} py-5`}>
-        <SectionLabel>About the event</SectionLabel>
-        <h2 className="mt-3 text-2xl font-medium tracking-[-0.8px] text-white sm:text-3xl">
-          Educational deep-dive plus real hackathon.
-        </h2>
-        <p className="mt-4 max-w-3xl text-base leading-relaxed text-zinc-400">
-          The event introduced probabilistic computing chips, Energy-Based Models, and THRML through
-          theory, guided practice, and a team-based build day.
-        </p>
-
-        <div className="mt-8 grid gap-4 sm:grid-cols-2">
-          <div className="console-copy p-5 sm:p-6">
-            <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">Core topics</p>
-            <ul className="mt-4 space-y-2 text-sm text-zinc-300">
-              <li className="flex gap-2">
-                <span className="text-zinc-600">·</span>
-                Probabilistic and thermodynamic computing
-              </li>
-              <li className="flex gap-2">
-                <span className="text-zinc-600">·</span>
-                Energy-Based Models
-              </li>
-              <li className="flex gap-2">
-                <span className="text-zinc-600">·</span>
-                THRML framework
-              </li>
-            </ul>
-          </div>
-          <div className="console-copy p-5 sm:p-6">
-            <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">Audience</p>
-            <ul className="mt-4 space-y-2 text-sm text-zinc-300">
-              <li className="flex gap-2">
-                <span className="text-zinc-600">·</span>
-                ETH students and researchers
-              </li>
-              <li className="flex gap-2">
-                <span className="text-zinc-600">·</span>
-                Industry professionals
-              </li>
-              <li className="flex gap-2">
-                <span className="text-zinc-600">·</span>
-                Teams of 1 to 4 participants
-              </li>
-            </ul>
+      <section className={`${MARKETING_SHELL} pt-3`}>
+        <div className="console-copy overflow-hidden">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4">
+            {META.map((item, index) => (
+              <div
+                key={item.label}
+                className={`px-5 py-4 sm:px-6 ${
+                  index > 0 ? "border-t border-zinc-800/90 sm:border-t-0 sm:border-l" : ""
+                } ${index === 2 ? "lg:border-t-0" : ""} ${
+                  index >= 2 ? "sm:border-t lg:border-t-0" : ""
+                }`}
+              >
+                <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">{item.label}</p>
+                <p className="mt-1.5 text-sm font-medium leading-snug text-zinc-200">{item.value}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Agenda */}
-      <section id="agenda" className={`${MARKETING_SHELL} py-5`}>
-        <SectionLabel>Agenda</SectionLabel>
-        <h2 className="mt-3 text-2xl font-medium tracking-[-0.8px] text-white sm:text-3xl">
-          Started at 12:30.
-        </h2>
-        <p className="mt-3 text-sm text-zinc-500">All times CEST, Zurich.</p>
-
-        <ol className="mt-8 space-y-0 border-l border-zinc-800 pl-6">
-          {AGENDA.map((item) => (
-            <li key={item.time} className="relative pb-8 last:pb-0">
-              <span className="absolute -left-[1.9rem] top-1.5 h-2.5 w-2.5 rounded-full border border-zinc-600 bg-[#0a0a0a]" />
-              <p className="font-mono text-[11px] uppercase tracking-[1.5px] text-zinc-500">{item.time}</p>
-              <h3 className="mt-1 text-lg font-medium text-white">{item.title}</h3>
-              <p className="mt-1 text-sm leading-relaxed text-zinc-500">{item.body}</p>
-            </li>
-          ))}
-        </ol>
+      <section className={`${MARKETING_SHELL} pt-3`}>
+        <div className="console-copy overflow-hidden">
+          <div className="grid lg:grid-cols-12">
+            <section id="about" className="p-5 sm:p-6 lg:col-span-6 lg:p-7">
+              <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">01 · ABOUT</p>
+              <h2 className="mt-3 text-2xl font-medium tracking-[-0.8px] text-white sm:text-3xl">
+                Educational deep-dive plus real hackathon.
+              </h2>
+              <p className="mt-4 text-sm leading-relaxed text-zinc-400 sm:text-base">
+                The event introduced probabilistic computing chips, Energy-Based Models, and THRML through
+                theory, guided practice, and a team-based build day.
+              </p>
+              <div className="mt-6 grid gap-6 sm:grid-cols-2">
+                <div>
+                  <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">Core topics</p>
+                  <ul className="mt-3 space-y-2 text-sm text-zinc-300">
+                    <li>Probabilistic and thermodynamic computing</li>
+                    <li>Energy-Based Models</li>
+                    <li>THRML framework</li>
+                  </ul>
+                </div>
+                <div>
+                  <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">Audience</p>
+                  <ul className="mt-3 space-y-2 text-sm text-zinc-300">
+                    <li>ETH students and researchers</li>
+                    <li>Industry professionals</li>
+                    <li>Teams of 1 to 4 participants</li>
+                  </ul>
+                </div>
+              </div>
+            </section>
+            <section
+              id="agenda"
+              className="border-t border-zinc-800/90 p-5 sm:p-6 lg:col-span-6 lg:border-t-0 lg:border-l lg:p-7"
+            >
+              <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">02 · AGENDA</p>
+              <h2 className="mt-3 text-2xl font-medium tracking-[-0.8px] text-white sm:text-3xl">
+                Started at 12:30.
+              </h2>
+              <p className="mt-2 text-sm text-zinc-500">All times CEST, Zurich.</p>
+              <ol className="mt-5">
+                {AGENDA.map((item, index) => (
+                  <li
+                    key={item.time}
+                    className={`py-3 ${index > 0 ? "border-t border-zinc-800/90" : ""}`}
+                  >
+                    <p className="font-mono text-[11px] uppercase tracking-[1.5px] text-zinc-500">{item.time}</p>
+                    <h3 className="mt-1 text-base font-medium text-white">{item.title}</h3>
+                    <p className="mt-1 text-sm leading-relaxed text-zinc-500">{item.body}</p>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          </div>
+        </div>
       </section>
 
-      {/* Winners */}
-      <section id="winners" className={`${MARKETING_SHELL} py-5`}>
-        <SectionLabel>Results</SectionLabel>
-        <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-medium tracking-[-0.8px] text-white sm:text-3xl">
+      <section id="winners" className={`${MARKETING_SHELL} pt-3`}>
+        <div className="console-copy overflow-hidden">
+          <div className="border-b border-zinc-800/90 p-5 sm:p-6 lg:p-7">
+            <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">03 · RESULTS</p>
+            <h2 className="mt-3 text-2xl font-medium tracking-[-0.8px] text-white sm:text-3xl">
               Winning projects
             </h2>
-            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-500">
+            <p className="mt-3 text-sm leading-relaxed text-zinc-500">
               $3,000 prize pool — 1st $1,500 · 2nd $1,000 · 3rd $500. Project write-ups and demos will be
               filled in here; placeholders for now.
             </p>
           </div>
-        </div>
-
-        <div className="mt-8 grid gap-4 sm:grid-cols-3">
-          {WINNING_PROJECTS.map((project) => (
-            <article
-              key={project.place}
-              className="console-copy flex flex-col overflow-hidden"
-            >
-              <div className="border-b border-zinc-800/80 bg-zinc-900/40 px-5 py-4">
+          <div className="grid sm:grid-cols-3">
+            {WINNING_PROJECTS.map((project, index) => (
+              <article
+                key={project.place}
+                className={`flex flex-col p-5 sm:p-6 ${
+                  index > 0 ? "border-t border-zinc-800/90 sm:border-t-0 sm:border-l" : ""
+                }`}
+              >
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300/90">
                     {project.place} place
                   </span>
                   <span className="text-sm font-medium text-white">{project.prize}</span>
                 </div>
-              </div>
-              <div className="flex flex-1 flex-col p-5">
-                <h3 className="text-lg font-medium text-white">{project.title}</h3>
+                <h3 className="mt-4 text-lg font-medium text-white">{project.title}</h3>
                 <p className="mt-1 flex items-center gap-1.5 text-xs text-zinc-500">
                   <Users size={12} />
                   {project.team}
@@ -322,71 +307,76 @@ export default function ProbabilisticComputingHackathonPage() {
                 <p className="mt-4 font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
                   Demo / repo · Coming soon
                 </p>
-              </div>
-            </article>
-          ))}
+              </article>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* Lifetime packages for winners */}
-      <section id="lifetime" className={`${MARKETING_SHELL} py-5`}>
-        <SectionLabel>Study the winners</SectionLabel>
-        <h2 className="mt-3 text-2xl font-medium tracking-[-0.8px] text-white sm:text-3xl">
-          Lifetime access packages
-        </h2>
-        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-500">
-          We will ship All-You-Can-Learn packages built around the winning projects — so anyone can
-          understand how they worked, not just watch a demo. Placeholders until the packages are live.
-        </p>
-
-        <div className="mt-8 grid gap-4 sm:grid-cols-3">
-          {LIFETIME_PACKAGES.map((pkg) => (
-            <article
-              key={pkg.id}
-              className="rounded-none border border-dashed border-white/40 bg-black flex flex-col p-5"
-            >
-              <span className="w-fit border border-neutral-600/30 bg-neutral-800/10 px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300/90">
-                {pkg.badge}
-              </span>
-              <h3 className="mt-4 text-base font-medium leading-snug text-white">{pkg.title}</h3>
-              <p className="mt-2 flex-1 text-sm leading-relaxed text-zinc-500">{pkg.description}</p>
-              <div className="mt-5 flex items-center justify-between gap-3 border-t border-zinc-800/80 pt-4">
-                <div>
-                  <p className="text-sm font-medium text-zinc-400">Price TBD</p>
-                  <p className="text-xs text-zinc-600">One-time · Fork yours for life</p>
-                </div>
-                <span className="rounded-none border border-zinc-800 px-3 py-2 text-xs text-zinc-600">
-                  Not yet available
-                </span>
-              </div>
-            </article>
-          ))}
-        </div>
-
-        <p className="mt-6 text-center text-xs text-zinc-600">
-          Browse other lifetime packages on{" "}
-          <Link
-            href="/all-you-can-learn?tab=lifetime"
-            className="text-zinc-400 underline decoration-zinc-700 underline-offset-2 hover:text-white"
-          >
-            All-You-Can-Learn
-          </Link>
-          .
-        </p>
-      </section>
-
-      {/* Prep material */}
-      <section className={`${MARKETING_SHELL} py-5`}>
+      <section id="lifetime" className={`${MARKETING_SHELL} pt-3`}>
         <div className="console-copy overflow-hidden">
-          <div className="grid md:grid-cols-2">
-            <div
-              className="min-h-[180px] bg-cover bg-center md:min-h-full"
-              style={{
-                backgroundImage:
-                  "url(https://cdn.sanity.io/images/otrk6k1t/production/7ef4d9c0fcf06719cb7ddd7ebdb20b02a2355793-1736x1284.webp?auto=format&fit=max&q=75&w=868)",
-              }}
-            />
-            <div className="p-6 sm:p-8">
+          <div className="border-b border-zinc-800/90 p-5 sm:p-6 lg:p-7">
+            <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">04 · STUDY</p>
+            <h2 className="mt-3 text-2xl font-medium tracking-[-0.8px] text-white sm:text-3xl">
+              Lifetime access packages
+            </h2>
+            <p className="mt-3 text-sm leading-relaxed text-zinc-500">
+              We will ship All-You-Can-Learn packages built around the winning projects — so anyone can
+              understand how they worked, not just watch a demo. Placeholders until the packages are live.
+            </p>
+          </div>
+          <div className="grid sm:grid-cols-3">
+            {LIFETIME_PACKAGES.map((pkg, index) => (
+              <article
+                key={pkg.id}
+                className={`flex flex-col p-5 sm:p-6 ${
+                  index > 0 ? "border-t border-zinc-800/90 sm:border-t-0 sm:border-l" : ""
+                }`}
+              >
+                <span className="console-chip w-fit px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300/90">
+                  {pkg.badge}
+                </span>
+                <h3 className="mt-4 text-base font-medium leading-snug text-white">{pkg.title}</h3>
+                <p className="mt-2 flex-1 text-sm leading-relaxed text-zinc-500">{pkg.description}</p>
+                <div className="mt-5 flex items-center justify-between gap-3 border-t border-zinc-800/80 pt-4">
+                  <div>
+                    <p className="text-sm font-medium text-zinc-400">Price TBD</p>
+                    <p className="text-xs text-zinc-600">One-time · Fork yours for life</p>
+                  </div>
+                  <span className="border border-zinc-800 px-3 py-2 text-xs text-zinc-600">
+                    Not yet available
+                  </span>
+                </div>
+              </article>
+            ))}
+          </div>
+          <p className="border-t border-zinc-800/90 px-5 py-4 text-xs text-zinc-600 sm:px-6">
+            Browse other lifetime packages on{" "}
+            <Link
+              href="/all-you-can-learn?tab=lifetime"
+              className="text-zinc-400 underline decoration-zinc-700 underline-offset-2 hover:text-white"
+            >
+              All-You-Can-Learn
+            </Link>
+            .
+          </p>
+        </div>
+      </section>
+
+      <section className={`${MARKETING_SHELL} pt-3`}>
+        <div className="console-copy overflow-hidden">
+          <div className="grid lg:grid-cols-12">
+            <div className={`relative min-h-[16rem] ${MARKETING_MEDIA_FILL_CLASS} sm:min-h-[20rem] lg:col-span-6 lg:min-h-[24rem]`}>
+              <Image
+                src={PREP_IMAGE}
+                alt=""
+                fill
+                unoptimized
+                className="object-cover object-center"
+                sizes="(max-width: 1024px) 100vw, 50vw"
+              />
+            </div>
+            <div className="flex flex-col justify-center border-t border-zinc-800/90 p-5 sm:p-6 lg:col-span-6 lg:border-t-0 lg:border-l lg:p-7">
               <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
                 Optional preparation
               </p>
@@ -409,105 +399,106 @@ export default function ProbabilisticComputingHackathonPage() {
         </div>
       </section>
 
-      {/* Technology + education context */}
-      <section className={`${MARKETING_SHELL} py-5`}>
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="console-copy p-6">
-            <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
-              Technology context
-            </p>
-            <h2 className="mt-3 text-xl font-medium text-white">About Extropic</h2>
-            <p className="mt-3 text-sm leading-relaxed text-zinc-500">
-              Extropic is building energy-efficient computers for the AI-powered future by rethinking
-              computing from physics fundamentals.
-            </p>
-            <div className="mt-5 space-y-4">
-              <div>
-                <p className="text-xs font-medium text-zinc-300">Core focus</p>
-                <p className="mt-1 text-sm leading-relaxed text-zinc-500">
-                  Thermodynamic and probabilistic computing for generative AI and probabilistic
-                  workloads, targeting orders-of-magnitude lower power for inference and generation.
-                </p>
+      <section className={`${MARKETING_SHELL} pt-3`}>
+        <div className="console-copy overflow-hidden">
+          <div className="grid lg:grid-cols-2">
+            <div className="p-5 sm:p-6 lg:p-7">
+              <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
+                Technology context
+              </p>
+              <h2 className="mt-3 text-xl font-medium text-white">About Extropic</h2>
+              <p className="mt-3 text-sm leading-relaxed text-zinc-500">
+                Extropic is building energy-efficient computers for the AI-powered future by rethinking
+                computing from physics fundamentals.
+              </p>
+              <div className="mt-5 space-y-4">
+                <div>
+                  <p className="text-xs font-medium text-zinc-300">Core focus</p>
+                  <p className="mt-1 text-sm leading-relaxed text-zinc-500">
+                    Thermodynamic and probabilistic computing for generative AI and probabilistic
+                    workloads, targeting orders-of-magnitude lower power for inference and generation.
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-zinc-300">Key technology</p>
+                  <p className="mt-1 text-sm leading-relaxed text-zinc-500">
+                    Thermodynamic Sampling Units, the XTR-0 / X0 platform, and THRML — an open-source
+                    Python library for thermodynamic algorithms and TSU simulation.
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs font-medium text-zinc-300">Key technology</p>
-                <p className="mt-1 text-sm leading-relaxed text-zinc-500">
-                  Thermodynamic Sampling Units, the XTR-0 / X0 platform, and THRML — an open-source
-                  Python library for thermodynamic algorithms and TSU simulation.
-                </p>
-              </div>
+              <a
+                href="https://extropic.ai/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-6 inline-flex items-center gap-1.5 text-sm text-zinc-400 transition hover:text-white"
+              >
+                extropic.ai
+                <ExternalLink size={13} />
+              </a>
             </div>
-            <a
-              href="https://extropic.ai/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-6 inline-flex items-center gap-1.5 text-sm text-zinc-400 transition hover:text-white"
-            >
-              extropic.ai
-              <ExternalLink size={13} />
-            </a>
-          </div>
-
-          <div className="console-copy p-6">
-            <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
-              Education context
-            </p>
-            <h2 className="mt-3 text-xl font-medium text-white">About Uncertain Systems</h2>
-            <p className="mt-3 text-sm leading-relaxed text-zinc-500">
-              Uncertain Systems accelerates technical education around emerging computing paradigms —
-              clear lessons, hands-on projects, and public learning infrastructure.
-            </p>
-            <div className="mt-5 space-y-4">
-              <div>
-                <p className="text-xs font-medium text-zinc-300">Education accelerationism</p>
-                <p className="mt-1 text-sm leading-relaxed text-zinc-500">
-                  Shorten the path from frontier research to practical understanding for students,
-                  researchers, and builders.
-                </p>
+            <div className="border-t border-zinc-800/90 p-5 sm:p-6 lg:border-t-0 lg:border-l lg:p-7">
+              <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
+                Education context
+              </p>
+              <h2 className="mt-3 text-xl font-medium text-white">About Uncertain Systems</h2>
+              <p className="mt-3 text-sm leading-relaxed text-zinc-500">
+                Uncertain Systems accelerates technical education around emerging computing paradigms —
+                clear lessons, hands-on projects, and public learning infrastructure.
+              </p>
+              <div className="mt-5 space-y-4">
+                <div>
+                  <p className="text-xs font-medium text-zinc-300">Education accelerationism</p>
+                  <p className="mt-1 text-sm leading-relaxed text-zinc-500">
+                    Shorten the path from frontier research to practical understanding for students,
+                    researchers, and builders.
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-zinc-300">Why it matters</p>
+                  <p className="mt-1 text-sm leading-relaxed text-zinc-500">
+                    Probabilistic and thermodynamic computing will need a new generation of practitioners.
+                    We turn complex ideas into learnable, buildable material.
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs font-medium text-zinc-300">Why it matters</p>
-                <p className="mt-1 text-sm leading-relaxed text-zinc-500">
-                  Probabilistic and thermodynamic computing will need a new generation of practitioners.
-                  We turn complex ideas into learnable, buildable material.
-                </p>
-              </div>
+              <Link
+                href="/all-you-can-learn"
+                className="mt-6 inline-flex items-center gap-1.5 text-sm text-zinc-400 transition hover:text-white"
+              >
+                All-You-Can-Learn
+                <ArrowRight size={13} />
+              </Link>
             </div>
-            <Link
-              href="/all-you-can-learn"
-              className="mt-6 inline-flex items-center gap-1.5 text-sm text-zinc-400 transition hover:text-white"
-            >
-              All-You-Can-Learn
-              <ArrowRight size={13} />
-            </Link>
           </div>
         </div>
       </section>
 
-      {/* Sponsors */}
-      <section className={`${MARKETING_SHELL} py-5`}>
-        <SectionLabel>Sponsors and partners</SectionLabel>
-        <h2 className="mt-3 text-2xl font-medium tracking-[-0.8px] text-white">Supported by</h2>
-        <div className="mt-6 grid gap-3 sm:grid-cols-3">
-          {SPONSORS.map((sponsor) => (
-            <a
-              key={sponsor.name}
-              href={sponsor.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="console-copy p-5 transition hover:border-white/80"
-            >
-              <p className="font-medium text-white">{sponsor.name}</p>
-              <p className="mt-2 text-sm leading-relaxed text-zinc-500">{sponsor.role}</p>
-            </a>
-          ))}
-        </div>
-      </section>
-
-      {/* Closed registration */}
-      <section className={`${MARKETING_SHELL} pb-12 pt-5 sm:pb-14`}>
-        <div className="console-copy p-6 sm:p-8">
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+      <section className={`${MARKETING_SHELL} pb-12 pt-3 sm:pb-14`}>
+        <div className="console-copy overflow-hidden">
+          <div className="p-5 sm:p-6 lg:p-7">
+            <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
+              05 · SPONSORS AND PARTNERS
+            </p>
+            <h2 className="mt-3 text-2xl font-medium tracking-[-0.8px] text-white">Supported by</h2>
+          </div>
+          <div className="grid border-t border-zinc-800/90 sm:grid-cols-3">
+            {SPONSORS.map((sponsor, index) => (
+              <a
+                key={sponsor.name}
+                href={sponsor.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`p-5 transition hover:bg-white/[0.03] sm:p-6 ${
+                  index > 0 ? "border-t border-zinc-800/90 sm:border-t-0 sm:border-l" : ""
+                }`}
+              >
+                <p className="font-medium text-white">{sponsor.name}</p>
+                <p className="mt-2 text-sm leading-relaxed text-zinc-500">{sponsor.role}</p>
+              </a>
+            ))}
+          </div>
+          <div className="flex flex-col gap-6 border-t border-zinc-800/90 p-5 sm:flex-row sm:items-start sm:justify-between sm:p-6 lg:p-7">
             <div>
               <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
                 Registration
@@ -525,7 +516,7 @@ export default function ProbabilisticComputingHackathonPage() {
             <div className="shrink-0 space-y-3">
               <a
                 href="mailto:uncertainsystems@gmail.com"
-                className="inline-flex min-h-11 w-full items-center justify-center rounded-none bg-white px-5 text-sm font-medium text-black transition hover:bg-zinc-200 sm:w-auto"
+                className={MARKETING_HERO_PRIMARY_CTA_CLASS}
               >
                 Host a hackathon with us
               </a>
@@ -536,25 +527,6 @@ export default function ProbabilisticComputingHackathonPage() {
           </div>
         </div>
       </section>
-
-      <div className="relative z-10">
-        <Footer />
-      </div>
-    </main>
-  );
-}
-
-function SectionLabel({ children }: { children: ReactNode }) {
-  return (
-    <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">{children}</p>
-  );
-}
-
-function MetaCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="console-copy px-4 py-3">
-      <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">{label}</p>
-      <p className="mt-1.5 text-sm font-medium leading-snug text-zinc-200">{value}</p>
-    </div>
+    </MarketingPageShell>
   );
 }

@@ -1,13 +1,17 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { Footer } from "@/components/Footer";
-import { LandingNav } from "@/components/LandingNav";
+import { MarketingPageShell } from "@/components/marketing/MarketingChrome";
+import { MarketingDirectoryHero } from "@/components/marketing/MarketingDirectoryHero";
 import { AYCL_HACKATHONS } from "@/lib/aycl-landing";
 import { aestheticImageForId } from "@/lib/aesthetics";
+import {
+  COMMUNITY_EVENTS_COPY,
+  COMMUNITY_EVENTS_DIRECTORY,
+} from "@/lib/marketing/projects";
+import { MARKETING_MEDIA_FILL_CLASS, MARKETING_MEDIA_STAGE_CLASS, MARKETING_SHELL } from "@/lib/marketing/shell";
 import { standardShareSocialMetadata } from "@/lib/og/standard";
-import { PublicConsoleWash, PublicPageField } from "@/components/ui/console-frame";
-import { MARKETING_SHELL } from "@/lib/marketing/shell";
 
 const standardSocial = standardShareSocialMetadata({
   url: "https://uncertain.systems/community-events",
@@ -31,104 +35,89 @@ const BACKGROUND_IMAGE = aestheticImageForId("hackathons", [
 
 export default function HackathonsPage() {
   return (
-    <main
-      className="relative min-h-screen overflow-hidden border border-white/40 bg-[#0e1c2c] text-zinc-200 selection:bg-zinc-700"
-      data-hackathons-page
-    >
-      <PublicPageField image={BACKGROUND_IMAGE} />
-      <PublicConsoleWash />
+    <MarketingPageShell image={BACKGROUND_IMAGE}>
+      <div data-hackathons-page>
+        <MarketingDirectoryHero
+          eyebrows={[COMMUNITY_EVENTS_COPY.eyebrow]}
+          title={COMMUNITY_EVENTS_COPY.title}
+          directoryEyebrow={COMMUNITY_EVENTS_COPY.directoryEyebrow}
+          directoryTitle={COMMUNITY_EVENTS_COPY.directoryTitle}
+          directoryLead={COMMUNITY_EVENTS_COPY.directoryLead}
+          links={COMMUNITY_EVENTS_DIRECTORY}
+          marker="community-events"
+        >
+          <p>{COMMUNITY_EVENTS_COPY.lead}</p>
+        </MarketingDirectoryHero>
 
-      <LandingNav />
-
-      <section className={`${MARKETING_SHELL} py-8 sm:py-10`}>
-        <header className="mb-10 text-center">
-          <p className="mb-4 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
-            Projects & Community
-          </p>
-          <h1 className="text-3xl font-medium tracking-[-1.6px] text-white sm:text-5xl">
-            Community Events
-          </h1>
-          <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-zinc-300 sm:text-lg">
-            In-person and online events where curious people learn frontier
-            knowledge by doing — lectures, mentors, teams, and demos on ideas
-            that are still taking shape.
-          </p>
-        </header>
-
-        <div className="mb-5 text-center">
-          <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
-            Past & upcoming events
-          </p>
-        </div>
-
-        <div className="grid gap-5 sm:grid-cols-2" data-hackathons-grid>
-          {AYCL_HACKATHONS.map((hackathon) => (
-            <Link
-              key={hackathon.id}
-              href={hackathon.href}
-              className="console-copy group overflow-hidden transition hover:border-white/60"
-              data-hackathon-card={hackathon.id}
-            >
-              <div
-                className="relative h-44 bg-cover bg-center sm:h-48"
-                style={{ backgroundImage: `url(${hackathon.image})` }}
+        <section className={`${MARKETING_SHELL} pb-12 pt-3 sm:pb-14`} data-hackathons-grid>
+          <div className="console-copy overflow-hidden">
+            {AYCL_HACKATHONS.map((hackathon, index) => (
+              <Link
+                key={hackathon.id}
+                href={hackathon.href}
+                className={`group grid lg:grid-cols-12 ${
+                  index > 0 ? "border-t border-zinc-800/90" : ""
+                }`}
+                data-hackathon-card={hackathon.id}
               >
-                <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/80 via-transparent to-transparent" />
-                <span className="console-copy absolute left-4 top-4 px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-300">
-                  {hackathon.status}
-                </span>
-              </div>
-              <div className="space-y-4 p-5">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="console-copy px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300/90">
-                    {hackathon.kind}
+                <div
+                  className={`relative ${MARKETING_MEDIA_STAGE_CLASS} ${MARKETING_MEDIA_FILL_CLASS} lg:col-span-7`}
+                >
+                  <Image
+                    src={hackathon.image}
+                    alt=""
+                    fill
+                    unoptimized
+                    className="object-cover object-center"
+                    sizes="(max-width: 1024px) 100vw, 60vw"
+                  />
+                  <span className="console-chip absolute left-4 top-4 px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-300">
+                    {hackathon.status}
                   </span>
-                  {hackathon.host ? (
-                    <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
-                      {hackathon.host}
-                    </span>
-                  ) : null}
                 </div>
-                <div>
-                  <h2 className="text-xl font-medium leading-tight text-white group-hover:text-zinc-100">
+                <div className="flex flex-col justify-center border-t border-zinc-800/90 p-5 sm:p-6 lg:col-span-5 lg:border-t-0 lg:border-l lg:p-7">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="console-chip px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300/90">
+                      {hackathon.kind}
+                    </span>
+                    {hackathon.host ? (
+                      <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
+                        {hackathon.host}
+                      </span>
+                    ) : null}
+                  </div>
+                  <h2 className="mt-4 text-xl font-medium leading-tight tracking-[-0.5px] text-white group-hover:text-zinc-100 sm:text-2xl">
                     {hackathon.title}
                   </h2>
-                  <p className="mt-2 text-sm leading-relaxed text-zinc-500">
-                    {hackathon.description}
-                  </p>
-                </div>
-                <div className="flex items-end justify-between gap-3">
-                  <div className="space-y-1 text-xs text-zinc-500">
-                    {hackathon.date ? <p>{hackathon.date}</p> : null}
-                    {hackathon.location ? <p>{hackathon.location}</p> : null}
+                  <p className="mt-3 text-sm leading-relaxed text-zinc-400">{hackathon.description}</p>
+                  <div className="mt-5 flex items-end justify-between gap-3">
+                    <div className="space-y-1 text-xs text-zinc-500">
+                      {hackathon.date ? <p>{hackathon.date}</p> : null}
+                      {hackathon.location ? <p>{hackathon.location}</p> : null}
+                    </div>
+                    <span className="inline-flex items-center gap-1.5 text-sm font-medium text-white">
+                      View event
+                      <ArrowRight
+                        size={14}
+                        className="transition group-hover:translate-x-0.5"
+                      />
+                    </span>
                   </div>
-                  <span className="inline-flex items-center gap-1.5 text-sm font-medium text-white">
-                    View event
-                    <ArrowRight
-                      size={14}
-                      className="transition group-hover:translate-x-0.5"
-                    />
-                  </span>
                 </div>
-              </div>
+              </Link>
+            ))}
+          </div>
+          <p className="mt-6 text-sm text-zinc-600">
+            {COMMUNITY_EVENTS_COPY.ayclHint}{" "}
+            <Link
+              href={COMMUNITY_EVENTS_COPY.ayclHref}
+              className="text-zinc-400 underline decoration-zinc-700 underline-offset-2 hover:text-white"
+            >
+              {COMMUNITY_EVENTS_COPY.ayclLabel}
             </Link>
-          ))}
-        </div>
-
-        <p className="mt-10 text-center text-sm text-zinc-600">
-          Looking for lifetime learning environments?{" "}
-          <Link
-            href="/all-you-can-learn"
-            className="text-zinc-400 underline decoration-zinc-700 underline-offset-2 hover:text-white"
-          >
-            Browse All-You-Can-Learn
-          </Link>
-        </p>
-      </section>
-
-      <div className="relative z-10">
-        <Footer />
+          </p>
+        </section>
       </div>
-    </main>
+    </MarketingPageShell>
   );
 }

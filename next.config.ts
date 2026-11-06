@@ -39,11 +39,10 @@ const nextConfig: NextConfig = {
         destination: "/docs/learning-map-api/:path*",
         permanent: true,
       },
-      // Former /platform marketing path must not redirect to deleted /use-cases.
+      // Former /platform marketing path must not redirect onto use-cases.
       // Nav "Platform" uses client hash /#platform on home — server redirects stay path-only.
       { source: "/platform", destination: "/", permanent: true },
-      { source: "/use-cases", destination: "/", permanent: true },
-      { source: "/use-cases/:path*", destination: "/", permanent: true },
+      { source: "/use-cases/:path+", destination: "/use-cases", permanent: true },
       { source: "/products", destination: "/", permanent: true },
       { source: "/products/:path*", destination: "/", permanent: true },
       { source: "/enterprise", destination: "/", permanent: true },

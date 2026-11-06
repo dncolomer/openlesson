@@ -1,12 +1,17 @@
 /**
- * Marketing chrome: three products in main nav; AYCL not in community; no product-detail /use-cases trees.
+ * Marketing chrome: three products in main nav; Use cases listing; AYCL not in community; no product-detail trees.
  */
 import { describe, expect, it } from "vitest";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { LANDING_PRODUCT_ROWS } from "@/components/ProductTable";
 import { PRODUCTS } from "@/lib/seo/products";
-import { COMMUNITY_LINKS, MAIN_NAV_PRODUCT_LINKS, PRICING_NAV_LINKS } from "@/lib/marketing/nav";
+import {
+  COMMUNITY_LINKS,
+  MAIN_NAV_PRODUCT_LINKS,
+  PRICING_NAV_LINKS,
+  USE_CASES_NAV_LINK,
+} from "@/lib/marketing/nav";
 
 const ROOT = join(__dirname, "../..");
 
@@ -29,10 +34,11 @@ function collectPageTsx(dir: string): string[] {
 }
 
 describe("marketing nav and platform rename", () => {
-  it("LandingNav links Acquisition, Verification, and Mapping, not Platform /#platform or Use cases", () => {
+  it("LandingNav links Acquisition, Verification, and Mapping, then Use cases, then Pricing", () => {
     const nav = read("components/LandingNav.tsx");
-    expect(nav).not.toMatch(/href=["']\/use-cases/);
-    expect(nav).not.toMatch(/>\s*Use cases\s*</);
+    expect(nav).toContain("USE_CASES_NAV_LINK");
+    expect(nav).toContain("data-nav-products");
+    expect(nav).toMatch(/<div className="console-copy flex items-stretch" data-nav-products>/);
     expect(nav).not.toMatch(/href=["']\/#products["']/);
     expect(nav).not.toMatch(/>\s*Products\s*</);
     expect(nav).not.toContain('href="/#platform"');
@@ -42,6 +48,7 @@ describe("marketing nav and platform rename", () => {
       "/knowledge-verification",
       "/knowledge-mapping",
     ]);
+    expect(USE_CASES_NAV_LINK).toEqual({ href: "/use-cases", label: "Use cases" });
     expect(nav).toContain("PRICING_NAV_LINKS");
     expect(nav).toContain('href="/dashboard"');
     expect(nav).toContain("Dashboard");
@@ -57,10 +64,10 @@ describe("marketing nav and platform rename", () => {
     ]);
   });
 
-  it("Footer no longer links to /use-cases and links Support this Project", () => {
+  it("Footer links Use cases and Support this Project", () => {
     const footer = read("components/Footer.tsx");
-    expect(footer).not.toMatch(/href:\s*["']\/use-cases/);
-    expect(footer).not.toContain("footer.useCases");
+    expect(footer).toMatch(/href:\s*["']\/use-cases["']/);
+    expect(footer).toContain("footer.useCases");
     expect(footer).toContain('href: "/support"');
   });
 
@@ -121,31 +128,35 @@ describe("platform suite listing CTAs", () => {
 });
 
 describe("removed public route trees", () => {
-  it("has zero page.tsx under app/use-cases and app/products", () => {
+  it("ships a use-cases listing page and no nested product or use-case trees", () => {
     const useCasePages = collectPageTsx(join(ROOT, "app/use-cases"));
     const productPages = collectPageTsx(join(ROOT, "app/products"));
-    expect(useCasePages).toEqual([]);
+    expect(useCasePages).toEqual([join(ROOT, "app/use-cases/page.tsx")]);
     expect(productPages).toEqual([]);
-    expect(existsSync(join(ROOT, "app/use-cases"))).toBe(false);
+    expect(existsSync(join(ROOT, "app/use-cases/page.tsx"))).toBe(true);
     expect(existsSync(join(ROOT, "app/products"))).toBe(false);
   });
 
-  it("sitemap does not list deleted use-cases or products URLs", () => {
+  it("sitemap lists the use-cases hub and not deleted product URLs", () => {
     const sitemap = read("app/sitemap.ts");
-    expect(sitemap).not.toContain("/use-cases");
+    expect(sitemap).toContain("/use-cases");
+    expect(sitemap).not.toContain("/use-cases/");
     expect(sitemap).not.toContain("/products/");
   });
 
-  it("next.config redirects former marketing paths to home, not /use-cases destinations", () => {
+  it("next.config keeps the use-cases listing live and redirects nested leftovers onto it", () => {
     const config = read("next.config.ts");
     expect(config).toMatch(/source:\s*["']\/platform["']/);
-    expect(config).toMatch(/source:\s*["']\/use-cases["']/);
+    expect(config).toMatch(/source:\s*["']\/use-cases\/:path\+["']/);
     expect(config).toMatch(/source:\s*["']\/products\/:path\*["']/);
     expect(config).not.toMatch(
       /source:\s*["']\/platform["']\s*,\s*destination:\s*["']\/use-cases/,
     );
-    expect(config).toMatch(
+    expect(config).not.toMatch(
       /source:\s*["']\/use-cases["']\s*,\s*destination:\s*["']\/["']/,
+    );
+    expect(config).toMatch(
+      /source:\s*["']\/use-cases\/:path\+["']\s*,\s*destination:\s*["']\/use-cases["']/,
     );
     expect(config).toMatch(
       /source:\s*["']\/products\/:path\*["']\s*,\s*destination:\s*["']\/["']/,

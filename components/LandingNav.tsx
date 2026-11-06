@@ -10,6 +10,7 @@ import {
   MAIN_NAV_PRODUCT_LINKS,
   PRICING_NAV_LINKS,
   TOP_LINKS,
+  USE_CASES_NAV_LINK,
 } from "@/lib/marketing/nav";
 import { createClient } from "@/lib/supabase/client";
 
@@ -81,11 +82,23 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
         </Link>
 
         <nav className="hidden items-center gap-6 text-sm text-zinc-500 md:flex" aria-label="Main navigation">
-          {MAIN_NAV_PRODUCT_LINKS.map((link) => (
-            <Link key={link.href} href={link.href} className="transition hover:text-white">
-              {link.label}
-            </Link>
-          ))}
+          <div className="console-copy flex items-stretch" data-nav-products>
+            {MAIN_NAV_PRODUCT_LINKS.map((link, index) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`px-3 py-2 text-sm font-medium text-zinc-100 transition hover:bg-white/10 hover:text-white ${
+                  index > 0 ? "border-l border-white/25" : ""
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
+
+          <Link href={USE_CASES_NAV_LINK.href} className="transition hover:text-white">
+            {USE_CASES_NAV_LINK.label}
+          </Link>
 
           {PRICING_NAV_LINKS.map((link) => (
             <Link key={link.href} href={link.href} className="transition hover:text-white">
@@ -169,17 +182,29 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
       {mobileOpen && (
         <nav className="mx-auto mt-4 w-full max-w-[96rem] border-t border-zinc-900 pt-4 md:hidden" aria-label="Mobile navigation">
           <ul className="space-y-1 text-sm">
-            {MAIN_NAV_PRODUCT_LINKS.map((link) => (
-              <li key={link.href}>
-                <Link
-                  href={link.href}
-                  className="block rounded-sm px-2 py-2 text-zinc-300"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  {link.label}
-                </Link>
-              </li>
-            ))}
+            <li>
+              <div className="console-copy divide-y divide-white/20">
+                {MAIN_NAV_PRODUCT_LINKS.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="block px-3 py-2 font-medium text-white"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+            </li>
+            <li>
+              <Link
+                href={USE_CASES_NAV_LINK.href}
+                className="block rounded-sm px-2 py-2 text-zinc-300"
+                onClick={() => setMobileOpen(false)}
+              >
+                {USE_CASES_NAV_LINK.label}
+              </Link>
+            </li>
             {PRICING_NAV_LINKS.map((link) => (
               <li key={link.href}>
                 <Link

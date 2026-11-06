@@ -9,6 +9,7 @@ const productLinks = [
   { labelKey: "footer.learningHarness", href: LEARNING_HARNESS_PATH },
   { labelKey: "footer.knowledgeVerification", href: "/knowledge-verification" },
   { labelKey: "footer.knowledgeMapping", href: "/knowledge-mapping" },
+  { labelKey: "footer.useCases", href: "/use-cases" },
   { labelKey: "footer.pricing", href: "/pricing" },
   { labelKey: "footer.vision", href: "/science" },
   { labelKey: "footer.agenticApi", href: "/docs/learning-map-api" },

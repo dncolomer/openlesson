@@ -5,6 +5,7 @@ import {
   KNOWLEDGE_MAPPING_PATH,
   KNOWLEDGE_VERIFICATION_PATH,
   LEARNING_HARNESS_PATH,
+  USE_CASES_PATH,
 } from "@/lib/marketing/paths";
 
 export const MAIN_NAV_PRODUCT_LINKS = [
@@ -12,6 +13,11 @@ export const MAIN_NAV_PRODUCT_LINKS = [
   { href: KNOWLEDGE_VERIFICATION_PATH, label: "Verification" },
   { href: KNOWLEDGE_MAPPING_PATH, label: "Mapping" },
 ] as const;
+
+export const USE_CASES_NAV_LINK = {
+  href: USE_CASES_PATH,
+  label: "Use cases",
+} as const;
 
 export const PRICING_NAV_LINKS = [
   { href: HARNESS_PRICING_PATH, label: "Pricing" },

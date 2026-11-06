@@ -405,7 +405,8 @@ describe("sitemap lists new public pages", () => {
     expect(sitemap).toContain("/community-events");
     expect(sitemap).toContain("/community-events/ground-state");
     expect(sitemap).toContain("/brain-priming");
-    expect(sitemap).not.toContain("/use-cases");
+    expect(sitemap).toContain("/use-cases");
+    expect(sitemap).not.toContain("/use-cases/");
     expect(sitemap).not.toContain("/products/");
   });
 });

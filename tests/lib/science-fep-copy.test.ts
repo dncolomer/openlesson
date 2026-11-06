@@ -59,21 +59,19 @@ describe("science page renders FEP copy", () => {
     expect(src).toContain("SCIENCE_FEP_COPY.name");
     expect(src).toContain("SCIENCE_FEP_COPY.caveat");
 
-    const thesisAt = src.indexOf("science-thesis-slide");
+    const whyAt = src.indexOf("data-science-why");
     const fepAt = src.indexOf("data-science-free-energy");
     const researchAt = src.indexOf("data-science-research");
-    expect(thesisAt).toBeGreaterThan(-1);
+    expect(whyAt).toBeGreaterThan(-1);
     expect(fepAt).toBeGreaterThan(-1);
     expect(researchAt).toBeGreaterThan(-1);
-    expect(thesisAt).toBeLessThan(fepAt);
+    expect(whyAt).toBeLessThan(fepAt);
     expect(fepAt).toBeLessThan(researchAt);
+    expect(src).not.toContain("science-thesis-slide");
   });
 
-  it("keeps thesis slide and research white-paper links", () => {
+  it("keeps research white-paper links", () => {
     const src = read("app/science/page.tsx");
-    expect(src).toContain("getPlatformPitchSlide");
-    expect(src).toContain("PLATFORM_THESIS_SLIDE_INDEX");
-    expect(src).toContain("data-science-pitch-slide");
     expect(src).toContain("KNOWLEDGE_TOMOGRAPHY_WHITEPAPER_PATH");
     expect(src).toContain("TAP_WHITEPAPER_PATH");
     expect(src).toContain("data-science-research-link");

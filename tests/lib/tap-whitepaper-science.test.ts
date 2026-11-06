@@ -91,6 +91,11 @@ describe("white paper public page and science link", () => {
     expect(component).toContain("data-whitepaper-section");
     expect(component).toContain("experimentSteps");
     expect(component).toContain("ScienceWhitepaper");
+    expect(component).toContain("console-copy");
+    expect(component).toContain("lg:grid-cols-12");
+    expect(component).toContain("MARKETING_SHELL");
+    expect(component).not.toContain("bg-zinc-900");
+    expect(component).not.toContain("ring-1 ring-zinc");
   });
 
   it("science page links to the white paper research path", () => {

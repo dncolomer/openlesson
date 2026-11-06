@@ -16,7 +16,7 @@ import {
   LANDING_HERO_STILL_ALT,
   LANDING_USES,
 } from "@/lib/marketing/landing-variants";
-import { MARKETING_SHELL } from "@/lib/marketing/shell";
+import { MARKETING_MEDIA_FILL_CLASS, MARKETING_SHELL } from "@/lib/marketing/shell";
 import { PLATFORM_CORE, PLATFORM_PROOF } from "@/lib/marketing/platform";
 
 export function LandingWash() {
@@ -129,7 +129,7 @@ export function LandingCoreSection() {
                 src={PLATFORM_CORE.imageSrc}
                 alt={PLATFORM_CORE.imageAlt}
                 fill
-                className="object-cover"
+                className={`object-contain ${MARKETING_MEDIA_FILL_CLASS}`}
                 sizes="(max-width: 1024px) 100vw, 40vw"
               />
             </div>
@@ -165,25 +165,16 @@ export function LandingProofSection() {
             key={item.name}
             className="console-copy flex min-h-[6.5rem] min-w-0 flex-row overflow-hidden"
           >
-            <div className="relative w-24 shrink-0 self-stretch sm:w-32 lg:w-36">
-              <Image
-                src={item.image}
-                alt={item.imageAlt}
-                fill
-                className="object-cover"
-                sizes="144px"
-              />
-              {"logo" in item && item.logo ? (
-                <div className="absolute left-2 top-2 z-10 flex items-center rounded-none border border-white/25 bg-black/70 px-1.5 py-1.5">
-                  <Image
-                    src={item.logo}
-                    alt={item.logoAlt ?? item.eyebrow}
-                    width={40}
-                    height={37}
-                    className="h-5 w-auto invert"
-                  />
-                </div>
-              ) : null}
+            <div className="relative w-24 shrink-0 self-stretch bg-black sm:w-32 lg:w-36">
+              <div className="absolute inset-3 sm:inset-4">
+                <Image
+                  src={item.image}
+                  alt={item.imageAlt}
+                  fill
+                  className="object-contain invert"
+                  sizes="144px"
+                />
+              </div>
             </div>
             <div className="flex min-w-0 flex-1 flex-col justify-center px-4 py-3 sm:px-5 sm:py-3.5">
               <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">{item.eyebrow}</p>

@@ -65,8 +65,8 @@ describe("live landing hero", () => {
     expect(heroes).not.toContain("data-home-hero-strip");
     expect(heroes).not.toContain("data-region-image-variants");
     expect(heroes).not.toContain("bg-white px-5 py-3 text-sm font-medium text-black");
-    expect(PLATFORM_CORE.imageSrc).toBe("/lp-boxes/knowledge-embedding-blueprint-v1.jpg");
-    expect(existsSync(join(ROOT, "public/lp-boxes/knowledge-embedding-blueprint-v1.jpg"))).toBe(true);
+    expect(PLATFORM_CORE.imageSrc).toBe("/regions1.png");
+    expect(existsSync(join(ROOT, "public/regions1.png"))).toBe(true);
     expect(LANDING_HERO_STILL).toBe("/lp-boxes/session-canvas-blueprint.jpg");
     expect(existsSync(join(ROOT, "public", LANDING_HERO_STILL.replace(/^\//, "")))).toBe(true);
     expect(heroes).toContain("LANDING_HERO_STILL");

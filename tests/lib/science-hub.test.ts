@@ -3,7 +3,7 @@
  * deep links from harness, verification, and pricing.
  */
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { TOP_LINKS } from "@/lib/marketing/nav";
 import { HARNESS_PRODUCT_COPY } from "@/lib/marketing/harness-product";
@@ -15,6 +15,7 @@ import {
   HARNESS_THESIS_LINKS,
   MAPPING_THESIS_LINKS,
   SCIENCE_FEP_PATH,
+  SCIENCE_HUB_COPY,
   SCIENCE_HUB_DIRECTORY,
   SCIENCE_HUB_PATH,
   SCIENCE_WHY_PATH,
@@ -45,21 +46,37 @@ describe("combined vision + science hub", () => {
     expect(read("app/sitemap.ts")).not.toMatch(/url: `\$\{baseUrl\}\/vision`/);
   });
 
-  it("hub opens with a directory of why, thesis, policy, generative model, and papers", () => {
+  it("hub opens with a directory of why, policy, generative model, and papers", () => {
     const page = read("app/science/page.tsx");
     expect(page).toContain("data-science-hub");
-    expect(page).toContain("ThesisDirectory");
+    expect(page).toContain("console-copy");
+    expect(page).toContain("lg:grid-cols-12");
+    expect(page).toContain("md:grid-cols-3");
+    expect(page).not.toContain("bg-zinc-900");
+    expect(page).toContain("MarketingDirectoryHero");
     expect(page).toContain("SCIENCE_HUB_DIRECTORY");
+    expect(page).toContain('marker="science-hub"');
+    expect(read("components/marketing/MarketingDirectoryHero.tsx")).toContain("ThesisDirectory");
+    expect(read("components/marketing/MarketingDirectoryHero.tsx")).toContain('tone="index"');
     expect(page).toContain("ScrollToHash");
     expect(page).toContain("[&_section[id]]:scroll-mt-24");
     expect(page).toContain('id="why"');
     expect(page).toContain("SCIENCE_HUB_COPY.whyTitle");
+    expect(page).toContain("SCIENCE_HUB_COPY.whyImageSrc");
+    expect(page).toContain("MARKETING_MEDIA_FILL_CLASS");
+    expect(page).toContain("data-science-why-visual");
+    expect(page).toContain("SCIENCE_HUB_COPY.whyP1");
+    expect(page).toContain("SCIENCE_HUB_COPY.whyP2");
+    expect(page).toContain("SCIENCE_HUB_COPY.whyP3");
+    expect(page).not.toContain("SCIENCE_HUB_WHY");
+    expect(page).not.toContain("Low ROI Learning");
+    expect(SCIENCE_HUB_COPY.whyImageSrc).toBe("/why.jpg");
+    expect(existsSync(join(ROOT, "public/why.jpg"))).toBe(true);
     expect(page).not.toContain('className="sr-only"');
     expect(read("components/science/ThesisDirectory.tsx")).toContain('link.href.startsWith("#")');
     expect(read("components/science/ScrollToHash.tsx")).toContain("scrollIntoView");
     expect(SCIENCE_HUB_DIRECTORY.map((row) => row.href)).toEqual([
       "#why",
-      "#science-thesis-slide",
       "#science-free-energy",
       "#science-epistemic-foraging",
       SCIENCE_LEARNING_MODEL_PATH,
@@ -88,8 +105,11 @@ describe("combined vision + science hub", () => {
     expect(
       HARNESS_THESIS_LINKS.find((row) => row.href === SCIENCE_LEARNING_MODEL_PATH)?.label,
     ).toBe("Unsys model");
+    expect(read("app/acquisition/page.tsx")).toContain("MarketingDirectoryHero");
     expect(read("app/acquisition/page.tsx")).toContain('marker="harness"');
+    expect(read("app/knowledge-verification/page.tsx")).toContain("MarketingDirectoryHero");
     expect(read("app/knowledge-verification/page.tsx")).toContain('marker="verification"');
+    expect(read("app/knowledge-mapping/page.tsx")).toContain("MarketingDirectoryHero");
     expect(read("app/knowledge-mapping/page.tsx")).toContain('marker="mapping"');
     expect(read("app/pricing/page.tsx")).not.toContain("ThesisDirectory");
     expect(HARNESS_PRICING_COPY.thesisLinks.length).toBeGreaterThan(0);

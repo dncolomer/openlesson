@@ -206,6 +206,10 @@ describe("science learning model page", () => {
     expect(page).toContain("LearningModelPipelines");
     expect(page).toContain("LearningModelObjectGlyph");
     expect(page).toContain("data-science-learning-model");
+    expect(page).toContain("console-copy");
+    expect(page).toContain("lg:grid-cols-12");
+    expect(page).toContain("MARKETING_SHELL");
+    expect(page).not.toContain("bg-zinc-900");
     expect(page).toContain("learning-model-concepts");
     expect(page).toContain("data-learning-model-concept");
     expect(page).not.toContain("data-learning-model-object");

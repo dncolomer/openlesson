@@ -174,8 +174,8 @@ describe("landing: knowledge acquisition, verification, and mapping", () => {
   });
 });
 
-describe("product pages: verification owns platform/approach/scale; harness owns AYCL", () => {
-  it("verification product page carries moved platform, approach, and scale claims", () => {
+describe("product pages: verification owns platform/approach; harness owns AYCL", () => {
+  it("verification product page carries platform and approach claims", () => {
     expect(existsSync(join(ROOT, "app/knowledge-verification/page.tsx"))).toBe(true);
     const page = read("app/knowledge-verification/page.tsx");
     expect(page).toContain("knowledge regions");
@@ -185,7 +185,6 @@ describe("product pages: verification owns platform/approach/scale; harness owns
     expect(page).toContain("epistemic foraging");
     expect(page).not.toContain("TIM — Trace Interruption Model");
     expect(page).not.toContain("Trace Interruption Model");
-    expect(page).toContain("Calibrate, Learn, and Verify");
     expect(page).not.toContain("TAP Learning");
     expect(page).not.toMatch(/\bTAP\b/);
     expect(page).not.toContain("data-landing-tapbench");
@@ -195,15 +194,18 @@ describe("product pages: verification owns platform/approach/scale; harness owns
     expect("tapbenchHref" in VERIFICATION_PRODUCT_COPY).toBe(false);
     expect("tapbenchHref" in VERIFICATION_SCALE_COPY).toBe(false);
     expect(page).toContain("VERIFICATION_PLATFORM_COPY.imageSrc");
-    expect(page).toContain("VERIFICATION_SCALE_COPY.imageSrc");
-    expect(VERIFICATION_PLATFORM_COPY.imageSrc).toBe("/knowledgeg2.png");
-    expect(VERIFICATION_SCALE_COPY.imageSrc).toBe("/ranking_app.png");
+    expect(page).toContain("MARKETING_MEDIA_FILL_CLASS");
+    expect(page).toContain("MARKETING_MEDIA_STAGE_CLASS");
+    expect(page).not.toContain("VERIFICATION_SCALE_COPY.imageSrc");
+    expect(VERIFICATION_PLATFORM_COPY.imageSrc).toBe("/regions1.png");
+    expect(existsSync(join(ROOT, "public/regions1.png"))).toBe(true);
     expect(page).toContain("data-landing-knowledge-visual");
-    expect(page).toContain("data-landing-ranking-visual");
+    expect(page).not.toContain("data-landing-ranking-visual");
+    expect(page).not.toContain('id="scale"');
+    expect(page).not.toContain("data-landing-scale-section");
     expect(page).toMatch(/cannot be cheated or faked/);
     expect(VERIFICATION_PLATFORM_COPY.title).toMatch(/knowledge space/i);
     expect(VERIFICATION_APPROACH_COPY.title).toMatch(/learning world model/i);
-    expect(VERIFICATION_SCALE_COPY.title).toMatch(/at scale/i);
     expect(VERIFICATION_PRODUCT_COPY.lead.toLowerCase()).toMatch(/without traditional tests/);
     expect(VERIFICATION_APPROACH_COPY.p2).toMatch(/Free Energy Principle/);
     expect(VERIFICATION_APPROACH_COPY.p2).toMatch(/epistemic foraging/);
@@ -225,7 +227,10 @@ describe("product pages: verification owns platform/approach/scale; harness owns
     expect(page).not.toMatch(/\bTAP\b/);
     expect(page).not.toContain("TAPBench");
     expect(page).toContain("MAPPING_PLATFORM_COPY.imageSrc");
-    expect(MAPPING_PLATFORM_COPY.imageSrc).toBe("/knowledgeg2.png");
+    expect(page).toContain("MARKETING_MEDIA_FILL_CLASS");
+    expect(page).toContain("MARKETING_MEDIA_STAGE_CLASS");
+    expect(MAPPING_PLATFORM_COPY.imageSrc).toBe("/map.jpg");
+    expect(existsSync(join(ROOT, "public/map.jpg"))).toBe(true);
     expect(page).toContain("data-landing-knowledge-visual");
     expect(page).toContain('marker="mapping"');
     expect(MAPPING_PLATFORM_COPY.title).toMatch(/map of regions/i);
@@ -253,21 +258,24 @@ describe("product pages: verification owns platform/approach/scale; harness owns
     expect(HARNESS_PRODUCT_COPY.foraging.toLowerCase()).toMatch(/reducing uncertainty/);
     expect(page).toContain("data-harness-epistemic-foraging");
     expect(page).toContain("epistemic foraging");
-    expect(page).toContain("HARNESS_PRODUCT_COPY.screenshots");
-    expect(page).toContain("data-harness-screenshots");
-    expect(page).toContain("HarnessScreenshotCarousel");
-    const carousel = read("components/marketing/HarnessScreenshotCarousel.tsx");
-    expect(carousel).toContain("data-harness-screenshot-carousel");
-    expect(carousel).toContain('aria-roledescription="carousel"');
-    expect(carousel).toContain("Problem Solving Harness screenshots");
+    expect(page).toContain("HARNESS_PRODUCT_COPY.modelImageSrc");
+    expect(page).toContain("data-harness-model");
+    expect(page).not.toContain("HarnessScreenshotCarousel");
+    expect(page).not.toContain("data-harness-screenshots");
+    expect(HARNESS_PRODUCT_COPY.modelImageSrc).toBe("/unsysmodel.png");
+    expect(existsSync(join(ROOT, "public/unsysmodel.png"))).toBe(true);
     expect(HARNESS_PRODUCT_COPY.screenshots.map((s) => s.src)).toEqual([
       "/harness.png",
       "/harness-2.png",
     ]);
     expect(existsSync(join(ROOT, "public/harness.png"))).toBe(true);
     expect(existsSync(join(ROOT, "public/harness-2.png"))).toBe(true);
-    expect(page).toContain("All-You-Can-Learn");
+    expect(page).not.toContain("All-You-Can-Learn");
+    expect(page).not.toContain("data-harness-aycl");
+    expect(page).not.toContain("Lifetime workspace");
     expect(page).toContain("data-harness-points");
+    expect(page).toContain("md:grid-cols-3");
+    expect(page).toContain("lg:grid-cols-12");
     expect(HARNESS_PRODUCT_COPY.points.map((p) => p.title)).toEqual([
       "Epistemic foraging",
       "Unsys model",
@@ -284,8 +292,6 @@ describe("product pages: verification owns platform/approach/scale; harness owns
     for (const point of HARNESS_PRODUCT_COPY.points) {
       expect(existsSync(join(ROOT, "public", point.image.replace(/^\//, "")))).toBe(true);
     }
-    expect(page).toContain("HARNESS_PRODUCT_COPY.ayclHref");
-    expect(page).toContain("data-harness-aycl");
     expect(HARNESS_PRODUCT_COPY.ayclHref).toBe("/all-you-can-learn");
   });
 

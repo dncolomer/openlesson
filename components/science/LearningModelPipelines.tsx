@@ -3,12 +3,14 @@ import { LearningModelModeGlyph } from "@/components/science/LearningModelMarks"
 
 export function LearningModelPipelines() {
   return (
-    <div className="grid gap-4 lg:grid-cols-3" data-learning-model-pipelines>
-      {SCIENCE_LEARNING_MODEL_MODES.map((mode) => (
+    <div className="grid lg:grid-cols-3" data-learning-model-pipelines>
+      {SCIENCE_LEARNING_MODEL_MODES.map((mode, index) => (
         <article
           key={mode.id}
           data-learning-model-mode={mode.id}
-          className="console-copy flex flex-col p-5"
+          className={`flex flex-col p-5 sm:p-6 ${
+            index > 0 ? "border-t border-zinc-800/90 lg:border-t-0 lg:border-l" : ""
+          }`}
         >
           <div className="flex items-start gap-3">
             <span className="relative h-9 w-9 shrink-0 overflow-clip border border-white/25 text-zinc-200 [clip-path:inset(0)]">

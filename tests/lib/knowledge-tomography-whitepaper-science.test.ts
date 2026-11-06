@@ -114,6 +114,8 @@ describe("knowledge tomography public page and science link", () => {
     expect(component).toContain("data-whitepaper-section");
     expect(component).toContain("experimentSteps");
     expect(component).toContain("planned-study");
+    expect(component).toContain("console-copy");
+    expect(component).not.toContain("bg-zinc-900");
   });
 
   it("science page links to knowledge tomography and keeps TAP white paper link", () => {

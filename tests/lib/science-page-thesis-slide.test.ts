@@ -33,28 +33,18 @@ describe("science page embeds platform pitch slide 10", () => {
     expect(getPlatformPitchSlide(PLATFORM_PITCH_DECK.slides.length + 1)).toBeNull();
   });
 
-  it("science page source renders slide 10 at the top of content", () => {
+  it("science hub does not mount pitch slide 10", () => {
     const pagePath = join(root, "app/science/page.tsx");
     expect(existsSync(pagePath)).toBe(true);
     const src = readFileSync(pagePath, "utf8");
-    expect(src).toContain("getPlatformPitchSlide");
-    expect(src).toContain("PLATFORM_THESIS_SLIDE_INDEX");
-    expect(src).toContain("data-science-pitch-slide");
-    expect(src).toContain("science-thesis-slide");
-
-    // Thesis block appears before research papers
-    const thesisAt = src.indexOf("science-thesis-slide");
-    const researchAt = src.indexOf("data-science-research");
-    expect(thesisAt).toBeGreaterThan(-1);
-    expect(researchAt).toBeGreaterThan(-1);
-    expect(thesisAt).toBeLessThan(researchAt);
-
-    // Drives real slide data — not a hard-coded reimplementation of title
+    expect(src).not.toContain("getPlatformPitchSlide");
+    expect(src).not.toContain("PLATFORM_THESIS_SLIDE_INDEX");
+    expect(src).not.toContain("data-science-pitch-slide");
+    expect(src).not.toContain("science-thesis-slide");
+    expect(src).not.toContain("data-science-pitch-cards");
+    expect(src).not.toContain("data-science-pitch-highlight");
     const slide = getPlatformPitchSlide(10)!;
-    expect(src).toContain("thesisSlide.title");
-    expect(src).toContain("thesisSlide.highlights");
-    expect(src).toContain("thesisSlide.cards");
-    expect(slide.title.length).toBeGreaterThan(20);
+    expect(slide.highlights?.[0]).toMatch(/solve problems/);
   });
 
   it("thesis slide public assets exist", () => {

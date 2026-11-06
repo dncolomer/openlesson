@@ -114,22 +114,23 @@ describe("science page renders epistemic foraging copy", () => {
     expect(src).not.toContain("SCIENCE_EPISTEMIC_FORAGING_COPY.distinction");
     expect(src).toContain("data-science-epistemic-foraging-readings");
 
-    const thesisAt = src.indexOf("science-thesis-slide");
+    const whyAt = src.indexOf("data-science-why");
     const fepAt = src.indexOf("data-science-free-energy");
     const foragingAt = src.indexOf("data-science-epistemic-foraging");
     const researchAt = src.indexOf("data-science-research");
-    expect(thesisAt).toBeGreaterThan(-1);
+    expect(whyAt).toBeGreaterThan(-1);
     expect(fepAt).toBeGreaterThan(-1);
     expect(foragingAt).toBeGreaterThan(-1);
     expect(researchAt).toBeGreaterThan(-1);
-    expect(thesisAt).toBeLessThan(fepAt);
+    expect(whyAt).toBeLessThan(fepAt);
     expect(fepAt).toBeLessThan(foragingAt);
     expect(foragingAt).toBeLessThan(researchAt);
+    expect(src).not.toContain("science-thesis-slide");
 
     expect(src.toLowerCase()).toMatch(/epistemic foraging/);
     expect(SCIENCE_EPISTEMIC_FORAGING_PATH).toBe("/science#science-epistemic-foraging");
     expect(src).toContain("data-science-hub");
-    expect(src).toContain("ThesisDirectory");
+    expect(src).toContain("MarketingDirectoryHero");
     expect(src).toContain("SCIENCE_HUB_DIRECTORY");
     expect(src).toContain("data-science-why");
     expect(src).toContain("data-vision-tomography-induction");

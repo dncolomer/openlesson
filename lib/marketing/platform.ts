@@ -84,9 +84,9 @@ export const PLATFORM_CORE = {
   visualCaption: "Knowledge · Embeddings · Regions · Distance · Transitions",
   visualBody:
     "Proof of work becomes an embedding. Knowledge regions are the territories. Positions, distances, and transitions are how you read the space.",
-  imageSrc: "/lp-boxes/knowledge-embedding-blueprint-v1.jpg",
+  imageSrc: "/regions1.png",
   imageAlt:
-    "Blueprint of overlapping drafted sheets of plotted knowledge-region points, with a gold path, loupe, and compass",
+    "2D projection of knowledge regions for Physics, Maths, Code, and Design, with user and agent positions and distances",
 } as const;
 
 export const PLATFORM_PROOF = {
@@ -99,8 +99,8 @@ export const PLATFORM_PROOF = {
       body: "Slides + videos + Capstone + Notebooks + lifetime access to our Unsys workspaces for students.",
       href: "https://thewiser.org",
       hrefLabel: "thewiser.org",
-      image: "/lp-boxes/wiser-blueprint.jpg",
-      imageAlt: "Blueprint of a course-authoring kit: open notebook, stacked volumes, compass, and a video plate",
+      image: "/lp-boxes/wiser-logo.png",
+      imageAlt: "WISER logo",
       logo: "/lp-boxes/wiser-logo.png",
       logoAlt: "WISER",
     },
@@ -110,8 +110,10 @@ export const PLATFORM_PROOF = {
       body: "Run by us at ETH Zürich.",
       href: "/community-events/probabilistic-computing",
       hrefLabel: "ETH Zürich",
-      image: "/lp-boxes/eth-hackathon-blueprint.jpg",
-      imageAlt: "Blueprint of thermodynamic computing chips from the ETH Zürich hackathon",
+      image: "/lp-boxes/extropic-logo.webp",
+      imageAlt: "Extropic logo",
+      logo: "/lp-boxes/extropic-logo.webp",
+      logoAlt: "Extropic",
     },
   ],
 } as const;

@@ -11,7 +11,6 @@ import { TAP_WHITEPAPER_PATH } from "@/lib/science/tap-stash-submit-whitepaper";
 
 export const SCIENCE_HUB_PATH = "/science" as const;
 export const SCIENCE_WHY_PATH = "/science#why" as const;
-export const SCIENCE_THESIS_PATH = "/science#science-thesis-slide" as const;
 export const SCIENCE_FEP_PATH = "/science#science-free-energy" as const;
 export const SCIENCE_RESEARCH_PATH = "/science#research" as const;
 export const SCIENCE_TOMOGRAPHY_PATH = "/science#knowledge-tomography-induction" as const;
@@ -26,28 +25,19 @@ export const SCIENCE_HUB_COPY = {
   workspaceHref: "/workspace/new",
   directoryEyebrow: "ON THIS PAGE",
   directoryTitle: "Jump to a section.",
-  directoryLead: "Why we exist, the thesis, the policy, the generative model, or the papers.",
+  directoryLead: "Why we exist, the policy, the generative model, or the papers.",
   whyEyebrow: "WHY",
   whyTitle: "Why we exist",
+  whyImageSrc: "/why.jpg",
+  whyImageAlt:
+    "Field depth versus people who can teach it: thermodynamic computing, quantum computing, and mathematics pull away from the number of experts who can teach, and the gap grows every year.",
+  whyP1:
+    "New knowledge is expanding, and the depth of that knowledge is accelerating. Fields such as thermodynamic computing, quantum computing, and mathematics steepen every year: more material, and more nested structure inside it.",
+  whyP2:
+    "Explainability and human acquisition stay slow. A person still has to understand, retain, and teach. The number of experts who can carry that depth grows on a nearly flat line.",
+  whyP3:
+    "The gap between field depth and people who can teach it widens every year. We exist to close it with self-driving technology for learning: more attention and understanding without asking humans to burn proportionally more energy.",
 } as const;
-
-export const SCIENCE_HUB_WHY = [
-  {
-    eyebrow: "Problem",
-    title: "Low ROI Learning",
-    body: "For most people, learning is physically and mentally expensive. Attention, retention, and deep understanding still require too much effort for the output they get back.",
-  },
-  {
-    eyebrow: "Vision",
-    title: "Self-Driving Learning",
-    body: "We are building non-invasive technology that guarantees the same or more human learning with significantly less physical and mental effort.",
-  },
-  {
-    eyebrow: "Goal",
-    title: "More Attention, Same Energy",
-    body: "Increase attention markers without a proportional energy cost to the user, then compound that into a full automation stack for human learning.",
-  },
-] as const;
 
 export type ThesisDeepLink = {
   href: string;
@@ -56,8 +46,7 @@ export type ThesisDeepLink = {
 };
 
 export const SCIENCE_HUB_DIRECTORY: readonly ThesisDeepLink[] = [
-  { href: "#why", label: "Why we exist", hint: "Problem, goal, self-driving learning" },
-  { href: "#science-thesis-slide", label: "The thesis", hint: "Knowledge as proximity" },
+  { href: "#why", label: "Why we exist", hint: "The teaching gap" },
   { href: "#science-free-energy", label: "Free Energy Principle", hint: "Learning is reducing uncertainty" },
   { href: "#science-epistemic-foraging", label: "Epistemic foraging", hint: "Search, not scores" },
   { href: SCIENCE_LEARNING_MODEL_PATH, label: LEARNING_MODEL_PUBLIC_LABEL, hint: "A generative model you can act on" },

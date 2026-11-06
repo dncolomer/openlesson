@@ -10,6 +10,8 @@ export const MAPPING_PRODUCT_COPY = {
   pricingCta: "See mapping pricing",
   pricingHref: MAPPING_PRICING_PATH,
   thesisLinks: MAPPING_THESIS_LINKS,
+  directoryEyebrow: "THESIS",
+  directoryTitle: "The science.",
 } as const;
 
 export const MAPPING_PLATFORM_COPY = {
@@ -20,7 +22,7 @@ export const MAPPING_PLATFORM_COPY = {
   visualCaption: "Knowledge · Embeddings · Knowledge regions · Proof of Work",
   visualBody:
     "We help you build a living map of proximity to any kind of knowledge. Knowledge regions are the territories. People are positions on that map.",
-  imageSrc: "/knowledgeg2.png",
+  imageSrc: "/map.jpg",
   imageAlt:
-    "Uncertain Systems Knowledge embeddings: multi-user projection with knowledge regions as a map of the domain",
+    "Illustrative 2D projection of knowledge regions for Physics, Maths, Code, and Design, with an agent position and distances between them",
 } as const;

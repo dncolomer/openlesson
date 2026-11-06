@@ -14,6 +14,8 @@ export const HARNESS_PRODUCT_COPY = {
   foragingHref: SCIENCE_EPISTEMIC_FORAGING_PATH,
   foragingLabel: "epistemic foraging",
   thesisLinks: HARNESS_THESIS_LINKS,
+  directoryEyebrow: "THESIS",
+  directoryTitle: "The science.",
   points: [
     {
       eyebrow: "POLICY",
@@ -53,6 +55,9 @@ export const HARNESS_PRODUCT_COPY = {
   pricingHref: HARNESS_PRICING_PATH,
   workspaceCta: "Create your Workspace",
   workspaceHref: "/workspace/new",
+  modelImageSrc: "/unsysmodel.png",
+  modelImageAlt:
+    "Hidden-state map of Integrals: meaning, setup, and technique branches, with the cheapest edge marked as the policy",
   screenshots: [
     {
       src: "/harness.png",

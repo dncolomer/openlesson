@@ -13,14 +13,14 @@ export const VERIFICATION_PRODUCT_COPY = {
 export const VERIFICATION_PLATFORM_COPY = {
   eyebrow: "PLATFORM",
   title: "See skill as distance in knowledge space.",
-  p1: "Every workspace puts people into a shared embedding geometry. Create knowledge regions, multi-select users, and read distance to knowledge live: see how people do against your defined knowledge regions.",
+  p1: "Our flows put humans and agents into a shared embedding geometry. Create knowledge regions, multi-select users, and read distance to knowledge live: see how people do against your defined knowledge regions.",
   p2: "Create custom knowledge regions from internal expert data and measure your workforce readiness without sharing confidential information about your internal systems. Regions stay private to the workspace.",
   visualCaption: "Knowledge · Embeddings · Knowledge regions · Proof of Work",
   visualBody:
     "We help you build a living map of proximity to any kind of knowledge. We ground our results on real and genuine work traces, with the guarantee that results cannot be cheated or faked.",
-  imageSrc: "/knowledgeg2.png",
+  imageSrc: "/regions1.png",
   imageAlt:
-    "Uncertain Systems Knowledge embeddings: multi-user projection with knowledge regions and knowledge distance",
+    "2D projection of knowledge regions for Physics, Maths, Code, and Design, with user and agent positions and distances",
 } as const;
 
 export const VERIFICATION_APPROACH_COPY = {
@@ -34,6 +34,8 @@ export const VERIFICATION_APPROACH_COPY = {
   foragingHref: SCIENCE_EPISTEMIC_FORAGING_PATH,
   foragingLabel: "epistemic foraging",
   thesisLinks: VERIFICATION_THESIS_LINKS,
+  directoryEyebrow: "THESIS",
+  directoryTitle: "The science.",
 } as const;
 
 export const VERIFICATION_SCALE_COPY = {

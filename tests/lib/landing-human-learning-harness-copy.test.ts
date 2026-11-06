@@ -147,7 +147,7 @@ describe("landing knowledge acquisition, verification, and mapping copy", () => 
     expect(PLATFORM_CORE.p1).toMatch(/proof of work/);
     expect(PLATFORM_CORE.p3).toMatch(/BCI/);
     expect(PLATFORM_CORE.p3).toMatch(/Audiovisual/);
-    expect(PLATFORM_CORE.imageSrc).toBe("/lp-boxes/knowledge-embedding-blueprint-v1.jpg");
+    expect(PLATFORM_CORE.imageSrc).toBe("/regions1.png");
     expect(fs.existsSync(path.join(REPO_ROOT, "public", PLATFORM_CORE.imageSrc.replace(/^\//, "")))).toBe(
       true,
     );
@@ -175,12 +175,14 @@ describe("landing knowledge acquisition, verification, and mapping copy", () => 
     expect(lp).toContain("flex-row");
     expect(lp).not.toContain("mt-8 grid gap-4 md:grid-cols-2");
     expect(PLATFORM_PROOF.items.map((item) => item.image)).toEqual([
-      "/lp-boxes/wiser-blueprint.jpg",
-      "/lp-boxes/eth-hackathon-blueprint.jpg",
+      "/lp-boxes/wiser-logo.png",
+      "/lp-boxes/extropic-logo.webp",
     ]);
     expect(PLATFORM_PROOF.items[0].logo).toBe("/lp-boxes/wiser-logo.png");
+    expect(PLATFORM_PROOF.items[1].logo).toBe("/lp-boxes/extropic-logo.webp");
     expect(fs.existsSync(path.join(REPO_ROOT, "public/lp-boxes/wiser-logo.png"))).toBe(true);
-    expect(lp).toContain("item.logo");
+    expect(fs.existsSync(path.join(REPO_ROOT, "public/lp-boxes/extropic-logo.webp"))).toBe(true);
+    expect(lp).toContain("object-contain invert");
     for (const item of PLATFORM_PROOF.items) {
       expect(item.image.startsWith("/aesthetics/")).toBe(false);
       expect(fs.existsSync(path.join(REPO_ROOT, "public", item.image.replace(/^\//, "")))).toBe(true);

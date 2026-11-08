@@ -11,16 +11,16 @@ export const LANDING_HERO_STILL_ALT =
 
 export const LANDING_USE_COPY = {
   harness: {
-    dek: "Develop understanding through work on difficult problems.",
-    body: "The Problem Solving Harness is how Build Understanding works in software today. You work through a demanding problem, make reasoning visible through supported session inputs, and follow up on gaps the work reveals. AI can sit in that working environment where the session supports it. The result is a work trace and a clearer basis for further investigation, not a finished course.",
+    dek: "Develop understanding through work on difficult problems, through an interface that implements behavioral cognitive enhancements like think-aloud protocols.",
+    body: "",
   },
   verification: {
-    dek: "Examine understanding through the work itself.",
-    body: "Knowledge Verification looks at how someone explores a demanding problem, tests assumptions, and develops their reasoning, alongside the answer they reach. A session stores that work and can relate it to a knowledge region you define. The result is evidence for a hiring or development decision, not a score of the whole person.",
+    dek: "Examine understanding through the work itself, and compare verification results on a custom knowledge embeddings model.",
+    body: "",
   },
   mapping: {
     dek: "Relate understanding to your domain of work.",
-    body: "Knowledge Mapping is the domain asset: a knowledge region built around your expertise, with positions informed by work. Use it as a reference while people develop understanding and when you examine that understanding. It is a model of the domain you care about, not a neurological instrument and not a complete picture of competence.",
+    body: "",
   },
 } as const;
 

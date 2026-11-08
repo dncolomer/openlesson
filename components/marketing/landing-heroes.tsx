@@ -118,7 +118,6 @@ export function LandingHeroEditorial({
                 {product.name}
               </h2>
               <p className="mt-1.5 text-[14px] leading-relaxed text-zinc-300 sm:text-[15px]">{product.dek}</p>
-              <p className="mt-1.5 text-[14px] leading-relaxed text-zinc-400 sm:text-[15px]">{product.body}</p>
               <UseLink href={product.href} label={product.cta} location={location} />
             </li>
           ))}

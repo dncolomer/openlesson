@@ -50,10 +50,12 @@ describe("live landing hero", () => {
       "Knowledge Mapping",
     ]);
     for (const use of LANDING_USES) {
-      expect(wordCount(use.body)).toBeGreaterThanOrEqual(40);
-      expect(wordCount(use.body)).toBeLessThanOrEqual(90);
+      expect(use.body).toBe("");
       expect(use.dek.split(" ").length).toBeGreaterThanOrEqual(6);
     }
+    expect(LANDING_USES[0].dek).toMatch(/think-aloud protocols/);
+    expect(LANDING_USES[1].dek).toMatch(/knowledge embeddings model/);
+    expect(LANDING_USES[2].dek).toBe("Relate understanding to your domain of work.");
     expect(wordCount(LANDING_HERO_COPY.p1)).toBeGreaterThanOrEqual(20);
     expect(wordCount(LANDING_HERO_COPY.p2)).toBeGreaterThanOrEqual(20);
 
@@ -80,9 +82,9 @@ describe("live landing hero", () => {
     expect(heroes).not.toContain("brightness-[1.18]");
 
     const copy = landingHeroCopyText();
-    expect(copy).toMatch(/Problem Solving Harness/);
+    expect(copy).toMatch(/think-aloud protocols/);
     expect(copy).toMatch(/Explore understanding/);
-    expect(copy).toMatch(/knowledge region/);
+    expect(copy).toMatch(/Relate understanding to your domain of work/);
     expect(copy).not.toMatch(/\u2014/);
     expect(copy).not.toMatch(/hard-domain learning experiences/i);
   });

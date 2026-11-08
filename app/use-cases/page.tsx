@@ -142,22 +142,28 @@ export default function UseCasesPage() {
                     ))}
                   </div>
                 ))}
-                <div
-                  className="mt-7 border-t border-zinc-800/90 pt-5"
-                  data-use-case-example
-                >
-                  <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
-                    Illustrative example
-                  </p>
-                  <p className="mt-3 text-sm leading-relaxed text-zinc-300 sm:text-base">
-                    {item.example}
-                  </p>
-                  {item.afterExample ? (
-                    <p className="mt-3 text-sm leading-relaxed text-zinc-400 sm:text-base">
-                      {item.afterExample}
-                    </p>
-                  ) : null}
-                </div>
+                {item.example || item.afterExample ? (
+                  <div
+                    className="mt-7 border-t border-zinc-800/90 pt-5"
+                    data-use-case-example
+                  >
+                    {item.example ? (
+                      <>
+                        <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
+                          Illustrative example
+                        </p>
+                        <p className="mt-3 text-sm leading-relaxed text-zinc-300 sm:text-base">
+                          {item.example}
+                        </p>
+                      </>
+                    ) : null}
+                    {item.afterExample ? (
+                      <p className="mt-3 text-sm leading-relaxed text-zinc-400 sm:text-base">
+                        {item.afterExample}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
                 <div className="mt-7">
                   <h3 className="text-lg font-medium tracking-[-0.4px] text-white sm:text-xl">
                     {item.close.title}

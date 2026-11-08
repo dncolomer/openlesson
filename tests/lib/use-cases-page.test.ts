@@ -88,7 +88,8 @@ describe("use cases listing", () => {
     expect(text).toMatch(/Agent-harness evaluation/);
     expect(text).toMatch(/Knowledge and neuroscience studies/);
     expect(text).toMatch(/does not enforce a tool policy/);
-    expect(text).toMatch(/emerging application/);
+    expect(text).toMatch(/behavioral cognitive enhancements/);
+    expect(text).toMatch(/Human interpretability here means/);
     expect(text).not.toMatch(/cannot be cheated or faked/);
     expect(text).not.toMatch(/WISER/);
     expect(text).not.toMatch(/\u2014/);

@@ -69,14 +69,11 @@ export const USE_CASES = [
       {
         title: "Make an unfamiliar argument inspectable",
         paragraphs: [
-          "A research lead needs a colleague to understand an unfamiliar argument in an AI-generated proof well enough to question it. The missing work is identifying assumptions, intermediate reasoning, and prerequisite concepts, then investigating those parts through problem work.",
-          "This is a hypothetical first use, and an emerging application. Knowledge Mapping can hold a domain region around the method. The Problem Solving Harness is where someone works a representative case or a step they cannot yet justify. Knowledge Verification can later examine whether that understanding holds on a related problem.",
-          "The result is recorded session work and a clearer account of understood and unresolved parts. The value is making difficult work inspectable, rather than receiving another explanation. The system does not certify a proof or expose a model's internals.",
+          "Automated checks only go so far. To really understand difficult work, especially AI-generated work, you have to work through it yourself and build your own insight. Uncertain Systems flows pair you with an AI-powered canvas and an interface that implements behavioral cognitive enhancements, so you get there faster and with less effort than in a chat window. Your work is also embedded in a knowledge embedding space, which helps you and others build insight more efficiently over time.",
         ],
       },
     ],
-    example:
-      "A researcher receives a generated proof that uses an unfamiliar lemma. They work the lemma on simpler examples, reconstruct a key step on the canvas, and test whether the stated assumptions cover the case at hand. They may uncover a missing justification or a useful connection. Either result gives the team a more precise next investigation.",
+    example: "",
     afterExample:
       "Human interpretability here means acquiring enough understanding to question the work. It is distinct from mechanistic interpretability of a model, and distinct from automated proof certification.",
     links: [

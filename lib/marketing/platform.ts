@@ -86,7 +86,7 @@ export const PLATFORM_LAYERS = {
 export const PLATFORM_CORE = {
   eyebrow: "KNOWLEDGE REGIONS",
   title: "A knowledge region is a shared reference for your domain.",
-  p1: "A knowledge region is a territory of problems, concepts, and reasoning you care about. Genuine work in sessions informs where someone sits relative to that territory. The region is the durable company or domain asset: a reference for developing understanding, examining it, and deciding what to investigate next. It is not a session, a course, a chapter map, or the embedding model itself.",
+  p1: "A knowledge region is a territory of problems, concepts, and reasoning you care about. Genuine work in sessions informs where someone sits relative to that territory. The region is the durable company or domain asset: a reference for developing understanding, examining it, and deciding what to investigate next.",
   p2: "The software builds an embedding from recorded work, then places people as positions in that space. Distance is how close a position sits to a region in this model. Transitions are how that position moves as further work is recorded. Distance is model-relative. It is not a calibrated measure of someone's whole competence, and the region does not grow or cover a field on its own.",
   p3: "The diagram on this page is an illustration of regions and positions, not a scan of knowledge. Longer-horizon research, including questions about the brain, lives on the science page. That research is not a capability of the mapping product you can use today.",
   scienceHref: SCIENCE_HUB_PATH,

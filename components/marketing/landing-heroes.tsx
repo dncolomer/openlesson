@@ -65,7 +65,7 @@ function UseLink({
   );
 }
 
-/** Combined hero: full still with title overlaid, three uses under the same plate. */
+/** Combined hero: stacked still + copy on mobile, overlaid from md up. */
 export function LandingHeroEditorial({
   location = "landing_layers",
 }: {
@@ -76,24 +76,28 @@ export function LandingHeroEditorial({
     <section className={`${MARKETING_SHELL} pt-4 pb-0 sm:pt-5`} data-home-hero data-home-hero-editorial>
       <div className="console-copy overflow-hidden" data-home-layers>
         <div
-          className={`relative aspect-video w-full max-h-[calc(100svh-5.5rem)] ${LANDING_FIELD_BG_CLASS}`}
+          className={`relative w-full md:aspect-video md:max-h-[calc(100svh-5.5rem)] ${LANDING_FIELD_BG_CLASS}`}
         >
-          <Image
-            src={LANDING_HERO_STILL}
-            alt={LANDING_HERO_STILL_ALT}
-            fill
-            unoptimized
-            className="object-cover object-center"
-            sizes="100vw"
-            priority
-          />
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black via-black/70 via-[38%] to-black/10" />
-          <div className="relative z-10 flex h-full flex-col items-start justify-end px-5 pb-6 pt-16 text-left sm:px-8 sm:pb-8 xl:px-10 xl:pb-10">
-            <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-300">{copy.eyebrow}</p>
+          <div className="relative aspect-video w-full md:absolute md:inset-0 md:aspect-auto">
+            <Image
+              src={LANDING_HERO_STILL}
+              alt={LANDING_HERO_STILL_ALT}
+              fill
+              unoptimized
+              className="object-cover object-center"
+              sizes="100vw"
+              priority
+            />
+            <div className="pointer-events-none absolute inset-0 hidden bg-gradient-to-t from-black via-black/70 via-[38%] to-black/10 md:block" />
+          </div>
+          <div className="relative z-10 border-t border-zinc-800/90 px-5 py-5 text-left sm:px-8 sm:py-6 md:absolute md:inset-0 md:flex md:h-full md:flex-col md:items-start md:justify-end md:border-t-0 md:px-8 md:pb-8 md:pt-16 xl:px-10 xl:pb-10">
+            <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500 md:text-zinc-300">
+              {copy.eyebrow}
+            </p>
             <h1 className="mt-2 max-w-3xl text-[2rem] font-medium leading-[1.05] tracking-[-1.4px] text-white sm:text-5xl lg:text-6xl">
               {copy.h1}
             </h1>
-            <div className="mt-3 max-w-3xl space-y-3 text-[15px] leading-relaxed text-zinc-200 sm:mt-4 sm:text-base">
+            <div className="mt-3 max-w-3xl space-y-3 text-[15px] leading-relaxed text-zinc-400 sm:mt-4 sm:text-base md:text-zinc-200">
               <p>{copy.p1}</p>
               <p>{copy.p2}</p>
             </div>

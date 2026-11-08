@@ -74,6 +74,9 @@ describe("live landing hero", () => {
     expect(heroes).toContain("aspect-video");
     expect(heroes).toContain("object-cover");
     expect(heroes).toContain("bg-gradient-to-t from-black");
+    expect(heroes).toContain("hidden");
+    expect(heroes).toContain("md:block");
+    expect(heroes).toContain("md:absolute md:inset-0");
     expect(heroes).not.toContain("brightness-[1.18]");
 
     const copy = landingHeroCopyText();

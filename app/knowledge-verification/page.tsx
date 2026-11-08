@@ -5,11 +5,14 @@ import { ArrowRight } from "lucide-react";
 import { MarketingPageShell, SectionHeading } from "@/components/marketing/MarketingChrome";
 import {
   MARKETING_HERO_PRIMARY_CTA_CLASS,
+  MARKETING_HERO_SECONDARY_CTA_CLASS,
   MarketingDirectoryHero,
 } from "@/components/marketing/MarketingDirectoryHero";
+import { TrackedCtaLink } from "@/components/TrackedCtaLink";
 import { KNOWLEDGE_VERIFICATION_PATH } from "@/lib/marketing/paths";
 import {
   VERIFICATION_APPROACH_COPY,
+  VERIFICATION_FLOW_COPY,
   VERIFICATION_PLATFORM_COPY,
   VERIFICATION_PRODUCT_COPY,
 } from "@/lib/marketing/verification-product";
@@ -43,13 +46,25 @@ export default function KnowledgeVerificationPage() {
         links={VERIFICATION_APPROACH_COPY.thesisLinks}
         marker="verification"
         actions={
-          <Link href={VERIFICATION_PRODUCT_COPY.pricingHref} className={MARKETING_HERO_PRIMARY_CTA_CLASS}>
-            {VERIFICATION_PRODUCT_COPY.pricingCta}
-            <ArrowRight className="ml-2" size={16} />
-          </Link>
+          <>
+            <TrackedCtaLink
+              href={VERIFICATION_PRODUCT_COPY.discoveryHref}
+              label={VERIFICATION_PRODUCT_COPY.discoveryCta}
+              location="verification_hero"
+              page={KNOWLEDGE_VERIFICATION_PATH}
+              className={MARKETING_HERO_PRIMARY_CTA_CLASS}
+            >
+              {VERIFICATION_PRODUCT_COPY.discoveryCta}
+              <ArrowRight className="ml-2" size={16} />
+            </TrackedCtaLink>
+            <Link href={VERIFICATION_PRODUCT_COPY.pricingHref} className={MARKETING_HERO_SECONDARY_CTA_CLASS}>
+              {VERIFICATION_PRODUCT_COPY.pricingCta}
+            </Link>
+          </>
         }
       >
         <p>{VERIFICATION_PRODUCT_COPY.lead}</p>
+        <p>{VERIFICATION_PRODUCT_COPY.body}</p>
       </MarketingDirectoryHero>
 
       <section id="platform" className={`${MARKETING_SHELL} pt-3`}>
@@ -61,16 +76,10 @@ export default function KnowledgeVerificationPage() {
                 title={VERIFICATION_PLATFORM_COPY.title}
               />
               <p className="mt-4 text-base leading-relaxed text-zinc-400 sm:text-lg">
-                Our flows put humans and agents into a shared embedding geometry. Create knowledge regions,
-                multi-select users, and read{" "}
-                <span className="text-zinc-200">distance to knowledge</span> live: see how people do against your
-                defined knowledge regions.
+                {VERIFICATION_PLATFORM_COPY.p1}
               </p>
               <p className="mt-3 text-sm leading-relaxed text-zinc-500 sm:text-[15px]">
-                Create{" "}
-                <span className="text-zinc-300">custom knowledge regions</span> from internal expert data and measure
-                your workforce readiness without sharing confidential information about your internal systems.
-                Regions stay private to the workspace.
+                {VERIFICATION_PLATFORM_COPY.p2}
               </p>
             </div>
           </div>
@@ -90,14 +99,36 @@ export default function KnowledgeVerificationPage() {
             </div>
             <div className="border-t border-zinc-800/90 px-4 py-3 sm:px-5 sm:py-3.5">
               <p className="font-mono text-[10px] uppercase tracking-[1.6px] text-zinc-500">
-                Knowledge · Embeddings · Knowledge regions · Proof of Work
+                {VERIFICATION_PLATFORM_COPY.visualCaption}
               </p>
               <p className="mt-1.5 text-sm leading-relaxed text-zinc-400">
-                We help you build a living map of proximity to any kind of knowledge. We ground our results on real
-                and genuine work traces, with the guarantee that results cannot be cheated or faked.
+                {VERIFICATION_PLATFORM_COPY.visualBody}
               </p>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section id="flow" className={`${MARKETING_SHELL} pt-3`} data-verification-flow>
+        <div className="console-copy overflow-hidden p-5 sm:p-6 lg:p-7">
+          <SectionHeading
+            eyebrow={VERIFICATION_FLOW_COPY.eyebrow}
+            title={VERIFICATION_FLOW_COPY.title}
+          />
+          <ol className="mt-6 grid gap-5 md:grid-cols-3">
+            {VERIFICATION_FLOW_COPY.steps.map((step, index) => (
+              <li key={step.title}>
+                <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
+                  {String(index + 1).padStart(2, "0")}
+                </p>
+                <h3 className="mt-2 text-lg font-medium tracking-[-0.4px] text-white">{step.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-zinc-400">{step.body}</p>
+              </li>
+            ))}
+          </ol>
+          <p className="mt-6 text-sm leading-relaxed text-zinc-400 sm:text-base">
+            {VERIFICATION_FLOW_COPY.aiNote}
+          </p>
         </div>
       </section>
 
@@ -107,21 +138,11 @@ export default function KnowledgeVerificationPage() {
           title={VERIFICATION_APPROACH_COPY.title}
         />
         <div className="console-copy mt-6 p-6 text-lg leading-relaxed text-zinc-400 sm:p-8">
-          <p>
-            Uncertain Systems builds a learning world model from real work: skills, scenarios, proof of work,
-            and where reasoning breaks. Our hosted interfaces as well as our API products are all specially
-            designed to elicit genuine raw work data from the user while at the same time minimizing the
-            disruption of the natural cognitive process.
-          </p>
-          <p className="mt-5">
-            Our conversational interfaces run on a{" "}
-            <span className="text-zinc-200">Free Energy Principle</span> approach based on
-            epistemic foraging: the evolving learner model searches for information that reduces
-            uncertainty, and helps choose what to explore next. The thinking stays yours.
-          </p>
+          <p>{VERIFICATION_APPROACH_COPY.p1}</p>
+          <p className="mt-5">{VERIFICATION_APPROACH_COPY.p2}</p>
           <p className="mt-5">{VERIFICATION_APPROACH_COPY.p3}</p>
           <p className="mt-5" data-landing-epistemic-foraging>
-            The harness searches for information that reduces uncertainty about what is held. That policy is{" "}
+            The session searches for information that reduces uncertainty about what is held. That policy is{" "}
             <Link
               href={VERIFICATION_APPROACH_COPY.foragingHref}
               className="text-zinc-200 underline decoration-zinc-700 underline-offset-4 transition hover:text-white hover:decoration-zinc-500"
@@ -130,6 +151,19 @@ export default function KnowledgeVerificationPage() {
             </Link>
             .
           </p>
+          <p className="mt-5 text-base">{VERIFICATION_APPROACH_COPY.related}</p>
+          <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-base">
+            {VERIFICATION_APPROACH_COPY.relatedLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="inline-flex items-center text-sm font-medium text-zinc-200 underline decoration-zinc-700 underline-offset-4 transition hover:text-white hover:decoration-zinc-500"
+              >
+                {link.label}
+                <ArrowRight className="ml-2" size={14} />
+              </Link>
+            ))}
+          </div>
         </div>
       </section>
     </MarketingPageShell>

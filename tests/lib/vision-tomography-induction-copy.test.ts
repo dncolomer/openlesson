@@ -11,7 +11,7 @@ import {
   VISION_TOMOGRAPHY_INDUCTION_TERMS,
   getVisionTomographyInductionFullText,
 } from "@/lib/vision/knowledge-tomography-induction-copy";
-import { SCIENCE_HUB_COPY } from "@/lib/science/hub";
+import { SCIENCE_HUB_COPY, scienceHubLeadText } from "@/lib/science/hub";
 
 const ROOT = join(__dirname, "../..");
 
@@ -79,7 +79,8 @@ describe("vision page renders tomography + induction block", () => {
 
     expect(src).toContain("SCIENCE_HUB_COPY.title");
     expect(SCIENCE_HUB_COPY.title).toBe("Tools for knowledge building on autopilot");
-    expect(SCIENCE_HUB_COPY.lead).toMatch(/thinking stays yours/);
+    expect(scienceHubLeadText()).toMatch(/autopilot for knowledge building/);
+    expect(scienceHubLeadText()).not.toMatch(/thinking stays yours/);
     expect(SCIENCE_HUB_COPY.workspaceCta).toBe("Create your Workspace");
     expect(read("app/vision/page.tsx")).toContain('redirect("/science")');
   });

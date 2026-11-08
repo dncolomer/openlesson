@@ -84,7 +84,7 @@ describe("OG share inventory (one unsys standard)", () => {
     const standard = read("lib/og/standard.ts");
     expect(standard).toContain("PLATFORM_HERO.h1");
     expect(UNSYS_STANDARD_SHARE_TITLE).toBe(PLATFORM_HERO.h1);
-    expect(UNSYS_STANDARD_SHARE_TITLE).toMatch(/From genuine work/);
+    expect(UNSYS_STANDARD_SHARE_TITLE).toMatch(/Build Understanding on autopilot/);
     expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toMatch(/guide people through hard problems/);
     expect(UNSYS_STANDARD_SHARE_DESCRIPTION).not.toBe(PLATFORM_HERO.p1);
     expect(standard).not.toContain("Beyond benchmarks for AI. Beyond tests for humans.");

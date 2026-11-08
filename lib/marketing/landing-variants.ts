@@ -4,23 +4,23 @@
  */
 import { PLATFORM_HERO, PLATFORM_PRODUCTS } from "@/lib/marketing/platform";
 
-/** Drafted Learn/Verify session: left rail plus Work canvas. */
-export const LANDING_HERO_STILL = "/lp-boxes/session-canvas-blueprint.jpg" as const;
+/** Live session Work canvas still from Downloads/hero3.jpg. */
+export const LANDING_HERO_STILL = "/lp-boxes/hero3.jpg" as const;
 export const LANDING_HERO_STILL_ALT =
-  "Blueprint of a live session: left command sidebar and an interactive Work canvas with grid, notes, and arrows" as const;
+  "Full session: left command sidebar and a Work canvas with a mathematical argument, notes, and a Thinking panel" as const;
 
 export const LANDING_USE_COPY = {
   harness: {
-    dek: "Acquire knowledge as it is being made.",
-    body: "A problem-solving harness for frontier tech research and learning: photonic computing, new materials, BCI systems, agent tooling. It is the working piece of a bottom-up approach based on the Free Energy Principle and epistemic foraging. The harness helps choose what to explore next; the thinking stays yours. The work you do is captured as proof, so the knowledge you acquire is held.",
+    dek: "Develop understanding through work on difficult problems.",
+    body: "The Problem Solving Harness is how Knowledge Acquisition works in software today. You work through a demanding problem, make reasoning visible through supported session inputs, and follow up on gaps the work reveals. AI can sit in that working environment where the session supports it. The result is a work trace and a clearer basis for further investigation, not a finished course.",
   },
   verification: {
-    dek: "Proof from work, for people and for agents.",
-    body: "Verify understanding from genuine work traces, without traditional tests. Results cannot be cheated or faked. The same stack benchmarks the knowledge of agentic harnesses, so labs and teams can score what a given setup knows and compare one configuration to another. The probe is guided; holding the knowledge is still the person's work.",
+    dek: "Examine understanding through the work itself.",
+    body: "Knowledge Verification looks at how someone explores a demanding problem, tests assumptions, and develops their reasoning, alongside the answer they reach. A session stores that work and can relate it to a knowledge region you define. The result is evidence for a hiring or development decision, not a score of the whole person.",
   },
   mapping: {
-    dek: "Correlate neurological patterns with knowledge regions.",
-    body: "A product for science, and a way to make sense of complex AI-generated work. Build studies that look for correlations between neurological patterns and knowledge regions: where a person sits in the embedding, and what the brain is doing there. Use it to study knowledge and to study the brain, with the same geometry the other two uses already write.",
+    dek: "Relate understanding to your domain of work.",
+    body: "Knowledge Mapping is the domain asset: a knowledge region built around your expertise, with positions informed by work. Use it as a reference while people develop understanding and when you examine that understanding. It is a model of the domain you care about, not a neurological instrument and not a complete picture of competence.",
   },
 } as const;
 
@@ -46,12 +46,14 @@ export const LANDING_HERO_COPY = {
   eyebrow: "PLATFORM",
   h1: PLATFORM_HERO.h1,
   p1: PLATFORM_HERO.p1,
+  p2: PLATFORM_HERO.p2,
 } as const;
 
 export function landingHeroCopyText(): string {
   return [
     LANDING_HERO_COPY.h1,
     LANDING_HERO_COPY.p1,
-    ...LANDING_USES.flatMap((item) => [item.dek, item.body, item.name, item.href]),
+    LANDING_HERO_COPY.p2,
+    ...LANDING_USES.flatMap((item) => [item.dek, item.body, item.name, item.href, item.cta]),
   ].join("\n");
 }

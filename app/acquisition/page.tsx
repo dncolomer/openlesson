@@ -19,7 +19,7 @@ const standardSocial = standardShareSocialMetadata({
 });
 
 export const metadata: Metadata = {
-  title: "Problem Solving Harness",
+  title: "Knowledge Acquisition",
   description: HARNESS_PRODUCT_COPY.lead,
   alternates: { canonical: `https://uncertain.systems${LEARNING_HARNESS_PATH}` },
   openGraph: standardSocial.openGraph,
@@ -40,14 +40,23 @@ export default function AcquisitionPage() {
         actions={
           <>
             <TrackedCtaLink
-              href={HARNESS_PRODUCT_COPY.workspaceHref}
-              label={HARNESS_PRODUCT_COPY.workspaceCta}
+              href={HARNESS_PRODUCT_COPY.discoveryHref}
+              label={HARNESS_PRODUCT_COPY.discoveryCta}
               location="harness_hero"
               page={LEARNING_HARNESS_PATH}
               className={MARKETING_HERO_PRIMARY_CTA_CLASS}
             >
-              {HARNESS_PRODUCT_COPY.workspaceCta}
+              {HARNESS_PRODUCT_COPY.discoveryCta}
               <ArrowRight className="ml-2" size={16} />
+            </TrackedCtaLink>
+            <TrackedCtaLink
+              href={HARNESS_PRODUCT_COPY.workspaceHref}
+              label={HARNESS_PRODUCT_COPY.workspaceCta}
+              location="harness_hero_workspace"
+              page={LEARNING_HARNESS_PATH}
+              className={MARKETING_HERO_SECONDARY_CTA_CLASS}
+            >
+              {HARNESS_PRODUCT_COPY.workspaceCta}
             </TrackedCtaLink>
             <Link href={HARNESS_PRODUCT_COPY.pricingHref} className={MARKETING_HERO_SECONDARY_CTA_CLASS}>
               {HARNESS_PRODUCT_COPY.pricingCta}
@@ -65,9 +74,56 @@ export default function AcquisitionPage() {
           >
             epistemic foraging
           </Link>
-          : learning as reducing uncertainty, rather than optimizing for tests and practice repetition.
+          : search for information that reduces uncertainty, rather than optimizing for tests and practice
+          repetition.
         </p>
       </MarketingDirectoryHero>
+
+      <section className={`${MARKETING_SHELL} pt-3`} data-harness-workflow>
+        <div className="console-copy overflow-hidden p-5 sm:p-6 lg:p-7">
+          <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
+            {HARNESS_PRODUCT_COPY.workflowEyebrow}
+          </p>
+          <h2 className="mt-2 text-2xl font-medium tracking-[-0.8px] text-white sm:text-3xl">
+            {HARNESS_PRODUCT_COPY.workflowTitle}
+          </h2>
+          <ol className="mt-6 grid gap-5 md:grid-cols-3">
+            {HARNESS_PRODUCT_COPY.workflow.map((step, index) => (
+              <li key={step.title}>
+                <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
+                  {String(index + 1).padStart(2, "0")}
+                </p>
+                <h3 className="mt-2 text-lg font-medium tracking-[-0.4px] text-white">{step.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-zinc-400">{step.body}</p>
+              </li>
+            ))}
+          </ol>
+          <div className="mt-7 border-t border-zinc-800/90 pt-5">
+            <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
+              {HARNESS_PRODUCT_COPY.exampleEyebrow}
+            </p>
+            <h3 className="mt-2 text-lg font-medium tracking-[-0.4px] text-white">
+              {HARNESS_PRODUCT_COPY.exampleTitle}
+            </h3>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-400 sm:text-base">
+              {HARNESS_PRODUCT_COPY.example}
+            </p>
+          </div>
+          <p className="mt-5 text-sm leading-relaxed text-zinc-400">{HARNESS_PRODUCT_COPY.related}</p>
+          <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
+            {HARNESS_PRODUCT_COPY.relatedLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="inline-flex items-center text-sm font-medium text-zinc-200 underline decoration-zinc-700 underline-offset-4 transition hover:text-white hover:decoration-zinc-500"
+              >
+                {link.label}
+                <ArrowRight className="ml-2" size={14} />
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
 
       <section className={`${MARKETING_SHELL} pb-12 pt-3 sm:pb-14`} data-harness-model>
         <div className="console-copy overflow-hidden" data-harness-points>

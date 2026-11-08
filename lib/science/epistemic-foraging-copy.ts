@@ -21,11 +21,11 @@ export const SCIENCE_EPISTEMIC_FORAGING_COPY = {
   eyebrow: "POLICY",
   title: "Foraging for information, not chasing scores.",
   definition:
-    "Epistemic foraging is an active search for information to reduce uncertainty about an environment, rather than immediately chasing rewards. In Karl Friston’s active-inference account, actions carry epistemic value: information that shrinks uncertainty. We treat learning technology as a forage for that information.",
+    "Epistemic foraging is an active search for information to reduce uncertainty about an environment, rather than immediately chasing rewards. In Karl Friston's active-inference account, actions carry epistemic value: the expected information that would shrink uncertainty about hidden states.",
   platform:
-    "On Uncertain Systems, Think Aloud Protocol probes, interruptions, knowledge maps, and Proof of Work traces are the forage: they search for signal about what is actually held. That forage is how the autopilot chooses what to explore next. The thinking stays yours.",
+    "That policy is how we think about the understanding gap. If the bottleneck is inspection, questioning, and use, then the useful next step is often the one that exposes what is still unheld, rather than immediately chasing rewards. On Uncertain Systems, Think Aloud Protocol probes, interruptions, and Proof of Work traces are the current forage: they search for signal in observable work. The Unsys model is the generative model that forage is scored against.",
   caveat:
-    "Epistemic foraging is an influence on this point of view. We do not claim that Uncertain Systems is Friston’s full formal theory, and we do not claim completed active-inference empirical results.",
+    "Epistemic foraging is an influence on this point of view. We do not claim that Uncertain Systems is Friston's full formal theory, and we do not claim completed active-inference empirical results.",
 } as const;
 
 export type ScienceReading = {
@@ -38,7 +38,7 @@ export type ScienceReading = {
   why: string;
 };
 
-/** Canonical further-reading list rendered on /science. */
+/** Friston / active-inference papers. Combined with SCIENCE_CONTEXT_READINGS on /science. */
 export const SCIENCE_EPISTEMIC_FORAGING_READINGS: readonly ScienceReading[] = [
   {
     id: "friston-epistemic-value-2015",
@@ -47,7 +47,7 @@ export const SCIENCE_EPISTEMIC_FORAGING_READINGS: readonly ScienceReading[] = [
     title: "Active inference and epistemic value",
     venue: "Cognitive Neuroscience, 6(4), 187–214",
     href: "https://doi.org/10.1080/17588928.2015.1020053",
-    why: "Definitional paper: epistemic versus pragmatic value of action — forage for information, rather than immediately chase rewards.",
+    why: "Definitional paper: epistemic versus pragmatic value of action. Forage for information, rather than immediately chase rewards.",
   },
   {
     id: "friston-process-theory-2017",
@@ -86,6 +86,45 @@ export const SCIENCE_EPISTEMIC_FORAGING_READINGS: readonly ScienceReading[] = [
     why: "The Free Energy Principle overview that the adjacent science section already names as an influence.",
   },
 ] as const;
+
+/** Dresler, Cinel, Licklider: context for enhancement and symbiosis sections. */
+export const SCIENCE_CONTEXT_READINGS: readonly ScienceReading[] = [
+  {
+    id: "dresler-hacking-the-brain-2019",
+    authors:
+      "Dresler, M., Sandberg, A., Bublitz, C., Ohla, K., Trenado, C., Mroczko-Wąsowicz, A., Kühn, S., & Repantis, D.",
+    year: "2019",
+    title: "Hacking the Brain: Dimensions of Cognitive Enhancement",
+    venue: "ACS Chemical Neuroscience, 10(3), 1137–1148",
+    href: "https://doi.org/10.1021/acschemneuro.8b00571",
+    why: "Mode-of-action taxonomy (biochemical, physical, and behavioral) and further dimensions: domain, person, time scale, side effects, availability, and social acceptance.",
+  },
+  {
+    id: "cinel-neurotechnologies-2019",
+    authors: "Cinel, C., Valeriani, D., & Poli, R.",
+    year: "2019",
+    title:
+      "Neurotechnologies for Human Cognitive Augmentation: Current State of the Art and Future Prospects",
+    venue: "Frontiers in Human Neuroscience, 13:13",
+    href: "https://doi.org/10.3389/fnhum.2019.00013",
+    why: "Recording versus influencing brain activity, invasive and non-invasive methods, and a 2019 forecast. Vocabulary and context, not a current product-readiness assessment.",
+  },
+  {
+    id: "licklider-symbiosis-1960",
+    authors: "Licklider, J. C. R.",
+    year: "1960",
+    title: "Man-Computer Symbiosis",
+    venue: "IRE Transactions on Human Factors in Electronics, HFE-1, 4–11",
+    href: "https://groups.csail.mit.edu/medg/people/psz/Licklider.html",
+    why: "Historical frame for people and computers adapting together in formulative thinking. An influence on the symbiotic vocabulary, not evidence of measured co-adaptation today.",
+  },
+] as const;
+
+/** Full annotated list rendered once at the end of /science. */
+export const SCIENCE_PAGE_READINGS: readonly ScienceReading[] = [
+  ...SCIENCE_CONTEXT_READINGS,
+  ...SCIENCE_EPISTEMIC_FORAGING_READINGS,
+];
 
 /** Shared citation used by science white papers that point at the definitional paper. */
 export const FRISTON_EPISTEMIC_VALUE_CITATION =

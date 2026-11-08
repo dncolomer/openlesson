@@ -25,27 +25,27 @@ export const VISION_TOMOGRAPHY_INDUCTION_COPY = {
   eyebrow: "SCIENCE PATH",
   title: "Knowledge tomography, then knowledge induction.",
   lead:
-    "Tools for knowledge building on autopilot need a policy and two complementary layers. Epistemic foraging is the policy: search for information that reduces uncertainty, rather than chasing scores. Then we measure what an entity currently holds, and steer toward the next useful configuration. The exploration is guided; the thinking stays yours.",
+    "Tools for knowledge building on autopilot need a policy, a way to measure, and a longer-horizon aim. Epistemic foraging is the policy: search for information that reduces uncertainty, rather than chasing scores. Knowledge tomography reconstructs a provisional state from observable work. Knowledge induction is the later aim of changing knowledge configurations.",
   policy: {
     eyebrow: "Policy",
     title: "Epistemic foraging",
     body:
-      "Epistemic foraging (Friston / active inference) is an active search for information that reduces uncertainty about an environment, rather than immediately chasing rewards. Tomography measures the state being foraged; induction is later steering.",
+      "Epistemic foraging (Friston / active inference) is an active search for information that reduces uncertainty about an environment, rather than immediately chasing rewards. Tomography measures the state being foraged; induction is later transformation.",
   },
   tomography: {
     eyebrow: "Measurement",
     title: "Knowledge tomography",
     body:
-      "Knowledge tomography is the family of methodologies that prompt human as well as agentic entities to try to reproduce their state of knowledge—multi-angle projections of what is held, missing, and transferable, not finals alone.",
+      "Knowledge tomography is the family of methodologies that prompt human as well as agentic entities to try to reproduce their state of knowledge: multi-angle projections of what appears held, missing, and transferable, not finals alone. The reconstruction is provisional. It does not see all of a mind's knowledge.",
   },
   induction: {
     eyebrow: "Long-horizon aim",
     title: "Knowledge induction tech",
     body:
-      "Knowledge induction is the longer-horizon aim: technology that guides transformation through knowledge configuration space—raising proximity to useful states without asking minds to burn proportionally more energy. Tomography measures; induction transforms.",
+      "Knowledge induction is the longer-horizon aim: technology that guides transformation through knowledge configuration space, raising proximity to useful states. Tomography measures; induction transforms. This is an Uncertain Systems aim, still ahead of a completed capability.",
   },
   distinction:
-    "We keep the layers distinct on purpose. Epistemic foraging is the policy. Tomography externalizes and reconstructs current state. Knowledge induction tech uses that measurement to choose what to explore next. Without tomography, induction is blind steering; without induction, measurement never compounds into knowledge building on autopilot.",
+    "We keep the layers distinct on purpose. Epistemic foraging is the policy. Tomography externalizes and reconstructs current state from observable work. Knowledge induction tech uses that measurement to choose what to explore next. Without tomography, induction is blind steering; without induction, measurement never compounds into knowledge building on autopilot. A cheapest-edge score on the Unsys model is a software measurement of travel against a frozen generative model. It does not establish intelligence, hiring validity, or genuine understanding.",
   links: {
     scienceLabel: "Science thesis",
     foragingLabel: "Epistemic foraging",

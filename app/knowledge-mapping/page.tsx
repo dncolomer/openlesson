@@ -8,6 +8,7 @@ import {
   MARKETING_HERO_SECONDARY_CTA_CLASS,
   MarketingDirectoryHero,
 } from "@/components/marketing/MarketingDirectoryHero";
+import { TrackedCtaLink } from "@/components/TrackedCtaLink";
 import { KNOWLEDGE_MAPPING_PATH } from "@/lib/marketing/paths";
 import {
   MAPPING_PLATFORM_COPY,
@@ -44,9 +45,18 @@ export default function KnowledgeMappingPage() {
         marker="mapping"
         actions={
           <>
-            <Link href={MAPPING_PRODUCT_COPY.pricingHref} className={MARKETING_HERO_PRIMARY_CTA_CLASS}>
-              {MAPPING_PRODUCT_COPY.pricingCta}
+            <TrackedCtaLink
+              href={MAPPING_PRODUCT_COPY.discoveryHref}
+              label={MAPPING_PRODUCT_COPY.discoveryCta}
+              location="mapping_hero"
+              page={KNOWLEDGE_MAPPING_PATH}
+              className={MARKETING_HERO_PRIMARY_CTA_CLASS}
+            >
+              {MAPPING_PRODUCT_COPY.discoveryCta}
               <ArrowRight className="ml-2" size={16} />
+            </TrackedCtaLink>
+            <Link href={MAPPING_PRODUCT_COPY.pricingHref} className={MARKETING_HERO_SECONDARY_CTA_CLASS}>
+              {MAPPING_PRODUCT_COPY.pricingCta}
             </Link>
             <Link href={MAPPING_PRODUCT_COPY.scienceHref} className={MARKETING_HERO_SECONDARY_CTA_CLASS}>
               {MAPPING_PRODUCT_COPY.scienceCta}
@@ -55,6 +65,7 @@ export default function KnowledgeMappingPage() {
         }
       >
         <p>{MAPPING_PRODUCT_COPY.lead}</p>
+        <p>{MAPPING_PRODUCT_COPY.body}</p>
       </MarketingDirectoryHero>
 
       <section id="platform" className={`${MARKETING_SHELL} pb-12 pt-3 sm:pb-14`}>
@@ -66,18 +77,39 @@ export default function KnowledgeMappingPage() {
                 title={MAPPING_PLATFORM_COPY.title}
               />
               <p className="mt-4 text-base leading-relaxed text-zinc-400 sm:text-lg">
-                Every workspace puts people into a shared embedding geometry. Create knowledge regions,
-                multi-select users, and read{" "}
-                <span className="text-zinc-200">position on the map</span> live: the map shows where
-                people sit against your defined knowledge regions. That position is how the autopilot
-                chooses what to explore next; the thinking stays yours.
+                {MAPPING_PLATFORM_COPY.p1}
               </p>
               <p className="mt-3 text-sm leading-relaxed text-zinc-500 sm:text-[15px]">
-                Create{" "}
-                <span className="text-zinc-300">custom knowledge regions</span> from internal expert data
-                and chart a domain without sharing confidential information about your internal systems.
-                Regions stay private to the workspace.
+                {MAPPING_PLATFORM_COPY.p2}
               </p>
+              <p className="mt-3 text-sm leading-relaxed text-zinc-500 sm:text-[15px]">
+                {MAPPING_PLATFORM_COPY.p3}
+              </p>
+              <p className="mt-3 text-sm leading-relaxed text-zinc-500 sm:text-[15px]">
+                {MAPPING_PLATFORM_COPY.interpretability}
+              </p>
+              <p className="mt-3 text-sm leading-relaxed text-zinc-500 sm:text-[15px]">
+                {MAPPING_PLATFORM_COPY.researchBefore}{" "}
+                <Link
+                  href={MAPPING_PLATFORM_COPY.researchHref}
+                  className="text-zinc-300 underline decoration-zinc-700 underline-offset-4 transition hover:text-white hover:decoration-zinc-500"
+                >
+                  {MAPPING_PLATFORM_COPY.researchLabel}
+                </Link>
+                . {MAPPING_PLATFORM_COPY.researchAfter}
+              </p>
+              <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
+                {MAPPING_PLATFORM_COPY.relatedLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="inline-flex items-center text-sm font-medium text-zinc-200 underline decoration-zinc-700 underline-offset-4 transition hover:text-white hover:decoration-zinc-500"
+                  >
+                    {link.label}
+                    <ArrowRight className="ml-2" size={14} />
+                  </Link>
+                ))}
+              </div>
             </div>
           </div>
           <div
@@ -96,11 +128,10 @@ export default function KnowledgeMappingPage() {
             </div>
             <div className="border-t border-zinc-800/90 px-4 py-3 sm:px-5 sm:py-3.5">
               <p className="font-mono text-[10px] uppercase tracking-[1.6px] text-zinc-500">
-                Knowledge · Embeddings · Knowledge regions · Proof of Work
+                {MAPPING_PLATFORM_COPY.visualCaption}
               </p>
               <p className="mt-1.5 text-sm leading-relaxed text-zinc-400">
-                We help you build a living map of proximity to any kind of knowledge. Knowledge
-                regions are the territories. People are positions on that map.
+                {MAPPING_PLATFORM_COPY.visualBody}
               </p>
             </div>
           </div>

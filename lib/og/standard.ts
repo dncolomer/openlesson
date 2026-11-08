@@ -15,7 +15,7 @@ export const UNSYS_STANDARD_SHARE_TITLE = PLATFORM_HERO.h1;
  * `UNSYS_STANDARD_SHARE_TITLE`.
  */
 export const UNSYS_STANDARD_HTML_TITLE =
-  "Knowledge building on autopilot | Uncertain Systems" as const;
+  "Build Understanding on autopilot | Uncertain Systems" as const;
 
 /**
  * Share + meta description: homepage lead, no product-split headline.

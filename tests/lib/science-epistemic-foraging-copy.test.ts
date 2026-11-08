@@ -104,7 +104,7 @@ describe("science page renders epistemic foraging copy", () => {
     const src = read("app/science/page.tsx");
 
     expect(src).toContain("SCIENCE_EPISTEMIC_FORAGING_COPY");
-    expect(src).toContain("SCIENCE_EPISTEMIC_FORAGING_READINGS");
+    expect(src).toContain("SCIENCE_PAGE_READINGS");
     expect(src).toContain("epistemic-foraging-copy");
     expect(src).toContain("data-science-epistemic-foraging");
     expect(src).toContain("SCIENCE_EPISTEMIC_FORAGING_COPY.title");

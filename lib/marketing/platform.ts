@@ -3,20 +3,28 @@
  * Pages interpolate these strings so tests drive shipped copy, not a parallel corpus.
  */
 import {
+  DISCOVERY_CTA_LABEL,
+  ENTERPRISE_SETUP_MAILTO,
   HARNESS_PRICING_PATH,
   KNOWLEDGE_MAPPING_PATH,
   KNOWLEDGE_VERIFICATION_PATH,
   LEARNING_HARNESS_PATH,
   MAPPING_PRICING_PATH,
+  USE_CASES_PATH,
   VERIFICATION_PRICING_PATH,
 } from "@/lib/marketing/paths";
+import { SCIENCE_HUB_PATH } from "@/lib/science/hub";
+
+export const APPROVED_BRAND_ANCHOR =
+  "Uncertain Systems is the autopilot for knowledge building, bringing human and artificial intelligence together so people can understand more with less effort." as const;
 
 export const PLATFORM_PHRASE = "From genuine work" as const;
 
 export const PLATFORM_HERO = {
   pill: "ACQUIRE VERIFY MAP",
-  h1: "From genuine work.",
-  p1: "Uncertain Systems is creating tools for knowledge building on autopilot. We guide people through hard problems to build knowledge, verify understanding and make sense of complex AI-generated work. The exploration is guided, but the thinking stays yours: autopilot means the system helps choose what to explore next, not that understanding happens without you.",
+  h1: "Build Understanding on autopilot.",
+  p1: APPROVED_BRAND_ANCHOR,
+  p2: "Work through hard problems, examine the reasoning they reveal, and relate that evidence to knowledge regions built around your domain.",
 } as const;
 
 export const PLATFORM_PUBLIC_MAPS = {
@@ -77,16 +85,18 @@ export const PLATFORM_LAYERS = {
 
 export const PLATFORM_CORE = {
   eyebrow: "KNOWLEDGE REGIONS",
-  title: "Build knowledge embedding models and knowledge regions.",
-  p1: "At the core of the platform is the knowledge region: a territory in an embedding space built from genuine work. Uncertain Systems gives you tools to capture proof of work, then tools to build embedding models over those traces and to define regions in that space. That geometry is how the autopilot chooses what to explore next.",
-  p2: "People, agents, and studies sit as positions. Distance is how close a position is to a region. Transitions are how that position moves as work continues. The thinking stays yours; the system reads the space so the next hard problem is the one that builds knowledge.",
-  p3: "The model is extensible. Audiovisual work, BCI streams, and other scientific signals can feed the same geometry, especially for studies that correlate neurological patterns with knowledge regions.",
+  title: "A knowledge region is a shared reference for your domain.",
+  p1: "A knowledge region is a territory of problems, concepts, and reasoning you care about. Genuine work in sessions informs where someone sits relative to that territory. The region is the durable company or domain asset: a reference for developing understanding, examining it, and deciding what to investigate next. It is not a session, a course, a chapter map, or the embedding model itself.",
+  p2: "The software builds an embedding from recorded work, then places people as positions in that space. Distance is how close a position sits to a region in this model. Transitions are how that position moves as further work is recorded. Distance is model-relative. It is not a calibrated measure of someone's whole competence, and the region does not grow or cover a field on its own.",
+  p3: "The diagram on this page is an illustration of regions and positions, not a scan of knowledge. Longer-horizon research, including questions about the brain, lives on the science page. That research is not a capability of the mapping product you can use today.",
+  scienceHref: SCIENCE_HUB_PATH,
+  scienceLabel: "Read the science",
   visualCaption: "Knowledge · Embeddings · Regions · Distance · Transitions",
   visualBody:
-    "Proof of work becomes an embedding. Knowledge regions are the territories. Positions, distances, and transitions are how you read the space.",
+    "Illustrative projection: work becomes an embedding, regions are territories in that space, and positions, distances, and transitions are how you read the model.",
   imageSrc: "/regions1.png",
   imageAlt:
-    "2D projection of knowledge regions for Physics, Maths, Code, and Design, with user and agent positions and distances",
+    "Illustrative 2D projection of knowledge regions for Physics, Maths, Code, and Design, with positions and distances between them",
 } as const;
 
 export const PLATFORM_PROOF = {
@@ -118,36 +128,69 @@ export const PLATFORM_PROOF = {
   ],
 } as const;
 
+export const PLATFORM_OUTCOMES = {
+  eyebrow: "USE CASES",
+  title: "Put knowledge building to work.",
+  lead: "Acquisition, verification, and mapping can work together when a team needs to understand difficult work, develop expertise, or assess capability through hard problems.",
+  cta: DISCOVERY_CTA_LABEL,
+  ctaHref: ENTERPRISE_SETUP_MAILTO,
+  moreCta: "Read the use cases",
+  moreHref: USE_CASES_PATH,
+  items: [
+    {
+      eyebrow: "FRONTIER WORK",
+      name: "Understand difficult work",
+      body: "Investigate an unfamiliar argument, including AI-generated work, until the assumptions and open questions are explicit.",
+      href: `${USE_CASES_PATH}#research-ai`,
+      hrefLabel: "Frontier work",
+    },
+    {
+      eyebrow: "TEAM EXPERTISE",
+      name: "Turn expertise into capability",
+      body: "Give colleagues a private domain region and representative problems, then use their work to see what still needs development.",
+      href: `${USE_CASES_PATH}#company-expertise`,
+      hrefLabel: "Team expertise",
+    },
+    {
+      eyebrow: "ASSESSMENT",
+      name: "Assess capability through problems",
+      body: "Examine how a candidate explores a demanding problem, including work with an allowed AI tool when the problem says so.",
+      href: `${USE_CASES_PATH}#technical-hiring`,
+      hrefLabel: "Hard-problem assessment",
+    },
+  ],
+} as const;
+
 export const PLATFORM_PRODUCTS = {
   harness: {
-    eyebrow: "FRONTIER TECH",
+    eyebrow: "PROBLEM WORK",
     name: "Knowledge Acquisition",
     title: "Knowledge Acquisition",
-    body: "A problem-solving harness for frontier tech research and learning. Use it to acquire a field as it is being made: photonic computing, new materials, BCI systems, agent tooling. The harness is the working piece of a bottom-up approach based on the Free Energy Principle and epistemic foraging. It guides what to explore next; the thinking stays yours. The work you do is captured as proof.",
+    body: "The Problem Solving Harness is how Knowledge Acquisition works in software today. You work through a demanding problem, make reasoning visible through supported session inputs, and follow up on gaps the work reveals. AI can sit in that working environment where the session supports it. The result is a work trace and a clearer basis for further investigation, not a finished course.",
     href: LEARNING_HARNESS_PATH,
-    cta: "Explore",
+    cta: "Explore acquisition",
     pricingHref: HARNESS_PRICING_PATH,
     image: "/lp-boxes/harness-books-blueprint.jpg",
     imageAlt: "Blueprint sketch of an open gridded notebook, a compass, and a stack of volumes",
   },
   verification: {
-    eyebrow: "HUMANS AND AGENTS",
+    eyebrow: "WORK EVIDENCE",
     name: "Knowledge Verification",
     title: "Knowledge Verification",
-    body: "Verify understanding from genuine work traces, without traditional tests. Results cannot be cheated or faked. The same stack benchmarks the knowledge of agentic harnesses, so labs and teams can score what a given agent setup knows. The probe is guided; the thinking stays yours.",
+    body: "Knowledge Verification looks at how someone explores a demanding problem, tests assumptions, and develops their reasoning, alongside the answer they reach. A session stores that work and can relate it to a knowledge region you define. The result is evidence for a hiring or development decision, not a score of the whole person.",
     href: KNOWLEDGE_VERIFICATION_PATH,
-    cta: "Explore",
+    cta: "Explore verification",
     pricingHref: VERIFICATION_PRICING_PATH,
     image: "/lp-boxes/verification-bottles-blueprint.jpg",
     imageAlt: "Blueprint sketch of laboratory bottles with blank plates and red seals",
   },
   mapping: {
-    eyebrow: "FOR SCIENCE",
+    eyebrow: "DOMAIN REFERENCE",
     name: "Knowledge Mapping",
     title: "Knowledge Mapping",
-    body: "A product for science, and a way to make sense of complex AI-generated work. Build studies that look for correlations between neurological patterns and knowledge regions: where a person sits in the embedding, and what the brain is doing there. Use it to study knowledge and to study the brain.",
+    body: "Knowledge Mapping is the domain asset: a knowledge region built around your expertise, with positions informed by work. Use it as a reference while people develop understanding and when you examine that understanding. It is a model of the domain you care about, not a neurological instrument and not a complete picture of competence.",
     href: KNOWLEDGE_MAPPING_PATH,
-    cta: "Explore",
+    cta: "Explore mapping",
     pricingHref: MAPPING_PRICING_PATH,
     image: "/lp-boxes/tapbench-maps-blueprint.jpg",
     imageAlt: "Blueprint sketch of a folded map, compass, and knowledge-region plates",
@@ -173,9 +216,10 @@ export function homepageCopyText(): string {
     PLATFORM_HERO.pill,
     PLATFORM_HERO.h1,
     PLATFORM_HERO.p1,
+    PLATFORM_HERO.p2,
     PLATFORM_LAYERS.eyebrow,
     PLATFORM_LAYERS.title,
-    ...PLATFORM_LAYER_LIST.flatMap((item) => [item.name, item.title, item.body, item.href]),
+    ...PLATFORM_LAYER_LIST.flatMap((item) => [item.name, item.title, item.body, item.href, item.cta]),
     PLATFORM_CORE.eyebrow,
     PLATFORM_CORE.title,
     PLATFORM_CORE.p1,
@@ -195,8 +239,20 @@ export function homepageCopyText(): string {
       item.hrefLabel ?? "",
       item.image,
       item.imageAlt,
-      "logo" in item ? item.logo : "",
-      "logoAlt" in item ? item.logoAlt : "",
+      item.logo,
+      item.logoAlt,
+    ]),
+    PLATFORM_OUTCOMES.eyebrow,
+    PLATFORM_OUTCOMES.title,
+    PLATFORM_OUTCOMES.lead,
+    PLATFORM_OUTCOMES.cta,
+    PLATFORM_OUTCOMES.moreCta,
+    ...PLATFORM_OUTCOMES.items.flatMap((item) => [
+      item.eyebrow,
+      item.name,
+      item.body,
+      item.href ?? "",
+      item.hrefLabel ?? "",
     ]),
   ].join("\n");
 }

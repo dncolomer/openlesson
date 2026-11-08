@@ -5,6 +5,7 @@ import { LandingNav } from "@/components/LandingNav";
 import {
   LandingCoreSection,
   LandingHeroEditorial,
+  LandingOutcomesSection,
   LandingProofSection,
   LandingWash,
 } from "@/components/marketing/landing-heroes";
@@ -16,6 +17,7 @@ export default function B2BLandingPage() {
       <LandingNav />
       <LandingHeroEditorial />
       <LandingCoreSection />
+      <LandingOutcomesSection />
       <LandingProofSection />
       <div className="relative z-10">
         <Footer />

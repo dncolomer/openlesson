@@ -26,7 +26,9 @@ describe("science FEP copy content", () => {
     expect(full).toContain("Free Energy Principle");
     expect(full.toLowerCase()).toMatch(/reducing uncertainty/);
     expect(full).toContain("Uncertain Systems");
-    expect(SCIENCE_FEP_COPY.title.toLowerCase()).toBe("learning is reducing uncertainty.");
+    expect(SCIENCE_FEP_COPY.title.toLowerCase()).toBe(
+      "uncertainty, surprise, and the free energy principle.",
+    );
     expect(SCIENCE_FEP_COPY.name).toMatch(/named Uncertain Systems/);
     expect(SCIENCE_FEP_COPY.influence.toLowerCase()).toMatch(/heavily influenced/);
   });
@@ -56,6 +58,7 @@ describe("science page renders FEP copy", () => {
     expect(src).toContain("data-science-free-energy");
     expect(src).toContain("SCIENCE_FEP_COPY.title");
     expect(src).toContain("SCIENCE_FEP_COPY.influence");
+    expect(src).toContain("SCIENCE_FEP_COPY.exploration");
     expect(src).toContain("SCIENCE_FEP_COPY.name");
     expect(src).toContain("SCIENCE_FEP_COPY.caveat");
 

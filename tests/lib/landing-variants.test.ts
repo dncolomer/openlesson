@@ -54,28 +54,32 @@ describe("live landing hero", () => {
       expect(wordCount(use.body)).toBeLessThanOrEqual(90);
       expect(use.dek.split(" ").length).toBeGreaterThanOrEqual(6);
     }
-    expect(wordCount(LANDING_HERO_COPY.p1)).toBeGreaterThanOrEqual(30);
+    expect(wordCount(LANDING_HERO_COPY.p1)).toBeGreaterThanOrEqual(20);
+    expect(wordCount(LANDING_HERO_COPY.p2)).toBeGreaterThanOrEqual(20);
 
     const heroes = read("components/marketing/landing-heroes.tsx");
     expect(heroes).toContain("data-home-layers");
     expect(heroes).toContain("md:grid-cols-3");
     expect(heroes).toContain("lg:grid-cols-12");
-    expect(heroes).toContain("xl:grid-cols-2");
+    expect(heroes).toContain("xl:grid-cols-3");
     expect(heroes).toContain("data-home-hero-editorial");
     expect(heroes).not.toContain("data-home-hero-strip");
     expect(heroes).not.toContain("data-region-image-variants");
     expect(heroes).not.toContain("bg-white px-5 py-3 text-sm font-medium text-black");
     expect(PLATFORM_CORE.imageSrc).toBe("/regions1.png");
     expect(existsSync(join(ROOT, "public/regions1.png"))).toBe(true);
-    expect(LANDING_HERO_STILL).toBe("/lp-boxes/session-canvas-blueprint.jpg");
+    expect(LANDING_HERO_STILL).toBe("/lp-boxes/hero3.jpg");
     expect(existsSync(join(ROOT, "public", LANDING_HERO_STILL.replace(/^\//, "")))).toBe(true);
     expect(heroes).toContain("LANDING_HERO_STILL");
-    expect(heroes).toContain("brightness-[1.18]");
+    expect(heroes).toContain("aspect-video");
+    expect(heroes).toContain("object-cover");
+    expect(heroes).toContain("bg-gradient-to-t from-black");
+    expect(heroes).not.toContain("brightness-[1.18]");
 
     const copy = landingHeroCopyText();
-    expect(copy).toMatch(/photonic computing/);
-    expect(copy).toMatch(/agentic harnesses/);
-    expect(copy).toMatch(/neurological patterns/);
+    expect(copy).toMatch(/Problem Solving Harness/);
+    expect(copy).toMatch(/Explore acquisition/);
+    expect(copy).toMatch(/knowledge region/);
     expect(copy).not.toMatch(/\u2014/);
     expect(copy).not.toMatch(/hard-domain learning experiences/i);
   });

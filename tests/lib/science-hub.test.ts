@@ -81,6 +81,10 @@ describe("combined vision + science hub", () => {
       "#science-epistemic-foraging",
       SCIENCE_LEARNING_MODEL_PATH,
       "#knowledge-tomography-induction",
+      "#cognitive-enhancement",
+      "#human-ai-symbiosis",
+      "#software-and-research",
+      "#science-references",
     ]);
     expect(
       SCIENCE_HUB_DIRECTORY.find((row) => row.href === SCIENCE_LEARNING_MODEL_PATH)?.label,

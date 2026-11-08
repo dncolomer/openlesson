@@ -17,3 +17,9 @@ export const BRAIN_PRIMING_JOIN_PATH = "/brain-priming/join" as const;
 
 export const ENTERPRISE_SETUP_EMAIL = "daniel@uncertain.systems" as const;
 export const ENTERPRISE_SETUP_MAILTO = `mailto:${ENTERPRISE_SETUP_EMAIL}` as const;
+export const DISCOVERY_CTA_LABEL = "Discuss your use case" as const;
+export const WORKSPACE_NEW_PATH = "/workspace/new" as const;
+
+export function discoveryMailto(subject: string): string {
+  return `${ENTERPRISE_SETUP_MAILTO}?subject=${encodeURIComponent(subject)}`;
+}

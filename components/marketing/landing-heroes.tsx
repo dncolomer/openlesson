@@ -2,9 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { SectionHeading } from "@/components/marketing/MarketingChrome";
 import { TrackedCtaLink } from "@/components/TrackedCtaLink";
+import {
+  MARKETING_HERO_PRIMARY_CTA_CLASS,
+  MARKETING_HERO_SECONDARY_CTA_CLASS,
+} from "@/components/marketing/MarketingDirectoryHero";
 import {
   PublicConsoleWash,
   PublicPageField,
@@ -17,7 +22,10 @@ import {
   LANDING_USES,
 } from "@/lib/marketing/landing-variants";
 import { MARKETING_MEDIA_FILL_CLASS, MARKETING_SHELL } from "@/lib/marketing/shell";
-import { PLATFORM_CORE, PLATFORM_PROOF } from "@/lib/marketing/platform";
+import { PLATFORM_CORE, PLATFORM_OUTCOMES, PLATFORM_PROOF } from "@/lib/marketing/platform";
+
+/** Field color sampled from the hero3 still surround. */
+export const LANDING_FIELD_BG_CLASS = "bg-[#0a172d]";
 
 export function LandingWash() {
   const [bgImage, setBgImage] = useState("");
@@ -57,7 +65,7 @@ function UseLink({
   );
 }
 
-/** Combined hero: session-canvas still, live copy overlaid, three uses in the same plate. */
+/** Combined hero: full still with title overlaid, three uses under the same plate. */
 export function LandingHeroEditorial({
   location = "landing_layers",
 }: {
@@ -67,52 +75,50 @@ export function LandingHeroEditorial({
   return (
     <section className={`${MARKETING_SHELL} pt-4 pb-0 sm:pt-5`} data-home-hero data-home-hero-editorial>
       <div className="console-copy overflow-hidden" data-home-layers>
-        <div className="grid lg:grid-cols-12">
-          <div className="relative min-h-[20rem] sm:min-h-[26rem] lg:col-span-7 lg:min-h-[32rem] xl:col-span-8 xl:min-h-[36rem]">
-            <Image
-              src={LANDING_HERO_STILL}
-              alt={LANDING_HERO_STILL_ALT}
-              fill
-              unoptimized
-              className="object-cover object-center brightness-[1.18]"
-              sizes="(max-width: 1024px) 100vw, 70vw"
-              priority
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 via-[48%] to-transparent lg:bg-gradient-to-tr" />
-            <div className="relative z-10 flex h-full min-h-[20rem] flex-col items-start justify-end px-5 pb-6 pt-12 text-left sm:min-h-[26rem] sm:px-8 sm:pb-8 xl:px-10 xl:pb-10">
-              <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-300">{copy.eyebrow}</p>
-              <h1 className="mt-2 max-w-xl text-[2rem] font-medium leading-[1.05] tracking-[-1.4px] text-white sm:text-5xl lg:max-w-2xl lg:text-6xl">
-                {copy.h1}
-              </h1>
-              <div className="mt-3 max-w-lg space-y-3 text-[15px] leading-relaxed text-zinc-200 sm:mt-4 sm:text-base">
-                <p>{copy.p1}</p>
-              </div>
+        <div
+          className={`relative aspect-video w-full max-h-[calc(100svh-5.5rem)] ${LANDING_FIELD_BG_CLASS}`}
+        >
+          <Image
+            src={LANDING_HERO_STILL}
+            alt={LANDING_HERO_STILL_ALT}
+            fill
+            unoptimized
+            className="object-cover object-center"
+            sizes="100vw"
+            priority
+          />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black via-black/70 via-[38%] to-black/10" />
+          <div className="relative z-10 flex h-full flex-col items-start justify-end px-5 pb-6 pt-16 text-left sm:px-8 sm:pb-8 xl:px-10 xl:pb-10">
+            <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-300">{copy.eyebrow}</p>
+            <h1 className="mt-2 max-w-3xl text-[2rem] font-medium leading-[1.05] tracking-[-1.4px] text-white sm:text-5xl lg:text-6xl">
+              {copy.h1}
+            </h1>
+            <div className="mt-3 max-w-3xl space-y-3 text-[15px] leading-relaxed text-zinc-200 sm:mt-4 sm:text-base">
+              <p>{copy.p1}</p>
+              <p>{copy.p2}</p>
             </div>
           </div>
-
-          <ol className="grid border-t border-zinc-800/90 md:grid-cols-3 lg:col-span-5 lg:grid-cols-1 lg:border-t-0 lg:border-l xl:col-span-4">
-            {LANDING_USES.map((product, index) => (
-              <li
-                key={product.href}
-                className={`flex flex-col px-5 py-5 sm:px-6 sm:py-6 lg:py-5 ${
-                  index > 0
-                    ? "border-t border-zinc-800/90 md:border-t-0 md:border-l lg:border-l-0 lg:border-t"
-                    : ""
-                }`}
-              >
-                <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
-                  {String(index + 1).padStart(2, "0")} · {product.eyebrow}
-                </p>
-                <h2 className="mt-1.5 text-lg font-medium tracking-[-0.5px] text-white sm:text-xl">
-                  {product.name}
-                </h2>
-                <p className="mt-1.5 text-[14px] leading-relaxed text-zinc-300 sm:text-[15px]">{product.dek}</p>
-                <p className="mt-1.5 text-[14px] leading-relaxed text-zinc-400 sm:text-[15px]">{product.body}</p>
-                <UseLink href={product.href} label={product.cta} location={location} />
-              </li>
-            ))}
-          </ol>
         </div>
+        <ol className="grid border-t border-zinc-800/90 md:grid-cols-3">
+          {LANDING_USES.map((product, index) => (
+            <li
+              key={product.href}
+              className={`flex flex-col px-5 py-5 sm:px-6 sm:py-6 ${
+                index > 0 ? "border-t border-zinc-800/90 md:border-t-0 md:border-l" : ""
+              }`}
+            >
+              <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
+                {String(index + 1).padStart(2, "0")} · {product.eyebrow}
+              </p>
+              <h2 className="mt-1.5 text-lg font-medium tracking-[-0.5px] text-white sm:text-xl">
+                {product.name}
+              </h2>
+              <p className="mt-1.5 text-[14px] leading-relaxed text-zinc-300 sm:text-[15px]">{product.dek}</p>
+              <p className="mt-1.5 text-[14px] leading-relaxed text-zinc-400 sm:text-[15px]">{product.body}</p>
+              <UseLink href={product.href} label={product.cta} location={location} />
+            </li>
+          ))}
+        </ol>
       </div>
     </section>
   );
@@ -149,6 +155,13 @@ export function LandingCoreSection() {
           <p className="mt-2.5 text-[14px] leading-relaxed text-zinc-500 sm:text-[15px]">{PLATFORM_CORE.p2}</p>
           <p className="mt-2.5 text-[14px] leading-relaxed text-zinc-500 sm:text-[15px]">{PLATFORM_CORE.p3}</p>
           <p className="mt-4 text-sm leading-relaxed text-zinc-400">{PLATFORM_CORE.visualBody}</p>
+          <Link
+            href={PLATFORM_CORE.scienceHref}
+            className="mt-4 inline-flex items-center text-sm font-medium text-zinc-200 underline decoration-zinc-700 underline-offset-4 transition hover:text-white hover:decoration-zinc-500"
+          >
+            {PLATFORM_CORE.scienceLabel}
+            <ArrowRight className="ml-2" size={14} />
+          </Link>
         </div>
       </div>
     </section>
@@ -195,6 +208,50 @@ export function LandingProofSection() {
           </li>
         ))}
       </ul>
+    </section>
+  );
+}
+
+export function LandingOutcomesSection() {
+  return (
+    <section className={`${MARKETING_SHELL} pt-3`} data-home-outcomes>
+      <SectionHeading eyebrow={PLATFORM_OUTCOMES.eyebrow} title={PLATFORM_OUTCOMES.title} mark={false} />
+      <p className="mt-4 max-w-3xl text-sm leading-relaxed text-zinc-400 sm:text-base">
+        {PLATFORM_OUTCOMES.lead}
+      </p>
+      <ul className="mt-5 flex flex-col gap-3 xl:grid xl:grid-cols-3">
+        {PLATFORM_OUTCOMES.items.map((item) => (
+          <li key={item.name} className="console-copy flex min-h-[6.5rem] min-w-0 flex-col justify-center px-4 py-4 sm:px-5 sm:py-5">
+            <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">{item.eyebrow}</p>
+            <h4 className="mt-1 text-base font-medium tracking-[-0.4px] text-white sm:text-lg">{item.name}</h4>
+            <p className="mt-1 text-sm leading-relaxed text-zinc-400">{item.body}</p>
+            {item.href && item.hrefLabel ? (
+              <Link
+                href={item.href}
+                className="mt-1.5 inline-flex items-center text-sm font-medium text-zinc-200 underline decoration-zinc-700 underline-offset-4 transition hover:text-white hover:decoration-zinc-500"
+              >
+                {item.hrefLabel}
+                <ArrowRight className="ml-2" size={14} />
+              </Link>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center" data-home-cta>
+        <TrackedCtaLink
+          href={PLATFORM_OUTCOMES.ctaHref}
+          label={PLATFORM_OUTCOMES.cta}
+          location="landing_outcomes"
+          page="/"
+          className={MARKETING_HERO_PRIMARY_CTA_CLASS}
+        >
+          {PLATFORM_OUTCOMES.cta}
+          <ArrowRight className="ml-2" size={16} />
+        </TrackedCtaLink>
+        <Link href={PLATFORM_OUTCOMES.moreHref} className={MARKETING_HERO_SECONDARY_CTA_CLASS}>
+          {PLATFORM_OUTCOMES.moreCta}
+        </Link>
+      </div>
     </section>
   );
 }

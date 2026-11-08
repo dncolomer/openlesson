@@ -62,25 +62,26 @@ describe("landing knowledge acquisition, verification, and mapping copy", () => 
     expect(lp).toContain("LandingHeroEditorial");
     expect(lp).toContain("{copy.h1}");
     expect(lp).toContain("{copy.p1}");
-    expect(lp).not.toContain("{copy.p2}");
+    expect(lp).toContain("{copy.p2}");
     expect(lp).not.toContain("{PLATFORM_HERO.pill}");
     expect(lp).not.toContain("AccelerandoRun");
     expect(lp).not.toContain("PUBLIC_MAGI_GRID_CLASS");
     expect(readRel("components/marketing/landing-heroes.tsx")).toContain("PublicConsoleWash");
     expect(readRel("components/marketing/landing-heroes.tsx")).toContain("PublicPageField");
+    expect(readRel("components/marketing/landing-heroes.tsx")).toContain("PUBLIC_FIELD_STILLS");
     expect(readRel("components/marketing/MarketingChrome.tsx")).toContain("bg-[#0e1c2c]");
     expect(readRel("components/marketing/landing-heroes.tsx")).not.toContain("AccelerandoRun");
     expect(lp).not.toContain("A Human Knowledge Platform.");
     expect(lp).not.toContain("Uncertain Systems is a Human Knowledge Platform.");
     expect(lp).not.toMatch(/<h1[^>]*>[\s\S]*Human Knowledge Platform/);
 
-    expect(copy).toMatch(/From genuine work/);
-    expect(PLATFORM_HERO.h1).toMatch(/From genuine work/);
-    expect(PLATFORM_HERO.h1).toMatch(/^From genuine work/);
-    expect(PLATFORM_HERO.p1).toMatch(/creating tools for knowledge building on autopilot/);
-    expect(PLATFORM_HERO.p1).toMatch(/thinking stays yours/);
-    expect(PLATFORM_HERO.p1).toMatch(/choose what to explore next/);
-    expect("p2" in PLATFORM_HERO).toBe(false);
+    expect(copy).toMatch(/Build Understanding on autopilot/);
+    expect(PLATFORM_HERO.h1).toBe("Build Understanding on autopilot.");
+    expect(PLATFORM_HERO.p1).toBe(
+      "Uncertain Systems is the autopilot for knowledge building, bringing human and artificial intelligence together so people can understand more with less effort.",
+    );
+    expect(PLATFORM_HERO.p2).toMatch(/knowledge regions/);
+    expect("p2" in PLATFORM_HERO).toBe(true);
     expect(homepageCopyText()).not.toMatch(/three uses share the geometry/);
     expect(copy).not.toMatch(/proposition/i);
     expect(copy).not.toMatch(/hard-domain learning experiences/i);
@@ -128,13 +129,13 @@ describe("landing knowledge acquisition, verification, and mapping copy", () => 
     expect(lp).toContain("data-home-layers");
     expect(PLATFORM_HERO.h1).not.toMatch(/Learning Harness/);
     expect(PLATFORM_HERO.h1).not.toMatch(/TAPBench/);
-    expect(PLATFORM_PRODUCTS.harness.body).toMatch(/photonic computing/);
-    expect(PLATFORM_PRODUCTS.harness.body).toMatch(/problem-solving harness/);
-    expect(PLATFORM_PRODUCTS.harness.body).toMatch(/epistemic foraging/);
-    expect(PLATFORM_PRODUCTS.verification.body).toMatch(/agentic harnesses/);
-    expect(PLATFORM_PRODUCTS.verification.body).toMatch(/cannot be cheated or faked/);
-    expect(PLATFORM_PRODUCTS.mapping.body).toMatch(/neurological patterns/);
-    expect(PLATFORM_PRODUCTS.mapping.body).toMatch(/knowledge regions/);
+    expect(PLATFORM_PRODUCTS.harness.body).toMatch(/Problem Solving Harness/);
+    expect(PLATFORM_PRODUCTS.harness.body).toMatch(/demanding problem/);
+    expect(PLATFORM_PRODUCTS.harness.cta).toBe("Explore acquisition");
+    expect(PLATFORM_PRODUCTS.verification.body).toMatch(/explores a demanding problem/);
+    expect(PLATFORM_PRODUCTS.verification.cta).toBe("Explore verification");
+    expect(PLATFORM_PRODUCTS.mapping.body).toMatch(/knowledge region/);
+    expect(PLATFORM_PRODUCTS.mapping.cta).toBe("Explore mapping");
 
     expect(lp).toContain("PLATFORM_CORE");
     expect(lp).toContain("data-home-core");
@@ -144,11 +145,10 @@ describe("landing knowledge acquisition, verification, and mapping copy", () => 
     expect(lp).toContain("{PLATFORM_CORE.p2}");
     expect(lp).toContain("{PLATFORM_CORE.p3}");
     expect(lp).toContain("{PLATFORM_CORE.imageSrc}");
-    expect(PLATFORM_CORE.title).toMatch(/knowledge embedding models/i);
+    expect(PLATFORM_CORE.title).toMatch(/shared reference/i);
     expect(PLATFORM_CORE.p1).toMatch(/knowledge region/);
-    expect(PLATFORM_CORE.p1).toMatch(/proof of work/);
-    expect(PLATFORM_CORE.p3).toMatch(/BCI/);
-    expect(PLATFORM_CORE.p3).toMatch(/Audiovisual/);
+    expect(PLATFORM_CORE.p2).toMatch(/model-relative/);
+    expect(PLATFORM_CORE.p3).toMatch(/science page/);
     expect(PLATFORM_CORE.imageSrc).toBe("/regions1.png");
     expect(fs.existsSync(path.join(REPO_ROOT, "public", PLATFORM_CORE.imageSrc.replace(/^\//, "")))).toBe(
       true,
@@ -161,39 +161,31 @@ describe("landing knowledge acquisition, verification, and mapping copy", () => 
     expect(copy).not.toMatch(/Institutes, workforce programs/);
 
     expect(lp).toContain("PLATFORM_PROOF");
+    expect(lp).toContain("LandingOutcomesSection");
     expect(PLATFORM_PROOF.eyebrow).toMatch(/CASE STUDIES/i);
     expect(PLATFORM_PROOF.title).toBe("They trust us");
-    expect(PLATFORM_PROOF.title).not.toMatch(/Course authoring for WISER/);
     expect(copy).toMatch(/WISER/);
     expect(copy).toMatch(/thewiser\.org/);
     expect(copy).toMatch(/Extropic/);
-    expect(copy).toMatch(/Thermocomputing Hackathon/);
     expect(copy).toMatch(/ETH Zürich|ETH Zurich/);
-    expect(copy).toMatch(/Europe/);
-    expect(copy).toMatch(/Run by us/);
     expect(lp).toContain("{item.image}");
-    expect(lp).toContain("{item.imageAlt}");
+    expect(lp).toContain("object-contain invert");
     expect(lp).toContain("flex flex-col gap-3");
-    expect(lp).toContain("flex-row");
+    expect(lp).toContain("xl:grid-cols-2");
+    expect(lp).toContain("xl:grid-cols-3");
     expect(lp).not.toContain("mt-8 grid gap-4 md:grid-cols-2");
     expect(PLATFORM_PROOF.items.map((item) => item.image)).toEqual([
       "/lp-boxes/wiser-logo.png",
       "/lp-boxes/extropic-logo.webp",
     ]);
-    expect(PLATFORM_PROOF.items[0].logo).toBe("/lp-boxes/wiser-logo.png");
-    expect(PLATFORM_PROOF.items[1].logo).toBe("/lp-boxes/extropic-logo.webp");
     expect(fs.existsSync(path.join(REPO_ROOT, "public/lp-boxes/wiser-logo.png"))).toBe(true);
     expect(fs.existsSync(path.join(REPO_ROOT, "public/lp-boxes/extropic-logo.webp"))).toBe(true);
-    expect(lp).toContain("object-contain invert");
-    for (const item of PLATFORM_PROOF.items) {
-      expect(item.image.startsWith("/aesthetics/")).toBe(false);
-      expect(fs.existsSync(path.join(REPO_ROOT, "public", item.image.replace(/^\//, "")))).toBe(true);
-    }
+    expect(lp).toContain("data-home-cta");
+    expect(lp).toContain("PLATFORM_OUTCOMES");
     expect(copy).not.toMatch(/\d+%/);
     expect(copy).not.toMatch(/\$\d+/);
 
     expect(lp).not.toContain("PLATFORM_CTA");
-    expect(lp).not.toContain("data-home-cta");
     expect(lp).not.toContain("write to daniel@uncertain.systems");
     expect(lp).not.toContain("Scope a program");
 
@@ -236,7 +228,7 @@ describe("landing knowledge acquisition, verification, and mapping copy", () => 
     expect(lp).toContain("LandingHeroEditorial");
     expect(lp).toContain("{copy.h1}");
     expect(lp).toContain("{copy.p1}");
-    expect(lp).not.toContain("{copy.p2}");
+    expect(lp).toContain("{copy.p2}");
     const standard = readRel("lib/og/standard.ts");
     expect(standard).toContain("PLATFORM_HERO.h1");
     expect(standard).not.toContain("Beyond benchmarks for AI. Beyond tests for humans.");
@@ -250,7 +242,7 @@ describe("landing knowledge acquisition, verification, and mapping copy", () => 
   it("root HTML, OG, Twitter, JSON-LD, and manifest share the LP hero (not old efficiency copy)", () => {
     const rootHtml = unsysRootHtmlMetadata();
     expect(rootHtml.title.default).toBe(UNSYS_STANDARD_HTML_TITLE);
-    expect(rootHtml.title.default).toMatch(/Knowledge building on autopilot/i);
+    expect(rootHtml.title.default).toMatch(/Build Understanding on autopilot/i);
     expect(rootHtml.title.default).not.toMatch(/Human Knowledge Platform/);
     expect(rootHtml.title.default).not.toMatch(/hard-domain learning experiences/i);
     expect(rootHtml.title.default.length).toBeGreaterThanOrEqual(50);

@@ -11,7 +11,6 @@ import {
   PLATFORM_HERO,
   PLATFORM_LAYER_LIST,
   PLATFORM_PRODUCTS,
-  PLATFORM_PHRASE,
 } from "@/lib/marketing/platform";
 import { HARNESS_PRODUCT_COPY } from "@/lib/marketing/harness-product";
 import {
@@ -89,8 +88,8 @@ describe("landing: knowledge acquisition, verification, and mapping", () => {
     const platform = read("lib/marketing/platform.ts");
     const corpus = `${landing}\n${platform}`;
 
-    expect(corpus).toMatch(/From genuine work/);
-    expect(PLATFORM_HERO.p1).toMatch(/creating tools for knowledge building on autopilot/);
+    expect(corpus).toMatch(/Build Understanding on autopilot/);
+    expect(PLATFORM_HERO.p1).toMatch(/autopilot for knowledge building/);
     expect(landing).toContain("LandingHeroEditorial");
     expect(landing).toContain("{copy.h1}");
     expect(landing).not.toContain("A Human Knowledge Platform.");
@@ -99,19 +98,17 @@ describe("landing: knowledge acquisition, verification, and mapping", () => {
     expect(landing).not.toContain("AccelerandoRun");
     expect(landing).toContain("PublicConsoleWash");
     expect(landing).not.toContain("PUBLIC_MAGI_GRID_CLASS");
-    expect(PLATFORM_HERO.h1.toLowerCase()).toContain(PLATFORM_PHRASE.toLowerCase());
-    expect(PLATFORM_HERO.p1).toMatch(/thinking stays yours/);
-    expect(PLATFORM_HERO.p1).toMatch(/choose what to explore next/);
-    expect("p2" in PLATFORM_HERO).toBe(false);
+    expect(PLATFORM_HERO.h1).toBe("Build Understanding on autopilot.");
+    expect(PLATFORM_HERO.p1).not.toMatch(/thinking stays yours/);
+    expect("p2" in PLATFORM_HERO).toBe(true);
     expect(landing).not.toMatch(/three uses share the geometry/);
     expect(landing).toContain("LANDING_USES");
     expect(landing).toContain("{product.name}");
     expect(landing).not.toContain("The Unsys workspace is a course-seeded Learning Harness.");
-    expect(corpus.toLowerCase()).toMatch(/cannot be cheated|cannot be faked/);
-    expect(corpus.toLowerCase()).toMatch(/without traditional tests/);
+    expect(corpus.toLowerCase()).not.toMatch(/cannot be cheated|cannot be faked/);
     expect(landing).not.toContain("PLATFORM_PRODUCT_LIST");
     expect(PLATFORM_PRODUCTS.harness.name).toBe("Knowledge Acquisition");
-    expect(PLATFORM_PRODUCTS.harness.body).toMatch(/problem-solving harness/);
+    expect(PLATFORM_PRODUCTS.harness.body).toMatch(/Problem Solving Harness/);
     expect(PLATFORM_PRODUCTS.verification.name).toBe("Knowledge Verification");
     expect(PLATFORM_PRODUCTS.mapping.name).toBe("Knowledge Mapping");
     expect(PLATFORM_PRODUCTS.harness.image).toBe("/lp-boxes/harness-books-blueprint.jpg");
@@ -180,11 +177,11 @@ describe("product pages: verification owns platform/approach; harness owns AYCL"
   it("verification product page carries platform and approach claims", () => {
     expect(existsSync(join(ROOT, "app/knowledge-verification/page.tsx"))).toBe(true);
     const page = read("app/knowledge-verification/page.tsx");
-    expect(page).toContain("knowledge regions");
-    expect(page).toContain("distance to knowledge");
-    expect(page).toContain("learning world model");
-    expect(page).toContain("Free Energy Principle");
-    expect(page).toContain("epistemic foraging");
+    expect(page).toContain("VERIFICATION_PLATFORM_COPY.p1");
+    expect(page).toContain("VERIFICATION_FLOW_COPY");
+    expect(VERIFICATION_APPROACH_COPY.p2).toMatch(/Free Energy Principle/);
+    expect(page).toContain("data-landing-epistemic-foraging");
+    expect(VERIFICATION_APPROACH_COPY.foragingLabel).toBe("epistemic foraging");
     expect(page).not.toContain("TIM — Trace Interruption Model");
     expect(page).not.toContain("Trace Interruption Model");
     expect(page).not.toContain("TAP Learning");
@@ -205,10 +202,10 @@ describe("product pages: verification owns platform/approach; harness owns AYCL"
     expect(page).not.toContain("data-landing-ranking-visual");
     expect(page).not.toContain('id="scale"');
     expect(page).not.toContain("data-landing-scale-section");
-    expect(page).toMatch(/cannot be cheated or faked/);
-    expect(VERIFICATION_PLATFORM_COPY.title).toMatch(/knowledge space/i);
-    expect(VERIFICATION_APPROACH_COPY.title).toMatch(/learning world model/i);
-    expect(VERIFICATION_PRODUCT_COPY.lead.toLowerCase()).toMatch(/without traditional tests/);
+    expect(page).not.toMatch(/cannot be cheated or faked/);
+    expect(VERIFICATION_PLATFORM_COPY.title).toMatch(/knowledge region/i);
+    expect(VERIFICATION_APPROACH_COPY.title).toMatch(/model informs verification/i);
+    expect(VERIFICATION_PRODUCT_COPY.lead.toLowerCase()).toMatch(/look beyond the final answer/);
     expect(VERIFICATION_APPROACH_COPY.p2).toMatch(/Free Energy Principle/);
     expect(VERIFICATION_APPROACH_COPY.p2).toMatch(/epistemic foraging/);
   });
@@ -216,8 +213,8 @@ describe("product pages: verification owns platform/approach; harness owns AYCL"
   it("mapping product page clones verification structure as a map of knowledge regions", () => {
     expect(existsSync(join(ROOT, "app/knowledge-mapping/page.tsx"))).toBe(true);
     const page = read("app/knowledge-mapping/page.tsx");
-    expect(page).toContain("knowledge regions");
-    expect(page).toContain("position on the map");
+    expect(page).toContain("MAPPING_PLATFORM_COPY.p1");
+    expect(page).toContain("MAPPING_PLATFORM_COPY.p2");
     expect(page).not.toContain("learning world model");
     expect(page).not.toContain('id="approach"');
     expect(page).not.toContain('id="scale"');
@@ -235,9 +232,9 @@ describe("product pages: verification owns platform/approach; harness owns AYCL"
     expect(existsSync(join(ROOT, "public/map.jpg"))).toBe(true);
     expect(page).toContain("data-landing-knowledge-visual");
     expect(page).toContain('marker="mapping"');
-    expect(MAPPING_PLATFORM_COPY.title).toMatch(/map of regions/i);
-    expect(MAPPING_PRODUCT_COPY.lead.toLowerCase()).toMatch(/living map/);
-    expect(MAPPING_PRODUCT_COPY.lead.toLowerCase()).toMatch(/verification exam/);
+    expect(MAPPING_PLATFORM_COPY.title).toMatch(/shared reference|region/i);
+    expect(MAPPING_PRODUCT_COPY.lead.toLowerCase()).toMatch(/knowledge regions/);
+    expect(MAPPING_PLATFORM_COPY.p3.toLowerCase()).toMatch(/verification exam/);
     expect(page).toContain("MAPPING_PRODUCT_COPY.pricingHref");
     expect(MAPPING_PRODUCT_COPY.pricingHref).toBe("/pricing#mapping");
     expect(MAPPING_PRODUCT_COPY.pricingCta).toMatch(/pricing/i);
@@ -248,16 +245,17 @@ describe("product pages: verification owns platform/approach; harness owns AYCL"
     expect(existsSync(join(ROOT, "app/learning-harness/page.tsx"))).toBe(false);
     const page = read("app/acquisition/page.tsx");
     expect(page).toContain("{HARNESS_PRODUCT_COPY.title}");
-    expect(HARNESS_PRODUCT_COPY.title).toBe("Problem Solving Harness");
+    expect(HARNESS_PRODUCT_COPY.title).toBe("Build understanding through hard problems.");
     expect(HARNESS_PRODUCT_COPY.eyebrow).toBe("PROBLEM SOLVING HARNESS");
+    expect(HARNESS_PRODUCT_COPY.productName).toBe("Problem Solving Harness");
     expect(JSON.stringify(HARNESS_PRODUCT_COPY)).not.toMatch(/Learning Harness/);
     expect(page).not.toContain("Learning Harness");
     expect(page).not.toContain("heroImage");
     expect(page).not.toContain("session-canvas-blueprint");
-    expect(HARNESS_PRODUCT_COPY.lead.toLowerCase()).toMatch(/age of ai/);
-    expect(HARNESS_PRODUCT_COPY.body.toLowerCase()).toMatch(/does not build content or a course/);
+    expect(HARNESS_PRODUCT_COPY.lead.toLowerCase()).toMatch(/problem solving harness/);
+    expect(HARNESS_PRODUCT_COPY.body.toLowerCase()).toMatch(/knowledge acquisition/);
     expect(HARNESS_PRODUCT_COPY.foraging.toLowerCase()).toMatch(/epistemic foraging/);
-    expect(HARNESS_PRODUCT_COPY.foraging.toLowerCase()).toMatch(/reducing uncertainty/);
+    expect(HARNESS_PRODUCT_COPY.foraging.toLowerCase()).toMatch(/reduces uncertainty/);
     expect(page).toContain("data-harness-epistemic-foraging");
     expect(page).toContain("epistemic foraging");
     expect(page).toContain("HARNESS_PRODUCT_COPY.modelImageSrc");

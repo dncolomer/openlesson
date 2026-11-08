@@ -155,8 +155,7 @@ export function LandingCoreSection() {
             {PLATFORM_CORE.title}
           </h2>
           <p className="mt-3 text-[15px] leading-relaxed text-zinc-400 sm:text-base">{PLATFORM_CORE.p1}</p>
-          <p className="mt-2.5 text-[14px] leading-relaxed text-zinc-500 sm:text-[15px]">{PLATFORM_CORE.p2}</p>
-          <p className="mt-2.5 text-[14px] leading-relaxed text-zinc-500 sm:text-[15px]">{PLATFORM_CORE.p3}</p>
+          <p className="mt-2.5 text-[15px] leading-relaxed text-zinc-400 sm:text-base">{PLATFORM_CORE.p2}</p>
           <p className="mt-4 text-sm leading-relaxed text-zinc-400">{PLATFORM_CORE.visualBody}</p>
           <Link
             href={PLATFORM_CORE.scienceHref}

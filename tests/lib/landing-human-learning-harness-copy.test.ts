@@ -143,12 +143,13 @@ describe("landing knowledge acquisition, verification, and mapping copy", () => 
     expect(lp).toContain("{PLATFORM_CORE.title}");
     expect(lp).toContain("{PLATFORM_CORE.p1}");
     expect(lp).toContain("{PLATFORM_CORE.p2}");
-    expect(lp).toContain("{PLATFORM_CORE.p3}");
+    expect(lp).not.toContain("{PLATFORM_CORE.p3}");
     expect(lp).toContain("{PLATFORM_CORE.imageSrc}");
     expect(PLATFORM_CORE.title).toMatch(/shared reference/i);
     expect(PLATFORM_CORE.p1).toMatch(/knowledge region/);
-    expect(PLATFORM_CORE.p2).toMatch(/model-relative/);
-    expect(PLATFORM_CORE.p3).toMatch(/science page/);
+    expect(PLATFORM_CORE.p2).toMatch(/organically with expert users/);
+    expect(PLATFORM_CORE.p2).toMatch(/privately/);
+    expect("p3" in PLATFORM_CORE).toBe(false);
     expect(PLATFORM_CORE.imageSrc).toBe("/regions1.png");
     expect(fs.existsSync(path.join(REPO_ROOT, "public", PLATFORM_CORE.imageSrc.replace(/^\//, "")))).toBe(
       true,

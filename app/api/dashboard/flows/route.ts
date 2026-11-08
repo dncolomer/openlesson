@@ -17,6 +17,7 @@ import {
   productFlowOwnerTitle,
   productFlowPagePath,
 } from "@/lib/product-flow";
+import { parseFlowArtifacts, flowProblemFromUnknown } from "@/lib/flow-artifacts";
 import { calibrationFlowPublicPath } from "@/lib/calibration-flow";
 import { solveFlowPublicPath } from "@/lib/solve-flow";
 import { verificationFlowPublicPath } from "@/lib/verification-flow";
@@ -83,6 +84,7 @@ function presentCalibration(row: {
   id: string;
   name: string;
   goal: string;
+  topic?: string;
   workspaceId: string;
   createdAt: string;
   publicToken: string;
@@ -92,7 +94,7 @@ function presentCalibration(row: {
     id: row.id,
     kind: "calibrate",
     name: row.name,
-    title: row.goal,
+    title: row.goal || row.topic,
     workspaceId: row.workspaceId,
     workspaceTitle: productFlowOwnerTitle("calibration"),
     createdAt: row.createdAt,
@@ -153,12 +155,13 @@ export async function POST(req: NextRequest) {
     if (!kind) return jsonError(400, "kind must be verification, calibration, or solve");
     const workspaceId =
       String(body.workspaceId || body.workspace_id || "").trim() || undefined;
+    const problem = flowProblemFromUnknown(body);
     const draft = {
       ...emptyProductFlowDraft(kind),
       name: String(body.name || ""),
-      topic: String(body.topic || ""),
-      goal: String(body.goal || ""),
-      questions: Array.isArray(body.questions) ? body.questions.map((item) => String(item)) : [],
+      topic: problem,
+      goal: problem,
+      artifacts: parseFlowArtifacts(body.artifacts),
       actionCatalog: Number(body.actionCatalog) || 4,
       durationMinutes: Number(body.durationMinutes) || 15,
     };
@@ -172,6 +175,7 @@ export async function POST(req: NextRequest) {
         workspaceId,
         name: accepted.name,
         topic: accepted.topic,
+        artifacts: accepted.artifacts,
         durationMinutes: accepted.durationMinutes,
         actionCatalog: accepted.actionCatalog,
       });
@@ -196,7 +200,8 @@ export async function POST(req: NextRequest) {
         workspaceId,
         name: accepted.name,
         goal: accepted.goal,
-        questions: accepted.questions,
+        topic: accepted.topic,
+        artifacts: accepted.artifacts,
         durationMinutes: accepted.durationMinutes,
         actionCatalog: accepted.actionCatalog,
       });
@@ -220,7 +225,7 @@ export async function POST(req: NextRequest) {
       workspaceId,
       name: accepted.name,
       topic: accepted.topic,
-      questions: accepted.questions,
+      artifacts: accepted.artifacts,
       actionCatalog: accepted.actionCatalog,
     });
     if (!created.ok || !created.flow) {

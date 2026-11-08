@@ -5,6 +5,12 @@
  */
 
 import { normalizeFlowName } from "@/lib/product-flow";
+import {
+  parseFlowArtifacts,
+  flowProblemFromUnknown,
+  flowProblemQuestionPool,
+  type FlowArtifact,
+} from "@/lib/flow-artifacts";
 import { TUTOR_CANVAS_VOICE } from "@/lib/prompt-kernel/tutor-voice";
 import {
   buildCalibrateProofMetadata,
@@ -25,7 +31,9 @@ export type CalibrationFlow = {
   ownerUserId?: string;
   name: string;
   goal: string;
+  topic: string;
   questions: CalibrateQuestion[];
+  artifacts: FlowArtifact[];
   /** Countdown chosen when the flow is created, in minutes. */
   durationMinutes: number;
   /** 4, 8, or 16 actions on the unsys model. */
@@ -95,14 +103,23 @@ export function createCalibrationPublicToken(): string {
 }
 
 export function acceptCalibrationDraft(input: {
-  goal: unknown;
-  questions: unknown;
-}): { ok: true; goal: string; questions: CalibrateQuestion[] } | { ok: false; reason: string } {
-  const goal = String(input.goal ?? "").trim();
-  if (!goal) return { ok: false, reason: "goal_required" };
-  const questions = normalizeCalibrateQuestions(input.questions);
-  if (questions.length === 0) return { ok: false, reason: "questions_required" };
-  return { ok: true, goal, questions };
+  goal?: unknown;
+  topic?: unknown;
+  problem?: unknown;
+  questions?: unknown;
+  artifacts?: unknown;
+}):
+  | { ok: true; goal: string; topic: string; questions: CalibrateQuestion[]; artifacts: FlowArtifact[] }
+  | { ok: false; reason: string } {
+  const problem = flowProblemFromUnknown(input);
+  if (!problem) return { ok: false, reason: "topic_required" };
+  return {
+    ok: true,
+    goal: problem,
+    topic: problem,
+    questions: flowProblemQuestionPool(problem),
+    artifacts: parseFlowArtifacts(input.artifacts),
+  };
 }
 
 function commandOwnsFlow(
@@ -121,8 +138,11 @@ export type CalibrationCommand =
       workspaceId?: string;
       ownerUserId?: string;
       name?: string;
-      goal: string;
-      questions: unknown;
+      goal?: string;
+      topic?: string;
+      problem?: string;
+      questions?: unknown;
+      artifacts?: unknown;
       durationMinutes?: number;
       actionCatalog?: number;
       id?: string;
@@ -135,7 +155,10 @@ export type CalibrationCommand =
       flowId: string;
       name?: string;
       goal?: string;
+      topic?: string;
+      problem?: string;
       questions?: unknown;
+      artifacts?: unknown;
       durationMinutes?: number;
       actionCatalog?: number;
     }
@@ -201,7 +224,13 @@ export function applyCalibrationCommand(
 ): CalibrationCommandResult {
   state = completeCalibrationState(state);
   if (command.type === "create") {
-    const draft = acceptCalibrationDraft({ goal: command.goal, questions: command.questions });
+    const draft = acceptCalibrationDraft({
+      goal: command.goal,
+      topic: command.topic,
+      problem: command.problem,
+      questions: command.questions,
+      artifacts: command.artifacts,
+    });
     if (!draft.ok) return { ok: false, reason: draft.reason, state };
     const token = (command.publicToken || createCalibrationPublicToken()).trim();
     if (!token) return { ok: false, reason: "token_required", state };
@@ -215,7 +244,9 @@ export function applyCalibrationCommand(
       ownerUserId: String(command.ownerUserId || "").trim(),
       name: normalizeFlowName(command.name, draft.goal),
       goal: draft.goal,
+      topic: draft.topic,
       questions: draft.questions,
+      artifacts: draft.artifacts,
       durationMinutes: flowCountdownMinutes(command.durationMinutes),
       actionCatalog: parseLearningModelSize(command.actionCatalog),
       publicToken: token,
@@ -231,11 +262,15 @@ export function applyCalibrationCommand(
     if (!commandOwnsFlow(current, command)) {
       return { ok: false, reason: "wrong_workspace", state };
     }
-    const goal = command.goal === undefined ? current.goal : command.goal.trim();
-    if (!goal) return { ok: false, reason: "goal_required", state };
-    const questions =
-      command.questions === undefined ? current.questions : normalizeCalibrateQuestions(command.questions);
-    if (questions.length === 0) return { ok: false, reason: "questions_required", state };
+    const goal =
+      command.goal === undefined && command.topic === undefined && command.problem === undefined
+        ? current.goal || current.topic
+        : flowProblemFromUnknown({
+            goal: command.goal,
+            topic: command.topic,
+            problem: command.problem,
+          });
+    if (!goal) return { ok: false, reason: "topic_required", state };
     const flow: CalibrationFlow = {
       ...current,
       name:
@@ -243,7 +278,12 @@ export function applyCalibrationCommand(
           ? normalizeFlowName(current.name, goal)
           : normalizeFlowName(command.name, goal),
       goal,
-      questions,
+      topic: goal,
+      questions: flowProblemQuestionPool(goal),
+      artifacts:
+        command.artifacts === undefined
+          ? parseFlowArtifacts(current.artifacts)
+          : parseFlowArtifacts(command.artifacts),
       durationMinutes:
         command.durationMinutes === undefined
           ? flowCountdownMinutes(current.durationMinutes)

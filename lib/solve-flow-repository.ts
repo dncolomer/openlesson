@@ -17,6 +17,7 @@ import {
   type SolveState,
 } from "@/lib/solve-flow";
 import { flowArchivedAtFromRow, listedAuthorFlows } from "@/lib/flow-archive";
+import { parseFlowArtifacts, serializeFlowArtifacts } from "@/lib/flow-artifacts";
 import { inviteFlowSessionOwner } from "@/lib/map-play-data-access";
 
 const SOLVE_FLOW_GLOBAL = "__openlessonSolveFlowRepository";
@@ -122,6 +123,7 @@ function mapFlow(row: Record<string, unknown>): SolveFlow {
     ownerUserId: String(row.owner_user_id || ""),
     name: String(row.name || "").trim() || topic,
     topic,
+    artifacts: parseFlowArtifacts(row.artifacts),
     durationMinutes: flowCountdownMinutes(row.duration_minutes),
     actionCatalog: parseLearningModelSize(row.action_catalog),
     publicToken: String(row.public_token || ""),
@@ -177,6 +179,7 @@ async function persistCommand(
       workspace_id: nullableId(value.flow.workspaceId),
       name: value.flow.name,
       topic: value.flow.topic,
+      artifacts: serializeFlowArtifacts(value.flow.artifacts),
       duration_minutes: value.flow.durationMinutes,
       action_catalog: value.flow.actionCatalog,
       public_token: value.flow.publicToken,
@@ -190,6 +193,7 @@ async function persistCommand(
     const { error } = await writeSolveFlow(supabase, "update", value.flow.id, {
       name: value.flow.name,
       topic: value.flow.topic,
+      artifacts: serializeFlowArtifacts(value.flow.artifacts),
       duration_minutes: value.flow.durationMinutes,
       action_catalog: value.flow.actionCatalog,
       updated_at: value.flow.updatedAt,
@@ -253,7 +257,7 @@ async function writeSolveFlow(
       ? supabase.from(SOLVE_FLOWS_TABLE).insert(body)
       : supabase.from(SOLVE_FLOWS_TABLE).update(body).eq("id", id);
   let current = row;
-  for (const optional of ["action_catalog", "duration_minutes", "workspace_id", "archived_at"] as const) {
+  for (const optional of ["action_catalog", "duration_minutes", "workspace_id", "archived_at", "artifacts"] as const) {
     const result = await run(current);
     if (!result.error) return result;
     if (!String(result.error.message).includes(optional) || !(optional in current)) return result;

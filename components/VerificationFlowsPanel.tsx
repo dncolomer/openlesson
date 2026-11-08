@@ -4,11 +4,14 @@ import { useCallback, useEffect, useState } from "react";
 import { ContextGenerationPool } from "@/components/ContextGenerationPool";
 import { type VerificationQuestion } from "@/lib/verification-flow";
 import { CopyFlowUrlButton } from "@/components/product-flow/copy-flow-url-button";
+import { FlowProblemFields } from "@/components/product-flow/flow-problem-fields";
+import { parseFlowArtifacts, type FlowArtifact } from "@/lib/flow-artifacts";
 
 type FlowRecord = {
   id: string;
   name?: string;
   topic: string;
+  artifacts?: FlowArtifact[];
   questions: VerificationQuestion[];
   publicToken: string;
   publicUrl: string;
@@ -26,7 +29,7 @@ export function VerificationFlowsPanel({
   const [flows, setFlows] = useState<FlowRecord[]>([]);
   const [name, setName] = useState("");
   const [topic, setTopic] = useState("");
-  const [draftQuestions, setDraftQuestions] = useState<string[]>([""]);
+  const [artifacts, setArtifacts] = useState<FlowArtifact[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -47,13 +50,6 @@ export function VerificationFlowsPanel({
     void load();
   }, [load]);
 
-  function questionsFromDraft(): VerificationQuestion[] {
-    return draftQuestions
-      .map((text) => text.trim())
-      .filter(Boolean)
-      .map((text, index) => ({ id: `q-${index + 1}`, text }));
-  }
-
   async function save() {
     setBusy(true);
     setError("");
@@ -68,7 +64,8 @@ export function VerificationFlowsPanel({
           flowId: editingId,
           name,
           topic,
-          questions: questionsFromDraft(),
+          problem: topic,
+          artifacts,
         }),
       });
       const payload = await response.json();
@@ -78,7 +75,7 @@ export function VerificationFlowsPanel({
       }
       setName("");
       setTopic("");
-      setDraftQuestions([""]);
+      setArtifacts([]);
       setEditingId(null);
       await load();
     } finally {
@@ -111,9 +108,8 @@ export function VerificationFlowsPanel({
       <div>
         <h2 className="text-sm font-medium text-white">Verification Flows</h2>
         <p className="mt-1 max-w-2xl text-xs leading-relaxed text-neutral-500">
-          A verification flow is one topic. Its question pool, public link, agent skill, and
-          proof-of-work results stay on the flow. Session length is chosen when the run
-          starts.
+          A verification flow is a name and a Problem. Optional files are stored on xAI and
+          used with the Problem to generate the unsys model.
         </p>
       </div>
 
@@ -130,11 +126,15 @@ export function VerificationFlowsPanel({
         onUseFlow={(draft) => {
           setEditingId(null);
           setTopic(draft.topic);
-          setDraftQuestions(draft.questions.length ? draft.questions : [""]);
         }}
       />
 
-      <section className="space-y-3 border border-neutral-800 p-4" data-verification-flow-editor>
+      <section
+        className="space-y-3 border border-neutral-800 p-4"
+        data-verification-flow-editor
+        data-flow-problem=""
+        data-verification-flow-topic=""
+      >
         <input
           value={name}
           onChange={(event) => setName(event.target.value)}
@@ -142,45 +142,14 @@ export function VerificationFlowsPanel({
           data-flow-name=""
           className="w-full border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
         />
-        <input
-          value={topic}
-          onChange={(event) => setTopic(event.target.value)}
-          placeholder="Topic"
-          data-verification-flow-topic
-          className="w-full border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
+        <FlowProblemFields
+          problem={topic}
+          onProblemChange={setTopic}
+          artifacts={artifacts}
+          onArtifactsChange={setArtifacts}
+          workspaceId={workspaceId}
+          topicHook="verification"
         />
-        <div className="space-y-2" data-verification-flow-pool>
-          {draftQuestions.map((value, index) => (
-            <div key={index} className="flex gap-2">
-              <input
-                value={value}
-                onChange={(event) => {
-                  const next = draftQuestions.slice();
-                  next[index] = event.target.value;
-                  setDraftQuestions(next);
-                }}
-                placeholder={`Starting question ${index + 1}`}
-                data-verification-flow-question
-                className="min-w-0 flex-1 border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
-              />
-              <button
-                type="button"
-                className="border border-neutral-700 px-2 text-[11px] text-neutral-300"
-                onClick={() => setDraftQuestions(draftQuestions.filter((_, item) => item !== index))}
-              >
-                Remove
-              </button>
-            </div>
-          ))}
-          <button
-            type="button"
-            data-verification-flow-add-question
-            className="text-[11px] text-neutral-300 underline"
-            onClick={() => setDraftQuestions([...draftQuestions, ""])}
-          >
-            Add question
-          </button>
-        </div>
         <button
           type="button"
           disabled={busy || !topic.trim()}
@@ -199,7 +168,7 @@ export function VerificationFlowsPanel({
               <div>
                 <p className="text-sm text-white" data-flow-name>{flow.name || flow.topic}</p>
                 <p className="text-[11px] text-neutral-500">
-                  {flow.questions.length} starting question{flow.questions.length === 1 ? "" : "s"}
+                  Problem
                 </p>
               </div>
               <div className="flex gap-2">
@@ -210,9 +179,7 @@ export function VerificationFlowsPanel({
                     setEditingId(flow.id);
                     setName(flow.name || flow.topic);
                     setTopic(flow.topic);
-                    setDraftQuestions(
-                      flow.questions.length ? flow.questions.map((question) => question.text) : [""],
-                    );
+                    setArtifacts(parseFlowArtifacts(flow.artifacts));
                   }}
                 >
                   Edit

@@ -34,8 +34,10 @@ import {
   WorkspaceOwnerFlowPicker,
   mapBlockFromPickerState,
 } from "@/components/WorkspaceMapBlockFields";
+import { FlowProblemFields } from "@/components/product-flow/flow-problem-fields";
 import type { MapBlock, MapBlockAttachment, MapBlockKind } from "@/lib/block-kind";
 import type { DashboardRecentFlow } from "@/lib/dashboard-home";
+import type { FlowArtifact } from "@/lib/flow-artifacts";
 
 /**
  * Options for multi-slot expand create.
@@ -63,6 +65,9 @@ export type WorkspaceAddBlockSubmitOpts = {
   /** Solve / verification / calibration / content payload. */
   mapBlock?: MapBlock;
   title?: string;
+  /** Problem text for a newly minted flow (ignored when linking an existing flow). */
+  problem?: string;
+  artifacts?: FlowArtifact[];
 };
 
 /**
@@ -140,6 +145,8 @@ export function WorkspaceAddBlockPane({
   const [contentAttachments, setContentAttachments] = useState<
     MapBlockAttachment[]
   >([]);
+  const [problem, setProblem] = useState("");
+  const [artifacts, setArtifacts] = useState<FlowArtifact[]>([]);
 
   // Reset draft when the target cell changes.
   useEffect(() => {
@@ -152,6 +159,8 @@ export function WorkspaceAddBlockPane({
     setBlockKind("solve");
     setSelectedFlow(null);
     setContentAttachments([]);
+    setProblem("");
+    setArtifacts([]);
   }, [cell.row, cell.col]);
 
   // Load workspace Context inventory for attach picker (same as generate-in-shape).
@@ -291,11 +300,16 @@ export function WorkspaceAddBlockPane({
     flow: selectedFlow,
     attachments: contentAttachments,
   });
-  const titleForTyped = prompt.trim() || selectedFlow?.name || selectedFlow?.title || "Untitled";
+  const titleForTyped =
+    prompt.trim() ||
+    selectedFlow?.name ||
+    selectedFlow?.title ||
+    problem.trim() ||
+    "Untitled";
   const canSubmitTyped =
     blockKind === "content"
       ? Boolean(prompt.trim() || contentAttachments.length > 0)
-      : Boolean(selectedFlow?.id || prompt.trim());
+      : Boolean(selectedFlow?.id || prompt.trim() || problem.trim());
   const canSubmit = canSubmitTyped;
 
   const handleSubmit = async () => {
@@ -315,8 +329,16 @@ export function WorkspaceAddBlockPane({
         frozenSlots: slots,
         mapBlock,
         title: titleForTyped,
+        ...(selectedFlow
+          ? {}
+          : {
+              problem: problem.trim() || titleForTyped,
+              artifacts,
+            }),
       });
       setPrompt("");
+      setProblem("");
+      setArtifacts([]);
       setRange(0);
       setDensity(ADD_DENSITY_MAX);
       setSampleSeed(1);
@@ -357,6 +379,8 @@ export function WorkspaceAddBlockPane({
             setBlockKind(kind);
             setSelectedFlow(null);
             setAddError(null);
+            setProblem("");
+            setArtifacts([]);
           }}
           disabled={busy || submitting}
         />
@@ -370,6 +394,19 @@ export function WorkspaceAddBlockPane({
             onChange={setSelectedFlow}
             disabled={busy || submitting}
           />
+        ) : null}
+
+        {blockKind !== "content" && !selectedFlow ? (
+          <div data-map-block-flow-problem="">
+            <FlowProblemFields
+              problem={problem}
+              onProblemChange={setProblem}
+              artifacts={artifacts}
+              onArtifactsChange={setArtifacts}
+              workspaceId={workspaceId}
+              topicHook={blockKind}
+            />
+          </div>
         ) : null}
 
         {blockKind === "content" ? (

@@ -18,6 +18,11 @@ import {
   runCalibrationCommand,
 } from "@/lib/calibration-flow-repository";
 import { parseProductFlowKind, type ProductFlowKind } from "@/lib/product-flow";
+import {
+  parseFlowArtifacts,
+  flowProblemFromUnknown,
+  type FlowArtifact,
+} from "@/lib/flow-artifacts";
 import { solveFlowPublicPath } from "@/lib/solve-flow";
 import {
   getSolveFlowById,
@@ -44,6 +49,7 @@ export type PresentedAgentFlow = {
   topic: string | null;
   goal: string | null;
   questions: string[];
+  artifacts: FlowArtifact[];
   duration_minutes: number | null;
   action_catalog: number | null;
   public_token: string;
@@ -86,6 +92,7 @@ function presentSolve(flow: {
   id: string;
   name: string;
   topic: string;
+  artifacts?: FlowArtifact[];
   durationMinutes: number;
   actionCatalog: number;
   publicToken: string;
@@ -101,6 +108,7 @@ function presentSolve(flow: {
     topic: flow.topic,
     goal: null,
     questions: [],
+    artifacts: parseFlowArtifacts(flow.artifacts),
     duration_minutes: flow.durationMinutes,
     action_catalog: flow.actionCatalog,
     public_token: flow.publicToken,
@@ -115,7 +123,9 @@ function presentCalibration(flow: {
   id: string;
   name: string;
   goal: string;
+  topic?: string;
   questions: unknown;
+  artifacts?: FlowArtifact[];
   durationMinutes: number;
   actionCatalog: number;
   publicToken: string;
@@ -128,9 +138,10 @@ function presentCalibration(flow: {
     id: flow.id,
     kind: "calibration",
     name: flow.name,
-    topic: null,
+    topic: flow.topic || flow.goal,
     goal: flow.goal,
     questions: questionsFrom(flow.questions),
+    artifacts: parseFlowArtifacts(flow.artifacts),
     duration_minutes: flow.durationMinutes,
     action_catalog: flow.actionCatalog,
     public_token: flow.publicToken,
@@ -146,6 +157,7 @@ function presentVerification(flow: {
   name: string;
   topic: string;
   questions: unknown;
+  artifacts?: FlowArtifact[];
   durationMinutes?: number;
   actionCatalog: number;
   publicToken: string;
@@ -161,6 +173,7 @@ function presentVerification(flow: {
     topic: flow.topic,
     goal: null,
     questions: questionsFrom(flow.questions),
+    artifacts: parseFlowArtifacts(flow.artifacts),
     duration_minutes: flow.durationMinutes ?? null,
     action_catalog: flow.actionCatalog,
     public_token: flow.publicToken,
@@ -254,9 +267,9 @@ export async function createAgentFlow(
     optionalWorkspaceId(workspaceId) ||
     optionalWorkspaceId(body.workspace_id || body.workspaceId);
   const name = String(body.name || "").trim();
-  const topic = String(body.topic || name).trim() || name;
-  const goal = String(body.goal || topic).trim() || topic;
-  const questions = questionsFrom(body.questions);
+  const topic = flowProblemFromUnknown({ ...body, topic: body.topic || name }) || name;
+  const goal = topic;
+  const artifacts = parseFlowArtifacts(body.artifacts);
   const durationMinutes =
     typeof body.duration_minutes === "number"
       ? body.duration_minutes
@@ -278,6 +291,7 @@ export async function createAgentFlow(
       workspaceId: mapId,
       name: name || topic,
       topic,
+      artifacts,
       durationMinutes,
       actionCatalog,
     });
@@ -288,15 +302,15 @@ export async function createAgentFlow(
   }
 
   if (kind === "calibration") {
-    const pool = questions.length ? questions : [goal];
-    if (!goal) throw new Error("goal is required for Calibration flows");
+    if (!goal) throw new Error("topic is required for Calibration flows");
     const created = await runCalibrationCommand({
       type: "create",
       ownerUserId: owner,
       workspaceId: mapId,
       name: name || goal,
       goal,
-      questions: pool,
+      topic,
+      artifacts,
       durationMinutes,
       actionCatalog,
     });
@@ -306,7 +320,6 @@ export async function createAgentFlow(
     return presentCalibration(created.flow);
   }
 
-  const pool = questions.length ? questions : [topic];
   if (!topic) throw new Error("topic is required for Verification flows");
   const created = await runVerificationCommand({
     type: "create",
@@ -314,7 +327,7 @@ export async function createAgentFlow(
     workspaceId: mapId,
     name: name || topic,
     topic,
-    questions: pool,
+    artifacts,
     durationMinutes,
     actionCatalog,
   });
@@ -334,9 +347,11 @@ export async function updateAgentFlow(
   const existing = await getAgentFlow(workspaceId, flowId, owner);
   if (!existing) throw new Error("Flow not found.");
   const name = body.name === undefined ? undefined : String(body.name || "").trim();
-  const topic = body.topic === undefined ? undefined : String(body.topic || "").trim();
-  const goal = body.goal === undefined ? undefined : String(body.goal || "").trim();
-  const questions = body.questions === undefined ? undefined : questionsFrom(body.questions);
+  const problem =
+    body.problem === undefined && body.topic === undefined && body.goal === undefined
+      ? undefined
+      : flowProblemFromUnknown(body);
+  const artifacts = body.artifacts === undefined ? undefined : parseFlowArtifacts(body.artifacts);
   const durationMinutes =
     body.duration_minutes === undefined && body.durationMinutes === undefined
       ? undefined
@@ -353,7 +368,8 @@ export async function updateAgentFlow(
       workspaceId: existing.workspace_id || undefined,
       flowId,
       name,
-      topic,
+      topic: problem,
+      artifacts,
       durationMinutes,
       actionCatalog,
     });
@@ -370,8 +386,9 @@ export async function updateAgentFlow(
       workspaceId: existing.workspace_id || undefined,
       flowId,
       name,
-      goal,
-      questions,
+      goal: problem,
+      topic: problem,
+      artifacts,
       durationMinutes,
       actionCatalog,
     });
@@ -387,8 +404,8 @@ export async function updateAgentFlow(
     workspaceId: existing.workspace_id || undefined,
     flowId,
     name,
-    topic,
-    questions,
+    topic: problem,
+    artifacts,
     durationMinutes,
     actionCatalog,
   });

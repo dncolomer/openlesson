@@ -72,6 +72,9 @@ export async function POST(req: NextRequest) {
       mapBlock: mapBlockCamel,
       title: titleBody,
       description: descriptionBody,
+      problem: problemBody,
+      topic: topicBody,
+      artifacts: artifactsBody,
     } = body;
 
     let mapBlock = coerceAuthoringMapBlock(mapBlockSnake ?? mapBlockCamel);
@@ -276,6 +279,13 @@ Create exactly one learning block that belongs at this grid slot. The topic shou
       raw: mapBlock,
       title: generated.title.trim() || authorTitle || promptText || "Untitled",
       topic: generated.description?.trim() || generated.title.trim(),
+      problem:
+        typeof problemBody === "string"
+          ? problemBody
+          : typeof topicBody === "string"
+            ? topicBody
+            : undefined,
+      artifacts: artifactsBody,
       ownerUserId: String(plan.user_id || auth.persistUserId || ""),
       workspaceId,
     });

@@ -23,7 +23,18 @@ import {
   type SessionBranchDraft,
   type SessionBranchModel,
 } from "@/lib/session-branch-model";
-import { callXai, systemMessage, userMessage, type JsonSchema } from "@/lib/xai-client";
+import {
+  callXai,
+  callXaiResponsesWithFiles,
+  systemMessage,
+  userMessage,
+  type JsonSchema,
+} from "@/lib/xai-client";
+import {
+  flowArtifactFileIds,
+  parseFlowArtifacts,
+  type FlowArtifact,
+} from "@/lib/flow-artifacts";
 
 export type SessionBranchGenerateResult =
   | { ok: true; model: SessionBranchModel }
@@ -48,6 +59,96 @@ const SYSTEM = [
   `Choose how many children the concept needs, between ${SESSION_BRANCH_CHILD_MIN} and ${SESSION_BRANCH_CHILD_MAX}. Do not pad.`,
   "No headings, no bullets, no product names.",
 ].join(" ");
+
+const SOLVE_SYSTEM = [
+  SYSTEM,
+  "The ultimate goal is to assist the user in breaking down and solving the problem.",
+  "Use the Problem text and attached files together as the full context for the unsys model.",
+].join(" ");
+
+export type SessionBranchGenerateKind = "solve" | "verification" | "calibration" | "learn";
+
+export type SessionBranchGenerateContext = {
+  kind?: SessionBranchGenerateKind | null;
+  chapterTitle?: string | null;
+  chapterBrief?: string | null;
+  problem?: string | null;
+  fileIds?: string[] | null;
+  files?: Array<{ name?: string; xaiFileId?: string; mimeType?: string }> | null;
+  artifacts?: FlowArtifact[] | null;
+};
+
+export type SessionBranchGenerateMaterial = {
+  kind: SessionBranchGenerateKind;
+  system: string;
+  user: string;
+  chapterTitle: string;
+  chapterBrief: string;
+  fileIds: string[];
+};
+
+export function sessionBranchContextFromFlow(input: {
+  kind: SessionBranchGenerateKind;
+  name?: string | null;
+  topic?: string | null;
+  goal?: string | null;
+  artifacts?: unknown;
+}): SessionBranchGenerateContext {
+  const problem = textOf(input.topic) || textOf(input.goal) || textOf(input.name);
+  return {
+    kind: input.kind,
+    chapterTitle: textOf(input.name) || problem,
+    chapterBrief: problem,
+    problem,
+    artifacts: parseFlowArtifacts(input.artifacts),
+  };
+}
+
+export function buildSessionBranchGenerateMaterial(
+  input: SessionBranchGenerateContext,
+): SessionBranchGenerateMaterial {
+  const kind: SessionBranchGenerateKind =
+    input.kind === "solve" || input.kind === "verification" || input.kind === "calibration"
+      ? input.kind
+      : "learn";
+  const problem = textOf(input.problem) || textOf(input.chapterBrief) || textOf(input.chapterTitle);
+  const chapterTitle = textOf(input.chapterTitle) || problem;
+  const chapterBrief = textOf(input.chapterBrief) || (kind === "learn" ? "" : problem);
+  const artifacts = parseFlowArtifacts(input.artifacts ?? input.files);
+  const namedIds = artifacts.map((item) => `${item.name} (${item.xaiFileId})`);
+  const extraIds = (input.fileIds ?? []).map((id) => String(id || "").trim()).filter(Boolean);
+  const fileIds = [...new Set([...flowArtifactFileIds(artifacts), ...extraIds])];
+  const fileBlock =
+    namedIds.length || extraIds.length
+      ? `Attached files (xAI file ids — use as context):\n${
+          namedIds.length ? namedIds.map((line) => `- ${line}`).join("\n") : extraIds.map((id) => `- ${id}`).join("\n")
+        }`
+      : "";
+  const problemBlock = problem ? `Problem:\n${problem}` : "";
+  const user = [
+    kind === "solve"
+      ? "Assist the user in breaking down and solving the problem. Use the Problem and attached files as the field to decompose."
+      : "",
+    problemBlock,
+    chapterTitle && chapterTitle !== problem ? `Chapter: ${chapterTitle}.` : "",
+    chapterBrief && chapterBrief !== problem ? `Material:\n${chapterBrief}` : "",
+    fileBlock,
+    kind === "solve"
+      ? "This slice belongs to a breakdown of the problem, not a short quiz."
+      : "This slice belongs to a wide field of inquiry, not a short quiz and not a three-step maze.",
+    "Write in complete sentences. Each question is an original interrogative sentence, not a wrap of the title. No headings, no bullets, no product names.",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+  return {
+    kind,
+    system: kind === "solve" ? SOLVE_SYSTEM : SYSTEM,
+    user,
+    chapterTitle: chapterTitle || chapterBrief,
+    chapterBrief,
+    fileIds,
+  };
+}
 
 function objectSchema(
   name: string,
@@ -149,36 +250,42 @@ function filled(nodes: readonly FieldNode[]): number {
   ).length;
 }
 
-function materialBlock(input: { chapterTitle: string; chapterBrief?: string | null }): string {
-  const title = textOf(input.chapterTitle) || textOf(input.chapterBrief) || "this chapter";
-  const brief = textOf(input.chapterBrief);
-  return [
-    `Chapter: ${title}.`,
-    brief ? `Material:\n${brief}` : "",
-    "This slice belongs to a wide field of inquiry, not a short quiz and not a three-step maze.",
-    "Write in complete sentences. Each question is an original interrogative sentence, not a wrap of the title. No headings, no bullets, no product names.",
-  ]
-    .filter(Boolean)
-    .join("\n\n");
+function materialBlock(
+  input: { chapterTitle: string; chapterBrief?: string | null } & SessionBranchGenerateContext,
+): string {
+  return buildSessionBranchGenerateMaterial(input).user;
 }
 
 async function ask(
   schema: JsonSchema,
   prompt: string,
   maxTokens: number,
+  run?: SessionBranchGenerateMaterial | null,
 ): Promise<{ ok: true; data: FieldNode } | { ok: false; error: string }> {
-  const response = await callXai<FieldNode>(
-    [systemMessage(SYSTEM), userMessage(prompt)],
-    {
-      maxTokens,
-      temperature: 0.3,
-      responseFormat: "json_schema",
-      jsonSchema: schema,
-      reasoningEffort: "low",
-      fetchTimeout: 90_000,
-      retries: 2,
-    },
-  );
+  const system = run?.system ?? SYSTEM;
+  const fileIds = run?.fileIds ?? [];
+  const response = fileIds.length
+    ? await callXaiResponsesWithFiles<FieldNode>(prompt, fileIds, {
+        instructions: system,
+        maxOutputTokens: maxTokens,
+        temperature: 0.3,
+        jsonSchema: schema,
+        reasoningEffort: "low",
+        fetchTimeout: 90_000,
+        retries: 2,
+      })
+    : await callXai<FieldNode>(
+        [systemMessage(system), userMessage(prompt)],
+        {
+          maxTokens,
+          temperature: 0.3,
+          responseFormat: "json_schema",
+          jsonSchema: schema,
+          reasoningEffort: "low",
+          fetchTimeout: 90_000,
+          retries: 2,
+        },
+      );
   if (!response.success || !response.data || typeof response.data !== "object") {
     return { ok: false, error: response.error || "The field could not be prepared." };
   }
@@ -194,14 +301,16 @@ async function askUntil(
   prompt: string,
   maxTokens: number,
   accept: (data: FieldNode) => boolean,
+  run?: SessionBranchGenerateMaterial | null,
 ): Promise<{ ok: true; data: FieldNode } | { ok: false; error: string }> {
-  const first = await ask(schema, prompt, maxTokens);
+  const first = await ask(schema, prompt, maxTokens, run);
   if (!first.ok) return first;
   if (accept(first.data)) return first;
   const second = await ask(
     schema,
     `${prompt}\n\nThe last reply was too small. Write every item this request asks for. Do not stop early.`,
     maxTokens,
+    run,
   );
   if (!second.ok) return first;
   if (accept(second.data) || listedCount(second.data) >= listedCount(first.data)) return second;
@@ -312,18 +421,19 @@ export async function generateSessionBranchFirstLevel(input: {
   chapterTitle: string;
   chapterBrief?: string | null;
   regionCount?: number;
-}): Promise<SessionBranchGenerateResult> {
+} & SessionBranchGenerateContext): Promise<SessionBranchGenerateResult> {
   const chapterTitle = textOf(input.chapterTitle);
   const chapterBrief = textOf(input.chapterBrief);
   const regionMax = clampChildCount(input.regionCount, SESSION_BRANCH_CHILD_MAX);
-  if (!chapterTitle && !chapterBrief) {
+  if (!chapterTitle && !chapterBrief && !textOf(input.problem)) {
     return { ok: false, error: "A chapter is required." };
   }
-  const material = { chapterTitle: chapterTitle || chapterBrief, chapterBrief };
+  const run = buildSessionBranchGenerateMaterial(input);
+  const material = { chapterTitle: run.chapterTitle, chapterBrief: run.chapterBrief };
   const regionsReply = await askUntil(
     regionSchema(),
     [
-      materialBlock(material),
+      materialBlock({ ...input, ...material }),
       `Write the premise and between ${SESSION_BRANCH_CHILD_MIN} and ${regionMax} regions.`,
       "Choose how many regions the concept needs. Do not pad.",
       "Do not write avenues or inquiries in this reply.",
@@ -331,6 +441,7 @@ export async function generateSessionBranchFirstLevel(input: {
     ].join("\n\n"),
     tokensForNodes(regionMax),
     (data) => filled(asList(data.regions)) >= SESSION_BRANCH_CHILD_MIN && Boolean(textOf(data.premise)),
+    run,
   );
   if (!regionsReply.ok) return regionsReply;
   const regions = asList(regionsReply.data.regions).slice(0, regionMax);
@@ -379,7 +490,7 @@ export async function generateSessionBranchChildren(input: {
   parentTerritory?: string;
   siblingTitles?: string[];
   count?: number;
-}): Promise<
+} & SessionBranchGenerateContext): Promise<
   | { ok: true; children: SessionBranchChildDraft[] }
   | { ok: false; error: string }
 > {
@@ -387,17 +498,18 @@ export async function generateSessionBranchChildren(input: {
   const chapterBrief = textOf(input.chapterBrief);
   const maxCount = clampChildCount(input.count, SESSION_BRANCH_CHILD_MAX);
   const parentTitle = textOf(input.parentTitle);
-  if ((!chapterTitle && !chapterBrief) || !parentTitle) {
+  if ((!chapterTitle && !chapterBrief && !textOf(input.problem)) || !parentTitle) {
     return { ok: false, error: "A chapter is required." };
   }
-  const material = { chapterTitle: chapterTitle || chapterBrief, chapterBrief };
+  const run = buildSessionBranchGenerateMaterial(input);
+  const material = { chapterTitle: run.chapterTitle, chapterBrief: run.chapterBrief };
   const siblings = (input.siblingTitles ?? [])
     .map((title) => textOf(title))
     .filter(Boolean);
   const reply = await askUntil(
     childrenSchema(),
     [
-      materialBlock(material),
+      materialBlock({ ...input, ...material }),
       `Parent hidden state: ${parentTitle}.`,
       textOf(input.parentQuestion) ? `Parent question: ${textOf(input.parentQuestion)}` : "",
       textOf(input.parentTerritory) ? `Parent territory: ${textOf(input.parentTerritory)}` : "",
@@ -410,6 +522,7 @@ export async function generateSessionBranchChildren(input: {
       .join("\n\n"),
     tokensForNodes(maxCount),
     (data) => filled(asList(data.children)) >= SESSION_BRANCH_CHILD_MIN,
+    run,
   );
   if (!reply.ok) return reply;
   const children = asList(reply.data.children)
@@ -423,24 +536,26 @@ export async function generateSessionBranchChildren(input: {
 export async function generateSessionBranchModel(input: {
   chapterTitle: string;
   chapterBrief?: string | null;
-}): Promise<SessionBranchGenerateResult> {
+} & SessionBranchGenerateContext): Promise<SessionBranchGenerateResult> {
   const chapterTitle = textOf(input.chapterTitle);
   const chapterBrief = textOf(input.chapterBrief);
-  if (!chapterTitle && !chapterBrief) {
+  if (!chapterTitle && !chapterBrief && !textOf(input.problem)) {
     return { ok: false, error: "A chapter is required." };
   }
-  const material = { chapterTitle: chapterTitle || chapterBrief, chapterBrief };
+  const run = buildSessionBranchGenerateMaterial(input);
+  const material = { chapterTitle: run.chapterTitle, chapterBrief: run.chapterBrief };
 
   const regionsReply = await askUntil(
     regionSchema(),
     [
-      materialBlock(material),
+      materialBlock({ ...input, ...material }),
       `Write the premise and exactly ${SESSION_BRANCH_REGION_COUNT} regions.`,
       "Do not write avenues or inquiries in this reply.",
       "The regions must cover different parts of the chapter.",
     ].join("\n\n"),
     6000,
     (data) => filled(asList(data.regions)) >= SESSION_BRANCH_REGION_COUNT && Boolean(textOf(data.premise)),
+    run,
   );
   if (!regionsReply.ok) return regionsReply;
   const regions = asList(regionsReply.data.regions).slice(0, SESSION_BRANCH_REGION_COUNT);
@@ -458,7 +573,7 @@ export async function generateSessionBranchModel(input: {
     const reply = await askUntil(
       avenueSchema(),
       [
-        materialBlock(material),
+        materialBlock({ ...input, ...material }),
         "Region already chosen:",
         `${regionNumber}. ${textOf(region?.title)} — ${textOf(region?.territory)}`,
         `Write exactly ${call.expected} avenues for region ${regionNumber}.`,
@@ -467,6 +582,7 @@ export async function generateSessionBranchModel(input: {
       ].join("\n\n"),
       tokensForNodes(call.expected),
       (data) => filled(asList(data.avenues)) >= call.expected,
+      run,
     );
     return { call, reply };
   });
@@ -506,7 +622,7 @@ export async function generateSessionBranchModel(input: {
     const reply = await askUntil(
       inquirySchema(),
       [
-        materialBlock(material),
+        materialBlock({ ...input, ...material }),
         "Avenues to go further into:",
         listed.map((item) => item.line).join("\n"),
         `Write exactly ${SESSION_BRANCH_INQUIRY_COUNT} inquiries for every avenue listed.`,
@@ -515,6 +631,7 @@ export async function generateSessionBranchModel(input: {
       ].join("\n\n"),
       tokensForNodes(call.expected),
       (data) => filled(asList(data.inquiries)) >= call.expected,
+      run,
     );
     return { call, reply, listed };
   });
@@ -789,25 +906,27 @@ function modelFromContinuation(
 export async function generateSessionBranchOpening(input: {
   chapterTitle: string;
   chapterBrief?: string | null;
-}): Promise<
+} & SessionBranchGenerateContext): Promise<
   | { ok: true; model: SessionBranchModel; continuation: SessionBranchContinuation }
   | { ok: false; error: string }
 > {
   const chapterTitle = textOf(input.chapterTitle);
   const chapterBrief = textOf(input.chapterBrief);
-  if (!chapterTitle && !chapterBrief) {
+  if (!chapterTitle && !chapterBrief && !textOf(input.problem)) {
     return { ok: false, error: "A chapter is required." };
   }
-  const material = { chapterTitle: chapterTitle || chapterBrief, chapterBrief };
+  const run = buildSessionBranchGenerateMaterial(input);
+  const material = { chapterTitle: run.chapterTitle, chapterBrief: run.chapterBrief };
   const reply = await ask(
     regionSchema(),
     [
-      materialBlock(material),
+      materialBlock({ ...input, ...material }),
       "Write the premise and exactly 1 region.",
       "Do not write avenues or inquiries in this reply.",
       "One region is enough to open the session. The others are written later.",
     ].join("\n\n"),
     OPENING_REGION_TOKENS,
+    run,
   );
   if (!reply.ok) return reply;
   const regions = asList(reply.data.regions).slice(0, SESSION_BRANCH_REGION_COUNT);
@@ -835,7 +954,7 @@ type SliceDelta = {
 async function writeContinuationSlice(
   continuation: SessionBranchContinuation,
   slice: ContinuationSlice,
-  material: { chapterTitle: string; chapterBrief?: string | null },
+  material: { chapterTitle: string; chapterBrief?: string | null; run?: SessionBranchGenerateMaterial },
 ): Promise<SliceDelta> {
   const next = asContinuation(continuation);
   if (slice.kind === "region") {
@@ -854,6 +973,7 @@ async function writeContinuationSlice(
         .filter(Boolean)
         .join("\n\n"),
       2000,
+      material.run,
     );
     const region = reply.ok ? asRecord(reply.data.region) : null;
     if (!region || !textOf(region.title) || !textOf(region.question) || !textOf(region.observation)) {
@@ -875,6 +995,7 @@ async function writeContinuationSlice(
         "Avenues must diverge. Do not write inquiries in this reply.",
       ].join("\n\n"),
       tokensForNodes(SESSION_BRANCH_AVENUE_COUNT),
+      material.run,
     );
     const avenues = reply.ok
       ? asList(reply.data.avenues).slice(0, SESSION_BRANCH_AVENUE_COUNT)
@@ -913,6 +1034,7 @@ async function writeContinuationSlice(
       "An inquiry goes further into that avenue. It must not repeat the avenue title.",
     ].join("\n\n"),
     tokensForNodes(slice.avenueCount * SESSION_BRANCH_INQUIRY_COUNT),
+    material.run,
   );
   const key = `inquiries:${slice.regionNumber}:${slice.avenueOffset}`;
   if (!reply.ok || filled(asList(reply.data.inquiries)) < 1) return { failedKey: key };
@@ -931,14 +1053,15 @@ export async function continueSessionBranchModel(input: {
   chapterTitle: string;
   chapterBrief?: string | null;
   continuation: SessionBranchContinuation;
-}): Promise<
+} & SessionBranchGenerateContext): Promise<
   | { ok: true; model: SessionBranchModel; continuation: SessionBranchContinuation; done: boolean }
   | { ok: false; error: string }
 > {
   const chapterTitle = textOf(input.chapterTitle);
   const chapterBrief = textOf(input.chapterBrief);
-  if (!chapterTitle && !chapterBrief) return { ok: false, error: "A chapter is required." };
-  const material = { chapterTitle: chapterTitle || chapterBrief, chapterBrief };
+  if (!chapterTitle && !chapterBrief && !textOf(input.problem)) return { ok: false, error: "A chapter is required." };
+  const run = buildSessionBranchGenerateMaterial(input);
+  const material = { chapterTitle: run.chapterTitle, chapterBrief: run.chapterBrief, run };
   let continuation = asContinuation(input.continuation);
   if (continuation.seedModel) {
     return growSeededSessionBranchModel({

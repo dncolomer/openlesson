@@ -80,8 +80,10 @@ export async function POST(req: NextRequest) {
         workspaceId,
         flowId: String(body.flowId || ""),
         name: typeof body.name === "string" ? body.name : undefined,
-        topic: typeof body.topic === "string" ? body.topic : undefined,
-        questions: body.questions,
+        topic: typeof body.problem === "string" || typeof body.topic === "string"
+          ? String(body.problem || body.topic || "")
+          : undefined,
+        artifacts: body.artifacts,
         durationMinutes: body.durationMinutes as number | undefined,
         actionCatalog: body.actionCatalog as number | undefined,
       });
@@ -102,8 +104,8 @@ export async function POST(req: NextRequest) {
       type: "create",
       workspaceId,
       name: typeof body.name === "string" ? body.name : undefined,
-      topic: String(body.topic || ""),
-      questions: body.questions,
+      topic: String(body.problem || body.topic || ""),
+      artifacts: body.artifacts,
       durationMinutes: body.durationMinutes as number | undefined,
       actionCatalog: body.actionCatalog as number | undefined,
     });

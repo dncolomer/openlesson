@@ -16,6 +16,7 @@ import {
   emptyProductFlowDraft,
   type ProductFlowKind,
 } from "@/lib/product-flow";
+import { parseFlowArtifacts, type FlowArtifact } from "@/lib/flow-artifacts";
 
 export type HeliosFlowCreateInput = {
   kind: ProductFlowKind;
@@ -23,6 +24,7 @@ export type HeliosFlowCreateInput = {
   goal: string;
   topic: string;
   questions: string[];
+  artifacts: FlowArtifact[];
   actionCatalog: number;
   durationMinutes: number;
   workspaceId?: string;
@@ -79,12 +81,10 @@ export function heliosFlowCreateInput(
       : kind === "solve"
         ? "Solve flow"
         : "Verification flow");
-  const goal = text(args, "goal") || name;
-  const topic = text(args, "topic") || name;
-  let questions = heliosFlowQuestionsFromArgs(args);
-  if (questions.length === 0) {
-    questions = [kind === "calibration" ? goal : topic];
-  }
+  const topic =
+    text(args, "problem", "topic", "goal") || name;
+  const goal = topic;
+  const questions = [topic];
   const draft = emptyProductFlowDraft(kind);
   const actionCatalog = Number(args.actionCatalog);
   const durationMinutes = Number(args.durationMinutes);
@@ -95,6 +95,7 @@ export function heliosFlowCreateInput(
     goal,
     topic,
     questions,
+    artifacts: parseFlowArtifacts(args.artifacts),
     actionCatalog: Number.isFinite(actionCatalog)
       ? actionCatalog
       : draft.actionCatalog,

@@ -314,7 +314,7 @@ export function WorkspaceRightDrawers({
             name: input.name,
             goal: input.goal,
             topic: input.topic,
-            questions: input.questions,
+            artifacts: input.artifacts,
             actionCatalog: input.actionCatalog,
             durationMinutes: input.durationMinutes,
             workspaceId,

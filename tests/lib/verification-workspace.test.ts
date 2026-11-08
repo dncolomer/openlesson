@@ -799,12 +799,10 @@ describe("verification workspace shell gates", () => {
       "dashboardTabForProductSurface(kind)",
     );
     expect(read("components/product-flow/product-flow-wizard.tsx")).toContain("Publish");
-    expect(read("components/product-flow/product-flow-wizard.tsx")).toContain(
+    expect(read("components/product-flow/product-flow-wizard.tsx")).not.toContain(
       "data-verification-generate-from-topic",
     );
-    expect(read("components/product-flow/product-flow-wizard.tsx")).toContain(
-      "DASHBOARD_FLOWS_GENERATE_PATH",
-    );
+    expect(read("components/product-flow/product-flow-wizard.tsx")).toContain("data-flow-problem");
     const generated = await generateVerificationPoolFromTopic({
       topic: "Limits",
       complete: async (request) => {
@@ -820,10 +818,8 @@ describe("verification workspace shell gates", () => {
     expect(generateRoute).toContain("generateCalibrationPoolFromGoal");
     expect(generateRoute).toContain("callXaiJSON");
     expect(generateRoute).toContain("requireAuthenticatedUser");
-    expect(read("components/product-flow/product-flow-page.tsx")).toContain(
-      "data-verification-flow-pool",
-    );
-    expect(read("components/product-flow/product-flow-page.tsx")).toContain(
+    expect(read("components/product-flow/product-flow-page.tsx")).toContain("data-flow-problem");
+    expect(read("components/product-flow/product-flow-page.tsx")).not.toContain(
       "data-calibration-flow-add-question",
     );
     const shell = read("components/workspace-view/workspace-chrome.tsx");
@@ -836,7 +832,8 @@ describe("verification workspace shell gates", () => {
     expect(shell).not.toContain("Learning workspace");
 
     const flows = read("components/VerificationFlowsPanel.tsx");
-    expect(flows).toContain("data-verification-flow-pool");
+    expect(flows).toContain("data-flow-problem");
+    expect(flows).not.toContain("data-verification-flow-add-question");
     expect(flows).toContain("data-verification-flow-public-link");
     expect(flows).toContain("CopyFlowUrlButton");
     expect(read("components/CalibrationFlowsPanel.tsx")).toContain("CopyFlowUrlButton");

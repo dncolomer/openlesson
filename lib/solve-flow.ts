@@ -4,6 +4,10 @@
  */
 
 import { normalizeFlowName } from "@/lib/product-flow";
+import {
+  parseFlowArtifacts,
+  type FlowArtifact,
+} from "@/lib/flow-artifacts";
 import { flowCountdownMinutes } from "@/lib/flow-countdown";
 import { parseLearningModelSize, type LearningModelSize } from "@/lib/learning-model";
 import { acceptParticipantIdentity } from "@/lib/verification-flow";
@@ -22,6 +26,7 @@ export type SolveFlow = {
   ownerUserId?: string;
   name: string;
   topic: string;
+  artifacts: FlowArtifact[];
   durationMinutes: number;
   actionCatalog: LearningModelSize;
   publicToken: string;
@@ -78,13 +83,15 @@ export function createSolvePublicToken(): string {
 
 export function acceptSolveDraft(input: {
   name?: unknown;
-  topic: unknown;
-}): { ok: true; name: string; topic: string } | { ok: false; reason: string } {
-  const topic = String(input.topic ?? "").trim();
+  topic?: unknown;
+  problem?: unknown;
+  artifacts?: unknown;
+}): { ok: true; name: string; topic: string; artifacts: FlowArtifact[] } | { ok: false; reason: string } {
+  const topic = String(input.problem ?? input.topic ?? "").trim();
   if (!topic) return { ok: false, reason: "topic_required" };
   const name = normalizeFlowName(input.name, topic);
   if (!name) return { ok: false, reason: "name_required" };
-  return { ok: true, name, topic };
+  return { ok: true, name, topic, artifacts: parseFlowArtifacts(input.artifacts) };
 }
 
 function commandOwnsFlow(
@@ -103,7 +110,9 @@ export type SolveCommand =
       workspaceId?: string;
       ownerUserId?: string;
       name?: string;
-      topic: string;
+      topic?: string;
+      problem?: string;
+      artifacts?: unknown;
       durationMinutes?: number;
       actionCatalog?: number;
       id?: string;
@@ -116,6 +125,8 @@ export type SolveCommand =
       flowId: string;
       name?: string;
       topic?: string;
+      problem?: string;
+      artifacts?: unknown;
       durationMinutes?: number;
       actionCatalog?: number;
     }
@@ -131,7 +142,12 @@ export function applySolveCommand(
   command: SolveCommand,
 ): SolveCommandResult {
   if (command.type === "create") {
-    const accepted = acceptSolveDraft({ name: command.name, topic: command.topic });
+    const accepted = acceptSolveDraft({
+      name: command.name,
+      topic: command.topic,
+      problem: command.problem,
+      artifacts: command.artifacts,
+    });
     if (!accepted.ok) return { ok: false, reason: accepted.reason, state };
     const ownerUserId = String(command.ownerUserId || "").trim();
     if (!ownerUserId && !String(command.workspaceId || "").trim()) {
@@ -143,6 +159,7 @@ export function applySolveCommand(
       ownerUserId: ownerUserId || undefined,
       name: accepted.name,
       topic: accepted.topic,
+      artifacts: accepted.artifacts,
       durationMinutes: flowCountdownMinutes(command.durationMinutes),
       actionCatalog: parseLearningModelSize(command.actionCatalog),
       publicToken: command.publicToken || createSolvePublicToken(),
@@ -159,7 +176,9 @@ export function applySolveCommand(
       return { ok: false, reason: "wrong_workspace", state };
     }
     const topic =
-      command.topic === undefined ? current.topic : String(command.topic || "").trim();
+      command.topic === undefined && command.problem === undefined
+        ? current.topic
+        : String(command.problem ?? command.topic ?? "").trim();
     if (!topic) return { ok: false, reason: "topic_required", state };
     const flow: SolveFlow = {
       ...current,
@@ -168,6 +187,10 @@ export function applySolveCommand(
           ? normalizeFlowName(current.name, topic)
           : normalizeFlowName(command.name, topic),
       topic,
+      artifacts:
+        command.artifacts === undefined
+          ? parseFlowArtifacts(current.artifacts)
+          : parseFlowArtifacts(command.artifacts),
       durationMinutes:
         command.durationMinutes === undefined
           ? flowCountdownMinutes(current.durationMinutes)

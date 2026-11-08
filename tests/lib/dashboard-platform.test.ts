@@ -412,16 +412,17 @@ describe("dashboard platform surface", () => {
     expect(readRepo("components/product-flow/copy-flow-url-button.tsx")).toContain("data-flow-copy-url");
     expect(readRepo("components/product-flow/copy-flow-url-button.tsx")).toContain("absoluteFlowPublicUrl");
     expect(readRepo("components/product-flow/product-flow-page.tsx")).toContain("CopyFlowUrlButton");
-    expect(readRepo("components/product-flow/product-flow-wizard.tsx")).toContain("data-verification-flow-pool");
-    expect(readRepo("components/product-flow/product-flow-wizard.tsx")).toContain(
+    expect(readRepo("components/product-flow/product-flow-wizard.tsx")).toContain("data-flow-problem");
+    expect(readRepo("components/product-flow/product-flow-wizard.tsx")).not.toContain(
       "data-verification-generate-from-topic",
     );
-    expect(readRepo("components/product-flow/product-flow-wizard.tsx")).toContain(
+    expect(readRepo("components/product-flow/product-flow-wizard.tsx")).not.toContain(
       "Generate questions from this topic",
     );
     expect(readRepo("components/product-flow/product-flow-page.tsx")).not.toContain("data-verification-flow-skill");
     expect(readRepo("components/product-flow/product-flow-page.tsx")).not.toContain("Generate skill");
-    expect(readRepo("components/product-flow/product-flow-page.tsx")).toContain(
+    expect(readRepo("components/product-flow/product-flow-page.tsx")).toContain("data-flow-problem");
+    expect(readRepo("components/product-flow/product-flow-page.tsx")).not.toContain(
       "data-calibration-flow-add-question",
     );
     expect(dashSrc).toContain("learningWorkspaces");

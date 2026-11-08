@@ -9,17 +9,17 @@ import {
   productFlowDashboardPath,
   type ProductFlowKind,
 } from "@/lib/product-flow";
+import { parseFlowArtifacts, type FlowArtifact } from "@/lib/flow-artifacts";
 import { ProductSurface } from "@/components/product-flow/product-surface";
 import {
   FLOW_DANGER_BTN,
   FLOW_FORM_INPUT,
-  FLOW_FORM_TEXTAREA,
-  FLOW_GHOST_BTN,
   FLOW_PRIMARY_BTN,
   FlowField,
   FlowFormCard,
   FlowFormHeader,
 } from "@/components/product-flow/product-flow-form";
+import { FlowProblemFields } from "@/components/product-flow/flow-problem-fields";
 import { dashboardTabForProductSurface } from "@/lib/dashboard-nav";
 import { CopyFlowUrlButton } from "@/components/product-flow/copy-flow-url-button";
 
@@ -28,6 +28,7 @@ type LoadedFlow = {
   name: string;
   topic?: string;
   goal?: string;
+  artifacts?: FlowArtifact[];
   questions: Array<{ id?: string; text?: string }>;
   durationMinutes?: number;
   publicToken: string;
@@ -45,10 +46,9 @@ export function ProductFlowPage({
   const router = useRouter();
   const [flow, setFlow] = useState<LoadedFlow | null>(null);
   const [name, setName] = useState("");
-  const [topic, setTopic] = useState("");
-  const [goal, setGoal] = useState("");
+  const [problem, setProblem] = useState("");
+  const [artifacts, setArtifacts] = useState<FlowArtifact[]>([]);
   const [minutes, setMinutes] = useState(15);
-  const [draftQuestions, setDraftQuestions] = useState<string[]>([""]);
   const [publicUrl, setPublicUrl] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -65,14 +65,9 @@ export function ProductFlowPage({
     const next = payload.flow as LoadedFlow;
     setFlow(next);
     setName(String(next.name || payload.name || ""));
-    setTopic(String(next.topic || ""));
-    setGoal(String(next.goal || ""));
+    setProblem(String(next.topic || next.goal || ""));
+    setArtifacts(parseFlowArtifacts(next.artifacts));
     setMinutes(flowCountdownMinutes(next.durationMinutes));
-    setDraftQuestions(
-      Array.isArray(next.questions) && next.questions.length
-        ? next.questions.map((question) => String(question.text || ""))
-        : [""],
-    );
     setPublicUrl(String(payload.publicUrl || ""));
   }, [flowId, kind]);
 
@@ -88,18 +83,15 @@ export function ProductFlowPage({
       const response = await fetch(`${DASHBOARD_FLOWS_PATH}/${encodeURIComponent(flow.id)}?kind=${kind}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(
-          kind === "solve"
-            ? { action: "update", name, topic, durationMinutes: minutes }
-            : {
-                action: "update",
-                name,
-                topic,
-                goal,
-                questions: draftQuestions.map((text, index) => ({ id: `q-${index + 1}`, text })),
-                durationMinutes: minutes,
-              },
-        ),
+        body: JSON.stringify({
+          action: "update",
+          name,
+          topic: problem,
+          goal: problem,
+          problem,
+          artifacts,
+          durationMinutes: minutes,
+        }),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -136,10 +128,8 @@ export function ProductFlowPage({
 
   const description =
     kind === "calibration"
-      ? "Goal, countdown, and sounding questions."
-      : kind === "solve"
-        ? "The topic learners work on in the Solve canvas."
-        : "Topic, starting questions, and the public run link.";
+      ? "Problem, optional files, and countdown."
+      : "The problem learners work on, and optional files used to generate the unsys model.";
 
   return (
     <ProductSurface
@@ -187,69 +177,22 @@ export function ProductFlowPage({
             />
           </FlowField>
 
-          {kind === "verification" ? (
-            <section className="space-y-5" data-verification-flow-editor>
-              <FlowField label="Topic">
-                <input
-                  value={topic}
-                  onChange={(event) => setTopic(event.target.value)}
-                  placeholder="Topic"
-                  data-verification-flow-topic
-                  className={FLOW_FORM_INPUT}
-                />
-              </FlowField>
-              <div className="space-y-3" data-verification-flow-pool>
-                <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
-                  Starting questions
-                </p>
-                {draftQuestions.map((value, index) => (
-                  <input
-                    key={index}
-                    value={value}
-                    onChange={(event) => {
-                      const next = draftQuestions.slice();
-                      next[index] = event.target.value;
-                      setDraftQuestions(next);
-                    }}
-                    placeholder={`Starting question ${index + 1}`}
-                    data-verification-flow-question
-                    className={FLOW_FORM_INPUT}
-                  />
-                ))}
-                <button
-                  type="button"
-                  data-verification-flow-add-question
-                  className={FLOW_GHOST_BTN}
-                  onClick={() => setDraftQuestions([...draftQuestions, ""])}
-                >
-                  Add question
-                </button>
-              </div>
-            </section>
-          ) : kind === "solve" ? (
-            <section className="space-y-5" data-solve-flow-editor>
-              <FlowField label="Topic">
-                <input
-                  value={topic}
-                  onChange={(event) => setTopic(event.target.value)}
-                  placeholder="Topic"
-                  data-solve-flow-topic
-                  className={FLOW_FORM_INPUT}
-                />
-              </FlowField>
-            </section>
-          ) : (
-            <section className="space-y-5" data-calibration-flow-editor>
-              <FlowField label="Goal">
-                <textarea
-                  value={goal}
-                  onChange={(event) => setGoal(event.target.value)}
-                  placeholder="Goal"
-                  data-calibration-flow-goal
-                  rows={3}
-                  className={FLOW_FORM_TEXTAREA}
-                />
-              </FlowField>
+          <section
+            className="space-y-5"
+            data-flow-problem=""
+            data-verification-flow-editor={kind === "verification" ? "" : undefined}
+            data-solve-flow-editor={kind === "solve" ? "" : undefined}
+            data-calibration-flow-editor={kind === "calibration" ? "" : undefined}
+          >
+            <FlowProblemFields
+              problem={problem}
+              onProblemChange={setProblem}
+              artifacts={artifacts}
+              onArtifactsChange={setArtifacts}
+              workspaceId={flow?.workspaceId}
+              topicHook={kind}
+            />
+            {kind === "calibration" ? (
               <FlowField label="Countdown">
                 <select
                   value={minutes}
@@ -264,36 +207,8 @@ export function ProductFlowPage({
                   ))}
                 </select>
               </FlowField>
-              <div className="space-y-3" data-calibration-flow-pool>
-                <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
-                  Questions
-                </p>
-                {draftQuestions.map((value, index) => (
-                  <textarea
-                    key={index}
-                    value={value}
-                    onChange={(event) => {
-                      const next = draftQuestions.slice();
-                      next[index] = event.target.value;
-                      setDraftQuestions(next);
-                    }}
-                    placeholder={`Question ${index + 1}`}
-                    data-calibration-flow-question
-                    rows={2}
-                    className={FLOW_FORM_TEXTAREA}
-                  />
-                ))}
-                <button
-                  type="button"
-                  data-calibration-flow-add-question
-                  className={FLOW_GHOST_BTN}
-                  onClick={() => setDraftQuestions([...draftQuestions, ""])}
-                >
-                  Add question
-                </button>
-              </div>
-            </section>
-          )}
+            ) : null}
+          </section>
 
           <div className="flex flex-wrap gap-3 pt-2">
             <button

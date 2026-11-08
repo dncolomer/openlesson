@@ -5,11 +5,15 @@ import { ContextGenerationPool } from "@/components/ContextGenerationPool";
 import type { CalibrateQuestion } from "@/lib/calibrate-session";
 import { FLOW_COUNTDOWN_MINUTES, flowCountdownMinutes } from "@/lib/flow-countdown";
 import { CopyFlowUrlButton } from "@/components/product-flow/copy-flow-url-button";
+import { FlowProblemFields } from "@/components/product-flow/flow-problem-fields";
+import { parseFlowArtifacts, type FlowArtifact } from "@/lib/flow-artifacts";
 
 type FlowRecord = {
   id: string;
   name?: string;
   goal: string;
+  topic?: string;
+  artifacts?: FlowArtifact[];
   questions: CalibrateQuestion[];
   durationMinutes?: number;
   publicToken: string;
@@ -26,8 +30,8 @@ export function CalibrationFlowsPanel({
   const [flows, setFlows] = useState<FlowRecord[]>([]);
   const [name, setName] = useState("");
   const [goal, setGoal] = useState("");
+  const [artifacts, setArtifacts] = useState<FlowArtifact[]>([]);
   const [minutes, setMinutes] = useState(15);
-  const [draftQuestions, setDraftQuestions] = useState<string[]>([""]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -48,13 +52,6 @@ export function CalibrationFlowsPanel({
     void load();
   }, [load]);
 
-  function questionsFromDraft(): CalibrateQuestion[] {
-    return draftQuestions
-      .map((text) => text.trim())
-      .filter(Boolean)
-      .map((text, index) => ({ id: `q-${index + 1}`, text }));
-  }
-
   async function save() {
     setBusy(true);
     setError("");
@@ -69,7 +66,9 @@ export function CalibrationFlowsPanel({
           flowId: editingId,
           name,
           goal,
-          questions: questionsFromDraft(),
+          topic: goal,
+          problem: goal,
+          artifacts,
           durationMinutes: minutes,
         }),
       });
@@ -80,38 +79,10 @@ export function CalibrationFlowsPanel({
       }
       setName("");
       setGoal("");
-      setDraftQuestions([""]);
+      setArtifacts([]);
       setMinutes(15);
       setEditingId(null);
       await load();
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function generateFromGoal() {
-    const text = goal.trim();
-    if (!text) return;
-    setBusy(true);
-    setError("");
-    try {
-      const response = await fetch("/api/workspace/context-generation", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          workspaceId,
-          ayclToken,
-          kind: "calibration_from_goal",
-          goal: text,
-        }),
-      });
-      const payload = await response.json();
-      if (!response.ok) {
-        setError(payload?.error?.message || "Could not generate questions from the goal");
-        return;
-      }
-      const questions = Array.isArray(payload.questions) ? payload.questions : [];
-      if (questions.length) setDraftQuestions(questions.map((item: unknown) => String(item)));
     } finally {
       setBusy(false);
     }
@@ -142,8 +113,8 @@ export function CalibrationFlowsPanel({
       <div>
         <h2 className="text-sm font-medium text-white">Calibration Flows</h2>
         <p className="mt-1 max-w-2xl text-xs leading-relaxed text-neutral-500">
-          A calibration flow is a goal and a pool of questions. The learner sorts three they
-          could answer and two they could not, then writes both responses on the canvas.
+          A calibration flow is a name and a Problem. Optional files are stored on xAI and
+          used with the Problem to generate the unsys model.
         </p>
       </div>
 
@@ -167,11 +138,15 @@ export function CalibrationFlowsPanel({
         onUseFlow={(draft) => {
           setEditingId(null);
           setGoal(draft.topic);
-          setDraftQuestions(draft.questions.length ? draft.questions : [""]);
         }}
       />
 
-      <section className="space-y-3 border border-neutral-800 p-4" data-calibration-flow-editor>
+      <section
+        className="space-y-3 border border-neutral-800 p-4"
+        data-calibration-flow-editor
+        data-flow-problem=""
+        data-calibration-flow-goal=""
+      >
         <input
           value={name}
           onChange={(event) => setName(event.target.value)}
@@ -179,23 +154,14 @@ export function CalibrationFlowsPanel({
           data-flow-name=""
           className="w-full border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
         />
-        <textarea
-          value={goal}
-          onChange={(event) => setGoal(event.target.value)}
-          placeholder="Goal"
-          data-calibration-flow-goal
-          rows={3}
-          className="w-full border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
+        <FlowProblemFields
+          problem={goal}
+          onProblemChange={setGoal}
+          artifacts={artifacts}
+          onArtifactsChange={setArtifacts}
+          workspaceId={workspaceId}
+          topicHook="calibration"
         />
-        <button
-          type="button"
-          disabled={busy || !goal.trim()}
-          onClick={() => void generateFromGoal()}
-          data-calibration-generate-from-goal
-          className="border border-white/80 px-3 py-1.5 text-[11px] font-medium text-white disabled:opacity-40"
-        >
-          Generate questions from this goal
-        </button>
         <label className="flex items-center gap-3 text-xs text-neutral-300">
           Countdown
           <select
@@ -211,39 +177,6 @@ export function CalibrationFlowsPanel({
             ))}
           </select>
         </label>
-        <div className="space-y-2" data-calibration-flow-pool>
-          {draftQuestions.map((value, index) => (
-            <div key={index} className="flex gap-2">
-              <textarea
-                value={value}
-                onChange={(event) => {
-                  const next = draftQuestions.slice();
-                  next[index] = event.target.value;
-                  setDraftQuestions(next);
-                }}
-                placeholder={`Question ${index + 1}`}
-                data-calibration-flow-question
-                rows={2}
-                className="min-w-0 flex-1 border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
-              />
-              <button
-                type="button"
-                className="border border-neutral-700 px-2 text-[11px] text-neutral-300"
-                onClick={() => setDraftQuestions(draftQuestions.filter((_, item) => item !== index))}
-              >
-                Remove
-              </button>
-            </div>
-          ))}
-          <button
-            type="button"
-            data-calibration-flow-add-question
-            className="text-[11px] text-neutral-300 underline"
-            onClick={() => setDraftQuestions([...draftQuestions, ""])}
-          >
-            Add question
-          </button>
-        </div>
         <button
           type="button"
           disabled={busy || !goal.trim()}
@@ -262,8 +195,6 @@ export function CalibrationFlowsPanel({
               <div>
                 <p className="text-sm text-white" data-flow-name>{flow.name || flow.goal}</p>
                 <p className="text-[11px] text-neutral-500">
-                  {flow.questions.length} question{flow.questions.length === 1 ? "" : "s"}
-                  {" · "}
                   {flowCountdownMinutes(flow.durationMinutes)} min
                 </p>
               </div>
@@ -274,11 +205,9 @@ export function CalibrationFlowsPanel({
                   onClick={() => {
                     setEditingId(flow.id);
                     setName(flow.name || flow.goal);
-                    setGoal(flow.goal);
+                    setGoal(flow.goal || flow.topic || "");
+                    setArtifacts(parseFlowArtifacts(flow.artifacts));
                     setMinutes(flowCountdownMinutes(flow.durationMinutes));
-                    setDraftQuestions(
-                      flow.questions.length ? flow.questions.map((question) => question.text) : [""],
-                    );
                   }}
                 >
                   Edit

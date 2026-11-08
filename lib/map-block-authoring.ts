@@ -24,7 +24,8 @@ export type EnsureAuthoringMapBlockInput = {
   title: string;
   topic?: string;
   goal?: string;
-  questions?: string[];
+  problem?: string;
+  artifacts?: unknown;
   ownerUserId: string;
   workspaceId: string;
 };
@@ -42,12 +43,9 @@ export async function ensureAuthoringMapBlock(
   }
 
   const title = String(input.title || "").trim() || "Untitled";
-  const topic = String(input.topic || title).trim() || title;
-  const goal = String(input.goal || topic).trim() || topic;
-  const questions =
-    Array.isArray(input.questions) && input.questions.length > 0
-      ? input.questions
-      : [block.kind === "calibration" ? goal : topic];
+  const topic =
+    String(input.problem || input.topic || input.goal || title).trim() || title;
+  const goal = topic;
   const ownerUserId = String(input.ownerUserId || "").trim();
   const workspaceId = String(input.workspaceId || "").trim();
   if (!ownerUserId) return { ok: false, error: "owner_required" };
@@ -59,7 +57,8 @@ export async function ensureAuthoringMapBlock(
       workspaceId: workspaceId || undefined,
       name: title.slice(0, 160),
       goal,
-      questions,
+      topic,
+      artifacts: input.artifacts,
     });
     if (!created.ok || !created.flow) {
       return { ok: false, error: created.ok ? "create_flow_failed" : created.reason };
@@ -82,7 +81,7 @@ export async function ensureAuthoringMapBlock(
       workspaceId: workspaceId || undefined,
       name: title.slice(0, 160),
       topic,
-      questions,
+      artifacts: input.artifacts,
     });
     if (!created.ok || !created.flow) {
       return { ok: false, error: created.ok ? "create_flow_failed" : created.reason };
@@ -104,6 +103,7 @@ export async function ensureAuthoringMapBlock(
     workspaceId: workspaceId || undefined,
     name: title.slice(0, 160),
     topic,
+    artifacts: input.artifacts,
   });
   if (!created.ok || !created.flow) {
     return { ok: false, error: created.ok ? "create_flow_failed" : created.reason };

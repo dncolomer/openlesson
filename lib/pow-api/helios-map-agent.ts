@@ -391,7 +391,7 @@ export async function applyHeliosMapToolsForAgent(input: {
           title: flowInput.name,
           topic: flowInput.topic,
           goal: flowInput.goal,
-          questions: flowInput.questions,
+          artifacts: flowInput.artifacts,
           ownerUserId,
           workspaceId: input.workspaceId,
         });

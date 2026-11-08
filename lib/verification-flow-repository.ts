@@ -24,6 +24,7 @@ import {
   type VerificationState,
 } from "@/lib/verification-flow";
 import { flowArchivedAtFromRow, listedAuthorFlows } from "@/lib/flow-archive";
+import { parseFlowArtifacts, serializeFlowArtifacts } from "@/lib/flow-artifacts";
 import { inviteFlowSessionOwner } from "@/lib/map-play-data-access";
 
 const VERIFICATION_FLOW_GLOBAL = "__openlessonVerificationFlowRepository";
@@ -97,6 +98,7 @@ function mapFlow(row: Record<string, unknown>): VerificationFlow {
     name: String(row.name || "").trim() || topic,
     topic,
     questions: normalizeQuestionPool(row.questions),
+    artifacts: parseFlowArtifacts(row.artifacts),
     durationMinutes: flowCountdownMinutes(row.duration_minutes),
     actionCatalog: parseLearningModelSize(row.action_catalog),
     publicToken: String(row.public_token || ""),
@@ -192,6 +194,7 @@ async function persistCommand(
       name: value.flow.name,
       topic: value.flow.topic,
       questions: value.flow.questions,
+      artifacts: serializeFlowArtifacts(value.flow.artifacts),
       duration_minutes: value.flow.durationMinutes,
       action_catalog: value.flow.actionCatalog,
       public_token: value.flow.publicToken,
@@ -206,6 +209,7 @@ async function persistCommand(
       name: value.flow.name,
       topic: value.flow.topic,
       questions: value.flow.questions,
+      artifacts: serializeFlowArtifacts(value.flow.artifacts),
       duration_minutes: value.flow.durationMinutes,
       action_catalog: value.flow.actionCatalog,
       updated_at: value.flow.updatedAt,
@@ -368,7 +372,7 @@ async function writeVerificationFlow(
       ? supabase.from("verify_flows").insert(body)
       : supabase.from("verify_flows").update(body).eq("id", id);
   let current = row;
-  for (const optional of ["name", "action_catalog", "duration_minutes", "owner_user_id", "workspace_id", "archived_at"] as const) {
+  for (const optional of ["name", "action_catalog", "duration_minutes", "owner_user_id", "workspace_id", "archived_at", "artifacts"] as const) {
     const result = await run(current);
     if (!result.error) return result;
     if (!String(result.error.message).includes(optional) || !(optional in current)) return result;

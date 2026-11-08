@@ -6,11 +6,18 @@
 
 import { parseLearningModelSize } from "@/lib/learning-model";
 import { flowCountdownMinutes } from "@/lib/flow-countdown";
+import {
+  parseFlowArtifacts,
+  flowProblemFromUnknown,
+  flowProblemQuestionPool,
+  type FlowArtifact,
+} from "@/lib/flow-artifacts";
 
 export type ProductFlowKind = "verification" | "calibration" | "solve";
 
 export const DASHBOARD_FLOWS_PATH = "/api/dashboard/flows";
 export const DASHBOARD_FLOWS_GENERATE_PATH = "/api/dashboard/flows/generate-questions";
+export const DASHBOARD_FLOW_FILES_PATH = "/api/dashboard/flows/files";
 
 export const PRODUCT_FLOW_WIZARD_STEPS = ["name", "author", "publish"] as const;
 
@@ -19,9 +26,11 @@ export type ProductFlowWizardStep = (typeof PRODUCT_FLOW_WIZARD_STEPS)[number];
 export type ProductFlowDraft = {
   kind: ProductFlowKind;
   name: string;
+  /** Problem text. Stored as topic. Calibration `goal` is the same string. */
   topic: string;
   goal: string;
   questions: string[];
+  artifacts: FlowArtifact[];
   actionCatalog: number;
   durationMinutes: number;
 };
@@ -112,10 +121,15 @@ export function emptyProductFlowDraft(kind: ProductFlowKind): ProductFlowDraft {
     name: "",
     topic: "",
     goal: "",
-    questions: [""],
+    questions: [],
+    artifacts: [],
     actionCatalog: 4,
     durationMinutes: 15,
   };
+}
+
+export function productFlowProblem(draft: Pick<ProductFlowDraft, "topic" | "goal">): string {
+  return flowProblemFromUnknown(draft);
 }
 
 export function normalizeFlowName(raw: unknown, fallback?: unknown): string {
@@ -150,15 +164,7 @@ export function productFlowWizardCanAdvance(
   draft: ProductFlowDraft,
 ): boolean {
   if (step === "name") return Boolean(normalizeFlowName(draft.name));
-  if (step === "author") {
-    if (draft.kind === "calibration") {
-      return Boolean(String(draft.goal || "").trim()) && productFlowQuestionsFromDraft(draft.questions).length > 0;
-    }
-    if (draft.kind === "solve") {
-      return Boolean(String(draft.topic || "").trim());
-    }
-    return Boolean(String(draft.topic || "").trim());
-  }
+  if (step === "author") return Boolean(productFlowProblem(draft));
   return Boolean(normalizeFlowName(draft.name));
 }
 
@@ -184,6 +190,7 @@ export type AcceptedProductFlowPublish =
       topic: string;
       goal: string;
       questions: string[];
+      artifacts: FlowArtifact[];
       actionCatalog: ReturnType<typeof parseLearningModelSize>;
       durationMinutes: number;
     }
@@ -192,34 +199,34 @@ export type AcceptedProductFlowPublish =
 export function acceptProductFlowPublish(draft: ProductFlowDraft): AcceptedProductFlowPublish {
   const name = normalizeFlowName(draft.name);
   if (!name) return { ok: false, reason: "name_required" };
-  const questions = productFlowQuestionsFromDraft(draft.questions);
+  const problem = productFlowProblem(draft);
+  if (!problem) return { ok: false, reason: "topic_required" };
+  const artifacts = parseFlowArtifacts(draft.artifacts);
   const actionCatalog = parseLearningModelSize(draft.actionCatalog);
   const durationMinutes = flowCountdownMinutes(draft.durationMinutes);
+  const pool = flowProblemQuestionPool(problem).map((item) => item.text);
   if (draft.kind === "calibration") {
-    const goal = String(draft.goal || "").trim();
-    if (!goal) return { ok: false, reason: "goal_required" };
-    if (questions.length === 0) return { ok: false, reason: "questions_required" };
     return {
       ok: true,
       kind: "calibration",
       name,
-      topic: "",
-      goal,
-      questions,
+      topic: problem,
+      goal: problem,
+      questions: pool,
+      artifacts,
       actionCatalog,
       durationMinutes,
     };
   }
-  const topic = String(draft.topic || "").trim();
-  if (!topic) return { ok: false, reason: "topic_required" };
   if (draft.kind === "solve") {
     return {
       ok: true,
       kind: "solve",
       name,
-      topic,
+      topic: problem,
       goal: "",
       questions: [],
+      artifacts,
       actionCatalog,
       durationMinutes,
     };
@@ -228,9 +235,10 @@ export function acceptProductFlowPublish(draft: ProductFlowDraft): AcceptedProdu
     ok: true,
     kind: "verification",
     name,
-    topic,
+    topic: problem,
     goal: "",
-    questions,
+    questions: pool,
+    artifacts,
     actionCatalog,
     durationMinutes,
   };

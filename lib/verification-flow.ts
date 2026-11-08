@@ -6,6 +6,12 @@
  */
 
 import { normalizeFlowName } from "@/lib/product-flow";
+import {
+  parseFlowArtifacts,
+  flowProblemFromUnknown,
+  flowProblemQuestionPool,
+  type FlowArtifact,
+} from "@/lib/flow-artifacts";
 import { TUTOR_CANVAS_VOICE } from "@/lib/prompt-kernel/tutor-voice";
 import {
   completeFlowEmbedding,
@@ -41,6 +47,7 @@ export type VerificationFlow = {
   name: string;
   topic: string;
   questions: VerificationQuestion[];
+  artifacts: FlowArtifact[];
   /** Stored default; the run clock is chosen on the session start screen. */
   durationMinutes: number;
   /** 4, 8, or 16 actions on the unsys model. */
@@ -501,8 +508,10 @@ export type VerificationCommand =
       workspaceId?: string;
       ownerUserId?: string;
       name?: string;
-      topic: string;
-      questions: unknown;
+      topic?: string;
+      problem?: string;
+      questions?: unknown;
+      artifacts?: unknown;
       durationMinutes?: number;
       actionCatalog?: number;
       id?: string;
@@ -515,7 +524,9 @@ export type VerificationCommand =
       flowId: string;
       name?: string;
       topic?: string;
+      problem?: string;
       questions?: unknown;
+      artifacts?: unknown;
       durationMinutes?: number;
       actionCatalog?: number;
     }
@@ -548,7 +559,10 @@ export function applyVerificationCommand(
   command: VerificationCommand,
 ): VerificationCommandResult {
   if (command.type === "create") {
-    const topic = command.topic.trim();
+    const topic = flowProblemFromUnknown({
+      problem: command.problem,
+      topic: command.topic,
+    });
     if (!topic) return { ok: false, reason: "topic_required", state };
     const token = (command.publicToken || createVerificationPublicToken()).trim();
     if (!token) return { ok: false, reason: "token_required", state };
@@ -562,7 +576,8 @@ export function applyVerificationCommand(
       ownerUserId: String(command.ownerUserId || "").trim(),
       name: normalizeFlowName(command.name, topic),
       topic,
-      questions: normalizeQuestionPool(command.questions),
+      questions: flowProblemQuestionPool(topic),
+      artifacts: parseFlowArtifacts(command.artifacts),
       durationMinutes: flowCountdownMinutes(command.durationMinutes),
       actionCatalog: parseLearningModelSize(command.actionCatalog),
       publicToken: token,
@@ -578,7 +593,10 @@ export function applyVerificationCommand(
     if (!commandOwnsFlow(current, command)) {
       return { ok: false, reason: "wrong_workspace", state };
     }
-    const topic = command.topic === undefined ? current.topic : command.topic.trim();
+    const topic =
+      command.topic === undefined && command.problem === undefined
+        ? current.topic
+        : flowProblemFromUnknown({ problem: command.problem, topic: command.topic });
     if (!topic) return { ok: false, reason: "topic_required", state };
     const flow: VerificationFlow = {
       ...current,
@@ -587,10 +605,11 @@ export function applyVerificationCommand(
           ? normalizeFlowName(current.name, topic)
           : normalizeFlowName(command.name, topic),
       topic,
-      questions:
-        command.questions === undefined
-          ? current.questions
-          : normalizeQuestionPool(command.questions),
+      questions: flowProblemQuestionPool(topic),
+      artifacts:
+        command.artifacts === undefined
+          ? parseFlowArtifacts(current.artifacts)
+          : parseFlowArtifacts(command.artifacts),
       durationMinutes:
         command.durationMinutes === undefined
           ? flowCountdownMinutes(current.durationMinutes)

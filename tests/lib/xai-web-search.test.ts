@@ -43,7 +43,35 @@ describe("Helios web search + create-flow args", () => {
     });
     expect(draft.kind).toBe("verification");
     expect(draft.topic).toBe("Distance");
-    expect(draft.questions.length).toBeGreaterThan(0);
+    expect(draft.questions).toEqual(["Distance"]);
+    expect(draft.artifacts).toEqual([]);
+    expect(
+      heliosFlowCreateInput({
+        kind: "calibration",
+        flowName: "Priors",
+        problem: "State the noise model",
+        artifacts: [
+          {
+            name: "brief.pdf",
+            mimeType: "application/pdf",
+            xaiFileId: "file_aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+          },
+        ],
+      }),
+    ).toMatchObject({
+      kind: "calibration",
+      name: "Priors",
+      topic: "State the noise model",
+      goal: "State the noise model",
+      questions: ["State the noise model"],
+      artifacts: [
+        {
+          name: "brief.pdf",
+          mimeType: "application/pdf",
+          xaiFileId: "file_aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        },
+      ],
+    });
     expect(heliosFlowCreateInput({ title: "Research" }).kind).toBe("solve");
     expect(heliosFlowCreateInput({ kind: "learn", title: "Old" }).kind).toBe(
       "solve",

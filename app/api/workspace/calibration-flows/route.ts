@@ -61,8 +61,15 @@ export async function POST(req: NextRequest) {
         workspaceId,
         flowId: String(body.flowId || ""),
         name: typeof body.name === "string" ? body.name : undefined,
-        goal: typeof body.goal === "string" ? body.goal : undefined,
-        questions: body.questions,
+        goal:
+          body.problem === undefined && body.topic === undefined && body.goal === undefined
+            ? undefined
+            : String(body.problem || body.topic || body.goal || ""),
+        topic:
+          body.problem === undefined && body.topic === undefined && body.goal === undefined
+            ? undefined
+            : String(body.problem || body.topic || body.goal || ""),
+        artifacts: body.artifacts,
         durationMinutes: body.durationMinutes as number | undefined,
         actionCatalog: body.actionCatalog as number | undefined,
       });
@@ -83,8 +90,9 @@ export async function POST(req: NextRequest) {
       type: "create",
       workspaceId,
       name: typeof body.name === "string" ? body.name : undefined,
-      goal: String(body.goal || ""),
-      questions: body.questions,
+      goal: String(body.problem || body.topic || body.goal || ""),
+      topic: String(body.problem || body.topic || body.goal || ""),
+      artifacts: body.artifacts,
       durationMinutes: body.durationMinutes as number | undefined,
       actionCatalog: body.actionCatalog as number | undefined,
     });

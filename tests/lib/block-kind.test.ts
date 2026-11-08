@@ -244,8 +244,7 @@ describe("map block kinds", () => {
         args: {
           title: "Priors",
           kind: "calibration",
-          goal: "State the prior",
-          questions: ["What is the prior?"],
+          topic: "State the prior",
         },
       },
       host: {

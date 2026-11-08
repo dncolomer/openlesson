@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { flowOwnedByUser, parseProductFlowKind, productFlowPagePath } from "@/lib/product-flow";
+import { flowProblemFromUnknown, parseFlowArtifacts } from "@/lib/flow-artifacts";
 import { calibrationFlowPublicPath } from "@/lib/calibration-flow";
 import { solveFlowPublicPath } from "@/lib/solve-flow";
 import { verificationFlowPublicPath } from "@/lib/verification-flow";
@@ -156,6 +157,12 @@ export async function POST(
       return NextResponse.json({ ok: true });
     }
 
+    const problem =
+      body.problem === undefined && body.topic === undefined && body.goal === undefined
+        ? undefined
+        : flowProblemFromUnknown(body);
+    const artifacts = body.artifacts === undefined ? undefined : parseFlowArtifacts(body.artifacts);
+
     if (loaded.kind === "solve") {
       const updated = await runSolveCommand({
         type: "update",
@@ -163,7 +170,8 @@ export async function POST(
         workspaceId: loaded.workspaceId,
         flowId: id,
         name: typeof body.name === "string" ? body.name : undefined,
-        topic: typeof body.topic === "string" ? body.topic : undefined,
+        topic: problem,
+        artifacts,
         durationMinutes: body.durationMinutes as number | undefined,
         actionCatalog: body.actionCatalog as number | undefined,
       });
@@ -178,8 +186,9 @@ export async function POST(
         workspaceId: loaded.workspaceId,
         flowId: id,
         name: typeof body.name === "string" ? body.name : undefined,
-        goal: typeof body.goal === "string" ? body.goal : undefined,
-        questions: body.questions,
+        goal: problem,
+        topic: problem,
+        artifacts,
         durationMinutes: body.durationMinutes as number | undefined,
         actionCatalog: body.actionCatalog as number | undefined,
       });
@@ -192,8 +201,8 @@ export async function POST(
       workspaceId: loaded.workspaceId,
       flowId: id,
       name: typeof body.name === "string" ? body.name : undefined,
-      topic: typeof body.topic === "string" ? body.topic : undefined,
-      questions: body.questions,
+      topic: problem,
+      artifacts,
       actionCatalog: body.actionCatalog as number | undefined,
     });
     if (!updated.ok) return jsonError(400, updated.reason);

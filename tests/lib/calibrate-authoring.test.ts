@@ -39,23 +39,26 @@ describe("calibration authoring", () => {
   it("accepts a typed goal and pool, and a goal generator fills that pool", async () => {
     const emptyGoal = acceptCalibrationDraft({ goal: "  ", questions: MANUAL_QUESTIONS });
     expect(emptyGoal.ok).toBe(false);
+    if (!emptyGoal.ok) expect(emptyGoal.reason).toBe("topic_required");
 
     const typed = acceptCalibrationDraft({ goal: " Continuity ", questions: MANUAL_QUESTIONS });
     expect(typed.ok).toBe(true);
     if (!typed.ok) return;
+    expect(typed.questions).toEqual([{ id: "q-1", text: "Continuity" }]);
 
     const created = applyCalibrationCommand(emptyCalibrationState(), {
       type: "create",
       workspaceId: "ws-cal",
       goal: typed.goal,
-      questions: typed.questions,
+      questions: MANUAL_QUESTIONS,
       id: "flow-1",
       publicToken: "token-cal",
     });
     expect(created.ok).toBe(true);
     if (!created.ok || !created.flow) return;
     expect(created.flow.goal).toBe("Continuity");
-    expect(created.flow.questions).toHaveLength(5);
+    expect(created.flow.topic).toBe("Continuity");
+    expect(created.flow.questions).toEqual([{ id: "q-1", text: "Continuity" }]);
     expect(created.flow.durationMinutes).toBe(15);
     const timed = applyCalibrationCommand(emptyCalibrationState(), {
       type: "create",
@@ -74,16 +77,11 @@ describe("calibration authoring", () => {
     expect(started.kind).toBe("calibration");
     expect(started.verificationRun).toBe(false);
     expect(started.requiresClassification).toBe(true);
-    expect(started.session.pool.map((question) => question.text)).toEqual(MANUAL_QUESTIONS);
+    expect(started.session.pool.map((question) => question.text)).toEqual(["Continuity"]);
     expect(canFinishClassifying(started.session)).toBe(false);
 
     let session = started.session;
     session = moveCalibrateQuestion(session, session.pool[0]!.id, "comfortable");
-    session = moveCalibrateQuestion(session, session.pool[1]!.id, "comfortable");
-    session = moveCalibrateQuestion(session, session.pool[2]!.id, "comfortable");
-    session = moveCalibrateQuestion(session, session.pool[3]!.id, "unconfident");
-    session = moveCalibrateQuestion(session, session.pool[4]!.id, "unconfident");
-    expect(canFinishClassifying(session)).toBe(true);
     expect(calibrationProofMetadata(session).verification_run).toBe(false);
     const unclaimed = applyCalibrationCommand(created.state, {
       type: "addProof",
@@ -153,7 +151,7 @@ describe("calibration authoring", () => {
     });
     expect(generated.ok).toBe(true);
     if (!generated.ok) return;
-    expect(generated.questions.map((question) => question.text)).toEqual(MANUAL_QUESTIONS);
+    expect(generated.questions.map((question) => question.text)).toEqual(["Understand continuity"]);
     expect(beginCalibrationSession({ questions: generated.questions }).verificationRun).toBe(false);
   });
 
@@ -193,8 +191,9 @@ describe("calibration authoring", () => {
     expect(panel).toContain('kind="goals"');
     expect(panel).toContain('kind="calibration_flow"');
     expect(panel).toContain("data-calibration-flow-goal");
-    expect(panel).toContain("data-calibration-flow-question");
-    expect(panel).toContain("data-calibration-generate-from-goal");
+    expect(panel).toContain("data-flow-problem");
+    expect(panel).not.toContain("data-calibration-flow-add-question");
+    expect(panel).not.toContain("data-calibration-generate-from-goal");
     expect(panel).toContain("data-calibration-flow-save");
     const route = read("app/api/workspace/context-generation/route.ts");
     expect(route).toContain('calibration_from_goal');
@@ -219,11 +218,12 @@ describe("calibration authoring", () => {
     expect(runner).toContain("identity: claimedIdentity");
     expect(runner).toContain("data-calibration-live-clock");
     expect(panel).toContain("data-calibration-flow-minutes");
-    expect(panel).toContain("data-calibration-flow-add-question");
-    expect(read("components/product-flow/product-flow-page.tsx")).toContain(
+    expect(read("components/product-flow/product-flow-page.tsx")).toContain("data-flow-problem");
+    expect(read("components/product-flow/product-flow-wizard.tsx")).toContain("data-flow-problem");
+    expect(read("components/product-flow/product-flow-page.tsx")).not.toContain(
       "data-calibration-flow-add-question",
     );
-    expect(read("components/product-flow/product-flow-wizard.tsx")).toContain(
+    expect(read("components/product-flow/product-flow-wizard.tsx")).not.toContain(
       "data-calibration-generate-from-goal",
     );
     expect(read("components/VerificationFlowsPanel.tsx")).not.toContain("data-verification-flow-minutes");
@@ -245,6 +245,7 @@ describe("calibration authoring", () => {
       workspaceId: "ws-cal",
       name: "Limits",
       topic: "Limits",
+      artifacts: [],
       questions: MANUAL_QUESTIONS.map((text, index) => ({ id: `v-${index + 1}`, text })),
       durationMinutes: 15,
       actionCatalog: 4,

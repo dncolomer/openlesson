@@ -69,6 +69,40 @@ describe("product flow owner_user_id", () => {
     expect(accepted.topic).toBe("epsilon-delta limits");
     expect(accepted.questions).toEqual([]);
     expect(accepted.goal).toBe("");
+    expect(accepted.artifacts).toEqual([]);
+  });
+
+  it("accepts verification and calibration from name + problem without questions", () => {
+    const verification = acceptProductFlowPublish({
+      ...emptyProductFlowDraft("verification"),
+      name: "Limits",
+      topic: "What is a limit in epsilon-delta form?",
+      questions: ["ignored extra question"],
+    });
+    expect(verification.ok).toBe(true);
+    if (!verification.ok) return;
+    expect(verification.topic).toBe("What is a limit in epsilon-delta form?");
+    expect(verification.questions).toEqual(["What is a limit in epsilon-delta form?"]);
+
+    const calibration = acceptProductFlowPublish({
+      ...emptyProductFlowDraft("calibration"),
+      name: "Priors",
+      goal: "",
+      topic: "State the noise model before decoding",
+      questions: [],
+    });
+    expect(calibration.ok).toBe(true);
+    if (!calibration.ok) return;
+    expect(calibration.goal).toBe("State the noise model before decoding");
+    expect(calibration.topic).toBe("State the noise model before decoding");
+    expect(calibration.questions).toEqual(["State the noise model before decoding"]);
+
+    expect(
+      acceptProductFlowPublish({
+        ...emptyProductFlowDraft("calibration"),
+        name: "Priors",
+      }),
+    ).toEqual({ ok: false, reason: "topic_required" });
   });
 
   it("treats owner_user_id as the ownership check", () => {

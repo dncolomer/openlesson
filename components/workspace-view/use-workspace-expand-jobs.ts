@@ -320,6 +320,10 @@ export function useWorkspaceExpandJobs(input: {
                             ? opts.mapBlock
                             : slotMapBlockTemplate(opts.mapBlock),
                         title: opts.title || prompt,
+                        ...(opts.problem ? { problem: opts.problem } : {}),
+                        ...(opts.artifacts?.length
+                          ? { artifacts: opts.artifacts }
+                          : {}),
                       }
                     : {}),
                   ...(ayclToken ? { ayclToken } : {}),

@@ -33,6 +33,7 @@ import { sessionBranchParentsNeedingGrowth } from "@/lib/session-branch-model";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveTapSessionAccess } from "@/lib/tap-score-session-auth";
 import { getVerificationFlowByToken } from "@/lib/verification-flow-repository";
+import type { FlowArtifact } from "@/lib/flow-artifacts";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -77,10 +78,49 @@ export async function POST(request: NextRequest) {
       if (!auth.ok) return auth.response;
     }
 
+    let generateContext: {
+      kind?: "solve" | "verification" | "calibration" | "learn";
+      problem?: string;
+      artifacts?: FlowArtifact[];
+      fileIds?: string[];
+    } = {};
     const material = {
       chapterTitle: plan.chapterTitle,
       chapterBrief: plan.chapterBrief,
     };
+    try {
+      const tokenedEarly = definitionFlowTokenFromPreparePlan(plan);
+      if (tokenedEarly?.kind === "calibration") {
+        const flow = await getCalibrationFlowByToken(tokenedEarly.token);
+        if (flow) {
+          generateContext = {
+            kind: "calibration",
+            problem: flow.topic || flow.goal,
+            artifacts: flow.artifacts,
+          };
+        }
+      } else if (tokenedEarly?.kind === "verification") {
+        const flow = await getVerificationFlowByToken(tokenedEarly.token);
+        if (flow) {
+          generateContext = {
+            kind: "verification",
+            problem: flow.topic,
+            artifacts: flow.artifacts,
+          };
+        }
+      } else if (tokenedEarly?.kind === "solve") {
+        const flow = await getSolveFlowByToken(tokenedEarly.token);
+        if (flow) {
+          generateContext = {
+            kind: "solve",
+            problem: flow.topic,
+            artifacts: flow.artifacts,
+          };
+        }
+      }
+    } catch {
+      /* flow lookup is optional context */
+    }
     if (body.phase !== "continue") {
       try {
         const supabase = createAdminClient();
@@ -93,14 +133,35 @@ export async function POST(request: NextRequest) {
           const flow = await getCalibrationFlowByToken(tokened.token);
           flowId = String(flow?.id || "");
           definitionWorkspaceId = String(flow?.workspaceId || "");
+          if (flow) {
+            generateContext = {
+              kind: "calibration",
+              problem: flow.topic || flow.goal,
+              artifacts: flow.artifacts,
+            };
+          }
         } else if (tokened?.kind === "verification") {
           const flow = await getVerificationFlowByToken(tokened.token);
           flowId = String(flow?.id || "");
           definitionWorkspaceId = String(flow?.workspaceId || "");
+          if (flow) {
+            generateContext = {
+              kind: "verification",
+              problem: flow.topic,
+              artifacts: flow.artifacts,
+            };
+          }
         } else if (tokened?.kind === "solve") {
           const flow = await getSolveFlowByToken(tokened.token);
           flowId = String(flow?.id || "");
           definitionWorkspaceId = String(flow?.workspaceId || "");
+          if (flow) {
+            generateContext = {
+              kind: "solve",
+              problem: flow.topic,
+              artifacts: flow.artifacts,
+            };
+          }
         }
         if (!flowId) {
           const sessionId = authorSeedSessionIdFromPreparePlan(plan);
@@ -211,6 +272,7 @@ export async function POST(request: NextRequest) {
       }
       const prepared = await continueSessionBranchModel({
         ...material,
+        ...generateContext,
         continuation: continuation as SessionBranchContinuation,
       });
       if (!prepared.ok) return jsonError(502, prepared.error);
@@ -220,7 +282,10 @@ export async function POST(request: NextRequest) {
         done: prepared.done,
       });
     }
-    const prepared = await generateSessionBranchOpening(material);
+    const prepared = await generateSessionBranchOpening({
+      ...material,
+      ...generateContext,
+    });
     if (!prepared.ok) return jsonError(502, prepared.error);
     const openingWork =
       plan.kind === "learn"

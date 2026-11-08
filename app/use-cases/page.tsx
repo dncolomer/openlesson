@@ -23,7 +23,7 @@ const standardSocial = standardShareSocialMetadata({
 
 export const metadata: Metadata = {
   title: "Use cases",
-  description: USE_CASES_COPY.lead[2],
+  description: USE_CASES_COPY.lead[1],
   alternates: { canonical: `https://uncertain.systems${USE_CASES_PATH}` },
   openGraph: standardSocial.openGraph,
   twitter: standardSocial.twitter,

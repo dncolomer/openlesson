@@ -12,15 +12,15 @@ export const LANDING_HERO_STILL_ALT =
 export const LANDING_USE_COPY = {
   harness: {
     dek: "Acquire knowledge as it is being made.",
-    body: "A problem-solving harness for frontier tech research and learning: photonic computing, new materials, BCI systems, agent tooling. It is the working piece of a bottom-up approach based on the Free Energy Principle and epistemic foraging. The work you do is captured as proof, so the knowledge you acquire is held.",
+    body: "A problem-solving harness for frontier tech research and learning: photonic computing, new materials, BCI systems, agent tooling. It is the working piece of a bottom-up approach based on the Free Energy Principle and epistemic foraging. The harness helps choose what to explore next; the thinking stays yours. The work you do is captured as proof, so the knowledge you acquire is held.",
   },
   verification: {
     dek: "Proof from work, for people and for agents.",
-    body: "Verify that a person actually holds a skill from genuine work traces, without traditional tests. Results cannot be cheated or faked. The same stack benchmarks the knowledge of agentic harnesses, so labs and teams can score what a given setup knows and compare one configuration to another.",
+    body: "Verify understanding from genuine work traces, without traditional tests. Results cannot be cheated or faked. The same stack benchmarks the knowledge of agentic harnesses, so labs and teams can score what a given setup knows and compare one configuration to another. The probe is guided; holding the knowledge is still the person's work.",
   },
   mapping: {
     dek: "Correlate neurological patterns with knowledge regions.",
-    body: "A product for science. Build studies that look for correlations between neurological patterns and knowledge regions: where a person sits in the embedding, and what the brain is doing there. Use it to study knowledge and to study the brain, with the same geometry the other two uses already write.",
+    body: "A product for science, and a way to make sense of complex AI-generated work. Build studies that look for correlations between neurological patterns and knowledge regions: where a person sits in the embedding, and what the brain is doing there. Use it to study knowledge and to study the brain, with the same geometry the other two uses already write.",
   },
 } as const;
 

@@ -101,13 +101,8 @@ describe("Knowledge tomography white paper content", () => {
 });
 
 describe("knowledge tomography public page and science link", () => {
-  it("research page route exists and renders the white paper module", () => {
-    const pagePath = join(ROOT, "app/science/knowledge-tomography/page.tsx");
-    expect(existsSync(pagePath)).toBe(true);
-    const src = read("app/science/knowledge-tomography/page.tsx");
-    expect(src).toContain("KNOWLEDGE_TOMOGRAPHY_WHITEPAPER");
-    expect(src).toContain("ScienceWhitepaperPage");
-    expect(src).toContain("KNOWLEDGE_TOMOGRAPHY_WHITEPAPER_PATH");
+  it("whitepaper shell remains even though the tomography paper route is unmounted", () => {
+    expect(existsSync(join(ROOT, "app/science/knowledge-tomography/page.tsx"))).toBe(false);
 
     const component = read("components/ScienceWhitepaperPage.tsx");
     expect(component).toContain("data-whitepaper-experiment-steps");
@@ -118,27 +113,29 @@ describe("knowledge tomography public page and science link", () => {
     expect(component).not.toContain("bg-zinc-900");
   });
 
-  it("science page links to knowledge tomography and keeps TAP white paper link", () => {
+  it("science hub no longer links the paper pages; old URLs redirect to /science", () => {
     const science = read("app/science/page.tsx");
-    expect(science).toContain("KNOWLEDGE_TOMOGRAPHY_WHITEPAPER_PATH");
-    expect(science).toContain("TAP_WHITEPAPER_PATH");
-    expect(science).toContain("data-science-research-link");
-    expect(science).toContain("data-science-research");
-    expect(science).toMatch(/href=\{KNOWLEDGE_TOMOGRAPHY_WHITEPAPER_PATH\}/);
-    expect(science).toMatch(/href=\{TAP_WHITEPAPER_PATH\}/);
+    expect(science).not.toContain("KNOWLEDGE_TOMOGRAPHY_WHITEPAPER_PATH");
+    expect(science).not.toContain("TAP_WHITEPAPER_PATH");
+    expect(science).not.toContain("data-science-research-link");
+    expect(science).not.toContain("data-science-research");
+    expect(science).not.toMatch(/Methods|&amp; planned experiments|planned experiments/i);
     expect(KNOWLEDGE_TOMOGRAPHY_WHITEPAPER_PATH).toBe("/science/knowledge-tomography");
-    expect(science).toMatch(/Methods|&amp; planned experiments|planned experiments/i);
+    const nextConfig = read("next.config.ts");
+    expect(nextConfig).toContain('source: "/science/knowledge-tomography"');
+    expect(nextConfig).toContain('source: "/science/think-aloud-protocol"');
+    expect(nextConfig).toContain('destination: "/science"');
   });
 
-  it("path constant matches shipped page file location", () => {
+  it("path constant stays on the retired URL and the page file is gone", () => {
     expect(KNOWLEDGE_TOMOGRAPHY_WHITEPAPER_PATH).toBe("/science/knowledge-tomography");
     expect(KNOWLEDGE_TOMOGRAPHY_WHITEPAPER.path).toBe(KNOWLEDGE_TOMOGRAPHY_WHITEPAPER_PATH);
-    expect(existsSync(join(ROOT, "app/science/knowledge-tomography/page.tsx"))).toBe(true);
+    expect(existsSync(join(ROOT, "app/science/knowledge-tomography/page.tsx"))).toBe(false);
   });
 
-  it("sitemap lists the knowledge tomography URL", () => {
+  it("sitemap no longer lists the paper URLs", () => {
     const sitemap = read("app/sitemap.ts");
-    expect(sitemap).toContain("/science/knowledge-tomography");
-    expect(sitemap).toContain("/science/think-aloud-protocol");
+    expect(sitemap).not.toContain("/science/knowledge-tomography");
+    expect(sitemap).not.toContain("/science/think-aloud-protocol");
   });
 });

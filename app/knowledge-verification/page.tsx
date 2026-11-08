@@ -117,7 +117,7 @@ export default function KnowledgeVerificationPage() {
             Our conversational interfaces run on a{" "}
             <span className="text-zinc-200">Free Energy Principle</span> approach based on
             epistemic foraging: the evolving learner model searches for information that reduces
-            uncertainty, and steers the thinking process toward what is still unknown.
+            uncertainty, and helps choose what to explore next. The thinking stays yours.
           </p>
           <p className="mt-5">{VERIFICATION_APPROACH_COPY.p3}</p>
           <p className="mt-5" data-landing-epistemic-foraging>

@@ -117,14 +117,14 @@ describe("science page renders epistemic foraging copy", () => {
     const whyAt = src.indexOf("data-science-why");
     const fepAt = src.indexOf("data-science-free-energy");
     const foragingAt = src.indexOf("data-science-epistemic-foraging");
-    const researchAt = src.indexOf("data-science-research");
+    const tomographyAt = src.indexOf("data-vision-tomography-induction");
     expect(whyAt).toBeGreaterThan(-1);
     expect(fepAt).toBeGreaterThan(-1);
     expect(foragingAt).toBeGreaterThan(-1);
-    expect(researchAt).toBeGreaterThan(-1);
+    expect(tomographyAt).toBeGreaterThan(-1);
     expect(whyAt).toBeLessThan(fepAt);
     expect(fepAt).toBeLessThan(foragingAt);
-    expect(foragingAt).toBeLessThan(researchAt);
+    expect(foragingAt).toBeLessThan(tomographyAt);
     expect(src).not.toContain("science-thesis-slide");
 
     expect(src.toLowerCase()).toMatch(/epistemic foraging/);

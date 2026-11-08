@@ -20,6 +20,7 @@ export const metadata: Metadata = {
   title: rootHtml.title,
   description: rootHtml.description,
   keywords: [
+    "knowledge building on autopilot",
     "knowledge acquisition",
     "knowledge verification",
     "knowledge mapping",

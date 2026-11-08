@@ -19,7 +19,8 @@ describe("science principles layout", () => {
     expect(src).not.toContain("principle-proximity-blueprint.jpg");
     expect(src).not.toContain("principle-transformation-blueprint.jpg");
     expect(src).not.toContain("principle-noninvasive-blueprint.jpg");
-    expect(src).toContain("data-science-research");
+    expect(src).toContain("data-vision-tomography-induction");
+    expect(src).not.toContain("data-science-research");
 
     for (const still of [
       "principle-configuration-blueprint.jpg",

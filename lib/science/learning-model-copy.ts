@@ -30,13 +30,13 @@ export const SCIENCE_LEARNING_MODEL_COPY = {
   eyebrow: "UNSYS MODEL",
   title: "A generative model you can act on.",
   lead:
-    "The unsys model is a generative model of a concept the user is trying to learn or verify: hidden states, state factors, observations, priced edges, and policies. Our system generates a learning simulation of that model and uses it to calibrate sessions, verify knowledge, and steer learning.",
+    "The unsys model is a generative model of a concept the user is trying to learn or verify: hidden states, state factors, observations, priced edges, and policies. Our system generates a learning simulation of that model and uses it to calibrate sessions, verify knowledge, and steer learning. The policy is how the autopilot helps choose what to explore next. The thinking stays yours.",
   foundationTitle: "Where this comes from",
   foundation:
     "Karl Friston’s Free Energy Principle says living systems keep a generative model of the world, then act to reduce uncertainty about its hidden states. A mismatch between the observation a hidden state would generate and what the learner produces is a surprise. We use those Concepts for Calibrate, Learn, and Verify. We do not compute variational free energy, and we do not claim the full formal theory.",
   howTitle: "What the system does",
   how:
-    "Before a session starts we freeze a generative model of the concept. Related hidden states share a state factor. Each hidden state carries an observation: what we would expect while focusing on it. An action is travel along a priced edge from the current hidden state to another, with a cost: its expected-free-energy price. A policy is a sequence of those hidden states, or the cheapest outgoing edge. Taps, speech, and canvas work are projected onto a policy. Learn shows those costs so the policy can steer. Verify hides them and scores distance from the cheapest policy.",
+    "Before a session starts we freeze a generative model of the concept. Related hidden states share a state factor. Each hidden state carries an observation: what we would expect while focusing on it. An action is travel along a priced edge from the current hidden state to another, with a cost: its expected-free-energy price. A policy is a sequence of those hidden states, or the cheapest outgoing edge. Taps, speech, and canvas work are projected onto a policy. Learn shows those costs so the policy can steer the next exploration. Verify hides them and scores distance from the cheapest policy. Understanding still happens in the work, not in the policy.",
   conceptsTitle: "The six Concepts",
   modesTitle: "Three sessions, one generative model",
   projectionTitle: "Projection",

@@ -78,13 +78,8 @@ describe("TAP Stash/Submit white paper content", () => {
 });
 
 describe("white paper public page and science link", () => {
-  it("research page route exists and renders the white paper module", () => {
-    const pagePath = join(ROOT, "app/science/think-aloud-protocol/page.tsx");
-    expect(existsSync(pagePath)).toBe(true);
-    const src = read("app/science/think-aloud-protocol/page.tsx");
-    expect(src).toContain("TAP_STASH_SUBMIT_WHITEPAPER");
-    expect(src).toContain("ScienceWhitepaperPage");
-    expect(src).toContain("TAP_WHITEPAPER_PATH");
+  it("whitepaper shell remains even though the TAP paper route is unmounted", () => {
+    expect(existsSync(join(ROOT, "app/science/think-aloud-protocol/page.tsx"))).toBe(false);
 
     const component = read("components/ScienceWhitepaperPage.tsx");
     expect(component).toContain("data-whitepaper-experiment-steps");
@@ -98,20 +93,21 @@ describe("white paper public page and science link", () => {
     expect(component).not.toContain("ring-1 ring-zinc");
   });
 
-  it("science page links to the white paper research path", () => {
+  it("science hub no longer links the TAP paper; old URL redirects to /science", () => {
     const science = read("app/science/page.tsx");
-    expect(science).toContain("TAP_WHITEPAPER_PATH");
-    expect(science).toContain("data-science-research-link");
-    expect(science).toContain("data-science-research");
-    expect(science).toMatch(/href=\{TAP_WHITEPAPER_PATH\}/);
+    expect(science).not.toContain("TAP_WHITEPAPER_PATH");
+    expect(science).not.toContain("data-science-research-link");
+    expect(science).not.toContain("data-science-research");
+    expect(science).not.toMatch(/Methods|&amp; planned experiments|planned experiments/i);
     expect(TAP_WHITEPAPER_PATH).toBe("/science/think-aloud-protocol");
-    // Intentional Research section, not only footer
-    expect(science).toMatch(/Methods|&amp; planned experiments|planned experiments/i);
+    const nextConfig = read("next.config.ts");
+    expect(nextConfig).toContain('source: "/science/think-aloud-protocol"');
+    expect(nextConfig).toContain('destination: "/science"');
   });
 
-  it("path constant matches shipped page file location", () => {
+  it("path constant stays on the retired URL and the page file is gone", () => {
     expect(TAP_WHITEPAPER_PATH).toBe("/science/think-aloud-protocol");
     expect(TAP_STASH_SUBMIT_WHITEPAPER.path).toBe(TAP_WHITEPAPER_PATH);
-    expect(existsSync(join(ROOT, "app/science/think-aloud-protocol/page.tsx"))).toBe(true);
+    expect(existsSync(join(ROOT, "app/science/think-aloud-protocol/page.tsx"))).toBe(false);
   });
 });

@@ -77,7 +77,9 @@ describe("landing knowledge acquisition, verification, and mapping copy", () => 
     expect(copy).toMatch(/From genuine work/);
     expect(PLATFORM_HERO.h1).toMatch(/From genuine work/);
     expect(PLATFORM_HERO.h1).toMatch(/^From genuine work/);
-    expect(PLATFORM_HERO.p1).toMatch(/Capture it as proof/);
+    expect(PLATFORM_HERO.p1).toMatch(/creating tools for knowledge building on autopilot/);
+    expect(PLATFORM_HERO.p1).toMatch(/thinking stays yours/);
+    expect(PLATFORM_HERO.p1).toMatch(/choose what to explore next/);
     expect("p2" in PLATFORM_HERO).toBe(false);
     expect(homepageCopyText()).not.toMatch(/three uses share the geometry/);
     expect(copy).not.toMatch(/proposition/i);
@@ -220,9 +222,9 @@ describe("landing knowledge acquisition, verification, and mapping copy", () => 
   it("contracts OG title to the hero H1 and share description to the new lead, not product split", () => {
     expect(UNSYS_STANDARD_SHARE_TITLE).toBe(PLATFORM_HERO.h1);
     expect(UNSYS_STANDARD_SHARE_DESCRIPTION).not.toBe(PLATFORM_HERO.p1);
-    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toMatch(/Acquire, verify, and map knowledge/);
-    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toMatch(/proof of work/);
-    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toMatch(/embedding models/);
+    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toMatch(/guide people through hard problems/);
+    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toMatch(/thinking stays yours/);
+    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toMatch(/verify understanding/);
     expect(UNSYS_STANDARD_SHARE_DESCRIPTION).not.toContain("Learning Harness");
     expect(UNSYS_STANDARD_SHARE_DESCRIPTION).not.toContain("Knowledge Verification");
     expect(UNSYS_STANDARD_SHARE_DESCRIPTION).not.toMatch(/Human Knowledge Platform/);
@@ -239,7 +241,8 @@ describe("landing knowledge acquisition, verification, and mapping copy", () => 
     expect(standard).toContain("PLATFORM_HERO.h1");
     expect(standard).not.toContain("Beyond benchmarks for AI. Beyond tests for humans.");
     expect(standard).not.toContain("three verticals for human and agentic learning");
-    expect(standard).toContain("Acquire, verify, and map knowledge");
+    expect(standard).toContain("knowledge building on autopilot");
+    expect(standard).toContain("thinking stays yours");
     expect(standard).not.toContain("hard-domain learning experiences");
     expect(standard).not.toContain("Human Knowledge Platform");
   });
@@ -247,7 +250,7 @@ describe("landing knowledge acquisition, verification, and mapping copy", () => 
   it("root HTML, OG, Twitter, JSON-LD, and manifest share the LP hero (not old efficiency copy)", () => {
     const rootHtml = unsysRootHtmlMetadata();
     expect(rootHtml.title.default).toBe(UNSYS_STANDARD_HTML_TITLE);
-    expect(rootHtml.title.default).toMatch(/Acquire, verify, and map knowledge/i);
+    expect(rootHtml.title.default).toMatch(/Knowledge building on autopilot/i);
     expect(rootHtml.title.default).not.toMatch(/Human Knowledge Platform/);
     expect(rootHtml.title.default).not.toMatch(/hard-domain learning experiences/i);
     expect(rootHtml.title.default.length).toBeGreaterThanOrEqual(50);
@@ -303,7 +306,7 @@ describe("landing knowledge acquisition, verification, and mapping copy", () => 
     expect(standard).not.toContain("Optimize learning efficiency for humans and agentic systems");
 
     const en = JSON.parse(readRel("messages/en.json")) as { footer: { seoBlurb: string } };
-    expect(en.footer.seoBlurb).toMatch(/Acquire, verify, and map knowledge/i);
+    expect(en.footer.seoBlurb).toMatch(/tools for knowledge building on autopilot/i);
     expect(en.footer.seoBlurb).not.toMatch(/hard-domain learning experiences/i);
     expect(en.footer.seoBlurb).not.toMatch(/Human Knowledge Platform/);
   });

@@ -7,8 +7,8 @@ import { SCIENCE_LEARNING_MODEL_PATH } from "@/lib/science/learning-model-copy";
 export const HARNESS_PRODUCT_COPY = {
   eyebrow: "PROBLEM SOLVING HARNESS",
   title: "Problem Solving Harness",
-  lead: "A harness designed to help you learn in the age of AI. It steers your learning process so you can use tools like AI to outsource certain parts of the work without accidentally outsourcing the learning itself.",
-  body: "Guardrails sit in the flow. You stay in the driver's seat when you pull data from different sources. The harness does not build content or a course for you — it steers you into the right learning actions and the internal model updates that make knowledge actually held.",
+  lead: "A harness designed to help you learn in the age of AI. It is one of the tools for knowledge building on autopilot: it guides you through hard problems so you can use tools like AI without accidentally outsourcing the learning itself. The exploration is guided; the thinking stays yours.",
+  body: "Guardrails sit in the flow. You stay in the driver's seat when you pull data from different sources. The harness does not build content or a course for you. Autopilot here means it helps choose what to explore next, not that understanding happens without you. It steers you into the right learning actions and the internal model updates that make knowledge actually held.",
   foraging:
     "That policy is epistemic foraging: learning as reducing uncertainty, rather than optimizing for tests and practice repetition.",
   foragingHref: SCIENCE_EPISTEMIC_FORAGING_PATH,
@@ -20,7 +20,7 @@ export const HARNESS_PRODUCT_COPY = {
     {
       eyebrow: "POLICY",
       title: "Epistemic foraging",
-      body: "An active search for information that shrinks what you do not know, instead of optimizing for tests and practice repetition. The harness forages for the next genuine gap.",
+      body: "An active search for information that shrinks what you do not know, instead of optimizing for tests and practice repetition. The harness forages for the next genuine gap: that is how the autopilot chooses what to explore next.",
       href: SCIENCE_EPISTEMIC_FORAGING_PATH,
       linkLabel: "Read the policy",
       image: "/lp-boxes/epistemic-foraging-blueprint.jpg",

@@ -171,8 +171,8 @@ describe("Unsys standard share (LP-derived)", () => {
     expect(UNSYS_STANDARD_SHARE_TITLE).toBe(PLATFORM_HERO.h1);
     expect(UNSYS_STANDARD_SHARE_TITLE).toMatch(/From genuine work/);
     expect(UNSYS_STANDARD_SHARE_DESCRIPTION).not.toBe(PLATFORM_HERO.p1);
-    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toMatch(/Acquire, verify, and map knowledge/);
-    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toMatch(/proof of work/);
+    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toMatch(/guide people through hard problems/);
+    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toMatch(/thinking stays yours/);
     expect(UNSYS_STANDARD_SHARE_DESCRIPTION).not.toContain("Learning Harness");
     expect(UNSYS_STANDARD_SHARE_DESCRIPTION).not.toContain("Knowledge Verification");
     expect(UNSYS_STANDARD_SHARE_DESCRIPTION).not.toMatch(/Human Knowledge Platform/);
@@ -220,7 +220,10 @@ describe("Unsys standard share (LP-derived)", () => {
     expect(lp).not.toContain("Beyond benchmarks for AI.");
     expect(lp).not.toContain("Beyond tests for humans.");
     expect(lp).not.toContain("VERIFICATION . OPTIMIZATION . AUGMENTATION");
-    expect(lp).toContain(UNSYS_STANDARD_SHARE_AESTHETIC);
+    expect(lp).toContain("PUBLIC_FIELD_STILLS");
+    expect(
+      fs.readFileSync(path.join(REPO_ROOT, "components/ui/console-frame.tsx"), "utf8"),
+    ).toContain(UNSYS_STANDARD_SHARE_AESTHETIC);
 
     writeScratch(
       "og-social-copy.txt",
@@ -240,7 +243,7 @@ describe("Unsys standard share (LP-derived)", () => {
 
   it("unsysRootHtmlMetadata matches LP hero and is what layout emits for title/description", () => {
     const html = unsysRootHtmlMetadata();
-    expect(html.title.default).toBe("Acquire, verify, and map knowledge | Uncertain Systems");
+    expect(html.title.default).toBe("Knowledge building on autopilot | Uncertain Systems");
     expect(html.title.default.length).toBeGreaterThanOrEqual(50);
     expect(html.title.default.length).toBeLessThanOrEqual(60);
     expect(html.description).toBe(UNSYS_STANDARD_SHARE_DESCRIPTION);
@@ -290,10 +293,10 @@ describe("Unsys standard share (LP-derived)", () => {
     expect(standardTwitter().images).toEqual(["/opengraph-image"]);
     const cardDescription = truncateOgDescription(UNSYS_STANDARD_SHARE_DESCRIPTION);
     expect(cardDescription.length).toBeLessThanOrEqual(OG_DESCRIPTION_MAX);
-    expect(cardDescription).toMatch(/Acquire, verify, and map knowledge/);
+    expect(cardDescription).toMatch(/guide people through hard problems/);
     expect(cardDescription).not.toContain("Learning Harness");
     expect(cardDescription).not.toContain("Knowledge Verification");
-    expect(cardDescription).toMatch(/proof of work/);
+    expect(cardDescription).toMatch(/thinking stays yours/);
     expect(social.openGraph?.description).toBe(UNSYS_STANDARD_SHARE_DESCRIPTION);
     expect(social.twitter?.description).toBe(UNSYS_STANDARD_SHARE_DESCRIPTION);
   });

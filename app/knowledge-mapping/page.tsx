@@ -69,7 +69,8 @@ export default function KnowledgeMappingPage() {
                 Every workspace puts people into a shared embedding geometry. Create knowledge regions,
                 multi-select users, and read{" "}
                 <span className="text-zinc-200">position on the map</span> live: the map shows where
-                people sit against your defined knowledge regions.
+                people sit against your defined knowledge regions. That position is how the autopilot
+                chooses what to explore next; the thinking stays yours.
               </p>
               <p className="mt-3 text-sm leading-relaxed text-zinc-500 sm:text-[15px]">
                 Create{" "}

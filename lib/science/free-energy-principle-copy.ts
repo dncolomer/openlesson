@@ -20,7 +20,7 @@ export const SCIENCE_FEP_COPY = {
   influence:
     "Our point of view on learning is heavily influenced by the Free Energy Principle. Adaptive systems that persist act as if they minimize surprise: variational free energy is an upper bound on surprise, and prediction error is the signal that drives belief updates and action. Learning, in that picture, is reducing uncertainty about the hidden causes of what you encounter.",
   name:
-    "That is why the platform is named Uncertain Systems: we treat learning as reducing uncertainty about a useful knowledge configuration, not as accumulating test scores.",
+    "That is why the platform is named Uncertain Systems: we treat learning as reducing uncertainty about a useful knowledge configuration, not as accumulating test scores. The autopilot helps choose what to explore next; the thinking stays yours.",
   caveat:
     "The Free Energy Principle is an influence on this point of view. We do not claim that Uncertain Systems is Friston's full formal theory, and we do not claim completed FEP empirical results.",
 } as const;

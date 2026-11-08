@@ -11,7 +11,6 @@ import {
   VISION_TOMOGRAPHY_INDUCTION_TERMS,
   getVisionTomographyInductionFullText,
 } from "@/lib/vision/knowledge-tomography-induction-copy";
-import { KNOWLEDGE_TOMOGRAPHY_WHITEPAPER_PATH } from "@/lib/science/knowledge-tomography-whitepaper";
 import { SCIENCE_HUB_COPY } from "@/lib/science/hub";
 
 const ROOT = join(__dirname, "../..");
@@ -79,31 +78,29 @@ describe("vision page renders tomography + induction block", () => {
     expect(src).toContain("knowledge-tomography-induction-copy");
 
     expect(src).toContain("SCIENCE_HUB_COPY.title");
-    expect(SCIENCE_HUB_COPY.title).toBe("Automating Human Learning");
+    expect(SCIENCE_HUB_COPY.title).toBe("Tools for knowledge building on autopilot");
+    expect(SCIENCE_HUB_COPY.lead).toMatch(/thinking stays yours/);
     expect(SCIENCE_HUB_COPY.workspaceCta).toBe("Create your Workspace");
     expect(read("app/vision/page.tsx")).toContain('redirect("/science")');
   });
 
-  it("links to foraging, learning model, and knowledge tomography paper paths", () => {
+  it("links to foraging and the Unsys model, not the retired paper pages", () => {
     const src = read("app/science/page.tsx");
     expect(src).toContain("VISION_TOMOGRAPHY_INDUCTION_PATHS.epistemicForaging");
-    expect(src).toContain("VISION_TOMOGRAPHY_INDUCTION_PATHS.knowledgeTomographyPaper");
+    expect(src).not.toContain("knowledgeTomographyPaper");
     expect(src).toContain("data-vision-epistemic-foraging-link");
-    expect(src).toContain("data-vision-knowledge-tomography-paper-link");
+    expect(src).not.toContain("data-vision-knowledge-tomography-paper-link");
     expect(src).toContain("data-vision-learning-model-link");
 
     expect(VISION_TOMOGRAPHY_INDUCTION_PATHS.science).toBe("/science");
     expect(VISION_TOMOGRAPHY_INDUCTION_PATHS.epistemicForaging).toBe(
       "/science#science-epistemic-foraging",
     );
-    expect(VISION_TOMOGRAPHY_INDUCTION_PATHS.knowledgeTomographyPaper).toBe(
-      KNOWLEDGE_TOMOGRAPHY_WHITEPAPER_PATH,
-    );
-    expect(KNOWLEDGE_TOMOGRAPHY_WHITEPAPER_PATH).toBe("/science/knowledge-tomography");
+    expect("knowledgeTomographyPaper" in VISION_TOMOGRAPHY_INDUCTION_PATHS).toBe(false);
   });
 
-  it("copy module path constants match paper route source", () => {
-    expect(existsSync(join(ROOT, "app/science/knowledge-tomography/page.tsx"))).toBe(true);
+  it("copy module remains and paper pages are gone", () => {
+    expect(existsSync(join(ROOT, "app/science/knowledge-tomography/page.tsx"))).toBe(false);
     expect(existsSync(join(ROOT, "lib/vision/knowledge-tomography-induction-copy.ts"))).toBe(
       true,
     );

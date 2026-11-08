@@ -90,6 +90,7 @@ describe("landing: knowledge acquisition, verification, and mapping", () => {
     const corpus = `${landing}\n${platform}`;
 
     expect(corpus).toMatch(/From genuine work/);
+    expect(PLATFORM_HERO.p1).toMatch(/creating tools for knowledge building on autopilot/);
     expect(landing).toContain("LandingHeroEditorial");
     expect(landing).toContain("{copy.h1}");
     expect(landing).not.toContain("A Human Knowledge Platform.");
@@ -99,7 +100,8 @@ describe("landing: knowledge acquisition, verification, and mapping", () => {
     expect(landing).toContain("PublicConsoleWash");
     expect(landing).not.toContain("PUBLIC_MAGI_GRID_CLASS");
     expect(PLATFORM_HERO.h1.toLowerCase()).toContain(PLATFORM_PHRASE.toLowerCase());
-    expect(PLATFORM_HERO.p1).toMatch(/Capture it as proof/);
+    expect(PLATFORM_HERO.p1).toMatch(/thinking stays yours/);
+    expect(PLATFORM_HERO.p1).toMatch(/choose what to explore next/);
     expect("p2" in PLATFORM_HERO).toBe(false);
     expect(landing).not.toMatch(/three uses share the geometry/);
     expect(landing).toContain("LANDING_USES");

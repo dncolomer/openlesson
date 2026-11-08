@@ -10,14 +10,6 @@ import {
   MARKETING_HERO_PRIMARY_CTA_CLASS,
   MarketingDirectoryHero,
 } from "@/components/marketing/MarketingDirectoryHero";
-import {
-  TAP_WHITEPAPER_PATH,
-  TAP_STASH_SUBMIT_WHITEPAPER,
-} from "@/lib/science/tap-stash-submit-whitepaper";
-import {
-  KNOWLEDGE_TOMOGRAPHY_WHITEPAPER,
-  KNOWLEDGE_TOMOGRAPHY_WHITEPAPER_PATH,
-} from "@/lib/science/knowledge-tomography-whitepaper";
 import { SCIENCE_FEP_COPY } from "@/lib/science/free-energy-principle-copy";
 import {
   SCIENCE_EPISTEMIC_FORAGING_COPY,
@@ -46,7 +38,7 @@ const standardSocial = standardShareSocialMetadata({
 export const metadata: Metadata = {
   title: "Vision",
   description:
-    "Self-driving technology for learning, grounded in a physical model of knowledge: epistemic foraging, configuration, proximity, and transformation with less wasted effort.",
+    "Uncertain Systems is creating tools for knowledge building on autopilot. We guide people through hard problems to build knowledge, verify understanding and make sense of complex AI-generated work. The science is epistemic foraging, configuration, and a shorter path through knowledge.",
   alternates: { canonical: "https://uncertain.systems/science" },
   openGraph: standardSocial.openGraph,
   twitter: standardSocial.twitter,
@@ -235,7 +227,7 @@ export default function SciencePage() {
       <section
         id="knowledge-tomography-induction"
         data-vision-tomography-induction
-        className={`${MARKETING_SHELL} pt-3`}
+        className={`${MARKETING_SHELL} pb-12 pt-3 sm:pb-14`}
         aria-labelledby="vision-tomography-induction-heading"
       >
         <div className="console-copy overflow-hidden">
@@ -279,14 +271,6 @@ export default function SciencePage() {
                   {SCIENCE_LEARNING_MODEL_COPY.title}
                   <ArrowRight size={13} />
                 </Link>
-                <Link
-                  href={VISION_TOMOGRAPHY_INDUCTION_PATHS.knowledgeTomographyPaper}
-                  data-vision-knowledge-tomography-paper-link
-                  className="inline-flex items-center gap-1.5 text-zinc-300 underline decoration-zinc-700 underline-offset-4 transition hover:text-white hover:decoration-zinc-500"
-                >
-                  {VISION_TOMOGRAPHY_INDUCTION_COPY.links.paperLabel}
-                  <ArrowRight size={13} />
-                </Link>
               </div>
             </div>
             <div className="grid border-t border-zinc-800/90 md:grid-cols-3 lg:col-span-7 lg:grid-cols-1 lg:border-t-0 lg:border-l">
@@ -323,75 +307,6 @@ export default function SciencePage() {
                   {VISION_TOMOGRAPHY_INDUCTION_COPY.induction.body}
                 </p>
               </article>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section
-        id="research"
-        data-science-research
-        className={`${MARKETING_SHELL} pb-12 pt-3 sm:pb-14`}
-        aria-labelledby="science-research-heading"
-      >
-        <div className="console-copy overflow-hidden">
-          <div className="grid lg:grid-cols-12">
-            <div className="flex flex-col justify-center p-5 sm:p-6 lg:col-span-5 lg:p-7">
-              <div className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
-                04 · Research
-              </div>
-              <h2
-                id="science-research-heading"
-                className="mt-3 text-2xl font-medium tracking-[-0.8px] text-white sm:text-3xl"
-              >
-                Methods &amp; planned experiments
-              </h2>
-              <p className="mt-3 text-sm leading-relaxed text-zinc-400">
-                Academic working papers on knowledge tomography, how we externalize cognition as Proof of
-                Work, and how we plan to embed that data into a Map of Knowledge toward knowledge induction.
-              </p>
-            </div>
-            <div className="grid border-t border-zinc-800/90 sm:grid-cols-2 lg:col-span-7 lg:grid-cols-1 lg:border-t-0 lg:border-l">
-              <Link
-                href={KNOWLEDGE_TOMOGRAPHY_WHITEPAPER_PATH}
-                data-science-research-link
-                data-science-research-link-knowledge-tomography
-                className="group block px-5 py-5 sm:px-6 sm:py-6"
-              >
-                <p className="font-mono text-[10px] uppercase tracking-[1.6px] text-zinc-500">
-                  Working paper · {KNOWLEDGE_TOMOGRAPHY_WHITEPAPER.meta.date}
-                </p>
-                <h3 className="mt-2 text-lg font-medium tracking-[-0.4px] text-white">
-                  {KNOWLEDGE_TOMOGRAPHY_WHITEPAPER.meta.shortTitle}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-zinc-400">
-                  {KNOWLEDGE_TOMOGRAPHY_WHITEPAPER.meta.description}
-                </p>
-                <span className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-zinc-300 transition group-hover:text-white">
-                  Read the white paper
-                  <ArrowRight size={14} />
-                </span>
-              </Link>
-              <Link
-                href={TAP_WHITEPAPER_PATH}
-                data-science-research-link
-                data-science-research-link-tap
-                className="group block border-t border-zinc-800/90 px-5 py-5 sm:border-t-0 sm:border-l sm:px-6 sm:py-6 lg:border-l-0 lg:border-t"
-              >
-                <p className="font-mono text-[10px] uppercase tracking-[1.6px] text-zinc-500">
-                  Working paper · {TAP_STASH_SUBMIT_WHITEPAPER.meta.date}
-                </p>
-                <h3 className="mt-2 text-lg font-medium tracking-[-0.4px] text-white">
-                  {TAP_STASH_SUBMIT_WHITEPAPER.meta.shortTitle}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-zinc-400">
-                  {TAP_STASH_SUBMIT_WHITEPAPER.meta.description}
-                </p>
-                <span className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-zinc-300 transition group-hover:text-white">
-                  Read the white paper
-                  <ArrowRight size={14} />
-                </span>
-              </Link>
             </div>
           </div>
         </div>

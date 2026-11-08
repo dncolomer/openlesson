@@ -61,19 +61,21 @@ describe("science page renders FEP copy", () => {
 
     const whyAt = src.indexOf("data-science-why");
     const fepAt = src.indexOf("data-science-free-energy");
-    const researchAt = src.indexOf("data-science-research");
+    const tomographyAt = src.indexOf("data-vision-tomography-induction");
     expect(whyAt).toBeGreaterThan(-1);
     expect(fepAt).toBeGreaterThan(-1);
-    expect(researchAt).toBeGreaterThan(-1);
+    expect(tomographyAt).toBeGreaterThan(-1);
     expect(whyAt).toBeLessThan(fepAt);
-    expect(fepAt).toBeLessThan(researchAt);
+    expect(fepAt).toBeLessThan(tomographyAt);
     expect(src).not.toContain("science-thesis-slide");
   });
 
-  it("keeps research white-paper links", () => {
+  it("does not ship Methods, planned experiments, or paper pages", () => {
     const src = read("app/science/page.tsx");
-    expect(src).toContain("KNOWLEDGE_TOMOGRAPHY_WHITEPAPER_PATH");
-    expect(src).toContain("TAP_WHITEPAPER_PATH");
-    expect(src).toContain("data-science-research-link");
+    expect(src).not.toContain("KNOWLEDGE_TOMOGRAPHY_WHITEPAPER_PATH");
+    expect(src).not.toContain("TAP_WHITEPAPER_PATH");
+    expect(src).not.toContain("data-science-research");
+    expect(src).not.toContain("data-science-research-link");
+    expect(src).not.toMatch(/Methods|&amp; planned experiments|planned experiments/i);
   });
 });

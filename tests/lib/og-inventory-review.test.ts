@@ -58,7 +58,7 @@ describe("OG share inventory (one unsys standard)", () => {
 
     expect(UNSYS_STANDARD_SHARE_TITLE).toBe(PLATFORM_HERO.h1);
     expect(UNSYS_STANDARD_SHARE_DESCRIPTION).not.toBe(PLATFORM_HERO.p1);
-    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toMatch(/Acquire, verify, and map knowledge/);
+    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toMatch(/guide people through hard problems/);
 
     for (const s of surfaces) {
       expect(s.title).toBe(UNSYS_STANDARD_SHARE_TITLE);
@@ -85,11 +85,12 @@ describe("OG share inventory (one unsys standard)", () => {
     expect(standard).toContain("PLATFORM_HERO.h1");
     expect(UNSYS_STANDARD_SHARE_TITLE).toBe(PLATFORM_HERO.h1);
     expect(UNSYS_STANDARD_SHARE_TITLE).toMatch(/From genuine work/);
-    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toMatch(/Acquire, verify, and map knowledge/);
+    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toMatch(/guide people through hard problems/);
     expect(UNSYS_STANDARD_SHARE_DESCRIPTION).not.toBe(PLATFORM_HERO.p1);
     expect(standard).not.toContain("Beyond benchmarks for AI. Beyond tests for humans.");
     expect(standard).not.toContain("three verticals for human and agentic learning");
-    expect(standard).toContain("Acquire, verify, and map knowledge");
+    expect(standard).toContain("knowledge building on autopilot");
+    expect(standard).toContain("thinking stays yours");
     expect(standard).not.toContain("Human Knowledge Platform");
     expect(standard).not.toContain("Verification · Optimization · Augmentation");
     expect(standard).toContain("/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg");

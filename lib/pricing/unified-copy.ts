@@ -12,7 +12,7 @@ import { FLOW_SESSION_CREDIT_COST, STARTER_CREDIT_GRANT } from "@/lib/credits/co
 export const UNIFIED_PRICING_COPY = {
   eyebrow: "PRICING",
   title: "Pay for usage.",
-  lead: "Sign up free, get starter credits, and buy more when you run Calibrate, Learn, Verify, and Solve sessions.",
+  lead: "Sign up free, get starter credits, and buy more when you run Calibrate, Learn, Verify, and Solve sessions. Credits power tools for knowledge building on autopilot: the system helps choose what to explore next, and the thinking stays yours.",
   needsPlan: "Buy a credit pack to keep running sessions.",
   free: {
     id: "free",

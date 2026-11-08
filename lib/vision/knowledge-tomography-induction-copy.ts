@@ -3,12 +3,10 @@
  * Structured so tests assert terms against shipped strings (not re-implemented prose).
  */
 
-import { KNOWLEDGE_TOMOGRAPHY_WHITEPAPER_PATH } from "@/lib/science/knowledge-tomography-whitepaper";
 import { SCIENCE_EPISTEMIC_FORAGING_PATH } from "@/lib/science/epistemic-foraging-copy";
 
 export const VISION_TOMOGRAPHY_INDUCTION_PATHS = {
   science: "/science",
-  knowledgeTomographyPaper: KNOWLEDGE_TOMOGRAPHY_WHITEPAPER_PATH,
   epistemicForaging: SCIENCE_EPISTEMIC_FORAGING_PATH,
 } as const;
 
@@ -27,7 +25,7 @@ export const VISION_TOMOGRAPHY_INDUCTION_COPY = {
   eyebrow: "SCIENCE PATH",
   title: "Knowledge tomography, then knowledge induction.",
   lead:
-    "Self-driving learning needs a policy and two complementary layers. Epistemic foraging is the policy: search for information that reduces uncertainty, rather than chasing scores. Then we measure what an entity currently holds, and steer transformation toward useful configurations with less wasted effort.",
+    "Tools for knowledge building on autopilot need a policy and two complementary layers. Epistemic foraging is the policy: search for information that reduces uncertainty, rather than chasing scores. Then we measure what an entity currently holds, and steer toward the next useful configuration. The exploration is guided; the thinking stays yours.",
   policy: {
     eyebrow: "Policy",
     title: "Epistemic foraging",
@@ -47,10 +45,9 @@ export const VISION_TOMOGRAPHY_INDUCTION_COPY = {
       "Knowledge induction is the longer-horizon aim: technology that guides transformation through knowledge configuration space—raising proximity to useful states without asking minds to burn proportionally more energy. Tomography measures; induction transforms.",
   },
   distinction:
-    "We keep the layers distinct on purpose. Epistemic foraging is the policy. Tomography externalizes and reconstructs current state. Knowledge induction tech uses that measurement to steer learning. Without tomography, induction is blind steering; without induction, measurement never compounds into self-driving learning.",
+    "We keep the layers distinct on purpose. Epistemic foraging is the policy. Tomography externalizes and reconstructs current state. Knowledge induction tech uses that measurement to choose what to explore next. Without tomography, induction is blind steering; without induction, measurement never compounds into knowledge building on autopilot.",
   links: {
     scienceLabel: "Science thesis",
-    paperLabel: "Knowledge tomography white paper",
     foragingLabel: "Epistemic foraging",
   },
 } as const;
@@ -74,7 +71,6 @@ export function getVisionTomographyInductionFullText(
     copy.induction.body,
     copy.distinction,
     copy.links.scienceLabel,
-    copy.links.paperLabel,
     copy.links.foragingLabel,
   ].join("\n");
 }

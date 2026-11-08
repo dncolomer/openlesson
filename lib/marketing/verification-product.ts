@@ -5,7 +5,7 @@ import { VERIFICATION_PRICING_PATH } from "@/lib/marketing/paths";
 export const VERIFICATION_PRODUCT_COPY = {
   eyebrow: "KNOWLEDGE VERIFICATION",
   title: "Verify Human Knowledge.",
-  lead: "A Knowledge Verification product for enterprise use cases: confirm that knowledge is actually held, without traditional tests and exams, with the guarantee that results cannot be cheated or faked.",
+  lead: "A Knowledge Verification product for enterprise use cases: confirm that understanding is actually held, without traditional tests and exams, with the guarantee that results cannot be cheated or faked. The probe is guided; the thinking stays yours.",
   pricingCta: "See verification pricing",
   pricingHref: VERIFICATION_PRICING_PATH,
 } as const;
@@ -26,8 +26,8 @@ export const VERIFICATION_PLATFORM_COPY = {
 export const VERIFICATION_APPROACH_COPY = {
   eyebrow: "THE APPROACH",
   title: "A learning world model.",
-  p1: "Uncertain Systems builds a learning world model from real work: skills, scenarios, proof of work, and where reasoning breaks. Our hosted interfaces as well as our API products are all specially designed to elicit genuine raw work data from the user while at the same time minimizing the disruption of the natural cognitive process.",
-  p2: "Our conversational interfaces run on a Free Energy Principle approach based on epistemic foraging: the evolving learner model searches for information that reduces uncertainty, and steers the thinking process toward what is still unknown.",
+  p1: "Uncertain Systems builds a learning world model from real work: skills, scenarios, proof of work, and where reasoning breaks. Our hosted interfaces as well as our API products are all specially designed to elicit genuine raw work data from the user while at the same time minimizing the disruption of the natural cognitive process. That is how we verify understanding without taking the thinking away from you.",
+  p2: "Our conversational interfaces run on a Free Energy Principle approach based on epistemic foraging: the evolving learner model searches for information that reduces uncertainty, and helps choose what to explore next. Autopilot here means guided probes, not understanding that happens without you.",
   p3: "We score whether people actually hold the knowledge from genuine work traces, with the guarantee that results cannot be cheated or faked.",
   foraging:
     "The harness searches for information that reduces uncertainty about what is held. That policy is epistemic foraging.",

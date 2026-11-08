@@ -1,6 +1,6 @@
 /**
  * Single Uncertain Systems (“unsys”) social share standard.
- * Social copy stays on the homepage lead (knowledge acquisition, verification, and mapping).
+ * Social copy stays on the homepage lead (tools for knowledge building on autopilot).
  * All public OG/Twitter metadata and opengraph-image entrypoints should use this.
  */
 
@@ -15,16 +15,16 @@ export const UNSYS_STANDARD_SHARE_TITLE = PLATFORM_HERO.h1;
  * `UNSYS_STANDARD_SHARE_TITLE`.
  */
 export const UNSYS_STANDARD_HTML_TITLE =
-  "Acquire, verify, and map knowledge | Uncertain Systems" as const;
+  "Knowledge building on autopilot | Uncertain Systems" as const;
 
 /**
  * Share + meta description: homepage lead, no product-split headline.
  * Length is 120–160 for SERP and under ~200 for X.
  */
 export const UNSYS_STANDARD_SHARE_DESCRIPTION =
-  "Acquire, verify, and map knowledge from genuine work. Capture proof of work, build embedding models, and define knowledge regions." as const;
+  "We guide people through hard problems to build knowledge, verify understanding and make sense of complex AI-generated work. The thinking stays yours." as const;
 
-/** LP hero platform phrase — knowledge acquisition, verification, and mapping */
+/** LP hero platform phrase — from genuine work */
 export const UNSYS_STANDARD_SHARE_EYEBROW = PLATFORM_PHRASE;
 
 /** Footer pill chrome on composed cards. */

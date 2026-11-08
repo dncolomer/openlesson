@@ -12,7 +12,7 @@ export const LANDING_HERO_STILL_ALT =
 export const LANDING_USE_COPY = {
   harness: {
     dek: "Develop understanding through work on difficult problems.",
-    body: "The Problem Solving Harness is how Knowledge Acquisition works in software today. You work through a demanding problem, make reasoning visible through supported session inputs, and follow up on gaps the work reveals. AI can sit in that working environment where the session supports it. The result is a work trace and a clearer basis for further investigation, not a finished course.",
+    body: "The Problem Solving Harness is how Build Understanding works in software today. You work through a demanding problem, make reasoning visible through supported session inputs, and follow up on gaps the work reveals. AI can sit in that working environment where the session supports it. The result is a work trace and a clearer basis for further investigation, not a finished course.",
   },
   verification: {
     dek: "Examine understanding through the work itself.",

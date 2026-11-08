@@ -19,7 +19,7 @@ const standardSocial = standardShareSocialMetadata({
 });
 
 export const metadata: Metadata = {
-  title: "Knowledge Acquisition",
+  title: "Build Understanding",
   description: HARNESS_PRODUCT_COPY.lead,
   alternates: { canonical: `https://uncertain.systems${LEARNING_HARNESS_PATH}` },
   openGraph: standardSocial.openGraph,

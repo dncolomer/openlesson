@@ -45,7 +45,7 @@ describe("live landing hero", () => {
   it("ships medium-length copy and a combined editorial hero", () => {
     expect(LANDING_HERO_COPY.h1).toBe(PLATFORM_HERO.h1);
     expect(LANDING_USES.map((item) => item.name)).toEqual([
-      "Knowledge Acquisition",
+      "Build Understanding",
       "Knowledge Verification",
       "Knowledge Mapping",
     ]);
@@ -78,7 +78,7 @@ describe("live landing hero", () => {
 
     const copy = landingHeroCopyText();
     expect(copy).toMatch(/Problem Solving Harness/);
-    expect(copy).toMatch(/Explore acquisition/);
+    expect(copy).toMatch(/Explore understanding/);
     expect(copy).toMatch(/knowledge region/);
     expect(copy).not.toMatch(/\u2014/);
     expect(copy).not.toMatch(/hard-domain learning experiences/i);

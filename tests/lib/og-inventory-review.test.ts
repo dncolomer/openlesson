@@ -191,7 +191,7 @@ describe("OG share inventory (one unsys standard)", () => {
     expect(layout).not.toContain("Learning Efficiency for Humans & Agents");
     expect(layout).not.toContain("Optimize learning efficiency for humans and agentic systems");
     expect(layout).not.toContain("learning efficiency platform");
-    expect(layout).toContain("knowledge acquisition");
+    expect(layout).toContain("build understanding");
     expect(layout).not.toContain("Human Knowledge Platform");
     expect(read("app/manifest.ts")).toContain("UNSYS_STANDARD_SHARE_DESCRIPTION");
     expect(read("app/manifest.ts")).not.toContain(

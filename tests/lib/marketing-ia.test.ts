@@ -107,7 +107,7 @@ describe("landing: knowledge acquisition, verification, and mapping", () => {
     expect(landing).not.toContain("The Unsys workspace is a course-seeded Learning Harness.");
     expect(corpus.toLowerCase()).not.toMatch(/cannot be cheated|cannot be faked/);
     expect(landing).not.toContain("PLATFORM_PRODUCT_LIST");
-    expect(PLATFORM_PRODUCTS.harness.name).toBe("Knowledge Acquisition");
+    expect(PLATFORM_PRODUCTS.harness.name).toBe("Build Understanding");
     expect(PLATFORM_PRODUCTS.harness.body).toMatch(/Problem Solving Harness/);
     expect(PLATFORM_PRODUCTS.verification.name).toBe("Knowledge Verification");
     expect(PLATFORM_PRODUCTS.mapping.name).toBe("Knowledge Mapping");
@@ -130,7 +130,7 @@ describe("landing: knowledge acquisition, verification, and mapping", () => {
     expect("tapbench" in PLATFORM_PRODUCTS).toBe(false);
     expect(PLATFORM_LAYER_LIST).toHaveLength(3);
     expect(PLATFORM_LAYER_LIST.map((p) => p.name)).toEqual([
-      "Knowledge Acquisition",
+      "Build Understanding",
       "Knowledge Verification",
       "Knowledge Mapping",
     ]);
@@ -253,7 +253,7 @@ describe("product pages: verification owns platform/approach; harness owns AYCL"
     expect(page).not.toContain("heroImage");
     expect(page).not.toContain("session-canvas-blueprint");
     expect(HARNESS_PRODUCT_COPY.lead.toLowerCase()).toMatch(/problem solving harness/);
-    expect(HARNESS_PRODUCT_COPY.body.toLowerCase()).toMatch(/knowledge acquisition/);
+    expect(HARNESS_PRODUCT_COPY.body.toLowerCase()).toMatch(/build understanding/);
     expect(HARNESS_PRODUCT_COPY.foraging.toLowerCase()).toMatch(/epistemic foraging/);
     expect(HARNESS_PRODUCT_COPY.foraging.toLowerCase()).toMatch(/reduces uncertainty/);
     expect(page).toContain("data-harness-epistemic-foraging");

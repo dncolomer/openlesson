@@ -34,7 +34,7 @@ function collectPageTsx(dir: string): string[] {
 }
 
 describe("marketing nav and platform rename", () => {
-  it("LandingNav links Acquisition, Verification, and Mapping, then Use cases, then Pricing", () => {
+  it("LandingNav links Understanding, Verification, and Mapping, then Use cases, then Pricing", () => {
     const nav = read("components/LandingNav.tsx");
     expect(nav).toContain("USE_CASES_NAV_LINK");
     expect(nav).toContain("data-nav-products");
@@ -58,7 +58,7 @@ describe("marketing nav and platform rename", () => {
     expect(nav).not.toContain("Create your Workspace");
     expect(nav).not.toContain("TrackedCtaLink");
     expect(MAIN_NAV_PRODUCT_LINKS.map((l) => l.label)).toEqual([
-      "Acquisition",
+      "Understanding",
       "Verification",
       "Mapping",
     ]);

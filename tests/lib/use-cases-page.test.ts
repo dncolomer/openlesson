@@ -26,7 +26,7 @@ describe("use cases listing", () => {
     expect(USE_CASES_NAV_LINK.href).toBe("/use-cases");
     expect(USE_CASES_NAV_LINK.label).toBe("Use cases");
     expect(MAIN_NAV_PRODUCT_LINKS.map((link) => link.label)).toEqual([
-      "Acquisition",
+      "Understanding",
       "Verification",
       "Mapping",
     ]);

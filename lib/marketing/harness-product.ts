@@ -17,7 +17,7 @@ export const HARNESS_PRODUCT_COPY = {
   title: "Build understanding through hard problems.",
   productName: "Problem Solving Harness",
   lead: "The Problem Solving Harness structures work on difficult problems around the understanding you need to develop, rather than stopping at an answer.",
-  body: "This is the working software for Knowledge Acquisition. You stay with a demanding problem or concept, make reasoning observable through the inputs the session supports, and continue into the gaps that work reveals.",
+  body: "This is the working software for Build Understanding. You stay with a demanding problem or concept, make reasoning observable through the inputs the session supports, and continue into the gaps that work reveals.",
   workflowEyebrow: "IN A SESSION",
   workflowTitle: "What working with the harness involves.",
   workflow: [
@@ -91,7 +91,7 @@ export const HARNESS_PRODUCT_COPY = {
   workspaceCta: "Create your Workspace",
   workspaceHref: WORKSPACE_NEW_PATH,
   discoveryCta: DISCOVERY_CTA_LABEL,
-  discoveryHref: discoveryMailto("Knowledge acquisition use case"),
+  discoveryHref: discoveryMailto("Build Understanding use case"),
   modelImageSrc: "/unsysmodel.png",
   modelImageAlt:
     "Hidden-state diagram of Integrals: meaning, setup, and technique branches, with the cheapest edge marked as the policy",

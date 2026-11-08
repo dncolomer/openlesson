@@ -188,7 +188,7 @@ describe("Unsys standard share (LP-derived)", () => {
     expect(UNSYS_STANDARD_SHARE.title).toBe(UNSYS_STANDARD_SHARE_TITLE);
     expect(UNSYS_STANDARD_SHARE.description).toBe(UNSYS_STANDARD_SHARE_DESCRIPTION);
     expect(UNSYS_STANDARD_SHARE.eyebrow).toBe("From genuine work");
-    expect(UNSYS_STANDARD_SHARE.footerLabel).toMatch(/ACQUIRE VERIFY MAP/);
+    expect(UNSYS_STANDARD_SHARE.footerLabel).toMatch(/UNDERSTAND VERIFY MAP/);
     expect(UNSYS_STANDARD_SHARE.aestheticImage).toBe(UNSYS_STANDARD_SHARE_AESTHETIC);
     expect(UNSYS_STANDARD_SHARE.title).not.toMatch(/learning efficiency for humans & agents/i);
     expect(UNSYS_STANDARD_SHARE.title).not.toMatch(/Beyond benchmarks for AI/i);

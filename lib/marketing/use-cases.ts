@@ -15,7 +15,7 @@ export const USE_CASES_COPY = {
   title: "Put knowledge building to work",
   lead: [
     "A researcher can hold an AI-generated argument no one on the team can yet question. A new colleague can read the documentation and still be unready to make a difficult call. A candidate can reach the right answer without showing how they got there.",
-    "Acquisition, verification, and mapping can work together in each of these situations. The system organizes work around a difficult problem and evidence of understanding.",
+    "Understanding, verification, and mapping can work together in each of these situations. The system organizes work around a difficult problem and evidence of understanding.",
   ],
   directoryEyebrow: "ON THIS PAGE",
   directoryTitle: "The cases.",
@@ -63,7 +63,7 @@ export const USE_CASES = [
     id: "research-ai",
     eyebrow: "FRONTIER WORK",
     directoryLabel: "Frontier work",
-    hint: "Acquisition · Mapping · Verification",
+    hint: "Understanding · Mapping · Verification",
     title: "Understand difficult work at the frontier",
     sections: [
       {
@@ -80,7 +80,7 @@ export const USE_CASES = [
     afterExample:
       "Human interpretability here means acquiring enough understanding to question the work. It is distinct from mechanistic interpretability of a model, and distinct from automated proof certification.",
     links: [
-      { href: LEARNING_HARNESS_PATH, label: "Knowledge Acquisition" },
+      { href: LEARNING_HARNESS_PATH, label: "Build Understanding" },
       { href: KNOWLEDGE_MAPPING_PATH, label: "Knowledge Mapping" },
       { href: KNOWLEDGE_VERIFICATION_PATH, label: "Knowledge Verification" },
     ],
@@ -95,7 +95,7 @@ export const USE_CASES = [
     id: "company-expertise",
     eyebrow: "TEAM EXPERTISE",
     directoryLabel: "Team expertise",
-    hint: "Mapping · Acquisition · Verification",
+    hint: "Mapping · Understanding · Verification",
     title: "Turn expert knowledge into team capability",
     sections: [
       {
@@ -112,7 +112,7 @@ export const USE_CASES = [
     afterExample: "",
     links: [
       { href: KNOWLEDGE_MAPPING_PATH, label: "Knowledge Mapping" },
-      { href: LEARNING_HARNESS_PATH, label: "Knowledge Acquisition" },
+      { href: LEARNING_HARNESS_PATH, label: "Build Understanding" },
       { href: KNOWLEDGE_VERIFICATION_PATH, label: "Knowledge Verification" },
     ],
     close: {
@@ -133,7 +133,7 @@ export const USE_CASES = [
         title: "Examine the approach, not only the answer",
         paragraphs: [
           "A technical hiring team wants to see how candidates approach a demanding problem, including work with an explicitly allowed AI tool. The useful evidence is how they explore, which assumptions they test, what they check, and how they develop their reasoning, alongside the result.",
-          "Define a reference knowledge region and a problem your experts consider meaningful. Run a Verify session under clear assessment conditions. Review the stored work and the model-relative relationship to that reference. Knowledge Mapping holds the domain target. Knowledge Acquisition is available afterward when the evidence points to development.",
+          "Define a reference knowledge region and a problem your experts consider meaningful. Run a Verify session under clear assessment conditions. Review the stored work and the model-relative relationship to that reference. Knowledge Mapping holds the domain target. Build Understanding is available afterward when the evidence points to development.",
           "The result is work-derived evidence for a hiring or development conversation, not a total measure of the person. The product does not enforce a tool policy or claim predictive validity. Agent-harness comparison is a related extension, not a validated cross-species benchmark.",
         ],
       },
@@ -145,7 +145,7 @@ export const USE_CASES = [
     links: [
       { href: KNOWLEDGE_VERIFICATION_PATH, label: "Knowledge Verification" },
       { href: KNOWLEDGE_MAPPING_PATH, label: "Knowledge Mapping" },
-      { href: LEARNING_HARNESS_PATH, label: "Knowledge Acquisition" },
+      { href: LEARNING_HARNESS_PATH, label: "Build Understanding" },
     ],
     close: {
       title: "Leave with a more specific hiring conversation",

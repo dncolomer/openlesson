@@ -109,12 +109,12 @@ describe("landing knowledge acquisition, verification, and mapping copy", () => 
     expect(lp).toContain("LandingHeroEditorial");
     expect(lp).not.toContain("{PLATFORM_LAYERS.title}");
     expect(lp).not.toContain("PLATFORM_LAYERS.lead");
-    expect(PLATFORM_LAYERS.title).toMatch(/Knowledge Acquisition/);
+    expect(PLATFORM_LAYERS.title).toMatch(/Build Understanding/);
     expect(PLATFORM_LAYERS.title).toMatch(/Knowledge Verification/);
     expect(PLATFORM_LAYERS.title).toMatch(/Knowledge Mapping/);
     expect(PLATFORM_LAYERS.title).not.toMatch(/Custom Knowledge Mapping/);
     expect(PLATFORM_LAYER_LIST.map((p) => p.name)).toEqual([
-      "Knowledge Acquisition",
+      "Build Understanding",
       "Knowledge Verification",
       "Knowledge Mapping",
     ]);
@@ -131,7 +131,7 @@ describe("landing knowledge acquisition, verification, and mapping copy", () => 
     expect(PLATFORM_HERO.h1).not.toMatch(/TAPBench/);
     expect(PLATFORM_PRODUCTS.harness.body).toMatch(/Problem Solving Harness/);
     expect(PLATFORM_PRODUCTS.harness.body).toMatch(/demanding problem/);
-    expect(PLATFORM_PRODUCTS.harness.cta).toBe("Explore acquisition");
+    expect(PLATFORM_PRODUCTS.harness.cta).toBe("Explore understanding");
     expect(PLATFORM_PRODUCTS.verification.body).toMatch(/explores a demanding problem/);
     expect(PLATFORM_PRODUCTS.verification.cta).toBe("Explore verification");
     expect(PLATFORM_PRODUCTS.mapping.body).toMatch(/knowledge region/);
@@ -285,7 +285,7 @@ describe("landing knowledge acquisition, verification, and mapping copy", () => 
     expect(layout).not.toContain("Learning Efficiency for Humans & Agents");
     expect(layout).not.toContain("Optimize learning efficiency for humans and agentic systems");
     expect(layout).not.toContain("learning efficiency platform");
-    expect(layout).toContain("knowledge acquisition");
+    expect(layout).toContain("build understanding");
     expect(layout).not.toContain("hard-domain learning experiences");
     expect(layout).not.toContain("Human Knowledge Platform");
 

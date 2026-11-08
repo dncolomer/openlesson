@@ -1,5 +1,5 @@
 /**
- * Landing copy: knowledge acquisition, verification, and mapping as the front door.
+ * Landing copy: Build Understanding, verification, and mapping as the front door.
  * Pages interpolate these strings so tests drive shipped copy, not a parallel corpus.
  */
 import {
@@ -21,7 +21,7 @@ export const APPROVED_BRAND_ANCHOR =
 export const PLATFORM_PHRASE = "From genuine work" as const;
 
 export const PLATFORM_HERO = {
-  pill: "ACQUIRE VERIFY MAP",
+  pill: "UNDERSTAND VERIFY MAP",
   h1: "Build Understanding on autopilot.",
   p1: APPROVED_BRAND_ANCHOR,
   p2: "Work through hard problems, examine the reasoning they reveal, and relate that evidence to knowledge regions built around your domain.",
@@ -80,7 +80,7 @@ export const PLATFORM_DELIVERY = {
 
 export const PLATFORM_LAYERS = {
   eyebrow: "THREE USES",
-  title: "Knowledge Acquisition, Knowledge Verification, Knowledge Mapping.",
+  title: "Build Understanding, Knowledge Verification, Knowledge Mapping.",
 } as const;
 
 export const PLATFORM_CORE = {
@@ -131,7 +131,7 @@ export const PLATFORM_PROOF = {
 export const PLATFORM_OUTCOMES = {
   eyebrow: "USE CASES",
   title: "Put knowledge building to work.",
-  lead: "Acquisition, verification, and mapping can work together when a team needs to understand difficult work, develop expertise, or assess capability through hard problems.",
+  lead: "Understanding, verification, and mapping can work together when a team needs to understand difficult work, develop expertise, or assess capability through hard problems.",
   cta: DISCOVERY_CTA_LABEL,
   ctaHref: ENTERPRISE_SETUP_MAILTO,
   moreCta: "Read the use cases",
@@ -164,11 +164,11 @@ export const PLATFORM_OUTCOMES = {
 export const PLATFORM_PRODUCTS = {
   harness: {
     eyebrow: "PROBLEM WORK",
-    name: "Knowledge Acquisition",
-    title: "Knowledge Acquisition",
-    body: "The Problem Solving Harness is how Knowledge Acquisition works in software today. You work through a demanding problem, make reasoning visible through supported session inputs, and follow up on gaps the work reveals. AI can sit in that working environment where the session supports it. The result is a work trace and a clearer basis for further investigation, not a finished course.",
+    name: "Build Understanding",
+    title: "Build Understanding",
+    body: "The Problem Solving Harness is how Build Understanding works in software today. You work through a demanding problem, make reasoning visible through supported session inputs, and follow up on gaps the work reveals. AI can sit in that working environment where the session supports it. The result is a work trace and a clearer basis for further investigation, not a finished course.",
     href: LEARNING_HARNESS_PATH,
-    cta: "Explore acquisition",
+    cta: "Explore understanding",
     pricingHref: HARNESS_PRICING_PATH,
     image: "/lp-boxes/harness-books-blueprint.jpg",
     imageAlt: "Blueprint sketch of an open gridded notebook, a compass, and a stack of volumes",
@@ -197,7 +197,7 @@ export const PLATFORM_PRODUCTS = {
   },
 } as const;
 
-/** Full product catalog: Knowledge Acquisition, Knowledge Verification, Knowledge Mapping. */
+/** Full product catalog: Build Understanding, Knowledge Verification, Knowledge Mapping. */
 export const PLATFORM_PRODUCT_LIST = [
   PLATFORM_PRODUCTS.harness,
   PLATFORM_PRODUCTS.verification,

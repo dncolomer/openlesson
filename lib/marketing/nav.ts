@@ -9,7 +9,7 @@ import {
 } from "@/lib/marketing/paths";
 
 export const MAIN_NAV_PRODUCT_LINKS = [
-  { href: LEARNING_HARNESS_PATH, label: "Acquisition" },
+  { href: LEARNING_HARNESS_PATH, label: "Understanding" },
   { href: KNOWLEDGE_VERIFICATION_PATH, label: "Verification" },
   { href: KNOWLEDGE_MAPPING_PATH, label: "Mapping" },
 ] as const;
@@ -23,7 +23,7 @@ export const PRICING_NAV_LINKS = [
   { href: HARNESS_PRICING_PATH, label: "Pricing" },
 ] as const;
 
-/** Community dropdown — AYCL lives under Knowledge Acquisition, not here. */
+/** Community dropdown — AYCL lives under Build Understanding, not here. */
 export const COMMUNITY_LINKS = [
   { href: "/community-events", label: "Community Events" },
   { href: "/kardashev", label: "Kardashev Research" },

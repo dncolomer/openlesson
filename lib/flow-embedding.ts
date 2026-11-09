@@ -520,6 +520,35 @@ export function embedFlowOutput(rawInput: FlowEmbeddingRaw): FlowEmbeddingRecord
   };
 }
 
+/** Transcripts extracted from PoW (same rules as Path + Text). */
+export function collectFlowPowTranscripts(pow: readonly FlowPowRow[]): string[] {
+  return collectPowTranscripts(pow);
+}
+
+/** 64-d tree sketch used by Path. Does not include walk or transcripts. */
+export function flowEmbeddingTreeSketch(raw: FlowEmbeddingRaw): number[] {
+  const recovered = recoverFlowEmbeddingRaw(raw) ?? raw;
+  return pad(treeSketch(recovered), FLOW_EMBEDDING_STRUCT_DIM);
+}
+
+/** 32-d walk sketch used by Path. Empty sequence is zeros. */
+export function flowEmbeddingWalkSketch(raw: FlowEmbeddingRaw): number[] {
+  const recovered = recoverFlowEmbeddingRaw(raw) ?? raw;
+  return pad(walkSketch(recovered), FLOW_EMBEDDING_SEM_DIM);
+}
+
+/** 96-d hashed transcript bag. Empty transcripts are a zero vector. */
+export function flowEmbeddingTextVector(raw: FlowEmbeddingRaw): number[] {
+  const recovered = recoverFlowEmbeddingRaw(raw) ?? raw;
+  return textVector(recovered);
+}
+
+/** Zero the walk portion of a Path vector and re-normalize (ablation). */
+export function ablateFlowPathWalk(path: readonly number[]): number[] {
+  const tree = pad(Array.from(path.slice(0, FLOW_EMBEDDING_STRUCT_DIM)), FLOW_EMBEDDING_STRUCT_DIM);
+  return l2Normalize([...tree, ...new Array(FLOW_EMBEDDING_SEM_DIM).fill(0)]);
+}
+
 export function completeFlowEmbedding(input: {
   flowKind: FlowKind | string;
   model?: SessionBranchModel | null;

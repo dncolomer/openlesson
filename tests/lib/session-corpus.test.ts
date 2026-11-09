@@ -127,5 +127,7 @@ describe("session corpus re-embed", () => {
     const pkg = readFileSync(join(__dirname, "../../package.json"), "utf8");
     expect(pkg).toContain("corpus:backup");
     expect(pkg).toContain("corpus:reembed");
+    expect(pkg).toContain("corpus:harness");
+    expect(pkg).not.toContain("corpus:train-flow");
   });
 });

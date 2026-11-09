@@ -39,7 +39,9 @@ Embeddings can be thrown away and rebuilt. Proof of work and xAI files cannot.
 4. **Three embedding families, same algorithm at v1** (`flowcfg-v1-d96`).
    Registry table `embedding_models` lets Calibrate, Learn, and Verify version
    independently. Stored vectors stay on `flowcfg-v1-d96` until a family ships
-   its own algorithm.
+   its own algorithm. Training for a later algorithm lives in the private
+   repo `flowcfg-trained-v1` and must not mutate v1. CPU harness:
+   `npm run corpus:harness`.
 5. **Calibrate result** is the sounding band already computed in
    `lib/calibrate-sounding.ts` (`unranked` | `lost` | `localized` | `coverage`),
    the uncertain/trusted question ids, and an optional one-step expert proof.

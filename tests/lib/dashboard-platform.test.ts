@@ -138,15 +138,15 @@ describe("dashboard nav", () => {
     ]);
     expect(learning?.items.map((item) => item.id)).toEqual([
       "browse_maps",
-      "my_maps",
       "practice",
+      "my_maps",
       "practice_studio",
       "practice_performance",
     ]);
     expect(learning?.items.map((item) => item.label)).toEqual([
       "Browse maps",
-      "My Maps",
       "Browse exercises",
+      "My Maps",
       "Data Studio",
       "Performance",
     ]);
@@ -155,8 +155,8 @@ describe("dashboard nav", () => {
         cluster.map((item) => item.id),
       ),
     ).toEqual([
-      ["browse_maps", "my_maps"],
-      ["practice", "practice_studio", "practice_performance"],
+      ["browse_maps", "practice", "my_maps"],
+      ["practice_studio", "practice_performance"],
     ]);
     expect(teaching?.label).toBe("Teaching");
     expect(teaching?.items.map((item) => item.id)).toEqual(["learning", "shop"]);

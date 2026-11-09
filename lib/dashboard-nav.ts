@@ -92,11 +92,11 @@ export const DASHBOARD_NAV_GROUPS: readonly DashboardNavGroup[] = [
     id: "learning",
     label: "Learning",
     items: [
-      { id: "browse_maps", label: "Browse maps", cluster: "maps" },
-      { id: "my_maps", label: "My Maps", cluster: "maps" },
-      { id: "practice", label: "Browse exercises", cluster: "exercises" },
-      { id: "practice_studio", label: "Data Studio", cluster: "exercises" },
-      { id: "practice_performance", label: "Performance", cluster: "exercises" },
+      { id: "browse_maps", label: "Browse maps", cluster: "catalog" },
+      { id: "practice", label: "Browse exercises", cluster: "catalog" },
+      { id: "my_maps", label: "My Maps", cluster: "catalog" },
+      { id: "practice_studio", label: "Data Studio", cluster: "studio" },
+      { id: "practice_performance", label: "Performance", cluster: "studio" },
     ],
   },
   {

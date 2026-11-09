@@ -5,6 +5,8 @@ import {
   dashboardCreateHref,
   dashboardCreateLabel,
   dashboardFrameLabel,
+  clusterDashboardNavItems,
+  dashboardNavGroupIdForTab,
   dashboardHrefForTab,
   dashboardTabForProductSurface,
   dashboardListFilterForTab,
@@ -118,14 +120,16 @@ describe("dashboard nav", () => {
     expect(dashboardTabForProductSurface("calibration", "region")).toBe("calibration_regions");
   });
 
-  it("subdivides the sidebar into Learning, Solve, Verification, and Calibration", () => {
+  it("subdivides the sidebar into Learning, Teaching, Solve, Verification, and Calibration", () => {
     const learning = DASHBOARD_NAV_GROUPS.find((group) => group.id === "learning");
+    const teaching = DASHBOARD_NAV_GROUPS.find((group) => group.id === "teaching");
     const verification = DASHBOARD_NAV_GROUPS.find((group) => group.id === "verification");
     const calibration = DASHBOARD_NAV_GROUPS.find((group) => group.id === "calibration");
     const solve = DASHBOARD_NAV_GROUPS.find((group) => group.id === "solve");
     expect(DASHBOARD_NAV_GROUPS.map((group) => group.id)).toEqual([
       "platform",
       "learning",
+      "teaching",
       "solve",
       "verification",
       "calibration",
@@ -134,22 +138,33 @@ describe("dashboard nav", () => {
     ]);
     expect(learning?.items.map((item) => item.id)).toEqual([
       "browse_maps",
+      "my_maps",
       "practice",
       "practice_studio",
       "practice_performance",
-      "my_maps",
-      "learning",
-      "shop",
     ]);
     expect(learning?.items.map((item) => item.label)).toEqual([
       "Browse maps",
+      "My Maps",
       "Browse exercises",
       "Data Studio",
       "Performance",
-      "My Maps",
-      "Build",
-      "My Shop",
     ]);
+    expect(
+      clusterDashboardNavItems(learning?.items ?? []).map((cluster) =>
+        cluster.map((item) => item.id),
+      ),
+    ).toEqual([
+      ["browse_maps", "my_maps"],
+      ["practice", "practice_studio", "practice_performance"],
+    ]);
+    expect(teaching?.label).toBe("Teaching");
+    expect(teaching?.items.map((item) => item.id)).toEqual(["learning", "shop"]);
+    expect(teaching?.items.map((item) => item.label)).toEqual(["Build", "My Shop"]);
+    expect(dashboardNavGroupIdForTab("learning")).toBe("teaching");
+    expect(dashboardNavGroupIdForTab("shop")).toBe("teaching");
+    expect(dashboardNavGroupIdForTab("browse_maps")).toBe("learning");
+    expect(clusterDashboardNavItems(solve?.items ?? [])).toHaveLength(1);
     expect(verification?.items.map((item) => item.label)).toEqual([
       "Flows",
       "Knowledge regions",
@@ -351,6 +366,12 @@ describe("dashboard platform surface", () => {
     expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).not.toContain("LanguageSwitcher");
     expect(readRepo("components/dashboard/dashboard-help-tab.tsx")).toContain("LanguageSwitcher");
     expect(readRepo("components/dashboard/dashboard-help-tab.tsx")).toContain('variant="support"');
+    expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain(
+      "data-dashboard-nav-cluster",
+    );
+    expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain(
+      "clusterDashboardNavItems",
+    );
     expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain("data-dashboard-sign-out");
     expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain(
       'group.id === "account"',

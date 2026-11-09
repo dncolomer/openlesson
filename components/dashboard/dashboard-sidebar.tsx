@@ -5,10 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BrandLogo } from "@/components/BrandLogo";
 import {
+  clusterDashboardNavItems,
   dashboardNavGroupIdForTab,
   isDashboardNavTabItem,
   isDashboardProductTab,
   type DashboardNavGroupId,
+  type DashboardNavItem,
   type DashboardTab,
 } from "@/lib/dashboard-nav";
 import { dashboardNavGroupsForAccess } from "@/lib/free-tier";
@@ -65,6 +67,7 @@ export function DashboardSidebar({
       {groups.map((group) => {
         const open = openGroup === group.id;
         const containsActive = group.items.some((item) => item.id === activeTab);
+        const clusters = clusterDashboardNavItems(group.items);
         return (
           <nav
             key={group.id}
@@ -86,58 +89,87 @@ export function DashboardSidebar({
               <span aria-hidden="true">{open ? "−" : "+"}</span>
             </button>
             {open ? (
-              <ul className="flex flex-row gap-0.5 overflow-x-auto md:flex-col">
-                {group.items.map((item) => {
-                  if (item.href) {
-                    return (
-                      <li key={item.id}>
-                        <Link
-                          href={item.href}
-                          data-dashboard-nav={item.id}
-                          data-dashboard-nav-link=""
+              <div className="flex flex-row gap-2 overflow-x-auto md:flex-col md:gap-0">
+                {clusters.map((cluster, index) => (
+                  <ul
+                    key={`${group.id}-${cluster[0]?.cluster ?? index}`}
+                    data-dashboard-nav-cluster={cluster[0]?.cluster || undefined}
+                    className={`flex flex-row gap-0.5 md:flex-col ${
+                      index > 0
+                        ? "border-l border-white/20 pl-2 md:border-l-0 md:border-t md:pl-0 md:pt-2"
+                        : ""
+                    }`}
+                  >
+                    {cluster.map((item) => (
+                      <NavItem
+                        key={item.id}
+                        item={item}
+                        activeTab={activeTab}
+                        onSelect={onSelect}
+                      />
+                    ))}
+                    {group.id === "account" && index === clusters.length - 1 ? (
+                      <li>
+                        <button
+                          type="button"
+                          data-dashboard-sign-out
+                          onClick={() => void handleSignOut()}
                           className={`${itemClass} ${idleClass}`}
                         >
-                          {item.label}
-                        </Link>
+                          {t("nav.signOut")}
+                        </button>
                       </li>
-                    );
-                  }
-                  if (!isDashboardNavTabItem(item)) return null;
-                  const active = activeTab === item.id;
-                  return (
-                    <li key={item.id}>
-                      <button
-                        type="button"
-                        data-dashboard-nav={item.id}
-                        data-dashboard-nav-active={active ? "true" : "false"}
-                        data-workspace-type-filter={
-                          isDashboardProductTab(item.id) ? item.id : undefined
-                        }
-                        onClick={() => onSelect(item.id)}
-                        className={`${itemClass} ${active ? activeClass : idleClass}`}
-                      >
-                        {item.label}
-                      </button>
-                    </li>
-                  );
-                })}
-                {group.id === "account" ? (
-                  <li>
-                    <button
-                      type="button"
-                      data-dashboard-sign-out
-                      onClick={() => void handleSignOut()}
-                      className={`${itemClass} ${idleClass}`}
-                    >
-                      {t("nav.signOut")}
-                    </button>
-                  </li>
-                ) : null}
-              </ul>
+                    ) : null}
+                  </ul>
+                ))}
+              </div>
             ) : null}
           </nav>
         );
       })}
     </aside>
+  );
+}
+
+function NavItem({
+  item,
+  activeTab,
+  onSelect,
+}: {
+  item: DashboardNavItem;
+  activeTab: DashboardTab;
+  onSelect: (tab: DashboardTab) => void;
+}) {
+  if (item.href) {
+    return (
+      <li>
+        <Link
+          href={item.href}
+          data-dashboard-nav={item.id}
+          data-dashboard-nav-link=""
+          className={`${itemClass} ${idleClass}`}
+        >
+          {item.label}
+        </Link>
+      </li>
+    );
+  }
+  if (!isDashboardNavTabItem(item)) return null;
+  const active = activeTab === item.id;
+  return (
+    <li>
+      <button
+        type="button"
+        data-dashboard-nav={item.id}
+        data-dashboard-nav-active={active ? "true" : "false"}
+        data-workspace-type-filter={
+          isDashboardProductTab(item.id) ? item.id : undefined
+        }
+        onClick={() => onSelect(item.id)}
+        className={`${itemClass} ${active ? activeClass : idleClass}`}
+      >
+        {item.label}
+      </button>
+    </li>
   );
 }

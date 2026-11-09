@@ -62,11 +62,14 @@ export type DashboardNavItem = {
   label: string;
   /** Off-dashboard destination. Tab items omit this. */
   href?: string;
+  /** Consecutive items that share a cluster render as an untitled subgroup. */
+  cluster?: string;
 };
 
 export type DashboardNavGroupId =
   | "platform"
   | "learning"
+  | "teaching"
   | "verification"
   | "calibration"
   | "solve"
@@ -89,11 +92,17 @@ export const DASHBOARD_NAV_GROUPS: readonly DashboardNavGroup[] = [
     id: "learning",
     label: "Learning",
     items: [
-      { id: "browse_maps", label: "Browse maps" },
-      { id: "practice", label: "Browse exercises" },
-      { id: "practice_studio", label: "Data Studio" },
-      { id: "practice_performance", label: "Performance" },
-      { id: "my_maps", label: "My Maps" },
+      { id: "browse_maps", label: "Browse maps", cluster: "maps" },
+      { id: "my_maps", label: "My Maps", cluster: "maps" },
+      { id: "practice", label: "Browse exercises", cluster: "exercises" },
+      { id: "practice_studio", label: "Data Studio", cluster: "exercises" },
+      { id: "practice_performance", label: "Performance", cluster: "exercises" },
+    ],
+  },
+  {
+    id: "teaching",
+    label: "Teaching",
+    items: [
       { id: "learning", label: "Build" },
       { id: "shop", label: "My Shop" },
     ],
@@ -212,6 +221,23 @@ export function dashboardNavGroupIdForTab(tab: DashboardTab): DashboardNavGroupI
     if (group.items.some((item) => item.id === tab)) return group.id;
   }
   return "platform";
+}
+
+export function clusterDashboardNavItems(
+  items: readonly DashboardNavItem[],
+): DashboardNavItem[][] {
+  const clusters: DashboardNavItem[][] = [];
+  for (const item of items) {
+    const key = item.cluster ?? "";
+    const last = clusters[clusters.length - 1];
+    const lastKey = last?.[0]?.cluster ?? "";
+    if (!last || lastKey !== key) {
+      clusters.push([item]);
+    } else {
+      last.push(item);
+    }
+  }
+  return clusters;
 }
 
 export function dashboardRegionsProduct(

@@ -134,14 +134,14 @@ export function DashboardPracticeTab({
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
-            Learning
+            Solve / Practice
           </p>
           <h2 className="mt-1 text-2xl font-medium tracking-[-0.6px] text-white">
             Practice library
           </h2>
           <p className="mt-1 max-w-2xl text-sm text-neutral-400">
-            Choose a category, then a topic, then start a Solve session. Each run is yours — no
-            verification or calibration.
+            Choose a category, then a topic, then start a Solve session. Practicing a problem
+            creates a Solve flow you can reopen from Flows.
           </p>
         </div>
       </header>

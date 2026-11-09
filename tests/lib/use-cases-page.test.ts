@@ -6,6 +6,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { MAIN_NAV_PRODUCT_LINKS, USE_CASES_NAV_LINK } from "@/lib/marketing/nav";
 import { ENTERPRISE_SETUP_MAILTO, USE_CASES_PATH } from "@/lib/marketing/paths";
+import { PLATFORM_OUTCOMES } from "@/lib/marketing/platform";
 import {
   USE_CASES,
   USE_CASES_COPY,
@@ -59,19 +60,41 @@ describe("use cases listing", () => {
     expect(page).toContain("data-use-cases-other");
     expect(page).toContain("data-use-cases-close");
     expect(page).toContain("data-use-case-example");
+    expect(page).toContain("data-use-case-visual");
+    expect(page).toContain("md:flex-row");
+    expect(page).toContain("md:w-[30%]");
+    expect(page).toContain("md:w-[70%]");
+    expect(page).toContain("object-cover");
+    expect(page).not.toContain("aspect-video");
     expect(page).toContain("USE_CASES");
     expect(USE_CASES).toHaveLength(3);
     expect(USE_CASES_OTHER).toHaveLength(3);
     expect(USE_CASES.map((item) => item.id)).toEqual([
       "research-ai",
-      "company-expertise",
       "technical-hiring",
+      "team-insight",
     ]);
+    expect(USE_CASES.map((item) => item.title)).toEqual(PLATFORM_OUTCOMES.items.map((item) => item.name));
+    expect(USE_CASES.map((item) => item.lead)).toEqual(PLATFORM_OUTCOMES.items.map((item) => item.body));
+    expect(USE_CASES.map((item) => item.eyebrow)).toEqual(
+      PLATFORM_OUTCOMES.items.map((item) => item.eyebrow),
+    );
+    expect(PLATFORM_OUTCOMES.items.map((item) => item.href)).toEqual(
+      USE_CASES.map((item) => `${USE_CASES_PATH}#${item.id}`),
+    );
+    expect(USE_CASES.map((item) => item.imageSrc)).toEqual([
+      "/lp-boxes/hero3.jpg",
+      "/unsysmodel.png",
+      "/regions1.png",
+    ]);
+    for (const item of USE_CASES) {
+      expect(existsSync(join(ROOT, "public", item.imageSrc.replace(/^\//, "")))).toBe(true);
+    }
     expect(USE_CASES_DIRECTORY.map((item) => item.href)).toEqual([
       "#ideas",
       "#research-ai",
-      "#company-expertise",
       "#technical-hiring",
+      "#team-insight",
       "#other-directions",
       "#start",
     ]);
@@ -83,7 +106,10 @@ describe("use cases listing", () => {
     expect(text).toMatch(/knowledge region/);
     expect(text).toMatch(/solve flow/);
     expect(text).toMatch(/technical hiring/);
-    expect(text).toMatch(/team capability/);
+    expect(text).toMatch(/Turn work into actionable insight/);
+    expect(text).not.toMatch(/TEAM EXPERTISE/);
+    expect(text).not.toMatch(/company-expertise/);
+    expect(text).not.toMatch(/team capability/);
     expect(text).toMatch(/AI-generated/);
     expect(text).toMatch(/Calibrate, Learn, and Verify/);
     expect(text).toMatch(/Institute and course-authoring/);

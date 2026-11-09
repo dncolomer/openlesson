@@ -185,15 +185,15 @@ export function DataStudioPanel({
   }, [focusRegionId, payload]);
 
   const rows = payload?.embeddings ?? [];
-  const showFlowFilters = product !== "learning";
+  const showFlowFilters = true;
   const filtered = useMemo(
     () =>
       filterStudioEmbeddings(rows, {
-        flowIds: showFlowFilters ? flowIds : [],
-        runIds: showFlowFilters ? runIds : [],
-        workspaceId: product === "learning" ? mapId : workspaceId,
+        flowIds,
+        runIds,
+        workspaceId,
       }),
-    [flowIds, mapId, product, rows, runIds, showFlowFilters, workspaceId],
+    [flowIds, rows, runIds, workspaceId],
   );
 
   const flows = useMemo(() => studioFlowOptions(rows), [rows]);
@@ -219,11 +219,8 @@ export function DataStudioPanel({
   const maps = payload?.workspaces ?? [];
 
   const spaceRegions = useMemo(
-    () =>
-      product === "learning"
-        ? []
-        : studioRegionsForSpace(payload?.regions ?? [], space),
-    [payload?.regions, product, space],
+    () => studioRegionsForSpace(payload?.regions ?? [], space),
+    [payload?.regions, space],
   );
   const regionIds = useMemo(
     () => spaceRegions.map((region) => region.id).filter(Boolean),

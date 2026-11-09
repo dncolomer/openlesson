@@ -11,17 +11,11 @@ import { IntegrationQuickAccess } from "@/components/IntegrationQuickAccess";
 import { WorkspaceAccessSettings } from "@/components/WorkspaceAccessSettings";
 import { WorkspaceAyclMarketplaceSettings } from "@/components/WorkspaceAyclMarketplaceSettings";
 import { WorkspaceIdentitySettings } from "@/components/WorkspaceIdentitySettings";
-import { CustomVerificationModelsPanel } from "@/components/CustomVerificationModelsPanel";
-import { WorkspaceDataStudioPanel } from "@/components/WorkspaceDataStudioPanel";
 import { WorkspaceSectionSubTabs } from "@/components/WorkspaceSectionSubTabs";
 import { readJsonResponse } from "@/lib/read-json-response";
 import { SECTION_TAB_CONTENT_CLASS } from "@/lib/workspace-section-surface";
 import type { Workspace } from "@/components/WorkspaceView";
-import {
-  isCalibrationWorkspace,
-  isKnowledgeRegionWorkspace,
-  isNoMapWorkspace,
-} from "@/lib/workspace-kind";
+import { isNoMapWorkspace } from "@/lib/workspace-kind";
 import {
   resolveSettingsSubview,
   settingsShowsMakePublic,
@@ -85,8 +79,6 @@ export function WorkspaceIntegrationPanel({
   );
 
   const showMakePublic = settingsShowsMakePublic(workspaceKind);
-  const isKnowledgeRegion = isKnowledgeRegionWorkspace(workspaceKind);
-  const isCalibration = isCalibrationWorkspace(workspaceKind);
   const isNoMap = isNoMapWorkspace(workspaceKind);
 
   const handleDownloadSkill = async () => {
@@ -206,43 +198,6 @@ export function WorkspaceIntegrationPanel({
               </p>
             )}
           </div>
-        ) : null}
-
-        {activeSubview === "regions" ? (
-          <section
-            className="space-y-3"
-            data-settings-section="custom-knowledge-regions"
-            data-settings-tab-panel="regions"
-          >
-            <div className="min-w-0 shrink-0">
-              <h2 className="text-sm font-medium text-white">Knowledge Regions</h2>
-              <p className="mt-1 max-w-2xl text-xs leading-relaxed text-neutral-500">
-                {isCalibration
-                  ? "Regions in flowcfg-v1-d96. Overlay them on calibration embeddings (uncertainty mapping)."
-                  : isKnowledgeRegion
-                    ? "Regions in flowcfg-v1-d96. Build them from verification flows or synthetic agents, then overlay them on Knowledge embeddings."
-                    : "Regions in flowcfg-v1-d96. Build them from verification flows, synthetic agents, or proof-of-work sources, then overlay them on Embeddings."}
-              </p>
-            </div>
-            <CustomVerificationModelsPanel
-              workspaceId={workspaceId}
-              currentUserId={currentUserId}
-              ayclToken={undefined}
-              verificationWorkspace={isNoMap}
-              knowledgeFlowKind={isCalibration ? "calibrate" : isKnowledgeRegion ? "verify" : null}
-            />
-          </section>
-        ) : null}
-
-        {activeSubview === "data-studio" ? (
-          <section
-            className="space-y-3"
-            data-settings-section="data-studio"
-            data-settings-tab-panel="data-studio"
-          >
-            <h2 className="text-sm font-medium text-white">Data Studio</h2>
-            <WorkspaceDataStudioPanel workspaceId={workspaceId} isOwner={isOwner} />
-          </section>
         ) : null}
 
         {activeSubview === "integrations" ? (

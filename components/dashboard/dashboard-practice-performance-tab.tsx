@@ -98,7 +98,7 @@ export function DashboardPracticePerformanceTab() {
     <div className="flex flex-col gap-4" data-dashboard-practice-performance>
       <header>
         <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
-          Learning
+          Solve / Practice
         </p>
         <h2 className="mt-1 text-2xl font-medium tracking-[-0.6px] text-white">
           Performance

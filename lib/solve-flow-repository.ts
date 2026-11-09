@@ -17,7 +17,6 @@ import {
   type SolveState,
 } from "@/lib/solve-flow";
 import { flowArchivedAtFromRow, listedAuthorFlows } from "@/lib/flow-archive";
-import { isPracticeSolveFlow } from "@/lib/practice-problems";
 import { parseFlowArtifacts, serializeFlowArtifacts } from "@/lib/flow-artifacts";
 import { inviteFlowSessionOwner } from "@/lib/map-play-data-access";
 
@@ -316,13 +315,11 @@ export async function listSolveFlows(workspaceId: string): Promise<SolveFlow[]> 
   if (!id) return [];
   if ((await resolveBackend()) === "memory") {
     return listedAuthorFlows(
-      solveRepositoryGlobal().memory.flows.filter(
-        (flow) => flow.workspaceId === id && !isPracticeSolveFlow(flow),
-      ),
+      solveRepositoryGlobal().memory.flows.filter((flow) => flow.workspaceId === id),
     ).map(presentFlow);
   }
   const state = await loadSupabaseState({ workspaceId: id });
-  return listedAuthorFlows(state.flows.filter((flow) => !isPracticeSolveFlow(flow))).map(presentFlow);
+  return listedAuthorFlows(state.flows).map(presentFlow);
 }
 
 export async function listSolveFlowsForOwnerUserId(ownerUserId: string): Promise<SolveFlow[]> {
@@ -330,9 +327,7 @@ export async function listSolveFlowsForOwnerUserId(ownerUserId: string): Promise
   if (!userId) return [];
   if ((await resolveBackend()) === "memory") {
     return listedAuthorFlows(
-      solveRepositoryGlobal().memory.flows.filter(
-        (flow) => flow.ownerUserId === userId && !isPracticeSolveFlow(flow),
-      ),
+      solveRepositoryGlobal().memory.flows.filter((flow) => flow.ownerUserId === userId),
     ).map(presentFlow);
   }
   const supabase = createAdminClient();
@@ -343,9 +338,7 @@ export async function listSolveFlowsForOwnerUserId(ownerUserId: string): Promise
     .order("created_at", { ascending: false });
   if (error || !Array.isArray(data)) return [];
   return listedAuthorFlows(
-    data
-      .map((row) => presentFlow(mapFlow(row as Record<string, unknown>)))
-      .filter((flow) => !isPracticeSolveFlow(flow)),
+    data.map((row) => presentFlow(mapFlow(row as Record<string, unknown>))),
   );
 }
 

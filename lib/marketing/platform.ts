@@ -85,14 +85,12 @@ export const PLATFORM_LAYERS = {
 
 export const PLATFORM_CORE = {
   eyebrow: "KNOWLEDGE REGIONS",
-  title: "A knowledge region is a shared reference for your domain.",
-  p1: "A knowledge region is a territory of problems, concepts, and reasoning you care about. Genuine work in sessions informs where someone sits relative to that territory. The region is the durable company or domain asset: a reference for developing understanding, examining it, and deciding what to investigate next.",
+  title: "A knowledge region is where similar ways of thinking cluster.",
+  p1: "Every piece of work done in the system, by people or by agents, is embedded into a custom knowledge embeddings space. Over time, that work forms clusters that group humans and agents who think and solve problems in similar ways within a knowledge area: these are knowledge regions. You can use a region as a target to practise toward, as a frame of reference for assessing a person's or an agent system's fit and knowledge, or as a way to spot gaps worth investigating next.",
   p2: "Knowledge regions can grow organically with expert users or be built synthetically with expert agents. You can also build them privately, as an internal asset for your project, team, or company, without sharing confidential information like internal APIs, strategy documents, or product details.",
   scienceHref: SCIENCE_HUB_PATH,
   scienceLabel: "Read the science",
   visualCaption: "Knowledge · Embeddings · Regions · Distance · Transitions",
-  visualBody:
-    "Illustrative projection: work becomes an embedding, regions are territories in that space, and positions, distances, and transitions are how you read the model.",
   imageSrc: "/regions1.png",
   imageAlt:
     "Illustrative 2D projection of knowledge regions for Physics, Maths, Code, and Design, with positions and distances between them",
@@ -144,18 +142,18 @@ export const PLATFORM_OUTCOMES = {
       hrefLabel: "Frontier work",
     },
     {
-      eyebrow: "TEAM EXPERTISE",
-      name: "Turn expertise into capability",
-      body: "Give colleagues a private domain region and representative problems, then use their work to see what still needs development.",
-      href: `${USE_CASES_PATH}#company-expertise`,
-      hrefLabel: "Team expertise",
-    },
-    {
       eyebrow: "ASSESSMENT",
       name: "Assess capability through problems",
       body: "Examine how a candidate explores a demanding problem, including work with an allowed AI tool when the problem says so.",
       href: `${USE_CASES_PATH}#technical-hiring`,
       hrefLabel: "Hard-problem assessment",
+    },
+    {
+      eyebrow: "TEAM INSIGHT",
+      name: "Turn work into actionable insight",
+      body: "Skills and expertise don't fit on a leaderboard or a two-axis chart. See your team, or yourself, across many dimensions at once, set against the goals that matter to you.",
+      href: `${USE_CASES_PATH}#team-insight`,
+      hrefLabel: "Team insight",
     },
   ],
 } as const;
@@ -224,7 +222,6 @@ export function homepageCopyText(): string {
     PLATFORM_CORE.p1,
     PLATFORM_CORE.p2,
     PLATFORM_CORE.visualCaption,
-    PLATFORM_CORE.visualBody,
     PLATFORM_CORE.imageSrc,
     PLATFORM_CORE.imageAlt,
     PLATFORM_PROOF.eyebrow,

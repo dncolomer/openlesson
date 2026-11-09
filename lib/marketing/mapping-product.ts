@@ -44,7 +44,7 @@ export const MAPPING_PLATFORM_COPY = {
   imageAlt:
     "Illustrative 2D projection of knowledge regions for Physics, Maths, Code, and Design, with a position and distances between them",
   relatedLinks: [
-    { href: `${USE_CASES_PATH}#company-expertise`, label: "Team expertise" },
+    { href: `${USE_CASES_PATH}#team-insight`, label: "Team insight" },
     { href: `${USE_CASES_PATH}#research-ai`, label: "Frontier work" },
     { href: LEARNING_HARNESS_PATH, label: "Solve" },
     { href: KNOWLEDGE_VERIFICATION_PATH, label: "Verify" },

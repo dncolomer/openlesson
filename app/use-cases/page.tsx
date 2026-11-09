@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { MarketingPageShell } from "@/components/marketing/MarketingChrome";
@@ -14,7 +15,7 @@ import {
   USE_CASES_OTHER,
   USE_CASES_PATH,
 } from "@/lib/marketing/use-cases";
-import { MARKETING_SHELL } from "@/lib/marketing/shell";
+import { MARKETING_MEDIA_FILL_CLASS, MARKETING_SHELL } from "@/lib/marketing/shell";
 import { standardShareSocialMetadata } from "@/lib/og/standard";
 
 const standardSocial = standardShareSocialMetadata({
@@ -117,80 +118,57 @@ export default function UseCasesPage() {
               data-use-case={item.id}
               aria-labelledby={`use-case-${item.id}-heading`}
             >
-              <article className="console-copy overflow-hidden p-5 sm:p-6 lg:p-7">
-                <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
-                  {String(index + 1).padStart(2, "0")} · {item.eyebrow}
-                </p>
-                <h2
-                  id={`use-case-${item.id}-heading`}
-                  className="mt-3 max-w-4xl text-2xl font-medium tracking-[-0.8px] text-white sm:text-3xl"
+              <article className="console-copy flex flex-col overflow-hidden md:flex-row">
+                <div
+                  className={`relative aspect-[4/3] w-full shrink-0 overflow-hidden md:aspect-auto md:min-h-full md:w-[30%] md:self-stretch ${MARKETING_MEDIA_FILL_CLASS}`}
+                  data-use-case-visual
                 >
-                  {item.title}
-                </h2>
-                {item.sections.map((section) => (
-                  <div key={section.title} className="mt-7">
-                    <h3 className="text-lg font-medium tracking-[-0.4px] text-white sm:text-xl">
-                      {section.title}
-                    </h3>
-                    {section.paragraphs.map((paragraph) => (
-                      <p
-                        key={paragraph}
-                        className="mt-3 text-sm leading-relaxed text-zinc-400 sm:text-base"
-                      >
-                        {paragraph}
-                      </p>
-                    ))}
-                  </div>
-                ))}
-                {item.example || item.afterExample ? (
+                  <Image
+                    src={item.imageSrc}
+                    alt={item.imageAlt}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, 30vw"
+                  />
+                </div>
+                <div className="min-w-0 flex-1 p-5 sm:p-6 md:w-[70%] lg:p-7">
+                  <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
+                    {String(index + 1).padStart(2, "0")} · {item.eyebrow}
+                  </p>
+                  <h2
+                    id={`use-case-${item.id}-heading`}
+                    className="mt-3 max-w-4xl text-2xl font-medium tracking-[-0.8px] text-white sm:text-3xl"
+                  >
+                    {item.title}
+                  </h2>
+                  <p className="mt-4 text-sm leading-relaxed text-zinc-400 sm:text-base">{item.lead}</p>
+                  <p className="mt-7 text-sm leading-relaxed text-zinc-400 sm:text-base">{item.body}</p>
                   <div
                     className="mt-7 border-t border-zinc-800/90 pt-5"
                     data-use-case-example
                   >
-                    {item.example ? (
-                      <>
-                        <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
-                          Illustrative example
-                        </p>
-                        <p className="mt-3 text-sm leading-relaxed text-zinc-300 sm:text-base">
-                          {item.example}
-                        </p>
-                      </>
-                    ) : null}
-                    {item.afterExample ? (
-                      <p className="mt-3 text-sm leading-relaxed text-zinc-400 sm:text-base">
-                        {item.afterExample}
-                      </p>
-                    ) : null}
-                  </div>
-                ) : null}
-                <div className="mt-7">
-                  <h3 className="text-lg font-medium tracking-[-0.4px] text-white sm:text-xl">
-                    {item.close.title}
-                  </h3>
-                  {item.close.paragraphs.map((paragraph) => (
-                    <p
-                      key={paragraph}
-                      className="mt-3 text-sm leading-relaxed text-zinc-400 sm:text-base"
-                    >
-                      {paragraph}
+                    <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
+                      Illustrative example
                     </p>
-                  ))}
-                </div>
-                <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2">
-                  {item.links.map((link) => (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      className="inline-flex items-center text-sm font-medium text-zinc-200 underline decoration-zinc-700 underline-offset-4 transition hover:text-white hover:decoration-zinc-500"
-                    >
-                      {link.label}
-                      <ArrowRight className="ml-2" size={14} />
-                    </Link>
-                  ))}
-                </div>
-                <div className="mt-6">
-                  <DiscoveryCta location={`use_case_${item.id}`} />
+                    <p className="mt-3 text-sm leading-relaxed text-zinc-300 sm:text-base">
+                      {item.example}
+                    </p>
+                  </div>
+                  <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2">
+                    {item.links.map((link) => (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        className="inline-flex items-center text-sm font-medium text-zinc-200 underline decoration-zinc-700 underline-offset-4 transition hover:text-white hover:decoration-zinc-500"
+                      >
+                        {link.label}
+                        <ArrowRight className="ml-2" size={14} />
+                      </Link>
+                    ))}
+                  </div>
+                  <div className="mt-6">
+                    <DiscoveryCta location={`use_case_${item.id}`} />
+                  </div>
                 </div>
               </article>
             </section>

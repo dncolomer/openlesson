@@ -1,6 +1,7 @@
 /**
- * Pure Data Studio helpers: flow/run filters, learning play-copy scope,
- * inspect payloads (vector + raw + PoW/transcripts), and 2D projection.
+ * Pure Data Studio helpers: flow/run filters, inspect payloads
+ * (vector + raw + PoW/transcripts), and 2D projection.
+ * Products are verification | calibration | solve.
  * Tests drive these functions — do not re-implement in tests.
  */
 
@@ -35,7 +36,6 @@ import {
   type RegionCentroidInput,
   type ScreenRect,
 } from "@/lib/knowledge-config";
-import { workspaceProductShell } from "@/lib/workspace-kind";
 import { includeAuthorStudioEmbedding } from "@/lib/map-play-data-access";
 import {
   isSimulationStrategyClusterName,
@@ -48,9 +48,7 @@ export type { StudioEmbeddingOrigin };
 export const DATA_STUDIO_PRODUCTS = [
   "verification",
   "calibration",
-  "learning",
   "solve",
-  "practice",
 ] as const;
 
 export type DataStudioProduct = (typeof DATA_STUDIO_PRODUCTS)[number];
@@ -164,13 +162,7 @@ function text(value: unknown): string {
 }
 
 export function parseDataStudioProduct(value: unknown): DataStudioProduct | null {
-  if (
-    value === "verification" ||
-    value === "calibration" ||
-    value === "learning" ||
-    value === "solve" ||
-    value === "practice"
-  ) {
+  if (value === "verification" || value === "calibration" || value === "solve") {
     return value;
   }
   return null;
@@ -179,16 +171,13 @@ export function parseDataStudioProduct(value: unknown): DataStudioProduct | null
 export function dataStudioFlowKind(product: DataStudioProduct): FlowKind {
   if (product === "verification") return "verify";
   if (product === "calibration") return "calibrate";
-  if (product === "solve" || product === "practice") return "solve";
-  return "learn";
+  return "solve";
 }
 
 export function dataStudioProductLabel(product: DataStudioProduct): string {
   if (product === "verification") return "Verification";
   if (product === "calibration") return "Calibration";
-  if (product === "solve") return "Solve";
-  if (product === "practice") return "Practice";
-  return "Learning";
+  return "Solve";
 }
 
 export function uniqueStudioIds(values: readonly unknown[]): string[] {
@@ -570,9 +559,8 @@ export function clampStudioInspectWidth(width: number, max = STUDIO_INSPECT_WIDT
 }
 
 /**
- * Learning Data Studio is play copies the viewer added. Authored maps stay
- * on Build. A missing owner on a play copy still belongs to the listed
- * workspace; authored rows are always excluded.
+ * Leftover helper kept for tests. Dashboard Data Studio no longer has a
+ * learning product; `presentDashboardDataStudio` does not call this.
  */
 export function includeLearningStudioEmbedding(input: {
   viewerUserId: string;
@@ -629,7 +617,7 @@ export function presentDashboardDataStudio(input: {
   product: DataStudioProduct;
   viewerUserId: string;
   practiceFlowIds?: readonly string[];
-  workspaces: readonly {
+  workspaces?: readonly {
     id?: unknown;
     title?: unknown;
     root_topic?: unknown;
@@ -647,81 +635,23 @@ export function presentDashboardDataStudio(input: {
   embeddings: DataStudioEmbeddingRow[];
   regions: RegionCentroidInput[];
 } {
+  void input.practiceFlowIds;
+  void input.workspaces;
   const flowKind = dataStudioFlowKind(input.product);
-  const workspaces = input.workspaces
-    .map((workspace) => {
-      const id = text(workspace.id);
-      if (!id) return null;
-      const shell = workspaceProductShell(workspace.workspace_kind);
-      if (input.product !== "learning") return null;
-      if (shell !== "learning") return null;
-      if (!Boolean(workspace.is_play_copy)) return null;
-      if (text(workspace.user_id) && text(workspace.user_id) !== text(input.viewerUserId)) {
-        return null;
-      }
-      return {
-        id,
-        title: text(workspace.title) || text(workspace.root_topic) || "Workspace",
-        is_play_copy: Boolean(workspace.is_play_copy),
-        owner_user_id: text(workspace.user_id) || input.viewerUserId,
-        original_workspace_id: text(workspace.original_workspace_id) || null,
-      };
-    })
-    .filter((row): row is NonNullable<typeof row> => !!row);
-
-  const workspaceIds = new Set(workspaces.map((row) => row.id));
-  const titleById = new Map(workspaces.map((row) => [row.id, row.title]));
-  const practiceFlowIds = new Set(
-    (input.practiceFlowIds ?? []).map((id) => text(id)).filter(Boolean),
-  );
-  let embeddings = input.embeddings.filter((row) => {
+  const embeddings = input.embeddings.filter((row) => {
     if (text(row.flow_kind) && text(row.flow_kind) !== flowKind) return false;
-    const flowId = text(row.flow_id);
-    if (input.product === "practice") {
-      if (practiceFlowIds.size === 0 || !flowId || !practiceFlowIds.has(flowId)) {
-        return false;
-      }
-    } else if (input.product === "solve" && flowId && practiceFlowIds.has(flowId)) {
-      return false;
-    }
-    if (input.product !== "learning") {
-      return includeAuthorStudioEmbedding({
-        viewerUserId: input.viewerUserId,
-        embedding: row,
-      });
-    }
-    const workspaceId = text(row.workspace_id);
-    if (workspaceId && !workspaceIds.has(workspaceId)) return false;
-    return true;
-  });
-
-  if (input.product === "learning") {
-    embeddings = scopeLearningStudioEmbeddings(embeddings, {
+    return includeAuthorStudioEmbedding({
       viewerUserId: input.viewerUserId,
-      workspaces,
+      embedding: row,
     });
-  }
-
-  embeddings = embeddings.map((row) => ({
-    ...row,
-    workspace_title: row.workspace_title || titleById.get(text(row.workspace_id)) || null,
-  }));
-
-  const regions =
-    input.product === "learning" || input.product === "practice"
-      ? []
-      : [...(input.regions ?? [])];
+  });
 
   return {
     product: input.product,
     flowKind,
-    workspaces: workspaces.map((row) => ({
-      id: row.id,
-      title: row.title,
-      is_play_copy: row.is_play_copy,
-    })),
+    workspaces: [],
     embeddings,
-    regions,
+    regions: [...(input.regions ?? [])],
   };
 }
 

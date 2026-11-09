@@ -7,6 +7,8 @@ import {
   flowOwnedByUser,
   parseProductFlowKind,
   productFlowNewPath,
+  productFlowEmbeddingKind,
+  productFlowKindLabel,
   productFlowOwnerTitle,
   productFlowPagePath,
   productFlowWizardCanAdvance,
@@ -23,8 +25,14 @@ describe("product flow owner_user_id", () => {
   it("maps historical workspace kind aliases for reads", () => {
     expect(parseWorkspaceKind("knowledge_region")).toBe("standard");
     expect(parseWorkspaceKind("calibration")).toBe("standard");
+    expect(productFlowKindLabel("verification")).toBe("Verification");
+    expect(productFlowKindLabel("calibration")).toBe("Calibration");
+    expect(productFlowKindLabel("solve")).toBe("Solve");
     expect(productFlowOwnerTitle("verification")).toBe("Verification flows");
     expect(productFlowOwnerTitle("solve")).toBe("Solve flows");
+    expect(productFlowEmbeddingKind("verification")).toBe("verify");
+    expect(productFlowEmbeddingKind("calibration")).toBe("calibrate");
+    expect(productFlowEmbeddingKind("solve")).toBe("solve");
     expect(parseProductFlowKind("solve")).toBe("solve");
     expect(parseProductFlowKind("practice")).toBeNull();
     expect(productFlowNewPath("solve")).toBe("/solve/flows/new");

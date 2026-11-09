@@ -36,46 +36,13 @@ describe("custom verification model surfaces", () => {
     expect(src).toContain("validation_score");
   });
 
-  it("workspace UI wires Custom Knowledge Regions sub-tabs: Create / Browse regions", () => {
+  it("workspace Settings does not create knowledge regions", () => {
     const ui = read("components/CustomVerificationModelsPanel.tsx");
-    expect(ui).toContain("data-custom-knowledge-regions");
-    expect(ui).toContain("data-knowledge-regions-subtabs");
-    expect(ui).toContain("WorkspaceSectionSubTabs");
-    expect(ui).toContain("Region builder");
-    expect(ui).toContain('action: "create"');
-    expect(ui).toContain('action: "delete"');
-    expect(ui).toContain("data-remove-knowledge-region");
-    expect(ui).toContain("Remove knowledge region?");
-    // Two sub-tabs — TAPBench mint lives under Knowledge Links
-    expect(ui).toContain('data-knowledge-regions-inner-tab="create"');
-    expect(ui).toContain('data-knowledge-regions-inner-tab="browse-regions"');
-    expect(ui).not.toContain('data-knowledge-regions-inner-tab="tapbench"');
-    expect(ui).toContain('innerTab === "create"');
-    expect(ui).toContain('innerTab === "browse-regions"');
-    expect(ui).not.toContain('innerTab === "tapbench"');
-    expect(ui).not.toContain("data-create-tapbench-link");
-    // Synthetic create-from-prompt removed from Knowledge Regions.
-    expect(ui).not.toContain('action: "create_synthetic"');
-    expect(ui).not.toContain("Create from description or files");
-    expect(ui).not.toContain("data-create-synthetic-region");
-    expect(ui).not.toContain("data-synthetic-region-prompt");
-    expect(ui).toContain("data-region-builder");
-    expect(ui).toContain("data-region-source-filter");
-    expect(ui).toContain("data-region-link-filter");
-    expect(ui).toContain("data-create-cohort-region");
-    expect(ui).toContain("data-region-saved-list");
-    // Settings region cards are create/list/remove — distance lives on Embeddings overlays.
-    expect(ui).not.toContain('action: "eval"');
-    expect(ui).not.toContain('action: "knowledge_distance"');
-    expect(ui).not.toContain("data-knowledge-distance-btn");
-    expect(ui).not.toContain("Eval against region");
-    expect(ui).toContain("bg-white");
-    expect(ui).toContain("PRIMARY_CTA_CLASS");
-    expect(ui).not.toMatch(/bg-cyan-|text-blue-|border-amber-|bg-blue-/);
-    expect(ui).toContain("subjects");
-    expect(ui).toContain("data-custom-knowledge-regions");
+    expect(ui).not.toContain("data-region-create-from-flow");
+    expect(ui).not.toContain('action: "create"');
+    expect(ui).not.toContain("data-create-cohort-region");
+    expect(ui).not.toContain("Create from verification flow");
 
-    // Custom Knowledge Regions live in Settings; Embeddings overlays regions + distance.
     const brain = readKnowledgePanelSurface();
     expect(brain).not.toContain("<CustomVerificationModelsPanel");
     expect(brain).toContain("data-region-overlay-picker");
@@ -92,34 +59,24 @@ describe("custom verification model surfaces", () => {
     expect(brain).toContain('data-section="embeddings-projections"');
 
     const settings = read("components/WorkspaceIntegrationPanel.tsx");
-    const settingsTabs = read("lib/workspace-settings-tabs.ts");
-    expect(settings).toContain("<CustomVerificationModelsPanel");
-    expect(settings).toContain("Knowledge Regions");
-    expect(settings).not.toContain("Custom Knowledge Regions");
-    expect(settings).toContain('data-settings-section="custom-knowledge-regions"');
+    expect(settings).not.toContain("<CustomVerificationModelsPanel");
+    expect(settings).not.toContain('data-settings-section="custom-knowledge-regions"');
+    expect(settings).not.toContain('data-settings-tab-panel="regions"');
+    expect(settings).not.toContain("WorkspaceDataStudioPanel");
     expect(settings).toContain("settingsSubTabsForKind");
-    expect(settingsTabs).toContain('"regions"');
-    expect(settings).toContain('data-settings-tab-panel="regions"');
-    expect(settings).toContain('activeSubview === "regions"');
   });
 
-  it("API routes expose cohort create, synthetic create with files, delete, eval, knowledge distance, and listing", () => {
+  it("API routes expose listing, delete, eval, and knowledge distance; create is simulation-only", () => {
     const cookie = read("app/api/workspace/custom-knowledge-regions/route.ts");
-    expect(cookie).toContain("createCustomVerificationModelFromSubjects");
-    expect(cookie).toContain("voice_model");
-    expect(cookie).toContain("voice_spec");
-    expect(cookie).toContain("createSyntheticCustomVerificationModel");
+    expect(cookie).toContain("Regions are created by running a simulation");
+    expect(cookie).not.toContain("createCustomVerificationModelFromSubjects");
+    expect(cookie).not.toContain("createSyntheticCustomVerificationModel");
     expect(cookie).toContain("deleteCustomVerificationModel");
-    expect(cookie).toContain("create_synthetic");
     expect(cookie).toContain('action === "delete"');
     expect(cookie).toContain("evalSubjectAgainstCustomVerificationModel");
     expect(cookie).toContain("computeKnowledgeDistanceForSubject");
     expect(cookie).toContain("knowledge_distance");
     expect(cookie).toContain("listSubjectsWithKnowledgeConfig");
-    // File-based synthetic create
-    expect(cookie).toContain("files");
-    expect(cookie).toContain("mimeType");
-    expect(cookie).toContain("prompt or files are required");
 
     const barrel = read("lib/pow-api/custom-verification-model-store.ts");
     expect(barrel).toContain("generateSyntheticRegionProfileWithGrok");

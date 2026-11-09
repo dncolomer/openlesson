@@ -14,7 +14,7 @@ export const USE_CASES_COPY = {
   eyebrow: "USE CASES",
   title: "Put knowledge building to work",
   lead: [
-    "A researcher can hold an AI-generated argument no one on the team can yet question. A new colleague can read the documentation and still be unready to make a difficult call. A candidate can reach the right answer without showing how they got there.",
+    "A researcher can hold an AI-generated argument no one on the team can yet question. A candidate can reach the right answer without showing how they got there. A lead can collect work traces and still not see where people sit relative to the goals that matter.",
     "Solve Protocol, Verify Protocol, and Map Protocol can work together in each of these situations. The system organizes work around a difficult problem and evidence of understanding.",
   ],
   directoryEyebrow: "ON THIS PAGE",
@@ -38,7 +38,7 @@ export const USE_CASES_COPY = {
   closeEyebrow: "START",
   closeTitle: "Start with one problem your team needs to understand",
   closeBody:
-    "Bring a frontier artifact, an area of company expertise, or a hiring problem. We can discuss the target knowledge, the work that would make understanding visible, and a focused first use case.",
+    "Bring a frontier artifact, an assessment problem, or stored work you want to read against a region. We can discuss the target knowledge, the work that would make understanding visible, and a focused first use case.",
   closeCta: DISCOVERY_CTA_LABEL,
   closeHref: ENTERPRISE_SETUP_MAILTO,
 } as const;
@@ -64,92 +64,60 @@ export const USE_CASES = [
     eyebrow: "FRONTIER WORK",
     directoryLabel: "Frontier work",
     hint: "Solve · Map · Verify",
-    title: "Understand difficult work at the frontier",
-    sections: [
-      {
-        title: "Make an unfamiliar argument inspectable",
-        paragraphs: [
-          "Automated checks only go so far. To really understand difficult work, especially AI-generated work, you have to work through it yourself and build your own insight. Uncertain Systems flows pair you with an AI-powered canvas and an interface that implements behavioral cognitive enhancements, so you get there faster and with less effort than in a chat window. Your work is also embedded in a knowledge embedding space, which helps you and others build insight more efficiently over time.",
-        ],
-      },
-    ],
-    example: "",
-    afterExample:
-      "Human interpretability here means acquiring enough understanding to question the work. It is distinct from mechanistic interpretability of a model, and distinct from automated proof certification.",
-    links: [
-      { href: LEARNING_HARNESS_PATH, label: "Solve" },
-      { href: KNOWLEDGE_MAPPING_PATH, label: "Map" },
-      { href: KNOWLEDGE_VERIFICATION_PATH, label: "Verify" },
-    ],
-    close: {
-      title: "Leave with a record of what was actually examined",
-      paragraphs: [
-        "A useful outcome is the region of dependencies the team has worked, plus traces and open questions. That record can support expert review. It is not a certificate of correctness.",
-      ],
-    },
-  },
-  {
-    id: "company-expertise",
-    eyebrow: "TEAM EXPERTISE",
-    directoryLabel: "Team expertise",
-    hint: "Map · Solve · Verify",
-    title: "Turn expert knowledge into team capability",
-    sections: [
-      {
-        title: "Give colleagues a shared domain reference",
-        paragraphs: [
-          "A technical lead needs colleagues to reason through an unfamiliar subsystem, including design choices and failure cases. Documentation preserves information. It does not show whether someone can use it when the situation changes.",
-          "Use expert material and representative problems to define a private knowledge region in the workspace, using the inputs authoring actually supports. Colleagues then work those problems in the Problem Solving Harness. Stored work helps locate further development needs. Knowledge Verification can examine understanding on a later problem under stated conditions.",
-          "The durable asset is the company region and the associated work, not a course-consumption checklist. Ownership stays with the workspace that holds the region. Authors still decide what belongs in the region. The system does not automatically capture an expert or promise faster onboarding.",
-        ],
-      },
-    ],
+    title: "Understand difficult work",
+    lead: "Investigate an unfamiliar argument, including AI-generated work, until the assumptions and open questions are explicit.",
+    body: "You work the argument in a Solve or Learn session. Speech, writing, and drawing on the canvas are stored, and the unsys model can suggest a next place to look. Completing a session records what you examined. It does not certify that the argument is correct. The interface uses behavioral cognitive enhancements such as think-aloud work on the canvas so you can question the work yourself. Human interpretability here means acquiring enough understanding to question the work. It is distinct from mechanistic interpretability of a model, and distinct from automated proof certification.",
     example:
-      "An engineer joins a team responsible for a data pipeline. Instead of only reading its runbook, they explore why an apparently healthy deployment is producing incomplete results. They trace dependencies, test explanations, and justify a recovery plan. An experienced colleague reviews the stored work and identifies which assumptions need another pass.",
-    afterExample: "",
+      "A researcher is given an AI-generated proof of a lemma the team has not checked. They start a Solve session, write the first claim on the canvas, and talk through why the second step follows. They cannot justify a substitution, so they mark that gap and stop. A colleague opens the stored session, reads those notes, and continues from the substitution instead of starting over.",
+    imageSrc: "/lp-boxes/hero3.jpg",
+    imageAlt:
+      "Full session: left command sidebar and a Work canvas with a mathematical argument, notes, and a Thinking panel",
+    imageFit: "cover" as const,
     links: [
-      { href: KNOWLEDGE_MAPPING_PATH, label: "Map" },
       { href: LEARNING_HARNESS_PATH, label: "Solve" },
+      { href: KNOWLEDGE_MAPPING_PATH, label: "Map" },
       { href: KNOWLEDGE_VERIFICATION_PATH, label: "Verify" },
     ],
-    close: {
-      title: "Keep the region useful after the first cohort",
-      paragraphs: [
-        "The same region can support a new hire or later coaching. Calibrate, Learn, and Verify sessions gather further evidence. Revising the region is an authoring task as the architecture changes.",
-      ],
-    },
   },
   {
     id: "technical-hiring",
-    eyebrow: "TECHNICAL HIRING",
-    directoryLabel: "Technical hiring",
+    eyebrow: "ASSESSMENT",
+    directoryLabel: "Assessment",
     hint: "Verify",
-    title: "Assess capability through hard problems",
-    sections: [
-      {
-        title: "Examine the approach, not only the answer",
-        paragraphs: [
-          "A technical hiring team wants to see how candidates approach a demanding problem, including work with an explicitly allowed AI tool. The useful evidence is how they explore, which assumptions they test, what they check, and how they develop their reasoning, alongside the result.",
-          "Define a reference knowledge region and a problem your experts consider meaningful. Run a Verify session under clear assessment conditions. Review the stored work and the model-relative relationship to that reference. Knowledge Mapping holds the domain target. Build Understanding is available afterward when the evidence points to development.",
-          "The result is work-derived evidence for a hiring or development conversation, not a total measure of the person. The product does not enforce a tool policy or claim predictive validity. Agent-harness comparison is a related extension, not a validated cross-species benchmark.",
-        ],
-      },
-    ],
+    title: "Assess capability through problems",
+    lead: "Examine how a candidate explores a demanding problem, including work with an allowed AI tool when the problem says so.",
+    body: "You define a knowledge region and a problem your experts consider meaningful, then run a Verify session under stated conditions. Reviewers open the stored work. Where Distance is shown, it is a model-relative relationship to that region, not a score of the whole person. The product does not enforce a tool policy, replace interviews, or claim the result predicts job performance. Agent-harness comparison is a related extension, not a validated benchmark that treats people and agents as equivalent.",
     example:
-      "A team hiring a distributed-systems engineer uses a replication problem with a network partition. The candidate proposes a design, then explores what happens when two nodes accept conflicting writes. The reviewer examines whether they spot the inconsistency, revise their assumptions, and explain the trade-off they choose, including any allowed model suggestions they accepted or rejected.",
-    afterExample:
-      "The visible evidence is the candidate's work in that situation. Whether it transfers to the team's production environment remains a judgment to investigate through discussion and other hiring evidence.",
+      "A team doing technical hiring for a distributed-systems engineer writes a replication problem that includes a network partition, and states that an AI tool is allowed. The candidate proposes a design, then explores what happens when two nodes accept conflicting writes. They accept one model suggestion and reject another. The reviewer opens the stored session and looks at whether the candidate spotted the inconsistency, revised an assumption, and explained the trade-off.",
+    imageSrc: "/unsysmodel.png",
+    imageAlt:
+      "Hidden-state diagram of Integrals: meaning, setup, and technique branches, with the cheapest edge marked as the policy",
+    imageFit: "contain" as const,
     links: [
       { href: KNOWLEDGE_VERIFICATION_PATH, label: "Verify" },
       { href: KNOWLEDGE_MAPPING_PATH, label: "Map" },
       { href: LEARNING_HARNESS_PATH, label: "Solve" },
     ],
-    close: {
-      title: "Leave with a more specific hiring conversation",
-      paragraphs: [
-        "The useful artifact is a record of problem exploration against a defined target. Use it to support technical judgment, not to replace interviews or reduce a person to a single score.",
-      ],
-    },
+  },
+  {
+    id: "team-insight",
+    eyebrow: "TEAM INSIGHT",
+    directoryLabel: "Team insight",
+    hint: "Map · Solve · Verify",
+    title: "Turn work into actionable insight",
+    lead: "Skills and expertise don't fit on a leaderboard or a two-axis chart. See your team, or yourself, across many dimensions at once, set against the goals that matter to you.",
+    body: "Calibrate, Learn, and Verify sessions store work, as do Solve runs. Data Studio currently plots Calibrate, Verify, and Solve runs against a knowledge region you define, so you can see position and distance. Learn traces can be opened; they are not yet plotted there. You still read the stored work to decide what to do next. A packaged leaderboard that ranks people is not what this is. An automatic report that compares every person on every goal at once is still being built.",
+    example:
+      "A technical lead defines a private knowledge region for a billing subsystem and a representative incident problem. Three colleagues each complete a Verify session on that problem. The lead opens Data Studio, looks at the three runs against the region, and opens the stored trace for the run farthest from it to see which assumptions still need work.",
+    imageSrc: "/regions1.png",
+    imageAlt:
+      "Illustrative 2D projection of knowledge regions for Physics, Maths, Code, and Design, with positions and distances between them",
+    imageFit: "contain" as const,
+    links: [
+      { href: KNOWLEDGE_MAPPING_PATH, label: "Map" },
+      { href: LEARNING_HARNESS_PATH, label: "Solve" },
+      { href: KNOWLEDGE_VERIFICATION_PATH, label: "Verify" },
+    ],
   },
 ] as const;
 
@@ -174,12 +142,11 @@ export function useCasesCopyText(): string {
       item.eyebrow,
       item.directoryLabel,
       item.title,
-      ...item.sections.flatMap((section) => [section.title, ...section.paragraphs]),
+      item.lead,
+      item.body,
       item.example,
-      item.afterExample,
+      item.imageSrc,
       ...item.links.flatMap((link) => [link.href, link.label]),
-      item.close.title,
-      ...item.close.paragraphs,
     ]),
     USE_CASES_COPY.otherTitle,
     ...USE_CASES_OTHER.flatMap((item) => [item.title, item.body]),

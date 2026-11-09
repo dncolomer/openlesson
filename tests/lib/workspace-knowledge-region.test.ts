@@ -390,8 +390,8 @@ describe("Knowledge Region zero-block PoW surfaces", () => {
     expect(Math.abs(l2Norm(encoded) - 1)).toBeLessThan(1e-6);
     expect(encoded).toHaveLength(FLOW_EMBEDDING_DIM);
 
-    const regionsPanel = read("components/CustomVerificationModelsPanel.tsx");
-    expect(regionsPanel).toContain("/api/workspace/custom-knowledge-regions");
+    const regionsPanel = read("app/api/workspace/custom-knowledge-regions/route.ts");
+    expect(regionsPanel).toContain("Regions are created by running a simulation");
     expect(regionsPanel).not.toMatch(/required.*blockId|blockId is required/i);
     const regionsStore = [
       read("lib/pow-api/custom-verification-model-store.ts"),
@@ -556,7 +556,10 @@ describe("Knowledge Region wiring", () => {
     expect(read("app/verification/flows/new/page.tsx")).toContain("ProductFlowWizard");
     expect(read("app/calibration/flows/new/page.tsx")).toContain("ProductFlowWizard");
     expect(read("components/product-flow/knowledge-region-create.tsx")).toContain(
-      "data-region-create-from-flow",
+      "RegionSimulationSetup",
+    );
+    expect(read("components/product-flow/region-simulation-setup.tsx")).toContain(
+      "data-run-simulation",
     );
 
     const gen = read("app/api/workspace/generate/route.ts");

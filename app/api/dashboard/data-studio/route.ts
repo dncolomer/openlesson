@@ -1,6 +1,6 @@
 /**
- * Owner Data Studio: embeddings + overlay regions for a product
- * (verification, calibration, solve, or learning play copies).
+ * Owner Data Studio: embeddings + overlay regions for Verification,
+ * Calibration, or Solve.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
@@ -10,14 +10,10 @@ import {
   presentDashboardDataStudio,
   type DataStudioEmbeddingRow,
 } from "@/lib/data-studio-view";
-import {
-  listFlowEmbeddingsForOwner,
-  listFlowEmbeddingsForWorkspaces,
-} from "@/lib/flow-embedding-store";
+import { listFlowEmbeddingsForOwner } from "@/lib/flow-embedding-store";
 import type { RegionCentroidInput } from "@/lib/knowledge-config";
 import { regionMatchesFlowEmbeddingChannel } from "@/lib/flow-embedding-view";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { listPracticeSolveFlowIds } from "@/lib/practice-session";
 
 export const runtime = "nodejs";
 
@@ -26,65 +22,22 @@ export async function GET(req: NextRequest) {
     const auth = await requireAuthenticatedUser();
     if (!auth.ok) return auth.response;
 
-    const url = new URL(req.url);
-    const product = parseDataStudioProduct(url.searchParams.get("product"));
+    const product = parseDataStudioProduct(new URL(req.url).searchParams.get("product"));
     if (!product) {
-      return jsonError(
-        400,
-        "product must be verification, calibration, solve, practice, or learning",
-      );
-    }
-    const workspaceId = (url.searchParams.get("workspaceId") || "").trim();
-
-    const { data: workspaceRows, error: workspaceError } = await auth.supabase
-      .from("workspaces")
-      .select("id, title, root_topic, user_id, workspace_kind, is_play_copy, original_workspace_id")
-      .eq("user_id", auth.user.id)
-      .neq("status", "archived");
-
-    if (workspaceError) {
-      return NextResponse.json(
-        presentDashboardDataStudio({
-          product,
-          viewerUserId: auth.user.id,
-          workspaces: [],
-          embeddings: [],
-          regions: [],
-        }),
-      );
-    }
-
-    let listed = Array.isArray(workspaceRows) ? workspaceRows : [];
-    if (workspaceId) {
-      listed = listed.filter((row) => String(row.id || "") === workspaceId);
+      return jsonError(400, "product must be verification, calibration, or solve");
     }
 
     const presentedEmpty = presentDashboardDataStudio({
       product,
       viewerUserId: auth.user.id,
-      workspaces: listed,
       embeddings: [],
       regions: [],
     });
-    const ids = presentedEmpty.workspaces.map((row) => row.id);
-    if (product === "learning" && ids.length === 0) {
-      return NextResponse.json(presentedEmpty);
-    }
 
-    const stored =
-      product === "learning"
-        ? await listFlowEmbeddingsForWorkspaces({
-            workspaceIds: ids,
-            flowKind: presentedEmpty.flowKind,
-          })
-        : await listFlowEmbeddingsForOwner({
-            ownerUserId: auth.user.id,
-            flowKind: presentedEmpty.flowKind,
-          });
-    const practiceFlowIds =
-      product === "practice" || product === "solve"
-        ? await listPracticeSolveFlowIds(auth.user.id)
-        : [];
+    const stored = await listFlowEmbeddingsForOwner({
+      ownerUserId: auth.user.id,
+      flowKind: presentedEmpty.flowKind,
+    });
     const embeddings: DataStudioEmbeddingRow[] = stored.map((row) => ({
       id: row.id,
       workspace_id: row.workspace_id,
@@ -101,54 +54,50 @@ export async function GET(req: NextRequest) {
     }));
 
     let regions: RegionCentroidInput[] = [];
-    if (product !== "learning" && product !== "practice") {
-      const admin = createAdminClient();
-      const { data: regionRows } = await admin
-        .from("knowledge_regions")
-        .select(
-          "id, name, centroid, mean_radius, cosine_threshold, embedding_model_id, workspace_id, owner_user_id, product",
+    const admin = createAdminClient();
+    const { data: regionRows } = await admin
+      .from("knowledge_regions")
+      .select(
+        "id, name, centroid, mean_radius, cosine_threshold, embedding_model_id, workspace_id, owner_user_id, product",
+      )
+      .eq("owner_user_id", auth.user.id)
+      .eq("product", product);
+    for (const row of regionRows || []) {
+      const centroid = Array.isArray(row.centroid)
+        ? row.centroid.filter((n): n is number => typeof n === "number" && Number.isFinite(n))
+        : [];
+      if (
+        !regionMatchesFlowEmbeddingChannel(
+          {
+            embedding_model_id: String(row.embedding_model_id || ""),
+            centroid,
+          },
+          "any",
         )
-        .eq("owner_user_id", auth.user.id)
-        .eq("product", product);
-      for (const row of regionRows || []) {
-        const centroid = Array.isArray(row.centroid)
-          ? row.centroid.filter((n): n is number => typeof n === "number" && Number.isFinite(n))
-          : [];
-        if (
-          !regionMatchesFlowEmbeddingChannel(
-            {
-              embedding_model_id: String(row.embedding_model_id || ""),
-              centroid,
-            },
-            "any",
-          )
-        ) {
-          continue;
-        }
-        regions.push({
-          id: String(row.id),
-          name: String(row.name || "Region"),
-          centroid,
-          mean_radius:
-            typeof row.mean_radius === "number" && Number.isFinite(row.mean_radius)
-              ? row.mean_radius
-              : undefined,
-          cosine_threshold:
-            typeof row.cosine_threshold === "number" && Number.isFinite(row.cosine_threshold)
-              ? row.cosine_threshold
-              : undefined,
-          source: String(row.workspace_id || "") || null,
-          embedding_model_id: String(row.embedding_model_id || ""),
-        });
+      ) {
+        continue;
       }
+      regions.push({
+        id: String(row.id),
+        name: String(row.name || "Region"),
+        centroid,
+        mean_radius:
+          typeof row.mean_radius === "number" && Number.isFinite(row.mean_radius)
+            ? row.mean_radius
+            : undefined,
+        cosine_threshold:
+          typeof row.cosine_threshold === "number" && Number.isFinite(row.cosine_threshold)
+            ? row.cosine_threshold
+            : undefined,
+        source: String(row.workspace_id || "") || null,
+        embedding_model_id: String(row.embedding_model_id || ""),
+      });
     }
 
     return NextResponse.json(
       presentDashboardDataStudio({
         product,
         viewerUserId: auth.user.id,
-        practiceFlowIds,
-        workspaces: listed,
         embeddings,
         regions,
       }),

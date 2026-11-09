@@ -854,15 +854,10 @@ describe("verification workspace shell gates", () => {
     expect(hosts).toContain("if (visibleSections.length === 0) return null");
 
     const regions = read("components/CustomVerificationModelsPanel.tsx");
-    expect(regions).toContain("data-region-create-from-flow");
-    expect(regions).toContain("data-create-flow-first");
-    expect(regions).toContain("Create from verification flow");
-    expect(regions).toContain("data-region-create-from-synthetic");
-    expect(regions).toContain("Create from Synthetic Agents");
-    expect(regions).toContain("data-synthetic-prompt-modifier");
-    expect(regions).toContain("verificationWorkspace ?");
+    expect(regions).not.toContain("data-region-create-from-flow");
+    expect(regions).not.toContain("Create from verification flow");
     const settings = read("components/WorkspaceIntegrationPanel.tsx");
-    expect(settings).toContain("verificationWorkspace={isNoMap}");
+    expect(settings).not.toContain("CustomVerificationModelsPanel");
     expect(settings).not.toContain("workspaceAllowsCopyToVerification");
     expect(settings).not.toContain("WorkspaceCopyToVerification");
     const copyRoute = read("app/api/workspace/copy-to-verification/route.ts");
@@ -899,7 +894,7 @@ describe("verification workspace shell gates", () => {
     expect(embeddingsHook).toContain("knowledgeConfigFromFlowEmbeddings");
     expect(embeddingsHook).toContain("regionMatchesFlowEmbeddingSpace");
     expect(embeddingsHook).toContain('embeddingSource?: "flowcfg" | string');
-    expect(settings).toContain("Regions in flowcfg-v1-d96.");
+    expect(settings).not.toContain("Regions in flowcfg-v1-d96.");
     expect(read("lib/verification-knowledge-subtab.ts")).toContain(
       'embedding_model_id: "flowcfg-v1-d96"',
     );

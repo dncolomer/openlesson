@@ -1,7 +1,7 @@
 /**
  * Knowledge-region simulation: exploration-strategy catalog, even sample
- * spread across verification flows, problem coverage, and deterministic
- * agent walks on a seeded hidden-state tree.
+ * spread across Verification, Calibration, or Solve flows, problem coverage,
+ * and deterministic agent walks on a seeded hidden-state tree.
  *
  * One sample is one agent on one problem from one selected flow, with one
  * strategy as its instructions, producing a proof-of-work trace.
@@ -459,7 +459,10 @@ export function regionSimulationPow(input: {
   ];
 }
 
-export function runRegionSimulationSample(plan: RegionSimulationSamplePlan): RegionSimulationWalk {
+export function runRegionSimulationSample(
+  plan: RegionSimulationSamplePlan,
+  flowKind: "verify" | "calibrate" | "solve" = "verify",
+): RegionSimulationWalk {
   const strategy = explorationStrategyById(plan.strategyId);
   if (!strategy) {
     throw new Error(`Unknown exploration strategy: ${plan.strategyId}`);
@@ -478,7 +481,7 @@ export function runRegionSimulationSample(plan: RegionSimulationSamplePlan): Reg
     sequence,
   });
   const embedding = completeFlowEmbedding({
-    flowKind: "verify",
+    flowKind,
     model,
     sequence,
     pow,

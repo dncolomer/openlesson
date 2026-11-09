@@ -19,7 +19,7 @@ export const LANDING_USE_COPY = {
     body: "",
   },
   mapping: {
-    dek: "Relate understanding to your domain of work.",
+    dek: "Build a concrete knowledge embeddings model of how a team, a fleet of agents, a mix of both, or just you thinks and works through problems. Then set it against a target region to see where you stand and what to work on next.",
     body: "",
   },
 } as const;
@@ -27,6 +27,7 @@ export const LANDING_USE_COPY = {
 export const LANDING_USES = [
   {
     ...PLATFORM_PRODUCTS.harness,
+    name: "Solve / Practice",
     dek: LANDING_USE_COPY.harness.dek,
     body: LANDING_USE_COPY.harness.body,
   },
@@ -37,6 +38,7 @@ export const LANDING_USES = [
   },
   {
     ...PLATFORM_PRODUCTS.mapping,
+    eyebrow: "TARGET MAP",
     dek: LANDING_USE_COPY.mapping.dek,
     body: LANDING_USE_COPY.mapping.body,
   },

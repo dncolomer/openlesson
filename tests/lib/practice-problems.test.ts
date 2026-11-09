@@ -78,7 +78,7 @@ describe("practice catalog", () => {
     expect(PRACTICE_QUANTUM_PROBLEMS.every((row) => row.prompt.length > 80)).toBe(true);
   });
 
-  it("tags virtual practice flows and summarizes history", () => {
+  it("tags practice Solve flows and lists them with authored flows", () => {
     expect(isPracticeSolveFlow({ practiceProblemId: "p1" })).toBe(true);
     expect(isPracticeSolveFlow({ practice_problem_id: "p1" })).toBe(true);
     expect(isPracticeSolveFlow({ practiceProblemId: null })).toBe(false);
@@ -90,7 +90,8 @@ describe("practice catalog", () => {
       ],
       isFlowArchived,
     );
-    expect(listed).toHaveLength(1);
+    expect(listed).toHaveLength(2);
+    expect(listed.map((flow) => flow.practiceProblemId ?? null)).toEqual([null, "p1"]);
     expect(practiceSessionHref("abc")).toBe("/session?id=abc");
     expect(practiceIdentityForUser("user-1")).toBe("practice:user-1");
     const meta = practiceSessionMetadata({
@@ -137,23 +138,27 @@ describe("practice catalog", () => {
 });
 
 describe("practice dashboard surfaces", () => {
-  it("puts browse maps, exercises, Data Studio, and Performance on Learning", () => {
+  it("puts browse maps on Learning and exercises plus Performance on Solve / Practice", () => {
     expect(parseDashboardTab("practice")).toBe("practice");
     expect(isDashboardBrowseMapsTab("browse_maps")).toBe(true);
     expect(isDashboardPracticeTab("practice")).toBe(true);
-    expect(isDashboardStudioTab("practice_studio")).toBe(true);
+    expect(isDashboardStudioTab("practice_studio")).toBe(false);
+    expect(parseDashboardTab("practice_studio")).toBe("solve_studio");
     expect(parseDashboardTab("practice_performance")).toBe("practice_performance");
     expect(dashboardFrameLabel("practice")).toBe("Practice library");
-    expect(dashboardFrameLabel("practice_studio")).toBe("Data Studio");
+    expect(dashboardFrameLabel("solve_studio")).toBe("Data Studio");
     expect(dashboardFrameLabel("practice_performance")).toBe("Performance");
-    expect(dashboardNavGroupIdForTab("practice")).toBe("learning");
+    expect(dashboardNavGroupIdForTab("practice")).toBe("solve");
+    expect(dashboardNavGroupIdForTab("practice_performance")).toBe("solve");
     expect(dashboardNavGroupIdForTab("calibration")).toBe("calibration");
     const learning = DASHBOARD_NAV_GROUPS.find((group) => group.id === "learning");
-    expect(learning?.items.map((item) => item.id)).toContain("practice");
+    const solve = DASHBOARD_NAV_GROUPS.find((group) => group.id === "solve");
+    expect(learning?.items.map((item) => item.id)).not.toContain("practice");
     expect(learning?.items.map((item) => item.id)).toContain("browse_maps");
-    expect(learning?.items.map((item) => item.id)).toContain("practice_performance");
-    expect(learning?.items.map((item) => item.label)).toContain("Data Studio");
-    expect(learning?.items.map((item) => item.label)).toContain("Performance");
+    expect(learning?.items.map((item) => item.label)).not.toContain("Data Studio");
+    expect(solve?.label).toBe("Solve / Practice");
+    expect(solve?.items.map((item) => item.id)).toContain("practice");
+    expect(solve?.items.map((item) => item.id)).toContain("practice_performance");
     expect(readRepo("app/dashboard/page.tsx")).toContain("DashboardPracticePerformanceTab");
     expect(readRepo("app/dashboard/page.tsx")).toContain("DashboardDataStudioTab");
     expect(readRepo("components/dashboard/dashboard-practice-performance-tab.tsx")).toContain(
@@ -163,7 +168,7 @@ describe("practice dashboard surfaces", () => {
       "browse_maps",
       "practice",
       "my_maps",
-      "practice_studio",
+      "solve_studio",
     ]);
     expect(readRepo("components/dashboard/dashboard-home-tab.tsx")).toContain(
       "data-dashboard-home-cta",
@@ -187,6 +192,7 @@ describe("practice dashboard surfaces", () => {
     expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain(
       "data-dashboard-nav-group-toggle",
     );
+    expect(readRepo("lib/solve-flow-repository.ts")).not.toContain("isPracticeSolveFlow");
     expect(readRepo("app/api/dashboard/practice/start/route.ts")).toContain(
       "ensurePracticeSolveFlow",
     );
@@ -202,7 +208,7 @@ describe("practice dashboard surfaces", () => {
     expect(practiceTab).not.toContain("All categories");
   });
 
-  it("scopes Practice Data Studio to practice flows and Solve studio away from them", () => {
+  it("includes practice Solve flows in Solve Data Studio", () => {
     const embedding = {
       id: "e1",
       owner_user_id: "u1",
@@ -211,22 +217,12 @@ describe("practice dashboard surfaces", () => {
       run_id: "r1",
       vector: [1, 0],
     };
-    const practice = presentDashboardDataStudio({
-      product: "practice",
-      viewerUserId: "u1",
-      practiceFlowIds: ["flow-practice"],
-      workspaces: [],
-      embeddings: [embedding],
-    });
-    expect(practice.flowKind).toBe("solve");
-    expect(practice.embeddings).toHaveLength(1);
     const solve = presentDashboardDataStudio({
       product: "solve",
       viewerUserId: "u1",
-      practiceFlowIds: ["flow-practice"],
-      workspaces: [],
       embeddings: [embedding],
     });
-    expect(solve.embeddings).toHaveLength(0);
+    expect(solve.flowKind).toBe("solve");
+    expect(solve.embeddings).toHaveLength(1);
   });
 });

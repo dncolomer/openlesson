@@ -156,25 +156,18 @@ describe("dashboard knowledge regions", () => {
     expect(route).toContain("knowledge_regions");
     expect(route).toContain("presentDashboardKnowledgeRegions");
     expect(route).toContain("owner_user_id");
-    expect(route).toContain("flowOwnedByUser");
     expect(route).not.toContain("listProductFlowWorkspaceIds");
-    expect(route).toContain("listFlowEmbeddingsForOwner");
-    expect(route).toContain(
-      'kind === "calibration" ? "calibrate" : "solve"',
-    );
-    expect(route).toContain("getSolveFlowById");
-    expect(route).toContain("solve_flow_id");
-    expect(route).toContain("buildVoiceRegionFromFlowRaws");
-    expect(route).toContain("Verification regions are created by running a simulation");
+    expect(route).not.toContain("getSolveFlowById");
+    expect(route).toContain("Regions are created by running a simulation");
     const dash = readDashboardSurface();
     expect(dash).toContain("data-dashboard-knowledge-regions");
     expect(dash).toContain("DASHBOARD_KNOWLEDGE_REGIONS_PATH");
     expect(dash).toContain("running a simulation of exploration strategies");
     expect(dash).toContain("data-create-flow-first");
-    expect(readRepo("components/product-flow/knowledge-region-create.tsx")).toContain(
+    expect(readRepo("components/product-flow/knowledge-region-create.tsx")).not.toContain(
       "data-region-create-from-flow",
     );
-    expect(readRepo("components/product-flow/knowledge-region-create.tsx")).toContain(
+    expect(readRepo("components/product-flow/region-simulation-setup.tsx")).toContain(
       "data-create-flow-first",
     );
     expect(readRepo("components/product-flow/knowledge-region-create.tsx")).toContain(

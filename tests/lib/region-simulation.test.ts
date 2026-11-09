@@ -97,6 +97,7 @@ describe("region simulation", () => {
     const walk = runRegionSimulationSample(plan);
     expect(walk.sequence.length).toBeGreaterThan(0);
     expect(walk.embedding.raw.flowKind).toBe("verify");
+    expect(runRegionSimulationSample(plan, "solve").embedding.raw.flowKind).toBe("solve");
     expect(walk.pow[0]?.tool_name).toBe(REGION_SIMULATION_SOURCE);
     expect(walk.pow[0]?.metadata?.simulated).toBe(true);
     expect(walk.pow[0]?.metadata?.strategyId).toBe("exploit-heavy");
@@ -160,6 +161,7 @@ describe("region simulation", () => {
       "Balanced",
       "Exploit-heavy",
     ]);
+    expect(result.regionPath).toContain("verification_studio");
     expect(result.clusters.every((cluster) => cluster.sampleCount === 3)).toBe(true);
     expect(result.progress.every((row) => row.done === 3 && row.total === 3)).toBe(true);
     expect(ticks.at(-1)).toBe(6);
@@ -208,10 +210,11 @@ describe("region simulation", () => {
     expect(regions.map((row) => row.id)).toEqual(["parent"]);
   });
 
-  it("replaces verification region create with the simulation setup page", () => {
+  it("uses the same simulation setup for Verification, Calibration, and Solve", () => {
     const create = read("components/product-flow/knowledge-region-create.tsx");
     expect(create).toContain("RegionSimulationSetup");
-    expect(create).toContain('kind === "verification"');
+    expect(create).toContain("kind={kind}");
+    expect(create).not.toContain("LegacyKnowledgeRegionCreate");
     const setup = read("components/product-flow/region-simulation-setup.tsx");
     expect(setup).toContain("data-run-simulation");
     expect(setup).toContain("data-region-simulation-setup");
@@ -219,9 +222,51 @@ describe("region simulation", () => {
     expect(setup).toContain("Include data from real humans in these flows");
     expect(setup).toContain("Run simulation");
     expect(setup).toContain("data-region-simulation-progress");
+    expect(setup).toContain("kind=${kind}");
     const route = read("app/api/dashboard/region-simulation/route.ts");
     expect(route).toContain("runRegionSimulation");
     expect(route).toContain("requireAuthenticatedUser");
+    expect(route).toContain("listSolveFlowsForOwnerUserId");
+    expect(route).toContain("listCalibrationFlowsForOwnerUserId");
+    expect(route).toContain("productFlowEmbeddingKind");
     expect(read("app/verification/regions/new/page.tsx")).toContain('kind="verification"');
+    expect(read("app/calibration/regions/new/page.tsx")).toContain('kind="calibration"');
+    expect(read("app/solve/regions/new/page.tsx")).toContain('kind="solve"');
+  });
+
+  it("stores Solve simulations on solve embeddings", async () => {
+    const result = await runRegionSimulation({
+      ownerUserId: "owner-solve",
+      name: "Gaussian packet",
+      kind: "solve",
+      flows: [{ id: "flow-s", name: "Normalize", problems: ["Find A"] }],
+      strategyIds: ["exploit-heavy"],
+      samplesPerStrategy: 3,
+      includeHumanData: false,
+    });
+    expect(result.regionPath).toContain("solve_studio");
+    const stored = await listFlowEmbeddingsForOwner({
+      ownerUserId: "owner-solve",
+      flowKind: "solve",
+    });
+    expect(stored.filter((row) => row.source === REGION_SIMULATION_SOURCE)).toHaveLength(3);
+  });
+
+  it("stores Calibration simulations on calibrate embeddings", async () => {
+    const result = await runRegionSimulation({
+      ownerUserId: "owner-cal",
+      name: "Limits scout",
+      kind: "calibration",
+      flows: [{ id: "flow-c", name: "Scout", problems: ["What is a limit?"] }],
+      strategyIds: ["balanced"],
+      samplesPerStrategy: 3,
+      includeHumanData: false,
+    });
+    expect(result.regionPath).toContain("calibration_studio");
+    const stored = await listFlowEmbeddingsForOwner({
+      ownerUserId: "owner-cal",
+      flowKind: "calibrate",
+    });
+    expect(stored.filter((row) => row.source === REGION_SIMULATION_SOURCE)).toHaveLength(3);
   });
 });

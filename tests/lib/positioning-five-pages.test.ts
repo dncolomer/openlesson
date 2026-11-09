@@ -103,8 +103,8 @@ describe("five-page positioning contract", () => {
     expect(USE_CASES_COPY.title).toBe("Put knowledge building to work");
     expect(USE_CASES.map((item) => item.id)).toEqual([
       "research-ai",
-      "company-expertise",
       "technical-hiring",
+      "team-insight",
     ]);
     expect(USE_CASES_OTHER).toHaveLength(3);
     expect(USE_CASES_OTHER.map((item) => item.title)).toEqual([

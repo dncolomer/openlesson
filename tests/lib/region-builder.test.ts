@@ -150,16 +150,14 @@ describe("region builder filters (shipped helpers)", () => {
 });
 
 describe("region builder UI + API surface", () => {
-  it("panel exposes human PoW filter and does not offer TAPBench as a live source", () => {
+  it("workspace Settings does not expose the region builder", () => {
     const ui = readFileSync(join(ROOT, "components/CustomVerificationModelsPanel.tsx"), "utf8");
-    expect(ui).toContain("data-region-builder");
-    expect(ui).toContain("data-region-source-filter");
-    expect(ui).toContain("data-region-link-filter");
-    expect(ui).toContain('value="human"');
-    expect(ui).not.toContain('value="tapbench"');
-    expect(ui).toContain("filterRegionBuilderSubjects");
-    expect(ui).not.toContain("create_synthetic");
-    expect(ui).not.toContain("FileDropZone");
+    expect(ui).not.toContain("data-region-builder");
+    expect(ui).not.toContain("data-region-source-filter");
+    expect(ui).not.toContain("filterRegionBuilderSubjects");
+    expect(readFileSync(join(ROOT, "components/WorkspaceIntegrationPanel.tsx"), "utf8")).not.toContain(
+      "CustomVerificationModelsPanel",
+    );
   });
 
   it("region-builder module exists", () => {

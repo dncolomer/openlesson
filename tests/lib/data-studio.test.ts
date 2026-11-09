@@ -481,12 +481,13 @@ describe("product Data Studio chrome", () => {
     const verification = DASHBOARD_NAV_GROUPS.find((group) => group.id === "verification");
     const calibration = DASHBOARD_NAV_GROUPS.find((group) => group.id === "calibration");
     const solve = DASHBOARD_NAV_GROUPS.find((group) => group.id === "solve");
-    expect(learning?.items.some((item) => item.label === "Data Studio")).toBe(true);
-    expect(dashboardStudioProduct("practice_studio")).toBe("practice");
+    expect(learning?.items.some((item) => item.label === "Data Studio")).toBe(false);
+    expect(dashboardStudioProduct("solve_studio")).toBe("solve");
     expect(verification?.items.some((item) => item.label === "Data Studio")).toBe(true);
     expect(calibration?.items.some((item) => item.label === "Data Studio")).toBe(true);
     expect(solve?.items.some((item) => item.label === "Data Studio")).toBe(true);
-    expect(isDashboardStudioTab("learning_studio")).toBe(true);
+    expect(isDashboardStudioTab("learning_studio")).toBe(false);
+    expect(isDashboardStudioTab("practice_studio")).toBe(false);
     expect(isDashboardStudioTab("solve_studio")).toBe(true);
     expect(dashboardStudioProduct("calibration_studio")).toBe("calibration");
     expect(dashboardStudioProduct("solve_studio")).toBe("solve");
@@ -582,8 +583,9 @@ describe("product Data Studio chrome", () => {
     expect(existsSync(join(ROOT, "components/dashboard/dashboard-data-studio-tab.tsx"))).toBe(true);
     const api = readFileSync(join(ROOT, "app/api/dashboard/data-studio/route.ts"), "utf8");
     expect(api).toContain("presentDashboardDataStudio");
-    expect(api).toContain("listFlowEmbeddingsForWorkspaces");
+    expect(api).not.toContain("listFlowEmbeddingsForWorkspaces");
     expect(api).toContain("listFlowEmbeddingsForOwner");
+    expect(api).toContain("product must be verification, calibration, or solve");
     expect(api).not.toContain("denyWorkspaceFeatureById");
   });
 });
@@ -595,7 +597,7 @@ describe("Data Studio help explainer", () => {
     expect(parseDataStudioView("nope")).toBe("map");
     const verification = dataStudioExplainer("verification");
     const calibration = dataStudioExplainer("calibration");
-    const learning = dataStudioExplainer("learning");
+    const solve = dataStudioExplainer("solve");
     expect(verification.figures.map((figure) => figure.id)).toEqual([
       "walk",
       "spaces",
@@ -609,9 +611,8 @@ describe("Data Studio help explainer", () => {
     expect(calibration.figures[2]?.body).toContain("dashed ring");
     expect(calibration.lede).toContain("Calibrate");
     expect(calibration.figures[2]?.title).toContain("Sounding");
-    expect(learning.lede).toContain("Learn");
-    expect(learning.figures[2]?.body).toContain("play");
-    expect(learning.controls).toContain("map");
+    expect(solve.lede).toContain("Solve");
+    expect(solve.controls).toContain("flow");
     expect(verification.figures[1]?.body).toContain("Path + Text");
   });
 });
@@ -1034,30 +1035,6 @@ describe("studio flow/run filters, inspect, projection, learning scope", () => {
       ],
     });
     expect(scoped.map((row) => row.id)).toEqual(["play-1"]);
-    const presented = presentDashboardDataStudio({
-      product: "learning",
-      viewerUserId: "me",
-      workspaces: [
-        {
-          id: "copy-1",
-          title: "Copy",
-          user_id: "me",
-          workspace_kind: "standard",
-          is_play_copy: true,
-        },
-        {
-          id: "authored-1",
-          title: "Sold map",
-          user_id: "me",
-          workspace_kind: "standard",
-          is_play_copy: false,
-        },
-      ],
-      embeddings: [play, ownAuthored, buyer],
-    });
-    expect(presented.embeddings.map((row) => row.id)).toEqual(["play-1"]);
-    expect(presented.workspaces.map((row) => row.id)).toEqual(["copy-1"]);
-    expect(presented.regions).toEqual([]);
   });
 
   it("excludes API-shaped authored Learn rows that have no user_id", () => {
@@ -1101,28 +1078,6 @@ describe("studio flow/run filters, inspect, projection, learning scope", () => {
         embedding: authoredAnonymous,
       }),
     ).toBe(false);
-    const presented = presentDashboardDataStudio({
-      product: "learning",
-      viewerUserId: "me",
-      workspaces: [
-        {
-          id: "copy-1",
-          title: "Copy",
-          user_id: "me",
-          workspace_kind: "standard",
-          is_play_copy: true,
-        },
-        {
-          id: "authored-1",
-          title: "Sold map",
-          user_id: "me",
-          workspace_kind: "standard",
-          is_play_copy: false,
-        },
-      ],
-      embeddings: [play, authoredAnonymous],
-    });
-    expect(presented.embeddings.map((row) => row.id)).toEqual(["play-api"]);
   });
 
   it("pans, zooms around a cursor, and hit-tests through the camera", () => {

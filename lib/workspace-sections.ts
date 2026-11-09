@@ -4,7 +4,8 @@
  * Unsys models, Context, and Settings for designers; Workspace for play-only
  * viewers.
  * Knowledge-region and calibration kinds have no WorkspaceView sections —
- * Flows live on the dashboard. Learning Data Studio lives on dashboard chrome.
+ * Flows live on the dashboard. Data Studio lives on dashboard chrome for
+ * Verification, Calibration, and Solve. Learning workspaces do not mount it.
  */
 
 import { isNoMapWorkspace } from "@/lib/workspace-kind";

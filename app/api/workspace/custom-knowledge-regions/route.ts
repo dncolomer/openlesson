@@ -3,8 +3,6 @@ import { jsonError } from "@/lib/api-error-envelope";
 import { ayclTokenFromBody, guardWorkspaceRoute } from "@/lib/api/require-auth";
 import {
   computeKnowledgeDistanceForSubject,
-  createCustomVerificationModelFromSubjects,
-  createSyntheticCustomVerificationModel,
   deleteCustomVerificationModel,
   evalSubjectAgainstCustomVerificationModel,
   listCustomVerificationModels,
@@ -18,7 +16,8 @@ export const runtime = "nodejs";
 /**
  * Cookie-auth surface for workspace custom knowledge regions (custom knowledge regions).
  * GET  ?workspaceId=  → list regions + subjects with embeddings (includes centroids for overlay)
- * POST { action: "create" | "create_synthetic" | "delete" | "eval" | "knowledge_distance", workspaceId, ... }
+ * POST { action: "delete" | "eval" | "knowledge_distance" | "list", workspaceId, ... }
+ * Create is dashboard simulation only.
  */
 export async function GET(req: NextRequest) {
   try {
@@ -77,7 +76,10 @@ export async function POST(req: NextRequest) {
       feature: "knowledge_regions", ayclToken: ayclTokenFromBody(body) });
     if (!auth.ok) return auth.response;
 
-    const action = typeof body.action === "string" ? body.action : "create";
+    const action = typeof body.action === "string" ? body.action : "";
+    if (action === "create" || action === "create_synthetic" || !action) {
+      return jsonError(400, "Regions are created by running a simulation");
+    }
 
     if (action === "list") {
       const [models, subjects] = await Promise.all([
@@ -150,71 +152,6 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    if (action === "create_synthetic") {
-      const name = typeof body.name === "string" ? body.name : "";
-      const prompt = typeof body.prompt === "string" ? body.prompt : "";
-      const rawFiles = Array.isArray(body.files) ? body.files : [];
-      const files = rawFiles
-        .map((f: Record<string, unknown>) => {
-          const fileName = typeof f.name === "string" ? f.name : "";
-          const mimeType =
-            typeof f.mimeType === "string"
-              ? f.mimeType
-              : typeof f.mime_type === "string"
-                ? f.mime_type
-                : "";
-          const data = typeof f.data === "string" ? f.data : "";
-          if (!fileName.trim() || !mimeType || !data) return null;
-          return { name: fileName.trim(), mimeType, data };
-        })
-        .filter(
-          (f: { name: string; mimeType: string; data: string } | null): f is {
-            name: string;
-            mimeType: string;
-            data: string;
-          } => Boolean(f),
-        )
-        .slice(0, 5);
-      const fileIds = Array.isArray(body.fileIds)
-        ? body.fileIds.filter((id: unknown): id is string => typeof id === "string" && id.trim().length > 0)
-        : Array.isArray(body.file_ids)
-          ? body.file_ids.filter((id: unknown): id is string => typeof id === "string" && id.trim().length > 0)
-          : [];
-
-      if (!name.trim()) {
-        return jsonError(400, "name is required");
-      }
-      if (!prompt.trim() && files.length === 0 && fileIds.length === 0) {
-        return jsonError(400, "prompt or files are required for synthetic knowledge region generation",);
-      }
-
-      const { model, spec } = await createSyntheticCustomVerificationModel(auth.supabase, {
-        workspaceId,
-        name,
-        prompt,
-        files,
-        fileIds,
-        description: typeof body.description === "string" ? body.description : null,
-        ownerUserId: auth.persistUserId,
-        createdBy: auth.persistUserId,
-      });
-
-      return NextResponse.json({
-        workspace_id: workspaceId,
-        model,
-        source: "synthetic:grok-4.5",
-        files_used: files.length + fileIds.length,
-        spec: {
-          name: spec.name,
-          subject_count: spec.subject_count,
-          cosine_threshold: spec.cosine_threshold,
-          cohort_cohesion: spec.cohort_cohesion,
-          embedding_model_id: spec.embedding_model_id,
-          dim: spec.dim,
-        },
-      });
-    }
-
     if (action === "delete") {
       const modelId =
         typeof body.modelId === "string"
@@ -245,53 +182,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // create (cohort of user embeddings)
-    const name = typeof body.name === "string" ? body.name : "";
-    const subjects = Array.isArray(body.subjects) ? body.subjects : [];
-    if (!name.trim()) {
-      return jsonError(400, "name is required");
-    }
-    if (!subjects.length) {
-      return jsonError(400, "subjects array is required");
-    }
-
-    const { model, spec, voiceModel, voiceSpec } = await createCustomVerificationModelFromSubjects(auth.supabase, {
-      workspaceId,
-      name,
-      description: typeof body.description === "string" ? body.description : null,
-      subjects: subjects.map((s: Record<string, unknown>) => ({
-        user_id: typeof s.user_id === "string" ? s.user_id : null,
-        guest_user_id: typeof s.guest_user_id === "string" ? s.guest_user_id : null,
-        label: typeof s.label === "string" ? s.label : null,
-      })),
-      ownerUserId: auth.persistUserId,
-      createdBy: auth.subjectId,
-    });
-
-    return NextResponse.json({
-      workspace_id: workspaceId,
-      model,
-      voice_model: voiceModel,
-      source: "cohort",
-      spec: {
-        name: spec.name,
-        subject_count: spec.subject_count,
-        cosine_threshold: spec.cosine_threshold,
-        cohort_cohesion: spec.cohort_cohesion,
-        embedding_model_id: spec.embedding_model_id,
-        dim: spec.dim,
-      },
-      voice_spec: voiceSpec
-        ? {
-            name: voiceSpec.name,
-            subject_count: voiceSpec.subject_count,
-            cosine_threshold: voiceSpec.cosine_threshold,
-            cohort_cohesion: voiceSpec.cohort_cohesion,
-            embedding_model_id: voiceSpec.embedding_model_id,
-            dim: voiceSpec.dim,
-          }
-        : null,
-    });
+    return jsonError(400, "Unknown action");
   } catch (error) {
     if (error instanceof CustomVerificationModelError) {
       return jsonError(400, error.message);

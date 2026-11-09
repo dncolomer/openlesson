@@ -67,7 +67,7 @@ export function dashboardHomeCtas(): DashboardHomeCta[] {
     { id: "browse_maps", label: "Browse maps", href: dashboardHrefForTab("browse_maps") },
     { id: "practice", label: "Browse exercises", href: dashboardHrefForTab("practice") },
     { id: "my_maps", label: "My Maps", href: dashboardHrefForTab("my_maps") },
-    { id: "practice_studio", label: "Data Studio", href: dashboardHrefForTab("practice_studio") },
+    { id: "solve_studio", label: "Data Studio", href: dashboardHrefForTab("solve_studio") },
   ];
 }
 

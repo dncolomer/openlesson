@@ -108,7 +108,6 @@ describe("Knowledge distance surfaces", () => {
     expect(settings).not.toContain("Eval against region");
     expect(settings).not.toContain('action: "knowledge_distance"');
     expect(settings).not.toContain('action: "eval"');
-    expect(settings).toContain("Embeddings tab");
   });
 
   it("public agent docs do not catalog knowledge-distance as an agent API", () => {

@@ -8,9 +8,7 @@ import type { DataStudioProduct } from "@/lib/data-studio-view";
 function explainerProductLabel(product: DataStudioProduct): string {
   if (product === "verification") return "Verification";
   if (product === "calibration") return "Calibration";
-  if (product === "solve") return "Solve";
-  if (product === "practice") return "Practice";
-  return "Learning";
+  return "Solve";
 }
 
 export const DATA_STUDIO_VIEWS = ["map", "help"] as const;
@@ -64,13 +62,6 @@ const INSPECT_FIGURE: DataStudioExplainerFigure = {
 };
 
 function overlayFigure(product: DataStudioProduct): DataStudioExplainerFigure {
-  if (product === "learning") {
-    return {
-      id: "overlay",
-      title: "Maps you played",
-      body: "Learning Data Studio is play copies you added from Home. Filter by map. Authored maps stay on Build. Knowledge regions stay off this product.",
-    };
-  }
   if (product === "calibration") {
     return {
       id: "overlay",
@@ -86,25 +77,16 @@ function overlayFigure(product: DataStudioProduct): DataStudioExplainerFigure {
 }
 
 function ledeFor(product: DataStudioProduct): string {
-  if (product === "learning") {
-    return "This map is Learn sessions on play copies you added. Nearby points walked similar hidden-state paths on those maps.";
-  }
   if (product === "calibration") {
     return "This map is Calibrate soundings. Nearby points sounded similar hidden-state trees.";
   }
   if (product === "solve") {
     return "This map is Solve runs. Nearby points walked similar hidden-state paths on this Solve flow.";
   }
-  if (product === "practice") {
-    return "This map is your Practice Solve sessions. Nearby points walked similar hidden-state paths on catalog problems.";
-  }
   return "This map is Verify runs. Nearby points walked the hidden-state tree in similar ways.";
 }
 
-function controlsFor(product: DataStudioProduct): string {
-  if (product === "learning") {
-    return "Choose Path or Path + Text, pick a projection, and filter by map. Drag to pan. Scroll to zoom. Press Help again to return to the map.";
-  }
+function controlsFor(_product: DataStudioProduct): string {
   return "Choose Path or Path + Text, pick a projection, and filter by flow or run with search and multi-select. Toggle Distances for high-dimensional L2 to region centers. Toggle In region to color dots by cosine membership and show the dashed cosine-ball ring. Drag to pan. Scroll to zoom. Press Help again to return to the map.";
 }
 

@@ -3,7 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
-import { productFlowNewPath, productRegionPagePath } from "@/lib/product-flow";
+import {
+  productFlowKindLabel,
+  productFlowNewPath,
+  productRegionPagePath,
+  type ProductFlowKind,
+} from "@/lib/product-flow";
 import { ProductSurface } from "@/components/product-flow/product-surface";
 import {
   FLOW_FORM_INPUT,
@@ -86,7 +91,12 @@ async function readSimulationStream(
   return result;
 }
 
-export function RegionSimulationSetup() {
+export function RegionSimulationSetup({
+  kind,
+}: {
+  kind: ProductFlowKind;
+}) {
+  const productLabel = productFlowKindLabel(kind);
   const [flows, setFlows] = useState<SetupFlow[]>([]);
   const [strategies, setStrategies] = useState<SetupStrategy[]>([]);
   const [name, setName] = useState("");
@@ -101,7 +111,7 @@ export function RegionSimulationSetup() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch(DASHBOARD_REGION_SIMULATION_PATH)
+    fetch(`${DASHBOARD_REGION_SIMULATION_PATH}?kind=${kind}`)
       .then(async (response) => {
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) {
@@ -138,7 +148,7 @@ export function RegionSimulationSetup() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [kind]);
 
   const selectedFlows = useMemo(
     () => flows.filter((flow) => flowIds.includes(flow.id)),
@@ -172,6 +182,7 @@ export function RegionSimulationSetup() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          kind,
           name: name.trim(),
           flowIds,
           strategyIds,
@@ -197,18 +208,18 @@ export function RegionSimulationSetup() {
 
   return (
     <ProductSurface
-      label="Verification knowledge region"
-      activeTab={dashboardTabForProductSurface("verification", "region")}
+      label={`${productLabel} knowledge region`}
+      activeTab={dashboardTabForProductSurface(kind, "region")}
     >
-      <div className="mx-auto w-full max-w-3xl space-y-6" data-knowledge-region-create="verification">
+      <div className="mx-auto w-full max-w-3xl space-y-6" data-knowledge-region-create={kind}>
         <FlowFormHeader
-          backHref="/dashboard?tab=verification_regions"
+          backHref={`/dashboard?tab=${kind}_regions`}
           backLabel="Back to knowledge regions"
           title={result ? result.parentName : "Create knowledge region"}
           description={
             result
-              ? "Simulated exploration styles on the selected verification flows. Clusters describe how agents searched, not a person's ability."
-              : "Creating a region means configuring and running a simulation. Pick verification flows and exploration strategies; agents solve those problems and the result is an annotated region."
+              ? `Simulated exploration styles on the selected ${productLabel.toLowerCase()} flows. Clusters describe how agents searched, not a person's ability.`
+              : `Creating a region means configuring and running a simulation. Pick ${productLabel.toLowerCase()} flows and exploration strategies; agents solve those problems and the result is an annotated region.`
           }
         />
         {error ? <p className="text-sm text-red-300">{error}</p> : null}
@@ -254,7 +265,7 @@ export function RegionSimulationSetup() {
             </ul>
             <div className="flex flex-wrap gap-3">
               <Link
-                href={result.regionPath || productRegionPagePath("verification", result.id || "")}
+                href={result.regionPath || productRegionPagePath(kind, result.id || "")}
                 className={FLOW_PRIMARY_BTN}
                 data-open-simulated-region=""
               >
@@ -276,7 +287,7 @@ export function RegionSimulationSetup() {
           <FlowFormCard data-region-simulation-setup="">
             {flows.length === 0 ? (
               <Link
-                href={productFlowNewPath("verification")}
+                href={productFlowNewPath(kind)}
                 data-create-flow-first=""
                 className={FLOW_PRIMARY_BTN}
               >
@@ -296,7 +307,7 @@ export function RegionSimulationSetup() {
 
                 <fieldset className="space-y-2" data-region-simulation-flows="">
                   <legend className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
-                    Verification flows
+                    {productLabel} flows
                   </legend>
                   <p className="text-xs text-neutral-500">
                     Required. These flows supply the problems the agents will solve.

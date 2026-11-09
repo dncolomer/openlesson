@@ -333,17 +333,11 @@ describe("dashboard home and my maps surface", () => {
     const learning = DASHBOARD_NAV_GROUPS.find((group) => group.id === "learning");
     expect(learning?.items.map((item) => item.id)).toEqual([
       "browse_maps",
-      "practice",
       "my_maps",
-      "practice_studio",
-      "practice_performance",
     ]);
     expect(learning?.items.map((item) => item.label)).toEqual([
       "Browse maps",
-      "Browse exercises",
       "My Maps",
-      "Data Studio",
-      "Performance",
     ]);
     expect(isDashboardMyMapsTab("my_maps")).toBe(true);
     expect(parseDashboardTab("my_maps")).toBe("my_maps");

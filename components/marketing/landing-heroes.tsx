@@ -156,7 +156,6 @@ export function LandingCoreSection() {
           </h2>
           <p className="mt-3 text-[15px] leading-relaxed text-zinc-400 sm:text-base">{PLATFORM_CORE.p1}</p>
           <p className="mt-2.5 text-[15px] leading-relaxed text-zinc-400 sm:text-base">{PLATFORM_CORE.p2}</p>
-          <p className="mt-4 text-sm leading-relaxed text-zinc-400">{PLATFORM_CORE.visualBody}</p>
           <Link
             href={PLATFORM_CORE.scienceHref}
             className="mt-4 inline-flex items-center text-sm font-medium text-zinc-200 underline decoration-zinc-700 underline-offset-4 transition hover:text-white hover:decoration-zinc-500"

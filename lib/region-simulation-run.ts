@@ -1,6 +1,6 @@
 /**
  * Run a knowledge-region simulation: persist labelled simulated embeddings,
- * optionally overlay real human embeddings from the same verification flows,
+ * optionally overlay real human embeddings from the same product flows,
  * and save a parent region plus one named cluster per strategy.
  */
 
@@ -17,7 +17,11 @@ import {
   persistCompletedFlowEmbedding,
   type StoredFlowEmbedding,
 } from "@/lib/flow-embedding-store";
-import { productRegionPagePath } from "@/lib/product-flow";
+import {
+  productFlowEmbeddingKind,
+  productRegionPagePath,
+  type ProductFlowKind,
+} from "@/lib/product-flow";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   clampSamplesPerStrategy,
@@ -75,6 +79,17 @@ function supabaseConfigured(): boolean {
   return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
+function simulationStudioPath(kind: ProductFlowKind, regionId: string | null): string {
+  if (regionId) return productRegionPagePath(kind, regionId);
+  const tab =
+    kind === "calibration"
+      ? "calibration_studio"
+      : kind === "solve"
+        ? "solve_studio"
+        : "verification_studio";
+  return `/dashboard?tab=${tab}`;
+}
+
 function humanEmbeddingsForFlows(
   rows: readonly StoredFlowEmbedding[],
   flowIds: readonly string[],
@@ -107,6 +122,7 @@ async function persistKnowledgeRegion(input: {
   spec: CustomVerificationModelSpec;
   flowId: string | null;
   createdBy: string;
+  kind: ProductFlowKind;
 }): Promise<{ persisted: boolean; id: string | null }> {
   if (!supabaseConfigured()) {
     return { persisted: false, id: null };
@@ -117,7 +133,7 @@ async function persistKnowledgeRegion(input: {
     .insert({
       workspace_id: input.workspaceId,
       owner_user_id: input.ownerUserId,
-      product: "verification",
+      product: input.kind,
       name: input.spec.name,
       description: input.description,
       embedding_model_id: input.spec.embedding_model_id,
@@ -130,7 +146,9 @@ async function persistKnowledgeRegion(input: {
       subjects: input.spec.subjects,
       created_by: input.createdBy,
       updated_at: new Date().toISOString(),
-      verify_flow_id: input.flowId,
+      ...(input.kind === "verification" ? { verify_flow_id: input.flowId } : {}),
+      ...(input.kind === "calibration" ? { calibrate_flow_id: input.flowId } : {}),
+      ...(input.kind === "solve" ? { solve_flow_id: input.flowId } : {}),
     })
     .select("id")
     .maybeSingle();
@@ -148,6 +166,7 @@ async function persistPathTextCompanion(input: {
   embeddings: readonly { raw?: unknown }[];
   flowId: string | null;
   createdBy: string;
+  kind: ProductFlowKind;
 }): Promise<void> {
   try {
     const voiceSpec = buildVoiceRegionFromFlowRaws({
@@ -172,13 +191,16 @@ export async function runRegionSimulation(input: {
   strategyIds: readonly ExplorationStrategyId[];
   samplesPerStrategy: number;
   includeHumanData: boolean;
+  kind?: ProductFlowKind;
   onProgress?: (progress: RegionSimulationProgress[]) => void;
 }): Promise<RegionSimulationRunResult> {
   const ownerUserId = String(input.ownerUserId || "").trim();
   const name = String(input.name || "").trim();
+  const kind: ProductFlowKind = input.kind || "verification";
+  const flowKind = productFlowEmbeddingKind(kind);
   if (!ownerUserId) throw new Error("owner is required");
   if (!name) throw new Error("name is required");
-  if (!input.flows.length) throw new Error("Select at least one verification flow");
+  if (!input.flows.length) throw new Error("Select at least one flow");
   if (!input.strategyIds.length) throw new Error("Select at least one exploration strategy");
   const samplesPerStrategy = clampSamplesPerStrategy(input.samplesPerStrategy);
 
@@ -201,13 +223,13 @@ export async function runRegionSimulation(input: {
 
   const simulated: StoredFlowEmbedding[] = [];
   for (const plan of plans) {
-    const walk = runRegionSimulationSample(plan);
+    const walk = runRegionSimulationSample(plan, flowKind);
     const strategy = explorationStrategyById(plan.strategyId)!;
     const flow = input.flows.find((row) => row.id === plan.flowId);
     const stored = await persistCompletedFlowEmbedding({
       ownerUserId,
       workspaceId: flow?.workspaceId || undefined,
-      flowKind: "verify",
+      flowKind,
       flowId: plan.flowId,
       runId: simulationSampleRunId(plan),
       identity: simulatedIdentityLabel(strategy.name),
@@ -227,7 +249,7 @@ export async function runRegionSimulation(input: {
   if (input.includeHumanData) {
     const owned = await listFlowEmbeddingsForOwner({
       ownerUserId,
-      flowKind: "verify",
+      flowKind,
     });
     humans = humanEmbeddingsForFlows(owned, flowIds);
   }
@@ -258,6 +280,7 @@ export async function runRegionSimulation(input: {
     spec: parentSpec,
     flowId: primaryFlowId,
     createdBy: ownerUserId,
+    kind,
   });
   await persistPathTextCompanion({
     ownerUserId,
@@ -267,6 +290,7 @@ export async function runRegionSimulation(input: {
     embeddings: parentRows,
     flowId: primaryFlowId,
     createdBy: ownerUserId,
+    kind,
   });
 
   const clusters: RegionSimulationClusterResult[] = [];
@@ -285,6 +309,7 @@ export async function runRegionSimulation(input: {
       spec,
       flowId: primaryFlowId,
       createdBy: ownerUserId,
+      kind,
     });
     await persistPathTextCompanion({
       ownerUserId,
@@ -294,6 +319,7 @@ export async function runRegionSimulation(input: {
       embeddings: rows,
       flowId: primaryFlowId,
       createdBy: ownerUserId,
+      kind,
     });
     clusters.push({
       id: saved.id,
@@ -308,7 +334,7 @@ export async function runRegionSimulation(input: {
   return {
     persisted: parent.persisted,
     id: parent.id,
-    regionPath: productRegionPagePath("verification", parent.id || ""),
+    regionPath: simulationStudioPath(kind, parent.id),
     parentName: name,
     clusters,
     summary,
@@ -316,16 +342,27 @@ export async function runRegionSimulation(input: {
   };
 }
 
-export function problemsForVerificationFlow(flow: Pick<VerificationFlow, "questions" | "topic" | "name">): string[] {
+export function problemsForSimulationFlow(flow: {
+  questions?: readonly (string | { text?: string | null })[] | null;
+  topic?: string | null;
+  goal?: string | null;
+  name?: string | null;
+}): string[] {
   const questions = (flow.questions ?? [])
     .map((item) => (typeof item === "string" ? item : item.text))
     .map((item) => String(item || "").trim())
     .filter(Boolean);
   if (questions.length) return questions;
-  const topic = String(flow.topic || "").trim();
+  const topic = String(flow.topic || flow.goal || "").trim();
   if (topic) return [topic];
   const name = String(flow.name || "").trim();
   return name ? [name] : ["Problem"];
+}
+
+export function problemsForVerificationFlow(
+  flow: Pick<VerificationFlow, "questions" | "topic" | "name">,
+): string[] {
+  return problemsForSimulationFlow(flow);
 }
 
 export type { RegionSimulationSamplePlan };

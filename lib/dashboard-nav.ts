@@ -18,11 +18,9 @@ export const DASHBOARD_TABS = [
   "home",
   "browse_maps",
   "practice",
-  "practice_studio",
   "practice_performance",
   "my_maps",
   "learning",
-  "learning_studio",
   "shop",
   "verification",
   "verification_regions",
@@ -51,11 +49,9 @@ export type DashboardRegionsTab =
   | "solve_regions";
 
 export type DashboardStudioTab =
-  | "learning_studio"
   | "verification_studio"
   | "calibration_studio"
-  | "solve_studio"
-  | "practice_studio";
+  | "solve_studio";
 
 export type DashboardNavItem = {
   id: string;
@@ -92,11 +88,8 @@ export const DASHBOARD_NAV_GROUPS: readonly DashboardNavGroup[] = [
     id: "learning",
     label: "Learning",
     items: [
-      { id: "browse_maps", label: "Browse maps", cluster: "catalog" },
-      { id: "practice", label: "Browse exercises", cluster: "catalog" },
-      { id: "my_maps", label: "My Maps", cluster: "catalog" },
-      { id: "practice_studio", label: "Data Studio", cluster: "studio" },
-      { id: "practice_performance", label: "Performance", cluster: "studio" },
+      { id: "browse_maps", label: "Browse maps" },
+      { id: "my_maps", label: "My Maps" },
     ],
   },
   {
@@ -109,11 +102,13 @@ export const DASHBOARD_NAV_GROUPS: readonly DashboardNavGroup[] = [
   },
   {
     id: "solve",
-    label: "Solve",
+    label: "Solve / Practice",
     items: [
+      { id: "practice", label: "Browse exercises" },
       { id: "solve", label: "Flows" },
-      { id: "solve_regions", label: "Knowledge regions" },
-      { id: "solve_studio", label: "Data Studio" },
+      { id: "solve_regions", label: "Knowledge regions", cluster: "studio" },
+      { id: "solve_studio", label: "Data Studio", cluster: "studio" },
+      { id: "practice_performance", label: "Performance", cluster: "studio" },
     ],
   },
   {
@@ -183,11 +178,9 @@ export function isDashboardRegionsTab(value: unknown): value is DashboardRegions
 
 export function isDashboardStudioTab(value: unknown): value is DashboardStudioTab {
   return (
-    value === "learning_studio" ||
     value === "verification_studio" ||
     value === "calibration_studio" ||
-    value === "solve_studio" ||
-    value === "practice_studio"
+    value === "solve_studio"
   );
 }
 
@@ -207,12 +200,10 @@ export function isDashboardPracticePerformanceTab(
 
 export function dashboardStudioProduct(
   tab: DashboardTab,
-): DashboardProductTab | "practice" | null {
-  if (tab === "learning_studio") return "learning";
+): Exclude<DashboardProductTab, "learning"> | null {
   if (tab === "verification_studio") return "verification";
   if (tab === "calibration_studio") return "calibration";
   if (tab === "solve_studio") return "solve";
-  if (tab === "practice_studio") return "practice";
   return null;
 }
 
@@ -259,6 +250,8 @@ export function isDashboardNavTabItem(
 export function parseDashboardTab(value: unknown): DashboardTab {
   if (value === "plans") return "learning";
   if (value === "upgrade") return "usage";
+  if (value === "practice_studio") return "solve_studio";
+  if (value === "learning_studio") return "home";
   if (isDashboardTab(value)) return value;
   return "home";
 }
@@ -270,11 +263,7 @@ export function dashboardTypeFilterForTab(
     tab === "learning" ||
     tab === "shop" ||
     tab === "my_maps" ||
-    tab === "learning_studio" ||
-    tab === "browse_maps" ||
-    tab === "practice" ||
-    tab === "practice_studio" ||
-    tab === "practice_performance"
+    tab === "browse_maps"
   ) {
     return "learning";
   }
@@ -284,7 +273,13 @@ export function dashboardTypeFilterForTab(
   if (tab === "calibration" || tab === "calibration_regions" || tab === "calibration_studio") {
     return "calibration";
   }
-  if (tab === "solve" || tab === "solve_regions" || tab === "solve_studio") {
+  if (
+    tab === "solve" ||
+    tab === "solve_regions" ||
+    tab === "solve_studio" ||
+    tab === "practice" ||
+    tab === "practice_performance"
+  ) {
     return "solve";
   }
   return null;

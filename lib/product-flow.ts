@@ -100,10 +100,22 @@ export function productRegionStudioPath(kind: ProductFlowKind, regionId: string)
   return productRegionPagePath(kind, regionId);
 }
 
+export function productFlowKindLabel(kind: ProductFlowKind): string {
+  if (kind === "calibration") return "Calibration";
+  if (kind === "solve") return "Solve";
+  return "Verification";
+}
+
 export function productFlowOwnerTitle(kind: ProductFlowKind): string {
-  if (kind === "calibration") return "Calibration flows";
-  if (kind === "solve") return "Solve flows";
-  return "Verification flows";
+  return `${productFlowKindLabel(kind)} flows`;
+}
+
+export function productFlowEmbeddingKind(
+  kind: ProductFlowKind,
+): "verify" | "calibrate" | "solve" {
+  if (kind === "calibration") return "calibrate";
+  if (kind === "solve") return "solve";
+  return "verify";
 }
 
 export function flowOwnedByUser(

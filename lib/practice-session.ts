@@ -1,5 +1,5 @@
 /**
- * Mint or reuse a per-user virtual Solve flow for a catalog problem,
+ * Mint or reuse a per-user Solve flow for a catalog problem,
  * then start a Solve work session.
  */
 

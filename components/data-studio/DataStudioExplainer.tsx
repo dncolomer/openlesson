@@ -65,26 +65,8 @@ function SpacesFigure() {
   );
 }
 
-function OverlayFigure({ product }: { product: DataStudioProduct }) {
-  if (product === "learning") {
-    return (
-      <svg viewBox="0 0 280 150" className="h-full w-full" aria-hidden>
-        <circle cx="70" cy="70" r="5" fill="#fff" />
-        <circle cx="128" cy="92" r="5" fill="#fff" />
-        <circle cx="176" cy="58" r="5" fill="#fff" />
-        <circle cx="220" cy="100" r="5" fill="none" stroke="#fff" />
-        <text x="78" y="66" fill="rgba(255,255,255,0.7)" fontSize="8" fontFamily="ui-monospace, monospace">
-          you
-        </text>
-        <text x="136" y="88" fill="rgba(255,255,255,0.7)" fontSize="8" fontFamily="ui-monospace, monospace">
-          you
-        </text>
-        <text x="16" y="136" fill="rgba(255,255,255,0.45)" fontSize="8" fontFamily="ui-monospace, monospace">
-          play copies only · no region disk
-        </text>
-      </svg>
-    );
-  }
+function OverlayFigure({ product: _product }: { product: DataStudioProduct }) {
+  void _product;
   return (
     <svg viewBox="0 0 280 150" className="h-full w-full" aria-hidden>
       <circle

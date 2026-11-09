@@ -12,6 +12,7 @@ import {
   PLATFORM_LAYER_LIST,
   PLATFORM_LAYERS,
   PLATFORM_PRODUCT_LIST,
+  PLATFORM_OUTCOMES,
   PLATFORM_PRODUCTS,
   PLATFORM_PROOF,
   PLATFORM_PUBLIC_MAPS,
@@ -144,9 +145,15 @@ describe("landing knowledge acquisition, verification, and mapping copy", () => 
     expect(lp).toContain("{PLATFORM_CORE.p1}");
     expect(lp).toContain("{PLATFORM_CORE.p2}");
     expect(lp).not.toContain("{PLATFORM_CORE.p3}");
+    expect(lp).not.toContain("{PLATFORM_CORE.visualBody}");
+    expect("visualBody" in PLATFORM_CORE).toBe(false);
+    expect(copy).not.toMatch(/Illustrative projection/);
     expect(lp).toContain("{PLATFORM_CORE.imageSrc}");
-    expect(PLATFORM_CORE.title).toMatch(/shared reference/i);
-    expect(PLATFORM_CORE.p1).toMatch(/knowledge region/);
+    expect(PLATFORM_CORE.title).toBe(
+      "A knowledge region is where similar ways of thinking cluster.",
+    );
+    expect(PLATFORM_CORE.p1).toMatch(/custom knowledge embeddings space/);
+    expect(PLATFORM_CORE.p1).toMatch(/these are knowledge regions/);
     expect(PLATFORM_CORE.p2).toMatch(/organically with expert users/);
     expect(PLATFORM_CORE.p2).toMatch(/privately/);
     expect("p3" in PLATFORM_CORE).toBe(false);
@@ -183,6 +190,17 @@ describe("landing knowledge acquisition, verification, and mapping copy", () => 
     expect(fs.existsSync(path.join(REPO_ROOT, "public/lp-boxes/extropic-logo.webp"))).toBe(true);
     expect(lp).toContain("data-home-cta");
     expect(lp).toContain("PLATFORM_OUTCOMES");
+    expect(PLATFORM_OUTCOMES.items.map((item) => item.eyebrow)).toEqual([
+      "FRONTIER WORK",
+      "ASSESSMENT",
+      "TEAM INSIGHT",
+    ]);
+    expect(PLATFORM_OUTCOMES.items[2]).toMatchObject({
+      name: "Turn work into actionable insight",
+      href: "/use-cases#team-insight",
+      hrefLabel: "Team insight",
+    });
+    expect(PLATFORM_OUTCOMES.items[2].body).toMatch(/many dimensions at once/);
     expect(copy).not.toMatch(/\d+%/);
     expect(copy).not.toMatch(/\$\d+/);
 

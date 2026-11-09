@@ -1,5 +1,5 @@
 /**
- * Practice library: catalog grouping, virtual Solve-flow tagging,
+ * Practice library: catalog grouping, Solve-flow tagging,
  * session history, and dashboard copy.
  */
 
@@ -90,7 +90,7 @@ export function listedAuthorSolveFlows<T extends {
   flows: readonly T[],
   isArchived: (flow: T) => boolean,
 ): T[] {
-  return flows.filter((flow) => !isArchived(flow) && !isPracticeSolveFlow(flow));
+  return flows.filter((flow) => !isArchived(flow));
 }
 
 export function presentPracticeProblem(row: {

@@ -5,8 +5,10 @@ import type { DataStudioView } from "@/lib/data-studio-explainer";
 import {
   DATA_STUDIO_SPACE_OPTIONS,
   parseDataStudioSpace,
+  STUDIO_HUMAN_FILL,
   STUDIO_IN_REGION_FILL,
   STUDIO_OUT_REGION_FILL,
+  STUDIO_SIMULATED_FILL,
   studioHiddenRegionIdsFromVisible,
   type DataStudioSpace,
   type StudioSelectOption,
@@ -44,6 +46,7 @@ export function DataStudioHud({
   onToggleRegion,
   view,
   colorMembership,
+  colorByOrigin = false,
   hiddenRegionIds,
   filteredCount,
   cameraScale,
@@ -77,6 +80,7 @@ export function DataStudioHud({
   onToggleRegion: (id: string) => void;
   view: DataStudioView;
   colorMembership: boolean;
+  colorByOrigin?: boolean;
   hiddenRegionIds: readonly string[];
   filteredCount: number;
   cameraScale: number;
@@ -209,6 +213,33 @@ export function DataStudioHud({
             <p className="mb-1 text-[9px] uppercase tracking-[0.14em] text-neutral-500">
               Regions
             </p>
+            {colorByOrigin ? (
+              <div
+                className="mb-1.5 space-y-1 text-[10px] text-neutral-400"
+                data-data-studio-origin-legend
+              >
+                <p className="flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center gap-1">
+                    <span
+                      className="inline-block h-2 w-2 rounded-full"
+                      style={{ background: STUDIO_SIMULATED_FILL }}
+                    />
+                    simulated
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <span
+                      className="inline-block h-2 w-2 rounded-full"
+                      style={{ background: STUDIO_HUMAN_FILL }}
+                    />
+                    real human
+                  </span>
+                </p>
+                <p className="text-[9px] leading-snug text-neutral-500">
+                  Simulated traces are labelled simulated. Clusters describe
+                  exploration style, not a person's ability.
+                </p>
+              </div>
+            ) : null}
             {colorMembership ? (
               <div
                 className="mb-1.5 space-y-1 text-[10px] text-neutral-400"

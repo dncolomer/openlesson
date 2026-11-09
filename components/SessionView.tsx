@@ -38,6 +38,7 @@ import { isIleSessionSettingsPath } from "@/lib/learn-session-routes";
 import { useI18n } from "@/lib/i18n";
 import { coerceSpokenLocale, type SpokenLocale } from "@/lib/tutoring-languages";
 import { ileBlockSessionFrame } from "@/lib/learn-canvas-session";
+import { sessionWelcomeTitle } from "@/lib/session-stage-progress";
 import { SessionWelcomeModal } from "@/components/session-view/session-welcome-modal";
 import { SessionToolPanes } from "@/components/session-view/session-tool-panes";
 import { SessionChapterWorkCanvas } from "@/components/session-view/session-chapter-canvas";
@@ -842,6 +843,10 @@ export function SessionView({
     return (
       <SessionWelcomeModal
         t={t}
+        title={sessionWelcomeTitle({
+          solveToken,
+          metadata: session.metadata,
+        })}
         languageConfirmed={languageConfirmed}
         planLoading={planLoading}
         isPreparing={isPreparing}

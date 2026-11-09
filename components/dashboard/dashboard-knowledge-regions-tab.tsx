@@ -65,8 +65,9 @@ export function DashboardKnowledgeRegionsTab({
               Knowledge regions
             </h2>
             <p className="mt-3 max-w-xl text-sm leading-relaxed text-neutral-400">
-              Overlay regions from your {productLabel.toLowerCase()} flows. Open a region in Data
-              Studio to see it against the runs.
+              {kind === "verification"
+                ? "Create a region by running a simulation of exploration strategies on your verification flows. Open it in Data Studio to see simulated and real points."
+                : `Overlay regions from your ${productLabel.toLowerCase()} flows. Open a region in Data Studio to see it against the runs.`}
             </p>
           </div>
           <Link
@@ -91,7 +92,9 @@ export function DashboardKnowledgeRegionsTab({
               No knowledge regions yet
             </h3>
             <p className="mt-3 text-sm leading-relaxed text-neutral-400">
-              Select existing flows or create a flow first, then publish a region.
+              {kind === "verification"
+                ? "Name a region, pick verification flows and exploration strategies, then run a simulation."
+                : "Select existing flows or create a flow first, then publish a region."}
             </p>
             <Link
               href={createHref}

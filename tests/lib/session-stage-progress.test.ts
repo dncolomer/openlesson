@@ -6,8 +6,10 @@ import { describe, expect, it } from "vitest";
 import { SessionStageProgress } from "@/components/session-view/session-stage-progress";
 import {
   FLOW_END_KICKERS,
+  SESSION_WELCOME_TITLES,
   sessionLearnPolicyProgressLabel,
   sessionStageProgressLine,
+  sessionWelcomeTitle,
 } from "@/lib/session-stage-progress";
 import {
   normalizeSessionBranchModel,
@@ -85,6 +87,19 @@ describe("session stage progress", () => {
     expect(read("components/session-view/session-guide-panel.tsx")).toContain("SessionHarnessPanel");
     expect(read("components/calibrate/calibrate-sounding-surface.tsx")).not.toContain(
       "SessionBranchFieldMap",
+    );
+  });
+
+  it("titles the language and aesthetics screen Solve for Solve sessions", () => {
+    expect(SESSION_WELCOME_TITLES).toEqual({ learn: "Learn", solve: "Solve" });
+    expect(sessionWelcomeTitle({})).toBe("Learn");
+    expect(sessionWelcomeTitle({ solveToken: "stok" })).toBe("Solve");
+    expect(sessionWelcomeTitle({ kind: "solve" })).toBe("Solve");
+    expect(sessionWelcomeTitle({ metadata: { solve_flow_id: "sf1" } })).toBe("Solve");
+    expect(sessionWelcomeTitle({ kind: "learn" })).toBe("Learn");
+    expect(read("components/SessionView.tsx")).toContain("sessionWelcomeTitle");
+    expect(read("components/session-view/session-welcome-modal.tsx")).toContain(
+      "title = FLOW_END_KICKERS.learn",
     );
   });
 });

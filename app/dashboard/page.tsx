@@ -12,8 +12,11 @@ import { OrganizationDashboardTab } from "@/components/OrganizationDashboardTab"
 import { DashboardAtmosphere } from "@/components/dashboard/dashboard-atmosphere";
 import { DashboardConfigTab } from "@/components/dashboard/dashboard-config-tab";
 import { DashboardHelpTab } from "@/components/dashboard/dashboard-help-tab";
+import { DashboardBrowseMapsTab } from "@/components/dashboard/dashboard-browse-maps-tab";
 import { DashboardHomeTab } from "@/components/dashboard/dashboard-home-tab";
 import { DashboardMyMapsTab } from "@/components/dashboard/dashboard-my-maps-tab";
+import { DashboardPracticeTab } from "@/components/dashboard/dashboard-practice-tab";
+import { DashboardPracticePerformanceTab } from "@/components/dashboard/dashboard-practice-performance-tab";
 import { DashboardIntegrationsTab } from "@/components/dashboard/dashboard-integrations-tab";
 import { DashboardFlowsTab } from "@/components/dashboard/dashboard-flows-tab";
 import { DashboardKnowledgeRegionsTab } from "@/components/dashboard/dashboard-knowledge-regions-tab";
@@ -37,7 +40,10 @@ import {
   dashboardListFilterForTab,
   dashboardTypeFilterForTab,
   dashboardStudioProduct,
+  isDashboardBrowseMapsTab,
   isDashboardMyMapsTab,
+  isDashboardPracticePerformanceTab,
+  isDashboardPracticeTab,
   isDashboardProductTab,
   isDashboardRegionsTab,
   isDashboardShopTab,
@@ -786,12 +792,31 @@ export default function DashboardPage() {
             playCopies={myMaps}
             t={t}
             hasPaidAccess={hasPaidAccess}
+          />
+        )}
+
+        {isDashboardBrowseMapsTab(activeTab) && (
+          <DashboardBrowseMapsTab
+            workspaces={learningWorkspaces}
+            playCopies={myMaps}
+            t={t}
+            hasPaidAccess={hasPaidAccess}
             weeklySessionsUsed={usageData?.weeklySessionsUsed ?? 0}
             weeklySessionsLimit={usageData?.weeklySessionsLimit ?? null}
             weeklySessionsResetAt={usageData?.weeklySessionsResetAt ?? null}
             weeklySessionsAllowed={usageData?.weeklySessionsAllowed !== false}
             coverImagePool={workspaceCoverPool}
           />
+        )}
+
+        {isDashboardPracticeTab(activeTab) && (
+          <DashboardPracticeTab
+            weeklySessionsAllowed={usageData?.weeklySessionsAllowed !== false}
+          />
+        )}
+
+        {isDashboardPracticePerformanceTab(activeTab) && (
+          <DashboardPracticePerformanceTab />
         )}
 
         {isDashboardMyMapsTab(activeTab) && (

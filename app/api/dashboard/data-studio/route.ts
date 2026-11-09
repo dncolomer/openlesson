@@ -17,6 +17,7 @@ import {
 import type { RegionCentroidInput } from "@/lib/knowledge-config";
 import { regionMatchesFlowEmbeddingChannel } from "@/lib/flow-embedding-view";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { listPracticeSolveFlowIds } from "@/lib/practice-session";
 
 export const runtime = "nodejs";
 
@@ -30,7 +31,7 @@ export async function GET(req: NextRequest) {
     if (!product) {
       return jsonError(
         400,
-        "product must be verification, calibration, solve, or learning",
+        "product must be verification, calibration, solve, practice, or learning",
       );
     }
     const workspaceId = (url.searchParams.get("workspaceId") || "").trim();
@@ -80,6 +81,10 @@ export async function GET(req: NextRequest) {
             ownerUserId: auth.user.id,
             flowKind: presentedEmpty.flowKind,
           });
+    const practiceFlowIds =
+      product === "practice" || product === "solve"
+        ? await listPracticeSolveFlowIds(auth.user.id)
+        : [];
     const embeddings: DataStudioEmbeddingRow[] = stored.map((row) => ({
       id: row.id,
       workspace_id: row.workspace_id,
@@ -96,7 +101,7 @@ export async function GET(req: NextRequest) {
     }));
 
     let regions: RegionCentroidInput[] = [];
-    if (product !== "learning") {
+    if (product !== "learning" && product !== "practice") {
       const admin = createAdminClient();
       const { data: regionRows } = await admin
         .from("knowledge_regions")
@@ -142,6 +147,7 @@ export async function GET(req: NextRequest) {
       presentDashboardDataStudio({
         product,
         viewerUserId: auth.user.id,
+        practiceFlowIds,
         workspaces: listed,
         embeddings,
         regions,

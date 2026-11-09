@@ -17,10 +17,6 @@ import {
 import { listFlowEmbeddingsForOwner } from "@/lib/flow-embedding-store";
 import { getCalibrationFlowById } from "@/lib/calibration-flow-repository";
 import { getSolveFlowById } from "@/lib/solve-flow-repository";
-import {
-  getVerificationFlowById,
-  listVerificationResultsForFlowId,
-} from "@/lib/verification-flow-repository";
 
 export const runtime = "nodejs";
 
@@ -64,6 +60,9 @@ export async function POST(req: NextRequest) {
     const body = (await req.json()) as Record<string, unknown>;
     const kind = parseProductFlowKind(body.kind) || parseDashboardKnowledgeRegionKind(body.kind);
     if (!kind) return jsonError(400, "kind must be verification, calibration, or solve");
+    if (kind === "verification") {
+      return jsonError(400, "Verification regions are created by running a simulation");
+    }
     const name = String(body.name || "").trim();
     if (!name) return jsonError(400, "name is required");
     const flowId = String(body.flowId || "").trim();
@@ -72,9 +71,7 @@ export async function POST(req: NextRequest) {
     const flow =
       kind === "calibration"
         ? await getCalibrationFlowById(flowId)
-        : kind === "solve"
-          ? await getSolveFlowById(flowId)
-          : await getVerificationFlowById(flowId);
+        : await getSolveFlowById(flowId);
     if (!flow || !flowOwnedByUser(flow, auth.user.id)) {
       return jsonError(404, "Flow not found");
     }
@@ -82,19 +79,15 @@ export async function POST(req: NextRequest) {
     const stored = await listFlowEmbeddingsForOwner({
       ownerUserId: auth.user.id,
       flowId,
-      flowKind:
-        kind === "calibration" ? "calibrate" : kind === "solve" ? "solve" : "verify",
+      flowKind: kind === "calibration" ? "calibrate" : "solve",
     });
-    let items: { flowId: string; embedding?: number[] | null; id?: string }[] = stored.map(
+    const items: { flowId: string; embedding?: number[] | null; id?: string }[] = stored.map(
       (row) => ({
         flowId: row.flow_id || flowId,
         embedding: row.vector,
         id: row.id,
       }),
     );
-    if (kind === "verification" && items.length === 0) {
-      items = await listVerificationResultsForFlowId(flow.id);
-    }
     let spec: ReturnType<typeof buildRegionFromFlowEmbeddings>;
     try {
       spec = buildRegionFromFlowEmbeddings({
@@ -136,7 +129,6 @@ export async function POST(req: NextRequest) {
         updated_at: new Date().toISOString(),
         ...(kind === "solve" ? { solve_flow_id: flowId } : {}),
         ...(kind === "calibration" ? { calibrate_flow_id: flowId } : {}),
-        ...(kind === "verification" ? { verify_flow_id: flowId } : {}),
       })
       .select("id")
       .maybeSingle();
@@ -165,7 +157,6 @@ export async function POST(req: NextRequest) {
           updated_at: new Date().toISOString(),
           ...(kind === "solve" ? { solve_flow_id: flowId } : {}),
           ...(kind === "calibration" ? { calibrate_flow_id: flowId } : {}),
-          ...(kind === "verification" ? { verify_flow_id: flowId } : {}),
         });
       }
     } catch {

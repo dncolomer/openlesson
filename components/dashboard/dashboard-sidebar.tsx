@@ -1,11 +1,14 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BrandLogo } from "@/components/BrandLogo";
 import {
+  dashboardNavGroupIdForTab,
   isDashboardNavTabItem,
   isDashboardProductTab,
+  type DashboardNavGroupId,
   type DashboardTab,
 } from "@/lib/dashboard-nav";
 import { dashboardNavGroupsForAccess } from "@/lib/free-tier";
@@ -29,6 +32,13 @@ export function DashboardSidebar({
   const router = useRouter();
   const { t } = useI18n();
   const groups = dashboardNavGroupsForAccess(hasPaidAccess);
+  const [openGroup, setOpenGroup] = useState<DashboardNavGroupId | null>(
+    () => dashboardNavGroupIdForTab(activeTab),
+  );
+
+  useEffect(() => {
+    setOpenGroup(dashboardNavGroupIdForTab(activeTab));
+  }, [activeTab]);
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -52,66 +62,82 @@ export function DashboardSidebar({
           />
         </Link>
       </div>
-      {groups.map((group) => (
-        <nav
-          key={group.id}
-          className="border-b border-white/20 px-2 py-2 last:border-b-0"
-          data-dashboard-nav-group={group.id}
-          aria-label={group.label}
-        >
-          <p className="mb-1 px-2 font-mono text-[9px] uppercase tracking-[0.16em] text-neutral-500">
-            {group.label}
-          </p>
-          <ul className="flex flex-row gap-0.5 overflow-x-auto md:flex-col md:overflow-visible">
-            {group.items.map((item) => {
-              if (item.href) {
-                return (
-                  <li key={item.id}>
-                    <Link
-                      href={item.href}
-                      data-dashboard-nav={item.id}
-                      data-dashboard-nav-link=""
+      {groups.map((group) => {
+        const open = openGroup === group.id;
+        const containsActive = group.items.some((item) => item.id === activeTab);
+        return (
+          <nav
+            key={group.id}
+            className="shrink-0 border-b border-white/20 px-2 py-2 last:border-b-0"
+            data-dashboard-nav-group={group.id}
+            data-dashboard-nav-group-open={open ? "true" : "false"}
+            aria-label={group.label}
+          >
+            <button
+              type="button"
+              data-dashboard-nav-group-toggle={group.id}
+              aria-expanded={open}
+              onClick={() => setOpenGroup(open ? null : group.id)}
+              className={`mb-1 flex w-full items-center justify-between px-2 py-1 text-left font-mono text-[9px] uppercase tracking-[0.16em] transition ${
+                containsActive ? "text-white" : "text-neutral-500 hover:text-neutral-300"
+              }`}
+            >
+              <span>{group.label}</span>
+              <span aria-hidden="true">{open ? "−" : "+"}</span>
+            </button>
+            {open ? (
+              <ul className="flex flex-row gap-0.5 overflow-x-auto md:flex-col">
+                {group.items.map((item) => {
+                  if (item.href) {
+                    return (
+                      <li key={item.id}>
+                        <Link
+                          href={item.href}
+                          data-dashboard-nav={item.id}
+                          data-dashboard-nav-link=""
+                          className={`${itemClass} ${idleClass}`}
+                        >
+                          {item.label}
+                        </Link>
+                      </li>
+                    );
+                  }
+                  if (!isDashboardNavTabItem(item)) return null;
+                  const active = activeTab === item.id;
+                  return (
+                    <li key={item.id}>
+                      <button
+                        type="button"
+                        data-dashboard-nav={item.id}
+                        data-dashboard-nav-active={active ? "true" : "false"}
+                        data-workspace-type-filter={
+                          isDashboardProductTab(item.id) ? item.id : undefined
+                        }
+                        onClick={() => onSelect(item.id)}
+                        className={`${itemClass} ${active ? activeClass : idleClass}`}
+                      >
+                        {item.label}
+                      </button>
+                    </li>
+                  );
+                })}
+                {group.id === "account" ? (
+                  <li>
+                    <button
+                      type="button"
+                      data-dashboard-sign-out
+                      onClick={() => void handleSignOut()}
                       className={`${itemClass} ${idleClass}`}
                     >
-                      {item.label}
-                    </Link>
+                      {t("nav.signOut")}
+                    </button>
                   </li>
-                );
-              }
-              if (!isDashboardNavTabItem(item)) return null;
-              const active = activeTab === item.id;
-              return (
-                <li key={item.id}>
-                  <button
-                    type="button"
-                    data-dashboard-nav={item.id}
-                    data-dashboard-nav-active={active ? "true" : "false"}
-                    data-workspace-type-filter={
-                      isDashboardProductTab(item.id) ? item.id : undefined
-                    }
-                    onClick={() => onSelect(item.id)}
-                    className={`${itemClass} ${active ? activeClass : idleClass}`}
-                  >
-                    {item.label}
-                  </button>
-                </li>
-              );
-            })}
-            {group.id === "account" ? (
-              <li>
-                <button
-                  type="button"
-                  data-dashboard-sign-out
-                  onClick={() => void handleSignOut()}
-                  className={`${itemClass} ${idleClass}`}
-                >
-                  {t("nav.signOut")}
-                </button>
-              </li>
+                ) : null}
+              </ul>
             ) : null}
-          </ul>
-        </nav>
-      ))}
+          </nav>
+        );
+      })}
     </aside>
   );
 }

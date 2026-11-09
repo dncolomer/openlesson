@@ -16,8 +16,9 @@ import {
   formatStudioHighDimDistance,
   STUDIO_IN_REGION_FILL,
   STUDIO_IN_REGION_STROKE,
-  STUDIO_OUT_REGION_FILL,
+  studioPointFill,
   type DataStudioProduct,
+  type StudioEmbeddingOrigin,
   type StudioPointRegionMembership,
   type StudioRegionDistanceRay,
 } from "@/lib/data-studio-view";
@@ -35,6 +36,7 @@ export function DataStudioPlot({
   grid,
   visibleOverlays,
   colorMembership,
+  colorByOrigin = false,
   distanceRays,
   selectedId,
   membership,
@@ -58,6 +60,7 @@ export function DataStudioPlot({
   grid: { lines: readonly StudioGridLine[] };
   visibleOverlays: readonly StudioRegionOverlayView[];
   colorMembership: boolean;
+  colorByOrigin?: boolean;
   distanceRays: readonly StudioRegionDistanceRay[];
   selectedId: string | null;
   membership: ReadonlyMap<string, StudioPointRegionMembership>;
@@ -66,6 +69,7 @@ export function DataStudioPlot({
     screenX: number;
     screenY: number;
     identity: string | null;
+    origin?: StudioEmbeddingOrigin;
   }[];
   showDistances: boolean;
   onKeyDown: (event: ReactKeyboardEvent<HTMLDivElement>) => void;
@@ -279,13 +283,13 @@ export function DataStudioPlot({
               const radius = (active ? 5.5 : 3.6) / camera.scale;
               const member = membership.get(point.id);
               const inHighDim = Boolean(colorMembership && member?.inRegion);
-              const fill = colorMembership
-                ? inHighDim
-                  ? STUDIO_IN_REGION_FILL
-                  : STUDIO_OUT_REGION_FILL
-                : active
-                  ? "#ffffff"
-                  : "rgba(255,255,255,0.82)";
+              const fill = studioPointFill({
+                origin: point.origin,
+                colorByOrigin,
+                colorMembership,
+                inRegion: member?.inRegion,
+                active,
+              });
               const stroke = colorMembership
                 ? inHighDim
                   ? STUDIO_IN_REGION_STROKE
@@ -301,6 +305,7 @@ export function DataStudioPlot({
                   data-data-studio-in-region={
                     colorMembership ? (member?.inRegion ? "true" : "false") : undefined
                   }
+                  data-data-studio-origin={point.origin}
                 >
                   <circle
                     cx={point.screenX}

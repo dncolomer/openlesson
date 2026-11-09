@@ -104,7 +104,7 @@ describe("free tier surfaces", () => {
     const dash = readDashboardSurface();
     expect(dash).toContain("dashboardNavGroupsForAccess");
     expect(dash).toContain("clampDashboardTabForAccess");
-    expect(dash).toContain("dashboardPlayKindsForAccess");
+    expect(readRepo("lib/free-tier.ts")).toContain("dashboardPlayKindsForAccess");
     expect(readRepo("components/dashboard/dashboard-usage-tab.tsx")).toContain("data-dashboard-credits");
     expect(readRepo("app/api/workspace/generate/route.ts")).not.toContain("rejectIfInsufficientSessionCredits");
     expect(readRepo("app/api/dashboard/knowledge-regions/route.ts")).not.toContain("rejectIfInsufficientSessionCredits");

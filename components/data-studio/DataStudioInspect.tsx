@@ -81,6 +81,14 @@ export function DataStudioInspect({
           <dd className="text-white" data-data-studio-inspect-identity>
             {inspect.identity || "—"}
           </dd>
+          <dt className="text-neutral-500">origin</dt>
+          <dd data-data-studio-inspect-origin={inspect.origin}>
+            {inspect.origin === "simulated" ? (
+              <span data-data-studio-simulated="">Simulated</span>
+            ) : (
+              "Real human"
+            )}
+          </dd>
           <dt className="text-neutral-500">flow_id</dt>
           <dd className="break-all">{inspect.flow_id || "—"}</dd>
           <dt className="text-neutral-500">run_id</dt>

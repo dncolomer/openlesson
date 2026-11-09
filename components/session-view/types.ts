@@ -60,6 +60,8 @@ export type SessionViewProps = {
 
 export type SessionWelcomeModalProps = {
   t: SessionViewTranslate;
+  /** Language/aesthetics heading. Defaults to Learn. Solve passes "Solve". */
+  title?: string;
   languageConfirmed: boolean;
   planLoading: boolean;
   isPreparing: boolean;

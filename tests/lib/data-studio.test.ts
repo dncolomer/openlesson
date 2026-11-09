@@ -53,6 +53,10 @@ import {
   formatStudioHighDimDistance,
   hiddenStudioRegionIdsForFocus,
   filterStudioEmbeddings,
+  studioHasSimulatedPoints,
+  studioPointFill,
+  STUDIO_HUMAN_FILL,
+  STUDIO_SIMULATED_FILL,
   studioHighDimRegionMembership,
   studioPointInsideHighDimRegion,
   includeLearningStudioEmbedding,
@@ -386,6 +390,7 @@ function studioRow(input: {
   flowId?: string | null;
   runId?: string | null;
   identity?: string | null;
+  source?: string | null;
   prompt: string;
   workspaceId?: string;
   userId?: string | null;
@@ -412,6 +417,7 @@ function studioRow(input: {
     flow_id: input.flowId ?? "flow-a",
     run_id: input.runId ?? "run-1",
     identity: input.identity ?? "ada",
+    source: input.source ?? null,
     vector: record.vector,
     raw: record.raw,
     embedding_model_id: record.embedding_model_id,
@@ -475,7 +481,8 @@ describe("product Data Studio chrome", () => {
     const verification = DASHBOARD_NAV_GROUPS.find((group) => group.id === "verification");
     const calibration = DASHBOARD_NAV_GROUPS.find((group) => group.id === "calibration");
     const solve = DASHBOARD_NAV_GROUPS.find((group) => group.id === "solve");
-    expect(learning?.items.some((item) => item.label === "Data Studio")).toBe(false);
+    expect(learning?.items.some((item) => item.label === "Data Studio")).toBe(true);
+    expect(dashboardStudioProduct("practice_studio")).toBe("practice");
     expect(verification?.items.some((item) => item.label === "Data Studio")).toBe(true);
     expect(calibration?.items.some((item) => item.label === "Data Studio")).toBe(true);
     expect(solve?.items.some((item) => item.label === "Data Studio")).toBe(true);
@@ -557,6 +564,9 @@ describe("product Data Studio chrome", () => {
     expect(visual).toContain("data-data-studio-focus-region");
     expect(visual).toContain("DATA_STUDIO_REGION_QUERY");
     expect(visual).toContain("hiddenStudioRegionIdsForFocus");
+    expect(visual).toContain("colorByOrigin");
+    expect(visual).toContain("data-data-studio-origin");
+    expect(visual).toContain("data-data-studio-origin-legend");
     expect(visual).toContain("DataStudioExplainer");
     const explainer = readFileSync(
       join(ROOT, "components/data-studio/DataStudioExplainer.tsx"),
@@ -794,6 +804,7 @@ describe("studio flow/run filters, inspect, projection, learning scope", () => {
     expect(view.regionOverlays[0].screenRadius).toBeGreaterThan(0);
     expect(Number.isFinite(view.regionOverlays[0].screenX)).toBe(true);
     expect(view.coords[0].identity).toBe("ada");
+    expect(view.coords[0].origin).toBe("human");
   });
 
   it("maps the cosine ball wider than a tight cohort disk so 2D overlay can disagree with membership", () => {
@@ -942,6 +953,28 @@ describe("studio flow/run filters, inspect, projection, learning scope", () => {
       "region-2",
     ]);
     expect(hiddenStudioRegionIdsForFocus(["region-1", "region-2"], "")).toEqual([]);
+    expect(
+      hiddenStudioRegionIdsForFocus(
+        [
+          { id: "parent", name: "Limits styles" },
+          { id: "cluster", name: "Limits styles · Exploit-heavy" },
+          { id: "other", name: "Bayes" },
+        ],
+        "parent",
+      ),
+    ).toEqual(["other"]);
+    const simulated = studioRow({
+      id: "sim-1",
+      identity: "Simulated · Exploit-heavy",
+      source: "simulated",
+      prompt: "agent walk",
+    });
+    expect(studioHasSimulatedPoints([a, simulated])).toBe(true);
+    expect(studioPointFill({ origin: "simulated", colorByOrigin: true })).toBe(
+      STUDIO_SIMULATED_FILL,
+    );
+    expect(studioPointFill({ origin: "human", colorByOrigin: true })).toBe(STUDIO_HUMAN_FILL);
+    expect(inspectStudioEmbedding(simulated)?.origin).toBe("simulated");
     expect(ada.inRegion).toBe(true);
     expect(bea.inRegion).toBe(false);
     expect(

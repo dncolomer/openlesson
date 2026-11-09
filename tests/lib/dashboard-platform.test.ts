@@ -52,6 +52,10 @@ describe("dashboard nav", () => {
     expect(parseDashboardTab("shop")).toBe("shop");
     expect(parseDashboardTab("verification_regions")).toBe("verification_regions");
     expect(parseDashboardTab("calibration_regions")).toBe("calibration_regions");
+    expect(parseDashboardTab("browse_maps")).toBe("browse_maps");
+    expect(parseDashboardTab("practice")).toBe("practice");
+    expect(parseDashboardTab("practice_studio")).toBe("practice_studio");
+    expect(parseDashboardTab("practice_performance")).toBe("practice_performance");
     expect(parseDashboardTab("learning_studio")).toBe("learning_studio");
     expect(parseDashboardTab("verification_studio")).toBe("verification_studio");
     expect(parseDashboardTab("calibration_studio")).toBe("calibration_studio");
@@ -80,7 +84,7 @@ describe("dashboard nav", () => {
     expect(isDashboardShopTab("shop")).toBe(true);
     expect(isDashboardRegionsTab("verification_regions")).toBe(true);
     expect(dashboardRegionsProduct("calibration_regions")).toBe("calibration");
-    expect(dashboardFrameLabel("shop")).toBe("Your Shop");
+    expect(dashboardFrameLabel("shop")).toBe("My Shop");
     expect(dashboardFrameLabel("verification_regions")).toBe("Knowledge regions");
     expect(isDashboardStudioTab("learning_studio")).toBe(true);
     expect(dashboardStudioProduct("verification_studio")).toBe("verification");
@@ -129,16 +133,23 @@ describe("dashboard nav", () => {
       "support",
     ]);
     expect(learning?.items.map((item) => item.id)).toEqual([
+      "browse_maps",
+      "practice",
+      "practice_studio",
+      "practice_performance",
       "my_maps",
       "learning",
       "shop",
     ]);
     expect(learning?.items.map((item) => item.label)).toEqual([
+      "Browse maps",
+      "Browse exercises",
+      "Data Studio",
+      "Performance",
       "My Maps",
       "Build",
-      "Your Shop",
+      "My Shop",
     ]);
-    expect(learning?.items.map((item) => item.label)).not.toContain("Data Studio");
     expect(verification?.items.map((item) => item.label)).toEqual([
       "Flows",
       "Knowledge regions",
@@ -323,6 +334,10 @@ describe("dashboard platform surface", () => {
     expect(dashSrc).toContain("md:overflow-hidden");
     expect(dashSrc).toContain("md:overflow-y-auto");
     expect(dashSrc).toContain("DashboardDataStudioTab");
+    expect(dashSrc).toContain("DashboardPracticePerformanceTab");
+    expect(dashboardStudioProduct("practice_studio")).toBe("practice");
+    expect(dashboardFrameLabel("practice_studio")).toBe("Data Studio");
+    expect(dashboardFrameLabel("practice_performance")).toBe("Performance");
     expect(dashSrc).toContain("isDashboardStudioTab");
     expect(dashSrc).toContain('data-dashboard-data-studio');
     expect(dashSrc).not.toContain("md:row-span-2");
@@ -337,10 +352,22 @@ describe("dashboard platform surface", () => {
     expect(readRepo("components/dashboard/dashboard-help-tab.tsx")).toContain("LanguageSwitcher");
     expect(readRepo("components/dashboard/dashboard-help-tab.tsx")).toContain('variant="support"');
     expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain("data-dashboard-sign-out");
+    expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain(
+      'group.id === "account"',
+    );
+    expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).not.toContain(
+      'group.id === "account" && !open',
+    );
     expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain("py-1");
     expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain("md:sticky");
     expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain("md:h-full");
     expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain("md:max-h-full");
+    expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain(
+      'className="shrink-0 border-b border-white/20 px-2 py-2 last:border-b-0"',
+    );
+    expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).not.toContain(
+      "open ? \"flex min-h-0 flex-1 flex-col\"",
+    );
     expect(dashSrc).toContain('data-dashboard-nav={item.id}');
     expect(dashSrc).toContain("DashboardHomeTab");
     expect(dashSrc).toContain("DashboardHelpTab");
@@ -351,10 +378,15 @@ describe("dashboard platform surface", () => {
     expect(dashSrc).not.toContain("Recent workspaces");
     expect(dashSrc).toContain("WorkspaceCardHero");
     expect(dashSrc).toContain('fallback="aesthetic"');
-    expect(dashSrc).toContain("data-dashboard-play");
-    expect(dashSrc).toContain("data-dashboard-play-kind");
-    expect(dashSrc).toContain("data-dashboard-play-prompt");
-    expect(dashSrc).toContain("DASHBOARD_PLAY_START_PATH");
+    expect(dashSrc).toContain("data-dashboard-home-overview");
+    expect(readRepo("components/dashboard/dashboard-home-tab.tsx")).toContain(
+      'section className="console-copy px-4 py-4" data-dashboard-home-cta',
+    );
+    expect(dashSrc).not.toContain("data-dashboard-home-announcements");
+    expect(dashSrc).not.toContain("DASHBOARD_ANNOUNCEMENTS");
+    expect(dashSrc).toContain("data-dashboard-practice");
+    expect(dashSrc).toContain("data-dashboard-browse-maps-search");
+    expect(dashSrc).not.toContain("Quick Work Session");
     expect(dashSrc).not.toContain("data-dashboard-home-stats");
     expect(dashSrc).not.toContain("data-dashboard-recent-flow");
     expect(dashSrc).toContain("data-dashboard-product={productTab}");

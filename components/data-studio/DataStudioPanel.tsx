@@ -31,6 +31,7 @@ import {
   dataStudioProductLabel,
   filterStudioEmbeddings,
   hiddenStudioRegionIdsForFocus,
+  studioHasSimulatedPoints,
   studioHighDimRegionMembership,
   inspectStudioEmbedding,
   mergeStudioInspectPow,
@@ -178,11 +179,9 @@ export function DataStudioPanel({
 
   useEffect(() => {
     if (!focusRegionId || !payload) return;
-    const ids = payload.regions
-      .map((region) => String(region.id || "").trim())
-      .filter(Boolean);
-    if (!ids.includes(focusRegionId)) return;
-    setHiddenRegionIds(hiddenStudioRegionIdsForFocus(ids, focusRegionId));
+    const listed = payload.regions.filter((region) => String(region.id || "").trim());
+    if (!listed.some((region) => String(region.id) === focusRegionId)) return;
+    setHiddenRegionIds(hiddenStudioRegionIdsForFocus(listed, focusRegionId));
   }, [focusRegionId, payload]);
 
   const rows = payload?.embeddings ?? [];
@@ -464,6 +463,7 @@ export function DataStudioPanel({
   );
 
   const productLabel = dataStudioProductLabel(product);
+  const colorByOrigin = studioHasSimulatedPoints(filtered);
 
   return (
     <div
@@ -491,6 +491,7 @@ export function DataStudioPanel({
             grid={grid}
             visibleOverlays={visibleOverlays}
             colorMembership={colorMembership}
+            colorByOrigin={colorByOrigin}
             distanceRays={distanceRays}
             selectedId={selectedId}
             membership={membership}
@@ -579,6 +580,7 @@ export function DataStudioPanel({
             }
             view={view}
             colorMembership={colorMembership}
+            colorByOrigin={colorByOrigin}
             hiddenRegionIds={hiddenRegionIds}
             filteredCount={filtered.length}
             cameraScale={camera.scale}

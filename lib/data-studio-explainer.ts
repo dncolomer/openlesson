@@ -9,6 +9,7 @@ function explainerProductLabel(product: DataStudioProduct): string {
   if (product === "verification") return "Verification";
   if (product === "calibration") return "Calibration";
   if (product === "solve") return "Solve";
+  if (product === "practice") return "Practice";
   return "Learning";
 }
 
@@ -93,6 +94,9 @@ function ledeFor(product: DataStudioProduct): string {
   }
   if (product === "solve") {
     return "This map is Solve runs. Nearby points walked similar hidden-state paths on this Solve flow.";
+  }
+  if (product === "practice") {
+    return "This map is your Practice Solve sessions. Nearby points walked similar hidden-state paths on catalog problems.";
   }
   return "This map is Verify runs. Nearby points walked the hidden-state tree in similar ways.";
 }

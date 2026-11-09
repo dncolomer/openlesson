@@ -2,678 +2,215 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import type { Workspace } from "@/lib/storage";
 import {
-  DashboardHomeMapDetail,
-  type DashboardHomeMapDetailState,
-} from "@/components/dashboard/dashboard-home-map-detail";
+  dashboardHomeCtas,
+  presentDashboardHomeRecentMap,
+  sortDashboardHomeRecentMaps,
+} from "@/lib/dashboard-home-overview";
+import {
+  PRACTICE_HISTORY_PATH,
+  formatPracticeDuration,
+  practiceSessionHref,
+  summarizePracticeHistory,
+  type PracticeHistoryRow,
+} from "@/lib/practice-problems";
+import { dashboardHrefForTab } from "@/lib/dashboard-nav";
 import { dashboardHasNoWorkspaces } from "@/lib/dashboard-workspace-filters";
-import {
-  DASHBOARD_PLAY_CURIOUS_PATH,
-  DASHBOARD_PLAY_START_PATH,
-  dashboardPlayKindLabel,
-  normalizeDashboardPlayPrompt,
-  type DashboardPlayKind,
-} from "@/lib/dashboard-play";
-import {
-  dashboardPlayKindsForAccess,
-  formatFreeWeekReset,
-  freeWeeklySessionLimitMessage,
-} from "@/lib/free-tier";
-import { errorMessageFromBody } from "@/lib/api-error-envelope";
-import { WorkspaceCardHero } from "@/components/WorkspaceCardHero";
-import {
-  featuredStoredCoverUrl,
-  filterFeaturedAestheticPool,
-} from "@/lib/aesthetic-resolution";
-import {
-  DASHBOARD_CATALOG_PATH,
-  DASHBOARD_MAPS_ADD_PATH,
-  DASHBOARD_MAPS_REMOVE_PATH,
-  DASHBOARD_MAPS_TRY_PATH,
-  collectPublicMapCategories,
-  filterPublicMapCatalog,
-  isHomeFeaturedMapId,
-  partitionPublicMapCatalog,
-  truncatePublicMapSummary,
-  type PublicMapCatalogItem,
-} from "@/lib/dashboard-home-catalog";
-import {
-  catalogMapIsInMyMaps,
-  dashboardMapBuyCheckoutBody,
-  playCopyMyMapsHref,
-} from "@/lib/workspace-play-copy";
 
 export type DashboardHomeTabProps = {
   workspaces: Workspace[];
   playCopies?: Workspace[];
   t: (key: string, params?: Record<string, string | number>) => string;
   hasPaidAccess?: boolean;
-  weeklySessionsUsed?: number;
-  weeklySessionsLimit?: number | null;
-  weeklySessionsResetAt?: string | null;
-  weeklySessionsAllowed?: boolean;
-  coverImagePool?: readonly string[] | null;
 };
-
-
 
 export function DashboardHomeTab({
   workspaces,
   playCopies = [],
   t,
   hasPaidAccess = false,
-  weeklySessionsUsed = 0,
-  weeklySessionsLimit = null,
-  weeklySessionsResetAt = null,
-  weeklySessionsAllowed = true,
-  coverImagePool = null,
 }: DashboardHomeTabProps) {
-  const router = useRouter();
-  const playKinds = useMemo(
-    () => dashboardPlayKindsForAccess(hasPaidAccess),
-    [hasPaidAccess],
-  );
-  const featuredCoverPool = useMemo(
-    () => filterFeaturedAestheticPool(coverImagePool),
-    [coverImagePool],
-  );
-  const [kind, setKind] = useState<DashboardPlayKind>("learn");
-  const [busy, setBusy] = useState<"start" | "curious" | false>(false);
-  const [error, setError] = useState("");
-  const [maps, setMaps] = useState<PublicMapCatalogItem[]>([]);
-  const [catalogLoading, setCatalogLoading] = useState(true);
-  const [query, setQuery] = useState("");
-  const [category, setCategory] = useState("all");
-  const [heroIndex, setHeroIndex] = useState(0);
-  const [detail, setDetail] = useState<DashboardHomeMapDetailState | null>(null);
-  const [detailBusy, setDetailBusy] = useState(false);
-  const [detailError, setDetailError] = useState("");
-  const [acquireBusy, setAcquireBusy] = useState(false);
-  const [tryBusy, setTryBusy] = useState(false);
-  const [removedSourceIds, setRemovedSourceIds] = useState<string[]>([]);
-
-  const emptyWorkspaces = dashboardHasNoWorkspaces(workspaces);
-  const canStart = useMemo(
-    () => Boolean(normalizeDashboardPlayPrompt(query)) && weeklySessionsAllowed,
-    [query, weeklySessionsAllowed],
-  );
-
-  useEffect(() => {
-    if (!playKinds.includes(kind)) setKind(playKinds[0] || "learn");
-  }, [kind, playKinds]);
+  const [practiceRows, setPracticeRows] = useState<PracticeHistoryRow[]>([]);
+  const [practiceLoading, setPracticeLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
-    setCatalogLoading(true);
-    fetch("/api/dashboard/catalog" satisfies typeof DASHBOARD_CATALOG_PATH)
+    fetch("/api/dashboard/practice/history" satisfies typeof PRACTICE_HISTORY_PATH)
       .then((res) => res.json())
       .then((payload) => {
         if (cancelled) return;
-        const next = Array.isArray(payload?.maps) ? payload.maps : [];
-        setMaps(next);
+        const next = Array.isArray(payload?.rows) ? payload.rows : [];
+        setPracticeRows(next);
       })
       .catch(() => {
-        if (!cancelled) setMaps([]);
+        if (!cancelled) setPracticeRows([]);
       })
       .finally(() => {
-        if (!cancelled) setCatalogLoading(false);
+        if (!cancelled) setPracticeLoading(false);
       });
     return () => {
       cancelled = true;
     };
   }, []);
 
-  const filtered = useMemo(
-    () => filterPublicMapCatalog(maps, { query, category }),
-    [maps, query, category],
-  );
-  const categories = useMemo(() => collectPublicMapCategories(maps), [maps]);
-  const parts = useMemo(() => partitionPublicMapCatalog(filtered), [filtered]);
+  const recentMaps = useMemo(() => {
+    const rows = [...workspaces, ...playCopies]
+      .map((row) =>
+        presentDashboardHomeRecentMap({
+          id: row.id,
+          title: row.title,
+          root_topic: row.root_topic,
+          is_play_copy: row.is_play_copy,
+          updated_at: (row as { updated_at?: string }).updated_at,
+          created_at: row.created_at,
+        }),
+      )
+      .filter((row): row is NonNullable<typeof row> => Boolean(row));
+    const seen = new Set<string>();
+    const unique = rows.filter((row) => {
+      if (seen.has(row.id)) return false;
+      seen.add(row.id);
+      return true;
+    });
+    return sortDashboardHomeRecentMaps(unique);
+  }, [workspaces, playCopies]);
 
-  useEffect(() => {
-    setHeroIndex(0);
-  }, [query, category, parts.hero.length]);
-
-  const hero = parts.hero[heroIndex] || parts.hero[0] || null;
-  const heroSummary = hero ? truncatePublicMapSummary(hero.summary, 320) : "";
-
-  async function assertSessionQuota(
-    report: (message: string) => void = setError,
-  ): Promise<boolean> {
-    const usageRes = await fetch("/api/check-usage");
-    if (!usageRes.ok) return true;
-    const usage = await usageRes.json();
-    const freeAccount = usage.freeTier === true || usage.hasPaidAccess === false;
-    if (freeAccount && usage.weeklySessionsAllowed === false) {
-      report(freeWeeklySessionLimitMessage(usage.weeklySessionsResetAt || new Date()));
-      return false;
-    }
-    if (!freeAccount && usage.allowed === false) {
-      report(t("problemInput.sessionLimitReached"));
-      return false;
-    }
-    return true;
-  }
-
-  async function startPlay() {
-    const trimmed = normalizeDashboardPlayPrompt(query);
-    if (!trimmed || busy) return;
-    setBusy("start");
-    setError("");
-    try {
-      if (!(await assertSessionQuota())) return;
-      const response = await fetch(DASHBOARD_PLAY_START_PATH, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind, prompt: trimmed }),
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok || !payload.href) {
-        throw new Error(errorMessageFromBody(payload, "Could not start session"));
-      }
-      router.push(String(payload.href));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not start session");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function startCurious() {
-    if (busy) return;
-    setBusy("curious");
-    setError("");
-    try {
-      if (!(await assertSessionQuota())) return;
-      const response = await fetch("/api/play/curious" satisfies typeof DASHBOARD_PLAY_CURIOUS_PATH, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ seed: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}` }),
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok || !payload.href) {
-        throw new Error(errorMessageFromBody(payload, "Could not invent a topic"));
-      }
-      if (typeof payload.prompt === "string" && payload.prompt.trim()) {
-        setQuery(payload.prompt);
-      }
-      router.push(String(payload.href));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not invent a topic");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function openDetail(item: PublicMapCatalogItem) {
-    setDetail({ map: item, landing: null });
-    setDetailError("");
-    setDetailBusy(true);
-    try {
-      const res = await fetch(
-        `${"/api/dashboard/catalog" satisfies typeof DASHBOARD_CATALOG_PATH}/${encodeURIComponent(item.id)}`,
-      );
-      const payload = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(errorMessageFromBody(payload, "Could not load map"));
-      }
-      setDetail({
-        map: payload.map || item,
-        landing: payload.landing || null,
-      });
-    } catch (err) {
-      setDetailError(err instanceof Error ? err.message : "Could not load map");
-    } finally {
-      setDetailBusy(false);
-    }
-  }
-
-  async function tryNow(item: PublicMapCatalogItem) {
-    if (acquireBusy || tryBusy || detailBusy) return;
-    setTryBusy(true);
-    setDetailError("");
-    try {
-      if (!(await assertSessionQuota(setDetailError))) return;
-      const res = await fetch("/api/dashboard/maps/try" satisfies typeof DASHBOARD_MAPS_TRY_PATH, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ workspaceId: item.id }),
-      });
-      const payload = await res.json().catch(() => ({}));
-      if (!res.ok || !payload.href) {
-        throw new Error(errorMessageFromBody(payload, "Could not start session"));
-      }
-      router.push(String(payload.href));
-    } catch (err) {
-      setDetailError(err instanceof Error ? err.message : "Could not start session");
-    } finally {
-      setTryBusy(false);
-    }
-  }
-
-  const copiesInMyMaps = useMemo(
-    () =>
-      playCopies.filter(
-        (row) => !removedSourceIds.includes(String(row.original_workspace_id || "").trim()),
-      ),
-    [playCopies, removedSourceIds],
-  );
-  const detailInMyMaps = detail
-    ? catalogMapIsInMyMaps(copiesInMyMaps, detail.map.id)
-    : false;
-
-  async function addToMyMaps(item: PublicMapCatalogItem) {
-    if (acquireBusy || tryBusy) return;
-    setAcquireBusy(true);
-    setDetailError("");
-    try {
-      const res = await fetch("/api/dashboard/maps/add" satisfies typeof DASHBOARD_MAPS_ADD_PATH, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ workspaceId: item.id }),
-      });
-      const payload = await res.json().catch(() => ({}));
-      if (res.status === 402) {
-        await buyMap(item);
-        return;
-      }
-      if (!res.ok) {
-        throw new Error(errorMessageFromBody(payload, "Could not add map"));
-      }
-      router.push(String(payload.href || playCopyMyMapsHref()));
-    } catch (err) {
-      setDetailError(err instanceof Error ? err.message : "Could not add map");
-    } finally {
-      setAcquireBusy(false);
-    }
-  }
-
-  async function removeFromMyMaps(item: PublicMapCatalogItem) {
-    if (acquireBusy || tryBusy) return;
-    setAcquireBusy(true);
-    setDetailError("");
-    try {
-      const res = await fetch(
-        "/api/dashboard/maps/remove" satisfies typeof DASHBOARD_MAPS_REMOVE_PATH,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ workspaceId: item.id }),
-        },
-      );
-      const payload = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(errorMessageFromBody(payload, "Could not remove map"));
-      }
-      setRemovedSourceIds((ids) =>
-        ids.includes(item.id) ? ids : [...ids, item.id],
-      );
-      router.refresh();
-    } catch (err) {
-      setDetailError(err instanceof Error ? err.message : "Could not remove map");
-    } finally {
-      setAcquireBusy(false);
-    }
-  }
-
-  async function buyMap(item: PublicMapCatalogItem) {
-    if (tryBusy) return;
-    setAcquireBusy(true);
-    setDetailError("");
-    try {
-      const res = await fetch("/api/stripe/create-checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(dashboardMapBuyCheckoutBody(item.id)),
-      });
-      const payload = await res.json().catch(() => ({}));
-      if (!res.ok || !payload.url) {
-        throw new Error(errorMessageFromBody(payload, "Checkout failed"));
-      }
-      window.location.href = String(payload.url);
-    } catch (err) {
-      setDetailError(err instanceof Error ? err.message : "Checkout failed");
-      setAcquireBusy(false);
-    }
-  }
-
-  const searching = Boolean(query.trim()) || (category !== "all" && category !== "");
-
-  if (detail) {
-    return (
-      <div className="space-y-8" data-dashboard-home data-dashboard-home-detail="">
-        <DashboardHomeMapDetail
-          detail={detail}
-          busy={detailBusy}
-          error={detailError}
-          inMyMaps={detailInMyMaps}
-          acquireBusy={acquireBusy}
-          tryBusy={tryBusy}
-          onBack={() => {
-            setDetail(null);
-            setDetailError("");
-          }}
-          onAdd={(item) => void addToMyMaps(item)}
-          onRemove={(item) => void removeFromMyMaps(item)}
-          onBuy={(item) => void buyMap(item)}
-          onTry={(item) => void tryNow(item)}
-        />
-      </div>
-    );
-  }
+  const recentPractice = practiceRows.slice(0, 4);
+  const practiceSummary = summarizePracticeHistory(practiceRows);
+  const emptyWorkspaces = dashboardHasNoWorkspaces(workspaces);
+  const ctas = dashboardHomeCtas();
 
   return (
-    <div className="space-y-8" data-dashboard-home data-dashboard-home-list="">
-      {!catalogLoading && parts.hero.length > 0 ? (
-        <section data-dashboard-home-hero className="space-y-3">
-          <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
-            Featured
-          </p>
-          {hero ? (
-            <button
-              type="button"
-              onClick={() => void openDetail(hero)}
-              className="group relative block min-h-[22rem] w-full overflow-hidden rounded-none border border-white/25 text-left sm:min-h-[28rem] lg:min-h-[32rem]"
-            >
-              <WorkspaceCardHero
-                workspaceId={hero.id}
-                coverImageUrl={featuredStoredCoverUrl(hero.coverImageUrl)}
-                imagePool={featuredCoverPool}
-                fallback="aesthetic"
-                heightClassName="absolute inset-0 h-full min-h-[22rem] sm:min-h-[28rem] lg:min-h-[32rem]"
-              />
-              <div className="relative flex h-full min-h-[22rem] flex-col justify-end p-6 sm:min-h-[28rem] sm:p-10 lg:min-h-[32rem]">
-                <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-300">
-                  {hero.category}
-                  {hero.isAycl && hero.priceLabel ? ` · ${hero.priceLabel}` : ""}
-                </p>
-                <h3 className="mt-2 max-w-3xl text-4xl font-medium tracking-[-1.4px] text-white sm:text-5xl lg:text-6xl">
-                  {hero.title}
-                </h3>
-                {heroSummary ? (
-                  <p
-                    className="mt-3 max-w-2xl text-sm leading-relaxed text-neutral-100 line-clamp-5 sm:text-base"
-                    data-dashboard-map-hero-summary
-                  >
-                    {heroSummary}
-                  </p>
-                ) : null}
-              </div>
-            </button>
-          ) : null}
-          {parts.hero.length > 1 ? (
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() =>
-                  setHeroIndex((index) =>
-                    (index - 1 + parts.hero.length) % parts.hero.length,
-                  )
-                }
-                className="rounded-none border border-white/40 px-3 py-1.5 text-xs text-white hover:border-white/80"
-              >
-                Previous
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  setHeroIndex((index) => (index + 1) % parts.hero.length)
-                }
-                className="rounded-none border border-white/40 px-3 py-1.5 text-xs text-white hover:border-white/80"
-              >
-                Next
-              </button>
-              <p className="font-mono text-[10px] text-neutral-500">
-                {heroIndex + 1} / {parts.hero.length}
-              </p>
-            </div>
-          ) : null}
-        </section>
-      ) : null}
+    <div
+      className="flex flex-col gap-4"
+      data-dashboard-home
+      data-dashboard-home-overview
+    >
+      <header>
+        <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
+          Platform
+        </p>
+        <h2 className="mt-1 text-2xl font-medium tracking-[-0.6px] text-white">
+          Home
+        </h2>
+      </header>
 
-      <section
-        className="console-copy sticky top-0 z-20 px-4 py-3 sm:px-5"
-        data-dashboard-play
-        data-dashboard-play-bar
-        data-dashboard-home-search
-      >
-        <form
-          className="flex flex-col gap-3"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void startPlay();
-          }}
-        >
-          <div className="min-w-0">
-            <p className="mb-1 font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
-              Play
-            </p>
-            <h2 className="text-base font-medium tracking-[-0.3px] text-white sm:text-lg">
-              Quick Work Session
-            </h2>
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <label className="block min-w-0 flex-1">
-              <span className="sr-only">Search maps or start a session</span>
-              <input
-                data-dashboard-play-prompt
-                data-dashboard-home-search-input
-                type="search"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search maps or type a topic to start"
-                className="w-full rounded-none border border-white/40 bg-black px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-white/80 focus:outline-none"
-              />
-            </label>
-            <label className="block sm:w-52">
-              <span className="sr-only">Category</span>
-              <select
-                value={category}
-                onChange={(event) => setCategory(event.target.value)}
-                className="w-full rounded-none border border-white/40 bg-black px-3 py-2 text-sm text-white focus:border-white/80 focus:outline-none"
-              >
-                <option value="all">All categories</option>
-                {categories.map((name) => (
-                  <option key={name} value={name}>
-                    {name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <div className="flex flex-wrap items-center gap-2" data-dashboard-play-kinds>
-            {playKinds.map((item) => {
-              const active = kind === item;
-              return (
-                <button
-                  key={item}
-                  type="button"
-                  data-dashboard-play-kind={item}
-                  data-dashboard-play-kind-active={active ? "true" : "false"}
-                  onClick={() => setKind(item)}
-                  className={`rounded-none border px-3 py-1.5 text-xs font-medium transition ${
-                    active
-                      ? "border-white/80 bg-white text-black"
-                      : "border-white/40 text-white hover:border-white/80"
-                  }`}
-                >
-                  {dashboardPlayKindLabel(item)}
-                </button>
-              );
-            })}
-            <button
-              type="submit"
-              data-dashboard-play-start
-              disabled={!canStart || Boolean(busy)}
-              className="inline-flex h-10 min-w-[140px] items-center justify-center rounded-none bg-white px-4 text-sm font-medium text-black transition hover:bg-neutral-200 disabled:opacity-40"
+      <section className="console-copy px-4 py-4" data-dashboard-home-cta>
+        <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
+          Actions
+        </p>
+        <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
+          {ctas.map((cta) => (
+            <Link
+              key={cta.id}
+              href={cta.href}
+              data-dashboard-home-cta-link={cta.id}
+              className="console-button flex min-h-[4.25rem] items-center justify-center px-3 py-3 text-center text-sm text-white transition hover:border-white/80 hover:bg-white/5"
             >
-              {busy === "start" ? "Starting…" : `Start ${dashboardPlayKindLabel(kind)}`}
-            </button>
-            <button
-              type="button"
-              data-dashboard-play-curious
-              disabled={!weeklySessionsAllowed || Boolean(busy)}
-              onClick={() => void startCurious()}
-              className="inline-flex h-10 items-center justify-center rounded-none border border-white/40 px-4 text-sm font-medium text-white transition hover:border-white/80 disabled:opacity-40"
-            >
-              {busy === "curious" ? "Finding a topic…" : "I'm feeling Curious"}
-            </button>
-          </div>
-        </form>
-        {error ? <p className="mt-2 text-sm text-red-300">{error}</p> : null}
-        {!hasPaidAccess ? (
-          <p className="mt-2 text-xs text-neutral-500" data-dashboard-free-quota>
-            {weeklySessionsAllowed
-              ? `${weeklySessionsUsed} of ${weeklySessionsLimit ?? 3} free sessions used this week.${
-                  weeklySessionsResetAt
-                    ? ` Resets ${formatFreeWeekReset(weeklySessionsResetAt)} (UTC).`
-                    : ""
-                }`
-              : freeWeeklySessionLimitMessage(weeklySessionsResetAt || new Date())}
-          </p>
-        ) : null}
+              {cta.label}
+            </Link>
+          ))}
+        </div>
       </section>
 
-      {catalogLoading ? (
-        <p className="px-1 text-sm text-neutral-500">Loading maps…</p>
-      ) : filtered.length === 0 ? (
-        <p className="px-1 text-sm text-neutral-500">
-          {searching ? "No maps match that search." : "No public maps yet."}
-        </p>
-      ) : (
-        <>
-          {parts.secondary.length > 0 ? (
-            <section data-dashboard-home-secondary className="space-y-3">
-              <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
-                More maps
-              </p>
-              <div className="flex gap-3 overflow-x-auto pb-2">
-                {parts.secondary.map((item) => (
-                  <CatalogCard
-                    key={item.id}
-                    item={item}
-                    imagePool={coverImagePool}
-                    featuredImagePool={featuredCoverPool}
-                    onOpen={() => void openDetail(item)}
-                    className="w-[18rem] shrink-0 sm:w-[20rem]"
-                  />
-                ))}
-              </div>
-            </section>
-          ) : null}
-
-          {parts.grid.length > 0 ? (
-            <section data-dashboard-home-maps-grid className="space-y-3">
-              <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
-                Maps
-              </p>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {parts.grid.map((item) => (
-                  <CatalogCard
-                    key={item.id}
-                    item={item}
-                    imagePool={coverImagePool}
-                    featuredImagePool={featuredCoverPool}
-                    onOpen={() => void openDetail(item)}
-                  />
-                ))}
-              </div>
-            </section>
-          ) : null}
-
-          {parts.ayclPaid.length > 0 ? (
-            <section data-dashboard-home-aycl className="space-y-3">
-              <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
-                All You Can Learn
-              </p>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {parts.ayclPaid.map((item) => (
-                  <CatalogCard
-                    key={item.id}
-                    item={item}
-                    imagePool={coverImagePool}
-                    featuredImagePool={featuredCoverPool}
-                    onOpen={() => void openDetail(item)}
-                  />
-                ))}
-              </div>
-            </section>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <section
+          className="console-copy min-h-[12rem] px-4 py-4"
+          data-dashboard-home-recent-maps
+        >
+          <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
+            Recent maps
+          </p>
+          {recentMaps.length === 0 ? (
+            <p className="mt-3 text-sm text-neutral-400">No maps yet.</p>
           ) : (
-            <section data-dashboard-home-aycl className="hidden" aria-hidden />
+            <ul className="mt-3 space-y-2">
+              {recentMaps.map((item) => (
+                <li key={item.id}>
+                  <Link
+                    href={item.href}
+                    className="flex items-center justify-between gap-3 border border-white/15 px-3 py-2 text-sm text-white transition hover:border-white/50"
+                  >
+                    <span className="truncate">{item.title}</span>
+                    <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.12em] text-neutral-500">
+                      {item.kind === "play_copy" ? "Play" : "Build"}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
           )}
-        </>
-      )}
+        </section>
+
+        <section
+          className="console-copy min-h-[12rem] px-4 py-4"
+          data-dashboard-home-recent-practice
+        >
+          <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
+            Recent practice
+          </p>
+          {practiceLoading ? (
+            <p className="mt-3 text-sm text-neutral-400">Loading practice…</p>
+          ) : recentPractice.length === 0 ? (
+            <p className="mt-3 text-sm text-neutral-400">
+              No practice sessions yet.{" "}
+              <Link
+                href={dashboardHrefForTab("practice")}
+                className="text-white underline decoration-white/30 underline-offset-4"
+              >
+                Browse exercises
+              </Link>
+            </p>
+          ) : (
+            <>
+              <p className="mt-2 font-mono text-[10px] text-neutral-500">
+                {practiceSummary.sessionCount} sessions · {practiceSummary.insightCount} insights ·{" "}
+                {formatPracticeDuration(practiceSummary.durationMs)}
+              </p>
+              <ul className="mt-3 space-y-2">
+                {recentPractice.map((row) => (
+                  <li key={row.sessionId}>
+                    <Link
+                      href={practiceSessionHref(row.sessionId)}
+                      className="flex items-center justify-between gap-3 border border-white/15 px-3 py-2 text-sm text-white transition hover:border-white/50"
+                    >
+                      <span className="truncate">{row.title}</span>
+                      <span className="shrink-0 font-mono text-[10px] text-neutral-500">
+                        {row.insightCount} insights
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </section>
+      </div>
 
       {emptyWorkspaces && hasPaidAccess ? (
         <section
           data-dashboard-empty-workspaces
-          className="console-copy px-6 py-8 sm:px-8"
+          className="console-copy px-4 py-4"
         >
           <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
             {t("dashboard.emptyWorkspacesKicker")}
           </p>
-          <h3 className="mt-2 text-xl font-medium tracking-[-0.6px] text-white">
+          <h3 className="mt-2 text-lg font-medium tracking-[-0.4px] text-white">
             {t("dashboard.emptyWorkspacesTitle")}
           </h3>
-          <p className="mt-2 max-w-xl text-sm text-neutral-400">{t("dashboard.emptyWorkspacesBody")}</p>
+          <p className="mt-1 max-w-xl text-sm text-neutral-400">
+            {t("dashboard.emptyWorkspacesBody")}
+          </p>
           <Link
             href="/workspace/new"
             data-dashboard-empty-create
-            className="mt-5 inline-flex h-10 items-center justify-center rounded-none border border-white/40 px-5 text-sm text-white transition hover:border-white/80"
+            className="mt-4 inline-flex h-9 items-center border border-white/40 px-4 text-sm text-white transition hover:border-white/80"
           >
             {t("dashboard.emptyWorkspacesCta")}
           </Link>
         </section>
       ) : null}
-
     </div>
-  );
-}
-
-function CatalogCard({
-  item,
-  onOpen,
-  imagePool = null,
-  featuredImagePool = null,
-  className = "",
-}: {
-  item: PublicMapCatalogItem;
-  onOpen: () => void;
-  imagePool?: readonly string[] | null;
-  featuredImagePool?: readonly string[] | null;
-  className?: string;
-}) {
-  const summary = truncatePublicMapSummary(item.summary);
-  const featured = isHomeFeaturedMapId(item.id);
-  return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className={`group relative min-h-[16rem] overflow-hidden rounded-none border border-white/20 text-left transition hover:border-white/60 ${className}`}
-    >
-      <WorkspaceCardHero
-        workspaceId={item.id}
-        coverImageUrl={
-          featured ? featuredStoredCoverUrl(item.coverImageUrl) : item.coverImageUrl
-        }
-        imagePool={featured ? featuredImagePool : imagePool}
-        fallback="aesthetic"
-        heightClassName="absolute inset-0 h-full min-h-[16rem]"
-      />
-      <div className="relative flex min-h-[16rem] flex-col justify-end p-3 sm:p-4">
-        <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300">
-          {item.category}
-          {item.isAycl && item.priceLabel ? ` · ${item.priceLabel}` : ""}
-        </p>
-        <p className="mt-1 text-sm font-medium text-white">{item.title}</p>
-        {summary ? (
-          <p className="mt-1 line-clamp-3 text-xs leading-relaxed text-neutral-200" data-dashboard-map-card-summary>
-            {summary}
-          </p>
-        ) : null}
-      </div>
-    </button>
   );
 }

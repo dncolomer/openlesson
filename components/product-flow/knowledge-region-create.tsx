@@ -21,10 +21,18 @@ import {
   FlowFormHeader,
 } from "@/components/product-flow/product-flow-form";
 import { dashboardTabForProductSurface } from "@/lib/dashboard-nav";
+import { RegionSimulationSetup } from "@/components/product-flow/region-simulation-setup";
 
 type FlowChoice = { id: string; name: string; title?: string };
 
 export function KnowledgeRegionCreate({ kind }: { kind: ProductFlowKind }) {
+  if (kind === "verification") {
+    return <RegionSimulationSetup />;
+  }
+  return <LegacyKnowledgeRegionCreate kind={kind} />;
+}
+
+function LegacyKnowledgeRegionCreate({ kind }: { kind: ProductFlowKind }) {
   const router = useRouter();
   const [flows, setFlows] = useState<FlowChoice[]>([]);
   const [selectedFlowId, setSelectedFlowId] = useState("");

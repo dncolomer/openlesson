@@ -3,6 +3,7 @@
  * Index 01 sits on the stage. The line beside it is pass, policy, or time.
  */
 
+import { isSolveSession } from "@/lib/core-data-model";
 import { formatCountdown } from "@/lib/tap-score-client-helpers";
 import {
   recommendSessionBranchAction,
@@ -16,6 +17,33 @@ export const FLOW_END_KICKERS = {
   learn: "Learn",
   verify: "Verify",
 } as const;
+
+/** Language/aesthetics start heading. Solve sessions title this screen Solve. */
+export const SESSION_WELCOME_TITLES = {
+  learn: FLOW_END_KICKERS.learn,
+  solve: "Solve",
+} as const;
+
+export function sessionWelcomeTitle(input: {
+  solveToken?: string | null;
+  kind?: unknown;
+  metadata?: unknown;
+}): string {
+  const meta =
+    input.metadata && typeof input.metadata === "object" && !Array.isArray(input.metadata)
+      ? (input.metadata as Record<string, unknown>)
+      : {};
+  if (
+    String(input.solveToken || "").trim() ||
+    isSolveSession({
+      kind: input.kind ?? meta.kind,
+      solve_flow_id: meta.solve_flow_id ?? meta.solveFlowId,
+    })
+  ) {
+    return SESSION_WELCOME_TITLES.solve;
+  }
+  return SESSION_WELCOME_TITLES.learn;
+}
 
 export type SessionStageKind = keyof typeof FLOW_END_KICKERS;
 

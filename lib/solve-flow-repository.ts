@@ -17,6 +17,7 @@ import {
   type SolveState,
 } from "@/lib/solve-flow";
 import { flowArchivedAtFromRow, listedAuthorFlows } from "@/lib/flow-archive";
+import { isPracticeSolveFlow } from "@/lib/practice-problems";
 import { parseFlowArtifacts, serializeFlowArtifacts } from "@/lib/flow-artifacts";
 import { inviteFlowSessionOwner } from "@/lib/map-play-data-access";
 
@@ -130,6 +131,7 @@ function mapFlow(row: Record<string, unknown>): SolveFlow {
     createdAt: String(row.created_at || ""),
     updatedAt: String(row.updated_at || ""),
     archivedAt: flowArchivedAtFromRow(row),
+    practiceProblemId: nullableId(row.practice_problem_id),
   };
 }
 
@@ -185,6 +187,7 @@ async function persistCommand(
       public_token: value.flow.publicToken,
       created_at: value.flow.createdAt,
       updated_at: value.flow.updatedAt,
+      practice_problem_id: nullableId(value.flow.practiceProblemId),
     });
     if (error) throw new Error(error.message);
     return;
@@ -257,7 +260,7 @@ async function writeSolveFlow(
       ? supabase.from(SOLVE_FLOWS_TABLE).insert(body)
       : supabase.from(SOLVE_FLOWS_TABLE).update(body).eq("id", id);
   let current = row;
-  for (const optional of ["action_catalog", "duration_minutes", "workspace_id", "archived_at", "artifacts"] as const) {
+  for (const optional of ["action_catalog", "duration_minutes", "workspace_id", "archived_at", "artifacts", "practice_problem_id"] as const) {
     const result = await run(current);
     if (!result.error) return result;
     if (!String(result.error.message).includes(optional) || !(optional in current)) return result;
@@ -313,11 +316,13 @@ export async function listSolveFlows(workspaceId: string): Promise<SolveFlow[]> 
   if (!id) return [];
   if ((await resolveBackend()) === "memory") {
     return listedAuthorFlows(
-      solveRepositoryGlobal().memory.flows.filter((flow) => flow.workspaceId === id),
+      solveRepositoryGlobal().memory.flows.filter(
+        (flow) => flow.workspaceId === id && !isPracticeSolveFlow(flow),
+      ),
     ).map(presentFlow);
   }
   const state = await loadSupabaseState({ workspaceId: id });
-  return listedAuthorFlows(state.flows).map(presentFlow);
+  return listedAuthorFlows(state.flows.filter((flow) => !isPracticeSolveFlow(flow))).map(presentFlow);
 }
 
 export async function listSolveFlowsForOwnerUserId(ownerUserId: string): Promise<SolveFlow[]> {
@@ -325,7 +330,9 @@ export async function listSolveFlowsForOwnerUserId(ownerUserId: string): Promise
   if (!userId) return [];
   if ((await resolveBackend()) === "memory") {
     return listedAuthorFlows(
-      solveRepositoryGlobal().memory.flows.filter((flow) => flow.ownerUserId === userId),
+      solveRepositoryGlobal().memory.flows.filter(
+        (flow) => flow.ownerUserId === userId && !isPracticeSolveFlow(flow),
+      ),
     ).map(presentFlow);
   }
   const supabase = createAdminClient();
@@ -336,7 +343,9 @@ export async function listSolveFlowsForOwnerUserId(ownerUserId: string): Promise
     .order("created_at", { ascending: false });
   if (error || !Array.isArray(data)) return [];
   return listedAuthorFlows(
-    data.map((row) => presentFlow(mapFlow(row as Record<string, unknown>))),
+    data
+      .map((row) => presentFlow(mapFlow(row as Record<string, unknown>)))
+      .filter((flow) => !isPracticeSolveFlow(flow)),
   );
 }
 

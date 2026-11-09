@@ -374,8 +374,8 @@ function RegisterForm() {
             Free
           </p>
           <p className="mt-1 text-sm text-neutral-300">
-            Home, My Maps, and Quick Work Session, with 3 sessions a week. Upgrade any time for
-            Build, Your Shop, Verification, and Calibration.
+            Home, My Maps, Browse maps, and Practice library, with 3 sessions a week. Upgrade any
+            time for Build, My Shop, Verification, and Calibration.
           </p>
         </div>
 
@@ -560,7 +560,7 @@ function RegisterShell() {
               ? "Set your email and password to join the organization."
               : sessionId
                 ? "You've paid — set a password to activate your account."
-                : "Create a Free account to browse maps and run Quick Work Session — 3 sessions a week."}
+                : "Create a Free account to browse maps and practice exercises — 3 sessions a week."}
           </p>
           <RegisterForm />
 

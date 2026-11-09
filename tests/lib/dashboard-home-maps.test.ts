@@ -332,14 +332,22 @@ describe("dashboard home and my maps surface", () => {
   it("wires Home cinematic catalog, floating prompt bar, My Maps, and play View", () => {
     const learning = DASHBOARD_NAV_GROUPS.find((group) => group.id === "learning");
     expect(learning?.items.map((item) => item.id)).toEqual([
+      "browse_maps",
+      "practice",
+      "practice_studio",
+      "practice_performance",
       "my_maps",
       "learning",
       "shop",
     ]);
     expect(learning?.items.map((item) => item.label)).toEqual([
+      "Browse maps",
+      "Browse exercises",
+      "Data Studio",
+      "Performance",
       "My Maps",
       "Build",
-      "Your Shop",
+      "My Shop",
     ]);
     expect(isDashboardMyMapsTab("my_maps")).toBe(true);
     expect(parseDashboardTab("my_maps")).toBe("my_maps");
@@ -348,21 +356,21 @@ describe("dashboard home and my maps surface", () => {
     const dash = readDashboardSurface();
     expect(readRepo("lib/dashboard-home-catalog.ts")).toContain("orderLandingFeaturedMaps");
     expect(readRepo("lib/dashboard-home-catalog.ts")).toContain("landing-featured-ids");
-    expect(readRepo("components/dashboard/dashboard-home-tab.tsx")).toMatch(
-      /className="console-copy sticky[^"]*"[\s\S]*data-dashboard-play-bar/,
+    expect(readRepo("components/dashboard/dashboard-browse-maps-tab.tsx")).toMatch(
+      /className="console-copy sticky[^"]*"[\s\S]*data-dashboard-browse-maps-search/,
     );
-    expect(readRepo("components/dashboard/dashboard-home-tab.tsx").indexOf("data-dashboard-home-hero")).toBeLessThan(
-      readRepo("components/dashboard/dashboard-home-tab.tsx").indexOf("data-dashboard-play-bar"),
+    expect(readRepo("components/dashboard/dashboard-browse-maps-tab.tsx").indexOf("data-dashboard-home-hero")).toBeLessThan(
+      readRepo("components/dashboard/dashboard-browse-maps-tab.tsx").indexOf("data-dashboard-browse-maps-search"),
     );
     expect(dash).toContain("data-dashboard-home-hero");
     expect(dash).toContain("data-dashboard-map-hero-summary");
     expect(dash).toContain("data-dashboard-map-card-summary");
     expect(dash).toContain('fallback="aesthetic"');
     expect(dash).toContain("coverImagePool={workspaceCoverPool}");
-    expect(readRepo("components/dashboard/dashboard-home-tab.tsx")).toContain(
+    expect(readRepo("components/dashboard/dashboard-browse-maps-tab.tsx")).toContain(
       "filterFeaturedAestheticPool",
     );
-    expect(readRepo("components/dashboard/dashboard-home-tab.tsx")).toContain(
+    expect(readRepo("components/dashboard/dashboard-browse-maps-tab.tsx")).toContain(
       "featuredCoverPool",
     );
     expect(dash).toContain("truncatePublicMapSummary");
@@ -370,8 +378,8 @@ describe("dashboard home and my maps surface", () => {
     expect(dash).toContain("data-dashboard-home-maps-grid");
     expect(dash).toContain("data-dashboard-home-aycl");
     expect(dash).toContain("data-dashboard-home-search");
-    expect(dash).toContain("data-dashboard-play-bar");
-    expect(dash).toContain("Quick Work Session");
+    expect(dash).toContain("data-dashboard-browse-maps-search");
+    expect(dash).not.toContain("Quick Work Session");
     expect(dash).toContain("data-dashboard-map-detail");
     expect(dash).toContain("data-dashboard-home-detail");
     expect(dash).toContain("data-dashboard-home-list");
@@ -383,10 +391,10 @@ describe("dashboard home and my maps surface", () => {
     expect(dash).toContain("AYCL_EXAMPLE_PROBLEMS_TITLE");
     expect(dash).toContain("AyclExampleProblemGrid");
     expect(dash).toContain("Workspace map");
-    expect(readRepo("components/dashboard/dashboard-home-tab.tsx")).not.toContain(
+    expect(readRepo("components/dashboard/dashboard-browse-maps-tab.tsx")).not.toContain(
       'aria-modal="true"',
     );
-    expect(readRepo("components/dashboard/dashboard-home-tab.tsx")).not.toContain(
+    expect(readRepo("components/dashboard/dashboard-browse-maps-tab.tsx")).not.toContain(
       'role="dialog"',
     );
     expect(readRepo("components/dashboard/dashboard-home-map-detail.tsx")).not.toContain(
@@ -465,10 +473,10 @@ describe("dashboard home and my maps surface", () => {
     expect(readRepo("lib/fork-workspace.ts")).toContain("is_play_copy");
     expect(readRepo("app/api/dashboard/maps/add/route.ts")).toContain("decideAddToMyMaps");
     expect(readRepo("app/api/dashboard/maps/add/route.ts")).toContain("playCopyMyMapsHref");
-    expect(readRepo("components/dashboard/dashboard-home-tab.tsx")).toContain(
+    expect(readRepo("components/dashboard/dashboard-browse-maps-tab.tsx")).toContain(
       "playCopyMyMapsHref",
     );
-    expect(readRepo("components/dashboard/dashboard-home-tab.tsx")).not.toContain(
+    expect(readRepo("components/dashboard/dashboard-browse-maps-tab.tsx")).not.toContain(
       "playCopyWorkspaceHref",
     );
     expect(readRepo("components/WorkspaceView.tsx")).toContain("playCopy:");

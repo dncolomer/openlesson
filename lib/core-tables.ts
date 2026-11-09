@@ -8,6 +8,7 @@ export const SESSION_EMBEDDINGS_TABLE = "session_embeddings" as const;
 export const CALIBRATE_FLOWS_TABLE = "calibrate_flows" as const;
 export const VERIFY_FLOWS_TABLE = "verify_flows" as const;
 export const SOLVE_FLOWS_TABLE = "solve_flows" as const;
+export const PRACTICE_PROBLEMS_TABLE = "practice_problems" as const;
 export const KNOWLEDGE_REGIONS_TABLE = "knowledge_regions" as const;
 export const SESSIONS_TABLE = "sessions" as const;
 export const WORKSPACES_TABLE = "workspaces" as const;

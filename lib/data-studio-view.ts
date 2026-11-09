@@ -37,12 +37,20 @@ import {
 } from "@/lib/knowledge-config";
 import { workspaceProductShell } from "@/lib/workspace-kind";
 import { includeAuthorStudioEmbedding } from "@/lib/map-play-data-access";
+import {
+  isSimulationStrategyClusterName,
+  studioEmbeddingOrigin,
+  type StudioEmbeddingOrigin,
+} from "@/lib/region-simulation";
+
+export type { StudioEmbeddingOrigin };
 
 export const DATA_STUDIO_PRODUCTS = [
   "verification",
   "calibration",
   "learning",
   "solve",
+  "practice",
 ] as const;
 
 export type DataStudioProduct = (typeof DATA_STUDIO_PRODUCTS)[number];
@@ -126,6 +134,7 @@ export type DataStudioInspectPayload = {
   workspace_id: string | null;
   workspace_title: string | null;
   source: string | null;
+  origin: StudioEmbeddingOrigin;
   created_at: string | null;
   space: DataStudioSpace;
   embedding_model_id: string;
@@ -159,7 +168,8 @@ export function parseDataStudioProduct(value: unknown): DataStudioProduct | null
     value === "verification" ||
     value === "calibration" ||
     value === "learning" ||
-    value === "solve"
+    value === "solve" ||
+    value === "practice"
   ) {
     return value;
   }
@@ -169,7 +179,7 @@ export function parseDataStudioProduct(value: unknown): DataStudioProduct | null
 export function dataStudioFlowKind(product: DataStudioProduct): FlowKind {
   if (product === "verification") return "verify";
   if (product === "calibration") return "calibrate";
-  if (product === "solve") return "solve";
+  if (product === "solve" || product === "practice") return "solve";
   return "learn";
 }
 
@@ -177,6 +187,7 @@ export function dataStudioProductLabel(product: DataStudioProduct): string {
   if (product === "verification") return "Verification";
   if (product === "calibration") return "Calibration";
   if (product === "solve") return "Solve";
+  if (product === "practice") return "Practice";
   return "Learning";
 }
 
@@ -510,6 +521,7 @@ export function inspectStudioEmbedding(
       workspace_id: text(row.workspace_id) || null,
       workspace_title: text(row.workspace_title) || null,
       source: text(row.source) || null,
+      origin: studioEmbeddingOrigin(row),
       created_at: text(row.created_at) || null,
       space: channel,
       embedding_model_id: flowEmbeddingModelIdForChannel(channel),
@@ -616,6 +628,7 @@ export function scopeLearningStudioEmbeddings(
 export function presentDashboardDataStudio(input: {
   product: DataStudioProduct;
   viewerUserId: string;
+  practiceFlowIds?: readonly string[];
   workspaces: readonly {
     id?: unknown;
     title?: unknown;
@@ -658,8 +671,19 @@ export function presentDashboardDataStudio(input: {
 
   const workspaceIds = new Set(workspaces.map((row) => row.id));
   const titleById = new Map(workspaces.map((row) => [row.id, row.title]));
+  const practiceFlowIds = new Set(
+    (input.practiceFlowIds ?? []).map((id) => text(id)).filter(Boolean),
+  );
   let embeddings = input.embeddings.filter((row) => {
     if (text(row.flow_kind) && text(row.flow_kind) !== flowKind) return false;
+    const flowId = text(row.flow_id);
+    if (input.product === "practice") {
+      if (practiceFlowIds.size === 0 || !flowId || !practiceFlowIds.has(flowId)) {
+        return false;
+      }
+    } else if (input.product === "solve" && flowId && practiceFlowIds.has(flowId)) {
+      return false;
+    }
     if (input.product !== "learning") {
       return includeAuthorStudioEmbedding({
         viewerUserId: input.viewerUserId,
@@ -683,7 +707,10 @@ export function presentDashboardDataStudio(input: {
     workspace_title: row.workspace_title || titleById.get(text(row.workspace_id)) || null,
   }));
 
-  const regions = input.product === "learning" ? [] : [...(input.regions ?? [])];
+  const regions =
+    input.product === "learning" || input.product === "practice"
+      ? []
+      : [...(input.regions ?? [])];
 
   return {
     product: input.product,
@@ -778,7 +805,7 @@ export function buildDataStudioProjectionView(input: {
 }): {
   algorithm: ProjectionAlgorithmId;
   frame_id: string;
-  coords: Array<StudioProjectionPoint & { id: string; identity: string | null; run_id: string | null; flow_id: string | null }>;
+  coords: Array<StudioProjectionPoint & { id: string; identity: string | null; run_id: string | null; flow_id: string | null; origin: StudioEmbeddingOrigin }>;
   regionOverlays: StudioRegionOverlayView[];
 } {
   const space = parseDataStudioSpace(input.space);
@@ -806,6 +833,7 @@ export function buildDataStudioProjectionView(input: {
         identity: text(row?.identity) || null,
         run_id: text(row?.run_id) || null,
         flow_id: text(row?.flow_id) || null,
+        origin: studioEmbeddingOrigin(row ?? {}),
       };
     }),
     regionOverlays: view.regionOverlays,
@@ -851,12 +879,26 @@ export function parseStudioFocusRegionId(value: unknown): string {
 }
 
 export function hiddenStudioRegionIdsForFocus(
-  regionIds: readonly string[],
+  regions: readonly { id: string; name?: string }[] | readonly string[],
   focusId: string | null | undefined,
 ): string[] {
   const focus = parseStudioFocusRegionId(focusId);
   if (!focus) return [];
-  return regionIds.filter((id) => text(id) && text(id) !== focus);
+  const list = (regions ?? []).map((region) =>
+    typeof region === "string" ? { id: region, name: "" } : region,
+  );
+  const focused = list.find((region) => text(region.id) === focus);
+  const parentName = text(focused?.name);
+  return list
+    .filter((region) => {
+      const id = text(region.id);
+      if (!id || id === focus) return false;
+      if (parentName && isSimulationStrategyClusterName(parentName, region.name || "")) {
+        return false;
+      }
+      return true;
+    })
+    .map((region) => text(region.id));
 }
 
 export function studioPointInsideHighDimRegion(
@@ -907,6 +949,37 @@ export function studioHighDimRegionMembership(input: {
 export const STUDIO_IN_REGION_FILL = "#00ffc2";
 export const STUDIO_OUT_REGION_FILL = "rgba(255,255,255,0.16)";
 export const STUDIO_IN_REGION_STROKE = "#031410";
+/** Simulated samples vs real human sessions in the same verification flows. */
+export const STUDIO_SIMULATED_FILL = "#8ec8ff";
+export const STUDIO_HUMAN_FILL = "#e6c97a";
+export const STUDIO_SIMULATED_FILL_DIM = "rgba(142,200,255,0.28)";
+export const STUDIO_HUMAN_FILL_DIM = "rgba(230,201,122,0.28)";
+
+export function studioHasSimulatedPoints(
+  rows: readonly { source?: unknown; identity?: unknown }[],
+): boolean {
+  return rows.some((row) => studioEmbeddingOrigin(row) === "simulated");
+}
+
+export function studioPointFill(input: {
+  origin?: StudioEmbeddingOrigin | null;
+  colorByOrigin?: boolean;
+  colorMembership?: boolean;
+  inRegion?: boolean;
+  active?: boolean;
+}): string {
+  if (input.colorByOrigin && input.origin) {
+    const inRegion = !input.colorMembership || input.inRegion;
+    if (input.origin === "simulated") {
+      return inRegion ? STUDIO_SIMULATED_FILL : STUDIO_SIMULATED_FILL_DIM;
+    }
+    return inRegion ? STUDIO_HUMAN_FILL : STUDIO_HUMAN_FILL_DIM;
+  }
+  if (input.colorMembership) {
+    return input.inRegion ? STUDIO_IN_REGION_FILL : STUDIO_OUT_REGION_FILL;
+  }
+  return input.active ? "#ffffff" : "rgba(255,255,255,0.82)";
+}
 
 export function workspaceStudioHrefForRegion(workspaceId: string, regionId: string): string {
   const id = String(workspaceId || "").trim();

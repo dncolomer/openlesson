@@ -21,6 +21,7 @@ import { coerceSpokenLocale } from "@/lib/tutoring-languages";
 
 export function SessionWelcomeModal({
   t,
+  title = FLOW_END_KICKERS.learn,
   languageConfirmed: _languageConfirmed,
   planLoading: _planLoading,
   isPreparing,
@@ -96,7 +97,7 @@ export function SessionWelcomeModal({
       <div className="grid h-full min-h-0 w-full flex-1 overflow-hidden lg:grid-cols-2">
             <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden border-neutral-800 lg:border-r">
               <TapBriefingConfig
-                title={FLOW_END_KICKERS.learn}
+                title={title}
                 intro={t("session.welcomeMessage")}
                 minutes={DEFAULT_DURATION_MINUTES}
                 onMinutesChange={() => {}}

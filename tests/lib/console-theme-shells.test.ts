@@ -100,6 +100,34 @@ describe("console theme shells", () => {
     expect(confirmed).toContain("data-ile-aesthetic-picker");
     expect(confirmed).toContain("data-ile-confirm-settings");
     expect(confirmed).not.toContain("session.getStarted");
+    expect(confirmed).toContain("Learn");
+
+    const solveHtml = renderToStaticMarkup(
+      createElement(SessionWelcomeModal, {
+        t: (key: string) => key,
+        title: "Solve",
+        languageConfirmed: false,
+        planLoading: false,
+        isPreparing: false,
+        tutoringLanguage: "en",
+        onTutoringLanguageChange: () => {},
+        aestheticPackages: [],
+        selectedAesthetic: undefined,
+        selectedAestheticId: null,
+        onSelectAesthetic: () => {},
+        aestheticsLoading: false,
+        chapterPlanStatus: "exists",
+        autoAdvance: false,
+        onToggleAutoAdvance: () => {},
+        planError: null,
+        onConfirmSettings: () => {},
+        onReadyStart: () => {},
+        hasSessionPlan: false,
+      }),
+    );
+    expect(solveHtml).toContain("Solve");
+    expect(solveHtml).toContain("data-ile-aesthetic-picker");
+    expect(solveHtml).not.toContain(">Learn<");
   });
 
   it("renders a confirm pop-up with the console frame and its title and action", () => {

@@ -73,6 +73,7 @@ export function presentDashboardKnowledgeRegions(
     if (String(region.owner_user_id || "").trim() !== owner) continue;
     if (String(region.product || "") !== kind) continue;
     if (String(region.embedding_model_id || "") === FLOW_EMBEDDING_PATH_TEXT_MODEL_ID) continue;
+    if (String(region.description || "").includes("region-simulation-cluster:")) continue;
     const subjectCount = Number(region.subject_count);
     out.push({
       id,

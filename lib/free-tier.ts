@@ -124,7 +124,7 @@ export function dashboardNavGroupsForAccess(
   }));
 }
 
-/** Home Quick Work Session kinds. Free and paid both run Learn, Verify, and Calibrate. */
+/** Play start kinds. Free and paid both run Learn, Verify, and Calibrate. */
 export function dashboardPlayKindsForAccess(
   _hasPaidAccess?: boolean,
 ): DashboardPlayKind[] {

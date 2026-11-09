@@ -43,7 +43,7 @@ export type ModuleSkuId = (typeof MODULE_SKU_IDS)[number];
 
 /** Learning module monthly (same sticker as the former public harness). */
 export const LEARN_MONTHLY_PRICE_CENTS = 2499;
-/** Course authoring monthly (includes Learning + Your Shop). */
+/** Course authoring monthly (includes Learning + My Shop). */
 export const AUTHOR_MONTHLY_PRICE_CENTS = 4999;
 /** Verification monthly. */
 export const VERIFY_MONTHLY_PRICE_CENTS = 4999;
@@ -275,7 +275,7 @@ export function planFeatureList(plan: string | null | undefined): string[] {
   const modules = modulesForPlan(plan);
   const features: string[] = [];
   if (modules.includes("learn")) features.push("Learning workspaces and Learn sessions");
-  if (modules.includes("author")) features.push("Course authoring and Your Shop (All You Can Learn listings)");
+  if (modules.includes("author")) features.push("Course authoring and My Shop (All You Can Learn listings)");
   if (modules.includes("verify")) features.push("Verification flows and knowledge regions");
   if (modules.includes("calibrate")) features.push("Calibration flows and knowledge regions");
   if (plan === "trial") features.unshift("All modules for 3 days");
@@ -313,7 +313,7 @@ export const PUBLIC_SKU_CARDS: readonly PublicSkuCard[] = [
     body: "Learning, course authoring, Verification, and Calibration for three days. One payment.",
     features: [
       "All modules for 3 days",
-      "Learning and Your Shop",
+      "Learning and My Shop",
       "Verification and Calibration",
       `${formatUsdFromCents(TRY_EVERYTHING_PRICE_CENTS)} one-time`,
     ],
@@ -340,11 +340,11 @@ export const PUBLIC_SKU_CARDS: readonly PublicSkuCard[] = [
     name: "Course authoring",
     priceLabel: formatUsdFromCents(AUTHOR_MONTHLY_PRICE_CENTS),
     cadence: "/ month",
-    body: "Learning plus the tools to build courses and sell them in Your Shop.",
+    body: "Learning plus the tools to build courses and sell them in My Shop.",
     features: [
       "Includes Learning",
       "Course authoring",
-      "Your Shop · All You Can Learn listings",
+      "My Shop · All You Can Learn listings",
     ],
     cta: "Get course authoring",
   },

@@ -38,24 +38,12 @@ describe("dashboard play sessions", () => {
     expect(DASHBOARD_PLAY_CURIOUS_KIND).toBe("learn");
   });
 
-  it("wires Home play start and play session shells", () => {
+  it("keeps play session APIs after Home drops Quick Work Session", () => {
     const dash = readDashboardSurface();
-    expect(dash).toContain("data-dashboard-play");
-    expect(dash).toContain("Quick Work Session");
-    expect(readRepo("components/dashboard/dashboard-home-tab.tsx")).toMatch(
-      /className="console-copy sticky[^"]*"[\s\S]*data-dashboard-play-bar/,
-    );
-    expect(dash).not.toContain("Start a session");
+    expect(dash).not.toContain("Quick Work Session");
+    expect(dash).not.toContain("data-dashboard-play-bar");
     expect(dash).not.toContain("data-dashboard-play-topics");
     expect(dash).not.toContain("pickDashboardPlayTopics");
-    expect(dash).toContain("data-dashboard-play-prompt");
-    expect(dash).toContain("data-dashboard-play-start");
-    expect(dash).toContain("data-dashboard-play-curious");
-    expect(dash).toContain("I'm feeling Curious");
-    expect(dash).toContain("data-dashboard-home-search");
-    expect(dash).toContain("DASHBOARD_PLAY_START_PATH");
-    expect(dash).toContain("DASHBOARD_PLAY_CURIOUS_PATH");
-    expect(dash).toContain(DASHBOARD_PLAY_CURIOUS_PATH);
     expect(dash).toContain("PlayCalibrateSession");
     expect(readRepo("app/api/play/start/route.ts")).toContain("dashboardPlaySessionMetadata");
     expect(readRepo("app/api/play/curious/route.ts")).toContain("parseCuriousPrompt");

@@ -89,11 +89,11 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
           <BrandLogo nameClassName="text-base font-semibold tracking-tight text-white" />
         </Link>
 
-        <nav className="hidden items-center gap-6 text-sm text-zinc-500 md:flex" aria-label="Main navigation">
+        <nav className="hidden items-center gap-6 text-base text-zinc-500 md:flex" aria-label="Main navigation">
           <div className="relative" ref={platformRef} data-nav-products>
             <button
               type="button"
-              className="inline-flex items-center gap-1 bg-white px-3 py-2 text-sm font-medium text-black transition hover:bg-zinc-200"
+              className="inline-flex items-center gap-1 bg-white px-3 py-2 text-base font-medium text-black transition hover:bg-zinc-200"
               aria-expanded={platformOpen}
               aria-haspopup="menu"
               aria-controls="platform-menu"
@@ -194,12 +194,12 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
           {isLoggedIn === true ? (
             <Link
               href="/dashboard"
-              className="px-2 py-2 text-sm text-zinc-500 transition hover:text-white"
+              className="px-2 py-2 text-base text-zinc-500 transition hover:text-white"
             >
               Dashboard
             </Link>
           ) : isLoggedIn === false ? (
-            <Link href="/login" className="px-2 py-2 text-sm text-zinc-500 transition hover:text-white">
+            <Link href="/login" className="px-2 py-2 text-base text-zinc-500 transition hover:text-white">
               Login
             </Link>
           ) : null}
@@ -217,12 +217,12 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
 
       {mobileOpen && (
         <nav className="mx-auto mt-4 w-full max-w-[96rem] border-t border-zinc-900 pt-4 md:hidden" aria-label="Mobile navigation">
-          <ul className="space-y-1 text-sm">
+          <ul className="space-y-1 text-base">
             <li>
               <div data-nav-products>
                 <button
                   type="button"
-                  className="flex w-full items-center justify-between bg-white px-3 py-2 text-left text-sm font-medium text-black"
+                  className="flex w-full items-center justify-between bg-white px-3 py-2 text-left text-base font-medium text-black"
                   aria-expanded={mobilePlatformOpen}
                   onClick={() => setMobilePlatformOpen((open) => !open)}
                 >

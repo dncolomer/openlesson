@@ -126,7 +126,7 @@ export function Navbar({
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="text-xs sm:text-sm text-neutral-500 hover:text-white transition-colors"
+                  className="text-sm sm:text-base text-neutral-500 hover:text-white transition-colors"
                 >
                   {link.label}
                 </Link>
@@ -137,7 +137,7 @@ export function Navbar({
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="text-xs sm:text-sm text-neutral-500 hover:text-white transition-colors"
+                  className="text-sm sm:text-base text-neutral-500 hover:text-white transition-colors"
                 >
                   {link.label}
                 </Link>
@@ -151,7 +151,7 @@ export function Navbar({
               >
                 <button
                   type="button"
-                  className="inline-flex items-center gap-1 text-xs sm:text-sm text-neutral-500 transition-colors hover:text-white"
+                  className="inline-flex items-center gap-1 text-sm sm:text-base text-neutral-500 transition-colors hover:text-white"
                   aria-expanded={communityOpen}
                   aria-haspopup="menu"
                   onClick={() => setCommunityOpen((open) => !open)}
@@ -197,12 +197,12 @@ export function Navbar({
             {isLoggedIn === true ? (
               <button
                 onClick={handleSignOut}
-                className="text-xs sm:text-sm text-neutral-500 hover:text-white transition-colors"
+                className="text-sm sm:text-base text-neutral-500 hover:text-white transition-colors"
               >
                 {t('nav.signOut')}
               </button>
             ) : isLoggedIn === false && (
-              <Link href="/login" className="px-3 sm:px-3.5 py-1.5 text-xs sm:text-sm bg-neutral-800 hover:bg-neutral-700 text-white rounded-sm transition-colors">
+              <Link href="/login" className="px-3 sm:px-3.5 py-1.5 text-sm sm:text-base bg-neutral-800 hover:bg-neutral-700 text-white rounded-sm transition-colors">
                 {t('nav.signIn')}
               </Link>
             )}
@@ -261,7 +261,7 @@ export function Navbar({
                     key={link.href} 
                     href={link.href} 
                     onClick={() => setMobileMenuOpen(false)}
-                    className="text-sm text-neutral-400 hover:text-white transition-colors"
+                    className="text-base text-neutral-400 hover:text-white transition-colors"
                   >
                     {link.label}
                   </Link>
@@ -274,7 +274,7 @@ export function Navbar({
                 key={link.href} 
                 href={link.href} 
                 onClick={() => setMobileMenuOpen(false)}
-                className="text-sm text-neutral-400 hover:text-white transition-colors"
+                className="text-base text-neutral-400 hover:text-white transition-colors"
               >
                 {link.label}
               </Link>
@@ -286,7 +286,7 @@ export function Navbar({
                   key={link.href}
                   href={link.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className="text-sm text-neutral-400 hover:text-white transition-colors"
+                  className="text-base text-neutral-400 hover:text-white transition-colors"
                 >
                   {link.label}
                 </Link>
@@ -296,7 +296,7 @@ export function Navbar({
               <div>
                 <button
                   type="button"
-                  className="flex w-full items-center justify-between text-left text-sm text-neutral-400 transition-colors hover:text-white"
+                  className="flex w-full items-center justify-between text-left text-base text-neutral-400 transition-colors hover:text-white"
                   aria-expanded={mobileCommunityOpen}
                   onClick={() => setMobileCommunityOpen((open) => !open)}
                 >
@@ -337,7 +337,7 @@ export function Navbar({
                   handleSignOut();
                   setMobileMenuOpen(false);
                 }}
-                className="text-sm text-neutral-400 hover:text-white transition-colors text-left"
+                className="text-base text-neutral-400 hover:text-white transition-colors text-left"
               >
                 {t('nav.signOut')}
               </button>
@@ -345,7 +345,7 @@ export function Navbar({
               <Link 
                 href="/login" 
                 onClick={() => setMobileMenuOpen(false)}
-                className="text-sm text-neutral-400 hover:text-white transition-colors"
+                className="text-base text-neutral-400 hover:text-white transition-colors"
               >
                 {t('nav.signIn')}
               </Link>

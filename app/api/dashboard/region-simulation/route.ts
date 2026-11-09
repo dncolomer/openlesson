@@ -68,7 +68,7 @@ async function listedSimulationFlows(input: {
     listed.push({
       id: flow.id,
       name: flow.name,
-      topic: "topic" in flow ? flow.topic : "goal" in flow ? flow.goal : "",
+      topic: flow.topic,
       questionCount: Math.max(1, problemsForSimulationFlow(flow).length),
       realSessionCount: await realSessionCountForFlow({
         kind: input.kind,

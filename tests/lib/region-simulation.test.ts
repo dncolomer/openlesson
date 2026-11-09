@@ -229,6 +229,8 @@ describe("region simulation", () => {
     expect(route).toContain("listSolveFlowsForOwnerUserId");
     expect(route).toContain("listCalibrationFlowsForOwnerUserId");
     expect(route).toContain("productFlowEmbeddingKind");
+    expect(route).toContain("topic: flow.topic");
+    expect(route).not.toContain("flow.goal");
     expect(read("app/verification/regions/new/page.tsx")).toContain('kind="verification"');
     expect(read("app/calibration/regions/new/page.tsx")).toContain('kind="calibration"');
     expect(read("app/solve/regions/new/page.tsx")).toContain('kind="solve"');

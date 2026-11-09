@@ -13,11 +13,14 @@ import {
   PRACTICE_QUANTUM_PROBLEMS,
 } from "@/lib/practice-quantum-catalog";
 import {
+  countPracticeProblems,
+  filterPracticeCatalog,
   formatPracticeDuration,
   groupPracticeProblems,
   isPracticeSessionMetadata,
   isPracticeSolveFlow,
   listedAuthorSolveFlows,
+  practiceBrowseLevel,
   practiceIdentityForUser,
   practiceSessionHref,
   practiceSessionMetadata,
@@ -56,6 +59,20 @@ describe("practice catalog", () => {
     ]);
     expect(groups[0]?.subcategories.length).toBeGreaterThan(1);
     expect(groups[1]?.subcategories.length).toBeGreaterThan(1);
+    expect(countPracticeProblems(groups[0]!)).toBeGreaterThan(groups[0]!.subcategories.length);
+    expect(practiceBrowseLevel({})).toBe("categories");
+    expect(practiceBrowseLevel({ category: "Quantum mechanics" })).toBe("subcategories");
+    expect(
+      practiceBrowseLevel({
+        category: "Quantum mechanics",
+        subcategory: "Wave functions",
+      }),
+    ).toBe("problems");
+    expect(filterPracticeCatalog(groups, { category: "Quantum computing" })).toHaveLength(1);
+    expect(
+      filterPracticeCatalog(groups, { query: "grover" })[0]?.subcategories[0]?.problems[0]?.slug,
+    ).toBe("qc-grover-one-item");
+    expect(filterPracticeCatalog(groups, { query: "zzzz-missing" })).toEqual([]);
     expect(presented.length).toBe(PRACTICE_QUANTUM_PROBLEMS.length);
     expect(PRACTICE_QUANTUM_PROBLEMS.every((row) => row.prompt.includes("?"))).toBe(false);
     expect(PRACTICE_QUANTUM_PROBLEMS.every((row) => row.prompt.length > 80)).toBe(true);
@@ -176,6 +193,13 @@ describe("practice dashboard surfaces", () => {
     expect(readRepo("app/api/dashboard/practice/start/route.ts")).toContain(
       "rejectIfInsufficientSessionCredits",
     );
+    const practiceTab = readRepo("components/dashboard/dashboard-practice-tab.tsx");
+    expect(practiceTab).toContain("data-dashboard-practice-crumbs");
+    expect(practiceTab).toContain("data-dashboard-practice-open-category");
+    expect(practiceTab).toContain("data-dashboard-practice-open-subcategory");
+    expect(practiceTab).toContain('data-dashboard-practice-browse="categories"');
+    expect(practiceTab).not.toContain("<select");
+    expect(practiceTab).not.toContain("All categories");
   });
 
   it("scopes Practice Data Studio to practice flows and Solve studio away from them", () => {

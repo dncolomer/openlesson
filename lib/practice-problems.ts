@@ -157,6 +157,60 @@ export function groupPracticeProblems(
   return categories;
 }
 
+export function countPracticeProblems(
+  group: Pick<PracticeCategoryGroup, "subcategories">,
+): number {
+  return group.subcategories.reduce((n, sub) => n + sub.problems.length, 0);
+}
+
+function practiceProblemMatchesQuery(
+  problem: PracticeProblem,
+  query: string,
+): boolean {
+  if (!query) return true;
+  const hay = `${problem.title} ${problem.prompt} ${problem.category} ${problem.subcategory}`.toLowerCase();
+  return hay.includes(query);
+}
+
+export function filterPracticeCatalog(
+  groups: readonly PracticeCategoryGroup[],
+  input: {
+    query?: string;
+    category?: string | null;
+    subcategory?: string | null;
+  } = {},
+): PracticeCategoryGroup[] {
+  const q = (input.query || "").trim().toLowerCase();
+  const category = (input.category || "").trim();
+  const subcategory = (input.subcategory || "").trim();
+  return groups
+    .filter((group) => !category || group.category === category)
+    .map((group) => ({
+      ...group,
+      subcategories: group.subcategories
+        .filter((sub) => !subcategory || sub.subcategory === subcategory)
+        .map((sub) => ({
+          ...sub,
+          problems: sub.problems.filter((problem) =>
+            practiceProblemMatchesQuery(problem, q),
+          ),
+        }))
+        .filter((sub) => sub.problems.length > 0),
+    }))
+    .filter((group) => group.subcategories.length > 0);
+}
+
+export type PracticeBrowseLevel = "categories" | "subcategories" | "problems";
+
+export function practiceBrowseLevel(input: {
+  category?: string | null;
+  subcategory?: string | null;
+}): PracticeBrowseLevel {
+  if ((input.subcategory || "").trim()) return "problems";
+  if ((input.category || "").trim()) return "subcategories";
+  return "categories";
+}
+
 export function practiceSessionHref(sessionId: string): string {
   return `/session?id=${encodeURIComponent(text(sessionId))}`;
 }

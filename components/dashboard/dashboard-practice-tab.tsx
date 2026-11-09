@@ -6,11 +6,18 @@ import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import {
   PRACTICE_CATALOG_PATH,
   PRACTICE_START_PATH,
+  countPracticeProblems,
+  filterPracticeCatalog,
   groupPracticeProblems,
+  practiceBrowseLevel,
   type PracticeCategoryGroup,
   type PracticeProblem,
 } from "@/lib/practice-problems";
 import { freeWeeklySessionLimitMessage } from "@/lib/free-tier";
+
+function countLabel(n: number, singular: string, plural: string): string {
+  return `${n} ${n === 1 ? singular : plural}`;
+}
 
 export function DashboardPracticeTab({
   weeklySessionsAllowed = true,
@@ -21,7 +28,8 @@ export function DashboardPracticeTab({
   const [groups, setGroups] = useState<PracticeCategoryGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
-  const [category, setCategory] = useState("all");
+  const [category, setCategory] = useState<string | null>(null);
+  const [subcategory, setSubcategory] = useState<string | null>(null);
   const [busyId, setBusyId] = useState("");
   const [error, setError] = useState("");
 
@@ -47,30 +55,21 @@ export function DashboardPracticeTab({
     };
   }, []);
 
-  const categories = useMemo(
-    () => groups.map((group) => group.category),
-    [groups],
+  const searching = query.trim().length > 0;
+  const level = practiceBrowseLevel({ category, subcategory });
+  const filtered = useMemo(
+    () =>
+      filterPracticeCatalog(groups, {
+        query,
+        category,
+        subcategory: searching || level === "problems" ? subcategory : null,
+      }),
+    [groups, query, category, subcategory, searching, level],
   );
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return groups
-      .filter((group) => category === "all" || group.category === category)
-      .map((group) => ({
-        ...group,
-        subcategories: group.subcategories
-          .map((sub) => ({
-            ...sub,
-            problems: sub.problems.filter((problem) => {
-              if (!q) return true;
-              const hay = `${problem.title} ${problem.prompt} ${problem.subcategory}`.toLowerCase();
-              return hay.includes(q);
-            }),
-          }))
-          .filter((sub) => sub.problems.length > 0),
-      }))
-      .filter((group) => group.subcategories.length > 0);
-  }, [groups, query, category]);
+  const categoryGroup = filtered.find((group) => group.category === category) || null;
+  const subcategoryGroup =
+    categoryGroup?.subcategories.find((sub) => sub.subcategory === subcategory) || null;
 
   async function startProblem(problem: PracticeProblem) {
     if (busyId) return;
@@ -105,6 +104,31 @@ export function DashboardPracticeTab({
     }
   }
 
+  function openCategory(name: string) {
+    setCategory(name);
+    setSubcategory(null);
+  }
+
+  function openSubcategory(name: string) {
+    setSubcategory(name);
+  }
+
+  function showCategories() {
+    setCategory(null);
+    setSubcategory(null);
+  }
+
+  function showSubcategories() {
+    setSubcategory(null);
+  }
+
+  const browseMode = searching ? "search" : level;
+  const emptyCopy = searching
+    ? "No exercises match that search."
+    : groups.length === 0
+      ? "No exercises yet."
+      : "No exercises in this topic.";
+
   return (
     <div className="space-y-6" data-dashboard-practice>
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -116,39 +140,23 @@ export function DashboardPracticeTab({
             Practice library
           </h2>
           <p className="mt-1 max-w-2xl text-sm text-neutral-400">
-            Pick a problem and start a Solve session. Each run is yours — no verification or calibration.
+            Choose a category, then a topic, then start a Solve session. Each run is yours — no
+            verification or calibration.
           </p>
         </div>
       </header>
 
       <section className="console-copy px-4 py-3" data-dashboard-practice-search>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <label className="block min-w-0 flex-1">
-            <span className="sr-only">Search exercises</span>
-            <input
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search exercises"
-              className="w-full rounded-none border border-white/40 bg-black px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-white/80 focus:outline-none"
-            />
-          </label>
-          <label className="block sm:w-64">
-            <span className="sr-only">Category</span>
-            <select
-              value={category}
-              onChange={(event) => setCategory(event.target.value)}
-              className="w-full rounded-none border border-white/40 bg-black px-3 py-2 text-sm text-white focus:border-white/80 focus:outline-none"
-            >
-              <option value="all">All categories</option>
-              {categories.map((name) => (
-                <option key={name} value={name}>
-                  {name}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
+        <label className="block min-w-0">
+          <span className="sr-only">Search exercises</span>
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search exercises"
+            className="w-full rounded-none border border-white/40 bg-black px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-white/80 focus:outline-none"
+          />
+        </label>
         {error ? <p className="mt-2 text-sm text-red-300">{error}</p> : null}
         {!weeklySessionsAllowed ? (
           <p className="mt-2 text-xs text-neutral-500">
@@ -157,56 +165,191 @@ export function DashboardPracticeTab({
         ) : null}
       </section>
 
+      <nav
+        className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[10px] uppercase tracking-[0.14em] text-neutral-500"
+        data-dashboard-practice-crumbs
+        aria-label="Practice catalog"
+      >
+        <button
+          type="button"
+          data-dashboard-practice-crumb="root"
+          onClick={showCategories}
+          className={
+            category || searching
+              ? "text-neutral-400 transition hover:text-white"
+              : "text-white"
+          }
+        >
+          Categories
+        </button>
+        {category ? (
+          <>
+            <span aria-hidden>/</span>
+            <button
+              type="button"
+              data-dashboard-practice-crumb="category"
+              onClick={showSubcategories}
+              className={
+                subcategory || searching
+                  ? "text-neutral-400 transition hover:text-white"
+                  : "text-white"
+              }
+            >
+              {category}
+            </button>
+          </>
+        ) : null}
+        {category && subcategory ? (
+          <>
+            <span aria-hidden>/</span>
+            <span data-dashboard-practice-crumb="subcategory" className="text-white">
+              {subcategory}
+            </span>
+          </>
+        ) : null}
+        {searching ? (
+          <>
+            <span aria-hidden>/</span>
+            <span data-dashboard-practice-crumb="search" className="text-white">
+              Search
+            </span>
+          </>
+        ) : null}
+      </nav>
+
       {loading ? (
         <p className="text-sm text-neutral-500">Loading exercises…</p>
       ) : filtered.length === 0 ? (
-        <p className="text-sm text-neutral-500">No exercises match that search.</p>
-      ) : (
-        filtered.map((group) => (
-          <section
-            key={group.category}
-            className="space-y-4"
-            data-dashboard-practice-category={group.category}
-          >
-            <h3 className="text-lg font-medium tracking-[-0.4px] text-white">
-              {group.category}
-            </h3>
-            {group.subcategories.map((sub) => (
-              <div key={sub.subcategory} className="space-y-2">
-                <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-neutral-500">
+        <p className="text-sm text-neutral-500">{emptyCopy}</p>
+      ) : browseMode === "categories" ? (
+        <ul
+          className="grid gap-2 sm:grid-cols-2"
+          data-dashboard-practice-browse="categories"
+        >
+          {filtered.map((group) => {
+            const problems = countPracticeProblems(group);
+            return (
+              <li key={group.category}>
+                <button
+                  type="button"
+                  data-dashboard-practice-open-category={group.category}
+                  onClick={() => openCategory(group.category)}
+                  className="console-copy flex h-full w-full flex-col items-start gap-2 px-4 py-4 text-left transition hover:border-white/80"
+                >
+                  <h3 className="text-base font-medium tracking-[-0.3px] text-white">
+                    {group.category}
+                  </h3>
+                  <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-neutral-500">
+                    {countLabel(group.subcategories.length, "topic", "topics")} ·{" "}
+                    {countLabel(problems, "exercise", "exercises")}
+                  </p>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      ) : browseMode === "subcategories" && categoryGroup ? (
+        <ul
+          className="grid gap-2 sm:grid-cols-2"
+          data-dashboard-practice-browse="subcategories"
+          data-dashboard-practice-category={categoryGroup.category}
+        >
+          {categoryGroup.subcategories.map((sub) => (
+            <li key={sub.subcategory}>
+              <button
+                type="button"
+                data-dashboard-practice-open-subcategory={sub.subcategory}
+                onClick={() => openSubcategory(sub.subcategory)}
+                className="console-copy flex h-full w-full flex-col items-start gap-2 px-4 py-4 text-left transition hover:border-white/80"
+              >
+                <h3 className="text-base font-medium tracking-[-0.3px] text-white">
                   {sub.subcategory}
+                </h3>
+                <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-neutral-500">
+                  {countLabel(sub.problems.length, "exercise", "exercises")}
                 </p>
-                <ul className="grid gap-2">
-                  {sub.problems.map((problem) => (
-                    <li key={problem.id}>
-                      <article
-                        className="console-copy flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-start sm:justify-between"
-                        data-dashboard-practice-problem={problem.slug}
-                      >
-                        <div className="min-w-0">
-                          <h4 className="text-sm font-medium text-white">{problem.title}</h4>
-                          <p className="mt-1 text-sm leading-relaxed text-neutral-400">
-                            {problem.prompt}
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          data-dashboard-practice-start={problem.id}
-                          disabled={Boolean(busyId)}
-                          onClick={() => void startProblem(problem)}
-                          className="inline-flex h-9 shrink-0 items-center justify-center bg-white px-4 text-sm font-medium text-black transition hover:bg-neutral-200 disabled:opacity-40"
-                        >
-                          {busyId === problem.id ? "Starting…" : "Practice"}
-                        </button>
-                      </article>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </section>
-        ))
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : browseMode === "problems" && subcategoryGroup && categoryGroup ? (
+        <section
+          className="space-y-2"
+          data-dashboard-practice-browse="problems"
+          data-dashboard-practice-category={categoryGroup.category}
+        >
+          <ProblemList
+            problems={subcategoryGroup.problems}
+            busyId={busyId}
+            onStart={startProblem}
+          />
+        </section>
+      ) : (
+        <div className="space-y-6" data-dashboard-practice-browse="search">
+          {filtered.map((group) => (
+            <section
+              key={group.category}
+              className="space-y-4"
+              data-dashboard-practice-category={group.category}
+            >
+              <h3 className="text-lg font-medium tracking-[-0.4px] text-white">
+                {group.category}
+              </h3>
+              {group.subcategories.map((sub) => (
+                <div key={sub.subcategory} className="space-y-2">
+                  <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-neutral-500">
+                    {sub.subcategory}
+                  </p>
+                  <ProblemList
+                    problems={sub.problems}
+                    busyId={busyId}
+                    onStart={startProblem}
+                  />
+                </div>
+              ))}
+            </section>
+          ))}
+        </div>
       )}
     </div>
+  );
+}
+
+function ProblemList({
+  problems,
+  busyId,
+  onStart,
+}: {
+  problems: PracticeProblem[];
+  busyId: string;
+  onStart: (problem: PracticeProblem) => void;
+}) {
+  return (
+    <ul className="grid gap-2">
+      {problems.map((problem) => (
+        <li key={problem.id}>
+          <article
+            className="console-copy flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-start sm:justify-between"
+            data-dashboard-practice-problem={problem.slug}
+          >
+            <div className="min-w-0">
+              <h4 className="text-sm font-medium text-white">{problem.title}</h4>
+              <p className="mt-1 text-sm leading-relaxed text-neutral-400">
+                {problem.prompt}
+              </p>
+            </div>
+            <button
+              type="button"
+              data-dashboard-practice-start={problem.id}
+              disabled={Boolean(busyId)}
+              onClick={() => onStart(problem)}
+              className="inline-flex h-9 shrink-0 items-center justify-center bg-white px-4 text-sm font-medium text-black transition hover:bg-neutral-200 disabled:opacity-40"
+            >
+              {busyId === problem.id ? "Starting…" : "Practice"}
+            </button>
+          </article>
+        </li>
+      ))}
+    </ul>
   );
 }

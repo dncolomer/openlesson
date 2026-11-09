@@ -528,6 +528,10 @@ describe("dashboard platform surface", () => {
     expect(readRepo("components/dashboard/dashboard-usage-tab.tsx")).toContain("DashboardUpgradeTab");
     expect(readRepo("components/dashboard/dashboard-usage-tab.tsx")).toContain("data-dashboard-credits");
     expect(readRepo("components/dashboard/dashboard-usage-tab.tsx")).toContain("creditBalance");
+    expect(readRepo("components/dashboard/dashboard-usage-tab.tsx")).toContain("Unlimited");
+    expect(readRepo("components/dashboard/dashboard-usage-tab.tsx")).toContain(
+      "Platform admin accounts have no credit limit.",
+    );
     expect(readRepo("components/dashboard/dashboard-usage-tab.tsx")).toContain("StripeConnectPanel");
     expect(readRepo("app/dashboard/page.tsx")).toContain("StripeConnectPanel");
     expect(readRepo("components/dashboard/stripe-connect-panel.tsx")).toContain("data-aycl-stripe-connect");

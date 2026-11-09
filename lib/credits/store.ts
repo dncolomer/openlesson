@@ -2,7 +2,12 @@
  * Credit account store. Memory implementation is the test double; Supabase is live.
  */
 
-import { applyDebit, applyGrant, type CreditEntryKind } from "@/lib/credits/ledger";
+import {
+  applyDebit,
+  applyGrant,
+  isUnmeteredCreditsProfile,
+  type CreditEntryKind,
+} from "@/lib/credits/ledger";
 import type { FlowSessionKind } from "@/lib/credits/constants";
 
 export type CreditLedgerEntry = {
@@ -24,7 +29,8 @@ export type CreditAccountSnapshot = {
 };
 
 export type DebitCommitResult =
-  | { ok: true; balanceAfter: number; entry: CreditLedgerEntry }
+  | { ok: true; balanceAfter: number; entry: CreditLedgerEntry; skipped?: false }
+  | { ok: true; balanceAfter: number; entry: null; skipped: true }
   | {
       ok: false;
       code: "insufficient_credits";
@@ -67,10 +73,12 @@ function newId(): string {
 
 export function createMemoryCreditStore(
   seed: Record<string, number> = {},
+  options?: { unmeteredUserIds?: Iterable<string> },
 ): CreditStore & { balances: Map<string, number> } {
   const balances = new Map<string, number>(
     Object.entries(seed).map(([id, value]) => [id, Math.max(0, Math.floor(value))]),
   );
+  const unmetered = new Set(options?.unmeteredUserIds ?? []);
   const ledgers = new Map<string, CreditLedgerEntry[]>();
 
   function entriesFor(userId: string): CreditLedgerEntry[] {
@@ -114,6 +122,9 @@ export function createMemoryCreditStore(
     },
     async commitDebit(input) {
       const current = balances.get(input.userId) ?? 0;
+      if (isUnmeteredCreditsProfile({ is_admin: unmetered.has(input.userId) })) {
+        return { ok: true as const, balanceAfter: current, entry: null, skipped: true as const };
+      }
       const debited = applyDebit(current, input.amount);
       if (!debited.ok) return debited;
       const entry: CreditLedgerEntry = {

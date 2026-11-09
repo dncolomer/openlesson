@@ -22,6 +22,7 @@ export {
   creditCostForAction,
   flowSessionCreditCost,
   isBillableAction,
+  isUnmeteredCreditsProfile,
   guestGrantAmount,
   starterGrantAmount,
   type CreditAction,

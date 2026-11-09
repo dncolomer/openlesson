@@ -58,6 +58,13 @@ export function billedUserIdForSession(input: {
   return input.ownerUserId;
 }
 
+/** Platform admins (`profiles.is_admin`) never consume session credits. */
+export function isUnmeteredCreditsProfile(
+  profile: { is_admin?: boolean | null } | null | undefined,
+): boolean {
+  return Boolean(profile?.is_admin);
+}
+
 export function applyGrant(balance: number, amount: number): LedgerApplyOk {
   const safeBalance = Math.max(0, Math.floor(balance));
   const safeAmount = Math.max(0, Math.floor(amount));

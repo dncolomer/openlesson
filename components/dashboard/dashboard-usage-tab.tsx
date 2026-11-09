@@ -144,7 +144,9 @@ export function DashboardUsageTab({
                   {sectionTitle(
                     "1 · Credits",
                     "Your balance",
-                    `Starter grant ${usageData.starterCreditGrant ?? STARTER_CREDIT_GRANT}. Each flow session costs ${usageData.sessionCreditCost ?? FLOW_SESSION_CREDIT_COST} credits.`
+                    usageData.isAdmin
+                      ? "Platform admin accounts have no credit limit."
+                      : `Starter grant ${usageData.starterCreditGrant ?? STARTER_CREDIT_GRANT}. Each flow session costs ${usageData.sessionCreditCost ?? FLOW_SESSION_CREDIT_COST} credits.`
                   )}
                   <div className={`grid gap-4 ${isBillingBypass ? "md:grid-cols-1" : "md:grid-cols-2"}`}>
                     <div className={usageCardClass}>
@@ -155,7 +157,7 @@ export function DashboardUsageTab({
                         {planBadge}
                       </div>
                       <div className="mt-4 text-3xl font-medium tracking-[-1px] text-white">
-                        {usageData.creditBalance ?? 0} credits
+                        {usageData.isAdmin ? "Unlimited" : `${usageData.creditBalance ?? 0} credits`}
                       </div>
                       {isBillingBypass ? (
                         <p className="mt-2 text-sm text-neutral-300">
@@ -577,6 +579,7 @@ export function DashboardUsageTab({
 
             <StripeConnectPanel />
 
+            {!usageData?.isAdmin && (
             <div id="dashboard-upgrade">
               <DashboardUpgradeTab
                 plan={usageData?.plan || "inactive"}
@@ -586,6 +589,7 @@ export function DashboardUsageTab({
                 balance={usageData?.creditBalance}
               />
             </div>
+            )}
           </div>
           );
 }

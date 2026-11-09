@@ -19,6 +19,7 @@ import {
   debitFlowSessionCredits,
   grantCreditPack,
   isBillableAction,
+  isUnmeteredCreditsProfile,
   loadCreditSummary,
   startBillableFlowSession,
   unmeteredCreateLeavesBalance,
@@ -118,9 +119,57 @@ describe("flow session debit", () => {
     expect(summary.balance).toBe(FLOW_SESSION_CREDIT_COST - 1);
     expect(summary.debits).toHaveLength(0);
   });
+
+  it("skips the debit for a platform admin even at a zero balance", async () => {
+    expect(isUnmeteredCreditsProfile({ is_admin: true })).toBe(true);
+    expect(isUnmeteredCreditsProfile({ is_admin: false })).toBe(false);
+    const store = createMemoryCreditStore({ admin: 0 }, { unmeteredUserIds: ["admin"] });
+    let created = false;
+    const result = await startBillableFlowSession(
+      store,
+      { runnerUserId: "admin", ownerUserId: "admin", flowKind: "learn" },
+      async () => {
+        created = true;
+        return { sessionId: "admin-learn" };
+      },
+    );
+    expect(result.ok).toBe(true);
+    expect(created).toBe(true);
+    if (!result.ok) return;
+    expect(result.balanceAfter).toBe(0);
+    const summary = await loadCreditSummary(store, "admin");
+    expect(summary.balance).toBe(0);
+    expect(summary.debits).toHaveLength(0);
+  });
+
+  it("does not refund a skipped admin debit when persist fails", async () => {
+    const store = createMemoryCreditStore({ admin: 0 }, { unmeteredUserIds: ["admin"] });
+    await expect(
+      startBillableFlowSession(
+        store,
+        { runnerUserId: "admin", ownerUserId: "admin", flowKind: "verify" },
+        async () => {
+          throw new Error("persist failed");
+        },
+      ),
+    ).rejects.toThrow("persist failed");
+    expect((await store.load("admin")).balance).toBe(0);
+  });
 });
 
 describe("guest vs signed-in billed account", () => {
+  it("does not bill an admin owner for an anonymous guest start", async () => {
+    const store = createMemoryCreditStore({ "owner-1": 0 }, { unmeteredUserIds: ["owner-1"] });
+    const result = await debitFlowSessionCredits(store, {
+      runnerUserId: null,
+      ownerUserId: "owner-1",
+      flowKind: "calibrate",
+    });
+    expect(result.ok).toBe(true);
+    expect(result.skipped).toBe(true);
+    expect((await store.load("owner-1")).balance).toBe(0);
+  });
+
   it("bills the owner when the runner is anonymous", async () => {
     expect(
       billedUserIdForSession({ runnerUserId: null, ownerUserId: "owner-1" }),
@@ -221,6 +270,10 @@ describe("session-start routes debit shipped credits", () => {
     );
     expect(startFlow).toContain("chargeFlowSessionOrThrow");
     expect(startFlow).toContain("ownerUserId: runnerUserId");
+    const supabaseStore = readFileSync(join(root, "lib/credits/supabase-store.ts"), "utf8");
+    expect(supabaseStore).toContain("credit_balance, is_admin");
+    expect(supabaseStore).toContain("isUnmeteredCreditsProfile");
+    expect(supabaseStore).toContain("skipped: true");
   });
 
   it("bills the signed-in player for a play-copy start and the invite runner otherwise", () => {

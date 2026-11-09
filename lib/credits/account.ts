@@ -175,7 +175,13 @@ export async function startBillableFlowSession<T>(
       balanceAfter: charge.balanceAfter,
     };
   } catch (error) {
-    await refundFlowSessionCredits(store, charge.billedUserId, charge.entry.amount < 0 ? -charge.entry.amount : flowSessionCreditCost(input.flowKind));
+    if (!charge.skipped && charge.entry) {
+      await refundFlowSessionCredits(
+        store,
+        charge.billedUserId,
+        charge.entry.amount < 0 ? -charge.entry.amount : flowSessionCreditCost(input.flowKind),
+      );
+    }
     throw error;
   }
 }
@@ -208,8 +214,11 @@ export function creditStoreFromClient(client: SupabaseClient): CreditStore {
   return createSupabaseCreditStore(client);
 }
 
-export function memoryCreditStore(seed?: Record<string, number>) {
-  return createMemoryCreditStore(seed);
+export function memoryCreditStore(
+  seed?: Record<string, number>,
+  options?: { unmeteredUserIds?: Iterable<string> },
+) {
+  return createMemoryCreditStore(seed, options);
 }
 
 export async function rejectIfInsufficientSessionCredits(

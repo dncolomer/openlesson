@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { applyDebit, applyGrant } from "@/lib/credits/ledger";
+import { applyDebit, applyGrant, isUnmeteredCreditsProfile } from "@/lib/credits/ledger";
 import type { CreditLedgerEntry, CreditStore, DebitCommitResult, GrantCommitResult } from "@/lib/credits/store";
 import type { FlowSessionKind } from "@/lib/credits/constants";
 
@@ -31,15 +31,26 @@ function mapRow(row: LedgerRow): CreditLedgerEntry {
   };
 }
 
-async function readBalance(client: SupabaseClient, userId: string): Promise<number> {
+async function readAccount(
+  client: SupabaseClient,
+  userId: string,
+): Promise<{ balance: number; unmetered: boolean }> {
   const { data, error } = await client
     .from("profiles")
-    .select("credit_balance")
+    .select("credit_balance, is_admin")
     .eq("id", userId)
     .maybeSingle();
   if (error) throw new Error(error.message);
-  const raw = (data as { credit_balance?: number } | null)?.credit_balance;
-  return typeof raw === "number" && Number.isFinite(raw) ? Math.max(0, Math.floor(raw)) : 0;
+  const row = data as { credit_balance?: number; is_admin?: boolean } | null;
+  const raw = row?.credit_balance;
+  return {
+    balance: typeof raw === "number" && Number.isFinite(raw) ? Math.max(0, Math.floor(raw)) : 0,
+    unmetered: isUnmeteredCreditsProfile(row),
+  };
+}
+
+async function readBalance(client: SupabaseClient, userId: string): Promise<number> {
+  return (await readAccount(client, userId)).balance;
 }
 
 async function writeBalance(
@@ -139,7 +150,16 @@ export function createSupabaseCreditStore(client: SupabaseClient): CreditStore {
     },
     async commitDebit(input): Promise<DebitCommitResult> {
       for (let attempt = 0; attempt < 5; attempt += 1) {
-        const current = await readBalance(client, input.userId);
+        const account = await readAccount(client, input.userId);
+        if (account.unmetered) {
+          return {
+            ok: true,
+            balanceAfter: account.balance,
+            entry: null,
+            skipped: true,
+          };
+        }
+        const current = account.balance;
         const debited = applyDebit(current, input.amount);
         if (!debited.ok) return debited;
         const moved = await writeBalance(client, input.userId, current, debited.balanceAfter);

@@ -45,9 +45,9 @@ describe("live landing hero", () => {
   it("ships medium-length copy and a combined editorial hero", () => {
     expect(LANDING_HERO_COPY.h1).toBe(PLATFORM_HERO.h1);
     expect(LANDING_USES.map((item) => item.name)).toEqual([
-      "Build Understanding",
-      "Knowledge Verification",
-      "Knowledge Mapping",
+      "Solve",
+      "Verify",
+      "Map",
     ]);
     for (const use of LANDING_USES) {
       expect(use.body).toBe("");

@@ -8,6 +8,7 @@ import {
   COMMUNITY_LINKS,
   COMMUNITY_NAV_LABEL,
   MAIN_NAV_PRODUCT_LINKS,
+  PLATFORM_NAV_LABEL,
   PRICING_NAV_LINKS,
   TOP_LINKS,
   USE_CASES_NAV_LINK,
@@ -28,8 +29,11 @@ function communityAnchorProps(href: string) {
 export function LandingNav({ overlay = false }: LandingNavProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [communityOpen, setCommunityOpen] = useState(false);
+  const [platformOpen, setPlatformOpen] = useState(false);
   const [mobileCommunityOpen, setMobileCommunityOpen] = useState(false);
+  const [mobilePlatformOpen, setMobilePlatformOpen] = useState(false);
   const communityRef = useRef<HTMLDivElement>(null);
+  const platformRef = useRef<HTMLDivElement>(null);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -48,16 +52,20 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
   }, []);
 
   useEffect(() => {
-    if (!communityOpen) return;
+    if (!communityOpen && !platformOpen) return;
     const onPointerDown = (event: MouseEvent) => {
       const target = event.target as Node;
       if (!communityRef.current?.contains(target)) {
         setCommunityOpen(false);
       }
+      if (!platformRef.current?.contains(target)) {
+        setPlatformOpen(false);
+      }
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setCommunityOpen(false);
+        setPlatformOpen(false);
       }
     };
     document.addEventListener("mousedown", onPointerDown);
@@ -66,7 +74,7 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
       document.removeEventListener("mousedown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [communityOpen]);
+  }, [communityOpen, platformOpen]);
 
   return (
     <header
@@ -82,18 +90,45 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
         </Link>
 
         <nav className="hidden items-center gap-6 text-sm text-zinc-500 md:flex" aria-label="Main navigation">
-          <div className="console-copy flex items-stretch" data-nav-products>
-            {MAIN_NAV_PRODUCT_LINKS.map((link, index) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`px-3 py-2 text-sm font-medium text-zinc-100 transition hover:bg-white/10 hover:text-white ${
-                  index > 0 ? "border-l border-white/25" : ""
-                }`}
+          <div className="relative" ref={platformRef} data-nav-products>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 bg-white px-3 py-2 text-sm font-medium text-black transition hover:bg-zinc-200"
+              aria-expanded={platformOpen}
+              aria-haspopup="menu"
+              aria-controls="platform-menu"
+              onClick={() => {
+                setPlatformOpen((open) => !open);
+                setCommunityOpen(false);
+              }}
+            >
+              {PLATFORM_NAV_LABEL}
+              <ChevronDown
+                size={14}
+                className={`transition-transform ${platformOpen ? "rotate-180" : ""}`}
+                aria-hidden
+              />
+            </button>
+            {platformOpen && (
+              <div
+                id="platform-menu"
+                role="menu"
+                aria-label={PLATFORM_NAV_LABEL}
+                className="absolute left-0 top-full z-50 mt-2 min-w-[14rem] border border-zinc-800 bg-[#0a0a0a]/95 py-1 shadow-xl shadow-black/40 backdrop-blur-md"
               >
-                {link.label}
-              </Link>
-            ))}
+                {MAIN_NAV_PRODUCT_LINKS.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    role="menuitem"
+                    className="block px-3 py-2 text-sm text-zinc-300 transition hover:bg-white/5 hover:text-white"
+                    onClick={() => setPlatformOpen(false)}
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
 
           <Link href={USE_CASES_NAV_LINK.href} className="transition hover:text-white">
@@ -121,6 +156,7 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
               aria-controls="community-menu"
               onClick={() => {
                 setCommunityOpen((open) => !open);
+                setPlatformOpen(false);
               }}
             >
               {COMMUNITY_NAV_LABEL}
@@ -183,17 +219,35 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
         <nav className="mx-auto mt-4 w-full max-w-[96rem] border-t border-zinc-900 pt-4 md:hidden" aria-label="Mobile navigation">
           <ul className="space-y-1 text-sm">
             <li>
-              <div className="console-copy divide-y divide-white/20">
-                {MAIN_NAV_PRODUCT_LINKS.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className="block px-3 py-2 font-medium text-white"
-                    onClick={() => setMobileOpen(false)}
-                  >
-                    {link.label}
-                  </Link>
-                ))}
+              <div data-nav-products>
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between bg-white px-3 py-2 text-left text-sm font-medium text-black"
+                  aria-expanded={mobilePlatformOpen}
+                  onClick={() => setMobilePlatformOpen((open) => !open)}
+                >
+                  {PLATFORM_NAV_LABEL}
+                  <ChevronDown
+                    size={14}
+                    className={`transition-transform ${mobilePlatformOpen ? "rotate-180" : ""}`}
+                    aria-hidden
+                  />
+                </button>
+                {mobilePlatformOpen && (
+                  <ul className="mb-1 mt-1 space-y-0.5 border border-zinc-800 bg-[#0a0a0a]/95 py-1">
+                    {MAIN_NAV_PRODUCT_LINKS.map((link) => (
+                      <li key={link.href}>
+                        <Link
+                          href={link.href}
+                          className="block px-3 py-2 text-zinc-300"
+                          onClick={() => setMobileOpen(false)}
+                        >
+                          {link.label}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </li>
             <li>

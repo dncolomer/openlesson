@@ -107,10 +107,10 @@ describe("landing: knowledge acquisition, verification, and mapping", () => {
     expect(landing).not.toContain("The Unsys workspace is a course-seeded Learning Harness.");
     expect(corpus.toLowerCase()).not.toMatch(/cannot be cheated|cannot be faked/);
     expect(landing).not.toContain("PLATFORM_PRODUCT_LIST");
-    expect(PLATFORM_PRODUCTS.harness.name).toBe("Build Understanding");
+    expect(PLATFORM_PRODUCTS.harness.name).toBe("Solve");
     expect(PLATFORM_PRODUCTS.harness.body).toMatch(/Problem Solving Harness/);
-    expect(PLATFORM_PRODUCTS.verification.name).toBe("Knowledge Verification");
-    expect(PLATFORM_PRODUCTS.mapping.name).toBe("Knowledge Mapping");
+    expect(PLATFORM_PRODUCTS.verification.name).toBe("Verify");
+    expect(PLATFORM_PRODUCTS.mapping.name).toBe("Map");
     expect(PLATFORM_PRODUCTS.harness.image).toBe("/lp-boxes/harness-books-blueprint.jpg");
     expect(PLATFORM_PRODUCTS.verification.image).toBe("/lp-boxes/verification-bottles-blueprint.jpg");
     expect(PLATFORM_PRODUCTS.mapping.image).toBe("/lp-boxes/tapbench-maps-blueprint.jpg");
@@ -130,9 +130,9 @@ describe("landing: knowledge acquisition, verification, and mapping", () => {
     expect("tapbench" in PLATFORM_PRODUCTS).toBe(false);
     expect(PLATFORM_LAYER_LIST).toHaveLength(3);
     expect(PLATFORM_LAYER_LIST.map((p) => p.name)).toEqual([
-      "Build Understanding",
-      "Knowledge Verification",
-      "Knowledge Mapping",
+      "Solve",
+      "Verify",
+      "Map",
     ]);
   });
 
@@ -175,8 +175,8 @@ describe("landing: knowledge acquisition, verification, and mapping", () => {
 
 describe("product pages: verification owns platform/approach; harness owns AYCL", () => {
   it("verification product page carries platform and approach claims", () => {
-    expect(existsSync(join(ROOT, "app/knowledge-verification/page.tsx"))).toBe(true);
-    const page = read("app/knowledge-verification/page.tsx");
+    expect(existsSync(join(ROOT, "app/verify-protocols/page.tsx"))).toBe(true);
+    const page = read("app/verify-protocols/page.tsx");
     expect(page).toContain("VERIFICATION_PLATFORM_COPY.p1");
     expect(page).toContain("VERIFICATION_FLOW_COPY");
     expect(VERIFICATION_APPROACH_COPY.p2).toMatch(/Free Energy Principle/);
@@ -211,8 +211,8 @@ describe("product pages: verification owns platform/approach; harness owns AYCL"
   });
 
   it("mapping product page clones verification structure as a map of knowledge regions", () => {
-    expect(existsSync(join(ROOT, "app/knowledge-mapping/page.tsx"))).toBe(true);
-    const page = read("app/knowledge-mapping/page.tsx");
+    expect(existsSync(join(ROOT, "app/mapping-protocols/page.tsx"))).toBe(true);
+    const page = read("app/mapping-protocols/page.tsx");
     expect(page).toContain("MAPPING_PLATFORM_COPY.p1");
     expect(page).toContain("MAPPING_PLATFORM_COPY.p2");
     expect(page).not.toContain("learning world model");
@@ -241,9 +241,9 @@ describe("product pages: verification owns platform/approach; harness owns AYCL"
   });
 
   it("harness product path includes All-You-Can-Learn", () => {
-    expect(existsSync(join(ROOT, "app/acquisition/page.tsx"))).toBe(true);
+    expect(existsSync(join(ROOT, "app/solve-protocols/page.tsx"))).toBe(true);
     expect(existsSync(join(ROOT, "app/learning-harness/page.tsx"))).toBe(false);
-    const page = read("app/acquisition/page.tsx");
+    const page = read("app/solve-protocols/page.tsx");
     expect(page).toContain("{HARNESS_PRODUCT_COPY.title}");
     expect(HARNESS_PRODUCT_COPY.title).toBe("Build understanding through hard problems.");
     expect(HARNESS_PRODUCT_COPY.eyebrow).toBe("PROBLEM SOLVING HARNESS");
@@ -392,10 +392,11 @@ describe("unified pricing + public module checkout", () => {
 describe("sitemap lists new public pages", () => {
   it("includes product, support, unified pricing, and community events listing", () => {
     const sitemap = read("app/sitemap.ts");
-    expect(sitemap).toContain("/acquisition");
+    expect(sitemap).toContain("/solve-protocols");
     expect(sitemap).not.toContain("/learning-harness");
-    expect(sitemap).toContain("/knowledge-verification");
-    expect(sitemap).toContain("/knowledge-mapping");
+    expect(sitemap).not.toContain("/acquisition");
+    expect(sitemap).toContain("/verify-protocols");
+    expect(sitemap).toContain("/mapping-protocols");
     expect(sitemap).toContain("/pricing");
     expect(sitemap).not.toContain("/pricing/authoring");
     expect(sitemap).not.toContain("/pricing/verification");
@@ -464,7 +465,7 @@ describe("nav and footer hrefs resolve to shipped pages", () => {
     const events = read("lib/aycl-landing.ts");
     expect(events).toContain('title: "Thermosynthesis"');
     expect(events).not.toContain("Ground State");
-    const verification = read("app/knowledge-verification/page.tsx");
+    const verification = read("app/verify-protocols/page.tsx");
     expect(verification).not.toContain("Verify Human Knowledge without tests.");
     const vision = read("app/vision/page.tsx");
     expect(vision).not.toContain("$UNSYS");

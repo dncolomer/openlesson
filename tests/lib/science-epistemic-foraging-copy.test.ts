@@ -145,14 +145,14 @@ describe("science page renders epistemic foraging copy", () => {
 
 describe("landing approach names foraging without rewriting the hero", () => {
   it("verification product approach section names epistemic foraging and links to /science", () => {
-    const page = read("app/knowledge-verification/page.tsx");
+    const page = read("app/verify-protocols/page.tsx");
     expect(page).toContain('id="approach"');
     expect(page).toContain("data-landing-epistemic-foraging");
     expect(page).toMatch(/epistemic foraging/i);
     expect(page).toContain("foragingHref");
     expect(page).toContain('marker="verification"');
     expect(page).not.toContain("Epistemic Foraging Platform");
-    const mapping = read("app/knowledge-mapping/page.tsx");
+    const mapping = read("app/mapping-protocols/page.tsx");
     expect(mapping).not.toContain('id="approach"');
     expect(mapping).not.toContain("data-landing-epistemic-foraging");
     expect(mapping).not.toContain("foragingHref");
@@ -168,7 +168,7 @@ describe("landing approach names foraging without rewriting the hero", () => {
 describe("foraging visitor strings stay affirmative", () => {
   it("science, vision, landing, pitch, and README foraging copy omit Pirolli disclaimers and we-refuse closers", () => {
     const thesis = getPlatformPitchSlide(PLATFORM_THESIS_SLIDE_INDEX);
-    const verification = read("app/knowledge-verification/page.tsx");
+    const verification = read("app/verify-protocols/page.tsx");
     const landingForageAt = verification.indexOf("data-landing-epistemic-foraging");
     const landingForage = verification.slice(landingForageAt, landingForageAt + 800);
     const corpus = [

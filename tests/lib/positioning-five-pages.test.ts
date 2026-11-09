@@ -38,9 +38,9 @@ const SCOPED_SOURCES = [
   "lib/marketing/mapping-product.ts",
   "lib/marketing/use-cases.ts",
   "app/page.tsx",
-  "app/acquisition/page.tsx",
-  "app/knowledge-verification/page.tsx",
-  "app/knowledge-mapping/page.tsx",
+  "app/solve-protocols/page.tsx",
+  "app/verify-protocols/page.tsx",
+  "app/mapping-protocols/page.tsx",
   "app/use-cases/page.tsx",
   "components/marketing/landing-heroes.tsx",
 ] as const;
@@ -86,14 +86,14 @@ describe("five-page positioning contract", () => {
   });
 
   it("preserves product routes, discovery mailto, and workspace as a secondary path", () => {
-    expect(LEARNING_HARNESS_PATH).toBe("/acquisition");
-    expect(KNOWLEDGE_VERIFICATION_PATH).toBe("/knowledge-verification");
-    expect(KNOWLEDGE_MAPPING_PATH).toBe("/knowledge-mapping");
+    expect(LEARNING_HARNESS_PATH).toBe("/solve-protocols");
+    expect(KNOWLEDGE_VERIFICATION_PATH).toBe("/verify-protocols");
+    expect(KNOWLEDGE_MAPPING_PATH).toBe("/mapping-protocols");
     expect(USE_CASES_PATH).toBe("/use-cases");
     expect(DISCOVERY_CTA_LABEL).toBe("Discuss your use case");
     expect(ENTERPRISE_SETUP_MAILTO).toBe("mailto:daniel@uncertain.systems");
     expect(HARNESS_PRODUCT_COPY.workspaceHref).toBe("/workspace/new");
-    expect(read("app/acquisition/page.tsx")).toContain("HARNESS_PRODUCT_COPY.workspaceHref");
+    expect(read("app/solve-protocols/page.tsx")).toContain("HARNESS_PRODUCT_COPY.workspaceHref");
     expect(read("next.config.ts")).not.toMatch(
       /source:\s*["']\/knowledge-mapping["']\s*,\s*destination:\s*["']\/mapping["']/,
     );

@@ -66,7 +66,7 @@ describe("TAPBench product surfaces removed", () => {
     expect("tapbenchHref" in VERIFICATION_PRODUCT_COPY).toBe(false);
     expect("tapbenchCta" in VERIFICATION_PRODUCT_COPY).toBe(false);
     expect("tapbenchHref" in VERIFICATION_SCALE_COPY).toBe(false);
-    const kv = read("app/knowledge-verification/page.tsx");
+    const kv = read("app/verify-protocols/page.tsx");
     expect(kv).not.toContain("data-landing-tapbench");
     expect(kv).not.toContain("tapbenchHref");
     expect(kv).not.toContain("TAPBench");

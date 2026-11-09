@@ -71,8 +71,8 @@ export const VERIFICATION_APPROACH_COPY = {
     "Use Knowledge Mapping as the domain reference, and Build Understanding when the evidence points to further development.",
   relatedLinks: [
     { href: `${USE_CASES_PATH}#technical-hiring`, label: "Hard-problem assessment" },
-    { href: LEARNING_HARNESS_PATH, label: "Build Understanding" },
-    { href: KNOWLEDGE_MAPPING_PATH, label: "Knowledge Mapping" },
+    { href: LEARNING_HARNESS_PATH, label: "Solve" },
+    { href: KNOWLEDGE_MAPPING_PATH, label: "Map" },
   ],
 } as const;
 

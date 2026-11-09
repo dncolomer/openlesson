@@ -108,12 +108,12 @@ describe("combined vision + science hub", () => {
     expect(
       HARNESS_THESIS_LINKS.find((row) => row.href === SCIENCE_LEARNING_MODEL_PATH)?.label,
     ).toBe("Unsys model");
-    expect(read("app/acquisition/page.tsx")).toContain("MarketingDirectoryHero");
-    expect(read("app/acquisition/page.tsx")).toContain('marker="harness"');
-    expect(read("app/knowledge-verification/page.tsx")).toContain("MarketingDirectoryHero");
-    expect(read("app/knowledge-verification/page.tsx")).toContain('marker="verification"');
-    expect(read("app/knowledge-mapping/page.tsx")).toContain("MarketingDirectoryHero");
-    expect(read("app/knowledge-mapping/page.tsx")).toContain('marker="mapping"');
+    expect(read("app/solve-protocols/page.tsx")).toContain("MarketingDirectoryHero");
+    expect(read("app/solve-protocols/page.tsx")).toContain('marker="harness"');
+    expect(read("app/verify-protocols/page.tsx")).toContain("MarketingDirectoryHero");
+    expect(read("app/verify-protocols/page.tsx")).toContain('marker="verification"');
+    expect(read("app/mapping-protocols/page.tsx")).toContain("MarketingDirectoryHero");
+    expect(read("app/mapping-protocols/page.tsx")).toContain('marker="mapping"');
     expect(read("app/pricing/page.tsx")).not.toContain("ThesisDirectory");
     expect(HARNESS_PRICING_COPY.thesisLinks.length).toBeGreaterThan(0);
     expect(HARNESS_PRICING_COPY.thesisLinks.map((row) => row.label)).toContain("Unsys model");

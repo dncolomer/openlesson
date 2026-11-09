@@ -155,7 +155,7 @@ describe("high-resolution featured aesthetics", () => {
   });
 
   it("wires Home Featured hero and secondary to the high-res pool", () => {
-    const home = readRepo("components/dashboard/dashboard-home-tab.tsx");
+    const home = readRepo("components/dashboard/dashboard-browse-maps-tab.tsx");
     expect(home).toContain("filterFeaturedAestheticPool");
     expect(home).toContain("featuredStoredCoverUrl");
     expect(home).toContain("featuredCoverPool");

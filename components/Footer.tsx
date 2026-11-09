@@ -2,13 +2,17 @@
 
 import Link from "next/link";
 import { BrandLogo } from "@/components/BrandLogo";
-import { LEARNING_HARNESS_PATH } from "@/lib/marketing/paths";
+import {
+  KNOWLEDGE_MAPPING_PATH,
+  KNOWLEDGE_VERIFICATION_PATH,
+  LEARNING_HARNESS_PATH,
+} from "@/lib/marketing/paths";
 import { useI18n } from "@/lib/i18n";
 
 const productLinks = [
   { labelKey: "footer.learningHarness", href: LEARNING_HARNESS_PATH },
-  { labelKey: "footer.knowledgeVerification", href: "/knowledge-verification" },
-  { labelKey: "footer.knowledgeMapping", href: "/knowledge-mapping" },
+  { labelKey: "footer.knowledgeVerification", href: KNOWLEDGE_VERIFICATION_PATH },
+  { labelKey: "footer.knowledgeMapping", href: KNOWLEDGE_MAPPING_PATH },
   { labelKey: "footer.useCases", href: "/use-cases" },
   { labelKey: "footer.pricing", href: "/pricing" },
   { labelKey: "footer.vision", href: "/science" },

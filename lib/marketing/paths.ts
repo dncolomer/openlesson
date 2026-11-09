@@ -1,9 +1,14 @@
 /** Public marketing routes for the Uncertain Systems IA. */
 
-export const ACQUISITION_PATH = "/acquisition" as const;
-export const LEARNING_HARNESS_PATH = ACQUISITION_PATH;
-export const KNOWLEDGE_VERIFICATION_PATH = "/knowledge-verification" as const;
-export const KNOWLEDGE_MAPPING_PATH = "/knowledge-mapping" as const;
+export const SOLVE_PROTOCOLS_PATH = "/solve-protocols" as const;
+export const VERIFY_PROTOCOLS_PATH = "/verify-protocols" as const;
+export const MAPPING_PROTOCOLS_PATH = "/mapping-protocols" as const;
+
+/** Canonical product pages. Legacy names stay as aliases for existing imports. */
+export const ACQUISITION_PATH = SOLVE_PROTOCOLS_PATH;
+export const LEARNING_HARNESS_PATH = SOLVE_PROTOCOLS_PATH;
+export const KNOWLEDGE_VERIFICATION_PATH = VERIFY_PROTOCOLS_PATH;
+export const KNOWLEDGE_MAPPING_PATH = MAPPING_PROTOCOLS_PATH;
 export const USE_CASES_PATH = "/use-cases" as const;
 export const SUPPORT_PATH = "/support" as const;
 export const HARNESS_PRICING_PATH = "/pricing" as const;

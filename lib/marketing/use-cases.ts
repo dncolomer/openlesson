@@ -15,7 +15,7 @@ export const USE_CASES_COPY = {
   title: "Put knowledge building to work",
   lead: [
     "A researcher can hold an AI-generated argument no one on the team can yet question. A new colleague can read the documentation and still be unready to make a difficult call. A candidate can reach the right answer without showing how they got there.",
-    "Understanding, verification, and mapping can work together in each of these situations. The system organizes work around a difficult problem and evidence of understanding.",
+    "Solve Protocol, Verify Protocol, and Map Protocol can work together in each of these situations. The system organizes work around a difficult problem and evidence of understanding.",
   ],
   directoryEyebrow: "ON THIS PAGE",
   directoryTitle: "The cases.",
@@ -63,7 +63,7 @@ export const USE_CASES = [
     id: "research-ai",
     eyebrow: "FRONTIER WORK",
     directoryLabel: "Frontier work",
-    hint: "Understanding · Mapping · Verification",
+    hint: "Solve · Map · Verify",
     title: "Understand difficult work at the frontier",
     sections: [
       {
@@ -77,9 +77,9 @@ export const USE_CASES = [
     afterExample:
       "Human interpretability here means acquiring enough understanding to question the work. It is distinct from mechanistic interpretability of a model, and distinct from automated proof certification.",
     links: [
-      { href: LEARNING_HARNESS_PATH, label: "Build Understanding" },
-      { href: KNOWLEDGE_MAPPING_PATH, label: "Knowledge Mapping" },
-      { href: KNOWLEDGE_VERIFICATION_PATH, label: "Knowledge Verification" },
+      { href: LEARNING_HARNESS_PATH, label: "Solve" },
+      { href: KNOWLEDGE_MAPPING_PATH, label: "Map" },
+      { href: KNOWLEDGE_VERIFICATION_PATH, label: "Verify" },
     ],
     close: {
       title: "Leave with a record of what was actually examined",
@@ -92,7 +92,7 @@ export const USE_CASES = [
     id: "company-expertise",
     eyebrow: "TEAM EXPERTISE",
     directoryLabel: "Team expertise",
-    hint: "Mapping · Understanding · Verification",
+    hint: "Map · Solve · Verify",
     title: "Turn expert knowledge into team capability",
     sections: [
       {
@@ -108,9 +108,9 @@ export const USE_CASES = [
       "An engineer joins a team responsible for a data pipeline. Instead of only reading its runbook, they explore why an apparently healthy deployment is producing incomplete results. They trace dependencies, test explanations, and justify a recovery plan. An experienced colleague reviews the stored work and identifies which assumptions need another pass.",
     afterExample: "",
     links: [
-      { href: KNOWLEDGE_MAPPING_PATH, label: "Knowledge Mapping" },
-      { href: LEARNING_HARNESS_PATH, label: "Build Understanding" },
-      { href: KNOWLEDGE_VERIFICATION_PATH, label: "Knowledge Verification" },
+      { href: KNOWLEDGE_MAPPING_PATH, label: "Map" },
+      { href: LEARNING_HARNESS_PATH, label: "Solve" },
+      { href: KNOWLEDGE_VERIFICATION_PATH, label: "Verify" },
     ],
     close: {
       title: "Keep the region useful after the first cohort",
@@ -123,7 +123,7 @@ export const USE_CASES = [
     id: "technical-hiring",
     eyebrow: "TECHNICAL HIRING",
     directoryLabel: "Technical hiring",
-    hint: "Verification",
+    hint: "Verify",
     title: "Assess capability through hard problems",
     sections: [
       {
@@ -140,9 +140,9 @@ export const USE_CASES = [
     afterExample:
       "The visible evidence is the candidate's work in that situation. Whether it transfers to the team's production environment remains a judgment to investigate through discussion and other hiring evidence.",
     links: [
-      { href: KNOWLEDGE_VERIFICATION_PATH, label: "Knowledge Verification" },
-      { href: KNOWLEDGE_MAPPING_PATH, label: "Knowledge Mapping" },
-      { href: LEARNING_HARNESS_PATH, label: "Build Understanding" },
+      { href: KNOWLEDGE_VERIFICATION_PATH, label: "Verify" },
+      { href: KNOWLEDGE_MAPPING_PATH, label: "Map" },
+      { href: LEARNING_HARNESS_PATH, label: "Solve" },
     ],
     close: {
       title: "Leave with a more specific hiring conversation",

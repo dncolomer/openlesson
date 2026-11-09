@@ -212,17 +212,17 @@ describe("OG share inventory (one unsys standard)", () => {
     expect(science).toContain("standardShareSocialMetadata");
     expect(science).not.toContain("/science/opengraph-image");
 
-    const harness = read("app/acquisition/page.tsx");
+    const harness = read("app/solve-protocols/page.tsx");
     expect(harness).toContain("standardShareSocialMetadata");
     expect(harness).toMatch(/openGraph:\s*standardSocial\.openGraph/);
     expect(harness).toMatch(/twitter:\s*standardSocial\.twitter/);
 
-    const verification = read("app/knowledge-verification/page.tsx");
+    const verification = read("app/verify-protocols/page.tsx");
     expect(verification).toContain("standardShareSocialMetadata");
     expect(verification).toMatch(/openGraph:\s*standardSocial\.openGraph/);
     expect(verification).toMatch(/twitter:\s*standardSocial\.twitter/);
 
-    const mapping = read("app/knowledge-mapping/page.tsx");
+    const mapping = read("app/mapping-protocols/page.tsx");
     expect(mapping).toContain("standardShareSocialMetadata");
     expect(mapping).toMatch(/openGraph:\s*standardSocial\.openGraph/);
     expect(mapping).toMatch(/twitter:\s*standardSocial\.twitter/);

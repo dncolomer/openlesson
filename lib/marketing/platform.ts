@@ -1,5 +1,5 @@
 /**
- * Landing copy: Build Understanding, verification, and mapping as the front door.
+ * Landing copy: Solve, Verify, and Map as the front door.
  * Pages interpolate these strings so tests drive shipped copy, not a parallel corpus.
  */
 import {
@@ -80,7 +80,7 @@ export const PLATFORM_DELIVERY = {
 
 export const PLATFORM_LAYERS = {
   eyebrow: "THREE USES",
-  title: "Build Understanding, Knowledge Verification, Knowledge Mapping.",
+  title: "Solve Protocol, Verify Protocol, Map Protocol.",
 } as const;
 
 export const PLATFORM_CORE = {
@@ -130,7 +130,7 @@ export const PLATFORM_PROOF = {
 export const PLATFORM_OUTCOMES = {
   eyebrow: "USE CASES",
   title: "Put knowledge building to work.",
-  lead: "Understanding, verification, and mapping can work together when a team needs to understand difficult work, develop expertise, or assess capability through hard problems.",
+  lead: "Solve Protocol, Verify Protocol, and Map Protocol can work together when a team needs to understand difficult work, develop expertise, or assess capability through hard problems.",
   cta: DISCOVERY_CTA_LABEL,
   ctaHref: ENTERPRISE_SETUP_MAILTO,
   moreCta: "Read the use cases",
@@ -163,8 +163,8 @@ export const PLATFORM_OUTCOMES = {
 export const PLATFORM_PRODUCTS = {
   harness: {
     eyebrow: "PROBLEM WORK",
-    name: "Build Understanding",
-    title: "Build Understanding",
+    name: "Solve",
+    title: "Solve Protocol",
     body: "The Problem Solving Harness is how Build Understanding works in software today. You work through a demanding problem, make reasoning visible through supported session inputs, and follow up on gaps the work reveals. AI can sit in that working environment where the session supports it. The result is a work trace and a clearer basis for further investigation, not a finished course.",
     href: LEARNING_HARNESS_PATH,
     cta: "Explore understanding",
@@ -174,8 +174,8 @@ export const PLATFORM_PRODUCTS = {
   },
   verification: {
     eyebrow: "WORK EVIDENCE",
-    name: "Knowledge Verification",
-    title: "Knowledge Verification",
+    name: "Verify",
+    title: "Verify Protocol",
     body: "Knowledge Verification looks at how someone explores a demanding problem, tests assumptions, and develops their reasoning, alongside the answer they reach. A session stores that work and can relate it to a knowledge region you define. The result is evidence for a hiring or development decision, not a score of the whole person.",
     href: KNOWLEDGE_VERIFICATION_PATH,
     cta: "Explore verification",
@@ -185,8 +185,8 @@ export const PLATFORM_PRODUCTS = {
   },
   mapping: {
     eyebrow: "DOMAIN REFERENCE",
-    name: "Knowledge Mapping",
-    title: "Knowledge Mapping",
+    name: "Map",
+    title: "Map Protocol",
     body: "Knowledge Mapping is the domain asset: a knowledge region built around your expertise, with positions informed by work. Use it as a reference while people develop understanding and when you examine that understanding. It is a model of the domain you care about, not a neurological instrument and not a complete picture of competence.",
     href: KNOWLEDGE_MAPPING_PATH,
     cta: "Explore mapping",
@@ -196,7 +196,7 @@ export const PLATFORM_PRODUCTS = {
   },
 } as const;
 
-/** Full product catalog: Build Understanding, Knowledge Verification, Knowledge Mapping. */
+/** Full product catalog: Solve, Verify, Map. */
 export const PLATFORM_PRODUCT_LIST = [
   PLATFORM_PRODUCTS.harness,
   PLATFORM_PRODUCTS.verification,

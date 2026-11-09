@@ -33,7 +33,6 @@ function namesRetiredProduct(text: string) {
 
 const FORMER_PRODUCT_SLOTS = [
   "app/layout.tsx",
-  "app/knowledge-verification/page.tsx",
   "app/skill-verification/SkillVerificationLanding.tsx",
   "lib/seo/platform-page.ts",
   "lib/seo/product-page.ts",
@@ -162,7 +161,6 @@ describe("retired product language is gone from shipped prose", () => {
     const tapWord = /\bTAP\b/;
     const lineupFiles = [
       "app/layout.tsx",
-      "app/knowledge-verification/page.tsx",
       "app/skill-verification/SkillVerificationLanding.tsx",
       "app/docs/proof-of-work-api/page.tsx",
       "lib/marketing/verification-product.ts",

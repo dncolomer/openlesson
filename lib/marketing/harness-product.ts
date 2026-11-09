@@ -41,8 +41,8 @@ export const HARNESS_PRODUCT_COPY = {
   related:
     "Knowledge Mapping holds the domain region this work can refer to. Knowledge Verification is another way to examine the understanding the same kind of work reveals.",
   relatedLinks: [
-    { href: KNOWLEDGE_MAPPING_PATH, label: "Knowledge Mapping" },
-    { href: KNOWLEDGE_VERIFICATION_PATH, label: "Knowledge Verification" },
+    { href: KNOWLEDGE_MAPPING_PATH, label: "Map" },
+    { href: KNOWLEDGE_VERIFICATION_PATH, label: "Verify" },
   ],
   foraging:
     "Epistemic foraging is the policy influence: search for information that reduces uncertainty, rather than optimizing for tests and practice repetition.",

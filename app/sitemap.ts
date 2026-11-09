@@ -11,19 +11,19 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 1.0,
     },
     {
-      url: `${baseUrl}/acquisition`,
+      url: `${baseUrl}/solve-protocols`,
       lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 0.95,
     },
     {
-      url: `${baseUrl}/knowledge-verification`,
+      url: `${baseUrl}/verify-protocols`,
       lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 0.95,
     },
     {
-      url: `${baseUrl}/knowledge-mapping`,
+      url: `${baseUrl}/mapping-protocols`,
       lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 0.95,

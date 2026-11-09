@@ -120,7 +120,7 @@ describe("Accelerando-8192 overlay", () => {
     expect(footer).not.toContain("Accelerando-8192");
     expect(ACCELERANDO_SOURCE).toBe("https://github.com/gillverd/accelerando-8192");
 
-    const acquisition = read("app/acquisition/page.tsx");
+    const acquisition = read("app/solve-protocols/page.tsx");
     expect(acquisition).not.toContain("AccelerandoRun");
 
     expect(existsSync(join(ROOT, "public/data/alphabet.json"))).toBe(false);

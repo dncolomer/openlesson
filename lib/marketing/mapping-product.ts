@@ -46,7 +46,7 @@ export const MAPPING_PLATFORM_COPY = {
   relatedLinks: [
     { href: `${USE_CASES_PATH}#company-expertise`, label: "Team expertise" },
     { href: `${USE_CASES_PATH}#research-ai`, label: "Frontier work" },
-    { href: LEARNING_HARNESS_PATH, label: "Build Understanding" },
-    { href: KNOWLEDGE_VERIFICATION_PATH, label: "Knowledge Verification" },
+    { href: LEARNING_HARNESS_PATH, label: "Solve" },
+    { href: KNOWLEDGE_VERIFICATION_PATH, label: "Verify" },
   ],
 } as const;

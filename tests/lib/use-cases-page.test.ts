@@ -26,9 +26,9 @@ describe("use cases listing", () => {
     expect(USE_CASES_NAV_LINK.href).toBe("/use-cases");
     expect(USE_CASES_NAV_LINK.label).toBe("Use cases");
     expect(MAIN_NAV_PRODUCT_LINKS.map((link) => link.label)).toEqual([
-      "Understanding",
-      "Verification",
-      "Mapping",
+      "Solve Protocols",
+      "Verify Protocols",
+      "Mapping Protocols",
     ]);
     const nav = read("components/LandingNav.tsx");
     expect(nav).toContain("data-nav-products");
@@ -41,8 +41,10 @@ describe("use cases listing", () => {
     expect(productsAt).toBeGreaterThan(-1);
     expect(useCasesAt).toBeGreaterThan(productsAt);
     expect(pricingAt).toBeGreaterThan(useCasesAt);
-    expect(nav).toContain("font-medium text-zinc-100");
-    expect(nav).toMatch(/data-nav-products[\s\S]*?console-copy|console-copy[\s\S]*?data-nav-products/);
+    expect(nav).toContain("PLATFORM_NAV_LABEL");
+    expect(nav).toContain("bg-white");
+    expect(nav).toContain("text-black");
+    expect(nav).toContain("platform-menu");
   });
 
   it("ships a magazine page of three cases, connecting ideas, and a discovery close", () => {

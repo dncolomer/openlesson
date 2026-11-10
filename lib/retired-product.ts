@@ -13,7 +13,7 @@ export const RETIRED_PRODUCT_BODY =
 
 export const RETIRED_PRODUCT_MAILTO = `mailto:${RETIRED_PRODUCT_EMAIL}` as const;
 
-/** Public paths that used to ship maps, workspaces, AYCL shop, support, or brain priming. */
+/** Public paths that used to ship maps, workspaces, AYCL shop, support, brain priming, or Kardashev. */
 export const RETIRED_PRODUCT_PATHS = [
   "/workspace",
   "/workspaces",
@@ -22,4 +22,5 @@ export const RETIRED_PRODUCT_PATHS = [
   "/docs/learning-map-api",
   "/p",
   "/brain-priming",
+  "/kardashev",
 ] as const;

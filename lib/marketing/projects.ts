@@ -4,13 +4,11 @@ import type { ThesisDeepLink } from "@/lib/science/hub";
 
 export const PROJECTS_PATHS = {
   events: "/community-events",
-  kardashev: "/kardashev",
   academyK: ACADEMY_K_HREF,
 } as const;
 
 export const PROJECTS_DIRECTORY: readonly ThesisDeepLink[] = [
   { href: PROJECTS_PATHS.events, label: "Community Events", hint: "Hackathons and gatherings" },
-  { href: PROJECTS_PATHS.kardashev, label: "Kardashev Research", hint: "Coming soon" },
   { href: PROJECTS_PATHS.academyK, label: "Academy-k", hint: "Course authoring" },
 ];
 

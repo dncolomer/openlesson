@@ -27,7 +27,6 @@ export const PRICING_NAV_LINKS = [
 /** Community dropdown — AYCL lives under Solve, not here. */
 export const COMMUNITY_LINKS = [
   { href: "/community-events", label: "Community Events" },
-  { href: "/kardashev", label: "Kardashev Research" },
   { href: ACADEMY_K_HREF, label: "Academy-k" },
 ] as const;
 

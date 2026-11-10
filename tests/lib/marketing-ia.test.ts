@@ -405,6 +405,7 @@ describe("sitemap lists new public pages", () => {
     expect(sitemap).toContain("/community-events");
     expect(sitemap).toContain("/community-events/ground-state");
     expect(sitemap).not.toContain("/brain-priming");
+    expect(sitemap).not.toContain("/kardashev");
     expect(sitemap).toContain("/use-cases");
     expect(sitemap).not.toContain("/use-cases/");
     expect(sitemap).not.toContain("/products/");
@@ -449,10 +450,10 @@ describe("nav and footer hrefs resolve to shipped pages", () => {
   it("Community nav labels and Navbar match the current IA", () => {
     expect(COMMUNITY_LINKS.map((l) => l.label)).toEqual([
       "Community Events",
-      "Kardashev Research",
       "Academy-k",
     ]);
     expect(COMMUNITY_LINKS.map((l) => l.href)).not.toContain("/brain-priming");
+    expect(COMMUNITY_LINKS.map((l) => l.href)).not.toContain("/kardashev");
     expect(COMMUNITY_LINKS.map((l) => l.href)).toContain("https://academy-k.com/");
     const navbar = read("components/Navbar.tsx");
     expect(navbar).toContain("COMMUNITY_LINKS");
@@ -467,13 +468,7 @@ describe("nav and footer hrefs resolve to shipped pages", () => {
     expect(verification).not.toContain("Verify Human Knowledge without tests.");
     const vision = read("app/vision/page.tsx");
     expect(vision).not.toContain("$UNSYS");
-    const kardashev = read("app/kardashev/page.tsx");
-    expect(kardashev).toContain("Coming soon");
-    expect(kardashev).toContain("data-kardashev-coming-soon");
-    expect(kardashev).not.toContain("KardashevBoard");
-    expect(kardashev).toContain("MarketingPageShell");
-    expect(kardashev).toContain("MarketingDirectoryHero");
-    expect(kardashev).toContain("PROJECTS_DIRECTORY");
+    expect(read("app/kardashev/page.tsx")).toContain("RetiredProductPage");
     const eventsPage = read("app/community-events/page.tsx");
     expect(eventsPage).toContain("MarketingDirectoryHero");
     expect(eventsPage).toContain("console-copy");

@@ -43,6 +43,7 @@ describe("retired product page", () => {
       "/docs/learning-map-api",
       "/p",
       "/brain-priming",
+      "/kardashev",
     ]);
     expect(read("app/workspace/[[...slug]]/page.tsx")).toContain("RetiredProductPage");
     expect(read("app/workspaces/page.tsx")).toContain("RetiredProductPage");
@@ -53,6 +54,7 @@ describe("retired product page", () => {
     expect(read("app/p/[id]/[slug]/page.tsx")).not.toContain("WorkspaceView");
     expect(read("app/brain-priming/page.tsx")).toContain("RetiredProductPage");
     expect(read("app/brain-priming/join/page.tsx")).toContain("RetiredProductPage");
+    expect(read("app/kardashev/page.tsx")).toContain("RetiredProductPage");
     expect(existsSync(join(ROOT, "app/workspace/[id]/page.tsx"))).toBe(false);
     expect(existsSync(join(ROOT, "app/workspace/new/page.tsx"))).toBe(false);
     expect(existsSync(join(ROOT, "app/all-you-can-learn/page.tsx"))).toBe(false);

@@ -138,14 +138,14 @@ describe("practice catalog", () => {
 });
 
 describe("practice dashboard surfaces", () => {
-  it("puts browse maps on Learning and exercises plus Performance on Solve / Practice", () => {
+  it("puts Browse Problems next to Performance as standalone top-level sections", () => {
     expect(parseDashboardTab("practice")).toBe("practice");
     expect(isDashboardBrowseMapsTab("browse_maps")).toBe(false);
     expect(isDashboardPracticeTab("practice")).toBe(true);
     expect(isDashboardStudioTab("practice_studio")).toBe(false);
     expect(parseDashboardTab("practice_studio")).toBe("solve_studio");
     expect(parseDashboardTab("practice_performance")).toBe("practice_performance");
-    expect(dashboardFrameLabel("practice")).toBe("Practice library");
+    expect(dashboardFrameLabel("practice")).toBe("Browse Problems");
     expect(dashboardFrameLabel("solve_studio")).toBe("Data Studio");
     expect(dashboardFrameLabel("practice_performance")).toBe("Performance");
     expect(dashboardNavGroupIdForTab("practice")).toBeNull();

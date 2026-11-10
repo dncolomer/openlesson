@@ -7,6 +7,7 @@ import {
   DASHBOARD_TOP_NAV_ITEMS,
   dashboardCreateHref,
   dashboardCreateLabel,
+  dashboardPracticeCreateFlowCtas,
   dashboardFrameLabel,
   clusterDashboardNavItems,
   dashboardNavGroupIdForTab,
@@ -111,6 +112,17 @@ describe("dashboard nav", () => {
     expect(dashboardCreateLabel("calibration")).toBe("Create Calibration flow →");
     expect(dashboardProductLabel("solve")).toBe("Solve");
     expect(dashboardCreateLabel("solve")).toBe("Create Solve flow →");
+    expect(dashboardPracticeCreateFlowCtas().map((cta) => [cta.id, cta.href, cta.label])).toEqual([
+      ["solve", "/solve/flows/new", "Create Solve / Practice flow"],
+      ["verification", "/verification/flows/new", "Create Verify flow"],
+      ["calibration", "/calibration/flows/new", "Create Calibrate flow"],
+    ]);
+    expect(readRepo("components/dashboard/dashboard-practice-tab.tsx")).toContain(
+      "data-dashboard-practice-create",
+    );
+    expect(readRepo("components/dashboard/dashboard-practice-tab.tsx")).toContain(
+      "dashboardPracticeCreateFlowCtas",
+    );
     expect(dashboardFrameLabel("solve")).toBe("Solve");
     expect(dashboardFrameLabel("solve_regions")).toBe("Knowledge regions");
     expect(dashboardStudioProduct("solve_studio")).toBe("solve");
@@ -418,7 +430,7 @@ describe("dashboard platform surface", () => {
       "practice",
       "practice_performance",
     ]);
-    expect(DASHBOARD_PRACTICE_NAV_ITEM.label).toBe("Browse exercises");
+    expect(DASHBOARD_PRACTICE_NAV_ITEM.label).toBe("Browse Problems");
     expect(DASHBOARD_PERFORMANCE_NAV_ITEM.label).toBe("Performance");
     expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain("data-dashboard-nav-home");
     expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain(

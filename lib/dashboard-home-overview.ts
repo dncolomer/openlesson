@@ -101,7 +101,7 @@ export function dashboardHomeCtas(): DashboardHomeCta[] {
       id: "practice",
       label: "Solve / Practice",
       href: solveLinks[0]!.href,
-      body: "Browse exercises, run Solve flows, and review knowledge regions, Data Studio, and performance.",
+      body: "Browse problems, run Solve flows, and review knowledge regions, Data Studio, and performance.",
       ...useCaseVisual(DASHBOARD_HOME_CTA_USE_CASE_IDS.practice),
       links: solveLinks,
     },

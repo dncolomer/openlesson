@@ -71,7 +71,7 @@ export const DASHBOARD_HOME_NAV_ITEM: DashboardNavItem = {
 
 export const DASHBOARD_PRACTICE_NAV_ITEM: DashboardNavItem = {
   id: "practice",
-  label: "Browse exercises",
+  label: "Browse Problems",
 };
 
 export const DASHBOARD_PERFORMANCE_NAV_ITEM: DashboardNavItem = {
@@ -314,8 +314,34 @@ export function dashboardCreateLabel(tab: DashboardProductTab): string {
   return `Create ${dashboardProductLabel(tab)} flow →`;
 }
 
+export type DashboardPracticeCreateFlowCta = {
+  id: DashboardProductTab;
+  label: string;
+  href: string;
+};
+
+export function dashboardPracticeCreateFlowCtas(): readonly DashboardPracticeCreateFlowCta[] {
+  return [
+    {
+      id: "solve",
+      label: "Create Solve / Practice flow",
+      href: dashboardCreateHref("solve"),
+    },
+    {
+      id: "verification",
+      label: "Create Verify flow",
+      href: dashboardCreateHref("verification"),
+    },
+    {
+      id: "calibration",
+      label: "Create Calibrate flow",
+      href: dashboardCreateHref("calibration"),
+    },
+  ];
+}
+
 export function dashboardFrameLabel(tab: DashboardTab): string {
-  if (tab === "practice") return "Practice library";
+  if (tab === "practice") return "Browse Problems";
   if (tab === "practice_performance") return "Performance";
   if (isDashboardRegionsTab(tab)) return "Knowledge regions";
   if (isDashboardStudioTab(tab)) return "Data Studio";

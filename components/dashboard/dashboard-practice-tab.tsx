@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
+import { dashboardPracticeCreateFlowCtas } from "@/lib/dashboard-nav";
 import {
   PRACTICE_CATALOG_PATH,
   PRACTICE_START_KINDS,
@@ -128,36 +130,59 @@ export function DashboardPracticeTab({
 
   const browseMode = searching ? "search" : level;
   const emptyCopy = searching
-    ? "No exercises match that search."
+    ? "No problems match that search."
     : groups.length === 0
-      ? "No exercises yet."
-      : "No exercises in this topic.";
+      ? "No problems yet."
+      : "No problems in this topic.";
+  const createCtas = dashboardPracticeCreateFlowCtas();
 
   return (
     <div className="space-y-6" data-dashboard-practice>
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
-            Browse exercises
+            Browse Problems
           </p>
           <h2 className="mt-1 text-2xl font-medium tracking-[-0.6px] text-white">
-            Practice library
+            Problems
           </h2>
           <p className="mt-1 max-w-2xl text-sm text-neutral-400">
-            Choose a category, then a topic, then open an exercise as Solve / Practice, Verify,
+            Choose a category, then a topic, then open a problem as Solve / Practice, Verify,
             or Calibrate.
           </p>
+        </div>
+        <div className="flex min-w-0 flex-col gap-2" data-dashboard-practice-create>
+          <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
+            Create your own
+          </p>
+          <p className="text-sm text-neutral-400">Practice, Verify, and Solve flows.</p>
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+            {createCtas.map((cta) => (
+              <Link
+                key={cta.id}
+                href={cta.href}
+                data-dashboard-practice-create-kind={cta.id}
+                className={
+                  cta.id === "solve"
+                    ? "inline-flex h-9 items-center justify-center bg-white px-4 text-sm font-medium text-black transition hover:bg-neutral-200"
+                    : "console-button inline-flex h-9 items-center justify-center px-4 text-sm font-medium text-white transition hover:border-white/80"
+                }
+              >
+                {cta.label}
+              </Link>
+            ))}
+          </div>
         </div>
       </header>
 
       <section className="console-copy px-4 py-3" data-dashboard-practice-search>
         <label className="block min-w-0">
-          <span className="sr-only">Search exercises</span>
+          <span className="sr-only">Search problems</span>
           <input
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search exercises"
+            placeholder="Search problems"
             className="w-full rounded-none border border-white/40 bg-black px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-white/80 focus:outline-none"
           />
         </label>
@@ -222,7 +247,7 @@ export function DashboardPracticeTab({
       </nav>
 
       {loading ? (
-        <p className="text-sm text-neutral-500">Loading exercises…</p>
+        <p className="text-sm text-neutral-500">Loading problems…</p>
       ) : filtered.length === 0 ? (
         <p className="text-sm text-neutral-500">{emptyCopy}</p>
       ) : browseMode === "categories" ? (
@@ -245,7 +270,7 @@ export function DashboardPracticeTab({
                   </h3>
                   <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-neutral-500">
                     {countLabel(group.subcategories.length, "topic", "topics")} ·{" "}
-                    {countLabel(problems, "exercise", "exercises")}
+                    {countLabel(problems, "problem", "problems")}
                   </p>
                 </button>
               </li>
@@ -270,7 +295,7 @@ export function DashboardPracticeTab({
                   {sub.subcategory}
                 </h3>
                 <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-neutral-500">
-                  {countLabel(sub.problems.length, "exercise", "exercises")}
+                  {countLabel(sub.problems.length, "problem", "problems")}
                 </p>
               </button>
             </li>

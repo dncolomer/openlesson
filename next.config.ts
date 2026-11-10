@@ -123,7 +123,10 @@ const nextConfig: NextConfig = {
     ];
   },
   async rewrites() {
-    return [{ source: "/pitch", destination: "/pitch.pdf" }];
+    return [
+      { source: "/pitch", destination: "/pitch.pdf" },
+      { source: "/pitch-product", destination: "/pitch-product.pdf" },
+    ];
   },
   images: {
     remotePatterns: [

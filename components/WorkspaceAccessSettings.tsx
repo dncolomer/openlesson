@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import type { Workspace } from "@/components/WorkspaceView";
-import { AYCL_SUGGESTED_CATEGORIES } from "@/lib/dashboard-home-catalog";
+import { AYCL_SUGGESTED_CATEGORIES } from "@/lib/aycl-marketplace";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import {
   MAP_PLAY_INSIGHTS_SHARE_LABEL,

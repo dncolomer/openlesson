@@ -172,9 +172,7 @@ describe("block-starter-flag UI + host structural wiring", () => {
     const add = readSrc("components/WorkspaceAddBlockPane.tsx");
     const shape = readSrc("components/WorkspaceGenerateShapePane.tsx");
     const view = readWorkspaceViewSurface();
-    const aycl = readSrc("components/AyclWorkspaceView.tsx");
     const gridOps = readGridOpsSurface();
-    const addSlot = readSrc("app/api/workspace/add-block-at-slot/route.ts");
     const helper = readSrc("lib/block-starter-flag.ts");
 
     expect(edit).not.toContain("data-block-edit-starter");
@@ -188,7 +186,6 @@ describe("block-starter-flag UI + host structural wiring", () => {
     expect(view).toContain("is_start: Boolean(opts?.isStart)");
     expect(view).toContain("is_start: Boolean(payload.isStart)");
     expect(view).toContain("buildUpdateBlockPayload");
-    expect(aycl).toContain("WorkspaceView");
     expect(view).toContain("is_start: Boolean(opts?.isStart)");
     expect(view).toContain("is_start: Boolean(payload.isStart)");
     expect(view).toContain("buildUpdateBlockPayload");
@@ -196,15 +193,11 @@ describe("block-starter-flag UI + host structural wiring", () => {
     // APIs resolve author starter rather than always false on create
     expect(gridOps).toContain("resolveCreateBlockIsStart");
     expect(gridOps).toContain("updateFields.is_start = isStartBody");
-    expect(addSlot).toContain("resolveCreateBlockIsStart");
     expect(helper).toContain("export function resolveCreateBlockIsStart");
     expect(helper).toContain("export function buildUpdateBlockPayload");
 
     // Must not force create is_start: false unconditionally in the insert path
     // (author opt-in + empty-map resolution replace hard-coded false).
-    expect(addSlot).toMatch(
-      /is_start:\s*resolveCreateBlockIsStart\s*\(\s*\{\s*authorStarter/,
-    );
     expect(gridOps).toMatch(
       /is_start:\s*resolveCreateBlockIsStart\s*\(\s*\{\s*authorStarter/,
     );
@@ -220,10 +213,7 @@ describe("block-starter-flag UI + host structural wiring", () => {
         "view_add_is_start=" + view.includes("is_start: Boolean(opts?.isStart)"),
         "view_shape_is_start=" + view.includes("is_start: Boolean(payload.isStart)"),
         "view_update_builder=" + view.includes("buildUpdateBlockPayload"),
-        "aycl_add_is_start=" + aycl.includes("is_start: Boolean(opts?.isStart)"),
-        "aycl_shape_is_start=" + aycl.includes("is_start: Boolean(payload.isStart)"),
         "grid_ops_resolve=" + gridOps.includes("resolveCreateBlockIsStart"),
-        "add_slot_resolve=" + addSlot.includes("resolveCreateBlockIsStart"),
         "helper_create=" + helper.includes("resolveCreateBlockIsStart"),
         "helper_update=" + helper.includes("buildUpdateBlockPayload"),
       ].join("\n") + "\n",
@@ -234,6 +224,5 @@ describe("block-starter-flag UI + host structural wiring", () => {
     expect(body).toContain("add_starter=false");
     expect(body).toContain("shape_starter=false");
     expect(body).toContain("grid_ops_resolve=true");
-    expect(body).toContain("add_slot_resolve=true");
   });
 });

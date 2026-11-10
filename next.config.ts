@@ -29,16 +29,7 @@ const nextConfig: NextConfig = {
         destination: "/docs/learning-map-api",
         permanent: true,
       },
-      {
-        source: "/docs/proof-of-work-api",
-        destination: "/docs/learning-map-api",
-        permanent: true,
-      },
-      {
-        source: "/docs/proof-of-work-api/:path*",
-        destination: "/docs/learning-map-api/:path*",
-        permanent: true,
-      },
+
       // Former /platform marketing path must not redirect onto use-cases.
       // Nav "Platform" uses client hash /#platform on home — server redirects stay path-only.
       { source: "/platform", destination: "/", permanent: true },

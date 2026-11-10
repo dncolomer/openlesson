@@ -55,7 +55,6 @@ export async function forkWorkspaceExactCopy(
       title,
       status: "active",
       is_public: false,
-      is_all_you_can_learn: false,
       author_id: params.ownerUserId,
       original_workspace_id: params.originalWorkspaceId ?? params.sourceWorkspaceId,
       description: sourcePlan.description ?? null,

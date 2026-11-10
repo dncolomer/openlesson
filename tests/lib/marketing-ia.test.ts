@@ -292,7 +292,7 @@ describe("product pages: verification owns platform/approach; harness owns AYCL"
     for (const point of HARNESS_PRODUCT_COPY.points) {
       expect(existsSync(join(ROOT, "public", point.image.replace(/^\//, "")))).toBe(true);
     }
-    expect(HARNESS_PRODUCT_COPY.ayclHref).toBe("/all-you-can-learn");
+    expect("ayclHref" in HARNESS_PRODUCT_COPY).toBe(false);
   });
 
   it("AYCL is not in the Community nav group", () => {
@@ -306,24 +306,22 @@ describe("product pages: verification owns platform/approach; harness owns AYCL"
 });
 
 describe("Support this Project is footer-only", () => {
-  it("ships the Support this Project page with relocated $UNSYS copy", () => {
+  it("retires the Support this Project page", () => {
     expect(existsSync(join(ROOT, "app/support/page.tsx"))).toBe(true);
     const page = read("app/support/page.tsx");
-    expect(page).toContain("Support this Project");
-    expect(page).toContain("$UNSYS");
-    expect(page).toContain("Buy $UNSYS");
-    expect(page).toContain("staking");
-    expect(page).toContain("Tokenomics");
+    expect(page).toContain("RetiredProductPage");
+    expect(page).not.toContain("Support this Project");
+    expect(page).not.toContain("$UNSYS");
     expect(SUPPORT_PAGE_TITLE).toBe("Support this Project");
     expect(SUPPORT_COPY.buyCta).toBe("Buy $UNSYS");
   });
 
-  it("footer links Support this Project; main nav does not", () => {
+  it("footer and main nav do not present Support as live product", () => {
     const footer = read("components/Footer.tsx");
     const nav = read("components/LandingNav.tsx");
     const navModule = read("lib/marketing/nav.ts");
-    expect(footer).toContain('href: "/support"');
-    expect(footer).toContain("footer.supportThisProject");
+    expect(footer).not.toContain('href: "/support"');
+    expect(footer).not.toContain("footer.supportThisProject");
     expect(nav).not.toContain("/support");
     expect(nav).not.toContain("Support this Project");
     expect(navModule).not.toContain("/support");
@@ -344,12 +342,12 @@ describe("Support this Project is footer-only", () => {
 });
 
 describe("unified pricing + public module checkout", () => {
-  it("pricing page shows free signup, credit packs, and AYCL", () => {
+  it("pricing page shows free signup and credit packs", () => {
     const page = read("app/pricing/page.tsx");
     expect(page).toContain("PRICING_PAGE_SKUS");
-    expect(page).toContain("data-testid=\"pricing-aycl-link\"");
-    expect(page).toContain("UNIFIED_PRICING_COPY.ayclHref");
-    expect(HARNESS_PRICING_COPY.ayclHref).toBe("/all-you-can-learn");
+    expect(page).not.toContain("data-testid=\"pricing-aycl-link\"");
+    expect(page).not.toContain("UNIFIED_PRICING_COPY.ayclHref");
+    expect("ayclHref" in HARNESS_PRICING_COPY).toBe(false);
     expect(HARNESS_PRICING_COPY.monthlyCadence).toMatch(/one-time/);
     expect(HARNESS_PRICING_COPY.trialPrice).toBe("$0");
     expect(page).toContain("data-testid={`checkout-${sku}`}");
@@ -401,11 +399,12 @@ describe("sitemap lists new public pages", () => {
     expect(sitemap).not.toContain("/pricing/authoring");
     expect(sitemap).not.toContain("/pricing/verification");
     expect(sitemap).not.toContain("/pricing/mapping");
-    expect(sitemap).toContain("/support");
-    expect(sitemap).toContain("/all-you-can-learn");
+    expect(sitemap).not.toContain("/support");
+    expect(sitemap).not.toContain("/all-you-can-learn");
+    expect(sitemap).not.toContain("/docs/learning-map-api");
     expect(sitemap).toContain("/community-events");
     expect(sitemap).toContain("/community-events/ground-state");
-    expect(sitemap).toContain("/brain-priming");
+    expect(sitemap).not.toContain("/brain-priming");
     expect(sitemap).toContain("/use-cases");
     expect(sitemap).not.toContain("/use-cases/");
     expect(sitemap).not.toContain("/products/");
@@ -451,10 +450,9 @@ describe("nav and footer hrefs resolve to shipped pages", () => {
     expect(COMMUNITY_LINKS.map((l) => l.label)).toEqual([
       "Community Events",
       "Kardashev Research",
-      "Brain Priming Protocol",
       "Academy-k",
     ]);
-    expect(COMMUNITY_LINKS.map((l) => l.href)).toContain("/brain-priming");
+    expect(COMMUNITY_LINKS.map((l) => l.href)).not.toContain("/brain-priming");
     expect(COMMUNITY_LINKS.map((l) => l.href)).toContain("https://academy-k.com/");
     const navbar = read("components/Navbar.tsx");
     expect(navbar).toContain("COMMUNITY_LINKS");
@@ -483,6 +481,6 @@ describe("nav and footer hrefs resolve to shipped pages", () => {
     expect(read("app/community-events/probabilistic-computing/page.tsx")).toContain(
       "MarketingDirectoryHero",
     );
-    expect(read("app/brain-priming/page.tsx")).toContain("MarketingDirectoryHero");
+    expect(read("app/brain-priming/page.tsx")).toContain("RetiredProductPage");
   });
 });

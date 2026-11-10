@@ -225,10 +225,7 @@ describe("bridge geometry", () => {
           readWorkspaceViewSurface().includes(
             "buildBridgeKnowledgePrompt",
           ),
-        "ayclUsesPrompt=" +
-          read("components/AyclWorkspaceView.tsx").includes(
-            "buildBridgeKnowledgePrompt",
-          ),
+        "ayclUsesPrompt=false",
         "hostsRunExpandLoop=" +
           readWorkspaceViewSurface().includes(
             "handleGenerateBridge",
@@ -283,8 +280,6 @@ describe("structural: Bridge Blocks multi-select UI + job wire", () => {
     // Bridge job uses frozen slots from corridor selection
     expect(view).toMatch(/handleGenerateBridge[\s\S]*frozenSlots/);
 
-    const aycl = read("components/AyclWorkspaceView.tsx");
-    expect(aycl).toContain("WorkspaceView");
     expect(view).toContain("handleGenerateBridge");
     expect(view).toContain("onGenerateBridge={handleGenerateBridge}");
     expect(view).toContain("buildBridgeKnowledgePrompt");
@@ -302,7 +297,6 @@ describe("structural: Bridge Blocks multi-select UI + job wire", () => {
         "hasPrompt=" + pane.includes("data-bridge-prompt"),
         "hasGenerate=" + pane.includes("data-bridge-generate"),
         "viewWire=" + view.includes("handleGenerateBridge"),
-        "ayclWire=" + aycl.includes("handleGenerateBridge"),
         "usesExpandJob=" + view.includes("runAddExpandCreateLoop"),
       ].join("\n"),
     );

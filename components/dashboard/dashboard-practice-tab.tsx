@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import {
   PRACTICE_CATALOG_PATH,
+  PRACTICE_START_KINDS,
   PRACTICE_START_PATH,
   countPracticeProblems,
   filterPracticeCatalog,
@@ -12,6 +13,7 @@ import {
   practiceBrowseLevel,
   type PracticeCategoryGroup,
   type PracticeProblem,
+  type PracticeStartKind,
 } from "@/lib/practice-problems";
 import { freeWeeklySessionLimitMessage } from "@/lib/free-tier";
 
@@ -71,26 +73,28 @@ export function DashboardPracticeTab({
   const subcategoryGroup =
     categoryGroup?.subcategories.find((sub) => sub.subcategory === subcategory) || null;
 
-  async function startProblem(problem: PracticeProblem) {
+  async function startProblem(problem: PracticeProblem, kind: PracticeStartKind) {
     if (busyId) return;
-    setBusyId(problem.id);
+    setBusyId(`${problem.id}:${kind}`);
     setError("");
     try {
-      const usageRes = await fetch("/api/check-usage");
-      if (usageRes.ok) {
-        const usage = await usageRes.json();
-        const freeAccount = usage.freeTier === true || usage.hasPaidAccess === false;
-        if (freeAccount && usage.weeklySessionsAllowed === false) {
-          throw new Error(freeWeeklySessionLimitMessage(usage.weeklySessionsResetAt || new Date()));
-        }
-        if (!freeAccount && usage.allowed === false) {
-          throw new Error("Session limit reached");
+      if (kind === "solve") {
+        const usageRes = await fetch("/api/check-usage");
+        if (usageRes.ok) {
+          const usage = await usageRes.json();
+          const freeAccount = usage.freeTier === true || usage.hasPaidAccess === false;
+          if (freeAccount && usage.weeklySessionsAllowed === false) {
+            throw new Error(freeWeeklySessionLimitMessage(usage.weeklySessionsResetAt || new Date()));
+          }
+          if (!freeAccount && usage.allowed === false) {
+            throw new Error("Session limit reached");
+          }
         }
       }
       const response = await fetch(PRACTICE_START_PATH, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ problemId: problem.id }),
+        body: JSON.stringify({ problemId: problem.id, kind }),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload.href) {
@@ -134,14 +138,14 @@ export function DashboardPracticeTab({
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
-            Solve / Practice
+            Browse exercises
           </p>
           <h2 className="mt-1 text-2xl font-medium tracking-[-0.6px] text-white">
             Practice library
           </h2>
           <p className="mt-1 max-w-2xl text-sm text-neutral-400">
-            Choose a category, then a topic, then start a Solve session. Practicing a problem
-            creates a Solve flow you can reopen from Flows.
+            Choose a category, then a topic, then open an exercise as Solve / Practice, Verify,
+            or Calibrate.
           </p>
         </div>
       </header>
@@ -315,6 +319,12 @@ export function DashboardPracticeTab({
   );
 }
 
+const PRACTICE_ACTION_LABELS: Record<PracticeStartKind, string> = {
+  solve: "Solve / Practice",
+  verification: "Verify",
+  calibration: "Calibrate",
+};
+
 function ProblemList({
   problems,
   busyId,
@@ -322,7 +332,7 @@ function ProblemList({
 }: {
   problems: PracticeProblem[];
   busyId: string;
-  onStart: (problem: PracticeProblem) => void;
+  onStart: (problem: PracticeProblem, kind: PracticeStartKind) => void;
 }) {
   return (
     <ul className="grid gap-2">
@@ -338,15 +348,32 @@ function ProblemList({
                 {problem.prompt}
               </p>
             </div>
-            <button
-              type="button"
-              data-dashboard-practice-start={problem.id}
-              disabled={Boolean(busyId)}
-              onClick={() => onStart(problem)}
-              className="inline-flex h-9 shrink-0 items-center justify-center bg-white px-4 text-sm font-medium text-black transition hover:bg-neutral-200 disabled:opacity-40"
-            >
-              {busyId === problem.id ? "Starting…" : "Practice"}
-            </button>
+            <div className="flex shrink-0 flex-col gap-2 sm:items-stretch">
+              {PRACTICE_START_KINDS.map((kind) => {
+                const busyKey = `${problem.id}:${kind}`;
+                return (
+                  <button
+                    key={kind}
+                    type="button"
+                    data-dashboard-practice-start={kind === "solve" ? problem.id : undefined}
+                    data-dashboard-practice-kind={kind}
+                    disabled={Boolean(busyId)}
+                    onClick={() => onStart(problem, kind)}
+                    className={
+                      kind === "solve"
+                        ? "inline-flex h-9 items-center justify-center bg-white px-4 text-sm font-medium text-black transition hover:bg-neutral-200 disabled:opacity-40"
+                        : "console-button inline-flex h-9 items-center justify-center px-4 text-sm font-medium text-white transition hover:border-white/80 disabled:opacity-40"
+                    }
+                  >
+                    {busyId === busyKey
+                      ? kind === "solve"
+                        ? "Starting…"
+                        : "Creating…"
+                      : PRACTICE_ACTION_LABELS[kind]}
+                  </button>
+                );
+              })}
+            </div>
           </article>
         </li>
       ))}

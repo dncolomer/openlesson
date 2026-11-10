@@ -1,12 +1,12 @@
 # Uncertain Systems agent APIs
 
-Use this skill when ChatGPT, Claude, or another agent should authorize against Uncertain Systems and **manage Learning Maps** plus **Solve, Calibration, and Verification flows**.
+Use this skill when ChatGPT, Claude, or another agent should authorize against Uncertain Systems and **manage Solve, Calibration, and Verification flows**.
 
 There is **one** public agent family:
 
-1. **Learning Map and flow management** — `GET/POST /api/v3/workspaces`, `GET/PATCH /api/v3/workspaces/{id}`, map blocks, Helios `map-tools`, workspace settings, and independent flows (`GET/POST /api/v3/flows`, `GET/PATCH/DELETE /api/v3/flows/{flow_id}`, `POST /api/v3/flows/{flow_id}/link`). Create Learning Maps (`kind: "learning"` / `standard`). Create Solve, Calibration, and Verification with `create_flow`. Flows are independent unless `workspace_id` is set.
+1. **Flow management** — `GET/POST /api/v3/flows`, `GET/PATCH/DELETE /api/v3/flows/{flow_id}`. Create Solve, Calibration, and Verification with `create_flow`. Flows are independent.
 
-**Human-readable spec:** `/docs/learning-map-api`  
+**Human-readable spec:** `/docs/proof-of-work-api`  
 **Base URL:** `https://uncertain.systems` (or your self-hosted origin)  
 **MCP:** `POST /api/mcp` with `Authorization: Bearer <api_key>`
 
@@ -44,19 +44,20 @@ Content-Type: application/json
 { "jsonrpc": "2.0", "id": 1, "method": "tools/list" }
 ```
 
-**Tools (parity with REST under `/api/v3/workspaces` and `/api/v3/flows`):**
+**Tools (parity with REST under `/api/v3/flows`):**
 
-`list_workspaces`, `get_workspace`, `create_workspace`, `update_workspace`, `list_blocks`, `update_blocks`, `list_map_tools`, `apply_map_tool`, `get_workspace_settings`, `update_workspace_settings`, `list_flows`, `create_flow`, `get_flow`, `update_flow`, `delete_flow`, `link_flow`
+`list_flows`, `create_flow`, `get_flow`, `update_flow`, `delete_flow`
 
-**Partner agents:** `create_workspace` or `get_workspace`, then `list_map_tools` / `apply_map_tool`, then `create_flow` → `link_flow`.
+**Partner agents:** `list_flows`, then `create_flow` → `get_flow` → `update_flow`. Use `delete_flow` when a flow should be removed.
 
 ---
 
 ## Checklist
 
-1. `create_workspace` (`kind: "learning"`) or `get_workspace`
-2. `list_map_tools` / `apply_map_tool` (or `update_blocks`) to shape the Learning Map
-3. `create_flow` with `kind` `solve` | `calibration` | `verification` (independent unless `workspace_id` is set)
-4. `link_flow` with `workspace_id` and `block_id` to place the flow on a tile
+1. `list_flows` — independent Solve, Calibration, and Verification flows
+2. `create_flow` with `kind` `solve` | `calibration` | `verification`
+3. `get_flow`
+4. `update_flow`
+5. `delete_flow` when a flow should be removed
 
 Do not call `start_session`, `upload_proof_of_work`, or `end_session`. Those tools are not on the public catalog.

@@ -37,9 +37,7 @@ export async function getWorkspaces(options?: { includeArchived?: boolean }): Pr
     workspace_kind: parseWorkspaceKind(p.workspace_kind),
     learning_model_size:
       p.learning_model_size === 8 || p.learning_model_size === 16 ? p.learning_model_size : 4,
-    is_all_you_can_learn: Boolean(p.is_all_you_can_learn),
     is_play_copy: Boolean(p.is_play_copy),
-    aycl_category: p.aycl_category ?? null,
   }));
 }
 

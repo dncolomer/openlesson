@@ -390,9 +390,11 @@ describe("Knowledge Region zero-block PoW surfaces", () => {
     expect(Math.abs(l2Norm(encoded) - 1)).toBeLessThan(1e-6);
     expect(encoded).toHaveLength(FLOW_EMBEDDING_DIM);
 
-    const regionsPanel = read("app/api/workspace/custom-knowledge-regions/route.ts");
-    expect(regionsPanel).toContain("Regions are created by running a simulation");
-    expect(regionsPanel).not.toMatch(/required.*blockId|blockId is required/i);
+    expect(existsSync(join(ROOT, "app/api/workspace/custom-knowledge-regions/route.ts"))).toBe(
+      false,
+    );
+    const regionsPanel = read("app/api/dashboard/knowledge-regions/route.ts");
+    expect(regionsPanel.length).toBeGreaterThan(0);
     const regionsStore = [
       read("lib/pow-api/custom-verification-model-store.ts"),
       read("lib/pow-api/custom-verification-model-crud.ts"),
@@ -401,9 +403,8 @@ describe("Knowledge Region zero-block PoW surfaces", () => {
     expect(regionsStore).toContain("listSubjectsWithKnowledgeConfig");
     expect(regionsStore).not.toMatch(/block_id.*required/);
 
-    const dataStudio = read("components/WorkspaceDataStudioPanel.tsx");
-    expect(dataStudio).toContain("/api/workspace/data-studio/pow");
-    expect(dataStudio).toContain("data-workspace-data-studio");
+    expect(existsSync(join(ROOT, "components/WorkspaceDataStudioPanel.tsx"))).toBe(false);
+    const dataStudio = read("app/api/dashboard/data-studio/route.ts");
 
     const goalsPanel = read("components/WorkspaceGoalsPanel.tsx");
     expect(goalsPanel).toContain("/api/workspace/goals");

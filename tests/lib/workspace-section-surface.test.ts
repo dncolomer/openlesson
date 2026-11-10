@@ -111,7 +111,6 @@ describe("layout class contracts", () => {
 
 describe("shipped Knowledge / Setting aesthetic wiring", () => {
   const view = readWorkspaceViewSurface();
-  const aycl = fs.readFileSync(path.join(REPO_ROOT, "components/AyclWorkspaceView.tsx"), "utf8");
   const surface = fs.readFileSync(
     path.join(REPO_ROOT, "components/WorkspaceSectionSurface.tsx"),
     "utf8",
@@ -140,10 +139,9 @@ describe("shipped Knowledge / Setting aesthetic wiring", () => {
     expect(view).toContain("imageSrc={workspaceImage}");
     expect(view).toContain("<WorkspacePerformancePanel");
     expect(view).toContain("<WorkspaceIntegrationPanel");
-
-    // AYCL shell is a thin WorkspaceView wrapper (surfaces live inside WorkspaceView).
-    expect(aycl).toContain("WorkspaceView");
-    expect(aycl).toContain("ayclToken={accessToken}");
+    expect(fs.existsSync(path.join(REPO_ROOT, "components/AyclWorkspaceView.tsx"))).toBe(
+      false,
+    );
   });
 
   it("section surface renders aesthetic image + overlays without identity name bar", () => {

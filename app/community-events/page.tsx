@@ -107,15 +107,6 @@ export default function HackathonsPage() {
               </Link>
             ))}
           </div>
-          <p className="mt-6 text-sm text-zinc-600">
-            {COMMUNITY_EVENTS_COPY.ayclHint}{" "}
-            <Link
-              href={COMMUNITY_EVENTS_COPY.ayclHref}
-              className="text-zinc-400 underline decoration-zinc-700 underline-offset-2 hover:text-white"
-            >
-              {COMMUNITY_EVENTS_COPY.ayclLabel}
-            </Link>
-          </p>
         </section>
       </div>
     </MarketingPageShell>

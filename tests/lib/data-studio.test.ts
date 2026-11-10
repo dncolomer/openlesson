@@ -354,33 +354,32 @@ describe("studio projection + region geometry (shipped)", () => {
 });
 
 describe("data studio structural wiring", () => {
-  it("workspace Settings mounts Data Studio against the workspace PoW route", () => {
-    const panel = readFileSync(join(ROOT, "components/WorkspaceDataStudioPanel.tsx"), "utf8");
-    expect(panel).toContain("data-workspace-data-studio");
-    expect(panel).toContain("/api/workspace/data-studio/pow");
-    expect(panel).toContain("data-studio-filter-link");
-    expect(panel).toContain("data-studio-pow-details-row");
-    expect(panel).toContain("data-studio-bulk-invalidate");
-    expect(panel).toContain("data-studio-invalidate");
-    expect(existsSync(join(ROOT, "app/api/workspace/data-studio/pow/route.ts"))).toBe(true);
+  it("dashboard Data Studio mounts against the owner studio route", () => {
+    const tab = readFileSync(join(ROOT, "components/dashboard/dashboard-data-studio-tab.tsx"), "utf8");
+    expect(tab).toContain("DataStudioPanel");
+    expect(tab).toContain("data-dashboard-data-studio");
+    const panel = readFileSync(join(ROOT, "components/data-studio/DataStudioPanel.tsx"), "utf8");
+    expect(panel).toContain("DASHBOARD_DATA_STUDIO_PATH");
+    expect(panel).toContain("DASHBOARD_DATA_STUDIO_RUN_PATH");
+    expect(existsSync(join(ROOT, "app/api/dashboard/data-studio/route.ts"))).toBe(true);
+    expect(existsSync(join(ROOT, "app/api/dashboard/data-studio/run/route.ts"))).toBe(true);
+    expect(existsSync(join(ROOT, "app/api/workspace/data-studio/pow/route.ts"))).toBe(false);
     expect(existsSync(join(ROOT, "app/admin"))).toBe(false);
     expect(existsSync(join(ROOT, "app/api/admin"))).toBe(false);
   });
 
-  it("workspace pow API resolves TAP/TAP Learning/TAPBench link tokens and matches related PoW", () => {
-    const src = readFileSync(join(ROOT, "app/api/workspace/data-studio/pow/route.ts"), "utf8");
-    expect(src).toContain("parseStudioSessionLinkInput");
-    expect(src).toContain("hashPrivateToken");
-    expect(src).toContain("matchesStudioPowToSessionLink");
-    expect(src).toContain("sessions");
-    expect(src).toContain('.in("kind", ["calibrate", "verify"])');
-    expect(src).toContain('.eq("kind", "learn")');
-    expect(src).not.toContain("workspace_tapbench_links");
-    expect(src).toContain("private_token_hash");
-    expect(src).toContain("sortStudioRows");
-    expect(src).toContain('searchParams.get("link")');
-    expect(src).toContain("guardWorkspaceRoute");
+  it("dashboard studio API loads owner embeddings and run proof of work", () => {
+    const src = readFileSync(join(ROOT, "app/api/dashboard/data-studio/route.ts"), "utf8");
+    expect(src).toContain("listFlowEmbeddingsForOwner");
+    expect(src).toContain("presentDashboardDataStudio");
+    expect(src).toContain("requireAuthenticatedUser");
+    expect(src).not.toContain("guardWorkspaceRoute");
     expect(src).not.toContain("requireAdmin");
+    const run = readFileSync(join(ROOT, "app/api/dashboard/data-studio/run/route.ts"), "utf8");
+    expect(run).toContain("flowPowFromWorkspaceRow");
+    expect(run).toContain("extractStudioSpeechTranscripts");
+    expect(run).toContain("requireAuthenticatedUser");
+    expect(run).not.toContain("requireAdmin");
   });
 });
 
@@ -477,11 +476,12 @@ describe("product Data Studio chrome", () => {
     expect(availableWorkspaceSections({ isOwner: true })).not.toContain("data_studio");
     expect(resolveWorkspaceSectionLayout("data_studio").mountsDataStudioPanel).toBe(true);
 
-    const learning = DASHBOARD_NAV_GROUPS.find((group) => group.id === "learning");
+    const learning = DASHBOARD_NAV_GROUPS.find((group) => (group.id as string) === "learning");
+    expect(learning).toBeUndefined();
     const verification = DASHBOARD_NAV_GROUPS.find((group) => group.id === "verification");
     const calibration = DASHBOARD_NAV_GROUPS.find((group) => group.id === "calibration");
     const solve = DASHBOARD_NAV_GROUPS.find((group) => group.id === "solve");
-    expect(learning?.items.some((item) => item.label === "Data Studio")).toBe(false);
+
     expect(dashboardStudioProduct("solve_studio")).toBe("solve");
     expect(verification?.items.some((item) => item.label === "Data Studio")).toBe(true);
     expect(calibration?.items.some((item) => item.label === "Data Studio")).toBe(true);

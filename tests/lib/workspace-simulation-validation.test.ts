@@ -180,7 +180,6 @@ describe("Simulation validation module remains pure (tab UI no longer primary ho
   it("validateWorkspaceSimulation still exported; panel redo uses scope+generate", () => {
     const blockSim = read("components/WorkspaceBlockSimulationPanel.tsx");
     const view = readWorkspaceViewSurface();
-    const aycl = read("components/AyclWorkspaceView.tsx");
     const mod = read("lib/workspace-simulation-validation.ts");
 
     expect(mod).toContain("export function validateWorkspaceSimulation");
@@ -190,7 +189,6 @@ describe("Simulation validation module remains pure (tab UI no longer primary ho
     expect(surface).toContain("data-simulate-insights-keep");
     expect(view).not.toContain("WorkspaceSimulationPanel");
     expect(view).not.toMatch(/workspaceGoal=\{plan\.workspace_goal\}/);
-    expect(aycl).toContain("WorkspaceView");
 
     // Per-block drawer does not host workspace validation
     expect(blockSim).not.toContain("validateWorkspaceSimulation");

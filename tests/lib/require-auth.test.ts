@@ -170,6 +170,8 @@ describe("require-auth helpers", () => {
         identity: "ada",
       },
       ownerUserId: "owner-1",
+      runOwnerUserId: "owner-1",
+      workspaceId: "ws-1",
       identity: "ada",
     });
     const result = await guardSessionRoute("sess-1", { solveToken: "stok" });

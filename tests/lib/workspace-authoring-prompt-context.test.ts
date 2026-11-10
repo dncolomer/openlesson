@@ -1,6 +1,6 @@
 import { readGridOpsSurface, readWorkspaceViewSurface } from "@/tests/helpers/surface-source";
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   composeAddBlockAtSlotSystemMessage,
@@ -53,12 +53,7 @@ describe("workspace authoring prompt context (journey + bridge)", () => {
     expect(view).toContain('intent: "bridge"');
   });
 
-  it("AYCL reuses full WorkspaceView shell", () => {
-    const aycl = read("components/AyclWorkspaceView.tsx");
-    expect(aycl).toContain("WorkspaceView");
-    expect(aycl).toContain("ayclToken={accessToken}");
-    expect(aycl).toContain("workspaceIdOverride");
-    expect(aycl).toMatch(/clone|cloning/i);
-    expect(aycl).toContain("ayclAccessTier");
+  it("AYCL workspace shell is gone", () => {
+    expect(existsSync(join(process.cwd(), "components/AyclWorkspaceView.tsx"))).toBe(false);
   });
 });

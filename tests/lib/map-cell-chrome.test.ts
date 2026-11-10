@@ -268,6 +268,6 @@ describe("structural: BlockSkillGrid title-only map tiles", () => {
     const list = read("components/SessionList.tsx");
     expect(list).toContain("<BlockSkillGrid");
     expect(list).not.toContain("SKILL_GRID_ILE_DEFAULT_ZOOM_AT_REFERENCE");
-    expect(read("components/AyclLandingClient.tsx")).toContain("<BlockSkillGrid");
+    expect(existsSync(join(ROOT, "components/AyclLandingClient.tsx"))).toBe(false);
   });
 });

@@ -1,73 +1,126 @@
 /**
- * Compact Home overview: framed action CTAs, recent maps, recent practice.
+ * Compact Home overview: three product CTA boxes.
  */
 
 import { dashboardHrefForTab, type DashboardTab } from "@/lib/dashboard-nav";
+import { USE_CASES } from "@/lib/marketing/use-cases";
 import type { PracticeHistoryRow } from "@/lib/practice-problems";
 
 export const DASHBOARD_HOME_RECENT_LIMIT = 4;
 
-export type DashboardHomeRecentMap = {
-  id: string;
-  title: string;
+/** Home product boxes reuse the use-cases stills, mapped by product. */
+export const DASHBOARD_HOME_CTA_USE_CASE_IDS = {
+  practice: "research-ai",
+  verification: "team-insight",
+  calibration: "technical-hiring",
+} as const;
+
+export type DashboardHomeCtaLink = {
+  id: DashboardTab;
+  label: string;
   href: string;
-  kind: "play_copy" | "authored";
-  updatedAt: string;
 };
 
 export type DashboardHomeCta = {
   id: DashboardTab;
   label: string;
   href: string;
+  body: string;
+  imageSrc: string;
+  imageAlt: string;
+  imageFit: "contain" | "cover";
+  links: readonly DashboardHomeCtaLink[];
 };
 
-export function presentDashboardHomeRecentMap(input: {
-  id?: unknown;
-  title?: unknown;
-  root_topic?: unknown;
-  is_play_copy?: unknown;
-  updated_at?: unknown;
-  created_at?: unknown;
-}): DashboardHomeRecentMap | null {
-  const id = String(input.id || "").trim();
-  if (!id) return null;
-  const title =
-    String(input.title || "").trim() ||
-    String(input.root_topic || "").trim() ||
-    "Untitled map";
-  const playCopy = input.is_play_copy === true;
-  const updatedAt =
-    String(input.updated_at || "").trim() ||
-    String(input.created_at || "").trim();
+function productSurfaceLinks(
+  kind: "solve" | "verification" | "calibration",
+): DashboardHomeCtaLink[] {
+  const regions = `${kind}_regions` as DashboardTab;
+  const studio = `${kind}_studio` as DashboardTab;
+  return [
+    {
+      id: kind,
+      label: "Flows",
+      href: dashboardHrefForTab(kind),
+    },
+    {
+      id: regions,
+      label: "Knowledge regions",
+      href: dashboardHrefForTab(regions),
+    },
+    {
+      id: studio,
+      label: "Data Studio",
+      href: dashboardHrefForTab(studio),
+    },
+  ];
+}
+
+function useCaseVisual(id: (typeof USE_CASES)[number]["id"]): {
+  imageSrc: string;
+  imageAlt: string;
+  imageFit: "contain" | "cover";
+} {
+  const item = USE_CASES.find((row) => row.id === id);
+  if (!item) {
+    throw new Error(`Missing use case ${id}`);
+  }
   return {
-    id,
-    title,
-    href: `/workspace/${id}`,
-    kind: playCopy ? "play_copy" : "authored",
-    updatedAt,
+    imageSrc: item.imageSrc,
+    imageAlt: item.imageAlt,
+    imageFit: item.imageFit,
   };
 }
 
-export function sortDashboardHomeRecentMaps(
-  rows: readonly DashboardHomeRecentMap[],
-  limit = DASHBOARD_HOME_RECENT_LIMIT,
-): DashboardHomeRecentMap[] {
-  return [...rows]
-    .sort((a, b) => {
-      const tb = Date.parse(b.updatedAt) || 0;
-      const ta = Date.parse(a.updatedAt) || 0;
-      if (tb !== ta) return tb - ta;
-      return b.id.localeCompare(a.id);
-    })
-    .slice(0, limit);
+export type DashboardHomeIntegrationsCta = {
+  id: "integrations";
+  label: string;
+  href: string;
+  eyebrow: string;
+  body: string;
+  action: string;
+};
+
+export function dashboardHomeIntegrationsCta(): DashboardHomeIntegrationsCta {
+  return {
+    id: "integrations",
+    label: "Integrations",
+    href: dashboardHrefForTab("integrations"),
+    eyebrow: "Quick access",
+    body: "Connect agents with skill.md, MCP, and API keys.",
+    action: "Open integrations →",
+  };
 }
 
 export function dashboardHomeCtas(): DashboardHomeCta[] {
+  const solveLinks = productSurfaceLinks("solve");
+  const verificationLinks = productSurfaceLinks("verification");
+  const calibrationLinks = productSurfaceLinks("calibration");
   return [
-    { id: "browse_maps", label: "Browse maps", href: dashboardHrefForTab("browse_maps") },
-    { id: "practice", label: "Browse exercises", href: dashboardHrefForTab("practice") },
-    { id: "my_maps", label: "My Maps", href: dashboardHrefForTab("my_maps") },
-    { id: "solve_studio", label: "Data Studio", href: dashboardHrefForTab("solve_studio") },
+    {
+      id: "practice",
+      label: "Solve / Practice",
+      href: solveLinks[0]!.href,
+      body: "Browse exercises, run Solve flows, and review knowledge regions, Data Studio, and performance.",
+      ...useCaseVisual(DASHBOARD_HOME_CTA_USE_CASE_IDS.practice),
+      links: solveLinks,
+    },
+    {
+      id: "verification",
+      label: "Verification",
+      href: verificationLinks[0]!.href,
+      body: "Author Verification flows, knowledge regions, and Data Studio runs.",
+      ...useCaseVisual(DASHBOARD_HOME_CTA_USE_CASE_IDS.verification),
+      links: verificationLinks,
+    },
+    {
+      id: "calibration",
+      label: "Calibration",
+      href: calibrationLinks[0]!.href,
+      body: "Author Calibration flows, knowledge regions, and Data Studio runs.",
+      ...useCaseVisual(DASHBOARD_HOME_CTA_USE_CASE_IDS.calibration),
+      links: calibrationLinks,
+    },
   ];
 }
 

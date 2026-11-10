@@ -52,8 +52,8 @@ Embeddings can be thrown away and rebuilt. Proof of work and xAI files cannot.
 8. **Raw corpus export** is a first-class operator path: JSONL of sessions +
    proof of work + embedding metadata + xAI file ids, optional download of
    file bytes. Re-embed reads the corpus, not the previous vector.
-9. **UI adapters.** Current Calibrate, Learn, Verify, Data Studio, All You Can
-   Learn, and MCP screens keep working. No restyle in this plan.
+9. **UI adapters.** Current Calibrate, Learn, Verify, Data Studio, and MCP
+   screens keep working. No restyle in this plan.
 10. **Flows have no parent workspace.** `owner_user_id` is required. Optional
     `workspace_id` may remain as a topic pointer during dual-read, then drop.
 
@@ -61,7 +61,7 @@ Embeddings can be thrown away and rebuilt. Proof of work and xAI files cannot.
 
 Keep: `profiles`, `organizations`, `organization_invites`,
 `organization_guest_users`, `agent_api_keys`, MCP OAuth tables,
-`pending_checkouts`, `aycl_purchases`, `aycl_complimentary_links`,
+`pending_checkouts`,
 `workspaces`, `blocks`, `calibrate_flows` (today `workspace_calibration_flows`),
 `verify_flows` (today `workspace_verification_flows`), `sessions`, `insights`,
 `embedding_models`, `session_embeddings` (today `workspace_flow_embeddings`),
@@ -176,6 +176,12 @@ instead of `block_sessions`.
 - **Files/components affected:** `supabase/migrations/20261025270000_drop_tap_verify_sessions_and_64d_embeddings.sql`
 - **Dependencies:** PR 10
 - **Description:** Delete `sessions` with `kind=verify` and no `verify_flow_id` (TAP dual-write leftovers). Delete `session_embeddings` that are 64-d or `knowledgecfg-v1-d64`. Proof of work stays (`session_id` SET NULL). Real Verify identity sessions stay.
+
+### PR 12: Drop All-You-Can-Learn shop tables and Stripe Connect payout columns (shipped)
+
+- **Files/components affected:** `supabase/migrations/20261110120000_drop_learning_map_shop_payouts.sql`, Stripe webhook, `lib/fork-workspace.ts`, landing featured-map seed
+- **Dependencies:** Product retirement of Learning Maps / AYCL / Connect
+- **Description:** Drop `aycl_purchases` and `aycl_complimentary_links`. Drop workspace listing columns (`is_all_you_can_learn`, `aycl_*`). Drop `profiles.stripe_connect_account_id` and `profiles.stripe_connect_charges_enabled`. Keep `workspaces`, `blocks`, `sessions`, flows, `credit_ledger`. Webhook ignores leftover `all_you_can_learn` checkouts.
 
 ### PR 9: Rename knowledge regions and attach them to a model plus a map or a flow (shipped)
 

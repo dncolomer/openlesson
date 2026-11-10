@@ -1,6 +1,5 @@
 import {
   ACADEMY_K_HREF,
-  BRAIN_PRIMING_PATH,
   HARNESS_PRICING_PATH,
   KNOWLEDGE_MAPPING_PATH,
   KNOWLEDGE_VERIFICATION_PATH,
@@ -8,7 +7,7 @@ import {
   USE_CASES_PATH,
 } from "@/lib/marketing/paths";
 
-export const PLATFORM_NAV_LABEL = "Explore the Platform" as const;
+export const PLATFORM_NAV_LABEL = "Explore the Protocols" as const;
 
 export const MAIN_NAV_PRODUCT_LINKS = [
   { href: KNOWLEDGE_VERIFICATION_PATH, label: "Verify Protocols" },
@@ -29,7 +28,6 @@ export const PRICING_NAV_LINKS = [
 export const COMMUNITY_LINKS = [
   { href: "/community-events", label: "Community Events" },
   { href: "/kardashev", label: "Kardashev Research" },
-  { href: BRAIN_PRIMING_PATH, label: "Brain Priming Protocol" },
   { href: ACADEMY_K_HREF, label: "Academy-k" },
 ] as const;
 

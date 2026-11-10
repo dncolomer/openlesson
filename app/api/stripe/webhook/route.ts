@@ -19,7 +19,6 @@ import {
 } from "@/lib/stripe-checkout";
 import { isComboPlanId, mergePlanIds } from "@/lib/pricing/modules";
 import { isCreditPackSkuId } from "@/lib/credits/constants";
-import { fulfillAyclPurchase } from "@/lib/aycl";
 import {
   countIleSessions,
   countOrgIleSessions,
@@ -112,7 +111,10 @@ export async function POST(request: NextRequest) {
         const priceType = session.metadata?.price_type || "";
 
         if (priceType === "all_you_can_learn") {
-          await fulfillAyclPurchase(supabase, session);
+          console.info(
+            "Ignoring retired All-You-Can-Learn checkout; shop tables are dropped",
+            session.id,
+          );
           break;
         }
 

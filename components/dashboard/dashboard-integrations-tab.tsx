@@ -66,7 +66,7 @@ export function DashboardIntegrationsTab({
               </div>
               {usesAgenticV2Keys && (
                 <Link
-                  href="/docs/learning-map-api"
+                  href="/docs/proof-of-work-api"
                   className="inline-flex h-10 items-center justify-center rounded-none border border-neutral-700 px-4 text-sm text-neutral-200 transition hover:border-neutral-500 hover:text-white"
                 >
                   {t("dashboard.mcpDocsLink")} →
@@ -78,12 +78,11 @@ export function DashboardIntegrationsTab({
               <IntegrationQuickAccess
                 origin={mcpOrigin}
                 apiKeyPlaceholder={newKeyValue || "YOUR_API_KEY"}
-                showWorkspaceLevelNote
                 idPrefix="dashboard"
               />
             </div>
 
-            {/* Learning Map and flow API keys */}
+            {/* Flow API keys */}
             <div className={`${usageCardClass} space-y-5`}>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
@@ -93,7 +92,7 @@ export function DashboardIntegrationsTab({
                 <div className="flex items-center gap-3">
                   {usesAgenticV2Keys && (
                     <Link
-                      href="/docs/learning-map-api"
+                      href="/docs/proof-of-work-api"
                       className="text-sm text-neutral-400 underline decoration-neutral-600 underline-offset-4 transition hover:text-white"
                     >
                       {t("dashboard.mcpDocsLink")} →

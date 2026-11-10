@@ -19,9 +19,8 @@ export const FREE_WEEKLY_SESSION_LIMIT = 3;
 
 export const FREE_DASHBOARD_TAB_IDS = [
   "home",
-  "my_maps",
+  "practice",
   "usage",
-  "help",
 ] as const satisfies readonly DashboardTab[];
 
 const FREE_TAB_SET = new Set<string>(FREE_DASHBOARD_TAB_IDS);
@@ -33,7 +32,6 @@ const FREE_TIER_ALLOWED_PREFIXES = [
   "/dashboard",
   "/session",
   "/play",
-  "/workspace",
   "/results",
   "/verification",
   "/calibration",

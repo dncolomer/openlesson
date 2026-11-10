@@ -64,7 +64,6 @@ const LIVE_SURFACES = [
   "components/workspace-view/use-workspace-learner.ts",
   "components/InsightsDashboardTab.tsx",
   "components/CustomVerificationModelsPanel.tsx",
-  "components/WorkspaceDataStudioPanel.tsx",
 ];
 
 function read(rel: string) {

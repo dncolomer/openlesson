@@ -469,6 +469,12 @@ async function loadPurchaseRow(client: PgClient, purchaseId: string) {
 }
 
 async function main() {
+  throw new Error(
+    "AYCL shop tables were dropped in 20261110120000_drop_learning_map_shop_payouts. This seed is retired.",
+  );
+}
+
+void async function retiredAyclSeed() {
   const target = argTarget();
   if (target === "prod") {
     console.error(

@@ -1,15 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BrandLogo } from "@/components/BrandLogo";
 import {
   clusterDashboardNavItems,
-  dashboardNavGroupIdForTab,
+  DASHBOARD_TOP_NAV_ITEMS,
   isDashboardNavTabItem,
   isDashboardProductTab,
-  type DashboardNavGroupId,
   type DashboardNavItem,
   type DashboardTab,
 } from "@/lib/dashboard-nav";
@@ -20,6 +18,7 @@ import { createClient } from "@/lib/supabase/client";
 const itemClass =
   "block w-full whitespace-nowrap rounded-none px-2 py-1 text-left text-[13px] leading-tight transition";
 const idleClass = "border border-transparent text-neutral-400 hover:border-white/25 hover:text-white";
+const homeIdleClass = "border border-transparent text-white hover:border-white/25";
 const activeClass = "border border-white/55 bg-white/10 text-white";
 
 export function DashboardSidebar({
@@ -34,13 +33,6 @@ export function DashboardSidebar({
   const router = useRouter();
   const { t } = useI18n();
   const groups = dashboardNavGroupsForAccess(hasPaidAccess);
-  const [openGroup, setOpenGroup] = useState<DashboardNavGroupId | null>(
-    () => dashboardNavGroupIdForTab(activeTab),
-  );
-
-  useEffect(() => {
-    setOpenGroup(dashboardNavGroupIdForTab(activeTab));
-  }, [activeTab]);
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -64,66 +56,76 @@ export function DashboardSidebar({
           />
         </Link>
       </div>
+      {DASHBOARD_TOP_NAV_ITEMS.map((item) => {
+        if (!isDashboardNavTabItem(item)) return null;
+        const active = activeTab === item.id;
+        return (
+          <nav
+            key={item.id}
+            className="shrink-0 border-b border-white/20 px-2 py-2"
+            aria-label={item.label}
+            data-dashboard-nav-home={item.id === "home" ? "" : undefined}
+            data-dashboard-nav-practice={item.id === "practice" ? "" : undefined}
+            data-dashboard-nav-performance={item.id === "practice_performance" ? "" : undefined}
+          >
+            <button
+              type="button"
+              data-dashboard-nav={item.id}
+              data-dashboard-nav-active={active ? "true" : "false"}
+              onClick={() => onSelect(item.id)}
+              className={`${itemClass} ${active ? activeClass : homeIdleClass}`}
+            >
+              {item.label}
+            </button>
+          </nav>
+        );
+      })}
       {groups.map((group) => {
-        const open = openGroup === group.id;
-        const containsActive = group.items.some((item) => item.id === activeTab);
         const clusters = clusterDashboardNavItems(group.items);
         return (
           <nav
             key={group.id}
             className="shrink-0 border-b border-white/20 px-2 py-2 last:border-b-0"
             data-dashboard-nav-group={group.id}
-            data-dashboard-nav-group-open={open ? "true" : "false"}
             aria-label={group.label}
           >
-            <button
-              type="button"
-              data-dashboard-nav-group-toggle={group.id}
-              aria-expanded={open}
-              onClick={() => setOpenGroup(open ? null : group.id)}
-              className={`mb-1 flex w-full items-center justify-between px-2 py-1 text-left font-mono text-[9px] uppercase tracking-[0.16em] transition ${
-                containsActive ? "text-white" : "text-neutral-500 hover:text-neutral-300"
-              }`}
-            >
-              <span>{group.label}</span>
-              <span aria-hidden="true">{open ? "−" : "+"}</span>
-            </button>
-            {open ? (
-              <div className="flex flex-row gap-2 overflow-x-auto md:flex-col md:gap-0">
-                {clusters.map((cluster, index) => (
-                  <ul
-                    key={`${group.id}-${cluster[0]?.cluster ?? index}`}
-                    data-dashboard-nav-cluster={cluster[0]?.cluster || undefined}
-                    className={`flex flex-row gap-0.5 md:flex-col ${
-                      index > 0
-                        ? "border-l border-white/20 pl-2 md:border-l-0 md:border-t md:pl-0 md:pt-2"
-                        : ""
-                    }`}
-                  >
-                    {cluster.map((item) => (
-                      <NavItem
-                        key={item.id}
-                        item={item}
-                        activeTab={activeTab}
-                        onSelect={onSelect}
-                      />
-                    ))}
-                    {group.id === "account" && index === clusters.length - 1 ? (
-                      <li>
-                        <button
-                          type="button"
-                          data-dashboard-sign-out
-                          onClick={() => void handleSignOut()}
-                          className={`${itemClass} ${idleClass}`}
-                        >
-                          {t("nav.signOut")}
-                        </button>
-                      </li>
-                    ) : null}
-                  </ul>
-                ))}
-              </div>
-            ) : null}
+            <div className="mb-1 px-2 py-1 font-mono text-[9px] uppercase tracking-[0.16em] text-neutral-500">
+              {group.label}
+            </div>
+            <div className="flex flex-row gap-2 overflow-x-auto md:flex-col md:gap-0">
+              {clusters.map((cluster, index) => (
+                <ul
+                  key={`${group.id}-${cluster[0]?.cluster ?? index}`}
+                  data-dashboard-nav-cluster={cluster[0]?.cluster || undefined}
+                  className={`flex flex-row gap-0.5 md:flex-col ${
+                    index > 0
+                      ? "border-l border-white/20 pl-2 md:border-l-0 md:border-t md:pl-0 md:pt-2"
+                      : ""
+                  }`}
+                >
+                  {cluster.map((item) => (
+                    <NavItem
+                      key={item.id}
+                      item={item}
+                      activeTab={activeTab}
+                      onSelect={onSelect}
+                    />
+                  ))}
+                  {group.id === "account" && index === clusters.length - 1 ? (
+                    <li>
+                      <button
+                        type="button"
+                        data-dashboard-sign-out
+                        onClick={() => void handleSignOut()}
+                        className={`${itemClass} ${idleClass}`}
+                      >
+                        {t("nav.signOut")}
+                      </button>
+                    </li>
+                  ) : null}
+                </ul>
+              ))}
+            </div>
           </nav>
         );
       })}

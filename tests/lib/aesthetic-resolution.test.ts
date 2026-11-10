@@ -63,7 +63,7 @@ describe("high-resolution featured aesthetics", () => {
       measuredHighRes,
     );
     expect(
-      HIGH_RESOLUTION_SYSTEM_AESTHETIC_IMAGES.includes(
+      (HIGH_RESOLUTION_SYSTEM_AESTHETIC_IMAGES as readonly string[]).includes(
         "/aesthetics/galactic-stoneworks/HHpCr91aoAAVXmd.jpeg",
       ),
     ).toBe(false);

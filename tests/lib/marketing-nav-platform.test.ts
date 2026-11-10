@@ -35,7 +35,7 @@ function collectPageTsx(dir: string): string[] {
 }
 
 describe("marketing nav and platform rename", () => {
-  it("LandingNav opens Explore the Platform onto Solve, Verify, and Mapping Protocols, then Use cases, then Pricing", () => {
+  it("LandingNav opens Explore the Protocols onto Solve, Verify, and Mapping Protocols, then Use cases, then Pricing", () => {
     const nav = read("components/LandingNav.tsx");
     expect(nav).toContain("USE_CASES_NAV_LINK");
     expect(nav).toContain("data-nav-products");
@@ -48,7 +48,7 @@ describe("marketing nav and platform rename", () => {
     expect(nav).not.toMatch(/>\s*Products\s*</);
     expect(nav).not.toContain('href="/#platform"');
     expect(nav).toContain("MAIN_NAV_PRODUCT_LINKS");
-    expect(PLATFORM_NAV_LABEL).toBe("Explore the Platform");
+    expect(PLATFORM_NAV_LABEL).toBe("Explore the Protocols");
     expect(MAIN_NAV_PRODUCT_LINKS.map((l) => l.href)).toEqual([
       "/verify-protocols",
       "/mapping-protocols",
@@ -74,7 +74,7 @@ describe("marketing nav and platform rename", () => {
     const footer = read("components/Footer.tsx");
     expect(footer).toMatch(/href:\s*["']\/use-cases["']/);
     expect(footer).toContain("footer.useCases");
-    expect(footer).toContain('href: "/support"');
+    expect(footer).not.toContain('href: "/support"');
   });
 
   it("home leads with knowledge acquisition, verification, and mapping (no #platform suite, no optimization cards)", () => {

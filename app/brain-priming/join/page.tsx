@@ -1,6 +1,5 @@
-import { redirect } from "next/navigation";
-import { BRAIN_PRIMING_PATH } from "@/lib/marketing/paths";
+import { RetiredProductPage } from "@/components/retired-product-page";
 
-export default function BrainPrimingJoinRedirect() {
-  redirect(`${BRAIN_PRIMING_PATH}#join`);
+export default function BrainPrimingJoinRetiredPage() {
+  return <RetiredProductPage />;
 }

@@ -38,31 +38,33 @@ describe("Proof-of-Work API v3 path contract", () => {
     expect(WORKSPACE_API_BASE).toBe("/api/v3/workspaces");
     expect(ACCOUNT_API_BASE).toBe("/api/v3/account");
     expect(POW_API_BASE).toBe("/api/v3/pow");
-    expect([...PUBLIC_AGENT_API_FAMILIES]).toEqual(["workspace"]);
+    expect([...PUBLIC_AGENT_API_FAMILIES]).toEqual(["flow"]);
     expect(SNAPSHOT_API_BASE).toBe("/api/v3/snapshot");
     expect(EVAL_API_BASE).toBe(SNAPSHOT_API_BASE);
     expect(STASH_API_BASE).toBe("/api/v3/stash");
     expect(SNAPSHOT_API_BASE).not.toBe("/api/v3/eval");
   });
 
-  it("e2e and agent surface docs advertise Learning Map and flow management (not /api/v3/eval)", () => {
+  it("e2e and agent surface docs advertise flow management (not /api/v3/eval)", () => {
     const e2e = readFileSync(join(ROOT, "scripts/run-pow-api-e2e.mjs"), "utf8");
     expect(e2e).not.toMatch(/\/api\/v3\/eval\//);
 
     const skill = readFileSync(join(ROOT, "public/skill.md"), "utf8");
-    expect(skill).toContain("/api/v3/workspaces");
+    expect(skill).not.toContain("/api/v3/workspaces");
     expect(skill).toContain("create_flow");
     expect(skill).toContain("/api/v3/flows");
+    expect(skill).not.toContain("create_workspace");
+    expect(skill).not.toContain("list_map_tools");
     expect(skill).not.toContain("/api/v3/{pow,eval,stash}");
     expect(skill).not.toContain("/api/v3/{pow,snapshot,stash}");
 
     const mcp = readMcpSurface();
-    expect(mcp).toContain("/api/v3/workspaces");
+    expect(mcp).toContain("/api/v3/flows");
     expect(mcp).toContain("create_flow");
     expect(mcp).not.toContain("/api/v3/{pow,eval,stash}");
 
     const en = readFileSync(join(ROOT, "messages/en.json"), "utf8");
-    expect(en).toContain("/api/v3/workspaces");
+    expect(en).toContain("/api/v3/flows");
     expect(en).toContain("create_flow");
     expect(en).not.toContain("/api/v3/{pow,eval,stash}");
     const enMessages = JSON.parse(en) as {
@@ -70,8 +72,8 @@ describe("Proof-of-Work API v3 path contract", () => {
       integrationAccess: Record<string, string>;
       workspaceIntegration: Record<string, string>;
     };
-    expect(enMessages.dashboard.proofOfWorkApi).toBe("Learning Map and flow API");
-    expect(enMessages.dashboard.mcpDocsLink).toBe("Map and flow API docs");
+    expect(enMessages.dashboard.proofOfWorkApi).toBe("Flow API");
+    expect(enMessages.dashboard.mcpDocsLink).toBe("Flow API docs");
     expect(enMessages.dashboard.proofOfWorkApi).not.toMatch(/Proof-of-Work API/i);
     expect(enMessages.dashboard.mcpDocsLink).not.toMatch(/Proof-of-Work API/i);
     expect(enMessages.dashboard.proofOfWorkApiDesc).not.toMatch(/Proof-of-Work API/i);
@@ -104,12 +106,14 @@ describe("Proof-of-Work API v3 path contract", () => {
 
     const liveGuide = readFileSync(join(ROOT, "public/docs/proof-of-work-api-guide.md"), "utf8");
     expect(liveGuide).toContain("create_flow");
-    expect(liveGuide).toContain("/api/v3/workspaces");
+    expect(liveGuide).toContain("/api/v3/flows");
+    expect(liveGuide).not.toContain("/api/v3/workspaces");
+    expect(liveGuide).not.toContain("create_workspace");
     expect(publicDocInstructsHeadlessPowLoop(liveGuide)).toBe(false);
 
     const docsPage = readFileSync(join(ROOT, "app/docs/proof-of-work-api/page.tsx"), "utf8");
     expect(docsPage).toContain("create_flow");
-    expect(docsPage).toContain("link_flow");
+    expect(docsPage).not.toContain("link_flow");
     expect(publicDocInstructsHeadlessPowLoop(docsPage)).toBe(false);
   });
 

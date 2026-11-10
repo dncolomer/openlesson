@@ -95,13 +95,11 @@ describe("workspace Simulation section helpers + UI structure", () => {
     expect(resolveWorkspaceSectionLayout("simulation").mountsSimulationPanel).toBe(false);
 
     const view = readWorkspaceViewSurface();
-    const aycl = read("components/AyclWorkspaceView.tsx");
     const detail = read("components/WorkspaceBlockDetailPane.tsx");
     const sections = read("lib/workspace-sections.ts");
 
     expect(view).not.toContain("WorkspaceSimulationPanel");
     expect(view).not.toContain("data-workspace-simulation-host");
-    expect(aycl).toContain("WorkspaceView");
     expect(detail).not.toContain('title="Simulate Insights"');
     expect(detail).not.toContain("WorkspaceBlockSimulationPanel");
 
@@ -135,7 +133,6 @@ describe("workspace Simulation section helpers + UI structure", () => {
       join(SCRATCH, "workspace-simulation-ui.log"),
       [
         "view_panel=" + view.includes("WorkspaceSimulationPanel"),
-        "aycl_via_workspace_view=" + aycl.includes("WorkspaceView"),
         "block_drawer=" + detail.includes('title="Simulate Insights"'),
       ].join("\n") + "\n",
       "utf8",

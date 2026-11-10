@@ -17,7 +17,6 @@ import {
   PLATFORM_PROOF,
   PLATFORM_PUBLIC_MAPS,
 } from "@/lib/marketing/platform";
-import { LANDING_MAP_SIGNUP_HREF } from "@/lib/dashboard-home-catalog";
 import {
   UNSYS_STANDARD_HTML_TITLE,
   UNSYS_STANDARD_SHARE_DESCRIPTION,
@@ -93,6 +92,11 @@ describe("landing knowledge acquisition, verification, and mapping copy", () => 
     expect(lp).not.toContain("three verticals for human and agentic learning");
     expect(lp).not.toContain("VERIFICATION . OPTIMIZATION . AUGMENTATION");
     expect(lp).not.toContain("LandingPublicMapsCarousel");
+    expect(fs.existsSync(path.join(REPO_ROOT, "components/marketing/LandingPublicMapsCarousel.tsx"))).toBe(
+      false,
+    );
+    expect(fs.existsSync(path.join(REPO_ROOT, "lib/dashboard-home-catalog.ts"))).toBe(false);
+    expect(fs.existsSync(path.join(REPO_ROOT, "app/api/landing/maps/route.ts"))).toBe(false);
     expect(lp).toMatch(/data-home-hero[\s\S]*data-home-layers[\s\S]*<\/section>/);
     expect(lp).not.toContain("data-home-spine");
     expect(lp).not.toContain("data-home-delivery");
@@ -211,9 +215,9 @@ describe("landing knowledge acquisition, verification, and mapping copy", () => 
     expect(lp).not.toContain("PLATFORM_PRODUCT_LIST");
     expect(lp).not.toContain("LandingPublicMapsCarousel");
 
-    expect(PLATFORM_PUBLIC_MAPS.title).toBe("Explore our Learning Maps");
-    expect(PLATFORM_PUBLIC_MAPS.lead).toBe("Try out any of our learning maps.");
-    expect(PLATFORM_PUBLIC_MAPS.signupHref).toBe(LANDING_MAP_SIGNUP_HREF);
+    expect(PLATFORM_PUBLIC_MAPS.title).toBe("Explore the protocols");
+    expect(PLATFORM_PUBLIC_MAPS.lead).toBe("Try Solve, Verify, and Mapping protocols.");
+    expect(homepageCopyText().toLowerCase()).not.toContain("learning map");
     expect(PLATFORM_PUBLIC_MAPS.signupHref).toBe("/register");
   });
 

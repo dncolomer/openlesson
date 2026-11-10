@@ -41,12 +41,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.9,
     },
     {
-      url: `${baseUrl}/support`,
-      lastModified: new Date(),
-      changeFrequency: "monthly",
-      priority: 0.6,
-    },
-    {
       url: `${baseUrl}/science`,
       lastModified: new Date(),
       changeFrequency: "monthly",
@@ -59,15 +53,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.85,
     },
     {
-      url: `${baseUrl}/docs/learning-map-api`,
+      url: `${baseUrl}/docs/proof-of-work-api`,
       lastModified: new Date(),
       changeFrequency: "monthly",
-      priority: 0.85,
-    },
-    {
-      url: `${baseUrl}/all-you-can-learn`,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
       priority: 0.85,
     },
     {
@@ -81,12 +69,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: new Date(),
       changeFrequency: "monthly",
       priority: 0.4,
-    },
-    {
-      url: `${baseUrl}/brain-priming`,
-      lastModified: new Date(),
-      changeFrequency: "monthly",
-      priority: 0.7,
     },
     {
       url: `${baseUrl}/community-events/probabilistic-computing`,

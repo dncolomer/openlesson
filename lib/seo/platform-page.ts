@@ -132,8 +132,8 @@ export const PLATFORM_PAGE: SeoPlatformPageConfig = {
         "Teams where humans and AI agents perform knowledge work and need to verify learning with proof of work — then augment it when gaps appear. Builders embedding verification and practice tools via API.",
     },
   ],
-  primaryCta: { label: "Create a Workspace", href: "/workspace/new" },
-  secondaryCta: { label: "Learning Map API docs", href: "/docs/learning-map-api" },
+  primaryCta: { label: "Open dashboard", href: "/dashboard" },
+  secondaryCta: { label: "Flow API docs", href: "/docs/proof-of-work-api" },
   closingTitle: "Verify learning. Augment where it breaks.",
   closingBody:
     "Stop trusting outputs and completion rates. Use software tools in a knowledge workspace to verify learning with proof of work, and augment it until scores move.",

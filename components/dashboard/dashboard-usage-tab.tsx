@@ -4,7 +4,6 @@ import type { OrgUsageSummary } from "@/lib/plans";
 import type { DashboardTab } from "@/lib/dashboard-nav";
 import { FLOW_SESSION_CREDIT_COST, STARTER_CREDIT_GRANT } from "@/lib/credits/constants";
 import { DashboardUpgradeTab } from "@/components/dashboard/dashboard-upgrade-tab";
-import { StripeConnectPanel } from "@/components/dashboard/stripe-connect-panel";
 
 type XaiPeriodPreset = "7d" | "30d" | "90d" | "billing";
 
@@ -190,7 +189,7 @@ export function DashboardUsageTab({
                           Calibrate, Learn, Verify, or Solve session
                         </p>
                         <p className="mt-1 text-xs text-neutral-500">
-                          Creating a Learning Map or Knowledge Region does not spend credits.
+                          Creating a Knowledge Region does not spend credits.
                         </p>
                       </div>
                       {usageData.organization && (
@@ -576,8 +575,6 @@ export function DashboardUsageTab({
                 {t("dashboard.unableToLoadUsage")}
               </div>
             )}
-
-            <StripeConnectPanel />
 
             {!usageData?.isAdmin && (
             <div id="dashboard-upgrade">

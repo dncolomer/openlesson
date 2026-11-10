@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   LANDING_FEATURED_MAP_IDS,
@@ -9,7 +9,6 @@ import {
   landingFeaturedUuid,
   orderLandingFeaturedMaps,
 } from "@/lib/marketing/landing-featured-maps";
-import { LANDING_PUBLIC_MAPS_PATH } from "@/lib/dashboard-home-catalog";
 
 const ROOT = join(__dirname, "../..");
 
@@ -51,20 +50,12 @@ describe("landing featured maps catalog", () => {
     )).toEqual([LANDING_FEATURED_MAP_IDS[0], LANDING_FEATURED_MAP_IDS[1]]);
   });
 
-  it("hardcodes featured ids on the landing maps API instead of latest public rows", () => {
-    const route = read("app/api/landing/maps/route.ts");
-    expect(route).toContain("LANDING_FEATURED_MAP_IDS");
-    expect(route).toContain("orderLandingFeaturedMaps");
-    expect(route).toContain('.in("id"');
-    expect(route).not.toContain("LANDING_PUBLIC_MAPS_LIMIT");
-    expect(route).not.toContain('.eq("is_public", true)');
-    expect(read("components/marketing/LandingPublicMapsCarousel.tsx")).toContain(
-      LANDING_PUBLIC_MAPS_PATH,
-    );
-    expect(read("scripts/seed-landing-featured-maps.ts")).toContain("LANDING_FEATURED_MAPS");
-    expect(read("scripts/seed-landing-featured-maps.ts")).toContain("--target=prod");
-    expect(read("lib/dashboard-home-catalog.ts")).toContain("orderLandingFeaturedMaps");
-    expect(read("lib/dashboard-home-catalog.ts")).toContain("landing-featured-ids");
+  it("does not ship a public map catalog API or landing carousel", () => {
+    expect(existsSync(join(ROOT, "app/api/landing/maps/route.ts"))).toBe(false);
+    expect(existsSync(join(ROOT, "lib/dashboard-home-catalog.ts"))).toBe(false);
+    expect(
+      existsSync(join(ROOT, "components/marketing/LandingPublicMapsCarousel.tsx")),
+    ).toBe(false);
     expect(read("lib/marketing/landing-featured-ids.ts")).not.toContain('from "node:crypto"');
     expect(read("lib/marketing/landing-featured-maps.ts")).toContain("landing-featured-maps.json");
     expect(read("lib/marketing/landing-featured-maps.ts")).toContain("landingFeaturedUuid");

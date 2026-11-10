@@ -367,12 +367,8 @@ describe("structural: right pane not map modal", () => {
     expect(view).not.toContain("BlockDetailDrawer");
   });
 
-  it("AyclWorkspaceView shares the same right-pane open/close path including add + shape", () => {
-    const aycl = read("components/AyclWorkspaceView.tsx");
+  it("right-pane open/close path including add + shape lives on WorkspaceView", () => {
     const view = readWorkspaceViewSurface();
-    // AYCL is a token/access wrapper — right pane lives on WorkspaceView.
-    expect(aycl).toContain("<WorkspaceView");
-    expect(aycl).toContain("ayclToken={accessToken}");
     expect(view).toContain("resolveWorkspaceRightPane");
     expect(view).toContain("WorkspaceBlockDetailPane");
     expect(view).toContain("WorkspaceMapAuthoringPane");
@@ -384,7 +380,6 @@ describe("structural: right pane not map modal", () => {
     expect(view).toContain("onMapSelectionChange");
     expect(view).toContain('rightPane === "add_block"');
     expect(view).toContain('rightPane === "generate_shape"');
-    expect(aycl).not.toContain("BlockDetailDrawer");
     expect(view).not.toContain("BlockDetailDrawer");
   });
 
@@ -477,8 +472,6 @@ describe("structural: right pane not map modal", () => {
     expect(view).toContain('op: "split"');
     expect(view).toContain("onSplitBlock={isOwner ? handleSplitBlock");
 
-    const aycl = read("components/AyclWorkspaceView.tsx");
-    expect(aycl).toContain("<WorkspaceView");
     expect(view).toContain("handleSplitBlock");
     expect(view).toContain('op: "split"');
 
@@ -691,10 +684,7 @@ describe("structural: right pane not map modal", () => {
     expect(view).toContain("overflow-hidden p-0");
     expect(view).toContain("WorkspaceBlockDetailPane");
     expect(view).not.toContain("WorkspaceBlockDetailTabs");
-    const aycl = read("components/AyclWorkspaceView.tsx");
-    expect(aycl).toContain("<WorkspaceView");
     expect(view).toContain("overflow-hidden p-0");
-    expect(aycl).not.toContain("WorkspaceBlockDetailTabs");
 
     writeEvidence(
       "right-pane-drawer-chrome.log",

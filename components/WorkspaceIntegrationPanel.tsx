@@ -217,7 +217,7 @@ export function WorkspaceIntegrationPanel({
                 </div>
                 {isNoMap ? (
                   <Link
-                    href="/docs/learning-map-api"
+                    href="/docs/proof-of-work-api"
                     className="shrink-0 text-xs text-neutral-400 underline decoration-neutral-700 underline-offset-2 hover:text-neutral-200"
                   >
                     {t("workspaceIntegration.docsLink")}

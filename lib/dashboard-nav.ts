@@ -3,25 +3,16 @@
  * and product create deep-links.
  */
 
-import type {
-  DashboardWorkspaceListFilter,
-  DashboardWorkspaceTypeFilter,
-} from "@/lib/dashboard-workspace-filters";
 import {
   productFlowNewPath,
   productRegionNewPath,
   type ProductFlowKind,
 } from "@/lib/product-flow";
-import type { WorkspaceCreateMode } from "@/lib/workspace-create-modes";
 
 export const DASHBOARD_TABS = [
   "home",
-  "browse_maps",
   "practice",
   "practice_performance",
-  "my_maps",
-  "learning",
-  "shop",
   "verification",
   "verification_regions",
   "verification_studio",
@@ -34,14 +25,13 @@ export const DASHBOARD_TABS = [
   "usage",
   "organization",
   "integrations",
-  "help",
   "sessions",
   "config",
 ] as const;
 
 export type DashboardTab = (typeof DASHBOARD_TABS)[number];
 
-export type DashboardProductTab = "learning" | "verification" | "calibration" | "solve";
+export type DashboardProductTab = "verification" | "calibration" | "solve";
 
 export type DashboardRegionsTab =
   | "verification_regions"
@@ -63,14 +53,10 @@ export type DashboardNavItem = {
 };
 
 export type DashboardNavGroupId =
-  | "platform"
-  | "learning"
-  | "teaching"
   | "verification"
   | "calibration"
   | "solve"
-  | "account"
-  | "support";
+  | "account";
 
 export type DashboardNavGroup = {
   id: DashboardNavGroupId;
@@ -78,37 +64,35 @@ export type DashboardNavGroup = {
   items: readonly DashboardNavItem[];
 };
 
+export const DASHBOARD_HOME_NAV_ITEM: DashboardNavItem = {
+  id: "home",
+  label: "Home",
+};
+
+export const DASHBOARD_PRACTICE_NAV_ITEM: DashboardNavItem = {
+  id: "practice",
+  label: "Browse exercises",
+};
+
+export const DASHBOARD_PERFORMANCE_NAV_ITEM: DashboardNavItem = {
+  id: "practice_performance",
+  label: "Performance",
+};
+
+export const DASHBOARD_TOP_NAV_ITEMS: readonly DashboardNavItem[] = [
+  DASHBOARD_HOME_NAV_ITEM,
+  DASHBOARD_PRACTICE_NAV_ITEM,
+  DASHBOARD_PERFORMANCE_NAV_ITEM,
+];
+
 export const DASHBOARD_NAV_GROUPS: readonly DashboardNavGroup[] = [
   {
-    id: "platform",
-    label: "Platform",
-    items: [{ id: "home", label: "Home" }],
-  },
-  {
-    id: "learning",
-    label: "Learning",
-    items: [
-      { id: "browse_maps", label: "Browse maps" },
-      { id: "my_maps", label: "My Maps" },
-    ],
-  },
-  {
-    id: "teaching",
-    label: "Teaching",
-    items: [
-      { id: "learning", label: "Build" },
-      { id: "shop", label: "My Shop" },
-    ],
-  },
-  {
     id: "solve",
-    label: "Solve / Practice",
+    label: "Solve",
     items: [
-      { id: "practice", label: "Browse exercises" },
       { id: "solve", label: "Flows" },
-      { id: "solve_regions", label: "Knowledge regions", cluster: "studio" },
-      { id: "solve_studio", label: "Data Studio", cluster: "studio" },
-      { id: "practice_performance", label: "Performance", cluster: "studio" },
+      { id: "solve_regions", label: "Knowledge regions" },
+      { id: "solve_studio", label: "Data Studio" },
     ],
   },
   {
@@ -138,34 +122,34 @@ export const DASHBOARD_NAV_GROUPS: readonly DashboardNavGroup[] = [
       { id: "integrations", label: "Integrations" },
     ],
   },
-  {
-    id: "support",
-    label: "Support",
-    items: [{ id: "help", label: "How it works" }],
-  },
 ] as const;
 
 const TAB_SET = new Set<string>(DASHBOARD_TABS);
+
+const RETIRED_TAB_ALIASES = new Set([
+  "browse_maps",
+  "my_maps",
+  "learning",
+  "shop",
+  "help",
+  "plans",
+  "learning_studio",
+]);
 
 export function isDashboardTab(value: unknown): value is DashboardTab {
   return typeof value === "string" && TAB_SET.has(value);
 }
 
 export function isDashboardProductTab(value: unknown): value is DashboardProductTab {
-  return (
-    value === "learning" ||
-    value === "verification" ||
-    value === "calibration" ||
-    value === "solve"
-  );
+  return value === "verification" || value === "calibration" || value === "solve";
 }
 
-export function isDashboardShopTab(value: unknown): value is "shop" {
-  return value === "shop";
+export function isDashboardShopTab(value: unknown): value is never {
+  return false;
 }
 
-export function isDashboardMyMapsTab(value: unknown): value is "my_maps" {
-  return value === "my_maps";
+export function isDashboardMyMapsTab(value: unknown): value is never {
+  return false;
 }
 
 export function isDashboardRegionsTab(value: unknown): value is DashboardRegionsTab {
@@ -184,8 +168,8 @@ export function isDashboardStudioTab(value: unknown): value is DashboardStudioTa
   );
 }
 
-export function isDashboardBrowseMapsTab(value: unknown): value is "browse_maps" {
-  return value === "browse_maps";
+export function isDashboardBrowseMapsTab(value: unknown): value is never {
+  return false;
 }
 
 export function isDashboardPracticeTab(value: unknown): value is "practice" {
@@ -200,18 +184,20 @@ export function isDashboardPracticePerformanceTab(
 
 export function dashboardStudioProduct(
   tab: DashboardTab,
-): Exclude<DashboardProductTab, "learning"> | null {
+): DashboardProductTab | null {
   if (tab === "verification_studio") return "verification";
   if (tab === "calibration_studio") return "calibration";
   if (tab === "solve_studio") return "solve";
   return null;
 }
 
-export function dashboardNavGroupIdForTab(tab: DashboardTab): DashboardNavGroupId {
+export function dashboardNavGroupIdForTab(
+  tab: DashboardTab,
+): DashboardNavGroupId | null {
   for (const group of DASHBOARD_NAV_GROUPS) {
     if (group.items.some((item) => item.id === tab)) return group.id;
   }
-  return "platform";
+  return null;
 }
 
 export function clusterDashboardNavItems(
@@ -246,27 +232,18 @@ export function isDashboardNavTabItem(
   return !item.href && isDashboardTab(item.id);
 }
 
-/** Query `tab` → sidebar section. `plans` is the old Workspaces tab. */
+/** Query `tab` → sidebar section. Retired map/shop/help tabs land on Home. */
 export function parseDashboardTab(value: unknown): DashboardTab {
-  if (value === "plans") return "learning";
   if (value === "upgrade") return "usage";
   if (value === "practice_studio") return "solve_studio";
-  if (value === "learning_studio") return "home";
+  if (typeof value === "string" && RETIRED_TAB_ALIASES.has(value)) return "home";
   if (isDashboardTab(value)) return value;
   return "home";
 }
 
 export function dashboardTypeFilterForTab(
   tab: DashboardTab,
-): DashboardWorkspaceTypeFilter | null {
-  if (
-    tab === "learning" ||
-    tab === "shop" ||
-    tab === "my_maps" ||
-    tab === "browse_maps"
-  ) {
-    return "learning";
-  }
+): DashboardProductTab | null {
   if (tab === "verification" || tab === "verification_regions" || tab === "verification_studio") {
     return "verification";
   }
@@ -285,10 +262,7 @@ export function dashboardTypeFilterForTab(
   return null;
 }
 
-export function dashboardListFilterForTab(
-  tab: DashboardTab,
-): DashboardWorkspaceListFilter | null {
-  if (tab === "shop") return "aycl";
+export function dashboardListFilterForTab(_tab: DashboardTab): null {
   return null;
 }
 
@@ -311,8 +285,7 @@ export function dashboardTabForProductSurface(
 export function dashboardCreateHref(tab: DashboardProductTab): string {
   if (tab === "verification") return productFlowNewPath("verification");
   if (tab === "calibration") return productFlowNewPath("calibration");
-  if (tab === "solve") return productFlowNewPath("solve");
-  return "/workspace/new";
+  return productFlowNewPath("solve");
 }
 
 export function dashboardRegionCreateHref(
@@ -324,39 +297,29 @@ export function dashboardRegionCreateHref(
   if (tab === "verification" || tab === "verification_regions") {
     return productRegionNewPath("verification");
   }
-  if (tab === "solve" || tab === "solve_regions") {
-    return productRegionNewPath("solve");
-  }
-  return "/workspace/new";
+  return productRegionNewPath("solve");
 }
 
-export function dashboardCreateMode(tab: DashboardProductTab): WorkspaceCreateMode | null {
-  if (tab === "learning") return null;
+export function dashboardCreateMode(_tab: DashboardProductTab): null {
   return null;
 }
 
 export function dashboardProductLabel(tab: DashboardProductTab): string {
   if (tab === "verification") return "Verification";
   if (tab === "calibration") return "Calibration";
-  if (tab === "solve") return "Solve";
-  return "Learning";
+  return "Solve";
 }
 
 export function dashboardCreateLabel(tab: DashboardProductTab): string {
-  if (tab === "learning") return "Create a Learning Map →";
   return `Create ${dashboardProductLabel(tab)} flow →`;
 }
 
 export function dashboardFrameLabel(tab: DashboardTab): string {
-  if (tab === "browse_maps") return "Browse maps";
   if (tab === "practice") return "Practice library";
   if (tab === "practice_performance") return "Performance";
-  if (tab === "my_maps") return "My Maps";
-  if (tab === "shop") return "My Shop";
   if (isDashboardRegionsTab(tab)) return "Knowledge regions";
   if (isDashboardStudioTab(tab)) return "Data Studio";
   if (isDashboardProductTab(tab)) return dashboardProductLabel(tab);
-  if (tab === "help") return "How it works";
   if (tab === "organization") return "Organization";
   if (tab === "integrations") return "Integrations";
   if (tab === "usage") return "Usage";

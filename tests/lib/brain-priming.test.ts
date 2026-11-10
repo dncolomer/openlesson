@@ -1,6 +1,6 @@
 /**
- * Public Projects landing: Brain Priming Protocol waitlist.
- * Drives the shipped copy module, nav, sitemap, and page source.
+ * Brain Priming Protocol is retired as a public page.
+ * Copy and waitlist helpers remain; inbound URLs show the Greco contact screen.
  */
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
@@ -23,38 +23,21 @@ function read(rel: string): string {
 }
 
 describe("Brain Priming Protocol project", () => {
-  it("is listed under Projects nav with the waitlist form on the landing", () => {
-    const entry = COMMUNITY_LINKS.find((link) => link.href === BRAIN_PRIMING_PATH);
-    expect(entry?.label).toBe("Brain Priming Protocol");
+  it("retires the public landing and waitlist routes", () => {
+    expect(COMMUNITY_LINKS.map((link) => link.href as string)).not.toContain(BRAIN_PRIMING_PATH);
+    expect(COMMUNITY_LINKS.map((link) => link.label)).not.toContain("Brain Priming Protocol");
     expect(BRAIN_PRIMING_PATH).toBe("/brain-priming");
     expect(BRAIN_PRIMING_JOIN_PATH).toBe("/brain-priming/join");
     expect(existsSync(join(ROOT, "app/brain-priming/page.tsx"))).toBe(true);
     const landing = read("app/brain-priming/page.tsx");
-    expect(landing).toContain("BRAIN_PRIMING_COPY");
-    expect(landing).toContain("MarketingPageShell");
-    expect(landing).toContain("MarketingDirectoryHero");
-    expect(landing).toContain("console-copy");
-    expect(landing).toContain("lg:grid-cols-12");
-    expect(landing).not.toContain("bg-zinc-900");
-    expect(landing).toContain("data-brain-priming-page");
-    expect(landing).toContain("{copy.title}");
-    expect(landing).toContain("{copy.h1}");
-    expect(landing).toContain("{copy.thesis}");
-    expect(landing).toContain("data-brain-priming-hero");
-    expect(landing).toContain("data-brain-priming-flows");
-    expect(landing).toContain("data-brain-priming-domains");
-    expect(landing).toContain("data-brain-priming-blood");
-    expect(landing).toContain("data-brain-priming-start");
-    expect(landing).toContain("ctaStartHref");
-    expect(landing).toContain("BrainPrimingWaitlistForm");
-    expect(landing).toContain('id="join"');
-    expect(landing).toContain("data-brain-priming-join");
-    expect(landing).not.toContain("BrainPrimingIntentForm");
+    expect(landing).toContain("RetiredProductPage");
+    expect(landing).not.toContain("BRAIN_PRIMING_COPY");
+    expect(landing).not.toContain("BrainPrimingWaitlistForm");
+    expect(landing).not.toContain("data-brain-priming-page");
     const joinPage = read("app/brain-priming/join/page.tsx");
-    expect(joinPage).toContain("redirect");
-    expect(joinPage).toContain("#join");
-    expect(read("components/marketing/MarketingChrome.tsx")).toContain("LandingNav");
-    expect(read("app/sitemap.ts")).toContain("/brain-priming");
+    expect(joinPage).toContain("RetiredProductPage");
+    expect(joinPage).not.toContain("redirect");
+    expect(read("app/sitemap.ts")).not.toContain("/brain-priming");
   });
 
   it("states Brain Priming Protocol, brain priming, tailored to you, and supplement", () => {
@@ -80,7 +63,6 @@ describe("Brain Priming Protocol project", () => {
     expect(text).toMatch(/Computer science/);
     expect(text).toMatch(/Chemistry and biology/);
     expect(text).toMatch(/tailored exercises/i);
-    expect(text).toMatch(/Learning Map/);
     expect(text).toMatch(/Solve/);
     expect(text).toMatch(/Verify/);
     expect(text).toMatch(/3 months/);
@@ -138,7 +120,6 @@ describe("Brain Priming Protocol project", () => {
       /\bthis (product|protocol|supplement) (diagnoses|treats|cures|prevents)\b/i,
     );
     expect(withoutDisclaimer).not.toMatch(/\bcures?\b/i);
-    expect(read("app/brain-priming/page.tsx")).toContain("data-brain-priming-disclaimer");
     expect(read("app/brain-priming/page.tsx")).not.toContain("Calibrate is priming");
   });
 

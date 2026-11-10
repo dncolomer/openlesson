@@ -120,7 +120,7 @@ export async function POST(req: NextRequest) {
       return errorResponse(
         403,
         "api_plan_required",
-        "The Learning Map API requires an active API Metered plan.",
+        "The Flow API requires an active API Metered plan.",
         { renew_url: "https://uncertain.systems/pricing" }
       );
     }

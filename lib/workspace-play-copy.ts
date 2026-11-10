@@ -4,12 +4,9 @@
 
 import { START_NEW_SESSION_LABEL } from "@/lib/block-previous-sessions";
 import { resolveLaunchFromStyleAndModality } from "@/lib/product-intent";
-import {
-  DASHBOARD_MAPS_ADD_PATH,
-  DASHBOARD_MAPS_REMOVE_PATH,
-} from "@/lib/dashboard-home-catalog";
 
-export { DASHBOARD_MAPS_ADD_PATH, DASHBOARD_MAPS_REMOVE_PATH };
+export const DASHBOARD_MAPS_ADD_PATH = "/api/dashboard/maps/add";
+export const DASHBOARD_MAPS_REMOVE_PATH = "/api/dashboard/maps/remove";
 
 export const DASHBOARD_MAPS_START_FLOW_PATH = "/api/dashboard/maps/start-flow";
 

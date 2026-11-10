@@ -28,8 +28,8 @@ export const SCIENCE_HUB_COPY = {
     "Uncertain Systems is the autopilot for knowledge building. That sentence is a vision: a system that adapts around a person's mind, so difficult knowledge takes less cognitive effort to acquire, and the gap between what machines can discover and what people can understand gets smaller.",
     "Today's software is narrower. Authors define knowledge regions and solve flows. People work through hard problems in Calibrate, Learn, Verify, and Solve sessions. The system records observable work, estimates a provisional knowledge state on a generative model, and can suggest a next step in that model. Understanding still happens in the person. The longer-term aim is knowledge acquisition with less conscious steering and less effort spent managing the path. That aim remains a research horizon, and it is not knowledge uploading.",
   ],
-  workspaceCta: "Create your Workspace",
-  workspaceHref: "/workspace/new",
+  workspaceCta: "Open dashboard",
+  workspaceHref: "/dashboard",
   directoryEyebrow: "ON THIS PAGE",
   directoryTitle: "Jump to a section.",
   directoryLead:

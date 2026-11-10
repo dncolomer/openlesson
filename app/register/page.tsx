@@ -374,8 +374,8 @@ function RegisterForm() {
             Free
           </p>
           <p className="mt-1 text-sm text-neutral-300">
-            Home, My Maps, Browse maps, and Practice library, with 3 sessions a week. Upgrade any
-            time for Build, My Shop, Verification, and Calibration.
+            Solve / Practice, Verification, and Calibration, with starter credits. Upgrade any time
+            for more sessions.
           </p>
         </div>
 

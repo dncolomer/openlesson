@@ -1,12 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { CREDIT_PACK_CARDS } from "@/lib/pricing/modules";
 import { UNIFIED_PRICING_COPY } from "@/lib/pricing/unified-copy";
 import { FLOW_SESSION_CREDIT_COST, STARTER_CREDIT_GRANT } from "@/lib/credits/constants";
 import type { CreditPackSkuId } from "@/lib/credits/constants";
-import { AYCL_PATH } from "@/lib/marketing/paths";
 
 const usageCardClass = "console-copy rounded-none p-5 sm:p-6";
 const usageLabelClass = "font-mono text-[10px] uppercase tracking-[2px] text-neutral-500";
@@ -48,9 +46,9 @@ export function DashboardUpgradeTab({
         <h2 className="mt-2 text-2xl font-medium text-white">Buy credits</h2>
         <p className="mt-2 text-sm text-neutral-500">
           {typeof balance === "number" ? `Balance ${balance}. ` : ""}
-          Free signup includes {STARTER_CREDIT_GRANT} credits. Each Calibrate, Learn, Verify, or
-          Solve session costs {FLOW_SESSION_CREDIT_COST} credits. Creating a Learning Map or
-          Knowledge Region is free.
+          Free signup includes {STARTER_CREDIT_GRANT} credits. Each Calibrate, Verify, or
+          Solve session costs {FLOW_SESSION_CREDIT_COST} credits. Creating a Knowledge Region is
+          free.
         </p>
       </section>
 
@@ -93,12 +91,6 @@ export function DashboardUpgradeTab({
         </div>
       </section>
 
-      <Link
-        href={AYCL_PATH}
-        className="inline-flex text-sm text-neutral-300 underline decoration-neutral-600 underline-offset-4 transition hover:text-white"
-      >
-        Browse All You Can Learn
-      </Link>
     </div>
   );
 }

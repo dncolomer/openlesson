@@ -3,7 +3,7 @@
  * Workspace and All-you-can-learn still mount the block grid.
  * The session stage shows the work canvas and does not render a map.
  */
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { readMapGridSurface, readSessionStageSurface } from "../helpers/surface-source";
@@ -35,9 +35,9 @@ describe("chapter suggest mode is absent", () => {
     );
   });
 
-  it("the workspace map and the All-you-can-learn preview mount the block grid", () => {
+  it("the workspace map mounts the block grid; AYCL landing is gone", () => {
     expect(read("components/SessionList.tsx")).toContain("<BlockSkillGrid");
-    expect(read("components/AyclLandingClient.tsx")).toContain("<BlockSkillGrid");
+    expect(existsSync(join(ROOT, "components/AyclLandingClient.tsx"))).toBe(false);
   });
 
   it("the session stage shows the work canvas and does not render a map", () => {

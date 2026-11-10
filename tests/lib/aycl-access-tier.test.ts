@@ -216,14 +216,9 @@ describe("AYCL dual-tier wiring (structural)", () => {
     expect(src).toContain("allowExplore");
   });
 
-  it("AyclWorkspaceView reuses WorkspaceView and passes tier", () => {
-    const src = fs.readFileSync(
-      path.join(REPO_ROOT, "components/AyclWorkspaceView.tsx"),
-      "utf8",
+  it("AyclWorkspaceView is gone from the product tree", () => {
+    expect(fs.existsSync(path.join(REPO_ROOT, "components/AyclWorkspaceView.tsx"))).toBe(
+      false,
     );
-    expect(src).toContain("WorkspaceView");
-    expect(src).toContain("ayclToken={accessToken}");
-    expect(src).toContain("ayclAccessTier={accessTier}");
-    expect(src).toContain("data-aycl-access-tier");
   });
 });

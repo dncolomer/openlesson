@@ -1,10 +1,10 @@
 /**
  * Public agent REST family (v3):
- *   - Learning Map management `/api/v3/workspaces`
  *   - Independent Solve / Calibration / Verification flows `/api/v3/flows`
  *
- * Headless proof-of-work (`/api/v3/pow` sessions), Snapshot, and Stash are
- * not public agent APIs. API-key CRUD stays on `/api/dashboard/api-keys` (browser session).
+ * Learning Map management (`/api/v3/workspaces`) is retired. Headless
+ * proof-of-work (`/api/v3/pow` sessions), Snapshot, and Stash are not
+ * public agent APIs. API-key CRUD stays on `/api/dashboard/api-keys`.
  */
 
 export const WORKSPACE_API_BASE = "/api/v3/workspaces" as const;
@@ -16,8 +16,8 @@ export const SNAPSHOT_API_BASE = "/api/v3/snapshot" as const;
 /** Retired Stash API family. Kept so tests can assert the tree is gone. */
 export const STASH_API_BASE = "/api/v3/stash" as const;
 
-/** Public agent REST families. PoW sessions, Snapshot, and Stash are excluded. */
-export const PUBLIC_AGENT_API_FAMILIES = ["workspace"] as const;
+/** Public agent REST families. Map/workspace, PoW sessions, Snapshot, and Stash are excluded. */
+export const PUBLIC_AGENT_API_FAMILIES = ["flow"] as const;
 export type PublicAgentApiFamily = (typeof PUBLIC_AGENT_API_FAMILIES)[number];
 
 /** @deprecated Use SNAPSHOT_API_BASE — former Evaluation API base name. */
@@ -26,7 +26,7 @@ export const EVAL_API_BASE = SNAPSHOT_API_BASE;
 export type PowSnapshotApiSurface = "pow" | "snapshot";
 /** @deprecated Use PowSnapshotApiSurface */
 export type PowEvalApiSurface = PowSnapshotApiSurface | "eval";
-export type AgentApiSurface = PowSnapshotApiSurface | "stash" | "workspace";
+export type AgentApiSurface = PowSnapshotApiSurface | "stash" | "workspace" | "flow";
 
 export function workspaceCollectionPath(baseUrl?: string | null): string {
   const base = (baseUrl || "").replace(/\/$/, "");

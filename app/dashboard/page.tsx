@@ -4,49 +4,30 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/client";
-import { getSessions, deleteSession, restartSession, getWorkspaces, getIlePostSessionPath, type Session, type Workspace } from "@/lib/storage";
+import { getSessions, deleteSession, restartSession, type Session } from "@/lib/storage";
 import { useI18n } from "@/lib/i18n";
 import { formatPlanMonthlyPrice, hasAgentApiKeyPlan, planDisplayName as formatPlanName, type PlanId } from "@/lib/plans";
 import { dashboardUsesAgenticKeys } from "@/lib/dashboard-agent-access";
 import { OrganizationDashboardTab } from "@/components/OrganizationDashboardTab";
 import { DashboardAtmosphere } from "@/components/dashboard/dashboard-atmosphere";
 import { DashboardConfigTab } from "@/components/dashboard/dashboard-config-tab";
-import { DashboardHelpTab } from "@/components/dashboard/dashboard-help-tab";
-import { DashboardBrowseMapsTab } from "@/components/dashboard/dashboard-browse-maps-tab";
 import { DashboardHomeTab } from "@/components/dashboard/dashboard-home-tab";
-import { DashboardMyMapsTab } from "@/components/dashboard/dashboard-my-maps-tab";
 import { DashboardPracticeTab } from "@/components/dashboard/dashboard-practice-tab";
 import { DashboardPracticePerformanceTab } from "@/components/dashboard/dashboard-practice-performance-tab";
 import { DashboardIntegrationsTab } from "@/components/dashboard/dashboard-integrations-tab";
 import { DashboardFlowsTab } from "@/components/dashboard/dashboard-flows-tab";
 import { DashboardKnowledgeRegionsTab } from "@/components/dashboard/dashboard-knowledge-regions-tab";
 import { DashboardDataStudioTab } from "@/components/dashboard/dashboard-data-studio-tab";
-import { DashboardPlansTab } from "@/components/dashboard/dashboard-plans-tab";
 import { DashboardSessionsTab } from "@/components/dashboard/dashboard-sessions-tab";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DashboardUsageTab } from "@/components/dashboard/dashboard-usage-tab";
-import { StripeConnectPanel } from "@/components/dashboard/stripe-connect-panel";
-import { fetchAestheticPackages } from "@/lib/aesthetics";
 import { buildMcpClientConfig } from "@/lib/pow-api/mcp-proof-of-work-catalog";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import {
-  isDashboardWorkspaceListFilter,
-  workspaceIsPlayCopy,
-  workspaceMatchesDashboardListFilter,
-  workspaceMatchesDashboardTypeFilter,
-  type DashboardWorkspaceListFilter,
-} from "@/lib/dashboard-workspace-filters";
-import {
-  dashboardListFilterForTab,
-  dashboardTypeFilterForTab,
   dashboardStudioProduct,
-  isDashboardBrowseMapsTab,
-  isDashboardMyMapsTab,
   isDashboardPracticePerformanceTab,
   isDashboardPracticeTab,
-  isDashboardProductTab,
   isDashboardRegionsTab,
-  isDashboardShopTab,
   isDashboardStudioTab,
   parseDashboardTab,
   type DashboardTab,
@@ -182,19 +163,6 @@ export default function DashboardPage() {
   const [sessionPage, setSessionPage] = useState(1);
   const sessionPageSize = 10;
 
-  // Plans tab
-  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
-  const [workspaceSearch, setPlanSearch] = useState("");
-  const [showArchivedWorkspaces, setShowArchivedPlans] = useState(false);
-  /** Filter workspace cards by visibility or AYCL listing: all | public | private | aycl */
-  const [workspaceVisibilityFilter, setWorkspaceVisibilityFilter] =
-    useState<DashboardWorkspaceListFilter>("all");
-  const [archivingWorkspaceId, setArchivingPlanId] = useState<string | null>(null);
-  const [workspacePage, setPlanPage] = useState(1);
-  const workspacePageSize = 10;
-  /** Images from /api/aesthetics: org custom set, or the system folder listing. */
-  const [workspaceCoverPool, setWorkspaceCoverPool] = useState<string[] | null>(null);
-
   // Agentic tab
   const [apiKeys, setApiKeys] = useState<AgentApiKey[]>([]);
   const [creatingKey, setCreatingKey] = useState(false);
@@ -215,28 +183,10 @@ export default function DashboardPage() {
     loadData();
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    fetchAestheticPackages()
-      .then((packages) => {
-        if (cancelled) return;
-        const images = packages.flatMap((pkg) => pkg.images).filter(Boolean);
-        if (images.length > 0) setWorkspaceCoverPool(images);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   // Reset page when search or filter changes
   useEffect(() => {
     setSessionPage(1);
   }, [sessionSearch, sessionStatusFilter]);
-
-  useEffect(() => {
-    setPlanPage(1);
-  }, [workspaceSearch, workspaceVisibilityFilter, activeTab]);
 
   const loadData = async () => {
     try {
@@ -281,10 +231,6 @@ export default function DashboardPage() {
       // Load sessions
       const loadedSessions = await getSessions();
       setSessions(loadedSessions);
-
-        // Load learning plans (archived hidden by default)
-        const plans = await getWorkspaces({ includeArchived: false });
-        setWorkspaces(plans);
 
         // Load usage data
         try {
@@ -352,7 +298,7 @@ export default function DashboardPage() {
           console.error("Failed to load usage data:", err);
         }
 
-      // Load Learning Map API keys (API Metered)
+      // Load Flow API keys (API Metered)
       try {
         const keysRes = await fetch("/api/dashboard/api-keys");
         if (keysRes.ok) {
@@ -581,126 +527,6 @@ export default function DashboardPage() {
     sessionPage * sessionPageSize
   );
 
-  // Filter and paginate plans
-  const reloadWorkspaces = async (includeArchived = showArchivedWorkspaces) => {
-    const plans = await getWorkspaces({ includeArchived });
-    setWorkspaces(plans);
-  };
-
-  useEffect(() => {
-    if (
-      !isDashboardProductTab(activeTab) &&
-      !isDashboardShopTab(activeTab) &&
-      !isDashboardRegionsTab(activeTab) &&
-      !isDashboardStudioTab(activeTab) &&
-      activeTab !== "home"
-    ) {
-      return;
-    }
-    void reloadWorkspaces(showArchivedWorkspaces);
-  }, [showArchivedWorkspaces, activeTab]);
-
-  const handleArchivePlan = async (workspaceId: string) => {
-    if (!confirm("Archive this workspace? It will be hidden from your dashboard but preserved for audit.")) {
-      return;
-    }
-    setArchivingPlanId(workspaceId);
-    try {
-      const res = await fetch(`/api/workspaces/${workspaceId}/archive`, { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to archive workspace");
-      setWorkspaces((plans) => plans.filter((plan) => plan.id !== workspaceId));
-    } catch (err) {
-      console.error("Archive workspace error:", err);
-      alert(err instanceof Error ? err.message : "Failed to archive workspace");
-    } finally {
-      setArchivingPlanId(null);
-    }
-  };
-
-  const handleRestorePlan = async (workspaceId: string) => {
-    setArchivingPlanId(workspaceId);
-    try {
-      const res = await fetch(`/api/workspaces/${workspaceId}/archive`, { method: "DELETE" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to restore workspace");
-      await reloadWorkspaces(showArchivedWorkspaces);
-    } catch (err) {
-      console.error("Restore workspace error:", err);
-      alert(err instanceof Error ? err.message : "Failed to restore workspace");
-    } finally {
-      setArchivingPlanId(null);
-    }
-  };
-
-  const productTypeFilter = dashboardTypeFilterForTab(activeTab);
-  const lockedListFilter = dashboardListFilterForTab(activeTab);
-
-  const filteredWorkspaces = useMemo(() => {
-    const typeFilter = productTypeFilter ?? "all";
-    const listFilter = lockedListFilter ?? workspaceVisibilityFilter;
-    const filtered = workspaces.filter((p) => {
-      if (isDashboardMyMapsTab(activeTab)) {
-        if (!workspaceIsPlayCopy(p)) return false;
-      } else if (workspaceIsPlayCopy(p)) {
-        return false;
-      }
-      const matchesSearch =
-        workspaceSearch === "" ||
-        p.root_topic.toLowerCase().includes(workspaceSearch.toLowerCase()) ||
-        (p.title || "").toLowerCase().includes(workspaceSearch.toLowerCase());
-      if (!matchesSearch) return false;
-      if (!workspaceMatchesDashboardListFilter(p, listFilter)) return false;
-      return workspaceMatchesDashboardTypeFilter(p, typeFilter);
-    });
-    return [...filtered].sort((a, b) => {
-      const aTime = Date.parse(a.created_at || "") || 0;
-      const bTime = Date.parse(b.created_at || "") || 0;
-      if (aTime !== bTime) return bTime - aTime;
-      return (a.id || "").localeCompare(b.id || "");
-    });
-  }, [
-    workspaces,
-    workspaceSearch,
-    workspaceVisibilityFilter,
-    lockedListFilter,
-    productTypeFilter,
-    activeTab,
-  ]);
-
-  const learningWorkspaces = useMemo(
-    () =>
-      workspaces.filter(
-        (row) =>
-          workspaceMatchesDashboardTypeFilter(row, "learning") && !workspaceIsPlayCopy(row),
-      ),
-    [workspaces],
-  );
-  const myMaps = useMemo(
-    () => workspaces.filter((row) => workspaceIsPlayCopy(row)),
-    [workspaces],
-  );
-  const productEmpty =
-    (isDashboardProductTab(activeTab) &&
-      workspaces.filter(
-        (row) =>
-          workspaceMatchesDashboardTypeFilter(row, activeTab) &&
-          (activeTab !== "learning" || !workspaceIsPlayCopy(row)),
-      ).length === 0) ||
-    (isDashboardShopTab(activeTab) &&
-      workspaces.filter(
-        (row) =>
-          workspaceMatchesDashboardTypeFilter(row, "learning") &&
-          workspaceMatchesDashboardListFilter(row, "aycl") &&
-          !workspaceIsPlayCopy(row),
-      ).length === 0);
-
-  const totalPlanPages = Math.ceil(filteredWorkspaces.length / workspacePageSize);
-  const paginatedPlans = filteredWorkspaces.slice(
-    (workspacePage - 1) * workspacePageSize,
-    workspacePage * workspacePageSize
-  );
-
   const accessKnown = usageData != null;
   const hasPaidAccess = usageData?.hasPaidAccess === true;
 
@@ -786,28 +612,7 @@ export default function DashboardPage() {
           />
         )}
 
-        {activeTab === "home" && (
-          <DashboardHomeTab
-            workspaces={learningWorkspaces}
-            playCopies={myMaps}
-            t={t}
-            hasPaidAccess={hasPaidAccess}
-          />
-        )}
-
-        {isDashboardBrowseMapsTab(activeTab) && (
-          <DashboardBrowseMapsTab
-            workspaces={learningWorkspaces}
-            playCopies={myMaps}
-            t={t}
-            hasPaidAccess={hasPaidAccess}
-            weeklySessionsUsed={usageData?.weeklySessionsUsed ?? 0}
-            weeklySessionsLimit={usageData?.weeklySessionsLimit ?? null}
-            weeklySessionsResetAt={usageData?.weeklySessionsResetAt ?? null}
-            weeklySessionsAllowed={usageData?.weeklySessionsAllowed !== false}
-            coverImagePool={workspaceCoverPool}
-          />
-        )}
+        {activeTab === "home" && <DashboardHomeTab />}
 
         {isDashboardPracticeTab(activeTab) && (
           <DashboardPracticeTab
@@ -819,50 +624,10 @@ export default function DashboardPage() {
           <DashboardPracticePerformanceTab />
         )}
 
-        {isDashboardMyMapsTab(activeTab) && (
-          <DashboardMyMapsTab
-            maps={myMaps}
-            formatDate={formatDate}
-            coverImagePool={workspaceCoverPool}
-          />
-        )}
-
         {(activeTab === "verification" ||
           activeTab === "calibration" ||
           activeTab === "solve") && (
           <DashboardFlowsTab productTab={activeTab} formatDate={formatDate} />
-        )}
-
-        {isDashboardShopTab(activeTab) ? (
-          <div className="mb-6">
-            <StripeConnectPanel />
-          </div>
-        ) : null}
-
-        {(activeTab === "learning" || isDashboardShopTab(activeTab)) && (
-          <DashboardPlansTab
-            archivingWorkspaceId={archivingWorkspaceId}
-            filteredWorkspaces={filteredWorkspaces}
-            formatDate={formatDate}
-            handleArchivePlan={handleArchivePlan}
-            handleRestorePlan={handleRestorePlan}
-            paginatedPlans={paginatedPlans}
-            productEmpty={productEmpty}
-            productTab="learning"
-            surface={isDashboardShopTab(activeTab) ? "shop" : "workspaces"}
-            setPlanPage={setPlanPage}
-            setPlanSearch={setPlanSearch}
-            setShowArchivedPlans={setShowArchivedPlans}
-            setWorkspaceVisibilityFilter={setWorkspaceVisibilityFilter}
-            setWorkspaces={setWorkspaces}
-            showArchivedWorkspaces={showArchivedWorkspaces}
-            t={t}
-            totalPlanPages={totalPlanPages}
-            workspacePage={workspacePage}
-            workspacePageSize={workspacePageSize}
-            workspaceSearch={workspaceSearch}
-            workspaceVisibilityFilter={workspaceVisibilityFilter}
-          />
         )}
 
         {isDashboardRegionsTab(activeTab) ? (
@@ -881,8 +646,6 @@ export default function DashboardPage() {
         {isDashboardStudioTab(activeTab) && dashboardStudioProduct(activeTab) ? (
           <DashboardDataStudioTab product={dashboardStudioProduct(activeTab)!} />
         ) : null}
-
-        {activeTab === "help" && <DashboardHelpTab />}
 
         {activeTab === "organization" && <OrganizationDashboardTab />}
 

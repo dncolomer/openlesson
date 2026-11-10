@@ -170,4 +170,28 @@ describe("core data model contract", () => {
     expect(sql).toContain("'solve'::text");
     expect(sql).toContain("solve-flowcfg-v1-d96");
   });
+
+  it("drops retired AYCL shop tables and Stripe Connect payout columns", () => {
+    const sql = readFileSync(
+      join(ROOT, "supabase/migrations/20261110120000_drop_learning_map_shop_payouts.sql"),
+      "utf8",
+    );
+    expect(sql).toContain("drop table if exists public.aycl_purchases cascade");
+    expect(sql).toContain("drop table if exists public.aycl_complimentary_links cascade");
+    expect(sql).toContain("drop column if exists is_all_you_can_learn");
+    expect(sql).toContain("drop column if exists aycl_category");
+    expect(sql).toContain("drop column if exists stripe_connect_account_id");
+    expect(sql).toContain("drop column if exists stripe_connect_charges_enabled");
+    expect(sql).not.toContain("drop table if exists public.workspaces");
+    expect(sql).not.toContain("drop table if exists public.blocks");
+    expect(sql).not.toContain("drop table if exists public.sessions");
+    expect(sql).not.toContain("drop table if exists public.credit_ledger");
+  });
+
+  it("stripe webhook ignores retired AYCL checkouts without writing shop tables", () => {
+    const webhook = readFileSync(join(ROOT, "app/api/stripe/webhook/route.ts"), "utf8");
+    expect(webhook).toContain('priceType === "all_you_can_learn"');
+    expect(webhook).toContain("Ignoring retired All-You-Can-Learn checkout");
+    expect(webhook).not.toContain("fulfillAyclPurchase");
+  });
 });

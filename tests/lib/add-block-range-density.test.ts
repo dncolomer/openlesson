@@ -569,9 +569,7 @@ describe("structural: Add pane Range/Density/Randomize + multi 1×1 create", () 
     expect(view).toMatch(/busy=\{false\}/);
     expect(view).toContain("upsertAddExpandJob");
 
-    const aycl = read("components/AyclWorkspaceView.tsx");
     expect(view).toContain("runAddExpandCreateLoop");
-    expect(aycl).toContain("WorkspaceView");
     expect(view).toContain("createAddExpandJob");
     expect(view).toContain("expandJobs");
     expect(view).toContain("Do NOT set isAddingBlock");
@@ -593,7 +591,6 @@ describe("structural: Add pane Range/Density/Randomize + multi 1×1 create", () 
         "minimapStop=" + grid.includes("data-map-expand-stop"),
         "paneNoProgress=" + String(!add.includes("data-add-expand-progress")),
         "viewNoBusyGate=" + view.includes("Do NOT set isAddingBlock"),
-        "ayclNoBusyGate=" + aycl.includes("Do NOT set isAddingBlock"),
         "listWiresJobs=" + list.includes("expandJobs"),
       ].join("\n"),
     );

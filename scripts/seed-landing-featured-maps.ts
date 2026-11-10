@@ -76,13 +76,13 @@ async function seedMap(
     INSERT INTO public.workspaces (
       id, user_id, author_id, title, root_topic, status,
       description, notes,
-      organization_id, is_public, is_agent_workspace, is_all_you_can_learn,
-      is_play_copy, workspace_kind, aycl_category, aycl_summary
+      organization_id, is_public, is_agent_workspace,
+      is_play_copy, workspace_kind
     ) VALUES (
       $1, $2, $2, $3, $3, 'active',
       $4, $5,
-      $6, true, false, false,
-      false, 'standard', $7, $8
+      $6, true, false,
+      false, 'standard'
     )
     ON CONFLICT (id) DO UPDATE SET
       title = EXCLUDED.title,
@@ -91,10 +91,7 @@ async function seedMap(
       notes = EXCLUDED.notes,
       is_public = true,
       is_play_copy = false,
-      is_all_you_can_learn = false,
-      workspace_kind = 'standard',
-      aycl_category = EXCLUDED.aycl_category,
-      aycl_summary = EXCLUDED.aycl_summary
+      workspace_kind = 'standard'
     `,
     [
       map.id,
@@ -103,8 +100,6 @@ async function seedMap(
       map.description,
       `${map.notesMarker} ${map.goal}`,
       owner.organizationId,
-      map.category,
-      map.summary,
     ],
   );
 

@@ -151,14 +151,6 @@ export function workspaceFeatureDeniedMessage(
  */
 export function agentToolFeature(name: string): WorkspaceFeature | null {
   switch (name) {
-    case "list_workspaces":
-    case "get_workspace":
-    case "create_workspace":
-    case "update_workspace":
-    case "list_blocks":
-    case "update_blocks":
-    case "get_workspace_settings":
-    case "update_workspace_settings":
     case "get_account_settings":
     case "update_account_settings":
     case "generate_integration_skill":
@@ -166,7 +158,6 @@ export function agentToolFeature(name: string): WorkspaceFeature | null {
     case "create_flow":
     case "get_flow":
     case "update_flow":
-    case "link_flow":
       return null;
     case "list_map_tools":
     case "apply_map_tool":

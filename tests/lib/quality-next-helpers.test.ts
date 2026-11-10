@@ -48,7 +48,7 @@ import {
   requireSessionWorkspaceProofOfWorkAccess,
   requireWorkspaceOwnerSession,
 } from "@/lib/pow-api/workspace-session-access";
-import { POST as workspaceNewsPost } from "@/app/api/workspace/news/route";
+
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
@@ -162,17 +162,6 @@ describe("quality-next shipped helpers", () => {
     expect(classifyApiErrorEnvelope(powForbiddenBody)).toBe("nested_code");
     expect(errorMessageFromBody(powForbiddenBody, "")).not.toBe("");
 
-    const newsRes = await workspaceNewsPost(
-      new NextRequest("http://local/api/workspace/news", {
-        method: "POST",
-        body: JSON.stringify({}),
-      }),
-    );
-    expect(newsRes.ok).toBe(false);
-    const newsBody = await newsRes.json();
-    expect(classifyApiErrorEnvelope(newsBody)).toBe("nested_code");
-    expect(errorMessageFromBody(newsBody, "")).not.toBe("");
-
     const cells = nextWorkspaceMapSelection({
       type: "set_empty_cells",
       cells: [{ row: 2, col: 3 }],
@@ -250,8 +239,8 @@ describe("quality-next shipped helpers", () => {
         `pow401msg=${errorMessageFromBody(powUnauthBody, "x")}`,
         `owner401=${classifyApiErrorEnvelope(ownerUnauthBody)}`,
         `pow403=${classifyApiErrorEnvelope(powForbiddenBody)}`,
-        `newsStatus=${newsRes.status}`,
-        `newsEnvelope=${classifyApiErrorEnvelope(newsBody)}`,
+        `newsStatus=gone`,
+        `newsEnvelope=gone`,
         `emptyClickCells=${cells.kind === "empties" ? cells.cells.length : 0}`,
         `oneBlockId=${oneBlock.kind === "block" ? oneBlock.id : ""}`,
         `hookText=${tapHookFormingText({ getFormingText: () => "live" })}`,

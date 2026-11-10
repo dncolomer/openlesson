@@ -351,12 +351,12 @@ export default function ProbabilisticComputingHackathonPage() {
             ))}
           </div>
           <p className="border-t border-zinc-800/90 px-5 py-4 text-xs text-zinc-600 sm:px-6">
-            Browse other lifetime packages on{" "}
+            Browse credit packs on{" "}
             <Link
-              href="/all-you-can-learn?tab=lifetime"
+              href="/pricing"
               className="text-zinc-400 underline decoration-zinc-700 underline-offset-2 hover:text-white"
             >
-              All-You-Can-Learn
+              Pricing
             </Link>
             .
           </p>
@@ -384,14 +384,14 @@ export default function ProbabilisticComputingHackathonPage() {
                 Probabilistic Computing and Extropic AI approach
               </h2>
               <p className="mt-3 text-sm leading-relaxed text-zinc-500">
-                Fork the custom learning plan and adapt it to your level, needs, and interests — still
-                useful after the event.
+                The event learning map is no longer here. If you are coming from this course, contact
+                daniel@uncertain.systems.
               </p>
               <Link
                 href={LEARNING_PLAN_HREF}
                 className="mt-6 inline-flex items-center gap-1.5 text-sm font-medium text-white transition hover:text-zinc-300"
               >
-                Open learning plan
+                Contact about this plan
                 <ArrowRight size={14} />
               </Link>
             </div>
@@ -463,10 +463,10 @@ export default function ProbabilisticComputingHackathonPage() {
                 </div>
               </div>
               <Link
-                href="/all-you-can-learn"
+                href="/pricing"
                 className="mt-6 inline-flex items-center gap-1.5 text-sm text-zinc-400 transition hover:text-white"
               >
-                All-You-Can-Learn
+                Pricing
                 <ArrowRight size={13} />
               </Link>
             </div>

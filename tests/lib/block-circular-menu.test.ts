@@ -208,7 +208,7 @@ describe("circular menu source wiring", () => {
     const wsView = read("components/WorkspaceView.tsx");
     const drawers = read("components/workspace-view/workspace-right-drawers.tsx");
     expect(existsSync(join(ROOT, "components/session-view/learn-continue-map-preview.tsx"))).toBe(false);
-    const landing = read("components/AyclLandingClient.tsx");
+    expect(existsSync(join(ROOT, "components/AyclLandingClient.tsx"))).toBe(false);
 
     expect(ring).toContain("data-block-circular-menu");
     expect(ring).toContain("data-block-circular-menu-ring");
@@ -411,8 +411,6 @@ describe("circular menu source wiring", () => {
     expect(grid).toContain("viewOnly");
     expect(grid).toContain('circularMenuSurfaceProp ?? "none"');
     expect(grid).toContain("if (viewOnly) {");
-    expect(landing).toContain("viewOnly");
-    expect(landing).not.toContain("circularMenuSurface");
     expect(learner).toContain('drawerId="practice"');
     expect(learner).not.toContain("PREVIOUS_SESSIONS_DRAWER_ID");
     expect(learner).not.toContain('drawerId="progress"');

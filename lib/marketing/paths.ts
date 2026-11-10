@@ -15,7 +15,6 @@ export const HARNESS_PRICING_PATH = "/pricing" as const;
 export const VERIFICATION_PRICING_PATH = "/pricing#verification" as const;
 export const MAPPING_PRICING_PATH = "/pricing#mapping" as const;
 export const AUTHORING_PRICING_PATH = "/pricing/authoring" as const;
-export const AYCL_PATH = "/all-you-can-learn" as const;
 export const ACADEMY_K_HREF = "https://academy-k.com/" as const;
 export const BRAIN_PRIMING_PATH = "/brain-priming" as const;
 export const BRAIN_PRIMING_JOIN_PATH = "/brain-priming/join" as const;

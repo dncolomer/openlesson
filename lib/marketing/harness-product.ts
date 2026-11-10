@@ -1,11 +1,9 @@
 import { LEARNING_MODEL_PUBLIC_LABEL } from "@/lib/learning-model";
 import {
-  AYCL_PATH,
   DISCOVERY_CTA_LABEL,
   HARNESS_PRICING_PATH,
   KNOWLEDGE_MAPPING_PATH,
   KNOWLEDGE_VERIFICATION_PATH,
-  WORKSPACE_NEW_PATH,
   discoveryMailto,
 } from "@/lib/marketing/paths";
 import { SCIENCE_EPISTEMIC_FORAGING_PATH } from "@/lib/science/epistemic-foraging-copy";
@@ -80,16 +78,10 @@ export const HARNESS_PRODUCT_COPY = {
       imageAlt: "Blueprint of nested diamonds shrinking toward a focus, uncertainty collapsing",
     },
   ],
-  ayclEyebrow: "ALL-YOU-CAN-LEARN",
-  ayclTitle: "Lifetime workspace buys",
-  ayclBody:
-    "All-You-Can-Learn is part of the Problem Solving Harness. Browse ready-made workspaces and buy lifetime access as a one-time purchase.",
-  ayclCta: "Browse All-You-Can-Learn",
-  ayclHref: AYCL_PATH,
   pricingCta: "See pricing",
   pricingHref: HARNESS_PRICING_PATH,
-  workspaceCta: "Create your Workspace",
-  workspaceHref: WORKSPACE_NEW_PATH,
+  workspaceCta: "Open dashboard",
+  workspaceHref: "/dashboard",
   discoveryCta: DISCOVERY_CTA_LABEL,
   discoveryHref: discoveryMailto("Build Understanding use case"),
   modelImageSrc: "/unsysmodel.png",

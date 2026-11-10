@@ -1,89 +1,20 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
-import type { Workspace } from "@/lib/storage";
 import {
   dashboardHomeCtas,
-  presentDashboardHomeRecentMap,
-  sortDashboardHomeRecentMaps,
+  dashboardHomeIntegrationsCta,
 } from "@/lib/dashboard-home-overview";
-import {
-  PRACTICE_HISTORY_PATH,
-  formatPracticeDuration,
-  practiceSessionHref,
-  summarizePracticeHistory,
-  type PracticeHistoryRow,
-} from "@/lib/practice-problems";
-import { dashboardHrefForTab } from "@/lib/dashboard-nav";
-import { dashboardHasNoWorkspaces } from "@/lib/dashboard-workspace-filters";
+import { MARKETING_MEDIA_FILL_CLASS } from "@/lib/marketing/shell";
 
-export type DashboardHomeTabProps = {
-  workspaces: Workspace[];
-  playCopies?: Workspace[];
-  t: (key: string, params?: Record<string, string | number>) => string;
-  hasPaidAccess?: boolean;
-};
-
-export function DashboardHomeTab({
-  workspaces,
-  playCopies = [],
-  t,
-  hasPaidAccess = false,
-}: DashboardHomeTabProps) {
-  const [practiceRows, setPracticeRows] = useState<PracticeHistoryRow[]>([]);
-  const [practiceLoading, setPracticeLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/dashboard/practice/history" satisfies typeof PRACTICE_HISTORY_PATH)
-      .then((res) => res.json())
-      .then((payload) => {
-        if (cancelled) return;
-        const next = Array.isArray(payload?.rows) ? payload.rows : [];
-        setPracticeRows(next);
-      })
-      .catch(() => {
-        if (!cancelled) setPracticeRows([]);
-      })
-      .finally(() => {
-        if (!cancelled) setPracticeLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const recentMaps = useMemo(() => {
-    const rows = [...workspaces, ...playCopies]
-      .map((row) =>
-        presentDashboardHomeRecentMap({
-          id: row.id,
-          title: row.title,
-          root_topic: row.root_topic,
-          is_play_copy: row.is_play_copy,
-          updated_at: (row as { updated_at?: string }).updated_at,
-          created_at: row.created_at,
-        }),
-      )
-      .filter((row): row is NonNullable<typeof row> => Boolean(row));
-    const seen = new Set<string>();
-    const unique = rows.filter((row) => {
-      if (seen.has(row.id)) return false;
-      seen.add(row.id);
-      return true;
-    });
-    return sortDashboardHomeRecentMaps(unique);
-  }, [workspaces, playCopies]);
-
-  const recentPractice = practiceRows.slice(0, 4);
-  const practiceSummary = summarizePracticeHistory(practiceRows);
-  const emptyWorkspaces = dashboardHasNoWorkspaces(workspaces);
+export function DashboardHomeTab() {
   const ctas = dashboardHomeCtas();
+  const integrations = dashboardHomeIntegrationsCta();
 
   return (
     <div
-      className="flex flex-col gap-4"
+      className="flex min-h-[calc(100dvh-4rem)] flex-col gap-4"
       data-dashboard-home
       data-dashboard-home-overview
     >
@@ -94,123 +25,81 @@ export function DashboardHomeTab({
         <h2 className="mt-1 text-2xl font-medium tracking-[-0.6px] text-white">
           Home
         </h2>
+        <p className="mt-2 max-w-2xl text-sm text-neutral-400">
+          Pick a product. Solve and practice problems, verify work, or calibrate a prior.
+        </p>
       </header>
 
-      <section className="console-copy px-4 py-4" data-dashboard-home-cta>
-        <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
-          Actions
-        </p>
-        <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
-          {ctas.map((cta) => (
-            <Link
-              key={cta.id}
-              href={cta.href}
-              data-dashboard-home-cta-link={cta.id}
-              className="console-button flex min-h-[4.25rem] items-center justify-center px-3 py-3 text-center text-sm text-white transition hover:border-white/80 hover:bg-white/5"
-            >
-              {cta.label}
-            </Link>
-          ))}
-        </div>
+      <section
+        className="sticky top-0 z-10 -mx-4 bg-gradient-to-b from-black from-40% via-black/90 to-transparent px-4 pb-4 pt-1 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8"
+        data-dashboard-home-integrations
+      >
+        <Link
+          href={integrations.href}
+          data-dashboard-home-integrations-link
+          className="console-copy flex items-center justify-between gap-4 px-5 py-3 transition hover:border-white/70"
+        >
+          <div className="min-w-0">
+            <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
+              {integrations.eyebrow}
+            </p>
+            <p className="mt-1 text-sm font-medium tracking-[-0.2px] text-white">
+              {integrations.label}
+            </p>
+            <p className="mt-0.5 text-sm text-neutral-400">{integrations.body}</p>
+          </div>
+          <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.16em] text-white/80">
+            {integrations.action}
+          </span>
+        </Link>
       </section>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <section
-          className="console-copy min-h-[12rem] px-4 py-4"
-          data-dashboard-home-recent-maps
-        >
-          <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
-            Recent maps
-          </p>
-          {recentMaps.length === 0 ? (
-            <p className="mt-3 text-sm text-neutral-400">No maps yet.</p>
-          ) : (
-            <ul className="mt-3 space-y-2">
-              {recentMaps.map((item) => (
-                <li key={item.id}>
-                  <Link
-                    href={item.href}
-                    className="flex items-center justify-between gap-3 border border-white/15 px-3 py-2 text-sm text-white transition hover:border-white/50"
-                  >
-                    <span className="truncate">{item.title}</span>
-                    <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.12em] text-neutral-500">
-                      {item.kind === "play_copy" ? "Play" : "Build"}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        <section
-          className="console-copy min-h-[12rem] px-4 py-4"
-          data-dashboard-home-recent-practice
-        >
-          <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
-            Recent practice
-          </p>
-          {practiceLoading ? (
-            <p className="mt-3 text-sm text-neutral-400">Loading practice…</p>
-          ) : recentPractice.length === 0 ? (
-            <p className="mt-3 text-sm text-neutral-400">
-              No practice sessions yet.{" "}
-              <Link
-                href={dashboardHrefForTab("practice")}
-                className="text-white underline decoration-white/30 underline-offset-4"
-              >
-                Browse exercises
-              </Link>
-            </p>
-          ) : (
-            <>
-              <p className="mt-2 font-mono text-[10px] text-neutral-500">
-                {practiceSummary.sessionCount} sessions · {practiceSummary.insightCount} insights ·{" "}
-                {formatPracticeDuration(practiceSummary.durationMs)}
-              </p>
-              <ul className="mt-3 space-y-2">
-                {recentPractice.map((row) => (
-                  <li key={row.sessionId}>
-                    <Link
-                      href={practiceSessionHref(row.sessionId)}
-                      className="flex items-center justify-between gap-3 border border-white/15 px-3 py-2 text-sm text-white transition hover:border-white/50"
-                    >
-                      <span className="truncate">{row.title}</span>
-                      <span className="shrink-0 font-mono text-[10px] text-neutral-500">
-                        {row.insightCount} insights
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </section>
-      </div>
-
-      {emptyWorkspaces && hasPaidAccess ? (
-        <section
-          data-dashboard-empty-workspaces
-          className="console-copy px-4 py-4"
-        >
-          <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
-            {t("dashboard.emptyWorkspacesKicker")}
-          </p>
-          <h3 className="mt-2 text-lg font-medium tracking-[-0.4px] text-white">
-            {t("dashboard.emptyWorkspacesTitle")}
-          </h3>
-          <p className="mt-1 max-w-xl text-sm text-neutral-400">
-            {t("dashboard.emptyWorkspacesBody")}
-          </p>
-          <Link
-            href="/workspace/new"
-            data-dashboard-empty-create
-            className="mt-4 inline-flex h-9 items-center border border-white/40 px-4 text-sm text-white transition hover:border-white/80"
+      <section
+        className="mt-auto grid min-h-0 flex-1 gap-3 md:grid-cols-3 md:items-stretch"
+        data-dashboard-home-cta
+      >
+        {ctas.map((cta) => (
+          <article
+            key={cta.id}
+            data-dashboard-home-cta-card={cta.id}
+            className="console-copy relative min-h-[18rem] overflow-hidden md:h-full"
           >
-            {t("dashboard.emptyWorkspacesCta")}
-          </Link>
-        </section>
-      ) : null}
+            <div
+              className={`absolute inset-0 ${MARKETING_MEDIA_FILL_CLASS}`}
+              data-dashboard-home-cta-visual={cta.id}
+            >
+              <Image
+                src={cta.imageSrc}
+                alt={cta.imageAlt}
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, 33vw"
+              />
+            </div>
+            <div className="absolute inset-x-0 bottom-0 z-[3] bg-gradient-to-t from-black via-black/85 to-transparent px-5 pb-5 pt-28">
+              <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-400">
+                Open
+              </p>
+              <h3 className="mt-3 text-xl font-medium tracking-[-0.4px] text-white">
+                {cta.label}
+              </h3>
+              <p className="mt-2 text-sm leading-relaxed text-neutral-300">{cta.body}</p>
+              <nav className="mt-6 flex flex-col gap-1.5" aria-label={cta.label}>
+                {cta.links.map((link) => (
+                  <Link
+                    key={link.id}
+                    href={link.href}
+                    data-dashboard-home-cta-link={link.id}
+                    className="font-mono text-[10px] uppercase tracking-[0.16em] text-white/80 transition hover:text-white"
+                  >
+                    {link.label} →
+                  </Link>
+                ))}
+              </nav>
+            </div>
+          </article>
+        ))}
+      </section>
     </div>
   );
 }

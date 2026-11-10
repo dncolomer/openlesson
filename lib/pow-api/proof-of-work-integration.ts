@@ -37,7 +37,7 @@ import {
   type ProofOfWorkApiInterruption,
 } from "./predictive-interruption";
 import { callXaiResponsesWithFiles } from "@/lib/xai-client";
-import { workspaceResource, powWorkspaceResource } from "@/lib/api/agent-api-paths";
+import { FLOW_API_BASE, powWorkspaceResource, workspaceResource } from "@/lib/api/agent-api-paths";
 
 export const EVIDENCE_SPEC_VERSION = "1.3";
 
@@ -72,60 +72,59 @@ export function buildContinuousEvaluationPolicy(
   } | null
 ): ContinuousEvaluationPolicy {
   const proofOfWorkCount = contextCounts?.proof_of_work_artifacts ?? 0;
-  const flowsPath = workspaceResource(workspaceId, "flows", baseUrl);
+  const flowsPath = `${baseUrl.replace(/\/$/, "")}${FLOW_API_BASE}`;
   const skillPath = buildIntegrationSkillApiPath(workspaceId, baseUrl);
-  const mapPath = workspaceResource(workspaceId, "map-tools", baseUrl);
 
   const evidenceTriggers = [
-    "When adding a Solve, Calibration, or Verification flow to the Learning Map",
-    "After Helios or Manual authoring needs a flow before placing a tile",
-    "When block definitions or workspace_goal change",
+    "When adding a Solve, Calibration, or Verification flow",
+    "After authoring needs a flow before a session",
+    "When flow questions or topic change",
   ];
 
   if (proofOfWorkCount === 0) {
-    evidenceTriggers.unshift("Immediately now: workspace has little or no proof of work yet; spec will sharpen as the map and flows grow");
+    evidenceTriggers.unshift("Immediately now: little or no proof of work yet; spec will sharpen as flows grow");
   } else if (proofOfWorkCount < 10) {
     evidenceTriggers.unshift(
-      `Now recommended: workspace has ${proofOfWorkCount} proof-of-work artifact(s) recorded in the product UI; keep the map and flows aligned`
+      `Now recommended: ${proofOfWorkCount} proof-of-work artifact(s) recorded in the product UI; keep flows aligned`
     );
   } else {
     evidenceTriggers.unshift(
-      `Re-fetch recommended: workspace already has ${proofOfWorkCount} proof-of-work artifacts; spec should reflect the current map and flows`
+      `Re-fetch recommended: already ${proofOfWorkCount} proof-of-work artifacts; spec should reflect the current flows`
     );
   }
 
   return {
     principle:
-      "Uncertain Systems public agents manage Learning Maps and Solve, Calibration, and Verification flows. Proof of work is recorded in the product UI.",
+      "Uncertain Systems public agents manage Solve, Calibration, and Verification flows. Proof of work is recorded in the product UI.",
     more_evidence_improves:
-      "More map tiles and linked Solve, Calibration, and Verification flows give the Learning Map a complete path.",
+      "More Solve, Calibration, and Verification flows give partners a complete evaluation path.",
     regeneration_required: true,
     proof_of_work_spec: {
       api_path: flowsPath,
       method: "POST",
-      purpose: "Create a Solve, Calibration, or Verification flow on this Learning Map",
+      purpose: "Create a Solve, Calibration, or Verification flow",
       when_to_call: evidenceTriggers,
     },
     integration_skill: {
       api_path: skillPath,
       method: "POST",
-      purpose: "Regenerate skill.md so partner agents stay aligned with the latest map and flows",
+      purpose: "Regenerate skill.md so partner agents stay aligned with the latest flows",
       when_to_call: [
-        "After the map or flow set changes",
+        "After the flow set changes",
         "When onboarding a new partner agent version",
         "Never treat the initial skill.md as permanent; regeneration is part of the operating model",
       ],
     },
     performance: {
-      api_path: mapPath,
+      api_path: flowsPath,
       method: "POST",
-      purpose: "Apply Helios Learning Map builder tools (same catalog as in-app Helios)",
+      purpose: "List and update Solve, Calibration, and Verification flows",
       when_to_call: [
-        "When placing, shaping, or connecting map tiles",
-        "When a flow should be created with the tile",
+        "When reviewing the current flow set",
+        "When a flow should be created or updated",
       ],
     },
-    recommended_cadence: `Map + flow loop: create_workspace or get_workspace → list_map_tools / apply_map_tool (${mapPath}) → create_flow (${flowsPath}) → link_flow → regenerate skill (${skillPath}).`,
+    recommended_cadence: `Flow loop: list_flows → create_flow (${flowsPath}) → get_flow → update_flow.`,
   };
 }
 
@@ -148,13 +147,13 @@ export function enrichProofOfWorkSpecResult(
   const proofOfWorkSpecPath = buildProofOfWorkSchemaApiPath(workspaceId, baseUrl);
   const skillPath = buildIntegrationSkillApiPath(workspaceId, baseUrl);
 
-  const mapRequiredFields = ["workspace_id", "tool", "tool_calls"] as const;
+  const flowRequiredFields = ["kind", "name"] as const;
   const performanceContract: PerformanceReportContract = {
     ...(result.performance_report_contract ??
       buildVerticalScoreReportContract("verification", baseUrl)),
-    endpoint_pattern: `POST ${workspaceResource(workspaceId, "map-tools", baseUrl)}`,
-    mcp_tool: "apply_map_tool",
-    required_fields: [...mapRequiredFields],
+    endpoint_pattern: `POST ${baseUrl.replace(/\/$/, "")}${FLOW_API_BASE}`,
+    mcp_tool: "create_flow",
+    required_fields: [...flowRequiredFields],
   };
 
   const continuousEvaluation = buildContinuousEvaluationPolicy(workspaceId, baseUrl, contextCounts);
@@ -200,7 +199,7 @@ export function enrichProofOfWorkSpecResult(
       result.collection_guidance,
       result.continuous_evaluation_summary,
       formatDualSurfaceGuidance(continuousEvaluation, continuousEvaluationMcp),
-      `Self-update: create_flow then link_flow then apply_map_tool; regenerate skill at ${skillPath} or MCP generate_integration_skill.`,
+      `Self-update: list_flows then create_flow then get_flow then update_flow; regenerate skill at ${skillPath} or MCP generate_integration_skill.`,
     ]
       .filter(Boolean)
       .join(" "),
@@ -234,21 +233,21 @@ Dynamic integration skill API (MUST appear in skill.md):
 POST ${spec.continuous_evaluation?.integration_skill.api_path || spec.proof_of_work_spec_api_path || "(workspace)/integration-skill"}
 
 Continuous evaluation — REST (MUST appear in skill.md):
-${spec.continuous_evaluation?.principle || "Public agents manage Learning Maps and Solve, Calibration, and Verification flows."}
+${spec.continuous_evaluation?.principle || "Public agents manage Solve, Calibration, and Verification flows."}
 ${spec.continuous_evaluation?.more_evidence_improves || ""}
-Create flow: ${spec.continuous_evaluation?.proof_of_work_spec.api_path || "(workspace)/flows"}
+Create flow: ${spec.continuous_evaluation?.proof_of_work_spec.api_path || "/api/v3/flows"}
 Regenerate integration skill: ${spec.continuous_evaluation?.integration_skill.api_path || "(workspace)/integration-skill"}
-Apply map tools: ${spec.continuous_evaluation?.performance.api_path || "(workspace)/map-tools"}
-REST cadence: ${spec.continuous_evaluation?.recommended_cadence || "create_workspace → apply_map_tool → create_flow → link_flow → regenerate skill"}
+List flows: ${spec.continuous_evaluation?.performance.api_path || "/api/v3/flows"}
+REST cadence: ${spec.continuous_evaluation?.recommended_cadence || "list_flows → create_flow → get_flow → update_flow"}
 
 Continuous evaluation — MCP (same loop, tool names):
 ${spec.continuous_evaluation_mcp?.principle || spec.continuous_evaluation?.principle || ""}
 MCP endpoint: ${spec.continuous_evaluation_mcp?.mcp_endpoint_pattern || "POST /api/mcp"} (Authorization: Bearer <api_key>)
 create_flow ↔ REST POST .../flows
-link_flow ↔ REST POST .../flows/{flow_id}/link
-apply_map_tool ↔ REST POST .../map-tools
-get_workspace — workspace_goal, kind, map, and settings
-MCP cadence: ${spec.continuous_evaluation_mcp?.recommended_cadence || "create/get workspace → apply_map_tool → create_flow → link_flow → repeat"}
+get_flow ↔ REST GET .../flows/{flow_id}
+update_flow ↔ REST PATCH .../flows/{flow_id}
+list_flows ↔ REST GET .../flows
+MCP cadence: ${spec.continuous_evaluation_mcp?.recommended_cadence || "list_flows → create_flow → get_flow → update_flow"}
 
 Integration surfaces: REST Bearer auth + MCP JSON-RPC (full parity — document both, prefer live API paths over static copies).
 

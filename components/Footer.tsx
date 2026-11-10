@@ -16,17 +16,12 @@ const productLinks = [
   { labelKey: "footer.useCases", href: "/use-cases" },
   { labelKey: "footer.pricing", href: "/pricing" },
   { labelKey: "footer.vision", href: "/science" },
-  { labelKey: "footer.agenticApi", href: "/docs/learning-map-api" },
-];
-
-const workspaceLinks = [
-  { labelKey: "footer.createWorkspace", href: "/workspace/new" },
+  { labelKey: "footer.agenticApi", href: "/docs/proof-of-work-api" },
   { labelKey: "footer.skillFile", href: "/skill.md" },
 ];
 
 const resourceLinks = [
   { labelKey: "footer.github", href: "https://github.com/dncolomer/openlesson", external: true as const },
-  { labelKey: "footer.supportThisProject", href: "/support", external: false as const },
 ];
 
 const legalLinks = [
@@ -43,7 +38,7 @@ export function Footer() {
   return (
     <footer className="mt-auto border-t border-neutral-900 bg-[#050505]">
       <div className="mx-auto w-full max-w-[96rem] px-4 py-10 sm:px-6 xl:px-8">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-8 pb-8 border-b border-neutral-900">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 pb-8 border-b border-neutral-900">
           <div className="col-span-2 md:col-span-1">
             <BrandLogo
               size={24}
@@ -60,21 +55,6 @@ export function Footer() {
             </h3>
             <ul className="space-y-3">
               {productLinks.map((link) => (
-                <li key={link.href}>
-                  <Link href={link.href} className="text-sm text-neutral-500 hover:text-white transition-colors">
-                    {t(link.labelKey)}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="col-span-2 md:col-span-1">
-            <h3 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-4">
-              {t('footer.workspace')}
-            </h3>
-            <ul className="space-y-3">
-              {workspaceLinks.map((link) => (
                 <li key={link.href}>
                   <Link href={link.href} className="text-sm text-neutral-500 hover:text-white transition-colors">
                     {t(link.labelKey)}

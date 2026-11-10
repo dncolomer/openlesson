@@ -14,6 +14,23 @@ export const PRACTICE_CATALOG_PATH = "/api/dashboard/practice/catalog";
 export const PRACTICE_HISTORY_PATH = "/api/dashboard/practice/history";
 export const PRACTICE_HOME_PATH = "/api/dashboard/practice/home";
 
+export const PRACTICE_START_KINDS = ["solve", "verification", "calibration"] as const;
+export type PracticeStartKind = (typeof PRACTICE_START_KINDS)[number];
+
+export function parsePracticeStartKind(value: unknown): PracticeStartKind {
+  if (value === "verification" || value === "verify") return "verification";
+  if (value === "calibration" || value === "calibrate") return "calibration";
+  return "solve";
+}
+
+export function practiceFlowMatchesProblem(
+  flow: { name?: string | null; topic?: string | null; goal?: string | null },
+  problem: { title: string; prompt: string },
+): boolean {
+  const topic = String(flow.topic || flow.goal || "").trim();
+  return topic === problem.prompt && String(flow.name || "").trim() === problem.title;
+}
+
 export type PracticeProblem = {
   id: string;
   slug: string;

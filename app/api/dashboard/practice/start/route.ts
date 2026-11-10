@@ -3,9 +3,13 @@ import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { rejectIfInsufficientSessionCredits } from "@/lib/credits/account";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { parsePracticeStartKind } from "@/lib/practice-problems";
 import {
+  ensurePracticeCalibrationFlow,
   ensurePracticeSolveFlow,
+  ensurePracticeVerificationFlow,
   loadPublishedPracticeProblem,
+  practiceCreatedFlowPayload,
   practiceSessionInsert,
   practiceStartPayload,
 } from "@/lib/practice-session";
@@ -20,9 +24,25 @@ export async function POST(req: NextRequest) {
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
     const problemId = String(body.problemId || "").trim();
     if (!problemId) return jsonError(400, "problemId is required");
+    const kind = parsePracticeStartKind(body.kind);
 
     const problem = await loadPublishedPracticeProblem(problemId);
     if (!problem) return jsonError(404, "Problem not found");
+
+    if (kind === "verification") {
+      const flow = await ensurePracticeVerificationFlow({
+        ownerUserId: auth.user.id,
+        problem,
+      });
+      return NextResponse.json(practiceCreatedFlowPayload("verification", flow.id));
+    }
+    if (kind === "calibration") {
+      const flow = await ensurePracticeCalibrationFlow({
+        ownerUserId: auth.user.id,
+        problem,
+      });
+      return NextResponse.json(practiceCreatedFlowPayload("calibration", flow.id));
+    }
 
     const denied = await rejectIfInsufficientSessionCredits(createAdminClient(), {
       runnerUserId: auth.user.id,

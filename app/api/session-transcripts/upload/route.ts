@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
     const workspaceId = await workspaceIdForSession(supabase, body.sessionId);
     if (!workspaceId) {
       await deleteOrgScopedXaiFile(xaiFileId, organizationId).catch(() => {});
-      return jsonError(400, "Session is missing a Learning Map");
+      return jsonError(400, "Session is missing a workspace");
     }
     const transcriptRow = sensorPowInsertPayload({
       sessionId: body.sessionId,

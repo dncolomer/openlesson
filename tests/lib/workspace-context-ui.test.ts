@@ -221,11 +221,9 @@ describe("structural wiring in WorkspaceView + AYCL", () => {
     expect(view).toContain("handleMapGround");
   });
 
-  it("AyclWorkspaceView shares Context + map authoring path", () => {
-    const aycl = read("components/AyclWorkspaceView.tsx");
+  it("AyclWorkspaceView is gone; Context + map authoring stay on WorkspaceView", () => {
+    expect(existsSync(join(ROOT, "components/AyclWorkspaceView.tsx"))).toBe(false);
     const view = readWorkspaceViewSurface();
-    expect(aycl).toContain("<WorkspaceView");
-    expect(aycl).toContain("ayclToken={accessToken}");
     expect(view).toContain("mountsContextPanel");
     expect(view).toContain("WorkspaceMapAuthoringPane");
     expect(view).not.toContain("WorkspaceBlockLocalContextPanel");

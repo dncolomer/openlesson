@@ -84,12 +84,9 @@ describe("desktop layout + block detail chrome", () => {
     expect(WORKSPACE_MAP_DESKTOP_RIGHT_WIDTH_CLASS).toBe("md:w-1/4");
     // Prior split was md:w-1/2 each; new right is 50% of that width.
     const view = readWorkspaceViewSurface();
-    const aycl = read("components/AyclWorkspaceView.tsx");
     expect(view).toContain("WORKSPACE_MAP_DESKTOP_MAP_WIDTH_CLASS");
     expect(view).toContain("WORKSPACE_MAP_DESKTOP_RIGHT_WIDTH_CLASS");
     expect(view).not.toMatch(/md:w-1\/2 md:border-b-0 md:border-r/);
-    // AYCL is a thin access wrapper that mounts WorkspaceView (inherits map split).
-    expect(aycl).toContain("WorkspaceView");
   });
 
   it("BlockDetailCard is Explore/Drill only; no ? help", () => {
@@ -194,10 +191,6 @@ describe("desktop layout + block detail chrome", () => {
     expect(view).not.toMatch(
       /WorkspaceBlockLocalContextPanel[\s\S]*How context shapes practice/,
     );
-    const aycl = read("components/AyclWorkspaceView.tsx");
-    // AYCL mounts WorkspaceView which owns block detail drawers.
-    expect(aycl).toContain("WorkspaceView");
-    expect(aycl).not.toContain("WorkspaceBlockDetailTabs");
 
     const cardSrc = read("components/BlockDetailCard.tsx");
     expect(cardSrc).toContain("data-block-detail-no-hero-image");

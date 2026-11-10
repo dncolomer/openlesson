@@ -166,7 +166,7 @@ describe("guest vs signed-in billed account", () => {
       flowKind: "calibrate",
     });
     expect(result.ok).toBe(true);
-    expect(result.skipped).toBe(true);
+    expect((result as { skipped?: boolean }).skipped).toBe(true);
     expect((await store.load("owner-1")).balance).toBe(0);
   });
 
@@ -242,9 +242,7 @@ describe("session-start routes debit shipped credits", () => {
     const files = [
       "app/api/play/start/route.ts",
       "app/api/play/curious/route.ts",
-      "app/api/workspace/learner-launch/route.ts",
-      "app/api/dashboard/maps/try/route.ts",
-      "app/api/aycl/start-session/route.ts",
+      "app/api/dashboard/practice/start/route.ts",
       "lib/learn-link-auth.ts",
       "lib/calibration-flow-repository.ts",
       "lib/verification-flow-repository.ts",
@@ -259,17 +257,13 @@ describe("session-start routes debit shipped credits", () => {
     expect(learnLink).toContain("debitClaimedFlowSession");
     expect(learnLink).toContain("refundClaimedFlowSession");
     expect(learnLink).toContain("billedUserIdForIleLinkSession");
-    const launch = readFileSync(join(root, "app/api/workspace/learner-launch/route.ts"), "utf8");
-    const debitAt = launch.indexOf("rejectIfInsufficientSessionCredits(createAdminClient()");
-    expect(debitAt).toBeGreaterThan(launch.indexOf("Block not found"));
-    expect(debitAt).toBeGreaterThan(launch.indexOf("Failed to save prompt"));
-    expect(launch).toContain("refundFlowSessionCredits");
-    const startFlow = readFileSync(
-      join(root, "app/api/dashboard/maps/start-flow/route.ts"),
+    const practiceStart = readFileSync(
+      join(root, "app/api/dashboard/practice/start/route.ts"),
       "utf8",
     );
+    expect(practiceStart).toContain("rejectIfInsufficientSessionCredits");
+    const startFlow = readFileSync(join(root, "lib/credits/claim-charge.ts"), "utf8");
     expect(startFlow).toContain("chargeFlowSessionOrThrow");
-    expect(startFlow).toContain("ownerUserId: runnerUserId");
     const supabaseStore = readFileSync(join(root, "lib/credits/supabase-store.ts"), "utf8");
     expect(supabaseStore).toContain("credit_balance, is_admin");
     expect(supabaseStore).toContain("isUnmeteredCreditsProfile");

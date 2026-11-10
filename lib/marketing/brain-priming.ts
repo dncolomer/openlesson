@@ -31,7 +31,7 @@ export const BRAIN_PRIMING_COPY = {
   positioning: "tailored to you",
   product: "supplement",
   h1: "Tell us what you want to learn. The map and the supplement follow.",
-  p1: "The Brain Priming Protocol starts with your subject. Mathematics, computer science, or chemistry and biology. We build a Learning Map and tailored exercises around exactly that.",
+  p1: "The Brain Priming Protocol starts with your subject. Mathematics, computer science, or chemistry and biology. We build tailored Solve and Verify exercises around exactly that.",
   p2: "Each week you Solve, then Verify, on that map. The work is brain priming, tailored to you. The supplement follows the same weeks. Three months or six.",
   lead:
     "Brain Priming Protocol: tell us what you want to learn. Weekly tailored exercises plus a brain priming supplement tailored to you.",
@@ -72,7 +72,7 @@ export const BRAIN_PRIMING_COPY = {
       {
         eyebrow: "02",
         name: "Tailored exercises",
-        body: "A Learning Map of Solve and Verify flows on that topic. You run it every week.",
+        body: "Solve and Verify flows on that topic. You run them every week.",
       },
       {
         eyebrow: "03",
@@ -93,7 +93,7 @@ export const BRAIN_PRIMING_COPY = {
       {
         eyebrow: "MAP",
         name: "Tailored exercises",
-        body: "Weekly Solve and Verify on a Learning Map built for that subject.",
+        body: "Weekly Solve and Verify flows built for that subject.",
       },
       {
         eyebrow: "BOTTLE",
@@ -138,7 +138,7 @@ export const BRAIN_PRIMING_COPY = {
       {
         eyebrow: "EXERCISES",
         name: "Weekly Solve and Verify",
-        body: "A Learning Map built for that topic. Tailored exercises. You run it every week.",
+        body: "Solve and Verify flows built for that topic. Tailored exercises. You run them every week.",
         image: "/lp-boxes/tapbench-maps-blueprint.jpg",
         imageAlt: "Blueprint of a folded map and compass",
       },

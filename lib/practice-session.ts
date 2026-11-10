@@ -8,6 +8,7 @@ import { SOLVE_FLOWS_TABLE } from "@/lib/core-tables";
 import {
   PRACTICE_PROBLEMS_TABLE,
   practiceDurationMs,
+  practiceFlowMatchesProblem,
   practiceIdentityForUser,
   practiceSessionHref,
   practiceSessionMetadata,
@@ -20,11 +21,28 @@ import {
   type PracticeInsight,
   type PracticeProblem,
 } from "@/lib/practice-problems";
+import { productFlowPagePath } from "@/lib/product-flow";
 import {
   createSolvePublicToken,
   type SolveFlow,
 } from "@/lib/solve-flow";
 import { runSolveCommand, getSolveFlowById } from "@/lib/solve-flow-repository";
+import {
+  createVerificationPublicToken,
+  type VerificationFlow,
+} from "@/lib/verification-flow";
+import {
+  listVerificationFlowsForOwnerUserId,
+  runVerificationCommand,
+} from "@/lib/verification-flow-repository";
+import {
+  createCalibrationPublicToken,
+  type CalibrationFlow,
+} from "@/lib/calibration-flow";
+import {
+  listCalibrationFlowsForOwnerUserId,
+  runCalibrationCommand,
+} from "@/lib/calibration-flow-repository";
 import { flowCountdownMinutes } from "@/lib/flow-countdown";
 
 export async function loadPublishedPracticeProblem(
@@ -155,6 +173,58 @@ export function practiceStartPayload(sessionId: string): {
   return {
     sessionId,
     href: practiceSessionHref(sessionId),
+  };
+}
+
+export async function ensurePracticeVerificationFlow(input: {
+  ownerUserId: string;
+  problem: PracticeProblem;
+}): Promise<VerificationFlow> {
+  const listed = await listVerificationFlowsForOwnerUserId(input.ownerUserId);
+  const existing = listed.find((flow) => practiceFlowMatchesProblem(flow, input.problem));
+  if (existing) return existing;
+  const created = await runVerificationCommand({
+    type: "create",
+    ownerUserId: input.ownerUserId,
+    name: input.problem.title,
+    topic: input.problem.prompt,
+    problem: input.problem.prompt,
+    durationMinutes: flowCountdownMinutes(input.problem.durationMinutes),
+    publicToken: createVerificationPublicToken(),
+  });
+  if (created.ok && created.flow) return created.flow;
+  throw new Error(created.ok ? "Failed to create verification flow" : created.reason);
+}
+
+export async function ensurePracticeCalibrationFlow(input: {
+  ownerUserId: string;
+  problem: PracticeProblem;
+}): Promise<CalibrationFlow> {
+  const listed = await listCalibrationFlowsForOwnerUserId(input.ownerUserId);
+  const existing = listed.find((flow) => practiceFlowMatchesProblem(flow, input.problem));
+  if (existing) return existing;
+  const created = await runCalibrationCommand({
+    type: "create",
+    ownerUserId: input.ownerUserId,
+    name: input.problem.title,
+    topic: input.problem.prompt,
+    problem: input.problem.prompt,
+    goal: input.problem.prompt,
+    durationMinutes: flowCountdownMinutes(input.problem.durationMinutes),
+    publicToken: createCalibrationPublicToken(),
+  });
+  if (created.ok && created.flow) return created.flow;
+  throw new Error(created.ok ? "Failed to create calibration flow" : created.reason);
+}
+
+export function practiceCreatedFlowPayload(
+  kind: "verification" | "calibration",
+  flowId: string,
+): { flowId: string; href: string; kind: "verification" | "calibration" } {
+  return {
+    kind,
+    flowId,
+    href: productFlowPagePath(kind, flowId),
   };
 }
 

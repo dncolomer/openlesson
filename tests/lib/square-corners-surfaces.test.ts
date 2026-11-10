@@ -25,7 +25,6 @@ const ENTRY_SHELLS = [
   "components/SessionView.tsx",
   "components/TapScoreClient.tsx",
   "components/LearnGuestSessionClient.tsx",
-  "components/AyclWorkspaceView.tsx",
   "components/BlockSkillGrid.tsx",
 ];
 

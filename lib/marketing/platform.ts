@@ -28,8 +28,8 @@ export const PLATFORM_HERO = {
 } as const;
 
 export const PLATFORM_PUBLIC_MAPS = {
-  title: "Explore our Learning Maps",
-  lead: "Try out any of our learning maps.",
+  title: "Explore the protocols",
+  lead: "Try Solve, Verify, and Mapping protocols.",
   signupHref: "/register",
 } as const;
 

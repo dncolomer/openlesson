@@ -9,7 +9,7 @@ const labelClass = "font-mono text-[10px] uppercase tracking-[2px] text-neutral-
 const codeBlockClass =
   "mt-3 overflow-x-auto border border-white/20 bg-black p-4 font-mono text-xs text-neutral-300 sm:text-sm";
 
-export default function LearningMapApiPage() {
+export default function FlowApiPage() {
   return (
     <div className="relative min-h-screen">
       <PublicPageField />
@@ -18,10 +18,11 @@ export default function LearningMapApiPage() {
       <main className="relative z-10 mx-auto max-w-[96rem] px-4 py-10 sm:px-6 lg:px-8">
         <header className={`${sectionClass} mb-6`}>
           <p className={labelClass}>Public agent API v3</p>
-          <h1 className="mt-2 text-3xl font-medium text-white">Learning Map API</h1>
+          <h1 className="mt-2 text-3xl font-medium text-white">Flow API</h1>
           <p className="mt-3 max-w-3xl text-sm text-neutral-400">
-            Agents and humans create Learning Maps and independent Solve, Calibration, and Verification
-            flows with a Bearer API key. Proof of work is recorded in the product UI (Calibrate, Learn, and Verify). Headless session upload is not a public agent API.
+            Agents and humans create independent Solve, Calibration, and Verification flows with a
+            Bearer API key. Proof of work is recorded in the product UI. Headless session upload is
+            not a public agent API.
           </p>
         </header>
 
@@ -52,15 +53,14 @@ Content-Type: application/json`}</pre>
           <h2 className="text-lg font-medium text-white">What you can create</h2>
           <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-neutral-400">
             <li>
-              <strong className="font-medium text-neutral-200">Learning Maps</strong> —{" "}
-              <code className="text-neutral-300">/api/v3/workspaces</code>. REST paths still say workspaces;
-              the product name is Learning Map.
-            </li>
-            <li>
-              <strong className="font-medium text-neutral-200">Flows</strong> — independent Solve, Calibration,
-              and Verification at <code className="text-neutral-300">/api/v3/flows</code>. Optional{" "}
-              <code className="text-neutral-300">workspace_id</code> when created from a map.{" "}
-              <code className="text-neutral-300">link_flow</code> places an existing flow on a tile.
+              <strong className="font-medium text-neutral-200">Flows</strong> — independent Solve,
+              Calibration, and Verification at{" "}
+              <code className="text-neutral-300">/api/v3/flows</code>. MCP tools{" "}
+              <code className="text-neutral-300">list_flows</code>,{" "}
+              <code className="text-neutral-300">create_flow</code>,{" "}
+              <code className="text-neutral-300">get_flow</code>,{" "}
+              <code className="text-neutral-300">update_flow</code>, and{" "}
+              <code className="text-neutral-300">delete_flow</code> are 1:1 with these REST twins.
             </li>
           </ul>
           <pre className={codeBlockClass}>{`POST /api/v3/flows
@@ -94,14 +94,11 @@ Content-Type: application/json`}</pre>
 Authorization: Bearer sk_…
 { "jsonrpc": "2.0", "id": 1, "method": "tools/list" }`}</pre>
           <p className="mt-3 text-sm text-neutral-400">
-            Partner loop: <code className="text-neutral-300">create_workspace</code> or{" "}
-            <code className="text-neutral-300">get_workspace</code>, then{" "}
-            <code className="text-neutral-300">list_map_tools</code> /{" "}
-            <code className="text-neutral-300">apply_map_tool</code>, then{" "}
+            Partner loop: <code className="text-neutral-300">list_flows</code>, then{" "}
             <code className="text-neutral-300">create_flow</code> →{" "}
-            <code className="text-neutral-300">link_flow</code>. Nested{" "}
-            <code className="text-neutral-300">/api/v3/workspaces/{"{id}"}/flows</code> still creates a flow
-            on that map.
+            <code className="text-neutral-300">get_flow</code> →{" "}
+            <code className="text-neutral-300">update_flow</code>. REST lives at{" "}
+            <code className="text-neutral-300">/api/v3/flows</code>.
           </p>
           <p className="mt-2 text-sm text-neutral-500">
             Do not call <code className="text-neutral-400">start_session</code>,{" "}

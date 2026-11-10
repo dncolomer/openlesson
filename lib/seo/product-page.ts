@@ -210,7 +210,7 @@ export const POW_API_PAGE: SeoProductPageConfig = {
         "The system learns what evidence is still missing to complete the learning world model for a user or agent, and surfaces that through updated schemas and measurement — optimizing its own asks over time instead of returning the same checklist forever.",
     },
   ],
-  secondaryCta: { label: "View API docs", href: "/docs/learning-map-api" },
+  secondaryCta: { label: "View API docs", href: "/docs/proof-of-work-api" },
   closingTitle: "Build your application on a model that keeps learning what to measure.",
   closingBody:
     "Book a demo to see Proof-of-Work API as the foundation for custom verification, optimization, and augmentation — with an interface that grows as your users’ world model does.",

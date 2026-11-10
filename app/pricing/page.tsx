@@ -78,14 +78,6 @@ function PricingPageContent() {
             {UNIFIED_PRICING_COPY.lead}
           </p>
           <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm">
-            <Link
-              href={UNIFIED_PRICING_COPY.ayclHref}
-              data-testid="pricing-aycl-link"
-              className="inline-flex items-center text-neutral-200 underline decoration-neutral-700 underline-offset-4 hover:text-white"
-            >
-              {UNIFIED_PRICING_COPY.ayclCta}
-              <span className="ml-1.5 text-neutral-500">{UNIFIED_PRICING_COPY.ayclLabel}</span>
-            </Link>
             <a
               href={UNIFIED_PRICING_COPY.academyHref}
               data-testid="pricing-academy-k-link"

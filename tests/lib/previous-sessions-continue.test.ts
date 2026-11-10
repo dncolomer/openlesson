@@ -357,9 +357,7 @@ describe("dummy density occupancy + continue mini read-only", () => {
     expect(welcome).not.toContain("data-ile-session-insight-goal");
     expect(welcome).not.toContain("data-ile-silence-lock-minutes");
     expect(welcome).toContain("flex-1");
-    const aycl = read("components/AyclLandingClient.tsx");
-    expect(aycl).toContain("h-[min(28rem,55vh)]");
-    expect(aycl).toContain("viewOnly");
+    expect(existsSync(join(ROOT, "components/AyclLandingClient.tsx"))).toBe(false);
   });
 });
 

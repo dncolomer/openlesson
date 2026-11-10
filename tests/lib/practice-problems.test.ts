@@ -20,7 +20,9 @@ import {
   isPracticeSessionMetadata,
   isPracticeSolveFlow,
   listedAuthorSolveFlows,
+  parsePracticeStartKind,
   practiceBrowseLevel,
+  practiceFlowMatchesProblem,
   practiceIdentityForUser,
   practiceSessionHref,
   practiceSessionMetadata,
@@ -32,8 +34,6 @@ import {
 } from "@/lib/practice-problems";
 import {
   dashboardHomeCtas,
-  presentDashboardHomeRecentMap,
-  sortDashboardHomeRecentMaps,
 } from "@/lib/dashboard-home-overview";
 import { presentDashboardDataStudio } from "@/lib/data-studio-view";
 import { isFlowArchived } from "@/lib/flow-archive";
@@ -140,7 +140,7 @@ describe("practice catalog", () => {
 describe("practice dashboard surfaces", () => {
   it("puts browse maps on Learning and exercises plus Performance on Solve / Practice", () => {
     expect(parseDashboardTab("practice")).toBe("practice");
-    expect(isDashboardBrowseMapsTab("browse_maps")).toBe(true);
+    expect(isDashboardBrowseMapsTab("browse_maps")).toBe(false);
     expect(isDashboardPracticeTab("practice")).toBe(true);
     expect(isDashboardStudioTab("practice_studio")).toBe(false);
     expect(parseDashboardTab("practice_studio")).toBe("solve_studio");
@@ -148,27 +148,24 @@ describe("practice dashboard surfaces", () => {
     expect(dashboardFrameLabel("practice")).toBe("Practice library");
     expect(dashboardFrameLabel("solve_studio")).toBe("Data Studio");
     expect(dashboardFrameLabel("practice_performance")).toBe("Performance");
-    expect(dashboardNavGroupIdForTab("practice")).toBe("solve");
-    expect(dashboardNavGroupIdForTab("practice_performance")).toBe("solve");
+    expect(dashboardNavGroupIdForTab("practice")).toBeNull();
+    expect(dashboardNavGroupIdForTab("practice_performance")).toBeNull();
     expect(dashboardNavGroupIdForTab("calibration")).toBe("calibration");
-    const learning = DASHBOARD_NAV_GROUPS.find((group) => group.id === "learning");
+    const learning = DASHBOARD_NAV_GROUPS.find((group) => (group.id as string) === "learning");
     const solve = DASHBOARD_NAV_GROUPS.find((group) => group.id === "solve");
-    expect(learning?.items.map((item) => item.id)).not.toContain("practice");
-    expect(learning?.items.map((item) => item.id)).toContain("browse_maps");
-    expect(learning?.items.map((item) => item.label)).not.toContain("Data Studio");
-    expect(solve?.label).toBe("Solve / Practice");
-    expect(solve?.items.map((item) => item.id)).toContain("practice");
-    expect(solve?.items.map((item) => item.id)).toContain("practice_performance");
+    expect(learning).toBeUndefined();
+    expect(solve?.label).toBe("Solve");
+    expect(solve?.items.map((item) => item.id)).not.toContain("practice");
+    expect(solve?.items.map((item) => item.id)).not.toContain("practice_performance");
     expect(readRepo("app/dashboard/page.tsx")).toContain("DashboardPracticePerformanceTab");
     expect(readRepo("app/dashboard/page.tsx")).toContain("DashboardDataStudioTab");
     expect(readRepo("components/dashboard/dashboard-practice-performance-tab.tsx")).toContain(
       "data-dashboard-practice-insights",
     );
     expect(dashboardHomeCtas().map((cta) => cta.id)).toEqual([
-      "browse_maps",
       "practice",
-      "my_maps",
-      "solve_studio",
+      "verification",
+      "calibration",
     ]);
     expect(readRepo("components/dashboard/dashboard-home-tab.tsx")).toContain(
       "data-dashboard-home-cta",
@@ -176,20 +173,7 @@ describe("practice dashboard surfaces", () => {
     expect(readRepo("components/dashboard/dashboard-home-tab.tsx")).not.toContain(
       "data-dashboard-home-announcements",
     );
-    const maps = sortDashboardHomeRecentMaps([
-      presentDashboardHomeRecentMap({
-        id: "a",
-        title: "Old",
-        created_at: "2026-01-01T00:00:00.000Z",
-      })!,
-      presentDashboardHomeRecentMap({
-        id: "b",
-        title: "New",
-        created_at: "2026-11-01T00:00:00.000Z",
-      })!,
-    ]);
-    expect(maps.map((row) => row.id)).toEqual(["b", "a"]);
-    expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain(
+    expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).not.toContain(
       "data-dashboard-nav-group-toggle",
     );
     expect(readRepo("lib/solve-flow-repository.ts")).not.toContain("isPracticeSolveFlow");
@@ -197,13 +181,32 @@ describe("practice dashboard surfaces", () => {
       "ensurePracticeSolveFlow",
     );
     expect(readRepo("app/api/dashboard/practice/start/route.ts")).toContain(
+      "ensurePracticeVerificationFlow",
+    );
+    expect(readRepo("app/api/dashboard/practice/start/route.ts")).toContain(
+      "ensurePracticeCalibrationFlow",
+    );
+    expect(readRepo("app/api/dashboard/practice/start/route.ts")).toContain(
       "rejectIfInsufficientSessionCredits",
     );
+    expect(parsePracticeStartKind("verify")).toBe("verification");
+    expect(parsePracticeStartKind("calibrate")).toBe("calibration");
+    expect(parsePracticeStartKind(undefined)).toBe("solve");
+    expect(
+      practiceFlowMatchesProblem(
+        { name: "Bell", topic: "Explain a Bell pair." },
+        { title: "Bell", prompt: "Explain a Bell pair." },
+      ),
+    ).toBe(true);
     const practiceTab = readRepo("components/dashboard/dashboard-practice-tab.tsx");
     expect(practiceTab).toContain("data-dashboard-practice-crumbs");
     expect(practiceTab).toContain("data-dashboard-practice-open-category");
     expect(practiceTab).toContain("data-dashboard-practice-open-subcategory");
     expect(practiceTab).toContain('data-dashboard-practice-browse="categories"');
+    expect(practiceTab).toContain("data-dashboard-practice-kind={kind}");
+    expect(practiceTab).toContain("Solve / Practice");
+    expect(practiceTab).toContain("Verify");
+    expect(practiceTab).toContain("Calibrate");
     expect(practiceTab).not.toContain("<select");
     expect(practiceTab).not.toContain("All categories");
   });

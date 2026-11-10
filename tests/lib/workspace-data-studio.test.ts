@@ -18,61 +18,14 @@ function read(rel: string) {
 }
 
 describe("workspace Data Studio surface", () => {
-  it("Settings registry mounts Data Studio tab and panel", () => {
+  it("workspace Settings Data Studio panel and mutate route are gone; dashboard studio remains", () => {
+    expect(existsSync(join(ROOT, "components/WorkspaceDataStudioPanel.tsx"))).toBe(false);
+    expect(existsSync(join(ROOT, "app/api/workspace/data-studio/pow/route.ts"))).toBe(false);
     const panel = read("components/WorkspaceIntegrationPanel.tsx");
-    expect(panel).toContain('"data-studio"');
-    expect(panel).toContain("Data Studio");
-    expect(panel).toContain("WorkspaceDataStudioPanel");
-    expect(panel).toContain('data-settings-tab-panel="data-studio"');
-    expect(existsSync(join(ROOT, "components/WorkspaceDataStudioPanel.tsx"))).toBe(true);
-    const studio = read("components/WorkspaceDataStudioPanel.tsx");
-    expect(studio).toContain("data-workspace-data-studio");
-    expect(studio).toContain("data-studio-filter-user");
-    expect(studio).toContain("data-studio-filter-link");
-    expect(studio).toContain("data-studio-filter-search");
-    expect(studio).toContain("data-studio-bulk-invalidate");
-    expect(studio).toContain("data-studio-invalidate");
-    expect(studio).toContain("/api/workspace/data-studio/pow");
-    // Expandable row details with metadata
-    expect(studio).toContain("data-studio-pow-expand");
-    expect(studio).toContain("data-studio-pow-details-row");
-    expect(studio).toContain("data-studio-pow-metadata-json");
-    expect(studio).toContain("data-studio-pow-details");
-    expect(studio).toContain("JSON.stringify(meta");
-  });
-
-  it("ships workspace mutate route using metadata invalidate", () => {
-    const ws = read("app/api/workspace/data-studio/pow/route.ts");
-    expect(ws).toContain("buildStudioPowPatch");
-    expect(ws).toContain("invalidate");
-    expect(ws).toContain("guardWorkspaceRoute");
-    expect(ws).toContain("updated_ids");
-    // Writes after owner gate use service role (RLS lacked UPDATE historically)
-    expect(ws).toContain("createAdminClient");
-    // List: accurate range+count for simple browse; candidate scan for filters
-    expect(ws).toContain("count: \"exact\"");
-    expect(ws).toContain("POW_CANDIDATE_LIMIT");
-    expect(ws).toContain("needsCandidateScan");
-    expect(ws).toContain(".range(");
-
-    // No dedicated invalidated column in select / updates beyond metadata object
-    expect(ws).not.toMatch(/\.update\(\s*\{\s*invalidated\s*:/);
-
-    // Owner UPDATE RLS migration ships
-    expect(
-      existsSync(
-        join(ROOT, "supabase/migrations/20260731160000_workspace_pow_owner_update.sql"),
-      ),
-    ).toBe(true);
-    const mig = read("supabase/migrations/20260731160000_workspace_pow_owner_update.sql");
-    expect(mig).toMatch(/Workspace owners can update evidence/i);
-    expect(mig).toMatch(/FOR UPDATE/i);
-  });
-
-  it("bulk invalidate UI closes inspect to avoid stale metadata wipe", () => {
-    const wsUi = read("components/WorkspaceDataStudioPanel.tsx");
-    expect(wsUi).toContain("setExpandedId(null)");
-    expect(wsUi).toMatch(/bulkInvalidate[\s\S]*setExpandedId\(null\)/);
+    expect(panel).not.toContain("WorkspaceDataStudioPanel");
+    expect(existsSync(join(ROOT, "app/api/dashboard/data-studio/route.ts"))).toBe(true);
+    const studio = read("app/api/dashboard/data-studio/route.ts");
+    expect(studio.length).toBeGreaterThan(0);
   });
 });
 

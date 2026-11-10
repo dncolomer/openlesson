@@ -280,12 +280,12 @@ export function planFeatureList(plan: string | null | undefined): string[] {
   if (modules.includes("calibrate")) features.push("Calibration flows and knowledge regions");
   if (plan === "trial") features.unshift("All modules for 3 days");
   if (plan === "api_metered") {
-    features.push("Learning Map API keys + MCP");
+    features.push("Flow API keys + MCP");
     features.push("$99/mo platform + usage");
   }
   if (features.length === 0) {
     features.push("Free signup with starter credits");
-    features.push("Create Learning Maps and Knowledge Regions at no credit cost");
+    features.push("Create Knowledge Regions at no credit cost");
     features.push("Pay credits to run Calibrate, Learn, Verify, and Solve sessions");
   }
   return features;

@@ -4,12 +4,7 @@
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import {
-  HARNESS_PRICING_COPY,
-  PRICING_AYCL_CTA,
-  PRICING_AYCL_HREF,
-  PRICING_AYCL_LABEL,
-} from "@/lib/pricing/harness-copy";
+import { HARNESS_PRICING_COPY } from "@/lib/pricing/harness-copy";
 import { UNIFIED_PRICING_COPY } from "@/lib/pricing/unified-copy";
 import { VERIFICATION_PRICING_COPY } from "@/lib/pricing/verification-copy";
 import { AUTHORING_PRICING_COPY } from "@/lib/pricing/authoring-copy";
@@ -86,13 +81,12 @@ describe("unified pricing page source", () => {
     expect(src).not.toContain("VERIFICATION_PRICING_COPY");
   });
 
-  it("links to All-You-Can-Learn as a visible CTA", () => {
+  it("does not present All-You-Can-Learn as a live CTA", () => {
     const src = read("app/pricing/page.tsx");
-    expect(src).toContain("UNIFIED_PRICING_COPY.ayclHref");
-    expect(src).toContain('data-testid="pricing-aycl-link"');
-    expect(PRICING_AYCL_HREF).toBe("/all-you-can-learn");
-    expect(PRICING_AYCL_LABEL).toMatch(/All-You-Can-Learn/);
-    expect(PRICING_AYCL_CTA.toLowerCase()).toMatch(/browse ready-made workspaces/);
+    expect(src).not.toContain("UNIFIED_PRICING_COPY.ayclHref");
+    expect(src).not.toContain('data-testid="pricing-aycl-link"');
+    expect(src).not.toContain("/all-you-can-learn");
+    expect("ayclHref" in UNIFIED_PRICING_COPY).toBe(false);
   });
 
   it("links Academy-k on modules pricing", () => {

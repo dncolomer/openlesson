@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { readDashboardSurface, readRepo } from "../helpers/surface-source";
 import {
   FREE_DASHBOARD_TAB_IDS,
@@ -38,10 +40,10 @@ describe("free tier dashboard and paths", () => {
     const groups = dashboardNavGroupsForAccess(false);
     expect(groups.some((group) => group.id === "verification")).toBe(true);
     expect(groups.some((group) => group.id === "calibration")).toBe(true);
-    expect(clampDashboardTabForAccess("learning", false)).toBe("learning");
-    expect(clampDashboardTabForAccess("shop", false)).toBe("shop");
+    expect(clampDashboardTabForAccess("learning" as never, false)).toBe("home");
+    expect(clampDashboardTabForAccess("shop" as never, false)).toBe("home");
     expect(clampDashboardTabForAccess("verification", false)).toBe("verification");
-    expect(clampDashboardTabForAccess("my_maps", false)).toBe("my_maps");
+    expect(clampDashboardTabForAccess("practice", false)).toBe("practice");
     expect(dashboardPlayKindsForAccess(false)).toEqual(["learn", "verify", "calibrate"]);
     expect(dashboardPlayKindsForAccess(true)).toEqual(["learn", "verify", "calibrate"]);
   });
@@ -53,9 +55,9 @@ describe("free tier dashboard and paths", () => {
     expect(isFreeTierAllowedPath("/play")).toBe(true);
     expect(isFreeTierAllowedPath("/play/verify")).toBe(true);
     expect(isFreeTierAllowedPath("/play/calibrate")).toBe(true);
-    expect(isFreeTierAllowedPath("/workspace/abc")).toBe(true);
+    expect(isFreeTierAllowedPath("/workspace/abc")).toBe(false);
     expect(isFreeTierAllowedPath("/results")).toBe(true);
-    expect(isFreeTierAllowedPath("/workspace/new")).toBe(true);
+    expect(isFreeTierAllowedPath("/workspace/new")).toBe(false);
     expect(isFreeTierAllowedPath("/verification")).toBe(true);
     expect(isFreeTierAllowedPath("/verification/flows/new")).toBe(true);
     expect(isFreeTierAllowedPath("/calibration/flows/x")).toBe(true);
@@ -87,15 +89,11 @@ describe("free tier surfaces", () => {
     expect(playStart).toContain("parseDashboardPlayKind");
     expect(readRepo("app/api/play/curious/route.ts")).toContain("rejectIfInsufficientSessionCredits");
 
-    const launch = readRepo("app/api/workspace/learner-launch/route.ts");
-    expect(launch).toContain("requireProductAccess: false");
-    expect(launch).toContain("rejectIfInsufficientSessionCredits");
-    expect(launch.indexOf("rejectIfInsufficientSessionCredits(createAdminClient()")).toBeGreaterThan(
-      launch.indexOf("Block not found"),
+    expect(existsSync(join(__dirname, "../../app/api/workspace/learner-launch/route.ts"))).toBe(
+      false,
     );
-    expect(launch.indexOf("rejectIfInsufficientSessionCredits(createAdminClient()")).toBeGreaterThan(
-      launch.indexOf("Failed to save prompt"),
-    );
+    const practiceStart = readRepo("app/api/dashboard/practice/start/route.ts");
+    expect(practiceStart).toContain("rejectIfInsufficientSessionCredits");
 
     const checkUsage = readRepo("app/api/check-usage/route.ts");
     expect(checkUsage).toContain("creditBalance");
@@ -106,7 +104,7 @@ describe("free tier surfaces", () => {
     expect(dash).toContain("clampDashboardTabForAccess");
     expect(readRepo("lib/free-tier.ts")).toContain("dashboardPlayKindsForAccess");
     expect(readRepo("components/dashboard/dashboard-usage-tab.tsx")).toContain("data-dashboard-credits");
-    expect(readRepo("app/api/workspace/generate/route.ts")).not.toContain("rejectIfInsufficientSessionCredits");
+    expect(existsSync(join(__dirname, "../../app/api/workspace/generate/route.ts"))).toBe(false);
     expect(readRepo("app/api/dashboard/knowledge-regions/route.ts")).not.toContain("rejectIfInsufficientSessionCredits");
 
     expect(readRepo("lib/api/require-auth.ts")).toContain(

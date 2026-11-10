@@ -3,13 +3,8 @@
  */
 import { CREDIT_PACKS, FLOW_SESSION_CREDIT_COST, STARTER_CREDIT_GRANT } from "@/lib/credits/constants";
 import { formatUsdFromCents } from "@/lib/pricing/modules";
-import { AYCL_PATH } from "@/lib/marketing/paths";
 import { HARNESS_PRICING_THESIS_LINKS } from "@/lib/science/hub";
 import { UNIFIED_PRICING_COPY } from "@/lib/pricing/unified-copy";
-
-export const PRICING_AYCL_HREF = AYCL_PATH;
-export const PRICING_AYCL_CTA = UNIFIED_PRICING_COPY.ayclCta;
-export const PRICING_AYCL_LABEL = UNIFIED_PRICING_COPY.ayclLabel;
 
 const highlightedPack = CREDIT_PACKS.find((pack) => pack.highlighted) ?? CREDIT_PACKS[1];
 const starterPack = CREDIT_PACKS[0];
@@ -31,11 +26,8 @@ export const HARNESS_PRICING_COPY = {
     `${STARTER_CREDIT_GRANT} starter credits on free signup`,
     `${FLOW_SESSION_CREDIT_COST} credits per Calibrate, Learn, Verify, or Solve session`,
     `${starterPack.name} for ${formatUsdFromCents(starterPack.priceCents)} one-time`,
-    "All-You-Can-Learn catalog available as lifetime buys",
+    "Credit packs for more Calibrate, Learn, Verify, and Solve sessions",
   ],
-  ayclHref: PRICING_AYCL_HREF,
-  ayclCta: PRICING_AYCL_CTA,
-  ayclLabel: PRICING_AYCL_LABEL,
   thesisLead:
     "You are paying credits to run Solving, Learn, Verify, and Calibrate sessions.",
   thesisLinks: HARNESS_PRICING_THESIS_LINKS,

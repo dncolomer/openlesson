@@ -87,7 +87,7 @@ export const PLANS: Record<PlanId, PlanDef> = {
     workspacesPerPeriod: null,
     features: [
       "Free signup with starter credits",
-      "Create Learning Maps and Knowledge Regions at no credit cost",
+      "Create Knowledge Regions at no credit cost",
       "Run Calibrate, Learn, Verify, and Solve sessions with credits",
     ],
     stripePriceEnv: null,
@@ -116,7 +116,7 @@ export const PLANS: Record<PlanId, PlanDef> = {
       "$1 per timed session · $10 per Learning session",
       "$99/mo platform access",
       "Unlimited Workspaces",
-      "Learning Map API keys + MCP",
+      "Flow API keys + MCP",
       "Internal practice-session PoW not billed as API PoW",
       "Priority support",
     ],
@@ -598,7 +598,7 @@ export function hasProofOfWorkApiAccess(
   return plan === "api_metered";
 }
 
-/** Plans that may create Learning Map API keys (dashboard /api/dashboard/api-keys). */
+/** Plans that may create Flow API keys (dashboard /api/dashboard/api-keys). */
 export function hasAgentApiKeyPlan(plan: PlanId | string | null | undefined): boolean {
   return plan === "api_metered";
 }

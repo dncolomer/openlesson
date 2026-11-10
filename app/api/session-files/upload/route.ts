@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
 
     const workspaceId = await workspaceIdForSession(supabase, sessionId);
     if (!workspaceId) {
-      return jsonError(400, "Session is missing a Learning Map");
+      return jsonError(400, "Session is missing a workspace");
     }
 
     let xaiFileId: string;

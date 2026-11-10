@@ -360,11 +360,11 @@ export function buildProofOfWorkSchemaInstructions(
 
   const task = `${scope}
 
-You are an Uncertain Systems proof-of-work architect. Produce a **formal proof-of-work specification** for in-app session recording. Public agents manage Learning Maps and Solve, Calibration, and Verification flows; they do not run a headless proof-of-work loop.
+You are an Uncertain Systems proof-of-work architect. Produce a **formal proof-of-work specification** for in-app session recording. Public agents manage Solve, Calibration, and Verification flows; they do not run a headless proof-of-work loop.
 
-Uncertain Systems public agent surface is Learning Map and flow management (REST /api/v3/workspaces and MCP). Headless start_session / upload_proof_of_work / end_session are not public agent APIs. Snapshot and Stash are not public agent APIs.
+Uncertain Systems public agent surface is independent flow management (REST /api/v3/flows and MCP). Headless start_session / upload_proof_of_work / end_session are not public agent APIs. Snapshot and Stash are not public agent APIs.
 
-Document map and flow REST paths in contracts. The platform also attaches continuous_evaluation_mcp with create_flow, link_flow, and apply_map_tool after generation — your continuous_evaluation_summary must mention those surfaces.
+Document flow REST paths in contracts. The platform also attaches continuous_evaluation_mcp with list_flows, create_flow, get_flow, and update_flow after generation — your continuous_evaluation_summary must mention those surfaces.
 
 Use the full workspace context: attached JSON summary, block titles/descriptions, existing proof of work patterns, plan files, and Think Aloud Protocol (TAP) session signals when present. TAP and TAP Learning may inform scoring — but score report remediation (gaps, next_steps, suggestions) must stay product-independent: never recommend TAP sessions, block completion, TAP Learning, or other Uncertain Systems platform mechanics.
 
@@ -388,18 +388,17 @@ Output rules:
    - proof_of_work_types: tool (${PROOF_OF_WORK_MIME_BY_TYPE.tool.join(", ")}), screen (${PROOF_OF_WORK_MIME_BY_TYPE.screen.join(", ")}), video (${PROOF_OF_WORK_MIME_BY_TYPE.video.join(", ")}), eeg (${PROOF_OF_WORK_MIME_BY_TYPE.eeg.join(", ")}) with when_to_use guidance. Stored types are ${WORKSPACE_PROOF_OF_WORK_TYPES.join(" | ")}. Model version ${POW_MODEL_VERSION}.
    - common_fields: type, mime_type, data, file_name, block_id, session_id, timestamp_ms, tool_name, tool_action, metadata, pow_model_version
 5. Optimize payloads for path inference on the prepared answers-model tree: time-ordered events, tool_action, metadata.prompt, decision rationale. In-app session outcomes still include answers_model, sequence, remaining_ms, and embedding. Catalog sizes 4 / 8 / 16. Expired sessions reject further work.
-6. "performance_report_contract" must formally describe Helios map tools (MCP apply_map_tool):
-   - endpoint_pattern: "POST /api/v3/workspaces/{workspace_id}/map-tools"
+6. "performance_report_contract" must formally describe flow management (MCP create_flow):
+   - endpoint_pattern: "POST /api/v3/flows"
    - response_mode: "score"
-   - required_fields: workspace_id, tool, tool_calls
-   Do not document Snapshot, Stash, or headless sessions as public agent APIs.
-7. "collection_guidance" explains cadence: create_workspace or get_workspace → list_map_tools / apply_map_tool → create_flow → link_flow. Proof of work is recorded in the product UI. When learning world model evidence appetite is provided above, bias collection_guidance and tool_submissions toward want_more types and de-emphasize saturated types.
+   - required_fields: kind, name
+   Do not document Snapshot, Stash, Learning Maps, or headless sessions as public agent APIs.
+7. "collection_guidance" explains cadence: list_flows → create_flow → get_flow → update_flow. Proof of work is recorded in the product UI. When learning world model evidence appetite is provided above, bias collection_guidance and tool_submissions toward want_more types and de-emphasize saturated types.
 8. "continuous_evaluation_summary" must state clearly that:
-   - This spec is derived from current workspace context
-   - Integrators run **create_flow** then **link_flow** then **apply_map_tool**
-   - Integrators must **regenerate** POST .../integration-skill (REST) or generate_integration_skill (MCP) so skill.md stays aligned
-   - Progress tracking uses get_workspace and list_flows
-   - get_workspace (MCP) orients agents before create_flow
+   - This spec is derived from current flow context
+   - Integrators run **create_flow** then **get_flow** then **update_flow**
+   - Progress tracking uses list_flows and get_flow
+   - list_flows (MCP) orients agents before create_flow
    - Continuous evaluation is the intended operating model, not a one-time setup
 9. schema_name must be snake_case prefixed with "eval_input_".
 10. Keep required_fields practical; use optional_fields for enrichments.

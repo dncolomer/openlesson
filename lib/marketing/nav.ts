@@ -11,9 +11,9 @@ import {
 export const PLATFORM_NAV_LABEL = "Explore the Platform" as const;
 
 export const MAIN_NAV_PRODUCT_LINKS = [
-  { href: LEARNING_HARNESS_PATH, label: "Solve Protocols" },
   { href: KNOWLEDGE_VERIFICATION_PATH, label: "Verify Protocols" },
   { href: KNOWLEDGE_MAPPING_PATH, label: "Mapping Protocols" },
+  { href: LEARNING_HARNESS_PATH, label: "Solve / Practice Protocols" },
 ] as const;
 
 export const USE_CASES_NAV_LINK = {

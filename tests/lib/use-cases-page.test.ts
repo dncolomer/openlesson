@@ -27,9 +27,9 @@ describe("use cases listing", () => {
     expect(USE_CASES_NAV_LINK.href).toBe("/use-cases");
     expect(USE_CASES_NAV_LINK.label).toBe("Use cases");
     expect(MAIN_NAV_PRODUCT_LINKS.map((link) => link.label)).toEqual([
-      "Solve Protocols",
       "Verify Protocols",
       "Mapping Protocols",
+      "Solve / Practice Protocols",
     ]);
     const nav = read("components/LandingNav.tsx");
     expect(nav).toContain("data-nav-products");
@@ -70,9 +70,9 @@ describe("use cases listing", () => {
     expect(USE_CASES).toHaveLength(3);
     expect(USE_CASES_OTHER).toHaveLength(3);
     expect(USE_CASES.map((item) => item.id)).toEqual([
-      "research-ai",
       "technical-hiring",
       "team-insight",
+      "research-ai",
     ]);
     expect(USE_CASES.map((item) => item.title)).toEqual(PLATFORM_OUTCOMES.items.map((item) => item.name));
     expect(USE_CASES.map((item) => item.lead)).toEqual(PLATFORM_OUTCOMES.items.map((item) => item.body));
@@ -83,18 +83,18 @@ describe("use cases listing", () => {
       USE_CASES.map((item) => `${USE_CASES_PATH}#${item.id}`),
     );
     expect(USE_CASES.map((item) => item.imageSrc)).toEqual([
-      "/lp-boxes/hero3.jpg",
       "/unsysmodel.png",
       "/regions1.png",
+      "/lp-boxes/hero3.jpg",
     ]);
     for (const item of USE_CASES) {
       expect(existsSync(join(ROOT, "public", item.imageSrc.replace(/^\//, "")))).toBe(true);
     }
     expect(USE_CASES_DIRECTORY.map((item) => item.href)).toEqual([
       "#ideas",
-      "#research-ai",
       "#technical-hiring",
       "#team-insight",
+      "#research-ai",
       "#other-directions",
       "#start",
     ]);

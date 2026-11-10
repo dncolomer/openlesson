@@ -22,9 +22,9 @@ export const PLATFORM_PHRASE = "From genuine work" as const;
 
 export const PLATFORM_HERO = {
   pill: "UNDERSTAND VERIFY MAP",
-  h1: "Build Understanding on autopilot.",
-  p1: APPROVED_BRAND_ANCHOR,
-  p2: "Work through hard problems, examine the reasoning they reveal, and relate that evidence to knowledge regions built around your domain.",
+  h1: "Verify understanding through proof of work.",
+  p1: "Uncertain Systems verifies understanding from genuine work traces, not quiz scores. People and agents leave a stored path as they solve problems; that path is the proof.",
+  p2: "Set those traces against a knowledge region you define. Use the result as evidence for hiring, development, or what to investigate next, not as a score of the whole person.",
 } as const;
 
 export const PLATFORM_PUBLIC_MAPS = {
@@ -128,22 +128,15 @@ export const PLATFORM_PROOF = {
 export const PLATFORM_OUTCOMES = {
   eyebrow: "USE CASES",
   title: "Put knowledge building to work.",
-  lead: "Solve Protocol, Verify Protocol, and Map Protocol can work together when a team needs to understand difficult work, develop expertise, or assess capability through hard problems.",
+  lead: "Verify Protocol, Map Protocol, and Solve Protocol can work together when a team needs to assess capability through proof of work, turn work into insight, or understand difficult work.",
   cta: DISCOVERY_CTA_LABEL,
   ctaHref: ENTERPRISE_SETUP_MAILTO,
   moreCta: "Read the use cases",
   moreHref: USE_CASES_PATH,
   items: [
     {
-      eyebrow: "FRONTIER WORK",
-      name: "Understand difficult work",
-      body: "Investigate an unfamiliar argument, including AI-generated work, until the assumptions and open questions are explicit.",
-      href: `${USE_CASES_PATH}#research-ai`,
-      hrefLabel: "Frontier work",
-    },
-    {
       eyebrow: "ASSESSMENT",
-      name: "Assess capability through problems",
+      name: "Assess capability through proof of work",
       body: "Examine how a candidate explores a demanding problem, including work with an allowed AI tool when the problem says so.",
       href: `${USE_CASES_PATH}#technical-hiring`,
       hrefLabel: "Hard-problem assessment",
@@ -154,6 +147,13 @@ export const PLATFORM_OUTCOMES = {
       body: "Skills and expertise don't fit on a leaderboard or a two-axis chart. See your team, or yourself, across many dimensions at once, set against the goals that matter to you.",
       href: `${USE_CASES_PATH}#team-insight`,
       hrefLabel: "Team insight",
+    },
+    {
+      eyebrow: "FRONTIER WORK",
+      name: "Understand difficult work",
+      body: "Investigate an unfamiliar argument, including AI-generated work, until the assumptions and open questions are explicit.",
+      href: `${USE_CASES_PATH}#research-ai`,
+      hrefLabel: "Frontier work",
     },
   ],
 } as const;

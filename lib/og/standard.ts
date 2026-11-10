@@ -11,11 +11,11 @@ import { PLATFORM_HERO, PLATFORM_PHRASE } from "@/lib/marketing/platform";
 export const UNSYS_STANDARD_SHARE_TITLE = PLATFORM_HERO.h1;
 
 /**
- * SERP `<title>` (50–60 characters). og/twitter titles stay on
+ * SERP `<title>` (about 50–65 characters). og/twitter titles stay on
  * `UNSYS_STANDARD_SHARE_TITLE`.
  */
 export const UNSYS_STANDARD_HTML_TITLE =
-  "Build Understanding on autopilot | Uncertain Systems" as const;
+  "Verify understanding through proof of work | Uncertain Systems" as const;
 
 /**
  * Share + meta description: homepage lead, no product-split headline.

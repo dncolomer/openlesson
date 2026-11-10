@@ -169,7 +169,7 @@ describe("OG aesthetic resolution", () => {
 describe("Unsys standard share (LP-derived)", () => {
   it("exports LP hero title, description, aesthetics image, and root image path", async () => {
     expect(UNSYS_STANDARD_SHARE_TITLE).toBe(PLATFORM_HERO.h1);
-    expect(UNSYS_STANDARD_SHARE_TITLE).toMatch(/Build Understanding on autopilot/);
+    expect(UNSYS_STANDARD_SHARE_TITLE).toMatch(/Verify understanding through proof of work/);
     expect(UNSYS_STANDARD_SHARE_DESCRIPTION).not.toBe(PLATFORM_HERO.p1);
     expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toMatch(/guide people through hard problems/);
     expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toMatch(/thinking stays yours/);
@@ -243,9 +243,9 @@ describe("Unsys standard share (LP-derived)", () => {
 
   it("unsysRootHtmlMetadata matches LP hero and is what layout emits for title/description", () => {
     const html = unsysRootHtmlMetadata();
-    expect(html.title.default).toBe("Build Understanding on autopilot | Uncertain Systems");
+    expect(html.title.default).toBe("Verify understanding through proof of work | Uncertain Systems");
     expect(html.title.default.length).toBeGreaterThanOrEqual(50);
-    expect(html.title.default.length).toBeLessThanOrEqual(60);
+    expect(html.title.default.length).toBeLessThanOrEqual(65);
     expect(html.description).toBe(UNSYS_STANDARD_SHARE_DESCRIPTION);
     expect(html.title.default).not.toMatch(/Learning Efficiency for Humans/i);
     expect(html.description).not.toMatch(/Optimize learning efficiency/i);
@@ -261,7 +261,7 @@ describe("Unsys standard share (LP-derived)", () => {
   it("standardShareSocialMetadata always points at root opengraph-image with LP copy", () => {
     const social = standardShareSocialMetadata({ url: "https://uncertain.systems/pricing" });
     expect(social.openGraph?.title).toBe(PLATFORM_HERO.h1);
-    expect(social.openGraph?.title).toMatch(/Build Understanding on autopilot/);
+    expect(social.openGraph?.title).toMatch(/Verify understanding through proof of work/);
     expect(social.openGraph?.description).toBe(UNSYS_STANDARD_SHARE_DESCRIPTION);
     expect(social.openGraph?.description).not.toBe(PLATFORM_HERO.p1);
     expect(social.twitter?.title).toBe(PLATFORM_HERO.h1);
@@ -286,7 +286,7 @@ describe("Unsys standard share (LP-derived)", () => {
         url: "/opengraph-image",
         width: 1200,
         height: 630,
-        alt: expect.stringContaining("Build Understanding on autopilot"),
+        alt: expect.stringContaining("Verify understanding through proof of work"),
       },
     ]);
     expect(standardOpenGraph().images).toEqual(images);

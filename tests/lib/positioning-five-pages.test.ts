@@ -62,12 +62,12 @@ function scopedCorpus(): string {
 }
 
 describe("five-page positioning contract", () => {
-  it("keeps the approved brand anchor once on the homepage", () => {
+  it("keeps the approved brand anchor as a constant off the live hero", () => {
     expect(APPROVED_BRAND_ANCHOR).toBe(
       "Uncertain Systems is the autopilot for knowledge building, bringing human and artificial intelligence together so people can understand more with less effort.",
     );
-    expect(homepageCopyText()).toContain(APPROVED_BRAND_ANCHOR);
-    expect(landingHeroCopyText()).toContain(APPROVED_BRAND_ANCHOR);
+    expect(homepageCopyText()).not.toContain(APPROVED_BRAND_ANCHOR);
+    expect(landingHeroCopyText()).not.toContain(APPROVED_BRAND_ANCHOR);
     expect(useCasesCopyText()).not.toContain(APPROVED_BRAND_ANCHOR);
     expect(HARNESS_PRODUCT_COPY.lead).not.toContain(APPROVED_BRAND_ANCHOR);
     expect(VERIFICATION_PRODUCT_COPY.lead).not.toContain(APPROVED_BRAND_ANCHOR);
@@ -102,9 +102,9 @@ describe("five-page positioning contract", () => {
   it("ships three complementary primary use cases with preserved fragment ids", () => {
     expect(USE_CASES_COPY.title).toBe("Put knowledge building to work");
     expect(USE_CASES.map((item) => item.id)).toEqual([
-      "research-ai",
       "technical-hiring",
       "team-insight",
+      "research-ai",
     ]);
     expect(USE_CASES_OTHER).toHaveLength(3);
     expect(USE_CASES_OTHER.map((item) => item.title)).toEqual([

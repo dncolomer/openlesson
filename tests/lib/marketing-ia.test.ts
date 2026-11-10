@@ -88,8 +88,8 @@ describe("landing: knowledge acquisition, verification, and mapping", () => {
     const platform = read("lib/marketing/platform.ts");
     const corpus = `${landing}\n${platform}`;
 
-    expect(corpus).toMatch(/Build Understanding on autopilot/);
-    expect(PLATFORM_HERO.p1).toMatch(/autopilot for knowledge building/);
+    expect(corpus).toMatch(/Verify understanding through proof of work/);
+    expect(PLATFORM_HERO.p1).toMatch(/genuine work traces/);
     expect(landing).toContain("LandingHeroEditorial");
     expect(landing).toContain("{copy.h1}");
     expect(landing).not.toContain("A Human Knowledge Platform.");
@@ -98,7 +98,7 @@ describe("landing: knowledge acquisition, verification, and mapping", () => {
     expect(landing).not.toContain("AccelerandoRun");
     expect(landing).toContain("PublicConsoleWash");
     expect(landing).not.toContain("PUBLIC_MAGI_GRID_CLASS");
-    expect(PLATFORM_HERO.h1).toBe("Build Understanding on autopilot.");
+    expect(PLATFORM_HERO.h1).toBe("Verify understanding through proof of work.");
     expect(PLATFORM_HERO.p1).not.toMatch(/thinking stays yours/);
     expect("p2" in PLATFORM_HERO).toBe(true);
     expect(landing).not.toMatch(/three uses share the geometry/);

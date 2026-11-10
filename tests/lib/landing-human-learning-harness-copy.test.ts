@@ -76,12 +76,10 @@ describe("landing knowledge acquisition, verification, and mapping copy", () => 
     expect(lp).not.toContain("Uncertain Systems is a Human Knowledge Platform.");
     expect(lp).not.toMatch(/<h1[^>]*>[\s\S]*Human Knowledge Platform/);
 
-    expect(copy).toMatch(/Build Understanding on autopilot/);
-    expect(PLATFORM_HERO.h1).toBe("Build Understanding on autopilot.");
-    expect(PLATFORM_HERO.p1).toBe(
-      "Uncertain Systems is the autopilot for knowledge building, bringing human and artificial intelligence together so people can understand more with less effort.",
-    );
-    expect(PLATFORM_HERO.p2).toMatch(/knowledge regions/);
+    expect(copy).toMatch(/Verify understanding through proof of work/);
+    expect(PLATFORM_HERO.h1).toBe("Verify understanding through proof of work.");
+    expect(PLATFORM_HERO.p1).toMatch(/genuine work traces/);
+    expect(PLATFORM_HERO.p2).toMatch(/knowledge region/);
     expect("p2" in PLATFORM_HERO).toBe(true);
     expect(homepageCopyText()).not.toMatch(/three uses share the geometry/);
     expect(copy).not.toMatch(/proposition/i);
@@ -191,16 +189,18 @@ describe("landing knowledge acquisition, verification, and mapping copy", () => 
     expect(lp).toContain("data-home-cta");
     expect(lp).toContain("PLATFORM_OUTCOMES");
     expect(PLATFORM_OUTCOMES.items.map((item) => item.eyebrow)).toEqual([
-      "FRONTIER WORK",
       "ASSESSMENT",
       "TEAM INSIGHT",
+      "FRONTIER WORK",
     ]);
-    expect(PLATFORM_OUTCOMES.items[2]).toMatchObject({
+    expect(PLATFORM_OUTCOMES.items[0].name).toBe("Assess capability through proof of work");
+    expect(PLATFORM_OUTCOMES.items[1]).toMatchObject({
       name: "Turn work into actionable insight",
       href: "/use-cases#team-insight",
       hrefLabel: "Team insight",
     });
-    expect(PLATFORM_OUTCOMES.items[2].body).toMatch(/many dimensions at once/);
+    expect(PLATFORM_OUTCOMES.items[1].body).toMatch(/many dimensions at once/);
+    expect(PLATFORM_OUTCOMES.items[2].name).toBe("Understand difficult work");
     expect(copy).not.toMatch(/\d+%/);
     expect(copy).not.toMatch(/\$\d+/);
 
@@ -262,11 +262,11 @@ describe("landing knowledge acquisition, verification, and mapping copy", () => 
   it("root HTML, OG, Twitter, JSON-LD, and manifest share the LP hero (not old efficiency copy)", () => {
     const rootHtml = unsysRootHtmlMetadata();
     expect(rootHtml.title.default).toBe(UNSYS_STANDARD_HTML_TITLE);
-    expect(rootHtml.title.default).toMatch(/Build Understanding on autopilot/i);
+    expect(rootHtml.title.default).toMatch(/Verify understanding through proof of work/i);
     expect(rootHtml.title.default).not.toMatch(/Human Knowledge Platform/);
     expect(rootHtml.title.default).not.toMatch(/hard-domain learning experiences/i);
     expect(rootHtml.title.default.length).toBeGreaterThanOrEqual(50);
-    expect(rootHtml.title.default.length).toBeLessThanOrEqual(60);
+    expect(rootHtml.title.default.length).toBeLessThanOrEqual(65);
     expect(rootHtml.description).toBe(UNSYS_STANDARD_SHARE_DESCRIPTION);
     expect(rootHtml.description).not.toBe(PLATFORM_HERO.h1);
     expect(rootHtml.description).not.toBe(PLATFORM_HERO.p1);

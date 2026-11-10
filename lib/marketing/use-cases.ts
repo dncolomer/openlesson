@@ -14,8 +14,8 @@ export const USE_CASES_COPY = {
   eyebrow: "USE CASES",
   title: "Put knowledge building to work",
   lead: [
-    "A researcher can hold an AI-generated argument no one on the team can yet question. A candidate can reach the right answer without showing how they got there. A lead can collect work traces and still not see where people sit relative to the goals that matter.",
-    "Solve Protocol, Verify Protocol, and Map Protocol can work together in each of these situations. The system organizes work around a difficult problem and evidence of understanding.",
+    "A candidate can reach the right answer without showing how they got there. A lead can collect work traces and still not see where people sit relative to the goals that matter. A researcher can hold an AI-generated argument no one on the team can yet question.",
+    "Verify Protocol, Map Protocol, and Solve Protocol can work together in each of these situations. The system organizes work around proof of work and evidence of understanding.",
   ],
   directoryEyebrow: "ON THIS PAGE",
   directoryTitle: "The cases.",
@@ -60,31 +60,11 @@ export const USE_CASES_OTHER = [
 
 export const USE_CASES = [
   {
-    id: "research-ai",
-    eyebrow: "FRONTIER WORK",
-    directoryLabel: "Frontier work",
-    hint: "Solve · Map · Verify",
-    title: "Understand difficult work",
-    lead: "Investigate an unfamiliar argument, including AI-generated work, until the assumptions and open questions are explicit.",
-    body: "You work the argument in a Solve or Learn session. Speech, writing, and drawing on the canvas are stored, and the unsys model can suggest a next place to look. Completing a session records what you examined. It does not certify that the argument is correct. The interface uses behavioral cognitive enhancements such as think-aloud work on the canvas so you can question the work yourself. Human interpretability here means acquiring enough understanding to question the work. It is distinct from mechanistic interpretability of a model, and distinct from automated proof certification.",
-    example:
-      "A researcher is given an AI-generated proof of a lemma the team has not checked. They start a Solve session, write the first claim on the canvas, and talk through why the second step follows. They cannot justify a substitution, so they mark that gap and stop. A colleague opens the stored session, reads those notes, and continues from the substitution instead of starting over.",
-    imageSrc: "/lp-boxes/hero3.jpg",
-    imageAlt:
-      "Full session: left command sidebar and a Work canvas with a mathematical argument, notes, and a Thinking panel",
-    imageFit: "cover" as const,
-    links: [
-      { href: LEARNING_HARNESS_PATH, label: "Solve" },
-      { href: KNOWLEDGE_MAPPING_PATH, label: "Map" },
-      { href: KNOWLEDGE_VERIFICATION_PATH, label: "Verify" },
-    ],
-  },
-  {
     id: "technical-hiring",
     eyebrow: "ASSESSMENT",
     directoryLabel: "Assessment",
     hint: "Verify",
-    title: "Assess capability through problems",
+    title: "Assess capability through proof of work",
     lead: "Examine how a candidate explores a demanding problem, including work with an allowed AI tool when the problem says so.",
     body: "You define a knowledge region and a problem your experts consider meaningful, then run a Verify session under stated conditions. Reviewers open the stored work. Where Distance is shown, it is a model-relative relationship to that region, not a score of the whole person. The product does not enforce a tool policy, replace interviews, or claim the result predicts job performance. Agent-harness comparison is a related extension, not a validated benchmark that treats people and agents as equivalent.",
     example:
@@ -116,6 +96,26 @@ export const USE_CASES = [
     links: [
       { href: KNOWLEDGE_MAPPING_PATH, label: "Map" },
       { href: LEARNING_HARNESS_PATH, label: "Solve" },
+      { href: KNOWLEDGE_VERIFICATION_PATH, label: "Verify" },
+    ],
+  },
+  {
+    id: "research-ai",
+    eyebrow: "FRONTIER WORK",
+    directoryLabel: "Frontier work",
+    hint: "Solve · Map · Verify",
+    title: "Understand difficult work",
+    lead: "Investigate an unfamiliar argument, including AI-generated work, until the assumptions and open questions are explicit.",
+    body: "You work the argument in a Solve or Learn session. Speech, writing, and drawing on the canvas are stored, and the unsys model can suggest a next place to look. Completing a session records what you examined. It does not certify that the argument is correct. The interface uses behavioral cognitive enhancements such as think-aloud work on the canvas so you can question the work yourself. Human interpretability here means acquiring enough understanding to question the work. It is distinct from mechanistic interpretability of a model, and distinct from automated proof certification.",
+    example:
+      "A researcher is given an AI-generated proof of a lemma the team has not checked. They start a Solve session, write the first claim on the canvas, and talk through why the second step follows. They cannot justify a substitution, so they mark that gap and stop. A colleague opens the stored session, reads those notes, and continues from the substitution instead of starting over.",
+    imageSrc: "/lp-boxes/hero3.jpg",
+    imageAlt:
+      "Full session: left command sidebar and a Work canvas with a mathematical argument, notes, and a Thinking panel",
+    imageFit: "cover" as const,
+    links: [
+      { href: LEARNING_HARNESS_PATH, label: "Solve" },
+      { href: KNOWLEDGE_MAPPING_PATH, label: "Map" },
       { href: KNOWLEDGE_VERIFICATION_PATH, label: "Verify" },
     ],
   },

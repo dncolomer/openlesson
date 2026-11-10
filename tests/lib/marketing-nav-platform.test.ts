@@ -50,9 +50,9 @@ describe("marketing nav and platform rename", () => {
     expect(nav).toContain("MAIN_NAV_PRODUCT_LINKS");
     expect(PLATFORM_NAV_LABEL).toBe("Explore the Platform");
     expect(MAIN_NAV_PRODUCT_LINKS.map((l) => l.href)).toEqual([
-      "/solve-protocols",
       "/verify-protocols",
       "/mapping-protocols",
+      "/solve-protocols",
     ]);
     expect(USE_CASES_NAV_LINK).toEqual({ href: "/use-cases", label: "Use cases" });
     expect(nav).toContain("PRICING_NAV_LINKS");
@@ -64,9 +64,9 @@ describe("marketing nav and platform rename", () => {
     expect(nav).not.toContain("Create your Workspace");
     expect(nav).not.toContain("TrackedCtaLink");
     expect(MAIN_NAV_PRODUCT_LINKS.map((l) => l.label)).toEqual([
-      "Solve Protocols",
       "Verify Protocols",
       "Mapping Protocols",
+      "Solve / Practice Protocols",
     ]);
   });
 

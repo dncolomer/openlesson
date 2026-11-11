@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   DASHBOARD_KNOWLEDGE_REGIONS_PATH,
+  dashboardKnowledgeRegionHref,
   dashboardKnowledgeRegionStudioHref,
   type DashboardKnowledgeRegion,
   type DashboardKnowledgeRegionKind,
@@ -66,8 +67,8 @@ export function DashboardKnowledgeRegionsTab({
             </h2>
             <p className="mt-3 max-w-xl text-sm leading-relaxed text-neutral-400">
               Create a region by running a simulation of exploration strategies on your{" "}
-              {productLabel.toLowerCase()} flows. Open it in Data Studio to see simulated and real
-              points.
+              {productLabel.toLowerCase()} flows. Open details to see that region, or overlay it in
+              Data Studio.
             </p>
           </div>
           <Link
@@ -119,6 +120,7 @@ export function DashboardKnowledgeRegionsTab({
                 <th className="px-4 py-3 font-medium">Workspace</th>
                 <th className="px-4 py-3 font-medium">Subjects</th>
                 <th className="px-4 py-3 font-medium">Created</th>
+                <th className="px-4 py-3 font-medium">Details</th>
                 <th className="px-4 py-3 font-medium">Data Studio</th>
               </tr>
             </thead>
@@ -136,6 +138,15 @@ export function DashboardKnowledgeRegionsTab({
                   </td>
                   <td className="px-4 py-3 text-neutral-400">
                     {region.createdAt ? formatDate(region.createdAt) : "—"}
+                  </td>
+                  <td className="px-4 py-3">
+                    <Link
+                      href={dashboardKnowledgeRegionHref(kind, region.id)}
+                      className="inline-flex h-9 items-center justify-center border border-white/25 px-3 text-[11px] text-white transition hover:border-white hover:bg-white hover:text-black"
+                      data-open-region-details={region.id}
+                    >
+                      Open details
+                    </Link>
                   </td>
                   <td className="px-4 py-3">
                     <Link

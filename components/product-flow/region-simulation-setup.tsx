@@ -7,6 +7,7 @@ import {
   productFlowKindLabel,
   productFlowNewPath,
   productRegionPagePath,
+  productRegionStudioPath,
   type ProductFlowKind,
 } from "@/lib/product-flow";
 import { ProductSurface } from "@/components/product-flow/product-surface";
@@ -267,20 +268,17 @@ export function RegionSimulationSetup({
               <Link
                 href={result.regionPath || productRegionPagePath(kind, result.id || "")}
                 className={FLOW_PRIMARY_BTN}
+                data-open-region-details=""
+              >
+                Open details
+              </Link>
+              <Link
+                href={result.studioPath || productRegionStudioPath(kind, result.id || "")}
+                className={FLOW_GHOST_BTN}
                 data-open-simulated-region=""
               >
                 Open in Data Studio
               </Link>
-              <button
-                type="button"
-                className={FLOW_GHOST_BTN}
-                onClick={() => {
-                  setResult(null);
-                  setProgress([]);
-                }}
-              >
-                Run another simulation
-              </button>
             </div>
           </FlowFormCard>
         ) : (

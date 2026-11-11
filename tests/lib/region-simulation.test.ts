@@ -161,7 +161,8 @@ describe("region simulation", () => {
       "Balanced",
       "Exploit-heavy",
     ]);
-    expect(result.regionPath).toContain("verification_studio");
+    expect(result.regionPath).toContain("/verification/regions/");
+    expect(result.studioPath).toContain("verification_studio");
     expect(result.clusters.every((cluster) => cluster.sampleCount === 3)).toBe(true);
     expect(result.progress.every((row) => row.done === 3 && row.total === 3)).toBe(true);
     expect(ticks.at(-1)).toBe(6);
@@ -221,6 +222,11 @@ describe("region simulation", () => {
     expect(setup).toContain("data-region-simulation-result");
     expect(setup).toContain("Include data from real humans in these flows");
     expect(setup).toContain("Run simulation");
+    expect(setup).not.toContain("Run another simulation");
+    expect(setup).toContain("Open details");
+    expect(setup).toContain("data-open-region-details");
+    expect(setup).toContain("productRegionPagePath");
+    expect(setup).toContain("productRegionStudioPath");
     expect(setup).toContain("data-region-simulation-progress");
     expect(setup).toContain("kind=${kind}");
     const route = read("app/api/dashboard/region-simulation/route.ts");
@@ -246,7 +252,8 @@ describe("region simulation", () => {
       samplesPerStrategy: 3,
       includeHumanData: false,
     });
-    expect(result.regionPath).toContain("solve_studio");
+    expect(result.regionPath).toContain("/solve/regions/");
+    expect(result.studioPath).toContain("solve_studio");
     const stored = await listFlowEmbeddingsForOwner({
       ownerUserId: "owner-solve",
       flowKind: "solve",
@@ -264,7 +271,8 @@ describe("region simulation", () => {
       samplesPerStrategy: 3,
       includeHumanData: false,
     });
-    expect(result.regionPath).toContain("calibration_studio");
+    expect(result.regionPath).toContain("/calibration/regions/");
+    expect(result.studioPath).toContain("calibration_studio");
     const stored = await listFlowEmbeddingsForOwner({
       ownerUserId: "owner-cal",
       flowKind: "calibrate",

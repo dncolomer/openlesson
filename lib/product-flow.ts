@@ -87,17 +87,21 @@ export function productRegionNewPath(kind: ProductFlowKind): string {
 export function productRegionPagePath(kind: ProductFlowKind, regionId: string): string {
   const id = String(regionId || "").trim();
   if (!id) return productRegionNewPath(kind);
+  if (kind === "calibration") return `/calibration/regions/${id}`;
+  if (kind === "solve") return `/solve/regions/${id}`;
+  return `/verification/regions/${id}`;
+}
+
+export function productRegionStudioPath(kind: ProductFlowKind, regionId: string): string {
+  const id = String(regionId || "").trim();
   const tab =
     kind === "calibration"
       ? "calibration_studio"
       : kind === "solve"
         ? "solve_studio"
         : "verification_studio";
+  if (!id) return `/dashboard?tab=${tab}`;
   return `/dashboard?tab=${tab}&region=${encodeURIComponent(id)}`;
-}
-
-export function productRegionStudioPath(kind: ProductFlowKind, regionId: string): string {
-  return productRegionPagePath(kind, regionId);
 }
 
 export function productFlowKindLabel(kind: ProductFlowKind): string {

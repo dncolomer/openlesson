@@ -5,6 +5,7 @@ import { readDashboardSurface, readRepo } from "../helpers/surface-source";
 import {
   dashboardKnowledgeRegionCreateHref,
   dashboardKnowledgeRegionHref,
+  dashboardKnowledgeRegionStudioHref,
   parseDashboardKnowledgeRegionKind,
   presentDashboardKnowledgeRegions,
 } from "@/lib/dashboard-knowledge-regions";
@@ -13,6 +14,7 @@ import {
   productFlowNewPath,
   productRegionNewPath,
   productRegionPagePath,
+  productRegionStudioPath,
 } from "@/lib/product-flow";
 
 describe("dashboard knowledge regions", () => {
@@ -132,13 +134,17 @@ describe("dashboard knowledge regions", () => {
       productRegionPagePath("solve", "r-s"),
     );
     expect(dashboardKnowledgeRegionHref("verification", "r-1")).toBe(
-      "/dashboard?tab=verification_studio&region=r-1",
+      "/verification/regions/r-1",
     );
     expect(dashboardKnowledgeRegionHref("calibration", "r-c")).toBe(
       productRegionPagePath("calibration", "r-c"),
     );
-    expect(productRegionPagePath("calibration", "r-c")).toBe(
+    expect(productRegionPagePath("calibration", "r-c")).toBe("/calibration/regions/r-c");
+    expect(productRegionStudioPath("calibration", "r-c")).toBe(
       "/dashboard?tab=calibration_studio&region=r-c",
+    );
+    expect(dashboardKnowledgeRegionStudioHref("verification", "r-1")).toBe(
+      "/dashboard?tab=verification_studio&region=r-1",
     );
     expect(dashboardKnowledgeRegionCreateHref("verification")).toBe(
       productRegionNewPath("verification"),
@@ -184,14 +190,25 @@ describe("dashboard knowledge regions", () => {
     );
     expect(readRepo("app/verification/regions/new/page.tsx")).toContain('kind="verification"');
     expect(readRepo("app/solve/regions/new/page.tsx")).toContain('kind="solve"');
-    expect(readRepo("app/calibration/regions/[id]/page.tsx")).toContain("redirect");
-    expect(readRepo("app/calibration/regions/[id]/page.tsx")).toContain("productRegionPagePath");
-    expect(readRepo("app/verification/regions/[id]/page.tsx")).toContain("redirect");
+    expect(readRepo("app/calibration/regions/[id]/page.tsx")).toContain("KnowledgeRegionPage");
+    expect(readRepo("app/calibration/regions/[id]/page.tsx")).not.toContain("redirect");
+    expect(readRepo("app/verification/regions/[id]/page.tsx")).toContain("KnowledgeRegionPage");
+    expect(readRepo("app/verification/regions/[id]/page.tsx")).not.toContain("redirect");
+    expect(readRepo("app/solve/regions/[id]/page.tsx")).toContain("KnowledgeRegionPage");
+    expect(readRepo("components/dashboard/dashboard-knowledge-regions-tab.tsx")).toContain(
+      "dashboardKnowledgeRegionHref(kind, region.id)",
+    );
     expect(readRepo("components/dashboard/dashboard-knowledge-regions-tab.tsx")).toContain(
       "dashboardKnowledgeRegionStudioHref(kind, region.id)",
     );
     expect(readRepo("components/dashboard/dashboard-knowledge-regions-tab.tsx")).toContain(
+      "Open details",
+    );
+    expect(readRepo("components/dashboard/dashboard-knowledge-regions-tab.tsx")).toContain(
       "Open in Data Studio",
+    );
+    expect(readRepo("components/dashboard/dashboard-knowledge-regions-tab.tsx")).toContain(
+      "data-open-region-details",
     );
     expect(readRepo("components/dashboard/dashboard-knowledge-regions-tab.tsx")).toContain(
       "data-dashboard-knowledge-region-table",
@@ -204,7 +221,31 @@ describe("dashboard knowledge regions", () => {
     );
     expect(
       existsSync(join(__dirname, "../../components/product-flow/knowledge-region-page.tsx")),
-    ).toBe(false);
+    ).toBe(true);
+    const detailsPage = readRepo("components/product-flow/knowledge-region-page.tsx");
+    expect(detailsPage).toContain("data-knowledge-region-details");
+    expect(detailsPage).toContain("data-knowledge-region-summary");
+    expect(detailsPage).toContain("<details");
+    expect(detailsPage).toContain("lg:grid-cols-[7fr_3fr]");
+    expect(detailsPage).toContain("data-knowledge-region-clusters");
+    expect(detailsPage).toContain("data-knowledge-region-controls");
+    expect(detailsPage).not.toContain("data-knowledge-region-samples");
+    expect(detailsPage).toContain("data-knowledge-region-legend");
+    expect(detailsPage).toContain("data-knowledge-region-polar");
+    expect(detailsPage).toContain("data-knowledge-region-projection");
+    expect(detailsPage).toContain("KnowledgeRegionInspect");
+    expect(detailsPage).toContain("inspectStudioEmbedding");
+    expect(readRepo("components/product-flow/knowledge-region-inspect.tsx")).toContain(
+      "data-knowledge-region-inspect",
+    );
+    expect(readRepo("components/product-flow/knowledge-region-inspect.tsx")).toContain(
+      "DataStudioInspectFields",
+    );
+    expect(detailsPage).not.toContain("zoomStudioCamera");
+    expect(detailsPage).not.toContain("panStudioCamera");
+    expect(readRepo("app/api/dashboard/knowledge-regions/[id]/route.ts")).toContain(
+      "presentKnowledgeRegionDetails",
+    );
     expect(productFlowNewPath("verification")).toBe("/verification/flows/new");
   });
 });

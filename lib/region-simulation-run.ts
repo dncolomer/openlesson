@@ -20,6 +20,7 @@ import {
 import {
   productFlowEmbeddingKind,
   productRegionPagePath,
+  productRegionStudioPath,
   type ProductFlowKind,
 } from "@/lib/product-flow";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -69,6 +70,7 @@ export type RegionSimulationRunResult = {
   persisted: boolean;
   id: string | null;
   regionPath: string;
+  studioPath: string;
   parentName: string;
   clusters: RegionSimulationClusterResult[];
   summary: RegionSimulationSummary;
@@ -79,15 +81,12 @@ function supabaseConfigured(): boolean {
   return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
+function simulationDetailsPath(kind: ProductFlowKind, regionId: string | null): string {
+  return productRegionPagePath(kind, regionId || "");
+}
+
 function simulationStudioPath(kind: ProductFlowKind, regionId: string | null): string {
-  if (regionId) return productRegionPagePath(kind, regionId);
-  const tab =
-    kind === "calibration"
-      ? "calibration_studio"
-      : kind === "solve"
-        ? "solve_studio"
-        : "verification_studio";
-  return `/dashboard?tab=${tab}`;
+  return productRegionStudioPath(kind, regionId || "");
 }
 
 function humanEmbeddingsForFlows(
@@ -334,7 +333,8 @@ export async function runRegionSimulation(input: {
   return {
     persisted: parent.persisted,
     id: parent.id,
-    regionPath: simulationStudioPath(kind, parent.id),
+    regionPath: simulationDetailsPath(kind, parent.id),
+    studioPath: simulationStudioPath(kind, parent.id),
     parentName: name,
     clusters,
     summary,

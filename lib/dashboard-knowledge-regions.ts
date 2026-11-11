@@ -4,7 +4,12 @@
  */
 
 import { FLOW_EMBEDDING_PATH_TEXT_MODEL_ID } from "@/lib/flow-embedding";
-import { productFlowOwnerTitle, productRegionNewPath, productRegionPagePath } from "@/lib/product-flow";
+import {
+  productFlowOwnerTitle,
+  productRegionNewPath,
+  productRegionPagePath,
+  productRegionStudioPath,
+} from "@/lib/product-flow";
 
 export const DASHBOARD_KNOWLEDGE_REGIONS_PATH = "/api/dashboard/knowledge-regions";
 
@@ -40,7 +45,7 @@ export function dashboardKnowledgeRegionStudioHref(
   kind: DashboardKnowledgeRegionKind,
   regionId: string,
 ): string {
-  return productRegionPagePath(kind, regionId);
+  return productRegionStudioPath(kind, regionId);
 }
 
 export function dashboardKnowledgeRegionCreateHref(kind: DashboardKnowledgeRegionKind): string {

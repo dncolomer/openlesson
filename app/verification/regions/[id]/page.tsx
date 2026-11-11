@@ -1,5 +1,4 @@
-import { redirect } from "next/navigation";
-import { productRegionPagePath } from "@/lib/product-flow";
+import { KnowledgeRegionPage } from "@/components/product-flow/knowledge-region-page";
 
 export default async function VerificationRegionPage({
   params,
@@ -7,5 +6,5 @@ export default async function VerificationRegionPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  redirect(productRegionPagePath("verification", id));
+  return <KnowledgeRegionPage kind="verification" regionId={id} />;
 }

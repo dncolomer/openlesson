@@ -21,6 +21,7 @@ export function StudioMultiSelect({
   searchPlaceholder = "Search",
   marker,
   compact = false,
+  showSearch = true,
 }: {
   label: string;
   options: readonly StudioSelectOption[];
@@ -32,6 +33,7 @@ export function StudioMultiSelect({
   searchPlaceholder?: string;
   marker: string;
   compact?: boolean;
+  showSearch?: boolean;
 }) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const searchRef = useRef<HTMLInputElement | null>(null);
@@ -65,7 +67,7 @@ export function StudioMultiSelect({
 
   useEffect(() => {
     if (!open) return;
-    searchRef.current?.focus();
+    if (showSearch) searchRef.current?.focus();
     function onPointerDown(event: PointerEvent) {
       if (!rootRef.current?.contains(event.target as Node)) {
         setOpen(false);
@@ -85,7 +87,7 @@ export function StudioMultiSelect({
       document.removeEventListener("pointerdown", onPointerDown);
       document.removeEventListener("keydown", onKey);
     };
-  }, [open]);
+  }, [open, showSearch]);
 
   function commit(ids: string[]) {
     onChange(uniqueStudioIds(ids));
@@ -136,6 +138,7 @@ export function StudioMultiSelect({
           data-data-studio-select-menu={marker}
           data-data-studio-select-align={menuAlign}
         >
+          {showSearch ? (
           <div className="border-b border-white/15 p-1.5">
             <input
               ref={searchRef}
@@ -147,6 +150,7 @@ export function StudioMultiSelect({
               data-data-studio-select-search={marker}
             />
           </div>
+          ) : null}
           <div className="flex items-center justify-between gap-2 border-b border-white/10 px-2 py-1 text-[10px] text-neutral-500">
             <button
               type="button"

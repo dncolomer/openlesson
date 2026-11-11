@@ -66,9 +66,9 @@ describe("dashboard nav", () => {
     expect(parseDashboardTab("browse_maps")).toBe("home");
     expect(parseDashboardTab("practice")).toBe("solve");
     expect(parseDashboardTab("practice_studio")).toBe("solve_studio");
-    expect(parseDashboardTab("practice_performance")).toBe("solve");
+    expect(parseDashboardTab("practice_performance")).toBe("practice_performance");
     expect(isDashboardPracticeTab("practice")).toBe(false);
-    expect(isDashboardPracticePerformanceTab("practice_performance")).toBe(false);
+    expect(isDashboardPracticePerformanceTab("practice_performance")).toBe(true);
     expect(parseDashboardTab("learning_studio")).toBe("home");
     expect(parseDashboardTab("verification_studio")).toBe("verification_studio");
     expect(parseDashboardTab("calibration_studio")).toBe("calibration_studio");
@@ -88,6 +88,7 @@ describe("dashboard nav", () => {
     expect(dashboardTypeFilterForTab("solve")).toBe("solve");
     expect(dashboardTypeFilterForTab("solve_regions")).toBe("solve");
     expect(dashboardTypeFilterForTab("solve_studio")).toBe("solve");
+    expect(dashboardTypeFilterForTab("practice_performance")).toBe("solve");
     expect(dashboardTypeFilterForTab(parseDashboardTab("shop"))).toBeNull();
     expect(dashboardTypeFilterForTab("verification_regions")).toBe("verification");
     expect(dashboardTypeFilterForTab("calibration_regions")).toBe("calibration");
@@ -156,17 +157,22 @@ describe("dashboard nav", () => {
     );
     expect(dashboardNavGroupIdForTab("home")).toBeNull();
     expect(dashboardNavGroupIdForTab("solve")).toBe("solve");
+    expect(dashboardNavGroupIdForTab("practice_performance")).toBe("solve");
     expect(solve?.label).toBe("Solve / Practice");
     expect(solve?.items.map((item) => item.id)).toEqual([
       "solve",
       "solve_regions",
       "solve_studio",
+      "practice_performance",
     ]);
     expect(
       clusterDashboardNavItems(solve?.items ?? []).map((cluster) =>
         cluster.map((item) => item.id),
       ),
-    ).toEqual([["solve", "solve_regions", "solve_studio"]]);
+    ).toEqual([
+      ["solve"],
+      ["solve_regions", "solve_studio", "practice_performance"],
+    ]);
     expect(verification?.items.map((item) => item.label)).toEqual([
       "Flows",
       "Knowledge regions",
@@ -193,6 +199,7 @@ describe("dashboard nav", () => {
       "Flows",
       "Knowledge regions",
       "Data Studio",
+      "Performance",
     ]);
     expect(DASHBOARD_NAV_GROUPS.map((group) => group.id)).toContain("solve");
     expect(DASHBOARD_NAV_GROUPS.map((group) => group.id)).not.toContain("products");
@@ -389,10 +396,11 @@ describe("dashboard platform surface", () => {
     expect(dashSrc).toContain("md:overflow-hidden");
     expect(dashSrc).toContain("md:overflow-y-auto");
     expect(dashSrc).toContain("DashboardDataStudioTab");
-    expect(dashSrc).not.toContain("DashboardPracticePerformanceTab");
+    expect(dashSrc).toContain("DashboardPracticePerformanceTab");
     expect(dashSrc).not.toContain("DashboardPracticeTab");
     expect(dashboardStudioProduct("solve_studio")).toBe("solve");
     expect(dashboardFrameLabel("solve_studio")).toBe("Data Studio");
+    expect(dashboardFrameLabel("practice_performance")).toBe("Performance");
     expect(dashSrc).toContain("isDashboardStudioTab");
     expect(dashSrc).toContain('data-dashboard-data-studio');
     expect(dashSrc).not.toContain("md:row-span-2");
@@ -419,7 +427,7 @@ describe("dashboard platform surface", () => {
     expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).not.toContain(
       "data-dashboard-nav-practice",
     );
-    expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).not.toContain(
+    expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain(
       "data-dashboard-nav-performance",
     );
     expect(readRepo("components/dashboard/dashboard-sidebar.tsx")).toContain(
@@ -505,7 +513,8 @@ describe("dashboard platform surface", () => {
     expect(readRepo("lib/dashboard-home-overview.ts")).toContain("Calibration");
     expect(dashSrc).not.toContain("data-dashboard-home-announcements");
     expect(dashSrc).not.toContain("DASHBOARD_ANNOUNCEMENTS");
-    expect(dashSrc).not.toContain("data-dashboard-practice");
+    expect(dashSrc).toContain("data-dashboard-practice-performance");
+    expect(dashSrc).not.toContain("data-dashboard-practice-browse");
     expect(dashSrc).not.toContain("data-dashboard-browse-maps-search");
     expect(dashSrc).not.toContain("Quick Work Session");
     expect(dashSrc).not.toContain("data-dashboard-home-stats");

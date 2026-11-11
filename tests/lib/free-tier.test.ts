@@ -43,7 +43,7 @@ describe("free tier dashboard and paths", () => {
     expect(clampDashboardTabForAccess("learning" as never, false)).toBe("home");
     expect(clampDashboardTabForAccess("shop" as never, false)).toBe("home");
     expect(clampDashboardTabForAccess("verification", false)).toBe("verification");
-    expect(clampDashboardTabForAccess("practice", false)).toBe("practice");
+    expect(clampDashboardTabForAccess("solve", false)).toBe("solve");
     expect(dashboardPlayKindsForAccess(false)).toEqual(["learn", "verify", "calibrate"]);
     expect(dashboardPlayKindsForAccess(true)).toEqual(["learn", "verify", "calibrate"]);
   });
@@ -92,9 +92,6 @@ describe("free tier surfaces", () => {
     expect(existsSync(join(__dirname, "../../app/api/workspace/learner-launch/route.ts"))).toBe(
       false,
     );
-    const practiceStart = readRepo("app/api/dashboard/practice/start/route.ts");
-    expect(practiceStart).toContain("rejectIfInsufficientSessionCredits");
-
     const checkUsage = readRepo("app/api/check-usage/route.ts");
     expect(checkUsage).toContain("creditBalance");
     expect(checkUsage).toContain("loadCreditSummary");

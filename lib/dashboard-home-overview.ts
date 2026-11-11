@@ -4,13 +4,10 @@
 
 import { dashboardHrefForTab, type DashboardTab } from "@/lib/dashboard-nav";
 import { USE_CASES } from "@/lib/marketing/use-cases";
-import type { PracticeHistoryRow } from "@/lib/practice-problems";
-
-export const DASHBOARD_HOME_RECENT_LIMIT = 4;
 
 /** Home product boxes reuse the use-cases stills, mapped by product. */
 export const DASHBOARD_HOME_CTA_USE_CASE_IDS = {
-  practice: "research-ai",
+  solve: "research-ai",
   verification: "team-insight",
   calibration: "technical-hiring",
 } as const;
@@ -98,11 +95,11 @@ export function dashboardHomeCtas(): DashboardHomeCta[] {
   const calibrationLinks = productSurfaceLinks("calibration");
   return [
     {
-      id: "practice",
+      id: "solve",
       label: "Solve / Practice",
       href: solveLinks[0]!.href,
-      body: "Browse problems, run Solve flows, and review knowledge regions, Data Studio, and performance.",
-      ...useCaseVisual(DASHBOARD_HOME_CTA_USE_CASE_IDS.practice),
+      body: "Author Solve flows, knowledge regions, and Data Studio runs.",
+      ...useCaseVisual(DASHBOARD_HOME_CTA_USE_CASE_IDS.solve),
       links: solveLinks,
     },
     {
@@ -122,18 +119,4 @@ export function dashboardHomeCtas(): DashboardHomeCta[] {
       links: calibrationLinks,
     },
   ];
-}
-
-export function recentPracticeForHome(
-  rows: readonly PracticeHistoryRow[],
-  limit = DASHBOARD_HOME_RECENT_LIMIT,
-): PracticeHistoryRow[] {
-  return [...rows]
-    .sort((a, b) => {
-      const tb = Date.parse(b.startedAt) || 0;
-      const ta = Date.parse(a.startedAt) || 0;
-      if (tb !== ta) return tb - ta;
-      return b.sessionId.localeCompare(a.sessionId);
-    })
-    .slice(0, limit);
 }

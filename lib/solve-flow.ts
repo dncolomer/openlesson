@@ -33,7 +33,6 @@ export type SolveFlow = {
   createdAt: string;
   updatedAt: string;
   archivedAt?: string | null;
-  practiceProblemId?: string | null;
 };
 
 export type SolveIdentity = {
@@ -118,7 +117,6 @@ export type SolveCommand =
       actionCatalog?: number;
       id?: string;
       publicToken?: string;
-      practiceProblemId?: string | null;
     }
   | {
       type: "update";
@@ -167,7 +165,6 @@ export function applySolveCommand(
       publicToken: command.publicToken || createSolvePublicToken(),
       createdAt: nowIso(),
       updatedAt: nowIso(),
-      practiceProblemId: String(command.practiceProblemId || "").trim() || null,
     };
     return { ok: true, state: { ...state, flows: [...state.flows, flow] }, flow };
   }

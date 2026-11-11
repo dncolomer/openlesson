@@ -19,7 +19,7 @@ export const FREE_WEEKLY_SESSION_LIMIT = 3;
 
 export const FREE_DASHBOARD_TAB_IDS = [
   "home",
-  "practice",
+  "solve",
   "usage",
 ] as const satisfies readonly DashboardTab[];
 

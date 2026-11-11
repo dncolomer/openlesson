@@ -130,7 +130,6 @@ function mapFlow(row: Record<string, unknown>): SolveFlow {
     createdAt: String(row.created_at || ""),
     updatedAt: String(row.updated_at || ""),
     archivedAt: flowArchivedAtFromRow(row),
-    practiceProblemId: nullableId(row.practice_problem_id),
   };
 }
 
@@ -186,7 +185,6 @@ async function persistCommand(
       public_token: value.flow.publicToken,
       created_at: value.flow.createdAt,
       updated_at: value.flow.updatedAt,
-      practice_problem_id: nullableId(value.flow.practiceProblemId),
     });
     if (error) throw new Error(error.message);
     return;
@@ -259,7 +257,7 @@ async function writeSolveFlow(
       ? supabase.from(SOLVE_FLOWS_TABLE).insert(body)
       : supabase.from(SOLVE_FLOWS_TABLE).update(body).eq("id", id);
   let current = row;
-  for (const optional of ["action_catalog", "duration_minutes", "workspace_id", "archived_at", "artifacts", "practice_problem_id"] as const) {
+  for (const optional of ["action_catalog", "duration_minutes", "workspace_id", "archived_at", "artifacts"] as const) {
     const result = await run(current);
     if (!result.error) return result;
     if (!String(result.error.message).includes(optional) || !(optional in current)) return result;

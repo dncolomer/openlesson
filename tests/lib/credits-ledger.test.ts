@@ -242,7 +242,6 @@ describe("session-start routes debit shipped credits", () => {
     const files = [
       "app/api/play/start/route.ts",
       "app/api/play/curious/route.ts",
-      "app/api/dashboard/practice/start/route.ts",
       "lib/learn-link-auth.ts",
       "lib/calibration-flow-repository.ts",
       "lib/verification-flow-repository.ts",
@@ -257,11 +256,6 @@ describe("session-start routes debit shipped credits", () => {
     expect(learnLink).toContain("debitClaimedFlowSession");
     expect(learnLink).toContain("refundClaimedFlowSession");
     expect(learnLink).toContain("billedUserIdForIleLinkSession");
-    const practiceStart = readFileSync(
-      join(root, "app/api/dashboard/practice/start/route.ts"),
-      "utf8",
-    );
-    expect(practiceStart).toContain("rejectIfInsufficientSessionCredits");
     const startFlow = readFileSync(join(root, "lib/credits/claim-charge.ts"), "utf8");
     expect(startFlow).toContain("chargeFlowSessionOrThrow");
     const supabaseStore = readFileSync(join(root, "lib/credits/supabase-store.ts"), "utf8");

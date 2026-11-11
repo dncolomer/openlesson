@@ -12,8 +12,6 @@ import { OrganizationDashboardTab } from "@/components/OrganizationDashboardTab"
 import { DashboardAtmosphere } from "@/components/dashboard/dashboard-atmosphere";
 import { DashboardConfigTab } from "@/components/dashboard/dashboard-config-tab";
 import { DashboardHomeTab } from "@/components/dashboard/dashboard-home-tab";
-import { DashboardPracticeTab } from "@/components/dashboard/dashboard-practice-tab";
-import { DashboardPracticePerformanceTab } from "@/components/dashboard/dashboard-practice-performance-tab";
 import { DashboardIntegrationsTab } from "@/components/dashboard/dashboard-integrations-tab";
 import { DashboardFlowsTab } from "@/components/dashboard/dashboard-flows-tab";
 import { DashboardKnowledgeRegionsTab } from "@/components/dashboard/dashboard-knowledge-regions-tab";
@@ -25,8 +23,6 @@ import { buildMcpClientConfig } from "@/lib/pow-api/mcp-proof-of-work-catalog";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import {
   dashboardStudioProduct,
-  isDashboardPracticePerformanceTab,
-  isDashboardPracticeTab,
   isDashboardRegionsTab,
   isDashboardStudioTab,
   parseDashboardTab,
@@ -613,16 +609,6 @@ export default function DashboardPage() {
         )}
 
         {activeTab === "home" && <DashboardHomeTab />}
-
-        {isDashboardPracticeTab(activeTab) && (
-          <DashboardPracticeTab
-            weeklySessionsAllowed={usageData?.weeklySessionsAllowed !== false}
-          />
-        )}
-
-        {isDashboardPracticePerformanceTab(activeTab) && (
-          <DashboardPracticePerformanceTab />
-        )}
 
         {(activeTab === "verification" ||
           activeTab === "calibration" ||

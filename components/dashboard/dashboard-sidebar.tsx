@@ -162,8 +162,6 @@ function NavItem({
         type="button"
         data-dashboard-nav={item.id}
         data-dashboard-nav-active={active ? "true" : "false"}
-        data-dashboard-nav-practice={item.id === "practice" ? "" : undefined}
-        data-dashboard-nav-performance={item.id === "practice_performance" ? "" : undefined}
         data-workspace-type-filter={
           isDashboardProductTab(item.id) ? item.id : undefined
         }

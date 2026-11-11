@@ -11,8 +11,6 @@ import {
 
 export const DASHBOARD_TABS = [
   "home",
-  "practice",
-  "practice_performance",
   "verification",
   "verification_regions",
   "verification_studio",
@@ -69,16 +67,6 @@ export const DASHBOARD_HOME_NAV_ITEM: DashboardNavItem = {
   label: "Home",
 };
 
-export const DASHBOARD_PRACTICE_NAV_ITEM: DashboardNavItem = {
-  id: "practice",
-  label: "Browse Problems",
-};
-
-export const DASHBOARD_PERFORMANCE_NAV_ITEM: DashboardNavItem = {
-  id: "practice_performance",
-  label: "Performance",
-};
-
 export const DASHBOARD_TOP_NAV_ITEMS: readonly DashboardNavItem[] = [
   DASHBOARD_HOME_NAV_ITEM,
 ];
@@ -88,11 +76,9 @@ export const DASHBOARD_NAV_GROUPS: readonly DashboardNavGroup[] = [
     id: "solve",
     label: "Solve / Practice",
     items: [
-      DASHBOARD_PRACTICE_NAV_ITEM,
       { id: "solve", label: "Flows" },
-      { id: "solve_regions", label: "Knowledge regions", cluster: "studio" },
-      { id: "solve_studio", label: "Data Studio", cluster: "studio" },
-      { ...DASHBOARD_PERFORMANCE_NAV_ITEM, cluster: "studio" },
+      { id: "solve_regions", label: "Knowledge regions" },
+      { id: "solve_studio", label: "Data Studio" },
     ],
   },
   {
@@ -172,14 +158,12 @@ export function isDashboardBrowseMapsTab(value: unknown): value is never {
   return false;
 }
 
-export function isDashboardPracticeTab(value: unknown): value is "practice" {
-  return value === "practice";
+export function isDashboardPracticeTab(value: unknown): value is never {
+  return false;
 }
 
-export function isDashboardPracticePerformanceTab(
-  value: unknown,
-): value is "practice_performance" {
-  return value === "practice_performance";
+export function isDashboardPracticePerformanceTab(value: unknown): value is never {
+  return false;
 }
 
 export function dashboardStudioProduct(
@@ -235,6 +219,7 @@ export function isDashboardNavTabItem(
 /** Query `tab` → sidebar section. Retired map/shop/help tabs land on Home. */
 export function parseDashboardTab(value: unknown): DashboardTab {
   if (value === "upgrade") return "usage";
+  if (value === "practice" || value === "practice_performance") return "solve";
   if (value === "practice_studio") return "solve_studio";
   if (typeof value === "string" && RETIRED_TAB_ALIASES.has(value)) return "home";
   if (isDashboardTab(value)) return value;
@@ -250,13 +235,7 @@ export function dashboardTypeFilterForTab(
   if (tab === "calibration" || tab === "calibration_regions" || tab === "calibration_studio") {
     return "calibration";
   }
-  if (
-    tab === "solve" ||
-    tab === "solve_regions" ||
-    tab === "solve_studio" ||
-    tab === "practice" ||
-    tab === "practice_performance"
-  ) {
+  if (tab === "solve" || tab === "solve_regions" || tab === "solve_studio") {
     return "solve";
   }
   return null;
@@ -315,8 +294,6 @@ export function dashboardCreateLabel(tab: DashboardProductTab): string {
 }
 
 export function dashboardFrameLabel(tab: DashboardTab): string {
-  if (tab === "practice") return "Browse Problems";
-  if (tab === "practice_performance") return "Performance";
   if (isDashboardRegionsTab(tab)) return "Knowledge regions";
   if (isDashboardStudioTab(tab)) return "Data Studio";
   if (isDashboardProductTab(tab)) return dashboardProductLabel(tab);

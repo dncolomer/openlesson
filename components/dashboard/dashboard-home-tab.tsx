@@ -26,7 +26,7 @@ export function DashboardHomeTab() {
           Home
         </h2>
         <p className="mt-2 max-w-2xl text-sm text-neutral-400">
-          Pick a product. Solve and practice problems, verify work, or calibrate a prior.
+          Pick a product. Run Solve / Practice, verify work, or calibrate a prior.
         </p>
       </header>
 

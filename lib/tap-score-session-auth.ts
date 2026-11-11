@@ -4,6 +4,7 @@ import {
   getTapScoreBrief,
   getTapScoreBriefForUser,
   hashPrivateToken,
+  type TapScoreBrief,
 } from "@/lib/tap-score";
 import type { TapPostSessionMode } from "@/lib/pow-api/tap-link-config";
 import type { EntryQueryParams } from "@/lib/guest-link-access";
@@ -48,7 +49,7 @@ export interface ResolvedTapSessionContext {
 export const TAP_SESSION_SELECT = GUEST_SESSION_SELECT;
 
 const TAP_SESSION_SELECT_NO_JOIN =
-  "id, workspace_id, user_id, guest_user_id, assigned_user_id, organization_id, block_id, session_id, status, started_at, requested_duration_seconds, focus_block_ids, post_session, redirect_url, completion_webhook_url, access_mode, public_token, entry_query_params, interaction_kind, session_shell";
+  "id, workspace_id, user_id, guest_user_id, assigned_user_id, organization_id, block_id, status, access_mode, public_token, private_token_hash, kind, identity, result, field_model, guest_link";
 
 export function authContextFromTapAccess(
   access: {
@@ -129,6 +130,18 @@ export function selectTapBriefUserId(access: {
  * Uses workspace owner for ownership-gated brief (guest/assigned private links).
  * Cookie path falls back to getTapScoreBrief when no owner id is known.
  */
+export function tapProofSessionId(access: {
+  tapSessionId?: string | null;
+  focusSessionId?: string | null;
+}, focusSessionId?: string | null): string | null {
+  return (
+    String(focusSessionId || "").trim() ||
+    String(access.focusSessionId || "").trim() ||
+    String(access.tapSessionId || "").trim() ||
+    null
+  );
+}
+
 export async function loadTapScoreBriefForAccess(
   access: {
     workspaceId: string;
@@ -138,17 +151,31 @@ export async function loadTapScoreBriefForAccess(
   focusNodeIds: string[] = [],
   focusSessionId?: string | null
 ) {
+  const workspaceId = String(access.workspaceId || "").trim();
   const briefUserId = selectTapBriefUserId(access);
+  if (!workspaceId) {
+    const brief: TapScoreBrief = {
+      plan: { id: "", title: "Session", root_topic: "Session", description: null, notes: null, workspace_goal: null },
+      nodes: [],
+      sessions: [],
+      files: [],
+      unusableCells: [],
+    };
+    return {
+      userId: briefUserId || access.userId || "",
+      brief,
+    };
+  }
   if (briefUserId) {
     return getTapScoreBriefForUser(
-      access.workspaceId,
+      workspaceId,
       briefUserId,
       focusNodeIds,
       true,
       focusSessionId
     );
   }
-  return getTapScoreBrief(access.workspaceId, focusNodeIds, focusSessionId);
+  return getTapScoreBrief(workspaceId, focusNodeIds, focusSessionId);
 }
 
 export async function resolveTapSessionAccess(input: {
@@ -275,7 +302,7 @@ export async function resolveTapSessionAccess(input: {
   }
 
   const workspaceId = input.workspaceId?.trim() || "";
-  if (!workspaceId) return { error: "workspaceId is required", status: 400 };
+  if (!workspaceId && !tapSessionId) return { error: "workspaceId is required", status: 400 };
 
   const authSupabase = await createClient();
   const {
@@ -283,12 +310,14 @@ export async function resolveTapSessionAccess(input: {
   } = await authSupabase.auth.getUser();
   if (!user) return { error: "Not authenticated", status: 401 };
 
-  try {
-    await getTapScoreBrief(workspaceId, input.blockId ? [input.blockId] : [], input.focusSessionId || null);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Not authorized";
-    const status = message === "Not authenticated" ? 401 : message === "Not authorized" ? 403 : 404;
-    return { error: message, status };
+  if (workspaceId) {
+    try {
+      await getTapScoreBrief(workspaceId, input.blockId ? [input.blockId] : [], input.focusSessionId || null);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Not authorized";
+      const status = message === "Not authenticated" ? 401 : message === "Not authorized" ? 403 : 404;
+      return { error: message, status };
+    }
   }
 
   const supabase = createAdminClient();
@@ -303,7 +332,7 @@ export async function resolveTapSessionAccess(input: {
     );
     const session = foundById?.session ?? null;
 
-    if (!session || session.workspace_id !== workspaceId) {
+    if (!session || (workspaceId && session.workspace_id !== workspaceId)) {
       return { error: "Session not found", status: 404 };
     }
     if (session.assigned_user_id && session.assigned_user_id !== user.id) {
@@ -316,15 +345,19 @@ export async function resolveTapSessionAccess(input: {
     sessionTable = foundById!.table;
   }
 
-  const { data: workspaceRow } = await supabase
-    .from("workspaces")
-    .select("user_id, organization_id")
-    .eq("id", workspaceId)
-    .maybeSingle();
+  const resolvedWorkspaceId =
+    workspaceId || String(existingSession?.workspace_id || "").trim();
+  const { data: workspaceRow } = resolvedWorkspaceId
+    ? await supabase
+        .from("workspaces")
+        .select("user_id, organization_id")
+        .eq("id", resolvedWorkspaceId)
+        .maybeSingle()
+    : { data: null };
 
   return {
     supabase,
-    workspaceId,
+    workspaceId: resolvedWorkspaceId,
     userId: user.id,
     guestUserId: null,
     assignedUserId: existingSession?.assigned_user_id?.toString() || null,

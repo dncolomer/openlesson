@@ -200,21 +200,10 @@ export async function redeemComplimentaryAyclLink(
 }
 
 export async function getAyclPurchaseByToken(
-  supabase: SupabaseClient,
-  accessToken: string
+  _supabase: SupabaseClient,
+  _accessToken: string
 ): Promise<AyclPurchase | null> {
-  const token = accessToken.trim();
-  if (!token) return null;
-
-  const { data, error } = await supabase
-    .from("aycl_purchases")
-    .select("*")
-    .eq("access_token_hash", hashPrivateToken(token))
-    .eq("status", "completed")
-    .maybeSingle();
-
-  if (error || !data) return null;
-  return data as AyclPurchase;
+  return null;
 }
 
 export async function getAyclPurchaseByCheckoutSession(

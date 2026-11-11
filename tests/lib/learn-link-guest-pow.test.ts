@@ -43,7 +43,7 @@ describe("shareable TAP Learning guest PoW wiring", () => {
     "utf8",
   );
   const powSource = fs.readFileSync(
-    path.join(REPO_ROOT, "app/api/workspace/proof-of-work/route.ts"),
+    path.join(REPO_ROOT, "app/api/session/proof-of-work/route.ts"),
     "utf8",
   );
   const sessionSource = readSessionViewSurface();
@@ -61,12 +61,15 @@ describe("shareable TAP Learning guest PoW wiring", () => {
   });
 
   it("wires ileToken into TAP Learning speech, idle, and proof-of-work API routes", () => {
-    expect(speechSource).toContain("ileTokenFromPowBody");
-    expect(idleSource).toContain("ileTokenFromPowBody");
-    expect(powSource).toContain("ileTokenFromPowBody");
-    expect(speechSource).toContain("ileToken:");
-    expect(idleSource).toContain("ileToken:");
-    expect(powSource).toContain("ileToken:");
+    expect(speechSource).toContain("sessionProofAccessFromBody");
+    expect(idleSource).toContain("sessionProofAccessFromBody");
+    expect(powSource).toContain("sessionProofAccessFromBody");
+    const access = fs.readFileSync(
+      path.join(REPO_ROOT, "lib/session-proof-access.ts"),
+      "utf8",
+    );
+    expect(access).toContain("ileToken");
+    expect(access).toContain("resolveIleLinkSessionAccess");
   });
 
   it("sends the shareable TAP Learning token from SessionView guest PoW context", () => {

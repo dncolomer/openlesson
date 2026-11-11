@@ -597,7 +597,7 @@ describe("TAP Learning TIM map interactions catalog + wiring", () => {
     expect(provider).toContain('features.event.endpoint === "upload_ile_chapter_done"');
     expect(provider).toContain("predictIleChapterCompleteInterruption");
 
-    const route = read("app/api/workspace/proof-of-work/route.ts");
+    const route = read("app/api/session/proof-of-work/route.ts");
     expect(route).toContain("resolvePowInterruptionContext");
     expect(route).toContain("withProofOfWorkApiResponse");
 

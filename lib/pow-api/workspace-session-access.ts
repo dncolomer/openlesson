@@ -236,7 +236,7 @@ export async function requireSessionWorkspaceProofOfWorkAccess(
     return jsonError(400, "workspaceId is required");
   }
 
-  const ayclToken = options?.ayclToken?.trim() || "";
+  const ayclToken = "";
   if (ayclToken) {
     const aycl = await resolveAyclAccess(ayclToken);
     if ("error" in aycl) {

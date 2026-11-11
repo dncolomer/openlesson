@@ -375,6 +375,7 @@ export function SessionView({
     sessionBlockId:
       typeof session?.metadata?.block_id === "string" ? session.metadata.block_id : undefined,
     ileToken,
+    solveToken,
     entryQueryParams,
     whiteboardData,
     notebookContent,

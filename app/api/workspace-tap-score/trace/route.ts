@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
-import { authContextFromTapAccess, resolveTapSessionAccess } from "@/lib/tap-score-session-auth";
+import { authContextFromTapAccess, resolveTapSessionAccess, tapProofSessionId } from "@/lib/tap-score-session-auth";
 import {
   buildTapThoughtTracePayload,
   TAP_TRACE_TOOL_NAME,
@@ -14,6 +14,7 @@ import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruptio
 import {stampSourceLinkMetadata, entryQueryParamsFromBody} from "@/lib/guest-link-access";
 import { isTapPracticeRequest, stampPoWPracticeFlag } from "@/lib/tap-practice";
 import { storedTraceFamily, storedTraceToolAction } from "@/lib/pow-trace-family";
+import { billingWorkspaceFromTapAccess } from "@/lib/pow-api/billing-workspace";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -121,14 +122,7 @@ export async function POST(req: NextRequest) {
       practice,
     );
 
-    const { data: workspace } = await access.supabase
-      .from("workspaces")
-      .select("id, user_id, organization_id")
-      .eq("id", access.workspaceId)
-      .single();
-    if (!workspace) {
-      return jsonError(404, "Workspace not found");
-    }
+    const workspace = await billingWorkspaceFromTapAccess(access);
     const row = await uploadWorkspaceProofOfWork(
       access.supabase,
       authContextFromTapAccess(access, "tap-trace"),
@@ -139,7 +133,7 @@ export async function POST(req: NextRequest) {
         mime_type: "application/json",
         data: base64,
         block_id: blockId || access.blockId,
-        session_id: focusSessionId || access.focusSessionId,
+        session_id: tapProofSessionId(access, focusSessionId),
         file_name: fileName,
         timestamp_ms: timestampMs,
         tool_name: TAP_TRACE_TOOL_NAME,

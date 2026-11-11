@@ -149,7 +149,7 @@ export function useIleGatherResources(input: {
         consume: decision.consume,
       });
       input.recordSessionPowArtifact(pow);
-      if (input.workspaceId && input.sessionId) {
+      if (input.sessionId) {
         void uploadIleProofOfWork({
           workspaceId: input.workspaceId,
           sessionId: input.sessionId,

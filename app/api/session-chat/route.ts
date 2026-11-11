@@ -15,6 +15,7 @@ import { assemblePromptWorkspaceContext } from "@/lib/prompt-workspace-context";
 import { resolveIleDurableSessionMode } from "@/lib/learn-mode";
 import { powAttributionColumnsFromIds } from "@/lib/session-participant-identity";
 import { uploadWorkspaceProofOfWork } from "@/lib/pow-api/upload-workspace-proof-of-work";
+import { loadBillingWorkspaceForProof } from "@/lib/pow-api/billing-workspace";
 import {
   buildIleSessionChatPowFile,
   ILE_SESSION_CHAT_POW_TOOL_ACTION,
@@ -148,56 +149,48 @@ export async function POST(request: NextRequest) {
     });
     if (powTarget.persist) {
       try {
-        const { data: workspace } = await supabase
-          .from("workspaces")
-          .select("id, user_id, organization_id")
-          .eq("id", powTarget.workspaceId)
-          .maybeSingle();
-        if (!workspace) {
-          console.error("[session-chat] PoW workspace missing; returning coach reply");
-        } else {
-          const attribution = powAttributionColumnsFromIds({
-            userId: auth.subjectId,
-            guestUserId: auth.guestUserId,
-          });
-          const file = buildIleSessionChatPowFile({
-            sessionId: powTarget.sessionId,
-            workspaceId: powTarget.workspaceId,
-            learnerText: lastLearner,
-            assistantText: extracted.visibleText,
-          });
-          await uploadWorkspaceProofOfWork(
-            supabase,
-            {
-              user_id: attribution.user_id,
-              guest_user_id: attribution.guest_user_id,
-              organization_id:
-                typeof workspace.organization_id === "string"
-                  ? workspace.organization_id
-                  : null,
-              is_org_admin: false,
-              key_id: "ile-session-chat",
-              scopes: ["workspaces:write"],
-            },
-            workspace,
-            {
-              workspaceId: powTarget.workspaceId,
-              type: "tool",
-              mime_type: "application/json",
-              data: file.base64,
+        const workspace = await loadBillingWorkspaceForProof(supabase, {
+          workspaceId: powTarget.workspaceId,
+          ownerUserId: auth.persistUserId || auth.subjectId,
+        });
+        const attribution = powAttributionColumnsFromIds({
+          userId: auth.subjectId,
+          guestUserId: auth.guestUserId,
+        });
+        const file = buildIleSessionChatPowFile({
+          sessionId: powTarget.sessionId,
+          workspaceId: powTarget.workspaceId,
+          learnerText: lastLearner,
+          assistantText: extracted.visibleText,
+        });
+        await uploadWorkspaceProofOfWork(
+          supabase,
+          {
+            user_id: attribution.user_id,
+            guest_user_id: attribution.guest_user_id,
+            organization_id: workspace.organization_id,
+            is_org_admin: false,
+            key_id: "ile-session-chat",
+            scopes: ["workspaces:write"],
+          },
+          { ...workspace, user_id: workspace.user_id || auth.persistUserId || auth.subjectId },
+          {
+            workspaceId: powTarget.workspaceId || null,
+            type: "tool",
+            mime_type: "application/json",
+            data: file.base64,
+            session_id: powTarget.sessionId,
+            file_name: file.fileName,
+            timestamp_ms: file.timestampMs,
+            tool_name: ILE_SESSION_CHAT_POW_TOOL_NAME,
+            tool_action: ILE_SESSION_CHAT_POW_TOOL_ACTION,
+            metadata: {
               session_id: powTarget.sessionId,
-              file_name: file.fileName,
-              timestamp_ms: file.timestampMs,
-              tool_name: ILE_SESSION_CHAT_POW_TOOL_NAME,
-              tool_action: ILE_SESSION_CHAT_POW_TOOL_ACTION,
-              metadata: {
-                session_id: powTarget.sessionId,
-                via: "helios_dialog",
-                chapter_suggest: extracted.toolData ?? null,
-              },
+              via: "helios_dialog",
+              chapter_suggest: extracted.toolData ?? null,
             },
-          );
-        }
+          },
+        );
       } catch (err) {
         console.error("[session-chat] PoW upload failed:", err);
       }

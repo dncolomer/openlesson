@@ -19,7 +19,7 @@ import type { SessionPowContext } from "@/lib/session-pow-api-paths";
 export type TutoringClientAuth = {
   product?: "ile" | "tap";
   modality?: "dialog" | "solo";
-  authKind?: "cookie" | "ile" | "aycl" | "tap";
+  authKind?: "cookie" | "ile" | "aycl" | "tap" | "solve";
   workspaceId: string;
   sessionId: string;
   blockId?: string | null;
@@ -110,6 +110,7 @@ export function powAuthFields(context: SessionPowContext): Record<string, unknow
     sessionId: context.sessionId,
     privateToken: context.privateToken,
     ileToken: context.privateToken,
+    solveToken: context.solveToken,
     tapSessionId: context.tapSessionId,
     entryQueryParams: context.entryQueryParams,
     practice: context.practice === true,

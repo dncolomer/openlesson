@@ -280,31 +280,29 @@ export function ScoutTapClient({
       entryQueryParams: entryQueryParamsRef.current,
       item: soundingProofUploadItem(live),
     });
-    if (workspaceId) {
-      const metadata = soundingProofMetadata(live);
-      await postWorkspaceFlowEmbedding({
-        workspaceId,
-        flowKind: "calibrate",
-        runId: tapSessionIdRef.current || sessionId || null,
-        source: "sounding",
-        model: live.model,
-        sequence: null,
-        pow: [
-          {
-            type: "tool",
-            tool_name: "probe",
-            tool_action: "sounding",
-            timestamp_ms: 1,
-            payload: JSON.stringify(metadata),
-            metadata,
-          },
-        ],
-        sessionId,
-        privateToken,
-        tapSessionId: tapSessionIdRef.current,
-        entryQueryParams: entryQueryParamsRef.current,
-      });
-    }
+    const metadata = soundingProofMetadata(live);
+    await postWorkspaceFlowEmbedding({
+      workspaceId,
+      flowKind: "calibrate",
+      runId: tapSessionIdRef.current || sessionId || null,
+      source: "sounding",
+      model: live.model,
+      sequence: null,
+      pow: [
+        {
+          type: "tool",
+          tool_name: "probe",
+          tool_action: "sounding",
+          timestamp_ms: 1,
+          payload: JSON.stringify(metadata),
+          metadata,
+        },
+      ],
+      sessionId,
+      privateToken,
+      tapSessionId: tapSessionIdRef.current,
+      entryQueryParams: entryQueryParamsRef.current,
+    });
   }, [blockId, privateToken, sessionId, workspaceId]);
 
   const loadPool = useCallback(async (title: string, description: string) => {

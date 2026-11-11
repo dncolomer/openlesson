@@ -529,7 +529,7 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
     s.tapThoughtSpeech.pauseLiveSpeech();
     const snapshot = s.policyRef?.current;
     const policy = snapshot?.model ? { model: snapshot.model, sequence: snapshot.sequence } : null;
-    if (s.kind === "verify" && policy && s.workspaceId && !s.localOpening) {
+    if (s.kind === "verify" && policy && !s.localOpening) {
       const prompt = s.messages
         .map((message) => String(message.content || "").trim())
         .filter(Boolean)

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
-import { resolveTapSessionAccess } from "@/lib/tap-score-session-auth";
+import { resolveTapSessionAccess, tapProofSessionId } from "@/lib/tap-score-session-auth";
 import { hashPrivateToken } from "@/lib/tap-score";
 import {
   buildTapTranscriptPayload,
@@ -18,8 +18,11 @@ import {
 } from "@/lib/tap-practice";
 import {
   CALIBRATE_SESSIONS_TABLE,
+  insertGuestSession,
   storedCalibrateVerifyWrite,
+  updateGuestSession,
 } from "@/lib/guest-session-tables";
+import { billingWorkspaceFromTapAccess } from "@/lib/pow-api/billing-workspace";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -62,15 +65,7 @@ export async function POST(req: NextRequest) {
       return jsonError(400, "tapSessionId is required");
     }
 
-    const { data: workspace } = await access.supabase
-      .from("workspaces")
-      .select("id, user_id, organization_id")
-      .eq("id", access.workspaceId)
-      .single();
-
-    if (!workspace) {
-      return jsonError(404, "Workspace not found");
-    }
+    const workspace = await billingWorkspaceFromTapAccess(access);
 
     const auth: AuthContext = {
       user_id: access.guestUserId ? null : access.userId,
@@ -130,7 +125,7 @@ export async function POST(req: NextRequest) {
       mime_type: "application/json",
       data: Buffer.from(transcriptJson, "utf8").toString("base64"),
       block_id: blockId || access.blockId,
-      session_id: focusSessionId || access.focusSessionId,
+      session_id: tapProofSessionId(access, focusSessionId),
       file_name: `tap-transcript-${resolvedTapSessionId}.json`,
       timestamp_ms: Date.now(),
       tool_name: TAP_TRANSCRIPT_TOOL_NAME,
@@ -166,34 +161,40 @@ export async function POST(req: NextRequest) {
     const write = storedCalibrateVerifyWrite(
       access.sessionTable === CALIBRATE_SESSIONS_TABLE ? "calibrate" : "verify",
     );
-    const query = access.existingSession
-      ? access.supabase
-          .from(access.sessionTable)
-          .update(sessionPayload)
-          .eq("id", resolvedTapSessionId)
-      : access.supabase.from(access.sessionTable).insert({
-          workspace_id: access.workspaceId,
-          user_id: access.guestUserId ? null : access.userId,
-          guest_user_id: access.guestUserId,
-          organization_id: access.organizationId,
-          duration_seconds: durationSeconds,
-          requested_duration_seconds: resolvedRequestedDuration,
-          block_id: blockId || access.blockId,
-          session_id: focusSessionId || access.focusSessionId,
-          status: "completed",
-          completed_at: completedAt,
-          private_token_hash: privateToken ? hashPrivateToken(privateToken) : null,
-          interaction_kind: write.interaction_kind,
-          session_shell: write.session_shell,
-        });
-
-    const { data: row, error: writeError } = await query
-      .select("id, workspace_id, block_id, session_id, status, completed_at")
-      .single();
+    const written = access.existingSession
+      ? await updateGuestSession(
+          access.supabase,
+          access.sessionTable,
+          resolvedTapSessionId,
+          sessionPayload,
+          "id, workspace_id, block_id, status, guest_link",
+        )
+      : await insertGuestSession(
+          access.supabase,
+          access.sessionTable,
+          {
+            workspace_id: access.workspaceId || null,
+            user_id: access.guestUserId ? access.workspaceOwnerUserId : access.userId,
+            guest_user_id: access.guestUserId,
+            organization_id: access.organizationId,
+            duration_seconds: durationSeconds,
+            requested_duration_seconds: resolvedRequestedDuration,
+            block_id: blockId || access.blockId,
+            session_id: tapProofSessionId(access, focusSessionId),
+            status: "completed",
+            completed_at: completedAt,
+            private_token_hash: privateToken ? hashPrivateToken(privateToken) : null,
+            interaction_kind: write.interaction_kind,
+            session_shell: write.session_shell,
+          },
+          "id, workspace_id, block_id, status, guest_link",
+        );
+    const row = written.data;
+    const writeError = written.error as { message?: string } | null;
 
     if (writeError) {
       console.error("[workspace-tap-score/complete] Write error:", writeError);
-      return jsonError(500, writeError.message);
+      return jsonError(500, writeError.message || "Could not complete Verify session");
     }
 
     if (access.completionWebhookUrl) {

@@ -131,9 +131,9 @@ export function IleCanvasCraftInsightForm({
           const uploadWorkspaceId = String(
             insight.workspace_id ?? config.workspaceId ?? "",
           ).trim();
-          if (uploadWorkspaceId && config.sessionId) {
+          if (config.sessionId) {
             void uploadIleProofOfWork({
-              workspaceId: uploadWorkspaceId,
+              workspaceId: uploadWorkspaceId || undefined,
               sessionId: config.sessionId,
               type: "tool",
               mime_type: "application/json",

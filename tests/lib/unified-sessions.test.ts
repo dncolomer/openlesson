@@ -7,7 +7,7 @@ import {
   kindFromGuestLogicalTable,
   unifiedSessionInsertPayload,
 } from "@/lib/unified-sessions";
-import { insertGuestSession, storedCalibrateVerifyWrite } from "@/lib/guest-session-tables";
+import { insertGuestSession, storedCalibrateVerifyWrite, updateGuestSession } from "@/lib/guest-session-tables";
 import { proofOfWorkTypeForSensor, sensorPowInsertPayload } from "@/lib/session-sensor-pow";
 
 const ROOT = join(__dirname, "../..");
@@ -61,6 +61,53 @@ describe("unified sessions", () => {
     expect(calls[0]?.table).toBe("sessions");
     expect(calls[0]?.row.kind).toBe("calibrate");
     expect(data?.kind).toBe("calibrate");
+  });
+
+  it("updates TAP fields onto sessions.guest_link", async () => {
+    const calls: Array<{ table: string; op: string; row?: Record<string, unknown> }> = [];
+    const client = {
+      from(table: string) {
+        return {
+          select() {
+            return {
+              eq() {
+                return this;
+              },
+              async maybeSingle() {
+                calls.push({ table, op: "select" });
+                return { data: { guest_link: { requested_duration_seconds: 900 } }, error: null };
+              },
+            };
+          },
+          update(row: Record<string, unknown>) {
+            calls.push({ table, op: "update", row });
+            return {
+              eq() {
+                return this;
+              },
+              select() {
+                return this;
+              },
+              async single() {
+                return { data: { id: "s1", kind: "verify", guest_link: row.guest_link }, error: null };
+              },
+            };
+          },
+        };
+      },
+    };
+    const { data, error } = await updateGuestSession(
+      client,
+      "workspace_verify_sessions",
+      "s1",
+      { status: "completed", duration_seconds: 42, completed_at: "now" },
+    );
+    expect(error).toBeNull();
+    expect(calls.some((call) => call.table === "sessions" && call.op === "update")).toBe(true);
+    const update = calls.find((call) => call.op === "update");
+    expect(update?.row?.status).toBe("completed");
+    expect((update?.row?.guest_link as { duration_seconds: number }).duration_seconds).toBe(42);
+    expect(data?.duration_seconds).toBe(42);
   });
 
   it("keeps extra TAP fields in guest_link", () => {
@@ -128,6 +175,6 @@ describe("core data-model remaining migrations", () => {
     expect(existsSync(join(ROOT, "app/rabbit-hole/page.tsx"))).toBe(false);
     expect(existsSync(join(ROOT, "lib/rabbit-hole.ts"))).toBe(false);
     expect(existsSync(join(ROOT, "lib/rabbit-hole-expand.ts"))).toBe(true);
-    expect(existsSync(join(ROOT, "app/api/workspace/rabbit-hole-expand/route.ts"))).toBe(true);
+    expect(existsSync(join(ROOT, "app/api/workspace/rabbit-hole-expand/route.ts"))).toBe(false);
   });
 });

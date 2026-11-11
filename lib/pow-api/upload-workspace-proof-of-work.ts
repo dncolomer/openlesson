@@ -23,12 +23,10 @@ import {
   redactOpaqueFileName,
   sanitizeOpaqueMetadata,
 } from "./opaque-evaluation";
-
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+import { isProofWorkspaceId } from "./billing-workspace";
 
 function isUuid(value: string | null | undefined): value is string {
-  return typeof value === "string" && UUID_RE.test(value);
+  return isProofWorkspaceId(value);
 }
 
 function formatDbError(context: string, error: { message?: string; code?: string; details?: string; hint?: string } | null) {
@@ -88,7 +86,7 @@ export interface UploadWorkspaceProofOfWorkWorkspace {
 }
 
 export interface UploadWorkspaceProofOfWorkInput {
-  workspaceId: string;
+  workspaceId?: string | null;
   type: string;
   mime_type: string;
   data: string;
@@ -110,7 +108,7 @@ export interface UploadWorkspaceProofOfWorkInput {
 
 export type UploadWorkspaceProofOfWorkResult = {
   proof_of_work: Record<string, unknown> & {
-    workspace_id: string;
+    workspace_id: string | null;
     block_id: string | null;
     type: string;
     tool_name?: string | null;
@@ -149,6 +147,11 @@ export async function uploadWorkspaceProofOfWork(
   const powModelVersion = schema.pow_model_version;
 
   const fileBytes = Buffer.from(base64, "base64");
+  const storedWorkspaceId = isUuid(input.workspaceId)
+    ? input.workspaceId
+    : isUuid(workspace.id)
+      ? workspace.id
+      : null;
 
   const billingUserId = workspace.user_id || auth.user_id;
   if (!billingUserId) {
@@ -159,12 +162,12 @@ export async function uploadWorkspaceProofOfWork(
   const participantUserId = auth.guest_user_id ? null : auth.user_id || null;
   const participantGuestUserId = isUuid(auth.guest_user_id) ? auth.guest_user_id : null;
 
-  if (input.block_id) {
+  if (input.block_id && storedWorkspaceId) {
     const { data: block } = await supabase
       .from("blocks")
       .select("id")
       .eq("id", input.block_id)
-      .eq("workspace_id", input.workspaceId)
+      .eq("workspace_id", storedWorkspaceId)
       .single();
     if (!block) throw new Error("Block not found in this workspace");
   }
@@ -221,7 +224,7 @@ export async function uploadWorkspaceProofOfWork(
     organizationId,
     collectionFields: {
       ...(organizationId ? { organization_id: organizationId } : {}),
-      workspace_id: input.workspaceId,
+      ...(storedWorkspaceId ? { workspace_id: storedWorkspaceId } : {}),
       proof_of_work_type: evidenceType,
       ...(participantUserId ? { user_id: participantUserId } : {}),
     },
@@ -231,8 +234,8 @@ export async function uploadWorkspaceProofOfWork(
   const xaiCollectionId = uploaded.collectionId;
 
   const { row, error } = await insertWorkspaceProofOfWorkRow(supabase, {
-    workspace_id: input.workspaceId,
-    block_id: input.block_id || null,
+    workspace_id: storedWorkspaceId,
+    block_id: storedWorkspaceId ? input.block_id || null : null,
     session_id: finalSessionId,
     proof_of_work_type: evidenceType,
     pow_model_version: powModelVersion,

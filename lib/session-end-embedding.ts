@@ -10,18 +10,26 @@ export type SessionEndEmbeddingTarget =
 export function sessionEndEmbeddingTarget(session: {
   metadata?: unknown;
   identity?: unknown;
+  solve_flow_id?: unknown;
+  solveFlowId?: unknown;
+  workspace_id?: unknown;
+  workspaceId?: unknown;
 } | null | undefined): SessionEndEmbeddingTarget | null {
   if (!session) return null;
   const meta =
     session.metadata && typeof session.metadata === "object" && !Array.isArray(session.metadata)
       ? (session.metadata as Record<string, unknown>)
       : {};
-  const solveFlowId = String(meta.solve_flow_id ?? meta.solveFlowId ?? "").trim();
+  const solveFlowId = String(
+    session.solve_flow_id ?? session.solveFlowId ?? meta.solve_flow_id ?? meta.solveFlowId ?? "",
+  ).trim();
   if (solveFlowId) {
     const identity = String(session.identity ?? meta.identity ?? "").trim() || null;
     return { kind: "solve", flowId: solveFlowId, identity };
   }
-  const workspaceId = String(meta.workspace_id ?? meta.workspaceId ?? "").trim();
+  const workspaceId = String(
+    session.workspace_id ?? session.workspaceId ?? meta.workspace_id ?? meta.workspaceId ?? "",
+  ).trim();
   if (workspaceId) return { kind: "learn", workspaceId };
   return null;
 }

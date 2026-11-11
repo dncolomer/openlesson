@@ -233,11 +233,11 @@ describe("TAP client wires purity UX", () => {
     expect(phase).toContain("withImpurePoWData");
     expect(phase).toContain("stayOnScreen: impure");
     const impureRoute = fs.readFileSync(
-      path.join(ROOT, "app/api/workspace/proof-of-work/impure/route.ts"),
+      path.join(ROOT, "app/api/session/proof-of-work/impure/route.ts"),
       "utf8",
     );
     expect(impureRoute).toContain("flagIleSessionProofOfWorkImpure");
-    expect(impureRoute).toContain("requireSessionWorkspaceProofOfWorkAccess");
+    expect(impureRoute).toContain("requireSessionProofAccess");
   });
 
   it("Learn purity is off on a development loopback host and stays on in production and Verify", () => {

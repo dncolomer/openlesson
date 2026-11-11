@@ -233,10 +233,12 @@ export async function countWorkspaceProofOfWorkForPlan(
   supabase: import("@supabase/supabase-js").SupabaseClient,
   workspaceId: string
 ): Promise<number> {
+  const id = String(workspaceId || "").trim();
+  if (!id) return 0;
   const { count, error } = await supabase
     .from("proof_of_work")
     .select("id", { count: "exact", head: true })
-    .eq("workspace_id", workspaceId);
+    .eq("workspace_id", id);
 
   if (error) return 0;
   return count ?? 0;

@@ -41,6 +41,7 @@ export type SessionSpeechInput = {
     workspaceId?: string;
     sessionId: string | null;
     privateToken?: string;
+    solveToken?: string;
     blockId?: string;
     entryQueryParams?: Record<string, string | string[]>;
   };
@@ -127,13 +128,13 @@ const uploadIleThoughtTrace = useCallback(
   async (payload: SessionThoughtTracePayload) => {
     const workspaceId = getWorkspaceId();
     const currentSession = sessionRef.current;
-    if (!workspaceId || !currentSession) return;
+    if (!currentSession) return;
 
     const tracePayload = buildIleThoughtTracePayload({
       traceType: payload.traceType,
       action: payload.action as IleSystem1Action | IleSystem2Action,
       sessionId: currentSession.id,
-      workspaceId,
+      workspaceId: workspaceId ?? "",
       thoughtId: payload.thoughtId,
       thoughtIds: payload.thoughtIds,
       chainId: payload.chainId,
@@ -165,6 +166,7 @@ const uploadIleThoughtTrace = useCallback(
         combined: payload.combined ?? false,
       },
       ...(ileToken ? { ileToken } : {}),
+      ...(ilePowContext.solveToken ? { solveToken: ilePowContext.solveToken } : {}),
       ...(entryQueryParams && Object.keys(entryQueryParams).length > 0
         ? { entryQueryParams }
         : {}),
@@ -341,10 +343,11 @@ const handleProjectDemote = useCallback(
       lastSentAt = now;
       const workspaceId = ilePowContext.workspaceId ?? getWorkspaceId();
       const liveSessionId = ilePowContext.sessionId ?? sessionId;
-      if (!workspaceId || !liveSessionId) return;
+      if (!liveSessionId) return;
       void uploadIleProofOfWork({
         workspaceId,
         sessionId: liveSessionId,
+        solveToken: ilePowContext.solveToken,
         type: "tool",
         mime_type: "application/json",
         data: textToBase64(JSON.stringify(event.payload)),

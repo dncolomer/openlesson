@@ -50,6 +50,7 @@ export type SessionRuntimeInput = {
   sessionId: string | undefined;
   sessionBlockId: string | undefined;
   ileToken?: string;
+  solveToken?: string;
   entryQueryParams?: Record<string, string | string[]>;
   whiteboardData: string | null;
   notebookContent: string;
@@ -68,6 +69,7 @@ export function useSessionRuntime(input: SessionRuntimeInput) {
     sessionId,
     sessionBlockId,
     ileToken,
+    solveToken,
     entryQueryParams,
     whiteboardData,
     notebookContent,
@@ -310,7 +312,7 @@ const uploadPowItem = useCallback(
   async (item: IleProofOfWorkUploadItem, channel: keyof TransferHealth) => {
     const workspaceId = getWorkspaceId();
     const currentSession = sessionRef.current;
-    if (!workspaceId || !currentSession || !powSessionEnabledRef.current) return;
+    if (!currentSession || !powSessionEnabledRef.current) return;
 
     const result = await uploadIleEvidenceItem(
       workspaceId,
@@ -318,6 +320,7 @@ const uploadPowItem = useCallback(
       item,
       ileToken,
       entryQueryParams,
+      solveToken,
     );
     recordTransferEvent(channel, result.ok, result.error);
     if (result.ok) {
@@ -335,14 +338,14 @@ const uploadPowItem = useCallback(
       }
     }
   },
-  [getWorkspaceId, recordTransferEvent, recordSessionPowArtifact, ileToken, entryQueryParams],
+  [getWorkspaceId, recordTransferEvent, recordSessionPowArtifact, ileToken, solveToken, entryQueryParams],
 );
 
 const uploadScreenshotPow = useCallback(
   async (blob: Blob, timestampMs: number) => {
     const workspaceId = getWorkspaceId();
     const currentSession = sessionRef.current;
-    if (!workspaceId || !currentSession || !powSessionEnabledRef.current) return;
+    if (!currentSession || !powSessionEnabledRef.current) return;
 
     const result = await uploadIleScreenshot(
       workspaceId,
@@ -350,6 +353,7 @@ const uploadScreenshotPow = useCallback(
       { blob, timestampMs },
       ileToken,
       entryQueryParams,
+      solveToken,
     );
     recordTransferEvent("screenshots", result.ok, result.error);
     if (result.ok) {
@@ -360,7 +364,7 @@ const uploadScreenshotPow = useCallback(
       }
     }
   },
-  [getWorkspaceId, recordTransferEvent, recordSessionPowArtifact, ileToken, entryQueryParams],
+  [getWorkspaceId, recordTransferEvent, recordSessionPowArtifact, ileToken, solveToken, entryQueryParams],
 );
 
 const tryUploadFacialBatch = useCallback(
@@ -508,10 +512,11 @@ const ilePowContext = useMemo(
     sessionId: sessionId ?? null,
     // Shareable TAP Learning guests authenticate PoW routes with the private link token.
     privateToken: ileToken || undefined,
+    solveToken: solveToken || undefined,
     blockId: sessionBlockId,
     entryQueryParams,
   }),
-  [getWorkspaceId, sessionId, sessionBlockId, ileToken, entryQueryParams],
+  [getWorkspaceId, sessionId, sessionBlockId, ileToken, solveToken, entryQueryParams],
 );
 const logToolRef = useRef<
   ((toolName: ToolName, action: ToolAction, metadata?: Record<string, unknown>) => Promise<void>) | null

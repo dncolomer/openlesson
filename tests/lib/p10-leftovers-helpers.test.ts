@@ -84,7 +84,7 @@ describe("P10 leftovers shipped helpers", () => {
     expect(tapHookFormingText({ getFormingText: () => "  hook live  " })).toBe("hook live");
     expect(tapHookFormingText({ getFormingText: () => "" })).toBe("");
 
-    const skipPow = resolveIleSessionChatPowUpload({ sessionId: "s", workspaceId: "" });
+    const skipPow = resolveIleSessionChatPowUpload({ sessionId: "", workspaceId: "w1" });
     expect(skipPow.persist).toBe(false);
     const persistPow = resolveIleSessionChatPowUpload({
       sessionId: "s1",

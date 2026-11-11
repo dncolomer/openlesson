@@ -321,14 +321,13 @@ describe("completion paths persist flow embeddings instead of snapshots", () => 
     expect(playCalibrate).toContain("postWorkspaceFlowEmbedding");
     expect(playCalibrate).toContain("soundingProofMetadata");
 
-    const listRoute = read("app/api/workspace/flow-embeddings/route.ts");
-    expect(listRoute).toContain("export async function GET");
-    expect(listRoute).toContain("listFlowEmbeddings");
-    expect(listRoute).toContain('embedding_model_id: "flowcfg-v1-d96"');
-    expect(listRoute).toContain("flow_embeddings: rows");
+    const listRoute = read("app/api/session/embed/route.ts");
+    expect(listRoute).toContain("export async function POST");
+    expect(listRoute).toContain("persistCompletedFlowEmbedding");
+    expect(listRoute).toContain("persistSolveCompletedEmbedding");
     const client = read("lib/flow-embedding-client.ts");
     expect(client).toContain("listWorkspaceFlowEmbeddings");
-    expect(client).toContain("/api/workspace/flow-embeddings?");
+    expect(client).toContain("/api/session/embed");
     const models = read("components/knowledge-panel/models-view.tsx");
     expect(models).toContain('embeddingSource: "flowcfg"');
     expect(models).toContain("Embeddings in");

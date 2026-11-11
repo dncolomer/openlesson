@@ -44,6 +44,8 @@ describe("retired product page", () => {
       "/p",
       "/brain-priming",
       "/kardashev",
+      "/community",
+      "/quiz",
     ]);
     expect(read("app/workspace/[[...slug]]/page.tsx")).toContain("RetiredProductPage");
     expect(read("app/workspaces/page.tsx")).toContain("RetiredProductPage");
@@ -55,6 +57,8 @@ describe("retired product page", () => {
     expect(read("app/brain-priming/page.tsx")).toContain("RetiredProductPage");
     expect(read("app/brain-priming/join/page.tsx")).toContain("RetiredProductPage");
     expect(read("app/kardashev/page.tsx")).toContain("RetiredProductPage");
+    expect(read("app/community/page.tsx")).toContain("RetiredProductPage");
+    expect(read("app/quiz/page.tsx")).toContain("RetiredProductPage");
     expect(existsSync(join(ROOT, "app/workspace/[id]/page.tsx"))).toBe(false);
     expect(existsSync(join(ROOT, "app/workspace/new/page.tsx"))).toBe(false);
     expect(existsSync(join(ROOT, "app/all-you-can-learn/page.tsx"))).toBe(false);

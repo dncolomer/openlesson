@@ -16,7 +16,7 @@ import {
   tapSessionInsertRetryKind,
   type TapInteractionKind,
 } from "@/lib/pow-api/tap-link-config";
-import { storedCalibrateVerifyWrite } from "@/lib/guest-session-tables";
+import { insertGuestSession, storedCalibrateVerifyWrite, updateGuestSession } from "@/lib/guest-session-tables";
 import { looksLikeConversationalOpening, tapStartInteractionKind } from "@/lib/exercise-tap";
 import { generateTapExercisePrompt } from "@/lib/pow-api/tapbench-exercise-generate";
 
@@ -155,23 +155,20 @@ export async function POST(req: NextRequest) {
     // Private TAP links are multi-use: reopening a completed link restarts a run
     // on the same row, preserving guest_user_id / assigned_user_id for identity.
     if (access.existingSession?.id) {
-      await access.supabase
-        .from(access.sessionTable)
-        .update({
-          status: "in_progress",
-          started_at: new Date().toISOString(),
-          completed_at: null,
-          duration_seconds: 0,
-          requested_duration_seconds: requestedDurationSeconds,
-          transcript: [],
-          summary: null,
-          analysis: {},
-          overall_score: null,
-          marker_scores: [],
-          block_id: blockId || access.blockId,
-          session_id: focusSessionId || access.focusSessionId,
-        })
-        .eq("id", access.existingSession.id);
+      await updateGuestSession(access.supabase, access.sessionTable, String(access.existingSession.id), {
+        status: "in_progress",
+        started_at: new Date().toISOString(),
+        completed_at: null,
+        duration_seconds: 0,
+        requested_duration_seconds: requestedDurationSeconds,
+        transcript: [],
+        summary: null,
+        analysis: {},
+        overall_score: null,
+        marker_scores: [],
+        block_id: blockId || access.blockId,
+        session_id: focusSessionId || access.focusSessionId,
+      });
 
       return NextResponse.json({
         tapSessionId: access.existingSession.id,
@@ -190,10 +187,11 @@ export async function POST(req: NextRequest) {
 
     const insertRow = (kind: TapInteractionKind) => {
       const write = storedCalibrateVerifyWrite(kind);
-      return access.supabase
-        .from(write.table)
-        .insert({
-          workspace_id: access.workspaceId,
+      return insertGuestSession(
+        access.supabase,
+        write.table,
+        {
+          workspace_id: access.workspaceId || null,
           user_id: access.userId,
           block_id: blockId,
           session_id: focusSessionId,
@@ -203,9 +201,9 @@ export async function POST(req: NextRequest) {
           mode: "curious",
           interaction_kind: write.interaction_kind,
           session_shell: write.session_shell,
-        })
-        .select("id")
-        .single();
+        },
+        "id",
+      );
     };
 
     let { data: row, error } = await insertRow(interactionKind);

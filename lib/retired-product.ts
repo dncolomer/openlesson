@@ -23,4 +23,6 @@ export const RETIRED_PRODUCT_PATHS = [
   "/p",
   "/brain-priming",
   "/kardashev",
+  "/community",
+  "/quiz",
 ] as const;

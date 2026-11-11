@@ -273,6 +273,19 @@ describe("TAP session auth brief vs participant", () => {
     );
   });
 
+  it("loadTapScoreBriefForAccess stubs a brief when the TAP session has no workspace", async () => {
+    getTapScoreBriefForUser.mockClear();
+    getTapScoreBrief.mockClear();
+    const { brief } = await loadTapScoreBriefForAccess({
+      workspaceId: "",
+      workspaceOwnerUserId: "owner-1",
+      userId: "owner-1",
+    });
+    expect(brief.plan.title).toBe("Session");
+    expect(getTapScoreBriefForUser).not.toHaveBeenCalled();
+    expect(getTapScoreBrief).not.toHaveBeenCalled();
+  });
+
   it("chat/start/topics routes load brief via loadTapScoreBriefForAccess (not access.userId)", () => {
     const root = process.cwd();
     const routes = [

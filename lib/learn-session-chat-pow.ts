@@ -11,7 +11,7 @@ export function resolveIleSessionChatPowUpload(input: {
   const sessionId = typeof input.sessionId === "string" ? input.sessionId.trim() : "";
   const workspaceId =
     typeof input.workspaceId === "string" ? input.workspaceId.trim() : "";
-  if (!sessionId || !workspaceId) return { persist: false };
+  if (!sessionId) return { persist: false };
   return { persist: true, sessionId, workspaceId };
 }
 

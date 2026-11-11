@@ -40,7 +40,7 @@ export async function postSolveFlowEmbedding(input: {
 }
 
 export async function postWorkspaceFlowEmbedding(input: {
-  workspaceId: string;
+  workspaceId?: string;
   flowKind: FlowKind;
   flowId?: string | null;
   runId?: string | null;
@@ -52,19 +52,23 @@ export async function postWorkspaceFlowEmbedding(input: {
   sequence?: readonly string[] | null;
   pow?: readonly FlowPowRow[] | null;
   sessionId?: string | null;
+  solveToken?: string | null;
   ileToken?: string | null;
   privateToken?: string | null;
   tapSessionId?: string | null;
   entryQueryParams?: Record<string, string | string[]> | null;
 }): Promise<{ ok: boolean; id?: string | null }> {
-  const workspaceId = input.workspaceId.trim();
-  if (!workspaceId) return { ok: false };
+  const sessionId = String(input.sessionId || input.runId || "").trim();
+  const tapSessionId = String(input.tapSessionId || "").trim();
+  if (!sessionId && !tapSessionId && !input.solveToken && !input.privateToken && !input.ileToken) {
+    return { ok: false };
+  }
   try {
-    const response = await fetch("/api/workspace/flow-embeddings", {
+    const response = await fetch("/api/session/embed", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        workspaceId,
+        workspaceId: input.workspaceId?.trim() || null,
         flowKind: input.flowKind,
         flowId: input.flowId ?? null,
         runId: input.runId ?? null,
@@ -74,6 +78,7 @@ export async function postWorkspaceFlowEmbedding(input: {
         sequence: input.sequence ?? null,
         pow: input.pow ?? [],
         sessionId: input.sessionId ?? null,
+        solveToken: input.solveToken ?? null,
         ileToken: input.ileToken ?? null,
         privateToken: input.privateToken ?? null,
         tapSessionId: input.tapSessionId ?? null,
@@ -88,27 +93,11 @@ export async function postWorkspaceFlowEmbedding(input: {
   }
 }
 
-export async function listWorkspaceFlowEmbeddings(input: {
+export async function listWorkspaceFlowEmbeddings(_input: {
   workspaceId: string;
   ayclToken?: string;
   flowId?: string | null;
   flowKind?: FlowKind | string | null;
 }): Promise<FlowEmbeddingViewRow[]> {
-  const workspaceId = input.workspaceId.trim();
-  if (!workspaceId) return [];
-  const params = new URLSearchParams({ workspaceId });
-  if (input.ayclToken) params.set("ayclToken", input.ayclToken);
-  const flowId = String(input.flowId || "").trim();
-  if (flowId) params.set("flowId", flowId);
-  const flowKind = String(input.flowKind || "").trim();
-  if (flowKind) params.set("flowKind", flowKind);
-  const response = await fetch(`/api/workspace/flow-embeddings?${params.toString()}`);
-  const payload = (await response.json().catch(() => ({}))) as {
-    error?: string;
-    flow_embeddings?: FlowEmbeddingViewRow[];
-  };
-  if (!response.ok) {
-    throw new Error(payload.error || "Failed to load embeddings");
-  }
-  return Array.isArray(payload.flow_embeddings) ? payload.flow_embeddings : [];
+  return [];
 }

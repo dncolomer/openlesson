@@ -37,6 +37,12 @@ describe("sessionEndEmbeddingTarget", () => {
       }),
     ).toEqual({ kind: "learn", workspaceId: "ws-1" });
     expect(sessionEndEmbeddingTarget({ metadata: {} })).toBeNull();
+    expect(
+      sessionEndEmbeddingTarget({
+        solve_flow_id: "sf-col",
+        identity: "cam",
+      }),
+    ).toEqual({ kind: "solve", flowId: "sf-col", identity: "cam" });
   });
 });
 

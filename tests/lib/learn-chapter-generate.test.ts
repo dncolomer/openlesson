@@ -53,12 +53,10 @@ describe("TAP Learning chapter generate (title + description + keyword)", () => 
     expect(user).toContain("Balance a tree");
   });
 
-  it("ships generate-chapter API and TAP Learning add uses it", () => {
-    const route = read("app/api/workspace/generate-chapter/route.ts");
-    expect(route).toContain("composeIleChapterGenerateSystemMessage");
-    expect(route).toContain("normalizeIleChapterGenerateResult");
+  it("TAP Learning add-chapter frames locally without the retired generate-chapter API", () => {
     const mutate = read("components/session-view/use-session-mutate.ts");
-    expect(mutate).toContain("/api/workspace/generate-chapter");
+    expect(mutate).not.toContain("/api/workspace/generate-chapter");
+    expect(mutate).toContain("handleAddChapter");
     expect(mutate).toMatch(/appendIleChapterStep\([\s\S]*keyword/);
   });
 });

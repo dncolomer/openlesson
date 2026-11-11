@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import {
-  ileTokenFromPowBody,
-  requireSessionWorkspaceProofOfWorkAccess,
-} from "@/lib/pow-api/workspace-session-access";
+  requireSessionProofAccess,
+  sessionProofAccessFromBody,
+} from "@/lib/session-proof-access";
 import { ILE_IDLE_TOOL_NAME } from "@/lib/learn-thought-traces";
 import {
   buildTutoringIdleOutcome,
@@ -12,7 +12,7 @@ import {
 import { countWorkspaceProofOfWorkForPlan } from "@/lib/pow-api/workspace-proof-of-work";
 import { uploadWorkspaceProofOfWork } from "@/lib/pow-api/upload-workspace-proof-of-work";
 import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruption";
-import { entryQueryParamsFromBody, stampSourceLinkMetadata } from "@/lib/guest-link-access";
+import { stampSourceLinkMetadata } from "@/lib/guest-link-access";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -27,13 +27,14 @@ export async function POST(req: NextRequest) {
     const hasPendingTranscription = Boolean(body.hasPendingTranscription);
     const timestampMs = typeof body.timestampMs === "number" ? body.timestampMs : Date.now();
 
-    if (!workspaceId || !sessionId) {
-      return jsonError(400, "workspaceId and sessionId are required");
+    if (!sessionId) {
+      return jsonError(400, "sessionId is required");
     }
 
-    const access = await requireSessionWorkspaceProofOfWorkAccess(workspaceId, sessionId, {
-      ileToken: ileTokenFromPowBody(body as Record<string, unknown>),
-      entryQueryParams: entryQueryParamsFromBody(body as Record<string, unknown>),
+    const access = await requireSessionProofAccess({
+      ...sessionProofAccessFromBody(body as Record<string, unknown>),
+      sessionId,
+      workspaceId: workspaceId || null,
     });
     if (access instanceof NextResponse) return access;
     const participantUserId = access.auth.guest_user_id ? null : access.auth.user_id;
@@ -44,7 +45,7 @@ export async function POST(req: NextRequest) {
         product: "ile",
         modality: "dialog",
         authKind: access.ileLinkId ? "ile" : "cookie",
-        workspaceId,
+        workspaceId: access.workspaceId || workspaceId,
         sessionId,
       }),
       {
@@ -71,7 +72,7 @@ export async function POST(req: NextRequest) {
       access.auth,
       access.workspace,
       {
-        workspaceId,
+        workspaceId: access.workspaceId,
         type: "tool",
         mime_type: "application/json",
         data: base64,
@@ -84,7 +85,10 @@ export async function POST(req: NextRequest) {
       },
     );
 
-    const proofOfWorkCount = await countWorkspaceProofOfWorkForPlan(access.supabase, workspaceId);
+    const proofOfWorkCount = await countWorkspaceProofOfWorkForPlan(
+      access.supabase,
+      access.workspaceId || "",
+    );
 
     return NextResponse.json(
       await withProofOfWorkApiResponse(

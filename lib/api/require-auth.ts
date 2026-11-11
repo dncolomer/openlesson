@@ -61,7 +61,7 @@ export function sessionGuestTokensFromBody(body: Record<string, unknown>): {
   solveToken: string | null;
 } {
   return {
-    ayclToken: ayclTokenFromBody(body),
+    ayclToken: null,
     ileToken: ileTokenFromBody(body),
     solveToken: solveTokenFromBody(body),
   };
@@ -173,7 +173,7 @@ export async function guardWorkspaceRoute(
     return result;
   }
 
-  const ayclToken = options?.ayclToken?.trim() || "";
+  const ayclToken = "";
   if (ayclToken) {
     const aycl = await resolveAyclAccess(ayclToken);
     if ("error" in aycl) {
@@ -303,7 +303,7 @@ export async function guardSessionRoute(
   sessionId?: string | null,
   options?: GuardSessionOptions
 ): Promise<AuthenticatedRequest> {
-  const ayclToken = options?.ayclToken?.trim() || "";
+  const ayclToken = "";
   const ileToken = options?.ileToken?.trim() || "";
   const solveToken = options?.solveToken?.trim() || "";
   // Default off so Free accounts can run a started Home / My Maps session.

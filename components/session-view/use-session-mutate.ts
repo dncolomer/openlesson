@@ -614,34 +614,6 @@ const handleAddChapter = useCallback(async (
   // Same as workspace add-block-at-slot: author title/description/keyword together
   // so the map tile is not the first two words of whatever title was picked.
   const sessionId = sessionRef.current?.id || session?.id;
-  if (sessionId) {
-    try {
-      const authored = await fetch("/api/workspace/generate-chapter", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId,
-          seed: trimmed,
-          sessionMode: resolvedSessionMode,
-          locale,
-          ...guestAccessBody,
-        }),
-      });
-      if (authored.ok) {
-        const data = (await authored.json()) as {
-          title?: string;
-          description?: string;
-          keyword?: string;
-        };
-        const nextDescription = String(data.description || "").trim();
-        const nextKeyword = String(data.keyword || "").trim();
-        if (nextDescription) framed = nextDescription;
-        if (nextKeyword) keyword = nextKeyword;
-      }
-    } catch {
-      /* keep seed; keyword fallback is first 1–2 title words */
-    }
-  }
   // Project Mode: LLM-author a real longer-horizon exercise (not a topic-list wrap).
   // Keep the generated map keyword even if the exercise text is rewritten.
   if (isProjectMode) {

@@ -155,7 +155,7 @@ export async function insertGuestSession(
   table: CalibrateVerifyTable,
   row: Record<string, unknown>,
   select = "*",
-): Promise<{ data: Record<string, unknown> | null; error: unknown }> {
+): Promise<{ data: Record<string, unknown> | null; error: { message?: string } | null }> {
   const kind = kindForLogicalTable(table);
   const userId = String(row.user_id || "");
   if (!userId) return { data: null, error: { message: "user_id is required" } };
@@ -167,7 +167,7 @@ export async function insertGuestSession(
       user_id: userId,
       problem: kind === "calibrate" ? "Calibrate" : "Verify",
       status: typeof row.status === "string" ? row.status : "pending",
-      workspace_id: (row.workspace_id as string | null) ?? null,
+      workspace_id: String(row.workspace_id || "").trim() || null,
       block_id: (row.block_id as string | null) ?? null,
       calibrate_flow_id: kind === "calibrate" ? ((row.flow_id as string | null) ?? null) : null,
       verify_flow_id: kind === "verify" ? ((row.flow_id as string | null) ?? null) : null,
@@ -184,7 +184,76 @@ export async function insertGuestSession(
   );
   return {
     data: hydrateUnifiedGuestRow(result.data),
-    error: result.error,
+    error: result.error as { message?: string } | null,
+  };
+}
+
+const SESSION_UPDATE_KEYS = new Set([
+  "status",
+  "workspace_id",
+  "block_id",
+  "user_id",
+  "guest_user_id",
+  "assigned_user_id",
+  "organization_id",
+  "identity",
+  "result",
+  "field_model",
+  "access_mode",
+  "public_token",
+  "private_token_hash",
+  "metadata",
+  "kind",
+  "problem",
+  "calibrate_flow_id",
+  "verify_flow_id",
+  "solve_flow_id",
+]);
+
+/** Merge TAP fields onto `sessions.guest_link` and live session columns. */
+export async function updateGuestSession(
+  supabase: GuestSessionClient,
+  table: CalibrateVerifyTable,
+  id: string,
+  patch: Record<string, unknown>,
+  select = "*",
+): Promise<{ data: Record<string, unknown> | null; error: { message?: string } | null }> {
+  const kind = kindForLogicalTable(table);
+  const sessionId = String(id || "").trim();
+  if (!sessionId) return { data: null, error: { message: "id is required" } };
+
+  const { data: existing } = await supabase
+    .from(UNIFIED_SESSIONS_TABLE)
+    .select("guest_link")
+    .eq("id", sessionId)
+    .eq("kind", kind)
+    .maybeSingle();
+
+  const guestLink: Record<string, unknown> = {
+    ...(existing?.guest_link && typeof existing.guest_link === "object" && !Array.isArray(existing.guest_link)
+      ? (existing.guest_link as Record<string, unknown>)
+      : {}),
+  };
+  const sessionPatch: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(patch)) {
+    if (SESSION_UPDATE_KEYS.has(key)) sessionPatch[key] = value;
+    else guestLink[key] = value;
+  }
+  if (typeof sessionPatch.workspace_id === "string") {
+    sessionPatch.workspace_id = sessionPatch.workspace_id.trim() || null;
+  }
+  sessionPatch.guest_link = guestLink;
+
+  const { data, error } = await supabase
+    .from(UNIFIED_SESSIONS_TABLE)
+    .update(sessionPatch)
+    .eq("id", sessionId)
+    .eq("kind", kind)
+    .select(select)
+    .single();
+  return {
+    data: hydrateUnifiedGuestRow(data as Record<string, unknown> | null),
+    error: error as { message?: string } | null,
   };
 }
 

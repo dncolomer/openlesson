@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
-import { authContextFromTapAccess, resolveTapSessionAccess } from "@/lib/tap-score-session-auth";
+import { authContextFromTapAccess, resolveTapSessionAccess, tapProofSessionId } from "@/lib/tap-score-session-auth";
 import { uploadWorkspaceProofOfWork } from "@/lib/pow-api/upload-workspace-proof-of-work";
 import { countWorkspaceProofOfWorkForPlan } from "@/lib/pow-api/workspace-proof-of-work";
 import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruption";
 import { stampSourceLinkMetadata, entryQueryParamsFromBody } from "@/lib/guest-link-access";
 import { isTapPracticeRequest, stampPoWPracticeFlag } from "@/lib/tap-practice";
+import { billingWorkspaceFromTapAccess } from "@/lib/pow-api/billing-workspace";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -74,14 +75,7 @@ export async function POST(req: NextRequest) {
       practice,
     );
 
-    const { data: workspace } = await access.supabase
-      .from("workspaces")
-      .select("id, user_id, organization_id")
-      .eq("id", access.workspaceId)
-      .single();
-    if (!workspace) {
-      return jsonError(404, "Workspace not found");
-    }
+    const workspace = await billingWorkspaceFromTapAccess(access);
 
     const row = await uploadWorkspaceProofOfWork(
       access.supabase,
@@ -93,7 +87,7 @@ export async function POST(req: NextRequest) {
         mime_type: typeof body.mime_type === "string" ? body.mime_type : "application/json",
         data: base64,
         block_id: blockId || access.blockId,
-        session_id: focusSessionId || access.focusSessionId,
+        session_id: tapProofSessionId(access, focusSessionId),
         file_name: fileName,
         timestamp_ms: timestampMs,
         tool_name: toolName,

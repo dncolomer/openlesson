@@ -350,12 +350,13 @@ export function DataStudioPanel({
   );
 
   useEffect(() => {
-    if (!selected?.workspace_id) {
+    if (!selected?.workspace_id && !selected?.run_id) {
       setRunPow([]);
       return;
     }
     let cancelled = false;
-    const params = new URLSearchParams({ workspaceId: selected.workspace_id });
+    const params = new URLSearchParams();
+    if (selected.workspace_id) params.set("workspaceId", selected.workspace_id);
     if (selected.run_id) params.set("runId", selected.run_id);
     void fetch(`${DASHBOARD_DATA_STUDIO_RUN_PATH}?${params.toString()}`)
       .then(async (response) => {

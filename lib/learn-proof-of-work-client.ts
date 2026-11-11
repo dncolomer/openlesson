@@ -6,8 +6,9 @@ import type { WorkspaceProofOfWorkType } from "@/lib/pow-api/workspace-proof-of-
 export type IleProofOfWorkCaptureType = Extract<WorkspaceProofOfWorkType, "tool" | "screen" | "eeg">;
 
 export interface UploadIleProofOfWorkInput {
-  workspaceId: string;
+  workspaceId?: string;
   sessionId: string;
+  solveToken?: string;
   type: IleProofOfWorkCaptureType;
   mime_type: string;
   data: string;
@@ -56,19 +57,21 @@ export async function blobToBase64(blob: Blob): Promise<string> {
 }
 
 export async function flagIleSessionProofOfWorkImpure(input: {
-  workspaceId: string;
+  workspaceId?: string;
   sessionId: string;
   ileToken?: string;
+  solveToken?: string;
   entryQueryParams?: Record<string, string | string[]>;
 }): Promise<{ ok: boolean; updated?: number; error?: string }> {
   try {
-    const res = await fetch("/api/workspace/proof-of-work/impure", {
+    const res = await fetch("/api/session/proof-of-work/impure", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        workspaceId: input.workspaceId,
+        ...(input.workspaceId ? { workspaceId: input.workspaceId } : {}),
         session_id: input.sessionId,
         ...(input.ileToken ? { ileToken: input.ileToken } : {}),
+        ...(input.solveToken ? { solveToken: input.solveToken } : {}),
         ...(input.entryQueryParams && Object.keys(input.entryQueryParams).length > 0
           ? { entryQueryParams: input.entryQueryParams }
           : {}),
@@ -88,14 +91,15 @@ export async function uploadIleProofOfWork(
   input: UploadIleProofOfWorkInput,
 ): Promise<UploadIleProofOfWorkResult> {
   try {
-    const { sessionId, ileToken, entryQueryParams, ...rest } = input;
-    const res = await fetch("/api/workspace/proof-of-work", {
+    const { sessionId, ileToken, solveToken, entryQueryParams, ...rest } = input;
+    const res = await fetch("/api/session/proof-of-work", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...rest,
         session_id: sessionId,
         ...(ileToken ? { ileToken } : {}),
+        ...(solveToken ? { solveToken } : {}),
         ...(entryQueryParams && Object.keys(entryQueryParams).length > 0
           ? { entryQueryParams }
           : {}),
@@ -116,11 +120,12 @@ export async function uploadIleProofOfWork(
 }
 
 export async function uploadIleEvidenceItem(
-  workspaceId: string,
+  workspaceId: string | undefined,
   sessionId: string,
   item: IleProofOfWorkUploadItem,
   ileToken?: string,
   entryQueryParams?: Record<string, string | string[]>,
+  solveToken?: string,
 ): Promise<UploadIleProofOfWorkResult> {
   return uploadIleProofOfWork({
     workspaceId,
@@ -137,16 +142,18 @@ export async function uploadIleEvidenceItem(
     device_name: item.deviceName,
     sample_count: item.sampleCount,
     ...(ileToken ? { ileToken } : {}),
+    ...(solveToken ? { solveToken } : {}),
     ...(entryQueryParams ? { entryQueryParams } : {}),
   });
 }
 
 export async function uploadIleScreenshot(
-  workspaceId: string,
+  workspaceId: string | undefined,
   sessionId: string,
   screenshot: IleBufferedScreenshot,
   ileToken?: string,
   entryQueryParams?: Record<string, string | string[]>,
+  solveToken?: string,
 ): Promise<UploadIleProofOfWorkResult> {
   const mime = screenshot.blob.type || "image/png";
   return uploadIleProofOfWork({
@@ -159,6 +166,7 @@ export async function uploadIleScreenshot(
     timestamp_ms: screenshot.timestampMs,
     metadata: { size: screenshot.blob.size },
     ...(ileToken ? { ileToken } : {}),
+    ...(solveToken ? { solveToken } : {}),
     ...(entryQueryParams ? { entryQueryParams } : {}),
   });
 }

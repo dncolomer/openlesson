@@ -95,11 +95,6 @@ const nextConfig: NextConfig = {
         permanent: true,
       },
       {
-        source: "/api/workspace/ile-links",
-        destination: "/api/workspace/learn-links",
-        permanent: true,
-      },
-      {
         source: "/workspace/:id/scout",
         destination: "/workspace/:id/calibrate",
         permanent: true,

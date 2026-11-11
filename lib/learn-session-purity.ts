@@ -8,19 +8,20 @@ import { withImpurePoWData } from "@/lib/tap-session-purity";
  */
 export async function flagIleSessionProofOfWorkImpure(
   supabase: SupabaseClient,
-  workspaceId: string,
+  workspaceId: string | null | undefined,
   sessionId: string,
 ): Promise<number> {
+  let query = supabase
+    .from("proof_of_work")
+    .select("id, metadata")
+    .eq("session_id", sessionId);
+  const scopedWorkspaceId = String(workspaceId || "").trim();
+  if (scopedWorkspaceId) query = query.eq("workspace_id", scopedWorkspaceId);
+
   const { data, error } = await queryWorkspaceProofOfWorkRows<{
     id: string;
     metadata: Record<string, unknown> | null;
-  }>(
-    supabase
-      .from("proof_of_work")
-      .select("id, metadata")
-      .eq("workspace_id", workspaceId)
-      .eq("session_id", sessionId),
-  );
+  }>(query);
 
   if (error) throw new Error(error.message);
   if (!data.length) return 0;
@@ -30,11 +31,9 @@ export async function flagIleSessionProofOfWorkImpure(
     const nextMetadata = withImpurePoWData({
       ...(row.metadata && typeof row.metadata === "object" ? row.metadata : {}),
     });
-    const { error: updateError } = await supabase
-      .from("proof_of_work")
-      .update({ metadata: nextMetadata })
-      .eq("id", row.id)
-      .eq("workspace_id", workspaceId);
+    let update = supabase.from("proof_of_work").update({ metadata: nextMetadata }).eq("id", row.id);
+    if (scopedWorkspaceId) update = update.eq("workspace_id", scopedWorkspaceId);
+    const { error: updateError } = await update;
     if (!updateError) updated += 1;
   }
   return updated;

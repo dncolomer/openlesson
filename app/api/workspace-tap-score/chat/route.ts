@@ -11,6 +11,7 @@ import {
   authContextFromTapAccess,
   loadTapScoreBriefForAccess,
   resolveTapSessionAccess,
+  tapProofSessionId,
 } from "@/lib/tap-score-session-auth";
 import { uploadWorkspaceProofOfWork } from "@/lib/pow-api/upload-workspace-proof-of-work";
 import {
@@ -18,6 +19,8 @@ import {
   TAP_CHAT_TOOL_NAME,
 } from "@/lib/tap-score-traces";
 import { countWorkspaceProofOfWorkForPlan } from "@/lib/pow-api/workspace-proof-of-work";
+import { billingWorkspaceFromTapAccess } from "@/lib/pow-api/billing-workspace";
+import { updateGuestSession } from "@/lib/guest-session-tables";
 import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruption";
 import { buildTapInProgressPatch } from "@/lib/tap-started-at";
 import {stampSourceLinkMetadata, entryQueryParamsFromBody} from "@/lib/guest-link-access";
@@ -86,10 +89,7 @@ export async function POST(req: NextRequest) {
 
     if (privateToken && access.tapSessionId) {
       const patch = buildTapInProgressPatch(existing);
-      await access.supabase
-        .from(access.sessionTable)
-        .update(patch)
-        .eq("id", access.tapSessionId);
+      await updateGuestSession(access.supabase, access.sessionTable, access.tapSessionId, patch);
 
       mode = "curious";
       minutes = Math.max(1, Math.round((existing?.requested_duration_seconds || 900) / 60));
@@ -99,7 +99,6 @@ export async function POST(req: NextRequest) {
       if (existing?.session_id) focusSessionId = existing.session_id;
     }
 
-    if (!workspaceId) return jsonError(400, "workspaceId is required");
     if (blockId && !focusNodeIds.includes(blockId)) focusNodeIds = [blockId, ...focusNodeIds];
 
     // Shared brief loader: owner for guest/assigned private links (not participant userId).
@@ -182,14 +181,7 @@ export async function POST(req: NextRequest) {
         practice,
       );
 
-      const { data: workspace } = await access.supabase
-        .from("workspaces")
-        .select("id, user_id, organization_id")
-        .eq("id", access.workspaceId)
-        .single();
-      if (!workspace) {
-        return jsonError(404, "Workspace not found");
-      }
+      const workspace = await billingWorkspaceFromTapAccess(access);
       try {
         await uploadWorkspaceProofOfWork(
           access.supabase,
@@ -201,7 +193,7 @@ export async function POST(req: NextRequest) {
             mime_type: "application/json",
             data: base64,
             block_id: blockId || access.blockId,
-            session_id: focusSessionId || access.focusSessionId,
+            session_id: tapProofSessionId(access, focusSessionId),
             file_name: fileName,
             timestamp_ms: timestampMs,
             tool_name: TAP_CHAT_TOOL_NAME,

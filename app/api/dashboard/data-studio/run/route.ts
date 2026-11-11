@@ -25,47 +25,59 @@ export async function GET(req: NextRequest) {
     const workspaceId = (url.searchParams.get("workspaceId") || "").trim();
     const rawRunId = (url.searchParams.get("runId") || "").trim();
     const runId = /^[a-zA-Z0-9_-]+$/.test(rawRunId) ? rawRunId : "";
-    if (!workspaceId) {
-      return jsonError(400, "workspaceId is required");
-    }
-
-    const { data: workspace, error: workspaceError } = await auth.supabase
-      .from("workspaces")
-      .select("id, user_id")
-      .eq("id", workspaceId)
-      .eq("user_id", auth.user.id)
-      .maybeSingle();
-    if (workspaceError || !workspace) {
-      return jsonError(404, "Workspace not found");
+    if (!runId && !workspaceId) {
+      return jsonError(400, "runId is required");
     }
 
     const admin = createAdminClient();
+    if (workspaceId) {
+      const { data: workspace, error: workspaceError } = await auth.supabase
+        .from("workspaces")
+        .select("id, user_id")
+        .eq("id", workspaceId)
+        .eq("user_id", auth.user.id)
+        .maybeSingle();
+      if (workspaceError || !workspace) {
+        return jsonError(404, "Workspace not found");
+      }
+    } else {
+      const { data: owned } = await admin
+        .from("session_embeddings")
+        .select("id")
+        .eq("owner_user_id", auth.user.id)
+        .eq("run_id", runId)
+        .limit(1);
+      if (!owned?.length) {
+        return jsonError(404, "Run not found");
+      }
+    }
+
     let query = admin
       .from("proof_of_work")
       .select("proof_of_work_type, tool_name, tool_action, timestamp_ms, metadata, file_name, session_id")
-      .eq("workspace_id", workspaceId)
       .order("timestamp_ms", { ascending: true })
       .limit(400);
+    if (workspaceId) query = query.eq("workspace_id", workspaceId);
     if (runId) {
       query = query.or(`session_id.eq.${runId},metadata->>tap_session_id.eq.${runId}`);
     }
     const { data, error } = await query;
     if (error) {
       return NextResponse.json({
-        workspaceId,
+        workspaceId: workspaceId || null,
         runId: runId || null,
         pow: [],
         transcripts: [],
         speech: [],
       } satisfies Pick<DataStudioInspectPayload, "pow" | "transcripts" | "speech"> & {
-        workspaceId: string;
+        workspaceId: string | null;
         runId: string | null;
       });
     }
 
     const pow = (data || []).map((row) => flowPowFromWorkspaceRow(row));
     return NextResponse.json({
-      workspaceId,
+      workspaceId: workspaceId || null,
       runId: runId || null,
       pow,
       transcripts: extractStudioTranscripts(pow),

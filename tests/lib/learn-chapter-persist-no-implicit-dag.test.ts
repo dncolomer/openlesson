@@ -93,7 +93,7 @@ describe("appendIleChapterStep + persist payload (shipped)", () => {
     expect(persistFn).not.toContain("console.warn");
     expect(mutate).toContain("handleAddChapter");
     expect(mutate).toContain("appendIleChapterStep(currentPlan");
-    expect(mutate).toContain("/api/workspace/generate-chapter");
+    expect(mutate).not.toContain("/api/workspace/generate-chapter");
     expect(mutate).toContain("keyword");
 
     writeScratch(

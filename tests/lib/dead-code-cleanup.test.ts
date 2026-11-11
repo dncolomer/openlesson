@@ -86,8 +86,8 @@ describe("upgrade leftovers are gone", () => {
   });
 
   it("cookie-auth mint remains; headless session ingest is gone", () => {
-    expect(existsSync(join(ROOT, "app/api/workspace/tap-links/route.ts"))).toBe(true);
-    expect(existsSync(join(ROOT, "app/api/workspace/learn-links/route.ts"))).toBe(true);
+    expect(existsSync(join(ROOT, "app/api/session/proof-of-work/route.ts"))).toBe(true);
+    expect(existsSync(join(ROOT, "app/api/session/embed/route.ts"))).toBe(true);
     expect(
       existsSync(
         join(ROOT, "app/api/v3/pow/workspaces/[id]/sessions/[sessionId]/proof-of-work/route.ts"),

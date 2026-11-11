@@ -380,6 +380,11 @@ describe("data studio structural wiring", () => {
     expect(run).toContain("extractStudioSpeechTranscripts");
     expect(run).toContain("requireAuthenticatedUser");
     expect(run).not.toContain("requireAdmin");
+    expect(run).toContain("runId is required");
+    expect(run).toContain('eq("owner_user_id", auth.user.id)');
+    expect(run).toContain("session_id.eq.");
+    const panel = readFileSync(join(ROOT, "components/data-studio/DataStudioPanel.tsx"), "utf8");
+    expect(panel).toContain("selected?.workspace_id && !selected?.run_id");
   });
 });
 

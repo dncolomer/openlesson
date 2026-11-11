@@ -222,7 +222,7 @@ describe("session page wiring (static)", () => {
       "app/api/workspace-tap-score/speech/route.ts",
       "app/api/workspace-tap-score/idle/route.ts",
       "app/api/workspace-tap-score/complete/route.ts",
-      "app/api/workspace/proof-of-work/route.ts",
+      "app/api/session/proof-of-work/route.ts",
       "app/api/workspace-learn/speech/route.ts",
       "app/api/workspace-learn/idle/route.ts",
     ]) {

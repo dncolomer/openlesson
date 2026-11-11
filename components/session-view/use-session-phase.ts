@@ -373,16 +373,30 @@ export function useSessionPhase(input: SessionPhaseInput) {
           tool_action: action,
           timestamp_ms: index + 1,
         }));
-        if (embeddingTarget?.kind === "solve" && solveToken) {
-          void postSolveFlowEmbedding({
-            solveToken,
-            sessionId: session.id,
-            flowId: embeddingTarget.flowId,
-            identity: embeddingTarget.identity,
-            model: snapshot.model,
-            sequence,
-            pow,
-          });
+        if (embeddingTarget?.kind === "solve") {
+          if (solveToken) {
+            void postSolveFlowEmbedding({
+              solveToken,
+              sessionId: session.id,
+              flowId: embeddingTarget.flowId,
+              identity: embeddingTarget.identity,
+              model: snapshot.model,
+              sequence,
+              pow,
+            });
+          } else {
+            void postWorkspaceFlowEmbedding({
+              flowKind: "solve",
+              flowId: embeddingTarget.flowId,
+              runId: session.id,
+              identity: embeddingTarget.identity,
+              source: "solve",
+              model: snapshot.model,
+              sequence,
+              pow,
+              sessionId: session.id,
+            });
+          }
         } else if (embeddingTarget?.kind === "learn") {
           void postWorkspaceFlowEmbedding({
             workspaceId: embeddingTarget.workspaceId,
@@ -404,6 +418,7 @@ export function useSessionPhase(input: SessionPhaseInput) {
             workspaceId: embeddingTarget.workspaceId,
             sessionId: session.id,
             ileToken,
+            solveToken,
             type: "tool",
             mime_type: "application/json",
             data: textToBase64(
@@ -425,11 +440,12 @@ export function useSessionPhase(input: SessionPhaseInput) {
       sessionRef.current = finalSession;
     }
     await stopRecording({ stayOnScreen: impure });
-    if (impure && workspaceId && session) {
+    if (impure && session) {
       void flagIleSessionProofOfWorkImpure({
-        workspaceId,
+        workspaceId: workspaceId || undefined,
         sessionId: session.id,
         ileToken,
+        solveToken,
         entryQueryParams,
       });
     }

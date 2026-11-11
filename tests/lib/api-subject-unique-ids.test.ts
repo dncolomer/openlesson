@@ -63,8 +63,7 @@ describe("API subject unique IDs (no subject=me)", () => {
 
   it("eval routes and docs do not prescribe subject=me self addressing", () => {
     const routes = [
-      "app/api/workspace/custom-knowledge-regions/route.ts",
-      "app/api/workspace/flow-embeddings/route.ts",
+      "app/api/session/embed/route.ts",
       "components/WorkspacePerformancePanel.tsx",
     ];
     for (const rel of routes) {

@@ -228,16 +228,17 @@ async function patchTapSessionProofOfWorkMetadata(
   tapSessionId: string,
   patch: Record<string, unknown>,
 ): Promise<number> {
+  const scopedWorkspaceId = String(workspaceId || "").trim();
+  let query = supabase
+    .from("proof_of_work")
+    .select("id, metadata")
+    .contains("metadata", { tap_session_id: tapSessionId });
+  if (scopedWorkspaceId) query = query.eq("workspace_id", scopedWorkspaceId);
+
   const { data, error } = await queryWorkspaceProofOfWorkRows<{
     id: string;
     metadata: Record<string, unknown> | null;
-  }>(
-    supabase
-      .from("proof_of_work")
-      .select("id, metadata")
-      .eq("workspace_id", workspaceId)
-      .contains("metadata", { tap_session_id: tapSessionId }),
-  );
+  }>(query);
 
   if (error) throw new Error(error.message);
   if (!data.length) return 0;
@@ -248,11 +249,9 @@ async function patchTapSessionProofOfWorkMetadata(
       ...(row.metadata && typeof row.metadata === "object" ? row.metadata : {}),
       ...patch,
     };
-    const { error: updateError } = await supabase
-      .from("proof_of_work")
-      .update({ metadata: nextMetadata })
-      .eq("id", row.id)
-      .eq("workspace_id", workspaceId);
+    let update = supabase.from("proof_of_work").update({ metadata: nextMetadata }).eq("id", row.id);
+    if (scopedWorkspaceId) update = update.eq("workspace_id", scopedWorkspaceId);
+    const { error: updateError } = await update;
     if (!updateError) updated += 1;
   }
   return updated;

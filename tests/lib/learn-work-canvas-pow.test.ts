@@ -672,7 +672,7 @@ describe("Work-canvas PoW host wiring (shipped)", () => {
     expect(tapRuntime).toContain("VERIFY_POW_API_PATHS");
 
     const tapCanvasRoute = read("app/api/workspace-tap-score/canvas/route.ts");
-    const ilePowRoute = read("app/api/workspace/proof-of-work/route.ts");
+    const ilePowRoute = read("app/api/session/proof-of-work/route.ts");
     expect(tapCanvasRoute).toContain('type: "tool"');
     expect(tapCanvasRoute).toContain("tool_action: toolAction");
     expect(tapCanvasRoute).not.toContain("pow-model-v2");

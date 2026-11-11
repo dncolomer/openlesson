@@ -78,9 +78,9 @@ export const DASHBOARD_NAV_GROUPS: readonly DashboardNavGroup[] = [
     label: "Solve / Practice",
     items: [
       { id: "solve", label: "Flows" },
-      { id: "solve_regions", label: "Knowledge regions", cluster: "studio" },
-      { id: "solve_studio", label: "Data Studio", cluster: "studio" },
-      { id: "practice_performance", label: "Performance", cluster: "studio" },
+      { id: "solve_regions", label: "Knowledge regions" },
+      { id: "solve_studio", label: "Data Studio" },
+      { id: "practice_performance", label: "Performance" },
     ],
   },
   {

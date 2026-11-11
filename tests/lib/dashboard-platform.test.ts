@@ -169,10 +169,7 @@ describe("dashboard nav", () => {
       clusterDashboardNavItems(solve?.items ?? []).map((cluster) =>
         cluster.map((item) => item.id),
       ),
-    ).toEqual([
-      ["solve"],
-      ["solve_regions", "solve_studio", "practice_performance"],
-    ]);
+    ).toEqual([["solve", "solve_regions", "solve_studio", "practice_performance"]]);
     expect(verification?.items.map((item) => item.label)).toEqual([
       "Flows",
       "Knowledge regions",

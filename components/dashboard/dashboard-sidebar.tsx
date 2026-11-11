@@ -65,8 +65,6 @@ export function DashboardSidebar({
             className="shrink-0 border-b border-white/20 px-2 py-2"
             aria-label={item.label}
             data-dashboard-nav-home={item.id === "home" ? "" : undefined}
-            data-dashboard-nav-practice={item.id === "practice" ? "" : undefined}
-            data-dashboard-nav-performance={item.id === "practice_performance" ? "" : undefined}
           >
             <button
               type="button"
@@ -164,6 +162,8 @@ function NavItem({
         type="button"
         data-dashboard-nav={item.id}
         data-dashboard-nav-active={active ? "true" : "false"}
+        data-dashboard-nav-practice={item.id === "practice" ? "" : undefined}
+        data-dashboard-nav-performance={item.id === "practice_performance" ? "" : undefined}
         data-workspace-type-filter={
           isDashboardProductTab(item.id) ? item.id : undefined
         }

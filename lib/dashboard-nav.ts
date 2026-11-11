@@ -81,18 +81,18 @@ export const DASHBOARD_PERFORMANCE_NAV_ITEM: DashboardNavItem = {
 
 export const DASHBOARD_TOP_NAV_ITEMS: readonly DashboardNavItem[] = [
   DASHBOARD_HOME_NAV_ITEM,
-  DASHBOARD_PRACTICE_NAV_ITEM,
-  DASHBOARD_PERFORMANCE_NAV_ITEM,
 ];
 
 export const DASHBOARD_NAV_GROUPS: readonly DashboardNavGroup[] = [
   {
     id: "solve",
-    label: "Solve",
+    label: "Solve / Practice",
     items: [
+      DASHBOARD_PRACTICE_NAV_ITEM,
       { id: "solve", label: "Flows" },
-      { id: "solve_regions", label: "Knowledge regions" },
-      { id: "solve_studio", label: "Data Studio" },
+      { id: "solve_regions", label: "Knowledge regions", cluster: "studio" },
+      { id: "solve_studio", label: "Data Studio", cluster: "studio" },
+      { ...DASHBOARD_PERFORMANCE_NAV_ITEM, cluster: "studio" },
     ],
   },
   {
@@ -312,32 +312,6 @@ export function dashboardProductLabel(tab: DashboardProductTab): string {
 
 export function dashboardCreateLabel(tab: DashboardProductTab): string {
   return `Create ${dashboardProductLabel(tab)} flow →`;
-}
-
-export type DashboardPracticeCreateFlowCta = {
-  id: DashboardProductTab;
-  label: string;
-  href: string;
-};
-
-export function dashboardPracticeCreateFlowCtas(): readonly DashboardPracticeCreateFlowCta[] {
-  return [
-    {
-      id: "solve",
-      label: "Create Solve / Practice flow",
-      href: dashboardCreateHref("solve"),
-    },
-    {
-      id: "verification",
-      label: "Create Verify flow",
-      href: dashboardCreateHref("verification"),
-    },
-    {
-      id: "calibration",
-      label: "Create Calibrate flow",
-      href: dashboardCreateHref("calibration"),
-    },
-  ];
 }
 
 export function dashboardFrameLabel(tab: DashboardTab): string {

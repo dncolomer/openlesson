@@ -138,7 +138,7 @@ describe("practice catalog", () => {
 });
 
 describe("practice dashboard surfaces", () => {
-  it("puts Browse Problems next to Performance as standalone top-level sections", () => {
+  it("puts Browse Problems and Performance under Solve / Practice", () => {
     expect(parseDashboardTab("practice")).toBe("practice");
     expect(isDashboardBrowseMapsTab("browse_maps")).toBe(false);
     expect(isDashboardPracticeTab("practice")).toBe(true);
@@ -148,15 +148,15 @@ describe("practice dashboard surfaces", () => {
     expect(dashboardFrameLabel("practice")).toBe("Browse Problems");
     expect(dashboardFrameLabel("solve_studio")).toBe("Data Studio");
     expect(dashboardFrameLabel("practice_performance")).toBe("Performance");
-    expect(dashboardNavGroupIdForTab("practice")).toBeNull();
-    expect(dashboardNavGroupIdForTab("practice_performance")).toBeNull();
+    expect(dashboardNavGroupIdForTab("practice")).toBe("solve");
+    expect(dashboardNavGroupIdForTab("practice_performance")).toBe("solve");
     expect(dashboardNavGroupIdForTab("calibration")).toBe("calibration");
     const learning = DASHBOARD_NAV_GROUPS.find((group) => (group.id as string) === "learning");
     const solve = DASHBOARD_NAV_GROUPS.find((group) => group.id === "solve");
     expect(learning).toBeUndefined();
-    expect(solve?.label).toBe("Solve");
-    expect(solve?.items.map((item) => item.id)).not.toContain("practice");
-    expect(solve?.items.map((item) => item.id)).not.toContain("practice_performance");
+    expect(solve?.label).toBe("Solve / Practice");
+    expect(solve?.items.map((item) => item.id)).toContain("practice");
+    expect(solve?.items.map((item) => item.id)).toContain("practice_performance");
     expect(readRepo("app/dashboard/page.tsx")).toContain("DashboardPracticePerformanceTab");
     expect(readRepo("app/dashboard/page.tsx")).toContain("DashboardDataStudioTab");
     expect(readRepo("components/dashboard/dashboard-practice-performance-tab.tsx")).toContain(
@@ -203,10 +203,12 @@ describe("practice dashboard surfaces", () => {
     expect(practiceTab).toContain("data-dashboard-practice-open-category");
     expect(practiceTab).toContain("data-dashboard-practice-open-subcategory");
     expect(practiceTab).toContain('data-dashboard-practice-browse="categories"');
-    expect(practiceTab).toContain("data-dashboard-practice-kind={kind}");
+    expect(practiceTab).toContain("data-dashboard-practice-start={problem.id}");
     expect(practiceTab).toContain("Solve / Practice");
-    expect(practiceTab).toContain("Verify");
-    expect(practiceTab).toContain("Calibrate");
+    expect(practiceTab).not.toContain("data-dashboard-practice-kind");
+    expect(practiceTab).not.toContain("Verify");
+    expect(practiceTab).not.toContain("Calibrate");
+    expect(practiceTab).not.toContain("data-dashboard-practice-create");
     expect(practiceTab).not.toContain("<select");
     expect(practiceTab).not.toContain("All categories");
   });

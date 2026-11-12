@@ -249,7 +249,12 @@ export function presentKnowledgeRegionClusterDistances(input: {
     .map((cluster) => {
       const region = regionById.get(cluster.id);
       const centroid = region?.centroid;
-      if (!Array.isArray(centroid) || !centroid.length || vector.length !== centroid.length) {
+      if (
+        !region ||
+        !Array.isArray(centroid) ||
+        !centroid.length ||
+        vector.length !== centroid.length
+      ) {
         return null;
       }
       const distance = l2Distance(vector, centroid);

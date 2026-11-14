@@ -8,17 +8,19 @@ import {
   ileWorkCanvasNormalizedRect,
 } from "@/lib/learn-work-canvas-geometry";
 import {
+  BOARD_INSTRUCTION_NOTE_KEY,
+  ileWorkCanvasNoteLabel,
   DEFAULT_FONT_SIZE,
+  ILE_WORK_CANVAS_END_ARROWHEAD,
   ILE_WORK_CANVAS_FONT_FAMILY,
   ILE_WORK_CANVAS_STROKE_COLOR,
   ILE_WORK_CANVAS_TEXT_BOX_WIDTH,
-  ILE_XAI_NOTE_PAD_X,
-  ILE_XAI_NOTE_PAD_Y,
   TEXT_ORIGIN_X,
   TEXT_ORIGIN_Y,
   convertToExcalidrawElements,
   ileWorkCanvasContentBounds,
   ileWorkCanvasSelectedLive,
+  nextElementId,
   normalizeExtraSkeletons,
   serializeIleWorkCanvasScene,
   wrapIleWorkCanvasText,
@@ -29,7 +31,7 @@ import {
 import { withIleWorkCanvasAutoLayout } from "@/lib/learn-work-canvas-chrome";
 import {
   ileWorkCanvasEmptyNearbyOriginWithReserved,
-  ileWorkCanvasXaiNoteSkeletons,
+  ileWorkCanvasXaiNoteElements,
   placeTurn,
   settleIleWorkCanvasIncoming,
 } from "@/lib/learn-work-canvas-place";
@@ -481,9 +483,135 @@ function ileWorkCanvasFanHost(
   return { host, expanded };
 }
 
+/** Marks the vertical `[` that gathers a Concepts/Breakdown fan-out. */
+export const ILE_WORK_CANVAS_FAN_BRACKET_KEY = "ileFanBracket" as const;
+
+const FAN_BRACKET_INSET = 16;
+const FAN_BRACKET_TICK = 8;
+const FAN_BIND_GAP = 4;
+
+function ileWorkCanvasBindFanArrow(
+  arrow: IleWorkCanvasElement,
+  start: IleWorkCanvasElement,
+  end: IleWorkCanvasElement,
+  hostBounds: Array<{ id: string; type: "arrow" }>,
+) {
+  arrow.endArrowhead = ILE_WORK_CANVAS_END_ARROWHEAD;
+  arrow.startArrowhead = null;
+  arrow.startBinding = { elementId: start.id, focus: 0, gap: FAN_BIND_GAP };
+  arrow.endBinding = { elementId: end.id, focus: 0, gap: FAN_BIND_GAP };
+  hostBounds.push({ id: arrow.id, type: "arrow" });
+  end.boundElements = [
+    ...(Array.isArray(end.boundElements) ? end.boundElements : []),
+    { id: arrow.id, type: "arrow" },
+  ];
+}
+
+function ileWorkCanvasFanStem(
+  host: IleWorkCanvasElement,
+  hostRect: { minX: number; minY: number; maxX: number; maxY: number },
+  end: IleWorkCanvasElement,
+  toX: number,
+  toY: number,
+  mark: "ileBreakdown" | "ileConcepts",
+  hostBounds: Array<{ id: string; type: "arrow" }>,
+): IleWorkCanvasElement | null {
+  const startX = hostRect.maxX;
+  const startY = (hostRect.minY + hostRect.maxY) / 2;
+  const dx = toX - startX;
+  const dy = toY - startY;
+  const [arrow] = convertToExcalidrawElements([
+    {
+      type: "arrow",
+      x: startX,
+      y: startY,
+      width: dx,
+      height: dy,
+      points: [
+        [0, 0],
+        [dx, dy],
+      ],
+      customData: { [mark]: true },
+    },
+  ]);
+  if (!arrow) return null;
+  ileWorkCanvasBindFanArrow(arrow, host, end, hostBounds);
+  return arrow;
+}
+
 /**
- * Keep the original mark and fan labeled nodes to the right, each linked back
- * with an arrow. The new nodes stay unselected.
+ * One stem from the host into a vertical `[` that brackets the fan-out stack.
+ * A single node keeps a direct arrow.
+ */
+function ileWorkCanvasFanConnectors(
+  host: IleWorkCanvasElement,
+  hostRect: { minX: number; minY: number; maxX: number; maxY: number },
+  settledNodes: IleWorkCanvasElement[],
+  nodeHosts: IleWorkCanvasElement[],
+  mark: "ileBreakdown" | "ileConcepts",
+): { connectors: IleWorkCanvasElement[]; hostBounds: unknown[] } {
+  const hostBounds = Array.isArray(host.boundElements) ? [...host.boundElements] : [];
+  const connectors: IleWorkCanvasElement[] = [];
+  if (nodeHosts.length === 1) {
+    const node = nodeHosts[0]!;
+    const rect = ileWorkCanvasNormalizedRect(node);
+    if (rect) {
+      const arrow = ileWorkCanvasFanStem(
+        host,
+        hostRect,
+        node,
+        rect.minX,
+        (rect.minY + rect.maxY) / 2,
+        mark,
+        hostBounds as Array<{ id: string; type: "arrow" }>,
+      );
+      if (arrow) connectors.push(arrow);
+    }
+    return { connectors, hostBounds };
+  }
+  const stack = ileWorkCanvasContentBounds(settledNodes);
+  if (!stack) return { connectors, hostBounds };
+  const height = Math.max(1, stack.maxY - stack.minY);
+  const barX = stack.minX - FAN_BRACKET_INSET;
+  const [bracket] = convertToExcalidrawElements([
+    {
+      type: "line",
+      x: barX,
+      y: stack.minY,
+      width: FAN_BRACKET_TICK,
+      height,
+      points: [
+        [FAN_BRACKET_TICK, 0],
+        [0, 0],
+        [0, height],
+        [FAN_BRACKET_TICK, height],
+      ],
+      customData: { [mark]: true, [ILE_WORK_CANVAS_FAN_BRACKET_KEY]: true },
+    },
+  ]);
+  if (!bracket) return { connectors, hostBounds };
+  const fanGroupId = nextElementId("fan");
+  for (const el of [...settledNodes, bracket]) {
+    const groups = Array.isArray(el.groupIds) ? el.groupIds : [];
+    if (!groups.includes(fanGroupId)) el.groupIds = [...groups, fanGroupId];
+  }
+  const arrow = ileWorkCanvasFanStem(
+    host,
+    hostRect,
+    bracket,
+    barX,
+    stack.minY + height / 2,
+    mark,
+    hostBounds as Array<{ id: string; type: "arrow" }>,
+  );
+  connectors.push(bracket);
+  if (arrow) connectors.push(arrow);
+  return { connectors, hostBounds };
+}
+
+/**
+ * Keep the original mark and fan labeled nodes to the right, linked with one
+ * stem into a vertical bracket around the stack. The new nodes stay unselected.
  */
 export function fanIleWorkCanvasLabeledNodes(
   scene: IleWorkCanvasScene | null | undefined,
@@ -507,81 +635,51 @@ export function fanIleWorkCanvasLabeledNodes(
     ILE_WORK_CANVAS_TEXT_BOX_WIDTH,
     Math.max(140, hostRect.maxX - hostRect.minX),
   );
-  const gapX = ILE_WORK_CANVAS_OVERLAP_GAP + 28;
+  const gapX = ILE_WORK_CANVAS_OVERLAP_GAP + 48;
   const gapY = 12;
-  const nodeSkeletons: IleWorkCanvasSkeleton[] = [];
+  const created: IleWorkCanvasElement[] = [];
   let cursorY = hostRect.minY;
   for (const chunk of labels) {
-    const wrapped = wrapIleWorkCanvasText(chunk, innerWidth);
-    const height = wrapped.height + ILE_XAI_NOTE_PAD_Y * 2;
-    nodeSkeletons.push({
-      type: "rectangle",
+    const note = ileWorkCanvasXaiNoteElements({
+      text: chunk,
       x: hostRect.maxX + gapX,
       y: cursorY,
-      width: wrapped.width + ILE_XAI_NOTE_PAD_X * 2,
-      height,
-      label: { text: chunk },
+      width: innerWidth,
+      label: ileWorkCanvasNoteLabel(mark === "ileConcepts" ? "concepts" : "breakdown"),
       customData: { [mark]: true },
     });
-    cursorY += height + gapY;
+    created.push(...note.elements);
+    cursorY += note.height + gapY;
   }
   const stackHeight = cursorY - gapY - hostRect.minY;
   const hostHeight = hostRect.maxY - hostRect.minY;
   const shiftY = stackHeight < hostHeight ? (hostHeight - stackHeight) / 2 : 0;
   if (shiftY) {
-    for (const skeleton of nodeSkeletons) {
-      skeleton.y = Number(skeleton.y) + shiftY;
+    for (const el of created) {
+      el.y = Number(el.y) + shiftY;
     }
   }
-  const created = convertToExcalidrawElements(nodeSkeletons);
   if (!created.length) return { scene: current, split: false, parts: [] };
   const settledNodes = settleIleWorkCanvasIncoming(
     created,
     current.elements.filter((el) => !el.isDeleted),
   );
-  const nodeHosts = settledNodes.filter((el) => el.type === "rectangle");
-  const hostMidY = (hostRect.minY + hostRect.maxY) / 2;
-  const arrows: IleWorkCanvasElement[] = [];
-  const hostBounds = Array.isArray(host.boundElements) ? [...host.boundElements] : [];
-  for (const node of nodeHosts) {
-    const rect = ileWorkCanvasNormalizedRect(node);
-    if (!rect) continue;
-    const endX = rect.minX;
-    const endY = (rect.minY + rect.maxY) / 2;
-    const dx = endX - hostRect.maxX;
-    const dy = endY - hostMidY;
-    const [arrow] = convertToExcalidrawElements([
-      {
-        type: "arrow",
-        x: hostRect.maxX,
-        y: hostMidY,
-        width: dx,
-        height: dy,
-        points: [
-          [0, 0],
-          [dx, dy],
-        ],
-        customData: { [mark]: true },
-      },
-    ]);
-    if (!arrow) continue;
-    arrow.endArrowhead = "arrow";
-    arrow.startArrowhead = null;
-    arrow.startBinding = { elementId: host.id, focus: 0, gap: 4 };
-    arrow.endBinding = { elementId: node.id, focus: 0, gap: 4 };
-    hostBounds.push({ id: arrow.id, type: "arrow" });
-    node.boundElements = [
-      ...(Array.isArray(node.boundElements) ? node.boundElements : []),
-      { id: arrow.id, type: "arrow" },
-    ];
-    arrows.push(arrow);
-  }
+  const nodeHosts = settledNodes.filter(
+    (el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "body",
+  );
+  const { connectors, hostBounds } = ileWorkCanvasFanConnectors(
+    host,
+    hostRect,
+    settledNodes,
+    nodeHosts,
+    mark,
+  );
   const hostNext = {
     ...host,
     boundElements: hostBounds,
     version: (Number(host.version) || 1) + 1,
   };
-  const parts = [...settledNodes, ...arrows];
+  const parts = [...settledNodes, ...connectors];
   return {
     scene: {
       ...current,
@@ -650,18 +748,18 @@ export function appendIleWorkCanvasFocusNote(
   const current = serializeIleWorkCanvasScene(scene);
   const clean = String(text || "").replace(/\s+/g, " ").trim();
   if (!clean) return { scene: current, appended: [] };
-  const created = convertToExcalidrawElements(
-    ileWorkCanvasXaiNoteSkeletons({
-      text: clean,
-      x: 0,
-      y: 0,
-      customData: { author: "harness", ileHarnessFocus: true },
-    }),
-  );
+  const note = ileWorkCanvasXaiNoteElements({
+    text: clean,
+    x: 0,
+    y: 0,
+    label: ileWorkCanvasNoteLabel("focus"),
+    customData: { author: "harness", ileHarnessFocus: true },
+  });
+  const created = note.elements;
   if (!created.length) return { scene: current, appended: [] };
   const box = {
-    width: Number(created[0]?.width) || ILE_WORK_CANVAS_TEXT_BOX_WIDTH,
-    height: Number(created[0]?.height) || 80,
+    width: note.width || ILE_WORK_CANVAS_TEXT_BOX_WIDTH,
+    height: note.height || 80,
   };
   const origin = ileWorkCanvasEmptyNearbyOriginWithReserved({
     elements: current.elements,
@@ -716,6 +814,7 @@ export function replaceIleWorkCanvasSelection(
     text?: string | null;
     elements?: IleWorkCanvasSkeleton[] | null;
     turnId?: string | null;
+    label?: string | null;
   },
 ): IleWorkCanvasScene {
   const current = serializeIleWorkCanvasScene(scene);
@@ -730,7 +829,7 @@ export function replaceIleWorkCanvasSelection(
   const bounds = ileWorkCanvasContentBounds(originElements);
   return placeTurn(
     current,
-    { text, elements: extra, turnId: payload.turnId },
+    { text, elements: extra, turnId: payload.turnId, label: payload.label },
     {
       origin: {
         x: bounds?.minX ?? TEXT_ORIGIN_X,

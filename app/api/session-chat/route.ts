@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
-import { buildImageContent, callXaiText, systemMessage, userMessage, DEFAULT_MODEL, RECOMMENDED_TEMPS } from "@/lib/xai-client";
+import { buildImageContent, callXaiText, systemMessage, userMessage, RECOMMENDED_TEMPS } from "@/lib/xai-client";
 import { withConversationLanguageInstruction } from "@/lib/tutoring-languages";
 import { sessionGuestTokensFromBody, guardSessionRoute } from "@/lib/api/require-auth";
 import { buildIleHeliosChatSystemPrompt } from "@/lib/prompt-kernel/surfaces/learn";
@@ -9,10 +9,15 @@ import { ileWorkCanvasWorkspaceFromChatBody } from "@/lib/learn-work-canvas-prom
 import {
   ileSessionChatCanvasReply,
   ileWorkCanvasTurnContextMessage,
+  ileWorkCanvasXaiFetchTimeout,
+  ileWorkCanvasXaiMaxTokens,
+  ileWorkCanvasXaiModel,
+  ileWorkCanvasXaiNeedsBoardContext,
   serializeIleWorkCanvasScene,
 } from "@/lib/learn-work-canvas";
 import { assemblePromptWorkspaceContext } from "@/lib/prompt-workspace-context";
 import { resolveIleDurableSessionMode } from "@/lib/learn-mode";
+import { isUuid } from "@/lib/domain/types";
 import { powAttributionColumnsFromIds } from "@/lib/session-participant-identity";
 import { uploadWorkspaceProofOfWork } from "@/lib/pow-api/upload-workspace-proof-of-work";
 import { loadBillingWorkspaceForProof } from "@/lib/pow-api/billing-workspace";
@@ -37,10 +42,13 @@ function imageDataUrlToImageInput(dataUrl: string) {
   return { mimeType: match[1], data: match[2] };
 }
 
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { problem, messages, model, sessionId, tutoringLanguage: bodyLanguage, activeStepIndex, activeStepId, activeStepDescription, sessionPlan, workCanvasScene } = body;
+    const { problem, messages, model, sessionId, tutoringLanguage: bodyLanguage, activeStepIndex, activeStepId, activeStepDescription, sessionPlan, workCanvasScene, canvasAskKind } = body;
 
     if (!problem) {
       return jsonError(400, "Missing problem");
@@ -59,12 +67,12 @@ export async function POST(request: NextRequest) {
     // durable source as the TAP Learning shell (link/prop, then metadata).
     let tutoringLanguage = bodyLanguage;
     let sessionMeta: Record<string, unknown> | null = null;
-    if (sessionId) {
+    if (typeof sessionId === "string" && isUuid(sessionId)) {
       const { data: sessionData } = await supabase
         .from("sessions")
         .select("metadata")
         .eq("id", sessionId)
-        .single();
+        .maybeSingle();
       sessionMeta = (sessionData?.metadata as Record<string, unknown> | undefined) ?? null;
       if (!tutoringLanguage && sessionMeta?.tutoringLanguage) {
         tutoringLanguage = sessionMeta.tutoringLanguage;
@@ -85,22 +93,27 @@ export async function POST(request: NextRequest) {
     const activeChapterContext = activeStepDescription
       ? `The current message is about focused Chapter ${(activeStepIndex ?? 0) + 1}: ${activeStepDescription}. Use this chapter as the local focus, but you may use the whole session plan as context.`
       : "";
-    const canvasScene = serializeIleWorkCanvasScene(workCanvasScene);
+    const askKind = typeof canvasAskKind === "string" ? canvasAskKind : null;
+    const needsBoard = ileWorkCanvasXaiNeedsBoardContext(askKind);
+    const canvasScene = needsBoard ? serializeIleWorkCanvasScene(workCanvasScene) : null;
     const workspaceInput = ileWorkCanvasWorkspaceFromChatBody({
       ...(body as Record<string, unknown>),
       activeStepDescription,
       problem,
     });
     const assembledWorkspace = assemblePromptWorkspaceContext(workspaceInput);
-    const canvasContext = ileWorkCanvasTurnContextMessage(canvasScene, {
-      workspace: assembledWorkspace,
-    });
+    const canvasContext = needsBoard && canvasScene
+      ? ileWorkCanvasTurnContextMessage(canvasScene, {
+          workspace: assembledWorkspace,
+          kind: askKind,
+        })
+      : "";
     const conversationMessages = [
       systemMessage(systemPrompt),
       userMessage(`The user is working on: ${problem}`),
       ...(planContext ? [userMessage(planContext)] : []),
       ...(activeChapterContext ? [userMessage(activeChapterContext)] : []),
-      userMessage(canvasContext),
+      ...(canvasContext ? [userMessage(canvasContext)] : []),
       ...inputMessages.map((m, index) => {
         const isLatestMessage = index === inputMessages.length - 1;
         const image = isLatestMessage && m.role === "user" && m.imageDataUrl
@@ -116,9 +129,11 @@ export async function POST(request: NextRequest) {
     const response = await callXaiText(
       conversationMessages,
       {
-        model: model || DEFAULT_MODEL,
-        maxTokens: 800,
+        model: (typeof model === "string" && model.trim()) || ileWorkCanvasXaiModel(askKind),
+        maxTokens: ileWorkCanvasXaiMaxTokens(askKind),
         temperature: RECOMMENDED_TEMPS.chat,
+        fetchTimeout: ileWorkCanvasXaiFetchTimeout(askKind),
+        retries: 1,
       }
     );
 

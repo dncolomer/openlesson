@@ -160,6 +160,7 @@ export function TapScorePhases(props: {
     prompt: string;
     selectedElements?: readonly IleWorkCanvasElement[] | null;
     scene: IleWorkCanvasScene;
+    kind?: string | null;
   }) => Promise<{
     text: string;
     elements?: IleWorkCanvasSkeleton[] | null;
@@ -424,6 +425,7 @@ export function TapScorePhases(props: {
         prompt: userText,
         selectedElements: input.selectedElements,
         scene: input.scene,
+        kind: input.kind,
       });
     },
     [sendCanvasAsk, workspaceTitle],

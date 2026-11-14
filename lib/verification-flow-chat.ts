@@ -9,7 +9,10 @@ import {
 } from "@/lib/prompt-kernel/surfaces/tap";
 import { assemblePromptWorkspaceContext } from "@/lib/prompt-workspace-context";
 import { tapWorkCanvasTurnContextMessage } from "@/lib/tap-work-canvas";
-import type { IleWorkCanvasScene } from "@/lib/learn-work-canvas";
+import {
+  ileWorkCanvasXaiNeedsBoardContext,
+  type IleWorkCanvasScene,
+} from "@/lib/learn-work-canvas";
 
 export function buildVerificationFlowChatSystemPrompt(topic: string): string {
   const subject = topic.trim() || "this topic";
@@ -29,6 +32,7 @@ export function buildVerificationFlowChatUserMessage(input: {
   messages?: Array<{ role?: string; content?: string }> | null;
   workCanvasScene?: IleWorkCanvasScene | null;
   workspaceTitle?: string | null;
+  canvasAskKind?: string | null;
 }): string {
   const history = (input.messages ?? [])
     .slice(-12)
@@ -37,12 +41,15 @@ export function buildVerificationFlowChatUserMessage(input: {
       return `${role}: ${String(message.content || "").slice(0, 2000)}`;
     })
     .join("\n\n");
-  const canvasContext = input.workCanvasScene
-    ? `\n\n${tapWorkCanvasTurnContextMessage(input.workCanvasScene, {
-        workspace: assemblePromptWorkspaceContext({
-          workspaceTitle: input.workspaceTitle,
-        }),
-      })}`
-    : "";
+  const kind = input.canvasAskKind ?? "ask";
+  const canvasContext =
+    input.workCanvasScene && ileWorkCanvasXaiNeedsBoardContext(kind)
+      ? `\n\n${tapWorkCanvasTurnContextMessage(input.workCanvasScene, {
+          workspace: assemblePromptWorkspaceContext({
+            workspaceTitle: input.workspaceTitle,
+          }),
+          kind,
+        })}`
+      : "";
   return `Conversation so far:\n${history || "None"}\n\nLatest canvas command:\n${input.thought.trim()}${canvasContext}`;
 }

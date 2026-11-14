@@ -56,6 +56,12 @@ async function resolveProofOfWorkSession(
   if (!sessionId) {
     return { session_id: null, metadata };
   }
+  if (!isUuid(sessionId)) {
+    return {
+      session_id: null,
+      metadata: { ...metadata, correlation_session_id: sessionId },
+    };
+  }
 
   const { data: session } = await supabase
     .from("sessions")
@@ -173,6 +179,7 @@ export async function uploadWorkspaceProofOfWork(
   }
 
   if (input.require_existing_session && input.session_id) {
+    if (!isUuid(input.session_id)) throw new Error("session_id not found");
     const { data: session } = await supabase
       .from("sessions")
       .select("id")
@@ -207,9 +214,10 @@ export async function uploadWorkspaceProofOfWork(
     rawMetadata
   );
   // When require_existing_session, we already validated session_id above — keep it.
-  const finalSessionId = input.require_existing_session
+  const finalSessionIdRaw = input.require_existing_session
     ? input.session_id || null
     : resolvedSessionId;
+  const finalSessionId = isUuid(finalSessionIdRaw) ? finalSessionIdRaw : null;
   const metadataBase = input.require_existing_session ? rawMetadata : sessionMeta;
   const metadata = isOpaque
     ? sanitizeOpaqueMetadata(metadataBase, allowPlaintext)

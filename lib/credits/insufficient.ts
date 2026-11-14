@@ -82,12 +82,42 @@ export function publishInsufficientCreditsIce(detail: InsufficientCreditsDetail 
 
 let fetchGuardInstalled = false;
 
+/** Browser TypeError from a dropped connection — not an HTTP envelope. */
+export function isBrowserNetworkFetchError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const name = "name" in error ? String(error.name) : "";
+  if (name === "AbortError") return false;
+  const message = error instanceof Error ? error.message : String(error);
+  return (
+    name === "TimeoutError" ||
+    /failed to fetch|networkerror|load failed|aborted due to timeout/i.test(message)
+  );
+}
+
+export function networkFetchErrorResponse(_error?: unknown): Response {
+  return new Response(
+    JSON.stringify({
+      error: {
+        code: "network_error",
+        message: "Could not reach the server. Try again.",
+      },
+    }),
+    { status: 503, headers: { "Content-Type": "application/json" } },
+  );
+}
+
 export function installInsufficientCreditsFetchGuard() {
   if (fetchGuardInstalled || typeof window === "undefined") return;
   fetchGuardInstalled = true;
   const orig = window.fetch.bind(window);
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
-    const res = await orig(input, init);
+    let res: Response;
+    try {
+      res = await orig(input, init);
+    } catch (error) {
+      if (isBrowserNetworkFetchError(error)) return networkFetchErrorResponse(error);
+      throw error;
+    }
     if (res.status === 402) {
       void res
         .clone()

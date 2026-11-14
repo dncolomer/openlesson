@@ -26,6 +26,15 @@ describe("verification flow canvas chat", () => {
     expect(user).toContain("What is a limit?");
     expect(user).toContain("SESSION");
     expect(user).toContain("Limits");
+
+    const command = buildVerificationFlowChatUserMessage({
+      thought: "List the distinct concepts.",
+      workCanvasScene: emptyTapWorkCanvasScene(),
+      workspaceTitle: "Limits",
+      canvasAskKind: "concepts",
+    });
+    expect(command).toContain("List the distinct concepts.");
+    expect(command).not.toContain("SESSION");
   });
 
   it("ships a public chat route that calls xAI instead of echoing the command", () => {

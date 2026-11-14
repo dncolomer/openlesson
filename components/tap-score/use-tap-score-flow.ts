@@ -143,6 +143,7 @@ async function postVerificationCanvasAsk(
     prompt: string;
     workCanvasScene: ReturnType<typeof serializeTapWorkCanvasScene>;
     scene: TapWorkCanvasScene;
+    canvasAskKind?: string | null;
   },
 ): Promise<{
   ok: boolean;
@@ -161,6 +162,7 @@ async function postVerificationCanvasAsk(
           conversationLanguage: s.conversationLanguage,
           workCanvasScene: input.workCanvasScene,
           canvasAsk: true,
+          canvasAskKind: input.canvasAskKind ?? "ask",
         }),
       },
     );
@@ -181,6 +183,7 @@ async function postVerificationCanvasAsk(
       sessionId: s.sessionId,
       tutoringLanguage: s.conversationLanguage || null,
       workCanvasScene: input.scene,
+      canvasAskKind: input.canvasAskKind ?? "ask",
       workspaceContext: s.workspaceTitle ? { workspaceTitle: s.workspaceTitle } : null,
       messages: [
         ...s.messages.map((message) => ({ role: message.role, content: message.content })),
@@ -204,6 +207,7 @@ async function postVerificationCanvasAsk(
       conversationLanguage: s.conversationLanguage,
       workCanvasScene: input.workCanvasScene,
       canvasAsk: true,
+      canvasAskKind: input.canvasAskKind ?? "ask",
     }),
   });
   const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
@@ -293,6 +297,7 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
     prompt: string;
     selectedElements?: readonly IleWorkCanvasElement[] | null;
     scene: TapWorkCanvasScene;
+    kind?: string | null;
   }): Promise<{
     text: string;
     elements?: IleWorkCanvasSkeleton[] | null;
@@ -305,6 +310,7 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
       prompt: input.prompt,
       workCanvasScene,
       scene: input.scene,
+      canvasAskKind: input.kind ?? "ask",
     });
     const asked = ileWorkCanvasAskFromSessionChat({
       ok: chat.ok,

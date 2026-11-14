@@ -135,6 +135,8 @@ export type IleXaiCanvasTurnPayload = {
   elements?: IleWorkCanvasSkeleton[] | null;
   turnId?: string | null;
   origin?: { x?: number; y?: number } | null;
+  /** Header on the Work card. Command name when the turn came from a command. */
+  label?: string | null;
 };
 
 /** Finite text-box width from an XAI reply. Missing or invalid → null (default box). */
@@ -198,6 +200,9 @@ export const ILE_WORK_CANVAS_STROKE_COLOR = "#1e1e1e";
 /** Grid on and zen mode on, unless this scene already stored a choice. */
 export const ILE_AUTO_LAYOUT_APP_STATE_KEY = "ileAutoLayoutEnabled";
 
+/** Filled triangle is smaller than Excalidraw's default line "arrow" head. */
+export const ILE_WORK_CANVAS_END_ARROWHEAD = "triangle" as const;
+
 export function withIleWorkCanvasGridAppState(
   appState: IleWorkCanvasAppState | null | undefined,
 ): IleWorkCanvasAppState {
@@ -214,6 +219,9 @@ export function withIleWorkCanvasGridAppState(
     next.currentItemStrokeColor = ILE_WORK_CANVAS_STROKE_COLOR;
   }
   next.currentItemFontFamily = ILE_WORK_CANVAS_FONT_FAMILY;
+  if (typeof next.currentItemEndArrowhead !== "string" && next.currentItemEndArrowhead !== null) {
+    next.currentItemEndArrowhead = ILE_WORK_CANVAS_END_ARROWHEAD;
+  }
   if (!ileWorkCanvasStoredToolType(next.activeTool)) {
     next.activeTool = { type: "text" };
   }
@@ -244,6 +252,7 @@ export const ILE_WORK_CANVAS_DEFAULT_APP_STATE_KEYS = [
   "gridSize",
   "currentItemStrokeColor",
   "currentItemFontFamily",
+  "currentItemEndArrowhead",
 ] as const;
 
 /** What survives an Excalidraw restoreAppState / updateScene round-trip. */
@@ -545,6 +554,16 @@ export function convertIleWorkCanvasSkeletons(
             [0, 0],
             [width, height],
           ];
+      if (type === "arrow") {
+        el.endArrowhead =
+          typeof skeleton.endArrowhead === "string" || skeleton.endArrowhead === null
+            ? skeleton.endArrowhead
+            : ILE_WORK_CANVAS_END_ARROWHEAD;
+        el.startArrowhead =
+          typeof skeleton.startArrowhead === "string" || skeleton.startArrowhead === null
+            ? skeleton.startArrowhead
+            : null;
+      }
       out.push(el);
       continue;
     }
@@ -685,22 +704,60 @@ export const BOARD_INSTRUCTION_NOTE_LABEL = "Work";
  */
 export const BOARD_INSTRUCTION_NOTE_BODY_FILL = "#f4f4f5";
 export const BOARD_INSTRUCTION_NOTE_HEADER_FILL = "#ffffff";
-const BOARD_NOTE_HEADER_HEIGHT = 32;
+export const BOARD_INSTRUCTION_NOTE_HEADER_HEIGHT = 32;
+const BOARD_NOTE_HEADER_HEIGHT = BOARD_INSTRUCTION_NOTE_HEADER_HEIGHT;
 const BOARD_NOTE_PAD_X = 14;
 const BOARD_NOTE_PAD_Y = 12;
 const BOARD_NOTE_HEADER_FONT = 14;
 
+/** Header copy for an xAI/command note. Chapter seed stays "Work". */
+export function ileWorkCanvasNoteLabel(kind?: string | null): string {
+  switch (String(kind || "").trim().toLowerCase()) {
+    case "ask":
+      return "Ask";
+    case "answer":
+      return "Answer";
+    case "draw":
+      return "Draw";
+    case "simplify":
+      return "Simplify";
+    case "concepts":
+      return "Concepts";
+    case "define":
+      return "Define";
+    case "check":
+      return "Check";
+    case "selective-compress":
+      return "Compress";
+    case "refactor":
+      return "Refactor";
+    case "suggest-insight":
+      return "Insight";
+    case "clear-overlaps":
+    case "declutter":
+      return "Layout";
+    case "focus":
+      return "Focus";
+    case "split":
+      return "Split";
+    case "breakdown":
+      return "Breakdown";
+    default:
+      return BOARD_INSTRUCTION_NOTE_LABEL;
+  }
+}
+
 /**
- * Instruction on the board is a work card: a filled card, a Work header, and the words.
- * Not a transparent rectangle with text bound inside it.
- * Body copy is not bound to the full card. Binding it there makes Excalidraw
- * pin the note to the top of the card, on top of Work.
+ * Instruction on the board is a work card: header bar + body bar stacked,
+ * each with its own bound text. One full-card rectangle plus unbound copy
+ * gets pulled apart by overlap settle and by Excalidraw bind-on-restore.
  */
 export function boardInstructionNoteElements(input: {
   text: string;
   x: number;
   y: number;
   textWidth: number;
+  label?: string | null;
   fontSize?: number;
   textCustomData?: Record<string, unknown> | null;
   bodyCustomData?: Record<string, unknown> | null;
@@ -710,14 +767,17 @@ export function boardInstructionNoteElements(input: {
 }): { elements: IleWorkCanvasElement[]; width: number; height: number } {
   const text = String(input.text || "").trim();
   if (!text) return { elements: [], width: 0, height: 0 };
+  const title = String(input.label || "").trim() || BOARD_INSTRUCTION_NOTE_LABEL;
   const fontSize = Number(input.fontSize) || DEFAULT_FONT_SIZE;
   const textWidth = Math.max(96, Number(input.textWidth) || ILE_WORK_CANVAS_TEXT_BOX_WIDTH);
   const wrapped = wrapIleWorkCanvasText(text, textWidth, fontSize);
   const width = wrapped.width + BOARD_NOTE_PAD_X * 2;
-  const height = BOARD_NOTE_HEADER_HEIGHT + BOARD_NOTE_PAD_Y + wrapped.height + BOARD_NOTE_PAD_Y;
+  const bodyHeight = BOARD_NOTE_PAD_Y + wrapped.height + BOARD_NOTE_PAD_Y;
+  const height = BOARD_NOTE_HEADER_HEIGHT + bodyHeight;
   const locked = input.locked === true;
   const x = input.x;
   const y = input.y;
+  const bodyY = y + BOARD_NOTE_HEADER_HEIGHT;
   const kind = (
     data: Record<string, unknown> | null | undefined,
     part: "body" | "header" | "text" | "label",
@@ -732,9 +792,9 @@ export function boardInstructionNoteElements(input: {
       {
         type: "rectangle",
         x,
-        y,
+        y: bodyY,
         width,
-        height,
+        height: bodyHeight,
         strokeColor: ILE_WORK_CANVAS_STROKE_COLOR,
         backgroundColor: BOARD_INSTRUCTION_NOTE_BODY_FILL,
         fillStyle: "solid",
@@ -764,7 +824,7 @@ export function boardInstructionNoteElements(input: {
         id: input.textId,
         text,
         x: x + BOARD_NOTE_PAD_X,
-        y: y + BOARD_NOTE_HEADER_HEIGHT + BOARD_NOTE_PAD_Y,
+        y: bodyY + BOARD_NOTE_PAD_Y,
         width: wrapped.width,
         fontSize,
         textAlign: "left",
@@ -777,7 +837,7 @@ export function boardInstructionNoteElements(input: {
       },
       {
         type: "text",
-        text: BOARD_INSTRUCTION_NOTE_LABEL,
+        text: title,
         x: x + BOARD_NOTE_PAD_X,
         y: y + 8,
         width: wrapped.width,
@@ -797,12 +857,12 @@ export function boardInstructionNoteElements(input: {
   const header = converted.find((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "header");
   const bodyText = converted.find((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "text");
   const label = converted.find((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "label");
-  if (bodyText) {
-    bodyText.containerId = null;
+  if (body && bodyText) {
+    bodyText.containerId = body.id;
     bodyText.verticalAlign = "top";
     bodyText.textAlign = "left";
+    body.boundElements = [{ type: "text", id: bodyText.id }];
   }
-  if (body) body.boundElements = null;
   if (header && label) {
     label.containerId = header.id;
     label.verticalAlign = "middle";

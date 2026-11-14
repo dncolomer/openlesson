@@ -56,10 +56,10 @@ export function ileWorkCanvasXaiToolsInstruction(): string {
     `A schematic is rare. Add JSON "elements" (types: ${shapes}) only when a diagram is truly necessary: the topic is spatial, structural, geometric, or a relationship the learner cannot see from sentences.`,
     `For an ordinary explanation, definition, question, or worked step, omit "elements" or send an empty array. Do not draw a flowchart, box diagram, or extra shape by default.`,
     "Skip eraser and selection — those are learner tools only. Skip image unless you already have a fileId.",
-    `Reply as JSON: {"text":"<coaching reply, also placed as a text block>","textWidth":number,"origin":{"x":number,"y":number},"elements":[]}.`,
-    `"text" is what the learner reads on the board. Answer the topic directly: complete unhurried sentences, eloquent and plain, easy to start from, with no headings, bullets, or compressed exam stems. Never mention commands, origin, placement, or that a question sits in the right place. Never mention PoW, platform jargon, or Uncertain Systems. Do not put JSON, code fences, or element arrays inside "text".`,
-    `"textWidth" is the coaching text box width in pixels. Choose it for this reply so the box fits the cluster. Do not reuse one width every time. A text element may set its own "width" the same way.`,
-    `Include "elements" only for that necessary diagram (${shapes}). Arrows/lines/freedraw may include "points":[[x,y],...]. Labeled shapes use "label":{"text":"..."}. Place marks near related existing elements. Always include "text". Never mention this JSON format to the learner.`,
+    `Reply as JSON: {"text":"<coaching reply, placed as a Work note>","textWidth":number,"elements":[]}.`,
+    `"text" is what the learner reads on the board as a Work note (same card as the opening prompt). Answer the topic directly: complete unhurried sentences, eloquent and plain, easy to start from, with no headings, bullets, or compressed exam stems. Never mention commands, origin, placement, or that a question sits in the right place. Never mention PoW, platform jargon, or Uncertain Systems. Do not put JSON, code fences, or element arrays inside "text".`,
+    `"textWidth" is the coaching note width in pixels. Choose it for this reply so the note fits the cluster. Do not reuse one width every time.`,
+    `Include "elements" only for that necessary diagram (${shapes}). Arrows/lines/freedraw may include "points":[[x,y],...]. Labeled boxes become Work notes via "label":{"text":"..."}. Always include "text". Never mention this JSON format to the learner.`,
   ].join(" ");
 }
 

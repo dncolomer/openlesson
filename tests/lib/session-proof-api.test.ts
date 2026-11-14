@@ -83,12 +83,29 @@ describe("session-scoped PoW and embeddings", () => {
     expect(auth).not.toContain("requested_duration_seconds, focus_block_ids");
   });
 
-  it("session chat PoW persists on session id alone", () => {
-    expect(resolveIleSessionChatPowUpload({ sessionId: "s", workspaceId: "" })).toEqual({
+  it("session chat PoW persists on a uuid session id alone", () => {
+    const sessionId = "550e8400-e29b-41d4-a716-446655440000";
+    expect(resolveIleSessionChatPowUpload({ sessionId, workspaceId: "" })).toEqual({
       persist: true,
-      sessionId: "s",
+      sessionId,
       workspaceId: "",
     });
+  });
+
+  it("skips session chat PoW when session or workspace ids are not uuids", () => {
+    expect(resolveIleSessionChatPowUpload({ sessionId: "klhkj", workspaceId: "" })).toEqual({
+      persist: false,
+    });
+    expect(
+      resolveIleSessionChatPowUpload({
+        sessionId: "s",
+        workspaceId: "klhkj",
+      }),
+    ).toEqual({ persist: false });
+    const sessionId = "550e8400-e29b-41d4-a716-446655440000";
+    expect(
+      resolveIleSessionChatPowUpload({ sessionId, workspaceId: "klhkj" }),
+    ).toEqual({ persist: true, sessionId, workspaceId: "" });
   });
 
   it("ignores leftover AYCL tokens and does not query dropped purchases", async () => {

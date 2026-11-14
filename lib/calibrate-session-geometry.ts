@@ -5,6 +5,7 @@
 
 import { clearCalibrateResponseOverlap, ILE_CANVAS_DICTATE_AUTHOR } from "@/lib/learn-canvas-dictate";
 import {
+  BOARD_INSTRUCTION_NOTE_KEY,
   boardInstructionNoteElements,
   convertToExcalidrawElements,
   emptyIleWorkCanvasScene,
@@ -475,6 +476,15 @@ function chromeInsideFrame(a: IleWorkCanvasElement, b: IleWorkCanvasElement): bo
 }
 
 /** True when two board marks occupy the same pixels, other than a label inside its card. */
+function sameBoardInstructionNote(a: IleWorkCanvasElement, b: IleWorkCanvasElement): boolean {
+  if (!a.customData?.[BOARD_INSTRUCTION_NOTE_KEY] || !b.customData?.[BOARD_INSTRUCTION_NOTE_KEY]) {
+    return false;
+  }
+  const groupA = Array.isArray(a.groupIds) ? a.groupIds[0] : null;
+  const groupB = Array.isArray(b.groupIds) ? b.groupIds[0] : null;
+  return Boolean(groupA && groupA === groupB);
+}
+
 export function calibrateBoardHasOverlap(elements: readonly IleWorkCanvasElement[]): boolean {
   const live = elements.filter((el) => !el.isDeleted);
   for (let i = 0; i < live.length; i += 1) {
@@ -482,6 +492,7 @@ export function calibrateBoardHasOverlap(elements: readonly IleWorkCanvasElement
       const a = live[i]!;
       const b = live[j]!;
       if (a.containerId === b.id || b.containerId === a.id) continue;
+      if (sameBoardInstructionNote(a, b)) continue;
       if (chromeInsideFrame(a, b)) continue;
       const rectA = ileWorkCanvasMarkRect(a);
       const rectB = ileWorkCanvasMarkRect(b);

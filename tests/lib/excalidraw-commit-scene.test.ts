@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import {
   commitScene,
@@ -37,6 +39,15 @@ describe("commitScene", () => {
       appState: { selectedElementIds: { a: true } },
     });
     expect(live.scrollToContent).toHaveBeenCalledTimes(1);
+    expect(flag.current).toBe(true);
+  });
+
+  it("keeps applyingRemote set until nested scene updates have flushed", async () => {
+    const live = api();
+    const flag = { current: false };
+    commitScene(live, { elements: [] }, { applyingRemote: flag });
+    expect(flag.current).toBe(true);
+    await Promise.resolve();
     expect(flag.current).toBe(false);
   });
 
@@ -47,6 +58,18 @@ describe("commitScene", () => {
     commitScene(live, { appState: { zoom: { value: 1 } } }, { remote: false, applyingRemote: flag });
     expect(flag.current).toBe(false);
     expect(live.updateScene).toHaveBeenCalledTimes(1);
+  });
+
+  it("pins Excalidraw scene callbacks so parent renders do not retrigger onChange", () => {
+    const mount = readFileSync(
+      join(process.cwd(), "components/excalidraw-canvas/learn-excalidraw-mount.tsx"),
+      "utf8",
+    );
+    expect(mount).toContain("onChangeRef.current = onChange");
+    expect(mount).toContain("IleExcalidrawStable");
+    expect(mount).toContain("initialDataRef.current");
+    expect(mount).toContain("excalidrawAPI={bindApi}");
+    expect(mount).toContain("onChange={bindChange}");
   });
 
   it("reads including-deleted elements for live scene helpers", () => {

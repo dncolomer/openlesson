@@ -28,7 +28,13 @@ import { isTapPracticeRequest, stampPoWPracticeFlag } from "@/lib/tap-practice";
 import { withConversationLanguageInstruction } from "@/lib/tutoring-languages";
 import { tapWorkCanvasTurnContextMessage } from "@/lib/tap-work-canvas";
 import { assemblePromptWorkspaceContext } from "@/lib/prompt-workspace-context";
-import { ileSessionChatCanvasReply } from "@/lib/learn-work-canvas";
+import {
+  ileSessionChatCanvasReply,
+  ileWorkCanvasXaiFetchTimeout,
+  ileWorkCanvasXaiMaxTokens,
+  ileWorkCanvasXaiModel,
+  ileWorkCanvasXaiNeedsBoardContext,
+} from "@/lib/learn-work-canvas";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -119,15 +125,23 @@ export async function POST(req: NextRequest) {
     );
 
     const canvasAsk = body.canvasAsk === true;
-    const canvasContext = body.workCanvasScene
-      ? `\n\n${tapWorkCanvasTurnContextMessage(body.workCanvasScene, {
-          workspace: assemblePromptWorkspaceContext(
-            tapScoreBriefToPromptWorkspaceInput(brief, {
-              focusedBlockId: blockId || access.blockId,
-            }),
-          ),
-        })}`
-      : "";
+    const canvasAskKind =
+      typeof body.canvasAskKind === "string"
+        ? body.canvasAskKind
+        : canvasAsk
+          ? "ask"
+          : null;
+    const canvasContext =
+      body.workCanvasScene && ileWorkCanvasXaiNeedsBoardContext(canvasAskKind)
+        ? `\n\n${tapWorkCanvasTurnContextMessage(body.workCanvasScene, {
+            workspace: assemblePromptWorkspaceContext(
+              tapScoreBriefToPromptWorkspaceInput(brief, {
+                focusedBlockId: blockId || access.blockId,
+              }),
+            ),
+            kind: canvasAskKind,
+          })}`
+        : "";
 
     const response = await callXai([
       systemMessage(systemPrompt),
@@ -135,9 +149,11 @@ export async function POST(req: NextRequest) {
         `Conversation so far:\n${history || "None"}\n\nLatest submitted ${canvasAsk ? "canvas command" : "thought"}:\n${latestThought}${canvasContext}`,
       ),
     ], {
-      maxTokens: practice ? 280 : canvasAsk ? 800 : 500,
+      model: canvasAsk ? ileWorkCanvasXaiModel(canvasAskKind) : undefined,
+      maxTokens: practice ? 280 : canvasAsk ? ileWorkCanvasXaiMaxTokens(canvasAskKind) : 500,
       temperature: practice ? 0.4 : 0.55,
-      fetchTimeout: 60000,
+      fetchTimeout: canvasAsk ? ileWorkCanvasXaiFetchTimeout(canvasAskKind) : 60000,
+      retries: canvasAsk ? 1 : undefined,
     });
 
     if (!response.success || !response.data) {

@@ -206,7 +206,10 @@ export function useWorkCanvasCommands(input: {
         });
         return true;
       } catch (err) {
-        console.error("[ExcalidrawCanvas] Ask XAI failed:", err);
+        console.error(
+          "[ExcalidrawCanvas] Ask XAI failed:",
+          err instanceof Error ? err.message : String(err),
+        );
         const fallback = ileWorkCanvasAskFallback(askInput.kind);
         await enqueueCanvasAskApply(() => {
           applyReply({ text: fallback });

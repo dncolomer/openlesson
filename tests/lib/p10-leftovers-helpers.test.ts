@@ -87,8 +87,8 @@ describe("P10 leftovers shipped helpers", () => {
     const skipPow = resolveIleSessionChatPowUpload({ sessionId: "", workspaceId: "w1" });
     expect(skipPow.persist).toBe(false);
     const persistPow = resolveIleSessionChatPowUpload({
-      sessionId: "s1",
-      workspaceId: "w1",
+      sessionId: "550e8400-e29b-41d4-a716-446655440000",
+      workspaceId: "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
     });
     expect(persistPow.persist).toBe(true);
     if (persistPow.persist) {

@@ -23,6 +23,8 @@ import {
   ileWorkCanvasNormalizedRect,
 } from "@/lib/learn-work-canvas-geometry";
 import {
+  BOARD_INSTRUCTION_NOTE_KEY,
+  ileWorkCanvasNoteLabel,
   ILE_COMPRESS_WORK_CUSTOM_DATA_KEY,
   ILE_WORK_CANVAS_TEXT_BOX_WIDTH,
   TEXT_ORIGIN_X,
@@ -44,10 +46,12 @@ import {
 import { withIleWorkCanvasAutoLayout } from "@/lib/learn-work-canvas-chrome";
 import {
   ileWorkCanvasEmptyNearbyOrigin,
+  ileWorkCanvasXaiNoteElements,
   mergeIleXaiTurnOntoLiveWorkCanvas,
   placeTurn,
   settleIleWorkCanvasIncoming,
 } from "@/lib/learn-work-canvas-place";
+import { CANVAS_ASK_MODEL, CANVAS_COMMAND_MODEL } from "@/lib/xai-models";
 import {
   extractJsonObject,
   ileWorkCanvasCommandProse,
@@ -96,20 +100,16 @@ export function compressIleWorkCanvasScene(
   const current = serializeIleWorkCanvasScene(scene);
   const text = String(summary ?? "").trim();
   if (!text) return current;
-  const converted = convertToExcalidrawElements([
-    {
-      type: "text",
-      text,
-      x: TEXT_ORIGIN_X,
-      y: TEXT_ORIGIN_Y,
-      width: ILE_WORK_CANVAS_TEXT_BOX_WIDTH,
-      autoResize: false,
-      customData: {
-        [ILE_COMPRESS_WORK_CUSTOM_DATA_KEY]: true,
-        author: "xai",
-      },
+  const converted = ileWorkCanvasXaiNoteElements({
+    text,
+    x: TEXT_ORIGIN_X,
+    y: TEXT_ORIGIN_Y,
+    label: ileWorkCanvasNoteLabel("selective-compress"),
+    customData: {
+      [ILE_COMPRESS_WORK_CUSTOM_DATA_KEY]: true,
+      author: "xai",
     },
-  ]);
+  }).elements;
   if (!converted.length) return current;
   return {
     elements: converted,
@@ -135,12 +135,78 @@ export function applyIleXaiReplyToWorkCanvas(
 export const ILE_WORK_CANVAS_TURN_ORIGIN_INSTRUCTION =
   'Suggest a scene origin for that reply as JSON "origin": {"x": number, "y": number} tucked against the existing cluster, usually directly under nearby marks. Do not jump far to the right. Origin is JSON only — never mention origin, placement, Check/ask, or that a question sits in the right place in "text".';
 
+const ILE_CANVAS_CONTEXT_TEXT_MAX = 220;
+const ILE_CANVAS_CONTEXT_MAX_MARKS = 24;
+
+const ILE_CANVAS_FAST_KINDS = new Set<string>([
+  "concepts",
+  "define",
+  "simplify",
+  "refactor",
+  "check",
+  "selective-compress",
+  "suggest-insight",
+  "clear-overlaps",
+  "declutter",
+]);
+
+export function ileWorkCanvasXaiModel(kind?: string | null): string {
+  return kind && ILE_CANVAS_FAST_KINDS.has(kind) ? CANVAS_COMMAND_MODEL : CANVAS_ASK_MODEL;
+}
+
+export function ileWorkCanvasXaiNeedsBoardContext(kind?: string | null): boolean {
+  return !kind || kind === "ask" || kind === "answer" || kind === "draw";
+}
+
+export function ileWorkCanvasXaiMaxTokens(kind?: string | null): number {
+  if (kind === "concepts") return 220;
+  if (kind === "define" || kind === "simplify") return 280;
+  if (kind === "refactor" || kind === "check" || kind === "suggest-insight") return 400;
+  if (kind === "selective-compress" || kind === "clear-overlaps" || kind === "declutter") return 360;
+  return 800;
+}
+
+/** Per-request AbortSignal budget. Commands skip the board listing and should return sooner. */
+export function ileWorkCanvasXaiFetchTimeout(kind?: string | null): number {
+  return ileWorkCanvasXaiNeedsBoardContext(kind) ? 60_000 : 45_000;
+}
+
 function formatCanvasMeasure(value: unknown): string {
   const n = Number(value);
   if (!Number.isFinite(n)) return "0";
   const rounded = Math.round(n * 1000) / 1000;
   if (Object.is(rounded, -0)) return "0";
   return String(rounded);
+}
+
+function ileWorkCanvasContextSkipChrome(el: IleWorkCanvasElement): boolean {
+  const part = el.customData?.[BOARD_INSTRUCTION_NOTE_KEY];
+  return part === "header" || part === "label" || part === "body";
+}
+
+/**
+ * Compact board listing: type plus truncated text. Positions are omitted so
+ * the model does not spend tokens reconstructing the full scene.
+ */
+export function ileWorkCanvasCompactListing(
+  scene: IleWorkCanvasScene | { elements?: unknown } | null | undefined,
+  options?: { maxMarks?: number },
+): string {
+  const live = serializeIleWorkCanvasScene(scene).elements.filter(
+    (el) => !el.isDeleted && el.type !== "cursor" && !ileWorkCanvasContextSkipChrome(el),
+  );
+  if (!live.length) return "(no live elements)";
+  const cap = Math.max(1, options?.maxMarks ?? ILE_CANVAS_CONTEXT_MAX_MARKS);
+  const shown = live.slice(0, cap);
+  const lines = shown.map((el) => {
+    const text = String(el.originalText || el.text || "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, ILE_CANVAS_CONTEXT_TEXT_MAX);
+    return text ? `[${el.type}] ${JSON.stringify(text)}` : `[${el.type}]`;
+  });
+  if (live.length > cap) lines.push(`…and ${live.length - cap} more marks`);
+  return lines.join("\n");
 }
 
 /**
@@ -163,16 +229,18 @@ export function ileWorkCanvasLiveGeometryListing(
     .join("\n");
 }
 
-/** User-message payload: the focused chapter's live board geometry and drawing tools. */
+/** User-message payload: compact live-board contents and drawing tools. */
 export function ileWorkCanvasTurnContextMessage(
   scene: IleWorkCanvasScene | null | undefined,
   input?: {
     boardLabel?: string;
     workspace?: PromptWorkspaceContextInput | PromptWorkspaceContext | null;
+    kind?: IleWorkCanvasAskKind | string | null;
   },
 ): string {
   const board = String(input?.boardLabel || "CHAPTER").trim() || "CHAPTER";
-  const body = `CURRENT ${board} WORK CANVAS (every live element: type, x, y, width, height, and text). Deleted marks are omitted. Co-author this board: your reply is placed on it as a text block the learner can move and edit. ${ILE_WORK_CANVAS_TURN_ORIGIN_INSTRUCTION} ${ileWorkCanvasXaiToolsInstruction()}\n${ileWorkCanvasLiveGeometryListing(scene)}`;
+  const listing = ileWorkCanvasCompactListing(scene);
+  const body = `CURRENT ${board} WORK CANVAS (compact: type and text of live marks; positions omitted). Co-author this board: your reply is placed as a Work note the learner can move and edit. ${ileWorkCanvasXaiToolsInstruction()}\n${listing}`;
   return ileWorkCanvasWithDomainPrefix(body, input?.workspace);
 }
 
@@ -318,21 +386,17 @@ export function compressIleWorkCanvasSelection(
   const liveSelected = ileWorkCanvasSelectedLive(current, selectedElements);
   if (!text || !liveSelected.length) return current;
   const bounds = ileWorkCanvasContentBounds(liveSelected);
-  const created = convertToExcalidrawElements([
-    {
-      type: "text",
-      text,
-      x: bounds?.minX ?? TEXT_ORIGIN_X,
-      y: bounds?.minY ?? TEXT_ORIGIN_Y,
-      width: ILE_WORK_CANVAS_TEXT_BOX_WIDTH,
-      autoResize: false,
-      customData: {
-        [ILE_COMPRESS_WORK_CUSTOM_DATA_KEY]: true,
-        ileSelectiveCompression: true,
-        author: "xai",
-      },
+  const created = ileWorkCanvasXaiNoteElements({
+    text,
+    x: bounds?.minX ?? TEXT_ORIGIN_X,
+    y: bounds?.minY ?? TEXT_ORIGIN_Y,
+    label: ileWorkCanvasNoteLabel("selective-compress"),
+    customData: {
+      [ILE_COMPRESS_WORK_CUSTOM_DATA_KEY]: true,
+      ileSelectiveCompression: true,
+      author: "xai",
     },
-  ]);
+  }).elements;
   if (!created.length) return current;
   const remove = new Set(liveSelected.map((el) => el.id));
   const kept = current.elements.filter((el) => !remove.has(el.id));
@@ -466,26 +530,21 @@ export function applyIleWorkCanvasSuggestInsight(
   const text = ileWorkCanvasCommandProse(String(suggestion ?? ""));
   const liveSelected = ileWorkCanvasSelectedLive(current, selectedElements);
   if (!text || !liveSelected.length) return current;
-  const wrapped = wrapIleWorkCanvasText(text);
   const origin = ileWorkCanvasEmptyNearbyOrigin({
     elements: current.elements,
     near: liveSelected,
-    box: { width: wrapped.width, height: wrapped.height },
+    box: { width: ILE_WORK_CANVAS_TEXT_BOX_WIDTH, height: 80 },
   });
-  const created = convertToExcalidrawElements([
-    {
-      type: "text",
-      text,
-      x: origin.x,
-      y: origin.y,
-      width: wrapped.width,
-      autoResize: false,
-      customData: {
-        author: "xai",
-        ileSuggestedInsight: true,
-      },
+  const created = ileWorkCanvasXaiNoteElements({
+    text,
+    x: origin.x,
+    y: origin.y,
+    label: ileWorkCanvasNoteLabel("suggest-insight"),
+    customData: {
+      author: "xai",
+      ileSuggestedInsight: true,
     },
-  ]);
+  }).elements;
   if (!created.length) return current;
   const settled = settleIleWorkCanvasIncoming(
     created,
@@ -548,6 +607,7 @@ export function applyIleWorkCanvasAskReply(input: {
   const live = serializeIleWorkCanvasScene(input.live);
   const selected = expandIleWorkCanvasCommandSelection(live, input.selectedElements);
   const kind = input.kind ?? null;
+  const noteLabel = ileWorkCanvasNoteLabel(kind);
   const source =
     kind && kind !== "ask" ? String(input.payload.raw || "") : String(input.payload.text || "");
   const layoutReply = ileWorkCanvasLayoutReply(input.payload.raw, input.payload.elements);
@@ -559,6 +619,7 @@ export function applyIleWorkCanvasAskReply(input: {
         elements: extra ?? input.payload.elements,
         turnId: input.payload.turnId,
         origin: input.payload.origin,
+        label: noteLabel,
       },
       {
         fallbackOrigin: input.fallbackOrigin,
@@ -573,6 +634,7 @@ export function applyIleWorkCanvasAskReply(input: {
       text: input.payload.text,
       elements: input.payload.elements,
       turnId: input.payload.turnId,
+      label: noteLabel,
     });
   } else if (kind === "concepts") {
     const labels = ileWorkCanvasConceptLabels(source, {

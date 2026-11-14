@@ -1,6 +1,10 @@
 /**
  * TAP Learning session-chat PoW persist decision — used by /api/session-chat.
+ * `proof_of_work.session_id` / `workspace_id` are uuid columns; local slugs
+ * such as "klhkj" must not be inserted.
  */
+
+import { isUuid } from "@/lib/domain/types";
 
 export function resolveIleSessionChatPowUpload(input: {
   sessionId?: string | null;
@@ -11,8 +15,12 @@ export function resolveIleSessionChatPowUpload(input: {
   const sessionId = typeof input.sessionId === "string" ? input.sessionId.trim() : "";
   const workspaceId =
     typeof input.workspaceId === "string" ? input.workspaceId.trim() : "";
-  if (!sessionId) return { persist: false };
-  return { persist: true, sessionId, workspaceId };
+  if (!isUuid(sessionId)) return { persist: false };
+  return {
+    persist: true,
+    sessionId,
+    workspaceId: isUuid(workspaceId) ? workspaceId : "",
+  };
 }
 
 export const ILE_SESSION_CHAT_POW_TOOL_NAME = "helios";

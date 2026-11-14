@@ -8,7 +8,9 @@ import {
   INSUFFICIENT_CREDITS_COPY,
   insufficientCreditsPricingHref,
   insufficientCreditsRegisterHref,
+  isBrowserNetworkFetchError,
   isInsufficientCreditsBody,
+  networkFetchErrorResponse,
   parseInsufficientCreditsBody,
   safeInternalReturnPath,
 } from "@/lib/credits/insufficient";
@@ -74,6 +76,19 @@ describe("insufficient credits ice screen", () => {
     expect(host).toContain("installInsufficientCreditsFetchGuard");
     expect(read("lib/credits/insufficient.ts")).toContain("window.fetch");
     expect(read("lib/credits/insufficient.ts")).toContain("res.status === 402");
+    expect(read("lib/credits/insufficient.ts")).toContain("isBrowserNetworkFetchError");
+  });
+
+  it("turns a dropped connection into a 503 envelope instead of a TypeError", async () => {
+    expect(isBrowserNetworkFetchError(new TypeError("Failed to fetch"))).toBe(true);
+    const abort = new Error("aborted");
+    abort.name = "AbortError";
+    expect(isBrowserNetworkFetchError(abort)).toBe(false);
+    const res = networkFetchErrorResponse(new TypeError("Failed to fetch"));
+    expect(res.status).toBe(503);
+    const body = await res.json();
+    expect(body.error.code).toBe("network_error");
+    expect(String(body.error.message)).toMatch(/server/i);
   });
 
   it("Learn guest-link 402 renders the ice; minted guests grant 100 credits", () => {

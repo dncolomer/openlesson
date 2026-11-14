@@ -10,6 +10,7 @@ import ts from "typescript";
 import {
   BOARD_INSTRUCTION_NOTE_KEY,
   BOARD_INSTRUCTION_NOTE_LABEL,
+  BOARD_INSTRUCTION_NOTE_HEADER_HEIGHT,
 } from "@/lib/learn-work-canvas";
 import {
   applyTapAssistantTurnsToWorkCanvas,
@@ -401,8 +402,8 @@ describe("TAP Work canvas XAI origin + board ask (shipped)", () => {
     );
     const reply = ileWorkCanvasHostForCaption(placed.elements, "Name the parent index.");
     expect(reply?.x).toBe(310);
-    expect(reply?.y).toBe(90);
-    expect(reply?.strokeStyle).toBe("dashed");
+    expect(reply?.y).toBe(90 + BOARD_INSTRUCTION_NOTE_HEADER_HEIGHT);
+    expect(reply?.customData?.[BOARD_INSTRUCTION_NOTE_KEY]).toBe("body");
     const extra = placed.elements.find((el) => el.type === "ellipse");
     expect(extra?.x).toBe(12);
     expect(extra?.y).toBe(40);
@@ -414,7 +415,8 @@ describe("TAP Work canvas XAI origin + board ask (shipped)", () => {
     const ctx = tapWorkCanvasTurnContextMessage(placed);
     expect(ctx).toContain("SESSION");
     expect(ctx).toContain("Name the parent index.");
-    expect(ctx).toContain(ILE_WORK_CANVAS_TURN_ORIGIN_INSTRUCTION);
+    expect(ctx).toContain("compact:");
+    expect(ctx).not.toContain(ILE_WORK_CANVAS_TURN_ORIGIN_INSTRUCTION);
 
     const canvas = read("components/ExcalidrawCanvas.tsx");
     expect(canvas).toContain("data-ile-canvas-prompt-bar");
@@ -518,7 +520,7 @@ describe("TAP Work canvas non-overlap and session geometry (shipped)", () => {
     expect(newMarksOverlapExisting(added, [existing])).toBe(false);
     const addedText = ileWorkCanvasHostForCaption(added, "Name the parent index.")!;
     const addedRect = added.find((el) => el.type === "rectangle" && !isIleXaiNoteElement(el))!;
-    expect(addedText.strokeStyle).toBe("dashed");
+    expect(addedText.customData?.[BOARD_INSTRUCTION_NOTE_KEY]).toBe("body");
     expect(addedRect.width).toBe(140);
     expect(addedRect.height).toBe(90);
 
@@ -552,12 +554,16 @@ describe("TAP Work canvas non-overlap and session geometry (shipped)", () => {
       null,
       "tap-stack",
     );
-    const stackedSolids = stacked.elements.filter(
-      (el) => !el.isDeleted && !(el.type === "text" && el.containerId),
-    );
+    const stackedSolids = stacked.elements.filter((el) => {
+      if (el.isDeleted) return false;
+      if (el.type === "text" && el.containerId) return false;
+      const part = el.customData?.[BOARD_INSTRUCTION_NOTE_KEY];
+      if (part && part !== "body") return false;
+      return true;
+    });
     expect(stackedSolids.some((el) => el.type === "rectangle")).toBe(true);
     expect(stackedSolids.some((el) => el.type === "diamond")).toBe(true);
-    expect(stackedSolids.some((el) => (el.originalText || el.text) === "note")).toBe(true);
+    expect(stacked.elements.some((el) => (el.originalText || el.text) === "note")).toBe(true);
     for (let i = 0; i < stackedSolids.length; i += 1) {
       for (let j = i + 1; j < stackedSolids.length; j += 1) {
         const a = canvasRect(stackedSolids[i]!);
@@ -575,7 +581,7 @@ describe("TAP Work canvas non-overlap and session geometry (shipped)", () => {
     );
     const stayed = ileWorkCanvasHostForCaption(open.elements, "Free corner.")!;
     expect(stayed.x).toBe(3600);
-    expect(stayed.y).toBe(2800);
+    expect(stayed.y).toBe(2800 + BOARD_INSTRUCTION_NOTE_HEADER_HEIGHT);
 
     const tall = "stack the wrapped lines ".repeat(30).trim();
     const metrics = wrapIleWorkCanvasText(tall);
@@ -628,9 +634,9 @@ describe("TAP Work canvas non-overlap and session geometry (shipped)", () => {
       files: {},
     });
     expect(ctx).toContain("SESSION");
-    expect(ctx).toContain(
-      `rectangle x=${blocker.x} y=${blocker.y} width=${blocker.width} height=${blocker.height}`,
-    );
+    expect(ctx).toContain("[rectangle]");
+    expect(ctx).toContain("compact:");
+    expect(ctx).not.toMatch(/\bx=\d/);
     expect(ctx).toContain("freedraw");
     expect(ctx).toContain(ileWorkCanvasXaiToolsInstruction());
     expect(ctx).not.toContain("TAP_DELETED_MARK");
@@ -672,9 +678,12 @@ describe("TAP Work canvas non-overlap and session geometry (shipped)", () => {
       "tap-clear",
     );
     const added = placed.elements.filter((el) => !occupied.some((prev) => prev.id === el.id));
-    expect(added.filter((el) => el.type === "text").length).toBe(2);
+    const addedCopy = added.filter(
+      (el) => el.type === "text" && el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "text",
+    );
+    expect(addedCopy.length).toBe(2);
     expect(newMarksOverlapExisting(added, occupied)).toBe(false);
-    const [first, second] = added.filter((el) => el.type === "text");
+    const [first, second] = addedCopy;
     expect(newMarksOverlapExisting([first!], [second!])).toBe(false);
     const visible = canvasRect({ x: 0, y: 0, width: 420, height: 260 })!;
     const laysOutside = added.some((el) => {

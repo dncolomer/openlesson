@@ -233,7 +233,7 @@ describe("session policy store", () => {
     expect(persist).toContain("enqueueIleSessionSave");
     expect(restore).toContain("setInferences(record.inferences)");
     expect(restore).not.toContain("publishSlot");
-    expect(context).toContain("if (suggestAction.current) setSuggestion(null)");
+    expect(context).toContain("if (suggestAction.current) setSuggestion((current) => (current == null ? current : null))");
     expect(rememberSessionPolicy("sess-2", sessionPolicyRecordFromLive({
       model: birthTree(),
       birth: birthTree(),

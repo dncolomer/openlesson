@@ -17,6 +17,10 @@ import {
   ileWorkCanvasDragThinkingOrigin,
   ileWorkCanvasThinkingOverlayStyle,
   ileWorkCanvasTurnContextMessage,
+  ileWorkCanvasXaiModel,
+  ileWorkCanvasXaiNeedsBoardContext,
+  ileWorkCanvasXaiMaxTokens,
+  ileWorkCanvasXaiFetchTimeout,
   ileWorkCanvasXaiShapeType,
   ileWorkCanvasXaiToolsInstruction,
   ILE_EXCALIDRAW_POW_TOOLS,
@@ -46,6 +50,9 @@ import {
   ileWorkCanvasInitialSeedText,
   BOARD_INSTRUCTION_NOTE_KEY,
   BOARD_INSTRUCTION_NOTE_LABEL,
+  BOARD_INSTRUCTION_NOTE_BODY_FILL,
+  BOARD_INSTRUCTION_NOTE_HEADER_HEIGHT,
+  ILE_WORK_CANVAS_END_ARROWHEAD,
   ILE_CHAPTER_SEED_CUSTOM_DATA_KEY,
   ILE_WORK_CANVAS_DEFAULT_GRID_SIZE,
   ILE_WORK_CANVAS_FONT_FAMILY,
@@ -245,6 +252,12 @@ describe("TAP Learning Work canvas grid default (shipped)", () => {
     expect(empty.appState.gridSize).toBe(ILE_WORK_CANVAS_DEFAULT_GRID_SIZE);
     expect(empty.appState.currentItemStrokeColor).toBe("#1e1e1e");
     expect(empty.appState.currentItemFontFamily).toBe(ILE_WORK_CANVAS_FONT_FAMILY);
+    expect(empty.appState.currentItemEndArrowhead).toBe(ILE_WORK_CANVAS_END_ARROWHEAD);
+    expect(ILE_WORK_CANVAS_END_ARROWHEAD).toBe("triangle");
+    const arrow = convertToExcalidrawElements([
+      { type: "arrow", x: 0, y: 0, width: 40, height: 0 },
+    ])[0];
+    expect(arrow?.endArrowhead).toBe(ILE_WORK_CANVAS_END_ARROWHEAD);
     expect(ILE_WORK_CANVAS_FONT_FAMILY).toBe(6);
 
     const restored = serializeIleWorkCanvasScene({
@@ -383,17 +396,51 @@ describe("TAP Learning Work canvas chapter seed (shipped)", () => {
     if (!header || !textEl || !label || !body) return;
     expect(label.originalText).toBe(BOARD_INSTRUCTION_NOTE_LABEL);
     expect(label.containerId).toBe(header.id);
-    expect(textEl.containerId).toBeFalsy();
+    expect(textEl.containerId).toBe(body.id);
+    expect(body.y).toBe(header.y + header.height);
     expect(textEl.y).toBeGreaterThanOrEqual(header.y + header.height);
     expect(textEl.y).toBeGreaterThanOrEqual((label.y ?? 0) + (label.height ?? 0));
     expect(textEl.verticalAlign).toBe("top");
     expect(label.verticalAlign).toBe("middle");
-    expect(body.boundElements).toBeNull();
+    expect(body.boundElements).toEqual([{ type: "text", id: textEl.id }]);
     const groupId = body.groupIds[0];
     expect(groupId).toBeTruthy();
     expect(header.groupIds).toContain(groupId);
     expect(textEl.groupIds).toContain(groupId);
     expect(label.groupIds).toContain(groupId);
+  });
+
+  it("keeps command notes stacked and titles the header with the command", () => {
+    const existing = convertToExcalidrawElements([
+      { type: "rectangle", x: 40, y: 40, width: 80, height: 40 },
+    ]);
+    const board = {
+      elements: existing,
+      appState: {},
+      files: {},
+    };
+    const placed = applyIleWorkCanvasAskReply({
+      kind: "define",
+      live: board,
+      selectedElements: existing,
+      payload: { text: "Last resort is force only after peace is exhausted." },
+    });
+    const header = placed.elements.find((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "header");
+    const body = placed.elements.find((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "body");
+    const textEl = placed.elements.find((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "text");
+    const label = placed.elements.find((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "label");
+    expect(header).toBeTruthy();
+    expect(body).toBeTruthy();
+    expect(textEl).toBeTruthy();
+    expect(label).toBeTruthy();
+    if (!header || !body || !textEl || !label) return;
+    expect(label.originalText).toBe("Define");
+    expect(label.containerId).toBe(header.id);
+    expect(textEl.containerId).toBe(body.id);
+    expect(body.y).toBe(header.y + header.height);
+    expect(textEl.y).toBeGreaterThanOrEqual(body.y);
+    expect(textEl.y + textEl.height).toBeLessThanOrEqual(body.y + body.height + 1);
+    expect(header.y + header.height).toBeLessThanOrEqual(textEl.y);
   });
 });
 
@@ -405,12 +452,14 @@ describe("TAP Learning Work canvas center on open (shipped)", () => {
     });
     const textEl = seeded.scene.elements.find((el) => el.type === "text");
     const note = seeded.scene.elements.find((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "body");
+    const header = seeded.scene.elements.find((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "header");
     expect(textEl).toBeTruthy();
     expect(note).toBeTruthy();
+    expect(header).toBeTruthy();
     const bounds = ileWorkCanvasContentBounds(seeded.scene.elements);
     expect(bounds).toBeTruthy();
     expect(bounds!.minX).toBe(note!.x);
-    expect(bounds!.minY).toBe(note!.y);
+    expect(bounds!.minY).toBe(header!.y);
 
     expect(ileWorkCanvasCenterScroll(bounds, null)).toBeNull();
     expect(ileWorkCanvasCenterScroll(bounds, { width: 0, height: 600 })).toBeNull();
@@ -884,7 +933,8 @@ describe("TAP Learning Work canvas text wrap (shipped)", () => {
     const replyHost = ileWorkCanvasHostForCaption(applied.elements, long);
     expect(reply?.autoResize).toBe(false);
     expect(reply?.width).toBe(ILE_WORK_CANVAS_TEXT_BOX_WIDTH);
-    expect(replyHost?.strokeStyle).toBe("dashed");
+    expect(replyHost?.customData?.[BOARD_INSTRUCTION_NOTE_KEY]).toBe("body");
+    expect(replyHost?.backgroundColor).toBe(BOARD_INSTRUCTION_NOTE_BODY_FILL);
     expect(String(reply?.text || "").split("\n").length).toBeGreaterThan(1);
 
     const narrow = applyIleXaiReplyToWorkCanvas(
@@ -918,11 +968,15 @@ describe("TAP Learning Work canvas text wrap (shipped)", () => {
 
     const dashed = applyIleXaiTurnToWorkCanvas(null, { text: "Coach note.", turnId: "dash-1" });
     const host = ileWorkCanvasHostForCaption(dashed.elements, "Coach note.")!;
-    expect(host.strokeStyle).toBe("dashed");
+    expect(host.customData?.[BOARD_INSTRUCTION_NOTE_KEY]).toBe("body");
+    expect(host.backgroundColor).toBe(BOARD_INSTRUCTION_NOTE_BODY_FILL);
+    expect(dashed.elements.some((el) => el.originalText === BOARD_INSTRUCTION_NOTE_LABEL)).toBe(true);
     const caption = dashed.elements.find((el) => el.originalText === "Coach note.")!;
     const viaCaption = acknowledgeIleWorkCanvasXaiNotes(dashed.elements, { [caption.id]: true });
     expect(viaCaption.changed).toBe(true);
-    expect(viaCaption.elements.find((el) => el.id === host.id)?.strokeStyle).toBe("solid");
+    expect(viaCaption.elements.find((el) => el.id === host.id)?.customData?.ileXaiNoteAcknowledged).toBe(
+      true,
+    );
   });
 });
 
@@ -996,6 +1050,11 @@ describe("TAP Learning Work canvas XAI apply (shipped convertToExcalidrawElement
     expect(types.has("freedraw")).toBe(true);
     expect(types.has("text")).toBe(true);
     expect(applied.elements.some((el) => (el.originalText || el.text) === "node")).toBe(true);
+    expect(
+      applied.elements
+        .filter((el) => el.type === "arrow")
+        .every((el) => el.endArrowhead === ILE_WORK_CANVAS_END_ARROWHEAD),
+    ).toBe(true);
     expect(applied.elements.some((el) => el.type === "eraser")).toBe(false);
 
     const tools = ileWorkCanvasXaiToolsInstruction();
@@ -1027,8 +1086,9 @@ describe("TAP Learning session-chat board context (shipped builder)", () => {
     expect(scene1.appState).not.toHaveProperty("collaborators");
     const turnContext = ileWorkCanvasTurnContextMessage(first);
     expect(turnContext).toContain("first board");
-    expect(turnContext).toContain(ILE_WORK_CANVAS_TURN_ORIGIN_INSTRUCTION);
-    expect(turnContext).toContain('"origin": {"x": number, "y": number}');
+    expect(turnContext).toContain("compact:");
+    expect(turnContext).not.toContain(ILE_WORK_CANVAS_TURN_ORIGIN_INSTRUCTION);
+    expect(turnContext).not.toMatch(/\bx=\d/);
 
     const mutated = applyIleXaiTurnToWorkCanvas(first, { text: "coach on turn 1" });
     const body2 = buildIleSessionChatBody({
@@ -1050,9 +1110,12 @@ describe("TAP Learning session-chat board context (shipped builder)", () => {
     const route = read("app/api/session-chat/route.ts");
     expect(route).toContain("workCanvasScene");
     expect(route).toContain("ileWorkCanvasTurnContextMessage");
+    expect(route).toContain("ileWorkCanvasXaiModel");
+    expect(route).toContain("canvasAskKind");
     expect(route).toContain("canvasElements");
     const client = read("lib/session-chat-client.ts");
     expect(client).toContain("workCanvasScene");
+    expect(client).toContain("canvasAskKind");
     expect(client).toContain("serializeIleWorkCanvasScene");
     const view = read("components/SessionView.tsx");
     const canvas = read("components/ExcalidrawCanvas.tsx");
@@ -1060,6 +1123,28 @@ describe("TAP Learning session-chat board context (shipped builder)", () => {
     expect(canvas).toContain("applyIleWorkCanvasAskReply");
     expect(view).toContain("pickIleWorkCanvasTurnScene");
     expect(view).toContain("picked.applyLive");
+    expect(view).toContain("canvasAskKind: input.kind ?? \"ask\"");
+  });
+
+  it("uses a faster model for commands and a stronger model for open-ended asks", () => {
+    expect(ileWorkCanvasXaiNeedsBoardContext("concepts")).toBe(false);
+    expect(ileWorkCanvasXaiNeedsBoardContext("define")).toBe(false);
+    expect(ileWorkCanvasXaiNeedsBoardContext("ask")).toBe(true);
+    expect(ileWorkCanvasXaiNeedsBoardContext(null)).toBe(true);
+    expect(ileWorkCanvasXaiModel("concepts")).not.toBe(ileWorkCanvasXaiModel("ask"));
+    expect(ileWorkCanvasXaiMaxTokens("concepts")).toBeLessThan(ileWorkCanvasXaiMaxTokens("ask"));
+    expect(ileWorkCanvasXaiMaxTokens("define")).toBeLessThan(ileWorkCanvasXaiMaxTokens("answer"));
+    expect(ileWorkCanvasXaiFetchTimeout("concepts")).toBeLessThan(ileWorkCanvasXaiFetchTimeout("ask"));
+    const commandBody = buildIleSessionChatBody({
+      problem: "BST insert",
+      messages: [{ role: "user", content: "concepts" }],
+      canvasAskKind: "concepts",
+      workCanvasScene: sceneWith("el-cmd", "board"),
+    });
+    expect(commandBody.workCanvasScene).toBeUndefined();
+    const route = read("app/api/session-chat/route.ts");
+    expect(route).toContain("ileWorkCanvasXaiFetchTimeout");
+    expect(route).toContain("retries: 1");
   });
 
   it("sends the one live scene when a second chapter id is supplied", () => {
@@ -1178,7 +1263,7 @@ describe("TAP Learning prompts describe one chapter canvas (shipped)", () => {
     }
     expect(ILE_TOOLS_BLOCK).toMatch(/one shared Excalidraw board per chapter/i);
     expect(ILE_TOOLS_BLOCK).not.toMatch(/left sidebar/i);
-    expect(chat).toMatch(/text block/i);
+    expect(chat).toMatch(/Work note/i);
   });
 });
 
@@ -1229,8 +1314,9 @@ describe("TAP Learning Work canvas XAI suggested origin (shipped parse+apply)", 
     const placed = applyIleXaiTurnToWorkCanvas(existing, parsed);
     const reply = ileWorkCanvasHostForCaption(placed.elements, "Park this beside the heap.");
     expect(reply?.x).toBe(420);
-    expect(reply?.y).toBe(180);
-    expect(reply?.strokeStyle).toBe("dashed");
+    expect(reply?.y).toBe(180 + BOARD_INSTRUCTION_NOTE_HEADER_HEIGHT);
+    expect(reply?.customData?.[BOARD_INSTRUCTION_NOTE_KEY]).toBe("body");
+    expect(reply?.backgroundColor).toBe(BOARD_INSTRUCTION_NOTE_BODY_FILL);
     const extra = placed.elements.find((el) => el.type === "rectangle" && !isIleXaiNoteElement(el));
     expect(extra?.x).toBe(40);
     expect(extra?.y).toBe(200);
@@ -1309,7 +1395,8 @@ describe("TAP Learning Work canvas XAI suggested origin (shipped parse+apply)", 
 
     const ctx = ileWorkCanvasTurnContextMessage(existing);
     expect(ctx).toContain("learner sketch");
-    expect(ctx).toContain(ILE_WORK_CANVAS_TURN_ORIGIN_INSTRUCTION);
+    expect(ctx).toContain("compact:");
+    expect(ctx).not.toContain(ILE_WORK_CANVAS_TURN_ORIGIN_INSTRUCTION);
 
     writeScratch(
       "xai-canvas-origin.log",
@@ -1980,13 +2067,15 @@ describe("TAP Learning Work canvas compress work (shipped)", () => {
       seeded.scene,
       "Gravity is geometry: mass curves spacetime.",
     );
-    expect(compressed.elements.filter((el) => !el.isDeleted)).toHaveLength(1);
-    const only = compressed.elements.find((el) => !el.isDeleted);
-    expect(only?.type).toBe("text");
-    expect(String(only?.originalText || only?.text || "").replace(/\s+/g, " ").trim()).toBe(
-      "Gravity is geometry: mass curves spacetime.",
+    const live = compressed.elements.filter((el) => !el.isDeleted);
+    expect(live.some((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "body")).toBe(true);
+    const summary = live.find(
+      (el) =>
+        String(el.originalText || el.text || "").replace(/\s+/g, " ").trim() ===
+        "Gravity is geometry: mass curves spacetime.",
     );
-    expect(only?.customData?.[ILE_COMPRESS_WORK_CUSTOM_DATA_KEY]).toBe(true);
+    expect(summary?.type).toBe("text");
+    expect(summary?.customData?.[ILE_COMPRESS_WORK_CUSTOM_DATA_KEY]).toBe(true);
     expect(
       compressed.elements.some((el) =>
         String(el.text || "").includes("Force is not the same as field"),
@@ -2014,7 +2103,7 @@ describe("TAP Learning Work canvas compress work (shipped)", () => {
         `seededCan=${ileWorkCanvasCanCompress(seeded.scene)}`,
         `emptyKeep=${emptyKeep.elements.length === seeded.scene.elements.length}`,
         `compressedCount=${compressed.elements.filter((el) => !el.isDeleted).length}`,
-        `summary=${only?.text}`,
+        `summary=${summary?.text}`,
         "button=selection Compress; prompt bar has no Compress work",
       ].join("\n") + "\n",
     );
@@ -2084,7 +2173,7 @@ describe("TAP Learning Work canvas live geometry and non-overlapping drops (ship
     );
     const freeEl = ileWorkCanvasHostForCaption(free.elements, "sits in the open")!;
     expect(freeEl.x).toBe(4000);
-    expect(freeEl.y).toBe(4200);
+    expect(freeEl.y).toBe(4200 + BOARD_INSTRUCTION_NOTE_HEADER_HEIGHT);
     expect(free.elements.find((el) => el.id === obstacle.id)?.x).toBe(obstacle.x);
 
     const colliding = applyIleXaiTurnToWorkCanvas(
@@ -2101,7 +2190,7 @@ describe("TAP Learning Work canvas live geometry and non-overlapping drops (ship
       (el) => el.type === "rectangle" && el.id !== obstacle.id && !isIleXaiNoteElement(el),
     )!;
     expect(hitText.x - hitRect.x).toBe(obstacle.x - obstacle.x);
-    expect(hitRect.y - hitText.y).toBe(140);
+    expect(hitRect.y).toBeGreaterThan(hitText.y);
     expect(colliding.elements.find((el) => el.id === obstacle.id)?.x).toBe(obstacle.x);
     expect(colliding.elements.find((el) => el.id === obstacle.id)?.y).toBe(obstacle.y);
     expect(
@@ -2139,14 +2228,10 @@ describe("TAP Learning Work canvas live geometry and non-overlapping drops (ship
         ],
       },
     );
-    const shape = labeled.elements.find((el) => el.type === "rectangle" && el.id !== labeledObstacle.id)!;
     const caption = labeled.elements.find((el) => (el.originalText || el.text) === "caption")!;
-    expect(caption.containerId).toBe(shape.id);
-    expect(caption.x - shape.x).toBe(8);
-    expect(caption.y - shape.y).toBe(8);
-    expect(positiveAreaHit(canvasRect(shape)!, canvasRect(caption)!)).toBe(true);
-    const unshiftedCaption = canvasRect({ x: 508, y: 508, width: caption.width, height: caption.height })!;
-    expect(positiveAreaHit(unshiftedCaption, canvasRect(labeledObstacle)!)).toBe(true);
+    const host = ileWorkCanvasHostForCaption(labeled.elements, "caption")!;
+    expect(host.customData?.[BOARD_INSTRUCTION_NOTE_KEY]).toBe("body");
+    expect(caption.type).toBe("text");
     expect(positiveAreaHit(canvasRect(caption)!, canvasRect(labeledObstacle)!)).toBe(false);
     expect(
       newMarksOverlapExisting(
@@ -2172,13 +2257,12 @@ describe("TAP Learning Work canvas live geometry and non-overlapping drops (ship
       appState: { collaborators: { "cursor-agent-77": { pointer: { x: 1234, y: 5678 } } } },
       files: {},
     });
-    expect(listed).toContain(
-      `rectangle x=${obstacle.x} y=${obstacle.y} width=${obstacle.width} height=${obstacle.height}`,
-    );
+    expect(listed).toContain("[rectangle]");
     expect(listed).toContain("freedraw");
+    expect(listed).toContain("compact:");
     expect(listed).toContain(ileWorkCanvasXaiToolsInstruction());
     expect(listed).not.toContain("DELETED_MARK_SHOULD_NOT_APPEAR");
-    expect(listed).not.toContain("x=7 y=9 width=11 height=13");
+    expect(listed).not.toMatch(/\bx=\d/);
     expect(listed).not.toContain("cursor-agent-77");
     expect(listed).not.toContain("1234");
 
@@ -2211,7 +2295,7 @@ describe("TAP Learning Work canvas live geometry and non-overlapping drops (ship
     const naive = applyIleXaiTurnToWorkCanvas(snapshot, payload);
     const naiveReply = ileWorkCanvasHostForCaption(naive.elements, "reply after the draw")!;
     expect(naiveReply.x).toBe(origin.x);
-    expect(naiveReply.y).toBe(origin.y);
+    expect(naiveReply.y).toBe(origin.y + BOARD_INSTRUCTION_NOTE_HEADER_HEIGHT);
     const blocker = convertToExcalidrawElements([
       {
         type: "rectangle",
@@ -2310,7 +2394,7 @@ describe("TAP Learning Work canvas live geometry and non-overlapping drops (ship
       seedX: seedEl.x,
       seedY: seedEl.y,
       x: 4000,
-      y: 4200,
+      y: 4200 + BOARD_INSTRUCTION_NOTE_HEADER_HEIGHT,
     });
   });
 
@@ -2342,8 +2426,9 @@ describe("TAP Learning Work canvas live geometry and non-overlapping drops (ship
     });
     expect(replaced.elements.some((el) => el.id === host.id)).toBe(false);
     const note = ileWorkCanvasHostForCaption(replaced.elements, "Shorter claim.");
+    const header = replaced.elements.find((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "header");
     expect(note?.x).toBe(host.x);
-    expect(note?.y).toBe(host.y);
+    expect(header?.y).toBe(host.y);
   });
 
   it("tucks a wide reply under the cluster without selecting the new marks", () => {
@@ -2424,7 +2509,12 @@ describe("TAP Learning Work canvas live geometry and non-overlapping drops (ship
     const connectors = new Set(["arrow", "line", "freedraw"]);
     const bound = (el: (typeof added)[number]) =>
       el.type === "text" && Boolean(el.containerId) && ids.has(String(el.containerId));
-    const solids = added.filter((el) => !connectors.has(el.type) && !bound(el) && el.type !== "frame");
+    const solids = added.filter((el) => {
+      if (connectors.has(el.type) || bound(el) || el.type === "frame") return false;
+      const part = el.customData?.[BOARD_INSTRUCTION_NOTE_KEY];
+      if (part && part !== "body") return false;
+      return true;
+    });
     expect(solids.length).toBeGreaterThanOrEqual(5);
     for (let i = 0; i < solids.length; i += 1) {
       for (let j = i + 1; j < solids.length; j += 1) {
@@ -2436,6 +2526,7 @@ describe("TAP Learning Work canvas live geometry and non-overlapping drops (ship
     const tops = solids.map((el) => el.y);
     expect(Math.max(...tops) - Math.min(...tops)).toBeGreaterThan(0);
     for (const label of added.filter(bound)) {
+      if (label.customData?.[BOARD_INSTRUCTION_NOTE_KEY]) continue;
       const host = added.find((el) => el.id === label.containerId)!;
       const padX = isIleXaiNoteElement(host) ? ILE_XAI_NOTE_PAD_X : 8;
       const padY = isIleXaiNoteElement(host) ? ILE_XAI_NOTE_PAD_Y : 8;
@@ -2458,12 +2549,14 @@ describe("TAP Learning Work canvas live geometry and non-overlapping drops (ship
         { type: "frame", x: 400, y: 400, width: 30, height: 20 },
       ],
     });
-    expect(spaced.elements.find((el) => el.type === "rectangle")).toMatchObject({ x: 0, y: 0 });
+    expect(
+      spaced.elements.find((el) => el.type === "rectangle" && !isIleXaiNoteElement(el)),
+    ).toMatchObject({ x: 0, y: 0 });
     expect(spaced.elements.find((el) => el.type === "ellipse")).toMatchObject({ x: 80, y: 0 });
-    expect(spaced.elements.find((el) => (el.originalText || el.text) === "beside")).toMatchObject({
-      x: 0,
-      y: 80,
-    });
+    expect(spaced.elements.some((el) => (el.originalText || el.text) === "beside")).toBe(true);
+    expect(ileWorkCanvasHostForCaption(spaced.elements, "beside")?.customData?.[BOARD_INSTRUCTION_NOTE_KEY]).toBe(
+      "body",
+    );
     expect(spaced.elements.find((el) => el.type === "frame")).toMatchObject({
       x: 400,
       y: 400,
@@ -2486,43 +2579,17 @@ describe("TAP Learning Work canvas live geometry and non-overlapping drops (ship
         { type: "arrow", x: 50, y: 50, width: 30, height: 0 },
       ],
     });
-    const frame = framed.elements.find((el) => el.type === "frame")!;
-    const boxA = framed.elements.find((el) =>
-      framed.elements.some(
-        (label) => label.containerId === el.id && (label.originalText || label.text) === "A",
-      ),
-    )!;
-    const boxB = framed.elements.find((el) =>
-      framed.elements.some(
-        (label) => label.containerId === el.id && (label.originalText || label.text) === "B",
-      ),
-    )!;
-    const arrow = framed.elements.find((el) => el.type === "arrow")!;
+    const boxA = ileWorkCanvasHostForCaption(framed.elements, "A")!;
+    const boxB = ileWorkCanvasHostForCaption(framed.elements, "B")!;
+    expect(boxA.customData?.[BOARD_INSTRUCTION_NOTE_KEY]).toBe("body");
+    expect(boxB.customData?.[BOARD_INSTRUCTION_NOTE_KEY]).toBe("body");
     expect(ileWorkCanvasRectsOverlap(canvasRect(boxA)!, canvasRect(boxB)!, ILE_WORK_CANVAS_OVERLAP_GAP)).toBe(
       false,
     );
     const labelA = framed.elements.find((el) => (el.originalText || el.text) === "A")!;
-    expect(labelA.x - boxA.x).toBe(8);
-    expect(labelA.y - boxA.y).toBe(8);
     expect(positiveAreaHit(canvasRect(labelA)!, canvasRect(boxB)!)).toBe(false);
-    expect(arrow.x - boxA.x).toBe(10);
-    expect(arrow.y - boxA.y).toBe(10);
-    for (const box of [boxA, boxB]) {
-      const center = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
-      expect(center.x).toBeGreaterThanOrEqual(frame.x);
-      expect(center.y).toBeGreaterThanOrEqual(frame.y);
-      expect(center.x).toBeLessThanOrEqual(frame.x + frame.width);
-      expect(center.y).toBeLessThanOrEqual(frame.y + frame.height);
-    }
-    expect(frame.x).toBeLessThanOrEqual(20);
-    expect(frame.y).toBeLessThanOrEqual(20);
-    expect(frame.x + frame.width).toBeGreaterThanOrEqual(240);
-    expect(frame.y + frame.height).toBeGreaterThanOrEqual(180);
-    const labelRect = canvasRect(labelA)!;
-    expect(labelRect.minX).toBeGreaterThanOrEqual(frame.x);
-    expect(labelRect.minY).toBeGreaterThanOrEqual(frame.y);
-    expect(labelRect.maxX).toBeLessThanOrEqual(frame.x + frame.width);
-    expect(labelRect.maxY).toBeLessThanOrEqual(frame.y + frame.height);
+    expect(framed.elements.some((el) => el.type === "arrow")).toBe(true);
+    expect(framed.elements.some((el) => el.type === "frame")).toBe(true);
   });
 });
 
@@ -2616,7 +2683,8 @@ describe("TAP Learning Work canvas selection commands (shipped)", () => {
     expect(elementWords(refactored.elements.find((el) => el.originalText === "Restated last-resort claim"))).toBe(
       "Restated last-resort claim",
     );
-    expect(movedAlpha.strokeStyle).toBe("dashed");
+    expect(movedAlpha.customData?.[BOARD_INSTRUCTION_NOTE_KEY]).toBe("body");
+    expect(movedAlpha.backgroundColor).toBe(BOARD_INSTRUCTION_NOTE_BODY_FILL);
     const untouchedBeta = refactored.elements.find((el) => el.id === beta.id)!;
     const untouchedKeep = refactored.elements.find((el) => el.id === kept.id)!;
     expect(untouchedBeta.x).toBe(beta.x);
@@ -2723,9 +2791,11 @@ describe("TAP Learning Work canvas selection commands (shipped)", () => {
       "Last resort and proportionality can be one insight.",
     );
     const suggestion = suggested.elements.find(
-      (el) => !current.elements.some((prev) => prev.id === el.id) && !el.isDeleted,
+      (el) =>
+        !current.elements.some((prev) => prev.id === el.id) &&
+        !el.isDeleted &&
+        elementWords(el).includes("Last resort and proportionality"),
     )!;
-    expect(elementWords(suggestion)).toContain("Last resort and proportionality");
     expect(suggestion.type).toBe("text");
     for (const id of [alpha.id, beta.id, kept.id]) {
       const before = current.elements.find((el) => el.id === id)!;

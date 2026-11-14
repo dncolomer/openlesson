@@ -160,7 +160,7 @@ export function SessionPolicyProvider({ children }: { children: ReactNode }) {
     const prev = slotRef.current;
     const next = typeof action === "function" ? action(prev) : action;
     slotRef.current = next;
-    setBranchSlot(next);
+    if (next !== prev) setBranchSlot(next);
     const chapterChanged = next.model?.chapterTitle !== prev.model?.chapterTitle;
     const rewound = Boolean(prev.model && prev.model.step > 0 && next.model && next.model.step === 0);
     if (!chapterChanged && !rewound) return;
@@ -355,7 +355,7 @@ function SessionPolicyInferLoop({
       .join("\n");
     const key = `${model.focusId}:${model.step}:${recommended.id}:${canvasNote}`;
     if (suggestAction.current !== recommended.id) {
-      if (suggestAction.current) setSuggestion(null);
+      if (suggestAction.current) setSuggestion((current) => (current == null ? current : null));
       suggestAction.current = recommended.id;
     }
     latestWanted.current = key;
@@ -364,7 +364,9 @@ function SessionPolicyInferLoop({
       observation: recommended.observation || focus?.observation || "",
       intent: recommended.observation.trim() || recommended.leads.trim(),
     });
-    if (suggestKey.current !== key && local) setSuggestion(local);
+    if (suggestKey.current !== key && local) {
+      setSuggestion((current) => (current === local ? current : local));
+    }
     if (suggestInflight.current) return;
     if (suggestKey.current === key) return;
     const sameStep = suggestKey.current.startsWith(`${model.focusId}:${model.step}:${recommended.id}:`);

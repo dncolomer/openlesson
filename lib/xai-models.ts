@@ -8,6 +8,12 @@
 
 export const DEFAULT_MODEL = "grok-4.5";
 
+/** Open-ended canvas questions (ask / answer / draw). */
+export const CANVAS_ASK_MODEL = "grok-4.7";
+
+/** Structured canvas commands (concepts, define, simplify, …). No reasoning loop. */
+export const CANVAS_COMMAND_MODEL = "grok-4.20-0309-non-reasoning";
+
 /**
  * Grok 4.5 reasoning depth. API default is "high" (slow); we default to "low"
  * for interactive latency. Reasoning cannot be fully disabled on grok-4.5.
@@ -17,6 +23,15 @@ export type ReasoningEffort = "low" | "medium" | "high";
 
 /** Prefer low for chat/UX; override to medium/high for hard analysis jobs. */
 export const DEFAULT_REASONING_EFFORT: ReasoningEffort = "low";
+
+/** True when this model id accepts Chat Completions `reasoning_effort`. */
+export function modelSendsReasoningEffort(model: string | null | undefined): boolean {
+  const id = String(model || "").toLowerCase();
+  if (!id || id.includes("non-reasoning")) return false;
+  if (/^grok-4\.(5|6|7)/.test(id)) return true;
+  if (id.includes("grok-4.20") && id.includes("reasoning")) return true;
+  return false;
+}
 
 export interface ModelOption {
   id: string;

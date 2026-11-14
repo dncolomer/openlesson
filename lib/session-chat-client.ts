@@ -4,6 +4,7 @@
 
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import {
+  ileWorkCanvasXaiNeedsBoardContext,
   serializeIleWorkCanvasScene,
   type IleWorkCanvasScene,
   type IleWorkCanvasWorkspaceInput,
@@ -41,6 +42,7 @@ export type IleSessionChatRequestInput = {
   activeStepDescription?: string;
   workCanvasScene?: IleWorkCanvasScene | null;
   workspaceContext?: IleWorkCanvasWorkspaceInput | null;
+  canvasAskKind?: string | null;
 } & Record<string, unknown>;
 
 export function buildIleSessionChatBody(input: IleSessionChatRequestInput): Record<string, unknown> {
@@ -58,13 +60,32 @@ export function buildIleSessionChatBody(input: IleSessionChatRequestInput): Reco
   if (input.activeStepIndex != null) body.activeStepIndex = input.activeStepIndex;
   if (input.activeStepId) body.activeStepId = input.activeStepId;
   if (input.activeStepDescription) body.activeStepDescription = input.activeStepDescription;
-  if (input.workCanvasScene != null) {
-    body.workCanvasScene = serializeIleWorkCanvasScene(input.workCanvasScene);
+  if (
+    input.workCanvasScene != null &&
+    ileWorkCanvasXaiNeedsBoardContext(
+      typeof input.canvasAskKind === "string" ? input.canvasAskKind : null,
+    )
+  ) {
+    const scene = serializeIleWorkCanvasScene(input.workCanvasScene);
+    body.workCanvasScene = { ...scene, files: {} };
   }
   if (input.workspaceContext != null) {
     body.workspaceContext = input.workspaceContext;
   }
+  if (input.canvasAskKind) body.canvasAskKind = input.canvasAskKind;
   return body;
+}
+
+export function sessionChatNetworkErrorMessage(error: unknown): string {
+  const name = error && typeof error === "object" && "name" in error ? String(error.name) : "";
+  if (name === "AbortError" || name === "TimeoutError") {
+    return "Session chat timed out. Try again.";
+  }
+  const message = error instanceof Error ? error.message : String(error || "");
+  if (/failed to fetch|networkerror|load failed/i.test(message)) {
+    return "Session chat could not reach the server. Try again.";
+  }
+  return message.trim() || "Session chat failed";
 }
 
 export async function postIleSessionChat(
@@ -76,16 +97,25 @@ export async function postIleSessionChat(
   data: Record<string, unknown>;
   errorMessage: string;
 }> {
-  const response = await fetchImpl(ILE_SESSION_CHAT_PATH, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(buildIleSessionChatBody(input)),
-  });
-  const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-  return {
-    ok: response.ok,
-    status: response.status,
-    data,
-    errorMessage: errorMessageFromBody(data, "Session chat failed"),
-  };
+  try {
+    const response = await fetchImpl(ILE_SESSION_CHAT_PATH, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(buildIleSessionChatBody(input)),
+    });
+    const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+    return {
+      ok: response.ok,
+      status: response.status,
+      data,
+      errorMessage: errorMessageFromBody(data, "Session chat failed"),
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      status: 0,
+      data: {},
+      errorMessage: sessionChatNetworkErrorMessage(error),
+    };
+  }
 }

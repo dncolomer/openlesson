@@ -20,8 +20,11 @@
 
 import {
   AVAILABLE_MODELS,
+  CANVAS_ASK_MODEL,
+  CANVAS_COMMAND_MODEL,
   DEFAULT_MODEL,
   DEFAULT_REASONING_EFFORT,
+  modelSendsReasoningEffort,
   type ModelId,
   type ModelOption,
   type ReasoningEffort,
@@ -29,8 +32,11 @@ import {
 
 export {
   AVAILABLE_MODELS,
+  CANVAS_ASK_MODEL,
+  CANVAS_COMMAND_MODEL,
   DEFAULT_MODEL,
   DEFAULT_REASONING_EFFORT,
+  modelSendsReasoningEffort,
   type ModelId,
   type ModelOption,
   type ReasoningEffort,
@@ -311,14 +317,17 @@ interface ChatRequestBody {
 }
 
 function buildChatBody(messages: Message[], config: XaiChatConfig): ChatRequestBody {
+  const model = config.model || DEFAULT_MODEL;
   const body: ChatRequestBody = {
-    model: config.model || DEFAULT_MODEL,
+    model,
     messages,
     max_tokens: config.maxTokens,
     temperature: config.temperature,
-    // Explicit effort — xAI defaults grok-4.5 to "high", which is slow for interactive UX.
-    reasoning_effort: config.reasoningEffort ?? DEFAULT_REASONING_EFFORT,
   };
+  if (modelSendsReasoningEffort(model)) {
+    // Explicit effort — xAI defaults grok-4.5 to "high", which is slow for interactive UX.
+    body.reasoning_effort = config.reasoningEffort ?? DEFAULT_REASONING_EFFORT;
+  }
   if (config.responseFormat === "json") {
     body.response_format = { type: "json_object" };
   } else if (config.responseFormat === "json_schema" && config.jsonSchema) {
@@ -709,16 +718,19 @@ export async function callXaiResponses<T = unknown>(
   const maxRetries = options.retries ?? 3;
   const baseDelay = options.retryDelay ?? 1000;
 
+  const model = options.model || DEFAULT_MODEL;
   const body: Record<string, unknown> = {
-    model: options.model || DEFAULT_MODEL,
+    model,
     input: options.input,
     // Avoid "Response is too large to store" on file-heavy requests; we don't use previous_response_id.
     store: options.store ?? false,
-    // Explicit effort — API default for grok-4.5 is "high".
-    reasoning: {
-      effort: options.reasoningEffort ?? DEFAULT_REASONING_EFFORT,
-    },
   };
+  if (modelSendsReasoningEffort(model)) {
+    // Explicit effort — API default for grok-4.5 is "high".
+    body.reasoning = {
+      effort: options.reasoningEffort ?? DEFAULT_REASONING_EFFORT,
+    };
+  }
   if (options.instructions) body.instructions = options.instructions;
   if (typeof options.maxOutputTokens === "number") body.max_output_tokens = options.maxOutputTokens;
   if (typeof options.temperature === "number") body.temperature = options.temperature;

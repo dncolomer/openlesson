@@ -5,7 +5,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { callXai, systemMessage, userMessage } from "@/lib/xai-client";
-import { ileSessionChatCanvasReply } from "@/lib/learn-work-canvas";
+import {
+  ileSessionChatCanvasReply,
+  ileWorkCanvasXaiFetchTimeout,
+  ileWorkCanvasXaiMaxTokens,
+  ileWorkCanvasXaiModel,
+} from "@/lib/learn-work-canvas";
 import { withConversationLanguageInstruction } from "@/lib/tutoring-languages";
 import {
   buildVerificationFlowChatSystemPrompt,
@@ -38,6 +43,7 @@ export async function POST(
           : "";
     const messages = Array.isArray(body.messages) ? body.messages : [];
     const workCanvasScene = (body.workCanvasScene ?? null) as IleWorkCanvasScene | null;
+    const canvasAskKind = typeof body.canvasAskKind === "string" ? body.canvasAskKind : "ask";
 
     const systemPrompt = withConversationLanguageInstruction(
       buildVerificationFlowChatSystemPrompt(flow.topic),
@@ -52,13 +58,16 @@ export async function POST(
             messages: messages as Array<{ role?: string; content?: string }>,
             workCanvasScene,
             workspaceTitle: flow.topic,
+            canvasAskKind,
           }),
         ),
       ],
       {
-        maxTokens: 800,
+        model: ileWorkCanvasXaiModel(canvasAskKind),
+        maxTokens: ileWorkCanvasXaiMaxTokens(canvasAskKind),
         temperature: 0.55,
-        fetchTimeout: 60000,
+        fetchTimeout: ileWorkCanvasXaiFetchTimeout(canvasAskKind),
+        retries: 1,
       },
     );
 

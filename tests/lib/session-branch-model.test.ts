@@ -333,7 +333,7 @@ describe("session branch model", () => {
     expect(notes).toHaveLength(3);
     expect(notes[0]?.x).toBe(80);
     expect(notes[1]?.x).toBe(420);
-    expect(notes[2]?.y).toBe(80 + 280);
+    expect(notes[2]?.y).toBe(80 + 280 + 32);
     expect(notes[0]?.customData?.sessionBranchNote).toBe("root");
     expect(notes[0]?.backgroundColor).not.toBe("transparent");
     expect(first.added.some((element) => element.originalText === "Work")).toBe(true);

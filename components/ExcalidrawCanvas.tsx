@@ -216,6 +216,8 @@ export function ExcalidrawCanvas({
   const sceneDataRef = useRef<IleWorkCanvasScene | null>(null);
   const initialSceneDataRef = useRef(openCanvasScene(initialSceneData, !openFocusRole));
   const onSceneChangeRef = useRef(onSceneChange);
+  const onCanvasChangeRef = useRef(onCanvasChange);
+  onCanvasChangeRef.current = onCanvasChange;
   const onCanvasPowActionsRef = useRef(onCanvasPowActions);
   const publishSessionProof = usePublishSessionProof();
   const publishSessionProofRef = useRef(publishSessionProof);
@@ -693,7 +695,7 @@ export function ExcalidrawCanvas({
   }, []);
 
   const debouncedExportPNG = useCallback(() => {
-    if (!onCanvasChange) return;
+    if (!onCanvasChangeRef.current) return;
     if (exportTimeoutRef.current) {
       clearTimeout(exportTimeoutRef.current);
     }
@@ -703,13 +705,13 @@ export function ExcalidrawCanvas({
       try {
         const dataUrl = await exportToPNG();
         if (dataUrl) {
-          onCanvasChange(dataUrl);
+          onCanvasChangeRef.current?.(dataUrl);
         }
       } finally {
         isExportingRef.current = false;
       }
     }, 500);
-  }, [onCanvasChange, exportToPNG]);
+  }, [exportToPNG]);
 
   const handleChange = useCallback(
     (
@@ -729,7 +731,8 @@ export function ExcalidrawCanvas({
         userClearedRef.current = false;
       }
       sceneDataRef.current = sceneData ?? null;
-      if (!applyingRemoteRef.current) {
+      let remoteWrite = applyingRemoteRef.current;
+      if (!remoteWrite) {
         const acked = acknowledgeIleWorkCanvasXaiNotes(
           sceneData.elements,
           appState?.selectedElementIds ?? {},
@@ -742,9 +745,10 @@ export function ExcalidrawCanvas({
           );
           sceneData.elements = acked.elements;
           sceneDataRef.current = sceneData;
+          remoteWrite = true;
         }
       }
-      if (applyingRemoteRef.current) {
+      if (remoteWrite) {
         canvasPowCollectorRef.current.syncWithoutEmit(sceneData);
       } else {
         const powEvents = canvasPowCollectorRef.current.observeScene(sceneData, {

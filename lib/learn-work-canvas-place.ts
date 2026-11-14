@@ -11,24 +11,25 @@ import {
   type IleWorkCanvasRectSource,
 } from "@/lib/learn-work-canvas-geometry";
 import {
+  BOARD_INSTRUCTION_NOTE_KEY,
+  BOARD_INSTRUCTION_NOTE_LABEL,
   DEFAULT_DIMENSION,
   ILE_XAI_CANVAS_CUSTOM_DATA_KEY,
   ILE_XAI_LOADING_CUSTOM_DATA_KEY,
   ILE_XAI_LOADING_TEXT,
   ILE_XAI_NOTE_CUSTOM_DATA_KEY,
-  ILE_XAI_NOTE_PAD_X,
-  ILE_XAI_NOTE_PAD_Y,
   ILE_WORK_CANVAS_TEXT_BOX_WIDTH,
   TEXT_ORIGIN_X,
   TEXT_ORIGIN_Y,
+  boardInstructionNoteElements,
   convertToExcalidrawElements,
   ileWorkCanvasContentBounds,
   ileWorkCanvasFiniteOrigin,
+  ileWorkCanvasXaiShapeType,
   ileWorkCanvasXaiTextWidth,
   nextXaiTextOrigin,
   normalizeExtraSkeletons,
   serializeIleWorkCanvasScene,
-  wrapIleWorkCanvasText,
   type IleWorkCanvasElement,
   type IleWorkCanvasScene,
   type IleWorkCanvasSkeleton,
@@ -58,6 +59,18 @@ export function ileWorkCanvasHostForCaption(
   if (typeof text.containerId === "string" && text.containerId) {
     return live.find((el) => el.id === text.containerId) ?? text;
   }
+  if (text.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "text") {
+    const groupId = Array.isArray(text.groupIds) ? text.groupIds[0] : null;
+    if (groupId) {
+      const body = live.find(
+        (el) =>
+          el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "body" &&
+          Array.isArray(el.groupIds) &&
+          el.groupIds.includes(groupId),
+      );
+      if (body) return body;
+    }
+  }
   return text;
 }
 
@@ -65,7 +78,33 @@ export function isIleXaiNoteElement(el: IleWorkCanvasElement | null | undefined)
   return Boolean(el?.customData?.[ILE_XAI_NOTE_CUSTOM_DATA_KEY]);
 }
 
-/** Dashed rectangle plus bound caption. Clicking later drops the dash. */
+/** Same Work card as the chapter seed: header bar, body bar, bound copy in each. */
+export function ileWorkCanvasXaiNoteElements(input: {
+  text: string;
+  x: number;
+  y: number;
+  width?: number | null;
+  label?: string | null;
+  customData?: Record<string, unknown> | null;
+}): { elements: IleWorkCanvasElement[]; width: number; height: number } {
+  const text = String(input.text || "").trim();
+  if (!text) return { elements: [], width: 0, height: 0 };
+  const customData = {
+    [ILE_XAI_NOTE_CUSTOM_DATA_KEY]: true,
+    ...(input.customData ?? {}),
+  };
+  return boardInstructionNoteElements({
+    text,
+    x: input.x,
+    y: input.y,
+    label: input.label,
+    textWidth: ileWorkCanvasXaiTextWidth(input.width) ?? ILE_WORK_CANVAS_TEXT_BOX_WIDTH,
+    textCustomData: customData,
+    bodyCustomData: customData,
+  });
+}
+
+/** @deprecated Use ileWorkCanvasXaiNoteElements. Kept for existing imports. */
 export function ileWorkCanvasXaiNoteSkeletons(input: {
   text: string;
   x: number;
@@ -73,28 +112,13 @@ export function ileWorkCanvasXaiNoteSkeletons(input: {
   width?: number | null;
   customData?: Record<string, unknown> | null;
 }): IleWorkCanvasSkeleton[] {
-  const text = String(input.text || "").trim();
-  if (!text) return [];
-  const inner = ileWorkCanvasXaiTextWidth(input.width) ?? ILE_WORK_CANVAS_TEXT_BOX_WIDTH;
-  const wrapped = wrapIleWorkCanvasText(text, inner);
-  return [
-    {
-      type: "rectangle",
-      x: input.x,
-      y: input.y,
-      width: wrapped.width + ILE_XAI_NOTE_PAD_X * 2,
-      height: wrapped.height + ILE_XAI_NOTE_PAD_Y * 2,
-      strokeStyle: "dashed",
-      strokeWidth: 2,
-      backgroundColor: "transparent",
-      roundness: { type: 3 },
-      customData: {
-        [ILE_XAI_NOTE_CUSTOM_DATA_KEY]: true,
-        ...(input.customData ?? {}),
-      },
-      label: { text },
-    },
-  ];
+  return ileWorkCanvasXaiNoteElements(input).elements as IleWorkCanvasSkeleton[];
+}
+
+function ileWorkCanvasExtraNoteCaption(item: IleWorkCanvasSkeleton): string {
+  const type = ileWorkCanvasXaiShapeType(item.type);
+  if (type !== "text" && type !== "rectangle") return "";
+  return String(item.label?.text || item.text || "").trim();
 }
 
 export function acknowledgeIleWorkCanvasXaiNotes(
@@ -113,8 +137,21 @@ export function acknowledgeIleWorkCanvasXaiNotes(
   for (const id of selected) {
     const el = byId.get(id);
     if (!el) continue;
-    if (isIleXaiNoteElement(el) && el.type !== "text") {
-      noteIds.add(el.id);
+    if (isIleXaiNoteElement(el)) {
+      const groupId = Array.isArray(el.groupIds) ? el.groupIds[0] : null;
+      if (groupId) {
+        for (const other of live) {
+          if (
+            other.type !== "text" &&
+            Array.isArray(other.groupIds) &&
+            other.groupIds.includes(groupId) &&
+            isIleXaiNoteElement(other)
+          ) {
+            noteIds.add(other.id);
+          }
+        }
+      }
+      if (el.type !== "text") noteIds.add(el.id);
       continue;
     }
     if (typeof el.containerId === "string" && el.containerId) {
@@ -125,7 +162,7 @@ export function acknowledgeIleWorkCanvasXaiNotes(
   if (!noteIds.size) return { elements: live, changed: false };
   let changed = false;
   const next = live.map((el) => {
-    if (!noteIds.has(el.id) || el.strokeStyle === "solid") return el;
+    if (!noteIds.has(el.id) || el.customData?.ileXaiNoteAcknowledged) return el;
     changed = true;
     return {
       ...el,
@@ -204,37 +241,58 @@ export function placeTurn(
   if (!candidates.length) candidates.push(nextXaiTextOrigin(current.elements));
 
   const turnId = String(payload.turnId || `turn-${Date.now()}`);
+  const noteLabel =
+    String(payload.label || "").trim() || BOARD_INSTRUCTION_NOTE_LABEL;
   const customData = {
     [ILE_XAI_CANVAS_CUSTOM_DATA_KEY]: true,
     turnId,
     author: "xai",
   };
   const materialize = (origin: { x: number; y: number }): IleWorkCanvasElement[] => {
-    const skeletons: IleWorkCanvasSkeleton[] = [];
+    const out: IleWorkCanvasElement[] = [];
     let extraY = origin.y;
     if (text) {
-      const notes = ileWorkCanvasXaiNoteSkeletons({
+      const notes = ileWorkCanvasXaiNoteElements({
         text,
         x: origin.x,
         y: origin.y,
         width: payload.textWidth,
+        label: noteLabel,
         customData,
       });
-      skeletons.push(...notes);
-      extraY = origin.y + (Number(notes[0]?.height) || 0) + 16;
+      out.push(...notes.elements);
+      extraY = origin.y + notes.height + 16;
     }
     for (const item of extra) {
       const x = item.x == null ? origin.x : Number(item.x);
       const y = item.y == null ? extraY : Number(item.y);
-      extraY = y + (Number(item.height) || DEFAULT_DIMENSION) + 16;
-      skeletons.push({
-        ...item,
-        x,
-        y,
-        customData: { ...customData, ...(item.customData ?? {}) },
-      });
+      const caption = ileWorkCanvasExtraNoteCaption(item);
+      const itemData = { ...customData, ...(item.customData ?? {}) };
+      if (caption) {
+        const notes = ileWorkCanvasXaiNoteElements({
+          text: caption,
+          x,
+          y,
+          width: item.width,
+          label: noteLabel,
+          customData: itemData,
+        });
+        out.push(...notes.elements);
+        extraY = y + notes.height + 16;
+        continue;
+      }
+      const converted = convertToExcalidrawElements([
+        {
+          ...item,
+          x,
+          y,
+          customData: itemData,
+        },
+      ]);
+      out.push(...converted);
+      extraY = y + (Number(item.height) || Number(converted[0]?.height) || DEFAULT_DIMENSION) + 16;
     }
-    return convertToExcalidrawElements(skeletons);
+    return out;
   };
 
   const obstacles = ileWorkCanvasPlacementObstacles(current.elements, options?.reserved);
@@ -402,6 +460,24 @@ export function separateIleWorkCanvasGroupOverlaps(
   const frames: IleWorkCanvasElement[] = [];
   const connectors: IleWorkCanvasElement[] = [];
   const solids: IleWorkCanvasElement[] = [];
+  const noteFollowers = new Map<string, IleWorkCanvasElement[]>();
+  const notePartIds = new Set<string>();
+  const notesByGroup = new Map<string, IleWorkCanvasElement[]>();
+  for (const el of list) {
+    if (el.isDeleted || !el.customData?.[BOARD_INSTRUCTION_NOTE_KEY]) continue;
+    const groupId = Array.isArray(el.groupIds) ? String(el.groupIds[0] || "") : "";
+    if (!groupId) continue;
+    const bucket = notesByGroup.get(groupId) ?? [];
+    bucket.push(el);
+    notesByGroup.set(groupId, bucket);
+  }
+  for (const members of notesByGroup.values()) {
+    const body =
+      members.find((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "body") ?? members[0];
+    const others = members.filter((el) => el.id !== body.id);
+    noteFollowers.set(body.id, others);
+    for (const el of others) notePartIds.add(el.id);
+  }
   for (const el of list) {
     if (el.isDeleted) continue;
     if (el.type === "frame") {
@@ -419,7 +495,15 @@ export function separateIleWorkCanvasGroupOverlaps(
       labelsByContainer.set(containerId, bucket);
       continue;
     }
+    if (notePartIds.has(el.id)) continue;
     solids.push(el);
+  }
+  for (const [bodyId, others] of noteFollowers) {
+    const bucket = labelsByContainer.get(bodyId) ?? [];
+    for (const el of others) {
+      if (!bucket.includes(el)) bucket.push(el);
+    }
+    labelsByContainer.set(bodyId, bucket);
   }
 
   const labelsFor = (el: IleWorkCanvasElement): IleWorkCanvasElement[] =>

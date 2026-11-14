@@ -175,6 +175,15 @@ describe("P1–P10 shipped helpers", () => {
     );
     expect(chat.ok).toBe(true);
     expect(chat.data.message).toBe("ok");
+    const dropped = await postIleSessionChat(
+      { problem: "p", messages: [{ role: "user", content: "hi" }] },
+      async () => {
+        throw new TypeError("Failed to fetch");
+      },
+    );
+    expect(dropped.ok).toBe(false);
+    expect(dropped.status).toBe(0);
+    expect(dropped.errorMessage).toMatch(/server/i);
 
     expect(existsSync(join(ROOT, "lib/learn-keyboard-mode.ts"))).toBe(false);
 

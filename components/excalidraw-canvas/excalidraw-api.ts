@@ -72,6 +72,24 @@ export function liveWorkCanvasScene(
   });
 }
 
+type ApplyingRemoteFlag = { current: boolean; locks?: number };
+
+function lockApplyingRemote(flag: ApplyingRemoteFlag) {
+  flag.locks = (flag.locks ?? 0) + 1;
+  flag.current = true;
+}
+
+function unlockApplyingRemote(flag: ApplyingRemoteFlag) {
+  queueMicrotask(() => {
+    const next = (flag.locks ?? 1) - 1;
+    flag.locks = next;
+    if (next <= 0) {
+      flag.locks = 0;
+      flag.current = false;
+    }
+  });
+}
+
 export function commitScene(
   api: LiveExcalidrawAPI | null | undefined,
   next: CommitSceneInput,
@@ -79,8 +97,8 @@ export function commitScene(
 ): boolean {
   if (!api) return false;
   const remote = options?.remote !== false;
-  const flag = options?.applyingRemote;
-  if (remote && flag) flag.current = true;
+  const flag = options?.applyingRemote as ApplyingRemoteFlag | undefined;
+  if (remote && flag) lockApplyingRemote(flag);
   try {
     api.updateScene(next);
     if (options?.scrollTo?.length) {
@@ -88,6 +106,6 @@ export function commitScene(
     }
     return true;
   } finally {
-    if (remote && flag) flag.current = false;
+    if (remote && flag) unlockApplyingRemote(flag);
   }
 }

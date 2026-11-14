@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { Component, memo, useLayoutEffect, type ReactNode } from "react";
+import { Component, memo, useCallback, useLayoutEffect, useRef, type ReactNode } from "react";
 import "@excalidraw/excalidraw/index.css";
 import { commitOpenExcalidrawTextEditor } from "@/lib/excalidraw-text-editor";
 import type { IleWorkCanvasElement, IleWorkCanvasFiles, IleWorkCanvasScene } from "@/lib/learn-work-canvas";
@@ -22,7 +22,24 @@ const ILE_EXCALIDRAW_UI_OPTIONS = {
   },
 };
 
-const IleExcalidrawMount = memo(function IleExcalidrawMount({
+type IleExcalidrawPointerUpdate = {
+  pointer: { x: number; y: number; tool: "pointer" | "laser" };
+  button: "up" | "down";
+  pointersMap: Map<number, unknown>;
+};
+
+type IleExcalidrawChange = (
+  elements: readonly IleWorkCanvasElement[],
+  appState: LiveExcalidrawAppState,
+  files: IleWorkCanvasFiles,
+) => void;
+
+/**
+ * Outer host always takes the latest callbacks. The inner board is memoized
+ * so Excalidraw does not componentDidUpdate (and fire onChange) on every
+ * parent render.
+ */
+function IleExcalidrawMount({
   onApi,
   onChange,
   onPointerUpdate,
@@ -30,35 +47,71 @@ const IleExcalidrawMount = memo(function IleExcalidrawMount({
   viewModeEnabled = false,
 }: {
   onApi: (api: LiveExcalidrawAPI) => void;
-  onChange: (
-    elements: readonly IleWorkCanvasElement[],
-    appState: LiveExcalidrawAppState,
-    files: IleWorkCanvasFiles,
-  ) => void;
-  onPointerUpdate?: (payload: {
-    pointer: { x: number; y: number; tool: "pointer" | "laser" };
-    button: "up" | "down";
-    pointersMap: Map<number, unknown>;
-  }) => void;
+  onChange: IleExcalidrawChange;
+  onPointerUpdate?: (payload: IleExcalidrawPointerUpdate) => void;
   initialData: IleWorkCanvasScene & { scrollToContent?: boolean };
   viewModeEnabled?: boolean;
+}) {
+  const onApiRef = useRef(onApi);
+  const onChangeRef = useRef(onChange);
+  const onPointerUpdateRef = useRef(onPointerUpdate);
+  const initialDataRef = useRef(initialData);
+  onApiRef.current = onApi;
+  onChangeRef.current = onChange;
+  onPointerUpdateRef.current = onPointerUpdate;
+  return (
+    <IleExcalidrawStable
+      onApiRef={onApiRef}
+      onChangeRef={onChangeRef}
+      onPointerUpdateRef={onPointerUpdateRef}
+      initialData={initialDataRef.current}
+      viewModeEnabled={viewModeEnabled}
+      pointerEnabled={Boolean(onPointerUpdate)}
+    />
+  );
+}
+
+const IleExcalidrawStable = memo(function IleExcalidrawStable({
+  onApiRef,
+  onChangeRef,
+  onPointerUpdateRef,
+  initialData,
+  viewModeEnabled,
+  pointerEnabled,
+}: {
+  onApiRef: { current: (api: LiveExcalidrawAPI) => void };
+  onChangeRef: { current: IleExcalidrawChange };
+  onPointerUpdateRef: { current: ((payload: IleExcalidrawPointerUpdate) => void) | undefined };
+  initialData: IleWorkCanvasScene & { scrollToContent?: boolean };
+  viewModeEnabled: boolean;
+  pointerEnabled: boolean;
 }) {
   useLayoutEffect(() => {
     return () => {
       commitOpenExcalidrawTextEditor();
     };
   }, []);
+  const bindApi = useCallback((api: unknown) => {
+    onApiRef.current(api as LiveExcalidrawAPI);
+  }, [onApiRef]);
+  const bindChange = useCallback(
+    (elements: readonly unknown[], appState: unknown, files: unknown) => {
+      onChangeRef.current(
+        elements as readonly IleWorkCanvasElement[],
+        appState as LiveExcalidrawAppState,
+        files as IleWorkCanvasFiles,
+      );
+    },
+    [onChangeRef],
+  );
+  const bindPointerUpdate = useCallback((payload: IleExcalidrawPointerUpdate) => {
+    onPointerUpdateRef.current?.(payload);
+  }, [onPointerUpdateRef]);
   return (
     <Excalidraw
-      excalidrawAPI={(api) => onApi(api as unknown as LiveExcalidrawAPI)}
-      onChange={(elements, appState, files) =>
-        onChange(
-          elements as unknown as readonly IleWorkCanvasElement[],
-          appState as unknown as LiveExcalidrawAppState,
-          files as unknown as IleWorkCanvasFiles,
-        )
-      }
-      onPointerUpdate={onPointerUpdate}
+      excalidrawAPI={bindApi}
+      onChange={bindChange}
+      onPointerUpdate={pointerEnabled ? bindPointerUpdate : undefined}
       initialData={initialData as never}
       theme="dark"
       viewModeEnabled={viewModeEnabled}

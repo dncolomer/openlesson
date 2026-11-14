@@ -415,6 +415,7 @@ export function useSessionField(input: SessionFieldInput) {
           ...guestAccessBody,
           workCanvasScene: serializeIleWorkCanvasScene(input.scene),
           workspaceContext: canvasWorkspaceContext,
+          canvasAskKind: input.kind ?? "ask",
           messages: [...existingMessages, userMsg].map((m) => ({
             role: m.role,
             content: m.content,
@@ -437,7 +438,10 @@ export function useSessionField(input: SessionFieldInput) {
         }));
         return asked;
       } catch (error) {
-        console.error("Canvas ask XAI error:", error);
+        console.error(
+          "Canvas ask XAI error:",
+          error instanceof Error ? error.message : String(error),
+        );
         const fail = t("heliosChat.errorMessage");
         updateChapterWorkspace(chapterKey, (workspace) => ({
           chatMessages: workspace.chatMessages.map((message) =>

@@ -16,6 +16,9 @@ import {
   ileWorkCanvasSplitTextChunks,
   runIleWorkCanvasCommand,
   serializeIleWorkCanvasScene,
+  BOARD_INSTRUCTION_NOTE_KEY,
+  ILE_WORK_CANVAS_END_ARROWHEAD,
+  ILE_WORK_CANVAS_FAN_BRACKET_KEY,
   type IleWorkCanvasElement,
   type IleWorkCanvasScene,
 } from "@/lib/learn-work-canvas";
@@ -157,7 +160,7 @@ describe("work-canvas command buttons actually mutate the board", () => {
     expect(unlabeled.notice).toBe("Select text, or a labeled shape, to split.");
   });
 
-  it("Breakdown keeps the original mark and fans parts out with arrows", () => {
+  it("Breakdown keeps the original mark and fans parts out with one stem into a bracket", () => {
     const source =
       "First clause names the last-resort test. Second clause names discrimination.";
     const free = convertToExcalidrawElements([{ type: "text", text: source, x: 40, y: 80 }]);
@@ -169,7 +172,18 @@ describe("work-canvas command buttons actually mutate the board", () => {
     });
     expect(run.changed).toBe(true);
     expect(run.scene.elements.some((el) => el.id === originalId && !el.isDeleted)).toBe(true);
-    expect(run.scene.elements.some((el) => el.type === "arrow" && !el.isDeleted)).toBe(true);
+    const arrows = run.scene.elements.filter(
+      (el) => el.type === "arrow" && el.customData?.ileBreakdown && !el.isDeleted,
+    );
+    const brackets = run.scene.elements.filter(
+      (el) => el.type === "line" && el.customData?.[ILE_WORK_CANVAS_FAN_BRACKET_KEY] && !el.isDeleted,
+    );
+    expect(arrows).toHaveLength(1);
+    expect(brackets).toHaveLength(1);
+    expect(arrows[0]!.endArrowhead).toBe(ILE_WORK_CANVAS_END_ARROWHEAD);
+    expect(arrows[0]!.endBinding).toEqual(
+      expect.objectContaining({ elementId: brackets[0]!.id }),
+    );
     expect(run.scene.elements.filter((el) => el.customData?.ileBreakdown && el.type === "rectangle").length).toBeGreaterThanOrEqual(
       2,
     );
@@ -202,8 +216,25 @@ describe("work-canvas command buttons actually mutate the board", () => {
       payload: { text: "Last resort\nPeaceful options\nForce" },
     });
     expect(fanned.elements.some((el) => el.id === originalId && !el.isDeleted)).toBe(true);
-    expect(fanned.elements.filter((el) => el.customData?.ileConcepts && el.type === "rectangle").length).toBe(3);
-    expect(fanned.elements.some((el) => el.type === "arrow" && el.customData?.ileConcepts)).toBe(true);
+    expect(
+      fanned.elements.filter(
+        (el) =>
+          el.customData?.ileConcepts && el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "body",
+      ).length,
+    ).toBe(3);
+    const conceptArrows = fanned.elements.filter(
+      (el) => el.type === "arrow" && el.customData?.ileConcepts,
+    );
+    const conceptBrackets = fanned.elements.filter(
+      (el) => el.type === "line" && el.customData?.[ILE_WORK_CANVAS_FAN_BRACKET_KEY],
+    );
+    expect(conceptArrows).toHaveLength(1);
+    expect(conceptBrackets).toHaveLength(1);
+    expect(conceptArrows[0]!.endArrowhead).toBe(ILE_WORK_CANVAS_END_ARROWHEAD);
+    expect(conceptArrows[0]!.endBinding).toEqual(
+      expect.objectContaining({ elementId: conceptBrackets[0]!.id }),
+    );
+    expect(conceptBrackets[0]!.points).toHaveLength(4);
     expect(liveText(fanned).some((line) => line.includes("Peaceful options"))).toBe(true);
     const selectedIds = fanned.appState.selectedElementIds as Record<string, boolean>;
     expect(selectedIds[originalId]).toBe(true);
@@ -230,7 +261,10 @@ describe("work-canvas command buttons actually mutate the board", () => {
     });
     expect(placed.changed).toBe(true);
     expect(liveText(placed.scene).some((line) => line.includes("Stay with the ray"))).toBe(true);
-    expect(placed.parts.some((el) => el.strokeStyle === "dashed")).toBe(true);
+    expect(
+      placed.parts.some((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "body"),
+    ).toBe(true);
+    expect(placed.parts.some((el) => el.originalText === "Focus")).toBe(true);
   });
 
   it("Define asks XAI and places a definition beside the original", () => {

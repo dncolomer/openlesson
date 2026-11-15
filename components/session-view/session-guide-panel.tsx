@@ -11,6 +11,7 @@ import {
 } from "@/components/excalidraw-canvas/command-plate";
 import { IleCraftInsightButton } from "@/components/session-view/learn-canvas-craft-insight";
 import { IleCanvasDictateButton } from "@/components/session-view/learn-canvas-dictate-button";
+import { IleCanvasPointerButton } from "@/components/session-view/learn-canvas-pointer-button";
 import { SessionCommandCheatsheet } from "@/components/session-view/session-command-cheatsheet";
 import { SessionHarnessPanel } from "@/components/session-view/session-harness-panel";
 import { useSessionCanvasCommands } from "@/components/session-view/session-command-bridge";
@@ -52,7 +53,8 @@ export function SessionGuidePanel({
   const commandsHint = !bridge ? "The board is still opening." : null;
   const catalog = ileWorkCanvasCommandsFor(guide);
   const dictateIndex = String(catalog.length + 1).padStart(2, "0");
-  const commitIndex = String(catalog.length + 2).padStart(2, "0");
+  const pointerIndex = String(catalog.length + 2).padStart(2, "0");
+  const commitIndex = String(catalog.length + 3).padStart(2, "0");
   return (
     <div data-session-guide={guide} className="flex h-full min-h-0 flex-col overflow-hidden bg-black text-white">
       <div className="flex shrink-0 border-b border-white/30 bg-black">
@@ -135,7 +137,15 @@ export function SessionGuidePanel({
               transcript={bridge?.dictate?.transcript ?? ""}
               onLiveText={(text) => bridge?.dictate?.write(text, false)}
               onCommit={(text) => bridge?.dictate?.write(text, true)}
+              onAnswer={(text) => bridge?.dictate?.answer(text)}
               onActiveChange={bridge?.dictate?.onActive}
+            />
+            <IleCanvasPointerButton
+              plate
+              index={pointerIndex}
+              active={Boolean(bridge?.pointer?.active)}
+              disabled={!bridge?.pointer}
+              onToggle={() => bridge?.pointer?.toggle()}
             />
           </div>
           <div className="shrink-0 px-1.5 pt-1">

@@ -91,3 +91,21 @@
 [data-ile-excalidraw-host] .excalidraw.theme--dark .dropdown-menu-item--selected {
   background-color: #2a2a2a !important;
 }
+
+/* Laser lives on the main shape island; hide the extra-tools copy. */
+[data-ile-excalidraw-host] .App-toolbar__extra-tools-dropdown [data-testid="toolbar-laser"] {
+  display: none !important;
+}
+
+[data-ile-excalidraw-host] [data-ile-toolbar-laser] {
+  margin: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+[data-ile-excalidraw-host] [data-ile-toolbar-laser][aria-pressed="true"] .ToolIcon__icon {
+  background: #3a3a3a;
+  background-color: #3a3a3a;
+  border-color: #525252;
+}

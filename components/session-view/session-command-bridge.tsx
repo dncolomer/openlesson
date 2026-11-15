@@ -6,6 +6,8 @@ import type { IleWorkCanvasCommandId } from "@/lib/learn-work-canvas-commands";
 export type SessionCanvasDictate = {
   transcript: string;
   write: (text: string, commit: boolean) => void;
+  /** Stop recording and run Answer on the dictate note. */
+  answer: (text: string) => void;
   onActive?: (active: boolean) => void;
 };
 
@@ -13,6 +15,8 @@ export type SessionCanvasCommands = {
   selectionActive: boolean;
   run: (id: IleWorkCanvasCommandId) => void;
   dictate: SessionCanvasDictate | null;
+  /** Laser pointer mode. Click on, click again off. */
+  pointer: { active: boolean; toggle: () => void } | null;
   /** Learn opens the insight form. Other modes leave this empty. */
   craft: { open: () => void } | null;
   autoLayout: { enabled: boolean; toggle: () => void } | null;

@@ -10,20 +10,15 @@ import {
 import {
   BOARD_INSTRUCTION_NOTE_KEY,
   ileWorkCanvasNoteLabel,
-  DEFAULT_FONT_SIZE,
   ILE_WORK_CANVAS_END_ARROWHEAD,
-  ILE_WORK_CANVAS_FONT_FAMILY,
-  ILE_WORK_CANVAS_STROKE_COLOR,
   ILE_WORK_CANVAS_TEXT_BOX_WIDTH,
   TEXT_ORIGIN_X,
   TEXT_ORIGIN_Y,
   convertToExcalidrawElements,
   ileWorkCanvasContentBounds,
   ileWorkCanvasSelectedLive,
-  nextElementId,
   normalizeExtraSkeletons,
   serializeIleWorkCanvasScene,
-  wrapIleWorkCanvasText,
   type IleWorkCanvasElement,
   type IleWorkCanvasScene,
   type IleWorkCanvasSkeleton,
@@ -43,8 +38,17 @@ export const ILE_WORK_CANVAS_COMMANDS = [
   {
     id: "focus",
     label: "Focus",
-    tooltip: "Place the harness next step onto the canvas as a note.",
+    tooltip: "Place the current harness focus onto the canvas as a note.",
     shortcut: "f",
+    needsSelection: false,
+    learnOnly: true,
+    replacesSelection: false,
+  },
+  {
+    id: "next",
+    label: "Next",
+    tooltip: "Place the cheapest next thing to explore, if it is not the focus you are already on.",
+    shortcut: "n",
     needsSelection: false,
     learnOnly: true,
     replacesSelection: false,
@@ -59,17 +63,8 @@ export const ILE_WORK_CANVAS_COMMANDS = [
     replacesSelection: true,
   },
   {
-    id: "split",
-    label: "Split",
-    tooltip: "Break the selected text into two or three separate blocks on the canvas.",
-    shortcut: "x",
-    needsSelection: true,
-    learnOnly: false,
-    replacesSelection: false,
-  },
-  {
     id: "breakdown",
-    label: "Breakdown",
+    label: "Subdivide",
     tooltip: "Keep the original mark and fan its parts into smaller nodes, linked with arrows.",
     shortcut: "b",
     needsSelection: true,
@@ -105,7 +100,8 @@ export const ILE_WORK_CANVAS_COMMANDS = [
   },
   {
     id: "draw",
-    label: "Draw",
+    label: "Do/run",
+    slash: "run",
     tooltip: "Give a visual answer: a diagram of the highlighted question.",
     shortcut: "d",
     needsSelection: true,
@@ -215,6 +211,25 @@ export function ileWorkCanvasCommandReplacesSelection(id: string | null | undefi
   return Boolean(ILE_WORK_CANVAS_COMMANDS.find((row) => row.id === id)?.replacesSelection);
 }
 
+function ileWorkCanvasCommandMatchNames(
+  command: (typeof ILE_WORK_CANVAS_COMMANDS)[number],
+): string[] {
+  const label = command.label.toLowerCase();
+  const names = [
+    command.id,
+    label,
+    label.replace(/[\s/]+/g, ""),
+    label.replace(/[\s/]+/g, "-"),
+  ];
+  if ("slash" in command) {
+    const slash = String(command.slash || "")
+      .trim()
+      .toLowerCase();
+    if (slash) names.push(slash);
+  }
+  return names;
+}
+
 export function filterIleWorkCanvasCommands(
   query: string | null | undefined,
   guide?: string | null,
@@ -224,17 +239,9 @@ export function filterIleWorkCanvasCommands(
     .trim()
     .toLowerCase();
   if (!q) return catalog;
-  return catalog.filter((command) => {
-    const label = command.label.toLowerCase();
-    const compact = label.replace(/[\s/]+/g, "");
-    const dashed = label.replace(/[\s/]+/g, "-");
-    return (
-      command.id.startsWith(q) ||
-      label.startsWith(q) ||
-      compact.startsWith(q) ||
-      dashed.startsWith(q)
-    );
-  });
+  return catalog.filter((command) =>
+    ileWorkCanvasCommandMatchNames(command).some((name) => name.startsWith(q)),
+  );
 }
 
 /** Slash draft. `/ask what is force` is Ask plus the typed question. */
@@ -254,15 +261,9 @@ export function ileCanvasCommandDraft(raw: string | null | undefined): {
   const rest = space === -1 ? "" : body.slice(space + 1).trim();
   const matches = filterIleWorkCanvasCommands(head);
   const exact =
-    ILE_WORK_CANVAS_COMMANDS.find((command) => {
-      const label = command.label.toLowerCase();
-      return (
-        command.id === head ||
-        label === head ||
-        label.replace(/[\s/]+/g, "") === head ||
-        label.replace(/[\s/]+/g, "-") === head
-      );
-    }) ?? (head && matches.length === 1 ? matches[0] : null);
+    ILE_WORK_CANVAS_COMMANDS.find((command) =>
+      ileWorkCanvasCommandMatchNames(command).includes(head),
+    ) ?? (head && matches.length === 1 ? matches[0] : null);
   return { slash: true, query: head, rest, exactId: exact?.id ?? null };
 }
 
@@ -360,110 +361,6 @@ export function expandIleWorkCanvasCommandSelection(
     if (bound) byId.set(bound.id, bound);
   }
   return [...byId.values()];
-}
-
-function ileWorkCanvasWithoutBoundText(
-  elements: IleWorkCanvasElement[],
-  textId: string,
-): IleWorkCanvasElement[] {
-  return elements
-    .filter((el) => el.id !== textId)
-    .map((el) => {
-      const bound = Array.isArray(el.boundElements) ? el.boundElements : null;
-      if (!bound?.length) return el;
-      const nextBound = bound.filter((entry) => {
-        if (!entry || typeof entry !== "object") return true;
-        return (entry as { id?: unknown }).id !== textId;
-      });
-      if (nextBound.length === bound.length) return el;
-      return { ...el, boundElements: nextBound.length ? nextBound : null };
-    });
-}
-
-/**
- * Replace one text element with 2 or 3 live text blocks. Non-text is a no-op.
- * Concatenated chunks preserve the source modulo whitespace.
- * Bound captions unbind from their container so the new blocks stay editable.
- */
-export function splitIleWorkCanvasTextElement(
-  scene: IleWorkCanvasScene | null | undefined,
-  element: Pick<
-    IleWorkCanvasElement,
-    | "id"
-    | "type"
-    | "text"
-    | "originalText"
-    | "x"
-    | "y"
-    | "width"
-    | "height"
-    | "isDeleted"
-    | "fontSize"
-    | "fontFamily"
-    | "strokeColor"
-    | "textAlign"
-    | "opacity"
-    | "containerId"
-  > | null | undefined,
-): { scene: IleWorkCanvasScene; split: boolean; parts: IleWorkCanvasElement[] } {
-  const current = serializeIleWorkCanvasScene(scene);
-  if (!element || element.isDeleted || element.type !== "text") {
-    return { scene: current, split: false, parts: [] };
-  }
-  const source = String(element.originalText || element.text || "");
-  const chunks = ileWorkCanvasSplitTextChunks(source);
-  if (chunks.length < 2) return { scene: current, split: false, parts: [] };
-  const boxWidth = Number(element.width) > 0 ? Number(element.width) : ILE_WORK_CANVAS_TEXT_BOX_WIDTH;
-  const fontSize = Number(element.fontSize) || DEFAULT_FONT_SIZE;
-  const skeletons: IleWorkCanvasSkeleton[] = [];
-  let y = Number(element.y) || 0;
-  const x = Number(element.x) || 0;
-  for (const chunk of chunks) {
-    const wrapped = wrapIleWorkCanvasText(chunk, boxWidth, fontSize);
-    skeletons.push({
-      type: "text",
-      text: chunk,
-      x,
-      y,
-      width: wrapped.width,
-      autoResize: false,
-      fontSize,
-      fontFamily: Number(element.fontFamily) || ILE_WORK_CANVAS_FONT_FAMILY,
-      strokeColor:
-        typeof element.strokeColor === "string" ? element.strokeColor : ILE_WORK_CANVAS_STROKE_COLOR,
-      textAlign: typeof element.textAlign === "string" ? element.textAlign : "left",
-      opacity: element.opacity == null ? 100 : Number(element.opacity) || 0,
-    });
-    y += wrapped.height + 16;
-  }
-  const parts = convertToExcalidrawElements(skeletons);
-  if (parts.length < 2) return { scene: current, split: false, parts: [] };
-  const remaining = ileWorkCanvasWithoutBoundText(current.elements, element.id);
-  const selectedElementIds = Object.fromEntries(parts.map((part) => [part.id, true]));
-  return {
-    scene: {
-      ...current,
-      elements: [...remaining, ...parts],
-      appState: {
-        ...current.appState,
-        selectedElementIds,
-      },
-    },
-    split: true,
-    parts,
-  };
-}
-
-export function splitIleWorkCanvasSelectedText(
-  scene: IleWorkCanvasScene | null | undefined,
-  selectedElements: readonly IleWorkCanvasElement[] | null | undefined,
-): { scene: IleWorkCanvasScene; split: boolean; parts: IleWorkCanvasElement[] } {
-  const current = serializeIleWorkCanvasScene(scene);
-  const expanded = expandIleWorkCanvasCommandSelection(current, selectedElements);
-  const target = ileWorkCanvasSplitTextTarget(current, expanded);
-  if (!target) return { scene: current, split: false, parts: [] };
-  const live = current.elements.find((el) => el.id === target.id) ?? target;
-  return splitIleWorkCanvasTextElement(current, live);
 }
 
 function ileWorkCanvasFanHost(
@@ -590,11 +487,6 @@ function ileWorkCanvasFanConnectors(
     },
   ]);
   if (!bracket) return { connectors, hostBounds };
-  const fanGroupId = nextElementId("fan");
-  for (const el of [...settledNodes, bracket]) {
-    const groups = Array.isArray(el.groupIds) ? el.groupIds : [];
-    if (!groups.includes(fanGroupId)) el.groupIds = [...groups, fanGroupId];
-  }
   const arrow = ileWorkCanvasFanStem(
     host,
     hostRect,
@@ -732,10 +624,10 @@ function ileWorkCanvasCommandPrompt(action: IleWorkCanvasCommandId): string {
   if (action === "simplify") return "Simplify";
   if (action === "refactor") return "Refactor";
   if (action === "answer") return "Answer";
-  if (action === "draw") return "Draw";
+  if (action === "draw") return "Do/run";
   if (action === "focus") return "Focus";
-  if (action === "split") return "Split";
-  if (action === "breakdown") return "Breakdown";
+  if (action === "next") return "Next";
+  if (action === "breakdown") return "Subdivide";
   if (action === "concepts") return "Concepts";
   if (action === "define") return "Define";
   return action;
@@ -744,6 +636,7 @@ function ileWorkCanvasCommandPrompt(action: IleWorkCanvasCommandId): string {
 export function appendIleWorkCanvasFocusNote(
   scene: IleWorkCanvasScene | null | undefined,
   text: string | null | undefined,
+  kind: "focus" | "next" = "focus",
 ): { scene: IleWorkCanvasScene; appended: IleWorkCanvasElement[] } {
   const current = serializeIleWorkCanvasScene(scene);
   const clean = String(text || "").replace(/\s+/g, " ").trim();
@@ -752,8 +645,12 @@ export function appendIleWorkCanvasFocusNote(
     text: clean,
     x: 0,
     y: 0,
-    label: ileWorkCanvasNoteLabel("focus"),
-    customData: { author: "harness", ileHarnessFocus: true },
+    label: ileWorkCanvasNoteLabel(kind),
+    customData: {
+      author: "harness",
+      ileHarnessFocus: kind === "focus",
+      ileHarnessNext: kind === "next",
+    },
   });
   const created = note.elements;
   if (!created.length) return { scene: current, appended: [] };
@@ -842,7 +739,7 @@ export function replaceIleWorkCanvasSelection(
 
 /**
  * Local result of a sidebar/dock command click.
- * Split, Breakdown, and Focus mutate now. Simplify and Refactor drop the
+ * Subdivide, Focus, and Next mutate now. Simplify and Refactor drop the
  * original marks immediately, then ask XAI. Answer, Draw, Concepts, and Define
  * keep the original and ask. A click that cannot run returns a short board notice instead of going silent.
  */
@@ -851,6 +748,8 @@ export function runIleWorkCanvasCommand(input: {
   scene: IleWorkCanvasScene | null | undefined;
   selectedElements: readonly IleWorkCanvasElement[] | null | undefined;
   focusText?: string | null;
+  nextText?: string | null;
+  nextSameAsHere?: boolean;
 }): IleWorkCanvasCommandRun {
   const current = serializeIleWorkCanvasScene(input.scene);
   const selected = expandIleWorkCanvasCommandSelection(current, input.selectedElements);
@@ -865,7 +764,7 @@ export function runIleWorkCanvasCommand(input: {
     notice,
   });
   if (input.action === "focus") {
-    const placed = appendIleWorkCanvasFocusNote(current, input.focusText);
+    const placed = appendIleWorkCanvasFocusNote(current, input.focusText, "focus");
     if (!placed.appended.length) {
       return idle("The harness has nothing to place yet.");
     }
@@ -879,28 +778,26 @@ export function runIleWorkCanvasCommand(input: {
       notice: null,
     };
   }
+  if (input.action === "next") {
+    if (input.nextSameAsHere) {
+      return idle("You are already on the cheapest step to explore.");
+    }
+    const placed = appendIleWorkCanvasFocusNote(current, input.nextText, "next");
+    if (!placed.appended.length) {
+      return idle("The harness has nothing cheaper to explore yet.");
+    }
+    return {
+      scene: placed.scene,
+      changed: true,
+      parts: placed.appended,
+      selected,
+      prompt,
+      ask: null,
+      notice: null,
+    };
+  }
   if (!selected.length) {
     return idle(null);
-  }
-  if (input.action === "split") {
-    const result = splitIleWorkCanvasSelectedText(current, selected);
-    if (result.split) {
-      return {
-        scene: withIleWorkCanvasAutoLayout(result.scene),
-        changed: true,
-        parts: result.parts,
-        selected,
-        prompt,
-        ask: null,
-        notice: null,
-      };
-    }
-    const target = ileWorkCanvasSplitTextTarget(current, selected);
-    return idle(
-      target
-        ? "Need at least two words to split."
-        : "Select text, or a labeled shape, to split.",
-    );
   }
   if (input.action === "breakdown") {
     const result = breakdownIleWorkCanvasSelection(current, selected);
@@ -919,8 +816,8 @@ export function runIleWorkCanvasCommand(input: {
     const target = ileWorkCanvasSplitTextTarget(current, selected);
     return idle(
       target
-        ? "Need at least two words to break down."
-        : "Select text, or a labeled shape, to break down.",
+        ? "Need at least two words to subdivide."
+        : "Select text, or a labeled shape, to subdivide.",
     );
   }
   if (input.action === "simplify" || input.action === "refactor") {

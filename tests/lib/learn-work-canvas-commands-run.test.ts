@@ -1,6 +1,6 @@
 /**
  * Live canvas commands must mutate the scene or post a visible note.
- * Split used to no-op on labeled rectangles and short captions.
+ * Breakdown used to no-op on labeled rectangles and short captions.
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
@@ -40,8 +40,8 @@ describe("work-canvas command buttons actually mutate the board", () => {
   it("lists the live commands and wires sidebar clicks through the runner", () => {
     expect(ILE_WORK_CANVAS_COMMANDS.map((command) => command.id)).toEqual([
       "focus",
+      "next",
       "simplify",
-      "split",
       "breakdown",
       "concepts",
       "define",
@@ -72,31 +72,23 @@ describe("work-canvas command buttons actually mutate the board", () => {
     }
   });
 
-  it("splits free text, labeled rectangles, containerId captions, and clause labels", () => {
+  it("breaks down labeled rectangles, containerId captions, and clause labels", () => {
     const source =
       "First clause names the last-resort test. Second clause names discrimination.";
-    const free = convertToExcalidrawElements([{ type: "text", text: source, x: 40, y: 80 }]);
-    const freeRun = runIleWorkCanvasCommand({
-      action: "split",
-      scene: sceneOf(free),
-      selectedElements: free,
-    });
-    expect(freeRun.changed).toBe(true);
-    expect(freeRun.parts.length).toBeGreaterThanOrEqual(2);
-    expect(freeRun.notice).toBeNull();
-
     const labeled = convertToExcalidrawElements([
       { type: "rectangle", x: 20, y: 20, width: 200, height: 80, label: { text: source } },
     ]);
     const container = labeled.find((el) => el.type === "rectangle")!;
     const labeledRun = runIleWorkCanvasCommand({
-      action: "split",
+      action: "breakdown",
       scene: sceneOf(labeled),
       selectedElements: [container],
     });
     expect(labeledRun.changed).toBe(true);
-    expect(labeledRun.parts.length).toBeGreaterThanOrEqual(2);
-    expect(labeledRun.parts.every((el) => !el.containerId)).toBe(true);
+    expect(
+      labeledRun.scene.elements.filter((el) => el.customData?.ileBreakdown && el.type === "rectangle")
+        .length,
+    ).toBeGreaterThanOrEqual(2);
 
     const caption = labeled.find((el) => el.type === "text")!;
     const stripped = labeled.map((el) =>
@@ -105,27 +97,27 @@ describe("work-canvas command buttons actually mutate the board", () => {
     expect(stripped.find((el) => el.id === container.id)?.boundElements).toBeNull();
     expect(caption.containerId).toBe(container.id);
     const byContainer = runIleWorkCanvasCommand({
-      action: "split",
+      action: "breakdown",
       scene: sceneOf(stripped),
       selectedElements: [stripped.find((el) => el.id === container.id)!],
     });
     expect(byContainer.changed).toBe(true);
-    expect(byContainer.parts.length).toBeGreaterThanOrEqual(2);
+    expect(
+      byContainer.scene.elements.filter((el) => el.customData?.ileBreakdown && el.type === "rectangle")
+        .length,
+    ).toBeGreaterThanOrEqual(2);
 
     expect(ileWorkCanvasSplitTextChunks("Force: Newton's first law").length).toBeGreaterThanOrEqual(2);
     const clause = convertToExcalidrawElements([
       { type: "text", text: "Force: Newton's first law", x: 0, y: 0 },
     ]);
     const clauseRun = runIleWorkCanvasCommand({
-      action: "split",
+      action: "breakdown",
       scene: sceneOf(clause),
       selectedElements: clause,
     });
     expect(clauseRun.changed).toBe(true);
-    expect(clauseRun.parts.map((el) => String(el.originalText || el.text || "").trim())).toEqual([
-      "Force",
-      "Newton's first law",
-    ]);
+    expect(liveText(clauseRun.scene)).toEqual(expect.arrayContaining(["Force", "Newton's first law"]));
   });
 
   it("stays quiet when nothing is selected", () => {
@@ -138,29 +130,29 @@ describe("work-canvas command buttons actually mutate the board", () => {
     expect(empty.notice).toBeNull();
   });
 
-  it("posts a board notice when Split cannot run, instead of going silent", () => {
+  it("posts a board notice when Subdivide cannot run, instead of going silent", () => {
     const word = convertToExcalidrawElements([{ type: "text", text: "Force", x: 0, y: 0 }]);
     const short = runIleWorkCanvasCommand({
-      action: "split",
+      action: "breakdown",
       scene: sceneOf(word),
       selectedElements: word,
     });
     expect(short.changed).toBe(false);
-    expect(short.notice).toBe("Need at least two words to split.");
+    expect(short.notice).toBe("Need at least two words to subdivide.");
 
     const rect = convertToExcalidrawElements([
       { type: "rectangle", x: 0, y: 0, width: 80, height: 40 },
     ]);
     const unlabeled = runIleWorkCanvasCommand({
-      action: "split",
+      action: "breakdown",
       scene: sceneOf(rect),
       selectedElements: rect,
     });
     expect(unlabeled.changed).toBe(false);
-    expect(unlabeled.notice).toBe("Select text, or a labeled shape, to split.");
+    expect(unlabeled.notice).toBe("Select text, or a labeled shape, to subdivide.");
   });
 
-  it("Breakdown keeps the original mark and fans parts out with one stem into a bracket", () => {
+  it("Subdivide keeps the original mark and fans parts out with one stem into a bracket", () => {
     const source =
       "First clause names the last-resort test. Second clause names discrimination.";
     const free = convertToExcalidrawElements([{ type: "text", text: source, x: 40, y: 80 }]);
@@ -235,6 +227,16 @@ describe("work-canvas command buttons actually mutate the board", () => {
       expect.objectContaining({ elementId: conceptBrackets[0]!.id }),
     );
     expect(conceptBrackets[0]!.points).toHaveLength(4);
+    const conceptBodies = fanned.elements.filter(
+      (el) =>
+        el.customData?.ileConcepts && el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "body",
+    );
+    const cardGroups = conceptBodies.map((el) => (el.groupIds ?? [])[0]).filter(Boolean);
+    expect(new Set(cardGroups).size).toBe(conceptBodies.length);
+    const bracketGroups = new Set(conceptBrackets[0]!.groupIds ?? []);
+    for (const body of conceptBodies) {
+      expect((body.groupIds ?? []).some((id) => bracketGroups.has(id))).toBe(false);
+    }
     expect(liveText(fanned).some((line) => line.includes("Peaceful options"))).toBe(true);
     const selectedIds = fanned.appState.selectedElementIds as Record<string, boolean>;
     expect(selectedIds[originalId]).toBe(true);
@@ -265,6 +267,38 @@ describe("work-canvas command buttons actually mutate the board", () => {
       placed.parts.some((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "body"),
     ).toBe(true);
     expect(placed.parts.some((el) => el.originalText === "Focus")).toBe(true);
+  });
+
+  it("Next places the cheapest other step, and stays quiet when that is the current focus", () => {
+    const board = sceneOf([]);
+    const empty = runIleWorkCanvasCommand({
+      action: "next",
+      scene: board,
+      selectedElements: [],
+    });
+    expect(empty.changed).toBe(false);
+    expect(empty.notice).toBe("The harness has nothing cheaper to explore yet.");
+
+    const same = runIleWorkCanvasCommand({
+      action: "next",
+      scene: board,
+      selectedElements: [],
+      nextSameAsHere: true,
+      nextText: "When is force last?",
+    });
+    expect(same.changed).toBe(false);
+    expect(same.notice).toBe("You are already on the cheapest step to explore.");
+
+    const placed = runIleWorkCanvasCommand({
+      action: "next",
+      scene: board,
+      selectedElements: [],
+      nextText: "Which peaceful option is still open?",
+    });
+    expect(placed.changed).toBe(true);
+    expect(liveText(placed.scene).some((line) => line.includes("peaceful option"))).toBe(true);
+    expect(placed.parts.some((el) => el.originalText === "Next")).toBe(true);
+    expect(placed.parts.some((el) => el.customData?.ileHarnessNext)).toBe(true);
   });
 
   it("Define asks XAI and places a definition beside the original", () => {

@@ -6,7 +6,6 @@
 import { ILE_EXCALIDRAW_POW_TOOLS } from "@/lib/learn-work-canvas-prompts";
 import {
   ileWorkCanvasHasLiveElements,
-  serializeIleWorkCanvasScene,
   type IleWorkCanvasElement,
   type IleWorkCanvasScene,
 } from "@/lib/learn-work-canvas-scene";
@@ -38,8 +37,8 @@ export const ILE_WORK_CANVAS_USE_AND_PROMPT_ACTIONS = [
 /** Canvas command buttons. Each id is its own `tool_action`, not `expand_more`. */
 export const ILE_WORK_CANVAS_COMMAND_POW_IDS = [
   "focus",
+  "next",
   "simplify",
-  "split",
   "breakdown",
   "concepts",
   "define",
@@ -59,6 +58,7 @@ export const ILE_WORK_CANVAS_RETIRED_COMMAND_POW_IDS = [
   "elaborate",
   "selective-compression",
   "clear-overlaps",
+  "split",
 ] as const;
 
 export type IleWorkCanvasCommandPowId = (typeof ILE_WORK_CANVAS_COMMAND_POW_IDS)[number];
@@ -155,6 +155,79 @@ export function ileWorkCanvasGestureBusy(
 
 function liveElements(scene: IleWorkCanvasScene): IleWorkCanvasElement[] {
   return scene.elements.filter((el) => el && !el.isDeleted && el.id);
+}
+
+function snapshotActiveTool(raw: unknown): unknown {
+  if (typeof raw === "string") return raw;
+  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    const type = (raw as { type?: unknown }).type;
+    return typeof type === "string" ? { type } : {};
+  }
+  return raw ?? {};
+}
+
+function snapshotPowElement(el: IleWorkCanvasElement): IleWorkCanvasElement {
+  return {
+    id: String(el.id || ""),
+    type: String(el.type || ""),
+    x: Number(el.x) || 0,
+    y: Number(el.y) || 0,
+    width: Number(el.width) || 0,
+    height: Number(el.height) || 0,
+    angle: Number(el.angle) || 0,
+    strokeColor: String(el.strokeColor || ""),
+    backgroundColor: String(el.backgroundColor || ""),
+    fillStyle: "",
+    strokeWidth: 0,
+    strokeStyle: "",
+    roughness: 0,
+    opacity: 0,
+    groupIds: [],
+    frameId: null,
+    roundness: null,
+    seed: 0,
+    version: Number(el.version) || 0,
+    versionNonce: Number(el.versionNonce) || 0,
+    isDeleted: Boolean(el.isDeleted),
+    boundElements: null,
+    updated: 0,
+    link: null,
+    locked: false,
+    text: el.text,
+    originalText: el.originalText,
+    fileId: el.fileId,
+    points: Array.isArray(el.points)
+      ? el.points.map((pair) => (Array.isArray(pair) ? [...pair] : pair))
+      : undefined,
+  };
+}
+
+/**
+ * PoW baseline: id/geom/text/points/colors plus selection and active tool.
+ * Skips files and the rest of appState so pan/zoom does not clone the board.
+ * Copies primitives so Excalidraw in-place mutation cannot collapse diffs.
+ */
+export function snapshotIleWorkCanvasPowScene(
+  scene: IleWorkCanvasScene | null | undefined,
+): IleWorkCanvasScene {
+  if (!scene || typeof scene !== "object") {
+    return { elements: [], appState: {}, files: {} };
+  }
+  const elements = Array.isArray(scene.elements) ? scene.elements : [];
+  const appState = scene.appState && typeof scene.appState === "object" ? scene.appState : {};
+  const selectedRaw = appState.selectedElementIds;
+  const selectedElementIds =
+    selectedRaw && typeof selectedRaw === "object" && !Array.isArray(selectedRaw)
+      ? { ...(selectedRaw as Record<string, unknown>) }
+      : {};
+  return {
+    elements: elements.map((el) => snapshotPowElement(el)),
+    appState: {
+      selectedElementIds,
+      activeTool: snapshotActiveTool(appState.activeTool),
+    },
+    files: {},
+  };
 }
 
 function indexById(elements: readonly IleWorkCanvasElement[]): Map<string, IleWorkCanvasElement> {
@@ -312,14 +385,14 @@ export function classifyIleWorkCanvasSceneDiff(
   prevScene: IleWorkCanvasScene | null | undefined,
   nextScene: IleWorkCanvasScene | null | undefined,
 ): IleWorkCanvasPowEvent[] {
-  const next = serializeIleWorkCanvasScene(nextScene);
+  const next = snapshotIleWorkCanvasPowScene(nextScene);
   if (isRetiredIleWorkToolName(ileWorkCanvasActiveToolName(next.appState))) return [];
   if (!prevScene) {
     const created = liveElements(next);
     if (!created.length) return [];
     return eventsForCreated(created);
   }
-  const prev = serializeIleWorkCanvasScene(prevScene);
+  const prev = snapshotIleWorkCanvasPowScene(prevScene);
   if (isRetiredIleWorkToolName(ileWorkCanvasActiveToolName(prev.appState))) return [];
 
   const prevLive = liveElements(prev);
@@ -592,8 +665,7 @@ export function shouldLogIleSidebarToolSwitch(toolName: string | null | undefine
 export function ileWorkCanvasElementContentFingerprint(
   scene: IleWorkCanvasScene | null | undefined,
 ): string {
-  const restorable = serializeIleWorkCanvasScene(scene);
-  const live = liveElements(restorable);
+  const live = liveElements(snapshotIleWorkCanvasPowScene(scene));
   if (!live.length) return "";
   try {
     return JSON.stringify(
@@ -640,14 +712,14 @@ export class IleWorkCanvasPowCollector {
   private gestureBusy = false;
 
   reset(scene?: IleWorkCanvasScene | null) {
-    const next = scene ? serializeIleWorkCanvasScene(scene) : null;
+    const next = scene ? snapshotIleWorkCanvasPowScene(scene) : null;
     this.baseline = next;
     this.latest = next;
     this.gestureBusy = false;
   }
 
   syncWithoutEmit(scene: IleWorkCanvasScene | null | undefined) {
-    const next = serializeIleWorkCanvasScene(scene);
+    const next = snapshotIleWorkCanvasPowScene(scene);
     this.baseline = next;
     this.latest = next;
   }
@@ -656,18 +728,22 @@ export class IleWorkCanvasPowCollector {
     scene: IleWorkCanvasScene | null | undefined,
     opts?: CollectorObserveOpts,
   ): IleWorkCanvasPowEvent[] {
-    const next = serializeIleWorkCanvasScene(scene);
+    const incoming =
+      scene && typeof scene === "object"
+        ? scene
+        : ({ elements: [], appState: {}, files: {} } satisfies IleWorkCanvasScene);
     // Excalidraw fires a bare empty scene on mount. That is not last-element
     // delete/erase, which leave isDeleted remnants the classifier must emit.
-    if (isIleWorkCanvasMountEmptyWipe(this.baseline, next)) {
+    if (isIleWorkCanvasMountEmptyWipe(this.baseline, incoming)) {
       return [];
     }
-    this.latest = next;
     const busy = Boolean(opts?.gestureBusy);
     if (busy) {
       this.gestureBusy = true;
       return [];
     }
+    const next = snapshotIleWorkCanvasPowScene(incoming);
+    this.latest = next;
     const events = classifyIleWorkCanvasSceneDiff(this.baseline, next);
     this.baseline = next;
     this.gestureBusy = false;

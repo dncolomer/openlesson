@@ -24,6 +24,7 @@ import {
 import type { IleWorkCanvasElement } from "@/lib/learn-work-canvas";
 import { ileCanvasCraftInsightUsable, ileCanvasShowsCraftInsight } from "@/lib/learn-turn-insights";
 import { IleCanvasDictateButton } from "@/components/session-view/learn-canvas-dictate-button";
+import { IleCanvasPointerButton } from "@/components/session-view/learn-canvas-pointer-button";
 import {
   IleCanvasCraftInsightForm,
   IleCraftInsightButton,
@@ -87,6 +88,8 @@ export function CanvasPromptBar({
   selectedCanvasElements,
   autoLayoutEnabled = false,
   onToggleAutoLayout,
+  pointerActive = false,
+  onTogglePointer,
   sessionMarkMode,
   sessionMarkQuestions,
   sessionMarkListKey,
@@ -102,18 +105,20 @@ export function CanvasPromptBar({
   slashBarOpen: boolean;
   commandText: string;
   setCommandText: (value: string) => void;
-  handleQuickAction: (id: IleWorkCanvasCommandId) => void;
+  handleQuickAction: (id: IleWorkCanvasCommandId, selected?: IleWorkCanvasElement[]) => void;
   commandInputRef: RefObject<HTMLInputElement | null>;
   craftInsight?: IleCanvasCraftInsightConfig | null;
   setCraftInsightOpen: (open: boolean) => void;
   dictateTranscript?: string;
   viewModeEnabled?: boolean;
-  writeDictatedText: (text: string, commit: boolean) => void;
+  writeDictatedText: (text: string, commit: boolean) => IleWorkCanvasElement[];
   onDictateActive?: (active: boolean) => void;
   craftInsightOpen: boolean;
   selectedCanvasElements: () => IleWorkCanvasElement[];
   autoLayoutEnabled?: boolean;
   onToggleAutoLayout?: () => void;
+  pointerActive?: boolean;
+  onTogglePointer?: () => void;
   sessionMarkMode?: SessionMarkMode | null;
   sessionMarkQuestions?: readonly { id?: string | null; text?: string | null }[];
   sessionMarkListKey?: string | null;
@@ -180,6 +185,8 @@ export function CanvasPromptBar({
   const dictateOn = dictateTranscript !== undefined && !viewModeEnabled;
   const toggleAutoLayoutRef = useRef(onToggleAutoLayout);
   toggleAutoLayoutRef.current = onToggleAutoLayout;
+  const togglePointerRef = useRef(onTogglePointer);
+  togglePointerRef.current = onTogglePointer;
   useEffect(() => {
     publishCommands({
       selectionActive: canvasSelectionActive,
@@ -190,8 +197,21 @@ export function CanvasPromptBar({
       dictate: dictateOn
         ? {
             transcript: dictateTranscript ?? "",
-            write: (text, commit) => writeDictatedRef.current(text, commit),
+            write: (text, commit) => {
+              writeDictatedRef.current(text, commit);
+            },
+            answer: (text) => {
+              const selected = writeDictatedRef.current(text, true);
+              if (!selected.length) return;
+              runCommandRef.current("answer", selected);
+            },
             onActive: (active) => dictateActiveRef.current?.(active),
+          }
+        : null,
+      pointer: togglePointerRef.current
+        ? {
+            active: pointerActive,
+            toggle: () => togglePointerRef.current?.(),
           }
         : null,
       craft: showCraftInsight ? { open: () => openCraftRef.current(true) } : null,
@@ -207,6 +227,7 @@ export function CanvasPromptBar({
     canvasSelectionActive,
     dictateOn,
     dictateTranscript,
+    pointerActive,
     publishCommands,
     showCraftInsight,
   ]);
@@ -432,7 +453,19 @@ export function CanvasPromptBar({
                       transcript={dictateTranscript}
                       onLiveText={(text) => writeDictatedText(text, false)}
                       onCommit={(text) => writeDictatedText(text, true)}
+                      onAnswer={(text) => {
+                        const selected = writeDictatedText(text, true);
+                        if (!selected.length) return;
+                        handleQuickAction("answer", selected);
+                      }}
                       onActiveChange={onDictateActive}
+                    />
+                  ) : null}
+                  {onTogglePointer ? (
+                    <IleCanvasPointerButton
+                      square={rail}
+                      active={pointerActive}
+                      onToggle={onTogglePointer}
                     />
                   ) : null}
                   </div>

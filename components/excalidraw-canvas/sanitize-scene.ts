@@ -7,11 +7,14 @@ import {
 
 // Excalidraw's appState contains runtime-only fields like collaborators
 // (a Map) that do not survive JSON storage. Persist only restorable state.
-function sanitizeSceneData(scene: Partial<IleWorkCanvasScene> | null | undefined): IleWorkCanvasScene {
+function sanitizeSceneData(
+  scene: Partial<IleWorkCanvasScene> | null | undefined,
+  options?: { migrateLegacyStrokeWidth?: boolean; migrateLegacyRoundness?: boolean },
+): IleWorkCanvasScene {
   if (!scene) {
     return {
       elements: [],
-      appState: withIleWorkCanvasGridAppState({}),
+      appState: withIleWorkCanvasGridAppState({}, options),
       files: {},
     };
   }
@@ -20,7 +23,7 @@ function sanitizeSceneData(scene: Partial<IleWorkCanvasScene> | null | undefined
   };
   return {
     elements: scene.elements ?? [],
-    appState: withIleWorkCanvasGridAppState(appState),
+    appState: withIleWorkCanvasGridAppState(appState, options),
     files: scene.files ?? {},
   };
 }
@@ -29,7 +32,10 @@ export function openCanvasScene(
   scene: IleWorkCanvasScene | null | undefined,
   scrollToContent: boolean,
 ) {
-  const clean = sanitizeSceneData(scene);
+  const clean = sanitizeSceneData(scene, {
+    migrateLegacyStrokeWidth: true,
+    migrateLegacyRoundness: true,
+  });
   const next = {
     ...clean,
     elements: withoutSessionBranchNotes(clean.elements ?? []),

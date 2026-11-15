@@ -14,6 +14,7 @@ vi.mock("@/app/learn-excalidraw-theme.css", () => ({}));
 import { IleCanvasDictateButton } from "@/components/session-view/learn-canvas-dictate-button";
 import {
   ILE_CANVAS_DICTATE_AUTHOR,
+  ILE_CANVAS_DICTATE_ANSWER_LABEL,
   ILE_CANVAS_DICTATE_LABEL,
   ILE_CANVAS_DICTATE_STOP_LABEL,
   advanceIleDictateCapture,
@@ -23,6 +24,10 @@ import {
   startIleDictateCapture,
   syncIleDictatedTextOnWorkCanvas,
 } from "@/lib/learn-canvas-dictate";
+import {
+  BOARD_INSTRUCTION_NOTE_KEY,
+  ileWorkCanvasViewportCenter,
+} from "@/lib/learn-work-canvas";
 import {
   ILE_WORK_CANVAS_DICTATE_ACTION,
   IleWorkCanvasPowCollector,
@@ -55,7 +60,7 @@ function promptBar(mode: SessionMarkMode) {
       handleQuickAction: () => {},
       commandInputRef: { current: null },
       setCraftInsightOpen: () => {},
-      writeDictatedText: () => {},
+      writeDictatedText: () => [],
       craftInsightOpen: false,
       selectedCanvasElements: () => [],
       selectedMarkTexts: [],
@@ -102,34 +107,73 @@ describe("canvas dictate capture", () => {
   });
 });
 
+function dictateBodyText(
+  scene: { elements: { id: string; originalText?: string; text?: string; customData?: Record<string, unknown> | null }[] },
+  elementId: string | null,
+) {
+  return scene.elements.find((el) => el.id === elementId);
+}
+
+function dictateLabel(
+  scene: { elements: { originalText?: string; text?: string; customData?: Record<string, unknown> | null }[] },
+) {
+  return scene.elements.find((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "label");
+}
+
 describe("canvas dictate live text", () => {
-  it("keeps one element and replaces its text as the transcript grows", () => {
+  it("opens a Dictate note on start and fills the same card as speech arrives", () => {
+    const opened = syncIleDictatedTextOnWorkCanvas(
+      { elements: [], appState: {}, files: {} },
+      "",
+      null,
+      { persistEmpty: true },
+    );
+    expect(opened.changed).toBe(true);
+    expect(opened.elementId).toBeTruthy();
+    expect(String(dictateLabel(opened.scene)?.originalText || dictateLabel(opened.scene)?.text || "")).toBe(
+      "Dictate",
+    );
+    expect(String(dictateBodyText(opened.scene, opened.elementId)?.originalText || "")).toBe("");
+    expect(opened.scene.elements.some((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "body")).toBe(
+      true,
+    );
+
     let capture = startIleDictateCapture("already said");
     let live = advanceIleDictateCapture(capture, "already said hello");
     capture = live.capture;
     expect(live.text).toBe("hello");
 
-    const first = syncIleDictatedTextOnWorkCanvas(
-      { elements: [], appState: {}, files: {} },
-      live.text,
-      null,
-    );
+    const first = syncIleDictatedTextOnWorkCanvas(opened.scene, live.text, opened.elementId, {
+      persistEmpty: true,
+    });
     expect(first.changed).toBe(true);
-    expect(first.elementId).toBeTruthy();
-    expect(first.scene.elements).toHaveLength(1);
-    expect(first.scene.elements[0]?.originalText).toBe("hello");
-    expect(first.scene.elements[0]?.customData).toMatchObject({ author: ILE_CANVAS_DICTATE_AUTHOR });
+    expect(first.elementId).toBe(opened.elementId);
+    expect(dictateBodyText(first.scene, first.elementId)?.originalText).toBe("hello");
+    expect(dictateBodyText(first.scene, first.elementId)?.customData).toMatchObject({
+      author: ILE_CANVAS_DICTATE_AUTHOR,
+    });
 
     live = advanceIleDictateCapture(capture, "already said hello world");
-    const second = syncIleDictatedTextOnWorkCanvas(first.scene, live.text, first.elementId);
+    const second = syncIleDictatedTextOnWorkCanvas(first.scene, live.text, first.elementId, {
+      persistEmpty: true,
+    });
     expect(second.elementId).toBe(first.elementId);
-    expect(second.scene.elements).toHaveLength(1);
-    expect(second.scene.elements[0]?.originalText).toBe("hello world");
-    expect(second.scene.elements[0]?.customData).not.toMatchObject({ ileXaiTurn: true });
+    expect(dictateBodyText(second.scene, second.elementId)?.originalText).toBe("hello world");
+    expect(dictateBodyText(second.scene, second.elementId)?.customData).not.toMatchObject({
+      ileXaiTurn: true,
+    });
 
-    const same = syncIleDictatedTextOnWorkCanvas(second.scene, live.text, second.elementId);
+    const same = syncIleDictatedTextOnWorkCanvas(second.scene, live.text, second.elementId, {
+      persistEmpty: true,
+    });
     expect(same.changed).toBe(false);
     expect(same.elementId).toBe(first.elementId);
+
+    const closed = syncIleDictatedTextOnWorkCanvas(opened.scene, "", opened.elementId);
+    expect(closed.elementId).toBeNull();
+    expect(closed.scene.elements.some((el) => el.customData?.author === ILE_CANVAS_DICTATE_AUTHOR)).toBe(
+      false,
+    );
   });
 
   it("records the finished transcript as canvas dictate proof, not draw_text", () => {
@@ -161,7 +205,7 @@ describe("canvas dictate live text", () => {
 });
 
 describe("canvas dictate text element", () => {
-  it("adds one learner text element and leaves an empty note off the board", () => {
+  it("adds a Dictate Work note beside existing marks and leaves blank appends off the board", () => {
     const empty = appendIleDictatedTextToWorkCanvas({ elements: [], appState: {}, files: {} }, "  ");
     expect(empty.appended).toEqual([]);
 
@@ -172,16 +216,44 @@ describe("canvas dictate text element", () => {
       { elements: [obstacle], appState: {}, files: {} },
       "Dictated on the canvas",
     );
-    expect(placed.appended).toHaveLength(1);
-    const text = placed.appended[0]!;
-    expect(text.type).toBe("text");
-    expect(text.originalText).toBe("Dictated on the canvas");
-    expect(text.customData).toMatchObject({ author: ILE_CANVAS_DICTATE_AUTHOR });
-    expect(text.customData).not.toMatchObject({ ileXaiTurn: true });
-    expect(placed.scene.elements).toHaveLength(2);
-    const textRect = ileWorkCanvasElementRect(text);
+    const text = placed.appended.find((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "text");
+    const body = placed.appended.find((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "body");
+    expect(text?.type).toBe("text");
+    expect(text?.originalText).toBe("Dictated on the canvas");
+    expect(text?.customData).toMatchObject({ author: ILE_CANVAS_DICTATE_AUTHOR });
+    expect(text?.customData).not.toMatchObject({ ileXaiTurn: true });
+    expect(String(dictateLabel(placed.scene)?.originalText || dictateLabel(placed.scene)?.text || "")).toBe(
+      "Dictate",
+    );
+    expect(placed.scene.elements.length).toBeGreaterThan(2);
+    const textRect = ileWorkCanvasElementRect(body ?? text!);
     const obstacleRect = ileWorkCanvasElementRect(obstacle);
     expect(ileWorkCanvasRectsOverlap(textRect, obstacleRect)).toBe(false);
+  });
+
+  it("opens the Dictate note at the center of the current canvas view", () => {
+    const appState = {
+      width: 800,
+      height: 600,
+      zoom: { value: 1 },
+      scrollX: 120,
+      scrollY: -40,
+      offsetLeft: 0,
+      offsetTop: 0,
+    };
+    const placed = appendIleDictatedTextToWorkCanvas(
+      { elements: [], appState, files: {} },
+      "hello",
+    );
+    const header = placed.appended.find((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "header");
+    const body = placed.appended.find((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "body");
+    expect(header).toBeTruthy();
+    expect(body).toBeTruthy();
+    const centerX = header!.x + header!.width / 2;
+    const centerY = (header!.y + body!.y + body!.height) / 2;
+    const viewCenter = ileWorkCanvasViewportCenter(appState)!;
+    expect(Math.abs(centerX - viewCenter.x)).toBeLessThan(1);
+    expect(Math.abs(centerY - viewCenter.y)).toBeLessThan(1);
   });
 });
 
@@ -189,6 +261,7 @@ describe("canvas dictate button", () => {
   it("sits next to craft insight and reads the live transcript", () => {
     expect(ILE_CANVAS_DICTATE_LABEL).toBe("dictate");
     expect(ILE_CANVAS_DICTATE_STOP_LABEL).toBe("stop");
+    expect(ILE_CANVAS_DICTATE_ANSWER_LABEL).toBe("Answer");
     const idle = renderToStaticMarkup(
       createElement(IleCanvasDictateButton, {
         transcript: "",
@@ -204,15 +277,23 @@ describe("canvas dictate button", () => {
     expect(idle).not.toContain("data-ile-canvas-dictate-stop-ask");
     const dictate = read("components/session-view/learn-canvas-dictate-button.tsx");
     expect(dictate).toContain("data-ile-canvas-dictate-stop");
+    expect(dictate).toContain("data-ile-canvas-dictate-answer");
+    expect(dictate).toContain("finishAndAnswer");
+    expect(dictate).toContain("onAnswer");
     expect(dictate).not.toContain("data-ile-canvas-dictate-stop-ask");
     expect(dictate).not.toContain("ILE_CANVAS_DICTATE_STOP_ASK_LABEL");
     expect(dictate).not.toContain("onAsk");
     expect(read("components/excalidraw-canvas/canvas-prompt-bar.tsx")).not.toContain(
       "onAsk=",
     );
+    expect(read("components/excalidraw-canvas/canvas-prompt-bar.tsx")).toContain("onAnswer=");
+    expect(read("components/excalidraw-canvas/canvas-prompt-bar.tsx")).toContain(
+      'handleQuickAction("answer", selected)',
+    );
     expect(read("components/session-view/session-guide-panel.tsx")).not.toContain(
       "onAsk=",
     );
+    expect(read("components/session-view/session-guide-panel.tsx")).toContain("onAnswer=");
 
     const canvas = read("components/ExcalidrawCanvas.tsx");
     const promptAt = canvas.indexOf("data-ile-canvas-prompt-bar");
@@ -237,6 +318,10 @@ describe("canvas dictate button", () => {
     expect(canvas).toContain("syncIleDictatedTextOnWorkCanvas");
     expect(canvas).toContain("writeDictatedText(text, false)");
     expect(canvas).toContain("writeDictatedText(text, true)");
+    expect(canvas).toContain("persistEmpty: !emitPow");
+    expect(dictate).toContain('onLiveText("")');
+    expect(dictate).toContain("onCommit(text)");
+    expect(dictate).not.toContain("if (text) onCommit");
     expect(canvas).toContain("dictateTranscript !== undefined && !viewModeEnabled");
     expect(canvas).toContain(".dictate(");
     expect(canvas).toContain("transcript={dictateTranscript}");
@@ -259,10 +344,10 @@ describe("canvas dictate button", () => {
     expect(html).toContain("data-ile-craft-insight");
     expect(html).toContain("data-ile-canvas-dictate");
     expect(html).toContain("data-ile-learn-more-actions");
-    for (const label of ["Simplify", "Split", "Breakdown", "Concepts", "Define", "Answer", "Draw", "Refactor"]) {
+    for (const label of ["Simplify", "Subdivide", "Concepts", "Define", "Answer", "Do/run", "Refactor"]) {
       expect(html).toContain(`>${label}<`);
     }
-    for (const label of ["Focus", "Check/ask", "Declutter", "Rephrase", "Join", "Elaborate", "Compress", "Clear overlaps"]) {
+    for (const label of ["Focus", "Next", "Check/ask", "Declutter", "Rephrase", "Join", "Elaborate", "Compress", "Clear overlaps"]) {
       expect(html).not.toContain(`>${label}<`);
     }
     expect(html).toContain('data-ile-command-mark="simplify"');
@@ -274,8 +359,8 @@ describe("canvas dictate button", () => {
     expect(html).toContain('role="switch"');
     expect(html).toContain("data-session-auto-layout-track");
     expect(html).toContain('data-ile-command-index="01"');
-    expect(html).toContain('data-ile-command-index="08"');
-    expect(html).not.toContain('data-ile-command-index="09"');
+    expect(html).toContain('data-ile-command-index="07"');
+    expect(html).not.toContain('data-ile-command-index="08"');
     expect(read("components/excalidraw-canvas/command-plate.tsx")).toContain("min-h-9");
     for (const file of [
       "components/session-view/session-chapter-canvas.tsx",

@@ -39,6 +39,7 @@ export type LiveExcalidrawAPI = {
     opts?: { animate?: boolean },
   ) => void;
   refresh?: () => void;
+  setActiveTool?: (tool: { type: string }) => void;
 };
 
 export type CommitSceneInput = {

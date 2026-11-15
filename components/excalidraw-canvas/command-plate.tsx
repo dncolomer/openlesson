@@ -38,8 +38,8 @@ export function ileWorkCanvasCommandIndex(
 
 const ICON_PATHS: Record<string, string> = {
   focus: "M8 2v2.5M8 11.5V14M2 8h2.5M11.5 8H14M8 5.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5z",
+  next: "M2 8h9M8 4.5l4.5 3.5L8 11.5M13.5 3.5v9",
   simplify: "M3 4h10M3 8h7M3 12h4",
-  split: "M3 3h4v10H3zM9 3h4v4H9zM9 9h4v4H9z",
   breakdown: "M2 6.5h4v3H2zM10 2.5h4v3h-4zM10 10.5h4v3h-4zM6 8h4M10 8V4M10 8v6.5",
   concepts: "M2 2.5h4v3H2zM10 2.5h4v3h-4zM6 10.5h4v3H6zM4 5.5v5M12 5.5v5M8 8.5v2",
   define: "M3 2.5h10v11H3zM5.5 5.5h5M5.5 8h7M5.5 10.5h4",
@@ -47,6 +47,7 @@ const ICON_PATHS: Record<string, string> = {
   draw: "M10.5 2.5l3 3-8 8H2.5v-3zM9 4l3 3",
   refactor: "M4 3h5v2H6.5A4.5 4.5 0 1 1 3 10M12 13H7v-2h2.5A4.5 4.5 0 1 1 13 6",
   dictate: "M8 2.5a2 2 0 0 1 2 2V8a2 2 0 1 1-4 0V4.5a2 2 0 0 1 2-2zM5 8.5a3 3 0 0 0 6 0M8 11.5V14",
+  pointer: "M4.2 8.2a3.6 3.6 0 1 1 3.6-3.6l5.8 5.8a2.2 2.2 0 0 1-3.1 3.1zM9.4 9.4l2.1 2.1M7 7.2l1.3 1.3M4.8 4.8l1.8 1.8",
   commit: "M3 8h10M10 5l3 3-3 3",
   "auto-layout": "M3 3h4v4H3zM9 3h4v4H9zM3 9h4v4H3zM9 9h4v4H9z",
 };
@@ -77,7 +78,7 @@ export function CommandMark({
   label,
   className = "h-3.5 w-3.5",
 }: {
-  id: IleWorkCanvasCommandId | "dictate" | "commit" | "auto-layout";
+  id: IleWorkCanvasCommandId | "dictate" | "pointer" | "commit" | "auto-layout";
   label?: string;
   className?: string;
 }) {

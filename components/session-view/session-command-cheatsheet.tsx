@@ -12,6 +12,11 @@ import {
   ileWorkCanvasCommandsFor,
   type IleWorkCanvasCommandId,
 } from "@/lib/learn-work-canvas-commands";
+import {
+  ILE_CANVAS_POINTER_LABEL,
+  ILE_CANVAS_POINTER_SHORTCUT,
+  ILE_CANVAS_POINTER_TOOLTIP,
+} from "@/lib/learn-work-canvas-laser-gestures";
 import type { SessionGuideId } from "@/lib/session-instructions";
 
 export function SessionCommandCheatsheet({
@@ -85,6 +90,25 @@ export function SessionCommandCheatsheet({
               </div>
             </li>
           ))}
+          <li
+            data-session-command-cheatsheet-row="pointer"
+            className="flex items-start gap-2 border border-white/20 px-2 py-2"
+          >
+            <CommandMark id="pointer" label={ILE_CANVAS_POINTER_LABEL} className="mt-0.5 h-4 w-4 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="font-mono text-[12px] font-semibold">{ILE_CANVAS_POINTER_LABEL}</span>
+                <span className="flex shrink-0 items-baseline gap-1.5 font-mono text-[10px] text-white/55">
+                  <kbd data-shortcut-apple={ILE_CANVAS_POINTER_SHORTCUT}>
+                    {ILE_CANVAS_POINTER_SHORTCUT.toUpperCase()}
+                  </kbd>
+                </span>
+              </div>
+              <p className="mt-1 font-mono text-[11px] leading-snug text-white/70">
+                Toggle. {ILE_CANVAS_POINTER_TOOLTIP}
+              </p>
+            </div>
+          </li>
           <li
             data-session-command-cheatsheet-row="auto-layout"
             className="flex items-start gap-2 border border-white/20 px-2 py-2"

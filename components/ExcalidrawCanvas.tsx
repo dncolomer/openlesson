@@ -45,10 +45,13 @@ import {
   ileWorkCanvasCenterScroll,
   ileWorkCanvasContentBounds,
   ileWorkCanvasHasLiveElements,
+  ileWorkCanvasLiveVersionSignature,
   ileWorkCanvasShouldRestoreEmptyBoard,
   ileWorkCanvasThinkingOverlayStyle,
   ileWorkCanvasZoomAtPoint,
   ileWorkCanvasZoomValue,
+  ileWorkCanvasPointerNextTool,
+  ileWorkCanvasPointerToolActive,
   pasteIleWorkCanvasElements,
   ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS,
   type IleWorkCanvasAskKind,
@@ -72,6 +75,8 @@ import {
 import { useSessionMarkCanvas } from "@/components/excalidraw-canvas/use-session-mark-canvas";
 import { useWorkCanvasThinking } from "@/components/excalidraw-canvas/use-work-canvas-thinking";
 import { useWorkCanvasCommands } from "@/components/excalidraw-canvas/use-work-canvas-commands";
+import { useWorkCanvasLaser } from "@/components/excalidraw-canvas/use-work-canvas-laser";
+import { IleLaserToolbarSlot } from "@/components/excalidraw-canvas/laser-toolbar-slot";
 import "@excalidraw/excalidraw/index.css";
 import "@/app/learn-excalidraw-theme.css";
 
@@ -193,6 +198,10 @@ export function ExcalidrawCanvas({
   const lastReplaceNonceRef = useRef<string | number | null>(null);
   const [canvasSelectionActive, setCanvasSelectionActive] = useState(false);
   const [autoLayoutEnabled, setAutoLayoutEnabled] = useState(false);
+  const [laserToolActive, setLaserToolActive] = useState(false);
+  const toggleLaserTool = useCallback(() => {
+    excalidrawAPIRef.current?.setActiveTool?.(ileWorkCanvasPointerNextTool(laserToolActive));
+  }, [laserToolActive]);
   const harnessSuggestion = useSessionPolicySuggestion();
   const harnessInferences = useSessionPolicyInferences();
   const harnessSuggestionRef = useRef(harnessSuggestion);
@@ -239,6 +248,7 @@ export function ExcalidrawCanvas({
   const scenePersistTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isExportingRef = useRef(false);
   const lastPersistedSceneJsonRef = useRef("");
+  const lastPngExportSignatureRef = useRef("");
   const userClearedRef = useRef(false);
   const centeredOnOpenRef = useRef(false);
   const openFocusRoleRef = useRef(openFocusRole);
@@ -521,6 +531,7 @@ export function ExcalidrawCanvas({
     sessionMarkModeRef,
     harnessSuggestionRef,
     harnessInferencesRef,
+    sessionBranchRef,
     commandText,
     setCommandText,
     setAutoLayoutEnabled,
@@ -536,6 +547,10 @@ export function ExcalidrawCanvas({
     writeDictatedText,
     submitCommand,
   } = commands;
+  const { onLaserPointerUpdate } = useWorkCanvasLaser({
+    apiRef: excalidrawAPIRef,
+    handleQuickActionRef,
+  });
 
   useSessionMarkCanvas({
     apiRef: excalidrawAPIRef,
@@ -764,9 +779,15 @@ export function ExcalidrawCanvas({
         lastPersistedSceneJsonRef.current = json;
         onSceneChangeRef.current?.(sceneData);
       }, 250);
-      debouncedExportPNG();
+      const exportSig = ileWorkCanvasLiveVersionSignature(sceneData.elements);
+      if (exportSig !== lastPngExportSignatureRef.current) {
+        lastPngExportSignatureRef.current = exportSig;
+        debouncedExportPNG();
+      }
       syncCanvasSelection(appState);
       syncThinkingOverlay(appState);
+      const laserOn = ileWorkCanvasPointerToolActive(appState.activeTool);
+      setLaserToolActive((prev) => (prev === laserOn ? prev : laserOn));
     },
     [debouncedExportPNG, syncCanvasSelection, syncThinkingOverlay],
   );
@@ -776,6 +797,7 @@ export function ExcalidrawCanvas({
       pointer: { x: number; y: number; tool: "pointer" | "laser" };
       button: "up" | "down";
     }) => {
+      onLaserPointerUpdate(payload);
       const api = excalidrawAPIRef.current;
       if (payload.button === "down" && api) {
         syncCanvasSelection(api.getAppState?.() ?? {});
@@ -792,7 +814,7 @@ export function ExcalidrawCanvas({
         emitCanvasPowRef.current(powEvents);
       }
     },
-    [syncCanvasSelection],
+    [onLaserPointerUpdate, syncCanvasSelection],
   );
 
   const handleSubmitToHelios = useCallback(async () => {
@@ -939,6 +961,12 @@ export function ExcalidrawCanvas({
             />
           </IleExcalidrawErrorBoundary>
         )}
+        <IleLaserToolbarSlot
+          hostRef={canvasHostRef}
+          apiRef={excalidrawAPIRef}
+          active={laserToolActive}
+          onToggle={toggleLaserTool}
+        />
         <CanvasThinkingChips
           thinkingChips={thinkingChips}
           thinkingHostByIdRef={thinkingHostByIdRef}
@@ -968,6 +996,8 @@ export function ExcalidrawCanvas({
             writeDictatedText={writeDictatedText}
             autoLayoutEnabled={autoLayoutEnabled}
             onToggleAutoLayout={toggleAutoLayout}
+            pointerActive={laserToolActive}
+            onTogglePointer={toggleLaserTool}
             onDictateActive={onDictateActive}
             craftInsightOpen={craftInsightOpen}
             selectedCanvasElements={selectedCanvasElements}

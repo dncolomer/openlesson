@@ -1,11 +1,18 @@
 /**
- * Prompt-bar Dictate: speech that arrives after the click is written onto
- * the work canvas as it is recognized, in one learner text element. Stop
- * keeps that element and records it as canvas proof of work.
+ * Prompt-bar Dictate: the click opens a Dictate Work note immediately.
+ * Speech that arrives after the click fills that same note. Stop keeps a
+ * note that has speech and records it as canvas proof of work.
  */
 import {
+  BOARD_INSTRUCTION_NOTE_HEADER_HEIGHT,
+  BOARD_INSTRUCTION_NOTE_KEY,
+  boardInstructionNoteElements,
   convertToExcalidrawElements,
   ileWorkCanvasEmptyNearbyOriginWithReserved,
+  ileWorkCanvasNoteLabel,
+  ileWorkCanvasOriginCenteredOn,
+  ileWorkCanvasViewportCenter,
+  ILE_WORK_CANVAS_TEXT_BOX_WIDTH,
   serializeIleWorkCanvasScene,
   wrapIleWorkCanvasText,
   type IleWorkCanvasElement,
@@ -14,6 +21,7 @@ import {
 
 export const ILE_CANVAS_DICTATE_LABEL = "dictate";
 export const ILE_CANVAS_DICTATE_STOP_LABEL = "stop";
+export const ILE_CANVAS_DICTATE_ANSWER_LABEL = "Answer";
 export const ILE_CANVAS_DICTATE_AUTHOR = "dictate";
 
 export type IleDictateCapture = {
@@ -118,23 +126,160 @@ function dictatedTextElement(
   );
 }
 
+function dictatedNoteMemberIds(
+  elements: readonly IleWorkCanvasElement[],
+  text: IleWorkCanvasElement,
+): Set<string> {
+  const ids = new Set<string>([text.id]);
+  if (typeof text.containerId === "string" && text.containerId) ids.add(text.containerId);
+  const groupId = Array.isArray(text.groupIds) ? String(text.groupIds[0] || "") : "";
+  if (groupId) {
+    for (const el of elements) {
+      if (el.isDeleted) continue;
+      if (Array.isArray(el.groupIds) && el.groupIds.includes(groupId)) ids.add(el.id);
+    }
+  }
+  return ids;
+}
+
+function bumpDictatedElement(
+  el: IleWorkCanvasElement,
+  patch: Partial<IleWorkCanvasElement>,
+): IleWorkCanvasElement {
+  return {
+    ...el,
+    ...patch,
+    version: (Number(el.version) || 1) + 1,
+    versionNonce: Math.floor(Math.random() * 2 ** 31),
+    updated: Date.now(),
+  };
+}
+
+function updateDictatedPlainText(
+  existing: IleWorkCanvasElement,
+  clean: string,
+): IleWorkCanvasElement {
+  const wrapped = wrapIleWorkCanvasText(clean, Number(existing.width) || ILE_WORK_CANVAS_TEXT_BOX_WIDTH);
+  return bumpDictatedElement(existing, {
+    text: wrapped.text,
+    originalText: clean,
+    width: wrapped.width,
+    height: wrapped.height,
+    autoResize: false,
+    customData: { ...(existing.customData ?? {}), author: ILE_CANVAS_DICTATE_AUTHOR },
+  });
+}
+
+function updateDictatedNote(
+  elements: readonly IleWorkCanvasElement[],
+  textEl: IleWorkCanvasElement,
+  clean: string,
+): { elements: IleWorkCanvasElement[]; changed: boolean } | null {
+  const groupId = Array.isArray(textEl.groupIds) ? String(textEl.groupIds[0] || "") : "";
+  if (!groupId || textEl.customData?.[BOARD_INSTRUCTION_NOTE_KEY] !== "text") return null;
+  const members = elements.filter(
+    (el) => !el.isDeleted && Array.isArray(el.groupIds) && el.groupIds.includes(groupId),
+  );
+  const body = members.find((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "body");
+  const header = members.find((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "header");
+  const label = members.find((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "label");
+  if (!body || !header) return null;
+  const sameText =
+    normalizeDictateText(String(textEl.originalText || textEl.text || "")) === clean;
+  const padX = Math.max(8, (Number(textEl.x) || 0) - (Number(body.x) || 0) || 14);
+  const padY = Math.max(4, (Number(textEl.y) || 0) - (Number(body.y) || 0) || 12);
+  const innerWidth = Math.max(
+    96,
+    (Number(body.width) || ILE_WORK_CANVAS_TEXT_BOX_WIDTH) - padX * 2,
+  );
+  const wrapped = wrapIleWorkCanvasText(
+    clean || " ",
+    innerWidth,
+    Number(textEl.fontSize) || undefined,
+  );
+  const width = innerWidth + padX * 2;
+  const bodyHeight = padY + wrapped.height + padY;
+  const headerH = Number(header.height) || BOARD_INSTRUCTION_NOTE_HEADER_HEIGHT;
+  const x = Number(header.x) || Number(body.x) || 0;
+  const y = Number(header.y) || 0;
+  const bodyY = y + headerH;
+  if (
+    sameText &&
+    body.width === width &&
+    body.height === bodyHeight &&
+    body.y === bodyY &&
+    textEl.height === wrapped.height
+  ) {
+    return { elements: [...elements], changed: false };
+  }
+  const byId = new Map(elements.map((el) => [el.id, el]));
+  byId.set(
+    body.id,
+    bumpDictatedElement(body, {
+      x,
+      y: bodyY,
+      width,
+      height: bodyHeight,
+      customData: { ...(body.customData ?? {}), author: ILE_CANVAS_DICTATE_AUTHOR },
+    }),
+  );
+  byId.set(
+    header.id,
+    bumpDictatedElement(header, {
+      x,
+      y,
+      width,
+      customData: { ...(header.customData ?? {}), author: ILE_CANVAS_DICTATE_AUTHOR },
+    }),
+  );
+  byId.set(
+    textEl.id,
+    bumpDictatedElement(textEl, {
+      x: x + padX,
+      y: bodyY + padY,
+      width: innerWidth,
+      height: wrapped.height,
+      text: clean ? wrapped.text : "",
+      originalText: clean,
+      autoResize: false,
+      customData: { ...(textEl.customData ?? {}), author: ILE_CANVAS_DICTATE_AUTHOR },
+    }),
+  );
+  if (label) {
+    byId.set(
+      label.id,
+      bumpDictatedElement(label, {
+        x: x + padX,
+        y: y + 8,
+        width: innerWidth,
+        customData: { ...(label.customData ?? {}), author: ILE_CANVAS_DICTATE_AUTHOR },
+      }),
+    );
+  }
+  return { elements: elements.map((el) => byId.get(el.id) ?? el), changed: true };
+}
+
 /**
- * Create or update the live dictate mark. The same element id grows with the
- * transcript. An empty transcript removes a mark this dictate had started.
+ * Create or update the live dictate mark. The same note grows with the
+ * transcript. `persistEmpty` keeps an empty Dictate card while recording.
+ * Without it, an empty transcript removes the mark this dictate started.
  */
 export function syncIleDictatedTextOnWorkCanvas(
   scene: IleWorkCanvasScene | null | undefined,
   text: string,
   elementId: string | null | undefined,
+  opts?: { persistEmpty?: boolean },
 ): { scene: IleWorkCanvasScene; elementId: string | null; changed: boolean } {
   const current = serializeIleWorkCanvasScene(scene);
   const clean = normalizeDictateText(text);
   const existing = dictatedTextElement(current.elements, elementId);
-  if (!clean) {
+  const persistEmpty = opts?.persistEmpty === true;
+  if (!clean && !persistEmpty) {
     if (!existing) return { scene: current, elementId: null, changed: false };
+    const remove = dictatedNoteMemberIds(current.elements, existing);
     return {
       scene: {
-        elements: current.elements.filter((el) => el.id !== existing.id),
+        elements: current.elements.filter((el) => !remove.has(el.id)),
         appState: current.appState,
         files: current.files,
       },
@@ -142,24 +287,23 @@ export function syncIleDictatedTextOnWorkCanvas(
       changed: true,
     };
   }
-  const wrapped = wrapIleWorkCanvasText(clean);
   if (existing) {
-    const sameText = normalizeDictateText(String(existing.originalText || existing.text || "")) === clean;
+    const note = updateDictatedNote(current.elements, existing, clean);
+    if (note) {
+      if (!note.changed) return { scene: current, elementId: existing.id, changed: false };
+      return {
+        scene: { ...current, elements: note.elements },
+        elementId: existing.id,
+        changed: true,
+      };
+    }
+    const wrapped = wrapIleWorkCanvasText(clean);
+    const sameText =
+      normalizeDictateText(String(existing.originalText || existing.text || "")) === clean;
     if (sameText && existing.width === wrapped.width && existing.height === wrapped.height) {
       return { scene: current, elementId: existing.id, changed: false };
     }
-    const nextElement: IleWorkCanvasElement = {
-      ...existing,
-      text: wrapped.text,
-      originalText: clean,
-      width: wrapped.width,
-      height: wrapped.height,
-      autoResize: false,
-      version: (Number(existing.version) || 1) + 1,
-      versionNonce: Math.floor(Math.random() * 2 ** 31),
-      updated: Date.now(),
-      customData: { ...(existing.customData ?? {}), author: ILE_CANVAS_DICTATE_AUTHOR },
-    };
+    const nextElement = updateDictatedPlainText(existing, clean);
     return {
       scene: {
         elements: current.elements.map((el) => (el.id === existing.id ? nextElement : el)),
@@ -170,10 +314,13 @@ export function syncIleDictatedTextOnWorkCanvas(
       changed: true,
     };
   }
-  const placed = appendIleDictatedTextToWorkCanvas(current, clean);
-  const createdId = placed.appended[0]?.id ?? null;
-  if (!createdId) return { scene: current, elementId: null, changed: false };
-  return { scene: placed.scene, elementId: createdId, changed: true };
+  const placed = appendIleDictatedTextToWorkCanvas(current, clean, { allowEmpty: persistEmpty });
+  const created =
+    placed.appended.find((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "text") ??
+    placed.appended.find((el) => el.type === "text") ??
+    null;
+  if (!created) return { scene: current, elementId: null, changed: false };
+  return { scene: placed.scene, elementId: created.id, changed: true };
 }
 
 /**
@@ -510,42 +657,75 @@ export function clearCalibrateResponseOverlap(
 export function appendIleDictatedTextToWorkCanvas(
   scene: IleWorkCanvasScene | null | undefined,
   text: string,
+  opts?: { allowEmpty?: boolean },
 ): { scene: IleWorkCanvasScene; appended: IleWorkCanvasElement[] } {
   const current = serializeIleWorkCanvasScene(scene);
   const clean = normalizeDictateText(text);
-  if (!clean) return { scene: current, appended: [] };
+  if (!clean && !opts?.allowEmpty) return { scene: current, appended: [] };
   const target = calibrateDictateTarget(current.elements);
-  const fontSize = target ? 15 : undefined;
-  const wrapped = wrapIleWorkCanvasText(clean, target?.width, fontSize);
-  const origin = target
-    ? { x: target.x, y: target.y }
+  if (target) {
+    if (!clean) return { scene: current, appended: [] };
+    const fontSize = 15;
+    const wrapped = wrapIleWorkCanvasText(clean, target.width, fontSize);
+    const customData: Record<string, unknown> = {
+      author: ILE_CANVAS_DICTATE_AUTHOR,
+      [CALIBRATE_ROLE]: "response",
+      [CALIBRATE_QUESTION]: target.questionId,
+      [CALIBRATE_SOURCE]: "dictated",
+    };
+    const appended = convertToExcalidrawElements([
+      {
+        type: "text",
+        text: clean,
+        x: target.x,
+        y: target.y,
+        width: wrapped.width,
+        fontSize,
+        autoResize: false,
+        customData,
+      },
+    ]);
+    if (!appended.length) return { scene: current, appended: [] };
+    return {
+      scene: {
+        elements: clearCalibrateResponseOverlap([...current.elements, ...appended]),
+        appState: current.appState,
+        files: current.files,
+      },
+      appended,
+    };
+  }
+  const textWidth = ILE_WORK_CANVAS_TEXT_BOX_WIDTH;
+  const customData: Record<string, unknown> = { author: ILE_CANVAS_DICTATE_AUTHOR };
+  const note = boardInstructionNoteElements({
+    text: clean,
+    x: 0,
+    y: 0,
+    textWidth,
+    label: ileWorkCanvasNoteLabel("dictate"),
+    allowEmpty: true,
+    textCustomData: customData,
+    bodyCustomData: customData,
+  });
+  if (!note.elements.length) return { scene: current, appended: [] };
+  const viewCenter = ileWorkCanvasViewportCenter(current.appState);
+  const origin = viewCenter
+    ? ileWorkCanvasOriginCenteredOn(viewCenter, { width: note.width, height: note.height })
     : ileWorkCanvasEmptyNearbyOriginWithReserved({
         elements: current.elements,
         near: current.elements.filter((el) => !el.isDeleted),
-        box: { width: wrapped.width, height: wrapped.height },
+        box: { width: note.width, height: note.height },
       });
-  const customData: Record<string, unknown> = { author: ILE_CANVAS_DICTATE_AUTHOR };
-  if (target) {
-    customData[CALIBRATE_ROLE] = "response";
-    customData[CALIBRATE_QUESTION] = target.questionId;
-    customData[CALIBRATE_SOURCE] = "dictated";
-  }
-  const appended = convertToExcalidrawElements([
-    {
-      type: "text",
-      text: clean,
-      x: origin.x,
-      y: origin.y,
-      width: wrapped.width,
-      fontSize,
-      autoResize: false,
-      customData,
-    },
-  ]);
-  if (!appended.length) return { scene: current, appended: [] };
+  const dx = origin.x;
+  const dy = origin.y;
+  const appended = note.elements.map((el) => ({
+    ...el,
+    x: Number(el.x) + dx,
+    y: Number(el.y) + dy,
+  }));
   return {
     scene: {
-      elements: clearCalibrateResponseOverlap([...current.elements, ...appended]),
+      elements: [...current.elements, ...appended],
       appState: current.appState,
       files: current.files,
     },

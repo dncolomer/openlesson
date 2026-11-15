@@ -1,7 +1,11 @@
 "use client";
 
 import { useCallback, useRef, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
-import { sessionHarnessFocusLine } from "@/lib/session-harness";
+import {
+  sessionHarnessExploreLine,
+  sessionHarnessHereLine,
+} from "@/lib/session-harness";
+import type { SessionBranchModel } from "@/lib/session-branch-model";
 import {
   ileCanvasCommandDraft,
   ileWorkCanvasAddedElementIds,
@@ -64,6 +68,7 @@ export function useWorkCanvasCommands(input: {
   sessionMarkModeRef: MutableRefObject<"calibrate" | "learn" | "verification" | null | undefined>;
   harnessSuggestionRef: MutableRefObject<string | null>;
   harnessInferencesRef: MutableRefObject<readonly SessionPolicyInference[]>;
+  sessionBranchRef: MutableRefObject<SessionBranchModel | null>;
   commandText: string;
   setCommandText: Dispatch<SetStateAction<string>>;
   setAutoLayoutEnabled: Dispatch<SetStateAction<boolean>>;
@@ -81,16 +86,17 @@ export function useWorkCanvasCommands(input: {
     projectThinkingChip,
     upsertThinkingChip,
     removeThinkingChip,
-    sessionMarkModeRef,
     harnessSuggestionRef,
-    harnessInferencesRef,
+    sessionBranchRef,
     commandText,
     setCommandText,
     setAutoLayoutEnabled,
     setAskInFlight,
     askInFlightRef,
   } = input;
-  const handleQuickActionRef = useRef<(id: IleWorkCanvasCommandId) => void>(() => {});
+  const handleQuickActionRef = useRef<
+    (id: IleWorkCanvasCommandId, selected?: IleWorkCanvasElement[]) => void
+  >(() => {});
   const toggleAutoLayoutRef = useRef<() => void>(() => {});
   const askSeqRef = useRef(0);
   const applyChainRef = useRef(Promise.resolve());
@@ -238,22 +244,24 @@ export function useWorkCanvasCommands(input: {
   );
 
   const handleQuickAction = useCallback(
-    (action: IleWorkCanvasCommandId) => {
+    (action: IleWorkCanvasCommandId, selectedOverride?: IleWorkCanvasElement[]) => {
       const api = apiRef.current;
-      const selected = selectedCanvasElements();
+      const selected = selectedOverride?.length ? selectedOverride : selectedCanvasElements();
       if (!api) return;
       if (ileWorkCanvasCommandNeedsSelection(action) && !selected.length) return;
       const live = liveWorkCanvasScene(api);
-      const mode = sessionMarkModeRef.current;
+      const model = sessionBranchRef.current;
+      const explore = sessionHarnessExploreLine({
+        model,
+        suggestion: harnessSuggestionRef.current,
+      });
       const outcome = runIleWorkCanvasCommand({
         action,
         scene: live,
         selectedElements: selected,
-        focusText: sessionHarnessFocusLine({
-          guide: mode === "verification" ? "verification" : mode === "calibrate" ? "calibrate" : "learn",
-          suggestion: harnessSuggestionRef.current,
-          inferenceLabel: harnessInferencesRef.current.at(-1)?.label ?? null,
-        }),
+        focusText: sessionHarnessHereLine(model),
+        nextText: explore.text,
+        nextSameAsHere: explore.sameAsHere,
       });
       const emitCommand = (commandId: IleWorkCanvasCommandId, prompt: string) => {
         const powEvents = canvasPowCollectorRef.current.command(commandId, {
@@ -327,11 +335,10 @@ export function useWorkCanvasCommands(input: {
       apiRef,
       applyingRemoteRef,
       canvasPowCollectorRef,
-      harnessInferencesRef,
       harnessSuggestionRef,
       runCanvasAsk,
       selectedCanvasElements,
-      sessionMarkModeRef,
+      sessionBranchRef,
     ],
   );
   handleQuickActionRef.current = handleQuickAction;
@@ -361,22 +368,23 @@ export function useWorkCanvasCommands(input: {
   toggleAutoLayoutRef.current = toggleAutoLayout;
 
   const writeDictatedText = useCallback(
-    (text: string, emitPow: boolean) => {
+    (text: string, emitPow: boolean): IleWorkCanvasElement[] => {
       const api = apiRef.current;
-      if (!api) return;
+      if (!api) return [];
       const clean = text.trim();
       const live = liveWorkCanvasScene(api, true);
       const previousId = dictateElementIdRef.current;
-      const result = syncIleDictatedTextOnWorkCanvas(live, clean, previousId);
+      const result = syncIleDictatedTextOnWorkCanvas(live, clean, previousId, {
+        persistEmpty: !emitPow,
+      });
       dictateElementIdRef.current = emitPow ? null : result.elementId;
-      if (!result.changed && !emitPow) return;
+      const selected = result.elementId
+        ? result.scene.elements.filter((el) => el.id === result.elementId && !el.isDeleted)
+        : [];
+      if (!result.changed && !emitPow) return selected;
       const selectedElementIds =
         emitPow && result.elementId ? { [result.elementId]: true } : {};
       if (result.changed || emitPow) {
-        const created = Boolean(result.elementId && result.elementId !== previousId);
-        const mark = created
-          ? result.scene.elements.find((el) => el.id === result.elementId)
-          : null;
         commitScene(
           api,
           {
@@ -385,7 +393,6 @@ export function useWorkCanvasCommands(input: {
           },
           {
             applyingRemote: applyingRemoteRef,
-            scrollTo: mark ? [mark] : null,
           },
         );
         canvasPowCollectorRef.current.syncWithoutEmit({
@@ -394,12 +401,13 @@ export function useWorkCanvasCommands(input: {
           files: api.getFiles() ?? {},
         });
       }
-      if (!emitPow || !clean) return;
+      if (!emitPow || !clean) return emitPow ? selected : [];
       const powEvents = canvasPowCollectorRef.current.dictate({
         text: clean,
         elementId: result.elementId,
       });
       emitCanvasPowRef.current(powEvents);
+      return selected;
     },
     [apiRef, applyingRemoteRef, canvasPowCollectorRef],
   );

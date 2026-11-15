@@ -538,6 +538,43 @@ export function ileWorkCanvasSceneToViewport(
   };
 }
 
+/** Excalidraw container coordinates → scene (same formula as viewportCoordsToSceneCoords). */
+export function ileWorkCanvasViewportToScene(
+  point: { x: number; y: number },
+  appState: IleWorkCanvasViewportAppState | null | undefined,
+): { x: number; y: number } {
+  const zoom = ileWorkCanvasZoomValue(appState);
+  const scrollX = Number(appState?.scrollX) || 0;
+  const scrollY = Number(appState?.scrollY) || 0;
+  const offsetLeft = Number(appState?.offsetLeft) || 0;
+  const offsetTop = Number(appState?.offsetTop) || 0;
+  return {
+    x: (point.x - offsetLeft) / zoom - scrollX,
+    y: (point.y - offsetTop) / zoom - scrollY,
+  };
+}
+
+/** Scene point at the center of the visible canvas. Null when the view size is unknown. */
+export function ileWorkCanvasViewportCenter(
+  appState: IleWorkCanvasViewportAppState | null | undefined,
+): { x: number; y: number } | null {
+  const width = Number(appState?.width);
+  const height = Number(appState?.height);
+  if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) return null;
+  return ileWorkCanvasViewportToScene({ x: width / 2, y: height / 2 }, appState);
+}
+
+/** Top-left so `box` sits on `center`. */
+export function ileWorkCanvasOriginCenteredOn(
+  center: { x: number; y: number },
+  box: { width?: number; height?: number },
+): { x: number; y: number } {
+  return {
+    x: Math.round(center.x - (Number(box.width) || 0) / 2),
+    y: Math.round(center.y - (Number(box.height) || 0) / 2),
+  };
+}
+
 /**
  * Minimal pan that brings `elements` into view. Null when they already sit
  * inside the viewport (with padding) so a command does not yank the camera.

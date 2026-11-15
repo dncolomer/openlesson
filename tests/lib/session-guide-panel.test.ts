@@ -17,10 +17,13 @@ import {
 import { SESSION_BRIEFING_INTRO, SESSION_INSTRUCTIONS } from "@/lib/session-instructions";
 import {
   LEARN_HIDDEN_STATES_BUTTON_LABEL,
+  sessionHarnessExploreLine,
   sessionHarnessFocusLine,
+  sessionHarnessHereLine,
   sessionHarnessNextLine,
   SESSION_HARNESS_FALLBACK,
 } from "@/lib/session-harness";
+import type { SessionBranchModel } from "@/lib/session-branch-model";
 
 const ROOT = join(__dirname, "../..");
 
@@ -41,6 +44,7 @@ describe("session guide panel", () => {
     expect(html).not.toContain("grid-cols-3");
     expect(html).not.toContain("The board is still opening.");
     expect(html).not.toContain("data-ile-canvas-dictate");
+    expect(html).not.toContain("data-ile-canvas-pointer");
     expect(html).not.toContain("data-ile-craft-insight");
     for (const command of ILE_WORK_CANVAS_COMMANDS) {
       expect(html).not.toContain(`data-session-command="${command.id}"`);
@@ -71,6 +75,9 @@ describe("session guide panel", () => {
     expect(learn).toContain("data-session-commit");
     expect(learn).toContain('data-ile-command-index="10"');
     expect(learn).toContain('data-ile-command-index="11"');
+    expect(learn).toContain('data-ile-command-index="12"');
+    expect(learn).toContain('data-session-command="pointer"');
+    expect(learn).toContain("data-ile-canvas-pointer");
     for (const command of ILE_WORK_CANVAS_COMMANDS) {
       expect(learn).toContain(`data-session-command="${command.id}"`);
       expect(learn).toContain(`>${command.label}<`);
@@ -87,9 +94,13 @@ describe("session guide panel", () => {
     expect(learn).toContain('data-session-command="concepts"');
     expect(learn).toContain('data-session-command="define"');
     expect(ILE_WORK_CANVAS_COMMANDS.find((command) => command.id === "focus")?.label).toBe("Focus");
+    expect(ILE_WORK_CANVAS_COMMANDS.find((command) => command.id === "next")?.label).toBe("Next");
+    expect(learn).toContain('data-session-command="next"');
     expect(ILE_WORK_CANVAS_COMMANDS.find((command) => command.id === "answer")?.label).toBe("Answer");
-    expect(ILE_WORK_CANVAS_COMMANDS.find((command) => command.id === "draw")?.label).toBe("Draw");
+    expect(ILE_WORK_CANVAS_COMMANDS.find((command) => command.id === "draw")?.label).toBe("Do/run");
     expect(ILE_WORK_CANVAS_COMMANDS.map((command) => command.id as string)).not.toContain("check");
+    expect(ILE_WORK_CANVAS_COMMANDS.map((command) => command.id as string)).not.toContain("split");
+    expect(learn).not.toContain('data-session-command="split"');
 
     const verify = renderToStaticMarkup(createElement(SessionGuidePanel, { guide: "verification" }));
     expect(verify).toContain('data-session-guide-tab="commands"');
@@ -98,13 +109,16 @@ describe("session guide panel", () => {
     expect(verify).toContain("grid-cols-2");
     expect(verify).not.toContain("grid-cols-3");
     expect(verify).not.toContain('data-session-command="focus"');
+    expect(verify).not.toContain('data-session-command="next"');
     expect(verify).toContain('data-session-command="answer"');
     expect(verify).toContain('data-session-command="draw"');
+    expect(verify).toContain('data-session-command="pointer"');
     expect(verify).toContain('data-session-command="auto-layout"');
     expect(verify).toContain('role="switch"');
     expect(verify).toContain('data-session-command="breakdown"');
     expect(verify).toContain('data-session-command="concepts"');
     expect(verify).toContain('data-session-command="define"');
+    expect(verify).not.toContain('data-session-command="split"');
 
     const en = JSON.parse(readFileSync(join(ROOT, "messages/en.json"), "utf8")) as {
       onboardingGuide: { scout: { step3: { body: string } } };
@@ -137,6 +151,8 @@ describe("session guide panel", () => {
     const source = readFileSync(join(ROOT, "components/session-view/session-guide-panel.tsx"), "utf8");
     expect(source).toContain("IleCanvasDictateButton");
     expect(source).not.toContain("onAsk=");
+    expect(source).toContain("onAnswer=");
+    expect(source).toContain("bridge?.dictate?.answer(text)");
     expect(source).toContain("IleCraftInsightButton");
     expect(source).toContain("usable={ileCanvasCraftInsightUsable()}");
     expect(source).not.toContain("Boolean(bridge?.craft)");
@@ -167,6 +183,8 @@ describe("session guide panel", () => {
     expect(sheet).toContain("Alt+F");
     expect(sheet).toContain("⌥L");
     expect(sheet).toContain("Alt+L");
+    expect(sheet).toContain('data-session-command-cheatsheet-row="pointer"');
+    expect(sheet).toContain(">K<");
     expect(ileWorkCanvasCommandShortcutAppleLabel("s")).toBe("⌥S");
     expect(ileWorkCanvasCommandShortcutAltLabel("s")).toBe("Alt+S");
     expect(ileWorkCanvasCommandShortcutKeyFromEvent({ altKey: true, code: "KeyS", key: "ß" })).toBe("s");
@@ -206,6 +224,8 @@ describe("session guide panel", () => {
     expect(ileCanvasCommandDraft("/answer").exactId).toBe("answer");
     expect(ileCanvasCommandDraft("/focus").exactId).toBe("focus");
     expect(ileCanvasCommandDraft("/draw").exactId).toBe("draw");
+    expect(ileCanvasCommandDraft("/run").exactId).toBe("draw");
+    expect(ileCanvasCommandDraft("/do").exactId).toBe("draw");
     expect(ileCanvasCommandDraft("/define").exactId).toBe("define");
     expect(ileCanvasCommandDraft("/check").exactId).toBeNull();
   });
@@ -267,6 +287,73 @@ describe("session guide panel", () => {
         inferenceLabel: "Insight",
       }),
     ).toBe(SESSION_HARNESS_FALLBACK.verification);
+    const hereModel: SessionBranchModel = {
+      chapterTitle: "Just war",
+      rootId: "here",
+      focusId: "here",
+      step: 0,
+      boardNotes: [],
+      branches: [
+        {
+          id: "here",
+          parentId: null,
+          title: "Last resort",
+          question: "When is force last?",
+          territory: "force",
+          observation: "Stay with last resort.",
+          depth: 0,
+          status: "open",
+          edges: [
+            { toId: "cheap", price: 8 },
+            { toId: "dear", price: 40 },
+          ],
+        },
+        {
+          id: "cheap",
+          parentId: "here",
+          title: "Peaceful options",
+          question: "Which peaceful option is still open?",
+          territory: "force",
+          observation: "Name the remaining peaceful option.",
+          depth: 1,
+          status: "open",
+          edges: [],
+        },
+        {
+          id: "dear",
+          parentId: "here",
+          title: "Proportionality",
+          question: "Is the means proportional?",
+          territory: "force",
+          observation: "Check the means.",
+          depth: 1,
+          status: "open",
+          edges: [],
+        },
+      ],
+    };
+    expect(sessionHarnessHereLine(hereModel)).toBe("When is force last?");
+    expect(sessionHarnessExploreLine({ model: hereModel }).text).toBe(
+      "Which peaceful option is still open?",
+    );
+    expect(
+      sessionHarnessExploreLine({
+        model: hereModel,
+        suggestion: "Walk the remaining peaceful option.",
+      }).text,
+    ).toBe("Walk the remaining peaceful option.");
+    expect(
+      sessionHarnessExploreLine({
+        model: hereModel,
+        suggestion: "When is force last?",
+      }).sameAsHere,
+    ).toBe(true);
+    expect(
+      sessionHarnessExploreLine({
+        model: { ...hereModel, branches: hereModel.branches.filter((branch) => branch.id === "here").map((branch) => ({ ...branch, edges: [] })) },
+      }),
+    ).toEqual({ text: "", sameAsHere: false });
+
     const harness = readFileSync(join(ROOT, "components/session-view/session-harness-panel.tsx"), "utf8");
     expect(harness).toContain("sessionHarnessFocusLine");
     expect(harness).toContain("data-session-harness-next");

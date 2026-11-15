@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
+  ILE_CANVAS_DICTATE_ANSWER_LABEL,
   ILE_CANVAS_DICTATE_LABEL,
   ILE_CANVAS_DICTATE_STOP_LABEL,
   advanceIleDictateCapture,
@@ -15,10 +16,11 @@ import {
   CommandPlate,
   ILE_CANVAS_COMMAND_SIDEBAR_CLASS,
   ILE_CANVAS_COMMAND_SIDEBAR_MARK_CLASS,
+  ileWorkCanvasCommandIndex,
 } from "@/components/excalidraw-canvas/command-plate";
 
 function dictateButtonClass(
-  kind: "idle" | "stop",
+  kind: "idle" | "stop" | "answer",
   square: boolean,
   wide: boolean,
   plate: boolean,
@@ -38,6 +40,7 @@ export function IleCanvasDictateButton({
   transcript,
   onLiveText,
   onCommit,
+  onAnswer,
   onActiveChange,
   square = false,
   wide = false,
@@ -49,6 +52,8 @@ export function IleCanvasDictateButton({
   onLiveText: (text: string) => void;
   /** Stop. The canvas records the finished transcript as proof of work. */
   onCommit: (text: string) => void;
+  /** Stop and run Answer on the dictate note. */
+  onAnswer?: (text: string) => void;
   /** Optional. Calibration starts speech only while this button is active. */
   onActiveChange?: (active: boolean) => void;
   /** Left and right docks: a short row with the name beside a mark. */
@@ -71,26 +76,39 @@ export function IleCanvasDictateButton({
     onLiveTextRef.current(advanced.text);
   }, [transcript]);
 
-  const finish = () => {
-    if (!captureRef.current) return;
+  const closeCapture = () => {
+    if (!captureRef.current) return "";
     const text = ileDictateCaptureText(
       noteIleDictateTranscript(captureRef.current, transcript),
     );
     captureRef.current = null;
     setDictating(false);
     onActiveChange?.(false);
-    if (text) onCommit(text);
-    else onLiveText(text);
+    return text;
+  };
+
+  const finish = () => {
+    if (!captureRef.current) return;
+    onCommit(closeCapture());
+  };
+
+  const finishAndAnswer = () => {
+    if (!captureRef.current) return;
+    const text = closeCapture();
+    if (onAnswer) onAnswer(text);
+    else onCommit(text);
   };
 
   const markClass = plate ? ILE_CANVAS_COMMAND_SIDEBAR_MARK_CLASS : "h-3.5 w-3.5";
+  const answerIndex = ileWorkCanvasCommandIndex("answer");
   return (
     <div
       data-ile-canvas-dictate
       data-session-command="dictate"
-      className="flex h-full min-h-0 w-full min-w-0"
+      className={`flex h-full min-h-0 w-full min-w-0${dictating ? " col-span-2" : ""}`}
     >
       {dictating ? (
+        <div className="grid h-full min-h-0 w-full min-w-0 grid-cols-2 gap-0.5">
         <button
           type="button"
           data-ile-canvas-dictate-stop
@@ -107,6 +125,22 @@ export function IleCanvasDictateButton({
             ILE_CANVAS_DICTATE_STOP_LABEL
           )}
         </button>
+        <button
+          type="button"
+          data-ile-canvas-dictate-answer
+          aria-label={ILE_CANVAS_DICTATE_ANSWER_LABEL}
+          onClick={finishAndAnswer}
+          className={dictateButtonClass("answer", square, wide, plate)}
+        >
+          {plate ? <CommandPlate index={answerIndex} /> : null}
+          <CommandMark id="answer" label={ILE_CANVAS_DICTATE_ANSWER_LABEL} className={markClass} />
+          {plate ? (
+            <span className="min-w-0 truncate">{ILE_CANVAS_DICTATE_ANSWER_LABEL}</span>
+          ) : (
+            ILE_CANVAS_DICTATE_ANSWER_LABEL
+          )}
+        </button>
+        </div>
       ) : (
         <button
           type="button"
@@ -116,6 +150,7 @@ export function IleCanvasDictateButton({
             captureRef.current = startIleDictateCapture(transcript);
             setDictating(true);
             onActiveChange?.(true);
+            onLiveText("");
           }}
           className={dictateButtonClass("idle", square, wide, plate)}
         >

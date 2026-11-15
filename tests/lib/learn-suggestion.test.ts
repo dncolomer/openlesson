@@ -45,7 +45,7 @@ function promptBar(mode: SessionMarkMode) {
       handleQuickAction: () => {},
       commandInputRef: { current: null },
       setCraftInsightOpen: () => {},
-      writeDictatedText: () => {},
+      writeDictatedText: () => [],
       craftInsightOpen: false,
       selectedCanvasElements: () => [],
       selectedMarkTexts: [],
@@ -196,9 +196,13 @@ describe("learn suggestion toast", () => {
     const canvas = read("components/ExcalidrawCanvas.tsx");
     expect(canvas).not.toContain("placeSuggestionText");
     expect(canvas).not.toContain("appendLearnSuggestionText");
-    expect(canvas).toContain("runIleWorkCanvasCommand");
-    expect(canvas).toContain("focusText: sessionHarnessFocusLine");
-    expect(canvas).toContain("sessionHarnessFocusLine");
+    expect(canvas).toContain("sessionBranchRef");
     expect(canvas).toContain("acknowledgeIleWorkCanvasXaiNotes");
+    const commands = read("components/excalidraw-canvas/use-work-canvas-commands.ts");
+    expect(commands).toContain("runIleWorkCanvasCommand");
+    expect(commands).toContain("sessionHarnessHereLine");
+    expect(commands).toContain("sessionHarnessExploreLine");
+    expect(commands).toContain("focusText: sessionHarnessHereLine(model)");
+    expect(commands).toContain("nextText: explore.text");
   });
 });

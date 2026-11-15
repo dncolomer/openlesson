@@ -197,14 +197,29 @@ export const ILE_WORK_CANVAS_FONT_FAMILY = 6;
 /** Excalidraw dark theme inverts the canvas: stored black renders as white. */
 export const ILE_WORK_CANVAS_STROKE_COLOR = "#1e1e1e";
 
+/**
+ * Excalidraw `STROKE_WIDTH.thin`. Freedraw renders at `strokeWidth * 4.25`,
+ * so 1 is half of Excalidraw's shipped default (2).
+ */
+export const ILE_WORK_CANVAS_STROKE_WIDTH = 1;
+
+/** Excalidraw `DEFAULT_ELEMENT_PROPS.strokeWidth` before our Work-canvas default. */
+export const EXCALIDRAW_DEFAULT_STROKE_WIDTH = 2;
+
 /** Grid on and zen mode on, unless this scene already stored a choice. */
 export const ILE_AUTO_LAYOUT_APP_STATE_KEY = "ileAutoLayoutEnabled";
 
 /** Filled triangle is smaller than Excalidraw's default line "arrow" head. */
 export const ILE_WORK_CANVAS_END_ARROWHEAD = "triangle" as const;
 
+/** Excalidraw `currentItemRoundness`. Sharp squares, diamonds, and boxes. */
+export const ILE_WORK_CANVAS_ROUNDNESS = "sharp" as const;
+/** Excalidraw's shipped edge default before our Work-canvas default. */
+export const EXCALIDRAW_DEFAULT_ROUNDNESS = "round" as const;
+
 export function withIleWorkCanvasGridAppState(
   appState: IleWorkCanvasAppState | null | undefined,
+  options?: { migrateLegacyStrokeWidth?: boolean; migrateLegacyRoundness?: boolean },
 ): IleWorkCanvasAppState {
   const next = asRecord(appState);
   if (typeof next.gridModeEnabled !== "boolean") next.gridModeEnabled = true;
@@ -218,7 +233,19 @@ export function withIleWorkCanvasGridAppState(
   if (typeof next.currentItemStrokeColor !== "string" || !String(next.currentItemStrokeColor).trim()) {
     next.currentItemStrokeColor = ILE_WORK_CANVAS_STROKE_COLOR;
   }
+  const strokeWidth = Number(next.currentItemStrokeWidth);
+  const legacyDefault =
+    options?.migrateLegacyStrokeWidth === true && strokeWidth === EXCALIDRAW_DEFAULT_STROKE_WIDTH;
+  if (!Number.isFinite(strokeWidth) || strokeWidth <= 0 || legacyDefault) {
+    next.currentItemStrokeWidth = ILE_WORK_CANVAS_STROKE_WIDTH;
+  }
   next.currentItemFontFamily = ILE_WORK_CANVAS_FONT_FAMILY;
+  const roundness = next.currentItemRoundness;
+  const legacyRound =
+    options?.migrateLegacyRoundness === true && roundness === EXCALIDRAW_DEFAULT_ROUNDNESS;
+  if ((roundness !== "round" && roundness !== "sharp") || legacyRound) {
+    next.currentItemRoundness = ILE_WORK_CANVAS_ROUNDNESS;
+  }
   if (typeof next.currentItemEndArrowhead !== "string" && next.currentItemEndArrowhead !== null) {
     next.currentItemEndArrowhead = ILE_WORK_CANVAS_END_ARROWHEAD;
   }
@@ -251,7 +278,9 @@ export const ILE_WORK_CANVAS_DEFAULT_APP_STATE_KEYS = [
   ILE_AUTO_LAYOUT_APP_STATE_KEY,
   "gridSize",
   "currentItemStrokeColor",
+  "currentItemStrokeWidth",
   "currentItemFontFamily",
+  "currentItemRoundness",
   "currentItemEndArrowhead",
 ] as const;
 
@@ -668,7 +697,25 @@ export function normalizeExtraSkeletons(raw: unknown): IleWorkCanvasSkeleton[] {
 export function ileWorkCanvasHasLiveElements(
   scene: IleWorkCanvasScene | null | undefined,
 ): boolean {
-  return serializeIleWorkCanvasScene(scene).elements.some((el) => !el.isDeleted);
+  const elements = scene?.elements;
+  if (!Array.isArray(elements) || elements.length === 0) return false;
+  return elements.some((el) => Boolean(el && !el.isDeleted));
+}
+
+/**
+ * Cheap live-element identity for pan/zoom skip. Excalidraw bumps
+ * `version` / `versionNonce` on element edits; camera changes do not.
+ */
+export function ileWorkCanvasLiveVersionSignature(
+  elements: readonly IleWorkCanvasElement[] | null | undefined,
+): string {
+  if (!elements?.length) return "";
+  let out = "";
+  for (const el of elements) {
+    if (!el || el.isDeleted) continue;
+    out += `${el.id}:${el.versionNonce ?? 0}:${el.version ?? 0};`;
+  }
+  return out;
 }
 
 /**
@@ -693,7 +740,9 @@ export function ileWorkCanvasIncomingClearsLiveScene(
 ): boolean {
   if (!ileWorkCanvasHasLiveElements(current)) return false;
   if (ileWorkCanvasHasLiveElements(incoming)) return false;
-  return serializeIleWorkCanvasScene(incoming).elements.some((el) => el.isDeleted);
+  const elements = incoming?.elements;
+  if (!Array.isArray(elements) || elements.length === 0) return false;
+  return elements.some((el) => Boolean(el?.isDeleted));
 }
 
 export const BOARD_INSTRUCTION_NOTE_KEY = "boardInstructionNote" as const;
@@ -718,7 +767,9 @@ export function ileWorkCanvasNoteLabel(kind?: string | null): string {
     case "answer":
       return "Answer";
     case "draw":
-      return "Draw";
+    case "do":
+    case "run":
+      return "Do/run";
     case "simplify":
       return "Simplify";
     case "concepts":
@@ -738,10 +789,13 @@ export function ileWorkCanvasNoteLabel(kind?: string | null): string {
       return "Layout";
     case "focus":
       return "Focus";
-    case "split":
-      return "Split";
+    case "next":
+      return "Next";
     case "breakdown":
-      return "Breakdown";
+    case "subdivide":
+      return "Subdivide";
+    case "dictate":
+      return "Dictate";
     default:
       return BOARD_INSTRUCTION_NOTE_LABEL;
   }
@@ -764,13 +818,15 @@ export function boardInstructionNoteElements(input: {
   headerCustomData?: Record<string, unknown> | null;
   locked?: boolean;
   textId?: string;
+  /** Empty body still draws the card (live dictate). */
+  allowEmpty?: boolean;
 }): { elements: IleWorkCanvasElement[]; width: number; height: number } {
   const text = String(input.text || "").trim();
-  if (!text) return { elements: [], width: 0, height: 0 };
+  if (!text && !input.allowEmpty) return { elements: [], width: 0, height: 0 };
   const title = String(input.label || "").trim() || BOARD_INSTRUCTION_NOTE_LABEL;
   const fontSize = Number(input.fontSize) || DEFAULT_FONT_SIZE;
   const textWidth = Math.max(96, Number(input.textWidth) || ILE_WORK_CANVAS_TEXT_BOX_WIDTH);
-  const wrapped = wrapIleWorkCanvasText(text, textWidth, fontSize);
+  const wrapped = wrapIleWorkCanvasText(text || " ", textWidth, fontSize);
   const width = wrapped.width + BOARD_NOTE_PAD_X * 2;
   const bodyHeight = BOARD_NOTE_PAD_Y + wrapped.height + BOARD_NOTE_PAD_Y;
   const height = BOARD_NOTE_HEADER_HEIGHT + bodyHeight;
@@ -822,7 +878,7 @@ export function boardInstructionNoteElements(input: {
       {
         type: "text",
         id: input.textId,
-        text,
+        text: text || " ",
         x: x + BOARD_NOTE_PAD_X,
         y: bodyY + BOARD_NOTE_PAD_Y,
         width: wrapped.width,
@@ -868,6 +924,10 @@ export function boardInstructionNoteElements(input: {
     label.verticalAlign = "middle";
     label.textAlign = "left";
     header.boundElements = [{ type: "text", id: label.id }];
+  }
+  if (bodyText && !text) {
+    bodyText.text = "";
+    bodyText.originalText = "";
   }
   return { elements: converted, width, height };
 }

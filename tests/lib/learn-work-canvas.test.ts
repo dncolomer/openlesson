@@ -53,6 +53,10 @@ import {
   BOARD_INSTRUCTION_NOTE_BODY_FILL,
   BOARD_INSTRUCTION_NOTE_HEADER_HEIGHT,
   ILE_WORK_CANVAS_END_ARROWHEAD,
+  ILE_WORK_CANVAS_STROKE_WIDTH,
+  EXCALIDRAW_DEFAULT_STROKE_WIDTH,
+  ILE_WORK_CANVAS_ROUNDNESS,
+  EXCALIDRAW_DEFAULT_ROUNDNESS,
   ILE_CHAPTER_SEED_CUSTOM_DATA_KEY,
   ILE_WORK_CANVAS_DEFAULT_GRID_SIZE,
   ILE_WORK_CANVAS_FONT_FAMILY,
@@ -119,6 +123,7 @@ import {
   ileWorkCanvasFitScroll,
   ileWorkCanvasRevealScroll,
   ileWorkCanvasZoomAtPoint,
+  ileWorkCanvasSceneToViewport,
   ileWorkCanvasContentBounds,
   ileWorkCanvasClusteredOrigin,
   ileWorkCanvasEmptyNearbyOrigin,
@@ -130,17 +135,19 @@ import {
   ileWorkCanvasSplitTextChunks,
   ileWorkCanvasThinkingOccupancy,
   ileWorkCanvasIncomingClearsLiveScene,
+  ileWorkCanvasLiveVersionSignature,
   ileWorkCanvasShouldRestoreEmptyBoard,
   ileWorkCanvasWorkspaceFromChatBody,
   ileWorkCanvasViewportToHost,
+  ileWorkCanvasViewportToScene,
+  ileWorkCanvasViewportCenter,
+  ileWorkCanvasOriginCenteredOn,
   ileWorkCanvasWithScrollToContent,
   mergeIleXaiTurnOntoLiveWorkCanvas,
   pasteIleWorkCanvasElements,
   replaceIleWorkCanvasSelection,
   placeIleLearnMorePrompt,
   joinIleWorkCanvasSelection,
-  splitIleWorkCanvasSelectedText,
-  splitIleWorkCanvasTextElement,
   ILE_WORK_CANVAS_STAY_ON_DOMAIN,
   type IleWorkCanvasScene,
 } from "@/lib/learn-work-canvas";
@@ -251,8 +258,13 @@ describe("TAP Learning Work canvas grid default (shipped)", () => {
     expect(empty.appState.zenModeEnabled).toBe(true);
     expect(empty.appState.gridSize).toBe(ILE_WORK_CANVAS_DEFAULT_GRID_SIZE);
     expect(empty.appState.currentItemStrokeColor).toBe("#1e1e1e");
+    expect(empty.appState.currentItemStrokeWidth).toBe(ILE_WORK_CANVAS_STROKE_WIDTH);
+    expect(ILE_WORK_CANVAS_STROKE_WIDTH).toBe(1);
+    expect(ILE_WORK_CANVAS_STROKE_WIDTH).toBeLessThanOrEqual(EXCALIDRAW_DEFAULT_STROKE_WIDTH / 2);
     expect(empty.appState.currentItemFontFamily).toBe(ILE_WORK_CANVAS_FONT_FAMILY);
     expect(empty.appState.currentItemEndArrowhead).toBe(ILE_WORK_CANVAS_END_ARROWHEAD);
+    expect(empty.appState.currentItemRoundness).toBe(ILE_WORK_CANVAS_ROUNDNESS);
+    expect(ILE_WORK_CANVAS_ROUNDNESS).toBe("sharp");
     expect(ILE_WORK_CANVAS_END_ARROWHEAD).toBe("triangle");
     const arrow = convertToExcalidrawElements([
       { type: "arrow", x: 0, y: 0, width: 40, height: 0 },
@@ -268,6 +280,7 @@ describe("TAP Learning Work canvas grid default (shipped)", () => {
     expect(restored.appState.gridModeEnabled).toBe(true);
     expect(restored.appState.zenModeEnabled).toBe(true);
     expect(restored.appState.gridSize).toBe(ILE_WORK_CANVAS_DEFAULT_GRID_SIZE);
+    expect(restored.appState.currentItemStrokeWidth).toBe(ILE_WORK_CANVAS_STROKE_WIDTH);
 
     const keptOff = withIleWorkCanvasGridAppState({ gridModeEnabled: false, gridSize: 40 });
     expect(keptOff.gridModeEnabled).toBe(false);
@@ -277,6 +290,27 @@ describe("TAP Learning Work canvas grid default (shipped)", () => {
     const keptOn = withIleWorkCanvasGridAppState({ gridModeEnabled: true, zenModeEnabled: true });
     expect(keptOn.gridModeEnabled).toBe(true);
     expect(keptOn.zenModeEnabled).toBe(true);
+
+    const keptBold = withIleWorkCanvasGridAppState({
+      currentItemStrokeWidth: EXCALIDRAW_DEFAULT_STROKE_WIDTH,
+    });
+    expect(keptBold.currentItemStrokeWidth).toBe(EXCALIDRAW_DEFAULT_STROKE_WIDTH);
+    const keptExtraBold = withIleWorkCanvasGridAppState({ currentItemStrokeWidth: 4 });
+    expect(keptExtraBold.currentItemStrokeWidth).toBe(4);
+    const openedLegacy = withIleWorkCanvasGridAppState(
+      { currentItemStrokeWidth: EXCALIDRAW_DEFAULT_STROKE_WIDTH },
+      { migrateLegacyStrokeWidth: true },
+    );
+    expect(openedLegacy.currentItemStrokeWidth).toBe(ILE_WORK_CANVAS_STROKE_WIDTH);
+    const keptRound = withIleWorkCanvasGridAppState({
+      currentItemRoundness: EXCALIDRAW_DEFAULT_ROUNDNESS,
+    });
+    expect(keptRound.currentItemRoundness).toBe(EXCALIDRAW_DEFAULT_ROUNDNESS);
+    const openedRound = withIleWorkCanvasGridAppState(
+      { currentItemRoundness: EXCALIDRAW_DEFAULT_ROUNDNESS },
+      { migrateLegacyRoundness: true },
+    );
+    expect(openedRound.currentItemRoundness).toBe(ILE_WORK_CANVAS_ROUNDNESS);
 
     const canvas = read("components/ExcalidrawCanvas.tsx");
     expect(canvas).toContain("withIleWorkCanvasGridAppState");
@@ -293,6 +327,8 @@ describe("TAP Learning Work canvas grid default (shipped)", () => {
     expect(css).toContain("--color-selection: #111111 !important");
     expect(css).toContain(".ToolIcon_type_radio:checked + .ToolIcon__icon");
     expect(css).toContain("button.standalone.active");
+    expect(css).toContain('[data-testid="toolbar-laser"]');
+    expect(css).toContain("[data-ile-toolbar-laser]");
     expect(css).not.toContain("#a8a5ff");
     expect(css).not.toContain("#4f4d6f");
     expect(css).not.toContain("#403e6a");
@@ -727,6 +763,18 @@ describe("TAP Learning Work canvas ask-XAI on selection (shipped)", () => {
     expect(ileCanvasPromptBarWidth(null)).toBe(ILE_CANVAS_PROMPT_BAR_FALLBACK_WIDTH);
     expect(ILE_CANVAS_PROMPT_BAR_TOOLBAR_SELECTOR).toContain(".App-toolbar");
     expect(canvas).toContain("handleQuickAction");
+    expect(canvas).toContain("IleLaserToolbarSlot");
+    expect(canvas).toContain("data-ile-toolbar-laser");
+    expect(canvas).toContain("ileWorkCanvasLiveVersionSignature");
+    expect(canvas).toContain("lastPngExportSignatureRef");
+    const laserSlot = read("components/excalidraw-canvas/laser-toolbar-slot.tsx");
+    expect(laserSlot).toContain("requestAnimationFrame");
+    expect(laserSlot).not.toContain("observer.observe(host, { childList: true, subtree: true })");
+    expect(canvas).toContain("toggleLaserTool");
+    expect(canvas).toContain("onTogglePointer");
+    expect(canvas).toContain("ileWorkCanvasPointerNextTool");
+    expect(canvas).toContain("onLaserPointerUpdate");
+    expect(canvas).toContain("finishLaserStroke");
     expect(canvas).not.toContain("data-ile-compress-work");
     expect(canvas).toContain("IleCraftInsightButton");
     expect(canvas).not.toContain("selectedElements: []");
@@ -799,6 +847,25 @@ describe("TAP Learning Work canvas ask-XAI on selection (shipped)", () => {
 
     const ileInset = { left: 16, top: 96 };
     expect(ileWorkCanvasViewportToHost({ x: 80, y: 180 }, ileInset)).toEqual({ x: 64, y: 84 });
+    const view = {
+      width: 800,
+      height: 600,
+      zoom: { value: 2 },
+      scrollX: 10,
+      scrollY: 20,
+      offsetLeft: 16,
+      offsetTop: 8,
+    };
+    const viewCenter = ileWorkCanvasViewportCenter(view)!;
+    const back = ileWorkCanvasSceneToViewport(viewCenter, view);
+    expect(back.x).toBeCloseTo(400);
+    expect(back.y).toBeCloseTo(300);
+    expect(ileWorkCanvasViewportToScene({ x: 400, y: 300 }, view)).toEqual(viewCenter);
+    expect(ileWorkCanvasViewportCenter({ width: 0, height: 600 })).toBeNull();
+    expect(ileWorkCanvasOriginCenteredOn({ x: 100, y: 80 }, { width: 40, height: 20 })).toEqual({
+      x: 80,
+      y: 70,
+    });
     const tight = ileLearnMorePromptPlacement({
       elements: selected,
       selectedElementIds: { [el.id]: true },
@@ -1718,60 +1785,14 @@ describe("TAP Learning Work canvas workspace+block prompt context (shipped)", ()
   });
 });
 
-describe("TAP Learning Work canvas split + Expand More quick actions (shipped)", () => {
-  it("splits a text element into 2 or 3 live blocks and keeps icon-only quick actions", () => {
+describe("TAP Learning Work canvas chunking + Expand More quick actions (shipped)", () => {
+  it("chunks source text into 2 or 3 parts and keeps icon-only quick actions", () => {
     const source =
       "First clause names the last-resort test. Second clause names discrimination. Third clause names proportionality of means.";
     const chunks = ileWorkCanvasSplitTextChunks(source);
     expect(chunks.length).toBeGreaterThanOrEqual(2);
     expect(chunks.length).toBeLessThanOrEqual(3);
     expect(chunks.join(" ").replace(/\s+/g, " ")).toBe(source.replace(/\s+/g, " "));
-
-    const scene = {
-      elements: convertToExcalidrawElements([{ type: "text", text: source, x: 40, y: 80 }]),
-      appState: {},
-      files: {},
-    };
-    const original = scene.elements[0]!;
-    const split = splitIleWorkCanvasTextElement(scene, original);
-    expect(split.split).toBe(true);
-    const liveText = split.scene.elements.filter((el) => el.type === "text" && !el.isDeleted);
-    expect(liveText.length).toBeGreaterThanOrEqual(2);
-    expect(liveText.length).toBeLessThanOrEqual(3);
-    expect(liveText.some((el) => el.id === original.id)).toBe(false);
-    const joined = liveText
-      .map((el) => String(el.originalText || el.text || ""))
-      .join(" ")
-      .replace(/\s+/g, " ");
-    expect(joined).toBe(source.replace(/\s+/g, " "));
-
-    const rect = convertToExcalidrawElements([
-      { type: "rectangle", x: 0, y: 0, width: 80, height: 40 },
-    ])[0]!;
-    const noSplit = splitIleWorkCanvasSelectedText(scene, [rect]);
-    expect(noSplit.split).toBe(false);
-    expect(noSplit.scene.elements.map((el) => el.id)).toEqual(scene.elements.map((el) => el.id));
-
-    const box = convertToExcalidrawElements([
-      { type: "rectangle", x: 20, y: 20, width: 160, height: 80, label: { text: source } },
-    ]);
-    const container = box.find((el) => el.type === "rectangle")!;
-    const caption = box.find((el) => el.type === "text")!;
-    expect(caption.containerId).toBe(container.id);
-    const boundSplit = splitIleWorkCanvasSelectedText(
-      { elements: box, appState: {}, files: {} },
-      [container],
-    );
-    expect(boundSplit.split).toBe(true);
-    expect(boundSplit.parts.length).toBeGreaterThanOrEqual(2);
-    expect(boundSplit.parts.every((el) => !el.containerId)).toBe(true);
-    expect(boundSplit.parts[0]?.fontFamily).toBe(ILE_WORK_CANVAS_FONT_FAMILY);
-    const boundSelectedIds = (boundSplit.scene.appState.selectedElementIds ?? {}) as Record<
-      string,
-      boolean
-    >;
-    expect(boundSelectedIds[boundSplit.parts[0]!.id]).toBe(true);
-    expect(boundSplit.scene.elements.some((el) => el.id === caption.id)).toBe(false);
 
     const upper = convertToExcalidrawElements([{ type: "text", text: "Alpha", x: 10, y: 10 }])[0]!;
     const lower = convertToExcalidrawElements([{ type: "text", text: "Beta", x: 30, y: 80 }])[0]!;
@@ -1839,8 +1860,8 @@ describe("TAP Learning Work canvas split + Expand More quick actions (shipped)",
         `occupancyOverlap=${ileWorkCanvasThinkingOccupancy({ heliosBusy: true, canvasAskTurnIds: ["ask-1"] }).join(",")}`,
         `expandMoreEmptyBusy=${ileLearnMoreVisiblePlacement({ selectedElementIds: {}, pointerBusy: true, placed: { count: 1, left: 1, top: 1 } }) === null}`,
         `askHasWorkspace=${domainAsk.includes("Just War Ethics") && domainAsk.includes("Last resort")}`,
-        `splitCount=${liveText.length}`,
-        `splitPreserves=${joined === source.replace(/\s+/g, " ")}`,
+        `chunkCount=${chunks.length}`,
+        `chunksPreserve=${chunks.join(" ").replace(/\s+/g, " ") === source.replace(/\s+/g, " ")}`,
         "quickActions=named Check",
         "packaging=WorkCanvas injected ask, no host imports",
       ].join("\n") + "\n",
@@ -1879,6 +1900,14 @@ describe("TAP Learning Work canvas user delete stays empty (shipped)", () => {
     };
     expect(ileWorkCanvasIncomingClearsLiveScene(live, deleted)).toBe(true);
     expect(ileWorkCanvasIncomingClearsLiveScene(live, emptyIleWorkCanvasScene())).toBe(false);
+    expect(ileWorkCanvasLiveVersionSignature(live.elements)).toBe(
+      ileWorkCanvasLiveVersionSignature(live.elements.map((el) => ({ ...el, x: el.x + 40 }))),
+    );
+    expect(ileWorkCanvasLiveVersionSignature(live.elements)).not.toBe(
+      ileWorkCanvasLiveVersionSignature(
+        live.elements.map((el) => ({ ...el, versionNonce: (el.versionNonce || 0) + 1 })),
+      ),
+    );
 
     const canvas = read("components/ExcalidrawCanvas.tsx");
     expect(canvas).toContain("ileWorkCanvasShouldRestoreEmptyBoard");
@@ -2983,7 +3012,7 @@ describe("TAP Learning Work canvas selection commands (shipped)", () => {
         `clearAskCalls=${ask.calls.length}`,
         `gappedAskCalls=${gappedAsk.calls.length}`,
         `modelAsk=${modelAsk.calls.length}`,
-        "commands=Focus Simplify Split Breakdown Answer Draw Refactor",
+        "commands=Focus Next Simplify Subdivide Answer Do/run Refactor",
       ].join("\n") + "\n",
     );
   });

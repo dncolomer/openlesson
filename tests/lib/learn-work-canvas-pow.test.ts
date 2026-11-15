@@ -21,6 +21,7 @@ import {
   classifyIleWorkCanvasSceneDiff,
   IleWorkCanvasPowCollector,
   ileWorkCanvasElementContentFingerprint,
+  snapshotIleWorkCanvasPowScene,
   ILE_WORK_CANVAS_COMMAND_POW_IDS,
   ILE_WORK_CANVAS_POW_ACTIONS,
   ILE_WORK_CANVAS_RETIRED_COMMAND_POW_IDS,
@@ -301,6 +302,31 @@ describe("Work-canvas scene-diff PoW (shipped classifier)", () => {
     );
   });
 
+  it("snapshots PoW baselines so in-place Excalidraw mutation still classifies, and skips clone while the pointer is down", () => {
+    const rect = el("rectangle", "live", { x: 10, y: 10 });
+    const live = scene([rect], { files: { blob: { dataURL: "data:image/png;base64,AAA" } } });
+    const snap = snapshotIleWorkCanvasPowScene(live);
+    expect(snap.files).toEqual({});
+    rect.x = 200;
+    expect(snap.elements[0].x).toBe(10);
+
+    const collector = new IleWorkCanvasPowCollector();
+    rect.x = 10;
+    collector.reset(live);
+    expect(collector.observeScene(live, { gestureBusy: true })).toEqual([]);
+    rect.x = 240;
+    expect(collector.observeScene(live, { gestureBusy: true })).toEqual([]);
+    const moved = collector.observeScene(live, { gestureBusy: false });
+    expect(actionsOf(moved)).toEqual(["canvas/move"]);
+    expect(moved[0].metadata.element_ids).toEqual(["live"]);
+
+    const again = el("rectangle", "again", { x: 4, y: 4 });
+    const board = scene([again]);
+    collector.reset(board);
+    again.x = 90;
+    expect(actionsOf(collector.observeScene(board))).toEqual(["canvas/move"]);
+  });
+
   it("TAP Learning and TAP builders agree on the same classified events", () => {
     const rect = el("rectangle", "shared");
     const events = classifyIleWorkCanvasSceneDiff(emptyIleWorkCanvasScene(), scene([rect]));
@@ -397,13 +423,13 @@ describe("Work-canvas scene-diff PoW (shipped classifier)", () => {
 
     const commandPrompts: Record<(typeof ILE_WORK_CANVAS_COMMAND_POW_IDS)[number], string> = {
       focus: "Focus",
+      next: "Next",
       simplify: "Simplify",
-      split: "split",
-      breakdown: "Breakdown",
+      breakdown: "Subdivide",
       concepts: "Concepts",
       define: "Define",
       answer: "Answer",
-      draw: "Draw",
+      draw: "Do/run",
       refactor: "Refactor",
     };
 

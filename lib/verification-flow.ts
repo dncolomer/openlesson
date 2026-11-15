@@ -5,7 +5,7 @@
  * Callers (UI, routes) must use these functions — do not re-implement them.
  */
 
-import { normalizeFlowName } from "@/lib/product-flow";
+import { normalizeFlowName, parseExactProblemOnCanvas } from "@/lib/product-flow";
 import {
   parseFlowArtifacts,
   flowProblemFromUnknown,
@@ -48,6 +48,7 @@ export type VerificationFlow = {
   topic: string;
   questions: VerificationQuestion[];
   artifacts: FlowArtifact[];
+  exactProblemOnCanvas: boolean;
   /** Stored default; the run clock is chosen on the session start screen. */
   durationMinutes: number;
   /** 4, 8, or 16 actions on the unsys model. */
@@ -512,6 +513,7 @@ export type VerificationCommand =
       problem?: string;
       questions?: unknown;
       artifacts?: unknown;
+      exactProblemOnCanvas?: boolean;
       durationMinutes?: number;
       actionCatalog?: number;
       id?: string;
@@ -527,6 +529,7 @@ export type VerificationCommand =
       problem?: string;
       questions?: unknown;
       artifacts?: unknown;
+      exactProblemOnCanvas?: boolean;
       durationMinutes?: number;
       actionCatalog?: number;
     }
@@ -578,6 +581,7 @@ export function applyVerificationCommand(
       topic,
       questions: flowProblemQuestionPool(topic),
       artifacts: parseFlowArtifacts(command.artifacts),
+      exactProblemOnCanvas: parseExactProblemOnCanvas(command.exactProblemOnCanvas),
       durationMinutes: flowCountdownMinutes(command.durationMinutes),
       actionCatalog: parseLearningModelSize(command.actionCatalog),
       publicToken: token,
@@ -610,6 +614,10 @@ export function applyVerificationCommand(
         command.artifacts === undefined
           ? parseFlowArtifacts(current.artifacts)
           : parseFlowArtifacts(command.artifacts),
+      exactProblemOnCanvas:
+        command.exactProblemOnCanvas === undefined
+          ? Boolean(current.exactProblemOnCanvas)
+          : parseExactProblemOnCanvas(command.exactProblemOnCanvas),
       durationMinutes:
         command.durationMinutes === undefined
           ? flowCountdownMinutes(current.durationMinutes)

@@ -14,6 +14,7 @@ import {
 } from "@/lib/block-kind";
 import {
   emptyProductFlowDraft,
+  parseExactProblemOnCanvas,
   type ProductFlowKind,
 } from "@/lib/product-flow";
 import { parseFlowArtifacts, type FlowArtifact } from "@/lib/flow-artifacts";
@@ -25,6 +26,7 @@ export type HeliosFlowCreateInput = {
   topic: string;
   questions: string[];
   artifacts: FlowArtifact[];
+  exactProblemOnCanvas: boolean;
   actionCatalog: number;
   durationMinutes: number;
   workspaceId?: string;
@@ -96,6 +98,9 @@ export function heliosFlowCreateInput(
     topic,
     questions,
     artifacts: parseFlowArtifacts(args.artifacts),
+    exactProblemOnCanvas: parseExactProblemOnCanvas(
+      args.exactProblemOnCanvas ?? args.exact_problem_on_canvas,
+    ),
     actionCatalog: Number.isFinite(actionCatalog)
       ? actionCatalog
       : draft.actionCatalog,

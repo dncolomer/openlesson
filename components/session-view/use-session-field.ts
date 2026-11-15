@@ -23,7 +23,8 @@ import {
   isSessionWelcomeSeen,
   markIleSessionSettingsConfirmed,
 } from "@/lib/welcomeState";
-import { resolveLearnOpeningWork } from "@/lib/learn-opening-work";
+import { exactProblemOpeningWork, resolveLearnOpeningWork } from "@/lib/learn-opening-work";
+import { sessionWantsExactProblemOnCanvas } from "@/lib/product-flow";
 import { loadSessionBranchField, sessionClockMayStart } from "@/lib/session-branch-field-load";
 import { learnSessionFieldInput } from "@/lib/session-branch-prepare";
 import type { SessionBranchModel } from "@/lib/session-branch-model";
@@ -325,8 +326,15 @@ export function useSessionField(input: SessionFieldInput) {
   );
 
   const seedOpeningWorkCanvas = useCallback(
-    (boardId: string, model: SessionBranchModel, generated?: string | null) => {
-      const text = resolveLearnOpeningWork(model, generated, boardId);
+    (
+      boardId: string,
+      model: SessionBranchModel,
+      generated?: string | null,
+      options?: { exactProblem?: boolean; fallback?: string | null },
+    ) => {
+      const text = options?.exactProblem
+        ? exactProblemOpeningWork(generated || options.fallback)
+        : resolveLearnOpeningWork(model, generated, boardId);
       if (!text) return;
       seedChapterWorkCanvas(boardId, text);
     },
@@ -583,12 +591,16 @@ export function useSessionField(input: SessionFieldInput) {
         return;
       }
       if (field.ok) {
+        const exact =
+          ("openingWorkExact" in field && field.openingWorkExact === true) ||
+          sessionWantsExactProblemOnCanvas(session.metadata);
         seedOpeningWorkCanvas(
           session.id,
           field.model,
           "openingWork" in field && typeof field.openingWork === "string"
             ? field.openingWork
             : null,
+          { exactProblem: exact, fallback: session.problem },
         );
       }
       setIsPaused(false);
@@ -655,12 +667,16 @@ export function useSessionField(input: SessionFieldInput) {
         return;
       }
       if (field.ok) {
+        const exact =
+          ("openingWorkExact" in field && field.openingWorkExact === true) ||
+          sessionWantsExactProblemOnCanvas(session.metadata);
         seedOpeningWorkCanvas(
           session.id,
           field.model,
           "openingWork" in field && typeof field.openingWork === "string"
             ? field.openingWork
             : null,
+          { exactProblem: exact, fallback: session.problem },
         );
       }
       setIsPaused(false);

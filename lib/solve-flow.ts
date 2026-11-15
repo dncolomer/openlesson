@@ -3,7 +3,7 @@
  * work-canvas run attached to the flow.
  */
 
-import { normalizeFlowName } from "@/lib/product-flow";
+import { normalizeFlowName, parseExactProblemOnCanvas } from "@/lib/product-flow";
 import {
   parseFlowArtifacts,
   type FlowArtifact,
@@ -27,6 +27,7 @@ export type SolveFlow = {
   name: string;
   topic: string;
   artifacts: FlowArtifact[];
+  exactProblemOnCanvas: boolean;
   durationMinutes: number;
   actionCatalog: LearningModelSize;
   publicToken: string;
@@ -113,6 +114,7 @@ export type SolveCommand =
       topic?: string;
       problem?: string;
       artifacts?: unknown;
+      exactProblemOnCanvas?: boolean;
       durationMinutes?: number;
       actionCatalog?: number;
       id?: string;
@@ -127,6 +129,7 @@ export type SolveCommand =
       topic?: string;
       problem?: string;
       artifacts?: unknown;
+      exactProblemOnCanvas?: boolean;
       durationMinutes?: number;
       actionCatalog?: number;
     }
@@ -160,6 +163,7 @@ export function applySolveCommand(
       name: accepted.name,
       topic: accepted.topic,
       artifacts: accepted.artifacts,
+      exactProblemOnCanvas: parseExactProblemOnCanvas(command.exactProblemOnCanvas),
       durationMinutes: flowCountdownMinutes(command.durationMinutes),
       actionCatalog: parseLearningModelSize(command.actionCatalog),
       publicToken: command.publicToken || createSolvePublicToken(),
@@ -191,6 +195,10 @@ export function applySolveCommand(
         command.artifacts === undefined
           ? parseFlowArtifacts(current.artifacts)
           : parseFlowArtifacts(command.artifacts),
+      exactProblemOnCanvas:
+        command.exactProblemOnCanvas === undefined
+          ? Boolean(current.exactProblemOnCanvas)
+          : parseExactProblemOnCanvas(command.exactProblemOnCanvas),
       durationMinutes:
         command.durationMinutes === undefined
           ? flowCountdownMinutes(current.durationMinutes)

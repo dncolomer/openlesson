@@ -21,7 +21,7 @@ import {
 } from "@/components/product-flow/product-flow-form";
 import { FlowProblemFields } from "@/components/product-flow/flow-problem-fields";
 import { dashboardTabForProductSurface } from "@/lib/dashboard-nav";
-import { CopyFlowUrlButton } from "@/components/product-flow/copy-flow-url-button";
+import { FlowPublicActions } from "@/components/product-flow/copy-flow-url-button";
 
 type LoadedFlow = {
   id: string;
@@ -29,6 +29,7 @@ type LoadedFlow = {
   topic?: string;
   goal?: string;
   artifacts?: FlowArtifact[];
+  exactProblemOnCanvas?: boolean;
   questions: Array<{ id?: string; text?: string }>;
   durationMinutes?: number;
   publicToken: string;
@@ -48,6 +49,7 @@ export function ProductFlowPage({
   const [name, setName] = useState("");
   const [problem, setProblem] = useState("");
   const [artifacts, setArtifacts] = useState<FlowArtifact[]>([]);
+  const [exactProblemOnCanvas, setExactProblemOnCanvas] = useState(false);
   const [minutes, setMinutes] = useState(15);
   const [publicUrl, setPublicUrl] = useState("");
   const [error, setError] = useState("");
@@ -67,6 +69,7 @@ export function ProductFlowPage({
     setName(String(next.name || payload.name || ""));
     setProblem(String(next.topic || next.goal || ""));
     setArtifacts(parseFlowArtifacts(next.artifacts));
+    setExactProblemOnCanvas(Boolean(next.exactProblemOnCanvas));
     setMinutes(flowCountdownMinutes(next.durationMinutes));
     setPublicUrl(String(payload.publicUrl || ""));
   }, [flowId, kind]);
@@ -86,10 +89,8 @@ export function ProductFlowPage({
         body: JSON.stringify({
           action: "update",
           name,
-          topic: problem,
-          goal: problem,
-          problem,
           artifacts,
+          exactProblemOnCanvas,
           durationMinutes: minutes,
         }),
       });
@@ -128,8 +129,8 @@ export function ProductFlowPage({
 
   const description =
     kind === "calibration"
-      ? "Problem, optional files, and countdown."
-      : "The problem learners work on, and optional files used to generate the unsys model.";
+      ? "The problem is fixed. Name, files, and countdown can still change."
+      : "The problem is fixed. Name, files, and Exact problem on canvas can still change.";
 
   return (
     <ProductSurface
@@ -149,16 +150,8 @@ export function ProductFlowPage({
           description={description}
           extra={
             publicUrl ? (
-              <div className="mt-6 flex flex-wrap items-center gap-3">
-                <p
-                  className="min-w-0 flex-1 break-all font-mono text-[11px] text-neutral-400"
-                  data-verification-flow-public-link={kind === "verification" ? "" : undefined}
-                  data-calibration-flow-public-link={kind === "calibration" ? "" : undefined}
-                  data-solve-flow-public-link={kind === "solve" ? "" : undefined}
-                >
-                  {publicUrl}
-                </p>
-                <CopyFlowUrlButton url={publicUrl} />
+              <div className="mt-6">
+                <FlowPublicActions url={publicUrl} />
               </div>
             ) : null
           }
@@ -191,6 +184,9 @@ export function ProductFlowPage({
               onArtifactsChange={setArtifacts}
               workspaceId={flow?.workspaceId}
               topicHook={kind}
+              exactProblemOnCanvas={exactProblemOnCanvas}
+              onExactProblemOnCanvasChange={setExactProblemOnCanvas}
+              problemReadOnly
             />
             {kind === "calibration" ? (
               <FlowField label="Countdown">

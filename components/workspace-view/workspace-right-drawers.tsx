@@ -315,6 +315,7 @@ export function WorkspaceRightDrawers({
             goal: input.goal,
             topic: input.topic,
             artifacts: input.artifacts,
+            exactProblemOnCanvas: input.exactProblemOnCanvas,
             actionCatalog: input.actionCatalog,
             durationMinutes: input.durationMinutes,
             workspaceId,

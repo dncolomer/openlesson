@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ContextGenerationPool } from "@/components/ContextGenerationPool";
 import { type VerificationQuestion } from "@/lib/verification-flow";
-import { CopyFlowUrlButton } from "@/components/product-flow/copy-flow-url-button";
+import { FlowPublicActions } from "@/components/product-flow/copy-flow-url-button";
 import { FlowProblemFields } from "@/components/product-flow/flow-problem-fields";
 import { parseFlowArtifacts, type FlowArtifact } from "@/lib/flow-artifacts";
 
@@ -12,6 +12,7 @@ type FlowRecord = {
   name?: string;
   topic: string;
   artifacts?: FlowArtifact[];
+  exactProblemOnCanvas?: boolean;
   questions: VerificationQuestion[];
   publicToken: string;
   publicUrl: string;
@@ -30,6 +31,7 @@ export function VerificationFlowsPanel({
   const [name, setName] = useState("");
   const [topic, setTopic] = useState("");
   const [artifacts, setArtifacts] = useState<FlowArtifact[]>([]);
+  const [exactProblemOnCanvas, setExactProblemOnCanvas] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -63,9 +65,9 @@ export function VerificationFlowsPanel({
           action: editingId ? "update" : "create",
           flowId: editingId,
           name,
-          topic,
-          problem: topic,
           artifacts,
+          exactProblemOnCanvas,
+          ...(editingId ? {} : { topic, problem: topic }),
         }),
       });
       const payload = await response.json();
@@ -76,6 +78,7 @@ export function VerificationFlowsPanel({
       setName("");
       setTopic("");
       setArtifacts([]);
+      setExactProblemOnCanvas(false);
       setEditingId(null);
       await load();
     } finally {
@@ -149,6 +152,9 @@ export function VerificationFlowsPanel({
           onArtifactsChange={setArtifacts}
           workspaceId={workspaceId}
           topicHook="verification"
+          exactProblemOnCanvas={exactProblemOnCanvas}
+          onExactProblemOnCanvasChange={setExactProblemOnCanvas}
+          problemReadOnly={Boolean(editingId)}
         />
         <button
           type="button"
@@ -179,6 +185,7 @@ export function VerificationFlowsPanel({
                     setEditingId(flow.id);
                     setName(flow.name || flow.topic);
                     setTopic(flow.topic);
+                    setExactProblemOnCanvas(Boolean(flow.exactProblemOnCanvas));
                     setArtifacts(parseFlowArtifacts(flow.artifacts));
                   }}
                 >
@@ -198,7 +205,7 @@ export function VerificationFlowsPanel({
               <p className="min-w-0 flex-1 break-all font-mono text-[11px] text-neutral-300" data-verification-flow-public-link>
                 {flow.publicUrl}
               </p>
-              <CopyFlowUrlButton url={flow.publicUrl} />
+              <FlowPublicActions url={flow.publicUrl} />
             </div>
           </li>
         ))}

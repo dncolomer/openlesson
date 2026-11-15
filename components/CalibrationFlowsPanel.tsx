@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ContextGenerationPool } from "@/components/ContextGenerationPool";
 import type { CalibrateQuestion } from "@/lib/calibrate-session";
 import { FLOW_COUNTDOWN_MINUTES, flowCountdownMinutes } from "@/lib/flow-countdown";
-import { CopyFlowUrlButton } from "@/components/product-flow/copy-flow-url-button";
+import { FlowPublicActions } from "@/components/product-flow/copy-flow-url-button";
 import { FlowProblemFields } from "@/components/product-flow/flow-problem-fields";
 import { parseFlowArtifacts, type FlowArtifact } from "@/lib/flow-artifacts";
 
@@ -65,11 +65,9 @@ export function CalibrationFlowsPanel({
           action: editingId ? "update" : "create",
           flowId: editingId,
           name,
-          goal,
-          topic: goal,
-          problem: goal,
           artifacts,
           durationMinutes: minutes,
+          ...(editingId ? {} : { goal, topic: goal, problem: goal }),
         }),
       });
       const payload = await response.json();
@@ -161,6 +159,7 @@ export function CalibrationFlowsPanel({
           onArtifactsChange={setArtifacts}
           workspaceId={workspaceId}
           topicHook="calibration"
+          problemReadOnly={Boolean(editingId)}
         />
         <label className="flex items-center gap-3 text-xs text-neutral-300">
           Countdown
@@ -226,7 +225,7 @@ export function CalibrationFlowsPanel({
               <p className="min-w-0 flex-1 break-all font-mono text-[11px] text-neutral-300" data-calibration-flow-public-link>
                 {flow.publicUrl}
               </p>
-              <CopyFlowUrlButton url={flow.publicUrl} />
+              <FlowPublicActions url={flow.publicUrl} />
             </div>
           </li>
         ))}

@@ -84,6 +84,7 @@ export function ProductFlowWizard({ kind }: { kind: ProductFlowKind }) {
           goal: accepted.goal,
           problem: accepted.topic,
           artifacts: accepted.artifacts,
+          exactProblemOnCanvas: accepted.exactProblemOnCanvas,
           actionCatalog: accepted.actionCatalog,
           durationMinutes: accepted.durationMinutes,
         }),
@@ -189,6 +190,10 @@ export function ProductFlowWizard({ kind }: { kind: ProductFlowKind }) {
               artifacts={draft.artifacts}
               onArtifactsChange={(artifacts) => patch({ artifacts })}
               topicHook={kind}
+              exactProblemOnCanvas={draft.exactProblemOnCanvas}
+              onExactProblemOnCanvasChange={(exactProblemOnCanvas) =>
+                patch({ exactProblemOnCanvas })
+              }
             />
             {kind === "calibration" ? (
               <FlowField label="Countdown">
@@ -224,6 +229,11 @@ export function ProductFlowWizard({ kind }: { kind: ProductFlowKind }) {
               {draft.artifacts.length ? (
                 <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
                   {draft.artifacts.length} artifact{draft.artifacts.length === 1 ? "" : "s"}
+                </p>
+              ) : null}
+              {draft.exactProblemOnCanvas && kind !== "calibration" ? (
+                <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
+                  Exact problem on canvas
                 </p>
               ) : null}
             </div>

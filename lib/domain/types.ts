@@ -45,6 +45,7 @@ export type ToolAction =
   | "answer"
   | "draw"
   | "focus"
+  | "next"
   | "simplify"
   | "ask"
   | "notebook_edit"

@@ -4,7 +4,7 @@
  * on the same cache entry while the session is already on.
  */
 
-import { resolveLearnOpeningWork } from "@/lib/learn-opening-work";
+import { exactProblemOpeningWork, resolveLearnOpeningWork } from "@/lib/learn-opening-work";
 import type { SessionBranchModel } from "@/lib/session-branch-model";
 import {
   planSessionBranchPrepare,
@@ -24,7 +24,13 @@ export type SessionBranchContinuation = {
 };
 
 export type SessionBranchFieldLoadResult =
-  | { ok: true; model: SessionBranchModel; key: string; openingWork: string }
+  | {
+      ok: true;
+      model: SessionBranchModel;
+      key: string;
+      openingWork: string;
+      openingWorkExact: boolean;
+    }
   | { ok: false; error: string; key: string | null };
 
 export type SessionBranchFieldCacheStatus = "preparing" | "ready" | "failed";
@@ -37,6 +43,7 @@ type CacheEntry = {
   model: SessionBranchModel | null;
   birth: SessionBranchModel | null;
   openingWork: string;
+  openingWorkExact: boolean;
   error: string | null;
   promise: Promise<SessionBranchModel>;
   listeners: Set<(entry: CacheEntry) => void>;
@@ -104,8 +111,14 @@ function isContinuation(value: unknown): value is SessionBranchContinuation {
   return Array.isArray(record.regions) && record.regions.length > 0;
 }
 
-function openingWorkOf(model: SessionBranchModel, value: unknown, salt: string): string {
+function openingWorkOf(
+  model: SessionBranchModel,
+  value: unknown,
+  salt: string,
+  exact?: boolean,
+): string {
   const generated = typeof value === "string" ? value : "";
+  if (exact) return exactProblemOpeningWork(generated);
   return resolveLearnOpeningWork(model, generated, salt);
 }
 
@@ -117,12 +130,14 @@ async function readPayload(
   continuation: SessionBranchContinuation | null;
   done: boolean;
   openingWork: string;
+  openingWorkExact: boolean;
 }> {
   const payload = (await response.json().catch(() => null)) as {
     model?: unknown;
     continuation?: unknown;
     done?: unknown;
     openingWork?: unknown;
+    openingWorkExact?: unknown;
     error?: { message?: unknown };
   } | null;
   if (!response.ok) {
@@ -130,11 +145,13 @@ async function readPayload(
     throw new Error(message || FIELD_ERROR);
   }
   if (!isModel(payload?.model)) throw new Error(FIELD_ERROR);
+  const openingWorkExact = payload.openingWorkExact === true;
   return {
     model: payload.model,
     continuation: isContinuation(payload.continuation) ? payload.continuation : null,
     done: payload.done === true,
-    openingWork: openingWorkOf(payload.model, payload.openingWork, salt),
+    openingWork: openingWorkOf(payload.model, payload.openingWork, salt, openingWorkExact),
+    openingWorkExact,
   };
 }
 
@@ -189,7 +206,9 @@ export async function loadSessionBranchField(
       model: existing.model,
       key,
       openingWork:
-        existing.openingWork || openingWorkOf(existing.model, existing.openingWork, key),
+        existing.openingWork ||
+        openingWorkOf(existing.model, existing.openingWork, key, existing.openingWorkExact),
+      openingWorkExact: existing.openingWorkExact,
     };
   }
   if (decision === "join" && existing) {
@@ -201,7 +220,9 @@ export async function loadSessionBranchField(
         model,
         key,
         openingWork:
-          ready?.openingWork || openingWorkOf(model, ready?.openingWork, key),
+          ready?.openingWork ||
+          openingWorkOf(model, ready?.openingWork, key, ready?.openingWorkExact),
+        openingWorkExact: Boolean(ready?.openingWorkExact),
       };
     } catch (error) {
       return { ok: false, error: messageOf(error), key };
@@ -227,6 +248,7 @@ export async function loadSessionBranchField(
     model: null,
     birth: null,
     openingWork: "",
+    openingWorkExact: false,
     error: null,
     promise: promise.then((payload) => payload.model),
     listeners: pendingListeners.get(key) ?? new Set(),
@@ -241,13 +263,20 @@ export async function loadSessionBranchField(
       entry.model = payload.model;
       entry.birth = payload.model;
       entry.openingWork = payload.openingWork;
+      entry.openingWorkExact = payload.openingWorkExact;
       entry.error = null;
       for (const listener of entry.listeners) listener(entry);
     }
     if (payload.continuation && !payload.done && cache.get(key)?.token === token) {
       void finishSessionBranchField(key, token, body, payload.continuation, fetchImpl);
     }
-    return { ok: true, model: payload.model, key, openingWork: payload.openingWork };
+    return {
+      ok: true,
+      model: payload.model,
+      key,
+      openingWork: payload.openingWork,
+      openingWorkExact: payload.openingWorkExact,
+    };
   } catch (error) {
     if (cache.get(key)?.token === token) cache.delete(key);
     return { ok: false, error: messageOf(error), key };

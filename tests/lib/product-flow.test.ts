@@ -5,6 +5,7 @@ import {
   acceptProductFlowPublish,
   emptyProductFlowDraft,
   flowOwnedByUser,
+  parseExactProblemOnCanvas,
   parseProductFlowKind,
   productFlowNewPath,
   productFlowEmbeddingKind,
@@ -34,6 +35,11 @@ describe("product flow owner_user_id", () => {
     expect(productFlowEmbeddingKind("calibration")).toBe("calibrate");
     expect(productFlowEmbeddingKind("solve")).toBe("solve");
     expect(parseProductFlowKind("solve")).toBe("solve");
+    expect(parseExactProblemOnCanvas(true)).toBe(true);
+    expect(parseExactProblemOnCanvas("true")).toBe(true);
+    expect(parseExactProblemOnCanvas("1")).toBe(true);
+    expect(parseExactProblemOnCanvas(false)).toBe(false);
+    expect(parseExactProblemOnCanvas(undefined)).toBe(false);
     expect(parseProductFlowKind("practice")).toBeNull();
     expect(productFlowNewPath("solve")).toBe("/solve/flows/new");
     expect(productFlowPagePath("solve", "sf1")).toBe("/solve/flows/sf1");
@@ -78,6 +84,7 @@ describe("product flow owner_user_id", () => {
     expect(accepted.questions).toEqual([]);
     expect(accepted.goal).toBe("");
     expect(accepted.artifacts).toEqual([]);
+    expect(accepted.exactProblemOnCanvas).toBe(false);
   });
 
   it("accepts verification and calibration from name + problem without questions", () => {

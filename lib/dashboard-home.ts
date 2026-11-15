@@ -61,8 +61,20 @@ export type DashboardRecentFlow = {
   questionCount: number;
 };
 
-export function dashboardFlowListShowsTopic(tab: string): boolean {
-  return tab === "solve";
+/** One-line Problem clip for every product flow table. */
+export const DASHBOARD_FLOW_TOPIC_MAX = 72;
+
+export function truncateDashboardFlowTopic(
+  value: unknown,
+  max = DASHBOARD_FLOW_TOPIC_MAX,
+): string {
+  const text = String(value ?? "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!text) return "—";
+  const limit = Number.isFinite(max) && max > 1 ? Math.floor(max) : DASHBOARD_FLOW_TOPIC_MAX;
+  if (text.length <= limit) return text;
+  return `${text.slice(0, limit - 1).trimEnd()}…`;
 }
 
 export function dashboardFlowWorkspacePath(kind: DashboardRecentFlowKind, flowId: string): string {

@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  dashboardFlowListShowsTopic,
   paginateDashboardFlows,
+  truncateDashboardFlowTopic,
   type DashboardRecentFlow,
 } from "@/lib/dashboard-home";
 import {
@@ -14,7 +14,7 @@ import {
   type DashboardProductTab,
 } from "@/lib/dashboard-nav";
 import { DASHBOARD_FLOWS_PATH } from "@/lib/product-flow";
-import { CopyFlowUrlButton } from "@/components/product-flow/copy-flow-url-button";
+import { FlowPublicActions } from "@/components/product-flow/copy-flow-url-button";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 
 export function DashboardFlowsTab({
@@ -30,7 +30,6 @@ export function DashboardFlowsTab({
   const [page, setPage] = useState(1);
   const productLabel = dashboardProductLabel(productTab);
   const createHref = dashboardCreateHref(productTab);
-  const showTopic = dashboardFlowListShowsTopic(productTab);
   const paged = useMemo(() => paginateDashboardFlows(flows, page), [flows, page]);
 
   useEffect(() => {
@@ -110,9 +109,9 @@ export function DashboardFlowsTab({
             <thead>
               <tr className="border-b border-white/20 font-mono text-[10px] uppercase tracking-[0.18em] text-neutral-500">
                 <th className="px-4 py-3 font-medium">Name</th>
-                <th className="px-4 py-3 font-medium">{showTopic ? "Topic" : "Questions"}</th>
+                <th className="px-4 py-3 font-medium">Topic</th>
                 <th className="px-4 py-3 font-medium">Created</th>
-                <th className="px-4 py-3 font-medium">Public URL</th>
+                <th className="px-4 py-3 font-medium">Run</th>
               </tr>
             </thead>
             <tbody>
@@ -131,23 +130,20 @@ export function DashboardFlowsTab({
                       {flow.name}
                     </Link>
                   </td>
-                  <td
-                    className={`px-4 py-3 ${showTopic ? "text-neutral-400" : "tabular-nums text-neutral-400"}`}
-                    data-dashboard-flow-topic={showTopic ? "" : undefined}
-                    data-dashboard-flow-questions={showTopic ? undefined : ""}
-                  >
-                    {showTopic ? flow.topic || "—" : flow.questionCount}
+                  <td className="max-w-[20rem] px-4 py-3 text-neutral-400">
+                    <span
+                      className="block truncate"
+                      title={flow.topic || undefined}
+                      data-dashboard-flow-topic=""
+                    >
+                      {truncateDashboardFlowTopic(flow.topic)}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-neutral-400">
                     {flow.createdAt ? formatDate(flow.createdAt) : "—"}
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <span className="min-w-0 truncate font-mono text-[11px] text-neutral-400" title={flow.publicPath}>
-                        {flow.publicPath}
-                      </span>
-                      <CopyFlowUrlButton url={flow.publicPath} />
-                    </div>
+                    <FlowPublicActions url={flow.publicPath} />
                   </td>
                 </tr>
               ))}

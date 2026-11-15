@@ -246,6 +246,7 @@ describe("calibration authoring", () => {
       name: "Limits",
       topic: "Limits",
       artifacts: [],
+      exactProblemOnCanvas: false,
       questions: MANUAL_QUESTIONS.map((text, index) => ({ id: `v-${index + 1}`, text })),
       durationMinutes: 15,
       actionCatalog: 4,

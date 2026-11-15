@@ -141,8 +141,17 @@ export function applyTapAssistantTurnsToWorkCanvas(
 export function applyTapVerificationOpeningToWorkCanvas(
   scene: IleWorkCanvasScene | null | undefined,
   turns: readonly TapAssistantCanvasTurn[] | null | undefined,
+  exactProblem?: string | null,
 ): IleWorkCanvasScene {
   const assistant = assistantCanvasTurns(turns);
+  const problem = String(exactProblem || "").replace(/\s+/g, " ").trim();
+  if (problem) {
+    const seeded = seedIleChapterWorkCanvas(scene, {
+      text: problem,
+      chapterId: "session",
+    });
+    return applyTapAssistantTurnsToWorkCanvas(seeded.scene, assistant);
+  }
   const [first, ...rest] = assistant;
   const seeded = seedIleChapterWorkCanvas(scene, {
     text: first?.content,

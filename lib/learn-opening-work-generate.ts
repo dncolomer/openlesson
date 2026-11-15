@@ -4,6 +4,7 @@
  */
 
 import {
+  exactProblemOpeningWork,
   learnOpeningWorkScopeText,
   resolveLearnOpeningWork,
 } from "@/lib/learn-opening-work";
@@ -59,7 +60,10 @@ export async function generateLearnOpeningWorkPrompt(
 export async function openingWorkForSessionField(
   model: SessionBranchModel,
   salt?: string | null,
+  options?: { exactProblem?: string | null },
 ): Promise<string> {
+  const exact = exactProblemOpeningWork(options?.exactProblem);
+  if (exact) return exact;
   try {
     const generated = await generateLearnOpeningWorkPrompt(model);
     return resolveLearnOpeningWork(model, generated, salt);

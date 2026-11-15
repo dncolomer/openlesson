@@ -108,6 +108,8 @@ interface TapScoreClientProps {
   }) => Promise<void> | void;
   sidebarMode?: Extract<SessionSidebarMode, "tap" | "verification-tap">;
   verificationToken?: string | null;
+  exactProblemOnCanvas?: boolean;
+  canvasProblem?: string | null;
 }
 
 /** Resolve whether End Session UI should show (default yes). */
@@ -136,6 +138,8 @@ export function TapScoreClient({
   onLocalProof,
   sidebarMode = "tap",
   verificationToken = null,
+  exactProblemOnCanvas = false,
+  canvasProblem = null,
 }: TapScoreClientProps) {
   const showEndSession = resolveTapShowEndSession({
     showEndSession: showEndSessionProp,
@@ -903,6 +907,8 @@ export function TapScoreClient({
       privateToken={privateToken}
       kind={kind}
       verificationToken={verificationToken}
+      exactProblemOnCanvas={exactProblemOnCanvas}
+      canvasProblem={canvasProblem}
       policyRef={policyRef}
       durationLocked={durationLocked}
       isStartingSession={isStartingSession}

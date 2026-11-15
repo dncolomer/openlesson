@@ -34,8 +34,9 @@ import {
   DASHBOARD_FLOWS_PAGE_SIZE,
   dashboardWorkspaceCounts,
   paginateDashboardFlows,
-  dashboardFlowListShowsTopic,
   presentDashboardRecentFlow,
+  truncateDashboardFlowTopic,
+  DASHBOARD_FLOW_TOPIC_MAX,
   questionCountFromUnknown,
   sortDashboardRecentFlows,
 } from "@/lib/dashboard-home";
@@ -45,6 +46,7 @@ import {
   emptyProductFlowDraft,
   flowDisplayName,
   absoluteFlowPublicUrl,
+  flowPublicHref,
   productFlowDashboardPath,
   productFlowNewPath,
   productFlowPagePath,
@@ -323,9 +325,15 @@ describe("dashboard home summaries", () => {
     expect(solve?.workspacePath).toBe("/solve/flows/sf1");
     expect(solve?.topic).toBe("epsilon-delta");
     expect(solve?.questionCount).toBe(0);
-    expect(dashboardFlowListShowsTopic("solve")).toBe(true);
-    expect(dashboardFlowListShowsTopic("verification")).toBe(false);
-    expect(dashboardFlowListShowsTopic("calibration")).toBe(false);
+    expect(truncateDashboardFlowTopic("")).toBe("—");
+    expect(truncateDashboardFlowTopic("epsilon-delta")).toBe("epsilon-delta");
+    expect(truncateDashboardFlowTopic("a".repeat(DASHBOARD_FLOW_TOPIC_MAX))).toHaveLength(
+      DASHBOARD_FLOW_TOPIC_MAX,
+    );
+    expect(truncateDashboardFlowTopic(`  ${"word ".repeat(40)}  `).endsWith("…")).toBe(true);
+    expect(truncateDashboardFlowTopic("a".repeat(DASHBOARD_FLOW_TOPIC_MAX + 8)).length).toBe(
+      DASHBOARD_FLOW_TOPIC_MAX,
+    );
     expect(presentDashboardRecentFlow({ id: "", kind: "verify", workspaceId: "ws" })).toBeNull();
     const ownerScoped = presentDashboardRecentFlow({
       id: "vf-owner",
@@ -526,9 +534,11 @@ describe("dashboard platform surface", () => {
     expect(dashSrc).not.toContain("data-dashboard-insights");
     expect(dashSrc).toContain("data-dashboard-flows");
     expect(dashSrc).toContain("data-dashboard-flow-table");
-    expect(dashSrc).toContain("dashboardFlowListShowsTopic");
+    expect(dashSrc).toContain("truncateDashboardFlowTopic");
     expect(dashSrc).toContain("data-dashboard-flow-topic");
-    expect(dashSrc).toContain("{showTopic ? \"Topic\" : \"Questions\"}");
+    expect(dashSrc).toContain("block truncate");
+    expect(dashSrc).not.toContain("data-dashboard-flow-questions");
+    expect(dashSrc).not.toContain("{showTopic ? \"Topic\" : \"Questions\"}");
     expect(dashSrc).not.toContain("data-dashboard-flow-grid");
     expect(dashSrc).not.toContain("data-dashboard-workspace-table");
     expect(dashSrc).not.toContain("data-workspace-cards-grid");
@@ -567,10 +577,16 @@ describe("dashboard platform surface", () => {
     expect(absoluteFlowPublicUrl("https://app.example/c/tok", "https://other")).toBe(
       "https://app.example/c/tok",
     );
-    expect(dashSrc).toContain("CopyFlowUrlButton");
+    expect(dashSrc).toContain("FlowPublicActions");
+    expect(dashSrc).not.toContain("Public URL");
     expect(readRepo("components/product-flow/copy-flow-url-button.tsx")).toContain("data-flow-copy-url");
+    expect(readRepo("components/product-flow/copy-flow-url-button.tsx")).toContain("data-flow-start");
     expect(readRepo("components/product-flow/copy-flow-url-button.tsx")).toContain("absoluteFlowPublicUrl");
-    expect(readRepo("components/product-flow/product-flow-page.tsx")).toContain("CopyFlowUrlButton");
+    expect(readRepo("components/product-flow/copy-flow-url-button.tsx")).toContain("flowPublicHref");
+    expect(readRepo("components/product-flow/product-flow-page.tsx")).toContain("FlowPublicActions");
+    expect(readRepo("components/product-flow/product-flow-page.tsx")).toContain("problemReadOnly");
+    expect(flowPublicHref("/s/tok")).toBe("/s/tok");
+    expect(flowPublicHref("https://app.example/v/tok")).toBe("/v/tok");
     expect(readRepo("components/product-flow/product-flow-wizard.tsx")).toContain("data-flow-problem");
     expect(readRepo("components/product-flow/product-flow-wizard.tsx")).not.toContain(
       "data-verification-generate-from-topic",

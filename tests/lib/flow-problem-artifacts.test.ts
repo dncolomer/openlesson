@@ -230,10 +230,20 @@ describe("Helios and Manual map authoring", () => {
       topic: "Decode a distance-5 chain",
       questions: ["Decode a distance-5 chain"],
       artifacts: [ARTIFACT],
+      exactProblemOnCanvas: false,
     });
+    expect(
+      heliosFlowCreateInput({
+        kind: "solve",
+        flowName: "Decoder",
+        problem: "Decode a distance-5 chain",
+        exactProblemOnCanvas: true,
+      }).exactProblemOnCanvas,
+    ).toBe(true);
 
     const addPane = read("components/WorkspaceAddBlockPane.tsx");
     expect(addPane).toContain("FlowProblemFields");
+    expect(addPane).toContain("onExactProblemOnCanvasChange");
     expect(addPane).toContain("data-map-block-flow-problem");
     expect(addPane).toContain("problem:");
     expect(addPane).toContain("artifacts");
@@ -242,6 +252,79 @@ describe("Helios and Manual map authoring", () => {
       "artifacts: input.artifacts",
     );
     expect(read("lib/map-block-authoring.ts")).toContain("artifacts: input.artifacts");
+  });
+});
+
+describe("flow exact problem on canvas", () => {
+  it("stores the author option on Solve and Verification, not Calibration", () => {
+    const on = acceptProductFlowPublish({
+      ...emptyProductFlowDraft("solve"),
+      name: "Decoder",
+      topic: "Decode a distance-5 chain",
+      exactProblemOnCanvas: true,
+    });
+    expect(on.ok).toBe(true);
+    if (!on.ok) return;
+    expect(on.exactProblemOnCanvas).toBe(true);
+
+    const off = acceptProductFlowPublish({
+      ...emptyProductFlowDraft("verification"),
+      name: "Decoder",
+      topic: "Decode a distance-5 chain",
+    });
+    expect(off.ok).toBe(true);
+    if (!off.ok) return;
+    expect(off.exactProblemOnCanvas).toBe(false);
+
+    const calibrate = acceptProductFlowPublish({
+      ...emptyProductFlowDraft("calibration"),
+      name: "Priors",
+      topic: "State the noise model",
+      exactProblemOnCanvas: true,
+    });
+    expect(calibrate.ok).toBe(true);
+    if (!calibrate.ok) return;
+    expect(calibrate.exactProblemOnCanvas).toBe(false);
+
+    const solve = applySolveCommand(emptySolveState(), {
+      type: "create",
+      ownerUserId: "owner-1",
+      name: "Decoder",
+      topic: "Decode a distance-5 chain",
+      exactProblemOnCanvas: true,
+      id: "sf-exact",
+      publicToken: "stok-exact",
+    });
+    expect(solve.ok).toBe(true);
+    if (!solve.ok) return;
+    expect(solve.flow?.exactProblemOnCanvas).toBe(true);
+
+    const verify = applyVerificationCommand(emptyVerificationState(), {
+      type: "create",
+      ownerUserId: "owner-1",
+      name: "Investigate",
+      topic: "When does a learned decoder beat MWPM?",
+      exactProblemOnCanvas: true,
+      id: "vf-exact",
+      publicToken: "vtok-exact",
+    });
+    expect(verify.ok).toBe(true);
+    if (!verify.ok) return;
+    expect(verify.flow?.exactProblemOnCanvas).toBe(true);
+
+    const sql = read("supabase/migrations/20261115120000_flow_exact_problem_on_canvas.sql");
+    expect(sql).toContain("exact_problem_on_canvas");
+    expect(sql).toContain("solve_flows");
+    expect(sql).toContain("verify_flows");
+    expect(sql).not.toMatch(/calibrate_flows[\s\S]*exact_problem_on_canvas/);
+
+    const wizard = read("components/product-flow/product-flow-wizard.tsx");
+    const page = read("components/product-flow/product-flow-page.tsx");
+    expect(wizard).toContain("onExactProblemOnCanvasChange");
+    expect(page).toContain("onExactProblemOnCanvasChange");
+    expect(page).toContain("problemReadOnly");
+    expect(read("app/api/dashboard/flows/route.ts")).toContain("exactProblemOnCanvas");
+    expect(read("lib/learn-opening-work-generate.ts")).toContain("exactProblem");
   });
 });
 
@@ -266,12 +349,17 @@ describe("flow create/edit UI", () => {
     const page = read("components/product-flow/product-flow-page.tsx");
     const fields = read("components/product-flow/flow-problem-fields.tsx");
     expect(fields).toContain("data-flow-problem");
+    expect(fields).toContain("data-flow-exact-problem-on-canvas");
+    expect(fields).toContain("Exact problem on canvas");
     expect(fields).toContain("data-flow-artifact-file");
     expect(fields).toContain("Define the problem");
     expect(fields).toContain('type="file"');
     expect(fields).toContain("multiple");
     expect(wizard).toContain("FlowProblemFields");
     expect(page).toContain("FlowProblemFields");
+    expect(page).toContain("problemReadOnly");
+    expect(fields).toContain("data-flow-problem-locked");
+    expect(page).toContain("FlowPublicActions");
     const verificationPanel = read("components/VerificationFlowsPanel.tsx");
     const calibrationPanel = read("components/CalibrationFlowsPanel.tsx");
     expect(verificationPanel).toContain("FlowProblemFields");

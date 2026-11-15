@@ -4,7 +4,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
-import { flowOwnedByUser, parseProductFlowKind, productFlowPagePath } from "@/lib/product-flow";
+import {
+  flowOwnedByUser,
+  parseExactProblemOnCanvas,
+  parseProductFlowKind,
+  productFlowPagePath,
+} from "@/lib/product-flow";
 import { flowProblemFromUnknown, parseFlowArtifacts } from "@/lib/flow-artifacts";
 import { calibrationFlowPublicPath } from "@/lib/calibration-flow";
 import { solveFlowPublicPath } from "@/lib/solve-flow";
@@ -162,6 +167,10 @@ export async function POST(
         ? undefined
         : flowProblemFromUnknown(body);
     const artifacts = body.artifacts === undefined ? undefined : parseFlowArtifacts(body.artifacts);
+    const exactProblemOnCanvas =
+      body.exactProblemOnCanvas === undefined
+        ? undefined
+        : parseExactProblemOnCanvas(body.exactProblemOnCanvas);
 
     if (loaded.kind === "solve") {
       const updated = await runSolveCommand({
@@ -172,6 +181,7 @@ export async function POST(
         name: typeof body.name === "string" ? body.name : undefined,
         topic: problem,
         artifacts,
+        exactProblemOnCanvas,
         durationMinutes: body.durationMinutes as number | undefined,
         actionCatalog: body.actionCatalog as number | undefined,
       });
@@ -203,6 +213,7 @@ export async function POST(
       name: typeof body.name === "string" ? body.name : undefined,
       topic: problem,
       artifacts,
+      exactProblemOnCanvas,
       actionCatalog: body.actionCatalog as number | undefined,
     });
     if (!updated.ok) return jsonError(400, updated.reason);

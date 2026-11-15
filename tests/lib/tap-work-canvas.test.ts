@@ -160,6 +160,11 @@ describe("TAP Work canvas apply / pull (shipped)", () => {
     const verifyOpening = applyTapVerificationOpeningToWorkCanvas(empty, [
       { id: "open-1", role: "assistant", content: "Walk the heap insert from this array." },
     ]);
+    const exactOpening = applyTapVerificationOpeningToWorkCanvas(
+      empty,
+      [{ id: "open-1", role: "assistant", content: "Walk the heap insert from this array." }],
+      "Decode a distance-5 rotated surface-code chain",
+    );
     const workLabel = verifyOpening.elements.find(
       (el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "label",
     );
@@ -168,6 +173,21 @@ describe("TAP Work canvas apply / pull (shipped)", () => {
     );
     expect(workLabel?.originalText || workLabel?.text).toBe(BOARD_INSTRUCTION_NOTE_LABEL);
     expect(String(workText?.originalText || workText?.text || "")).toContain("heap insert");
+    const exactText = exactOpening.elements.find(
+      (el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "text",
+    );
+    const exactBody = exactOpening.elements.find(
+      (el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "body",
+    );
+    const exactLive = String(
+      exactText?.originalText ||
+        exactText?.text ||
+        exactBody?.originalText ||
+        exactBody?.text ||
+        "",
+    );
+    expect(exactLive).toContain("distance-5");
+    expect(exactLive).not.toContain("heap insert");
     expect(verifyOpening.elements.some((el) => el.customData?.[BOARD_INSTRUCTION_NOTE_KEY] === "body")).toBe(
       true,
     );

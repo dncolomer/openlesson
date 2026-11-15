@@ -33,7 +33,30 @@ export type ProductFlowDraft = {
   artifacts: FlowArtifact[];
   actionCatalog: number;
   durationMinutes: number;
+  /** Solve / Verification: seed the Work canvas with this Problem as written. */
+  exactProblemOnCanvas: boolean;
 };
+
+/** Author option on Solve and Verification flows. Calibration has no canvas. */
+export function parseExactProblemOnCanvas(value: unknown): boolean {
+  if (value === true || value === 1) return true;
+  if (typeof value === "string") {
+    const text = value.trim().toLowerCase();
+    return text === "true" || text === "1" || text === "yes";
+  }
+  return false;
+}
+
+export function flowShowsExactProblemOnCanvas(kind: ProductFlowKind): boolean {
+  return kind === "solve" || kind === "verification";
+}
+
+export function sessionWantsExactProblemOnCanvas(metadata: unknown): boolean {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return false;
+  return parseExactProblemOnCanvas(
+    (metadata as Record<string, unknown>).exactProblemOnCanvas,
+  );
+}
 
 export function parseProductFlowKind(value: unknown): ProductFlowKind | null {
   if (value === "verification" || value === "verify") return "verification";
@@ -68,6 +91,21 @@ export function absoluteFlowPublicUrl(pathOrUrl: string, origin: string): string
   const base = String(origin || "").replace(/\/$/, "");
   const path = value.startsWith("/") ? value : `/${value}`;
   return `${base}${path}`;
+}
+
+/** Same-origin path for opening a public flow (identification still runs). */
+export function flowPublicHref(pathOrUrl: string): string {
+  const value = String(pathOrUrl || "").trim();
+  if (!value) return "";
+  if (/^[a-z][a-z0-9+.-]*:/i.test(value)) {
+    try {
+      const parsed = new URL(value);
+      return `${parsed.pathname}${parsed.search}${parsed.hash}` || value;
+    } catch {
+      return value;
+    }
+  }
+  return value.startsWith("/") ? value : `/${value}`;
 }
 
 export function productFlowPagePath(kind: ProductFlowKind, flowId: string): string {
@@ -141,6 +179,7 @@ export function emptyProductFlowDraft(kind: ProductFlowKind): ProductFlowDraft {
     artifacts: [],
     actionCatalog: 4,
     durationMinutes: 15,
+    exactProblemOnCanvas: false,
   };
 }
 
@@ -209,6 +248,7 @@ export type AcceptedProductFlowPublish =
       artifacts: FlowArtifact[];
       actionCatalog: ReturnType<typeof parseLearningModelSize>;
       durationMinutes: number;
+      exactProblemOnCanvas: boolean;
     }
   | { ok: false; reason: string };
 
@@ -221,6 +261,9 @@ export function acceptProductFlowPublish(draft: ProductFlowDraft): AcceptedProdu
   const actionCatalog = parseLearningModelSize(draft.actionCatalog);
   const durationMinutes = flowCountdownMinutes(draft.durationMinutes);
   const pool = flowProblemQuestionPool(problem).map((item) => item.text);
+  const exactProblemOnCanvas = flowShowsExactProblemOnCanvas(draft.kind)
+    ? parseExactProblemOnCanvas(draft.exactProblemOnCanvas)
+    : false;
   if (draft.kind === "calibration") {
     return {
       ok: true,
@@ -232,6 +275,7 @@ export function acceptProductFlowPublish(draft: ProductFlowDraft): AcceptedProdu
       artifacts,
       actionCatalog,
       durationMinutes,
+      exactProblemOnCanvas: false,
     };
   }
   if (draft.kind === "solve") {
@@ -245,6 +289,7 @@ export function acceptProductFlowPublish(draft: ProductFlowDraft): AcceptedProdu
       artifacts,
       actionCatalog,
       durationMinutes,
+      exactProblemOnCanvas,
     };
   }
   return {
@@ -257,6 +302,7 @@ export function acceptProductFlowPublish(draft: ProductFlowDraft): AcceptedProdu
     artifacts,
     actionCatalog,
     durationMinutes,
+    exactProblemOnCanvas,
   };
 }
 

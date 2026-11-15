@@ -68,6 +68,7 @@ export type WorkspaceAddBlockSubmitOpts = {
   /** Problem text for a newly minted flow (ignored when linking an existing flow). */
   problem?: string;
   artifacts?: FlowArtifact[];
+  exactProblemOnCanvas?: boolean;
 };
 
 /**
@@ -147,6 +148,7 @@ export function WorkspaceAddBlockPane({
   >([]);
   const [problem, setProblem] = useState("");
   const [artifacts, setArtifacts] = useState<FlowArtifact[]>([]);
+  const [exactProblemOnCanvas, setExactProblemOnCanvas] = useState(false);
 
   // Reset draft when the target cell changes.
   useEffect(() => {
@@ -161,6 +163,7 @@ export function WorkspaceAddBlockPane({
     setContentAttachments([]);
     setProblem("");
     setArtifacts([]);
+    setExactProblemOnCanvas(false);
   }, [cell.row, cell.col]);
 
   // Load workspace Context inventory for attach picker (same as generate-in-shape).
@@ -334,11 +337,13 @@ export function WorkspaceAddBlockPane({
           : {
               problem: problem.trim() || titleForTyped,
               artifacts,
+              exactProblemOnCanvas,
             }),
       });
       setPrompt("");
       setProblem("");
       setArtifacts([]);
+      setExactProblemOnCanvas(false);
       setRange(0);
       setDensity(ADD_DENSITY_MAX);
       setSampleSeed(1);
@@ -381,6 +386,7 @@ export function WorkspaceAddBlockPane({
             setAddError(null);
             setProblem("");
             setArtifacts([]);
+            setExactProblemOnCanvas(false);
           }}
           disabled={busy || submitting}
         />
@@ -405,6 +411,8 @@ export function WorkspaceAddBlockPane({
               onArtifactsChange={setArtifacts}
               workspaceId={workspaceId}
               topicHook={blockKind}
+              exactProblemOnCanvas={exactProblemOnCanvas}
+              onExactProblemOnCanvasChange={setExactProblemOnCanvas}
             />
           </div>
         ) : null}

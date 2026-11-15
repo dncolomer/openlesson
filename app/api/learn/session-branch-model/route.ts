@@ -8,12 +8,13 @@ import { jsonError } from "@/lib/api-error-envelope";
 import { guardSessionRoute } from "@/lib/api/require-auth";
 import { entryQueryParamsFromBody } from "@/lib/guest-link-access";
 import { getCalibrationFlowByToken } from "@/lib/calibration-flow-repository";
+import { exactProblemOpeningWork } from "@/lib/learn-opening-work";
 import { studentSessionModelFromAuthorSeed } from "@/lib/author-unsys-model";
 import {
   definitionUnsysSeedFromBlocks,
   studentModelFromDefinitionSeed,
 } from "@/lib/definition-unsys-seed";
-import { getSolveFlowByToken } from "@/lib/solve-flow-repository";
+import { getSolveFlowById, getSolveFlowByToken } from "@/lib/solve-flow-repository";
 import {
   authorSeedBlockIdFromPreparePlan,
   authorSeedSessionIdFromPreparePlan,
@@ -32,11 +33,39 @@ import { openingWorkForSessionField } from "@/lib/learn-opening-work-generate";
 import { sessionBranchParentsNeedingGrowth } from "@/lib/session-branch-model";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveTapSessionAccess } from "@/lib/tap-score-session-auth";
-import { getVerificationFlowByToken } from "@/lib/verification-flow-repository";
+import { getVerificationFlowById, getVerificationFlowByToken } from "@/lib/verification-flow-repository";
 import type { FlowArtifact } from "@/lib/flow-artifacts";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
+
+type OpeningGenerateContext = {
+  kind?: "solve" | "verification" | "calibration" | "learn";
+  problem?: string;
+  artifacts?: FlowArtifact[];
+  fileIds?: string[];
+  exactProblemOnCanvas?: boolean;
+};
+
+async function openingWorkPayload(
+  plan: { kind: string; sessionId?: string; chapterTitle?: string; chapterBrief?: string },
+  model: Parameters<typeof openingWorkForSessionField>[0],
+  generateContext: OpeningGenerateContext,
+): Promise<{ openingWork: string; openingWorkExact: boolean }> {
+  if (generateContext.exactProblemOnCanvas) {
+    const openingWork = exactProblemOpeningWork(
+      generateContext.problem || plan.chapterBrief || plan.chapterTitle,
+    );
+    if (openingWork) return { openingWork, openingWorkExact: true };
+  }
+  if (plan.kind === "learn") {
+    return {
+      openingWork: await openingWorkForSessionField(model, plan.sessionId || ""),
+      openingWorkExact: false,
+    };
+  }
+  return { openingWork: "", openingWorkExact: false };
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -78,12 +107,7 @@ export async function POST(request: NextRequest) {
       if (!auth.ok) return auth.response;
     }
 
-    let generateContext: {
-      kind?: "solve" | "verification" | "calibration" | "learn";
-      problem?: string;
-      artifacts?: FlowArtifact[];
-      fileIds?: string[];
-    } = {};
+    let generateContext: OpeningGenerateContext = {};
     const material = {
       chapterTitle: plan.chapterTitle,
       chapterBrief: plan.chapterBrief,
@@ -106,6 +130,7 @@ export async function POST(request: NextRequest) {
             kind: "verification",
             problem: flow.topic,
             artifacts: flow.artifacts,
+            exactProblemOnCanvas: flow.exactProblemOnCanvas,
           };
         }
       } else if (tokenedEarly?.kind === "solve") {
@@ -115,6 +140,7 @@ export async function POST(request: NextRequest) {
             kind: "solve",
             problem: flow.topic,
             artifacts: flow.artifacts,
+            exactProblemOnCanvas: flow.exactProblemOnCanvas,
           };
         }
       }
@@ -149,6 +175,7 @@ export async function POST(request: NextRequest) {
               kind: "verification",
               problem: flow.topic,
               artifacts: flow.artifacts,
+              exactProblemOnCanvas: flow.exactProblemOnCanvas,
             };
           }
         } else if (tokened?.kind === "solve") {
@@ -160,6 +187,7 @@ export async function POST(request: NextRequest) {
               kind: "solve",
               problem: flow.topic,
               artifacts: flow.artifacts,
+              exactProblemOnCanvas: flow.exactProblemOnCanvas,
             };
           }
         }
@@ -179,6 +207,37 @@ export async function POST(request: NextRequest) {
                 sessionRow?.verify_flow_id ||
                 "",
             ).trim();
+            const meta =
+              sessionRow?.metadata && typeof sessionRow.metadata === "object"
+                ? (sessionRow.metadata as Record<string, unknown>)
+                : null;
+            if (meta?.exactProblemOnCanvas === true) {
+              generateContext = {
+                ...generateContext,
+                exactProblemOnCanvas: true,
+              };
+            }
+          }
+        }
+        if (flowId && !generateContext.exactProblemOnCanvas) {
+          const solve = await getSolveFlowById(flowId);
+          if (solve) {
+            generateContext = {
+              kind: "solve",
+              problem: solve.topic,
+              artifacts: solve.artifacts,
+              exactProblemOnCanvas: solve.exactProblemOnCanvas,
+            };
+          } else {
+            const verify = await getVerificationFlowById(flowId);
+            if (verify) {
+              generateContext = {
+                kind: "verification",
+                problem: verify.topic,
+                artifacts: verify.artifacts,
+                exactProblemOnCanvas: verify.exactProblemOnCanvas,
+              };
+            }
           }
         }
         if (flowId) {
@@ -226,16 +285,13 @@ export async function POST(request: NextRequest) {
           if (seeded) {
             const continuation = sessionBranchContinuationFromSeed(seeded);
             const done = sessionBranchParentsNeedingGrowth(seeded).length === 0;
-            const openingWork =
-              plan.kind === "learn"
-                ? await openingWorkForSessionField(seeded, plan.kind === "learn" ? plan.sessionId : "")
-                : "";
+            const opening = await openingWorkPayload(plan, seeded, generateContext);
             return NextResponse.json({
               model: seeded,
               continuation: done ? null : continuation,
               done,
               seeded: true,
-              openingWork,
+              ...opening,
             });
           }
         } else if (copyBlockId) {
@@ -248,16 +304,13 @@ export async function POST(request: NextRequest) {
           if (seeded) {
             const continuation = sessionBranchContinuationFromSeed(seeded);
             const done = sessionBranchParentsNeedingGrowth(seeded).length === 0;
-            const openingWork =
-              plan.kind === "learn"
-                ? await openingWorkForSessionField(seeded, plan.sessionId)
-                : "";
+            const opening = await openingWorkPayload(plan, seeded, generateContext);
             return NextResponse.json({
               model: seeded,
               continuation: done ? null : continuation,
               done,
               seeded: true,
-              openingWork,
+              ...opening,
             });
           }
         }
@@ -287,15 +340,12 @@ export async function POST(request: NextRequest) {
       ...generateContext,
     });
     if (!prepared.ok) return jsonError(502, prepared.error);
-    const openingWork =
-      plan.kind === "learn"
-        ? await openingWorkForSessionField(prepared.model, plan.sessionId)
-        : "";
+    const opening = await openingWorkPayload(plan, prepared.model, generateContext);
     return NextResponse.json({
       model: prepared.model,
       continuation: prepared.continuation,
       done: false,
-      openingWork,
+      ...opening,
     });
   } catch (error) {
     console.error("[session-branch-model]", error);

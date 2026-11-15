@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  exactProblemOpeningWork,
   isBareChapterTitle,
   learnOpeningWorkFallback,
   learnOpeningWorkScope,
@@ -130,14 +131,30 @@ describe("learn opening work", () => {
     const route = read("app/api/learn/session-branch-model/route.ts");
     expect(route).toContain("openingWorkForSessionField");
     expect(route).toContain("openingWork");
-    expect(route).toContain('plan.kind === "learn"');
+    expect(route).toContain("openingWorkExact");
+    expect(route).toContain("exactProblemOnCanvas");
     const field = read("components/session-view/use-session-field.ts");
     expect(field).toContain("seedOpeningWorkCanvas");
     expect(field).toContain("resolveLearnOpeningWork");
-    expect(field).not.toContain("(session.problem || \"\").trim()");
+    expect(field).toContain("exactProblemOpeningWork");
+    expect(field).toContain("sessionWantsExactProblemOnCanvas");
     expect(field).toContain("seedChapterWorkCanvas(boardId, text)");
     const load = read("lib/session-branch-field-load.ts");
     expect(load).toContain("openingWork");
+    expect(load).toContain("openingWorkExact");
     expect(load).toContain("resolveLearnOpeningWork");
+  });
+
+  it("keeps the authored Problem when the flow asks for a 1:1 canvas", async () => {
+    const field = model();
+    expect(
+      resolveLearnOpeningWork(field, "Langevin", "s1", { exactProblem: true }),
+    ).toBe("Langevin");
+    expect(exactProblemOpeningWork("  Keep this problem.  ")).toBe("Keep this problem.");
+    const exact = await openingWorkForSessionField(field, "sess-9", {
+      exactProblem: "Write the Langevin force balance for this grain.",
+    });
+    expect(exact).toBe("Write the Langevin force balance for this grain.");
+    expect(callXai).not.toHaveBeenCalled();
   });
 });

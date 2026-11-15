@@ -835,8 +835,8 @@ describe("verification workspace shell gates", () => {
     expect(flows).toContain("data-flow-problem");
     expect(flows).not.toContain("data-verification-flow-add-question");
     expect(flows).toContain("data-verification-flow-public-link");
-    expect(flows).toContain("CopyFlowUrlButton");
-    expect(read("components/CalibrationFlowsPanel.tsx")).toContain("CopyFlowUrlButton");
+    expect(flows).toContain("FlowPublicActions");
+    expect(read("components/CalibrationFlowsPanel.tsx")).toContain("FlowPublicActions");
     expect(read("components/product-flow/copy-flow-url-button.tsx")).toContain("data-flow-copy-url");
     expect(flows).not.toContain("data-verification-flow-skill");
     expect(flows).not.toContain("Generate skill");

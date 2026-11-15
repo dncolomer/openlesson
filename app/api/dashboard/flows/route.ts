@@ -13,6 +13,7 @@ import {
 import {
   acceptProductFlowPublish,
   emptyProductFlowDraft,
+  parseExactProblemOnCanvas,
   parseProductFlowKind,
   productFlowOwnerTitle,
   productFlowPagePath,
@@ -164,6 +165,7 @@ export async function POST(req: NextRequest) {
       artifacts: parseFlowArtifacts(body.artifacts),
       actionCatalog: Number(body.actionCatalog) || 4,
       durationMinutes: Number(body.durationMinutes) || 15,
+      exactProblemOnCanvas: parseExactProblemOnCanvas(body.exactProblemOnCanvas),
     };
     const accepted = acceptProductFlowPublish(draft);
     if (!accepted.ok) return jsonError(400, accepted.reason);
@@ -176,6 +178,7 @@ export async function POST(req: NextRequest) {
         name: accepted.name,
         topic: accepted.topic,
         artifacts: accepted.artifacts,
+        exactProblemOnCanvas: accepted.exactProblemOnCanvas,
         durationMinutes: accepted.durationMinutes,
         actionCatalog: accepted.actionCatalog,
       });
@@ -226,6 +229,7 @@ export async function POST(req: NextRequest) {
       name: accepted.name,
       topic: accepted.topic,
       artifacts: accepted.artifacts,
+      exactProblemOnCanvas: accepted.exactProblemOnCanvas,
       actionCatalog: accepted.actionCatalog,
     });
     if (!created.ok || !created.flow) {

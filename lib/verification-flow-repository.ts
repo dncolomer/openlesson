@@ -24,6 +24,7 @@ import {
   type VerificationState,
 } from "@/lib/verification-flow";
 import { flowArchivedAtFromRow, listedAuthorFlows } from "@/lib/flow-archive";
+import { parseExactProblemOnCanvas } from "@/lib/product-flow";
 import { parseFlowArtifacts, serializeFlowArtifacts } from "@/lib/flow-artifacts";
 import { inviteFlowSessionOwner } from "@/lib/map-play-data-access";
 
@@ -99,6 +100,7 @@ function mapFlow(row: Record<string, unknown>): VerificationFlow {
     topic,
     questions: normalizeQuestionPool(row.questions),
     artifacts: parseFlowArtifacts(row.artifacts),
+    exactProblemOnCanvas: parseExactProblemOnCanvas(row.exact_problem_on_canvas),
     durationMinutes: flowCountdownMinutes(row.duration_minutes),
     actionCatalog: parseLearningModelSize(row.action_catalog),
     publicToken: String(row.public_token || ""),
@@ -195,6 +197,7 @@ async function persistCommand(
       topic: value.flow.topic,
       questions: value.flow.questions,
       artifacts: serializeFlowArtifacts(value.flow.artifacts),
+      exact_problem_on_canvas: value.flow.exactProblemOnCanvas,
       duration_minutes: value.flow.durationMinutes,
       action_catalog: value.flow.actionCatalog,
       public_token: value.flow.publicToken,
@@ -210,6 +213,7 @@ async function persistCommand(
       topic: value.flow.topic,
       questions: value.flow.questions,
       artifacts: serializeFlowArtifacts(value.flow.artifacts),
+      exact_problem_on_canvas: value.flow.exactProblemOnCanvas,
       duration_minutes: value.flow.durationMinutes,
       action_catalog: value.flow.actionCatalog,
       updated_at: value.flow.updatedAt,
@@ -228,7 +232,7 @@ async function persistCommand(
   if (command.type === "claim" && value.identity) {
     const { data: flow } = await supabase
       .from("verify_flows")
-      .select("owner_user_id")
+      .select("*")
       .eq("id", command.flowId)
       .maybeSingle();
     const owner = inviteFlowSessionOwner({
@@ -241,9 +245,11 @@ async function persistCommand(
       runnerUserId: command.runnerUserId,
       flowKind: "verify",
     });
+    const mapped = flow ? mapFlow(flow as Record<string, unknown>) : null;
+    const topic = String(mapped?.topic || "").trim();
     const { error } = await supabase.from("sessions").insert({
       kind: "verify",
-      problem: "Verify",
+      problem: mapped?.exactProblemOnCanvas && topic ? topic : "Verify",
       status: "pending",
       user_id: owner.user_id,
       verify_flow_id: command.flowId,
@@ -253,6 +259,9 @@ async function persistCommand(
         projectedPolicy: null,
         knowledgeRegionId: null,
         answers: [],
+      },
+      metadata: {
+        ...(mapped?.exactProblemOnCanvas ? { exactProblemOnCanvas: true } : {}),
       },
     });
     if (error) {
@@ -372,7 +381,7 @@ async function writeVerificationFlow(
       ? supabase.from("verify_flows").insert(body)
       : supabase.from("verify_flows").update(body).eq("id", id);
   let current = row;
-  for (const optional of ["name", "action_catalog", "duration_minutes", "owner_user_id", "workspace_id", "archived_at", "artifacts"] as const) {
+  for (const optional of ["name", "action_catalog", "duration_minutes", "owner_user_id", "workspace_id", "archived_at", "artifacts", "exact_problem_on_canvas"] as const) {
     const result = await run(current);
     if (!result.error) return result;
     if (!String(result.error.message).includes(optional) || !(optional in current)) return result;

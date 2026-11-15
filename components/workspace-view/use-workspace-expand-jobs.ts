@@ -324,6 +324,9 @@ export function useWorkspaceExpandJobs(input: {
                         ...(opts.artifacts?.length
                           ? { artifacts: opts.artifacts }
                           : {}),
+                        ...(opts.exactProblemOnCanvas
+                          ? { exactProblemOnCanvas: true }
+                          : {}),
                       }
                     : {}),
                   ...(ayclToken ? { ayclToken } : {}),

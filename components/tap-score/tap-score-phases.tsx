@@ -92,6 +92,8 @@ export function TapScorePhases(props: {
   kind?: TapProductKind;
   /** Public verification flow. Workspace verification uses the session instead. */
   verificationToken?: string | null;
+  exactProblemOnCanvas?: boolean;
+  canvasProblem?: string | null;
   policyRef?: MutableRefObject<SessionPolicySnapshot>;
   durationLocked: boolean;
   isStartingSession: boolean;
@@ -181,6 +183,8 @@ export function TapScorePhases(props: {
     privateToken,
     kind = "scored",
     verificationToken = null,
+    exactProblemOnCanvas = false,
+    canvasProblem = null,
     durationLocked,
     isStartingSession,
     startingTopics,
@@ -298,6 +302,22 @@ export function TapScorePhases(props: {
     }
   }, [phase, syncScene]);
 
+  useEffect(() => {
+    if (phase !== "live" || kind !== "verify" || !exactProblemOnCanvas) return;
+    const problem = String(canvasProblem || "").trim();
+    if (!problem) return;
+    const boardEmpty = !sceneRef.current.elements.some((el) => !el.isDeleted);
+    if (!boardEmpty) return;
+    const next = applyTapVerificationOpeningToWorkCanvas(
+      emptyTapWorkCanvasScene(),
+      [],
+      problem,
+    );
+    syncScene(next);
+    setCanvasApplyElements(next.elements);
+    setCanvasApplyNonce((n) => n + 1);
+  }, [canvasProblem, exactProblemOnCanvas, kind, phase, syncScene]);
+
   const heliosBusy = tapHeliosCanvasBusy({
     isSending,
     isStartingSession,
@@ -317,7 +337,11 @@ export function TapScorePhases(props: {
     const next =
       boardEmpty && missing.length === assistantTurns.length
         ? kind === "verify"
-          ? applyTapVerificationOpeningToWorkCanvas(emptyTapWorkCanvasScene(), assistantTurns)
+          ? applyTapVerificationOpeningToWorkCanvas(
+              emptyTapWorkCanvasScene(),
+              assistantTurns,
+              exactProblemOnCanvas ? canvasProblem : null,
+            )
           : applyTapAssistantTurnsToWorkCanvas(emptyTapWorkCanvasScene(), assistantTurns)
         : applyTapHeliosReplyToWorkCanvas(
             sceneRef.current,
@@ -331,7 +355,16 @@ export function TapScorePhases(props: {
     syncScene(next);
     setCanvasApplyElements(added.length ? added : next.elements);
     setCanvasApplyNonce((n) => n + 1);
-  }, [kind, lastAssistantTurn?.id, lastAssistantTurn?.content, messages, phase, syncScene]);
+  }, [
+    canvasProblem,
+    exactProblemOnCanvas,
+    kind,
+    lastAssistantTurn?.id,
+    lastAssistantTurn?.content,
+    messages,
+    phase,
+    syncScene,
+  ]);
 
   const handleCanvasPowActions = useCallback(
     (events: IleWorkCanvasPowEvent[]) => {

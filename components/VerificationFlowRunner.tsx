@@ -13,6 +13,7 @@ export function VerificationFlowRunner({ token }: { token: string }) {
   const [claimedIdentity, setClaimedIdentity] = useState("");
   const [topic, setTopic] = useState("");
   const [presetTopics, setPresetTopics] = useState<TapStartingTopic[]>([]);
+  const [exactProblemOnCanvas, setExactProblemOnCanvas] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -58,6 +59,7 @@ export function VerificationFlowRunner({ token }: { token: string }) {
       }
       setPresetTopics(cards);
       setTopic(String(payload.topic || ""));
+      setExactProblemOnCanvas(payload.exactProblemOnCanvas === true);
       setPhase("pick");
     } finally {
       setBusy(false);
@@ -98,6 +100,8 @@ export function VerificationFlowRunner({ token }: { token: string }) {
           localOpening
           sidebarMode="verification-tap"
           verificationToken={token}
+          exactProblemOnCanvas={exactProblemOnCanvas}
+          canvasProblem={topic}
           onLocalProof={storeProof}
           initialSession={{ workspaceTitle: topic || "Verification flow", post_session: "show_results" }}
           showEndSession

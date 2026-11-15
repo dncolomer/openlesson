@@ -17,6 +17,7 @@ import {
   type SolveState,
 } from "@/lib/solve-flow";
 import { flowArchivedAtFromRow, listedAuthorFlows } from "@/lib/flow-archive";
+import { parseExactProblemOnCanvas } from "@/lib/product-flow";
 import { parseFlowArtifacts, serializeFlowArtifacts } from "@/lib/flow-artifacts";
 import { inviteFlowSessionOwner } from "@/lib/map-play-data-access";
 
@@ -82,6 +83,7 @@ function memorySolveSessionRow(input: {
       title: input.flow.topic || input.flow.name,
       solve_flow_id: input.flow.id,
       identity: input.identity,
+      ...(input.flow.exactProblemOnCanvas ? { exactProblemOnCanvas: true } : {}),
     },
     created_at: new Date().toISOString(),
   };
@@ -124,6 +126,7 @@ function mapFlow(row: Record<string, unknown>): SolveFlow {
     name: String(row.name || "").trim() || topic,
     topic,
     artifacts: parseFlowArtifacts(row.artifacts),
+    exactProblemOnCanvas: parseExactProblemOnCanvas(row.exact_problem_on_canvas),
     durationMinutes: flowCountdownMinutes(row.duration_minutes),
     actionCatalog: parseLearningModelSize(row.action_catalog),
     publicToken: String(row.public_token || ""),
@@ -180,6 +183,7 @@ async function persistCommand(
       name: value.flow.name,
       topic: value.flow.topic,
       artifacts: serializeFlowArtifacts(value.flow.artifacts),
+      exact_problem_on_canvas: value.flow.exactProblemOnCanvas,
       duration_minutes: value.flow.durationMinutes,
       action_catalog: value.flow.actionCatalog,
       public_token: value.flow.publicToken,
@@ -194,6 +198,7 @@ async function persistCommand(
       name: value.flow.name,
       topic: value.flow.topic,
       artifacts: serializeFlowArtifacts(value.flow.artifacts),
+      exact_problem_on_canvas: value.flow.exactProblemOnCanvas,
       duration_minutes: value.flow.durationMinutes,
       action_catalog: value.flow.actionCatalog,
       updated_at: value.flow.updatedAt,
@@ -212,7 +217,7 @@ async function persistCommand(
   if (command.type === "claim" && value.identity) {
     const { data: flow } = await supabase
       .from(SOLVE_FLOWS_TABLE)
-      .select("owner_user_id, topic, name")
+      .select("*")
       .eq("id", command.flowId)
       .maybeSingle();
     const owner = inviteFlowSessionOwner({
@@ -225,7 +230,8 @@ async function persistCommand(
       runnerUserId: command.runnerUserId,
       flowKind: "solve",
     });
-    const topic = String(flow?.topic || flow?.name || "Solve");
+    const mapped = flow ? mapFlow(flow as Record<string, unknown>) : null;
+    const topic = String(mapped?.topic || flow?.topic || flow?.name || "Solve");
     const { error } = await supabase.from("sessions").insert({
       kind: "solve",
       problem: topic,
@@ -237,7 +243,11 @@ async function persistCommand(
         kind: "solve",
         projectedPolicy: null,
       },
-      metadata: { title: topic, solve_flow_id: command.flowId },
+      metadata: {
+        title: topic,
+        solve_flow_id: command.flowId,
+        ...(mapped?.exactProblemOnCanvas ? { exactProblemOnCanvas: true } : {}),
+      },
     });
     if (error) {
       await refundClaimedFlowSession(charged?.billedUserId);
@@ -257,7 +267,7 @@ async function writeSolveFlow(
       ? supabase.from(SOLVE_FLOWS_TABLE).insert(body)
       : supabase.from(SOLVE_FLOWS_TABLE).update(body).eq("id", id);
   let current = row;
-  for (const optional of ["action_catalog", "duration_minutes", "workspace_id", "archived_at", "artifacts"] as const) {
+  for (const optional of ["action_catalog", "duration_minutes", "workspace_id", "archived_at", "artifacts", "exact_problem_on_canvas"] as const) {
     const result = await run(current);
     if (!result.error) return result;
     if (!String(result.error.message).includes(optional) || !(optional in current)) return result;

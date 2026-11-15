@@ -1,6 +1,7 @@
 /**
  * First Work-canvas prompt for a Learn session.
- * Grounded in the opening hidden-state tree. Never the bare block title.
+ * Grounded in the opening hidden-state tree, unless the flow asks for the
+ * authored Problem as written.
  */
 
 import type { SessionBranch, SessionBranchModel } from "@/lib/session-branch-model";
@@ -72,12 +73,18 @@ export function learnOpeningWorkFallback(
   return pool[pickIndex(pool.length, compact(salt || ""))];
 }
 
+export function exactProblemOpeningWork(problem: string | null | undefined): string {
+  return compact(String(problem || ""));
+}
+
 export function resolveLearnOpeningWork(
   model: SessionBranchModel,
   generated?: string | null,
   salt?: string | null,
+  options?: { exactProblem?: boolean },
 ): string {
   const text = compact(generated || "");
+  if (options?.exactProblem && text) return text;
   if (text && !isBareChapterTitle(text, model.chapterTitle)) return text;
   return learnOpeningWorkFallback(model, salt);
 }

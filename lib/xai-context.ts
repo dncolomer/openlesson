@@ -22,12 +22,9 @@ const noopStorage: StorageLike = {
 };
 
 function createStorage(): StorageLike {
-  // Browser / non-Node: no request-scoped context.
-  if (typeof process === "undefined" || !process.versions?.node) {
-    return noopStorage;
-  }
   try {
-    // Dynamic require so bundlers do not resolve async_hooks for client builds.
+    // Dynamic require so bundlers do not resolve async_hooks for client/edge.
+    // Avoid Node version probes; Turbopack treats those as an Edge Node API.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { AsyncLocalStorage } = require("async_hooks") as typeof import("async_hooks");
     return new AsyncLocalStorage<XaiRequestContext>();

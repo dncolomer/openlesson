@@ -7,6 +7,9 @@
 // API ref: https://docs.x.ai/developers/rest-api-reference/files
 // ============================================
 
+import { isXaiFileId } from "@/lib/ai/stored-file-id";
+export { isXaiFileId };
+
 const XAI_BASE_URL = "https://api.x.ai";
 
 function getApiKey(override?: string | null): string {
@@ -60,14 +63,6 @@ export interface XAIFileMetadata {
   hash?: string;
   upload_status?: string;
   processing_status?: string;
-}
-
-const XAI_FILE_ID_RE =
-  /^file_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-/** True when the value looks like a real xAI Files API id (not a test placeholder). */
-export function isXaiFileId(value: string | null | undefined): value is string {
-  return typeof value === "string" && XAI_FILE_ID_RE.test(value.trim());
 }
 
 /** Keep only ids that still resolve in the xAI Files API. */

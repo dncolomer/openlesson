@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { readRepo } from "../helpers/surface-source";
 import {
   createMemoryBlobStore,
   getBlobStore,
@@ -139,6 +140,14 @@ describe("isStoredFileId", () => {
     expect(isStoredFileId("mem_1")).toBe(true);
     expect(isStoredFileId("not-a-file")).toBe(false);
     expect(isFlowArtifactFileId("fs_aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee")).toBe(true);
+  });
+
+  it("keeps identity checks off the xAI Files client (Edge middleware)", () => {
+    const src = readRepo("lib/ai/stored-file-id.ts");
+    expect(src).not.toContain("@/lib/xai-files");
+    expect(src).not.toContain("@/lib/xai-context");
+    expect(src).not.toContain("process.versions");
+    expect(readRepo("lib/xai-context.ts")).not.toContain("process.versions");
   });
 });
 

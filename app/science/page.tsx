@@ -44,6 +44,7 @@ function SciencePlate({
   imageAlt,
   imageFirst = true,
   visualHook,
+  className = "",
   children,
 }: {
   id: string;
@@ -55,6 +56,7 @@ function SciencePlate({
   imageAlt: string;
   imageFirst?: boolean;
   visualHook?: string;
+  className?: string;
   children: ReactNode;
 }) {
   const media = (
@@ -96,7 +98,7 @@ function SciencePlate({
     <section
       id={id}
       data-science-plate={marker}
-      className={`${MARKETING_SHELL} pt-3`}
+      className={`${MARKETING_SHELL} pt-3 ${className}`.trim()}
       aria-labelledby={titleId}
     >
       <div className="grid items-stretch gap-3 lg:grid-cols-12 lg:gap-5">
@@ -128,6 +130,8 @@ export default function SciencePage() {
       <LandingNav />
 
       <MarketingDirectoryHero
+        id="why"
+        data-science-why=""
         eyebrows={[SCIENCE_HUB_COPY.eyebrowScience]}
         title={SCIENCE_HUB_COPY.title}
         directoryEyebrow={SCIENCE_HUB_COPY.directoryEyebrow}
@@ -155,25 +159,9 @@ export default function SciencePage() {
       </MarketingDirectoryHero>
 
       <SciencePlate
-        id="why"
-        marker="why"
-        eyebrow={`01 · ${SCIENCE_HUB_COPY.whyEyebrow}`}
-        titleId="science-why-heading"
-        title={SCIENCE_HUB_COPY.whyTitle}
-        imageSrc={SCIENCE_HUB_COPY.whyImageSrc}
-        imageAlt={SCIENCE_HUB_COPY.whyImageAlt}
-        visualHook="data-science-why-visual"
-      >
-        <div data-science-why="">
-          <p>{SCIENCE_HUB_COPY.whyP1}</p>
-          <p className="mt-3">{SCIENCE_HUB_COPY.whyP2}</p>
-        </div>
-      </SciencePlate>
-
-      <SciencePlate
         id="science-free-energy"
         marker="free-energy"
-        eyebrow={`02 · ${SCIENCE_FEP_COPY.eyebrow}`}
+        eyebrow={`01 · ${SCIENCE_FEP_COPY.eyebrow}`}
         titleId="science-fep-heading"
         title={SCIENCE_FEP_COPY.title}
         imageSrc={SCIENCE_HUB_COPY.fepImageSrc}
@@ -191,7 +179,7 @@ export default function SciencePage() {
       <section
         id="science-unsys-model"
         data-science-unsys-model
-        className={`${MARKETING_SHELL} pb-12 pt-3 sm:pb-14`}
+        className={`${MARKETING_SHELL} pt-3`}
         aria-labelledby="science-unsys-heading"
       >
         <div className="grid items-stretch gap-3 lg:grid-cols-12 lg:gap-5">
@@ -211,7 +199,7 @@ export default function SciencePage() {
           <div className="flex min-h-0 flex-col lg:col-span-5">
             <div className="console-copy flex h-full flex-col justify-center p-5 sm:p-6 lg:p-7">
               <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
-                03 · {SCIENCE_HUB_COPY.unsysEyebrow}
+                02 · {SCIENCE_HUB_COPY.unsysEyebrow}
               </p>
               <h2
                 id="science-unsys-heading"
@@ -246,6 +234,26 @@ export default function SciencePage() {
           </div>
         </div>
       </section>
+
+      <SciencePlate
+        id="science-embedding"
+        marker="embedding"
+        eyebrow={`03 · ${SCIENCE_HUB_COPY.embeddingEyebrow}`}
+        titleId="science-embedding-heading"
+        title={SCIENCE_HUB_COPY.embeddingTitle}
+        imageSrc={SCIENCE_HUB_COPY.embeddingImageSrc}
+        imageAlt={SCIENCE_HUB_COPY.embeddingImageAlt}
+        className="pb-12 sm:pb-14"
+      >
+        <div data-science-embedding="">
+          <p className="font-mono text-[10px] uppercase tracking-[1.6px] text-zinc-500">
+            {SCIENCE_HUB_COPY.embeddingKicker}
+          </p>
+          <p>{SCIENCE_HUB_COPY.embeddingP1}</p>
+          <p>{SCIENCE_HUB_COPY.embeddingP2}</p>
+          <p className="text-zinc-200">{SCIENCE_HUB_COPY.embeddingCallout}</p>
+        </div>
+      </SciencePlate>
 
       <div className="relative z-10">
         <Footer />

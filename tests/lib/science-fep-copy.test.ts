@@ -65,11 +65,14 @@ describe("science page renders FEP copy", () => {
     const whyAt = src.indexOf("data-science-why");
     const fepAt = src.indexOf("data-science-free-energy");
     const unsysAt = src.indexOf("data-science-unsys-model");
+    const embeddingAt = src.indexOf("data-science-embedding");
     expect(whyAt).toBeGreaterThan(-1);
     expect(fepAt).toBeGreaterThan(-1);
     expect(unsysAt).toBeGreaterThan(-1);
+    expect(embeddingAt).toBeGreaterThan(-1);
     expect(whyAt).toBeLessThan(fepAt);
     expect(fepAt).toBeLessThan(unsysAt);
+    expect(unsysAt).toBeLessThan(embeddingAt);
     expect(src).not.toContain("science-thesis-slide");
     expect(src).not.toContain("data-vision-tomography-induction");
   });

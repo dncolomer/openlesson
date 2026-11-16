@@ -28,6 +28,9 @@ function scienceVisitorText(): string {
     SCIENCE_HUB_COPY.unsysP2,
     SCIENCE_HUB_COPY.unsysCallout,
     SCIENCE_HUB_COPY.unsysP3,
+    SCIENCE_HUB_COPY.embeddingP1,
+    SCIENCE_HUB_COPY.embeddingP2,
+    SCIENCE_HUB_COPY.embeddingCallout,
     getScienceFepFullText(),
   ].join("\n");
 }

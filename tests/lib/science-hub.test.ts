@@ -17,6 +17,7 @@ import {
   SCIENCE_HUB_COPY,
   SCIENCE_HUB_DIRECTORY,
   SCIENCE_HUB_PATH,
+  SCIENCE_EMBEDDING_PATH,
   SCIENCE_UNSYS_PATH,
   SCIENCE_WHY_PATH,
   VERIFICATION_THESIS_LINKS,
@@ -45,7 +46,7 @@ describe("science hub", () => {
     expect(read("app/sitemap.ts")).not.toMatch(/url: `\$\{baseUrl\}\/vision`/);
   });
 
-  it("hub is why, Free Energy Principle, and the Unsys model", () => {
+  it("hub is why in the header, then FEP, Unsys, and embedding space", () => {
     const page = read("app/science/page.tsx");
     expect(page).toContain("data-science-hub");
     expect(page).toContain("console-copy");
@@ -57,29 +58,39 @@ describe("science hub", () => {
     expect(page).toContain("ScrollToHash");
     expect(page).toContain("[&_section[id]]:scroll-mt-24");
     expect(page).toContain('id="why"');
-    expect(page).toContain("SCIENCE_HUB_COPY.whyTitle");
-    expect(page).toContain("SCIENCE_HUB_COPY.whyImageSrc");
+    expect(page).toContain("data-science-why");
+    expect(page).toContain("SCIENCE_HUB_COPY.lead");
+    expect(page).not.toContain("SCIENCE_HUB_COPY.whyImageSrc");
+    expect(page).not.toContain("data-science-why-visual");
     expect(page).toContain("MARKETING_MEDIA_FILL_CLASS");
-    expect(page).toContain("data-science-why-visual");
-    expect(page).toContain("SCIENCE_HUB_COPY.whyP1");
-    expect(page).toContain("SCIENCE_HUB_COPY.whyP2");
+    expect(page).toContain("SCIENCE_HUB_COPY.fepImageSrc");
+    expect(page).toContain("SCIENCE_HUB_COPY.unsysImageSrc");
+    expect(page).toContain("SCIENCE_HUB_COPY.embeddingImageSrc");
+    expect(page).toContain("data-science-embedding");
     expect(page).not.toContain("SCIENCE_HUB_WHY");
     expect(page).not.toContain("Low ROI Learning");
     expect(page).not.toContain("data-vision-tomography-induction");
     expect(page).not.toContain("data-science-enhancement");
     expect(page).not.toContain("data-science-symbiosis");
-    expect(SCIENCE_HUB_COPY.whyImageSrc).toBe("/science/why.jpg");
+    expect(SCIENCE_HUB_COPY.lead).toEqual([
+      SCIENCE_HUB_COPY.whyP1,
+      SCIENCE_HUB_COPY.whyP2,
+    ]);
     expect(SCIENCE_HUB_COPY.fepImageSrc).toBe("/science/proof-of-work.jpg");
     expect(SCIENCE_HUB_COPY.unsysImageSrc).toBe("/science/unsys-model.jpg");
-    expect(existsSync(join(ROOT, "public/science/why.jpg"))).toBe(true);
+    expect(SCIENCE_HUB_COPY.embeddingImageSrc).toBe("/science/embedding.jpg");
+    expect(existsSync(join(ROOT, "public/science/why.jpg"))).toBe(false);
+    expect(existsSync(join(ROOT, "public/science/embedding.jpg"))).toBe(true);
     expect(existsSync(join(ROOT, "public/science/unsys-model.jpg"))).toBe(true);
     expect(existsSync(join(ROOT, "public/science/proof-of-work.jpg"))).toBe(true);
     expect(SCIENCE_HUB_DIRECTORY.map((row) => row.href)).toEqual([
-      "#why",
       "#science-free-energy",
       "#science-unsys-model",
+      "#science-embedding",
     ]);
     expect(SCIENCE_UNSYS_PATH).toBe("/science#science-unsys-model");
+    expect(SCIENCE_EMBEDDING_PATH).toBe("/science#science-embedding");
+    expect(SCIENCE_WHY_PATH).toBe("/science#why");
     expect(
       SCIENCE_HUB_DIRECTORY.find((row) => row.href === "#science-unsys-model")?.label,
     ).toBe("Unsys model");
@@ -92,12 +103,12 @@ describe("science hub", () => {
     expect(MAPPING_THESIS_LINKS.map((row) => row.href)).toEqual([
       SCIENCE_FEP_PATH,
       SCIENCE_LEARNING_MODEL_PATH,
-      SCIENCE_WHY_PATH,
+      SCIENCE_EMBEDDING_PATH,
     ]);
     expect(HARNESS_THESIS_LINKS.map((row) => row.href)).toEqual([
       SCIENCE_FEP_PATH,
       SCIENCE_LEARNING_MODEL_PATH,
-      SCIENCE_WHY_PATH,
+      SCIENCE_EMBEDDING_PATH,
     ]);
     expect(
       HARNESS_THESIS_LINKS.find((row) => row.href === SCIENCE_LEARNING_MODEL_PATH)?.label,

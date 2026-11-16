@@ -13,6 +13,7 @@ import {
   SCIENCE_EPISTEMIC_FORAGING_TERMS,
   getScienceEpistemicForagingFullText,
 } from "@/lib/science/epistemic-foraging-copy";
+import { getScienceFepFullText } from "@/lib/science/free-energy-principle-copy";
 import { getVisionTomographyInductionFullText } from "@/lib/vision/knowledge-tomography-induction-copy";
 import { THESIS_EPISTEMIC_POLICY } from "@/lib/sales/thesis-science-snippet";
 import { getPlatformPitchSlide, PLATFORM_THESIS_SLIDE_INDEX } from "@/lib/sales/platform-pitch-deck";
@@ -97,49 +98,29 @@ describe("science epistemic foraging copy content", () => {
   });
 });
 
-describe("science page renders epistemic foraging copy", () => {
-  it("imports and renders the shipped foraging module on /science after FEP", () => {
+describe("science page keeps the foraging hash on the FEP plate", () => {
+  it("does not mount a separate foraging chapter", () => {
     const pagePath = join(ROOT, "app/science/page.tsx");
     expect(existsSync(pagePath)).toBe(true);
     const src = read("app/science/page.tsx");
 
-    expect(src).toContain("SCIENCE_EPISTEMIC_FORAGING_COPY");
-    expect(src).toContain("SCIENCE_PAGE_READINGS");
-    expect(src).toContain("epistemic-foraging-copy");
-    expect(src).toContain("data-science-epistemic-foraging");
-    expect(src).toContain("SCIENCE_EPISTEMIC_FORAGING_COPY.title");
-    expect(src).toContain("SCIENCE_EPISTEMIC_FORAGING_COPY.definition");
-    expect(src).toContain("SCIENCE_EPISTEMIC_FORAGING_COPY.platform");
-    expect(src).toContain("SCIENCE_EPISTEMIC_FORAGING_COPY.caveat");
-    expect(src).not.toContain("SCIENCE_EPISTEMIC_FORAGING_COPY.distinction");
-    expect(src).toContain("data-science-epistemic-foraging-readings");
-
-    const whyAt = src.indexOf("data-science-why");
-    const fepAt = src.indexOf("data-science-free-energy");
-    const foragingAt = src.indexOf("data-science-epistemic-foraging");
-    const tomographyAt = src.indexOf("data-vision-tomography-induction");
-    expect(whyAt).toBeGreaterThan(-1);
-    expect(fepAt).toBeGreaterThan(-1);
-    expect(foragingAt).toBeGreaterThan(-1);
-    expect(tomographyAt).toBeGreaterThan(-1);
-    expect(whyAt).toBeLessThan(fepAt);
-    expect(fepAt).toBeLessThan(foragingAt);
-    expect(foragingAt).toBeLessThan(tomographyAt);
-    expect(src).not.toContain("science-thesis-slide");
-
-    expect(src.toLowerCase()).toMatch(/epistemic foraging/);
+    expect(src).not.toContain("SCIENCE_EPISTEMIC_FORAGING_COPY");
+    expect(src).not.toContain("SCIENCE_PAGE_READINGS");
+    expect(src).toContain('id="science-epistemic-foraging"');
+    expect(src).toContain("data-science-free-energy");
+    expect(src).not.toContain("data-science-epistemic-foraging-readings");
+    expect(src).not.toContain("data-vision-tomography-induction");
     expect(SCIENCE_EPISTEMIC_FORAGING_PATH).toBe("/science#science-epistemic-foraging");
     expect(src).toContain("data-science-hub");
     expect(src).toContain("MarketingDirectoryHero");
     expect(src).toContain("SCIENCE_HUB_DIRECTORY");
     expect(src).toContain("data-science-why");
-    expect(src).toContain("data-vision-tomography-induction");
   });
 
-  it("science metadata names epistemic foraging", () => {
+  it("science metadata is Science", () => {
     const src = read("app/science/page.tsx");
-    expect(src).toMatch(/epistemic foraging/);
-    expect(src).toContain('title: "Vision"');
+    expect(src).toContain('title: "Science"');
+    expect(getScienceFepFullText().toLowerCase()).toMatch(/epistemic foraging/);
   });
 });
 

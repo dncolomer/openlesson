@@ -26,11 +26,11 @@ describe("science FEP copy content", () => {
     expect(full).toContain("Free Energy Principle");
     expect(full.toLowerCase()).toMatch(/reducing uncertainty/);
     expect(full).toContain("Uncertain Systems");
-    expect(SCIENCE_FEP_COPY.title.toLowerCase()).toBe(
-      "uncertainty, surprise, and the free energy principle.",
-    );
+    expect(SCIENCE_FEP_COPY.title.toLowerCase()).toBe("the free energy principle.");
     expect(SCIENCE_FEP_COPY.name).toMatch(/named Uncertain Systems/);
     expect(SCIENCE_FEP_COPY.influence.toLowerCase()).toMatch(/heavily influenced/);
+    expect(SCIENCE_FEP_COPY.exploration.toLowerCase()).toMatch(/generative model of hidden states/);
+    expect(SCIENCE_FEP_COPY.exploration.toLowerCase()).toMatch(/reduces your uncertainty/);
   });
 
   it("frames FEP as influence, not identity or completed experiments", () => {
@@ -64,13 +64,14 @@ describe("science page renders FEP copy", () => {
 
     const whyAt = src.indexOf("data-science-why");
     const fepAt = src.indexOf("data-science-free-energy");
-    const tomographyAt = src.indexOf("data-vision-tomography-induction");
+    const unsysAt = src.indexOf("data-science-unsys-model");
     expect(whyAt).toBeGreaterThan(-1);
     expect(fepAt).toBeGreaterThan(-1);
-    expect(tomographyAt).toBeGreaterThan(-1);
+    expect(unsysAt).toBeGreaterThan(-1);
     expect(whyAt).toBeLessThan(fepAt);
-    expect(fepAt).toBeLessThan(tomographyAt);
+    expect(fepAt).toBeLessThan(unsysAt);
     expect(src).not.toContain("science-thesis-slide");
+    expect(src).not.toContain("data-vision-tomography-induction");
   });
 
   it("does not ship Methods, planned experiments, or paper pages", () => {

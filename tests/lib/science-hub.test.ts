@@ -1,6 +1,5 @@
 /**
- * Vision and Science share one hub at /science, with a directory and
- * deep links from harness, verification, and pricing.
+ * Science hub at /science: why, Free Energy Principle, Unsys model.
  */
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
@@ -18,10 +17,10 @@ import {
   SCIENCE_HUB_COPY,
   SCIENCE_HUB_DIRECTORY,
   SCIENCE_HUB_PATH,
+  SCIENCE_UNSYS_PATH,
   SCIENCE_WHY_PATH,
   VERIFICATION_THESIS_LINKS,
 } from "@/lib/science/hub";
-import { SCIENCE_EPISTEMIC_FORAGING_PATH } from "@/lib/science/epistemic-foraging-copy";
 import { SCIENCE_LEARNING_MODEL_PATH } from "@/lib/science/learning-model-copy";
 
 const ROOT = join(__dirname, "../..");
@@ -30,15 +29,15 @@ function read(rel: string): string {
   return readFileSync(join(ROOT, rel), "utf8");
 }
 
-describe("combined vision + science hub", () => {
-  it("nav and footer expose one Vision door into /science", () => {
-    expect(TOP_LINKS).toEqual([{ href: "/science", label: "Vision" }]);
+describe("science hub", () => {
+  it("nav and footer expose Science at /science", () => {
+    expect(TOP_LINKS).toEqual([{ href: "/science", label: "Science" }]);
     expect(SCIENCE_HUB_PATH).toBe("/science");
     const footer = read("components/Footer.tsx");
     expect(footer).toContain('href: "/science"');
-    expect(footer).toContain("footer.vision");
-    expect(footer).not.toContain("footer.science");
-    expect(read("components/Navbar.tsx")).toContain('{ href: "/science", label: "Vision" }');
+    expect(footer).toContain("footer.science");
+    expect(footer).not.toContain("footer.vision");
+    expect(read("components/Navbar.tsx")).toContain('{ href: "/science", label: "Science" }');
     expect(read("next.config.ts")).toContain('source: "/vision"');
     expect(read("next.config.ts")).toContain('destination: "/science"');
     expect(read("app/vision/page.tsx")).toContain('redirect("/science")');
@@ -46,18 +45,15 @@ describe("combined vision + science hub", () => {
     expect(read("app/sitemap.ts")).not.toMatch(/url: `\$\{baseUrl\}\/vision`/);
   });
 
-  it("hub opens with a directory of why, policy, generative model, and tomography", () => {
+  it("hub is why, Free Energy Principle, and the Unsys model", () => {
     const page = read("app/science/page.tsx");
     expect(page).toContain("data-science-hub");
     expect(page).toContain("console-copy");
     expect(page).toContain("lg:grid-cols-12");
-    expect(page).toContain("md:grid-cols-3");
     expect(page).not.toContain("bg-zinc-900");
     expect(page).toContain("MarketingDirectoryHero");
     expect(page).toContain("SCIENCE_HUB_DIRECTORY");
     expect(page).toContain('marker="science-hub"');
-    expect(read("components/marketing/MarketingDirectoryHero.tsx")).toContain("ThesisDirectory");
-    expect(read("components/marketing/MarketingDirectoryHero.tsx")).toContain('tone="index"');
     expect(page).toContain("ScrollToHash");
     expect(page).toContain("[&_section[id]]:scroll-mt-24");
     expect(page).toContain('id="why"');
@@ -67,27 +63,23 @@ describe("combined vision + science hub", () => {
     expect(page).toContain("data-science-why-visual");
     expect(page).toContain("SCIENCE_HUB_COPY.whyP1");
     expect(page).toContain("SCIENCE_HUB_COPY.whyP2");
-    expect(page).toContain("SCIENCE_HUB_COPY.whyP3");
     expect(page).not.toContain("SCIENCE_HUB_WHY");
     expect(page).not.toContain("Low ROI Learning");
-    expect(SCIENCE_HUB_COPY.whyImageSrc).toBe("/why.jpg");
-    expect(existsSync(join(ROOT, "public/why.jpg"))).toBe(true);
-    expect(page).not.toContain('className="sr-only"');
-    expect(read("components/science/ThesisDirectory.tsx")).toContain('link.href.startsWith("#")');
-    expect(read("components/science/ScrollToHash.tsx")).toContain("scrollIntoView");
+    expect(page).not.toContain("data-vision-tomography-induction");
+    expect(page).not.toContain("data-science-enhancement");
+    expect(page).not.toContain("data-science-symbiosis");
+    expect(SCIENCE_HUB_COPY.whyImageSrc).toBe("/science/why.jpg");
+    expect(existsSync(join(ROOT, "public/science/why.jpg"))).toBe(true);
+    expect(existsSync(join(ROOT, "public/science/unsys-model.jpg"))).toBe(true);
+    expect(existsSync(join(ROOT, "public/science/proof-of-work.jpg"))).toBe(true);
     expect(SCIENCE_HUB_DIRECTORY.map((row) => row.href)).toEqual([
       "#why",
       "#science-free-energy",
-      "#science-epistemic-foraging",
-      SCIENCE_LEARNING_MODEL_PATH,
-      "#knowledge-tomography-induction",
-      "#cognitive-enhancement",
-      "#human-ai-symbiosis",
-      "#software-and-research",
-      "#science-references",
+      "#science-unsys-model",
     ]);
+    expect(SCIENCE_UNSYS_PATH).toBe("/science#science-unsys-model");
     expect(
-      SCIENCE_HUB_DIRECTORY.find((row) => row.href === SCIENCE_LEARNING_MODEL_PATH)?.label,
+      SCIENCE_HUB_DIRECTORY.find((row) => row.href === "#science-unsys-model")?.label,
     ).toBe("Unsys model");
   });
 
@@ -97,11 +89,11 @@ describe("combined vision + science hub", () => {
     expect(MAPPING_PRODUCT_COPY.thesisLinks).toEqual(MAPPING_THESIS_LINKS);
     expect(MAPPING_THESIS_LINKS.map((row) => row.href)).toEqual([
       SCIENCE_FEP_PATH,
-      SCIENCE_EPISTEMIC_FORAGING_PATH,
       SCIENCE_LEARNING_MODEL_PATH,
+      SCIENCE_WHY_PATH,
     ]);
     expect(HARNESS_THESIS_LINKS.map((row) => row.href)).toEqual([
-      SCIENCE_EPISTEMIC_FORAGING_PATH,
+      SCIENCE_FEP_PATH,
       SCIENCE_LEARNING_MODEL_PATH,
       SCIENCE_WHY_PATH,
     ]);

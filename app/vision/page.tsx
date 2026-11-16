@@ -8,7 +8,7 @@ const standardSocial = standardShareSocialMetadata({
 });
 
 export const metadata: Metadata = {
-  title: "Vision",
+  title: "Science",
   description: SCIENCE_HUB_COPY.description,
   alternates: { canonical: "https://uncertain.systems/science" },
   openGraph: standardSocial.openGraph,

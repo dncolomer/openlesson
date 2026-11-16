@@ -33,5 +33,5 @@ export const COMMUNITY_LINKS = [
 export const COMMUNITY_NAV_LABEL = "Projects" as const;
 
 export const TOP_LINKS = [
-  { href: "/science", label: "Vision" },
+  { href: "/science", label: "Science" },
 ] as const;

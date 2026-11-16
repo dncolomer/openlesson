@@ -175,10 +175,10 @@ export default function ScienceLearningModelPage() {
 
         <p className="mt-6">
           <Link
-            href="/science#science-epistemic-foraging"
+            href="/science#science-unsys-model"
             className="inline-flex items-center gap-1.5 text-sm text-zinc-300 transition hover:text-white"
           >
-            Epistemic foraging
+            Science
             <ArrowRight size={14} />
           </Link>
         </p>

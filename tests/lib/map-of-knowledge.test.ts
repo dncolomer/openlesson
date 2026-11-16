@@ -643,12 +643,12 @@ describe("map-of-knowledge product surfaces", () => {
     expect(navSrc).toContain("TOP_LINKS");
     expect(navLinkSrc).not.toContain('href: "/map-of-knowledge"');
     expect(navLinkSrc).toContain('href: "/science"');
-    expect(navLinkSrc).toContain('label: "Vision"');
+    expect(navLinkSrc).toContain('label: "Science"');
     expect(navLinkSrc).not.toContain('href: "/vision"');
     expect(navLinkSrc).not.toContain('label: "The Map of Knowledge"');
     expect(navLinkSrc).toContain('COMMUNITY_NAV_LABEL = "Projects"');
     expect(navSrc).toContain("aria-label={COMMUNITY_NAV_LABEL}");
-    expect(navLinkSrc).toMatch(/TOP_LINKS[\s\S]*href: "\/science"[\s\S]*label: "Vision"/);
+    expect(navLinkSrc).toMatch(/TOP_LINKS[\s\S]*href: "\/science"[\s\S]*label: "Science"/);
   });
 
   it("groups regions by workspace for collapsible map toggles", () => {

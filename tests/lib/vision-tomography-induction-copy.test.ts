@@ -66,32 +66,28 @@ describe("vision tomography + induction copy content", () => {
 });
 
 describe("vision page renders tomography + induction block", () => {
-  it("combined hub imports and renders the shipped copy module", () => {
+  it("combined hub no longer mounts the tomography chapter", () => {
     const pagePath = join(ROOT, "app/science/page.tsx");
     expect(existsSync(pagePath)).toBe(true);
     const src = read("app/science/page.tsx");
 
-    expect(src).toContain("VISION_TOMOGRAPHY_INDUCTION_COPY");
-    expect(src).toContain("VISION_TOMOGRAPHY_INDUCTION_PATHS");
-    expect(src).toContain("data-vision-tomography-induction");
-    expect(src).toContain("data-vision-epistemic-foraging");
-    expect(src).toContain("knowledge-tomography-induction-copy");
+    expect(src).not.toContain("VISION_TOMOGRAPHY_INDUCTION_COPY");
+    expect(src).not.toContain("data-vision-tomography-induction");
+    expect(src).not.toContain("knowledge-tomography-induction-copy");
 
     expect(src).toContain("SCIENCE_HUB_COPY.title");
-    expect(SCIENCE_HUB_COPY.title).toBe("Tools for knowledge building on autopilot");
-    expect(scienceHubLeadText()).toMatch(/autopilot for knowledge building/);
+    expect(SCIENCE_HUB_COPY.title).toBe("Science");
+    expect(scienceHubLeadText()).toMatch(/can't trust answers anymore because AI writes them/);
     expect(scienceHubLeadText()).not.toMatch(/thinking stays yours/);
-    expect(SCIENCE_HUB_COPY.workspaceCta).toBe("Create your Workspace");
+    expect(SCIENCE_HUB_COPY.workspaceCta).toBe("Open dashboard");
     expect(read("app/vision/page.tsx")).toContain('redirect("/science")');
   });
 
-  it("links to foraging and the Unsys model, not the retired paper pages", () => {
+  it("copy paths still point at /science hashes, not retired paper pages", () => {
     const src = read("app/science/page.tsx");
-    expect(src).toContain("VISION_TOMOGRAPHY_INDUCTION_PATHS.epistemicForaging");
     expect(src).not.toContain("knowledgeTomographyPaper");
-    expect(src).toContain("data-vision-epistemic-foraging-link");
     expect(src).not.toContain("data-vision-knowledge-tomography-paper-link");
-    expect(src).toContain("data-vision-learning-model-link");
+    expect(src).toContain("data-science-learning-model-link");
 
     expect(VISION_TOMOGRAPHY_INDUCTION_PATHS.science).toBe("/science");
     expect(VISION_TOMOGRAPHY_INDUCTION_PATHS.epistemicForaging).toBe(

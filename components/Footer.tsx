@@ -15,7 +15,7 @@ const productLinks = [
   { labelKey: "footer.knowledgeMapping", href: KNOWLEDGE_MAPPING_PATH },
   { labelKey: "footer.useCases", href: "/use-cases" },
   { labelKey: "footer.pricing", href: "/pricing" },
-  { labelKey: "footer.vision", href: "/science" },
+  { labelKey: "footer.science", href: "/science" },
   { labelKey: "footer.agenticApi", href: "/docs/proof-of-work-api" },
   { labelKey: "footer.skillFile", href: "/skill.md" },
 ];

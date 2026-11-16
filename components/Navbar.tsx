@@ -59,7 +59,7 @@ export function Navbar({
     router.refresh();
   };
 
-  // Logged-in: product nav only (Upgrade + Dashboard). Community + Vision/Science for guests.
+  // Logged-in: product nav only (Upgrade + Dashboard). Community + Science for guests.
   const navLinks =
     isLoggedIn === true
       ? [
@@ -71,7 +71,7 @@ export function Navbar({
           { href: "/dashboard", label: t("nav.dashboard") },
         ];
 
-  const topLinks = [{ href: "/science", label: "Vision" }];
+  const topLinks = [{ href: "/science", label: "Science" }];
 
   const communityLinks = COMMUNITY_LINKS;
 

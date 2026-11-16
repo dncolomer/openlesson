@@ -26,7 +26,7 @@ export function DashboardHomeTab() {
           Home
         </h2>
         <p className="mt-2 max-w-2xl text-sm text-neutral-400">
-          Pick a product. Run Solve / Practice, verify work, or calibrate a prior.
+          Author flows and inspect knowledge regions.
         </p>
       </header>
 
@@ -55,7 +55,7 @@ export function DashboardHomeTab() {
       </section>
 
       <section
-        className="mt-auto grid min-h-0 flex-1 gap-3 md:grid-cols-3 md:items-stretch"
+        className="mt-auto grid min-h-0 flex-1 gap-3 md:grid-cols-2 md:items-stretch"
         data-dashboard-home-cta
       >
         {ctas.map((cta) => (

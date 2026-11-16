@@ -5,7 +5,6 @@ import {
   FALLBACK_AESTHETIC_IMAGES,
   pickWorkspaceCoverFromPool,
 } from "@/lib/aesthetics";
-import { readCustomAestheticUrls } from "@/lib/organization/custom-aesthetic-set";
 
 const AESTHETICS_DIR = path.join(process.cwd(), "public", "aesthetics");
 const IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp"]);
@@ -32,36 +31,6 @@ async function collectAestheticImages(dir: string, base = ""): Promise<string[]>
   return images.flat();
 }
 
-type CoverLookupClient = {
-  from: (table: string) => {
-    update?: (values: Record<string, unknown>) => { eq: (column: string, value: string) => Promise<unknown> };
-    select?: (columns: string) => {
-      eq: (column: string, value: string) => {
-        maybeSingle: () => Promise<{ data?: { organization_id?: string | null; custom_aesthetic_urls?: unknown } | null }>;
-      };
-    };
-  };
-};
-
-async function customUrlsForCoverUser(
-  supabase: CoverLookupClient,
-  userId: string,
-): Promise<string[]> {
-  try {
-    const profileQuery = supabase.from("profiles").select?.("organization_id");
-    if (!profileQuery) return [];
-    const { data: profile } = await profileQuery.eq("id", userId).maybeSingle();
-    const organizationId = profile?.organization_id;
-    if (!organizationId) return [];
-    const orgQuery = supabase.from("organizations").select?.("custom_aesthetic_urls");
-    if (!orgQuery) return [];
-    const { data: org } = await orgQuery.eq("id", organizationId).maybeSingle();
-    return readCustomAestheticUrls(org?.custom_aesthetic_urls);
-  } catch {
-    return [];
-  }
-}
-
 export async function getRandomWorkspaceCoverImage(
   customUrls?: readonly string[] | null,
 ): Promise<string | null> {
@@ -80,30 +49,11 @@ export async function getRandomWorkspaceCoverImage(
     });
     return pickWorkspaceCoverFromPool(system);
   } catch (error) {
-    console.error("[plan-image] Failed to load aesthetic images:", error);
+    console.error("[workspace-image] Failed to load aesthetic images:", error);
     const system = decideActiveAestheticPool({
       customUrls: [],
       systemImages: [...FALLBACK_AESTHETIC_IMAGES],
     });
     return pickWorkspaceCoverFromPool(system);
   }
-}
-
-export async function generateAndStorePlanCover(
-  supabase: CoverLookupClient,
-  userId: string,
-  workspaceId: string,
-  _description: string,
-  customUrls?: readonly string[] | null,
-): Promise<string | null> {
-  const urls = customUrls ?? (await customUrlsForCoverUser(supabase, userId));
-  const coverUrl = await getRandomWorkspaceCoverImage(urls);
-  if (!coverUrl) return null;
-
-   
-  await (supabase.from("workspaces") as any)
-    .update({ cover_image_url: coverUrl })
-    .eq("id", workspaceId);
-
-  return coverUrl;
 }

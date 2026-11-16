@@ -15,6 +15,8 @@ import {
 
 export type ProductFlowKind = "verification" | "calibration" | "solve";
 
+export const PRODUCT_FLOW_KINDS = ["solve", "verification", "calibration"] as const;
+
 export const DASHBOARD_FLOWS_PATH = "/api/dashboard/flows";
 export const DASHBOARD_FLOWS_GENERATE_PATH = "/api/dashboard/flows/generate-questions";
 export const DASHBOARD_FLOW_FILES_PATH = "/api/dashboard/flows/files";
@@ -51,6 +53,11 @@ export function flowShowsExactProblemOnCanvas(kind: ProductFlowKind): boolean {
   return kind === "solve" || kind === "verification";
 }
 
+/** Verification and Calibration lock the run clock at authoring. Solve has no run countdown. */
+export function flowAuthorShowsCountdown(kind: ProductFlowKind): boolean {
+  return kind === "verification" || kind === "calibration";
+}
+
 export function sessionWantsExactProblemOnCanvas(metadata: unknown): boolean {
   if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return false;
   return parseExactProblemOnCanvas(
@@ -65,6 +72,12 @@ export function parseProductFlowKind(value: unknown): ProductFlowKind | null {
   return null;
 }
 
+export type ProductFlowKindFilter = ProductFlowKind | "all";
+
+export function parseProductFlowKindFilter(value: unknown): ProductFlowKindFilter {
+  return parseProductFlowKind(value) ?? "all";
+}
+
 export function productFlowKindFromDashboardKind(
   kind: "verify" | "calibrate" | "solve" | ProductFlowKind,
 ): ProductFlowKind {
@@ -73,14 +86,19 @@ export function productFlowKindFromDashboardKind(
   return "verification";
 }
 
-export function productFlowNewPath(kind: ProductFlowKind): string {
+export function productFlowNewPath(kind?: ProductFlowKind | null): string {
   if (kind === "calibration") return "/calibration/flows/new";
   if (kind === "solve") return "/solve/flows/new";
-  return "/verification/flows/new";
+  if (kind === "verification") return "/verification/flows/new";
+  return "/flows/new";
 }
 
-export function productFlowDashboardPath(kind: ProductFlowKind): string {
-  return `/dashboard?tab=${kind}`;
+export function productFlowDashboardPath(_kind?: ProductFlowKind | null): string {
+  return "/dashboard?tab=flows";
+}
+
+export function productRegionDashboardPath(_kind?: ProductFlowKind | null): string {
+  return "/dashboard?tab=regions";
 }
 
 /** Public run URL for clipboard copy. Paths become origin + path. */
@@ -116,10 +134,11 @@ export function productFlowPagePath(kind: ProductFlowKind, flowId: string): stri
   return `/verification/flows/${id}`;
 }
 
-export function productRegionNewPath(kind: ProductFlowKind): string {
+export function productRegionNewPath(kind?: ProductFlowKind | null): string {
   if (kind === "calibration") return "/calibration/regions/new";
   if (kind === "solve") return "/solve/regions/new";
-  return "/verification/regions/new";
+  if (kind === "verification") return "/verification/regions/new";
+  return "/regions/new";
 }
 
 export function productRegionPagePath(kind: ProductFlowKind, regionId: string): string {
@@ -128,18 +147,6 @@ export function productRegionPagePath(kind: ProductFlowKind, regionId: string): 
   if (kind === "calibration") return `/calibration/regions/${id}`;
   if (kind === "solve") return `/solve/regions/${id}`;
   return `/verification/regions/${id}`;
-}
-
-export function productRegionStudioPath(kind: ProductFlowKind, regionId: string): string {
-  const id = String(regionId || "").trim();
-  const tab =
-    kind === "calibration"
-      ? "calibration_studio"
-      : kind === "solve"
-        ? "solve_studio"
-        : "verification_studio";
-  if (!id) return `/dashboard?tab=${tab}`;
-  return `/dashboard?tab=${tab}&region=${encodeURIComponent(id)}`;
 }
 
 export function productFlowKindLabel(kind: ProductFlowKind): string {

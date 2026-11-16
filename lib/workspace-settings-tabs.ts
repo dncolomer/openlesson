@@ -12,7 +12,6 @@ export type SettingsSubview =
   | "general"
   | "aycl"
   | "regions"
-  | "data-studio"
   | "integrations";
 
 export const LEARNING_SETTINGS_SUBVIEWS: readonly SettingsSubview[] = [
@@ -55,8 +54,6 @@ export function settingsSubviewLabel(
       return "AYCL";
     case "regions":
       return "Knowledge Regions";
-    case "data-studio":
-      return "Data Studio";
     case "integrations":
       return "Integrations";
   }

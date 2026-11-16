@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { TapScoreClient } from "@/components/TapScoreClient";
+import { ProductFlowIdentityForm } from "@/components/product-flow/product-flow-identity-form";
+import { flowCountdownMinutes } from "@/lib/flow-countdown";
 import type { TapStartingTopic } from "@/lib/tap-score";
 import { verificationQuestionStartingPrompt } from "@/lib/verification-flow";
 
@@ -14,6 +16,7 @@ export function VerificationFlowRunner({ token }: { token: string }) {
   const [topic, setTopic] = useState("");
   const [presetTopics, setPresetTopics] = useState<TapStartingTopic[]>([]);
   const [exactProblemOnCanvas, setExactProblemOnCanvas] = useState(false);
+  const [durationMinutes, setDurationMinutes] = useState(15);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -60,6 +63,7 @@ export function VerificationFlowRunner({ token }: { token: string }) {
       setPresetTopics(cards);
       setTopic(String(payload.topic || ""));
       setExactProblemOnCanvas(payload.exactProblemOnCanvas === true);
+      setDurationMinutes(flowCountdownMinutes(payload.durationMinutes));
       setPhase("pick");
     } finally {
       setBusy(false);
@@ -102,6 +106,8 @@ export function VerificationFlowRunner({ token }: { token: string }) {
           verificationToken={token}
           exactProblemOnCanvas={exactProblemOnCanvas}
           canvasProblem={topic}
+          initialMinutes={durationMinutes}
+          lockDuration
           onLocalProof={storeProof}
           initialSession={{ workspaceTitle: topic || "Verification flow", post_session: "show_results" }}
           showEndSession
@@ -110,49 +116,27 @@ export function VerificationFlowRunner({ token }: { token: string }) {
     );
   }
 
-  return (
-    <main className="min-h-screen bg-[#0b0b0b] text-white" data-verification-public-entry>
-      {phase === "identity" ? (
-        <form
-          onSubmit={(event) => void claim(event)}
-          className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-4 px-6"
-          data-verification-identity
-        >
-          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-neutral-400">
-            Verification flow
-          </p>
-          <h1 className="font-serif text-2xl">Identify yourself</h1>
-          <p className="text-sm text-neutral-400">
-            Enter a unique string for this flow. A duplicate does not start.
-          </p>
-          <input
-            value={identity}
-            onChange={(event) => setIdentity(event.target.value)}
-            data-verification-identity-input
-            className="border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm"
-            placeholder="Unique identity"
-            autoComplete="off"
-          />
-          {error ? <p className="text-sm text-red-300">{error}</p> : null}
-          <button
-            type="submit"
-            disabled={busy}
-            className="bg-white px-3 py-2 text-sm font-medium text-black disabled:opacity-40"
-          >
-            Continue
-          </button>
-        </form>
-      ) : null}
-
-      {phase === "empty" ? (
+  if (phase === "empty") {
+    return (
+      <main className="min-h-screen bg-[#0b0b0b] text-white" data-verification-public-entry>
         <section className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6" data-verification-empty-pool>
           <h1 className="font-serif text-2xl">No starting question</h1>
           <p className="mt-2 text-sm text-neutral-400">
             This verification flow has an empty question pool, so it does not offer generated topics.
           </p>
         </section>
-      ) : null}
+      </main>
+    );
+  }
 
-    </main>
+  return (
+    <ProductFlowIdentityForm
+      kind="verification"
+      identity={identity}
+      onIdentityChange={setIdentity}
+      error={error}
+      busy={busy}
+      onSubmit={(event) => void claim(event)}
+    />
   );
 }

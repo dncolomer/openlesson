@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { fetchAestheticPackages, type AestheticPackage } from "@/lib/aesthetics";
+import { useAestheticPackages } from "@/components/session-view/use-aesthetic-packages";
 import { isSmartphoneClient } from "@/lib/is-smartphone";
 import { createClient } from "@/lib/supabase/client";
 import { useSessionPaneLayout } from "@/lib/useSessionPaneLayout";
@@ -62,26 +62,13 @@ export function useSessionChrome(input: {
   const [welcomeOpenNonce, setWelcomeOpenNonce] = useState(0);
   const helpPreviousLayoutRef = useRef<HelpPreviousLayout | null>(null);
 
-  const [aestheticPackages, setAestheticPackages] = useState<AestheticPackage[]>([]);
-  const [aestheticsLoading, setAestheticsLoading] = useState(true);
-  const [selectedAestheticId, setSelectedAestheticId] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    setAestheticsLoading(true);
-    fetchAestheticPackages()
-      .then((packages) => {
-        if (cancelled) return;
-        setAestheticPackages(packages);
-        setSelectedAestheticId((current) => current ?? packages[0]?.id ?? null);
-      })
-      .finally(() => {
-        if (!cancelled) setAestheticsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const {
+    aestheticPackages,
+    aestheticsLoading,
+    selectedAestheticId,
+    setSelectedAestheticId,
+    selectedAesthetic,
+  } = useAestheticPackages();
 
   useEffect(() => {
     if (!sessionId || showWelcomeModal) return;
@@ -137,9 +124,6 @@ export function useSessionChrome(input: {
     },
     [applyIleChapterGridStartup, isPaused, isRecording, onHelpPauseRef, setActiveTool],
   );
-
-  const selectedAesthetic =
-    aestheticPackages.find((pkg) => pkg.id === selectedAestheticId) ?? aestheticPackages[0];
 
   return {
     isMobile,

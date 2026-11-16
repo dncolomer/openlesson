@@ -5,7 +5,6 @@ import { readDashboardSurface, readRepo } from "../helpers/surface-source";
 import {
   dashboardKnowledgeRegionCreateHref,
   dashboardKnowledgeRegionHref,
-  dashboardKnowledgeRegionStudioHref,
   parseDashboardKnowledgeRegionKind,
   presentDashboardKnowledgeRegions,
 } from "@/lib/dashboard-knowledge-regions";
@@ -14,7 +13,6 @@ import {
   productFlowNewPath,
   productRegionNewPath,
   productRegionPagePath,
-  productRegionStudioPath,
 } from "@/lib/product-flow";
 
 describe("dashboard knowledge regions", () => {
@@ -69,6 +67,7 @@ describe("dashboard knowledge regions", () => {
     expect(regions).toEqual([
       {
         id: "r-v",
+        kind: "verification",
         name: "Limits",
         description: null,
         workspaceId: "",
@@ -122,6 +121,7 @@ describe("dashboard knowledge regions", () => {
     expect(solveRegions).toEqual([
       {
         id: "r-s",
+        kind: "solve",
         name: "Limits cohort",
         description: null,
         workspaceId: "",
@@ -140,12 +140,6 @@ describe("dashboard knowledge regions", () => {
       productRegionPagePath("calibration", "r-c"),
     );
     expect(productRegionPagePath("calibration", "r-c")).toBe("/calibration/regions/r-c");
-    expect(productRegionStudioPath("calibration", "r-c")).toBe(
-      "/dashboard?tab=calibration_studio&region=r-c",
-    );
-    expect(dashboardKnowledgeRegionStudioHref("verification", "r-1")).toBe(
-      "/dashboard?tab=verification_studio&region=r-1",
-    );
     expect(dashboardKnowledgeRegionCreateHref("verification")).toBe(
       productRegionNewPath("verification"),
     );
@@ -196,15 +190,19 @@ describe("dashboard knowledge regions", () => {
     expect(readRepo("app/verification/regions/[id]/page.tsx")).not.toContain("redirect");
     expect(readRepo("app/solve/regions/[id]/page.tsx")).toContain("KnowledgeRegionPage");
     expect(readRepo("components/dashboard/dashboard-knowledge-regions-tab.tsx")).toContain(
-      "dashboardKnowledgeRegionHref(kind, region.id)",
+      "dashboardKnowledgeRegionHref(region.kind, region.id)",
     );
     expect(readRepo("components/dashboard/dashboard-knowledge-regions-tab.tsx")).toContain(
-      "dashboardKnowledgeRegionStudioHref(kind, region.id)",
+      "data-dashboard-type-filter",
+    );
+    expect(readRepo("app/regions/new/page.tsx")).toContain("KnowledgeRegionCreate");
+    expect(readRepo("components/dashboard/dashboard-knowledge-regions-tab.tsx")).not.toContain(
+      "dashboardKnowledgeRegionStudioHref",
     );
     expect(readRepo("components/dashboard/dashboard-knowledge-regions-tab.tsx")).toContain(
       "Open details",
     );
-    expect(readRepo("components/dashboard/dashboard-knowledge-regions-tab.tsx")).toContain(
+    expect(readRepo("components/dashboard/dashboard-knowledge-regions-tab.tsx")).not.toContain(
       "Open in Data Studio",
     );
     expect(readRepo("components/dashboard/dashboard-knowledge-regions-tab.tsx")).toContain(
@@ -233,6 +231,8 @@ describe("dashboard knowledge regions", () => {
     expect(detailsPage).toContain("data-knowledge-region-legend");
     expect(detailsPage).toContain("data-knowledge-region-polar");
     expect(detailsPage).toContain("data-knowledge-region-projection");
+    expect(detailsPage).toContain("data-knowledge-region-figure-mode");
+    expect(detailsPage).toContain("data-knowledge-region-identity");
     expect(detailsPage).toContain("KnowledgeRegionInspect");
     expect(detailsPage).toContain("inspectStudioEmbedding");
     expect(readRepo("components/product-flow/knowledge-region-inspect.tsx")).toContain(

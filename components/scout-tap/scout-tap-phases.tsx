@@ -3,7 +3,8 @@
 import type { ReactNode } from "react";
 import { PracticeVoiceChallenge } from "@/components/PracticeVoiceChallenge";
 import { CalibrateSoundingSurface } from "@/components/calibrate/calibrate-sounding-surface";
-import { TapBriefingConfig } from "@/components/TapBriefingConfig";
+import { ProductFlowSetupScreen } from "@/components/session-view/product-flow-setup-screen";
+import type { AestheticPackage } from "@/lib/aesthetics";
 import { SessionFinishedScreen } from "@/components/session-view/session-finished-screen";
 import { SessionGuidePanel } from "@/components/session-view/session-guide-panel";
 import { SessionWorkSurface } from "@/components/session-view/session-work-surface";
@@ -11,9 +12,6 @@ import { SessionTopicChapter } from "@/components/session-view/learn-work-dock-b
 import { TapSessionSignals } from "@/components/session-view/session-signals";
 import { IleStartLoading } from "@/components/session-view/learn-start-loading";
 import { SessionPageLoading } from "@/components/session-view/session-page-loading";
-import { SessionStartBackButton } from "@/components/session-view/session-start-back-button";
-import { SessionStartShell } from "@/components/session-view/session-start-shell";
-import { TapAestheticSection } from "@/components/tap-score/tap-aesthetic-section";
 import { TapLiveClock } from "@/components/tap-score/tap-live-clock";
 import { TapThoughtButton } from "@/components/tap-score/tap-thought-button";
 import { FLOW_END_KICKERS } from "@/lib/session-stage-progress";
@@ -41,6 +39,11 @@ export function ScoutTapPhases(props: {
   setConversationLanguage: (locale: SpokenLocale) => void;
   privateToken?: string;
   durationLocked: boolean;
+  aestheticPackages: AestheticPackage[];
+  aestheticsLoading: boolean;
+  selectedAestheticId: string | null;
+  selectedAesthetic: AestheticPackage | undefined;
+  onSelectAesthetic: (id: string) => void;
   isStartingSession: boolean;
   error: string;
   confirmStart: () => void;
@@ -69,12 +72,13 @@ export function ScoutTapPhases(props: {
     bgImage,
     t,
     workspaceTitle,
-    minutes,
-    setMinutes,
     conversationLanguage,
     setConversationLanguage,
-    privateToken,
-    durationLocked,
+    aestheticPackages,
+    aestheticsLoading,
+    selectedAestheticId,
+    selectedAesthetic,
+    onSelectAesthetic,
     isStartingSession,
     error,
     confirmStart,
@@ -124,49 +128,31 @@ export function ScoutTapPhases(props: {
         ) : null}
 
         {phase === "briefing" && !isStartingSession && briefingStep === "confirm" && (
-          <SessionStartShell data-scout-briefing="" data-tap-briefing-layout="sections">
-            <div className="grid h-full min-h-0 w-full flex-1 lg:grid-cols-2">
-              <div className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-[#0b0b0b] lg:border-r lg:border-neutral-800/60">
-                <TapBriefingConfig
-                  workspaceTitle={workspaceTitle}
-                  minutes={minutes}
-                  onMinutesChange={setMinutes}
-                  conversationLanguage={conversationLanguage}
-                  onConversationLanguageChange={(locale) =>
-                    setConversationLanguage(coerceSpokenLocale(locale))
-                  }
-                  showDurationPicker={!privateToken && !durationLocked}
-                  disabled={isStartingSession}
-                  title={t("scout.briefing.title")}
-                  intro={t("scout.briefing.intro")}
-                  wideLanguage
-                />
-                <div className="mt-auto shrink-0 border-t border-neutral-800 p-3">
-                  {onSettingsBackToWorkspace ? (
-                    <SessionStartBackButton onClick={onSettingsBackToWorkspace}>
-                      {t("session.backToDashboard")}
-                    </SessionStartBackButton>
-                  ) : null}
-                  <button
-                    type="button"
-                    data-onboarding-start
-                    data-calibrate-start
-                    onClick={confirmStart}
-                    disabled={isStartingSession}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-none bg-neutral-100 px-3 py-3 text-[11px] font-semibold uppercase tracking-wider text-neutral-900 transition-colors hover:bg-white disabled:cursor-wait disabled:bg-neutral-800 disabled:text-neutral-500"
-                  >
-                    {isStartingSession ? t("onboardingGuide.scout.step3.starting") : t("onboardingGuide.scout.step3.start")}
-                  </button>
-                </div>
-              </div>
-              <TapAestheticSection bgImage={bgImage} kind="shortcuts" />
-              {error ? (
-                <p className="absolute inset-x-0 bottom-0 z-20 px-6 pb-5 text-center text-sm text-red-300 lg:col-span-2">
-                  {error}
-                </p>
-              ) : null}
-            </div>
-          </SessionStartShell>
+          <div
+            data-scout-briefing=""
+            data-tap-briefing-layout="sections"
+            data-calibrate-start=""
+            data-onboarding-start=""
+            className="flex min-h-0 flex-1 flex-col"
+          >
+            <ProductFlowSetupScreen
+              t={t}
+              title={FLOW_END_KICKERS.calibrate}
+              tutoringLanguage={conversationLanguage}
+              onTutoringLanguageChange={(locale) =>
+                setConversationLanguage(coerceSpokenLocale(locale))
+              }
+              aestheticPackages={aestheticPackages}
+              selectedAesthetic={selectedAesthetic}
+              selectedAestheticId={selectedAestheticId}
+              onSelectAesthetic={onSelectAesthetic}
+              aestheticsLoading={aestheticsLoading}
+              isPreparing={isStartingSession}
+              planError={error || null}
+              onConfirm={confirmStart}
+              onBackToWorkspace={onSettingsBackToWorkspace}
+            />
+          </div>
         )}
 
         {phase === "live" && sounding ? (

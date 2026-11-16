@@ -12,21 +12,15 @@ import { OrganizationDashboardTab } from "@/components/OrganizationDashboardTab"
 import { DashboardAtmosphere } from "@/components/dashboard/dashboard-atmosphere";
 import { DashboardConfigTab } from "@/components/dashboard/dashboard-config-tab";
 import { DashboardHomeTab } from "@/components/dashboard/dashboard-home-tab";
-import { DashboardPracticePerformanceTab } from "@/components/dashboard/dashboard-practice-performance-tab";
 import { DashboardIntegrationsTab } from "@/components/dashboard/dashboard-integrations-tab";
 import { DashboardFlowsTab } from "@/components/dashboard/dashboard-flows-tab";
 import { DashboardKnowledgeRegionsTab } from "@/components/dashboard/dashboard-knowledge-regions-tab";
-import { DashboardDataStudioTab } from "@/components/dashboard/dashboard-data-studio-tab";
 import { DashboardSessionsTab } from "@/components/dashboard/dashboard-sessions-tab";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DashboardUsageTab } from "@/components/dashboard/dashboard-usage-tab";
 import { buildMcpClientConfig } from "@/lib/pow-api/mcp-proof-of-work-catalog";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import {
-  dashboardStudioProduct,
-  isDashboardPracticePerformanceTab,
-  isDashboardRegionsTab,
-  isDashboardStudioTab,
   parseDashboardTab,
   type DashboardTab,
 } from "@/lib/dashboard-nav";
@@ -574,20 +568,8 @@ export default function DashboardPage() {
         hasPaidAccess={hasPaidAccess}
       />
 
-      <div
-        className={
-          isDashboardStudioTab(activeTab)
-            ? "flex min-h-0 min-w-0 flex-col md:h-full md:overflow-hidden"
-            : "min-w-0 md:min-h-0 md:overflow-y-auto"
-        }
-      >
-      <main
-        className={
-          isDashboardStudioTab(activeTab)
-            ? "flex h-full min-h-[70vh] flex-1 flex-col overflow-hidden p-0 md:min-h-0"
-            : "overflow-x-hidden p-4 py-8 sm:px-6 lg:px-8"
-        }
-      >
+      <div className="min-w-0 md:min-h-0 md:overflow-y-auto">
+      <main className="overflow-x-hidden p-4 py-8 sm:px-6 lg:px-8">
         {/* Sessions Tab */}
         {activeTab === "sessions" && (
           <DashboardSessionsTab
@@ -612,31 +594,12 @@ export default function DashboardPage() {
 
         {activeTab === "home" && <DashboardHomeTab />}
 
-        {isDashboardPracticePerformanceTab(activeTab) && (
-          <DashboardPracticePerformanceTab />
-        )}
-
-        {(activeTab === "verification" ||
-          activeTab === "calibration" ||
-          activeTab === "solve") && (
-          <DashboardFlowsTab productTab={activeTab} formatDate={formatDate} />
-        )}
-
-        {isDashboardRegionsTab(activeTab) ? (
-          <DashboardKnowledgeRegionsTab
-            kind={
-              activeTab === "calibration_regions"
-                ? "calibration"
-                : activeTab === "solve_regions"
-                  ? "solve"
-                  : "verification"
-            }
-            formatDate={formatDate}
-          />
+        {activeTab === "flows" ? (
+          <DashboardFlowsTab formatDate={formatDate} />
         ) : null}
 
-        {isDashboardStudioTab(activeTab) && dashboardStudioProduct(activeTab) ? (
-          <DashboardDataStudioTab product={dashboardStudioProduct(activeTab)!} />
+        {activeTab === "regions" ? (
+          <DashboardKnowledgeRegionsTab formatDate={formatDate} />
         ) : null}
 
         {activeTab === "organization" && <OrganizationDashboardTab />}

@@ -162,7 +162,6 @@ describe("region simulation", () => {
       "Exploit-heavy",
     ]);
     expect(result.regionPath).toContain("/verification/regions/");
-    expect(result.studioPath).toContain("verification_studio");
     expect(result.clusters.every((cluster) => cluster.sampleCount === 3)).toBe(true);
     expect(result.progress.every((row) => row.done === 3 && row.total === 3)).toBe(true);
     expect(ticks.at(-1)).toBe(6);
@@ -214,9 +213,10 @@ describe("region simulation", () => {
   it("uses the same simulation setup for Verification, Calibration, and Solve", () => {
     const create = read("components/product-flow/knowledge-region-create.tsx");
     expect(create).toContain("RegionSimulationSetup");
-    expect(create).toContain("kind={kind}");
+    expect(create).toContain("kind?: ProductFlowKind");
     expect(create).not.toContain("LegacyKnowledgeRegionCreate");
     const setup = read("components/product-flow/region-simulation-setup.tsx");
+    expect(setup).toContain("data-region-kind");
     expect(setup).toContain("data-run-simulation");
     expect(setup).toContain("data-region-simulation-setup");
     expect(setup).toContain("data-region-simulation-result");
@@ -226,7 +226,8 @@ describe("region simulation", () => {
     expect(setup).toContain("Open details");
     expect(setup).toContain("data-open-region-details");
     expect(setup).toContain("productRegionPagePath");
-    expect(setup).toContain("productRegionStudioPath");
+    expect(setup).not.toContain("productRegionStudioPath");
+    expect(setup).not.toContain("Open in Data Studio");
     expect(setup).toContain("data-region-simulation-progress");
     expect(setup).toContain("kind=${kind}");
     const route = read("app/api/dashboard/region-simulation/route.ts");
@@ -253,7 +254,6 @@ describe("region simulation", () => {
       includeHumanData: false,
     });
     expect(result.regionPath).toContain("/solve/regions/");
-    expect(result.studioPath).toContain("solve_studio");
     const stored = await listFlowEmbeddingsForOwner({
       ownerUserId: "owner-solve",
       flowKind: "solve",
@@ -272,7 +272,6 @@ describe("region simulation", () => {
       includeHumanData: false,
     });
     expect(result.regionPath).toContain("/calibration/regions/");
-    expect(result.studioPath).toContain("calibration_studio");
     const stored = await listFlowEmbeddingsForOwner({
       ownerUserId: "owner-cal",
       flowKind: "calibrate",

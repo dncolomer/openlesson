@@ -9,7 +9,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: [
           "/dashboard",
           "/session",
-          "/results",
           "/login",
           "/register",
           "/plans",

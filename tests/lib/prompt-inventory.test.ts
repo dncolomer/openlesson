@@ -9,8 +9,6 @@ const ACTIVE_KEYS: PromptKey[] = [
   "gap_detection",
   "opening_probe",
   "probe_generation",
-  "report_generation",
-  "follow_up_sessions",
   "generate_objectives",
   "session_plan_create",
   "session_plan_update",

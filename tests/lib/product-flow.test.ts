@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
   acceptProductFlowPublish,
   emptyProductFlowDraft,
+  flowAuthorShowsCountdown,
   flowOwnedByUser,
   parseExactProblemOnCanvas,
   parseProductFlowKind,
@@ -41,7 +42,11 @@ describe("product flow owner_user_id", () => {
     expect(parseExactProblemOnCanvas(false)).toBe(false);
     expect(parseExactProblemOnCanvas(undefined)).toBe(false);
     expect(parseProductFlowKind("practice")).toBeNull();
+    expect(flowAuthorShowsCountdown("verification")).toBe(true);
+    expect(flowAuthorShowsCountdown("calibration")).toBe(true);
+    expect(flowAuthorShowsCountdown("solve")).toBe(false);
     expect(productFlowNewPath("solve")).toBe("/solve/flows/new");
+    expect(productFlowNewPath()).toBe("/flows/new");
     expect(productFlowPagePath("solve", "sf1")).toBe("/solve/flows/sf1");
   });
 

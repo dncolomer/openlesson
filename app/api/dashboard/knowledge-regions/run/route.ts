@@ -1,7 +1,7 @@
 /**
- * Owner Data Studio: proof-of-work for one embedding run, including spoken
- * transcript_snapshot rows that live on proof_of_work rather than
- * the compact embedding payload.
+ * Owner knowledge-region inspect: proof-of-work for one embedding run,
+ * including spoken transcript_snapshot rows that live on proof_of_work
+ * rather than the compact embedding payload.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";

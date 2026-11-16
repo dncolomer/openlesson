@@ -27,29 +27,11 @@ import {
   FLOW_EMBEDDING_PATH_TEXT_MODEL_ID,
 } from "@/lib/flow-embedding";
 import { cosineThresholdToL2, l2Distance, l2Normalize } from "@/lib/knowledge-config/math";
-import {
-  availableWorkspaceSections,
-  resolveWorkspaceSectionLayout,
-} from "@/lib/workspace-sections";
-import {
-  DASHBOARD_NAV_GROUPS,
-  dashboardStudioProduct,
-  isDashboardStudioTab,
-} from "@/lib/dashboard-nav";
-import {
-  IDENTITY_STUDIO_CAMERA,
-  hitTestStudioPoint,
-  panStudioCamera,
-  studioCameraTransform,
-  studioGridLines,
-  studioNiceGridStep,
-  studioScreenToWorld,
-  zoomStudioCamera,
-} from "@/lib/data-studio-camera";
+import { availableWorkspaceSections } from "@/lib/workspace-sections";
+import { DASHBOARD_NAV_GROUPS } from "@/lib/dashboard-nav";
 import {
   buildDataStudioProjectionView,
   buildStudioRegionDistanceRays,
-  clampStudioInspectWidth,
   formatStudioHighDimDistance,
   hiddenStudioRegionIdsForFocus,
   filterStudioEmbeddings,
@@ -83,10 +65,6 @@ import {
   visibleStudioRegions,
   type DataStudioEmbeddingRow,
 } from "@/lib/data-studio-view";
-import {
-  dataStudioExplainer,
-  parseDataStudioView,
-} from "@/lib/data-studio-explainer";
 import {
   includeAuthorStudioEmbedding,
   parseMapPlayDataAccessFlags,
@@ -353,38 +331,46 @@ describe("studio projection + region geometry (shipped)", () => {
   });
 });
 
-describe("data studio structural wiring", () => {
-  it("dashboard Data Studio mounts against the owner studio route", () => {
-    const tab = readFileSync(join(ROOT, "components/dashboard/dashboard-data-studio-tab.tsx"), "utf8");
-    expect(tab).toContain("DataStudioPanel");
-    expect(tab).toContain("data-dashboard-data-studio");
-    const panel = readFileSync(join(ROOT, "components/data-studio/DataStudioPanel.tsx"), "utf8");
-    expect(panel).toContain("DASHBOARD_DATA_STUDIO_PATH");
-    expect(panel).toContain("DASHBOARD_DATA_STUDIO_RUN_PATH");
-    expect(existsSync(join(ROOT, "app/api/dashboard/data-studio/route.ts"))).toBe(true);
-    expect(existsSync(join(ROOT, "app/api/dashboard/data-studio/run/route.ts"))).toBe(true);
+describe("data studio overlay retired", () => {
+  it("keeps knowledge-region inspect helpers and drops overlay chrome", () => {
+    expect(existsSync(join(ROOT, "app/api/dashboard/data-studio/route.ts"))).toBe(false);
+    expect(existsSync(join(ROOT, "app/api/dashboard/data-studio/run/route.ts"))).toBe(false);
+    expect(existsSync(join(ROOT, "components/dashboard/dashboard-data-studio-tab.tsx"))).toBe(false);
+    expect(existsSync(join(ROOT, "components/data-studio/DataStudioPanel.tsx"))).toBe(false);
+    expect(existsSync(join(ROOT, "components/data-studio/DataStudioPlot.tsx"))).toBe(false);
+    expect(existsSync(join(ROOT, "components/data-studio/DataStudioHud.tsx"))).toBe(false);
+    expect(existsSync(join(ROOT, "lib/data-studio-camera.ts"))).toBe(false);
+    expect(existsSync(join(ROOT, "lib/data-studio-explainer.ts"))).toBe(false);
     expect(existsSync(join(ROOT, "app/api/workspace/data-studio/pow/route.ts"))).toBe(false);
     expect(existsSync(join(ROOT, "app/admin"))).toBe(false);
     expect(existsSync(join(ROOT, "app/api/admin"))).toBe(false);
-  });
 
-  it("dashboard studio API loads owner embeddings and run proof of work", () => {
-    const src = readFileSync(join(ROOT, "app/api/dashboard/data-studio/route.ts"), "utf8");
-    expect(src).toContain("listFlowEmbeddingsForOwner");
-    expect(src).toContain("presentDashboardDataStudio");
-    expect(src).toContain("requireAuthenticatedUser");
-    expect(src).not.toContain("guardWorkspaceRoute");
-    expect(src).not.toContain("requireAdmin");
-    const run = readFileSync(join(ROOT, "app/api/dashboard/data-studio/run/route.ts"), "utf8");
+    expect(existsSync(join(ROOT, "components/data-studio/DataStudioInspect.tsx"))).toBe(true);
+    expect(existsSync(join(ROOT, "components/data-studio/StudioMultiSelect.tsx"))).toBe(true);
+    expect(existsSync(join(ROOT, "app/api/dashboard/knowledge-regions/run/route.ts"))).toBe(true);
+    const inspect = readFileSync(join(ROOT, "components/data-studio/DataStudioInspect.tsx"), "utf8");
+    expect(inspect).toContain("export function DataStudioInspectFields");
+    expect(inspect).not.toContain("export function DataStudioInspect(");
+    expect(inspect).toContain("data-data-studio-speech");
+    const select = readFileSync(join(ROOT, "components/data-studio/StudioMultiSelect.tsx"), "utf8");
+    expect(select).toContain("data-data-studio-select-search");
+    expect(select).toContain("data-data-studio-select-option");
+    const run = readFileSync(join(ROOT, "app/api/dashboard/knowledge-regions/run/route.ts"), "utf8");
     expect(run).toContain("flowPowFromWorkspaceRow");
     expect(run).toContain("extractStudioSpeechTranscripts");
     expect(run).toContain("requireAuthenticatedUser");
-    expect(run).not.toContain("requireAdmin");
     expect(run).toContain("runId is required");
     expect(run).toContain('eq("owner_user_id", auth.user.id)');
-    expect(run).toContain("session_id.eq.");
-    const panel = readFileSync(join(ROOT, "components/data-studio/DataStudioPanel.tsx"), "utf8");
-    expect(panel).toContain("selected?.workspace_id && !selected?.run_id");
+    const page = readFileSync(join(ROOT, "components/product-flow/knowledge-region-page.tsx"), "utf8");
+    expect(page).toContain("DASHBOARD_KNOWLEDGE_REGION_RUN_PATH");
+    expect(page).not.toContain("Open in Data Studio");
+    const dash = readFileSync(join(ROOT, "app/dashboard/page.tsx"), "utf8");
+    expect(dash).not.toContain("DashboardDataStudioTab");
+    expect(dash).toContain("DashboardKnowledgeRegionsTab");
+    expect(availableWorkspaceSections({ isOwner: true })).not.toContain("data_studio");
+    expect(
+      DASHBOARD_NAV_GROUPS.flatMap((group) => group.items.map((item) => item.label)),
+    ).not.toContain("Data Studio");
   });
 });
 
@@ -469,158 +455,6 @@ function dashboardApiEmbedding(input: {
     source: null,
   };
 }
-
-describe("product Data Studio chrome", () => {
-  it("lists Data Studio on verification, calibration, and solve product chrome", () => {
-    expect(
-      availableWorkspaceSections({ isOwner: true, workspaceKind: "knowledge_region" }),
-    ).not.toContain("data_studio");
-    expect(
-      availableWorkspaceSections({ isOwner: true, workspaceKind: "calibration" }),
-    ).not.toContain("data_studio");
-    expect(availableWorkspaceSections({ isOwner: true })).not.toContain("data_studio");
-    expect(resolveWorkspaceSectionLayout("data_studio").mountsDataStudioPanel).toBe(true);
-
-    const learning = DASHBOARD_NAV_GROUPS.find((group) => (group.id as string) === "learning");
-    expect(learning).toBeUndefined();
-    const verification = DASHBOARD_NAV_GROUPS.find((group) => group.id === "verification");
-    const calibration = DASHBOARD_NAV_GROUPS.find((group) => group.id === "calibration");
-    const solve = DASHBOARD_NAV_GROUPS.find((group) => group.id === "solve");
-
-    expect(dashboardStudioProduct("solve_studio")).toBe("solve");
-    expect(verification?.items.some((item) => item.label === "Data Studio")).toBe(true);
-    expect(calibration?.items.some((item) => item.label === "Data Studio")).toBe(true);
-    expect(solve?.items.some((item) => item.label === "Data Studio")).toBe(true);
-    expect(isDashboardStudioTab("learning_studio")).toBe(false);
-    expect(isDashboardStudioTab("practice_studio")).toBe(false);
-    expect(isDashboardStudioTab("solve_studio")).toBe(true);
-    expect(dashboardStudioProduct("calibration_studio")).toBe("calibration");
-    expect(dashboardStudioProduct("solve_studio")).toBe("solve");
-
-    const hosts = readFileSync(join(ROOT, "components/workspace-view/workspace-section-hosts.tsx"), "utf8");
-    expect(hosts).not.toContain("DataStudioPanel");
-    expect(hosts).not.toContain("data-workspace-data-studio-host");
-
-    expect(existsSync(join(ROOT, "lib/data-studio-camera.ts"))).toBe(true);
-    expect(readFileSync(join(ROOT, "lib/data-studio-view.ts"), "utf8")).not.toContain(
-      'from "@/lib/data-studio-camera"',
-    );
-    expect(readFileSync(join(ROOT, "components/data-studio/DataStudioPanel.tsx"), "utf8")).toContain(
-      'from "@/lib/data-studio-camera"',
-    );
-    expect(existsSync(join(ROOT, "components/data-studio/DataStudioPlot.tsx"))).toBe(true);
-    expect(existsSync(join(ROOT, "components/data-studio/DataStudioHud.tsx"))).toBe(true);
-    expect(existsSync(join(ROOT, "components/data-studio/DataStudioInspect.tsx"))).toBe(true);
-    const visual = [
-      "components/data-studio/DataStudioPanel.tsx",
-      "components/data-studio/DataStudioPlot.tsx",
-      "components/data-studio/DataStudioHud.tsx",
-      "components/data-studio/DataStudioInspect.tsx",
-    ]
-      .map((rel) => readFileSync(join(ROOT, rel), "utf8"))
-      .join("\n");
-    expect(visual).toContain("<DataStudioPlot");
-    expect(visual).toContain("<DataStudioHud");
-    expect(visual).toContain("<DataStudioInspect");
-    expect(visual).toContain("data-workspace-data-studio");
-    expect(visual).toContain("data-data-studio-visual");
-    expect(visual).toContain("data-data-studio-product");
-    expect(visual).toContain("data-data-studio-plot");
-    expect(visual).toContain("data-data-studio-hud");
-    expect(visual).toContain("data-data-studio-toolbar");
-    expect(visual).toContain("data-data-studio-toolbar-grid");
-    expect(visual).toContain("minmax(7.5rem,1fr)");
-    expect(visual).toContain("data-data-studio-status");
-    expect(visual).toContain("data-data-studio-flow-filter");
-    expect(visual).toContain("data-data-studio-run-filter");
-    expect(visual).toContain("data-data-studio-map-filter");
-    expect(visual).toContain("data-data-studio-region-filter");
-    expect(visual).toContain("StudioMultiSelect");
-    const select = readFileSync(join(ROOT, "components/data-studio/StudioMultiSelect.tsx"), "utf8");
-    expect(select).toContain("data-data-studio-select-search");
-    expect(select).toContain("data-data-studio-select-option");
-    expect(select).toContain("aria-multiselectable");
-    expect(visual).toContain("compact");
-    expect(visual).toContain("data-data-studio-inspect");
-    expect(visual).toContain("data-data-studio-speech");
-    expect(visual).toContain("data-data-studio-resize");
-    expect(visual).toContain("data-data-studio-grid");
-    expect(visual).toContain("data-data-studio-reset-camera");
-    expect(visual).toContain("data-data-studio-camera");
-    expect(visual).toContain("data-data-studio-space-select");
-    expect(visual).toContain("dataStudioSpaceLabel");
-    expect(visual).toContain("All together");
-    expect(visual).toContain("data-data-studio-help");
-    expect(visual).toContain("data-data-studio-view");
-    expect(visual).toContain("data-data-studio-distances-toggle");
-    expect(visual).toContain("data-data-studio-membership-toggle");
-    expect(visual).toContain("const [showDistances, setShowDistances] = useState(true)");
-    expect(visual).toContain("const [colorMembership, setColorMembership] = useState(true)");
-    expect(visual).toContain("data-data-studio-spread-disk");
-    expect(visual).toContain("data-data-studio-spread-label");
-    expect(visual).toContain("data-data-studio-membership-ring");
-    expect(visual).toContain("studioHighDimRegionMembership");
-    expect(visual).toContain("STUDIO_IN_REGION_FILL");
-    expect(visual).toContain("membershipScreenRadius");
-    expect(visual).toContain("data-data-studio-region-legend");
-    expect(visual).toContain("data-data-studio-region-toggle");
-    expect(visual).toContain("data-data-studio-distance-ray");
-    expect(visual).toContain("strokeDasharray");
-    expect(visual).toContain("data-data-studio-inspect-distances");
-    expect(visual).toContain("data-data-studio-focus-region");
-    expect(visual).toContain("DATA_STUDIO_REGION_QUERY");
-    expect(visual).toContain("hiddenStudioRegionIdsForFocus");
-    expect(visual).toContain("colorByOrigin");
-    expect(visual).toContain("data-data-studio-origin");
-    expect(visual).toContain("data-data-studio-origin-legend");
-    expect(visual).toContain("DataStudioExplainer");
-    const explainer = readFileSync(
-      join(ROOT, "components/data-studio/DataStudioExplainer.tsx"),
-      "utf8",
-    );
-    expect(explainer).toContain("data-data-studio-explainer");
-    expect(explainer).toContain("data-data-studio-explainer-figure");
-    expect(explainer).toContain("Back to map");
-
-    const dash = readFileSync(join(ROOT, "app/dashboard/page.tsx"), "utf8");
-    expect(dash).toContain("DashboardDataStudioTab");
-    expect(existsSync(join(ROOT, "app/api/dashboard/data-studio/route.ts"))).toBe(true);
-    expect(existsSync(join(ROOT, "components/dashboard/dashboard-data-studio-tab.tsx"))).toBe(true);
-    const api = readFileSync(join(ROOT, "app/api/dashboard/data-studio/route.ts"), "utf8");
-    expect(api).toContain("presentDashboardDataStudio");
-    expect(api).not.toContain("listFlowEmbeddingsForWorkspaces");
-    expect(api).toContain("listFlowEmbeddingsForOwner");
-    expect(api).toContain("product must be verification, calibration, or solve");
-    expect(api).not.toContain("denyWorkspaceFeatureById");
-  });
-});
-
-describe("Data Studio help explainer", () => {
-  it("swaps the map for a product explainer with walk, spaces, overlay, and inspect", () => {
-    expect(parseDataStudioView("help")).toBe("help");
-    expect(parseDataStudioView("map")).toBe("map");
-    expect(parseDataStudioView("nope")).toBe("map");
-    const verification = dataStudioExplainer("verification");
-    const calibration = dataStudioExplainer("calibration");
-    const solve = dataStudioExplainer("solve");
-    expect(verification.figures.map((figure) => figure.id)).toEqual([
-      "walk",
-      "spaces",
-      "overlay",
-      "inspect",
-    ]);
-    expect(verification.lede).toContain("Verify");
-    expect(verification.figures[2]?.body).toContain("flow");
-    expect(verification.figures[2]?.body).toContain("dashed ring");
-    expect(verification.figures[2]?.body).toContain("white disk");
-    expect(calibration.figures[2]?.body).toContain("dashed ring");
-    expect(calibration.lede).toContain("Calibrate");
-    expect(calibration.figures[2]?.title).toContain("Sounding");
-    expect(solve.lede).toContain("Solve");
-    expect(solve.controls).toContain("flow");
-    expect(verification.figures[1]?.body).toContain("Path + Text");
-  });
-});
 
 describe("studio flow/run filters, inspect, projection, learning scope", () => {
   it("keeps all-together, drops other flows and runs, and retains identity", () => {
@@ -777,9 +611,6 @@ describe("studio flow/run filters, inspect, projection, learning scope", () => {
       "I am thinking about limits out loud",
       "the derivative is the slope",
     ]);
-    expect(clampStudioInspectWidth(120)).toBe(280);
-    expect(clampStudioInspectWidth(2000)).toBe(960);
-    expect(clampStudioInspectWidth(500)).toBe(500);
   });
 
   it("projects two algorithms to finite 2D and overlays region disks in the same frame", () => {
@@ -1083,73 +914,6 @@ describe("studio flow/run filters, inspect, projection, learning scope", () => {
         embedding: authoredAnonymous,
       }),
     ).toBe(false);
-  });
-
-  it("pans, zooms around a cursor, and hit-tests through the camera", () => {
-    const panned = panStudioCamera(IDENTITY_STUDIO_CAMERA, 40, -12);
-    expect(panned).toEqual({ x: 40, y: -12, scale: 1 });
-    expect(studioCameraTransform(panned)).toBe("translate(40 -12) scale(1)");
-
-    const zoomed = zoomStudioCamera(IDENTITY_STUDIO_CAMERA, {
-      factor: 2,
-      originX: 100,
-      originY: 50,
-    });
-    expect(zoomed.scale).toBe(2);
-    const world = studioScreenToWorld(IDENTITY_STUDIO_CAMERA, 100, 50);
-    const worldAfter = studioScreenToWorld(zoomed, 100, 50);
-    expect(worldAfter.x).toBeCloseTo(world.x);
-    expect(worldAfter.y).toBeCloseTo(world.y);
-
-    const clamped = zoomStudioCamera(IDENTITY_STUDIO_CAMERA, {
-      factor: 1000,
-      originX: 0,
-      originY: 0,
-    });
-    expect(clamped.scale).toBe(16);
-
-    expect(studioNiceGridStep(1)).toBeGreaterThan(0);
-    expect(studioNiceGridStep(4)).toBeLessThan(studioNiceGridStep(1));
-    const grid = studioGridLines({
-      width: 400,
-      height: 300,
-      camera: zoomed,
-    });
-    expect(grid.step).toBeGreaterThan(0);
-    expect(grid.lines.some((line) => line.axis === "x" && line.major)).toBe(true);
-    expect(grid.lines.some((line) => line.axis === "y")).toBe(true);
-
-    const points = [
-      { id: "near", screenX: 80, screenY: 40 },
-      { id: "far", screenX: 300, screenY: 200 },
-    ];
-    expect(
-      hitTestStudioPoint(points, {
-        screenX: 80,
-        screenY: 40,
-        camera: IDENTITY_STUDIO_CAMERA,
-      }),
-    ).toBe("near");
-    const zoomedHit = zoomStudioCamera(IDENTITY_STUDIO_CAMERA, {
-      factor: 2,
-      originX: 80,
-      originY: 40,
-    });
-    expect(
-      hitTestStudioPoint(points, {
-        screenX: 80,
-        screenY: 40,
-        camera: zoomedHit,
-      }),
-    ).toBe("near");
-    expect(
-      hitTestStudioPoint(points, {
-        screenX: 0,
-        screenY: 0,
-        camera: IDENTITY_STUDIO_CAMERA,
-        pixelRadius: 8,
-      }),
-    ).toBeNull();
   });
 
   it("author studio keeps invite and contributed Path rows and hides private play-copy rows", () => {

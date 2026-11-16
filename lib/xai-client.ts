@@ -2,13 +2,12 @@
 // xAI CLIENT
 //
 // Single, centralized client for xAI REST APIs. Handles both:
-//   - POST /v1/chat/completions  (callXai, callXaiJSON, callXaiText, callXaiWithSchema, callXaiWithImage)
+//   - POST /v1/chat/completions  (callXai, callXaiJSON, callXaiText, callXaiWithSchema)
 //   - POST /v1/responses         (callXaiResponses, callXaiResponsesWithFiles)
 //
 // Shared: env/config, retry+backoff, JSON-parse fallback, schema enforcement.
 //
-// For the Files API see lib/xai-files.ts, STT lib/xai-stt.ts, TTS app/api/xai-tts,
-// image gen lib/plan-image.ts.
+// For the Files API see lib/xai-files.ts, STT lib/xai-stt.ts.
 //
 // Client components: import model constants from lib/xai-models.ts only.
 // Do not import this module from "use client" files (server-only API key path).
@@ -18,6 +17,11 @@
 // CONFIG
 // ============================================
 
+import {
+  chatCompletionsUrl,
+  getChatConfig,
+  resolveChatApiKey,
+} from "@/lib/ai/chat";
 import {
   AVAILABLE_MODELS,
   CANVAS_ASK_MODEL,
@@ -42,11 +46,10 @@ export {
   type ReasoningEffort,
 };
 
-const XAI_CHAT_URL = "https://api.x.ai/v1/chat/completions";
 const XAI_RESPONSES_URL = "https://api.x.ai/v1/responses";
 
 export interface ProviderInfo {
-  provider: "xai";
+  provider: "xai" | "openai-compatible";
   label: string;
   defaultModel: string;
   chatUrl: string;
@@ -54,12 +57,14 @@ export interface ProviderInfo {
 }
 
 export function getProviderInfo(): ProviderInfo {
+  const cfg = getChatConfig();
+  const isXai = cfg.baseURL.includes("api.x.ai");
   return {
-    provider: "xai",
-    label: "xAI Direct",
-    defaultModel: DEFAULT_MODEL,
-    chatUrl: XAI_CHAT_URL,
-    hasXAIKey: !!process.env.XAI_API_KEY,
+    provider: isXai ? "xai" : "openai-compatible",
+    label: isXai ? "xAI Direct" : cfg.baseURL,
+    defaultModel: cfg.model,
+    chatUrl: chatCompletionsUrl(),
+    hasXAIKey: !!cfg.apiKey,
   };
 }
 
@@ -79,8 +84,12 @@ function getApiKey(override?: string | null): string {
       /* no context */
     }
   }
-  const key = process.env.XAI_API_KEY;
-  if (!key) throw new Error("XAI_API_KEY not configured. Set it in your .env.local file.");
+  const key = resolveChatApiKey();
+  if (!key) {
+    throw new Error(
+      "AI_API_KEY / XAI_API_KEY not configured. Set it in your .env.local file.",
+    );
+  }
   return key;
 }
 
@@ -317,7 +326,7 @@ interface ChatRequestBody {
 }
 
 function buildChatBody(messages: Message[], config: XaiChatConfig): ChatRequestBody {
-  const model = config.model || DEFAULT_MODEL;
+  const model = config.model || getChatConfig().model;
   const body: ChatRequestBody = {
     model,
     messages,
@@ -366,7 +375,7 @@ export async function callXai<T = string>(
         fetchOptions.signal = AbortSignal.timeout(config.fetchTimeout);
       }
 
-      const response = await fetch(XAI_CHAT_URL, fetchOptions);
+      const response = await fetch(chatCompletionsUrl(), fetchOptions);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -571,27 +580,6 @@ export function buildImageContent(text: string, image: ImageInput): MessageConte
     { type: "text", text },
     { type: "image_url", image_url: { url: `data:${mimeType};base64,${image.data}` } },
   ];
-}
-
-export async function callXaiWithImage<T>(
-  prompt: string,
-  image: ImageInput,
-  config: Omit<XaiChatConfig, "responseFormat"> & {
-    responseFormat?: "json" | "json_schema" | "text";
-  }
-): Promise<XaiResponse<T>> {
-  const content = buildImageContent(prompt, image);
-  const messages: Message[] = [{ role: "user", content }];
-
-  if (config.responseFormat === "text" || !config.responseFormat) {
-    return callXai<T>(messages, { ...config, responseFormat: undefined });
-  }
-
-  return callXai<T>(messages, {
-    ...config,
-    responseFormat: config.responseFormat as "json" | "json_schema",
-    temperature: Math.min(config.temperature, 0.2),
-  });
 }
 
 // ============================================

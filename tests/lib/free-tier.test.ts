@@ -38,12 +38,13 @@ describe("free tier week window and quota", () => {
 describe("free tier dashboard and paths", () => {
   it("opens Learning Map create and product tabs without a subscription", () => {
     const groups = dashboardNavGroupsForAccess(false);
-    expect(groups.some((group) => group.id === "verification")).toBe(true);
-    expect(groups.some((group) => group.id === "calibration")).toBe(true);
+    expect(groups.some((group) => group.id === "account")).toBe(true);
+    expect(groups.some((group) => (group.id as string) === "verification")).toBe(false);
+    expect(groups.some((group) => (group.id as string) === "calibration")).toBe(false);
     expect(clampDashboardTabForAccess("learning" as never, false)).toBe("home");
     expect(clampDashboardTabForAccess("shop" as never, false)).toBe("home");
-    expect(clampDashboardTabForAccess("verification", false)).toBe("verification");
-    expect(clampDashboardTabForAccess("solve", false)).toBe("solve");
+    expect(clampDashboardTabForAccess("flows", false)).toBe("flows");
+    expect(clampDashboardTabForAccess("home", false)).toBe("home");
     expect(dashboardPlayKindsForAccess(false)).toEqual(["learn", "verify", "calibrate"]);
     expect(dashboardPlayKindsForAccess(true)).toEqual(["learn", "verify", "calibrate"]);
   });
@@ -56,11 +57,13 @@ describe("free tier dashboard and paths", () => {
     expect(isFreeTierAllowedPath("/play/verify")).toBe(true);
     expect(isFreeTierAllowedPath("/play/calibrate")).toBe(true);
     expect(isFreeTierAllowedPath("/workspace/abc")).toBe(false);
-    expect(isFreeTierAllowedPath("/results")).toBe(true);
+    expect(isFreeTierAllowedPath("/results")).toBe(false);
     expect(isFreeTierAllowedPath("/workspace/new")).toBe(false);
     expect(isFreeTierAllowedPath("/verification")).toBe(true);
     expect(isFreeTierAllowedPath("/verification/flows/new")).toBe(true);
     expect(isFreeTierAllowedPath("/calibration/flows/x")).toBe(true);
+    expect(isFreeTierAllowedPath("/flows/new")).toBe(true);
+    expect(isFreeTierAllowedPath("/regions/new")).toBe(true);
     expect(isPaidOnlyWorkspaceKind("knowledge_region")).toBe(false);
     expect(isPaidOnlyWorkspaceKind("calibration")).toBe(false);
     expect(isPaidOnlyWorkspaceKind("standard")).toBe(false);

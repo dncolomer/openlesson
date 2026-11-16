@@ -7,11 +7,14 @@ import type { DataStudioInspectPayload } from "@/lib/data-studio-view";
 import {
   formatKnowledgeRegionTimestamp,
   knowledgeRegionPointKindLabel,
+  parseKnowledgeRegionFigureMode,
   type KnowledgeRegionClusterDistance,
+  type KnowledgeRegionFigureMode,
+  type KnowledgeRegionIdentityPath,
 } from "@/lib/knowledge-region-figure";
 import type { KnowledgeRegionDetailsSample } from "@/lib/knowledge-region-details";
 
-type InspectTab = "distances" | "record";
+type InspectTab = "distances" | "path" | "record";
 
 const TAB_CLASS =
   "border-b px-4 py-2 text-[11px] uppercase tracking-[0.16em]";
@@ -22,20 +25,28 @@ export function KnowledgeRegionInspect({
   inspect,
   sample,
   distances,
+  path = null,
+  mode = "individual",
   productKind,
   onClose,
+  onSelectStep,
 }: {
   inspect: DataStudioInspectPayload;
   sample: KnowledgeRegionDetailsSample;
   distances: readonly KnowledgeRegionClusterDistance[];
+  path?: KnowledgeRegionIdentityPath | null;
+  mode?: KnowledgeRegionFigureMode | string | null;
   productKind?: string | null;
   onClose: () => void;
+  onSelectStep?: (id: string) => void;
 }) {
-  const [tab, setTab] = useState<InspectTab>("distances");
+  const figureMode = parseKnowledgeRegionFigureMode(mode);
+  const primaryTab: InspectTab = figureMode === "path" ? "path" : "distances";
+  const [tab, setTab] = useState<InspectTab>(primaryTab);
 
   useEffect(() => {
-    setTab("distances");
-  }, [inspect.id]);
+    setTab(primaryTab);
+  }, [inspect.id, primaryTab]);
 
   return (
     <section
@@ -53,16 +64,29 @@ export function KnowledgeRegionInspect({
         </button>
       </div>
       <div className="flex" role="tablist" aria-label="Point inspect">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === "distances"}
-          className={tab === "distances" ? TAB_ON : TAB_OFF}
-          data-knowledge-region-inspect-tab="distances"
-          onClick={() => setTab("distances")}
-        >
-          Distances
-        </button>
+        {figureMode === "path" ? (
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "path"}
+            className={tab === "path" ? TAB_ON : TAB_OFF}
+            data-knowledge-region-inspect-tab="path"
+            onClick={() => setTab("path")}
+          >
+            Path
+          </button>
+        ) : (
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "distances"}
+            className={tab === "distances" ? TAB_ON : TAB_OFF}
+            data-knowledge-region-inspect-tab="distances"
+            onClick={() => setTab("distances")}
+          >
+            Distances
+          </button>
+        )}
         <button
           type="button"
           role="tab"
@@ -74,7 +98,59 @@ export function KnowledgeRegionInspect({
           Stored record
         </button>
       </div>
-      {tab === "distances" ? (
+      {tab === "path" ? (
+        <div className="space-y-4 p-4 text-sm text-neutral-300" data-knowledge-region-inspect-panel="path">
+          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+            <dt className={FLOW_FORM_LABEL}>Identity</dt>
+            <dd className="text-white">{path?.label || inspect.identity || sample.id}</dd>
+            <dt className={FLOW_FORM_LABEL}>Observations</dt>
+            <dd className="text-white">{path?.steps.length ?? 0}</dd>
+          </dl>
+          <div data-knowledge-region-path-table="">
+            <p className={FLOW_FORM_LABEL}>Connected evolution</p>
+            {path?.steps.length ? (
+              <table className="mt-2 w-full text-left text-[12px]">
+                <thead>
+                  <tr className="text-neutral-500">
+                    <th className="pb-1 font-normal">#</th>
+                    <th className="pb-1 font-normal">Created</th>
+                    <th className="pb-1 font-normal">Cluster</th>
+                    <th className="pb-1 text-right font-normal">Δ L2</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {path.steps.map((step, index) => {
+                    const previous = index > 0 ? path.segments[index - 1] : null;
+                    const current = step.id === sample.id;
+                    return (
+                      <tr
+                        key={step.id}
+                        className={`cursor-pointer ${current ? "text-white" : "text-neutral-300 hover:text-white"}`}
+                        data-knowledge-region-path-row={step.id}
+                        data-knowledge-region-path-row-current={String(current)}
+                        onClick={() => onSelectStep?.(step.id)}
+                      >
+                        <td className="py-0.5 pr-3 font-mono">{step.index}</td>
+                        <td className="py-0.5 pr-3 font-mono">
+                          {formatKnowledgeRegionTimestamp(step.createdAt)}
+                        </td>
+                        <td className="py-0.5 pr-3">{step.clusterLabel || "—"}</td>
+                        <td className="py-0.5 text-right font-mono">
+                          {previous?.label ?? "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            ) : (
+              <p className="mt-2 text-[12px] text-neutral-500">
+                Select a named identity to follow its evolution.
+              </p>
+            )}
+          </div>
+        </div>
+      ) : tab === "distances" ? (
         <div className="space-y-4 p-4 text-sm text-neutral-300" data-knowledge-region-inspect-panel="distances">
           <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
             <dt className={FLOW_FORM_LABEL}>Origin</dt>

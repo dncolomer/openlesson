@@ -427,19 +427,21 @@ describe("custom aesthetic surfaces", () => {
   });
 
   it("TAP backgrounds use pickTapBackgroundImage from the org-aware listing", () => {
+    const hook = read("components/session-view/use-aesthetic-packages.ts");
+    expect(hook).toContain("fetchAestheticPackages");
     for (const rel of [
       "components/TapScoreClient.tsx",
       "components/scout-tap/ScoutTapClient.tsx",
     ]) {
       const source = read(rel);
-      expect(source).toContain("fetchAestheticPackages");
-      expect(source).toContain("pickTapBackgroundImage");
+      expect(source).toContain("useAestheticPackages");
+      expect(source).toContain("selectedAesthetic?.previewImage");
       expect(source).not.toContain("BACKGROUND_IMAGES[");
     }
   });
 
   it("takes session, workspace, and skill-grid images from the org-aware aesthetics source", () => {
-    const sessionChrome = read("components/session-view/use-session-chrome.ts");
+    const sessionChrome = read("components/session-view/use-aesthetic-packages.ts");
     const workspace = read("components/workspace-view/use-workspace-load.ts");
     const skillGrid = read("components/BlockSkillGrid.tsx");
     const sessionView = read("components/session-view/use-session-field.ts");

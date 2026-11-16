@@ -86,9 +86,9 @@ export const USE_CASES = [
     hint: "Map · Solve · Verify",
     title: "Turn work into actionable insight",
     lead: "Skills and expertise don't fit on a leaderboard or a two-axis chart. See your team, or yourself, across many dimensions at once, set against the goals that matter to you.",
-    body: "Calibrate, Learn, and Verify sessions store work, as do Solve runs. Data Studio currently plots Calibrate, Verify, and Solve runs against a knowledge region you define, so you can see position and distance. Learn traces can be opened; they are not yet plotted there. You still read the stored work to decide what to do next. A packaged leaderboard that ranks people is not what this is. An automatic report that compares every person on every goal at once is still being built.",
+    body: "Calibrate, Learn, and Verify sessions store work, as do Solve runs. A knowledge region you define plots Calibrate, Verify, and Solve runs so you can see position and distance. Learn traces can be opened; they are not yet plotted there. You still read the stored work to decide what to do next. A packaged leaderboard that ranks people is not what this is. An automatic report that compares every person on every goal at once is still being built.",
     example:
-      "A technical lead defines a private knowledge region for a billing subsystem and a representative incident problem. Three colleagues each complete a Verify session on that problem. The lead opens Data Studio, looks at the three runs against the region, and opens the stored trace for the run farthest from it to see which assumptions still need work.",
+      "A technical lead defines a private knowledge region for a billing subsystem and a representative incident problem. Three colleagues each complete a Verify session on that problem. The lead opens the region, looks at the three runs against it, and opens the stored trace for the run farthest from it to see which assumptions still need work.",
     imageSrc: "/regions1.png",
     imageAlt:
       "Illustrative 2D projection of knowledge regions for Physics, Maths, Code, and Design, with positions and distances between them",

@@ -343,13 +343,12 @@ async function main() {
 
     for (const set of PRODUCTION_STUDIO_DEMO_SETS) {
       const seeded = await seedSet(client, owner, set);
-      const tab = set.product === "calibration" ? "calibration_studio" : "verification_studio";
+      const tab = set.product === "calibration" ? "calibration_regions" : "verification_regions";
       const publicPath = set.product === "calibration" ? `/c/${seeded.publicToken}` : `/v/${seeded.publicToken}`;
       console.log(
         `[seed-prod-studio] ${set.id} workspace=${seeded.workspaceId} flow=${seeded.flowId} runs=${seeded.runCount}`,
       );
-      console.log(`[seed-prod-studio]   studio ${appUrl}/dashboard?tab=${tab}`);
-      console.log(`[seed-prod-studio]   workspace ${appUrl}/workspace/${seeded.workspaceId}?section=data_studio`);
+      console.log(`[seed-prod-studio]   regions ${appUrl}/dashboard?tab=${tab}`);
       console.log(`[seed-prod-studio]   public ${appUrl}${publicPath}`);
     }
 

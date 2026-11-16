@@ -102,7 +102,10 @@ describe("shared live work surface", () => {
     expect(memoryAt).toBeGreaterThan(doneAt);
     expect(verify).toContain("<TapScoreClient");
     expect(verify).toContain('sidebarMode="verification-tap"');
-    expect(verify).toContain("data-verification-identity");
+    expect(verify).toContain("ProductFlowIdentityForm");
+    expect(read("components/product-flow/product-flow-identity-form.tsx")).toContain(
+      "data-verification-identity",
+    );
     for (const marker of OLD_LIVE_SPLITS) {
       expect(tap, marker).not.toContain(marker);
       expect(verify, marker).not.toContain(marker);

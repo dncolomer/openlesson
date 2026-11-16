@@ -7,39 +7,51 @@ import {
   truncateDashboardFlowTopic,
   type DashboardRecentFlow,
 } from "@/lib/dashboard-home";
+import { dashboardCreateHref, dashboardCreateLabel } from "@/lib/dashboard-nav";
 import {
-  dashboardCreateHref,
-  dashboardCreateLabel,
-  dashboardProductLabel,
-  type DashboardProductTab,
-} from "@/lib/dashboard-nav";
-import { DASHBOARD_FLOWS_PATH } from "@/lib/product-flow";
+  DASHBOARD_FLOWS_PATH,
+  PRODUCT_FLOW_KINDS,
+  parseProductFlowKindFilter,
+  productFlowKindFromDashboardKind,
+  productFlowKindLabel,
+  type ProductFlowKindFilter,
+} from "@/lib/product-flow";
 import { FlowPublicActions } from "@/components/product-flow/copy-flow-url-button";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 
+const TYPE_SELECT =
+  "h-12 min-w-[12rem] border border-white/20 bg-black px-3 font-mono text-[11px] text-white outline-none focus:border-white/55";
+
 export function DashboardFlowsTab({
-  productTab,
   formatDate,
 }: {
-  productTab: Exclude<DashboardProductTab, "learning">;
   formatDate: (value: string) => string;
 }) {
   const [flows, setFlows] = useState<DashboardRecentFlow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [page, setPage] = useState(1);
-  const productLabel = dashboardProductLabel(productTab);
-  const createHref = dashboardCreateHref(productTab);
-  const paged = useMemo(() => paginateDashboardFlows(flows, page), [flows, page]);
+  const [typeFilter, setTypeFilter] = useState<ProductFlowKindFilter>("all");
+  const createHref = dashboardCreateHref();
+  const visible = useMemo(
+    () =>
+      typeFilter === "all"
+        ? flows
+        : flows.filter(
+            (flow) => productFlowKindFromDashboardKind(flow.kind) === typeFilter,
+          ),
+    [flows, typeFilter],
+  );
+  const paged = useMemo(() => paginateDashboardFlows(visible, page), [page, visible]);
 
   useEffect(() => {
     setPage(1);
-  }, [productTab]);
+  }, [typeFilter]);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    fetch(`${DASHBOARD_FLOWS_PATH}?kind=${productTab}`)
+    fetch(DASHBOARD_FLOWS_PATH)
       .then(async (response) => {
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) {
@@ -59,10 +71,10 @@ export function DashboardFlowsTab({
     return () => {
       cancelled = true;
     };
-  }, [productTab]);
+  }, []);
 
   return (
-    <div className="space-y-6" data-dashboard-product={productTab} data-dashboard-flows={productTab}>
+    <div className="space-y-6" data-dashboard-flows="">
       <div className="console-copy px-6 py-7 sm:px-8 sm:py-8">
         <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div>
@@ -70,16 +82,38 @@ export function DashboardFlowsTab({
               Flows
             </h2>
             <p className="mt-3 max-w-xl text-sm leading-relaxed text-neutral-400">
-              Named {productLabel.toLowerCase()} flows with public run links.
+              Named Solve, Verification, and Calibration flows with public run links.
             </p>
           </div>
-          <Link
-            href={createHref}
-            data-dashboard-product-create
-            className="inline-flex h-12 items-center justify-center rounded-none bg-white px-6 text-sm font-medium text-black transition hover:bg-neutral-200"
-          >
-            {dashboardCreateLabel(productTab)}
-          </Link>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <label className="flex min-w-0 flex-col gap-1">
+              <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-neutral-500">
+                Type
+              </span>
+              <select
+                className={TYPE_SELECT}
+                value={typeFilter}
+                data-dashboard-type-filter=""
+                onChange={(event) =>
+                  setTypeFilter(parseProductFlowKindFilter(event.target.value))
+                }
+              >
+                <option value="all">All types</option>
+                {PRODUCT_FLOW_KINDS.map((kind) => (
+                  <option key={kind} value={kind}>
+                    {productFlowKindLabel(kind)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <Link
+              href={createHref}
+              data-dashboard-product-create
+              className="inline-flex h-12 items-center justify-center rounded-none bg-white px-6 text-sm font-medium text-black transition hover:bg-neutral-200"
+            >
+              {dashboardCreateLabel()}
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -92,23 +126,26 @@ export function DashboardFlowsTab({
           <div className="mx-auto flex max-w-xl flex-col items-center text-center">
             <h3 className="text-2xl font-medium tracking-[-0.8px] text-white">No flows yet</h3>
             <p className="mt-3 text-sm leading-relaxed text-neutral-400">
-              Name a flow, author the pool, then Publish.
+              Pick a type, name a flow, author the problem, then Publish.
             </p>
             <Link
               href={createHref}
               data-dashboard-empty-create
               className="mt-8 inline-flex h-12 min-w-[220px] items-center justify-center rounded-none bg-white px-8 text-sm font-medium text-black"
             >
-              {dashboardCreateLabel(productTab)}
+              {dashboardCreateLabel()}
             </Link>
           </div>
         </section>
+      ) : visible.length === 0 ? (
+        <p className="text-sm text-neutral-500">No flows of this type.</p>
       ) : (
         <div className="console-copy overflow-x-auto" data-dashboard-flow-table>
           <table className="w-full min-w-[40rem] border-collapse text-left text-sm">
             <thead>
               <tr className="border-b border-white/20 font-mono text-[10px] uppercase tracking-[0.18em] text-neutral-500">
                 <th className="px-4 py-3 font-medium">Name</th>
+                <th className="px-4 py-3 font-medium">Type</th>
                 <th className="px-4 py-3 font-medium">Topic</th>
                 <th className="px-4 py-3 font-medium">Created</th>
                 <th className="px-4 py-3 font-medium">Run</th>
@@ -120,6 +157,7 @@ export function DashboardFlowsTab({
                   key={flow.id}
                   className="border-b border-white/10 last:border-b-0"
                   data-dashboard-flow
+                  data-dashboard-flow-kind={productFlowKindFromDashboardKind(flow.kind)}
                 >
                   <td className="px-4 py-3">
                     <Link
@@ -129,6 +167,9 @@ export function DashboardFlowsTab({
                     >
                       {flow.name}
                     </Link>
+                  </td>
+                  <td className="px-4 py-3 text-neutral-400">
+                    {productFlowKindLabel(productFlowKindFromDashboardKind(flow.kind))}
                   </td>
                   <td className="max-w-[20rem] px-4 py-3 text-neutral-400">
                     <span

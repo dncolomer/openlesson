@@ -104,43 +104,39 @@ function presentCalibration(row: {
   });
 }
 
+async function listOwnerFlows(
+  userId: string,
+  kind: "verification" | "calibration" | "solve",
+): Promise<DashboardRecentFlow[]> {
+  if (kind === "calibration") {
+    const flows = await listCalibrationFlowsForOwnerUserId(userId);
+    return flows
+      .map((flow) => presentCalibration(flow))
+      .filter((row): row is DashboardRecentFlow => Boolean(row));
+  }
+  if (kind === "solve") {
+    const flows = await listSolveFlowsForOwnerUserId(userId);
+    return flows
+      .map((flow) => presentSolve(flow))
+      .filter((row): row is DashboardRecentFlow => Boolean(row));
+  }
+  const flows = await listVerificationFlowsForOwnerUserId(userId);
+  return flows
+    .map((flow) => presentVerification(flow))
+    .filter((row): row is DashboardRecentFlow => Boolean(row));
+}
+
 export async function GET(req: NextRequest) {
   try {
     const auth = await requireAuthenticatedUser();
     if (!auth.ok) return auth.response;
     const kind = parseProductFlowKind(new URL(req.url).searchParams.get("kind"));
-    if (!kind) return jsonError(400, "kind must be verification, calibration, or solve");
-
-    if (kind === "calibration") {
-      const flows = await listCalibrationFlowsForOwnerUserId(auth.user.id);
-      const listed = sortDashboardRecentFlows(
-        flows
-          .map((flow) => presentCalibration(flow))
-          .filter((row): row is DashboardRecentFlow => Boolean(row)),
-        100,
-      );
-      return NextResponse.json({ kind, flows: listed });
-    }
-
-    if (kind === "solve") {
-      const flows = await listSolveFlowsForOwnerUserId(auth.user.id);
-      const listed = sortDashboardRecentFlows(
-        flows
-          .map((flow) => presentSolve(flow))
-          .filter((row): row is DashboardRecentFlow => Boolean(row)),
-        100,
-      );
-      return NextResponse.json({ kind, flows: listed });
-    }
-
-    const flows = await listVerificationFlowsForOwnerUserId(auth.user.id);
+    const kinds = kind ? [kind] : (["solve", "verification", "calibration"] as const);
     const listed = sortDashboardRecentFlows(
-      flows
-        .map((flow) => presentVerification(flow))
-        .filter((row): row is DashboardRecentFlow => Boolean(row)),
+      (await Promise.all(kinds.map((item) => listOwnerFlows(auth.user.id, item)))).flat(),
       100,
     );
-    return NextResponse.json({ kind, flows: listed });
+    return NextResponse.json({ kind: kind ?? "all", flows: listed });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to list flows";
     return jsonError(500, message);

@@ -185,14 +185,12 @@ describe("shipped Knowledge / Setting aesthetic wiring", () => {
     expect(settingsTabs).toContain('"regions"');
     expect(settingsTabs).not.toContain('"knowledge-portal"');
     expect(settingsTabs).not.toContain('"guest-links"');
-    expect(settingsTabs).toContain('"data-studio"');
+    expect(settingsTabs).not.toContain('"data-studio"');
     expect(settingsTabs).toContain('"integrations"');
     expect(settingsTabs).not.toContain("knowledgePortalSettingsTab");
     expect(settingsTabs).not.toContain("performanceSubTabTap");
     const regionsIdx = settingsTabs.indexOf('"regions"');
-    const dataStudioIdx = settingsTabs.indexOf('"data-studio"');
     expect(regionsIdx).toBeGreaterThan(-1);
-    expect(dataStudioIdx).toBeGreaterThan(regionsIdx);
     expect(integration).toContain('data-settings-tab-panel="general"');
     expect(integration).toContain('data-settings-tab-panel="aycl"');
     expect(integration).not.toContain('data-settings-tab-panel="regions"');

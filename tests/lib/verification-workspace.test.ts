@@ -932,9 +932,12 @@ describe("verification workspace shell gates", () => {
     const runner = read("components/VerificationFlowRunner.tsx");
     expect(read("components/VerificationFlowsPanel.tsx")).not.toContain("data-verification-flow-minutes");
     expect(read("components/VerificationFlowsPanel.tsx")).not.toContain("Countdown");
-    expect(runner).not.toContain("lockDuration");
-    expect(runner).not.toContain("initialMinutes");
-    expect(runner).toContain("data-verification-identity");
+    expect(runner).toContain("lockDuration");
+    expect(runner).toContain("initialMinutes");
+    expect(runner).toContain("ProductFlowIdentityForm");
+    expect(read("components/product-flow/product-flow-identity-form.tsx")).toContain(
+      "data-verification-identity",
+    );
     expect(runner).toContain("data-verification-empty-pool");
     expect(runner).toContain("TapScoreClient");
     expect(runner).toContain("presetStartingTopics={presetTopics}");

@@ -204,5 +204,8 @@ describe("learn suggestion toast", () => {
     expect(commands).toContain("sessionHarnessExploreLine");
     expect(commands).toContain("focusText: sessionHarnessHereLine(model)");
     expect(commands).toContain("nextText: explore.text");
+    expect(commands).toContain("ileWorkCanvasPlacedHarnessNext");
+    expect(commands).toContain("nextHiddenStateId: explore.toId");
+    expect(commands).not.toContain("harnessSuggestionRef.current");
   });
 });

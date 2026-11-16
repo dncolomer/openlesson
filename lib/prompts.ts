@@ -135,39 +135,6 @@ Rules:
 
 Return ONLY the question or task text, no JSON or formatting.`,
 
-  report_generation: `You are reviewing a tutoring session conducted in the Learning use case. Be direct and specific.
-
-Problem: {problem}
-Duration: {duration}
-Probes triggered: {count} (avg gap score: {avg_gap})
-Probes and signals:
-{probes_summary}
-
-{eeg_context}
-
-Write a concise session debrief in markdown:
-
-## What Happened
-1-2 sentences. What the student worked on, how it went.
-
-## Gaps Found
-Bullet the specific reasoning gaps detected. No generic observations.
-
-## What Went Well
-1-2 bullets on genuine strengths shown.
-
-## Next Time
-2-3 concrete, actionable things to focus on next session. Include:
-- Specific concepts to review or practice
-- Suggest using the chapter canvas if it would help (drawing tools for visual problems, text blocks for reflection, etc.)
-- External resources or practice exercises if appropriate
-
-Rules:
-- 150-200 words maximum
-- No filler, no motivational fluff
-- Be honest and specific
-- Plain language only`,
-
   generate_objectives: `You are designing learning objectives for a tutoring session.
 
 Problem topic: {problem}
@@ -434,33 +401,6 @@ The next_request should be ready to display directly to the student - make it sp
 suggested_tools is optional - only include it for "task" or "suggestion" types where drawing tools would help. Use Excalidraw tool IDs (text, freedraw, rectangle, diamond, ellipse, arrow, line, image, frame).
 can_auto_advance: Set to true only when CHAPTER CLOSURE POLICY is satisfied (Dialog: multi-turn chapter-objective depth; Project: standalone exercise complete). Do not hold a ready chapter open for perfection — and do not set true after the first Dialog turn.
 advance_reasoning: A brief (1-2 sentence) human-readable explanation of why the step can or cannot advance, displayed in the manual mode override dialog. Use domain/practice language — not platform product terms.`,
-
-  follow_up_sessions: `You are helping a student continue their learning journey after completing a tutoring session.
-
-Session just completed:
-- Topic: {problem}
-- Duration: {duration}
-- Gaps detected: {gaps_summary}
-- Report summary: {report_summary}
-
-Generate exactly 3 follow-up session topics that would help this student continue learning effectively. Each topic should:
-1. Build on what was learned or address gaps found in this session
-2. Be specific and actionable (not vague like "practice more")
-3. Be completable in a 15-30 minute focused session
-4. Progress logically from where the student is now
-
-For each topic, provide:
-- A concise title (5-10 words)
-- A brief description of what the session will cover (1 sentence)
-
-Return ONLY valid JSON:
-{
-  "suggestions": [
-    {"title": "Topic title here", "description": "What this session covers"},
-    {"title": "Topic title here", "description": "What this session covers"},
-    {"title": "Topic title here", "description": "What this session covers"}
-  ]
-}`,
 } as const;
 
 export type PromptKey = keyof typeof DEFAULT_PROMPTS;
@@ -488,10 +428,6 @@ export const PROMPT_META: Record<PromptKey, { label: string; description: string
     label: "Probe Generation",
     description: "Generates probes during the session. Variables: {problem}, {score}, {signals}, {rag_context}, {previous_probes}",
   },
-  report_generation: {
-    label: "Block Report",
-    description: "Generates a concise post-session debrief (150-200 words). Variables: {problem}, {duration}, {count}, {avg_gap}, {probes_summary}, {eeg_context}",
-  },
   generate_objectives: {
     label: "Generate Objectives",
     description: "Generates session objectives at start. Variables: {problem}",
@@ -504,9 +440,5 @@ export const PROMPT_META: Record<PromptKey, { label: string; description: string
   session_plan_update: {
     label: "Block Plan Update",
     description: "Updates the plan during the session based on observations. Variables: {goal}, {strategy}, {steps}, {current_step}, {gap_score}, {signals}, {transcript}, {traffic_light}, {previous_probes}, {session_mode}, {chapter_closure_rules}, {chapter_expansion_rules}",
-  },
-  follow_up_sessions: {
-    label: "Follow-up Blocks",
-    description: "Generates suggested follow-up session topics after session completion. Variables: {problem}, {duration}, {gaps_summary}, {report_summary}",
   },
 };

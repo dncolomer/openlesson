@@ -124,7 +124,6 @@ export async function GET(
       region: presented,
       details,
       regionPath: dashboardKnowledgeRegionHref(kind, presented.id),
-      studioPath: details?.studioPath ?? null,
       workspaceId: presented.workspaceId,
     });
   } catch (error) {

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { WorkspaceBlockUnsysHeliosChat } from "@/components/WorkspaceBlockUnsysHeliosChat";
 import { WorkspaceUnsysSeedGraph } from "@/components/WorkspaceUnsysSeedGraph";
 import { WorkspaceUnsysSeedInspector } from "@/components/WorkspaceUnsysSeedInspector";
 import type { AuthorUnsysHeliosApplyState } from "@/lib/author-unsys-helios";
@@ -18,14 +17,6 @@ import {
 } from "@/lib/author-unsys-model";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import type { SessionBranchModel } from "@/lib/session-branch-model";
-import {
-  DEFAULT_WORKSPACE_HELIOS_COLUMN_MODE,
-  HELIOS_MAP_MODE_LABEL,
-  MANUAL_MAP_MODE_LABEL,
-  normalizeWorkspaceHeliosColumnMode,
-  resolveWorkspaceHeliosColumnSurface,
-  type WorkspaceHeliosColumnMode,
-} from "@/lib/workspace-helios-mode";
 
 const BUTTON_CLASS =
   "rounded-none bg-white px-3 py-2 text-xs font-semibold text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400";
@@ -39,7 +30,6 @@ export function WorkspaceUnsysSeedStudio({
   seed,
   workspaceId,
   ayclToken,
-  locale,
   busy = false,
   onClose,
   onSaveSeed,
@@ -67,12 +57,6 @@ export function WorkspaceUnsysSeedStudio({
   const [generating, setGenerating] = useState(false);
   const [graphEpoch, setGraphEpoch] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [heliosColumnMode, setHeliosColumnMode] =
-    useState<WorkspaceHeliosColumnMode>(DEFAULT_WORKSPACE_HELIOS_COLUMN_MODE);
-  const heliosSurface = resolveWorkspaceHeliosColumnSurface({
-    authoring: true,
-    mode: heliosColumnMode,
-  });
 
   useEffect(() => {
     const nextSeed = normalizeAuthorUnsysModelSeed(seed);
@@ -127,7 +111,7 @@ export function WorkspaceUnsysSeedStudio({
       const nextFocus = parentId || sample.rootId;
       commitModel(sample, nextFocus);
       if (!parentId) setGraphEpoch((value) => value + 1);
-      return { model: sample, focusId: nextFocus };
+      return { model: sample, focusId: nextFocus } satisfies AuthorUnsysHeliosApplyState;
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "The unsys field could not be generated.",
@@ -136,11 +120,6 @@ export function WorkspaceUnsysSeedStudio({
     } finally {
       setGenerating(false);
     }
-  };
-
-  const applyHelios = (next: AuthorUnsysHeliosApplyState) => {
-    setModel(next.model);
-    setFocusId(next.focusId);
   };
 
   const addBranch = (parentId: string) => {
@@ -256,7 +235,6 @@ export function WorkspaceUnsysSeedStudio({
               disabled={disabled}
               onSelect={(id) => {
                 setFocusId(id);
-                setHeliosColumnMode(normalizeWorkspaceHeliosColumnMode("manual"));
               }}
             />
           </div>
@@ -272,61 +250,7 @@ export function WorkspaceUnsysSeedStudio({
         <aside
           className="flex max-h-[50vh] w-full shrink-0 flex-col overflow-hidden border-t border-white/10 bg-[#080808] lg:max-h-none lg:w-1/4 lg:flex-none lg:border-l lg:border-t-0"
           data-workspace-right-column=""
-          data-helios-map-mode={heliosSurface.mode}
         >
-          {heliosSurface.showModeToggle ? (
-            <div
-              className="flex shrink-0 border-b border-white/10"
-              data-workspace-helios-mode-toggle=""
-            >
-              <button
-                type="button"
-                className={`flex-1 px-2 py-2 text-[10px] uppercase tracking-[0.16em] ${
-                  heliosSurface.mode === "helios"
-                    ? "bg-white/10 text-neutral-100"
-                    : "text-neutral-500"
-                }`}
-                aria-pressed={heliosSurface.mode === "helios"}
-                data-helios-map-mode-option="helios"
-                onClick={() =>
-                  setHeliosColumnMode(normalizeWorkspaceHeliosColumnMode("helios"))
-                }
-              >
-                {HELIOS_MAP_MODE_LABEL}
-              </button>
-              <button
-                type="button"
-                className={`flex-1 px-2 py-2 text-[10px] uppercase tracking-[0.16em] ${
-                  heliosSurface.mode === "manual"
-                    ? "bg-white/10 text-neutral-100"
-                    : "text-neutral-500"
-                }`}
-                aria-pressed={heliosSurface.mode === "manual"}
-                data-helios-map-mode-option="manual"
-                onClick={() =>
-                  setHeliosColumnMode(normalizeWorkspaceHeliosColumnMode("manual"))
-                }
-              >
-                {MANUAL_MAP_MODE_LABEL}
-              </button>
-            </div>
-          ) : null}
-          {heliosSurface.showHeliosChat ? (
-            <div className="flex min-h-0 flex-1 flex-col">
-              <WorkspaceBlockUnsysHeliosChat
-                workspaceId={workspaceId}
-                ayclToken={ayclToken}
-                locale={locale}
-                blockId={blockId}
-                blockTitle={blockTitle}
-                model={model}
-                focusId={focusId}
-                disabled={disabled}
-                onApplied={applyHelios}
-                onGenerateGraph={generateSample}
-              />
-            </div>
-          ) : (
             <WorkspaceUnsysSeedInspector
               model={model}
               focusId={focusId}
@@ -359,7 +283,6 @@ export function WorkspaceUnsysSeedStudio({
                 commitModel(removeAuthorUnsysBranch(model, branchId), parentId);
               }}
             />
-          )}
         </aside>
       </div>
     </div>

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { getIlePostSessionPath } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/client";
 import { type HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
-import { fetchAestheticPackages } from "@/lib/aesthetics";
+import { useAestheticPackages } from "@/components/session-view/use-aesthetic-packages";
 import { useTapPredictiveInterruption } from "@/lib/useTapPredictiveInterruption";
 import { useTapIdleProofOfWork } from "@/lib/useTapIdleProofOfWork";
 import { useTapSpeechProofOfWork } from "@/lib/useTapSpeechProofOfWork";
@@ -45,7 +45,6 @@ import {
   type TapSystem2Action,
   type TapChatMessage as ChatMessage,
   CHAIN_GAP_MS,
-  pickTapBackgroundImage,
   getDialogueStorageKey,
   clearDialogueMessages,
   resolveInitialMinutes,
@@ -219,12 +218,21 @@ export function TapScoreClient({
   const [editingTranscription, setEditingTranscription] = useState<{ draft: string; originalText: string } | null>(null);
   const [error, setError] = useState("");
   const [isStartingSession, setIsStartingSession] = useState(false);
-  const [startingTopics, setStartingTopics] = useState<TapStartingTopic[]>([]);
+  const [startingTopics, setStartingTopics] = useState<TapStartingTopic[]>(
+    () => (presetStartingTopics ? [...presetStartingTopics] : []),
+  );
   const [startingTopicId, setStartingTopicId] = useState<string | null>(null);
   const [topicsError, setTopicsError] = useState("");
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
-  const [bgImage, setBgImage] = useState("");
+  const {
+    aestheticPackages,
+    aestheticsLoading,
+    selectedAestheticId,
+    setSelectedAestheticId,
+    selectedAesthetic,
+  } = useAestheticPackages();
+  const bgImage = selectedAesthetic?.previewImage ?? "";
   const userInitial = "Y";
   const [tapSessionId, setTapSessionId] = useState<string | null>(initialSession?.id ?? null);
   const tapSessionIdRef = useRef<string | null>(initialSession?.id ?? null);
@@ -263,19 +271,7 @@ export function TapScoreClient({
     tapSessionIdRef.current = tapSessionId;
   }, [tapSessionId]);
 
-  useEffect(() => {
-    let cancelled = false;
-    fetchAestheticPackages()
-      .then((packages) => {
-        if (!cancelled) setBgImage(pickTapBackgroundImage(packages));
-      })
-      .catch(() => {
-        if (!cancelled) setBgImage(pickTapBackgroundImage([]));
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+
 
   const isTranscriptionActiveRef = useRef(false);
 
@@ -911,6 +907,11 @@ export function TapScoreClient({
       canvasProblem={canvasProblem}
       policyRef={policyRef}
       durationLocked={durationLocked}
+      aestheticPackages={aestheticPackages}
+      aestheticsLoading={aestheticsLoading}
+      selectedAestheticId={selectedAestheticId}
+      selectedAesthetic={selectedAesthetic}
+      onSelectAesthetic={setSelectedAestheticId}
       isStartingSession={isStartingSession}
       startingTopics={startingTopics}
       startingTopicId={startingTopicId}

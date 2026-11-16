@@ -44,7 +44,7 @@ Agents authorize with a Bearer key (ChatGPT, Claude, or any MCP client) and use 
 | Styling | Tailwind CSS |
 | State | Zustand |
 | Database & Auth | Supabase (PostgreSQL + RLS + Auth) |
-| LLM + STT + TTS + Images + Files | xAI (api.x.ai) |
+| LLM + STT + Files | xAI (api.x.ai) |
 | Payments | Stripe |
 | Graph Visualization | React Flow (@xyflow/react) |
 | Code Editor | Monaco Editor |
@@ -85,7 +85,7 @@ Required environment variables:
 
 | Variable | Description |
 |---|---|
-| `XAI_API_KEY` | xAI API key (LLM, STT, TTS, images, files) |
+| `XAI_API_KEY` | xAI API key (cloud default for LLM, STT, files) |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key |
@@ -100,6 +100,8 @@ Optional:
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe publishable key |
 | `MCP_OAUTH_SECRET` | MCP OAuth signing secret (defaults to service role key in dev) |
 | `SUPABASE_DB_URL` | Session-mode pooler URL for migration scripts |
+| `AI_BASE_URL` / `AI_API_KEY` / `AI_MODEL` | OpenAI-compatible Chat Completions (default: xAI) |
+| `BLOB_STORE` / `BLOB_STORE_DIR` | `xai` (default) or `fs` with a disk directory for local/on-prem blobs |
 
 4. Set up the database by running the schema in `supabase/schema.sql` against your Supabase project (or apply `supabase/migrations`).
 

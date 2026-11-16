@@ -1,8 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AuthContext } from "./types";
+import { isStoredFileId } from "@/lib/ai/stored-file-id";
 import { filterResolvableXaiFileIds, isXaiFileId } from "@/lib/xai-files";
 import { runWithXaiContext } from "@/lib/xai-context";
-import { resolveOrgXaiApiKey, uploadOrgScopedXaiFile } from "@/lib/organization/org-xai-files";
+import { resolveOrgXaiApiKey } from "@/lib/organization/org-xai-files";
 import { proofOfWorkQueryForAuth } from "./workspace-proof-of-work";
 import { filterSnapshotEligibleProofOfWorkRows } from "./pow-quality";
 
@@ -276,42 +277,29 @@ export async function buildWorkspacePerformanceContext({
       ? scrubOpaquePerformanceContext(basePayload, evalMeta.protocol_config)
       : basePayload;
 
-  const dataJson = JSON.stringify(payload, null, 2);
   const organizationId =
     typeof workspace.organization_id === "string" ? workspace.organization_id : null;
   const orgApiKey = await resolveOrgXaiApiKey(organizationId);
 
   const attachFiles = async () => {
-    const summaryUpload = await uploadOrgScopedXaiFile(
-      `workspace-performance-${workspaceId}-${Date.now()}.json`,
-      "application/json",
-      Buffer.from(dataJson).toString("base64"),
-      {
-        organizationId,
-        collectionFields: {
-          workspace_id: workspaceId,
-          kind: "performance-context",
-        },
-      },
-    );
-
-    const candidateArtifactIds = Array.from(
+    const storedIds = Array.from(
       new Set(
         [
           ...proofOfWorkRows.map((row) => row.xai_file_id),
           ...(workspaceFiles || []).map((file) => file.xai_file_id),
-        ].filter(isXaiFileId)
-      )
+        ].filter(isStoredFileId),
+      ),
     ).slice(0, MAX_ARTIFACT_FILE_REFS);
-
-    const artifactFileIds = await filterResolvableXaiFileIds(candidateArtifactIds, {
-      apiKey: orgApiKey,
-    });
+    const xaiIds = storedIds.filter(isXaiFileId);
+    const otherIds = storedIds.filter((id) => !isXaiFileId(id));
+    const artifactFileIds = [
+      ...(await filterResolvableXaiFileIds(xaiIds, { apiKey: orgApiKey })),
+      ...otherIds,
+    ];
 
     return {
       payload,
-      fileIds: [summaryUpload.file_id, ...artifactFileIds],
-      summaryFileId: summaryUpload.file_id,
+      fileIds: artifactFileIds,
     };
   };
 

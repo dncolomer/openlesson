@@ -24,6 +24,10 @@ import {
   type SessionBranchModel,
 } from "@/lib/session-branch-model";
 import {
+  getDocumentContext,
+  mergeDocumentContextPrompt,
+} from "@/lib/ai/document-context";
+import {
   callXai,
   callXaiResponsesWithFiles,
   systemMessage,
@@ -120,7 +124,7 @@ export function buildSessionBranchGenerateMaterial(
   const fileIds = [...new Set([...flowArtifactFileIds(artifacts), ...extraIds])];
   const fileBlock =
     namedIds.length || extraIds.length
-      ? `Attached files (xAI file ids — use as context):\n${
+      ? `Attached files:\n${
           namedIds.length ? namedIds.map((line) => `- ${line}`).join("\n") : extraIds.map((id) => `- ${id}`).join("\n")
         }`
       : "";
@@ -263,9 +267,10 @@ async function ask(
   run?: SessionBranchGenerateMaterial | null,
 ): Promise<{ ok: true; data: FieldNode } | { ok: false; error: string }> {
   const system = run?.system ?? SYSTEM;
-  const fileIds = run?.fileIds ?? [];
-  const response = fileIds.length
-    ? await callXaiResponsesWithFiles<FieldNode>(prompt, fileIds, {
+  const docs = await getDocumentContext().forTurn(run?.fileIds ?? []);
+  const userPrompt = mergeDocumentContextPrompt(prompt, docs.extraPrompt);
+  const response = docs.responsesFiles?.length
+    ? await callXaiResponsesWithFiles<FieldNode>(userPrompt, docs.responsesFiles, {
         instructions: system,
         maxOutputTokens: maxTokens,
         temperature: 0.3,
@@ -275,7 +280,7 @@ async function ask(
         retries: 2,
       })
     : await callXai<FieldNode>(
-        [systemMessage(system), userMessage(prompt)],
+        [systemMessage(system), userMessage(userPrompt)],
         {
           maxTokens,
           temperature: 0.3,

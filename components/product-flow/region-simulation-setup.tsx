@@ -4,16 +4,17 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import {
+  parseProductFlowKind,
+  PRODUCT_FLOW_KINDS,
   productFlowKindLabel,
   productFlowNewPath,
+  productRegionDashboardPath,
   productRegionPagePath,
-  productRegionStudioPath,
   type ProductFlowKind,
 } from "@/lib/product-flow";
 import { ProductSurface } from "@/components/product-flow/product-surface";
 import {
   FLOW_FORM_INPUT,
-  FLOW_GHOST_BTN,
   FLOW_PRIMARY_BTN,
   FlowField,
   FlowFormCard,
@@ -93,10 +94,11 @@ async function readSimulationStream(
 }
 
 export function RegionSimulationSetup({
-  kind,
+  kind: lockedKind,
 }: {
-  kind: ProductFlowKind;
+  kind?: ProductFlowKind;
 }) {
+  const [kind, setKind] = useState<ProductFlowKind>(lockedKind ?? "solve");
   const productLabel = productFlowKindLabel(kind);
   const [flows, setFlows] = useState<SetupFlow[]>([]);
   const [strategies, setStrategies] = useState<SetupStrategy[]>([]);
@@ -149,6 +151,10 @@ export function RegionSimulationSetup({
     return () => {
       cancelled = true;
     };
+  }, [kind]);
+
+  useEffect(() => {
+    setFlowIds([]);
   }, [kind]);
 
   const selectedFlows = useMemo(
@@ -214,7 +220,7 @@ export function RegionSimulationSetup({
     >
       <div className="mx-auto w-full max-w-3xl space-y-6" data-knowledge-region-create={kind}>
         <FlowFormHeader
-          backHref={`/dashboard?tab=${kind}_regions`}
+          backHref={productRegionDashboardPath()}
           backLabel="Back to knowledge regions"
           title={result ? result.parentName : "Create knowledge region"}
           description={
@@ -272,17 +278,28 @@ export function RegionSimulationSetup({
               >
                 Open details
               </Link>
-              <Link
-                href={result.studioPath || productRegionStudioPath(kind, result.id || "")}
-                className={FLOW_GHOST_BTN}
-                data-open-simulated-region=""
-              >
-                Open in Data Studio
-              </Link>
             </div>
           </FlowFormCard>
         ) : (
           <FlowFormCard data-region-simulation-setup="">
+            <FlowField label="Type">
+              <select
+                className={FLOW_FORM_INPUT}
+                value={kind}
+                disabled={Boolean(lockedKind)}
+                data-region-kind=""
+                onChange={(event) => {
+                  const next = parseProductFlowKind(event.target.value);
+                  if (next) setKind(next);
+                }}
+              >
+                {PRODUCT_FLOW_KINDS.map((item) => (
+                  <option key={item} value={item}>
+                    {productFlowKindLabel(item)}
+                  </option>
+                ))}
+              </select>
+            </FlowField>
             {flows.length === 0 ? (
               <Link
                 href={productFlowNewPath(kind)}

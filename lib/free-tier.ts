@@ -19,7 +19,7 @@ export const FREE_WEEKLY_SESSION_LIMIT = 3;
 
 export const FREE_DASHBOARD_TAB_IDS = [
   "home",
-  "solve",
+  "flows",
   "usage",
 ] as const satisfies readonly DashboardTab[];
 
@@ -32,10 +32,11 @@ const FREE_TIER_ALLOWED_PREFIXES = [
   "/dashboard",
   "/session",
   "/play",
-  "/results",
   "/verification",
   "/calibration",
   "/solve",
+  "/flows",
+  "/regions",
 ] as const;
 
 export type UtcMondayWeekWindow = {

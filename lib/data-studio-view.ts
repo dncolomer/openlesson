@@ -147,7 +147,7 @@ export type DataStudioInspectPayload = {
 export const STUDIO_INSPECT_WIDTH_MIN = 280;
 export const STUDIO_INSPECT_WIDTH_DEFAULT = 440;
 export const STUDIO_INSPECT_WIDTH_MAX = 960;
-export const DASHBOARD_DATA_STUDIO_RUN_PATH = "/api/dashboard/data-studio/run";
+export const DASHBOARD_KNOWLEDGE_REGION_RUN_PATH = "/api/dashboard/knowledge-regions/run";
 
 export type LearningStudioWorkspace = {
   id: string;
@@ -911,14 +911,6 @@ export function studioPointFill(input: {
   return input.active ? "#ffffff" : "rgba(255,255,255,0.82)";
 }
 
-export function workspaceStudioHrefForRegion(workspaceId: string, regionId: string): string {
-  const id = String(workspaceId || "").trim();
-  const region = parseStudioFocusRegionId(regionId);
-  const params = new URLSearchParams({ section: "data_studio" });
-  if (region) params.set(DATA_STUDIO_REGION_QUERY, region);
-  return `/workspace/${id}?${params.toString()}`;
-}
-
 export type StudioRegionDistanceRay = {
   pointId: string;
   regionId: string;
@@ -982,5 +974,3 @@ export function buildStudioRegionDistanceRays(input: {
   }
   return rays;
 }
-
-export const DASHBOARD_DATA_STUDIO_PATH = "/api/dashboard/data-studio";

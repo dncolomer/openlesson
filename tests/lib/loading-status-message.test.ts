@@ -19,7 +19,6 @@ const GATE_FILES = [
   "app/invite/[token]/page.tsx",
   "app/labs/layout.tsx",
   "app/session/page.tsx",
-  "app/results/page.tsx",
   "app/session/analytics/page.tsx",
   "app/learn/[token]/session/page.tsx",
   "app/login/page.tsx",

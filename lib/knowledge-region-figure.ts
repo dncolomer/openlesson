@@ -34,6 +34,21 @@ export type KnowledgeRegionGlyphKind =
   | "diamond"
   | "open-diamond";
 
+export type KnowledgeRegionFigureMode = "individual" | "path";
+
+export function parseKnowledgeRegionFigureMode(value: unknown): KnowledgeRegionFigureMode {
+  return value === "path" ? "path" : "individual";
+}
+
+export function knowledgeRegionIdentityKey(point: {
+  id?: string | null;
+  identity?: string | null;
+}): string {
+  const identity = String(point.identity || "").trim();
+  if (identity) return identity;
+  return String(point.id || "").trim();
+}
+
 export type KnowledgeRegionFigurePoint = {
   id: string;
   x: number;
@@ -43,6 +58,7 @@ export type KnowledgeRegionFigurePoint = {
   clusterId: string | null;
   identity: string | null;
   vector?: number[] | null;
+  createdAt?: string | null;
 };
 
 export type KnowledgeRegionContour = {
@@ -86,6 +102,43 @@ export type KnowledgeRegionRay = {
   distance: number;
 };
 
+export type KnowledgeRegionPathStep = {
+  id: string;
+  index: number;
+  x: number;
+  y: number;
+  identity: string | null;
+  createdAt: string | null;
+  clusterId: string | null;
+  clusterLabel: string | null;
+  vector?: number[] | null;
+};
+
+export type KnowledgeRegionPathSegment = {
+  fromId: string;
+  toId: string;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  midX: number;
+  midY: number;
+  distance: number;
+  label: string;
+};
+
+export type KnowledgeRegionIdentityPath = {
+  key: string;
+  label: string;
+  steps: KnowledgeRegionPathStep[];
+  segments: KnowledgeRegionPathSegment[];
+};
+
+export type KnowledgeRegionIdentityOption = {
+  id: string;
+  label: string;
+};
+
 export type KnowledgeRegionFigureLegendItem = {
   id: string;
   kind: "cluster" | "simulated" | "cohort" | "analysis";
@@ -111,6 +164,7 @@ export type KnowledgeRegionFigureView = {
   centroids: Array<{ id: string; x: number; y: number; color: string; label: string }>;
   badges: KnowledgeRegionBadge[];
   rays: KnowledgeRegionRay[];
+  path: KnowledgeRegionIdentityPath | null;
   focus: { id: string; x: number; y: number; label: string } | null;
   legend: KnowledgeRegionFigureLegendItem[];
 };
@@ -236,6 +290,98 @@ export function formatKnowledgeRegionTimestamp(value: string | null | undefined)
   const ms = Date.parse(raw);
   if (!Number.isFinite(ms)) return raw;
   return `${new Date(ms).toISOString().slice(0, 19).replace("T", " ")} UTC`;
+}
+
+function createdAtMs(value: string | null | undefined): number {
+  const ms = Date.parse(String(value || "").trim());
+  return Number.isFinite(ms) ? ms : Number.POSITIVE_INFINITY;
+}
+
+export function knowledgeRegionIdentityOptions(
+  points: readonly Pick<KnowledgeRegionFigurePoint, "id" | "identity">[],
+): KnowledgeRegionIdentityOption[] {
+  const seen = new Map<string, string>();
+  for (const point of points) {
+    const key = knowledgeRegionIdentityKey(point);
+    if (!key || seen.has(key)) continue;
+    seen.set(key, String(point.identity || "").trim() || key);
+  }
+  return [...seen.entries()]
+    .map(([id, label]) => ({ id, label }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
+
+export function knowledgeRegionSampleIdForIdentity(input: {
+  points: readonly Pick<KnowledgeRegionFigurePoint, "id" | "identity" | "createdAt">[];
+  identityKey: string | null | undefined;
+  currentId?: string | null;
+}): string | null {
+  const key = String(input.identityKey || "").trim();
+  if (!key) return null;
+  const members = input.points
+    .filter((point) => knowledgeRegionIdentityKey(point) === key)
+    .sort((a, b) => {
+      const byTime = createdAtMs(a.createdAt) - createdAtMs(b.createdAt);
+      return byTime !== 0 ? byTime : String(a.id).localeCompare(String(b.id));
+    });
+  if (!members.length) return null;
+  const current = String(input.currentId || "").trim();
+  if (current && members.some((point) => point.id === current)) return current;
+  return members[members.length - 1]?.id ?? null;
+}
+
+export function presentKnowledgeRegionIdentityPath(input: {
+  points: readonly KnowledgeRegionFigurePoint[];
+  identityKey: string | null | undefined;
+  clusters?: readonly { id: string; strategyName: string }[];
+}): KnowledgeRegionIdentityPath | null {
+  const key = String(input.identityKey || "").trim();
+  if (!key) return null;
+  const clusterLabelById = new Map(
+    (input.clusters ?? []).map((cluster) => [cluster.id, cluster.strategyName] as const),
+  );
+  const members = input.points
+    .filter((point) => knowledgeRegionIdentityKey(point) === key)
+    .sort((a, b) => {
+      const byTime = createdAtMs(a.createdAt) - createdAtMs(b.createdAt);
+      return byTime !== 0 ? byTime : String(a.id).localeCompare(String(b.id));
+    });
+  if (!members.length) return null;
+  const steps: KnowledgeRegionPathStep[] = members.map((point, index) => ({
+    id: point.id,
+    index: index + 1,
+    x: point.x,
+    y: point.y,
+    identity: point.identity,
+    createdAt: point.createdAt ?? null,
+    clusterId: point.clusterId,
+    clusterLabel: point.clusterId ? clusterLabelById.get(point.clusterId) ?? null : null,
+    vector: point.vector ?? null,
+  }));
+  const segments: KnowledgeRegionPathSegment[] = [];
+  for (let i = 1; i < steps.length; i += 1) {
+    const from = steps[i - 1]!;
+    const to = steps[i]!;
+    const distance = pointDistance(from, to);
+    segments.push({
+      fromId: from.id,
+      toId: to.id,
+      x1: from.x,
+      y1: from.y,
+      x2: to.x,
+      y2: to.y,
+      midX: (from.x + to.x) / 2,
+      midY: (from.y + to.y) / 2,
+      distance,
+      label: formatStudioHighDimDistance(distance),
+    });
+  }
+  return {
+    key,
+    label: String(members[0]?.identity || "").trim() || key,
+    steps,
+    segments,
+  };
 }
 
 export function presentKnowledgeRegionClusterDistances(input: {
@@ -569,6 +715,7 @@ export function presentKnowledgeRegionFigure(input: {
   selectedClusterId?: string | null;
   visibleClusterIds?: readonly string[] | null;
   selectedPointId?: string | null;
+  mode?: KnowledgeRegionFigureMode | string | null;
 }): KnowledgeRegionFigureView {
   const visiblePointKinds = new Set<KnowledgeRegionPointKind>(
     input.visiblePointKinds
@@ -587,6 +734,7 @@ export function presentKnowledgeRegionFigure(input: {
         ? [input.selectedClusterId]
         : null;
   const selectedPointId = input.selectedPointId || null;
+  const mode = parseKnowledgeRegionFigureMode(input.mode);
   const map = {
     size: KNOWLEDGE_REGION_MAP_SIZE,
     cx: KNOWLEDGE_REGION_MAP_CENTER.x,
@@ -726,8 +874,17 @@ export function presentKnowledgeRegionFigure(input: {
     });
   }
 
+  const path =
+    mode === "path" && focusPoint
+      ? presentKnowledgeRegionIdentityPath({
+          points: located,
+          identityKey: knowledgeRegionIdentityKey(focusPoint),
+          clusters: input.clusters,
+        })
+      : null;
+
   const rays: KnowledgeRegionRay[] = [];
-  if (focus && focusPoint) {
+  if (mode === "individual" && focus && focusPoint) {
     const ranked = [...clusterMeta]
       .filter((cluster) => cluster.center)
       .map((cluster) => ({
@@ -798,6 +955,7 @@ export function presentKnowledgeRegionFigure(input: {
     centroids,
     badges,
     rays,
+    path,
     focus,
     legend,
   };

@@ -7,16 +7,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { runWithXaiContext } from "@/lib/xai-context";
+import { getBlobStore } from "@/lib/ai/blob-store";
 import {
   attachFileToOrgCollection,
   ensureOrgXaiApiKey,
 } from "@/lib/organization/ensure-xai-resources";
-import {
-  deleteFileFromXAI,
-  getFileContentResponse,
-  uploadFileToXAI,
-  type XAIFileMetadata,
-} from "@/lib/xai-files";
+import type { XAIFileMetadata } from "@/lib/xai-files";
 
 function asOrgId(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
@@ -99,7 +95,23 @@ export async function uploadOrgScopedXaiFile(
 }> {
   const organizationId = asOrgId(options?.organizationId);
   const apiKey = await resolveOrgXaiApiKey(organizationId, options?.admin);
-  const uploaded = await uploadFileToXAI(name, mimeType, base64Data, { apiKey });
+  const fields: Record<string, string> = {
+    ...(apiKey ? { apiKey } : {}),
+    ...(organizationId ? { organizationId } : {}),
+    ...(options?.collectionFields || {}),
+  };
+  const put = await getBlobStore().put({
+    name,
+    mimeType,
+    bytes: base64Data,
+    fields: Object.keys(fields).length ? fields : undefined,
+  });
+  const uploaded: XAIFileMetadata = {
+    file_id: put.id,
+    name,
+    size_bytes: 0,
+    content_type: mimeType,
+  };
   let collectionId: string | null = null;
   if (organizationId) {
     try {
@@ -107,14 +119,14 @@ export async function uploadOrgScopedXaiFile(
       collectionId = await attachFileToOrgCollection(
         client,
         organizationId,
-        uploaded.file_id,
+        put.id,
         options?.collectionFields,
       );
     } catch (err) {
       console.error("[uploadOrgScopedXaiFile] collection attach failed:", err);
     }
   }
-  return { file_id: uploaded.file_id, collectionId, apiKey, uploaded };
+  return { file_id: put.id, collectionId, apiKey, uploaded };
 }
 
 export async function getOrgScopedFileContentResponse(
@@ -123,12 +135,18 @@ export async function getOrgScopedFileContentResponse(
 ): Promise<Response> {
   const orgId = asOrgId(organizationId);
   const apiKey = await resolveOrgXaiApiKey(orgId);
+  const fields = apiKey ? { apiKey } : undefined;
+  const load = async () => {
+    const file = await getBlobStore().get(fileId, fields);
+    return new Response(Buffer.from(file.bytes), {
+      status: file.status,
+      headers: { "Content-Type": file.mimeType },
+    });
+  };
   if (orgId && apiKey) {
-    return runWithXaiContext({ organizationId: orgId, apiKey }, () =>
-      getFileContentResponse(fileId, { apiKey }),
-    );
+    return runWithXaiContext({ organizationId: orgId, apiKey }, load);
   }
-  return getFileContentResponse(fileId, { apiKey });
+  return load();
 }
 
 export async function deleteOrgScopedXaiFile(
@@ -136,5 +154,5 @@ export async function deleteOrgScopedXaiFile(
   organizationId: string | null | undefined,
 ): Promise<boolean> {
   const apiKey = await resolveOrgXaiApiKey(organizationId);
-  return deleteFileFromXAI(fileId, { apiKey });
+  return getBlobStore().delete(fileId, apiKey ? { apiKey } : undefined);
 }

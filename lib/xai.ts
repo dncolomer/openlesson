@@ -3,22 +3,17 @@
 //
 // Domain wrappers around the shared xAI client (lib/xai-client.ts):
 //   - generateObjectives   (session objectives at start)
-//   - generateReport       (post-session markdown report)
 //   - createSessionPlanLLM (initial plan)
 //
 // Prompts live in lib/prompts.ts.
 // ============================================
 
 import {
-  callXaiText,
   callXaiJSON,
   callXaiWithSchema,
-  callXaiResponsesWithFiles,
   DEFAULT_MODEL,
-  RECOMMENDED_TEMPS,
   userMessage,
 } from "./xai-client";
-import { blockMapGlyphDbFields, randFromSeed } from "@/lib/block-map-glyph";
 import { getPrompt, type UserPrompts } from "./prompts";
 import { getInitialChaptersBand } from "./initial-chapters";
 import { relocateChapterStepsOffBlocked } from "./learn-chapter-blocked";
@@ -39,144 +34,6 @@ import {
 } from "./learn-mode";
 
 const MODEL = DEFAULT_MODEL;
-
-// ============================================
-// REPORT GENERATION
-// ============================================
-
-export async function generateReport(options: {
-  problem: string;
-  duration: string;
-  probeCount: number;
-  avgGapScore: number;
-  probesSummary: string;
-  eegContext?: string;
-  promptOverrides?: UserPrompts;
-  /** xAI file IDs (transcripts, analysis snapshots) to attach via Responses API */
-  fileIds?: string[];
-}): Promise<{ success: boolean; report?: string; error?: string }> {
-  const prompt = getPrompt("report_generation", options.promptOverrides)
-    .replace("{problem}", options.problem)
-    .replace("{duration}", options.duration)
-    .replace("{count}", options.probeCount.toString())
-    .replace("{avg_gap}", options.avgGapScore.toFixed(2))
-    .replace("{probes_summary}", options.probesSummary || "No probes triggered")
-    .replace(
-      "{eeg_context}",
-      options.eegContext
-        ? `EEG Data Summary:\n${options.eegContext}\n\nInclude observations about the student's brain state patterns and how they correlated with reasoning gaps.`
-        : ""
-    );
-
-  // If file IDs provided, use Responses API with attachment_search capability
-  if (options.fileIds && options.fileIds.length > 0) {
-    const response = await callXaiResponsesWithFiles(
-      prompt,
-      options.fileIds,
-      {
-        model: MODEL,
-        maxOutputTokens: 800,
-        temperature: RECOMMENDED_TEMPS.report,
-      }
-    );
-
-    if (!response.success || !response.text) {
-      return { success: false, error: response.error || "No report generated" };
-    }
-
-    return { success: true, report: response.text };
-  }
-
-  // Fallback to standard chat completions API if no files
-  const response = await callXaiText(
-    [userMessage(prompt)],
-    {
-      model: MODEL,
-      maxTokens: 800,
-      temperature: RECOMMENDED_TEMPS.report,
-    }
-  );
-
-  if (!response.success || !response.data) {
-    return { success: false, error: response.error || "No report generated" };
-  }
-
-  return { success: true, report: response.data };
-}
-
-// ============================================
-// FOLLOW-UP SESSION SUGGESTIONS
-// ============================================
-
-export interface FollowUpSuggestion {
-  title: string;
-  description: string;
-}
-
-export async function generateFollowUpSessions(options: {
-  problem: string;
-  duration: string;
-  gapsSummary: string;
-  reportSummary: string;
-  promptOverrides?: UserPrompts;
-  /** xAI file IDs (transcripts, analysis snapshots) to attach via Responses API */
-  fileIds?: string[];
-}): Promise<{ success: boolean; suggestions?: FollowUpSuggestion[]; error?: string }> {
-  const prompt = getPrompt("follow_up_sessions", options.promptOverrides)
-    .replace("{problem}", options.problem)
-    .replace("{duration}", options.duration)
-    .replace("{gaps_summary}", options.gapsSummary || "No specific gaps noted")
-    .replace("{report_summary}", options.reportSummary || "No report available");
-
-  // If file IDs provided, use Responses API with attachment_search capability
-  if (options.fileIds && options.fileIds.length > 0) {
-    const response = await callXaiResponsesWithFiles<{ suggestions?: FollowUpSuggestion[] }>(
-      prompt,
-      options.fileIds,
-      {
-        model: MODEL,
-        maxOutputTokens: 500,
-        temperature: 0.7, // Slightly creative for suggestions
-      }
-    );
-
-    if (!response.success || !response.text) {
-      return { success: false, error: response.error || "No suggestions generated" };
-    }
-
-    // Parse the JSON from the response text
-    try {
-      const parsed = JSON.parse(response.text);
-      if (parsed.suggestions && Array.isArray(parsed.suggestions)) {
-        return { success: true, suggestions: parsed.suggestions };
-      }
-      return { success: false, error: "Invalid response format" };
-    } catch {
-      return { success: false, error: "Failed to parse suggestions JSON" };
-    }
-  }
-
-  // Fallback to standard JSON API if no files
-  const response = await callXaiJSON<{ suggestions?: FollowUpSuggestion[] }>(
-    [userMessage(prompt)],
-    {
-      model: MODEL,
-      maxTokens: 500,
-      temperature: 0.7,
-    }
-  );
-
-  if (!response.success || !response.data) {
-    return { success: false, error: response.error || "No suggestions generated" };
-  }
-
-  const suggestions = response.data.suggestions;
-  if (!suggestions || !Array.isArray(suggestions)) {
-    return { success: false, error: "Invalid suggestions format" };
-  }
-
-  return { success: true, suggestions };
-}
 
 // ============================================
 // GENERATE OBJECTIVES (Session start)

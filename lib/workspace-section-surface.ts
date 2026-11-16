@@ -57,7 +57,6 @@ export const SETTING_INNER_LAYOUT_CLASS =
 
 export type SectionSurfaceKind =
   | "knowledge"
-  | "data_studio"
   | "settings"
   | "insights"
   | "kpis";
@@ -100,13 +99,11 @@ export function resolveSectionIdentityDisplay(
     eyebrow:
       kind === "knowledge"
         ? "Knowledge"
-        : kind === "data_studio"
-          ? "Data Studio"
-          : kind === "insights"
-            ? "Insights"
-            : kind === "kpis"
-              ? "KPIs"
-              : "Settings",
+        : kind === "insights"
+          ? "Insights"
+          : kind === "kpis"
+            ? "KPIs"
+            : "Settings",
     title,
     subtitle: description,
     showOwnerBadge: identity.isOwner === true,

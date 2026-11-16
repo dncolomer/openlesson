@@ -251,7 +251,6 @@ describe("session-start routes debit shipped credits", () => {
       const src = readFileSync(join(root, rel), "utf8");
       expect(src).toMatch(/rejectIfInsufficientSessionCredits|debitClaimedFlowSession/);
     }
-    expect(readFileSync(join(root, "app/results/page.tsx"), "utf8")).toContain("/api/play/start");
     const learnLink = readFileSync(join(root, "lib/learn-link-auth.ts"), "utf8");
     expect(learnLink).toContain("debitClaimedFlowSession");
     expect(learnLink).toContain("refundClaimedFlowSession");

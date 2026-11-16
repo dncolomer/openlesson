@@ -12,6 +12,10 @@ import {
   CustomVerificationModelError,
 } from "@/lib/knowledge-config/custom-verification-model";
 import {
+  getDocumentContext,
+  mergeDocumentContextPrompt,
+} from "@/lib/ai/document-context";
+import {
   callXaiJSON,
   callXaiResponsesWithFiles,
   DEFAULT_MODEL,
@@ -81,7 +85,7 @@ const SYNTHETIC_REGION_JSON_SCHEMA = {
 
 /**
  * Decode base64 text-like files for prompt context (unit-testable, no network).
- * Returns null for binary types (PDF/images) that need xAI attachment_search.
+ * Returns null for binary types (PDF/images) that DocumentContext handles.
  */
 export function decodeSyntheticRegionFileText(file: {
   name: string;
@@ -200,12 +204,12 @@ function mapProfileFromLlmData(
 /**
  * Ask Grok 4.5 for a synthetic competency profile, then encode into flowcfg-v1-d96
  * and persist as a custom knowledge region (same table/shape as cohort regions).
- * When fileIds are present, uses Responses API with input_file attachments.
+ * When fileIds are present, DocumentContext attaches xAI files or extracts text.
  */
 export async function generateSyntheticRegionProfileWithGrok(options: {
   prompt: string;
   name?: string | null;
-  /** xAI Files API ids already uploaded. */
+  /** Stored blob ids already uploaded. */
   fileIds?: string[];
 }): Promise<SyntheticRegionProfile> {
   const prompt = options.prompt.trim();
@@ -222,12 +226,13 @@ ${prompt}
 
 Return JSON with keys: name, description, verification_score, augmentation_score, optimization_score, ghc_score, strengths, friction_patterns, preferred_modalities, pow_types, tool_names.`;
 
-  const fileIds = (options.fileIds || []).filter(Boolean);
+  const docs = await getDocumentContext().forTurn(options.fileIds || []);
+  const promptWithFiles = mergeDocumentContextPrompt(userPrompt, docs.extraPrompt);
 
-  if (fileIds.length > 0) {
+  if (docs.responsesFiles?.length) {
     const response = await callXaiResponsesWithFiles<Record<string, unknown>>(
-      userPrompt,
-      fileIds,
+      promptWithFiles,
+      docs.responsesFiles,
       {
         model: DEFAULT_MODEL,
         temperature: 0.4,
@@ -248,7 +253,7 @@ Return JSON with keys: name, description, verification_score, augmentation_score
   }
 
   const response = await callXaiJSON<Record<string, unknown>>(
-    [systemMessage(SYNTHETIC_REGION_PROFILE_SYSTEM), userMessage(userPrompt)],
+    [systemMessage(SYNTHETIC_REGION_PROFILE_SYSTEM), userMessage(promptWithFiles)],
     {
       model: DEFAULT_MODEL,
       temperature: 0.4,
@@ -275,9 +280,9 @@ export async function createSyntheticCustomVerificationModel(
     description?: string | null;
     ownerUserId?: string | null;
     createdBy?: string | null;
-    /** Base64 file attachments — uploaded to xAI when generating (unless profile injected). */
+    /** Base64 file attachments — uploaded to the blob store when generating (unless profile injected). */
     files?: SyntheticRegionFileInput[] | null;
-    /** Pre-uploaded xAI file ids (optional shortcut). */
+    /** Pre-uploaded stored file ids (optional shortcut). */
     fileIds?: string[] | null;
     /** Injected profile for tests — skips live Grok when provided. */
     profile?: SyntheticRegionProfile | null;

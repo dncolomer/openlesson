@@ -7,7 +7,6 @@ import {
   clusterDashboardNavItems,
   DASHBOARD_TOP_NAV_ITEMS,
   isDashboardNavTabItem,
-  isDashboardProductTab,
   type DashboardNavItem,
   type DashboardTab,
 } from "@/lib/dashboard-nav";
@@ -59,6 +58,7 @@ export function DashboardSidebar({
       {DASHBOARD_TOP_NAV_ITEMS.map((item) => {
         if (!isDashboardNavTabItem(item)) return null;
         const active = activeTab === item.id;
+        const idle = item.id === "home" ? homeIdleClass : idleClass;
         return (
           <nav
             key={item.id}
@@ -71,7 +71,7 @@ export function DashboardSidebar({
               data-dashboard-nav={item.id}
               data-dashboard-nav-active={active ? "true" : "false"}
               onClick={() => onSelect(item.id)}
-              className={`${itemClass} ${active ? activeClass : homeIdleClass}`}
+              className={`${itemClass} ${active ? activeClass : idle}`}
             >
               {item.label}
             </button>
@@ -162,10 +162,6 @@ function NavItem({
         type="button"
         data-dashboard-nav={item.id}
         data-dashboard-nav-active={active ? "true" : "false"}
-        data-dashboard-nav-performance={item.id === "practice_performance" ? "" : undefined}
-        data-workspace-type-filter={
-          isDashboardProductTab(item.id) ? item.id : undefined
-        }
         onClick={() => onSelect(item.id)}
         className={`${itemClass} ${active ? activeClass : idleClass}`}
       >

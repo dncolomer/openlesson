@@ -62,21 +62,6 @@
   ],
   "entries": [
     {
-      "id": "lib-prompts-ts::follow_up_sessions",
-      "domainId": "registry",
-      "file": "lib/prompts.ts",
-      "symbol": "follow_up_sessions",
-      "kind": "registry",
-      "status": "active",
-      "label": "Follow-up Blocks",
-      "description": "Generates suggested follow-up session topics after session completion. Variables: {problem}, {duration}, {gaps_summary}, {report_summary}",
-      "usedBy": [
-        "generateFollowUpSessions"
-      ],
-      "text": "You are helping a student continue their learning journey after completing a tutoring session.\n\nSession just completed:\n- Topic: {problem}\n- Duration: {duration}\n- Gaps detected: {gaps_summary}\n- Report summary: {report_summary}\n\nGenerate exactly 3 follow-up session topics that would help this student continue learning effectively. Each topic should:\n1. Build on what was learned or address gaps found in this session\n2. Be specific and actionable (not vague like \"practice more\")\n3. Be completable in a 15-30 minute focused session\n4. Progress logically from where the student is now\n\nFor each topic, provide:\n- A concise title (5-10 words)\n- A brief description of what the session will cover (1 sentence)\n\nReturn ONLY valid JSON:\n{\n  \"suggestions\": [\n    {\"title\": \"Topic title here\", \"description\": \"What this session covers\"},\n    {\"title\": \"Topic title here\", \"description\": \"What this session covers\"},\n    {\"title\": \"Topic title here\", \"description\": \"What this session covers\"}\n  ]\n}",
-      "charCount": 994
-    },
-    {
       "id": "lib-prompts-ts::gap_detection",
       "domainId": "registry",
       "file": "lib/prompts.ts",
@@ -137,21 +122,6 @@
       "charCount": 1487
     },
     {
-      "id": "lib-prompts-ts::report_generation",
-      "domainId": "registry",
-      "file": "lib/prompts.ts",
-      "symbol": "report_generation",
-      "kind": "registry",
-      "status": "active",
-      "label": "Block Report",
-      "description": "Generates a concise post-session debrief (150-200 words). Variables: {problem}, {duration}, {count}, {avg_gap}, {probes_summary}, {eeg_context}",
-      "usedBy": [
-        "generateReport"
-      ],
-      "text": "You are reviewing a tutoring session conducted in Learn. Be direct and specific.\n\nProblem: {problem}\nDuration: {duration}\nProbes triggered: {count} (avg gap score: {avg_gap})\nProbes and signals:\n{probes_summary}\n\n{eeg_context}\n\nWrite a concise session debrief in markdown:\n\n## What Happened\n1-2 sentences. What the student worked on, how it went.\n\n## Gaps Found\nBullet the specific reasoning gaps detected. No generic observations.\n\n## What Went Well\n1-2 bullets on genuine strengths shown.\n\n## Next Time\n2-3 concrete, actionable things to focus on next session. Include:\n- Specific concepts to review or practice\n- Suggest using Learn tools if they would help (Canvas for visual problems, Notebook for reflection, etc.)\n- External resources or practice exercises if appropriate\n\nRules:\n- 150-200 words maximum\n- No filler, no motivational fluff\n- Be honest and specific\n- Plain language only",
-      "charCount": 925
-    },
-    {
       "id": "lib-prompts-ts::session_plan_create",
       "domainId": "registry",
       "file": "lib/prompts.ts",
@@ -189,7 +159,7 @@
       "kind": "consumer",
       "label": "xAI domain helpers",
       "description": "High-level wrappers that load registry prompts via getPrompt().",
-      "text": "gap_detection \u2192 analyzeGap\nopening_probe \u2192 generateOpeningProbe\nprobe_generation \u2192 generateProbe\nreport_generation \u2192 generateReport\nfollow_up_sessions \u2192 generateFollowUpSessions\ngenerate_objectives \u2192 generateObjectives\nsession_plan_create \u2192 createSessionPlanLLM\nsession_plan_update \u2192 updateSessionPlanLLM",
+      "text": "gap_detection \u2192 analyzeGap\nopening_probe \u2192 generateOpeningProbe\nprobe_generation \u2192 generateProbe\ngenerate_objectives \u2192 generateObjectives\nsession_plan_create \u2192 createSessionPlanLLM\nsession_plan_update \u2192 updateSessionPlanLLM",
       "charCount": 0
     },
     {
@@ -220,15 +190,6 @@
       "charCount": 71
     },
     {
-      "id": "app-api-session-performance-chat-route-ts::buildSystemInstructions",
-      "domainId": "session-helios",
-      "file": "app/api/session/performance-chat/route.ts",
-      "symbol": "buildSystemInstructions",
-      "kind": "builder",
-      "text": "You are Helios, an AI learning assistant analyzing a single tutoring session on the topic: \"${sessionTopic}\".\n\nYour role is to help the learner understand their performance in this specific session and provide actionable insights.\n\nThe session data is provided in a JSON file attached to this conversation, containing:\n- Session metadata (topic, duration, status)\n- The session report (AI-generated summary with detailed feedback)\n- All probes/questions generated during the session with their gap scores\n\nWhen analyzing performance:\n1. Reference specific details from the session report and probes\n2. Explain what the gap scores indicate (0 = no gap, 1 = significant knowledge gap)\n3. Identify strengths demonstrated during the session\n4. Point out specific areas that need more work\n5. Be encouraging while being honest about areas needing improvement\n6. Provide concrete, actionable suggestions for improvement\n\nKeep responses concise but insightful. Format your responses in markdown for readability.",
-      "charCount": 1004
-    },
-    {
       "id": "app-api-session-plan-translate-route-ts::translationPrompt",
       "domainId": "heartbeat-session-plan",
       "file": "app/api/session-plan/translate/route.ts",
@@ -254,15 +215,6 @@
       "kind": "inline",
       "text": "You are helping a student use the Grok / Grokipedia tool. Grokipedia is an educational search engine, and the same panel also has a Grok prompt bar for custom questions on grok.com.\n\nBased on the following learning context, generate 5-8 specific search terms that would help the student find relevant educational content.\n\nTopic: ${sessionProblem}${stepContext}${probesContext}\n\nGuidelines:\n- Terms should be specific enough to yield focused results\n- Include both foundational concepts and more specific topics from the current context\n- Prioritize terms directly relevant to the active questions/tasks if present\n- Keep each term concise (2-5 words typically)\n- Order by relevance (most helpful first)\n\nReturn ONLY a JSON array of search term strings, nothing else. Example format:\n[\"term one\", \"term two\", \"term three\"]",
       "charCount": 822
-    },
-    {
-      "id": "app-api-suggest-plan-topic-route-ts::prompt",
-      "domainId": "workspace-api",
-      "file": "app/api/suggest-plan-topic/route.ts",
-      "symbol": "prompt",
-      "kind": "inline",
-      "text": "Based on this completed tutoring session, suggest ONE specific learning plan topic that would help the student continue their learning journey.\n\nSession Topic: ${problem}\n\nSession Report:\n${report}\n\nGenerate a single, specific topic for a multi-session learning plan that:\n1. Builds on what was learned or addresses gaps found\n2. Is broader/deeper than a single session topic\n3. Would benefit from a structured multi-week approach\n\nReturn ONLY the suggested topic text (5-15 words), nothing else. No quotes, no explanation.",
-      "charCount": 523
     },
     {
       "id": "app-api-workspace-add-block-at-slot-route-ts::aiPrompt",

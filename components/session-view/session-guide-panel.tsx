@@ -137,7 +137,7 @@ export function SessionGuidePanel({
               transcript={bridge?.dictate?.transcript ?? ""}
               onLiveText={(text) => bridge?.dictate?.write(text, false)}
               onCommit={(text) => bridge?.dictate?.write(text, true)}
-              onAnswer={(text) => bridge?.dictate?.answer(text)}
+              onRun={(text) => bridge?.dictate?.run(text)}
               onActiveChange={bridge?.dictate?.onActive}
             />
             <IleCanvasPointerButton

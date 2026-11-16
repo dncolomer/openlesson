@@ -3,6 +3,7 @@
  * Bytes live on org-scoped xAI Files; the flow stores name, mime, file id.
  */
 
+import { isStoredFileId } from "@/lib/ai/stored-file-id";
 import {
   HELIOS_MAP_FILE_ACCEPT,
   HELIOS_MAP_MAX_FILE_BYTES,
@@ -15,9 +16,6 @@ export const FLOW_ARTIFACT_ACCEPT = HELIOS_MAP_FILE_ACCEPT;
 export const FLOW_ARTIFACT_MAX_BYTES = HELIOS_MAP_MAX_FILE_BYTES;
 export const FLOW_ARTIFACT_MAX_COUNT = 20;
 
-const XAI_FILE_ID_RE =
-  /^file_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 export type FlowArtifact = {
   name: string;
   mimeType?: string;
@@ -25,7 +23,7 @@ export type FlowArtifact = {
 };
 
 export function isFlowArtifactFileId(value: unknown): value is string {
-  return typeof value === "string" && XAI_FILE_ID_RE.test(value.trim());
+  return typeof value === "string" && isStoredFileId(value);
 }
 
 export function parseFlowArtifact(raw: unknown): FlowArtifact | null {

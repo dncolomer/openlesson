@@ -1,20 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import { StudioMultiSelect } from "@/components/data-studio/StudioMultiSelect";
 import { KnowledgeRegionInspect } from "@/components/product-flow/knowledge-region-inspect";
 import { ProductSurface } from "@/components/product-flow/product-surface";
 import {
   FLOW_FORM_LABEL,
-  FLOW_GHOST_BTN,
   FlowFormCard,
   FlowFormHeader,
 } from "@/components/product-flow/product-flow-form";
 import { dashboardTabForProductSurface } from "@/lib/dashboard-nav";
 import {
-  DASHBOARD_DATA_STUDIO_RUN_PATH,
+  DASHBOARD_KNOWLEDGE_REGION_RUN_PATH,
   STUDIO_HUMAN_FILL,
   STUDIO_SIMULATED_FILL,
   buildDataStudioProjectionView,
@@ -33,10 +31,15 @@ import {
   KNOWLEDGE_REGION_ANALYSIS_FILL,
   KNOWLEDGE_REGION_MAP_SIZE,
   knowledgeRegionAnalysisPointLabel,
+  knowledgeRegionIdentityKey,
+  knowledgeRegionIdentityOptions,
+  knowledgeRegionSampleIdForIdentity,
   knowledgeRegionVisibleIdsFromSelection,
+  parseKnowledgeRegionFigureMode,
   presentKnowledgeRegionClusterDistances,
   presentKnowledgeRegionFigure,
   resolveKnowledgeRegionPointKind,
+  type KnowledgeRegionFigureMode,
   type KnowledgeRegionPointKind,
 } from "@/lib/knowledge-region-figure";
 import type { FlowPowRow } from "@/lib/flow-embedding";
@@ -45,11 +48,7 @@ import {
   type KnowledgeRegionDetails,
   type KnowledgeRegionDetailsSample,
 } from "@/lib/knowledge-region-details";
-import {
-  productFlowKindLabel,
-  productRegionStudioPath,
-  type ProductFlowKind,
-} from "@/lib/product-flow";
+import { productFlowKindLabel, type ProductFlowKind } from "@/lib/product-flow";
 
 const FIGURE_SCREEN = {
   width: KNOWLEDGE_REGION_MAP_SIZE,
@@ -59,6 +58,10 @@ const FIGURE_SCREEN = {
 
 const CONTROL_SELECT =
   "h-7 w-full min-w-0 border border-white/20 bg-black px-2 font-mono text-[11px] text-white outline-none focus:border-white/55";
+const MODE_BTN =
+  "h-7 flex-1 border text-[10px] uppercase tracking-[0.14em]";
+const MODE_ON = `${MODE_BTN} border-white bg-white/10 text-white`;
+const MODE_OFF = `${MODE_BTN} border-white/20 text-neutral-500 hover:text-white`;
 const POINT_KIND_IDS: readonly KnowledgeRegionPointKind[] = [
   "simulated",
   "cohort",
@@ -82,6 +85,7 @@ export function KnowledgeRegionPage({
     "simulated",
   ]);
   const [algorithm, setAlgorithm] = useState<ProjectionAlgorithmId>("pca");
+  const [figureMode, setFigureMode] = useState<KnowledgeRegionFigureMode>("individual");
   const [runPow, setRunPow] = useState<FlowPowRow[]>([]);
 
   useEffect(() => {
@@ -131,8 +135,26 @@ export function KnowledgeRegionPage({
     });
   }, [details?.samples, visibleClusterIds, visiblePointKinds]);
 
+  const identityPoints = useMemo(
+    () =>
+      samples.map((sample) => ({
+        id: sample.id,
+        identity: sample.identity,
+        createdAt: sample.embedding.created_at ?? null,
+      })),
+    [samples],
+  );
+
+  const identityOptions = useMemo(
+    () => knowledgeRegionIdentityOptions(identityPoints),
+    [identityPoints],
+  );
+
   const selectedSample: KnowledgeRegionDetailsSample | null =
     samples.find((sample) => sample.id === selectedSampleId) ?? null;
+  const selectedIdentityKey = selectedSample
+    ? knowledgeRegionIdentityKey(selectedSample)
+    : "";
 
   const inspect: DataStudioInspectPayload | null = useMemo(() => {
     const base = inspectStudioEmbedding(selectedSample?.embedding);
@@ -158,7 +180,7 @@ export function KnowledgeRegionPage({
     const params = new URLSearchParams();
     if (selectedSample.workspace_id) params.set("workspaceId", selectedSample.workspace_id);
     if (selectedSample.run_id) params.set("runId", selectedSample.run_id);
-    void fetch(`${DASHBOARD_DATA_STUDIO_RUN_PATH}?${params.toString()}`)
+    void fetch(`${DASHBOARD_KNOWLEDGE_REGION_RUN_PATH}?${params.toString()}`)
       .then(async (response) => {
         const body = (await response.json().catch(() => ({}))) as { pow?: FlowPowRow[] };
         if (!cancelled && response.ok && Array.isArray(body.pow)) {
@@ -204,6 +226,7 @@ export function KnowledgeRegionPage({
           identity: point.identity,
           pointKind: sample?.pointKind,
           vector: sample?.embedding.vector ?? null,
+          createdAt: sample?.embedding.created_at ?? null,
         };
       }),
       clusters: details.clusters.map((cluster) => ({
@@ -222,8 +245,31 @@ export function KnowledgeRegionPage({
       analysisLabel: knowledgeRegionAnalysisPointLabel(details.kind),
       visibleClusterIds,
       selectedPointId: selectedSampleId,
+      mode: figureMode,
     });
-  }, [details, projection, selectedSampleId, visibleClusterIds, visiblePointKinds]);
+  }, [details, figureMode, projection, selectedSampleId, visibleClusterIds, visiblePointKinds]);
+
+  const pathIds = useMemo(
+    () => new Set((figure?.path?.steps ?? []).map((step) => step.id)),
+    [figure?.path],
+  );
+
+  function selectIdentity(key: string) {
+    const id = knowledgeRegionSampleIdForIdentity({
+      points: identityPoints,
+      identityKey: key,
+      currentId: selectedSampleId,
+    });
+    if (id) setSelectedSampleId(id);
+  }
+
+  function setMode(next: KnowledgeRegionFigureMode) {
+    const mode = parseKnowledgeRegionFigureMode(next);
+    setFigureMode(mode);
+    if (mode !== "path" || selectedSampleId) return;
+    const first = identityOptions[0];
+    if (first) selectIdentity(first.id);
+  }
 
   return (
     <ProductSurface
@@ -232,7 +278,7 @@ export function KnowledgeRegionPage({
     >
       <div className="mx-auto min-h-[32rem] w-full max-w-5xl space-y-6" data-knowledge-region-details={kind}>
           <FlowFormHeader
-            backHref={`/dashboard?tab=${kind}_regions`}
+            backHref="/dashboard?tab=regions"
             backLabel="Back to knowledge regions"
             title={details?.name || (loading ? "Knowledge region" : "Region not found")}
             description={
@@ -244,15 +290,6 @@ export function KnowledgeRegionPage({
             extra={
               details ? (
                 <div className="mt-6 space-y-4">
-                  <div className="flex flex-wrap gap-3">
-                    <Link
-                      href={details.studioPath || productRegionStudioPath(kind, details.id)}
-                      className={FLOW_GHOST_BTN}
-                      data-open-region-data-studio={details.id}
-                    >
-                      Open in Data Studio
-                    </Link>
-                  </div>
                   <details
                     className="border border-white/15"
                     data-knowledge-region-summary=""
@@ -314,6 +351,7 @@ export function KnowledgeRegionPage({
                     viewBox={`0 0 ${figure.map.size} ${figure.map.size}`}
                     className="block h-auto w-full"
                     data-knowledge-region-figure=""
+                    data-knowledge-region-figure-mode={figureMode}
                     role="img"
                     aria-label={`${details.name} embedding map`}
                   >
@@ -403,6 +441,57 @@ export function KnowledgeRegionPage({
                           </text>
                         </g>
                       ))}
+                      {figure.path ? (
+                        <g data-knowledge-region-path={figure.path.key}>
+                          {figure.path.segments.map((segment) => (
+                            <g
+                              key={`${segment.fromId}:${segment.toId}`}
+                              data-knowledge-region-path-segment={`${segment.fromId}:${segment.toId}`}
+                            >
+                              <line
+                                x1={segment.x1}
+                                y1={segment.y1}
+                                x2={segment.x2}
+                                y2={segment.y2}
+                                stroke="rgba(255,255,255,0.72)"
+                                strokeWidth={1.2}
+                              />
+                              <rect
+                                x={segment.midX - 18}
+                                y={segment.midY - 8}
+                                width={36}
+                                height={14}
+                                rx={3}
+                                fill="#0b0b0b"
+                                stroke="rgba(255,255,255,0.25)"
+                              />
+                              <text
+                                x={segment.midX}
+                                y={segment.midY + 3}
+                                textAnchor="middle"
+                                fill="rgba(255,255,255,0.82)"
+                                fontSize={9}
+                                fontFamily="ui-monospace, monospace"
+                              >
+                                {segment.label}
+                              </text>
+                            </g>
+                          ))}
+                          {figure.path.steps.map((step) => (
+                            <text
+                              key={step.id}
+                              x={step.x + 8}
+                              y={step.y - 8}
+                              fill="rgba(255,255,255,0.9)"
+                              fontSize={9}
+                              fontFamily="ui-monospace, monospace"
+                              data-knowledge-region-path-step={step.id}
+                            >
+                              {step.index}
+                            </text>
+                          ))}
+                        </g>
+                      ) : null}
                       {figure.glyphs.map((point) => {
                         const kind = resolveKnowledgeRegionPointKind(point);
                         const fill =
@@ -413,14 +502,19 @@ export function KnowledgeRegionPage({
                               : STUDIO_HUMAN_FILL;
                         const open = point.glyph === "open-circle" || point.glyph === "open-diamond";
                         const selected = point.id === selectedSampleId;
+                        const onPath = figureMode !== "path" || pathIds.has(point.id);
                         const radius = selected ? 5.5 : 4.2;
                         return (
                           <g
                             key={point.id}
                             className="cursor-pointer"
+                            opacity={onPath ? 1 : 0.22}
                             data-knowledge-region-figure-point={point.id}
                             data-knowledge-region-glyph={point.glyph}
                             data-knowledge-region-point-kind={kind}
+                            data-knowledge-region-on-path={
+                              figureMode === "path" ? String(onPath) : undefined
+                            }
                             onClick={() => setSelectedSampleId(point.id)}
                           >
                             <title>{point.identity || point.id}</title>
@@ -512,6 +606,57 @@ export function KnowledgeRegionPage({
                     className="space-y-2 border border-white/15 bg-black/50 px-3 py-2.5"
                     data-knowledge-region-controls=""
                   >
+                    <div data-knowledge-region-figure-mode="">
+                      <span className="text-[10px] uppercase tracking-wide text-neutral-500">
+                        View
+                      </span>
+                      <div
+                        className="mt-0.5 flex gap-1"
+                        role="tablist"
+                        aria-label="Figure mode"
+                      >
+                        <button
+                          type="button"
+                          role="tab"
+                          aria-selected={figureMode === "individual"}
+                          className={figureMode === "individual" ? MODE_ON : MODE_OFF}
+                          data-knowledge-region-figure-mode-option="individual"
+                          onClick={() => setMode("individual")}
+                        >
+                          Individual
+                        </button>
+                        <button
+                          type="button"
+                          role="tab"
+                          aria-selected={figureMode === "path"}
+                          className={figureMode === "path" ? MODE_ON : MODE_OFF}
+                          data-knowledge-region-figure-mode-option="path"
+                          onClick={() => setMode("path")}
+                        >
+                          Path
+                        </button>
+                      </div>
+                    </div>
+                    {figureMode === "path" ? (
+                      <label className="flex min-w-0 w-full flex-col gap-0.5">
+                        <span className="text-[10px] uppercase tracking-wide text-neutral-500">
+                          Identity
+                        </span>
+                        <select
+                          className={CONTROL_SELECT}
+                          value={selectedIdentityKey}
+                          onChange={(event) => selectIdentity(event.target.value)}
+                          data-knowledge-region-identity=""
+                        >
+                          <option value="">Select identity</option>
+                          {identityOptions.map((option) => (
+                            <option key={option.id} value={option.id}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    ) : null}
                     <label className="flex min-w-0 w-full flex-col gap-0.5">
                       <span className="text-[10px] uppercase tracking-wide text-neutral-500">
                         Project
@@ -596,8 +741,11 @@ export function KnowledgeRegionPage({
                   inspect={inspect}
                   sample={selectedSample}
                   distances={clusterDistances}
+                  path={figure?.path ?? null}
+                  mode={figureMode}
                   productKind={details.kind}
                   onClose={() => setSelectedSampleId(null)}
+                  onSelectStep={setSelectedSampleId}
                 />
               ) : null}
             </>

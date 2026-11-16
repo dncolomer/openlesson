@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { readWorkspaceViewSurface } from "../helpers/surface-source";
@@ -77,41 +77,31 @@ function writeEvidence(name: string, body: string) {
 }
 
 describe("Helios / Manual Learning Map column mode", () => {
-  it("defaults to Helios and toggles Manual drawers then back", () => {
+  it("authoring and play-only shells use Manual drawers; Helios Chat stays unmounted", () => {
     const start = resolveWorkspaceHeliosColumnSurface({
       authoring: true,
     });
-    expect(DEFAULT_WORKSPACE_HELIOS_COLUMN_MODE).toBe("helios");
-    expect(start.mode).toBe("helios");
-    expect(start.showManualDrawers).toBe(false);
-    expect(start.showHeliosChat).toBe(true);
-    expect(start.showModeToggle).toBe(true);
+    expect(DEFAULT_WORKSPACE_HELIOS_COLUMN_MODE).toBe("manual");
+    expect(start.mode).toBe("manual");
+    expect(start.showManualDrawers).toBe(true);
+    expect(start.showHeliosChat).toBe(false);
+    expect(start.showModeToggle).toBe(false);
 
-    const manual = resolveWorkspaceHeliosColumnSurface({
+    const requestedHelios = resolveWorkspaceHeliosColumnSurface({
       authoring: true,
-      mode: toggleWorkspaceHeliosColumnMode(start.mode),
+      mode: "helios",
     });
-    expect(manual.mode).toBe("manual");
-    expect(manual.showHeliosChat).toBe(false);
-    expect(manual.showManualDrawers).toBe(true);
-
-    const back = resolveWorkspaceHeliosColumnSurface({
-      authoring: true,
-      mode: toggleWorkspaceHeliosColumnMode(manual.mode),
-    });
-    expect(back.mode).toBe("helios");
-    expect(back.showManualDrawers).toBe(false);
-    expect(back.showHeliosChat).toBe(true);
-    expect(normalizeWorkspaceHeliosColumnMode("nope")).toBe("helios");
+    expect(requestedHelios.showHeliosChat).toBe(false);
+    expect(requestedHelios.showManualDrawers).toBe(true);
+    expect(toggleWorkspaceHeliosColumnMode("manual")).toBe("helios");
+    expect(normalizeWorkspaceHeliosColumnMode("nope")).toBe("manual");
 
     writeEvidence(
       "helios-map-mode.log",
       [
         "default=" + start.mode,
-        "afterToggle=" + manual.mode,
         "heliosChat=" + start.showHeliosChat,
         "heliosDrawers=" + start.showManualDrawers,
-        "back=" + back.mode,
         "labels=" + HELIOS_MAP_MODE_LABEL + "/" + MANUAL_MAP_MODE_LABEL,
       ].join("\n"),
     );
@@ -137,30 +127,22 @@ describe("Helios / Manual Learning Map column mode", () => {
 });
 
 describe("Helios map right-column chrome", () => {
-  it("Helios mounts Helios Chat; Manual Mode keeps the drawer stack", () => {
+  it("unmounts Helios Chat and keeps the Manual drawer stack", () => {
     const drawers = read("components/workspace-view/workspace-right-drawers.tsx");
-    const chat = read("components/WorkspaceHeliosChat.tsx");
     const view = readWorkspaceViewSurface();
 
     expect(HELIOS_MAP_MODE_LABEL).toBe("Helios");
     expect(MANUAL_MAP_MODE_LABEL).toBe("Manual Mode");
-    expect(drawers).toContain("Helios");
-    expect(drawers).toContain("Manual Mode");
     expect(drawers).not.toContain("Helios Mode");
-    expect(drawers).toContain("data-workspace-helios-mode-toggle");
-    expect(drawers).toContain('data-helios-map-mode-option="helios"');
-    expect(drawers).toContain('data-helios-map-mode-option="manual"');
+    expect(drawers).not.toContain("data-workspace-helios-mode-toggle");
+    expect(drawers).not.toContain("<WorkspaceHeliosChat");
+    expect(drawers).not.toContain("heliosSurface.showHeliosChat");
     expect(drawers).toContain("resolveWorkspaceHeliosColumnSurface");
-    expect(drawers).toContain("<WorkspaceHeliosChat");
-    expect(drawers).toContain("heliosSurface.showHeliosChat");
     expect(drawers).toContain("heliosSurface.showManualDrawers");
     expect(drawers).toContain('data-workspace-block-drawers=""');
     expect(drawers).toContain("WorkspaceAddBlockPane");
     expect(drawers).toContain("WorkspaceGenerateShapePane");
     expect(drawers).toContain("WorkspaceCombineBlocksPane");
-    expect(drawers).toMatch(
-      /showHeliosChat \? \([\s\S]*<WorkspaceHeliosChat/,
-    );
     expect(drawers).toMatch(
       /showManualDrawers &&[\s\S]*rightPane === "add_block"/,
     );
@@ -173,119 +155,40 @@ describe("Helios map right-column chrome", () => {
     expect(drawers).toMatch(
       /showManualDrawers &&[\s\S]*data-workspace-block-drawers/,
     );
-    expect(chat).toContain("data-workspace-helios-chat");
-    expect(chat).toContain("data-workspace-helios-chat-input");
-    expect(chat).toContain("border border-white/30 bg-black/55");
-    expect(chat).toContain('aria-label="Message Helios"');
-    expect(chat).not.toMatch(
-      /className="w-full resize-none bg-transparent text-sm text-neutral-100 outline-none placeholder:text-neutral-600"/,
-    );
-    expect(chat).toContain("data-workspace-helios-chat-mic");
-    expect(chat).toContain('import { Mic } from "lucide-react"');
-    expect(chat).toContain('<Mic className="h-4 w-4" aria-hidden="true" />');
-    expect(chat).not.toContain(">Mic</");
-    expect(chat).not.toContain(">Mic on</");
-    expect(chat).toMatch(
-      /data-workspace-helios-chat-mic[\s\S]*data-workspace-helios-chat-send/,
-    );
-    expect(chat).toContain("applyHeliosMapToolsAtomically");
-    expect(chat).toContain("data-workspace-helios-tool-trace-toggle");
-    expect(chat).toContain(
-      "const [showToolTrace, setShowToolTrace] = useState(false)",
-    );
-    expect(chat).toContain('kind !== "tool"');
-    expect(chat).toContain("startLiveSpeechRecognition");
-    expect(chat).toContain("Learning Map builder");
-    expect(chat).toContain("data-workspace-helios-opening");
-    expect(chat).toContain("data-workspace-helios-opening-question");
-    expect(chat).toContain("data-workspace-helios-opening-example");
-    expect(chat).toContain("data-workspace-helios-opening-examples");
-    expect(chat).toContain("heliosMapOpeningMarkdown");
-    expect(chat).toContain("HELIOS_MAP_OPENING_EXAMPLES");
-    expect(chat).toContain("enqueuePrompt(example.prompt)");
-    expect(chat).toContain("snapshot: snapshotRef.current");
-    expect(chat).toContain("selection: serializeHeliosMapSelection(selectionRef.current)");
-    expect(chat).toContain("data-workspace-helios-context");
-    expect(chat).toContain("data-workspace-helios-selection");
-    expect(chat).toContain("data-workspace-helios-selection-kind");
-    expect(chat).toContain("data-workspace-helios-selection-chip");
-    expect(chat).toContain("data-workspace-helios-selection-empty");
-    expect(chat).toContain("heliosSelectionContext");
-    expect(chat).toContain("data-workspace-helios-files");
-    expect(chat).toContain("data-workspace-helios-files-attach");
-    expect(chat).toContain("data-workspace-helios-files-chip");
-    expect(chat).toContain("data-workspace-helios-files-empty");
-    expect(chat).toContain("data-workspace-helios-files-input");
-    expect(chat).toContain("files: attachedRef.current");
-    expect(chat).toContain("workspaceFileNames: workspaceFileNamesRef.current");
-    expect(chat).toContain("mapTypes: serializeHeliosWorkspaceMapTypes(mapTypesRef.current)");
-    expect(chat).toContain("HELIOS_MAP_FILES_FALLBACK_PROMPT");
-    expect(drawers).toContain("workspaceFileItems={workspaceFileItems}");
-    expect(drawers).toContain("mapSelection={mapSelection}");
-    expect(drawers).toContain("workspaceMapTypes={workspaceMapTypes}");
     expect(view).toMatch(
       /<WorkspaceRightDrawers[\s\S]*mapSelection=\{mapSelection\}/,
     );
     expect(view).toMatch(
       /<WorkspaceRightDrawers[\s\S]*workspaceMapTypes=\{workspaceMapTypes\}/,
     );
-    expect(chat).toContain("cursor-pointer");
-    expect(chat).toContain("type=\"button\"");
     expect(drawers).toContain("pointer-events-none absolute inset-0 bg-black/35");
-    expect(drawers).toContain("applySnapshot");
-    expect(drawers).toContain("heliosMapSnapshotToAuthoringNodes");
     expect(drawers).toContain("onPreviewUnusableCells");
     expect(drawers).toContain("onApplyHeliosOverlay");
     expect(drawers).toContain("mapOverlay");
-    expect(chat).toContain("snapshot: snapshotRef.current");
     const grid = read("components/BlockSkillGrid.tsx");
     expect(grid).toContain("injectHeliosOverlay");
     expect(grid).toContain("persistAnnotationLayers");
-    expect(view).toContain("WorkspaceHeliosChat");
+    expect(view).not.toContain("WorkspaceHeliosChat");
     expect(view).toContain("onClonePaste");
     expect(view).toContain("onPreviewUnusableCells");
     expect(view).not.toContain("<WorkspaceChat");
     expect(view).not.toContain("SessionHeliosPanel");
-    const api = read("app/api/workspace/helios-map-chat/route.ts");
-    expect(api).toContain("buildHeliosMapBuilderSystemPrompt");
-    expect(api).toContain("requireAyclAuthoring: true");
-    expect(api).toContain("heliosMapSnapshotFromUnknown");
-    expect(api).toContain("formatHeliosMapSnapshotForPrompt");
-    expect(api).toContain("formatHeliosMapSelectionForPrompt");
-    expect(api).toContain("heliosMapSelectionFromUnknown");
-    expect(api).toContain("body.selection");
-    expect(api).toContain("formatHeliosFilesForPrompt");
-    expect(api).toContain("formatHeliosWorkspaceMapTypesForPrompt");
-    expect(api).toContain("heliosWorkspaceMapTypesFromUnknown");
-    expect(api).toContain("body.mapTypes ?? body.map_types");
-    expect(api).toContain("parseHeliosAttachedFiles");
-    expect(api).toContain("uploadOrgScopedXaiFile");
-    expect(api).toContain("callXaiResponses");
-    expect(api).toContain("input_file");
-    expect(api).toContain("input_image");
-    expect(api).toContain("searchXaiWeb");
-    expect(api).toContain("isHeliosResearchToolId");
-    expect(api).toContain("formatHeliosSearchResultsForPrompt");
+    expect(existsSync(join(ROOT, "app/api/workspace/helios-map-chat/route.ts"))).toBe(
+      false,
+    );
+    expect(existsSync(join(ROOT, "components/WorkspaceHeliosChat.tsx"))).toBe(false);
+    expect(existsSync(join(ROOT, "lib/xai-web-search.ts"))).toBe(false);
 
     writeEvidence(
       "helios-map-chrome.log",
       [
-        "labels=" +
-          drawers.includes(HELIOS_MAP_MODE_LABEL) +
-          "/" +
-          drawers.includes(MANUAL_MAP_MODE_LABEL),
         "chatMount=" + drawers.includes("<WorkspaceHeliosChat"),
         "drawersMarker=" + drawers.includes("data-workspace-block-drawers"),
         "addPane=" + drawers.includes("WorkspaceAddBlockPane"),
         "shapePane=" + drawers.includes("WorkspaceGenerateShapePane"),
         "combinePane=" + drawers.includes("WorkspaceCombineBlocksPane"),
-        "gatedByShowHeliosChat=" +
-          /showHeliosChat \? \([\s\S]*<WorkspaceHeliosChat/.test(drawers),
         "manualAdd=" +
           /showManualDrawers &&[\s\S]*rightPane === "add_block"/.test(drawers),
-        "mic=" + chat.includes("data-workspace-helios-chat-mic"),
-        "atomic=" + chat.includes("applyHeliosMapToolsAtomically"),
-        "speech=" + chat.includes("startLiveSpeechRecognition"),
       ].join("\n"),
     );
   });

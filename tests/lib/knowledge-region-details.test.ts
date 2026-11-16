@@ -193,7 +193,6 @@ describe("knowledge region details", () => {
     expect(details?.samples.find((row) => row.id === "human-1")?.pointKind).toBe("cohort");
     expect(details?.samples.find((row) => row.id === "human-2")?.pointKind).toBe("analysis");
     expect(details?.regionPath).toBe("/verification/regions/parent");
-    expect(details?.studioPath).toBe("/dashboard?tab=verification_studio&region=parent");
 
     const simulatedInspect = inspectKnowledgeRegionSample(
       details?.samples.find((row) => row.id === "sim-1"),
@@ -253,7 +252,6 @@ describe("knowledge region details", () => {
     });
     expect(details?.kind).toBe("solve");
     expect(details?.regionPath).toBe("/solve/regions/solve-parent");
-    expect(details?.studioPath).toContain("solve_studio");
     expect(details?.flows[0]?.name).toBe("Normalize");
     expect(details?.samples).toHaveLength(1);
   });

@@ -1,8 +1,6 @@
 "use client";
 
-import { useRef, type PointerEvent as ReactPointerEvent, type RefObject } from "react";
 import {
-  clampStudioInspectWidth,
   dataStudioSpaceLabel,
   formatStudioHighDimDistance,
   STUDIO_IN_REGION_FILL,
@@ -172,104 +170,5 @@ export function DataStudioInspectFields({
         </pre>
       </details>
     </>
-  );
-}
-
-export function DataStudioInspect({
-  inspect,
-  inspectWidth = 440,
-  inspectDistanceRays = [],
-  shellRef,
-  onInspectWidthChange,
-  onClose,
-  layout = "aside",
-}: {
-  inspect: DataStudioInspectPayload;
-  inspectWidth?: number;
-  inspectDistanceRays?: readonly StudioRegionDistanceRay[];
-  shellRef?: RefObject<HTMLDivElement | null>;
-  onInspectWidthChange?: (width: number) => void;
-  onClose: () => void;
-  layout?: "aside" | "page";
-}) {
-  const resizeRef = useRef<{ pointerId: number; startX: number; startWidth: number } | null>(
-    null,
-  );
-  const fields = (
-    <DataStudioInspectFields inspect={inspect} inspectDistanceRays={inspectDistanceRays} />
-  );
-
-  if (layout === "page") {
-    return (
-      <section
-        className="select-text border border-white/15 bg-black/80"
-        data-data-studio-inspect
-        data-knowledge-region-inspect=""
-      >
-        <div className="flex items-center justify-between border-b border-white/10 px-6 py-3">
-          <p className="text-sm font-medium text-white">Stored record</p>
-          <button
-            type="button"
-            className="text-[11px] text-neutral-500 hover:text-white"
-            onClick={onClose}
-          >
-            Close
-          </button>
-        </div>
-        <div className="p-6 text-sm text-neutral-300">{fields}</div>
-      </section>
-    );
-  }
-
-  return (
-    <aside
-      className="relative flex shrink-0 select-text flex-col overflow-hidden border-l border-white/15 bg-black/80"
-      style={{ width: inspectWidth, maxWidth: "85%" }}
-      data-data-studio-inspect
-    >
-      <div
-        role="separator"
-        aria-orientation="vertical"
-        aria-label="Resize inspect panel"
-        data-data-studio-resize
-        className="absolute inset-y-0 left-0 z-10 w-1.5 cursor-col-resize bg-transparent hover:bg-white/25"
-        onPointerDown={(event: ReactPointerEvent<HTMLDivElement>) => {
-          event.preventDefault();
-          event.currentTarget.setPointerCapture(event.pointerId);
-          resizeRef.current = {
-            pointerId: event.pointerId,
-            startX: event.clientX,
-            startWidth: inspectWidth,
-          };
-        }}
-        onPointerMove={(event: ReactPointerEvent<HTMLDivElement>) => {
-          const drag = resizeRef.current;
-          if (!drag || drag.pointerId !== event.pointerId) return;
-          const max = Math.floor((shellRef?.current?.clientWidth || 1200) * 0.78);
-          onInspectWidthChange?.(
-            clampStudioInspectWidth(drag.startWidth + (drag.startX - event.clientX), max),
-          );
-        }}
-        onPointerUp={(event: ReactPointerEvent<HTMLDivElement>) => {
-          if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-            event.currentTarget.releasePointerCapture(event.pointerId);
-          }
-          resizeRef.current = null;
-        }}
-      />
-      <div className="flex items-center justify-between border-b border-white/10 px-3 py-2 pl-4">
-        <p className="text-xs font-medium text-white">Stored record</p>
-        <button
-          type="button"
-          className="text-[11px] text-neutral-500 hover:text-white"
-          onClick={onClose}
-        >
-          Close
-        </button>
-      </div>
-      <div className="min-h-0 flex-1 overflow-y-auto p-3 pl-4 text-[11px] text-neutral-300">
-        {fields}
-      </div>
-    </aside>
   );
 }

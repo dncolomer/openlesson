@@ -294,8 +294,7 @@ async function main() {
     console.log(
       `[seed-local-studio] runs=${encoded.length} regions=${regions.path.name}, ${regions.voice.name}`,
     );
-    console.log(`[seed-local-studio] Data Studio ${appUrl}/dashboard?tab=verification_studio`);
-    console.log(`[seed-local-studio] Workspace ${appUrl}/workspace/${workspaceId}?section=data_studio`);
+    console.log(`[seed-local-studio] Knowledge regions ${appUrl}/dashboard?tab=verification_regions`);
     console.log(`[seed-local-studio] Public flow ${appUrl}/v/${publicToken}`);
     console.log(
       "[seed-local-studio] Path: ada=bea (same walk), cam nearby in-region, eve outside. Path + Text splits ada/bea speech.",

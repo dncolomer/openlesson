@@ -6,6 +6,7 @@ import { policySuggestionIsRawLabel, sessionPolicyLocalSuggestion } from "@/lib/
 import {
   sessionBranchById,
   sessionBranchCheapestTransition,
+  sessionBranchNextPolicyStep,
   type SessionBranchModel,
 } from "@/lib/session-branch-model";
 import type { SessionGuideId } from "@/lib/session-instructions";
@@ -73,44 +74,55 @@ export function sessionHarnessHereLine(
   model: SessionBranchModel | null | undefined,
 ): string {
   if (!model) return "";
-  const here = sessionBranchById(model, model.focusId);
-  if (!here) return "";
+  return sessionHarnessNodeLine(model, model.focusId);
+}
+
+function sessionHarnessNodeLine(
+  model: SessionBranchModel,
+  branchId: string | null | undefined,
+): string {
+  const node = sessionBranchById(model, branchId);
+  if (!node) return "";
   return (
     sessionPolicyLocalSuggestion({
-      nodeTitle: here.title,
-      observation: here.observation,
-      intent: here.question,
+      nodeTitle: node.title,
+      observation: node.observation,
+      intent: node.question,
     }) ?? ""
   );
 }
 
 /**
- * Cheapest outgoing hidden state that is not the occupied node.
- * Prefers the live harness suggestion when it is not the here line.
+ * Next unused priced action on the Unsys simulated policy.
+ * Each call skips nodes already placed as Next notes and walks cheapest
+ * unused outgoing, then siblings, then deeper.
  */
 export function sessionHarnessExploreLine(input: {
   model: SessionBranchModel | null | undefined;
-  suggestion?: string | null;
-}): { text: string; sameAsHere: boolean } {
+  placedIds?: readonly string[] | null;
+  placedTexts?: readonly string[] | null;
+}): { text: string; sameAsHere: boolean; toId: string | null } {
   const model = input.model;
-  if (!model) return { text: "", sameAsHere: false };
+  if (!model) return { text: "", sameAsHere: false, toId: null };
   const hereId = model.focusId;
-  const cheapest = sessionBranchCheapestTransition(model, hereId);
-  if (!cheapest) return { text: "", sameAsHere: false };
-  if (cheapest.toId === hereId) return { text: "", sameAsHere: true };
   const here = sessionHarnessHereLine(model);
-  const suggestion = cleanLine(input.suggestion);
-  if (suggestion && !policySuggestionIsRawLabel(suggestion)) {
-    if (here && suggestion === here) return { text: "", sameAsHere: true };
-    return { text: suggestion, sameAsHere: false };
+  const placed = new Set(
+    (input.placedIds ?? []).map((id) => String(id || "").trim()).filter(Boolean),
+  );
+  const placedTexts = new Set(
+    (input.placedTexts ?? []).map((text) => cleanLine(text)).filter(Boolean),
+  );
+  if (here) placedTexts.add(here);
+  for (const branch of model.branches) {
+    const line = sessionHarnessNodeLine(model, branch.id);
+    if (line && (placedTexts.has(line) || (here && line === here))) placed.add(branch.id);
   }
-  const to = sessionBranchById(model, cheapest.toId);
-  const text =
-    sessionPolicyLocalSuggestion({
-      nodeTitle: cheapest.toTitle,
-      observation: to?.observation ?? "",
-      intent: to?.question ?? "",
-    }) ?? "";
-  if (here && text && text === here) return { text: "", sameAsHere: true };
-  return { text, sameAsHere: false };
+  const step = sessionBranchNextPolicyStep(model, [...placed]);
+  if (!step) {
+    const cheapest = sessionBranchCheapestTransition(model, hereId);
+    return { text: "", sameAsHere: Boolean(cheapest && cheapest.toId === hereId), toId: null };
+  }
+  const text = sessionHarnessNodeLine(model, step.toId);
+  if (!text) return { text: "", sameAsHere: false, toId: null };
+  return { text, sameAsHere: false, toId: step.toId };
 }

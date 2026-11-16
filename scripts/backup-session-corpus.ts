@@ -1,6 +1,6 @@
 /**
  * Dump the raw session corpus: sessions, proof of work pointers, embedding
- * metadata, and optional xAI file bytes. Embeddings are listed, not treated
+ * metadata, and optional blob bytes. Embeddings are listed, not treated
  * as the source of truth.
  *
  * Usage:
@@ -10,7 +10,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { connectTarget } from "./db-connection.mjs";
-import { getFileContentResponse, isXaiFileId } from "../lib/xai-files";
+import { getBlobStore } from "../lib/ai/blob-store";
+import { isStoredFileId } from "../lib/ai/stored-file-id";
 import {
   buildSessionCorpusRecord,
   type CorpusProofOfWork,
@@ -177,18 +178,18 @@ async function main() {
       fs.mkdirSync(filesDir, { recursive: true });
       let downloaded = 0;
       let skipped = 0;
+      const store = getBlobStore();
       for (const fileId of allFileIds) {
-        if (!isXaiFileId(fileId)) {
+        if (!isStoredFileId(fileId)) {
           skipped += 1;
           continue;
         }
-        const res = await getFileContentResponse(fileId);
-        if (!res.ok) {
+        const file = await store.get(fileId);
+        if (file.status !== 200 || !file.bytes.length) {
           skipped += 1;
           continue;
         }
-        const buf = Buffer.from(await res.arrayBuffer());
-        fs.writeFileSync(path.join(filesDir, fileId), buf);
+        fs.writeFileSync(path.join(filesDir, fileId), Buffer.from(file.bytes));
         downloaded += 1;
       }
       fs.writeFileSync(

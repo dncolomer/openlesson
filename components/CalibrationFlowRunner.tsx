@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { PracticeVoiceChallenge } from "@/components/PracticeVoiceChallenge";
+import { ProductFlowIdentityForm } from "@/components/product-flow/product-flow-identity-form";
+import { ProductFlowSetupScreen } from "@/components/session-view/product-flow-setup-screen";
+import { useAestheticPackages } from "@/components/session-view/use-aesthetic-packages";
 import { TapLiveClock } from "@/components/tap-score/tap-live-clock";
 import { flowCountdownMinutes } from "@/lib/flow-countdown";
 import { CalibrateSoundingSurface } from "@/components/calibrate/calibrate-sounding-surface";
@@ -13,8 +16,7 @@ import { TapSessionSignals } from "@/components/session-view/session-signals";
 import { TapThoughtButton } from "@/components/tap-score/tap-thought-button";
 import { FLOW_END_KICKERS } from "@/lib/session-stage-progress";
 import { beginCalibrationSession } from "@/lib/calibration-flow";
-import { fetchAestheticPackages } from "@/lib/aesthetics";
-import { pickTapBackgroundImage } from "@/lib/tap-score-client-helpers";
+import { coerceSpokenLocale, type SpokenLocale } from "@/lib/tutoring-languages";
 import { IleStartLoading } from "@/components/session-view/learn-start-loading";
 import { SessionPageLoading } from "@/components/session-view/session-page-loading";
 import {
@@ -63,6 +65,15 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
   const [proofBusy, setProofBusy] = useState(false);
   const [claiming, setClaiming] = useState(false);
   const [voiceReady, setVoiceReady] = useState(false);
+  const [setupConfirmed, setSetupConfirmed] = useState(false);
+  const [conversationLanguage, setConversationLanguage] = useState<SpokenLocale>("en");
+  const {
+    aestheticPackages,
+    aestheticsLoading,
+    selectedAestheticId,
+    setSelectedAestheticId,
+    selectedAesthetic,
+  } = useAestheticPackages();
   const [fieldHold, setFieldHold] = useState<null | "preparing" | "failed">(null);
   const [fieldError, setFieldError] = useState("");
   const pendingRef = useRef<{
@@ -77,23 +88,14 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const [timeUp, setTimeUp] = useState(false);
   const storedRef = useRef(false);
-  const [bgImage, setBgImage] = useState("");
+  const bgImage = selectedAesthetic?.previewImage ?? "";
 
   useEffect(() => {
     soundingRef.current = sounding;
   }, [sounding]);
 
   useEffect(() => {
-    let cancelled = false;
-    fetchAestheticPackages()
-      .then((packages) => {
-        if (!cancelled) setBgImage(pickTapBackgroundImage(packages));
-      })
-      .catch(() => {
-        if (!cancelled) setBgImage(pickTapBackgroundImage([]));
-      });
     return () => {
-      cancelled = true;
       releaseSessionLocalMemory();
     };
   }, []);
@@ -302,37 +304,38 @@ export function CalibrationFlowRunner({ token }: { token: string }) {
 
   if (!voiceReady) {
     return (
-      <CalibrationViewport>
-        <form
-          onSubmit={(event) => void claim(event)}
-          className="mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col justify-center gap-4 px-6"
-          data-calibration-identity
-        >
-          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-neutral-400">
-            Calibration flow
-          </p>
-          <h1 className="font-serif text-2xl">Identify yourself</h1>
-          <p className="text-sm text-neutral-400">
-            Enter a unique string for this flow. A duplicate does not start.
-          </p>
-          <input
-            value={identity}
-            onChange={(event) => setIdentity(event.target.value)}
-            data-calibration-identity-input
-            className="border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm"
-            placeholder="Unique identity"
-            autoComplete="off"
-          />
-          {error ? <p className="text-sm text-red-300">{error}</p> : null}
-          <button
-            type="submit"
-            disabled={claiming}
-            className="bg-white px-3 py-2 text-sm font-medium text-black disabled:opacity-40"
-          >
-            Continue
-          </button>
-        </form>
-      </CalibrationViewport>
+      <ProductFlowIdentityForm
+        kind="calibration"
+        identity={identity}
+        onIdentityChange={setIdentity}
+        error={error}
+        busy={claiming}
+        onSubmit={(event) => void claim(event)}
+      />
+    );
+  }
+
+  if (!setupConfirmed) {
+    return (
+      <ProductFlowSetupScreen
+        t={t}
+        title={FLOW_END_KICKERS.calibrate}
+        tutoringLanguage={conversationLanguage}
+        onTutoringLanguageChange={(locale) =>
+          setConversationLanguage(coerceSpokenLocale(locale))
+        }
+        aestheticPackages={aestheticPackages}
+        selectedAesthetic={selectedAesthetic}
+        selectedAestheticId={selectedAestheticId}
+        onSelectAesthetic={setSelectedAestheticId}
+        aestheticsLoading={aestheticsLoading}
+        isPreparing={false}
+        planError={error || null}
+        onConfirm={() => setSetupConfirmed(true)}
+        onBackToWorkspace={() => {
+          window.location.href = "/dashboard";
+        }}
+      />
     );
   }
 

@@ -6,6 +6,7 @@ import { FLOW_COUNTDOWN_MINUTES, flowCountdownMinutes } from "@/lib/flow-countdo
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import {
   DASHBOARD_FLOWS_PATH,
+  flowAuthorShowsCountdown,
   productFlowDashboardPath,
   type ProductFlowKind,
 } from "@/lib/product-flow";
@@ -130,7 +131,9 @@ export function ProductFlowPage({
   const description =
     kind === "calibration"
       ? "The problem is fixed. Name, files, and countdown can still change."
-      : "The problem is fixed. Name, files, and Exact problem on canvas can still change.";
+      : kind === "verification"
+        ? "The problem is fixed. Name, files, countdown, and Exact problem on canvas can still change."
+        : "The problem is fixed. Name, files, and Exact problem on canvas can still change.";
 
   return (
     <ProductSurface
@@ -188,11 +191,13 @@ export function ProductFlowPage({
               onExactProblemOnCanvasChange={setExactProblemOnCanvas}
               problemReadOnly
             />
-            {kind === "calibration" ? (
+            {flowAuthorShowsCountdown(kind) ? (
               <FlowField label="Countdown">
                 <select
                   value={minutes}
-                  data-calibration-flow-minutes
+                  data-flow-countdown=""
+                  data-calibration-flow-minutes={kind === "calibration" ? "" : undefined}
+                  data-verification-flow-minutes={kind === "verification" ? "" : undefined}
                   onChange={(event) => setMinutes(flowCountdownMinutes(event.target.value))}
                   className={FLOW_FORM_INPUT}
                 >

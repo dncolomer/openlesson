@@ -1,4 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { getChatConfig } from "@/lib/ai/chat";
+import { isXaiBlobStore } from "@/lib/ai/blob-store";
 import { sealString, openSealedString } from "@/lib/crypto/seal";
 import {
   addFileToCollection,
@@ -8,6 +10,7 @@ import {
   isXaiManagementConfigured,
   orgXaiResourceName,
 } from "@/lib/xai-management";
+import { isXaiFileId } from "@/lib/xai-files";
 
 export type OrgXaiRow = {
   id: string;
@@ -33,9 +36,9 @@ export async function ensureOrgXaiApiKey(
   admin: SupabaseClient,
   organizationId: string
 ): Promise<{ apiKey: string; apiKeyId: string | null; fromOrg: boolean }> {
-  const platformKey = process.env.XAI_API_KEY;
+  const platformKey = getChatConfig().apiKey;
   if (!platformKey) {
-    throw new Error("XAI_API_KEY not configured");
+    throw new Error("AI_API_KEY / XAI_API_KEY not configured");
   }
 
   const { data: org, error } = await admin
@@ -63,7 +66,7 @@ export async function ensureOrgXaiApiKey(
     }
   }
 
-  if (!isXaiManagementConfigured()) {
+  if (!isXaiBlobStore() || !isXaiManagementConfigured()) {
     return { apiKey: platformKey, apiKeyId: null, fromOrg: false };
   }
 
@@ -108,9 +111,9 @@ export async function getXaiApiKeyForOrganization(
   admin: SupabaseClient,
   organizationId: string | null | undefined
 ): Promise<string> {
-  const platformKey = process.env.XAI_API_KEY;
+  const platformKey = getChatConfig().apiKey;
   if (!platformKey) {
-    throw new Error("XAI_API_KEY not configured");
+    throw new Error("AI_API_KEY / XAI_API_KEY not configured");
   }
   if (!organizationId) return platformKey;
 
@@ -140,6 +143,9 @@ export async function ensureOrgXaiCollection(
   admin: SupabaseClient,
   organizationId: string
 ): Promise<{ collectionId: string | null; ready: boolean }> {
+  if (!isXaiBlobStore() || !isXaiManagementConfigured()) {
+    return { collectionId: null, ready: false };
+  }
   const { data: org, error } = await admin
     .from("organizations")
     .select(ORG_XAI_SELECT)
@@ -200,6 +206,7 @@ export async function attachFileToOrgCollection(
   fileId: string,
   fields?: Record<string, string>
 ): Promise<string | null> {
+  if (!isXaiBlobStore() || !isXaiFileId(fileId)) return null;
   try {
     const { collectionId, ready } = await ensureOrgXaiCollection(admin, organizationId);
     if (!ready || !collectionId) return null;

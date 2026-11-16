@@ -36,7 +36,15 @@ import {
   normalizePredictedInterruption,
   type ProofOfWorkApiInterruption,
 } from "./predictive-interruption";
-import { callXaiResponsesWithFiles } from "@/lib/xai-client";
+import {
+  getDocumentContext,
+  mergeDocumentContextPrompt,
+} from "@/lib/ai/document-context";
+import {
+  callXaiResponsesWithFiles,
+  callXaiWithSchema,
+  userMessage,
+} from "@/lib/xai-client";
 import { FLOW_API_BASE, powWorkspaceResource, workspaceResource } from "@/lib/api/agent-api-paths";
 
 export const EVIDENCE_SPEC_VERSION = "1.3";
@@ -348,23 +356,39 @@ export async function generateWorkspaceProofOfWorkSpec(
   });
 
   const worldModelAppetiteGuidance: string | null = null;
-
-  const schemaResult = await callXaiResponsesWithFiles<ProofOfWorkEvalSchemaResult>(
-    buildProofOfWorkSchemaPrompt(workspaceTitle),
-    context.fileIds,
-    {
-      instructions: buildProofOfWorkSchemaInstructions(
-        request,
-        blockId,
-        context.payload,
-        worldModelAppetiteGuidance,
-      ),
-      temperature: 0.25,
-      maxOutputTokens: 6144,
-      fetchTimeout: 120000,
-      jsonSchema: EVIDENCE_EVAL_SCHEMA_OUTPUT,
-    }
+  const snapshot = JSON.stringify(context.payload).slice(0, 24_000);
+  const docs = await getDocumentContext().forTurn(context.fileIds);
+  const prompt = mergeDocumentContextPrompt(
+    `${buildProofOfWorkSchemaPrompt(workspaceTitle)}\n\nWORKSPACE JSON SNAPSHOT:\n${snapshot}`,
+    docs.extraPrompt,
   );
+  const instructions = buildProofOfWorkSchemaInstructions(
+    request,
+    blockId,
+    context.payload,
+    worldModelAppetiteGuidance,
+  );
+  const schemaResult = docs.responsesFiles?.length
+    ? await callXaiResponsesWithFiles<ProofOfWorkEvalSchemaResult>(
+        prompt,
+        docs.responsesFiles,
+        {
+          instructions,
+          temperature: 0.25,
+          maxOutputTokens: 6144,
+          fetchTimeout: 120000,
+          jsonSchema: EVIDENCE_EVAL_SCHEMA_OUTPUT,
+        },
+      )
+    : await callXaiWithSchema<ProofOfWorkEvalSchemaResult>(
+        [userMessage(`${instructions}\n\n${prompt}`)],
+        EVIDENCE_EVAL_SCHEMA_OUTPUT,
+        {
+          temperature: 0.25,
+          maxTokens: 6144,
+          fetchTimeout: 120000,
+        },
+      );
 
   if (!schemaResult.success || !schemaResult.data) {
     throw new Error(schemaResult.error || "Failed to generate proof-of-work specification");

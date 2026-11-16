@@ -77,7 +77,7 @@ export function composeSessionPlanUpdatePrompt(
     .replace(
       "{transcript}",
       vars.transcript ||
-        "See the attached transcript chunks (search them via attachment_search).",
+        "See the transcript chunks in the session context.",
     )
     .replace(
       "{previous_probes}",

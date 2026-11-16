@@ -123,7 +123,7 @@ describe("session corpus re-embed", () => {
     expect(src).toContain("proof_of_work");
     expect(src).toContain("xai_file_id");
     expect(src).toContain("--download-files");
-    expect(src).toContain("getFileContentResponse");
+    expect(src).toContain("getBlobStore");
     const pkg = readFileSync(join(__dirname, "../../package.json"), "utf8");
     expect(pkg).toContain("corpus:backup");
     expect(pkg).toContain("corpus:reembed");

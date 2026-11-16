@@ -228,6 +228,51 @@ export function sessionBranchOutgoing(
   return focus.edges.filter((edge) => ids.has(edge.toId));
 }
 
+/** Outgoing priced actions, cheapest first. Ties break on toId. */
+export function sessionBranchRankedOutgoing(
+  model: SessionBranchModel,
+  branchId: string | null | undefined,
+): SessionBranchEdge[] {
+  return sessionBranchOutgoing(model, branchId)
+    .slice()
+    .sort((a, b) => a.price - b.price || a.toId.localeCompare(b.toId));
+}
+
+/**
+ * Next unused step on the simulated policy.
+ * At the occupied node, walk cheapest unused outgoing, then the rest of that
+ * node's priced actions, then the same walk under those children.
+ */
+export function sessionBranchNextPolicyStep(
+  model: SessionBranchModel | null | undefined,
+  placedIds?: readonly string[] | null,
+): { fromId: string; toId: string; price: number } | null {
+  if (!model) return null;
+  const start = String(model.focusId || "").trim();
+  if (!start) return null;
+  const placed = new Set(
+    (placedIds ?? []).map((id) => String(id || "").trim()).filter(Boolean),
+  );
+  placed.add(start);
+  const queue = [start];
+  const enqueued = new Set<string>([start]);
+  while (queue.length) {
+    const fromId = queue.shift()!;
+    const ranked = sessionBranchRankedOutgoing(model, fromId);
+    for (const edge of ranked) {
+      if (placed.has(edge.toId)) continue;
+      if (!sessionBranchById(model, edge.toId)) continue;
+      return { fromId, toId: edge.toId, price: edge.price };
+    }
+    for (const edge of ranked) {
+      if (enqueued.has(edge.toId)) continue;
+      enqueued.add(edge.toId);
+      queue.push(edge.toId);
+    }
+  }
+  return null;
+}
+
 export function sessionBranchEdgeBetween(
   model: SessionBranchModel,
   fromId: string | null | undefined,

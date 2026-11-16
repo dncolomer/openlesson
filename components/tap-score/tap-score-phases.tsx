@@ -24,6 +24,8 @@ import {
 } from "@/lib/practice-voice-challenge";
 import { TapStartingTopicCards } from "@/components/TapStartingTopicCards";
 import { TapBriefingConfig } from "@/components/TapBriefingConfig";
+import { ProductFlowSetupScreen } from "@/components/session-view/product-flow-setup-screen";
+import type { AestheticPackage } from "@/lib/aesthetics";
 import { SessionFinishedScreen } from "@/components/session-view/session-finished-screen";
 import { SessionPolicyScoreResult } from "@/components/session-view/session-policy-score-result";
 import { IleStartLoading } from "@/components/session-view/learn-start-loading";
@@ -38,9 +40,7 @@ import { TapAestheticSection } from "@/components/tap-score/tap-aesthetic-sectio
 import { SessionTopicChapter } from "@/components/session-view/learn-work-dock-bar";
 import { TapSessionSignals } from "@/components/session-view/session-signals";
 import { SessionWorkSurface } from "@/components/session-view/session-work-surface";
-import { SESSION_BRIEFING_INTRO } from "@/lib/session-instructions";
 import { SessionStartBackButton } from "@/components/session-view/session-start-back-button";
-import { SessionStartShell } from "@/components/session-view/session-start-shell";
 import { FLOW_END_KICKERS } from "@/lib/session-stage-progress";
 import type { TapProductKind } from "@/lib/tap-session-runtime";
 import { coerceSpokenLocale, type SpokenLocale } from "@/lib/tutoring-languages";
@@ -96,6 +96,11 @@ export function TapScorePhases(props: {
   canvasProblem?: string | null;
   policyRef?: MutableRefObject<SessionPolicySnapshot>;
   durationLocked: boolean;
+  aestheticPackages: AestheticPackage[];
+  aestheticsLoading: boolean;
+  selectedAestheticId: string | null;
+  selectedAesthetic: AestheticPackage | undefined;
+  onSelectAesthetic: (id: string) => void;
   isStartingSession: boolean;
   startingTopics: TapStartingTopic[];
   startingTopicId: string | null;
@@ -186,6 +191,11 @@ export function TapScorePhases(props: {
     exactProblemOnCanvas = false,
     canvasProblem = null,
     durationLocked,
+    aestheticPackages,
+    aestheticsLoading,
+    selectedAestheticId,
+    selectedAesthetic,
+    onSelectAesthetic,
     isStartingSession,
     startingTopics,
     startingTopicId,
@@ -511,56 +521,28 @@ export function TapScorePhases(props: {
 
         {phase === "briefing" && !isStartingSession && briefingStep === "pick" && (
           kind === "verify" ? (
-          <SessionStartShell data-tap-briefing-layout="sections" data-tap-briefing-step="pick">
-            <div className="grid h-full min-h-0 w-full flex-1 lg:grid-cols-2">
-                  <div className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-[#0b0b0b] lg:border-r lg:border-neutral-800/60">
-                    <TapBriefingConfig
-                      workspaceTitle={workspaceTitle}
-                      minutes={minutes}
-                      onMinutesChange={setMinutes}
-                      conversationLanguage={conversationLanguage}
-                      onConversationLanguageChange={(locale) =>
-                        setConversationLanguage(coerceSpokenLocale(locale))
-                      }
-                      showDurationPicker={!privateToken && !durationLocked}
-                      disabled={isStartingSession}
-                      title={FLOW_END_KICKERS.verify}
-                      intro={SESSION_BRIEFING_INTRO.verification}
-                      wideLanguage
-                      layout="stack"
-                    />
-                    <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-8 sm:px-8 lg:px-10">
-                      <div className="mx-auto w-full max-w-xl">
-                      <TapStartingTopicCards
-                        topics={startingTopics}
-                        isStarting={isStartingSession}
-                        startingTopicId={startingTopicId}
-                        onStartTopic={chooseTopic}
-                        loadingLabel={t("tap.briefing.topicsLoading")}
-                        startLabel={t("onboardingGuide.tap.step3.start")}
-                        startingLabel={t("onboardingGuide.tap.step3.starting")}
-                      />
-                      {topicsError ? (
-                        <p className="mt-2 text-center text-xs text-neutral-300/90">{topicsError}</p>
-                      ) : null}
-                      </div>
-                    </div>
-                    {onBackToWorkspace ? (
-                      <div className="mt-auto shrink-0 border-t border-neutral-800 p-3">
-                        <SessionStartBackButton onClick={onBackToWorkspace} className="mb-0">
-                          {t("session.backToDashboard")}
-                        </SessionStartBackButton>
-                      </div>
-                    ) : null}
-                  </div>
-                  <TapAestheticSection bgImage={bgImage} kind="shortcuts" />
-              {error ? (
-                <p className="absolute inset-x-0 bottom-0 z-20 px-6 pb-5 text-center text-sm text-red-300 lg:col-span-2">
-                  {error}
-                </p>
-              ) : null}
-            </div>
-          </SessionStartShell>
+          <div data-tap-briefing-layout="sections" data-tap-briefing-step="pick" className="flex min-h-0 flex-1 flex-col">
+            <ProductFlowSetupScreen
+              t={t}
+              title={FLOW_END_KICKERS.verify}
+              tutoringLanguage={conversationLanguage}
+              onTutoringLanguageChange={(locale) =>
+                setConversationLanguage(coerceSpokenLocale(locale))
+              }
+              aestheticPackages={aestheticPackages}
+              selectedAesthetic={selectedAesthetic}
+              selectedAestheticId={selectedAestheticId}
+              onSelectAesthetic={onSelectAesthetic}
+              aestheticsLoading={aestheticsLoading}
+              isPreparing={isStartingSession}
+              planError={error || topicsError || null}
+              onConfirm={() => {
+                const topic = startingTopics[0];
+                if (topic) chooseTopic(topic);
+              }}
+              onBackToWorkspace={onBackToWorkspace}
+            />
+          </div>
           ) : (
           <section className="relative flex min-h-0 flex-1" data-tap-briefing-layout="sections" data-tap-briefing-step="pick">
             <div className="grid h-full min-h-0 w-full flex-1 lg:grid-cols-2">

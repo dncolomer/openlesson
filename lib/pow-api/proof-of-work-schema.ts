@@ -107,7 +107,7 @@ export interface ProofOfWorkEvalSchemaResult {
 export const EVIDENCE_EVAL_SCHEMA_OUTPUT = {
   name: "evidence_eval_input_schema",
   schema: {
-    type: "object",
+    type: "object" as const,
     properties: {
       schema: {
         type: "object",
@@ -306,7 +306,7 @@ export function parseProofOfWorkSchemaRequest(body: Record<string, unknown>): Pr
 
 function formatWorkspaceContextSummary(payload?: PerformanceContextPayload): string {
   if (!payload) {
-    return "Workspace context file attached separately (blocks, proof-of-work history, plan files, Think Aloud Protocol (TAP) sessions).";
+    return "Workspace context is in the user prompt JSON snapshot (blocks, proof-of-work history, plan files, Think Aloud Protocol (TAP) sessions).";
   }
 
   const blockLines = payload.blocks
@@ -317,7 +317,7 @@ function formatWorkspaceContextSummary(payload?: PerformanceContextPayload): str
     new Set(payload.proof_of_work.map((row) => row.tool_name).filter((name): name is string => !!name))
   );
 
-  return `Workspace context summary (use the attached JSON for full detail):
+  return `Workspace context summary (use the workspace JSON snapshot in the user prompt for full detail):
 - title: ${payload.workspace.title || "n/a"}
 - root_topic: ${payload.workspace.root_topic || "n/a"}
 - description: ${payload.workspace.description || "n/a"}
@@ -366,7 +366,7 @@ Uncertain Systems public agent surface is independent flow management (REST /api
 
 Document flow REST paths in contracts. The platform also attaches continuous_evaluation_mcp with list_flows, create_flow, get_flow, and update_flow after generation — your continuous_evaluation_summary must mention those surfaces.
 
-Use the full workspace context: attached JSON summary, block titles/descriptions, existing proof of work patterns, plan files, and Think Aloud Protocol (TAP) session signals when present. TAP and TAP Learning may inform scoring — but score report remediation (gaps, next_steps, suggestions) must stay product-independent: never recommend TAP sessions, block completion, TAP Learning, or other Uncertain Systems platform mechanics.
+Use the full workspace context: the workspace JSON snapshot in the user prompt, block titles/descriptions, existing proof of work patterns, plan files, and Think Aloud Protocol (TAP) session signals when present. TAP and TAP Learning may inform scoring — but score report remediation (gaps, next_steps, suggestions) must stay product-independent: never recommend TAP sessions, block completion, TAP Learning, or other Uncertain Systems platform mechanics.
 
 ${formatWorkspaceContextSummary(workspacePayload)}
 ${appetiteBlock}

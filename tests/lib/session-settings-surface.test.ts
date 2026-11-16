@@ -16,6 +16,7 @@ function read(rel: string): string {
 describe("shared TAP settings surface", () => {
   const briefing = read("components/TapBriefingConfig.tsx");
   const learn = read("components/session-view/session-welcome-modal.tsx");
+  const setup = read("components/session-view/product-flow-setup-screen.tsx");
   const prepare = read("components/scout-tap/scout-tap-phases.tsx");
   expect(existsSync(join(ROOT, "components/exercise-tap/exercise-tap-phases.tsx"))).toBe(false);
 
@@ -74,31 +75,27 @@ describe("shared TAP settings surface", () => {
   });
 
   it("Prepare, Drill, and Verify settings still use the same briefing card and aesthetic column", () => {
+    expect(setup).toContain("SessionWelcomeModal");
+    expect(setup).toContain("data-product-flow-setup");
     for (const src of [prepare, verify]) {
-      expect(src).toContain("<TapBriefingConfig");
-      expect(src).toContain("<TapAestheticSection");
-      expect(src).toContain('kind="shortcuts"');
-      expect(src).toContain("showDurationPicker=");
-      expect(src).toContain("onConversationLanguageChange");
+      expect(src).toContain("<ProductFlowSetupScreen");
       expect(src).not.toContain("data-ile-pregame-tabs");
     }
-    expect(prepare).toContain("wideLanguage");
     expect(prepare).toContain("data-calibrate-start");
-    expect(prepare).toContain("<TapAestheticSection bgImage={bgImage} kind=\"shortcuts\" />");
-    expect(prepare).toContain("SessionStartShell");
     expect(learn).toContain("SessionStartShell");
-    expect(verify).toContain("SessionStartShell");
-    expect(verify).toContain("wideLanguage");
-    expect(verify).toContain('layout="stack"');
+    expect(learn).toContain("wideLanguage");
+    expect(verify).toContain("FLOW_END_KICKERS.verify");
+    expect(read("components/CalibrationFlowRunner.tsx")).toContain("<ProductFlowSetupScreen");
+    expect(read("components/VerificationFlowRunner.tsx")).toContain("initialMinutes={durationMinutes}");
+    expect(read("components/VerificationFlowRunner.tsx")).toContain("lockDuration");
   });
 
   it("every first settings screen mounts Back to workspace", () => {
     const back = read("components/session-view/session-start-back-button.tsx");
     expect(back).toContain("data-session-back-to-workspace");
-    for (const src of [learn, prepare, verify]) {
-      expect(src).toContain("SessionStartBackButton");
-      expect(src).toContain('t("session.backToDashboard")');
-    }
+    expect(learn).toContain("SessionStartBackButton");
+    expect(learn).toContain('t("session.backToDashboard")');
+    expect(setup).toContain("onBackToWorkspace");
     expect(learn).toContain("data-ile-back-to-workspace");
     expect(prepare).toContain("onSettingsBackToWorkspace");
     expect(verify).toContain("onBackToWorkspace");

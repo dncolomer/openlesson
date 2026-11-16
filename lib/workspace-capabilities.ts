@@ -24,7 +24,6 @@ export type WorkspaceFeature =
   | "make_public"
   | "aycl"
   | "knowledge_regions"
-  | "data_studio"
   | "integrations"
   | "proof_of_work"
   | "knowledge_portal"
@@ -49,7 +48,6 @@ const VERIFICATION_FEATURES: readonly WorkspaceFeature[] = [
   "settings",
   "make_public",
   "knowledge_regions",
-  "data_studio",
   "integrations",
   "proof_of_work",
 ];
@@ -62,7 +60,6 @@ const CALIBRATION_FEATURES: readonly WorkspaceFeature[] = [
   "settings",
   "make_public",
   "knowledge_regions",
-  "data_studio",
   "integrations",
   "proof_of_work",
 ];
@@ -120,8 +117,6 @@ function featurePhrase(feature: WorkspaceFeature): string {
       return "AYCL";
     case "knowledge_regions":
       return "knowledge regions";
-    case "data_studio":
-      return "Data Studio";
     case "integrations":
       return "integrations";
     case "proof_of_work":

@@ -76,12 +76,10 @@ describe("learning Calibrate entry", () => {
 
     expect(phases).toContain("<CalibrateSoundingSurface");
     expect(phases).toContain("<SessionWorkSurface");
-    expect(phases).toContain("onClick={confirmStart}");
+    expect(phases).toContain("onConfirm={confirmStart}");
     expect(phases).toContain("data-calibrate-start");
-    expect(phases).toContain("SessionStartBackButton");
     expect(phases).toContain("onSettingsBackToWorkspace");
-    expect(phases).toContain("<TapBriefingConfig");
-    expect(phases).toContain("SessionStartShell");
+    expect(phases).toContain("<ProductFlowSetupScreen");
     expect(phases).not.toContain("kicker={t(\"scout.briefing.kicker\")}");
     expect(phases).toContain("PracticeVoiceChallenge");
     expect(phases).toContain('variant="prepare"');

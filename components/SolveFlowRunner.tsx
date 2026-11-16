@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { SessionView } from "@/components/SessionView";
+import { ProductFlowIdentityForm } from "@/components/product-flow/product-flow-identity-form";
 import { solvePublicApiPath } from "@/lib/session-pow-api-paths";
 
 type Phase = "identity" | "work";
@@ -55,36 +56,13 @@ export function SolveFlowRunner({ token }: { token: string }) {
   }
 
   return (
-    <main className="min-h-screen bg-[#0b0b0b] text-white" data-solve-public-entry>
-      <form
-        onSubmit={(event) => void claim(event)}
-        className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-4 px-6"
-        data-solve-identity
-      >
-        <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-neutral-400">
-          Solve flow
-        </p>
-        <h1 className="font-serif text-2xl">Identify yourself</h1>
-        <p className="text-sm text-neutral-400">
-          Enter a unique string for this flow. A duplicate does not start.
-        </p>
-        <input
-          value={identity}
-          onChange={(event) => setIdentity(event.target.value)}
-          data-solve-identity-input
-          className="border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm"
-          placeholder="Unique identity"
-          autoComplete="off"
-        />
-        {error ? <p className="text-sm text-red-300">{error}</p> : null}
-        <button
-          type="submit"
-          disabled={busy}
-          className="bg-white px-3 py-2 text-sm font-medium text-black disabled:opacity-40"
-        >
-          Continue
-        </button>
-      </form>
-    </main>
+    <ProductFlowIdentityForm
+      kind="solve"
+      identity={identity}
+      onIdentityChange={setIdentity}
+      error={error}
+      busy={busy}
+      onSubmit={(event) => void claim(event)}
+    />
   );
 }

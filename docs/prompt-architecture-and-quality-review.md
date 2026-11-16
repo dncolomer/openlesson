@@ -47,8 +47,8 @@ composePrompt({ ontology, surface, task, contextNotes? })
 | Loader | `getUserPrompts()` in `lib/user-prompts.ts` (server-only) |
 | Resolver | `getPrompt(key, overrides)` → override if set, else default |
 
-**Active registry keys (9):**  
-`gap_detection`, `opening_probe`, `probe_generation`, `report_generation`, `follow_up_sessions`, `generate_objectives`, `session_plan_create`, `session_plan_update`
+**Active registry keys (7):**  
+`gap_detection`, `opening_probe`, `probe_generation`, `generate_objectives`, `session_plan_create`, `session_plan_update`
 
 **Important architectural split:** registry prompts are **string templates** with `{placeholders}`. They **do not** go through `composePrompt` / L0 ontology. TAP Learning practice-coach language is duplicated into those strings (and `ILE_CONTEXT` re-exports `ILE_CONTEXT_BODY` from the kernel for shared blurb use). Kernel builders (TAP facilitator, Helios chat system, LWM score instructions) **do** use `composePrompt`.
 
@@ -231,7 +231,7 @@ TAP complete scoring also appends buildTraceScoringInstructions (System1/2 count
 ### 3.2 Gaps relative to durable PoW practice
 
 1. **Registry path lacks L0 ontology and can drift from kernel**  
-   Probes and plans are long free-standing strings. Product rules must be hand-duplicated. Today they are aligned, but `report_generation` still frames “tutoring session” and can recommend TAP Learning tools in “Next Time,” which conflicts philosophically with LWM remediation guardrails (platform mechanics not as outputs — different surface, same brand risk).
+   Probes and plans are long free-standing strings. Product rules must be hand-duplicated. Today they are aligned with kernel practice-coach language, but the dual source remains a drift risk.
 
 2. **`gap_detection` optimizes for speech/reasoning gaps, not artifact progress**  
    Gap scoring (0–1) listens for hesitation, circular thinking, etc. That is TAP-adjacent. For TAP Learning, a learner may be productively silent while coding on a shared screen; pure audio gap detection can over-probe or under-score progress. Session update partly compensates with activity context, but the dedicated gap prompt does not mention tools/artifacts.
@@ -258,7 +258,6 @@ TAP complete scoring also appends buildTraceScoringInstructions (System1/2 count
 | P0 | Add success criteria to probe/task GOOD patterns (“Sketch X on Canvas **and label A/B**”) | `opening_probe`, `probe_generation`, `ILE_SURFACE` tactics |
 | P1 | Extend `gap_detection` with tool/artifact progress signals (or merge into session_plan_update-only gap logic) | `DEFAULT_PROMPTS.gap_detection` |
 | P1 | Per-step expected PoW modality in session_plan_create JSON | `session_plan_create` schema |
-| P2 | Route report_generation remediation language through same platform-ban spirit as LWM (domain next steps, tools OK as practice, not product sales) | `report_generation` |
 | P2 | Consider slim composePrompt wrapper for registry TAP Learning prompts (compact ontology + ILE_SURFACE + task body) to stop dual-source drift | Future architecture |
 
 ---

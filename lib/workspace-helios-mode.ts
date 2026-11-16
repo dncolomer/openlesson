@@ -1,6 +1,6 @@
 /**
- * Learning Map right-column authoring mode: Helios Chat vs Manual drawers.
- * Play-only / no-authoring shells never gain Helios map-building.
+ * Learning Map right-column authoring surface.
+ * Helios Chat is retired; authoring and play-only shells use Manual drawers.
  */
 
 export type WorkspaceHeliosColumnMode = "helios" | "manual";
@@ -8,7 +8,7 @@ export type WorkspaceHeliosColumnMode = "helios" | "manual";
 export const HELIOS_MAP_MODE_LABEL = "Helios";
 export const MANUAL_MAP_MODE_LABEL = "Manual Mode";
 export const DEFAULT_WORKSPACE_HELIOS_COLUMN_MODE: WorkspaceHeliosColumnMode =
-  "helios";
+  "manual";
 
 export function isWorkspaceHeliosColumnMode(
   value: unknown,
@@ -39,30 +39,18 @@ export type WorkspaceHeliosColumnSurface = {
 };
 
 /**
- * Right-column Helios vs Manual surface.
- * Authoring default is Helios. Play-only / no-authoring shells stay
- * on Manual drawers and never mount Helios Chat.
+ * Right-column surface. Helios Chat is unmounted; Manual drawers always show.
+ * `mode` is accepted for stored values and ignored for chrome.
  */
-export function resolveWorkspaceHeliosColumnSurface(input: {
+export function resolveWorkspaceHeliosColumnSurface(_input: {
   authoring: boolean;
   playView?: boolean;
   mode?: unknown;
 }): WorkspaceHeliosColumnSurface {
-  const authoring = Boolean(input.authoring) && !input.playView;
-  if (!authoring) {
-    return {
-      mode: "manual",
-      showHeliosChat: false,
-      showManualDrawers: true,
-      showModeToggle: false,
-    };
-  }
-  const mode = normalizeWorkspaceHeliosColumnMode(input.mode);
-  const helios = mode === "helios";
   return {
-    mode,
-    showHeliosChat: helios,
-    showManualDrawers: !helios,
-    showModeToggle: true,
+    mode: "manual",
+    showHeliosChat: false,
+    showManualDrawers: true,
+    showModeToggle: false,
   };
 }

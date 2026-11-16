@@ -78,13 +78,11 @@ describe("live surfaces use the org-scoped Files path", () => {
       "app/api/session-files/upload/route.ts",
       "app/api/session-files/download/route.ts",
       "app/api/session-transcripts/upload/route.ts",
-      "app/api/session/performance-chat/route.ts",
       "app/api/workspace/generate/route.ts",
       "app/api/workspace/map-block-files/route.ts",
       "app/api/dashboard/flows/files/route.ts",
       "lib/pow-api/create-agent-workspace.ts",
       "lib/pow-api/upload-workspace-proof-of-work.ts",
-      "lib/pow-api/performance-context.ts",
     ];
     for (const rel of files) {
       const src = read(rel);

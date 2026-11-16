@@ -4,8 +4,8 @@
  * Unsys models, Context, and Settings for designers; Workspace for play-only
  * viewers.
  * Knowledge-region and calibration kinds have no WorkspaceView sections —
- * Flows live on the dashboard. Data Studio lives on dashboard chrome for
- * Verification, Calibration, and Solve. Learning workspaces do not mount it.
+ * Flows live on the dashboard. Knowledge region details live on dashboard
+ * chrome for Verification, Calibration, and Solve.
  */
 
 import { isNoMapWorkspace } from "@/lib/workspace-kind";
@@ -21,7 +21,6 @@ export type WorkspaceSectionKey =
   | "verification_flows"
   | "calibration_flows"
   | "knowledge"
-  | "data_studio"
   | "insights"
   | "kpis"
   | "settings";
@@ -40,7 +39,6 @@ export type WorkspaceMainSurface =
   | "verification_flows"
   | "calibration_flows"
   | "knowledge"
-  | "data_studio"
   | "insights"
   | "kpis"
   | "settings";
@@ -56,7 +54,6 @@ export const WORKSPACE_SECTION_KEYS: readonly WorkspaceSectionKey[] = [
   "context",
   "simulation",
   "knowledge",
-  "data_studio",
   "insights",
   "kpis",
   "settings",
@@ -87,8 +84,6 @@ export type WorkspaceSectionLayout = {
   mountsVerificationFlowsPanel?: boolean;
   /** Calibration Flows tab — only on a Calibration Workspace. */
   mountsCalibrationFlowsPanel?: boolean;
-  /** Visual Data Studio — embeddings projection + inspect. */
-  mountsDataStudioPanel?: boolean;
   /** Always empty — local tab bar removed from Workspace section. */
   localTabs: readonly WorkspaceLocalTabKey[];
   mountsPerformancePanel: boolean;
@@ -262,24 +257,6 @@ export function resolveWorkspaceSectionLayout(
         mountsIntegrationPanel: false,
         mountsInsightsPanel: false,
         mountsKpisPanel: false,
-      };
-    case "data_studio":
-      return {
-        section: "data_studio",
-        mainSurface: "data_studio",
-        showBlockMapChrome: false,
-        showSessionsColumn: false,
-        mountsContextPanel: false,
-        mountsSimulationPanel: false,
-        mountsDagsPanel: false,
-        mountsMapTypesPanel: false,
-        mountsGoalsPanel: false,
-        localTabs: [],
-        mountsPerformancePanel: false,
-        mountsIntegrationPanel: false,
-        mountsInsightsPanel: false,
-        mountsKpisPanel: false,
-        mountsDataStudioPanel: true,
       };
     case "insights":
       return {

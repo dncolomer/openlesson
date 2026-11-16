@@ -10,10 +10,14 @@ import {
   KNOWLEDGE_REGION_CLUSTER_COLORS,
   knowledgeRegionAnalysisPointLabel,
   knowledgeRegionGlyphForPoint,
+  knowledgeRegionIdentityOptions,
   knowledgeRegionPointKind,
   knowledgeRegionPolarGrid,
+  knowledgeRegionSampleIdForIdentity,
+  parseKnowledgeRegionFigureMode,
   presentKnowledgeRegionClusterDistances,
   presentKnowledgeRegionFigure,
+  presentKnowledgeRegionIdentityPath,
   toggleKnowledgeRegionCluster,
 } from "@/lib/knowledge-region-figure";
 
@@ -177,10 +181,111 @@ describe("knowledge region figure", () => {
     expect(focused.legend.find((item) => item.kind === "analysis")?.on).toBe(true);
     expect(focused.glyphs.find((point) => point.origin === "simulated")?.glyph).toBe("open-circle");
     expect(focused.glyphs.find((point) => point.origin === "human")?.glyph).toBe("diamond");
+    expect(focused.path).toBeNull();
     expect(KNOWLEDGE_REGION_CLUSTER_COLORS.every((color) => /#(\d|[a-f]){3,8}/i.test(color))).toBe(
       true,
     );
     expect(KNOWLEDGE_REGION_CLUSTER_COLORS).toHaveLength(3);
+  });
+
+  it("follows a named identity as a time-ordered path instead of cluster rays", () => {
+    expect(parseKnowledgeRegionFigureMode("path")).toBe("path");
+    expect(parseKnowledgeRegionFigureMode("individual")).toBe("individual");
+    expect(parseKnowledgeRegionFigureMode("nope")).toBe("individual");
+
+    const points = [
+      {
+        id: "sim-late",
+        x: 24,
+        y: 22,
+        origin: "simulated" as const,
+        clusterId: "c-exploit",
+        identity: "Simulated · Exploit-heavy",
+        createdAt: "2024-06-03T00:00:00Z",
+        vector: [1, 0],
+      },
+      {
+        id: "sim-early",
+        x: 18,
+        y: 20,
+        origin: "simulated" as const,
+        clusterId: "c-exploit",
+        identity: "Simulated · Exploit-heavy",
+        createdAt: "2024-06-01T00:00:00Z",
+        vector: [0.9, 0.1],
+      },
+      {
+        id: "sim-other",
+        x: 80,
+        y: 24,
+        origin: "simulated" as const,
+        clusterId: "c-balanced",
+        identity: "Simulated · Balanced",
+        createdAt: "2024-06-02T00:00:00Z",
+        vector: [0, 1],
+      },
+      {
+        id: "human-1",
+        x: 50,
+        y: 50,
+        origin: "human" as const,
+        clusterId: null,
+        identity: "ada",
+        createdAt: "2024-06-04T00:00:00Z",
+        vector: [0.4, 0.4],
+      },
+    ];
+    expect(knowledgeRegionIdentityOptions(points).map((row) => row.label)).toEqual([
+      "ada",
+      "Simulated · Balanced",
+      "Simulated · Exploit-heavy",
+    ]);
+    expect(
+      knowledgeRegionSampleIdForIdentity({
+        points,
+        identityKey: "Simulated · Exploit-heavy",
+      }),
+    ).toBe("sim-late");
+    expect(
+      knowledgeRegionSampleIdForIdentity({
+        points,
+        identityKey: "Simulated · Exploit-heavy",
+        currentId: "sim-early",
+      }),
+    ).toBe("sim-early");
+
+    const path = presentKnowledgeRegionIdentityPath({
+      points,
+      identityKey: "Simulated · Exploit-heavy",
+      clusters: [
+        { id: "c-exploit", strategyName: "Exploit-heavy" },
+        { id: "c-balanced", strategyName: "Balanced" },
+      ],
+    });
+    expect(path?.steps.map((step) => step.id)).toEqual(["sim-early", "sim-late"]);
+    expect(path?.steps.map((step) => step.clusterLabel)).toEqual([
+      "Exploit-heavy",
+      "Exploit-heavy",
+    ]);
+    expect(path?.segments).toHaveLength(1);
+    expect(path?.segments[0]?.label.length).toBeGreaterThan(0);
+
+    const followed = presentKnowledgeRegionFigure({
+      parent: { id: "parent", name: "Limits styles" },
+      clusters: [
+        { id: "c-exploit", strategyName: "Exploit-heavy" },
+        { id: "c-balanced", strategyName: "Balanced" },
+      ],
+      showReal: true,
+      selectedPointId: "sim-early",
+      mode: "path",
+      points,
+    });
+    expect(followed.rays).toEqual([]);
+    expect(followed.path?.label).toBe("Simulated · Exploit-heavy");
+    expect(followed.path?.steps.map((step) => step.id)).toEqual(["sim-early", "sim-late"]);
+    expect(followed.path?.segments).toHaveLength(1);
+    expect(followed.focus?.id).toBe("sim-early");
   });
 
   it("renders the polar map chrome on the details page", () => {
@@ -213,12 +318,21 @@ describe("knowledge region figure", () => {
     expect(page).toContain("<details");
     expect(page).toContain("KnowledgeRegionInspect");
     expect(page).toContain("presentKnowledgeRegionClusterDistances");
+    expect(page).toContain("data-knowledge-region-figure-mode");
+    expect(page).toContain("data-knowledge-region-figure-mode-option");
+    expect(page).toContain("data-knowledge-region-identity");
+    expect(page).toContain("data-knowledge-region-path");
+    expect(page).toContain("data-knowledge-region-path-segment");
+    expect(page).toContain("data-knowledge-region-on-path");
+    expect(page).toContain("createdAt");
     const inspect = readFileSync(
       join(ROOT, "components/product-flow/knowledge-region-inspect.tsx"),
       "utf8",
     );
     expect(inspect).toContain("data-knowledge-region-inspect-tab");
     expect(inspect).toContain("data-knowledge-region-distance-table");
+    expect(inspect).toContain("data-knowledge-region-path-table");
+    expect(inspect).toContain('data-knowledge-region-inspect-tab="path"');
     expect(inspect).toContain("DataStudioInspectFields");
     expect(inspect).not.toContain("scrollIntoView");
   });

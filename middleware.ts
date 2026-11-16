@@ -86,7 +86,7 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // Protected routes - require authentication
-  const protectedRoutes = ["/session", "/dashboard", "/results", "/play"];
+  const protectedRoutes = ["/session", "/dashboard", "/play"];
   const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route));
 
   // Public routes that should skip all auth logic (shareable session links)

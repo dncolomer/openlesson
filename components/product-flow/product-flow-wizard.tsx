@@ -8,10 +8,14 @@ import {
   acceptProductFlowPublish,
   DASHBOARD_FLOWS_PATH,
   emptyProductFlowDraft,
+  flowAuthorShowsCountdown,
   nextProductFlowWizardStep,
+  parseProductFlowKind,
   previousProductFlowWizardStep,
+  PRODUCT_FLOW_KINDS,
   PRODUCT_FLOW_WIZARD_STEPS,
   productFlowDashboardPath,
+  productFlowKindLabel,
   productFlowProblem,
   productFlowWizardCanAdvance,
   type ProductFlowDraft,
@@ -36,18 +40,20 @@ function wizardDescription(kind: ProductFlowKind, step: ProductFlowWizardStep): 
   if (step === "publish") {
     return "Review, then publish. The public run asks for identification first.";
   }
-  if (kind === "calibration") return "Problem, optional files, and countdown.";
+  if (flowAuthorShowsCountdown(kind)) return "Problem, optional files, and countdown.";
   return "The problem learners work on, and optional files used to generate the unsys model.";
 }
 
-export function ProductFlowWizard({ kind }: { kind: ProductFlowKind }) {
+export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind }) {
   const router = useRouter();
   const [step, setStep] = useState<ProductFlowWizardStep>("name");
-  const [draft, setDraft] = useState<ProductFlowDraft>(() => emptyProductFlowDraft(kind));
+  const [draft, setDraft] = useState<ProductFlowDraft>(() =>
+    emptyProductFlowDraft(lockedKind ?? "solve"),
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const productLabel =
-    kind === "calibration" ? "Calibration" : kind === "solve" ? "Solve" : "Verification";
+  const kind = draft.kind;
+  const productLabel = productFlowKindLabel(kind);
   const canAdvance = productFlowWizardCanAdvance(step, draft);
   const problem = productFlowProblem(draft);
 
@@ -164,6 +170,24 @@ export function ProductFlowWizard({ kind }: { kind: ProductFlowKind }) {
 
         {step === "name" ? (
           <FlowFormCard>
+            <FlowField label="Type">
+              <select
+                className={FLOW_FORM_INPUT}
+                value={draft.kind}
+                disabled={Boolean(lockedKind)}
+                data-flow-kind=""
+                onChange={(event) => {
+                  const next = parseProductFlowKind(event.target.value);
+                  if (next) patch({ kind: next });
+                }}
+              >
+                {PRODUCT_FLOW_KINDS.map((item) => (
+                  <option key={item} value={item}>
+                    {productFlowKindLabel(item)}
+                  </option>
+                ))}
+              </select>
+            </FlowField>
             <FlowField label="Flow name">
               <input
                 value={draft.name}
@@ -195,11 +219,13 @@ export function ProductFlowWizard({ kind }: { kind: ProductFlowKind }) {
                 patch({ exactProblemOnCanvas })
               }
             />
-            {kind === "calibration" ? (
+            {flowAuthorShowsCountdown(kind) ? (
               <FlowField label="Countdown">
                 <select
                   value={draft.durationMinutes}
-                  data-calibration-flow-minutes
+                  data-flow-countdown=""
+                  data-calibration-flow-minutes={kind === "calibration" ? "" : undefined}
+                  data-verification-flow-minutes={kind === "verification" ? "" : undefined}
                   onChange={(event) =>
                     patch({ durationMinutes: flowCountdownMinutes(event.target.value) })
                   }
@@ -234,6 +260,11 @@ export function ProductFlowWizard({ kind }: { kind: ProductFlowKind }) {
               {draft.exactProblemOnCanvas && kind !== "calibration" ? (
                 <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
                   Exact problem on canvas
+                </p>
+              ) : null}
+              {flowAuthorShowsCountdown(kind) ? (
+                <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
+                  {draft.durationMinutes} min countdown
                 </p>
               ) : null}
             </div>

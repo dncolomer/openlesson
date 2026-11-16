@@ -21,7 +21,6 @@ export async function GET(req: NextRequest) {
     const kind = parseDashboardKnowledgeRegionKind(
       new URL(req.url).searchParams.get("kind"),
     );
-    if (!kind) return jsonError(400, "kind must be verification, calibration, or solve");
 
     const { data: rows, error } = await auth.supabase
       .from("knowledge_regions")
@@ -32,11 +31,11 @@ export async function GET(req: NextRequest) {
       .order("created_at", { ascending: false });
 
     if (error) {
-      return NextResponse.json({ kind, regions: [] });
+      return NextResponse.json({ kind: kind ?? "all", regions: [] });
     }
 
     return NextResponse.json({
-      kind,
+      kind: kind ?? "all",
       regions: presentDashboardKnowledgeRegions(rows || [], kind, auth.user.id),
     });
   } catch (error) {

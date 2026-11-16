@@ -289,7 +289,6 @@ describe("Knowledge Region shell", () => {
     expect(integrationPanel).toContain('activeSubview === "general"');
     expect(settingsSubviewLabel("integrations", "knowledge_region")).toBe("Integrations");
     expect(settingsSubviewLabel("regions", "knowledge_region")).toBe("Knowledge Regions");
-    expect(settingsSubviewLabel("data-studio", "knowledge_region")).toBe("Data Studio");
 
     const fullTabs = availableSettingsSubviews("standard");
     expect(fullTabs).toContain("general");
@@ -404,7 +403,8 @@ describe("Knowledge Region zero-block PoW surfaces", () => {
     expect(regionsStore).not.toMatch(/block_id.*required/);
 
     expect(existsSync(join(ROOT, "components/WorkspaceDataStudioPanel.tsx"))).toBe(false);
-    const dataStudio = read("app/api/dashboard/data-studio/route.ts");
+    expect(existsSync(join(ROOT, "app/api/dashboard/data-studio/route.ts"))).toBe(false);
+    const dataStudio = read("app/api/dashboard/knowledge-regions/run/route.ts");
 
     const goalsPanel = read("components/WorkspaceGoalsPanel.tsx");
     expect(goalsPanel).toContain("/api/workspace/goals");

@@ -17,7 +17,7 @@ import {
   postTutoringSessionStart,
 } from "@/lib/tutoring-client";
 import { resolveTapShowEndSession } from "@/components/TapScoreClient";
-import { fetchAestheticPackages } from "@/lib/aesthetics";
+import { useAestheticPackages } from "@/components/session-view/use-aesthetic-packages";
 import { ScoutTapPhases } from "@/components/scout-tap/scout-tap-phases";
 import {
   loadSessionBranchField,
@@ -28,7 +28,6 @@ import { releaseSessionLocalMemory } from "@/lib/session-local-memory";
 import { calibrateFieldPrepareInput } from "@/lib/session-branch-prepare";
 import {
   advanceTapLiveClockPause,
-  pickTapBackgroundImage,
   tapLiveClockRemainingSeconds,
   type Phase,
   resolveInitialMinutes,
@@ -179,7 +178,14 @@ export function ScoutTapClient({
   const pauseStartedAtRef = useRef<number | null>(null);
   const pausedMsRef = useRef(0);
   const questionsLoadingRef = useRef(false);
-  const [bgImage, setBgImage] = useState("");
+  const {
+    aestheticPackages,
+    aestheticsLoading,
+    selectedAestheticId,
+    setSelectedAestheticId,
+    selectedAesthetic,
+  } = useAestheticPackages();
+  const bgImage = selectedAesthetic?.previewImage ?? "";
   const [tapSessionId, setTapSessionId] = useState<string | null>(
     (initialSession?.id as string) ?? null,
   );
@@ -236,19 +242,7 @@ export function ScoutTapClient({
     });
   }, [fieldKey]);
 
-  useEffect(() => {
-    let cancelled = false;
-    fetchAestheticPackages()
-      .then((packages) => {
-        if (!cancelled) setBgImage(pickTapBackgroundImage(packages));
-      })
-      .catch(() => {
-        if (!cancelled) setBgImage(pickTapBackgroundImage([]));
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+
 
   useEffect(() => {
     if (!blockId) return;
@@ -664,6 +658,11 @@ export function ScoutTapClient({
       setConversationLanguage={setConversationLanguage}
       privateToken={privateToken}
       durationLocked={durationLocked}
+      aestheticPackages={aestheticPackages}
+      aestheticsLoading={aestheticsLoading}
+      selectedAestheticId={selectedAestheticId}
+      selectedAesthetic={selectedAesthetic}
+      onSelectAesthetic={setSelectedAestheticId}
       isStartingSession={isStartingSession}
       error={error}
       confirmStart={confirmStart}

@@ -263,7 +263,6 @@ describe("console theme shells", () => {
       "app/pricing/page.tsx",
       "app/legal/page.tsx",
       "app/community/page.tsx",
-      "app/results/page.tsx",
       "app/pricing/success/page.tsx",
       "components/ScienceWhitepaperPage.tsx",
       "app/invite/[token]/page.tsx",

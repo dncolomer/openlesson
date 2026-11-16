@@ -1,7 +1,7 @@
 /**
  * Single-region details: reconstruct a polished summary + cluster/sample
  * lists from the persisted parent region, strategy-cluster children, and
- * owner embeddings. Inspect uses Data Studio's payload (identity, origin,
+ * owner embeddings. Inspect uses the stored embedding payload (identity, origin,
  * flow/run ids, transcripts/PoW).
  */
 
@@ -19,7 +19,6 @@ import {
 } from "@/lib/knowledge-region-figure";
 import {
   dashboardKnowledgeRegionHref,
-  dashboardKnowledgeRegionStudioHref,
   type DashboardKnowledgeRegionKind,
 } from "@/lib/dashboard-knowledge-regions";
 import {
@@ -76,7 +75,6 @@ export type KnowledgeRegionDetails = {
   embeddings: DataStudioEmbeddingRow[];
   regions: RegionCentroidInput[];
   regionPath: string;
-  studioPath: string;
 };
 
 export type KnowledgeRegionDetailsRow = {
@@ -455,6 +453,5 @@ export function presentKnowledgeRegionDetails(input: {
     embeddings,
     regions,
     regionPath: dashboardKnowledgeRegionHref(kind, id),
-    studioPath: dashboardKnowledgeRegionStudioHref(kind, id),
   };
 }

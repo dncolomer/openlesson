@@ -20,6 +20,7 @@ import {
   withoutSessionBranchNotes,
   recommendSessionBranchAction,
   sessionBranchCheapestTransition,
+  sessionBranchNextPolicyStep,
   SESSION_BRANCH_ACCEPT_COUNT,
   SESSION_BRANCH_TARGET_COUNT,
   sessionBranchById,
@@ -155,6 +156,11 @@ describe("session branch model", () => {
     expect(cheapest?.toId).toBe("r1");
     expect(cheapest?.fromTitle).toBe(sessionBranchById(model, "root")?.title);
     expect(cheapest?.toTitle).toBe(sessionBranchById(model, "r1")?.title);
+    const first = sessionBranchNextPolicyStep(model);
+    expect(first?.toId).toBe("r1");
+    const second = sessionBranchNextPolicyStep(model, [first!.toId]);
+    expect(second?.toId).toBeTruthy();
+    expect(second?.toId).not.toBe(first?.toId);
     expect(sessionBranchChildQuota(0)).toBe(0);
     expect(sessionBranchChildQuota(1)).toBe(4);
     expect(sessionBranchChildQuota(2)).toBe(3);

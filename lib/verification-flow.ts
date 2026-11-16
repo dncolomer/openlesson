@@ -49,7 +49,7 @@ export type VerificationFlow = {
   questions: VerificationQuestion[];
   artifacts: FlowArtifact[];
   exactProblemOnCanvas: boolean;
-  /** Stored default; the run clock is chosen on the session start screen. */
+  /** Author-set run clock. The public start screen does not let the runner change it. */
   durationMinutes: number;
   /** 4, 8, or 16 actions on the unsys model. */
   actionCatalog: LearningModelSize;

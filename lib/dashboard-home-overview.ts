@@ -1,15 +1,14 @@
 /**
- * Compact Home overview: three product CTA boxes.
+ * Compact Home overview: Flows and Knowledge regions.
  */
 
 import { dashboardHrefForTab, type DashboardTab } from "@/lib/dashboard-nav";
 import { USE_CASES } from "@/lib/marketing/use-cases";
 
-/** Home product boxes reuse the use-cases stills, mapped by product. */
+/** Home boxes reuse the use-cases stills. */
 export const DASHBOARD_HOME_CTA_USE_CASE_IDS = {
-  solve: "research-ai",
-  verification: "team-insight",
-  calibration: "technical-hiring",
+  flows: "research-ai",
+  regions: "team-insight",
 } as const;
 
 export type DashboardHomeCtaLink = {
@@ -29,28 +28,12 @@ export type DashboardHomeCta = {
   links: readonly DashboardHomeCtaLink[];
 };
 
-function productSurfaceLinks(
-  kind: "solve" | "verification" | "calibration",
-): DashboardHomeCtaLink[] {
-  const regions = `${kind}_regions` as DashboardTab;
-  const studio = `${kind}_studio` as DashboardTab;
-  return [
-    {
-      id: kind,
-      label: "Flows",
-      href: dashboardHrefForTab(kind),
-    },
-    {
-      id: regions,
-      label: "Knowledge regions",
-      href: dashboardHrefForTab(regions),
-    },
-    {
-      id: studio,
-      label: "Data Studio",
-      href: dashboardHrefForTab(studio),
-    },
-  ];
+function surfaceLink(tab: DashboardTab, label: string): DashboardHomeCtaLink {
+  return {
+    id: tab,
+    label,
+    href: dashboardHrefForTab(tab),
+  };
 }
 
 function useCaseVisual(id: (typeof USE_CASES)[number]["id"]): {
@@ -90,33 +73,24 @@ export function dashboardHomeIntegrationsCta(): DashboardHomeIntegrationsCta {
 }
 
 export function dashboardHomeCtas(): DashboardHomeCta[] {
-  const solveLinks = productSurfaceLinks("solve");
-  const verificationLinks = productSurfaceLinks("verification");
-  const calibrationLinks = productSurfaceLinks("calibration");
+  const flows = surfaceLink("flows", "Open flows");
+  const regions = surfaceLink("regions", "Open regions");
   return [
     {
-      id: "solve",
-      label: "Solve / Practice",
-      href: solveLinks[0]!.href,
-      body: "Author Solve flows, knowledge regions, Data Studio, and performance.",
-      ...useCaseVisual(DASHBOARD_HOME_CTA_USE_CASE_IDS.solve),
-      links: solveLinks,
+      id: "flows",
+      label: "Flows",
+      href: flows.href,
+      body: "Author Solve, Verification, and Calibration flows. Pick the type when you create one.",
+      ...useCaseVisual(DASHBOARD_HOME_CTA_USE_CASE_IDS.flows),
+      links: [flows],
     },
     {
-      id: "verification",
-      label: "Verification",
-      href: verificationLinks[0]!.href,
-      body: "Author Verification flows, knowledge regions, and Data Studio runs.",
-      ...useCaseVisual(DASHBOARD_HOME_CTA_USE_CASE_IDS.verification),
-      links: verificationLinks,
-    },
-    {
-      id: "calibration",
-      label: "Calibration",
-      href: calibrationLinks[0]!.href,
-      body: "Author Calibration flows, knowledge regions, and Data Studio runs.",
-      ...useCaseVisual(DASHBOARD_HOME_CTA_USE_CASE_IDS.calibration),
-      links: calibrationLinks,
+      id: "regions",
+      label: "Knowledge regions",
+      href: regions.href,
+      body: "Simulate exploration strategies on your flows and inspect the resulting regions.",
+      ...useCaseVisual(DASHBOARD_HOME_CTA_USE_CASE_IDS.regions),
+      links: [regions],
     },
   ];
 }

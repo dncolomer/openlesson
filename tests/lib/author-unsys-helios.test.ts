@@ -120,31 +120,19 @@ describe("Helios unsys seed helper", () => {
 
     const panel = read("components/WorkspaceBlockUnsysModelPanel.tsx");
     const studio = read("components/WorkspaceUnsysSeedStudio.tsx");
-    const chat = read("components/WorkspaceBlockUnsysHeliosChat.tsx");
     const detail = read("components/WorkspaceBlockDetailPane.tsx");
-    const route = read("app/api/workspace/helios-unsys-seed-chat/route.ts");
-    const mapChat = read("components/WorkspaceHeliosChat.tsx");
     const learner = read("components/WorkspaceLearnerBlockPane.tsx");
 
     expect(panel).not.toContain("WorkspaceBlockUnsysHeliosChat");
-    expect(studio).toContain("WorkspaceBlockUnsysHeliosChat");
-    expect(chat).toContain("data-author-unsys-helios-chat");
-    expect(chat).toMatch(
-      /data-author-unsys-helios-chat-mic[\s\S]*data-author-unsys-helios-chat-send/,
+    expect(studio).not.toContain("WorkspaceBlockUnsysHeliosChat");
+    expect(studio).toContain("WorkspaceUnsysSeedInspector");
+    expect(existsSync(join(ROOT, "components/WorkspaceBlockUnsysHeliosChat.tsx"))).toBe(
+      false,
     );
-    expect(chat).toContain("data-author-unsys-helios-selection");
-    expect(chat).toContain("onGenerateGraph");
-    expect(chat).toContain("isAuthorUnsysHeliosHostTool");
-    expect(chat).toContain("/api/workspace/helios-unsys-seed-chat");
-    expect(chat).toContain("applyAuthorUnsysHeliosTools");
-    expect(chat).not.toMatch(/\bprior\b/i);
+    expect(
+      existsSync(join(ROOT, "app/api/workspace/helios-unsys-seed-chat/route.ts")),
+    ).toBe(false);
     expect(detail).toContain("workspaceId={workspaceId}");
-    expect(route).toContain("buildHeliosUnsysSeedSystemPrompt");
-    expect(route).toContain("callXaiJSON");
-    expect(route).toContain("seedModel");
-    expect(route).toContain("formatAuthorUnsysSelectionForPrompt");
-    expect(route).toContain("parseAuthorUnsysHeliosChatTurn");
-    expect(mapChat).not.toContain("helios-unsys-seed-chat");
     expect(learner).not.toContain("WorkspaceBlockUnsysHeliosChat");
 
     writeEvidence(
@@ -153,8 +141,7 @@ describe("Helios unsys seed helper", () => {
         `reply=${turn.reply}`,
         `edgePrice=${sessionBranchById(applied.model, "root")?.edges.find((row) => row.toId === "r1")?.price}`,
         `added=${added?.title}`,
-        `route=${route.includes("buildHeliosUnsysSeedSystemPrompt")}`,
-        `micThenSend=${/data-author-unsys-helios-chat-mic[\s\S]*data-author-unsys-helios-chat-send/.test(chat)}`,
+        `studioInspector=${studio.includes("WorkspaceUnsysSeedInspector")}`,
       ].join("\n"),
     );
     expect(existsSync(join(SCRATCH, "author-unsys-helios.log"))).toBe(true);

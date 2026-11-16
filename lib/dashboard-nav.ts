@@ -11,16 +11,8 @@ import {
 
 export const DASHBOARD_TABS = [
   "home",
-  "practice_performance",
-  "verification",
-  "verification_regions",
-  "verification_studio",
-  "calibration",
-  "calibration_regions",
-  "calibration_studio",
-  "solve",
-  "solve_regions",
-  "solve_studio",
+  "flows",
+  "regions",
   "usage",
   "organization",
   "integrations",
@@ -30,17 +22,9 @@ export const DASHBOARD_TABS = [
 
 export type DashboardTab = (typeof DASHBOARD_TABS)[number];
 
-export type DashboardProductTab = "verification" | "calibration" | "solve";
+export type DashboardProductTab = ProductFlowKind;
 
-export type DashboardRegionsTab =
-  | "verification_regions"
-  | "calibration_regions"
-  | "solve_regions";
-
-export type DashboardStudioTab =
-  | "verification_studio"
-  | "calibration_studio"
-  | "solve_studio";
+export type DashboardRegionsTab = "regions";
 
 export type DashboardNavItem = {
   id: string;
@@ -51,11 +35,7 @@ export type DashboardNavItem = {
   cluster?: string;
 };
 
-export type DashboardNavGroupId =
-  | "verification"
-  | "calibration"
-  | "solve"
-  | "account";
+export type DashboardNavGroupId = "account";
 
 export type DashboardNavGroup = {
   id: DashboardNavGroupId;
@@ -70,37 +50,11 @@ export const DASHBOARD_HOME_NAV_ITEM: DashboardNavItem = {
 
 export const DASHBOARD_TOP_NAV_ITEMS: readonly DashboardNavItem[] = [
   DASHBOARD_HOME_NAV_ITEM,
+  { id: "flows", label: "Flows" },
+  { id: "regions", label: "Knowledge regions" },
 ];
 
 export const DASHBOARD_NAV_GROUPS: readonly DashboardNavGroup[] = [
-  {
-    id: "solve",
-    label: "Solve / Practice",
-    items: [
-      { id: "solve", label: "Flows" },
-      { id: "solve_regions", label: "Knowledge regions" },
-      { id: "solve_studio", label: "Data Studio" },
-      { id: "practice_performance", label: "Performance" },
-    ],
-  },
-  {
-    id: "verification",
-    label: "Verification",
-    items: [
-      { id: "verification", label: "Flows" },
-      { id: "verification_regions", label: "Knowledge regions" },
-      { id: "verification_studio", label: "Data Studio" },
-    ],
-  },
-  {
-    id: "calibration",
-    label: "Calibration",
-    items: [
-      { id: "calibration", label: "Flows" },
-      { id: "calibration_regions", label: "Knowledge regions" },
-      { id: "calibration_studio", label: "Data Studio" },
-    ],
-  },
   {
     id: "account",
     label: "Account",
@@ -141,19 +95,7 @@ export function isDashboardMyMapsTab(value: unknown): value is never {
 }
 
 export function isDashboardRegionsTab(value: unknown): value is DashboardRegionsTab {
-  return (
-    value === "verification_regions" ||
-    value === "calibration_regions" ||
-    value === "solve_regions"
-  );
-}
-
-export function isDashboardStudioTab(value: unknown): value is DashboardStudioTab {
-  return (
-    value === "verification_studio" ||
-    value === "calibration_studio" ||
-    value === "solve_studio"
-  );
+  return value === "regions";
 }
 
 export function isDashboardBrowseMapsTab(value: unknown): value is never {
@@ -164,19 +106,8 @@ export function isDashboardPracticeTab(value: unknown): value is never {
   return false;
 }
 
-export function isDashboardPracticePerformanceTab(
-  value: unknown,
-): value is "practice_performance" {
-  return value === "practice_performance";
-}
-
-export function dashboardStudioProduct(
-  tab: DashboardTab,
-): DashboardProductTab | null {
-  if (tab === "verification_studio") return "verification";
-  if (tab === "calibration_studio") return "calibration";
-  if (tab === "solve_studio") return "solve";
-  return null;
+export function isDashboardPracticePerformanceTab(value: unknown): value is never {
+  return false;
 }
 
 export function dashboardNavGroupIdForTab(
@@ -206,11 +137,8 @@ export function clusterDashboardNavItems(
 }
 
 export function dashboardRegionsProduct(
-  tab: DashboardTab,
+  _tab: DashboardTab,
 ): DashboardProductTab | null {
-  if (tab === "verification_regions") return "verification";
-  if (tab === "calibration_regions") return "calibration";
-  if (tab === "solve_regions") return "solve";
   return null;
 }
 
@@ -223,30 +151,34 @@ export function isDashboardNavTabItem(
 /** Query `tab` → sidebar section. Retired map/shop/help tabs land on Home. */
 export function parseDashboardTab(value: unknown): DashboardTab {
   if (value === "upgrade") return "usage";
-  if (value === "practice") return "solve";
-  if (value === "practice_studio") return "solve_studio";
+  if (
+    value === "practice" ||
+    value === "practice_performance" ||
+    value === "solve" ||
+    value === "verification" ||
+    value === "calibration"
+  ) {
+    return "flows";
+  }
+  if (
+    value === "practice_studio" ||
+    value === "solve_studio" ||
+    value === "verification_studio" ||
+    value === "calibration_studio" ||
+    value === "solve_regions" ||
+    value === "verification_regions" ||
+    value === "calibration_regions"
+  ) {
+    return "regions";
+  }
   if (typeof value === "string" && RETIRED_TAB_ALIASES.has(value)) return "home";
   if (isDashboardTab(value)) return value;
   return "home";
 }
 
 export function dashboardTypeFilterForTab(
-  tab: DashboardTab,
+  _tab: DashboardTab,
 ): DashboardProductTab | null {
-  if (tab === "verification" || tab === "verification_regions" || tab === "verification_studio") {
-    return "verification";
-  }
-  if (tab === "calibration" || tab === "calibration_regions" || tab === "calibration_studio") {
-    return "calibration";
-  }
-  if (
-    tab === "solve" ||
-    tab === "solve_regions" ||
-    tab === "solve_studio" ||
-    tab === "practice_performance"
-  ) {
-    return "solve";
-  }
   return null;
 }
 
@@ -259,33 +191,23 @@ export function dashboardHrefForTab(tab: DashboardTab): string {
 }
 
 export function dashboardTabForProductSurface(
-  kind: ProductFlowKind,
+  _kind: ProductFlowKind,
   area: "flow" | "region" = "flow",
 ): DashboardTab {
-  if (area === "region") {
-    if (kind === "calibration") return "calibration_regions";
-    if (kind === "solve") return "solve_regions";
-    return "verification_regions";
-  }
-  return kind;
+  return area === "region" ? "regions" : "flows";
 }
 
-export function dashboardCreateHref(tab: DashboardProductTab): string {
-  if (tab === "verification") return productFlowNewPath("verification");
-  if (tab === "calibration") return productFlowNewPath("calibration");
-  return productFlowNewPath("solve");
+export function dashboardCreateHref(kind?: DashboardProductTab | null): string {
+  return productFlowNewPath(kind);
 }
 
 export function dashboardRegionCreateHref(
-  tab: DashboardProductTab | DashboardRegionsTab,
+  kind?: DashboardProductTab | DashboardRegionsTab | null,
 ): string {
-  if (tab === "calibration" || tab === "calibration_regions") {
-    return productRegionNewPath("calibration");
-  }
-  if (tab === "verification" || tab === "verification_regions") {
-    return productRegionNewPath("verification");
-  }
-  return productRegionNewPath("solve");
+  if (kind === "calibration") return productRegionNewPath("calibration");
+  if (kind === "verification") return productRegionNewPath("verification");
+  if (kind === "solve") return productRegionNewPath("solve");
+  return "/regions/new";
 }
 
 export function dashboardCreateMode(_tab: DashboardProductTab): null {
@@ -298,15 +220,14 @@ export function dashboardProductLabel(tab: DashboardProductTab): string {
   return "Solve";
 }
 
-export function dashboardCreateLabel(tab: DashboardProductTab): string {
-  return `Create ${dashboardProductLabel(tab)} flow →`;
+export function dashboardCreateLabel(kind?: DashboardProductTab | null): string {
+  if (!kind) return "Create flow →";
+  return `Create ${dashboardProductLabel(kind)} flow →`;
 }
 
 export function dashboardFrameLabel(tab: DashboardTab): string {
-  if (tab === "practice_performance") return "Performance";
-  if (isDashboardRegionsTab(tab)) return "Knowledge regions";
-  if (isDashboardStudioTab(tab)) return "Data Studio";
-  if (isDashboardProductTab(tab)) return dashboardProductLabel(tab);
+  if (tab === "flows") return "Flows";
+  if (tab === "regions") return "Knowledge regions";
   if (tab === "organization") return "Organization";
   if (tab === "integrations") return "Integrations";
   if (tab === "usage") return "Usage";

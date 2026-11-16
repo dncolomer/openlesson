@@ -1,40 +1,46 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   DASHBOARD_KNOWLEDGE_REGIONS_PATH,
   dashboardKnowledgeRegionHref,
-  dashboardKnowledgeRegionStudioHref,
   type DashboardKnowledgeRegion,
-  type DashboardKnowledgeRegionKind,
 } from "@/lib/dashboard-knowledge-regions";
+import { dashboardRegionCreateHref } from "@/lib/dashboard-nav";
 import {
-  dashboardProductLabel,
-  dashboardRegionCreateHref,
-} from "@/lib/dashboard-nav";
-import { productFlowNewPath } from "@/lib/product-flow";
+  PRODUCT_FLOW_KINDS,
+  parseProductFlowKindFilter,
+  productFlowKindLabel,
+  productFlowNewPath,
+  type ProductFlowKindFilter,
+} from "@/lib/product-flow";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 
+const TYPE_SELECT =
+  "h-12 min-w-[12rem] border border-white/20 bg-black px-3 font-mono text-[11px] text-white outline-none focus:border-white/55";
+
 export function DashboardKnowledgeRegionsTab({
-  kind,
   formatDate,
 }: {
-  kind: DashboardKnowledgeRegionKind;
   formatDate: (value: string) => string;
 }) {
   const [regions, setRegions] = useState<DashboardKnowledgeRegion[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const productLabel = dashboardProductLabel(kind);
-  const createHref = dashboardRegionCreateHref(kind);
-  const createFlowHref = productFlowNewPath(kind);
+  const [typeFilter, setTypeFilter] = useState<ProductFlowKindFilter>("all");
+  const createHref = dashboardRegionCreateHref();
+  const createFlowHref = productFlowNewPath();
+  const visible = useMemo(
+    () => (typeFilter === "all" ? regions : regions.filter((region) => region.kind === typeFilter)),
+    [regions, typeFilter],
+  );
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError("");
-    fetch(`${DASHBOARD_KNOWLEDGE_REGIONS_PATH}?kind=${kind}`)
+    fetch(DASHBOARD_KNOWLEDGE_REGIONS_PATH)
       .then(async (response) => {
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) {
@@ -55,10 +61,10 @@ export function DashboardKnowledgeRegionsTab({
     return () => {
       cancelled = true;
     };
-  }, [kind]);
+  }, []);
 
   return (
-    <div className="space-y-6" data-dashboard-knowledge-regions={kind}>
+    <div className="space-y-6" data-dashboard-knowledge-regions="">
       <div className="console-copy px-6 py-7 sm:px-8 sm:py-8">
         <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div>
@@ -66,17 +72,38 @@ export function DashboardKnowledgeRegionsTab({
               Knowledge regions
             </h2>
             <p className="mt-3 max-w-xl text-sm leading-relaxed text-neutral-400">
-              Create a region by running a simulation of exploration strategies on your{" "}
-              {productLabel.toLowerCase()} flows. Open details to see that region, or overlay it in
-              Data Studio.
+              Create a region by running a simulation of exploration strategies on your flows.
+              Open details to inspect that region.
             </p>
           </div>
-          <Link
-            href={createHref}
-            className="inline-flex h-12 items-center justify-center rounded-none bg-white px-6 text-sm font-medium text-black"
-          >
-            Create knowledge region →
-          </Link>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <label className="flex min-w-0 flex-col gap-1">
+              <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-neutral-500">
+                Type
+              </span>
+              <select
+                className={TYPE_SELECT}
+                value={typeFilter}
+                data-dashboard-type-filter=""
+                onChange={(event) =>
+                  setTypeFilter(parseProductFlowKindFilter(event.target.value))
+                }
+              >
+                <option value="all">All types</option>
+                {PRODUCT_FLOW_KINDS.map((kind) => (
+                  <option key={kind} value={kind}>
+                    {productFlowKindLabel(kind)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <Link
+              href={createHref}
+              className="inline-flex h-12 items-center justify-center rounded-none bg-white px-6 text-sm font-medium text-black"
+            >
+              Create knowledge region →
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -93,8 +120,7 @@ export function DashboardKnowledgeRegionsTab({
               No knowledge regions yet
             </h3>
             <p className="mt-3 text-sm leading-relaxed text-neutral-400">
-              Name a region, pick {productLabel.toLowerCase()} flows and exploration strategies,
-              then run a simulation.
+              Name a region, pick a flow type, then run a simulation.
             </p>
             <Link
               href={createHref}
@@ -111,28 +137,32 @@ export function DashboardKnowledgeRegionsTab({
             </Link>
           </div>
         </section>
+      ) : visible.length === 0 ? (
+        <p className="text-sm text-neutral-500">No knowledge regions of this type.</p>
       ) : (
         <div className="console-copy overflow-x-auto" data-dashboard-knowledge-region-table>
           <table className="w-full min-w-[40rem] border-collapse text-left text-sm">
             <thead>
               <tr className="border-b border-white/20 font-mono text-[10px] uppercase tracking-[0.18em] text-neutral-500">
                 <th className="px-4 py-3 font-medium">Name</th>
-                <th className="px-4 py-3 font-medium">Workspace</th>
+                <th className="px-4 py-3 font-medium">Type</th>
                 <th className="px-4 py-3 font-medium">Subjects</th>
                 <th className="px-4 py-3 font-medium">Created</th>
                 <th className="px-4 py-3 font-medium">Details</th>
-                <th className="px-4 py-3 font-medium">Data Studio</th>
               </tr>
             </thead>
             <tbody>
-              {regions.map((region) => (
+              {visible.map((region) => (
                 <tr
                   key={region.id}
                   className="border-b border-white/10 last:border-b-0"
                   data-dashboard-knowledge-region
+                  data-dashboard-region-kind={region.kind}
                 >
                   <td className="px-4 py-3 font-medium text-white">{region.name}</td>
-                  <td className="px-4 py-3 text-neutral-400">{region.workspaceTitle}</td>
+                  <td className="px-4 py-3 text-neutral-400">
+                    {productFlowKindLabel(region.kind)}
+                  </td>
                   <td className="px-4 py-3 tabular-nums text-neutral-400">
                     {region.subjectCount}
                   </td>
@@ -141,20 +171,11 @@ export function DashboardKnowledgeRegionsTab({
                   </td>
                   <td className="px-4 py-3">
                     <Link
-                      href={dashboardKnowledgeRegionHref(kind, region.id)}
+                      href={dashboardKnowledgeRegionHref(region.kind, region.id)}
                       className="inline-flex h-9 items-center justify-center border border-white/25 px-3 text-[11px] text-white transition hover:border-white hover:bg-white hover:text-black"
                       data-open-region-details={region.id}
                     >
                       Open details
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Link
-                      href={dashboardKnowledgeRegionStudioHref(kind, region.id)}
-                      className="inline-flex h-9 items-center justify-center border border-white/25 px-3 text-[11px] text-white transition hover:border-white hover:bg-white hover:text-black"
-                      data-open-region-data-studio={region.id}
-                    >
-                      Open in Data Studio
                     </Link>
                   </td>
                 </tr>

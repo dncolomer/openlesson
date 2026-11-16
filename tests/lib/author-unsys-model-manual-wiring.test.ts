@@ -37,7 +37,6 @@ describe("author unsys model Manual Mode wiring", () => {
     const drawers = read("components/workspace-view/workspace-right-drawers.tsx");
     const detail = read("components/WorkspaceBlockDetailPane.tsx");
     const panel = read("components/WorkspaceBlockUnsysModelPanel.tsx");
-    const chat = read("components/WorkspaceHeliosChat.tsx");
     const learner = read("components/WorkspaceLearnerBlockPane.tsx");
     const view = read("components/WorkspaceView.tsx");
     const studio = read("components/WorkspaceUnsysSeedStudio.tsx");
@@ -51,7 +50,7 @@ describe("author unsys model Manual Mode wiring", () => {
     expect(AUTHOR_UNSYS_MODEL_SURFACE).toBe("data-author-unsys-model");
     expect(AUTHOR_UNSYS_STUDIO_SURFACE).toBe("data-author-unsys-studio");
 
-    expect(drawers).toContain("Manual Mode");
+    expect(drawers).not.toContain("<WorkspaceHeliosChat");
     expect(drawers).toContain("heliosSurface.showManualDrawers");
     expect(drawers).toContain("WorkspaceBlockDetailPane");
     expect(drawers).toContain("onSaveAnswersModelSeed");
@@ -90,16 +89,15 @@ describe("author unsys model Manual Mode wiring", () => {
     expect(studio).not.toContain("backdrop-blur-sm");
     expect(studio).not.toContain("blur-sm");
     expect(studio).not.toContain("bg-black/45");
-    expect(studio).toContain('normalizeWorkspaceHeliosColumnMode("manual")');
     expect(studio).not.toContain("Generating with xAI");
     expect(studio).toContain("data-author-unsys-regenerate");
     expect(studio).toContain("data-author-unsys-save-seed");
     expect(studio).toContain("data-author-unsys-delete-seed");
     expect(studio).toContain("WorkspaceUnsysSeedGraph");
     expect(studio).toContain("WorkspaceUnsysSeedInspector");
-    expect(studio).toContain("WorkspaceBlockUnsysHeliosChat");
+    expect(studio).not.toContain("WorkspaceBlockUnsysHeliosChat");
     expect(studio).toContain("AUTHOR_UNSYS_GENERATE_PATH");
-    expect(studio).toContain("data-workspace-helios-mode-toggle");
+    expect(studio).not.toContain("data-workspace-helios-mode-toggle");
     expect(studio).not.toContain("generateAuthorUnsysSample");
     const inspector = read("components/WorkspaceUnsysSeedInspector.tsx");
     expect(inspector).toContain("data-author-unsys-action-price");
@@ -114,8 +112,6 @@ describe("author unsys model Manual Mode wiring", () => {
     expect(graph).not.toContain("data-author-unsys-action-price");
     expect(graph).toContain("seedAuthorUnsysPositions");
 
-    expect(chat).not.toContain("data-author-unsys-model");
-    expect(chat).not.toContain("WorkspaceBlockUnsysModelPanel");
     expect(learner).not.toContain("data-author-unsys-model");
     expect(learner).not.toContain("WorkspaceBlockUnsysModelPanel");
     expect(learner).not.toContain("onSaveAnswersModelSeed");
@@ -131,8 +127,8 @@ describe("author unsys model Manual Mode wiring", () => {
       authoring: true,
       mode: "helios",
     });
-    expect(helios.showHeliosChat).toBe(true);
-    expect(helios.showManualDrawers).toBe(false);
+    expect(helios.showHeliosChat).toBe(false);
+    expect(helios.showManualDrawers).toBe(true);
     const manual = resolveWorkspaceHeliosColumnSurface({
       authoring: true,
       mode: "manual",
@@ -181,7 +177,6 @@ describe("author unsys model Manual Mode wiring", () => {
         "studio=" + studio.includes("data-author-unsys-studio"),
         "viewStudio=" + view.includes("WorkspaceUnsysSeedStudio"),
         "detailMount=" + detail.includes("WorkspaceBlockUnsysModelPanel"),
-        "heliosHasSurface=" + chat.includes("data-author-unsys-model"),
         "learnerHasSurface=" + learner.includes("data-author-unsys-model"),
         "manualDrawers=" + manual.showManualDrawers,
         "heliosChat=" + helios.showHeliosChat,

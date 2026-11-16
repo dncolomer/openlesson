@@ -18,14 +18,13 @@ function read(rel: string) {
 }
 
 describe("workspace Data Studio surface", () => {
-  it("workspace Settings Data Studio panel and mutate route are gone; dashboard studio remains", () => {
+  it("workspace Settings Data Studio panel and overlay dashboard studio are gone", () => {
     expect(existsSync(join(ROOT, "components/WorkspaceDataStudioPanel.tsx"))).toBe(false);
     expect(existsSync(join(ROOT, "app/api/workspace/data-studio/pow/route.ts"))).toBe(false);
     const panel = read("components/WorkspaceIntegrationPanel.tsx");
     expect(panel).not.toContain("WorkspaceDataStudioPanel");
-    expect(existsSync(join(ROOT, "app/api/dashboard/data-studio/route.ts"))).toBe(true);
-    const studio = read("app/api/dashboard/data-studio/route.ts");
-    expect(studio.length).toBeGreaterThan(0);
+    expect(existsSync(join(ROOT, "app/api/dashboard/data-studio/route.ts"))).toBe(false);
+    expect(existsSync(join(ROOT, "app/api/dashboard/knowledge-regions/run/route.ts"))).toBe(true);
   });
 });
 

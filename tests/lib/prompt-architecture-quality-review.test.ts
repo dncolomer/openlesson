@@ -250,8 +250,6 @@ describe("prompt architecture: TAP Learning call path (shipped builders + regist
   it("xai consumers resolve registry keys via getPrompt", () => {
     const xai = readFileSync(join(ROOT, "lib/xai.ts"), "utf8");
     for (const key of [
-      "report_generation",
-      "follow_up_sessions",
       "generate_objectives",
       "session_plan_create",
     ]) {

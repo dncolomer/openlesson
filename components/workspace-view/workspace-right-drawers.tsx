@@ -1,11 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import {
   WorkspaceAddBlockPane,
   type WorkspaceAddBlockSubmitOpts,
 } from "@/components/WorkspaceAddBlockPane";
-import { WorkspaceHeliosChat } from "@/components/WorkspaceHeliosChat";
 import { WorkspaceBlockDangerDrawer } from "@/components/WorkspaceBlockDangerPanel";
 import { WorkspaceBlockDetailPane } from "@/components/WorkspaceBlockDetailPane";
 import { WorkspaceCombineBlocksPane } from "@/components/WorkspaceCombineBlocksPane";
@@ -21,10 +19,7 @@ import type { AuthorUnsysModelSeed } from "@/lib/author-unsys-model";
 import type { BlockCreatorEffects, GeneratorTargetCell } from "@/lib/block-creator-effects";
 import { parseBlockCreatorEffects } from "@/lib/block-creator-effects";
 import type { BlockPracticeOptions } from "@/lib/block-practice-options";
-import { parseMapBlock, type MapBlock } from "@/lib/block-kind";
-import { DASHBOARD_FLOWS_PATH } from "@/lib/product-flow";
-import { uploadMapBlockFileFromUrl } from "@/lib/map-block-files";
-import { heliosCreatedFlowFromUnknown } from "@/lib/workspace-helios-flow";
+import type { MapBlock } from "@/lib/block-kind";
 import type { ExpandSourceIdentity } from "@/lib/expand-block-from-source";
 import type { UnusableCell } from "@/lib/map-ground-rules";
 import type { WorkspaceFileContextItem } from "@/lib/prompt-workspace-context";
@@ -34,19 +29,7 @@ import type { WorkspaceMapSelection } from "@/lib/workspace-map-selection";
 import type { WorkspaceMapTypesState } from "@/lib/workspace-map-types";
 import { WORKSPACE_MAP_DESKTOP_RIGHT_WIDTH_CLASS } from "@/lib/workspace-right-pane";
 import { useI18n } from "@/lib/i18n";
-import {
-  DEFAULT_WORKSPACE_HELIOS_COLUMN_MODE,
-  normalizeWorkspaceHeliosColumnMode,
-  resolveWorkspaceHeliosColumnSurface,
-  type WorkspaceHeliosColumnMode,
-} from "@/lib/workspace-helios-mode";
-import { saveCreatorMapNotes } from "@/lib/learner-map-notes";
-import { saveAnnotationLayers as writeAnnotationLayers } from "@/lib/map-annotation-layers";
-import {
-  heliosMapSnapshotFromBlocks,
-  heliosMapSnapshotToAuthoringNodes,
-  type HeliosMapToolHost,
-} from "@/lib/workspace-helios-tools";
+import { resolveWorkspaceHeliosColumnSurface } from "@/lib/workspace-helios-mode";
 
 export function WorkspaceRightDrawers({
   mobileColumn,
@@ -60,8 +43,6 @@ export function WorkspaceRightDrawers({
   ayclToken,
   locale,
   nodes,
-  mapSelection,
-  workspaceMapTypes,
   unusableCells,
   selectiveExplanationPolygon,
   selectiveExplanationActive,
@@ -72,7 +53,6 @@ export function WorkspaceRightDrawers({
   onCreateNoteFromSummary,
   detailBlock,
   detailIndex,
-  onBlocksUpdated,
   combineBlockIds,
   isAddingBlock,
   onCombine,
@@ -94,14 +74,10 @@ export function WorkspaceRightDrawers({
   cloneArmed = false,
   onCloneArm,
   onCloneCancel,
-  onClonePaste,
   onExpandBlock,
   onGenerateMap,
   onGenerateMapPreviewChange,
   onSetUnusableCells,
-  onPreviewUnusableCells,
-  onApplyHeliosOverlay,
-  mapOverlay,
   onExpandPreviewChange,
   onGeneratorTargetPreviewChange,
   onGeneratorPickModeChange,
@@ -109,7 +85,6 @@ export function WorkspaceRightDrawers({
   onDynamicUnlockPreviewChange,
   onDynamicPickModeChange,
   onRegisterDynamicBlockToggle,
-  workspaceFileItems,
   addTargetCell,
   onSubmitAddBlock,
   onCancelEmptyCreate,
@@ -248,169 +223,9 @@ export function WorkspaceRightDrawers({
   }) => Promise<void>;
 }) {
   const { t } = useI18n();
-  const [heliosColumnMode, setHeliosColumnMode] =
-    useState<WorkspaceHeliosColumnMode>(DEFAULT_WORKSPACE_HELIOS_COLUMN_MODE);
   const heliosSurface = resolveWorkspaceHeliosColumnSurface({
     authoring: showCreatorDrawers,
-    mode: heliosColumnMode,
   });
-  const heliosSnapshot = useMemo(
-    () =>
-      heliosMapSnapshotFromBlocks({
-        blocks: nodes.map((n) => ({
-          id: n.id,
-          title: n.title,
-          description: n.description,
-          position_x: n.position_x ?? 0,
-          position_y: n.position_y ?? 0,
-          span_w: n.span_w,
-          span_h: n.span_h,
-          shape_cells: n.shape_cells,
-          next_block_ids: n.next_block_ids,
-          lock_until_block_ids: n.lock_until_block_ids,
-          creator_effects: n.creator_effects,
-          planning_prompt: n.planning_prompt,
-          map_block: parseMapBlock(n.map_block),
-        })),
-        unusableCells,
-        notes: mapOverlay?.notes,
-        annotationLayers: mapOverlay?.annotationLayers,
-      }),
-    [mapOverlay, nodes, unusableCells],
-  );
-  const heliosHost = useMemo<HeliosMapToolHost>(
-    () => ({
-      applySnapshot: (snap) => {
-        onBlocksUpdated(heliosMapSnapshotToAuthoringNodes(snap, nodes));
-        onPreviewUnusableCells?.(snap.unusableCells);
-        onApplyHeliosOverlay?.({
-          notes: snap.notes || [],
-          annotationLayers: snap.annotationLayers || [],
-        });
-      },
-      saveNotes: async (notes) => {
-        saveCreatorMapNotes({
-          workspaceId,
-          mapKind: "workspace",
-          notes,
-        });
-      },
-      saveAnnotationLayers: async (layers) => {
-        writeAnnotationLayers({
-          workspaceId,
-          mapKind: "workspace",
-          layers,
-        });
-      },
-      addBlock: async ({ prompt, cell, mapBlock }) => {
-        await onSubmitAddBlock(prompt, cell, mapBlock ? { mapBlock, title: prompt } : undefined);
-      },
-      createFlow: async (input) => {
-        const res = await fetch(DASHBOARD_FLOWS_PATH, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            kind: input.kind,
-            name: input.name,
-            goal: input.goal,
-            topic: input.topic,
-            artifacts: input.artifacts,
-            exactProblemOnCanvas: input.exactProblemOnCanvas,
-            actionCatalog: input.actionCatalog,
-            durationMinutes: input.durationMinutes,
-            workspaceId,
-          }),
-        });
-        const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
-        if (!res.ok) {
-          const err = data.error;
-          const message =
-            typeof err === "string"
-              ? err
-              : err && typeof err === "object" && typeof (err as { message?: unknown }).message === "string"
-                ? String((err as { message: string }).message)
-                : "Could not create flow";
-          throw new Error(message);
-        }
-        const created = heliosCreatedFlowFromUnknown(data, input.kind);
-        if (!created) throw new Error("Create flow did not return an id");
-        return created;
-      },
-      ingestRemoteFile: async ({ url, name }) => {
-        return uploadMapBlockFileFromUrl({
-          workspaceId,
-          ayclToken,
-          url,
-          name,
-        });
-      },
-      generateShape: async ({ prompt, cells, mapBlock }) => {
-        await onSubmitGenerateShape({ prompt, cells, mapBlock });
-      },
-      splitBlock: onSplitBlock
-        ? async ({ blockId, prompt }) => {
-            await onSplitBlock({ blockId, prompt });
-          }
-        : undefined,
-      cloneBlock: onClonePaste
-        ? async ({ blockId, cell }) => {
-            await onClonePaste(blockId, cell);
-          }
-        : undefined,
-      editBlock: async ({ blockId, title, description, mapBlock }) => {
-        await onUpdateBlock({ blockId, title, description, mapBlock });
-      },
-      expandBlock: onExpandBlock
-        ? async ({ blockId, prompt, range, density, frozenSlots }) => {
-            const source = nodes.find((n) => n.id === blockId);
-            if (!source) return;
-            await onExpandBlock(
-              {
-                id: source.id,
-                title: source.title,
-                description: source.description,
-                planning_prompt: source.planning_prompt,
-                map_block: source.map_block,
-              },
-              {
-                frozenSlots,
-                range,
-                density,
-                userGuidance: prompt,
-              },
-            );
-          }
-        : undefined,
-      combineBlocks: onCombine,
-      generateBridge: onGenerateBridge,
-      clusterBlocks: onClusterBlocks,
-      applyDag: onApplyDag,
-      setUnusableCells: onSetUnusableCells,
-      saveCreatorEffects: onSaveCreatorEffects,
-      deleteBlock: onDeleteBlock,
-    }),
-    [
-      nodes,
-      onApplyDag,
-      onBlocksUpdated,
-      onPreviewUnusableCells,
-      onApplyHeliosOverlay,
-      onClonePaste,
-      onClusterBlocks,
-      onCombine,
-      onDeleteBlock,
-      onExpandBlock,
-      onGenerateBridge,
-      onSaveCreatorEffects,
-      onSetUnusableCells,
-      onSplitBlock,
-      onSubmitAddBlock,
-      onSubmitGenerateShape,
-      onUpdateBlock,
-      ayclToken,
-      workspaceId,
-    ],
-  );
   return (
     <section className={`${mobileColumn === "workspace" ? "flex" : "hidden"} relative min-h-0 min-w-0 flex-1 flex-col overflow-hidden p-0 bg-[#080808] md:flex ${WORKSPACE_MAP_DESKTOP_RIGHT_WIDTH_CLASS} md:flex-none`}>
       {workspaceImage && (
@@ -429,55 +244,7 @@ export function WorkspaceRightDrawers({
         data-workspace-right-pane={rightPane}
         data-helios-map-mode={heliosSurface.mode}
       >
-        {heliosSurface.showModeToggle ? (
-          <div
-            className="flex shrink-0 border-b border-white/10"
-            data-workspace-helios-mode-toggle=""
-          >
-            <button
-              type="button"
-              className={`flex-1 px-2 py-2 text-[10px] uppercase tracking-[0.16em] ${
-                heliosSurface.mode === "helios"
-                  ? "bg-white/10 text-neutral-100"
-                  : "text-neutral-500"
-              }`}
-              aria-pressed={heliosSurface.mode === "helios"}
-              data-helios-map-mode-option="helios"
-              onClick={() =>
-                setHeliosColumnMode(normalizeWorkspaceHeliosColumnMode("helios"))
-              }
-            >
-              Helios
-            </button>
-            <button
-              type="button"
-              className={`flex-1 px-2 py-2 text-[10px] uppercase tracking-[0.16em] ${
-                heliosSurface.mode === "manual"
-                  ? "bg-white/10 text-neutral-100"
-                  : "text-neutral-500"
-              }`}
-              aria-pressed={heliosSurface.mode === "manual"}
-              data-helios-map-mode-option="manual"
-              onClick={() =>
-                setHeliosColumnMode(normalizeWorkspaceHeliosColumnMode("manual"))
-              }
-            >
-              Manual Mode
-            </button>
-          </div>
-        ) : null}
-        {heliosSurface.showHeliosChat ? (
-          <WorkspaceHeliosChat
-            workspaceId={workspaceId}
-            ayclToken={ayclToken}
-            locale={locale}
-            snapshot={heliosSnapshot}
-            host={heliosHost}
-            mapSelection={mapSelection}
-            workspaceFileItems={workspaceFileItems}
-            workspaceMapTypes={workspaceMapTypes}
-          />
-        ) : heliosSurface.showManualDrawers &&
+        {heliosSurface.showManualDrawers &&
           showCreatorDrawers &&
           rightPane === "combine_blocks" &&
           combineBlockIds.length >= 2 ? (

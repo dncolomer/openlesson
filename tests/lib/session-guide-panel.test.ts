@@ -73,9 +73,10 @@ describe("session guide panel", () => {
     expect(commitTag.slice(0, commitTag.indexOf(">"))).not.toContain(" disabled=");
     expect(learn).toContain("data-ile-canvas-dictate");
     expect(learn).toContain("data-session-commit");
+    expect(learn).toContain('data-ile-command-index="08"');
+    expect(learn).toContain('data-ile-command-index="09"');
     expect(learn).toContain('data-ile-command-index="10"');
-    expect(learn).toContain('data-ile-command-index="11"');
-    expect(learn).toContain('data-ile-command-index="12"');
+    expect(learn).not.toContain('data-ile-command-index="11"');
     expect(learn).toContain('data-session-command="pointer"');
     expect(learn).toContain("data-ile-canvas-pointer");
     for (const command of ILE_WORK_CANVAS_COMMANDS) {
@@ -86,18 +87,21 @@ describe("session guide panel", () => {
     }
     expect(learn).not.toContain("data-accelerando-mark");
     expect(learn).toContain('data-ile-command-index="01"');
-    expect(learn).toContain('data-ile-command-index="09"');
+    expect(learn).toContain('data-ile-command-index="07"');
     expect(learn).toContain('data-session-command="auto-layout"');
     expect(learn).toContain('role="switch"');
     expect(learn).toContain("data-session-auto-layout-track");
     expect(learn).toContain('data-session-command="breakdown"');
     expect(learn).toContain('data-session-command="concepts"');
-    expect(learn).toContain('data-session-command="define"');
+    expect(learn).not.toContain('data-session-command="define"');
+    expect(learn).not.toContain('data-session-command="answer"');
     expect(ILE_WORK_CANVAS_COMMANDS.find((command) => command.id === "focus")?.label).toBe("Focus");
     expect(ILE_WORK_CANVAS_COMMANDS.find((command) => command.id === "next")?.label).toBe("Next");
     expect(learn).toContain('data-session-command="next"');
-    expect(ILE_WORK_CANVAS_COMMANDS.find((command) => command.id === "answer")?.label).toBe("Answer");
     expect(ILE_WORK_CANVAS_COMMANDS.find((command) => command.id === "draw")?.label).toBe("Do/run");
+    expect(ILE_WORK_CANVAS_COMMANDS.find((command) => command.id === "simplify")?.tooltip).toMatch(
+      /term, make the meaning plain/i,
+    );
     expect(ILE_WORK_CANVAS_COMMANDS.map((command) => command.id as string)).not.toContain("check");
     expect(ILE_WORK_CANVAS_COMMANDS.map((command) => command.id as string)).not.toContain("split");
     expect(learn).not.toContain('data-session-command="split"');
@@ -110,14 +114,14 @@ describe("session guide panel", () => {
     expect(verify).not.toContain("grid-cols-3");
     expect(verify).not.toContain('data-session-command="focus"');
     expect(verify).not.toContain('data-session-command="next"');
-    expect(verify).toContain('data-session-command="answer"');
+    expect(verify).not.toContain('data-session-command="answer"');
     expect(verify).toContain('data-session-command="draw"');
     expect(verify).toContain('data-session-command="pointer"');
     expect(verify).toContain('data-session-command="auto-layout"');
     expect(verify).toContain('role="switch"');
     expect(verify).toContain('data-session-command="breakdown"');
     expect(verify).toContain('data-session-command="concepts"');
-    expect(verify).toContain('data-session-command="define"');
+    expect(verify).not.toContain('data-session-command="define"');
     expect(verify).not.toContain('data-session-command="split"');
 
     const en = JSON.parse(readFileSync(join(ROOT, "messages/en.json"), "utf8")) as {
@@ -151,8 +155,8 @@ describe("session guide panel", () => {
     const source = readFileSync(join(ROOT, "components/session-view/session-guide-panel.tsx"), "utf8");
     expect(source).toContain("IleCanvasDictateButton");
     expect(source).not.toContain("onAsk=");
-    expect(source).toContain("onAnswer=");
-    expect(source).toContain("bridge?.dictate?.answer(text)");
+    expect(source).toContain("onRun=");
+    expect(source).toContain("bridge?.dictate?.run(text)");
     expect(source).toContain("IleCraftInsightButton");
     expect(source).toContain("usable={ileCanvasCraftInsightUsable()}");
     expect(source).not.toContain("Boolean(bridge?.craft)");
@@ -221,12 +225,12 @@ describe("session guide panel", () => {
   it("keeps slash drafts on the live catalog and leaves /ask as free text", () => {
     expect(ileCanvasCommandDraft("/ask what holds").exactId).toBeNull();
     expect(ileCanvasCommandDraft("/ask what holds").rest).toBe("what holds");
-    expect(ileCanvasCommandDraft("/answer").exactId).toBe("answer");
+    expect(ileCanvasCommandDraft("/answer").exactId).toBeNull();
     expect(ileCanvasCommandDraft("/focus").exactId).toBe("focus");
     expect(ileCanvasCommandDraft("/draw").exactId).toBe("draw");
     expect(ileCanvasCommandDraft("/run").exactId).toBe("draw");
     expect(ileCanvasCommandDraft("/do").exactId).toBe("draw");
-    expect(ileCanvasCommandDraft("/define").exactId).toBe("define");
+    expect(ileCanvasCommandDraft("/define").exactId).toBeNull();
     expect(ileCanvasCommandDraft("/check").exactId).toBeNull();
   });
 
@@ -317,6 +321,17 @@ describe("session guide panel", () => {
           observation: "Name the remaining peaceful option.",
           depth: 1,
           status: "open",
+          edges: [{ toId: "deeper", price: 10 }],
+        },
+        {
+          id: "deeper",
+          parentId: "cheap",
+          title: "Exhaustion",
+          question: "Have peaceful means been exhausted?",
+          territory: "force",
+          observation: "Name what is still untried.",
+          depth: 2,
+          status: "open",
           edges: [],
         },
         {
@@ -333,26 +348,41 @@ describe("session guide panel", () => {
       ],
     };
     expect(sessionHarnessHereLine(hereModel)).toBe("When is force last?");
-    expect(sessionHarnessExploreLine({ model: hereModel }).text).toBe(
-      "Which peaceful option is still open?",
-    );
+    expect(sessionHarnessExploreLine({ model: hereModel })).toEqual({
+      text: "Which peaceful option is still open?",
+      sameAsHere: false,
+      toId: "cheap",
+    });
     expect(
       sessionHarnessExploreLine({
         model: hereModel,
-        suggestion: "Walk the remaining peaceful option.",
-      }).text,
-    ).toBe("Walk the remaining peaceful option.");
-    expect(
-      sessionHarnessExploreLine({
-        model: hereModel,
-        suggestion: "When is force last?",
-      }).sameAsHere,
-    ).toBe(true);
-    expect(
-      sessionHarnessExploreLine({
-        model: { ...hereModel, branches: hereModel.branches.filter((branch) => branch.id === "here").map((branch) => ({ ...branch, edges: [] })) },
+        placedIds: ["cheap"],
       }),
-    ).toEqual({ text: "", sameAsHere: false });
+    ).toEqual({
+      text: "Is the means proportional?",
+      sameAsHere: false,
+      toId: "dear",
+    });
+    expect(
+      sessionHarnessExploreLine({
+        model: hereModel,
+        placedIds: ["cheap", "dear"],
+      }),
+    ).toEqual({
+      text: "Have peaceful means been exhausted?",
+      sameAsHere: false,
+      toId: "deeper",
+    });
+    expect(
+      sessionHarnessExploreLine({
+        model: {
+          ...hereModel,
+          branches: hereModel.branches
+            .filter((branch) => branch.id === "here")
+            .map((branch) => ({ ...branch, edges: [] })),
+        },
+      }),
+    ).toEqual({ text: "", sameAsHere: false, toId: null });
 
     const harness = readFileSync(join(ROOT, "components/session-view/session-harness-panel.tsx"), "utf8");
     expect(harness).toContain("sessionHarnessFocusLine");

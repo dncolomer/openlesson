@@ -1,10 +1,25 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { callXai } = vi.hoisted(() => ({ callXai: vi.fn() }));
+const { callXai, forTurn } = vi.hoisted(() => ({
+  callXai: vi.fn(),
+  forTurn: vi.fn(async (ids: string[]) =>
+    ids.length ? { extraPrompt: "FILE EXCERPT" } : { extraPrompt: "" },
+  ),
+}));
 
 vi.mock("@/lib/xai-client", async () => {
   const actual = await vi.importActual<typeof import("@/lib/xai-client")>("@/lib/xai-client");
   return { ...actual, callXai };
+});
+
+vi.mock("@/lib/ai/document-context", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/ai/document-context")>(
+    "@/lib/ai/document-context",
+  );
+  return {
+    ...actual,
+    getDocumentContext: () => ({ forTurn }),
+  };
 });
 
 import {
@@ -98,6 +113,20 @@ function replyFor(prompt: string): { success: boolean; data?: unknown; error?: s
 describe("generateSessionBranchModel", () => {
   beforeEach(() => {
     callXai.mockReset();
+    forTurn.mockClear();
+  });
+
+  it("opens with Chat Completions and DocumentContext excerpts when artifacts are present", async () => {
+    callXai.mockImplementation(async (messages: ChatMessage[]) => replyFor(promptOf(messages)));
+    const result = await generateSessionBranchOpening({
+      chapterTitle: "Just war",
+      chapterBrief: "When is a war permitted?",
+      fileIds: ["mem_1"],
+    });
+    expect(result.ok).toBe(true);
+    expect(forTurn).toHaveBeenCalledWith(["mem_1"]);
+    expect(callXai).toHaveBeenCalled();
+    expect(promptOf(callXai.mock.calls[0][0] as ChatMessage[])).toContain("FILE EXCERPT");
   });
 
   it("refuses an empty chapter without calling xAI", async () => {

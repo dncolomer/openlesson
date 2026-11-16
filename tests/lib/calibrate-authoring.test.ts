@@ -211,13 +211,22 @@ describe("calibration authoring", () => {
     const runner = read("components/CalibrationFlowRunner.tsx");
     expect(runner).toContain("data-calibrate-voice-challenge");
     expect(runner).toContain("PracticeVoiceChallenge");
-    expect(runner).toContain("data-calibration-identity");
-    expect(runner).toContain("data-calibration-identity-input");
-    expect(runner).toContain("Identify yourself");
+    expect(runner).toContain("ProductFlowIdentityForm");
+    expect(runner).toContain('kind="calibration"');
     expect(runner).toContain("That identity is already used for this calibration flow.");
     expect(runner).toContain("identity: claimedIdentity");
     expect(runner).toContain("data-calibration-live-clock");
+    expect(runner).toContain("<ProductFlowSetupScreen");
     expect(panel).toContain("data-calibration-flow-minutes");
+    expect(read("components/product-flow/product-flow-identity-form.tsx")).toContain(
+      "data-calibration-identity",
+    );
+    expect(read("components/product-flow/product-flow-identity-form.tsx")).toContain(
+      "data-calibration-identity-input",
+    );
+    expect(read("components/product-flow/product-flow-identity-form.tsx")).toContain(
+      "Identify yourself",
+    );
     expect(read("components/product-flow/product-flow-page.tsx")).toContain("data-flow-problem");
     expect(read("components/product-flow/product-flow-wizard.tsx")).toContain("data-flow-problem");
     expect(read("components/product-flow/product-flow-page.tsx")).not.toContain(
@@ -228,8 +237,14 @@ describe("calibration authoring", () => {
     );
     expect(read("components/VerificationFlowsPanel.tsx")).not.toContain("data-verification-flow-minutes");
     expect(read("components/VerificationFlowsPanel.tsx")).not.toContain("Countdown");
-    expect(read("components/VerificationFlowRunner.tsx")).not.toContain("lockDuration");
-    expect(read("components/VerificationFlowRunner.tsx")).not.toContain("initialMinutes");
+    expect(read("components/product-flow/product-flow-page.tsx")).toContain(
+      "data-verification-flow-minutes",
+    );
+    expect(read("components/product-flow/product-flow-wizard.tsx")).toContain(
+      "data-verification-flow-minutes",
+    );
+    expect(read("components/VerificationFlowRunner.tsx")).toContain("lockDuration");
+    expect(read("components/VerificationFlowRunner.tsx")).toContain("initialMinutes");
     expect(existsSync(join(ROOT, "components/calibrate/calibrate-live-surface.tsx"))).toBe(false);
     expect(read("components/calibrate/calibrate-sounding-surface.tsx")).toContain("data-calibrate-sounding");
     expect(read("components/ExcalidrawCanvas.tsx")).not.toContain("restoreCalibrateChrome");

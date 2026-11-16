@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
-  ILE_CANVAS_DICTATE_ANSWER_LABEL,
   ILE_CANVAS_DICTATE_LABEL,
+  ILE_CANVAS_DICTATE_RUN_LABEL,
   ILE_CANVAS_DICTATE_STOP_LABEL,
   advanceIleDictateCapture,
   ileDictateCaptureText,
@@ -20,7 +20,7 @@ import {
 } from "@/components/excalidraw-canvas/command-plate";
 
 function dictateButtonClass(
-  kind: "idle" | "stop" | "answer",
+  kind: "idle" | "stop" | "run",
   square: boolean,
   wide: boolean,
   plate: boolean,
@@ -40,7 +40,7 @@ export function IleCanvasDictateButton({
   transcript,
   onLiveText,
   onCommit,
-  onAnswer,
+  onRun,
   onActiveChange,
   square = false,
   wide = false,
@@ -52,8 +52,8 @@ export function IleCanvasDictateButton({
   onLiveText: (text: string) => void;
   /** Stop. The canvas records the finished transcript as proof of work. */
   onCommit: (text: string) => void;
-  /** Stop and run Answer on the dictate note. */
-  onAnswer?: (text: string) => void;
+  /** Stop and run Do/run on the dictate note. */
+  onRun?: (text: string) => void;
   /** Optional. Calibration starts speech only while this button is active. */
   onActiveChange?: (active: boolean) => void;
   /** Left and right docks: a short row with the name beside a mark. */
@@ -92,15 +92,15 @@ export function IleCanvasDictateButton({
     onCommit(closeCapture());
   };
 
-  const finishAndAnswer = () => {
+  const finishAndRun = () => {
     if (!captureRef.current) return;
     const text = closeCapture();
-    if (onAnswer) onAnswer(text);
+    if (onRun) onRun(text);
     else onCommit(text);
   };
 
   const markClass = plate ? ILE_CANVAS_COMMAND_SIDEBAR_MARK_CLASS : "h-3.5 w-3.5";
-  const answerIndex = ileWorkCanvasCommandIndex("answer");
+  const runIndex = ileWorkCanvasCommandIndex("draw");
   return (
     <div
       data-ile-canvas-dictate
@@ -127,17 +127,17 @@ export function IleCanvasDictateButton({
         </button>
         <button
           type="button"
-          data-ile-canvas-dictate-answer
-          aria-label={ILE_CANVAS_DICTATE_ANSWER_LABEL}
-          onClick={finishAndAnswer}
-          className={dictateButtonClass("answer", square, wide, plate)}
+          data-ile-canvas-dictate-run
+          aria-label={ILE_CANVAS_DICTATE_RUN_LABEL}
+          onClick={finishAndRun}
+          className={dictateButtonClass("run", square, wide, plate)}
         >
-          {plate ? <CommandPlate index={answerIndex} /> : null}
-          <CommandMark id="answer" label={ILE_CANVAS_DICTATE_ANSWER_LABEL} className={markClass} />
+          {plate ? <CommandPlate index={runIndex} /> : null}
+          <CommandMark id="draw" label={ILE_CANVAS_DICTATE_RUN_LABEL} className={markClass} />
           {plate ? (
-            <span className="min-w-0 truncate">{ILE_CANVAS_DICTATE_ANSWER_LABEL}</span>
+            <span className="min-w-0 truncate">{ILE_CANVAS_DICTATE_RUN_LABEL}</span>
           ) : (
-            ILE_CANVAS_DICTATE_ANSWER_LABEL
+            ILE_CANVAS_DICTATE_RUN_LABEL
           )}
         </button>
         </div>

@@ -40,6 +40,7 @@ export {
   ileWorkCanvasCommandShortcutLabel,
   ileWorkCanvasCommandsFor,
   ILE_WORK_CANVAS_OVERLAP_GAP,
+  ileWorkCanvasPlacedHarnessNext,
 } from "@/lib/learn-work-canvas-commands";
 export type { IleWorkCanvasAskKind, IleWorkCanvasCommandId } from "@/lib/learn-work-canvas-commands";
 export {
@@ -47,15 +48,14 @@ export {
   ILE_EXCALIDRAW_POW_TOOLS,
   ILE_WORK_CANVAS_STAY_ON_DOMAIN,
   ILE_XAI_CANVAS_SHAPE_TYPES,
-  buildIleWorkCanvasAnswerUserMessage,
   buildIleWorkCanvasAskUserMessage,
+  buildIleWorkCanvasDrawUserMessage,
   buildIleWorkCanvasCheckUserMessage,
   buildIleWorkCanvasClearOverlapsUserMessage,
   buildIleWorkCanvasCommandUserMessage,
   buildIleWorkCanvasRefactorUserMessage,
   buildIleWorkCanvasSelectiveCompressUserMessage,
   buildIleWorkCanvasConceptsUserMessage,
-  buildIleWorkCanvasDefineUserMessage,
   buildIleWorkCanvasSimplifyUserMessage,
   buildIleWorkCanvasSuggestInsightUserMessage,
   ileWorkCanvasDomainContextBlock,

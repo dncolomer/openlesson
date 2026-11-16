@@ -7,11 +7,12 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   applyIleWorkCanvasAskReply,
-  buildIleWorkCanvasDefineUserMessage,
+  buildIleWorkCanvasSimplifyUserMessage,
   convertToExcalidrawElements,
   expandIleWorkCanvasCommandSelection,
   ILE_WORK_CANVAS_COMMANDS,
   ileWorkCanvasAskFallback,
+  ileWorkCanvasPlacedHarnessNext,
   ileWorkCanvasSceneVisiblyChanged,
   ileWorkCanvasSplitTextChunks,
   runIleWorkCanvasCommand,
@@ -44,8 +45,6 @@ describe("work-canvas command buttons actually mutate the board", () => {
       "simplify",
       "breakdown",
       "concepts",
-      "define",
-      "answer",
       "draw",
       "refactor",
     ]);
@@ -294,44 +293,57 @@ describe("work-canvas command buttons actually mutate the board", () => {
       scene: board,
       selectedElements: [],
       nextText: "Which peaceful option is still open?",
+      nextHiddenStateId: "cheap",
     });
     expect(placed.changed).toBe(true);
     expect(liveText(placed.scene).some((line) => line.includes("peaceful option"))).toBe(true);
     expect(placed.parts.some((el) => el.originalText === "Next")).toBe(true);
     expect(placed.parts.some((el) => el.customData?.ileHarnessNext)).toBe(true);
+    expect(placed.parts.some((el) => el.customData?.ileHarnessNextId === "cheap")).toBe(true);
+
+    const again = runIleWorkCanvasCommand({
+      action: "next",
+      scene: placed.scene,
+      selectedElements: [],
+      nextText: "Is the means proportional?",
+      nextHiddenStateId: "dear",
+    });
+    expect(again.changed).toBe(true);
+    expect(liveText(again.scene).some((line) => line.includes("proportional"))).toBe(true);
+    expect(ileWorkCanvasPlacedHarnessNext(again.scene).ids).toEqual(["cheap", "dear"]);
   });
 
-  it("Define asks XAI and places a definition beside the original", () => {
+  it("Simplify makes a term plain and replaces the original", () => {
     const source = "Last resort";
     const free = convertToExcalidrawElements([{ type: "text", text: source, x: 40, y: 80 }]);
     const originalId = free[0]!.id;
     const asked = runIleWorkCanvasCommand({
-      action: "define",
+      action: "simplify",
       scene: sceneOf(free),
       selectedElements: free,
     });
-    expect(asked.changed).toBe(false);
-    expect(asked.ask).toEqual({ kind: "define", prompt: "Define" });
-    expect(asked.scene.elements.some((el) => el.id === originalId && !el.isDeleted)).toBe(true);
+    expect(asked.changed).toBe(true);
+    expect(asked.ask).toEqual({ kind: "simplify", prompt: "Simplify" });
+    expect(asked.scene.elements.some((el) => el.id === originalId && !el.isDeleted)).toBe(false);
     const placed = applyIleWorkCanvasAskReply({
-      kind: "define",
+      kind: "simplify",
       live: asked.scene,
       selectedElements: asked.selected,
       payload: {
         text: "Last resort is using force only after every peaceful option is exhausted.",
       },
     });
-    expect(placed.elements.some((el) => el.id === originalId && !el.isDeleted)).toBe(true);
+    expect(placed.elements.some((el) => el.id === originalId && !el.isDeleted)).toBe(false);
     expect(
       liveText(placed).some((line) => line.includes("every peaceful option")),
     ).toBe(true);
-    const prompt = buildIleWorkCanvasDefineUserMessage({ selectedElements: free });
-    expect(prompt).toMatch(/one clean, simple definition/i);
-    expect(prompt).toMatch(/Keep the original marks in place/i);
+    const prompt = buildIleWorkCanvasSimplifyUserMessage({ selectedElements: free });
+    expect(prompt).toMatch(/make the meaning plain/i);
+    expect(prompt).toMatch(/shorter, plainer/i);
     expect(prompt).toContain("Last resort");
   });
 
-  it("Simplify, Answer, Draw, and Refactor ask XAI, and replies always land on the board", () => {
+  it("Simplify, Do/run, and Refactor ask XAI, and replies always land on the board", () => {
     const text = convertToExcalidrawElements([
       {
         type: "text",
@@ -360,20 +372,6 @@ describe("work-canvas command buttons actually mutate the board", () => {
     expect(liveText(simplified).some((line) => line.includes("weaker"))).toBe(true);
     expect(simplified.elements.some((el) => el.id === text[0]!.id)).toBe(false);
 
-    const answer = runIleWorkCanvasCommand({
-      action: "answer",
-      scene: board,
-      selectedElements: text,
-    });
-    expect(answer.ask?.kind).toBe("answer");
-    const answered = applyIleWorkCanvasAskReply({
-      kind: "answer",
-      live: board,
-      selectedElements: text,
-      payload: { text: "The inverse-square claim holds. Name the bodies next." },
-    });
-    expect(liveText(answered).some((line) => line.includes("inverse-square"))).toBe(true);
-
     const draw = runIleWorkCanvasCommand({
       action: "draw",
       scene: board,
@@ -382,6 +380,14 @@ describe("work-canvas command buttons actually mutate the board", () => {
     expect(draw.changed).toBe(false);
     expect(draw.ask?.kind).toBe("draw");
     expect(draw.scene.elements.some((el) => el.id === text[0]!.id)).toBe(true);
+    const drawn = applyIleWorkCanvasAskReply({
+      kind: "draw",
+      live: board,
+      selectedElements: text,
+      payload: { text: "The inverse-square claim holds. Name the bodies next." },
+    });
+    expect(liveText(drawn).some((line) => line.includes("inverse-square"))).toBe(true);
+    expect(drawn.elements.some((el) => el.id === text[0]!.id && !el.isDeleted)).toBe(true);
 
     const refactor = runIleWorkCanvasCommand({
       action: "refactor",

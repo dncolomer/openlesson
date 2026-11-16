@@ -320,6 +320,7 @@ describe("TAP Learning Work canvas grid default (shipped)", () => {
     const css = read("app/learn-excalidraw-theme.css");
     expect(css).toContain("[data-ile-excalidraw-host] .excalidraw");
     expect(css).toContain("[data-ile-excalidraw-host] .excalidraw.theme--dark");
+    expect(css).toContain(".ile-work-canvas-latex");
     expect(css).toContain("--color-primary-contrast-offset");
     expect(css).toContain("--color-primary-light: #2a2a2a !important");
     expect(css).toContain("--color-surface-primary-container: #3a3a3a !important");
@@ -456,7 +457,7 @@ describe("TAP Learning Work canvas chapter seed (shipped)", () => {
       files: {},
     };
     const placed = applyIleWorkCanvasAskReply({
-      kind: "define",
+      kind: "draw",
       live: board,
       selectedElements: existing,
       payload: { text: "Last resort is force only after peace is exhausted." },
@@ -470,7 +471,7 @@ describe("TAP Learning Work canvas chapter seed (shipped)", () => {
     expect(textEl).toBeTruthy();
     expect(label).toBeTruthy();
     if (!header || !body || !textEl || !label) return;
-    expect(label.originalText).toBe("Define");
+    expect(label.originalText).toBe("Do/run");
     expect(label.containerId).toBe(header.id);
     expect(textEl.containerId).toBe(body.id);
     expect(body.y).toBe(header.y + header.height);
@@ -746,6 +747,7 @@ describe("TAP Learning Work canvas ask-XAI on selection (shipped)", () => {
     expect(canvas).not.toContain("renderTopRightUI");
     expect(canvas).toContain("ileWorkCanvasEmptyNearbyOrigin");
     expect(canvas).toContain("data-ile-canvas-thinking");
+    expect(canvas).toContain("data-ile-canvas-latex");
     expect(canvas).toContain("ileHeliosThinkingLine");
     expect(canvas).toContain("mergeIleXaiTurnOntoLiveWorkCanvas");
     expect(canvas).toContain("enqueueCanvasAskApply");
@@ -1195,12 +1197,13 @@ describe("TAP Learning session-chat board context (shipped builder)", () => {
 
   it("uses a faster model for commands and a stronger model for open-ended asks", () => {
     expect(ileWorkCanvasXaiNeedsBoardContext("concepts")).toBe(false);
-    expect(ileWorkCanvasXaiNeedsBoardContext("define")).toBe(false);
+    expect(ileWorkCanvasXaiNeedsBoardContext("simplify")).toBe(false);
+    expect(ileWorkCanvasXaiNeedsBoardContext("draw")).toBe(true);
     expect(ileWorkCanvasXaiNeedsBoardContext("ask")).toBe(true);
     expect(ileWorkCanvasXaiNeedsBoardContext(null)).toBe(true);
     expect(ileWorkCanvasXaiModel("concepts")).not.toBe(ileWorkCanvasXaiModel("ask"));
     expect(ileWorkCanvasXaiMaxTokens("concepts")).toBeLessThan(ileWorkCanvasXaiMaxTokens("ask"));
-    expect(ileWorkCanvasXaiMaxTokens("define")).toBeLessThan(ileWorkCanvasXaiMaxTokens("answer"));
+    expect(ileWorkCanvasXaiMaxTokens("simplify")).toBeLessThan(ileWorkCanvasXaiMaxTokens("draw"));
     expect(ileWorkCanvasXaiFetchTimeout("concepts")).toBeLessThan(ileWorkCanvasXaiFetchTimeout("ask"));
     const commandBody = buildIleSessionChatBody({
       problem: "BST insert",
@@ -3012,7 +3015,7 @@ describe("TAP Learning Work canvas selection commands (shipped)", () => {
         `clearAskCalls=${ask.calls.length}`,
         `gappedAskCalls=${gappedAsk.calls.length}`,
         `modelAsk=${modelAsk.calls.length}`,
-        "commands=Focus Next Simplify Subdivide Answer Do/run Refactor",
+        "commands=Focus Next Simplify Subdivide Concepts Do/run Refactor",
       ].join("\n") + "\n",
     );
   });

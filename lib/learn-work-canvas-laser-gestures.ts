@@ -1,6 +1,6 @@
 /**
  * Laser-pointer gestures on the Learn work canvas.
- * Only the laser tool feeds this. A question mark runs Define, a line from a
+ * Only the laser tool feeds this. A question mark runs Simplify, a line from a
  * mark into empty space runs Concepts, and two quick lines run Subdivide.
  */
 import {
@@ -13,14 +13,14 @@ import type { IleWorkCanvasCommandId } from "@/lib/learn-work-canvas-commands";
 export type LaserPoint = { x: number; y: number; t?: number };
 export type LaserStroke = LaserPoint[];
 export type LaserStrokeKind = "question-mark" | "line" | "unknown";
-export type LaserGestureCommand = Extract<IleWorkCanvasCommandId, "define" | "concepts" | "breakdown">;
+export type LaserGestureCommand = Extract<IleWorkCanvasCommandId, "simplify" | "concepts" | "breakdown">;
 
 export const LASER_DOUBLE_LINE_MS = 650;
 export const LASER_TARGET_PAD = 36;
 export const ILE_CANVAS_POINTER_LABEL = "pointer";
 export const ILE_CANVAS_POINTER_SHORTCUT = "k";
 export const ILE_CANVAS_POINTER_TOOLTIP =
-  "Laser pointer. Click again to put it away. Shortcut K. Gestures: ? Define, line Concepts, two lines Subdivide.";
+  "Laser pointer. Click again to put it away. Shortcut K. Gestures: ? Simplify, line Concepts, two lines Subdivide.";
 
 export function ileWorkCanvasPointerToolActive(activeTool: unknown): boolean {
   if (typeof activeTool === "string") return activeTool.trim().toLowerCase() === "laser";
@@ -305,7 +305,7 @@ export function finishLaserStroke(input: {
     if (!target) return { session: pendingDue.session, fire: pendingDue.fire, waitMs: null };
     return {
       session: { pending: null },
-      fire: { command: "define", targetId: target.id },
+      fire: { command: "simplify", targetId: target.id },
       waitMs: null,
     };
   }

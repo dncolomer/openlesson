@@ -14,7 +14,7 @@ vi.mock("@/app/learn-excalidraw-theme.css", () => ({}));
 import { IleCanvasDictateButton } from "@/components/session-view/learn-canvas-dictate-button";
 import {
   ILE_CANVAS_DICTATE_AUTHOR,
-  ILE_CANVAS_DICTATE_ANSWER_LABEL,
+  ILE_CANVAS_DICTATE_RUN_LABEL,
   ILE_CANVAS_DICTATE_LABEL,
   ILE_CANVAS_DICTATE_STOP_LABEL,
   advanceIleDictateCapture,
@@ -261,7 +261,7 @@ describe("canvas dictate button", () => {
   it("sits next to craft insight and reads the live transcript", () => {
     expect(ILE_CANVAS_DICTATE_LABEL).toBe("dictate");
     expect(ILE_CANVAS_DICTATE_STOP_LABEL).toBe("stop");
-    expect(ILE_CANVAS_DICTATE_ANSWER_LABEL).toBe("Answer");
+    expect(ILE_CANVAS_DICTATE_RUN_LABEL).toBe("Do/run");
     const idle = renderToStaticMarkup(
       createElement(IleCanvasDictateButton, {
         transcript: "",
@@ -277,23 +277,27 @@ describe("canvas dictate button", () => {
     expect(idle).not.toContain("data-ile-canvas-dictate-stop-ask");
     const dictate = read("components/session-view/learn-canvas-dictate-button.tsx");
     expect(dictate).toContain("data-ile-canvas-dictate-stop");
-    expect(dictate).toContain("data-ile-canvas-dictate-answer");
-    expect(dictate).toContain("finishAndAnswer");
-    expect(dictate).toContain("onAnswer");
+    expect(dictate).toContain("data-ile-canvas-dictate-run");
+    expect(dictate).toContain("finishAndRun");
+    expect(dictate).toContain("onRun");
+    expect(dictate).toContain('ileWorkCanvasCommandIndex("draw")');
+    expect(dictate).toContain('CommandMark id="draw"');
+    expect(dictate).not.toContain("data-ile-canvas-dictate-answer");
+    expect(dictate).not.toContain("onAnswer");
     expect(dictate).not.toContain("data-ile-canvas-dictate-stop-ask");
     expect(dictate).not.toContain("ILE_CANVAS_DICTATE_STOP_ASK_LABEL");
     expect(dictate).not.toContain("onAsk");
     expect(read("components/excalidraw-canvas/canvas-prompt-bar.tsx")).not.toContain(
       "onAsk=",
     );
-    expect(read("components/excalidraw-canvas/canvas-prompt-bar.tsx")).toContain("onAnswer=");
+    expect(read("components/excalidraw-canvas/canvas-prompt-bar.tsx")).toContain("onRun=");
     expect(read("components/excalidraw-canvas/canvas-prompt-bar.tsx")).toContain(
-      'handleQuickAction("answer", selected)',
+      'handleQuickAction("draw", selected)',
     );
     expect(read("components/session-view/session-guide-panel.tsx")).not.toContain(
       "onAsk=",
     );
-    expect(read("components/session-view/session-guide-panel.tsx")).toContain("onAnswer=");
+    expect(read("components/session-view/session-guide-panel.tsx")).toContain("onRun=");
 
     const canvas = read("components/ExcalidrawCanvas.tsx");
     const promptAt = canvas.indexOf("data-ile-canvas-prompt-bar");
@@ -344,23 +348,23 @@ describe("canvas dictate button", () => {
     expect(html).toContain("data-ile-craft-insight");
     expect(html).toContain("data-ile-canvas-dictate");
     expect(html).toContain("data-ile-learn-more-actions");
-    for (const label of ["Simplify", "Subdivide", "Concepts", "Define", "Answer", "Do/run", "Refactor"]) {
+    for (const label of ["Simplify", "Subdivide", "Concepts", "Do/run", "Refactor"]) {
       expect(html).toContain(`>${label}<`);
     }
     for (const label of ["Focus", "Next", "Check/ask", "Declutter", "Rephrase", "Join", "Elaborate", "Compress", "Clear overlaps"]) {
       expect(html).not.toContain(`>${label}<`);
     }
     expect(html).toContain('data-ile-command-mark="simplify"');
-    expect(html).toContain('data-ile-command-mark="answer"');
     expect(html).toContain('data-ile-command-mark="draw"');
     expect(html).toContain('data-ile-command-mark="breakdown"');
     expect(html).toContain('data-ile-command-mark="concepts"');
-    expect(html).toContain('data-ile-command-mark="define"');
+    expect(html).not.toContain('data-ile-command-mark="answer"');
+    expect(html).not.toContain('data-ile-command-mark="define"');
     expect(html).toContain('role="switch"');
     expect(html).toContain("data-session-auto-layout-track");
     expect(html).toContain('data-ile-command-index="01"');
-    expect(html).toContain('data-ile-command-index="07"');
-    expect(html).not.toContain('data-ile-command-index="08"');
+    expect(html).toContain('data-ile-command-index="05"');
+    expect(html).not.toContain('data-ile-command-index="06"');
     expect(read("components/excalidraw-canvas/command-plate.tsx")).toContain("min-h-9");
     for (const file of [
       "components/session-view/session-chapter-canvas.tsx",
@@ -373,9 +377,12 @@ describe("canvas dictate button", () => {
     expect(html).toContain("min-w-0 items-center justify-center");
     expect(html).toContain("flex-col");
     expect(html).toContain("border-l border-t");
-    expect(html).toContain(">Answer<");
+    expect(html).toContain(">Do/run<");
+    expect(html).not.toContain(">Answer<");
+    expect(html).not.toContain(">Define<");
     expect(html).not.toContain(">Suggest Insight<");
-    expect(html).toContain('data-ile-learn-more-quick="answer"');
+    expect(html).toContain('data-ile-learn-more-quick="draw"');
+    expect(html).not.toContain('data-ile-learn-more-quick="answer"');
     expect(html).not.toContain('data-ile-learn-more-quick="ask"');
     expect(html).not.toContain('data-ile-learn-more-quick="suggest-insight"');
     expect(html).toContain(">commit (insight)<");

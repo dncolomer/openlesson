@@ -47,7 +47,8 @@ export const ILE_WORK_CANVAS_COMMANDS = [
   {
     id: "next",
     label: "Next",
-    tooltip: "Place the cheapest next thing to explore, if it is not the focus you are already on.",
+    tooltip:
+      "Place the next unused cheapest step on the hidden-state model. Each click walks another priced action.",
     shortcut: "n",
     needsSelection: false,
     learnOnly: true,
@@ -56,7 +57,8 @@ export const ILE_WORK_CANVAS_COMMANDS = [
   {
     id: "simplify",
     label: "Simplify",
-    tooltip: "Replace the selected marks with a shorter, plainer rewrite.",
+    tooltip:
+      "Replace the selected marks with a shorter, plainer rewrite. If the selection is a term, make the meaning plain.",
     shortcut: "s",
     needsSelection: true,
     learnOnly: false,
@@ -81,28 +83,10 @@ export const ILE_WORK_CANVAS_COMMANDS = [
     replacesSelection: false,
   },
   {
-    id: "define",
-    label: "Define",
-    tooltip: "Keep the original and place a clean, simple definition beside it.",
-    shortcut: "e",
-    needsSelection: true,
-    learnOnly: false,
-    replacesSelection: false,
-  },
-  {
-    id: "answer",
-    label: "Answer",
-    tooltip: "Answer the highlighted question and place the reply beside it.",
-    shortcut: "a",
-    needsSelection: true,
-    learnOnly: false,
-    replacesSelection: false,
-  },
-  {
     id: "draw",
     label: "Do/run",
     slash: "run",
-    tooltip: "Give a visual answer: a diagram of the highlighted question.",
+    tooltip: "Work the highlighted problem: carry it out, compute it, or show the result.",
     shortcut: "d",
     needsSelection: true,
     learnOnly: false,
@@ -123,11 +107,9 @@ export type IleWorkCanvasCommandId = (typeof ILE_WORK_CANVAS_COMMANDS)[number]["
 
 export type IleWorkCanvasAskKind =
   | "ask"
-  | "answer"
   | "draw"
   | "simplify"
   | "concepts"
-  | "define"
   | "check"
   | "selective-compress"
   | "refactor"
@@ -623,24 +605,47 @@ export type IleWorkCanvasCommandRun = {
 function ileWorkCanvasCommandPrompt(action: IleWorkCanvasCommandId): string {
   if (action === "simplify") return "Simplify";
   if (action === "refactor") return "Refactor";
-  if (action === "answer") return "Answer";
   if (action === "draw") return "Do/run";
   if (action === "focus") return "Focus";
   if (action === "next") return "Next";
   if (action === "breakdown") return "Subdivide";
   if (action === "concepts") return "Concepts";
-  if (action === "define") return "Define";
   return action;
+}
+
+export function ileWorkCanvasPlacedHarnessNext(
+  scene: IleWorkCanvasScene | null | undefined,
+): { ids: string[]; texts: string[] } {
+  const ids: string[] = [];
+  const texts: string[] = [];
+  const seenIds = new Set<string>();
+  const seenTexts = new Set<string>();
+  for (const el of serializeIleWorkCanvasScene(scene).elements) {
+    if (el.isDeleted || !el.customData?.ileHarnessNext) continue;
+    const hiddenId = String(el.customData.ileHarnessNextId || "").trim();
+    if (hiddenId && !seenIds.has(hiddenId)) {
+      seenIds.add(hiddenId);
+      ids.push(hiddenId);
+    }
+    if (el.customData[BOARD_INSTRUCTION_NOTE_KEY] !== "text") continue;
+    const text = String(el.originalText || el.text || "").replace(/\s+/g, " ").trim();
+    if (!text || seenTexts.has(text)) continue;
+    seenTexts.add(text);
+    texts.push(text);
+  }
+  return { ids, texts };
 }
 
 export function appendIleWorkCanvasFocusNote(
   scene: IleWorkCanvasScene | null | undefined,
   text: string | null | undefined,
   kind: "focus" | "next" = "focus",
+  hiddenStateId?: string | null,
 ): { scene: IleWorkCanvasScene; appended: IleWorkCanvasElement[] } {
   const current = serializeIleWorkCanvasScene(scene);
   const clean = String(text || "").replace(/\s+/g, " ").trim();
   if (!clean) return { scene: current, appended: [] };
+  const nextId = String(hiddenStateId || "").trim();
   const note = ileWorkCanvasXaiNoteElements({
     text: clean,
     x: 0,
@@ -650,6 +655,7 @@ export function appendIleWorkCanvasFocusNote(
       author: "harness",
       ileHarnessFocus: kind === "focus",
       ileHarnessNext: kind === "next",
+      ...(kind === "next" && nextId ? { ileHarnessNextId: nextId } : {}),
     },
   });
   const created = note.elements;
@@ -740,8 +746,8 @@ export function replaceIleWorkCanvasSelection(
 /**
  * Local result of a sidebar/dock command click.
  * Subdivide, Focus, and Next mutate now. Simplify and Refactor drop the
- * original marks immediately, then ask XAI. Answer, Draw, Concepts, and Define
- * keep the original and ask. A click that cannot run returns a short board notice instead of going silent.
+ * original marks immediately, then ask XAI. Do/run and Concepts keep the
+ * original and ask. A click that cannot run returns a short board notice instead of going silent.
  */
 export function runIleWorkCanvasCommand(input: {
   action: IleWorkCanvasCommandId;
@@ -750,6 +756,7 @@ export function runIleWorkCanvasCommand(input: {
   focusText?: string | null;
   nextText?: string | null;
   nextSameAsHere?: boolean;
+  nextHiddenStateId?: string | null;
 }): IleWorkCanvasCommandRun {
   const current = serializeIleWorkCanvasScene(input.scene);
   const selected = expandIleWorkCanvasCommandSelection(current, input.selectedElements);
@@ -782,7 +789,12 @@ export function runIleWorkCanvasCommand(input: {
     if (input.nextSameAsHere) {
       return idle("You are already on the cheapest step to explore.");
     }
-    const placed = appendIleWorkCanvasFocusNote(current, input.nextText, "next");
+    const placed = appendIleWorkCanvasFocusNote(
+      current,
+      input.nextText,
+      "next",
+      input.nextHiddenStateId,
+    );
     if (!placed.appended.length) {
       return idle("The harness has nothing cheaper to explore yet.");
     }
@@ -834,12 +846,6 @@ export function runIleWorkCanvasCommand(input: {
   }
   if (input.action === "concepts") {
     return idle(null, { kind: "concepts", prompt });
-  }
-  if (input.action === "define") {
-    return idle(null, { kind: "define", prompt });
-  }
-  if (input.action === "answer") {
-    return idle(null, { kind: "answer", prompt });
   }
   if (input.action === "draw") {
     return idle(null, { kind: "draw", prompt });

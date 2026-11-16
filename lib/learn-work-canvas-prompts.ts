@@ -57,7 +57,7 @@ export function ileWorkCanvasXaiToolsInstruction(): string {
     `For an ordinary explanation, definition, question, or worked step, omit "elements" or send an empty array. Do not draw a flowchart, box diagram, or extra shape by default.`,
     "Skip eraser and selection — those are learner tools only. Skip image unless you already have a fileId.",
     `Reply as JSON: {"text":"<coaching reply, placed as a Work note>","textWidth":number,"elements":[]}.`,
-    `"text" is what the learner reads on the board as a Work note (same card as the opening prompt). Answer the topic directly: complete unhurried sentences, eloquent and plain, easy to start from, with no headings, bullets, or compressed exam stems. Never mention commands, origin, placement, or that a question sits in the right place. Never mention PoW, platform jargon, or Uncertain Systems. Do not put JSON, code fences, or element arrays inside "text".`,
+    `"text" is what the learner reads on the board as a Work note (same card as the opening prompt). Answer the topic directly: complete unhurried sentences, eloquent and plain, easy to start from, with no headings, bullets, or compressed exam stems. Write mathematics as LaTeX: $...$ inline and $$...$$ on its own line. Never mention Check/ask, commands, origin, placement, or that a question sits in the right place. Never mention PoW, platform jargon, or Uncertain Systems. Do not put JSON, code fences, or element arrays inside "text".`,
     `"textWidth" is the coaching note width in pixels. Choose it for this reply so the note fits the cluster. Do not reuse one width every time.`,
     `Include "elements" only for that necessary diagram (${shapes}). Arrows/lines/freedraw may include "points":[[x,y],...]. Labeled boxes become Work notes via "label":{"text":"..."}. Always include "text". Never mention this JSON format to the learner.`,
   ].join(" ");
@@ -249,34 +249,16 @@ export function buildIleWorkCanvasSuggestInsightUserMessage(input: {
   return ileWorkCanvasWithDomainPrefix(body, input.workspace);
 }
 
-export function buildIleWorkCanvasAnswerUserMessage(input: {
-  selectedElements?: readonly IleWorkCanvasElement[] | null;
-  workspace?: PromptWorkspaceContextInput | PromptWorkspaceContext | null;
-}): string {
-  const live = (input.selectedElements ?? []).filter((el) => el && !el.isDeleted);
-  const body = [
-    "Answer the highlighted question on the canvas.",
-    "The learner selected these marks. Answer them directly in complete, unhurried sentences.",
-    "Leave the selected questions in place. The answer is the reply text, placed as a note.",
-    "Do not repeat the questions. Do not mention commands or placement.",
-    "",
-    "Selected elements:",
-    ileWorkCanvasCommandSelectionListing(live),
-  ].join("\n");
-  return ileWorkCanvasWithDomainPrefix(body, input.workspace);
-}
-
 export function buildIleWorkCanvasDrawUserMessage(input: {
   selectedElements?: readonly IleWorkCanvasElement[] | null;
   workspace?: PromptWorkspaceContextInput | PromptWorkspaceContext | null;
 }): string {
   const live = (input.selectedElements ?? []).filter((el) => el && !el.isDeleted);
   const body = [
-    "Draw a visual answer to the highlighted question.",
-    "Leave the selected marks in place. Put a short caption in \"text\".",
-    "Always include JSON \"elements\" with a diagram (rectangle, diamond, ellipse, arrow, line, freedraw, or labeled shapes).",
-    "The diagram is the answer. Do not answer with sentences alone.",
-    "Do not mention commands or placement.",
+    "Work the highlighted problem. Carry it out, compute it, or show the result.",
+    "Leave the selected marks in place. Put the worked result in \"text\".",
+    "Add JSON \"elements\" when a diagram, table, or steps on the board help. A sentence-only result is fine when a diagram would not help.",
+    "Do not repeat the prompt. Do not mention commands or placement.",
     "",
     "Selected elements:",
     ileWorkCanvasCommandSelectionListing(live),
@@ -317,32 +299,17 @@ export function buildIleWorkCanvasConceptsUserMessage(input: {
   return ileWorkCanvasWithDomainPrefix(body, input.workspace);
 }
 
-export function buildIleWorkCanvasDefineUserMessage(input: {
-  selectedElements?: readonly IleWorkCanvasElement[] | null;
-  workspace?: PromptWorkspaceContextInput | PromptWorkspaceContext | null;
-}): string {
-  const live = (input.selectedElements ?? []).filter((el) => el && !el.isDeleted);
-  const body = [
-    "Define the selected term or idea.",
-    "Write one clean, simple definition a learner can keep. Plain language. One or two short sentences.",
-    "Keep the original marks in place. The reply is the definition only, placed as a note.",
-    "Do not lecture, list examples, or mention commands or placement.",
-    "",
-    "Selected elements:",
-    ileWorkCanvasCommandSelectionListing(live),
-  ].join("\n");
-  return ileWorkCanvasWithDomainPrefix(body, input.workspace);
-}
-
 export function buildIleWorkCanvasSimplifyUserMessage(input: {
   selectedElements?: readonly IleWorkCanvasElement[] | null;
   workspace?: PromptWorkspaceContextInput | PromptWorkspaceContext | null;
 }): string {
   const live = (input.selectedElements ?? []).filter((el) => el && !el.isDeleted);
   const body = [
-    "Simplify the selected text.",
-    "Rewrite it in shorter, plainer sentences a learner can follow on a first read. Keep the same meaning.",
+    "Simplify the selected marks.",
+    "Rewrite them in shorter, plainer sentences a learner can follow on a first read. Keep the same meaning.",
+    "If the selection is a term or idea, make the meaning plain in that rewrite. One or two short sentences is enough.",
     "The selected marks will be deleted and replaced by your simplified text.",
+    "Do not lecture, list examples, or mention commands or placement.",
     "",
     "Selected elements:",
     ileWorkCanvasCommandSelectionListing(live),
@@ -382,11 +349,9 @@ export function buildIleWorkCanvasCommandUserMessage(input: {
   if (kind === "refactor") return buildIleWorkCanvasRefactorUserMessage(input);
   if (kind === "suggest-insight") return buildIleWorkCanvasSuggestInsightUserMessage(input);
   if (kind === "declutter" || kind === "clear-overlaps") return buildIleWorkCanvasClearOverlapsUserMessage(input);
-  if (kind === "answer") return buildIleWorkCanvasAnswerUserMessage(input);
   if (kind === "draw") return buildIleWorkCanvasDrawUserMessage(input);
   if (kind === "simplify") return buildIleWorkCanvasSimplifyUserMessage(input);
   if (kind === "concepts") return buildIleWorkCanvasConceptsUserMessage(input);
-  if (kind === "define") return buildIleWorkCanvasDefineUserMessage(input);
   if (kind === "check") return buildIleWorkCanvasCheckUserMessage(input);
   return buildIleWorkCanvasAskUserMessage({
     prompt: String(input.prompt || ""),

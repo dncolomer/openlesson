@@ -14,6 +14,7 @@ import {
   ileWorkCanvasCommandNeedsSelection,
   ileWorkCanvasEmptyNearbyOriginWithReserved,
   ileWorkCanvasFiniteOrigin,
+  ileWorkCanvasPlacedHarnessNext,
   ileWorkCanvasRevealScroll,
   ileWorkCanvasThinkingOverlayStyle,
   applyIleWorkCanvasAskReply,
@@ -251,9 +252,11 @@ export function useWorkCanvasCommands(input: {
       if (ileWorkCanvasCommandNeedsSelection(action) && !selected.length) return;
       const live = liveWorkCanvasScene(api);
       const model = sessionBranchRef.current;
+      const placedNext = ileWorkCanvasPlacedHarnessNext(live);
       const explore = sessionHarnessExploreLine({
         model,
-        suggestion: harnessSuggestionRef.current,
+        placedIds: placedNext.ids,
+        placedTexts: placedNext.texts,
       });
       const outcome = runIleWorkCanvasCommand({
         action,
@@ -262,6 +265,7 @@ export function useWorkCanvasCommands(input: {
         focusText: sessionHarnessHereLine(model),
         nextText: explore.text,
         nextSameAsHere: explore.sameAsHere,
+        nextHiddenStateId: explore.toId,
       });
       const emitCommand = (commandId: IleWorkCanvasCommandId, prompt: string) => {
         const powEvents = canvasPowCollectorRef.current.command(commandId, {

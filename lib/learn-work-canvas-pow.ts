@@ -41,8 +41,6 @@ export const ILE_WORK_CANVAS_COMMAND_POW_IDS = [
   "simplify",
   "breakdown",
   "concepts",
-  "define",
-  "answer",
   "draw",
   "refactor",
 ] as const;
@@ -59,6 +57,8 @@ export const ILE_WORK_CANVAS_RETIRED_COMMAND_POW_IDS = [
   "selective-compression",
   "clear-overlaps",
   "split",
+  "define",
+  "answer",
 ] as const;
 
 export type IleWorkCanvasCommandPowId = (typeof ILE_WORK_CANVAS_COMMAND_POW_IDS)[number];

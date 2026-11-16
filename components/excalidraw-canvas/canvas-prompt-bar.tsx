@@ -200,10 +200,10 @@ export function CanvasPromptBar({
             write: (text, commit) => {
               writeDictatedRef.current(text, commit);
             },
-            answer: (text) => {
+            run: (text) => {
               const selected = writeDictatedRef.current(text, true);
               if (!selected.length) return;
-              runCommandRef.current("answer", selected);
+              runCommandRef.current("draw", selected);
             },
             onActive: (active) => dictateActiveRef.current?.(active),
           }
@@ -453,10 +453,10 @@ export function CanvasPromptBar({
                       transcript={dictateTranscript}
                       onLiveText={(text) => writeDictatedText(text, false)}
                       onCommit={(text) => writeDictatedText(text, true)}
-                      onAnswer={(text) => {
+                      onRun={(text) => {
                         const selected = writeDictatedText(text, true);
                         if (!selected.length) return;
-                        handleQuickAction("answer", selected);
+                        handleQuickAction("draw", selected);
                       }}
                       onActiveChange={onDictateActive}
                     />

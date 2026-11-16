@@ -427,8 +427,6 @@ describe("Work-canvas scene-diff PoW (shipped classifier)", () => {
       simplify: "Simplify",
       breakdown: "Subdivide",
       concepts: "Concepts",
-      define: "Define",
-      answer: "Answer",
       draw: "Do/run",
       refactor: "Refactor",
     };
@@ -561,7 +559,7 @@ describe("Work-canvas scene-diff PoW (shipped classifier)", () => {
       );
     }
 
-    const longCommand = buildIleWorkCanvasCommandPowEvent("answer", {
+    const longCommand = buildIleWorkCanvasCommandPowEvent("draw", {
       prompt: longPrompt,
       selectedIds: ["sel-1", "sel-2"],
     });
@@ -575,17 +573,19 @@ describe("Work-canvas scene-diff PoW (shipped classifier)", () => {
       prompt: "Check",
       selectedIds: ["sel-1"],
     });
-    const answer = buildIleWorkCanvasCommandPowEvent("answer", {
-      prompt: "Answer",
+    const draw = buildIleWorkCanvasCommandPowEvent("draw", {
+      prompt: "Do/run",
       selectedIds: ["sel-1"],
     });
     expect(freeAsk?.toolAction).toBe("expand_more");
-    expect(answer?.toolAction).toBe("answer");
-    expect(answer?.toolAction).not.toBe(freeAsk?.toolAction);
-    expect(answer?.metadata.command_id).toBe("answer");
+    expect(draw?.toolAction).toBe("draw");
+    expect(draw?.toolAction).not.toBe(freeAsk?.toolAction);
+    expect(draw?.metadata.command_id).toBe("draw");
     expect(freeAsk?.metadata.command_id).toBeUndefined();
     expect(buildIleWorkCanvasCommandPowEvent("not-a-command", { prompt: "x" })).toBeNull();
     expect(buildIleWorkCanvasCommandPowEvent("ask", { prompt: "x" })).toBeNull();
+    expect(buildIleWorkCanvasCommandPowEvent("define", { prompt: "x" })).toBeNull();
+    expect(buildIleWorkCanvasCommandPowEvent("answer", { prompt: "x" })).toBeNull();
     expect(buildIleWorkCanvasCommandPowEvent("check", { prompt: "x" })).toBeNull();
     expect(buildIleWorkCanvasCommandPowEvent("declutter", { prompt: "x" })).toBeNull();
     expect(buildIleWorkCanvasCommandPowEvent("rephrase", { prompt: "x" })).toBeNull();

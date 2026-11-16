@@ -109,3 +109,23 @@
   background-color: #3a3a3a;
   border-color: #525252;
 }
+
+/* KaTeX overlay sits on inverted canvas text; paint stored colors then invert. */
+[data-ile-excalidraw-host] .ile-work-canvas-latex {
+  box-sizing: border-box;
+  background: #f4f4f5;
+  color: #1e1e1e;
+  filter: invert(1);
+  line-height: 1.25;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+[data-ile-excalidraw-host] .ile-work-canvas-latex .katex,
+[data-ile-excalidraw-host] .ile-work-canvas-latex .katex-display {
+  color: inherit;
+}
+
+[data-ile-excalidraw-host] .ile-work-canvas-latex .katex-display {
+  margin: 0.15em 0;
+}

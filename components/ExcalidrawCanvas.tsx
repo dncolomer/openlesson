@@ -76,6 +76,8 @@ import { useSessionMarkCanvas } from "@/components/excalidraw-canvas/use-session
 import { useWorkCanvasThinking } from "@/components/excalidraw-canvas/use-work-canvas-thinking";
 import { useWorkCanvasCommands } from "@/components/excalidraw-canvas/use-work-canvas-commands";
 import { useWorkCanvasLaser } from "@/components/excalidraw-canvas/use-work-canvas-laser";
+import { useWorkCanvasLatex } from "@/components/excalidraw-canvas/use-work-canvas-latex";
+import { WorkCanvasLatexLayer } from "@/components/excalidraw-canvas/work-canvas-latex-layer";
 import { IleLaserToolbarSlot } from "@/components/excalidraw-canvas/laser-toolbar-slot";
 import "@excalidraw/excalidraw/index.css";
 import "@/app/learn-excalidraw-theme.css";
@@ -499,6 +501,11 @@ export function ExcalidrawCanvas({
     isLoaded,
   });
 
+  const { latexItems, latexHostByIdRef, syncLatexOverlay } = useWorkCanvasLatex({
+    sceneDataRef,
+    canvasHostOrigin,
+  });
+
   const syncCanvasSelection = useCallback((appState: LiveExcalidrawAppState) => {
     const active =
       Boolean(onAskSelectedRef.current) &&
@@ -786,10 +793,11 @@ export function ExcalidrawCanvas({
       }
       syncCanvasSelection(appState);
       syncThinkingOverlay(appState);
+      syncLatexOverlay(appState);
       const laserOn = ileWorkCanvasPointerToolActive(appState.activeTool);
       setLaserToolActive((prev) => (prev === laserOn ? prev : laserOn));
     },
-    [debouncedExportPNG, syncCanvasSelection, syncThinkingOverlay],
+    [debouncedExportPNG, syncCanvasSelection, syncLatexOverlay, syncThinkingOverlay],
   );
 
   const handlePointerUpdate = useCallback(
@@ -890,6 +898,7 @@ export function ExcalidrawCanvas({
         const appState = api.getAppState() ?? {};
         syncCanvasSelection(appState);
         syncThinkingOverlay(appState);
+        syncLatexOverlay(appState);
       }
     };
     const unbind = bindIleSurfaceEditorEvents(host, refreshSurface);
@@ -928,7 +937,7 @@ export function ExcalidrawCanvas({
       unbind();
       unbindZoom();
     };
-  }, [isLoaded, scheduleCenterOnOpen, syncCanvasSelection, syncPromptBarPlacement, syncThinkingOverlay]);
+  }, [isLoaded, scheduleCenterOnOpen, syncCanvasSelection, syncLatexOverlay, syncPromptBarPlacement, syncThinkingOverlay]);
 
   if (
     !excalidrawAPIRef.current &&
@@ -967,6 +976,7 @@ export function ExcalidrawCanvas({
           active={laserToolActive}
           onToggle={toggleLaserTool}
         />
+        <WorkCanvasLatexLayer items={latexItems} hostByIdRef={latexHostByIdRef} />
         <CanvasThinkingChips
           thinkingChips={thinkingChips}
           thinkingHostByIdRef={thinkingHostByIdRef}

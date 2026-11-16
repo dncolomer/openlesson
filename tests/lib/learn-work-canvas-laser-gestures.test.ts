@@ -63,7 +63,7 @@ describe("laser gesture commands", () => {
   const other = box("other", 240, 0);
   const elements = [host, other];
 
-  it("maps a question mark over a mark to Define", () => {
+  it("maps a question mark over a mark to Simplify", () => {
     const result = finishLaserStroke({
       session: emptyLaserGestureSession(),
       elements,
@@ -79,7 +79,7 @@ describe("laser gesture commands", () => {
         [32, 78],
       ]),
     });
-    expect(result.fire).toEqual({ command: "define", targetId: "host" });
+    expect(result.fire).toEqual({ command: "simplify", targetId: "host" });
     expect(result.waitMs).toBeNull();
   });
 

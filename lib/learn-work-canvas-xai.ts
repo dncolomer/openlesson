@@ -140,7 +140,6 @@ const ILE_CANVAS_CONTEXT_MAX_MARKS = 24;
 
 const ILE_CANVAS_FAST_KINDS = new Set<string>([
   "concepts",
-  "define",
   "simplify",
   "refactor",
   "check",
@@ -155,12 +154,12 @@ export function ileWorkCanvasXaiModel(kind?: string | null): string {
 }
 
 export function ileWorkCanvasXaiNeedsBoardContext(kind?: string | null): boolean {
-  return !kind || kind === "ask" || kind === "answer" || kind === "draw";
+  return !kind || kind === "ask" || kind === "draw";
 }
 
 export function ileWorkCanvasXaiMaxTokens(kind?: string | null): number {
   if (kind === "concepts") return 220;
-  if (kind === "define" || kind === "simplify") return 280;
+  if (kind === "simplify") return 280;
   if (kind === "refactor" || kind === "check" || kind === "suggest-insight") return 400;
   if (kind === "selective-compress" || kind === "clear-overlaps" || kind === "declutter") return 360;
   return 800;

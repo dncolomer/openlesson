@@ -7,7 +7,7 @@ import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import {
   presentDashboardRecentFlow,
   questionCountFromUnknown,
-  sortDashboardRecentFlows,
+  sortDashboardFlowsByCreatedAt,
   type DashboardRecentFlow,
 } from "@/lib/dashboard-home";
 import {
@@ -55,6 +55,7 @@ function presentVerification(row: {
     workspaceTitle: productFlowOwnerTitle("verification"),
     createdAt: row.createdAt,
     publicToken: row.publicToken,
+    topic: row.topic,
     questionCount: questionCountFromUnknown(row.questions),
   });
 }
@@ -100,6 +101,7 @@ function presentCalibration(row: {
     workspaceTitle: productFlowOwnerTitle("calibration"),
     createdAt: row.createdAt,
     publicToken: row.publicToken,
+    topic: row.topic || row.goal,
     questionCount: questionCountFromUnknown(row.questions),
   });
 }
@@ -132,9 +134,8 @@ export async function GET(req: NextRequest) {
     if (!auth.ok) return auth.response;
     const kind = parseProductFlowKind(new URL(req.url).searchParams.get("kind"));
     const kinds = kind ? [kind] : (["solve", "verification", "calibration"] as const);
-    const listed = sortDashboardRecentFlows(
+    const listed = sortDashboardFlowsByCreatedAt(
       (await Promise.all(kinds.map((item) => listOwnerFlows(auth.user.id, item)))).flat(),
-      100,
     );
     return NextResponse.json({ kind: kind ?? "all", flows: listed });
   } catch (error) {

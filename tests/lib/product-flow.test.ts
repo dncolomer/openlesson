@@ -137,6 +137,8 @@ describe("product flow owner_user_id", () => {
     expect(route).toContain("listVerificationFlowsForOwnerUserId");
     expect(route).toContain("listCalibrationFlowsForOwnerUserId");
     expect(route).toContain("listSolveFlowsForOwnerUserId");
+    expect(route).toContain("sortDashboardFlowsByCreatedAt");
+    expect(route).not.toContain("sortDashboardRecentFlows");
     expect(route).not.toContain("ensureProductFlowOwnerWorkspace");
     expect(route).not.toContain("listProductFlowWorkspaceIds");
     expect(route).not.toMatch(/from\("workspaces"\)[\s\S]{0,200}\.insert\(/);

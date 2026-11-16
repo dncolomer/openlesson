@@ -61,12 +61,13 @@ export type DashboardRecentFlow = {
   questionCount: number;
 };
 
-/** One-line Problem clip for every product flow table. */
-export const DASHBOARD_FLOW_TOPIC_MAX = 72;
+/** One-line clips so the Flows table columns stay put. */
+export const DASHBOARD_FLOW_NAME_MAX = 40;
+export const DASHBOARD_FLOW_TOPIC_MAX = 48;
 
-export function truncateDashboardFlowTopic(
+export function truncateDashboardFlowLabel(
   value: unknown,
-  max = DASHBOARD_FLOW_TOPIC_MAX,
+  max: number,
 ): string {
   const text = String(value ?? "")
     .replace(/\s+/g, " ")
@@ -75,6 +76,20 @@ export function truncateDashboardFlowTopic(
   const limit = Number.isFinite(max) && max > 1 ? Math.floor(max) : DASHBOARD_FLOW_TOPIC_MAX;
   if (text.length <= limit) return text;
   return `${text.slice(0, limit - 1).trimEnd()}…`;
+}
+
+export function truncateDashboardFlowTopic(
+  value: unknown,
+  max = DASHBOARD_FLOW_TOPIC_MAX,
+): string {
+  return truncateDashboardFlowLabel(value, max);
+}
+
+export function truncateDashboardFlowName(
+  value: unknown,
+  max = DASHBOARD_FLOW_NAME_MAX,
+): string {
+  return truncateDashboardFlowLabel(value, max);
 }
 
 export function dashboardFlowWorkspacePath(kind: DashboardRecentFlowKind, flowId: string): string {
@@ -124,13 +139,17 @@ export function presentDashboardRecentFlow(input: {
   };
 }
 
+export function sortDashboardFlowsByCreatedAt(
+  rows: readonly DashboardRecentFlow[],
+): DashboardRecentFlow[] {
+  return [...rows].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+}
+
 export function sortDashboardRecentFlows(
   rows: readonly DashboardRecentFlow[],
   limit = 8,
 ): DashboardRecentFlow[] {
-  return [...rows]
-    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
-    .slice(0, Math.max(0, limit));
+  return sortDashboardFlowsByCreatedAt(rows).slice(0, Math.max(0, limit));
 }
 
 export const DASHBOARD_FLOWS_PAGE_SIZE = 10;

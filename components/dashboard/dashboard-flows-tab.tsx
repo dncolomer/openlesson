@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   paginateDashboardFlows,
+  truncateDashboardFlowName,
   truncateDashboardFlowTopic,
   type DashboardRecentFlow,
 } from "@/lib/dashboard-home";
@@ -141,7 +142,14 @@ export function DashboardFlowsTab({
         <p className="text-sm text-neutral-500">No flows of this type.</p>
       ) : (
         <div className="console-copy overflow-x-auto" data-dashboard-flow-table>
-          <table className="w-full min-w-[40rem] border-collapse text-left text-sm">
+          <table className="w-full min-w-[40rem] table-fixed border-collapse text-left text-sm">
+            <colgroup>
+              <col className="w-[28%]" />
+              <col className="w-[8.5rem]" />
+              <col />
+              <col className="w-[9.5rem]" />
+              <col className="w-[11.5rem]" />
+            </colgroup>
             <thead>
               <tr className="border-b border-white/20 font-mono text-[10px] uppercase tracking-[0.18em] text-neutral-500">
                 <th className="px-4 py-3 font-medium">Name</th>
@@ -159,19 +167,20 @@ export function DashboardFlowsTab({
                   data-dashboard-flow
                   data-dashboard-flow-kind={productFlowKindFromDashboardKind(flow.kind)}
                 >
-                  <td className="px-4 py-3">
+                  <td className="min-w-0 px-4 py-3">
                     <Link
                       href={flow.flowPath}
-                      className="font-medium text-white underline decoration-white/20 underline-offset-2 hover:decoration-white"
+                      className="block truncate font-medium text-white underline decoration-white/20 underline-offset-2 hover:decoration-white"
+                      title={flow.name || undefined}
                       data-flow-name
                     >
-                      {flow.name}
+                      {truncateDashboardFlowName(flow.name)}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-neutral-400">
+                  <td className="whitespace-nowrap px-4 py-3 text-neutral-400">
                     {productFlowKindLabel(productFlowKindFromDashboardKind(flow.kind))}
                   </td>
-                  <td className="max-w-[20rem] px-4 py-3 text-neutral-400">
+                  <td className="min-w-0 px-4 py-3 text-neutral-400">
                     <span
                       className="block truncate"
                       title={flow.topic || undefined}
@@ -180,10 +189,10 @@ export function DashboardFlowsTab({
                       {truncateDashboardFlowTopic(flow.topic)}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-neutral-400">
+                  <td className="whitespace-nowrap px-4 py-3 text-neutral-400">
                     {flow.createdAt ? formatDate(flow.createdAt) : "—"}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="whitespace-nowrap px-4 py-3">
                     <FlowPublicActions url={flow.publicPath} />
                   </td>
                 </tr>

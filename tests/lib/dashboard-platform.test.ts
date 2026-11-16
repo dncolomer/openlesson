@@ -33,10 +33,13 @@ import {
   dashboardWorkspaceCounts,
   paginateDashboardFlows,
   presentDashboardRecentFlow,
+  truncateDashboardFlowName,
   truncateDashboardFlowTopic,
+  DASHBOARD_FLOW_NAME_MAX,
   DASHBOARD_FLOW_TOPIC_MAX,
   questionCountFromUnknown,
   sortDashboardRecentFlows,
+  sortDashboardFlowsByCreatedAt,
 } from "@/lib/dashboard-home";
 import { workspaceCreateModeFromQuery } from "@/lib/workspace-create-modes";
 import {
@@ -272,6 +275,12 @@ describe("dashboard home summaries", () => {
     expect(truncateDashboardFlowTopic("a".repeat(DASHBOARD_FLOW_TOPIC_MAX + 8)).length).toBe(
       DASHBOARD_FLOW_TOPIC_MAX,
     );
+    expect(truncateDashboardFlowName("Limits ε-δ")).toBe("Limits ε-δ");
+    expect(truncateDashboardFlowName("a".repeat(DASHBOARD_FLOW_NAME_MAX + 8)).length).toBe(
+      DASHBOARD_FLOW_NAME_MAX,
+    );
+    expect(DASHBOARD_FLOW_NAME_MAX).toBe(40);
+    expect(DASHBOARD_FLOW_TOPIC_MAX).toBe(48);
     expect(presentDashboardRecentFlow({ id: "", kind: "verify", workspaceId: "ws" })).toBeNull();
     const ownerScoped = presentDashboardRecentFlow({
       id: "vf-owner",
@@ -319,6 +328,40 @@ describe("dashboard home summaries", () => {
       1,
     );
     expect(sorted.map((row) => row.id)).toEqual(["b"]);
+    const mixed = Array.from({ length: 101 }, (_, i) => ({
+      id: `solve-${i}`,
+      kind: "solve" as const,
+      name: `S${i}`,
+      title: `S${i}`,
+      workspaceId: "w",
+      workspaceTitle: "W",
+      createdAt: `2026-11-${String((i % 28) + 1).padStart(2, "0")}T00:00:00.000Z`,
+      publicPath: `/s/${i}`,
+      workspacePath: `/solve/flows/${i}`,
+      flowPath: `/solve/flows/${i}`,
+      topic: "",
+      questionCount: 0,
+    }));
+    mixed.push({
+      id: "verify-old",
+      kind: "verify",
+      name: "Limits",
+      title: "Limits",
+      workspaceId: "w",
+      workspaceTitle: "W",
+      createdAt: "2026-10-01T00:00:00.000Z",
+      publicPath: "/v/old",
+      workspacePath: "/verification/flows/old",
+      flowPath: "/verification/flows/old",
+      topic: "ε-δ",
+      questionCount: 1,
+    });
+    expect(sortDashboardRecentFlows(mixed, 100).some((row) => row.kind === "verify")).toBe(
+      false,
+    );
+    expect(sortDashboardFlowsByCreatedAt(mixed).some((row) => row.kind === "verify")).toBe(
+      true,
+    );
     expect(questionCountFromUnknown(["q1", "q2"])).toBe(2);
     expect(questionCountFromUnknown(4)).toBe(4);
     expect(questionCountFromUnknown(JSON.stringify(["q"]))).toBe(1);
@@ -471,6 +514,8 @@ describe("dashboard platform surface", () => {
     expect(dashSrc).not.toContain("data-dashboard-insights");
     expect(dashSrc).toContain("data-dashboard-flows");
     expect(dashSrc).toContain("data-dashboard-flow-table");
+    expect(dashSrc).toContain("table-fixed");
+    expect(dashSrc).toContain("truncateDashboardFlowName");
     expect(dashSrc).toContain("truncateDashboardFlowTopic");
     expect(dashSrc).toContain("data-dashboard-flow-topic");
     expect(dashSrc).toContain("block truncate");

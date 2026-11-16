@@ -69,6 +69,8 @@ describe("science hub", () => {
     expect(page).not.toContain("data-science-enhancement");
     expect(page).not.toContain("data-science-symbiosis");
     expect(SCIENCE_HUB_COPY.whyImageSrc).toBe("/science/why.jpg");
+    expect(SCIENCE_HUB_COPY.fepImageSrc).toBe("/science/proof-of-work.jpg");
+    expect(SCIENCE_HUB_COPY.unsysImageSrc).toBe("/science/unsys-model.jpg");
     expect(existsSync(join(ROOT, "public/science/why.jpg"))).toBe(true);
     expect(existsSync(join(ROOT, "public/science/unsys-model.jpg"))).toBe(true);
     expect(existsSync(join(ROOT, "public/science/proof-of-work.jpg"))).toBe(true);

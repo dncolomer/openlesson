@@ -33,20 +33,20 @@ export const SCIENCE_HUB_COPY = {
   whyTitle: "Why this matters",
   whyImageSrc: "/science/why.jpg",
   whyImageAlt:
-    "Pitch diagram: three clusters of work inside one field, the picture of answers that no longer tell you who understands.",
+    "Pitch quote: universities and employers cannot trust answers anymore because AI writes them.",
   whyP1:
     "Universities and employers can't trust answers anymore because AI writes them. We show how a person reasons through a real problem, with or without AI in the loop, so they can grade and hire with confidence.",
   whyP2:
     "A finished answer can be generated. Understanding has to be shown as work: what someone asks, revises, and checks. That is why this page exists. The rest is the science that makes that work readable.",
-  fepImageSrc: "/science/unsys-model.jpg",
+  fepImageSrc: "/science/proof-of-work.jpg",
   fepImageAlt:
-    "Pitch Unsys model for integrals: hidden states on three state factors, with priced edges and the cheapest policy marked.",
+    "Pitch work canvas: spoken questions, canvas revisions, and checks projected onto hidden states.",
   unsysEyebrow: "UNSYS MODEL",
   unsysTitle: "The Unsys model",
   unsysKicker: "Hidden states, state factors, priced edges",
-  unsysImageSrc: "/science/proof-of-work.jpg",
+  unsysImageSrc: "/science/unsys-model.jpg",
   unsysImageAlt:
-    "Pitch proof-of-work canvas: spoken questions, canvas revisions, and checks projected onto hidden states.",
+    "Pitch Unsys model for integrals: hidden states on three state factors, with priced edges and the cheapest policy marked.",
   unsysP1:
     "The Unsys model is the reference the system uses to read behaviour. Actions on the canvas and transcribed speech are projected onto its hidden states; each step is travel along a priced edge.",
   unsysP2:

@@ -106,12 +106,13 @@ const nextConfig: NextConfig = {
       },
       { source: "/_pitch", destination: "/pitch", permanent: false },
       { source: "/_pitch.pdf", destination: "/pitch.pdf", permanent: false },
+      { source: "/pitch-product", destination: "/pitch", permanent: true },
+      { source: "/pitch-product.pdf", destination: "/pitch.pdf", permanent: true },
     ];
   },
   async rewrites() {
     return [
       { source: "/pitch", destination: "/pitch.pdf" },
-      { source: "/pitch-product", destination: "/pitch-product.pdf" },
     ];
   },
   images: {

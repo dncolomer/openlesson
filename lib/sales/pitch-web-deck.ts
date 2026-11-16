@@ -1,4 +1,4 @@
-/** HTML presenter of the live Unsys 5-minute pitch (`public/pitch.pdf` / `/pitch`). */
+/** HTML presenter of the 5-minute Unsys pitch at `/pitch-web`. Live PDF is `/pitch`. */
 
 export const PITCH_WEB_PATH = "/pitch-web" as const;
 

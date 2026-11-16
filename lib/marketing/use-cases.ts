@@ -111,7 +111,7 @@ export const USE_CASES = [
       "A researcher is given an AI-generated proof of a lemma the team has not checked. They start a Solve session, write the first claim on the canvas, and talk through why the second step follows. They cannot justify a substitution, so they mark that gap and stop. A colleague opens the stored session, reads those notes, and continues from the substitution instead of starting over.",
     imageSrc: "/lp-boxes/hero3.jpg",
     imageAlt:
-      "Full session: left command sidebar and a Work canvas with a mathematical argument, notes, and a Thinking panel",
+      "Full session Work canvas with proof-of-work annotations on spoken questions, canvas revisions, and verification checks",
     imageFit: "cover" as const,
     links: [
       { href: LEARNING_HARNESS_PATH, label: "Solve" },

@@ -4,10 +4,10 @@
  */
 import { PLATFORM_HERO, PLATFORM_PRODUCTS } from "@/lib/marketing/platform";
 
-/** Live session Work canvas still from Downloads/hero3.jpg. */
+/** Live session Work canvas still with proof-of-work annotations (pitch slide). */
 export const LANDING_HERO_STILL = "/lp-boxes/hero3.jpg" as const;
 export const LANDING_HERO_STILL_ALT =
-  "Full session: left command sidebar and a Work canvas with a mathematical argument, notes, and a Thinking panel" as const;
+  "Full session Work canvas with proof-of-work annotations on spoken questions, canvas revisions, and verification checks" as const;
 
 export const LANDING_USE_COPY = {
   harness: {

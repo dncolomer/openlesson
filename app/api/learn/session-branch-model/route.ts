@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { guardSessionRoute } from "@/lib/api/require-auth";
 import { entryQueryParamsFromBody } from "@/lib/guest-link-access";
-import { getCalibrationFlowByToken } from "@/lib/calibration-flow-repository";
+import { getCalibrationFlowById, getCalibrationFlowByToken } from "@/lib/calibration-flow-repository";
 import { exactProblemOpeningWork } from "@/lib/learn-opening-work";
 import { studentSessionModelFromAuthorSeed } from "@/lib/author-unsys-model";
 import {
@@ -160,6 +160,7 @@ export async function POST(request: NextRequest) {
           flowId = String(flow?.id || "");
           definitionWorkspaceId = String(flow?.workspaceId || "");
           if (flow) {
+            flowSeed = flow.answersModelSeed ?? null;
             generateContext = {
               kind: "calibration",
               problem: flow.topic || flow.goal,
@@ -171,6 +172,7 @@ export async function POST(request: NextRequest) {
           flowId = String(flow?.id || "");
           definitionWorkspaceId = String(flow?.workspaceId || "");
           if (flow) {
+            flowSeed = flow.answersModelSeed ?? null;
             generateContext = {
               kind: "verification",
               problem: flow.topic,
@@ -183,6 +185,7 @@ export async function POST(request: NextRequest) {
           flowId = String(flow?.id || "");
           definitionWorkspaceId = String(flow?.workspaceId || "");
           if (flow) {
+            flowSeed = flow.answersModelSeed ?? null;
             generateContext = {
               kind: "solve",
               problem: flow.topic,
@@ -219,9 +222,10 @@ export async function POST(request: NextRequest) {
             }
           }
         }
-        if (flowId && !generateContext.exactProblemOnCanvas) {
+        if (flowId) {
           const solve = await getSolveFlowById(flowId);
           if (solve) {
+            flowSeed = flowSeed || solve.answersModelSeed || null;
             generateContext = {
               kind: "solve",
               problem: solve.topic,
@@ -231,12 +235,23 @@ export async function POST(request: NextRequest) {
           } else {
             const verify = await getVerificationFlowById(flowId);
             if (verify) {
+              flowSeed = flowSeed || verify.answersModelSeed || null;
               generateContext = {
                 kind: "verification",
                 problem: verify.topic,
                 artifacts: verify.artifacts,
                 exactProblemOnCanvas: verify.exactProblemOnCanvas,
               };
+            } else {
+              const calibrate = await getCalibrationFlowById(flowId);
+              if (calibrate) {
+                flowSeed = flowSeed || calibrate.answersModelSeed || null;
+                generateContext = {
+                  kind: "calibration",
+                  problem: calibrate.topic || calibrate.goal,
+                  artifacts: calibrate.artifacts,
+                };
+              }
             }
           }
         }

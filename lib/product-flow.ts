@@ -12,6 +12,8 @@ import {
   flowProblemQuestionPool,
   type FlowArtifact,
 } from "@/lib/flow-artifacts";
+import { parseFlowUnsysSeed } from "@/lib/flow-unsys-seed";
+import type { AuthorUnsysModelSeed } from "@/lib/author-unsys-model";
 
 export type ProductFlowKind = "verification" | "calibration" | "solve";
 
@@ -21,7 +23,7 @@ export const DASHBOARD_FLOWS_PATH = "/api/dashboard/flows";
 export const DASHBOARD_FLOWS_GENERATE_PATH = "/api/dashboard/flows/generate-questions";
 export const DASHBOARD_FLOW_FILES_PATH = "/api/dashboard/flows/files";
 
-export const PRODUCT_FLOW_WIZARD_STEPS = ["name", "author", "publish"] as const;
+export const PRODUCT_FLOW_WIZARD_STEPS = ["name", "author", "model", "publish"] as const;
 
 export type ProductFlowWizardStep = (typeof PRODUCT_FLOW_WIZARD_STEPS)[number];
 
@@ -37,6 +39,8 @@ export type ProductFlowDraft = {
   durationMinutes: number;
   /** Solve / Verification: seed the Work canvas with this Problem as written. */
   exactProblemOnCanvas: boolean;
+  /** Author unsys seed used when a learner runs this flow. */
+  answersModelSeed: AuthorUnsysModelSeed | null;
 };
 
 /** Author option on Solve and Verification flows. Calibration has no canvas. */
@@ -187,6 +191,7 @@ export function emptyProductFlowDraft(kind: ProductFlowKind): ProductFlowDraft {
     actionCatalog: 4,
     durationMinutes: 15,
     exactProblemOnCanvas: false,
+    answersModelSeed: null,
   };
 }
 
@@ -227,6 +232,7 @@ export function productFlowWizardCanAdvance(
 ): boolean {
   if (step === "name") return Boolean(normalizeFlowName(draft.name));
   if (step === "author") return Boolean(productFlowProblem(draft));
+  if (step === "model") return Boolean(productFlowProblem(draft));
   return Boolean(normalizeFlowName(draft.name));
 }
 
@@ -234,13 +240,15 @@ export function nextProductFlowWizardStep(
   step: ProductFlowWizardStep,
 ): ProductFlowWizardStep {
   if (step === "name") return "author";
+  if (step === "author") return "model";
   return "publish";
 }
 
 export function previousProductFlowWizardStep(
   step: ProductFlowWizardStep,
 ): ProductFlowWizardStep {
-  if (step === "publish") return "author";
+  if (step === "publish") return "model";
+  if (step === "model") return "author";
   return "name";
 }
 
@@ -256,6 +264,7 @@ export type AcceptedProductFlowPublish =
       actionCatalog: ReturnType<typeof parseLearningModelSize>;
       durationMinutes: number;
       exactProblemOnCanvas: boolean;
+      answersModelSeed: AuthorUnsysModelSeed | null;
     }
   | { ok: false; reason: string };
 
@@ -271,6 +280,7 @@ export function acceptProductFlowPublish(draft: ProductFlowDraft): AcceptedProdu
   const exactProblemOnCanvas = flowShowsExactProblemOnCanvas(draft.kind)
     ? parseExactProblemOnCanvas(draft.exactProblemOnCanvas)
     : false;
+  const answersModelSeed = parseFlowUnsysSeed(draft.answersModelSeed);
   if (draft.kind === "calibration") {
     return {
       ok: true,
@@ -283,6 +293,7 @@ export function acceptProductFlowPublish(draft: ProductFlowDraft): AcceptedProdu
       actionCatalog,
       durationMinutes,
       exactProblemOnCanvas: false,
+      answersModelSeed,
     };
   }
   if (draft.kind === "solve") {
@@ -297,6 +308,7 @@ export function acceptProductFlowPublish(draft: ProductFlowDraft): AcceptedProdu
       actionCatalog,
       durationMinutes,
       exactProblemOnCanvas,
+      answersModelSeed,
     };
   }
   return {
@@ -310,6 +322,7 @@ export function acceptProductFlowPublish(draft: ProductFlowDraft): AcceptedProdu
     actionCatalog,
     durationMinutes,
     exactProblemOnCanvas,
+    answersModelSeed,
   };
 }
 

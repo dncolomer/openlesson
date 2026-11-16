@@ -6,8 +6,11 @@ import {
   emptyProductFlowDraft,
   flowAuthorShowsCountdown,
   flowOwnedByUser,
+  nextProductFlowWizardStep,
   parseExactProblemOnCanvas,
   parseProductFlowKind,
+  previousProductFlowWizardStep,
+  PRODUCT_FLOW_WIZARD_STEPS,
   productFlowNewPath,
   productFlowEmbeddingKind,
   productFlowKindLabel,
@@ -15,7 +18,22 @@ import {
   productFlowPagePath,
   productFlowWizardCanAdvance,
 } from "@/lib/product-flow";
+import { exampleAuthorUnsysModel, authorUnsysSeedForPersist } from "@/lib/author-unsys-model";
+import { applySolveCommand, emptySolveState } from "@/lib/solve-flow";
+import { applyVerificationCommand, emptyVerificationState } from "@/lib/verification-flow";
+import { applyCalibrationCommand, emptyCalibrationState } from "@/lib/calibration-flow";
+import {
+  FLOW_UNSYS_SEED_PATH,
+  nextFlowUnsysSeed,
+  parseFlowUnsysSeed,
+  studentModelFromFlowSeed,
+} from "@/lib/flow-unsys-seed";
+import { definitionUnsysSeedFromBlocks } from "@/lib/definition-unsys-seed";
 import { parseWorkspaceKind } from "@/lib/workspace-kind";
+import {
+  FLOW_DANGER_BTN,
+  FLOW_PRIMARY_BTN,
+} from "@/components/product-flow/product-flow-form";
 
 const root = join(__dirname, "../..");
 
@@ -90,6 +108,141 @@ describe("product flow owner_user_id", () => {
     expect(accepted.goal).toBe("");
     expect(accepted.artifacts).toEqual([]);
     expect(accepted.exactProblemOnCanvas).toBe(false);
+    expect(accepted.answersModelSeed).toBeNull();
+  });
+
+  it("inserts an unsys model step between author and publish", () => {
+    expect(PRODUCT_FLOW_WIZARD_STEPS).toEqual(["name", "author", "model", "publish"]);
+    expect(nextProductFlowWizardStep("author")).toBe("model");
+    expect(nextProductFlowWizardStep("model")).toBe("publish");
+    expect(previousProductFlowWizardStep("publish")).toBe("model");
+    expect(previousProductFlowWizardStep("model")).toBe("author");
+    const empty = emptyProductFlowDraft("solve");
+    expect(productFlowWizardCanAdvance("model", empty)).toBe(false);
+    expect(
+      productFlowWizardCanAdvance("model", {
+        ...empty,
+        name: "Limits",
+        topic: "epsilon-delta limits",
+      }),
+    ).toBe(true);
+
+    const seed = authorUnsysSeedForPersist(exampleAuthorUnsysModel("Limits"));
+    const accepted = acceptProductFlowPublish({
+      ...emptyProductFlowDraft("solve"),
+      name: "Limits practice",
+      topic: "epsilon-delta limits",
+      answersModelSeed: seed,
+    });
+    expect(accepted.ok).toBe(true);
+    if (!accepted.ok) return;
+    expect(accepted.answersModelSeed?.model.rootId).toBe(seed.model.rootId);
+    expect(studentModelFromFlowSeed(accepted.answersModelSeed)?.rootId).toBe(seed.model.rootId);
+    expect(nextFlowUnsysSeed(seed, undefined)?.model.rootId).toBe(seed.model.rootId);
+    expect(nextFlowUnsysSeed(seed, null)).toBeNull();
+    expect(parseFlowUnsysSeed(seed)?.model.rootId).toBe(seed.model.rootId);
+
+    const fromFlow = definitionUnsysSeedFromBlocks({
+      flowId: "sf-live",
+      flowSeed: seed,
+      copyBlockId: "copy-block",
+      blocks: [
+        {
+          id: "copy-block",
+          workspace_id: "ws-copy",
+          map_block: { kind: "solve", flow_id: "sf-live" },
+          answers_model_seed: authorUnsysSeedForPersist(exampleAuthorUnsysModel("Copy")),
+        },
+      ],
+    });
+    expect(studentModelFromFlowSeed(fromFlow)?.rootId).toBe(seed.model.rootId);
+
+    const solve = applySolveCommand(emptySolveState(), {
+      type: "create",
+      ownerUserId: "owner-1",
+      name: "Limits practice",
+      topic: "epsilon-delta limits",
+      answersModelSeed: seed,
+    });
+    expect(solve.ok).toBe(true);
+    if (!solve.ok) return;
+    expect(solve.flow?.answersModelSeed?.model.rootId).toBe(seed.model.rootId);
+    const verify = applyVerificationCommand(emptyVerificationState(), {
+      type: "create",
+      ownerUserId: "owner-1",
+      name: "Limits",
+      topic: "What is a limit?",
+      publicToken: "vtok-unsys",
+      answersModelSeed: seed,
+    });
+    expect(verify.ok).toBe(true);
+    if (!verify.ok) return;
+    expect(verify.flow?.answersModelSeed?.model.rootId).toBe(seed.model.rootId);
+    const calibrate = applyCalibrationCommand(emptyCalibrationState(), {
+      type: "create",
+      ownerUserId: "owner-1",
+      name: "Priors",
+      topic: "State the noise model",
+      publicToken: "ctok-unsys",
+      answersModelSeed: seed,
+    });
+    expect(calibrate.ok).toBe(true);
+    if (!calibrate.ok) return;
+    expect(calibrate.flow?.answersModelSeed?.model.rootId).toBe(seed.model.rootId);
+
+    const wizard = read("components/product-flow/product-flow-wizard.tsx");
+    const step = read("components/product-flow/flow-unsys-model-step.tsx");
+    const page = read("components/product-flow/product-flow-page.tsx");
+    const create = read("app/api/dashboard/flows/route.ts");
+    const update = read("app/api/dashboard/flows/[id]/route.ts");
+    const generate = read("app/api/dashboard/flows/unsys-seed/route.ts");
+    const session = read("app/api/learn/session-branch-model/route.ts");
+    const sql = read("supabase/migrations/20261116140000_flow_answers_model_seed.sql");
+    expect(wizard).toContain("FlowUnsysModelStep");
+    expect(wizard).toContain('step === "model"');
+    expect(wizard).toContain("answersModelSeed: accepted.answersModelSeed");
+    expect(wizard).toContain("data-flow-unsys-step");
+    expect(wizard).toContain("data-flow-publish-unsys");
+    expect(step).toContain('data-flow-unsys-generate=""');
+    expect(step).toContain('data-flow-unsys-import=""');
+    expect(step).toContain('data-flow-unsys-prompt=""');
+    expect(step).toContain("FLOW_UNSYS_SEED_PATH");
+    expect(step).toContain("WorkspaceUnsysSeedGraph");
+    expect(step).toContain("WorkspaceUnsysSeedInspector");
+    expect(page).toContain("FlowUnsysModelStep");
+    expect(page).toContain("answersModelSeed");
+    expect(create).toContain("answersModelSeed: accepted.answersModelSeed");
+    expect(update).toContain("parseFlowUnsysSeed");
+    expect(generate).toContain("generateAuthorUnsysSessionField");
+    expect(generate).toContain("requireAuthenticatedUser");
+    expect(FLOW_UNSYS_SEED_PATH).toBe("/api/dashboard/flows/unsys-seed");
+    expect(session).toContain("flow.answersModelSeed");
+    expect(session).toContain("getCalibrationFlowById");
+    expect(sql).toContain("solve_flows");
+    expect(sql).toContain("verify_flows");
+    expect(sql).toContain("calibrate_flows");
+    expect(sql).toContain("answers_model_seed");
+  });
+
+  it("sizes Save flow and Remove the same on flow details", () => {
+    for (const token of [
+      "inline-flex",
+      "h-12",
+      "items-center",
+      "justify-center",
+      "px-6",
+      "text-sm",
+      "font-medium",
+    ]) {
+      expect(FLOW_PRIMARY_BTN).toContain(token);
+      expect(FLOW_DANGER_BTN).toContain(token);
+    }
+    expect(FLOW_DANGER_BTN).not.toContain("h-10");
+    expect(FLOW_DANGER_BTN).not.toContain("text-xs");
+    expect(FLOW_DANGER_BTN).not.toContain("px-4");
+    const page = read("components/product-flow/product-flow-page.tsx");
+    expect(page).toContain("FLOW_PRIMARY_BTN");
+    expect(page).toContain("FLOW_DANGER_BTN");
   });
 
   it("accepts verification and calibration from name + problem without questions", () => {

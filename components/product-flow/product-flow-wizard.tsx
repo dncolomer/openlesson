@@ -33,10 +33,14 @@ import {
   FlowWizardSteps,
 } from "@/components/product-flow/product-flow-form";
 import { FlowProblemFields } from "@/components/product-flow/flow-problem-fields";
+import { FlowUnsysModelStep } from "@/components/product-flow/flow-unsys-model-step";
 import { dashboardTabForProductSurface } from "@/lib/dashboard-nav";
 
 function wizardDescription(kind: ProductFlowKind, step: ProductFlowWizardStep): string {
   if (step === "name") return "A short name for the dashboard list and the public run.";
+  if (step === "model") {
+    return "A simulation of the unsys model for this flow. Edit it by hand, import a seed, or prompt to adapt it.";
+  }
   if (step === "publish") {
     return "Review, then publish. The public run asks for identification first.";
   }
@@ -51,6 +55,7 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
     emptyProductFlowDraft(lockedKind ?? "solve"),
   );
   const [busy, setBusy] = useState(false);
+  const [modelBusy, setModelBusy] = useState(false);
   const [error, setError] = useState("");
   const kind = draft.kind;
   const productLabel = productFlowKindLabel(kind);
@@ -60,6 +65,7 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
   const heading = useMemo(() => {
     if (step === "name") return `Name this ${productLabel.toLowerCase()} flow`;
     if (step === "author") return `Author the ${productLabel.toLowerCase()} flow`;
+    if (step === "model") return "Adapt the unsys model";
     return `Publish ${draft.name.trim() || "this flow"}`;
   }, [draft.name, productLabel, step]);
 
@@ -93,6 +99,7 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
           exactProblemOnCanvas: accepted.exactProblemOnCanvas,
           actionCatalog: accepted.actionCatalog,
           durationMinutes: accepted.durationMinutes,
+          answersModelSeed: accepted.answersModelSeed,
         }),
       });
       const payload = await response.json().catch(() => ({}));
@@ -113,6 +120,7 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
         <button
           type="button"
           className={FLOW_SECONDARY_BTN}
+          disabled={modelBusy}
           onClick={() => setStep(previousProductFlowWizardStep(step))}
         >
           Back
@@ -129,7 +137,7 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
       {step === "publish" ? (
         <button
           type="button"
-          disabled={busy || !canAdvance}
+          disabled={busy || modelBusy || !canAdvance}
           onClick={() => void publish()}
           data-flow-publish=""
           className={FLOW_PRIMARY_BTN}
@@ -139,7 +147,7 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
       ) : (
         <button
           type="button"
-          disabled={busy || !canAdvance}
+          disabled={busy || modelBusy || !canAdvance}
           onClick={() => setStep(nextProductFlowWizardStep(step))}
           className={FLOW_PRIMARY_BTN}
         >
@@ -155,7 +163,7 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
       activeTab={dashboardTabForProductSurface(kind)}
     >
       <div
-        className="mx-auto w-full max-w-3xl space-y-6"
+        className={`mx-auto w-full space-y-6 ${step === "model" ? "max-w-[96rem]" : "max-w-3xl"}`}
         data-flow-wizard=""
         data-flow-wizard-kind={kind}
         data-flow-wizard-step={step}
@@ -243,6 +251,21 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
           </FlowFormCard>
         ) : null}
 
+        {step === "model" ? (
+          <FlowFormCard data-flow-unsys-step="">
+            <FlowUnsysModelStep
+              kind={kind}
+              name={draft.name}
+              problem={problem}
+              artifacts={draft.artifacts}
+              seed={draft.answersModelSeed}
+              onChange={(answersModelSeed) => patch({ answersModelSeed })}
+              onBusyChange={setModelBusy}
+              actions={actions}
+            />
+          </FlowFormCard>
+        ) : null}
+
         {step === "publish" ? (
           <FlowFormCard data-flow-publish-review="">
             <div className="space-y-3">
@@ -265,6 +288,14 @@ export function ProductFlowWizard({ kind: lockedKind }: { kind?: ProductFlowKind
               {flowAuthorShowsCountdown(kind) ? (
                 <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
                   {draft.durationMinutes} min countdown
+                </p>
+              ) : null}
+              {draft.answersModelSeed ? (
+                <p
+                  className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500"
+                  data-flow-publish-unsys=""
+                >
+                  Unsys model
                 </p>
               ) : null}
             </div>

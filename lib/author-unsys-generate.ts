@@ -7,6 +7,7 @@
 import {
   generateSessionBranchChildren,
   generateSessionBranchFirstLevel,
+  type SessionBranchGenerateContext,
 } from "@/lib/session-branch-model-generate";
 import {
   addAuthorUnsysGeneratedChildren,
@@ -22,7 +23,7 @@ export { AUTHOR_UNSYS_GENERATE_PATH } from "@/lib/author-unsys-model";
 export type AuthorUnsysGenerateInput = {
   chapterTitle: string;
   chapterBrief?: string | null;
-};
+} & SessionBranchGenerateContext;
 
 export type AuthorUnsysGenerateResult =
   | { ok: true; model: SessionBranchModel }
@@ -44,8 +45,10 @@ export async function generateAuthorUnsysSessionField(
   }
   const generateFirstLevel = deps.generateFirstLevel ?? generateSessionBranchFirstLevel;
   return generateFirstLevel({
+    ...input,
     chapterTitle: chapterTitle || chapterBrief,
     chapterBrief: chapterBrief || null,
+    problem: input.problem || chapterBrief || chapterTitle,
   });
 }
 
@@ -61,8 +64,14 @@ export async function expandAuthorUnsysSessionNode(
   const generateChildren = deps.generateChildren ?? generateSessionBranchChildren;
   const siblings = input.model.branches.filter((branch) => branch.parentId === parent.id);
   const prepared = await generateChildren({
+    kind: input.kind,
     chapterTitle: input.chapterTitle,
     chapterBrief: input.chapterBrief,
+    problem: input.problem,
+    artifacts: input.artifacts,
+    files: input.files,
+    fileIds: input.fileIds,
+    guidance: input.guidance,
     parentTitle: parent.title,
     parentQuestion: parent.question,
     parentTerritory: parent.territory,

@@ -201,6 +201,14 @@ describe("unsys generate material from Problem + files", () => {
     );
     expect(calibrate.user).toContain("State the noise model");
     expect(calibrate.fileIds).toEqual([ARTIFACT.xaiFileId]);
+
+    const guided = buildSessionBranchGenerateMaterial({
+      kind: "solve",
+      problem: "Decode a distance-5 rotated surface-code chain",
+      guidance: "Keep the first ring on decoder failure modes.",
+    });
+    expect(guided.user).toContain("Author guidance:");
+    expect(guided.user).toContain("Keep the first ring on decoder failure modes.");
   });
 });
 

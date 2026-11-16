@@ -26,6 +26,7 @@ import {
 import { flowArchivedAtFromRow, listedAuthorFlows } from "@/lib/flow-archive";
 import { parseExactProblemOnCanvas } from "@/lib/product-flow";
 import { parseFlowArtifacts, serializeFlowArtifacts } from "@/lib/flow-artifacts";
+import { parseFlowUnsysSeed, serializeFlowUnsysSeed } from "@/lib/flow-unsys-seed";
 import { inviteFlowSessionOwner } from "@/lib/map-play-data-access";
 
 const VERIFICATION_FLOW_GLOBAL = "__openlessonVerificationFlowRepository";
@@ -103,6 +104,7 @@ function mapFlow(row: Record<string, unknown>): VerificationFlow {
     exactProblemOnCanvas: parseExactProblemOnCanvas(row.exact_problem_on_canvas),
     durationMinutes: flowCountdownMinutes(row.duration_minutes),
     actionCatalog: parseLearningModelSize(row.action_catalog),
+    answersModelSeed: parseFlowUnsysSeed(row.answers_model_seed),
     publicToken: String(row.public_token || ""),
     createdAt: String(row.created_at || ""),
     updatedAt: String(row.updated_at || ""),
@@ -200,6 +202,7 @@ async function persistCommand(
       exact_problem_on_canvas: value.flow.exactProblemOnCanvas,
       duration_minutes: value.flow.durationMinutes,
       action_catalog: value.flow.actionCatalog,
+      answers_model_seed: serializeFlowUnsysSeed(value.flow.answersModelSeed),
       public_token: value.flow.publicToken,
       created_at: value.flow.createdAt,
       updated_at: value.flow.updatedAt,
@@ -216,6 +219,7 @@ async function persistCommand(
       exact_problem_on_canvas: value.flow.exactProblemOnCanvas,
       duration_minutes: value.flow.durationMinutes,
       action_catalog: value.flow.actionCatalog,
+      answers_model_seed: serializeFlowUnsysSeed(value.flow.answersModelSeed),
       updated_at: value.flow.updatedAt,
     });
     if (error) throw new Error(error.message);
@@ -381,7 +385,7 @@ async function writeVerificationFlow(
       ? supabase.from("verify_flows").insert(body)
       : supabase.from("verify_flows").update(body).eq("id", id);
   let current = row;
-  for (const optional of ["name", "action_catalog", "duration_minutes", "owner_user_id", "workspace_id", "archived_at", "artifacts", "exact_problem_on_canvas"] as const) {
+  for (const optional of ["name", "action_catalog", "duration_minutes", "owner_user_id", "workspace_id", "archived_at", "artifacts", "exact_problem_on_canvas", "answers_model_seed"] as const) {
     const result = await run(current);
     if (!result.error) return result;
     if (!String(result.error.message).includes(optional) || !(optional in current)) return result;

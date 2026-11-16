@@ -132,6 +132,9 @@ describe("author unsys model seed", () => {
     expect(route).toContain("openingWorkForSessionField");
     expect(route).toContain("definitionUnsysSeedFromBlocks");
     expect(route).toContain("definitionFlowTokenFromPreparePlan");
+    expect(route).toContain("flow.answersModelSeed");
+    expect(route).toContain("getCalibrationFlowById");
+    expect(route).not.toContain("flowId && !generateContext.exactProblemOnCanvas");
     expect(route).not.toContain("continuation: null,\n              done: true");
     const field = readFileSync(
       join(__dirname, "../../components/session-view/use-session-field.ts"),

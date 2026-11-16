@@ -4,6 +4,8 @@
  */
 
 import { normalizeFlowName, parseExactProblemOnCanvas } from "@/lib/product-flow";
+import { nextFlowUnsysSeed } from "@/lib/flow-unsys-seed";
+import type { AuthorUnsysModelSeed } from "@/lib/author-unsys-model";
 import {
   parseFlowArtifacts,
   type FlowArtifact,
@@ -30,6 +32,7 @@ export type SolveFlow = {
   exactProblemOnCanvas: boolean;
   durationMinutes: number;
   actionCatalog: LearningModelSize;
+  answersModelSeed?: AuthorUnsysModelSeed | null;
   publicToken: string;
   createdAt: string;
   updatedAt: string;
@@ -117,6 +120,7 @@ export type SolveCommand =
       exactProblemOnCanvas?: boolean;
       durationMinutes?: number;
       actionCatalog?: number;
+      answersModelSeed?: unknown;
       id?: string;
       publicToken?: string;
     }
@@ -132,6 +136,7 @@ export type SolveCommand =
       exactProblemOnCanvas?: boolean;
       durationMinutes?: number;
       actionCatalog?: number;
+      answersModelSeed?: unknown;
     }
   | { type: "remove"; workspaceId?: string; ownerUserId?: string; flowId: string }
   | { type: "claim"; flowId: string; identity: string; runnerUserId?: string | null };
@@ -166,6 +171,7 @@ export function applySolveCommand(
       exactProblemOnCanvas: parseExactProblemOnCanvas(command.exactProblemOnCanvas),
       durationMinutes: flowCountdownMinutes(command.durationMinutes),
       actionCatalog: parseLearningModelSize(command.actionCatalog),
+      answersModelSeed: nextFlowUnsysSeed(null, command.answersModelSeed),
       publicToken: command.publicToken || createSolvePublicToken(),
       createdAt: nowIso(),
       updatedAt: nowIso(),
@@ -207,6 +213,7 @@ export function applySolveCommand(
         command.actionCatalog === undefined
           ? parseLearningModelSize(current.actionCatalog)
           : parseLearningModelSize(command.actionCatalog),
+      answersModelSeed: nextFlowUnsysSeed(current.answersModelSeed, command.answersModelSeed),
       updatedAt: nowIso(),
     };
     return {

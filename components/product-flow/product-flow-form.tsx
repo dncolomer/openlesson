@@ -22,7 +22,7 @@ export const FLOW_GHOST_BTN =
   "console-button inline-flex h-10 items-center justify-center px-4 text-xs font-medium text-neutral-300 transition hover:border-white/80 hover:text-white disabled:opacity-40";
 
 export const FLOW_DANGER_BTN =
-  "console-button inline-flex h-10 items-center justify-center px-4 text-xs font-medium text-red-300 transition hover:border-red-300/70 hover:text-red-200 disabled:opacity-40";
+  "console-button inline-flex h-12 items-center justify-center px-6 text-sm font-medium text-red-300 transition hover:border-red-300/70 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-40";
 
 export function FlowFormHeader({
   kicker,

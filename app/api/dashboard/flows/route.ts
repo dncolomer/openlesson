@@ -19,6 +19,7 @@ import {
   productFlowPagePath,
 } from "@/lib/product-flow";
 import { parseFlowArtifacts, flowProblemFromUnknown } from "@/lib/flow-artifacts";
+import { parseFlowUnsysSeed } from "@/lib/flow-unsys-seed";
 import { calibrationFlowPublicPath } from "@/lib/calibration-flow";
 import { solveFlowPublicPath } from "@/lib/solve-flow";
 import { verificationFlowPublicPath } from "@/lib/verification-flow";
@@ -163,6 +164,7 @@ export async function POST(req: NextRequest) {
       actionCatalog: Number(body.actionCatalog) || 4,
       durationMinutes: Number(body.durationMinutes) || 15,
       exactProblemOnCanvas: parseExactProblemOnCanvas(body.exactProblemOnCanvas),
+      answersModelSeed: parseFlowUnsysSeed(body.answersModelSeed ?? body.answers_model_seed),
     };
     const accepted = acceptProductFlowPublish(draft);
     if (!accepted.ok) return jsonError(400, accepted.reason);
@@ -178,6 +180,7 @@ export async function POST(req: NextRequest) {
         exactProblemOnCanvas: accepted.exactProblemOnCanvas,
         durationMinutes: accepted.durationMinutes,
         actionCatalog: accepted.actionCatalog,
+        answersModelSeed: accepted.answersModelSeed,
       });
       if (!created.ok || !created.flow) {
         return jsonError(400, created.ok ? "create_failed" : created.reason);
@@ -204,6 +207,7 @@ export async function POST(req: NextRequest) {
         artifacts: accepted.artifacts,
         durationMinutes: accepted.durationMinutes,
         actionCatalog: accepted.actionCatalog,
+        answersModelSeed: accepted.answersModelSeed,
       });
       if (!created.ok || !created.flow) {
         return jsonError(400, created.ok ? "create_failed" : created.reason);
@@ -228,6 +232,7 @@ export async function POST(req: NextRequest) {
       artifacts: accepted.artifacts,
       exactProblemOnCanvas: accepted.exactProblemOnCanvas,
       actionCatalog: accepted.actionCatalog,
+      answersModelSeed: accepted.answersModelSeed,
     });
     if (!created.ok || !created.flow) {
       return jsonError(400, created.ok ? "create_failed" : created.reason);

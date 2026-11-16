@@ -21,6 +21,9 @@ import {
   FlowFormHeader,
 } from "@/components/product-flow/product-flow-form";
 import { FlowProblemFields } from "@/components/product-flow/flow-problem-fields";
+import { FlowUnsysModelStep } from "@/components/product-flow/flow-unsys-model-step";
+import { parseFlowUnsysSeed } from "@/lib/flow-unsys-seed";
+import type { AuthorUnsysModelSeed } from "@/lib/author-unsys-model";
 import { dashboardTabForProductSurface } from "@/lib/dashboard-nav";
 import { FlowPublicActions } from "@/components/product-flow/copy-flow-url-button";
 
@@ -35,6 +38,7 @@ type LoadedFlow = {
   durationMinutes?: number;
   publicToken: string;
   workspaceId: string;
+  answersModelSeed?: AuthorUnsysModelSeed | null;
 };
 
 
@@ -51,10 +55,12 @@ export function ProductFlowPage({
   const [problem, setProblem] = useState("");
   const [artifacts, setArtifacts] = useState<FlowArtifact[]>([]);
   const [exactProblemOnCanvas, setExactProblemOnCanvas] = useState(false);
+  const [answersModelSeed, setAnswersModelSeed] = useState<AuthorUnsysModelSeed | null>(null);
   const [minutes, setMinutes] = useState(15);
   const [publicUrl, setPublicUrl] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [modelBusy, setModelBusy] = useState(false);
   const productLabel =
     kind === "calibration" ? "Calibration" : kind === "solve" ? "Solve" : "Verification";
 
@@ -71,6 +77,7 @@ export function ProductFlowPage({
     setProblem(String(next.topic || next.goal || ""));
     setArtifacts(parseFlowArtifacts(next.artifacts));
     setExactProblemOnCanvas(Boolean(next.exactProblemOnCanvas));
+    setAnswersModelSeed(parseFlowUnsysSeed(next.answersModelSeed));
     setMinutes(flowCountdownMinutes(next.durationMinutes));
     setPublicUrl(String(payload.publicUrl || ""));
   }, [flowId, kind]);
@@ -93,6 +100,7 @@ export function ProductFlowPage({
           artifacts,
           exactProblemOnCanvas,
           durationMinutes: minutes,
+          answersModelSeed,
         }),
       });
       const payload = await response.json().catch(() => ({}));
@@ -141,7 +149,7 @@ export function ProductFlowPage({
       activeTab={dashboardTabForProductSurface(kind)}
     >
       <div
-        className="mx-auto w-full max-w-3xl space-y-6"
+        className="mx-auto w-full max-w-[96rem] space-y-6"
         data-product-flow-page={kind}
         data-verification-flows-panel={kind === "verification" ? "" : undefined}
         data-calibration-flows-panel={kind === "calibration" ? "" : undefined}
@@ -211,10 +219,25 @@ export function ProductFlowPage({
             ) : null}
           </section>
 
+          <section className="space-y-3" data-flow-unsys-editor="">
+            <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
+              Unsys model
+            </p>
+            <FlowUnsysModelStep
+              kind={kind}
+              name={name}
+              problem={problem}
+              artifacts={artifacts}
+              seed={answersModelSeed}
+              onChange={setAnswersModelSeed}
+              onBusyChange={setModelBusy}
+            />
+          </section>
+
           <div className="flex flex-wrap gap-3 pt-2">
             <button
               type="button"
-              disabled={busy}
+              disabled={busy || modelBusy}
               onClick={() => void save()}
               className={FLOW_PRIMARY_BTN}
             >
@@ -226,6 +249,7 @@ export function ProductFlowPage({
               data-calibration-flow-remove={kind === "calibration" ? "" : undefined}
               data-solve-flow-remove={kind === "solve" ? "" : undefined}
               className={FLOW_DANGER_BTN}
+              disabled={busy || modelBusy}
               onClick={() => void remove()}
             >
               Remove

@@ -80,6 +80,8 @@ export type SessionBranchGenerateContext = {
   fileIds?: string[] | null;
   files?: Array<{ name?: string; xaiFileId?: string; mimeType?: string }> | null;
   artifacts?: FlowArtifact[] | null;
+  /** Extra author instruction when adapting the unsys field. */
+  guidance?: string | null;
 };
 
 export type SessionBranchGenerateMaterial = {
@@ -129,6 +131,7 @@ export function buildSessionBranchGenerateMaterial(
         }`
       : "";
   const problemBlock = problem ? `Problem:\n${problem}` : "";
+  const guidance = textOf(input.guidance);
   const user = [
     kind === "solve"
       ? "Assist the user in breaking down and solving the problem. Use the Problem and attached files as the field to decompose."
@@ -137,6 +140,7 @@ export function buildSessionBranchGenerateMaterial(
     chapterTitle && chapterTitle !== problem ? `Chapter: ${chapterTitle}.` : "",
     chapterBrief && chapterBrief !== problem ? `Material:\n${chapterBrief}` : "",
     fileBlock,
+    guidance ? `Author guidance:\n${guidance}` : "",
     kind === "solve"
       ? "This slice belongs to a breakdown of the problem, not a short quiz."
       : "This slice belongs to a wide field of inquiry, not a short quiz and not a three-step maze.",

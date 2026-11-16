@@ -6,6 +6,8 @@
  */
 
 import { normalizeFlowName, parseExactProblemOnCanvas } from "@/lib/product-flow";
+import { nextFlowUnsysSeed } from "@/lib/flow-unsys-seed";
+import type { AuthorUnsysModelSeed } from "@/lib/author-unsys-model";
 import {
   parseFlowArtifacts,
   flowProblemFromUnknown,
@@ -53,6 +55,7 @@ export type VerificationFlow = {
   durationMinutes: number;
   /** 4, 8, or 16 actions on the unsys model. */
   actionCatalog: LearningModelSize;
+  answersModelSeed?: AuthorUnsysModelSeed | null;
   publicToken: string;
   createdAt: string;
   updatedAt: string;
@@ -516,6 +519,7 @@ export type VerificationCommand =
       exactProblemOnCanvas?: boolean;
       durationMinutes?: number;
       actionCatalog?: number;
+      answersModelSeed?: unknown;
       id?: string;
       publicToken?: string;
     }
@@ -532,6 +536,7 @@ export type VerificationCommand =
       exactProblemOnCanvas?: boolean;
       durationMinutes?: number;
       actionCatalog?: number;
+      answersModelSeed?: unknown;
     }
   | { type: "remove"; workspaceId?: string; ownerUserId?: string; flowId: string }
   | { type: "claim"; flowId: string; identity: string; runnerUserId?: string | null }
@@ -584,6 +589,7 @@ export function applyVerificationCommand(
       exactProblemOnCanvas: parseExactProblemOnCanvas(command.exactProblemOnCanvas),
       durationMinutes: flowCountdownMinutes(command.durationMinutes),
       actionCatalog: parseLearningModelSize(command.actionCatalog),
+      answersModelSeed: nextFlowUnsysSeed(null, command.answersModelSeed),
       publicToken: token,
       createdAt: stamp,
       updatedAt: stamp,
@@ -626,6 +632,7 @@ export function applyVerificationCommand(
         command.actionCatalog === undefined
           ? parseLearningModelSize(current.actionCatalog)
           : parseLearningModelSize(command.actionCatalog),
+      answersModelSeed: nextFlowUnsysSeed(current.answersModelSeed, command.answersModelSeed),
       updatedAt: nowIso(),
     };
     return {
